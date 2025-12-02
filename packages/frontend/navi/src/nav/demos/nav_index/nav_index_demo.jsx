@@ -824,79 +824,90 @@ const Dashboard = () => {
                                 📋 Logs
                               </Tab>
                             </TabList>
+
+                            <Routes>
+                              <Route
+                                route={MONITORING_EXPORT_ROUTE}
+                                element={
+                                  <div>
+                                    <h3 style={{ color: "#0891b2" }}>
+                                      🚨 System Alerts
+                                    </h3>
+                                    <p>
+                                      Alert configuration and notification
+                                      settings would be available here.
+                                    </p>
+                                    <details
+                                      style={{
+                                        backgroundColor: "#f0fdff",
+                                        border: "1px solid #a5f3fc",
+                                        borderRadius: "6px",
+                                        padding: "1rem",
+                                        marginTop: "1rem",
+                                      }}
+                                    >
+                                      <summary
+                                        style={{
+                                          cursor: "pointer",
+                                          fontWeight: "bold",
+                                          color: "#0891b2",
+                                        }}
+                                      >
+                                        🔍 Technical details (Click to expand)
+                                      </summary>
+                                      <div style={{ marginTop: "0.5rem" }}>
+                                        <p>
+                                          This is a sub-page of Monitoring that
+                                          provides specific functionality while
+                                          the main Monitoring page shows the
+                                          dashboard overview.
+                                        </p>
+                                      </div>
+                                    </details>
+                                  </div>
+                                }
+                              />
+                              <Route
+                                route={MONITORING_ARCHIVE_ROUTE}
+                                element={
+                                  <div>
+                                    <h3 style={{ color: "#0891b2" }}>
+                                      📋 System Logs
+                                    </h3>
+                                    <p>
+                                      Application logs and system event history.
+                                    </p>
+                                    <details
+                                      style={{
+                                        backgroundColor: "#f0fdff",
+                                        border: "1px solid #a5f3fc",
+                                        borderRadius: "6px",
+                                        padding: "1rem",
+                                        marginTop: "1rem",
+                                      }}
+                                    >
+                                      <summary
+                                        style={{
+                                          cursor: "pointer",
+                                          fontWeight: "bold",
+                                          color: "#0891b2",
+                                        }}
+                                      >
+                                        🔍 Technical details (Click to expand)
+                                      </summary>
+                                      <div style={{ marginTop: "0.5rem" }}>
+                                        <p>
+                                          Another optional sub-page that
+                                          enhances the main Monitoring dashboard
+                                          without requiring it.
+                                        </p>
+                                      </div>
+                                    </details>
+                                  </div>
+                                }
+                              />
+                            </Routes>
                           </div>
-                        </div>
-                      }
-                    />
-                    <Route
-                      route={MONITORING_EXPORT_ROUTE}
-                      element={
-                        <div>
-                          <h3 style={{ color: "#0891b2" }}>🚨 System Alerts</h3>
-                          <p>
-                            Alert configuration and notification settings would
-                            be available here.
-                          </p>
-                          <details
-                            style={{
-                              backgroundColor: "#f0fdff",
-                              border: "1px solid #a5f3fc",
-                              borderRadius: "6px",
-                              padding: "1rem",
-                              marginTop: "1rem",
-                            }}
-                          >
-                            <summary
-                              style={{
-                                cursor: "pointer",
-                                fontWeight: "bold",
-                                color: "#0891b2",
-                              }}
-                            >
-                              🔍 Technical details (Click to expand)
-                            </summary>
-                            <div style={{ marginTop: "0.5rem" }}>
-                              <p>
-                                This is a sub-page of Monitoring that provides
-                                specific functionality while the main Monitoring
-                                page shows the dashboard overview.
-                              </p>
-                            </div>
-                          </details>
-                        </div>
-                      }
-                    />
-                    <Route
-                      route={MONITORING_ARCHIVE_ROUTE}
-                      element={
-                        <div>
-                          <h3 style={{ color: "#0891b2" }}>📋 System Logs</h3>
-                          <p>Application logs and system event history.</p>
-                          <details
-                            style={{
-                              backgroundColor: "#f0fdff",
-                              border: "1px solid #a5f3fc",
-                              borderRadius: "6px",
-                              padding: "1rem",
-                              marginTop: "1rem",
-                            }}
-                          >
-                            <summary
-                              style={{
-                                cursor: "pointer",
-                                fontWeight: "bold",
-                                color: "#0891b2",
-                              }}
-                            >
-                              🔍 Technical details (Click to expand)
-                            </summary>
-                            <div style={{ marginTop: "0.5rem" }}>
-                              <p>
-                                Another optional sub-page that enhances the main
-                                Monitoring dashboard without requiring it.
-                              </p>
-                            </div>
-                          </details>
                         </div>
                       }
                     />
