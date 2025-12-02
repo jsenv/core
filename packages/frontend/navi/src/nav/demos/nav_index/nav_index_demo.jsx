@@ -43,7 +43,11 @@ const Map = () => {
         <Tab route={MAP_TAB_B_ROUTE}>Settings</Tab>
       </TabList>
       <Routes>
-        <Route route={MAP_TAB_A_ROUTE} element={<Box>Tab A content</Box>} />
+        <Route
+          index
+          route={MAP_TAB_A_ROUTE}
+          element={<Box>Tab A content</Box>}
+        />
         <Route route={MAP_TAB_B_ROUTE} element={<Box>Tab B content</Box>} />
       </Routes>
     </Box>

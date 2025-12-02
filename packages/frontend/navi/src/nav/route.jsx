@@ -22,6 +22,7 @@ import { createContext } from "preact";
 import { useContext, useLayoutEffect, useRef } from "preact/hooks";
 
 import { useUITransitionContentId } from "../ui_transition/ui_transition.jsx";
+import { replaceUrl } from "./browser_integration/browser_integration.js";
 import { useForceRender } from "./use_force_render.js";
 
 const DEBUG = false;
@@ -41,7 +42,7 @@ export const Routes = ({ element = RootElement, children }) => {
 };
 
 export const useActiveRouteInfo = () => useContext(RouteInfoContext);
-export const Route = ({ element, route, fallback, meta, children }) => {
+export const Route = ({ element, route, index, fallback, meta, children }) => {
   const forceRender = useForceRender();
   const hasDiscoveredRef = useRef(false);
   const activeInfoRef = useRef(null);
@@ -51,6 +52,7 @@ export const Route = ({ element, route, fallback, meta, children }) => {
       <ActiveRouteManager
         element={element}
         route={route}
+        index={index}
         fallback={fallback}
         meta={meta}
         onActiveInfoChange={(activeInfo) => {
@@ -69,6 +71,11 @@ export const Route = ({ element, route, fallback, meta, children }) => {
     return null;
   }
   const { ActiveElement } = activeInfo;
+  if (activeInfo.index && !activeInfo.route.active) {
+    const routeFromProps = activeInfo.route.routeFromProps;
+    const routeUrl = routeFromProps.buildUrl();
+    replaceUrl(routeUrl);
+  }
   return <ActiveElement />;
 };
 
@@ -80,6 +87,7 @@ it's executed once for the entier app lifecycle */
 const ActiveRouteManager = ({
   element,
   route,
+  index,
   fallback,
   meta,
   onActiveInfoChange,
@@ -92,20 +100,10 @@ const ActiveRouteManager = ({
   const registerChildRouteFromContext = useContext(RegisterChildRouteContext);
   const elementId = getElementSignature(element);
   const candidateSet = new Set();
-  const registerChildRoute = (
-    ChildActiveElement,
-    childRoute,
-    childFallback,
-    childMeta,
-  ) => {
-    const childElementId = getElementSignature(ChildActiveElement);
+  const registerChildRoute = (childRouteInfo) => {
+    const childElementId = getElementSignature(childRouteInfo.element);
     debug(`${elementId}.registerChildRoute(${childElementId})`);
-    candidateSet.add({
-      ActiveElement: ChildActiveElement,
-      route: childRoute,
-      fallback: childFallback,
-      meta: childMeta,
-    });
+    candidateSet.add(childRouteInfo);
   };
   if (DEBUG) {
     console.group(`👶 Discovery of ${elementId}`);
@@ -117,6 +115,7 @@ const ActiveRouteManager = ({
     initRouteObserver({
       element,
       route,
+      index,
       fallback,
       meta,
       candidateSet,
@@ -135,6 +134,7 @@ const ActiveRouteManager = ({
 const initRouteObserver = ({
   element,
   route,
+  index,
   fallback,
   meta,
   candidateSet,
@@ -145,7 +145,7 @@ const initRouteObserver = ({
 
   const elementId = getElementSignature(element);
   const candidateElementIds = Array.from(candidateSet, (c) =>
-    getElementSignature(c.ActiveElement),
+    getElementSignature(c.element),
   );
   if (candidateElementIds.length === 0) {
     debug(`initRouteObserver ${elementId}, no children`);
@@ -178,6 +178,9 @@ const initRouteObserver = ({
       if (candidate.fallback && !candidate.route.routeFromProps) {
         fallbackInfo = candidate;
       }
+      if (candidate.index) {
+        fallbackInfo = candidate;
+      }
     }
     return fallbackInfo;
   };
@@ -194,8 +197,8 @@ const initRouteObserver = ({
           return activeChildInfo;
         }
         return {
-          ActiveElement: null,
           route,
+          element: null,
           meta,
         };
       }
@@ -242,11 +245,13 @@ const initRouteObserver = ({
     if (newActiveInfo) {
       compositeRoute.active = true;
       activeRouteInfoSignal.value = newActiveInfo;
-      SlotActiveElementSignal.value = newActiveInfo.ActiveElement;
+      SlotActiveElementSignal.value = newActiveInfo.element;
       onActiveInfoChange({
-        ActiveElement,
-        SlotActiveElement: newActiveInfo.ActiveElement,
         route: newActiveInfo.route,
+        ActiveElement,
+        SlotActiveElement: newActiveInfo.element,
+        index: newActiveInfo.index,
+        fallback: newActiveInfo.fallback,
         meta: newActiveInfo.meta,
       });
     } else {
@@ -275,12 +280,13 @@ const initRouteObserver = ({
     addTeardown(candidate.route.subscribeStatus(onChange));
   }
   if (registerChildRouteFromContext) {
-    registerChildRouteFromContext(
-      ActiveElement,
-      compositeRoute,
+    registerChildRouteFromContext({
+      route: compositeRoute,
+      element: ActiveElement,
+      index,
       fallback,
       meta,
-    );
+    });
   }
   updateActiveInfo();
 

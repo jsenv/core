@@ -341,7 +341,10 @@ const createRoute = (urlPatternInput) => {
 
   const buildRelativeUrl = (params, options) =>
     buildRouteRelativeUrl(urlPatternInput, params, options);
-  route.buildRelativeUrl = buildRelativeUrl;
+  route.buildRelativeUrl = (params, options) => {
+    const { relativeUrl } = buildRelativeUrl(params, options);
+    return relativeUrl;
+  };
 
   /**
    * Builds a complete URL for this route with the given parameters.

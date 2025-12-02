@@ -93,6 +93,9 @@ export const navTo = (target, options) => {
   }
   return browserIntegration.navTo(url, options);
 };
+export const replaceUrl = (target, options = {}) => {
+  return navTo(target, { ...options, replace: true });
+};
 export const stopLoad = (reason = "stopLoad() called") => {
   const windowIsLoading = windowIsLoadingSignal.value;
   if (windowIsLoading) {
