@@ -52,17 +52,6 @@ const {
 // User List Component - Shows actual user data first
 const UserListPage = () => (
   <div>
-    <h3
-      style={{
-        color: "#059669",
-        display: "flex",
-        alignItems: "center",
-        gap: "0.5rem",
-      }}
-    >
-      ✓ User List
-    </h3>
-
     {/* User List Content */}
     <div
       style={{
@@ -107,7 +96,6 @@ const UserListPage = () => (
 // User Activity Component
 const UserActivityPage = () => (
   <div>
-    <h3 style={{ color: "#3b82f6" }}>User Activity Dashboard</h3>
     <div
       style={{
         backgroundColor: "#eff6ff",
@@ -522,7 +510,7 @@ const Dashboard = () => {
                 </div>
 
                 {/* Content Area using Route.Slot */}
-                <div style={{ padding: "2rem" }}>
+                <div style={{ padding: "0 2rem" }}>
                   <Route.Slot />
                 </div>
               </div>
@@ -583,7 +571,7 @@ const UsersSection = () => (
       ]}
       activeColor="#3b82f6"
     />
-    <div style={{ padding: "2rem" }}>
+    <div style={{ padding: "0 2rem" }}>
       <Route.Slot />
     </div>
   </div>
@@ -599,14 +587,25 @@ const SettingsSection = () => (
       title="👆 Settings (You clicked to get here!)"
       description='Notice how this section didn&apos;t open automatically? You had to deliberately click "Settings". This is perfect for configuration areas that users visit intentionally.'
     />
-    <TabNavigation
-      tabs={[
-        { route: SETTINGS_GENERAL_ROUTE, label: "🔧 General" },
-        { route: SETTINGS_SECURITY_ROUTE, label: "🔒 Security" },
-      ]}
-      activeColor="#dc2626"
-    />
-    <div style={{ padding: "2rem" }}>
+    <div
+      style={{
+        backgroundColor: "#fff",
+        borderBottom: "1px solid #e2e8f0",
+        padding: "0 2rem",
+      }}
+    >
+      <TabList
+        underline
+        style={{
+          "--tab-color": "#64748b",
+          "--tab-active-color": "#dc2626",
+        }}
+      >
+        <Tab route={SETTINGS_GENERAL_ROUTE}>🔧 General</Tab>
+        <Tab route={SETTINGS_SECURITY_ROUTE}>🔒 Security</Tab>
+      </TabList>
+    </div>
+    <div style={{ padding: "0 2rem" }}>
       <Routes>
         <Route
           index
@@ -632,14 +631,25 @@ const AnalyticsSection = () => (
       title="👆 Analytics (Also clicked to get here!)"
       description='Like Settings, you had to deliberately click "Analytics" to reach this section. This demonstrates another manual navigation pattern with different technical implementation.'
     />
-    <TabNavigation
-      tabs={[
-        { route: ANALYTICS_OVERVIEW_ROUTE, label: "📈 Overview" },
-        { route: ANALYTICS_REPORTS_ROUTE, label: "📊 Reports" },
-      ]}
-      activeColor="#7c3aed"
-    />
-    <div style={{ padding: "2rem" }}>
+    <div
+      style={{
+        backgroundColor: "#fff",
+        borderBottom: "1px solid #e2e8f0",
+        padding: "0 2rem",
+      }}
+    >
+      <TabList
+        underline
+        style={{
+          "--tab-color": "#64748b",
+          "--tab-active-color": "#7c3aed",
+        }}
+      >
+        <Tab route={ANALYTICS_OVERVIEW_ROUTE}>📈 Overview</Tab>
+        <Tab route={ANALYTICS_REPORTS_ROUTE}>📊 Reports</Tab>
+      </TabList>
+    </div>
+    <div style={{ padding: "0 2rem" }}>
       <Routes>
         <Route
           index
@@ -665,7 +675,7 @@ const MonitoringSection = () => (
       title="🖥️ System Monitoring"
       description="This section shows content directly at /dashboard/monitoring without needing an index route. You can view the main dashboard or access specific tools."
     />
-    <div style={{ padding: "2rem" }}>
+    <div style={{ padding: "0 2rem" }}>
       <Routes>
         <Route
           route={REPORTS_SECTION_ROUTE}
@@ -687,7 +697,6 @@ const MonitoringSection = () => (
 // Page Components
 const GeneralSettingsPage = () => (
   <div>
-    <h3 style={{ color: "#dc2626" }}>🔧 General Settings</h3>
     <SettingsForm />
     <TechnicalExplanation
       color="#dc2626"
@@ -716,14 +725,12 @@ const GeneralSettingsPage = () => (
 
 const SecuritySettingsPage = () => (
   <div>
-    <h3 style={{ color: "#dc2626" }}>🔒 Security Settings</h3>
     <p>Security configuration options would go here.</p>
   </div>
 );
 
 const AnalyticsOverviewPage = () => (
   <div>
-    <h3 style={{ color: "#7c3aed" }}>📊 Analytics Overview</h3>
     <AnalyticsMetrics />
     <TechnicalExplanation
       color="#7c3aed"
@@ -757,14 +764,12 @@ const AnalyticsOverviewPage = () => (
 
 const AnalyticsReportsPage = () => (
   <div>
-    <h3 style={{ color: "#7c3aed" }}>📊 Reports</h3>
     <p>Detailed analytics reports would be displayed here.</p>
   </div>
 );
 
 const MonitoringOverviewPage = () => (
   <div>
-    <h3 style={{ color: "#0891b2" }}>🖥️ System Monitoring Overview</h3>
     <TechnicalExplanation
       color="#0891b2"
       backgroundColor="#f0fdff"
@@ -818,7 +823,6 @@ const MonitoringOverviewPage = () => (
 
 const MonitoringAlertsPage = () => (
   <div>
-    <h3 style={{ color: "#0891b2" }}>🚨 System Alerts</h3>
     <p>
       Alert configuration and notification settings would be available here.
     </p>
@@ -839,7 +843,6 @@ const MonitoringAlertsPage = () => (
 
 const MonitoringLogsPage = () => (
   <div>
-    <h3 style={{ color: "#0891b2" }}>📋 System Logs</h3>
     <p>Application logs and system event history.</p>
     <TechnicalExplanation
       color="#0891b2"
@@ -874,30 +877,6 @@ const SectionHeader = ({
     <h2 style={{ margin: 0, color }}>{title}</h2>
     <p style={{ margin: "0.5rem 0 0 0", color }}>{description}</p>
   </header>
-);
-
-const TabNavigation = ({ tabs, activeColor }) => (
-  <div
-    style={{
-      backgroundColor: "#fff",
-      borderBottom: "1px solid #e2e8f0",
-      padding: "0 2rem",
-    }}
-  >
-    <TabList
-      underline
-      style={{
-        "--tab-color": "#64748b",
-        "--tab-active-color": activeColor,
-      }}
-    >
-      {tabs.map((tab) => (
-        <Tab key={tab.route} route={tab.route}>
-          {tab.label}
-        </Tab>
-      ))}
-    </TabList>
-  </div>
 );
 
 render(<App />, document.querySelector("#root"));
