@@ -12,6 +12,7 @@ import {
   windowIsLoadingSignal,
   workingWhile,
 } from "./document_loading_signal.js";
+import { documentUrlSignal } from "./document_url_signal.js";
 import { setupBrowserIntegrationViaHistory } from "./via_history.js";
 
 const applyActions = (params) => {
@@ -84,7 +85,14 @@ setOnRouteDefined(() => {
 setBrowserIntegration(browserIntegration);
 
 export const actionIntegratedVia = browserIntegration.integration;
-export const navTo = browserIntegration.navTo;
+export const navTo = (target, options) => {
+  const url = new URL(target, window.location.href).href;
+  const currentUrl = documentUrlSignal.peek();
+  if (url === currentUrl) {
+    return null;
+  }
+  return browserIntegration.navTo(url, options);
+};
 export const stopLoad = (reason = "stopLoad() called") => {
   const windowIsLoading = windowIsLoadingSignal.value;
   if (windowIsLoading) {

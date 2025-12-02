@@ -3,7 +3,7 @@ import { signal } from "@preact/signals";
 import { setActionDispatcher } from "../../action/actions.js";
 import { executeWithCleanup } from "../../utils/execute_with_cleanup.js";
 import { updateDocumentState } from "./document_state_signal.js";
-import { documentUrlSignal, updateDocumentUrl } from "./document_url_signal.js";
+import { updateDocumentUrl } from "./document_url_signal.js";
 import { getHrefTargetInfo } from "./href_target_info.js";
 
 export const setupBrowserIntegrationViaHistory = ({
@@ -170,12 +170,7 @@ export const setupBrowserIntegrationViaHistory = ({
     });
   });
 
-  const navTo = async (target, { state = null, replace } = {}) => {
-    const url = new URL(target, window.location.href).href;
-    const currentUrl = documentUrlSignal.peek();
-    if (url === currentUrl) {
-      return;
-    }
+  const navTo = async (url, { state = null, replace } = {}) => {
     if (replace) {
       window.history.replaceState(state, null, url);
     } else {
