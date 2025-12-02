@@ -71,11 +71,6 @@ export const Route = ({ element, route, index, fallback, meta, children }) => {
     return null;
   }
   const { ActiveElement } = activeInfo;
-  if (activeInfo.index && !activeInfo.route.active) {
-    const routeFromProps = activeInfo.route.routeFromProps;
-    const routeUrl = routeFromProps.buildUrl();
-    replaceUrl(routeUrl);
-  }
   return <ActiveElement />;
 };
 
@@ -227,6 +222,16 @@ const initRouteObserver = ({
       const Element = element;
       element = <Element />;
     }
+
+    if (
+      activeRouteInfo &&
+      activeRouteInfo.index &&
+      !activeRouteInfo.route.active
+    ) {
+      const routeUrl = activeRouteInfo.route.routeFromProps.buildUrl();
+      replaceUrl(routeUrl);
+    }
+
     return (
       <RouteInfoContext.Provider value={activeRouteInfo}>
         <SlotContext.Provider value={SlotActiveElement}>
