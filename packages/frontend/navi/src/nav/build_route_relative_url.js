@@ -6,6 +6,30 @@ export const rawUrlPart = (value) => {
   };
 };
 
+const removeOptionalParts = (url) => {
+  // Remove optional parts from right to left to handle nested optionals
+  let result = url;
+  let changed = true;
+
+  while (changed) {
+    changed = false;
+    const originalLength = result.length;
+
+    // Handle optional patterns ending with ?
+    // Remove: /*?, :param?, {param}?, {/time/*}?, etc.
+    result = result.replace(/(\/?\*|\/:[^/?]*|\{[^}]*\})\?$/g, "");
+
+    // Clean up trailing slashes that might be left over
+    result = result.replace(/\/+$/, "");
+
+    if (result.length !== originalLength) {
+      changed = true;
+    }
+  }
+
+  return result;
+};
+
 export const buildRouteRelativeUrl = (
   urlPatternInput,
   params = {},
@@ -33,43 +57,43 @@ export const buildRouteRelativeUrl = (
   const keys = Object.keys(params);
   const extraParamSet = new Set(keys);
 
-  // Replace named parameters (:param and {param})
+  // Replace named parameters (:param and {param}) and remove optional markers
   for (const key of keys) {
     const value = params[key];
     const encodedValue = encodeParamValue(value);
     const beforeReplace = relativeUrl;
+
+    // Replace parameter and remove optional marker if present
+    relativeUrl = relativeUrl.replace(`:${key}?`, encodedValue);
     relativeUrl = relativeUrl.replace(`:${key}`, encodedValue);
+    relativeUrl = relativeUrl.replace(`{${key}}?`, encodedValue);
     relativeUrl = relativeUrl.replace(`{${key}}`, encodedValue);
+
     // If the URL changed, no need to inject this param
     if (relativeUrl !== beforeReplace) {
       extraParamSet.delete(key);
     }
   }
 
-  // Handle wildcards: if the pattern ends with /*? (optional wildcard)
-  // always remove the wildcard part for URL building since it's optional
-  if (relativeUrl.endsWith("/*?")) {
-    // Always remove the optional wildcard part for URL building
-    relativeUrl = relativeUrl.slice(0, -"/*?".length);
-  } else if (relativeUrl.endsWith("{/}?*")) {
-    relativeUrl = relativeUrl.slice(0, -"{/}?*".length);
-  } else {
-    // For required wildcards (/*) or other patterns, replace normally
-    let wildcardIndex = 0;
-    relativeUrl = relativeUrl.replace(/\*/g, () => {
-      const paramKey = wildcardIndex.toString();
-      const paramValue = params[paramKey];
-      if (paramValue) {
-        extraParamSet.delete(paramKey);
-      }
-      const replacement = paramValue ? encodeParamValue(paramValue) : "*";
-      wildcardIndex++;
-      return replacement;
-    });
-    // we did not replace anything, or not enough to remove the last "*"
-    if (relativeUrl.endsWith("*")) {
-      relativeUrl = relativeUrl.slice(0, -1);
+  // Handle remaining wildcards
+  let wildcardIndex = 0;
+  relativeUrl = relativeUrl.replace(/\*/g, () => {
+    const paramKey = wildcardIndex.toString();
+    const paramValue = params[paramKey];
+    if (paramValue) {
+      extraParamSet.delete(paramKey);
     }
+    const replacement = paramValue ? encodeParamValue(paramValue) : "*";
+    wildcardIndex++;
+    return replacement;
+  });
+
+  // Handle optional parts after parameter replacement
+  // This includes patterns like /*?, {/time/*}?, :param?, etc.
+  relativeUrl = removeOptionalParts(relativeUrl);
+  // we did not replace anything, or not enough to remove the last "*"
+  if (relativeUrl.endsWith("*")) {
+    relativeUrl = relativeUrl.slice(0, -1);
   }
 
   // Add remaining parameters as search params
