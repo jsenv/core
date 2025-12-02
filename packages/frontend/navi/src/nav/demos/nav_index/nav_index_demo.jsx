@@ -80,7 +80,10 @@ const Map = () => {
                 <Tab route={MAP_TAB_B_WALK_ROUTE}>Walk</Tab>
                 <Tab route={MAP_TAB_B_TRANSIT_ROUTE}>Transit</Tab>
               </TabList>
-              <Route.Slot />
+              <Routes>
+                <Route index route={MAP_TAB_B_WALK_ROUTE} element="Walk" />
+                <Route route={MAP_TAB_B_TRANSIT_ROUTE} element="Transit" />
+              </Routes>
             </Box>
           }
         />
