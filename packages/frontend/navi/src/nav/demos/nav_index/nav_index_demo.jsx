@@ -49,6 +49,269 @@ const {
   MONITORING_ARCHIVE_ROUTE: "dashboard/monitoring/archive",
 });
 
+// User List Component - Shows actual user data first
+const UserListPage = () => (
+  <div>
+    <h3
+      style={{
+        color: "#059669",
+        display: "flex",
+        alignItems: "center",
+        gap: "0.5rem",
+      }}
+    >
+      ✓ User List
+    </h3>
+
+    {/* User List Content */}
+    <div
+      style={{
+        marginTop: "1rem",
+        display: "grid",
+        gap: "1rem",
+        gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+      }}
+    >
+      <UserCard name="John Doe" role="Admin" lastActive="2 hours ago" />
+      <UserCard name="Jane Smith" role="Editor" lastActive="1 day ago" />
+    </div>
+
+    <TechnicalExplanation
+      color="#059669"
+      backgroundColor="#ecfdf5"
+      borderColor="#a7f3d0"
+      title="How did we get here?"
+      explanation={
+        <div>
+          <p style={{ margin: "0 0 0.5rem 0" }}>
+            <strong>🎯 What happened:</strong> You navigated to /dashboard and
+            got redirected to /dashboard/users because this route has the index
+            prop.
+          </p>
+          <p style={{ margin: "0 0 0.5rem 0" }}>
+            <strong>🤔 Why:</strong> Index props redirect when no specific route
+            matches, ensuring /dashboard doesn&apos;t display content - only
+            /dashboard/users does.
+          </p>
+          <p style={{ margin: 0 }}>
+            <strong>🛠️ How:</strong> The index prop redirects /dashboard to
+            /dashboard/users so you always end up on the &quot;right URL&quot;
+            with actual content.
+          </p>
+        </div>
+      }
+    />
+  </div>
+);
+
+// User Activity Component
+const UserActivityPage = () => (
+  <div>
+    <h3 style={{ color: "#3b82f6" }}>User Activity Dashboard</h3>
+    <div
+      style={{
+        backgroundColor: "#eff6ff",
+        border: "1px solid #93c5fd",
+        borderRadius: "6px",
+        padding: "1rem",
+        marginTop: "1rem",
+      }}
+    >
+      <p>Activity charts and user engagement metrics would go here.</p>
+      <p>This route is accessed manually (not an index route).</p>
+    </div>
+  </div>
+);
+
+// User Card Component
+const UserCard = ({ name, role, lastActive }) => (
+  <div
+    style={{
+      border: "1px solid #e2e8f0",
+      borderRadius: "6px",
+      padding: "1rem",
+    }}
+  >
+    <h4>{name}</h4>
+    <p style={{ color: "#64748b", fontSize: "0.9rem" }}>
+      {role} • Last active {lastActive}
+    </p>
+  </div>
+);
+
+// Settings Form Component
+const SettingsForm = () => (
+  <div style={{ marginTop: "1rem" }}>
+    <div
+      style={{
+        backgroundColor: "#fff",
+        border: "1px solid #e2e8f0",
+        borderRadius: "8px",
+        padding: "1.5rem",
+      }}
+    >
+      <h4 style={{ margin: "0 0 1rem 0", color: "#dc2626" }}>
+        Application Settings
+      </h4>
+      <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+        <label style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+          <input type="checkbox" defaultChecked />
+          <span>Enable notifications</span>
+        </label>
+        <label style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+          <input type="checkbox" />
+          <span>Auto-save drafts</span>
+        </label>
+        <div>
+          <label style={{ display: "block", marginBottom: "0.5rem" }}>
+            Theme:
+          </label>
+          <select
+            style={{
+              padding: "0.5rem",
+              borderRadius: "4px",
+              border: "1px solid #e2e8f0",
+            }}
+          >
+            <option>Light</option>
+            <option>Dark</option>
+            <option>Auto</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
+// Analytics Metrics Component
+const AnalyticsMetrics = () => (
+  <div
+    style={{
+      marginTop: "1rem",
+      display: "grid",
+      gap: "1rem",
+      gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
+    }}
+  >
+    <MetricCard
+      icon="📈"
+      title="Page Views"
+      value="12,847"
+      change="+23% from last week"
+      color="#7c3aed"
+      backgroundColor="#faf5ff"
+      borderColor="#c4b5fd"
+    />
+    <MetricCard
+      icon="⏱️"
+      title="Avg. Session"
+      value="4m 32s"
+      change="+15s from last week"
+      color="#7c3aed"
+      backgroundColor="#faf5ff"
+      borderColor="#c4b5fd"
+    />
+  </div>
+);
+
+// Monitoring Metrics Component
+const MonitoringMetrics = () => (
+  <div
+    style={{
+      marginTop: "2rem",
+      display: "grid",
+      gap: "1rem",
+      gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
+    }}
+  >
+    <MetricCard
+      icon="📈"
+      title="Server Uptime"
+      value="99.9%"
+      change="+0.1% from last month"
+      color="#0891b2"
+      backgroundColor="#f0fdff"
+      borderColor="#a5f3fc"
+    />
+    <MetricCard
+      icon="⚡"
+      title="Response Time"
+      value="142ms"
+      change="-15ms from last week"
+      color="#0891b2"
+      backgroundColor="#f0fdff"
+      borderColor="#a5f3fc"
+    />
+  </div>
+);
+
+// Reusable Metric Card Component
+const MetricCard = ({
+  icon,
+  title,
+  value,
+  change,
+  color,
+  backgroundColor,
+  borderColor,
+}) => (
+  <div
+    style={{
+      border: `1px solid ${borderColor}`,
+      borderRadius: "8px",
+      padding: "1.5rem",
+      backgroundColor,
+    }}
+  >
+    <h4 style={{ margin: "0 0 0.5rem 0", color }}>
+      {icon} {title}
+    </h4>
+    <p
+      style={{
+        margin: "0 0 0.5rem 0",
+        fontSize: "2rem",
+        fontWeight: "bold",
+        color,
+      }}
+    >
+      {value}
+    </p>
+    <p style={{ margin: 0, color, fontSize: "0.9rem", opacity: 0.8 }}>
+      {change}
+    </p>
+  </div>
+);
+
+// Reusable Technical Explanation Component
+const TechnicalExplanation = ({
+  color,
+  backgroundColor,
+  borderColor,
+  title,
+  explanation,
+}) => (
+  <details
+    style={{
+      backgroundColor,
+      border: `1px solid ${borderColor}`,
+      borderRadius: "6px",
+      padding: "1rem",
+      marginTop: "2rem",
+    }}
+  >
+    <summary
+      style={{
+        cursor: "pointer",
+        fontWeight: "bold",
+        color,
+      }}
+    >
+      🔍 {title} (Click to expand)
+    </summary>
+    <div style={{ marginTop: "0.5rem" }}>{explanation}</div>
+  </details>
+);
+
 const App = () => {
   return (
     <div style={{ fontFamily: "system-ui, sans-serif" }}>
@@ -265,116 +528,10 @@ const Dashboard = () => {
               </div>
             }
           >
-            <Route
-              index
-              route={USERS_LIST_ROUTE}
-              element={
-                <div>
-                  <h3
-                    style={{
-                      color: "#059669",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "0.5rem",
-                    }}
-                  >
-                    ✓ User List (Also auto-loaded!)
-                  </h3>
-
-                  <details
-                    style={{
-                      backgroundColor: "#ecfdf5",
-                      border: "1px solid #a7f3d0",
-                      borderRadius: "6px",
-                      padding: "1rem",
-                      marginTop: "1rem",
-                    }}
-                  >
-                    <summary
-                      style={{
-                        cursor: "pointer",
-                        fontWeight: "bold",
-                        color: "#059669",
-                      }}
-                    >
-                      🔍 How did we get here? (Click to expand)
-                    </summary>
-                    <div style={{ marginTop: "0.5rem" }}>
-                      <p style={{ margin: "0 0 0.5rem 0" }}>
-                        <strong>🎯 What happened:</strong> You navigated to
-                        /dashboard and got redirected to /dashboard/users
-                        because this route has the index prop.
-                      </p>
-                      <p style={{ margin: "0 0 0.5rem 0" }}>
-                        <strong>🤔 Why:</strong> Index props redirect when no
-                        specific route matches, ensuring /dashboard doesn&apos;t
-                        display content - only /dashboard/users does.
-                      </p>
-                      <p style={{ margin: 0 }}>
-                        <strong>🛠️ How:</strong> The index prop redirects
-                        /dashboard to /dashboard/users so you always end up on
-                        the &quot;right URL&quot; with actual content.
-                      </p>
-                    </div>
-                  </details>
-                  <div
-                    style={{
-                      marginTop: "1rem",
-                      display: "grid",
-                      gap: "1rem",
-                      gridTemplateColumns:
-                        "repeat(auto-fit, minmax(200px, 1fr))",
-                    }}
-                  >
-                    <div
-                      style={{
-                        border: "1px solid #e2e8f0",
-                        borderRadius: "6px",
-                        padding: "1rem",
-                      }}
-                    >
-                      <h4>John Doe</h4>
-                      <p style={{ color: "#64748b", fontSize: "0.9rem" }}>
-                        Admin • Last active 2 hours ago
-                      </p>
-                    </div>
-                    <div
-                      style={{
-                        border: "1px solid #e2e8f0",
-                        borderRadius: "6px",
-                        padding: "1rem",
-                      }}
-                    >
-                      <h4>Jane Smith</h4>
-                      <p style={{ color: "#64748b", fontSize: "0.9rem" }}>
-                        Editor • Last active 1 day ago
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              }
-            />
+            <Route index route={USERS_LIST_ROUTE} element={<UserListPage />} />
             <Route
               route={USERS_ACTIVITY_ROUTE}
-              element={
-                <div>
-                  <h3 style={{ color: "#3b82f6" }}>User Activity Dashboard</h3>
-                  <div
-                    style={{
-                      backgroundColor: "#eff6ff",
-                      border: "1px solid #93c5fd",
-                      borderRadius: "6px",
-                      padding: "1rem",
-                      marginTop: "1rem",
-                    }}
-                  >
-                    <p>
-                      Activity charts and user engagement metrics would go here.
-                    </p>
-                    <p>This route is accessed manually (not an index route).</p>
-                  </div>
-                </div>
-              }
+              element={<UserActivityPage />}
             />
           </Route>
 
@@ -382,122 +539,7 @@ const Dashboard = () => {
               - SETTINGS_SECTION_ROUTE has no index prop, so requires explicit navigation
               - Has nested routes but uses <Routes> instead of <Route.Slot />
               - /dashboard/settings has actual content, no redirection happens */}
-          <Route
-            route={SETTINGS_SECTION_ROUTE}
-            element={
-              <div>
-                {/* Section Header */}
-                <header
-                  style={{
-                    backgroundColor: "#fef2f2",
-                    borderBottom: "1px solid #fecaca",
-                    padding: "1.5rem 2rem",
-                  }}
-                >
-                  <h2 style={{ margin: 0, color: "#dc2626" }}>
-                    👆 Settings (You clicked to get here!)
-                  </h2>
-                  <p style={{ margin: "0.5rem 0 0 0", color: "#dc2626" }}>
-                    Notice how this section didn&apos;t open automatically? You
-                    had to deliberately click &quot;Settings&quot;. This is
-                    perfect for configuration areas that users visit
-                    intentionally.
-                  </p>
-                </header>
-
-                {/* Sub-navigation */}
-                <div
-                  style={{
-                    backgroundColor: "#fff",
-                    borderBottom: "1px solid #e2e8f0",
-                    padding: "0 2rem",
-                  }}
-                >
-                  <TabList
-                    underline
-                    style={{
-                      "--tab-color": "#64748b",
-                      "--tab-active-color": "#dc2626",
-                    }}
-                  >
-                    <Tab route={SETTINGS_GENERAL_ROUTE}>🔧 General</Tab>
-                    <Tab route={SETTINGS_SECURITY_ROUTE}>🔒 Security</Tab>
-                  </TabList>
-                </div>
-
-                {/* Content Area using Routes */}
-                <div style={{ padding: "2rem" }}>
-                  <Routes>
-                    <Route
-                      index
-                      route={SETTINGS_GENERAL_ROUTE}
-                      element={
-                        <div>
-                          <h3
-                            style={{
-                              color: "#dc2626",
-                              display: "flex",
-                              alignItems: "center",
-                              gap: "0.5rem",
-                            }}
-                          >
-                            🔧 General Settings (Default here)
-                          </h3>
-
-                          <details
-                            style={{
-                              backgroundColor: "#fef2f2",
-                              border: "1px solid #fca5a5",
-                              borderRadius: "6px",
-                              padding: "1rem",
-                              marginTop: "1rem",
-                            }}
-                          >
-                            <summary
-                              style={{
-                                cursor: "pointer",
-                                fontWeight: "bold",
-                                color: "#dc2626",
-                              }}
-                            >
-                              🔍 How did we get here? (Click to expand)
-                            </summary>
-                            <div style={{ marginTop: "0.5rem" }}>
-                              <p style={{ margin: "0 0 0.5rem 0" }}>
-                                <strong>🎯 What happened:</strong> You clicked
-                                Settings, then landed on General (the default
-                                sub-section).
-                              </p>
-                              <p style={{ margin: "0 0 0.5rem 0" }}>
-                                <strong>🤔 Why:</strong> Settings requires
-                                intentional navigation since it&apos;s used less
-                                frequently than user management.
-                              </p>
-                              <p style={{ margin: 0 }}>
-                                <strong>🛠️ How:</strong> Uses manual navigation
-                                with standard routing (no slots needed).
-                              </p>
-                            </div>
-                          </details>
-                        </div>
-                      }
-                    />
-                    <Route
-                      route={SETTINGS_SECURITY_ROUTE}
-                      element={
-                        <div>
-                          <h3 style={{ color: "#dc2626" }}>
-                            Security Settings
-                          </h3>
-                          <p>Security configuration options would go here.</p>
-                        </div>
-                      }
-                    />
-                  </Routes>
-                </div>
-              </div>
-            }
-          />
+          <Route route={SETTINGS_SECTION_ROUTE} element={<SettingsSection />} />
 
           {/* Non-index route using <Routes> for nested navigation
               - ANALYTICS_SECTION_ROUTE uses <Routes> for nested routes, no index prop on parent
@@ -505,125 +547,7 @@ const Dashboard = () => {
               - /dashboard/analytics has content, nested routes redirect normally */}
           <Route
             route={ANALYTICS_SECTION_ROUTE}
-            element={
-              <div>
-                {/* Section Header */}
-                <header
-                  style={{
-                    backgroundColor: "#f3f4f6",
-                    borderBottom: "1px solid #d1d5db",
-                    padding: "1.5rem 2rem",
-                  }}
-                >
-                  <h2 style={{ margin: 0, color: "#7c3aed" }}>
-                    👆 Analytics (Also clicked to get here!)
-                  </h2>
-                  <p style={{ margin: "0.5rem 0 0 0", color: "#7c3aed" }}>
-                    Like Settings, you had to deliberately click
-                    &quot;Analytics&quot; to reach this section. This
-                    demonstrates another manual navigation pattern with
-                    different technical implementation.
-                  </p>
-                </header>
-
-                {/* Sub-navigation */}
-                <div
-                  style={{
-                    backgroundColor: "#fff",
-                    borderBottom: "1px solid #e2e8f0",
-                    padding: "0 2rem",
-                  }}
-                >
-                  <TabList
-                    underline
-                    style={{
-                      "--tab-color": "#64748b",
-                      "--tab-active-color": "#7c3aed",
-                    }}
-                  >
-                    <Tab route={ANALYTICS_OVERVIEW_ROUTE}>📈 Overview</Tab>
-                    <Tab route={ANALYTICS_REPORTS_ROUTE}>📊 Reports</Tab>
-                  </TabList>
-                </div>
-
-                {/* Content Area using Routes */}
-                <div style={{ padding: "2rem" }}>
-                  <Routes>
-                    <Route
-                      index
-                      route={ANALYTICS_OVERVIEW_ROUTE}
-                      element={
-                        <div>
-                          <h3 style={{ color: "#7c3aed" }}>
-                            Analytics Overview
-                          </h3>
-
-                          <details
-                            style={{
-                              backgroundColor: "#f5f3ff",
-                              border: "1px solid #c4b5fd",
-                              borderRadius: "6px",
-                              padding: "1rem",
-                              marginTop: "1rem",
-                            }}
-                          >
-                            <summary
-                              style={{
-                                cursor: "pointer",
-                                fontWeight: "bold",
-                                color: "#7c3aed",
-                              }}
-                            >
-                              🔍 How did we get here? (Click to expand)
-                            </summary>
-                            <div style={{ marginTop: "0.5rem" }}>
-                              <h4 style={{ color: "#7c3aed" }}>
-                                🔍 What happened?
-                              </h4>
-                              <p>
-                                You clicked &quot;Analytics&quot; which brought
-                                you here, similar to how Settings works.
-                              </p>
-
-                              <h4 style={{ color: "#7c3aed" }}>
-                                🤔 Why did this happen?
-                              </h4>
-                              <p>
-                                Analytics is configured with a{" "}
-                                <code>Routes</code> pattern that requires
-                                deliberate user interaction - it won&apos;t
-                                auto-open like Users.
-                              </p>
-
-                              <h4 style={{ color: "#7c3aed" }}>
-                                ⚙️ How does this work?
-                              </h4>
-                              <p>
-                                Analytics uses the same <code>Routes</code>{" "}
-                                component pattern as Settings, demonstrating
-                                consistent manual navigation behavior across
-                                different sections.
-                              </p>
-                            </div>
-                          </details>
-                        </div>
-                      }
-                    />
-                    <Route
-                      route={ANALYTICS_REPORTS_ROUTE}
-                      element={
-                        <div>
-                          <h3 style={{ color: "#7c3aed" }}>Reports</h3>
-                          <p>
-                            Detailed analytics reports would be displayed here.
-                          </p>
-                        </div>
-                      }
-                    />
-                  </Routes>
-                </div>
-              </div>
-            }
+            element={<AnalyticsSection />}
           />
 
           {/* Monitoring section with content at base URL - no index needed
@@ -632,290 +556,348 @@ const Dashboard = () => {
               - Demonstrates route with both base content and optional sub-navigation */}
           <Route
             route={REPORTS_SECTION_ROUTE}
-            element={
-              <div>
-                {/* Section Header */}
-                <header
-                  style={{
-                    backgroundColor: "#ecfeff",
-                    borderBottom: "1px solid #67e8f9",
-                    padding: "1.5rem 2rem",
-                  }}
-                >
-                  <h2 style={{ margin: 0, color: "#0891b2" }}>
-                    🖥️ System Monitoring
-                  </h2>
-                  <p style={{ margin: "0.5rem 0 0 0", color: "#0891b2" }}>
-                    This section shows content directly at /dashboard/monitoring
-                    without needing an index route. You can view the main
-                    dashboard or access specific tools.
-                  </p>
-                </header>
-
-                {/* Content Area using Routes */}
-                <div style={{ padding: "2rem" }}>
-                  <Routes>
-                    {/* Default content shown at /dashboard/reports */}
-                    <Route
-                      route={REPORTS_SECTION_ROUTE}
-                      element={
-                        <div>
-                          {/* Sample dashboard content */}
-                          <div
-                            style={{
-                              marginTop: "2rem",
-                              display: "grid",
-                              gap: "1rem",
-                              gridTemplateColumns:
-                                "repeat(auto-fit, minmax(250px, 1fr))",
-                            }}
-                          >
-                            <div
-                              style={{
-                                border: "1px solid #a5f3fc",
-                                borderRadius: "8px",
-                                padding: "1.5rem",
-                                backgroundColor: "#f0fdff",
-                              }}
-                            >
-                              <h4
-                                style={{
-                                  margin: "0 0 0.5rem 0",
-                                  color: "#0891b2",
-                                }}
-                              >
-                                📈 Server Uptime
-                              </h4>
-                              <p
-                                style={{
-                                  margin: "0 0 0.5rem 0",
-                                  fontSize: "2rem",
-                                  fontWeight: "bold",
-                                  color: "#0891b2",
-                                }}
-                              >
-                                99.9%
-                              </p>
-                              <p
-                                style={{
-                                  margin: 0,
-                                  color: "#0e7490",
-                                  fontSize: "0.9rem",
-                                }}
-                              >
-                                +0.1% from last month
-                              </p>
-                            </div>
-                            <div
-                              style={{
-                                border: "1px solid #a5f3fc",
-                                borderRadius: "8px",
-                                padding: "1.5rem",
-                                backgroundColor: "#f0fdff",
-                              }}
-                            >
-                              <h4
-                                style={{
-                                  margin: "0 0 0.5rem 0",
-                                  color: "#0891b2",
-                                }}
-                              >
-                                ⚡ Response Time
-                              </h4>
-                              <p
-                                style={{
-                                  margin: "0 0 0.5rem 0",
-                                  fontSize: "2rem",
-                                  fontWeight: "bold",
-                                  color: "#0891b2",
-                                }}
-                              >
-                                142ms
-                              </p>
-                              <p
-                                style={{
-                                  margin: 0,
-                                  color: "#0e7490",
-                                  fontSize: "0.9rem",
-                                }}
-                              >
-                                -15ms from last week
-                              </p>
-                            </div>
-                          </div>
-
-                          <details
-                            style={{
-                              backgroundColor: "#f0fdff",
-                              border: "1px solid #a5f3fc",
-                              borderRadius: "6px",
-                              padding: "1rem",
-                              marginTop: "1rem",
-                            }}
-                          >
-                            <summary
-                              style={{
-                                cursor: "pointer",
-                                fontWeight: "bold",
-                                color: "#0891b2",
-                              }}
-                            >
-                              🔍 How is this different? (Click to expand)
-                            </summary>
-                            <div style={{ marginTop: "0.5rem" }}>
-                              <h4 style={{ color: "#0891b2" }}>
-                                🎯 What&apos;s different here?
-                              </h4>
-                              <p>
-                                This section shows content directly at
-                                /dashboard/monitoring - no redirect needed
-                                because there&apos;s actual content to display.
-                              </p>
-
-                              <h4 style={{ color: "#0891b2" }}>
-                                🤔 Why no index route?
-                              </h4>
-                              <p>
-                                Index routes are only needed when the base URL
-                                has no content. Here, /dashboard/monitoring
-                                shows this dashboard directly.
-                              </p>
-
-                              <h4 style={{ color: "#0891b2" }}>
-                                ⚙️ How does this work?
-                              </h4>
-                              <p>
-                                The route matches /dashboard/monitoring exactly
-                                and displays content. Sub-pages are available
-                                but optional - users can stay on the main
-                                dashboard or navigate to specific tools.
-                              </p>
-                            </div>
-                          </details>
-
-                          {/* Optional Sub-navigation - less prominent */}
-                          <div
-                            style={{
-                              marginTop: "3rem",
-                              paddingTop: "2rem",
-                              borderTop: "1px solid #e2e8f0",
-                            }}
-                          >
-                            <h4
-                              style={{ color: "#0891b2", marginBottom: "1rem" }}
-                            >
-                              Additional Tools
-                            </h4>
-                            <TabList
-                              style={{
-                                "--tab-color": "#64748b",
-                                "--tab-active-color": "#0891b2",
-                                "fontSize": "0.9rem",
-                              }}
-                            >
-                              <Tab route={MONITORING_EXPORT_ROUTE}>
-                                🚨 Alerts
-                              </Tab>
-                              <Tab route={MONITORING_ARCHIVE_ROUTE}>
-                                📋 Logs
-                              </Tab>
-                            </TabList>
-
-                            <Routes>
-                              <Route
-                                route={MONITORING_EXPORT_ROUTE}
-                                element={
-                                  <div>
-                                    <h3 style={{ color: "#0891b2" }}>
-                                      🚨 System Alerts
-                                    </h3>
-                                    <p>
-                                      Alert configuration and notification
-                                      settings would be available here.
-                                    </p>
-                                    <details
-                                      style={{
-                                        backgroundColor: "#f0fdff",
-                                        border: "1px solid #a5f3fc",
-                                        borderRadius: "6px",
-                                        padding: "1rem",
-                                        marginTop: "1rem",
-                                      }}
-                                    >
-                                      <summary
-                                        style={{
-                                          cursor: "pointer",
-                                          fontWeight: "bold",
-                                          color: "#0891b2",
-                                        }}
-                                      >
-                                        🔍 Technical details (Click to expand)
-                                      </summary>
-                                      <div style={{ marginTop: "0.5rem" }}>
-                                        <p>
-                                          This is a sub-page of Monitoring that
-                                          provides specific functionality while
-                                          the main Monitoring page shows the
-                                          dashboard overview.
-                                        </p>
-                                      </div>
-                                    </details>
-                                  </div>
-                                }
-                              />
-                              <Route
-                                route={MONITORING_ARCHIVE_ROUTE}
-                                element={
-                                  <div>
-                                    <h3 style={{ color: "#0891b2" }}>
-                                      📋 System Logs
-                                    </h3>
-                                    <p>
-                                      Application logs and system event history.
-                                    </p>
-                                    <details
-                                      style={{
-                                        backgroundColor: "#f0fdff",
-                                        border: "1px solid #a5f3fc",
-                                        borderRadius: "6px",
-                                        padding: "1rem",
-                                        marginTop: "1rem",
-                                      }}
-                                    >
-                                      <summary
-                                        style={{
-                                          cursor: "pointer",
-                                          fontWeight: "bold",
-                                          color: "#0891b2",
-                                        }}
-                                      >
-                                        🔍 Technical details (Click to expand)
-                                      </summary>
-                                      <div style={{ marginTop: "0.5rem" }}>
-                                        <p>
-                                          Another optional sub-page that
-                                          enhances the main Monitoring dashboard
-                                          without requiring it.
-                                        </p>
-                                      </div>
-                                    </details>
-                                  </div>
-                                }
-                              />
-                            </Routes>
-                          </div>
-                        </div>
-                      }
-                    />
-                  </Routes>
-                </div>
-              </div>
-            }
+            element={<MonitoringSection />}
           />
         </Routes>
       </main>
     </div>
   );
 };
+
+// Section Components that preserve Routes vs Route.Slot patterns
+
+// Users Section - Uses Route.Slot pattern (index route behavior)
+const UsersSection = () => (
+  <div>
+    <SectionHeader
+      backgroundColor="#f0fdf4"
+      borderColor="#bbf7d0"
+      color="#15803d"
+      title="✨ Users Management (Index route - this is what you end up seeing)"
+      description="You landed here automatically! When you clicked Dashboard, the URL redirected to /dashboard/users because this route has the index prop."
+    />
+    <TabNavigation
+      tabs={[
+        { route: USERS_LIST_ROUTE, label: "📋 User List" },
+        { route: USERS_ACTIVITY_ROUTE, label: "📊 Activity" },
+      ]}
+      activeColor="#3b82f6"
+    />
+    <div style={{ padding: "2rem" }}>
+      <Route.Slot />
+    </div>
+  </div>
+);
+
+// Settings Section - Uses Routes pattern (manual navigation)
+const SettingsSection = () => (
+  <div>
+    <SectionHeader
+      backgroundColor="#fef2f2"
+      borderColor="#fecaca"
+      color="#dc2626"
+      title="👆 Settings (You clicked to get here!)"
+      description='Notice how this section didn&apos;t open automatically? You had to deliberately click "Settings". This is perfect for configuration areas that users visit intentionally.'
+    />
+    <TabNavigation
+      tabs={[
+        { route: SETTINGS_GENERAL_ROUTE, label: "🔧 General" },
+        { route: SETTINGS_SECURITY_ROUTE, label: "🔒 Security" },
+      ]}
+      activeColor="#dc2626"
+    />
+    <div style={{ padding: "2rem" }}>
+      <Routes>
+        <Route
+          index
+          route={SETTINGS_GENERAL_ROUTE}
+          element={<GeneralSettingsPage />}
+        />
+        <Route
+          route={SETTINGS_SECURITY_ROUTE}
+          element={<SecuritySettingsPage />}
+        />
+      </Routes>
+    </div>
+  </div>
+);
+
+// Analytics Section - Uses Routes pattern (manual navigation, different impl)
+const AnalyticsSection = () => (
+  <div>
+    <SectionHeader
+      backgroundColor="#f3f4f6"
+      borderColor="#d1d5db"
+      color="#7c3aed"
+      title="👆 Analytics (Also clicked to get here!)"
+      description='Like Settings, you had to deliberately click "Analytics" to reach this section. This demonstrates another manual navigation pattern with different technical implementation.'
+    />
+    <TabNavigation
+      tabs={[
+        { route: ANALYTICS_OVERVIEW_ROUTE, label: "📈 Overview" },
+        { route: ANALYTICS_REPORTS_ROUTE, label: "📊 Reports" },
+      ]}
+      activeColor="#7c3aed"
+    />
+    <div style={{ padding: "2rem" }}>
+      <Routes>
+        <Route
+          index
+          route={ANALYTICS_OVERVIEW_ROUTE}
+          element={<AnalyticsOverviewPage />}
+        />
+        <Route
+          route={ANALYTICS_REPORTS_ROUTE}
+          element={<AnalyticsReportsPage />}
+        />
+      </Routes>
+    </div>
+  </div>
+);
+
+// Monitoring Section - Content-first with optional sub-navigation
+const MonitoringSection = () => (
+  <div>
+    <SectionHeader
+      backgroundColor="#ecfeff"
+      borderColor="#67e8f9"
+      color="#0891b2"
+      title="🖥️ System Monitoring"
+      description="This section shows content directly at /dashboard/monitoring without needing an index route. You can view the main dashboard or access specific tools."
+    />
+    <div style={{ padding: "2rem" }}>
+      <Routes>
+        <Route
+          route={REPORTS_SECTION_ROUTE}
+          element={<MonitoringOverviewPage />}
+        />
+        <Route
+          route={MONITORING_EXPORT_ROUTE}
+          element={<MonitoringAlertsPage />}
+        />
+        <Route
+          route={MONITORING_ARCHIVE_ROUTE}
+          element={<MonitoringLogsPage />}
+        />
+      </Routes>
+    </div>
+  </div>
+);
+
+// Page Components
+const GeneralSettingsPage = () => (
+  <div>
+    <h3 style={{ color: "#dc2626" }}>🔧 General Settings</h3>
+    <SettingsForm />
+    <TechnicalExplanation
+      color="#dc2626"
+      backgroundColor="#fef2f2"
+      borderColor="#fca5a5"
+      title="How did we get here?"
+      explanation={
+        <div>
+          <p style={{ margin: "0 0 0.5rem 0" }}>
+            <strong>🎯 What happened:</strong> You clicked Settings, then landed
+            on General (the default sub-section).
+          </p>
+          <p style={{ margin: "0 0 0.5rem 0" }}>
+            <strong>🤔 Why:</strong> Settings requires intentional navigation
+            since it&apos;s used less frequently than user management.
+          </p>
+          <p style={{ margin: 0 }}>
+            <strong>🛠️ How:</strong> Uses manual navigation with standard
+            routing (no slots needed).
+          </p>
+        </div>
+      }
+    />
+  </div>
+);
+
+const SecuritySettingsPage = () => (
+  <div>
+    <h3 style={{ color: "#dc2626" }}>🔒 Security Settings</h3>
+    <p>Security configuration options would go here.</p>
+  </div>
+);
+
+const AnalyticsOverviewPage = () => (
+  <div>
+    <h3 style={{ color: "#7c3aed" }}>📊 Analytics Overview</h3>
+    <AnalyticsMetrics />
+    <TechnicalExplanation
+      color="#7c3aed"
+      backgroundColor="#f5f3ff"
+      borderColor="#c4b5fd"
+      title="How did we get here?"
+      explanation={
+        <div>
+          <h4 style={{ color: "#7c3aed" }}>🔍 What happened?</h4>
+          <p>
+            You clicked &quot;Analytics&quot; which brought you here, similar to
+            how Settings works.
+          </p>
+          <h4 style={{ color: "#7c3aed" }}>🤔 Why did this happen?</h4>
+          <p>
+            Analytics is configured with a <code>Routes</code> pattern that
+            requires deliberate user interaction - it won&apos;t auto-open like
+            Users.
+          </p>
+          <h4 style={{ color: "#7c3aed" }}>⚙️ How does this work?</h4>
+          <p>
+            Analytics uses the same <code>Routes</code> component pattern as
+            Settings, demonstrating consistent manual navigation behavior across
+            different sections.
+          </p>
+        </div>
+      }
+    />
+  </div>
+);
+
+const AnalyticsReportsPage = () => (
+  <div>
+    <h3 style={{ color: "#7c3aed" }}>📊 Reports</h3>
+    <p>Detailed analytics reports would be displayed here.</p>
+  </div>
+);
+
+const MonitoringOverviewPage = () => (
+  <div>
+    <h3 style={{ color: "#0891b2" }}>🖥️ System Monitoring Overview</h3>
+    <TechnicalExplanation
+      color="#0891b2"
+      backgroundColor="#f0fdff"
+      borderColor="#a5f3fc"
+      title="How is this different?"
+      explanation={
+        <div>
+          <h4 style={{ color: "#0891b2" }}>🎯 What&apos;s different here?</h4>
+          <p>
+            This section shows content directly at /dashboard/monitoring - no
+            redirect needed because there&apos;s actual content to display.
+          </p>
+          <h4 style={{ color: "#0891b2" }}>🤔 Why no index route?</h4>
+          <p>
+            Index routes are only needed when the base URL has no content. Here,
+            /dashboard/monitoring shows this dashboard directly.
+          </p>
+          <h4 style={{ color: "#0891b2" }}>⚙️ How does this work?</h4>
+          <p>
+            The route matches /dashboard/monitoring exactly and displays
+            content. Sub-pages are available but optional - users can stay on
+            the main dashboard or navigate to specific tools.
+          </p>
+        </div>
+      }
+    />
+    <MonitoringMetrics />
+    <div
+      style={{
+        marginTop: "3rem",
+        paddingTop: "2rem",
+        borderTop: "1px solid #e2e8f0",
+      }}
+    >
+      <h4 style={{ color: "#0891b2", marginBottom: "1rem" }}>
+        Additional Tools
+      </h4>
+      <TabList
+        style={{
+          "--tab-color": "#64748b",
+          "--tab-active-color": "#0891b2",
+          "fontSize": "0.9rem",
+        }}
+      >
+        <Tab route={MONITORING_EXPORT_ROUTE}>🚨 Alerts</Tab>
+        <Tab route={MONITORING_ARCHIVE_ROUTE}>📋 Logs</Tab>
+      </TabList>
+    </div>
+  </div>
+);
+
+const MonitoringAlertsPage = () => (
+  <div>
+    <h3 style={{ color: "#0891b2" }}>🚨 System Alerts</h3>
+    <p>
+      Alert configuration and notification settings would be available here.
+    </p>
+    <TechnicalExplanation
+      color="#0891b2"
+      backgroundColor="#f0fdff"
+      borderColor="#a5f3fc"
+      title="Technical details"
+      explanation={
+        <p>
+          This is a sub-page of Monitoring that provides specific functionality
+          while the main Monitoring page shows the dashboard overview.
+        </p>
+      }
+    />
+  </div>
+);
+
+const MonitoringLogsPage = () => (
+  <div>
+    <h3 style={{ color: "#0891b2" }}>📋 System Logs</h3>
+    <p>Application logs and system event history.</p>
+    <TechnicalExplanation
+      color="#0891b2"
+      backgroundColor="#f0fdff"
+      borderColor="#a5f3fc"
+      title="Technical details"
+      explanation={
+        <p>
+          Another optional sub-page that enhances the main Monitoring dashboard
+          without requiring it.
+        </p>
+      }
+    />
+  </div>
+);
+
+// Reusable Layout Components
+const SectionHeader = ({
+  backgroundColor,
+  borderColor,
+  color,
+  title,
+  description,
+}) => (
+  <header
+    style={{
+      backgroundColor,
+      borderBottom: `1px solid ${borderColor}`,
+      padding: "1.5rem 2rem",
+    }}
+  >
+    <h2 style={{ margin: 0, color }}>{title}</h2>
+    <p style={{ margin: "0.5rem 0 0 0", color }}>{description}</p>
+  </header>
+);
+
+const TabNavigation = ({ tabs, activeColor }) => (
+  <div
+    style={{
+      backgroundColor: "#fff",
+      borderBottom: "1px solid #e2e8f0",
+      padding: "0 2rem",
+    }}
+  >
+    <TabList
+      underline
+      style={{
+        "--tab-color": "#64748b",
+        "--tab-active-color": activeColor,
+      }}
+    >
+      {tabs.map((tab) => (
+        <Tab key={tab.route} route={tab.route}>
+          {tab.label}
+        </Tab>
+      ))}
+    </TabList>
+  </div>
+);
 
 render(<App />, document.querySelector("#root"));
