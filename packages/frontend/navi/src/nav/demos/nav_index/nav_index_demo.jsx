@@ -9,6 +9,7 @@
  * - Users Management: This is the index route ✨ (uses index prop for auto-navigation)
  * - Settings: You must click to open 👆 (uses manual navigation)
  * - Analytics: You must click to open 👆 (uses manual navigation but different pattern)
+ * - Reports: Has content at base URL 📋 (no index needed, displays content directly)
  *
  * Each section demonstrates different technical patterns under the hood.
  */
@@ -22,24 +23,30 @@ const {
   USERS_SECTION_ROUTE,
   SETTINGS_SECTION_ROUTE,
   ANALYTICS_SECTION_ROUTE,
+  REPORTS_SECTION_ROUTE,
   USERS_LIST_ROUTE,
   USERS_ACTIVITY_ROUTE,
   SETTINGS_GENERAL_ROUTE,
   SETTINGS_SECURITY_ROUTE,
   ANALYTICS_OVERVIEW_ROUTE,
   ANALYTICS_REPORTS_ROUTE,
+  REPORTS_EXPORT_ROUTE,
+  REPORTS_ARCHIVE_ROUTE,
 } = setupRoutes({
   HOME_ROUTE: "home",
   DASHBOARD_ROUTE: "dashboard{/}?*",
   USERS_SECTION_ROUTE: "dashboard/users{/}?*",
   SETTINGS_SECTION_ROUTE: "dashboard/settings{/}?*",
   ANALYTICS_SECTION_ROUTE: "dashboard/analytics{/}?*",
+  REPORTS_SECTION_ROUTE: "dashboard/reports{/}?*",
   USERS_LIST_ROUTE: "dashboard/users/list",
   USERS_ACTIVITY_ROUTE: "dashboard/users/activity",
   SETTINGS_GENERAL_ROUTE: "dashboard/settings/general",
   SETTINGS_SECURITY_ROUTE: "dashboard/settings/security",
   ANALYTICS_OVERVIEW_ROUTE: "dashboard/analytics/overview",
   ANALYTICS_REPORTS_ROUTE: "dashboard/analytics/reports",
+  REPORTS_EXPORT_ROUTE: "dashboard/reports/export",
+  REPORTS_ARCHIVE_ROUTE: "dashboard/reports/archive",
 });
 
 const App = () => {
@@ -92,8 +99,8 @@ const Home = () => {
           margin: "0 auto",
         }}
       >
-        This demo shows how navigation works in a modern web application. Click
-        "Dashboard" above to see automatic navigation in action!
+        This demo shows how navigation works in a modern web application. Click{" "}
+        &quot;Dashboard&quot; above to see automatic navigation in action!
       </p>
       <div
         style={{
@@ -145,6 +152,7 @@ const Dashboard = () => {
             <Tab route={USERS_SECTION_ROUTE}>👥 Users Management</Tab>
             <Tab route={SETTINGS_SECTION_ROUTE}>⚙️ Settings</Tab>
             <Tab route={ANALYTICS_SECTION_ROUTE}>📈 Analytics</Tab>
+            <Tab route={REPORTS_SECTION_ROUTE}>📊 Reports</Tab>
           </TabList>
         </nav>
 
@@ -184,6 +192,17 @@ const Dashboard = () => {
             }}
           >
             👆 <strong>Analytics:</strong> Click to open
+          </div>
+          <div
+            style={{
+              fontSize: "0.8rem",
+              color: "#06b6d4",
+              backgroundColor: "#164e63",
+              padding: "0.5rem",
+              borderRadius: "4px",
+            }}
+          >
+            📊 <strong>Reports:</strong> Has content at base URL
           </div>
         </div>
       </aside>
@@ -277,13 +296,13 @@ const Dashboard = () => {
                     </p>
                     <p style={{ margin: "0 0 0.5rem 0" }}>
                       <strong>🤔 Why:</strong> Index props redirect when no
-                      specific route matches, ensuring /dashboard doesn't
+                      specific route matches, ensuring /dashboard doesn&apos;t
                       display content - only /dashboard/users does.
                     </p>
                     <p style={{ margin: 0 }}>
                       <strong>🛠️ How:</strong> The index prop redirects
                       /dashboard to /dashboard/users so you always end up on the
-                      "right URL" with actual content.
+                      &quot;right URL&quot; with actual content.
                     </p>
                   </div>
                   <div
@@ -367,9 +386,10 @@ const Dashboard = () => {
                     👆 Settings (You clicked to get here!)
                   </h2>
                   <p style={{ margin: "0.5rem 0 0 0", color: "#dc2626" }}>
-                    Notice how this section didn't open automatically? You had
-                    to deliberately click \"Settings\". This is perfect for
-                    configuration areas that users visit intentionally.
+                    Notice how this section didn&apos;t open automatically? You
+                    had to deliberately click &quot;Settings&quot;. This is
+                    perfect for configuration areas that users visit
+                    intentionally.
                   </p>
                 </header>
 
@@ -427,7 +447,7 @@ const Dashboard = () => {
                             </p>
                             <p style={{ margin: "0 0 0.5rem 0" }}>
                               <strong>🤔 Why:</strong> Settings requires
-                              intentional navigation since it's used less
+                              intentional navigation since it&apos;s used less
                               frequently than user management.
                             </p>
                             <p style={{ margin: 0 }}>
@@ -475,9 +495,10 @@ const Dashboard = () => {
                     👆 Analytics (Also clicked to get here!)
                   </h2>
                   <p style={{ margin: "0.5rem 0 0 0", color: "#7c3aed" }}>
-                    Like Settings, you had to deliberately click \"Analytics\"
-                    to reach this section. This demonstrates another manual
-                    navigation pattern with different technical implementation.
+                    Like Settings, you had to deliberately click
+                    &quot;Analytics&quot; to reach this section. This
+                    demonstrates another manual navigation pattern with
+                    different technical implementation.
                   </p>
                 </header>
 
@@ -525,8 +546,8 @@ const Dashboard = () => {
                               🔍 What happened?
                             </h4>
                             <p>
-                              You clicked "Analytics" which brought you here,
-                              similar to how Settings works.
+                              You clicked &quot;Analytics&quot; which brought
+                              you here, similar to how Settings works.
                             </p>
 
                             <h4 style={{ color: "#7c3aed" }}>
@@ -535,7 +556,7 @@ const Dashboard = () => {
                             <p>
                               Analytics is configured with a <code>Routes</code>{" "}
                               pattern that requires deliberate user interaction
-                              - it won't auto-open like Users.
+                              - it won&apos;t auto-open like Users.
                             </p>
 
                             <h4 style={{ color: "#7c3aed" }}>
@@ -559,6 +580,244 @@ const Dashboard = () => {
                           <p>
                             Detailed analytics reports would be displayed here.
                           </p>
+                        </div>
+                      }
+                    />
+                  </Routes>
+                </div>
+              </div>
+            }
+          />
+
+          {/* Reports section with content at base URL - no index needed
+              - REPORTS_SECTION_ROUTE has content at /dashboard/reports directly
+              - Also has nested sub-pages for specific actions
+              - Demonstrates route with both base content and optional sub-navigation */}
+          <Route
+            route={REPORTS_SECTION_ROUTE}
+            element={
+              <div>
+                {/* Section Header */}
+                <header
+                  style={{
+                    backgroundColor: "#ecfeff",
+                    borderBottom: "1px solid #67e8f9",
+                    padding: "1.5rem 2rem",
+                  }}
+                >
+                  <h2 style={{ margin: 0, color: "#0891b2" }}>
+                    📊 Reports Dashboard
+                  </h2>
+                  <p style={{ margin: "0.5rem 0 0 0", color: "#0891b2" }}>
+                    This section shows content directly at /dashboard/reports
+                    without needing an index route. You can view the main
+                    dashboard or access specific tools.
+                  </p>
+                </header>
+
+                {/* Sub-navigation */}
+                <div
+                  style={{
+                    backgroundColor: "#fff",
+                    borderBottom: "1px solid #e2e8f0",
+                    padding: "0 2rem",
+                  }}
+                >
+                  <TabList
+                    underline
+                    style={{
+                      "--tab-color": "#64748b",
+                      "--tab-active-color": "#0891b2",
+                    }}
+                  >
+                    <Tab route={REPORTS_SECTION_ROUTE}>📊 Dashboard</Tab>
+                    <Tab route={REPORTS_EXPORT_ROUTE}>📤 Export Data</Tab>
+                    <Tab route={REPORTS_ARCHIVE_ROUTE}>📁 Archive</Tab>
+                  </TabList>
+                </div>
+
+                {/* Content Area using Routes */}
+                <div style={{ padding: "2rem" }}>
+                  <Routes>
+                    {/* Default content shown at /dashboard/reports */}
+                    <Route
+                      route={REPORTS_SECTION_ROUTE}
+                      element={
+                        <div>
+                          <h3 style={{ color: "#0891b2" }}>
+                            📊 Reports Dashboard
+                          </h3>
+                          <div
+                            style={{
+                              backgroundColor: "#f0fdff",
+                              border: "1px solid #a5f3fc",
+                              borderRadius: "6px",
+                              padding: "1rem",
+                              marginTop: "1rem",
+                            }}
+                          >
+                            <h4 style={{ color: "#0891b2" }}>
+                              🎯 What&apos;s different here?
+                            </h4>
+                            <p>
+                              This section shows content directly at
+                              /dashboard/reports - no redirect needed because
+                              there&apos;s actual content to display.
+                            </p>
+
+                            <h4 style={{ color: "#0891b2" }}>
+                              🤔 Why no index route?
+                            </h4>
+                            <p>
+                              Index routes are only needed when the base URL has
+                              no content. Here, /dashboard/reports shows this
+                              dashboard directly.
+                            </p>
+
+                            <h4 style={{ color: "#0891b2" }}>
+                              ⚙️ How does this work?
+                            </h4>
+                            <p>
+                              The route matches /dashboard/reports exactly and
+                              displays content. Sub-pages are available but
+                              optional - users can stay on the main dashboard or
+                              navigate to specific tools.
+                            </p>
+                          </div>
+
+                          {/* Sample dashboard content */}
+                          <div
+                            style={{
+                              marginTop: "2rem",
+                              display: "grid",
+                              gap: "1rem",
+                              gridTemplateColumns:
+                                "repeat(auto-fit, minmax(250px, 1fr))",
+                            }}
+                          >
+                            <div
+                              style={{
+                                border: "1px solid #a5f3fc",
+                                borderRadius: "8px",
+                                padding: "1.5rem",
+                                backgroundColor: "#f0fdff",
+                              }}
+                            >
+                              <h4
+                                style={{
+                                  margin: "0 0 0.5rem 0",
+                                  color: "#0891b2",
+                                }}
+                              >
+                                📈 Sales Report
+                              </h4>
+                              <p
+                                style={{
+                                  margin: "0 0 0.5rem 0",
+                                  fontSize: "2rem",
+                                  fontWeight: "bold",
+                                  color: "#0891b2",
+                                }}
+                              >
+                                $45,231
+                              </p>
+                              <p
+                                style={{
+                                  margin: 0,
+                                  color: "#0e7490",
+                                  fontSize: "0.9rem",
+                                }}
+                              >
+                                +12% from last month
+                              </p>
+                            </div>
+                            <div
+                              style={{
+                                border: "1px solid #a5f3fc",
+                                borderRadius: "8px",
+                                padding: "1.5rem",
+                                backgroundColor: "#f0fdff",
+                              }}
+                            >
+                              <h4
+                                style={{
+                                  margin: "0 0 0.5rem 0",
+                                  color: "#0891b2",
+                                }}
+                              >
+                                👥 User Growth
+                              </h4>
+                              <p
+                                style={{
+                                  margin: "0 0 0.5rem 0",
+                                  fontSize: "2rem",
+                                  fontWeight: "bold",
+                                  color: "#0891b2",
+                                }}
+                              >
+                                1,247
+                              </p>
+                              <p
+                                style={{
+                                  margin: 0,
+                                  color: "#0e7490",
+                                  fontSize: "0.9rem",
+                                }}
+                              >
+                                +8% from last month
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      }
+                    />
+                    <Route
+                      route={REPORTS_EXPORT_ROUTE}
+                      element={
+                        <div>
+                          <h3 style={{ color: "#0891b2" }}>📤 Export Data</h3>
+                          <p>
+                            Export tools and data download options would be
+                            available here.
+                          </p>
+                          <div
+                            style={{
+                              backgroundColor: "#f0fdff",
+                              border: "1px solid #a5f3fc",
+                              borderRadius: "6px",
+                              padding: "1rem",
+                              marginTop: "1rem",
+                            }}
+                          >
+                            <p>
+                              This is a sub-page of Reports that provides
+                              specific functionality while the main Reports page
+                              shows the dashboard overview.
+                            </p>
+                          </div>
+                        </div>
+                      }
+                    />
+                    <Route
+                      route={REPORTS_ARCHIVE_ROUTE}
+                      element={
+                        <div>
+                          <h3 style={{ color: "#0891b2" }}>📁 Archive</h3>
+                          <p>Historical reports and archived data.</p>
+                          <div
+                            style={{
+                              backgroundColor: "#f0fdff",
+                              border: "1px solid #a5f3fc",
+                              borderRadius: "6px",
+                              padding: "1rem",
+                              marginTop: "1rem",
+                            }}
+                          >
+                            <p>
+                              Another optional sub-page that enhances the main
+                              Reports dashboard without requiring it.
+                            </p>
+                          </div>
                         </div>
                       }
                     />
