@@ -1,22 +1,16 @@
 /**
  * Navigation Index Demo
  *
- * This demo tests different scenarios with index routes and nested navigation:
+ * This demo shows how different navigation patterns work in a realistic admin interface:
  *
- * Test Case 1: Simple top-level navigation between Home and Map
+ * 🏠 Home vs 📊 Dashboard: Basic page switching
  *
- * Test Case 2: Multi-level nested index routes with <Route.Slot />
- *   - /dashboard auto-redirects to Users tab (index route)
- *   - /dashboard/users auto-redirects to List sub-tab (nested index route)
- *   - Uses <Route.Slot /> pattern for nested route rendering
+ * When you click Dashboard, you automatically land on Users (the default section)
+ * - Users Management: Opens automatically ✨ (uses smart navigation with slots)
+ * - Settings: You must click to open 👆 (uses manual navigation)
+ * - Analytics: You must click to open 👆 (uses manual navigation but different pattern)
  *
- * Test Case 3: Non-index route with nested routes using <Routes>
- *   - Settings tab is NOT index, requires manual navigation
- *   - Uses <Routes> instead of <Route.Slot /> for nested structure
- *
- * Test Case 4: Non-index route without <Route.Slot />
- *   - Analytics tab uses <Routes> for nested routes instead of <Route.Slot />
- *   - Tests route behavior when not using slot pattern and not being an index
+ * Each section demonstrates different technical patterns under the hood.
  */
 
 import { Route, Routes, setupRoutes, Tab, TabList } from "@jsenv/navi";
@@ -88,7 +82,7 @@ const Home = () => {
   return (
     <div style={{ padding: "3rem", textAlign: "center" }}>
       <h2 style={{ color: "#1f2937", marginBottom: "1rem" }}>
-        Welcome to Admin Portal
+        Welcome to the Admin Portal
       </h2>
       <p
         style={{
@@ -98,8 +92,8 @@ const Home = () => {
           margin: "0 auto",
         }}
       >
-        This is the home page. Navigate to the Dashboard to see the nested
-        navigation examples with different index route configurations.
+        This demo shows how navigation works in a modern web application. Click
+        "Dashboard" above to see automatic navigation in action!
       </p>
       <div
         style={{
@@ -110,8 +104,8 @@ const Home = () => {
           display: "inline-block",
         }}
       >
-        <strong>Test Case 1:</strong> Simple top-level navigation between Home
-        and Dashboard
+        <strong>🎯 Try this:</strong> Click Dashboard and watch how it
+        automatically takes you to Users Management
       </div>
     </div>
   );
@@ -154,42 +148,42 @@ const Dashboard = () => {
           </TabList>
         </nav>
 
-        {/* Test Case Indicators */}
+        {/* Navigation Behavior Indicators */}
         <div style={{ marginTop: "2rem", padding: "0 1.5rem" }}>
           <div
             style={{
               fontSize: "0.8rem",
-              color: "#9ca3af",
-              backgroundColor: "#4b5563",
+              color: "#10b981",
+              backgroundColor: "#065f46",
               padding: "0.5rem",
               borderRadius: "4px",
               marginBottom: "0.5rem",
             }}
           >
-            <strong>Test Case 2:</strong> Users (index + slot)
+            ✨ <strong>Users:</strong> Opens automatically
           </div>
           <div
             style={{
               fontSize: "0.8rem",
-              color: "#9ca3af",
-              backgroundColor: "#4b5563",
+              color: "#f59e0b",
+              backgroundColor: "#78350f",
               padding: "0.5rem",
               borderRadius: "4px",
               marginBottom: "0.5rem",
             }}
           >
-            <strong>Test Case 3:</strong> Settings (non-index + routes)
+            👆 <strong>Settings:</strong> Click to open
           </div>
           <div
             style={{
               fontSize: "0.8rem",
-              color: "#9ca3af",
-              backgroundColor: "#4b5563",
+              color: "#8b5cf6",
+              backgroundColor: "#4c1d95",
               padding: "0.5rem",
               borderRadius: "4px",
             }}
           >
-            <strong>Test Case 4:</strong> Analytics (non-index + routes)
+            👆 <strong>Analytics:</strong> Click to open
           </div>
         </div>
       </aside>
@@ -209,17 +203,19 @@ const Dashboard = () => {
                 {/* Section Header */}
                 <header
                   style={{
-                    backgroundColor: "#f8fafc",
-                    borderBottom: "1px solid #e2e8f0",
+                    backgroundColor: "#f0fdf4",
+                    borderBottom: "1px solid #bbf7d0",
                     padding: "1.5rem 2rem",
                   }}
                 >
-                  <h2 style={{ margin: 0, color: "#1e293b" }}>
-                    Users Management
+                  <h2 style={{ margin: 0, color: "#15803d" }}>
+                    ✨ Users Management (Auto-opened)
                   </h2>
-                  <p style={{ margin: "0.5rem 0 0 0", color: "#64748b" }}>
-                    Manage users and view their activity. Auto-redirects to List
-                    view (nested index with slot).
+                  <p style={{ margin: "0.5rem 0 0 0", color: "#16a34a" }}>
+                    You landed here automatically! When you clicked Dashboard,
+                    it brought you straight to Users. This shows "smart
+                    navigation" - taking users to the most important section by
+                    default.
                   </p>
                 </header>
 
@@ -255,8 +251,15 @@ const Dashboard = () => {
               route={USERS_LIST_ROUTE}
               element={
                 <div>
-                  <h3 style={{ color: "#059669" }}>
-                    ✓ User List (Auto-loaded via nested index)
+                  <h3
+                    style={{
+                      color: "#059669",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.5rem",
+                    }}
+                  >
+                    ✓ User List (Also auto-loaded!)
                   </h3>
                   <div
                     style={{
@@ -267,16 +270,17 @@ const Dashboard = () => {
                       marginTop: "1rem",
                     }}
                   >
-                    <p>
-                      <strong>Route Pattern:</strong> Uses{" "}
-                      <code>&lt;Route.Slot /&gt;</code>
+                    <p style={{ margin: "0 0 0.5rem 0" }}>
+                      <strong>🎯 What happened:</strong> Dashboard → Users →
+                      User List (all automatic!)
                     </p>
-                    <p>
-                      <strong>Auto-redirect:</strong> /dashboard →
-                      /dashboard/users → /dashboard/users/list
+                    <p style={{ margin: "0 0 0.5rem 0" }}>
+                      <strong>🤔 Why:</strong> This gives users the fastest path
+                      to the most common task.
                     </p>
-                    <p>
-                      This demonstrates multi-level index route auto-navigation.
+                    <p style={{ margin: 0 }}>
+                      <strong>🛠️ How:</strong> Uses "nested smart navigation"
+                      with slots for flexible content.
                     </p>
                   </div>
                   <div
@@ -351,15 +355,18 @@ const Dashboard = () => {
                 {/* Section Header */}
                 <header
                   style={{
-                    backgroundColor: "#f8fafc",
-                    borderBottom: "1px solid #e2e8f0",
+                    backgroundColor: "#fef2f2",
+                    borderBottom: "1px solid #fecaca",
                     padding: "1.5rem 2rem",
                   }}
                 >
-                  <h2 style={{ margin: 0, color: "#1e293b" }}>Settings</h2>
-                  <p style={{ margin: "0.5rem 0 0 0", color: "#64748b" }}>
-                    Configure application settings. Must be manually navigated
-                    (non-index with Routes).
+                  <h2 style={{ margin: 0, color: "#dc2626" }}>
+                    👆 Settings (You clicked to get here!)
+                  </h2>
+                  <p style={{ margin: "0.5rem 0 0 0", color: "#dc2626" }}>
+                    Notice how this section didn't open automatically? You had
+                    to deliberately click \"Settings\". This is perfect for
+                    configuration areas that users visit intentionally.
                   </p>
                 </header>
 
@@ -391,7 +398,16 @@ const Dashboard = () => {
                       route={SETTINGS_GENERAL_ROUTE}
                       element={
                         <div>
-                          <h3 style={{ color: "#dc2626" }}>General Settings</h3>
+                          <h3
+                            style={{
+                              color: "#dc2626",
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "0.5rem",
+                            }}
+                          >
+                            🔧 General Settings (Default here)
+                          </h3>
                           <div
                             style={{
                               backgroundColor: "#fef2f2",
@@ -401,17 +417,19 @@ const Dashboard = () => {
                               marginTop: "1rem",
                             }}
                           >
-                            <p>
-                              <strong>Route Pattern:</strong> Uses{" "}
-                              <code>&lt;Routes&gt;</code>
+                            <p style={{ margin: "0 0 0.5rem 0" }}>
+                              <strong>🎯 What happened:</strong> You clicked
+                              Settings, then landed on General (the default
+                              sub-section).
                             </p>
-                            <p>
-                              <strong>Manual navigation:</strong> User must
-                              click Settings first
+                            <p style={{ margin: "0 0 0.5rem 0" }}>
+                              <strong>🤔 Why:</strong> Settings requires
+                              intentional navigation since it's used less
+                              frequently than user management.
                             </p>
-                            <p>
-                              Then auto-redirects to General (this page) as its
-                              the index route within Settings.
+                            <p style={{ margin: 0 }}>
+                              <strong>🛠️ How:</strong> Uses manual navigation
+                              with standard routing (no slots needed).
                             </p>
                           </div>
                         </div>
@@ -444,15 +462,18 @@ const Dashboard = () => {
                 {/* Section Header */}
                 <header
                   style={{
-                    backgroundColor: "#f8fafc",
-                    borderBottom: "1px solid #e2e8f0",
+                    backgroundColor: "#f3f4f6",
+                    borderBottom: "1px solid #d1d5db",
                     padding: "1.5rem 2rem",
                   }}
                 >
-                  <h2 style={{ margin: 0, color: "#1e293b" }}>Analytics</h2>
-                  <p style={{ margin: "0.5rem 0 0 0", color: "#64748b" }}>
-                    View analytics and reports. Non-index route that uses Routes
-                    pattern (requires manual navigation).
+                  <h2 style={{ margin: 0, color: "#7c3aed" }}>
+                    👆 Analytics (Also clicked to get here!)
+                  </h2>
+                  <p style={{ margin: "0.5rem 0 0 0", color: "#7c3aed" }}>
+                    Like Settings, you had to deliberately click \"Analytics\"
+                    to reach this section. This demonstrates another manual
+                    navigation pattern with different technical implementation.
                   </p>
                 </header>
 
@@ -496,18 +517,31 @@ const Dashboard = () => {
                               marginTop: "1rem",
                             }}
                           >
+                            <h4 style={{ color: "#7c3aed" }}>
+                              🔍 What happened?
+                            </h4>
                             <p>
-                              <strong>Route Pattern:</strong> Uses{" "}
-                              <code>&lt;Routes&gt;</code> (like Settings)
+                              You clicked "Analytics" which brought you here,
+                              similar to how Settings works.
                             </p>
+
+                            <h4 style={{ color: "#7c3aed" }}>
+                              🤔 Why did this happen?
+                            </h4>
                             <p>
-                              <strong>Navigation:</strong> This section is NOT
-                              an index route, so requires manual navigation
+                              Analytics is configured with a <code>Routes</code>{" "}
+                              pattern that requires deliberate user interaction
+                              - it won't auto-open like Users.
                             </p>
+
+                            <h4 style={{ color: "#7c3aed" }}>
+                              ⚙️ How does this work?
+                            </h4>
                             <p>
-                              This demonstrates the Routes pattern for non-index
-                              sections that must be manually navigated to.
-                              route.
+                              Analytics uses the same <code>Routes</code>{" "}
+                              component pattern as Settings, demonstrating
+                              consistent manual navigation behavior across
+                              different sections.
                             </p>
                           </div>
                         </div>
