@@ -479,14 +479,8 @@ const Dashboard = () => {
                   }}
                 >
                   <h2 style={{ margin: 0, color: "#15803d" }}>
-                    ✨ Users Management (Index route - this is what you end up
-                    seeing)
+                    ✨ Users Management
                   </h2>
-                  <p style={{ margin: "0.5rem 0 0 0", color: "#16a34a" }}>
-                    You landed here automatically! When you clicked Dashboard,
-                    the URL redirected to /dashboard/users because this route
-                    has the index prop.
-                  </p>
                 </header>
 
                 {/* Sub-navigation */}
@@ -559,8 +553,8 @@ const SettingsSection = () => (
       backgroundColor="#fef2f2"
       borderColor="#fecaca"
       color="#dc2626"
-      title="👆 Settings (You clicked to get here!)"
-      description='Notice how this section didn&apos;t open automatically? You had to deliberately click "Settings". This is perfect for configuration areas that users visit intentionally.'
+      title="👆 Settings"
+      description=""
     />
     <div
       style={{
@@ -603,8 +597,8 @@ const AnalyticsSection = () => (
       backgroundColor="#f3f4f6"
       borderColor="#d1d5db"
       color="#7c3aed"
-      title="👆 Analytics (Also clicked to get here!)"
-      description='Like Settings, you had to deliberately click "Analytics" to reach this section. This demonstrates another manual navigation pattern with different technical implementation.'
+      title="👆 Analytics"
+      description=""
     />
     <div
       style={{
@@ -648,23 +642,10 @@ const MonitoringSection = () => (
       borderColor="#67e8f9"
       color="#0891b2"
       title="🖥️ System Monitoring"
-      description="This section shows content directly at /dashboard/monitoring without needing an index route. You can view the main dashboard or access specific tools."
+      description=""
     />
     <div style={{ padding: "0 2rem" }}>
-      <Routes>
-        <Route
-          route={REPORTS_SECTION_ROUTE}
-          element={<MonitoringOverviewPage />}
-        />
-        <Route
-          route={MONITORING_EXPORT_ROUTE}
-          element={<MonitoringAlertsPage />}
-        />
-        <Route
-          route={MONITORING_ARCHIVE_ROUTE}
-          element={<MonitoringLogsPage />}
-        />
-      </Routes>
+      <MonitoringOverviewPage />
     </div>
   </div>
 );
@@ -745,6 +726,38 @@ const AnalyticsReportsPage = () => (
 
 const MonitoringOverviewPage = () => (
   <div>
+    <MonitoringMetrics />
+    <div
+      style={{
+        marginTop: "3rem",
+        paddingTop: "2rem",
+        borderTop: "1px solid #e2e8f0",
+      }}
+    >
+      <h4 style={{ color: "#0891b2", marginBottom: "1rem" }}>
+        Additional Tools
+      </h4>
+      <TabList
+        style={{
+          "--tab-color": "#64748b",
+          "--tab-active-color": "#0891b2",
+          "fontSize": "0.9rem",
+        }}
+      >
+        <Tab route={MONITORING_EXPORT_ROUTE}>🚨 Alerts</Tab>
+        <Tab route={MONITORING_ARCHIVE_ROUTE}>📋 Logs</Tab>
+      </TabList>
+      <Routes>
+        <Route
+          route={MONITORING_EXPORT_ROUTE}
+          element={<MonitoringAlertsPage />}
+        />
+        <Route
+          route={MONITORING_ARCHIVE_ROUTE}
+          element={<MonitoringLogsPage />}
+        />
+      </Routes>
+    </div>
     <TechnicalExplanation
       color="#0891b2"
       backgroundColor="#f0fdff"
@@ -771,28 +784,6 @@ const MonitoringOverviewPage = () => (
         </div>
       }
     />
-    <MonitoringMetrics />
-    <div
-      style={{
-        marginTop: "3rem",
-        paddingTop: "2rem",
-        borderTop: "1px solid #e2e8f0",
-      }}
-    >
-      <h4 style={{ color: "#0891b2", marginBottom: "1rem" }}>
-        Additional Tools
-      </h4>
-      <TabList
-        style={{
-          "--tab-color": "#64748b",
-          "--tab-active-color": "#0891b2",
-          "fontSize": "0.9rem",
-        }}
-      >
-        <Tab route={MONITORING_EXPORT_ROUTE}>🚨 Alerts</Tab>
-        <Tab route={MONITORING_ARCHIVE_ROUTE}>📋 Logs</Tab>
-      </TabList>
-    </div>
   </div>
 );
 
@@ -801,36 +792,12 @@ const MonitoringAlertsPage = () => (
     <p>
       Alert configuration and notification settings would be available here.
     </p>
-    <TechnicalExplanation
-      color="#0891b2"
-      backgroundColor="#f0fdff"
-      borderColor="#a5f3fc"
-      title="Technical details"
-      explanation={
-        <p>
-          This is a sub-page of Monitoring that provides specific functionality
-          while the main Monitoring page shows the dashboard overview.
-        </p>
-      }
-    />
   </div>
 );
 
 const MonitoringLogsPage = () => (
   <div>
     <p>Application logs and system event history.</p>
-    <TechnicalExplanation
-      color="#0891b2"
-      backgroundColor="#f0fdff"
-      borderColor="#a5f3fc"
-      title="Technical details"
-      explanation={
-        <p>
-          Another optional sub-page that enhances the main Monitoring dashboard
-          without requiring it.
-        </p>
-      }
-    />
   </div>
 );
 
