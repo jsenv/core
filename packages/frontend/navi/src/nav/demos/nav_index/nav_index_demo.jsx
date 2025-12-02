@@ -4,7 +4,7 @@ import { render } from "preact";
 const { HOME_ROUTE, MAP_ROUTE, MAP_TAB_A_ROUTE, MAP_TAB_B_ROUTE } = setupRoutes(
   {
     HOME_ROUTE: "home",
-    MAP_ROUTE: "map",
+    MAP_ROUTE: "map{/}?*",
     MAP_TAB_A_ROUTE: "map/tab_a",
     MAP_TAB_B_ROUTE: "map/tab_b",
   },
@@ -31,17 +31,17 @@ const App = () => {
 };
 
 const Home = () => {
-  return <Box>🏠 Homepage</Box>;
+  return <Box>Home content</Box>;
 };
 
 const Map = () => {
   return (
     <Box>
+      Map content
       <TabList>
         <Tab route={MAP_TAB_A_ROUTE}>Users</Tab>
         <Tab route={MAP_TAB_B_ROUTE}>Settings</Tab>
       </TabList>
-
       <Routes>
         <Route route={MAP_TAB_A_ROUTE} element={<Box>Tab A content</Box>} />
         <Route route={MAP_TAB_B_ROUTE} element={<Box>Tab B content</Box>} />
