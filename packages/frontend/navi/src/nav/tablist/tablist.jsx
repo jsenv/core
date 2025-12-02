@@ -1,5 +1,5 @@
 /**
- * TODO: vertical prop to display the tab vertically
+ * TabList component with support for horizontal and vertical layouts
  */
 
 import { createContext } from "preact";
@@ -39,96 +39,132 @@ import.meta.css = /* css */ `
     line-height: 2em;
     overflow-x: auto;
     overflow-y: hidden;
-  }
-  .navi_tablist > ul {
-    display: flex;
-    width: 100%;
-    margin: 0;
-    padding: 0;
-    align-items: center;
-    gap: 0.5rem;
-    list-style: none;
-    background: var(--tablist-background);
-    border-radius: var(--tablist-border-radius);
-  }
-  .navi_tablist > ul > li {
-    position: relative;
-    display: inline-flex;
-  }
 
-  .navi_tab {
-    --x-tab-background: var(--tab-background);
-    --x-tab-color: var(--tab-color);
-
-    display: flex;
-    flex-direction: column;
-    white-space: nowrap;
-    border-radius: var(--tab-border-radius);
-
-    .navi_tab_content {
-      display: flex;
-      color: var(--x-tab-color);
-      background: var(--x-tab-background);
-      border-radius: inherit;
-      transition: background 0.12s ease-out;
-
-      .navi_link {
-        flex-grow: 1;
-        text-align: center;
-        border-radius: inherit;
-      }
-    }
-    /* Hidden bold clone to reserve space for bold width without affecting height */
-    .navi_tab_content_bold_clone {
-      display: block; /* in-flow so it contributes to width */
-      height: 0; /* zero height so it doesn't change layout height */
-      font-weight: 600; /* force bold to compute max width */
-      visibility: hidden; /* not visible */
-      pointer-events: none; /* inert */
-      overflow: hidden; /* avoid any accidental height */
-    }
-    .navi_tab_selected_marker {
-      z-index: 1;
+    > ul {
       display: flex;
       width: 100%;
-      height: var(--tab-marker-height);
-      margin-top: 5px;
-      background: transparent;
-      border-radius: 0.1px;
-    }
-
-    /* Interactive */
-    &[data-interactive] {
-      cursor: pointer;
-    }
-    /* Hover */
-    &:hover {
-      --x-tab-background: var(--tab-background-hover);
-      --x-tab-color: var(--tab-color-hover);
-    }
-    /* Selected */
-    &[data-selected] {
-      --x-tab-background: var(--tab-background-selected);
-      --x-tab-color: var(--tab-color-selected);
-
-      .navi_tab_content {
-        font-weight: 600;
-      }
-      .navi_tab_selected_marker {
-        background: var(--tab-marker-color);
-      }
-    }
-  }
-
-  .navi_tablist[data-expand] {
-    .navi_tab {
-      flex: 1;
+      margin: 0;
+      padding: 2px; /* space for border radius and outline */
       align-items: center;
+      gap: 0.5rem;
+      list-style: none;
+      background: var(--tablist-background);
+      border-radius: var(--tablist-border-radius);
+
+      > li {
+        position: relative;
+        display: inline-flex;
+
+        .navi_tab {
+          --x-tab-background: var(--tab-background);
+          --x-tab-color: var(--tab-color);
+
+          display: flex;
+          flex-direction: column;
+          white-space: nowrap;
+          border-radius: var(--tab-border-radius);
+
+          .navi_tab_content {
+            display: flex;
+            color: var(--x-tab-color);
+            background: var(--x-tab-background);
+            border-radius: inherit;
+            transition: background 0.12s ease-out;
+
+            .navi_link {
+              flex-grow: 1;
+              text-align: center;
+              border-radius: inherit;
+            }
+          }
+          /* Hidden bold clone to reserve space for bold width without affecting height */
+          .navi_tab_content_bold_clone {
+            display: block; /* in-flow so it contributes to width */
+            height: 0; /* zero height so it doesn't change layout height */
+            font-weight: 600; /* force bold to compute max width */
+            visibility: hidden; /* not visible */
+            pointer-events: none; /* inert */
+            overflow: hidden; /* avoid any accidental height */
+          }
+          .navi_tab_selected_marker {
+            z-index: 1;
+            display: flex;
+            width: 100%;
+            height: var(--tab-marker-height);
+            margin-top: 5px;
+            background: transparent;
+            border-radius: 0.1px;
+          }
+
+          /* Interactive */
+          &[data-interactive] {
+            cursor: pointer;
+          }
+          /* Hover */
+          &:hover {
+            --x-tab-background: var(--tab-background-hover);
+            --x-tab-color: var(--tab-color-hover);
+          }
+          /* Selected */
+          &[data-selected] {
+            --x-tab-background: var(--tab-background-selected);
+            --x-tab-color: var(--tab-color-selected);
+
+            .navi_tab_content {
+              font-weight: 600;
+            }
+            .navi_tab_selected_marker {
+              background: var(--tab-marker-color);
+            }
+          }
+        }
+      }
     }
 
-    .navi_tab_content {
-      width: 100%;
-      justify-content: center;
+    /* Vertical layout */
+    &[data-vertical] {
+      overflow-x: hidden;
+      overflow-y: auto;
+
+      > ul {
+        flex-direction: column;
+        align-items: stretch;
+
+        > li {
+          .navi_tab {
+            .navi_tab_content {
+              justify-content: flex-start;
+              text-align: left;
+
+              .navi_link {
+                text-align: left;
+              }
+            }
+            .navi_tab_selected_marker {
+              width: var(--tab-marker-height);
+              height: 100%;
+              margin-top: 0;
+              margin-right: 5px;
+              margin-left: auto;
+            }
+          }
+        }
+      }
+
+      &[data-expand] {
+        > ul {
+          .navi_tab {
+            flex: 1;
+            align-items: center;
+            align-items: stretch;
+
+            .navi_tab_content {
+              width: 100%;
+              justify-content: center;
+            }
+          }
+        }
+      }
     }
   }
 `;
@@ -144,6 +180,7 @@ export const TabList = ({
   underline,
   expand,
   expandX,
+  vertical,
   paddingX,
   paddingY,
   padding,
@@ -155,6 +192,7 @@ export const TabList = ({
       baseClassName="navi_tablist"
       role="tablist"
       data-expand={expand || expandX ? "" : undefined}
+      data-vertical={vertical ? "" : undefined}
       expand={expand}
       expandX={expandX}
       {...props}
@@ -227,7 +265,6 @@ const TabRoute = ({
         routeParams={routeParams}
         expand
         discrete
-        align="center"
         paddingX={paddingX}
         padding={padding}
         paddingY={paddingY}
