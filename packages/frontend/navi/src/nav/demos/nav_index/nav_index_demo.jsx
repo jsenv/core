@@ -191,10 +191,10 @@ const Dashboard = () => {
       {/* Main Content Area */}
       <main style={{ flex: 1, backgroundColor: "white" }}>
         <Routes>
-          {/* Test Case 2: Index route with nested index using <Route.Slot />
-              - USERS_SECTION_ROUTE is marked as index, so /dashboard auto-redirects here
-              - USERS_LIST_ROUTE is marked as index, so /dashboard/users auto-redirects to /dashboard/users/list
-              - Tests multi-level nested index auto-navigation with slot pattern */}
+          {/* Index route with nested index using <Route.Slot />
+              - USERS_SECTION_ROUTE has index prop, so /dashboard redirects to /dashboard/users
+              - USERS_LIST_ROUTE has index prop, so /dashboard/users redirects to /dashboard/users/list
+              - Tests URL redirection with index props ensuring proper URLs are used */}
           <Route
             index
             route={USERS_SECTION_ROUTE}
@@ -214,9 +214,8 @@ const Dashboard = () => {
                   </h2>
                   <p style={{ margin: "0.5rem 0 0 0", color: "#16a34a" }}>
                     You landed here automatically! When you clicked Dashboard,
-                    it brought you straight to Users. This shows "smart
-                    navigation" - taking users to the most important section by
-                    default.
+                    the URL redirected to /dashboard/users because this route
+                    has the index prop.
                   </p>
                 </header>
 
@@ -273,17 +272,18 @@ const Dashboard = () => {
                   >
                     <p style={{ margin: "0 0 0.5rem 0" }}>
                       <strong>🎯 What happened:</strong> You navigated to
-                      /dashboard and the route with index prop decided what to
-                      show.
+                      /dashboard and got redirected to /dashboard/users because
+                      this route has the index prop.
                     </p>
                     <p style={{ margin: "0 0 0.5rem 0" }}>
-                      <strong>🤔 Why:</strong> Index props let routes decide
-                      what content to display, ensuring one URL equals one
-                      content.
+                      <strong>🤔 Why:</strong> Index props redirect when no
+                      specific route matches, ensuring /dashboard doesn't
+                      display content - only /dashboard/users does.
                     </p>
                     <p style={{ margin: 0 }}>
-                      <strong>🛠️ How:</strong> Uses index prop to auto-navigate
-                      when no specific sub-route matches.
+                      <strong>🛠️ How:</strong> The index prop redirects
+                      /dashboard to /dashboard/users so you always end up on the
+                      "right URL" with actual content.
                     </p>
                   </div>
                   <div
@@ -347,10 +347,10 @@ const Dashboard = () => {
             />
           </Route>
 
-          {/* Test Case 3: Non-index route with nested routes using <Routes>
-              - SETTINGS_SECTION_ROUTE is NOT marked as index, so it won't auto-redirect
+          {/* Non-index route with manual navigation using <Routes>
+              - SETTINGS_SECTION_ROUTE has no index prop, so requires explicit navigation
               - Has nested routes but uses <Routes> instead of <Route.Slot />
-              - Tests manual navigation to non-index tab with nested structure */}
+              - /dashboard/settings has actual content, no redirection happens */}
           <Route
             route={SETTINGS_SECTION_ROUTE}
             element={
@@ -455,9 +455,10 @@ const Dashboard = () => {
             }
           />
 
-          {/* Test Case 4: Index route without <Route.Slot /> 
-              - ANALYTICS_SECTION_ROUTE uses <Routes> for nested routes instead of <Route.Slot />
-              - Tests route behavior when not using slot pattern but not being an index */}
+          {/* Non-index route using <Routes> for nested navigation
+              - ANALYTICS_SECTION_ROUTE uses <Routes> for nested routes, no index prop on parent
+              - Shows manual navigation pattern with nested routes
+              - /dashboard/analytics has content, nested routes redirect normally */}
           <Route
             route={ANALYTICS_SECTION_ROUTE}
             element={
