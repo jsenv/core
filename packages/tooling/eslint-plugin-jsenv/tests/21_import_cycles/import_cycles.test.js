@@ -57,7 +57,7 @@ ruleTester.run("no-unknown-params with import cycles", noUnknownParamsRule, {
       filename: fileURLToPath(import.meta.resolve("./fixtures/file_a.js")),
       errors: [
         {
-          message: `"invalidParam" not found in helperFunction() (defined in ./file_b.js)`,
+          message: `"invalidParam" not found in "helperFunction" params (defined in ./file_b.js)`,
           type: "Property",
         },
       ],

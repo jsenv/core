@@ -103,7 +103,7 @@ ruleTester.run(
         filename: mainFilePath,
         errors: [
           {
-            message: `"unknownTopLevel" not found in processUser()`,
+            message: `"unknownTopLevel" not found in "processUser" params`,
             type: "Property",
           },
         ],

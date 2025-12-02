@@ -40,7 +40,7 @@ ruleTester.run(
         options: [{ reportAllUnknownParams: true }],
         errors: [
           {
-            message: `"invalidParam" not found in sevenParamFunction()`,
+            message: `"invalidParam" not found in "sevenParamFunction" params`,
             type: "Property",
           },
         ],

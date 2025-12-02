@@ -85,7 +85,7 @@ ruleTester.run("no-unknown-params with many parameters", noUnknownParamsRule, {
       filename: "/test.js",
       errors: [
         {
-          message: `"unknownParam" not found in processComplexData()`,
+          message: `"unknownParam" not found in "processComplexData" params`,
           type: "Property",
         },
       ],

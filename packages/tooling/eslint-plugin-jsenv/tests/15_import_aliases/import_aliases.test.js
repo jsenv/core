@@ -52,15 +52,15 @@ ruleTester.run("no-unknown-params with import aliases", noUnknownParamsRule, {
       filename: mainFilePath,
       errors: [
         {
-          message: `"metadata" not found in createAPI() (defined in ./api-utils.js)`,
+          message: `"metadata" not found in "createAPI" params (defined in ./api-utils.js)`,
           type: "Property",
         },
         {
-          message: `"force" not found in updateAPI() (defined in ./api-utils.js)`,
+          message: `"force" not found in "updateAPI" params (defined in ./api-utils.js)`,
           type: "Property",
         },
         {
-          message: `"cascade" not found in deleteAPI() (defined in ./api-utils.js)`,
+          message: `"cascade" not found in "deleteAPI" params (defined in ./api-utils.js)`,
           type: "Property",
         },
       ],

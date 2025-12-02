@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/eslint-plugin",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Custom ESLint rules for jsenv projects",
   "keywords": [
     "eslint",
@@ -25,7 +25,7 @@
   "devDependencies": {
     "@jsenv/eslint-import-resolver": "../eslint-import-resolver",
     "eslint": "9.39.1",
-    "espree": "10.4.0"
+    "espree": "11.0.0"
   },
   "engines": {
     "node": ">=18.0.0"
