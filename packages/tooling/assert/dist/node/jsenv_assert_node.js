@@ -6951,11 +6951,12 @@ const createGetWellKnownValuePath = (globalObject) => {
   return getWellKnownValuePath;
 };
 
+const GraphemerDef = __jsenv_default_import__.default || __jsenv_default_import__;
+
 const assert = createAssert({
   measureStringWidth: measureTextWidth,
   tokenizeString: (string) => {
-    // eslint-disable-next-line new-cap
-    const splitter = new __jsenv_default_import__.default();
+    const splitter = new GraphemerDef();
     return splitter.splitGraphemes(string);
   },
   getWellKnownValuePath: createGetWellKnownValuePath(global),

@@ -3,11 +3,12 @@ import Graphemer from "graphemer";
 import { createAssert } from "./assert_scratch.js";
 import { createGetWellKnownValuePath } from "./utils/well_known_value.js";
 
+const GraphemerDef = Graphemer.default || Graphemer;
+
 export const assert = createAssert({
   measureStringWidth: measureTextWidth,
   tokenizeString: (string) => {
-    // eslint-disable-next-line new-cap
-    const splitter = new Graphemer.default();
+    const splitter = new GraphemerDef();
     return splitter.splitGraphemes(string);
   },
   getWellKnownValuePath: createGetWellKnownValuePath(global),
