@@ -287,6 +287,14 @@ const createRoute = (urlPatternInput) => {
     return relativeUrl;
   };
 
+  route.compareParams = (otherParams) => {
+    const params = route.params;
+    if (!otherParams || Object.keys(otherParams).length === 0) {
+      return params === NO_PARAMS;
+    }
+    return compareTwoJsValues(params, otherParams);
+  };
+
   /**
    * Builds a complete URL for this route with the given parameters.
    *

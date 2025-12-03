@@ -7,14 +7,15 @@ export const RouteLink = ({ route, routeParams, children, ...rest }) => {
   }
   const routeStatus = useRouteStatus(route);
   const url = route.buildUrl(routeParams);
-  const routeIsActive = routeStatus.active;
+  const active = routeStatus.active;
+  const paramsAreMatching = route.compareParams(routeParams);
 
   return (
     <Link
       {...rest}
       href={url}
       pseudoState={{
-        ":-navi-href-current": routeIsActive,
+        ":-navi-href-current": active && paramsAreMatching,
       }}
     >
       {children}
