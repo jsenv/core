@@ -2,12 +2,9 @@ import { render } from "preact";
 
 import { Route, Routes, setupRoutes, TabList } from "@jsenv/navi";
 
-const {
-  HOME_ROUTE,
-  // OTHER_ROUTE
-} = setupRoutes({
+const { HOME_ROUTE, OTHER_ROUTE } = setupRoutes({
   HOME_ROUTE: "/",
-  // OTHER_ROUTE: "/other",
+  OTHER_ROUTE: "/other",
 });
 
 const App = () => {
@@ -30,12 +27,12 @@ const App = () => {
       >
         <TabList>
           <TabList.Tab route={HOME_ROUTE}>Home</TabList.Tab>
-          {/* <TabList.Tab route={OTHER_ROUTE}>Other</TabList.Tab> */}
+          <TabList.Tab route={OTHER_ROUTE}>Other</TabList.Tab>
         </TabList>
 
         <Routes>
           <Route route={HOME_ROUTE} element={"Home"} />
-          {/* <Route route={OTHER_ROUTE} element={"Other"} /> */}
+          <Route route={OTHER_ROUTE} element={"Other"} />
         </Routes>
       </div>
     </div>

@@ -28,6 +28,16 @@ export const createRoutePattern = (urlPatternInput, baseUrl) => {
   });
 
   const applyOn = (url) => {
+    if (import.meta.dev) {
+      const urlObj = new URL(url, baseUrl);
+      urlObj.search = "";
+      const urlWithoutSearchParam = urlObj.href;
+      if (urlWithoutSearchParam === baseUrl) {
+        const rootUrl = new URL("./", baseUrl).href;
+        url = rootUrl;
+      }
+    }
+
     // Check if the URL matches the route pattern
     const match = urlPattern.exec(url);
     if (match) {
