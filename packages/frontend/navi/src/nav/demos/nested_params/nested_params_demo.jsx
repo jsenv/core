@@ -1,6 +1,12 @@
 import { render } from "preact";
 
-import { Route, Routes, setupRoutes, TabList } from "@jsenv/navi";
+import {
+  Route,
+  Routes,
+  setupRoutes,
+  TabList,
+  useUrlSearchParam,
+} from "@jsenv/navi";
 
 // Setup nested routes
 const { HOME_ROUTE, PARENT_ROUTE, CHILD_A_ROUTE, CHILD_B_ROUTE } = setupRoutes({
@@ -24,7 +30,9 @@ const HomePage = () => {
 };
 
 // Parent page component
-const ParentPage = ({ category = "default" }) => {
+const ParentPage = () => {
+  const [category] = useUrlSearchParam("category");
+
   return (
     <div>
       <h2>Parent Page</h2>
@@ -47,7 +55,9 @@ const ParentPage = ({ category = "default" }) => {
 };
 
 // Child A page component
-const ChildAPage = ({ category = "default" }) => {
+const ChildAPage = () => {
+  const [category] = useUrlSearchParam("category");
+
   return (
     <div>
       <h2>Child A</h2>
@@ -60,7 +70,9 @@ const ChildAPage = ({ category = "default" }) => {
 };
 
 // Child B page component
-const ChildBPage = ({ category = "default" }) => {
+const ChildBPage = () => {
+  const [category] = useUrlSearchParam("category");
+
   return (
     <div>
       <h2>Child B</h2>
