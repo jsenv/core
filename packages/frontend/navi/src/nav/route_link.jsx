@@ -8,7 +8,7 @@ export const RouteLink = ({ route, routeParams, children, ...rest }) => {
   const routeStatus = useRouteStatus(route);
   const url = route.buildUrl(routeParams);
   const active = routeStatus.active;
-  const paramsAreMatching = route.compareParams(routeParams);
+  const paramsAreMatching = route.matchesParams(routeParams);
 
   return (
     <Link

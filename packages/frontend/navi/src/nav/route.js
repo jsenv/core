@@ -289,10 +289,14 @@ const createRoute = (urlPatternInput) => {
 
   route.matchesParams = (otherParams) => {
     const params = route.params;
-    const paramsIsEmptyOrFalsy = Object.keys(otherParams).length === 0;
-    const otherParamsIsEmptyOrFalsy = Object.keys(otherParams).length === 0;
-    if (paramsIsEmptyOrFalsy && otherParamsIsEmptyOrFalsy) {
-      return true;
+    const paramsIsFalsyOrEmpty = !params || Object.keys(params).length === 0;
+    const otherParamsFalsyOrEmpty =
+      !otherParams || Object.keys(otherParams).length === 0;
+    if (paramsIsFalsyOrEmpty) {
+      return otherParamsFalsyOrEmpty;
+    }
+    if (otherParamsFalsyOrEmpty) {
+      return false;
     }
     const paramsWithoutWildcards = {};
     for (const key of Object.keys(params)) {
