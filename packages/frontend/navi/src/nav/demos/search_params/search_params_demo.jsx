@@ -5,10 +5,10 @@ import { Route, Routes, setupRoutes, TabList } from "@jsenv/navi";
 // Setup routes with search params handling
 const { HOME_ROUTE, COLOR_ROUTE, COLOR_LIGHT_ROUTE, COLOR_DARK_ROUTE } =
   setupRoutes({
-    HOME_ROUTE: "/",
-    COLOR_ROUTE: "/colors",
-    COLOR_LIGHT_ROUTE: "/colors/light",
-    COLOR_DARK_ROUTE: "/colors/dark",
+    HOME_ROUTE: "",
+    COLOR_ROUTE: "colors",
+    COLOR_LIGHT_ROUTE: "colors/light",
+    COLOR_DARK_ROUTE: "colors/dark",
   });
 
 // Color picker component
@@ -48,13 +48,13 @@ const HomePage = () => {
       <h3>Navigation</h3>
       <TabList>
         <TabList.Tab route={COLOR_ROUTE}>Colors (default)</TabList.Tab>
-        <TabList.Tab route={COLOR_ROUTE} params={{ color: "red" }}>
+        <TabList.Tab route={COLOR_ROUTE} routeParams={{ color: "red" }}>
           Colors (red)
         </TabList.Tab>
-        <TabList.Tab route={COLOR_ROUTE} params={{ color: "green" }}>
+        <TabList.Tab route={COLOR_ROUTE} routeParams={{ color: "green" }}>
           Colors (green)
         </TabList.Tab>
-        <TabList.Tab route={COLOR_ROUTE} params={{ color: "purple" }}>
+        <TabList.Tab route={COLOR_ROUTE} routeParams={{ color: "purple" }}>
           Colors (purple)
         </TabList.Tab>
       </TabList>
@@ -82,13 +82,13 @@ const ColorsPage = ({ color = "blue" }) => {
       <TabList>
         <TabList.Tab
           route={COLOR_LIGHT_ROUTE}
-          params={{ color, theme: "pastel" }}
+          routeParams={{ color, theme: "pastel" }}
         >
           Light theme
         </TabList.Tab>
         <TabList.Tab
           route={COLOR_DARK_ROUTE}
-          params={{ color, mode: "intense" }}
+          routeParams={{ color, mode: "intense" }}
         >
           Dark mode
         </TabList.Tab>
@@ -152,7 +152,7 @@ const LightThemePage = ({ color = "blue", theme = "default" }) => {
 
       <div style={{ marginTop: "20px" }}>
         <TabList>
-          <TabList.Tab route={COLOR_ROUTE} params={{ color }}>
+          <TabList.Tab route={COLOR_ROUTE} routeParams={{ color }}>
             ← Colors
           </TabList.Tab>
           <TabList.Tab route={HOME_ROUTE}>Home</TabList.Tab>
@@ -213,7 +213,7 @@ const DarkModePage = ({ color = "blue", mode = "standard" }) => {
 
       <div style={{ marginTop: "20px" }}>
         <TabList>
-          <TabList.Tab route={COLOR_ROUTE} params={{ color }}>
+          <TabList.Tab route={COLOR_ROUTE} routeParams={{ color }}>
             ← Colors
           </TabList.Tab>
           <TabList.Tab route={HOME_ROUTE}>Home</TabList.Tab>
@@ -261,21 +261,10 @@ const SearchParamsDemo = () => {
         }}
       >
         <Routes>
-          <Route route={HOME_ROUTE}>
-            {(params) => <HomePage {...params} />}
-          </Route>
-
-          <Route route={COLOR_ROUTE}>
-            {(params) => <ColorsPage {...params} />}
-          </Route>
-
-          <Route route={COLOR_LIGHT_ROUTE}>
-            {(params) => <LightThemePage {...params} />}
-          </Route>
-
-          <Route route={COLOR_DARK_ROUTE}>
-            {(params) => <DarkModePage {...params} />}
-          </Route>
+          <Route route={HOME_ROUTE} element={<HomePage />} />
+          <Route route={COLOR_ROUTE} element={<ColorsPage />} />
+          <Route route={COLOR_LIGHT_ROUTE} element={<LightThemePage />} />
+          <Route route={COLOR_DARK_ROUTE} element={<DarkModePage />} />
         </Routes>
       </div>
     </div>
