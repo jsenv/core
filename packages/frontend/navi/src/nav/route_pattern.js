@@ -31,7 +31,7 @@ export const createRoutePattern = (urlPatternInput, baseUrl) => {
     // Check if the URL matches the route pattern
     const match = urlPattern.exec(url);
     if (match) {
-      return extractParams(match, url);
+      return extractParams(match);
     }
 
     // If no match, try with normalized URLs (trailing slash handling)
@@ -41,28 +41,25 @@ export const createRoutePattern = (urlPatternInput, baseUrl) => {
     // Try removing trailing slash from pathname
     if (pathname.endsWith("/") && pathname.length > 1) {
       const pathnameWithoutSlash = pathname.slice(0, -1);
-      const normalizedUrl = pathnameWithoutSlash + urlObj.search + urlObj.hash;
+      const normalizedUrl = `${urlObj.protocol}//${urlObj.host}${pathnameWithoutSlash}${urlObj.search}${urlObj.hash}`;
       const matchWithoutTrailingSlash = urlPattern.exec(normalizedUrl);
       if (matchWithoutTrailingSlash) {
-        return extractParams(matchWithoutTrailingSlash, url);
+        return extractParams(matchWithoutTrailingSlash);
       }
-      return null;
     }
     // Try adding trailing slash to pathname
-    if (pathname.endsWith("/")) {
-      return null;
-    }
-    const pathnameWithSlash = `${pathname}/`;
-    const normalizedUrl = pathnameWithSlash + urlObj.search + urlObj.hash;
-    const matchWithTrailingSlash = urlPattern.exec(normalizedUrl);
-    if (matchWithTrailingSlash) {
-      return extractParams(matchWithTrailingSlash, url);
+    else if (!pathname.endsWith("/")) {
+      const pathnameWithSlash = `${pathname}/`;
+      const normalizedUrl = `${urlObj.protocol}//${urlObj.host}${pathnameWithSlash}${urlObj.search}${urlObj.hash}`;
+      const matchWithTrailingSlash = urlPattern.exec(normalizedUrl);
+      if (matchWithTrailingSlash) {
+        return extractParams(matchWithTrailingSlash);
+      }
     }
     return null;
   };
 
-  const extractParams = (urlPattern, url) => {
-    const match = urlPattern.exec(url);
+  const extractParams = (match) => {
     if (!match) {
       return NO_PARAMS;
     }
