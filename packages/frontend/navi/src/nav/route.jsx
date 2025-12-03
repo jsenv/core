@@ -96,10 +96,34 @@ const ActiveRouteManager = ({
   const registerChildRouteFromContext = useContext(RegisterChildRouteContext);
   const elementId = getElementSignature(element);
   const candidateSet = new Set();
+  let indexCandidate = null;
+  let fallbackCandidate = null;
   const registerChildRoute = (childRouteInfo) => {
     const childElementId = getElementSignature(childRouteInfo.element);
     debug(`${elementId}.registerChildRoute(${childElementId})`);
     candidateSet.add(childRouteInfo);
+
+    if (childRouteInfo.index) {
+      if (indexCandidate) {
+        throw new Error(`Multiple index routes registered under the same parent route (${elementId}):
+- ${getElementSignature(indexCandidate.element)}
+- ${childElementId}`);
+      }
+      indexCandidate = childRouteInfo;
+    }
+    if (childRouteInfo.fallback) {
+      if (fallbackCandidate) {
+        throw new Error(`Multiple fallback routes registered under the same parent route (${elementId}):
+- ${getElementSignature(fallbackCandidate.element)}
+- ${childElementId}`);
+      }
+      if (childRouteInfo.route.routeFromProps) {
+        throw new Error(
+          `Fallback route cannot have a route prop (${childElementId})`,
+        );
+      }
+      fallbackCandidate = childRouteInfo;
+    }
   };
   if (DEBUG) {
     console.group(`👶 Discovery of ${elementId}`);
@@ -114,6 +138,8 @@ const ActiveRouteManager = ({
       index,
       fallback,
       meta,
+      indexCandidate,
+      fallbackCandidate,
       candidateSet,
       onActiveInfoChange,
       registerChildRouteFromContext,
@@ -133,6 +159,8 @@ const initRouteObserver = ({
   index,
   fallback,
   meta,
+  indexCandidate,
+  fallbackCandidate,
   candidateSet,
   onActiveInfoChange,
   registerChildRouteFromContext,
@@ -163,23 +191,18 @@ const initRouteObserver = ({
   };
 
   const findActiveChildInfo = () => {
-    let fallbackInfo = null;
-    let indexInfo = null;
     for (const candidate of candidateSet) {
       if (candidate.route?.active) {
         return candidate;
       }
-      // fallback without route can match when no other route matches.
-      // This is useful solely for "catch all" fallback used on the <Routes>
-      // otherwise a fallback would always match and make the parent route always active
-      if (candidate.fallback && !candidate.route.routeFromProps) {
-        fallbackInfo = candidate;
-      }
-      if (candidate.index) {
-        indexInfo = candidate;
-      }
     }
-    return indexInfo || fallbackInfo;
+    if (indexCandidate) {
+      return indexCandidate;
+    }
+    if (fallbackCandidate) {
+      return fallbackCandidate;
+    }
+    return null;
   };
   const getActiveInfo = route
     ? () => {
