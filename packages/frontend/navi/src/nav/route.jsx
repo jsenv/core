@@ -197,6 +197,12 @@ const initRouteObserver = ({
       }
     }
     if (indexCandidate) {
+      if (indexCandidate === fallbackCandidate) {
+        // the index is also used as fallback (catch all routes under a parent)
+        return indexCandidate;
+      }
+      // TODO: the index candidate should match only if the url matches "exactly" the parent route
+      // to let fallback a chance to match on non defined urls for that parent route
       return indexCandidate;
     }
     if (fallbackCandidate) {
