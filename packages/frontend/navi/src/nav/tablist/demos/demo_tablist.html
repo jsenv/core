@@ -118,7 +118,23 @@
               updates the associated panel below.
             </Text>
             <div className="example-block">
+              <div className="caption">Indicator at end (default)</div>
               <TabList spacing="sm" indicator="end">
+                {tabs.map((name) => (
+                  <Tab
+                    key={name}
+                    selected={name === active}
+                    onClick={() => setActive(name)}
+                    aria-controls={`panel-${name}`}
+                  >
+                    {name.charAt(0).toUpperCase() + name.slice(1)}
+                  </Tab>
+                ))}
+              </TabList>
+            </div>
+            <div className="example-block">
+              <div className="caption">Indicator at start</div>
+              <TabList spacing="sm" indicator="start">
                 {tabs.map((name) => (
                   <Tab
                     key={name}

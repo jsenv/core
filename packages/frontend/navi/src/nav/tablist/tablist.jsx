@@ -30,6 +30,7 @@ import.meta.css = /* css */ `
       --tab-color-hover: #010409;
       --tab-color-selected: inherit;
       --tab-indicator-size: 2px;
+      --tab-indicator-spacing: 5px;
       --tab-indicator-color: rgb(205, 52, 37);
     }
   }
@@ -91,9 +92,16 @@ import.meta.css = /* css */ `
             display: flex;
             width: 100%;
             height: var(--tab-indicator-size);
-            margin-top: 5px;
             background: transparent;
             border-radius: 0.1px;
+
+            &[data-position="start"] {
+              margin-bottom: var(--tab-indicator-spacing);
+            }
+
+            &[data-position="end"] {
+              margin-top: var(--tab-indicator-spacing);
+            }
           }
 
           /* Interactive */
@@ -304,6 +312,9 @@ const TabBasic = ({
       }}
       {...props}
     >
+      {tabListIndicator && tabListIndicator === "start" && (
+        <span className="navi_tab_indicator" data-position="start"></span>
+      )}
       <Box
         className="navi_tab_content"
         paddingX={paddingX}
@@ -315,11 +326,8 @@ const TabBasic = ({
       <div className="navi_tab_content_bold_clone" aria-hidden="true">
         {children}
       </div>
-      {tabListIndicator && tabListIndicator !== "none" && (
-        <span
-          className="navi_tab_indicator"
-          data-position={tabListIndicator}
-        ></span>
+      {tabListIndicator && tabListIndicator === "end" && (
+        <span className="navi_tab_indicator" data-position="end"></span>
       )}
     </Box>
   );
