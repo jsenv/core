@@ -34,29 +34,22 @@ const debug = (...args) => {
 
 // Check if a route is a "parent" route (catches multiple routes) and if current URL matches exactly
 const isParentRouteExactMatch = (route) => {
-  if (!route || !route.urlPattern) {
+  if (!route) {
     return false;
   }
-
-  const pattern = route.urlPattern;
-
-  // Check if this looks like a parent route (contains wildcards like {/}?* or /*)
-  const isParentRoute = pattern.includes("*") || pattern.includes("{/}");
-
-  if (!isParentRoute) {
+  const currentUrl = window.location.href;
+  const parentUrl = route.buildUrl();
+  if (currentUrl === parentUrl) {
+    return true;
+  }
+  const currentUrlObject = new URL(currentUrl);
+  if (!currentUrlObject.pathname.endsWith("/")) {
     return false;
   }
-
-  // Get the base pattern without wildcards
-  const basePattern = pattern
-    .replace("{/}?*", "") // Remove {/}?* wildcard
-    .replace("/*", "") // Remove /* wildcard
-    .replace("*", ""); // Remove any remaining * wildcard
-
-  const currentUrl = window.location.pathname;
-
-  // Check exact match: "monitoring" -> yes, "monitoring/" -> yes, "monitoring/any" -> no
-  return currentUrl === basePattern || currentUrl === `${basePattern}/`;
+  const pathnameWithoutSlash = currentUrlObject.pathname.slice(0, -1);
+  currentUrlObject.pathname = pathnameWithoutSlash;
+  const currentUrlWithoutTrailingSlash = currentUrlObject.href;
+  return currentUrlWithoutTrailingSlash === parentUrl;
 };
 
 const RootElement = () => {
