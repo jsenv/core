@@ -5,10 +5,10 @@ import { Route, Routes, setupRoutes, TabList } from "@jsenv/navi";
 // Setup routes with search params handling
 const { HOME_ROUTE, COLOR_ROUTE, COLOR_LIGHT_ROUTE, COLOR_DARK_ROUTE } =
   setupRoutes({
-    HOME_ROUTE: "",
-    COLOR_ROUTE: "colors",
-    COLOR_LIGHT_ROUTE: "colors/light",
-    COLOR_DARK_ROUTE: "colors/dark",
+    HOME_ROUTE: "/",
+    COLOR_ROUTE: "/colors",
+    COLOR_LIGHT_ROUTE: "/colors/light",
+    COLOR_DARK_ROUTE: "/colors/dark",
   });
 
 // Color picker component
@@ -44,20 +44,6 @@ const HomePage = () => {
     <div>
       <h2>Home Page</h2>
       <p>This is the home page with no search params.</p>
-
-      <h3>Navigation</h3>
-      <TabList>
-        <TabList.Tab route={COLOR_ROUTE}>Colors (default)</TabList.Tab>
-        <TabList.Tab route={COLOR_ROUTE} routeParams={{ color: "red" }}>
-          Colors (red)
-        </TabList.Tab>
-        <TabList.Tab route={COLOR_ROUTE} routeParams={{ color: "green" }}>
-          Colors (green)
-        </TabList.Tab>
-        <TabList.Tab route={COLOR_ROUTE} routeParams={{ color: "purple" }}>
-          Colors (purple)
-        </TabList.Tab>
-      </TabList>
     </div>
   );
 };
@@ -223,7 +209,7 @@ const DarkModePage = ({ color = "blue", mode = "standard" }) => {
   );
 };
 
-const SearchParamsDemo = () => {
+const App = () => {
   return (
     <div
       style={{
@@ -252,6 +238,21 @@ const SearchParamsDemo = () => {
         </li>
       </ul>
 
+      <h3>Navigation</h3>
+      <TabList>
+        <TabList.Tab route={HOME_ROUTE}>Home</TabList.Tab>
+        <TabList.Tab route={COLOR_ROUTE}>Colors (default)</TabList.Tab>
+        <TabList.Tab route={COLOR_ROUTE} routeParams={{ color: "red" }}>
+          Colors (red)
+        </TabList.Tab>
+        <TabList.Tab route={COLOR_ROUTE} routeParams={{ color: "green" }}>
+          Colors (green)
+        </TabList.Tab>
+        <TabList.Tab route={COLOR_ROUTE} routeParams={{ color: "purple" }}>
+          Colors (purple)
+        </TabList.Tab>
+      </TabList>
+
       <div
         style={{
           border: "1px solid #ddd",
@@ -271,4 +272,4 @@ const SearchParamsDemo = () => {
   );
 };
 
-render(<SearchParamsDemo />, document.getElementById("app"));
+render(<App />, document.getElementById("app"));

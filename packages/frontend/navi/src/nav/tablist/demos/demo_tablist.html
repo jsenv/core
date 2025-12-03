@@ -117,7 +117,7 @@
               selected tab also updates the associated panel below.
             </Text>
             <div className="example-block">
-              <TabList underline spacing="sm">
+              <TabList spacing="sm">
                 {tabs.map((name) => (
                   <Tab
                     key={name}
@@ -152,7 +152,7 @@
             </Text>
             <div className="example-block">
               <div className="caption">spacing="xs"</div>
-              <TabList underline spacing="xs">
+              <TabList spacing="xs">
                 <Tab key="a" selected>
                   A
                 </Tab>
@@ -162,7 +162,7 @@
             </div>
             <div className="example-block">
               <div className="caption">spacing="sm"</div>
-              <TabList underline spacing="sm">
+              <TabList spacing="sm">
                 <Tab key="a" selected>
                   A
                 </Tab>
@@ -172,7 +172,7 @@
             </div>
             <div className="example-block">
               <div className="caption">(default spacing)</div>
-              <TabList underline>
+              <TabList>
                 <Tab key="a" selected>
                   A
                 </Tab>
@@ -216,7 +216,7 @@
               </button>
               <button onClick={removeLast}>Remove Last</button>
             </div>
-            <TabList underline spacing="sm">
+            <TabList spacing="sm">
               {tabs.map((t) => (
                 <Tab
                   key={t.key}
@@ -252,7 +252,6 @@
             <div className="example-block">
               <div className="caption">Global theme (light slate)</div>
               <TabList
-                underline
                 style={{
                   "--tab-background": "#f2f5f8",
                   "--tab-color": "#334155",
@@ -270,7 +269,6 @@
             <div className="example-block">
               <div className="caption">Override third tab only</div>
               <TabList
-                underline
                 style={{
                   "--tab-background": "#202124",
                   "--tab-color": "#e8eaed",
@@ -298,7 +296,6 @@
             <div className="example-block">
               <div className="caption">Custom hover + marker</div>
               <TabList
-                underline
                 style={{
                   "--tab-background": "transparent",
                   "--tab-color": "#374151",
@@ -317,7 +314,6 @@
             <div className="example-block">
               <div className="caption">Custom selected background & color</div>
               <TabList
-                underline
                 style={{
                   "--tab-background": "#1e1e1e",
                   "--tab-color": "#c9d1d9",
@@ -339,7 +335,6 @@
             <div className="example-block">
               <div className="caption">Override selected style for one tab</div>
               <TabList
-                underline
                 style={{
                   "--tab-background": "#f1f5f9",
                   "--tab-color": "#475569",
@@ -383,7 +378,7 @@
         return (
           <div className="example-block">
             <div className="caption">
-              TabList background + selected styling (no underline)
+              TabList background + selected styling (no indicator)
             </div>
             <Box
               row
@@ -391,6 +386,7 @@
               paddingX="m"
               width="400"
               border="1px solid #ccc"
+              indicator="none"
             >
               <TabList
                 borderRadius="s"

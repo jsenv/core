@@ -315,7 +315,7 @@ const TabBasic = ({
       <div className="navi_tab_content_bold_clone" aria-hidden="true">
         {children}
       </div>
-      {tabListIndicator && (
+      {tabListIndicator && tabListIndicator !== "none" && (
         <span
           className="navi_tab_indicator"
           data-position={tabListIndicator}
