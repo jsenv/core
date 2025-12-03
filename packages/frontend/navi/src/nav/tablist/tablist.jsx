@@ -2,7 +2,7 @@
  * TabList component with support for horizontal and vertical layouts
  */
 
-import { createContext } from "preact";
+import { createContext, toChildArray } from "preact";
 import { useContext } from "preact/hooks";
 
 import { Box } from "../../box/box.jsx";
@@ -186,6 +186,8 @@ export const TabList = ({
   padding,
   ...props
 }) => {
+  children = toChildArray(children);
+
   return (
     <Box
       as="nav"
