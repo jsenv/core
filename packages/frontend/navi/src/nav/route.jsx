@@ -192,6 +192,17 @@ const initRouteObserver = ({
   onActiveInfoChange,
   registerChildRouteFromContext,
 }) => {
+  if (
+    !fallbackCandidate &&
+    indexCandidate &&
+    indexCandidate.fallback !== false
+  ) {
+    // no fallback + an index -> index behaves as a fallback (handle urls under a parent when no sibling matches)
+    // to disable this behavior set fallback={false} on the index route
+    // (in that case no route will be rendered when no child matches meaning only parent route element will be shown)
+    fallbackCandidate = indexCandidate;
+  }
+
   const [teardown, addTeardown] = createPubSub();
 
   const elementId = getElementSignature(element);
@@ -233,11 +244,6 @@ const initRouteObserver = ({
       if (route && isParentRouteExactMatch(route)) {
         return indexCandidate;
       }
-      // URL doesn't match exactly, let fallback handle it if available
-      if (fallbackCandidate) {
-        return fallbackCandidate;
-      }
-      return indexCandidate;
     }
     if (fallbackCandidate) {
       return fallbackCandidate;

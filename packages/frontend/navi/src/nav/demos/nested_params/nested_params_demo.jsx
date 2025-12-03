@@ -18,7 +18,6 @@ const { HOME_ROUTE, CATALOG_ROUTE, PRODUCTS_ROUTE, REVIEWS_ROUTE } =
     REVIEWS_ROUTE: "/catalog/reviews",
   });
 
-// Home page component
 const HomePage = () => {
   return (
     <div>
@@ -29,8 +28,6 @@ const HomePage = () => {
     </div>
   );
 };
-
-// Catalog page component
 const CatalogPage = () => {
   const [category] = useUrlSearchParam("category");
 
@@ -50,8 +47,6 @@ const CatalogPage = () => {
     </div>
   );
 };
-
-// Products page component
 const ProductsPage = () => {
   const [category] = useUrlSearchParam("category");
 
@@ -68,8 +63,6 @@ const ProductsPage = () => {
     </div>
   );
 };
-
-// Reviews page component
 const ReviewsPage = () => {
   const [category] = useUrlSearchParam("category");
 
