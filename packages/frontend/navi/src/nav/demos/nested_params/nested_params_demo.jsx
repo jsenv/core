@@ -12,7 +12,7 @@ import {
 // Setup nested routes
 const { HOME_ROUTE, GALLERY_ROUTE, PHOTOS_ROUTE, ALBUMS_ROUTE } = setupRoutes({
   HOME_ROUTE: "/",
-  GALLERY_ROUTE: "/gallery",
+  GALLERY_ROUTE: "/gallery/*",
   PHOTOS_ROUTE: "/gallery/photos",
   ALBUMS_ROUTE: "/gallery/albums",
 });
@@ -43,6 +43,11 @@ const GalleryPage = () => {
         <Tab route={PHOTOS_ROUTE} routeParams={{ color }} />
         <Tab route={ALBUMS_ROUTE} routeParams={{ color }} />
       </TabList>
+
+      <Routes>
+        <Route route={PHOTOS_ROUTE} element={<PhotosPage />} />
+        <Route route={ALBUMS_ROUTE} element={<AlbumsPage />} />
+      </Routes>
     </div>
   );
 };
@@ -96,7 +101,6 @@ const App = () => {
           <Tab route={HOME_ROUTE}>Home</Tab>
           <Tab route={GALLERY_ROUTE} routeParams={{ color: "red" }} />
           <Tab route={GALLERY_ROUTE} routeParams={{ color: "green" }} />
-          <Tab route={GALLERY_ROUTE} routeParams={{ color: "purple" }} />
         </TabList>
       </div>
 
@@ -111,8 +115,6 @@ const App = () => {
         <Routes>
           <Route route={HOME_ROUTE} element={<HomePage />} />
           <Route route={GALLERY_ROUTE} element={<GalleryPage />} />
-          <Route route={PHOTOS_ROUTE} element={<PhotosPage />} />
-          <Route route={ALBUMS_ROUTE} element={<AlbumsPage />} />
         </Routes>
       </div>
     </div>
