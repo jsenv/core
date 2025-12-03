@@ -164,6 +164,7 @@ const initRouteObserver = ({
 
   const findActiveChildInfo = () => {
     let fallbackInfo = null;
+    let indexInfo = null;
     for (const candidate of candidateSet) {
       if (candidate.route?.active) {
         return candidate;
@@ -175,10 +176,10 @@ const initRouteObserver = ({
         fallbackInfo = candidate;
       }
       if (candidate.index) {
-        fallbackInfo = candidate;
+        indexInfo = candidate;
       }
     }
-    return fallbackInfo;
+    return indexInfo || fallbackInfo;
   };
   const getActiveInfo = route
     ? () => {

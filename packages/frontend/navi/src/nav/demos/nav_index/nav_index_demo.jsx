@@ -335,6 +335,7 @@ const App = () => {
         <Routes>
           <Route route={HOME_ROUTE} element={<Home />} />
           <Route route={DASHBOARD_ROUTE} element={<Dashboard />} />
+          <Route fallback element={"404 - Page Not Found"} />
         </Routes>
       </main>
     </div>
