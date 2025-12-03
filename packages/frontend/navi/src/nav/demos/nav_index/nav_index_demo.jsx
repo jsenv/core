@@ -26,12 +26,14 @@ const {
   REPORTS_SECTION_ROUTE,
   USERS_LIST_ROUTE,
   USERS_ACTIVITY_ROUTE,
+  USERS_NOTHING_ROUTE,
   SETTINGS_GENERAL_ROUTE,
   SETTINGS_SECURITY_ROUTE,
   ANALYTICS_OVERVIEW_ROUTE,
   ANALYTICS_REPORTS_ROUTE,
   MONITORING_EXPORT_ROUTE,
   MONITORING_ARCHIVE_ROUTE,
+  TEST_404_ROUTE,
 } = setupRoutes({
   HOME_ROUTE: "home",
   DASHBOARD_ROUTE: "dashboard{/}?*",
@@ -41,12 +43,14 @@ const {
   REPORTS_SECTION_ROUTE: "dashboard/monitoring{/}?*",
   USERS_LIST_ROUTE: "dashboard/users/list",
   USERS_ACTIVITY_ROUTE: "dashboard/users/activity",
+  USERS_NOTHING_ROUTE: "dashboard/users/nothing",
   SETTINGS_GENERAL_ROUTE: "dashboard/settings/general",
   SETTINGS_SECURITY_ROUTE: "dashboard/settings/security",
   ANALYTICS_OVERVIEW_ROUTE: "dashboard/analytics/overview",
   ANALYTICS_REPORTS_ROUTE: "dashboard/analytics/reports",
   MONITORING_EXPORT_ROUTE: "dashboard/monitoring/export",
   MONITORING_ARCHIVE_ROUTE: "dashboard/monitoring/archive",
+  TEST_404_ROUTE: "test-404",
 });
 
 // User List Component - Shows actual user data first
@@ -322,6 +326,7 @@ const App = () => {
           >
             <Tab route={HOME_ROUTE}>🏠 Home</Tab>
             <Tab route={DASHBOARD_ROUTE}>📊 Dashboard</Tab>
+            <Tab route={TEST_404_ROUTE}>❌ Test 404</Tab>
           </TabList>
         </nav>
       </header>
@@ -500,6 +505,7 @@ const Dashboard = () => {
                   >
                     <Tab route={USERS_LIST_ROUTE}>📋 User List</Tab>
                     <Tab route={USERS_ACTIVITY_ROUTE}>📊 Activity</Tab>
+                    <Tab route={USERS_NOTHING_ROUTE}>❌ Nothing</Tab>
                   </TabList>
                 </div>
 
