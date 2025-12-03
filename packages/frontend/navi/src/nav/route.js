@@ -8,7 +8,7 @@ import { batch, computed, effect, signal } from "@preact/signals";
 
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
 import { buildRouteRelativeUrl } from "./build_route_relative_url.js";
-import { NO_PARAMS, createRoutePattern } from "./route_pattern.js";
+import { createRoutePattern } from "./route_pattern.js";
 
 let baseUrl;
 if (typeof window === "undefined") {
@@ -54,7 +54,7 @@ export const updateRoutes = (
     // Get previous state
     const previousState = routePreviousStateMap.get(route) || {
       active: false,
-      params: NO_PARAMS,
+      params: null,
     };
     const oldActive = previousState.active;
     const oldParams = previousState.params;
@@ -69,7 +69,7 @@ export const updateRoutes = (
         newParams = extractedParams;
       }
     } else {
-      newParams = NO_PARAMS;
+      newParams = null;
     }
 
     const routeMatchInfo = {
@@ -227,7 +227,7 @@ const createRoute = (urlPatternInput) => {
     urlPattern: urlPatternInput,
     isRoute: true,
     active: false,
-    params: NO_PARAMS,
+    params: null,
     buildUrl: null,
     bindAction: null,
     relativeUrl: null,
@@ -289,8 +289,11 @@ const createRoute = (urlPatternInput) => {
 
   route.compareParams = (otherParams) => {
     const params = route.params;
-    if (!otherParams || Object.keys(otherParams).length === 0) {
-      return params === NO_PARAMS;
+    const paramsIsEmptyOrFalsy = !params || Object.keys(params).length === 0;
+    const otherParamsIsEmptyOrFalsy =
+      !otherParams || Object.keys(otherParams).length === 0;
+    if (paramsIsEmptyOrFalsy && otherParamsIsEmptyOrFalsy) {
+      return true;
     }
     return compareTwoJsValues(params, otherParams);
   };
@@ -329,7 +332,7 @@ const createRoute = (urlPatternInput) => {
   route.buildUrl = buildUrl;
 
   const activeSignal = signal(false);
-  const paramsSignal = signal(NO_PARAMS);
+  const paramsSignal = signal(null);
   const visitedSignal = signal(false);
   const relativeUrlSignal = computed(() => {
     const params = paramsSignal.value;

@@ -1,7 +1,3 @@
-import { SYMBOL_IDENTITY } from "../utils/compare_two_js_values.js";
-
-export const NO_PARAMS = { [SYMBOL_IDENTITY]: Symbol("no_params") };
-
 export const createRoutePattern = (urlPatternInput, baseUrl) => {
   // Remove leading slash from urlPattern to make it relative to baseUrl
   const normalizedUrlPattern = urlPatternInput.startsWith("/")
@@ -70,9 +66,6 @@ export const createRoutePattern = (urlPatternInput, baseUrl) => {
   };
 
   const extractParams = (match, originalUrl) => {
-    if (!match) {
-      return NO_PARAMS;
-    }
     const params = {};
 
     // Extract search parameters from the original URL
