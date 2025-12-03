@@ -18,7 +18,7 @@ export const RouteLink = ({ route, routeParams, children, ...rest }) => {
         ":-navi-href-current": active && paramsAreMatching,
       }}
     >
-      {children}
+      {children || route.buildRelativeUrl(routeParams)}
     </Link>
   );
 };

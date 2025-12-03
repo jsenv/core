@@ -4,17 +4,19 @@ import {
   Route,
   Routes,
   setupRoutes,
+  Tab,
   TabList,
   useUrlSearchParam,
 } from "@jsenv/navi";
 
 // Setup nested routes
-const { HOME_ROUTE, PARENT_ROUTE, CHILD_A_ROUTE, CHILD_B_ROUTE } = setupRoutes({
-  HOME_ROUTE: "/",
-  PARENT_ROUTE: "/parent",
-  CHILD_A_ROUTE: "/parent/child-a",
-  CHILD_B_ROUTE: "/parent/child-b",
-});
+const { HOME_ROUTE, CATALOG_ROUTE, PRODUCTS_ROUTE, REVIEWS_ROUTE } =
+  setupRoutes({
+    HOME_ROUTE: "/",
+    CATALOG_ROUTE: "/catalog",
+    PRODUCTS_ROUTE: "/catalog/products",
+    REVIEWS_ROUTE: "/catalog/reviews",
+  });
 
 // Home page component
 const HomePage = () => {
@@ -22,64 +24,64 @@ const HomePage = () => {
     <div>
       <h2>Home</h2>
       <p>
-        Navigate to the parent page to see how child routes inherit search
-        parameters.
+        Navigate to the catalog to see how sub-pages inherit search parameters.
       </p>
     </div>
   );
 };
 
-// Parent page component
-const ParentPage = () => {
+// Catalog page component
+const CatalogPage = () => {
   const [category] = useUrlSearchParam("category");
 
   return (
     <div>
-      <h2>Parent Page</h2>
+      <h2>Catalog</h2>
       <p>
-        Category: <strong>{category}</strong>
+        Category: <strong>{category || "all"}</strong>
       </p>
 
-      <h3>Child Pages</h3>
-      <p>Both children will inherit the current category parameter:</p>
+      <h3>Sections</h3>
+      <p>Both sections will inherit the current category parameter:</p>
       <TabList spacing="sm">
-        <TabList.Tab route={CHILD_A_ROUTE} routeParams={{ category }}>
-          Child A
-        </TabList.Tab>
-        <TabList.Tab route={CHILD_B_ROUTE} routeParams={{ category }}>
-          Child B
-        </TabList.Tab>
+        <Tab route={PRODUCTS_ROUTE} routeParams={{ category }}></Tab>
+        <Tab route={REVIEWS_ROUTE} routeParams={{ category }}></Tab>
       </TabList>
     </div>
   );
 };
 
-// Child A page component
-const ChildAPage = () => {
+// Products page component
+const ProductsPage = () => {
   const [category] = useUrlSearchParam("category");
 
   return (
     <div>
-      <h2>Child A</h2>
+      <h2>Products</h2>
       <p>
-        Inherited category: <strong>{category}</strong>
+        Showing products for: <strong>{category || "all categories"}</strong>
       </p>
-      <p>This page uses the search parameter from the parent route.</p>
+      <p>
+        This page displays products filtered by the catalog's category
+        parameter.
+      </p>
     </div>
   );
 };
 
-// Child B page component
-const ChildBPage = () => {
+// Reviews page component
+const ReviewsPage = () => {
   const [category] = useUrlSearchParam("category");
 
   return (
     <div>
-      <h2>Child B</h2>
+      <h2>Reviews</h2>
       <p>
-        Inherited category: <strong>{category}</strong>
+        Showing reviews for: <strong>{category || "all categories"}</strong>
       </p>
-      <p>This page also uses the search parameter from the parent route.</p>
+      <p>
+        This page displays reviews filtered by the catalog's category parameter.
+      </p>
     </div>
   );
 };
@@ -95,24 +97,17 @@ const App = () => {
       }}
     >
       <h1>Nested Parameters Demo</h1>
-      <p>Test how child routes inherit parent search parameters.</p>
+      <p>Test how sub-routes inherit parent search parameters.</p>
 
       {/* Top level navigation - always available */}
       <div style={{ marginBottom: "20px" }}>
         <TabList spacing="sm">
-          <TabList.Tab route={HOME_ROUTE}>Home</TabList.Tab>
-          <TabList.Tab
-            route={PARENT_ROUTE}
-            routeParams={{ category: "products" }}
-          >
-            Parent (products)
-          </TabList.Tab>
-          <TabList.Tab
-            route={PARENT_ROUTE}
-            routeParams={{ category: "services" }}
-          >
-            Parent (services)
-          </TabList.Tab>
+          <Tab route={HOME_ROUTE}>Home</Tab>
+          <Tab
+            route={CATALOG_ROUTE}
+            routeParams={{ category: "electronics" }}
+          ></Tab>
+          <Tab route={CATALOG_ROUTE} routeParams={{ category: "books" }}></Tab>
         </TabList>
       </div>
 
@@ -126,9 +121,9 @@ const App = () => {
       >
         <Routes>
           <Route route={HOME_ROUTE} element={<HomePage />} />
-          <Route route={PARENT_ROUTE} element={<ParentPage />} />
-          <Route route={CHILD_A_ROUTE} element={<ChildAPage />} />
-          <Route route={CHILD_B_ROUTE} element={<ChildBPage />} />
+          <Route route={CATALOG_ROUTE} element={<CatalogPage />} />
+          <Route route={PRODUCTS_ROUTE} element={<ProductsPage />} />
+          <Route route={REVIEWS_ROUTE} element={<ReviewsPage />} />
         </Routes>
       </div>
     </div>
