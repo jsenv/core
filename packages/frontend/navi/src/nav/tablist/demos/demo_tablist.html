@@ -77,6 +77,7 @@
             <BasicTabs />
             <UnderlineInteractiveTabs />
             <SpacingVariants />
+            <VerticalTabs />
             <StylingVariables />
             <DynamicAddRemove />
           </div>
@@ -251,6 +252,71 @@
               role="tabpanel"
             >
               <strong>{active}</strong> dynamic panel content
+            </div>
+          </Box>
+        );
+      };
+
+      const VerticalTabs = () => {
+        const [activeVertical, setActiveVertical] = useState("dashboard");
+        const verticalTabs = ["dashboard", "analytics", "reports", "settings"];
+        return (
+          <Box as="section" className="demo-section">
+            <Title as="h2">Vertical Layout</Title>
+            <Text className="note">
+              The <code>vertical</code> prop changes the layout direction.
+              Default indicator position for vertical is <code>"start"</code>{" "}
+              (left side), but can be changed to <code>"end"</code> (right
+              side).
+            </Text>
+            <div
+              style={{ display: "flex", gap: "20px", alignItems: "flex-start" }}
+            >
+              <div className="example-block" style={{ flex: "1" }}>
+                <div className="caption">
+                  Vertical with start indicator (default)
+                </div>
+                <TabList vertical spacing="xs" style={{ height: "200px" }}>
+                  {verticalTabs.map((name) => (
+                    <Tab
+                      key={name}
+                      selected={name === activeVertical}
+                      onClick={() => setActiveVertical(name)}
+                      aria-controls={`vertical-panel-${name}`}
+                    >
+                      {name.charAt(0).toUpperCase() + name.slice(1)}
+                    </Tab>
+                  ))}
+                </TabList>
+              </div>
+
+              <div className="example-block" style={{ flex: "1" }}>
+                <div className="caption">Vertical with end indicator</div>
+                <TabList
+                  vertical
+                  indicator="end"
+                  spacing="xs"
+                  style={{ height: "200px" }}
+                >
+                  {verticalTabs.map((name) => (
+                    <Tab
+                      key={name}
+                      selected={name === activeVertical}
+                      onClick={() => setActiveVertical(name)}
+                      aria-controls={`vertical-panel-${name}`}
+                    >
+                      {name.charAt(0).toUpperCase() + name.slice(1)}
+                    </Tab>
+                  ))}
+                </TabList>
+              </div>
+            </div>
+            <div
+              className="dynamic-panel"
+              id={`vertical-panel-${activeVertical}`}
+              role="tabpanel"
+            >
+              <strong>{activeVertical}</strong> vertical panel content
             </div>
           </Box>
         );

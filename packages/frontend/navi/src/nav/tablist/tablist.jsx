@@ -41,6 +41,17 @@ import.meta.css = /* css */ `
     overflow-x: auto;
     overflow-y: hidden;
 
+    &[data-tab-indicator-position="start"] {
+      .navi_tab {
+        margin-top: var(--tab-indicator-spacing);
+      }
+    }
+    &[data-tab-indicator-position="end"] {
+      .navi_tab {
+        margin-bottom: var(--tab-indicator-spacing);
+      }
+    }
+
     > ul {
       display: flex;
       width: 100%;
@@ -64,6 +75,7 @@ import.meta.css = /* css */ `
           flex-direction: column;
           white-space: nowrap;
           border-radius: var(--tab-border-radius);
+          user-select: none;
 
           .navi_tab_content {
             display: flex;
@@ -88,6 +100,7 @@ import.meta.css = /* css */ `
             overflow: hidden; /* avoid any accidental height */
           }
           .navi_tab_indicator {
+            position: absolute;
             z-index: 1;
             display: flex;
             width: 100%;
@@ -96,11 +109,11 @@ import.meta.css = /* css */ `
             border-radius: 0.1px;
 
             &[data-position="start"] {
-              margin-bottom: var(--tab-indicator-spacing);
+              top: 0;
             }
 
             &[data-position="end"] {
-              margin-top: var(--tab-indicator-spacing);
+              bottom: 0;
             }
           }
 
@@ -134,26 +147,48 @@ import.meta.css = /* css */ `
       overflow-x: hidden;
       overflow-y: auto;
 
+      &[data-tab-indicator-position="start"] {
+        .navi_tab {
+          margin-top: 0;
+          margin-left: var(--tab-indicator-spacing);
+
+          .navi_tab_indicator {
+            left: 0;
+          }
+        }
+      }
+      &[data-tab-indicator-position="end"] {
+        .navi_tab {
+          margin-right: var(--tab-indicator-spacing);
+          margin-bottom: 0;
+        }
+
+        .navi_tab_indicator {
+          right: 0;
+        }
+      }
+
       > ul {
         flex-direction: column;
-        align-items: stretch;
+        align-items: start;
 
         > li {
-          .navi_tab {
-            .navi_tab_content {
-              justify-content: flex-start;
-              text-align: left;
+          width: 100%;
 
-              .navi_link {
-                text-align: left;
-              }
+          .navi_tab {
+            flex-direction: row;
+
+            .navi_tab_content_bold_clone {
+              width: 0;
+              height: auto;
+            }
+
+            .navi_tab_content {
+              text-align: left;
             }
             .navi_tab_indicator {
               width: var(--tab-indicator-size);
               height: 100%;
-              margin-top: 0;
-              margin-right: 5px;
-              margin-left: auto;
             }
           }
         }
@@ -201,6 +236,7 @@ export const TabList = ({
       as="nav"
       baseClassName="navi_tablist"
       role="tablist"
+      data-tab-indicator-position={indicator}
       data-expand={expand || expandX ? "" : undefined}
       data-vertical={vertical ? "" : undefined}
       expand={expand}
@@ -312,8 +348,8 @@ const TabBasic = ({
       }}
       {...props}
     >
-      {tabListIndicator && tabListIndicator === "start" && (
-        <span className="navi_tab_indicator" data-position="start"></span>
+      {tabListIndicator && tabListIndicator !== "none" && (
+        <span className="navi_tab_indicator" data-position={tabListIndicator} />
       )}
       <Box
         className="navi_tab_content"
@@ -326,9 +362,6 @@ const TabBasic = ({
       <div className="navi_tab_content_bold_clone" aria-hidden="true">
         {children}
       </div>
-      {tabListIndicator && tabListIndicator === "end" && (
-        <span className="navi_tab_indicator" data-position="end"></span>
-      )}
     </Box>
   );
 };
