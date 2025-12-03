@@ -23,6 +23,7 @@ import { useContext, useLayoutEffect, useRef } from "preact/hooks";
 
 import { useUITransitionContentId } from "../ui_transition/ui_transition.jsx";
 import { replaceUrl } from "./browser_integration/browser_integration.js";
+import { useDocumentUrl } from "./browser_integration/document_url_signal.js";
 import { useForceRender } from "./use_force_render.js";
 
 const DEBUG = false;
@@ -222,6 +223,9 @@ const initRouteObserver = ({
       const Element = element;
       element = <Element />;
     }
+    // ensure we re-render on document url change (useful when navigating from /users/list to /users)
+    // so that we re-replace urls back to /users/list when /users/list is an index
+    useDocumentUrl();
 
     if (
       activeRouteInfo &&
