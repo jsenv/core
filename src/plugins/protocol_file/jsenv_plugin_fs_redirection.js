@@ -3,12 +3,7 @@ import {
   applyFileSystemMagicResolution,
   getExtensionsToTry,
 } from "@jsenv/node-esm-resolution";
-import {
-  urlIsOrIsInsideOf,
-  urlToExtension,
-  urlToFilename,
-  urlToPathname,
-} from "@jsenv/urls";
+import { urlIsOrIsInsideOf, urlToExtension, urlToFilename } from "@jsenv/urls";
 import { existsSync, realpathSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 
@@ -100,13 +95,7 @@ export const jsenvPluginFsRedirection = ({
         // 2. The url pathname does not have an extension
         //    This point assume client is requesting a file when there is an extension
         //    and it assumes all routes will not use extension
-        // 3. The url pathname does not ends with "/"
-        //    In that case we assume client explicitely asks to load a directory
-        if (
-          spa &&
-          !urlToExtension(urlObject) &&
-          !urlToPathname(urlObject).endsWith("/")
-        ) {
+        if (spa && !urlToExtension(urlObject)) {
           const { requestedUrl, rootDirectoryUrl, mainFilePath } =
             reference.ownerUrlInfo.context;
           const closestHtmlRootFile = getClosestHtmlRootFile(

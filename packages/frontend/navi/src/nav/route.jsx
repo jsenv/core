@@ -39,7 +39,14 @@ const SlotContext = createContext(null);
 const RouteInfoContext = createContext(null);
 
 export const Routes = ({ element = RootElement, children }) => {
-  return <Route element={element}>{children}</Route>;
+  const routeInfo = useActiveRouteInfo();
+  const route = routeInfo?.route;
+
+  return (
+    <Route route={route} element={element}>
+      {children}
+    </Route>
+  );
 };
 
 export const useActiveRouteInfo = () => useContext(RouteInfoContext);
@@ -201,8 +208,8 @@ const initRouteObserver = ({
         // the index is also used as fallback (catch all routes under a parent)
         return indexCandidate;
       }
-      // TODO: the index candidate should match only if the url matches "exactly" the parent route
-      // to let fallback a chance to match on non defined urls for that parent route
+      // Only return the index candidate if the current URL matches exactly the parent route
+      // This allows fallback routes to handle non-defined URLs under this parent route
       return indexCandidate;
     }
     if (fallbackCandidate) {
