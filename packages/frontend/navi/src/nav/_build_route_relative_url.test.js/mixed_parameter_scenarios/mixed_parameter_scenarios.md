@@ -12,15 +12,12 @@ return {
     enabled: true,
     debug: true,
   }),
-  complex_pattern_with_booleans: run(
-    "/search{/:query}?{/filters/*}?",
-    {
-      query: "javascript",
-      0: "recent",
-      exact: true,
-      caseSensitive: false,
-    },
-  ),
+  complex_pattern_with_booleans: run("/search{/:query}?{/filters/*}?", {
+    query: "javascript",
+    0: "recent",
+    exact: true,
+    caseSensitive: false,
+  }),
   empty_vs_false_boolean: run("/test", {
     empty: "",
     zero: 0,

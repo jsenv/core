@@ -147,6 +147,12 @@ export const buildRouteRelativeUrl = (
     relativeUrl = relativeUrl.slice(0, -1);
   }
 
+  // Normalize trailing slash: always favor URLs without trailing slash
+  // except for root path which should remain "/"
+  if (relativeUrl.endsWith("/") && relativeUrl.length > 1) {
+    relativeUrl = relativeUrl.slice(0, -1);
+  }
+
   // Add remaining parameters as search params
   if (extraParamSet.size > 0) {
     if (extraParamEffect === "inject_as_search_param") {

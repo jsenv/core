@@ -62,14 +62,31 @@ export const updateRoutes = (
     const oldActive = previousState.active;
     const oldParams = previousState.params;
     // Check if the URL matches the route pattern
-    const match = urlPattern.exec(url);
+    let match = urlPattern.exec(url);
+
+    // If no match, try with normalized URLs (trailing slash handling)
+    if (!match) {
+      // Try removing trailing slash from URL
+      if (url.endsWith("/") && url.length > 1) {
+        const urlWithoutTrailingSlash = url.slice(0, -1);
+        match = urlPattern.exec(urlWithoutTrailingSlash);
+      }
+      // Try adding trailing slash to URL
+      else if (!url.endsWith("/")) {
+        const urlWithTrailingSlash = `${url}/`;
+        match = urlPattern.exec(urlWithTrailingSlash);
+      }
+    }
+
     const newActive = Boolean(match);
     let newParams;
     if (match) {
       const { optionalParamKeySet } = routePrivateProperties;
+      // Use the URL that actually matched for parameter extraction
+      const matchedUrl = match.input;
       const extractedParams = extractParams(
         urlPattern,
-        url,
+        matchedUrl,
         optionalParamKeySet,
       );
       if (compareTwoJsValues(oldParams, extractedParams)) {
@@ -372,7 +389,7 @@ const createRoute = (urlPatternInput) => {
       processedRelativeUrl = processedRelativeUrl.slice(1);
     }
     if (hasRawUrlPartWithInvalidChars) {
-      return `${baseUrl}/${processedRelativeUrl}`;
+      return `${baseUrl}${processedRelativeUrl}`;
     }
     const url = new URL(processedRelativeUrl, baseUrl).href;
     return url;

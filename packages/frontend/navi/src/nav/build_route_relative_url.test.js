@@ -210,9 +210,34 @@ await snapshotTests(import.meta.url, ({ test }) => {
         zero: 0,
         false: false,
         true: true,
+        // eslint-disable-next-line object-shorthand
         undefined: undefined,
         null: null,
       }),
+    };
+  });
+
+  test("trailing slash normalization", () => {
+    return {
+      basic_trailing_slash_removal: run("/dashboard/"),
+      parameter_with_trailing_slash: run("/users/:id/", { id: "123" }),
+      wildcard_with_trailing_slash: run("/api/*/", { 0: "v1/users" }),
+      nested_path_trailing_slash: run("/admin/users/:id/edit/", { id: "456" }),
+      optional_param_trailing_slash: run("/posts/:id/:slug?/", { id: "123" }),
+      optional_param_with_value_trailing_slash: run("/posts/:id/:slug?/", {
+        id: "123",
+        slug: "hello-world",
+      }),
+      root_path_preserved: run("/"),
+      multiple_trailing_slashes: run("/path///"),
+      complex_optional_with_trailing_slash: run(
+        "/map/isochrone{/time/:duration}?/",
+        {
+          time: "15",
+          duration: "minutes",
+        },
+      ),
+      query_params_with_trailing_slash: run("/search/", { q: "test", page: 1 }),
     };
   });
 });

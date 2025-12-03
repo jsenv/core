@@ -12,6 +12,7 @@
 - [boolean parameters](boolean_parameters/boolean_parameters.md)
 - [string params with optional parts](string_params_with_optional_parts/string_params_with_optional_parts.md)
 - [mixed parameter scenarios](mixed_parameter_scenarios/mixed_parameter_scenarios.md)
+- [trailing slash normalization](trailing_slash_normalization/trailing_slash_normalization.md)
 
 ---
 

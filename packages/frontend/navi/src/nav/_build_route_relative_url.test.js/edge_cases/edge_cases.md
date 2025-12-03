@@ -21,7 +21,7 @@ return {
   "empty_pattern": "",
   "root_pattern": "",
   "no_params": "/api/users",
-  "trailing_wildcard": "/files/",
+  "trailing_wildcard": "/files",
   "multiple_wildcards": "/folder1/files/file.txt",
   "special_characters": "/users/user%40domain.com"
 }
