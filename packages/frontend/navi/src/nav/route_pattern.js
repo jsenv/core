@@ -35,13 +35,14 @@ export const createRoutePattern = (urlPatternInput, baseUrl) => {
     }
 
     // If no match, try with normalized URLs (trailing slash handling)
-    const urlObj = new URL(url, "http://localhost"); // Ensure we have a valid URL for parsing
+    const urlObj = new URL(url, baseUrl);
     const pathname = urlObj.pathname;
 
     // Try removing trailing slash from pathname
     if (pathname.endsWith("/") && pathname.length > 1) {
       const pathnameWithoutSlash = pathname.slice(0, -1);
-      const normalizedUrl = `${urlObj.protocol}//${urlObj.host}${pathnameWithoutSlash}${urlObj.search}${urlObj.hash}`;
+      urlObj.pathname = pathnameWithoutSlash;
+      const normalizedUrl = urlObj.href;
       const matchWithoutTrailingSlash = urlPattern.exec(normalizedUrl);
       if (matchWithoutTrailingSlash) {
         return extractParams(matchWithoutTrailingSlash);
@@ -50,7 +51,8 @@ export const createRoutePattern = (urlPatternInput, baseUrl) => {
     // Try adding trailing slash to pathname
     else if (!pathname.endsWith("/")) {
       const pathnameWithSlash = `${pathname}/`;
-      const normalizedUrl = `${urlObj.protocol}//${urlObj.host}${pathnameWithSlash}${urlObj.search}${urlObj.hash}`;
+      urlObj.pathname = pathnameWithSlash;
+      const normalizedUrl = urlObj.href;
       const matchWithTrailingSlash = urlPattern.exec(normalizedUrl);
       if (matchWithTrailingSlash) {
         return extractParams(matchWithTrailingSlash);
