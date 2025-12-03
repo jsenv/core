@@ -150,18 +150,18 @@ import.meta.css = /* css */ `
           }
         }
       }
+    }
 
-      &[data-expand] {
-        > ul {
-          .navi_tab {
-            flex: 1;
-            align-items: center;
-            align-items: stretch;
+    &[data-expand] {
+      > ul {
+        .navi_tab {
+          flex: 1;
+          align-items: center;
+          align-items: stretch;
 
-            .navi_tab_content {
-              width: 100%;
-              justify-content: center;
-            }
+          .navi_tab_content {
+            width: 100%;
+            justify-content: center;
           }
         }
       }
