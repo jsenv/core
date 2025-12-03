@@ -30,9 +30,7 @@ export const createRoutePattern = (urlPatternInput, baseUrl) => {
   const applyOn = (url) => {
     if (import.meta.dev) {
       const urlObj = new URL(url, baseUrl);
-      urlObj.search = "";
-      const urlWithoutSearchParam = urlObj.href;
-      if (urlWithoutSearchParam === baseUrl) {
+      if (urlObj.href === baseUrl) {
         const rootUrl = new URL("./", baseUrl).href;
         url = rootUrl;
       }
@@ -41,7 +39,7 @@ export const createRoutePattern = (urlPatternInput, baseUrl) => {
     // Check if the URL matches the route pattern
     const match = urlPattern.exec(url);
     if (match) {
-      return extractParams(match);
+      return extractParams(match, url);
     }
 
     // If no match, try with normalized URLs (trailing slash handling)
@@ -55,7 +53,7 @@ export const createRoutePattern = (urlPatternInput, baseUrl) => {
       const normalizedUrl = urlObj.href;
       const matchWithoutTrailingSlash = urlPattern.exec(normalizedUrl);
       if (matchWithoutTrailingSlash) {
-        return extractParams(matchWithoutTrailingSlash);
+        return extractParams(matchWithoutTrailingSlash, url);
       }
     }
     // Try adding trailing slash to pathname
@@ -65,17 +63,23 @@ export const createRoutePattern = (urlPatternInput, baseUrl) => {
       const normalizedUrl = urlObj.href;
       const matchWithTrailingSlash = urlPattern.exec(normalizedUrl);
       if (matchWithTrailingSlash) {
-        return extractParams(matchWithTrailingSlash);
+        return extractParams(matchWithTrailingSlash, url);
       }
     }
     return null;
   };
 
-  const extractParams = (match) => {
+  const extractParams = (match, originalUrl) => {
     if (!match) {
       return NO_PARAMS;
     }
     const params = {};
+
+    // Extract search parameters from the original URL
+    const urlObj = new URL(originalUrl, baseUrl);
+    for (const [key, value] of urlObj.searchParams) {
+      params[key] = value;
+    }
 
     // Collect all parameters from URLPattern groups, handling both named and numbered groups
     let wildcardOffset = 0;
@@ -87,6 +91,10 @@ export const createRoutePattern = (urlPatternInput, baseUrl) => {
           const value = urlPartMatch.groups[key];
           const keyAsNumber = parseInt(key, 10);
           if (!isNaN(keyAsNumber)) {
+            // Skip group "0" from search params as it captures the entire search string
+            if (property === "search" && key === "0") {
+              continue;
+            }
             if (value) {
               // Only include non-empty values and non-ignored wildcard indices
               const wildcardKey = String(wildcardOffset + keyAsNumber);

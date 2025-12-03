@@ -5,6 +5,7 @@ import {
   Routes,
   setupRoutes,
   TabList,
+  useRouteStatus,
   useUrlSearchParam,
 } from "@jsenv/navi";
 
@@ -15,6 +16,8 @@ const { HOME_ROUTE, COLOR_ROUTE } = setupRoutes({
 });
 
 const App = () => {
+  const { params } = useRouteStatus(COLOR_ROUTE);
+
   return (
     <div
       style={{
@@ -36,6 +39,11 @@ const App = () => {
           🎨 <strong>Colors page:</strong> Uses ?color param
         </li>
       </ul>
+
+      <div>
+        Debug COLOR_ROUTE params:
+        <pre>{JSON.stringify(params, null, 2)}</pre>
+      </div>
 
       <h3>Navigation</h3>
       <TabList>
