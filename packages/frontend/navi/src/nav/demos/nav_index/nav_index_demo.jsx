@@ -522,6 +522,7 @@ const Dashboard = () => {
               route={USERS_ACTIVITY_ROUTE}
               element={<UserActivityPage />}
             />
+            <Route fallback element={"This url does not exists."} />
           </Route>
 
           {/* Non-index route with manual navigation using <Routes>
