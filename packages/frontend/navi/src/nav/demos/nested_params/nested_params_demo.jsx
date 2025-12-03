@@ -10,70 +10,68 @@ import {
 } from "@jsenv/navi";
 
 // Setup nested routes
-const { HOME_ROUTE, CATALOG_ROUTE, PRODUCTS_ROUTE, REVIEWS_ROUTE } =
-  setupRoutes({
-    HOME_ROUTE: "/",
-    CATALOG_ROUTE: "/catalog",
-    PRODUCTS_ROUTE: "/catalog/products",
-    REVIEWS_ROUTE: "/catalog/reviews",
-  });
+const { HOME_ROUTE, GALLERY_ROUTE, PHOTOS_ROUTE, ALBUMS_ROUTE } = setupRoutes({
+  HOME_ROUTE: "/",
+  GALLERY_ROUTE: "/gallery",
+  PHOTOS_ROUTE: "/gallery/photos",
+  ALBUMS_ROUTE: "/gallery/albums",
+});
 
 const HomePage = () => {
   return (
     <div>
       <h2>Home</h2>
       <p>
-        Navigate to the catalog to see how sub-pages inherit search parameters.
+        Navigate to the gallery to see how sub-pages inherit the color theme.
       </p>
     </div>
   );
 };
-const CatalogPage = () => {
-  const [category] = useUrlSearchParam("category");
+const GalleryPage = () => {
+  const [color] = useUrlSearchParam("color");
 
   return (
     <div>
-      <h2>Catalog</h2>
+      <h2>Gallery</h2>
       <p>
-        Category: <strong>{category || "all"}</strong>
+        Color theme: <strong>{color || "blue"}</strong>
       </p>
 
-      <h3>Sections</h3>
-      <p>Both sections will inherit the current category parameter:</p>
+      <h3>Gallery Sections</h3>
+      <p>Photos and albums will inherit the current color theme:</p>
       <TabList spacing="sm">
-        <Tab route={PRODUCTS_ROUTE} routeParams={{ category }}></Tab>
-        <Tab route={REVIEWS_ROUTE} routeParams={{ category }}></Tab>
+        <Tab route={PHOTOS_ROUTE} routeParams={{ color }} />
+        <Tab route={ALBUMS_ROUTE} routeParams={{ color }} />
       </TabList>
     </div>
   );
 };
-const ProductsPage = () => {
-  const [category] = useUrlSearchParam("category");
+const PhotosPage = () => {
+  const [color] = useUrlSearchParam("color");
 
   return (
     <div>
-      <h2>Products</h2>
+      <h2>Photos</h2>
       <p>
-        Showing products for: <strong>{category || "all categories"}</strong>
+        Showing photos with <strong>{color || "blue"}</strong> theme.
       </p>
       <p>
-        This page displays products filtered by the catalog's category
-        parameter.
+        This page displays photos using the gallery's color theme preference.
       </p>
     </div>
   );
 };
-const ReviewsPage = () => {
-  const [category] = useUrlSearchParam("category");
+const AlbumsPage = () => {
+  const [color] = useUrlSearchParam("color");
 
   return (
     <div>
-      <h2>Reviews</h2>
+      <h2>Albums</h2>
       <p>
-        Showing reviews for: <strong>{category || "all categories"}</strong>
+        Showing albums with <strong>{color || "blue"}</strong> theme.
       </p>
       <p>
-        This page displays reviews filtered by the catalog's category parameter.
+        This page displays albums using the same color theme from the gallery.
       </p>
     </div>
   );
@@ -90,17 +88,15 @@ const App = () => {
       }}
     >
       <h1>Nested Parameters Demo</h1>
-      <p>Test how sub-routes inherit parent search parameters.</p>
+      <p>Test how gallery sub-pages inherit the color theme.</p>
 
       {/* Top level navigation - always available */}
       <div style={{ marginBottom: "20px" }}>
         <TabList spacing="sm">
           <Tab route={HOME_ROUTE}>Home</Tab>
-          <Tab
-            route={CATALOG_ROUTE}
-            routeParams={{ category: "electronics" }}
-          ></Tab>
-          <Tab route={CATALOG_ROUTE} routeParams={{ category: "books" }}></Tab>
+          <Tab route={GALLERY_ROUTE} routeParams={{ color: "red" }} />
+          <Tab route={GALLERY_ROUTE} routeParams={{ color: "green" }} />
+          <Tab route={GALLERY_ROUTE} routeParams={{ color: "purple" }} />
         </TabList>
       </div>
 
@@ -114,9 +110,9 @@ const App = () => {
       >
         <Routes>
           <Route route={HOME_ROUTE} element={<HomePage />} />
-          <Route route={CATALOG_ROUTE} element={<CatalogPage />} />
-          <Route route={PRODUCTS_ROUTE} element={<ProductsPage />} />
-          <Route route={REVIEWS_ROUTE} element={<ReviewsPage />} />
+          <Route route={GALLERY_ROUTE} element={<GalleryPage />} />
+          <Route route={PHOTOS_ROUTE} element={<PhotosPage />} />
+          <Route route={ALBUMS_ROUTE} element={<AlbumsPage />} />
         </Routes>
       </div>
     </div>
