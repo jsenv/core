@@ -29,8 +29,8 @@ import.meta.css = /* css */ `
       --tab-color: inherit;
       --tab-color-hover: #010409;
       --tab-color-selected: inherit;
-      --tab-marker-height: 2px;
-      --tab-marker-color: rgb(205, 52, 37);
+      --tab-indicator-size: 2px;
+      --tab-indicator-color: rgb(205, 52, 37);
     }
   }
 
@@ -86,11 +86,11 @@ import.meta.css = /* css */ `
             pointer-events: none; /* inert */
             overflow: hidden; /* avoid any accidental height */
           }
-          .navi_tab_selected_marker {
+          .navi_tab_indicator {
             z-index: 1;
             display: flex;
             width: 100%;
-            height: var(--tab-marker-height);
+            height: var(--tab-indicator-size);
             margin-top: 5px;
             background: transparent;
             border-radius: 0.1px;
@@ -113,8 +113,8 @@ import.meta.css = /* css */ `
             .navi_tab_content {
               font-weight: 600;
             }
-            .navi_tab_selected_marker {
-              background: var(--tab-marker-color);
+            .navi_tab_indicator {
+              background: var(--tab-indicator-color);
             }
           }
         }
@@ -140,8 +140,8 @@ import.meta.css = /* css */ `
                 text-align: left;
               }
             }
-            .navi_tab_selected_marker {
-              width: var(--tab-marker-height);
+            .navi_tab_indicator {
+              width: var(--tab-indicator-size);
               height: 100%;
               margin-top: 0;
               margin-right: 5px;
@@ -169,7 +169,7 @@ import.meta.css = /* css */ `
   }
 `;
 
-const TabListUnderlinerContext = createContext();
+const TabListIndicatorContext = createContext();
 const TabListStyleCSSVars = {
   borderRadius: "--tablist-border-radius",
   background: "--tablist-background",
@@ -177,10 +177,10 @@ const TabListStyleCSSVars = {
 export const TabList = ({
   children,
   spacing,
-  underline,
+  vertical,
+  indicator = vertical ? "start" : "end",
   expand,
   expandX,
-  vertical,
   paddingX,
   paddingY,
   padding,
@@ -209,7 +209,7 @@ export const TabList = ({
         padding={padding}
         spacing={spacing}
       >
-        <TabListUnderlinerContext.Provider value={underline}>
+        <TabListIndicatorContext.Provider value={indicator}>
           {children.map((child) => {
             return (
               <Box
@@ -223,7 +223,7 @@ export const TabList = ({
               </Box>
             );
           })}
-        </TabListUnderlinerContext.Provider>
+        </TabListIndicatorContext.Provider>
       </Box>
     </Box>
   );
@@ -242,7 +242,7 @@ const TAB_STYLE_CSS_VARS = {
   },
 };
 const TAB_PSEUDO_CLASSES = [":hover", ":-navi-selected"];
-const TAB_PSEUDO_ELEMENTS = ["::-navi-marker"];
+const TAB_PSEUDO_ELEMENTS = ["::-navi-indicator"];
 export const Tab = (props) => {
   if (props.route) {
     return <TabRoute {...props} />;
@@ -286,7 +286,7 @@ const TabBasic = ({
   onClick,
   ...props
 }) => {
-  const tabListUnderline = useContext(TabListUnderlinerContext);
+  const tabListIndicator = useContext(TabListIndicatorContext);
 
   return (
     <Box
@@ -315,7 +315,12 @@ const TabBasic = ({
       <div className="navi_tab_content_bold_clone" aria-hidden="true">
         {children}
       </div>
-      {tabListUnderline && <span className="navi_tab_selected_marker"></span>}
+      {tabListIndicator && (
+        <span
+          className="navi_tab_indicator"
+          data-position={tabListIndicator}
+        ></span>
+      )}
     </Box>
   );
 };
