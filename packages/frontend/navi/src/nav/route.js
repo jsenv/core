@@ -6,11 +6,9 @@
 import { createPubSub } from "@jsenv/dom";
 import { batch, computed, effect, signal } from "@preact/signals";
 
-import {
-  SYMBOL_IDENTITY,
-  compareTwoJsValues,
-} from "../utils/compare_two_js_values.js";
+import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
 import { buildRouteRelativeUrl } from "./build_route_relative_url.js";
+import { NO_PARAMS, createRoutePattern } from "./route_pattern.js";
 
 let baseUrl;
 if (typeof window === "undefined") {
@@ -26,7 +24,6 @@ export const setBaseUrl = (value) => {
 };
 
 const DEBUG = false;
-const NO_PARAMS = { [SYMBOL_IDENTITY]: Symbol("no_params") };
 // Controls what happens to actions when their route becomes inactive:
 // 'abort' - Cancel the action immediately when route deactivates
 // 'keep-loading' - Allow action to continue running after route deactivation
@@ -52,7 +49,7 @@ export const updateRoutes = (
   const routeMatchInfoSet = new Set();
   for (const route of routeSet) {
     const routePrivateProperties = getRoutePrivateProperties(route);
-    const { urlPattern } = routePrivateProperties;
+    const { applyRoutePattern } = routePrivateProperties;
 
     // Get previous state
     const previousState = routePreviousStateMap.get(route) || {
@@ -61,34 +58,10 @@ export const updateRoutes = (
     };
     const oldActive = previousState.active;
     const oldParams = previousState.params;
-    // Check if the URL matches the route pattern
-    let match = urlPattern.exec(url);
-
-    // If no match, try with normalized URLs (trailing slash handling)
-    if (!match) {
-      // Try removing trailing slash from URL
-      if (url.endsWith("/") && url.length > 1) {
-        const urlWithoutTrailingSlash = url.slice(0, -1);
-        match = urlPattern.exec(urlWithoutTrailingSlash);
-      }
-      // Try adding trailing slash to URL
-      else if (!url.endsWith("/")) {
-        const urlWithTrailingSlash = `${url}/`;
-        match = urlPattern.exec(urlWithTrailingSlash);
-      }
-    }
-
-    const newActive = Boolean(match);
+    const extractedParams = applyRoutePattern(url);
+    const newActive = Boolean(extractedParams);
     let newParams;
-    if (match) {
-      const { optionalParamKeySet } = routePrivateProperties;
-      // Use the URL that actually matched for parameter extraction
-      const matchedUrl = match.input;
-      const extractedParams = extractParams(
-        urlPattern,
-        matchedUrl,
-        optionalParamKeySet,
-      );
+    if (extractedParams) {
       if (compareTwoJsValues(oldParams, extractedParams)) {
         // No change in parameters, keep the old params
         newParams = oldParams;
@@ -203,7 +176,7 @@ export const updateRoutes = (
     if (becomesActive) {
       if (DEBUG) {
         console.debug(
-          `Route ${routePrivateProperties.urlPattern} became active with params:`,
+          `${routePrivateProperties} became active with params:`,
           newParams,
         );
       }
@@ -220,10 +193,7 @@ export const updateRoutes = (
     // Handle parameter changes while route stays active
     if (paramsChangedWhileActive) {
       if (DEBUG) {
-        console.debug(
-          `Route ${routePrivateProperties.urlPattern} params changed:`,
-          newParams,
-        );
+        console.debug(`${routePrivateProperties} params changed:`, newParams);
       }
       shouldReload(route);
     }
@@ -237,51 +207,6 @@ export const updateRoutes = (
     activeRouteSet,
   };
 };
-const extractParams = (urlPattern, url, ignoreSet = new Set()) => {
-  const match = urlPattern.exec(url);
-  if (!match) {
-    return NO_PARAMS;
-  }
-  const params = {};
-
-  // Collect all parameters from URLPattern groups, handling both named and numbered groups
-  let wildcardOffset = 0;
-  for (const property of URL_PATTERN_PROPERTIES_WITH_GROUP_SET) {
-    const urlPartMatch = match[property];
-    if (urlPartMatch && urlPartMatch.groups) {
-      let localWildcardCount = 0;
-      for (const key of Object.keys(urlPartMatch.groups)) {
-        const value = urlPartMatch.groups[key];
-        const keyAsNumber = parseInt(key, 10);
-        if (!isNaN(keyAsNumber)) {
-          if (value) {
-            // Only include non-empty values and non-ignored wildcard indices
-            const wildcardKey = String(wildcardOffset + keyAsNumber);
-            if (!ignoreSet.has(wildcardKey)) {
-              params[wildcardKey] = decodeURIComponent(value);
-            }
-            localWildcardCount++;
-          }
-        } else if (!ignoreSet.has(key)) {
-          // Named group (:param or {param}) - only include if not ignored
-          params[key] = decodeURIComponent(value);
-        }
-      }
-      // Update wildcard offset for next URL part
-      wildcardOffset += localWildcardCount;
-    }
-  }
-  return params;
-};
-const URL_PATTERN_PROPERTIES_WITH_GROUP_SET = new Set([
-  "protocol",
-  "username",
-  "password",
-  "hostname",
-  "pathname",
-  "search",
-  "hash",
-]);
 
 const routePrivatePropertiesMap = new Map();
 const getRoutePrivateProperties = (route) => {
@@ -318,13 +243,12 @@ const createRoute = (urlPatternInput) => {
   routeSet.add(route);
 
   const routePrivateProperties = {
-    urlPattern: undefined,
+    routePattern: null,
     activeSignal: null,
     paramsSignal: null,
     visitedSignal: null,
     relativeUrlSignal: null,
     urlSignal: null,
-    optionalParamKeySet: null,
     updateStatus: ({ active, params, visited }) => {
       let someChange = false;
       activeSignal.value = active;
@@ -502,37 +426,14 @@ const createRoute = (urlPatternInput) => {
   route.bindAction = bindAction;
 
   private_properties: {
-    // Remove leading slash from urlPattern to make it relative to baseUrl
-    const normalizedUrlPattern = urlPatternInput.startsWith("/")
-      ? urlPatternInput.slice(1)
-      : urlPatternInput;
-    const urlPattern = new URLPattern(normalizedUrlPattern, baseUrl, {
-      ignoreCase: true,
-    });
-    routePrivateProperties.urlPattern = urlPattern;
     routePrivateProperties.activeSignal = activeSignal;
     routePrivateProperties.paramsSignal = paramsSignal;
     routePrivateProperties.visitedSignal = visitedSignal;
     routePrivateProperties.relativeUrlSignal = relativeUrlSignal;
     routePrivateProperties.urlSignal = urlSignal;
     routePrivateProperties.cleanupCallbackSet = cleanupCallbackSet;
-
-    // Analyze pattern once to detect optional params (named and wildcard indices)
-    // Note: Wildcard indices are stored as strings ("0", "1", ...) to match keys from extractParams
-    const optionalParamKeySet = new Set();
-    normalizedUrlPattern.replace(/:([A-Za-z0-9_]+)\?/g, (_m, name) => {
-      optionalParamKeySet.add(name);
-      return "";
-    });
-    let wildcardIndex = 0;
-    normalizedUrlPattern.replace(/\*(\?)?/g, (_m, opt) => {
-      if (opt === "?") {
-        optionalParamKeySet.add(String(wildcardIndex));
-      }
-      wildcardIndex++;
-      return "";
-    });
-    routePrivateProperties.optionalParamKeySet = optionalParamKeySet;
+    const routePattern = createRoutePattern(urlPatternInput, baseUrl);
+    routePrivateProperties.routePattern = routePattern;
   }
 
   return route;
