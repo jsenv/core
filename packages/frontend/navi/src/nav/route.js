@@ -287,15 +287,20 @@ const createRoute = (urlPatternInput) => {
     return relativeUrl;
   };
 
-  route.compareParams = (otherParams) => {
+  route.matchesParams = (otherParams) => {
     const params = route.params;
-    const paramsIsEmptyOrFalsy = !params || Object.keys(params).length === 0;
-    const otherParamsIsEmptyOrFalsy =
-      !otherParams || Object.keys(otherParams).length === 0;
+    const paramsIsEmptyOrFalsy = Object.keys(otherParams).length === 0;
+    const otherParamsIsEmptyOrFalsy = Object.keys(otherParams).length === 0;
     if (paramsIsEmptyOrFalsy && otherParamsIsEmptyOrFalsy) {
       return true;
     }
-    return compareTwoJsValues(params, otherParams);
+    const paramsWithoutWildcards = {};
+    for (const key of Object.keys(params)) {
+      if (!Number.isInteger(Number(key))) {
+        paramsWithoutWildcards[key] = params[key];
+      }
+    }
+    return compareTwoJsValues(paramsWithoutWildcards, otherParams);
   };
 
   /**
