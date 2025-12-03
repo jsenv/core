@@ -27,7 +27,7 @@ export const createRoutePattern = (urlPatternInput, baseUrl) => {
     return "";
   });
 
-  const applyRoutePattern = (url) => {
+  const applyOn = (url) => {
     // Check if the URL matches the route pattern
     const match = urlPattern.exec(url);
     if (match) {
@@ -99,7 +99,7 @@ export const createRoutePattern = (urlPatternInput, baseUrl) => {
 
   return {
     urlPattern,
-    applyRoutePattern,
+    applyOn,
   };
 };
 

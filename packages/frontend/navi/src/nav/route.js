@@ -49,7 +49,7 @@ export const updateRoutes = (
   const routeMatchInfoSet = new Set();
   for (const route of routeSet) {
     const routePrivateProperties = getRoutePrivateProperties(route);
-    const { applyRoutePattern } = routePrivateProperties;
+    const { routePattern } = routePrivateProperties;
 
     // Get previous state
     const previousState = routePreviousStateMap.get(route) || {
@@ -58,7 +58,7 @@ export const updateRoutes = (
     };
     const oldActive = previousState.active;
     const oldParams = previousState.params;
-    const extractedParams = applyRoutePattern(url);
+    const extractedParams = routePattern.applyOn(url);
     const newActive = Boolean(extractedParams);
     let newParams;
     if (extractedParams) {
