@@ -14,7 +14,7 @@ export const useUrlSearchParam = (paramName, defaultValue) => {
     setValue(searchParam);
   }
 
-  const setSearchParamValue = (newValue, { replace = true } = {}) => {
+  const setSearchParamValue = (newValue, { replace = false } = {}) => {
     const newUrlObject = new URL(window.location.href);
     newUrlObject.searchParams.set(paramName, newValue);
     const newUrl = newUrlObject.href;
