@@ -109,15 +109,16 @@
         const tabs = ["overview", "activity", "reports", "billing"];
         return (
           <Box as="section" className="demo-section">
-            <Title as="h2">Underline + Click Selection</Title>
+            <Title as="h2">Indicator + Click Selection</Title>
             <Text className="note">
-              The <code>underline</code> prop enables an active marker. Tabs
-              become interactive when you provide an <code>onClick</code>;
-              selection is controlled externally (here by local state). The
-              selected tab also updates the associated panel below.
+              The <code>indicator</code> prop enables an active marker at the{" "}
+              <code>"start"</code> or <code>"end"</code> of tabs. Tabs become
+              interactive when you provide an <code>onClick</code>; selection is
+              controlled externally (here by local state). The selected tab also
+              updates the associated panel below.
             </Text>
             <div className="example-block">
-              <TabList spacing="sm">
+              <TabList spacing="sm" indicator="end">
                 {tabs.map((name) => (
                   <Tab
                     key={name}
@@ -246,8 +247,9 @@
             <Text className="note">
               Use <code>--tab-*</code> variables on <code>TabList</code> to set
               base, hover and selected appearance; override per <code>Tab</code>{" "}
-              when needed. Marker controlled by <code>--tab-marker-color</code>{" "}
-              and <code>--tab-marker-height</code>.
+              when needed. Indicator controlled by{" "}
+              <code>--tab-indicator-color</code> and{" "}
+              <code>--tab-indicator-size</code>.
             </Text>
             <div className="example-block">
               <div className="caption">Global theme (light slate)</div>
@@ -294,14 +296,15 @@
               </TabList>
             </div>
             <div className="example-block">
-              <div className="caption">Custom hover + marker</div>
+              <div className="caption">Custom hover + indicator</div>
               <TabList
+                indicator="end"
                 style={{
                   "--tab-background": "transparent",
                   "--tab-color": "#374151",
                   "--tab-background-hover": "#fde68a",
                   "--tab-color-hover": "#92400e",
-                  "--tab-marker-color": "#f59e0b",
+                  "--tab-indicator-color": "#f59e0b",
                 }}
               >
                 <Tab key="day" selected>
@@ -314,13 +317,14 @@
             <div className="example-block">
               <div className="caption">Custom selected background & color</div>
               <TabList
+                indicator="end"
                 style={{
                   "--tab-background": "#1e1e1e",
                   "--tab-color": "#c9d1d9",
                   "--tab-background-hover": "#2a2a2a",
                   "--tab-color-hover": "white",
-                  "--tab-marker-color": "#ff6b6b",
-                  "--tab-marker-height": "3px",
+                  "--tab-indicator-color": "#ff6b6b",
+                  "--tab-indicator-size": "3px",
                   "--tab-background-selected": "#0d1117",
                   "--tab-color-selected": "#ffdd57",
                 }}
@@ -335,6 +339,7 @@
             <div className="example-block">
               <div className="caption">Override selected style for one tab</div>
               <TabList
+                indicator="end"
                 style={{
                   "--tab-background": "#f1f5f9",
                   "--tab-color": "#475569",
@@ -342,7 +347,7 @@
                   "--tab-color-hover": "#1e293b",
                   "--tab-background-selected": "#cbd5e1",
                   "--tab-color-selected": "#0f172a",
-                  "--tab-marker-color": "#0ea5e9",
+                  "--tab-indicator-color": "#0ea5e9",
                 }}
               >
                 <Tab key="general" selected>
@@ -358,11 +363,31 @@
                     "--tab-color-hover": "#7f1d1d",
                     "--tab-background-selected": "#fb7185",
                     "--tab-color-selected": "white",
-                    "--tab-marker-color": "#dc2626",
+                    "--tab-indicator-color": "#dc2626",
                   }}
                 >
                   Danger (override)
                 </Tab>
+              </TabList>
+            </div>
+            <div className="example-block">
+              <div className="caption">Indicator at start position</div>
+              <TabList
+                indicator="start"
+                style={{
+                  "--tab-background": "#f8fafc",
+                  "--tab-color": "#64748b",
+                  "--tab-background-hover": "#e2e8f0",
+                  "--tab-color-hover": "#334155",
+                  "--tab-indicator-color": "#22c55e",
+                  "--tab-indicator-size": "4px",
+                }}
+              >
+                <Tab key="inbox" selected>
+                  Inbox
+                </Tab>
+                <Tab key="sent">Sent</Tab>
+                <Tab key="drafts">Drafts</Tab>
               </TabList>
             </div>
             <div className="example-block">
