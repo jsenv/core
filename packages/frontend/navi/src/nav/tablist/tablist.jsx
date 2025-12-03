@@ -247,6 +247,7 @@ export const Tab = (props) => {
   }
   return <TabBasic {...props} />;
 };
+TabList.Tab = Tab;
 
 const TabRoute = ({
   route,
