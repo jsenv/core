@@ -3,44 +3,36 @@ import { createRoutePattern } from "./route_pattern.js";
 
 const baseUrl = "http://localhost:3000";
 
+const run = (pattern, urlOrRelativeUrl) => {
+  const { applyRoutePattern } = createRoutePattern(pattern, baseUrl);
+  const url = new URL(urlOrRelativeUrl, baseUrl).href;
+  return applyRoutePattern(url);
+};
+
 // Basic pattern matching tests
 {
-  const pattern = createRoutePattern("/users", baseUrl);
-
-  const result = pattern.applyRoutePattern("http://localhost:3000/users");
+  const result = run("/users", "/users");
   const expect = {};
   assert({ actual: result, expect });
 }
 
 {
-  const pattern = createRoutePattern("/users/:id", baseUrl);
-
-  const result = pattern.applyRoutePattern("http://localhost:3000/users/123");
+  const result = run("/users/:id", "/users/123");
   const expect = { id: "123" };
   assert({ actual: result, expect });
 }
 
 {
-  const pattern = createRoutePattern("/api/*", baseUrl);
-
-  const result = pattern.applyRoutePattern(
-    "http://localhost:3000/api/v1/users",
-  );
+  const result = run("/api/*", "/api/v1/users");
   const expect = { 0: "v1/users" };
   assert({ actual: result, expect });
 }
 
 // Trailing slash normalization tests
 {
-  const pattern = createRoutePattern("/dashboard", baseUrl);
-
   // Should match both with and without trailing slash
-  const resultWithSlash = pattern.applyRoutePattern(
-    "http://localhost:3000/dashboard/",
-  );
-  const resultWithoutSlash = pattern.applyRoutePattern(
-    "http://localhost:3000/dashboard",
-  );
+  const resultWithSlash = run("/dashboard", "/dashboard/");
+  const resultWithoutSlash = run("/dashboard", "/dashboard");
   const expect = {};
 
   assert({ actual: resultWithSlash, expect });
@@ -48,102 +40,70 @@ const baseUrl = "http://localhost:3000";
 }
 
 {
-  const pattern = createRoutePattern("/users/:id/", baseUrl);
-
   // Should match URL without trailing slash
-  const result = pattern.applyRoutePattern("http://localhost:3000/users/123");
+  const result = run("/users/:id/", "/users/123");
   const expect = { id: "123" };
   assert({ actual: result, expect });
 }
 
 {
-  const pattern = createRoutePattern("/users/:id", baseUrl);
-
   // Should match URL with trailing slash
-  const result = pattern.applyRoutePattern("http://localhost:3000/users/123/");
+  const result = run("/users/:id", "/users/123/");
   const expect = { id: "123" };
   assert({ actual: result, expect });
 }
 
 // Multiple parameters tests
 {
-  const pattern = createRoutePattern("/users/:userId/posts/:postId", baseUrl);
-
-  const result = pattern.applyRoutePattern(
-    "http://localhost:3000/users/123/posts/456",
-  );
+  const result = run("/users/:userId/posts/:postId", "/users/123/posts/456");
   const expect = { userId: "123", postId: "456" };
   assert({ actual: result, expect });
 }
 
 {
-  const pattern = createRoutePattern("/api/*/files/*", baseUrl);
-
-  const result = pattern.applyRoutePattern(
-    "http://localhost:3000/api/v1/files/document.pdf",
-  );
+  const result = run("/api/*/files/*", "/api/v1/files/document.pdf");
   const expect = { 0: "v1", 1: "document.pdf" };
   assert({ actual: result, expect });
 }
 
 // Non-matching URLs should return null
 {
-  const pattern = createRoutePattern("/users", baseUrl);
-
-  const result = pattern.applyRoutePattern("http://localhost:3000/posts");
+  const result = run("/users", "/posts");
   assert({ actual: result, expect: null });
 }
 
 {
-  const pattern = createRoutePattern("/users/:id", baseUrl);
-
-  const result = pattern.applyRoutePattern("http://localhost:3000/users");
+  const result = run("/users/:id", "/users");
   assert({ actual: result, expect: null });
 }
 
 // URL encoding/decoding tests
 {
-  const pattern = createRoutePattern("/search/:query", baseUrl);
-
-  const result = pattern.applyRoutePattern(
-    "http://localhost:3000/search/hello%20world",
-  );
+  const result = run("/search/:query", "/search/hello%20world");
   const expect = { query: "hello world" };
   assert({ actual: result, expect });
 }
 
 {
-  const pattern = createRoutePattern("/users/:email", baseUrl);
-
-  const result = pattern.applyRoutePattern(
-    "http://localhost:3000/users/user%40domain.com",
-  );
+  const result = run("/users/:email", "/users/user%40domain.com");
   const expect = { email: "user@domain.com" };
   assert({ actual: result, expect });
 }
 
 // Root path tests
 {
-  const pattern = createRoutePattern("/", baseUrl);
-
-  const resultRoot = pattern.applyRoutePattern("http://localhost:3000/");
+  const resultRoot = run("/", "/");
   const expectedRoot = {};
   assert({ actual: resultRoot, expect: expectedRoot });
 
-  const resultEmpty = pattern.applyRoutePattern("http://localhost:3000");
+  const resultEmpty = run("/", "");
   assert({ actual: resultEmpty, expect: expectedRoot });
 }
 
 // Complex patterns with trailing slash normalization
 {
-  const pattern = createRoutePattern("/admin/users/:id/edit", baseUrl);
-
-  const result1 = pattern.applyRoutePattern(
-    "http://localhost:3000/admin/users/123/edit/",
-  );
-  const result2 = pattern.applyRoutePattern(
-    "http://localhost:3000/admin/users/123/edit",
-  );
+  const result1 = run("/admin/users/:id/edit", "/admin/users/123/edit/");
+  const result2 = run("/admin/users/:id/edit", "/admin/users/123/edit");
   const expect = { id: "123" };
 
   assert({ actual: result1, expect });
