@@ -7,6 +7,7 @@ import { useContext } from "preact/hooks";
 
 import { Box } from "../../box/box.jsx";
 import { PSEUDO_CLASSES } from "../../box/pseudo_styles.js";
+import { Text } from "../../text/text.jsx";
 import { useRouteStatus } from "../route.js";
 import { RouteLink } from "../route_link.jsx";
 
@@ -73,32 +74,19 @@ import.meta.css = /* css */ `
 
           display: flex;
           flex-direction: column;
+          color: var(--x-tab-color);
           white-space: nowrap;
+          background: var(--x-tab-background);
           border-radius: var(--tab-border-radius);
+          transition: background 0.12s ease-out;
           user-select: none;
 
-          .navi_tab_content {
-            display: flex;
-            color: var(--x-tab-color);
-            background: var(--x-tab-background);
+          .navi_link {
+            flex-grow: 1;
+            text-align: center;
             border-radius: inherit;
-            transition: background 0.12s ease-out;
+          }
 
-            .navi_link {
-              flex-grow: 1;
-              text-align: center;
-              border-radius: inherit;
-            }
-          }
-          /* Hidden bold clone to reserve space for bold width without affecting height */
-          .navi_tab_content_bold_clone {
-            display: block; /* in-flow so it contributes to width */
-            height: 0; /* zero height so it doesn't change layout height */
-            font-weight: 600; /* force bold to compute max width */
-            visibility: hidden; /* not visible */
-            pointer-events: none; /* inert */
-            overflow: hidden; /* avoid any accidental height */
-          }
           .navi_tab_indicator {
             position: absolute;
             z-index: 1;
@@ -131,11 +119,12 @@ import.meta.css = /* css */ `
             --x-tab-background: var(--tab-background-selected);
             --x-tab-color: var(--tab-color-selected);
 
-            .navi_tab_content {
+            .navi_tab {
               font-weight: 600;
-            }
-            .navi_tab_indicator {
-              background: var(--tab-indicator-color);
+
+              .navi_tab_indicator {
+                background: var(--tab-indicator-color);
+              }
             }
           }
         }
@@ -177,15 +166,8 @@ import.meta.css = /* css */ `
 
           .navi_tab {
             flex-direction: row;
+            text-align: left;
 
-            .navi_tab_content_bold_clone {
-              width: 0;
-              height: auto;
-            }
-
-            .navi_tab_content {
-              text-align: left;
-            }
             .navi_tab_indicator {
               width: var(--tab-indicator-size);
               height: 100%;
@@ -198,14 +180,11 @@ import.meta.css = /* css */ `
     &[data-expand] {
       > ul {
         .navi_tab {
+          width: 100%;
           flex: 1;
           align-items: center;
           align-items: stretch;
-
-          .navi_tab_content {
-            width: 100%;
-            justify-content: center;
-          }
+          justify-content: center;
         }
       }
     }
@@ -323,23 +302,16 @@ const TabRoute = ({
     </TabBasic>
   );
 };
-const TabBasic = ({
-  children,
-  selected,
-  padding,
-  paddingX = "s",
-  paddingY,
-  onClick,
-  ...props
-}) => {
+const TabBasic = ({ children, selected, onClick, ...props }) => {
   const tabListIndicator = useContext(TabListIndicatorContext);
 
   return (
-    <Box
+    <Text
       role="tab"
       aria-selected={selected ? "true" : "false"}
       data-interactive={onClick ? "" : undefined}
       onClick={onClick}
+      paddingX="s"
       // Style system
       baseClassName="navi_tab"
       styleCSSVars={TAB_STYLE_CSS_VARS}
@@ -353,17 +325,7 @@ const TabBasic = ({
       {tabListIndicator && tabListIndicator !== "none" && (
         <span className="navi_tab_indicator" data-position={tabListIndicator} />
       )}
-      <Box
-        className="navi_tab_content"
-        paddingX={paddingX}
-        paddingY={paddingY}
-        padding={padding}
-      >
-        {children}
-      </Box>
-      <div className="navi_tab_content_bold_clone" aria-hidden="true">
-        {children}
-      </div>
-    </Box>
+      {children}
+    </Text>
   );
 };

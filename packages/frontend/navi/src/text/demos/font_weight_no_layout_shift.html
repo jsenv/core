@@ -12,11 +12,61 @@
       import { Text, Link, Paragraph } from "@jsenv/navi";
 
       // Reusable Components
+      const SectionSeparator = () => (
+        <div
+          style={{
+            height: "1px",
+            background:
+              "linear-gradient(90deg, transparent, #e0e0e0 25%, #e0e0e0 75%, transparent)",
+            margin: "40px 0",
+            position: "relative",
+          }}
+        >
+          <div
+            style={{
+              position: "absolute",
+              left: "50%",
+              top: "-8px",
+              transform: "translateX(-50%)",
+              background: "white",
+              padding: "0 15px",
+              fontSize: "18px",
+              color: "#999",
+            }}
+          >
+            • • •
+          </div>
+        </div>
+      );
+
       const DemoSection = ({ id, title, children, style = {} }) => (
-        <section id={id} style={{ marginBottom: "30px", ...style }}>
-          <h2>{title}</h2>
-          {children}
-        </section>
+        <>
+          <SectionSeparator />
+          <section
+            id={id}
+            style={{
+              marginBottom: "30px",
+              padding: "25px",
+              border: "1px solid #e9ecef",
+              borderRadius: "8px",
+              backgroundColor: "#fafbfc",
+              boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
+              ...style,
+            }}
+          >
+            <h2
+              style={{
+                margin: "0 0 20px 0",
+                paddingBottom: "15px",
+                borderBottom: "2px solid #e9ecef",
+                color: "#495057",
+              }}
+            >
+              {title}
+            </h2>
+            {children}
+          </section>
+        </>
       );
 
       const AlignmentTestCase = ({
@@ -88,15 +138,52 @@
             style={{
               padding: "20px",
               fontFamily: "system-ui, sans-serif",
+              maxWidth: "1200px",
+              margin: "0 auto",
+              backgroundColor: "#ffffff",
             }}
           >
-            <h1>Font Weight - No Layout Shift Demo</h1>
-            <p>
-              The <code>boldTransition</code> prop on Text components prevents
-              layout shifts when transitioning to bold by using an invisible
-              bold clone to reserve space. As a bonus, it enables smooth bold
-              transitions. Only works with <code>noWrap</code> text.
-            </p>
+            {/* Header Section */}
+            <div
+              style={{
+                textAlign: "center",
+                padding: "40px 20px",
+                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                borderRadius: "12px",
+                color: "white",
+                marginBottom: "20px",
+              }}
+            >
+              <h1 style={{ margin: "0 0 15px 0", fontSize: "2.5rem" }}>
+                Font Weight - No Layout Shift Demo
+              </h1>
+              <p style={{ margin: "0", fontSize: "1.1rem", opacity: "0.9" }}>
+                The{" "}
+                <code
+                  style={{
+                    background: "rgba(255,255,255,0.2)",
+                    padding: "2px 6px",
+                    borderRadius: "4px",
+                  }}
+                >
+                  boldTransition
+                </code>{" "}
+                prop on Text components prevents layout shifts when
+                transitioning to bold by using an invisible bold clone to
+                reserve space. As a bonus, it enables smooth bold transitions.
+                Only works with{" "}
+                <code
+                  style={{
+                    background: "rgba(255,255,255,0.2)",
+                    padding: "2px 6px",
+                    borderRadius: "4px",
+                  }}
+                >
+                  noWrap
+                </code>{" "}
+                text.
+              </p>
+            </div>
 
             {/* Table of Contents */}
             <section
@@ -143,9 +230,10 @@
               </nav>
             </section>
 
-            {/* Layout Shift Problem */}
-            <section id="layout-shift-problem" style={{ marginBottom: "30px" }}>
-              <h2>⚠️ The Layout Shift Problem</h2>
+            <DemoSection
+              id="layout-shift-problem"
+              title="⚠️ The Layout Shift Problem"
+            >
               <p>
                 When text changes from normal to bold weight, it becomes wider,
                 causing surrounding elements to shift. The{" "}
@@ -260,11 +348,9 @@
                   transitions.
                 </Text>
               </div>
-            </section>
+            </DemoSection>
 
-            {/* Basic Usage */}
-            <section id="basic-usage" style={{ marginBottom: "30px" }}>
-              <h2>🎯 Basic boldTransition Usage</h2>
+            <DemoSection id="basic-usage" title="🎯 Basic boldTransition Usage">
               <p>
                 For the best experience, use <code>boldTransition</code> which
                 combines <code>preventBoldLayoutShift</code> with smooth
@@ -315,11 +401,12 @@
         This text transitions smoothly to bold
       </Text>`}
               </pre>
-            </section>
+            </DemoSection>
 
-            {/* Different Lengths */}
-            <section id="different-lengths" style={{ marginBottom: "30px" }}>
-              <h2>📏 Different Text Lengths</h2>
+            <DemoSection
+              id="different-lengths"
+              title="📏 Different Text Lengths"
+            >
               <p>
                 Testing <code>boldTransition</code> behavior with various text
                 lengths to ensure it works consistently.
@@ -428,10 +515,10 @@
                   </div>
                 </div>
               </div>
-            </section>
+            </DemoSection>
 
             {/* Text Alignments */}
-            <section id="text-alignments" style={{ marginBottom: "30px" }}>
+            <DemoSection id="text-alignments" style={{ marginBottom: "30px" }}>
               <h2>🎯 Different Text Alignments</h2>
               <p>
                 Testing how <code>boldTransition</code> works with different
@@ -559,11 +646,9 @@
                 that the bold effect applies from the center, regardless of
                 container alignment.
               </p>
-            </section>
+            </DemoSection>
 
-            {/* Technical Details */}
-            <section style={{ marginBottom: "30px" }}>
-              <h2>⚙️ How it Works</h2>
+            <DemoSection id="how-it-works" title="⚙️ How it Works">
               <div
                 style={{
                   padding: "20px",
@@ -600,7 +685,7 @@
                   transitioning the visible text.
                 </p>
               </div>
-            </section>
+            </DemoSection>
 
             <DemoSection
               id="boldstable-alternative"
