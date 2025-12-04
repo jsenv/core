@@ -109,6 +109,29 @@
         font-weight: 700;
       }
 
+      /* EXEMPLE 0: bold=flow + normal=absolute (inverse de A) */
+      .ex-0 .wrapper {
+        position: relative;
+        display: inline-block;
+      }
+      .ex-0 .text {
+        position: static;
+      }
+      /* Pour cet exemple, le bold dicte le flow et on mesure sa largeur */
+
+      /* EXEMPLE VAR: font-variation-settings */
+      .ex-var .text {
+        position: static;
+        font-weight: normal; /* fallback */
+        font-family: "Inter", system-ui, sans-serif;
+        font-variation-settings: "wght" 400;
+        transition: font-variation-settings 0.18s ease;
+      }
+      .ex-var .active .text {
+        font-weight: bold; /* fallback */
+        font-variation-settings: "wght" 700;
+      }
+
       /* EXEMPLE A: normal flow avec wrapper de largeur fixe */
       .ex-a .wrapper {
         position: relative;
@@ -181,6 +204,29 @@
     </p>
 
     <div class="examples">
+      <!-- EXEMPLE 0 -->
+      <div class="card ex-0">
+        <div class="technique">Bold=Flow + Normal=Absolute</div>
+        <div class="example-title">
+          Exemple 0 — <strong>bold dicte le flow</strong>
+        </div>
+        <div class="controls">
+          <button data-toggle="0">Toggle bold</button>
+          <div class="meta">
+            Wrapper width = largeur du texte bold, normal en position absolute
+          </div>
+        </div>
+        <div class="stage">
+          <div class="smooth wrapper" id="wrap-0">
+            <span class="text" id="0-text"
+              >Ceci est un texte d'exemple qui peut se couper sur plusieurs
+              lignes pour démontrer les risques de wrapping différent.</span
+            >
+          </div>
+        </div>
+        <div class="widths" id="0-widths">—</div>
+      </div>
+
       <!-- EXEMPLE A -->
       <div class="card ex-a">
         <div class="technique">Normal=Flow + Bold=Absolute</div>
@@ -271,6 +317,31 @@
         </div>
         <div class="widths" id="d-widths">—</div>
       </div>
+
+      <!-- EXEMPLE VAR -->
+      <div class="card ex-var">
+        <div class="technique">Font Variation Settings</div>
+        <div class="example-title">
+          Exemple VAR — <strong>font-variation-settings</strong> (Inter
+          variable)
+        </div>
+        <div class="controls">
+          <button data-toggle="var">Toggle bold</button>
+          <div class="meta">
+            Utilise font-variation-settings: "wght" 400/700 pour une transition
+            plus fluide
+          </div>
+        </div>
+        <div class="stage">
+          <div class="smooth wrapper" id="wrap-var">
+            <span class="text" id="var-text"
+              >Ceci est un texte d'exemple qui peut se couper sur plusieurs
+              lignes pour démontrer les risques de wrapping différent.</span
+            >
+          </div>
+        </div>
+        <div class="widths" id="var-widths">—</div>
+      </div>
     </div>
 
     <footer>
@@ -286,6 +357,23 @@
       // Simple helpers
       const $ = (id) => document.getElementById(id);
       const measure = (el) => Math.ceil(el.scrollWidth);
+
+      // Initialize example 0: set wrapper width to text's bold weight width
+      function init0() {
+        const wrapper = $("wrap-0");
+        const text = $("0-text");
+        // Ensure text is in bold weight for measurement
+        const card = document.querySelector(".ex-0");
+        const wasActive = card.classList.contains("active");
+        if (!wasActive) card.classList.add("active");
+
+        requestAnimationFrame(() => {
+          const boldWidth = measure(text);
+          wrapper.style.width = `${boldWidth}px`;
+          if (!wasActive) card.classList.remove("active");
+          updateWidths("0");
+        });
+      }
 
       // Initialize example A: set wrapper width to text's normal weight width
       function initA() {
@@ -316,11 +404,18 @@
 
         let displayText = `${currentWeight}: ${currentWidth}px`;
 
-        if (example === "a") {
+        if (example === "0") {
+          const wrapper = $("wrap-0");
+          displayText += ` — wrapper: ${wrapper.style.width}`;
+        } else if (example === "a") {
           const wrapper = $("wrap-a");
           displayText += ` — wrapper: ${wrapper.style.width}`;
         } else if (example === "b") {
           displayText += " — parent max-width: 300px";
+        } else if (example === "var") {
+          const computedStyle = getComputedStyle(text);
+          const fontVarSettings = computedStyle.fontVariationSettings;
+          displayText += ` — font-variation-settings: ${fontVarSettings || "non supporté"}`;
         }
 
         widthsEl.textContent = displayText;
@@ -339,6 +434,9 @@
 
       // Initialize everything
       function init() {
+        // Set up example 0
+        init0();
+
         // Set up example A
         initA();
 
@@ -346,6 +444,7 @@
         updateWidths("b");
         updateWidths("c");
         updateWidths("d");
+        updateWidths("var");
 
         // Attach button listeners
         document.querySelectorAll("button[data-toggle]").forEach((btn) => {
@@ -361,6 +460,7 @@
             updateWidths("b");
             updateWidths("c");
             updateWidths("d");
+            updateWidths("var");
           });
         });
       }
