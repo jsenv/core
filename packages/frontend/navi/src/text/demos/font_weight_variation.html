@@ -22,6 +22,8 @@
           Roboto,
           "Helvetica Neue",
           Arial;
+
+        --max-width: 220px;
       }
       body {
         padding: 20px;
@@ -92,7 +94,8 @@
         font-weight: 700;
       }
       .constrainer {
-        max-width: 145px;
+        box-sizing: border-box;
+        max-width: var(--max-width);
         padding: 8px;
         background: #fff;
         border: 1px dashed #ddd;
@@ -134,21 +137,12 @@
         color: #5b6473;
         font-size: 13px;
       }
-      .widths {
-        display: inline-block;
-        margin-left: 8px;
-        padding: 6px 8px;
-        font-size: 11px;
-        font-family: monospace;
-        background: #f1f4fb;
-        border-radius: 6px;
-      }
 
       /* EXEMPLE 0: bold invisible dicte la largeur */
       .ex-0 .wrapper {
         position: relative;
         display: inline-block;
-        max-width: 145px;
+        max-width: var(--max-width);
       }
       .ex-0 .inner {
         position: relative;
@@ -177,6 +171,7 @@
       .ex-b .wrapper {
         position: relative;
         display: block;
+        height: 110px;
       }
       .ex-b .inner {
         position: relative;
@@ -236,84 +231,50 @@
     </style>
   </head>
   <body>
-    <h1>Smooth-bold — problèmes de wrapping</h1>
+    <h1>Font weight transitions</h1>
     <p style="margin: 0 0 16px; font-size: 14px; color: #666">
-      Chaque exemple montre d'abord les versions <strong>normal</strong> et
-      <strong>bold</strong> côte à côte, puis une démonstration interactive du
-      problème de layout shift.
+      Différentes approches pour gérer les transitions de font-weight.
     </p>
 
     <div class="examples">
       <!-- EXEMPLE 0 -->
       <div class="card ex-0">
-        <div class="technique">Bold invisible dicte la largeur</div>
-        <div class="example-title">
-          Problème : wrapping différent entre normal et bold
-        </div>
+        <div class="technique">Bold invisible avec largeur fixe</div>
 
         <div class="comparison">
           <div class="version">
             <div class="version-title">Normal (visible)</div>
-            <div class="demo-text normal constrainer">
-              Cette solution semble marcher mais échoue à cause du wrapping.
-            </div>
+            <div class="demo-text normal constrainer demo-text-content"></div>
           </div>
           <div class="version">
             <div class="version-title">Bold (invisible, dicte largeur)</div>
-            <div class="demo-text bold constrainer">
-              Cette solution semble marcher mais échoue à cause du wrapping.
-            </div>
+            <div class="demo-text bold constrainer demo-text-content"></div>
           </div>
-        </div>
-
-        <div class="meta">
-          ⚠️ Le bold (invisible) dicte la largeur du container, mais son
-          wrapping est différent du normal visible.
         </div>
 
         <div class="interactive">
           <label> <input type="checkbox" data-toggle="0" /> Bold </label>
           <div class="smooth wrapper" id="wrap-0">
             <span class="inner">
-              <span class="text-normal" id="0-normal"
-                >Cette solution semble marcher mais échoue à cause du
-                wrapping.</span
-              >
-              <span class="text-bold" id="0-bold"
-                >Cette solution semble marcher mais échoue à cause du
-                wrapping.</span
-              >
+              <span class="text-normal demo-text-content" id="0-normal"></span>
+              <span class="text-bold demo-text-content" id="0-bold"></span>
             </span>
           </div>
         </div>
-        <div class="widths" id="0-widths">—</div>
       </div>
-
       <!-- EXEMPLE B -->
       <div class="card ex-b">
-        <div class="technique">Les deux en absolute</div>
-        <div class="example-title">
-          Problème : wrapping différent entre les deux versions
-        </div>
+        <div class="technique">Les deux en position absolute</div>
 
         <div class="comparison">
           <div class="version">
             <div class="version-title">Normal (absolute)</div>
-            <div class="demo-text normal constrainer">
-              Cette solution semble marcher mais échoue à cause du wrapping.
-            </div>
+            <div class="demo-text normal constrainer demo-text-content"></div>
           </div>
           <div class="version">
             <div class="version-title">Bold (absolute)</div>
-            <div class="demo-text bold constrainer">
-              Cette solution semble marcher mais échoue à cause du wrapping.
-            </div>
+            <div class="demo-text bold constrainer demo-text-content"></div>
           </div>
-        </div>
-
-        <div class="meta">
-          ⚠️ Les deux versions sont en absolute, mais leur wrapping diffère à
-          cause de la largeur des caractères.
         </div>
 
         <div class="interactive">
@@ -321,64 +282,45 @@
           <div class="constrainer">
             <div class="smooth wrapper" id="wrap-b">
               <span class="inner">
-                <span class="text-normal" id="b-normal"
-                  >Cette solution semble marcher mais échoue à cause du
-                  wrapping.</span
-                >
-                <span class="text-bold" id="b-bold"
-                  >Cette solution semble marcher mais échoue à cause du
-                  wrapping.</span
-                >
+                <span
+                  class="text-normal demo-text-content"
+                  id="b-normal"
+                ></span>
+                <span class="text-bold demo-text-content" id="b-bold"></span>
               </span>
             </div>
           </div>
         </div>
-        <div class="widths" id="b-widths">—</div>
       </div>
 
       <!-- EXEMPLE C -->
       <div class="card ex-c">
-        <div class="technique">Les deux en flow</div>
-        <div class="example-title">Problème : layout shift garanti</div>
+        <div class="technique">Document flow normal</div>
 
         <div class="comparison">
           <div class="version">
             <div class="version-title">Normal (flow)</div>
-            <div class="demo-text normal constrainer">
-              Cette solution semble marcher mais échoue à cause du wrapping.
-            </div>
+            <div class="demo-text normal constrainer demo-text-content"></div>
           </div>
           <div class="version">
             <div class="version-title">Bold (flow)</div>
-            <div class="demo-text bold constrainer">
-              Cette solution semble marcher mais échoue à cause du wrapping.
-            </div>
+            <div class="demo-text bold constrainer demo-text-content"></div>
           </div>
-        </div>
-
-        <div class="meta">
-          ⚠️ Le texte participe au flow, le changement de largeur cause
-          forcément un layout shift.
         </div>
 
         <div class="interactive">
           <label> <input type="checkbox" data-toggle="c" /> Bold </label>
           <div class="constrainer">
             <div class="smooth">
-              <span class="text" id="c-text"
-                >Cette solution semble marcher mais échoue à cause du
-                wrapping.</span
-              >
+              <span class="text demo-text-content" id="c-text"></span>
             </div>
           </div>
         </div>
-        <div class="widths" id="c-widths">—</div>
       </div>
 
       <!-- EXEMPLE D -->
       <div class="card ex-d">
-        <div class="technique">Single line (solution qui marche)</div>
-        <div class="example-title">Solution : pas de wrapping possible</div>
+        <div class="technique">Single line avec nowrap</div>
 
         <div class="comparison">
           <div class="version">
@@ -395,72 +337,42 @@
           </div>
         </div>
 
-        <div class="meta">
-          ✅ Avec white-space: nowrap, pas de différence de wrapping possible.
-        </div>
-
         <div class="interactive">
           <label> <input type="checkbox" data-toggle="d" /> Bold </label>
           <div class="smooth wrapper" id="wrap-d">
-            <span class="text" id="d-text"
-              >Cette solution semble marcher mais échoue à cause du
-              wrapping.</span
-            >
+            <span class="text demo-text-content" id="d-text"></span>
           </div>
         </div>
-        <div class="widths" id="d-widths">—</div>
       </div>
     </div>
 
     <script>
-      // Simple helpers
+      // Texte de référence centralisé
+      const DEMO_TEXT =
+        "Cette solution semble marcher mais échoue à cause du wrapping.";
+
+      // Simple helper
       const $ = (id) => document.getElementById(id);
-      const measure = (el) => Math.ceil(el.scrollWidth);
 
-      // Initialize example 0: set wrapper width to bold text width
-      function init0() {
-        const wrapper = $("wrap-0");
-        const boldText = $("0-bold");
-        // Attendre que le texte soit rendu avant de mesurer
-        requestAnimationFrame(() => {
-          const boldWidth = measure(boldText);
-          if (boldWidth > 0) {
-            wrapper.style.width = `${boldWidth}px`;
-          }
-          updateWidths("0");
+      // Remplir tous les textes de démonstration
+      function fillDemoTexts() {
+        document.querySelectorAll(".demo-text-content").forEach((el) => {
+          el.textContent = DEMO_TEXT;
         });
-      }
 
-      // Update width displays
-      function updateWidths(example) {
-        const widthsEl = $(`${example}-widths`);
-        const card = document.querySelector(`.ex-${example}`);
-        const isActive = card.classList.contains("active");
-
-        let displayText;
-
-        // Exemples avec deux éléments (0, b)
-        if (["0", "b"].includes(example)) {
-          const normalEl = $(`${example}-normal`);
-          const boldEl = $(`${example}-bold`);
-          const normalWidth = measure(normalEl);
-          const boldWidth = measure(boldEl);
-
-          displayText = `normal: ${normalWidth}px — bold: ${boldWidth}px`;
-
-          if (example === "0") {
-            const wrapper = $("wrap-0");
-            displayText += ` — wrapper: ${wrapper.style.width}`;
-          }
-        } else {
-          // Exemples avec un seul élément (c, d)
-          const text = $(`${example}-text`);
-          const currentWidth = measure(text);
-          const currentWeight = isActive ? "bold (700)" : "normal (400)";
-          displayText = `${currentWeight}: ${currentWidth}px`;
-        }
-
-        widthsEl.textContent = displayText;
+        // Remplir aussi les textes interactifs
+        const interactiveTexts = [
+          "0-normal",
+          "0-bold",
+          "b-normal",
+          "b-bold",
+          "c-text",
+          "d-text",
+        ];
+        interactiveTexts.forEach((id) => {
+          const el = $(id);
+          if (el) el.textContent = DEMO_TEXT;
+        });
       }
 
       // Toggle bold state based on checkbox
@@ -471,21 +383,12 @@
         } else {
           card.classList.remove("active");
         }
-
-        requestAnimationFrame(() => {
-          updateWidths(example);
-        });
       }
 
       // Initialize everything
       function init() {
-        // Set up example 0
-        init0();
-
-        // Initialize other examples
-        updateWidths("b");
-        updateWidths("c");
-        updateWidths("d");
+        // Fill all demo texts
+        fillDemoTexts();
 
         // Attach checkbox listeners
         document.querySelectorAll("input[data-toggle]").forEach((checkbox) => {
