@@ -323,7 +323,6 @@ const TabBasic = ({ children, selected, onClick, ...props }) => {
       data-interactive={onClick ? "" : undefined}
       onClick={onClick}
       paddingX="s"
-      // boldTransition
       // Style system
       baseClassName="navi_tab"
       styleCSSVars={TAB_STYLE_CSS_VARS}
@@ -337,7 +336,11 @@ const TabBasic = ({ children, selected, onClick, ...props }) => {
       {(tabListIndicator === "start" || tabListIndicator === "end") && (
         <span className="navi_tab_indicator" data-position={tabListIndicator} />
       )}
-      <Text noWrap preventBoldLayoutShift>
+      <Text
+        noWrap
+        preventBoldLayoutShift
+        // boldTransition
+      >
         {children}
       </Text>
     </Box>
