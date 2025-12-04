@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Text boldClone Demo</title>
+    <style>
+      :root {
+        color: #111;
+        font-family:
+          system-ui,
+          -apple-system,
+          "Segoe UI",
+          Roboto,
+          "Helvetica Neue",
+          Arial;
+      }
+      body {
+        padding: 20px;
+        line-height: 1.4;
+        background: #f7f7fb;
+      }
+      h1 {
+        margin: 0 0 12px;
+        font-size: 18px;
+      }
+      .examples {
+        max-width: 700px;
+        margin: 0 auto;
+      }
+      .card {
+        margin-bottom: 24px;
+        padding: 20px;
+        background: white;
+        border: 1px solid #e6e8ec;
+        border-radius: 8px;
+        box-shadow: 0 2px 6px rgba(20, 20, 40, 0.03);
+      }
+      .example-title {
+        margin-bottom: 16px;
+        color: #1e40af;
+        font-weight: 600;
+      }
+
+      /* Version sans boldClone pour comparaison */
+      .text-normal {
+        font-weight: normal;
+        white-space: nowrap;
+        transition: font-weight 0.2s ease;
+      }
+      .text-normal.active {
+        font-weight: bold;
+      }
+
+      /* Styles pour les contrôles */
+      .controls {
+        margin-bottom: 16px;
+        padding: 12px;
+        background: #f8f9fa;
+        border-radius: 6px;
+      }
+      .controls label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 600;
+        font-size: 13px;
+      }
+      .controls input[type="checkbox"] {
+        margin-right: 6px;
+      }
+
+      .demo-container {
+        padding: 12px;
+        background: #fff5f5;
+        border: 1px solid #fecaca;
+        border-radius: 6px;
+      }
+      .demo-item {
+        margin-bottom: 12px;
+        padding: 8px;
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 4px;
+      }
+      .demo-label {
+        margin-bottom: 4px;
+        color: #666;
+        font-weight: 600;
+        font-size: 12px;
+      }
+
+      .highlight {
+        padding: 2px 4px;
+        background: linear-gradient(
+          90deg,
+          rgba(255, 240, 240, 0.08),
+          rgba(240, 255, 240, 0.03)
+        );
+        border-radius: 3px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Text Component - boldClone Demo</h1>
+    <p style="margin: 0 0 16px; font-size: 14px; color: #666">
+      Démonstration de la prop <code>boldClone</code> du composant Text pour
+      éviter les layout shifts lors des transitions vers bold.
+    </p>
+
+    <div class="examples">
+      <!-- Exemple 1: Comparaison avec/sans boldClone -->
+      <div class="card">
+        <div class="example-title">Comparaison: avec et sans boldClone</div>
+
+        <div class="controls">
+          <label>
+            <input type="checkbox" id="toggle-1" />
+            Activer bold
+          </label>
+        </div>
+
+        <div class="demo-container">
+          <div class="demo-item">
+            <div class="demo-label">Sans boldClone (layout shift)</div>
+            <div class="highlight">
+              <span class="text-normal" id="text-normal">
+                Du texte qui change de font-weight
+              </span>
+            </div>
+          </div>
+
+          <div class="demo-item">
+            <div class="demo-label">Avec boldClone (pas de layout shift)</div>
+            <div class="highlight">
+              <span class="text-boldclone" id="text-boldclone">
+                <span class="bold-invisible">
+                  Du texte qui change de font-weight
+                </span>
+                <span class="text-overlay">
+                  Du texte qui change de font-weight
+                </span>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Exemple 2: Textes de différentes longueurs -->
+      <div class="card">
+        <div class="example-title">Différentes longueurs de texte</div>
+
+        <div class="controls">
+          <label>
+            <input type="checkbox" id="toggle-2" />
+            Activer bold
+          </label>
+        </div>
+
+        <div class="demo-container">
+          <div class="demo-item">
+            <div class="demo-label">Texte court</div>
+            <div class="highlight">
+              <span class="text-boldclone short" id="text-short">
+                <span class="bold-invisible">Court</span>
+                <span class="text-overlay">Court</span>
+              </span>
+            </div>
+          </div>
+
+          <div class="demo-item">
+            <div class="demo-label">Texte moyen</div>
+            <div class="highlight">
+              <span class="text-boldclone medium" id="text-medium">
+                <span class="bold-invisible">Un texte de longueur moyenne</span>
+                <span class="text-overlay">Un texte de longueur moyenne</span>
+              </span>
+            </div>
+          </div>
+
+          <div class="demo-item">
+            <div class="demo-label">Texte long</div>
+            <div class="highlight">
+              <span class="text-boldclone long" id="text-long">
+                <span class="bold-invisible">
+                  Voici un texte beaucoup plus long qui teste le comportement
+                </span>
+                <span class="text-overlay">
+                  Voici un texte beaucoup plus long qui teste le comportement
+                </span>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Exemple 3: Alignements différents -->
+      <div class="card">
+        <div class="example-title">Différents alignements</div>
+
+        <div class="controls">
+          <label>
+            <input type="checkbox" id="toggle-3" />
+            Activer bold
+          </label>
+        </div>
+
+        <div class="demo-container">
+          <div class="demo-item">
+            <div class="demo-label">Aligné à gauche</div>
+            <div class="highlight" style="text-align: left">
+              <span class="text-boldclone left" id="text-left">
+                <span class="bold-invisible">Texte aligné à gauche</span>
+                <span class="text-overlay">Texte aligné à gauche</span>
+              </span>
+            </div>
+          </div>
+
+          <div class="demo-item">
+            <div class="demo-label">Centré</div>
+            <div class="highlight" style="text-align: center">
+              <span class="text-boldclone center" id="text-center">
+                <span class="bold-invisible">Texte centré</span>
+                <span class="text-overlay">Texte centré</span>
+              </span>
+            </div>
+          </div>
+
+          <div class="demo-item">
+            <div class="demo-label">Aligné à droite</div>
+            <div class="highlight" style="text-align: right">
+              <span class="text-boldclone right" id="text-right">
+                <span class="bold-invisible">Texte aligné à droite</span>
+                <span class="text-overlay">Texte aligné à droite</span>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Toggle pour l'exemple 1
+      document.getElementById("toggle-1").addEventListener("change", (e) => {
+        const isActive = e.target.checked;
+        document
+          .getElementById("text-normal")
+          .classList.toggle("active", isActive);
+        document
+          .getElementById("text-boldclone")
+          .classList.toggle("active", isActive);
+      });
+
+      // Toggle pour l'exemple 2
+      document.getElementById("toggle-2").addEventListener("change", (e) => {
+        const isActive = e.target.checked;
+        document.querySelectorAll(".short, .medium, .long").forEach((el) => {
+          el.classList.toggle("active", isActive);
+        });
+      });
+
+      // Toggle pour l'exemple 3
+      document.getElementById("toggle-3").addEventListener("change", (e) => {
+        const isActive = e.target.checked;
+        document.querySelectorAll(".left, .center, .right").forEach((el) => {
+          el.classList.toggle("active", isActive);
+        });
+      });
+    </script>
+  </body>
+</html>

@@ -178,12 +178,32 @@ const TextWithSelectRange = ({ selectRange, ...props }) => {
   useInitialTextSelection(ref, selectRange);
   return <Text ref={ref} {...props}></Text>;
 };
-const TextBasic = ({ spacing = " ", children, ...rest }) => {
+const TextBasic = ({ spacing = " ", boldClone, children, ...rest }) => {
+  const shouldPreserveSpacing =
+    rest.as === "pre" || rest.box || rest.column || rest.row;
+  if (!shouldPreserveSpacing) {
+    children = applySpacingOnTextChildren(children, spacing);
+  }
+
+  if (boldClone) {
+    // La technique consiste a avoid un double gras qui force une taille
+    // et la version light par dessus en position absolute
+    // on la centre aussi pour donner l'impression que le gras s'applique depuis le centre
+    // ne fonctionne que sur une seul ligne de texte (donc lorsque noWrap est actif)
+    // on pourrait auto-active cela sur une prop genre boldCanChange
+    children = (
+      <span>
+        <span style="opacity: 0; font-weight: bold;">{children}</span>
+        <span style="position: absolute; left: 0; top: 0; transition-property: font-weight">
+          {children}
+        </span>
+      </span>
+    );
+  }
+
   return (
     <Box as="span" baseClassName="navi_text" {...rest}>
-      {rest.as === "pre" || rest.box || rest.column || rest.row
-        ? children
-        : applySpacingOnTextChildren(children, spacing)}
+      {children}
     </Box>
   );
 };
