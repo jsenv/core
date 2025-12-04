@@ -370,28 +370,28 @@
 
       <!-- EXEMPLE D -->
       <div class="card ex-d">
-        <div class="technique">Single line avec nowrap</div>
+        <div class="technique">Nowrap</div>
 
         <div class="comparison">
           <div class="version">
             <div class="version-title">Normal (nowrap)</div>
             <div
-              class="demo-text normal demo-text-content"
-              style="white-space: nowrap"
+              class="demo-text normal constrainer demo-text-content"
+              style="white-space: nowrap;"
             ></div>
           </div>
           <div class="version">
             <div class="version-title">Bold (nowrap)</div>
             <div
-              class="demo-text bold demo-text-content"
-              style="white-space: nowrap"
+              class="demo-text bold constrainer demo-text-content"
+              style="white-space: nowrap;"
             ></div>
           </div>
         </div>
 
         <div class="interactive">
           <label> <input type="checkbox" data-toggle="d" /> Bold </label>
-          <div class="smooth wrapper" id="wrap-d">
+          <div class="smooth wrapper" id="wrap-d" style="max-width: var(--max-width);">
             <span class="text demo-text-content" id="d-text"></span>
           </div>
         </div>
