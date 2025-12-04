@@ -23,7 +23,7 @@
           "Helvetica Neue",
           Arial;
 
-        --max-width: 100px;
+        --max-width: 125px;
       }
       body {
         padding: 20px;
@@ -236,6 +236,45 @@
       Différentes approches pour gérer les transitions de font-weight.
     </p>
 
+    <div
+      style="
+        margin-bottom: 20px;
+        padding: 12px;
+        background: #f0f4f8;
+        border-radius: 6px;
+      "
+    >
+      <label
+        style="
+          display: block;
+          margin-bottom: 6px;
+          font-weight: 600;
+          font-size: 13px;
+        "
+      >
+        Largeur max: <span id="width-display">100px</span>
+      </label>
+      <input
+        type="range"
+        id="width-slider"
+        min="80"
+        max="300"
+        value="100"
+        style="width: 200px"
+      />
+      <script>
+        // Initial setup of max-width CSS variable
+        const cssInitialValue = getComputedStyle(
+          document.documentElement,
+        ).getPropertyValue("--max-width");
+        document.querySelector("#width-display").textContent = cssInitialValue;
+        document.querySelector("#width-slider").value = parseInt(
+          cssInitialValue,
+          10,
+        );
+      </script>
+    </div>
+
     <div class="examples">
       <!-- EXEMPLE 0 -->
       <div class="card ex-0">
@@ -398,6 +437,21 @@
             toggle(example, checkbox.checked);
           });
         });
+
+        // Setup width control
+        const slider = document.getElementById("width-slider");
+        const display = document.getElementById("width-display");
+
+        if (slider && display) {
+          slider.addEventListener("input", (e) => {
+            const value = e.target.value;
+            document.documentElement.style.setProperty(
+              "--max-width",
+              value + "px",
+            );
+            display.textContent = value + "px";
+          });
+        }
       }
 
       // Start when ready
