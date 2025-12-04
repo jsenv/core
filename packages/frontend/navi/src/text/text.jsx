@@ -41,6 +41,27 @@ import.meta.css = /* css */ `
 
   .navi_custom_space {
   }
+
+  .navi_text_bold_clone {
+    font-weight: bold;
+    opacity: 0;
+  }
+  .navi_text_foreground {
+    position: absolute;
+    top: 0;
+    transition-property: font-weight;
+
+    &[data-align="start"] {
+      left: 0;
+    }
+    &[data-align="center"] {
+      left: 0;
+      width: 100%;
+    }
+    &[data-align="end"] {
+      right: 0;
+    }
+  }
 `;
 
 const REGULAR_SPACE = <span data-navi-space=""> </span>;
@@ -186,6 +207,8 @@ const TextBasic = ({ spacing = " ", boldClone, children, ...rest }) => {
   }
 
   if (boldClone) {
+    const alignX = rest.alignX || rest.align || "start";
+
     // La technique consiste a avoid un double gras qui force une taille
     // et la version light par dessus en position absolute
     // on la centre aussi pour donner l'impression que le gras s'applique depuis le centre
@@ -193,8 +216,10 @@ const TextBasic = ({ spacing = " ", boldClone, children, ...rest }) => {
     // on pourrait auto-active cela sur une prop genre boldCanChange
     children = (
       <span>
-        <span style="opacity: 0; font-weight: bold;">{children}</span>
-        <span style="position: absolute; left: 0; top: 0; transition-property: font-weight">
+        <span className="navi_text_bold_clone" aria-hidden="true">
+          {children}
+        </span>
+        <span className="navi_text_foreground" data-align={alignX}>
           {children}
         </span>
       </span>
