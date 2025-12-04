@@ -222,9 +222,9 @@ export const Box = (props) => {
     let boxPseudoNamedStyles = PSEUDO_NAMED_STYLES_DEFAULT;
     const shouldForwardAllToChild = visualSelector && pseudoStateSelector;
 
-    const addStyle = (value, name, stylesTarget, context) => {
+    const addStyle = (value, name, styleContext, stylesTarget, context) => {
       styleDeps.push(value); // impact box style -> add to deps
-      const cssVar = styleCSSVars[name];
+      const cssVar = styleContext.styleCSSVars[name];
       const mergedValue = prepareStyleValue(
         stylesTarget[name],
         value,
@@ -241,23 +241,24 @@ export const Box = (props) => {
     const addStyleMaybeForwarding = (
       value,
       name,
+      styleContext,
       stylesTarget,
       context,
       visualChildPropStrategy,
     ) => {
       if (!visualChildPropStrategy) {
-        addStyle(value, name, stylesTarget, context);
+        addStyle(value, name, styleContext, stylesTarget, context);
         return false;
       }
       const cssVar = styleCSSVars[name];
       if (cssVar) {
         // css var wins over visual child handling
-        addStyle(value, name, stylesTarget, context);
+        addStyle(value, name, styleContext, stylesTarget, context);
         return false;
       }
       if (visualChildPropStrategy === "copy") {
         // we stylyze ourself + forward prop to the child
-        addStyle(value, name, stylesTarget, context);
+        addStyle(value, name, styleContext, stylesTarget, context);
       }
       return true;
     };
@@ -271,7 +272,7 @@ export const Box = (props) => {
       const context = styleOrigin === "base_style" ? "js" : "css";
       const isCss = styleOrigin === "base_style" || styleOrigin === "style";
       if (isCss) {
-        addStyle(value, name, boxStylesTarget, context);
+        addStyle(value, name, styleContext, boxStylesTarget, context);
         return;
       }
       const isPseudoStyle = styleOrigin === "pseudo_style";
@@ -304,6 +305,7 @@ export const Box = (props) => {
         const needForwarding = addStyleMaybeForwarding(
           value,
           name,
+          styleContext,
           boxStylesTarget,
           context,
           visualChildPropStrategy,
@@ -327,6 +329,7 @@ export const Box = (props) => {
         needForwarding = addStyleMaybeForwarding(
           cssValue,
           styleName,
+          styleContext,
           boxStylesTarget,
           context,
           visualChildPropStrategy,

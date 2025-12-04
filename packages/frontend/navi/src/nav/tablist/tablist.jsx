@@ -84,7 +84,7 @@ import.meta.css = /* css */ `
           );
           --x-tab-background-hover: var(
             --tab-background-color-hover,
-            var(--tab-background-hover)
+            var(--tab-background-color, var(--tab-background-hover))
           );
           --x-tab-background-selected: var(
             --tab-background-color-selected,
