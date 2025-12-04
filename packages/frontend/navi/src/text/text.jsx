@@ -18,6 +18,10 @@ import.meta.css = /* css */ `
   .navi_text {
     position: relative;
     color: inherit;
+
+    &[data-has-absolute-child] {
+      display: inline-block;
+    }
   }
 
   .navi_text_overflow {
@@ -255,11 +259,16 @@ const TextBasic = ({
   if (boldStable) {
     const { bold } = boxProps;
     return (
-      <Box {...boxProps} bold={undefined} data-bold={bold ? "" : undefined}>
+      <Box
+        {...boxProps}
+        bold={undefined}
+        data-bold={bold ? "" : undefined}
+        data-has-absolute-child=""
+      >
         <span className="navi_text_bold_background" aria-hidden="true">
           {children}
         </span>
-        <span>{children}</span>
+        {children}
       </Box>
     );
   }

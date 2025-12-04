@@ -242,13 +242,13 @@
                   overflowX: "auto",
                 }}
               >
-                {`<Text 
-  noWrap
-  bold={basicBoldActive}
-  boldTransition
->
-  This text transitions smoothly to bold
-</Text>`}
+                {`<Text
+        noWrap
+        bold={basicBoldActive}
+        boldTransition
+      >
+        This text transitions smoothly to bold
+      </Text>`}
               </pre>
             </section>
 
@@ -496,159 +496,6 @@
               </p>
             </section>
 
-            {/* BoldStable Alternative */}
-            <section
-              id="boldstable-alignments"
-              style={{ marginBottom: "30px" }}
-            >
-              <h2>🔒 boldStable Alternative</h2>
-              <Paragraph>
-                Testing <code>boldStable</code> behavior with different text
-                alignments. This uses a different technique than
-                <code>boldTransition</code> to prevent layout shifts.
-              </Paragraph>
-
-              <div style={{ marginBottom: "20px" }}>
-                <label style={{ display: "block", marginBottom: "10px" }}>
-                  <input
-                    type="checkbox"
-                    checked={stableBoldActive}
-                    onChange={(e) => setStableBoldActive(e.target.checked)}
-                    style={{ marginRight: "8px" }}
-                  />
-                  Make all texts bold (boldStable technique)
-                </label>
-
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "15px",
-                  }}
-                >
-                  <div>
-                    <h4
-                      style={{
-                        margin: "0 0 8px 0",
-                        fontSize: "12px",
-                        color: "#666",
-                      }}
-                    >
-                      Left aligned
-                    </h4>
-                    <div
-                      style={{
-                        border: "1px solid #dee2e6",
-                        padding: "12px",
-                        backgroundColor: "#ffffff",
-                        borderRadius: "4px",
-                        textAlign: "left",
-                      }}
-                    >
-                      <Text
-                        boldStable
-                        boldTransition
-                        noWrap
-                        bold={stableBoldActive}
-                      >
-                        Left aligned text
-                      </Text>
-                      <Text
-                        width="16px"
-                        height="16px"
-                        background="orange"
-                      ></Text>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h4
-                      style={{
-                        margin: "0 0 8px 0",
-                        fontSize: "12px",
-                        color: "#666",
-                      }}
-                    >
-                      Center aligned
-                    </h4>
-                    <div
-                      style={{
-                        border: "1px solid #dee2e6",
-                        padding: "12px",
-                        backgroundColor: "#ffffff",
-                        borderRadius: "4px",
-                        textAlign: "center",
-                      }}
-                    >
-                      <Text
-                        width="16px"
-                        height="16px"
-                        background="orange"
-                      ></Text>
-                      <Text
-                        boldStable
-                        boldTransition
-                        noWrap
-                        alignX="center"
-                        bold={stableBoldActive}
-                      >
-                        Center aligned text
-                      </Text>
-                      <Text
-                        width="16px"
-                        height="16px"
-                        background="orange"
-                      ></Text>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h4
-                      style={{
-                        margin: "0 0 8px 0",
-                        fontSize: "12px",
-                        color: "#666",
-                      }}
-                    >
-                      Right aligned
-                    </h4>
-                    <div
-                      style={{
-                        border: "1px solid #dee2e6",
-                        padding: "12px",
-                        backgroundColor: "#ffffff",
-                        borderRadius: "4px",
-                        textAlign: "right",
-                      }}
-                    >
-                      <Text
-                        width="16px"
-                        height="16px"
-                        background="orange"
-                      ></Text>
-                      <Text
-                        boldStable
-                        boldTransition
-                        noWrap
-                        alignX="end"
-                        bold={stableBoldActive}
-                      >
-                        Right aligned text
-                      </Text>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <p
-                style={{ fontSize: "14px", color: "#666", fontStyle: "italic" }}
-              >
-                <strong>Note:</strong> The boldStable technique uses a different
-                approach than boldTransition to maintain layout stability when
-                toggling bold text.
-              </p>
-            </section>
-
             {/* Technical Details */}
             <section style={{ marginBottom: "30px" }}>
               <h2>⚙️ How it Works</h2>
@@ -661,7 +508,7 @@
                 }}
               >
                 <p style={{ margin: "0 0 15px 0" }}>
-                  The technique uses a clever CSS approach:
+                  The technique uses a CSS approach:
                 </p>
                 <ol style={{ margin: "0 0 15px 20px", lineHeight: "1.6" }}>
                   <li>
@@ -688,6 +535,213 @@
                   transitioning the visible text.
                 </p>
               </div>
+            </section>
+
+            {/* BoldStable Alternative */}
+            <section
+              id="boldstable-alignments"
+              style={{ marginBottom: "30px" }}
+            >
+              <h2>🔒 boldStable Alternative</h2>
+              <p>
+                The <code>boldStable</code> technique uses a different approach
+                to prevent layout shifts. Unlike <code>boldTransition</code>
+                which reserves space for bold text, <code>boldStable</code>
+                maintains consistent text width regardless of font-weight.
+              </p>
+
+              <div>
+                <h4
+                  style={{
+                    margin: "0 0 8px 0",
+                    fontSize: "12px",
+                    color: "#666",
+                  }}
+                >
+                  Long text without width changes
+                </h4>
+                <div
+                  style={{
+                    border: "2px solid #fd7e14",
+                    padding: "16px",
+                    backgroundColor: "#fff3cd",
+                    borderRadius: "6px",
+                  }}
+                >
+                  <Text boldStable bold={stableBoldActive}>
+                    This is a much longer sentence that demonstrates how
+                    boldStable can be used with extended text content without
+                    causing any layout shifts or width changes, making it
+                    particularly useful for paragraphs, long labels, or any text
+                    that might wrap across multiple lines while maintaining
+                    perfect layout stability.
+                  </Text>
+                  <Text width="20px" height="20px" background="orange"></Text>
+                </div>
+              </div>
+
+              <p
+                style={{ fontSize: "14px", color: "#666", fontStyle: "italic" }}
+              >
+                <strong>Note:</strong> The boldStable technique maintains
+                consistent text width regardless of font-weight changes, making
+                it ideal for long text or multi-line content where width
+                stability is crucial.
+              </p>
+
+              <section style={{ marginBottom: "30px" }}>
+                <h2>Retsting alignment and boldStable</h2>
+                <div
+                  style={{
+                    padding: "20px",
+                    backgroundColor: "#f8f9fa",
+                    border: "1px solid #e9ecef",
+                    borderRadius: "6px",
+                  }}
+                >
+                  <label style={{ display: "block", marginBottom: "10px" }}>
+                    <input
+                      type="checkbox"
+                      checked={stableBoldActive}
+                      onChange={(e) => setStableBoldActive(e.target.checked)}
+                      style={{ marginRight: "8px" }}
+                    />
+                    Make all texts bold (boldStable technique)
+                  </label>
+
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "15px",
+                    }}
+                  >
+                    <div>
+                      <h4
+                        style={{
+                          margin: "0 0 8px 0",
+                          fontSize: "12px",
+                          color: "#666",
+                        }}
+                      >
+                        Left aligned
+                      </h4>
+                      <div
+                        style={{
+                          border: "1px solid #dee2e6",
+                          padding: "12px",
+                          backgroundColor: "#ffffff",
+                          borderRadius: "4px",
+                          textAlign: "left",
+                        }}
+                      >
+                        <Text
+                          boldStable
+                          boldTransition
+                          noWrap
+                          bold={stableBoldActive}
+                        >
+                          Left aligned text
+                        </Text>
+                        <Text
+                          width="16px"
+                          height="16px"
+                          background="orange"
+                        ></Text>
+                      </div>
+                    </div>
+
+                    <div>
+                      <h4
+                        style={{
+                          margin: "0 0 8px 0",
+                          fontSize: "12px",
+                          color: "#666",
+                        }}
+                      >
+                        Center aligned
+                      </h4>
+                      <div
+                        style={{
+                          border: "1px solid #dee2e6",
+                          padding: "12px",
+                          backgroundColor: "#ffffff",
+                          borderRadius: "4px",
+                          textAlign: "center",
+                        }}
+                      >
+                        <Text
+                          width="16px"
+                          height="16px"
+                          background="orange"
+                        ></Text>
+                        <Text
+                          boldStable
+                          boldTransition
+                          noWrap
+                          alignX="center"
+                          bold={stableBoldActive}
+                        >
+                          Center aligned text
+                        </Text>
+                        <Text
+                          width="16px"
+                          height="16px"
+                          background="orange"
+                        ></Text>
+                      </div>
+                    </div>
+
+                    <div>
+                      <h4
+                        style={{
+                          margin: "0 0 8px 0",
+                          fontSize: "12px",
+                          color: "#666",
+                        }}
+                      >
+                        Right aligned
+                      </h4>
+                      <div
+                        style={{
+                          border: "1px solid #dee2e6",
+                          padding: "12px",
+                          backgroundColor: "#ffffff",
+                          borderRadius: "4px",
+                          textAlign: "right",
+                        }}
+                      >
+                        <Text
+                          width="16px"
+                          height="16px"
+                          background="orange"
+                        ></Text>
+                        <Text
+                          boldStable
+                          boldTransition
+                          noWrap
+                          alignX="end"
+                          bold={stableBoldActive}
+                        >
+                          Right aligned text
+                        </Text>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <p
+                  style={{
+                    fontSize: "14px",
+                    color: "#666",
+                    fontStyle: "italic",
+                  }}
+                >
+                  <strong>Note:</strong> The boldStable technique uses a
+                  different approach than boldTransition to maintain layout
+                  stability when toggling bold text.
+                </p>
+              </section>
             </section>
           </div>
         );
