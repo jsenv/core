@@ -148,7 +148,7 @@
       .ex-0 .wrapper {
         position: relative;
         display: inline-block;
-        max-width: 140px;
+        max-width: 145px;
       }
       .ex-0 .inner {
         position: relative;
@@ -300,13 +300,13 @@
           <div class="version">
             <div class="version-title">Normal (absolute)</div>
             <div class="demo-text normal constrainer">
-              Texte court qui wrap différemment en bold.
+              Cette solution semble marcher mais échoue à cause du wrapping.
             </div>
           </div>
           <div class="version">
             <div class="version-title">Bold (absolute)</div>
             <div class="demo-text bold constrainer">
-              Texte court qui wrap différemment en bold.
+              Cette solution semble marcher mais échoue à cause du wrapping.
             </div>
           </div>
         </div>
@@ -322,10 +322,12 @@
             <div class="smooth wrapper" id="wrap-b">
               <span class="inner">
                 <span class="text-normal" id="b-normal"
-                  >Texte court qui wrap différemment en bold.</span
+                  >Cette solution semble marcher mais échoue à cause du
+                  wrapping.</span
                 >
                 <span class="text-bold" id="b-bold"
-                  >Texte court qui wrap différemment en bold.</span
+                  >Cette solution semble marcher mais échoue à cause du
+                  wrapping.</span
                 >
               </span>
             </div>
@@ -343,13 +345,13 @@
           <div class="version">
             <div class="version-title">Normal (flow)</div>
             <div class="demo-text normal constrainer">
-              Texte normal dans le flow.
+              Cette solution semble marcher mais échoue à cause du wrapping.
             </div>
           </div>
           <div class="version">
             <div class="version-title">Bold (flow)</div>
             <div class="demo-text bold constrainer">
-              Texte normal dans le flow.
+              Cette solution semble marcher mais échoue à cause du wrapping.
             </div>
           </div>
         </div>
@@ -363,7 +365,10 @@
           <label> <input type="checkbox" data-toggle="c" /> Bold </label>
           <div class="constrainer">
             <div class="smooth">
-              <span class="text" id="c-text">Texte normal dans le flow.</span>
+              <span class="text" id="c-text"
+                >Cette solution semble marcher mais échoue à cause du
+                wrapping.</span
+              >
             </div>
           </div>
           <div class="widths" id="c-widths">—</div>
@@ -378,11 +383,15 @@
         <div class="comparison">
           <div class="version">
             <div class="version-title">Normal (nowrap)</div>
-            <div class="demo-text normal">Texte_single_line_sans_wrap</div>
+            <div class="demo-text normal">
+              Cette_solution_semble_marcher_sans_wrapping
+            </div>
           </div>
           <div class="version">
             <div class="version-title">Bold (nowrap)</div>
-            <div class="demo-text bold">Texte_single_line_sans_wrap</div>
+            <div class="demo-text bold">
+              Cette_solution_semble_marcher_sans_wrapping
+            </div>
           </div>
         </div>
 
@@ -393,7 +402,9 @@
         <div class="interactive">
           <label> <input type="checkbox" data-toggle="d" /> Bold </label>
           <div class="smooth wrapper" id="wrap-d">
-            <span class="text" id="d-text">Texte_single_line_sans_wrap</span>
+            <span class="text" id="d-text"
+              >Cette_solution_semble_marcher_sans_wrapping</span
+            >
           </div>
           <div class="widths" id="d-widths">—</div>
         </div>
