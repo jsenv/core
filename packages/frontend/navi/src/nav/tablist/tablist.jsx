@@ -81,7 +81,7 @@ import.meta.css = /* css */ `
           transition: background 0.12s ease-out;
           user-select: none;
 
-          .navi_text,
+          > .navi_text,
           .navi_link,
           .navi_button,
           .navi_text_bold_wrapper,
@@ -143,14 +143,14 @@ import.meta.css = /* css */ `
       overflow-y: auto;
 
       .navi_tab {
-        .navi_text,
+        > .navi_text,
         .navi_link,
         .navi_text_bold_foreground {
           justify-content: start;
         }
 
         &[data-align-x="end"] {
-          .navi_text,
+          > .navi_text,
           .navi_link,
           .navi_text_bold_foreground {
             justify-content: end;
