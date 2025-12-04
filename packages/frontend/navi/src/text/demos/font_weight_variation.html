@@ -314,9 +314,6 @@
         transform-origin: center;
         transition: opacity 0.2s ease;
       }
-      .ex-g.active .text-normal {
-        opacity: 0;
-      }
       .ex-g.active .text-bold {
         opacity: 1;
       }
@@ -638,12 +635,12 @@
 
       <!-- EXEMPLE G -->
       <div class="card ex-g">
-        <div class="technique">Scaling avec background-clip</div>
+        <div class="technique">Scaling avec background fade-in</div>
 
         <p style="margin: 0 0 16px; font-size: 13px; color: #666">
-          Cross-fade entre le texte normal (font-weight: 400) et sa version
-          scalée (scale 1.05) pour simuler un bold sans changer la largeur des
-          caractères.
+          Fade-in d'un background sur le texte scalé pour simuler un bold sans
+          changer la largeur des caractères. Le scaling (1.01) et l'apparition
+          du background augmentent visuellement la graisse.
         </p>
 
         <div class="comparison">
@@ -652,7 +649,9 @@
             <div class="demo-text normal constrainer demo-text-content"></div>
           </div>
           <div class="version">
-            <div class="version-title">Bold (simulé par scaling)</div>
+            <div class="version-title">
+              Bold (simulé par scaling + background)
+            </div>
             <div class="demo-text constrainer" style="position: relative">
               <div
                 class="demo-text-content"
