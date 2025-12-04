@@ -288,7 +288,16 @@ const createRoute = (urlPatternInput) => {
   };
 
   route.matchesParams = (otherParams) => {
-    const params = route.params;
+    let params = route.params;
+    if (params) {
+      const paramsWithoutWildcards = {};
+      for (const key of Object.keys(params)) {
+        if (!Number.isInteger(Number(key))) {
+          paramsWithoutWildcards[key] = params[key];
+        }
+      }
+      params = paramsWithoutWildcards;
+    }
     const paramsIsFalsyOrEmpty = !params || Object.keys(params).length === 0;
     const otherParamsFalsyOrEmpty =
       !otherParams || Object.keys(otherParams).length === 0;
@@ -298,13 +307,7 @@ const createRoute = (urlPatternInput) => {
     if (otherParamsFalsyOrEmpty) {
       return false;
     }
-    const paramsWithoutWildcards = {};
-    for (const key of Object.keys(params)) {
-      if (!Number.isInteger(Number(key))) {
-        paramsWithoutWildcards[key] = params[key];
-      }
-    }
-    return compareTwoJsValues(paramsWithoutWildcards, otherParams);
+    return compareTwoJsValues(params, otherParams);
   };
 
   /**
