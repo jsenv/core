@@ -3,7 +3,14 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Smooth-bold — démos</title>
+    <title>Smooth-bold — problèmes de wrapping</title>
+    <!-- Import Inter Variable pour font-variation-settings -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap"
+      rel="stylesheet"
+    />
     <style>
       :root {
         color: #111;
@@ -50,44 +57,67 @@
         border-radius: 4px;
       }
       .example-title {
-        margin-bottom: 8px;
+        margin-bottom: 16px;
         font-weight: 600;
       }
-      .controls {
+
+      /* Comparaison côte à côte */
+      .comparison {
         display: flex;
-        margin-bottom: 10px;
-        align-items: center;
-        gap: 8px;
+        margin-bottom: 16px;
+        gap: 12px;
       }
-      button {
-        padding: 6px 10px;
-        background: #fff;
-        border: 1px solid #cfd6e3;
-        border-radius: 6px;
-        cursor: pointer;
-      }
-      .stage {
-        margin-bottom: 8px;
-        padding: 12px;
-        background: #fff;
-        border: 1px dashed #e0e6f0;
-        border-radius: 6px;
-      }
-
-      /* zone parent qui contraint le texte (pour B/C/D). changez max-width pour tester */
-      .constrainer {
-        max-width: 100px;
-        height: 250px;
+      .version {
         padding: 10px;
-        background: #fbfcff;
-        border-radius: 6px;
+        flex: 1;
+        font-size: 14px;
+        background: #f8f9fa;
+        border-radius: 4px;
+      }
+      .version-title {
+        margin-bottom: 8px;
+        color: #666;
+        font-weight: 600;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+      .demo-text {
+        line-height: 1.3;
+      }
+      .demo-text.normal {
+        font-weight: 400;
+      }
+      .demo-text.bold {
+        font-weight: 700;
+      }
+      .constrainer {
+        max-width: 150px;
+        padding: 8px;
+        background: #fff;
+        border: 1px dashed #ddd;
+        border-radius: 4px;
       }
 
-      /* comportement par défaut pour les wrappers d'exemples */
+      /* Section interactive */
+      .interactive {
+        margin-top: 16px;
+        padding: 12px;
+        background: #fff5f5;
+        border: 1px solid #fecaca;
+        border-radius: 6px;
+      }
+      .interactive-title {
+        margin-bottom: 8px;
+        color: #dc2626;
+        font-weight: 600;
+        font-size: 12px;
+      }
       .smooth {
         display: inline-block;
+        margin: 8px 0;
         padding: 6px 8px;
-        vertical-align: top;
+        font-size: 14px;
         background: linear-gradient(
           90deg,
           rgba(255, 240, 240, 0.08),
@@ -96,10 +126,26 @@
         border-radius: 6px;
       }
 
-      /* EXEMPLE 0: bold dicte le flow, normal visible en absolute */
+      .meta {
+        margin: 8px 0;
+        color: #5b6473;
+        font-size: 13px;
+      }
+      .widths {
+        display: inline-block;
+        margin-left: 8px;
+        padding: 6px 8px;
+        font-size: 11px;
+        font-family: monospace;
+        background: #f1f4fb;
+        border-radius: 6px;
+      }
+
+      /* EXEMPLE 0: bold invisible dicte la largeur */
       .ex-0 .wrapper {
         position: relative;
         display: inline-block;
+        max-width: 140px;
       }
       .ex-0 .inner {
         position: relative;
@@ -110,27 +156,21 @@
         top: 0;
         left: 0;
         font-weight: 400;
-        line-height: 1.25;
-        white-space: normal;
+        line-height: 1.3;
         opacity: 1;
-        transition: opacity 0.18s ease;
+        transition: font-weight 0.2s ease;
       }
       .ex-0 .text-bold {
-        position: static; /* dicte le flow */
+        position: static;
         font-weight: 700;
-        line-height: 1.25;
-        white-space: normal;
-        opacity: 0; /* invisible, sert juste à dimensionner */
-        transition: opacity 0.18s ease;
+        line-height: 1.3;
+        opacity: 0;
       }
       .ex-0.active .text-normal {
-        font-weight: 700; /* devient bold */
-      }
-      .ex-0.active .text-bold {
-        opacity: 0; /* reste invisible */
+        font-weight: 700;
       }
 
-      /* EXEMPLE B: normal=absolute + bold=absolute */
+      /* EXEMPLE B: les deux en absolute */
       .ex-b .wrapper {
         position: relative;
         display: block;
@@ -146,10 +186,9 @@
         left: 0;
         width: 100%;
         font-weight: 400;
-        line-height: 1.25;
-        white-space: normal;
+        line-height: 1.3;
         opacity: 1;
-        transition: opacity 0.18s ease;
+        transition: opacity 0.2s ease;
       }
       .ex-b .text-bold {
         position: absolute;
@@ -157,10 +196,9 @@
         left: 0;
         width: 100%;
         font-weight: 700;
-        line-height: 1.25;
-        white-space: normal;
+        line-height: 1.3;
         opacity: 0;
-        transition: opacity 0.18s ease;
+        transition: opacity 0.2s ease;
       }
       .ex-b.active .text-normal {
         opacity: 0;
@@ -169,215 +207,212 @@
         opacity: 1;
       }
 
-      /* EXEMPLE C: flow normal - layout shift visible */
-      .ex-c .wrapper {
-        position: relative;
-        display: inline-block;
-      }
+      /* EXEMPLE C: les deux en flow */
       .ex-c .text {
-        position: static;
-        display: inline;
         font-weight: 400;
-        line-height: 1.25;
-        white-space: normal;
-        transition: font-weight 0.18s ease;
+        line-height: 1.3;
+        transition: font-weight 0.2s ease;
       }
       .ex-c.active .text {
         font-weight: 700;
       }
 
-      /* EXEMPLE D: single-line (nowrap) */
+      /* EXEMPLE D: single-line sans wrapping */
       .ex-d .wrapper {
-        position: relative;
-        display: inline-block;
         white-space: nowrap;
       }
       .ex-d .text {
-        position: static;
-        display: inline-block;
         font-weight: 400;
-        line-height: 1.25;
+        line-height: 1.3;
         white-space: nowrap;
-        transition: font-weight 0.18s ease;
+        transition: font-weight 0.2s ease;
       }
       .ex-d.active .text {
         font-weight: 700;
       }
-
-      .meta {
-        margin-top: 8px;
-        color: #5b6473;
-        font-size: 13px;
-      }
-      .widths {
-        display: inline-block;
-        margin-left: 8px;
-        padding: 6px 8px;
-        font-family: monospace;
-        background: #f1f4fb;
-        border-radius: 6px;
-      }
-      footer {
-        margin-top: 20px;
-        color: #606778;
-        font-size: 13px;
-      }
     </style>
   </head>
   <body>
-    <h1>Smooth-bold — démonstrations interactives</h1>
-    <p style="margin: 0 0 12px">
-      Coche la case <strong>Bold</strong> sur chaque exemple pour observer le
-      wrapping / layout-shift. Les largeurs mesurées (scrollWidth) sont
-      affichées.
+    <h1>Smooth-bold — problèmes de wrapping</h1>
+    <p style="margin: 0 0 16px; font-size: 14px; color: #666">
+      Chaque exemple montre d'abord les versions <strong>normal</strong> et
+      <strong>bold</strong> côte à côte, puis une démonstration interactive du
+      problème de layout shift.
     </p>
 
     <div class="examples">
       <!-- EXEMPLE 0 -->
       <div class="card ex-0">
-        <div class="technique">Bold=Flow + Normal=Absolute</div>
+        <div class="technique">Bold invisible dicte la largeur</div>
         <div class="example-title">
-          Exemple 0 — <strong>bold dicte le flow</strong>
+          Problème : wrapping différent entre normal et bold
         </div>
-        <div class="controls">
-          <label> <input type="checkbox" data-toggle="0" /> Bold </label>
-          <div class="meta">
-            Bold (invisible) dicte la largeur, normal (visible) affiché en
-            absolute
+
+        <div class="comparison">
+          <div class="version">
+            <div class="version-title">Normal (visible)</div>
+            <div class="demo-text normal constrainer">
+              Cette solution semble marcher mais échoue à cause du wrapping.
+            </div>
+          </div>
+          <div class="version">
+            <div class="version-title">Bold (invisible, dicte largeur)</div>
+            <div class="demo-text bold constrainer">
+              Cette solution semble marcher mais échoue à cause du wrapping.
+            </div>
           </div>
         </div>
-        <div class="stage">
+
+        <div class="meta">
+          ⚠️ Le bold (invisible) dicte la largeur du container, mais son
+          wrapping est différent du normal visible.
+        </div>
+
+        <div class="interactive">
+          <div class="interactive-title">
+            Test : Coche pour voir le décalage
+          </div>
+          <label> <input type="checkbox" data-toggle="0" /> Bold </label>
           <div class="smooth wrapper" id="wrap-0">
             <span class="inner">
-              <span class="text-bold" id="0-bold"
-                >Ceci est un texte d'exemple qui peut se couper sur plusieurs
-                lignes pour démontrer les risques de wrapping différent.</span
-              >
               <span class="text-normal" id="0-normal"
-                >Ceci est un texte d'exemple qui peut se couper sur plusieurs
-                lignes pour démontrer les risques de wrapping différent.</span
+                >Cette solution semble marcher mais échoue à cause du
+                wrapping.</span
+              >
+              <span class="text-bold" id="0-bold"
+                >Cette solution semble marcher mais échoue à cause du
+                wrapping.</span
               >
             </span>
           </div>
+          <div class="widths" id="0-widths">—</div>
         </div>
-        <div class="widths" id="0-widths">—</div>
       </div>
 
       <!-- EXEMPLE B -->
       <div class="card ex-b">
-        <div class="technique">Normal=Absolute + Bold=Absolute</div>
+        <div class="technique">Les deux en absolute</div>
         <div class="example-title">
-          Exemple B — <strong>les deux en absolute</strong>
+          Problème : wrapping différent entre les deux versions
         </div>
-        <div class="controls">
+
+        <div class="comparison">
+          <div class="version">
+            <div class="version-title">Normal (absolute)</div>
+            <div class="demo-text normal constrainer">
+              Texte court qui wrap différemment en bold.
+            </div>
+          </div>
+          <div class="version">
+            <div class="version-title">Bold (absolute)</div>
+            <div class="demo-text bold constrainer">
+              Texte court qui wrap différemment en bold.
+            </div>
+          </div>
+        </div>
+
+        <div class="meta">
+          ⚠️ Les deux versions sont en absolute, mais leur wrapping diffère à
+          cause de la largeur des caractères.
+        </div>
+
+        <div class="interactive">
+          <div class="interactive-title">
+            Test : Coche pour voir le changement de wrapping
+          </div>
           <label> <input type="checkbox" data-toggle="b" /> Bold </label>
-          <div class="meta">
-            Parent avec max-width: 300px → peut causer des wrappings différents
+          <div class="constrainer">
+            <div class="smooth wrapper" id="wrap-b">
+              <span class="inner">
+                <span class="text-normal" id="b-normal"
+                  >Texte court qui wrap différemment en bold.</span
+                >
+                <span class="text-bold" id="b-bold"
+                  >Texte court qui wrap différemment en bold.</span
+                >
+              </span>
+            </div>
           </div>
+          <div class="widths" id="b-widths">—</div>
         </div>
-        <div class="stage constrainer">
-          <div class="smooth wrapper" id="wrap-b">
-            <span class="inner">
-              <span class="text-normal" id="b-normal"
-                >Ceci est un texte d'exemple qui peut se couper sur plusieurs
-                lignes pour démontrer les risques de wrapping différent.</span
-              >
-              <span class="text-bold" id="b-bold"
-                >Ceci est un texte d'exemple qui peut se couper sur plusieurs
-                lignes pour démontrer les risques de wrapping différent.</span
-              >
-            </span>
-          </div>
-        </div>
-        <div class="widths" id="b-widths">—</div>
       </div>
 
       <!-- EXEMPLE C -->
       <div class="card ex-c">
-        <div class="technique">Normal=Flow + Bold=Flow</div>
-        <div class="example-title">
-          Exemple C — <strong>les deux en flow</strong> — shift visible
+        <div class="technique">Les deux en flow</div>
+        <div class="example-title">Problème : layout shift garanti</div>
+
+        <div class="comparison">
+          <div class="version">
+            <div class="version-title">Normal (flow)</div>
+            <div class="demo-text normal constrainer">
+              Texte normal dans le flow.
+            </div>
+          </div>
+          <div class="version">
+            <div class="version-title">Bold (flow)</div>
+            <div class="demo-text bold constrainer">
+              Texte normal dans le flow.
+            </div>
+          </div>
         </div>
-        <div class="controls">
+
+        <div class="meta">
+          ⚠️ Le texte participe au flow, le changement de largeur cause
+          forcément un layout shift.
+        </div>
+
+        <div class="interactive">
+          <div class="interactive-title">
+            Test : Coche pour voir le layout shift
+          </div>
           <label> <input type="checkbox" data-toggle="c" /> Bold </label>
-          <div class="meta">
-            Les deux textes participent au layout → layout shift garanti
+          <div class="constrainer">
+            <div class="smooth">
+              <span class="text" id="c-text">Texte normal dans le flow.</span>
+            </div>
           </div>
+          <div class="widths" id="c-widths">—</div>
         </div>
-        <div class="stage">
-          <div class="smooth wrapper" id="wrap-c">
-            <span class="text" id="c-text"
-              >Ceci est un texte d'exemple qui peut se couper sur plusieurs
-              lignes pour démontrer les risques de wrapping différent.</span
-            >
-          </div>
-        </div>
-        <div class="widths" id="c-widths">—</div>
       </div>
 
       <!-- EXEMPLE D -->
       <div class="card ex-d">
-        <div class="technique">Single Line (No Wrap)</div>
-        <div class="example-title">
-          Exemple D — <strong>single-line</strong> — solution idéale
-        </div>
-        <div class="controls">
-          <label> <input type="checkbox" data-toggle="d" /> Bold </label>
-          <div class="meta">
-            white-space: nowrap → pas de wrapping, donc pas de layout shift
-          </div>
-        </div>
-        <div class="stage">
-          <div class="smooth wrapper" id="wrap-d">
-            <span class="text" id="d-text"
-              >Texte_sans_retour_de_ligne_pour_montrer_le_cas_single_line_avec_underscores_ou_espaces_longs</span
-            >
-          </div>
-        </div>
-        <div class="widths" id="d-widths">—</div>
-      </div>
+        <div class="technique">Single line (solution qui marche)</div>
+        <div class="example-title">Solution : pas de wrapping possible</div>
 
-      <!-- EXEMPLE VAR -->
-      <div class="card ex-var">
-        <div class="technique">Font Variation Settings</div>
-        <div class="example-title">
-          Exemple VAR — <strong>font-variation-settings</strong> (Inter
-          variable)
-        </div>
-        <div class="controls">
-          <label> <input type="checkbox" data-toggle="var" /> Bold </label>
-          <div class="meta">
-            Utilise font-variation-settings: "wght" 400/700 pour une transition
-            plus fluide
+        <div class="comparison">
+          <div class="version">
+            <div class="version-title">Normal (nowrap)</div>
+            <div class="demo-text normal">Texte_single_line_sans_wrap</div>
+          </div>
+          <div class="version">
+            <div class="version-title">Bold (nowrap)</div>
+            <div class="demo-text bold">Texte_single_line_sans_wrap</div>
           </div>
         </div>
-        <div class="stage">
-          <div class="smooth wrapper" id="wrap-var">
-            <span class="text" id="var-text"
-              >Ceci est un texte d'exemple qui peut se couper sur plusieurs
-              lignes pour démontrer les risques de wrapping différent.</span
-            >
-          </div>
+
+        <div class="meta">
+          ✅ Avec white-space: nowrap, pas de différence de wrapping possible.
         </div>
-        <div class="widths" id="var-widths">—</div>
+
+        <div class="interactive">
+          <div class="interactive-title">Test : Aucun layout shift</div>
+          <label> <input type="checkbox" data-toggle="d" /> Bold </label>
+          <div class="smooth wrapper" id="wrap-d">
+            <span class="text" id="d-text">Texte_single_line_sans_wrap</span>
+          </div>
+          <div class="widths" id="d-widths">—</div>
+        </div>
       </div>
     </div>
-
-    <footer>
-      <div>
-        Tip : tu peux modifier la largeur du <code>.constrainer</code> (Ex. B)
-        ou le texte pour voir d'autres cas. L'exemple 0 utilise le texte bold
-        (invisible) pour dimensionner le wrapper, le normal (visible) s'affiche
-        en absolute.
-      </div>
-    </footer>
 
     <script>
       // Simple helpers
       const $ = (id) => document.getElementById(id);
       const measure = (el) => Math.ceil(el.scrollWidth);
 
-      // Initialize example 0: set wrapper width to bold text width (bold dicte le flow)
+      // Initialize example 0: set wrapper width to bold text width
       function init0() {
         const wrapper = $("wrap-0");
         const boldText = $("0-bold");
@@ -406,21 +441,13 @@
           if (example === "0") {
             const wrapper = $("wrap-0");
             displayText += ` — wrapper: ${wrapper.style.width}`;
-          } else if (example === "b") {
-            displayText += " — parent max-width: 300px";
           }
         } else {
-          // Exemples avec un seul élément (c, d, var)
+          // Exemples avec un seul élément (c, d)
           const text = $(`${example}-text`);
           const currentWidth = measure(text);
           const currentWeight = isActive ? "bold (700)" : "normal (400)";
           displayText = `${currentWeight}: ${currentWidth}px`;
-
-          if (example === "var") {
-            const computedStyle = getComputedStyle(text);
-            const fontVarSettings = computedStyle.fontVariationSettings;
-            displayText += ` — font-variation-settings: ${fontVarSettings || "non supporté"}`;
-          }
         }
 
         widthsEl.textContent = displayText;
@@ -449,23 +476,12 @@
         updateWidths("b");
         updateWidths("c");
         updateWidths("d");
-        updateWidths("var");
 
         // Attach checkbox listeners
         document.querySelectorAll("input[data-toggle]").forEach((checkbox) => {
           checkbox.addEventListener("change", () => {
             const example = checkbox.getAttribute("data-toggle");
             toggle(example, checkbox.checked);
-          });
-        });
-
-        // Update on resize
-        window.addEventListener("resize", () => {
-          requestAnimationFrame(() => {
-            updateWidths("b");
-            updateWidths("c");
-            updateWidths("d");
-            updateWidths("var");
           });
         });
       }
