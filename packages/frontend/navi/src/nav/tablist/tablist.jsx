@@ -81,8 +81,12 @@ import.meta.css = /* css */ `
           transition: background 0.12s ease-out;
           user-select: none;
 
-          span,
-          a {
+          .navi_text,
+          .navi_link,
+          .navi_button,
+          .navi_text_bold_wrapper,
+          .navi_text_bold_clone,
+          .navi_text_bold_foreground {
             display: inline-flex;
             flex-grow: 1;
             justify-content: center;
@@ -139,14 +143,16 @@ import.meta.css = /* css */ `
       overflow-y: auto;
 
       .navi_tab {
-        span,
-        a {
+        .navi_text,
+        .navi_link,
+        .navi_text_bold_foreground {
           justify-content: start;
         }
 
         &[data-align-x="end"] {
-          span,
-          a {
+          .navi_text,
+          .navi_link,
+          .navi_text_bold_foreground {
             justify-content: end;
           }
         }
