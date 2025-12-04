@@ -24,7 +24,6 @@
           Arial;
 
         --max-width: 162px;
-        --scaling-factor: 1.01;
       }
       body {
         padding: 20px;
@@ -311,7 +310,6 @@
         color: currentColor;
         font-weight: 400;
         opacity: 0;
-        transform: scale(var(--scaling-factor));
         transform-origin: center;
         transition: opacity 0.2s ease;
       }
@@ -637,42 +635,12 @@
 
       <!-- EXEMPLE G -->
       <div class="card ex-g">
-        <div class="technique">Scaling avec background fade-in</div>
-
-        <div
-          style="
-            margin-bottom: 16px;
-            padding: 12px;
-            background: #f0f8ff;
-            border: 1px solid #b3d9ff;
-            border-radius: 6px;
-          "
-        >
-          <label
-            style="
-              display: block;
-              margin-bottom: 6px;
-              font-weight: 600;
-              font-size: 13px;
-            "
-          >
-            Scaling factor: <span id="scaling-display">1.01</span>
-          </label>
-          <input
-            type="number"
-            id="scaling-input"
-            min="1"
-            max="1.2"
-            step="0.01"
-            value="1.01"
-            style="width: 80px"
-          />
-        </div>
+        <div class="technique">Background répétition pour effet de graisse</div>
 
         <p style="margin: 0 0 16px; font-size: 13px; color: #666">
-          Fade-in d'un background sur le texte scalé pour simuler un bold sans
-          changer la largeur des caractères. Le scaling (1.01) et l'apparition
-          du background augmentent visuellement la graisse.
+          Répétition du texte en arrière-plan avec background-clip pour simuler
+          un bold sans changer la largeur des caractères. L'apparition du
+          background augmente visuellement la graisse par superposition.
         </p>
 
         <div class="comparison">
@@ -692,7 +660,6 @@
                   top: 0;
                   left: 0;
                   font-weight: normal;
-                  transform: scale(var(--scaling-factor));
                   transform-origin: center;
                   color: currentColor;
                   background: currentColor;
@@ -791,21 +758,6 @@
               `${value}px`,
             );
             display.textContent = `${value}px`;
-          });
-        }
-
-        // Setup scaling control
-        const scalingInput = document.getElementById("scaling-input");
-        const scalingDisplay = document.getElementById("scaling-display");
-
-        if (scalingInput && scalingDisplay) {
-          scalingInput.addEventListener("input", (e) => {
-            const value = e.target.value;
-            document.documentElement.style.setProperty(
-              "--scaling-factor",
-              value,
-            );
-            scalingDisplay.textContent = value;
           });
         }
       }
