@@ -69,51 +69,6 @@
         </>
       );
 
-      const AlignmentTestCase = ({
-        title,
-        textAlign,
-        children,
-        indicators = [],
-      }) => (
-        <div>
-          <h4
-            style={{
-              margin: "0 0 8px 0",
-              fontSize: "12px",
-              color: "#666",
-            }}
-          >
-            {title}
-          </h4>
-          <div
-            style={{
-              border: "1px solid #dee2e6",
-              padding: "12px",
-              backgroundColor: "#ffffff",
-              borderRadius: "4px",
-              textAlign,
-            }}
-          >
-            {indicators.map((bg, i) => (
-              <Text
-                key={`before-${i}`}
-                width="16px"
-                height="16px"
-                background={bg}
-              ></Text>
-            ))}
-            {children}
-            {indicators.length > 1 && (
-              <Text
-                width="16px"
-                height="16px"
-                background={indicators[0]}
-              ></Text>
-            )}
-          </div>
-        </div>
-      );
-
       const BoldToggle = ({ checked, onChange, label }) => (
         <label style={{ display: "block", marginBottom: "10px" }}>
           <input
@@ -872,46 +827,111 @@
                     gap: "15px",
                   }}
                 >
-                  <AlignmentTestCase
-                    title="Left aligned"
-                    textAlign="left"
-                    indicators={["orange"]}
-                  >
-                    <Text boldStable noWrap bold={stableBoldActive}>
-                      Left aligned text
-                    </Text>
-                  </AlignmentTestCase>
-
-                  <AlignmentTestCase
-                    title="Center aligned"
-                    textAlign="center"
-                    indicators={["orange", "orange"]}
-                  >
-                    <Text
-                      boldStable
-                      noWrap
-                      alignX="center"
-                      bold={stableBoldActive}
-                      boldTransition
+                  <div>
+                    <h4
+                      style={{
+                        margin: "0 0 8px 0",
+                        fontSize: "12px",
+                        color: "#666",
+                      }}
                     >
-                      Center aligned text
-                    </Text>
-                  </AlignmentTestCase>
-
-                  <AlignmentTestCase
-                    title="Right aligned"
-                    textAlign="right"
-                    indicators={["orange"]}
-                  >
-                    <Text
-                      boldStable
-                      noWrap
-                      alignX="end"
-                      bold={stableBoldActive}
+                      Left aligned
+                    </h4>
+                    <div
+                      style={{
+                        border: "1px solid #dee2e6",
+                        padding: "12px",
+                        backgroundColor: "#ffffff",
+                        borderRadius: "4px",
+                        textAlign: "left",
+                      }}
                     >
-                      Right aligned text
-                    </Text>
-                  </AlignmentTestCase>
+                      <Text boldStable noWrap bold={stableBoldActive}>
+                        Left aligned text
+                      </Text>
+                      <Text
+                        width="16px"
+                        height="16px"
+                        background="orange"
+                      ></Text>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4
+                      style={{
+                        margin: "0 0 8px 0",
+                        fontSize: "12px",
+                        color: "#666",
+                      }}
+                    >
+                      Center aligned
+                    </h4>
+                    <div
+                      style={{
+                        border: "1px solid #dee2e6",
+                        padding: "12px",
+                        backgroundColor: "#ffffff",
+                        borderRadius: "4px",
+                        textAlign: "center",
+                      }}
+                    >
+                      <Text
+                        width="16px"
+                        height="16px"
+                        background="orange"
+                      ></Text>
+                      <Text
+                        boldStable
+                        noWrap
+                        alignX="center"
+                        bold={stableBoldActive}
+                        boldTransition
+                      >
+                        Center aligned text
+                      </Text>
+                      <Text
+                        width="16px"
+                        height="16px"
+                        background="orange"
+                      ></Text>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4
+                      style={{
+                        margin: "0 0 8px 0",
+                        fontSize: "12px",
+                        color: "#666",
+                      }}
+                    >
+                      Right aligned
+                    </h4>
+                    <div
+                      style={{
+                        border: "1px solid #dee2e6",
+                        padding: "12px",
+                        backgroundColor: "#ffffff",
+                        borderRadius: "4px",
+                        textAlign: "right",
+                      }}
+                    >
+                      <Text
+                        width="16px"
+                        height="16px"
+                        background="orange"
+                      ></Text>
+                      <Text
+                        boldStable
+                        noWrap
+                        alignX="end"
+                        bold={stableBoldActive}
+                      >
+                        Right aligned text
+                      </Text>
+                    </div>
+                  </div>
                 </div>
               </div>
 

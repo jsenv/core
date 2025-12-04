@@ -8,6 +8,7 @@ import {
   isSizeSpacingScaleKey,
   resolveSpacingSize,
 } from "../box/box_style_util.js";
+import { withPropsClassName } from "../utils/with_props_class_name.js";
 import { useInitialTextSelection } from "./use_initial_text_selection.jsx";
 
 import.meta.css = /* css */ `
@@ -253,7 +254,7 @@ const TextBasic = ({
     "as": "span",
     "data-bold-transition": boldTransition ? "" : undefined,
     ...rest,
-    "baseClassName": "navi_text",
+    "baseClassName": withPropsClassName("navi_text", rest.baseClassName),
   };
 
   if (boldStable) {
