@@ -62,6 +62,40 @@ export const parseCSSColor = (color, element) => {
     return parseCSSColor(resolvedColor, element);
   }
 
+  if (color.startsWith("color-mix(")) {
+    return color;
+  }
+
+  // Pass through CSS functions that we don't want to resolve
+  if (
+    color.includes("calc(") ||
+    color.includes("min(") ||
+    color.includes("max(") ||
+    color.includes("clamp(") ||
+    color.includes("env(") ||
+    color.includes("attr(")
+  ) {
+    return color;
+  }
+
+  // Pass through CSS color functions we don't handle
+  if (
+    color.startsWith("color(") ||
+    color.startsWith("lch(") ||
+    color.startsWith("oklch(") ||
+    color.startsWith("lab(") ||
+    color.startsWith("oklab(") ||
+    color.startsWith("hwb(") ||
+    color.includes("color-contrast(")
+  ) {
+    return color;
+  }
+
+  // Pass through relative color syntax (CSS Color Module Level 5)
+  if (color.includes(" from ")) {
+    return color;
+  }
+
   // If it's a CSS custom property, resolve it using getComputedStyle
   if (resolvedColor.includes("var(")) {
     if (!element) {

@@ -78,7 +78,18 @@ import.meta.css = /* css */ `
         }
 
         .navi_tab {
-          --x-tab-background: var(--tab-background);
+          --x-tab-background: var(
+            --tab-background-color,
+            var(--tab-background)
+          );
+          --x-tab-background-hover: var(
+            --tab-background-color-hover,
+            var(--tab-background-hover)
+          );
+          --x-tab-background-selected: var(
+            --tab-background-color-selected,
+            var(--tab-background-selected)
+          );
           --x-tab-color: var(--tab-color);
 
           display: flex;
@@ -129,12 +140,12 @@ import.meta.css = /* css */ `
           }
           /* Hover */
           &:hover {
-            --x-tab-background: var(--tab-background-hover);
+            --x-tab-background: var(--x-tab-background-hover);
             --x-tab-color: var(--tab-color-hover);
           }
           /* Selected */
           &[data-tab-selected] {
-            --x-tab-background: var(--tab-background-selected);
+            --x-tab-background: var(--x-tab-background-selected);
             --x-tab-color: var(--tab-color-selected);
             font-weight: bold;
 
@@ -301,13 +312,16 @@ export const TabList = ({
 
 const TAB_STYLE_CSS_VARS = {
   "background": "--tab-background",
+  "backgroundColor": "--tab-background-color",
   "color": "--tab-color",
   ":hover": {
     background: "--tab-background-hover",
+    backgroundColor: "--tab-background-color-hover",
     color: "--tab-color-hover",
   },
   ":-navi-tab-selected": {
-    background: "--tab-color-selected",
+    background: "--tab-background-selected",
+    backgroundColor: "--tab-background-color-selected",
     color: "--tab-color-selected",
   },
 };
