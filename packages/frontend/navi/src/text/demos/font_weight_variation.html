@@ -376,9 +376,37 @@
         </div>
       </div>
 
+      <!-- CONCLUSION INTERMEDIAIRE -->
+      <div
+        style="
+          margin: 32px 0;
+          padding: 20px;
+          background: #f8f9fa;
+          border-left: 4px solid #dc3545;
+          border-radius: 6px;
+        "
+      >
+        <h3 style="margin: 0 0 12px; font-size: 16px; color: #dc3545">
+          Problème fondamental
+        </h3>
+        <p style="margin: 0; color: #374151; line-height: 1.5">
+          Le problème des transitions de font-weight est
+          <strong>insolvable avec du texte sur plusieurs lignes</strong>. Dès
+          qu'un wrapping peut survenir, les versions normal et bold auront des
+          retours à la ligne différents, causant inévitablement des layout
+          shifts.
+        </p>
+      </div>
+
       <!-- EXEMPLE D -->
       <div class="card ex-d">
-        <div class="technique">Nowrap</div>
+        <div class="technique">Solution : Nowrap + Absolute</div>
+
+        <p style="margin: 0 0 16px; font-size: 13px; color: #666">
+          Avec <code>white-space: nowrap</code>, on peut utiliser la technique
+          absolute en toute sécurité car il n'y a plus de risque de wrapping
+          différentiel.
+        </p>
 
         <div class="comparison">
           <div class="version">
@@ -405,6 +433,50 @@
             style="max-width: var(--max-width)"
           >
             <span class="text demo-text-content" id="d-text"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- EXEMPLE F -->
+      <div class="card ex-f">
+        <div class="technique">Nowrap + Centrage</div>
+
+        <p style="margin: 0 0 16px; font-size: 13px; color: #666">
+          Comportement du texte centré lors du changement de font-weight avec
+          nowrap.
+        </p>
+
+        <div class="comparison">
+          <div class="version">
+            <div class="version-title">Normal (centré)</div>
+            <div class="constrainer" style="text-align: center">
+              <div
+                class="demo-text normal demo-text-content"
+                style="white-space: nowrap"
+              ></div>
+            </div>
+          </div>
+          <div class="version">
+            <div class="version-title">Bold (centré)</div>
+            <div class="constrainer" style="text-align: center">
+              <div
+                class="demo-text bold demo-text-content"
+                style="white-space: nowrap"
+              ></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="interactive">
+          <label> <input type="checkbox" data-toggle="f" /> Bold </label>
+          <div class="constrainer" style="text-align: center">
+            <div class="smooth">
+              <span
+                class="text demo-text-content"
+                id="f-text"
+                style="white-space: nowrap"
+              ></span>
+            </div>
           </div>
         </div>
       </div>
@@ -472,19 +544,13 @@
         Conclusion
       </h3>
       <p style="margin: 0; color: #374151; line-height: 1.5">
-        La seule approche fiable pour les transitions de font-weight est
-        l'utilisation de
+        Avec
         <code style="background: #e5e7eb; padding: 2px 4px; border-radius: 3px"
           >white-space: nowrap</code
-        >
-        qui garantit une seule ligne. Toutes les autres techniques échouent dès
-        que le wrapping intervient, car les versions normal et bold ont des
-        largeurs différentes et se comportent différemment lors du passage à la
-        ligne. L'utilisation de
-        <code style="background: #e5e7eb; padding: 2px 4px; border-radius: 3px"
-          >font-variation-settings</code
-        >
-        avec des polices variables ne résout pas ce problème fondamental.
+        >, les transitions de font-weight deviennent fiables car il n'y a plus
+        de wrapping possible. Cette approche fonctionne même avec du texte
+        centré, mais au prix d'un débordement visible quand le texte est plus
+        large que son conteneur.
       </p>
     </div>
 
@@ -509,6 +575,7 @@
           "b-bold",
           "c-text",
           "d-text",
+          "f-text",
           "e-text",
         ];
         interactiveTexts.forEach((id) => {
