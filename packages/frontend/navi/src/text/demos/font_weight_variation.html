@@ -138,6 +138,12 @@
         font-size: 13px;
       }
 
+      .inner {
+        position: relative;
+        display: inline-block;
+        background: rgba(238, 130, 238, 0.3);
+      }
+
       /* EXEMPLE 0: bold invisible dicte la largeur */
       .ex-0 .wrapper {
         position: relative;
@@ -148,14 +154,6 @@
         background: #fff3cd;
         /* border: 1px dashed #ffc107; */
         /* border-radius: 4px; */
-      }
-      .ex-0 .inner {
-        position: relative;
-        display: inline-block;
-        /* padding: 2px; */
-        background: #e8f5e8;
-        /* border: 1px solid #4caf50; */
-        /* border-radius: 3px; */
       }
       .ex-0 .text-normal {
         position: absolute;
@@ -181,15 +179,6 @@
         position: relative;
         display: block;
         height: 110px;
-      }
-      .ex-b .inner {
-        position: relative;
-        display: block;
-        width: 100%;
-        /* padding: 2px; */
-        background: #e8f5e8;
-        /* border: 1px solid #4caf50; */
-        /* border-radius: 3px; */
       }
       .ex-b .text-normal {
         position: absolute;
@@ -265,14 +254,6 @@
         /* border: 1px dashed #ffc107; */
         /* border-radius: 4px; */
       }
-      .ex-d .inner {
-        position: relative;
-        display: inline-block;
-        /* padding: 2px; */
-        background: #e8f5e8;
-        /* border: 1px solid #4caf50; */
-        /* border-radius: 3px; */
-      }
       .ex-d .text-normal {
         position: absolute;
         top: 0;
@@ -299,14 +280,6 @@
         position: relative;
         display: block;
         text-align: center;
-      }
-      .ex-f .inner {
-        position: relative;
-        display: inline-block;
-        /* padding: 2px; */
-        background: #e8f5e8;
-        /* border: 1px solid #4caf50; */
-        /* border-radius: 3px; */
       }
       .ex-f .text-normal {
         position: absolute;
@@ -420,7 +393,7 @@
           <label> <input type="checkbox" data-toggle="b" /> Bold </label>
           <div class="constrainer">
             <div class="smooth wrapper" id="wrap-b">
-              <span class="inner">
+              <span class="inner" style="width: 100%">
                 <span
                   class="text-normal demo-text-content"
                   id="b-normal"
