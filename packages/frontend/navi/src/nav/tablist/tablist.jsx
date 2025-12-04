@@ -44,12 +44,12 @@ import.meta.css = /* css */ `
 
     &[data-tab-indicator-position="start"] {
       .navi_tab {
-        padding-top: var(--tab-indicator-spacing);
+        margin-top: var(--tab-indicator-spacing);
       }
     }
     &[data-tab-indicator-position="end"] {
       .navi_tab {
-        padding-bottom: var(--tab-indicator-spacing);
+        margin-bottom: var(--tab-indicator-spacing);
       }
     }
 
@@ -97,11 +97,13 @@ import.meta.css = /* css */ `
             border-radius: 0.1px;
 
             &[data-position="start"] {
-              top: calc(-1 * var(--tab-indicator-spacing));
+              top: 0;
+              left: 0;
             }
 
             &[data-position="end"] {
-              bottom: calc(-1 * var(--tab-indicator-spacing));
+              bottom: 0;
+              left: 0;
             }
           }
 
@@ -135,23 +137,24 @@ import.meta.css = /* css */ `
 
       &[data-tab-indicator-position="start"] {
         .navi_tab {
-          padding-top: 0;
-          padding-left: var(--tab-indicator-spacing);
+          margin-top: 0;
+          margin-left: var(--tab-indicator-spacing);
 
           .navi_tab_indicator {
             top: 0;
-            left: calc(-1 * var(--tab-indicator-spacing));
+            left: 0;
           }
         }
       }
       &[data-tab-indicator-position="end"] {
         .navi_tab {
-          padding-right: var(--tab-indicator-spacing);
-          padding-bottom: 0;
+          margin-right: var(--tab-indicator-spacing);
+          margin-bottom: 0;
 
           .navi_tab_indicator {
             top: 0;
-            right: calc(-1 * var(--tab-indicator-spacing));
+            right: 0;
+            left: auto;
           }
         }
       }
@@ -181,7 +184,6 @@ import.meta.css = /* css */ `
         .navi_tab {
           width: 100%;
           flex: 1;
-          align-items: center;
           align-items: stretch;
           justify-content: center;
         }
@@ -305,14 +307,12 @@ const TabBasic = ({ children, selected, onClick, ...props }) => {
   const tabListIndicator = useContext(TabListIndicatorContext);
 
   return (
-    <Text
+    <Box
       role="tab"
       aria-selected={selected ? "true" : "false"}
       data-interactive={onClick ? "" : undefined}
       onClick={onClick}
       paddingX="s"
-      noWrap
-      preventBoldLayoutShift
       // boldTransition
       // Style system
       baseClassName="navi_tab"
@@ -327,7 +327,9 @@ const TabBasic = ({ children, selected, onClick, ...props }) => {
       {tabListIndicator && tabListIndicator !== "none" && (
         <span className="navi_tab_indicator" data-position={tabListIndicator} />
       )}
-      {children}
-    </Text>
+      <Text noWrap preventBoldLayoutShift>
+        {children}
+      </Text>
+    </Box>
   );
 };
