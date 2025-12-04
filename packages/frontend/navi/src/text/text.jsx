@@ -47,23 +47,17 @@ import.meta.css = /* css */ `
   .navi_custom_space {
   }
 
+  .navi_text_bold_wrapper {
+    position: relative;
+    display: inline-block;
+  }
   .navi_text_bold_clone {
     font-weight: bold;
     opacity: 0;
   }
   .navi_text_bold_foreground {
     position: absolute;
-    top: 0;
-    &[data-align="start"] {
-      left: 0;
-    }
-    &[data-align="center"] {
-      left: 0;
-      width: 100%;
-    }
-    &[data-align="end"] {
-      right: 0;
-    }
+    inset: 0;
   }
 
   .navi_text_bold_background {
@@ -283,7 +277,7 @@ const TextBasic = ({
     // on pourrait auto-active cela sur une prop genre boldCanChange
     return (
       <Box {...boxProps}>
-        <span style="position: relative; display: inline-block;">
+        <span className="navi_text_bold_wrapper">
           <span className="navi_text_bold_clone" aria-hidden="true">
             {children}
           </span>

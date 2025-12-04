@@ -81,8 +81,11 @@ import.meta.css = /* css */ `
           transition: background 0.12s ease-out;
           user-select: none;
 
-          .navi_link {
+          span,
+          a {
+            display: inline-flex;
             flex-grow: 1;
+            justify-content: center;
             text-align: center;
             border-radius: inherit;
           }
@@ -151,6 +154,11 @@ import.meta.css = /* css */ `
           margin-right: var(--tab-indicator-spacing);
           margin-bottom: 0;
 
+          span,
+          a {
+            justify-content: start;
+          }
+
           .navi_tab_indicator {
             top: 0;
             right: 0;
@@ -216,7 +224,9 @@ export const TabList = ({
       as="nav"
       baseClassName="navi_tablist"
       role="tablist"
-      data-tab-indicator-position={indicator}
+      data-tab-indicator-position={
+        indicator === "start" || indicator === "end" ? indicator : undefined
+      }
       data-expand={expand || expandX ? "" : undefined}
       data-vertical={vertical ? "" : undefined}
       expand={expand}
@@ -324,7 +334,7 @@ const TabBasic = ({ children, selected, onClick, ...props }) => {
       }}
       {...props}
     >
-      {tabListIndicator && tabListIndicator !== "none" && (
+      {(tabListIndicator === "start" || tabListIndicator === "end") && (
         <span className="navi_tab_indicator" data-position={tabListIndicator} />
       )}
       <Text noWrap preventBoldLayoutShift>
