@@ -59,8 +59,37 @@ import.meta.css = /* css */ `
     &[data-align="end"] {
       right: 0;
     }
-    &[data-bold-transition] {
+  }
+
+  .navi_text_bold_background {
+    position: absolute;
+    top: 0;
+    left: 0;
+    color: currentColor;
+    font-weight: normal;
+    background: currentColor;
+    background-clip: text;
+    -webkit-background-clip: text;
+    transform-origin: center;
+    -webkit-text-fill-color: transparent;
+    opacity: 0;
+  }
+
+  .navi_text[data-bold] {
+    .navi_text_bold_background {
+      opacity: 1;
+    }
+  }
+
+  .navi_text[data-bold-transition] {
+    .navi_text_bold_foreground {
       transition-property: font-weight;
+      transition-duration: 0.3s;
+      transition-timing-function: ease;
+    }
+
+    .navi_text_bold_background {
+      transition-property: opacity;
       transition-duration: 0.3s;
       transition-timing-function: ease;
     }
@@ -205,6 +234,7 @@ const TextWithSelectRange = ({ selectRange, ...props }) => {
 const TextBasic = ({
   spacing = " ",
   boldTransition,
+  boldStable,
   preventBoldLayoutShift = boldTransition,
   children,
   ...rest
@@ -215,7 +245,16 @@ const TextBasic = ({
     children = applySpacingOnTextChildren(children, spacing);
   }
 
-  if (preventBoldLayoutShift) {
+  if (boldStable) {
+    children = (
+      <span>
+        <span className="navi_text_bold_background" aria-hidden="true">
+          {children}
+        </span>
+        <span className="navi_text_bold_foreground">{children}</span>
+      </span>
+    );
+  } else if (preventBoldLayoutShift) {
     const alignX = rest.alignX || rest.align || "start";
 
     // La technique consiste a avoid un double gras qui force une taille
@@ -228,11 +267,7 @@ const TextBasic = ({
         <span className="navi_text_bold_clone" aria-hidden="true">
           {children}
         </span>
-        <span
-          className="navi_text_bold_foreground"
-          data-align={alignX}
-          data-bold-transition={boldTransition ? "" : undefined}
-        >
+        <span className="navi_text_bold_foreground" data-align={alignX}>
           {children}
         </span>
       </span>
@@ -240,7 +275,12 @@ const TextBasic = ({
   }
 
   return (
-    <Box as="span" baseClassName="navi_text" {...rest}>
+    <Box
+      as="span"
+      baseClassName="navi_text"
+      data-bold-transition={boldTransition ? "" : undefined}
+      {...rest}
+    >
       {children}
     </Box>
   );
