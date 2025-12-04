@@ -95,98 +95,49 @@
         border-radius: 6px;
       }
 
-      /* les deux couches texte */
-      .text-normal,
-      .text-bold {
+      /* le texte unique avec transition de font-weight */
+      .text {
         display: inline-block;
+        font-weight: 400;
         line-height: 1.25;
         white-space: normal;
-        transition:
-          opacity 0.18s ease,
-          transform 0.18s ease;
+        transition: font-weight 0.18s ease;
       }
 
-      /* styles pour la version bold dans chaque exemple — on va manipuler la position par JS/CSS selon l'exemple */
-      .text-bold {
-        position: static;
+      /* état actif = bold */
+      .active .text {
         font-weight: 700;
-        opacity: 0;
       }
 
-      /* états actifs */
-      .active .text-bold {
-        opacity: 1;
-      }
-      .active .text-normal {
-        opacity: 0;
-      }
-
-      /* EXEMPLE A: normal = relative (flow), bold = absolute overlay */
+      /* EXEMPLE A: normal flow avec wrapper de largeur fixe */
       .ex-a .wrapper {
-        position: relative; /* width fixé en JS à partir du normal */
+        position: relative;
         display: inline-block;
       }
-      .ex-a .text-normal {
+      .ex-a .text {
         position: static;
-      } /* participe au flow */
-      .ex-a .text-bold {
-        position: absolute;
-        top: 0;
-        left: 0;
-        opacity: 0;
-      }
-      .ex-a .active .text-bold {
-        opacity: 1;
-      }
-      .ex-a .active .text-normal {
-        opacity: 0;
       }
 
-      /* EXEMPLE B: both absolute, wrapper constrained by parent (max-width) */
+      /* EXEMPLE B: contraint par parent (max-width) */
       .ex-b .wrapper {
         position: relative;
-        display: block; /* width: auto; constrained par parent */
+        display: block;
       }
-      .ex-b .text-normal,
-      .ex-b .text-bold {
-        position: absolute;
-        top: 0;
-        left: 0;
+      .ex-b .text {
+        position: static;
         width: 100%;
         white-space: normal;
       }
-      .ex-b .text-normal {
-        position: absolute;
-      }
-      .ex-b .text-bold {
-        position: absolute;
-      }
-      .ex-b .active .text-bold {
-        opacity: 1;
-      }
-      .ex-b .active .text-normal {
-        opacity: 0;
-      }
 
-      /* EXEMPLE C: both relative (flow), cause shift */
+      /* EXEMPLE C: flow normal - layout shift visible */
       .ex-c .wrapper {
         position: relative;
         display: inline-block;
       }
-      .ex-c .text-normal,
-      .ex-c .text-bold {
+      .ex-c .text {
         position: static;
         display: inline;
         white-space: normal;
-      }
-      .ex-c .text-bold {
-        opacity: 0;
-      }
-      .ex-c .active .text-bold {
-        opacity: 1;
-      }
-      .ex-c .active .text-normal {
-        opacity: 0;
       }
 
       /* EXEMPLE D: single-line (nowrap) */
@@ -195,20 +146,10 @@
         display: inline-block;
         white-space: nowrap;
       }
-      .ex-d .text-normal,
-      .ex-d .text-bold {
+      .ex-d .text {
         position: static;
         display: inline-block;
         white-space: nowrap;
-      }
-      .ex-d .text-bold {
-        opacity: 0;
-      }
-      .ex-d .active .text-bold {
-        opacity: 1;
-      }
-      .ex-d .active .text-normal {
-        opacity: 0;
       }
 
       .meta {
@@ -254,11 +195,7 @@
         </div>
         <div class="stage">
           <div class="smooth wrapper" id="wrap-a">
-            <span class="text-normal" id="a-normal"
-              >Ceci est un texte d'exemple qui peut se couper sur plusieurs
-              lignes pour démontrer les risques de wrapping différent.</span
-            >
-            <span class="text-bold" id="a-bold"
+            <span class="text" id="a-text"
               >Ceci est un texte d'exemple qui peut se couper sur plusieurs
               lignes pour démontrer les risques de wrapping différent.</span
             >
@@ -281,11 +218,7 @@
         </div>
         <div class="stage constrainer">
           <div class="smooth wrapper" id="wrap-b">
-            <span class="text-normal" id="b-normal"
-              >Ceci est un texte d'exemple qui peut se couper sur plusieurs
-              lignes pour démontrer les risques de wrapping différent.</span
-            >
-            <span class="text-bold" id="b-bold"
+            <span class="text" id="b-text"
               >Ceci est un texte d'exemple qui peut se couper sur plusieurs
               lignes pour démontrer les risques de wrapping différent.</span
             >
@@ -308,11 +241,7 @@
         </div>
         <div class="stage">
           <div class="smooth wrapper" id="wrap-c">
-            <span class="text-normal" id="c-normal"
-              >Ceci est un texte d'exemple qui peut se couper sur plusieurs
-              lignes pour démontrer les risques de wrapping différent.</span
-            >
-            <span class="text-bold" id="c-bold"
+            <span class="text" id="c-text"
               >Ceci est un texte d'exemple qui peut se couper sur plusieurs
               lignes pour démontrer les risques de wrapping différent.</span
             >
@@ -335,10 +264,7 @@
         </div>
         <div class="stage">
           <div class="smooth wrapper" id="wrap-d">
-            <span class="text-normal" id="d-normal"
-              >Texte_sans_retour_de_ligne_pour_montrer_le_cas_single_line_avec_underscores_ou_espaces_longs</span
-            >
-            <span class="text-bold" id="d-bold"
+            <span class="text" id="d-text"
               >Texte_sans_retour_de_ligne_pour_montrer_le_cas_single_line_avec_underscores_ou_espaces_longs</span
             >
           </div>
@@ -361,34 +287,43 @@
       const $ = (id) => document.getElementById(id);
       const measure = (el) => Math.ceil(el.scrollWidth);
 
-      // Initialize example A: set wrapper width to normal text width
+      // Initialize example A: set wrapper width to text's normal weight width
       function initA() {
         const wrapper = $("wrap-a");
-        const normal = $("a-normal");
-        const naturalWidth = measure(normal);
-        wrapper.style.width = `${naturalWidth}px`;
-        updateWidths("a");
+        const text = $("a-text");
+        // Ensure text is in normal weight for measurement
+        const card = document.querySelector(".ex-a");
+        const wasActive = card.classList.contains("active");
+        if (wasActive) card.classList.remove("active");
+
+        requestAnimationFrame(() => {
+          const naturalWidth = measure(text);
+          wrapper.style.width = `${naturalWidth}px`;
+          if (wasActive) card.classList.add("active");
+          updateWidths("a");
+        });
       }
 
       // Update width displays
       function updateWidths(example) {
-        const normal = $(`${example}-normal`);
-        const bold = $(`${example}-bold`);
+        const text = $(`${example}-text`);
         const widthsEl = $(`${example}-widths`);
+        const card = document.querySelector(`.ex-${example}`);
+        const isActive = card.classList.contains("active");
 
-        const normalW = measure(normal);
-        const boldW = measure(bold);
+        const currentWidth = measure(text);
+        const currentWeight = isActive ? "bold (700)" : "normal (400)";
 
-        let text = `normal: ${normalW}px — bold: ${boldW}px`;
+        let displayText = `${currentWeight}: ${currentWidth}px`;
 
         if (example === "a") {
           const wrapper = $("wrap-a");
-          text += ` — wrapper: ${wrapper.style.width}`;
+          displayText += ` — wrapper: ${wrapper.style.width}`;
         } else if (example === "b") {
-          text += " — parent max-width: 300px";
+          displayText += " — parent max-width: 300px";
         }
 
-        widthsEl.textContent = text;
+        widthsEl.textContent = displayText;
       }
 
       // Toggle bold state
