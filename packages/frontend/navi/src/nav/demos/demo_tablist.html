@@ -76,8 +76,8 @@
             <Title as="h1">TabList Component Demo</Title>
             <BasicTabs />
             <UnderlineInteractiveTabs />
-            <SpacingVariants />
             <VerticalTabs />
+            <SpacingVariants />
             <StylingVariables />
             <DynamicAddRemove />
           </div>
@@ -120,40 +120,37 @@
             </Text>
             <div className="example-block">
               <div className="caption">Indicator at end (default)</div>
-              <TabList spacing="sm" indicator="end">
-                {tabs.map((name) => (
-                  <Tab
-                    key={name}
-                    selected={name === active}
-                    onClick={() => setActive(name)}
-                    aria-controls={`panel-${name}`}
-                  >
-                    {name.charAt(0).toUpperCase() + name.slice(1)}
-                  </Tab>
-                ))}
-              </TabList>
+              <Box border="1px dashed violet">
+                <TabList spacing="sm" indicator="end">
+                  {tabs.map((name) => (
+                    <Tab
+                      key={name}
+                      selected={name === active}
+                      onClick={() => setActive(name)}
+                      aria-controls={`panel-${name}`}
+                    >
+                      {name.charAt(0).toUpperCase() + name.slice(1)}
+                    </Tab>
+                  ))}
+                </TabList>
+              </Box>
             </div>
             <div className="example-block">
               <div className="caption">Indicator at start</div>
-              <TabList spacing="sm" indicator="start">
-                {tabs.map((name) => (
-                  <Tab
-                    key={name}
-                    selected={name === active}
-                    onClick={() => setActive(name)}
-                    aria-controls={`panel-${name}`}
-                  >
-                    {name.charAt(0).toUpperCase() + name.slice(1)}
-                  </Tab>
-                ))}
-              </TabList>
-              <div
-                className="dynamic-panel"
-                id={`panel-${active}`}
-                role="tabpanel"
-              >
-                <strong>{active}</strong> panel content
-              </div>
+              <Box border="1px dashed violet">
+                <TabList spacing="sm" indicator="start">
+                  {tabs.map((name) => (
+                    <Tab
+                      key={name}
+                      selected={name === active}
+                      onClick={() => setActive(name)}
+                      aria-controls={`panel-${name}`}
+                    >
+                      {name.charAt(0).toUpperCase() + name.slice(1)}
+                    </Tab>
+                  ))}
+                </TabList>
+              </Box>
             </div>
           </Box>
         );
@@ -269,53 +266,82 @@
               (left side), but can be changed to <code>"end"</code> (right
               side).
             </Text>
-            <div
-              style={{ display: "flex", gap: "20px", alignItems: "flex-start" }}
-            >
-              <div className="example-block" style={{ flex: "1" }}>
-                <div className="caption">Default indicator</div>
-                <TabList vertical spacing="xs" style={{ height: "200px" }}>
-                  {verticalTabs.map((name) => (
-                    <Tab
-                      key={name}
-                      selected={name === activeVertical}
-                      onClick={() => setActiveVertical(name)}
-                      aria-controls={`vertical-panel-${name}`}
-                    >
-                      {name.charAt(0).toUpperCase() + name.slice(1)}
-                    </Tab>
-                  ))}
-                </TabList>
-              </div>
 
-              <div className="example-block" style={{ flex: "1" }}>
-                <div className="caption">end indicator</div>
-                <TabList
-                  vertical
-                  indicator="end"
-                  spacing="xs"
-                  style={{ height: "200px" }}
-                >
-                  {verticalTabs.map((name) => (
-                    <Tab
-                      key={name}
-                      selected={name === activeVertical}
-                      onClick={() => setActiveVertical(name)}
-                      aria-controls={`vertical-panel-${name}`}
-                    >
-                      {name.charAt(0).toUpperCase() + name.slice(1)}
-                    </Tab>
-                  ))}
-                </TabList>
-              </div>
-            </div>
-            <div
-              className="dynamic-panel"
-              id={`vertical-panel-${activeVertical}`}
-              role="tabpanel"
-            >
-              <strong>{activeVertical}</strong> vertical panel content
-            </div>
+            <Box row>
+              <Box column spacing="md">
+                <div className="example-block" style={{ flex: "1" }}>
+                  <div className="caption">Default</div>
+                  <Box border="1px dashed violet">
+                    <TabList vertical spacing="xs">
+                      {verticalTabs.map((name) => (
+                        <Tab
+                          key={name}
+                          selected={name === activeVertical}
+                          onClick={() => setActiveVertical(name)}
+                          aria-controls={`vertical-panel-${name}`}
+                        >
+                          {name.charAt(0).toUpperCase() + name.slice(1)}
+                        </Tab>
+                      ))}
+                    </TabList>
+                  </Box>
+                </div>
+
+                <div className="example-block" style={{ flex: "1" }}>
+                  <div className="caption">indicator end</div>
+                  <Box border="1px dashed violet">
+                    <TabList vertical indicator="end" spacing="xs">
+                      {verticalTabs.map((name) => (
+                        <Tab
+                          key={name}
+                          selected={name === activeVertical}
+                          onClick={() => setActiveVertical(name)}
+                          aria-controls={`vertical-panel-${name}`}
+                        >
+                          {name.charAt(0).toUpperCase() + name.slice(1)}
+                        </Tab>
+                      ))}
+                    </TabList>
+                  </Box>
+                </div>
+              </Box>
+              <Box column spacing="md">
+                <Box expandX>
+                  <div className="caption">alignX="end"</div>
+                  <Box border="1px dashed violet">
+                    <TabList vertical spacing="xs" alignX="end">
+                      {verticalTabs.map((name) => (
+                        <Tab
+                          key={name}
+                          selected={name === activeVertical}
+                          onClick={() => setActiveVertical(name)}
+                          aria-controls={`vertical-panel-${name}`}
+                        >
+                          {name.charAt(0).toUpperCase() + name.slice(1)}
+                        </Tab>
+                      ))}
+                    </TabList>
+                  </Box>
+                </Box>
+                <Box expandX>
+                  <div className="caption">alignX="end" + indicator end</div>
+                  <Box border="1px dashed violet">
+                    <TabList vertical spacing="xs" alignX="end" indicator="end">
+                      {verticalTabs.map((name) => (
+                        <Tab
+                          key={name}
+                          selected={name === activeVertical}
+                          onClick={() => setActiveVertical(name)}
+                          aria-controls={`vertical-panel-${name}`}
+                        >
+                          {name.charAt(0).toUpperCase() + name.slice(1)}
+                        </Tab>
+                      ))}
+                    </TabList>
+                  </Box>
+                </Box>
+              </Box>
+            </Box>
           </Box>
         );
       };

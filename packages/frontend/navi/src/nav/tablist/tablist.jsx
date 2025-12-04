@@ -138,6 +138,20 @@ import.meta.css = /* css */ `
       overflow-x: hidden;
       overflow-y: auto;
 
+      .navi_tab {
+        span,
+        a {
+          justify-content: start;
+        }
+
+        &[data-align-x="end"] {
+          span,
+          a {
+            justify-content: end;
+          }
+        }
+      }
+
       &[data-tab-indicator-position="start"] {
         .navi_tab {
           margin-top: 0;
@@ -153,11 +167,6 @@ import.meta.css = /* css */ `
         .navi_tab {
           margin-right: var(--tab-indicator-spacing);
           margin-bottom: 0;
-
-          span,
-          a {
-            justify-content: start;
-          }
 
           .navi_tab_indicator {
             top: 0;
@@ -201,6 +210,7 @@ import.meta.css = /* css */ `
 `;
 
 const TabListIndicatorContext = createContext();
+const TabListAlignXContext = createContext();
 const TabListStyleCSSVars = {
   borderRadius: "--tablist-border-radius",
   background: "--tablist-background",
@@ -210,6 +220,7 @@ export const TabList = ({
   spacing,
   vertical,
   indicator = vertical ? "start" : "end",
+  alignX,
   expand,
   expandX,
   paddingX,
@@ -244,19 +255,21 @@ export const TabList = ({
         spacing={spacing}
       >
         <TabListIndicatorContext.Provider value={indicator}>
-          {children.map((child) => {
-            return (
-              <Box
-                as="li"
-                column
-                key={child.props.key}
-                expandX={expandX}
-                expand={expand}
-              >
-                {child}
-              </Box>
-            );
-          })}
+          <TabListAlignXContext.Provider value={alignX}>
+            {children.map((child) => {
+              return (
+                <Box
+                  as="li"
+                  column
+                  key={child.props.key}
+                  expandX={expandX}
+                  expand={expand}
+                >
+                  {child}
+                </Box>
+              );
+            })}
+          </TabListAlignXContext.Provider>
         </TabListIndicatorContext.Provider>
       </Box>
     </Box>
@@ -315,6 +328,7 @@ const TabRoute = ({
 };
 const TabBasic = ({ children, selected, onClick, ...props }) => {
   const tabListIndicator = useContext(TabListIndicatorContext);
+  const tabListAlignX = useContext(TabListAlignXContext);
 
   return (
     <Box
@@ -331,6 +345,8 @@ const TabBasic = ({ children, selected, onClick, ...props }) => {
       basePseudoState={{
         ":-navi-selected": selected,
       }}
+      selfAlignX={tabListAlignX}
+      data-align-x={tabListAlignX}
       {...props}
     >
       {(tabListIndicator === "start" || tabListIndicator === "end") && (
