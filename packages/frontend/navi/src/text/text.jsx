@@ -283,11 +283,13 @@ const TextBasic = ({
     // on pourrait auto-active cela sur une prop genre boldCanChange
     return (
       <Box {...boxProps}>
-        <span className="navi_text_bold_clone" aria-hidden="true">
-          {children}
-        </span>
-        <span className="navi_text_bold_foreground" data-align={alignX}>
-          {children}
+        <span style="position: relative; display: inline-block;">
+          <span className="navi_text_bold_clone" aria-hidden="true">
+            {children}
+          </span>
+          <span className="navi_text_bold_foreground" data-align={alignX}>
+            {children}
+          </span>
         </span>
       </Box>
     );

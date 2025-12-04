@@ -44,12 +44,12 @@ import.meta.css = /* css */ `
 
     &[data-tab-indicator-position="start"] {
       .navi_tab {
-        margin-top: var(--tab-indicator-spacing);
+        padding-top: var(--tab-indicator-spacing);
       }
     }
     &[data-tab-indicator-position="end"] {
       .navi_tab {
-        margin-bottom: var(--tab-indicator-spacing);
+        padding-bottom: var(--tab-indicator-spacing);
       }
     }
 
@@ -97,11 +97,11 @@ import.meta.css = /* css */ `
             border-radius: 0.1px;
 
             &[data-position="start"] {
-              top: 0;
+              top: calc(-1 * var(--tab-indicator-spacing));
             }
 
             &[data-position="end"] {
-              bottom: 0;
+              bottom: calc(-1 * var(--tab-indicator-spacing));
             }
           }
 
@@ -118,13 +118,10 @@ import.meta.css = /* css */ `
           &[data-selected] {
             --x-tab-background: var(--tab-background-selected);
             --x-tab-color: var(--tab-color-selected);
+            font-weight: bold;
 
-            .navi_tab {
-              font-weight: 600;
-
-              .navi_tab_indicator {
-                background: var(--tab-indicator-color);
-              }
+            .navi_tab_indicator {
+              background: var(--tab-indicator-color);
             }
           }
         }
@@ -138,22 +135,24 @@ import.meta.css = /* css */ `
 
       &[data-tab-indicator-position="start"] {
         .navi_tab {
-          margin-top: 0;
-          margin-left: var(--tab-indicator-spacing);
+          padding-top: 0;
+          padding-left: var(--tab-indicator-spacing);
 
           .navi_tab_indicator {
-            left: 0;
+            top: 0;
+            left: calc(-1 * var(--tab-indicator-spacing));
           }
         }
       }
       &[data-tab-indicator-position="end"] {
         .navi_tab {
-          margin-right: var(--tab-indicator-spacing);
-          margin-bottom: 0;
-        }
+          padding-right: var(--tab-indicator-spacing);
+          padding-bottom: 0;
 
-        .navi_tab_indicator {
-          right: 0;
+          .navi_tab_indicator {
+            top: 0;
+            right: calc(-1 * var(--tab-indicator-spacing));
+          }
         }
       }
 
@@ -314,6 +313,7 @@ const TabBasic = ({ children, selected, onClick, ...props }) => {
       paddingX="s"
       noWrap
       preventBoldLayoutShift
+      // boldTransition
       // Style system
       baseClassName="navi_tab"
       styleCSSVars={TAB_STYLE_CSS_VARS}
