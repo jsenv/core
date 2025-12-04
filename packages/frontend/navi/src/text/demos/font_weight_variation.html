@@ -344,6 +344,56 @@
       .ex-h.active .text-bold {
         opacity: 1;
       }
+
+      /* EXEMPLE I: scaling + text-shadow */
+      .ex-i .wrapper {
+        position: relative;
+        display: block;
+      }
+      .ex-i .text {
+        font-weight: 400;
+        transition: all 0.2s ease;
+      }
+      .ex-i.active .text {
+        display: inline-block;
+        transform: scale(1.04);
+        transform-origin: center;
+        text-shadow:
+          0.03em 0 0 currentColor,
+          -0.03em 0 0 currentColor;
+      }
+
+      /* EXEMPLE J: drop-shadow */
+      .ex-j .wrapper {
+        position: relative;
+        display: block;
+      }
+      .ex-j .text {
+        font-weight: 400;
+        transition: filter 0.2s ease;
+      }
+      .ex-j.active .text {
+        filter:
+          drop-shadow(0.03em 0 0 currentColor)
+          drop-shadow(-0.03em 0 0 currentColor);
+      }
+
+      /* EXEMPLE K: text-shadow multi-directionnel */
+      .ex-k .wrapper {
+        position: relative;
+        display: block;
+      }
+      .ex-k .text {
+        font-weight: 400;
+        transition: text-shadow 0.2s ease;
+      }
+      .ex-k.active .text {
+        text-shadow:
+          0.02em 0 0 currentColor,
+          -0.02em 0 0 currentColor,
+          0 0.02em 0 currentColor,
+          0 -0.02em 0 currentColor;
+      }
     </style>
   </head>
   <body>
@@ -762,6 +812,128 @@
           </div>
         </div>
       </div>
+
+      <!-- EXEMPLE I -->
+      <div class="card ex-i">
+        <div class="technique">Scaling + Text-shadow horizontal</div>
+
+        <p style="margin: 0 0 16px; font-size: 13px; color: #666">
+          Combinaison de scaling (1.04) et text-shadow horizontal pour simuler
+          un bold. Le transform nécessite display: inline-block.
+        </p>
+
+        <div class="comparison">
+          <div class="version">
+            <div class="version-title">Normal</div>
+            <div class="demo-text normal constrainer demo-text-content"></div>
+          </div>
+          <div class="version">
+            <div class="version-title">Bold (scaling + text-shadow)</div>
+            <div class="demo-text constrainer">
+              <div
+                class="demo-text-content"
+                style="
+                  display: inline-block;
+                  transform: scale(1.04);
+                  transform-origin: center;
+                  text-shadow:
+                    0.03em 0 0 currentColor,
+                    -0.03em 0 0 currentColor;
+                "
+              ></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="interactive">
+          <label> <input type="checkbox" data-toggle="i" /> Bold </label>
+          <div class="constrainer">
+            <div class="smooth">
+              <span class="text demo-text-content" id="i-text"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- EXEMPLE J -->
+      <div class="card ex-j">
+        <div class="technique">Drop-shadow horizontal</div>
+
+        <p style="margin: 0 0 16px; font-size: 13px; color: #666">
+          Utilisation de filter: drop-shadow avec des ombres horizontales pour
+          simuler un effet de bold.
+        </p>
+
+        <div class="comparison">
+          <div class="version">
+            <div class="version-title">Normal</div>
+            <div class="demo-text normal constrainer demo-text-content"></div>
+          </div>
+          <div class="version">
+            <div class="version-title">Bold (drop-shadow)</div>
+            <div class="demo-text constrainer">
+              <div
+                class="demo-text-content"
+                style="
+                  filter:
+                    drop-shadow(0.03em 0 0 currentColor)
+                    drop-shadow(-0.03em 0 0 currentColor);
+                "
+              ></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="interactive">
+          <label> <input type="checkbox" data-toggle="j" /> Bold </label>
+          <div class="constrainer">
+            <div class="smooth">
+              <span class="text demo-text-content" id="j-text"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- EXEMPLE K -->
+      <div class="card ex-k">
+        <div class="technique">Text-shadow multi-directionnel</div>
+
+        <p style="margin: 0 0 16px; font-size: 13px; color: #666">
+          Text-shadow dans les quatre directions (haut, bas, gauche, droite)
+          pour créer un effet de bold plus uniforme.
+        </p>
+
+        <div class="comparison">
+          <div class="version">
+            <div class="version-title">Normal</div>
+            <div class="demo-text normal constrainer demo-text-content"></div>
+          </div>
+          <div class="version">
+            <div class="version-title">Bold (text-shadow 4 directions)</div>
+            <div class="demo-text constrainer">
+              <div
+                class="demo-text-content"
+                style="
+                  text-shadow:
+                    0.02em 0 0 currentColor,
+                    -0.02em 0 0 currentColor,
+                    0 0.02em 0 currentColor,
+                    0 -0.02em 0 currentColor;
+                "
+              ></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="interactive">
+          <label> <input type="checkbox" data-toggle="k" /> Bold </label>
+          <div class="constrainer">
+            <div class="smooth">
+              <span class="text demo-text-content" id="k-text"></span>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <script>
@@ -792,6 +964,9 @@
           "g-bold",
           "h-normal",
           "h-bold",
+          "i-text",
+          "j-text",
+          "k-text",
           "e-text",
         ];
         interactiveTexts.forEach((id) => {
