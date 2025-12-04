@@ -204,7 +204,7 @@ const TextWithSelectRange = ({ selectRange, ...props }) => {
 const TextBasic = ({
   spacing = " ",
   boldTransition,
-  boldClone = boldTransition,
+  preventBoldLayoutShift = boldTransition,
   children,
   ...rest
 }) => {
@@ -214,7 +214,7 @@ const TextBasic = ({
     children = applySpacingOnTextChildren(children, spacing);
   }
 
-  if (boldClone) {
+  if (preventBoldLayoutShift) {
     const alignX = rest.alignX || rest.align || "start";
 
     // La technique consiste a avoid un double gras qui force une taille
