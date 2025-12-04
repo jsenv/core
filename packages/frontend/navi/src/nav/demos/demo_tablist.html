@@ -209,8 +209,13 @@
               <div className="caption">
                 TabList background + selected styling (no indicator)
               </div>
-              <Box row alignX="start" border="1px dashed violet">
-                <TabList borderRadius="s" spacing="0" indicator="none">
+              <Box
+                row
+                alignX="start"
+                border="1px dashed violet"
+                width="fit-content"
+              >
+                <TabList spacing="sm" indicator="none">
                   {tabs.map((name) => (
                     <Tab
                       key={name}
@@ -221,8 +226,15 @@
                       borderRadius="100%"
                       backgroundColor="orange"
                       color="white"
+                      scale="1"
+                      pseudoStyle={{
+                        ":-navi-tab-selected": {
+                          scale: "1.3",
+                        },
+                      }}
+                      transition="all 0.3s ease-in-out"
                     >
-                      <Icon width="32" height="32">
+                      <Icon width="32" height="32" align="center" padding="6">
                         <SettingsSvg />
                       </Icon>
                     </Tab>

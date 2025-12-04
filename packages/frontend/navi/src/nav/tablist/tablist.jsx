@@ -12,8 +12,8 @@ import { useRouteStatus } from "../route.js";
 import { RouteLink } from "../route_link.jsx";
 
 Object.assign(PSEUDO_CLASSES, {
-  ":-navi-selected": {
-    attribute: "data-selected",
+  ":-navi-tab-selected": {
+    attribute: "data-tab-selected",
   },
 });
 
@@ -39,8 +39,8 @@ import.meta.css = /* css */ `
   .navi_tablist {
     display: flex;
     line-height: 2em;
-    overflow-x: auto;
-    overflow-y: hidden;
+    /* overflow-x: auto; */
+    /* overflow-y: hidden; */
 
     &[data-tab-indicator-position="start"] {
       .navi_tab {
@@ -133,7 +133,7 @@ import.meta.css = /* css */ `
             --x-tab-color: var(--tab-color-hover);
           }
           /* Selected */
-          &[data-selected] {
+          &[data-tab-selected] {
             --x-tab-background: var(--tab-background-selected);
             --x-tab-color: var(--tab-color-selected);
             font-weight: bold;
@@ -148,8 +148,8 @@ import.meta.css = /* css */ `
 
     /* Vertical layout */
     &[data-vertical] {
-      overflow-x: hidden;
-      overflow-y: auto;
+      /* overflow-x: hidden; */
+      /* overflow-y: auto; */
 
       > ul {
         flex-direction: column;
@@ -306,12 +306,12 @@ const TAB_STYLE_CSS_VARS = {
     background: "--tab-background-hover",
     color: "--tab-color-hover",
   },
-  ":-navi-selected": {
+  ":-navi-tab-selected": {
     background: "--tab-color-selected",
     color: "--tab-color-selected",
   },
 };
-const TAB_PSEUDO_CLASSES = [":hover", ":-navi-selected"];
+const TAB_PSEUDO_CLASSES = [":hover", ":-navi-tab-selected"];
 const TAB_PSEUDO_ELEMENTS = ["::-navi-indicator"];
 export const Tab = (props) => {
   if (props.route) {
@@ -377,7 +377,7 @@ const TabBasic = ({ children, selected, onClick, ...props }) => {
       pseudoClasses={TAB_PSEUDO_CLASSES}
       pseudoElements={TAB_PSEUDO_ELEMENTS}
       basePseudoState={{
-        ":-navi-selected": selected,
+        ":-navi-tab-selected": selected,
       }}
       selfAlignX={tabListAlignX}
       data-align-x={tabListAlignX}
