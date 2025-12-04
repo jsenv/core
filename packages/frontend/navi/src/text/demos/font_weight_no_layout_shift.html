@@ -9,7 +9,7 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState } from "preact/hooks";
-      import { Text, Link } from "@jsenv/navi";
+      import { Text, Link, Paragraph } from "@jsenv/navi";
 
       const Demo = () => {
         const [basicBoldActive, setBasicBoldActive] = useState(false);
@@ -497,13 +497,16 @@
             </section>
 
             {/* BoldStable Alternative */}
-            <section id="boldstable-alignments" style={{ marginBottom: "30px" }}>
+            <section
+              id="boldstable-alignments"
+              style={{ marginBottom: "30px" }}
+            >
               <h2>🔒 boldStable Alternative</h2>
-              <p>
+              <Paragraph>
                 Testing <code>boldStable</code> behavior with different text
                 alignments. This uses a different technique than
                 <code>boldTransition</code> to prevent layout shifts.
-              </p>
+              </Paragraph>
 
               <div style={{ marginBottom: "20px" }}>
                 <label style={{ display: "block", marginBottom: "10px" }}>
@@ -542,10 +545,19 @@
                         textAlign: "left",
                       }}
                     >
-                      <Text boldStable noWrap bold={stableBoldActive}>
+                      <Text
+                        boldStable
+                        boldTransition
+                        noWrap
+                        bold={stableBoldActive}
+                      >
                         Left aligned text
                       </Text>
-                      <Text width="16px" height="16px" background="orange"></Text>
+                      <Text
+                        width="16px"
+                        height="16px"
+                        background="orange"
+                      ></Text>
                     </div>
                   </div>
 
@@ -568,16 +580,25 @@
                         textAlign: "center",
                       }}
                     >
-                      <Text width="16px" height="16px" background="orange"></Text>
+                      <Text
+                        width="16px"
+                        height="16px"
+                        background="orange"
+                      ></Text>
                       <Text
                         boldStable
+                        boldTransition
                         noWrap
                         alignX="center"
                         bold={stableBoldActive}
                       >
                         Center aligned text
                       </Text>
-                      <Text width="16px" height="16px" background="orange"></Text>
+                      <Text
+                        width="16px"
+                        height="16px"
+                        background="orange"
+                      ></Text>
                     </div>
                   </div>
 
@@ -600,9 +621,14 @@
                         textAlign: "right",
                       }}
                     >
-                      <Text width="16px" height="16px" background="orange"></Text>
+                      <Text
+                        width="16px"
+                        height="16px"
+                        background="orange"
+                      ></Text>
                       <Text
                         boldStable
+                        boldTransition
                         noWrap
                         alignX="end"
                         bold={stableBoldActive}
@@ -617,9 +643,9 @@
               <p
                 style={{ fontSize: "14px", color: "#666", fontStyle: "italic" }}
               >
-                <strong>Note:</strong> The boldStable technique uses a
-                different approach than boldTransition to maintain layout
-                stability when toggling bold text.
+                <strong>Note:</strong> The boldStable technique uses a different
+                approach than boldTransition to maintain layout stability when
+                toggling bold text.
               </p>
             </section>
 

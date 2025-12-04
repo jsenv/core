@@ -245,16 +245,25 @@ const TextBasic = ({
     children = applySpacingOnTextChildren(children, spacing);
   }
 
+  const boxProps = {
+    "as": "span",
+    "data-bold-transition": boldTransition ? "" : undefined,
+    ...rest,
+    "baseClassName": "navi_text",
+  };
+
   if (boldStable) {
-    children = (
-      <span>
+    const { bold } = boxProps;
+    return (
+      <Box {...boxProps} bold={undefined} data-bold={bold ? "" : undefined}>
         <span className="navi_text_bold_background" aria-hidden="true">
           {children}
         </span>
-        <span className="navi_text_bold_foreground">{children}</span>
-      </span>
+        <span>{children}</span>
+      </Box>
     );
-  } else if (preventBoldLayoutShift) {
+  }
+  if (preventBoldLayoutShift) {
     const alignX = rest.alignX || rest.align || "start";
 
     // La technique consiste a avoid un double gras qui force une taille
@@ -262,28 +271,19 @@ const TextBasic = ({
     // on la centre aussi pour donner l'impression que le gras s'applique depuis le centre
     // ne fonctionne que sur une seul ligne de texte (donc lorsque noWrap est actif)
     // on pourrait auto-active cela sur une prop genre boldCanChange
-    children = (
-      <span>
+    return (
+      <Box {...boxProps}>
         <span className="navi_text_bold_clone" aria-hidden="true">
           {children}
         </span>
         <span className="navi_text_bold_foreground" data-align={alignX}>
           {children}
         </span>
-      </span>
+      </Box>
     );
   }
 
-  return (
-    <Box
-      as="span"
-      baseClassName="navi_text"
-      data-bold-transition={boldTransition ? "" : undefined}
-      {...rest}
-    >
-      {children}
-    </Box>
-  );
+  return <Box {...boxProps}>{children}</Box>;
 };
 
 /* https://jsfiddle.net/v5xzJ/4/ */
