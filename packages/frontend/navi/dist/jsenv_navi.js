@@ -5863,9 +5863,9 @@ const Box = props => {
     };
     let boxPseudoNamedStyles = PSEUDO_NAMED_STYLES_DEFAULT;
     const shouldForwardAllToChild = visualSelector && pseudoStateSelector;
-    const addStyle = (value, name, stylesTarget, context) => {
+    const addStyle = (value, name, styleContext, stylesTarget, context) => {
       styleDeps.push(value); // impact box style -> add to deps
-      const cssVar = styleCSSVars[name];
+      const cssVar = styleContext.styleCSSVars[name];
       const mergedValue = prepareStyleValue(stylesTarget[name], value, name, context);
       if (cssVar) {
         stylesTarget[cssVar] = mergedValue;
@@ -5874,20 +5874,20 @@ const Box = props => {
       stylesTarget[name] = mergedValue;
       return false;
     };
-    const addStyleMaybeForwarding = (value, name, stylesTarget, context, visualChildPropStrategy) => {
+    const addStyleMaybeForwarding = (value, name, styleContext, stylesTarget, context, visualChildPropStrategy) => {
       if (!visualChildPropStrategy) {
-        addStyle(value, name, stylesTarget, context);
+        addStyle(value, name, styleContext, stylesTarget, context);
         return false;
       }
       const cssVar = styleCSSVars[name];
       if (cssVar) {
         // css var wins over visual child handling
-        addStyle(value, name, stylesTarget, context);
+        addStyle(value, name, styleContext, stylesTarget, context);
         return false;
       }
       if (visualChildPropStrategy === "copy") {
         // we stylyze ourself + forward prop to the child
-        addStyle(value, name, stylesTarget, context);
+        addStyle(value, name, styleContext, stylesTarget, context);
       }
       return true;
     };
@@ -5895,7 +5895,7 @@ const Box = props => {
       const context = styleOrigin === "base_style" ? "js" : "css";
       const isCss = styleOrigin === "base_style" || styleOrigin === "style";
       if (isCss) {
-        addStyle(value, name, boxStylesTarget, context);
+        addStyle(value, name, styleContext, boxStylesTarget, context);
         return;
       }
       const isPseudoStyle = styleOrigin === "pseudo_style";
@@ -5921,7 +5921,7 @@ const Box = props => {
       if (
       // prop name === css style name
       !getStyle) {
-        const needForwarding = addStyleMaybeForwarding(value, name, boxStylesTarget, context, visualChildPropStrategy);
+        const needForwarding = addStyleMaybeForwarding(value, name, styleContext, boxStylesTarget, context, visualChildPropStrategy);
         if (needForwarding) {
           if (isPseudoStyle) ; else {
             childForwardedProps[name] = value;
@@ -5936,7 +5936,7 @@ const Box = props => {
       let needForwarding = false;
       for (const styleName of Object.keys(cssValues)) {
         const cssValue = cssValues[styleName];
-        needForwarding = addStyleMaybeForwarding(cssValue, styleName, boxStylesTarget, context, visualChildPropStrategy);
+        needForwarding = addStyleMaybeForwarding(cssValue, styleName, styleContext, boxStylesTarget, context, visualChildPropStrategy);
       }
       if (needForwarding) {
         if (isPseudoStyle) ; else {
@@ -16782,8 +16782,8 @@ const RouteLink = ({
 };
 
 installImportMetaCss(import.meta);Object.assign(PSEUDO_CLASSES, {
-  ":-navi-selected": {
-    attribute: "data-selected"
+  ":-navi-tab-selected": {
+    attribute: "data-tab-selected"
   }
 });
 import.meta.css = /* css */`
@@ -16808,8 +16808,8 @@ import.meta.css = /* css */`
   .navi_tablist {
     display: flex;
     line-height: 2em;
-    overflow-x: auto;
-    overflow-y: hidden;
+    /* overflow-x: auto; */
+    /* overflow-y: hidden; */
 
     &[data-tab-indicator-position="start"] {
       .navi_tab {
@@ -16847,7 +16847,18 @@ import.meta.css = /* css */`
         }
 
         .navi_tab {
-          --x-tab-background: var(--tab-background);
+          --x-tab-background: var(
+            --tab-background-color,
+            var(--tab-background)
+          );
+          --x-tab-background-hover: var(
+            --tab-background-color-hover,
+            var(--tab-background-color, var(--tab-background-hover))
+          );
+          --x-tab-background-selected: var(
+            --tab-background-color-selected,
+            var(--tab-background-selected)
+          );
           --x-tab-color: var(--tab-color);
 
           display: flex;
@@ -16898,12 +16909,12 @@ import.meta.css = /* css */`
           }
           /* Hover */
           &:hover {
-            --x-tab-background: var(--tab-background-hover);
+            --x-tab-background: var(--x-tab-background-hover);
             --x-tab-color: var(--tab-color-hover);
           }
           /* Selected */
-          &[data-selected] {
-            --x-tab-background: var(--tab-background-selected);
+          &[data-tab-selected] {
+            --x-tab-background: var(--x-tab-background-selected);
             --x-tab-color: var(--tab-color-selected);
             font-weight: bold;
 
@@ -16917,8 +16928,8 @@ import.meta.css = /* css */`
 
     /* Vertical layout */
     &[data-vertical] {
-      overflow-x: hidden;
-      overflow-y: auto;
+      /* overflow-x: hidden; */
+      /* overflow-y: auto; */
 
       > ul {
         flex-direction: column;
@@ -17059,17 +17070,20 @@ const TabList = ({
 };
 const TAB_STYLE_CSS_VARS = {
   "background": "--tab-background",
+  "backgroundColor": "--tab-background-color",
   "color": "--tab-color",
   ":hover": {
     background: "--tab-background-hover",
+    backgroundColor: "--tab-background-color-hover",
     color: "--tab-color-hover"
   },
-  ":-navi-selected": {
-    background: "--tab-color-selected",
+  ":-navi-tab-selected": {
+    background: "--tab-background-selected",
+    backgroundColor: "--tab-background-color-selected",
     color: "--tab-color-selected"
   }
 };
-const TAB_PSEUDO_CLASSES = [":hover", ":-navi-selected"];
+const TAB_PSEUDO_CLASSES = [":hover", ":-navi-tab-selected"];
 const TAB_PSEUDO_ELEMENTS = ["::-navi-indicator"];
 const Tab = props => {
   if (props.route) {
@@ -17140,7 +17154,7 @@ const TabBasic = ({
     pseudoClasses: TAB_PSEUDO_CLASSES,
     pseudoElements: TAB_PSEUDO_ELEMENTS,
     basePseudoState: {
-      ":-navi-selected": selected
+      ":-navi-tab-selected": selected
     },
     selfAlignX: tabListAlignX,
     "data-align-x": tabListAlignX,

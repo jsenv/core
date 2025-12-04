@@ -422,6 +422,40 @@ const parseCSSColor = (color, element) => {
     return parseCSSColor(resolvedColor, element);
   }
 
+  if (color.startsWith("color-mix(")) {
+    return color;
+  }
+
+  // Pass through CSS functions that we don't want to resolve
+  if (
+    color.includes("calc(") ||
+    color.includes("min(") ||
+    color.includes("max(") ||
+    color.includes("clamp(") ||
+    color.includes("env(") ||
+    color.includes("attr(")
+  ) {
+    return color;
+  }
+
+  // Pass through CSS color functions we don't handle
+  if (
+    color.startsWith("color(") ||
+    color.startsWith("lch(") ||
+    color.startsWith("oklch(") ||
+    color.startsWith("lab(") ||
+    color.startsWith("oklab(") ||
+    color.startsWith("hwb(") ||
+    color.includes("color-contrast(")
+  ) {
+    return color;
+  }
+
+  // Pass through relative color syntax (CSS Color Module Level 5)
+  if (color.includes(" from ")) {
+    return color;
+  }
+
   // If it's a CSS custom property, resolve it using getComputedStyle
   if (resolvedColor.includes("var(")) {
     if (!element) {
@@ -3671,26 +3705,29 @@ const createPreviousNodeIterator = (fromNode, rootNode, skipRoot = null) => {
   };
 };
 
-const activeElementSignal = signal(document.activeElement);
-
-document.addEventListener(
-  "focus",
-  () => {
-    activeElementSignal.value = document.activeElement;
-  },
-  { capture: true },
+const activeElementSignal = signal(
+  typeof document === "object" ? document.activeElement : undefined,
 );
-// When clicking on document there is no "focus" event dispatched on the document
-// We can detect that with "blur" event when relatedTarget is null
-document.addEventListener(
-  "blur",
-  (e) => {
-    if (!e.relatedTarget) {
+if (typeof document === "object") {
+  document.addEventListener(
+    "focus",
+    () => {
       activeElementSignal.value = document.activeElement;
-    }
-  },
-  { capture: true },
-);
+    },
+    { capture: true },
+  );
+  // When clicking on document there is no "focus" event dispatched on the document
+  // We can detect that with "blur" event when relatedTarget is null
+  document.addEventListener(
+    "blur",
+    (e) => {
+      if (!e.relatedTarget) {
+        activeElementSignal.value = document.activeElement;
+      }
+    },
+    { capture: true },
+  );
+}
 
 const useActiveElement = () => {
   return activeElementSignal.value;
@@ -5059,7 +5096,8 @@ const bodyIsScrollable = (body) => {
 // https://developer.mozilla.org/en-US/docs/Glossary/Scroll_container
 
 
-const { documentElement: documentElement$2 } = document;
+const { documentElement: documentElement$2 } =
+  typeof document === "object" ? document : { documentElement: null };
 
 const getScrollContainer = (arg, { includeHidden } = {}) => {
   if (typeof arg !== "object" || arg.nodeType !== 1) {
@@ -5300,7 +5338,8 @@ const getBorderSizes = (element) => {
  */
 
 
-const { documentElement: documentElement$1 } = document;
+const { documentElement: documentElement$1 } =
+  typeof document === "object" ? document : { documentElement: null };
 
 /**
  * Get element rectangle relative to its scroll container
@@ -6163,7 +6202,9 @@ const isOverlayOf = (element, potentialTarget) => {
   return false;
 };
 
-const { documentElement } = document;
+const { documentElement } =
+  typeof document === "object" ? document : { documentElement: null };
+
 const createGetScrollOffsets = (
   scrollContainer,
   referenceScrollContainer,
@@ -9665,7 +9706,9 @@ const startTimeline = () => {
   backgroundUpdateLoop.start();
   animationUpdateLoop.start();
 };
-startTimeline();
+if (typeof document === "object") {
+  startTimeline();
+}
 
 // Default lifecycle methods that do nothing
 const LIFECYCLE_DEFAULT = {
@@ -9685,11 +9728,13 @@ const onTransitionPausedByBreakpoint = (transition) => {
 const cleanupTransitionPausedByBreakpoint = (transition) => {
   transitionPausedByBreakpointWeakSet.delete(transition);
 };
-window.resumeTransitions = () => {
-  for (const transition of transitionPausedByBreakpointWeakSet) {
-    transition.play();
-  }
-};
+if (typeof window !== "undefined") {
+  window.resumeTransitions = () => {
+    for (const transition of transitionPausedByBreakpointWeakSet) {
+      transition.play();
+    }
+  };
+}
 
 const combineTwoLifecycle = (lifecycleA, lifecycleB) => {
   if (!lifecycleA && !lifecycleB) {
