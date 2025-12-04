@@ -388,6 +388,34 @@
       </div>
     </div>
 
+    <div
+      style="
+        margin-top: 32px;
+        padding: 20px;
+        background: #f8f9fa;
+        border-left: 4px solid #1e40af;
+        border-radius: 6px;
+        max-width: 900px;
+        margin-left: auto;
+        margin-right: auto;
+      "
+    >
+      <h3 style="margin: 0 0 12px; font-size: 16px; color: #1e40af">
+        Conclusion
+      </h3>
+      <p style="margin: 0; color: #374151; line-height: 1.5">
+        La seule approche fiable pour les transitions de font-weight est
+        l'utilisation de
+        <code style="background: #e5e7eb; padding: 2px 4px; border-radius: 3px"
+          >white-space: nowrap</code
+        >
+        qui garantit une seule ligne. Toutes les autres techniques échouent dès
+        que le wrapping intervient, car les versions normal et bold ont des
+        largeurs différentes et se comportent différemment lors du passage à la
+        ligne.
+      </p>
+    </div>
+
     <script>
       // Texte de référence centralisé
       const DEMO_TEXT = "Du texte sur lequel on fait varier la font weight.";
