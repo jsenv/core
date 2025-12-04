@@ -479,6 +479,35 @@
                     </TabList>
                   </Box>
                 </Box>
+                <Box expandX>
+                  <div className="caption">Background + no indicator</div>
+                  <Box border="1px dashed violet">
+                    <TabList
+                      vertical
+                      spacing="0"
+                      padding="xs"
+                      indicator="none"
+                      style={{
+                        "--tablist-background": "rgb(233, 236, 240)",
+                        "--tab-background": "transparent",
+                        "--tab-color": "#373C45",
+                        "--tab-background-selected": "#373C45",
+                        "--tab-color-selected": "white",
+                      }}
+                    >
+                      {verticalTabs.map((name) => (
+                        <Tab
+                          key={name}
+                          selected={name === activeVertical}
+                          onClick={() => setActiveVertical(name)}
+                          aria-controls={`vertical-panel-${name}`}
+                        >
+                          {name.charAt(0).toUpperCase() + name.slice(1)}
+                        </Tab>
+                      ))}
+                    </TabList>
+                  </Box>
+                </Box>
               </Box>
             </Box>
           </Box>
@@ -640,8 +669,8 @@
       };
 
       const InteractiveStyledTabs = () => {
-        const [active, setActive] = useState("Overview");
-        const tabs = ["Overview", "Details", "More"];
+        const [active, setActive] = useState("overview");
+        const tabs = ["overview", "details", "more"];
         return (
           <div className="example-block">
             <div className="caption">
@@ -669,11 +698,8 @@
                     aria-controls={`panel-${name}`}
                     padding="0"
                   >
-                    <Link
-                      discrete
-                      pseudoState={{ ":focus-visible": name === "Details" }}
-                    >
-                      {name}
+                    <Link discrete>
+                      {name.charAt(0).toUpperCase() + name.slice(1)}
                     </Link>
                   </Tab>
                 ))}
