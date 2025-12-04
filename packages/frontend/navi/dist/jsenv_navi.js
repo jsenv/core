@@ -14316,11 +14316,15 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
   }
   .navi_icon_foreground {
     position: absolute;
-    inset: 0;
+    top: 50%;
+    left: 0;
     display: inline-flex;
     box-sizing: border-box;
+    aspect-ratio: 1/1;
+    width: 100%;
     align-items: center;
     justify-content: start;
+    transform: translateY(-50%);
   }
   .navi_icon_foreground > .navi_text {
     display: flex;
@@ -16819,7 +16823,8 @@ import.meta.css = /* css */`
       display: flex;
       width: 100%;
       margin: 0;
-      padding: 2px; /* space for border radius and outline */
+      padding-right: 2px; /* space for eventual outline overflow */
+      padding-left: 2px; /* space for eventual outline overflow */
       align-items: center;
       gap: 0.5rem;
       list-style: none;
@@ -16843,8 +16848,12 @@ import.meta.css = /* css */`
           transition: background 0.12s ease-out;
           user-select: none;
 
-          span,
-          a {
+          > .navi_text,
+          .navi_link,
+          .navi_button,
+          .navi_text_bold_wrapper,
+          .navi_text_bold_clone,
+          .navi_text_bold_foreground {
             display: inline-flex;
             flex-grow: 1;
             justify-content: center;
@@ -16900,16 +16909,37 @@ import.meta.css = /* css */`
       overflow-x: hidden;
       overflow-y: auto;
 
-      .navi_tab {
-        span,
-        a {
-          justify-content: start;
-        }
+      > ul {
+        padding-top: 2px; /* space for eventual outline overflow */
+        padding-bottom: 2px; /* space for eventual outline overflow */
+        flex-direction: column;
+        align-items: start;
 
-        &[data-align-x="end"] {
-          span,
-          a {
-            justify-content: end;
+        > li {
+          width: 100%;
+
+          .navi_tab {
+            flex-direction: row;
+            text-align: left;
+
+            .navi_tab_indicator {
+              width: var(--tab-indicator-size);
+              height: 100%;
+            }
+
+            > .navi_text,
+            .navi_link,
+            .navi_text_bold_foreground {
+              justify-content: start;
+            }
+
+            &[data-align-x="end"] {
+              > .navi_text,
+              .navi_link,
+              .navi_text_bold_foreground {
+                justify-content: end;
+              }
+            }
           }
         }
       }
@@ -16934,25 +16964,6 @@ import.meta.css = /* css */`
             top: 0;
             right: 0;
             left: auto;
-          }
-        }
-      }
-
-      > ul {
-        flex-direction: column;
-        align-items: start;
-
-        > li {
-          width: 100%;
-
-          .navi_tab {
-            flex-direction: row;
-            text-align: left;
-
-            .navi_tab_indicator {
-              width: var(--tab-indicator-size);
-              height: 100%;
-            }
           }
         }
       }
@@ -17056,9 +17067,11 @@ const TabRoute = ({
   route,
   routeParams,
   children,
-  paddingX,
+  paddingX = "s",
   padding,
   paddingY,
+  alignX,
+  alignY,
   ...props
 }) => {
   const {
@@ -17068,9 +17081,12 @@ const TabRoute = ({
   const selected = active && paramsAreMatching;
   return jsx(TabBasic, {
     selected: selected,
-    paddingX: "0",
+    paddingX: undefined,
+    alignX: alignX,
+    alignY: alignY,
     ...props,
     children: jsx(RouteLink, {
+      box: true,
       route: route,
       routeParams: routeParams,
       expand: true,
@@ -17078,6 +17094,8 @@ const TabRoute = ({
       paddingX: paddingX,
       padding: padding,
       paddingY: paddingY,
+      alignX: alignX,
+      alignY: alignY,
       children: children
     })
   });

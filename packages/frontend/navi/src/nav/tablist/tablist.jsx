@@ -57,7 +57,8 @@ import.meta.css = /* css */ `
       display: flex;
       width: 100%;
       margin: 0;
-      padding: 2px; /* space for border radius and outline */
+      padding-right: 2px; /* space for eventual outline overflow */
+      padding-left: 2px; /* space for eventual outline overflow */
       align-items: center;
       gap: 0.5rem;
       list-style: none;
@@ -142,18 +143,37 @@ import.meta.css = /* css */ `
       overflow-x: hidden;
       overflow-y: auto;
 
-      .navi_tab {
-        > .navi_text,
-        .navi_link,
-        .navi_text_bold_foreground {
-          justify-content: start;
-        }
+      > ul {
+        padding-top: 2px; /* space for eventual outline overflow */
+        padding-bottom: 2px; /* space for eventual outline overflow */
+        flex-direction: column;
+        align-items: start;
 
-        &[data-align-x="end"] {
-          > .navi_text,
-          .navi_link,
-          .navi_text_bold_foreground {
-            justify-content: end;
+        > li {
+          width: 100%;
+
+          .navi_tab {
+            flex-direction: row;
+            text-align: left;
+
+            .navi_tab_indicator {
+              width: var(--tab-indicator-size);
+              height: 100%;
+            }
+
+            > .navi_text,
+            .navi_link,
+            .navi_text_bold_foreground {
+              justify-content: start;
+            }
+
+            &[data-align-x="end"] {
+              > .navi_text,
+              .navi_link,
+              .navi_text_bold_foreground {
+                justify-content: end;
+              }
+            }
           }
         }
       }
@@ -178,25 +198,6 @@ import.meta.css = /* css */ `
             top: 0;
             right: 0;
             left: auto;
-          }
-        }
-      }
-
-      > ul {
-        flex-direction: column;
-        align-items: start;
-
-        > li {
-          width: 100%;
-
-          .navi_tab {
-            flex-direction: row;
-            text-align: left;
-
-            .navi_tab_indicator {
-              width: var(--tab-indicator-size);
-              height: 100%;
-            }
           }
         }
       }
@@ -308,17 +309,26 @@ const TabRoute = ({
   route,
   routeParams,
   children,
-  paddingX,
+  paddingX = "s",
   padding,
   paddingY,
+  alignX,
+  alignY,
   ...props
 }) => {
   const { active } = useRouteStatus(route);
   const paramsAreMatching = route.matchesParams(routeParams);
   const selected = active && paramsAreMatching;
   return (
-    <TabBasic selected={selected} paddingX="0" {...props}>
+    <TabBasic
+      selected={selected}
+      paddingX={undefined}
+      alignX={alignX}
+      alignY={alignY}
+      {...props}
+    >
       <RouteLink
+        box
         route={route}
         routeParams={routeParams}
         expand
@@ -326,6 +336,8 @@ const TabRoute = ({
         paddingX={paddingX}
         padding={padding}
         paddingY={paddingY}
+        alignX={alignX}
+        alignY={alignY}
       >
         {children}
       </RouteLink>

@@ -79,7 +79,13 @@
         HomeSvg,
         UserSvg,
         SettingsSvg,
+        BadgeCount,
+        setupRoutes,
       } from "@jsenv/navi";
+
+      const { TEST_ROUTE } = setupRoutes({
+        TEST_ROUTE: "/test_route",
+      });
 
       const Demo = () => {
         return (
@@ -188,28 +194,46 @@
                 <div className="example-block">
                   <div className="caption">Icons before text</div>
                   <Box border="1px dashed violet" style={{ width: "200px" }}>
-                    <TabList vertical spacing="xs" indicator="end">
+                    <TabList vertical spacing="xs" indicator="end" expandX>
                       <Tab
                         selected={activeIconTab === "home"}
                         onClick={() => setActiveIconTab("home")}
                         aria-controls="icon-panel-home"
                         column
                       >
-                        <Icon>
-                          <HomeSvg />
-                        </Icon>
-                        Home
+                        <Link box preventDefault href="toto" alignY="center">
+                          <Icon>
+                            <HomeSvg />
+                          </Icon>
+                          Home
+                          <BadgeCount
+                            background="red"
+                            selfAlignX="end"
+                            color="white"
+                          >
+                            1
+                          </BadgeCount>
+                        </Link>
                       </Tab>
                       <Tab
                         selected={activeIconTab === "profile"}
                         onClick={() => setActiveIconTab("profile")}
                         aria-controls="icon-panel-profile"
                         column
+                        route={TEST_ROUTE}
+                        alignY="center"
                       >
                         <Icon>
                           <UserSvg />
                         </Icon>
                         Profile
+                        <BadgeCount
+                          background="red"
+                          selfAlignX="end"
+                          color="white"
+                        >
+                          1
+                        </BadgeCount>
                       </Tab>
                       <Tab
                         selected={activeIconTab === "settings"}

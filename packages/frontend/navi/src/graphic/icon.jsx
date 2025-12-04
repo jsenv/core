@@ -21,11 +21,15 @@ import.meta.css = /* css */ `
   }
   .navi_icon_foreground {
     position: absolute;
-    inset: 0;
+    top: 50%;
+    left: 0;
     display: inline-flex;
     box-sizing: border-box;
+    aspect-ratio: 1/1;
+    width: 100%;
     align-items: center;
     justify-content: start;
+    transform: translateY(-50%);
   }
   .navi_icon_foreground > .navi_text {
     display: flex;
