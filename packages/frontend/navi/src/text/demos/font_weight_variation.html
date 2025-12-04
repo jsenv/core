@@ -121,7 +121,7 @@
       }
       .smooth {
         display: inline-block;
-        margin: 8px 0;
+        /* margin: 8px 0; */
         /* padding: 6px 8px; */
         font-size: 14px;
         background: linear-gradient(
@@ -144,14 +144,18 @@
         display: inline-block;
         box-sizing: border-box;
         max-width: var(--max-width);
-        padding: 4px;
+        /* padding: 4px; */
         background: #fff3cd;
-        border: 1px dashed #ffc107;
-        border-radius: 4px;
+        /* border: 1px dashed #ffc107; */
+        /* border-radius: 4px; */
       }
       .ex-0 .inner {
         position: relative;
         display: inline-block;
+        /* padding: 2px; */
+        background: #e8f5e8;
+        /* border: 1px solid #4caf50; */
+        /* border-radius: 3px; */
       }
       .ex-0 .text-normal {
         position: absolute;
@@ -182,6 +186,10 @@
         position: relative;
         display: block;
         width: 100%;
+        /* padding: 2px; */
+        background: #e8f5e8;
+        /* border: 1px solid #4caf50; */
+        /* border-radius: 3px; */
       }
       .ex-b .text-normal {
         position: absolute;
@@ -222,11 +230,11 @@
 
       /* EXEMPLE D: single-line sans wrapping */
       .ex-d .wrapper {
-        padding: 4px;
+        /* padding: 4px; */
         white-space: nowrap;
         background: #fff3cd;
-        border: 1px dashed #ffc107;
-        border-radius: 4px;
+        /* border: 1px dashed #ffc107; */
+        /* border-radius: 4px; */
       }
       .ex-d .text {
         font-weight: 400;
@@ -246,6 +254,87 @@
       }
       .ex-e.active .text {
         font-variation-settings: "wght" 700;
+      }
+
+      /* EXEMPLE D: nowrap + absolute positioning */
+      .ex-d .wrapper {
+        position: relative;
+        display: inline-block;
+        /* padding: 4px; */
+        background: #fff3cd;
+        /* border: 1px dashed #ffc107; */
+        /* border-radius: 4px; */
+      }
+      .ex-d .inner {
+        position: relative;
+        display: inline-block;
+        /* padding: 2px; */
+        background: #e8f5e8;
+        /* border: 1px solid #4caf50; */
+        /* border-radius: 3px; */
+      }
+      .ex-d .text-normal {
+        position: absolute;
+        top: 0;
+        left: 0;
+        /* padding: 2px; */
+        font-weight: 400;
+        line-height: 1.3;
+        white-space: nowrap;
+        opacity: 1;
+        transition: opacity 0.2s ease;
+      }
+      .ex-d .text-bold {
+        position: static;
+        font-weight: 700;
+        line-height: 1.3;
+        white-space: nowrap;
+        opacity: 0;
+      }
+      .ex-d.active .text-normal {
+        opacity: 0;
+      }
+      .ex-d.active .text-bold {
+        opacity: 1;
+      }
+
+      /* EXEMPLE F: nowrap + centrage avec absolute positioning */
+      .ex-f .wrapper {
+        position: relative;
+        display: block;
+        text-align: center;
+      }
+      .ex-f .inner {
+        position: relative;
+        display: inline-block;
+        /* padding: 2px; */
+        background: #e8f5e8;
+        /* border: 1px solid #4caf50; */
+        /* border-radius: 3px; */
+      }
+      .ex-f .text-normal {
+        position: absolute;
+        top: 0;
+        left: 0;
+        /* padding: 2px; */
+        font-weight: 400;
+        line-height: 1.3;
+        white-space: nowrap;
+        opacity: 1;
+        transition: opacity 0.2s ease;
+      }
+      .ex-f .text-bold {
+        position: static;
+        font-weight: 700;
+        line-height: 1.3;
+        white-space: nowrap;
+        opacity: 0;
+      }
+      .ex-f.active .text-normal {
+        opacity: 0;
+      }
+      .ex-f.active .text-bold {
+        opacity: 1;
       }
     </style>
   </head>
@@ -489,7 +578,10 @@
             id="wrap-d"
             style="max-width: var(--max-width)"
           >
-            <span class="text demo-text-content" id="d-text"></span>
+            <span class="inner">
+              <span class="text-normal demo-text-content" id="d-normal"></span>
+              <span class="text-bold demo-text-content" id="d-bold"></span>
+            </span>
           </div>
         </div>
       </div>
@@ -526,13 +618,15 @@
 
         <div class="interactive">
           <label> <input type="checkbox" data-toggle="f" /> Bold </label>
-          <div class="constrainer" style="text-align: center">
-            <div class="smooth">
-              <span
-                class="text demo-text-content"
-                id="f-text"
-                style="white-space: nowrap"
-              ></span>
+          <div class="constrainer">
+            <div class="smooth wrapper" id="wrap-f">
+              <span class="inner">
+                <span
+                  class="text-normal demo-text-content"
+                  id="f-normal"
+                ></span>
+                <span class="text-bold demo-text-content" id="f-bold"></span>
+              </span>
             </div>
           </div>
         </div>
@@ -559,8 +653,10 @@
           "b-normal",
           "b-bold",
           "c-text",
-          "d-text",
-          "f-text",
+          "d-normal",
+          "d-bold",
+          "f-normal",
+          "f-bold",
           "e-text",
         ];
         interactiveTexts.forEach((id) => {
