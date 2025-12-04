@@ -1,270 +1,540 @@
 <!doctype html>
-<html lang="fr">
+<html>
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Text boldClone Demo</title>
-    <style>
-      :root {
-        color: #111;
-        font-family:
-          system-ui,
-          -apple-system,
-          "Segoe UI",
-          Roboto,
-          "Helvetica Neue",
-          Arial;
-      }
-      body {
-        padding: 20px;
-        line-height: 1.4;
-        background: #f7f7fb;
-      }
-      h1 {
-        margin: 0 0 12px;
-        font-size: 18px;
-      }
-      .examples {
-        max-width: 700px;
-        margin: 0 auto;
-      }
-      .card {
-        margin-bottom: 24px;
-        padding: 20px;
-        background: white;
-        border: 1px solid #e6e8ec;
-        border-radius: 8px;
-        box-shadow: 0 2px 6px rgba(20, 20, 40, 0.03);
-      }
-      .example-title {
-        margin-bottom: 16px;
-        color: #1e40af;
-        font-weight: 600;
-      }
-
-      /* Version sans boldClone pour comparaison */
-      .text-normal {
-        font-weight: normal;
-        white-space: nowrap;
-        transition: font-weight 0.2s ease;
-      }
-      .text-normal.active {
-        font-weight: bold;
-      }
-
-      /* Styles pour les contrôles */
-      .controls {
-        margin-bottom: 16px;
-        padding: 12px;
-        background: #f8f9fa;
-        border-radius: 6px;
-      }
-      .controls label {
-        display: block;
-        margin-bottom: 8px;
-        font-weight: 600;
-        font-size: 13px;
-      }
-      .controls input[type="checkbox"] {
-        margin-right: 6px;
-      }
-
-      .demo-container {
-        padding: 12px;
-        background: #fff5f5;
-        border: 1px solid #fecaca;
-        border-radius: 6px;
-      }
-      .demo-item {
-        margin-bottom: 12px;
-        padding: 8px;
-        background: white;
-        border: 1px solid #e5e7eb;
-        border-radius: 4px;
-      }
-      .demo-label {
-        margin-bottom: 4px;
-        color: #666;
-        font-weight: 600;
-        font-size: 12px;
-      }
-
-      .highlight {
-        padding: 2px 4px;
-        background: linear-gradient(
-          90deg,
-          rgba(255, 240, 240, 0.08),
-          rgba(240, 255, 240, 0.03)
-        );
-        border-radius: 3px;
-      }
-    </style>
   </head>
   <body>
-    <h1>Text Component - boldClone Demo</h1>
-    <p style="margin: 0 0 16px; font-size: 14px; color: #666">
-      Démonstration de la prop <code>boldClone</code> du composant Text pour
-      éviter les layout shifts lors des transitions vers bold.
-    </p>
+    <div id="app"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useState } from "preact/hooks";
+      import { Text, Link } from "@jsenv/navi";
 
-    <div class="examples">
-      <!-- Exemple 1: Comparaison avec/sans boldClone -->
-      <div class="card">
-        <div class="example-title">Comparaison: avec et sans boldClone</div>
+      const Demo = () => {
+        const [basicBoldActive, setBasicBoldActive] = useState(false);
+        const [comparisonBoldActive, setComparisonBoldActive] = useState(false);
+        const [lengthsBoldActive, setLengthsBoldActive] = useState(false);
+        const [alignmentsBoldActive, setAlignmentsBoldActive] = useState(false);
 
-        <div class="controls">
-          <label>
-            <input type="checkbox" id="toggle-1" />
-            Activer bold
-          </label>
-        </div>
+        return (
+          <div
+            style={{
+              padding: "20px",
+              fontFamily: "system-ui, sans-serif",
+            }}
+          >
+            <h1>Text boldClone Demo</h1>
+            <p>
+              The <code>boldClone</code> prop on Text components prevents layout
+              shifts when transitioning to bold by using an invisible bold clone
+              to reserve space. Only works with <code>noWrap</code> text.
+            </p>
 
-        <div class="demo-container">
-          <div class="demo-item">
-            <div class="demo-label">Sans boldClone (layout shift)</div>
-            <div class="highlight">
-              <span class="text-normal" id="text-normal">
-                Du texte qui change de font-weight
-              </span>
-            </div>
+            {/* Table of Contents */}
+            <section
+              style={{
+                marginBottom: "30px",
+                padding: "15px",
+                backgroundColor: "#f8f9fa",
+                borderRadius: "6px",
+                border: "1px solid #e9ecef",
+              }}
+            >
+              <h2 style={{ margin: "0 0 15px 0", fontSize: "1.2rem" }}>
+                📋 Table of Contents
+              </h2>
+              <nav>
+                <ol
+                  style={{
+                    margin: 0,
+                    paddingLeft: "20px",
+                    lineHeight: "1.6",
+                  }}
+                >
+                  <li>
+                    <Link href="#basic-usage" textColor="#007bff">
+                      Basic boldClone Usage
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="#comparison" textColor="#007bff">
+                      With vs Without boldClone
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="#different-lengths" textColor="#007bff">
+                      Different Text Lengths
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="#text-alignments" textColor="#007bff">
+                      Different Text Alignments
+                    </Link>
+                  </li>
+                </ol>
+              </nav>
+            </section>
+
+            {/* Basic Usage */}
+            <section id="basic-usage" style={{ marginBottom: "30px" }}>
+              <h2>🎯 Basic boldClone Usage</h2>
+              <p>
+                The simplest case: a Text component with <code>boldClone</code>{" "}
+                and
+                <code>noWrap</code> that transitions smoothly to bold without
+                layout shifts.
+              </p>
+
+              <div style={{ marginBottom: "20px" }}>
+                <label style={{ display: "block", marginBottom: "10px" }}>
+                  <input
+                    type="checkbox"
+                    checked={basicBoldActive}
+                    onChange={(e) => setBasicBoldActive(e.target.checked)}
+                    style={{ marginRight: "8px" }}
+                  />
+                  Make text bold
+                </label>
+
+                <div
+                  style={{
+                    border: "2px solid #e9ecef",
+                    padding: "16px",
+                    backgroundColor: "#f8f9fa",
+                    borderRadius: "6px",
+                  }}
+                >
+                  <Text
+                    boldClone
+                    noWrap
+                    style={{
+                      fontWeight: basicBoldActive ? "bold" : "normal",
+                      transition: "font-weight 0.3s ease",
+                    }}
+                  >
+                    This text transitions smoothly to bold
+                  </Text>
+                </div>
+              </div>
+
+              <pre
+                style={{
+                  background: "#f7f7f7",
+                  padding: "10px",
+                  borderRadius: "4px",
+                  fontSize: "12px",
+                  overflowX: "auto",
+                }}
+              >
+                {`<Text 
+  boldClone 
+  noWrap
+  style={{
+    fontWeight: isActive ? "bold" : "normal",
+    transition: "font-weight 0.3s ease",
+  }}
+>
+  This text transitions smoothly to bold
+</Text>`}
+              </pre>
+            </section>
+
+            {/* Comparison */}
+            <section id="comparison" style={{ marginBottom: "30px" }}>
+              <h2>⚡ With vs Without boldClone</h2>
+              <p>
+                Side-by-side comparison showing the layout shift that happens
+                without <code>boldClone</code> vs the stable layout with it.
+              </p>
+
+              <div style={{ marginBottom: "20px" }}>
+                <label style={{ display: "block", marginBottom: "10px" }}>
+                  <input
+                    type="checkbox"
+                    checked={comparisonBoldActive}
+                    onChange={(e) => setComparisonBoldActive(e.target.checked)}
+                    style={{ marginRight: "8px" }}
+                  />
+                  Toggle bold on both examples
+                </label>
+
+                <div style={{ display: "flex", gap: "20px" }}>
+                  <div style={{ flex: 1 }}>
+                    <h3
+                      style={{
+                        margin: "0 0 10px 0",
+                        fontSize: "14px",
+                        color: "#dc3545",
+                      }}
+                    >
+                      ❌ Without boldClone (layout shift)
+                    </h3>
+                    <div
+                      style={{
+                        border: "2px solid #f5c2c7",
+                        padding: "16px",
+                        backgroundColor: "#f8d7da",
+                        borderRadius: "6px",
+                      }}
+                    >
+                      <span
+                        style={{
+                          whiteSpace: "nowrap",
+                          fontWeight: comparisonBoldActive ? "bold" : "normal",
+                          transition: "font-weight 0.3s ease",
+                        }}
+                      >
+                        Text that shifts layout when bold
+                      </span>
+                    </div>
+                  </div>
+
+                  <div style={{ flex: 1 }}>
+                    <h3
+                      style={{
+                        margin: "0 0 10px 0",
+                        fontSize: "14px",
+                        color: "#198754",
+                      }}
+                    >
+                      ✅ With boldClone (stable)
+                    </h3>
+                    <div
+                      style={{
+                        border: "2px solid #badbcc",
+                        padding: "16px",
+                        backgroundColor: "#d1e7dd",
+                        borderRadius: "6px",
+                      }}
+                    >
+                      <Text
+                        boldClone
+                        noWrap
+                        style={{
+                          fontWeight: comparisonBoldActive ? "bold" : "normal",
+                          transition: "font-weight 0.3s ease",
+                        }}
+                      >
+                        Text that shifts layout when bold
+                      </Text>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <p
+                style={{ fontSize: "14px", color: "#666", fontStyle: "italic" }}
+              >
+                <strong>Notice:</strong> The left example will cause elements
+                around it to move when toggled, while the right example
+                maintains stable positioning.
+              </p>
+            </section>
+
+            {/* Different Lengths */}
+            <section id="different-lengths" style={{ marginBottom: "30px" }}>
+              <h2>📏 Different Text Lengths</h2>
+              <p>
+                Testing <code>boldClone</code> behavior with various text
+                lengths to ensure it works consistently.
+              </p>
+
+              <div style={{ marginBottom: "20px" }}>
+                <label style={{ display: "block", marginBottom: "10px" }}>
+                  <input
+                    type="checkbox"
+                    checked={lengthsBoldActive}
+                    onChange={(e) => setLengthsBoldActive(e.target.checked)}
+                    style={{ marginRight: "8px" }}
+                  />
+                  Make all texts bold
+                </label>
+
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "15px",
+                  }}
+                >
+                  <div>
+                    <h4
+                      style={{
+                        margin: "0 0 8px 0",
+                        fontSize: "12px",
+                        color: "#666",
+                      }}
+                    >
+                      Short text
+                    </h4>
+                    <div
+                      style={{
+                        border: "1px solid #dee2e6",
+                        padding: "12px",
+                        backgroundColor: "#ffffff",
+                        borderRadius: "4px",
+                      }}
+                    >
+                      <Text
+                        boldClone
+                        noWrap
+                        style={{
+                          fontWeight: lengthsBoldActive ? "bold" : "normal",
+                          transition: "font-weight 0.3s ease",
+                        }}
+                      >
+                        Short
+                      </Text>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4
+                      style={{
+                        margin: "0 0 8px 0",
+                        fontSize: "12px",
+                        color: "#666",
+                      }}
+                    >
+                      Medium text
+                    </h4>
+                    <div
+                      style={{
+                        border: "1px solid #dee2e6",
+                        padding: "12px",
+                        backgroundColor: "#ffffff",
+                        borderRadius: "4px",
+                      }}
+                    >
+                      <Text
+                        boldClone
+                        noWrap
+                        style={{
+                          fontWeight: lengthsBoldActive ? "bold" : "normal",
+                          transition: "font-weight 0.3s ease",
+                        }}
+                      >
+                        A medium length text for testing
+                      </Text>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4
+                      style={{
+                        margin: "0 0 8px 0",
+                        fontSize: "12px",
+                        color: "#666",
+                      }}
+                    >
+                      Long text
+                    </h4>
+                    <div
+                      style={{
+                        border: "1px solid #dee2e6",
+                        padding: "12px",
+                        backgroundColor: "#ffffff",
+                        borderRadius: "4px",
+                      }}
+                    >
+                      <Text
+                        boldClone
+                        noWrap
+                        style={{
+                          fontWeight: lengthsBoldActive ? "bold" : "normal",
+                          transition: "font-weight 0.3s ease",
+                        }}
+                      >
+                        This is a much longer text that tests the boldClone
+                        behavior with extended content
+                      </Text>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {/* Text Alignments */}
+            <section id="text-alignments" style={{ marginBottom: "30px" }}>
+              <h2>🎯 Different Text Alignments</h2>
+              <p>
+                Testing how <code>boldClone</code> works with different text
+                alignments. The technique includes automatic centering for
+                smooth transitions.
+              </p>
+
+              <div style={{ marginBottom: "20px" }}>
+                <label style={{ display: "block", marginBottom: "10px" }}>
+                  <input
+                    type="checkbox"
+                    checked={alignmentsBoldActive}
+                    onChange={(e) => setAlignmentsBoldActive(e.target.checked)}
+                    style={{ marginRight: "8px" }}
+                  />
+                  Toggle bold on all alignments
+                </label>
+
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "15px",
+                  }}
+                >
+                  <div>
+                    <h4
+                      style={{
+                        margin: "0 0 8px 0",
+                        fontSize: "12px",
+                        color: "#666",
+                      }}
+                    >
+                      Left aligned
+                    </h4>
+                    <div
+                      style={{
+                        border: "1px solid #dee2e6",
+                        padding: "12px",
+                        backgroundColor: "#ffffff",
+                        borderRadius: "4px",
+                        textAlign: "left",
+                      }}
+                    >
+                      <Text
+                        boldClone
+                        noWrap
+                        style={{
+                          fontWeight: alignmentsBoldActive ? "bold" : "normal",
+                          transition: "font-weight 0.3s ease",
+                        }}
+                      >
+                        Left aligned text
+                      </Text>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4
+                      style={{
+                        margin: "0 0 8px 0",
+                        fontSize: "12px",
+                        color: "#666",
+                      }}
+                    >
+                      Center aligned
+                    </h4>
+                    <div
+                      style={{
+                        border: "1px solid #dee2e6",
+                        padding: "12px",
+                        backgroundColor: "#ffffff",
+                        borderRadius: "4px",
+                        textAlign: "center",
+                      }}
+                    >
+                      <Text
+                        boldClone
+                        noWrap
+                        style={{
+                          fontWeight: alignmentsBoldActive ? "bold" : "normal",
+                          transition: "font-weight 0.3s ease",
+                        }}
+                      >
+                        Center aligned text
+                      </Text>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4
+                      style={{
+                        margin: "0 0 8px 0",
+                        fontSize: "12px",
+                        color: "#666",
+                      }}
+                    >
+                      Right aligned
+                    </h4>
+                    <div
+                      style={{
+                        border: "1px solid #dee2e6",
+                        padding: "12px",
+                        backgroundColor: "#ffffff",
+                        borderRadius: "4px",
+                        textAlign: "right",
+                      }}
+                    >
+                      <Text
+                        boldClone
+                        noWrap
+                        style={{
+                          fontWeight: alignmentsBoldActive ? "bold" : "normal",
+                          transition: "font-weight 0.3s ease",
+                        }}
+                      >
+                        Right aligned text
+                      </Text>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <p
+                style={{ fontSize: "14px", color: "#666", fontStyle: "italic" }}
+              >
+                <strong>Note:</strong> The boldClone technique automatically
+                centers the text overlay to give the impression that the bold
+                effect applies from the center, regardless of container
+                alignment.
+              </p>
+            </section>
+
+            {/* Technical Details */}
+            <section style={{ marginBottom: "30px" }}>
+              <h2>⚙️ How boldClone Works</h2>
+              <div
+                style={{
+                  padding: "20px",
+                  backgroundColor: "#f8f9fa",
+                  border: "1px solid #e9ecef",
+                  borderRadius: "6px",
+                }}
+              >
+                <p style={{ margin: "0 0 15px 0" }}>
+                  The <code>boldClone</code> technique uses a clever CSS
+                  approach:
+                </p>
+                <ol style={{ margin: "0 0 15px 20px", lineHeight: "1.6" }}>
+                  <li>
+                    Creates an <strong>invisible bold clone</strong> that
+                    reserves the space needed for bold text
+                  </li>
+                  <li>
+                    Overlays the <strong>visible text</strong> in absolute
+                    position with transitions
+                  </li>
+                  <li>
+                    Centers the overlay to make bold appear to apply from the
+                    center
+                  </li>
+                  <li>
+                    Only works with <code>noWrap</code> since multi-line would
+                    have different wrapping
+                  </li>
+                </ol>
+                <p style={{ margin: "0", fontSize: "14px", color: "#666" }}>
+                  This prevents layout shifts by ensuring the container always
+                  has the width of the bold version, while smoothly
+                  transitioning the visible text.
+                </p>
+              </div>
+            </section>
           </div>
+        );
+      };
 
-          <div class="demo-item">
-            <div class="demo-label">Avec boldClone (pas de layout shift)</div>
-            <div class="highlight">
-              <span class="text-boldclone" id="text-boldclone">
-                <span class="bold-invisible">
-                  Du texte qui change de font-weight
-                </span>
-                <span class="text-overlay">
-                  Du texte qui change de font-weight
-                </span>
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Exemple 2: Textes de différentes longueurs -->
-      <div class="card">
-        <div class="example-title">Différentes longueurs de texte</div>
-
-        <div class="controls">
-          <label>
-            <input type="checkbox" id="toggle-2" />
-            Activer bold
-          </label>
-        </div>
-
-        <div class="demo-container">
-          <div class="demo-item">
-            <div class="demo-label">Texte court</div>
-            <div class="highlight">
-              <span class="text-boldclone short" id="text-short">
-                <span class="bold-invisible">Court</span>
-                <span class="text-overlay">Court</span>
-              </span>
-            </div>
-          </div>
-
-          <div class="demo-item">
-            <div class="demo-label">Texte moyen</div>
-            <div class="highlight">
-              <span class="text-boldclone medium" id="text-medium">
-                <span class="bold-invisible">Un texte de longueur moyenne</span>
-                <span class="text-overlay">Un texte de longueur moyenne</span>
-              </span>
-            </div>
-          </div>
-
-          <div class="demo-item">
-            <div class="demo-label">Texte long</div>
-            <div class="highlight">
-              <span class="text-boldclone long" id="text-long">
-                <span class="bold-invisible">
-                  Voici un texte beaucoup plus long qui teste le comportement
-                </span>
-                <span class="text-overlay">
-                  Voici un texte beaucoup plus long qui teste le comportement
-                </span>
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Exemple 3: Alignements différents -->
-      <div class="card">
-        <div class="example-title">Différents alignements</div>
-
-        <div class="controls">
-          <label>
-            <input type="checkbox" id="toggle-3" />
-            Activer bold
-          </label>
-        </div>
-
-        <div class="demo-container">
-          <div class="demo-item">
-            <div class="demo-label">Aligné à gauche</div>
-            <div class="highlight" style="text-align: left">
-              <span class="text-boldclone left" id="text-left">
-                <span class="bold-invisible">Texte aligné à gauche</span>
-                <span class="text-overlay">Texte aligné à gauche</span>
-              </span>
-            </div>
-          </div>
-
-          <div class="demo-item">
-            <div class="demo-label">Centré</div>
-            <div class="highlight" style="text-align: center">
-              <span class="text-boldclone center" id="text-center">
-                <span class="bold-invisible">Texte centré</span>
-                <span class="text-overlay">Texte centré</span>
-              </span>
-            </div>
-          </div>
-
-          <div class="demo-item">
-            <div class="demo-label">Aligné à droite</div>
-            <div class="highlight" style="text-align: right">
-              <span class="text-boldclone right" id="text-right">
-                <span class="bold-invisible">Texte aligné à droite</span>
-                <span class="text-overlay">Texte aligné à droite</span>
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <script>
-      // Toggle pour l'exemple 1
-      document.getElementById("toggle-1").addEventListener("change", (e) => {
-        const isActive = e.target.checked;
-        document
-          .getElementById("text-normal")
-          .classList.toggle("active", isActive);
-        document
-          .getElementById("text-boldclone")
-          .classList.toggle("active", isActive);
-      });
-
-      // Toggle pour l'exemple 2
-      document.getElementById("toggle-2").addEventListener("change", (e) => {
-        const isActive = e.target.checked;
-        document.querySelectorAll(".short, .medium, .long").forEach((el) => {
-          el.classList.toggle("active", isActive);
-        });
-      });
-
-      // Toggle pour l'exemple 3
-      document.getElementById("toggle-3").addEventListener("change", (e) => {
-        const isActive = e.target.checked;
-        document.querySelectorAll(".left, .center, .right").forEach((el) => {
-          el.classList.toggle("active", isActive);
-        });
-      });
+      render(<Demo />, document.getElementById("app"));
     </script>
   </body>
 </html>
