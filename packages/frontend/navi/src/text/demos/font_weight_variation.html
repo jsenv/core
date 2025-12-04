@@ -95,61 +95,68 @@
         border-radius: 6px;
       }
 
-      /* le texte unique avec transition de font-weight */
-      .text {
-        display: inline-block;
-        font-weight: 400;
-        line-height: 1.25;
-        white-space: normal;
-        transition: font-weight 0.18s ease;
-      }
-
-      /* état actif = bold */
-      .active .text {
-        font-weight: 700;
-      }
-
-      /* EXEMPLE 0: bold=flow + normal=absolute (inverse de A) */
+      /* EXEMPLE 0: bold dicte le flow, normal visible en absolute */
       .ex-0 .wrapper {
         position: relative;
         display: inline-block;
       }
-      .ex-0 .text {
-        position: static;
+      .ex-0 .text-normal {
+        position: absolute;
+        top: 0;
+        left: 0;
+        font-weight: 400;
+        line-height: 1.25;
+        white-space: normal;
+        opacity: 1;
+        transition: opacity 0.18s ease;
       }
-      /* Pour cet exemple, le bold dicte le flow et on mesure sa largeur */
-
-      /* EXEMPLE VAR: font-variation-settings */
-      .ex-var .text {
-        position: static;
-        font-weight: normal; /* fallback */
-        font-family: "Inter", system-ui, sans-serif;
-        font-variation-settings: "wght" 400;
-        transition: font-variation-settings 0.18s ease;
+      .ex-0 .text-bold {
+        position: static; /* dicte le flow */
+        font-weight: 700;
+        line-height: 1.25;
+        white-space: normal;
+        opacity: 0; /* invisible, sert juste à dimensionner */
+        transition: opacity 0.18s ease;
       }
-      .ex-var .active .text {
-        font-weight: bold; /* fallback */
-        font-variation-settings: "wght" 700;
+      .ex-0.active .text-normal {
+        font-weight: 700; /* devient bold */
       }
-
-      /* EXEMPLE A: normal flow avec wrapper de largeur fixe */
-      .ex-a .wrapper {
-        position: relative;
-        display: inline-block;
-      }
-      .ex-a .text {
-        position: static;
+      .ex-0.active .text-bold {
+        opacity: 0; /* reste invisible */
       }
 
-      /* EXEMPLE B: contraint par parent (max-width) */
+      /* EXEMPLE B: normal=absolute + bold=absolute */
       .ex-b .wrapper {
         position: relative;
         display: block;
       }
-      .ex-b .text {
-        position: static;
+      .ex-b .text-normal {
+        position: absolute;
+        top: 0;
+        left: 0;
         width: 100%;
+        font-weight: 400;
+        line-height: 1.25;
         white-space: normal;
+        opacity: 1;
+        transition: opacity 0.18s ease;
+      }
+      .ex-b .text-bold {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        font-weight: 700;
+        line-height: 1.25;
+        white-space: normal;
+        opacity: 0;
+        transition: opacity 0.18s ease;
+      }
+      .ex-b.active .text-normal {
+        opacity: 0;
+      }
+      .ex-b.active .text-bold {
+        opacity: 1;
       }
 
       /* EXEMPLE C: flow normal - layout shift visible */
@@ -160,7 +167,13 @@
       .ex-c .text {
         position: static;
         display: inline;
+        font-weight: 400;
+        line-height: 1.25;
         white-space: normal;
+        transition: font-weight 0.18s ease;
+      }
+      .ex-c.active .text {
+        font-weight: 700;
       }
 
       /* EXEMPLE D: single-line (nowrap) */
@@ -172,7 +185,13 @@
       .ex-d .text {
         position: static;
         display: inline-block;
+        font-weight: 400;
+        line-height: 1.25;
         white-space: nowrap;
+        transition: font-weight 0.18s ease;
+      }
+      .ex-d.active .text {
+        font-weight: 700;
       }
 
       .meta {
@@ -198,8 +217,8 @@
   <body>
     <h1>Smooth-bold — démonstrations interactives</h1>
     <p style="margin: 0 0 12px">
-      Clique sur <strong>Toggle bold</strong> sur chaque exemple pour observer
-      le wrapping / layout-shift. Les largeurs mesurées (scrollWidth) sont
+      Coche la case <strong>Bold</strong> sur chaque exemple pour observer le
+      wrapping / layout-shift. Les largeurs mesurées (scrollWidth) sont
       affichées.
     </p>
 
@@ -211,43 +230,25 @@
           Exemple 0 — <strong>bold dicte le flow</strong>
         </div>
         <div class="controls">
-          <button data-toggle="0">Toggle bold</button>
+          <label> <input type="checkbox" data-toggle="0" /> Bold </label>
           <div class="meta">
-            Wrapper width = largeur du texte bold, normal en position absolute
+            Bold (invisible) dicte la largeur, normal (visible) affiché en
+            absolute
           </div>
         </div>
         <div class="stage">
           <div class="smooth wrapper" id="wrap-0">
-            <span class="text" id="0-text"
+            <span class="text-normal" id="0-normal"
+              >Ceci est un texte d'exemple qui peut se couper sur plusieurs
+              lignes pour démontrer les risques de wrapping différent.</span
+            >
+            <span class="text-bold" id="0-bold"
               >Ceci est un texte d'exemple qui peut se couper sur plusieurs
               lignes pour démontrer les risques de wrapping différent.</span
             >
           </div>
         </div>
         <div class="widths" id="0-widths">—</div>
-      </div>
-
-      <!-- EXEMPLE A -->
-      <div class="card ex-a">
-        <div class="technique">Normal=Flow + Bold=Absolute</div>
-        <div class="example-title">
-          Exemple A — <strong>normal dicte le flow</strong>
-        </div>
-        <div class="controls">
-          <button data-toggle="a">Toggle bold</button>
-          <div class="meta">
-            Wrapper width = largeur du texte normal, bold en position absolute
-          </div>
-        </div>
-        <div class="stage">
-          <div class="smooth wrapper" id="wrap-a">
-            <span class="text" id="a-text"
-              >Ceci est un texte d'exemple qui peut se couper sur plusieurs
-              lignes pour démontrer les risques de wrapping différent.</span
-            >
-          </div>
-        </div>
-        <div class="widths" id="a-widths">—</div>
       </div>
 
       <!-- EXEMPLE B -->
@@ -257,14 +258,18 @@
           Exemple B — <strong>les deux en absolute</strong>
         </div>
         <div class="controls">
-          <button data-toggle="b">Toggle bold</button>
+          <label> <input type="checkbox" data-toggle="b" /> Bold </label>
           <div class="meta">
             Parent avec max-width: 300px → peut causer des wrappings différents
           </div>
         </div>
         <div class="stage constrainer">
           <div class="smooth wrapper" id="wrap-b">
-            <span class="text" id="b-text"
+            <span class="text-normal" id="b-normal"
+              >Ceci est un texte d'exemple qui peut se couper sur plusieurs
+              lignes pour démontrer les risques de wrapping différent.</span
+            >
+            <span class="text-bold" id="b-bold"
               >Ceci est un texte d'exemple qui peut se couper sur plusieurs
               lignes pour démontrer les risques de wrapping différent.</span
             >
@@ -280,7 +285,7 @@
           Exemple C — <strong>les deux en flow</strong> — shift visible
         </div>
         <div class="controls">
-          <button data-toggle="c">Toggle bold</button>
+          <label> <input type="checkbox" data-toggle="c" /> Bold </label>
           <div class="meta">
             Les deux textes participent au layout → layout shift garanti
           </div>
@@ -303,7 +308,7 @@
           Exemple D — <strong>single-line</strong> — solution idéale
         </div>
         <div class="controls">
-          <button data-toggle="d">Toggle bold</button>
+          <label> <input type="checkbox" data-toggle="d" /> Bold </label>
           <div class="meta">
             white-space: nowrap → pas de wrapping, donc pas de layout shift
           </div>
@@ -326,7 +331,7 @@
           variable)
         </div>
         <div class="controls">
-          <button data-toggle="var">Toggle bold</button>
+          <label> <input type="checkbox" data-toggle="var" /> Bold </label>
           <div class="meta">
             Utilise font-variation-settings: "wght" 400/700 pour une transition
             plus fluide
@@ -347,9 +352,9 @@
     <footer>
       <div>
         Tip : tu peux modifier la largeur du <code>.constrainer</code> (Ex. B)
-        ou le texte pour voir d'autres cas. L'exemple A force la largeur du
-        wrapper au <em>scrollWidth</em> mesuré du texte normal (c'est la
-        technique "normal impose le flux").
+        ou le texte pour voir d'autres cas. L'exemple 0 utilise le texte bold
+        (invisible) pour dimensionner le wrapper, le normal (visible) s'affiche
+        en absolute.
       </div>
     </footer>
 
@@ -358,75 +363,64 @@
       const $ = (id) => document.getElementById(id);
       const measure = (el) => Math.ceil(el.scrollWidth);
 
-      // Initialize example 0: set wrapper width to text's bold weight width
+      // Initialize example 0: set wrapper width to bold text width (bold dicte le flow)
       function init0() {
         const wrapper = $("wrap-0");
-        const text = $("0-text");
-        // Ensure text is in bold weight for measurement
-        const card = document.querySelector(".ex-0");
-        const wasActive = card.classList.contains("active");
-        if (!wasActive) card.classList.add("active");
-
-        requestAnimationFrame(() => {
-          const boldWidth = measure(text);
-          wrapper.style.width = `${boldWidth}px`;
-          if (!wasActive) card.classList.remove("active");
-          updateWidths("0");
-        });
-      }
-
-      // Initialize example A: set wrapper width to text's normal weight width
-      function initA() {
-        const wrapper = $("wrap-a");
-        const text = $("a-text");
-        // Ensure text is in normal weight for measurement
-        const card = document.querySelector(".ex-a");
-        const wasActive = card.classList.contains("active");
-        if (wasActive) card.classList.remove("active");
-
-        requestAnimationFrame(() => {
-          const naturalWidth = measure(text);
-          wrapper.style.width = `${naturalWidth}px`;
-          if (wasActive) card.classList.add("active");
-          updateWidths("a");
-        });
+        const boldText = $("0-bold");
+        const boldWidth = measure(boldText);
+        wrapper.style.width = `${boldWidth}px`;
+        updateWidths("0");
       }
 
       // Update width displays
       function updateWidths(example) {
-        const text = $(`${example}-text`);
         const widthsEl = $(`${example}-widths`);
         const card = document.querySelector(`.ex-${example}`);
         const isActive = card.classList.contains("active");
 
-        const currentWidth = measure(text);
-        const currentWeight = isActive ? "bold (700)" : "normal (400)";
+        let displayText;
 
-        let displayText = `${currentWeight}: ${currentWidth}px`;
+        // Exemples avec deux éléments (0, b)
+        if (["0", "b"].includes(example)) {
+          const normalEl = $(`${example}-normal`);
+          const boldEl = $(`${example}-bold`);
+          const normalWidth = measure(normalEl);
+          const boldWidth = measure(boldEl);
 
-        if (example === "0") {
-          const wrapper = $("wrap-0");
-          displayText += ` — wrapper: ${wrapper.style.width}`;
-        } else if (example === "a") {
-          const wrapper = $("wrap-a");
-          displayText += ` — wrapper: ${wrapper.style.width}`;
-        } else if (example === "b") {
-          displayText += " — parent max-width: 300px";
-        } else if (example === "var") {
-          const computedStyle = getComputedStyle(text);
-          const fontVarSettings = computedStyle.fontVariationSettings;
-          displayText += ` — font-variation-settings: ${fontVarSettings || "non supporté"}`;
+          displayText = `normal: ${normalWidth}px — bold: ${boldWidth}px`;
+
+          if (example === "0") {
+            const wrapper = $("wrap-0");
+            displayText += ` — wrapper: ${wrapper.style.width}`;
+          } else if (example === "b") {
+            displayText += " — parent max-width: 300px";
+          }
+        } else {
+          // Exemples avec un seul élément (c, d, var)
+          const text = $(`${example}-text`);
+          const currentWidth = measure(text);
+          const currentWeight = isActive ? "bold (700)" : "normal (400)";
+          displayText = `${currentWeight}: ${currentWidth}px`;
+
+          if (example === "var") {
+            const computedStyle = getComputedStyle(text);
+            const fontVarSettings = computedStyle.fontVariationSettings;
+            displayText += ` — font-variation-settings: ${fontVarSettings || "non supporté"}`;
+          }
         }
 
         widthsEl.textContent = displayText;
       }
 
-      // Toggle bold state
-      function toggle(example) {
+      // Toggle bold state based on checkbox
+      function toggle(example, checked) {
         const card = document.querySelector(`.ex-${example}`);
-        card.classList.toggle("active");
+        if (checked) {
+          card.classList.add("active");
+        } else {
+          card.classList.remove("active");
+        }
 
-        // Update measurements after DOM change
         requestAnimationFrame(() => {
           updateWidths(example);
         });
@@ -437,20 +431,17 @@
         // Set up example 0
         init0();
 
-        // Set up example A
-        initA();
-
         // Initialize other examples
         updateWidths("b");
         updateWidths("c");
         updateWidths("d");
         updateWidths("var");
 
-        // Attach button listeners
-        document.querySelectorAll("button[data-toggle]").forEach((btn) => {
-          btn.addEventListener("click", () => {
-            const example = btn.getAttribute("data-toggle");
-            toggle(example);
+        // Attach checkbox listeners
+        document.querySelectorAll("input[data-toggle]").forEach((checkbox) => {
+          checkbox.addEventListener("change", () => {
+            const example = checkbox.getAttribute("data-toggle");
+            toggle(example, checkbox.checked);
           });
         });
 
