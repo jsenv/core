@@ -16826,8 +16826,7 @@ import.meta.css = /* css */`
       display: flex;
       width: 100%;
       margin: 0;
-      padding-right: 2px; /* space for eventual outline overflow */
-      padding-left: 2px; /* space for eventual outline overflow */
+      padding: 0;
       align-items: center;
       gap: 0.5rem;
       list-style: none;
@@ -16837,6 +16836,15 @@ import.meta.css = /* css */`
       > li {
         position: relative;
         display: inline-flex;
+        /* Space for eventual outline inside the tab (link) */
+        padding-top: 2px;
+        padding-bottom: 2px;
+        &:first-child {
+          padding-left: 2px;
+        }
+        &:last-child {
+          padding-right: 2px;
+        }
 
         .navi_tab {
           --x-tab-background: var(--tab-background);
@@ -16913,13 +16921,21 @@ import.meta.css = /* css */`
       overflow-y: auto;
 
       > ul {
-        padding-top: 2px; /* space for eventual outline overflow */
-        padding-bottom: 2px; /* space for eventual outline overflow */
         flex-direction: column;
         align-items: start;
 
         > li {
           width: 100%;
+          padding-top: 0;
+          padding-right: 2px;
+          padding-bottom: 0;
+          padding-left: 2px;
+          &:first-child {
+            padding-top: 2px;
+          }
+          &:last-child {
+            padding-bottom: 2px;
+          }
 
           .navi_tab {
             flex-direction: row;
