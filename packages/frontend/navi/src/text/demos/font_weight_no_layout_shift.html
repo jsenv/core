@@ -121,7 +121,7 @@
                         style={{
                           whiteSpace: "nowrap",
                           fontWeight: comparisonBoldActive ? "bold" : "normal",
-                          transition: "font-weight 0.3s ease",
+                          //  transition: "font-weight 0.3s ease",
                         }}
                       >
                         Text that shifts layout when bold
@@ -165,6 +165,15 @@
                 </div>
               </div>
 
+              <p
+                style={{ fontSize: "14px", color: "#666", fontStyle: "italic" }}
+              >
+                <strong>Notice:</strong> The red indicator will shift when the
+                left example toggles bold, while the green indicator stays
+                stable with preventBoldLayoutShift. Watch how the colored
+                squares move!
+              </p>
+
               <div
                 style={{
                   padding: "15px",
@@ -177,23 +186,14 @@
                 <p style={{ margin: "0 0 10px 0", fontWeight: "600" }}>
                   💡 Pro tip:
                 </p>
-                <p style={{ margin: "0" }}>
+                <Text style={{ margin: "0" }}>
                   The <code>boldTransition</code> prop automatically enables
                   <code>preventBoldLayoutShift</code> and adds smooth
                   transitions. Use <code>preventBoldLayoutShift</code> alone
                   when you only want to prevent layout shifts without
                   transitions.
-                </p>
+                </Text>
               </div>
-
-              <p
-                style={{ fontSize: "14px", color: "#666", fontStyle: "italic" }}
-              >
-                <strong>Notice:</strong> The red indicator will shift when the
-                left example toggles bold, while the green indicator stays
-                stable with preventBoldLayoutShift. Watch how the colored
-                squares move!
-              </p>
             </section>
 
             {/* Basic Usage */}
