@@ -519,8 +519,39 @@
                     <TabList
                       vertical
                       spacing="0"
-                      padding="xs"
                       indicator="none"
+                      style={{
+                        "--tablist-background": "rgb(233, 236, 240)",
+                        "--tab-background": "transparent",
+                        "--tab-color": "#373C45",
+                        "--tab-background-selected": "#373C45",
+                        "--tab-color-selected": "white",
+                      }}
+                    >
+                      {verticalTabs.map((name) => (
+                        <Tab
+                          key={name}
+                          selected={name === activeVertical}
+                          onClick={() => setActiveVertical(name)}
+                          aria-controls={`vertical-panel-${name}`}
+                        >
+                          {name.charAt(0).toUpperCase() + name.slice(1)}
+                        </Tab>
+                      ))}
+                    </TabList>
+                  </Box>
+                </Box>
+
+                <Box expandX>
+                  <div className="caption">
+                    Background + no indicator + full width{" "}
+                  </div>
+                  <Box border="1px dashed violet">
+                    <TabList
+                      vertical
+                      spacing="0"
+                      indicator="none"
+                      expandX
                       style={{
                         "--tablist-background": "rgb(233, 236, 240)",
                         "--tab-background": "transparent",

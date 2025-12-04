@@ -157,6 +157,16 @@ import.meta.css = /* css */ `
 
         > li {
           width: 100%;
+          padding-top: 0;
+          padding-right: 2px;
+          padding-bottom: 0;
+          padding-left: 2px;
+          &:first-child {
+            padding-top: 2px;
+          }
+          &:last-child {
+            padding-bottom: 2px;
+          }
 
           .navi_tab {
             flex-direction: row;
