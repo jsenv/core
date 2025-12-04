@@ -76,7 +76,8 @@
 
       /* zone parent qui contraint le texte (pour B/C/D). changez max-width pour tester */
       .constrainer {
-        max-width: 300px;
+        max-width: 100px;
+        height: 250px;
         padding: 10px;
         background: #fbfcff;
         border-radius: 6px;
@@ -97,6 +98,10 @@
 
       /* EXEMPLE 0: bold dicte le flow, normal visible en absolute */
       .ex-0 .wrapper {
+        position: relative;
+        display: inline-block;
+      }
+      .ex-0 .inner {
         position: relative;
         display: inline-block;
       }
@@ -129,6 +134,11 @@
       .ex-b .wrapper {
         position: relative;
         display: block;
+      }
+      .ex-b .inner {
+        position: relative;
+        display: block;
+        width: 100%;
       }
       .ex-b .text-normal {
         position: absolute;
@@ -238,14 +248,16 @@
         </div>
         <div class="stage">
           <div class="smooth wrapper" id="wrap-0">
-            <span class="text-normal" id="0-normal"
-              >Ceci est un texte d'exemple qui peut se couper sur plusieurs
-              lignes pour démontrer les risques de wrapping différent.</span
-            >
-            <span class="text-bold" id="0-bold"
-              >Ceci est un texte d'exemple qui peut se couper sur plusieurs
-              lignes pour démontrer les risques de wrapping différent.</span
-            >
+            <span class="inner">
+              <span class="text-bold" id="0-bold"
+                >Ceci est un texte d'exemple qui peut se couper sur plusieurs
+                lignes pour démontrer les risques de wrapping différent.</span
+              >
+              <span class="text-normal" id="0-normal"
+                >Ceci est un texte d'exemple qui peut se couper sur plusieurs
+                lignes pour démontrer les risques de wrapping différent.</span
+              >
+            </span>
           </div>
         </div>
         <div class="widths" id="0-widths">—</div>
@@ -265,14 +277,16 @@
         </div>
         <div class="stage constrainer">
           <div class="smooth wrapper" id="wrap-b">
-            <span class="text-normal" id="b-normal"
-              >Ceci est un texte d'exemple qui peut se couper sur plusieurs
-              lignes pour démontrer les risques de wrapping différent.</span
-            >
-            <span class="text-bold" id="b-bold"
-              >Ceci est un texte d'exemple qui peut se couper sur plusieurs
-              lignes pour démontrer les risques de wrapping différent.</span
-            >
+            <span class="inner">
+              <span class="text-normal" id="b-normal"
+                >Ceci est un texte d'exemple qui peut se couper sur plusieurs
+                lignes pour démontrer les risques de wrapping différent.</span
+              >
+              <span class="text-bold" id="b-bold"
+                >Ceci est un texte d'exemple qui peut se couper sur plusieurs
+                lignes pour démontrer les risques de wrapping différent.</span
+              >
+            </span>
           </div>
         </div>
         <div class="widths" id="b-widths">—</div>
