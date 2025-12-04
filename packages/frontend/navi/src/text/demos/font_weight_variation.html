@@ -1,0 +1,441 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Smooth-bold — démos</title>
+    <style>
+      :root {
+        color: #111;
+        font-family:
+          Inter,
+          system-ui,
+          -apple-system,
+          "Segoe UI",
+          Roboto,
+          "Helvetica Neue",
+          Arial;
+      }
+      body {
+        padding: 20px;
+        line-height: 1.4;
+        background: #f7f7fb;
+      }
+      h1 {
+        margin: 0 0 12px;
+        font-size: 18px;
+      }
+      .examples {
+        max-width: 900px;
+        margin: 0 auto;
+      }
+      .card {
+        margin-bottom: 24px;
+        padding: 20px;
+        background: white;
+        border: 1px solid #e6e8ec;
+        border-radius: 8px;
+        box-shadow: 0 2px 6px rgba(20, 20, 40, 0.03);
+      }
+      .technique {
+        display: inline-block;
+        margin-bottom: 12px;
+        padding: 4px 8px;
+        color: #1e40af;
+        font-weight: 600;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        background: #e8f2ff;
+        border-radius: 4px;
+      }
+      .example-title {
+        margin-bottom: 8px;
+        font-weight: 600;
+      }
+      .controls {
+        display: flex;
+        margin-bottom: 10px;
+        align-items: center;
+        gap: 8px;
+      }
+      button {
+        padding: 6px 10px;
+        background: #fff;
+        border: 1px solid #cfd6e3;
+        border-radius: 6px;
+        cursor: pointer;
+      }
+      .stage {
+        margin-bottom: 8px;
+        padding: 12px;
+        background: #fff;
+        border: 1px dashed #e0e6f0;
+        border-radius: 6px;
+      }
+
+      /* zone parent qui contraint le texte (pour B/C/D). changez max-width pour tester */
+      .constrainer {
+        max-width: 300px;
+        padding: 10px;
+        background: #fbfcff;
+        border-radius: 6px;
+      }
+
+      /* comportement par défaut pour les wrappers d'exemples */
+      .smooth {
+        display: inline-block;
+        padding: 6px 8px;
+        vertical-align: top;
+        background: linear-gradient(
+          90deg,
+          rgba(255, 240, 240, 0.08),
+          rgba(240, 255, 240, 0.03)
+        );
+        border-radius: 6px;
+      }
+
+      /* les deux couches texte */
+      .text-normal,
+      .text-bold {
+        display: inline-block;
+        line-height: 1.25;
+        white-space: normal;
+        transition:
+          opacity 0.18s ease,
+          transform 0.18s ease;
+      }
+
+      /* styles pour la version bold dans chaque exemple — on va manipuler la position par JS/CSS selon l'exemple */
+      .text-bold {
+        position: static;
+        font-weight: 700;
+        opacity: 0;
+      }
+
+      /* états actifs */
+      .active .text-bold {
+        opacity: 1;
+      }
+      .active .text-normal {
+        opacity: 0;
+      }
+
+      /* EXEMPLE A: normal = relative (flow), bold = absolute overlay */
+      .ex-a .wrapper {
+        position: relative; /* width fixé en JS à partir du normal */
+        display: inline-block;
+      }
+      .ex-a .text-normal {
+        position: static;
+      } /* participe au flow */
+      .ex-a .text-bold {
+        position: absolute;
+        top: 0;
+        left: 0;
+        opacity: 0;
+      }
+      .ex-a .active .text-bold {
+        opacity: 1;
+      }
+      .ex-a .active .text-normal {
+        opacity: 0;
+      }
+
+      /* EXEMPLE B: both absolute, wrapper constrained by parent (max-width) */
+      .ex-b .wrapper {
+        position: relative;
+        display: block; /* width: auto; constrained par parent */
+      }
+      .ex-b .text-normal,
+      .ex-b .text-bold {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        white-space: normal;
+      }
+      .ex-b .text-normal {
+        position: absolute;
+      }
+      .ex-b .text-bold {
+        position: absolute;
+      }
+      .ex-b .active .text-bold {
+        opacity: 1;
+      }
+      .ex-b .active .text-normal {
+        opacity: 0;
+      }
+
+      /* EXEMPLE C: both relative (flow), cause shift */
+      .ex-c .wrapper {
+        position: relative;
+        display: inline-block;
+      }
+      .ex-c .text-normal,
+      .ex-c .text-bold {
+        position: static;
+        display: inline;
+        white-space: normal;
+      }
+      .ex-c .text-bold {
+        opacity: 0;
+      }
+      .ex-c .active .text-bold {
+        opacity: 1;
+      }
+      .ex-c .active .text-normal {
+        opacity: 0;
+      }
+
+      /* EXEMPLE D: single-line (nowrap) */
+      .ex-d .wrapper {
+        position: relative;
+        display: inline-block;
+        white-space: nowrap;
+      }
+      .ex-d .text-normal,
+      .ex-d .text-bold {
+        position: static;
+        display: inline-block;
+        white-space: nowrap;
+      }
+      .ex-d .text-bold {
+        opacity: 0;
+      }
+      .ex-d .active .text-bold {
+        opacity: 1;
+      }
+      .ex-d .active .text-normal {
+        opacity: 0;
+      }
+
+      .meta {
+        margin-top: 8px;
+        color: #5b6473;
+        font-size: 13px;
+      }
+      .widths {
+        display: inline-block;
+        margin-left: 8px;
+        padding: 6px 8px;
+        font-family: monospace;
+        background: #f1f4fb;
+        border-radius: 6px;
+      }
+      footer {
+        margin-top: 20px;
+        color: #606778;
+        font-size: 13px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Smooth-bold — démonstrations interactives</h1>
+    <p style="margin: 0 0 12px">
+      Clique sur <strong>Toggle bold</strong> sur chaque exemple pour observer
+      le wrapping / layout-shift. Les largeurs mesurées (scrollWidth) sont
+      affichées.
+    </p>
+
+    <div class="examples">
+      <!-- EXEMPLE A -->
+      <div class="card ex-a">
+        <div class="technique">Normal=Flow + Bold=Absolute</div>
+        <div class="example-title">
+          Exemple A — <strong>normal dicte le flow</strong>
+        </div>
+        <div class="controls">
+          <button data-toggle="a">Toggle bold</button>
+          <div class="meta">
+            Wrapper width = largeur du texte normal, bold en position absolute
+          </div>
+        </div>
+        <div class="stage">
+          <div class="smooth wrapper" id="wrap-a">
+            <span class="text-normal" id="a-normal"
+              >Ceci est un texte d'exemple qui peut se couper sur plusieurs
+              lignes pour démontrer les risques de wrapping différent.</span
+            >
+            <span class="text-bold" id="a-bold"
+              >Ceci est un texte d'exemple qui peut se couper sur plusieurs
+              lignes pour démontrer les risques de wrapping différent.</span
+            >
+          </div>
+        </div>
+        <div class="widths" id="a-widths">—</div>
+      </div>
+
+      <!-- EXEMPLE B -->
+      <div class="card ex-b">
+        <div class="technique">Normal=Absolute + Bold=Absolute</div>
+        <div class="example-title">
+          Exemple B — <strong>les deux en absolute</strong>
+        </div>
+        <div class="controls">
+          <button data-toggle="b">Toggle bold</button>
+          <div class="meta">
+            Parent avec max-width: 300px → peut causer des wrappings différents
+          </div>
+        </div>
+        <div class="stage constrainer">
+          <div class="smooth wrapper" id="wrap-b">
+            <span class="text-normal" id="b-normal"
+              >Ceci est un texte d'exemple qui peut se couper sur plusieurs
+              lignes pour démontrer les risques de wrapping différent.</span
+            >
+            <span class="text-bold" id="b-bold"
+              >Ceci est un texte d'exemple qui peut se couper sur plusieurs
+              lignes pour démontrer les risques de wrapping différent.</span
+            >
+          </div>
+        </div>
+        <div class="widths" id="b-widths">—</div>
+      </div>
+
+      <!-- EXEMPLE C -->
+      <div class="card ex-c">
+        <div class="technique">Normal=Flow + Bold=Flow</div>
+        <div class="example-title">
+          Exemple C — <strong>les deux en flow</strong> — shift visible
+        </div>
+        <div class="controls">
+          <button data-toggle="c">Toggle bold</button>
+          <div class="meta">
+            Les deux textes participent au layout → layout shift garanti
+          </div>
+        </div>
+        <div class="stage">
+          <div class="smooth wrapper" id="wrap-c">
+            <span class="text-normal" id="c-normal"
+              >Ceci est un texte d'exemple qui peut se couper sur plusieurs
+              lignes pour démontrer les risques de wrapping différent.</span
+            >
+            <span class="text-bold" id="c-bold"
+              >Ceci est un texte d'exemple qui peut se couper sur plusieurs
+              lignes pour démontrer les risques de wrapping différent.</span
+            >
+          </div>
+        </div>
+        <div class="widths" id="c-widths">—</div>
+      </div>
+
+      <!-- EXEMPLE D -->
+      <div class="card ex-d">
+        <div class="technique">Single Line (No Wrap)</div>
+        <div class="example-title">
+          Exemple D — <strong>single-line</strong> — solution idéale
+        </div>
+        <div class="controls">
+          <button data-toggle="d">Toggle bold</button>
+          <div class="meta">
+            white-space: nowrap → pas de wrapping, donc pas de layout shift
+          </div>
+        </div>
+        <div class="stage">
+          <div class="smooth wrapper" id="wrap-d">
+            <span class="text-normal" id="d-normal"
+              >Texte_sans_retour_de_ligne_pour_montrer_le_cas_single_line_avec_underscores_ou_espaces_longs</span
+            >
+            <span class="text-bold" id="d-bold"
+              >Texte_sans_retour_de_ligne_pour_montrer_le_cas_single_line_avec_underscores_ou_espaces_longs</span
+            >
+          </div>
+        </div>
+        <div class="widths" id="d-widths">—</div>
+      </div>
+    </div>
+
+    <footer>
+      <div>
+        Tip : tu peux modifier la largeur du <code>.constrainer</code> (Ex. B)
+        ou le texte pour voir d'autres cas. L'exemple A force la largeur du
+        wrapper au <em>scrollWidth</em> mesuré du texte normal (c'est la
+        technique "normal impose le flux").
+      </div>
+    </footer>
+
+    <script>
+      // Simple helpers
+      const $ = (id) => document.getElementById(id);
+      const measure = (el) => Math.ceil(el.scrollWidth);
+
+      // Initialize example A: set wrapper width to normal text width
+      function initA() {
+        const wrapper = $("wrap-a");
+        const normal = $("a-normal");
+        const naturalWidth = measure(normal);
+        wrapper.style.width = `${naturalWidth}px`;
+        updateWidths("a");
+      }
+
+      // Update width displays
+      function updateWidths(example) {
+        const normal = $(`${example}-normal`);
+        const bold = $(`${example}-bold`);
+        const widthsEl = $(`${example}-widths`);
+
+        const normalW = measure(normal);
+        const boldW = measure(bold);
+
+        let text = `normal: ${normalW}px — bold: ${boldW}px`;
+
+        if (example === "a") {
+          const wrapper = $("wrap-a");
+          text += ` — wrapper: ${wrapper.style.width}`;
+        } else if (example === "b") {
+          text += " — parent max-width: 300px";
+        }
+
+        widthsEl.textContent = text;
+      }
+
+      // Toggle bold state
+      function toggle(example) {
+        const card = document.querySelector(`.ex-${example}`);
+        card.classList.toggle("active");
+
+        // Update measurements after DOM change
+        requestAnimationFrame(() => {
+          updateWidths(example);
+        });
+      }
+
+      // Initialize everything
+      function init() {
+        // Set up example A
+        initA();
+
+        // Initialize other examples
+        updateWidths("b");
+        updateWidths("c");
+        updateWidths("d");
+
+        // Attach button listeners
+        document.querySelectorAll("button[data-toggle]").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            const example = btn.getAttribute("data-toggle");
+            toggle(example);
+          });
+        });
+
+        // Update on resize
+        window.addEventListener("resize", () => {
+          requestAnimationFrame(() => {
+            updateWidths("b");
+            updateWidths("c");
+            updateWidths("d");
+          });
+        });
+      }
+
+      // Start when ready
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", init);
+      } else {
+        init();
+      }
+    </script>
+  </body>
+</html>
