@@ -23,7 +23,7 @@
           "Helvetica Neue",
           Arial;
 
-        --max-width: 220px;
+        --max-width: 100px;
       }
       body {
         padding: 20px;
@@ -325,15 +325,17 @@
         <div class="comparison">
           <div class="version">
             <div class="version-title">Normal (nowrap)</div>
-            <div class="demo-text normal" style="white-space: nowrap">
-              Cette solution semble marcher mais échoue à cause du wrapping.
-            </div>
+            <div
+              class="demo-text normal demo-text-content"
+              style="white-space: nowrap"
+            ></div>
           </div>
           <div class="version">
             <div class="version-title">Bold (nowrap)</div>
-            <div class="demo-text bold" style="white-space: nowrap">
-              Cette solution semble marcher mais échoue à cause du wrapping.
-            </div>
+            <div
+              class="demo-text bold demo-text-content"
+              style="white-space: nowrap"
+            ></div>
           </div>
         </div>
 
@@ -348,8 +350,7 @@
 
     <script>
       // Texte de référence centralisé
-      const DEMO_TEXT =
-        "Cette solution semble marcher mais échoue à cause du wrapping.";
+      const DEMO_TEXT = "Du texte sur lequel on fait varier la font-weight.";
 
       // Simple helper
       const $ = (id) => document.getElementById(id);
