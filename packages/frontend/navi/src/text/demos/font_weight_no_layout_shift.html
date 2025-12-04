@@ -77,67 +77,14 @@
               </nav>
             </section>
 
-            {/* Basic Usage */}
-            <section id="basic-usage" style={{ marginBottom: "30px" }}>
-              <h2>🎯 Basic boldTransition Usage</h2>
+            {/* Layout Shift Problem */}
+            <section id="layout-shift-problem" style={{ marginBottom: "30px" }}>
+              <h2>⚠️ The Layout Shift Problem</h2>
               <p>
-                The simplest case: a Text component with{" "}
-                <code>boldTransition</code> and <code>noWrap</code> that
-                transitions smoothly to bold without layout shifts.
-              </p>
-
-              <div style={{ marginBottom: "20px" }}>
-                <label style={{ display: "block", marginBottom: "10px" }}>
-                  <input
-                    type="checkbox"
-                    checked={basicBoldActive}
-                    onChange={(e) => setBasicBoldActive(e.target.checked)}
-                    style={{ marginRight: "8px" }}
-                  />
-                  Make text bold
-                </label>
-
-                <div
-                  style={{
-                    border: "2px solid #e9ecef",
-                    padding: "16px",
-                    backgroundColor: "#f8f9fa",
-                    borderRadius: "6px",
-                  }}
-                >
-                  <Text boldTransition={basicBoldActive} noWrap>
-                    This text transitions smoothly to bold
-                  </Text>
-                  <Text width="16px" height="16px" background="violet"></Text>
-                </div>
-              </div>
-
-              <pre
-                style={{
-                  background: "#f7f7f7",
-                  padding: "10px",
-                  borderRadius: "4px",
-                  fontSize: "12px",
-                  overflowX: "auto",
-                }}
-              >
-                {`<Text 
-  noWrap
-  bold={basicBoldActive}
-  boldTransition
->
-  This text transitions smoothly to bold
-</Text>`}
-              </pre>
-            </section>
-
-            {/* Comparison */}
-            <section id="comparison" style={{ marginBottom: "30px" }}>
-              <h2>⚡ With vs Without boldTransition</h2>
-              <p>
-                Side-by-side comparison showing the layout shift that happens
-                without <code>boldTransition</code> vs the stable layout with
-                it.
+                When text changes from normal to bold weight, it becomes wider,
+                causing surrounding elements to shift. The{" "}
+                <code>preventBoldLayoutShift</code> prop solves this by
+                reserving space for the bold version upfront.
               </p>
 
               <div style={{ marginBottom: "20px" }}>
@@ -148,7 +95,7 @@
                     onChange={(e) => setComparisonBoldActive(e.target.checked)}
                     style={{ marginRight: "8px" }}
                   />
-                  Toggle bold on both examples
+                  Toggle bold to see the difference
                 </label>
 
                 <div style={{ display: "flex", gap: "20px" }}>
@@ -160,7 +107,7 @@
                         color: "#dc3545",
                       }}
                     >
-                      ❌ Without boldTransition (layout shift)
+                      ❌ Normal behavior (layout shift)
                     </h3>
                     <div
                       style={{
@@ -191,7 +138,7 @@
                         color: "#198754",
                       }}
                     >
-                      ✅ With boldTransition (stable)
+                      ✅ With preventBoldLayoutShift (stable)
                     </h3>
                     <div
                       style={{
@@ -201,7 +148,11 @@
                         borderRadius: "6px",
                       }}
                     >
-                      <Text boldTransition noWrap bold={comparisonBoldActive}>
+                      <Text
+                        preventBoldLayoutShift
+                        noWrap
+                        bold={comparisonBoldActive}
+                      >
                         Text that shifts layout when bold
                       </Text>
                       <Text
@@ -214,13 +165,90 @@
                 </div>
               </div>
 
+              <div
+                style={{
+                  padding: "15px",
+                  backgroundColor: "#e7f3ff",
+                  border: "1px solid #b3d9ff",
+                  borderRadius: "6px",
+                  marginBottom: "20px",
+                }}
+              >
+                <p style={{ margin: "0 0 10px 0", fontWeight: "600" }}>
+                  💡 Pro tip:
+                </p>
+                <p style={{ margin: "0" }}>
+                  The <code>boldTransition</code> prop automatically enables
+                  <code>preventBoldLayoutShift</code> and adds smooth
+                  transitions. Use <code>preventBoldLayoutShift</code> alone
+                  when you only want to prevent layout shifts without
+                  transitions.
+                </p>
+              </div>
+
               <p
                 style={{ fontSize: "14px", color: "#666", fontStyle: "italic" }}
               >
                 <strong>Notice:</strong> The red indicator will shift when the
                 left example toggles bold, while the green indicator stays
-                stable with boldTransition. Watch how the colored squares move!
+                stable with preventBoldLayoutShift. Watch how the colored
+                squares move!
               </p>
+            </section>
+
+            {/* Basic Usage */}
+            <section id="basic-usage" style={{ marginBottom: "30px" }}>
+              <h2>🎯 Basic boldTransition Usage</h2>
+              <p>
+                For the best experience, use <code>boldTransition</code> which
+                combines <code>preventBoldLayoutShift</code> with smooth
+                animations. Perfect for interactive elements like buttons and
+                links.
+              </p>
+
+              <div style={{ marginBottom: "20px" }}>
+                <label style={{ display: "block", marginBottom: "10px" }}>
+                  <input
+                    type="checkbox"
+                    checked={basicBoldActive}
+                    onChange={(e) => setBasicBoldActive(e.target.checked)}
+                    style={{ marginRight: "8px" }}
+                  />
+                  Make text bold
+                </label>
+
+                <div
+                  style={{
+                    border: "2px solid #e9ecef",
+                    padding: "16px",
+                    backgroundColor: "#f8f9fa",
+                    borderRadius: "6px",
+                  }}
+                >
+                  <Text boldTransition noWrap bold={basicBoldActive}>
+                    This text transitions smoothly to bold
+                  </Text>
+                  <Text width="16px" height="16px" background="violet"></Text>
+                </div>
+              </div>
+
+              <pre
+                style={{
+                  background: "#f7f7f7",
+                  padding: "10px",
+                  borderRadius: "4px",
+                  fontSize: "12px",
+                  overflowX: "auto",
+                }}
+              >
+                {`<Text 
+  noWrap
+  bold={basicBoldActive}
+  boldTransition
+>
+  This text transitions smoothly to bold
+</Text>`}
+              </pre>
             </section>
 
             {/* Different Lengths */}
@@ -267,7 +295,7 @@
                         borderRadius: "4px",
                       }}
                     >
-                      <Text boldTransition={lengthsBoldActive} noWrap>
+                      <Text boldTransition noWrap bold={lengthsBoldActive}>
                         Short
                       </Text>
                       <Text

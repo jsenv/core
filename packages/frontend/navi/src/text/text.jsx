@@ -49,10 +49,6 @@ import.meta.css = /* css */ `
   .navi_text_bold_foreground {
     position: absolute;
     top: 0;
-    transition-property: font-weight;
-    transition-duration: 0.3s;
-    transition-timing-function: ease;
-
     &[data-align="start"] {
       left: 0;
     }
@@ -62,6 +58,11 @@ import.meta.css = /* css */ `
     }
     &[data-align="end"] {
       right: 0;
+    }
+    &[data-bold-transition] {
+      transition-property: font-weight;
+      transition-duration: 0.3s;
+      transition-timing-function: ease;
     }
   }
 `;
@@ -227,7 +228,11 @@ const TextBasic = ({
         <span className="navi_text_bold_clone" aria-hidden="true">
           {children}
         </span>
-        <span className="navi_text_bold_foreground" data-align={alignX}>
+        <span
+          className="navi_text_bold_foreground"
+          data-align={alignX}
+          data-bold-transition={boldTransition ? "" : undefined}
+        >
           {children}
         </span>
       </span>
