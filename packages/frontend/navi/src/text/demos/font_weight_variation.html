@@ -418,6 +418,21 @@
           </div>
         </div>
 
+        <div
+          style="
+            margin: 12px 0;
+            padding: 10px;
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 4px;
+          "
+        >
+          <strong>Note :</strong> Les polices variables permettent des
+          transitions plus fluides mais ne résolvent pas le problème fondamental
+          : les caractères gras restent plus larges que les normaux, causant
+          toujours des différences de wrapping.
+        </div>
+
         <div class="interactive">
           <label> <input type="checkbox" data-toggle="e" /> Bold </label>
           <div class="constrainer">
@@ -522,9 +537,9 @@
             const value = e.target.value;
             document.documentElement.style.setProperty(
               "--max-width",
-              value + "px",
+              `${value}px`,
             );
-            display.textContent = value + "px";
+            display.textContent = `${value}px`;
           });
         }
       }
