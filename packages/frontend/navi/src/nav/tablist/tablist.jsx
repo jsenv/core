@@ -312,6 +312,8 @@ const TabBasic = ({ children, selected, onClick, ...props }) => {
       data-interactive={onClick ? "" : undefined}
       onClick={onClick}
       paddingX="s"
+      noWrap
+      preventBoldLayoutShift
       // Style system
       baseClassName="navi_tab"
       styleCSSVars={TAB_STYLE_CSS_VARS}
