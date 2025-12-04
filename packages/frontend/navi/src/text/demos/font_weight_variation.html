@@ -376,6 +376,52 @@
         </div>
       </div>
 
+      <!-- EXEMPLE E -->
+      <div class="card ex-e">
+        <div class="technique">Font-variation-settings (Inter Variable)</div>
+
+        <div class="comparison">
+          <div class="version">
+            <div class="version-title">Normal (wght: 400)</div>
+            <div
+              class="demo-text constrainer demo-text-content"
+              style="font-variation-settings: &quot;wght&quot; 400"
+            ></div>
+          </div>
+          <div class="version">
+            <div class="version-title">Bold (wght: 700)</div>
+            <div
+              class="demo-text constrainer demo-text-content"
+              style="font-variation-settings: &quot;wght&quot; 700"
+            ></div>
+          </div>
+        </div>
+
+        <div
+          style="
+            margin: 12px 0;
+            padding: 10px;
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 4px;
+          "
+        >
+          <strong>Note :</strong> Les polices variables permettent des
+          transitions plus fluides mais ne résolvent pas le problème fondamental
+          : les caractères gras restent plus larges que les normaux, causant
+          toujours des différences de wrapping.
+        </div>
+
+        <div class="interactive">
+          <label> <input type="checkbox" data-toggle="e" /> Bold </label>
+          <div class="constrainer">
+            <div class="smooth">
+              <span class="text demo-text-content" id="e-text"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- CONCLUSION INTERMEDIAIRE -->
       <div
         style="
@@ -389,12 +435,23 @@
         <h3 style="margin: 0 0 12px; font-size: 16px; color: #dc3545">
           Problème fondamental
         </h3>
-        <p style="margin: 0; color: #374151; line-height: 1.5">
+        <p style="margin: 0 0 12px; color: #374151; line-height: 1.5">
           Le problème des transitions de font-weight est
           <strong>insolvable avec du texte sur plusieurs lignes</strong>. Dès
           qu'un wrapping peut survenir, les versions normal et bold auront des
           retours à la ligne différents, causant inévitablement des layout
           shifts.
+        </p>
+        <p
+          style="
+            margin: 0;
+            color: #374151;
+            line-height: 1.5;
+            font-style: italic;
+          "
+        >
+          Concentrons-nous donc sur le cas <code>white-space: nowrap</code> où
+          il n'y a pas de retour à la ligne.
         </p>
       </div>
 
@@ -480,78 +537,6 @@
           </div>
         </div>
       </div>
-
-      <!-- EXEMPLE E -->
-      <div class="card ex-e">
-        <div class="technique">Font-variation-settings (Inter Variable)</div>
-
-        <div class="comparison">
-          <div class="version">
-            <div class="version-title">Normal (wght: 400)</div>
-            <div
-              class="demo-text constrainer demo-text-content"
-              style="font-variation-settings: &quot;wght&quot; 400"
-            ></div>
-          </div>
-          <div class="version">
-            <div class="version-title">Bold (wght: 700)</div>
-            <div
-              class="demo-text constrainer demo-text-content"
-              style="font-variation-settings: &quot;wght&quot; 700"
-            ></div>
-          </div>
-        </div>
-
-        <div
-          style="
-            margin: 12px 0;
-            padding: 10px;
-            background: #fff3cd;
-            border: 1px solid #ffeaa7;
-            border-radius: 4px;
-          "
-        >
-          <strong>Note :</strong> Les polices variables permettent des
-          transitions plus fluides mais ne résolvent pas le problème fondamental
-          : les caractères gras restent plus larges que les normaux, causant
-          toujours des différences de wrapping.
-        </div>
-
-        <div class="interactive">
-          <label> <input type="checkbox" data-toggle="e" /> Bold </label>
-          <div class="constrainer">
-            <div class="smooth">
-              <span class="text demo-text-content" id="e-text"></span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div
-      style="
-        margin-top: 32px;
-        padding: 20px;
-        background: #f8f9fa;
-        border-left: 4px solid #1e40af;
-        border-radius: 6px;
-        max-width: 900px;
-        margin-left: auto;
-        margin-right: auto;
-      "
-    >
-      <h3 style="margin: 0 0 12px; font-size: 16px; color: #1e40af">
-        Conclusion
-      </h3>
-      <p style="margin: 0; color: #374151; line-height: 1.5">
-        Avec
-        <code style="background: #e5e7eb; padding: 2px 4px; border-radius: 3px"
-          >white-space: nowrap</code
-        >, les transitions de font-weight deviennent fiables car il n'y a plus
-        de wrapping possible. Cette approche fonctionne même avec du texte
-        centré, mais au prix d'un débordement visible quand le texte est plus
-        large que son conteneur.
-      </p>
     </div>
 
     <script>
