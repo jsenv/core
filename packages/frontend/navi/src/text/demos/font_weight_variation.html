@@ -107,11 +107,14 @@
         border: 1px solid #fecaca;
         border-radius: 6px;
       }
-      .interactive-title {
+      .interactive label {
+        display: block;
         margin-bottom: 8px;
-        color: #dc2626;
         font-weight: 600;
-        font-size: 12px;
+        font-size: 13px;
+      }
+      .interactive input[type="checkbox"] {
+        margin-right: 6px;
       }
       .smooth {
         display: inline-block;
@@ -269,9 +272,6 @@
         </div>
 
         <div class="interactive">
-          <div class="interactive-title">
-            Test : Coche pour voir le décalage
-          </div>
           <label> <input type="checkbox" data-toggle="0" /> Bold </label>
           <div class="smooth wrapper" id="wrap-0">
             <span class="inner">
@@ -317,9 +317,6 @@
         </div>
 
         <div class="interactive">
-          <div class="interactive-title">
-            Test : Coche pour voir le changement de wrapping
-          </div>
           <label> <input type="checkbox" data-toggle="b" /> Bold </label>
           <div class="constrainer">
             <div class="smooth wrapper" id="wrap-b">
@@ -363,9 +360,6 @@
         </div>
 
         <div class="interactive">
-          <div class="interactive-title">
-            Test : Coche pour voir le layout shift
-          </div>
           <label> <input type="checkbox" data-toggle="c" /> Bold </label>
           <div class="constrainer">
             <div class="smooth">
@@ -397,7 +391,6 @@
         </div>
 
         <div class="interactive">
-          <div class="interactive-title">Test : Aucun layout shift</div>
           <label> <input type="checkbox" data-toggle="d" /> Bold </label>
           <div class="smooth wrapper" id="wrap-d">
             <span class="text" id="d-text">Texte_single_line_sans_wrap</span>
@@ -416,9 +409,14 @@
       function init0() {
         const wrapper = $("wrap-0");
         const boldText = $("0-bold");
-        const boldWidth = measure(boldText);
-        wrapper.style.width = `${boldWidth}px`;
-        updateWidths("0");
+        // Attendre que le texte soit rendu avant de mesurer
+        requestAnimationFrame(() => {
+          const boldWidth = measure(boldText);
+          if (boldWidth > 0) {
+            wrapper.style.width = `${boldWidth}px`;
+          }
+          updateWidths("0");
+        });
       }
 
       // Update width displays
