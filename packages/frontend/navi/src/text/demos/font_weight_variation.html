@@ -316,6 +316,34 @@
       .ex-g.active .text-bold {
         opacity: 1;
       }
+
+      /* EXEMPLE H: linear-gradient avec background-clip */
+      .ex-h .wrapper {
+        position: relative;
+        display: block;
+      }
+      .ex-h .text-normal {
+        position: relative;
+        color: currentColor;
+        font-weight: 400;
+        opacity: 1;
+        transition: opacity 0.2s ease;
+      }
+      .ex-h .text-bold {
+        position: absolute;
+        top: 0;
+        left: 0;
+        font-weight: 400;
+        opacity: 0;
+        background: linear-gradient(currentColor, currentColor) no-repeat;
+        background-size: 100% 100%;
+        -webkit-background-clip: text;
+        background-clip: text;
+        transition: opacity 0.2s ease;
+      }
+      .ex-h.active .text-bold {
+        opacity: 1;
+      }
     </style>
   </head>
   <body>
@@ -687,6 +715,53 @@
           </div>
         </div>
       </div>
+
+      <!-- EXEMPLE H -->
+      <div class="card ex-h">
+        <div class="technique">Linear-gradient avec background-clip</div>
+
+        <p style="margin: 0 0 16px; font-size: 13px; color: #666">
+          Utilisation d'un linear-gradient uniforme avec background-clip: text
+          pour créer un effet de bold. Le texte devient transparent et le
+          gradient sert de couleur de fond.
+        </p>
+
+        <div class="comparison">
+          <div class="version">
+            <div class="version-title">Normal (couleur normale)</div>
+            <div class="demo-text normal constrainer demo-text-content"></div>
+          </div>
+          <div class="version">
+            <div class="version-title">Bold (linear-gradient + clip)</div>
+            <div class="demo-text constrainer" style="position: relative">
+              <div
+                class="demo-text-content"
+                style="
+                  position: absolute;
+                  top: 0;
+                  left: 0;
+                  font-weight: 400;
+                  background: linear-gradient(currentColor, currentColor) no-repeat;
+                  background-size: 100% 100%;
+                  -webkit-background-clip: text;
+                  background-clip: text;
+                "
+              ></div>
+              <div class="demo-text-content" style="color: #333"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="interactive">
+          <label> <input type="checkbox" data-toggle="h" /> Bold </label>
+          <div class="constrainer">
+            <div class="smooth" style="position: relative">
+              <span class="text-bold demo-text-content" id="h-bold"></span>
+              <span class="text-normal demo-text-content" id="h-normal"></span>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <script>
@@ -715,6 +790,8 @@
           "f-bold",
           "g-normal",
           "g-bold",
+          "h-normal",
+          "h-bold",
           "e-text",
         ];
         interactiveTexts.forEach((id) => {
