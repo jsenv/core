@@ -68,7 +68,18 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState } from "preact/hooks";
-      import { Box, Title, Text, TabList, Tab, Link } from "@jsenv/navi";
+      import {
+        Box,
+        Title,
+        Text,
+        TabList,
+        Tab,
+        Link,
+        Icon,
+        HomeSvg,
+        UserSvg,
+        SettingsSvg,
+      } from "@jsenv/navi";
 
       const Demo = () => {
         return (
@@ -159,40 +170,55 @@
 
       const VerticalTabsWithIcons = () => {
         const [activeIconTab, setActiveIconTab] = useState("home");
-        const iconTabs = [
-          { key: "home", label: "Home", icon: "🏠" },
-          { key: "profile", label: "Profile", icon: "👤" },
-          { key: "messages", label: "Messages", icon: "💬" },
-          { key: "notifications", label: "Notifications", icon: "🔔" },
-          { key: "settings", label: "Settings", icon: "⚙️" },
-        ];
 
         return (
           <Box as="section" className="demo-section">
             <Title as="h2">Vertical Layout with Icons</Title>
             <Text className="note">
               Vertical tabs can include icons alongside text labels. Here are
-              examples with different icon placements and styling approaches.
+              examples with different icon placements and styling approaches
+              using the Icon component with SVG files.
             </Text>
 
-            <Box row spacing="lg">
+            <Box row spacing="md">
               <Box column spacing="md">
                 <div className="example-block">
+                  <div className="caption">Icons before text</div>
                   <Box border="1px dashed violet" style={{ width: "200px" }}>
                     <TabList vertical spacing="xs" indicator="end">
-                      {iconTabs.map((tab) => (
-                        <Tab
-                          key={tab.key}
-                          selected={tab.key === activeIconTab}
-                          onClick={() => setActiveIconTab(tab.key)}
-                          aria-controls={`icon-panel-${tab.key}`}
-                        >
-                          <Text row spacing="sm" alignY="center">
-                            <Text>{tab.icon}</Text>
-                            <Text>{tab.label}</Text>
-                          </Text>
-                        </Tab>
-                      ))}
+                      <Tab
+                        selected={activeIconTab === "home"}
+                        onClick={() => setActiveIconTab("home")}
+                        aria-controls="icon-panel-home"
+                        column
+                      >
+                        <Icon>
+                          <HomeSvg />
+                        </Icon>
+                        Home
+                      </Tab>
+                      <Tab
+                        selected={activeIconTab === "profile"}
+                        onClick={() => setActiveIconTab("profile")}
+                        aria-controls="icon-panel-profile"
+                        column
+                      >
+                        <Icon>
+                          <UserSvg />
+                        </Icon>
+                        Profile
+                      </Tab>
+                      <Tab
+                        selected={activeIconTab === "settings"}
+                        onClick={() => setActiveIconTab("settings")}
+                        aria-controls="icon-panel-settings"
+                        column
+                      >
+                        <Icon>
+                          <SettingsSvg />
+                        </Icon>
+                        Settings
+                      </Tab>
                     </TabList>
                   </Box>
                 </div>
@@ -201,65 +227,43 @@
               <Box column spacing="md">
                 <div className="example-block">
                   <div className="caption">Icons only</div>
-                  <Box border="1px dashed violet" style={{ width: "80px" }}>
+                  <Box border="1px dashed violet" width="fit-content">
                     <TabList vertical spacing="xs" indicator="end">
-                      {iconTabs.map((tab) => (
-                        <Tab
-                          key={tab.key}
-                          selected={tab.key === activeIconTab}
-                          onClick={() => setActiveIconTab(tab.key)}
-                          aria-controls={`icon-panel-${tab.key}`}
-                          title={tab.label}
-                        >
-                          <Text fontSize="lg">{tab.icon}</Text>
-                        </Tab>
-                      ))}
-                    </TabList>
-                  </Box>
-                </div>
-
-                <div className="example-block">
-                  <div className="caption">Stacked layout</div>
-                  <Box border="1px dashed violet" style={{ width: "120px" }}>
-                    <TabList vertical spacing="xs" indicator="start">
-                      {iconTabs.slice(0, 3).map((tab) => (
-                        <Tab
-                          key={tab.key}
-                          selected={tab.key === activeIconTab}
-                          onClick={() => setActiveIconTab(tab.key)}
-                          aria-controls={`icon-panel-${tab.key}`}
-                          padding="sm"
-                        >
-                          <Text column spacing="xs" alignX="center">
-                            <Text fontSize="lg">{tab.icon}</Text>
-                            <Text fontSize="xs">{tab.label}</Text>
-                          </Text>
-                        </Tab>
-                      ))}
+                      <Tab
+                        selected={activeIconTab === "home"}
+                        onClick={() => setActiveIconTab("home")}
+                        aria-controls="icon-panel-home"
+                        title="Home"
+                      >
+                        <Icon fontSize="lg">
+                          <HomeSvg />
+                        </Icon>
+                      </Tab>
+                      <Tab
+                        selected={activeIconTab === "profile"}
+                        onClick={() => setActiveIconTab("profile")}
+                        aria-controls="icon-panel-profile"
+                        title="Profile"
+                      >
+                        <Icon fontSize="lg">
+                          <UserSvg />
+                        </Icon>
+                      </Tab>
+                      <Tab
+                        selected={activeIconTab === "settings"}
+                        onClick={() => setActiveIconTab("settings")}
+                        aria-controls="icon-panel-settings"
+                        title="Settings"
+                      >
+                        <Icon fontSize="lg">
+                          <SettingsSvg />
+                        </Icon>
+                      </Tab>
                     </TabList>
                   </Box>
                 </div>
               </Box>
             </Box>
-
-            <div
-              className="dynamic-panel"
-              id={`icon-panel-${activeIconTab}`}
-              role="tabpanel"
-              style={{ marginTop: "20px" }}
-            >
-              <Text row spacing="sm" alignY="center">
-                <Text fontSize="lg">
-                  {iconTabs.find((t) => t.key === activeIconTab)?.icon}
-                </Text>
-                <Text>
-                  <strong>
-                    {iconTabs.find((t) => t.key === activeIconTab)?.label}
-                  </strong>{" "}
-                  panel content
-                </Text>
-              </Text>
-            </div>
           </Box>
         );
       };
