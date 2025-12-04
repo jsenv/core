@@ -77,6 +77,7 @@
             <BasicTabs />
             <UnderlineInteractiveTabs />
             <VerticalTabs />
+            <VerticalTabsWithIcons />
             <SpacingVariants />
             <StylingVariables />
             <DynamicAddRemove />
@@ -151,6 +152,113 @@
                   ))}
                 </TabList>
               </Box>
+            </div>
+          </Box>
+        );
+      };
+
+      const VerticalTabsWithIcons = () => {
+        const [activeIconTab, setActiveIconTab] = useState("home");
+        const iconTabs = [
+          { key: "home", label: "Home", icon: "🏠" },
+          { key: "profile", label: "Profile", icon: "👤" },
+          { key: "messages", label: "Messages", icon: "💬" },
+          { key: "notifications", label: "Notifications", icon: "🔔" },
+          { key: "settings", label: "Settings", icon: "⚙️" },
+        ];
+
+        return (
+          <Box as="section" className="demo-section">
+            <Title as="h2">Vertical Layout with Icons</Title>
+            <Text className="note">
+              Vertical tabs can include icons alongside text labels. Here are
+              examples with different icon placements and styling approaches.
+            </Text>
+
+            <Box row spacing="lg">
+              <Box column spacing="md">
+                <div className="example-block">
+                  <Box border="1px dashed violet" style={{ width: "200px" }}>
+                    <TabList vertical spacing="xs" indicator="end">
+                      {iconTabs.map((tab) => (
+                        <Tab
+                          key={tab.key}
+                          selected={tab.key === activeIconTab}
+                          onClick={() => setActiveIconTab(tab.key)}
+                          aria-controls={`icon-panel-${tab.key}`}
+                        >
+                          <Text row spacing="sm" alignY="center">
+                            <Text>{tab.icon}</Text>
+                            <Text>{tab.label}</Text>
+                          </Text>
+                        </Tab>
+                      ))}
+                    </TabList>
+                  </Box>
+                </div>
+              </Box>
+
+              <Box column spacing="md">
+                <div className="example-block">
+                  <div className="caption">Icons only</div>
+                  <Box border="1px dashed violet" style={{ width: "80px" }}>
+                    <TabList vertical spacing="xs" indicator="end">
+                      {iconTabs.map((tab) => (
+                        <Tab
+                          key={tab.key}
+                          selected={tab.key === activeIconTab}
+                          onClick={() => setActiveIconTab(tab.key)}
+                          aria-controls={`icon-panel-${tab.key}`}
+                          title={tab.label}
+                        >
+                          <Text fontSize="lg">{tab.icon}</Text>
+                        </Tab>
+                      ))}
+                    </TabList>
+                  </Box>
+                </div>
+
+                <div className="example-block">
+                  <div className="caption">Stacked layout</div>
+                  <Box border="1px dashed violet" style={{ width: "120px" }}>
+                    <TabList vertical spacing="xs" indicator="start">
+                      {iconTabs.slice(0, 3).map((tab) => (
+                        <Tab
+                          key={tab.key}
+                          selected={tab.key === activeIconTab}
+                          onClick={() => setActiveIconTab(tab.key)}
+                          aria-controls={`icon-panel-${tab.key}`}
+                          padding="sm"
+                        >
+                          <Text column spacing="xs" alignX="center">
+                            <Text fontSize="lg">{tab.icon}</Text>
+                            <Text fontSize="xs">{tab.label}</Text>
+                          </Text>
+                        </Tab>
+                      ))}
+                    </TabList>
+                  </Box>
+                </div>
+              </Box>
+            </Box>
+
+            <div
+              className="dynamic-panel"
+              id={`icon-panel-${activeIconTab}`}
+              role="tabpanel"
+              style={{ marginTop: "20px" }}
+            >
+              <Text row spacing="sm" alignY="center">
+                <Text fontSize="lg">
+                  {iconTabs.find((t) => t.key === activeIconTab)?.icon}
+                </Text>
+                <Text>
+                  <strong>
+                    {iconTabs.find((t) => t.key === activeIconTab)?.label}
+                  </strong>{" "}
+                  panel content
+                </Text>
+              </Text>
             </div>
           </Box>
         );
