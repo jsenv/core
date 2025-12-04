@@ -2,7 +2,7 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>Text boldClone Demo</title>
+    <title>Font Weight No Layout Shift Demo</title>
   </head>
   <body>
     <div id="app"></div>
@@ -24,11 +24,12 @@
               fontFamily: "system-ui, sans-serif",
             }}
           >
-            <h1>Text boldClone Demo</h1>
+            <h1>Font Weight - No Layout Shift Demo</h1>
             <p>
-              The <code>boldClone</code> prop on Text components prevents layout
+              The <code>boldTransition</code> prop on Text components prevents layout
               shifts when transitioning to bold by using an invisible bold clone
-              to reserve space. Only works with <code>noWrap</code> text.
+              to reserve space. As a bonus, it enables smooth bold transitions.
+              Only works with <code>noWrap</code> text.
             </p>
 
             {/* Table of Contents */}
@@ -54,12 +55,12 @@
                 >
                   <li>
                     <Link href="#basic-usage" textColor="#007bff">
-                      Basic boldClone Usage
+                      Basic boldTransition Usage
                     </Link>
                   </li>
                   <li>
                     <Link href="#comparison" textColor="#007bff">
-                      With vs Without boldClone
+                      With vs Without boldTransition
                     </Link>
                   </li>
                   <li>
@@ -78,11 +79,10 @@
 
             {/* Basic Usage */}
             <section id="basic-usage" style={{ marginBottom: "30px" }}>
-              <h2>🎯 Basic boldClone Usage</h2>
+              <h2>🎯 Basic boldTransition Usage</h2>
               <p>
-                The simplest case: a Text component with <code>boldClone</code>{" "}
-                and
-                <code>noWrap</code> that transitions smoothly to bold without
+                The simplest case: a Text component with <code>boldTransition</code>{" "}
+                and <code>noWrap</code> that transitions smoothly to bold without
                 layout shifts.
               </p>
 
@@ -133,10 +133,10 @@
 
             {/* Comparison */}
             <section id="comparison" style={{ marginBottom: "30px" }}>
-              <h2>⚡ With vs Without boldClone</h2>
+              <h2>⚡ With vs Without boldTransition</h2>
               <p>
                 Side-by-side comparison showing the layout shift that happens
-                without <code>boldClone</code> vs the stable layout with it.
+                without <code>boldTransition</code> vs the stable layout with it.
               </p>
 
               <div style={{ marginBottom: "20px" }}>
@@ -159,7 +159,7 @@
                         color: "#dc3545",
                       }}
                     >
-                      ❌ Without boldClone (layout shift)
+                      ❌ Without boldTransition (layout shift)
                     </h3>
                     <div
                       style={{
@@ -190,7 +190,7 @@
                         color: "#198754",
                       }}
                     >
-                      ✅ With boldClone (stable)
+                      ✅ With boldTransition (stable)
                     </h3>
                     <div
                       style={{
@@ -218,7 +218,7 @@
               >
                 <strong>Notice:</strong> The red indicator will shift when the
                 left example toggles bold, while the green indicator stays
-                stable with boldClone. Watch how the colored squares move!
+                stable with boldTransition. Watch how the colored squares move!
               </p>
             </section>
 
@@ -226,7 +226,7 @@
             <section id="different-lengths" style={{ marginBottom: "30px" }}>
               <h2>📏 Different Text Lengths</h2>
               <p>
-                Testing <code>boldClone</code> behavior with various text
+                Testing <code>boldTransition</code> behavior with various text
                 lengths to ensure it works consistently.
               </p>
 
@@ -325,7 +325,7 @@
                       }}
                     >
                       <Text boldTransition noWrap bold={lengthsBoldActive}>
-                        This is a much longer text that tests the boldClone
+                        This is a much longer text that tests the boldTransition
                         behavior with extended content
                       </Text>
                       <Text width="16px" height="16px" background="blue"></Text>
@@ -339,7 +339,7 @@
             <section id="text-alignments" style={{ marginBottom: "30px" }}>
               <h2>🎯 Different Text Alignments</h2>
               <p>
-                Testing how <code>boldClone</code> works with different text
+                Testing how <code>boldTransition</code> works with different text
                 alignments. The technique includes automatic centering for
                 smooth transitions.
               </p>
@@ -459,7 +459,7 @@
               <p
                 style={{ fontSize: "14px", color: "#666", fontStyle: "italic" }}
               >
-                <strong>Note:</strong> The boldClone technique automatically
+                <strong>Note:</strong> The boldTransition technique automatically
                 centers the text overlay to give the impression that the bold
                 effect applies from the center, regardless of container
                 alignment.
@@ -468,7 +468,7 @@
 
             {/* Technical Details */}
             <section style={{ marginBottom: "30px" }}>
-              <h2>⚙️ How boldClone Works</h2>
+              <h2>⚙️ How boldTransition Works</h2>
               <div
                 style={{
                   padding: "20px",
@@ -478,7 +478,7 @@
                 }}
               >
                 <p style={{ margin: "0 0 15px 0" }}>
-                  The <code>boldClone</code> technique uses a clever CSS
+                  The <code>boldTransition</code> technique uses a clever CSS
                   approach:
                 </p>
                 <ol style={{ margin: "0 0 15px 20px", lineHeight: "1.6" }}>
