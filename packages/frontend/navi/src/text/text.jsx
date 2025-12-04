@@ -46,10 +46,12 @@ import.meta.css = /* css */ `
     font-weight: bold;
     opacity: 0;
   }
-  .navi_text_foreground {
+  .navi_text_bold_foreground {
     position: absolute;
     top: 0;
     transition-property: font-weight;
+    transition-duration: 0.3s;
+    transition-timing-function: ease;
 
     &[data-align="start"] {
       left: 0;
@@ -199,7 +201,13 @@ const TextWithSelectRange = ({ selectRange, ...props }) => {
   useInitialTextSelection(ref, selectRange);
   return <Text ref={ref} {...props}></Text>;
 };
-const TextBasic = ({ spacing = " ", boldClone, children, ...rest }) => {
+const TextBasic = ({
+  spacing = " ",
+  boldTransition,
+  boldClone = boldTransition,
+  children,
+  ...rest
+}) => {
   const shouldPreserveSpacing =
     rest.as === "pre" || rest.box || rest.column || rest.row;
   if (!shouldPreserveSpacing) {
@@ -219,7 +227,7 @@ const TextBasic = ({ spacing = " ", boldClone, children, ...rest }) => {
         <span className="navi_text_bold_clone" aria-hidden="true">
           {children}
         </span>
-        <span className="navi_text_foreground" data-align={alignX}>
+        <span className="navi_text_bold_foreground" data-align={alignX}>
           {children}
         </span>
       </span>
