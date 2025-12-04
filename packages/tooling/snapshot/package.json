@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/snapshot",
-  "version": "2.15.24",
+  "version": "2.15.25",
   "description": "Snapshot testing",
   "repository": {
     "type": "git",
@@ -25,7 +25,7 @@
     "/src/"
   ],
   "dependencies": {
-    "@jsenv/assert": "4.5.4",
+    "@jsenv/assert": "4.5.5",
     "@jsenv/ast": "6.7.17",
     "@jsenv/exception": "1.2.1",
     "@jsenv/filesystem": "4.15.10",

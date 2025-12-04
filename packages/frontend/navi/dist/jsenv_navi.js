@@ -318,85 +318,95 @@ const getSignalType = (value) => {
  */
 const SYMBOL_IDENTITY = Symbol.for("navi_object_identity");
 
-const compareTwoJsValues = (a, b, seenSet = new Set()) => {
-  if (a === b) {
-    return true;
-  }
-  const aIsIsTruthy = Boolean(a);
-  const bIsTruthy = Boolean(b);
-  if (aIsIsTruthy && !bIsTruthy) {
-    return false;
-  }
-  if (!aIsIsTruthy && !bIsTruthy) {
-    // null, undefined, 0, false, NaN
-    if (isNaN(a) && isNaN(b)) {
+const compareTwoJsValues = (rootA, rootB, { keyComparator } = {}) => {
+  const seenSet = new Set();
+  const compare = (a, b) => {
+    if (a === b) {
       return true;
     }
-    return a === b;
-  }
-  const aType = typeof a;
-  const bType = typeof b;
-  if (aType !== bType) {
-    return false;
-  }
-  const aIsPrimitive =
-    a === null || (aType !== "object" && aType !== "function");
-  const bIsPrimitive =
-    b === null || (bType !== "object" && bType !== "function");
-  if (aIsPrimitive !== bIsPrimitive) {
-    return false;
-  }
-  if (aIsPrimitive && bIsPrimitive) {
-    return a === b;
-  }
-  if (seenSet.has(a)) {
-    return false;
-  }
-  if (seenSet.has(b)) {
-    return false;
-  }
-  seenSet.add(a);
-  seenSet.add(b);
-  const aIsArray = Array.isArray(a);
-  const bIsArray = Array.isArray(b);
-  if (aIsArray !== bIsArray) {
-    return false;
-  }
-  if (aIsArray) {
-    // compare arrays
-    if (a.length !== b.length) {
+    const aIsIsTruthy = Boolean(a);
+    const bIsTruthy = Boolean(b);
+    if (aIsIsTruthy && !bIsTruthy) {
       return false;
     }
-    let i = 0;
-    while (i < a.length) {
-      const aValue = a[i];
-      const bValue = b[i];
-      if (!compareTwoJsValues(aValue, bValue, seenSet)) {
+    if (!aIsIsTruthy && !bIsTruthy) {
+      // null, undefined, 0, false, NaN
+      if (isNaN(a) && isNaN(b)) {
+        return true;
+      }
+      return a === b;
+    }
+    const aType = typeof a;
+    const bType = typeof b;
+    if (aType !== bType) {
+      return false;
+    }
+    const aIsPrimitive =
+      a === null || (aType !== "object" && aType !== "function");
+    const bIsPrimitive =
+      b === null || (bType !== "object" && bType !== "function");
+    if (aIsPrimitive !== bIsPrimitive) {
+      return false;
+    }
+    if (aIsPrimitive && bIsPrimitive) {
+      return a === b;
+    }
+    if (seenSet.has(a)) {
+      return false;
+    }
+    if (seenSet.has(b)) {
+      return false;
+    }
+    seenSet.add(a);
+    seenSet.add(b);
+    const aIsArray = Array.isArray(a);
+    const bIsArray = Array.isArray(b);
+    if (aIsArray !== bIsArray) {
+      return false;
+    }
+    if (aIsArray) {
+      // compare arrays
+      if (a.length !== b.length) {
         return false;
       }
-      i++;
+      let i = 0;
+      while (i < a.length) {
+        const aValue = a[i];
+        const bValue = b[i];
+        const comparator = keyComparator || compare;
+        if (!comparator(aValue, bValue, i, compare)) {
+          return false;
+        }
+        i++;
+      }
+      return true;
     }
-    return true;
-  }
-  // compare objects
-  const aIdentity = a[SYMBOL_IDENTITY];
-  const bIdentity = b[SYMBOL_IDENTITY];
-  if (aIdentity === bIdentity && SYMBOL_IDENTITY in a && SYMBOL_IDENTITY in b) {
-    return true;
-  }
-  const aKeys = Object.keys(a);
-  const bKeys = Object.keys(b);
-  if (aKeys.length !== bKeys.length) {
-    return false;
-  }
-  for (const key of aKeys) {
-    const aValue = a[key];
-    const bValue = b[key];
-    if (!compareTwoJsValues(aValue, bValue, seenSet)) {
+    // compare objects
+    const aIdentity = a[SYMBOL_IDENTITY];
+    const bIdentity = b[SYMBOL_IDENTITY];
+    if (
+      aIdentity === bIdentity &&
+      SYMBOL_IDENTITY in a &&
+      SYMBOL_IDENTITY in b
+    ) {
+      return true;
+    }
+    const aKeys = Object.keys(a);
+    const bKeys = Object.keys(b);
+    if (aKeys.length !== bKeys.length) {
       return false;
     }
-  }
-  return true;
+    for (const key of aKeys) {
+      const aValue = a[key];
+      const bValue = b[key];
+      const comparator = keyComparator || compare;
+      if (!comparator(aValue, bValue, key, compare)) {
+        return false;
+      }
+    }
+    return true;
+  };
+  return compare(rootA, rootB);
 };
 
 /**
@@ -1247,8 +1257,8 @@ ${lines.join("\n")}`);
   };
 };
 
-const NO_PARAMS$1 = {};
-const initialParamsDefault = NO_PARAMS$1;
+const NO_PARAMS = {};
+const initialParamsDefault = NO_PARAMS;
 
 const actionWeakMap = new WeakMap();
 const createAction = (callback, rootOptions = {}) => {
@@ -1855,7 +1865,7 @@ const createActionProxyFromSignal = (
   const _updateTarget = (params) => {
     const previousActionTarget = actionTargetPreviousWeakRef?.deref();
 
-    if (params === NO_PARAMS$1) {
+    if (params === NO_PARAMS) {
       actionTarget = null;
       currentAction = action;
       currentActionPrivateProperties = getActionPrivateProperties(action);
@@ -2060,7 +2070,7 @@ const createActionProxyFromSignal = (
 };
 
 const generateActionName = (name, params) => {
-  if (params === NO_PARAMS$1) {
+  if (params === NO_PARAMS) {
     return `${name}({})`;
   }
   // Use stringifyForDisplay with asFunctionArgs option for the entire args array
@@ -4734,7 +4744,7 @@ const DIMENSION_PROPS = {
       return null;
     }
     if (parentBoxFlow === "column" || parentBoxFlow === "inline-column") {
-      return { flexGrow: 1 }; // Grow horizontally in row
+      return { flexGrow: 1, flexBasis: "0%" }; // Grow horizontally in row
     }
     if (parentBoxFlow === "row") {
       return { minWidth: "100%", width: "auto" }; // Take full width in column
@@ -4749,7 +4759,7 @@ const DIMENSION_PROPS = {
       return { minHeight: "100%", height: "auto" }; // Make column full height
     }
     if (parentBoxFlow === "row" || parentBoxFlow === "inline-row") {
-      return { flexGrow: 1 }; // Make row full height
+      return { flexGrow: 1, flexBasis: "0%" }; // Make row full height
     }
     return { minHeight: "100%", height: "auto" }; // Take full height outside flex
   },
@@ -4933,6 +4943,9 @@ const VISUAL_PROPS = {
   filter: PASS_THROUGH,
   cursor: PASS_THROUGH,
   transition: PASS_THROUGH,
+  overflow: PASS_THROUGH,
+  overflowX: PASS_THROUGH,
+  overflowY: PASS_THROUGH,
 };
 const CONTENT_PROPS = {
   align: applyOnTwoProps("alignX", "alignY"),
@@ -7173,18 +7186,6 @@ const useUITransitionContentId = value => {
   }, []);
 };
 
-/**
- *
- *
- */
-
-
-let baseUrl = window.location.origin;
-
-const setBaseUrl = (value) => {
-  baseUrl = new URL(value, window.location).href;
-};
-
 const rawUrlPartSymbol = Symbol("raw_url_part");
 const rawUrlPart = (value) => {
   return {
@@ -7192,7 +7193,330 @@ const rawUrlPart = (value) => {
     value,
   };
 };
-const NO_PARAMS = { [SYMBOL_IDENTITY]: Symbol("no_params") };
+
+const removeOptionalParts = (url) => {
+  // Only remove optional parts that still have ? (weren't replaced with actual values)
+  // Find the first unused optional part and remove everything from there onwards
+  let result = url;
+
+  // Find the first occurrence of an unused optional part (still has ?)
+  const optionalPartMatch = result.match(/(\/?\*|\/:[^/?]*|\{[^}]*\})\?/);
+
+  if (optionalPartMatch) {
+    // Remove everything from the start of the first unused optional part
+    const optionalStartIndex = optionalPartMatch.index;
+    result = result.substring(0, optionalStartIndex);
+
+    // Clean up trailing slashes
+    result = result.replace(/\/$/, "");
+  }
+
+  return result;
+};
+
+const buildRouteRelativeUrl = (
+  urlPatternInput,
+  params,
+  { extraParamEffect = "inject_as_search_param" } = {},
+) => {
+  let relativeUrl = urlPatternInput;
+  let hasRawUrlPartWithInvalidChars = false;
+  let stringQueryParams = "";
+
+  // Handle string params (query string) - store for later appending
+  if (typeof params === "string") {
+    stringQueryParams = params;
+    // Remove leading ? if present for processing
+    if (stringQueryParams.startsWith("?")) {
+      stringQueryParams = stringQueryParams.slice(1);
+    }
+    // Set params to empty object so the rest of the function processes the URL pattern
+    params = null;
+  }
+
+  // Encode parameter values for URL usage, with special handling for raw URL parts.
+  // When a parameter is wrapped with rawUrlPart(), it bypasses encoding and is
+  // inserted as-is into the URL. This allows including pre-encoded values or
+  // special characters that should not be percent-encoded.
+  const encodeParamValue = (value) => {
+    if (value && value[rawUrlPartSymbol]) {
+      const rawValue = value.value;
+      // Check if raw value contains invalid URL characters
+      if (/[\s<>{}|\\^`]/.test(rawValue)) {
+        hasRawUrlPartWithInvalidChars = true;
+      }
+      return rawValue;
+    }
+    return encodeURIComponent(value);
+  };
+  const extraParamMap = new Map();
+  if (params) {
+    const keys = Object.keys(params);
+    // Replace named parameters (:param and {param}) and remove optional markers
+    for (const key of keys) {
+      const value = params[key];
+      const encodedValue = encodeParamValue(value);
+      const beforeReplace = relativeUrl;
+
+      // Replace parameter and remove optional marker if present
+      relativeUrl = relativeUrl.replace(`:${key}?`, encodedValue);
+      relativeUrl = relativeUrl.replace(`:${key}`, encodedValue);
+      relativeUrl = relativeUrl.replace(`{${key}}?`, encodedValue);
+      relativeUrl = relativeUrl.replace(`{${key}}`, encodedValue);
+
+      // If the URL did not change we'll maybe delete that param
+      if (relativeUrl === beforeReplace) {
+        extraParamMap.set(key, value);
+      }
+    }
+    // Handle complex optional groups like {/time/:duration}?
+    // Replace parameters inside optional groups and remove the optional marker
+    relativeUrl = relativeUrl.replace(/\{([^}]*)\}\?/g, (match, group) => {
+      let processedGroup = group;
+      let hasReplacements = false;
+
+      // Check if any parameters in the group were provided
+      for (const key of keys) {
+        if (params[key] !== undefined) {
+          const encodedValue = encodeParamValue(params[key]);
+          const paramPattern = new RegExp(`:${key}\\b`);
+          if (paramPattern.test(processedGroup)) {
+            processedGroup = processedGroup.replace(paramPattern, encodedValue);
+            hasReplacements = true;
+            extraParamMap.delete(key);
+          }
+        }
+      }
+
+      // Also check for literal parts that match parameter names (like /time where time is a param)
+      for (const key of keys) {
+        if (params[key] !== undefined) {
+          const encodedValue = encodeParamValue(params[key]);
+          // Check for literal parts like /time that match parameter names
+          const literalPattern = new RegExp(`\\/${key}\\b`);
+          if (literalPattern.test(processedGroup)) {
+            processedGroup = processedGroup.replace(
+              literalPattern,
+              `/${encodedValue}`,
+            );
+            hasReplacements = true;
+            extraParamMap.delete(key);
+          }
+        }
+      }
+
+      // If we made replacements, include the group (without the optional marker)
+      // If no replacements, return empty string (remove the optional group)
+      return hasReplacements ? processedGroup : "";
+    });
+  }
+
+  // Clean up any double slashes or trailing slashes that might result
+  relativeUrl = relativeUrl.replace(/\/+/g, "/").replace(/\/$/, "");
+
+  // Handle remaining wildcards
+  if (params) {
+    let wildcardIndex = 0;
+    relativeUrl = relativeUrl.replace(/\*/g, () => {
+      const paramKey = wildcardIndex.toString();
+      const paramValue = params[paramKey];
+      if (paramValue) {
+        extraParamMap.delete(paramKey);
+      }
+      const replacement = paramValue ? encodeParamValue(paramValue) : "*";
+      wildcardIndex++;
+      return replacement;
+    });
+  }
+
+  // Handle optional parts after parameter replacement
+  // This includes patterns like /*?, {/time/*}?, :param?, etc.
+  relativeUrl = removeOptionalParts(relativeUrl);
+  // we did not replace anything, or not enough to remove the last "*"
+  if (relativeUrl.endsWith("*")) {
+    relativeUrl = relativeUrl.slice(0, -1);
+  }
+
+  // Normalize trailing slash: always favor URLs without trailing slash
+  // except for root path which should remain "/"
+  if (relativeUrl.endsWith("/") && relativeUrl.length > 1) {
+    relativeUrl = relativeUrl.slice(0, -1);
+  }
+
+  // Add remaining parameters as search params
+  if (extraParamMap.size > 0) {
+    if (extraParamEffect === "inject_as_search_param") {
+      const searchParamPairs = [];
+      for (const [key, value] of extraParamMap) {
+        if (value !== undefined && value !== null) {
+          const encodedKey = encodeURIComponent(key);
+          // Handle boolean values - if true, just add the key without value
+          if (value === true) {
+            searchParamPairs.push(encodedKey);
+          } else {
+            const encodedValue = encodeParamValue(value);
+            searchParamPairs.push(`${encodedKey}=${encodedValue}`);
+          }
+        }
+      }
+      if (searchParamPairs.length > 0) {
+        const searchString = searchParamPairs.join("&");
+        relativeUrl += (relativeUrl.includes("?") ? "&" : "?") + searchString;
+      }
+    } else if (extraParamEffect === "warn") {
+      console.warn(
+        `Unknown parameters given to "${urlPatternInput}":`,
+        Array.from(extraParamMap.keys()),
+      );
+    }
+  }
+
+  // Append string query params if any
+  if (stringQueryParams) {
+    relativeUrl += (relativeUrl.includes("?") ? "&" : "?") + stringQueryParams;
+  }
+
+  return {
+    relativeUrl,
+    hasRawUrlPartWithInvalidChars,
+  };
+};
+
+const createRoutePattern = (urlPatternInput, baseUrl) => {
+  // Remove leading slash from urlPattern to make it relative to baseUrl
+  const normalizedUrlPattern = urlPatternInput.startsWith("/")
+    ? urlPatternInput.slice(1)
+    : urlPatternInput;
+  const urlPattern = new URLPattern(normalizedUrlPattern, baseUrl, {
+    ignoreCase: true,
+  });
+
+  // Analyze pattern once to detect optional params (named and wildcard indices)
+  // Note: Wildcard indices are stored as strings ("0", "1", ...) to match keys from extractParams
+  const optionalParamKeySet = new Set();
+  normalizedUrlPattern.replace(/:([A-Za-z0-9_]+)\?/g, (_m, name) => {
+    optionalParamKeySet.add(name);
+    return "";
+  });
+  let wildcardIndex = 0;
+  normalizedUrlPattern.replace(/\*(\?)?/g, (_m, opt) => {
+    if (opt === "?") {
+      optionalParamKeySet.add(String(wildcardIndex));
+    }
+    wildcardIndex++;
+    return "";
+  });
+
+  const applyOn = (url) => {
+
+    // Check if the URL matches the route pattern
+    const match = urlPattern.exec(url);
+    if (match) {
+      return extractParams(match, url);
+    }
+
+    // If no match, try with normalized URLs (trailing slash handling)
+    const urlObj = new URL(url, baseUrl);
+    const pathname = urlObj.pathname;
+
+    // Try removing trailing slash from pathname
+    if (pathname.endsWith("/") && pathname.length > 1) {
+      const pathnameWithoutSlash = pathname.slice(0, -1);
+      urlObj.pathname = pathnameWithoutSlash;
+      const normalizedUrl = urlObj.href;
+      const matchWithoutTrailingSlash = urlPattern.exec(normalizedUrl);
+      if (matchWithoutTrailingSlash) {
+        return extractParams(matchWithoutTrailingSlash, url);
+      }
+    }
+    // Try adding trailing slash to pathname
+    else if (!pathname.endsWith("/")) {
+      const pathnameWithSlash = `${pathname}/`;
+      urlObj.pathname = pathnameWithSlash;
+      const normalizedUrl = urlObj.href;
+      const matchWithTrailingSlash = urlPattern.exec(normalizedUrl);
+      if (matchWithTrailingSlash) {
+        return extractParams(matchWithTrailingSlash, url);
+      }
+    }
+    return null;
+  };
+
+  const extractParams = (match, originalUrl) => {
+    const params = {};
+
+    // Extract search parameters from the original URL
+    const urlObj = new URL(originalUrl, baseUrl);
+    for (const [key, value] of urlObj.searchParams) {
+      params[key] = value;
+    }
+
+    // Collect all parameters from URLPattern groups, handling both named and numbered groups
+    let wildcardOffset = 0;
+    for (const property of URL_PATTERN_PROPERTIES_WITH_GROUP_SET) {
+      const urlPartMatch = match[property];
+      if (urlPartMatch && urlPartMatch.groups) {
+        let localWildcardCount = 0;
+        for (const key of Object.keys(urlPartMatch.groups)) {
+          const value = urlPartMatch.groups[key];
+          const keyAsNumber = parseInt(key, 10);
+          if (!isNaN(keyAsNumber)) {
+            // Skip group "0" from search params as it captures the entire search string
+            if (property === "search" && key === "0") {
+              continue;
+            }
+            if (value) {
+              // Only include non-empty values and non-ignored wildcard indices
+              const wildcardKey = String(wildcardOffset + keyAsNumber);
+              if (!optionalParamKeySet.has(wildcardKey)) {
+                params[wildcardKey] = decodeURIComponent(value);
+              }
+              localWildcardCount++;
+            }
+          } else if (!optionalParamKeySet.has(key)) {
+            // Named group (:param or {param}) - only include if not ignored
+            params[key] = decodeURIComponent(value);
+          }
+        }
+        // Update wildcard offset for next URL part
+        wildcardOffset += localWildcardCount;
+      }
+    }
+    return params;
+  };
+
+  return {
+    urlPattern,
+    applyOn,
+  };
+};
+
+const URL_PATTERN_PROPERTIES_WITH_GROUP_SET = new Set([
+  "protocol",
+  "username",
+  "password",
+  "hostname",
+  "pathname",
+  "search",
+  "hash",
+]);
+
+/**
+ *
+ *
+ */
+
+
+let baseUrl;
+if (typeof window === "undefined") {
+  baseUrl = "http://localhost/";
+} else {
+  baseUrl = window.location.origin;
+}
+
+const setBaseUrl = (value) => {
+  baseUrl = new URL(value, window.location).href;
+};
 // Controls what happens to actions when their route becomes inactive:
 // 'abort' - Cancel the action immediately when route deactivates
 // 'keep-loading' - Allow action to continue running after route deactivation
@@ -7218,26 +7542,19 @@ const updateRoutes = (
   const routeMatchInfoSet = new Set();
   for (const route of routeSet) {
     const routePrivateProperties = getRoutePrivateProperties(route);
-    const { urlPattern } = routePrivateProperties;
+    const { routePattern } = routePrivateProperties;
 
     // Get previous state
     const previousState = routePreviousStateMap.get(route) || {
       active: false,
-      params: NO_PARAMS,
+      params: null,
     };
     const oldActive = previousState.active;
     const oldParams = previousState.params;
-    // Check if the URL matches the route pattern
-    const match = urlPattern.exec(url);
-    const newActive = Boolean(match);
+    const extractedParams = routePattern.applyOn(url);
+    const newActive = Boolean(extractedParams);
     let newParams;
-    if (match) {
-      const { optionalParamKeySet } = routePrivateProperties;
-      const extractedParams = extractParams(
-        urlPattern,
-        url,
-        optionalParamKeySet,
-      );
+    if (extractedParams) {
       if (compareTwoJsValues(oldParams, extractedParams)) {
         // No change in parameters, keep the old params
         newParams = oldParams;
@@ -7245,7 +7562,7 @@ const updateRoutes = (
         newParams = extractedParams;
       }
     } else {
-      newParams = NO_PARAMS;
+      newParams = null;
     }
 
     const routeMatchInfo = {
@@ -7374,51 +7691,6 @@ const updateRoutes = (
     activeRouteSet,
   };
 };
-const extractParams = (urlPattern, url, ignoreSet = new Set()) => {
-  const match = urlPattern.exec(url);
-  if (!match) {
-    return NO_PARAMS;
-  }
-  const params = {};
-
-  // Collect all parameters from URLPattern groups, handling both named and numbered groups
-  let wildcardOffset = 0;
-  for (const property of URL_PATTERN_PROPERTIES_WITH_GROUP_SET) {
-    const urlPartMatch = match[property];
-    if (urlPartMatch && urlPartMatch.groups) {
-      let localWildcardCount = 0;
-      for (const key of Object.keys(urlPartMatch.groups)) {
-        const value = urlPartMatch.groups[key];
-        const keyAsNumber = parseInt(key, 10);
-        if (!isNaN(keyAsNumber)) {
-          if (value) {
-            // Only include non-empty values and non-ignored wildcard indices
-            const wildcardKey = String(wildcardOffset + keyAsNumber);
-            if (!ignoreSet.has(wildcardKey)) {
-              params[wildcardKey] = decodeURIComponent(value);
-            }
-            localWildcardCount++;
-          }
-        } else if (!ignoreSet.has(key)) {
-          // Named group (:param or {param}) - only include if not ignored
-          params[key] = decodeURIComponent(value);
-        }
-      }
-      // Update wildcard offset for next URL part
-      wildcardOffset += localWildcardCount;
-    }
-  }
-  return params;
-};
-const URL_PATTERN_PROPERTIES_WITH_GROUP_SET = new Set([
-  "protocol",
-  "username",
-  "password",
-  "hostname",
-  "pathname",
-  "search",
-  "hash",
-]);
 
 const routePrivatePropertiesMap = new Map();
 const getRoutePrivateProperties = (route) => {
@@ -7439,7 +7711,7 @@ const createRoute = (urlPatternInput) => {
     urlPattern: urlPatternInput,
     isRoute: true,
     active: false,
-    params: NO_PARAMS,
+    params: null,
     buildUrl: null,
     bindAction: null,
     relativeUrl: null,
@@ -7455,13 +7727,12 @@ const createRoute = (urlPatternInput) => {
   routeSet.add(route);
 
   const routePrivateProperties = {
-    urlPattern: undefined,
+    routePattern: null,
     activeSignal: null,
     paramsSignal: null,
     visitedSignal: null,
     relativeUrlSignal: null,
     urlSignal: null,
-    optionalParamKeySet: null,
     updateStatus: ({ active, params, visited }) => {
       let someChange = false;
       activeSignal.value = active;
@@ -7486,101 +7757,32 @@ const createRoute = (urlPatternInput) => {
   };
   routePrivatePropertiesMap.set(route, routePrivateProperties);
 
-  const buildRelativeUrl = (
-    params = {},
-    { extraParamEffect = "inject_as_search_param" } = {},
-  ) => {
-    let relativeUrl = urlPatternInput;
-    let hasRawUrlPartWithInvalidChars = false;
-
-    // Encode parameter values for URL usage, with special handling for raw URL parts.
-    // When a parameter is wrapped with rawUrlPart(), it bypasses encoding and is
-    // inserted as-is into the URL. This allows including pre-encoded values or
-    // special characters that should not be percent-encoded.
-    const encodeParamValue = (value) => {
-      if (value && value[rawUrlPartSymbol]) {
-        const rawValue = value.value;
-        // Check if raw value contains invalid URL characters
-        if (/[\s<>{}|\\^`]/.test(rawValue)) {
-          hasRawUrlPartWithInvalidChars = true;
-        }
-        return rawValue;
-      }
-      return encodeURIComponent(value);
-    };
-
-    const keys = Object.keys(params);
-    const extraParamSet = new Set(keys);
-
-    // Replace named parameters (:param and {param})
-    for (const key of keys) {
-      const value = params[key];
-      const encodedValue = encodeParamValue(value);
-      const beforeReplace = relativeUrl;
-      relativeUrl = relativeUrl.replace(`:${key}`, encodedValue);
-      relativeUrl = relativeUrl.replace(`{${key}}`, encodedValue);
-      // If the URL changed, no need to inject this param
-      if (relativeUrl !== beforeReplace) {
-        extraParamSet.delete(key);
-      }
-    }
-
-    // Handle wildcards: if the pattern ends with /*? (optional wildcard)
-    // always remove the wildcard part for URL building since it's optional
-    if (relativeUrl.endsWith("/*?")) {
-      // Always remove the optional wildcard part for URL building
-      relativeUrl = relativeUrl.slice(0, -"/*?".length);
-    } else if (relativeUrl.endsWith("{/}?*")) {
-      relativeUrl = relativeUrl.slice(0, -"{/}?*".length);
-    } else {
-      // For required wildcards (/*) or other patterns, replace normally
-      let wildcardIndex = 0;
-      relativeUrl = relativeUrl.replace(/\*/g, () => {
-        const paramKey = wildcardIndex.toString();
-        const paramValue = params[paramKey];
-        if (paramValue) {
-          extraParamSet.delete(paramKey);
-        }
-        const replacement = paramValue ? encodeParamValue(paramValue) : "*";
-        wildcardIndex++;
-        return replacement;
-      });
-      // we did not replace anything, or not enough to remove the last "*"
-      if (relativeUrl.endsWith("*")) {
-        relativeUrl = relativeUrl.slice(0, -1);
-      }
-    }
-
-    // Add remaining parameters as search params
-    if (extraParamSet.size > 0) {
-      if (extraParamEffect === "inject_as_search_param") {
-        const searchParamPairs = [];
-        for (const key of extraParamSet) {
-          const value = params[key];
-          if (value !== undefined && value !== null) {
-            const encodedKey = encodeURIComponent(key);
-            const encodedValue = encodeParamValue(value);
-            searchParamPairs.push(`${encodedKey}=${encodedValue}`);
-          }
-        }
-        if (searchParamPairs.length > 0) {
-          const searchString = searchParamPairs.join("&");
-          relativeUrl += (relativeUrl.includes("?") ? "&" : "?") + searchString;
-        }
-      } else if (extraParamEffect === "warn") {
-        console.warn(
-          `Unknown parameters given to "${urlPatternInput}":`,
-          Array.from(extraParamSet),
-        );
-      }
-    }
-
-    return {
-      relativeUrl,
-      hasRawUrlPartWithInvalidChars,
-    };
+  const buildRelativeUrl = (params, options) =>
+    buildRouteRelativeUrl(urlPatternInput, params, options);
+  route.buildRelativeUrl = (params, options) => {
+    const { relativeUrl } = buildRelativeUrl(params, options);
+    return relativeUrl;
   };
-  route.buildRelativeUrl = buildRelativeUrl;
+
+  route.matchesParams = (otherParams) => {
+    const params = route.params;
+    const paramsIsFalsyOrEmpty = !params || Object.keys(params).length === 0;
+    const otherParamsFalsyOrEmpty =
+      !otherParams || Object.keys(otherParams).length === 0;
+    if (paramsIsFalsyOrEmpty) {
+      return otherParamsFalsyOrEmpty;
+    }
+    if (otherParamsFalsyOrEmpty) {
+      return false;
+    }
+    const paramsWithoutWildcards = {};
+    for (const key of Object.keys(params)) {
+      if (!Number.isInteger(Number(key))) {
+        paramsWithoutWildcards[key] = params[key];
+      }
+    }
+    return compareTwoJsValues(paramsWithoutWildcards, otherParams);
+  };
 
   /**
    * Builds a complete URL for this route with the given parameters.
@@ -7608,7 +7810,7 @@ const createRoute = (urlPatternInput) => {
       processedRelativeUrl = processedRelativeUrl.slice(1);
     }
     if (hasRawUrlPartWithInvalidChars) {
-      return `${baseUrl}/${processedRelativeUrl}`;
+      return `${baseUrl}${processedRelativeUrl}`;
     }
     const url = new URL(processedRelativeUrl, baseUrl).href;
     return url;
@@ -7616,7 +7818,7 @@ const createRoute = (urlPatternInput) => {
   route.buildUrl = buildUrl;
 
   const activeSignal = signal(false);
-  const paramsSignal = signal(NO_PARAMS);
+  const paramsSignal = signal(null);
   const visitedSignal = signal(false);
   const relativeUrlSignal = computed(() => {
     const params = paramsSignal.value;
@@ -7645,7 +7847,7 @@ const createRoute = (urlPatternInput) => {
     if (route.action) {
       route.action.replaceParams(updatedParams);
     }
-    browserIntegration$1.goTo(updatedUrl, { replace: true });
+    browserIntegration$1.navTo(updatedUrl, { replace: true });
   };
   route.replaceParams = replaceParams;
 
@@ -7656,7 +7858,7 @@ const createRoute = (urlPatternInput) => {
      * and listen store changes to do this:
      *
      * When we detect changes we want to update the route params
-     * so we'll need to use goTo(buildUrl(params), { replace: true })
+     * so we'll need to use navTo(buildUrl(params), { replace: true })
      *
      * reinserted is useful because the item id might have changed
      * but not the mutable key
@@ -7721,37 +7923,14 @@ const createRoute = (urlPatternInput) => {
   route.bindAction = bindAction;
 
   {
-    // Remove leading slash from urlPattern to make it relative to baseUrl
-    const normalizedUrlPattern = urlPatternInput.startsWith("/")
-      ? urlPatternInput.slice(1)
-      : urlPatternInput;
-    const urlPattern = new URLPattern(normalizedUrlPattern, baseUrl, {
-      ignoreCase: true,
-    });
-    routePrivateProperties.urlPattern = urlPattern;
     routePrivateProperties.activeSignal = activeSignal;
     routePrivateProperties.paramsSignal = paramsSignal;
     routePrivateProperties.visitedSignal = visitedSignal;
     routePrivateProperties.relativeUrlSignal = relativeUrlSignal;
     routePrivateProperties.urlSignal = urlSignal;
     routePrivateProperties.cleanupCallbackSet = cleanupCallbackSet;
-
-    // Analyze pattern once to detect optional params (named and wildcard indices)
-    // Note: Wildcard indices are stored as strings ("0", "1", ...) to match keys from extractParams
-    const optionalParamKeySet = new Set();
-    normalizedUrlPattern.replace(/:([A-Za-z0-9_]+)\?/g, (_m, name) => {
-      optionalParamKeySet.add(name);
-      return "";
-    });
-    let wildcardIndex = 0;
-    normalizedUrlPattern.replace(/\*(\?)?/g, (_m, opt) => {
-      if (opt === "?") {
-        optionalParamKeySet.add(String(wildcardIndex));
-      }
-      wildcardIndex++;
-      return "";
-    });
-    routePrivateProperties.optionalParamKeySet = optionalParamKeySet;
+    const routePattern = createRoutePattern(urlPatternInput, baseUrl);
+    routePrivateProperties.routePattern = routePattern;
   }
 
   return route;
@@ -7944,14 +8123,6 @@ computed(() => {
   return reasonArray;
 });
 
-const documentStateSignal = signal(null);
-const useDocumentState = () => {
-  return documentStateSignal.value;
-};
-const updateDocumentState = (value) => {
-  documentStateSignal.value = value;
-};
-
 const documentUrlSignal = signal(window.location.href);
 const useDocumentUrl = () => {
   return documentUrlSignal.value;
@@ -7992,6 +8163,14 @@ const urlToScheme = (url) => {
   }
   const scheme = urlString.slice(0, colonIndex);
   return scheme;
+};
+
+const documentStateSignal = signal(null);
+const useDocumentState = () => {
+  return documentStateSignal.value;
+};
+const updateDocumentState = (value) => {
+  documentStateSignal.value = value;
 };
 
 const getHrefTargetInfo = (href) => {
@@ -8214,12 +8393,7 @@ const setupBrowserIntegrationViaHistory = ({
     });
   });
 
-  const goTo = async (target, { state = null, replace } = {}) => {
-    const url = new URL(target, window.location.href).href;
-    const currentUrl = documentUrlSignal.peek();
-    if (url === currentUrl) {
-      return;
-    }
+  const navTo = async (url, { state = null, replace } = {}) => {
     if (replace) {
       window.history.replaceState(state, null, url);
     } else {
@@ -8228,7 +8402,7 @@ const setupBrowserIntegrationViaHistory = ({
     handleRoutingTask(url, {
       state,
       replace,
-      reason: `goTo called with "${url}"`,
+      reason: `navTo called with "${url}"`,
     });
   };
 
@@ -8244,11 +8418,11 @@ const setupBrowserIntegrationViaHistory = ({
     });
   };
 
-  const goBack = () => {
+  const navBack = () => {
     window.history.back();
   };
 
-  const goForward = () => {
+  const navForward = () => {
     window.history.forward();
   };
 
@@ -8266,11 +8440,11 @@ const setupBrowserIntegrationViaHistory = ({
   return {
     integration: "browser_history_api",
     init,
-    goTo,
+    navTo,
     stop,
     reload,
-    goBack,
-    goForward,
+    navBack,
+    navForward,
     getDocumentState,
     replaceDocumentState,
     isVisited,
@@ -8348,7 +8522,17 @@ setOnRouteDefined(() => {
 setBrowserIntegration(browserIntegration);
 
 const actionIntegratedVia = browserIntegration.integration;
-const goTo = browserIntegration.goTo;
+const navTo = (target, options) => {
+  const url = new URL(target, window.location.href).href;
+  const currentUrl = documentUrlSignal.peek();
+  if (url === currentUrl) {
+    return null;
+  }
+  return browserIntegration.navTo(url, options);
+};
+const replaceUrl = (target, options = {}) => {
+  return navTo(target, { ...options, replace: true });
+};
 const stopLoad = (reason = "stopLoad() called") => {
   const windowIsLoading = windowIsLoadingSignal.value;
   if (windowIsLoading) {
@@ -8360,8 +8544,8 @@ const stopLoad = (reason = "stopLoad() called") => {
   }
 };
 const reload = browserIntegration.reload;
-const goBack = browserIntegration.goBack;
-const goForward = browserIntegration.goForward;
+const navBack = browserIntegration.navBack;
+const navForward = browserIntegration.navForward;
 const isVisited = browserIntegration.isVisited;
 const visitedUrlsSignal = browserIntegration.visitedUrlsSignal;
 browserIntegration.handleActionTask;
@@ -8451,11 +8635,11 @@ const useUrlSearchParam = (paramName, defaultValue) => {
     setValue(searchParam);
   }
 
-  const setSearchParamValue = (newValue, { replace = true } = {}) => {
+  const setSearchParamValue = (newValue, { replace = false } = {}) => {
     const newUrlObject = new URL(window.location.href);
     newUrlObject.searchParams.set(paramName, newValue);
     const newUrl = newUrlObject.href;
-    goTo(newUrl, { replace });
+    navTo(newUrl, { replace });
   };
 
   return [value, setSearchParamValue];
@@ -8492,6 +8676,26 @@ const useForceRender = () => {
 const debug$1 = (...args) => {
   return;
 };
+
+// Check if a route is a "parent" route (catches multiple routes) and if current URL matches exactly
+const isParentRouteExactMatch = route => {
+  if (!route) {
+    return false;
+  }
+  const currentUrl = window.location.href;
+  const parentUrl = route.buildUrl();
+  if (currentUrl === parentUrl) {
+    return true;
+  }
+  const currentUrlObject = new URL(currentUrl);
+  if (!currentUrlObject.pathname.endsWith("/")) {
+    return false;
+  }
+  const pathnameWithoutSlash = currentUrlObject.pathname.slice(0, -1);
+  currentUrlObject.pathname = pathnameWithoutSlash;
+  const currentUrlWithoutTrailingSlash = currentUrlObject.href;
+  return currentUrlWithoutTrailingSlash === parentUrl;
+};
 const RootElement = () => {
   return jsx(Route.Slot, {});
 };
@@ -8501,7 +8705,10 @@ const Routes = ({
   element = RootElement,
   children
 }) => {
+  const routeInfo = useActiveRouteInfo();
+  const route = routeInfo?.route;
   return jsx(Route, {
+    route: route,
     element: element,
     children: children
   });
@@ -8510,6 +8717,7 @@ const useActiveRouteInfo = () => useContext(RouteInfoContext);
 const Route = ({
   element,
   route,
+  index,
   fallback,
   meta,
   children
@@ -8521,6 +8729,7 @@ const Route = ({
     return jsx(ActiveRouteManager, {
       element: element,
       route: route,
+      index: index,
       fallback: fallback,
       meta: meta,
       onActiveInfoChange: activeInfo => {
@@ -8548,6 +8757,7 @@ it's executed once for the entier app lifecycle */
 const ActiveRouteManager = ({
   element,
   route,
+  index,
   fallback,
   meta,
   onActiveInfoChange,
@@ -8557,23 +8767,42 @@ const ActiveRouteManager = ({
     throw new Error("Route cannot have both route and fallback props");
   }
   const registerChildRouteFromContext = useContext(RegisterChildRouteContext);
-  getElementSignature(element);
+  const elementId = getElementSignature(element);
   const candidateSet = new Set();
-  const registerChildRoute = (ChildActiveElement, childRoute, childFallback, childMeta) => {
-    getElementSignature(ChildActiveElement);
-    candidateSet.add({
-      ActiveElement: ChildActiveElement,
-      route: childRoute,
-      fallback: childFallback,
-      meta: childMeta
-    });
+  let indexCandidate = null;
+  let fallbackCandidate = null;
+  const registerChildRoute = childRouteInfo => {
+    const childElementId = getElementSignature(childRouteInfo.element);
+    candidateSet.add(childRouteInfo);
+    if (childRouteInfo.index) {
+      if (indexCandidate) {
+        throw new Error(`Multiple index routes registered under the same parent route (${elementId}):
+- ${getElementSignature(indexCandidate.element)}
+- ${childElementId}`);
+      }
+      indexCandidate = childRouteInfo;
+    }
+    if (childRouteInfo.fallback) {
+      if (fallbackCandidate) {
+        throw new Error(`Multiple fallback routes registered under the same parent route (${elementId}):
+- ${getElementSignature(fallbackCandidate.element)}
+- ${childElementId}`);
+      }
+      if (childRouteInfo.route.routeFromProps) {
+        throw new Error(`Fallback route cannot have a route prop (${childElementId})`);
+      }
+      fallbackCandidate = childRouteInfo;
+    }
   };
   useLayoutEffect(() => {
     initRouteObserver({
       element,
       route,
+      index,
       fallback,
       meta,
+      indexCandidate,
+      fallbackCandidate,
       candidateSet,
       onActiveInfoChange,
       registerChildRouteFromContext
@@ -8587,15 +8816,24 @@ const ActiveRouteManager = ({
 const initRouteObserver = ({
   element,
   route,
+  index,
   fallback,
   meta,
+  indexCandidate,
+  fallbackCandidate,
   candidateSet,
   onActiveInfoChange,
   registerChildRouteFromContext
 }) => {
+  if (!fallbackCandidate && indexCandidate && indexCandidate.fallback !== false) {
+    // no fallback + an index -> index behaves as a fallback (handle urls under a parent when no sibling matches)
+    // to disable this behavior set fallback={false} on the index route
+    // (in that case no route will be rendered when no child matches meaning only parent route element will be shown)
+    fallbackCandidate = indexCandidate;
+  }
   const [teardown, addTeardown] = createPubSub();
   const elementId = getElementSignature(element);
-  const candidateElementIds = Array.from(candidateSet, c => getElementSignature(c.ActiveElement));
+  const candidateElementIds = Array.from(candidateSet, c => getElementSignature(c.element));
   if (candidateElementIds.length === 0) ; else {
     debug$1(`initRouteObserver ${elementId}, child candidates:
   - ${candidateElementIds.join("\n  - ")}`);
@@ -8611,19 +8849,26 @@ const initRouteObserver = ({
     elementFromProps: element
   };
   const findActiveChildInfo = () => {
-    let fallbackInfo = null;
     for (const candidate of candidateSet) {
       if (candidate.route?.active) {
         return candidate;
       }
-      // fallback without route can match when no other route matches.
-      // This is useful solely for "catch all" fallback used on the <Routes>
-      // otherwise a fallback would always match and make the parent route always active
-      if (candidate.fallback && !candidate.route.routeFromProps) {
-        fallbackInfo = candidate;
+    }
+    if (indexCandidate) {
+      if (indexCandidate === fallbackCandidate) {
+        // the index is also used as fallback (catch all routes under a parent)
+        return indexCandidate;
+      }
+      // Only return the index candidate if the current URL matches exactly the parent route
+      // This allows fallback routes to handle non-defined URLs under this parent route
+      if (route && isParentRouteExactMatch(route)) {
+        return indexCandidate;
       }
     }
-    return fallbackInfo;
+    if (fallbackCandidate) {
+      return fallbackCandidate;
+    }
+    return null;
   };
   const getActiveInfo = route ? () => {
     if (!route.active) {
@@ -8637,8 +8882,8 @@ const initRouteObserver = ({
       return activeChildInfo;
     }
     return {
-      ActiveElement: null,
       route,
+      element: null,
       meta
     };
   } : () => {
@@ -8659,6 +8904,13 @@ const initRouteObserver = ({
       const Element = element;
       element = jsx(Element, {});
     }
+    // ensure we re-render on document url change (useful when navigating from /users/list to /users)
+    // so that we re-replace urls back to /users/list when /users/list is an index
+    useDocumentUrl();
+    if (activeRouteInfo && activeRouteInfo.index && !activeRouteInfo.route.active) {
+      const routeUrl = activeRouteInfo.route.routeFromProps.buildUrl();
+      replaceUrl(routeUrl);
+    }
     return jsx(RouteInfoContext.Provider, {
       value: activeRouteInfo,
       children: jsx(SlotContext.Provider, {
@@ -8673,11 +8925,13 @@ const initRouteObserver = ({
     if (newActiveInfo) {
       compositeRoute.active = true;
       activeRouteInfoSignal.value = newActiveInfo;
-      SlotActiveElementSignal.value = newActiveInfo.ActiveElement;
+      SlotActiveElementSignal.value = newActiveInfo.element;
       onActiveInfoChange({
-        ActiveElement,
-        SlotActiveElement: newActiveInfo.ActiveElement,
         route: newActiveInfo.route,
+        ActiveElement,
+        SlotActiveElement: newActiveInfo.element,
+        index: newActiveInfo.index,
+        fallback: newActiveInfo.fallback,
         meta: newActiveInfo.meta
       });
     } else {
@@ -8698,7 +8952,13 @@ const initRouteObserver = ({
     addTeardown(candidate.route.subscribeStatus(onChange));
   }
   if (registerChildRouteFromContext) {
-    registerChildRouteFromContext(ActiveElement, compositeRoute, fallback, meta);
+    registerChildRouteFromContext({
+      route: compositeRoute,
+      element: ActiveElement,
+      index,
+      fallback,
+      meta
+    });
   }
   updateActiveInfo();
   return () => {
@@ -13732,6 +13992,10 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
   .navi_text {
     position: relative;
     color: inherit;
+
+    &[data-has-absolute-child] {
+      display: inline-block;
+    }
   }
 
   .navi_text_overflow {
@@ -13754,6 +14018,53 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
   }
 
   .navi_custom_space {
+  }
+
+  .navi_text_bold_wrapper {
+    position: relative;
+    display: inline-block;
+  }
+  .navi_text_bold_clone {
+    font-weight: bold;
+    opacity: 0;
+  }
+  .navi_text_bold_foreground {
+    position: absolute;
+    inset: 0;
+  }
+
+  .navi_text_bold_background {
+    position: absolute;
+    top: 0;
+    left: 0;
+    color: currentColor;
+    font-weight: normal;
+    background: currentColor;
+    background-clip: text;
+    -webkit-background-clip: text;
+    transform-origin: center;
+    -webkit-text-fill-color: transparent;
+    opacity: 0;
+  }
+
+  .navi_text[data-bold] {
+    .navi_text_bold_background {
+      opacity: 1;
+    }
+  }
+
+  .navi_text[data-bold-transition] {
+    .navi_text_bold_foreground {
+      transition-property: font-weight;
+      transition-duration: 0.3s;
+      transition-timing-function: ease;
+    }
+
+    .navi_text_bold_background {
+      transition-property: opacity;
+      transition-duration: 0.3s;
+      transition-timing-function: ease;
+    }
   }
 `;
 const REGULAR_SPACE = jsx("span", {
@@ -13924,14 +14235,65 @@ const TextWithSelectRange = ({
 };
 const TextBasic = ({
   spacing = " ",
+  boldTransition,
+  boldStable,
+  preventBoldLayoutShift = boldTransition,
   children,
   ...rest
 }) => {
-  return jsx(Box, {
-    as: "span",
-    baseClassName: "navi_text",
+  const shouldPreserveSpacing = rest.as === "pre" || rest.box || rest.column || rest.row;
+  if (!shouldPreserveSpacing) {
+    children = applySpacingOnTextChildren(children, spacing);
+  }
+  const boxProps = {
+    "as": "span",
+    "data-bold-transition": boldTransition ? "" : undefined,
     ...rest,
-    children: rest.as === "pre" || rest.box || rest.column || rest.row ? children : applySpacingOnTextChildren(children, spacing)
+    "baseClassName": withPropsClassName("navi_text", rest.baseClassName)
+  };
+  if (boldStable) {
+    const {
+      bold
+    } = boxProps;
+    return jsxs(Box, {
+      ...boxProps,
+      bold: undefined,
+      "data-bold": bold ? "" : undefined,
+      "data-has-absolute-child": "",
+      children: [jsx("span", {
+        className: "navi_text_bold_background",
+        "aria-hidden": "true",
+        children: children
+      }), children]
+    });
+  }
+  if (preventBoldLayoutShift) {
+    const alignX = rest.alignX || rest.align || "start";
+
+    // La technique consiste a avoid un double gras qui force une taille
+    // et la version light par dessus en position absolute
+    // on la centre aussi pour donner l'impression que le gras s'applique depuis le centre
+    // ne fonctionne que sur une seul ligne de texte (donc lorsque noWrap est actif)
+    // on pourrait auto-active cela sur une prop genre boldCanChange
+    return jsx(Box, {
+      ...boxProps,
+      children: jsxs("span", {
+        className: "navi_text_bold_wrapper",
+        children: [jsx("span", {
+          className: "navi_text_bold_clone",
+          "aria-hidden": "true",
+          children: children
+        }), jsx("span", {
+          className: "navi_text_bold_foreground",
+          "data-align": alignX,
+          children: children
+        })]
+      })
+    });
+  }
+  return jsx(Box, {
+    ...boxProps,
+    children: children
   });
 };
 
@@ -16400,14 +16762,15 @@ const RouteLink = ({
   }
   const routeStatus = useRouteStatus(route);
   const url = route.buildUrl(routeParams);
-  const routeIsActive = routeStatus.active;
+  const active = routeStatus.active;
+  const paramsAreMatching = route.matchesParams(routeParams);
   return jsx(Link, {
     ...rest,
     href: url,
     pseudoState: {
-      ":-navi-href-current": routeIsActive
+      ":-navi-href-current": active && paramsAreMatching
     },
-    children: children
+    children: children || route.buildRelativeUrl(routeParams)
   });
 };
 
@@ -16429,8 +16792,9 @@ import.meta.css = /* css */`
       --tab-color: inherit;
       --tab-color-hover: #010409;
       --tab-color-selected: inherit;
-      --tab-marker-height: 2px;
-      --tab-marker-color: rgb(205, 52, 37);
+      --tab-indicator-size: 2px;
+      --tab-indicator-spacing: 5px;
+      --tab-indicator-color: rgb(205, 52, 37);
     }
   }
 
@@ -16439,100 +16803,175 @@ import.meta.css = /* css */`
     line-height: 2em;
     overflow-x: auto;
     overflow-y: hidden;
-  }
-  .navi_tablist > ul {
-    display: flex;
-    width: 100%;
-    margin: 0;
-    padding: 0;
-    align-items: center;
-    gap: 0.5rem;
-    list-style: none;
-    background: var(--tablist-background);
-    border-radius: var(--tablist-border-radius);
-  }
-  .navi_tablist > ul > li {
-    position: relative;
-    display: inline-flex;
-  }
 
-  .navi_tab {
-    --x-tab-background: var(--tab-background);
-    --x-tab-color: var(--tab-color);
-
-    display: flex;
-    flex-direction: column;
-    white-space: nowrap;
-    border-radius: var(--tab-border-radius);
-
-    .navi_tab_content {
-      display: flex;
-      color: var(--x-tab-color);
-      background: var(--x-tab-background);
-      border-radius: inherit;
-      transition: background 0.12s ease-out;
-
-      .navi_link {
-        flex-grow: 1;
-        text-align: center;
-        border-radius: inherit;
+    &[data-tab-indicator-position="start"] {
+      .navi_tab {
+        margin-top: var(--tab-indicator-spacing);
       }
     }
-    /* Hidden bold clone to reserve space for bold width without affecting height */
-    .navi_tab_content_bold_clone {
-      display: block; /* in-flow so it contributes to width */
-      height: 0; /* zero height so it doesn't change layout height */
-      font-weight: 600; /* force bold to compute max width */
-      visibility: hidden; /* not visible */
-      pointer-events: none; /* inert */
-      overflow: hidden; /* avoid any accidental height */
+    &[data-tab-indicator-position="end"] {
+      .navi_tab {
+        margin-bottom: var(--tab-indicator-spacing);
+      }
     }
-    .navi_tab_selected_marker {
-      z-index: 1;
+
+    > ul {
       display: flex;
       width: 100%;
-      height: var(--tab-marker-height);
-      margin-top: 5px;
-      background: transparent;
-      border-radius: 0.1px;
-    }
-
-    /* Interactive */
-    &[data-interactive] {
-      cursor: pointer;
-    }
-    /* Hover */
-    &:hover {
-      --x-tab-background: var(--tab-background-hover);
-      --x-tab-color: var(--tab-color-hover);
-    }
-    /* Selected */
-    &[data-selected] {
-      --x-tab-background: var(--tab-background-selected);
-      --x-tab-color: var(--tab-color-selected);
-
-      .navi_tab_content {
-        font-weight: 600;
-      }
-      .navi_tab_selected_marker {
-        background: var(--tab-marker-color);
-      }
-    }
-  }
-
-  .navi_tablist[data-expand] {
-    .navi_tab {
-      flex: 1;
+      margin: 0;
+      padding: 2px; /* space for border radius and outline */
       align-items: center;
+      gap: 0.5rem;
+      list-style: none;
+      background: var(--tablist-background);
+      border-radius: var(--tablist-border-radius);
+
+      > li {
+        position: relative;
+        display: inline-flex;
+
+        .navi_tab {
+          --x-tab-background: var(--tab-background);
+          --x-tab-color: var(--tab-color);
+
+          display: flex;
+          flex-direction: column;
+          color: var(--x-tab-color);
+          white-space: nowrap;
+          background: var(--x-tab-background);
+          border-radius: var(--tab-border-radius);
+          transition: background 0.12s ease-out;
+          user-select: none;
+
+          span,
+          a {
+            display: inline-flex;
+            flex-grow: 1;
+            justify-content: center;
+            text-align: center;
+            border-radius: inherit;
+          }
+
+          .navi_tab_indicator {
+            position: absolute;
+            z-index: 1;
+            display: flex;
+            width: 100%;
+            height: var(--tab-indicator-size);
+            background: transparent;
+            border-radius: 0.1px;
+
+            &[data-position="start"] {
+              top: 0;
+              left: 0;
+            }
+
+            &[data-position="end"] {
+              bottom: 0;
+              left: 0;
+            }
+          }
+
+          /* Interactive */
+          &[data-interactive] {
+            cursor: pointer;
+          }
+          /* Hover */
+          &:hover {
+            --x-tab-background: var(--tab-background-hover);
+            --x-tab-color: var(--tab-color-hover);
+          }
+          /* Selected */
+          &[data-selected] {
+            --x-tab-background: var(--tab-background-selected);
+            --x-tab-color: var(--tab-color-selected);
+            font-weight: bold;
+
+            .navi_tab_indicator {
+              background: var(--tab-indicator-color);
+            }
+          }
+        }
+      }
     }
 
-    .navi_tab_content {
-      width: 100%;
-      justify-content: center;
+    /* Vertical layout */
+    &[data-vertical] {
+      overflow-x: hidden;
+      overflow-y: auto;
+
+      .navi_tab {
+        span,
+        a {
+          justify-content: start;
+        }
+
+        &[data-align-x="end"] {
+          span,
+          a {
+            justify-content: end;
+          }
+        }
+      }
+
+      &[data-tab-indicator-position="start"] {
+        .navi_tab {
+          margin-top: 0;
+          margin-left: var(--tab-indicator-spacing);
+
+          .navi_tab_indicator {
+            top: 0;
+            left: 0;
+          }
+        }
+      }
+      &[data-tab-indicator-position="end"] {
+        .navi_tab {
+          margin-right: var(--tab-indicator-spacing);
+          margin-bottom: 0;
+
+          .navi_tab_indicator {
+            top: 0;
+            right: 0;
+            left: auto;
+          }
+        }
+      }
+
+      > ul {
+        flex-direction: column;
+        align-items: start;
+
+        > li {
+          width: 100%;
+
+          .navi_tab {
+            flex-direction: row;
+            text-align: left;
+
+            .navi_tab_indicator {
+              width: var(--tab-indicator-size);
+              height: 100%;
+            }
+          }
+        }
+      }
+    }
+
+    &[data-expand] {
+      > ul {
+        .navi_tab {
+          width: 100%;
+          flex: 1;
+          align-items: stretch;
+          justify-content: center;
+        }
+      }
     }
   }
 `;
-const TabListUnderlinerContext = createContext();
+const TabListIndicatorContext = createContext();
+const TabListAlignXContext = createContext();
 const TabListStyleCSSVars = {
   borderRadius: "--tablist-border-radius",
   background: "--tablist-background"
@@ -16540,7 +16979,9 @@ const TabListStyleCSSVars = {
 const TabList = ({
   children,
   spacing,
-  underline,
+  vertical,
+  indicator = vertical ? "start" : "end",
+  alignX,
   expand,
   expandX,
   paddingX,
@@ -16548,11 +16989,14 @@ const TabList = ({
   padding,
   ...props
 }) => {
+  children = toChildArray(children);
   return jsx(Box, {
     as: "nav",
     baseClassName: "navi_tablist",
     role: "tablist",
+    "data-tab-indicator-position": indicator === "start" || indicator === "end" ? indicator : undefined,
     "data-expand": expand || expandX ? "" : undefined,
+    "data-vertical": vertical ? "" : undefined,
     expand: expand,
     expandX: expandX,
     ...props,
@@ -16565,16 +17009,19 @@ const TabList = ({
       paddingY: paddingY,
       padding: padding,
       spacing: spacing,
-      children: jsx(TabListUnderlinerContext.Provider, {
-        value: underline,
-        children: children.map(child => {
-          return jsx(Box, {
-            as: "li",
-            column: true,
-            expandX: expandX,
-            expand: expand,
-            children: child
-          }, child.props.key);
+      children: jsx(TabListIndicatorContext.Provider, {
+        value: indicator,
+        children: jsx(TabListAlignXContext.Provider, {
+          value: alignX,
+          children: children.map(child => {
+            return jsx(Box, {
+              as: "li",
+              column: true,
+              expandX: expandX,
+              expand: expand,
+              children: child
+            }, child.props.key);
+          })
         })
       })
     })
@@ -16593,7 +17040,7 @@ const TAB_STYLE_CSS_VARS = {
   }
 };
 const TAB_PSEUDO_CLASSES = [":hover", ":-navi-selected"];
-const TAB_PSEUDO_ELEMENTS = ["::-navi-marker"];
+const TAB_PSEUDO_ELEMENTS = ["::-navi-indicator"];
 const Tab = props => {
   if (props.route) {
     return jsx(TabRoute, {
@@ -16604,8 +17051,10 @@ const Tab = props => {
     ...props
   });
 };
+TabList.Tab = Tab;
 const TabRoute = ({
   route,
+  routeParams,
   children,
   paddingX,
   padding,
@@ -16615,15 +17064,17 @@ const TabRoute = ({
   const {
     active
   } = useRouteStatus(route);
+  const paramsAreMatching = route.matchesParams(routeParams);
+  const selected = active && paramsAreMatching;
   return jsx(TabBasic, {
-    selected: active,
+    selected: selected,
     paddingX: "0",
     ...props,
     children: jsx(RouteLink, {
       route: route,
+      routeParams: routeParams,
       expand: true,
       discrete: true,
-      align: "center",
       paddingX: paddingX,
       padding: padding,
       paddingY: paddingY,
@@ -16634,18 +17085,17 @@ const TabRoute = ({
 const TabBasic = ({
   children,
   selected,
-  padding,
-  paddingX = "s",
-  paddingY,
   onClick,
   ...props
 }) => {
-  const tabListUnderline = useContext(TabListUnderlinerContext);
+  const tabListIndicator = useContext(TabListIndicatorContext);
+  const tabListAlignX = useContext(TabListAlignXContext);
   return jsxs(Box, {
     role: "tab",
     "aria-selected": selected ? "true" : "false",
     "data-interactive": onClick ? "" : undefined,
-    onClick: onClick
+    onClick: onClick,
+    paddingX: "s"
     // Style system
     ,
     baseClassName: "navi_tab",
@@ -16655,19 +17105,18 @@ const TabBasic = ({
     basePseudoState: {
       ":-navi-selected": selected
     },
+    selfAlignX: tabListAlignX,
+    "data-align-x": tabListAlignX,
     ...props,
-    children: [jsx(Box, {
-      className: "navi_tab_content",
-      paddingX: paddingX,
-      paddingY: paddingY,
-      padding: padding,
+    children: [(tabListIndicator === "start" || tabListIndicator === "end") && jsx("span", {
+      className: "navi_tab_indicator",
+      "data-position": tabListIndicator
+    }), jsx(Text, {
+      noWrap: true,
+      preventBoldLayoutShift: true
+      // boldTransition
+      ,
       children: children
-    }), jsx("div", {
-      className: "navi_tab_content_bold_clone",
-      "aria-hidden": "true",
-      children: children
-    }), tabListUnderline && jsx("span", {
-      className: "navi_tab_selected_marker"
     })]
   });
 };
@@ -23788,5 +24237,5 @@ const UserSvg = () => jsx("svg", {
   })
 });
 
-export { ActionRenderer, ActiveKeyboardShortcuts, BadgeCount, Box, Button, Caption, CheckSvg, Checkbox, CheckboxList, Code, Col, Colgroup, Details, DialogLayout, Editable, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Form, HeartSvg, HomeSvg, Icon, Image, Input, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, MessageBox, Paragraph, Radio, RadioList, Route, RouteLink, Routes, RowNumberCol, RowNumberTableCell, SINGLE_SPACE_CONSTRAINT, SVGMaskOverlay, SearchSvg, Select, SelectionContext, SettingsSvg, StarSvg, SummaryMarker, Svg, Tab, TabList, Table, TableCell, Tbody, Text, Thead, Title, Tr, UITransition, UserSvg, ViewportLayout, actionIntegratedVia, addCustomMessage, compareTwoJsValues, createAction, createRequestCanceller, createSelectionKeyboardShortcuts, createUniqueValueConstraint, enableDebugActions, enableDebugOnDocumentLoading, forwardActionRequested, goBack, goForward, goTo, installCustomConstraintValidation, isCellSelected, isColumnSelected, isRowSelected, localStorageSignal, openCallout, rawUrlPart, reload, removeCustomMessage, rerunActions, resource, setBaseUrl, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, updateActions, useActionData, useActionStatus, useActiveRouteInfo, useCellsAndColumns, useConstraintValidityState, useDependenciesDiff, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState$1 as useNavState, useRouteStatus, useRunOnMount, useSelectableElement, useSelectionController, useSignalSync, useStateArray, useUrlSearchParam, valueInLocalStorage };
+export { ActionRenderer, ActiveKeyboardShortcuts, BadgeCount, Box, Button, Caption, CheckSvg, Checkbox, CheckboxList, Code, Col, Colgroup, Details, DialogLayout, Editable, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Form, HeartSvg, HomeSvg, Icon, Image, Input, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, MessageBox, Paragraph, Radio, RadioList, Route, RouteLink, Routes, RowNumberCol, RowNumberTableCell, SINGLE_SPACE_CONSTRAINT, SVGMaskOverlay, SearchSvg, Select, SelectionContext, SettingsSvg, StarSvg, SummaryMarker, Svg, Tab, TabList, Table, TableCell, Tbody, Text, Thead, Title, Tr, UITransition, UserSvg, ViewportLayout, actionIntegratedVia, addCustomMessage, compareTwoJsValues, createAction, createRequestCanceller, createSelectionKeyboardShortcuts, createUniqueValueConstraint, enableDebugActions, enableDebugOnDocumentLoading, forwardActionRequested, installCustomConstraintValidation, isCellSelected, isColumnSelected, isRowSelected, localStorageSignal, navBack, navForward, navTo, openCallout, rawUrlPart, reload, removeCustomMessage, rerunActions, resource, setBaseUrl, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, updateActions, useActionData, useActionStatus, useActiveRouteInfo, useCellsAndColumns, useConstraintValidityState, useDependenciesDiff, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState$1 as useNavState, useRouteStatus, useRunOnMount, useSelectableElement, useSelectionController, useSignalSync, useStateArray, useUrlSearchParam, valueInLocalStorage };
 //# sourceMappingURL=jsenv_navi.js.map
