@@ -670,14 +670,13 @@
           <div class="version">
             <div class="version-title">Bold (simulé par scaling)</div>
             <div class="demo-text constrainer" style="position: relative">
-              <div class="demo-text-content" style="color: #333"></div>
               <div
                 class="demo-text-content"
                 style="
                   position: absolute;
                   top: 0;
                   left: 0;
-                  font-weight: 700;
+                  font-weight: normal;
                   transform: scale(1.05);
                   transform-origin: center;
                   color: currentColor;
@@ -687,6 +686,7 @@
                   -webkit-text-fill-color: transparent;
                 "
               ></div>
+              <div class="demo-text-content" style="color: #333"></div>
             </div>
           </div>
         </div>
@@ -695,8 +695,12 @@
           <label> <input type="checkbox" data-toggle="g" /> Bold </label>
           <div class="constrainer">
             <div class="smooth" style="position: relative">
+              <span
+                class="text-bold demo-text-content"
+                id="g-bold"
+                style="font-weight: normal"
+              ></span>
               <span class="text-normal demo-text-content" id="g-normal"></span>
-              <span class="text-bold demo-text-content" id="g-bold"></span>
             </div>
           </div>
         </div>
