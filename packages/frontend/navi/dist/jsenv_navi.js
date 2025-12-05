@@ -16837,11 +16837,6 @@ import.meta.css = /* css */`
         position: relative;
         display: inline-flex;
 
-        /* Space for eventual outline inside the tab (link) */
-        .navi_tab {
-          padding: 2px;
-        }
-
         .navi_tab {
           --x-tab-background: var(
             --tab-background-color,
@@ -16858,6 +16853,7 @@ import.meta.css = /* css */`
           --x-tab-color: var(--tab-color);
 
           display: flex;
+          padding: 2px; /* Space for eventual outline inside the tab (link) */
           flex-direction: column;
           color: var(--x-tab-color);
           white-space: nowrap;
@@ -16912,7 +16908,9 @@ import.meta.css = /* css */`
           &[data-tab-selected] {
             --x-tab-background: var(--x-tab-background-selected);
             --x-tab-color: var(--tab-color-selected);
-            font-weight: bold;
+            &[data-bold-when-selected] {
+              font-weight: bold;
+            }
 
             .navi_tab_indicator {
               background: var(--tab-indicator-color);
@@ -17122,6 +17120,7 @@ const TabBasic = ({
   children,
   icon,
   selected,
+  boldWhenSelected = !icon,
   onClick,
   ...props
 }) => {
@@ -17131,6 +17130,7 @@ const TabBasic = ({
     role: "tab",
     "aria-selected": selected ? "true" : "false",
     "data-interactive": onClick ? "" : undefined,
+    "data-bold-when-selected": boldWhenSelected ? "" : undefined,
     onClick: onClick
     // Style system
     ,
@@ -17147,13 +17147,12 @@ const TabBasic = ({
     children: [(tabListIndicator === "start" || tabListIndicator === "end") && jsx("span", {
       className: "navi_tab_indicator",
       "data-position": tabListIndicator
-    }), icon ? children : jsx(Text, {
-      noWrap: true,
+    }), boldWhenSelected ? jsx(Text, {
       preventBoldLayoutShift: true
       // boldTransition
       ,
       children: children
-    })]
+    }) : children]
   });
 };
 
