@@ -301,10 +301,12 @@ const LinkPlain = (props) => {
     innerIcon = icon;
   }
 
+  const innerChildren = children || href;
+
   return (
     <Box
       as="a"
-      color={anchor && !children ? "inherit" : undefined}
+      color={anchor && !innerChildren ? "inherit" : undefined}
       id={anchor ? href.slice(1) : undefined}
       {...rest}
       ref={ref}
@@ -354,9 +356,9 @@ const LinkPlain = (props) => {
       }}
     >
       <LoaderBackground loading={loading} color="var(--link-loader-color)" />
-      {applySpacingOnTextChildren(children, spacing)}
+      {applySpacingOnTextChildren(innerChildren, spacing)}
       {innerIcon && (
-        <Icon marginLeft={children ? "xxs" : undefined}>{innerIcon}</Icon>
+        <Icon marginLeft={innerChildren ? "xxs" : undefined}>{innerIcon}</Icon>
       )}
     </Box>
   );

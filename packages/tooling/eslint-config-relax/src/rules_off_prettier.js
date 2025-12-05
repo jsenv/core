@@ -11,6 +11,7 @@ export const rulesOffPrettier = {
   "brace-style": ["off"],
   "comma-dangle": ["off"],
   "comma-style": ["off"],
+  "comma-spacing": ["off"],
   "computed-property-spacing": ["off"],
   "curly": ["off"],
   "dot-location": ["off"],

@@ -16553,9 +16553,10 @@ const LinkPlain = props => {
   } else {
     innerIcon = icon;
   }
+  const innerChildren = children || href;
   return jsxs(Box, {
     as: "a",
-    color: anchor && !children ? "inherit" : undefined,
+    color: anchor && !innerChildren ? "inherit" : undefined,
     id: anchor ? href.slice(1) : undefined,
     ...rest,
     ref: ref,
@@ -16607,8 +16608,8 @@ const LinkPlain = props => {
     children: [jsx(LoaderBackground, {
       loading: loading,
       color: "var(--link-loader-color)"
-    }), applySpacingOnTextChildren(children, spacing), innerIcon && jsx(Icon, {
-      marginLeft: children ? "xxs" : undefined,
+    }), applySpacingOnTextChildren(innerChildren, spacing), innerIcon && jsx(Icon, {
+      marginLeft: innerChildren ? "xxs" : undefined,
       children: innerIcon
     })]
   });
