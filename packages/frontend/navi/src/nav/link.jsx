@@ -60,7 +60,6 @@ import.meta.css = /* css */ `
     position: relative;
     color: var(--x-link-color);
     text-decoration: var(--x-link-text-decoration);
-    vertical-align: middle;
     border-radius: var(--link-border-radius);
     outline-width: 0;
     outline-style: solid;
