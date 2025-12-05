@@ -20,7 +20,7 @@ Object.assign(PSEUDO_CLASSES, {
 import.meta.css = /* css */ `
   @layer navi {
     .navi_tablist {
-      --tablist-border-radius: 8px;
+      --tablist-border-radius: 0px;
       --tablist-background: transparent;
       --tab-border-radius: calc(var(--tablist-border-radius) - 2px);
 
@@ -67,14 +67,21 @@ import.meta.css = /* css */ `
       > li {
         position: relative;
         display: inline-flex;
+
         /* Space for eventual outline inside the tab (link) */
-        padding-top: 2px;
-        padding-bottom: 2px;
+        .navi_tab {
+          padding-top: 2px;
+          padding-bottom: 2px;
+        }
         &:first-child {
-          padding-left: 2px;
+          .navi_tab {
+            padding-left: 2px;
+          }
         }
         &:last-child {
-          padding-right: 2px;
+          .navi_tab {
+            padding-right: 2px;
+          }
         }
 
         .navi_tab {
@@ -139,7 +146,7 @@ import.meta.css = /* css */ `
             cursor: pointer;
           }
           /* Hover */
-          &:hover {
+          &[data-hover] {
             --x-tab-background: var(--x-tab-background-hover);
             --x-tab-color: var(--tab-color-hover);
           }
@@ -168,15 +175,22 @@ import.meta.css = /* css */ `
 
         > li {
           width: 100%;
-          padding-top: 0;
-          padding-right: 2px;
-          padding-bottom: 0;
-          padding-left: 2px;
+
+          .navi_tab {
+            padding-top: 0;
+            padding-right: 2px;
+            padding-bottom: 0;
+            padding-left: 2px;
+          }
           &:first-child {
-            padding-top: 2px;
+            .navi_tab {
+              padding-top: 2px;
+            }
           }
           &:last-child {
-            padding-bottom: 2px;
+            .navi_tab {
+              padding-bottom: 2px;
+            }
           }
 
           .navi_tab {
