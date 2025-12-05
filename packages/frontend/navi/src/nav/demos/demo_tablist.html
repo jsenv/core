@@ -147,7 +147,7 @@
                       onClick={() => setActive(name)}
                       aria-controls={`panel-${name}`}
                       pseudoState={{
-                        ":hover": name === "activity",
+                        ":hover": name === "activity" || undefined,
                       }}
                     >
                       <Link
@@ -175,7 +175,7 @@
                       onClick={() => setActive(name)}
                       aria-controls={`panel-${name}`}
                       pseudoState={{
-                        ":hover": name === "activity",
+                        ":hover": name === "activity" || undefined,
                       }}
                     >
                       <Link
@@ -219,7 +219,7 @@
                       aria-controls={`panel-${name}`}
                       padding="0"
                       pseudoState={{
-                        ":hover": name === "activity",
+                        ":hover": name === "activity" || undefined,
                       }}
                     >
                       <Link
@@ -267,7 +267,7 @@
                         },
                       }}
                       pseudoState={{
-                        ":hover": name === "activity",
+                        ":hover": name === "activity" || undefined,
                       }}
                       transition="all 0.3s ease-in-out"
                     >
@@ -376,7 +376,12 @@
                 <div className="example-block">
                   <div className="caption">Icons only</div>
                   <Box border="1px dashed violet" width="fit-content">
-                    <TabList vertical spacing="xs" indicator="end">
+                    <TabList
+                      vertical
+                      spacing="xs"
+                      indicator="end"
+                      lineHeight="1"
+                    >
                       <Tab
                         selected={activeIconTab === "home"}
                         onClick={() => setActiveIconTab("home")}
@@ -540,7 +545,7 @@
                           onClick={() => setActiveVertical(name)}
                           aria-controls={`vertical-panel-${name}`}
                           pseudoState={{
-                            ":hover": name === "analytics",
+                            ":hover": name === "analytics" || undefined,
                           }}
                         >
                           <Link
@@ -569,7 +574,7 @@
                           onClick={() => setActiveVertical(name)}
                           aria-controls={`vertical-panel-${name}`}
                           pseudoState={{
-                            ":hover": name === "analytics",
+                            ":hover": name === "analytics" || undefined,
                           }}
                         >
                           <Link
@@ -599,7 +604,7 @@
                           onClick={() => setActiveVertical(name)}
                           aria-controls={`vertical-panel-${name}`}
                           pseudoState={{
-                            ":hover": name === "analytics",
+                            ":hover": name === "analytics" || undefined,
                           }}
                         >
                           <Link
@@ -627,7 +632,7 @@
                           onClick={() => setActiveVertical(name)}
                           aria-controls={`vertical-panel-${name}`}
                           pseudoState={{
-                            ":hover": name === "analytics",
+                            ":hover": name === "analytics" || undefined,
                           }}
                         >
                           <Link
@@ -669,7 +674,7 @@
                           onClick={() => setActiveVertical(name)}
                           aria-controls={`vertical-panel-${name}`}
                           pseudoState={{
-                            ":hover": name === "analytics",
+                            ":hover": name === "analytics" || undefined,
                           }}
                         >
                           <Link
@@ -710,7 +715,7 @@
                           onClick={() => setActiveVertical(name)}
                           aria-controls={`vertical-panel-${name}`}
                           pseudoState={{
-                            ":hover": name === "analytics",
+                            ":hover": name === "analytics" || undefined,
                           }}
                         >
                           <Link

@@ -31,7 +31,7 @@ import.meta.css = /* css */ `
       --tab-color-hover: #010409;
       --tab-color-selected: inherit;
       --tab-indicator-size: 2px;
-      --tab-indicator-spacing: 2px;
+      --tab-indicator-spacing: 0;
       --tab-indicator-color: rgb(205, 52, 37);
     }
   }
@@ -70,18 +70,7 @@ import.meta.css = /* css */ `
 
         /* Space for eventual outline inside the tab (link) */
         .navi_tab {
-          padding-top: 2px;
-          padding-bottom: 2px;
-        }
-        &:first-child {
-          .navi_tab {
-            padding-left: 2px;
-          }
-        }
-        &:last-child {
-          .navi_tab {
-            padding-right: 2px;
-          }
+          padding: 2px;
         }
 
         .navi_tab {
@@ -175,23 +164,6 @@ import.meta.css = /* css */ `
 
         > li {
           width: 100%;
-
-          .navi_tab {
-            padding-top: 0;
-            padding-right: 2px;
-            padding-bottom: 0;
-            padding-left: 2px;
-          }
-          &:first-child {
-            .navi_tab {
-              padding-top: 2px;
-            }
-          }
-          &:last-child {
-            .navi_tab {
-              padding-bottom: 2px;
-            }
-          }
 
           .navi_tab {
             flex-direction: row;

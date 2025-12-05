@@ -16789,7 +16789,7 @@ installImportMetaCss(import.meta);Object.assign(PSEUDO_CLASSES, {
 import.meta.css = /* css */`
   @layer navi {
     .navi_tablist {
-      --tablist-border-radius: 8px;
+      --tablist-border-radius: 0px;
       --tablist-background: transparent;
       --tab-border-radius: calc(var(--tablist-border-radius) - 2px);
 
@@ -16800,7 +16800,7 @@ import.meta.css = /* css */`
       --tab-color-hover: #010409;
       --tab-color-selected: inherit;
       --tab-indicator-size: 2px;
-      --tab-indicator-spacing: 5px;
+      --tab-indicator-spacing: 0;
       --tab-indicator-color: rgb(205, 52, 37);
     }
   }
@@ -16836,14 +16836,10 @@ import.meta.css = /* css */`
       > li {
         position: relative;
         display: inline-flex;
+
         /* Space for eventual outline inside the tab (link) */
-        padding-top: 2px;
-        padding-bottom: 2px;
-        &:first-child {
-          padding-left: 2px;
-        }
-        &:last-child {
-          padding-right: 2px;
+        .navi_tab {
+          padding: 2px;
         }
 
         .navi_tab {
@@ -16908,7 +16904,7 @@ import.meta.css = /* css */`
             cursor: pointer;
           }
           /* Hover */
-          &:hover {
+          &[data-hover] {
             --x-tab-background: var(--x-tab-background-hover);
             --x-tab-color: var(--tab-color-hover);
           }
@@ -16937,16 +16933,6 @@ import.meta.css = /* css */`
 
         > li {
           width: 100%;
-          padding-top: 0;
-          padding-right: 2px;
-          padding-bottom: 0;
-          padding-left: 2px;
-          &:first-child {
-            padding-top: 2px;
-          }
-          &:last-child {
-            padding-bottom: 2px;
-          }
 
           .navi_tab {
             flex-direction: row;
@@ -17100,8 +17086,8 @@ const TabRoute = ({
   route,
   routeParams,
   children,
-  paddingX = "s",
   padding,
+  paddingX,
   paddingY,
   alignX,
   alignY,
@@ -17114,18 +17100,18 @@ const TabRoute = ({
   const selected = active && paramsAreMatching;
   return jsx(TabBasic, {
     selected: selected,
-    paddingX: undefined,
+    ...props,
     alignX: alignX,
     alignY: alignY,
-    ...props,
+    visualSelector: ".navi_link",
     children: jsx(RouteLink, {
       box: true,
       route: route,
       routeParams: routeParams,
       expand: true,
       discrete: true,
-      paddingX: paddingX,
       padding: padding,
+      paddingX: paddingX,
       paddingY: paddingY,
       alignX: alignX,
       alignY: alignY,
@@ -17145,8 +17131,7 @@ const TabBasic = ({
     role: "tab",
     "aria-selected": selected ? "true" : "false",
     "data-interactive": onClick ? "" : undefined,
-    onClick: onClick,
-    paddingX: "s"
+    onClick: onClick
     // Style system
     ,
     baseClassName: "navi_tab",
