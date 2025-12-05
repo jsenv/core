@@ -337,13 +337,7 @@ const TabRoute = ({
   const paramsAreMatching = route.matchesParams(routeParams);
   const selected = active && paramsAreMatching;
   return (
-    <TabBasic
-      selected={selected}
-      {...props}
-      alignX={alignX}
-      alignY={alignY}
-      visualSelector=".navi_link"
-    >
+    <TabBasic selected={selected} {...props} alignX={alignX} alignY={alignY}>
       <RouteLink
         box
         route={route}
@@ -361,7 +355,7 @@ const TabRoute = ({
     </TabBasic>
   );
 };
-const TabBasic = ({ children, selected, onClick, ...props }) => {
+const TabBasic = ({ children, icon, selected, onClick, ...props }) => {
   const tabListIndicator = useContext(TabListIndicatorContext);
   const tabListAlignX = useContext(TabListAlignXContext);
 
@@ -386,13 +380,17 @@ const TabBasic = ({ children, selected, onClick, ...props }) => {
       {(tabListIndicator === "start" || tabListIndicator === "end") && (
         <span className="navi_tab_indicator" data-position={tabListIndicator} />
       )}
-      <Text
-        noWrap
-        preventBoldLayoutShift
-        // boldTransition
-      >
-        {children}
-      </Text>
+      {icon ? (
+        children
+      ) : (
+        <Text
+          noWrap
+          preventBoldLayoutShift
+          // boldTransition
+        >
+          {children}
+        </Text>
+      )}
     </Box>
   );
 };

@@ -17103,7 +17103,6 @@ const TabRoute = ({
     ...props,
     alignX: alignX,
     alignY: alignY,
-    visualSelector: ".navi_link",
     children: jsx(RouteLink, {
       box: true,
       route: route,
@@ -17121,6 +17120,7 @@ const TabRoute = ({
 };
 const TabBasic = ({
   children,
+  icon,
   selected,
   onClick,
   ...props
@@ -17147,7 +17147,7 @@ const TabBasic = ({
     children: [(tabListIndicator === "start" || tabListIndicator === "end") && jsx("span", {
       className: "navi_tab_indicator",
       "data-position": tabListIndicator
-    }), jsx(Text, {
+    }), icon ? children : jsx(Text, {
       noWrap: true,
       preventBoldLayoutShift: true
       // boldTransition
