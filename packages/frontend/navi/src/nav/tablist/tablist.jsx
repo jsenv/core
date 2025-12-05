@@ -31,7 +31,7 @@ import.meta.css = /* css */ `
       --tab-color-hover: #010409;
       --tab-color-selected: inherit;
       --tab-indicator-size: 2px;
-      --tab-indicator-spacing: 5px;
+      --tab-indicator-spacing: 2px;
       --tab-indicator-color: rgb(205, 52, 37);
     }
   }
@@ -349,13 +349,41 @@ export const Tab = (props) => {
 };
 TabList.Tab = Tab;
 
-const TabRoute = ({ route, routeParams, children, ...props }) => {
+const TabRoute = ({
+  route,
+  routeParams,
+  children,
+  padding,
+  paddingX,
+  paddingY,
+  alignX,
+  alignY,
+
+  ...props
+}) => {
   const { active } = useRouteStatus(route);
   const paramsAreMatching = route.matchesParams(routeParams);
   const selected = active && paramsAreMatching;
   return (
-    <TabBasic selected={selected} {...props} visualSelector=".navi_link">
-      <RouteLink box route={route} routeParams={routeParams} expand discrete>
+    <TabBasic
+      selected={selected}
+      {...props}
+      alignX={alignX}
+      alignY={alignY}
+      visualSelector=".navi_link"
+    >
+      <RouteLink
+        box
+        route={route}
+        routeParams={routeParams}
+        expand
+        discrete
+        padding={padding}
+        paddingX={paddingX}
+        paddingY={paddingY}
+        alignX={alignX}
+        alignY={alignY}
+      >
         {children}
       </RouteLink>
     </TabBasic>
