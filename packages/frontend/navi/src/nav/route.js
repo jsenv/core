@@ -333,9 +333,14 @@ const createRoute = (urlPatternInput) => {
       buildRelativeUrl(params);
     let processedRelativeUrl = relativeUrl;
     if (processedRelativeUrl[0] === "/") {
+      // we remove the leading slash because we want to resolve against baseUrl which may
+      // not be the root url
       processedRelativeUrl = processedRelativeUrl.slice(1);
     }
     if (hasRawUrlPartWithInvalidChars) {
+      if (!baseUrl.endsWith("/")) {
+        return `${baseUrl}/${processedRelativeUrl}`;
+      }
       return `${baseUrl}${processedRelativeUrl}`;
     }
     const url = new URL(processedRelativeUrl, baseUrl).href;
