@@ -137,7 +137,7 @@
               updates the associated panel below.
             </Text>
             <div className="example-block">
-              <div className="caption">Indicator at end (default)</div>
+              <div className="caption">Indicator below (default)</div>
               <Box border="1px dashed violet">
                 <TabList spacing="sm" indicator="end">
                   {tabs.map((name) => (
@@ -151,6 +151,7 @@
                       }}
                     >
                       <Link
+                        paddingX="md"
                         discrete
                         pseudoState={{
                           ":focus-visible": name === "activity",
@@ -164,7 +165,7 @@
               </Box>
             </div>
             <div className="example-block">
-              <div className="caption">Indicator at start</div>
+              <div className="caption">Indicator above</div>
               <Box border="1px dashed violet">
                 <TabList spacing="sm" indicator="start">
                   {tabs.map((name) => (
@@ -178,6 +179,7 @@
                       }}
                     >
                       <Link
+                        paddingX="md"
                         discrete
                         pseudoState={{
                           ":focus-visible": name === "activity",
@@ -221,6 +223,7 @@
                       }}
                     >
                       <Link
+                        paddingX="md"
                         discrete
                         pseudoState={{
                           ":focus-visible": name === "activity",
@@ -311,7 +314,13 @@
                         aria-controls="icon-panel-home"
                         column
                       >
-                        <Link box preventDefault href="toto" alignY="center">
+                        <Link
+                          box
+                          preventDefault
+                          href="toto"
+                          paddingX="md"
+                          alignY="center"
+                        >
                           <Icon>
                             <HomeSvg />
                           </Icon>
@@ -326,6 +335,7 @@
                         </Link>
                       </Tab>
                       <Tab
+                        paddingX="md"
                         selected={activeIconTab === "profile"}
                         onClick={() => setActiveIconTab("profile")}
                         aria-controls="icon-panel-profile"
@@ -346,6 +356,7 @@
                         </BadgeCount>
                       </Tab>
                       <Tab
+                        paddingX="md"
                         selected={activeIconTab === "settings"}
                         onClick={() => setActiveIconTab("settings")}
                         aria-controls="icon-panel-settings"
@@ -533,6 +544,7 @@
                           }}
                         >
                           <Link
+                            paddingX="md"
                             discrete
                             pseudoState={{
                               ":focus-visible": name === "analytics",
@@ -561,6 +573,7 @@
                           }}
                         >
                           <Link
+                            paddingX="md"
                             discrete
                             pseudoState={{
                               ":focus-visible": name === "analytics",
@@ -590,6 +603,7 @@
                           }}
                         >
                           <Link
+                            paddingX="md"
                             discrete
                             pseudoState={{
                               ":focus-visible": name === "analytics",
@@ -617,6 +631,7 @@
                           }}
                         >
                           <Link
+                            paddingX="md"
                             discrete
                             pseudoState={{
                               ":focus-visible": name === "analytics",
@@ -658,6 +673,7 @@
                           }}
                         >
                           <Link
+                            paddingX="md"
                             discrete
                             pseudoState={{
                               ":focus-visible": name === "analytics",
@@ -698,6 +714,7 @@
                           }}
                         >
                           <Link
+                            paddingX="md"
                             discrete
                             pseudoState={{
                               ":focus-visible": name === "analytics",

@@ -349,40 +349,13 @@ export const Tab = (props) => {
 };
 TabList.Tab = Tab;
 
-const TabRoute = ({
-  route,
-  routeParams,
-  children,
-  paddingX = "s",
-  padding,
-  paddingY,
-  alignX,
-  alignY,
-  ...props
-}) => {
+const TabRoute = ({ route, routeParams, children, ...props }) => {
   const { active } = useRouteStatus(route);
   const paramsAreMatching = route.matchesParams(routeParams);
   const selected = active && paramsAreMatching;
   return (
-    <TabBasic
-      selected={selected}
-      paddingX={undefined}
-      alignX={alignX}
-      alignY={alignY}
-      {...props}
-    >
-      <RouteLink
-        box
-        route={route}
-        routeParams={routeParams}
-        expand
-        discrete
-        paddingX={paddingX}
-        padding={padding}
-        paddingY={paddingY}
-        alignX={alignX}
-        alignY={alignY}
-      >
+    <TabBasic selected={selected} {...props} visualSelector=".navi_link">
+      <RouteLink box route={route} routeParams={routeParams} expand discrete>
         {children}
       </RouteLink>
     </TabBasic>
@@ -398,7 +371,6 @@ const TabBasic = ({ children, selected, onClick, ...props }) => {
       aria-selected={selected ? "true" : "false"}
       data-interactive={onClick ? "" : undefined}
       onClick={onClick}
-      paddingX="s"
       // Style system
       baseClassName="navi_tab"
       styleCSSVars={TAB_STYLE_CSS_VARS}
