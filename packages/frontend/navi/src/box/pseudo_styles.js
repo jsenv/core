@@ -402,87 +402,60 @@ const getStyleToApply = (styles, pseudoState, pseudoNamedStyles) => {
 const styleKeySetWeakMap = new WeakMap();
 const elementTransitionStateWeakMap = new WeakMap();
 const NO_STYLE_KEY_SET = new Set();
+
 const updateStyle = (element, style) => {
-  const oldStyleKeySet = styleKeySetWeakMap.get(element);
-  const styleKeySet = Set ? new Set(Object.keys(style)) : NO_STYLE_KEY_SET;
-  let transitionState = elementTransitionStateWeakMap.get(element);
+  const styleKeySet = style ? new Set(Object.keys(style)) : NO_STYLE_KEY_SET;
+  const oldStyleKeySet = styleKeySetWeakMap.get(element) || NO_STYLE_KEY_SET;
   const hasTransition = styleKeySet.has("transition");
+  let transitionState = elementTransitionStateWeakMap.get(element);
 
-  // Initialize or update transition state
-  // If we set both transition and styles together the browser will perform that transition
-  // so we must set transition after setting styles to avoid an initial transition
-  // we have 2 choices afterwards:
-  // 1. Force a reflow to be able to restore transition right away
-  // 2. Wait an animation frame to restore transition
-  //    - more performant (because we don't force a "useless" reflow)
-  //    - more correct (we don't want transition in case any other code is changing style right after)
-  if (!transitionState) {
-    transitionState = {
-      hasBeenUpdatedThisFrame: false,
-      pendingTransitionValue: undefined,
-      rafId: null,
-    };
-    elementTransitionStateWeakMap.set(element, transitionState);
+  if (hasTransition || transitionState) {
+    if (!transitionState) {
+      transitionState = { hasBeenUpdatedThisFrame: false, rafId: null };
+      elementTransitionStateWeakMap.set(element, transitionState);
+    }
+    // Cancel previous transition restoration and disable transitions on first update
+    if (transitionState.rafId !== null) {
+      cancelAnimationFrame(transitionState.rafId);
+    }
+    if (!transitionState.hasBeenUpdatedThisFrame) {
+      transitionState.hasBeenUpdatedThisFrame = true;
+      element.style.transition = "none";
+    }
   }
 
-  // Cancel any pending transition restoration
-  if (transitionState.rafId !== null) {
-    cancelAnimationFrame(transitionState.rafId);
-    transitionState.rafId = null;
-  }
-
-  // Store the latest transition value for later restoration
-  if (hasTransition) {
-    transitionState.pendingTransitionValue = style.transition;
-  } else if (style && !hasTransition) {
-    // If style object exists but no transition property, we want to remove it
-    transitionState.pendingTransitionValue = undefined;
-  }
-
-  // On first update in this frame, disable transitions
-  if (!transitionState.hasBeenUpdatedThisFrame) {
-    transitionState.hasBeenUpdatedThisFrame = true;
-    element.style.transition = "none";
-  }
-
-  // Apply all styles except transition
-  const toDeleteKeySet = oldStyleKeySet
-    ? new Set(oldStyleKeySet)
-    : NO_STYLE_KEY_SET;
+  // Apply styles (excluding transition)
+  const keysToDelete = new Set(oldStyleKeySet);
   for (const key of styleKeySet) {
-    if (key === "transition") {
-      continue;
-    }
-    toDeleteKeySet.delete(key);
+    if (key === "transition") continue;
+
+    keysToDelete.delete(key);
+    const value = style[key];
     if (key.startsWith("--")) {
-      element.style.setProperty(key, style[key]);
+      element.style.setProperty(key, value);
     } else {
-      element.style[key] = style[key];
+      element.style[key] = value;
     }
   }
-  for (const toDeleteKey of toDeleteKeySet) {
-    if (toDeleteKey === "transition") {
-      continue;
-    }
-    if (toDeleteKey.startsWith("--")) {
-      element.style.removeProperty(toDeleteKey);
+  // Remove obsolete styles (excluding transition)
+  for (const key of keysToDelete) {
+    if (key === "transition") continue;
+
+    if (key.startsWith("--")) {
+      element.style.removeProperty(key);
     } else {
-      element.style[toDeleteKey] = "";
+      element.style[key] = "";
     }
   }
   styleKeySetWeakMap.set(element, styleKeySet);
 
-  // Schedule transition restoration for next frame
-  transitionState.rafId = requestAnimationFrame(() => {
-    transitionState.hasBeenUpdatedThisFrame = false;
-    transitionState.rafId = null;
+  // Schedule transition restoration
+  if (transitionState) {
+    transitionState.rafId = requestAnimationFrame(() => {
+      transitionState.hasBeenUpdatedThisFrame = false;
+      transitionState.rafId = null;
 
-    // Restore transition to the latest value received
-    if (transitionState.pendingTransitionValue !== undefined) {
-      element.style.transition = transitionState.pendingTransitionValue;
-    } else {
-      // Remove transition property if it was not provided in the latest style
-      element.style.transition = "";
-    }
-  });
+      element.style.transition = hasTransition ? style.transition : "";
+    });
+  }
 };
