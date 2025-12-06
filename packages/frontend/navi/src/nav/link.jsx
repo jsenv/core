@@ -301,7 +301,7 @@ const LinkPlain = (props) => {
     innerIcon = icon;
   }
 
-  const innerChildren = children || href;
+  const innerChildren = children || (anchor ? undefined : href);
 
   return (
     <Box
