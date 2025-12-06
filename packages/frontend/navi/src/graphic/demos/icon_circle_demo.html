@@ -5,24 +5,28 @@
     <meta charset="utf-8" />
     <title>Icon Demo</title>
     <style>
-      /* Global styles for better SVG rendering */
-      svg {
-        backface-visibility: hidden;
-
-        /* GPU acceleration hints */
-        transform: translateZ(0);
-        /* Prevent blur on all SVGs by default */
-        image-rendering: optimizeSpeed; /* Firefox fallback */
-        image-rendering: -webkit-optimize-contrast; /* Safari */
-        image-rendering: crisp-edges; /* Standard */
-      }
-
       /* Anti-aliasing control for sharp graphics */
       .crisp-rendering {
         image-rendering: pixelated; /* Most aggressive */
         image-rendering: crisp-edges;
         -webkit-font-smoothing: none;
         -moz-osx-font-smoothing: unset;
+      }
+
+      /* Scoped SVG styles only for blur prevention examples */
+      .crisp-rendering svg,
+      .gpu-accelerated svg {
+        width: 100%;
+        height: 100%;
+
+        backface-visibility: hidden;
+
+        /* GPU acceleration hints */
+        transform: translateZ(0);
+        /* Prevent blur on SVGs in prevention examples */
+        image-rendering: optimizeSpeed; /* Firefox fallback */
+        image-rendering: -webkit-optimize-contrast; /* Safari */
+        image-rendering: crisp-edges; /* Standard */
       }
 
       /* GPU acceleration utilities */
@@ -345,7 +349,7 @@
               width: "60px",
               height: "60px",
               backgroundColor: background,
-              borderRadius: "50%",
+              borderRadius: "100%",
               color,
               cursor: "pointer",
               transform: isHovered
