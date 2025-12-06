@@ -406,29 +406,30 @@ const NO_STYLE_KEY_SET = new Set();
 const updateStyle = (element, style) => {
   const styleKeySet = style ? new Set(Object.keys(style)) : NO_STYLE_KEY_SET;
   const oldStyleKeySet = styleKeySetWeakMap.get(element) || NO_STYLE_KEY_SET;
+  // TRANSITION ANTI-FLICKER STRATEGY:
+  // When setting styles on an element for the first time, we temporarily
+  // disable transitions to prevent unwanted transition for the element initial styles.
+  // We only restore the intended transition after all style
+  // updates for this rendering frame are complete, ensuring no initial transition occurs.
   const hasTransition = styleKeySet.has("transition");
-  let transitionState = elementTransitionStateWeakMap.get(element);
-
-  if (hasTransition || transitionState) {
-    if (!transitionState) {
-      transitionState = { hasBeenUpdatedThisFrame: false, rafId: null };
-      elementTransitionStateWeakMap.set(element, transitionState);
-    }
-    // Cancel previous transition restoration and disable transitions on first update
-    if (transitionState.rafId !== null) {
-      cancelAnimationFrame(transitionState.rafId);
-    }
-    if (!transitionState.hasBeenUpdatedThisFrame) {
-      transitionState.hasBeenUpdatedThisFrame = true;
+  const isFirstUpdate = oldStyleKeySet === NO_STYLE_KEY_SET;
+  if (hasTransition && isFirstUpdate) {
+    if (elementTransitionStateWeakMap.has(element)) {
+      elementTransitionStateWeakMap.set(element, style.transition);
+    } else {
       element.style.transition = "none";
+      elementTransitionStateWeakMap.set(element, style.transition);
+      requestAnimationFrame(() => {
+        const transitionValue = elementTransitionStateWeakMap.get(element);
+        element.style.transition = transitionValue;
+        elementTransitionStateWeakMap.delete(element);
+      });
     }
   }
 
-  // Apply styles (excluding transition)
+  // Apply all styles normally (including transition)
   const keysToDelete = new Set(oldStyleKeySet);
   for (const key of styleKeySet) {
-    if (key === "transition") continue;
-
     keysToDelete.delete(key);
     const value = style[key];
     if (key.startsWith("--")) {
@@ -437,25 +438,15 @@ const updateStyle = (element, style) => {
       element.style[key] = value;
     }
   }
-  // Remove obsolete styles (excluding transition)
-  for (const key of keysToDelete) {
-    if (key === "transition") continue;
 
+  // Remove obsolete styles
+  for (const key of keysToDelete) {
     if (key.startsWith("--")) {
       element.style.removeProperty(key);
     } else {
       element.style[key] = "";
     }
   }
+
   styleKeySetWeakMap.set(element, styleKeySet);
-
-  // Schedule transition restoration
-  if (transitionState) {
-    transitionState.rafId = requestAnimationFrame(() => {
-      transitionState.hasBeenUpdatedThisFrame = false;
-      transitionState.rafId = null;
-
-      element.style.transition = hasTransition ? style.transition : "";
-    });
-  }
 };
