@@ -5,33 +5,70 @@
     <meta charset="utf-8" />
     <title>Icon Demo</title>
     <style>
+      /* Base crisp-scale component styling */
+      .crisp-scale {
+        display: flex;
+        width: 60px;
+        height: 60px;
+        align-items: center;
+        justify-content: center;
+        /* border-radius: 50%; */
+
+        /* Default scale state */
+        transform: scale(1);
+        transition: transform 0.6s ease-in-out;
+        cursor: pointer;
+      }
+
+      /* Background and color variants */
+      .crisp-scale[data-background="black"] {
+        background-color: black;
+      }
+
+      .crisp-scale[data-color="white"] {
+        color: white;
+      }
+
+      /* Scale behavior when hovered */
+      .crisp-scale[data-hovered="true"] {
+        transform: scale(1.4);
+      }
+
+      .crisp-scale[data-hovered="true"][data-use-3d="true"] {
+        transform: scale3d(1.4, 1.4, 1) translateZ(0);
+      }
+
+      .crisp-scale[data-use-3d="true"] {
+        transform: scale3d(1, 1, 1) translateZ(0);
+      }
+
+      .crisp-scale[data-hovered="true"][data-use-3d="true"] {
+        transform: scale3d(1.4, 1.4, 1) translateZ(0);
+      }
+
       /* Technique-specific CSS using data attributes */
-      .crisp-scale[data-will-change] {
+      .crisp-scale[data-will-change="true"] {
         will-change: transform;
       }
 
-      .crisp-scale[data-use-3d] {
-        /* 3D transforms handled in inline styles */
-      }
-
-      .crisp-scale[data-image-rendering] {
+      .crisp-scale[data-image-rendering="true"] {
         image-rendering: crisp-edges;
       }
 
-      .crisp-scale[data-backface-visibility] {
+      .crisp-scale[data-backface-visibility="true"] {
         backface-visibility: hidden;
       }
 
       /* SVG-specific crisp rendering for prevention examples */
-      .crisp-scale[data-image-rendering] svg {
+      .crisp-scale[data-image-rendering="true"] svg {
         image-rendering: optimizeSpeed; /* Firefox fallback */
         image-rendering: -webkit-optimize-contrast; /* Safari */
         image-rendering: crisp-edges; /* Standard */
       }
 
       /* GPU acceleration for SVGs when will-change is enabled */
-      .crisp-scale[data-will-change] svg,
-      .crisp-scale[data-backface-visibility] svg {
+      .crisp-scale[data-will-change="true"] svg,
+      .crisp-scale[data-backface-visibility="true"] svg {
         backface-visibility: hidden;
         transform: translateZ(0);
       }
@@ -286,28 +323,13 @@
         return (
           <div
             className="crisp-scale"
-            data-will-change={willChange || undefined}
-            data-image-rendering={imageRendering || undefined}
-            data-backface-visibility={backfaceVisibility || undefined}
-            data-use-3d={use3d || undefined}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              width: "60px",
-              height: "60px",
-              backgroundColor: background,
-              color,
-              cursor: "pointer",
-              transform: isHovered
-                ? use3d
-                  ? "scale3d(1.4, 1.4, 1) translateZ(0)"
-                  : "scale(1.4)"
-                : use3d
-                  ? "scale3d(1, 1, 1) translateZ(0)"
-                  : "scale(1)",
-              transition: "transform 0.6s ease-in-out",
-            }}
+            data-background={background}
+            data-color={color}
+            data-hovered={isHovered}
+            data-will-change={willChange}
+            data-image-rendering={imageRendering}
+            data-backface-visibility={backfaceVisibility}
+            data-use-3d={use3d}
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
           >
