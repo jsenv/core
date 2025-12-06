@@ -420,18 +420,20 @@ const updateStyle = (element, style) => {
       } else {
         element.style.transition = "none";
         elementTransitionStateWeakMap.set(element, style.transition);
-        requestAnimationFrame(() => {
-          const transitionValue = elementTransitionStateWeakMap.get(element);
-          if (transitionValue === undefined) {
-            element.style.transition = "";
-          } else {
-            element.style.transition = transitionValue;
-          }
-          elementRenderedWeakSet.add(element);
-          elementTransitionStateWeakMap.delete(element);
-        });
       }
     }
+    requestAnimationFrame(() => {
+      if (elementTransitionStateWeakMap.has(element)) {
+        const transitionToRestore = elementTransitionStateWeakMap.get(element);
+        if (transitionToRestore === undefined) {
+          element.style.transition = "";
+        } else {
+          element.style.transition = transitionToRestore;
+        }
+        elementTransitionStateWeakMap.delete(element);
+      }
+      elementRenderedWeakSet.add(element);
+    });
   }
 
   // Apply all styles normally (including transition)
