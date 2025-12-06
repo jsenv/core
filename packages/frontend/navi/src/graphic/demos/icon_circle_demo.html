@@ -76,20 +76,7 @@
             </Box>
 
             {/* Section 3: Extreme scaling for more obvious effect */}
-            <Box row spacing="md">
-              <Title as="h2">Extreme Scaling (2x Scale)</Title>
-              <Text>
-                Larger scale changes make the blur effect more pronounced:
-              </Text>
-              <Box column spacing="lg" align="center">
-                <ExtremeScaleIcon background="crimson" color="white">
-                  <SharpCrossSvg />
-                </ExtremeScaleIcon>
-                <ExtremeScaleIcon background="darkblue" color="white">
-                  <FineGridSvg />
-                </ExtremeScaleIcon>
-              </Box>
-            </Box>
+            <ExtremeScalingSection />
 
             {/* Section 4: Side-by-side comparison */}
             <Box row spacing="md">
@@ -112,6 +99,25 @@
                   </FastScaleIcon>
                 </Box>
               </Box>
+            </Box>
+          </Box>
+        );
+      };
+
+      const ExtremeScalingSection = () => {
+        return (
+          <Box row spacing="md">
+            <Title as="h2">Extreme Scaling (2x Scale)</Title>
+            <Text>
+              Larger scale changes make the blur effect more pronounced:
+            </Text>
+            <Box column spacing="lg" align="center">
+              <ExtremeScaleIcon background="crimson" color="white">
+                <SharpCrossSvg />
+              </ExtremeScaleIcon>
+              <ExtremeScaleIcon background="darkblue" color="white">
+                <FineGridSvg />
+              </ExtremeScaleIcon>
             </Box>
           </Box>
         );
