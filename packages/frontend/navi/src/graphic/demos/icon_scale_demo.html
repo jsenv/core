@@ -4,81 +4,11 @@
   <head>
     <meta charset="utf-8" />
     <title>Icon Demo</title>
-    <style>
-      /* Base crisp-scale component styling */
-      .crisp-scale {
-        display: flex;
-        width: 60px;
-        height: 60px;
-        align-items: center;
-        justify-content: center;
-        /* border-radius: 50%; */
-
-        /* Default scale state */
-        transform: scale(1);
-        transition: transform 0.6s ease-in-out;
-        cursor: pointer;
-      }
-
-      /* Background and color variants */
-      .crisp-scale[data-background="black"] {
-        background-color: black;
-      }
-
-      .crisp-scale[data-color="white"] {
-        color: white;
-      }
-
-      /* Scale behavior when hovered */
-      .crisp-scale[data-hovered="true"] {
-        transform: scale(1.4);
-      }
-
-      .crisp-scale[data-hovered="true"][data-use-3d="true"] {
-        transform: scale3d(1.4, 1.4, 1) translateZ(0);
-      }
-
-      .crisp-scale[data-use-3d="true"] {
-        transform: scale3d(1, 1, 1) translateZ(0);
-      }
-
-      .crisp-scale[data-hovered="true"][data-use-3d="true"] {
-        transform: scale3d(1.4, 1.4, 1) translateZ(0);
-      }
-
-      /* Technique-specific CSS using data attributes */
-      .crisp-scale[data-will-change="true"] {
-        will-change: transform;
-      }
-
-      .crisp-scale[data-image-rendering="true"] {
-        image-rendering: crisp-edges;
-      }
-
-      .crisp-scale[data-backface-visibility="true"] {
-        backface-visibility: hidden;
-      }
-
-      /* SVG-specific crisp rendering for prevention examples */
-      .crisp-scale[data-image-rendering="true"] svg {
-        image-rendering: optimizeSpeed; /* Firefox fallback */
-        image-rendering: -webkit-optimize-contrast; /* Safari */
-        image-rendering: crisp-edges; /* Standard */
-      }
-
-      /* GPU acceleration for SVGs when will-change is enabled */
-      .crisp-scale[data-will-change="true"] svg,
-      .crisp-scale[data-backface-visibility="true"] svg {
-        backface-visibility: hidden;
-        transform: translateZ(0);
-      }
-    </style>
   </head>
   <body>
     <div id="app"></div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { useState } from "preact/hooks";
       import {
         Text,
         Paragraph,
@@ -142,6 +72,9 @@
                 <CircleIcon background="purple" color="white">
                   <FineGridSvg />
                 </CircleIcon>
+                <CircleIcon background="teal" color="white">
+                  C
+                </CircleIcon>
               </Box>
             </Box>
 
@@ -180,112 +113,6 @@
                 </Box>
               </Box>
             </Box>
-
-            {/* Section 5: Techniques to prevent blur */}
-            <Box row spacing="md">
-              <Title as="h2">🛡️ Preventing the Blur Effect</Title>
-              <Text>
-                Each technique applied in isolation. Same background, color, and
-                SVG for proper comparison:
-              </Text>
-              <Box row spacing="lg" align="center">
-                <Box column align="center" spacing="sm">
-                  <Text fontSize="sm">1. will-change: transform</Text>
-                  <CrispScaleIcon willChange={true} />
-                </Box>
-                <Box column align="center" spacing="sm">
-                  <Text fontSize="sm">2. transform3d (3D acceleration)</Text>
-                  <CrispScaleIcon use3d={true} />
-                </Box>
-                <Box column align="center" spacing="sm">
-                  <Text fontSize="sm">3. image-rendering: crisp-edges</Text>
-                  <CrispScaleIcon imageRendering={true} />
-                </Box>
-                <Box column align="center" spacing="sm">
-                  <Text fontSize="sm">4. backface-visibility: hidden</Text>
-                  <CrispScaleIcon backfaceVisibility={true} />
-                </Box>
-              </Box>
-            </Box>
-
-            {/* Section 6: Complete comparison */}
-            <Box row spacing="md">
-              <Title as="h2">🔬 Complete Comparison</Title>
-              <Text>
-                All techniques compared side-by-side. Hover over each to test
-                effectiveness:
-              </Text>
-              <Box row spacing="lg" align="center">
-                <Box row spacing="md" align="center">
-                  <Box column align="center" spacing="sm">
-                    <Text fontSize="xs">Default (Blurry)</Text>
-                    <CircleIcon background="black" color="white">
-                      <SharpCrossSvg />
-                    </CircleIcon>
-                  </Box>
-                  <Box column align="center" spacing="sm">
-                    <Text fontSize="xs">will-change</Text>
-                    <CrispScaleIcon willChange={true} />
-                  </Box>
-                  <Box column align="center" spacing="sm">
-                    <Text fontSize="xs">3D transform</Text>
-                    <CrispScaleIcon use3d={true} />
-                  </Box>
-                  <Box column align="center" spacing="sm">
-                    <Text fontSize="xs">crisp-edges</Text>
-                    <CrispScaleIcon imageRendering={true} />
-                  </Box>
-                  <Box column align="center" spacing="sm">
-                    <Text fontSize="xs">backface-visibility</Text>
-                    <CrispScaleIcon backfaceVisibility={true} />
-                  </Box>
-                  <Box column align="center" spacing="sm">
-                    <Text fontSize="xs">All Combined</Text>
-                    <CrispScaleIcon
-                      willChange={true}
-                      imageRendering={true}
-                      backfaceVisibility={true}
-                      use3d={true}
-                    />
-                  </Box>
-                </Box>
-              </Box>
-            </Box>
-
-            {/* Section 7: Technical notes */}
-            <Box row spacing="md">
-              <Title as="h2">📝 Technical Notes</Title>
-              <Box row spacing="sm">
-                <Text fontSize="sm">
-                  <strong>Most Effective Techniques:</strong>
-                </Text>
-                <Text fontSize="sm">
-                  • <code>will-change: transform</code> - Forces GPU
-                  acceleration • <code>transform3d()</code> - Alternative GPU
-                  acceleration trigger •{" "}
-                  <code>image-rendering: crisp-edges</code> - Prevents
-                  anti-aliasing blur • <code>backface-visibility: hidden</code>{" "}
-                  - Optimizes GPU rendering
-                </Text>
-                <Text fontSize="sm">
-                  <strong>Browser Differences:</strong>
-                </Text>
-                <Text fontSize="sm">
-                  • Chrome/Edge: Most blur-prone, benefits most from GPU
-                  acceleration • Firefox: Less blur, but still benefits from
-                  crisp-edges • Safari: Good default rendering, minimal
-                  techniques needed
-                </Text>
-                <Text fontSize="sm">
-                  <strong>Performance Trade-offs:</strong>
-                </Text>
-                <Text fontSize="sm">
-                  • GPU acceleration uses more memory but smoother animations •
-                  crisp-edges may look pixelated on some devices • Combining all
-                  techniques gives best results but highest resource usage
-                </Text>
-              </Box>
-            </Box>
           </Box>
         );
       };
@@ -309,35 +136,6 @@
         );
       };
 
-      const CrispScaleIcon = ({
-        background = "black", // Match the problem demonstration
-        color = "white",
-        children = <SharpCrossSvg />, // Default to same SVG for consistency
-        willChange = false,
-        imageRendering = false,
-        backfaceVisibility = false,
-        use3d = false,
-      }) => {
-        const [isHovered, setIsHovered] = useState(false);
-
-        return (
-          <div
-            className="crisp-scale"
-            data-background={background}
-            data-color={color}
-            data-hovered={isHovered}
-            data-will-change={willChange}
-            data-image-rendering={imageRendering}
-            data-backface-visibility={backfaceVisibility}
-            data-use-3d={use3d}
-            onMouseEnter={() => setIsHovered(true)}
-            onMouseLeave={() => setIsHovered(false)}
-          >
-            {children}
-          </div>
-        );
-      };
-
       const CircleIcon = ({
         children,
         background = "orange",
@@ -356,7 +154,6 @@
             background={background}
             color={color}
             // borderRadius="100%"
-            scale="1"
             pseudoStyle={{
               ":hover": {
                 scale: scale.toString(),
@@ -401,7 +198,6 @@
           </svg>
         );
       };
-
       const FineGridSvg = () => {
         return (
           <svg viewBox="0 0 24 24">

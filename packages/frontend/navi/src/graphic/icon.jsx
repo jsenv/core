@@ -47,6 +47,7 @@ import.meta.css = /* css */ `
   .navi_icon > img {
     width: 100%;
     height: 100%;
+    backface-visibility: hidden;
   }
   .navi_icon[data-width] > svg,
   .navi_icon[data-width] > img {
