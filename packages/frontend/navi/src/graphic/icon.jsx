@@ -116,7 +116,6 @@ export const Icon = ({
         data-height={height}
         data-interactive={onClick ? "" : undefined}
         onClick={onClick}
-        paddingAbsoluteUnits
       >
         {innerChildren}
       </Box>
