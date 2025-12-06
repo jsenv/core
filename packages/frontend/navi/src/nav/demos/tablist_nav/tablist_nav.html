@@ -9,7 +9,6 @@
     <div id="app"></div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { useState } from "preact/hooks";
       import {
         Box,
         Title,
@@ -31,8 +30,6 @@
       });
 
       const ScalingTabsDemo = () => {
-        const [activeIcon, setActiveIcon] = useState("home");
-
         return (
           <Box as="section" className="demo-section">
             <Title as="h2">Scaling Selected Tabs</Title>
