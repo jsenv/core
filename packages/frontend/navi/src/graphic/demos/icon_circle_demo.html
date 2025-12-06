@@ -5,35 +5,35 @@
     <meta charset="utf-8" />
     <title>Icon Demo</title>
     <style>
-      /* Anti-aliasing control for sharp graphics */
-      .crisp-rendering {
-        image-rendering: pixelated; /* Most aggressive */
-        image-rendering: crisp-edges;
-        -webkit-font-smoothing: none;
-        -moz-osx-font-smoothing: unset;
+      /* Technique-specific CSS using data attributes */
+      .crisp-scale[data-will-change] {
+        will-change: transform;
       }
 
-      /* Scoped SVG styles only for blur prevention examples */
-      .crisp-rendering svg,
-      .gpu-accelerated svg {
-        width: 100%;
-        height: 100%;
+      .crisp-scale[data-use-3d] {
+        /* 3D transforms handled in inline styles */
+      }
 
+      .crisp-scale[data-image-rendering] {
+        image-rendering: crisp-edges;
+      }
+
+      .crisp-scale[data-backface-visibility] {
         backface-visibility: hidden;
+      }
 
-        /* GPU acceleration hints */
-        transform: translateZ(0);
-        /* Prevent blur on SVGs in prevention examples */
+      /* SVG-specific crisp rendering for prevention examples */
+      .crisp-scale[data-image-rendering] svg {
         image-rendering: optimizeSpeed; /* Firefox fallback */
         image-rendering: -webkit-optimize-contrast; /* Safari */
         image-rendering: crisp-edges; /* Standard */
       }
 
-      /* GPU acceleration utilities */
-      .gpu-accelerated {
+      /* GPU acceleration for SVGs when will-change is enabled */
+      .crisp-scale[data-will-change] svg,
+      .crisp-scale[data-backface-visibility] svg {
         backface-visibility: hidden;
         transform: translateZ(0);
-        will-change: transform;
       }
     </style>
   </head>
@@ -148,58 +148,25 @@
             <Box row spacing="md">
               <Title as="h2">🛡️ Preventing the Blur Effect</Title>
               <Text>
-                Various techniques to eliminate or reduce blur during scale
-                transitions:
+                Each technique applied in isolation. Same background, color, and
+                SVG for proper comparison:
               </Text>
               <Box row spacing="lg" align="center">
                 <Box column align="center" spacing="sm">
-                  <Text fontSize="sm">
-                    1. will-change: transform (GPU acceleration)
-                  </Text>
-                  <CrispScaleIcon
-                    background="green"
-                    color="white"
-                    willChange="transform"
-                  >
-                    <SharpCrossSvg />
-                  </CrispScaleIcon>
+                  <Text fontSize="sm">1. will-change: transform</Text>
+                  <CrispScaleIcon willChange={true} />
                 </Box>
                 <Box column align="center" spacing="sm">
-                  <Text fontSize="sm">
-                    2. transform3d (Force hardware acceleration)
-                  </Text>
-                  <CrispScaleIcon
-                    background="purple"
-                    color="white"
-                    use3d={true}
-                  >
-                    <SharpCrossSvg />
-                  </CrispScaleIcon>
+                  <Text fontSize="sm">2. transform3d (3D acceleration)</Text>
+                  <CrispScaleIcon use3d={true} />
                 </Box>
                 <Box column align="center" spacing="sm">
                   <Text fontSize="sm">3. image-rendering: crisp-edges</Text>
-                  <CrispScaleIcon
-                    background="orange"
-                    color="white"
-                    imageRendering="crisp-edges"
-                  >
-                    <SharpCrossSvg />
-                  </CrispScaleIcon>
+                  <CrispScaleIcon imageRendering={true} />
                 </Box>
                 <Box column align="center" spacing="sm">
-                  <Text fontSize="sm">
-                    4. Combined: GPU + crisp-edges + backface-visibility
-                  </Text>
-                  <CrispScaleIcon
-                    background="crimson"
-                    color="white"
-                    willChange="transform"
-                    imageRendering="crisp-edges"
-                    backfaceVisibility="hidden"
-                    use3d={true}
-                  >
-                    <SharpCrossSvg />
-                  </CrispScaleIcon>
+                  <Text fontSize="sm">4. backface-visibility: hidden</Text>
+                  <CrispScaleIcon backfaceVisibility={true} />
                 </Box>
               </Box>
             </Box>
@@ -215,52 +182,34 @@
                 <Box row spacing="md" align="center">
                   <Box column align="center" spacing="sm">
                     <Text fontSize="xs">Default (Blurry)</Text>
-                    <CircleIcon background="gray" color="white">
+                    <CircleIcon background="black" color="white">
                       <SharpCrossSvg />
                     </CircleIcon>
                   </Box>
                   <Box column align="center" spacing="sm">
                     <Text fontSize="xs">will-change</Text>
-                    <CrispScaleIcon
-                      background="green"
-                      color="white"
-                      willChange="transform"
-                    >
-                      <SharpCrossSvg />
-                    </CrispScaleIcon>
+                    <CrispScaleIcon willChange={true} />
                   </Box>
                   <Box column align="center" spacing="sm">
                     <Text fontSize="xs">3D transform</Text>
-                    <CrispScaleIcon
-                      background="purple"
-                      color="white"
-                      use3d={true}
-                    >
-                      <SharpCrossSvg />
-                    </CrispScaleIcon>
+                    <CrispScaleIcon use3d={true} />
                   </Box>
                   <Box column align="center" spacing="sm">
                     <Text fontSize="xs">crisp-edges</Text>
-                    <CrispScaleIcon
-                      background="orange"
-                      color="white"
-                      imageRendering="crisp-edges"
-                    >
-                      <SharpCrossSvg />
-                    </CrispScaleIcon>
+                    <CrispScaleIcon imageRendering={true} />
+                  </Box>
+                  <Box column align="center" spacing="sm">
+                    <Text fontSize="xs">backface-visibility</Text>
+                    <CrispScaleIcon backfaceVisibility={true} />
                   </Box>
                   <Box column align="center" spacing="sm">
                     <Text fontSize="xs">All Combined</Text>
                     <CrispScaleIcon
-                      background="crimson"
-                      color="white"
-                      willChange="transform"
-                      imageRendering="crisp-edges"
-                      backfaceVisibility="hidden"
+                      willChange={true}
+                      imageRendering={true}
+                      backfaceVisibility={true}
                       use3d={true}
-                    >
-                      <SharpCrossSvg />
-                    </CrispScaleIcon>
+                    />
                   </Box>
                 </Box>
               </Box>
@@ -324,24 +273,23 @@
       };
 
       const CrispScaleIcon = ({
-        background = "var(--color-bg)",
-        color = "var(--color-text)",
-        children,
-        willChange,
-        imageRendering,
-        backfaceVisibility,
+        background = "black", // Match the problem demonstration
+        color = "white",
+        children = <SharpCrossSvg />, // Default to same SVG for consistency
+        willChange = false,
+        imageRendering = false,
+        backfaceVisibility = false,
         use3d = false,
       }) => {
         const [isHovered, setIsHovered] = useState(false);
 
         return (
           <div
-            className={[
-              imageRendering && "crisp-rendering",
-              willChange && "gpu-accelerated",
-            ]
-              .filter(Boolean)
-              .join(" ")}
+            className="crisp-scale"
+            data-will-change={willChange || undefined}
+            data-image-rendering={imageRendering || undefined}
+            data-backface-visibility={backfaceVisibility || undefined}
+            data-use-3d={use3d || undefined}
             style={{
               display: "flex",
               alignItems: "center",
@@ -349,7 +297,7 @@
               width: "60px",
               height: "60px",
               backgroundColor: background,
-              borderRadius: "100%",
+              borderRadius: "50%",
               color,
               cursor: "pointer",
               transform: isHovered
@@ -360,22 +308,11 @@
                   ? "scale3d(1, 1, 1) translateZ(0)"
                   : "scale(1)",
               transition: "transform 0.6s ease-in-out",
-              willChange,
-              backfaceVisibility,
-              // Apply image-rendering directly to container for inheritance
-              imageRendering,
             }}
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
           >
-            <div
-              style={{
-                imageRendering,
-                transform: "translateZ(0)", // Extra GPU hint for SVG
-              }}
-            >
-              {children}
-            </div>
+            {children}
           </div>
         );
       };
