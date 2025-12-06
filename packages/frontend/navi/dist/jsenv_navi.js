@@ -5088,9 +5088,15 @@ const getHowToHandleStyleProp = (name) => {
   }
   return getStyle;
 };
-const prepareStyleValue = (existingValue, value, name, context) => {
+const prepareStyleValue = (
+  existingValue,
+  value,
+  name,
+  styleContext,
+  context,
+) => {
   const normalizer = getNormalizer(name);
-  const cssValue = normalizer(value, name);
+  const cssValue = normalizer(value, name, styleContext, context);
   const mergedValue = mergeOneStyle(existingValue, cssValue, name, context);
   return mergedValue;
 };
@@ -5623,7 +5629,8 @@ const applyStyle = (element, style, pseudoState, pseudoNamedStyles) => {
   if (!element) {
     return;
   }
-  updateStyle(element, getStyleToApply(style, pseudoState, pseudoNamedStyles));
+  const styleToApply = getStyleToApply(style, pseudoState, pseudoNamedStyles);
+  updateStyle(element, styleToApply);
 };
 
 const PSEUDO_STATE_DEFAULT = {};
@@ -5677,40 +5684,72 @@ const getStyleToApply = (styles, pseudoState, pseudoNamedStyles) => {
 };
 
 const styleKeySetWeakMap = new WeakMap();
+const elementTransitionStateWeakMap = new WeakMap();
+const elementRenderedWeakSet = new WeakSet();
+const NO_STYLE_KEY_SET = new Set();
+
 const updateStyle = (element, style) => {
-  const oldStyleKeySet = styleKeySetWeakMap.get(element);
-  const styleKeySet = new Set(style ? Object.keys(style) : []);
-  if (!oldStyleKeySet) {
-    for (const key of styleKeySet) {
-      if (key.startsWith("--")) {
-        element.style.setProperty(key, style[key]);
+  const styleKeySet = style ? new Set(Object.keys(style)) : NO_STYLE_KEY_SET;
+  const oldStyleKeySet = styleKeySetWeakMap.get(element) || NO_STYLE_KEY_SET;
+  // TRANSITION ANTI-FLICKER STRATEGY:
+  // Problem: When setting both transition and styled properties simultaneously
+  // (e.g., el.style.transition = "border-radius 0.3s ease"; el.style.borderRadius = "20px"),
+  // the browser will immediately perform a transition even if no transition existed before.
+  //
+  // Solution: Temporarily disable transitions during initial style application by setting
+  // transition to "none", then restore the intended transition after the frame completes.
+  // We handle multiple updateStyle calls in the same frame gracefully - only one
+  // requestAnimationFrame is scheduled per element, and the final transition value wins.
+  let styleKeySetToApply = styleKeySet;
+  if (!elementRenderedWeakSet.has(element)) {
+    const hasTransition = styleKeySet.has("transition");
+    if (hasTransition) {
+      if (elementTransitionStateWeakMap.has(element)) {
+        elementTransitionStateWeakMap.set(element, style.transition);
       } else {
-        element.style[key] = style[key];
+        element.style.transition = "none";
+        elementTransitionStateWeakMap.set(element, style.transition);
       }
+      // Don't apply the transition property now - we've set it to "none" temporarily
+      styleKeySetToApply = new Set(styleKeySet);
+      styleKeySetToApply.delete("transition");
     }
-    styleKeySetWeakMap.set(element, styleKeySet);
-    return;
+    requestAnimationFrame(() => {
+      if (elementTransitionStateWeakMap.has(element)) {
+        const transitionToRestore = elementTransitionStateWeakMap.get(element);
+        if (transitionToRestore === undefined) {
+          element.style.transition = "";
+        } else {
+          element.style.transition = transitionToRestore;
+        }
+        elementTransitionStateWeakMap.delete(element);
+      }
+      elementRenderedWeakSet.add(element);
+    });
   }
-  const toDeleteKeySet = new Set(oldStyleKeySet);
-  for (const key of styleKeySet) {
-    toDeleteKeySet.delete(key);
+
+  // Apply all styles normally (excluding transition during anti-flicker)
+  const keysToDelete = new Set(oldStyleKeySet);
+  for (const key of styleKeySetToApply) {
+    keysToDelete.delete(key);
+    const value = style[key];
     if (key.startsWith("--")) {
-      element.style.setProperty(key, style[key]);
+      element.style.setProperty(key, value);
     } else {
-      element.style[key] = style[key];
+      element.style[key] = value;
     }
   }
-  for (const toDeleteKey of toDeleteKeySet) {
-    if (toDeleteKey.startsWith("--")) {
-      element.style.removeProperty(toDeleteKey);
+
+  // Remove obsolete styles
+  for (const key of keysToDelete) {
+    if (key.startsWith("--")) {
+      element.style.removeProperty(key);
     } else {
-      // we can't use removeProperty because "toDeleteKey" is in camelCase
-      // e.g., backgroundColor (and it's safer to just let the browser do the conversion)
-      element.style[toDeleteKey] = "";
+      element.style[key] = "";
     }
   }
+
   styleKeySetWeakMap.set(element, styleKeySet);
-  return;
 };
 
 installImportMetaCss(import.meta);import.meta.css = /* css */`
@@ -5866,7 +5905,7 @@ const Box = props => {
     const addStyle = (value, name, styleContext, stylesTarget, context) => {
       styleDeps.push(value); // impact box style -> add to deps
       const cssVar = styleContext.styleCSSVars[name];
-      const mergedValue = prepareStyleValue(stylesTarget[name], value, name, context);
+      const mergedValue = prepareStyleValue(stylesTarget[name], value, name, styleContext, context);
       if (cssVar) {
         stylesTarget[cssVar] = mergedValue;
         return true;
@@ -14309,7 +14348,9 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
   .navi_icon {
     display: inline-block;
     box-sizing: border-box;
+    width: 1em;
     max-width: 100%;
+    height: 1em;
     max-height: 100%;
   }
 
@@ -14348,6 +14389,7 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
   .navi_icon > img {
     width: 100%;
     height: 100%;
+    backface-visibility: hidden;
   }
   .navi_icon[data-width] > svg,
   .navi_icon[data-width] > img {
@@ -14357,6 +14399,11 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
   .navi_icon[data-height] > svg,
   .navi_icon[data-height] > img {
     width: auto;
+    height: 100%;
+  }
+  .navi_icon[data-width][data-height] > svg,
+  .navi_icon[data-width][data-height] > img {
+    width: 100%;
     height: 100%;
   }
 
@@ -16510,6 +16557,7 @@ const LinkPlain = props => {
     icon,
     spacing,
     revealOnInteraction = Boolean(titleLevel),
+    hrefFallback = !anchor,
     children,
     ...rest
   } = props;
@@ -16553,7 +16601,7 @@ const LinkPlain = props => {
   } else {
     innerIcon = icon;
   }
-  const innerChildren = children || href;
+  const innerChildren = children || (hrefFallback ? href : children);
   return jsxs(Box, {
     as: "a",
     color: anchor && !innerChildren ? "inherit" : undefined,

@@ -416,6 +416,7 @@ const updateStyle = (element, style) => {
   // transition to "none", then restore the intended transition after the frame completes.
   // We handle multiple updateStyle calls in the same frame gracefully - only one
   // requestAnimationFrame is scheduled per element, and the final transition value wins.
+  let styleKeySetToApply = styleKeySet;
   if (!elementRenderedWeakSet.has(element)) {
     const hasTransition = styleKeySet.has("transition");
     if (hasTransition) {
@@ -425,6 +426,9 @@ const updateStyle = (element, style) => {
         element.style.transition = "none";
         elementTransitionStateWeakMap.set(element, style.transition);
       }
+      // Don't apply the transition property now - we've set it to "none" temporarily
+      styleKeySetToApply = new Set(styleKeySet);
+      styleKeySetToApply.delete("transition");
     }
     requestAnimationFrame(() => {
       if (elementTransitionStateWeakMap.has(element)) {
@@ -440,9 +444,9 @@ const updateStyle = (element, style) => {
     });
   }
 
-  // Apply all styles normally (including transition)
+  // Apply all styles normally (excluding transition during anti-flicker)
   const keysToDelete = new Set(oldStyleKeySet);
-  for (const key of styleKeySet) {
+  for (const key of styleKeySetToApply) {
     keysToDelete.delete(key);
     const value = style[key];
     if (key.startsWith("--")) {
