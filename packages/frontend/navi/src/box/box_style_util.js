@@ -460,13 +460,13 @@ export const prepareStyleValue = (existingValue, value, name, context) => {
 // This scale is used for spacing to create visual harmony
 // and consistent proportions throughout the design system.
 const sizeSpacingScale = {
-  xxs: "0.125rem", // 0.125 = 2px at 16px base
-  xs: "0.25rem", // 0.25 = 4px at 16px base
-  sm: "0.5rem", // 0.5 = 8px at 16px base
-  md: "1rem", // 1 = 16px at 16px base (base font size)
-  lg: "1.5rem", // 1.5 = 24px at 16px base
-  xl: "2rem", // 2 = 32px at 16px base
-  xxl: "3rem", // 3 = 48px at 16px base
+  xxs: "0.125em", // 0.125 = 2px at 16px base
+  xs: "0.25em", // 0.25 = 4px at 16px base
+  sm: "0.5em", // 0.5 = 8px at 16px base
+  md: "1em", // 1 = 16px at 16px base (base font size)
+  lg: "1.5em", // 1.5 = 24px at 16px base
+  xl: "2em", // 2 = 32px at 16px base
+  xxl: "3em", // 3 = 48px at 16px base
 };
 sizeSpacingScale.s = sizeSpacingScale.sm;
 sizeSpacingScale.m = sizeSpacingScale.md;
