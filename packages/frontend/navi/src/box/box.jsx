@@ -229,6 +229,7 @@ export const Box = (props) => {
         stylesTarget[name],
         value,
         name,
+        styleContext,
         context,
       );
       if (cssVar) {

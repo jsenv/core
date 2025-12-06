@@ -449,9 +449,15 @@ export const getHowToHandleStyleProp = (name) => {
   }
   return getStyle;
 };
-export const prepareStyleValue = (existingValue, value, name, context) => {
+export const prepareStyleValue = (
+  existingValue,
+  value,
+  name,
+  styleContext,
+  context,
+) => {
   const normalizer = getNormalizer(name);
-  const cssValue = normalizer(value, name);
+  const cssValue = normalizer(value, name, styleContext, context);
   const mergedValue = mergeOneStyle(existingValue, cssValue, name, context);
   return mergedValue;
 };
