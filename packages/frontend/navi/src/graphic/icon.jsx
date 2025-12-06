@@ -58,6 +58,11 @@ import.meta.css = /* css */ `
     width: auto;
     height: 100%;
   }
+  .navi_icon[data-width][data-height] > svg,
+  .navi_icon[data-width][data-height] > img {
+    width: 100%;
+    height: 100%;
+  }
 
   .navi_icon[data-icon-char] svg,
   .navi_icon[data-icon-char] img {
