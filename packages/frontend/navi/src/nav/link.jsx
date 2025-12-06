@@ -246,6 +246,7 @@ const LinkPlain = (props) => {
     icon,
     spacing,
     revealOnInteraction = Boolean(titleLevel),
+    hrefFallback = !anchor,
 
     children,
 
@@ -301,7 +302,7 @@ const LinkPlain = (props) => {
     innerIcon = icon;
   }
 
-  const innerChildren = children || (anchor ? undefined : href);
+  const innerChildren = children || (hrefFallback ? href : children);
 
   return (
     <Box
