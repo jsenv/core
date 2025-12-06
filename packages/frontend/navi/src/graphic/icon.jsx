@@ -106,6 +106,17 @@ export const Icon = ({
   const ariaProps = decorative ? { "aria-hidden": "true" } : {};
 
   if (box) {
+    if (
+      import.meta.dev &&
+      props.scale &&
+      props.padding &&
+      String(props.padding).includes("em")
+    ) {
+      console.warn(
+        "Using 'em' units for padding with scale cause positioning issue during the scale transition",
+      );
+    }
+
     return (
       <Box
         {...props}
