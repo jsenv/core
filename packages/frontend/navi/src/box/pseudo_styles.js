@@ -404,7 +404,21 @@ const updateStyle = (element, style) => {
   const oldStyleKeySet = styleKeySetWeakMap.get(element);
   const styleKeySet = new Set(style ? Object.keys(style) : []);
   if (!oldStyleKeySet) {
+    const hasTransition = styleKeySet.has("transition");
+    // If we set both transition and styles together the browser will perform that transition
+    // so we must set transition after setting styles to avoid an initial transition
+    // we have 2 choices afterwards:
+    // 1. Force a reflow to be able to restore transition right away
+    // 2. Wait an animation frame to restore transition
+    //    - more performant (because we don't force a "useless" reflow)
+    //    - more correct (we don't want transition in case any other code is changing style right after)
+    if (hasTransition) {
+      element.style.transition = "none";
+    }
     for (const key of styleKeySet) {
+      if (key === "transition") {
+        continue;
+      }
       if (key.startsWith("--")) {
         element.style.setProperty(key, style[key]);
       } else {
@@ -412,6 +426,11 @@ const updateStyle = (element, style) => {
       }
     }
     styleKeySetWeakMap.set(element, styleKeySet);
+    if (hasTransition) {
+      requestAnimationFrame(() => {
+        element.style.transition = style.transition;
+      });
+    }
     return;
   }
   const toDeleteKeySet = new Set(oldStyleKeySet);
