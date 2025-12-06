@@ -408,10 +408,14 @@ const updateStyle = (element, style) => {
   const styleKeySet = style ? new Set(Object.keys(style)) : NO_STYLE_KEY_SET;
   const oldStyleKeySet = styleKeySetWeakMap.get(element) || NO_STYLE_KEY_SET;
   // TRANSITION ANTI-FLICKER STRATEGY:
-  // When setting styles on an element for the first time, we temporarily
-  // disable transitions to prevent unwanted transition for the element initial styles.
-  // We only restore the intended transition after all style
-  // updates for this rendering frame are complete, ensuring no initial transition occurs.
+  // Problem: When setting both transition and styled properties simultaneously
+  // (e.g., el.style.transition = "border-radius 0.3s ease"; el.style.borderRadius = "20px"),
+  // the browser will immediately perform a transition even if no transition existed before.
+  //
+  // Solution: Temporarily disable transitions during initial style application by setting
+  // transition to "none", then restore the intended transition after the frame completes.
+  // We handle multiple updateStyle calls in the same frame gracefully - only one
+  // requestAnimationFrame is scheduled per element, and the final transition value wins.
   if (!elementRenderedWeakSet.has(element)) {
     const hasTransition = styleKeySet.has("transition");
     if (hasTransition) {
