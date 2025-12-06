@@ -401,6 +401,7 @@ const getStyleToApply = (styles, pseudoState, pseudoNamedStyles) => {
 
 const styleKeySetWeakMap = new WeakMap();
 const elementTransitionStateWeakMap = new WeakMap();
+const elementRenderedWeakSet = new WeakSet();
 const NO_STYLE_KEY_SET = new Set();
 
 const updateStyle = (element, style) => {
@@ -411,19 +412,25 @@ const updateStyle = (element, style) => {
   // disable transitions to prevent unwanted transition for the element initial styles.
   // We only restore the intended transition after all style
   // updates for this rendering frame are complete, ensuring no initial transition occurs.
-  const hasTransition = styleKeySet.has("transition");
-  const isFirstUpdate = oldStyleKeySet === NO_STYLE_KEY_SET;
-  if (hasTransition && isFirstUpdate) {
-    if (elementTransitionStateWeakMap.has(element)) {
-      elementTransitionStateWeakMap.set(element, style.transition);
-    } else {
-      element.style.transition = "none";
-      elementTransitionStateWeakMap.set(element, style.transition);
-      requestAnimationFrame(() => {
-        const transitionValue = elementTransitionStateWeakMap.get(element);
-        element.style.transition = transitionValue;
-        elementTransitionStateWeakMap.delete(element);
-      });
+  if (!elementRenderedWeakSet.has(element)) {
+    const hasTransition = styleKeySet.has("transition");
+    if (hasTransition) {
+      if (elementTransitionStateWeakMap.has(element)) {
+        elementTransitionStateWeakMap.set(element, style.transition);
+      } else {
+        element.style.transition = "none";
+        elementTransitionStateWeakMap.set(element, style.transition);
+        requestAnimationFrame(() => {
+          const transitionValue = elementTransitionStateWeakMap.get(element);
+          if (transitionValue === undefined) {
+            element.style.transition = "";
+          } else {
+            element.style.transition = transitionValue;
+          }
+          elementRenderedWeakSet.add(element);
+          elementTransitionStateWeakMap.delete(element);
+        });
+      }
     }
   }
 
