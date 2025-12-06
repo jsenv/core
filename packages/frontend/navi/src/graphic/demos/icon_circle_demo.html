@@ -4,11 +4,40 @@
   <head>
     <meta charset="utf-8" />
     <title>Icon Demo</title>
+    <style>
+      /* Global styles for better SVG rendering */
+      svg {
+        backface-visibility: hidden;
+
+        /* GPU acceleration hints */
+        transform: translateZ(0);
+        /* Prevent blur on all SVGs by default */
+        image-rendering: optimizeSpeed; /* Firefox fallback */
+        image-rendering: -webkit-optimize-contrast; /* Safari */
+        image-rendering: crisp-edges; /* Standard */
+      }
+
+      /* Anti-aliasing control for sharp graphics */
+      .crisp-rendering {
+        image-rendering: pixelated; /* Most aggressive */
+        image-rendering: crisp-edges;
+        -webkit-font-smoothing: none;
+        -moz-osx-font-smoothing: unset;
+      }
+
+      /* GPU acceleration utilities */
+      .gpu-accelerated {
+        backface-visibility: hidden;
+        transform: translateZ(0);
+        will-change: transform;
+      }
+    </style>
   </head>
   <body>
     <div id="app"></div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
+      import { useState } from "preact/hooks";
       import {
         Text,
         Paragraph,
@@ -110,6 +139,163 @@
                 </Box>
               </Box>
             </Box>
+
+            {/* Section 5: Techniques to prevent blur */}
+            <Box row spacing="md">
+              <Title as="h2">🛡️ Preventing the Blur Effect</Title>
+              <Text>
+                Various techniques to eliminate or reduce blur during scale
+                transitions:
+              </Text>
+              <Box row spacing="lg" align="center">
+                <Box column align="center" spacing="sm">
+                  <Text fontSize="sm">
+                    1. will-change: transform (GPU acceleration)
+                  </Text>
+                  <CrispScaleIcon
+                    background="green"
+                    color="white"
+                    willChange="transform"
+                  >
+                    <SharpCrossSvg />
+                  </CrispScaleIcon>
+                </Box>
+                <Box column align="center" spacing="sm">
+                  <Text fontSize="sm">
+                    2. transform3d (Force hardware acceleration)
+                  </Text>
+                  <CrispScaleIcon
+                    background="purple"
+                    color="white"
+                    use3d={true}
+                  >
+                    <SharpCrossSvg />
+                  </CrispScaleIcon>
+                </Box>
+                <Box column align="center" spacing="sm">
+                  <Text fontSize="sm">3. image-rendering: crisp-edges</Text>
+                  <CrispScaleIcon
+                    background="orange"
+                    color="white"
+                    imageRendering="crisp-edges"
+                  >
+                    <SharpCrossSvg />
+                  </CrispScaleIcon>
+                </Box>
+                <Box column align="center" spacing="sm">
+                  <Text fontSize="sm">
+                    4. Combined: GPU + crisp-edges + backface-visibility
+                  </Text>
+                  <CrispScaleIcon
+                    background="crimson"
+                    color="white"
+                    willChange="transform"
+                    imageRendering="crisp-edges"
+                    backfaceVisibility="hidden"
+                    use3d={true}
+                  >
+                    <SharpCrossSvg />
+                  </CrispScaleIcon>
+                </Box>
+              </Box>
+            </Box>
+
+            {/* Section 6: Complete comparison */}
+            <Box row spacing="md">
+              <Title as="h2">🔬 Complete Comparison</Title>
+              <Text>
+                All techniques compared side-by-side. Hover over each to test
+                effectiveness:
+              </Text>
+              <Box row spacing="lg" align="center">
+                <Box row spacing="md" align="center">
+                  <Box column align="center" spacing="sm">
+                    <Text fontSize="xs">Default (Blurry)</Text>
+                    <CircleIcon background="gray" color="white">
+                      <SharpCrossSvg />
+                    </CircleIcon>
+                  </Box>
+                  <Box column align="center" spacing="sm">
+                    <Text fontSize="xs">will-change</Text>
+                    <CrispScaleIcon
+                      background="green"
+                      color="white"
+                      willChange="transform"
+                    >
+                      <SharpCrossSvg />
+                    </CrispScaleIcon>
+                  </Box>
+                  <Box column align="center" spacing="sm">
+                    <Text fontSize="xs">3D transform</Text>
+                    <CrispScaleIcon
+                      background="purple"
+                      color="white"
+                      use3d={true}
+                    >
+                      <SharpCrossSvg />
+                    </CrispScaleIcon>
+                  </Box>
+                  <Box column align="center" spacing="sm">
+                    <Text fontSize="xs">crisp-edges</Text>
+                    <CrispScaleIcon
+                      background="orange"
+                      color="white"
+                      imageRendering="crisp-edges"
+                    >
+                      <SharpCrossSvg />
+                    </CrispScaleIcon>
+                  </Box>
+                  <Box column align="center" spacing="sm">
+                    <Text fontSize="xs">All Combined</Text>
+                    <CrispScaleIcon
+                      background="crimson"
+                      color="white"
+                      willChange="transform"
+                      imageRendering="crisp-edges"
+                      backfaceVisibility="hidden"
+                      use3d={true}
+                    >
+                      <SharpCrossSvg />
+                    </CrispScaleIcon>
+                  </Box>
+                </Box>
+              </Box>
+            </Box>
+
+            {/* Section 7: Technical notes */}
+            <Box row spacing="md">
+              <Title as="h2">📝 Technical Notes</Title>
+              <Box row spacing="sm">
+                <Text fontSize="sm">
+                  <strong>Most Effective Techniques:</strong>
+                </Text>
+                <Text fontSize="sm">
+                  • <code>will-change: transform</code> - Forces GPU
+                  acceleration • <code>transform3d()</code> - Alternative GPU
+                  acceleration trigger •{" "}
+                  <code>image-rendering: crisp-edges</code> - Prevents
+                  anti-aliasing blur • <code>backface-visibility: hidden</code>{" "}
+                  - Optimizes GPU rendering
+                </Text>
+                <Text fontSize="sm">
+                  <strong>Browser Differences:</strong>
+                </Text>
+                <Text fontSize="sm">
+                  • Chrome/Edge: Most blur-prone, benefits most from GPU
+                  acceleration • Firefox: Less blur, but still benefits from
+                  crisp-edges • Safari: Good default rendering, minimal
+                  techniques needed
+                </Text>
+                <Text fontSize="sm">
+                  <strong>Performance Trade-offs:</strong>
+                </Text>
+                <Text fontSize="sm">
+                  • GPU acceleration uses more memory but smoother animations •
+                  crisp-edges may look pixelated on some devices • Combining all
+                  techniques gives best results but highest resource usage
+                </Text>
+              </Box>
+            </Box>
           </Box>
         );
       };
@@ -130,6 +316,63 @@
               </ExtremeScaleIcon>
             </Box>
           </Box>
+        );
+      };
+
+      const CrispScaleIcon = ({
+        background = "var(--color-bg)",
+        color = "var(--color-text)",
+        children,
+        willChange,
+        imageRendering,
+        backfaceVisibility,
+        use3d = false,
+      }) => {
+        const [isHovered, setIsHovered] = useState(false);
+
+        return (
+          <div
+            className={[
+              imageRendering && "crisp-rendering",
+              willChange && "gpu-accelerated",
+            ]
+              .filter(Boolean)
+              .join(" ")}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: "60px",
+              height: "60px",
+              backgroundColor: background,
+              borderRadius: "50%",
+              color,
+              cursor: "pointer",
+              transform: isHovered
+                ? use3d
+                  ? "scale3d(1.4, 1.4, 1) translateZ(0)"
+                  : "scale(1.4)"
+                : use3d
+                  ? "scale3d(1, 1, 1) translateZ(0)"
+                  : "scale(1)",
+              transition: "transform 0.6s ease-in-out",
+              willChange,
+              backfaceVisibility,
+              // Apply image-rendering directly to container for inheritance
+              imageRendering,
+            }}
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+          >
+            <div
+              style={{
+                imageRendering,
+                transform: "translateZ(0)", // Extra GPU hint for SVG
+              }}
+            >
+              {children}
+            </div>
+          </div>
         );
       };
 
