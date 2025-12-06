@@ -6,7 +6,9 @@ import.meta.css = /* css */ `
   .navi_icon {
     display: inline-block;
     box-sizing: border-box;
+    width: 1em;
     max-width: 100%;
+    height: 1em;
     max-height: 100%;
   }
 
