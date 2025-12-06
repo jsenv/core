@@ -88,15 +88,25 @@
               <Box column spacing="xl" align="center">
                 <Box column align="center" spacing="sm">
                   <Text fontSize="sm">Slow transition (1.2s)</Text>
-                  <SlowScaleIcon background="teal" color="white">
+                  <CircleIcon
+                    background="teal"
+                    color="white"
+                    scale={1.6}
+                    duration={1.2}
+                  >
                     <SharpCrossSvg />
-                  </SlowScaleIcon>
+                  </CircleIcon>
                 </Box>
                 <Box column align="center" spacing="sm">
                   <Text fontSize="sm">Fast transition (0.2s)</Text>
-                  <FastScaleIcon background="teal" color="white">
+                  <CircleIcon
+                    background="teal"
+                    color="white"
+                    scale={1.6}
+                    duration={0.2}
+                  >
                     <SharpCrossSvg />
-                  </FastScaleIcon>
+                  </CircleIcon>
                 </Box>
               </Box>
             </Box>
@@ -127,107 +137,37 @@
         children,
         background = "orange",
         color = "white",
+        scale = 1.4,
+        duration = 0.8,
+        size = 48,
       }) => {
         return (
           <Icon
             box
             shrink={false}
             padding="0.15em"
-            size="48"
+            size={size}
             background={background}
             color={color}
             borderRadius="100%"
             scale="1"
             pseudoStyle={{
               ":hover": {
-                scale: "1.4",
+                scale: scale.toString(),
               },
             }}
-            transition="transform 0.8s ease-in-out"
+            transition={`transform ${duration}s ease-in-out`}
           >
             {children}
           </Icon>
         );
       };
 
-      const ExtremeScaleIcon = ({
-        children,
-        background = "orange",
-        color = "white",
-      }) => {
+      const ExtremeScaleIcon = ({ children, ...props }) => {
         return (
-          <Icon
-            box
-            shrink={false}
-            padding="0.15em"
-            size="48"
-            background={background}
-            color={color}
-            borderRadius="100%"
-            scale="1"
-            pseudoStyle={{
-              ":hover": {
-                scale: "2.0",
-              },
-            }}
-            transition="transform 1s ease-in-out"
-          >
+          <CircleIcon scale={2.0} duration={1} {...props}>
             {children}
-          </Icon>
-        );
-      };
-
-      const SlowScaleIcon = ({
-        children,
-        background = "orange",
-        color = "white",
-      }) => {
-        return (
-          <Icon
-            box
-            shrink={false}
-            padding="0.15em"
-            size="48"
-            background={background}
-            color={color}
-            borderRadius="100%"
-            scale="1"
-            pseudoStyle={{
-              ":hover": {
-                scale: "1.6",
-              },
-            }}
-            transition="transform 1.2s ease-in-out"
-          >
-            {children}
-          </Icon>
-        );
-      };
-
-      const FastScaleIcon = ({
-        children,
-        background = "orange",
-        color = "white",
-      }) => {
-        return (
-          <Icon
-            box
-            shrink={false}
-            padding="0.15em"
-            size="48"
-            background={background}
-            color={color}
-            borderRadius="100%"
-            scale="1"
-            pseudoStyle={{
-              ":hover": {
-                scale: "1.6",
-              },
-            }}
-            transition="transform 0.2s ease-in-out"
-          >
-            {children}
-          </Icon>
+          </CircleIcon>
         );
       };
 
