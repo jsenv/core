@@ -64,8 +64,8 @@
       .template-container {
         margin: 15px 0;
         padding: 15px;
-        background: #fff3cd;
-        border: 1px solid #ffeaa7;
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
         border-radius: 4px;
       }
 
@@ -203,33 +203,25 @@
         </div>
         <div id="dynamic-required-template" class="dynamic-template">
           <strong>⚡ Dynamic Required Error</strong>
-          <p>
-            This content updates live!
-            <span class="counter" id="update-counter">0</span>
-          </p>
+          <p>Updates: <span class="counter" id="update-counter">0</span></p>
           <small>Template ID: #dynamic-required-template</small>
         </div>
 
         <div style="margin-top: 15px">
-          <label>
-            <strong>Edit template content:</strong><br />
-            <textarea
-              id="template-editor"
-              placeholder="Edit the template content here..."
-            >
-⚡ Dynamic Required Error
-
-This content updates live!
-
-Template ID: #dynamic-required-template</textarea
-            >
-          </label>
-          <br />
-          <button type="button" class="modify-btn" onclick="updateTemplate()">
-            Update Template
-          </button>
           <button type="button" class="modify-btn" onclick="incrementCounter()">
             Increment Counter
+          </button>
+          <select
+            id="color-select"
+            onchange="changeColor()"
+            style="margin: 0 5px; padding: 5px"
+          >
+            <option value="#fff3cd">Warning Yellow</option>
+            <option value="#d4edda">Success Green</option>
+            <option value="#cce7ff">Info Blue</option>
+          </select>
+          <button type="button" class="modify-btn" onclick="resetTemplate()">
+            Reset
           </button>
         </div>
       </div>
@@ -271,38 +263,32 @@ Template ID: #dynamic-required-template</textarea
       // Global functions for template modification
       let updateCount = 0;
 
-      window.updateTemplate = () => {
-        const template = document.getElementById("dynamic-required-template");
-        const editor = document.getElementById("template-editor");
-        const content = editor.value;
-
-        updateCount++;
-        const lines = content.split("\n");
-        const updatedContent = lines
-          .map((line) => {
-            if (line.includes("updates live!")) {
-              return `<p>${line} <span class="counter" id="update-counter">${updateCount}</span></p>`;
-            }
-            if (line.includes("Dynamic Required Error")) {
-              return `<strong>${line}</strong>`;
-            }
-            if (line.includes("Template ID:")) {
-              return `<small>${line}</small>`;
-            }
-            return line.trim() ? `<p>${line}</p>` : "";
-          })
-          .filter((line) => line)
-          .join("\n");
-
-        template.innerHTML = updatedContent;
-      };
-
       window.incrementCounter = () => {
         const counter = document.getElementById("update-counter");
         if (counter) {
           updateCount++;
           counter.textContent = updateCount;
         }
+      };
+
+      window.changeColor = () => {
+        const template = document.getElementById("dynamic-required-template");
+        const select = document.getElementById("color-select");
+        template.style.backgroundColor = select.value;
+      };
+
+      window.resetTemplate = () => {
+        const template = document.getElementById("dynamic-required-template");
+        const counter = document.getElementById("update-counter");
+        const select = document.getElementById("color-select");
+
+        updateCount = 0;
+
+        if (counter) {
+          counter.textContent = updateCount;
+        }
+        template.style.backgroundColor = "#fff3cd"; // Original color
+        select.value = "#fff3cd"; // Reset select to original
       };
 
       // Add some helpful logging
