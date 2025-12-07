@@ -47,6 +47,7 @@ export const useExecuteAction = (
     } else {
       message = error;
     }
+    // TODO here: if message is a jsx element we should use render(jsx, calloutMessageElement)
     addCustomMessage(calloutAnchor, "action_error", message, {
       status: "error",
       // This error should not prevent <form> submission

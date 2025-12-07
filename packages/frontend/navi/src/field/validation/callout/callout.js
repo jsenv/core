@@ -259,6 +259,11 @@ export const openCallout = (
       closeOnClickOutside = options.closeOnClickOutside;
     }
 
+    if (typeof newMessage === "function") {
+      calloutMessageElement.innerHTML = "";
+      newMessage(calloutMessageElement);
+    }
+
     if (Error.isError(newMessage)) {
       const error = newMessage;
       newMessage = error.message;
