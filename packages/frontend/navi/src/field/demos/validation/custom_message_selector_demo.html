@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
   <head>
     <meta charset="utf-8" />
@@ -7,60 +7,60 @@
     <link rel="icon" href="data:," />
     <style>
       body {
-        font-family: Arial, sans-serif;
         max-width: 800px;
         margin: 40px auto;
         padding: 20px;
+        font-family: Arial, sans-serif;
         line-height: 1.6;
       }
-      
+
       .demo-section {
         margin: 40px 0;
         padding: 20px;
+        background: #f9f9f9;
         border: 2px solid #e0e0e0;
         border-radius: 8px;
-        background: #f9f9f9;
       }
-      
+
       .demo-section h2 {
         margin-top: 0;
         color: #333;
       }
-      
+
       .form-container {
         margin: 20px 0;
         padding: 15px;
         background: white;
-        border-radius: 4px;
         border: 1px solid #ddd;
+        border-radius: 4px;
       }
-      
+
       input[type="text"] {
         width: 200px;
-        padding: 8px;
         margin: 10px 0;
+        padding: 8px;
         border: 1px solid #ccc;
         border-radius: 4px;
       }
-      
+
       button {
-        padding: 8px 16px;
         margin: 10px 5px 10px 0;
+        padding: 8px 16px;
         border: none;
         border-radius: 4px;
         cursor: pointer;
       }
-      
+
       .submit-btn {
+        color: white;
         background: #007cba;
-        color: white;
       }
-      
+
       .modify-btn {
-        background: #28a745;
         color: white;
+        background: #28a745;
       }
-      
+
       .template-container {
         margin: 15px 0;
         padding: 15px;
@@ -68,73 +68,80 @@
         border: 1px solid #ffeaa7;
         border-radius: 4px;
       }
-      
+
       .template-note {
-        font-style: italic;
-        color: #856404;
         margin-bottom: 10px;
+        color: #856404;
+        font-style: italic;
         font-size: 14px;
       }
-      
+
       .message-template {
         padding: 12px;
-        border: 2px solid #dc3545;
-        border-radius: 6px;
-        background: #f8d7da;
         color: #721c24;
         font-weight: bold;
+        background: #f8d7da;
+        border: 2px solid #dc3545;
+        border-radius: 6px;
       }
-      
+
       .dynamic-template {
         padding: 12px;
-        border: 2px solid #fd7e14;
-        border-radius: 6px;
-        background: #fff3cd;
         color: #856404;
         font-weight: bold;
+        background: #fff3cd;
+        border: 2px solid #fd7e14;
+        border-radius: 6px;
       }
-      
+
       .counter {
-        background: #6c757d;
-        color: white;
-        padding: 2px 6px;
-        border-radius: 3px;
-        font-size: 12px;
         margin-left: 8px;
+        padding: 2px 6px;
+        color: white;
+        font-size: 12px;
+        background: #6c757d;
+        border-radius: 3px;
       }
-      
+
       textarea {
         width: 100%;
         height: 80px;
         padding: 8px;
+        font-family: Arial, sans-serif;
         border: 1px solid #ccc;
         border-radius: 4px;
-        font-family: Arial, sans-serif;
         resize: vertical;
       }
     </style>
   </head>
   <body>
     <h1>Custom Message Attribute Demo</h1>
-    <p>This demo shows how <code>data-x-message</code> attributes can use CSS selectors to reference DOM elements for advanced custom validation messages.</p>
+    <p>
+      This demo shows how <code>data-x-message</code> attributes can use CSS
+      selectors to reference DOM elements for advanced custom validation
+      messages.
+    </p>
 
     <!-- Scenario 1: String Message -->
     <div class="demo-section">
       <h2>Scenario 1: Simple String Message</h2>
-      <p>Traditional approach with a plain text message in the <code>data-required-message</code> attribute.</p>
-      
+      <p>
+        Traditional approach with a plain text message in the
+        <code>data-required-message</code> attribute.
+      </p>
+
       <div class="form-container">
         <form id="form1">
           <label>
             Name (required):
-            <input 
-              type="text" 
-              name="name" 
-              required 
+            <input
+              type="text"
+              name="name"
+              required
               data-required-message="Please enter your name - this is a simple string message"
             />
           </label>
-          <br>
+          <br />
           <button type="submit" class="submit-btn">Submit</button>
         </form>
       </div>
@@ -143,31 +150,39 @@
     <!-- Scenario 2: CSS Selector Message -->
     <div class="demo-section">
       <h2>Scenario 2: CSS Selector Message</h2>
-      <p>Advanced approach using a CSS ID selector (<code>#custom-required-template</code>) in the <code>data-required-message</code> attribute.</p>
-      
+      <p>
+        Advanced approach using a CSS ID selector
+        (<code>#custom-required-template</code>) in the
+        <code>data-required-message</code> attribute.
+      </p>
+
       <div class="template-container">
         <div class="template-note">
-          📝 <strong>Message Template</strong> (in real world, this would be hidden with CSS):
+          📝 <strong>Message Template</strong> (in real world, this would be
+          hidden with CSS):
         </div>
         <div id="custom-required-template" class="message-template">
           <strong>🚫 Custom Required Error</strong>
           <p>This field is mandatory and cannot be left empty!</p>
-          <small>This message comes from a DOM template with ID #custom-required-template</small>
+          <small
+            >This message comes from a DOM template with ID
+            #custom-required-template</small
+          >
         </div>
       </div>
-      
+
       <div class="form-container">
         <form id="form2">
           <label>
             Email (required):
-            <input 
-              type="text" 
-              name="email" 
-              required 
+            <input
+              type="text"
+              name="email"
+              required
               data-required-message="#custom-required-template"
             />
           </label>
-          <br>
+          <br />
           <button type="submit" class="submit-btn">Submit</button>
         </form>
       </div>
@@ -176,95 +191,114 @@
     <!-- Scenario 3: Dynamic CSS Selector Message -->
     <div class="demo-section">
       <h2>Scenario 3: Live Dynamic Message Template</h2>
-      <p>Same as scenario 2, but with live template modification to show how the validation message adapts in real-time.</p>
-      
+      <p>
+        Same as scenario 2, but with live template modification to show how the
+        validation message adapts in real-time.
+      </p>
+
       <div class="template-container">
         <div class="template-note">
-          📝 <strong>Dynamic Message Template</strong> (modify it to see live updates):
+          📝 <strong>Dynamic Message Template</strong> (modify it to see live
+          updates):
         </div>
         <div id="dynamic-required-template" class="dynamic-template">
           <strong>⚡ Dynamic Required Error</strong>
-          <p>This content updates live! <span class="counter" id="update-counter">0</span></p>
+          <p>
+            This content updates live!
+            <span class="counter" id="update-counter">0</span>
+          </p>
           <small>Template ID: #dynamic-required-template</small>
         </div>
-        
-        <div style="margin-top: 15px;">
+
+        <div style="margin-top: 15px">
           <label>
-            <strong>Edit template content:</strong><br>
-            <textarea id="template-editor" placeholder="Edit the template content here...">
+            <strong>Edit template content:</strong><br />
+            <textarea
+              id="template-editor"
+              placeholder="Edit the template content here..."
+            >
 ⚡ Dynamic Required Error
 
 This content updates live!
 
-Template ID: #dynamic-required-template</textarea>
+Template ID: #dynamic-required-template</textarea
+            >
           </label>
-          <br>
-          <button type="button" class="modify-btn" onclick="updateTemplate()">Update Template</button>
-          <button type="button" class="modify-btn" onclick="incrementCounter()">Increment Counter</button>
+          <br />
+          <button type="button" class="modify-btn" onclick="updateTemplate()">
+            Update Template
+          </button>
+          <button type="button" class="modify-btn" onclick="incrementCounter()">
+            Increment Counter
+          </button>
         </div>
       </div>
-      
+
       <div class="form-container">
         <form id="form3">
           <label>
             Username (required):
-            <input 
-              type="text" 
-              name="username" 
-              required 
+            <input
+              type="text"
+              name="username"
+              required
               data-required-message="#dynamic-required-template"
             />
           </label>
-          <br>
+          <br />
           <button type="submit" class="submit-btn">Submit</button>
         </form>
       </div>
     </div>
 
     <script type="module">
-      // Import the custom constraint validation
-      import { installCustomConstraintValidation } from "./custom_constraint_validation.js";
-      
+      import { installCustomConstraintValidation } from "@jsenv/navi";
+
       // Initialize custom validation on all forms and their elements
-      const forms = document.querySelectorAll('form');
-      forms.forEach(form => {
+      const forms = document.querySelectorAll("form");
+      forms.forEach((form) => {
         installCustomConstraintValidation(form);
-        
+
         // Install on all form elements
-        const elements = form.querySelectorAll('input, button, select, textarea');
-        elements.forEach(element => {
+        const elements = form.querySelectorAll(
+          "input, button, select, textarea",
+        );
+        elements.forEach((element) => {
           installCustomConstraintValidation(element);
         });
       });
 
       // Global functions for template modification
       let updateCount = 0;
-      
+
       window.updateTemplate = () => {
-        const template = document.getElementById('dynamic-required-template');
-        const editor = document.getElementById('template-editor');
+        const template = document.getElementById("dynamic-required-template");
+        const editor = document.getElementById("template-editor");
         const content = editor.value;
-        
+
         updateCount++;
-        const lines = content.split('\n');
-        const updatedContent = lines.map(line => {
-          if (line.includes('updates live!')) {
-            return `<p>${line} <span class="counter" id="update-counter">${updateCount}</span></p>`;
-          }
-          if (line.includes('Dynamic Required Error')) {
-            return `<strong>${line}</strong>`;
-          }
-          if (line.includes('Template ID:')) {
-            return `<small>${line}</small>`;
-          }
-          return line.trim() ? `<p>${line}</p>` : '';
-        }).filter(line => line).join('\n');
-        
+        const lines = content.split("\n");
+        const updatedContent = lines
+          .map((line) => {
+            if (line.includes("updates live!")) {
+              return `<p>${line} <span class="counter" id="update-counter">${updateCount}</span></p>`;
+            }
+            if (line.includes("Dynamic Required Error")) {
+              return `<strong>${line}</strong>`;
+            }
+            if (line.includes("Template ID:")) {
+              return `<small>${line}</small>`;
+            }
+            return line.trim() ? `<p>${line}</p>` : "";
+          })
+          .filter((line) => line)
+          .join("\n");
+
         template.innerHTML = updatedContent;
       };
-      
+
       window.incrementCounter = () => {
-        const counter = document.getElementById('update-counter');
+        const counter = document.getElementById("update-counter");
         if (counter) {
           updateCount++;
           counter.textContent = updateCount;
@@ -272,11 +306,17 @@ Template ID: #dynamic-required-template</textarea>
       };
 
       // Add some helpful logging
-      document.addEventListener('DOMContentLoaded', () => {
-        console.log('Demo loaded! Try submitting empty forms to see validation messages.');
-        console.log('- Scenario 1: Uses plain string message');
-        console.log('- Scenario 2: Uses CSS selector #custom-required-template');  
-        console.log('- Scenario 3: Uses CSS selector #dynamic-required-template with live updates');
+      document.addEventListener("DOMContentLoaded", () => {
+        console.log(
+          "Demo loaded! Try submitting empty forms to see validation messages.",
+        );
+        console.log("- Scenario 1: Uses plain string message");
+        console.log(
+          "- Scenario 2: Uses CSS selector #custom-required-template",
+        );
+        console.log(
+          "- Scenario 3: Uses CSS selector #dynamic-required-template with live updates",
+        );
       });
     </script>
   </body>
