@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>JSX Message Demo</title>
+    <style>
+      body {
+        margin: 20px;
+        font-family: Arial, sans-serif;
+        line-height: 1.6;
+        background: #f5f5f5;
+      }
+
+      .demo-section {
+        margin: 20px 0;
+        padding: 15px;
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+      }
+
+      .demo-section h2 {
+        margin-top: 0;
+        color: #495057;
+      }
+
+      .form-container {
+        margin-top: 15px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useState } from "preact/hooks";
+      import { Form, Input, Button, Label } from "@jsenv/navi";
+
+      const InteractiveRequiredMessage = () => {
+        const [counter, setCounter] = useState(0);
+
+        return (
+          <div
+            style={{
+              padding: "12px",
+              background: "#fff3cd",
+              border: "2px solid #fd7e14",
+              borderRadius: "6px",
+              color: "#856404",
+              fontWeight: "bold",
+            }}
+          >
+            <strong>⚡ Interactive JSX Required Error</strong>
+            <p>
+              Counter:{" "}
+              <span
+                style={{
+                  marginLeft: "8px",
+                  padding: "2px 6px",
+                  color: "white",
+                  fontSize: "12px",
+                  background: "#6c757d",
+                  borderRadius: "3px",
+                }}
+              >
+                {counter}
+              </span>
+            </p>
+            <button
+              type="button"
+              onClick={() => setCounter((prev) => prev + 1)}
+              style={{
+                padding: "4px 8px",
+                color: "white",
+                background: "#28a745",
+                border: "none",
+                borderRadius: "4px",
+                cursor: "pointer",
+                fontSize: "12px",
+                marginTop: "8px",
+              }}
+            >
+              Increment Counter
+            </button>
+            <small
+              style={{
+                display: "block",
+                marginTop: "8px",
+                color: "#856404",
+              }}
+            >
+              This is a live JSX component!
+            </small>
+          </div>
+        );
+      };
+
+      function JsxMessageDemo() {
+        return (
+          <div>
+            <h1>JSX Message Demo</h1>
+            <p>
+              This demo shows how validation messages can be JSX elements with
+              interactive components using Form and Input from @jsenv/navi.
+            </p>
+
+            <div className="demo-section">
+              <h2>Interactive JSX Validation Message</h2>
+              <p>
+                Try submitting the form without entering a name to see the
+                interactive JSX error message:
+              </p>
+
+              <Form
+                action={() => {}}
+                row
+                border="1px solid #ccc"
+                alignX="start"
+                padding="12px"
+              >
+                <Label column spacing="s" alignY="center">
+                  Name (required):
+                  <Input
+                    type="text"
+                    name="name"
+                    required
+                    requiredMessage={<InteractiveRequiredMessage />}
+                  />
+                </Label>
+                <Button type="submit" marginTop="m">
+                  Submit
+                </Button>
+              </Form>
+            </div>
+          </div>
+        );
+      }
+
+      render(<JsxMessageDemo />, document.getElementById("app"));
+    </script>
+  </body>
+</html>
