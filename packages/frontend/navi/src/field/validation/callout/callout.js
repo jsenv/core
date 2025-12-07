@@ -11,6 +11,7 @@ import {
   resolveCSSColor,
   visibleRectEffect,
 } from "@jsenv/dom";
+import { isValidElement, render } from "preact";
 
 /**
  * A callout component that mimics native browser validation messages.
@@ -259,33 +260,33 @@ export const openCallout = (
       closeOnClickOutside = options.closeOnClickOutside;
     }
 
-    if (typeof newMessage === "function") {
+    if (isValidElement(newMessage)) {
       calloutMessageElement.innerHTML = "";
-      newMessage(calloutMessageElement);
-    }
-
-    if (Error.isError(newMessage)) {
-      const error = newMessage;
-      newMessage = error.message;
-      if (showErrorStack && error.stack) {
-        newMessage += `<pre class="navi_callout_error_stack">${escapeHtml(String(error.stack))}</pre>`;
-      }
-    }
-
-    // Check if the message is a full HTML document (starts with DOCTYPE)
-    if (typeof newMessage === "string" && isHtmlDocument(newMessage)) {
-      // Create iframe to isolate the HTML document
-      const iframe = document.createElement("iframe");
-      iframe.style.border = "none";
-      iframe.style.width = "100%";
-      iframe.style.backgroundColor = "white";
-      iframe.srcdoc = newMessage;
-
-      // Clear existing content and add iframe
-      calloutMessageElement.innerHTML = "";
-      calloutMessageElement.appendChild(iframe);
+      render(newMessage, calloutMessageElement);
     } else {
-      calloutMessageElement.innerHTML = newMessage;
+      if (Error.isError(newMessage)) {
+        const error = newMessage;
+        newMessage = error.message;
+        if (showErrorStack && error.stack) {
+          newMessage += `<pre class="navi_callout_error_stack">${escapeHtml(String(error.stack))}</pre>`;
+        }
+      }
+
+      // Check if the message is a full HTML document (starts with DOCTYPE)
+      if (typeof newMessage === "string" && isHtmlDocument(newMessage)) {
+        // Create iframe to isolate the HTML document
+        const iframe = document.createElement("iframe");
+        iframe.style.border = "none";
+        iframe.style.width = "100%";
+        iframe.style.backgroundColor = "white";
+        iframe.srcdoc = newMessage;
+
+        // Clear existing content and add iframe
+        calloutMessageElement.innerHTML = "";
+        calloutMessageElement.appendChild(iframe);
+      } else {
+        calloutMessageElement.innerHTML = newMessage;
+      }
     }
   };
   close_on_click_outside: {

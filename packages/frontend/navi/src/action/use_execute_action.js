@@ -1,3 +1,4 @@
+import { isValidElement } from "preact";
 import { useCallback, useLayoutEffect, useRef, useState } from "preact/hooks";
 
 import { useResetErrorBoundary } from "../error_boundary_context.js";
@@ -37,6 +38,8 @@ export const useExecuteAction = (
         message = errorMappingResult;
       } else if (Error.isError(errorMappingResult)) {
         message = errorMappingResult;
+      } else if (isValidElement(errorMappingResult)) {
+        message = errorMappingResult;
       } else if (
         typeof errorMappingResult === "object" &&
         errorMappingResult !== null
@@ -47,7 +50,6 @@ export const useExecuteAction = (
     } else {
       message = error;
     }
-    // TODO here: if message is a jsx element we should use render(jsx, calloutMessageElement)
     addCustomMessage(calloutAnchor, "action_error", message, {
       status: "error",
       // This error should not prevent <form> submission

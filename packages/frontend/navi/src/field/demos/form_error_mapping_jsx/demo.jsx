@@ -55,9 +55,9 @@ const Demo = () => {
           if (error.code === "VALIDATION_ERROR") {
             return {
               target:
-                error.field.name === "name"
+                error.field === "name"
                   ? nameInputRef.current
-                  : error.field.name === "email"
+                  : error.field === "email"
                     ? emailInputRef.current
                     : null,
               message: <ValidationErrorMessage error={error} />,
