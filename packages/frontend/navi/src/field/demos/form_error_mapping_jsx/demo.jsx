@@ -1,4 +1,4 @@
-import { Button, Form, Input, Label } from "@jsenv/navi";
+import { Button, Form, Input, Label, useCalloutClose } from "@jsenv/navi";
 import { render } from "preact";
 import { useRef, useState } from "preact/hooks";
 
@@ -96,6 +96,7 @@ const Demo = () => {
 };
 
 const ValidationErrorMessage = ({ error }) => {
+  const closeCallout = useCalloutClose();
   const [dismissed, setDismissed] = useState(false);
   const [helpShown, setHelpShown] = useState(false);
 
@@ -157,10 +158,23 @@ const ValidationErrorMessage = ({ error }) => {
       )}
       <div style={{ marginTop: "10px" }}>
         <button
-          style={{ fontSize: "12px", padding: "4px 8px" }}
+          style={{ fontSize: "12px", padding: "4px 8px", marginRight: "8px" }}
           onClick={() => setHelpShown(!helpShown)}
         >
           {helpShown ? "Hide Help" : "Show Help"}
+        </button>
+        <button
+          style={{
+            fontSize: "12px",
+            padding: "4px 8px",
+            backgroundColor: "#dc3545",
+            color: "white",
+            border: "none",
+            borderRadius: "2px",
+          }}
+          onClick={closeCallout}
+        >
+          Close Callout
         </button>
         {helpShown && (
           <div
@@ -183,6 +197,7 @@ const ValidationErrorMessage = ({ error }) => {
   );
 };
 const ServerErrorMessage = ({ error }) => {
+  const closeCallout = useCalloutClose();
   const [retryCount, setRetryCount] = useState(0);
   const [showDetails, setShowDetails] = useState(false);
 
@@ -203,16 +218,29 @@ const ServerErrorMessage = ({ error }) => {
       </p>
       <div style={{ marginTop: "10px" }}>
         <button
-          style={{ marginRight: "10px", fontSize: "12px", padding: "4px 8px" }}
+          style={{ marginRight: "8px", fontSize: "12px", padding: "4px 8px" }}
           onClick={() => setRetryCount(retryCount + 1)}
         >
           Retry ({retryCount} attempts)
         </button>
         <button
-          style={{ fontSize: "12px", padding: "4px 8px" }}
+          style={{ marginRight: "8px", fontSize: "12px", padding: "4px 8px" }}
           onClick={() => setShowDetails(!showDetails)}
         >
           {showDetails ? "Hide Details" : "Show Details"}
+        </button>
+        <button
+          style={{
+            fontSize: "12px",
+            padding: "4px 8px",
+            backgroundColor: "#dc3545",
+            color: "white",
+            border: "none",
+            borderRadius: "2px",
+          }}
+          onClick={closeCallout}
+        >
+          Close Callout
         </button>
       </div>
       {showDetails && (
@@ -236,6 +264,7 @@ const ServerErrorMessage = ({ error }) => {
   );
 };
 const UnexpectedErrorMessage = ({ error }) => {
+  const closeCallout = useCalloutClose();
   const [reportSent, setReportSent] = useState(false);
   const [expanded, setExpanded] = useState(false);
 
@@ -254,7 +283,7 @@ const UnexpectedErrorMessage = ({ error }) => {
       <div style={{ marginTop: "10px" }}>
         <button
           style={{
-            marginRight: "10px",
+            marginRight: "8px",
             fontSize: "12px",
             padding: "4px 8px",
             backgroundColor: reportSent ? "#28a745" : "#dc3545",
@@ -268,10 +297,23 @@ const UnexpectedErrorMessage = ({ error }) => {
           {reportSent ? "✓ Report Sent" : "Send Report"}
         </button>
         <button
-          style={{ fontSize: "12px", padding: "4px 8px" }}
+          style={{ marginRight: "8px", fontSize: "12px", padding: "4px 8px" }}
           onClick={() => setExpanded(!expanded)}
         >
           {expanded ? "Less Info" : "More Info"}
+        </button>
+        <button
+          style={{
+            fontSize: "12px",
+            padding: "4px 8px",
+            backgroundColor: "#dc3545",
+            color: "white",
+            border: "none",
+            borderRadius: "2px",
+          }}
+          onClick={closeCallout}
+        >
+          Close Callout
         </button>
       </div>
       {expanded && (

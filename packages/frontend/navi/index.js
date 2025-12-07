@@ -71,6 +71,7 @@ export {
 export { useConstraintValidityState } from "./src/field/validation/hooks/use_constraint_validity_state.js";
 // popover (callout, dialogs, ...)
 export { openCallout } from "./src/field/validation/callout/callout.js";
+export { useCalloutClose } from "./src/field/validation/callout/callout.jsx";
 // Selection
 export {
   SelectionContext,

@@ -13,6 +13,8 @@ import {
 } from "@jsenv/dom";
 import { isValidElement, render } from "preact";
 
+import { prepareCalloutJsx } from "./callout.jsx";
+
 /**
  * A callout component that mimics native browser validation messages.
  * Features:
@@ -262,7 +264,7 @@ export const openCallout = (
 
     if (isValidElement(newMessage)) {
       calloutMessageElement.innerHTML = "";
-      render(newMessage, calloutMessageElement);
+      render(prepareCalloutJsx(newMessage, { close }), calloutMessageElement);
     } else {
       if (Error.isError(newMessage)) {
         const error = newMessage;
@@ -314,6 +316,15 @@ export const openCallout = (
     addTeardown(() => {
       document.removeEventListener("click", handleClickOutside, true);
     });
+  }
+  close_on_custom_event: {
+    const handleCustomCloseEvent = () => {
+      close("custom_event");
+    };
+    calloutElement.addEventListener(
+      "navi_callout_close",
+      handleCustomCloseEvent,
+    );
   }
   Object.assign(callout, {
     element: calloutElement,
@@ -464,6 +475,13 @@ export const openCallout = (
   }
 
   return callout;
+};
+
+export const dispatchCalloutCloseEvent = (elementInsideCallout) => {
+  const event = new CustomEvent("navi_callout_close", {
+    bubbles: true,
+  });
+  elementInsideCallout.dispatchEvent(event);
 };
 
 // Configuration parameters for callout appearance
