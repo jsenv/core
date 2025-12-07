@@ -63,6 +63,7 @@ export { SINGLE_SPACE_CONSTRAINT } from "./src/field/validation/constraints/sing
 export {
   forwardActionRequested,
   installCustomConstraintValidation,
+  requestAction,
 } from "./src/field/validation/custom_constraint_validation.js";
 export {
   addCustomMessage,

@@ -278,6 +278,9 @@ export const installCustomConstraintValidation = (
   element,
   elementReceivingValidationMessage = element,
 ) => {
+  if (debug) {
+    console.debug(`installCustomConstraintValidation on`, element);
+  }
   if (element.tagName === "INPUT" && element.type === "hidden") {
     elementReceivingValidationMessage = element.form || document.body;
   }

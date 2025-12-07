@@ -244,12 +244,20 @@
     </div>
 
     <script type="module">
-      import { installCustomConstraintValidation } from "@jsenv/navi";
+      import {
+        installCustomConstraintValidation,
+        requestAction,
+      } from "@jsenv/navi";
 
       // Initialize custom validation on all forms and their elements
       const forms = document.querySelectorAll("form");
       forms.forEach((form) => {
         installCustomConstraintValidation(form);
+
+        // Listen for actionrequested event to call requestAction
+        form.addEventListener("actionrequested", (event) => {
+          requestAction(form, () => {}, { event });
+        });
 
         // Install on all form elements
         const elements = form.querySelectorAll(
