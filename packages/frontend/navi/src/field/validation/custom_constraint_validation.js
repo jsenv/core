@@ -57,6 +57,7 @@ import { createPubSub } from "@jsenv/dom";
 
 import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
 import { openCallout } from "./callout/callout.js";
+import { getMessageFromAttribute } from "./constraint_message_attribute.js";
 import {
   MIN_DIGIT_CONSTRAINT,
   MIN_LOWER_LETTER_CONSTRAINT,
@@ -404,6 +405,17 @@ export const installCustomConstraintValidation = (
         typeof checkResult === "string"
           ? { message: checkResult }
           : checkResult;
+
+      if (constraint.messageAttribute) {
+        const messageFromAttribute = getMessageFromAttribute(
+          element,
+          constraint.messageAttribute,
+          constraintValidityInfo.message,
+        );
+        if (messageFromAttribute) {
+          constraintValidityInfo.message = messageFromAttribute;
+        }
+      }
       const thisConstraintFailureInfo = {
         name: constraint.name,
         constraint,
