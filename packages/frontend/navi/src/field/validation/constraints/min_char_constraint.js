@@ -2,6 +2,7 @@ import { generateFieldInvalidMessage } from "./constraint_message_util.js";
 
 export const MIN_LOWER_LETTER_CONSTRAINT = {
   name: "min_lower_letter",
+  messageAttribute: "data-min-lower-letter-message",
   check: (field) => {
     const fieldValue = field.value;
     if (!fieldValue && !field.required) {
@@ -19,12 +20,6 @@ export const MIN_LOWER_LETTER_CONSTRAINT = {
       }
     }
     if (numberOfLowercaseChars < min) {
-      const messageAttribute = field.getAttribute(
-        "data-min-lower-letter-message",
-      );
-      if (messageAttribute) {
-        return messageAttribute;
-      }
       if (min === 0) {
         return generateFieldInvalidMessage(
           `{field} doit contenir au moins une lettre minuscule.`,
@@ -41,6 +36,7 @@ export const MIN_LOWER_LETTER_CONSTRAINT = {
 };
 export const MIN_UPPER_LETTER_CONSTRAINT = {
   name: "min_upper_letter",
+  messageAttribute: "data-min-upper-letter-message",
   check: (field) => {
     const fieldValue = field.value;
     if (!fieldValue && !field.required) {
@@ -58,12 +54,6 @@ export const MIN_UPPER_LETTER_CONSTRAINT = {
       }
     }
     if (numberOfUppercaseChars < min) {
-      const messageAttribute = field.getAttribute(
-        "data-min-upper-letter-message",
-      );
-      if (messageAttribute) {
-        return messageAttribute;
-      }
       if (min === 0) {
         return generateFieldInvalidMessage(
           `{field} doit contenir au moins une lettre majuscule.`,
@@ -80,6 +70,7 @@ export const MIN_UPPER_LETTER_CONSTRAINT = {
 };
 export const MIN_DIGIT_CONSTRAINT = {
   name: "min_digit",
+  messageAttribute: "data-min-digit-message",
   check: (field) => {
     const fieldValue = field.value;
     if (!fieldValue && !field.required) {
@@ -97,10 +88,6 @@ export const MIN_DIGIT_CONSTRAINT = {
       }
     }
     if (numberOfDigitChars < min) {
-      const messageAttribute = field.getAttribute("data-min-digit-message");
-      if (messageAttribute) {
-        return messageAttribute;
-      }
       if (min === 0) {
         return generateFieldInvalidMessage(
           `{field} doit contenir au moins un chiffre.`,
@@ -115,44 +102,39 @@ export const MIN_DIGIT_CONSTRAINT = {
     return "";
   },
 };
-export const MIN_SPECIAL_CHARS_CONSTRAINT = {
-  name: "min_special_chars",
+export const MIN_SPECIAL_CHAR_CONSTRAINT = {
+  name: "min_special_char",
+  messageAttribute: "data-min-special-char-message",
   check: (field) => {
     const fieldValue = field.value;
     if (!fieldValue && !field.required) {
       return "";
     }
-    const minSpecialChars = field.getAttribute("data-min-special-chars");
+    const minSpecialChars = field.getAttribute("data-min-special-char");
     if (!minSpecialChars) {
       return "";
     }
     const min = parseInt(minSpecialChars, 10);
-    const specialChars = field.getAttribute("data-special-chars");
-    if (!specialChars) {
-      return "L'attribut data-special-chars doit être défini pour utiliser data-min-special-chars.";
+    const specialCharset = field.getAttribute("data-special-charset");
+    if (!specialCharset) {
+      return "L'attribut data-special-charset doit être défini pour utiliser data-min-special-char.";
     }
 
     let numberOfSpecialChars = 0;
     for (const char of fieldValue) {
-      if (specialChars.includes(char)) {
+      if (specialCharset.includes(char)) {
         numberOfSpecialChars++;
       }
     }
     if (numberOfSpecialChars < min) {
-      const messageAttribute = field.getAttribute(
-        "data-min-special-chars-message",
-      );
-      if (messageAttribute) {
-        return messageAttribute;
-      }
       if (min === 1) {
         return generateFieldInvalidMessage(
-          `{field} doit contenir au moins un caractère spécial. (${specialChars})`,
+          `{field} doit contenir au moins un caractère spécial. (${specialCharset})`,
           { field },
         );
       }
       return generateFieldInvalidMessage(
-        `{field} doit contenir au moins ${min} caractères spéciaux (${specialChars})`,
+        `{field} doit contenir au moins ${min} caractères spéciaux (${specialCharset})`,
         { field },
       );
     }

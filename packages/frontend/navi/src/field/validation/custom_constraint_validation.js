@@ -60,7 +60,7 @@ import { openCallout } from "./callout/callout.js";
 import {
   MIN_DIGIT_CONSTRAINT,
   MIN_LOWER_LETTER_CONSTRAINT,
-  MIN_SPECIAL_CHARS_CONSTRAINT,
+  MIN_SPECIAL_CHAR_CONSTRAINT,
   MIN_UPPER_LETTER_CONSTRAINT,
 } from "./constraints/min_char_constraint.js";
 import { READONLY_CONSTRAINT } from "./constraints/readonly_constraint.js";
@@ -97,7 +97,7 @@ const NAVI_CONSTRAINT_SET = new Set([
   // the order matters here, the last constraint is picked first when multiple constraints fail
   // so it's better to keep the most complex constraints at the beginning of the list
   // so the more basic ones shows up first
-  MIN_SPECIAL_CHARS_CONSTRAINT,
+  MIN_SPECIAL_CHAR_CONSTRAINT,
   SINGLE_SPACE_CONSTRAINT,
   MIN_DIGIT_CONSTRAINT,
   MIN_UPPER_LETTER_CONSTRAINT,

@@ -1,5 +1,6 @@
 export const SAME_AS_CONSTRAINT = {
   name: "same_as",
+  messageAttribute: "data-same-as-message",
   check: (field) => {
     const sameAs = field.getAttribute("data-same-as");
     if (!sameAs) {
@@ -23,10 +24,6 @@ export const SAME_AS_CONSTRAINT = {
     }
     if (fieldValue === otherFieldValue) {
       return null;
-    }
-    const messageAttribute = field.getAttribute("data-same-as-message");
-    if (messageAttribute) {
-      return messageAttribute;
     }
     const type = field.type;
     if (type === "password") {

@@ -265,6 +265,10 @@ export const openCallout = (
     if (isValidElement(newMessage)) {
       calloutMessageElement.innerHTML = "";
       render(prepareCalloutJsx(newMessage, { close }), calloutMessageElement);
+    } else if (newMessage instanceof Node) {
+      // Handle DOM node (cloned from CSS selector)
+      calloutMessageElement.innerHTML = "";
+      calloutMessageElement.appendChild(newMessage);
     } else {
       if (Error.isError(newMessage)) {
         const error = newMessage;

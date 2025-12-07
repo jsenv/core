@@ -2,6 +2,7 @@ import { generateFieldInvalidMessage } from "./constraint_message_util.js";
 
 export const SINGLE_SPACE_CONSTRAINT = {
   name: "single_space",
+  messageAttribute: "data-single-space-message",
   check: (field) => {
     const singleSpace = field.hasAttribute("data-single-space");
     if (!singleSpace) {
@@ -12,10 +13,6 @@ export const SINGLE_SPACE_CONSTRAINT = {
     const hasTrailingSpace = fieldValue.endsWith(" ");
     const hasDoubleSpace = fieldValue.includes("  ");
     if (hasLeadingSpace || hasDoubleSpace || hasTrailingSpace) {
-      const messageAttribute = field.getAttribute("data-single-space-message");
-      if (messageAttribute) {
-        return messageAttribute;
-      }
       if (hasLeadingSpace) {
         return generateFieldInvalidMessage(
           `{field} ne doit pas commencer par un espace.`,
