@@ -28,6 +28,7 @@ import { ReportReadOnlyOnLabelContext } from "./label.jsx";
 import { LoaderBackground } from "./loader/loader_background.jsx";
 import { useActionEvents } from "./use_action_events.js";
 import { useAutoFocus } from "./use_auto_focus.js";
+import { useConstraintMessage } from "./use_constraint_message.js";
 import {
   DisabledContext,
   LoadingContext,
@@ -238,6 +239,8 @@ const InputTextualBasic = (props) => {
     autoFocusVisible,
     autoSelect,
 
+    requiredMessage,
+
     ...rest
   } = props;
   const defaultRef = useRef();
@@ -257,6 +260,8 @@ const InputTextualBasic = (props) => {
     autoSelect,
   });
   useConstraints(ref, constraints);
+
+  const requiredMessageId = useConstraintMessage(requiredMessage);
 
   const innerOnInput = useStableCallback(onInput);
   const renderInput = (inputProps) => {
@@ -286,6 +291,7 @@ const InputTextualBasic = (props) => {
         onsetuistate={(e) => {
           uiStateController.setUIState(e.detail.value, e);
         }}
+        data-required-message={requiredMessageId}
         // style management
         baseClassName="navi_native_input"
       />
@@ -297,6 +303,7 @@ const InputTextualBasic = (props) => {
     uiState,
     innerValue,
     innerOnInput,
+    requiredMessageId,
   ]);
 
   return (

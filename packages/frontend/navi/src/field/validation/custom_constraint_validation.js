@@ -417,6 +417,8 @@ export const installCustomConstraintValidation = (
         );
         if (messageFromAttribute) {
           constraintValidityInfo.message = messageFromAttribute;
+          constraintValidityInfo.isNode =
+            messageFromAttribute instanceof Element;
         }
       }
       const thisConstraintFailureInfo = {
@@ -454,7 +456,10 @@ export const installCustomConstraintValidation = (
       if (!hasTitleAttribute) {
         // when a constraint is failing browser displays that constraint message if the element has no title attribute.
         // We want to do the same with our message (overriding the browser in the process to get better messages)
-        element.setAttribute("title", failedConstraintInfo.message);
+        element.setAttribute(
+          "title",
+          failedConstraintInfo.isNode ? "" : failedConstraintInfo.message,
+        );
       }
     } else {
       if (!hasTitleAttribute) {
