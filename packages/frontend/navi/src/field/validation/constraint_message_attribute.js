@@ -1,3 +1,5 @@
+import { createNaviMirror } from "./navi_mirror.js";
+
 export const getMessageFromAttribute = (element, attributeName, message) => {
   const messageAttribute = element.getAttribute(attributeName);
   if (messageAttribute) {
@@ -37,28 +39,7 @@ const resolveMessageFromAttribute = (messageAttributeValue) => {
     );
     return null; // Fallback to the generic message
   }
-
-  const mirror = createElementMirror(messageSourceElement);
+  const mirror = createNaviMirror(messageSourceElement);
+  mirror.setAttribute("data-source-selector", messageAttributeValue);
   return mirror;
-};
-
-const createElementMirror = (sourceElement) => {
-  const cloneElement = sourceElement.cloneNode(true);
-
-  // Set up mutation observer to sync changes from source to cloned element
-  const mutationObserver = new MutationObserver(() => {
-    // Replace the current clone's content
-    cloneElement.innerHTML = sourceElement.innerHTML;
-    // Copy attributes
-    for (const attr of Array.from(sourceElement.attributes)) {
-      cloneElement.setAttribute(attr.name, attr.value);
-    }
-  });
-  mutationObserver.observe(sourceElement, {
-    childList: true,
-    subtree: true,
-    attributes: true,
-    characterData: true,
-  });
-  return cloneElement;
 };
