@@ -111,6 +111,10 @@ export const Box = (props) => {
     // -> introduced for <Input /> with a wrapped for loading, checkboxes, etc
     pseudoStateSelector,
     hasChildFunction,
+    // preventInitialTransition can be used to prevent transition on mount
+    // (when transition is set via props, this is done automatically)
+    // so this prop is useful only when transition is enabled from "outside" (via CSS)
+    preventInitialTransition,
 
     children,
     ...rest
@@ -170,6 +174,8 @@ export const Box = (props) => {
       // Selectors
       visualSelector,
       pseudoStateSelector,
+
+      preventInitialTransition,
     ];
     let innerPseudoState;
     if (basePseudoState && pseudoState) {
@@ -448,7 +454,13 @@ export const Box = (props) => {
 
     const updateStyle = useCallback((state) => {
       const boxEl = ref.current;
-      applyStyle(boxEl, boxStyles, state, boxPseudoNamedStyles);
+      applyStyle(
+        boxEl,
+        boxStyles,
+        state,
+        boxPseudoNamedStyles,
+        preventInitialTransition,
+      );
     }, styleDeps);
     const finalStyleDeps = [pseudoStateSelector, innerPseudoState, updateStyle];
     // By default ":hover", ":active" are not tracked.

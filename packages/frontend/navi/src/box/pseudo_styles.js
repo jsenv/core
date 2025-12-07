@@ -341,12 +341,18 @@ export const initPseudoStyles = (
   return teardown;
 };
 
-export const applyStyle = (element, style, pseudoState, pseudoNamedStyles) => {
+export const applyStyle = (
+  element,
+  style,
+  pseudoState,
+  pseudoNamedStyles,
+  preventInitialTransition,
+) => {
   if (!element) {
     return;
   }
   const styleToApply = getStyleToApply(style, pseudoState, pseudoNamedStyles);
-  updateStyle(element, styleToApply);
+  updateStyle(element, styleToApply, preventInitialTransition);
 };
 
 export const PSEUDO_STATE_DEFAULT = {};
@@ -400,11 +406,10 @@ const getStyleToApply = (styles, pseudoState, pseudoNamedStyles) => {
 };
 
 const styleKeySetWeakMap = new WeakMap();
-const elementTransitionStateWeakMap = new WeakMap();
+const elementTransitionWeakMap = new WeakMap();
 const elementRenderedWeakSet = new WeakSet();
 const NO_STYLE_KEY_SET = new Set();
-
-const updateStyle = (element, style) => {
+const updateStyle = (element, style, preventInitialTransition) => {
   const styleKeySet = style ? new Set(Object.keys(style)) : NO_STYLE_KEY_SET;
   const oldStyleKeySet = styleKeySetWeakMap.get(element) || NO_STYLE_KEY_SET;
   // TRANSITION ANTI-FLICKER STRATEGY:
@@ -419,26 +424,26 @@ const updateStyle = (element, style) => {
   let styleKeySetToApply = styleKeySet;
   if (!elementRenderedWeakSet.has(element)) {
     const hasTransition = styleKeySet.has("transition");
-    if (hasTransition) {
-      if (elementTransitionStateWeakMap.has(element)) {
-        elementTransitionStateWeakMap.set(element, style.transition);
+    if (hasTransition || preventInitialTransition) {
+      if (elementTransitionWeakMap.has(element)) {
+        elementTransitionWeakMap.set(element, style?.transition);
       } else {
         element.style.transition = "none";
-        elementTransitionStateWeakMap.set(element, style.transition);
+        elementTransitionWeakMap.set(element, style?.transition);
       }
       // Don't apply the transition property now - we've set it to "none" temporarily
       styleKeySetToApply = new Set(styleKeySet);
       styleKeySetToApply.delete("transition");
     }
     requestAnimationFrame(() => {
-      if (elementTransitionStateWeakMap.has(element)) {
-        const transitionToRestore = elementTransitionStateWeakMap.get(element);
+      if (elementTransitionWeakMap.has(element)) {
+        const transitionToRestore = elementTransitionWeakMap.get(element);
         if (transitionToRestore === undefined) {
           element.style.transition = "";
         } else {
           element.style.transition = transitionToRestore;
         }
-        elementTransitionStateWeakMap.delete(element);
+        elementTransitionWeakMap.delete(element);
       }
       elementRenderedWeakSet.add(element);
     });
