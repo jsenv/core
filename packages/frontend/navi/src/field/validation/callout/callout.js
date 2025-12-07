@@ -120,6 +120,10 @@ import.meta.css = /* css */ `
         }
 
         .navi_callout_message {
+          position: relative;
+          display: inline-flex;
+          box-sizing: border-box;
+          box-decoration-break: clone;
           min-width: 0;
           align-self: center;
           word-break: break-word;
