@@ -1,3 +1,21 @@
+/**
+ * Creates a live mirror of a source DOM element that automatically stays in sync.
+ *
+ * The mirror is implemented as a custom element (`<navi-mirror>`) that:
+ * - Copies the source element's content (innerHTML) and attributes
+ * - Automatically updates when the source element changes
+ * - Efficiently manages observers based on DOM presence (starts observing when
+ *   added to DOM, stops when removed)
+ * - Excludes the 'id' attribute to avoid conflicts
+ *
+ * @param {Element} sourceElement - The DOM element to mirror. Any changes to this
+ *   element's content, attributes, or structure will be automatically reflected
+ *   in the returned mirror element.
+ *
+ * @returns {NaviMirror} A custom element that mirrors the source element. Can be
+ *   inserted into the DOM like any other element. The mirror will automatically
+ *   start/stop observing the source based on its DOM presence.
+ */
 export const createNaviMirror = (sourceElement) => {
   const naviMirror = new NaviMirror(sourceElement);
   return naviMirror;
