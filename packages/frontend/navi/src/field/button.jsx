@@ -313,8 +313,8 @@ const ButtonBasic = (props) => {
     autoFocus,
 
     // visual
-    discrete,
     icon,
+    discrete = icon,
 
     children,
     ...rest
@@ -344,6 +344,7 @@ const ButtonBasic = (props) => {
   return (
     <Box
       data-readonly-silent={innerLoading ? "" : undefined}
+      data-nohover={icon ? "" : undefined}
       {...remainingProps}
       as="button"
       ref={ref}

@@ -16314,8 +16314,8 @@ const ButtonBasic = props => {
     loading,
     autoFocus,
     // visual
-    discrete,
     icon,
+    discrete = icon,
     children,
     ...rest
   } = props;
@@ -16338,6 +16338,7 @@ const ButtonBasic = props => {
   const renderButtonContentMemoized = useCallback(renderButtonContent, [children]);
   return jsxs(Box, {
     "data-readonly-silent": innerLoading ? "" : undefined,
+    "data-nohover": icon ? "" : undefined,
     ...remainingProps,
     as: "button",
     ref: ref,
