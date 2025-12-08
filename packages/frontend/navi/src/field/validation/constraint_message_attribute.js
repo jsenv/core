@@ -1,26 +1,57 @@
 import { createNaviMirror } from "./navi_mirror.js";
 
 export const getMessageFromAttribute = (element, attributeName, message) => {
+  const resolver = createMessageResolver(element, attributeName, message);
+  return resolver.resolve();
+};
+
+const createMessageResolver = (
+  originalElement,
+  attributeName,
+  fallbackMessage,
+) => {
   const selectorAttributeName = `${attributeName}-selector`;
   const eventAttributeName = `${attributeName}-event`;
 
-  const fromAttribute = (element) => {
+  // Define resolution steps in order of priority
+  const resolutionSteps = [
+    // Step 1: Original element
+    {
+      element: originalElement,
+      description: "original element",
+    },
+    // Step 2: Closest fieldset
+    {
+      element: originalElement.closest("fieldset"),
+      description: "closest fieldset",
+    },
+    // Step 3: Closest form
+    {
+      element: originalElement.closest("form"),
+      description: "closest form",
+    },
+    // Step 4: Fallback message
+    {
+      element: null,
+      description: "fallback message",
+    },
+  ];
+  let currentStepIndex = 0;
+  const resolveFromElement = (element) => {
     if (!element) {
       return null;
     }
+    // Check for event attribute first (highest priority)
     const eventAttribute = element.getAttribute(eventAttributeName);
     if (eventAttribute) {
-      return fromEventAttribute(element, eventAttribute, () => {
-        // even did not work, we should keep trying to provide a message trying first the selector attribute
-        // then the message attribute
-        // then trying to reach the closest fieldset or form
-        // if nothing works we just return the message
-      });
+      return createEventHandler(element, eventAttribute);
     }
+    // Check for selector attribute
     const selectorAttribute = element.getAttribute(selectorAttributeName);
     if (selectorAttribute) {
       return fromSelectorAttribute(selectorAttribute);
     }
+    // Check for message attribute
     const messageAttribute = element.getAttribute(attributeName);
     if (messageAttribute) {
       return messageAttribute;
@@ -28,29 +59,71 @@ export const getMessageFromAttribute = (element, attributeName, message) => {
     return null;
   };
 
-  return (
-    fromAttribute(element) ||
-    fromAttribute(element.closest("fieldset")) ||
-    fromAttribute(element.closest("form")) ||
-    message
-  );
-};
-
-const fromEventAttribute = (element, eventName, fallback) => {
-  return ({ renderIntoCallout }) => {
-    element.dispatchEvent(
-      new CustomEvent(eventName, {
-        detail: {
-          render: (message) => {
-            if (message) {
-              renderIntoCallout(message);
-            } else {
-              renderIntoCallout(fallback());
-            }
+  const createEventHandler = (element, eventName) => {
+    return ({ renderIntoCallout }) => {
+      element.dispatchEvent(
+        new CustomEvent(eventName, {
+          detail: {
+            render: (message) => {
+              if (message) {
+                renderIntoCallout(message);
+              } else {
+                // Resume resolution from next step
+                const nextResult = resumeResolution();
+                renderIntoCallout(nextResult);
+              }
+            },
           },
-        },
-      }),
-    );
+        }),
+      );
+    };
+  };
+
+  const resumeResolution = () => {
+    // Continue from the next step
+    currentStepIndex++;
+
+    for (let i = currentStepIndex; i < resolutionSteps.length; i++) {
+      const step = resolutionSteps[i];
+      currentStepIndex = i;
+
+      if (step.element === null) {
+        // Reached fallback message step
+        return fallbackMessage;
+      }
+
+      const result = resolveFromElement(step.element);
+      if (result) {
+        return result;
+      }
+    }
+
+    // If we get here, return fallback message
+    return fallbackMessage;
+  };
+
+  return {
+    resolve: () => {
+      currentStepIndex = 0;
+
+      for (let i = 0; i < resolutionSteps.length; i++) {
+        const step = resolutionSteps[i];
+        currentStepIndex = i;
+
+        if (step.element === null) {
+          // Reached fallback message step
+          return fallbackMessage;
+        }
+
+        const result = resolveFromElement(step.element);
+        if (result) {
+          return result;
+        }
+      }
+
+      // Fallback
+      return fallbackMessage;
+    },
   };
 };
 
