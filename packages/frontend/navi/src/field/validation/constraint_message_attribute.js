@@ -8,17 +8,22 @@ export const getMessageFromAttribute = (element, attributeName, message) => {
     if (!element) {
       return null;
     }
-    const messageAttribute = element.getAttribute(attributeName);
-    if (messageAttribute) {
-      return messageAttribute;
+    const eventAttribute = element.getAttribute(eventAttributeName);
+    if (eventAttribute) {
+      return fromEventAttribute(element, eventAttribute, () => {
+        // even did not work, we should keep trying to provide a message trying first the selector attribute
+        // then the message attribute
+        // then trying to reach the closest fieldset or form
+        // if nothing works we just return the message
+      });
     }
     const selectorAttribute = element.getAttribute(selectorAttributeName);
     if (selectorAttribute) {
-      return fromSelectorAttribute(selectorAttribute, message);
+      return fromSelectorAttribute(selectorAttribute);
     }
-    const eventAttribute = element.getAttribute(eventAttributeName);
-    if (eventAttribute) {
-      return fromEventAttribute(element, eventAttribute, message);
+    const messageAttribute = element.getAttribute(attributeName);
+    if (messageAttribute) {
+      return messageAttribute;
     }
     return null;
   };
@@ -27,14 +32,24 @@ export const getMessageFromAttribute = (element, attributeName, message) => {
     fromAttribute(element) ||
     fromAttribute(element.closest("fieldset")) ||
     fromAttribute(element.closest("form")) ||
-    null
+    message
   );
 };
 
-const fromEventAttribute = (element, eventName) => {
-  return (calloutContext) => {
+const fromEventAttribute = (element, eventName, fallback) => {
+  return ({ renderIntoCallout }) => {
     element.dispatchEvent(
-      new CustomEvent(eventName, { detail: calloutContext }),
+      new CustomEvent(eventName, {
+        detail: {
+          render: (message) => {
+            if (message) {
+              renderIntoCallout(message);
+            } else {
+              renderIntoCallout(fallback());
+            }
+          },
+        },
+      }),
     );
   };
 };

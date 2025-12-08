@@ -416,7 +416,7 @@ export const installCustomConstraintValidation = (
           constraint.messageAttribute,
           constraintValidityInfo.message,
         );
-        if (messageFromAttribute) {
+        if (messageFromAttribute !== constraintValidityInfo.message) {
           constraintValidityInfo.message = messageFromAttribute;
           if (typeof messageFromAttribute === "string") {
             constraintValidityInfo.messageString = messageFromAttribute;

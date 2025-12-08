@@ -275,7 +275,10 @@ export const openCallout = (
       calloutMessageElement.appendChild(newMessage);
     } else if (typeof newMessage === "function") {
       calloutMessageElement.innerHTML = "";
-      newMessage({ renderIntoCallout, close });
+      newMessage({
+        renderIntoCallout,
+        close,
+      });
     } else {
       if (Error.isError(newMessage)) {
         const error = newMessage;
