@@ -41,16 +41,6 @@
         color: #666;
         font-weight: bold;
       }
-
-      .hierarchy-demo {
-        padding: 20px;
-        border: 1px solid #ccc;
-        border-radius: 4px;
-      }
-
-      .spacing-demo {
-        margin: 15px 0;
-      }
     </style>
   </head>
   <body>
@@ -138,38 +128,6 @@
                   color scheme.
                 </MessageBox>
               </div>
-
-              <div className="example">
-                <span className="example-label">
-                  Warning MessageBox with Title:
-                </span>
-                <MessageBox status="warning">
-                  <Title>Warning Alert</Title>
-                  <Text>
-                    The title adapts to the warning context automatically.
-                  </Text>
-                </MessageBox>
-              </div>
-
-              <div className="example">
-                <span className="example-label">
-                  Success MessageBox with Title:
-                </span>
-                <MessageBox status="success">
-                  <Title>Success Confirmation</Title>
-                  <Text>Perfect! The operation completed successfully.</Text>
-                </MessageBox>
-              </div>
-
-              <div className="example">
-                <span className="example-label">
-                  Error MessageBox with Title:
-                </span>
-                <MessageBox status="error">
-                  <Title>Error Encountered</Title>
-                  <Text>Something went wrong. Please try again.</Text>
-                </MessageBox>
-              </div>
             </div>
 
             {/* Text Styling Props */}
@@ -200,118 +158,6 @@
                 <Title marginTop="l" marginBottom="l">
                   Title with Large Margins
                 </Title>
-              </div>
-            </div>
-
-            {/* Hierarchy Demo */}
-            <div className="demo-section">
-              <h2>Document Hierarchy Example</h2>
-              <Text>
-                A complete document structure showing proper heading hierarchy:
-              </Text>
-
-              <div className="hierarchy-demo">
-                <Title>Document Title (h1)</Title>
-                <Text>Introduction paragraph for the document.</Text>
-
-                <Title as="h2">Chapter 1: Getting Started</Title>
-                <Text>Chapter introduction text.</Text>
-
-                <Title as="h3">Setting Up Your Environment</Title>
-                <Text>Section content about environment setup.</Text>
-
-                <Title as="h4">Installing Dependencies</Title>
-                <Text>Subsection about installing dependencies.</Text>
-
-                <Title as="h4">Configuration</Title>
-                <Text>Subsection about configuration.</Text>
-
-                <Title as="h3">First Steps</Title>
-                <Text>Another section in the same chapter.</Text>
-
-                <Title as="h2">Chapter 2: Advanced Topics</Title>
-                <Text>Second chapter introduction.</Text>
-              </div>
-            </div>
-
-            {/* Accessibility */}
-            <div className="demo-section">
-              <h2>Accessibility Features</h2>
-              <Text>
-                The <Code>Title</Code> component provides several accessibility
-                benefits:
-              </Text>
-
-              <ul>
-                <li>
-                  <strong>Semantic HTML:</strong> Uses proper heading elements
-                  (h1-h6)
-                </li>
-                <li>
-                  <strong>Heading Hierarchy:</strong> Provides logical document
-                  structure
-                </li>
-                <li>
-                  <strong>Context Awareness:</strong> Automatically adjusts
-                  level based on context
-                </li>
-                <li>
-                  <strong>Screen Reader Support:</strong> Proper heading
-                  navigation
-                </li>
-              </ul>
-
-              <div className="example">
-                <span className="example-label">
-                  Accessible heading structure:
-                </span>
-                <div role="region" aria-labelledby="accessible-title">
-                  <Title id="accessible-title" as="h3">
-                    Accessible Section
-                  </Title>
-                  <Text>
-                    This section has a proper heading that screen readers can
-                    navigate to.
-                  </Text>
-                </div>
-              </div>
-            </div>
-
-            {/* Best Practices */}
-            <div className="demo-section">
-              <h2>Best Practices</h2>
-              <Text>
-                Tips for using the <Code>Title</Code> component effectively:
-              </Text>
-
-              <div className="spacing-demo">
-                <Title as="h3">✅ Good Practices</Title>
-                <ul>
-                  <li>Use proper heading hierarchy (don't skip levels)</li>
-                  <li>
-                    Let the component handle automatic styling in MessageBox
-                    contexts
-                  </li>
-                  <li>
-                    Use the <Code>as</Code> prop to explicitly set the semantic
-                    level
-                  </li>
-                  <li>
-                    Leverage TitleLevelContext for context-aware components
-                  </li>
-                </ul>
-              </div>
-
-              <div className="spacing-demo">
-                <Title as="h3">❌ Avoid These Patterns</Title>
-                <ul>
-                  <li>Skipping heading levels (h1 directly to h3)</li>
-                  <li>
-                    Using titles just for visual styling without semantic
-                    meaning
-                  </li>
-                  <li>Overriding MessageBox automatic styling unnecessarily</li>
-                </ul>
               </div>
             </div>
           </div>
