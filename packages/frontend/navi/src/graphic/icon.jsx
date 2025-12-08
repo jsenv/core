@@ -6,10 +6,15 @@ import.meta.css = /* css */ `
   .navi_icon {
     display: inline-block;
     box-sizing: border-box;
-    width: 1em;
     max-width: 100%;
-    height: 1em;
     max-height: 100%;
+
+    &[data-flow-inline] {
+      width: 1em;
+      width: 1lh;
+      height: 1em;
+      height: 1lh;
+    }
   }
 
   .navi_icon[data-interactive] {
@@ -49,18 +54,18 @@ import.meta.css = /* css */ `
     height: 100%;
     backface-visibility: hidden;
   }
-  .navi_icon[data-width] > svg,
-  .navi_icon[data-width] > img {
+  .navi_icon[data-has-width] > svg,
+  .navi_icon[data-has-width] > img {
     width: 100%;
     height: auto;
   }
-  .navi_icon[data-height] > svg,
-  .navi_icon[data-height] > img {
+  .navi_icon[data-has-height] > svg,
+  .navi_icon[data-has-height] > img {
     width: auto;
     height: 100%;
   }
-  .navi_icon[data-width][data-height] > svg,
-  .navi_icon[data-width][data-height] > img {
+  .navi_icon[data-has-width][data-has-height] > svg,
+  .navi_icon[data-has-width][data-has-height] > img {
     width: 100%;
     height: 100%;
   }
@@ -97,7 +102,11 @@ export const Icon = ({
   );
 
   let { box, width, height } = props;
-  if (width === undefined && height === undefined) {
+  if (width === "auto") width = undefined;
+  if (height === "auto") height = undefined;
+  const hasExplicitWidth = width !== undefined;
+  const hasExplicitHeight = height !== undefined;
+  if (!hasExplicitWidth && !hasExplicitHeight) {
     if (decorative === undefined) {
       decorative = true;
     }
@@ -107,25 +116,15 @@ export const Icon = ({
   const ariaProps = decorative ? { "aria-hidden": "true" } : {};
 
   if (box) {
-    if (
-      import.meta.dev &&
-      props.scale &&
-      props.padding &&
-      String(props.padding).includes("em")
-    ) {
-      console.warn(
-        "Using 'em' units for padding with scale cause positioning issue during the scale transition",
-      );
-    }
-
     return (
       <Box
+        square
         {...props}
         {...ariaProps}
         box={box}
         baseClassName="navi_icon"
-        data-width={width}
-        data-height={height}
+        data-has-width={hasExplicitWidth ? "" : undefined}
+        data-has-height={hasExplicitHeight ? "" : undefined}
         data-interactive={onClick ? "" : undefined}
         onClick={onClick}
       >
@@ -143,8 +142,8 @@ export const Icon = ({
       className={withPropsClassName("navi_icon", className)}
       spacing="pre"
       data-icon-char=""
-      data-width={width}
-      data-height={height}
+      data-has-width={hasExplicitWidth ? "" : undefined}
+      data-has-height={hasExplicitHeight ? "" : undefined}
       data-interactive={onClick ? "" : undefined}
       onClick={onClick}
     >

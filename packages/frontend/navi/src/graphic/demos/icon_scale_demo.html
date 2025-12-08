@@ -72,7 +72,7 @@
                 <CircleIcon background="purple" color="white">
                   <FineGridSvg />
                 </CircleIcon>
-                <CircleIcon background="teal" color="white">
+                <CircleIcon align="center" background="teal" color="white">
                   C
                 </CircleIcon>
               </Box>
@@ -143,6 +143,7 @@
         scale = 1.4,
         duration = 0.8,
         size = 48,
+        ...props
       }) => {
         return (
           <Icon
@@ -160,6 +161,7 @@
               },
             }}
             transition={`transform ${duration}s ease-in-out`}
+            {...props}
           >
             {children}
           </Icon>

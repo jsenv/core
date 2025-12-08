@@ -97,16 +97,25 @@ const DIMENSION_PROPS = {
   height: PASS_THROUGH,
   minHeight: PASS_THROUGH,
   maxHeight: PASS_THROUGH,
-  square: (v) => {
+  square: (v, context) => {
     if (!v) {
+      return null;
+    }
+    console.log(context);
+    if (context.styles.width && context.styles.height) {
+      // width/height are defined, remove aspect ratio, we explicitely allow rectanglular shapes
       return null;
     }
     return {
       aspectRatio: "1/1",
     };
   },
-  circle: (v) => {
+  circle: (v, context) => {
     if (!v) {
+      return null;
+    }
+    if (context.styles.width && context.styles.height) {
+      // width/height are defined, remove aspect ratio, we explicitely allow rectanglular shapes
       return null;
     }
     return {
