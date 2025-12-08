@@ -4,7 +4,7 @@ import { jsxs, jsx, Fragment } from "preact/jsx-runtime";
 import { createIterableWeakSet, mergeOneStyle, stringifyStyle, createPubSub, mergeTwoStyles, normalizeStyles, createGroupTransitionController, getElementSignature, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, resolveCSSSize, findBefore, findAfter, createValueEffect, createStyleController, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, allowWheelThrough, resolveCSSColor, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, hasCSSSizeUnit, activeElementSignal, canInterceptKeys, pickLightOrDark, resolveColorLuminance, initFocusGroup, dragAfterThreshold, getScrollContainer, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement, elementIsFocusable } from "@jsenv/dom";
 import { prefixFirstAndIndentRemainingLines } from "@jsenv/humanize";
 import { effect, signal, computed, batch, useSignal } from "@preact/signals";
-import { createContext, toChildArray, createRef, cloneElement } from "preact";
+import { createContext, render, isValidElement, toChildArray, createRef, cloneElement } from "preact";
 import { createPortal, forwardRef } from "preact/compat";
 
 const actionPrivatePropertiesWeakMap = new WeakMap();
@@ -4736,6 +4736,23 @@ const DIMENSION_PROPS = {
   height: PASS_THROUGH,
   minHeight: PASS_THROUGH,
   maxHeight: PASS_THROUGH,
+  square: (v) => {
+    if (!v) {
+      return null;
+    }
+    return {
+      aspectRatio: "1/1",
+    };
+  },
+  circle: (v) => {
+    if (!v) {
+      return null;
+    }
+    return {
+      aspectRatio: "1/1",
+      borderRadius: "100%",
+    };
+  },
   expand: applyOnTwoProps("expandX", "expandY"),
   shrink: applyOnTwoProps("shrinkX", "shrinkY"),
   // apply after width/height to override if both are set
@@ -5079,7 +5096,14 @@ const getNormalizer = (key) => {
   if (group === "typo") {
     return normalizeTypoStyle;
   }
-  return stringifyStyle;
+  return normalizeRegularStyle;
+};
+const normalizeRegularStyle = (
+  value,
+  name,
+  // styleContext, context
+) => {
+  return stringifyStyle(value, name);
 };
 const getHowToHandleStyleProp = (name) => {
   const getStyle = All_PROPS[name];
@@ -5625,12 +5649,18 @@ const initPseudoStyles = (
   return teardown;
 };
 
-const applyStyle = (element, style, pseudoState, pseudoNamedStyles) => {
+const applyStyle = (
+  element,
+  style,
+  pseudoState,
+  pseudoNamedStyles,
+  preventInitialTransition,
+) => {
   if (!element) {
     return;
   }
   const styleToApply = getStyleToApply(style, pseudoState, pseudoNamedStyles);
-  updateStyle(element, styleToApply);
+  updateStyle(element, styleToApply, preventInitialTransition);
 };
 
 const PSEUDO_STATE_DEFAULT = {};
@@ -5684,11 +5714,10 @@ const getStyleToApply = (styles, pseudoState, pseudoNamedStyles) => {
 };
 
 const styleKeySetWeakMap = new WeakMap();
-const elementTransitionStateWeakMap = new WeakMap();
+const elementTransitionWeakMap = new WeakMap();
 const elementRenderedWeakSet = new WeakSet();
 const NO_STYLE_KEY_SET = new Set();
-
-const updateStyle = (element, style) => {
+const updateStyle = (element, style, preventInitialTransition) => {
   const styleKeySet = style ? new Set(Object.keys(style)) : NO_STYLE_KEY_SET;
   const oldStyleKeySet = styleKeySetWeakMap.get(element) || NO_STYLE_KEY_SET;
   // TRANSITION ANTI-FLICKER STRATEGY:
@@ -5703,26 +5732,26 @@ const updateStyle = (element, style) => {
   let styleKeySetToApply = styleKeySet;
   if (!elementRenderedWeakSet.has(element)) {
     const hasTransition = styleKeySet.has("transition");
-    if (hasTransition) {
-      if (elementTransitionStateWeakMap.has(element)) {
-        elementTransitionStateWeakMap.set(element, style.transition);
+    if (hasTransition || preventInitialTransition) {
+      if (elementTransitionWeakMap.has(element)) {
+        elementTransitionWeakMap.set(element, style?.transition);
       } else {
         element.style.transition = "none";
-        elementTransitionStateWeakMap.set(element, style.transition);
+        elementTransitionWeakMap.set(element, style?.transition);
       }
       // Don't apply the transition property now - we've set it to "none" temporarily
       styleKeySetToApply = new Set(styleKeySet);
       styleKeySetToApply.delete("transition");
     }
     requestAnimationFrame(() => {
-      if (elementTransitionStateWeakMap.has(element)) {
-        const transitionToRestore = elementTransitionStateWeakMap.get(element);
+      if (elementTransitionWeakMap.has(element)) {
+        const transitionToRestore = elementTransitionWeakMap.get(element);
         if (transitionToRestore === undefined) {
           element.style.transition = "";
         } else {
           element.style.transition = transitionToRestore;
         }
-        elementTransitionStateWeakMap.delete(element);
+        elementTransitionWeakMap.delete(element);
       }
       elementRenderedWeakSet.add(element);
     });
@@ -5798,6 +5827,10 @@ const Box = props => {
     // -> introduced for <Input /> with a wrapped for loading, checkboxes, etc
     pseudoStateSelector,
     hasChildFunction,
+    // preventInitialTransition can be used to prevent transition on mount
+    // (when transition is set via props, this is done automatically)
+    // so this prop is useful only when transition is enabled from "outside" (via CSS)
+    preventInitialTransition,
     children,
     ...rest
   } = props;
@@ -5851,7 +5884,7 @@ const Box = props => {
     // Style context dependencies
     styleCSSVars, pseudoClasses, pseudoElements,
     // Selectors
-    visualSelector, pseudoStateSelector];
+    visualSelector, pseudoStateSelector, preventInitialTransition];
     let innerPseudoState;
     if (basePseudoState && pseudoState) {
       innerPseudoState = {};
@@ -6059,7 +6092,7 @@ const Box = props => {
     }
     const updateStyle = useCallback(state => {
       const boxEl = ref.current;
-      applyStyle(boxEl, boxStyles, state, boxPseudoNamedStyles);
+      applyStyle(boxEl, boxStyles, state, boxPseudoNamedStyles, preventInitialTransition);
     }, styleDeps);
     const finalStyleDeps = [pseudoStateSelector, innerPseudoState, updateStyle];
     // By default ":hover", ":active" are not tracked.
@@ -11204,6 +11237,20 @@ const useAutoFocus = (
   }, []);
 };
 
+const CalloutCloseContext = createContext();
+const useCalloutClose = () => {
+  return useContext(CalloutCloseContext);
+};
+const renderIntoCallout = (jsx$1, calloutMessageElement, {
+  close
+}) => {
+  const calloutJsx = jsx(CalloutCloseContext.Provider, {
+    value: close,
+    children: jsx$1
+  });
+  render(calloutJsx, calloutMessageElement);
+};
+
 installImportMetaCss(import.meta);
 /**
  * A callout component that mimics native browser validation messages.
@@ -11310,6 +11357,10 @@ import.meta.css = /* css */ `
         }
 
         .navi_callout_message {
+          position: relative;
+          display: inline-flex;
+          box-sizing: border-box;
+          box-decoration-break: clone;
           min-width: 0;
           align-self: center;
           word-break: break-word;
@@ -11452,28 +11503,44 @@ const openCallout = (
       closeOnClickOutside = options.closeOnClickOutside;
     }
 
-    if (Error.isError(newMessage)) {
-      const error = newMessage;
-      newMessage = error.message;
-      if (showErrorStack && error.stack) {
-        newMessage += `<pre class="navi_callout_error_stack">${escapeHtml(String(error.stack))}</pre>`;
-      }
-    }
-
-    // Check if the message is a full HTML document (starts with DOCTYPE)
-    if (typeof newMessage === "string" && isHtmlDocument(newMessage)) {
-      // Create iframe to isolate the HTML document
-      const iframe = document.createElement("iframe");
-      iframe.style.border = "none";
-      iframe.style.width = "100%";
-      iframe.style.backgroundColor = "white";
-      iframe.srcdoc = newMessage;
-
-      // Clear existing content and add iframe
+    if (isValidElement(newMessage)) {
       calloutMessageElement.innerHTML = "";
-      calloutMessageElement.appendChild(iframe);
+      renderIntoCallout(newMessage, calloutMessageElement, { close });
+    } else if (newMessage instanceof Node) {
+      // Handle DOM node (cloned from CSS selector)
+      calloutMessageElement.innerHTML = "";
+      calloutMessageElement.appendChild(newMessage);
+    } else if (typeof newMessage === "function") {
+      calloutMessageElement.innerHTML = "";
+      newMessage({
+        renderIntoCallout: (jsx) =>
+          renderIntoCallout(jsx, calloutMessageElement, { close }),
+        close,
+      });
     } else {
-      calloutMessageElement.innerHTML = newMessage;
+      if (Error.isError(newMessage)) {
+        const error = newMessage;
+        newMessage = error.message;
+        if (showErrorStack && error.stack) {
+          newMessage += `<pre class="navi_callout_error_stack">${escapeHtml(String(error.stack))}</pre>`;
+        }
+      }
+
+      // Check if the message is a full HTML document (starts with DOCTYPE)
+      if (typeof newMessage === "string" && isHtmlDocument(newMessage)) {
+        // Create iframe to isolate the HTML document
+        const iframe = document.createElement("iframe");
+        iframe.style.border = "none";
+        iframe.style.width = "100%";
+        iframe.style.backgroundColor = "white";
+        iframe.srcdoc = newMessage;
+
+        // Clear existing content and add iframe
+        calloutMessageElement.innerHTML = "";
+        calloutMessageElement.appendChild(iframe);
+      } else {
+        calloutMessageElement.innerHTML = newMessage;
+      }
     }
   };
   {
@@ -11501,6 +11568,15 @@ const openCallout = (
     addTeardown(() => {
       document.removeEventListener("click", handleClickOutside, true);
     });
+  }
+  {
+    const handleCustomCloseEvent = () => {
+      close("custom_event");
+    };
+    calloutElement.addEventListener(
+      "navi_callout_close",
+      handleCustomCloseEvent,
+    );
   }
   Object.assign(callout, {
     element: calloutElement,
@@ -12234,6 +12310,189 @@ const generateSvgWithoutArrow = (width, height) => {
     </svg>`;
 };
 
+/**
+ * Creates a live mirror of a source DOM element that automatically stays in sync.
+ *
+ * The mirror is implemented as a custom element (`<navi-mirror>`) that:
+ * - Copies the source element's content (innerHTML) and attributes
+ * - Automatically updates when the source element changes
+ * - Efficiently manages observers based on DOM presence (starts observing when
+ *   added to DOM, stops when removed)
+ * - Excludes the 'id' attribute to avoid conflicts
+ *
+ * @param {Element} sourceElement - The DOM element to mirror. Any changes to this
+ *   element's content, attributes, or structure will be automatically reflected
+ *   in the returned mirror element.
+ *
+ * @returns {NaviMirror} A custom element that mirrors the source element. Can be
+ *   inserted into the DOM like any other element. The mirror will automatically
+ *   start/stop observing the source based on its DOM presence.
+ */
+const createNaviMirror = (sourceElement) => {
+  const naviMirror = new NaviMirror(sourceElement);
+  return naviMirror;
+};
+
+// Custom element that mirrors another element's content
+class NaviMirror extends HTMLElement {
+  constructor(sourceElement) {
+    super();
+    this.sourceElement = null;
+    this.sourceObserver = null;
+    this.setSourceElement(sourceElement);
+  }
+
+  setSourceElement(sourceElement) {
+    this.sourceElement = sourceElement;
+    this.updateFromSource();
+  }
+
+  updateFromSource() {
+    if (!this.sourceElement) return;
+
+    this.innerHTML = this.sourceElement.innerHTML;
+    // Copy attributes from source (except id to avoid conflicts)
+    for (const attr of Array.from(this.sourceElement.attributes)) {
+      if (attr.name !== "id") {
+        this.setAttribute(attr.name, attr.value);
+      }
+    }
+  }
+
+  startObserving() {
+    if (this.sourceObserver || !this.sourceElement) return;
+    this.sourceObserver = new MutationObserver(() => {
+      this.updateFromSource();
+    });
+    this.sourceObserver.observe(this.sourceElement, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      characterData: true,
+    });
+  }
+
+  stopObserving() {
+    if (this.sourceObserver) {
+      this.sourceObserver.disconnect();
+      this.sourceObserver = null;
+    }
+  }
+
+  // Called when element is added to DOM
+  connectedCallback() {
+    this.startObserving();
+  }
+
+  // Called when element is removed from DOM
+  disconnectedCallback() {
+    this.stopObserving();
+  }
+}
+
+// Register the custom element if not already registered
+if (!customElements.get("navi-mirror")) {
+  customElements.define("navi-mirror", NaviMirror);
+}
+
+const getMessageFromAttribute = (
+  originalElement,
+  attributeName,
+  generatedMessage,
+) => {
+  const selectorAttributeName = `${attributeName}-selector`;
+  const eventAttributeName = `${attributeName}-event`;
+  const resolutionSteps = [
+    {
+      description: "original element",
+      element: originalElement,
+    },
+    {
+      description: "closest fieldset",
+      element: originalElement.closest("fieldset"),
+    },
+    {
+      description: "closest form",
+      element: originalElement.closest("form"),
+    },
+  ];
+  // Sub-steps for each element (in order of priority)
+  const subSteps = ["event", "selector", "message"];
+  let currentStepIndex = 0;
+  let currentSubStepIndex = 0;
+  const resolve = () => {
+    while (currentStepIndex < resolutionSteps.length) {
+      const { element } = resolutionSteps[currentStepIndex];
+      if (element) {
+        while (currentSubStepIndex < subSteps.length) {
+          const subStep = subSteps[currentSubStepIndex];
+          currentSubStepIndex++;
+          if (subStep === "event") {
+            const eventAttribute = element.getAttribute(eventAttributeName);
+            if (eventAttribute) {
+              return createEventHandler(element, eventAttribute);
+            }
+          }
+          if (subStep === "selector") {
+            const selectorAttribute = element.getAttribute(
+              selectorAttributeName,
+            );
+            if (selectorAttribute) {
+              return fromSelectorAttribute(selectorAttribute);
+            }
+          }
+          if (subStep === "message") {
+            const messageAttribute = element.getAttribute(attributeName);
+            if (messageAttribute) {
+              return messageAttribute;
+            }
+          }
+        }
+      }
+      currentStepIndex++;
+      currentSubStepIndex = 0;
+    }
+    return generatedMessage;
+  };
+
+  const createEventHandler = (element, eventName) => {
+    return ({ renderIntoCallout }) => {
+      element.dispatchEvent(
+        new CustomEvent(eventName, {
+          detail: {
+            render: (message) => {
+              if (message) {
+                renderIntoCallout(message);
+              } else {
+                // Resume resolution from next step
+                const nextResult = resolve();
+                renderIntoCallout(nextResult);
+              }
+            },
+          },
+        }),
+      );
+    };
+  };
+
+  return resolve();
+};
+
+// Helper function to resolve messages that might be CSS selectors
+const fromSelectorAttribute = (messageAttributeValue) => {
+  // It's a CSS selector, find the DOM element
+  const messageSourceElement = document.querySelector(messageAttributeValue);
+  if (!messageSourceElement) {
+    console.warn(
+      `Message selector "${messageAttributeValue}" not found in DOM`,
+    );
+    return null; // Fallback to the generic message
+  }
+  const mirror = createNaviMirror(messageSourceElement);
+  mirror.setAttribute("data-source-selector", messageAttributeValue);
+  return mirror;
+};
+
 const generateFieldInvalidMessage = (template, { field }) => {
   return replaceStringVars(template, {
     "{field}": () => generateThisFieldText(field),
@@ -12271,6 +12530,7 @@ const replaceStringVars = (string, replacers) => {
 
 const MIN_LOWER_LETTER_CONSTRAINT = {
   name: "min_lower_letter",
+  messageAttribute: "data-min-lower-letter-message",
   check: (field) => {
     const fieldValue = field.value;
     if (!fieldValue && !field.required) {
@@ -12288,12 +12548,6 @@ const MIN_LOWER_LETTER_CONSTRAINT = {
       }
     }
     if (numberOfLowercaseChars < min) {
-      const messageAttribute = field.getAttribute(
-        "data-min-lower-letter-message",
-      );
-      if (messageAttribute) {
-        return messageAttribute;
-      }
       if (min === 0) {
         return generateFieldInvalidMessage(
           `{field} doit contenir au moins une lettre minuscule.`,
@@ -12310,6 +12564,7 @@ const MIN_LOWER_LETTER_CONSTRAINT = {
 };
 const MIN_UPPER_LETTER_CONSTRAINT = {
   name: "min_upper_letter",
+  messageAttribute: "data-min-upper-letter-message",
   check: (field) => {
     const fieldValue = field.value;
     if (!fieldValue && !field.required) {
@@ -12327,12 +12582,6 @@ const MIN_UPPER_LETTER_CONSTRAINT = {
       }
     }
     if (numberOfUppercaseChars < min) {
-      const messageAttribute = field.getAttribute(
-        "data-min-upper-letter-message",
-      );
-      if (messageAttribute) {
-        return messageAttribute;
-      }
       if (min === 0) {
         return generateFieldInvalidMessage(
           `{field} doit contenir au moins une lettre majuscule.`,
@@ -12349,6 +12598,7 @@ const MIN_UPPER_LETTER_CONSTRAINT = {
 };
 const MIN_DIGIT_CONSTRAINT = {
   name: "min_digit",
+  messageAttribute: "data-min-digit-message",
   check: (field) => {
     const fieldValue = field.value;
     if (!fieldValue && !field.required) {
@@ -12366,10 +12616,6 @@ const MIN_DIGIT_CONSTRAINT = {
       }
     }
     if (numberOfDigitChars < min) {
-      const messageAttribute = field.getAttribute("data-min-digit-message");
-      if (messageAttribute) {
-        return messageAttribute;
-      }
       if (min === 0) {
         return generateFieldInvalidMessage(
           `{field} doit contenir au moins un chiffre.`,
@@ -12384,44 +12630,39 @@ const MIN_DIGIT_CONSTRAINT = {
     return "";
   },
 };
-const MIN_SPECIAL_CHARS_CONSTRAINT = {
-  name: "min_special_chars",
+const MIN_SPECIAL_CHAR_CONSTRAINT = {
+  name: "min_special_char",
+  messageAttribute: "data-min-special-char-message",
   check: (field) => {
     const fieldValue = field.value;
     if (!fieldValue && !field.required) {
       return "";
     }
-    const minSpecialChars = field.getAttribute("data-min-special-chars");
+    const minSpecialChars = field.getAttribute("data-min-special-char");
     if (!minSpecialChars) {
       return "";
     }
     const min = parseInt(minSpecialChars, 10);
-    const specialChars = field.getAttribute("data-special-chars");
-    if (!specialChars) {
-      return "L'attribut data-special-chars doit être défini pour utiliser data-min-special-chars.";
+    const specialCharset = field.getAttribute("data-special-charset");
+    if (!specialCharset) {
+      return "L'attribut data-special-charset doit être défini pour utiliser data-min-special-char.";
     }
 
     let numberOfSpecialChars = 0;
     for (const char of fieldValue) {
-      if (specialChars.includes(char)) {
+      if (specialCharset.includes(char)) {
         numberOfSpecialChars++;
       }
     }
     if (numberOfSpecialChars < min) {
-      const messageAttribute = field.getAttribute(
-        "data-min-special-chars-message",
-      );
-      if (messageAttribute) {
-        return messageAttribute;
-      }
       if (min === 1) {
         return generateFieldInvalidMessage(
-          `{field} doit contenir au moins un caractère spécial. (${specialChars})`,
+          `{field} doit contenir au moins un caractère spécial. (${specialCharset})`,
           { field },
         );
       }
       return generateFieldInvalidMessage(
-        `{field} doit contenir au moins ${min} caractères spéciaux (${specialChars})`,
+        `{field} doit contenir au moins ${min} caractères spéciaux (${specialCharset})`,
         { field },
       );
     }
@@ -12431,6 +12672,7 @@ const MIN_SPECIAL_CHARS_CONSTRAINT = {
 
 const READONLY_CONSTRAINT = {
   name: "readonly",
+  messageAttribute: "data-readonly-message",
   check: (field, { skipReadonly }) => {
     if (skipReadonly) {
       return null;
@@ -12444,25 +12686,21 @@ const READONLY_CONSTRAINT = {
     const isButton = field.tagName === "BUTTON";
     const isBusy = field.getAttribute("aria-busy") === "true";
     const readonlySilent = field.hasAttribute("data-readonly-silent");
-    const messageAttribute = field.getAttribute("data-readonly-message");
     if (readonlySilent) {
       return { silent: true };
     }
     if (isBusy) {
       return {
         target: field,
-        message:
-          messageAttribute || `Cette action est en cours. Veuillez patienter.`,
+        message: `Cette action est en cours. Veuillez patienter.`,
         status: "info",
       };
     }
     return {
       target: field,
-      message:
-        messageAttribute ||
-        (isButton
-          ? `Cet action n'est pas disponible pour l'instant.`
-          : `Cet élément est en lecture seule et ne peut pas être modifié.`),
+      message: isButton
+        ? `Cet action n'est pas disponible pour l'instant.`
+        : `Cet élément est en lecture seule et ne peut pas être modifié.`,
       status: "info",
     };
   },
@@ -12470,6 +12708,7 @@ const READONLY_CONSTRAINT = {
 
 const SAME_AS_CONSTRAINT = {
   name: "same_as",
+  messageAttribute: "data-same-as-message",
   check: (field) => {
     const sameAs = field.getAttribute("data-same-as");
     if (!sameAs) {
@@ -12494,10 +12733,6 @@ const SAME_AS_CONSTRAINT = {
     if (fieldValue === otherFieldValue) {
       return null;
     }
-    const messageAttribute = field.getAttribute("data-same-as-message");
-    if (messageAttribute) {
-      return messageAttribute;
-    }
     const type = field.type;
     if (type === "password") {
       return `Ce mot de passe doit être identique au précédent.`;
@@ -12511,6 +12746,7 @@ const SAME_AS_CONSTRAINT = {
 
 const SINGLE_SPACE_CONSTRAINT = {
   name: "single_space",
+  messageAttribute: "data-single-space-message",
   check: (field) => {
     const singleSpace = field.hasAttribute("data-single-space");
     if (!singleSpace) {
@@ -12521,10 +12757,6 @@ const SINGLE_SPACE_CONSTRAINT = {
     const hasTrailingSpace = fieldValue.endsWith(" ");
     const hasDoubleSpace = fieldValue.includes("  ");
     if (hasLeadingSpace || hasDoubleSpace || hasTrailingSpace) {
-      const messageAttribute = field.getAttribute("data-single-space-message");
-      if (messageAttribute) {
-        return messageAttribute;
-      }
       if (hasLeadingSpace) {
         return generateFieldInvalidMessage(
           `{field} ne doit pas commencer par un espace.`,
@@ -12555,6 +12787,7 @@ const SINGLE_SPACE_CONSTRAINT = {
 // in our case it's just here in case some code is wrongly calling "requestAction" or "checkValidity" on a disabled element
 const DISABLED_CONSTRAINT = {
   name: "disabled",
+  messageAttribute: "data-disabled-message",
   check: (field) => {
     if (field.disabled) {
       return generateFieldInvalidMessage(`{field} est désactivé.`, { field });
@@ -12565,17 +12798,14 @@ const DISABLED_CONSTRAINT = {
 
 const REQUIRED_CONSTRAINT = {
   name: "required",
+  messageAttribute: "data-required-message",
   check: (field, { registerChange }) => {
     if (!field.required) {
       return null;
     }
-    const messageAttribute = field.getAttribute("data-required-message");
 
     if (field.type === "checkbox") {
       if (!field.checked) {
-        if (messageAttribute) {
-          return messageAttribute;
-        }
         return `Veuillez cocher cette case.`;
       }
       return null;
@@ -12586,19 +12816,12 @@ const REQUIRED_CONSTRAINT = {
       if (!name) {
         // If no name, check just this radio
         if (!field.checked) {
-          if (messageAttribute) {
-            return messageAttribute;
-          }
           return `Veuillez sélectionner une option.`;
         }
         return null;
       }
 
       const closestFieldset = field.closest("fieldset");
-      const fieldsetRequiredMessage = closestFieldset
-        ? closestFieldset.getAttribute("data-required-message")
-        : null;
-
       // Find the container (form or closest fieldset)
       const container = field.form || closestFieldset || document;
       // Check if any radio with the same name is checked
@@ -12617,10 +12840,7 @@ const REQUIRED_CONSTRAINT = {
       }
 
       return {
-        message:
-          messageAttribute ||
-          fieldsetRequiredMessage ||
-          `Veuillez sélectionner une option.`,
+        message: `Veuillez sélectionner une option.`,
         target: closestFieldset
           ? closestFieldset.querySelector("legend")
           : undefined,
@@ -12628,9 +12848,6 @@ const REQUIRED_CONSTRAINT = {
     }
     if (field.value) {
       return null;
-    }
-    if (messageAttribute) {
-      return messageAttribute;
     }
     if (field.type === "password") {
       return field.hasAttribute("data-same-as")
@@ -12650,6 +12867,7 @@ const REQUIRED_CONSTRAINT = {
 
 const PATTERN_CONSTRAINT = {
   name: "pattern",
+  messageAttribute: "data-pattern-message",
   check: (field) => {
     const pattern = field.pattern;
     if (!pattern) {
@@ -12662,10 +12880,6 @@ const PATTERN_CONSTRAINT = {
     const regex = new RegExp(pattern);
     if (regex.test(value)) {
       return null;
-    }
-    const messageAttribute = field.getAttribute("data-pattern-message");
-    if (messageAttribute) {
-      return messageAttribute;
     }
     let message = generateFieldInvalidMessage(
       `{field} ne correspond pas au format requis.`,
@@ -12683,6 +12897,7 @@ const emailregex =
   /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
 const TYPE_EMAIL_CONSTRAINT = {
   name: "type_email",
+  messageAttribute: "data-type-message",
   check: (field) => {
     if (field.type !== "email") {
       return null;
@@ -12691,17 +12906,10 @@ const TYPE_EMAIL_CONSTRAINT = {
     if (!value && !field.required) {
       return null;
     }
-    const messageAttribute = field.getAttribute("data-type-email-message");
     if (!value.includes("@")) {
-      if (messageAttribute) {
-        return messageAttribute;
-      }
       return `Veuillez inclure "@" dans l'adresse e-mail. Il manque un symbole "@" dans ${value}.`;
     }
     if (!emailregex.test(value)) {
-      if (messageAttribute) {
-        return messageAttribute;
-      }
       return `Veuillez saisir une adresse e-mail valide.`;
     }
     return null;
@@ -12710,6 +12918,7 @@ const TYPE_EMAIL_CONSTRAINT = {
 
 const MIN_LENGTH_CONSTRAINT = {
   name: "min_length",
+  messageAttribute: "data-min-length-message",
   check: (field) => {
     if (field.tagName === "INPUT") {
       if (!INPUT_TYPE_SUPPORTING_MIN_LENGTH_SET.has(field.type)) {
@@ -12730,10 +12939,6 @@ const MIN_LENGTH_CONSTRAINT = {
     const valueLength = value.length;
     if (valueLength >= minLength) {
       return null;
-    }
-    const messageAttribute = field.getAttribute("data-min-length-message");
-    if (messageAttribute) {
-      return messageAttribute;
     }
     if (valueLength === 1) {
       return generateFieldInvalidMessage(
@@ -12758,6 +12963,7 @@ const INPUT_TYPE_SUPPORTING_MIN_LENGTH_SET = new Set([
 
 const MAX_LENGTH_CONSTRAINT = {
   name: "max_length",
+  messageAttribute: "data-max-length-message",
   check: (field) => {
     if (field.tagName === "INPUT") {
       if (!INPUT_TYPE_SUPPORTING_MAX_LENGTH_SET.has(field.type)) {
@@ -12775,10 +12981,6 @@ const MAX_LENGTH_CONSTRAINT = {
     if (valueLength <= maxLength) {
       return null;
     }
-    const messageAttribute = field.getAttribute("data-max-length-message");
-    if (messageAttribute) {
-      return messageAttribute;
-    }
     return generateFieldInvalidMessage(
       `{field} doit contenir au maximum ${maxLength} caractères (il contient actuellement ${valueLength} caractères).`,
       { field },
@@ -12791,6 +12993,7 @@ const INPUT_TYPE_SUPPORTING_MAX_LENGTH_SET = new Set(
 
 const TYPE_NUMBER_CONSTRAINT = {
   name: "type_number",
+  messageAttribute: "data-type-message",
   check: (field) => {
     if (field.tagName !== "INPUT") {
       return null;
@@ -12803,10 +13006,6 @@ const TYPE_NUMBER_CONSTRAINT = {
     }
     const value = field.valueAsNumber;
     if (isNaN(value)) {
-      const messageAttribute = field.getAttribute("data-type-number-message");
-      if (messageAttribute) {
-        return messageAttribute;
-      }
       return generateFieldInvalidMessage(`{field} doit être un nombre.`, {
         field,
       });
@@ -12817,6 +13016,7 @@ const TYPE_NUMBER_CONSTRAINT = {
 
 const MIN_CONSTRAINT = {
   name: "min",
+  messageAttribute: "data-min-message",
   check: (field) => {
     if (field.tagName !== "INPUT") {
       return null;
@@ -12835,10 +13035,6 @@ const MIN_CONSTRAINT = {
         return null;
       }
       if (valueAsNumber < minNumber) {
-        const messageAttribute = field.getAttribute("data-min-message");
-        if (messageAttribute) {
-          return messageAttribute;
-        }
         return generateFieldInvalidMessage(
           `{field} doit être supérieur ou égal à <strong>${minString}</strong>.`,
           { field },
@@ -12854,11 +13050,7 @@ const MIN_CONSTRAINT = {
       const [minHours, minMinutes] = min.split(":").map(Number);
       const value = field.value;
       const [hours, minutes] = value.split(":").map(Number);
-      const messageAttribute = field.getAttribute("data-min-message");
       if (hours < minHours || (hours === minHours && minMinutes < minutes)) {
-        if (messageAttribute) {
-          return messageAttribute;
-        }
         return generateFieldInvalidMessage(
           `{field} doit être <strong>${min}</strong> ou plus.`,
           { field },
@@ -12877,6 +13069,7 @@ const MIN_CONSTRAINT = {
 
 const MAX_CONSTRAINT = {
   name: "max",
+  messageAttribute: "data-max-message",
   check: (field) => {
     if (field.tagName !== "INPUT") {
       return null;
@@ -12895,10 +13088,6 @@ const MAX_CONSTRAINT = {
         return null;
       }
       if (valueAsNumber > maxNumber) {
-        const messageAttribute = field.getAttribute("data-max-message");
-        if (messageAttribute) {
-          return messageAttribute;
-        }
         return generateFieldInvalidMessage(
           `{field} être <strong>${maxAttribute}</strong> ou plus.`,
           { field },
@@ -12915,10 +13104,6 @@ const MAX_CONSTRAINT = {
       const value = field.value;
       const [hours, minutes] = value.split(":").map(Number);
       if (hours > maxHours || (hours === maxHours && maxMinutes > minutes)) {
-        const messageAttribute = field.getAttribute("data-max-message");
-        if (messageAttribute) {
-          return messageAttribute;
-        }
         return generateFieldInvalidMessage(
           `{field} doit être <strong>${max}</strong> ou moins.`,
           { field },
@@ -13094,7 +13279,7 @@ const NAVI_CONSTRAINT_SET = new Set([
   // the order matters here, the last constraint is picked first when multiple constraints fail
   // so it's better to keep the most complex constraints at the beginning of the list
   // so the more basic ones shows up first
-  MIN_SPECIAL_CHARS_CONSTRAINT,
+  MIN_SPECIAL_CHAR_CONSTRAINT,
   SINGLE_SPACE_CONSTRAINT,
   MIN_DIGIT_CONSTRAINT,
   MIN_UPPER_LETTER_CONSTRAINT,
@@ -13376,6 +13561,21 @@ const installCustomConstraintValidation = (
         typeof checkResult === "string"
           ? { message: checkResult }
           : checkResult;
+      constraintValidityInfo.messageString = constraintValidityInfo.message;
+
+      if (constraint.messageAttribute) {
+        const messageFromAttribute = getMessageFromAttribute(
+          element,
+          constraint.messageAttribute,
+          constraintValidityInfo.message,
+        );
+        if (messageFromAttribute !== constraintValidityInfo.message) {
+          constraintValidityInfo.message = messageFromAttribute;
+          if (typeof messageFromAttribute === "string") {
+            constraintValidityInfo.messageString = messageFromAttribute;
+          }
+        }
+      }
       const thisConstraintFailureInfo = {
         name: constraint.name,
         constraint,
@@ -13409,7 +13609,7 @@ const installCustomConstraintValidation = (
       if (!hasTitleAttribute) {
         // when a constraint is failing browser displays that constraint message if the element has no title attribute.
         // We want to do the same with our message (overriding the browser in the process to get better messages)
-        element.setAttribute("title", failedConstraintInfo.message);
+        element.setAttribute("title", failedConstraintInfo.messageString);
       }
     } else {
       if (!hasTitleAttribute) {
@@ -13874,7 +14074,15 @@ const useCustomValidationRef = (elementRef, targetSelector) => {
       return null;
     }
     let target;
-    {
+    if (targetSelector) {
+      target = element.querySelector(targetSelector);
+      if (!target) {
+        console.warn(
+          `useCustomValidationRef: targetSelector "${targetSelector}" did not match in element`,
+        );
+        return null;
+      }
+    } else {
       target = element;
     }
     const unsubscribe = subscribe(element, target);
@@ -13912,7 +14120,28 @@ const unsubscribe = (element) => {
   }
 };
 
-const useConstraints = (elementRef, constraints, targetSelector) => {
+const NO_CONSTRAINTS = [];
+const useConstraints = (elementRef, props, { targetSelector } = {}) => {
+  const {
+    constraints = NO_CONSTRAINTS,
+    disabledMessage,
+    requiredMessage,
+    patternMessage,
+    minLengthMessage,
+    maxLengthMessage,
+    typeMessage,
+    minMessage,
+    maxMessage,
+    singleSpaceMessage,
+    sameAsMessage,
+    minDigitMessage,
+    minLowerLetterMessage,
+    minUpperLetterMessage,
+    minSpecialCharMessage,
+    availableMessage,
+    ...remainingProps
+  } = props;
+
   const customValidationRef = useCustomValidationRef(
     elementRef,
     targetSelector,
@@ -13930,6 +14159,96 @@ const useConstraints = (elementRef, constraints, targetSelector) => {
       }
     };
   }, constraints);
+
+  useLayoutEffect(() => {
+    const el = elementRef.current;
+    if (!el) {
+      return null;
+    }
+    const cleanupCallbackSet = new Set();
+    const setupCustomEvent = (el, constraintName, Component) => {
+      const attrName = `data-${constraintName}-message-event`;
+      const customEventName = `${constraintName}_message_jsx`;
+      el.setAttribute(attrName, customEventName);
+      const onCustomEvent = (e) => {
+        e.detail.render(Component);
+      };
+      el.addEventListener(customEventName, onCustomEvent);
+      cleanupCallbackSet.add(() => {
+        el.removeEventListener(customEventName, onCustomEvent);
+        el.removeAttribute(attrName);
+      });
+    };
+
+    if (disabledMessage) {
+      setupCustomEvent(el, "disabled", disabledMessage);
+    }
+    if (requiredMessage) {
+      setupCustomEvent(el, "required", requiredMessage);
+    }
+    if (patternMessage) {
+      setupCustomEvent(el, "pattern", patternMessage);
+    }
+    if (minLengthMessage) {
+      setupCustomEvent(el, "min-length", minLengthMessage);
+    }
+    if (maxLengthMessage) {
+      setupCustomEvent(el, "max-length", maxLengthMessage);
+    }
+    if (typeMessage) {
+      setupCustomEvent(el, "type", typeMessage);
+    }
+    if (minMessage) {
+      setupCustomEvent(el, "min", minMessage);
+    }
+    if (maxMessage) {
+      setupCustomEvent(el, "max", maxMessage);
+    }
+    if (singleSpaceMessage) {
+      setupCustomEvent(el, "single-space", singleSpaceMessage);
+    }
+    if (sameAsMessage) {
+      setupCustomEvent(el, "same-as", sameAsMessage);
+    }
+    if (minDigitMessage) {
+      setupCustomEvent(el, "min-digit", minDigitMessage);
+    }
+    if (minLowerLetterMessage) {
+      setupCustomEvent(el, "min-lower-letter", minLowerLetterMessage);
+    }
+    if (minUpperLetterMessage) {
+      setupCustomEvent(el, "min-upper-letter", minUpperLetterMessage);
+    }
+    if (minSpecialCharMessage) {
+      setupCustomEvent(el, "min-special-char", minSpecialCharMessage);
+    }
+    if (availableMessage) {
+      setupCustomEvent(el, "available", availableMessage);
+    }
+    return () => {
+      for (const cleanupCallback of cleanupCallbackSet) {
+        cleanupCallback();
+      }
+    };
+  }, [
+    disabledMessage,
+    requiredMessage,
+    patternMessage,
+    minLengthMessage,
+    maxLengthMessage,
+    typeMessage,
+    minMessage,
+    maxMessage,
+    singleSpaceMessage,
+    sameAsMessage,
+    minDigitMessage,
+    minLowerLetterMessage,
+    minUpperLetterMessage,
+    minSpecialCharMessage,
+    availableMessage,
+  ]);
+
+  return remainingProps;
 };
 
 const useInitialTextSelection = (ref, textSelection) => {
@@ -14659,6 +14978,8 @@ const useExecuteAction = (
       if (typeof errorMappingResult === "string") {
         message = errorMappingResult;
       } else if (Error.isError(errorMappingResult)) {
+        message = errorMappingResult;
+      } else if (isValidElement(errorMappingResult)) {
         message = errorMappingResult;
       } else if (
         typeof errorMappingResult === "object" &&
@@ -15975,7 +16296,6 @@ const ButtonBasic = props => {
     readOnly,
     disabled,
     loading,
-    constraints = [],
     autoFocus,
     // visual
     discrete,
@@ -15986,7 +16306,7 @@ const ButtonBasic = props => {
   const defaultRef = useRef();
   const ref = props.ref || defaultRef;
   useAutoFocus(ref, autoFocus);
-  useConstraints(ref, constraints);
+  const remainingProps = useConstraints(ref, rest);
   const innerLoading = loading || contextLoading && contextLoadingElement === ref.current;
   const innerReadOnly = readOnly || contextReadOnly || innerLoading;
   const innerDisabled = disabled || contextDisabled;
@@ -16002,7 +16322,7 @@ const ButtonBasic = props => {
   const renderButtonContentMemoized = useCallback(renderButtonContent, [children]);
   return jsxs(Box, {
     "data-readonly-silent": innerLoading ? "" : undefined,
-    ...rest,
+    ...remainingProps,
     as: "button",
     ref: ref,
     "data-icon": icon ? "" : undefined,
@@ -16542,7 +16862,6 @@ const LinkPlain = props => {
     disabled,
     autoFocus,
     spaceToClick = true,
-    constraints = [],
     onClick,
     onKeyDown,
     href,
@@ -16565,7 +16884,7 @@ const LinkPlain = props => {
   const ref = props.ref || defaultRef;
   const visited = useIsVisited(href);
   useAutoFocus(ref, autoFocus);
-  useConstraints(ref, constraints);
+  const remainingProps = useConstraints(ref, rest);
   const shouldDimColor = readOnly || disabled;
   useDimColorWhen(ref, shouldDimColor);
   // subscribe to document url to re-render and re-compute getHrefTargetInfo
@@ -16606,7 +16925,7 @@ const LinkPlain = props => {
     as: "a",
     color: anchor && !innerChildren ? "inherit" : undefined,
     id: anchor ? href.slice(1) : undefined,
-    ...rest,
+    ...remainingProps,
     ref: ref,
     href: href,
     rel: innerRel,
@@ -17209,7 +17528,7 @@ const TabBasic = ({
   });
 };
 
-const createUniqueValueConstraint = (
+const createAvailableConstraint = (
   // the set might be incomplete (the front usually don't have the full copy of all the items from the backend)
   // but this is already nice to help user with what we know
   // it's also possible that front is unsync with backend, preventing user to choose a value
@@ -17220,7 +17539,8 @@ const createUniqueValueConstraint = (
   message = `"{value}" est utilisé. Veuillez entrer une autre valeur.`,
 ) => {
   return {
-    name: "unique",
+    name: "available",
+    messageAttribute: "data-available-message",
     check: (field) => {
       const fieldValue = field.value;
       const hasConflict = existingValueSet.has(fieldValue);
@@ -17543,7 +17863,6 @@ const InputCheckboxBasic = props => {
     required,
     loading,
     autoFocus,
-    constraints = [],
     onClick,
     onInput,
     color,
@@ -17559,7 +17878,7 @@ const InputCheckboxBasic = props => {
   reportReadOnlyOnLabel?.(innerReadOnly);
   reportDisabledOnLabel?.(innerDisabled);
   useAutoFocus(ref, autoFocus);
-  useConstraints(ref, constraints);
+  const remainingProps = useConstraints(ref, rest);
   const checked = Boolean(uiState);
   const innerOnClick = useStableCallback(e => {
     if (innerReadOnly) {
@@ -17606,7 +17925,7 @@ const InputCheckboxBasic = props => {
   }, [color]);
   return jsxs(Box, {
     as: "span",
-    ...rest,
+    ...remainingProps,
     ref: undefined,
     baseClassName: "navi_checkbox",
     pseudoStateSelector: ".navi_native_field",
@@ -18101,7 +18420,6 @@ const InputRadioBasic = props => {
     required,
     loading,
     autoFocus,
-    constraints = [],
     onClick,
     onInput,
     color,
@@ -18117,7 +18435,7 @@ const InputRadioBasic = props => {
   reportReadOnlyOnLabel?.(innerReadOnly);
   reportDisabledOnLabel?.(innerDisabled);
   useAutoFocus(ref, autoFocus);
-  useConstraints(ref, constraints);
+  const remainingProps = useConstraints(ref, rest);
   const checked = Boolean(uiState);
   // we must first dispatch an event to inform all other radios they where unchecked
   // this way each other radio uiStateController knows thery are unchecked
@@ -18191,7 +18509,7 @@ const InputRadioBasic = props => {
   }, [color]);
   return jsxs(Box, {
     as: "span",
-    ...rest,
+    ...remainingProps,
     ref: undefined,
     baseClassName: "navi_radio",
     pseudoStateSelector: ".navi_native_field",
@@ -18515,7 +18833,6 @@ const InputRangeBasic = props => {
     onInput,
     readOnly,
     disabled,
-    constraints = [],
     loading,
     autoFocus,
     autoFocusVisible,
@@ -18534,7 +18851,7 @@ const InputRangeBasic = props => {
     autoFocusVisible,
     autoSelect
   });
-  useConstraints(ref, constraints);
+  const remainingProps = useConstraints(ref, rest);
   const innerOnInput = useStableCallback(onInput);
   const focusProxyId = `input_range_focus_proxy_${useId()}`;
   const inertButFocusable = innerReadOnly && !innerDisabled;
@@ -18624,7 +18941,7 @@ const InputRangeBasic = props => {
     pseudoClasses: InputPseudoClasses$1,
     pseudoElements: InputPseudoElements$1,
     hasChildFunction: true,
-    ...rest,
+    ...remainingProps,
     ref: undefined,
     children: [jsx(LoaderBackground, {
       loading: innerLoading,
@@ -18900,7 +19217,6 @@ const InputTextualBasic = props => {
     onInput,
     readOnly,
     disabled,
-    constraints = [],
     loading,
     autoFocus,
     autoFocusVisible,
@@ -18919,7 +19235,7 @@ const InputTextualBasic = props => {
     autoFocusVisible,
     autoSelect
   });
-  useConstraints(ref, constraints);
+  const remainingProps = useConstraints(ref, rest);
   const innerOnInput = useStableCallback(onInput);
   const renderInput = inputProps => {
     return jsx(Box, {
@@ -18968,7 +19284,7 @@ const InputTextualBasic = props => {
     pseudoClasses: InputPseudoClasses,
     pseudoElements: InputPseudoElements,
     hasChildFunction: true,
-    ...rest,
+    ...remainingProps,
     ref: undefined,
     children: [jsx(LoaderBackground, {
       loading: innerLoading,
@@ -19417,7 +19733,7 @@ const FormBasic = props => {
   // instantiation validation to:
   // - receive "requestsubmit" custom event ensure submit is prevented
   // (and also execute action without validation if form.submit() is ever called)
-  useConstraints(ref, []);
+  const remainingProps = useConstraints(ref, rest);
   const innerReadOnly = readOnly || loading;
   const formContextValue = useMemo(() => {
     return {
@@ -19425,7 +19741,7 @@ const FormBasic = props => {
     };
   }, [loading]);
   return jsx(Box, {
-    ...rest,
+    ...remainingProps,
     as: "form",
     ref: ref,
     onReset: e => {
@@ -24325,5 +24641,5 @@ const UserSvg = () => jsx("svg", {
   })
 });
 
-export { ActionRenderer, ActiveKeyboardShortcuts, BadgeCount, Box, Button, Caption, CheckSvg, Checkbox, CheckboxList, Code, Col, Colgroup, Details, DialogLayout, Editable, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Form, HeartSvg, HomeSvg, Icon, Image, Input, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, MessageBox, Paragraph, Radio, RadioList, Route, RouteLink, Routes, RowNumberCol, RowNumberTableCell, SINGLE_SPACE_CONSTRAINT, SVGMaskOverlay, SearchSvg, Select, SelectionContext, SettingsSvg, StarSvg, SummaryMarker, Svg, Tab, TabList, Table, TableCell, Tbody, Text, Thead, Title, Tr, UITransition, UserSvg, ViewportLayout, actionIntegratedVia, addCustomMessage, compareTwoJsValues, createAction, createRequestCanceller, createSelectionKeyboardShortcuts, createUniqueValueConstraint, enableDebugActions, enableDebugOnDocumentLoading, forwardActionRequested, installCustomConstraintValidation, isCellSelected, isColumnSelected, isRowSelected, localStorageSignal, navBack, navForward, navTo, openCallout, rawUrlPart, reload, removeCustomMessage, rerunActions, resource, setBaseUrl, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, updateActions, useActionData, useActionStatus, useActiveRouteInfo, useCellsAndColumns, useConstraintValidityState, useDependenciesDiff, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState$1 as useNavState, useRouteStatus, useRunOnMount, useSelectableElement, useSelectionController, useSignalSync, useStateArray, useUrlSearchParam, valueInLocalStorage };
+export { ActionRenderer, ActiveKeyboardShortcuts, BadgeCount, Box, Button, Caption, CheckSvg, Checkbox, CheckboxList, Code, Col, Colgroup, Details, DialogLayout, Editable, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Form, HeartSvg, HomeSvg, Icon, Image, Input, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, MessageBox, Paragraph, Radio, RadioList, Route, RouteLink, Routes, RowNumberCol, RowNumberTableCell, SINGLE_SPACE_CONSTRAINT, SVGMaskOverlay, SearchSvg, Select, SelectionContext, SettingsSvg, StarSvg, SummaryMarker, Svg, Tab, TabList, Table, TableCell, Tbody, Text, Thead, Title, Tr, UITransition, UserSvg, ViewportLayout, actionIntegratedVia, addCustomMessage, compareTwoJsValues, createAction, createAvailableConstraint, createRequestCanceller, createSelectionKeyboardShortcuts, enableDebugActions, enableDebugOnDocumentLoading, forwardActionRequested, installCustomConstraintValidation, isCellSelected, isColumnSelected, isRowSelected, localStorageSignal, navBack, navForward, navTo, openCallout, rawUrlPart, reload, removeCustomMessage, requestAction, rerunActions, resource, setBaseUrl, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, updateActions, useActionData, useActionStatus, useActiveRouteInfo, useCalloutClose, useCellsAndColumns, useConstraintValidityState, useDependenciesDiff, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState$1 as useNavState, useRouteStatus, useRunOnMount, useSelectableElement, useSelectionController, useSignalSync, useStateArray, useUrlSearchParam, valueInLocalStorage };
 //# sourceMappingURL=jsenv_navi.js.map

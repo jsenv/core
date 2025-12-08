@@ -457,7 +457,14 @@ const getNormalizer = (key) => {
   if (group === "typo") {
     return normalizeTypoStyle;
   }
-  return stringifyStyle;
+  return normalizeRegularStyle;
+};
+const normalizeRegularStyle = (
+  value,
+  name,
+  // styleContext, context
+) => {
+  return stringifyStyle(value, name);
 };
 export const getHowToHandleStyleProp = (name) => {
   const getStyle = All_PROPS[name];
