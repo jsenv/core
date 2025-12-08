@@ -251,11 +251,12 @@
                   {tabs.map((name) => (
                     <Tab
                       key={name}
+                      icon
                       selected={name === active}
                       onClick={() => setActive(name)}
                       aria-controls={`panel-${name}`}
                       padding="0"
-                      borderRadius="100%"
+                      circle
                       backgroundColor="orange"
                       color="white"
                       scale="1"
@@ -273,13 +274,13 @@
                     >
                       <Link
                         discrete
-                        borderRadius="100%"
+                        circle
                         backgroundColor="var(--x-tab-background)"
                         pseudoState={{
                           ":focus-visible": name === "activity",
                         }}
                       >
-                        <Icon width="32" height="32" align="center" padding="6">
+                        <Icon box size="32" align="center" padding="6">
                           <SettingsSvg />
                         </Icon>
                       </Link>
@@ -363,6 +364,21 @@
                         onClick={() => setActiveIconTab("settings")}
                         aria-controls="icon-panel-settings"
                         column
+                        // boldWhenSelected={false}
+                      >
+                        <Icon>
+                          <SettingsSvg />
+                        </Icon>
+                        Settings
+                      </Tab>
+                      <Tab
+                        paddingX="md"
+                        paddingY="sm"
+                        selected={activeIconTab === "settings_2"}
+                        onClick={() => setActiveIconTab("settings_2")}
+                        aria-controls="icon-panel-settings"
+                        column
+                        lineHeight="normal"
                       >
                         <Icon>
                           <SettingsSvg />

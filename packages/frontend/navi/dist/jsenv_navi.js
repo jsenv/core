@@ -14682,9 +14682,11 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
 
     &[data-flow-inline] {
       width: 1em;
-      width: 1lh;
       height: 1em;
-      height: 1lh;
+    }
+    &[data-icon-char] {
+      flex-grow: 0 !important;
+      line-height: normal;
     }
   }
 
@@ -14699,15 +14701,7 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
   }
   .navi_icon_foreground {
     position: absolute;
-    top: 50%;
-    left: 0;
-    display: inline-flex;
-    box-sizing: border-box;
-    aspect-ratio: 1/1;
-    width: 100%;
-    align-items: center;
-    justify-content: start;
-    transform: translateY(-50%);
+    inset: 0;
   }
   .navi_icon_foreground > .navi_text {
     display: flex;
@@ -14805,7 +14799,6 @@ const Icon = ({
   }
   const invisibleText = baseChar.repeat(charWidth);
   return jsxs(Text, {
-    square: true,
     ...props,
     ...ariaProps,
     className: withPropsClassName("navi_icon", className),
@@ -17382,7 +17375,7 @@ import.meta.css = /* css */`
           width: 100%;
           flex: 1;
           align-items: stretch;
-          justify-content: center;
+          justify-content: start;
         }
       }
     }

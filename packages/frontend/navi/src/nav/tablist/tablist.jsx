@@ -220,7 +220,7 @@ import.meta.css = /* css */ `
           width: 100%;
           flex: 1;
           align-items: stretch;
-          justify-content: center;
+          justify-content: start;
         }
       }
     }
