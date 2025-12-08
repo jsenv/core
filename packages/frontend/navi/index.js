@@ -136,6 +136,7 @@ export { SVGMaskOverlay } from "./src/graphic/svg_mask_overlay.jsx";
 export { Details } from "./src/layout/details/details.jsx";
 export { SummaryMarker } from "./src/layout/details/summary_marker.jsx";
 export { DialogLayout } from "./src/layout/dialog_layout.jsx";
+export { Separator } from "./src/layout/separator.jsx";
 export { ViewportLayout } from "./src/layout/viewport_layout.jsx";
 
 // Other

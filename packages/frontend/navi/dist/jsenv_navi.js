@@ -24486,6 +24486,52 @@ const DialogLayout = ({
 
 installImportMetaCss(import.meta);import.meta.css = /* css */`
   @layer navi {
+    .navi_separator {
+      --size: 1px;
+      --color: #e4e4e7;
+      --spacing: 0.5em;
+      --spacing-start: 0.5em;
+      --spacing-end: 0.5em;
+    }
+  }
+
+  .navi_separator {
+    height: var(--size);
+    margin-top: var(--spacing-start, var(--spacing));
+    margin-bottom: var(--spacing-end, var(--spacing));
+    background: var(--color);
+
+    &[data-vertical] {
+      display: inline-block;
+
+      width: var(--separator-size);
+      height: 1lh;
+      margin-top: 0;
+      margin-right: var(--spacing-end, var(--spacing));
+      margin-bottom: 0;
+      margin-left: var(--spacing-start, var(--spacing));
+      vertical-align: bottom;
+    }
+  }
+`;
+const SeparatorStyleCSSVars = {
+  color: "--separator-color"
+};
+const Separator = ({
+  vertical,
+  ...props
+}) => {
+  return jsx(Box, {
+    as: vertical ? "span" : "hr",
+    ...props,
+    "data-vertical": vertical ? "" : undefined,
+    baseClassName: "navi_separator",
+    styleCSSVars: SeparatorStyleCSSVars
+  });
+};
+
+installImportMetaCss(import.meta);import.meta.css = /* css */`
+  @layer navi {
     .navi_viewport_layout {
       --layout-padding: 40px;
       --layout-background: white;
@@ -24574,6 +24620,15 @@ const CheckSvg = () => jsx("svg", {
     fill: "currentColor"
   })
 });
+
+const ConstructionSvg = () => {
+  return jsx("svg", {
+    viewBox: "0 0 15 15",
+    children: jsx("path", {
+      d: "M13.5,12h-1.8L8.2,1.5C8,0.8,7,0.8,6.8,1.5L3.3,12H1.5C1.2,12,1,12.2,1,12.5v1C1,13.8,1.2,14,1.5,14h12 c0.3,0,0.5-0.2,0.5-0.5v-1C14,12.2,13.8,12,13.5,12z M7,4H8l0.7,2H6.4L7,4z M5.7,8h3.6l0.7,2H5L5.7,8z"
+    })
+  });
+};
 
 const ExclamationSvg = () => {
   return jsx("svg", {
@@ -24670,5 +24725,5 @@ const UserSvg = () => jsx("svg", {
   })
 });
 
-export { ActionRenderer, ActiveKeyboardShortcuts, BadgeCount, Box, Button, Caption, CheckSvg, Checkbox, CheckboxList, Code, Col, Colgroup, Details, DialogLayout, Editable, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Form, HeartSvg, HomeSvg, Icon, Image, Input, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, MessageBox, Paragraph, Radio, RadioList, Route, RouteLink, Routes, RowNumberCol, RowNumberTableCell, SINGLE_SPACE_CONSTRAINT, SVGMaskOverlay, SearchSvg, Select, SelectionContext, SettingsSvg, StarSvg, SummaryMarker, Svg, Tab, TabList, Table, TableCell, Tbody, Text, Thead, Title, Tr, UITransition, UserSvg, ViewportLayout, actionIntegratedVia, addCustomMessage, compareTwoJsValues, createAction, createAvailableConstraint, createRequestCanceller, createSelectionKeyboardShortcuts, enableDebugActions, enableDebugOnDocumentLoading, forwardActionRequested, installCustomConstraintValidation, isCellSelected, isColumnSelected, isRowSelected, localStorageSignal, navBack, navForward, navTo, openCallout, rawUrlPart, reload, removeCustomMessage, requestAction, rerunActions, resource, setBaseUrl, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, updateActions, useActionData, useActionStatus, useActiveRouteInfo, useCalloutClose, useCellsAndColumns, useConstraintValidityState, useDependenciesDiff, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState$1 as useNavState, useRouteStatus, useRunOnMount, useSelectableElement, useSelectionController, useSignalSync, useStateArray, useTitleLevel, useUrlSearchParam, valueInLocalStorage };
+export { ActionRenderer, ActiveKeyboardShortcuts, BadgeCount, Box, Button, Caption, CheckSvg, Checkbox, CheckboxList, Code, Col, Colgroup, ConstructionSvg, Details, DialogLayout, Editable, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Form, HeartSvg, HomeSvg, Icon, Image, Input, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, MessageBox, Paragraph, Radio, RadioList, Route, RouteLink, Routes, RowNumberCol, RowNumberTableCell, SINGLE_SPACE_CONSTRAINT, SVGMaskOverlay, SearchSvg, Select, SelectionContext, Separator, SettingsSvg, StarSvg, SummaryMarker, Svg, Tab, TabList, Table, TableCell, Tbody, Text, Thead, Title, Tr, UITransition, UserSvg, ViewportLayout, actionIntegratedVia, addCustomMessage, compareTwoJsValues, createAction, createAvailableConstraint, createRequestCanceller, createSelectionKeyboardShortcuts, enableDebugActions, enableDebugOnDocumentLoading, forwardActionRequested, installCustomConstraintValidation, isCellSelected, isColumnSelected, isRowSelected, localStorageSignal, navBack, navForward, navTo, openCallout, rawUrlPart, reload, removeCustomMessage, requestAction, rerunActions, resource, setBaseUrl, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, updateActions, useActionData, useActionStatus, useActiveRouteInfo, useCalloutClose, useCellsAndColumns, useConstraintValidityState, useDependenciesDiff, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState$1 as useNavState, useRouteStatus, useRunOnMount, useSelectableElement, useSelectionController, useSignalSync, useStateArray, useTitleLevel, useUrlSearchParam, valueInLocalStorage };
 //# sourceMappingURL=jsenv_navi.js.map
