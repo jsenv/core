@@ -24,7 +24,7 @@ export const Title = (props) => {
         className={withPropsClassName("navi_title")}
         as={messageBoxStatus ? "h4" : "h1"}
         marginTop={messageBoxStatus ? "0" : undefined}
-        marginBottom={messageBoxStatus ? "sm" : undefined}
+        marginBottom={messageBoxStatus ? "s" : undefined}
         color={messageBoxStatus ? `var(--x-color)` : undefined}
         {...props}
         pseudoClasses={TitlePseudoClasses}

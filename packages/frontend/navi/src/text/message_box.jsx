@@ -121,10 +121,8 @@ export const MessageBox = ({
           {onClose && (
             <Button
               action={onClose}
-              discrete
               icon
               border="none"
-              data-nohover=""
               alignX="center"
               alignY="center"
               pseudoStyle={{
