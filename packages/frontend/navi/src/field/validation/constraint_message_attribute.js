@@ -15,43 +15,69 @@ const createMessageResolver = (
 
   // Define resolution steps in order of priority
   const resolutionSteps = [
-    // Step 1: Original element
     {
-      element: originalElement,
       description: "original element",
+      element: originalElement,
     },
-    // Step 2: Closest fieldset
     {
-      element: originalElement.closest("fieldset"),
       description: "closest fieldset",
+      element: originalElement.closest("fieldset"),
     },
-    // Step 3: Closest form
     {
-      element: originalElement.closest("form"),
       description: "closest form",
+      element: originalElement.closest("form"),
     },
   ];
+  // Sub-steps for each element (in order of priority)
+  const subSteps = ["event", "selector", "message"];
   let currentStepIndex = 0;
-  const resolveFromElement = (element) => {
+  let currentSubStepIndex = 0;
+  const resolveSubStep = (element, subStep) => {
     if (!element) {
       return null;
     }
-    // Check for event attribute first (highest priority)
-    const eventAttribute = element.getAttribute(eventAttributeName);
-    if (eventAttribute) {
-      return createEventHandler(element, eventAttribute);
+
+    switch (subStep) {
+      case "event": {
+        const eventAttribute = element.getAttribute(eventAttributeName);
+        if (eventAttribute) {
+          return createEventHandler(element, eventAttribute);
+        }
+        return null;
+      }
+      case "selector": {
+        const selectorAttribute = element.getAttribute(selectorAttributeName);
+        if (selectorAttribute) {
+          return fromSelectorAttribute(selectorAttribute);
+        }
+        return null;
+      }
+      case "message": {
+        const messageAttribute = element.getAttribute(attributeName);
+        if (messageAttribute) {
+          return messageAttribute;
+        }
+        return null;
+      }
+      default:
+        return null;
     }
-    // Check for selector attribute
-    const selectorAttribute = element.getAttribute(selectorAttributeName);
-    if (selectorAttribute) {
-      return fromSelectorAttribute(selectorAttribute);
+  };
+  const resolve = () => {
+    while (currentStepIndex < resolutionSteps.length) {
+      const step = resolutionSteps[currentStepIndex];
+      while (currentSubStepIndex < subSteps.length) {
+        const subStep = subSteps[currentSubStepIndex];
+        const result = resolveSubStep(step.element, subStep);
+        if (result) {
+          return result;
+        }
+        currentSubStepIndex++;
+      }
+      currentStepIndex++;
+      currentSubStepIndex = 0;
     }
-    // Check for message attribute
-    const messageAttribute = element.getAttribute(attributeName);
-    if (messageAttribute) {
-      return messageAttribute;
-    }
-    return null;
+    return fallbackMessage;
   };
 
   const createEventHandler = (element, eventName) => {
@@ -64,7 +90,7 @@ const createMessageResolver = (
                 renderIntoCallout(message);
               } else {
                 // Resume resolution from next step
-                const nextResult = resumeResolution();
+                const nextResult = resolve();
                 renderIntoCallout(nextResult);
               }
             },
@@ -74,32 +100,7 @@ const createMessageResolver = (
     };
   };
 
-  const resolveFromStepIndex = (startIndex) => {
-    for (let i = startIndex; i < resolutionSteps.length; i++) {
-      const step = resolutionSteps[i];
-      currentStepIndex = i;
-
-      const result = resolveFromElement(step.element);
-      if (result) {
-        return result;
-      }
-    }
-
-    // If we get here, return fallback message
-    return fallbackMessage;
-  };
-
-  const resumeResolution = () => {
-    // Continue from the next step
-    return resolveFromStepIndex(currentStepIndex + 1);
-  };
-
-  return {
-    resolve: () => {
-      currentStepIndex = 0;
-      return resolveFromStepIndex(0);
-    },
-  };
+  return resolve();
 };
 
 // Helper function to resolve messages that might be CSS selectors
