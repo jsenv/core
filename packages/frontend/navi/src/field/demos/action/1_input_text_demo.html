@@ -746,6 +746,7 @@
       const FormInputDemo = () => {
         const [result, setResult] = useState("");
         const [isLoading, setIsLoading] = useState(false);
+        const [username, setUsername] = useState();
 
         const formDemoAction = async ({ username, email }) => {
           setIsLoading(true);
@@ -770,7 +771,12 @@
               <div className="control-group">
                 <label>
                   Username:
-                  <Input name="username" placeholder="Enter username" />
+                  <Input
+                    name="username"
+                    value={username}
+                    action={setUsername}
+                    placeholder="Enter username"
+                  />
                 </label>
               </div>
               <div className="control-group"></div>
@@ -779,6 +785,7 @@
                 <Button type="reset">Reset</Button>
               </div>
             </Form>
+            <div>username inside input: {username}</div>
             <div
               className={`result-display ${isLoading ? "result-loading" : result.startsWith("✅") ? "result-success" : result.startsWith("❌") ? "result-error" : ""}`}
             >

@@ -9076,7 +9076,6 @@ const FormActionContext = createContext();
 const renderActionableComponent = (props, {
   Basic,
   WithAction,
-  InsideForm,
   WithActionInsideForm
 }) => {
   const {
@@ -9089,17 +9088,10 @@ const renderActionableComponent = (props, {
   if (hasActionProps && WithAction) {
     if (considerInsideForm && WithActionInsideForm) {
       return jsx(WithActionInsideForm, {
-        formContext: formContext,
         ...props
       });
     }
     return jsx(WithAction, {
-      ...props
-    });
-  }
-  if (considerInsideForm && InsideForm) {
-    return jsx(InsideForm, {
-      formContext: formContext,
       ...props
     });
   }
@@ -16267,7 +16259,6 @@ const Button = props => {
   return renderActionableComponent(props, {
     Basic: ButtonBasic,
     WithAction: ButtonWithAction,
-    InsideForm: ButtonInsideForm,
     WithActionInsideForm: ButtonWithActionInsideForm
   });
 };
@@ -16406,32 +16397,9 @@ const ButtonWithAction = props => {
     children: children
   });
 };
-const ButtonInsideForm = props => {
-  const {
-    // eslint-disable-next-line no-unused-vars
-    formContext,
-    type,
-    children,
-    loading,
-    readOnly,
-    ...rest
-  } = props;
-  const innerLoading = loading;
-  const innerReadOnly = readOnly;
-  return jsx(ButtonBasic, {
-    ...rest,
-    type: type,
-    loading: innerLoading,
-    readOnly: innerReadOnly,
-    children: children
-  });
-};
 const ButtonWithActionInsideForm = props => {
   const formAction = useContext(FormActionContext);
   const {
-    // eslint-disable-next-line no-unused-vars
-    formContext,
-    // to avoid passing it to the button element
     type,
     action,
     loading,
@@ -17830,8 +17798,7 @@ const InputCheckbox = props => {
   const uiState = useUIState(uiStateController);
   const checkbox = renderActionableComponent(props, {
     Basic: InputCheckboxBasic,
-    WithAction: InputCheckboxWithAction,
-    InsideForm: InputCheckboxInsideForm
+    WithAction: InputCheckboxWithAction
   });
   return jsx(UIStateControllerContext.Provider, {
     value: uiStateController,
@@ -18052,7 +18019,6 @@ const InputCheckboxWithAction = props => {
     }
   });
 };
-const InputCheckboxInsideForm = InputCheckboxBasic;
 
 installImportMetaCss(import.meta);import.meta.css = /* css */`
   @layer navi {
@@ -18388,8 +18354,7 @@ const InputRadio = props => {
   const uiState = useUIState(uiStateController);
   const radio = renderActionableComponent(props, {
     Basic: InputRadioBasic,
-    WithAction: InputRadioWithAction,
-    InsideForm: InputRadioInsideForm
+    WithAction: InputRadioWithAction
   });
   return jsx(UIStateControllerContext.Provider, {
     value: uiStateController,
@@ -18590,7 +18555,6 @@ const InputRadioBasic = props => {
 const InputRadioWithAction = () => {
   throw new Error(`<Input type="radio" /> with an action make no sense. Use <RadioList action={something} /> instead`);
 };
-const InputRadioInsideForm = InputRadio;
 
 installImportMetaCss(import.meta);import.meta.css = /* css */`
   @layer navi {
@@ -18806,8 +18770,7 @@ const InputRange = props => {
   const uiState = useUIState(uiStateController);
   const input = renderActionableComponent(props, {
     Basic: InputRangeBasic,
-    WithAction: InputRangeWithAction,
-    InsideForm: InputRangeInsideForm
+    WithAction: InputRangeWithAction
   });
   return jsx(UIStateControllerContext.Provider, {
     value: uiStateController,
@@ -19054,17 +19017,6 @@ const InputRangeWithAction = props => {
     loading: loading || actionLoading
   });
 };
-const InputRangeInsideForm = props => {
-  const {
-    // We destructure formContext to avoid passing it to the underlying input element
-    // eslint-disable-next-line no-unused-vars
-    formContext,
-    ...rest
-  } = props;
-  return jsx(InputRangeBasic, {
-    ...rest
-  });
-};
 
 installImportMetaCss(import.meta);import.meta.css = /* css */`
   @layer navi {
@@ -19190,8 +19142,7 @@ const InputTextual = props => {
   const uiState = useUIState(uiStateController);
   const input = renderActionableComponent(props, {
     Basic: InputTextualBasic,
-    WithAction: InputTextualWithAction,
-    InsideForm: InputTextualInsideForm
+    WithAction: InputTextualWithAction
   });
   return jsx(UIStateControllerContext.Provider, {
     value: uiStateController,
@@ -19383,17 +19334,6 @@ const InputTextualWithAction = props => {
     ...rest,
     ref: ref,
     loading: loading || actionLoading
-  });
-};
-const InputTextualInsideForm = props => {
-  const {
-    // We destructure formContext to avoid passing it to the underlying input element
-    // eslint-disable-next-line no-unused-vars
-    formContext,
-    ...rest
-  } = props;
-  return jsx(InputTextualBasic, {
-    ...rest
   });
 };
 
@@ -20241,45 +20181,6 @@ forwardRef((props, ref) => {
         readOnly: child.readOnly || actionLoading
       };
     })
-  });
-});
-forwardRef((props, ref) => {
-  const {
-    id,
-    name,
-    value: externalValue,
-    children,
-    ...rest
-  } = props;
-  const innerRef = useRef();
-  useImperativeHandle(ref, () => innerRef.current);
-  const [navState, setNavState] = useNavState();
-  const [value, setValue, initialValue] = [name, externalValue, navState];
-  useEffect(() => {
-    setNavState(value);
-  }, [value]);
-  useFormEvents(innerRef, {
-    onFormReset: () => {
-      setValue(undefined);
-    },
-    onFormActionAbort: () => {
-      setValue(initialValue);
-    },
-    onFormActionError: () => {
-      setValue(initialValue);
-    }
-  });
-  return jsx(SelectControlled, {
-    ref: innerRef,
-    name: name,
-    value: value,
-    onChange: event => {
-      const select = event.target;
-      const selectedValue = select.checked;
-      setValue(selectedValue);
-    },
-    ...rest,
-    children: children
   });
 });
 
