@@ -9,6 +9,9 @@ import {
 import { Text } from "./text.jsx";
 
 export const TitleLevelContext = createContext();
+export const useTitleLevel = () => {
+  return useContext(TitleLevelContext);
+};
 const TitlePseudoClasses = [":hover"];
 export const Title = (props) => {
   const messageBoxStatus = useContext(MessageBoxStatusContext);

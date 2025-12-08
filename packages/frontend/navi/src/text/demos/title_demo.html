@@ -63,9 +63,8 @@
         MessageBox,
         Caption,
         Code,
-        TitleLevelContext,
+        useTitleLevel,
       } from "@jsenv/navi";
-      import { useContext } from "preact/hooks";
 
       const TitleDemo = () => {
         return (
@@ -321,7 +320,7 @@
 
       // Helper component to demonstrate TitleLevelContext
       const TitleLevelIndicator = () => {
-        const titleLevel = useContext(TitleLevelContext);
+        const titleLevel = useTitleLevel();
         return (
           <Text color="var(--navi_color_muted)" fontSize="s">
             Current title level from context: <Code>h{titleLevel}</Code>

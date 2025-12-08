@@ -124,7 +124,7 @@ export { Code } from "./src/text/code.jsx";
 export { MessageBox } from "./src/text/message_box.jsx";
 export { Paragraph } from "./src/text/paragraph.jsx";
 export { Text } from "./src/text/text.jsx";
-export { Title } from "./src/text/title.jsx";
+export { Title, useTitleLevel } from "./src/text/title.jsx";
 
 // Graphics
 export { Icon } from "./src/graphic/icon.jsx";
