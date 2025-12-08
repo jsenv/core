@@ -1,19 +1,12 @@
 import { createNaviMirror } from "./navi_mirror.js";
 
-export const getMessageFromAttribute = (element, attributeName, message) => {
-  const resolver = createMessageResolver(element, attributeName, message);
-  return resolver.resolve();
-};
-
-const createMessageResolver = (
+export const getMessageFromAttribute = (
   originalElement,
   attributeName,
-  fallbackMessage,
+  generatedMessage,
 ) => {
   const selectorAttributeName = `${attributeName}-selector`;
   const eventAttributeName = `${attributeName}-event`;
-
-  // Define resolution steps in order of priority
   const resolutionSteps = [
     {
       description: "original element",
@@ -64,7 +57,7 @@ const createMessageResolver = (
       currentStepIndex++;
       currentSubStepIndex = 0;
     }
-    return fallbackMessage;
+    return generatedMessage;
   };
 
   const createEventHandler = (element, eventName) => {
