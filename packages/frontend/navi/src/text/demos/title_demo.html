@@ -150,14 +150,25 @@
 
               <div className="example">
                 <span className="example-label">Custom color:</span>
-                <Title color="var(--navi_color_accent)">Colored Title</Title>
+                <Title color="orange">Colored Title</Title>
+              </div>
+            </div>
+
+            {/* Margins */}
+            <div className="demo-section">
+              <h2>Margins</h2>
+              <Text>Control title spacing with margin props:</Text>
+
+              <div className="example">
+                <span className="example-label">No margins:</span>
+                <Title margin="0">Title with Zero Margin</Title>
+                <Text>This text immediately follows the title.</Text>
               </div>
 
               <div className="example">
-                <span className="example-label">Custom margins:</span>
-                <Title marginTop="l" marginBottom="l">
-                  Title with Large Margins
-                </Title>
+                <span className="example-label">Bottom margin only:</span>
+                <Title marginBottom="l">Title with Bottom Margin</Title>
+                <Text>This text has more space above it.</Text>
               </div>
             </div>
           </div>
