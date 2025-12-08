@@ -207,7 +207,6 @@ export const InputRadio = (props) => {
   const radio = renderActionableComponent(props, {
     Basic: InputRadioBasic,
     WithAction: InputRadioWithAction,
-    InsideForm: InputRadioInsideForm,
   });
   return (
     <UIStateControllerContext.Provider value={uiStateController}>
@@ -440,5 +439,3 @@ const InputRadioWithAction = () => {
     `<Input type="radio" /> with an action make no sense. Use <RadioList action={something} /> instead`,
   );
 };
-
-const InputRadioInsideForm = InputRadio;

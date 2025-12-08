@@ -246,7 +246,6 @@ export const InputRange = (props) => {
   const input = renderActionableComponent(props, {
     Basic: InputRangeBasic,
     WithAction: InputRangeWithAction,
-    InsideForm: InputRangeInsideForm,
   });
   return (
     <UIStateControllerContext.Provider value={uiStateController}>
@@ -519,14 +518,4 @@ const InputRangeWithAction = (props) => {
       loading={loading || actionLoading}
     />
   );
-};
-const InputRangeInsideForm = (props) => {
-  const {
-    // We destructure formContext to avoid passing it to the underlying input element
-    // eslint-disable-next-line no-unused-vars
-    formContext,
-    ...rest
-  } = props;
-
-  return <InputRangeBasic {...rest} />;
 };

@@ -201,7 +201,6 @@ export const InputCheckbox = (props) => {
   const checkbox = renderActionableComponent(props, {
     Basic: InputCheckboxBasic,
     WithAction: InputCheckboxWithAction,
-    InsideForm: InputCheckboxInsideForm,
   });
   return (
     <UIStateControllerContext.Provider value={uiStateController}>
@@ -453,4 +452,3 @@ const InputCheckboxWithAction = (props) => {
     />
   );
 };
-const InputCheckboxInsideForm = InputCheckboxBasic;

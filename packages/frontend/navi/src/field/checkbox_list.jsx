@@ -56,7 +56,6 @@ export const CheckboxList = forwardRef((props, ref) => {
   const checkboxList = renderActionableComponent(props, ref, {
     Basic: CheckboxListBasic,
     WithAction: CheckboxListWithAction,
-    InsideForm: CheckboxListInsideForm,
   });
   return (
     <UIStateControllerContext.Provider value={uiStateController}>
@@ -182,4 +181,3 @@ const CheckboxListWithAction = forwardRef((props, ref) => {
     </CheckboxListBasic>
   );
 });
-const CheckboxListInsideForm = CheckboxListBasic;

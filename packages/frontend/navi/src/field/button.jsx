@@ -255,7 +255,6 @@ export const Button = (props) => {
   return renderActionableComponent(props, {
     Basic: ButtonBasic,
     WithAction: ButtonWithAction,
-    InsideForm: ButtonInsideForm,
     WithActionInsideForm: ButtonWithActionInsideForm,
   });
 };
@@ -418,35 +417,9 @@ const ButtonWithAction = (props) => {
     </ButtonBasic>
   );
 };
-const ButtonInsideForm = (props) => {
-  const {
-    // eslint-disable-next-line no-unused-vars
-    formContext,
-    type,
-    children,
-    loading,
-    readOnly,
-    ...rest
-  } = props;
-  const innerLoading = loading;
-  const innerReadOnly = readOnly;
-
-  return (
-    <ButtonBasic
-      {...rest}
-      type={type}
-      loading={innerLoading}
-      readOnly={innerReadOnly}
-    >
-      {children}
-    </ButtonBasic>
-  );
-};
 const ButtonWithActionInsideForm = (props) => {
   const formAction = useContext(FormActionContext);
   const {
-    // eslint-disable-next-line no-unused-vars
-    formContext, // to avoid passing it to the button element
     type,
     action,
     loading,

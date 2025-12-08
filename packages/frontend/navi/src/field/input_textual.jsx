@@ -168,7 +168,6 @@ export const InputTextual = (props) => {
   const input = renderActionableComponent(props, {
     Basic: InputTextualBasic,
     WithAction: InputTextualWithAction,
-    InsideForm: InputTextualInsideForm,
   });
   return (
     <UIStateControllerContext.Provider value={uiStateController}>
@@ -392,16 +391,6 @@ const InputTextualWithAction = (props) => {
       loading={loading || actionLoading}
     />
   );
-};
-const InputTextualInsideForm = (props) => {
-  const {
-    // We destructure formContext to avoid passing it to the underlying input element
-    // eslint-disable-next-line no-unused-vars
-    formContext,
-    ...rest
-  } = props;
-
-  return <InputTextualBasic {...rest} />;
 };
 
 // As explained in https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/input/datetime-local#setting_timezones

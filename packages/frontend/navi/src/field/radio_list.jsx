@@ -54,7 +54,6 @@ export const RadioList = forwardRef((props, ref) => {
   const radioList = renderActionableComponent(props, ref, {
     Basic: RadioListBasic,
     WithAction: RadioListWithAction,
-    InsideForm: RadioListInsideForm,
   });
   return (
     <UIStateControllerContext.Provider value={uiStateController}>
@@ -180,4 +179,3 @@ const RadioListWithAction = forwardRef((props, ref) => {
     </RadioListBasic>
   );
 });
-const RadioListInsideForm = RadioListBasic;

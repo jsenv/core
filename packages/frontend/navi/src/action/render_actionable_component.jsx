@@ -4,7 +4,7 @@ import { FormContext } from "../field/form_context.js";
 
 export const renderActionableComponent = (
   props,
-  { Basic, WithAction, InsideForm, WithActionInsideForm },
+  { Basic, WithAction, WithActionInsideForm },
 ) => {
   const { action, shortcuts } = props;
   const formContext = useContext(FormContext);
@@ -13,13 +13,9 @@ export const renderActionableComponent = (
 
   if (hasActionProps && WithAction) {
     if (considerInsideForm && WithActionInsideForm) {
-      return <WithActionInsideForm formContext={formContext} {...props} />;
+      return <WithActionInsideForm {...props} />;
     }
     return <WithAction {...props} />;
-  }
-
-  if (considerInsideForm && InsideForm) {
-    return <InsideForm formContext={formContext} {...props} />;
   }
 
   return <Basic {...props} />;

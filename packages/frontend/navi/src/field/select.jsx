@@ -8,7 +8,6 @@ import { useExecuteAction } from "../action/use_execute_action.js";
 import { useRefArray } from "../utils/use_ref_array.js";
 import { LoaderBackground } from "./loader/loader_background.jsx";
 import { useActionEvents } from "./use_action_events.js";
-import { useFormEvents } from "./use_form_events.js";
 import { requestAction } from "./validation/custom_constraint_validation.js";
 
 const useNavState = () => {};
@@ -23,7 +22,6 @@ export const Select = forwardRef((props, ref) => {
   const select = renderActionableComponent(props, ref, {
     Basic: SelectBasic,
     WithAction: SelectWithAction,
-    InsideForm: SelectInsideForm,
   });
   return select;
 });
@@ -211,47 +209,6 @@ const SelectWithAction = forwardRef((props, ref) => {
           readOnly: child.readOnly || actionLoading,
         };
       })}
-    </SelectControlled>
-  );
-});
-
-const SelectInsideForm = forwardRef((props, ref) => {
-  const { id, name, value: externalValue, children, ...rest } = props;
-
-  const innerRef = useRef();
-  useImperativeHandle(ref, () => innerRef.current);
-
-  const [navState, setNavState] = useNavState(id);
-  const [value, setValue, initialValue] = [name, externalValue, navState];
-  useEffect(() => {
-    setNavState(value);
-  }, [value]);
-
-  useFormEvents(innerRef, {
-    onFormReset: () => {
-      setValue(undefined);
-    },
-    onFormActionAbort: () => {
-      setValue(initialValue);
-    },
-    onFormActionError: () => {
-      setValue(initialValue);
-    },
-  });
-
-  return (
-    <SelectControlled
-      ref={innerRef}
-      name={name}
-      value={value}
-      onChange={(event) => {
-        const select = event.target;
-        const selectedValue = select.checked;
-        setValue(selectedValue);
-      }}
-      {...rest}
-    >
-      {children}
     </SelectControlled>
   );
 });
