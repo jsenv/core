@@ -30,11 +30,6 @@ const createMessageResolver = (
       element: originalElement.closest("form"),
       description: "closest form",
     },
-    // Step 4: Fallback message
-    {
-      element: null,
-      description: "fallback message",
-    },
   ];
   let currentStepIndex = 0;
   const resolveFromElement = (element) => {
@@ -79,18 +74,10 @@ const createMessageResolver = (
     };
   };
 
-  const resumeResolution = () => {
-    // Continue from the next step
-    currentStepIndex++;
-
-    for (let i = currentStepIndex; i < resolutionSteps.length; i++) {
+  const resolveFromStepIndex = (startIndex) => {
+    for (let i = startIndex; i < resolutionSteps.length; i++) {
       const step = resolutionSteps[i];
       currentStepIndex = i;
-
-      if (step.element === null) {
-        // Reached fallback message step
-        return fallbackMessage;
-      }
 
       const result = resolveFromElement(step.element);
       if (result) {
@@ -102,27 +89,15 @@ const createMessageResolver = (
     return fallbackMessage;
   };
 
+  const resumeResolution = () => {
+    // Continue from the next step
+    return resolveFromStepIndex(currentStepIndex + 1);
+  };
+
   return {
     resolve: () => {
       currentStepIndex = 0;
-
-      for (let i = 0; i < resolutionSteps.length; i++) {
-        const step = resolutionSteps[i];
-        currentStepIndex = i;
-
-        if (step.element === null) {
-          // Reached fallback message step
-          return fallbackMessage;
-        }
-
-        const result = resolveFromElement(step.element);
-        if (result) {
-          return result;
-        }
-      }
-
-      // Fallback
-      return fallbackMessage;
+      return resolveFromStepIndex(0);
     },
   };
 };
