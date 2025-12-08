@@ -24,11 +24,11 @@ import { useActionStatus } from "../action/use_action_status.js";
 import { useExecuteAction } from "../action/use_execute_action.js";
 import { Box } from "../box/box.jsx";
 import { useStableCallback } from "../utils/use_stable_callback.js";
+import { useConstraintMessage } from "./constraint_message.jsx";
 import { ReportReadOnlyOnLabelContext } from "./label.jsx";
 import { LoaderBackground } from "./loader/loader_background.jsx";
 import { useActionEvents } from "./use_action_events.js";
 import { useAutoFocus } from "./use_auto_focus.js";
-import { useConstraintMessage } from "./use_constraint_message.js";
 import {
   DisabledContext,
   LoadingContext,
@@ -291,7 +291,7 @@ const InputTextualBasic = (props) => {
         onsetuistate={(e) => {
           uiStateController.setUIState(e.detail.value, e);
         }}
-        data-required-message={requiredMessageId}
+        data-required-message-selector={`#${requiredMessageId}>*`}
         // style management
         baseClassName="navi_native_input"
       />

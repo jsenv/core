@@ -97,6 +97,23 @@ const DIMENSION_PROPS = {
   height: PASS_THROUGH,
   minHeight: PASS_THROUGH,
   maxHeight: PASS_THROUGH,
+  square: (v) => {
+    if (!v) {
+      return null;
+    }
+    return {
+      aspectRatio: "1/1",
+    };
+  },
+  circle: (v) => {
+    if (!v) {
+      return null;
+    }
+    return {
+      aspectRatio: "1/1",
+      borderRadius: "100%",
+    };
+  },
   expand: applyOnTwoProps("expandX", "expandY"),
   shrink: applyOnTwoProps("shrinkX", "shrinkY"),
   // apply after width/height to override if both are set

@@ -1,36 +1,33 @@
 import { createNaviMirror } from "./navi_mirror.js";
 
 export const getMessageFromAttribute = (element, attributeName, message) => {
-  const messageAttribute = element.getAttribute(attributeName);
-  if (messageAttribute) {
-    return resolveMessageFromAttribute(messageAttribute, message);
-  }
-  const closestFieldset = element.closest("fieldset");
-  if (closestFieldset) {
-    const fieldsetMessageAttribute =
-      closestFieldset.querySelector(attributeName);
-    if (fieldsetMessageAttribute) {
-      return resolveMessageFromAttribute(fieldsetMessageAttribute, message);
+  const selectorAttributeName = `${attributeName}-selector`;
+
+  const fromAttribute = (element) => {
+    if (!element) {
+      return null;
     }
-  }
-  const closestForm = element.closest("form");
-  if (closestForm) {
-    const formMessageAttribute = closestForm.querySelector(attributeName);
-    if (formMessageAttribute) {
-      return resolveMessageFromAttribute(formMessageAttribute, message);
+    const messageAttribute = element.getAttribute(attributeName);
+    if (messageAttribute) {
+      return messageAttribute;
     }
-  }
-  return null;
+    const selectorAttribute = element.getAttribute(selectorAttributeName);
+    if (selectorAttribute) {
+      return fromSelectorAttribute(selectorAttribute, message);
+    }
+    return null;
+  };
+
+  return (
+    fromAttribute(element) ||
+    fromAttribute(element.closest("fieldset")) ||
+    fromAttribute(element.closest("form")) ||
+    null
+  );
 };
 
 // Helper function to resolve messages that might be CSS selectors
-const resolveMessageFromAttribute = (messageAttributeValue) => {
-  if (typeof messageAttributeValue !== "string") {
-    return messageAttributeValue;
-  }
-  if (!messageAttributeValue.startsWith("#")) {
-    return messageAttributeValue; // Not a CSS selector, return the message directly
-  }
+const fromSelectorAttribute = (messageAttributeValue) => {
   // It's a CSS selector, find the DOM element
   const messageSourceElement = document.querySelector(messageAttributeValue);
   if (!messageSourceElement) {
