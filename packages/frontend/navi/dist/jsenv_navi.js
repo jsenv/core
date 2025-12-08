@@ -16112,6 +16112,7 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
 
     position: relative;
     box-sizing: border-box;
+    aspect-ratio: inherit;
     padding: 0;
     vertical-align: middle;
     background: none;
@@ -16128,6 +16129,7 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
       position: relative;
       display: inherit;
       box-sizing: border-box;
+      aspect-ratio: inherit;
       width: 100%;
       height: 100%;
       padding-top: var(
@@ -16718,6 +16720,7 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
     --x-link-cursor: var(--link-cursor);
 
     position: relative;
+    aspect-ratio: inherit;
     color: var(--x-link-color);
     text-decoration: var(--x-link-text-decoration);
     border-radius: var(--link-border-radius);
@@ -17467,10 +17470,11 @@ const Tab = props => {
 };
 TabList.Tab = Tab;
 const TabRoute = ({
+  circle,
   route,
   routeParams,
   children,
-  padding,
+  padding = 2,
   paddingX,
   paddingY,
   alignX,
@@ -17485,10 +17489,13 @@ const TabRoute = ({
   return jsx(TabBasic, {
     selected: selected,
     ...props,
+    circle: circle,
+    padding: "0",
     alignX: alignX,
     alignY: alignY,
     children: jsx(RouteLink, {
       box: true,
+      circle: circle,
       route: route,
       routeParams: routeParams,
       expand: true,

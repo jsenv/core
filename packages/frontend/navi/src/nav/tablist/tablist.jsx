@@ -320,10 +320,11 @@ export const Tab = (props) => {
 TabList.Tab = Tab;
 
 const TabRoute = ({
+  circle,
   route,
   routeParams,
   children,
-  padding,
+  padding = 2,
   paddingX,
   paddingY,
   alignX,
@@ -335,9 +336,17 @@ const TabRoute = ({
   const paramsAreMatching = route.matchesParams(routeParams);
   const selected = active && paramsAreMatching;
   return (
-    <TabBasic selected={selected} {...props} alignX={alignX} alignY={alignY}>
+    <TabBasic
+      selected={selected}
+      {...props}
+      circle={circle}
+      padding="0"
+      alignX={alignX}
+      alignY={alignY}
+    >
       <RouteLink
         box
+        circle={circle}
         route={route}
         routeParams={routeParams}
         expand

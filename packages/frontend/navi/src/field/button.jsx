@@ -99,6 +99,7 @@ import.meta.css = /* css */ `
 
     position: relative;
     box-sizing: border-box;
+    aspect-ratio: inherit;
     padding: 0;
     vertical-align: middle;
     background: none;
@@ -115,6 +116,7 @@ import.meta.css = /* css */ `
       position: relative;
       display: inherit;
       box-sizing: border-box;
+      aspect-ratio: inherit;
       width: 100%;
       height: 100%;
       padding-top: var(

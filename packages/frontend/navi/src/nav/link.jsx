@@ -58,6 +58,7 @@ import.meta.css = /* css */ `
     --x-link-cursor: var(--link-cursor);
 
     position: relative;
+    aspect-ratio: inherit;
     color: var(--x-link-color);
     text-decoration: var(--x-link-text-decoration);
     border-radius: var(--link-border-radius);
