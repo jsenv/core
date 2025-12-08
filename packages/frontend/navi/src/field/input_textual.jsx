@@ -24,7 +24,6 @@ import { useActionStatus } from "../action/use_action_status.js";
 import { useExecuteAction } from "../action/use_execute_action.js";
 import { Box } from "../box/box.jsx";
 import { useStableCallback } from "../utils/use_stable_callback.js";
-import { useConstraintMessage } from "./constraint_message.jsx";
 import { ReportReadOnlyOnLabelContext } from "./label.jsx";
 import { LoaderBackground } from "./loader/loader_background.jsx";
 import { useActionEvents } from "./use_action_events.js";
@@ -232,14 +231,11 @@ const InputTextualBasic = (props) => {
 
     readOnly,
     disabled,
-    constraints = [],
     loading,
 
     autoFocus,
     autoFocusVisible,
     autoSelect,
-
-    requiredMessage,
 
     ...rest
   } = props;
@@ -259,9 +255,7 @@ const InputTextualBasic = (props) => {
     autoFocusVisible,
     autoSelect,
   });
-  useConstraints(ref, constraints);
-
-  const requiredMessageId = useConstraintMessage(requiredMessage);
+  const remainingProps = useConstraints(ref, rest);
 
   const innerOnInput = useStableCallback(onInput);
   const renderInput = (inputProps) => {
@@ -291,7 +285,6 @@ const InputTextualBasic = (props) => {
         onsetuistate={(e) => {
           uiStateController.setUIState(e.detail.value, e);
         }}
-        data-required-message-selector={`#${requiredMessageId}>*`}
         // style management
         baseClassName="navi_native_input"
       />
@@ -303,7 +296,6 @@ const InputTextualBasic = (props) => {
     uiState,
     innerValue,
     innerOnInput,
-    requiredMessageId,
   ]);
 
   return (
@@ -322,7 +314,7 @@ const InputTextualBasic = (props) => {
       pseudoClasses={InputPseudoClasses}
       pseudoElements={InputPseudoElements}
       hasChildFunction
-      {...rest}
+      {...remainingProps}
       ref={undefined}
     >
       <LoaderBackground

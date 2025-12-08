@@ -2,6 +2,7 @@ import { createNaviMirror } from "./navi_mirror.js";
 
 export const getMessageFromAttribute = (element, attributeName, message) => {
   const selectorAttributeName = `${attributeName}-selector`;
+  const eventAttributeName = `${attributeName}-event`;
 
   const fromAttribute = (element) => {
     if (!element) {
@@ -15,6 +16,10 @@ export const getMessageFromAttribute = (element, attributeName, message) => {
     if (selectorAttribute) {
       return fromSelectorAttribute(selectorAttribute, message);
     }
+    const eventAttribute = element.getAttribute(eventAttributeName);
+    if (eventAttribute) {
+      return fromEventAttribute(element, eventAttribute, message);
+    }
     return null;
   };
 
@@ -24,6 +29,14 @@ export const getMessageFromAttribute = (element, attributeName, message) => {
     fromAttribute(element.closest("form")) ||
     null
   );
+};
+
+const fromEventAttribute = (element, eventName) => {
+  return (calloutContext) => {
+    element.dispatchEvent(
+      new CustomEvent(eventName, { detail: calloutContext }),
+    );
+  };
 };
 
 // Helper function to resolve messages that might be CSS selectors

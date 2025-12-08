@@ -408,6 +408,7 @@ export const installCustomConstraintValidation = (
         typeof checkResult === "string"
           ? { message: checkResult }
           : checkResult;
+      constraintValidityInfo.messageString = constraintValidityInfo.message;
 
       if (constraint.messageAttribute) {
         const messageFromAttribute = getMessageFromAttribute(
@@ -417,8 +418,9 @@ export const installCustomConstraintValidation = (
         );
         if (messageFromAttribute) {
           constraintValidityInfo.message = messageFromAttribute;
-          constraintValidityInfo.isNode =
-            messageFromAttribute instanceof Element;
+          if (typeof messageFromAttribute === "string") {
+            constraintValidityInfo.messageString = messageFromAttribute;
+          }
         }
       }
       const thisConstraintFailureInfo = {
@@ -456,10 +458,7 @@ export const installCustomConstraintValidation = (
       if (!hasTitleAttribute) {
         // when a constraint is failing browser displays that constraint message if the element has no title attribute.
         // We want to do the same with our message (overriding the browser in the process to get better messages)
-        element.setAttribute(
-          "title",
-          failedConstraintInfo.isNode ? "" : failedConstraintInfo.message,
-        );
+        element.setAttribute("title", failedConstraintInfo.messageString);
       }
     } else {
       if (!hasTitleAttribute) {

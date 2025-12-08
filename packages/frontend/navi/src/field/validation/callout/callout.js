@@ -11,9 +11,9 @@ import {
   resolveCSSColor,
   visibleRectEffect,
 } from "@jsenv/dom";
-import { isValidElement, render } from "preact";
+import { isValidElement } from "preact";
 
-import { prepareCalloutJsx } from "./callout.jsx";
+import { renderIntoCallout } from "./callout.jsx";
 
 /**
  * A callout component that mimics native browser validation messages.
@@ -268,11 +268,14 @@ export const openCallout = (
 
     if (isValidElement(newMessage)) {
       calloutMessageElement.innerHTML = "";
-      render(prepareCalloutJsx(newMessage, { close }), calloutMessageElement);
+      renderIntoCallout(newMessage, calloutMessageElement, { close });
     } else if (newMessage instanceof Node) {
       // Handle DOM node (cloned from CSS selector)
       calloutMessageElement.innerHTML = "";
       calloutMessageElement.appendChild(newMessage);
+    } else if (typeof newMessage === "function") {
+      calloutMessageElement.innerHTML = "";
+      newMessage({ renderIntoCallout, close });
     } else {
       if (Error.isError(newMessage)) {
         const error = newMessage;
