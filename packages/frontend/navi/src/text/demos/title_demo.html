@@ -1,0 +1,335 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Title Component Demo</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 20px;
+        font-family: system-ui, sans-serif;
+        line-height: 1.6;
+        background: #f5f5f5;
+      }
+
+      .demo-section {
+        margin: 30px 0;
+        padding: 20px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      .demo-section h2 {
+        margin-top: 0;
+        padding-bottom: 10px;
+        color: #333;
+        border-bottom: 2px solid #007cba;
+      }
+
+      .example {
+        margin: 20px 0;
+        padding: 15px;
+        background: #fafafa;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+      }
+
+      .example-label {
+        display: block;
+        margin-bottom: 10px;
+        color: #666;
+        font-weight: bold;
+      }
+
+      .hierarchy-demo {
+        padding: 20px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+      }
+
+      .spacing-demo {
+        margin: 15px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import {
+        Title,
+        Text,
+        MessageBox,
+        Caption,
+        Code,
+        TitleLevelContext,
+      } from "@jsenv/navi";
+      import { useContext } from "preact/hooks";
+
+      const TitleDemo = () => {
+        return (
+          <div>
+            <Title>Title Component Demo</Title>
+            <Text>
+              The <Code>Title</Code> component provides semantic heading
+              elements with automatic level detection, context awareness, and
+              consistent styling.
+            </Text>
+
+            {/* Basic Usage */}
+            <div className="demo-section">
+              <h2>Basic Usage</h2>
+              <Text>
+                Default title behavior with different semantic levels:
+              </Text>
+
+              <div className="example">
+                <span className="example-label">Default Title (h1):</span>
+                <Title>Main Page Title</Title>
+              </div>
+
+              <div className="example">
+                <span className="example-label">Explicit h2:</span>
+                <Title as="h2">Section Header</Title>
+              </div>
+
+              <div className="example">
+                <span className="example-label">Explicit h3:</span>
+                <Title as="h3">Subsection Title</Title>
+              </div>
+
+              <div className="example">
+                <span className="example-label">Explicit h4:</span>
+                <Title as="h4">Sub-subsection Title</Title>
+              </div>
+            </div>
+
+            {/* Title Level Context */}
+            <div className="demo-section">
+              <h2>Title Level Context</h2>
+              <Text>
+                The <Code>Title</Code> component provides{" "}
+                <Code>TitleLevelContext</Code> that other components can use to
+                understand the heading hierarchy:
+              </Text>
+
+              <div className="example">
+                <span className="example-label">Context-aware component:</span>
+                <Title as="h2">Section with Context</Title>
+                <TitleLevelIndicator />
+              </div>
+            </div>
+
+            {/* MessageBox Integration */}
+            <div className="demo-section">
+              <h2>MessageBox Integration</h2>
+              <Text>
+                When used inside a <Code>MessageBox</Code>, titles automatically
+                become h4 elements and inherit the MessageBox styling:
+              </Text>
+
+              <div className="example">
+                <span className="example-label">
+                  Info MessageBox with Title:
+                </span>
+                <MessageBox status="info">
+                  <Title>Information Notice</Title>
+                  This title automatically becomes an h4 and inherits the info
+                  color scheme.
+                </MessageBox>
+              </div>
+
+              <div className="example">
+                <span className="example-label">
+                  Warning MessageBox with Title:
+                </span>
+                <MessageBox status="warning">
+                  <Title>Warning Alert</Title>
+                  <Text>
+                    The title adapts to the warning context automatically.
+                  </Text>
+                </MessageBox>
+              </div>
+
+              <div className="example">
+                <span className="example-label">
+                  Success MessageBox with Title:
+                </span>
+                <MessageBox status="success">
+                  <Title>Success Confirmation</Title>
+                  <Text>Perfect! The operation completed successfully.</Text>
+                </MessageBox>
+              </div>
+
+              <div className="example">
+                <span className="example-label">
+                  Error MessageBox with Title:
+                </span>
+                <MessageBox status="error">
+                  <Title>Error Encountered</Title>
+                  <Text>Something went wrong. Please try again.</Text>
+                </MessageBox>
+              </div>
+            </div>
+
+            {/* Text Styling Props */}
+            <div className="demo-section">
+              <h2>Text Styling Props</h2>
+              <Text>
+                Since <Code>Title</Code> extends <Code>Text</Code>, it inherits
+                all text styling props:
+              </Text>
+
+              <div className="example">
+                <span className="example-label">Center-aligned title:</span>
+                <Title alignX="center">Centered Title</Title>
+              </div>
+
+              <div className="example">
+                <span className="example-label">Right-aligned title:</span>
+                <Title alignX="end">Right-aligned Title</Title>
+              </div>
+
+              <div className="example">
+                <span className="example-label">Custom color:</span>
+                <Title color="var(--navi_color_accent)">Colored Title</Title>
+              </div>
+
+              <div className="example">
+                <span className="example-label">Custom margins:</span>
+                <Title marginTop="l" marginBottom="l">
+                  Title with Large Margins
+                </Title>
+              </div>
+            </div>
+
+            {/* Hierarchy Demo */}
+            <div className="demo-section">
+              <h2>Document Hierarchy Example</h2>
+              <Text>
+                A complete document structure showing proper heading hierarchy:
+              </Text>
+
+              <div className="hierarchy-demo">
+                <Title>Document Title (h1)</Title>
+                <Text>Introduction paragraph for the document.</Text>
+
+                <Title as="h2">Chapter 1: Getting Started</Title>
+                <Text>Chapter introduction text.</Text>
+
+                <Title as="h3">Setting Up Your Environment</Title>
+                <Text>Section content about environment setup.</Text>
+
+                <Title as="h4">Installing Dependencies</Title>
+                <Text>Subsection about installing dependencies.</Text>
+
+                <Title as="h4">Configuration</Title>
+                <Text>Subsection about configuration.</Text>
+
+                <Title as="h3">First Steps</Title>
+                <Text>Another section in the same chapter.</Text>
+
+                <Title as="h2">Chapter 2: Advanced Topics</Title>
+                <Text>Second chapter introduction.</Text>
+              </div>
+            </div>
+
+            {/* Accessibility */}
+            <div className="demo-section">
+              <h2>Accessibility Features</h2>
+              <Text>
+                The <Code>Title</Code> component provides several accessibility
+                benefits:
+              </Text>
+
+              <ul>
+                <li>
+                  <strong>Semantic HTML:</strong> Uses proper heading elements
+                  (h1-h6)
+                </li>
+                <li>
+                  <strong>Heading Hierarchy:</strong> Provides logical document
+                  structure
+                </li>
+                <li>
+                  <strong>Context Awareness:</strong> Automatically adjusts
+                  level based on context
+                </li>
+                <li>
+                  <strong>Screen Reader Support:</strong> Proper heading
+                  navigation
+                </li>
+              </ul>
+
+              <div className="example">
+                <span className="example-label">
+                  Accessible heading structure:
+                </span>
+                <div role="region" aria-labelledby="accessible-title">
+                  <Title id="accessible-title" as="h3">
+                    Accessible Section
+                  </Title>
+                  <Text>
+                    This section has a proper heading that screen readers can
+                    navigate to.
+                  </Text>
+                </div>
+              </div>
+            </div>
+
+            {/* Best Practices */}
+            <div className="demo-section">
+              <h2>Best Practices</h2>
+              <Text>
+                Tips for using the <Code>Title</Code> component effectively:
+              </Text>
+
+              <div className="spacing-demo">
+                <Title as="h3">✅ Good Practices</Title>
+                <ul>
+                  <li>Use proper heading hierarchy (don't skip levels)</li>
+                  <li>
+                    Let the component handle automatic styling in MessageBox
+                    contexts
+                  </li>
+                  <li>
+                    Use the <Code>as</Code> prop to explicitly set the semantic
+                    level
+                  </li>
+                  <li>
+                    Leverage TitleLevelContext for context-aware components
+                  </li>
+                </ul>
+              </div>
+
+              <div className="spacing-demo">
+                <Title as="h3">❌ Avoid These Patterns</Title>
+                <ul>
+                  <li>Skipping heading levels (h1 directly to h3)</li>
+                  <li>
+                    Using titles just for visual styling without semantic
+                    meaning
+                  </li>
+                  <li>Overriding MessageBox automatic styling unnecessarily</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      // Helper component to demonstrate TitleLevelContext
+      const TitleLevelIndicator = () => {
+        const titleLevel = useContext(TitleLevelContext);
+        return (
+          <Text color="var(--navi_color_muted)" fontSize="s">
+            Current title level from context: <Code>h{titleLevel}</Code>
+          </Text>
+        );
+      };
+
+      render(<TitleDemo />, document.getElementById("app"));
+    </script>
+  </body>
+</html>
