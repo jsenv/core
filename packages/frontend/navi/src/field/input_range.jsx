@@ -309,7 +309,6 @@ const InputRangeBasic = (props) => {
 
     readOnly,
     disabled,
-    constraints = [],
     loading,
 
     autoFocus,
@@ -333,7 +332,7 @@ const InputRangeBasic = (props) => {
     autoFocusVisible,
     autoSelect,
   });
-  useConstraints(ref, constraints);
+  const remainingProps = useConstraints(ref, rest);
 
   const innerOnInput = useStableCallback(onInput);
   const focusProxyId = `input_range_focus_proxy_${useId()}`;
@@ -433,7 +432,7 @@ const InputRangeBasic = (props) => {
       pseudoClasses={InputPseudoClasses}
       pseudoElements={InputPseudoElements}
       hasChildFunction
-      {...rest}
+      {...remainingProps}
       ref={undefined}
     >
       <LoaderBackground

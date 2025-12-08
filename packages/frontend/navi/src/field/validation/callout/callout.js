@@ -276,7 +276,8 @@ export const openCallout = (
     } else if (typeof newMessage === "function") {
       calloutMessageElement.innerHTML = "";
       newMessage({
-        renderIntoCallout,
+        renderIntoCallout: (jsx) =>
+          renderIntoCallout(jsx, calloutMessageElement, { close }),
         close,
       });
     } else {

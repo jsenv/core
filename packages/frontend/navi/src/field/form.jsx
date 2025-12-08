@@ -79,7 +79,7 @@ const FormBasic = (props) => {
   // instantiation validation to:
   // - receive "requestsubmit" custom event ensure submit is prevented
   // (and also execute action without validation if form.submit() is ever called)
-  useConstraints(ref, []);
+  const remainingProps = useConstraints(ref, rest);
   const innerReadOnly = readOnly || loading;
   const formContextValue = useMemo(() => {
     return { loading };
@@ -87,7 +87,7 @@ const FormBasic = (props) => {
 
   return (
     <Box
-      {...rest}
+      {...remainingProps}
       as="form"
       ref={ref}
       onReset={(e) => {

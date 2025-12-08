@@ -308,7 +308,6 @@ const ButtonBasic = (props) => {
     readOnly,
     disabled,
     loading,
-    constraints = [],
     autoFocus,
 
     // visual
@@ -322,7 +321,7 @@ const ButtonBasic = (props) => {
   const ref = props.ref || defaultRef;
 
   useAutoFocus(ref, autoFocus);
-  useConstraints(ref, constraints);
+  const remainingProps = useConstraints(ref, rest);
   const innerLoading =
     loading || (contextLoading && contextLoadingElement === ref.current);
   const innerReadOnly = readOnly || contextReadOnly || innerLoading;
@@ -343,7 +342,7 @@ const ButtonBasic = (props) => {
   return (
     <Box
       data-readonly-silent={innerLoading ? "" : undefined}
-      {...rest}
+      {...remainingProps}
       as="button"
       ref={ref}
       data-icon={icon ? "" : undefined}

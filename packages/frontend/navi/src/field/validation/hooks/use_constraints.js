@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef } from "preact/hooks";
+import { useLayoutEffect } from "preact/hooks";
 
 import { useCustomValidationRef } from "./use_custom_validation_ref.js";
 
@@ -7,6 +7,8 @@ export const useConstraints = (elementRef, props, { targetSelector } = {}) => {
   const {
     constraints = NO_CONSTRAINTS,
     requiredMessage,
+    minMessage,
+    maxMessage,
     ...remainingProps
   } = props;
 
@@ -28,25 +30,41 @@ export const useConstraints = (elementRef, props, { targetSelector } = {}) => {
     };
   }, constraints);
 
-  const requiredMessageRef = useStableRef(requiredMessage);
   useLayoutEffect(() => {
     const el = elementRef.current;
     if (!el) {
       return null;
     }
-    el.setAttribute("data-required-message-event", "navi_required_message_jsx");
-    el.addEventListener("navi_required_message_jsx", (e) => {
-      const requiredMessage = requiredMessageRef.current;
-      e.detail.render(requiredMessage);
-    });
-    return () => {};
-  }, []);
+    const cleanupCallbackSet = new Set();
+    const setupCustomEvent = (el, constraintName, Component) => {
+      const attrName = `data-${constraintName}-message-event`;
+      const customEventName = `${constraintName}_message_jsx`;
+      el.setAttribute(attrName, customEventName);
+      const onCustomEvent = (e) => {
+        e.detail.render(Component);
+      };
+      el.addEventListener(customEventName, onCustomEvent);
+      cleanupCallbackSet.add(() => {
+        el.removeEventListener(customEventName, onCustomEvent);
+        el.removeAttribute(attrName);
+      });
+    };
+
+    if (requiredMessage) {
+      setupCustomEvent(el, "required", requiredMessage);
+    }
+    if (minMessage) {
+      setupCustomEvent(el, "min", minMessage);
+    }
+    if (maxMessage) {
+      setupCustomEvent(el, "max", maxMessage);
+    }
+    return () => {
+      for (const cleanupCallback of cleanupCallbackSet) {
+        cleanupCallback();
+      }
+    };
+  }, [requiredMessage, minMessage, maxMessage]);
 
   return remainingProps;
-};
-
-const useStableRef = (v) => {
-  const ref = useRef(v);
-  ref.current = v;
-  return ref;
 };

@@ -275,7 +275,6 @@ const InputRadioBasic = (props) => {
     required,
     loading,
     autoFocus,
-    constraints = [],
     onClick,
     onInput,
 
@@ -296,7 +295,7 @@ const InputRadioBasic = (props) => {
   reportReadOnlyOnLabel?.(innerReadOnly);
   reportDisabledOnLabel?.(innerDisabled);
   useAutoFocus(ref, autoFocus);
-  useConstraints(ref, constraints);
+  const remainingProps = useConstraints(ref, rest);
   const checked = Boolean(uiState);
   // we must first dispatch an event to inform all other radios they where unchecked
   // this way each other radio uiStateController knows thery are unchecked
@@ -382,7 +381,7 @@ const InputRadioBasic = (props) => {
   return (
     <Box
       as="span"
-      {...rest}
+      {...remainingProps}
       ref={undefined}
       baseClassName="navi_radio"
       pseudoStateSelector=".navi_native_field"

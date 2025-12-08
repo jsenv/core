@@ -230,7 +230,6 @@ const LinkPlain = (props) => {
     disabled,
     autoFocus,
     spaceToClick = true,
-    constraints = [],
     onClick,
     onKeyDown,
     href,
@@ -257,7 +256,7 @@ const LinkPlain = (props) => {
   const visited = useIsVisited(href);
 
   useAutoFocus(ref, autoFocus);
-  useConstraints(ref, constraints);
+  const remainingProps = useConstraints(ref, rest);
   const shouldDimColor = readOnly || disabled;
   useDimColorWhen(ref, shouldDimColor);
   // subscribe to document url to re-render and re-compute getHrefTargetInfo
@@ -309,7 +308,7 @@ const LinkPlain = (props) => {
       as="a"
       color={anchor && !innerChildren ? "inherit" : undefined}
       id={anchor ? href.slice(1) : undefined}
-      {...rest}
+      {...remainingProps}
       ref={ref}
       href={href}
       rel={innerRel}

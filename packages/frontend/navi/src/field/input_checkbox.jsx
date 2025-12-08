@@ -273,7 +273,6 @@ const InputCheckboxBasic = (props) => {
     loading,
 
     autoFocus,
-    constraints = [],
     onClick,
     onInput,
 
@@ -292,7 +291,7 @@ const InputCheckboxBasic = (props) => {
   reportReadOnlyOnLabel?.(innerReadOnly);
   reportDisabledOnLabel?.(innerDisabled);
   useAutoFocus(ref, autoFocus);
-  useConstraints(ref, constraints);
+  const remainingProps = useConstraints(ref, rest);
 
   const checked = Boolean(uiState);
   const innerOnClick = useStableCallback((e) => {
@@ -354,7 +353,7 @@ const InputCheckboxBasic = (props) => {
   return (
     <Box
       as="span"
-      {...rest}
+      {...remainingProps}
       ref={undefined}
       baseClassName="navi_checkbox"
       pseudoStateSelector=".navi_native_field"
