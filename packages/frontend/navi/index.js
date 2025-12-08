@@ -146,6 +146,7 @@ export { useDependenciesDiff } from "./src/utils/use_dependencies_diff.js";
 export { useKeyboardShortcuts } from "./src/keyboard/keyboard_shortcuts.js";
 
 export { CheckSvg } from "./src/graphic/icons/check_svg.jsx";
+export { ConstructionSvg } from "./src/graphic/icons/construction_svg.jsx";
 export { ExclamationSvg } from "./src/graphic/icons/exclamation_svg.jsx";
 export { EyeClosedSvg } from "./src/graphic/icons/eye_closed_svg.jsx";
 export { EyeSvg } from "./src/graphic/icons/eye_svg.jsx";
