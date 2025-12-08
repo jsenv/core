@@ -16557,31 +16557,31 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
   }
 
   .navi_message_box {
-    --x-background-color: var(--background-color-info);
-    --x-color: var(--color-info);
+    --x-message-background-color: var(--background-color-info);
+    --x-message-color: var(--color-info);
     /* color: var(--x-color); */
-    background-color: var(--x-background-color);
+    background-color: var(--x-message-background-color);
   }
 
   .navi_message_box[data-status-info] {
-    --x-background-color: var(--background-color-info);
-    --x-color: var(--color-info);
+    --x-message-background-color: var(--background-color-info);
+    --x-message-color: var(--color-info);
   }
   .navi_message_box[data-status-success] {
-    --x-background-color: var(--background-color-success);
-    --x-color: var(--color-success);
+    --x-message-background-color: var(--background-color-success);
+    --x-message-color: var(--color-success);
   }
   .navi_message_box[data-status-warning] {
-    --x-background-color: var(--background-color-warning);
-    --x-color: var(--color-warning);
+    --x-message-background-color: var(--background-color-warning);
+    --x-message-color: var(--color-warning);
   }
   .navi_message_box[data-status-error] {
-    --x-background-color: var(--background-color-error);
-    --x-color: var(--color-error);
+    --x-message-background-color: var(--background-color-error);
+    --x-message-color: var(--color-error);
   }
 
   .navi_message_box[data-left-stripe] {
-    border-left: 6px solid var(--x-color);
+    border-left: 6px solid var(--x-message-color);
     border-top-left-radius: 6px;
     border-bottom-left-radius: 6px;
   }
@@ -16629,16 +16629,14 @@ const MessageBox = ({
       children: jsxs(MessageBoxReportTitleChildContext.Provider, {
         value: setHasTitleChild,
         children: [icon && jsx(Icon, {
-          color: "var(--x-color)",
+          color: "var(--x-message-color)",
           children: icon
         }), jsx(Text, {
           children: children
         }), onClose && jsx(Button, {
           action: onClose,
-          discrete: true,
           icon: true,
           border: "none",
-          "data-nohover": "",
           alignX: "center",
           alignY: "center",
           pseudoStyle: {
@@ -16655,7 +16653,19 @@ const MessageBox = ({
   });
 };
 
+installImportMetaCss(import.meta);import.meta.css = /* css */`
+  .navi_message_box {
+    .navi_title {
+      margin-top: 0;
+      margin-bottom: var(--navi-spacing-s);
+      color: var(--x-message-color);
+    }
+  }
+`;
 const TitleLevelContext = createContext();
+const useTitleLevel = () => {
+  return useContext(TitleLevelContext);
+};
 const TitlePseudoClasses = [":hover"];
 const Title = props => {
   const messageBoxStatus = useContext(MessageBoxStatusContext);
@@ -16669,9 +16679,6 @@ const Title = props => {
       bold: true,
       className: withPropsClassName("navi_title"),
       as: messageBoxStatus ? "h4" : "h1",
-      marginTop: messageBoxStatus ? "0" : undefined,
-      marginBottom: messageBoxStatus ? "sm" : undefined,
-      color: messageBoxStatus ? `var(--x-color)` : undefined,
       ...props,
       pseudoClasses: TitlePseudoClasses,
       children: props.children
@@ -24663,5 +24670,5 @@ const UserSvg = () => jsx("svg", {
   })
 });
 
-export { ActionRenderer, ActiveKeyboardShortcuts, BadgeCount, Box, Button, Caption, CheckSvg, Checkbox, CheckboxList, Code, Col, Colgroup, Details, DialogLayout, Editable, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Form, HeartSvg, HomeSvg, Icon, Image, Input, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, MessageBox, Paragraph, Radio, RadioList, Route, RouteLink, Routes, RowNumberCol, RowNumberTableCell, SINGLE_SPACE_CONSTRAINT, SVGMaskOverlay, SearchSvg, Select, SelectionContext, SettingsSvg, StarSvg, SummaryMarker, Svg, Tab, TabList, Table, TableCell, Tbody, Text, Thead, Title, Tr, UITransition, UserSvg, ViewportLayout, actionIntegratedVia, addCustomMessage, compareTwoJsValues, createAction, createAvailableConstraint, createRequestCanceller, createSelectionKeyboardShortcuts, enableDebugActions, enableDebugOnDocumentLoading, forwardActionRequested, installCustomConstraintValidation, isCellSelected, isColumnSelected, isRowSelected, localStorageSignal, navBack, navForward, navTo, openCallout, rawUrlPart, reload, removeCustomMessage, requestAction, rerunActions, resource, setBaseUrl, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, updateActions, useActionData, useActionStatus, useActiveRouteInfo, useCalloutClose, useCellsAndColumns, useConstraintValidityState, useDependenciesDiff, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState$1 as useNavState, useRouteStatus, useRunOnMount, useSelectableElement, useSelectionController, useSignalSync, useStateArray, useUrlSearchParam, valueInLocalStorage };
+export { ActionRenderer, ActiveKeyboardShortcuts, BadgeCount, Box, Button, Caption, CheckSvg, Checkbox, CheckboxList, Code, Col, Colgroup, Details, DialogLayout, Editable, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Form, HeartSvg, HomeSvg, Icon, Image, Input, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, MessageBox, Paragraph, Radio, RadioList, Route, RouteLink, Routes, RowNumberCol, RowNumberTableCell, SINGLE_SPACE_CONSTRAINT, SVGMaskOverlay, SearchSvg, Select, SelectionContext, SettingsSvg, StarSvg, SummaryMarker, Svg, Tab, TabList, Table, TableCell, Tbody, Text, Thead, Title, Tr, UITransition, UserSvg, ViewportLayout, actionIntegratedVia, addCustomMessage, compareTwoJsValues, createAction, createAvailableConstraint, createRequestCanceller, createSelectionKeyboardShortcuts, enableDebugActions, enableDebugOnDocumentLoading, forwardActionRequested, installCustomConstraintValidation, isCellSelected, isColumnSelected, isRowSelected, localStorageSignal, navBack, navForward, navTo, openCallout, rawUrlPart, reload, removeCustomMessage, requestAction, rerunActions, resource, setBaseUrl, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, updateActions, useActionData, useActionStatus, useActiveRouteInfo, useCalloutClose, useCellsAndColumns, useConstraintValidityState, useDependenciesDiff, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState$1 as useNavState, useRouteStatus, useRunOnMount, useSelectableElement, useSelectionController, useSignalSync, useStateArray, useTitleLevel, useUrlSearchParam, valueInLocalStorage };
 //# sourceMappingURL=jsenv_navi.js.map

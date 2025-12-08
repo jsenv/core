@@ -38,6 +38,14 @@ import.meta.css = /* css */ `
       --navi-warning-color: #f19c05;
       --navi-error-color-light: #fcebed;
       --navi-error-color: #eb364b;
+
+      --navi-spacing-xxs: 0.125em;
+      --navi-spacing-xs: 0.25em;
+      --navi-spacing-s: 0.5em;
+      --navi-spacing-m: 1em;
+      --navi-spacing-l: 1.5em;
+      --navi-spacing-xl: 2em;
+      --navi-spacing-xxl: 3em;
     }
   }
 `;

@@ -29,31 +29,31 @@ import.meta.css = /* css */ `
   }
 
   .navi_message_box {
-    --x-background-color: var(--background-color-info);
-    --x-color: var(--color-info);
+    --x-message-background-color: var(--background-color-info);
+    --x-message-color: var(--color-info);
     /* color: var(--x-color); */
-    background-color: var(--x-background-color);
+    background-color: var(--x-message-background-color);
   }
 
   .navi_message_box[data-status-info] {
-    --x-background-color: var(--background-color-info);
-    --x-color: var(--color-info);
+    --x-message-background-color: var(--background-color-info);
+    --x-message-color: var(--color-info);
   }
   .navi_message_box[data-status-success] {
-    --x-background-color: var(--background-color-success);
-    --x-color: var(--color-success);
+    --x-message-background-color: var(--background-color-success);
+    --x-message-color: var(--color-success);
   }
   .navi_message_box[data-status-warning] {
-    --x-background-color: var(--background-color-warning);
-    --x-color: var(--color-warning);
+    --x-message-background-color: var(--background-color-warning);
+    --x-message-color: var(--color-warning);
   }
   .navi_message_box[data-status-error] {
-    --x-background-color: var(--background-color-error);
-    --x-color: var(--color-error);
+    --x-message-background-color: var(--background-color-error);
+    --x-message-color: var(--color-error);
   }
 
   .navi_message_box[data-left-stripe] {
-    border-left: 6px solid var(--x-color);
+    border-left: 6px solid var(--x-message-color);
     border-top-left-radius: 6px;
     border-bottom-left-radius: 6px;
   }
@@ -116,7 +116,7 @@ export const MessageBox = ({
     >
       <MessageBoxStatusContext.Provider value={status}>
         <MessageBoxReportTitleChildContext.Provider value={setHasTitleChild}>
-          {icon && <Icon color="var(--x-color)">{icon}</Icon>}
+          {icon && <Icon color="var(--x-message-color)">{icon}</Icon>}
           <Text>{children}</Text>
           {onClose && (
             <Button

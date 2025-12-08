@@ -8,6 +8,16 @@ import {
 } from "./message_box.jsx";
 import { Text } from "./text.jsx";
 
+import.meta.css = /* css */ `
+  .navi_message_box {
+    .navi_title {
+      margin-top: 0;
+      margin-bottom: var(--navi-spacing-s);
+      color: var(--x-message-color);
+    }
+  }
+`;
+
 export const TitleLevelContext = createContext();
 export const useTitleLevel = () => {
   return useContext(TitleLevelContext);
@@ -26,9 +36,6 @@ export const Title = (props) => {
         bold
         className={withPropsClassName("navi_title")}
         as={messageBoxStatus ? "h4" : "h1"}
-        marginTop={messageBoxStatus ? "0" : undefined}
-        marginBottom={messageBoxStatus ? "s" : undefined}
-        color={messageBoxStatus ? `var(--x-color)` : undefined}
         {...props}
         pseudoClasses={TitlePseudoClasses}
       >
