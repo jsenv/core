@@ -24496,10 +24496,12 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
   }
 
   .navi_separator {
+    width: 100%;
     height: var(--size);
     margin-top: var(--spacing-start, var(--spacing));
     margin-bottom: var(--spacing-end, var(--spacing));
     background: var(--color);
+    border: none;
 
     &[data-vertical] {
       display: inline-block;
