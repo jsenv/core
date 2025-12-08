@@ -32,47 +32,34 @@ const createMessageResolver = (
   const subSteps = ["event", "selector", "message"];
   let currentStepIndex = 0;
   let currentSubStepIndex = 0;
-  const resolveSubStep = (element, subStep) => {
-    if (!element) {
-      return null;
-    }
-
-    switch (subStep) {
-      case "event": {
-        const eventAttribute = element.getAttribute(eventAttributeName);
-        if (eventAttribute) {
-          return createEventHandler(element, eventAttribute);
-        }
-        return null;
-      }
-      case "selector": {
-        const selectorAttribute = element.getAttribute(selectorAttributeName);
-        if (selectorAttribute) {
-          return fromSelectorAttribute(selectorAttribute);
-        }
-        return null;
-      }
-      case "message": {
-        const messageAttribute = element.getAttribute(attributeName);
-        if (messageAttribute) {
-          return messageAttribute;
-        }
-        return null;
-      }
-      default:
-        return null;
-    }
-  };
   const resolve = () => {
     while (currentStepIndex < resolutionSteps.length) {
-      const step = resolutionSteps[currentStepIndex];
-      while (currentSubStepIndex < subSteps.length) {
-        const subStep = subSteps[currentSubStepIndex];
-        const result = resolveSubStep(step.element, subStep);
-        if (result) {
-          return result;
+      const { element } = resolutionSteps[currentStepIndex];
+      if (element) {
+        while (currentSubStepIndex < subSteps.length) {
+          const subStep = subSteps[currentSubStepIndex];
+          currentSubStepIndex++;
+          if (subStep === "event") {
+            const eventAttribute = element.getAttribute(eventAttributeName);
+            if (eventAttribute) {
+              return createEventHandler(element, eventAttribute);
+            }
+          }
+          if (subStep === "selector") {
+            const selectorAttribute = element.getAttribute(
+              selectorAttributeName,
+            );
+            if (selectorAttribute) {
+              return fromSelectorAttribute(selectorAttribute);
+            }
+          }
+          if (subStep === "message") {
+            const messageAttribute = element.getAttribute(attributeName);
+            if (messageAttribute) {
+              return messageAttribute;
+            }
+          }
         }
-        currentSubStepIndex++;
       }
       currentStepIndex++;
       currentSubStepIndex = 0;
