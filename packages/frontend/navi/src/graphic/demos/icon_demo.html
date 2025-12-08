@@ -771,7 +771,7 @@
               >
                 Width/Height for non-square icons
               </Text>
-              <Box row spacing="lg" alignItems="center">
+              <Box row>
                 <div>
                   <Text
                     style={{
@@ -780,11 +780,13 @@
                       display: "block",
                     }}
                   >
-                    width="90"
+                    width="90" height="auto"
                   </Text>
-                  <Icon width="90" height="auto">
-                    <HorizontalRectSvg />
-                  </Icon>
+                  <Box row border="1px dashed violet" width="fit-content">
+                    <Icon width="90" height="auto">
+                      <HorizontalRectSvg />
+                    </Icon>
+                  </Box>
                 </div>
                 <div>
                   <Text
@@ -794,11 +796,13 @@
                       display: "block",
                     }}
                   >
-                    height="40"
+                    width="auto" height="40"
                   </Text>
-                  <Icon height="40">
-                    <VerticalRectSvg />
-                  </Icon>
+                  <Box row border="1px dashed violet" width="fit-content">
+                    <Icon width="auto" height="40">
+                      <VerticalRectSvg />
+                    </Icon>
+                  </Box>
                 </div>
                 <div>
                   <Text
@@ -810,9 +814,11 @@
                   >
                     width="60" height="20"
                   </Text>
-                  <Icon width="60" height="20">
-                    <HorizontalRectSvg />
-                  </Icon>
+                  <Box row border="1px dashed violet" width="fit-content">
+                    <Icon width="60" height="20">
+                      <HorizontalRectSvg />
+                    </Icon>
+                  </Box>
                 </div>
               </Box>
             </div>

@@ -137,6 +137,7 @@ export const Icon = ({
 
   return (
     <Text
+      square
       {...props}
       {...ariaProps}
       className={withPropsClassName("navi_icon", className)}

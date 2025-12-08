@@ -90,6 +90,12 @@ const INNER_SPACING_PROPS = {
   paddingX: applyOnTwoCSSProps("paddingLeft", "paddingRight"),
   paddingY: applyOnTwoCSSProps("paddingTop", "paddingBottom"),
 };
+const hasWidthHeight = (context) => {
+  return (
+    (context.styles.width || context.remainingProps.width) &&
+    (context.styles.height || context.remainingProps.height)
+  );
+};
 const DIMENSION_PROPS = {
   width: PASS_THROUGH,
   minWidth: PASS_THROUGH,
@@ -101,8 +107,7 @@ const DIMENSION_PROPS = {
     if (!v) {
       return null;
     }
-    console.log(context);
-    if (context.styles.width && context.styles.height) {
+    if (hasWidthHeight(context)) {
       // width/height are defined, remove aspect ratio, we explicitely allow rectanglular shapes
       return null;
     }
@@ -114,12 +119,8 @@ const DIMENSION_PROPS = {
     if (!v) {
       return null;
     }
-    if (context.styles.width && context.styles.height) {
-      // width/height are defined, remove aspect ratio, we explicitely allow rectanglular shapes
-      return null;
-    }
     return {
-      aspectRatio: "1/1",
+      aspectRatio: hasWidthHeight(context) ? undefined : "1/1",
       borderRadius: "100%",
     };
   },

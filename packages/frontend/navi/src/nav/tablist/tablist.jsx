@@ -38,7 +38,7 @@ import.meta.css = /* css */ `
 
   .navi_tablist {
     display: flex;
-    line-height: 2em;
+    line-height: 2;
     /* overflow-x: auto; */
     /* overflow-y: hidden; */
 

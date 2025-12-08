@@ -4729,6 +4729,12 @@ const INNER_SPACING_PROPS = {
   paddingX: applyOnTwoCSSProps("paddingLeft", "paddingRight"),
   paddingY: applyOnTwoCSSProps("paddingTop", "paddingBottom"),
 };
+const hasWidthHeight = (context) => {
+  return (
+    (context.styles.width || context.remainingProps.width) &&
+    (context.styles.height || context.remainingProps.height)
+  );
+};
 const DIMENSION_PROPS = {
   width: PASS_THROUGH,
   minWidth: PASS_THROUGH,
@@ -4736,20 +4742,24 @@ const DIMENSION_PROPS = {
   height: PASS_THROUGH,
   minHeight: PASS_THROUGH,
   maxHeight: PASS_THROUGH,
-  square: (v) => {
+  square: (v, context) => {
     if (!v) {
+      return null;
+    }
+    if (hasWidthHeight(context)) {
+      // width/height are defined, remove aspect ratio, we explicitely allow rectanglular shapes
       return null;
     }
     return {
       aspectRatio: "1/1",
     };
   },
-  circle: (v) => {
+  circle: (v, context) => {
     if (!v) {
       return null;
     }
     return {
-      aspectRatio: "1/1",
+      aspectRatio: hasWidthHeight(context) ? undefined : "1/1",
       borderRadius: "100%",
     };
   },
@@ -14667,10 +14677,15 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
   .navi_icon {
     display: inline-block;
     box-sizing: border-box;
-    width: 1em;
     max-width: 100%;
-    height: 1em;
     max-height: 100%;
+
+    &[data-flow-inline] {
+      width: 1em;
+      width: 1lh;
+      height: 1em;
+      height: 1lh;
+    }
   }
 
   .navi_icon[data-interactive] {
@@ -14710,18 +14725,18 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
     height: 100%;
     backface-visibility: hidden;
   }
-  .navi_icon[data-width] > svg,
-  .navi_icon[data-width] > img {
+  .navi_icon[data-has-width] > svg,
+  .navi_icon[data-has-width] > img {
     width: 100%;
     height: auto;
   }
-  .navi_icon[data-height] > svg,
-  .navi_icon[data-height] > img {
+  .navi_icon[data-has-height] > svg,
+  .navi_icon[data-has-height] > img {
     width: auto;
     height: 100%;
   }
-  .navi_icon[data-width][data-height] > svg,
-  .navi_icon[data-width][data-height] > img {
+  .navi_icon[data-has-width][data-has-height] > svg,
+  .navi_icon[data-has-width][data-has-height] > img {
     width: 100%;
     height: 100%;
   }
@@ -14760,7 +14775,11 @@ const Icon = ({
     width,
     height
   } = props;
-  if (width === undefined && height === undefined) {
+  if (width === "auto") width = undefined;
+  if (height === "auto") height = undefined;
+  const hasExplicitWidth = width !== undefined;
+  const hasExplicitHeight = height !== undefined;
+  if (!hasExplicitWidth && !hasExplicitHeight) {
     if (decorative === undefined) {
       decorative = true;
     }
@@ -14772,12 +14791,13 @@ const Icon = ({
   } : {};
   if (box) {
     return jsx(Box, {
+      square: true,
       ...props,
       ...ariaProps,
       box: box,
       baseClassName: "navi_icon",
-      "data-width": width,
-      "data-height": height,
+      "data-has-width": hasExplicitWidth ? "" : undefined,
+      "data-has-height": hasExplicitHeight ? "" : undefined,
       "data-interactive": onClick ? "" : undefined,
       onClick: onClick,
       children: innerChildren
@@ -14785,13 +14805,14 @@ const Icon = ({
   }
   const invisibleText = baseChar.repeat(charWidth);
   return jsxs(Text, {
+    square: true,
     ...props,
     ...ariaProps,
     className: withPropsClassName("navi_icon", className),
     spacing: "pre",
     "data-icon-char": "",
-    "data-width": width,
-    "data-height": height,
+    "data-has-width": hasExplicitWidth ? "" : undefined,
+    "data-has-height": hasExplicitHeight ? "" : undefined,
     "data-interactive": onClick ? "" : undefined,
     onClick: onClick,
     children: [jsx("span", {
@@ -17179,7 +17200,7 @@ import.meta.css = /* css */`
 
   .navi_tablist {
     display: flex;
-    line-height: 2em;
+    line-height: 2;
     /* overflow-x: auto; */
     /* overflow-y: hidden; */
 
