@@ -6,9 +6,21 @@ const NO_CONSTRAINTS = [];
 export const useConstraints = (elementRef, props, { targetSelector } = {}) => {
   const {
     constraints = NO_CONSTRAINTS,
+    disabledMessage,
     requiredMessage,
+    patternMessage,
+    minLengthMessage,
+    maxLengthMessage,
+    typeMessage,
     minMessage,
     maxMessage,
+    singleSpaceMessage,
+    sameAsMessage,
+    minDigitMessage,
+    minLowerLetterMessage,
+    minUpperLetterMessage,
+    minSpecialCharMessage,
+    availableMessage,
     ...remainingProps
   } = props;
 
@@ -50,8 +62,23 @@ export const useConstraints = (elementRef, props, { targetSelector } = {}) => {
       });
     };
 
+    if (disabledMessage) {
+      setupCustomEvent(el, "disabled", disabledMessage);
+    }
     if (requiredMessage) {
       setupCustomEvent(el, "required", requiredMessage);
+    }
+    if (patternMessage) {
+      setupCustomEvent(el, "pattern", patternMessage);
+    }
+    if (minLengthMessage) {
+      setupCustomEvent(el, "min-length", minLengthMessage);
+    }
+    if (maxLengthMessage) {
+      setupCustomEvent(el, "max-length", maxLengthMessage);
+    }
+    if (typeMessage) {
+      setupCustomEvent(el, "type", typeMessage);
     }
     if (minMessage) {
       setupCustomEvent(el, "min", minMessage);
@@ -59,12 +86,49 @@ export const useConstraints = (elementRef, props, { targetSelector } = {}) => {
     if (maxMessage) {
       setupCustomEvent(el, "max", maxMessage);
     }
+    if (singleSpaceMessage) {
+      setupCustomEvent(el, "single-space", singleSpaceMessage);
+    }
+    if (sameAsMessage) {
+      setupCustomEvent(el, "same-as", sameAsMessage);
+    }
+    if (minDigitMessage) {
+      setupCustomEvent(el, "min-digit", minDigitMessage);
+    }
+    if (minLowerLetterMessage) {
+      setupCustomEvent(el, "min-lower-letter", minLowerLetterMessage);
+    }
+    if (minUpperLetterMessage) {
+      setupCustomEvent(el, "min-upper-letter", minUpperLetterMessage);
+    }
+    if (minSpecialCharMessage) {
+      setupCustomEvent(el, "min-special-char", minSpecialCharMessage);
+    }
+    if (availableMessage) {
+      setupCustomEvent(el, "available", availableMessage);
+    }
     return () => {
       for (const cleanupCallback of cleanupCallbackSet) {
         cleanupCallback();
       }
     };
-  }, [requiredMessage, minMessage, maxMessage]);
+  }, [
+    disabledMessage,
+    requiredMessage,
+    patternMessage,
+    minLengthMessage,
+    maxLengthMessage,
+    typeMessage,
+    minMessage,
+    maxMessage,
+    singleSpaceMessage,
+    sameAsMessage,
+    minDigitMessage,
+    minLowerLetterMessage,
+    minUpperLetterMessage,
+    minSpecialCharMessage,
+    availableMessage,
+  ]);
 
   return remainingProps;
 };

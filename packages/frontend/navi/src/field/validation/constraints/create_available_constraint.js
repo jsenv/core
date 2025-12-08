@@ -1,6 +1,6 @@
 import { replaceStringVars } from "./constraint_message_util.js";
 
-export const createUniqueValueConstraint = (
+export const createAvailableConstraint = (
   // the set might be incomplete (the front usually don't have the full copy of all the items from the backend)
   // but this is already nice to help user with what we know
   // it's also possible that front is unsync with backend, preventing user to choose a value
@@ -11,7 +11,8 @@ export const createUniqueValueConstraint = (
   message = `"{value}" est utilisé. Veuillez entrer une autre valeur.`,
 ) => {
   return {
-    name: "unique",
+    name: "available",
+    messageAttribute: "data-available-message",
     check: (field) => {
       const fieldValue = field.value;
       const hasConflict = existingValueSet.has(fieldValue);

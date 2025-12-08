@@ -118,7 +118,7 @@ const emailregex =
   /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
 export const TYPE_EMAIL_CONSTRAINT = {
   name: "type_email",
-  messageAttribute: "data-type-email-message",
+  messageAttribute: "data-type-message",
   check: (field) => {
     if (field.type !== "email") {
       return null;
@@ -214,7 +214,7 @@ const INPUT_TYPE_SUPPORTING_MAX_LENGTH_SET = new Set(
 
 export const TYPE_NUMBER_CONSTRAINT = {
   name: "type_number",
-  messageAttribute: "data-type-number-message",
+  messageAttribute: "data-type-message",
   check: (field) => {
     if (field.tagName !== "INPUT") {
       return null;

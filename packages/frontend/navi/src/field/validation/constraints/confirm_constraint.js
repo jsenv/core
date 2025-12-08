@@ -1,5 +1,6 @@
 export const CONFIRM_CONSTRAINT = {
   name: "confirm",
+  // messageAttribute: "data-confirm-message",
   check: (field) => {
     const messageAttribute = field.getAttribute("data-confirm");
     if (!messageAttribute) {

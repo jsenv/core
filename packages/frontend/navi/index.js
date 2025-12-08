@@ -58,7 +58,7 @@ export { enableDebugOnDocumentLoading } from "./src/nav/browser_integration/docu
 
 // Form
 // Validation
-export { createUniqueValueConstraint } from "./src/field/validation/constraints/create_unique_value_constraint.js";
+export { createAvailableConstraint } from "./src/field/validation/constraints/create_available_constraint.js";
 export { SINGLE_SPACE_CONSTRAINT } from "./src/field/validation/constraints/single_space_constraint.js";
 export {
   forwardActionRequested,
