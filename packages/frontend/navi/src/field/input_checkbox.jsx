@@ -291,11 +291,14 @@ import.meta.css = /* css */ `
 
       &[data-checked] {
         .navi_checkbox_marker {
+          position: relative;
+          left: -2px;
           transform: translateX(
             calc(
               var(--toggle-width) - var(--toggle-thumb-size) - var(
                   --toggle-padding
-                ) - var(--toggle-padding)
+                ) *
+                2
             )
           );
         }
