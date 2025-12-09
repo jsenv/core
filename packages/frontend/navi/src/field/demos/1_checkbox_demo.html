@@ -574,6 +574,56 @@
             </div>
 
             <div className="states-section">
+              <div className="states-title">Toggle Sizes</div>
+              <p className="states-description">
+                Toggle size can be controlled with the size prop, affecting both
+                the track and thumb proportionally.
+              </p>
+
+              <Box column spacing="sm">
+                <fieldset>
+                  <legend>Small</legend>
+                  <Box row spacing="sm" alignX="start" alignY="center">
+                    <Label column alignY="center" spacing="s">
+                      <Input type="checkbox" toggle size="s" />
+                      Label
+                    </Label>
+                    <Label column alignY="center" spacing="s">
+                      <Input type="checkbox" toggle size="s" defaultChecked />
+                      Label
+                    </Label>
+                  </Box>
+                </fieldset>
+                <fieldset>
+                  <legend>Medium (Default)</legend>
+                  <Box row spacing="sm" alignX="start" alignY="center">
+                    <Label column alignY="center" spacing="s">
+                      <Input type="checkbox" toggle />
+                      Label
+                    </Label>
+                    <Label column alignY="center" spacing="s">
+                      <Input type="checkbox" toggle defaultChecked />
+                      Label
+                    </Label>
+                  </Box>
+                </fieldset>
+                <fieldset>
+                  <legend>Large</legend>
+                  <Box row spacing="sm" alignX="start" alignY="center">
+                    <Label column alignY="center" spacing="s">
+                      <Input type="checkbox" toggle size="l" />
+                      Label
+                    </Label>
+                    <Label column alignY="center" spacing="s">
+                      <Input type="checkbox" toggle size="l" defaultChecked />
+                      Label
+                    </Label>
+                  </Box>
+                </fieldset>
+              </Box>
+            </div>
+
+            <div className="states-section">
               <div className="states-title">Toggle Width Control</div>
               <p className="states-description">
                 Toggle width can be controlled with the width prop for custom
