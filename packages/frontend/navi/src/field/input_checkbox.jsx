@@ -190,6 +190,18 @@ import.meta.css = /* css */ `
         --x-checkmark-color: var(--checkmark-color-disabled);
       }
     }
+
+    /* Toggle appeareance */
+    &[data-toggle] {
+      .navi_checkbox_field {
+        width: calc(var(--x-width) * 2);
+        border-radius: calc(var(--x-height) / 2);
+      }
+      .navi_checkbox_marker {
+        fill: var(--x-checkmark-color);
+        stroke: none;
+      }
+    }
   }
 `;
 
@@ -283,6 +295,7 @@ const InputCheckboxBasic = (props) => {
     onInput,
 
     color,
+    appearance, // "toggle"
     ...rest
   } = props;
   const defaultRef = useRef();
@@ -323,6 +336,7 @@ const InputCheckboxBasic = (props) => {
       checked={checked}
       required={innerRequired}
       baseClassName="navi_native_field"
+      data-toggle={appearance === "toggle" ? "" : undefined}
       data-callout-arrow-x="center"
       onClick={innerOnClick}
       onInput={innerOnInput}
@@ -383,13 +397,23 @@ const InputCheckboxBasic = (props) => {
       />
       {renderCheckboxMemoized}
       <div className="navi_checkbox_field">
-        <svg
-          viewBox="0 0 12 12"
-          aria-hidden="true"
-          className="navi_checkbox_marker"
-        >
-          <path d="M10.5 2L4.5 9L1.5 5.5" fill="none" strokeWidth="2" />
-        </svg>
+        {appearance === "toggle" ? (
+          <svg
+            viewBox="0 0 12 12"
+            aria-hidden="true"
+            className="navi_checkbox_marker"
+          >
+            <circle cx="6" cy="6" r="5"></circle>
+          </svg>
+        ) : (
+          <svg
+            viewBox="0 0 12 12"
+            aria-hidden="true"
+            className="navi_checkbox_marker"
+          >
+            <path d="M10.5 2L4.5 9L1.5 5.5" fill="none" strokeWidth="2" />
+          </svg>
+        )}
       </div>
     </Box>
   );

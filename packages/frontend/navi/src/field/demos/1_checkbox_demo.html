@@ -154,6 +154,7 @@
           <div>
             <BasicStatesDemo />
             <ColorDemo />
+            <ToggleAppearanceDemo />
             <InteractiveDemo />
           </div>
         );
@@ -406,6 +407,85 @@
                     </label>
                   </Box>
                 </fieldset>
+              </Box>
+            </div>
+          </div>
+        );
+      };
+
+      const ToggleAppearanceDemo = () => {
+        return (
+          <div className="demo-section">
+            <h2>Toggle Appearance</h2>
+
+            <div className="states-section">
+              <div className="states-title">appearance="toggle"</div>
+              <p className="states-description">
+                The toggle appearance provides an alternative visual style that
+                resembles switch controls.
+              </p>
+
+              <Box column spacing="sm">
+                <Box as="fieldset" width="100">
+                  <legend>Basic Toggle</legend>
+                  <Box row spacing="sm" alignX="start">
+                    <Label>
+                      <Input type="checkbox" appearance="toggle" />
+                      Unchecked
+                    </Label>
+                    <Label>
+                      <Input
+                        type="checkbox"
+                        appearance="toggle"
+                        defaultChecked
+                      />
+                      Checked
+                    </Label>
+                  </Box>
+                </Box>
+
+                <Box as="fieldset" width="200">
+                  <legend>Toggle States</legend>
+                  <Box row spacing="sm" alignX="start">
+                    <Label>
+                      <Input type="checkbox" appearance="toggle" disabled />
+                      Disabled
+                    </Label>
+                    <Label>
+                      <Input
+                        type="checkbox"
+                        appearance="toggle"
+                        disabled
+                        defaultChecked
+                      />
+                      Disabled Checked
+                    </Label>
+                  </Box>
+                </Box>
+
+                <Box as="fieldset" width="200">
+                  <legend>Toggle with Custom Color</legend>
+                  <Box row spacing="sm" alignX="start">
+                    <Label>
+                      <Input
+                        type="checkbox"
+                        appearance="toggle"
+                        color="#2ecc71"
+                        defaultChecked
+                      />
+                      Green Toggle
+                    </Label>
+                    <Label>
+                      <Input
+                        type="checkbox"
+                        appearance="toggle"
+                        color="#e74c3c"
+                        defaultChecked
+                      />
+                      Red Toggle
+                    </Label>
+                  </Box>
+                </Box>
               </Box>
             </div>
           </div>
