@@ -198,6 +198,8 @@ import.meta.css = /* css */ `
       --toggle-width: 3em;
       --toggle-thumb-size: 1.2em;
       --toggle-padding: 2px;
+      --toggle-thumb-color: white;
+      --toggle-thumb-border-radius: 50%;
 
       border-radius: calc(
         var(--toggle-thumb-size) / 2 + calc(var(--toggle-padding) * 2)
@@ -216,70 +218,18 @@ import.meta.css = /* css */ `
         .navi_checkbox_marker {
           width: var(--toggle-thumb-size);
           height: var(--toggle-thumb-size);
-          background-color: white;
-          border-radius: 50%;
+          border-radius: var(--toggle-thumb-border-radius);
           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
           opacity: 1;
-          fill: white;
-          stroke: none;
+          fill: var(--toggle-thumb-color);
           transform: translateX(0);
           transition: transform 0.2s ease;
         }
       }
 
       &[data-checked] {
-        .navi_checkbox_field {
-          background-color: var(--x-color);
-          border-color: var(--x-color);
-        }
-
         .navi_checkbox_marker {
           transform: translateX(calc(100% + var(--toggle-padding) * 2));
-        }
-      }
-
-      &[data-hover] {
-        .navi_checkbox_field {
-          background-color: color-mix(
-            in srgb,
-            var(--x-border-color) 80%,
-            var(--color-mix)
-          );
-        }
-
-        &[data-checked] {
-          .navi_checkbox_field {
-            background-color: var(--background-color-hover-checked);
-          }
-        }
-      }
-
-      &[data-disabled] {
-        .navi_checkbox_field {
-          background-color: var(--border-color-disabled);
-          opacity: 0.6;
-        }
-
-        .navi_checkbox_marker {
-          background-color: #f5f5f5;
-        }
-
-        &[data-checked] {
-          .navi_checkbox_field {
-            background-color: var(--background-color-disabled-checked);
-          }
-        }
-      }
-
-      &[data-readonly] {
-        .navi_checkbox_field {
-          background-color: var(--border-color-readonly);
-        }
-
-        &[data-checked] {
-          .navi_checkbox_field {
-            background-color: var(--background-color-readonly-checked);
-          }
         }
       }
     }
@@ -470,6 +420,7 @@ const InputCheckboxBasic = (props) => {
       }}
       color={color}
       hasChildFunction
+      preventInitialTransition
     >
       <LoaderBackground
         loading={innerLoading}
