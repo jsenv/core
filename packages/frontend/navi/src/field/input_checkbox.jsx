@@ -59,6 +59,7 @@ import.meta.css = /* css */ `
         var(--color) 80%,
         var(--color-mix)
       );
+      --background-color-hover: var(--background-color);
       --background-color-hover-checked: color-mix(
         in srgb,
         var(--color) 80%,
@@ -136,9 +137,6 @@ import.meta.css = /* css */ `
         opacity: 0;
         stroke: var(--x-checkmark-color);
         transform: scale(0.5);
-        transition-property: opacity, transform;
-        transition-duration: 0.15s;
-        transition-timing-function: ease;
         pointer-events: none;
       }
     }
@@ -151,6 +149,7 @@ import.meta.css = /* css */ `
     }
     /* Hover */
     &[data-hover] {
+      --x-background-color: var(--background-color-hover);
       --x-border-color: var(--border-color-hover);
 
       &[data-checked] {
@@ -166,6 +165,9 @@ import.meta.css = /* css */ `
       .navi_checkbox_marker {
         opacity: 1;
         transform: scale(1);
+        transition-property: opacity, transform;
+        transition-duration: 0.15s;
+        transition-timing-function: ease;
       }
     }
     /* Readonly */
@@ -198,19 +200,32 @@ import.meta.css = /* css */ `
       --toggle-width: 3em;
       --toggle-thumb-size: 1.2em;
       --toggle-padding: 2px;
-      --toggle-thumb-color: white;
       --toggle-thumb-border-radius: 50%;
+      --toggle-background-color: light-dark(#767676, #8e8e93);
+      --toggle-background-color-checked: light-dark(#4476ff, #3b82f6);
+      --toggle-background-color-disabled: #d3d3d3;
+      --toggle-thumb-color: white;
+
+      --background-color: var(--toggle-background-color);
+      --background-color-hover: var(--toggle-background-color);
+      --background-color-hover-checked: var(--toggle-background-color-checked);
+      --background-color-checked: var(--toggle-background-color-checked);
+      --background-color-disabled: var(--toggle-background-color-disabled);
 
       border-radius: calc(
         var(--toggle-thumb-size) / 2 + calc(var(--toggle-padding) * 2)
       );
+
+      .navi_native_field {
+        border-radius: inherit;
+      }
 
       .navi_checkbox_field {
         position: relative;
         width: var(--toggle-width);
         height: auto;
         padding: var(--toggle-padding);
-        background-color: var(--x-border-color);
+        background-color: var(--x-background-color);
         border-color: transparent;
         border-radius: inherit;
         user-select: none;
