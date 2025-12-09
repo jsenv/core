@@ -341,7 +341,7 @@ const InputCheckboxBasic = (props) => {
     onInput,
 
     color,
-    appearance, // "toggle"
+    toggle,
     ...rest
   } = props;
   const defaultRef = useRef();
@@ -422,7 +422,7 @@ const InputCheckboxBasic = (props) => {
       as="span"
       {...remainingProps}
       ref={undefined}
-      data-toggle={appearance === "toggle" ? "" : undefined}
+      data-toggle={toggle ? "" : undefined}
       baseClassName="navi_checkbox"
       pseudoStateSelector=".navi_native_field"
       styleCSSVars={CheckboxStyleCSSVars}
@@ -444,7 +444,7 @@ const InputCheckboxBasic = (props) => {
       />
       {renderCheckboxMemoized}
       <div className="navi_checkbox_field">
-        {appearance === "toggle" ? (
+        {toggle ? (
           <svg
             viewBox="0 0 12 12"
             aria-hidden="true"

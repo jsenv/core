@@ -429,7 +429,7 @@
                 <Box as="fieldset" width="250">
                   <legend>Default</legend>
                   <Label column alignY="center">
-                    <Input type="checkbox" appearance="toggle" />
+                    <Input type="checkbox" toggle />
                     Toggle
                   </Label>
                 </Box>
@@ -439,7 +439,7 @@
                   <Label column alignY="center">
                     <Input
                       type="checkbox"
-                      appearance="toggle"
+                      toggle
                       pseudoState={{ ":focus-visible": true }}
                     />
                     Toggle
@@ -448,7 +448,7 @@
                 <Box as="fieldset" width="250">
                   <legend>:disabled</legend>
                   <Label column alignY="center">
-                    <Input type="checkbox" appearance="toggle" disabled />
+                    <Input type="checkbox" toggle disabled />
                     Toggle
                   </Label>
                 </Box>
@@ -457,7 +457,7 @@
                 <Box as="fieldset" width="250">
                   <legend>:checked</legend>
                   <Label column alignY="center">
-                    <Input type="checkbox" appearance="toggle" defaultChecked />
+                    <Input type="checkbox" toggle defaultChecked />
                     Toggle
                   </Label>
                 </Box>
@@ -467,7 +467,7 @@
                   <Label column alignY="center">
                     <Input
                       type="checkbox"
-                      appearance="toggle"
+                      toggle
                       defaultChecked
                       pseudoState={{ ":focus-visible": true }}
                     />
@@ -478,12 +478,7 @@
                 <Box as="fieldset" width="250">
                   <legend>:disabled:checked</legend>
                   <Label column alignY="center">
-                    <Input
-                      type="checkbox"
-                      appearance="toggle"
-                      disabled
-                      defaultChecked
-                    />
+                    <Input type="checkbox" toggle disabled defaultChecked />
                     Toggle
                   </Label>
                 </Box>
@@ -503,7 +498,7 @@
                   <legend>:read-only</legend>
                   <Box row spacing="sm" alignX="start">
                     <Label>
-                      <Input type="checkbox" appearance="toggle" readOnly />
+                      <Input type="checkbox" toggle readOnly />
                       Read-only
                     </Label>
                   </Box>
@@ -512,7 +507,7 @@
                   <legend>:-navi-loading</legend>
                   <Box row spacing="sm" alignX="start">
                     <Label>
-                      <Input type="checkbox" appearance="toggle" loading />
+                      <Input type="checkbox" toggle loading />
                       Loading
                     </Label>
                   </Box>
@@ -523,12 +518,7 @@
                   <legend>:read-only:checked</legend>
                   <Box row spacing="sm" alignX="start">
                     <Label>
-                      <Input
-                        type="checkbox"
-                        appearance="toggle"
-                        readOnly
-                        checked
-                      />
+                      <Input type="checkbox" toggle readOnly checked />
                       Read-only
                     </Label>
                   </Box>
@@ -537,12 +527,7 @@
                   <legend>:-navi-loading:checked</legend>
                   <Box row spacing="sm" alignX="start">
                     <Label>
-                      <Input
-                        type="checkbox"
-                        appearance="toggle"
-                        loading
-                        checked
-                      />
+                      <Input type="checkbox" toggle loading checked />
                       Loading
                     </Label>
                   </Box>
@@ -564,7 +549,7 @@
                     <Label>
                       <Input
                         type="checkbox"
-                        appearance="toggle"
+                        toggle
                         color="#f39c12"
                         defaultChecked
                       />
@@ -578,7 +563,7 @@
                     <Label>
                       <Input
                         type="checkbox"
-                        appearance="toggle"
+                        toggle
                         color="#2ecc71"
                         defaultChecked
                       />
@@ -592,7 +577,7 @@
                     <Label>
                       <Input
                         type="checkbox"
-                        appearance="toggle"
+                        toggle
                         color="#34495e"
                         defaultChecked
                       />
