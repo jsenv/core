@@ -441,6 +441,7 @@ const InputCheckboxBasic = (props) => {
         loading={innerLoading}
         inset={-1}
         color="var(--loader-color)"
+        targetSelector=".navi_checkbox_field"
       />
       {renderCheckboxMemoized}
       <div className="navi_checkbox_field">
