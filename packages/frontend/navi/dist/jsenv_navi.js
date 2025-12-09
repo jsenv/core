@@ -17828,7 +17828,9 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
     &[data-toggle] {
       --toggle-width: 2.5em;
       --toggle-thumb-size: 1.2em;
-      --toggle-padding: 0.125em;
+      /* Padding uses px and not em otherwise it can be resolved to a float which does not play well */
+      /* With the translation calc in some configurations. In the end 2px is nice in all sizes and can still be configured for exceptions */
+      --toggle-padding: 2px;
       --toggle-thumb-border-radius: 50%;
       --toggle-background-color: light-dark(#767676, #8e8e93);
       --toggle-background-color-checked: var(
@@ -17852,7 +17854,7 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
       );
       --toggle-background-color-hover-checked: color-mix(
         in srgb,
-        var(--toggle-background-color-checked) 80%,
+        var(--toggle-background-color-checked) 90%,
         black
       );
       --toggle-background-color-readonly-checked: color-mix(
