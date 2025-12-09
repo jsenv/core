@@ -254,9 +254,8 @@ import.meta.css = /* css */ `
       --background-color-disabled-checked: var(
         --toggle-background-color-disabled-checked
       );
-      /* container-type: normal; */
 
-      margin: 0;
+      margin: 2px;
       border-radius: calc(
         var(--toggle-thumb-size) / 2 + calc(var(--toggle-padding) * 2)
       );
@@ -282,7 +281,7 @@ import.meta.css = /* css */ `
           width: var(--toggle-thumb-size);
           height: var(--toggle-thumb-size);
           border-radius: var(--toggle-thumb-border-radius);
-          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+          /* box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2); */
           opacity: 1;
           fill: var(--toggle-thumb-color);
           transform: translateX(0);
@@ -296,8 +295,7 @@ import.meta.css = /* css */ `
             calc(
               var(--toggle-width) - var(--toggle-thumb-size) - var(
                   --toggle-padding
-                ) *
-                2
+                ) - var(--toggle-padding)
             )
           );
         }

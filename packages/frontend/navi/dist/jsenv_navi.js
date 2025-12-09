@@ -17826,9 +17826,9 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
 
     /* Toggle appearance */
     &[data-toggle] {
-      --toggle-width: 3em;
+      --toggle-width: 2.5em;
       --toggle-thumb-size: 1.2em;
-      --toggle-padding: 2px;
+      --toggle-padding: 0.125em;
       --toggle-thumb-border-radius: 50%;
       --toggle-background-color: light-dark(#767676, #8e8e93);
       --toggle-background-color-checked: var(
@@ -17852,7 +17852,7 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
       );
       --toggle-background-color-hover-checked: color-mix(
         in srgb,
-        var(--toggle-background-color-checked) 60%,
+        var(--toggle-background-color-checked) 80%,
         black
       );
       --toggle-background-color-readonly-checked: color-mix(
@@ -17883,7 +17883,7 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
         --toggle-background-color-disabled-checked
       );
 
-      margin: 0;
+      margin: 2px;
       border-radius: calc(
         var(--toggle-thumb-size) / 2 + calc(var(--toggle-padding) * 2)
       );
@@ -17895,6 +17895,7 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
 
       .navi_checkbox_field {
         position: relative;
+        box-sizing: border-box;
         width: var(--toggle-width);
         height: auto;
         padding: var(--toggle-padding);
@@ -17904,6 +17905,7 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
         user-select: none;
 
         .navi_checkbox_marker {
+          /* position: absolute; */
           width: var(--toggle-thumb-size);
           height: var(--toggle-thumb-size);
           border-radius: var(--toggle-thumb-border-radius);
@@ -17917,7 +17919,13 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
 
       &[data-checked] {
         .navi_checkbox_marker {
-          transform: translateX(calc(100% + var(--toggle-padding) * 2));
+          transform: translateX(
+            calc(
+              var(--toggle-width) - var(--toggle-thumb-size) - var(
+                  --toggle-padding
+                ) - var(--toggle-padding)
+            )
+          );
         }
       }
     }
@@ -17948,6 +17956,8 @@ const InputCheckbox = props => {
   });
 };
 const CheckboxStyleCSSVars = {
+  "width": "--toggle-width",
+  "height": "--toggle-height",
   "outlineWidth": "--outline-width",
   "borderWidth": "--border-width",
   "borderRadius": "--border-radius",
@@ -18086,19 +18096,23 @@ const InputCheckboxBasic = props => {
       targetSelector: ".navi_checkbox_field"
     }), renderCheckboxMemoized, jsx("div", {
       className: "navi_checkbox_field",
-      children: toggle ? jsx("svg", {
+      children: toggle ? jsx(Box, {
+        as: "svg",
         viewBox: "0 0 12 12",
         "aria-hidden": "true",
         className: "navi_checkbox_marker",
+        preventInitialTransition: true,
         children: jsx("circle", {
           cx: "6",
           cy: "6",
           r: "5"
         })
-      }) : jsx("svg", {
+      }) : jsx(Box, {
+        as: "svg",
         viewBox: "0 0 12 12",
         "aria-hidden": "true",
         className: "navi_checkbox_marker",
+        preventInitialTransition: true,
         children: jsx("path", {
           d: "M10.5 2L4.5 9L1.5 5.5",
           fill: "none",
