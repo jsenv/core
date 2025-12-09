@@ -7,72 +7,72 @@
     <title>Checkbox Demo</title>
     <style>
       body {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
         font-family:
           system-ui,
           -apple-system,
           sans-serif;
-        max-width: 1200px;
-        margin: 0 auto;
-        padding: 20px;
       }
       .demo-grid {
         display: grid;
+        margin-bottom: 30px;
         grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
         gap: 20px;
-        margin-bottom: 30px;
       }
       .demo-card {
+        padding: 20px;
         background: white;
         border-radius: 8px;
-        padding: 20px;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
       }
       .demo-title {
         margin: 0 0 15px 0;
-        color: #333;
-        font-size: 16px;
-        font-weight: 600;
-        border-bottom: 2px solid #e0e0e0;
         padding-bottom: 8px;
+        color: #333;
+        font-weight: 600;
+        font-size: 16px;
+        border-bottom: 2px solid #e0e0e0;
       }
       .result-display {
+        min-height: 20px;
         margin-top: 15px;
         padding: 12px;
+        font-size: 14px;
+        font-family: monospace;
         background: #f8f9fa;
         border: 1px solid #dee2e6;
         border-radius: 4px;
-        min-height: 20px;
-        font-family: monospace;
-        font-size: 14px;
       }
       .result-success {
+        color: #155724;
         background: #d4edda;
         border-color: #c3e6cb;
-        color: #155724;
       }
       .result-error {
+        color: #721c24;
         background: #f8d7da;
         border-color: #f5c6cb;
-        color: #721c24;
       }
       .result-loading {
+        color: #0c5460;
         background: #d1ecf1;
         border-color: #bee5eb;
-        color: #0c5460;
       }
       .button-group {
         display: flex;
-        gap: 10px;
         margin-top: 10px;
+        gap: 10px;
       }
       .control-group {
         margin-bottom: 15px;
       }
       .checkbox-group {
         display: flex;
+        margin-bottom: 10px;
         align-items: center;
         gap: 8px;
-        margin-bottom: 10px;
       }
       .checkbox-group input[type="checkbox"] {
         width: 18px;
@@ -80,16 +80,16 @@
         cursor: pointer;
       }
       .checkbox-group label {
-        font-weight: 500;
         color: #555;
+        font-weight: 500;
         cursor: pointer;
       }
       .status-indicator {
         display: inline-block;
         width: 12px;
         height: 12px;
-        border-radius: 50%;
         margin-right: 8px;
+        border-radius: 50%;
       }
       .status-idle {
         background: #6c757d;
@@ -128,8 +128,8 @@
       }
       h2:first-of-type {
         margin-top: 0;
-        border-top: none;
         padding-top: 0;
+        border-top: none;
       }
     </style>
   </head>
@@ -140,19 +140,10 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState, useRef } from "preact/hooks";
-      import {
-        createAction,
-        // eslint-disable-next-line no-unused-vars
-        Form,
-        // eslint-disable-next-line no-unused-vars
-        Input,
-        // eslint-disable-next-line no-unused-vars
-        Button,
-      } from "@jsenv/navi";
+      import { createAction, Form, Input, Button } from "@jsenv/navi";
 
       const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-      // eslint-disable-next-line no-unused-vars
       const App = () => {
         const [checkboxBackgroundColor, setCheckboxBackgroundColor] =
           useState(undefined);
@@ -266,7 +257,6 @@
         );
       };
 
-      // eslint-disable-next-line no-unused-vars
       const CheckboxDemo = ({ backgroundColor }) => {
         const [result, setResult] = useState("");
         const [status] = useState("idle");
@@ -308,7 +298,7 @@
           </div>
         );
       };
-      // eslint-disable-next-line no-unused-vars
+
       const CheckboxDefaultCheckedDemo = ({ backgroundColor }) => {
         const [result, setResult] = useState("");
         const [status] = useState("idle");
@@ -351,7 +341,7 @@
           </div>
         );
       };
-      // eslint-disable-next-line no-unused-vars
+
       const CheckboxActionDemo = ({ backgroundColor }) => {
         const [result, setResult] = useState("");
         const [status, setStatus] = useState("idle");
@@ -395,7 +385,7 @@
           </div>
         );
       };
-      // eslint-disable-next-line no-unused-vars
+
       const CheckboxActionDefaultCheckedDemo = ({ backgroundColor }) => {
         const [result, setResult] = useState("");
 
@@ -432,7 +422,7 @@
           </div>
         );
       };
-      // eslint-disable-next-line no-unused-vars
+
       const CheckboxActionErrorDemo = ({ backgroundColor }) => {
         const [result, setResult] = useState("");
         const [status, setStatus] = useState("idle");
@@ -475,7 +465,7 @@
           </div>
         );
       };
-      // eslint-disable-next-line no-unused-vars
+
       const CheckboxActionErrorDefaultCheckedDemo = ({ backgroundColor }) => {
         const [result, setResult] = useState("");
         const [status, setStatus] = useState("idle");
@@ -524,7 +514,6 @@
         );
       };
 
-      // eslint-disable-next-line no-unused-vars
       const CheckboxActionErrorOnUncheckedDemo = ({ backgroundColor }) => {
         // for this example the checkbox is going to be controlled because that's how you would
         // implement it in a real world scenario:
@@ -589,7 +578,7 @@
         await delay(600);
         return `${notifications ? "✅" : "☐"} Notifications ${notifications ? "enabled" : "disabled"}`;
       });
-      // eslint-disable-next-line no-unused-vars
+
       const CheckboxActionObjectDemo = ({ backgroundColor }) => {
         const [result, setResult] = useState("");
 
@@ -626,7 +615,6 @@
         );
       };
 
-      // eslint-disable-next-line no-unused-vars
       const CheckboxFormControlledErrorDemo = ({ backgroundColor }) => {
         const [checked, setChecked] = useState(true);
         const [result, setResult] = useState("");
