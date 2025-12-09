@@ -191,15 +191,91 @@ import.meta.css = /* css */ `
       }
     }
 
-    /* Toggle appeareance */
+    /* Toggle appearance */
     &[data-toggle] {
+      --toggle-width: 3em;
+      --toggle-height: 1.5em;
+      --toggle-thumb-size: 1.2em;
+      --toggle-padding: 2px;
+
       .navi_checkbox_field {
-        width: calc(var(--x-width) * 2);
-        border-radius: calc(var(--x-height) / 2);
+        position: relative;
+        width: var(--toggle-width);
+        height: auto;
+        padding: var(--toggle-padding);
+        background-color: var(--x-border-color);
+        border-color: transparent;
+        border-radius: calc(var(--toggle-height) / 2);
+        transition: background-color 0.2s ease;
+
+        .navi_checkbox_marker {
+          width: var(--toggle-thumb-size);
+          height: var(--toggle-thumb-size);
+          background-color: white;
+          border-radius: 50%;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+          opacity: 1;
+          fill: white;
+          stroke: none;
+          transform: translateX(0);
+          transition: transform 0.2s ease;
+        }
       }
-      .navi_checkbox_marker {
-        fill: var(--x-checkmark-color);
-        stroke: none;
+
+      &[data-checked] {
+        .navi_checkbox_field {
+          background-color: var(--x-color);
+          border-color: var(--x-color);
+        }
+
+        .navi_checkbox_marker {
+          transform: translateX(100%);
+        }
+      }
+
+      &[data-hover] {
+        .navi_checkbox_field {
+          background-color: color-mix(
+            in srgb,
+            var(--x-border-color) 80%,
+            var(--color-mix)
+          );
+        }
+
+        &[data-checked] {
+          .navi_checkbox_field {
+            background-color: var(--background-color-hover-checked);
+          }
+        }
+      }
+
+      &[data-disabled] {
+        .navi_checkbox_field {
+          background-color: var(--border-color-disabled);
+          opacity: 0.6;
+        }
+
+        .navi_checkbox_marker {
+          background-color: #f5f5f5;
+        }
+
+        &[data-checked] {
+          .navi_checkbox_field {
+            background-color: var(--background-color-disabled-checked);
+          }
+        }
+      }
+
+      &[data-readonly] {
+        .navi_checkbox_field {
+          background-color: var(--border-color-readonly);
+        }
+
+        &[data-checked] {
+          .navi_checkbox_field {
+            background-color: var(--background-color-readonly-checked);
+          }
+        }
       }
     }
   }
@@ -336,7 +412,6 @@ const InputCheckboxBasic = (props) => {
       checked={checked}
       required={innerRequired}
       baseClassName="navi_native_field"
-      data-toggle={appearance === "toggle" ? "" : undefined}
       data-callout-arrow-x="center"
       onClick={innerOnClick}
       onInput={innerOnInput}
@@ -377,6 +452,7 @@ const InputCheckboxBasic = (props) => {
       as="span"
       {...remainingProps}
       ref={undefined}
+      data-toggle={appearance === "toggle" ? "" : undefined}
       baseClassName="navi_checkbox"
       pseudoStateSelector=".navi_native_field"
       styleCSSVars={CheckboxStyleCSSVars}

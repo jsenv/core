@@ -12,7 +12,7 @@ import.meta.css = /* css */ `
   .navi_message_box {
     .navi_title {
       margin-top: 0;
-      margin-bottom: var(--navi-spacing-s);
+      margin-bottom: var(--navi-s);
       color: var(--x-message-color);
     }
   }
