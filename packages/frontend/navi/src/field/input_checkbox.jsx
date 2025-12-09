@@ -224,7 +224,7 @@ import.meta.css = /* css */ `
       );
       --toggle-background-color-hover-checked: color-mix(
         in srgb,
-        var(--toggle-background-color-checked) 60%,
+        var(--toggle-background-color-checked) 80%,
         black
       );
       --toggle-background-color-readonly-checked: color-mix(
