@@ -212,12 +212,14 @@ import.meta.css = /* css */ `
       --background-color-checked: var(--toggle-background-color-checked);
       --background-color-disabled: var(--toggle-background-color-disabled);
 
+      margin: 0;
       border-radius: calc(
         var(--toggle-thumb-size) / 2 + calc(var(--toggle-padding) * 2)
       );
 
       .navi_native_field {
         border-radius: inherit;
+        appearance: none; /* This allows border-radius to have an effect */
       }
 
       .navi_checkbox_field {
