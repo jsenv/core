@@ -271,6 +271,7 @@ const InputCheckboxBasic = (props) => {
     defaultChecked,
     /* eslint-enable no-unused-vars */
 
+    id,
     name,
     readOnly,
     disabled,
@@ -314,6 +315,7 @@ const InputCheckboxBasic = (props) => {
   const renderCheckbox = (checkboxProps) => (
     <Box
       {...checkboxProps}
+      id={id}
       as="input"
       ref={ref}
       type="checkbox"
@@ -333,6 +335,7 @@ const InputCheckboxBasic = (props) => {
     />
   );
   const renderCheckboxMemoized = useCallback(renderCheckbox, [
+    id,
     innerName,
     checked,
     innerRequired,
