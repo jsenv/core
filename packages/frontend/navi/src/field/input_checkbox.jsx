@@ -291,14 +291,15 @@ import.meta.css = /* css */ `
 
       &[data-checked] {
         .navi_checkbox_marker {
-          position: relative;
-          left: -2px;
+          /* We remove padding 3 times */
+          /* - twice to get real width (box-sizing: border-box) */
+          /* - one more to apply right padding to the translation */
           transform: translateX(
             calc(
               var(--toggle-width) - var(--toggle-thumb-size) - var(
                   --toggle-padding
                 ) *
-                2
+                3
             )
           );
         }

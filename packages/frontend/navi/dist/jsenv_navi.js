@@ -17909,7 +17909,7 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
           width: var(--toggle-thumb-size);
           height: var(--toggle-thumb-size);
           border-radius: var(--toggle-thumb-border-radius);
-          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+          /* box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2); */
           opacity: 1;
           fill: var(--toggle-thumb-color);
           transform: translateX(0);
@@ -17919,11 +17919,15 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
 
       &[data-checked] {
         .navi_checkbox_marker {
+          /* We remove padding 3 times */
+          /* - twice to get real width (box-sizing: border-box) */
+          /* - one more to apply right padding to the translation */
           transform: translateX(
             calc(
               var(--toggle-width) - var(--toggle-thumb-size) - var(
                   --toggle-padding
-                ) - var(--toggle-padding)
+                ) *
+                3
             )
           );
         }
