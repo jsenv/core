@@ -574,15 +574,15 @@
             </div>
 
             <div className="states-section">
-              <div className="states-title">Toggle Sizes</div>
+              <div className="states-title">Toggle Width Control</div>
               <p className="states-description">
-                Toggle size can be controlled with the size prop, affecting both
-                the track and thumb proportionally.
+                Toggle width can be controlled with the width prop for custom
+                sizing.
               </p>
 
               <Box column spacing="sm">
                 <fieldset>
-                  <legend>Medium (Default)</legend>
+                  <legend>Default Width</legend>
                   <Box row spacing="sm" alignX="start" alignY="center">
                     <Label column alignY="center" spacing="s">
                       <Input type="checkbox" toggle />
@@ -595,40 +595,19 @@
                   </Box>
                 </fieldset>
                 <fieldset>
-                  <legend>Small</legend>
+                  <legend>Custom Width (30px)</legend>
                   <Box row spacing="sm" alignX="start" alignY="center">
                     <Label column alignY="center" spacing="s">
-                      <Input type="checkbox" toggle size="s" />
+                      <Input type="checkbox" toggle width="30px" />
                       Label
                     </Label>
                     <Label column alignY="center" spacing="s">
-                      <Input type="checkbox" toggle size="s" defaultChecked />
-                      Label
-                    </Label>
-                  </Box>
-                </fieldset>
-                <fieldset>
-                  <legend>Very small</legend>
-                  <Box row spacing="sm" alignX="start" alignY="center">
-                    <Label column alignY="center" spacing="s">
-                      <Input type="checkbox" toggle size="xs" />
-                      Label
-                    </Label>
-                    <Label column alignY="center" spacing="s">
-                      <Input type="checkbox" toggle size="xs" defaultChecked />
-                      Label
-                    </Label>
-                  </Box>
-                </fieldset>
-                <fieldset>
-                  <legend>Large</legend>
-                  <Box row spacing="sm" alignX="start" alignY="center">
-                    <Label column alignY="center" spacing="s">
-                      <Input type="checkbox" toggle size="l" />
-                      Label
-                    </Label>
-                    <Label column alignY="center" spacing="s">
-                      <Input type="checkbox" toggle size="l" defaultChecked />
+                      <Input
+                        type="checkbox"
+                        toggle
+                        width="30px"
+                        defaultChecked
+                      />
                       Label
                     </Label>
                   </Box>

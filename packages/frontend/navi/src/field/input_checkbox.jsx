@@ -321,6 +321,8 @@ export const InputCheckbox = (props) => {
 };
 
 const CheckboxStyleCSSVars = {
+  "width": "--toggle-width",
+  "height": "--toggle-height",
   "outlineWidth": "--outline-width",
   "borderWidth": "--border-width",
   "borderRadius": "--border-radius",
