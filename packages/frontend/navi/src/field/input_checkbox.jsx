@@ -207,9 +207,17 @@ import.meta.css = /* css */ `
       --toggle-thumb-color: white;
 
       --background-color: var(--toggle-background-color);
-      --background-color-hover: var(--toggle-background-color);
-      --background-color-hover-checked: var(--toggle-background-color-checked);
       --background-color-checked: var(--toggle-background-color-checked);
+      --background-color-hover: color-mix(
+        in srgb,
+        var(--toggle-background-color) 60%,
+        white
+      );
+      --background-color-hover-checked: color-mix(
+        in srgb,
+        var(--toggle-background-color-checked) 60%,
+        black
+      );
       --background-color-disabled: var(--toggle-background-color-disabled);
 
       margin: 0;
