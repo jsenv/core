@@ -29,10 +29,6 @@ import {
 import { requestAction } from "./validation/custom_constraint_validation.js";
 import { useConstraints } from "./validation/hooks/use_constraints.js";
 
-// to finish: la couleur du checkmark: faire un exemple navi/natif
-// avec le constraste de couleur
-// et voir comment la checkbox se comporte au hover/checked aussi au passage
-
 import.meta.css = /* css */ `
   @layer navi {
     .navi_checkbox {
@@ -83,20 +79,15 @@ import.meta.css = /* css */ `
       --checkmark-color-disabled: #eeeeee;
       --border-color-disabled-checked: #d3d3d3;
       --background-color-disabled-checked: #d3d3d3;
-    }
 
-    .navi_checkbox[data-dark] {
-      --color-mix: var(--color-mix-dark);
-      --checkmark-color: var(--navi-checkmark-color-dark);
+      &[data-dark] {
+        --color-mix: var(--color-mix-dark);
+        --checkmark-color: var(--navi-checkmark-color-dark);
+      }
     }
   }
 
   .navi_checkbox {
-    position: relative;
-    display: inline-flex;
-    box-sizing: content-box;
-    margin: 3px 3px 3px 4px;
-
     --x-border-radius: var(--border-radius);
     --x-outline-offset: var(--outline-offset);
     --x-outline-width: var(--outline-width);
@@ -108,82 +99,97 @@ import.meta.css = /* css */ `
     --x-border-color: var(--border-color);
     --x-color: var(--color);
     --x-checkmark-color: var(--checkmark-color);
-  }
-  .navi_checkbox .navi_native_field {
-    position: absolute;
-    inset: 0;
-    margin: 0;
-    padding: 0;
-    border: none;
-    opacity: 0;
-    cursor: inherit;
-  }
-  .navi_checkbox .navi_checkbox_field {
-    display: inline-flex;
-    box-sizing: border-box;
-    width: var(--x-width);
-    height: var(--x-height);
-    background-color: var(--x-background-color);
-    border-width: var(--x-border-width);
-    border-style: solid;
-    border-color: var(--x-border-color);
-    border-radius: var(--x-border-radius);
-    outline-width: var(--x-outline-width);
-    outline-style: none;
-    outline-color: var(--x-outline-color);
-    outline-offset: var(--x-outline-offset);
-  }
-  .navi_checkbox_marker {
-    width: 100%;
-    height: 100%;
-    opacity: 0;
-    stroke: var(--x-checkmark-color);
-    transform: scale(0.5);
-    transition: all 0.15s ease;
-    pointer-events: none;
-  }
-  .navi_checkbox[data-checked] .navi_checkbox_marker {
-    opacity: 1;
-    transform: scale(1);
-  }
 
-  /* Focus */
-  .navi_checkbox[data-focus-visible] .navi_checkbox_field {
-    outline-style: solid;
-  }
-  /* Hover */
-  .navi_checkbox[data-hover] {
-    --x-border-color: var(--border-color-hover);
-  }
-  .navi_checkbox[data-checked][data-hover] {
-    --x-border-color: var(--border-color-hover-checked);
-    --x-background-color: var(--background-color-hover-checked);
-  }
-  /* Checked */
-  .navi_checkbox[data-checked] {
-    --x-background-color: var(--x-color);
-    --x-border-color: var(--x-color);
-  }
-  /* Readonly */
-  .navi_checkbox[data-readonly],
-  .navi_checkbox[data-readonly][data-hover] {
-    --x-border-color: var(--border-color-readonly);
-    --x-background-color: var(--background-color-readonly);
-  }
-  .navi_checkbox[data-readonly][data-checked] {
-    --x-border-color: var(--border-color-readonly-checked);
-    --x-background-color: var(--background-color-readonly-checked);
-    --x-checkmark-color: var(--checkmark-color-readonly);
-  }
-  /* Disabled */
-  .navi_checkbox[data-disabled] {
-    --x-border-color: var(--border-color-disabled);
-    --x-background-color: var(--background-color-disabled);
-  }
-  .navi_checkbox[data-disabled][data-checked] {
-    --x-border-color: var(--border-color-disabled-checked);
-    --x-background-color: var(--background-color-disabled-checked);
-    --x-checkmark-color: var(--checkmark-color-disabled);
+    position: relative;
+    display: inline-flex;
+    box-sizing: content-box;
+    margin: 3px 3px 3px 4px;
+
+    .navi_native_field {
+      position: absolute;
+      inset: 0;
+      margin: 0;
+      padding: 0;
+      border: none;
+      opacity: 0;
+      cursor: inherit;
+    }
+
+    .navi_checkbox_field {
+      display: inline-flex;
+      box-sizing: border-box;
+      width: var(--x-width);
+      height: var(--x-height);
+      background-color: var(--x-background-color);
+      border-width: var(--x-border-width);
+      border-style: solid;
+      border-color: var(--x-border-color);
+      border-radius: var(--x-border-radius);
+      outline-width: var(--x-outline-width);
+      outline-style: none;
+      outline-color: var(--x-outline-color);
+      outline-offset: var(--x-outline-offset);
+
+      .navi_checkbox_marker {
+        width: 100%;
+        height: 100%;
+        opacity: 0;
+        stroke: var(--x-checkmark-color);
+        transform: scale(0.5);
+        transition: all 0.15s ease;
+        pointer-events: none;
+      }
+    }
+
+    /* Focus */
+    &[data-focus-visible] {
+      .navi_checkbox_field {
+        outline-style: solid;
+      }
+    }
+    /* Hover */
+    &[data-hover] {
+      --x-border-color: var(--border-color-hover);
+
+      &[data-checked] {
+        --x-border-color: var(--border-color-hover-checked);
+        --x-background-color: var(--background-color-hover-checked);
+      }
+    }
+    /* Checked */
+    &[data-checked] {
+      --x-background-color: var(--x-color);
+      --x-border-color: var(--x-color);
+
+      .navi_checkbox_marker {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+    /* Readonly */
+    &[data-readonly],
+    &[data-readonly][data-hover] {
+      --x-border-color: var(--border-color-readonly);
+      --x-background-color: var(--background-color-readonly);
+
+      &[data-checked] {
+        --x-border-color: var(--border-color-readonly-checked);
+        --x-background-color: var(--background-color-readonly-checked);
+        --x-checkmark-color: var(--checkmark-color-readonly);
+      }
+    }
+
+    /* Disabled */
+    &[data-disabled] {
+      --x-border-color: var(--border-color-disabled);
+      --x-background-color: var(--background-color-disabled);
+
+      &[data-checked] {
+        --x-border-color: var(--border-color-disabled-checked);
+        --x-background-color: var(--background-color-disabled-checked);
+        --x-checkmark-color: var(--checkmark-color-disabled);
+      }
+    }
   }
 `;
 

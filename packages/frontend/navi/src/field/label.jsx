@@ -20,6 +20,15 @@ import.meta.css = /* css */ `
 export const ReportReadOnlyOnLabelContext = createContext();
 export const ReportDisabledOnLabelContext = createContext();
 
+const LabelPseudoClasses = [
+  ":hover",
+  ":active",
+  ":focus",
+  ":focus-visible",
+  ":read-only",
+  ":disabled",
+  ":-navi-loading",
+];
 export const Label = (props) => {
   const { readOnly, disabled, children, ...rest } = props;
 
@@ -32,9 +41,10 @@ export const Label = (props) => {
     <Box
       {...rest}
       as="label"
+      pseudoClasses={LabelPseudoClasses}
       basePseudoState={{
-        readOnly: innerReadOnly,
-        disabled: innerDisabled,
+        ":read-only": innerReadOnly,
+        ":disabled": innerDisabled,
       }}
     >
       <ReportReadOnlyOnLabelContext.Provider value={setInputReadOnly}>
