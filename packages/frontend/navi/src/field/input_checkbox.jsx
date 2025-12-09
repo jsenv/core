@@ -270,7 +270,7 @@ import.meta.css = /* css */ `
         position: relative;
         box-sizing: border-box;
         width: var(--toggle-width);
-        height: calc(var(--toggle-thumb-size) + var(--toggle-padding) * 2);
+        height: auto;
         padding: var(--toggle-padding);
         background-color: var(--x-background-color);
         border-color: transparent;
@@ -278,9 +278,9 @@ import.meta.css = /* css */ `
         user-select: none;
 
         .navi_checkbox_marker {
-          position: absolute;
-          width: calc(var(--toggle-thumb-size) - var(--toggle-padding));
-          height: calc(var(--toggle-thumb-size) - var(--toggle-padding));
+          /* position: absolute; */
+          width: var(--toggle-thumb-size);
+          height: var(--toggle-thumb-size);
           border-radius: var(--toggle-thumb-border-radius);
           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
           opacity: 1;
@@ -292,7 +292,14 @@ import.meta.css = /* css */ `
 
       &[data-checked] {
         .navi_checkbox_marker {
-          transform: translateX(100%);
+          transform: translateX(
+            calc(
+              var(--toggle-width) - var(--toggle-thumb-size) - var(
+                  --toggle-padding
+                ) *
+                2
+            )
+          );
         }
       }
     }
