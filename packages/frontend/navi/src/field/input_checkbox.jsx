@@ -136,7 +136,9 @@ import.meta.css = /* css */ `
         opacity: 0;
         stroke: var(--x-checkmark-color);
         transform: scale(0.5);
-        transition: all 0.15s ease;
+        transition-property: opacity, transform;
+        transition-duration: 0.15s;
+        transition-timing-function: ease;
         pointer-events: none;
       }
     }
@@ -194,9 +196,12 @@ import.meta.css = /* css */ `
     /* Toggle appearance */
     &[data-toggle] {
       --toggle-width: 3em;
-      --toggle-height: 1.5em;
       --toggle-thumb-size: 1.2em;
       --toggle-padding: 2px;
+
+      border-radius: calc(
+        var(--toggle-thumb-size) / 2 + calc(var(--toggle-padding) * 2)
+      );
 
       .navi_checkbox_field {
         position: relative;
@@ -205,8 +210,8 @@ import.meta.css = /* css */ `
         padding: var(--toggle-padding);
         background-color: var(--x-border-color);
         border-color: transparent;
-        border-radius: calc(var(--toggle-height) / 2);
-        transition: background-color 0.2s ease;
+        border-radius: inherit;
+        user-select: none;
 
         .navi_checkbox_marker {
           width: var(--toggle-thumb-size);
@@ -229,7 +234,7 @@ import.meta.css = /* css */ `
         }
 
         .navi_checkbox_marker {
-          transform: translateX(100%);
+          transform: translateX(calc(100% + var(--toggle-padding) * 2));
         }
       }
 

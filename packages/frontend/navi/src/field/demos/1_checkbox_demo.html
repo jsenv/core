@@ -426,81 +426,66 @@
               </p>
 
               <Box column spacing="sm">
-                <Box as="fieldset" width="100">
+                <Box as="fieldset" width="250">
                   <legend>Default</legend>
-                  <Box row spacing="sm" alignX="start">
-                    <Label>
-                      <Input type="checkbox" appearance="toggle" />
-                      Toggle
-                    </Label>
-                  </Box>
+                  <Label column alignY="center">
+                    <Input type="checkbox" appearance="toggle" />
+                    Toggle
+                  </Label>
                 </Box>
-                <Box as="fieldset" width="200">
+                <Box as="fieldset" width="250">
                   <legend>:focus-visible</legend>
-                  <Box row spacing="sm" alignX="start">
-                    <Label>
-                      <Input
-                        type="checkbox"
-                        appearance="toggle"
-                        pseudoState={{ ":focus-visible": true }}
-                      />
-                      Toggle
-                    </Label>
-                  </Box>
+
+                  <Label column alignY="center">
+                    <Input
+                      type="checkbox"
+                      appearance="toggle"
+                      pseudoState={{ ":focus-visible": true }}
+                    />
+                    Toggle
+                  </Label>
                 </Box>
-                <Box as="fieldset" width="150">
+                <Box as="fieldset" width="250">
                   <legend>:disabled</legend>
-                  <Box row spacing="sm" alignX="start">
-                    <Label>
-                      <Input type="checkbox" appearance="toggle" disabled />
-                      Toggle
-                    </Label>
-                  </Box>
+                  <Label column alignY="center">
+                    <Input type="checkbox" appearance="toggle" disabled />
+                    Toggle
+                  </Label>
                 </Box>
               </Box>
               <Box column spacing="sm">
-                <Box as="fieldset" width="100">
+                <Box as="fieldset" width="250">
                   <legend>:checked</legend>
-                  <Box row spacing="sm" alignX="start">
-                    <Label>
-                      <Input
-                        type="checkbox"
-                        appearance="toggle"
-                        defaultChecked
-                      />
-                      Toggle
-                    </Label>
-                  </Box>
+                  <Label column alignY="center">
+                    <Input type="checkbox" appearance="toggle" defaultChecked />
+                    Toggle
+                  </Label>
                 </Box>
 
-                <Box as="fieldset" width="200">
+                <Box as="fieldset" width="250">
                   <legend>:focus-visible:checked</legend>
-                  <Box row spacing="sm" alignX="start">
-                    <Label>
-                      <Input
-                        type="checkbox"
-                        appearance="toggle"
-                        defaultChecked
-                        pseudoState={{ ":focus-visible": true }}
-                      />
-                      Toggle
-                    </Label>
-                  </Box>
+                  <Label column alignY="center">
+                    <Input
+                      type="checkbox"
+                      appearance="toggle"
+                      defaultChecked
+                      pseudoState={{ ":focus-visible": true }}
+                    />
+                    Toggle
+                  </Label>
                 </Box>
 
-                <Box as="fieldset" width="150">
+                <Box as="fieldset" width="250">
                   <legend>:disabled:checked</legend>
-                  <Box row spacing="sm" alignX="start">
-                    <Label>
-                      <Input
-                        type="checkbox"
-                        appearance="toggle"
-                        disabled
-                        defaultChecked
-                      />
-                      Toggle
-                    </Label>
-                  </Box>
+                  <Label column alignY="center">
+                    <Input
+                      type="checkbox"
+                      appearance="toggle"
+                      disabled
+                      defaultChecked
+                    />
+                    Toggle
+                  </Label>
                 </Box>
               </Box>
             </div>
