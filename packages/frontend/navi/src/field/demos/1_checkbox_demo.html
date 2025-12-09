@@ -419,38 +419,78 @@
             <h2>Toggle Appearance</h2>
 
             <div className="states-section">
-              <div className="states-title">appearance="toggle"</div>
+              <div className="states-title">Standard Toggle States</div>
               <p className="states-description">
-                The toggle appearance provides an alternative visual style that
-                resembles switch controls.
+                Toggle appearance provides a switch-like visual style with the
+                same state behaviors as standard checkboxes.
               </p>
 
               <Box column spacing="sm">
                 <Box as="fieldset" width="100">
-                  <legend>Basic Toggle</legend>
+                  <legend>Default</legend>
                   <Box row spacing="sm" alignX="start">
                     <Label>
                       <Input type="checkbox" appearance="toggle" />
-                      Unchecked
+                      Toggle
                     </Label>
+                  </Box>
+                </Box>
+                <Box as="fieldset" width="200">
+                  <legend>:focus-visible</legend>
+                  <Box row spacing="sm" alignX="start">
+                    <Label>
+                      <Input
+                        type="checkbox"
+                        appearance="toggle"
+                        pseudoState={{ ":focus-visible": true }}
+                      />
+                      Toggle
+                    </Label>
+                  </Box>
+                </Box>
+                <Box as="fieldset" width="150">
+                  <legend>:disabled</legend>
+                  <Box row spacing="sm" alignX="start">
+                    <Label>
+                      <Input type="checkbox" appearance="toggle" disabled />
+                      Toggle
+                    </Label>
+                  </Box>
+                </Box>
+              </Box>
+              <Box column spacing="sm">
+                <Box as="fieldset" width="100">
+                  <legend>:checked</legend>
+                  <Box row spacing="sm" alignX="start">
                     <Label>
                       <Input
                         type="checkbox"
                         appearance="toggle"
                         defaultChecked
                       />
-                      Checked
+                      Toggle
                     </Label>
                   </Box>
                 </Box>
 
                 <Box as="fieldset" width="200">
-                  <legend>Toggle States</legend>
+                  <legend>:focus-visible:checked</legend>
                   <Box row spacing="sm" alignX="start">
                     <Label>
-                      <Input type="checkbox" appearance="toggle" disabled />
-                      Disabled
+                      <Input
+                        type="checkbox"
+                        appearance="toggle"
+                        defaultChecked
+                        pseudoState={{ ":focus-visible": true }}
+                      />
+                      Toggle
                     </Label>
+                  </Box>
+                </Box>
+
+                <Box as="fieldset" width="150">
+                  <legend>:disabled:checked</legend>
+                  <Box row spacing="sm" alignX="start">
                     <Label>
                       <Input
                         type="checkbox"
@@ -458,13 +498,97 @@
                         disabled
                         defaultChecked
                       />
-                      Disabled Checked
+                      Toggle
                     </Label>
                   </Box>
                 </Box>
+              </Box>
+            </div>
 
+            <div className="states-section">
+              <div className="states-title enhanced-states-title">
+                Enhanced Toggle States
+              </div>
+              <p className="states-description">
+                Additional toggle states for enhanced UX patterns.
+              </p>
+
+              <Box column spacing="sm">
                 <Box as="fieldset" width="200">
-                  <legend>Toggle with Custom Color</legend>
+                  <legend>:read-only</legend>
+                  <Box row spacing="sm" alignX="start">
+                    <Label>
+                      <Input type="checkbox" appearance="toggle" readOnly />
+                      Read-only
+                    </Label>
+                  </Box>
+                </Box>
+                <Box as="fieldset" width="200">
+                  <legend>:-navi-loading</legend>
+                  <Box row spacing="sm" alignX="start">
+                    <Label>
+                      <Input type="checkbox" appearance="toggle" loading />
+                      Loading
+                    </Label>
+                  </Box>
+                </Box>
+              </Box>
+              <Box column spacing="sm">
+                <Box as="fieldset" width="200">
+                  <legend>:read-only:checked</legend>
+                  <Box row spacing="sm" alignX="start">
+                    <Label>
+                      <Input
+                        type="checkbox"
+                        appearance="toggle"
+                        readOnly
+                        checked
+                      />
+                      Read-only
+                    </Label>
+                  </Box>
+                </Box>
+                <Box as="fieldset" width="200">
+                  <legend>:-navi-loading:checked</legend>
+                  <Box row spacing="sm" alignX="start">
+                    <Label>
+                      <Input
+                        type="checkbox"
+                        appearance="toggle"
+                        loading
+                        checked
+                      />
+                      Loading
+                    </Label>
+                  </Box>
+                </Box>
+              </Box>
+            </div>
+
+            <div className="states-section">
+              <div className="states-title">Custom Color Toggle</div>
+              <p className="states-description">
+                Toggle appearance with custom colors maintains the same color
+                theming as regular checkboxes.
+              </p>
+
+              <Box column spacing="sm">
+                <fieldset>
+                  <legend>Orange</legend>
+                  <Box row spacing="sm" alignX="start">
+                    <Label>
+                      <Input
+                        type="checkbox"
+                        appearance="toggle"
+                        color="#f39c12"
+                        defaultChecked
+                      />
+                      Orange Toggle
+                    </Label>
+                  </Box>
+                </fieldset>
+                <fieldset>
+                  <legend>Green</legend>
                   <Box row spacing="sm" alignX="start">
                     <Label>
                       <Input
@@ -475,17 +599,22 @@
                       />
                       Green Toggle
                     </Label>
+                  </Box>
+                </fieldset>
+                <fieldset>
+                  <legend>Dark grey</legend>
+                  <Box row spacing="sm" alignX="start">
                     <Label>
                       <Input
                         type="checkbox"
                         appearance="toggle"
-                        color="#e74c3c"
+                        color="#34495e"
                         defaultChecked
                       />
-                      Red Toggle
+                      Dark Grey Toggle
                     </Label>
                   </Box>
-                </Box>
+                </fieldset>
               </Box>
             </div>
           </div>
