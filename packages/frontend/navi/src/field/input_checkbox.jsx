@@ -26,7 +26,7 @@ import {
   useUIState,
   useUIStateController,
 } from "./use_ui_state_controller.js";
-import { requestAction } from "./validation/custom_constraint_validation.js";
+import { forwardActionRequested } from "./validation/custom_constraint_validation.js";
 import { useConstraints } from "./validation/hooks/use_constraints.js";
 
 import.meta.css = /* css */ `
@@ -398,7 +398,6 @@ const InputCheckboxWithAction = (props) => {
   const {
     action,
     onCancel,
-    onChange,
     actionErrorEffect,
     onActionPrevented,
     onActionStart,
@@ -427,6 +426,7 @@ const InputCheckboxWithAction = (props) => {
       uiStateController.resetUIState(e);
       onCancel?.(e, reason);
     },
+    onRequested: (e) => forwardActionRequested(e, actionBoundToUIState),
     onPrevented: onActionPrevented,
     onAction: executeAction,
     onStart: onActionStart,
@@ -449,12 +449,6 @@ const InputCheckboxWithAction = (props) => {
       {...rest}
       ref={ref}
       loading={loading || actionLoading}
-      onChange={(e) => {
-        requestAction(e.target, actionBoundToUIState, {
-          event: e,
-        });
-        onChange?.(e);
-      }}
     />
   );
 };

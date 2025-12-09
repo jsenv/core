@@ -695,6 +695,27 @@ export const installCustomConstraintValidation = (
     });
   }
 
+  request_on_checkbox_change: {
+    const isCheckbox =
+      element.tagName === "INPUT" && element.type === "checkbox";
+    if (!isCheckbox) {
+      break request_on_checkbox_change;
+    }
+    const onchange = (e) => {
+      if (element.parentNode.hasAttribute("data-action")) {
+        dispatchActionRequestedCustomEvent(element, {
+          event: e,
+          requester: element,
+        });
+        return;
+      }
+    };
+    element.addEventListener("change", onchange);
+    addTeardown(() => {
+      element.removeEventListener("change", onchange);
+    });
+  }
+
   execute_on_form_submit: {
     if (!isForm) {
       break execute_on_form_submit;
