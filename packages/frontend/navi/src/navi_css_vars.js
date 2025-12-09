@@ -21,11 +21,11 @@ import.meta.css = /* css */ `
       --navi-error-color-light: #fcebed;
       --navi-error-color: #eb364b;
 
-      --navi-xxs: 0.125em;
-      --navi-xs: 0.25em;
-      --navi-s: 0.5em;
-      --navi-m: 1em;
-      --navi-l: 1.5em;
+      --navi-xxs: 0.125em; /* = 2px at 16px base */
+      --navi-xs: 0.25em; /* = 4px at 16px base */
+      --navi-s: 0.5em; /* = 8px at 16px base */
+      --navi-m: 1em; /* = 16px at 16px base (base font size) */
+      --navi-l: 1.5em; /* = 24px at 16px base */
       --navi-xl: 2em;
       --navi-xxl: 3em;
     }

@@ -582,6 +582,19 @@
 
               <Box column spacing="sm">
                 <fieldset>
+                  <legend>Medium (Default)</legend>
+                  <Box row spacing="sm" alignX="start" alignY="center">
+                    <Label column alignY="center" spacing="s">
+                      <Input type="checkbox" toggle />
+                      Label
+                    </Label>
+                    <Label column alignY="center" spacing="s">
+                      <Input type="checkbox" toggle defaultChecked />
+                      Label
+                    </Label>
+                  </Box>
+                </fieldset>
+                <fieldset>
                   <legend>Small</legend>
                   <Box row spacing="sm" alignX="start" alignY="center">
                     <Label column alignY="center" spacing="s">
@@ -595,14 +608,14 @@
                   </Box>
                 </fieldset>
                 <fieldset>
-                  <legend>Medium (Default)</legend>
+                  <legend>Very small</legend>
                   <Box row spacing="sm" alignX="start" alignY="center">
                     <Label column alignY="center" spacing="s">
-                      <Input type="checkbox" toggle />
+                      <Input type="checkbox" toggle size="xs" />
                       Label
                     </Label>
                     <Label column alignY="center" spacing="s">
-                      <Input type="checkbox" toggle defaultChecked />
+                      <Input type="checkbox" toggle size="xs" defaultChecked />
                       Label
                     </Label>
                   </Box>

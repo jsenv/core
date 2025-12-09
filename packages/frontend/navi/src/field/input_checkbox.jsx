@@ -198,9 +198,9 @@ import.meta.css = /* css */ `
 
     /* Toggle appearance */
     &[data-toggle] {
-      --toggle-width: 3em;
+      --toggle-width: 2.5em;
       --toggle-thumb-size: 1.2em;
-      --toggle-padding: 2px;
+      --toggle-padding: 0.125em;
       --toggle-thumb-border-radius: 50%;
       --toggle-background-color: light-dark(#767676, #8e8e93);
       --toggle-background-color-checked: var(
@@ -491,21 +491,25 @@ const InputCheckboxBasic = (props) => {
       {renderCheckboxMemoized}
       <div className="navi_checkbox_field">
         {toggle ? (
-          <svg
+          <Box
+            as="svg"
             viewBox="0 0 12 12"
             aria-hidden="true"
             className="navi_checkbox_marker"
+            preventInitialTransition
           >
             <circle cx="6" cy="6" r="5"></circle>
-          </svg>
+          </Box>
         ) : (
-          <svg
+          <Box
+            as="svg"
             viewBox="0 0 12 12"
             aria-hidden="true"
             className="navi_checkbox_marker"
+            preventInitialTransition
           >
             <path d="M10.5 2L4.5 9L1.5 5.5" fill="none" strokeWidth="2" />
-          </svg>
+          </Box>
         )}
       </div>
     </Box>
