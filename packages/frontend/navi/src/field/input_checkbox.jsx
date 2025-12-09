@@ -203,22 +203,53 @@ import.meta.css = /* css */ `
       --toggle-thumb-border-radius: 50%;
       --toggle-background-color: light-dark(#767676, #8e8e93);
       --toggle-background-color-checked: light-dark(#4476ff, #3b82f6);
-      --toggle-background-color-disabled: #d3d3d3;
-      --toggle-thumb-color: white;
-
-      --background-color: var(--toggle-background-color);
-      --background-color-checked: var(--toggle-background-color-checked);
-      --background-color-hover: color-mix(
+      --toggle-background-color-hover: color-mix(
         in srgb,
         var(--toggle-background-color) 60%,
         white
       );
-      --background-color-hover-checked: color-mix(
+      --toggle-background-color-readonly: color-mix(
+        in srgb,
+        var(--toggle-background-color) 40%,
+        transparent
+      );
+      --toggle-background-color-disabled: color-mix(
+        in srgb,
+        var(--toggle-background-color) 15%,
+        #d3d3d3
+      );
+      --toggle-background-color-hover-checked: color-mix(
         in srgb,
         var(--toggle-background-color-checked) 60%,
         black
       );
+      --toggle-background-color-readonly-checked: color-mix(
+        in srgb,
+        var(--toggle-background-color-checked) 40%,
+        transparent
+      );
+      --toggle-background-color-disabled-checked: color-mix(
+        in srgb,
+        var(--toggle-background-color-checked) 15%,
+        #d3d3d3
+      );
+
+      --toggle-thumb-color: white;
+
+      --background-color: var(--toggle-background-color);
+      --background-color-hover: var(--toggle-background-color-hover);
+      --background-color-readonly: var(--toggle-background-color-readonly);
       --background-color-disabled: var(--toggle-background-color-disabled);
+      --background-color-checked: var(--toggle-background-color-checked);
+      --background-color-hover-checked: var(
+        --toggle-background-color-hover-checked
+      );
+      --background-color-readonly-checked: var(
+        --toggle-background-color-readonly-checked
+      );
+      --background-color-disabled-checked: var(
+        --toggle-background-color-disabled-checked
+      );
 
       margin: 0;
       border-radius: calc(
