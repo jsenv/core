@@ -43,6 +43,7 @@ import.meta.css = /* css */ `
       --button-border-color: light-dark(#767676, #8e8e93);
       --button-background-color: light-dark(#f3f4f6, #2d3748);
       --button-color: currentColor;
+      --button-cursor: pointer;
 
       /* Hover */
       --button-border-color-hover: color-mix(
@@ -96,6 +97,7 @@ import.meta.css = /* css */ `
     --x-button-border-color: var(--button-border-color);
     --x-button-background-color: var(--button-background-color);
     --x-button-color: var(--button-color);
+    --x-button-cursor: var(--button-cursor);
 
     position: relative;
     box-sizing: border-box;
@@ -106,7 +108,7 @@ import.meta.css = /* css */ `
     border: none;
     border-radius: var(--x-button-border-radius);
     outline: none;
-    cursor: pointer;
+    cursor: var(--x-button-cursor);
 
     &[data-icon] {
       --button-padding: 0;
@@ -194,6 +196,7 @@ import.meta.css = /* css */ `
       --x-button-border-color: var(--button-border-color-readonly);
       --x-button-background-color: var(--button-background-color-readonly);
       --x-button-color: var(--button-color-readonly);
+      --x-button-cursor: default;
     }
     /* Focus */
     &[data-focus-visible] {
@@ -210,9 +213,9 @@ import.meta.css = /* css */ `
       --x-button-border-color: var(--button-border-color-disabled);
       --x-button-background-color: var(--button-background-color-disabled);
       --x-button-color: var(--button-color-disabled);
+      --x-button-cursor: default;
 
       color: unset;
-      cursor: default;
 
       /* Remove active effects */
       .navi_button_content {
