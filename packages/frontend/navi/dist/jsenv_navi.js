@@ -13848,6 +13848,27 @@ const installCustomConstraintValidation = (
     });
   }
 
+  request_on_checkbox_change: {
+    const isCheckbox =
+      element.tagName === "INPUT" && element.type === "checkbox";
+    if (!isCheckbox) {
+      break request_on_checkbox_change;
+    }
+    const onchange = (e) => {
+      if (element.parentNode.hasAttribute("data-action")) {
+        dispatchActionRequestedCustomEvent(element, {
+          event: e,
+          requester: element,
+        });
+        return;
+      }
+    };
+    element.addEventListener("change", onchange);
+    addTeardown(() => {
+      element.removeEventListener("change", onchange);
+    });
+  }
+
   execute_on_form_submit: {
     if (!isForm) {
       break execute_on_form_submit;
@@ -16048,6 +16069,7 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
       --button-border-color: light-dark(#767676, #8e8e93);
       --button-background-color: light-dark(#f3f4f6, #2d3748);
       --button-color: currentColor;
+      --button-cursor: pointer;
 
       /* Hover */
       --button-border-color-hover: color-mix(
@@ -16101,6 +16123,7 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
     --x-button-border-color: var(--button-border-color);
     --x-button-background-color: var(--button-background-color);
     --x-button-color: var(--button-color);
+    --x-button-cursor: var(--button-cursor);
 
     position: relative;
     box-sizing: border-box;
@@ -16111,7 +16134,7 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
     border: none;
     border-radius: var(--x-button-border-radius);
     outline: none;
-    cursor: pointer;
+    cursor: var(--x-button-cursor);
 
     &[data-icon] {
       --button-padding: 0;
@@ -16199,6 +16222,7 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
       --x-button-border-color: var(--button-border-color-readonly);
       --x-button-background-color: var(--button-background-color-readonly);
       --x-button-color: var(--button-color-readonly);
+      --x-button-cursor: default;
     }
     /* Focus */
     &[data-focus-visible] {
@@ -16215,9 +16239,9 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
       --x-button-border-color: var(--button-border-color-disabled);
       --x-button-background-color: var(--button-background-color-disabled);
       --x-button-color: var(--button-color-disabled);
+      --x-button-cursor: default;
 
       color: unset;
-      cursor: default;
 
       /* Remove active effects */
       .navi_button_content {
@@ -16625,7 +16649,7 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
   .navi_message_box {
     .navi_title {
       margin-top: 0;
-      margin-bottom: var(--navi-spacing-s);
+      margin-bottom: var(--navi-s);
       color: var(--x-message-color);
     }
   }
@@ -17603,6 +17627,7 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
 `;
 const ReportReadOnlyOnLabelContext = createContext();
 const ReportDisabledOnLabelContext = createContext();
+const LabelPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading"];
 const Label = props => {
   const {
     readOnly,
@@ -17617,9 +17642,10 @@ const Label = props => {
   return jsx(Box, {
     ...rest,
     as: "label",
+    pseudoClasses: LabelPseudoClasses,
     basePseudoState: {
-      readOnly: innerReadOnly,
-      disabled: innerDisabled
+      ":read-only": innerReadOnly,
+      ":disabled": innerDisabled
     },
     children: jsx(ReportReadOnlyOnLabelContext.Provider, {
       value: setInputReadOnly,
@@ -17645,7 +17671,8 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
       --loader-color: var(--navi-loader-color);
       --border-color: light-dark(#767676, #8e8e93);
       --background-color: white;
-      --color: light-dark(#4476ff, #3b82f6);
+      --background-color-checked: var(--color, light-dark(#4476ff, #3b82f6));
+      --border-color-checked: var(--color, light-dark(#4476ff, #3b82f6));
       --checkmark-color-light: white;
       --checkmark-color-dark: rgb(55, 55, 55);
       --checkmark-color: var(--checkmark-color-light);
@@ -17658,12 +17685,13 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
       --border-color-hover: color-mix(in srgb, var(--border-color) 60%, black);
       --border-color-hover-checked: color-mix(
         in srgb,
-        var(--color) 80%,
+        var(--border-color-checked) 80%,
         var(--color-mix)
       );
+      --background-color-hover: var(--background-color);
       --background-color-hover-checked: color-mix(
         in srgb,
-        var(--color) 80%,
+        var(--background-color-checked) 80%,
         var(--color-mix)
       );
       /* Readonly */
@@ -17681,20 +17709,15 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
       --checkmark-color-disabled: #eeeeee;
       --border-color-disabled-checked: #d3d3d3;
       --background-color-disabled-checked: #d3d3d3;
-    }
 
-    .navi_checkbox[data-dark] {
-      --color-mix: var(--color-mix-dark);
-      --checkmark-color: var(--navi-checkmark-color-dark);
+      &[data-dark] {
+        --color-mix: var(--color-mix-dark);
+        --checkmark-color: var(--navi-checkmark-color-dark);
+      }
     }
   }
 
   .navi_checkbox {
-    position: relative;
-    display: inline-flex;
-    box-sizing: content-box;
-    margin: 3px 3px 3px 4px;
-
     --x-border-radius: var(--border-radius);
     --x-outline-offset: var(--outline-offset);
     --x-outline-width: var(--outline-width);
@@ -17706,82 +17729,198 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
     --x-border-color: var(--border-color);
     --x-color: var(--color);
     --x-checkmark-color: var(--checkmark-color);
-  }
-  .navi_checkbox .navi_native_field {
-    position: absolute;
-    inset: 0;
-    margin: 0;
-    padding: 0;
-    border: none;
-    opacity: 0;
-    cursor: inherit;
-  }
-  .navi_checkbox .navi_checkbox_field {
-    display: inline-flex;
-    box-sizing: border-box;
-    width: var(--x-width);
-    height: var(--x-height);
-    background-color: var(--x-background-color);
-    border-width: var(--x-border-width);
-    border-style: solid;
-    border-color: var(--x-border-color);
-    border-radius: var(--x-border-radius);
-    outline-width: var(--x-outline-width);
-    outline-style: none;
-    outline-color: var(--x-outline-color);
-    outline-offset: var(--x-outline-offset);
-  }
-  .navi_checkbox_marker {
-    width: 100%;
-    height: 100%;
-    opacity: 0;
-    stroke: var(--x-checkmark-color);
-    transform: scale(0.5);
-    transition: all 0.15s ease;
-    pointer-events: none;
-  }
-  .navi_checkbox[data-checked] .navi_checkbox_marker {
-    opacity: 1;
-    transform: scale(1);
-  }
 
-  /* Focus */
-  .navi_checkbox[data-focus-visible] .navi_checkbox_field {
-    outline-style: solid;
-  }
-  /* Hover */
-  .navi_checkbox[data-hover] {
-    --x-border-color: var(--border-color-hover);
-  }
-  .navi_checkbox[data-checked][data-hover] {
-    --x-border-color: var(--border-color-hover-checked);
-    --x-background-color: var(--background-color-hover-checked);
-  }
-  /* Checked */
-  .navi_checkbox[data-checked] {
-    --x-background-color: var(--x-color);
-    --x-border-color: var(--x-color);
-  }
-  /* Readonly */
-  .navi_checkbox[data-readonly],
-  .navi_checkbox[data-readonly][data-hover] {
-    --x-border-color: var(--border-color-readonly);
-    --x-background-color: var(--background-color-readonly);
-  }
-  .navi_checkbox[data-readonly][data-checked] {
-    --x-border-color: var(--border-color-readonly-checked);
-    --x-background-color: var(--background-color-readonly-checked);
-    --x-checkmark-color: var(--checkmark-color-readonly);
-  }
-  /* Disabled */
-  .navi_checkbox[data-disabled] {
-    --x-border-color: var(--border-color-disabled);
-    --x-background-color: var(--background-color-disabled);
-  }
-  .navi_checkbox[data-disabled][data-checked] {
-    --x-border-color: var(--border-color-disabled-checked);
-    --x-background-color: var(--background-color-disabled-checked);
-    --x-checkmark-color: var(--checkmark-color-disabled);
+    position: relative;
+    display: inline-flex;
+    box-sizing: content-box;
+    margin: 3px 3px 3px 4px;
+
+    .navi_native_field {
+      position: absolute;
+      inset: 0;
+      margin: 0;
+      padding: 0;
+      border: none;
+      opacity: 0;
+      cursor: inherit;
+    }
+
+    .navi_checkbox_field {
+      display: inline-flex;
+      box-sizing: border-box;
+      width: var(--x-width);
+      height: var(--x-height);
+      background-color: var(--x-background-color);
+      border-width: var(--x-border-width);
+      border-style: solid;
+      border-color: var(--x-border-color);
+      border-radius: var(--x-border-radius);
+      outline-width: var(--x-outline-width);
+      outline-style: none;
+      outline-color: var(--x-outline-color);
+      outline-offset: var(--x-outline-offset);
+      pointer-events: none;
+
+      .navi_checkbox_marker {
+        width: 100%;
+        height: 100%;
+        opacity: 0;
+        stroke: var(--x-checkmark-color);
+        transform: scale(0.5);
+      }
+    }
+
+    /* Focus */
+    &[data-focus-visible] {
+      .navi_checkbox_field {
+        outline-style: solid;
+      }
+    }
+    /* Hover */
+    &[data-hover] {
+      --x-background-color: var(--background-color-hover);
+      --x-border-color: var(--border-color-hover);
+
+      &[data-checked] {
+        --x-border-color: var(--border-color-hover-checked);
+        --x-background-color: var(--background-color-hover-checked);
+      }
+    }
+    /* Checked */
+    &[data-checked] {
+      --x-background-color: var(--background-color-checked);
+      --x-border-color: var(--border-color-checked);
+
+      .navi_checkbox_marker {
+        opacity: 1;
+        transform: scale(1);
+        transition-property: opacity, transform;
+        transition-duration: 0.15s;
+        transition-timing-function: ease;
+      }
+    }
+    /* Readonly */
+    &[data-readonly],
+    &[data-readonly][data-hover] {
+      --x-border-color: var(--border-color-readonly);
+      --x-background-color: var(--background-color-readonly);
+
+      &[data-checked] {
+        --x-border-color: var(--border-color-readonly-checked);
+        --x-background-color: var(--background-color-readonly-checked);
+        --x-checkmark-color: var(--checkmark-color-readonly);
+      }
+    }
+
+    /* Disabled */
+    &[data-disabled] {
+      --x-border-color: var(--border-color-disabled);
+      --x-background-color: var(--background-color-disabled);
+
+      &[data-checked] {
+        --x-border-color: var(--border-color-disabled-checked);
+        --x-background-color: var(--background-color-disabled-checked);
+        --x-checkmark-color: var(--checkmark-color-disabled);
+      }
+    }
+
+    /* Toggle appearance */
+    &[data-toggle] {
+      --toggle-width: 3em;
+      --toggle-thumb-size: 1.2em;
+      --toggle-padding: 2px;
+      --toggle-thumb-border-radius: 50%;
+      --toggle-background-color: light-dark(#767676, #8e8e93);
+      --toggle-background-color-checked: var(
+        --color,
+        light-dark(#4476ff, #3b82f6)
+      );
+      --toggle-background-color-hover: color-mix(
+        in srgb,
+        var(--toggle-background-color) 60%,
+        white
+      );
+      --toggle-background-color-readonly: color-mix(
+        in srgb,
+        var(--toggle-background-color) 40%,
+        transparent
+      );
+      --toggle-background-color-disabled: color-mix(
+        in srgb,
+        var(--toggle-background-color) 15%,
+        #d3d3d3
+      );
+      --toggle-background-color-hover-checked: color-mix(
+        in srgb,
+        var(--toggle-background-color-checked) 60%,
+        black
+      );
+      --toggle-background-color-readonly-checked: color-mix(
+        in srgb,
+        var(--toggle-background-color-checked) 40%,
+        transparent
+      );
+      --toggle-background-color-disabled-checked: color-mix(
+        in srgb,
+        var(--toggle-background-color-checked) 15%,
+        #d3d3d3
+      );
+
+      --toggle-thumb-color: white;
+
+      --background-color: var(--toggle-background-color);
+      --background-color-hover: var(--toggle-background-color-hover);
+      --background-color-readonly: var(--toggle-background-color-readonly);
+      --background-color-disabled: var(--toggle-background-color-disabled);
+      --background-color-checked: var(--toggle-background-color-checked);
+      --background-color-hover-checked: var(
+        --toggle-background-color-hover-checked
+      );
+      --background-color-readonly-checked: var(
+        --toggle-background-color-readonly-checked
+      );
+      --background-color-disabled-checked: var(
+        --toggle-background-color-disabled-checked
+      );
+
+      margin: 0;
+      border-radius: calc(
+        var(--toggle-thumb-size) / 2 + calc(var(--toggle-padding) * 2)
+      );
+
+      .navi_native_field {
+        border-radius: inherit;
+        appearance: none; /* This allows border-radius to have an effect */
+      }
+
+      .navi_checkbox_field {
+        position: relative;
+        width: var(--toggle-width);
+        height: auto;
+        padding: var(--toggle-padding);
+        background-color: var(--x-background-color);
+        border-color: transparent;
+        border-radius: inherit;
+        user-select: none;
+
+        .navi_checkbox_marker {
+          width: var(--toggle-thumb-size);
+          height: var(--toggle-thumb-size);
+          border-radius: var(--toggle-thumb-border-radius);
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+          opacity: 1;
+          fill: var(--toggle-thumb-color);
+          transform: translateX(0);
+          transition: transform 0.2s ease;
+        }
+      }
+
+      &[data-checked] {
+        .navi_checkbox_marker {
+          transform: translateX(calc(100% + var(--toggle-padding) * 2));
+        }
+      }
+    }
   }
 `;
 const InputCheckbox = props => {
@@ -17853,6 +17992,7 @@ const InputCheckboxBasic = props => {
     defaultChecked,
     /* eslint-enable no-unused-vars */
 
+    id,
     name,
     readOnly,
     disabled,
@@ -17862,6 +18002,7 @@ const InputCheckboxBasic = props => {
     onClick,
     onInput,
     color,
+    toggle,
     ...rest
   } = props;
   const defaultRef = useRef();
@@ -17890,6 +18031,7 @@ const InputCheckboxBasic = props => {
   });
   const renderCheckbox = checkboxProps => jsx(Box, {
     ...checkboxProps,
+    id: id,
     as: "input",
     ref: ref,
     type: "checkbox",
@@ -17907,7 +18049,7 @@ const InputCheckboxBasic = props => {
       uiStateController.setUIState(e.detail.value, e);
     }
   });
-  const renderCheckboxMemoized = useCallback(renderCheckbox, [innerName, checked, innerRequired]);
+  const renderCheckboxMemoized = useCallback(renderCheckbox, [id, innerName, checked, innerRequired]);
   useLayoutEffect(() => {
     const naviCheckbox = ref.current;
     const lightColor = "var(--checkmark-color-light)";
@@ -17923,6 +18065,7 @@ const InputCheckboxBasic = props => {
     as: "span",
     ...remainingProps,
     ref: undefined,
+    "data-toggle": toggle ? "" : undefined,
     baseClassName: "navi_checkbox",
     pseudoStateSelector: ".navi_native_field",
     styleCSSVars: CheckboxStyleCSSVars,
@@ -17935,13 +18078,24 @@ const InputCheckboxBasic = props => {
     },
     color: color,
     hasChildFunction: true,
+    preventInitialTransition: true,
     children: [jsx(LoaderBackground, {
       loading: innerLoading,
       inset: -1,
-      color: "var(--loader-color)"
+      color: "var(--loader-color)",
+      targetSelector: ".navi_checkbox_field"
     }), renderCheckboxMemoized, jsx("div", {
       className: "navi_checkbox_field",
-      children: jsx("svg", {
+      children: toggle ? jsx("svg", {
+        viewBox: "0 0 12 12",
+        "aria-hidden": "true",
+        className: "navi_checkbox_marker",
+        children: jsx("circle", {
+          cx: "6",
+          cy: "6",
+          r: "5"
+        })
+      }) : jsx("svg", {
         viewBox: "0 0 12 12",
         "aria-hidden": "true",
         className: "navi_checkbox_marker",
@@ -17960,7 +18114,6 @@ const InputCheckboxWithAction = props => {
   const {
     action,
     onCancel,
-    onChange,
     actionErrorEffect,
     onActionPrevented,
     onActionStart,
@@ -17991,6 +18144,7 @@ const InputCheckboxWithAction = props => {
       uiStateController.resetUIState(e);
       onCancel?.(e, reason);
     },
+    onRequested: e => forwardActionRequested(e, actionBoundToUIState),
     onPrevented: onActionPrevented,
     onAction: executeAction,
     onStart: onActionStart,
@@ -18010,13 +18164,7 @@ const InputCheckboxWithAction = props => {
     "data-action": actionBoundToUIState.name,
     ...rest,
     ref: ref,
-    loading: loading || actionLoading,
-    onChange: e => {
-      requestAction(e.target, actionBoundToUIState, {
-        event: e
-      });
-      onChange?.(e);
-    }
+    loading: loading || actionLoading
   });
 };
 
