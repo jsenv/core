@@ -430,26 +430,25 @@
                   <legend>Default</legend>
                   <Label column alignY="center" borderRadius="50%">
                     <Input type="checkbox" toggle />
-                    Toggle
+                    Label
                   </Label>
                 </Box>
                 <Box as="fieldset" width="250">
                   <legend>:focus-visible</legend>
-
                   <Label column alignY="center">
                     <Input
                       type="checkbox"
                       toggle
                       pseudoState={{ ":focus-visible": true }}
                     />
-                    Toggle
+                    Label
                   </Label>
                 </Box>
                 <Box as="fieldset" width="250">
                   <legend>:disabled</legend>
                   <Label column alignY="center">
                     <Input type="checkbox" toggle disabled />
-                    Toggle
+                    Label
                   </Label>
                 </Box>
               </Box>
@@ -458,7 +457,7 @@
                   <legend>:checked</legend>
                   <Label column alignY="center">
                     <Input type="checkbox" toggle defaultChecked />
-                    Toggle
+                    Label
                   </Label>
                 </Box>
 
@@ -471,7 +470,7 @@
                       defaultChecked
                       pseudoState={{ ":focus-visible": true }}
                     />
-                    Toggle
+                    Label
                   </Label>
                 </Box>
 
@@ -479,7 +478,7 @@
                   <legend>:disabled:checked</legend>
                   <Label column alignY="center">
                     <Input type="checkbox" toggle disabled defaultChecked />
-                    Toggle
+                    Label
                   </Label>
                 </Box>
               </Box>
@@ -496,41 +495,33 @@
               <Box column spacing="sm">
                 <Box as="fieldset" width="200">
                   <legend>:read-only</legend>
-                  <Box row spacing="sm" alignX="start">
-                    <Label>
-                      <Input type="checkbox" toggle readOnly />
-                      Read-only
-                    </Label>
-                  </Box>
+                  <Label column alignY="center">
+                    <Input type="checkbox" toggle readOnly />
+                    Label
+                  </Label>
                 </Box>
                 <Box as="fieldset" width="200">
                   <legend>:-navi-loading</legend>
-                  <Box row spacing="sm" alignX="start">
-                    <Label>
-                      <Input type="checkbox" toggle loading />
-                      Loading
-                    </Label>
-                  </Box>
+                  <Label column alignY="center">
+                    <Input type="checkbox" toggle loading />
+                    Label
+                  </Label>
                 </Box>
               </Box>
               <Box column spacing="sm">
                 <Box as="fieldset" width="200">
                   <legend>:read-only:checked</legend>
-                  <Box row spacing="sm" alignX="start">
-                    <Label>
-                      <Input type="checkbox" toggle readOnly checked />
-                      Read-only
-                    </Label>
-                  </Box>
+                  <Label column alignY="center">
+                    <Input type="checkbox" toggle readOnly checked />
+                    Label
+                  </Label>
                 </Box>
                 <Box as="fieldset" width="200">
                   <legend>:-navi-loading:checked</legend>
-                  <Box row spacing="sm" alignX="start">
-                    <Label>
-                      <Input type="checkbox" toggle loading checked />
-                      Loading
-                    </Label>
-                  </Box>
+                  <Label column alignY="center">
+                    <Input type="checkbox" toggle loading checked />
+                    Label
+                  </Label>
                 </Box>
               </Box>
             </div>
@@ -545,43 +536,87 @@
               <Box column spacing="sm">
                 <fieldset>
                   <legend>Orange</legend>
-                  <Box row spacing="sm" alignX="start">
-                    <Label>
-                      <Input
-                        type="checkbox"
-                        toggle
-                        color="#f39c12"
-                        defaultChecked
-                      />
-                      Orange Toggle
-                    </Label>
-                  </Box>
+                  <Label column alignY="center">
+                    <Input
+                      type="checkbox"
+                      toggle
+                      color="#f39c12"
+                      defaultChecked
+                    />
+                    Label
+                  </Label>
                 </fieldset>
                 <fieldset>
                   <legend>Green</legend>
-                  <Box row spacing="sm" alignX="start">
+                  <Label column alignY="center">
+                    <Input
+                      type="checkbox"
+                      toggle
+                      color="#2ecc71"
+                      defaultChecked
+                    />
+                    Label
+                  </Label>
+                </fieldset>
+                <fieldset>
+                  <legend>Dark grey</legend>
+                  <Label column alignY="center">
+                    <Input
+                      type="checkbox"
+                      toggle
+                      color="#34495e"
+                      defaultChecked
+                    />
+                    Label
+                  </Label>
+                </fieldset>
+              </Box>
+            </div>
+
+            <div className="states-section">
+              <div className="states-title">Toggle Sizes</div>
+              <p className="states-description">
+                Toggle size can be controlled with the size prop, affecting both
+                the track and thumb proportionally.
+              </p>
+
+              <Box column spacing="sm">
+                <fieldset>
+                  <legend>Small</legend>
+                  <Box row spacing="sm" alignX="start" alignY="center">
                     <Label>
-                      <Input
-                        type="checkbox"
-                        toggle
-                        color="#2ecc71"
-                        defaultChecked
-                      />
-                      Green Toggle
+                      <Input type="checkbox" toggle size="s" />
+                      Label
+                    </Label>
+                    <Label>
+                      <Input type="checkbox" toggle size="s" defaultChecked />
+                      Label
                     </Label>
                   </Box>
                 </fieldset>
                 <fieldset>
-                  <legend>Dark grey</legend>
-                  <Box row spacing="sm" alignX="start">
+                  <legend>Medium (Default)</legend>
+                  <Box row spacing="sm" alignX="start" alignY="center">
                     <Label>
-                      <Input
-                        type="checkbox"
-                        toggle
-                        color="#34495e"
-                        defaultChecked
-                      />
-                      Dark Grey Toggle
+                      <Input type="checkbox" toggle />
+                      Label
+                    </Label>
+                    <Label>
+                      <Input type="checkbox" toggle defaultChecked />
+                      Label
+                    </Label>
+                  </Box>
+                </fieldset>
+                <fieldset>
+                  <legend>Large</legend>
+                  <Box row spacing="sm" alignX="start" alignY="center">
+                    <Label>
+                      <Input type="checkbox" toggle size="l" />
+                      Label
+                    </Label>
+                    <Label>
+                      <Input type="checkbox" toggle size="l" defaultChecked />
+                      Label
                     </Label>
                   </Box>
                 </fieldset>
