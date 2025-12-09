@@ -43,7 +43,8 @@ import.meta.css = /* css */ `
       --loader-color: var(--navi-loader-color);
       --border-color: light-dark(#767676, #8e8e93);
       --background-color: white;
-      --color: light-dark(#4476ff, #3b82f6);
+      --background-color-checked: var(--color, light-dark(#4476ff, #3b82f6));
+      --border-color-checked: var(--color, light-dark(#4476ff, #3b82f6));
       --checkmark-color-light: white;
       --checkmark-color-dark: rgb(55, 55, 55);
       --checkmark-color: var(--checkmark-color-light);
@@ -56,13 +57,13 @@ import.meta.css = /* css */ `
       --border-color-hover: color-mix(in srgb, var(--border-color) 60%, black);
       --border-color-hover-checked: color-mix(
         in srgb,
-        var(--color) 80%,
+        var(--border-color-checked) 80%,
         var(--color-mix)
       );
       --background-color-hover: var(--background-color);
       --background-color-hover-checked: color-mix(
         in srgb,
-        var(--color) 80%,
+        var(--background-color-checked) 80%,
         var(--color-mix)
       );
       /* Readonly */
@@ -159,8 +160,8 @@ import.meta.css = /* css */ `
     }
     /* Checked */
     &[data-checked] {
-      --x-background-color: var(--x-color);
-      --x-border-color: var(--x-color);
+      --x-background-color: var(--background-color-checked);
+      --x-border-color: var(--border-color-checked);
 
       .navi_checkbox_marker {
         opacity: 1;
@@ -202,7 +203,10 @@ import.meta.css = /* css */ `
       --toggle-padding: 2px;
       --toggle-thumb-border-radius: 50%;
       --toggle-background-color: light-dark(#767676, #8e8e93);
-      --toggle-background-color-checked: light-dark(#4476ff, #3b82f6);
+      --toggle-background-color-checked: var(
+        --color,
+        light-dark(#4476ff, #3b82f6)
+      );
       --toggle-background-color-hover: color-mix(
         in srgb,
         var(--toggle-background-color) 60%,
