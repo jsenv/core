@@ -156,6 +156,7 @@
         EyeClosedSvg,
         HeartSvg,
         ExclamationSvg,
+        Caption,
       } from "@jsenv/navi";
 
       const App = () => {
@@ -895,124 +896,21 @@
               <legend>Icon Sizes</legend>
               <p>Icons scale with the size prop:</p>
 
-              <Box row spacing="sm" alignY="start">
-                <div
-                  style={{
-                    fontSize: "0.85rem",
-                    color: "#666",
-                    marginBottom: "8px",
-                  }}
-                >
-                  Extra Small (xs)
-                </div>
-                <Label column spacing="sm" alignY="center">
-                  <Input
-                    type="checkbox"
-                    size="xs"
-                    icon={
-                      <Icon>
-                        <HeartSvg />
-                      </Icon>
-                    }
-                    defaultChecked
-                  />
-                  Newsletter subscription
-                </Label>
+              <Box row alignY="start">
+                <Caption>Extra Small (xs)</Caption>
+                <HeartField size="xs" />
 
-                <div
-                  style={{
-                    fontSize: "0.85rem",
-                    color: "#666",
-                    marginBottom: "8px",
-                    marginTop: "12px",
-                  }}
-                >
-                  Small (s)
-                </div>
-                <Label column spacing="sm" alignY="center">
-                  <Input
-                    type="checkbox"
-                    size="s"
-                    icon={
-                      <Icon>
-                        <HeartSvg />
-                      </Icon>
-                    }
-                    defaultChecked
-                  />
-                  Newsletter subscription
-                </Label>
+                <Caption>Small (s)</Caption>
+                <HeartField size="s" />
 
-                <div
-                  style={{
-                    fontSize: "0.85rem",
-                    color: "#666",
-                    marginBottom: "8px",
-                    marginTop: "12px",
-                  }}
-                >
-                  Medium (default)
-                </div>
-                <Label column spacing="sm" alignY="center">
-                  <Input
-                    type="checkbox"
-                    icon={
-                      <Icon>
-                        <HeartSvg />
-                      </Icon>
-                    }
-                    defaultChecked
-                  />
-                  Newsletter subscription
-                </Label>
+                <Caption>Medium (default)</Caption>
+                <HeartField />
 
-                <div
-                  style={{
-                    fontSize: "0.85rem",
-                    color: "#666",
-                    marginBottom: "8px",
-                    marginTop: "12px",
-                  }}
-                >
-                  Large (l)
-                </div>
-                <Label column spacing="sm" alignY="center">
-                  <Input
-                    type="checkbox"
-                    size="l"
-                    icon={
-                      <Icon>
-                        <HeartSvg />
-                      </Icon>
-                    }
-                    defaultChecked
-                  />
-                  Newsletter subscription
-                </Label>
+                <Caption>Large (l)</Caption>
+                <HeartField size="l" />
 
-                <div
-                  style={{
-                    fontSize: "0.85rem",
-                    color: "#666",
-                    marginBottom: "8px",
-                    marginTop: "12px",
-                  }}
-                >
-                  Extra Large (xl)
-                </div>
-                <Label column spacing="sm" alignY="center">
-                  <Input
-                    type="checkbox"
-                    size="xl"
-                    icon={
-                      <Icon>
-                        <HeartSvg />
-                      </Icon>
-                    }
-                    defaultChecked
-                  />
-                  Newsletter subscription
-                </Label>
+                <Caption>Extra Large (xl)</Caption>
+                <HeartField size="xl" />
               </Box>
             </fieldset>
 
@@ -1070,6 +968,26 @@
               </ul>
             </div>
           </div>
+        );
+      };
+
+      const HeartField = ({ size }) => {
+        return (
+          <Label column spacing="sm" alignY="center">
+            <Input
+              type="checkbox"
+              size={size}
+              icon={[
+                <Icon color="orange">
+                  <HeartSvg />
+                </Icon>,
+                <Icon color="red">
+                  <HeartSvg />
+                </Icon>,
+              ]}
+            />
+            Newsletter subscription
+          </Label>
         );
       };
 
