@@ -949,7 +949,9 @@
                 type="checkbox"
                 appearance="button"
                 checked={eyeChecked}
-                action={setEyeChecked}
+                action={(checked) => {
+                  setEyeChecked(checked);
+                }}
                 icon={[
                   <Icon>
                     <EyeClosedSvg />

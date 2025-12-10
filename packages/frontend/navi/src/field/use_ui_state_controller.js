@@ -165,8 +165,9 @@ export const useUIStateController = (
       if (hasStateProp) {
         uiStateController.hasStateProp = true;
         const currentState = uiStateController.state;
-        if (state !== currentState) {
-          uiStateController.state = state;
+        const stateFromProp = getStateFromProp(state);
+        if (stateFromProp !== currentState) {
+          uiStateController.state = stateFromProp;
           uiStateController.setUIState(
             uiStateController.getPropFromState(state),
             new CustomEvent("state_prop"),

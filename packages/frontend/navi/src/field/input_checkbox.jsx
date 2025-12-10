@@ -627,7 +627,8 @@ const InputCheckboxWithAction = (props) => {
   const defaultRef = useRef();
   const ref = props.ref || defaultRef;
   const [actionBoundToUIState] = useActionBoundToOneParam(action, uiState);
-  const { loading: actionLoading } = useActionStatus(actionBoundToUIState);
+  const actionStatus = useActionStatus(actionBoundToUIState);
+  const { loading: actionLoading } = actionStatus;
   const executeAction = useExecuteAction(ref, {
     errorEffect: actionErrorEffect,
   });
