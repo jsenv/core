@@ -418,6 +418,16 @@ const CheckboxToggleStyleCSSVars = {
   height: "--toggle-height",
   borderRadius: "--border-radius",
 };
+const CheckboxButtonStyleCSSVars = {
+  ...CheckboxStyleCSSVars,
+  paddingTop: "--padding-top",
+  paddingRight: "--padding-right",
+  paddingBottom: "--padding-bottom",
+  paddingLeft: "--padding-left",
+  paddingX: "--padding-x",
+  paddingY: "--padding-y",
+  padding: "--padding",
+};
 const CheckboxPseudoClasses = [
   ":hover",
   ":active",
@@ -546,7 +556,9 @@ const InputCheckboxBasic = (props) => {
       styleCSSVars={
         appearance === "toggle"
           ? CheckboxToggleStyleCSSVars
-          : CheckboxStyleCSSVars
+          : appearance === "button"
+            ? CheckboxButtonStyleCSSVars
+            : CheckboxStyleCSSVars
       }
       pseudoClasses={CheckboxPseudoClasses}
       pseudoElements={CheckboxPseudoElements}
