@@ -826,7 +826,6 @@
 
       const IconDemo = () => {
         const [heartChecked, setHeartChecked] = useState(false);
-        const [eyeChecked, setEyeChecked] = useState(false);
 
         return (
           <div className="demo-section">
@@ -914,43 +913,7 @@
               </Box>
             </fieldset>
 
-            <fieldset>
-              <legend>Button Appearance</legend>
-              <p>
-                Checkboxes with icons can also take the appearance of a button:
-              </p>
-
-              <Box column spacing="sm" alignY="start">
-                <Label column spacing="sm" alignY="center">
-                  <Input
-                    type="checkbox"
-                    appearance="button"
-                    checked={eyeChecked}
-                    action={setEyeChecked}
-                    icon={[
-                      <Icon>
-                        <EyeClosedSvg />
-                      </Icon>,
-                      <Icon>
-                        <EyeSvg />
-                      </Icon>,
-                    ]}
-                  />
-                  Toggle visibility
-                </Label>
-              </Box>
-
-              <div
-                style={{
-                  marginTop: "15px",
-                  fontSize: "0.85rem",
-                  color: "#666",
-                }}
-              >
-                <strong>Button appearance:</strong> Combines icon functionality
-                with button-style presentation for enhanced UI components.
-              </div>
-            </fieldset>
+            <ButtonAppearanceDemo />
 
             <div
               style={{ marginTop: "20px", fontSize: "0.85rem", color: "#666" }}
@@ -968,6 +931,37 @@
               </ul>
             </div>
           </div>
+        );
+      };
+
+      const ButtonAppearanceDemo = () => {
+        const [eyeChecked, setEyeChecked] = useState(false);
+
+        return (
+          <fieldset>
+            <legend>Button Appearance</legend>
+            <p>
+              Checkboxes with icons can also take the appearance of a button:
+            </p>
+
+            <Label column spacing="sm" alignY="center">
+              <Input
+                type="checkbox"
+                appearance="button"
+                checked={eyeChecked}
+                action={setEyeChecked}
+                icon={[
+                  <Icon>
+                    <EyeClosedSvg />
+                  </Icon>,
+                  <Icon>
+                    <EyeSvg />
+                  </Icon>,
+                ]}
+              />
+              Toggle visibility
+            </Label>
+          </fieldset>
         );
       };
 
