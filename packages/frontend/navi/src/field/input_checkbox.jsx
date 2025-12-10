@@ -312,6 +312,18 @@ import.meta.css = /* css */ `
         }
       }
     }
+
+    &[data-icon] {
+      .navi_checkbox_marker {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        opacity: 1;
+        stroke: unset;
+        transform: scale(1);
+      }
+    }
   }
 `;
 
@@ -413,6 +425,7 @@ const InputCheckboxBasic = (props) => {
 
     color,
     toggle,
+    icon,
     ...rest
   } = props;
   const defaultRef = useRef();
@@ -494,6 +507,7 @@ const InputCheckboxBasic = (props) => {
       {...remainingProps}
       ref={undefined}
       data-toggle={toggle ? "" : undefined}
+      data-icon={icon ? "" : undefined}
       baseClassName="navi_checkbox"
       pseudoStateSelector=".navi_native_field"
       styleCSSVars={toggle ? CheckboxToggleStyleCSSVars : CheckboxStyleCSSVars}
@@ -516,7 +530,11 @@ const InputCheckboxBasic = (props) => {
       />
       {renderCheckboxMemoized}
       <div className="navi_checkbox_field">
-        {toggle ? (
+        {icon ? (
+          <div className="navi_checkbox_marker" aria-hidden="true">
+            {Array.isArray(icon) ? (checked ? icon[1] : icon[0]) : icon}
+          </div>
+        ) : toggle ? (
           <Box
             as="svg"
             viewBox="0 0 12 12"

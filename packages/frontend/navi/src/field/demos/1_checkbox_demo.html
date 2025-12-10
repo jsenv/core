@@ -147,7 +147,14 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState } from "preact/hooks";
-      import { Input, Label, Box } from "@jsenv/navi";
+      import {
+        Input,
+        Label,
+        Box,
+        Icon,
+        EyeSvg,
+        EyeClosedSvg,
+      } from "@jsenv/navi";
 
       const App = () => {
         return (
@@ -155,6 +162,7 @@
             <BasicStatesDemo />
             <ColorDemo />
             <ToggleAppearanceDemo />
+            <IconDemo />
             <InteractiveDemo />
           </div>
         );
@@ -682,6 +690,90 @@
                 </fieldset>
               </Box>
             </div>
+          </div>
+        );
+      };
+
+      const IconDemo = () => {
+        const [eyeChecked, setEyeChecked] = useState(false);
+        const [heartChecked, setHeartChecked] = useState(true);
+
+        return (
+          <div className="demo-section">
+            <h2>Custom Icons</h2>
+
+            <fieldset>
+              <legend>Icon Prop Support</legend>
+              <p>You can use custom icons instead of the default checkmark:</p>
+
+              <div className="checkbox-row">
+                <Label htmlFor="eye-icon">
+                  <Input
+                    id="eye-icon"
+                    type="checkbox"
+                    checked={eyeChecked}
+                    onInput={(e) => setEyeChecked(e.target.checked)}
+                    icon={[
+                      <Icon>
+                        <EyeClosedSvg />
+                      </Icon>,
+                      <Icon>
+                        <EyeSvg />
+                      </Icon>,
+                    ]}
+                  />
+                  Eye visibility toggle (array of icons)
+                </Label>
+              </div>
+
+              <div className="checkbox-row">
+                <Label htmlFor="heart-icon">
+                  <Input
+                    id="heart-icon"
+                    type="checkbox"
+                    checked={heartChecked}
+                    onInput={(e) => setHeartChecked(e.target.checked)}
+                    icon={<span style={{ fontSize: "14px" }}>❤️</span>}
+                  />
+                  Heart icon (single icon)
+                </Label>
+              </div>
+
+              <div className="checkbox-row">
+                <Label htmlFor="star-icon">
+                  <Input
+                    id="star-icon"
+                    type="checkbox"
+                    icon={[
+                      <span style={{ fontSize: "14px", opacity: 0.3 }}>
+                        ⭐
+                      </span>,
+                      <span style={{ fontSize: "14px" }}>⭐</span>,
+                    ]}
+                  />
+                  Star rating (emoji icons)
+                </Label>
+              </div>
+
+              <div
+                style={{
+                  marginTop: "15px",
+                  fontSize: "0.85rem",
+                  color: "#666",
+                }}
+              >
+                <strong>Icon prop:</strong>
+                <ul style={{ marginTop: "5px", paddingLeft: "20px" }}>
+                  <li>Single icon: Shows the same icon for both states</li>
+                  <li>
+                    Array [unchecked, checked]: Different icons for each state
+                  </li>
+                  <li>
+                    Can be JSX elements, components, or any renderable content
+                  </li>
+                </ul>
+              </div>
+            </fieldset>
           </div>
         );
       };
