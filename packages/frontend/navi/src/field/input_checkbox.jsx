@@ -48,6 +48,7 @@ import.meta.css = /* css */ `
       --checkmark-color-light: white;
       --checkmark-color-dark: rgb(55, 55, 55);
       --checkmark-color: var(--checkmark-color-light);
+      --cursor: pointer;
 
       --color-mix-light: black;
       --color-mix-dark: white;
@@ -101,6 +102,7 @@ import.meta.css = /* css */ `
     --x-border-color: var(--border-color);
     --x-color: var(--color);
     --x-checkmark-color: var(--checkmark-color);
+    --x-cursor: var(--cursor);
 
     position: relative;
     display: inline-flex;
@@ -131,6 +133,7 @@ import.meta.css = /* css */ `
       outline-style: none;
       outline-color: var(--x-outline-color);
       outline-offset: var(--x-outline-offset);
+      cursor: var(--x-cursor);
       pointer-events: none;
 
       .navi_checkbox_marker {
@@ -176,6 +179,7 @@ import.meta.css = /* css */ `
     &[data-readonly][data-hover] {
       --x-border-color: var(--border-color-readonly);
       --x-background-color: var(--background-color-readonly);
+      --x-cursor: default;
 
       &[data-checked] {
         --x-border-color: var(--border-color-readonly-checked);
@@ -188,6 +192,7 @@ import.meta.css = /* css */ `
     &[data-disabled] {
       --x-border-color: var(--border-color-disabled);
       --x-background-color: var(--background-color-disabled);
+      --x-cursor: default;
 
       &[data-checked] {
         --x-border-color: var(--border-color-disabled-checked);
@@ -339,7 +344,6 @@ const CheckboxStyleCSSVars = {
   "height": "--toggle-height",
   "outlineWidth": "--outline-width",
   "borderWidth": "--border-width",
-  "borderRadius": "--border-radius",
   "backgroundColor": "--background-color",
   "borderColor": "--border-color",
   "color": "--color",
@@ -361,6 +365,12 @@ const CheckboxStyleCSSVars = {
     borderColor: "--border-color-disabled",
     color: "--color-disabled",
   },
+};
+const CheckboxToggleStyleCSSVars = {
+  ...CheckboxStyleCSSVars,
+  width: "--toggle-width",
+  height: "--toggle-height",
+  borderRadius: "--border-radius",
 };
 const CheckboxPseudoClasses = [
   ":hover",
@@ -486,7 +496,7 @@ const InputCheckboxBasic = (props) => {
       data-toggle={toggle ? "" : undefined}
       baseClassName="navi_checkbox"
       pseudoStateSelector=".navi_native_field"
-      styleCSSVars={CheckboxStyleCSSVars}
+      styleCSSVars={toggle ? CheckboxToggleStyleCSSVars : CheckboxStyleCSSVars}
       pseudoClasses={CheckboxPseudoClasses}
       pseudoElements={CheckboxPseudoElements}
       basePseudoState={{
