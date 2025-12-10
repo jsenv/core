@@ -824,25 +824,211 @@
       };
 
       const IconDemo = () => {
+        const [heartChecked, setHeartChecked] = useState(false);
         const [eyeChecked, setEyeChecked] = useState(false);
-        const [heartChecked, setHeartChecked] = useState(true);
 
         return (
           <div className="demo-section">
             <h2>Custom Icons</h2>
 
             <fieldset>
-              <legend>Icon Prop Support</legend>
+              <legend>Basic Icon Usage</legend>
               <p>You can use custom icons instead of the default checkmark:</p>
 
-              <div className="checkbox-row">
-                <Label htmlFor="eye-icon">
+              <Box row spacing="sm" alignY="start">
+                <Label column spacing="sm" alignY="center">
                   <Input
-                    id="eye-icon"
                     type="checkbox"
-                    checked={eyeChecked}
+                    checked={heartChecked}
+                    action={setHeartChecked}
+                    icon={
+                      <span
+                        style={{
+                          opacity: heartChecked ? 1 : "0.3",
+                        }}
+                      >
+                        ❤️
+                      </span>
+                    }
+                  />
+                  Heart icon (single icon)
+                </Label>
+
+                <Label column spacing="sm" alignY="center">
+                  <Input
+                    type="checkbox"
+                    icon={[<span>⭐</span>, <span>❤️</span>]}
+                  />
+                  Star or Heart icon (array of icons for different states)
+                </Label>
+
+                <Label column spacing="sm" alignY="center">
+                  <Input
+                    type="checkbox"
+                    icon={[
+                      <Icon color="green">
+                        <HeartSvg />
+                      </Icon>,
+                      <Icon color="red">
+                        <ExclamationSvg />
+                      </Icon>,
+                    ]}
+                    defaultChecked
+                  />
+                  SVG icon component
+                </Label>
+              </Box>
+
+              <div
+                style={{
+                  marginTop: "15px",
+                  fontSize: "0.85rem",
+                  color: "#666",
+                }}
+              >
+                <strong>Note:</strong> When icon prop is provided, appearance
+                automatically switches to "icon"
+              </div>
+            </fieldset>
+
+            <fieldset>
+              <legend>Icon Sizes</legend>
+              <p>Icons scale with the size prop:</p>
+
+              <Box row spacing="sm" alignY="start">
+                <div
+                  style={{
+                    fontSize: "0.85rem",
+                    color: "#666",
+                    marginBottom: "8px",
+                  }}
+                >
+                  Extra Small (xs)
+                </div>
+                <Label column spacing="sm" alignY="center">
+                  <Input
+                    type="checkbox"
+                    size="xs"
+                    icon={
+                      <Icon>
+                        <HeartSvg />
+                      </Icon>
+                    }
+                    defaultChecked
+                  />
+                  Newsletter subscription
+                </Label>
+
+                <div
+                  style={{
+                    fontSize: "0.85rem",
+                    color: "#666",
+                    marginBottom: "8px",
+                    marginTop: "12px",
+                  }}
+                >
+                  Small (s)
+                </div>
+                <Label column spacing="sm" alignY="center">
+                  <Input
+                    type="checkbox"
+                    size="s"
+                    icon={
+                      <Icon>
+                        <HeartSvg />
+                      </Icon>
+                    }
+                    defaultChecked
+                  />
+                  Newsletter subscription
+                </Label>
+
+                <div
+                  style={{
+                    fontSize: "0.85rem",
+                    color: "#666",
+                    marginBottom: "8px",
+                    marginTop: "12px",
+                  }}
+                >
+                  Medium (default)
+                </div>
+                <Label column spacing="sm" alignY="center">
+                  <Input
+                    type="checkbox"
+                    icon={
+                      <Icon>
+                        <HeartSvg />
+                      </Icon>
+                    }
+                    defaultChecked
+                  />
+                  Newsletter subscription
+                </Label>
+
+                <div
+                  style={{
+                    fontSize: "0.85rem",
+                    color: "#666",
+                    marginBottom: "8px",
+                    marginTop: "12px",
+                  }}
+                >
+                  Large (l)
+                </div>
+                <Label column spacing="sm" alignY="center">
+                  <Input
+                    type="checkbox"
+                    size="l"
+                    icon={
+                      <Icon>
+                        <HeartSvg />
+                      </Icon>
+                    }
+                    defaultChecked
+                  />
+                  Newsletter subscription
+                </Label>
+
+                <div
+                  style={{
+                    fontSize: "0.85rem",
+                    color: "#666",
+                    marginBottom: "8px",
+                    marginTop: "12px",
+                  }}
+                >
+                  Extra Large (xl)
+                </div>
+                <Label column spacing="sm" alignY="center">
+                  <Input
+                    type="checkbox"
+                    size="xl"
+                    icon={
+                      <Icon>
+                        <HeartSvg />
+                      </Icon>
+                    }
+                    defaultChecked
+                  />
+                  Newsletter subscription
+                </Label>
+              </Box>
+            </fieldset>
+
+            <fieldset>
+              <legend>Button Appearance</legend>
+              <p>
+                Checkboxes with icons can also take the appearance of a button:
+              </p>
+
+              <Box column spacing="sm" alignY="start">
+                <Label column spacing="sm" alignY="center">
+                  <Input
+                    type="checkbox"
                     appearance="button"
-                    action={(checked) => setEyeChecked(checked)}
+                    checked={eyeChecked}
+                    action={setEyeChecked}
                     icon={[
                       <Icon>
                         <EyeClosedSvg />
@@ -852,43 +1038,9 @@
                       </Icon>,
                     ]}
                   />
-                  Eye visibility toggle (array of icons)
+                  Toggle visibility
                 </Label>
-              </div>
-
-              <div className="checkbox-row">
-                <Label htmlFor="heart-icon">
-                  <Input
-                    id="heart-icon"
-                    type="checkbox"
-                    appearance="button"
-                    checked={heartChecked}
-                    action={(checked) => setHeartChecked(checked)}
-                    icon={
-                      <Icon size="xl" color="blue">
-                        {heartChecked ? <HeartSvg /> : <ExclamationSvg />}
-                      </Icon>
-                    }
-                  />
-                  Heart icon (single icon)
-                </Label>
-              </div>
-
-              <div className="checkbox-row">
-                <Label htmlFor="star-icon">
-                  <Input
-                    id="star-icon"
-                    type="checkbox"
-                    icon={[
-                      <span style={{ fontSize: "14px", opacity: 0.3 }}>
-                        ⭐
-                      </span>,
-                      <span style={{ fontSize: "14px" }}>⭐</span>,
-                    ]}
-                  />
-                  Star rating (emoji icons)
-                </Label>
-              </div>
+              </Box>
 
               <div
                 style={{
@@ -897,18 +1049,26 @@
                   color: "#666",
                 }}
               >
-                <strong>Icon prop:</strong>
-                <ul style={{ marginTop: "5px", paddingLeft: "20px" }}>
-                  <li>Single icon: Shows the same icon for both states</li>
-                  <li>
-                    Array [unchecked, checked]: Different icons for each state
-                  </li>
-                  <li>
-                    Can be JSX elements, components, or any renderable content
-                  </li>
-                </ul>
+                <strong>Button appearance:</strong> Combines icon functionality
+                with button-style presentation for enhanced UI components.
               </div>
             </fieldset>
+
+            <div
+              style={{ marginTop: "20px", fontSize: "0.85rem", color: "#666" }}
+            >
+              <strong>Icon prop summary:</strong>
+              <ul style={{ marginTop: "5px", paddingLeft: "20px" }}>
+                <li>Single icon: Shows the same icon for both states</li>
+                <li>
+                  Array [unchecked, checked]: Different icons for each state
+                </li>
+                <li>
+                  Can be JSX elements, components, or any renderable content
+                </li>
+                <li>Automatically sets appearance="icon" unless overridden</li>
+              </ul>
+            </div>
           </div>
         );
       };
