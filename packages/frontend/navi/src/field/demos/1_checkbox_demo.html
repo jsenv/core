@@ -910,7 +910,7 @@
                 <HeartField size="l" />
 
                 <Caption>Extra Large (xl)</Caption>
-                <HeartField size="xl" />
+                <HeartField size="xl" defaultChecked />
               </Box>
             </fieldset>
 
@@ -971,12 +971,11 @@
         );
       };
 
-      const HeartField = ({ size }) => {
+      const HeartField = (props) => {
         return (
           <Label column spacing="sm" alignY="center">
             <Input
               type="checkbox"
-              size={size}
               icon={[
                 <Icon color="orange">
                   <HeartSvg />
@@ -985,6 +984,7 @@
                   <HeartSvg />
                 </Icon>,
               ]}
+              {...props}
             />
             Newsletter subscription
           </Label>
