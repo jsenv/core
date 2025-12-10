@@ -154,6 +154,8 @@
         Icon,
         EyeSvg,
         EyeClosedSvg,
+        HeartSvg,
+        ExclamationSvg,
       } from "@jsenv/navi";
 
       const App = () => {
@@ -437,7 +439,7 @@
                 <Box as="fieldset" width="250">
                   <legend>Default</legend>
                   <Label column alignY="center" borderRadius="50%">
-                    <Input type="checkbox" toggle />
+                    <Input type="checkbox" appearance="toggle" />
                     Label
                   </Label>
                 </Box>
@@ -446,7 +448,7 @@
                   <Label column alignY="center">
                     <Input
                       type="checkbox"
-                      toggle
+                      appearance="toggle"
                       pseudoState={{ ":focus-visible": true }}
                     />
                     Label
@@ -455,7 +457,7 @@
                 <Box as="fieldset" width="250">
                   <legend>:disabled</legend>
                   <Label column alignY="center">
-                    <Input type="checkbox" toggle disabled />
+                    <Input type="checkbox" appearance="toggle" disabled />
                     Label
                   </Label>
                 </Box>
@@ -464,7 +466,7 @@
                 <Box as="fieldset" width="250">
                   <legend>:checked</legend>
                   <Label column alignY="center">
-                    <Input type="checkbox" toggle defaultChecked />
+                    <Input type="checkbox" appearance="toggle" defaultChecked />
                     Label
                   </Label>
                 </Box>
@@ -474,7 +476,7 @@
                   <Label column alignY="center">
                     <Input
                       type="checkbox"
-                      toggle
+                      appearance="toggle"
                       defaultChecked
                       pseudoState={{ ":focus-visible": true }}
                     />
@@ -485,7 +487,12 @@
                 <Box as="fieldset" width="250">
                   <legend>:disabled:checked</legend>
                   <Label column alignY="center">
-                    <Input type="checkbox" toggle disabled defaultChecked />
+                    <Input
+                      type="checkbox"
+                      appearance="toggle"
+                      disabled
+                      defaultChecked
+                    />
                     Label
                   </Label>
                 </Box>
@@ -504,14 +511,14 @@
                 <Box as="fieldset" width="200">
                   <legend>:read-only</legend>
                   <Label column alignY="center" spacing="s">
-                    <Input type="checkbox" toggle readOnly />
+                    <Input type="checkbox" appearance="toggle" readOnly />
                     Label
                   </Label>
                 </Box>
                 <Box as="fieldset" width="200">
                   <legend>:-navi-loading</legend>
                   <Label column alignY="center" spacing="s">
-                    <Input type="checkbox" toggle loading />
+                    <Input type="checkbox" appearance="toggle" loading />
                     Label
                   </Label>
                 </Box>
@@ -520,14 +527,24 @@
                 <Box as="fieldset" width="200">
                   <legend>:read-only:checked</legend>
                   <Label column alignY="center" spacing="s">
-                    <Input type="checkbox" toggle readOnly checked />
+                    <Input
+                      type="checkbox"
+                      appearance="toggle"
+                      readOnly
+                      checked
+                    />
                     Label
                   </Label>
                 </Box>
                 <Box as="fieldset" width="200">
                   <legend>:-navi-loading:checked</legend>
                   <Label column alignY="center" spacing="s">
-                    <Input type="checkbox" toggle loading checked />
+                    <Input
+                      type="checkbox"
+                      appearance="toggle"
+                      loading
+                      checked
+                    />
                     Label
                   </Label>
                 </Box>
@@ -547,7 +564,7 @@
                   <Label column alignY="center" spacing="s">
                     <Input
                       type="checkbox"
-                      toggle
+                      appearance="toggle"
                       color="#f39c12"
                       defaultChecked
                     />
@@ -559,7 +576,7 @@
                   <Label column alignY="center" spacing="s">
                     <Input
                       type="checkbox"
-                      toggle
+                      appearance="toggle"
                       color="#2ecc71"
                       defaultChecked
                     />
@@ -571,7 +588,7 @@
                   <Label column alignY="center" spacing="s">
                     <Input
                       type="checkbox"
-                      toggle
+                      appearance="toggle"
                       color="#34495e"
                       defaultChecked
                     />
@@ -593,11 +610,16 @@
                   <legend>Small</legend>
                   <Box row spacing="sm" alignX="start" alignY="center">
                     <Label column alignY="center" spacing="s">
-                      <Input type="checkbox" toggle size="s" />
+                      <Input type="checkbox" appearance="toggle" size="s" />
                       Label
                     </Label>
                     <Label column alignY="center" spacing="s">
-                      <Input type="checkbox" toggle size="s" defaultChecked />
+                      <Input
+                        type="checkbox"
+                        appearance="toggle"
+                        size="s"
+                        defaultChecked
+                      />
                       Label
                     </Label>
                   </Box>
@@ -606,11 +628,15 @@
                   <legend>Medium (Default)</legend>
                   <Box row spacing="sm" alignX="start" alignY="center">
                     <Label column alignY="center" spacing="s">
-                      <Input type="checkbox" toggle />
+                      <Input type="checkbox" appearance="toggle" />
                       Label
                     </Label>
                     <Label column alignY="center" spacing="s">
-                      <Input type="checkbox" toggle defaultChecked />
+                      <Input
+                        type="checkbox"
+                        appearance="toggle"
+                        defaultChecked
+                      />
                       Label
                     </Label>
                   </Box>
@@ -619,11 +645,16 @@
                   <legend>Large</legend>
                   <Box row spacing="sm" alignX="start" alignY="center">
                     <Label column alignY="center" spacing="s">
-                      <Input type="checkbox" toggle size="l" />
+                      <Input type="checkbox" appearance="toggle" size="l" />
                       Label
                     </Label>
                     <Label column alignY="center" spacing="s">
-                      <Input type="checkbox" toggle size="l" defaultChecked />
+                      <Input
+                        type="checkbox"
+                        appearance="toggle"
+                        size="l"
+                        defaultChecked
+                      />
                       Label
                     </Label>
                   </Box>
@@ -643,11 +674,15 @@
                   <legend>Default Width</legend>
                   <Box row spacing="sm" alignX="start" alignY="center">
                     <Label column alignY="center" spacing="s">
-                      <Input type="checkbox" toggle />
+                      <Input type="checkbox" appearance="toggle" />
                       Label
                     </Label>
                     <Label column alignY="center" spacing="s">
-                      <Input type="checkbox" toggle defaultChecked />
+                      <Input
+                        type="checkbox"
+                        appearance="toggle"
+                        defaultChecked
+                      />
                       Label
                     </Label>
                   </Box>
@@ -656,13 +691,13 @@
                   <legend>Custom Width (30px)</legend>
                   <Box row spacing="sm" alignX="start" alignY="center">
                     <Label column alignY="center" spacing="s">
-                      <Input type="checkbox" toggle width="30px" />
+                      <Input type="checkbox" appearance="toggle" width="30px" />
                       Label
                     </Label>
                     <Label column alignY="center" spacing="s">
                       <Input
                         type="checkbox"
-                        toggle
+                        appearance="toggle"
                         width="30px"
                         defaultChecked
                       />
@@ -674,13 +709,13 @@
                   <legend>Big Width (80px)</legend>
                   <Box row spacing="sm" alignX="start" alignY="center">
                     <Label column alignY="center" spacing="s">
-                      <Input type="checkbox" toggle width="80px" />
+                      <Input type="checkbox" appearance="toggle" width="80px" />
                       Label
                     </Label>
                     <Label column alignY="center" spacing="s">
                       <Input
                         type="checkbox"
-                        toggle
+                        appearance="toggle"
                         width="80px"
                         defaultChecked
                       />
@@ -712,7 +747,8 @@
                     id="eye-icon"
                     type="checkbox"
                     checked={eyeChecked}
-                    onInput={(e) => setEyeChecked(e.target.checked)}
+                    appearance="button"
+                    action={(checked) => setEyeChecked(checked)}
                     icon={[
                       <Icon>
                         <EyeClosedSvg />
@@ -731,9 +767,14 @@
                   <Input
                     id="heart-icon"
                     type="checkbox"
+                    appearance="button"
                     checked={heartChecked}
-                    onInput={(e) => setHeartChecked(e.target.checked)}
-                    icon={<span style={{ fontSize: "14px" }}>❤️</span>}
+                    action={(checked) => setHeartChecked(checked)}
+                    icon={
+                      <Icon size="xl" color="blue">
+                        {heartChecked ? <HeartSvg /> : <ExclamationSvg />}
+                      </Icon>
+                    }
                   />
                   Heart icon (single icon)
                 </Label>

@@ -32,6 +32,7 @@ import { useConstraints } from "./validation/hooks/use_constraints.js";
 import.meta.css = /* css */ `
   @layer navi {
     .navi_checkbox {
+      --margin: 3px 3px 3px 4px;
       --outline-offset: 1px;
       --outline-width: 2px;
       --border-width: 1px;
@@ -107,7 +108,7 @@ import.meta.css = /* css */ `
     position: relative;
     display: inline-flex;
     box-sizing: content-box;
-    margin: 3px 3px 3px 4px;
+    margin: var(--margin);
 
     .navi_native_field {
       position: absolute;
@@ -147,6 +148,8 @@ import.meta.css = /* css */ `
 
     /* Focus */
     &[data-focus-visible] {
+      z-index: 1;
+
       .navi_checkbox_field {
         outline-style: solid;
       }
@@ -202,7 +205,7 @@ import.meta.css = /* css */ `
     }
 
     /* Toggle appearance */
-    &[data-toggle] {
+    &[data-appearance="toggle"] {
       --toggle-width: 2.5em;
       --toggle-thumb-size: 1.2em;
       /* Padding uses px and not em otherwise it can be resolved to a float which does not play well */
@@ -311,11 +314,39 @@ import.meta.css = /* css */ `
       }
     }
 
-    &[data-icon] {
-      .navi_checkbox_icon {
-        display: flex;
-        align-items: center;
-        justify-content: center;
+    &[data-appearance="icon"] {
+      --margin: 0;
+      --outline-offset: 0px;
+      --width: auto;
+      --height: auto;
+      --padding: 4px;
+      --button-border-color: light-dark(#767676, #8e8e93);
+      --button-background-color: light-dark(#f3f4f6, #2d3748);
+      --button-border-color-hover: color-mix(
+        in srgb,
+        var(--button-border-color) 70%,
+        black
+      );
+      --button-background-color-hover: color-mix(
+        in srgb,
+        var(--button-background-color) 95%,
+        black
+      );
+
+      --border-color: var(--button-border-color);
+      --border-color-hover: var(--button-border-color-hover);
+      --background-color: var(--button-background-color);
+      --background-color-hover: var(--button-background-color-hover);
+      --background-color-readonly: var(--button-background-color-readonly);
+      --background-color-disabled: var(--button-background-color-disabled);
+      --border-color-checked: var(--button-border-color);
+      --background-color-checked: var(--button-background-color);
+
+      .navi_checkbox_field {
+        padding-top: var(--padding-top, var(--padding-y, var(--padding)));
+        padding-right: var(--padding-right, var(--padding-x, var(--padding)));
+        padding-bottom: var(--padding-bottom, var(--padding-y, var(--padding)));
+        padding-left: var(--padding-left, var(--padding-x, var(--padding)));
       }
     }
   }
@@ -418,8 +449,8 @@ const InputCheckboxBasic = (props) => {
     onInput,
 
     color,
-    toggle,
     icon,
+    appearance = icon ? "icon" : "checkbox", // "checkbox", "toggle", "icon", "button"
     ...rest
   } = props;
   const defaultRef = useRef();
@@ -500,11 +531,14 @@ const InputCheckboxBasic = (props) => {
       as="span"
       {...remainingProps}
       ref={undefined}
-      data-toggle={toggle ? "" : undefined}
-      data-icon={icon ? "" : undefined}
+      data-appearance={appearance}
       baseClassName="navi_checkbox"
       pseudoStateSelector=".navi_native_field"
-      styleCSSVars={toggle ? CheckboxToggleStyleCSSVars : CheckboxStyleCSSVars}
+      styleCSSVars={
+        appearance === "toggle"
+          ? CheckboxToggleStyleCSSVars
+          : CheckboxStyleCSSVars
+      }
       pseudoClasses={CheckboxPseudoClasses}
       pseudoElements={CheckboxPseudoElements}
       basePseudoState={{
@@ -524,11 +558,11 @@ const InputCheckboxBasic = (props) => {
       />
       {renderCheckboxMemoized}
       <div className="navi_checkbox_field">
-        {icon ? (
+        {appearance === "icon" ? (
           <div className="navi_checkbox_icon" aria-hidden="true">
-            {Array.isArray(icon) ? (checked ? icon[1] : icon[0]) : icon}
+            {Array.isArray(icon) ? icon[checked ? 1 : 0] : icon}
           </div>
-        ) : toggle ? (
+        ) : appearance === "toggle" ? (
           <Box
             className="navi_checkbox_toggle"
             as="svg"
