@@ -37,8 +37,8 @@ import.meta.css = /* css */ `
       --outline-width: 2px;
       --border-width: 1px;
       --border-radius: 2px;
-      --width: 13px;
-      --height: 13px;
+      --width: 0.815em;
+      --height: 0.815em;
 
       --outline-color: var(--navi-focus-outline-color);
       --loader-color: var(--navi-loader-color);
@@ -324,6 +324,18 @@ import.meta.css = /* css */ `
       }
     }
 
+    &[data-appearance="icon"] {
+      --margin: 0;
+      --outline-offset: 0px;
+      --width: auto;
+      --height: auto;
+
+      .navi_checkbox_field {
+        background: none;
+        border: none;
+      }
+    }
+
     &[data-appearance="button"] {
       --margin: 0;
       --outline-offset: 0px;
@@ -374,8 +386,8 @@ export const InputCheckbox = (props) => {
 };
 
 const CheckboxStyleCSSVars = {
-  "width": "--toggle-width",
-  "height": "--toggle-height",
+  "width": "--width",
+  "height": "--height",
   "outlineWidth": "--outline-width",
   "borderWidth": "--border-width",
   "backgroundColor": "--background-color",
@@ -555,7 +567,7 @@ const InputCheckboxBasic = (props) => {
       />
       {renderCheckboxMemoized}
       <div className="navi_checkbox_field">
-        {appearance === "icon" ? (
+        {icon ? (
           <div className="navi_checkbox_icon" aria-hidden="true">
             {Array.isArray(icon) ? icon[checked ? 1 : 0] : icon}
           </div>
