@@ -283,13 +283,11 @@ import.meta.css = /* css */ `
         border-radius: inherit;
         user-select: none;
 
-        .navi_checkbox_marker {
-          /* position: absolute; */
+        .navi_checkbox_toggle {
           width: var(--toggle-thumb-size);
           height: var(--toggle-thumb-size);
           border-radius: var(--toggle-thumb-border-radius);
-          /* box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2); */
-          opacity: 1;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
           fill: var(--toggle-thumb-color);
           transform: translateX(0);
           transition: transform 0.2s ease;
@@ -297,7 +295,7 @@ import.meta.css = /* css */ `
       }
 
       &[data-checked] {
-        .navi_checkbox_marker {
+        .navi_checkbox_toggle {
           /* We remove padding 3 times */
           /* - twice to get real width (box-sizing: border-box) */
           /* - one more to apply right padding to the translation */
@@ -314,14 +312,10 @@ import.meta.css = /* css */ `
     }
 
     &[data-icon] {
-      .navi_checkbox_marker {
+      .navi_checkbox_icon {
         display: flex;
         align-items: center;
         justify-content: center;
-
-        opacity: 1;
-        stroke: unset;
-        transform: scale(1);
       }
     }
   }
@@ -531,25 +525,25 @@ const InputCheckboxBasic = (props) => {
       {renderCheckboxMemoized}
       <div className="navi_checkbox_field">
         {icon ? (
-          <div className="navi_checkbox_marker" aria-hidden="true">
+          <div className="navi_checkbox_icon" aria-hidden="true">
             {Array.isArray(icon) ? (checked ? icon[1] : icon[0]) : icon}
           </div>
         ) : toggle ? (
           <Box
+            className="navi_checkbox_toggle"
             as="svg"
             viewBox="0 0 12 12"
             aria-hidden="true"
-            className="navi_checkbox_marker"
             preventInitialTransition
           >
             <circle cx="6" cy="6" r="5"></circle>
           </Box>
         ) : (
           <Box
+            className="navi_checkbox_marker"
             as="svg"
             viewBox="0 0 12 12"
             aria-hidden="true"
-            className="navi_checkbox_marker"
             preventInitialTransition
           >
             <path d="M10.5 2L4.5 9L1.5 5.5" fill="none" strokeWidth="2" />
