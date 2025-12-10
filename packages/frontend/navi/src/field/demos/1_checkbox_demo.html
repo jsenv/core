@@ -162,6 +162,7 @@
         return (
           <div>
             <BasicStatesDemo />
+            <SizeDemo />
             <ColorDemo />
             <ToggleAppearanceDemo />
             <IconDemo />
@@ -415,6 +416,50 @@
                       />
                       Native
                     </label>
+                  </Box>
+                </fieldset>
+              </Box>
+            </div>
+          </div>
+        );
+      };
+
+      const SizeDemo = () => {
+        return (
+          <div className="demo-section">
+            <h2>Checkbox Sizes</h2>
+
+            <div className="states-section">
+              <div className="states-title">Standard Checkbox Sizes</div>
+              <p className="states-description">
+                Control checkbox size using the size prop. Available sizes: xs,
+                s, m (default), l, xl.
+              </p>
+
+              <Box column spacing="md">
+                <fieldset>
+                  <legend>All Sizes Comparison</legend>
+                  <Box row spacing="sm" alignY="start">
+                    <Label column spacing="sm" alignY="center">
+                      <Input type="checkbox" size="xs" defaultChecked />
+                      Extra Small (xs)
+                    </Label>
+                    <Label column spacing="sm" alignY="center">
+                      <Input type="checkbox" size="s" defaultChecked />
+                      Small (s)
+                    </Label>
+                    <Label column spacing="sm" alignY="center">
+                      <Input type="checkbox" defaultChecked />
+                      Medium - Default (m)
+                    </Label>
+                    <Label column spacing="sm" alignY="center">
+                      <Input type="checkbox" size="l" defaultChecked />
+                      Large (l)
+                    </Label>
+                    <Label column spacing="sm" alignY="center">
+                      <Input type="checkbox" size="xl" defaultChecked />
+                      Extra Large (xl)
+                    </Label>
                   </Box>
                 </fieldset>
               </Box>
