@@ -84,133 +84,16 @@ import.meta.css = /* css */ `
       --border-color-disabled-checked: #d3d3d3;
       --background-color-disabled-checked: #d3d3d3;
 
-      &[data-dark] {
-        --color-mix: var(--color-mix-dark);
-        --checkmark-color: var(--navi-checkmark-color-dark);
-      }
-    }
-  }
-
-  .navi_checkbox {
-    --x-border-radius: var(--border-radius);
-    --x-outline-offset: var(--outline-offset);
-    --x-outline-width: var(--outline-width);
-    --x-border-width: var(--border-width);
-    --x-width: var(--width);
-    --x-height: var(--height);
-    --x-outline-color: var(--outline-color);
-    --x-background-color: var(--background-color);
-    --x-border-color: var(--border-color);
-    --x-color: var(--color);
-    --x-checkmark-color: var(--checkmark-color);
-    --x-cursor: var(--cursor);
-
-    position: relative;
-    display: inline-flex;
-    box-sizing: content-box;
-    margin: var(--margin);
-
-    .navi_native_field {
-      position: absolute;
-      inset: 0;
-      margin: 0;
-      padding: 0;
-      border: none;
-      opacity: 0;
-      cursor: inherit;
-    }
-
-    .navi_checkbox_field {
-      display: inline-flex;
-      box-sizing: border-box;
-      width: var(--x-width);
-      height: var(--x-height);
-      background-color: var(--x-background-color);
-      border-width: var(--x-border-width);
-      border-style: solid;
-      border-color: var(--x-border-color);
-      border-radius: var(--x-border-radius);
-      outline-width: var(--x-outline-width);
-      outline-style: none;
-      outline-color: var(--x-outline-color);
-      outline-offset: var(--x-outline-offset);
-      cursor: var(--x-cursor);
-      pointer-events: none;
-
-      .navi_checkbox_marker {
-        width: 100%;
-        height: 100%;
-        opacity: 0;
-        stroke: var(--x-checkmark-color);
-        transform: scale(0.5);
-      }
-    }
-
-    /* Focus */
-    &[data-focus-visible] {
-      z-index: 1;
-
-      .navi_checkbox_field {
-        outline-style: solid;
-      }
-    }
-    /* Hover */
-    &[data-hover] {
-      --x-background-color: var(--background-color-hover);
-      --x-border-color: var(--border-color-hover);
-
-      &[data-checked] {
-        --x-border-color: var(--border-color-hover-checked);
-        --x-background-color: var(--background-color-hover-checked);
-      }
-    }
-    /* Checked */
-    &[data-checked] {
-      --x-background-color: var(--background-color-checked);
-      --x-border-color: var(--border-color-checked);
-
-      .navi_checkbox_marker {
-        opacity: 1;
-        transform: scale(1);
-        transition-property: opacity, transform;
-        transition-duration: 0.15s;
-        transition-timing-function: ease;
-      }
-    }
-    /* Readonly */
-    &[data-readonly],
-    &[data-readonly][data-hover] {
-      --x-border-color: var(--border-color-readonly);
-      --x-background-color: var(--background-color-readonly);
-      --x-cursor: default;
-
-      &[data-checked] {
-        --x-border-color: var(--border-color-readonly-checked);
-        --x-background-color: var(--background-color-readonly-checked);
-        --x-checkmark-color: var(--checkmark-color-readonly);
-      }
-    }
-
-    /* Disabled */
-    &[data-disabled] {
-      --x-border-color: var(--border-color-disabled);
-      --x-background-color: var(--background-color-disabled);
-      --x-cursor: default;
-
-      &[data-checked] {
-        --x-border-color: var(--border-color-disabled-checked);
-        --x-background-color: var(--background-color-disabled-checked);
-        --x-checkmark-color: var(--checkmark-color-disabled);
-      }
-    }
-
-    /* Toggle appearance */
-    &[data-appearance="toggle"] {
+      /* Toggle specific */
+      --toggle-margin: 2px;
       --toggle-width: 2.5em;
       --toggle-thumb-size: 1.2em;
       /* Padding uses px and not em otherwise it can be resolved to a float which does not play well */
       /* With the translation calc in some configurations. In the end 2px is nice in all sizes and can still be configured for exceptions */
       --toggle-padding: 2px;
+      --toggle-border-radius: calc(
+        var(--toggle-thumb-size) / 2 + calc(var(--toggle-padding) * 2)
+      );
       --toggle-thumb-border-radius: 50%;
       --toggle-background-color: light-dark(#767676, #8e8e93);
       --toggle-background-color-checked: var(
@@ -247,9 +130,147 @@ import.meta.css = /* css */ `
         var(--toggle-background-color-checked) 15%,
         #d3d3d3
       );
-
       --toggle-thumb-color: white;
 
+      /* Button specific */
+      --button-border-color: light-dark(#767676, #8e8e93);
+      --button-background-color: light-dark(#f3f4f6, #2d3748);
+      --button-border-color-hover: color-mix(
+        in srgb,
+        var(--button-border-color) 70%,
+        black
+      );
+      --button-background-color-hover: color-mix(
+        in srgb,
+        var(--button-background-color) 95%,
+        black
+      );
+
+      &[data-dark] {
+        --color-mix: var(--color-mix-dark);
+        --checkmark-color: var(--navi-checkmark-color-dark);
+      }
+    }
+  }
+
+  .navi_checkbox {
+    --x-background-color: var(--background-color);
+    --x-border-color: var(--border-color);
+    --x-color: var(--color);
+    --x-checkmark-color: var(--checkmark-color);
+    --x-cursor: var(--cursor);
+
+    position: relative;
+    display: inline-flex;
+    box-sizing: content-box;
+    margin: var(--margin);
+
+    .navi_native_field {
+      position: absolute;
+      inset: 0;
+      margin: 0;
+      padding: 0;
+      border: none;
+      border-radius: inherit;
+      opacity: 0;
+      appearance: none; /* This allows border-radius to have an effect */
+      cursor: inherit;
+    }
+
+    .navi_checkbox_field {
+      display: inline-flex;
+      box-sizing: border-box;
+      width: var(--width);
+      height: var(--height);
+      background-color: var(--x-background-color);
+      border-width: var(--border-width);
+      border-style: solid;
+      border-color: var(--x-border-color);
+      border-radius: var(--border-radius);
+      outline-width: var(--outline-width);
+      outline-style: none;
+      outline-color: var(--outline-color);
+      outline-offset: var(--outline-offset);
+      cursor: var(--x-cursor);
+      pointer-events: none;
+    }
+
+    /* Focus */
+    &[data-focus-visible] {
+      z-index: 1;
+      .navi_checkbox_field {
+        outline-style: solid;
+      }
+    }
+    /* Hover */
+    &[data-hover] {
+      --x-background-color: var(--background-color-hover);
+      --x-border-color: var(--border-color-hover);
+
+      &[data-checked] {
+        --x-border-color: var(--border-color-hover-checked);
+        --x-background-color: var(--background-color-hover-checked);
+      }
+    }
+    /* Checked */
+    &[data-checked] {
+      --x-background-color: var(--background-color-checked);
+      --x-border-color: var(--border-color-checked);
+    }
+    /* Readonly */
+    &[data-readonly],
+    &[data-readonly][data-hover] {
+      --x-border-color: var(--border-color-readonly);
+      --x-background-color: var(--background-color-readonly);
+      --x-cursor: default;
+
+      &[data-checked] {
+        --x-border-color: var(--border-color-readonly-checked);
+        --x-background-color: var(--background-color-readonly-checked);
+        --x-checkmark-color: var(--checkmark-color-readonly);
+      }
+    }
+    /* Disabled */
+    &[data-disabled] {
+      --x-border-color: var(--border-color-disabled);
+      --x-background-color: var(--background-color-disabled);
+      --x-cursor: default;
+
+      &[data-checked] {
+        --x-border-color: var(--border-color-disabled-checked);
+        --x-background-color: var(--background-color-disabled-checked);
+        --x-checkmark-color: var(--checkmark-color-disabled);
+      }
+    }
+
+    /* Checkbox appearance */
+    &[data-appearance="checkbox"] {
+      .navi_checkbox_marker {
+        width: 100%;
+        height: 100%;
+        opacity: 0;
+        stroke: var(--x-checkmark-color);
+        transform: scale(0.5);
+      }
+
+      &[data-checked] {
+        .navi_checkbox_marker {
+          opacity: 1;
+          transform: scale(1);
+          transition-property: opacity, transform;
+          transition-duration: 0.15s;
+          transition-timing-function: ease;
+        }
+      }
+    }
+
+    /* Toggle appearance */
+    &[data-appearance="toggle"] {
+      --margin: var(--toggle-margin);
+      --padding: var(--toggle-padding);
+      --width: var(--toggle-width);
+      --height: unset;
+      --border-radius: var(--toggle-border-radius);
       --background-color: var(--toggle-background-color);
       --background-color-hover: var(--toggle-background-color-hover);
       --background-color-readonly: var(--toggle-background-color-readonly);
@@ -265,25 +286,14 @@ import.meta.css = /* css */ `
         --toggle-background-color-disabled-checked
       );
 
-      margin: 2px;
-      border-radius: calc(
-        var(--toggle-thumb-size) / 2 + calc(var(--toggle-padding) * 2)
-      );
-
-      .navi_native_field {
-        border-radius: inherit;
-        appearance: none; /* This allows border-radius to have an effect */
-      }
-
       .navi_checkbox_field {
         position: relative;
         box-sizing: border-box;
-        width: var(--toggle-width);
-        height: auto;
-        padding: var(--toggle-padding);
+        width: var(--width);
+        height: var(--height);
+        padding: var(--padding);
         background-color: var(--x-background-color);
         border-color: transparent;
-        border-radius: inherit;
         user-select: none;
 
         .navi_checkbox_toggle {
@@ -314,25 +324,12 @@ import.meta.css = /* css */ `
       }
     }
 
-    &[data-appearance="icon"] {
+    &[data-appearance="button"] {
       --margin: 0;
       --outline-offset: 0px;
       --width: auto;
       --height: auto;
       --padding: 4px;
-      --button-border-color: light-dark(#767676, #8e8e93);
-      --button-background-color: light-dark(#f3f4f6, #2d3748);
-      --button-border-color-hover: color-mix(
-        in srgb,
-        var(--button-border-color) 70%,
-        black
-      );
-      --button-background-color-hover: color-mix(
-        in srgb,
-        var(--button-background-color) 95%,
-        black
-      );
-
       --border-color: var(--button-border-color);
       --border-color-hover: var(--button-border-color-hover);
       --background-color: var(--button-background-color);
