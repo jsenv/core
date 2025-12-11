@@ -148,7 +148,7 @@ import.meta.css = /* css */ `
 
       &[data-dark] {
         --color-mix: var(--color-mix-dark);
-        --checkmark-color: var(--navi-checkmark-color-dark);
+        --checkmark-color: var(--checkmark-color-dark);
       }
     }
   }
@@ -528,8 +528,9 @@ const InputCheckboxBasic = (props) => {
     innerRequired,
   ]);
 
+  const boxRef = useRef();
   useLayoutEffect(() => {
-    const naviCheckbox = ref.current;
+    const naviCheckbox = boxRef.current;
     const lightColor = "var(--checkmark-color-light)";
     const darkColor = "var(--checkmark-color-dark)";
     const colorPicked = pickLightOrDark(
@@ -549,7 +550,7 @@ const InputCheckboxBasic = (props) => {
     <Box
       as="span"
       {...remainingProps}
-      ref={undefined}
+      ref={boxRef}
       data-appearance={appearance}
       baseClassName="navi_checkbox"
       pseudoStateSelector=".navi_native_field"

@@ -148,6 +148,10 @@ import.meta.css = /* css */ `
       &[data-focus-visible] {
         opacity: 1;
       }
+
+      .navi_icon {
+        vertical-align: top;
+      }
     }
   }
 

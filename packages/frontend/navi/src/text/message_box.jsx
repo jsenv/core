@@ -125,7 +125,7 @@ export const MessageBox = ({
               border="none"
               alignX="center"
               alignY="center"
-              pseudoStyle={{
+              style={{
                 ":hover": {
                   backgroundColor: "rgba(0, 0, 0, 0.1)",
                 },
