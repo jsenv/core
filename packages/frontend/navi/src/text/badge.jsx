@@ -78,11 +78,9 @@ const BadgeStyleCSSVars = {
   color: "--color",
   fontSize: "--font-size",
 };
-
 const BadgeCountOverflow = () => (
   <span className="navi_count_badge_overflow">+</span>
 );
-
 const MAX_CHAR_AS_CIRCLE = 3;
 export const BadgeCount = ({
   children,

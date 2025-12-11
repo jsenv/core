@@ -17853,7 +17853,7 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
       border-radius: inherit;
       opacity: 0;
       appearance: none; /* This allows border-radius to have an effect */
-      cursor: inherit;
+      cursor: var(--x-cursor);
     }
 
     .navi_checkbox_field {
@@ -17870,7 +17870,6 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
       outline-style: none;
       outline-color: var(--outline-color);
       outline-offset: var(--outline-offset);
-      cursor: var(--x-cursor);
       pointer-events: none;
     }
 
