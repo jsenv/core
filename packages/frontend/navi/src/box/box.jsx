@@ -272,7 +272,7 @@ export const Box = (props) => {
 
     // By default ":hover", ":active" are not tracked.
     // But if code explicitely do something like:
-    // pseudoStyle={{ ":hover": { backgroundColor: "red" } }}
+    // style={{ ":hover": { backgroundColor: "red" } }}
     // then we'll track ":hover" state changes even for basic elements like <div>
     const pseudoClassesFromStyleSet = new Set();
     boxPseudoNamedStyles = {};

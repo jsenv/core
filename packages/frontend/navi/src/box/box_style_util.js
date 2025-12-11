@@ -248,6 +248,7 @@ const POSITION_PROPS = {
   bottom: PASS_THROUGH,
   right: PASS_THROUGH,
 
+  transform: PASS_THROUGH,
   translateX: (value) => {
     return { transform: `translateX(${value})` };
   },
