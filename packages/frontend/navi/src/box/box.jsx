@@ -100,7 +100,6 @@ export const Box = (props) => {
     pseudoState, // for demo purposes it's possible to control pseudo state from props
     pseudoClasses = PSEUDO_CLASSES_DEFAULT,
     pseudoElements = PSEUDO_ELEMENTS_DEFAULT,
-    pseudoStyle,
     // visualSelector convey the following:
     // The box itself is visually "invisible", one of its descendant is responsible for visual representation
     // - Some styles will be used on the box itself (for instance margins)
@@ -230,7 +229,7 @@ export const Box = (props) => {
     const shouldForwardAllToChild = visualSelector && pseudoStateSelector;
 
     const addStyle = (value, name, styleContext, stylesTarget, context) => {
-      styleDeps.push(value); // impact box style -> add to deps
+      styleDeps.push(name, value); // impact box style -> add to deps
       const cssVar = styleContext.styleCSSVars[name];
       const mergedValue = prepareStyleValue(
         stylesTarget[name],
@@ -270,6 +269,13 @@ export const Box = (props) => {
       }
       return true;
     };
+
+    // By default ":hover", ":active" are not tracked.
+    // But if code explicitely do something like:
+    // pseudoStyle={{ ":hover": { backgroundColor: "red" } }}
+    // then we'll track ":hover" state changes even for basic elements like <div>
+    const pseudoClassesFromStyleSet = new Set();
+    boxPseudoNamedStyles = {};
     const assignStyle = (
       value,
       name,
@@ -277,6 +283,48 @@ export const Box = (props) => {
       boxStylesTarget,
       styleOrigin,
     ) => {
+      const isPseudoElement = name.startsWith("::");
+      const isPseudoClass = name.startsWith(":");
+      if (isPseudoElement || isPseudoClass) {
+        styleDeps.push(name);
+        pseudoClassesFromStyleSet.add(name);
+        const pseudoStyleContext = {
+          ...styleContext,
+          styleCSSVars: {
+            ...styleCSSVars,
+            ...styleCSSVars[name],
+          },
+          pseudoName: name,
+        };
+        const pseudoStyleKeys = Object.keys(value);
+        if (isPseudoElement) {
+          const pseudoElementStyles = {};
+          for (const key of pseudoStyleKeys) {
+            assignStyle(
+              value[key],
+              key,
+              pseudoStyleContext,
+              pseudoElementStyles,
+              "pseudo_style",
+            );
+          }
+          boxPseudoNamedStyles[name] = pseudoElementStyles;
+          return;
+        }
+        const pseudoClassStyles = {};
+        for (const key of pseudoStyleKeys) {
+          assignStyle(
+            value[key],
+            key,
+            pseudoStyleContext,
+            pseudoClassStyles,
+            "pseudo_style",
+          );
+          boxPseudoNamedStyles[name] = pseudoClassStyles;
+        }
+        return;
+      }
+
       const context = styleOrigin === "base_style" ? "js" : "css";
       const isCss = styleOrigin === "base_style" || styleOrigin === "style";
       if (isCss) {
@@ -372,79 +420,6 @@ export const Box = (props) => {
       const propValue = rest[propName];
       assignStyle(propValue, propName, styleContext, boxStyles, "prop");
     }
-    if (pseudoStyle) {
-      const assignPseudoStyle = (
-        propValue,
-        propName,
-        pseudoStyleContext,
-        pseudoStylesTarget,
-      ) => {
-        assignStyle(
-          propValue,
-          propName,
-          pseudoStyleContext,
-          pseudoStylesTarget,
-          "pseudo_style",
-        );
-      };
-
-      const pseudoStyleKeys = Object.keys(pseudoStyle);
-      if (pseudoStyleKeys.length) {
-        boxPseudoNamedStyles = {};
-        for (const key of pseudoStyleKeys) {
-          const pseudoStyleContext = {
-            ...styleContext,
-            styleCSSVars: {
-              ...styleCSSVars,
-              ...styleCSSVars[key],
-            },
-            pseudoName: key,
-          };
-
-          // pseudo class
-          if (key.startsWith(":")) {
-            styleDeps.push(key);
-            const pseudoClassStyles = {};
-            const pseudoClassStyle = pseudoStyle[key];
-            for (const pseudoClassStyleKey of Object.keys(pseudoClassStyle)) {
-              const pseudoClassStyleValue =
-                pseudoClassStyle[pseudoClassStyleKey];
-              debugger;
-              assignPseudoStyle(
-                pseudoClassStyleValue,
-                pseudoClassStyleKey,
-                pseudoStyleContext,
-                pseudoClassStyles,
-              );
-            }
-            boxPseudoNamedStyles[key] = pseudoClassStyles;
-            continue;
-          }
-          // pseudo element
-          if (key.startsWith("::")) {
-            styleDeps.push(key);
-            const pseudoElementStyles = {};
-            const pseudoElementStyle = pseudoStyle[key];
-            for (const pseudoElementStyleKey of Object.keys(
-              pseudoElementStyle,
-            )) {
-              const pseudoElementStyleValue =
-                pseudoElementStyle[pseudoElementStyleKey];
-              assignPseudoStyle(
-                pseudoElementStyleValue,
-                pseudoElementStyleKey,
-                pseudoStyleContext,
-                pseudoElementStyles,
-              );
-            }
-            boxPseudoNamedStyles[key] = pseudoElementStyles;
-            continue;
-          }
-          console.warn(`unsupported pseudo style key "${key}"`);
-        }
-      }
-      childForwardedProps.pseudoStyle = pseudoStyle;
-    }
     if (typeof style === "string") {
       const styleObject = normalizeStyles(style, "css");
       for (const styleName of Object.keys(styleObject)) {
@@ -469,21 +444,15 @@ export const Box = (props) => {
       );
     }, styleDeps);
     const finalStyleDeps = [pseudoStateSelector, innerPseudoState, updateStyle];
-    // By default ":hover", ":active" are not tracked.
-    // But if code explicitely do something like:
-    // pseudoStyle={{ ":hover": { backgroundColor: "red" } }}
-    // then we'll track ":hover" state changes even for basic elements like <div>
     let innerPseudoClasses;
-    if (pseudoStyle) {
+    if (pseudoClassesFromStyleSet.size) {
       innerPseudoClasses = [...pseudoClasses];
       if (pseudoClasses !== PSEUDO_CLASSES_DEFAULT) {
         finalStyleDeps.push(...pseudoClasses);
       }
-      for (const key of Object.keys(pseudoStyle)) {
-        if (key.startsWith(":") && !innerPseudoClasses.includes(key)) {
-          innerPseudoClasses.push(key);
-          finalStyleDeps.push(key);
-        }
+      for (const key of pseudoClassesFromStyleSet) {
+        innerPseudoClasses.push(key);
+        finalStyleDeps.push(key);
       }
     } else {
       innerPseudoClasses = pseudoClasses;
