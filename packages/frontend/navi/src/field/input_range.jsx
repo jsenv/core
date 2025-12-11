@@ -43,17 +43,17 @@ import.meta.css = /* css */ `
 
       --outline-color: var(--navi-focus-outline-color);
       --loader-color: var(--navi-loader-color);
-      --color: rgb(24, 117, 255);
+      --accent-color: rgb(24, 117, 255);
 
-      --border-color: rgba(150, 150, 150);
+      --border-color: rgb(150, 150, 150);
       --track-border-color: color-mix(
         in srgb,
         var(--border-color) 35%,
         transparent
       );
       --background-color: #efefef;
-      --fill-color: var(--color);
-      --thumb-color: var(--fill-color);
+      --fill-color: var(--accent-color);
+      --thumb-color: var(--accent-color);
       /* Hover */
       --border-color-hover: color-mix(in srgb, var(--border-color) 75%, black);
       --track-border-color-hover: color-mix(
@@ -62,7 +62,6 @@ import.meta.css = /* css */ `
         black
       );
       --track-color-hover: color-mix(in srgb, var(--fill-color) 95%, black);
-      --color-hover: color-mix(in srgb, var(--rail-color) 95%, black);
       --fill-color-hover: color-mix(in srgb, var(--fill-color) 80%, black);
       --thumb-color-hover: color-mix(in srgb, var(--thumb-color) 80%, black);
       /* Active */
@@ -85,6 +84,7 @@ import.meta.css = /* css */ `
         var(--border-color) 30%,
         white
       );
+      --track-border-color-readonly: var(--border-color);
       --background-color-readonly: var(--background-color);
       --fill-color-readonly: color-mix(in srgb, var(--fill-color) 30%, grey);
       --thumb-color-readonly: var(--fill-color-readonly);
@@ -191,14 +191,14 @@ import.meta.css = /* css */ `
     }
 
     /* Hover */
-    &:hover {
+    &[data-hover] {
       --x-border-color: var(--border-color-hover);
       --x-track-border-color: var(--track-border-color-hover);
       --x-fill-color: var(--fill-color-hover);
       --x-thumb-color: var(--thumb-color-hover);
     }
     /* Active */
-    &:active {
+    &[data-active] {
       --x-border-color: var(--border-color-active);
       --x-track-border-color: var(--track-border-color-active);
       --x-background-color: var(--background-color-active);
@@ -212,6 +212,7 @@ import.meta.css = /* css */ `
     /* Readonly */
     &[data-readonly] {
       --x-background-color: var(--background-color-readonly);
+      --x-track-border-color: var(--track-border-color-readonly);
       --x-border-color: var(--border-color-readonly);
       --x-fill-color: var(--fill-color-readonly);
       --x-thumb-color: var(--thumb-color-readonly);
@@ -231,7 +232,7 @@ import.meta.css = /* css */ `
   /* Disabled */
   .navi_input_range[data-disabled] {
     --x-background-color: var(--background-color-disabled);
-    --x-color: var(--color-disabled);
+    --x-accent-color: var(--accent-color-disabled);
   }
   /* Callout (info, warning, error) */
   .navi_input_range[data-callout] {
@@ -259,7 +260,7 @@ const InputStyleCSSVars = {
   "borderRadius": "--border-radius",
   "borderColor": "--border-color",
   "backgroundColor": "--background-color",
-  "color": "--color",
+  "accentColor": "--accent-color",
   ":hover": {
     borderColor: "--border-color-hover",
     backgroundColor: "--background-color-hover",

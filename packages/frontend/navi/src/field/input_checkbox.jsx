@@ -44,8 +44,9 @@ import.meta.css = /* css */ `
       --loader-color: var(--navi-loader-color);
       --border-color: light-dark(#767676, #8e8e93);
       --background-color: white;
-      --background-color-checked: var(--color, light-dark(#4476ff, #3b82f6));
-      --border-color-checked: var(--color, light-dark(#4476ff, #3b82f6));
+      --accent-color: light-dark(#4476ff, #3b82f6);
+      --background-color-checked: var(--accent-color);
+      --border-color-checked: var(--accent-color);
       --checkmark-color-light: white;
       --checkmark-color-dark: rgb(55, 55, 55);
       --checkmark-color: var(--checkmark-color-light);
@@ -96,10 +97,7 @@ import.meta.css = /* css */ `
       );
       --toggle-thumb-border-radius: 50%;
       --toggle-background-color: light-dark(#767676, #8e8e93);
-      --toggle-background-color-checked: var(
-        --color,
-        light-dark(#4476ff, #3b82f6)
-      );
+      --toggle-background-color-checked: var(--accent-color);
       --toggle-background-color-hover: color-mix(
         in srgb,
         var(--toggle-background-color) 60%,
@@ -392,7 +390,7 @@ const CheckboxStyleCSSVars = {
   "borderWidth": "--border-width",
   "backgroundColor": "--background-color",
   "borderColor": "--border-color",
-  "color": "--color",
+  "accentColor": "--accent-color",
   ":hover": {
     backgroundColor: "--background-color-hover",
     borderColor: "--border-color-hover",
@@ -467,7 +465,7 @@ const InputCheckboxBasic = (props) => {
     onClick,
     onInput,
 
-    color,
+    accentColor,
     icon,
     appearance = icon ? "icon" : "checkbox", // "checkbox", "toggle", "icon", "button"
     ...rest
@@ -534,7 +532,7 @@ const InputCheckboxBasic = (props) => {
     const lightColor = "var(--checkmark-color-light)";
     const darkColor = "var(--checkmark-color-dark)";
     const colorPicked = pickLightOrDark(
-      "var(--color)",
+      "var(--accent-color)",
       lightColor,
       darkColor,
       naviCheckbox,
@@ -544,7 +542,7 @@ const InputCheckboxBasic = (props) => {
     } else {
       naviCheckbox.setAttribute("data-dark", "");
     }
-  }, [color]);
+  }, [accentColor]);
 
   return (
     <Box
@@ -568,7 +566,7 @@ const InputCheckboxBasic = (props) => {
         ":disabled": innerDisabled,
         ":-navi-loading": innerLoading,
       }}
-      color={color}
+      accentColor={accentColor}
       hasChildFunction
       preventInitialTransition
     >

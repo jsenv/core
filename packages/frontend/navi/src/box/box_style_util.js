@@ -335,6 +335,7 @@ const VISUAL_PROPS = {
   overflow: PASS_THROUGH,
   overflowX: PASS_THROUGH,
   overflowY: PASS_THROUGH,
+  accentColor: PASS_THROUGH,
 };
 const CONTENT_PROPS = {
   align: applyOnTwoProps("alignX", "alignY"),
