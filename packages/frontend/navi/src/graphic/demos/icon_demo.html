@@ -17,6 +17,7 @@
         Title,
         Link,
         Button,
+        Caption,
         HeartSvg,
         CheckSvg,
         StarSvg,
@@ -1295,7 +1296,7 @@
               borderWidth="2"
               borderStyle="solid"
               borderRadius="5"
-              pseudoStyle={{
+              style={{
                 ":hover": {
                   backgroundColor: "#0056b3",
                   borderColor: "#0056b3",
@@ -1476,34 +1477,21 @@
             </div>
 
             <div>
-              <Text
+              <Caption>Icons in Buttons</Caption>
+              <br />
+              <Button
                 style={{
-                  fontSize: "14px",
-                  fontWeight: "bold",
-                  color: "#333",
-                  marginBottom: "8px",
-                  display: "block",
-                }}
-              >
-                Icons in Buttons
-              </Text>
-              <button
-                style={{
-                  padding: "12px 16px",
-                  border: "2px solid #dc3545",
-                  borderRadius: "6px",
-                  background: "white",
-                  color: "#dc3545",
-                  cursor: "pointer",
-                  fontSize: "14px",
-                }}
-                onMouseOver={(e) => {
-                  e.target.closest("button").style.background = "#dc3545";
-                  e.target.closest("button").style.color = "white";
-                }}
-                onMouseOut={(e) => {
-                  e.target.closest("button").style.background = "white";
-                  e.target.closest("button").style.color = "#dc3545";
+                  "padding": "12px 16px",
+                  "border": "2px solid #dc3545",
+                  "borderRadius": "6px",
+                  "backgroundColor": "white",
+                  "color": "#dc3545",
+                  "cursor": "pointer",
+                  "fontSize": "14px",
+                  ":hover": {
+                    backgroundColor: "#dc3545",
+                    color: "white",
+                  },
                 }}
               >
                 <Text>
@@ -1512,7 +1500,7 @@
                   </Icon>
                   Add to Favorites
                 </Text>
-              </button>
+              </Button>
             </div>
           </Box>
         </Box>

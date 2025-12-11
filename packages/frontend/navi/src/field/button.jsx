@@ -37,6 +37,8 @@ import.meta.css = /* css */ `
       --button-outline-width: 1px;
       --button-border-width: 1px;
       --button-border-radius: 2px;
+      --button-padding-x: 6px;
+      --button-padding-y: 1px;
       /* default */
       --button-outline-color: var(--navi-focus-outline-color);
       --button-loader-color: var(--navi-loader-color);
@@ -91,10 +93,11 @@ import.meta.css = /* css */ `
     --x-button-border-radius: var(--button-border-radius);
     --x-button-border-width: var(--button-border-width);
     --x-button-outer-width: calc(
-      var(--button-x-border-width) + var(--x-button-outline-width)
+      var(--x-button-border-width) + var(--x-button-outline-width)
     );
     --x-button-outline-color: var(--button-outline-color);
     --x-button-border-color: var(--button-border-color);
+    --x-button-background: var(--button-background);
     --x-button-background-color: var(--button-background-color);
     --x-button-color: var(--button-color);
     --x-button-cursor: var(--button-cursor);
@@ -123,24 +126,29 @@ import.meta.css = /* css */ `
       height: 100%;
       padding-top: var(
         --button-padding-top,
-        var(--button-padding-y, var(--button-padding, 1px))
+        var(--button-padding-y, var(--button-padding))
       );
       padding-right: var(
         --button-padding-right,
-        var(--button-padding-x, var(--button-padding, 6px))
+        var(--button-padding-x, var(--button-padding))
       );
       padding-bottom: var(
         --button-padding-bottom,
-        var(--button-padding-y, var(--button-padding, 1px))
+        var(--button-padding-y, var(--button-padding))
       );
       padding-left: var(
         --button-padding-left,
-        var(--button-padding-x, var(--button-padding, 6px))
+        var(--button-padding-x, var(--button-padding))
       );
       align-items: inherit;
       justify-content: inherit;
       color: var(--x-button-color);
-      background-color: var(--x-button-background-color);
+      background: var(--x-button-background);
+      background-color: var(
+        --x-button-background-color,
+        var(--x-button-background)
+      );
+
       border-width: var(--x-button-outer-width);
       border-style: solid;
       border-color: transparent;
@@ -266,12 +274,17 @@ const ButtonStyleCSSVars = {
   "outlineWidth": "--button-outline-width",
   "borderWidth": "--button-border-width",
   "borderRadius": "--button-border-radius",
+  "border": "--button-border",
+  "padding": "--button-padding",
+  "paddingX": "--button-padding-x",
+  "paddingY": "--button-padding-y",
   "paddingTop": "--button-padding-top",
   "paddingRight": "--button-padding-right",
   "paddingBottom": "--button-padding-bottom",
   "paddingLeft": "--button-padding-left",
-  "backgroundColor": "--button-background-color",
   "borderColor": "--button-border-color",
+  "background": "--button-background",
+  "backgroundColor": "--button-background-color",
   "color": "--button-color",
   ":hover": {
     backgroundColor: "--button-background-color-hover",
