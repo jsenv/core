@@ -4,11 +4,52 @@ export const PSEUDO_CLASSES = {
   ":hover": {
     attribute: "data-hover",
     setup: (el, callback) => {
-      el.addEventListener("mouseenter", callback);
-      el.addEventListener("mouseleave", callback);
+      let onmouseenter = () => {
+        callback();
+      };
+      let onmouseleave = () => {
+        callback();
+      };
+
+      if (el.tagName === "LABEL") {
+        // input.matches(":hover") is true when hovering the label
+        // so when label is hovered/not hovered we need to recheck the input too
+        const recheckInput = () => {
+          if (el.htmlFor) {
+            const input = document.getElementById(el.htmlFor);
+            if (!input) {
+              // cannot find the input for this label in the DOM
+              return;
+            }
+            input.dispatchEvent(
+              new CustomEvent(NAVI_CHECK_PSEUDO_STATE_CUSTOM_EVENT),
+            );
+            return;
+          }
+          const input = el.querySelector("input, textarea, select");
+          if (!input) {
+            // label does not contain an input
+            return;
+          }
+          input.dispatchEvent(
+            new CustomEvent(NAVI_CHECK_PSEUDO_STATE_CUSTOM_EVENT),
+          );
+        };
+        onmouseenter = () => {
+          callback();
+          recheckInput();
+        };
+        onmouseleave = () => {
+          callback();
+          recheckInput();
+        };
+      }
+
+      el.addEventListener("mouseenter", onmouseenter);
+      el.addEventListener("mouseleave", onmouseleave);
       return () => {
-        el.removeEventListener("mouseenter", callback);
-        el.removeEventListener("mouseleave", callback);
+        el.removeEventListener("mouseenter", onmouseenter);
+        el.removeEventListener("mouseleave", onmouseleave);
       };
     },
     test: (el) => el.matches(":hover"),
@@ -210,6 +251,7 @@ export const PSEUDO_CLASSES = {
 };
 
 const NAVI_PSEUDO_STATE_CUSTOM_EVENT = "navi_pseudo_state";
+const NAVI_CHECK_PSEUDO_STATE_CUSTOM_EVENT = "navi_check_pseudo_state";
 const dispatchNaviPseudoStateEvent = (element, value, oldValue) => {
   if (!element) {
     return;
@@ -314,6 +356,9 @@ export const initPseudoStyles = (
     state = event.detail.pseudoState;
     onStateChange(state, oldState);
   });
+  element.addEventListener(NAVI_CHECK_PSEUDO_STATE_CUSTOM_EVENT, () => {
+    checkPseudoClasses();
+  });
 
   for (const pseudoClass of pseudoClasses) {
     const pseudoClassDefinition = PSEUDO_CLASSES[pseudoClass];
@@ -333,7 +378,7 @@ export const initPseudoStyles = (
   // just in case + catch use forcing them in chrome devtools
   const interval = setInterval(() => {
     checkPseudoClasses();
-  }, 300);
+  }, 1_000);
   addTeardown(() => {
     clearInterval(interval);
   });
