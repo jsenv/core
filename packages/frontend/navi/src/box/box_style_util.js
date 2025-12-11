@@ -428,6 +428,7 @@ export const getVisualChildStylePropStrategy = (name) => {
 };
 
 export const isStyleProp = (name) => STYLE_PROP_NAME_SET.has(name);
+export const isCSSVar = (name) => name.startsWith("--");
 
 const getStylePropGroup = (name) => {
   if (FLOW_PROP_NAME_SET.has(name)) {

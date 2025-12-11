@@ -824,9 +824,27 @@
         );
       };
 
-      const IconDemo = () => {
-        const [heartChecked, setHeartChecked] = useState(false);
+      const HeartIconOpacityDemo = () => {
+        return (
+          <Label column spacing="sm" alignY="center">
+            <Input
+              type="checkbox"
+              style={{
+                "--opacity": 0.3,
+              }}
+              pseudoStyle={{
+                ":checked": {
+                  "--opacity": 1,
+                },
+              }}
+              icon={<span style="opacity: var(--opacity)">❤️</span>}
+            />
+            Heart icon (single icon)
+          </Label>
+        );
+      };
 
+      const IconDemo = () => {
         return (
           <div className="demo-section">
             <h2>Custom Icons</h2>
@@ -836,23 +854,7 @@
               <p>You can use custom icons instead of the default checkmark:</p>
 
               <Box row spacing="sm" alignY="start">
-                <Label column spacing="sm" alignY="center">
-                  <Input
-                    type="checkbox"
-                    checked={heartChecked}
-                    action={setHeartChecked}
-                    icon={
-                      <span
-                        style={{
-                          opacity: heartChecked ? 1 : "0.3",
-                        }}
-                      >
-                        ❤️
-                      </span>
-                    }
-                  />
-                  Heart icon (single icon)
-                </Label>
+                <HeartIconOpacityDemo />
 
                 <Label column spacing="sm" alignY="center">
                   <Input

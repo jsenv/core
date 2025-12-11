@@ -52,6 +52,7 @@ import { BoxFlowContext } from "./box_flow_context.jsx";
 import {
   getHowToHandleStyleProp,
   getVisualChildStylePropStrategy,
+  isCSSVar,
   isStyleProp,
   prepareStyleValue,
 } from "./box_style_util.js";
@@ -282,41 +283,54 @@ export const Box = (props) => {
         addStyle(value, name, styleContext, boxStylesTarget, context);
         return;
       }
-      const isPseudoStyle = styleOrigin === "pseudo_style";
-      const mightStyle = isStyleProp(name);
-      if (!mightStyle) {
-        // not a style prop what do we do with it?
-        if (shouldForwardAllToChild) {
-          if (isPseudoStyle) {
-            // le pseudo style est deja passé tel quel au child
-          } else {
-            childForwardedProps[name] = value;
-          }
-        } else {
-          if (isPseudoStyle) {
-            console.warn(`unsupported pseudo style key "${name}"`);
-          }
-          selfForwardedProps[name] = value;
-        }
+      if (isCSSVar(name)) {
+        addStyle(value, name, styleContext, boxStylesTarget, context);
         return;
       }
-      // it's a style prop, we need first to check if we have css var to handle them
-      // otherwise we decide to put it either on self or child
-      const visualChildPropStrategy =
-        visualSelector && getVisualChildStylePropStrategy(name);
-      const getStyle = getHowToHandleStyleProp(name);
-      if (
-        // prop name === css style name
-        !getStyle
-      ) {
-        const needForwarding = addStyleMaybeForwarding(
-          value,
-          name,
-          styleContext,
-          boxStylesTarget,
-          context,
-          visualChildPropStrategy,
-        );
+      const isPseudoStyle = styleOrigin === "pseudo_style";
+      if (isStyleProp(name)) {
+        // it's a style prop, we need first to check if we have css var to handle them
+        // otherwise we decide to put it either on self or child
+        const visualChildPropStrategy =
+          visualSelector && getVisualChildStylePropStrategy(name);
+        const getStyle = getHowToHandleStyleProp(name);
+        if (
+          // prop name === css style name
+          !getStyle
+        ) {
+          const needForwarding = addStyleMaybeForwarding(
+            value,
+            name,
+            styleContext,
+            boxStylesTarget,
+            context,
+            visualChildPropStrategy,
+          );
+          if (needForwarding) {
+            if (isPseudoStyle) {
+              // le pseudo style est deja passé tel quel au child
+            } else {
+              childForwardedProps[name] = value;
+            }
+          }
+          return;
+        }
+        const cssValues = getStyle(value, styleContext);
+        if (!cssValues) {
+          return;
+        }
+        let needForwarding = false;
+        for (const styleName of Object.keys(cssValues)) {
+          const cssValue = cssValues[styleName];
+          needForwarding = addStyleMaybeForwarding(
+            cssValue,
+            styleName,
+            styleContext,
+            boxStylesTarget,
+            context,
+            visualChildPropStrategy,
+          );
+        }
         if (needForwarding) {
           if (isPseudoStyle) {
             // le pseudo style est deja passé tel quel au child
@@ -326,29 +340,20 @@ export const Box = (props) => {
         }
         return;
       }
-      const cssValues = getStyle(value, styleContext);
-      if (!cssValues) {
-        return;
-      }
-      let needForwarding = false;
-      for (const styleName of Object.keys(cssValues)) {
-        const cssValue = cssValues[styleName];
-        needForwarding = addStyleMaybeForwarding(
-          cssValue,
-          styleName,
-          styleContext,
-          boxStylesTarget,
-          context,
-          visualChildPropStrategy,
-        );
-      }
-      if (needForwarding) {
+      // not a style prop what do we do with it?
+      if (shouldForwardAllToChild) {
         if (isPseudoStyle) {
           // le pseudo style est deja passé tel quel au child
         } else {
           childForwardedProps[name] = value;
         }
+      } else {
+        if (isPseudoStyle) {
+          console.warn(`unsupported pseudo style key "${name}"`);
+        }
+        selfForwardedProps[name] = value;
       }
+      return;
     };
 
     if (baseStyle) {
@@ -404,6 +409,7 @@ export const Box = (props) => {
             for (const pseudoClassStyleKey of Object.keys(pseudoClassStyle)) {
               const pseudoClassStyleValue =
                 pseudoClassStyle[pseudoClassStyleKey];
+              debugger;
               assignPseudoStyle(
                 pseudoClassStyleValue,
                 pseudoClassStyleKey,
@@ -464,7 +470,7 @@ export const Box = (props) => {
     }, styleDeps);
     const finalStyleDeps = [pseudoStateSelector, innerPseudoState, updateStyle];
     // By default ":hover", ":active" are not tracked.
-    // But is code explicitely do something like:
+    // But if code explicitely do something like:
     // pseudoStyle={{ ":hover": { backgroundColor: "red" } }}
     // then we'll track ":hover" state changes even for basic elements like <div>
     let innerPseudoClasses;
