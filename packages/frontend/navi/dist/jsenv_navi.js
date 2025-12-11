@@ -4887,6 +4887,7 @@ const POSITION_PROPS = {
   bottom: PASS_THROUGH,
   right: PASS_THROUGH,
 
+  transform: PASS_THROUGH,
   translateX: (value) => {
     return { transform: `translateX(${value})` };
   },
@@ -4973,6 +4974,7 @@ const VISUAL_PROPS = {
   overflow: PASS_THROUGH,
   overflowX: PASS_THROUGH,
   overflowY: PASS_THROUGH,
+  accentColor: PASS_THROUGH,
 };
 const CONTENT_PROPS = {
   align: applyOnTwoProps("alignX", "alignY"),
@@ -5067,6 +5069,7 @@ const getVisualChildStylePropStrategy = (name) => {
 };
 
 const isStyleProp = (name) => STYLE_PROP_NAME_SET.has(name);
+const isCSSVar = (name) => name.startsWith("--");
 
 const getStylePropGroup = (name) => {
   if (FLOW_PROP_NAME_SET.has(name)) {
@@ -5322,11 +5325,52 @@ const PSEUDO_CLASSES = {
   ":hover": {
     attribute: "data-hover",
     setup: (el, callback) => {
-      el.addEventListener("mouseenter", callback);
-      el.addEventListener("mouseleave", callback);
+      let onmouseenter = () => {
+        callback();
+      };
+      let onmouseleave = () => {
+        callback();
+      };
+
+      if (el.tagName === "LABEL") {
+        // input.matches(":hover") is true when hovering the label
+        // so when label is hovered/not hovered we need to recheck the input too
+        const recheckInput = () => {
+          if (el.htmlFor) {
+            const input = document.getElementById(el.htmlFor);
+            if (!input) {
+              // cannot find the input for this label in the DOM
+              return;
+            }
+            input.dispatchEvent(
+              new CustomEvent(NAVI_CHECK_PSEUDO_STATE_CUSTOM_EVENT),
+            );
+            return;
+          }
+          const input = el.querySelector("input, textarea, select");
+          if (!input) {
+            // label does not contain an input
+            return;
+          }
+          input.dispatchEvent(
+            new CustomEvent(NAVI_CHECK_PSEUDO_STATE_CUSTOM_EVENT),
+          );
+        };
+        onmouseenter = () => {
+          callback();
+          recheckInput();
+        };
+        onmouseleave = () => {
+          callback();
+          recheckInput();
+        };
+      }
+
+      el.addEventListener("mouseenter", onmouseenter);
+      el.addEventListener("mouseleave", onmouseleave);
       return () => {
-        el.removeEventListener("mouseenter", callback);
-        el.removeEventListener("mouseleave", callback);
+        el.removeEventListener("mouseenter", onmouseenter);
+        el.removeEventListener("mouseleave", onmouseleave);
       };
     },
     test: (el) => el.matches(":hover"),
@@ -5528,6 +5572,7 @@ const PSEUDO_CLASSES = {
 };
 
 const NAVI_PSEUDO_STATE_CUSTOM_EVENT = "navi_pseudo_state";
+const NAVI_CHECK_PSEUDO_STATE_CUSTOM_EVENT = "navi_check_pseudo_state";
 const dispatchNaviPseudoStateEvent = (element, value, oldValue) => {
   if (!element) {
     return;
@@ -5632,6 +5677,9 @@ const initPseudoStyles = (
     state = event.detail.pseudoState;
     onStateChange(state, oldState);
   });
+  element.addEventListener(NAVI_CHECK_PSEUDO_STATE_CUSTOM_EVENT, () => {
+    checkPseudoClasses();
+  });
 
   for (const pseudoClass of pseudoClasses) {
     const pseudoClassDefinition = PSEUDO_CLASSES[pseudoClass];
@@ -5651,7 +5699,7 @@ const initPseudoStyles = (
   // just in case + catch use forcing them in chrome devtools
   const interval = setInterval(() => {
     checkPseudoClasses();
-  }, 300);
+  }, 1_000);
   addTeardown(() => {
     clearInterval(interval);
   });
@@ -5825,7 +5873,6 @@ const Box = props => {
     // for demo purposes it's possible to control pseudo state from props
     pseudoClasses = PSEUDO_CLASSES_DEFAULT,
     pseudoElements = PSEUDO_ELEMENTS_DEFAULT,
-    pseudoStyle,
     // visualSelector convey the following:
     // The box itself is visually "invisible", one of its descendant is responsible for visual representation
     // - Some styles will be used on the box itself (for instance margins)
@@ -5946,7 +5993,7 @@ const Box = props => {
     let boxPseudoNamedStyles = PSEUDO_NAMED_STYLES_DEFAULT;
     const shouldForwardAllToChild = visualSelector && pseudoStateSelector;
     const addStyle = (value, name, styleContext, stylesTarget, context) => {
-      styleDeps.push(value); // impact box style -> add to deps
+      styleDeps.push(name, value); // impact box style -> add to deps
       const cssVar = styleContext.styleCSSVars[name];
       const mergedValue = prepareStyleValue(stylesTarget[name], value, name, styleContext, context);
       if (cssVar) {
@@ -5973,37 +6020,79 @@ const Box = props => {
       }
       return true;
     };
+
+    // By default ":hover", ":active" are not tracked.
+    // But if code explicitely do something like:
+    // style={{ ":hover": { backgroundColor: "red" } }}
+    // then we'll track ":hover" state changes even for basic elements like <div>
+    const pseudoClassesFromStyleSet = new Set();
+    boxPseudoNamedStyles = {};
     const assignStyle = (value, name, styleContext, boxStylesTarget, styleOrigin) => {
+      const isPseudoElement = name.startsWith("::");
+      const isPseudoClass = name.startsWith(":");
+      if (isPseudoElement || isPseudoClass) {
+        styleDeps.push(name);
+        pseudoClassesFromStyleSet.add(name);
+        const pseudoStyleContext = {
+          ...styleContext,
+          styleCSSVars: {
+            ...styleCSSVars,
+            ...styleCSSVars[name]
+          },
+          pseudoName: name
+        };
+        const pseudoStyleKeys = Object.keys(value);
+        if (isPseudoElement) {
+          const pseudoElementStyles = {};
+          for (const key of pseudoStyleKeys) {
+            assignStyle(value[key], key, pseudoStyleContext, pseudoElementStyles, "pseudo_style");
+          }
+          boxPseudoNamedStyles[name] = pseudoElementStyles;
+          return;
+        }
+        const pseudoClassStyles = {};
+        for (const key of pseudoStyleKeys) {
+          assignStyle(value[key], key, pseudoStyleContext, pseudoClassStyles, "pseudo_style");
+          boxPseudoNamedStyles[name] = pseudoClassStyles;
+        }
+        return;
+      }
       const context = styleOrigin === "base_style" ? "js" : "css";
       const isCss = styleOrigin === "base_style" || styleOrigin === "style";
       if (isCss) {
         addStyle(value, name, styleContext, boxStylesTarget, context);
         return;
       }
-      const isPseudoStyle = styleOrigin === "pseudo_style";
-      const mightStyle = isStyleProp(name);
-      if (!mightStyle) {
-        // not a style prop what do we do with it?
-        if (shouldForwardAllToChild) {
-          if (isPseudoStyle) ; else {
-            childForwardedProps[name] = value;
-          }
-        } else {
-          if (isPseudoStyle) {
-            console.warn(`unsupported pseudo style key "${name}"`);
-          }
-          selfForwardedProps[name] = value;
-        }
+      if (isCSSVar(name)) {
+        addStyle(value, name, styleContext, boxStylesTarget, context);
         return;
       }
-      // it's a style prop, we need first to check if we have css var to handle them
-      // otherwise we decide to put it either on self or child
-      const visualChildPropStrategy = visualSelector && getVisualChildStylePropStrategy(name);
-      const getStyle = getHowToHandleStyleProp(name);
-      if (
-      // prop name === css style name
-      !getStyle) {
-        const needForwarding = addStyleMaybeForwarding(value, name, styleContext, boxStylesTarget, context, visualChildPropStrategy);
+      const isPseudoStyle = styleOrigin === "pseudo_style";
+      if (isStyleProp(name)) {
+        // it's a style prop, we need first to check if we have css var to handle them
+        // otherwise we decide to put it either on self or child
+        const visualChildPropStrategy = visualSelector && getVisualChildStylePropStrategy(name);
+        const getStyle = getHowToHandleStyleProp(name);
+        if (
+        // prop name === css style name
+        !getStyle) {
+          const needForwarding = addStyleMaybeForwarding(value, name, styleContext, boxStylesTarget, context, visualChildPropStrategy);
+          if (needForwarding) {
+            if (isPseudoStyle) ; else {
+              childForwardedProps[name] = value;
+            }
+          }
+          return;
+        }
+        const cssValues = getStyle(value, styleContext);
+        if (!cssValues) {
+          return;
+        }
+        let needForwarding = false;
+        for (const styleName of Object.keys(cssValues)) {
+          const cssValue = cssValues[styleName];
+          needForwarding = addStyleMaybeForwarding(cssValue, styleName, styleContext, boxStylesTarget, context, visualChildPropStrategy);
+        }
         if (needForwarding) {
           if (isPseudoStyle) ; else {
             childForwardedProps[name] = value;
@@ -6011,20 +6100,18 @@ const Box = props => {
         }
         return;
       }
-      const cssValues = getStyle(value, styleContext);
-      if (!cssValues) {
-        return;
-      }
-      let needForwarding = false;
-      for (const styleName of Object.keys(cssValues)) {
-        const cssValue = cssValues[styleName];
-        needForwarding = addStyleMaybeForwarding(cssValue, styleName, styleContext, boxStylesTarget, context, visualChildPropStrategy);
-      }
-      if (needForwarding) {
+      // not a style prop what do we do with it?
+      if (shouldForwardAllToChild) {
         if (isPseudoStyle) ; else {
           childForwardedProps[name] = value;
         }
+      } else {
+        if (isPseudoStyle) {
+          console.warn(`unsupported pseudo style key "${name}"`);
+        }
+        selfForwardedProps[name] = value;
       }
+      return;
     };
     if (baseStyle) {
       for (const key of baseStyle) {
@@ -6041,52 +6128,6 @@ const Box = props => {
       }
       const propValue = rest[propName];
       assignStyle(propValue, propName, styleContext, boxStyles, "prop");
-    }
-    if (pseudoStyle) {
-      const assignPseudoStyle = (propValue, propName, pseudoStyleContext, pseudoStylesTarget) => {
-        assignStyle(propValue, propName, pseudoStyleContext, pseudoStylesTarget, "pseudo_style");
-      };
-      const pseudoStyleKeys = Object.keys(pseudoStyle);
-      if (pseudoStyleKeys.length) {
-        boxPseudoNamedStyles = {};
-        for (const key of pseudoStyleKeys) {
-          const pseudoStyleContext = {
-            ...styleContext,
-            styleCSSVars: {
-              ...styleCSSVars,
-              ...styleCSSVars[key]
-            },
-            pseudoName: key
-          };
-
-          // pseudo class
-          if (key.startsWith(":")) {
-            styleDeps.push(key);
-            const pseudoClassStyles = {};
-            const pseudoClassStyle = pseudoStyle[key];
-            for (const pseudoClassStyleKey of Object.keys(pseudoClassStyle)) {
-              const pseudoClassStyleValue = pseudoClassStyle[pseudoClassStyleKey];
-              assignPseudoStyle(pseudoClassStyleValue, pseudoClassStyleKey, pseudoStyleContext, pseudoClassStyles);
-            }
-            boxPseudoNamedStyles[key] = pseudoClassStyles;
-            continue;
-          }
-          // pseudo element
-          if (key.startsWith("::")) {
-            styleDeps.push(key);
-            const pseudoElementStyles = {};
-            const pseudoElementStyle = pseudoStyle[key];
-            for (const pseudoElementStyleKey of Object.keys(pseudoElementStyle)) {
-              const pseudoElementStyleValue = pseudoElementStyle[pseudoElementStyleKey];
-              assignPseudoStyle(pseudoElementStyleValue, pseudoElementStyleKey, pseudoStyleContext, pseudoElementStyles);
-            }
-            boxPseudoNamedStyles[key] = pseudoElementStyles;
-            continue;
-          }
-          console.warn(`unsupported pseudo style key "${key}"`);
-        }
-      }
-      childForwardedProps.pseudoStyle = pseudoStyle;
     }
     if (typeof style === "string") {
       const styleObject = normalizeStyles(style, "css");
@@ -6105,21 +6146,15 @@ const Box = props => {
       applyStyle(boxEl, boxStyles, state, boxPseudoNamedStyles, preventInitialTransition);
     }, styleDeps);
     const finalStyleDeps = [pseudoStateSelector, innerPseudoState, updateStyle];
-    // By default ":hover", ":active" are not tracked.
-    // But is code explicitely do something like:
-    // pseudoStyle={{ ":hover": { backgroundColor: "red" } }}
-    // then we'll track ":hover" state changes even for basic elements like <div>
     let innerPseudoClasses;
-    if (pseudoStyle) {
+    if (pseudoClassesFromStyleSet.size) {
       innerPseudoClasses = [...pseudoClasses];
       if (pseudoClasses !== PSEUDO_CLASSES_DEFAULT) {
         finalStyleDeps.push(...pseudoClasses);
       }
-      for (const key of Object.keys(pseudoStyle)) {
-        if (key.startsWith(":") && !innerPseudoClasses.includes(key)) {
-          innerPseudoClasses.push(key);
-          finalStyleDeps.push(key);
-        }
+      for (const key of pseudoClassesFromStyleSet) {
+        innerPseudoClasses.push(key);
+        finalStyleDeps.push(key);
       }
     } else {
       innerPseudoClasses = pseudoClasses;
@@ -16064,6 +16099,8 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
       --button-outline-width: 1px;
       --button-border-width: 1px;
       --button-border-radius: 2px;
+      --button-padding-x: 6px;
+      --button-padding-y: 1px;
       /* default */
       --button-outline-color: var(--navi-focus-outline-color);
       --button-loader-color: var(--navi-loader-color);
@@ -16118,10 +16155,11 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
     --x-button-border-radius: var(--button-border-radius);
     --x-button-border-width: var(--button-border-width);
     --x-button-outer-width: calc(
-      var(--button-x-border-width) + var(--x-button-outline-width)
+      var(--x-button-border-width) + var(--x-button-outline-width)
     );
     --x-button-outline-color: var(--button-outline-color);
     --x-button-border-color: var(--button-border-color);
+    --x-button-background: var(--button-background);
     --x-button-background-color: var(--button-background-color);
     --x-button-color: var(--button-color);
     --x-button-cursor: var(--button-cursor);
@@ -16150,24 +16188,29 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
       height: 100%;
       padding-top: var(
         --button-padding-top,
-        var(--button-padding-y, var(--button-padding, 1px))
+        var(--button-padding-y, var(--button-padding))
       );
       padding-right: var(
         --button-padding-right,
-        var(--button-padding-x, var(--button-padding, 6px))
+        var(--button-padding-x, var(--button-padding))
       );
       padding-bottom: var(
         --button-padding-bottom,
-        var(--button-padding-y, var(--button-padding, 1px))
+        var(--button-padding-y, var(--button-padding))
       );
       padding-left: var(
         --button-padding-left,
-        var(--button-padding-x, var(--button-padding, 6px))
+        var(--button-padding-x, var(--button-padding))
       );
       align-items: inherit;
       justify-content: inherit;
       color: var(--x-button-color);
-      background-color: var(--x-button-background-color);
+      background: var(--x-button-background);
+      background-color: var(
+        --x-button-background-color,
+        var(--x-button-background)
+      );
+
       border-width: var(--x-button-outer-width);
       border-style: solid;
       border-color: transparent;
@@ -16291,12 +16334,17 @@ const ButtonStyleCSSVars = {
   "outlineWidth": "--button-outline-width",
   "borderWidth": "--button-border-width",
   "borderRadius": "--button-border-radius",
+  "border": "--button-border",
+  "padding": "--button-padding",
+  "paddingX": "--button-padding-x",
+  "paddingY": "--button-padding-y",
   "paddingTop": "--button-padding-top",
   "paddingRight": "--button-padding-right",
   "paddingBottom": "--button-padding-bottom",
   "paddingLeft": "--button-padding-left",
-  "backgroundColor": "--button-background-color",
   "borderColor": "--button-border-color",
+  "background": "--button-background",
+  "backgroundColor": "--button-background-color",
   "color": "--button-color",
   ":hover": {
     backgroundColor: "--button-background-color-hover",
@@ -16632,7 +16680,7 @@ const MessageBox = ({
           border: "none",
           alignX: "center",
           alignY: "center",
-          pseudoStyle: {
+          style: {
             ":hover": {
               backgroundColor: "rgba(0, 0, 0, 0.1)"
             }
@@ -16810,6 +16858,10 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
       &[data-focus],
       &[data-focus-visible] {
         opacity: 1;
+      }
+
+      .navi_icon {
+        vertical-align: top;
       }
     }
   }
@@ -17673,8 +17725,9 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
       --loader-color: var(--navi-loader-color);
       --border-color: light-dark(#767676, #8e8e93);
       --background-color: white;
-      --background-color-checked: var(--color, light-dark(#4476ff, #3b82f6));
-      --border-color-checked: var(--color, light-dark(#4476ff, #3b82f6));
+      --accent-color: light-dark(#4476ff, #3b82f6);
+      --background-color-checked: var(--accent-color);
+      --border-color-checked: var(--accent-color);
       --checkmark-color-light: white;
       --checkmark-color-dark: rgb(55, 55, 55);
       --checkmark-color: var(--checkmark-color-light);
@@ -17725,10 +17778,7 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
       );
       --toggle-thumb-border-radius: 50%;
       --toggle-background-color: light-dark(#767676, #8e8e93);
-      --toggle-background-color-checked: var(
-        --color,
-        light-dark(#4476ff, #3b82f6)
-      );
+      --toggle-background-color-checked: var(--accent-color);
       --toggle-background-color-hover: color-mix(
         in srgb,
         var(--toggle-background-color) 60%,
@@ -17777,7 +17827,7 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
 
       &[data-dark] {
         --color-mix: var(--color-mix-dark);
-        --checkmark-color: var(--navi-checkmark-color-dark);
+        --checkmark-color: var(--checkmark-color-dark);
       }
     }
   }
@@ -18020,7 +18070,7 @@ const CheckboxStyleCSSVars = {
   "borderWidth": "--border-width",
   "backgroundColor": "--background-color",
   "borderColor": "--border-color",
-  "color": "--color",
+  "accentColor": "--accent-color",
   ":hover": {
     backgroundColor: "--background-color-hover",
     borderColor: "--border-color-hover",
@@ -18084,7 +18134,7 @@ const InputCheckboxBasic = props => {
     autoFocus,
     onClick,
     onInput,
-    color,
+    accentColor,
     icon,
     appearance = icon ? "icon" : "checkbox",
     // "checkbox", "toggle", "icon", "button"
@@ -18135,21 +18185,22 @@ const InputCheckboxBasic = props => {
     }
   });
   const renderCheckboxMemoized = useCallback(renderCheckbox, [id, innerName, checked, innerRequired]);
+  const boxRef = useRef();
   useLayoutEffect(() => {
-    const naviCheckbox = ref.current;
+    const naviCheckbox = boxRef.current;
     const lightColor = "var(--checkmark-color-light)";
     const darkColor = "var(--checkmark-color-dark)";
-    const colorPicked = pickLightOrDark("var(--color)", lightColor, darkColor, naviCheckbox);
+    const colorPicked = pickLightOrDark("var(--accent-color)", lightColor, darkColor, naviCheckbox);
     if (colorPicked === lightColor) {
       naviCheckbox.removeAttribute("data-dark");
     } else {
       naviCheckbox.setAttribute("data-dark", "");
     }
-  }, [color]);
+  }, [accentColor]);
   return jsxs(Box, {
     as: "span",
     ...remainingProps,
-    ref: undefined,
+    ref: boxRef,
     "data-appearance": appearance,
     baseClassName: "navi_checkbox",
     pseudoStateSelector: ".navi_native_field",
@@ -18161,7 +18212,7 @@ const InputCheckboxBasic = props => {
       ":disabled": innerDisabled,
       ":-navi-loading": innerLoading
     },
-    color: color,
+    accentColor: accentColor,
     hasChildFunction: true,
     preventInitialTransition: true,
     children: [jsx(LoaderBackground, {
@@ -18812,17 +18863,17 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
 
       --outline-color: var(--navi-focus-outline-color);
       --loader-color: var(--navi-loader-color);
-      --color: rgb(24, 117, 255);
+      --accent-color: rgb(24, 117, 255);
 
-      --border-color: rgba(150, 150, 150);
+      --border-color: rgb(150, 150, 150);
       --track-border-color: color-mix(
         in srgb,
         var(--border-color) 35%,
         transparent
       );
       --background-color: #efefef;
-      --fill-color: var(--color);
-      --thumb-color: var(--fill-color);
+      --fill-color: var(--accent-color);
+      --thumb-color: var(--accent-color);
       /* Hover */
       --border-color-hover: color-mix(in srgb, var(--border-color) 75%, black);
       --track-border-color-hover: color-mix(
@@ -18831,7 +18882,6 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
         black
       );
       --track-color-hover: color-mix(in srgb, var(--fill-color) 95%, black);
-      --color-hover: color-mix(in srgb, var(--rail-color) 95%, black);
       --fill-color-hover: color-mix(in srgb, var(--fill-color) 80%, black);
       --thumb-color-hover: color-mix(in srgb, var(--thumb-color) 80%, black);
       /* Active */
@@ -18854,6 +18904,7 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
         var(--border-color) 30%,
         white
       );
+      --track-border-color-readonly: var(--border-color);
       --background-color-readonly: var(--background-color);
       --fill-color-readonly: color-mix(in srgb, var(--fill-color) 30%, grey);
       --thumb-color-readonly: var(--fill-color-readonly);
@@ -18960,14 +19011,14 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
     }
 
     /* Hover */
-    &:hover {
+    &[data-hover] {
       --x-border-color: var(--border-color-hover);
       --x-track-border-color: var(--track-border-color-hover);
       --x-fill-color: var(--fill-color-hover);
       --x-thumb-color: var(--thumb-color-hover);
     }
     /* Active */
-    &:active {
+    &[data-active] {
       --x-border-color: var(--border-color-active);
       --x-track-border-color: var(--track-border-color-active);
       --x-background-color: var(--background-color-active);
@@ -18981,6 +19032,7 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
     /* Readonly */
     &[data-readonly] {
       --x-background-color: var(--background-color-readonly);
+      --x-track-border-color: var(--track-border-color-readonly);
       --x-border-color: var(--border-color-readonly);
       --x-fill-color: var(--fill-color-readonly);
       --x-thumb-color: var(--thumb-color-readonly);
@@ -19000,7 +19052,7 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
   /* Disabled */
   .navi_input_range[data-disabled] {
     --x-background-color: var(--background-color-disabled);
-    --x-color: var(--color-disabled);
+    --x-accent-color: var(--accent-color-disabled);
   }
   /* Callout (info, warning, error) */
   .navi_input_range[data-callout] {
@@ -19027,7 +19079,7 @@ const InputStyleCSSVars$1 = {
   "borderRadius": "--border-radius",
   "borderColor": "--border-color",
   "backgroundColor": "--background-color",
-  "color": "--color",
+  "accentColor": "--accent-color",
   ":hover": {
     borderColor: "--border-color-hover",
     backgroundColor: "--background-color-hover",
