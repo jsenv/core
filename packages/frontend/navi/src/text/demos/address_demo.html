@@ -5,52 +5,7 @@
     <link rel="icon" href="data:," />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Démo Address simplifiée</title>
-    <style>
-      body {
-        max-width: 800px;
-        margin: 0 auto;
-        padding: 20px;
-        font-family:
-          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-        line-height: 1.6;
-        background: #f5f5f5;
-      }
-
-      h1 {
-        margin-bottom: 24px;
-        color: #222;
-        font-size: 1.8rem;
-        text-align: center;
-      }
-
-      .demo-section {
-        padding: 20px;
-        background: white;
-        border-radius: 10px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-      }
-
-      .example {
-        margin: 20px 0;
-      }
-
-      .example-title {
-        margin-bottom: 8px;
-        color: #444;
-        font-weight: 600;
-      }
-
-      .code-block {
-        margin-top: 10px;
-        padding: 10px 12px;
-        font-size: 0.85rem;
-        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-        background: #f8f9fa;
-        border: 1px solid #e5e7eb;
-        border-radius: 8px;
-        overflow-x: auto;
-      }
-    </style>
+    <style></style>
   </head>
   <body>
     <h1>Démo Address</h1>
@@ -59,14 +14,14 @@
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { Address, Box, Icon } from "@jsenv/navi";
+      import { Address, Box, Icon, Caption } from "@jsenv/navi";
 
       const App = () => {
         return (
-          <div className="demo-section">
+          <Box row spacing="m">
             {/* Exemple 1: simple sans style particulier */}
-            <div className="example">
-              <div className="example-title">Adresse simple</div>
+            <Box row>
+              <Caption>Adresse simple</Caption>
               <Address>
                 123 Rue Principale
                 <br />
@@ -74,49 +29,27 @@
                 <br />
                 États-Unis
               </Address>
-            </div>
+            </Box>
 
             {/* Exemple 2: avec icône + bords + fond */}
-            <div className="example">
-              <div className="example-title">Adresse avec icône et style</div>
-              <Box
-                row
-                spacing="sm"
-                style={{
-                  padding: "16px",
-                  border: "2px solid #e0e7ff",
-                  borderRadius: "12px",
-                  backgroundColor: "#f8fafc",
-                  boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
-                  maxWidth: "360px",
-                }}
+            <Box row>
+              <Caption>Adresse avec icône et style</Caption>
+
+              <Address
+                width="fit-content"
+                border="1px solid #454C53"
+                borderRadius="xs"
+                padding="xs"
+                backgroundColor="#E6EAEF"
+                lineHeight="1em"
               >
-                <Icon
-                  style={{
-                    fontSize: "20px",
-                    color: "#3b82f6",
-                    marginTop: "2px",
-                  }}
-                >
+                <Icon italic={false} alignY="center">
                   📍
                 </Icon>
-                <Box column>
-                  <Address style={{ margin: 0, lineHeight: "1.5" }}>
-                    Tech Innovations Hub
-                    <br />
-                    789 Innovation Drive
-                    <br />
-                    Silicon Valley, CA 94000
-                    <br />
-                    <br />
-                    📞 (555) 789-0123
-                    <br />
-                    ✉️ hello@techhub.com
-                  </Address>
-                </Box>
-              </Box>
-            </div>
-          </div>
+                789 Innovation Drive
+              </Address>
+            </Box>
+          </Box>
         );
       };
 
