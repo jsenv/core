@@ -153,6 +153,7 @@ const RadioListWithAction = (props) => {
         requestAction(radioListContainer, boundAction, {
           event: e,
           requester: radio,
+          actionOrigin: "action_prop",
         });
       }}
       loading={loading || actionLoading}

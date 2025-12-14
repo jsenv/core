@@ -136,14 +136,14 @@
                 name="mapType"
                 value={selectedMapType}
                 action={async (mapType) => {
-                  await new Promise((resolve) => setTimeout(resolve, 1000));
+                  await new Promise((resolve) => setTimeout(resolve, 500));
                   setSelectedMapType(mapType);
                 }}
               >
                 <Radio
                   value="street"
-                  appearance="button"
                   borderRadius="5"
+                  appearance="button"
                   icon={
                     <Icon width="40" height="40">
                       <img
@@ -155,8 +155,8 @@
                 />
                 <Radio
                   value="satellite"
-                  appearance="button"
                   borderRadius="5"
+                  appearance="button"
                   icon={
                     <Icon width="40" height="40">
                       <img
@@ -168,8 +168,8 @@
                 />
                 <Radio
                   value="discrete"
-                  appearance="button"
                   borderRadius="5"
+                  appearance="button"
                   icon={
                     <Icon width="40" height="40">
                       <img

@@ -320,10 +320,10 @@ export const InputRadio = (props) => {
     getStateFromProp: (checked) => (checked ? value : undefined),
     getPropFromState: Boolean,
     getStateFromParent: (parentUIStateController) => {
-      if (parentUIStateController.componentType !== "radio_list") {
-        return undefined;
+      if (parentUIStateController.componentType === "radio_list") {
+        return parentUIStateController.value === props.value;
       }
-      return parentUIStateController.uiState;
+      return undefined;
     },
   });
   const uiState = useUIState(uiStateController);

@@ -61,6 +61,7 @@ export const useUIStateController = (
     fallbackState = "",
     getStateFromProp = (prop) => prop,
     getPropFromState = (state) => state,
+    getStateFromParent,
   } = {},
 ) => {
   const parentUIStateController = useContext(ParentUIStateControllerContext);
@@ -86,6 +87,9 @@ export const useUIStateController = (
       // not controlled but want to use value from nav state
       // (I think this should likely move earlier to win over the hasUIStateProp when it's undefined)
       return getStateFromProp(navState);
+    }
+    if (parentUIStateController && getStateFromParent) {
+      return getStateFromParent(parentUIStateController);
     }
     return getStateFromProp(fallbackState);
   });
@@ -330,7 +334,7 @@ export const useUIGroupStateController = (
     throw new TypeError("aggregateChildStates must be a function");
   }
   const parentUIStateController = useContext(ParentUIStateControllerContext);
-  const { onUIStateChange, name } = props;
+  const { onUIStateChange, name, value } = props;
   const childUIStateControllerArrayRef = useRef([]);
   const childUIStateControllerArray = childUIStateControllerArrayRef.current;
   const uiStateControllerRef = useRef();
@@ -382,6 +386,7 @@ export const useUIGroupStateController = (
   if (existingUIStateController) {
     existingUIStateController.name = name;
     existingUIStateController.onUIStateChange = onUIStateChange;
+    existingUIStateController.value = value;
     return existingUIStateController;
   }
   debugUIGroup(
@@ -400,6 +405,7 @@ export const useUIGroupStateController = (
   const uiStateController = {
     componentType,
     name,
+    value,
     onUIStateChange,
     uiState: emptyState,
     setUIState: (newUIState, e) => {
