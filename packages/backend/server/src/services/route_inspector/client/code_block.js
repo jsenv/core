@@ -8,43 +8,43 @@
  */
 
 (() => {
-  const css = /*css*/ `
-*[aria-hidden="true"] {
-    display: none;
-}
+  const css = /* css */ `
+    *[aria-hidden="true"] {
+      display: none;
+    }
 
-.clipboard_container {
-  display: flex;
-  padding: 8px;
-  gap: 5px;
-  align-items: center;
-}
+    .clipboard_container {
+      display: flex;
+      padding: 8px;
+      align-items: center;
+      gap: 5px;
+    }
 
-#copied_notif {
-    background: black;
-    color: white;
-    border-radius: 3px;
-    padding: 0.2em 0.5em;
-    font-size: 80%;
-}
+    #copied_notif {
+      padding: 0.2em 0.5em;
+      color: white;
+      font-size: 80%;
+      background: black;
+      border-radius: 3px;
+    }
 
-button {
-    border: none;
-    background: none;
-    background-color: rgb(246, 248, 250);
-    border-color: rgb(209, 217, 224);
-    border-radius: 6px;
-    border-width: 1px;
-    border-style: solid;
-    cursor: pointer;
-    width: 32px;
-    height: 32px;
-}
+    button {
+      width: 32px;
+      height: 32px;
+      background: none;
+      background-color: rgb(246, 248, 250);
+      border: none;
+      border-width: 1px;
+      border-style: solid;
+      border-color: rgb(209, 217, 224);
+      border-radius: 6px;
+      cursor: pointer;
+    }
 
-button:hover {
-    background-color: rgb(239, 242, 245);
-}
-`;
+    button:hover {
+      background-color: rgb(239, 242, 245);
+    }
+  `;
 
   const html = /* html */ `<style>
       ${css}
@@ -126,27 +126,27 @@ button:hover {
 })();
 
 (() => {
-  const css = /*css*/ `
-/* :host {
-    display: block;
-}
-:host code[class*="language-"], :host pre[class*="language-"]{
-    margin-top: 0;
-} */
-#code_block {
-  position: relative;
-}
+  const css = /* css */ `
+    /* :host {
+        display: block;
+    }
+    :host code[class*="language-"], :host pre[class*="language-"]{
+        margin-top: 0;
+    } */
+    #code_block {
+      position: relative;
+    }
 
-#pre {
-    padding: 16px;
-    font-size: 86%;
-    margin-top: 16px;
-    margin-bottom: 16px;
-    margin-left: 0;
-    margin-right: 0;
-    background: #333 ;
-}
-`;
+    #pre {
+      margin-top: 16px;
+      margin-right: 0;
+      margin-bottom: 16px;
+      margin-left: 0;
+      padding: 16px;
+      font-size: 86%;
+      background: #333;
+    }
+  `;
 
   const html = /* html */ `<style>
       ${css}

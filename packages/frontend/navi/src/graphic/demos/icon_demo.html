@@ -34,23 +34,24 @@
           <Title as="h2">Table des matières</Title>
           <Box row spacing="xs" marginTop="md">
             <Link href="#icon-positioning">1. Icon positioning</Link>
-            <Link href="#different-font-sizes">2. Font size and color</Link>
-            <Link href="#font-family">3. Font family</Link>
-            <Link href="#line-height-variations">4. Line height</Link>
-            <Link href="#inline-text-icons">5. Text flow</Link>
-            <Link href="#icon-dimensions">6. Icon dimensions</Link>
+            <Link href="#emoji-icons">2. Emoji icons</Link>
+            <Link href="#different-font-sizes">3. Font size and color</Link>
+            <Link href="#font-family">4. Font family</Link>
+            <Link href="#line-height-variations">5. Line height</Link>
+            <Link href="#inline-text-icons">6. Text flow</Link>
+            <Link href="#icon-dimensions">7. Icon dimensions</Link>
             <Link href="#squarish-icon-dimensions">
-              6a. Squarish icon dimensions (size)
+              7a. Squarish icon dimensions (size)
             </Link>
             <Link href="#custom-icon-dimensions">
-              6b. Custom icon dimensions (width/height)
+              7b. Custom icon dimensions (width/height)
             </Link>
-            <Link href="#icon-transformation">7. Icon transformation</Link>
-            <Link href="#icon-href">8. Icon with SVG use</Link>
-            <Link href="#icon-text-link">9. Icon + text + link</Link>
-            <Link href="#icon-row">10. Icon in row</Link>
-            <Link href="#icon-column">11. Icon in column</Link>
-            <Link href="#integration">12. Integration</Link>
+            <Link href="#icon-transformation">8. Icon transformation</Link>
+            <Link href="#icon-href">9. Icon with SVG use</Link>
+            <Link href="#icon-text-link">10. Icon + text + link</Link>
+            <Link href="#icon-row">11. Icon in row</Link>
+            <Link href="#icon-column">12. Icon in column</Link>
+            <Link href="#integration">13. Integration</Link>
           </Box>
         </Box>
       );
@@ -101,6 +102,135 @@
                 <SettingsSvg />
               </Icon>
             </Text>
+          </Box>
+        </Box>
+      );
+
+      // Emoji Icons Section
+      const EmojiIconsSection = () => (
+        <Box as="section" marginBottom="xl">
+          <Title as="h2">
+            <Link anchor href="#emoji-icons" />
+            Emoji Icons
+          </Title>
+          <Paragraph>
+            Icons can contain emoji/emoticon characters for quick and expressive
+            visual elements.
+          </Paragraph>
+
+          <Box row spacing="md" marginTop="md">
+            <Box row>
+              <Caption>Basic emoji icons:</Caption>
+              <Box row spacing="md">
+                <Text>
+                  <Icon>📍</Icon> Location
+                </Text>
+                <Text>
+                  <Icon>📞</Icon> Phone
+                </Text>
+                <Text>
+                  <Icon>📧</Icon> Email
+                </Text>
+                <Text>
+                  <Icon>🏠</Icon> Home
+                </Text>
+              </Box>
+            </Box>
+
+            <Box row>
+              <Caption>Emoji with colors and sizes:</Caption>
+              <Box row spacing="md" alignY="center">
+                <Text>
+                  <Icon size="xs">❤️</Icon> Small heart
+                </Text>
+                <Text>
+                  <Icon size="s">⭐</Icon> Small star
+                </Text>
+                <Text>
+                  <Icon>🔥</Icon> Fire
+                </Text>
+                <Text>
+                  <Icon size="l">🚀</Icon> Large rocket
+                </Text>
+                <Text>
+                  <Icon size="xl">🎉</Icon> XL celebration
+                </Text>
+              </Box>
+            </Box>
+
+            <Box row>
+              <Caption>State-based emoji icons:</Caption>
+              <Box row spacing="md">
+                <Text>
+                  <Icon>🔒</Icon> Locked
+                </Text>
+                <Text>
+                  <Icon>🔓</Icon> Unlocked
+                </Text>
+                <Text>
+                  <Icon>👁️</Icon> Visible
+                </Text>
+                <Text>
+                  <Icon>👀</Icon> Watching
+                </Text>
+                <Text>
+                  <Icon>💾</Icon> Save
+                </Text>
+              </Box>
+            </Box>
+
+            <Box row>
+              <Caption>Emoji in different contexts:</Caption>
+              <Box row spacing="sm">
+                <Text>
+                  Navigate to <Icon>🏠</Icon> Home or check <Icon>📨</Icon>
+                  Messages
+                </Text>
+                <Text>
+                  Status: <Icon color="green">✅</Icon> Completed or
+                  <Icon color="red">❌</Icon> Failed
+                </Text>
+                <Text>
+                  Weather: <Icon>☀️</Icon> Sunny, <Icon>🌧️</Icon> Rainy,
+                  <Icon>❄️</Icon> Snow
+                </Text>
+              </Box>
+            </Box>
+
+            <Box
+              style={{
+                padding: "16px",
+                backgroundColor: "#e8f5e8",
+                border: "1px solid #c3e6c3",
+                borderRadius: "8px",
+                marginTop: "16px",
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: "14px",
+                  color: "#2d5016",
+                  fontWeight: "bold",
+                  display: "block",
+                  marginBottom: "8px",
+                }}
+              >
+                💡 Emoji Icon Tips
+              </Text>
+              <Text
+                style={{
+                  fontSize: "13px",
+                  color: "#2d5016",
+                  lineHeight: "1.4",
+                }}
+              >
+                Emojis in Icon components automatically inherit sizing, spacing,
+                and alignment behaviors. They work great for quick prototyping
+                and can be mixed with SVG icons seamlessly. Consider
+                accessibility when using emoji as the primary communication
+                method.
+              </Text>
+            </Box>
           </Box>
         </Box>
       );
@@ -1555,6 +1685,7 @@
 
             <TableOfContents />
             <IconPositioningSection />
+            <EmojiIconsSection />
             <DifferentFontSizesSection />
             <FontFamilySection />
             <LineHeightVariationsSection />
