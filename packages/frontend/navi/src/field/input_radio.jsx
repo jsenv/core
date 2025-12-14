@@ -42,8 +42,8 @@ import.meta.css = /* css */ `
       --border-color-checked: var(--accent-color);
       --cursor: pointer;
 
-      --color-mix-light: white;
-      --color-mix-dark: black;
+      --color-mix-light: black;
+      --color-mix-dark: white;
       --color-mix: var(--color-mix-light);
 
       /* Hover */
@@ -121,6 +121,7 @@ import.meta.css = /* css */ `
       outline-style: none;
       outline-color: var(--x-outline-color);
       outline-offset: var(--x-outline-offset);
+      pointer-events: none;
 
       svg {
         overflow: visible;
@@ -158,6 +159,7 @@ import.meta.css = /* css */ `
 
     /* Focus */
     &[data-focus-visible] {
+      z-index: 1;
       .navi_radio_field {
         outline-style: solid;
       }
@@ -199,6 +201,7 @@ import.meta.css = /* css */ `
     }
     /* Disabled */
     &[data-disabled] {
+      --x-cursor: default;
       --x-background-color: var(--background-color-disabled);
       --x-border-color: var(--border-color-disabled);
       --x-radiomark-color: var(--radiomark-color-disabled);
