@@ -51,7 +51,7 @@ export const ButtonCopyToClipboard = ({ children, ...props }) => {
         aria-hidden={copied ? "false" : "true"}
         opacity={copied ? 1 : 0}
       >
-        Copied !
+        Copié !
       </Box>
       <Button
         className="navi_copy_button"
@@ -74,7 +74,15 @@ export const ButtonCopyToClipboard = ({ children, ...props }) => {
           setCopied(true);
         }}
       >
-        <Icon>{copied ? <CopiedIcon /> : <CopyIcon />}</Icon>
+        {copied ? (
+          <Icon color="green">
+            <CopiedIcon />
+          </Icon>
+        ) : (
+          <Icon>
+            <CopyIcon />
+          </Icon>
+        )}
       </Button>
     </Box>
   );
@@ -96,6 +104,9 @@ const CopyIcon = () => (
 );
 const CopiedIcon = () => (
   <svg viewBox="0 0 16 16">
-    <path d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0Z"></path>
+    <path
+      fill="currentColor"
+      d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0Z"
+    ></path>
   </svg>
 );

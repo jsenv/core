@@ -19,6 +19,7 @@
         Box,
         Icon,
         Caption,
+        Text,
         ButtonCopyToClipboard,
       } from "@jsenv/navi";
 
@@ -40,21 +41,22 @@
             {/* Exemple 2: avec icône + bords + fond */}
             <Box row>
               <Caption>Adresse avec icône et style</Caption>
-              <Box column alignY="center" height="32">
+              <Box column alignY="start" height="36" width="250">
                 <Address
                   boxSizing="border-box"
                   border="1px solid #454C53"
                   borderRadius="xs"
                   padding="xs"
+                  paddingX="s"
                   backgroundColor="#E6EAEF"
                 >
-                  <Icon userSelect="none" italic={false} alignY="center">
+                  <Icon userSelect="none" italic={false}>
                     📍
                   </Icon>
                   789 Innovation Drive
                 </Address>
 
-                <ButtonCopyToClipboard marginLeft="s" height="32">
+                <ButtonCopyToClipboard marginLeft="s" height="36">
                   789 Innovation Drive
                 </ButtonCopyToClipboard>
               </Box>
