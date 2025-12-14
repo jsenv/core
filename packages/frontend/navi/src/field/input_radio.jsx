@@ -27,10 +27,11 @@ import { useConstraints } from "./validation/hooks/use_constraints.js";
 import.meta.css = /* css */ `
   @layer navi {
     .navi_radio {
+      --margin: 3px 3px 0 5px;
       --outline-offset: 1px;
       --outline-width: 2px;
-      --width: 13px;
-      --height: 13px;
+      --width: 0.815em;
+      --height: 0.815em;
 
       --outline-color: var(--navi-focus-outline-color);
       --loader-color: var(--navi-loader-color);
@@ -94,9 +95,7 @@ import.meta.css = /* css */ `
     position: relative;
     display: inline-flex;
     box-sizing: content-box;
-    margin-top: 3px;
-    margin-right: 3px;
-    margin-left: 5px;
+    margin: var(--margin);
 
     .navi_native_field {
       position: absolute;
