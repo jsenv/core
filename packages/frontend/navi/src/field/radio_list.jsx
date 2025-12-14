@@ -1,15 +1,10 @@
-import { forwardRef } from "preact/compat";
-import {
-  useContext,
-  useImperativeHandle,
-  useRef,
-  useState,
-} from "preact/hooks";
+import { useContext, useRef, useState } from "preact/hooks";
 
 import { renderActionableComponent } from "../action/render_actionable_component.jsx";
 import { useActionBoundToOneParam } from "../action/use_action.js";
 import { useActionStatus } from "../action/use_action_status.js";
 import { useExecuteAction } from "../action/use_execute_action.js";
+import { Box } from "../box/box.jsx";
 import { InputRadio } from "./input_radio.jsx";
 import { useActionEvents } from "./use_action_events.js";
 import {
@@ -27,16 +22,9 @@ import {
 } from "./use_ui_state_controller.js";
 import { requestAction } from "./validation/custom_constraint_validation.js";
 
-import.meta.css = /* css */ `
-  @layer navi {
-    .navi_radio_list {
-      display: flex;
-      flex-direction: column;
-    }
-  }
-`;
+import.meta.css = /* css */ ``;
 
-export const RadioList = forwardRef((props, ref) => {
+export const RadioList = (props) => {
   const uiStateController = useUIGroupStateController(props, "radio_list", {
     childComponentType: "radio",
     aggregateChildStates: (childUIStateControllers) => {
@@ -51,7 +39,7 @@ export const RadioList = forwardRef((props, ref) => {
     },
   });
   const uiState = useUIState(uiStateController);
-  const radioList = renderActionableComponent(props, ref, {
+  const radioList = renderActionableComponent(props, {
     Basic: RadioListBasic,
     WithAction: RadioListWithAction,
   });
@@ -62,18 +50,16 @@ export const RadioList = forwardRef((props, ref) => {
       </UIStateContext.Provider>
     </UIStateControllerContext.Provider>
   );
-});
+};
 export const Radio = InputRadio;
 
-const RadioListBasic = forwardRef((props, ref) => {
+const RadioListBasic = (props) => {
   const contextReadOnly = useContext(ReadOnlyContext);
   const contextDisabled = useContext(DisabledContext);
   const contextLoading = useContext(LoadingContext);
   const uiStateController = useContext(UIStateControllerContext);
   const { name, loading, disabled, readOnly, children, required, ...rest } =
     props;
-  const innerRef = useRef();
-  useImperativeHandle(ref, () => innerRef.current);
 
   const innerLoading = loading || contextLoading;
   const innerReadOnly =
@@ -81,13 +67,12 @@ const RadioListBasic = forwardRef((props, ref) => {
   const innerDisabled = disabled || contextDisabled;
 
   return (
-    <div
+    <Box
       data-action={rest["data-action"]}
+      row
       {...rest}
-      ref={innerRef}
-      className="navi_radio_list"
+      baseClassName="navi_radio_list"
       data-radio-list
-      // eslint-disable-next-line react/no-unknown-property
       onresetuistate={(e) => {
         uiStateController.resetUIState(e);
       }}
@@ -105,10 +90,10 @@ const RadioListBasic = forwardRef((props, ref) => {
           </ReadOnlyContext.Provider>
         </FieldNameContext.Provider>
       </ParentUIStateControllerContext.Provider>
-    </div>
+    </Box>
   );
-});
-const RadioListWithAction = forwardRef((props, ref) => {
+};
+const RadioListWithAction = (props) => {
   const uiStateController = useContext(UIStateControllerContext);
   const uiState = useContext(UIStateContext);
   const {
@@ -126,7 +111,6 @@ const RadioListWithAction = forwardRef((props, ref) => {
     ...rest
   } = props;
   const innerRef = useRef();
-  useImperativeHandle(ref, () => innerRef.current);
   const [boundAction] = useActionBoundToOneParam(action, uiState);
   const { loading: actionLoading } = useActionStatus(boundAction);
   const executeAction = useExecuteAction(innerRef, {
@@ -178,4 +162,4 @@ const RadioListWithAction = forwardRef((props, ref) => {
       </LoadingElementContext.Provider>
     </RadioListBasic>
   );
-});
+};
