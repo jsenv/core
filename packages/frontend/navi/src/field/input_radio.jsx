@@ -120,6 +120,7 @@ import.meta.css = /* css */ `
     --x-background-color: var(--background-color);
     --x-border-color: var(--border-color);
     --x-radiomark-color: var(--radiomark-color);
+    --x-cursor: var(--cursor);
 
     position: relative;
     display: inline-flex;
@@ -249,6 +250,8 @@ import.meta.css = /* css */ `
 
     /* Icon appearance */
     &[data-appearance="icon"] {
+      --width: auto;
+      --height: auto;
       --outline-offset: 2px;
       --outline-width: 2px;
     }
@@ -259,7 +262,7 @@ import.meta.css = /* css */ `
       --outline-offset: 0px;
       --width: auto;
       --height: auto;
-      --padding: 4px;
+      --padding: 2px;
       --border-color: var(--button-border-color);
       --border-color-hover: var(--button-border-color-hover);
       --background-color: var(--button-background-color);
@@ -355,6 +358,7 @@ const RadioStyleCSSVars = {
 };
 const RadioButtonStyleCSSVars = {
   ...RadioStyleCSSVars,
+  "padding": "--padding",
   "borderRadius": "--button-border-radius",
   "borderWidth": "--button-border-width",
   "borderColor": "--button-border-color",

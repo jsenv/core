@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Radio List Image Demo</title>
+    <style>
+      body {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        line-height: 1.6;
+        background: #f5f5f5;
+      }
+
+      h1 {
+        margin-bottom: 30px;
+        color: #333;
+        font-size: 2rem;
+        text-align: center;
+      }
+
+      .demo-section {
+        margin-bottom: 40px;
+        padding: 20px;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      .demo-section h2 {
+        margin: 0 0 20px 0;
+        padding-bottom: 10px;
+        color: #333;
+        font-size: 1.4rem;
+        border-bottom: 2px solid #ddd;
+      }
+
+      .description {
+        margin-bottom: 20px;
+        color: #666;
+        line-height: 1.5;
+      }
+
+      .current-selection {
+        margin-top: 20px;
+        padding: 15px;
+        font-family: monospace;
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 6px;
+      }
+
+      .selection-label {
+        margin-bottom: 8px;
+        color: #495057;
+        font-weight: 600;
+      }
+
+      .selection-value {
+        color: #007bff;
+      }
+
+      .action-buttons {
+        display: flex;
+        margin-top: 15px;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .action-button {
+        padding: 8px 16px;
+        color: white;
+        font-size: 0.9rem;
+        background: #007bff;
+        border: none;
+        border-radius: 4px;
+        transition: background 0.2s ease;
+        cursor: pointer;
+      }
+
+      .action-button:hover {
+        background: #0056b3;
+      }
+
+      .action-button:disabled {
+        background: #6c757d;
+        cursor: not-allowed;
+      }
+
+      code {
+        padding: 2px 6px;
+        font-size: 0.9em;
+        font-family: "Consolas", "Monaco", "Courier New", monospace;
+        background: #f8f9fa;
+        border-radius: 3px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Radio List Image Demo</h1>
+    <div id="root"></div>
+
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useState } from "preact/hooks";
+      import { RadioList, Radio, Label, Box, Icon } from "@jsenv/navi";
+
+      const App = () => {
+        return (
+          <div>
+            <ImageRadioListDemo />
+          </div>
+        );
+      };
+
+      const ImageRadioListDemo = () => {
+        const [selectedMapType, setSelectedMapType] = useState("street");
+
+        return (
+          <div className="demo-section">
+            <h2>Map Type Selector</h2>
+            <p className="description">
+              Select a map visualization style using image-based radio buttons.
+              Each option shows a preview of the map style with{" "}
+              <code>appearance="button"</code>
+              and images in the <code>icon</code> prop.
+            </p>
+
+            <Box column spacing="lg">
+              <RadioList
+                column
+                name="mapType"
+                value={selectedMapType}
+                action={async (mapType) => {
+                  await new Promise((resolve) => setTimeout(resolve, 1000));
+                  setSelectedMapType(mapType);
+                }}
+              >
+                <Radio
+                  value="street"
+                  appearance="button"
+                  borderRadius="5"
+                  icon={
+                    <Icon width="40" height="40">
+                      <img
+                        src="./map_ui_street.avif"
+                        alt="Street view preview"
+                      />
+                    </Icon>
+                  }
+                />
+                <Radio
+                  value="satellite"
+                  appearance="button"
+                  borderRadius="5"
+                  icon={
+                    <Icon width="40" height="40">
+                      <img
+                        src="./map_ui_satellite.avif"
+                        alt="Satellite view preview"
+                      />
+                    </Icon>
+                  }
+                />
+                <Radio
+                  value="discrete"
+                  appearance="button"
+                  borderRadius="5"
+                  icon={
+                    <Icon width="40" height="40">
+                      <img
+                        src="./map_ui_discrete.avif"
+                        alt="Discrete view preview"
+                      />
+                    </Icon>
+                  }
+                />
+              </RadioList>
+            </Box>
+
+            <div
+              style={{
+                marginTop: "20px",
+                padding: "15px",
+                background: "#f8f9fa",
+                borderRadius: "8px",
+                fontSize: "0.85rem",
+                color: "#666",
+              }}
+            >
+              <strong>✨ Features Demonstrated:</strong>
+              <ul style={{ margin: "8px 0", paddingLeft: "20px" }}>
+                <li>
+                  <strong>Image Icons:</strong> Images used directly in{" "}
+                  <code>icon</code> prop
+                </li>
+                <li>
+                  <strong>Button Appearance:</strong> Radio buttons styled as
+                  toggle buttons
+                </li>
+                <li>
+                  <strong>RadioList Integration:</strong> Coordinated radio
+                  group with shared state
+                </li>
+                <li>
+                  <strong>Action Integration:</strong> Connected to async action
+                  with loading states
+                </li>
+                <li>
+                  <strong>Responsive Layout:</strong> Button group adapts to
+                  screen size
+                </li>
+                <li>
+                  <strong>Visual Feedback:</strong> Pressed/selected states with
+                  shadow effects
+                </li>
+              </ul>
+            </div>
+          </div>
+        );
+      };
+
+      render(<App />, document.querySelector("#root"));
+    </script>
+  </body>
+</html>
