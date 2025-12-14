@@ -36,9 +36,10 @@ import.meta.css = /* css */ `
       --loader-color: var(--navi-loader-color);
       --border-color: light-dark(#767676, #8e8e93);
       --background-color: white;
-      --color: light-dark(#4476ff, #3b82f6);
-      --radiomark-color: var(--color);
-      --border-color-checked: var(--color);
+      --accent-color: light-dark(#4476ff, #3b82f6);
+      --radiomark-color: var(--accent-color);
+      --border-color-checked: var(--accent-color);
+      --cursor: pointer;
 
       --color-mix-light: white;
       --color-mix-dark: black;
@@ -48,12 +49,12 @@ import.meta.css = /* css */ `
       --border-color-hover: color-mix(in srgb, var(--border-color) 60%, black);
       --border-color-hover-checked: color-mix(
         in srgb,
-        var(--color) 80%,
+        var(--border-color-checked) 80%,
         var(--color-mix)
       );
       --radiomark-color-hover: color-mix(
         in srgb,
-        var(--color) 80%,
+        var(--radiomark-color) 80%,
         var(--color-mix)
       );
       /* Readonly */
@@ -74,19 +75,12 @@ import.meta.css = /* css */ `
       --background-color-disabled-checked: var(--background-color);
     }
 
-    .navi_radio[data-dark] {
+    &[data-dark] {
       --color-mix: var(--color-mix-dark);
     }
   }
 
   .navi_radio {
-    position: relative;
-    display: inline-flex;
-    box-sizing: content-box;
-    margin-top: 3px;
-    margin-right: 3px;
-    margin-left: 5px;
-
     --x-outline-offset: var(--outline-offset);
     --x-outline-width: var(--outline-width);
     --x-border-width: var(--border-width);
@@ -95,29 +89,40 @@ import.meta.css = /* css */ `
     --x-outline-color: var(--outline-color);
     --x-background-color: var(--background-color);
     --x-border-color: var(--border-color);
-    --x-color: var(--color);
     --x-radiomark-color: var(--radiomark-color);
-  }
-  .navi_radio .navi_native_field {
-    position: absolute;
-    inset: 0;
-    margin: 0;
-    padding: 0;
-    opacity: 0;
-    cursor: inherit;
-  }
-  .navi_radio .navi_radio_field {
+
+    position: relative;
     display: inline-flex;
-    box-sizing: border-box;
-    width: var(--x-width);
-    height: var(--x-height);
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    outline-width: var(--x-outline-width);
-    outline-style: none;
-    outline-color: var(--x-outline-color);
-    outline-offset: var(--x-outline-offset);
+    box-sizing: content-box;
+    margin-top: 3px;
+    margin-right: 3px;
+    margin-left: 5px;
+
+    .navi_native_field {
+      position: absolute;
+      inset: 0;
+      margin: 0;
+      padding: 0;
+      border: none;
+      border-radius: inherit;
+      opacity: 0;
+      appearance: none; /* This allows border-radius to have an effect */
+      cursor: var(--x-cursor);
+    }
+
+    .navi_radio_field {
+      display: inline-flex;
+      box-sizing: border-box;
+      width: var(--x-width);
+      height: var(--x-height);
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      outline-width: var(--x-outline-width);
+      outline-style: none;
+      outline-color: var(--x-outline-color);
+      outline-offset: var(--x-outline-offset);
+    }
   }
   .navi_radio_field svg {
     overflow: visible;
@@ -221,11 +226,10 @@ const RadioStyleCSSVars = {
   "borderRadius": "--border-radius",
   "backgroundColor": "--background-color",
   "borderColor": "--border-color",
-  "color": "--color",
+  "accentColor": "--accent-color",
   ":hover": {
     backgroundColor: "--background-color-hover",
     borderColor: "--border-color-hover",
-    color: "--color-hover",
   },
   ":active": {
     borderColor: "--border-color-active",
@@ -233,12 +237,10 @@ const RadioStyleCSSVars = {
   ":read-only": {
     backgroundColor: "--background-color-readonly",
     borderColor: "--border-color-readonly",
-    color: "--color-readonly",
   },
   ":disabled": {
     backgroundColor: "--background-color-disabled",
     borderColor: "--border-color-disabled",
-    color: "--color-disabled",
   },
 };
 const RadioPseudoClasses = [

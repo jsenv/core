@@ -154,7 +154,6 @@ import.meta.css = /* css */ `
   .navi_checkbox {
     --x-background-color: var(--background-color);
     --x-border-color: var(--border-color);
-    --x-color: var(--color);
     --x-checkmark-color: var(--checkmark-color);
     --x-cursor: var(--cursor);
 
@@ -393,7 +392,6 @@ const CheckboxStyleCSSVars = {
   ":hover": {
     backgroundColor: "--background-color-hover",
     borderColor: "--border-color-hover",
-    color: "--color-hover",
   },
   ":active": {
     borderColor: "--border-color-active",
@@ -401,12 +399,10 @@ const CheckboxStyleCSSVars = {
   ":read-only": {
     backgroundColor: "--background-color-readonly",
     borderColor: "--border-color-readonly",
-    color: "--color-readonly",
   },
   ":disabled": {
     backgroundColor: "--background-color-disabled",
     borderColor: "--border-color-disabled",
-    color: "--color-disabled",
   },
 };
 const CheckboxToggleStyleCSSVars = {

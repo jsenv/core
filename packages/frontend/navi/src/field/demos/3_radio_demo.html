@@ -124,10 +124,9 @@
     <div id="root"></div>
 
     <script type="module" jsenv-type="module/jsx">
-      /* eslint-disable no-unused-vars */
       import { render } from "preact";
       import { useState } from "preact/hooks";
-      import { Input, Layout, Label, Box } from "@jsenv/navi";
+      import { Input, Label, Box } from "@jsenv/navi";
 
       const App = () => {
         return (
@@ -411,7 +410,7 @@
                         type="radio"
                         name="demo-orange-navi"
                         value="1"
-                        color="#f39c12"
+                        accentColor="#f39c12"
                         defaultValue
                       />
                       Navi
@@ -436,7 +435,7 @@
                         type="radio"
                         name="demo-green-navi"
                         value="1"
-                        color="#2ecc71"
+                        accentColor="#2ecc71"
                         defaultValue
                       />
                       Navi
@@ -461,7 +460,7 @@
                         type="radio"
                         name="demo-dark-navi"
                         value="1"
-                        color="#34495e"
+                        accentColor="#34495e"
                         defaultValue
                       />
                       Navi
@@ -497,7 +496,7 @@
                         type="radio"
                         name="demo-orange-checked-navi"
                         value="1"
-                        color="#f39c12"
+                        accentColor="#f39c12"
                         defaultValue
                       />
                       Navi
@@ -522,7 +521,7 @@
                         type="radio"
                         name="demo-orange-focus-checked-navi"
                         value="1"
-                        color="#f39c12"
+                        accentColor="#f39c12"
                         defaultValue
                         pseudoState={{ ":focus-visible": true }}
                       />
@@ -549,7 +548,7 @@
                         type="radio"
                         name="demo-orange-disabled-checked-navi"
                         value="1"
-                        color="#f39c12"
+                        accentColor="#f39c12"
                         defaultValue
                         disabled
                       />
@@ -578,7 +577,7 @@
                         type="radio"
                         name="demo-orange-readonly-checked-navi"
                         value="1"
-                        color="#f39c12"
+                        accentColor="#f39c12"
                         defaultValue
                         readOnly
                       />
@@ -597,7 +596,7 @@
                         type="radio"
                         name="demo-orange-readonly-loading-checked-navi"
                         value="1"
-                        color="#f39c12"
+                        accentColor="#f39c12"
                         defaultValue
                         readOnly
                         loading
