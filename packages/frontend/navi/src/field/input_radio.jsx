@@ -155,11 +155,6 @@ import.meta.css = /* css */ `
     &[data-checked] {
       --x-border-color: var(--border-color-checked);
 
-      .navi_radio_marker {
-        opacity: 1;
-        transform: scale(1);
-      }
-
       &[data-hover] {
         --x-border-color: var(--border-color-hover-checked);
       }
@@ -246,6 +241,13 @@ import.meta.css = /* css */ `
           transition: all 0.15s ease;
         }
       }
+
+      &[data-checked] {
+        .navi_radio_marker {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
     }
 
     /* Icon appearance */
@@ -317,6 +319,12 @@ export const InputRadio = (props) => {
     fallbackState: false,
     getStateFromProp: (checked) => (checked ? value : undefined),
     getPropFromState: Boolean,
+    getStateFromParent: (parentUIStateController) => {
+      if (parentUIStateController.componentType !== "radio_list") {
+        return undefined;
+      }
+      return parentUIStateController.uiState;
+    },
   });
   const uiState = useUIState(uiStateController);
 
