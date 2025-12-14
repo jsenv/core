@@ -1,6 +1,10 @@
+import { CodeBlock } from "./codeblock.jsx";
 import { Text } from "./text.jsx";
 
 export const Code = (props) => {
+  if (props.language) {
+    return <CodeBlock {...props} />;
+  }
   if (props.box) {
     return <CodeBox {...props} />;
   }
