@@ -122,80 +122,93 @@ import.meta.css = /* css */ `
       outline-style: none;
       outline-color: var(--x-outline-color);
       outline-offset: var(--x-outline-offset);
-    }
-  }
-  .navi_radio_field svg {
-    overflow: visible;
-  }
-  .navi_radio_border {
-    fill: var(--x-background-color);
-    stroke: var(--x-border-color);
-  }
-  .navi_radio_marker {
-    width: 100%;
-    height: 100%;
-    opacity: 0;
-    fill: var(--x-radiomark-color);
-    transform: scale(0.3);
-    transform-origin: center;
-    pointer-events: none;
-  }
-  .navi_radio_dashed_border {
-    display: none;
-  }
-  .navi_radio[data-transition] .navi_radio_marker {
-    transition: all 0.15s ease;
-  }
-  .navi_radio[data-transition] .navi_radio_dashed_border {
-    transition: all 0.15s ease;
-  }
-  .navi_radio[data-transition] .navi_radio_border {
-    transition: all 0.15s ease;
-  }
 
-  /* Focus */
-  .navi_radio[data-focus-visible] .navi_radio_field {
-    outline-style: solid;
-  }
-  /* Hover */
-  .navi_radio[data-hover] {
-    --x-border-color: var(--border-color-hover);
-    --x-radiomark-color: var(--radiomark-color-hover);
-  }
-  /* Checked */
-  .navi_radio[data-checked] {
-    --x-border-color: var(--border-color-checked);
-  }
-  .navi_radio[data-checked] .navi_radio_marker {
-    opacity: 1;
-    transform: scale(1);
-  }
-  .navi_radio[data-hover][data-checked] {
-    --x-border-color: var(--border-color-hover-checked);
-  }
-  /* Readonly */
-  .navi_radio[data-readonly] {
-    --x-background-color: var(--background-color-readonly);
-    --x-border-color: var(--border-color-readonly);
-    --x-radiomark-color: var(--radiomark-color-readonly);
-  }
-  .navi_radio[data-readonly] .navi_radio_dashed_border {
-    display: none;
-  }
-  .navi_radio[data-readonly][data-checked] {
-    --x-background-color: var(--background-color-readonly-checked);
-    --x-border-color: var(--border-color-readonly-checked);
-    --x-radiomark-color: var(--radiomark-color-readonly);
-  }
-  /* Disabled */
-  .navi_radio[data-disabled] {
-    --x-background-color: var(--background-color-disabled);
-    --x-border-color: var(--border-color-disabled);
-    --x-radiomark-color: var(--radiomark-color-disabled);
-  }
-  .navi_radio[data-disabled][data-checked] {
-    --x-border-color: var(--border-color-disabled);
-    --x-radiomark-color: var(--radiomark-color-disabled);
+      svg {
+        overflow: visible;
+      }
+
+      .navi_radio_border {
+        fill: var(--x-background-color);
+        stroke: var(--x-border-color);
+      }
+      .navi_radio_dashed_border {
+        display: none;
+      }
+      .navi_radio_marker {
+        width: 100%;
+        height: 100%;
+        opacity: 0;
+        fill: var(--x-radiomark-color);
+        transform: scale(0.3);
+        transform-origin: center;
+        pointer-events: none;
+      }
+    }
+
+    &[data-transition] {
+      .navi_radio_border {
+        transition: all 0.15s ease;
+      }
+      .navi_radio_dashed_border {
+        transition: all 0.15s ease;
+      }
+      .navi_radio_marker {
+        transition: all 0.15s ease;
+      }
+    }
+
+    /* Focus */
+    &[data-focus-visible] {
+      .navi_radio_field {
+        outline-style: solid;
+      }
+    }
+    /* Hover */
+    &[data-hover] {
+      --x-border-color: var(--border-color-hover);
+      --x-radiomark-color: var(--radiomark-color-hover);
+    }
+    /* Checked */
+    &[data-checked] {
+      --x-border-color: var(--border-color-checked);
+
+      .navi_radio_marker {
+        opacity: 1;
+        transform: scale(1);
+      }
+
+      &[data-hover] {
+        --x-border-color: var(--border-color-hover-checked);
+      }
+    }
+    /* Readonly */
+    &[data-readonly] {
+      --x-cursor: default;
+      --x-background-color: var(--background-color-readonly);
+      --x-border-color: var(--border-color-readonly);
+      --x-radiomark-color: var(--radiomark-color-readonly);
+
+      .navi_radio_dashed_border {
+        display: none;
+      }
+
+      &[data-checked] {
+        --x-background-color: var(--background-color-readonly-checked);
+        --x-border-color: var(--border-color-readonly-checked);
+        --x-radiomark-color: var(--radiomark-color-readonly);
+      }
+    }
+    /* Disabled */
+    &[data-disabled] {
+      --x-background-color: var(--background-color-disabled);
+      --x-border-color: var(--border-color-disabled);
+      --x-radiomark-color: var(--radiomark-color-disabled);
+
+      &[data-checked] {
+        --x-border-color: var(--border-color-disabled);
+        --x-radiomark-color: var(--radiomark-color-disabled);
+      }
+    }
   }
 `;
 
@@ -369,9 +382,10 @@ const InputRadioBasic = (props) => {
     innerRequired,
   ]);
 
+  const boxRef = useRef();
   useLayoutEffect(() => {
-    const naviRadio = ref.current;
-    const luminance = resolveColorLuminance("var(--color)", naviRadio);
+    const naviRadio = boxRef.current;
+    const luminance = resolveColorLuminance("var(--accent-color)", naviRadio);
     if (luminance < 0.3) {
       naviRadio.setAttribute("data-dark", "");
     } else {
@@ -383,7 +397,7 @@ const InputRadioBasic = (props) => {
     <Box
       as="span"
       {...remainingProps}
-      ref={undefined}
+      ref={boxRef}
       baseClassName="navi_radio"
       pseudoStateSelector=".navi_native_field"
       styleCSSVars={RadioStyleCSSVars}
