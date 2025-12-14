@@ -109,6 +109,14 @@ export const Icon = ({
   }
   const ariaProps = decorative ? { "aria-hidden": "true" } : {};
 
+  if (typeof children === "string") {
+    return (
+      <Text {...props} {...ariaProps}>
+        {children}
+      </Text>
+    );
+  }
+
   if (box) {
     return (
       <Box

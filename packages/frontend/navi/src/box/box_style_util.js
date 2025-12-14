@@ -369,7 +369,11 @@ const CONTENT_PROPS = {
       }
       return { alignItems: value };
     }
-    return { verticalAlign: value };
+
+    return {
+      verticalAlign:
+        { center: "middle", start: "top", end: "bottom" }[value] || value,
+    };
   },
   spacing: (value, { boxFlow }) => {
     if (
