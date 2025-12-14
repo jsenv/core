@@ -84,19 +84,25 @@ import.meta.css = /* css */ `
       --background-color-disabled-checked: var(--background-color);
 
       /* Button specific */
+      --button-border-width: 1px;
       --button-border-color: transparent;
       --button-background-color: transparent;
       --button-border-color-hover: color-mix(
         in srgb,
-        light-dark(#767676, #8e8e93) 70%,
+        var(--button-border-color) 70%,
+        black
+      );
+      --button-background-color-hover: color-mix(
+        in srgb,
+        var(--button-border-color) 95%,
         black
       );
       --button-border-color-checked: var(--accent-color);
-      --button-background-color-hover: color-mix(
-        in srgb,
-        light-dark(#f3f4f6, #2d3748) 90%,
-        black
-      );
+      --button-background-color-checked: transparent;
+      --button-border-color-readonly: #eeeeee;
+      --button-background-color-readonly: #d3d3d3;
+      --button-border-color-disabled: var(--border-color-readonly);
+      --button-background-color-disabled: var(--background-color-readonly);
     }
 
     &[data-dark] {
@@ -269,7 +275,26 @@ import.meta.css = /* css */ `
         padding-bottom: var(--padding-bottom, var(--padding-y, var(--padding)));
         padding-left: var(--padding-left, var(--padding-x, var(--padding)));
         background-color: var(--x-background-color);
+        border-width: var(--button-border-width);
+        border-style: solid;
         border-color: var(--x-border-color);
+      }
+
+      &[data-hover] {
+        --x-background-color: var(--button-background-color-hover);
+        --x-border-color: var(--button-border-color-hover);
+      }
+      &[data-checked] {
+        --x-border-color: var(--button-border-color-checked);
+        --x-background-color: var(--button-background-color-checked);
+
+        .navi_radio_field {
+          box-shadow: inset 0 0 0 1px var(--button-border-color-checked);
+        }
+      }
+      &[data-disabled] {
+        --x-border-color: var(--button-border-color-disabled);
+        --x-background-color: var(--button-background-color-disabled);
       }
     }
   }
