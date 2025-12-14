@@ -76,7 +76,11 @@ import.meta.css = /* css */ `
         white
       );
       --border-color-readonly-checked: #d3d3d3;
-      --background-color-readonly-checked: grey;
+      --background-color-readonly-checked: color-mix(
+        in srgb,
+        var(--background-color-checked) 30%,
+        grey
+      );
       --checkmark-color-readonly: #eeeeee;
       /* Disabled */
       --border-color-disabled: var(--border-color-readonly);

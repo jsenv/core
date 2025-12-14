@@ -65,9 +65,17 @@ import.meta.css = /* css */ `
         white
       );
       --background-color-readonly: var(--background-color);
-      --radiomark-color-readonly: grey;
-      --border-color-readonly-checked: #d3d3d3;
-      --background-color-readonly-checked: #d3d3d3;
+      --radiomark-color-readonly: color-mix(
+        in srgb,
+        var(--radiomark-color) 30%,
+        grey
+      );
+      --border-color-readonly-checked: color-mix(
+        in srgb,
+        var(--radiomark-color) 30%,
+        transparent
+      );
+      --background-color-readonly-checked: var(--border-color-readonly-checked);
       /* Disabled */
       --border-color-disabled: var(--border-color-readonly);
       --background-color-disabled: rgba(248, 248, 248, 0.7);
