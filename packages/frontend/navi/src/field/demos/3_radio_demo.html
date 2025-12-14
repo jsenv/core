@@ -133,6 +133,7 @@
           <div>
             <BasicStatesDemo />
             <IconStatesDemo />
+            <ButtonIconStatesDemo />
             <ColorDemo />
             <InteractiveDemo />
           </div>
@@ -712,6 +713,300 @@
                   <li>
                     Loading state shows a spinner overlay while preserving the
                     icon
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      const ButtonIconStatesDemo = () => {
+        return (
+          <div className="demo-section">
+            <h2>Button Appearance with Icons</h2>
+
+            <div className="states-section">
+              <div className="states-title">Button-styled Icon Radios</div>
+              <p className="states-description">
+                Radio buttons can be styled as buttons when using{" "}
+                <code>appearance="button"</code>
+                combined with <code>icon</code>. This creates toggle button
+                groups that look and feel like traditional button controls while
+                maintaining radio semantics.
+              </p>
+
+              <Box column spacing="sm">
+                <Box as="fieldset" width="300">
+                  <legend>Default Group (one selected)</legend>
+                  <Box row spacing="sm" alignX="start" wrap>
+                    <Label>
+                      <Input
+                        type="radio"
+                        name="demo-button-default"
+                        value="home"
+                        icon={<Icon>🏠</Icon>}
+                        appearance="button"
+                        defaultValue
+                      />
+                      Home
+                    </Label>
+                    <Label>
+                      <Input
+                        type="radio"
+                        name="demo-button-default"
+                        value="work"
+                        icon={<Icon>💼</Icon>}
+                        appearance="button"
+                      />
+                      Work
+                    </Label>
+                    <Label>
+                      <Input
+                        type="radio"
+                        name="demo-button-default"
+                        value="travel"
+                        icon={<Icon>✈️</Icon>}
+                        appearance="button"
+                      />
+                      Travel
+                    </Label>
+                  </Box>
+                </Box>
+
+                <Box as="fieldset" width="300">
+                  <legend>:focus-visible state</legend>
+                  <Box row spacing="sm" alignX="start" wrap>
+                    <Label>
+                      <Input
+                        type="radio"
+                        name="demo-button-focus"
+                        value="music"
+                        icon={<Icon>🎵</Icon>}
+                        appearance="button"
+                        pseudoState={{ ":focus-visible": true }}
+                      />
+                      Music
+                    </Label>
+                    <Label>
+                      <Input
+                        type="radio"
+                        name="demo-button-focus"
+                        value="art"
+                        icon={<Icon>🎨</Icon>}
+                        appearance="button"
+                        defaultValue
+                      />
+                      Art
+                    </Label>
+                    <Label>
+                      <Input
+                        type="radio"
+                        name="demo-button-focus"
+                        value="sports"
+                        icon={<Icon>🏃</Icon>}
+                        appearance="button"
+                      />
+                      Sports
+                    </Label>
+                  </Box>
+                </Box>
+
+                <Box as="fieldset" width="300">
+                  <legend>:disabled state</legend>
+                  <Box row spacing="sm" alignX="start" wrap>
+                    <Label>
+                      <Input
+                        type="radio"
+                        name="demo-button-disabled"
+                        value="read"
+                        icon={<Icon>📚</Icon>}
+                        appearance="button"
+                        disabled
+                      />
+                      Read
+                    </Label>
+                    <Label>
+                      <Input
+                        type="radio"
+                        name="demo-button-disabled"
+                        value="write"
+                        icon={<Icon>✍️</Icon>}
+                        appearance="button"
+                        defaultValue
+                        disabled
+                      />
+                      Write
+                    </Label>
+                    <Label>
+                      <Input
+                        type="radio"
+                        name="demo-button-disabled"
+                        value="code"
+                        icon={<Icon>💻</Icon>}
+                        appearance="button"
+                        disabled
+                      />
+                      Code
+                    </Label>
+                  </Box>
+                </Box>
+
+                <Box as="fieldset" width="300">
+                  <legend>:read-only state</legend>
+                  <Box row spacing="sm" alignX="start" wrap>
+                    <Label>
+                      <Input
+                        type="radio"
+                        name="demo-button-readonly"
+                        value="morning"
+                        icon={<Icon>🌅</Icon>}
+                        appearance="button"
+                        readOnly
+                      />
+                      Morning
+                    </Label>
+                    <Label>
+                      <Input
+                        type="radio"
+                        name="demo-button-readonly"
+                        value="afternoon"
+                        icon={<Icon>☀️</Icon>}
+                        appearance="button"
+                        checked
+                        readOnly
+                      />
+                      Afternoon
+                    </Label>
+                    <Label>
+                      <Input
+                        type="radio"
+                        name="demo-button-readonly"
+                        value="evening"
+                        icon={<Icon>🌙</Icon>}
+                        appearance="button"
+                        readOnly
+                      />
+                      Evening
+                    </Label>
+                  </Box>
+                </Box>
+
+                <Box as="fieldset" width="300">
+                  <legend>:-navi-loading state</legend>
+                  <Box row spacing="sm" alignX="start" wrap>
+                    <Label>
+                      <Input
+                        type="radio"
+                        name="demo-button-loading"
+                        value="upload"
+                        icon={<Icon>📤</Icon>}
+                        appearance="button"
+                        loading
+                      />
+                      Upload
+                    </Label>
+                    <Label>
+                      <Input
+                        type="radio"
+                        name="demo-button-loading"
+                        value="download"
+                        icon={<Icon>📥</Icon>}
+                        appearance="button"
+                        checked
+                        loading
+                      />
+                      Download
+                    </Label>
+                    <Label>
+                      <Input
+                        type="radio"
+                        name="demo-button-loading"
+                        value="sync"
+                        icon={<Icon>🔄</Icon>}
+                        appearance="button"
+                        loading
+                      />
+                      Sync
+                    </Label>
+                  </Box>
+                </Box>
+              </Box>
+
+              <div className="enhanced-states-title">Size Variations</div>
+              <p className="states-description">
+                Button appearance adapts to different sizes while maintaining
+                the icon + text layout.
+              </p>
+
+              <Box column spacing="sm">
+                <Box as="fieldset" width="400">
+                  <legend>Different sizes</legend>
+                  <Box column spacing="sm">
+                    <Box row spacing="sm" alignX="start" wrap>
+                      <Label>
+                        <Input
+                          type="radio"
+                          name="demo-button-sizes"
+                          value="small"
+                          icon={<Icon>📱</Icon>}
+                          appearance="button"
+                          size="s"
+                          defaultValue
+                        />
+                        Label
+                      </Label>
+                      <Label>
+                        <Input
+                          type="radio"
+                          name="demo-button-sizes"
+                          value="medium"
+                          icon={<Icon>📱</Icon>}
+                          appearance="button"
+                        />
+                        Label
+                      </Label>
+                      <Label>
+                        <Input
+                          type="radio"
+                          name="demo-button-sizes"
+                          value="large"
+                          icon={<Icon>📱</Icon>}
+                          appearance="button"
+                          size="l"
+                        />
+                        Label
+                      </Label>
+                    </Box>
+                  </Box>
+                </Box>
+              </Box>
+
+              <div
+                style={{
+                  marginTop: "15px",
+                  padding: "10px",
+                  background: "#f8f9fa",
+                  borderRadius: "4px",
+                  fontSize: "0.85rem",
+                  color: "#666",
+                }}
+              >
+                <strong>Button Appearance Benefits:</strong>
+                <ul style={{ margin: "5px 0", paddingLeft: "20px" }}>
+                  <li>
+                    Creates toggle button groups that are visually distinct
+                  </li>
+                  <li>
+                    Maintains radio button semantics and keyboard navigation
+                  </li>
+                  <li>Icons and text are properly aligned and sized</li>
+                  <li>
+                    Visual states (pressed, focused, disabled) are clearly
+                    communicated
+                  </li>
+                  <li>
+                    Works well for toolbar-style interfaces and option selection
                   </li>
                 </ul>
               </div>

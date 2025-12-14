@@ -82,6 +82,21 @@ import.meta.css = /* css */ `
       --radiomark-color-disabled: #d3d3d3;
       --border-color-checked-disabled: #d3d3d3;
       --background-color-disabled-checked: var(--background-color);
+
+      /* Button specific */
+      --button-border-color: transparent;
+      --button-background-color: transparent;
+      --button-border-color-hover: color-mix(
+        in srgb,
+        light-dark(#767676, #8e8e93) 70%,
+        black
+      );
+      --button-border-color-checked: var(--accent-color);
+      --button-background-color-hover: color-mix(
+        in srgb,
+        light-dark(#f3f4f6, #2d3748) 90%,
+        black
+      );
     }
 
     &[data-dark] {
@@ -230,6 +245,32 @@ import.meta.css = /* css */ `
     &[data-appearance="icon"] {
       --outline-offset: 2px;
       --outline-width: 2px;
+    }
+
+    /* Button appearance */
+    &[data-appearance="button"] {
+      --margin: 0;
+      --outline-offset: 0px;
+      --width: auto;
+      --height: auto;
+      --padding: 4px;
+      --border-color: var(--button-border-color);
+      --border-color-hover: var(--button-border-color-hover);
+      --background-color: var(--button-background-color);
+      --background-color-hover: var(--button-background-color-hover);
+      --background-color-readonly: var(--button-background-color-readonly);
+      --background-color-disabled: var(--button-background-color-disabled);
+      --border-color-checked: var(--button-border-color);
+      --background-color-checked: var(--button-background-color);
+
+      .navi_radio_field {
+        padding-top: var(--padding-top, var(--padding-y, var(--padding)));
+        padding-right: var(--padding-right, var(--padding-x, var(--padding)));
+        padding-bottom: var(--padding-bottom, var(--padding-y, var(--padding)));
+        padding-left: var(--padding-left, var(--padding-x, var(--padding)));
+        background-color: var(--x-background-color);
+        border-color: var(--x-border-color);
+      }
     }
   }
 `;
