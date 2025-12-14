@@ -195,6 +195,8 @@ import.meta.css = /* css */ `
 
     .navi_radio_field {
       box-sizing: border-box;
+      width: var(--x-width);
+      height: var(--x-height);
       outline-width: var(--x-outline-width);
       outline-style: none;
       outline-color: var(--x-outline-color);
@@ -206,8 +208,6 @@ import.meta.css = /* css */ `
     &[data-appearance="radio"] {
       .navi_radio_field {
         display: inline-flex;
-        width: var(--x-width);
-        height: var(--x-height);
         align-items: center;
         justify-content: center;
         border-radius: 50%;
@@ -270,14 +270,19 @@ import.meta.css = /* css */ `
       --background-color-checked: var(--button-background-color);
 
       .navi_radio_field {
+        display: inline-flex;
+        box-sizing: border-box;
         padding-top: var(--padding-top, var(--padding-y, var(--padding)));
         padding-right: var(--padding-right, var(--padding-x, var(--padding)));
         padding-bottom: var(--padding-bottom, var(--padding-y, var(--padding)));
         padding-left: var(--padding-left, var(--padding-x, var(--padding)));
+        align-items: center;
+        justify-content: center;
         background-color: var(--x-background-color);
         border-width: var(--button-border-width);
         border-style: solid;
         border-color: var(--x-border-color);
+        border-radius: var(--button-border-radius);
       }
 
       &[data-hover] {
@@ -289,7 +294,9 @@ import.meta.css = /* css */ `
         --x-background-color: var(--button-background-color-checked);
 
         .navi_radio_field {
-          box-shadow: inset 0 0 0 1px var(--button-border-color-checked);
+          box-shadow:
+            inset 0 2px 4px rgba(0, 0, 0, 0.15),
+            inset 0 0 0 1px var(--button-border-color-checked);
         }
       }
       &[data-disabled] {
@@ -322,9 +329,11 @@ export const InputRadio = (props) => {
 };
 
 const RadioStyleCSSVars = {
+  "width": "--width",
+  "height": "--height",
+  "borderRadius": "--border-radius",
   "outlineWidth": "--outline-width",
   "borderWidth": "--border-width",
-  "borderRadius": "--border-radius",
   "backgroundColor": "--background-color",
   "borderColor": "--border-color",
   "accentColor": "--accent-color",
@@ -342,6 +351,25 @@ const RadioStyleCSSVars = {
   ":disabled": {
     backgroundColor: "--background-color-disabled",
     borderColor: "--border-color-disabled",
+  },
+};
+const RadioButtonStyleCSSVars = {
+  ...RadioStyleCSSVars,
+  "borderRadius": "--button-border-radius",
+  "borderWidth": "--button-border-width",
+  "borderColor": "--button-border-color",
+  "backgroundColor": "--button-background-color",
+  ":hover": {
+    backgroundColor: "--button-background-color-hover",
+    borderColor: "--button-border-color-hover",
+  },
+  ":read-only": {
+    backgroundColor: "--button-background-color-readonly",
+    borderColor: "--button-border-color-readonly",
+  },
+  ":disabled": {
+    backgroundColor: "--button-background-color-disabled",
+    borderColor: "--button-border-color-disabled",
   },
 };
 const RadioPseudoClasses = [
@@ -491,7 +519,9 @@ const InputRadioBasic = (props) => {
       data-appearance={appearance}
       baseClassName="navi_radio"
       pseudoStateSelector=".navi_native_field"
-      styleCSSVars={RadioStyleCSSVars}
+      styleCSSVars={
+        appearance === "button" ? RadioButtonStyleCSSVars : RadioStyleCSSVars
+      }
       pseudoClasses={RadioPseudoClasses}
       pseudoElements={RadioPseudoElements}
       basePseudoState={{
