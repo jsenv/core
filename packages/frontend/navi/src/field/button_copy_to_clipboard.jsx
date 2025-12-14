@@ -54,9 +54,11 @@ export const ButtonCopyToClipboard = ({ children, ...props }) => {
         Copied !
       </Box>
       <Button
-        discrete
         className="navi_copy_button"
         row
+        icon
+        revealOnInteraction
+        square
         alignY="center"
         expandY
         borderRadius="xs"

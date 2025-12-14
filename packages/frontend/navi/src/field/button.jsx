@@ -169,6 +169,11 @@ import.meta.css = /* css */ `
       }
     }
 
+    &[data-reveal-on-interaction] {
+      --x-button-background-color: transparent;
+      --x-button-border-color: transparent;
+    }
+
     /* Hover */
     &[data-hover] {
       --x-button-border-color: var(--button-border-color-hover);
@@ -329,7 +334,8 @@ const ButtonBasic = (props) => {
 
     // visual
     icon,
-    discrete = icon,
+    revealOnInteraction = icon,
+    discrete = icon && !revealOnInteraction,
 
     children,
     ...rest
@@ -359,11 +365,11 @@ const ButtonBasic = (props) => {
   return (
     <Box
       data-readonly-silent={innerLoading ? "" : undefined}
-      data-nohover={icon ? "" : undefined}
       {...remainingProps}
       as="button"
       ref={ref}
       data-icon={icon ? "" : undefined}
+      data-reveal-on-interaction={revealOnInteraction ? "" : undefined}
       data-discrete={discrete ? "" : undefined}
       data-callout-arrow-x="center"
       aria-busy={innerLoading}
