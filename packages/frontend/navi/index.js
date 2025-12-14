@@ -118,6 +118,7 @@ export { ErrorBoundaryContext } from "./src/error_boundary_context.js";
 export { ActiveKeyboardShortcuts } from "./src/keyboard/active_keyboard_shortcuts.jsx";
 
 // Text
+export { Address } from "./src/text/address.jsx";
 export { BadgeCount } from "./src/text/badge.jsx";
 export { Caption } from "./src/text/caption.jsx";
 export { Code } from "./src/text/code.jsx";
