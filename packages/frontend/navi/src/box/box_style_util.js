@@ -97,6 +97,7 @@ const hasWidthHeight = (context) => {
   );
 };
 const DIMENSION_PROPS = {
+  boxSizing: PASS_THROUGH,
   width: PASS_THROUGH,
   minWidth: PASS_THROUGH,
   maxWidth: PASS_THROUGH,
@@ -307,6 +308,7 @@ const TYPO_PROPS = {
   pre: applyToCssPropWhenTruthy("whiteSpace", "pre", "normal"),
   preWrap: applyToCssPropWhenTruthy("whiteSpace", "pre-wrap", "normal"),
   preLine: applyToCssPropWhenTruthy("whiteSpace", "pre-line", "normal"),
+  userSelect: PASS_THROUGH,
 };
 const VISUAL_PROPS = {
   outline: PASS_THROUGH,

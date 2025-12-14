@@ -14,7 +14,13 @@
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { Address, Box, Icon, Caption } from "@jsenv/navi";
+      import {
+        Address,
+        Box,
+        Icon,
+        Caption,
+        ButtonCopyToClipboard,
+      } from "@jsenv/navi";
 
       const App = () => {
         return (
@@ -34,20 +40,26 @@
             {/* Exemple 2: avec icône + bords + fond */}
             <Box row>
               <Caption>Adresse avec icône et style</Caption>
+              <Box column alignY="center" height="32">
+                <Address
+                  height="32"
+                  boxSizing="border-box"
+                  border="1px solid #454C53"
+                  borderRadius="xs"
+                  paddingX="xs"
+                  backgroundColor="#E6EAEF"
+                  lineHeight="30px"
+                >
+                  <Icon userSelect="none" italic={false} alignY="center">
+                    📍
+                  </Icon>
+                  789 Innovation Drive
+                </Address>
 
-              <Address
-                width="fit-content"
-                border="1px solid #454C53"
-                borderRadius="xs"
-                padding="xs"
-                backgroundColor="#E6EAEF"
-                lineHeight="1em"
-              >
-                <Icon italic={false} alignY="center">
-                  📍
-                </Icon>
-                789 Innovation Drive
-              </Address>
+                <ButtonCopyToClipboard marginLeft="s" height="32">
+                  789 Innovation Drive
+                </ButtonCopyToClipboard>
+              </Box>
             </Box>
           </Box>
         );

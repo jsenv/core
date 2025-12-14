@@ -143,13 +143,16 @@ export const CodeBlock = ({
 })();
 
 (() => {
+  /*
+  :host {
+      display: block;
+  }
+  :host code[class*="language-"], :host pre[class*="language-"]{
+      margin-top: 0;
+  }
+  */
+
   const css = /* css */ `
-    /* :host {
-                    display: block;
-                }
-                :host code[class*="language-"], :host pre[class*="language-"]{
-                    margin-top: 0;
-                } */
     #code_block {
       position: relative;
     }

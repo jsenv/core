@@ -111,7 +111,7 @@ export const Icon = ({
 
   if (typeof children === "string") {
     return (
-      <Text {...props} {...ariaProps}>
+      <Text {...props} {...ariaProps} data-icon-text="">
         {children}
       </Text>
     );

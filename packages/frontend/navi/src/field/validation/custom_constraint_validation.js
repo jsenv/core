@@ -454,7 +454,7 @@ export const installCustomConstraintValidation = (
       }
     }
 
-    if (failedConstraintInfo) {
+    if (failedConstraintInfo && !failedConstraintInfo.silent) {
       if (!hasTitleAttribute) {
         // when a constraint is failing browser displays that constraint message if the element has no title attribute.
         // We want to do the same with our message (overriding the browser in the process to get better messages)
