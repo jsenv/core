@@ -302,6 +302,8 @@ const InputRadioBasic = (props) => {
     onClick,
     onInput,
 
+    icon,
+    appearance = icon ? "icon" : "radio",
     color,
     ...rest
   } = props;
@@ -374,6 +376,7 @@ const InputRadioBasic = (props) => {
       checked={checked}
       disabled={innerDisabled}
       required={innerRequired}
+      data-appearance={appearance}
       baseClassName="navi_native_field"
       data-callout-arrow-x="center"
       onClick={innerOnClick}

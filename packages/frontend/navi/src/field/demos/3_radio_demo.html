@@ -126,12 +126,13 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState } from "preact/hooks";
-      import { Input, Label, Box } from "@jsenv/navi";
+      import { Input, Label, Box, Icon } from "@jsenv/navi";
 
       const App = () => {
         return (
           <div>
             <BasicStatesDemo />
+            <IconStatesDemo />
             <ColorDemo />
             <InteractiveDemo />
           </div>
@@ -381,6 +382,330 @@
                   <li>
                     <strong>Loading:</strong> Shows a spinner while allowing the
                     radio to remain interactive
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      const IconStatesDemo = () => {
+        return (
+          <div className="demo-section">
+            <h2>Radio with Icons</h2>
+
+            <div className="states-section">
+              <div className="states-title">Icon Radio States</div>
+              <p className="states-description">
+                Radio buttons can display icons instead of traditional radio
+                circles. Here are all the possible states when using the{" "}
+                <code>icon</code> prop.
+              </p>
+
+              <Box column spacing="sm">
+                <Box as="fieldset" width="200">
+                  <legend>Default (unchecked)</legend>
+                  <Box row spacing="sm" alignX="start">
+                    <Label>
+                      <Input
+                        type="radio"
+                        name="demo-icon-default"
+                        value="1"
+                        icon={<Icon>🎵</Icon>}
+                      />
+                      Music
+                    </Label>
+                    <Label>
+                      <Input
+                        type="radio"
+                        name="demo-icon-default"
+                        value="2"
+                        icon={<Icon>🎨</Icon>}
+                      />
+                      Art
+                    </Label>
+                    <Label>
+                      <Input
+                        type="radio"
+                        name="demo-icon-default"
+                        value="3"
+                        icon={<Icon>🏃</Icon>}
+                      />
+                      Sports
+                    </Label>
+                  </Box>
+                </Box>
+
+                <Box as="fieldset" width="200">
+                  <legend>:focus-visible (unchecked)</legend>
+                  <Box row spacing="sm" alignX="start">
+                    <Label>
+                      <Input
+                        type="radio"
+                        name="demo-icon-focus"
+                        value="1"
+                        icon={<Icon>🎵</Icon>}
+                        pseudoState={{ ":focus-visible": true }}
+                      />
+                      Music
+                    </Label>
+                    <Label>
+                      <Input
+                        type="radio"
+                        name="demo-icon-focus"
+                        value="2"
+                        icon={<Icon>🎨</Icon>}
+                      />
+                      Art
+                    </Label>
+                  </Box>
+                </Box>
+
+                <Box as="fieldset" width="200">
+                  <legend>:disabled (unchecked)</legend>
+                  <Box row spacing="sm" alignX="start">
+                    <Label>
+                      <Input
+                        type="radio"
+                        name="demo-icon-disabled"
+                        value="1"
+                        icon={<Icon>🎵</Icon>}
+                        disabled
+                      />
+                      Music
+                    </Label>
+                    <Label>
+                      <Input
+                        type="radio"
+                        name="demo-icon-disabled"
+                        value="2"
+                        icon={<Icon>🎨</Icon>}
+                        disabled
+                      />
+                      Art
+                    </Label>
+                  </Box>
+                </Box>
+              </Box>
+
+              <Box column spacing="sm">
+                <Box as="fieldset" width="200">
+                  <legend>:checked</legend>
+                  <Box row spacing="sm" alignX="start">
+                    <Label>
+                      <Input
+                        type="radio"
+                        name="demo-icon-checked"
+                        value="1"
+                        icon={<Icon>🎵</Icon>}
+                        defaultValue
+                      />
+                      Music
+                    </Label>
+                    <Label>
+                      <Input
+                        type="radio"
+                        name="demo-icon-checked"
+                        value="2"
+                        icon={<Icon>🎨</Icon>}
+                      />
+                      Art
+                    </Label>
+                  </Box>
+                </Box>
+
+                <Box as="fieldset" width="200">
+                  <legend>:focus-visible:checked</legend>
+                  <Box row spacing="sm" alignX="start">
+                    <Label>
+                      <Input
+                        type="radio"
+                        name="demo-icon-focus-checked"
+                        value="1"
+                        icon={<Icon>🎵</Icon>}
+                        defaultValue
+                        pseudoState={{ ":focus-visible": true }}
+                      />
+                      Music
+                    </Label>
+                    <Label>
+                      <Input
+                        type="radio"
+                        name="demo-icon-focus-checked"
+                        value="2"
+                        icon={<Icon>🎨</Icon>}
+                      />
+                      Art
+                    </Label>
+                  </Box>
+                </Box>
+
+                <Box as="fieldset" width="200">
+                  <legend>:disabled:checked</legend>
+                  <Box row spacing="sm" alignX="start">
+                    <Label>
+                      <Input
+                        type="radio"
+                        name="demo-icon-disabled-checked"
+                        value="1"
+                        icon={<Icon>🎵</Icon>}
+                        defaultValue
+                        disabled
+                      />
+                      Music
+                    </Label>
+                    <Label>
+                      <Input
+                        type="radio"
+                        name="demo-icon-disabled-checked"
+                        value="2"
+                        icon={<Icon>🎨</Icon>}
+                        disabled
+                      />
+                      Art
+                    </Label>
+                  </Box>
+                </Box>
+              </Box>
+
+              <div className="enhanced-states-title">Enhanced Icon States</div>
+              <p className="states-description">
+                Additional Navi-specific states for radio buttons with icons.
+              </p>
+
+              <Box column spacing="sm">
+                <Box as="fieldset" width="200">
+                  <legend>:read-only (unchecked)</legend>
+                  <Box row spacing="sm" alignX="start">
+                    <Label>
+                      <Input
+                        type="radio"
+                        name="demo-icon-readonly"
+                        value="1"
+                        icon={<Icon>🎵</Icon>}
+                        readOnly
+                      />
+                      Music
+                    </Label>
+                    <Label>
+                      <Input
+                        type="radio"
+                        name="demo-icon-readonly"
+                        value="2"
+                        icon={<Icon>🎨</Icon>}
+                        readOnly
+                      />
+                      Art
+                    </Label>
+                  </Box>
+                </Box>
+
+                <Box as="fieldset" width="200">
+                  <legend>:read-only:checked</legend>
+                  <Box row spacing="sm" alignX="start">
+                    <Label>
+                      <Input
+                        type="radio"
+                        name="demo-icon-readonly-checked"
+                        value="1"
+                        icon={<Icon>🎵</Icon>}
+                        readOnly
+                        checked
+                      />
+                      Music
+                    </Label>
+                    <Label>
+                      <Input
+                        type="radio"
+                        name="demo-icon-readonly-checked"
+                        value="2"
+                        icon={<Icon>🎨</Icon>}
+                        readOnly
+                      />
+                      Art
+                    </Label>
+                  </Box>
+                </Box>
+
+                <Box as="fieldset" width="200">
+                  <legend>:-navi-loading (unchecked)</legend>
+                  <Box row spacing="sm" alignX="start">
+                    <Label>
+                      <Input
+                        type="radio"
+                        name="demo-icon-loading"
+                        value="1"
+                        icon={<Icon>🎵</Icon>}
+                        loading
+                      />
+                      Music
+                    </Label>
+                    <Label>
+                      <Input
+                        type="radio"
+                        name="demo-icon-loading"
+                        value="2"
+                        icon={<Icon>🎨</Icon>}
+                        loading
+                      />
+                      Art
+                    </Label>
+                  </Box>
+                </Box>
+
+                <Box as="fieldset" width="200">
+                  <legend>:-navi-loading:checked</legend>
+                  <Box row spacing="sm" alignX="start">
+                    <Label>
+                      <Input
+                        type="radio"
+                        name="demo-icon-loading-checked"
+                        value="1"
+                        icon={<Icon>🎵</Icon>}
+                        loading
+                        checked
+                      />
+                      Music
+                    </Label>
+                    <Label>
+                      <Input
+                        type="radio"
+                        name="demo-icon-loading-checked"
+                        value="2"
+                        icon={<Icon>🎨</Icon>}
+                        loading
+                      />
+                      Art
+                    </Label>
+                  </Box>
+                </Box>
+              </Box>
+
+              <div
+                style={{
+                  marginTop: "15px",
+                  padding: "10px",
+                  background: "#f8f9fa",
+                  borderRadius: "4px",
+                  fontSize: "0.85rem",
+                  color: "#666",
+                }}
+              >
+                <strong>Icon Radio Behavior:</strong>
+                <ul style={{ margin: "5px 0", paddingLeft: "20px" }}>
+                  <li>Icons replace the standard radio circle appearance</li>
+                  <li>
+                    All standard radio states (checked, focus, disabled) still
+                    apply
+                  </li>
+                  <li>
+                    Visual feedback is provided through background color and
+                    opacity changes
+                  </li>
+                  <li>
+                    Loading state shows a spinner overlay while preserving the
+                    icon
                   </li>
                 </ul>
               </div>
