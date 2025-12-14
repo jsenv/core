@@ -49,6 +49,7 @@
                   padding="xs"
                   paddingX="s"
                   backgroundColor="#E6EAEF"
+                  spacing="pre"
                 >
                   <Icon userSelect="none" italic={false}>
                     📍
@@ -58,6 +59,36 @@
 
                 <ButtonCopyToClipboard marginLeft="s" height="36">
                   789 Innovation Drive
+                </ButtonCopyToClipboard>
+              </Box>
+            </Box>
+
+            <Box row>
+              <Caption>Adresse multiligne avec icône et style</Caption>
+              <Box column alignY="start" height="36" width="250">
+                <Address
+                  boxSizing="border-box"
+                  border="1px solid #454C53"
+                  borderRadius="xs"
+                  padding="xs"
+                  paddingX="s"
+                  backgroundColor="#E6EAEF"
+                  spacing="pre"
+                >
+                  <Icon userSelect="none" italic={false}>
+                    📍
+                  </Icon>
+                  123 Rue Principale
+                  <br />
+                  Anytown, CA 12345
+                  <br />
+                  États-Unis
+                </Address>
+
+                <ButtonCopyToClipboard marginLeft="s" height="36">
+                  {`123 Rue Principale
+Anytown, CA 12345
+États-Unis`}
                 </ButtonCopyToClipboard>
               </Box>
             </Box>
