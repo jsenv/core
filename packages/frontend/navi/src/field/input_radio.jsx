@@ -117,54 +117,6 @@ import.meta.css = /* css */ `
       cursor: var(--x-cursor);
     }
 
-    .navi_radio_field {
-      display: inline-flex;
-      box-sizing: border-box;
-      width: var(--x-width);
-      height: var(--x-height);
-      align-items: center;
-      justify-content: center;
-      border-radius: 50%;
-      outline-width: var(--x-outline-width);
-      outline-style: none;
-      outline-color: var(--x-outline-color);
-      outline-offset: var(--x-outline-offset);
-      pointer-events: none;
-
-      svg {
-        overflow: visible;
-      }
-
-      .navi_radio_border {
-        fill: var(--x-background-color);
-        stroke: var(--x-border-color);
-      }
-      .navi_radio_dashed_border {
-        display: none;
-      }
-      .navi_radio_marker {
-        width: 100%;
-        height: 100%;
-        opacity: 0;
-        fill: var(--x-radiomark-color);
-        transform: scale(0.3);
-        transform-origin: center;
-        pointer-events: none;
-      }
-    }
-
-    &[data-transition] {
-      .navi_radio_border {
-        transition: all 0.15s ease;
-      }
-      .navi_radio_dashed_border {
-        transition: all 0.15s ease;
-      }
-      .navi_radio_marker {
-        transition: all 0.15s ease;
-      }
-    }
-
     /* Focus */
     &[data-focus-visible] {
       z-index: 1;
@@ -218,6 +170,66 @@ import.meta.css = /* css */ `
         --x-border-color: var(--border-color-disabled);
         --x-radiomark-color: var(--radiomark-color-disabled);
       }
+    }
+
+    .navi_radio_field {
+      box-sizing: border-box;
+      outline-width: var(--x-outline-width);
+      outline-style: none;
+      outline-color: var(--x-outline-color);
+      outline-offset: var(--x-outline-offset);
+      pointer-events: none;
+    }
+
+    /* Radio appearance */
+    &[data-appearance="radio"] {
+      .navi_radio_field {
+        display: inline-flex;
+        width: var(--x-width);
+        height: var(--x-height);
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+
+        svg {
+          overflow: visible;
+        }
+
+        .navi_radio_border {
+          fill: var(--x-background-color);
+          stroke: var(--x-border-color);
+        }
+        .navi_radio_dashed_border {
+          display: none;
+        }
+        .navi_radio_marker {
+          width: 100%;
+          height: 100%;
+          opacity: 0;
+          fill: var(--x-radiomark-color);
+          transform: scale(0.3);
+          transform-origin: center;
+          pointer-events: none;
+        }
+      }
+
+      &[data-transition] {
+        .navi_radio_border {
+          transition: all 0.15s ease;
+        }
+        .navi_radio_dashed_border {
+          transition: all 0.15s ease;
+        }
+        .navi_radio_marker {
+          transition: all 0.15s ease;
+        }
+      }
+    }
+
+    /* Icon appearance */
+    &[data-appearance="icon"] {
+      --outline-offset: 2px;
+      --outline-width: 2px;
     }
   }
 `;
@@ -376,7 +388,6 @@ const InputRadioBasic = (props) => {
       checked={checked}
       disabled={innerDisabled}
       required={innerRequired}
-      data-appearance={appearance}
       baseClassName="navi_native_field"
       data-callout-arrow-x="center"
       onClick={innerOnClick}
@@ -411,6 +422,7 @@ const InputRadioBasic = (props) => {
       as="span"
       {...remainingProps}
       ref={boxRef}
+      data-appearance={appearance}
       baseClassName="navi_radio"
       pseudoStateSelector=".navi_native_field"
       styleCSSVars={RadioStyleCSSVars}
@@ -432,32 +444,36 @@ const InputRadioBasic = (props) => {
       />
       {renderRadioMemoized}
       <span className="navi_radio_field">
-        <svg
-          viewBox="0 0 12 12"
-          aria-hidden="true"
-          preserveAspectRatio="xMidYMid meet"
-        >
-          {/* Border circle - always visible */}
-          <circle
-            className="navi_radio_border"
-            cx="6"
-            cy="6"
-            r="5.5"
-            strokeWidth="1"
-          />
-          {/* Dashed border for readonly - calculated for even distribution */}
-          <circle
-            className="navi_radio_dashed_border"
-            cx="6"
-            cy="6"
-            r="5.5"
-            strokeWidth="1"
-            strokeDasharray="2.16 2.16"
-            strokeDashoffset="0"
-          />
-          {/* Inner fill circle - only visible when checked */}
-          <circle className="navi_radio_marker" cx="6" cy="6" r="3.5" />
-        </svg>
+        {appearance === "radio" ? (
+          <svg
+            viewBox="0 0 12 12"
+            aria-hidden="true"
+            preserveAspectRatio="xMidYMid meet"
+          >
+            {/* Border circle - always visible */}
+            <circle
+              className="navi_radio_border"
+              cx="6"
+              cy="6"
+              r="5.5"
+              strokeWidth="1"
+            />
+            {/* Dashed border for readonly - calculated for even distribution */}
+            <circle
+              className="navi_radio_dashed_border"
+              cx="6"
+              cy="6"
+              r="5.5"
+              strokeWidth="1"
+              strokeDasharray="2.16 2.16"
+              strokeDashoffset="0"
+            />
+            {/* Inner fill circle - only visible when checked */}
+            <circle className="navi_radio_marker" cx="6" cy="6" r="3.5" />
+          </svg>
+        ) : (
+          icon
+        )}
       </span>
     </Box>
   );
