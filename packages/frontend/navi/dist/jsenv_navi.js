@@ -4736,6 +4736,7 @@ const hasWidthHeight = (context) => {
   );
 };
 const DIMENSION_PROPS = {
+  boxSizing: PASS_THROUGH,
   width: PASS_THROUGH,
   minWidth: PASS_THROUGH,
   maxWidth: PASS_THROUGH,
@@ -4946,6 +4947,7 @@ const TYPO_PROPS = {
   pre: applyToCssPropWhenTruthy("whiteSpace", "pre", "normal"),
   preWrap: applyToCssPropWhenTruthy("whiteSpace", "pre-wrap", "normal"),
   preLine: applyToCssPropWhenTruthy("whiteSpace", "pre-line", "normal"),
+  userSelect: PASS_THROUGH,
 };
 const VISUAL_PROPS = {
   outline: PASS_THROUGH,
@@ -5008,7 +5010,11 @@ const CONTENT_PROPS = {
       }
       return { alignItems: value };
     }
-    return { verticalAlign: value };
+
+    return {
+      verticalAlign:
+        { center: "middle", start: "top", end: "bottom" }[value] || value,
+    };
   },
   spacing: (value, { boxFlow }) => {
     if (
@@ -13642,7 +13648,7 @@ const installCustomConstraintValidation = (
       }
     }
 
-    if (failedConstraintInfo) {
+    if (failedConstraintInfo && !failedConstraintInfo.silent) {
       if (!hasTitleAttribute) {
         // when a constraint is failing browser displays that constraint message if the element has no title attribute.
         // We want to do the same with our message (overriding the browser in the process to get better messages)
@@ -14831,6 +14837,14 @@ const Icon = ({
   const ariaProps = decorative ? {
     "aria-hidden": "true"
   } : {};
+  if (typeof children === "string") {
+    return jsx(Text, {
+      ...props,
+      ...ariaProps,
+      "data-icon-text": "",
+      children: children
+    });
+  }
   if (box) {
     return jsx(Box, {
       square: true,
@@ -15675,6 +15689,7 @@ const useUIStateController = (
     fallbackState = "",
     getStateFromProp = (prop) => prop,
     getPropFromState = (state) => state,
+    getStateFromParent,
   } = {},
 ) => {
   const parentUIStateController = useContext(ParentUIStateControllerContext);
@@ -15700,6 +15715,9 @@ const useUIStateController = (
       // not controlled but want to use value from nav state
       // (I think this should likely move earlier to win over the hasUIStateProp when it's undefined)
       return getStateFromProp(navState);
+    }
+    if (parentUIStateController && getStateFromParent) {
+      return getStateFromParent(parentUIStateController);
     }
     return getStateFromProp(fallbackState);
   });
@@ -15927,7 +15945,7 @@ const useUIGroupStateController = (
     throw new TypeError("aggregateChildStates must be a function");
   }
   const parentUIStateController = useContext(ParentUIStateControllerContext);
-  const { onUIStateChange, name } = props;
+  const { onUIStateChange, name, value } = props;
   const childUIStateControllerArrayRef = useRef([]);
   const childUIStateControllerArray = childUIStateControllerArrayRef.current;
   const uiStateControllerRef = useRef();
@@ -15977,6 +15995,7 @@ const useUIGroupStateController = (
   if (existingUIStateController) {
     existingUIStateController.name = name;
     existingUIStateController.onUIStateChange = onUIStateChange;
+    existingUIStateController.value = value;
     return existingUIStateController;
   }
 
@@ -15990,6 +16009,7 @@ const useUIGroupStateController = (
   const uiStateController = {
     componentType,
     name,
+    value,
     onUIStateChange,
     uiState: emptyState,
     setUIState: (newUIState, e) => {
@@ -16231,6 +16251,11 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
       }
     }
 
+    &[data-reveal-on-interaction] {
+      --x-button-background-color: transparent;
+      --x-button-border-color: transparent;
+    }
+
     /* Hover */
     &[data-hover] {
       --x-button-border-color: var(--button-border-color-hover);
@@ -16379,7 +16404,8 @@ const ButtonBasic = props => {
     autoFocus,
     // visual
     icon,
-    discrete = icon,
+    revealOnInteraction = icon,
+    discrete = icon && !revealOnInteraction,
     children,
     ...rest
   } = props;
@@ -16402,11 +16428,11 @@ const ButtonBasic = props => {
   const renderButtonContentMemoized = useCallback(renderButtonContent, [children]);
   return jsxs(Box, {
     "data-readonly-silent": innerLoading ? "" : undefined,
-    "data-nohover": icon ? "" : undefined,
     ...remainingProps,
     as: "button",
     ref: ref,
     "data-icon": icon ? "" : undefined,
+    "data-reveal-on-interaction": revealOnInteraction ? "" : undefined,
     "data-discrete": discrete ? "" : undefined,
     "data-callout-arrow-x": "center",
     "aria-busy": innerLoading
@@ -17757,7 +17783,11 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
         white
       );
       --border-color-readonly-checked: #d3d3d3;
-      --background-color-readonly-checked: grey;
+      --background-color-readonly-checked: color-mix(
+        in srgb,
+        var(--background-color-checked) 30%,
+        grey
+      );
       --checkmark-color-readonly: #eeeeee;
       /* Disabled */
       --border-color-disabled: var(--border-color-readonly);
@@ -17835,7 +17865,6 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
   .navi_checkbox {
     --x-background-color: var(--background-color);
     --x-border-color: var(--border-color);
-    --x-color: var(--color);
     --x-checkmark-color: var(--checkmark-color);
     --x-cursor: var(--cursor);
 
@@ -18072,21 +18101,18 @@ const CheckboxStyleCSSVars = {
   "accentColor": "--accent-color",
   ":hover": {
     backgroundColor: "--background-color-hover",
-    borderColor: "--border-color-hover",
-    color: "--color-hover"
+    borderColor: "--border-color-hover"
   },
   ":active": {
     borderColor: "--border-color-active"
   },
   ":read-only": {
     backgroundColor: "--background-color-readonly",
-    borderColor: "--border-color-readonly",
-    color: "--color-readonly"
+    borderColor: "--border-color-readonly"
   },
   ":disabled": {
     backgroundColor: "--background-color-disabled",
-    borderColor: "--border-color-disabled",
-    color: "--color-disabled"
+    borderColor: "--border-color-disabled"
   }
 };
 const CheckboxToggleStyleCSSVars = {
@@ -18467,33 +18493,35 @@ forwardRef((props, ref) => {
 installImportMetaCss(import.meta);import.meta.css = /* css */`
   @layer navi {
     .navi_radio {
+      --margin: 3px 3px 0 5px;
       --outline-offset: 1px;
       --outline-width: 2px;
-      --width: 13px;
-      --height: 13px;
+      --width: 0.815em;
+      --height: 0.815em;
 
       --outline-color: var(--navi-focus-outline-color);
       --loader-color: var(--navi-loader-color);
       --border-color: light-dark(#767676, #8e8e93);
       --background-color: white;
-      --color: light-dark(#4476ff, #3b82f6);
-      --radiomark-color: var(--color);
-      --border-color-checked: var(--color);
+      --accent-color: light-dark(#4476ff, #3b82f6);
+      --radiomark-color: var(--accent-color);
+      --border-color-checked: var(--accent-color);
+      --cursor: pointer;
 
-      --color-mix-light: white;
-      --color-mix-dark: black;
+      --color-mix-light: black;
+      --color-mix-dark: white;
       --color-mix: var(--color-mix-light);
 
       /* Hover */
       --border-color-hover: color-mix(in srgb, var(--border-color) 60%, black);
       --border-color-hover-checked: color-mix(
         in srgb,
-        var(--color) 80%,
+        var(--border-color-checked) 80%,
         var(--color-mix)
       );
       --radiomark-color-hover: color-mix(
         in srgb,
-        var(--color) 80%,
+        var(--radiomark-color) 80%,
         var(--color-mix)
       );
       /* Readonly */
@@ -18503,30 +18531,52 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
         white
       );
       --background-color-readonly: var(--background-color);
-      --radiomark-color-readonly: grey;
-      --border-color-readonly-checked: #d3d3d3;
-      --background-color-readonly-checked: #d3d3d3;
+      --radiomark-color-readonly: color-mix(
+        in srgb,
+        var(--radiomark-color) 30%,
+        grey
+      );
+      --border-color-readonly-checked: color-mix(
+        in srgb,
+        var(--radiomark-color) 30%,
+        transparent
+      );
+      --background-color-readonly-checked: var(--border-color-readonly-checked);
       /* Disabled */
       --border-color-disabled: var(--border-color-readonly);
       --background-color-disabled: rgba(248, 248, 248, 0.7);
       --radiomark-color-disabled: #d3d3d3;
       --border-color-checked-disabled: #d3d3d3;
       --background-color-disabled-checked: var(--background-color);
+
+      /* Button specific */
+      --button-border-width: 1px;
+      --button-border-color: transparent;
+      --button-background-color: transparent;
+      --button-border-color-hover: color-mix(
+        in srgb,
+        var(--button-border-color) 70%,
+        black
+      );
+      --button-background-color-hover: color-mix(
+        in srgb,
+        var(--button-border-color) 95%,
+        black
+      );
+      --button-border-color-checked: var(--accent-color);
+      --button-background-color-checked: transparent;
+      --button-border-color-readonly: #eeeeee;
+      --button-background-color-readonly: #d3d3d3;
+      --button-border-color-disabled: var(--border-color-readonly);
+      --button-background-color-disabled: var(--background-color-readonly);
     }
 
-    .navi_radio[data-dark] {
+    &[data-dark] {
       --color-mix: var(--color-mix-dark);
     }
   }
 
   .navi_radio {
-    position: relative;
-    display: inline-flex;
-    box-sizing: content-box;
-    margin-top: 3px;
-    margin-right: 3px;
-    margin-left: 5px;
-
     --x-outline-offset: var(--outline-offset);
     --x-outline-width: var(--outline-width);
     --x-border-width: var(--border-width);
@@ -18535,102 +18585,196 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
     --x-outline-color: var(--outline-color);
     --x-background-color: var(--background-color);
     --x-border-color: var(--border-color);
-    --x-color: var(--color);
     --x-radiomark-color: var(--radiomark-color);
-  }
-  .navi_radio .navi_native_field {
-    position: absolute;
-    inset: 0;
-    margin: 0;
-    padding: 0;
-    opacity: 0;
-    cursor: inherit;
-  }
-  .navi_radio .navi_radio_field {
-    display: inline-flex;
-    box-sizing: border-box;
-    width: var(--x-width);
-    height: var(--x-height);
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    outline-width: var(--x-outline-width);
-    outline-style: none;
-    outline-color: var(--x-outline-color);
-    outline-offset: var(--x-outline-offset);
-  }
-  .navi_radio_field svg {
-    overflow: visible;
-  }
-  .navi_radio_border {
-    fill: var(--x-background-color);
-    stroke: var(--x-border-color);
-  }
-  .navi_radio_marker {
-    width: 100%;
-    height: 100%;
-    opacity: 0;
-    fill: var(--x-radiomark-color);
-    transform: scale(0.3);
-    transform-origin: center;
-    pointer-events: none;
-  }
-  .navi_radio_dashed_border {
-    display: none;
-  }
-  .navi_radio[data-transition] .navi_radio_marker {
-    transition: all 0.15s ease;
-  }
-  .navi_radio[data-transition] .navi_radio_dashed_border {
-    transition: all 0.15s ease;
-  }
-  .navi_radio[data-transition] .navi_radio_border {
-    transition: all 0.15s ease;
-  }
+    --x-cursor: var(--cursor);
 
-  /* Focus */
-  .navi_radio[data-focus-visible] .navi_radio_field {
-    outline-style: solid;
-  }
-  /* Hover */
-  .navi_radio[data-hover] {
-    --x-border-color: var(--border-color-hover);
-    --x-radiomark-color: var(--radiomark-color-hover);
-  }
-  /* Checked */
-  .navi_radio[data-checked] {
-    --x-border-color: var(--border-color-checked);
-  }
-  .navi_radio[data-checked] .navi_radio_marker {
-    opacity: 1;
-    transform: scale(1);
-  }
-  .navi_radio[data-hover][data-checked] {
-    --x-border-color: var(--border-color-hover-checked);
-  }
-  /* Readonly */
-  .navi_radio[data-readonly] {
-    --x-background-color: var(--background-color-readonly);
-    --x-border-color: var(--border-color-readonly);
-    --x-radiomark-color: var(--radiomark-color-readonly);
-  }
-  .navi_radio[data-readonly] .navi_radio_dashed_border {
-    display: none;
-  }
-  .navi_radio[data-readonly][data-checked] {
-    --x-background-color: var(--background-color-readonly-checked);
-    --x-border-color: var(--border-color-readonly-checked);
-    --x-radiomark-color: var(--radiomark-color-readonly);
-  }
-  /* Disabled */
-  .navi_radio[data-disabled] {
-    --x-background-color: var(--background-color-disabled);
-    --x-border-color: var(--border-color-disabled);
-    --x-radiomark-color: var(--radiomark-color-disabled);
-  }
-  .navi_radio[data-disabled][data-checked] {
-    --x-border-color: var(--border-color-disabled);
-    --x-radiomark-color: var(--radiomark-color-disabled);
+    position: relative;
+    display: inline-flex;
+    box-sizing: content-box;
+    margin: var(--margin);
+
+    .navi_native_field {
+      position: absolute;
+      inset: 0;
+      margin: 0;
+      padding: 0;
+      border: none;
+      border-radius: inherit;
+      opacity: 0;
+      appearance: none; /* This allows border-radius to have an effect */
+      cursor: var(--x-cursor);
+    }
+
+    /* Focus */
+    &[data-focus-visible] {
+      z-index: 1;
+      .navi_radio_field {
+        outline-style: solid;
+      }
+    }
+    /* Hover */
+    &[data-hover] {
+      --x-border-color: var(--border-color-hover);
+      --x-radiomark-color: var(--radiomark-color-hover);
+    }
+    /* Checked */
+    &[data-checked] {
+      --x-border-color: var(--border-color-checked);
+
+      &[data-hover] {
+        --x-border-color: var(--border-color-hover-checked);
+      }
+    }
+    /* Readonly */
+    &[data-readonly] {
+      --x-cursor: default;
+      --x-background-color: var(--background-color-readonly);
+      --x-border-color: var(--border-color-readonly);
+      --x-radiomark-color: var(--radiomark-color-readonly);
+
+      .navi_radio_dashed_border {
+        display: none;
+      }
+
+      &[data-checked] {
+        --x-background-color: var(--background-color-readonly-checked);
+        --x-border-color: var(--border-color-readonly-checked);
+        --x-radiomark-color: var(--radiomark-color-readonly);
+      }
+    }
+    /* Disabled */
+    &[data-disabled] {
+      --x-cursor: default;
+      --x-background-color: var(--background-color-disabled);
+      --x-border-color: var(--border-color-disabled);
+      --x-radiomark-color: var(--radiomark-color-disabled);
+
+      &[data-checked] {
+        --x-border-color: var(--border-color-disabled);
+        --x-radiomark-color: var(--radiomark-color-disabled);
+      }
+    }
+
+    .navi_radio_field {
+      box-sizing: border-box;
+      width: var(--x-width);
+      height: var(--x-height);
+      outline-width: var(--x-outline-width);
+      outline-style: none;
+      outline-color: var(--x-outline-color);
+      outline-offset: var(--x-outline-offset);
+      pointer-events: none;
+    }
+
+    /* Radio appearance */
+    &[data-appearance="radio"] {
+      .navi_radio_field {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+
+        svg {
+          overflow: visible;
+        }
+
+        .navi_radio_border {
+          fill: var(--x-background-color);
+          stroke: var(--x-border-color);
+        }
+        .navi_radio_dashed_border {
+          display: none;
+        }
+        .navi_radio_marker {
+          width: 100%;
+          height: 100%;
+          opacity: 0;
+          fill: var(--x-radiomark-color);
+          transform: scale(0.3);
+          transform-origin: center;
+          pointer-events: none;
+        }
+      }
+
+      &[data-transition] {
+        .navi_radio_border {
+          transition: all 0.15s ease;
+        }
+        .navi_radio_dashed_border {
+          transition: all 0.15s ease;
+        }
+        .navi_radio_marker {
+          transition: all 0.15s ease;
+        }
+      }
+
+      &[data-checked] {
+        .navi_radio_marker {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+    }
+
+    /* Icon appearance */
+    &[data-appearance="icon"] {
+      --width: auto;
+      --height: auto;
+      --outline-offset: 2px;
+      --outline-width: 2px;
+    }
+
+    /* Button appearance */
+    &[data-appearance="button"] {
+      --margin: 0;
+      --outline-offset: 0px;
+      --width: auto;
+      --height: auto;
+      --padding: 2px;
+      --border-color: var(--button-border-color);
+      --border-color-hover: var(--button-border-color-hover);
+      --background-color: var(--button-background-color);
+      --background-color-hover: var(--button-background-color-hover);
+      --background-color-readonly: var(--button-background-color-readonly);
+      --background-color-disabled: var(--button-background-color-disabled);
+      --border-color-checked: var(--button-border-color);
+      --background-color-checked: var(--button-background-color);
+
+      .navi_radio_field {
+        display: inline-flex;
+        box-sizing: border-box;
+        padding-top: var(--padding-top, var(--padding-y, var(--padding)));
+        padding-right: var(--padding-right, var(--padding-x, var(--padding)));
+        padding-bottom: var(--padding-bottom, var(--padding-y, var(--padding)));
+        padding-left: var(--padding-left, var(--padding-x, var(--padding)));
+        align-items: center;
+        justify-content: center;
+        background-color: var(--x-background-color);
+        border-width: var(--button-border-width);
+        border-style: solid;
+        border-color: var(--x-border-color);
+        border-radius: var(--button-border-radius);
+      }
+
+      &[data-hover] {
+        --x-background-color: var(--button-background-color-hover);
+        --x-border-color: var(--button-border-color-hover);
+      }
+      &[data-checked] {
+        --x-border-color: var(--button-border-color-checked);
+        --x-background-color: var(--button-background-color-checked);
+
+        .navi_radio_field {
+          box-shadow:
+            inset 0 2px 4px rgba(0, 0, 0, 0.15),
+            inset 0 0 0 1px var(--button-border-color-checked);
+        }
+      }
+      &[data-disabled] {
+        --x-border-color: var(--button-border-color-disabled);
+        --x-background-color: var(--button-background-color-disabled);
+      }
+    }
   }
 `;
 const InputRadio = props => {
@@ -18641,7 +18785,13 @@ const InputRadio = props => {
     statePropName: "checked",
     fallbackState: false,
     getStateFromProp: checked => checked ? value : undefined,
-    getPropFromState: Boolean
+    getPropFromState: Boolean,
+    getStateFromParent: parentUIStateController => {
+      if (parentUIStateController.componentType === "radio_list") {
+        return parentUIStateController.value === props.value;
+      }
+      return undefined;
+    }
   });
   const uiState = useUIState(uiStateController);
   const radio = renderActionableComponent(props, {
@@ -18657,29 +18807,48 @@ const InputRadio = props => {
   });
 };
 const RadioStyleCSSVars = {
+  "width": "--width",
+  "height": "--height",
+  "borderRadius": "--border-radius",
   "outlineWidth": "--outline-width",
   "borderWidth": "--border-width",
-  "borderRadius": "--border-radius",
   "backgroundColor": "--background-color",
   "borderColor": "--border-color",
-  "color": "--color",
+  "accentColor": "--accent-color",
   ":hover": {
     backgroundColor: "--background-color-hover",
-    borderColor: "--border-color-hover",
-    color: "--color-hover"
+    borderColor: "--border-color-hover"
   },
   ":active": {
     borderColor: "--border-color-active"
   },
   ":read-only": {
     backgroundColor: "--background-color-readonly",
-    borderColor: "--border-color-readonly",
-    color: "--color-readonly"
+    borderColor: "--border-color-readonly"
   },
   ":disabled": {
     backgroundColor: "--background-color-disabled",
-    borderColor: "--border-color-disabled",
-    color: "--color-disabled"
+    borderColor: "--border-color-disabled"
+  }
+};
+const RadioButtonStyleCSSVars = {
+  ...RadioStyleCSSVars,
+  "padding": "--padding",
+  "borderRadius": "--button-border-radius",
+  "borderWidth": "--button-border-width",
+  "borderColor": "--button-border-color",
+  "backgroundColor": "--button-background-color",
+  ":hover": {
+    backgroundColor: "--button-background-color-hover",
+    borderColor: "--button-border-color-hover"
+  },
+  ":read-only": {
+    backgroundColor: "--button-background-color-readonly",
+    borderColor: "--button-border-color-readonly"
+  },
+  ":disabled": {
+    backgroundColor: "--button-background-color-disabled",
+    borderColor: "--button-border-color-disabled"
   }
 };
 const RadioPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":checked", ":-navi-loading"];
@@ -18708,6 +18877,8 @@ const InputRadioBasic = props => {
     autoFocus,
     onClick,
     onInput,
+    icon,
+    appearance = icon ? "icon" : "radio",
     color,
     ...rest
   } = props;
@@ -18784,9 +18955,10 @@ const InputRadioBasic = props => {
     }
   });
   const renderRadioMemoized = useCallback(renderRadio, [innerName, checked, innerRequired]);
+  const boxRef = useRef();
   useLayoutEffect(() => {
-    const naviRadio = ref.current;
-    const luminance = resolveColorLuminance("var(--color)", naviRadio);
+    const naviRadio = boxRef.current;
+    const luminance = resolveColorLuminance("var(--accent-color)", naviRadio);
     if (luminance < 0.3) {
       naviRadio.setAttribute("data-dark", "");
     } else {
@@ -18796,10 +18968,11 @@ const InputRadioBasic = props => {
   return jsxs(Box, {
     as: "span",
     ...remainingProps,
-    ref: undefined,
+    ref: boxRef,
+    "data-appearance": appearance,
     baseClassName: "navi_radio",
     pseudoStateSelector: ".navi_native_field",
-    styleCSSVars: RadioStyleCSSVars,
+    styleCSSVars: appearance === "button" ? RadioButtonStyleCSSVars : RadioStyleCSSVars,
     pseudoClasses: RadioPseudoClasses,
     pseudoElements: RadioPseudoElements,
     basePseudoState: {
@@ -18816,7 +18989,7 @@ const InputRadioBasic = props => {
       color: "var(--loader-color)"
     }), renderRadioMemoized, jsx("span", {
       className: "navi_radio_field",
-      children: jsxs("svg", {
+      children: appearance === "radio" ? jsxs("svg", {
         viewBox: "0 0 12 12",
         "aria-hidden": "true",
         preserveAspectRatio: "xMidYMid meet",
@@ -18840,7 +19013,7 @@ const InputRadioBasic = props => {
           cy: "6",
           r: "3.5"
         })]
-      })
+      }) : icon
     })]
   });
 };
@@ -20115,15 +20288,8 @@ const FormWithAction = props => {
 //   form.dispatchEvent(customEvent);
 // };
 
-installImportMetaCss(import.meta);import.meta.css = /* css */`
-  @layer navi {
-    .navi_radio_list {
-      display: flex;
-      flex-direction: column;
-    }
-  }
-`;
-const RadioList = forwardRef((props, ref) => {
+installImportMetaCss(import.meta);import.meta.css = /* css */``;
+const RadioList = props => {
   const uiStateController = useUIGroupStateController(props, "radio_list", {
     childComponentType: "radio",
     aggregateChildStates: childUIStateControllers => {
@@ -20138,7 +20304,10 @@ const RadioList = forwardRef((props, ref) => {
     }
   });
   const uiState = useUIState(uiStateController);
-  const radioList = renderActionableComponent(props, ref);
+  const radioList = renderActionableComponent(props, {
+    Basic: RadioListBasic,
+    WithAction: RadioListWithAction
+  });
   return jsx(UIStateControllerContext.Provider, {
     value: uiStateController,
     children: jsx(UIStateContext.Provider, {
@@ -20146,9 +20315,9 @@ const RadioList = forwardRef((props, ref) => {
       children: radioList
     })
   });
-});
+};
 const Radio = InputRadio;
-const RadioListBasic = forwardRef((props, ref) => {
+const RadioListBasic = props => {
   const contextReadOnly = useContext(ReadOnlyContext);
   const contextDisabled = useContext(DisabledContext);
   const contextLoading = useContext(LoadingContext);
@@ -20162,19 +20331,15 @@ const RadioListBasic = forwardRef((props, ref) => {
     required,
     ...rest
   } = props;
-  const innerRef = useRef();
-  useImperativeHandle(ref, () => innerRef.current);
   const innerLoading = loading || contextLoading;
   const innerReadOnly = readOnly || contextReadOnly || innerLoading || uiStateController.readOnly;
   const innerDisabled = disabled || contextDisabled;
-  return jsx("div", {
+  return jsx(Box, {
     "data-action": rest["data-action"],
+    row: true,
     ...rest,
-    ref: innerRef,
-    className: "navi_radio_list",
-    "data-radio-list": true
-    // eslint-disable-next-line react/no-unknown-property
-    ,
+    baseClassName: "navi_radio_list",
+    "data-radio-list": true,
     onresetuistate: e => {
       uiStateController.resetUIState(e);
     },
@@ -20198,8 +20363,8 @@ const RadioListBasic = forwardRef((props, ref) => {
       })
     })
   });
-});
-forwardRef((props, ref) => {
+};
+const RadioListWithAction = props => {
   const uiStateController = useContext(UIStateControllerContext);
   const uiState = useContext(UIStateContext);
   const {
@@ -20216,7 +20381,6 @@ forwardRef((props, ref) => {
     ...rest
   } = props;
   const innerRef = useRef();
-  useImperativeHandle(ref, () => innerRef.current);
   const [boundAction] = useActionBoundToOneParam(action, uiState);
   const {
     loading: actionLoading
@@ -20257,7 +20421,8 @@ forwardRef((props, ref) => {
       const radioListContainer = innerRef.current;
       requestAction(radioListContainer, boundAction, {
         event: e,
-        requester: radio
+        requester: radio,
+        actionOrigin: "action_prop"
       });
     },
     loading: loading || actionLoading,
@@ -20266,7 +20431,7 @@ forwardRef((props, ref) => {
       children: children
     })
   });
-});
+};
 
 const useRefArray = (items, keyFromItem) => {
   const refMapRef = useRef(new Map());
@@ -23859,6 +24024,118 @@ const KeyboardShortcutAriaElement = ({
   });
 };
 
+installImportMetaCss(import.meta);import.meta.css = /* css */`
+  @layer navi {
+    .navi_clipboard_container {
+      --height: 1.5em;
+      --notif-spacing: 0.5em;
+    }
+  }
+
+  .navi_clipboard_container {
+    position: relative;
+    display: inline-flex;
+    height: var(--height);
+    align-items: center;
+
+    .navi_copied_notif {
+      position: absolute;
+      top: calc(-1 * var(--notif-spacing));
+      right: 0;
+      padding: 0.2em 0.5em;
+      color: white;
+      font-size: 80%;
+      white-space: nowrap;
+      background: black;
+      border-radius: 3px;
+      transform: translateY(-100%);
+    }
+  }
+`;
+const ButtonCopyToClipboard = ({
+  children,
+  ...props
+}) => {
+  const [copied, setCopied] = useState(false);
+  const renderedRef = useRef();
+  useEffect(() => {
+    renderedRef.current = true;
+    return () => {
+      renderedRef.current = false;
+    };
+  }, []);
+  return jsxs(Box, {
+    class: "navi_clipboard_container",
+    ...props,
+    children: [jsx(Box, {
+      className: "navi_copied_notif",
+      "aria-hidden": copied ? "false" : "true",
+      opacity: copied ? 1 : 0,
+      children: "Copi\xE9 !"
+    }), jsx(Button, {
+      className: "navi_copy_button",
+      row: true,
+      icon: true,
+      revealOnInteraction: true,
+      square: true,
+      alignY: "center",
+      expandY: true,
+      borderRadius: "xs",
+      action: async () => {
+        await addToClipboard(children);
+        setTimeout(() => {
+          if (!renderedRef.current) {
+            // do not call setState on unmounted component
+            return;
+          }
+          setCopied(false);
+        }, 1500);
+        setCopied(true);
+      },
+      children: copied ? jsx(Icon, {
+        color: "green",
+        children: jsx(CopiedIcon, {})
+      }) : jsx(Icon, {
+        children: jsx(CopyIcon, {})
+      })
+    })]
+  });
+};
+const addToClipboard = async text => {
+  const type = "text/plain";
+  const clipboardItemData = {
+    [type]: text
+  };
+  const clipboardItem = new ClipboardItem(clipboardItemData);
+  await window.navigator.clipboard.write([clipboardItem]);
+};
+const CopyIcon = () => jsxs("svg", {
+  viewBox: "0 0 16 16",
+  children: [jsx("path", {
+    d: "M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 0 1 0 1.5h-1.5a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-1.5a.75.75 0 0 1 1.5 0v1.5A1.75 1.75 0 0 1 9.25 16h-7.5A1.75 1.75 0 0 1 0 14.25Z"
+  }), jsx("path", {
+    d: "M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0 1 14.25 11h-7.5A1.75 1.75 0 0 1 5 9.25Zm1.75-.25a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-7.5a.25.25 0 0 0-.25-.25Z"
+  })]
+});
+const CopiedIcon = () => jsx("svg", {
+  viewBox: "0 0 16 16",
+  children: jsx("path", {
+    fill: "currentColor",
+    d: "M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0Z"
+  })
+});
+
+const Address = ({
+  children,
+  ...props
+}) => {
+  return jsx(Text, {
+    as: "address",
+    ...props,
+    children: children
+  });
+};
+
 const CSS_VAR_NAME = "--x-color-contrasting";
 
 const useContrastingColor = (ref, backgroundElementSelector) => {
@@ -24114,7 +24391,255 @@ const Caption = ({
   });
 };
 
+/**
+ * Example of how you'd use this:
+ * <code-block data-language="HTML" data-escaped="true">
+ *   <h1>Your HTML here. Any HTML should be escaped</h1>
+ * </code-block>
+ *
+ * https://github.com/TheWebTech/hs-code-block-web-component/tree/main
+ */
+
+const CodeBlock = ({
+  language,
+  escaped = false,
+  children,
+  ...props
+}) => {
+  return jsx("code-block", {
+    "data-language": language,
+    "data-escaped": escaped ? "" : null,
+    ...props,
+    children: children
+  });
+};
+(() => {
+  const css = /* css */`
+    *[aria-hidden="true"] {
+      display: none;
+    }
+
+    .clipboard_container {
+      display: flex;
+      padding: 8px;
+      align-items: center;
+      gap: 5px;
+    }
+
+    #copied_notif {
+      padding: 0.2em 0.5em;
+      color: white;
+      font-size: 80%;
+      background: black;
+      border-radius: 3px;
+    }
+
+    button {
+      width: 32px;
+      height: 32px;
+      background: none;
+      background-color: rgb(246, 248, 250);
+      border: none;
+      border-width: 1px;
+      border-style: solid;
+      border-color: rgb(209, 217, 224);
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: rgb(239, 242, 245);
+    }
+  `;
+  const html = /* html */`<style>
+      ${css}
+    </style>
+    <div class="clipboard_container">
+      <div id="copied_notif" aria-hidden="true">Copied !</div>
+      <button id="copy_button">
+        <svg
+          id="copy_icon"
+          aria-hidden="true"
+          viewBox="0 0 16 16"
+          width="16"
+          height="16"
+        >
+          <path
+            d="M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 0 1 0 1.5h-1.5a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-1.5a.75.75 0 0 1 1.5 0v1.5A1.75 1.75 0 0 1 9.25 16h-7.5A1.75 1.75 0 0 1 0 14.25Z"
+          ></path>
+          <path
+            d="M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0 1 14.25 11h-7.5A1.75 1.75 0 0 1 5 9.25Zm1.75-.25a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-7.5a.25.25 0 0 0-.25-.25Z"
+          ></path>
+        </svg>
+        <svg
+          id="copied_icon"
+          aria-hidden="true"
+          viewBox="0 0 16 16"
+          width="16"
+          height="16"
+        >
+          <path
+            d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0Z"
+          ></path>
+        </svg>
+      </button>
+    </div>`;
+  class ClipboardCopy extends HTMLElement {
+    constructor() {
+      super();
+      const root = this.attachShadow({
+        mode: "open"
+      });
+      root.innerHTML = html;
+    }
+    connectedCallback() {
+      const valueToCopy = this.getAttribute("value");
+      const shadowRoot = this.shadowRoot;
+      const button = shadowRoot.querySelector("button");
+      const copyIcon = shadowRoot.querySelector("#copy_icon");
+      const copiedIcon = shadowRoot.querySelector("#copied_icon");
+      const copiedNotif = shadowRoot.querySelector("#copied_notif");
+      copyIcon.removeAttribute("aria-hidden");
+      const copy = async () => {
+        await addToClipboard(valueToCopy);
+        copiedNotif.removeAttribute("aria-hidden");
+        copyIcon.setAttribute("aria-hidden", "true");
+        copiedIcon.setAttribute("aria-hidden", "false");
+        setTimeout(() => {
+          copiedNotif.setAttribute("aria-hidden", "true");
+          copyIcon.setAttribute("aria-hidden", "false");
+          copiedIcon.setAttribute("aria-hidden", "true");
+        }, 1500);
+      };
+      button.onclick = () => {
+        copy();
+      };
+    }
+  }
+  customElements.define("clipboard-copy", ClipboardCopy);
+  const addToClipboard = async text => {
+    const type = "text/plain";
+    const clipboardItemData = {
+      [type]: text
+    };
+    const clipboardItem = new ClipboardItem(clipboardItemData);
+    await window.navigator.clipboard.write([clipboardItem]);
+  };
+})();
+(() => {
+  /*
+  :host {
+      display: block;
+  }
+  :host code[class*="language-"], :host pre[class*="language-"]{
+      margin-top: 0;
+  }
+  */
+
+  const css = /* css */`
+    #code_block {
+      position: relative;
+    }
+
+    #pre {
+      margin-top: 16px;
+      margin-right: 0;
+      margin-bottom: 16px;
+      margin-left: 0;
+      padding: 16px;
+      font-size: 86%;
+      background: #333;
+    }
+  `;
+  const html = /* html */`<style>
+      ${css}
+    </style>
+    <div id="code_block">
+      <pre id="pre"><code></code></pre>
+      <div
+        id="clipboard_copy_container"
+        style="position: absolute; right: 0; top: 0"
+      >
+        <clipboard-copy></clipboard-copy>
+      </div>
+    </div>
+`;
+  let loadPromise;
+  const loadPrism = () => {
+    if (loadPromise) {
+      return loadPromise;
+    }
+    // https://prismjs.com/#basic-usage
+    const scriptLoadPromise = new Promise((resolve, reject) => {
+      window.Prism = window.Prism || {};
+      window.Prism.manual = true;
+      const script = document.createElement("script");
+      script.src = "https://cdn.jsdelivr.net/npm/prismjs";
+      script.onload = () => {
+        resolve(window.Prism);
+      };
+      script.onerror = error => {
+        reject(error);
+      };
+      document.head.appendChild(script);
+    });
+    const cssInjectionPromise = (async () => {
+      const prismCssUrl = "https://cdn.jsdelivr.net/npm/prismjs/themes/prism-tomorrow.css?inline";
+      const response = await window.fetch(prismCssUrl, {
+        method: "GET"
+      });
+      const cssText = await response.text();
+      const cssStylesheet = new CSSStyleSheet({
+        baseUrl: prismCssUrl
+      });
+      cssStylesheet.replaceSync(cssText);
+      return cssStylesheet;
+    })();
+    loadPromise = Promise.all([scriptLoadPromise, cssInjectionPromise]);
+    return loadPromise;
+  };
+  class CodeBlock extends HTMLElement {
+    constructor() {
+      super();
+      const root = this.attachShadow({
+        mode: "open"
+      });
+      root.innerHTML = html;
+      loadPrism();
+    }
+    async connectedCallback() {
+      const shadowRoot = this.shadowRoot;
+      const language = this.getAttribute("lang").toLowerCase();
+      const isEscaped = this.hasAttribute("data-escaped");
+      const addCopyButton = this.hasAttribute("data-copy-button");
+      let code = this.innerHTML.trimStart();
+      this.innerHTML = "";
+      const codeNode = shadowRoot.querySelector("code");
+      codeNode.className = `language-${language}`;
+      codeNode.textContent = isEscaped ? unescapeHTML(code) : code;
+      if (addCopyButton) {
+        const clipboardCopy = shadowRoot.querySelector("clipboard-copy");
+        clipboardCopy.setAttribute("value", isEscaped ? unescapeHTML(code) : code);
+      }
+      const [Prism, prismCssStyleSheet] = await loadPrism();
+      shadowRoot.adoptedStyleSheets.push(prismCssStyleSheet);
+      Prism.highlightAllUnder(shadowRoot);
+    }
+  }
+  customElements.define("code-block", CodeBlock);
+  const escape = document.createElement("textarea");
+  function unescapeHTML(html) {
+    escape.innerHTML = html;
+    return escape.textContent;
+  }
+})();
+
 const Code = props => {
+  if (props.language) {
+    return jsx(CodeBlock, {
+      ...props
+    });
+  }
   if (props.box) {
     return jsx(CodeBox, {
       ...props
@@ -24921,5 +25446,5 @@ const UserSvg = () => jsx("svg", {
   })
 });
 
-export { ActionRenderer, ActiveKeyboardShortcuts, BadgeCount, Box, Button, Caption, CheckSvg, Checkbox, CheckboxList, Code, Col, Colgroup, ConstructionSvg, Details, DialogLayout, Editable, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Form, HeartSvg, HomeSvg, Icon, Image, Input, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, MessageBox, Paragraph, Radio, RadioList, Route, RouteLink, Routes, RowNumberCol, RowNumberTableCell, SINGLE_SPACE_CONSTRAINT, SVGMaskOverlay, SearchSvg, Select, SelectionContext, Separator, SettingsSvg, StarSvg, SummaryMarker, Svg, Tab, TabList, Table, TableCell, Tbody, Text, Thead, Title, Tr, UITransition, UserSvg, ViewportLayout, actionIntegratedVia, addCustomMessage, compareTwoJsValues, createAction, createAvailableConstraint, createRequestCanceller, createSelectionKeyboardShortcuts, enableDebugActions, enableDebugOnDocumentLoading, forwardActionRequested, installCustomConstraintValidation, isCellSelected, isColumnSelected, isRowSelected, localStorageSignal, navBack, navForward, navTo, openCallout, rawUrlPart, reload, removeCustomMessage, requestAction, rerunActions, resource, setBaseUrl, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, updateActions, useActionData, useActionStatus, useActiveRouteInfo, useCalloutClose, useCellsAndColumns, useConstraintValidityState, useDependenciesDiff, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState$1 as useNavState, useRouteStatus, useRunOnMount, useSelectableElement, useSelectionController, useSignalSync, useStateArray, useTitleLevel, useUrlSearchParam, valueInLocalStorage };
+export { ActionRenderer, ActiveKeyboardShortcuts, Address, BadgeCount, Box, Button, ButtonCopyToClipboard, Caption, CheckSvg, Checkbox, CheckboxList, Code, Col, Colgroup, ConstructionSvg, Details, DialogLayout, Editable, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Form, HeartSvg, HomeSvg, Icon, Image, Input, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, MessageBox, Paragraph, Radio, RadioList, Route, RouteLink, Routes, RowNumberCol, RowNumberTableCell, SINGLE_SPACE_CONSTRAINT, SVGMaskOverlay, SearchSvg, Select, SelectionContext, Separator, SettingsSvg, StarSvg, SummaryMarker, Svg, Tab, TabList, Table, TableCell, Tbody, Text, Thead, Title, Tr, UITransition, UserSvg, ViewportLayout, actionIntegratedVia, addCustomMessage, compareTwoJsValues, createAction, createAvailableConstraint, createRequestCanceller, createSelectionKeyboardShortcuts, enableDebugActions, enableDebugOnDocumentLoading, forwardActionRequested, installCustomConstraintValidation, isCellSelected, isColumnSelected, isRowSelected, localStorageSignal, navBack, navForward, navTo, openCallout, rawUrlPart, reload, removeCustomMessage, requestAction, rerunActions, resource, setBaseUrl, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, updateActions, useActionData, useActionStatus, useActiveRouteInfo, useCalloutClose, useCellsAndColumns, useConstraintValidityState, useDependenciesDiff, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState$1 as useNavState, useRouteStatus, useRunOnMount, useSelectableElement, useSelectionController, useSignalSync, useStateArray, useTitleLevel, useUrlSearchParam, valueInLocalStorage };
 //# sourceMappingURL=jsenv_navi.js.map
