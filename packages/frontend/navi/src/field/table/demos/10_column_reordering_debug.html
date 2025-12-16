@@ -77,7 +77,7 @@
     <div class="debug-section">
       <h2>Debug Log</h2>
       <div id="log" class="log"></div>
-      <button onclick="clearLog()" class="btn-warning">Clear Log</button>
+      <button onclick="clearLog();" class="btn-warning">Clear Log</button>
     </div>
 
     <div class="debug-section">
@@ -88,7 +88,6 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState } from "preact/hooks";
-      /* eslint-disable no-unused-vars */
       import {
         Table,
         Colgroup,
@@ -99,9 +98,8 @@
         Tr,
         TableCell,
         RowNumberTableCell,
-      } from "../table/table.jsx";
-      /* eslint-enable no-unused-vars */
-      import { useCellsAndColumns } from "../table/use_cells_and_columns.js";
+      } from "../table.jsx";
+      import { useCellsAndColumns } from "../use_cells_and_columns.js";
 
       window.clearLog = () => {
         document.getElementById("log").textContent = "";
@@ -115,7 +113,6 @@
         console.log(`[DEBUG] ${message}`);
       };
 
-      // eslint-disable-next-line no-unused-vars
       const ColumnReorderingDemo = () => {
         // Initial column configuration
         const [columnConfig] = useState([

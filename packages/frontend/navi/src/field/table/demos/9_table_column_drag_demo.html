@@ -114,7 +114,6 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState, useRef } from "preact/hooks";
-      // eslint-disable-next-line no-unused-vars
       import { Table } from "@jsenv/navi";
 
       // Generate realistic user data
@@ -207,7 +206,6 @@
         { accessorKey: "creation_date", value: "Created", width: 120 },
       ];
 
-      // eslint-disable-next-line no-unused-vars
       const TableDemo = () => {
         const tableRef = useRef(null);
         const [data, setData] = useState(initialData);

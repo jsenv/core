@@ -12,16 +12,8 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState } from "preact/hooks";
-      import {
-        // eslint-disable-next-line no-unused-vars
-        Input,
-        // eslint-disable-next-line no-unused-vars
-        Button,
-        // eslint-disable-next-line no-unused-vars
-        Form,
-      } from "@jsenv/navi";
+      import { Input, Button, Form } from "@jsenv/navi";
 
-      // eslint-disable-next-line no-unused-vars
       const App = () => {
         return (
           <div>
@@ -107,7 +99,6 @@
 
       const TIME_TO_WAIT = 2_000;
 
-      // eslint-disable-next-line no-unused-vars
       const OutsideForm = () => {
         const [count, setCount] = useState(0);
 
@@ -150,7 +141,6 @@
         );
       };
 
-      // eslint-disable-next-line no-unused-vars
       const InsideForm = (props) => {
         const [count, setCount] = useState(0);
 

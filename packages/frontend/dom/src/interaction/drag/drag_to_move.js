@@ -32,7 +32,7 @@ export const createDragToMoveGestureController = ({
     { element, referenceElement, elementToMove, convertScrollablePosition },
   ) => {
     const direction = dragGesture.gestureInfo.direction;
-    const dragGestureName = dragGesture.gestureInfo.name;
+    // const dragGestureName = dragGesture.gestureInfo.name;
     const scrollContainer = dragGesture.gestureInfo.scrollContainer;
     const elementImpacted = elementToMove || element;
     const translateXAtGrab = dragStyleController.getUnderlyingValue(
@@ -90,7 +90,7 @@ export const createDragToMoveGestureController = ({
             {
               scrollContainer,
               direction,
-              dragGestureName,
+              // dragGestureName,
             },
           );
         }

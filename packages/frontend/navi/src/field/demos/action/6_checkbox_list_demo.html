@@ -12,20 +12,8 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState } from "preact/hooks";
-      import {
-        // eslint-disable-next-line no-unused-vars
-        Button,
-        // eslint-disable-next-line no-unused-vars
-        Form,
-        // eslint-disable-next-line no-unused-vars
-        CheckboxList,
-        // eslint-disable-next-line no-unused-vars
-        Label,
-        // eslint-disable-next-line no-unused-vars
-        Checkbox,
-      } from "@jsenv/navi";
+      import { Button, Form, CheckboxList, Label, Checkbox } from "@jsenv/navi";
 
-      // eslint-disable-next-line no-unused-vars
       const App = () => {
         return (
           <div style="display: flex; flex-direction: column; gap: 40px">
@@ -35,7 +23,6 @@
         );
       };
 
-      // eslint-disable-next-line no-unused-vars
       const DynamicCheckboxListDemo = () => {
         // Available color choices with their selection state
         const [colorChoices, setColorChoices] = useState([
