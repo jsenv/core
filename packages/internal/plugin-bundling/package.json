@@ -28,7 +28,7 @@
     "@jsenv/url-meta": "8.5.7",
     "@jsenv/urls": "2.9.4",
     "lightningcss": "1.30.2",
-    "rollup": "4.53.2"
+    "rollup": "4.53.5"
   },
   "devDependencies": {
     "@jsenv/filesystem": "../../tooling/filesystem",

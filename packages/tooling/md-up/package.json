@@ -23,7 +23,7 @@
     "@jsenv/filesystem": "4.15.10",
     "@jsenv/urls": "2.9.4",
     "anchor-markdown-header": "0.7.0",
-    "marked": "16.4.1"
+    "marked": "17.0.1"
   },
   "publishConfig": {
     "access": "public"

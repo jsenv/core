@@ -32,7 +32,7 @@
     "@jsenv/core": "../../../",
     "@jsenv/https-local": "../../tooling/https-local",
     "@jsenv/plugin-explorer": "../../related/plugin-explorer",
-    "playwright": "1.56.1"
+    "playwright": "1.57.0"
   },
   "engines": {
     "node": ">=16.3.0"

@@ -36,7 +36,7 @@
     "@jsenv/pwa": "../pwa",
     "@jsenv/service-worker": "./",
     "@jsenv/snapshot": "../../tooling/snapshot",
-    "playwright": "1.56.1"
+    "playwright": "1.57.0"
   },
   "engines": {
     "node": ">=16.13.0"

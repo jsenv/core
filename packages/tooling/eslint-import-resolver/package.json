@@ -36,7 +36,7 @@
     "@jsenv/node-esm-resolution": "../node-esm-resolution",
     "@jsenv/snapshot": "../snapshot",
     "@jsenv/urls": "../urls",
-    "rollup": "4.53.2"
+    "rollup": "4.53.5"
   },
   "publishConfig": {
     "access": "public"
