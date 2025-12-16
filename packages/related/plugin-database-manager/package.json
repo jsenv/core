@@ -30,17 +30,17 @@
   "dependencies": {
     "@jsenv/database": "0.0.5",
     "@jsenv/dom": "0.8.7",
-    "@jsenv/navi": "0.14.16",
+    "@jsenv/navi": "0.15.3",
     "@jsenv/sigi": "0.1.4",
     "@jsenv/urls": "2.9.4",
     "@tanstack/table-core": "8.21.3",
-    "jsonwebtoken": "9.0.2",
+    "jsonwebtoken": "9.0.3",
     "postgres": "3.4.7"
   },
   "devDependencies": {
     "@jsenv/core": "../../../",
     "@jsenv/plugin-preact": "../../related/plugin-preact",
-    "@preact/signals": "2.5.0",
+    "@preact/signals": "2.5.1",
     "preact": "11.0.0-beta.0"
   },
   "publishConfig": {

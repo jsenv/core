@@ -24,7 +24,7 @@
   },
   "devDependencies": {
     "@jsenv/eslint-import-resolver": "../eslint-import-resolver",
-    "eslint": "9.39.1",
+    "eslint": "9.39.2",
     "espree": "11.0.0"
   },
   "engines": {
