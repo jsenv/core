@@ -2,7 +2,7 @@ import { animateDamageDisplay } from "oto/src/animations/damage/damage.js";
 import { animateElement } from "oto/src/animations/element/animate_element.js";
 import { erase } from "oto/src/animations/erase/erase.js";
 import { glow } from "oto/src/animations/glow/glow.js";
-import { Box } from "oto/src/components/box/box.jsx";
+import { Box } from "oto/src/components/box/box_oto.jsx";
 import { Img } from "oto/src/components/img/img.jsx";
 import { Message } from "oto/src/components/message/message.jsx";
 import { Digits } from "oto/src/components/text/digits.jsx";

@@ -89,8 +89,8 @@ import.meta.css = /* css */ `
   }
 `;
 
-const DatabaseTableHeaderCell = () => {};
-const DatabaseTableCell = () => {};
+const DatabaseTableHeaderCell = (props) => props;
+const DatabaseTableCell = (props) => props;
 
 export const TableData = ({ table, rows }) => {
   const tableRef = useRef(null);

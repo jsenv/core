@@ -1,6 +1,6 @@
 import { ButtonMuteUnmute } from "oto/src/audio/button_mute_unmute.jsx";
 import { ButtonPlayPause } from "oto/src/audio/button_play_pause.jsx";
-import { Box, borderWithStroke } from "oto/src/components/box/box.jsx";
+import { Box, borderWithStroke } from "oto/src/components/box/box_oto.jsx";
 import { Curtain } from "oto/src/components/curtain/curtain.jsx";
 import { Fight } from "oto/src/fight/fight.jsx";
 import {

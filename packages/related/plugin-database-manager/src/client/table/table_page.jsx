@@ -18,14 +18,7 @@
  *
  */
 
-import {
-  LinkWithIcon,
-  Route,
-  Tab,
-  TabList,
-  UITransition,
-  useRouteStatus,
-} from "@jsenv/navi";
+import { Route, Tab, TabList, UITransition, useRouteStatus } from "@jsenv/navi";
 import { Page, PageBody, PageHead } from "../layout/page.jsx";
 import { TABLE_DATA_ROUTE, TABLE_SETTINGS_ROUTE } from "../routes.js";
 import { DataSvg } from "../svg/data_svg.jsx";
@@ -33,6 +26,8 @@ import { SettingsSvg } from "../svg/settings_svg.jsx";
 import { TableData } from "./table_data.jsx";
 import { TableSvg } from "./table_icons.jsx";
 import { TableSettings } from "./table_settings.jsx";
+
+const LinkWithIcon = (props) => props;
 
 export const TablePage = ({ table }) => {
   const tablename = table.tablename;

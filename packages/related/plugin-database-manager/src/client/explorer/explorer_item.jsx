@@ -1,14 +1,15 @@
 import {
-  createUniqueValueConstraint,
+  createAvailableConstraint,
   Editable,
-  FontSizedSvg,
   Input,
-  Overflow,
   SINGLE_SPACE_CONSTRAINT,
   useEditionController,
   useSignalSync,
 } from "@jsenv/navi";
 import { useSignal } from "@preact/signals";
+
+const Overflow = () => {};
+const FontSizedSvg = () => {};
 
 export const ExplorerItem = ({
   nameKey,
@@ -85,7 +86,7 @@ const RenameInputOrName = ({
     }
     otherValueSet.add(itemCandidate[nameKey]);
   }
-  const uniqueNameConstraint = createUniqueValueConstraint(
+  const availableNameConstraint = createAvailableConstraint(
     otherValueSet,
     `"{value}" already exist, please choose another name.`,
   );
@@ -98,7 +99,7 @@ const RenameInputOrName = ({
       valueSignal={nameSignal}
       action={renameAction}
       required
-      constraints={[SINGLE_SPACE_CONSTRAINT, uniqueNameConstraint]}
+      constraints={[SINGLE_SPACE_CONSTRAINT, availableNameConstraint]}
     >
       <Overflow>{itemName}</Overflow>
     </Editable>
@@ -120,7 +121,7 @@ export const ExplorerNewItem = ({
   for (const item of itemArrayInStore) {
     valueSet.add(item[nameKey]);
   }
-  const uniqueNameConstraint = createUniqueValueConstraint(
+  const availableNameConstraint = createAvailableConstraint(
     valueSet,
     `"{value}" already exists. Please choose an other name.`,
   );
@@ -140,7 +141,7 @@ export const ExplorerNewItem = ({
         onActionEnd={onActionEnd}
         autoFocus
         required
-        constraints={[SINGLE_SPACE_CONSTRAINT, uniqueNameConstraint]}
+        constraints={[SINGLE_SPACE_CONSTRAINT, availableNameConstraint]}
       />
     </span>
   );

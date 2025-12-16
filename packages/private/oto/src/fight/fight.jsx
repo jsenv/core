@@ -2,7 +2,7 @@ import { computed, signal } from "@preact/signals";
 import { useKeyEffect } from "hooks/use_key_effect.js";
 import { music } from "oto/src/audio/music/music.js";
 import { sound } from "oto/src/audio/sound/sound.js";
-import { Box, borderWithStroke } from "oto/src/components/box/box.jsx";
+import { Box, borderWithStroke } from "oto/src/components/box/box_oto.jsx";
 import { Curtain } from "oto/src/components/curtain/curtain.jsx";
 import { DialogTextBox } from "oto/src/components/dialog_text_box/dialog_text_box.jsx";
 import { Lifebar } from "oto/src/components/lifebar/lifebar.jsx";

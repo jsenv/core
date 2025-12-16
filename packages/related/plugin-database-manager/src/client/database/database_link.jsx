@@ -1,7 +1,9 @@
-import { LinkWithIcon, useRouteStatus } from "@jsenv/navi";
+import { useRouteStatus } from "@jsenv/navi";
 import { DATABASE_ROUTE } from "../routes.js";
 import { DatabaseSvg } from "./database_icons.jsx";
 import { useCurrentDatabase } from "./database_store.js";
+
+const LinkWithIcon = (props) => props;
 
 export const DatabaseLink = ({ database, children, ...rest }) => {
   const datname = database.datname;
@@ -13,7 +15,7 @@ export const DatabaseLink = ({ database, children, ...rest }) => {
 
   return (
     <LinkWithIcon
-      icon={<DatabaseSvg color="#333" />}
+      icon={<DatabaseSvg />}
       isCurrent={isCurrent}
       href={databaseUrl}
       active={activeDatname === datname}

@@ -1,4 +1,4 @@
-import { createAction, defineRoutes, setBaseUrl } from "@jsenv/navi";
+import { createAction, setBaseUrl, setupRoutes } from "@jsenv/navi";
 import { DATABASE } from "./database/database_store.js";
 import { ROLE } from "./role/role_store.js";
 import { TABLE, TABLE_ROW } from "./table/table_store.js";
@@ -11,7 +11,7 @@ let [
   TABLE_ROUTE,
   TABLE_DATA_ROUTE,
   TABLE_SETTINGS_ROUTE,
-] = defineRoutes({
+] = setupRoutes({
   "/roles/:rolname": ROLE.GET,
   "/databases/:datname": DATABASE.GET,
   "/tables/:tablename/*?": TABLE.GET,

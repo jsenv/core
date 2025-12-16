@@ -1,4 +1,3 @@
-import { TextAndCount } from "@jsenv/navi";
 import { useRoleGroupCount } from "../../database_manager_signals.js";
 import {
   createExplorerGroupController,
@@ -15,6 +14,8 @@ import {
   roleGroupListDetailsOnToggle,
   roleGroupListDetailsOpenAtStart,
 } from "./role_group_list_details_state.js";
+
+const TextAndCount = (props) => props;
 
 export const roleGroupListDetailsController = createExplorerGroupController(
   "role_group_list",

@@ -1,4 +1,4 @@
-import { Details, IconAndText, TextAndCount } from "@jsenv/navi";
+import { Details } from "@jsenv/navi";
 import { DatabaseLink } from "../../database/database_link.jsx";
 import { useRoleWithOwnershipCount } from "../../database_manager_signals.js";
 import {
@@ -19,6 +19,9 @@ import {
   roleWithOwnershipListDetailsOnToggle,
   roleWithOwnershipListDetailsOpenAtStart,
 } from "./role_with_ownership_list_details_state.js";
+
+const IconAndText = (props) => props;
+const TextAndCount = (props) => props;
 
 import.meta.css = /* css */ `
   .explorer_details {

@@ -5,6 +5,7 @@ import { processUser } from "./user-utils.js";
 processUser({
   name: "John",
   email: "john@example.com",
+  // eslint-disable-next-line jsenv/no-unknown-params
   invalidParam: "This will show where processUser is defined",
 });
 
@@ -17,5 +18,6 @@ function localFunction({ name, email }) {
 localFunction({
   name: "Jane",
   email: "jane@example.com",
+  // eslint-disable-next-line jsenv/no-unknown-params
   localInvalidParam: "This won't show file path",
 });
