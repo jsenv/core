@@ -1,5 +1,5 @@
 import { useActionStatus } from "@jsenv/navi";
-import { stringifyForDisplay } from "../../../utils/stringify_for_display.js";
+import { stringifyForDisplay } from "../../../../../utils/stringify_for_display.js";
 
 export const ActionStatus = ({ action, name = action.name }) => {
   const { idle, preloaded, pending, params, error, aborted, data } =
