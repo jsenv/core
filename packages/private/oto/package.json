@@ -23,7 +23,7 @@
   "dependencies": {
     "@jsenv/dom": "./packages/dom",
     "@jsenv/navi": "./packages/navi",
-    "@preact/signals": "2.5.0",
+    "@preact/signals": "2.5.1",
     "dom": "./packages/dom",
     "hooks": "./packages/hooks",
     "matrix": "./packages/matrix",
@@ -38,8 +38,8 @@
     "@jsenv/eslint-config-relax": "../../tooling/eslint-config-relax",
     "@jsenv/plugin-preact": "../../related/plugin-preact",
     "@jsenv/test": "../../related/test",
-    "@playwright/browser-chromium": "1.56.1",
-    "eslint": "9.39.1",
+    "@playwright/browser-chromium": "1.57.0",
+    "eslint": "9.39.2",
     "open": "10.2.0",
     "prettier": "3.7.4",
     "prettier-plugin-organize-imports": "4.3.0"

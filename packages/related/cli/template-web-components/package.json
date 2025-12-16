@@ -25,8 +25,8 @@
     "@jsenv/test": "3.7.15",
     "eslint": "9.39.1",
     "open": "10.2.0",
-    "@playwright/browser-chromium": "1.56.1",
+    "@playwright/browser-chromium": "1.57.0",
     "prettier": "3.7.4",
-    "playwright": "1.56.1"
+    "playwright": "1.57.0"
   }
 }
