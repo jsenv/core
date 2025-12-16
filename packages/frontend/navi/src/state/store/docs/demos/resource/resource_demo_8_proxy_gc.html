@@ -61,7 +61,6 @@
         `;
       };
 
-      // eslint-disable-next-line no-unused-vars
       const PageLoader = ({ proxyAction, pageSignal }) => {
         const [currentPage, setCurrentPage] = useState(1);
         const { matching, data, pending } = useActionStatus(proxyAction);
@@ -133,7 +132,6 @@
         );
       };
 
-      // eslint-disable-next-line no-unused-vars
       const App = () => {
         const [showPageLoader] = useState(false);
 
@@ -167,11 +165,9 @@
         proxyWeakRef = new WeakRef(currentProxy);
         oldTargetWeakRefs = []; // Reset old targets tracking
 
-        // eslint-disable-next-line no-unused-vars
         const AppWithState = () => {
           const [showPageLoader] = useState(true);
 
-          // eslint-disable-next-line no-unused-vars
           const PageLoaderRef = ({ proxyAction, pageSignal }) => {
             const component = (
               <PageLoader proxyAction={proxyAction} pageSignal={pageSignal} />

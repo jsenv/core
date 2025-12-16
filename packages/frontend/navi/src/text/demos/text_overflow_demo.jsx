@@ -1,4 +1,4 @@
-import { BadgeCount, Box, Icon, Layout, Text } from "@jsenv/navi";
+import { BadgeCount, Box, Icon, Text } from "@jsenv/navi";
 import { useState } from "preact/hooks";
 
 export const App = () => {

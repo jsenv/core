@@ -18,16 +18,8 @@
 
       import { render } from "preact";
       import { effect, signal } from "@preact/signals";
-      import {
-        useActionStatus,
-        resource,
-        // eslint-disable-next-line no-unused-vars
-        ActionRenderer,
-      } from "@jsenv/navi";
-      import {
-        // eslint-disable-next-line no-unused-vars
-        ActionStatus,
-      } from "./action_status.jsx";
+      import { useActionStatus, resource, ActionRenderer } from "@jsenv/navi";
+      import { ActionStatus } from "./action_status.jsx";
 
       const USER = resource("user", {
         idKey: "name",
@@ -62,7 +54,6 @@
       }
       USER.GET_MANY.load();
 
-      // eslint-disable-next-line no-unused-vars
       const App = () => {
         const { data: users } = useActionStatus(USER.GET_MANY);
 

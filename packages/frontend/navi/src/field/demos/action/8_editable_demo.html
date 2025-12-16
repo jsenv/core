@@ -160,12 +160,10 @@
       import {
         SINGLE_SPACE_CONSTRAINT,
         useEditionController,
-        // eslint-disable-next-line no-unused-vars
         Editable,
         createAction,
       } from "@jsenv/navi";
 
-      // eslint-disable-next-line no-unused-vars
       const App = () => {
         return (
           <div className="demo-grid">
@@ -178,7 +176,6 @@
         );
       };
 
-      // eslint-disable-next-line no-unused-vars
       const BasicDemo = () => {
         const { editing, startEditing, stopEditing } = useEditionController();
         const [value, setValue] = useState("Click edit to change this text");
@@ -221,7 +218,6 @@
         );
       };
 
-      // eslint-disable-next-line no-unused-vars
       const LoadingDemo = () => {
         const { editing, startEditing, stopEditing } = useEditionController();
         const [value, setValue] = useState("This will take 2 seconds to save");
@@ -276,7 +272,6 @@
         );
       };
 
-      // eslint-disable-next-line no-unused-vars
       const ErrorDemo = () => {
         const { editing, startEditing, stopEditing } = useEditionController();
         const [value] = useState("This edit will always fail");
@@ -323,7 +318,6 @@
         );
       };
 
-      // eslint-disable-next-line no-unused-vars
       const CustomStyleDemo = () => {
         const { editing, startEditing, stopEditing } = useEditionController();
         const [value, setValue] = useState("Bold styled text");
@@ -377,7 +371,7 @@
         editableTextSignal.value = newText;
         return `Signal update: "${newText}"`;
       });
-      // eslint-disable-next-line no-unused-vars
+
       const ActionObjectDemo = () => {
         const [result, setResult] = useState("");
         const { editing, startEditing, stopEditing } = useEditionController();
