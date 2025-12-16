@@ -22,14 +22,12 @@ This scenario is to test
       import { render } from "preact";
       import { useState } from "preact/hooks";
       import { useActiveElement, addActiveElementEffect } from "@jsenv/dom";
-      // eslint-disable-next-line no-unused-vars
       import { Modal } from "../modal.jsx";
 
       addActiveElementEffect((el) => {
         console.log(el);
       });
 
-      // eslint-disable-next-line no-unused-vars
       const App = () => {
         const activeElement = useActiveElement();
         const [opened, openedSetter] = useState(false);

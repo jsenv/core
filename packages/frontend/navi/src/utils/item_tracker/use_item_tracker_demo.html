@@ -184,7 +184,7 @@
       <div class="section">
         <h3>🔍 Debug Log</h3>
         <div id="log" class="log"></div>
-        <button class="btn btn--small" onclick="window.clearLog()">
+        <button class="btn btn--small" onclick="window.clearLog();">
           Clear Log
         </button>
       </div>
@@ -192,7 +192,6 @@
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      // eslint-disable-next-line no-unused-vars
       import { App } from "./use_item_tracker_demo.jsx";
 
       const logContainer = document.getElementById("log");

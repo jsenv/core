@@ -81,7 +81,7 @@ import {
   measureScrollbar,
   preventIntermediateScrollbar,
 } from "@jsenv/dom";
-import { monitorItemsHeightOverflow } from "../monitor_items_height_overflow.js";
+import { monitorItemsOverflow } from "../monitor_items_overflow.js";
 
 import.meta.css = /* css */ `
   * {
@@ -930,8 +930,7 @@ export const createUITransitionController = (
     });
   }
 
-  const stopMonitoringTargetSlotOverflow =
-    monitorItemsHeightOverflow(targetSlot);
+  const stopMonitoringTargetSlotOverflow = monitorItemsOverflow(targetSlot);
   addTeardown(stopMonitoringTargetSlotOverflow);
 
   const setDuration = (newDuration) => {

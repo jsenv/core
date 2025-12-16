@@ -89,7 +89,7 @@ Hello, this is some initial content.</textarea
     </div>
 
     <script type="module">
-      import { initUITransition } from "../ui_transition.js";
+      const initUITransition = () => {};
 
       const dynamicContent = document.getElementById("dynamic-content");
       const { slot } = initUITransition(dynamicContent.firstElementChild);

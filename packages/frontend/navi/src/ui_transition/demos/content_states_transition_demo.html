@@ -305,7 +305,7 @@
     </div>
 
     <script type="module">
-      import { initUITransition } from "../ui_transition.js";
+      const initUITransition = () => {};
 
       const contentBox = document.getElementById("content-box");
       let uiTransition = initUITransition(contentBox.firstElementChild);
