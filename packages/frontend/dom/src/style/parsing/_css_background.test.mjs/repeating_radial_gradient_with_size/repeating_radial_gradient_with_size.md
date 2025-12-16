@@ -1,7 +1,9 @@
 # [repeating radial gradient with size](../../css_background.test.mjs#L79)
 
 ```js
-return run("repeating-radial-gradient(circle 50px, red 0%, blue 50%, red 100%)");
+return run(
+  "repeating-radial-gradient(circle 50px, red 0%, blue 50%, red 100%)",
+);
 ```
 
 ```js

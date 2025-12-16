@@ -1,4 +1,4 @@
-# [trailing slash normalization](../../build_route_relative_url.test.js#L219)
+# [trailing slash normalization](../../build_route_relative_url.test.js#L220)
 
 ```js
 return {
@@ -13,10 +13,13 @@ return {
   }),
   root_path_preserved: run("/"),
   multiple_trailing_slashes: run("/path///"),
-  complex_optional_with_trailing_slash: run("/map/isochrone{/time/:duration}?/", {
-    time: "15",
-    duration: "minutes",
-  }),
+  complex_optional_with_trailing_slash: run(
+    "/map/isochrone{/time/:duration}?/",
+    {
+      time: "15",
+      duration: "minutes",
+    },
+  ),
   query_params_with_trailing_slash: run("/search/", { q: "test", page: 1 }),
 };
 ```

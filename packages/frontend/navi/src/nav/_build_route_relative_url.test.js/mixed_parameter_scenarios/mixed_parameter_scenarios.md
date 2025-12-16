@@ -23,6 +23,7 @@ return {
     zero: 0,
     false: false,
     true: true,
+    // eslint-disable-next-line object-shorthand
     undefined: undefined,
     null: null,
   }),

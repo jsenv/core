@@ -26,7 +26,7 @@ return {
 {
   "string_with_simple_optional": "/api/users?search=test",
   "string_with_complex_optional": "/map/isochrone?format=json&debug",
-  "string_with_nested_optional": "/api}?&include=profile&expand",
+  "string_with_nested_optional": "/api?include=profile&expand",
   "string_with_wildcard_optional": "/files?download&compress=true",
   "string_merging_with_existing": "/search?q=test&sort=date&highlight"
 }
