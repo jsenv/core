@@ -33,7 +33,7 @@ Error while handling http://127.0.0.1/js_syntax_error.js:
 # 2/2 reject
 
 ```console
-SyntaxError: expected expression, got end of script
+InternalError: module record has unexpected status: New
 ```
 
 ---
