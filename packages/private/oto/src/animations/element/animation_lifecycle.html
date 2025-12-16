@@ -17,7 +17,6 @@
         useEffect,
       } from "preact/hooks";
 
-      // eslint-disable-next-line no-unused-vars
       const App = () => {
         const [error] = useErrorBoundary();
         const [events, setEvents] = useState([]);
@@ -45,7 +44,6 @@
         );
       };
 
-      // eslint-disable-next-line no-unused-vars
       const AnimationUI = ({ addEvent }) => {
         const ref = useRef();
         const [rendered, setRendered] = useState(true);

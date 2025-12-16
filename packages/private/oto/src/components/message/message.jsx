@@ -1,4 +1,4 @@
-import { Box, borderWithStroke } from "oto/src/components/box/box.jsx";
+import { Box, borderWithStroke } from "oto/src/components/box/box_oto.jsx";
 import { Text } from "oto/src/components/text/text.jsx";
 import { forwardRef } from "preact/compat";
 

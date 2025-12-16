@@ -1,4 +1,4 @@
-import { Box } from "oto/src/components/box/box.jsx";
+import { Box } from "oto/src/components/box/box_oto.jsx";
 import { Message } from "oto/src/components/message/message.jsx";
 import { HOVER_TEXT_COLOR } from "oto/src/globals/colors.js";
 import { useState } from "preact/hooks";

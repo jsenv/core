@@ -202,7 +202,7 @@
     </div>
 
     <script type="module">
-      import { initUITransition } from "../../../../../dom/src/ui_transition/ui_transition.js";
+      const initUITransition = (p) => p;
 
       const transitionBox = document.getElementById("transition-box");
       const { slot } = initUITransition(transitionBox);
