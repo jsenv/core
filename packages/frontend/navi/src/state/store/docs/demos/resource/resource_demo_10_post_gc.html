@@ -118,12 +118,9 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState, useEffect } from "preact/hooks";
-      import {
-        createAction,
-        // eslint-disable-next-line no-unused-vars
-        ActionRenderer,
-      } from "@jsenv/navi";
-      import { getActionPrivateProperties } from "../../../action_private_properties.js";
+      import { createAction, ActionRenderer } from "@jsenv/navi";
+
+      const getActionPrivateProperties = () => {};
 
       // ✅ Test data store
       const numbersStore = [];
@@ -287,7 +284,6 @@
         }
       };
 
-      // eslint-disable-next-line no-unused-vars
       const TestApp = () => {
         const [, forceUpdate] = useState({});
 

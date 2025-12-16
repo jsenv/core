@@ -692,8 +692,8 @@ export const TableCell = forwardRef((props, ref) => {
 
 export const RowNumberCol = ({
   width = 50,
-  minWidth = 30,
-  maxWidth = 100,
+  // minWidth = 30,
+  // maxWidth = 100,
   immovable = true,
   ...rest
 }) => {
@@ -701,8 +701,8 @@ export const RowNumberCol = ({
     <Col
       id="row_number"
       width={width}
-      minWidth={minWidth}
-      maxWidth={maxWidth}
+      // minWidth={minWidth}
+      // maxWidth={maxWidth}
       immovable={immovable}
       {...rest}
     />

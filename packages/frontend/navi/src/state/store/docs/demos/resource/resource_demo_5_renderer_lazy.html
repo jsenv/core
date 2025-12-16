@@ -10,11 +10,7 @@
     <div id="root" style="position: relative; width: 400px"></div>
 
     <script type="module" jsenv-type="module/jsx">
-      import {
-        resource,
-        // eslint-disable-next-line no-unused-vars
-        ActionRenderer,
-      } from "@jsenv/navi";
+      import { resource, ActionRenderer } from "@jsenv/navi";
       import { render } from "preact";
 
       const PAGE = resource("page", {
@@ -32,7 +28,6 @@
         },
         {
           renderLoadedAsync: async () => {
-            // eslint-disable-next-line no-unused-vars
             const { Toto } = await import("./toto.jsx");
             return () => {
               return <Toto />;
@@ -46,7 +41,6 @@
         },
         {
           renderLoadedAsync: async () => {
-            // eslint-disable-next-line no-unused-vars
             const { Tata } = await import("./tata.jsx");
             return () => <Tata />;
           },
@@ -70,7 +64,6 @@
         PAGE.GET.bindParams({ name: activePageName }).load();
       }
 
-      // eslint-disable-next-line no-unused-vars
       const App = () => {
         return (
           <div>
