@@ -4,9 +4,9 @@ import { createRoutePattern } from "./route_pattern.js";
 const baseUrl = "http://localhost:3000";
 
 const run = (pattern, urlOrRelativeUrl) => {
-  const { applyRoutePattern } = createRoutePattern(pattern, baseUrl);
+  const { applyOn } = createRoutePattern(pattern, baseUrl);
   const url = new URL(urlOrRelativeUrl, baseUrl).href;
-  return applyRoutePattern(url);
+  return applyOn(url);
 };
 
 // Basic pattern matching tests
