@@ -521,8 +521,6 @@ const SIGINT_CALLBACK = {
  * https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/Data_URIs#syntax
  */
 
-/* eslint-env browser, node */
-
 const DATA_URL = {
   parse: (string) => {
     const afterDataProtocol = string.slice("data:".length);
