@@ -2942,9 +2942,8 @@ const shouldHandleSourcemap = (urlInfo) => {
   return true;
 };
 
-const inlineContentClientFileUrl = import.meta.resolve(
-  "../client/inline_content/inline_content.js",
-);
+const inlineContentClientFileUrl = import.meta
+  .resolve("../client/inline_content/inline_content.js");
 
 const createKitchen = ({
   name,
@@ -3806,9 +3805,8 @@ const inferUrlInfoType = (urlInfo) => {
 };
 
 const jsenvPluginHtmlSyntaxErrorFallback = () => {
-  const htmlSyntaxErrorFileUrl = import.meta.resolve(
-    "../client/html_syntax_error/html_syntax_error.html",
-  );
+  const htmlSyntaxErrorFileUrl = import.meta
+    .resolve("../client/html_syntax_error/html_syntax_error.html");
 
   return {
     mustStayFirst: true,
@@ -6255,9 +6253,8 @@ const jsenvPluginVersionSearchParam = () => {
  */
 
 
-const htmlFileUrlForDirectory = import.meta.resolve(
-  "../client/directory_listing/directory_listing.html",
-);
+const htmlFileUrlForDirectory = import.meta
+  .resolve("../client/directory_listing/directory_listing.html");
 
 const jsenvPluginDirectoryListing = ({
   spa,
@@ -6744,13 +6741,7 @@ const jsenvPluginFsRedirection = ({
         // 2. The url pathname does not have an extension
         //    This point assume client is requesting a file when there is an extension
         //    and it assumes all routes will not use extension
-        // 3. The url pathname does not ends with "/"
-        //    In that case we assume client explicitely asks to load a directory
-        if (
-          spa &&
-          !urlToExtension(urlObject) &&
-          !urlToPathname(urlObject).endsWith("/")
-        ) {
+        if (spa && !urlToExtension(urlObject)) {
           const { requestedUrl, rootDirectoryUrl, mainFilePath } =
             reference.ownerUrlInfo.context;
           const closestHtmlRootFile = getClosestHtmlRootFile(
@@ -7857,12 +7848,10 @@ const jsenvPluginNodeRuntime = ({ runtimeCompat }) => {
 
 
 const jsenvPluginImportMetaCss = () => {
-  const importMetaCssClientFileUrl = import.meta.resolve(
-    "../client/import_meta_css/import_meta_css.js",
-  );
-  const importMetaCssBuildFileUrl = import.meta.resolve(
-    "../client/import_meta_css/import_meta_css_build.js",
-  );
+  const importMetaCssClientFileUrl = import.meta
+    .resolve("../client/import_meta_css/import_meta_css.js");
+  const importMetaCssBuildFileUrl = import.meta
+    .resolve("../client/import_meta_css/import_meta_css_build.js");
 
   return {
     name: "jsenv:import_meta_css",
@@ -8194,9 +8183,8 @@ const htmlNodeCanHotReload = (node) => {
 };
 
 const jsenvPluginImportMetaHot = () => {
-  const importMetaHotClientFileUrl = import.meta.resolve(
-    "../client/import_meta_hot/import_meta_hot.js",
-  );
+  const importMetaHotClientFileUrl = import.meta
+    .resolve("../client/import_meta_hot/import_meta_hot.js");
 
   return {
     name: "jsenv:import_meta_hot",
@@ -8988,9 +8976,8 @@ const jsenvPluginChromeDevtoolsJson = () => {
 };
 
 const jsenvPluginAutoreloadOnServerRestart = () => {
-  const autoreloadOnRestartClientFileUrl = import.meta.resolve(
-    "@jsenv/server/src/services/autoreload_on_server_restart/client/autoreload_on_server_restart.js",
-  );
+  const autoreloadOnRestartClientFileUrl = import.meta
+    .resolve("@jsenv/server/src/services/autoreload_on_server_restart/client/autoreload_on_server_restart.js");
 
   return {
     name: "jsenv:autoreload_on_server_restart",

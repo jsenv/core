@@ -9243,9 +9243,8 @@ ${webServer.rootDirectoryUrl}`);
 
 // see also https://github.com/microsoft/playwright/releases
 const getBrowserVersion = (browserName) => {
-  const playwrightPackageJsonFileUrl = import.meta.resolve(
-    "playwright-core/package.json",
-  );
+  const playwrightPackageJsonFileUrl = import.meta
+    .resolve("playwright-core/package.json");
   const playwrightBrowsersJsonFileUrl = new URL(
     "./browsers.json",
     playwrightPackageJsonFileUrl,

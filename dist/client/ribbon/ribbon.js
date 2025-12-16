@@ -2,14 +2,14 @@ const injectRibbon = ({ text }) => {
   const css = /* css */ `
     #jsenv_ribbon_container {
       position: fixed;
-      z-index: 1001;
       top: 0;
       right: 0;
+      z-index: 1001;
       width: 100px;
       height: 100px;
-      overflow: hidden;
       opacity: 0.5;
       pointer-events: none;
+      overflow: hidden;
     }
     #jsenv_ribbon {
       position: absolute;
@@ -20,20 +20,20 @@ const injectRibbon = ({ text }) => {
     }
     #jsenv_ribbon_text {
       position: absolute;
-      left: 0px;
       top: 20px;
-      transform: rotate(45deg);
+      left: 0px;
       display: block;
       width: 125px;
-      line-height: 36px;
-      background-color: orange;
       color: rgb(55, 7, 7);
-      box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
       font-weight: 700;
       font-size: 16px;
       font-family: "Lato", sans-serif;
-      text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
       text-align: center;
+      text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
+      line-height: 36px;
+      background-color: orange;
+      box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
+      transform: rotate(45deg);
       user-select: none;
     }
   `;

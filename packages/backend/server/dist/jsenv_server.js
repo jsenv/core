@@ -6325,9 +6325,8 @@ const jsenvServiceOpenFile = () => {
   };
 };
 
-const routeInspectorHtmlFileUrl = import.meta.resolve(
-  "./client/route_inspector/route_inspector.html",
-);
+const routeInspectorHtmlFileUrl = import.meta
+  .resolve("./client/route_inspector/route_inspector.html");
 
 const jsenvServiceRouteInspector = () => {
   return {

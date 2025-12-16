@@ -143,10 +143,10 @@ input:focus-visible {
 }
 
 #execution_completed_icon[data-animate] path {
-  transform-origin: 50%;
+  stroke: green;
   stroke-dasharray: 48;
   stroke-dashoffset: 48px;
-  stroke: green;
+  transform-origin: 50%;
   animation: .5s cubic-bezier(.65, 0, .45, 1) forwards stroke;
 }
 
@@ -250,9 +250,9 @@ input:focus-visible {
 }
 
 .server_indicator_ring {
+  fill: #0000;
   stroke: #cecece75;
   stroke-width: 4px;
-  fill: #0000;
   transform-origin: center;
   animation: 1.2s ease-out infinite pulse;
 }
@@ -397,9 +397,9 @@ html[data-theme="light"] .execution-link {
 }
 
 #settings_box {
-  text-align: center;
-  color: #fff;
   z-index: -1;
+  color: #fff;
+  text-align: center;
   background-color: #030713;
   border-radius: 5px 5px 0 0;
   min-width: 250px;
@@ -496,8 +496,8 @@ label {
 }
 
 #settings_box .category_title svg {
-  fill: currentColor;
   vertical-align: top;
+  fill: currentColor;
   width: 18px;
   height: 18px;
   margin-right: 5px;
@@ -539,8 +539,8 @@ label {
 }
 
 .switch .square {
-  content: "";
   color: #030713;
+  content: "";
   background-color: #4c4c4c;
   border-radius: .15em;
   width: 1em;
@@ -599,8 +599,8 @@ label {
 }
 
 #menu_overflow {
-  visibility: hidden;
   opacity: 0;
+  visibility: hidden;
   background: #404040;
   width: 100%;
   height: 100%;
@@ -617,8 +617,8 @@ label {
 }
 
 #menu_overflow > * {
-  vertical-align: middle;
   text-align: center;
+  vertical-align: middle;
 }
 
 #toolbar[data-menu-overflow-enabled] #menu_overflow_button {
@@ -634,8 +634,8 @@ label {
 }
 
 #toolbar[data-menu-overflow-opened] #menu_overflow {
-  visibility: visible;
   opacity: 1;
+  visibility: visible;
   margin-left: -40px;
   display: block;
   left: 0;
@@ -701,14 +701,14 @@ label {
 }
 
 .tooltip_action a {
-  vertical-align: middle;
   color: #fff;
+  vertical-align: middle;
   text-decoration: none;
 }
 
 .tooltip_icon {
-  fill: #fff;
   vertical-align: middle;
+  fill: #fff;
   width: 20px;
   height: 20px;
 }
@@ -733,8 +733,8 @@ label {
 }
 
 .toolbar_icon {
-  fill: #cecece;
   color: #cecece;
+  fill: #cecece;
   height: 40px;
 }
 

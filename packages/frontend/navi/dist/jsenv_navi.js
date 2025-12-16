@@ -23130,10 +23130,10 @@ const initMoveStickyFrontierViaPointer = (pointerdownEvent, {
 installImportMetaCss(import.meta);import.meta.css = /* css */`
   .navi_table_ui {
     position: fixed;
-    z-index: ${Z_INDEX_TABLE_UI};
-    overflow: hidden; /* Ensure UI elements cannot impact scrollbars of the document  */
     inset: 0;
+    z-index: ${Z_INDEX_TABLE_UI};
     pointer-events: none; /* UI elements must use pointer-events: auto if they need to be interactive */
+    overflow: hidden; /* Ensure UI elements cannot impact scrollbars of the document  */
     /* background: rgba(0, 255, 0, 0.2); */
   }
 `;
@@ -23954,8 +23954,8 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
     position: absolute;
     width: 1px;
     height: 1px;
-    padding: 0;
     margin: -1px;
+    padding: 0;
     overflow: hidden;
     clip: rect(0, 0, 0, 0);
     white-space: nowrap;
@@ -23971,8 +23971,8 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
     position: absolute;
     width: 1px;
     height: 1px;
-    padding: 0;
     margin: -1px;
+    padding: 0;
     overflow: hidden;
     clip: rect(0, 0, 0, 0);
     white-space: nowrap;
@@ -24689,12 +24689,12 @@ const Svg = props => {
 
 installImportMetaCss(import.meta);import.meta.css = /* css */`
   .svg_mask_content * {
-    fill: black !important;
-    stroke: black !important;
-    fill-opacity: 1 !important;
-    stroke-opacity: 1 !important;
     color: black !important;
     opacity: 1 !important;
+    fill: black !important;
+    fill-opacity: 1 !important;
+    stroke: black !important;
+    stroke-opacity: 1 !important;
   }
 `;
 const SVGMaskOverlay = ({
