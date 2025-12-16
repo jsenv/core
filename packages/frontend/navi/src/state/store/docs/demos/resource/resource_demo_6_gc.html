@@ -36,7 +36,6 @@
         `;
       };
 
-      // eslint-disable-next-line no-unused-vars
       const UsersList = ({ action }) => {
         const { matching, data, pending } = useActionStatus(action);
 
@@ -66,7 +65,6 @@
         );
       };
 
-      // eslint-disable-next-line no-unused-vars
       const App = () => {
         const [showUsersList] = useState(false);
 
@@ -105,11 +103,9 @@
         // Créer les WeakRef pour le monitoring
         actionWeakRef = new WeakRef(currentAction);
 
-        // eslint-disable-next-line no-unused-vars
         const AppWithState = () => {
           const [showUsersList] = useState(true);
 
-          // eslint-disable-next-line no-unused-vars
           const UsersListRef = ({ action }) => {
             const component = <UsersList action={action} />;
             if (!componentWeakRef) {

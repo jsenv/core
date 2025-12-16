@@ -53,7 +53,6 @@
         `;
       };
 
-      // eslint-disable-next-line no-unused-vars
       const UserProfile = ({ childAction }) => {
         const { matching, data, pending } = useActionStatus(childAction);
 
@@ -85,7 +84,6 @@
         );
       };
 
-      // eslint-disable-next-line no-unused-vars
       const App = () => {
         const [showUserProfile] = useState(false);
 
@@ -115,11 +113,9 @@
         // Créer les WeakRef pour le monitoring
         childActionWeakRef = new WeakRef(currentChildAction);
 
-        // eslint-disable-next-line no-unused-vars
         const AppWithState = () => {
           const [showUserProfile] = useState(true);
 
-          // eslint-disable-next-line no-unused-vars
           const UserProfileRef = ({ childAction }) => {
             const component = <UserProfile childAction={childAction} />;
             if (!componentWeakRef) {

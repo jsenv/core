@@ -11,12 +11,10 @@
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      // eslint-disable-next-line no-unused-vars
       import { Button, ButtonMessage } from "./button.jsx";
       import { goblinFontUrl } from "oto/src/components/text/font_urls.js";
       import { useFontFace } from "hooks/use_font_face.js";
 
-      // eslint-disable-next-line no-unused-vars
       const App = () => {
         const goblinFont = useFontFace("goblin", {
           url: goblinFontUrl,
