@@ -2,7 +2,7 @@
 
 > ⚠️ **Work in Progress** - This framework is being actively developed and APIs may change.
 
-> Your guide through modern web application development
+> Helps to build modern web application
 
 **@jsenv/navi** is a comprehensive frontend framework designed to simplify navigation, state management, and UI development. Named after Navi, the fairy guide from Zelda, it helps you navigate through the complexities of building modern web applications.
 
