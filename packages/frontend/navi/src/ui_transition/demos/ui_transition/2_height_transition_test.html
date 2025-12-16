@@ -7,25 +7,25 @@
     <title>Height Transition Test - Big to Small</title>
     <style>
       body {
-        font-family:
-          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         max-width: 600px;
         margin: 0 auto;
         padding: 20px;
-        background: #f5f5f5;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         line-height: 1.5;
+        background: #f5f5f5;
       }
 
       h1 {
-        color: #333;
         margin-bottom: 20px;
+        color: #333;
       }
 
       .controls {
+        margin-bottom: 20px;
+        padding: 20px;
         background: white;
         border-radius: 8px;
-        padding: 20px;
-        margin-bottom: 20px;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
       }
 
@@ -37,19 +37,19 @@
 
       .button-group {
         display: flex;
-        gap: 10px;
         margin-bottom: 10px;
         flex-wrap: wrap;
+        gap: 10px;
       }
 
       button {
         padding: 10px 16px;
+        font: inherit;
+        background: #fff;
         border: 1px solid #ddd;
         border-radius: 6px;
-        background: #fff;
-        cursor: pointer;
-        font: inherit;
         transition: all 0.15s;
+        cursor: pointer;
       }
 
       button:hover {
@@ -62,24 +62,31 @@
       }
 
       .demo-container {
+        padding: 20px;
         background: white;
         border-radius: 8px;
-        padding: 20px;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
       }
 
       /* UI Transition Container */
       #transition-box {
-        border: 2px solid #007acc;
-        border-radius: 8px;
-        background: #f8fbff;
         max-width: 400px;
         margin: 20px 0;
+        background: #f8fbff;
+        border: 2px solid #007acc;
+        border-radius: 8px;
       }
 
       /* Content styles */
       .big-content {
+        display: flex;
+        min-height: 300px;
         padding: 30px;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        color: #222;
+        text-align: center;
         background: repeating-linear-gradient(
           to bottom,
           rgba(0, 0, 0, 0.05) 0px,
@@ -87,14 +94,7 @@
           rgba(0, 0, 0, 0.1) 20px,
           rgba(0, 0, 0, 0.1) 40px
         );
-        color: #222;
         border-radius: 6px;
-        min-height: 300px;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        text-align: center;
       }
 
       .big-content h2 {
@@ -104,26 +104,25 @@
 
       .big-content p {
         margin: 5px 0;
-        opacity: 0.9;
         font-size: 16px;
+        opacity: 0.9;
       }
 
       .small-content {
         padding: 15px;
-        background: transparent; /* reveal any cropping during cross-fade */
         color: #222;
-        border-radius: 6px;
-        text-align: center;
         font-weight: 600;
+        text-align: center;
+        background: transparent; /* reveal any cropping during cross-fade */
         border: 1px dashed #bbb; /* show where the new smaller height is */
+        border-radius: 6px;
       }
 
       /* A bright bar anchored at the bottom to make cropping obvious when height shrinks */
       .big-content .bottom-flag {
-        margin-top: 20px;
         width: 100%;
         height: 40px;
-        border-radius: 4px;
+        margin-top: 20px;
         background: repeating-linear-gradient(
           45deg,
           #ff1744,
@@ -131,17 +130,18 @@
           #ff9100 10px,
           #ff9100 20px
         );
+        border-radius: 4px;
         box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.15) inset;
       }
 
       .note {
+        margin-top: 15px;
+        padding: 12px;
+        color: #004085;
+        font-size: 14px;
         background: #e7f3ff;
         border: 1px solid #b8daff;
-        color: #004085;
-        padding: 12px;
         border-radius: 6px;
-        font-size: 14px;
-        margin-top: 15px;
       }
     </style>
   </head>

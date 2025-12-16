@@ -5,20 +5,20 @@ import { useErrorBoundary, useLayoutEffect, useRef } from "preact/hooks";
 import.meta.css = /* css */ `
   .page {
     display: flex;
-    flex-direction: column;
     flex: 1;
+    flex-direction: column;
   }
 
   .page_head {
-    display: flex;
-    gap: 10px;
-    justify-content: space-between;
-    flex-direction: column;
-
-    padding: 20px;
-    background: white;
     position: sticky;
     top: 0;
+    display: flex;
+
+    padding: 20px;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 10px;
+    background: white;
 
     background-color: rgb(239, 242, 245);
     border-bottom: 1px solid rgb(69, 76, 84);
@@ -38,19 +38,18 @@ import.meta.css = /* css */ `
   }
 
   .page_body {
-    padding-left: 20px;
+    padding-top: 20px;
     padding-right: 20px;
     padding-bottom: 20px;
-    padding-top: 20px;
+    padding-left: 20px;
   }
 
   .page_error {
+    margin-top: 0;
+    margin-bottom: 20px;
     padding: 20px;
     background: #fdd;
     border: 1px solid red;
-
-    margin-top: 0;
-    margin-bottom: 20px;
   }
 `;
 

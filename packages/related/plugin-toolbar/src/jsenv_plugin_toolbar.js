@@ -8,9 +8,8 @@ export const jsenvPluginToolbar = ({
   animationsEnabled = true,
   notificationsEnabled = true,
 } = {}) => {
-  const toolbarInjectorClientFileUrl = import.meta.resolve(
-    "./client/toolbar_injector.js",
-  );
+  const toolbarInjectorClientFileUrl = import.meta
+    .resolve("./client/toolbar_injector.js");
   const toolbarHtmlClientFileUrl = import.meta.resolve("./client/toolbar.html");
   return {
     name: "jsenv:toolbar",

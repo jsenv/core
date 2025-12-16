@@ -5,9 +5,9 @@ button {
 
 .focus_ring,
 .active_ring {
-  color: transparent;
   position: absolute;
   inset: 0;
+  color: transparent;
   overflow: visible; /* Override user agent styles setting overflow:hidden on svgs (cuts off edges) */
 }
 :focus-visible > .focus_ring {

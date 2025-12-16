@@ -13,36 +13,38 @@
       }
 
       .demo-section {
-        margin: 40px auto;
         max-width: 800px;
+        margin: 40px auto;
       }
 
       .demo-title {
-        background: white;
-        padding: 15px 20px;
-        border-radius: 8px 8px 0 0;
-        border-bottom: 2px solid #333;
         margin: 0;
-        font-size: 18px;
-        font-weight: bold;
+        padding: 15px 20px;
         color: #333;
+        font-weight: bold;
+        font-size: 18px;
+        background: white;
+        border-bottom: 2px solid #333;
+        border-radius: 8px 8px 0 0;
       }
 
       .container {
-        width: 400px;
-        height: 200px;
-        background: white;
-        overflow: auto;
-        overscroll-behavior: contain;
         position: relative;
         z-index: 10;
+        width: 400px;
+        height: 200px;
         margin: 0 auto;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        background: white;
         border-radius: 4px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        overflow: auto;
+        overscroll-behavior: contain;
       }
 
       /* Horizontal scrollbar only - content wider but same height */
       .horizontal-content {
+        position: relative;
+        z-index: 9;
         width: 600px; /* Wider than container = horizontal scrollbar */
         height: 180px; /* Same height as container = no vertical scrollbar */
         background: linear-gradient(
@@ -53,12 +55,11 @@
           transparent 102px
         );
         background-size: 100px 100px;
-        position: relative;
-        z-index: 9;
       }
 
       /* Both scrollbars - content wider and taller */
       .both-content {
+        position: relative;
         width: 600px; /* Wider than container = horizontal scrollbar */
         height: 400px; /* Taller than container = vertical scrollbar */
         background:
@@ -76,27 +77,26 @@
             transparent 102px
           );
         background-size: 100px 100px;
-        position: relative;
       }
 
       .draggable-rectangle {
-        width: 80px;
-        height: 60px;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        border: 2px solid #333;
-        border-radius: 8px;
         position: absolute;
         top: 50px;
         left: 50px;
-        cursor: grab;
         display: flex;
+        width: 80px;
+        height: 60px;
         align-items: center;
         justify-content: center;
         color: white;
         font-weight: bold;
         text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5);
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: 2px solid #333;
+        border-radius: 8px;
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
         transition: box-shadow 0.2s ease;
+        cursor: grab;
       }
 
       .draggable-rectangle:hover {
@@ -104,16 +104,15 @@
       }
 
       .draggable-rectangle[data-dragging] {
-        cursor: grabbing;
-        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
         z-index: 1000;
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+        cursor: grabbing;
       }
 
       /* Solid obstacles that cannot be traversed */
       .solid-obstacle {
         position: absolute;
-        background: #e91e63;
-        border-radius: 4px;
+        z-index: 100;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -121,9 +120,10 @@
         font-weight: bold;
         font-size: 12px;
         text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5);
-        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+        background: #e91e63;
         border: 2px solid #c2185b;
-        z-index: 100;
+        border-radius: 4px;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
       }
 
       #obstacleContainer {
@@ -133,6 +133,7 @@
 
       /* Content area for Case 3 with obstacles */
       .obstacle-content {
+        position: relative;
         width: 1600px; /* Wider than container = horizontal scrollbar */
         height: 800px; /* Taller than container = both scrollbars */
         background:
@@ -150,7 +151,6 @@
             #ddd 101px,
             transparent 102px
           );
-        position: relative;
       }
 
       .info {
@@ -178,16 +178,16 @@
 
       .debug-toggle label {
         display: inline-flex;
+        padding: 10px 15px;
         align-items: center;
         gap: 8px;
-        font-size: 14px;
         color: #333;
-        cursor: pointer;
+        font-size: 14px;
         background: white;
-        padding: 10px 15px;
         border-radius: 4px;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         transition: all 0.2s ease;
+        cursor: pointer;
       }
 
       .debug-toggle label:hover {

@@ -14,14 +14,14 @@ import.meta.css = /* css */ `
   }
   td[data-row-contains-selected] {
     position: relative;
-    font-weight: 500;
     color: #444;
+    font-weight: 500;
   }
 
   th[data-column-contains-selected] {
     position: relative;
-    font-weight: bold;
     color: #444;
+    font-weight: bold;
   }
 
   .navi_table [data-selection-border-top]::after {

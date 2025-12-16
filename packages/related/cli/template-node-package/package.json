@@ -17,6 +17,6 @@
     "@jsenv/eslint-config-relax": "1.7.11",
     "@jsenv/test": "3.7.15",
     "eslint": "9.39.1",
-    "prettier": "3.6.2"
+    "prettier": "3.7.4"
   }
 }

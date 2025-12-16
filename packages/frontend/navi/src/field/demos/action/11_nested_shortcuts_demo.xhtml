@@ -7,37 +7,37 @@
     <title>Nested Keyboard Shortcuts Demo</title>
     <style>
       body {
-        font-family:
-          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         max-width: 900px;
+        min-height: 100vh;
         margin: 0 auto;
         padding: 40px 20px;
+        color: #333;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         line-height: 1.6;
         background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-        min-height: 100vh;
-        color: #333;
       }
 
       .demo-container {
+        padding: 40px;
         background: white;
         border-radius: 12px;
-        padding: 40px;
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
       }
 
       .demo-title {
-        font-size: 2rem;
-        font-weight: 700;
         margin: 0 0 30px 0;
         color: #2d3748;
+        font-weight: 700;
+        font-size: 2rem;
         text-align: center;
       }
 
       .demo-description {
+        margin: 0 0 30px 0;
+        padding: 20px;
         background: #e6fffa;
         border-left: 4px solid #38b2ac;
-        padding: 20px;
-        margin: 0 0 30px 0;
         border-radius: 0 8px 8px 0;
       }
 
@@ -58,44 +58,44 @@
       }
 
       .shortcut-list {
-        list-style: none;
-        padding: 0;
         margin: 0;
+        padding: 0;
+        list-style: none;
       }
 
       .shortcut-item {
         display: flex;
-        align-items: center;
         margin: 8px 0;
         padding: 6px 0;
+        align-items: center;
       }
 
       .shortcut-key {
-        background: #2d3748;
-        color: white;
-        padding: 3px 10px;
-        border-radius: 5px;
-        font-family: "Monaco", "Menlo", monospace;
-        font-size: 0.8rem;
-        font-weight: 600;
-        margin-right: 12px;
         min-width: 50px;
+        margin-right: 12px;
+        padding: 3px 10px;
+        color: white;
+        font-weight: 600;
+        font-size: 0.8rem;
+        font-family: "Monaco", "Menlo", monospace;
         text-align: center;
+        background: #2d3748;
+        border-radius: 5px;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
       }
 
       .shortcut-description {
-        color: #4a5568;
         flex: 1;
+        color: #4a5568;
         font-size: 0.9rem;
       }
 
       .file-explorer {
+        margin: 30px 0;
+        padding: 20px;
         background: #f8f9fa;
         border: 2px solid #e9ecef;
         border-radius: 12px;
-        padding: 20px;
-        margin: 30px 0;
       }
 
       .explorer-title {
@@ -106,17 +106,17 @@
       }
 
       .file-list {
-        list-style: none;
-        padding: 0;
         margin: 0;
+        padding: 0;
+        list-style: none;
+        background: white;
         border: 1px solid #d1d5db;
         border-radius: 6px;
-        background: white;
       }
 
       .file-item {
-        border-bottom: 1px solid #e5e7eb;
         padding: 0;
+        border-bottom: 1px solid #e5e7eb;
       }
 
       .file-item:last-child {
@@ -126,8 +126,8 @@
       .file-link {
         display: block;
         padding: 12px 16px;
-        text-decoration: none;
         color: #374151;
+        text-decoration: none;
         transition: background-color 0.2s ease;
       }
 
@@ -136,9 +136,9 @@
       }
 
       .file-link:focus {
+        background-color: #dbeafe;
         outline: 2px solid #3b82f6;
         outline-offset: -2px;
-        background-color: #dbeafe;
       }
 
       .file-icon {
@@ -147,16 +147,16 @@
       }
 
       .instructions {
+        margin-top: 30px;
+        padding: 20px;
         background: #fef7ff;
         border: 1px solid #e879f9;
         border-radius: 8px;
-        padding: 20px;
-        margin-top: 30px;
       }
 
       .instructions h4 {
-        color: #a21caf;
         margin: 0 0 10px 0;
+        color: #a21caf;
         font-size: 1rem;
       }
 
@@ -167,19 +167,19 @@
       }
 
       .status-display {
-        background: #1f2937;
-        color: #f9fafb;
-        padding: 15px;
-        border-radius: 8px;
-        margin: 20px 0;
-        font-family: "Monaco", "Menlo", monospace;
-        font-size: 0.9rem;
         min-height: 60px;
+        margin: 20px 0;
+        padding: 15px;
+        color: #f9fafb;
+        font-size: 0.9rem;
+        font-family: "Monaco", "Menlo", monospace;
+        background: #1f2937;
+        border-radius: 8px;
       }
 
       .status-title {
-        color: #9ca3af;
         margin-bottom: 8px;
+        color: #9ca3af;
         font-size: 0.8rem;
         text-transform: uppercase;
         letter-spacing: 0.5px;

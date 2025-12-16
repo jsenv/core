@@ -11,10 +11,10 @@ import { useEffect, useState } from "preact/hooks";
 
 import.meta.css = /* css */ `
   body {
-    font-family: Arial, sans-serif;
     max-width: 800px;
     margin: 0 auto;
     padding: 20px;
+    font-family: Arial, sans-serif;
   }
   .nav-links {
     margin-bottom: 20px;
@@ -24,17 +24,17 @@ import.meta.css = /* css */ `
   }
   .nav-links a {
     margin-right: 15px;
-    text-decoration: none;
-    color: #007bff;
     padding: 5px 10px;
+    color: #007bff;
+    text-decoration: none;
     border-radius: 3px;
   }
   .nav-links a:hover {
     background: #e9ecef;
   }
   .nav-links a.active {
-    background: #007bff;
     color: white;
+    background: #007bff;
   }
   .user-details {
     margin: 20px 0;
@@ -49,11 +49,11 @@ import.meta.css = /* css */ `
     margin-right: 10px;
     margin-bottom: 10px;
     padding: 8px 15px;
+    color: white;
+    background: #007bff;
     border: none;
     border-radius: 3px;
     cursor: pointer;
-    background: #007bff;
-    color: white;
   }
   button:hover {
     background: #0056b3;
@@ -65,18 +65,18 @@ import.meta.css = /* css */ `
   .current-url {
     margin-top: 10px;
     padding: 10px;
+    font-size: 14px;
+    font-family: monospace;
     background: #f8f9fa;
     border-radius: 3px;
-    font-family: monospace;
-    font-size: 14px;
   }
   .loading {
     opacity: 0.6;
   }
   .error {
+    padding: 10px;
     color: #dc3545;
     background: #f8d7da;
-    padding: 10px;
     border-radius: 3px;
   }
 `;

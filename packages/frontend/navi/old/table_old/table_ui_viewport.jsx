@@ -7,13 +7,13 @@ import { Z_INDEX_TABLE_UI_CONTAINER } from "./z_indexes.js";
 import.meta.css = /* css */ `
   .navi_table_ui_viewport {
     position: absolute;
-    z-index: ${Z_INDEX_TABLE_UI_CONTAINER};
-    user-select: none;
-    left: var(--table-left, 0);
     top: var(--table-top, 0);
+    left: var(--table-left, 0);
+    z-index: ${Z_INDEX_TABLE_UI_CONTAINER};
     width: var(--table-width, 0);
     height: var(--table-height, 0);
     pointer-events: none;
+    user-select: none;
   }
 `;
 

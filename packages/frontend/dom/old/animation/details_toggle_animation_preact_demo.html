@@ -14,16 +14,16 @@
 
       #app {
         display: flex;
-        flex-direction: row;
         height: 300px;
+        flex-direction: row;
       }
 
       main {
-        min-width: 200px;
-        padding-bottom: 0;
-        min-width: 200px; /* Prevents content area from becoming too narrow */
         box-sizing: border-box;
         width: 100px;
+        min-width: 200px;
+        min-width: 200px; /* Prevents content area from becoming too narrow */
+        padding-bottom: 0;
       }
 
       details {
@@ -31,8 +31,8 @@
       }
 
       details > summary {
-        user-select: none;
         background: lightblue;
+        user-select: none;
       }
 
       details > summary + * {

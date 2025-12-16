@@ -1,8 +1,7 @@
 import { readFileSync } from "node:fs";
 
-const routeInspectorHtmlFileUrl = import.meta.resolve(
-  "./client/route_inspector.html",
-);
+const routeInspectorHtmlFileUrl = import.meta
+  .resolve("./client/route_inspector.html");
 
 export const jsenvServiceRouteInspector = () => {
   return {

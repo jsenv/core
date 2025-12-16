@@ -6,42 +6,42 @@
     <title>Table Column Drag Demo - Reorder Columns</title>
     <style>
       body {
+        margin: 0px;
+        padding: 0;
         font-family:
           system-ui,
           -apple-system,
           sans-serif;
-        margin: 0px;
-        padding: 0;
         background: #f5f5f5;
       }
 
       .demo-container {
         max-width: 1000px;
         margin: 0 auto;
-        background: white;
         padding: 20px;
+        background: white;
         border-radius: 8px;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
       }
 
       /* Container with fixed size to show drag behavior */
       .table-container {
-        height: 500px;
         width: 800px;
-        overflow: auto;
+        height: 500px;
         margin: 20px 0;
         border: 1px solid #ddd;
         border-radius: 4px;
+        overflow: auto;
       }
 
       /* Status display */
       .status {
         margin-top: 20px;
         padding: 10px;
+        font-size: 14px;
+        font-family: monospace;
         background: #f0f8ff;
         border-radius: 4px;
-        font-family: monospace;
-        font-size: 14px;
       }
 
       .actions {
@@ -49,13 +49,13 @@
       }
 
       .action-button {
-        background: #007acc;
-        color: white;
-        border: none;
+        margin-right: 10px;
         padding: 8px 16px;
+        color: white;
+        background: #007acc;
+        border: none;
         border-radius: 4px;
         cursor: pointer;
-        margin-right: 10px;
       }
 
       .action-button:hover {
@@ -63,11 +63,11 @@
       }
 
       .info {
+        margin-bottom: 20px;
+        padding: 15px;
         background: #e8f4fd;
         border: 1px solid #bee5eb;
         border-radius: 4px;
-        padding: 15px;
-        margin-bottom: 20px;
       }
 
       .info h3 {

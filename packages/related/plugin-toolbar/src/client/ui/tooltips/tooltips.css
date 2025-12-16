@@ -1,26 +1,26 @@
 .tooltip {
-  display: none;
-  background-color: rgb(94, 94, 94);
-  color: #fff;
-  text-align: center;
-  border-radius: 6px;
   position: absolute;
   bottom: 100%;
+  display: none;
+  max-width: 260px;
   margin-bottom: 6px;
   padding: 10px;
+  color: #fff;
   font-size: 14px;
-  max-width: 260px;
+  text-align: center;
+  background-color: rgb(94, 94, 94);
+  border-radius: 6px;
   cursor: default;
 }
 
 .tooltip::after {
-  content: "";
   position: absolute;
   top: 100%;
   left: 14px;
   border-width: 5px;
   border-style: solid;
   border-color: rgb(94, 94, 94) transparent transparent transparent;
+  content: "";
 }
 
 .tooltip[data-toolip-left] {
@@ -47,21 +47,21 @@
 
 .tooltip_action {
   display: inline-block;
+  margin-top: 6px;
+  padding: 3px 7px;
   border: 1px solid #a0a0a0;
   border-radius: 3px;
-  padding: 3px 7px;
-  margin-top: 6px;
 }
 
 .tooltip_action a {
-  vertical-align: middle;
   color: white;
   text-decoration: none;
+  vertical-align: middle;
 }
 
 .tooltip_icon {
-  fill: white;
   width: 20px;
   height: 20px;
   vertical-align: middle;
+  fill: white;
 }

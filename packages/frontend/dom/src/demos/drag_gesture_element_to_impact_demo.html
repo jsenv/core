@@ -10,43 +10,44 @@
       }
 
       body {
+        min-width: 150vw; /* Make document scrollable horizontally too */
+        min-height: 200vh; /* Make document scrollable */
         margin: 0;
         padding: 20px;
         font-family: Arial, sans-serif;
         background: #f0f0f0;
-        min-height: 200vh; /* Make document scrollable */
-        min-width: 150vw; /* Make document scrollable horizontally too */
       }
 
       .demo-section {
-        margin: 40px auto;
         max-width: 900px;
+        margin: 40px auto;
       }
 
       .demo-title {
-        background: white;
-        padding: 15px 20px;
-        border-radius: 8px 8px 0 0;
-        border-bottom: 2px solid #333;
         margin: 0;
-        font-size: 18px;
-        font-weight: bold;
+        padding: 15px 20px;
         color: #333;
+        font-weight: bold;
+        font-size: 18px;
+        background: white;
+        border-bottom: 2px solid #333;
+        border-radius: 8px 8px 0 0;
       }
 
       .container {
+        position: relative;
         width: 800px;
         height: 600px;
-        background: white;
-        position: relative;
         margin: 0 auto;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        border-radius: 4px;
+        background: white;
         border: 20px solid #ddd;
+        border-radius: 4px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
         /* Remove overflow and overscroll-behavior */
       }
 
       .content {
+        position: relative;
         width: 100%;
         height: 100%;
         background: linear-gradient(
@@ -55,26 +56,25 @@
           #e8e8e8 50%,
           #d8d8d8 100%
         );
-        position: relative;
       }
 
       .drag-handle {
+        position: absolute;
+        display: flex;
         width: 60px;
         height: 40px;
-        background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
-        border: 2px solid #2c5aa0;
-        border-radius: 6px;
-        position: absolute;
-        cursor: grab;
-        display: flex;
         align-items: center;
         justify-content: center;
         color: white;
         font-weight: bold;
         font-size: 10px;
         text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5);
+        background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
+        border: 2px solid #2c5aa0;
+        border-radius: 6px;
         box-shadow: 0 3px 6px rgba(0, 0, 0, 0.2);
         transition: all 0.2s ease;
+        cursor: grab;
         user-select: none;
       }
 
@@ -84,41 +84,38 @@
       }
 
       .drag-handle[data-dragging] {
-        cursor: grabbing;
-        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
         z-index: 1000;
+        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
         transform: scale(1.05);
+        cursor: grabbing;
       }
 
       .target-element {
-        width: 120px;
-        height: 80px;
-        background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
-        border: 3px solid #a93226;
-        border-radius: 8px;
         position: absolute;
         display: flex;
+        width: 120px;
+        height: 80px;
         align-items: center;
         justify-content: center;
         color: white;
         font-weight: bold;
         font-size: 12px;
         text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5);
+        background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+        border: 3px solid #a93226;
+        border-radius: 8px;
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
         transition: all 0.2s ease;
         user-select: none;
       }
 
       .target-element[data-being-moved] {
-        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
         z-index: 999;
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
         transform: scale(1.02);
       }
 
       .obstacle {
-        background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%);
-        border: 2px solid #5d6d6e;
-        border-radius: 6px;
         position: absolute;
         display: flex;
         align-items: center;
@@ -127,6 +124,9 @@
         font-weight: bold;
         font-size: 11px;
         text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5);
+        background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%);
+        border: 2px solid #5d6d6e;
+        border-radius: 6px;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
         user-select: none;
       }
@@ -156,16 +156,16 @@
 
       .debug-toggle label {
         display: inline-flex;
+        padding: 10px 15px;
         align-items: center;
         gap: 8px;
-        font-size: 14px;
         color: #333;
-        cursor: pointer;
+        font-size: 14px;
         background: white;
-        padding: 10px 15px;
         border-radius: 4px;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         transition: all 0.2s ease;
+        cursor: pointer;
       }
 
       .debug-toggle label:hover {
@@ -182,15 +182,15 @@
         position: fixed;
         top: 10px;
         right: 10px;
-        background: rgba(0, 0, 0, 0.8);
-        color: white;
-        padding: 10px;
-        border-radius: 4px;
-        font-family: monospace;
-        font-size: 11px;
         z-index: 10000;
-        line-height: 1.4;
         min-width: 250px;
+        padding: 10px;
+        color: white;
+        font-size: 11px;
+        font-family: monospace;
+        line-height: 1.4;
+        background: rgba(0, 0, 0, 0.8);
+        border-radius: 4px;
       }
 
       .position-display div {
@@ -198,39 +198,39 @@
       }
 
       .position-display .label {
-        font-weight: bold;
         color: #ffeb3b;
+        font-weight: bold;
       }
 
       .element-legend {
-        background: white;
+        max-width: 600px;
+        margin: 20px auto;
         padding: 15px;
+        text-align: center;
+        background: white;
         border-radius: 6px;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        margin: 20px auto;
-        max-width: 600px;
-        text-align: center;
       }
 
       .element-legend h4 {
         margin: 0 0 15px 0;
-        font-size: 14px;
         color: #333;
+        font-size: 14px;
       }
 
       .legend-item {
         display: inline-flex;
+        margin: 0 15px 10px 0;
         align-items: center;
         gap: 8px;
-        margin: 0 15px 10px 0;
         font-size: 12px;
       }
 
       .legend-color {
         width: 30px;
         height: 20px;
-        border-radius: 4px;
         border: 2px solid #333;
+        border-radius: 4px;
       }
 
       .legend-handle {

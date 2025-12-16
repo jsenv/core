@@ -60,6 +60,8 @@
       }
 
       body {
+        margin: 0;
+        color: var(--text-color);
         font-family:
           system-ui,
           -apple-system,
@@ -69,9 +71,7 @@
           Arial,
           sans-serif;
         line-height: 1.5;
-        color: var(--text-color);
         background-color: var(--background-color);
-        margin: 0;
 
         transition:
           background-color 0.3s ease,
@@ -83,23 +83,23 @@
         flex-direction: row;
       }
       aside {
+        position: fixed;
         width: 250px;
+        height: 100%;
+        margin-right: 20px;
         flex-shrink: 0;
         transition:
           width 0.3s ease,
           margin-left 0.3s ease;
-        height: 100%;
-        margin-right: 20px;
-        position: fixed;
       }
       main {
-        flex-grow: 1;
-        flex-basis: 0;
         min-width: 0;
-        transition: margin-left 0.3s ease;
+        margin-left: 280px;
         padding-top: 20px;
         padding-right: 20px;
-        margin-left: 280px;
+        flex-grow: 1;
+        flex-basis: 0;
+        transition: margin-left 0.3s ease;
       }
 
       .header_row {
@@ -108,22 +108,22 @@
         gap: 10px;
       }
       .header_title {
-        margin: 0;
-        line-height: 1;
         display: flex;
-        gap: 10px;
+        margin: 0;
         align-items: center;
+        gap: 10px;
+        line-height: 1;
       }
       .note_button_open {
-        background: none;
-        border: none;
-        cursor: pointer;
-        border-radius: 50%;
-        transition: background-color 0.2s;
+        height: 24px;
         padding: 0;
         color: var(--text-color);
+        background: none;
+        border: none;
+        border-radius: 50%;
         opacity: 0.7;
-        height: 24px;
+        transition: background-color 0.2s;
+        cursor: pointer;
       }
       .note_button_open:hover {
         background-color: color-mix(
@@ -134,36 +134,36 @@
         opacity: 1;
       }
       .note_title {
+        display: flex;
+        margin-bottom: 10px;
+        align-items: center;
         font-weight: bold;
         font-size: 1.1rem;
-        margin-bottom: 10px;
-        display: flex;
-        align-items: center;
       }
       .note_button_close {
         position: absolute;
         top: 15px;
         right: 15px;
-        background: none;
-        border: none;
-        cursor: pointer;
-        padding: 5px;
-        border-radius: 50%;
         display: flex;
+        padding: 5px;
         align-items: center;
         justify-content: center;
+        background: none;
+        border: none;
+        border-radius: 50%;
+        cursor: pointer;
       }
       .note_button_close:hover {
         background-color: var(--secondary-color);
       }
       .note_content {
+        position: relative;
+        width: 90%;
+        max-width: 500px;
+        padding: 20px;
         background-color: var(--background-color);
         border-radius: 8px;
-        padding: 20px;
-        max-width: 500px;
-        width: 90%;
         box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
-        position: relative;
         transform: translateY(-20px);
         transition: transform 0.3s ease;
       }
@@ -174,17 +174,17 @@
       }
 
       #theme-toggle-btn {
-        background: none;
-        border: none;
-        cursor: pointer;
+        display: flex;
         width: 40px;
         height: 40px;
-        border-radius: 50%;
-        display: flex;
         align-items: center;
         justify-content: center;
-        transition: background-color 0.2s;
+        background: none;
         background-color: var(--secondary-color);
+        border: none;
+        border-radius: 50%;
+        transition: background-color 0.2s;
+        cursor: pointer;
       }
 
       #theme-toggle-btn:hover {
@@ -213,13 +213,13 @@
       }
 
       .progress-container {
+        position: relative;
         width: 100%;
         height: 100%;
+        margin: 20px 0;
         background-color: rgba(25, 118, 210, 0.2);
         border-radius: 4px;
         overflow: hidden;
-        position: relative;
-        margin: 20px 0;
       }
       .progress-indeterminate .progress-bar-long,
       .progress-indeterminate .progress-bar-short {
@@ -233,102 +233,102 @@
       }
 
       .progress-indeterminate .progress-bar-long {
-        animation-name: indeterminate-ltr;
         width: 75%;
+        animation-name: indeterminate-ltr;
       }
 
       .progress-indeterminate .progress-bar-short {
-        animation-name: indeterminate-short-ltr;
         width: 20%;
+        animation-name: indeterminate-short-ltr;
       }
 
       @keyframes indeterminate-ltr {
         0% {
-          left: -90%;
           right: 100%;
+          left: -90%;
         }
         60% {
-          left: -90%;
           right: 100%;
+          left: -90%;
         }
         100% {
-          left: 100%;
           right: -35%;
+          left: 100%;
         }
       }
 
       @keyframes indeterminate-short-ltr {
         0% {
-          left: -200%;
           right: 100%;
+          left: -200%;
         }
         60% {
-          left: 107%;
           right: -8%;
+          left: 107%;
         }
         100% {
-          left: 107%;
           right: -8%;
+          left: 107%;
         }
       }
 
       /* Styles pour les routes */
       .auto_head_note {
-        margin-top: 10px;
-        font-size: 14px;
-        color: var(--method-head-color);
         display: flex;
+        margin-top: 10px;
         align-items: center;
+        color: var(--method-head-color);
+        font-size: 14px;
       }
       .note {
+        margin-bottom: 20px;
+        padding: 12px;
         background-color: rgba(255, 152, 0, 0.1);
         border-left: 4px solid var(--warning-color);
-        padding: 12px;
-        margin-bottom: 20px;
         border-radius: 4px;
       }
       .info_pill {
         display: inline-flex;
+        margin-left: 10px;
+        padding: 4px 10px;
         align-items: center;
+        font-size: 13px;
         background-color: rgba(0, 0, 0, 0.05);
         border-radius: 14px;
-        padding: 4px 10px;
-        font-size: 13px;
-        margin-left: 10px;
       }
 
       .route_container {
         display: flex;
-        gap: 20px;
         align-items: flex-start;
+        gap: 20px;
       }
       .filters_sidebar {
         width: 250px;
         flex-shrink: 0;
+        background: var(--secondary-color);
+        border: 1px solid var(--border-color);
         border-radius: 6px;
         overflow: hidden;
-        border: 1px solid var(--border-color);
-        background: var(--secondary-color);
       }
       .sidebar_header {
-        padding: 12px 15px;
-        font-weight: 500;
-        border-bottom: 1px solid var(--border-color);
         display: flex;
+        padding: 12px 15px;
         align-items: center;
         justify-content: space-between;
+        font-weight: 500;
+        border-bottom: 1px solid var(--border-color);
       }
       .filters_content {
         padding: 15px;
         background: var(--background-color);
       }
       .filters_count {
-        background-color: var(--primary-color);
-        color: white;
         padding: 2px 8px;
-        border-radius: 12px;
-        font-size: 0.8rem;
+        color: white;
         font-weight: normal;
+        font-size: 0.8rem;
+        background-color: var(--primary-color);
+        border-radius: 12px;
       }
       @media (max-width: 768px) {
         .route_container {
@@ -342,9 +342,9 @@
       }
 
       .route_container > * {
+        min-width: 0; /* Prevent flexbox from expanding beyond available space */
         margin-top: 20px;
         flex-grow: 1;
-        min-width: 0; /* Prevent flexbox from expanding beyond available space */
       }
       .route_group_details {
         margin: 0 0 15px;
@@ -354,10 +354,10 @@
         height: 24px;
       }
       .route_group_details > summary {
-        cursor: pointer;
+        margin-bottom: 7px;
         list-style: none;
         border-bottom: 1px solid var(--border-color);
-        margin-bottom: 7px;
+        cursor: pointer;
       }
       .route_group_details > summary::marker {
         display: none;
@@ -367,44 +367,44 @@
       }
       .route_group_summary_container {
         display: flex;
-        align-items: center;
         padding: 5px;
+        align-items: center;
       }
       .route_group_name {
         display: flex;
-        border-radius: 3px;
-        font-family: sans-serif;
-        font-size: 14px;
-        font-weight: 700;
         min-width: 80px;
         padding: 6px 0;
+        gap: 0.3em;
+        font-weight: 700;
+        font-size: 14px;
+        font-family: sans-serif;
         text-align: center;
         text-shadow: 0 1px 0 rgba(0, 0, 0, 0.1);
-        gap: 0.3em;
+        border-radius: 3px;
       }
       .route_group_description {
-        margin-left: 8px;
-        font-family: monospace;
-        font-size: 16px;
-        font-weight: 600;
-        word-break: break-word;
         margin-top: 0;
         margin-bottom: 0;
+        margin-left: 8px;
+        font-weight: 600;
+        font-size: 16px;
+        font-family: monospace;
+        word-break: break-word;
         user-select: none;
       }
 
       .route_details {
         margin-bottom: 8px;
-        box-shadow: 0 0 3px rgba(0, 0, 0, 0.19);
-        border: 1px solid #000;
-        border-radius: 4px;
         margin: 0 0 15px;
-        border-color: var(--method-color);
         background: color-mix(in srgb, var(--method-color), transparent 90%);
+        border: 1px solid #000;
+        border-color: var(--method-color);
+        border-radius: 4px;
+        box-shadow: 0 0 3px rgba(0, 0, 0, 0.19);
       }
       .route_details > summary {
-        cursor: pointer;
         list-style: none;
+        cursor: pointer;
       }
       .route_details > summary::marker {
         display: none;
@@ -414,29 +414,29 @@
       }
       .route_summary_container {
         display: flex;
-        align-items: center;
         padding: 5px;
+        align-items: center;
       }
       .route_method {
-        border-radius: 3px;
-        color: #fff;
-        font-family: sans-serif;
-        font-size: 14px;
-        font-weight: 700;
         min-width: 80px;
         padding: 6px 0;
+        color: #fff;
+        font-weight: 700;
+        font-size: 14px;
+        font-family: sans-serif;
         text-align: center;
         text-shadow: 0 1px 0 rgba(0, 0, 0, 0.1);
         background: var(--method-color);
+        border-radius: 3px;
       }
       .route_resource {
-        margin-left: 8px;
-        font-family: monospace;
-        font-size: 16px;
-        font-weight: 600;
-        word-break: break-word;
         margin-top: 0;
         margin-bottom: 0;
+        margin-left: 8px;
+        font-weight: 600;
+        font-size: 16px;
+        font-family: monospace;
+        word-break: break-word;
       }
       .route_details[data-method="HEAD"],
       .route_group_details[data-method="HEAD"] {
@@ -468,20 +468,20 @@
       }
 
       .route_owner_name {
-        background-color: #ffefd2;
-        color: #666;
         padding: 4px 8px;
+        color: #666;
         text-align: center;
+        background-color: #ffefd2;
         border-radius: 5px;
       }
       :root[data-theme="dark"] .route_owner_name {
-        background-color: rgb(96, 59, 13);
         color: white;
+        background-color: rgb(96, 59, 13);
       }
 
       .route_details_content {
-        border-top: 1px solid var(--method-color);
         padding: 10px;
+        border-top: 1px solid var(--method-color);
       }
       .route_description {
         margin: 0;
@@ -491,34 +491,34 @@
       }
 
       .filter_container {
+        height: 100%;
         margin-bottom: 20px;
+        background: var(--secondary-color);
+        border-right: 1px solid var(--border-color);
         overflow: hidden;
         overflow-y: auto;
-        border-right: 1px solid var(--border-color);
-        background: var(--secondary-color);
-        height: 100%;
       }
       .filter_container::marker {
         display: none;
       }
       .filter_summary {
-        cursor: pointer;
-        font-weight: 500;
         display: flex;
         flex-direction: row;
         align-items: center;
         justify-content: space-between;
+        font-weight: 500;
+        cursor: pointer;
         user-select: none;
       }
       .filter:open > summary .summary_marker {
         transform: rotate(180deg);
       }
       .summary_text {
-        overflow: hidden;
-        width: 100%;
         display: block;
-        white-space: nowrap;
+        width: 100%;
         text-overflow: ellipsis;
+        white-space: nowrap;
+        overflow: hidden;
       }
       .filter_list {
         background: var(--background-color);
@@ -529,49 +529,49 @@
         margin-left: 0;
       }
       .filter_badge {
-        background-color: var(--primary-color);
-        color: white;
-        padding: 2px 8px;
-        border-radius: 12px;
-        font-size: 0.8rem;
         margin-left: 10px;
+        padding: 2px 8px;
+        color: white;
+        font-size: 0.8rem;
+        background-color: var(--primary-color);
+        border-radius: 12px;
       }
 
       select {
         min-width: 200px;
         padding: 8px;
-        border-radius: 4px;
-        border: 1px solid var(--border-color);
-        background-color: var(--background-color);
         color: var(--text-color);
         font-family: inherit;
+        background-color: var(--background-color);
+        border: 1px solid var(--border-color);
+        border-radius: 4px;
       }
       select option {
         padding: 8px;
       }
       select option:checked {
-        background-color: var(--primary-color);
         color: white;
+        background-color: var(--primary-color);
       }
       .filter_form {
         display: flex;
+        margin-top: 15px;
+        margin-bottom: 15px;
         flex-direction: column;
         flex-wrap: wrap;
         gap: 8px;
-        margin-top: 15px;
-        margin-bottom: 15px;
         user-select: none;
       }
       .filter_form label {
         display: flex;
+        width: 100%;
         align-items: center;
         gap: 5px;
-        cursor: pointer;
-        width: 100%;
-        word-break: keep-all;
-        overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+        word-break: keep-all;
+        cursor: pointer;
+        overflow: hidden;
       }
       label .filter_text {
         text-overflow: ellipsis;
@@ -607,14 +607,14 @@
       }
 
       .filter_count {
-        background-color: #eee;
-        color: #666;
-        opacity: 0.8;
-        padding: 2px 8px;
-        border-radius: 12px;
-        font-size: 0.8rem;
         margin-left: auto;
+        padding: 2px 8px;
+        color: #666;
+        font-size: 0.8rem;
         white-space: nowrap;
+        background-color: #eee;
+        border-radius: 12px;
+        opacity: 0.8;
       }
 
       .filter_actions {
@@ -622,14 +622,14 @@
         gap: 10px;
       }
       .filter_button {
+        padding: 6px 12px;
+        color: var(--text-color);
+        font-size: 0.9rem;
         background-color: var(--secondary-color);
         border: 1px solid var(--border-color);
-        color: var(--text-color);
-        padding: 6px 12px;
         border-radius: 4px;
-        cursor: pointer;
-        font-size: 0.9rem;
         transition: all 0.2s;
+        cursor: pointer;
       }
       .filter_button:hover {
         background-color: color-mix(
@@ -641,8 +641,8 @@
 
       .status_pill {
         display: flex;
-        align-self: stretch;
         width: 0.4em;
+        align-self: stretch;
       }
     </style>
     <div class="container">

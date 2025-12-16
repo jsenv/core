@@ -28,10 +28,10 @@ import { forceStyles, setStyles } from "../style/dom_styles.js";
 
 import.meta.css = /* css */ `
   [data-position-sticky-placeholder] {
-    opacity: 0 !important;
     position: static !important;
     width: auto !important;
     height: auto !important;
+    opacity: 0 !important;
   }
 `;
 

@@ -17,36 +17,37 @@
       }
 
       .demo-section {
-        margin: 40px auto;
         max-width: 900px;
+        margin: 40px auto;
       }
 
       .demo-title {
-        background: white;
-        padding: 15px 20px;
-        border-radius: 8px 8px 0 0;
-        border-bottom: 2px solid #333;
         margin: 0;
-        font-size: 18px;
-        font-weight: bold;
+        padding: 15px 20px;
         color: #333;
+        font-weight: bold;
+        font-size: 18px;
+        background: white;
+        border-bottom: 2px solid #333;
+        border-radius: 8px 8px 0 0;
       }
 
       .container {
+        position: relative;
         width: 400px;
         height: 300px;
+        margin: 0 auto;
         background: white;
+        border: 30px solid #ddd;
+        border-radius: 4px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
         overflow: auto;
         overscroll-behavior: contain;
-        position: relative;
-        margin: 0 auto;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        border-radius: 4px;
-        border: 30px solid #ddd;
       }
 
       /* Horizontal constraints content */
       .horizontal-content {
+        position: relative;
         width: 800px; /* Wider than container = horizontal scrollbar */
         height: 280px; /* Same height as container = no vertical scrollbar */
         background:
@@ -69,11 +70,11 @@
         background-size:
           100px 280px,
           800px 280px;
-        position: relative;
       }
 
       /* Vertical constraints content */
       .vertical-content {
+        position: relative;
         width: 380px; /* Same width as container = no horizontal scrollbar */
         height: 600px; /* Taller than container = vertical scrollbar */
         background:
@@ -94,26 +95,25 @@
         background-size:
           380px 100px,
           380px 600px;
-        position: relative;
       }
 
       .draggable-rectangle {
+        position: absolute;
+        display: flex;
         width: 80px;
         height: 60px;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        /* border: 3px solid #333; */
-        border-radius: 8px;
-        position: absolute;
-        cursor: grab;
-        display: flex;
         align-items: center;
         justify-content: center;
         color: white;
         font-weight: bold;
         font-size: 12px;
         text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5);
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        /* border: 3px solid #333; */
+        border-radius: 8px;
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
         transition: box-shadow 0.2s ease;
+        cursor: grab;
         user-select: none;
       }
 
@@ -122,9 +122,9 @@
       }
 
       .draggable-rectangle[data-dragging] {
-        cursor: grabbing;
-        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
         z-index: 1000;
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+        cursor: grabbing;
       }
 
       .info {
@@ -152,16 +152,16 @@
 
       .debug-toggle label {
         display: inline-flex;
+        padding: 10px 15px;
         align-items: center;
         gap: 8px;
-        font-size: 14px;
         color: #333;
-        cursor: pointer;
+        font-size: 14px;
         background: white;
-        padding: 10px 15px;
         border-radius: 4px;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         transition: all 0.2s ease;
+        cursor: pointer;
       }
 
       .debug-toggle label:hover {
@@ -176,34 +176,34 @@
 
       /* Visual indicators for bounds */
       .bounds-legend {
-        background: white;
+        max-width: 400px;
+        margin: 20px auto;
         padding: 15px;
+        text-align: center;
+        background: white;
         border-radius: 6px;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        margin: 20px auto;
-        max-width: 400px;
-        text-align: center;
       }
 
       .bounds-legend h4 {
         margin: 0 0 10px 0;
-        font-size: 14px;
         color: #333;
+        font-size: 14px;
       }
 
       .legend-item {
         display: inline-flex;
+        margin: 0 10px;
         align-items: center;
         gap: 8px;
-        margin: 0 10px;
         font-size: 12px;
       }
 
       .legend-color {
         width: 20px;
         height: 15px;
-        border-radius: 2px;
         border: 1px solid #333;
+        border-radius: 2px;
       }
 
       .red-zone {
@@ -214,15 +214,15 @@
         position: fixed;
         top: 10px;
         right: 10px;
-        background: rgba(0, 0, 0, 0.8);
-        color: white;
-        padding: 10px;
-        border-radius: 4px;
-        font-family: monospace;
-        font-size: 11px;
         z-index: 10000;
-        line-height: 1.4;
         min-width: 200px;
+        padding: 10px;
+        color: white;
+        font-size: 11px;
+        font-family: monospace;
+        line-height: 1.4;
+        background: rgba(0, 0, 0, 0.8);
+        border-radius: 4px;
       }
 
       .position-display div {
@@ -230,8 +230,8 @@
       }
 
       .position-display .label {
-        font-weight: bold;
         color: #ffeb3b;
+        font-weight: bold;
       }
     </style>
   </head>

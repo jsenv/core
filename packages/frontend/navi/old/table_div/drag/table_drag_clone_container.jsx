@@ -38,8 +38,8 @@ import.meta.css = /* css */ `
   .navi_table_cell_placeholder {
     position: absolute;
     inset: 0;
-    background: lightgrey;
     z-index: ${Z_INDEX_DRAGGING_CELL_PLACEHOLDER};
+    background: lightgrey;
   }
 `;
 

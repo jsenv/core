@@ -2,8 +2,8 @@ import { Details } from "@jsenv/navi";
 
 import.meta.css = /* css */ `
   .explorer_details {
-    flex: 1;
     padding-left: 16px;
+    flex: 1;
   }
 `;
 

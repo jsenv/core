@@ -8,9 +8,9 @@ import.meta.css = /* css */ `
   [data-selection-borders] > .selection-border-canvas {
     position: absolute;
     inset: -${TABLE_BORDER_WIDTH}px; /* Extend 2px to sit on cell border edge */
-    pointer-events: none;
     width: calc(100% + ${TABLE_BORDER_WIDTH * 2}px);
     height: calc(100% + ${TABLE_BORDER_WIDTH * 2}px);
+    pointer-events: none;
   }
 
   /* Hide borders during drag selection */

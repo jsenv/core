@@ -49,8 +49,8 @@ html[data-theme="jsenv"] .switch .slider:before {
 
 /* tooltips */
 html[data-theme="jsenv"] .tooltip {
-  background-color: #ffd390;
   color: #884900;
+  background-color: #ffd390;
 }
 html[data-theme="jsenv"] .tooltip_action {
   border-color: #884900;

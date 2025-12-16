@@ -16,9 +16,8 @@ export const runLighthouse = async (url, lighthouseOptions) => {
 };
 
 export const reduceToMedianReport = async (lighthouseReports) => {
-  const { computeMedianRun } = await import(
-    "lighthouse/core/lib/median-run.js"
-  );
+  const { computeMedianRun } =
+    await import("lighthouse/core/lib/median-run.js");
   return computeMedianRun(lighthouseReports);
 };
 
@@ -36,9 +35,8 @@ export const formatReportAsJson = (lighthouseReport) => {
 };
 
 export const formatReportAsHtml = async (lighthouseReport) => {
-  const { ReportGenerator } = await import(
-    "lighthouse/report/generator/report-generator.js"
-  );
+  const { ReportGenerator } =
+    await import("lighthouse/report/generator/report-generator.js");
   const html = ReportGenerator.generateReportHtml(lighthouseReport);
   return html;
 };

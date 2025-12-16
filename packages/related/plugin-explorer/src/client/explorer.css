@@ -8,16 +8,16 @@
 
 html,
 body {
+  display: flex;
   margin: 0;
   padding: 0;
-  display: flex;
-  flex-direction: column;
   flex: 1;
+  flex-direction: column;
 }
 
 html {
-  font-family: arial, sans;
   height: 100%;
+  font-family: arial, sans;
 }
 
 button:focus,
@@ -66,7 +66,6 @@ Because for some element we set the focus outline on a div which would not match
     input:focus
     + * {
     outline-width: 2px;
-    outline-offset: 0;
     outline-style: solid;
     /*
     force a blue color for firefox otherwise
@@ -74,6 +73,7 @@ Because for some element we set the focus outline on a div which would not match
     making it unpredictible and sometimes hard to see
     */
     outline-color: rgb(0, 150, 255);
+    outline-offset: 0;
   }
 }
 ::-moz-focus-inner {
@@ -82,8 +82,8 @@ Because for some element we set the focus outline on a div which would not match
 
 main {
   display: flex;
-  flex-direction: column;
   flex: 1;
+  flex-direction: column;
 }
 
 main > * {
@@ -92,15 +92,15 @@ main > * {
 }
 
 hr {
+  margin: 15px 0;
   color: black;
   background-color: black;
   border-color: black;
-  margin: 15px 0;
 }
 
 article[data-page="file-list"] {
-  background-color: #204143;
   color: #97a0a0;
+  background-color: #204143;
 }
 
 nav,
@@ -119,8 +119,8 @@ nav,
 }
 
 article h2 {
-  margin: 0;
   display: flex;
+  margin: 0;
 }
 
 article h2 svg {
@@ -137,16 +137,16 @@ article h2 svg {
 }
 
 h2 {
+  display: inline-block;
   margin: 20px 0;
   color: #24b1b0;
-  display: inline-block;
 }
 
 h4 {
+  padding: 0 25px;
+  color: #97a0a0;
   font-weight: normal;
   font-size: 15px;
-  color: #97a0a0;
-  padding: 0 25px;
 }
 
 #explorables {
@@ -154,18 +154,18 @@ h4 {
 }
 
 #explorables-header {
-  /* padding-bottom: 10px; */
-  width: 100%;
   position: sticky;
   top: 0;
+  /* padding-bottom: 10px; */
+  width: 100%;
 }
 
 #explorables_header_and_menu {
-  padding-left: 25px;
-  padding-right: 25px;
-  padding-top: 25px;
-  background-color: #204143;
   position: relative;
+  padding-top: 25px;
+  padding-right: 25px;
+  padding-left: 25px;
+  background-color: #204143;
 }
 
 #explorables_header_bottom_spacing {
@@ -178,13 +178,13 @@ h4 {
 }
 
 #explorables ul {
-  padding: 0px 25px 25px 25px;
   margin: 0;
+  padding: 0px 25px 25px 25px;
 }
 
 #explorables li {
-  list-style-type: none;
   margin: 10px 0;
+  list-style-type: none;
 }
 
 #explorables li:first-child {
@@ -197,13 +197,13 @@ h4 {
 }
 
 .execution-link {
-  background: #204143;
-  padding: 6px 12px;
-  font-size: 14px;
   display: inline-block;
+  padding: 6px 12px;
   color: #e7f2f3;
+  font-size: 14px;
   font-family: monospace;
   text-decoration: unset;
+  background: #204143;
 }
 
 /* icons */
@@ -214,14 +214,14 @@ h4 {
 #explorables_icon {
   width: 25px;
   height: 25px;
-  stroke: none;
   fill: #24b1b0;
+  stroke: none;
 }
 
 #explorables fieldset {
-  border: none;
-  padding: 0;
   margin: 0;
+  padding: 0;
+  border: none;
 }
 
 #explorables fieldset label {
@@ -230,17 +230,17 @@ h4 {
 }
 
 #explorables fieldset input {
-  opacity: 0;
   position: absolute;
+  opacity: 0;
 }
 
 #explorables fieldset label input + * {
   display: block;
+  min-width: 8em;
   padding: 0.7em 1em;
+  text-align: center;
   background-color: #204143;
   border-radius: 0.1em;
-  min-width: 8em;
-  text-align: center;
 }
 
 #explorables fieldset input:checked + * {
@@ -252,10 +252,10 @@ h4 {
 .menu-wrapper {
   position: relative;
   max-width: 100%;
+  margin-top: 25px;
+  transition: 300ms;
   overflow-x: hidden;
   overflow-y: hidden;
-  transition: 300ms;
-  margin-top: 25px;
 }
 .menu {
   box-sizing: border-box;
@@ -266,17 +266,17 @@ h4 {
 }
 .menu .item {
   display: inline-block;
+  box-sizing: border-box;
   height: 100%;
   padding: 1em;
-  box-sizing: border-box;
 }
 .paddle {
   position: absolute;
-  height: 36px;
   bottom: 0;
-  border: none;
-  background: #24b1b0;
+  height: 36px;
   color: #1f262c;
+  background: #24b1b0;
+  border: none;
 }
 .left-paddle {
   left: 0;

@@ -6,30 +6,30 @@
     <title>Coordinates Systems Demo</title>
     <style>
       body {
+        position: relative;
+        /* Make document 10,000px wide */
+        width: 10000px;
+        height: 100vh;
         margin: 0;
         padding: 0;
         font-family: Arial, sans-serif;
         background: linear-gradient(45deg, #f0f0f0, #e0e0e0);
-        /* Make document 10,000px wide */
-        width: 10000px;
-        height: 100vh;
-        position: relative;
       }
 
       .info-panel {
         position: fixed;
         top: 10px;
         left: 10px;
-        background: rgba(255, 255, 255, 0.95);
-        padding: 20px;
-        border-radius: 8px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-        font-family: monospace;
-        font-size: 12px;
-        line-height: 1.4;
         z-index: 1000;
         max-width: 400px;
+        padding: 20px;
+        font-size: 12px;
+        font-family: monospace;
+        line-height: 1.4;
+        background: rgba(255, 255, 255, 0.95);
         border-left: 4px solid #2196f3;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
       }
 
       .info-section {
@@ -39,60 +39,63 @@
       }
 
       .info-section:last-child {
-        border-bottom: none;
         margin-bottom: 0;
+        border-bottom: none;
       }
 
       .info-title {
-        font-weight: bold;
-        color: #333;
         margin-bottom: 5px;
+        color: #333;
+        font-weight: bold;
         font-size: 13px;
       }
 
       .info-value {
-        color: #666;
         margin-left: 10px;
+        color: #666;
       }
 
       .red-square {
-        width: 100px;
-        height: 100px;
-        background: #f44336;
         position: absolute;
+        top: 200px;
         /* Center horizontally in the 10,000px wide document */
         left: calc(5000px - 50px); /* 5000px (middle) - 50px (half width) */
-        top: 200px;
-        border: 2px solid #d32f2f;
-        border-radius: 4px;
         display: flex;
+        width: 100px;
+        height: 100px;
         align-items: center;
         justify-content: center;
         color: white;
         font-weight: bold;
         text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5);
+        background: #f44336;
+        border: 2px solid #d32f2f;
+        border-radius: 4px;
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
       }
 
       .scrollable-container {
-        width: 200px;
-        height: 200px;
-        /* Make the scrollable content 4000px wide */
-        overflow-x: scroll;
-        overflow-y: hidden;
         position: absolute;
+        top: 400px;
         /* Center horizontally in the 10,000px wide document */
         left: calc(5000px - 100px); /* 5000px (middle) - 100px (half width) */
-        top: 400px;
+        width: 200px;
+        height: 200px;
         background: white;
         border: 3px solid #333;
         border-radius: 8px;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        /* Make the scrollable content 4000px wide */
+        overflow-x: scroll;
+        overflow-y: hidden;
       }
 
       .scrollable-content {
+        position: relative;
+        display: flex;
         width: 1000px;
         height: 100%;
+        align-items: center;
         background: linear-gradient(
           90deg,
           #e3f2fd,
@@ -101,26 +104,23 @@
           #64b5f6,
           #42a5f5
         );
-        position: relative;
-        display: flex;
-        align-items: center;
       }
 
       .blue-square {
-        width: 100px;
-        height: 100px;
-        background: #2196f3;
         position: absolute;
         /* Center horizontally in the 4000px wide scrollable content */
         left: 550px; /* 2000px (middle) - 50px (half width) */
-        border: 2px solid #1976d2;
-        border-radius: 4px;
         display: flex;
+        width: 100px;
+        height: 100px;
         align-items: center;
         justify-content: center;
         color: white;
         font-weight: bold;
         text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5);
+        background: #2196f3;
+        border: 2px solid #1976d2;
+        border-radius: 4px;
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
       }
 
@@ -128,56 +128,56 @@
         position: fixed;
         bottom: 10px;
         left: 10px;
-        background: rgba(0, 0, 0, 0.8);
-        color: white;
-        padding: 15px;
-        border-radius: 8px;
-        font-family: monospace;
-        font-size: 11px;
         z-index: 1000;
+        padding: 15px;
+        color: white;
+        font-size: 11px;
+        font-family: monospace;
         line-height: 1.4;
+        background: rgba(0, 0, 0, 0.8);
+        border-radius: 8px;
       }
 
       .coordinate-info {
         position: fixed;
         top: 10px;
         right: 10px;
-        background: rgba(255, 255, 255, 0.95);
-        padding: 20px;
-        border-radius: 8px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-        font-family: monospace;
-        font-size: 12px;
-        line-height: 1.4;
         z-index: 1000;
         max-width: 350px;
+        padding: 20px;
+        font-size: 12px;
+        font-family: monospace;
+        line-height: 1.4;
+        background: rgba(255, 255, 255, 0.95);
         border-left: 4px solid #ff9800;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
       }
 
       .setup-instructions {
         position: fixed;
-        bottom: 10px;
         right: 10px;
-        background: rgba(76, 175, 80, 0.9);
-        color: white;
-        padding: 15px;
-        border-radius: 8px;
-        font-size: 12px;
+        bottom: 10px;
         z-index: 1000;
         max-width: 250px;
+        padding: 15px;
+        color: white;
+        font-size: 12px;
         text-align: center;
+        background: rgba(76, 175, 80, 0.9);
+        border-radius: 8px;
       }
 
       .auto-setup-btn {
-        background: #fff;
-        color: #4caf50;
-        border: none;
+        margin-top: 10px;
         padding: 8px 15px;
+        color: #4caf50;
+        font-weight: bold;
+        font-size: 11px;
+        background: #fff;
+        border: none;
         border-radius: 4px;
         cursor: pointer;
-        font-weight: bold;
-        margin-top: 10px;
-        font-size: 11px;
       }
 
       .auto-setup-btn:hover {

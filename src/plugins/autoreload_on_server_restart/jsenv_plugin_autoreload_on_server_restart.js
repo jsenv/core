@@ -1,9 +1,8 @@
 import { injectJsenvScript, parseHtml, stringifyHtmlAst } from "@jsenv/ast";
 
 export const jsenvPluginAutoreloadOnServerRestart = () => {
-  const autoreloadOnRestartClientFileUrl = import.meta.resolve(
-    "@jsenv/server/src/services/autoreload_on_server_restart/client/autoreload_on_server_restart.js",
-  );
+  const autoreloadOnRestartClientFileUrl = import.meta
+    .resolve("@jsenv/server/src/services/autoreload_on_server_restart/client/autoreload_on_server_restart.js");
 
   return {
     name: "jsenv:autoreload_on_server_restart",

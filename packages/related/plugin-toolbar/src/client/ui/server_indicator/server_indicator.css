@@ -9,11 +9,11 @@
 
 #server_indicator .autoreload {
   position: absolute;
+  top: 0;
+  left: 0;
   width: 32px;
   height: 32px;
   margin: 4px;
-  left: 0;
-  top: 0;
 }
 .autoreload[data-variant="enabled"] {
   color: green;
@@ -30,8 +30,8 @@
 }
 .server_indicator_circle[data-variant="connecting"] {
   fill: #cecece;
-  animation: wink 1.2s ease-out infinite;
   transform-origin: center;
+  animation: wink 1.2s ease-out infinite;
 }
 @keyframes wink {
   0% {
@@ -52,22 +52,22 @@
 }
 
 .server_indicator_ring {
+  fill: transparent;
   stroke: rgba(206, 206, 206, 0.46);
   stroke-width: 4;
-  fill: transparent;
-  animation: pulse 1.2s ease-out infinite;
   transform-origin: center;
+  animation: pulse 1.2s ease-out infinite;
 }
 @keyframes pulse {
   0% {
-    transform: scale(0);
     opacity: 0;
+    transform: scale(0);
   }
   50% {
     opacity: 1;
   }
   100% {
-    transform: scale(1);
     opacity: 0;
+    transform: scale(1);
   }
 }

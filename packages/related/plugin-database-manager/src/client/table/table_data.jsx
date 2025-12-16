@@ -55,24 +55,24 @@ import.meta.css = /* css */ `
 
   .database_table_cell_content {
     display: inline-flex;
-    flex-grow: 1;
     width: 100%;
     height: 100%;
+    flex-grow: 1;
   }
 
   .database_table_cell_value {
     display: inline-flex;
+    padding: 8px;
     flex-grow: 1;
     user-select: none;
-    padding: 8px;
   }
 
   .database_table_cell_content input {
+    display: inline-flex;
     width: 100%;
     height: 100%;
-    display: inline-flex;
-    flex-grow: 1;
     padding-left: 8px;
+    flex-grow: 1;
     border-radius: 0; /* match table cell border-radius */
   }
 

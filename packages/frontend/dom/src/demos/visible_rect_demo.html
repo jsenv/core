@@ -6,26 +6,26 @@
     <title>Visible Rect Demo</title>
     <style>
       body {
+        min-width: 1200px; /* Force horizontal scrolling */
+        min-height: 300vh; /* Make page tall enough to scroll */
         margin: 0;
         padding: 20px;
         font-family: Arial, sans-serif;
         background: #f5f5f5;
-        min-height: 300vh; /* Make page tall enough to scroll */
-        min-width: 1200px; /* Force horizontal scrolling */
       }
 
       .demo-header {
-        background: white;
-        padding: 20px;
-        border-radius: 8px;
         margin-bottom: 20px;
+        padding: 20px;
+        background: white;
+        border-radius: 8px;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
       }
 
       .demo-title {
         margin: 0 0 10px 0;
-        font-size: 24px;
         color: #333;
+        font-size: 24px;
       }
 
       .demo-description {
@@ -50,75 +50,75 @@
 
       .target-row {
         display: flex;
-        gap: 20px;
-        align-items: flex-start;
         margin: 50px 0;
+        align-items: flex-start;
+        gap: 20px;
       }
 
       .side-content {
-        flex: 0 0 200px;
+        min-height: 150px;
         padding: 20px;
+        flex: 0 0 200px;
         background: rgba(0, 0, 0, 0.05);
         border-radius: 8px;
-        min-height: 150px;
       }
 
       .side-content h4 {
         margin: 0 0 10px 0;
-        font-size: 14px;
         color: #333;
+        font-size: 14px;
       }
 
       .side-content p {
         margin: 0;
-        font-size: 13px;
         color: #666;
+        font-size: 13px;
         line-height: 1.4;
       }
 
       .target-element {
-        flex: 1;
+        display: flex;
         width: 400px;
         min-width: 400px;
         height: 600px;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        border: 15px solid #333;
-        display: flex;
+        flex: 1;
         align-items: center;
         justify-content: center;
         color: white;
         font-weight: bold;
         font-size: 18px;
         text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5);
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: 15px solid #333;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
       }
 
       .overlay-ui {
         position: fixed;
-        z-index: 1000;
-        overflow: hidden;
         inset: 0;
-        pointer-events: none;
+        z-index: 1000;
         background: rgba(
           0,
           0,
           255,
           0.05
         ); /* Discrete blue background to make it visible */
+        pointer-events: none;
+        overflow: hidden;
       }
 
       .overlay-container {
         position: absolute;
-        background: rgba(255, 0, 0, 0.5);
-        border: 2px dashed white;
-        box-sizing: border-box; /* Ensure border is included in size */
         display: flex;
+        box-sizing: border-box; /* Ensure border is included in size */
         align-items: center;
         justify-content: center;
         color: white;
         font-weight: bold;
-        text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.8);
         font-size: 12px;
+        text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.8);
+        background: rgba(255, 0, 0, 0.5);
+        border: 2px dashed white;
         /* Only transition visual properties, not positioning */
         transition:
           background-color 0.2s ease,
@@ -145,21 +145,21 @@
         position: fixed;
         top: 100px;
         right: 10px;
-        background: rgba(0, 0, 0, 0.9);
-        color: white;
-        padding: 15px;
-        border-radius: 8px;
-        font-family: monospace;
-        font-size: 11px;
         z-index: 2000;
         max-width: 300px;
+        padding: 15px;
+        color: white;
+        font-size: 11px;
+        font-family: monospace;
         line-height: 1.4;
+        background: rgba(0, 0, 0, 0.9);
+        border-radius: 8px;
       }
 
       .debug-info h4 {
         margin: 0 0 10px 0;
-        font-size: 12px;
         color: #4caf50;
+        font-size: 12px;
       }
 
       .debug-info .section {
@@ -169,68 +169,68 @@
       }
 
       .debug-info .section:last-child {
-        border-bottom: none;
         margin-bottom: 0;
+        border-bottom: none;
       }
 
       .content-section {
-        background: white;
+        min-width: 1000px; /* Force horizontal scrolling */
         margin: 40px 0;
         padding: 40px;
+        text-align: center;
+        background: white;
         border-radius: 8px;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        text-align: center;
-        min-width: 1000px; /* Force horizontal scrolling */
       }
 
       .content-section:nth-child(even) {
-        background: linear-gradient(135deg, #e3f2fd, #bbdefb);
         color: #1976d2;
+        background: linear-gradient(135deg, #e3f2fd, #bbdefb);
       }
 
       .content-section:nth-child(odd) {
-        background: linear-gradient(135deg, #f3e5f5, #ce93d8);
         color: #7b1fa2;
+        background: linear-gradient(135deg, #f3e5f5, #ce93d8);
       }
 
       .scroll-indicator {
         position: fixed;
         top: 10px;
         right: 10px;
-        background: rgba(0, 0, 0, 0.8);
-        color: white;
-        padding: 10px;
-        border-radius: 4px;
-        font-family: monospace;
-        font-size: 12px;
         z-index: 2000;
+        padding: 10px;
+        color: white;
+        font-size: 12px;
+        font-family: monospace;
+        background: rgba(0, 0, 0, 0.8);
+        border-radius: 4px;
       }
 
       .controls {
-        background: white;
-        padding: 15px;
-        border-radius: 8px;
-        margin-bottom: 20px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
         max-width: 400px;
+        margin-bottom: 20px;
+        padding: 15px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
       }
 
       .controls h3 {
         margin: 0 0 15px 0;
-        font-size: 16px;
         color: #333;
+        font-size: 16px;
       }
 
       .controls button {
+        margin-right: 10px;
         padding: 10px 15px;
-        background: #4caf50;
         color: white;
+        font-weight: bold;
+        font-size: 14px;
+        background: #4caf50;
         border: none;
         border-radius: 4px;
         cursor: pointer;
-        font-size: 14px;
-        font-weight: bold;
-        margin-right: 10px;
       }
 
       .controls button:hover {
@@ -244,11 +244,11 @@
       .mode-status {
         margin-top: 10px;
         padding: 8px 12px;
-        background: #f0f0f0;
-        border-radius: 4px;
-        font-size: 12px;
         color: #666;
         font-style: italic;
+        font-size: 12px;
+        background: #f0f0f0;
+        border-radius: 4px;
       }
     </style>
   </head>

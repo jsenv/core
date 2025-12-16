@@ -1,9 +1,9 @@
 .box {
-  display: inline-flex;
-  align-items: flex-start; /* # or aspectRatio is ignored, see https://stackoverflow.com/questions/68739963/why-is-aspect-ratio-css-property-inside-flexbox-sometimes-ignored/68740146 */
   position: relative;
-  font-size: inherit; /* when box are inside <button> for some reason the font-size is decreased */
+  display: inline-flex;
   box-sizing: border-box;
+  align-items: flex-start; /* # or aspectRatio is ignored, see https://stackoverflow.com/questions/68739963/why-is-aspect-ratio-css-property-inside-flexbox-sometimes-ignored/68740146 */
+  font-size: inherit; /* when box are inside <button> for some reason the font-size is decreased */
 }
 
 .box[data-vertical] {
@@ -17,7 +17,7 @@
 }
 
 button.box {
-  border: none;
   padding: 0;
   background: none;
+  border: none;
 }

@@ -27,24 +27,24 @@ body {
 }
 
 aside {
-  width: 250px; /* Default width that can be overridden by resize */
-  flex-shrink: 0; /* Prevents sidebar from shrinking when window is narrow */
-  height: 100vh; /* Full viewport height */
-  min-height: 600px; /* Ideally should 150px * explorer_items + explorer_head height */
   position: sticky;
   top: 0; /* Keeps sidebar visible when scrolling */
-  border-right: 1px solid #e0e0e0;
-  min-width: 100px; /* Prevents sidebar from becoming too narrow */
   z-index: 1; /* Ensures sidebar is above main content */
+  width: 250px; /* Default width that can be overridden by resize */
+  min-width: 100px; /* Prevents sidebar from becoming too narrow */
+  height: 100vh; /* Full viewport height */
+  min-height: 600px; /* Ideally should 150px * explorer_items + explorer_head height */
+  flex-shrink: 0; /* Prevents sidebar from shrinking when window is narrow */
+  border-right: 1px solid #e0e0e0;
 }
 
 aside > [data-resize-handle] {
   position: absolute;
+  top: 0;
+  right: -2.5px; /* Centers the handle on the border */
+  bottom: 0;
   z-index: 1; /* Ensures resize handle appears above sidebar content */
   width: 5px;
-  right: -2.5px; /* Centers the handle on the border */
-  top: 0;
-  bottom: 0;
   cursor: ew-resize; /* Indicates horizontal resize capability */
 }
 aside > [data-resize-handle]:hover,
@@ -54,15 +54,14 @@ aside[data-resizing] > [data-resize-handle] {
 }
 
 main {
-  padding-bottom: 0;
-  min-width: 200px; /* Prevents content area from becoming too narrow */
-  box-sizing: border-box;
-  min-height: 100vh; /* Ensures content area is at least viewport height */
-  overflow-x: auto; /* Horizontal scrollbar appears when content is wider than available space */
-  /* scrollbar-gutter: stable; */ /* Reserves space for scrollbar to prevent layout shifts */
-  flex: 1;
   position: relative;
   z-index: 0; /* Ensures main content is below the sidebar */
+  box-sizing: border-box;
+  min-width: 200px; /* Prevents content area from becoming too narrow */
+  min-height: 100vh; /* Ensures content area is at least viewport height */
+  padding-bottom: 0;
+  flex: 1;
+  overflow-x: auto; /* Reserves space for scrollbar to prevent layout shifts */ /* Horizontal scrollbar appears when content is wider than available space */
 }
 .main_body {
   display: flex;

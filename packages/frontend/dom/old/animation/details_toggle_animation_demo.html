@@ -18,15 +18,15 @@
       }
 
       main {
-        min-width: 200px;
-        padding-bottom: 0;
-        min-width: 200px; /* Prevents content area from becoming too narrow */
         box-sizing: border-box;
-        min-height: 80vh; /* Ensures content area is at least viewport height */
-        overflow-x: auto; /* Horizontal scrollbar appears when content is wider than available space */
-        scrollbar-gutter: stable; /* Reserves space for scrollbar to prevent layout shifts */
 
         width: 100px;
+        min-width: 200px;
+        min-width: 200px; /* Prevents content area from becoming too narrow */
+        min-height: 80vh; /* Ensures content area is at least viewport height */
+        padding-bottom: 0;
+        overflow-x: auto; /* Horizontal scrollbar appears when content is wider than available space */
+        scrollbar-gutter: stable; /* Reserves space for scrollbar to prevent layout shifts */
       }
 
       details {
@@ -35,8 +35,8 @@
       }
 
       details > summary {
-        user-select: none;
         background: lightblue;
+        user-select: none;
       }
 
       details > summary + * {

@@ -4,7 +4,7 @@
 run({
   browserLauncher: chromium,
   browserName: "chromium",
-})
+});
 ```
 
 # 1/2 write 7 files into "./output/"
@@ -14,7 +14,7 @@ see [./output/](./output/)
 # 2/2 resolve
 
 ```js
-undefined
+undefined;
 ```
 
 ---

@@ -13,19 +13,19 @@
 }
 
 #settings_box {
-  display: none;
   position: absolute;
-  bottom: 40px;
   right: 0;
-  text-align: center;
-  padding: 17px;
-  font-size: 14px;
-  color: #fff;
-  background-color: #030713;
-  border-radius: 5px 5px 0 0;
+  bottom: 40px;
+  z-index: -1;
+  display: none;
   min-width: 250px;
   min-height: 150px;
-  z-index: -1;
+  padding: 17px;
+  color: #fff;
+  font-size: 14px;
+  text-align: center;
+  background-color: #030713;
+  border-radius: 5px 5px 0 0;
 }
 
 [data-active] #settings_box {
@@ -45,45 +45,45 @@
 }
 
 #settings_box_body {
-  text-align: left;
-  padding: 18px 0;
-  max-height: 80vh;
-  overflow: auto;
-  width: 100vw;
   display: flex;
+  width: 100vw;
+  max-height: 80vh;
+  padding: 18px 0;
   justify-content: center;
+  text-align: left;
+  overflow: auto;
 }
 
 .settings_box_items_wrapper {
-  max-width: 700px;
   display: flex;
+  max-width: 700px;
   flex-wrap: wrap;
   justify-content: center;
 }
 
 .settings_box_item {
-  padding: 15px;
-  background: #0c111b;
   width: 250px;
   margin: 9px 18px;
+  padding: 15px;
+  background: #0c111b;
 }
 
 #settings_box_header .settings_icon {
+  position: relative;
+  top: 4px;
+  width: 22px;
+  height: 22px;
+  margin-right: 10px;
   fill: none;
   stroke: #24b1b0;
   stroke-width: 2;
-  margin-right: 10px;
-  width: 22px;
-  height: 22px;
-  position: relative;
-  top: 4px;
 }
 
 #settings_box h3 {
   display: inline-block;
-  font-size: 20px;
   margin: 10px 0;
   color: #24b1b0;
+  font-size: 20px;
 }
 
 #settings_close_button {
@@ -95,32 +95,32 @@
 }
 
 label {
+  display: block;
+  padding-bottom: 3px;
   color: #a9a8a8;
   font-size: 14px;
-  padding-bottom: 3px;
-  display: block;
 }
 
 #settings_box .category_title {
+  display: inline-block;
+  margin-top: 4px;
+  margin-bottom: 15px;
   color: #24b1b0;
   font-size: 16px;
-  display: inline-block;
-  margin-bottom: 15px;
-  margin-top: 4px;
 }
 
 #settings_box .category_title svg {
-  fill: currentColor;
-  vertical-align: top;
-  margin-right: 5px;
   width: 18px;
   height: 18px;
+  margin-right: 5px;
+  vertical-align: top;
+  fill: currentColor;
 }
 
 #settings_box .category_subtitle {
+  max-width: 220px;
   color: #a9a8a8;
   font-size: 14px;
-  max-width: 220px;
 }
 
 /* checkbox switch */
@@ -134,34 +134,34 @@ label {
 }
 .switch input {
   position: absolute;
-  opacity: 0;
   width: 0;
   height: 0;
+  opacity: 0;
 }
 .switch .slider {
   position: absolute;
-  vertical-align: middle;
-  height: 0.3em;
-  left: 0.5em;
-  right: 0.5em;
   top: 50%;
+  right: 0.5em;
+  left: 0.5em;
+  height: 0.3em;
   margin-top: -0.15em;
+  vertical-align: middle;
   background-color: #4c4c4c;
-  transition: 0.4s;
   border-radius: 0.15em;
+  transition: 0.4s;
 }
 .switch .square {
   position: absolute;
-  content: "";
-  height: 1em;
-  width: 1em;
-  left: 0.5em;
   top: 50%;
+  left: 0.5em;
+  width: 1em;
+  height: 1em;
   margin-top: -0.5em;
-  background-color: #4c4c4c;
   color: #030713;
-  transition: 0.4s;
+  background-color: #4c4c4c;
   border-radius: 0.15em;
+  transition: 0.4s;
+  content: "";
 }
 .switch input + * {
   position: relative;
@@ -171,15 +171,15 @@ label {
   /* It's important to have a border (event transparent)
 To be able to apply an outline to this element later*/
   border-width: 1px;
-  border-color: transparent;
   border-style: solid;
+  border-color: transparent;
 }
 .switch input:checked + * .slider {
   background-color: #24b1b0;
 }
 .switch input:checked + * .square {
-  transform: translateX(1.6em);
   background-color: #24b1b0;
+  transform: translateX(1.6em);
 }
 
 .settings_box_item[data-disabled] {

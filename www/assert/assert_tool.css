@@ -6,49 +6,49 @@ body {
 }
 
 body {
-  padding: 10px;
   box-sizing: border-box;
+  padding: 10px;
 }
 
 .columns {
   display: flex;
-  gap: 20px;
   width: 100%;
+  gap: 20px;
 }
 
 .column {
-  flex: 1;
   display: flex;
+  flex: 1;
   flex-direction: column;
 }
 
 textarea {
+  box-sizing: border-box;
   width: 100%;
   height: 120px;
-  resize: vertical;
   padding: 10px;
-  box-sizing: border-box;
-  background: #282c34;
   color: #cccccc;
-  border: 0;
-  border-radius: 8px;
+  font-size: 14px;
   font-family:
     SauceCodePro Nerd Font,
     Source Code Pro,
     Courier;
-  font-size: 14px;
+  background: #282c34;
+  border: 0;
+  border-radius: 8px;
+  resize: vertical;
 }
 
 label {
   margin-bottom: 5px;
+  padding: 0 0 5px 8px;
+  color: #333333;
   font-weight: bold;
+  font-size: 18px;
   font-family:
     Helvetica Neue,
     Helvetica,
     sans-serif;
-  padding: 0 0 5px 8px;
-  font-size: 18px;
-  color: #333333;
 }
 
 form {
@@ -56,12 +56,12 @@ form {
 }
 
 button {
-  color: #ffffff;
-  cursor: pointer;
-  appearance: none;
-  padding: 8px 14px 8px 14px;
-  border: 0;
-  background: #ff5f57;
   margin: 10px 0 0 8px;
+  padding: 8px 14px 8px 14px;
+  color: #ffffff;
+  background: #ff5f57;
+  border: 0;
   border-radius: 5px;
+  appearance: none;
+  cursor: pointer;
 }

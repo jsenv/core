@@ -37,12 +37,12 @@ import { cloneElement } from "preact";
 
 import.meta.css = /* css */ `
   .svg_mask_content * {
-    fill: black !important;
-    stroke: black !important;
-    fill-opacity: 1 !important;
-    stroke-opacity: 1 !important;
     color: black !important;
     opacity: 1 !important;
+    fill: black !important;
+    fill-opacity: 1 !important;
+    stroke: black !important;
+    stroke-opacity: 1 !important;
   }
 `;
 

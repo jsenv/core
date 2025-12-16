@@ -452,11 +452,11 @@ import.meta.css = /* css */ `
     position: fixed;
     top: 0;
     left: 0;
+    z-index: 999998;
     width: 100vw;
     height: 100vh;
-    overflow: hidden;
     pointer-events: none;
-    z-index: 999998;
+    overflow: hidden;
     --marker-size: ${MARKER_SIZE}px;
   }
 
@@ -521,33 +521,33 @@ import.meta.css = /* css */ `
 
   .navi_debug_marker_label {
     position: absolute;
-    font-size: 12px;
-    font-weight: bold;
-    background: rgba(255, 255, 255, 0.9);
     padding: 2px 6px;
-    border-radius: 3px;
-    border: 1px solid;
-    white-space: nowrap;
-    pointer-events: none;
     color: rgb(from var(--marker-color) r g b / 1);
+    font-weight: bold;
+    font-size: 12px;
+    white-space: nowrap;
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid;
     border-color: rgb(from var(--marker-color) r g b / 1);
+    border-radius: 3px;
+    pointer-events: none;
   }
 
   /* Label positioning based on side data attributes */
 
   /* Left side markers - vertical with 90° rotation */
   .navi_debug_marker[data-left] .navi_debug_marker_label {
-    left: 10px;
     top: 20px;
+    left: 10px;
     transform: rotate(90deg);
     transform-origin: left center;
   }
 
   /* Right side markers - vertical with -90° rotation */
   .navi_debug_marker[data-right] .navi_debug_marker_label {
+    top: 20px;
     right: 10px;
     left: auto;
-    top: 20px;
     transform: rotate(-90deg);
     transform-origin: right center;
   }
@@ -560,16 +560,16 @@ import.meta.css = /* css */ `
 
   /* Bottom side markers - horizontal, label on the line */
   .navi_debug_marker[data-bottom] .navi_debug_marker_label {
-    bottom: 0px;
     top: auto;
+    bottom: 0px;
     left: 20px;
   }
 
   .navi_obstacle_marker {
     position: absolute;
+    z-index: 9999;
     background-color: orange;
     opacity: 0.6;
-    z-index: 9999;
     pointer-events: none;
   }
 
@@ -577,20 +577,20 @@ import.meta.css = /* css */ `
     position: absolute;
     top: 50%;
     left: 50%;
-    transform: translate(-50%, -50%);
-    font-size: 12px;
-    font-weight: bold;
     color: white;
+    font-weight: bold;
+    font-size: 12px;
     text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.8);
+    transform: translate(-50%, -50%);
     pointer-events: none;
   }
 
   .navi_element_marker {
     position: absolute;
+    z-index: 9997;
     background-color: var(--element-color-alpha, rgba(255, 0, 150, 0.3));
     border: 2px solid var(--element-color, rgb(255, 0, 150));
     opacity: 0.9;
-    z-index: 9997;
     pointer-events: none;
   }
 
@@ -598,23 +598,23 @@ import.meta.css = /* css */ `
     position: absolute;
     top: -25px;
     right: 0;
-    font-size: 11px;
-    font-weight: bold;
-    color: var(--element-color, rgb(255, 0, 150));
-    background: rgba(255, 255, 255, 0.9);
     padding: 2px 6px;
-    border-radius: 3px;
-    border: 1px solid var(--element-color, rgb(255, 0, 150));
+    color: var(--element-color, rgb(255, 0, 150));
+    font-weight: bold;
+    font-size: 11px;
     white-space: nowrap;
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid var(--element-color, rgb(255, 0, 150));
+    border-radius: 3px;
     pointer-events: none;
   }
 
   .navi_reference_element_marker {
     position: absolute;
+    z-index: 9998;
     background-color: rgba(0, 150, 255, 0.3);
     border: 2px dashed rgba(0, 150, 255, 0.7);
     opacity: 0.8;
-    z-index: 9998;
     pointer-events: none;
   }
 
@@ -622,14 +622,14 @@ import.meta.css = /* css */ `
     position: absolute;
     top: -25px;
     left: 0;
-    font-size: 11px;
-    font-weight: bold;
-    color: rgba(0, 150, 255, 1);
-    background: rgba(255, 255, 255, 0.9);
     padding: 2px 6px;
-    border-radius: 3px;
-    border: 1px solid rgba(0, 150, 255, 0.7);
+    color: rgba(0, 150, 255, 1);
+    font-weight: bold;
+    font-size: 11px;
     white-space: nowrap;
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(0, 150, 255, 0.7);
+    border-radius: 3px;
     pointer-events: none;
   }
 `;

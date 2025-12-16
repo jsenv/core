@@ -207,23 +207,23 @@ const appendIntoRespectingLineBreaksAndIndentation = (
 const createToolbarTriggerNode = () => {
   const css = /* css */ `
     #jsenv_toolbar_trigger {
-      display: block;
-      overflow: hidden;
       position: fixed;
-      z-index: 1000;
-      bottom: -32px;
       right: 20px;
-      height: 40px;
+      bottom: -32px;
+      z-index: 1000;
+      display: block;
       width: 40px;
-      padding: 0;
+      height: 40px;
       margin: 0;
-      border-radius: 5px 5px 0 0;
+      padding: 0;
+      text-align: center;
+      background: transparent;
       border: 1px solid rgba(0, 0, 0, 0.33);
       border-bottom: none;
+      border-radius: 5px 5px 0 0;
       box-shadow: 0px 0px 6px 2px rgba(0, 0, 0, 0.46);
-      background: transparent;
-      text-align: center;
       transition: 600ms;
+      overflow: hidden;
     }
 
     #jsenv_toolbar_trigger:hover {

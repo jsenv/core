@@ -129,11 +129,11 @@
     "open": "10.2.0",
     "playwright": "1.56.1",
     "preact": "11.0.0-beta.0",
-    "prettier": "3.6.2",
+    "prettier": "3.7.4",
     "prettier-plugin-css-order": "git+https://github.com/dmail-fork/prettier-plugin-css-order.git",
     "prettier-plugin-embed": "0.5.0",
     "prettier-plugin-organize-imports": "4.3.0",
-    "prettier-plugin-packagejson": "2.5.19",
+    "prettier-plugin-packagejson": "2.5.20",
     "prettier-plugin-sql": "0.19.2",
     "strip-ansi": "7.1.2"
   },

@@ -5,9 +5,8 @@ import { babelPluginMetadataImportMetaHot } from "./babel_plugin_metadata_import
 import { collectHotDataFromHtmlAst } from "./html_hot_dependencies.js";
 
 export const jsenvPluginImportMetaHot = () => {
-  const importMetaHotClientFileUrl = import.meta.resolve(
-    "./client/import_meta_hot.js",
-  );
+  const importMetaHotClientFileUrl = import.meta
+    .resolve("./client/import_meta_hot.js");
 
   return {
     name: "jsenv:import_meta_hot",

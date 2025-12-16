@@ -7,16 +7,16 @@
     <link rel="icon" href="data:," />
     <style>
       body {
-        font-family: system-ui, sans-serif;
         margin: 20px;
+        font-family: system-ui, sans-serif;
         background: #f5f5f5;
       }
 
       .demo-container {
         max-width: 800px;
         margin: 0 auto;
-        background: white;
         padding: 20px;
+        background: white;
         border-radius: 8px;
         box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
       }
@@ -24,17 +24,17 @@
       .section {
         margin-bottom: 25px;
         padding: 15px;
+        background: #fafafa;
         border: 1px solid #ddd;
         border-radius: 6px;
-        background: #fafafa;
       }
 
       .section h3 {
         margin: 0 0 15px 0;
-        font-size: 16px;
-        color: #333;
-        border-bottom: 1px solid #eee;
         padding-bottom: 8px;
+        color: #333;
+        font-size: 16px;
+        border-bottom: 1px solid #eee;
       }
 
       .table-container {
@@ -45,22 +45,22 @@
 
       .table {
         width: 100%;
-        border-collapse: collapse;
         background: white;
+        border-collapse: collapse;
       }
 
       .table th,
       .table td {
         padding: 8px 12px;
+        font-size: 12px;
         text-align: left;
         border-bottom: 1px solid #eee;
-        font-size: 12px;
       }
 
       .table th {
-        background: #f8f9fa;
-        font-weight: 600;
         color: #495057;
+        font-weight: 600;
+        background: #f8f9fa;
       }
 
       .table-row {
@@ -82,19 +82,19 @@
 
       .controls {
         display: flex;
-        gap: 8px;
-        align-items: center;
         flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
       }
 
       .btn {
         padding: 4px 8px;
+        color: #333;
         font-size: 11px;
+        background: white;
         border: 1px solid #ddd;
         border-radius: 3px;
-        background: white;
         cursor: pointer;
-        color: #333;
       }
 
       .btn:hover {
@@ -102,8 +102,8 @@
       }
 
       .btn--primary {
-        background: #007bff;
         color: white;
+        background: #007bff;
         border-color: #007bff;
       }
 
@@ -118,23 +118,23 @@
 
       .info-grid {
         display: grid;
+        margin-top: 10px;
         grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
         gap: 10px;
-        margin-top: 10px;
       }
 
       .info-item {
-        background: white;
         padding: 8px;
-        border-radius: 4px;
-        border: 1px solid #e0e0e0;
         font-size: 11px;
+        background: white;
+        border: 1px solid #e0e0e0;
+        border-radius: 4px;
       }
 
       .info-item strong {
-        color: #333;
         display: block;
         margin-bottom: 4px;
+        color: #333;
       }
 
       .tracked-rows {
@@ -144,26 +144,26 @@
       }
 
       .tracked-row-item {
-        background: white;
-        padding: 6px 8px;
-        border-radius: 3px;
-        border: 1px solid #ddd;
-        font-size: 10px;
         display: flex;
-        justify-content: space-between;
+        padding: 6px 8px;
         align-items: center;
+        justify-content: space-between;
+        font-size: 10px;
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 3px;
       }
 
       .log {
+        max-height: 200px;
+        padding: 10px;
+        font-size: 10px;
+        font-family: "Courier New", monospace;
+        white-space: pre-wrap;
         background: #f8f9fa;
         border: 1px solid #dee2e6;
         border-radius: 4px;
-        padding: 10px;
-        font-family: "Courier New", monospace;
-        font-size: 10px;
-        max-height: 200px;
         overflow-y: auto;
-        white-space: pre-wrap;
       }
     </style>
   </head>

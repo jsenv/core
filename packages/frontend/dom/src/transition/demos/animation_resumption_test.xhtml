@@ -5,39 +5,39 @@
     <style>
       body {
         margin: 0;
-        font-family: system-ui;
         padding: 20px;
+        font-family: system-ui;
         background: #f0f0f0;
       }
 
       .controls {
-        background: white;
-        padding: 20px;
-        border-radius: 8px;
         margin-bottom: 20px;
+        padding: 20px;
+        background: white;
+        border-radius: 8px;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
       }
 
       .control-group {
-        margin-bottom: 16px;
         display: flex;
-        gap: 12px;
-        align-items: center;
+        margin-bottom: 16px;
         flex-wrap: wrap;
+        align-items: center;
+        gap: 12px;
       }
 
       .control-group label {
-        font-weight: bold;
         min-width: 120px;
+        font-weight: bold;
       }
 
       button {
         padding: 8px 16px;
+        background: #f8f9fa;
         border: 1px solid #ccc;
         border-radius: 4px;
-        background: #f8f9fa;
-        cursor: pointer;
         transition: background 0.2s;
+        cursor: pointer;
       }
 
       button:hover {
@@ -45,8 +45,8 @@
       }
 
       button.active {
-        background: #0066cc;
         color: white;
+        background: #0066cc;
         border-color: #0066cc;
       }
 
@@ -62,19 +62,19 @@
       }
 
       .test-element {
-        background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
-        border: 2px solid #333;
-        border-radius: 8px;
+        position: relative;
+        display: flex;
+        margin: 20px 0;
+        align-items: center;
+        justify-content: center;
         color: white;
         font-weight: bold;
         text-align: center;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin: 20px 0;
+        background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+        border: 2px solid #333;
+        border-radius: 8px;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
         transition: box-shadow 0.2s;
-        position: relative;
       }
 
       .test-element[data-height-animated] {
@@ -94,18 +94,18 @@
       }
 
       .status {
-        background: white;
-        padding: 16px;
-        border-radius: 8px;
         margin-bottom: 20px;
+        padding: 16px;
+        background: white;
+        border-radius: 8px;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
       }
 
       .status-item {
         margin: 8px 0;
         padding: 8px;
-        border-radius: 4px;
         background: #f8f9fa;
+        border-radius: 4px;
       }
 
       .status-item.playing {
@@ -124,31 +124,31 @@
       }
 
       .debug-log {
-        background: #1e1e1e;
-        color: #00ff00;
-        padding: 16px;
-        border-radius: 8px;
-        font-family: monospace;
-        font-size: 12px;
         height: 200px;
-        overflow-y: auto;
         margin-top: 20px;
+        padding: 16px;
+        color: #00ff00;
+        font-size: 12px;
+        font-family: monospace;
+        background: #1e1e1e;
+        border-radius: 8px;
+        overflow-y: auto;
       }
 
       .progress-bar {
         width: 100%;
         height: 20px;
+        margin: 8px 0;
         background: #e9ecef;
         border-radius: 10px;
         overflow: hidden;
-        margin: 8px 0;
       }
 
       .progress-fill {
         height: 100%;
         background: linear-gradient(90deg, #ff6b6b, #4ecdc4);
-        transition: width 0.1s linear;
         border-radius: 10px;
+        transition: width 0.1s linear;
       }
     </style>
   </head>

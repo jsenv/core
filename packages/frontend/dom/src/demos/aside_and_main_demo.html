@@ -22,24 +22,24 @@
       }
 
       aside {
-        background: #f0f0f0;
-        border-right: 1px solid #ccc;
-        height: 100vh;
         position: sticky;
         top: 0;
         width: 200px;
         min-width: 100px;
+        height: 100vh;
+        background: #f0f0f0;
+        border-right: 1px solid #ccc;
       }
 
       main {
-        min-width: 200px;
-        padding-bottom: 0;
-        min-width: 200px; /* Prevents content area from becoming too narrow */
         box-sizing: border-box;
+        min-width: 200px;
+        min-width: 200px; /* Prevents content area from becoming too narrow */
         min-height: 100vh; /* Ensures content area is at least viewport height */
+        padding-bottom: 0;
+        flex: 1;
         overflow-x: auto; /* Horizontal scrollbar appears when content is wider than available space */
         scrollbar-gutter: stable; /* Reserves space for scrollbar to prevent layout shifts */
-        flex: 1;
       }
 
       .main_body {
@@ -49,11 +49,11 @@
 
       aside > [data-resize-handle] {
         position: absolute;
+        top: 0;
+        right: -2.5px; /* Centers the handle on the border */
+        bottom: 0;
         z-index: 1; /* Ensures resize handle appears above sidebar content */
         width: 5px;
-        right: -2.5px; /* Centers the handle on the border */
-        top: 0;
-        bottom: 0;
         cursor: ew-resize; /* Indicates horizontal resize capability */
       }
       aside > [data-resize-handle]:hover,

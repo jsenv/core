@@ -1,16 +1,16 @@
 .inserts_wrapper {
   position: relative;
   display: flex;
-  flex-direction: column;
+  height: 100%;
   min-height: 0;
   flex-grow: 1;
-  height: 100%;
+  flex-direction: column;
 }
 
 .insert_main {
   display: flex;
-  flex: 1;
   min-height: 0;
+  flex: 1;
 }
 
 .insert_top,

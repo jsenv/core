@@ -39,9 +39,8 @@ This package uses Node.js worker threads to perform imports in a separate contex
 ```js
 import { importOneExportFromFile } from "@jsenv/dynamic-import-worker";
 
-const randomNumberFileUrl = import.meta.resolve(
-  "./random_number.mjs#randomNumber",
-);
+const randomNumberFileUrl = import.meta
+  .resolve("./random_number.mjs#randomNumber");
 
 const randomNumberA = await importOneExportFromFile(randomNumberFileUrl);
 const randomNumberB = await importOneExportFromFile(randomNumberFileUrl);

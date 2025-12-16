@@ -369,8 +369,8 @@ Bundling combines multiple files into fewer files, improving performance. Bundli
 
 The bundlers used are:
 
-| File type | bundler used                                                                |
-| --------- | --------------------------------------------------------------------------- |
+| File type | bundler used                                                               |
+| --------- | -------------------------------------------------------------------------- |
 | js module | [rollup](https://github.com/rollup/rollup)<sup>↗</sup>                     |
 | css       | [lightningcss](https://github.com/parcel-bundler/lightningcss)<sup>↗</sup> |
 
@@ -430,12 +430,12 @@ Minification reduces file size and is enabled by default.
 
 The minifiers used are:
 
-| File type                | Minifier used                                                               |
-| ------------------------ | --------------------------------------------------------------------------- |
+| File type                | Minifier used                                                              |
+| ------------------------ | -------------------------------------------------------------------------- |
 | js module and js classic | [terser](https://github.com/terser/terser)<sup>↗</sup>                     |
 | html and svg             | [html-minifier](https://github.com/kangax/html-minifier)<sup>↗</sup>       |
 | css                      | [lightningcss](https://github.com/parcel-bundler/lightningcss)<sup>↗</sup> |
-| json                     | White spaces are removed using JSON.stringify                               |
+| json                     | White spaces are removed using JSON.stringify                              |
 
 You can configure which files to minify:
 

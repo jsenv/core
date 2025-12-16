@@ -4,33 +4,33 @@ import { render } from "preact";
 // Add CSS styles
 import.meta.css = /* css */ `
   body {
-    font-family: Arial, sans-serif;
     max-width: 800px;
     margin: 20px auto;
     padding: 20px;
+    font-family: Arial, sans-serif;
     line-height: 1.6;
   }
 
   .tree-container {
-    border: 2px solid #333;
-    padding: 20px;
     margin: 20px 0;
+    padding: 20px;
     background: #f9f9f9;
+    border: 2px solid #333;
   }
 
   details {
     margin: 8px 0;
+    background: white;
     border: 1px solid #ddd;
     border-radius: 4px;
-    background: white;
   }
 
   summary {
     padding: 12px;
-    background: #e8e8e8;
-    cursor: pointer;
-    border-radius: 4px 4px 0 0;
     font-weight: bold;
+    background: #e8e8e8;
+    border-radius: 4px 4px 0 0;
+    cursor: pointer;
   }
 
   summary:hover {
@@ -43,13 +43,13 @@ import.meta.css = /* css */ `
 
   .focusable-item {
     display: block;
-    padding: 8px 12px;
     margin: 4px 0;
+    padding: 8px 12px;
+    color: #333;
+    text-decoration: none;
     background: #fff;
     border: 1px solid #ccc;
     border-radius: 3px;
-    text-decoration: none;
-    color: #333;
     cursor: pointer;
   }
 
@@ -59,9 +59,9 @@ import.meta.css = /* css */ `
   }
 
   .focusable-item:focus {
+    background: #e6f3ff;
     outline: 2px solid #0066cc;
     outline-offset: 1px;
-    background: #e6f3ff;
   }
 
   .debug {
@@ -69,12 +69,12 @@ import.meta.css = /* css */ `
     top: 10px;
     right: 10px;
     width: 300px;
-    background: #222;
-    color: #fff;
-    padding: 10px;
-    border-radius: 4px;
-    font-size: 12px;
     max-height: 300px;
+    padding: 10px;
+    color: #fff;
+    font-size: 12px;
+    background: #222;
+    border-radius: 4px;
     overflow-y: auto;
   }
 
@@ -97,13 +97,13 @@ import.meta.css = /* css */ `
   }
 
   .before-tree {
-    border: 2px solid #0066cc;
     background: #f0f8ff;
+    border: 2px solid #0066cc;
   }
 
   .after-tree {
-    border: 2px solid #cc6600;
     background: #fff8f0;
+    border: 2px solid #cc6600;
   }
 
   input,

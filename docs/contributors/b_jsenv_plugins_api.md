@@ -336,29 +336,29 @@ A corresponding reference object is created that looks like this:
 
 A string, each value map to a way to reference an url.
 
-| reference.type           | Scenario where it gets created                                                                                           |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------------------ |
-| `"http_request"`         | dev server receives a request                                                                                            |
-| `"entry_point"`          | build [entryPoints](<B)-JavaScript-API#23-entrypoints>)                                                                  |
-| `"link_href"`            | `<link href="./favicon.ico">`                                                                                            |
-| `"style"`                | `<style>body { background: red; }<style>`                                                                                |
-| `"script"`               | `<script src="./file.js">`                                                                                               |
-| `"a_href"`               | `<a href="./file.pdf">`                                                                                                  |
-| `"iframe_src"`           | `<iframe src="./file.html">`                                                                                             |
-| `"img_src"`              | `<img src="./file.png">`                                                                                                 |
-| `"img_srcset"`           | `<img srcset="./file_480w.jpg 480w, ./file_800w.jpg 800w">`                                                              |
-| `"source_src"`           | `<source src="./file.mp3">`                                                                                              |
-| `"source_srcset"`        | `<source srcset="./file_480w.jpg 480w, ./file_800w.jpg 800w">`                                                           |
-| `"image_href"`           | `<image href="./file.svg">`                                                                                              |
-| `"use_href"`             | `<use href="./file.svg">`                                                                                                |
-| `"css_@import"`          | `@import "/file.css"`                                                                                                    |
-| `"css_url"`              | `background-image: url("/file.jpg")`                                                                                     |
-| `"js_import"`            | `import "./file.js"`                                                                                                     |
-| `"js_url"`               | `new URL("./file.json", import.meta.url)`                                                                                |
-| `"js_inline_content"`    | `new Blob([".a { color: red; }"], { type: "text/css" })`                                                                 |
-| `"sourcemap_comment"`    | `//*# sourceMappingURL=./file.map`                                                                                       |
+| reference.type           | Scenario where it gets created                                                                                          |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------- |
+| `"http_request"`         | dev server receives a request                                                                                           |
+| `"entry_point"`          | build [entryPoints](<B)-JavaScript-API#23-entrypoints>)                                                                 |
+| `"link_href"`            | `<link href="./favicon.ico">`                                                                                           |
+| `"style"`                | `<style>body { background: red; }<style>`                                                                               |
+| `"script"`               | `<script src="./file.js">`                                                                                              |
+| `"a_href"`               | `<a href="./file.pdf">`                                                                                                 |
+| `"iframe_src"`           | `<iframe src="./file.html">`                                                                                            |
+| `"img_src"`              | `<img src="./file.png">`                                                                                                |
+| `"img_srcset"`           | `<img srcset="./file_480w.jpg 480w, ./file_800w.jpg 800w">`                                                             |
+| `"source_src"`           | `<source src="./file.mp3">`                                                                                             |
+| `"source_srcset"`        | `<source srcset="./file_480w.jpg 480w, ./file_800w.jpg 800w">`                                                          |
+| `"image_href"`           | `<image href="./file.svg">`                                                                                             |
+| `"use_href"`             | `<use href="./file.svg">`                                                                                               |
+| `"css_@import"`          | `@import "/file.css"`                                                                                                   |
+| `"css_url"`              | `background-image: url("/file.jpg")`                                                                                    |
+| `"js_import"`            | `import "./file.js"`                                                                                                    |
+| `"js_url"`               | `new URL("./file.json", import.meta.url)`                                                                               |
+| `"js_inline_content"`    | `new Blob([".a { color: red; }"], { type: "text/css" })`                                                                |
+| `"sourcemap_comment"`    | `//*# sourceMappingURL=./file.map`                                                                                      |
 | `"webmanifest_icon_src"` | icon found inside [webmanifest](https://developer.mozilla.org/en-US/docs/Web/Manifest#deploying_a_manifest)<sup>↗</sup> |
-| `"package_json"`         | Represent the implicit dependency to a package.json when importing from node_modules                                     |
+| `"package_json"`         | Represent the implicit dependency to a package.json when importing from node_modules                                    |
 
 Hooks receiving `reference` as first argument can use a special notation as shown below:
 
@@ -426,13 +426,13 @@ Example of an url info object:
 
 A string, it categorize content that can be found in `urlInfo.content`.
 
-| urlInfo.type    | Example                                                                                                            |
-| --------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `"html"`        | `<iframe src="file.html">`                                                                                         |
-| `"css"`         | `<link rel="stylesheet" href="file.css" />`                                                                        |
-| `"js_classic"`  | `<script src="file.js">`                                                                                           |
-| `"js_module"`   | `<script type="module" src="file.js">`                                                                             |
-| `"json"`        | `new URL("file.json", import.meta.url)`                                                                            |
+| urlInfo.type    | Example                                                                                                           |
+| --------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `"html"`        | `<iframe src="file.html">`                                                                                        |
+| `"css"`         | `<link rel="stylesheet" href="file.css" />`                                                                       |
+| `"js_classic"`  | `<script src="file.js">`                                                                                          |
+| `"js_module"`   | `<script type="module" src="file.js">`                                                                            |
+| `"json"`        | `new URL("file.json", import.meta.url)`                                                                           |
 | `"webmanifest"` | [`<link rel="manifest">`](https://developer.mozilla.org/en-US/docs/Web/Manifest#deploying_a_manifest)<sup>↗</sup> |
 
 Hooks receiving [2.3 urlInfo](#23-urlInfo) as first argument can use a special notation as shown below:

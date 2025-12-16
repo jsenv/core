@@ -1165,9 +1165,9 @@ window.__supervisor__ = (() => {
       const overlayCSS = /* css */ `
         :host {
           position: fixed;
-          z-index: 99999;
           top: 0;
           left: 0;
+          z-index: 99999;
           width: 100%;
           height: 100%;
           /* overflow-y: scroll; */
@@ -1177,28 +1177,28 @@ window.__supervisor__ = (() => {
 
         .backdrop {
           position: absolute;
-          left: 0;
-          right: 0;
           top: 0;
+          right: 0;
           bottom: 0;
+          left: 0;
         }
 
         .overlay {
           position: relative;
-          background: rgba(0, 0, 0, 0.95);
+          box-sizing: border-box;
           width: 800px;
           max-width: 100vw;
           margin: 30px auto;
           padding: 25px 40px;
           padding-top: 0;
-          overflow: hidden; /* for h1 margins */
+          font-family: monospace;
+          direction: ltr;
+          background: rgba(0, 0, 0, 0.95);
           border-radius: 4px 8px;
           box-shadow:
             0 20px 40px rgb(0 0 0 / 30%),
             0 15px 12px rgb(0 0 0 / 20%);
-          box-sizing: border-box;
-          font-family: monospace;
-          direction: ltr;
+          overflow: hidden; /* for h1 margins */
         }
 
         h1 {
@@ -1207,34 +1207,34 @@ window.__supervisor__ = (() => {
         }
 
         pre {
-          overflow: auto;
           max-width: 100%;
           /* padding is nice + prevents scrollbar from hiding the text behind it */
           /* does not work nicely on firefox though https://bugzilla.mozilla.org/show_bug.cgi?id=748518 */
           padding: 20px;
+          overflow: auto;
         }
 
         .tip {
-          border-top: 1px solid #999;
           padding-top: 12px;
+          border-top: 1px solid #999;
         }
 
         [data-theme="dark"] {
           color: #999;
         }
         [data-theme="dark"] pre {
+          color: #eee;
           background: #111;
           border: 1px solid #333;
-          color: #eee;
         }
 
         [data-theme="light"] {
           color: #eeeeee;
         }
         [data-theme="light"] pre {
+          color: #eeeeee;
           background: #1e1e1e;
           border: 1px solid white;
-          color: #eeeeee;
         }
 
         pre a {

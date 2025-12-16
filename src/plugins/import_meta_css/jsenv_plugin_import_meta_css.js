@@ -26,12 +26,10 @@
 import { applyBabelPlugins } from "@jsenv/ast";
 
 export const jsenvPluginImportMetaCss = () => {
-  const importMetaCssClientFileUrl = import.meta.resolve(
-    "./client/import_meta_css.js",
-  );
-  const importMetaCssBuildFileUrl = import.meta.resolve(
-    "./client/import_meta_css_build.js",
-  );
+  const importMetaCssClientFileUrl = import.meta
+    .resolve("./client/import_meta_css.js");
+  const importMetaCssBuildFileUrl = import.meta
+    .resolve("./client/import_meta_css_build.js");
 
   return {
     name: "jsenv:import_meta_css",

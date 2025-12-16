@@ -25,9 +25,8 @@ import {
 import { createUrlInfoTransformer } from "./url_graph/url_info_transformations.js";
 import { urlSpecifierEncoding } from "./url_graph/url_specifier_encoding.js";
 
-const inlineContentClientFileUrl = import.meta.resolve(
-  "./client/inline_content.js",
-);
+const inlineContentClientFileUrl = import.meta
+  .resolve("./client/inline_content.js");
 
 export const createKitchen = ({
   name,

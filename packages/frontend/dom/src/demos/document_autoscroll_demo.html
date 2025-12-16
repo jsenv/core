@@ -6,26 +6,26 @@
     <title>Document Auto-Scroll Demo</title>
     <style>
       body {
+        min-width: 200vw;
+        min-height: 300vh; /* Make page tall enough to scroll */
         margin: 0;
         padding: 20px;
         font-family: Arial, sans-serif;
         background: #f0f0f0;
-        min-height: 300vh; /* Make page tall enough to scroll */
-        min-width: 200vw;
       }
 
       .demo-header {
-        background: white;
-        padding: 20px;
-        border-radius: 8px;
         margin-bottom: 20px;
+        padding: 20px;
+        background: white;
+        border-radius: 8px;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
       }
 
       .demo-title {
         margin: 0 0 10px 0;
-        font-size: 24px;
         color: #333;
+        font-size: 24px;
       }
 
       .demo-description {
@@ -35,21 +35,21 @@
       }
 
       .draggable-element {
+        z-index: 1000;
+        display: flex;
         width: 120px;
         height: 80px;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        border: 10px solid #333;
-        /* border-radius: 12px; */
-        cursor: grab;
-        display: flex;
         align-items: center;
         justify-content: center;
         color: white;
         font-weight: bold;
         text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5);
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: 10px solid #333;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
         transition: box-shadow 0.2s ease;
-        z-index: 1000;
+        /* border-radius: 12px; */
+        cursor: grab;
         user-select: none;
       }
 
@@ -58,40 +58,40 @@
       }
 
       .draggable-element[data-dragging] {
-        cursor: grabbing;
         box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+        cursor: grabbing;
       }
 
       .content-section {
-        background: white;
         margin: 40px 0;
         padding: 40px;
+        text-align: center;
+        background: white;
         border-radius: 8px;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        text-align: center;
       }
 
       .content-section:nth-child(even) {
-        background: linear-gradient(135deg, #e3f2fd, #bbdefb);
         color: #1976d2;
+        background: linear-gradient(135deg, #e3f2fd, #bbdefb);
       }
 
       .content-section:nth-child(odd) {
-        background: linear-gradient(135deg, #f3e5f5, #ce93d8);
         color: #7b1fa2;
+        background: linear-gradient(135deg, #f3e5f5, #ce93d8);
       }
 
       .scroll-indicator {
         position: fixed;
         top: 10px;
         right: 10px;
-        background: rgba(0, 0, 0, 0.8);
-        color: white;
-        padding: 10px;
-        border-radius: 4px;
-        font-family: monospace;
-        font-size: 12px;
         z-index: 2000;
+        padding: 10px;
+        color: white;
+        font-size: 12px;
+        font-family: monospace;
+        background: rgba(0, 0, 0, 0.8);
+        border-radius: 4px;
       }
     </style>
   </head>

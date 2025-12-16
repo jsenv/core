@@ -78,12 +78,12 @@ const createConstraintFeedbackLine = () => {
 import.meta.css = /* css */ `
   .navi_constraint_feedback_line {
     position: fixed;
-    pointer-events: none;
     z-index: 9998;
-    visibility: hidden;
-    transition: opacity 0.15s ease;
-    transform-origin: left center;
     border-top: 2px dotted rgba(59, 130, 246, 0.7);
+    visibility: hidden;
+    transform-origin: left center;
+    transition: opacity 0.15s ease;
+    pointer-events: none;
   }
 
   .navi_constraint_feedback_line[data-visible] {

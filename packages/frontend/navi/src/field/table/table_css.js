@@ -28,10 +28,10 @@ import.meta.css = /* css */ `
     border-spacing: 0; /* Required for manual border collapse */
   }
   .navi_table_cell {
-    white-space: nowrap;
-    overflow: hidden;
     text-overflow: ellipsis;
+    white-space: nowrap;
     background-color: var(--background-color, transparent);
+    overflow: hidden;
   }
 
   .navi_table_cell[data-align-x="start"] {
@@ -56,40 +56,40 @@ import.meta.css = /* css */ `
   /* Table borders using ::before pseudo-elements */
   /* Default: each cell draws all its own borders (no border-collapse) */
   .navi_table_cell {
-    border: none; /* Remove default borders - we'll use pseudo-elements */
     /* Required for pseudo-element positioning */
     position: relative;
+    border: none; /* Remove default borders - we'll use pseudo-elements */
   }
 
   .navi_table_cell::before {
-    content: "";
     position: absolute;
     inset: 0;
-    pointer-events: none;
     box-shadow:
       inset 0 1px 0 0 var(--border-color),
       inset 1px 0 0 0 var(--border-color),
       inset -1px 0 0 0 var(--border-color),
       inset 0 -1px 0 0 var(--border-color);
+    pointer-events: none;
+    content: "";
   }
   .navi_table_cell::after {
-    content: "";
     position: absolute;
     /* Default: include bottom and right borders (owned by this cell) */
     inset: 0;
     pointer-events: none;
+    content: "";
   }
 
   /* padding */
   .navi_table_cell {
-    padding-left: 12px;
-    padding-right: 12px;
     padding-top: 8px;
+    padding-right: 12px;
     padding-bottom: 8px;
+    padding-left: 12px;
   }
   .navi_table_cell[data-width-xxs] {
-    padding-left: 0;
     padding-right: 0;
+    padding-left: 0;
   }
   .navi_table_cell[data-height-xxs] {
     padding-top: 0;
@@ -111,20 +111,20 @@ import.meta.css = /* css */ `
 
   /* Number column specific styling */
   .navi_row_number_cell {
+    color: #666;
+    font-weight: 500;
     text-align: center;
     background: #fafafa;
-    font-weight: 500;
-    color: #666;
     user-select: none;
   }
 
   .navi_table_cell_content_bold_clone {
-    font-weight: bold; /* force bold to compute max width */
-    visibility: hidden; /* not visible */
     display: block; /* in-flow so it contributes to width */
     height: 0; /* zero height so it doesn't change layout height */
-    overflow: hidden; /* avoid any accidental height */
+    font-weight: bold; /* force bold to compute max width */
+    visibility: hidden; /* not visible */
     pointer-events: none; /* inert */
+    overflow: hidden; /* avoid any accidental height */
   }
 
   /* Border-collapse mode: each cell only owns specific borders to avoid doubling */
@@ -189,13 +189,13 @@ import.meta.css = /* css */ `
   }
 
   .navi_table_cell[data-editing] input {
+    display: inline-flex;
     width: 100%;
     height: 100%;
-    display: inline-flex;
     flex-grow: 1;
-    border-radius: 0; /* match table cell border-radius */
-    border: none;
     font-size: 16px;
+    border: none;
+    border-radius: 0; /* match table cell border-radius */
   }
 
   .navi_table_cell[data-editing]
@@ -205,7 +205,7 @@ import.meta.css = /* css */ `
   }
 
   .navi_table_cell[data-editing] {
-    outline: 2px solid var(--editing-border-color);
     z-index: ${Z_INDEX_EDITING};
+    outline: 2px solid var(--editing-border-color);
   }
 `;

@@ -7,37 +7,37 @@
     <title>Keyboard Shortcuts Demo</title>
     <style>
       body {
-        font-family:
-          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         max-width: 800px;
+        min-height: 100vh;
         margin: 0 auto;
         padding: 40px 20px;
+        color: #333;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         line-height: 1.6;
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        min-height: 100vh;
-        color: #333;
       }
 
       .demo-container {
+        padding: 40px;
         background: white;
         border-radius: 12px;
-        padding: 40px;
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
       }
 
       .demo-title {
-        font-size: 2rem;
-        font-weight: 700;
         margin: 0 0 30px 0;
         color: #2d3748;
+        font-weight: 700;
+        font-size: 2rem;
         text-align: center;
       }
 
       .demo-description {
+        margin: 0 0 30px 0;
+        padding: 20px;
         background: #f7fafc;
         border-left: 4px solid #4299e1;
-        padding: 20px;
-        margin: 0 0 30px 0;
         border-radius: 0 8px 8px 0;
       }
 
@@ -48,41 +48,41 @@
       }
 
       .shortcut-list {
-        list-style: none;
-        padding: 0;
         margin: 0;
+        padding: 0;
+        list-style: none;
       }
 
       .shortcut-item {
         display: flex;
-        align-items: center;
         margin: 10px 0;
         padding: 8px 0;
+        align-items: center;
       }
 
       .shortcut-key {
-        background: #2d3748;
-        color: white;
-        padding: 4px 12px;
-        border-radius: 6px;
-        font-family: "Monaco", "Menlo", monospace;
-        font-size: 0.85rem;
-        font-weight: 600;
-        margin-right: 15px;
         min-width: 60px;
+        margin-right: 15px;
+        padding: 4px 12px;
+        color: white;
+        font-weight: 600;
+        font-size: 0.85rem;
+        font-family: "Monaco", "Menlo", monospace;
         text-align: center;
+        background: #2d3748;
+        border-radius: 6px;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
       }
 
       .shortcut-description {
-        color: #4a5568;
         flex: 1;
+        color: #4a5568;
       }
 
       .demo-link-container {
-        text-align: center;
         margin: 40px 0;
         padding: 30px;
+        text-align: center;
         background: #f8f9fa;
         border: 2px solid #e9ecef;
         border-radius: 12px;
@@ -90,16 +90,16 @@
       }
 
       .instructions {
+        margin-top: 30px;
+        padding: 20px;
         background: #fff5f5;
         border: 1px solid #fed7d7;
         border-radius: 8px;
-        padding: 20px;
-        margin-top: 30px;
       }
 
       .instructions h4 {
-        color: #c53030;
         margin: 0 0 10px 0;
+        color: #c53030;
         font-size: 1rem;
       }
 

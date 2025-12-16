@@ -5,44 +5,44 @@
     <style>
       body {
         margin: 0;
-        font-family: system-ui;
         padding: 20px;
+        font-family: system-ui;
         background: #f0f0f0;
       }
 
       .controls {
-        background: white;
-        padding: 20px;
-        border-radius: 8px;
         margin-bottom: 20px;
+        padding: 20px;
+        background: white;
+        border-radius: 8px;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
       }
 
       .control-group {
-        margin-bottom: 16px;
         display: flex;
-        gap: 12px;
-        align-items: center;
+        margin-bottom: 16px;
         flex-wrap: wrap;
+        align-items: center;
+        gap: 12px;
       }
 
       .control-group label {
-        font-weight: bold;
         min-width: 120px;
+        font-weight: bold;
       }
 
       .toggle-button {
         padding: 12px 24px;
+        color: white;
+        font-weight: bold;
+        font-size: 16px;
+        background: #0066cc;
         border: 2px solid #0066cc;
         border-radius: 8px;
-        background: #0066cc;
-        color: white;
-        cursor: pointer;
-        font-size: 16px;
-        font-weight: bold;
         transition:
           background 0.2s,
           border-color 0.2s;
+        cursor: pointer;
       }
 
       .toggle-button:hover {
@@ -62,17 +62,17 @@
 
       .quick-test-buttons {
         display: flex;
-        gap: 8px;
         margin-top: 12px;
+        gap: 8px;
       }
 
       .quick-test-buttons button {
         padding: 6px 12px;
+        font-size: 14px;
+        background: #f8f9fa;
         border: 1px solid #ccc;
         border-radius: 4px;
-        background: #f8f9fa;
         cursor: pointer;
-        font-size: 14px;
       }
 
       .quick-test-buttons button:hover {
@@ -80,20 +80,20 @@
       }
 
       .test-element {
-        background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
-        border: 2px solid #333;
-        border-radius: 8px;
+        position: relative;
+        display: flex;
+        width: 300px;
+        margin: 20px 0;
+        align-items: center;
+        justify-content: center;
         color: white;
         font-weight: bold;
         text-align: center;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin: 20px 0;
-        width: 300px;
+        background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+        border: 2px solid #333;
+        border-radius: 8px;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
         transition: box-shadow 0.2s;
-        position: relative;
         overflow: hidden;
       }
 
@@ -105,30 +105,30 @@
         position: absolute;
         top: 5px;
         right: 10px;
-        background: rgba(0, 0, 0, 0.7);
-        color: white;
         padding: 4px 8px;
-        border-radius: 4px;
+        color: white;
         font-size: 12px;
         font-family: monospace;
+        background: rgba(0, 0, 0, 0.7);
+        border-radius: 4px;
       }
 
       .status {
-        background: white;
-        padding: 16px;
-        border-radius: 8px;
         margin-bottom: 20px;
+        padding: 16px;
+        background: white;
+        border-radius: 8px;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
       }
 
       .status-item {
+        display: flex;
         margin: 8px 0;
         padding: 8px;
-        border-radius: 4px;
-        background: #f8f9fa;
-        display: flex;
-        justify-content: space-between;
         align-items: center;
+        justify-content: space-between;
+        background: #f8f9fa;
+        border-radius: 4px;
       }
 
       .status-item.expanding {
@@ -149,55 +149,55 @@
       .progress-bar {
         width: 100%;
         height: 12px;
+        margin: 8px 0;
         background: #e9ecef;
         border-radius: 6px;
         overflow: hidden;
-        margin: 8px 0;
       }
 
       .progress-fill {
         height: 100%;
         background: linear-gradient(90deg, #ff6b6b, #4ecdc4);
-        transition: width 0.1s linear;
         border-radius: 6px;
+        transition: width 0.1s linear;
       }
 
       .debug-log {
-        background: #1e1e1e;
-        color: #00ff00;
-        padding: 16px;
-        border-radius: 8px;
-        font-family: monospace;
-        font-size: 12px;
         height: 250px;
-        overflow-y: auto;
         margin-top: 20px;
+        padding: 16px;
+        color: #00ff00;
+        font-size: 12px;
+        font-family: monospace;
+        background: #1e1e1e;
+        border-radius: 8px;
+        overflow-y: auto;
       }
 
       .stats {
         display: grid;
+        margin-top: 16px;
         grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
         gap: 12px;
-        margin-top: 16px;
       }
 
       .stat {
-        background: #f8f9fa;
         padding: 12px;
-        border-radius: 6px;
         text-align: center;
+        background: #f8f9fa;
+        border-radius: 6px;
       }
 
       .stat-value {
-        font-size: 24px;
-        font-weight: bold;
         color: #0066cc;
+        font-weight: bold;
+        font-size: 24px;
       }
 
       .stat-label {
-        font-size: 12px;
-        color: #6c757d;
         margin-top: 4px;
+        color: #6c757d;
+        font-size: 12px;
       }
     </style>
   </head>

@@ -22,37 +22,37 @@
 
       .flex_details_set {
         display: flex;
+
+        display: flex;
+        box-sizing: content-box;
+        width: 300px;
+        height: 60vh;
+        margin-top: 20px;
+        margin-left: 100px;
+        flex-direction: column;
         flex-direction: column;
 
         border: 1px solid black;
-
-        display: flex;
-        flex-direction: column;
-        height: 60vh;
-        box-sizing: content-box;
-        width: 300px;
-        margin-left: 100px;
-        margin-top: 20px;
       }
 
       .flex_details {
-        overflow: hidden;
         flex-shrink: 1;
+        overflow: hidden;
       }
       .flex_details summary {
-        user-select: none;
-        cursor: pointer;
         height: 30px;
         /* display: flex; */
         align-items: center;
+        cursor: pointer;
+        user-select: none;
       }
       .flex_details_content {
-        padding: 20px 10px;
         width: fit-content;
+        padding: 20px 10px;
         background: lightgray;
         overflow-y: auto;
-        scrollbar-gutter: stable both-edges;
         scrollbar-width: thin;
+        scrollbar-gutter: stable both-edges;
       }
     </style>
 

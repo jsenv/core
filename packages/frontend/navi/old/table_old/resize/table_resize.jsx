@@ -31,10 +31,10 @@ import.meta.css = /* css */ `
   }
   .navi_table_cell_resize_handle[data-left],
   .navi_table_cell_resize_handle[data-right] {
-    cursor: ew-resize;
     top: 0;
     bottom: 0;
     width: 8px;
+    cursor: ew-resize;
   }
   .navi_table_cell_resize_handle[data-left] {
     left: 0;
@@ -45,10 +45,10 @@ import.meta.css = /* css */ `
 
   .navi_table_cell_resize_handle[data-top],
   .navi_table_cell_resize_handle[data-bottom] {
-    cursor: ns-resize;
-    left: 0;
     right: 0;
+    left: 0;
     height: 8px;
+    cursor: ns-resize;
   }
   .navi_table_cell_resize_handle[data-top] {
     top: 0;
@@ -58,26 +58,26 @@ import.meta.css = /* css */ `
   }
 
   .navi_table_column_resizer {
-    pointer-events: none;
     position: absolute;
-    z-index: 1000000;
     top: var(--table-scroll-top, 0);
     bottom: 0;
-    width: 10px;
     left: var(--table-cell-right, 0);
+    z-index: 1000000;
+    width: 10px;
     opacity: 0;
+    pointer-events: none;
   }
   .navi_table_column_resizer .navi_table_column_resize_handle {
     position: absolute;
-    height: 100%;
     top: 50%;
-    transform: translateY(-50%);
-    border-radius: 15px;
-    background: var(--resizer-handle-color);
     /* opacity: 0.5; */
     width: 5px;
+    height: 100%;
     height: 26px;
     max-height: 80%;
+    background: var(--resizer-handle-color);
+    border-radius: 15px;
+    transform: translateY(-50%);
   }
   .navi_table_column_resizer .navi_table_column_resize_handle[data-left] {
     left: 2px;
@@ -88,16 +88,16 @@ import.meta.css = /* css */ `
   .navi_table_column_resize_handle_container {
     position: absolute;
     top: 0;
-    left: -10px;
     right: 0;
+    left: -10px;
     height: var(--table-cell-height);
   }
   .navi_table_column_resizer_line {
     position: absolute;
     top: 0;
     bottom: 0;
-    width: 5px;
     left: -3px;
+    width: 5px;
     background: var(--resizer-color);
     opacity: 0;
   }
@@ -110,26 +110,26 @@ import.meta.css = /* css */ `
   }
 
   .navi_table_row_resizer {
-    pointer-events: none;
     position: absolute;
-    z-index: 1000000;
-    left: var(--table-scroll-left, 0);
-    right: 0;
-    height: 10px;
     top: var(--table-cell-bottom, 0);
+    right: 0;
+    left: var(--table-scroll-left, 0);
+    z-index: 1000000;
+    height: 10px;
     opacity: 0;
+    pointer-events: none;
   }
   .navi_table_row_resizer .navi_table_row_resize_handle {
     position: absolute;
-    width: 100%;
     left: 50%;
-    transform: translateX(-50%);
-    border-radius: 15px;
-    background: var(--resizer-handle-color);
+    width: 100%;
     /* opacity: 0.5; */
     width: 26px;
-    height: 5px;
     max-width: 80%;
+    height: 5px;
+    background: var(--resizer-handle-color);
+    border-radius: 15px;
+    transform: translateX(-50%);
   }
   .navi_table_row_resizer .navi_table_row_resize_handle[data-top] {
     top: 2px;
@@ -139,17 +139,17 @@ import.meta.css = /* css */ `
   }
   .navi_table_row_resize_handle_container {
     position: absolute;
-    left: 0;
     top: -10px;
     bottom: 0;
+    left: 0;
     width: var(--table-cell-width);
   }
   .navi_table_row_resizer_line {
     position: absolute;
-    left: 0;
-    right: 0;
-    height: 5px;
     top: -3px;
+    right: 0;
+    left: 0;
+    height: 5px;
     background: var(--resizer-color);
     opacity: 0;
     transition: opacity 0.1s ease;

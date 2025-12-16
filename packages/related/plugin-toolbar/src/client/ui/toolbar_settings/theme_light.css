@@ -54,8 +54,8 @@ html[data-theme="light"] .switch input:checked + * .square {
 
 /* tooltips */
 html[data-theme="light"] .tooltip {
-  background-color: rgb(138, 145, 154);
   color: #fff;
+  background-color: rgb(138, 145, 154);
 }
 html[data-theme="light"] .tooltip_action {
   border-color: #fff;
@@ -100,6 +100,6 @@ html[data-theme="light"] #explorables fieldset label input + * {
   background: #ddf0ff;
 }
 html[data-theme="light"] .execution-link {
-  background: #ddf0ff;
   color: #076570;
+  background: #ddf0ff;
 }

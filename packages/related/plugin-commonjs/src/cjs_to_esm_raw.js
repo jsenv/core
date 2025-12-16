@@ -43,9 +43,8 @@ export const commonJsToJsModuleRaw = async ({
     exportConditions: [],
   });
 
-  const { default: createJSONRollupPlugin } = await import(
-    "@rollup/plugin-json"
-  );
+  const { default: createJSONRollupPlugin } =
+    await import("@rollup/plugin-json");
   const jsonRollupPlugin = createJSONRollupPlugin({
     preferConst: true,
     indent: "  ",
@@ -53,9 +52,8 @@ export const commonJsToJsModuleRaw = async ({
     namedExports: true,
   });
 
-  const { default: createReplaceRollupPlugin } = await import(
-    "@rollup/plugin-replace"
-  );
+  const { default: createReplaceRollupPlugin } =
+    await import("@rollup/plugin-replace");
   const replaceRollupPlugin = createReplaceRollupPlugin({
     preventAssignment: true,
     values: {
@@ -81,9 +79,8 @@ export const commonJsToJsModuleRaw = async ({
   const commonJsNamedExportsRollupPlugin = rollupPluginCommonJsNamedExports({
     logger,
   });
-  const { default: rollupPluginNodePolyfills } = await import(
-    "rollup-plugin-polyfill-node"
-  );
+  const { default: rollupPluginNodePolyfills } =
+    await import("rollup-plugin-polyfill-node");
 
   const { rollup } = await import("rollup");
   const rollupBuild = await rollup({

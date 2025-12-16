@@ -7,10 +7,10 @@ import { Z_INDEX_TABLE_UI } from "./z_indexes.js";
 import.meta.css = /* css */ `
   .navi_table_ui {
     position: fixed;
-    z-index: ${Z_INDEX_TABLE_UI};
-    overflow: hidden; /* Ensure UI elements cannot impact scrollbars of the document  */
     inset: 0;
+    z-index: ${Z_INDEX_TABLE_UI};
     pointer-events: none; /* UI elements must use pointer-events: auto if they need to be interactive */
+    overflow: hidden; /* Ensure UI elements cannot impact scrollbars of the document  */
     /* background: rgba(0, 255, 0, 0.2); */
   }
 `;

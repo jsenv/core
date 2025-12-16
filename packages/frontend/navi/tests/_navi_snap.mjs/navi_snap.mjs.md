@@ -1,6 +1,5 @@
 # [navi_snap.mjs](../navi_snap.mjs)
 
-
 - [0_chromium](0_chromium/0_chromium.md)
 - [1_firefox](1_firefox/1_firefox.md)
 

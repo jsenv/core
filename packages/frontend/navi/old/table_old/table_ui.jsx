@@ -28,14 +28,14 @@ import { Z_INDEX_TABLE_UI_CONTAINER } from "./z_indexes.js";
 import.meta.css = /* css */ `
   .navi_table_ui {
     position: absolute;
-    z-index: ${Z_INDEX_TABLE_UI_CONTAINER};
-    user-select: none;
-    overflow: hidden;
-    left: 0;
     top: 0;
+    left: 0;
+    z-index: ${Z_INDEX_TABLE_UI_CONTAINER};
     width: var(--table-width, 0);
     height: var(--table-height, 0);
     pointer-events: none;
+    user-select: none;
+    overflow: hidden;
   }
 `;
 

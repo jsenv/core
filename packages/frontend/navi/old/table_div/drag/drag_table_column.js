@@ -8,8 +8,8 @@ import {
 import.meta.css = /* css */ `
   .navi_table_column_drop_preview {
     position: absolute;
-    left: var(--table-left);
     top: var(--table-top);
+    left: var(--table-left);
     width: var(--table-width);
     height: var(--table-height);
     pointer-events: none;

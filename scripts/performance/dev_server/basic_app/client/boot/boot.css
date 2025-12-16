@@ -10,18 +10,18 @@
 
 noscript {
   display: block;
-  text-align: center;
   width: 80%;
   max-width: 640px;
   margin: auto;
+  text-align: center;
 }
 
 #browser_not_supported {
   display: block;
-  text-align: center;
   width: 80%;
   max-width: 640px;
   margin: auto;
+  text-align: center;
 }
 
 #app[data-booting] {
@@ -33,16 +33,16 @@ noscript {
 
 #splashscreen {
   position: fixed;
-  z-index: 1000;
-  left: 0;
   top: 0;
   right: 0;
   bottom: 0;
-  background-color: #030713;
-  color: #a9a8a8;
+  left: 0;
+  z-index: 1000;
   display: flex;
   flex-direction: column;
   align-items: center;
+  color: #a9a8a8;
+  background-color: #030713;
   opacity: 0;
 }
 #splashscreen[data-splashin] {
@@ -66,23 +66,23 @@ noscript {
 }
 #splashscreen_message {
   display: flex;
-  justify-content: center;
-  flex: 1;
   width: 80%;
   max-width: 640px;
   margin: 32px;
+  flex: 1;
+  justify-content: center;
 }
 #booting_error {
   display: block;
-  text-align: center;
   width: 100%;
+  text-align: center;
 }
 #booting_error p {
   display: inline-block;
+  padding: 16px 48px;
   color: #ba3939;
   background: #ffe0e0;
   border: 1px solid #a33a3a;
-  padding: 16px 48px;
 }
 #booting_error details {
   display: inline-block;
@@ -96,8 +96,8 @@ noscript {
   overflow: auto;
 }
 #splashscreen[data-splashout] {
-  animation-duration: 0.3s;
   animation-name: splashout;
+  animation-duration: 0.3s;
   animation-fill-mode: forwards;
 }
 @keyframes splashout {
@@ -106,7 +106,7 @@ noscript {
   }
 
   to {
-    opacity: 0;
     display: none;
+    opacity: 0;
   }
 }

@@ -27,9 +27,8 @@ import {
   selectTables,
 } from "./sql/table_sql.js";
 
-const databaseManagerHtmlFileUrl = import.meta.resolve(
-  "./client/database_manager.html",
-);
+const databaseManagerHtmlFileUrl = import.meta
+  .resolve("./client/database_manager.html");
 
 export const jsenvPluginDatabaseManager = ({
   pathname = "/.internal/database/",

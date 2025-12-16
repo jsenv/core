@@ -8,9 +8,8 @@ import { babelPluginTransformImportMetaUrl } from "./internal/babel_plugin_trans
 // because of https://github.com/rpetrich/babel-plugin-transform-async-to-promises/issues/84
 import customAsyncToPromises from "./internal/async-to-promises.js";
 
-export const systemJsClientFileUrlDefault = import.meta.resolve(
-  "./client/s.js?as_js_classic",
-);
+export const systemJsClientFileUrlDefault = import.meta
+  .resolve("./client/s.js?as_js_classic");
 
 const require = createRequire(import.meta.url);
 

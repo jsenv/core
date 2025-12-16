@@ -7,18 +7,18 @@
     <title>Editable Text Demo</title>
     <style>
       body {
-        font-family:
-          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         max-width: 1400px;
         margin: 0 auto;
         padding: 20px;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         background-color: #f8f9fa;
       }
 
       h1 {
-        text-align: center;
-        color: #333;
         margin-bottom: 30px;
+        color: #333;
+        text-align: center;
       }
 
       .demo-grid {
@@ -28,21 +28,21 @@
       }
 
       .demo-card {
-        background: white;
-        border-radius: 8px;
         padding: 20px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        background: white;
         border: 1px solid #e1e8ed;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
       }
 
       .demo-title {
-        color: #2c3e50;
         margin-top: 0;
         margin-bottom: 15px;
-        font-size: 18px;
-        font-weight: 600;
-        border-bottom: 2px solid #3498db;
         padding-bottom: 8px;
+        color: #2c3e50;
+        font-weight: 600;
+        font-size: 18px;
+        border-bottom: 2px solid #3498db;
       }
 
       .control-group {
@@ -52,27 +52,27 @@
       label {
         display: block;
         margin-bottom: 5px;
-        font-weight: 500;
         color: #555;
+        font-weight: 500;
       }
 
       .button-group {
         display: flex;
-        gap: 8px;
         margin-top: 12px;
         flex-wrap: wrap;
+        gap: 8px;
       }
 
       button {
-        padding: 6px 12px;
-        border: 1px solid #3498db;
-        background: #3498db;
-        color: white;
-        border-radius: 4px;
-        cursor: pointer;
-        font-size: 14px;
-        transition: all 0.2s ease;
         box-sizing: border-box;
+        padding: 6px 12px;
+        color: white;
+        font-size: 14px;
+        background: #3498db;
+        border: 1px solid #3498db;
+        border-radius: 4px;
+        transition: all 0.2s ease;
+        cursor: pointer;
       }
 
       button:hover {
@@ -87,48 +87,48 @@
       }
 
       .editable-container {
+        position: relative;
+        min-height: 40px;
         margin: 15px 0;
         padding: 15px;
+        font-size: 16px;
+        line-height: 1.4;
         background: #f8f9fa;
         border: 1px solid #dee2e6;
         border-radius: 6px;
-        min-height: 40px;
-        font-size: 16px;
-        line-height: 1.4;
-        position: relative;
       }
 
       .result-display {
-        background: #f8f9fa;
-        border: 1px solid #dee2e6;
-        border-radius: 4px;
-        padding: 12px;
+        min-height: 20px;
         margin-top: 15px;
+        padding: 12px;
+        color: #495057;
+        font-size: 13px;
         font-family:
           "SF Mono", "Monaco", "Inconsolata", "Fira Code", "Fira Mono",
           "Droid Sans Mono", "Courier New", monospace;
-        font-size: 13px;
-        color: #495057;
-        min-height: 20px;
         white-space: pre-wrap;
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
       }
 
       .result-success {
+        color: #155724;
         background: #d4edda;
         border-color: #c3e6cb;
-        color: #155724;
       }
 
       .result-error {
+        color: #721c24;
         background: #f8d7da;
         border-color: #f5c6cb;
-        color: #721c24;
       }
 
       .result-loading {
+        color: #0c5460;
         background: #d1ecf1;
         border-color: #bee5eb;
-        color: #0c5460;
         animation: pulse 1.5s ease-in-out infinite;
       }
 

@@ -31,39 +31,39 @@ import.meta.css = /* css */ `
 
   .navi_table th,
   .navi_table td {
+    text-overflow: ellipsis;
     white-space: nowrap;
     overflow: hidden;
-    text-overflow: ellipsis;
   }
 
   /* Table borders using ::before pseudo-elements */
   /* Default: each cell draws all its own borders (no border-collapse) */
   .navi_table th,
   .navi_table td {
-    border: none; /* Remove default borders - we'll use pseudo-elements */
     /* Required for pseudo-element positioning */
     position: relative;
+    border: none; /* Remove default borders - we'll use pseudo-elements */
   }
 
   .navi_table th::before,
   .navi_table td::before {
-    content: "";
     position: absolute;
     inset: 0;
-    pointer-events: none;
     box-shadow:
       inset 0 1px 0 0 var(--border-color),
       inset 1px 0 0 0 var(--border-color),
       inset -1px 0 0 0 var(--border-color),
       inset 0 -1px 0 0 var(--border-color);
+    pointer-events: none;
+    content: "";
   }
   .navi_table th::after,
   .navi_table td::after {
-    content: "";
     position: absolute;
     /* Default: include bottom and right borders (owned by this cell) */
     inset: 0;
     pointer-events: none;
+    content: "";
   }
 
   .navi_table th,
@@ -73,22 +73,22 @@ import.meta.css = /* css */ `
   }
 
   .navi_table th {
-    background-color: var(--background-color, #d3e7ff);
-    font-weight: normal;
     padding: 0;
+    font-weight: normal;
+    background-color: var(--background-color, #d3e7ff);
   }
 
   /* padding */
   .navi_table th,
   .navi_table td {
-    padding-left: 12px;
-    padding-right: 12px;
     padding-top: 8px;
+    padding-right: 12px;
     padding-bottom: 8px;
+    padding-left: 12px;
   }
   .navi_table [data-width-xxs] {
-    padding-left: 0;
     padding-right: 0;
+    padding-left: 0;
   }
   .navi_table [data-height-xxs] {
     padding-top: 0;
@@ -114,20 +114,20 @@ import.meta.css = /* css */ `
 
   /* Number column specific styling */
   .navi_row_number_cell {
+    color: #666;
+    font-weight: 500;
     text-align: center;
     background: #fafafa;
-    font-weight: 500;
-    color: #666;
     user-select: none;
   }
 
   .navi_table_cell_content_bold_clone {
-    font-weight: bold; /* force bold to compute max width */
-    visibility: hidden; /* not visible */
     display: block; /* in-flow so it contributes to width */
     height: 0; /* zero height so it doesn't change layout height */
-    overflow: hidden; /* avoid any accidental height */
+    font-weight: bold; /* force bold to compute max width */
+    visibility: hidden; /* not visible */
     pointer-events: none; /* inert */
+    overflow: hidden; /* avoid any accidental height */
   }
 
   /* Border-collapse mode: each cell only owns specific borders to avoid doubling */
@@ -194,13 +194,13 @@ import.meta.css = /* css */ `
   }
 
   .navi_table td[data-editing] input {
+    display: inline-flex;
     width: 100%;
     height: 100%;
-    display: inline-flex;
     flex-grow: 1;
-    border-radius: 0; /* match table cell border-radius */
-    border: none;
     font-size: 16px;
+    border: none;
+    border-radius: 0; /* match table cell border-radius */
   }
 
   .navi_table td[data-editing] input[type="number"]::-webkit-inner-spin-button {
@@ -209,7 +209,7 @@ import.meta.css = /* css */ `
   }
 
   .navi_table td[data-editing] {
-    outline: 2px solid var(--editing-border-color);
     z-index: ${Z_INDEX_EDITING};
+    outline: 2px solid var(--editing-border-color);
   }
 `;

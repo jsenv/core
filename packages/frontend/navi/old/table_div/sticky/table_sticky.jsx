@@ -52,9 +52,9 @@ import.meta.css = /* css */ `
 
   .navi_table_sticky_frontier[data-left] {
     top: var(--sticky-group-top-frontier, 0px);
-    height: calc(var(--table-height) - var(--sticky-group-top-frontier));
     left: var(--sticky-group-left-frontier, 0px);
     width: var(--sticky-frontier-size);
+    height: calc(var(--table-height) - var(--sticky-group-top-frontier));
     background: linear-gradient(
       to right,
       rgba(0, 0, 0, 0.1) 0%,
@@ -63,9 +63,9 @@ import.meta.css = /* css */ `
   }
 
   .navi_table_sticky_frontier[data-top] {
+    top: var(--sticky-group-top-frontier, 0px);
     left: var(--sticky-group-left-frontier, 0px);
     width: calc(var(--table-width) - var(--sticky-group-left-frontier));
-    top: var(--sticky-group-top-frontier, 0px);
     height: var(--sticky-frontier-size);
     background: linear-gradient(
       to bottom,
@@ -77,8 +77,8 @@ import.meta.css = /* css */ `
   .navi_table_sticky_frontier_ghost,
   .navi_table_sticky_frontier_preview {
     position: absolute;
-    pointer-events: none;
     opacity: 0;
+    pointer-events: none;
   }
   .navi_table_sticky_frontier_ghost {
     z-index: ${Z_INDEX_STICKY_FRONTIER_GHOST};
