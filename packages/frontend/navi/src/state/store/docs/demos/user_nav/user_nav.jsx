@@ -1,7 +1,7 @@
 import {
-  defineRoutes,
   resource,
   Route,
+  setupRoutes,
   useDocumentState,
   useDocumentUrl,
 } from "@jsenv/navi";
@@ -320,7 +320,7 @@ const USER = resource("user", {
   },
 });
 
-const [USER_ROUTE] = defineRoutes({
+const [USER_ROUTE] = setupRoutes({
   "/user/:name": USER.GET,
 });
 

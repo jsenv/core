@@ -1,4 +1,4 @@
-import { Box } from "oto/src/components/box/box.jsx";
+import { Box } from "oto/src/components/box/box_oto.jsx";
 import { mute, unmute, useMuted } from "./audio.js";
 
 export const ButtonMuteUnmute = () => {

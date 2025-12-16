@@ -28,17 +28,11 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState } from "preact/hooks";
-      import {
-        // eslint-disable-next-line no-unused-vars
-        Box,
-      } from "./box.jsx";
-      // eslint-disable-next-line no-unused-vars
+      import { Box } from "./box_oto.jsx";
       import { EnumSelector } from "oto/src/components/form/enum_selector.jsx";
-      // eslint-disable-next-line no-unused-vars
       import { SizeSelector } from "oto/src/components/form/size_selector.jsx";
       import { usePersistentState } from "hooks/use_persistent_state.js";
 
-      // eslint-disable-next-line no-unused-vars
       const App = () => {
         const [contentWidth, contentWidthSetter] = useState();
         const [contentHeight, contentHeightSetter] = useState();
