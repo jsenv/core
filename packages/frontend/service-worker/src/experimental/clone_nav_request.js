@@ -1,5 +1,3 @@
-/* eslint-env serviceworker */
-
 export const cloneNavRequest = async (request) => {
   const requestClone = request.clone();
   const {

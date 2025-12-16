@@ -16,9 +16,7 @@ const run = async () => {
     port: 0,
   });
   return executeHtml(`${devServer.origin}/main.html`, {
-    /* eslint-env browser */
     pageFunction: () => window.__supervisor__.getDocumentExecutionResult(),
-    /* eslint-env node */
   });
 };
 

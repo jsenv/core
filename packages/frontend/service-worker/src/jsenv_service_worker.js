@@ -1,4 +1,3 @@
-/* eslint-env serviceworker */
 /**
  * https://web.dev/service-worker-caching-and-http-caching/
  * https://stackoverflow.com/questions/33262385/service-worker-force-update-of-new-assets/64880568#64880568

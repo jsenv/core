@@ -1,5 +1,3 @@
-/* eslint-env serviceworker */
-
 const cachePrefix = "jsenv";
 const cacheName = (() => {
   const base = 36;

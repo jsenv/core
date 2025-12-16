@@ -1,5 +1,3 @@
-/* eslint-env serviceworker */
-
 self.addEventListener("install", () => {
   // throw new Error("here")
   //   installEvent.waitUntil(

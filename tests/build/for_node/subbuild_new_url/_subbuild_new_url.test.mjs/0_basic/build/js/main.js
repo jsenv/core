@@ -1,6 +1,5 @@
 import "../jsenv_core_packages.js";
 
-/* eslint-env browser,node */
 
 /*
  * This file does not use export const InlineContent = function() {} on purpose:

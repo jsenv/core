@@ -11,8 +11,6 @@
  */
 
 (function () {
-  /* eslint-env browser */
-
   const loadRegistry = Object.create(null);
   const registerRegistry = Object.create(null);
   let inlineScriptCount = 0;
