@@ -40,7 +40,7 @@
     "@jsenv/test": "../../related/test",
     "@playwright/browser-chromium": "1.57.0",
     "eslint": "9.39.2",
-    "open": "10.2.0",
+    "open": "11.0.0",
     "prettier": "3.7.4",
     "prettier-plugin-organize-imports": "4.3.0"
   },
