@@ -28,10 +28,9 @@ export default [
   {
     rules: {
       "no-debugger": ["off"],
-      "jsenv/no-unknown-params": [
-        "warn",
-        { maxImportDepth: 2, reportAllUnknownParams: true },
-      ],
+      "jsenv/no-unknown-params": process.env.CI
+        ? ["off"] // to oheavy for github actions
+        : ["warn", { maxImportDepth: 2, reportAllUnknownParams: true }],
     },
   },
   {
