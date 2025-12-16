@@ -1,4 +1,3 @@
-import { TextAndCount } from "@jsenv/navi";
 import { useDatabaseCount } from "../database_manager_signals.js";
 import {
   createExplorerGroupController,
@@ -15,6 +14,8 @@ import {
   useDatabaseArray,
   useDatabaseArrayInStore,
 } from "./database_store.js";
+
+const TextAndCount = (props) => props;
 
 export const databasesDetailsController = createExplorerGroupController(
   "databases",

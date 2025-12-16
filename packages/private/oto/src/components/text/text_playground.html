@@ -16,17 +16,11 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState } from "preact/hooks";
-      import {
-        // eslint-disable-next-line no-unused-vars
-        Text,
-      } from "./text.jsx";
-      // eslint-disable-next-line no-unused-vars
+      import { Text } from "./text.jsx";
       import { EnumSelector } from "oto/src/components/form/enum_selector.jsx";
-      // eslint-disable-next-line no-unused-vars
       import { SizeSelector } from "oto/src/components/form/size_selector.jsx";
       import { usePersistentState } from "hooks/use_persistent_state.js";
 
-      // eslint-disable-next-line no-unused-vars
       const App = () => {
         return (
           <div style="display:inline-flex; flex-direction: column">
@@ -37,7 +31,6 @@
         );
       };
 
-      // eslint-disable-next-line no-unused-vars
       const TextWithForm = () => {
         const [containerWidth, containerWidthSetter] = useState("auto");
         const [containerHeight, containerHeightSetter] = useState("auto");

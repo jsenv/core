@@ -1,5 +1,5 @@
 import { initFlexDetailsSet } from "@jsenv/dom";
-import { FontSizedSvg, useRunOnMount } from "@jsenv/navi";
+import { useRunOnMount } from "@jsenv/navi";
 import { useLayoutEffect, useRef, useState } from "preact/hooks";
 // import { DatabaseSvg } from "../database/database_icons.jsx";
 // import { useCurrentDatabase } from "../database/database_signals.js";
@@ -28,6 +28,8 @@ import {
 import "./explorer.css" with { type: "css" };
 import "./explorer_store.js";
 import { EXPLORER } from "./explorer_store.js";
+
+const FontSizedSvg = (props) => props;
 
 export const Explorer = () => {
   useRunOnMount(EXPLORER.GET, Explorer);

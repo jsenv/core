@@ -20,10 +20,10 @@ export const DatabaseSvg = () => {
   );
 };
 
-export const DatabaseWithPlusSvg = ({ color }) => {
+export const DatabaseWithPlusSvg = () => {
   return (
     <SvgWithPlus>
-      <DatabaseSvg color={color} />
+      <DatabaseSvg />
     </SvgWithPlus>
   );
 };

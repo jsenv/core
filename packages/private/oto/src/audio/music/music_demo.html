@@ -25,7 +25,6 @@
         allowMultipleMusicPlayback,
       } from "./music_global_controls.js";
       import { useVolume, useMuted, usePlaybackState } from "../audio_hooks.js";
-      // eslint-disable-next-line no-unused-vars
       import { Checkbox } from "oto/src/components/form/checkbox.jsx";
       import {
         useDocumentHidden,
@@ -43,7 +42,6 @@
       //   volume: 0.5,
       // });
 
-      // eslint-disable-next-line no-unused-vars
       const Music = ({ music }) => {
         const volume = useVolume(music);
         const muted = useMuted(music);
@@ -102,7 +100,6 @@
         );
       };
 
-      // eslint-disable-next-line no-unused-vars
       const MuteAllCheckbox = () => {
         const musicsAllMuted = useMusicsAllMuted();
 
@@ -117,7 +114,6 @@
         );
       };
 
-      // eslint-disable-next-line no-unused-vars
       const PreventPlaybackCheckbox = () => {
         const musicsAllPaused = useMusicsAllPaused();
         return (
@@ -131,7 +127,6 @@
         );
       };
 
-      // eslint-disable-next-line no-unused-vars
       const App = () => {
         const documentHidden = useDocumentHidden();
         const globalVolume = useMusicGlobalVolume();

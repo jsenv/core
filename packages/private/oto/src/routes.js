@@ -1,6 +1,6 @@
-import { defineRoutes } from "@jsenv/navi";
+import { setupRoutes } from "@jsenv/navi";
 
-const { paused } = defineRoutes({
+const { paused } = setupRoutes({
   paused: {
     urlTemplate: "?paused",
   },

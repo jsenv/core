@@ -1,7 +1,9 @@
-import { LinkWithIcon, useRouteStatus } from "@jsenv/navi";
+import { useRouteStatus } from "@jsenv/navi";
 import { ROLE_ROUTE } from "../routes.js";
 import { pickRoleIcon } from "./role_icons.jsx";
 import { useCurrentRole } from "./role_store.js";
+
+const LinkWithIcon = (props) => props;
 
 export const RoleLink = ({ role, children, ...rest }) => {
   const rolname = role.rolname;
