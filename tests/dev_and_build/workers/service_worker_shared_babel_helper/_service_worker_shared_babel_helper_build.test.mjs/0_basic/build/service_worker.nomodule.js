@@ -1,14 +1,14 @@
 self.resourcesFromJsenvBuild = {
   "/main.html": {
-    "version": "d02dd1be"
+    "version": "95bb8c3d"
   },
   "/js/app_loader.nomodule.js": {
     "version": "8988849e",
     "versionedUrl": "/js/app_loader.nomodule.js?v=8988849e"
   },
   "/js/app.nomodule.js": {
-    "version": "15bfca4d",
-    "versionedUrl": "/js/app.nomodule.js?v=15bfca4d"
+    "version": "31e398cc",
+    "versionedUrl": "/js/app.nomodule.js?v=31e398cc"
   },
   "/js/objectSpread2.nomodule.js": {
     "version": "7fbbab4b",
@@ -58,7 +58,7 @@ self.resourcesFromJsenvBuild = {
     "/js/app_loader.nomodule.js": "/js/app_loader.nomodule.js?v=8988849e",
     "/js/objectSpread2.nomodule.js": "/js/objectSpread2.nomodule.js?v=7fbbab4b",
     "/js/slicedToArray.nomodule.js": "/js/slicedToArray.nomodule.js?v=77f40001",
-    "/js/app.nomodule.js": "/js/app.nomodule.js?v=15bfca4d",
+    "/js/app.nomodule.js": "/js/app.nomodule.js?v=31e398cc",
     "/js/defineProperty.nomodule.js": "/js/defineProperty.nomodule.js?v=0bff9fa8",
     "/js/toPropertyKey.nomodule.js": "/js/toPropertyKey.nomodule.js?v=0c871ea1",
     "/js/toPrimitive.nomodule.js": "/js/toPrimitive.nomodule.js?v=43cdaded",
@@ -137,8 +137,6 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
 
 
 (function () {
-
-
   const loadRegistry = Object.create(null);
   const registerRegistry = Object.create(null);
   let inlineScriptCount = 0;

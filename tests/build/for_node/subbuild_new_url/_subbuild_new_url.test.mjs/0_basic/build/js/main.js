@@ -1,6 +1,5 @@
 import "../jsenv_core_packages.js";
 
-
 /*
  * This file does not use export const InlineContent = function() {} on purpose:
  * - An export would be renamed by rollup,

@@ -1,4 +1,4 @@
-# [0_chromium](../../js_syntax_error_dev.test.mjs#L28)
+# [0_chromium](../../js_syntax_error_dev.test.mjs#L26)
 
 ```js
 run({ browserLauncher: chromium })

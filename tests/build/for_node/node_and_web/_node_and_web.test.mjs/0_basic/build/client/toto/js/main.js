@@ -1,6 +1,5 @@
 import { bar } from "../test_node_modules.js";
 
-
 /*
  * This file does not use export const InlineContent = function() {} on purpose:
  * - An export would be renamed by rollup,

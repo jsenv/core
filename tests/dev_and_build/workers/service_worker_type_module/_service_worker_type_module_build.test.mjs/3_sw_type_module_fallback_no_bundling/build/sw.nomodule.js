@@ -1,6 +1,6 @@
 self.resourcesFromJsenvBuild = {
   "/main.html": {
-    "version": "12fe6eaa"
+    "version": "48f85fe8"
   },
   "/css/style.css": {
     "version": "2e9d11a2",
@@ -40,8 +40,6 @@ self.resourcesFromJsenvBuild = {
 
 
 (function () {
-
-
   const loadRegistry = Object.create(null);
   const registerRegistry = Object.create(null);
   let inlineScriptCount = 0;
