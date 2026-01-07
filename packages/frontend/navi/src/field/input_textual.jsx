@@ -270,6 +270,9 @@ const InputTextualBasic = (props) => {
           let inputValue;
           if (type === "number") {
             inputValue = e.target.valueAsNumber;
+            if (isNaN(inputValue)) {
+              inputValue = e.target.value;
+            }
           } else if (type === "datetime-local") {
             inputValue = convertToUTCTimezone(e.target.value);
           } else {

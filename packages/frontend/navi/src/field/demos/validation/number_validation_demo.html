@@ -171,7 +171,7 @@
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { Input, Form } from "@jsenv/navi";
+      import { Input, Form, Button } from "@jsenv/navi";
 
       const ConstraintSection = ({ title, description, inputProps }) => {
         return (
@@ -179,17 +179,12 @@
             <h2>{title}</h2>
             <p className="description">{description}</p>
 
-            <Form>
-              <div className="form-group">
-                <Input {...inputProps} />
+            <Form action={() => {}} column spacing="s">
+              <Input name="demo" {...inputProps} />
 
-                <button
-                  type="submit"
-                  style={{ marginTop: "10px", padding: "8px 16px" }}
-                >
-                  Submit
-                </button>
-              </div>
+              <Button type="submit" box alignY="center">
+                Submit
+              </Button>
             </Form>
           </div>
         );
@@ -206,16 +201,6 @@
                 pre-filled. Click "Submit" to see the validation error message.
               </p>
             </div>
-
-            <ConstraintSection
-              title="Type Number Constraint"
-              description="Tests that the input value is a valid number. This input contains invalid text."
-              inputProps={{
-                type: "number",
-                placeholder: "Should be a number",
-                value: "abc",
-              }}
-            />
 
             <ConstraintSection
               title="Min Constraint"
@@ -236,6 +221,15 @@
                 max: "100",
                 placeholder: "Maximum value is 100",
                 value: "150",
+              }}
+            />
+
+            <ConstraintSection
+              title="Type Number Constraint"
+              description="Tests that the input value is a valid number. Type some text (like 'abc') in this field and click Submit to see the validation error. Note: The browser prevents programmatically setting invalid text in number inputs."
+              inputProps={{
+                type: "number",
+                placeholder: "Type some text here (e.g., 'abc')",
               }}
             />
           </div>

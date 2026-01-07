@@ -76,8 +76,8 @@ const FormBasic = (props) => {
   const defaultRef = useRef();
   const ref = props.ref || defaultRef;
 
-  // instantiation validation to:
-  // - receive "requestsubmit" custom event ensure submit is prevented
+  // instantiate validation via useConstraints hook:
+  // - receive "actionrequested" custom event ensure submit is prevented
   // (and also execute action without validation if form.submit() is ever called)
   const remainingProps = useConstraints(ref, rest);
   const innerReadOnly = readOnly || loading;

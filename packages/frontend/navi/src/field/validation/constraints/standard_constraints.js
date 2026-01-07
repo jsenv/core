@@ -222,11 +222,13 @@ export const TYPE_NUMBER_CONSTRAINT = {
     if (field.type !== "number") {
       return null;
     }
-    if (field.value === "" && !field.required) {
+    if (field.validity.valueMissing) {
+      // let required handle that
       return null;
     }
-    const value = field.valueAsNumber;
-    if (isNaN(value)) {
+    const valueAsNumber = field.valueAsNumber;
+    const valueAsNumberIsNaN = isNaN(valueAsNumber);
+    if (valueAsNumberIsNaN) {
       return generateFieldInvalidMessage(`{field} doit être un nombre.`, {
         field,
       });
