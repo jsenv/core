@@ -18754,6 +18754,11 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
         border-style: solid;
         border-color: var(--x-border-color);
         border-radius: var(--button-border-radius);
+
+        .navi_icon,
+        img {
+          border-radius: inherit;
+        }
       }
 
       &[data-hover] {
@@ -23774,16 +23779,17 @@ const TableCell = forwardRef((props, ref) => {
 });
 const RowNumberCol = ({
   width = 50,
-  minWidth = 30,
-  maxWidth = 100,
+  // minWidth = 30,
+  // maxWidth = 100,
   immovable = true,
   ...rest
 }) => {
   return jsx(Col, {
     id: "row_number",
-    width: width,
-    minWidth: minWidth,
-    maxWidth: maxWidth,
+    width: width
+    // minWidth={minWidth}
+    // maxWidth={maxWidth}
+    ,
     immovable: immovable,
     ...rest
   });

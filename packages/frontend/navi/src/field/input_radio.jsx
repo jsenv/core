@@ -288,6 +288,11 @@ import.meta.css = /* css */ `
         border-style: solid;
         border-color: var(--x-border-color);
         border-radius: var(--button-border-radius);
+
+        .navi_icon,
+        img {
+          border-radius: inherit;
+        }
       }
 
       &[data-hover] {
