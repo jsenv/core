@@ -11401,10 +11401,9 @@ import.meta.css = /* css */ `
 
         .navi_callout_message {
           position: relative;
-          display: inline-flex;
+          display: block;
           box-sizing: border-box;
           box-decoration-break: clone;
-          min-width: 0;
           align-self: center;
           word-break: break-word;
           overflow-wrap: anywhere;
@@ -13044,11 +13043,13 @@ const TYPE_NUMBER_CONSTRAINT = {
     if (field.type !== "number") {
       return null;
     }
-    if (field.value === "" && !field.required) {
+    if (field.validity.valueMissing) {
+      // let required handle that
       return null;
     }
-    const value = field.valueAsNumber;
-    if (isNaN(value)) {
+    const valueAsNumber = field.valueAsNumber;
+    const valueAsNumberIsNaN = isNaN(valueAsNumber);
+    if (valueAsNumberIsNaN) {
       return generateFieldInvalidMessage(`{field} doit être un nombre.`, {
         field,
       });
@@ -13132,7 +13133,7 @@ const MAX_CONSTRAINT = {
       }
       if (valueAsNumber > maxNumber) {
         return generateFieldInvalidMessage(
-          `{field} être <strong>${maxAttribute}</strong> ou plus.`,
+          `{field} doit être <strong>${maxAttribute}</strong> ou moins.`,
           { field },
         );
       }
@@ -19700,6 +19701,9 @@ const InputTextualBasic = props => {
         let inputValue;
         if (type === "number") {
           inputValue = e.target.valueAsNumber;
+          if (isNaN(inputValue)) {
+            inputValue = e.target.value;
+          }
         } else if (type === "datetime-local") {
           inputValue = convertToUTCTimezone(e.target.value);
         } else {
@@ -20170,8 +20174,8 @@ const FormBasic = props => {
   const defaultRef = useRef();
   const ref = props.ref || defaultRef;
 
-  // instantiation validation to:
-  // - receive "requestsubmit" custom event ensure submit is prevented
+  // instantiate validation via useConstraints hook:
+  // - receive "actionrequested" custom event ensure submit is prevented
   // (and also execute action without validation if form.submit() is ever called)
   const remainingProps = useConstraints(ref, rest);
   const innerReadOnly = readOnly || loading;
