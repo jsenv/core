@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Number Validation Demo - Standard Constraints</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+      body {
+        max-width: 800px;
+        margin: 40px auto;
+        padding: 20px;
+        color: #333;
+        font-family:
+          system-ui,
+          -apple-system,
+          sans-serif;
+        line-height: 1.5;
+      }
+
+      .demo-section {
+        margin-bottom: 30px;
+        padding: 30px;
+        background: #fff;
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+      }
+
+      h1 {
+        margin: 0 0 10px 0;
+        color: #2c3e50;
+        font-size: 1.5rem;
+      }
+
+      .description {
+        margin: 0 0 30px 0;
+        color: #666;
+        font-size: 0.95rem;
+      }
+
+      .form-group {
+        margin-bottom: 20px;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 8px;
+        color: #555;
+        font-weight: 500;
+      }
+
+      input[type="number"] {
+        box-sizing: border-box;
+        width: 100%;
+        padding: 12px 16px;
+        font-size: 1rem;
+        border: 2px solid #e0e0e0;
+        border-radius: 6px;
+        transition: border-color 0.2s ease;
+      }
+
+      input[type="number"]:focus {
+        border-color: #007bff;
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+      }
+
+      input[type="number"]:invalid {
+        border-color: #dc3545;
+      }
+
+      .constraints-list {
+        margin-top: 15px;
+        padding: 20px;
+        background: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: 6px;
+      }
+
+      .constraints-title {
+        margin: 0 0 15px 0;
+        color: #495057;
+        font-weight: 600;
+        font-size: 0.9rem;
+      }
+
+      .constraint {
+        display: flex;
+        margin-bottom: 10px;
+        padding: 8px 0;
+        align-items: center;
+        font-size: 0.9rem;
+        transition: all 0.2s ease;
+      }
+      .constraint:last-child {
+        margin-bottom: 0;
+      }
+
+      .debug-info {
+        margin-top: 20px;
+        padding: 15px;
+        color: #666;
+        font-size: 0.8rem;
+        font-family: "Courier New", monospace;
+        background: #f1f3f4;
+        border-radius: 6px;
+      }
+
+      .debug-title {
+        margin-bottom: 8px;
+        color: #333;
+        font-weight: bold;
+      }
+
+      .test-scenarios {
+        margin-top: 20px;
+        padding: 20px;
+        background: #e8f4fd;
+        border: 1px solid #bee5eb;
+        border-radius: 6px;
+      }
+
+      .test-scenario {
+        margin-bottom: 10px;
+        padding: 10px;
+        background: white;
+        border-radius: 4px;
+        transition: background-color 0.2s ease;
+        cursor: pointer;
+      }
+
+      .test-scenario:hover {
+        background: #f8f9fa;
+      }
+
+      .scenario-title {
+        color: #0056b3;
+        font-weight: 600;
+      }
+
+      .scenario-description {
+        margin-top: 5px;
+        color: #666;
+        font-size: 0.85rem;
+      }
+
+      .validation-message {
+        display: none;
+        margin-top: 10px;
+        padding: 10px;
+        font-size: 0.9rem;
+        border-radius: 4px;
+      }
+
+      .validation-message.error {
+        display: block;
+        color: #721c24;
+        background: #f8d7da;
+        border: 1px solid #f5c6cb;
+      }
+
+      .validation-message.success {
+        display: block;
+        color: #0c5460;
+        background: #d1ecf1;
+        border: 1px solid #bee5eb;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { Input, Form } from "@jsenv/navi";
+
+      const ConstraintSection = ({ title, description, inputProps }) => {
+        return (
+          <div className="demo-section">
+            <h2>{title}</h2>
+            <p className="description">{description}</p>
+
+            <Form>
+              <div className="form-group">
+                <Input {...inputProps} />
+
+                <button
+                  type="submit"
+                  style={{ marginTop: "10px", padding: "8px 16px" }}
+                >
+                  Submit
+                </button>
+              </div>
+            </Form>
+          </div>
+        );
+      };
+
+      const NumberValidationDemo = () => {
+        return (
+          <div>
+            <div className="demo-section">
+              <h1>Number Validation Demo - Standard Constraints</h1>
+              <p className="description">
+                Test individual number validation constraints. Each section
+                below demonstrates a specific constraint with an invalid value
+                pre-filled. Click "Submit" to see the validation error message.
+              </p>
+            </div>
+
+            <ConstraintSection
+              title="Type Number Constraint"
+              description="Tests that the input value is a valid number. This input contains invalid text."
+              inputProps={{
+                type: "number",
+                placeholder: "Should be a number",
+                value: "abc",
+              }}
+            />
+
+            <ConstraintSection
+              title="Min Constraint"
+              description="Tests minimum value validation. This input has min='10' but contains a value below the minimum."
+              inputProps={{
+                type: "number",
+                min: "10",
+                placeholder: "Minimum value is 10",
+                value: 5,
+              }}
+            />
+
+            <ConstraintSection
+              title="Max Constraint"
+              description="Tests maximum value validation. This input has max='100' but contains a value above the maximum."
+              inputProps={{
+                type: "number",
+                max: "100",
+                placeholder: "Maximum value is 100",
+                value: "150",
+              }}
+            />
+          </div>
+        );
+      };
+
+      const App = () => {
+        return <NumberValidationDemo />;
+      };
+
+      // Render the app
+      render(<App />, document.getElementById("root"));
+    </script>
+  </body>
+</html>

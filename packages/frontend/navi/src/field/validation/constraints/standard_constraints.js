@@ -310,7 +310,7 @@ export const MAX_CONSTRAINT = {
       }
       if (valueAsNumber > maxNumber) {
         return generateFieldInvalidMessage(
-          `{field} être <strong>${maxAttribute}</strong> ou plus.`,
+          `{field} doit être <strong>${maxAttribute}</strong> ou moins.`,
           { field },
         );
       }
