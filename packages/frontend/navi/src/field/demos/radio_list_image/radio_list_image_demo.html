@@ -107,7 +107,7 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState } from "preact/hooks";
-      import { RadioList, Radio, Label, Box, Icon } from "@jsenv/navi";
+      import { RadioList, Radio, Label, Box, Icon, Image } from "@jsenv/navi";
 
       const App = () => {
         return (
@@ -158,12 +158,12 @@
                   appearance="button"
                   borderRadius="8"
                   icon={
-                    <Icon width="40" height="40">
-                      <img
-                        src="./map_ui_satellite.avif"
-                        alt="Satellite view preview"
-                      />
-                    </Icon>
+                    <img
+                      width="40"
+                      height="40"
+                      src="./map_ui_satellite.avif"
+                      alt="Satellite view preview"
+                    />
                   }
                 />
                 <Radio
@@ -171,12 +171,12 @@
                   appearance="button"
                   borderRadius="8"
                   icon={
-                    <Icon width="40" height="40">
-                      <img
-                        src="./map_ui_discrete.avif"
-                        alt="Discrete view preview"
-                      />
-                    </Icon>
+                    <Image
+                      width="40"
+                      height="40"
+                      src="./map_ui_discrete.avif"
+                      alt="Discrete view preview"
+                    />
                   }
                 />
               </RadioList>
