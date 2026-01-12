@@ -331,19 +331,15 @@ const createRoute = (urlPatternInput) => {
     urlParamMap.set(paramName, { default: defaultValue, localStorageKey });
   };
 
-  const buildRelativeUrl = (params = {}, options) => {
-    // Merge parameters in priority order:
-    // 1. Provided params (highest priority)
-    // 2. Current URL params
-    // 3. Local storage params (if configured)
-    // 4. Default values from urlParamMap (lowest priority)
+  // Utility function to resolve parameters with inheritance and defaults
+  const resolveParams = (providedParams = {}) => {
     const mergedParams = {};
 
     // Use raw params (without defaults) for inheritance to avoid double-applying defaults
     const currentParams = rawParamsSignal.value;
     for (const [paramName, paramConfig] of urlParamMap) {
-      if (Object.hasOwn(params, paramName)) {
-        mergedParams[paramName] = params[paramName];
+      if (Object.hasOwn(providedParams, paramName)) {
+        mergedParams[paramName] = providedParams[paramName];
         continue;
       }
       const currentValue = currentParams?.[paramName];
@@ -370,6 +366,13 @@ const createRoute = (urlPatternInput) => {
       }
     }
 
+    return mergedParams;
+  };
+
+  const buildRelativeUrl = (params = {}, options) => {
+    // Resolve parameters with inheritance and defaults
+    const mergedParams = resolveParams(params);
+
     // Remove parameters that match their default values to keep URLs shorter
     for (const [paramName, paramConfig] of urlParamMap) {
       const { default: defaultValue } = paramConfig;
@@ -390,6 +393,9 @@ const createRoute = (urlPatternInput) => {
 
   route.matchesParams = (otherParams) => {
     let params = route.params;
+    otherParams = resolveParams(otherParams);
+
+    // Remove wildcards from comparison (they're not user-controllable params)
     if (params) {
       const paramsWithoutWildcards = {};
       for (const key of Object.keys(params)) {
@@ -399,6 +405,7 @@ const createRoute = (urlPatternInput) => {
       }
       params = paramsWithoutWildcards;
     }
+
     const paramsIsFalsyOrEmpty = !params || Object.keys(params).length === 0;
     const otherParamsFalsyOrEmpty =
       !otherParams || Object.keys(otherParams).length === 0;
@@ -469,7 +476,7 @@ const createRoute = (urlPatternInput) => {
   const visitedSignal = signal(false);
   const relativeUrlSignal = computed(() => {
     const rawParams = rawParamsSignal.value;
-    const { relativeUrl } = buildRouteRelativeUrl(rawParams);
+    const { relativeUrl } = buildRelativeUrl(rawParams);
     return relativeUrl;
   });
   const disposeRelativeUrlEffect = effect(() => {
@@ -488,16 +495,20 @@ const createRoute = (urlPatternInput) => {
   cleanupCallbackSet.add(disposeUrlEffect);
 
   const replaceParams = (newParams) => {
-    // Use raw params as base to avoid including defaults that will be auto-applied
+    // Use resolved params as base (includes inheritance) but remove defaults to avoid URL pollution
+    const currentResolvedParams = resolveParams();
     const currentRawParams = rawParamsSignal.peek() || {};
-    const updatedParams = { ...currentRawParams, ...newParams };
-    const updatedUrl = route.buildUrl(updatedParams);
+
+    // For URL building: merge with raw params to avoid including unnecessary defaults
+    const updatedUrlParams = { ...currentRawParams, ...newParams };
+    const updatedUrl = route.buildUrl(updatedUrlParams);
+
     if (route.action) {
-      // Action expects merged params (with defaults)
-      const currentMergedParams = paramsSignal.peek();
-      const updatedMergedParams = { ...currentMergedParams, ...newParams };
-      route.action.replaceParams(updatedMergedParams);
+      // For action: merge with resolved params (includes defaults) so action gets complete params
+      const updatedActionParams = { ...currentResolvedParams, ...newParams };
+      route.action.replaceParams(updatedActionParams);
     }
+
     browserIntegration.navTo(updatedUrl, { replace: true });
   };
   route.replaceParams = replaceParams;
