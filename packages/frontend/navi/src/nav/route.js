@@ -271,6 +271,7 @@ const createRoute = (urlPatternInput) => {
     matchingSignal: null,
     exactMatchingSignal: null,
     paramsSignal: null,
+    rawParamsSignal: null, // params from URL without defaults
     visitedSignal: null,
     relativeUrlSignal: null,
     urlSignal: null,
@@ -278,8 +279,14 @@ const createRoute = (urlPatternInput) => {
       let someChange = false;
       matchingSignal.value = matching;
       exactMatchingSignal.value = exactMatching;
-      paramsSignal.value = params;
+
+      // Store raw params (from URL) - paramsSignal will reactively compute merged params
+      rawParamsSignal.value = params;
       visitedSignal.value = visited;
+
+      // Get merged params for comparison (computed signal will handle the merging)
+      const mergedParams = paramsSignal.value;
+
       if (route.matching !== matching) {
         route.matching = matching;
         someChange = true;
@@ -288,8 +295,8 @@ const createRoute = (urlPatternInput) => {
         route.exactMatching = exactMatching;
         someChange = true;
       }
-      if (route.params !== params) {
-        route.params = params;
+      if (route.params !== mergedParams) {
+        route.params = mergedParams;
         someChange = true;
       }
       if (route.visited !== visited) {
@@ -301,11 +308,16 @@ const createRoute = (urlPatternInput) => {
           console.debug(`${route} status changed:`, {
             matching,
             exactMatching,
-            params,
+            params: mergedParams,
             visited,
           });
         }
-        publishStatus({ matching, exactMatching, params, visited });
+        publishStatus({
+          matching,
+          exactMatching,
+          params: mergedParams,
+          visited,
+        });
       }
     },
   };
@@ -327,15 +339,11 @@ const createRoute = (urlPatternInput) => {
     // 4. Default values from urlParamMap (lowest priority)
     const mergedParams = {};
 
-    const currentParams = paramsSignal.value;
+    // Use raw params (without defaults) for inheritance to avoid double-applying defaults
+    const currentParams = rawParamsSignal.value;
     for (const [paramName, paramConfig] of urlParamMap) {
       if (Object.hasOwn(params, paramName)) {
         mergedParams[paramName] = params[paramName];
-        continue;
-      }
-      const defaultValue = paramConfig.default;
-      if (defaultValue !== undefined) {
-        mergedParams[paramName] = defaultValue;
         continue;
       }
       const currentValue = currentParams?.[paramName];
@@ -355,6 +363,21 @@ const createRoute = (urlPatternInput) => {
             continue;
           }
         }
+      }
+      const defaultValue = paramConfig.default;
+      if (defaultValue !== undefined) {
+        mergedParams[paramName] = defaultValue;
+      }
+    }
+
+    // Remove parameters that match their default values to keep URLs shorter
+    for (const [paramName, paramConfig] of urlParamMap) {
+      const { default: defaultValue } = paramConfig;
+      if (
+        defaultValue !== undefined &&
+        mergedParams[paramName] === defaultValue
+      ) {
+        delete mergedParams[paramName];
       }
     }
 
@@ -428,11 +451,25 @@ const createRoute = (urlPatternInput) => {
 
   const matchingSignal = signal(false);
   const exactMatchingSignal = signal(false);
-  const paramsSignal = signal(null);
+  const rawParamsSignal = signal(null);
+  const paramsSignal = computed(() => {
+    const rawParams = rawParamsSignal.value;
+    if (!rawParams || urlParamMap.size === 0) {
+      return rawParams;
+    }
+    // Merge raw params with defaults
+    const mergedParams = { ...rawParams };
+    for (const [paramName, paramConfig] of urlParamMap) {
+      if (!(paramName in mergedParams) && paramConfig.default !== undefined) {
+        mergedParams[paramName] = paramConfig.default;
+      }
+    }
+    return mergedParams;
+  });
   const visitedSignal = signal(false);
   const relativeUrlSignal = computed(() => {
-    const params = paramsSignal.value;
-    const { relativeUrl } = buildRelativeUrl(params);
+    const rawParams = rawParamsSignal.value;
+    const { relativeUrl } = buildRouteRelativeUrl(rawParams);
     return relativeUrl;
   });
   const disposeRelativeUrlEffect = effect(() => {
@@ -451,11 +488,15 @@ const createRoute = (urlPatternInput) => {
   cleanupCallbackSet.add(disposeUrlEffect);
 
   const replaceParams = (newParams) => {
-    const currentParams = paramsSignal.peek();
-    const updatedParams = { ...currentParams, ...newParams };
+    // Use raw params as base to avoid including defaults that will be auto-applied
+    const currentRawParams = rawParamsSignal.peek() || {};
+    const updatedParams = { ...currentRawParams, ...newParams };
     const updatedUrl = route.buildUrl(updatedParams);
     if (route.action) {
-      route.action.replaceParams(updatedParams);
+      // Action expects merged params (with defaults)
+      const currentMergedParams = paramsSignal.peek();
+      const updatedMergedParams = { ...currentMergedParams, ...newParams };
+      route.action.replaceParams(updatedMergedParams);
     }
     browserIntegration.navTo(updatedUrl, { replace: true });
   };
@@ -536,6 +577,7 @@ const createRoute = (urlPatternInput) => {
     routePrivateProperties.matchingSignal = matchingSignal;
     routePrivateProperties.exactMatchingSignal = exactMatchingSignal;
     routePrivateProperties.paramsSignal = paramsSignal;
+    routePrivateProperties.rawParamsSignal = rawParamsSignal;
     routePrivateProperties.visitedSignal = visitedSignal;
     routePrivateProperties.relativeUrlSignal = relativeUrlSignal;
     routePrivateProperties.urlSignal = urlSignal;
