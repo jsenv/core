@@ -327,11 +327,8 @@ const createRoute = (urlPatternInput) => {
         someChange = true;
 
         // Sync new parameter values to localStorage
-        for (const [paramName, value] of Object.entries(params)) {
-          const paramConfig = urlParamMap.get(paramName);
-          if (paramConfig) {
-            routeParamStorage.syncParam(paramConfig, value);
-          }
+        for (const [paramName, paramConfig] of urlParamMap) {
+          routeParamStorage.syncParam(paramConfig, params?.[paramName]);
         }
       }
       if (someChange) {
