@@ -432,14 +432,18 @@ const createRoute = (urlPatternInput) => {
     const paramNameSet = new Set(urlParamMap.keys());
     if (rawParams) {
       for (const name of Object.keys(rawParams)) {
-        mergedParams[name] = rawParams[name];
-        paramNameSet.delete(name);
+        const value = rawParams[name];
+        if (value !== undefined) {
+          mergedParams[name] = rawParams[name];
+          paramNameSet.delete(name);
+        }
       }
     }
     for (const paramName of paramNameSet) {
       const paramConfig = urlParamMap.get(paramName);
-      if (paramConfig.default !== undefined) {
-        mergedParams[paramName] = paramConfig.default;
+      const defaultValue = paramConfig.default;
+      if (defaultValue !== undefined) {
+        mergedParams[paramName] = defaultValue;
       }
     }
     return mergedParams;
