@@ -320,9 +320,8 @@ const createRoute = (urlPatternInput) => {
       }
       // Store raw params (from URL) - paramsSignal will reactively compute merged params
       rawParamsSignal.value = params;
-      const rawParams = rawParamsSignal.value;
       for (const [paramName, paramConfig] of urlParamMap) {
-        routeParamStorage.syncParam(paramConfig, rawParams?.[paramName]);
+        routeParamStorage.syncParam(paramConfig, params?.[paramName]);
       }
       // Get merged params for comparison (computed signal will handle the merging)
       const mergedParams = paramsSignal.value;
