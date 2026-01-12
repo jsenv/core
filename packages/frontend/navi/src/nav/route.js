@@ -305,8 +305,9 @@ const createRoute = (urlPatternInput) => {
     // Use raw params (without defaults) for inheritance to avoid double-applying defaults
     const currentParams = rawParamsSignal.value;
     for (const [paramName, paramConfig] of urlParamMap) {
-      if (providedParams && Object.hasOwn(providedParams, paramName)) {
-        mergedParams[paramName] = providedParams[paramName];
+      const providedValue = providedParams?.[paramName];
+      if (providedValue !== undefined) {
+        mergedParams[paramName] = providedValue;
         continue;
       }
       const currentValue = currentParams?.[paramName];

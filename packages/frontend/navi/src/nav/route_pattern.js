@@ -99,7 +99,8 @@ export const createRoutePattern = (urlPatternInput, baseUrl) => {
             }
           } else if (!optionalParamKeySet.has(key)) {
             // Named group (:param or {param}) - only include if not ignored
-            params[key] = decodeURIComponent(value);
+            params[key] =
+              value === undefined ? undefined : decodeURIComponent(value);
           }
         }
         // Update wildcard offset for next URL part
