@@ -28,9 +28,9 @@ return {
 {
   "no_params": "/map",
   "empty_params": "/map",
-  "wildcard_only": "/maplayer1%2Flayer2",
+  "wildcard_only": "/map/layer1/layer2",
   "search_params_only": "/map?zoom=10&center=paris",
-  "wildcard_and_search": "/mapsatellite?zoom=15&lat=48.8566&lng=2.3522"
+  "wildcard_and_search": "/map/satellite?zoom=15&lat=48.8566&lng=2.3522"
 }
 ```
 

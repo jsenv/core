@@ -159,6 +159,33 @@ await snapshotTests(import.meta.url, ({ test }) => {
     };
   });
 
+  test("slash encoding behavior", () => {
+    const pathValue = "docs/api/guide.md";
+
+    return {
+      // Wildcards preserve slashes (they represent path segments)
+      wildcard_slashes: run("/files/*", {
+        0: pathValue,
+      }),
+
+      // Named parameters encode slashes (they're part of the parameter value)
+      named_param_slashes: run("/users/:id", {
+        id: "user/with/slashes",
+      }),
+
+      // Search parameters encode slashes
+      search_param_slashes: run("/api", {
+        path: "folder/file.txt",
+      }),
+
+      // Mixed: wildcard preserves, search params encode
+      mixed_example: run("/files/*", {
+        0: pathValue,
+        type: "text/plain",
+      }),
+    };
+  });
+
   test("boolean parameters", () => {
     return {
       single_boolean_true: run("/api/data", {

@@ -50,7 +50,10 @@ export const buildRouteRelativeUrl = (
   // When a parameter is wrapped with rawUrlPart(), it bypasses encoding and is
   // inserted as-is into the URL. This allows including pre-encoded values or
   // special characters that should not be percent-encoded.
-  const encodeParamValue = (value) => {
+  //
+  // For wildcard parameters (isWildcard=true), we preserve slashes as path separators.
+  // For named parameters and search params (isWildcard=false), we encode slashes.
+  const encodeParamValue = (value, isWildcard = false) => {
     if (value && value[rawUrlPartSymbol]) {
       const rawValue = value.value;
       // Check if raw value contains invalid URL characters
@@ -59,15 +62,54 @@ export const buildRouteRelativeUrl = (
       }
       return rawValue;
     }
+
+    if (isWildcard) {
+      // For wildcards, only encode characters that are invalid in URL paths,
+      // but preserve slashes as they are path separators
+      return value
+        ? value.replace(/[^a-zA-Z0-9\-._~!$&'()*+,;=:@/]/g, (char) => {
+            return encodeURIComponent(char);
+          })
+        : value;
+    }
+
+    // For named parameters and search params, encode everything including slashes
     return encodeURIComponent(value);
   };
   const extraParamMap = new Map();
+  let wildcardIndex = 0; // Declare wildcard index in the main scope
+
   if (params) {
     const keys = Object.keys(params);
+
+    // First, handle special case: optional groups immediately followed by wildcards
+    // This handles patterns like {/}?* where the optional part should be included when wildcard has content
+    relativeUrl = relativeUrl.replace(/\{([^}]*)\}\?\*/g, (match, group) => {
+      const paramKey = wildcardIndex.toString();
+      const paramValue = params[paramKey];
+
+      if (paramValue) {
+        // Don't add to extraParamMap since we're processing it here
+        // For wildcards, preserve slashes as path separators
+        const wildcardValue = encodeParamValue(paramValue, true);
+        wildcardIndex++;
+        // Include the optional group content when wildcard has value
+        return group + wildcardValue;
+      }
+      wildcardIndex++;
+      // Remove the optional group and wildcard when no value
+      return "";
+    });
+
     // Replace named parameters (:param and {param}) and remove optional markers
     for (const key of keys) {
+      // Skip numeric keys (wildcards) if they were already processed
+      if (!isNaN(key) && parseInt(key) < wildcardIndex) {
+        continue;
+      }
+
       const value = params[key];
-      const encodedValue = encodeParamValue(value);
+      const encodedValue = encodeParamValue(value, false); // Named parameters should encode slashes
       const beforeReplace = relativeUrl;
 
       // Replace parameter and remove optional marker if present
@@ -90,7 +132,7 @@ export const buildRouteRelativeUrl = (
       // Check if any parameters in the group were provided
       for (const key of keys) {
         if (params[key] !== undefined) {
-          const encodedValue = encodeParamValue(params[key]);
+          const encodedValue = encodeParamValue(params[key], false); // Named parameters encode slashes
           const paramPattern = new RegExp(`:${key}\\b`);
           if (paramPattern.test(processedGroup)) {
             processedGroup = processedGroup.replace(paramPattern, encodedValue);
@@ -103,7 +145,7 @@ export const buildRouteRelativeUrl = (
       // Also check for literal parts that match parameter names (like /time where time is a param)
       for (const key of keys) {
         if (params[key] !== undefined) {
-          const encodedValue = encodeParamValue(params[key]);
+          const encodedValue = encodeParamValue(params[key], false); // Named parameters encode slashes
           // Check for literal parts like /time that match parameter names
           const literalPattern = new RegExp(`\\/${key}\\b`);
           if (literalPattern.test(processedGroup)) {
@@ -126,18 +168,19 @@ export const buildRouteRelativeUrl = (
   // Clean up any double slashes or trailing slashes that might result
   relativeUrl = relativeUrl.replace(/\/+/g, "/").replace(/\/$/, "");
 
-  // Handle remaining wildcards
+  // Handle remaining wildcards (those not processed by optional group + wildcard above)
   if (params) {
-    let wildcardIndex = 0;
     relativeUrl = relativeUrl.replace(/\*/g, () => {
       const paramKey = wildcardIndex.toString();
       const paramValue = params[paramKey];
       if (paramValue) {
         extraParamMap.delete(paramKey);
+        const replacement = encodeParamValue(paramValue, true); // Wildcards preserve slashes
+        wildcardIndex++;
+        return replacement;
       }
-      const replacement = paramValue ? encodeParamValue(paramValue) : "*";
       wildcardIndex++;
-      return replacement;
+      return "*";
     });
   }
 
@@ -166,7 +209,7 @@ export const buildRouteRelativeUrl = (
           if (value === true) {
             searchParamPairs.push(encodedKey);
           } else {
-            const encodedValue = encodeParamValue(value);
+            const encodedValue = encodeParamValue(value, false); // Search params encode slashes
             searchParamPairs.push(`${encodedKey}=${encodedValue}`);
           }
         }

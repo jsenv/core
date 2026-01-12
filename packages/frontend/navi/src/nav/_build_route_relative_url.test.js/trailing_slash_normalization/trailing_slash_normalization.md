@@ -1,4 +1,4 @@
-# [trailing slash normalization](../../build_route_relative_url.test.js#L244)
+# [trailing slash normalization](../../build_route_relative_url.test.js#L271)
 
 ```js
 return {
@@ -28,7 +28,7 @@ return {
 {
   "basic_trailing_slash_removal": "/dashboard",
   "parameter_with_trailing_slash": "/users/123",
-  "wildcard_with_trailing_slash": "/api/v1%2Fusers",
+  "wildcard_with_trailing_slash": "/api/v1/users",
   "nested_path_trailing_slash": "/admin/users/456/edit",
   "optional_param_trailing_slash": "/posts/123",
   "optional_param_with_value_trailing_slash": "/posts/123/hello-world",

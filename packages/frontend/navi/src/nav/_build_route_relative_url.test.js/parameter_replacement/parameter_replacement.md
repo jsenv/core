@@ -23,7 +23,7 @@ return {
 {
   "basic_parameters": "/users/123/posts/456",
   "optional_with_value": "/users/123",
-  "wildcard_parameter": "/files/documents%2Freadme.txt",
+  "wildcard_parameter": "/files/documents/readme.txt",
   "optional_group_with_params": "/map/isochrone/15/minutes"
 }
 ```

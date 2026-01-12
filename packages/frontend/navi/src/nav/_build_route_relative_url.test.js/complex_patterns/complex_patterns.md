@@ -20,7 +20,7 @@ return {
 {
   "nested_optional_groups": "/api}?",
   "mixed_parameter_types": "/api/v1/users/search?",
-  "url_encoding": "/search/query%20with%20spaces%20%26%20symbols"
+  "url_encoding": "/search/query%20with%20spaces%20&%20symbols"
 }
 ```
 

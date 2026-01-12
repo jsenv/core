@@ -1,4 +1,4 @@
-# [mixed parameter scenarios](../../build_route_relative_url.test.js#L214)
+# [mixed parameter scenarios](../../build_route_relative_url.test.js#L241)
 
 ```js
 return {
