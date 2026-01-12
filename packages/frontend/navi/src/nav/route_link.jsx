@@ -7,7 +7,6 @@ export const RouteLink = ({ route, routeParams, children, ...rest }) => {
   }
   const routeStatus = useRouteStatus(route);
   const url = route.buildUrl(routeParams);
-  const matching = routeStatus.matching;
   const paramsAreMatching = route.matchesParams(routeParams);
 
   return (
@@ -15,7 +14,9 @@ export const RouteLink = ({ route, routeParams, children, ...rest }) => {
       {...rest}
       href={url}
       pseudoState={{
-        ":-navi-href-current": matching && paramsAreMatching,
+        ":-navi-href-current": paramsAreMatching
+          ? routeStatus.matching
+          : routeStatus.exactMatching,
       }}
     >
       {children || route.buildRelativeUrl(routeParams)}
