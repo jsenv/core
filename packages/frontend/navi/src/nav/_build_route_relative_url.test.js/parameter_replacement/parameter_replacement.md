@@ -12,8 +12,8 @@ return {
   wildcard_parameter: run("/files/*", {
     0: "documents/readme.txt",
   }),
-  optional_group_with_params: run("/map/isochrone{/time/:duration}?", {
-    time: "15",
+  optional_group_with_params: run("/map/isochrone{/:time/:duration}?", {
+    time: 15,
     duration: "minutes",
   }),
 };

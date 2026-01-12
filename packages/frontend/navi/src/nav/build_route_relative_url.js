@@ -174,23 +174,6 @@ export const buildRouteRelativeUrl = (
         }
       }
 
-      // Also check for literal parts that match parameter names (like /time where time is a param)
-      for (const key of keys) {
-        if (params[key] !== undefined) {
-          const encodedValue = encodeParamValue(params[key], false); // Named parameters encode slashes
-          // Check for literal parts like /time that match parameter names
-          const literalPattern = new RegExp(`\\/${key}\\b`);
-          if (literalPattern.test(processedGroup)) {
-            processedGroup = processedGroup.replace(
-              literalPattern,
-              `/${encodedValue}`,
-            );
-            hasReplacements = true;
-            extraParamMap.delete(key);
-          }
-        }
-      }
-
       // If we made replacements, include the group (without the optional marker)
       // If no replacements, return empty string (remove the optional group)
       return hasReplacements ? processedGroup : "";

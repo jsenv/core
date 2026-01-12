@@ -14,7 +14,7 @@ return {
   root_path_preserved: run("/"),
   multiple_trailing_slashes: run("/path///"),
   complex_optional_with_trailing_slash: run(
-    "/map/isochrone{/time/:duration}?/",
+    "/map/isochrone{/:time/:duration}?/",
     {
       time: "15",
       duration: "minutes",

@@ -16,7 +16,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
       optional_parameter: run("/users/:id?"),
       optional_curly_parameter: run("/posts/{id}?"),
       multiple_optional_parts: run("/api/users/:id?/posts/*?"),
-      optional_group_no_params: run("/map/isochrone{/time/:duration}?"),
+      optional_group_no_params: run("/map/isochrone{/:time/:duration}?"),
     };
   });
 
@@ -32,8 +32,8 @@ await snapshotTests(import.meta.url, ({ test }) => {
       wildcard_parameter: run("/files/*", {
         0: "documents/readme.txt",
       }),
-      optional_group_with_params: run("/map/isochrone{/time/:duration}?", {
-        time: "15",
+      optional_group_with_params: run("/map/isochrone{/:time/:duration}?", {
+        time: 15,
         duration: "minutes",
       }),
     };
@@ -282,7 +282,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
       root_path_preserved: run("/"),
       multiple_trailing_slashes: run("/path///"),
       complex_optional_with_trailing_slash: run(
-        "/map/isochrone{/time/:duration}?/",
+        "/map/isochrone{/:time/:duration}?/",
         {
           time: "15",
           duration: "minutes",
