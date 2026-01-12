@@ -332,13 +332,13 @@ const createRoute = (urlPatternInput) => {
   };
 
   // Utility function to resolve parameters with inheritance and defaults
-  const resolveParams = (providedParams = {}) => {
+  const resolveParams = (providedParams) => {
     const mergedParams = {};
 
     // Use raw params (without defaults) for inheritance to avoid double-applying defaults
     const currentParams = rawParamsSignal.value;
     for (const [paramName, paramConfig] of urlParamMap) {
-      if (Object.hasOwn(providedParams, paramName)) {
+      if (providedParams && Object.hasOwn(providedParams, paramName)) {
         mergedParams[paramName] = providedParams[paramName];
         continue;
       }
@@ -369,44 +369,38 @@ const createRoute = (urlPatternInput) => {
     return mergedParams;
   };
 
-  const buildRelativeUrl = (params = {}, options) => {
-    // Resolve parameters with inheritance and defaults
-    const mergedParams = resolveParams(params);
-
+  const buildRelativeUrl = (providedParams, options) => {
+    // Inherit current parameters that would not be expliictely provided
+    const params = resolveParams(providedParams);
     // Remove parameters that match their default values to keep URLs shorter
     for (const [paramName, paramConfig] of urlParamMap) {
       const { default: defaultValue } = paramConfig;
-      if (
-        defaultValue !== undefined &&
-        mergedParams[paramName] === defaultValue
-      ) {
-        delete mergedParams[paramName];
+      if (defaultValue !== undefined && params[paramName] === defaultValue) {
+        delete params[paramName];
       }
     }
-
-    return buildRouteRelativeUrl(urlPatternInput, mergedParams, options);
+    return buildRouteRelativeUrl(urlPatternInput, params, options);
   };
   route.buildRelativeUrl = (params = {}, options) => {
     const { relativeUrl } = buildRelativeUrl(params, options);
     return relativeUrl;
   };
 
-  route.matchesParams = (otherParams) => {
-    let params = route.params;
-    otherParams = resolveParams(otherParams);
-
+  route.matchesParams = (providedParams) => {
+    const otherParams = resolveParams(providedParams);
+    let currentParams = route.params;
     // Remove wildcards from comparison (they're not user-controllable params)
-    if (params) {
-      const paramsWithoutWildcards = {};
-      for (const key of Object.keys(params)) {
+    if (currentParams) {
+      const currentParamsWithoutWildcards = {};
+      for (const key of Object.keys(currentParams)) {
         if (!Number.isInteger(Number(key))) {
-          paramsWithoutWildcards[key] = params[key];
+          currentParamsWithoutWildcards[key] = currentParams[key];
         }
       }
-      params = paramsWithoutWildcards;
+      currentParams = currentParamsWithoutWildcards;
     }
-
-    const paramsIsFalsyOrEmpty = !params || Object.keys(params).length === 0;
+    const paramsIsFalsyOrEmpty =
+      !currentParams || Object.keys(currentParams).length === 0;
     const otherParamsFalsyOrEmpty =
       !otherParams || Object.keys(otherParams).length === 0;
     if (paramsIsFalsyOrEmpty) {
@@ -415,7 +409,7 @@ const createRoute = (urlPatternInput) => {
     if (otherParamsFalsyOrEmpty) {
       return false;
     }
-    return compareTwoJsValues(params, otherParams);
+    return compareTwoJsValues(otherParams, currentParams);
   };
 
   /**
