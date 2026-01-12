@@ -92,7 +92,8 @@ export const createRoutePattern = (urlPatternInput, baseUrl) => {
               // Only include non-empty values and non-ignored wildcard indices
               const wildcardKey = String(wildcardOffset + keyAsNumber);
               if (!optionalParamKeySet.has(wildcardKey)) {
-                params[wildcardKey] = decodeURIComponent(value);
+                params[wildcardKey] =
+                  value === undefined ? undefined : decodeURIComponent(value);
               }
               localWildcardCount++;
             }

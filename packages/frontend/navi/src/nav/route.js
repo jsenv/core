@@ -255,23 +255,21 @@ const createRoute = (urlPatternInput) => {
       let someChange = false;
       matchingSignal.value = matching;
 
-      // Store raw params (from URL) - paramsSignal will reactively compute merged params
-      rawParamsSignal.value = params;
-      visitedSignal.value = visited;
-
-      // Get merged params for comparison (computed signal will handle the merging)
-      const mergedParams = paramsSignal.value;
-
       if (route.matching !== matching) {
         route.matching = matching;
         someChange = true;
       }
-      if (route.params !== mergedParams) {
-        route.params = mergedParams;
-        someChange = true;
-      }
+      visitedSignal.value = visited;
       if (route.visited !== visited) {
         route.visited = visited;
+        someChange = true;
+      }
+      // Store raw params (from URL) - paramsSignal will reactively compute merged params
+      rawParamsSignal.value = params;
+      // Get merged params for comparison (computed signal will handle the merging)
+      const mergedParams = paramsSignal.value;
+      if (route.params !== mergedParams) {
+        route.params = mergedParams;
         someChange = true;
       }
       if (someChange) {
@@ -426,13 +424,20 @@ const createRoute = (urlPatternInput) => {
   const rawParamsSignal = signal(null);
   const paramsSignal = computed(() => {
     const rawParams = rawParamsSignal.value;
-    if (!rawParams || urlParamMap.size === 0) {
+    if (!rawParams && urlParamMap.size === 0) {
       return rawParams;
     }
-    // Merge raw params with defaults
-    const mergedParams = { ...rawParams };
-    for (const [paramName, paramConfig] of urlParamMap) {
-      if (!(paramName in mergedParams) && paramConfig.default !== undefined) {
+    const mergedParams = {};
+    const paramNameSet = new Set(urlParamMap.keys());
+    if (rawParams) {
+      for (const name of Object.keys(rawParams)) {
+        mergedParams[name] = rawParams[name];
+        paramNameSet.delete(name);
+      }
+    }
+    for (const paramName of paramNameSet) {
+      const paramConfig = urlParamMap.get(paramName);
+      if (paramConfig.default !== undefined) {
         mergedParams[paramName] = paramConfig.default;
       }
     }
@@ -634,7 +639,13 @@ export const setupRoutes = (routeDefinition) => {
     const route = createRoute(value);
     routes[key] = route;
   }
-  onRouteDefined();
+
+  setTimeout(() => {
+    // give a chance to call addUrlParam
+    // TODO: better API to avoid relying on this ugly hack
+    onRouteDefined();
+  });
+
   return routes;
 };
 
