@@ -355,9 +355,6 @@ const createRoute = (urlPatternInput) => {
   };
 
   route.matchesParams = (providedParams) => {
-    if (providedParams && providedParams.color === "red") {
-      debugger;
-    }
     const otherParams = resolveParams(providedParams);
     let currentParams = route.params;
     // Remove wildcards from comparison (they're not user-controllable params)
