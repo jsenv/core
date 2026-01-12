@@ -335,6 +335,7 @@ const TabRoute = ({
   const { matching } = useRouteStatus(route);
   const paramsAreMatching = route.matchesParams(routeParams);
   const selected = matching && paramsAreMatching;
+
   return (
     <TabBasic
       selected={selected}

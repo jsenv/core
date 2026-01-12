@@ -18,7 +18,7 @@ return {
 
 ```js
 {
-  "nested_optional_groups": "/api}?",
+  "nested_optional_groups": "/api/v1",
   "mixed_parameter_types": "/api/v1/users/search?",
   "url_encoding": "/search/query%20with%20spaces%20&%20symbols"
 }

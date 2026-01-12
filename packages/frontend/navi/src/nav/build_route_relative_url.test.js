@@ -291,4 +291,17 @@ await snapshotTests(import.meta.url, ({ test }) => {
       query_params_with_trailing_slash: run("/search/", { q: "test", page: 1 }),
     };
   });
+
+  test("optional group patterns", () => {
+    return {
+      // Pattern: /colors{/:color}?
+      colors_no_params: run("/colors{/:color}?"),
+      colors_with_color: run("/colors{/:color}?", { color: "red" }),
+      colors_with_undefined_color: run("/colors{/:color}?", {
+        color: undefined,
+      }),
+      colors_with_empty_color: run("/colors{/:color}?", { color: "" }),
+      colors_with_null_color: run("/colors{/:color}?", { color: null }),
+    };
+  });
 });

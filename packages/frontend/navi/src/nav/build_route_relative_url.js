@@ -102,9 +102,15 @@ export const buildRouteRelativeUrl = (
     });
 
     // Replace named parameters (:param and {param}) and remove optional markers
+    // BUT skip parameters that are inside optional groups {...}? - those will be handled separately
     for (const key of keys) {
       // Skip numeric keys (wildcards) if they were already processed
       if (!isNaN(key) && parseInt(key) < wildcardIndex) {
+        continue;
+      }
+
+      // Skip numeric keys entirely - they represent wildcards, not named parameters
+      if (!isNaN(key)) {
         continue;
       }
 
@@ -112,11 +118,56 @@ export const buildRouteRelativeUrl = (
       const encodedValue = encodeParamValue(value, false); // Named parameters should encode slashes
       const beforeReplace = relativeUrl;
 
-      // Replace parameter and remove optional marker if present
-      relativeUrl = relativeUrl.replace(`:${key}?`, encodedValue);
-      relativeUrl = relativeUrl.replace(`:${key}`, encodedValue);
-      relativeUrl = relativeUrl.replace(`{${key}}?`, encodedValue);
-      relativeUrl = relativeUrl.replace(`{${key}}`, encodedValue);
+      // Create patterns for this parameter - escape special regex characters
+      const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+      // Handle optional and non-optional parameters separately
+      // For optional parameters (:param? or {param}?), replace the entire pattern including ?
+      // For non-optional parameters (:param or {param}), just replace the parameter
+      const optionalPatterns = [`:${escapedKey}\\?`, `\\{${escapedKey}\\}\\?`];
+      const normalPatterns = [`:${escapedKey}`, `\\{${escapedKey}\\}`];
+
+      // Replace optional parameters (with ?) - replace entire pattern including ?
+      for (const pattern of optionalPatterns) {
+        relativeUrl = relativeUrl.replace(
+          new RegExp(pattern, "g"),
+          (match, offset, string) => {
+            // Check if this match is inside an optional group {...}?
+            const beforeMatch = string.substring(0, offset);
+            const afterMatch = string.substring(offset + match.length);
+
+            // Count unclosed { before this match
+            const openBraces = (beforeMatch.match(/\{/g) || []).length;
+            const closeBraces = (beforeMatch.match(/\}/g) || []).length;
+            const isInsideOptionalGroup =
+              openBraces > closeBraces && afterMatch.includes("}?");
+
+            // Only replace if NOT inside an optional group
+            return isInsideOptionalGroup ? match : encodedValue;
+          },
+        );
+      }
+
+      // Replace normal parameters (without ?) - just replace the parameter part
+      for (const pattern of normalPatterns) {
+        relativeUrl = relativeUrl.replace(
+          new RegExp(pattern, "g"),
+          (match, offset, string) => {
+            // Check if this match is inside an optional group {...}?
+            const beforeMatch = string.substring(0, offset);
+            const afterMatch = string.substring(offset + match.length);
+
+            // Count unclosed { before this match
+            const openBraces = (beforeMatch.match(/\{/g) || []).length;
+            const closeBraces = (beforeMatch.match(/\}/g) || []).length;
+            const isInsideOptionalGroup =
+              openBraces > closeBraces && afterMatch.includes("}?");
+
+            // Only replace if NOT inside an optional group
+            return isInsideOptionalGroup ? match : encodedValue;
+          },
+        );
+      }
 
       // If the URL did not change we'll maybe delete that param
       if (relativeUrl === beforeReplace) {

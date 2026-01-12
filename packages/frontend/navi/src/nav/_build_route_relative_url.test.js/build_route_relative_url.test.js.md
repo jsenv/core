@@ -15,6 +15,7 @@
 - [string params with optional parts](string_params_with_optional_parts/string_params_with_optional_parts.md)
 - [mixed parameter scenarios](mixed_parameter_scenarios/mixed_parameter_scenarios.md)
 - [trailing slash normalization](trailing_slash_normalization/trailing_slash_normalization.md)
+- [optional group patterns](optional_group_patterns/optional_group_patterns.md)
 
 ---
 

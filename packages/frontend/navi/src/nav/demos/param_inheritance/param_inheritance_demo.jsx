@@ -11,7 +11,7 @@ import {
 // Setup routes to test parameter inheritance
 const { HOME_ROUTE, COLOR_ROUTE } = setupRoutes({
   HOME_ROUTE: "/",
-  COLOR_ROUTE: "/colors?color=:color",
+  COLOR_ROUTE: "/colors{/:color}?",
 });
 
 COLOR_ROUTE.addUrlParam("color", {
