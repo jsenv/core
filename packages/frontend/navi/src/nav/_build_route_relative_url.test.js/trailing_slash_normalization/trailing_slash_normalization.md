@@ -1,4 +1,4 @@
-# [trailing slash normalization](../../build_route_relative_url.test.js#L220)
+# [trailing slash normalization](../../build_route_relative_url.test.js#L244)
 
 ```js
 return {

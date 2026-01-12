@@ -9,6 +9,7 @@
 - [complex patterns](complex_patterns/complex_patterns.md)
 - [string params](string_params/string_params.md)
 - [map pattern with boolean params](map_pattern_with_boolean_params/map_pattern_with_boolean_params.md)
+- [map pattern variations](map_pattern_variations/map_pattern_variations.md)
 - [boolean parameters](boolean_parameters/boolean_parameters.md)
 - [string params with optional parts](string_params_with_optional_parts/string_params_with_optional_parts.md)
 - [mixed parameter scenarios](mixed_parameter_scenarios/mixed_parameter_scenarios.md)

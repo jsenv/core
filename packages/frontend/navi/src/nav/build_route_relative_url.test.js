@@ -135,6 +135,30 @@ await snapshotTests(import.meta.url, ({ test }) => {
     };
   });
 
+  test("map pattern variations", () => {
+    const runLocal = (params) => {
+      return run("/map{/}?*", params);
+    };
+
+    return {
+      no_params: runLocal(),
+      empty_params: runLocal({}),
+      wildcard_only: runLocal({
+        0: "layer1/layer2",
+      }),
+      search_params_only: runLocal({
+        zoom: "10",
+        center: "paris",
+      }),
+      wildcard_and_search: runLocal({
+        0: "satellite",
+        zoom: "15",
+        lat: "48.8566",
+        lng: "2.3522",
+      }),
+    };
+  });
+
   test("boolean parameters", () => {
     return {
       single_boolean_true: run("/api/data", {
