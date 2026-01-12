@@ -7194,7 +7194,11 @@ const UITransition = ({
     };
     const update = (part, newPart) => {
       if (!set.has(part)) {
-        console.warn(`UITransition: trying to update an id that does not exist: ${part}`);
+        if (set.size === 0) {
+          console.warn(`UITransition: content id update "${part}" -> "${newPart}" ignored because content id set is empty`);
+          return;
+        }
+        console.warn(`UITransition: content id update "${part}" -> "${newPart}" ignored because content id not found in set, only got [${Array.from(set).join(", ")}]`);
         return;
       }
       set.delete(part);
@@ -7640,9 +7644,9 @@ if (typeof window === "undefined") {
 const setBaseUrl = (value) => {
   baseUrl = new URL(value, window.location).href;
 };
-// Controls what happens to actions when their route becomes inactive:
-// 'abort' - Cancel the action immediately when route deactivates
-// 'keep-loading' - Allow action to continue running after route deactivation
+// Controls what happens to actions when their route stops matching:
+// 'abort' - Cancel the action immediately when route stops matching
+// 'keep-loading' - Allow action to continue running after route stops matching
 //
 // The 'keep-loading' strategy could act like preloading, keeping data ready for potential return.
 // However, since route reactivation triggers action reload anyway, the old data won't be used
@@ -7669,13 +7673,31 @@ const updateRoutes = (
 
     // Get previous state
     const previousState = routePreviousStateMap.get(route) || {
-      active: false,
+      matching: false,
+      exactMatching: false,
       params: null,
     };
-    const oldActive = previousState.active;
+    const oldMatching = previousState.matching;
+    const oldExactMatching = previousState.exactMatching;
     const oldParams = previousState.params;
     const extractedParams = routePattern.applyOn(url);
-    const newActive = Boolean(extractedParams);
+    const newMatching = Boolean(extractedParams);
+
+    // Calculate exact matching - true when matching but no wildcards have content
+    let newExactMatching = false;
+    if (newMatching && extractedParams) {
+      // Check if any wildcard parameters (numeric keys) have meaningful content
+      const hasWildcardContent = Object.keys(extractedParams).some((key) => {
+        const keyAsNumber = parseInt(key, 10);
+        if (!isNaN(keyAsNumber)) {
+          // This is a wildcard parameter (numeric key)
+          const value = extractedParams[key];
+          return value && value.trim() !== "";
+        }
+        return false;
+      });
+      newExactMatching = !hasWildcardContent;
+    }
     let newParams;
     if (extractedParams) {
       if (compareTwoJsValues(oldParams, extractedParams)) {
@@ -7691,37 +7713,42 @@ const updateRoutes = (
     const routeMatchInfo = {
       route,
       routePrivateProperties,
-      oldActive,
-      newActive,
+      oldMatching,
+      newMatching,
+      oldExactMatching,
+      newExactMatching,
       oldParams,
       newParams,
     };
     routeMatchInfoSet.add(routeMatchInfo);
     // Store current state for next comparison
     routePreviousStateMap.set(route, {
-      active: newActive,
+      matching: newMatching,
+      exactMatching: newExactMatching,
       params: newParams,
     });
   }
 
   // Apply all signal updates in a batch
-  const activeRouteSet = new Set();
+  const matchingRouteSet = new Set();
   batch(() => {
     for (const {
       route,
       routePrivateProperties,
-      newActive,
+      newMatching,
+      newExactMatching,
       newParams,
     } of routeMatchInfoSet) {
       const { updateStatus } = routePrivateProperties;
       const visited = isVisited(route.url);
       updateStatus({
-        active: newActive,
+        matching: newMatching,
+        exactMatching: newExactMatching,
         params: newParams,
         visited,
       });
-      if (newActive) {
-        activeRouteSet.add(route);
+      if (newMatching) {
+        matchingRouteSet.add(route);
       }
     }
   });
@@ -7773,8 +7800,8 @@ const updateRoutes = (
   for (const {
     route,
     routePrivateProperties,
-    newActive,
-    oldActive,
+    newMatching,
+    oldMatching,
     newParams,
     oldParams,
   } of routeMatchInfoSet) {
@@ -7783,25 +7810,25 @@ const updateRoutes = (
       continue;
     }
 
-    const becomesActive = newActive && !oldActive;
-    const becomesInactive = !newActive && oldActive;
-    const paramsChangedWhileActive =
-      newActive && oldActive && newParams !== oldParams;
+    const becomesMatching = newMatching && !oldMatching;
+    const becomesNotMatching = !newMatching && oldMatching;
+    const paramsChangedWhileMatching =
+      newMatching && oldMatching && newParams !== oldParams;
 
-    // Handle actions for routes that become active
-    if (becomesActive) {
+    // Handle actions for routes that become matching
+    if (becomesMatching) {
       shouldLoad(route);
       continue;
     }
 
-    // Handle actions for routes that become inactive - abort them
-    if (becomesInactive && ROUTE_DEACTIVATION_STRATEGY === "abort") {
+    // Handle actions for routes that become not matching - abort them
+    if (becomesNotMatching && ROUTE_DEACTIVATION_STRATEGY === "abort") {
       shouldAbort(route);
       continue;
     }
 
-    // Handle parameter changes while route stays active
-    if (paramsChangedWhileActive) {
+    // Handle parameter changes while route stays matching
+    if (paramsChangedWhileMatching) {
       shouldReload(route);
     }
   }
@@ -7811,7 +7838,7 @@ const updateRoutes = (
     reloadSet: toReloadSet,
     abortSignalMap,
     routeLoadRequestedMap,
-    activeRouteSet,
+    matchingRouteSet,
   };
 };
 
@@ -7833,7 +7860,8 @@ const createRoute = (urlPatternInput) => {
   const route = {
     urlPattern: urlPatternInput,
     isRoute: true,
-    active: false,
+    matching: false,
+    exactMatching: false,
     params: null,
     buildUrl: null,
     bindAction: null,
@@ -7851,18 +7879,24 @@ const createRoute = (urlPatternInput) => {
 
   const routePrivateProperties = {
     routePattern: null,
-    activeSignal: null,
+    matchingSignal: null,
+    exactMatchingSignal: null,
     paramsSignal: null,
     visitedSignal: null,
     relativeUrlSignal: null,
     urlSignal: null,
-    updateStatus: ({ active, params, visited }) => {
+    updateStatus: ({ matching, exactMatching, params, visited }) => {
       let someChange = false;
-      activeSignal.value = active;
+      matchingSignal.value = matching;
+      exactMatchingSignal.value = exactMatching;
       paramsSignal.value = params;
       visitedSignal.value = visited;
-      if (route.active !== active) {
-        route.active = active;
+      if (route.matching !== matching) {
+        route.matching = matching;
+        someChange = true;
+      }
+      if (route.exactMatching !== exactMatching) {
+        route.exactMatching = exactMatching;
         someChange = true;
       }
       if (route.params !== params) {
@@ -7874,7 +7908,7 @@ const createRoute = (urlPatternInput) => {
         someChange = true;
       }
       if (someChange) {
-        publishStatus({ active, params, visited });
+        publishStatus({ matching, exactMatching, params, visited });
       }
     },
   };
@@ -7948,7 +7982,8 @@ const createRoute = (urlPatternInput) => {
   };
   route.buildUrl = buildUrl;
 
-  const activeSignal = signal(false);
+  const matchingSignal = signal(false);
+  const exactMatchingSignal = signal(false);
   const paramsSignal = signal(null);
   const visitedSignal = signal(false);
   const relativeUrlSignal = computed(() => {
@@ -8054,7 +8089,8 @@ const createRoute = (urlPatternInput) => {
   route.bindAction = bindAction;
 
   {
-    routePrivateProperties.activeSignal = activeSignal;
+    routePrivateProperties.matchingSignal = matchingSignal;
+    routePrivateProperties.exactMatchingSignal = exactMatchingSignal;
     routePrivateProperties.paramsSignal = paramsSignal;
     routePrivateProperties.visitedSignal = visitedSignal;
     routePrivateProperties.relativeUrlSignal = relativeUrlSignal;
@@ -8072,17 +8108,24 @@ const useRouteStatus = (route) => {
     throw new Error(`Cannot find route private properties for ${route}`);
   }
 
-  const { urlSignal, activeSignal, paramsSignal, visitedSignal } =
-    routePrivateProperties;
+  const {
+    urlSignal,
+    matchingSignal,
+    exactMatchingSignal,
+    paramsSignal,
+    visitedSignal,
+  } = routePrivateProperties;
 
   const url = urlSignal.value;
-  const active = activeSignal.value;
+  const matching = matchingSignal.value;
+  const exactMatching = exactMatchingSignal.value;
   const params = paramsSignal.value;
   const visited = visitedSignal.value;
 
   return {
     url,
-    active,
+    matching,
+    exactMatching,
     params,
     visited,
   };
@@ -8836,7 +8879,7 @@ const Routes = ({
   element = RootElement,
   children
 }) => {
-  const routeInfo = useActiveRouteInfo();
+  const routeInfo = useMatchingRouteInfo();
   const route = routeInfo?.route;
   return jsx(Route, {
     route: route,
@@ -8844,7 +8887,7 @@ const Routes = ({
     children: children
   });
 };
-const useActiveRouteInfo = () => useContext(RouteInfoContext);
+const useMatchingRouteInfo = () => useContext(RouteInfoContext);
 const Route = ({
   element,
   route,
@@ -8855,43 +8898,43 @@ const Route = ({
 }) => {
   const forceRender = useForceRender();
   const hasDiscoveredRef = useRef(false);
-  const activeInfoRef = useRef(null);
+  const matchingInfoRef = useRef(null);
   if (!hasDiscoveredRef.current) {
-    return jsx(ActiveRouteManager, {
+    return jsx(MatchingRouteManager, {
       element: element,
       route: route,
       index: index,
       fallback: fallback,
       meta: meta,
-      onActiveInfoChange: activeInfo => {
+      onMatchingInfoChange: matchingInfo => {
         hasDiscoveredRef.current = true;
-        activeInfoRef.current = activeInfo;
+        matchingInfoRef.current = matchingInfo;
         forceRender();
       },
       children: children
     });
   }
-  const activeInfo = activeInfoRef.current;
-  if (!activeInfo) {
+  const matchingInfo = matchingInfoRef.current;
+  if (!matchingInfo) {
     return null;
   }
   const {
-    ActiveElement
-  } = activeInfo;
-  return jsx(ActiveElement, {});
+    MatchingElement
+  } = matchingInfo;
+  return jsx(MatchingElement, {});
 };
 const RegisterChildRouteContext = createContext(null);
 
 /* This component is ensure to be rendered once
 So no need to cleanup things or whatever we know and ensure that 
-it's executed once for the entier app lifecycle */
-const ActiveRouteManager = ({
+it's executed once for the entire app lifecycle */
+const MatchingRouteManager = ({
   element,
   route,
   index,
   fallback,
   meta,
-  onActiveInfoChange,
+  onMatchingInfoChange,
   children
 }) => {
   if (route && fallback) {
@@ -8935,7 +8978,7 @@ const ActiveRouteManager = ({
       indexCandidate,
       fallbackCandidate,
       candidateSet,
-      onActiveInfoChange,
+      onMatchingInfoChange,
       registerChildRouteFromContext
     });
   }, []);
@@ -8953,7 +8996,7 @@ const initRouteObserver = ({
   indexCandidate,
   fallbackCandidate,
   candidateSet,
-  onActiveInfoChange,
+  onMatchingInfoChange,
   registerChildRouteFromContext
 }) => {
   if (!fallbackCandidate && indexCandidate && indexCandidate.fallback !== false) {
@@ -8973,15 +9016,15 @@ const initRouteObserver = ({
   const compositeRoute = {
     urlPattern: `composite(${candidateElementIds})`,
     isComposite: true,
-    active: false,
+    matching: false,
     subscribeStatus: subscribeCompositeStatus,
     toString: () => `composite(${candidateSet.size} candidates)`,
     routeFromProps: route,
     elementFromProps: element
   };
-  const findActiveChildInfo = () => {
+  const findMatchingChildInfo = () => {
     for (const candidate of candidateSet) {
-      if (candidate.route?.active) {
+      if (candidate.route?.matching) {
         return candidate;
       }
     }
@@ -9001,16 +9044,16 @@ const initRouteObserver = ({
     }
     return null;
   };
-  const getActiveInfo = route ? () => {
-    if (!route.active) {
+  const getMatchingInfo = route ? () => {
+    if (!route.matching) {
       // we have a route and it does not match no need to go further
       return null;
     }
-    // we have a route and it is active (it matches)
-    // we search the first active child to put it in the slot
-    const activeChildInfo = findActiveChildInfo();
-    if (activeChildInfo) {
-      return activeChildInfo;
+    // we have a route and it is matching
+    // we search the first matching child to put it in the slot
+    const matchingChildInfo = findMatchingChildInfo();
+    if (matchingChildInfo) {
+      return matchingChildInfo;
     }
     return {
       route,
@@ -9018,19 +9061,19 @@ const initRouteObserver = ({
       meta
     };
   } : () => {
-    // we don't have a route, do we have an active child?
-    const activeChildInfo = findActiveChildInfo();
-    if (activeChildInfo) {
-      return activeChildInfo;
+    // we don't have a route, do we have a matching child?
+    const matchingChildInfo = findMatchingChildInfo();
+    if (matchingChildInfo) {
+      return matchingChildInfo;
     }
     return null;
   };
-  const activeRouteInfoSignal = signal();
-  const SlotActiveElementSignal = signal();
-  const ActiveElement = () => {
-    const activeRouteInfo = activeRouteInfoSignal.value;
-    useUITransitionContentId(activeRouteInfo ? activeRouteInfo.route.urlPattern : fallback ? "fallback" : undefined);
-    const SlotActiveElement = SlotActiveElementSignal.value;
+  const matchingRouteInfoSignal = signal();
+  const SlotMatchingElementSignal = signal();
+  const MatchingElement = () => {
+    const matchingRouteInfo = matchingRouteInfoSignal.value;
+    useUITransitionContentId(matchingRouteInfo ? matchingRouteInfo.route.urlPattern : fallback ? "fallback" : undefined);
+    const SlotMatchingElement = SlotMatchingElementSignal.value;
     if (typeof element === "function") {
       const Element = element;
       element = jsx(Element, {});
@@ -9038,42 +9081,42 @@ const initRouteObserver = ({
     // ensure we re-render on document url change (useful when navigating from /users/list to /users)
     // so that we re-replace urls back to /users/list when /users/list is an index
     useDocumentUrl();
-    if (activeRouteInfo && activeRouteInfo.index && !activeRouteInfo.route.active) {
-      const routeUrl = activeRouteInfo.route.routeFromProps.buildUrl();
+    if (matchingRouteInfo && matchingRouteInfo.index && !matchingRouteInfo.route.matching) {
+      const routeUrl = matchingRouteInfo.route.routeFromProps.buildUrl();
       replaceUrl(routeUrl);
     }
     return jsx(RouteInfoContext.Provider, {
-      value: activeRouteInfo,
+      value: matchingRouteInfo,
       children: jsx(SlotContext.Provider, {
-        value: SlotActiveElement,
+        value: SlotMatchingElement,
         children: element
       })
     });
   };
-  ActiveElement.underlyingElementId = candidateSet.size === 0 ? `${getElementSignature(element)} without slot` : `[${getElementSignature(element)} with slot one of ${candidateElementIds}]`;
-  const updateActiveInfo = () => {
-    const newActiveInfo = getActiveInfo();
-    if (newActiveInfo) {
-      compositeRoute.active = true;
-      activeRouteInfoSignal.value = newActiveInfo;
-      SlotActiveElementSignal.value = newActiveInfo.element;
-      onActiveInfoChange({
-        route: newActiveInfo.route,
-        ActiveElement,
-        SlotActiveElement: newActiveInfo.element,
-        index: newActiveInfo.index,
-        fallback: newActiveInfo.fallback,
-        meta: newActiveInfo.meta
+  MatchingElement.underlyingElementId = candidateSet.size === 0 ? `${getElementSignature(element)} without slot` : `[${getElementSignature(element)} with slot one of ${candidateElementIds}]`;
+  const updateMatchingInfo = () => {
+    const newMatchingInfo = getMatchingInfo();
+    if (newMatchingInfo) {
+      compositeRoute.matching = true;
+      matchingRouteInfoSignal.value = newMatchingInfo;
+      SlotMatchingElementSignal.value = newMatchingInfo.element;
+      onMatchingInfoChange({
+        route: newMatchingInfo.route,
+        MatchingElement,
+        SlotMatchingElement: newMatchingInfo.element,
+        index: newMatchingInfo.index,
+        fallback: newMatchingInfo.fallback,
+        meta: newMatchingInfo.meta
       });
     } else {
-      compositeRoute.active = false;
-      activeRouteInfoSignal.value = null;
-      SlotActiveElementSignal.value = null;
-      onActiveInfoChange(null);
+      compositeRoute.matching = false;
+      matchingRouteInfoSignal.value = null;
+      SlotMatchingElementSignal.value = null;
+      onMatchingInfoChange(null);
     }
   };
   const onChange = () => {
-    updateActiveInfo();
+    updateMatchingInfo();
     publishCompositeStatus();
   };
   if (route) {
@@ -9085,13 +9128,13 @@ const initRouteObserver = ({
   if (registerChildRouteFromContext) {
     registerChildRouteFromContext({
       route: compositeRoute,
-      element: ActiveElement,
+      element: MatchingElement,
       index,
       fallback,
       meta
     });
   }
-  updateActiveInfo();
+  updateMatchingInfo();
   return () => {
     teardown();
   };
@@ -17238,13 +17281,12 @@ const RouteLink = ({
   }
   const routeStatus = useRouteStatus(route);
   const url = route.buildUrl(routeParams);
-  const active = routeStatus.active;
   const paramsAreMatching = route.matchesParams(routeParams);
   return jsx(Link, {
     ...rest,
     href: url,
     pseudoState: {
-      ":-navi-href-current": active && paramsAreMatching
+      ":-navi-href-current": paramsAreMatching ? routeStatus.matching : routeStatus.exactMatching
     },
     children: children || route.buildRelativeUrl(routeParams)
   });
@@ -17562,10 +17604,10 @@ const TabRoute = ({
   ...props
 }) => {
   const {
-    active
+    matching
   } = useRouteStatus(route);
   const paramsAreMatching = route.matchesParams(routeParams);
-  const selected = active && paramsAreMatching;
+  const selected = matching && paramsAreMatching;
   return jsx(TabBasic, {
     selected: selected,
     ...props,
@@ -25456,5 +25498,5 @@ const UserSvg = () => jsx("svg", {
   })
 });
 
-export { ActionRenderer, ActiveKeyboardShortcuts, Address, BadgeCount, Box, Button, ButtonCopyToClipboard, Caption, CheckSvg, Checkbox, CheckboxList, Code, Col, Colgroup, ConstructionSvg, Details, DialogLayout, Editable, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Form, HeartSvg, HomeSvg, Icon, Image, Input, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, MessageBox, Paragraph, Radio, RadioList, Route, RouteLink, Routes, RowNumberCol, RowNumberTableCell, SINGLE_SPACE_CONSTRAINT, SVGMaskOverlay, SearchSvg, Select, SelectionContext, Separator, SettingsSvg, StarSvg, SummaryMarker, Svg, Tab, TabList, Table, TableCell, Tbody, Text, Thead, Title, Tr, UITransition, UserSvg, ViewportLayout, actionIntegratedVia, addCustomMessage, compareTwoJsValues, createAction, createAvailableConstraint, createRequestCanceller, createSelectionKeyboardShortcuts, enableDebugActions, enableDebugOnDocumentLoading, forwardActionRequested, installCustomConstraintValidation, isCellSelected, isColumnSelected, isRowSelected, localStorageSignal, navBack, navForward, navTo, openCallout, rawUrlPart, reload, removeCustomMessage, requestAction, rerunActions, resource, setBaseUrl, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, updateActions, useActionData, useActionStatus, useActiveRouteInfo, useCalloutClose, useCellsAndColumns, useConstraintValidityState, useDependenciesDiff, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState$1 as useNavState, useRouteStatus, useRunOnMount, useSelectableElement, useSelectionController, useSignalSync, useStateArray, useTitleLevel, useUrlSearchParam, valueInLocalStorage };
+export { ActionRenderer, ActiveKeyboardShortcuts, Address, BadgeCount, Box, Button, ButtonCopyToClipboard, Caption, CheckSvg, Checkbox, CheckboxList, Code, Col, Colgroup, ConstructionSvg, Details, DialogLayout, Editable, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Form, HeartSvg, HomeSvg, Icon, Image, Input, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, MessageBox, Paragraph, Radio, RadioList, Route, RouteLink, Routes, RowNumberCol, RowNumberTableCell, SINGLE_SPACE_CONSTRAINT, SVGMaskOverlay, SearchSvg, Select, SelectionContext, Separator, SettingsSvg, StarSvg, SummaryMarker, Svg, Tab, TabList, Table, TableCell, Tbody, Text, Thead, Title, Tr, UITransition, UserSvg, ViewportLayout, actionIntegratedVia, addCustomMessage, compareTwoJsValues, createAction, createAvailableConstraint, createRequestCanceller, createSelectionKeyboardShortcuts, enableDebugActions, enableDebugOnDocumentLoading, forwardActionRequested, installCustomConstraintValidation, isCellSelected, isColumnSelected, isRowSelected, localStorageSignal, navBack, navForward, navTo, openCallout, rawUrlPart, reload, removeCustomMessage, requestAction, rerunActions, resource, setBaseUrl, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, updateActions, useActionData, useActionStatus, useCalloutClose, useCellsAndColumns, useConstraintValidityState, useDependenciesDiff, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useMatchingRouteInfo, useNavState$1 as useNavState, useRouteStatus, useRunOnMount, useSelectableElement, useSelectionController, useSignalSync, useStateArray, useTitleLevel, useUrlSearchParam, valueInLocalStorage };
 //# sourceMappingURL=jsenv_navi.js.map

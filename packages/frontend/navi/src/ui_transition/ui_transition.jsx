@@ -69,8 +69,14 @@ export const UITransition = ({
     };
     const update = (part, newPart) => {
       if (!set.has(part)) {
+        if (set.size === 0) {
+          console.warn(
+            `UITransition: content id update "${part}" -> "${newPart}" ignored because content id set is empty`,
+          );
+          return;
+        }
         console.warn(
-          `UITransition: trying to update an id that does not exist: ${part}`,
+          `UITransition: content id update "${part}" -> "${newPart}" ignored because content id not found in set, only got [${Array.from(set).join(", ")}]`,
         );
         return;
       }
