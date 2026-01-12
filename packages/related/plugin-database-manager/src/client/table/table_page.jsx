@@ -33,8 +33,9 @@ export const TablePage = ({ table }) => {
   const tablename = table.tablename;
   const tableDataUrl = TABLE_DATA_ROUTE.buildUrl({ tablename });
   const tableSettingUrl = TABLE_SETTINGS_ROUTE.buildUrl({ tablename });
-  const { active: tableDataRouteIsActive } = useRouteStatus(TABLE_DATA_ROUTE);
-  const { active: tableSettingsRouteIsActive } =
+  const { matching: tableDataRouteIsMatching } =
+    useRouteStatus(TABLE_DATA_ROUTE);
+  const { matching: tableSettingsRouteIsMatching } =
     useRouteStatus(TABLE_SETTINGS_ROUTE);
 
   return (
@@ -44,7 +45,7 @@ export const TablePage = ({ table }) => {
           {tablename}
         </PageHead.Label>
         <TabList>
-          <Tab selected={tableDataRouteIsActive}>
+          <Tab selected={tableDataRouteIsMatching}>
             <LinkWithIcon
               icon={<DataSvg />}
               href={tableDataUrl}
@@ -53,7 +54,7 @@ export const TablePage = ({ table }) => {
               Data
             </LinkWithIcon>
           </Tab>
-          <Tab selected={tableSettingsRouteIsActive}>
+          <Tab selected={tableSettingsRouteIsMatching}>
             <LinkWithIcon
               icon={<SettingsSvg />}
               href={tableSettingUrl}

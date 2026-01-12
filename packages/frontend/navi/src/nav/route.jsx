@@ -59,7 +59,7 @@ const SlotContext = createContext(null);
 const RouteInfoContext = createContext(null);
 
 export const Routes = ({ element = RootElement, children }) => {
-  const routeInfo = useActiveRouteInfo();
+  const routeInfo = useMatchingRouteInfo();
   const route = routeInfo?.route;
 
   return (
@@ -69,51 +69,51 @@ export const Routes = ({ element = RootElement, children }) => {
   );
 };
 
-export const useActiveRouteInfo = () => useContext(RouteInfoContext);
+export const useMatchingRouteInfo = () => useContext(RouteInfoContext);
 export const Route = ({ element, route, index, fallback, meta, children }) => {
   const forceRender = useForceRender();
   const hasDiscoveredRef = useRef(false);
-  const activeInfoRef = useRef(null);
+  const matchingInfoRef = useRef(null);
 
   if (!hasDiscoveredRef.current) {
     return (
-      <ActiveRouteManager
+      <MatchingRouteManager
         element={element}
         route={route}
         index={index}
         fallback={fallback}
         meta={meta}
-        onActiveInfoChange={(activeInfo) => {
+        onMatchingInfoChange={(matchingInfo) => {
           hasDiscoveredRef.current = true;
-          activeInfoRef.current = activeInfo;
+          matchingInfoRef.current = matchingInfo;
           forceRender();
         }}
       >
         {children}
-      </ActiveRouteManager>
+      </MatchingRouteManager>
     );
   }
 
-  const activeInfo = activeInfoRef.current;
-  if (!activeInfo) {
+  const matchingInfo = matchingInfoRef.current;
+  if (!matchingInfo) {
     return null;
   }
-  const { ActiveElement } = activeInfo;
-  return <ActiveElement />;
+  const { MatchingElement } = matchingInfo;
+  return <MatchingElement />;
 };
 
 const RegisterChildRouteContext = createContext(null);
 
 /* This component is ensure to be rendered once
 So no need to cleanup things or whatever we know and ensure that 
-it's executed once for the entier app lifecycle */
-const ActiveRouteManager = ({
+it's executed once for the entire app lifecycle */
+const MatchingRouteManager = ({
   element,
   route,
   index,
   fallback,
   meta,
-  onActiveInfoChange,
+  onMatchingInfoChange,
   children,
 }) => {
   if (route && fallback) {
@@ -168,7 +168,7 @@ const ActiveRouteManager = ({
       indexCandidate,
       fallbackCandidate,
       candidateSet,
-      onActiveInfoChange,
+      onMatchingInfoChange,
       registerChildRouteFromContext,
     });
   }, []);
@@ -189,7 +189,7 @@ const initRouteObserver = ({
   indexCandidate,
   fallbackCandidate,
   candidateSet,
-  onActiveInfoChange,
+  onMatchingInfoChange,
   registerChildRouteFromContext,
 }) => {
   if (
@@ -221,16 +221,16 @@ const initRouteObserver = ({
   const compositeRoute = {
     urlPattern: `composite(${candidateElementIds})`,
     isComposite: true,
-    active: false,
+    matching: false,
     subscribeStatus: subscribeCompositeStatus,
     toString: () => `composite(${candidateSet.size} candidates)`,
     routeFromProps: route,
     elementFromProps: element,
   };
 
-  const findActiveChildInfo = () => {
+  const findMatchingChildInfo = () => {
     for (const candidate of candidateSet) {
-      if (candidate.route?.active) {
+      if (candidate.route?.matching) {
         return candidate;
       }
     }
@@ -250,17 +250,17 @@ const initRouteObserver = ({
     }
     return null;
   };
-  const getActiveInfo = route
+  const getMatchingInfo = route
     ? () => {
-        if (!route.active) {
+        if (!route.matching) {
           // we have a route and it does not match no need to go further
           return null;
         }
-        // we have a route and it is active (it matches)
-        // we search the first active child to put it in the slot
-        const activeChildInfo = findActiveChildInfo();
-        if (activeChildInfo) {
-          return activeChildInfo;
+        // we have a route and it is matching
+        // we search the first matching child to put it in the slot
+        const matchingChildInfo = findMatchingChildInfo();
+        if (matchingChildInfo) {
+          return matchingChildInfo;
         }
         return {
           route,
@@ -269,26 +269,26 @@ const initRouteObserver = ({
         };
       }
     : () => {
-        // we don't have a route, do we have an active child?
-        const activeChildInfo = findActiveChildInfo();
-        if (activeChildInfo) {
-          return activeChildInfo;
+        // we don't have a route, do we have a matching child?
+        const matchingChildInfo = findMatchingChildInfo();
+        if (matchingChildInfo) {
+          return matchingChildInfo;
         }
         return null;
       };
 
-  const activeRouteInfoSignal = signal();
-  const SlotActiveElementSignal = signal();
-  const ActiveElement = () => {
-    const activeRouteInfo = activeRouteInfoSignal.value;
+  const matchingRouteInfoSignal = signal();
+  const SlotMatchingElementSignal = signal();
+  const MatchingElement = () => {
+    const matchingRouteInfo = matchingRouteInfoSignal.value;
     useUITransitionContentId(
-      activeRouteInfo
-        ? activeRouteInfo.route.urlPattern
+      matchingRouteInfo
+        ? matchingRouteInfo.route.urlPattern
         : fallback
           ? "fallback"
           : undefined,
     );
-    const SlotActiveElement = SlotActiveElementSignal.value;
+    const SlotMatchingElement = SlotMatchingElementSignal.value;
     if (typeof element === "function") {
       const Element = element;
       element = <Element />;
@@ -298,50 +298,50 @@ const initRouteObserver = ({
     useDocumentUrl();
 
     if (
-      activeRouteInfo &&
-      activeRouteInfo.index &&
-      !activeRouteInfo.route.active
+      matchingRouteInfo &&
+      matchingRouteInfo.index &&
+      !matchingRouteInfo.route.matching
     ) {
-      const routeUrl = activeRouteInfo.route.routeFromProps.buildUrl();
+      const routeUrl = matchingRouteInfo.route.routeFromProps.buildUrl();
       replaceUrl(routeUrl);
     }
 
     return (
-      <RouteInfoContext.Provider value={activeRouteInfo}>
-        <SlotContext.Provider value={SlotActiveElement}>
+      <RouteInfoContext.Provider value={matchingRouteInfo}>
+        <SlotContext.Provider value={SlotMatchingElement}>
           {element}
         </SlotContext.Provider>
       </RouteInfoContext.Provider>
     );
   };
-  ActiveElement.underlyingElementId =
+  MatchingElement.underlyingElementId =
     candidateSet.size === 0
       ? `${getElementSignature(element)} without slot`
       : `[${getElementSignature(element)} with slot one of ${candidateElementIds}]`;
 
-  const updateActiveInfo = () => {
-    const newActiveInfo = getActiveInfo();
-    if (newActiveInfo) {
-      compositeRoute.active = true;
-      activeRouteInfoSignal.value = newActiveInfo;
-      SlotActiveElementSignal.value = newActiveInfo.element;
-      onActiveInfoChange({
-        route: newActiveInfo.route,
-        ActiveElement,
-        SlotActiveElement: newActiveInfo.element,
-        index: newActiveInfo.index,
-        fallback: newActiveInfo.fallback,
-        meta: newActiveInfo.meta,
+  const updateMatchingInfo = () => {
+    const newMatchingInfo = getMatchingInfo();
+    if (newMatchingInfo) {
+      compositeRoute.matching = true;
+      matchingRouteInfoSignal.value = newMatchingInfo;
+      SlotMatchingElementSignal.value = newMatchingInfo.element;
+      onMatchingInfoChange({
+        route: newMatchingInfo.route,
+        MatchingElement,
+        SlotMatchingElement: newMatchingInfo.element,
+        index: newMatchingInfo.index,
+        fallback: newMatchingInfo.fallback,
+        meta: newMatchingInfo.meta,
       });
     } else {
-      compositeRoute.active = false;
-      activeRouteInfoSignal.value = null;
-      SlotActiveElementSignal.value = null;
-      onActiveInfoChange(null);
+      compositeRoute.matching = false;
+      matchingRouteInfoSignal.value = null;
+      SlotMatchingElementSignal.value = null;
+      onMatchingInfoChange(null);
     }
   };
   const onChange = () => {
-    updateActiveInfo();
+    updateMatchingInfo();
     publishCompositeStatus();
   };
   if (route) {
@@ -361,13 +361,13 @@ const initRouteObserver = ({
   if (registerChildRouteFromContext) {
     registerChildRouteFromContext({
       route: compositeRoute,
-      element: ActiveElement,
+      element: MatchingElement,
       index,
       fallback,
       meta,
     });
   }
-  updateActiveInfo();
+  updateMatchingInfo();
 
   return () => {
     teardown();

@@ -24,9 +24,9 @@ export const setBaseUrl = (value) => {
 };
 
 const DEBUG = false;
-// Controls what happens to actions when their route becomes inactive:
-// 'abort' - Cancel the action immediately when route deactivates
-// 'keep-loading' - Allow action to continue running after route deactivation
+// Controls what happens to actions when their route stops matching:
+// 'abort' - Cancel the action immediately when route stops matching
+// 'keep-loading' - Allow action to continue running after route stops matching
 //
 // The 'keep-loading' strategy could act like preloading, keeping data ready for potential return.
 // However, since route reactivation triggers action reload anyway, the old data won't be used
@@ -53,13 +53,13 @@ export const updateRoutes = (
 
     // Get previous state
     const previousState = routePreviousStateMap.get(route) || {
-      active: false,
+      matching: false,
       params: null,
     };
-    const oldActive = previousState.active;
+    const oldMatching = previousState.matching;
     const oldParams = previousState.params;
     const extractedParams = routePattern.applyOn(url);
-    const newActive = Boolean(extractedParams);
+    const newMatching = Boolean(extractedParams);
     let newParams;
     if (extractedParams) {
       if (compareTwoJsValues(oldParams, extractedParams)) {
@@ -75,37 +75,37 @@ export const updateRoutes = (
     const routeMatchInfo = {
       route,
       routePrivateProperties,
-      oldActive,
-      newActive,
+      oldMatching,
+      newMatching,
       oldParams,
       newParams,
     };
     routeMatchInfoSet.add(routeMatchInfo);
     // Store current state for next comparison
     routePreviousStateMap.set(route, {
-      active: newActive,
+      matching: newMatching,
       params: newParams,
     });
   }
 
   // Apply all signal updates in a batch
-  const activeRouteSet = new Set();
+  const matchingRouteSet = new Set();
   batch(() => {
     for (const {
       route,
       routePrivateProperties,
-      newActive,
+      newMatching,
       newParams,
     } of routeMatchInfoSet) {
       const { updateStatus } = routePrivateProperties;
       const visited = isVisited(route.url);
       updateStatus({
-        active: newActive,
+        matching: newMatching,
         params: newParams,
         visited,
       });
-      if (newActive) {
-        activeRouteSet.add(route);
+      if (newMatching) {
+        matchingRouteSet.add(route);
       }
     }
   });
@@ -157,8 +157,8 @@ export const updateRoutes = (
   for (const {
     route,
     routePrivateProperties,
-    newActive,
-    oldActive,
+    newMatching,
+    oldMatching,
     newParams,
     oldParams,
   } of routeMatchInfoSet) {
@@ -167,16 +167,16 @@ export const updateRoutes = (
       continue;
     }
 
-    const becomesActive = newActive && !oldActive;
-    const becomesInactive = !newActive && oldActive;
-    const paramsChangedWhileActive =
-      newActive && oldActive && newParams !== oldParams;
+    const becomesMatching = newMatching && !oldMatching;
+    const becomesNotMatching = !newMatching && oldMatching;
+    const paramsChangedWhileMatching =
+      newMatching && oldMatching && newParams !== oldParams;
 
-    // Handle actions for routes that become active
-    if (becomesActive) {
+    // Handle actions for routes that become matching
+    if (becomesMatching) {
       if (DEBUG) {
         console.debug(
-          `${routePrivateProperties} became active with params:`,
+          `${routePrivateProperties} became matching with params:`,
           newParams,
         );
       }
@@ -184,14 +184,14 @@ export const updateRoutes = (
       continue;
     }
 
-    // Handle actions for routes that become inactive - abort them
-    if (becomesInactive && ROUTE_DEACTIVATION_STRATEGY === "abort") {
+    // Handle actions for routes that become not matching - abort them
+    if (becomesNotMatching && ROUTE_DEACTIVATION_STRATEGY === "abort") {
       shouldAbort(route);
       continue;
     }
 
-    // Handle parameter changes while route stays active
-    if (paramsChangedWhileActive) {
+    // Handle parameter changes while route stays matching
+    if (paramsChangedWhileMatching) {
       if (DEBUG) {
         console.debug(`${routePrivateProperties} params changed:`, newParams);
       }
@@ -204,7 +204,7 @@ export const updateRoutes = (
     reloadSet: toReloadSet,
     abortSignalMap,
     routeLoadRequestedMap,
-    activeRouteSet,
+    matchingRouteSet,
   };
 };
 
@@ -226,7 +226,7 @@ const createRoute = (urlPatternInput) => {
   const route = {
     urlPattern: urlPatternInput,
     isRoute: true,
-    active: false,
+    matching: false,
     params: null,
     buildUrl: null,
     bindAction: null,
@@ -244,18 +244,18 @@ const createRoute = (urlPatternInput) => {
 
   const routePrivateProperties = {
     routePattern: null,
-    activeSignal: null,
+    matchingSignal: null,
     paramsSignal: null,
     visitedSignal: null,
     relativeUrlSignal: null,
     urlSignal: null,
-    updateStatus: ({ active, params, visited }) => {
+    updateStatus: ({ matching, params, visited }) => {
       let someChange = false;
-      activeSignal.value = active;
+      matchingSignal.value = matching;
       paramsSignal.value = params;
       visitedSignal.value = visited;
-      if (route.active !== active) {
-        route.active = active;
+      if (route.matching !== matching) {
+        route.matching = matching;
         someChange = true;
       }
       if (route.params !== params) {
@@ -269,12 +269,12 @@ const createRoute = (urlPatternInput) => {
       if (someChange) {
         if (DEBUG) {
           console.debug(`${route} status changed:`, {
-            active,
+            matching,
             params,
             visited,
           });
         }
-        publishStatus({ active, params, visited });
+        publishStatus({ matching, params, visited });
       }
     },
   };
@@ -348,7 +348,7 @@ const createRoute = (urlPatternInput) => {
   };
   route.buildUrl = buildUrl;
 
-  const activeSignal = signal(false);
+  const matchingSignal = signal(false);
   const paramsSignal = signal(null);
   const visitedSignal = signal(false);
   const relativeUrlSignal = computed(() => {
@@ -454,7 +454,7 @@ const createRoute = (urlPatternInput) => {
   route.bindAction = bindAction;
 
   private_properties: {
-    routePrivateProperties.activeSignal = activeSignal;
+    routePrivateProperties.matchingSignal = matchingSignal;
     routePrivateProperties.paramsSignal = paramsSignal;
     routePrivateProperties.visitedSignal = visitedSignal;
     routePrivateProperties.relativeUrlSignal = relativeUrlSignal;
@@ -483,17 +483,17 @@ export const useRouteStatus = (route) => {
     throw new Error(`Cannot find route private properties for ${route}`);
   }
 
-  const { urlSignal, activeSignal, paramsSignal, visitedSignal } =
+  const { urlSignal, matchingSignal, paramsSignal, visitedSignal } =
     routePrivateProperties;
 
   const url = urlSignal.value;
-  const active = activeSignal.value;
+  const matching = matchingSignal.value;
   const params = paramsSignal.value;
   const visited = visitedSignal.value;
 
   return {
     url,
-    active,
+    matching,
     params,
     visited,
   };

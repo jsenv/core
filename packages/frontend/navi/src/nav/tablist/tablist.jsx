@@ -332,9 +332,9 @@ const TabRoute = ({
 
   ...props
 }) => {
-  const { active } = useRouteStatus(route);
+  const { matching } = useRouteStatus(route);
   const paramsAreMatching = route.matchesParams(routeParams);
-  const selected = active && paramsAreMatching;
+  const selected = matching && paramsAreMatching;
   return (
     <TabBasic
       selected={selected}
