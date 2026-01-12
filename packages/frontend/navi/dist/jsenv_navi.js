@@ -17324,12 +17324,19 @@ const RouteLink = ({
   }
   const routeStatus = useRouteStatus(route);
   const url = route.buildUrl(routeParams);
-  const paramsAreMatching = route.matchesParams(routeParams);
+  let isCurrent;
+  if (routeStatus.exactMatching) {
+    isCurrent = true;
+  } else if (routeStatus.matching) {
+    isCurrent = routeParams ? route.matchesParams(routeParams) : false;
+  } else {
+    isCurrent = false;
+  }
   return jsx(Link, {
     ...rest,
     href: url,
     pseudoState: {
-      ":-navi-href-current": paramsAreMatching ? routeStatus.matching : routeStatus.exactMatching
+      ":-navi-href-current": isCurrent
     },
     children: children || route.buildRelativeUrl(routeParams)
   });
