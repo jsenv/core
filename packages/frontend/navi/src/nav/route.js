@@ -54,12 +54,30 @@ export const updateRoutes = (
     // Get previous state
     const previousState = routePreviousStateMap.get(route) || {
       matching: false,
+      exactMatching: false,
       params: null,
     };
     const oldMatching = previousState.matching;
+    const oldExactMatching = previousState.exactMatching;
     const oldParams = previousState.params;
     const extractedParams = routePattern.applyOn(url);
     const newMatching = Boolean(extractedParams);
+
+    // Calculate exact matching - true when matching but no wildcards have content
+    let newExactMatching = false;
+    if (newMatching && extractedParams) {
+      // Check if any wildcard parameters (numeric keys) have meaningful content
+      const hasWildcardContent = Object.keys(extractedParams).some((key) => {
+        const keyAsNumber = parseInt(key, 10);
+        if (!isNaN(keyAsNumber)) {
+          // This is a wildcard parameter (numeric key)
+          const value = extractedParams[key];
+          return value && value.trim() !== "";
+        }
+        return false;
+      });
+      newExactMatching = !hasWildcardContent;
+    }
     let newParams;
     if (extractedParams) {
       if (compareTwoJsValues(oldParams, extractedParams)) {
@@ -77,6 +95,8 @@ export const updateRoutes = (
       routePrivateProperties,
       oldMatching,
       newMatching,
+      oldExactMatching,
+      newExactMatching,
       oldParams,
       newParams,
     };
@@ -84,6 +104,7 @@ export const updateRoutes = (
     // Store current state for next comparison
     routePreviousStateMap.set(route, {
       matching: newMatching,
+      exactMatching: newExactMatching,
       params: newParams,
     });
   }
@@ -95,12 +116,14 @@ export const updateRoutes = (
       route,
       routePrivateProperties,
       newMatching,
+      newExactMatching,
       newParams,
     } of routeMatchInfoSet) {
       const { updateStatus } = routePrivateProperties;
       const visited = isVisited(route.url);
       updateStatus({
         matching: newMatching,
+        exactMatching: newExactMatching,
         params: newParams,
         visited,
       });
@@ -227,6 +250,7 @@ const createRoute = (urlPatternInput) => {
     urlPattern: urlPatternInput,
     isRoute: true,
     matching: false,
+    exactMatching: false,
     params: null,
     buildUrl: null,
     bindAction: null,
@@ -245,17 +269,23 @@ const createRoute = (urlPatternInput) => {
   const routePrivateProperties = {
     routePattern: null,
     matchingSignal: null,
+    exactMatchingSignal: null,
     paramsSignal: null,
     visitedSignal: null,
     relativeUrlSignal: null,
     urlSignal: null,
-    updateStatus: ({ matching, params, visited }) => {
+    updateStatus: ({ matching, exactMatching, params, visited }) => {
       let someChange = false;
       matchingSignal.value = matching;
+      exactMatchingSignal.value = exactMatching;
       paramsSignal.value = params;
       visitedSignal.value = visited;
       if (route.matching !== matching) {
         route.matching = matching;
+        someChange = true;
+      }
+      if (route.exactMatching !== exactMatching) {
+        route.exactMatching = exactMatching;
         someChange = true;
       }
       if (route.params !== params) {
@@ -270,11 +300,12 @@ const createRoute = (urlPatternInput) => {
         if (DEBUG) {
           console.debug(`${route} status changed:`, {
             matching,
+            exactMatching,
             params,
             visited,
           });
         }
-        publishStatus({ matching, params, visited });
+        publishStatus({ matching, exactMatching, params, visited });
       }
     },
   };
@@ -349,6 +380,7 @@ const createRoute = (urlPatternInput) => {
   route.buildUrl = buildUrl;
 
   const matchingSignal = signal(false);
+  const exactMatchingSignal = signal(false);
   const paramsSignal = signal(null);
   const visitedSignal = signal(false);
   const relativeUrlSignal = computed(() => {
@@ -455,6 +487,7 @@ const createRoute = (urlPatternInput) => {
 
   private_properties: {
     routePrivateProperties.matchingSignal = matchingSignal;
+    routePrivateProperties.exactMatchingSignal = exactMatchingSignal;
     routePrivateProperties.paramsSignal = paramsSignal;
     routePrivateProperties.visitedSignal = visitedSignal;
     routePrivateProperties.relativeUrlSignal = relativeUrlSignal;
@@ -483,17 +516,24 @@ export const useRouteStatus = (route) => {
     throw new Error(`Cannot find route private properties for ${route}`);
   }
 
-  const { urlSignal, matchingSignal, paramsSignal, visitedSignal } =
-    routePrivateProperties;
+  const {
+    urlSignal,
+    matchingSignal,
+    exactMatchingSignal,
+    paramsSignal,
+    visitedSignal,
+  } = routePrivateProperties;
 
   const url = urlSignal.value;
   const matching = matchingSignal.value;
+  const exactMatching = exactMatchingSignal.value;
   const params = paramsSignal.value;
   const visited = visitedSignal.value;
 
   return {
     url,
     matching,
+    exactMatching,
     params,
     visited,
   };
