@@ -10,6 +10,60 @@ import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
 import { buildRouteRelativeUrl } from "./build_route_relative_url.js";
 import { createRoutePattern } from "./route_pattern.js";
 
+// Helper for managing route parameter localStorage storage
+const generateStorageKey = (routePattern, paramName) => {
+  // Create a scoped key based on route pattern to avoid conflicts
+  const routeKey = routePattern.replace(/[^a-zA-Z0-9]/g, "_");
+  return `route_param_${routeKey}_${paramName}`;
+};
+const createRouteParamStorage = () => {
+  const storeValue = (paramConfig, value) => {
+    const { localStorageKey, default: defaultValue } = paramConfig;
+    if (value === defaultValue || value === undefined) {
+      // Remove from localStorage when value matches default or is undefined
+      localStorage.removeItem(localStorageKey);
+    } else {
+      // Store in localStorage when value deviates from default
+      try {
+        localStorage.setItem(localStorageKey, JSON.stringify(value));
+      } catch (error) {
+        // Gracefully handle localStorage errors (quota exceeded, etc.)
+        console.warn(`Failed to store parameter to localStorage:`, error);
+      }
+    }
+  };
+  const retrieveValue = (paramConfig) => {
+    const { localStorageKey } = paramConfig;
+    try {
+      const storedValue = localStorage.getItem(localStorageKey);
+      if (storedValue !== null) {
+        try {
+          return JSON.parse(storedValue);
+        } catch {
+          return storedValue;
+        }
+      }
+      return null;
+    } catch (error) {
+      console.warn(`Failed to retrieve parameter from localStorage:`, error);
+      return null;
+    }
+  };
+  const syncParam = (paramConfig, value) => {
+    storeValue(paramConfig, value);
+  };
+  const getStoredParam = (paramConfig) => {
+    return retrieveValue(paramConfig);
+  };
+
+  return {
+    syncParam,
+    getStoredParam,
+  };
+};
+
+const routeParamStorage = createRouteParamStorage();
+
 let baseUrl;
 if (typeof window === "undefined") {
   baseUrl = "http://localhost/";
@@ -271,6 +325,14 @@ const createRoute = (urlPatternInput) => {
       if (route.params !== mergedParams) {
         route.params = mergedParams;
         someChange = true;
+
+        // Sync new parameter values to localStorage
+        for (const [paramName, value] of Object.entries(params)) {
+          const paramConfig = urlParamMap.get(paramName);
+          if (paramConfig) {
+            routeParamStorage.syncParam(paramConfig, value);
+          }
+        }
       }
       if (someChange) {
         if (DEBUG) {
@@ -291,11 +353,11 @@ const createRoute = (urlPatternInput) => {
   routePrivatePropertiesMap.set(route, routePrivateProperties);
 
   const urlParamMap = new Map();
-  route.addUrlParam = (
-    paramName,
-    { default: defaultValue, localStorageKey } = {},
-  ) => {
-    urlParamMap.set(paramName, { default: defaultValue, localStorageKey });
+  route.addUrlParam = (paramName, { default: defaultValue } = {}) => {
+    urlParamMap.set(paramName, {
+      default: defaultValue,
+      localStorageKey: generateStorageKey(urlPatternInput, paramName),
+    });
   };
 
   // Utility function to resolve parameters with inheritance and defaults
@@ -315,18 +377,12 @@ const createRoute = (urlPatternInput) => {
         mergedParams[paramName] = currentValue;
         continue;
       }
-      const { localStorageKey } = paramConfig;
-      if (localStorageKey) {
-        const storedValue = localStorage.getItem(localStorageKey);
-        if (storedValue !== null) {
-          try {
-            mergedParams[paramName] = JSON.parse(storedValue);
-            continue;
-          } catch {
-            mergedParams[paramName] = storedValue;
-            continue;
-          }
-        }
+
+      // Always check localStorage as source of truth for stored values
+      const storedValue = routeParamStorage.getStoredParam(paramConfig);
+      if (storedValue !== null) {
+        mergedParams[paramName] = storedValue;
+        continue;
       }
       const defaultValue = paramConfig.default;
       if (defaultValue !== undefined) {
@@ -427,6 +483,8 @@ const createRoute = (urlPatternInput) => {
     }
     const mergedParams = {};
     const paramNameSet = new Set(urlParamMap.keys());
+
+    // First, add raw params that have defined values
     if (rawParams) {
       for (const name of Object.keys(rawParams)) {
         const value = rawParams[name];
@@ -436,13 +494,23 @@ const createRoute = (urlPatternInput) => {
         }
       }
     }
+
+    // Then, for parameters not in URL, check localStorage and apply defaults
     for (const paramName of paramNameSet) {
       const paramConfig = urlParamMap.get(paramName);
-      const defaultValue = paramConfig.default;
+      const { default: defaultValue } = paramConfig;
+      // Always check localStorage as source of truth
+      const storedValue = routeParamStorage.getStoredParam(paramConfig);
+      if (storedValue !== null) {
+        mergedParams[paramName] = storedValue;
+        continue;
+      }
+      // Apply default if no stored value
       if (defaultValue !== undefined) {
         mergedParams[paramName] = defaultValue;
       }
     }
+
     return mergedParams;
   });
   const visitedSignal = signal(false);
