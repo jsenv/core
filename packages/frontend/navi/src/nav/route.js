@@ -311,9 +311,56 @@ const createRoute = (urlPatternInput) => {
   };
   routePrivatePropertiesMap.set(route, routePrivateProperties);
 
-  const buildRelativeUrl = (params, options) =>
-    buildRouteRelativeUrl(urlPatternInput, params, options);
-  route.buildRelativeUrl = (params, options) => {
+  const urlParamMap = new Map();
+  route.addUrlParam = (
+    paramName,
+    { default: defaultValue, localStorageKey } = {},
+  ) => {
+    urlParamMap.set(paramName, { default: defaultValue, localStorageKey });
+  };
+
+  const buildRelativeUrl = (params = {}, options) => {
+    // Merge parameters in priority order:
+    // 1. Provided params (highest priority)
+    // 2. Current URL params
+    // 3. Local storage params (if configured)
+    // 4. Default values from urlParamMap (lowest priority)
+    const mergedParams = {};
+
+    const currentParams = paramsSignal.value;
+    for (const [paramName, paramConfig] of urlParamMap) {
+      if (Object.hasOwn(params, paramName)) {
+        mergedParams[paramName] = params[paramName];
+        continue;
+      }
+      const defaultValue = paramConfig.default;
+      if (defaultValue !== undefined) {
+        mergedParams[paramName] = defaultValue;
+        continue;
+      }
+      const currentValue = currentParams?.[paramName];
+      if (currentValue !== undefined) {
+        mergedParams[paramName] = currentValue;
+        continue;
+      }
+      const { localStorageKey } = paramConfig;
+      if (localStorageKey) {
+        const storedValue = localStorage.getItem(localStorageKey);
+        if (storedValue !== null) {
+          try {
+            mergedParams[paramName] = JSON.parse(storedValue);
+            continue;
+          } catch {
+            mergedParams[paramName] = storedValue;
+            continue;
+          }
+        }
+      }
+    }
+
+    return buildRouteRelativeUrl(urlPatternInput, mergedParams, options);
+  };
+  route.buildRelativeUrl = (params = {}, options) => {
     const { relativeUrl } = buildRelativeUrl(params, options);
     return relativeUrl;
   };
