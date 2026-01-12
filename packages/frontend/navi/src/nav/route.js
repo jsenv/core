@@ -320,16 +320,15 @@ const createRoute = (urlPatternInput) => {
       }
       // Store raw params (from URL) - paramsSignal will reactively compute merged params
       rawParamsSignal.value = params;
+      const rawParams = rawParamsSignal.value;
+      for (const [paramName, paramConfig] of urlParamMap) {
+        routeParamStorage.syncParam(paramConfig, rawParams?.[paramName]);
+      }
       // Get merged params for comparison (computed signal will handle the merging)
       const mergedParams = paramsSignal.value;
       if (route.params !== mergedParams) {
         route.params = mergedParams;
         someChange = true;
-
-        // Sync new parameter values to localStorage
-        for (const [paramName, paramConfig] of urlParamMap) {
-          routeParamStorage.syncParam(paramConfig, params?.[paramName]);
-        }
       }
       if (someChange) {
         if (DEBUG) {
@@ -491,7 +490,6 @@ const createRoute = (urlPatternInput) => {
         }
       }
     }
-
     // Then, for parameters not in URL, check localStorage and apply defaults
     for (const paramName of paramNameSet) {
       const paramConfig = urlParamMap.get(paramName);
@@ -507,7 +505,6 @@ const createRoute = (urlPatternInput) => {
         mergedParams[paramName] = defaultValue;
       }
     }
-
     return mergedParams;
   });
   const visitedSignal = signal(false);
