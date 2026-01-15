@@ -11,8 +11,8 @@ import {
 
 const { HOME_ROUTE, MAP_ROUTE, SELECT_CITY_ROUTE } = setupRoutes({
   HOME_ROUTE: "/",
-  MAP_ROUTE: "/map?city=:city",
-  SELECT_CITY_ROUTE: "/map/select_city",
+  MAP_ROUTE: "/map",
+  SELECT_CITY_ROUTE: "/select_city",
 });
 
 MAP_ROUTE.describeParam("city", {
@@ -38,8 +38,8 @@ const App = () => {
       <div style={{ marginTop: "20px" }}>
         <Routes>
           <Route route={HOME_ROUTE} element={<HomePage />} />
-          <Route route={SELECT_CITY_ROUTE} element={<SelectedCityPage />} />
-          <Route route={MAP_ROUTE} element={<SelectCityPage />} />
+          <Route route={SELECT_CITY_ROUTE} element={<SelectCityPage />} />
+          <Route route={MAP_ROUTE} element={<MapPage />} />
         </Routes>
       </div>
     </div>
@@ -104,11 +104,12 @@ const SelectCityPage = () => {
   );
 };
 
-const SelectedCityPage = () => {
+const MapPage = () => {
   const { params } = useRouteStatus(MAP_ROUTE);
+  const { city } = params;
 
   // If no city is selected, redirect to city selection
-  if (!params.city) {
+  if (!city) {
     SELECT_CITY_ROUTE.navTo();
     return <div>Redirecting to city selection...</div>;
   }
@@ -124,9 +125,9 @@ const SelectedCityPage = () => {
           border: "2px solid #007bff",
         }}
       >
-        <h3 style={{ color: "#007bff", marginTop: 0 }}>🏙️ {params.cityName}</h3>
+        <h3 style={{ color: "#007bff", marginTop: 0 }}>🏙️ {city}</h3>
         <p>
-          You have selected <strong>{params.cityName}</strong> as your city!
+          You have selected <strong>{city}</strong> as your city!
         </p>
       </div>
 
