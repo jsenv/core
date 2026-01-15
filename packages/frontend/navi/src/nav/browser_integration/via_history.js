@@ -63,21 +63,19 @@ export const setupBrowserIntegrationViaHistory = ({
       return;
     }
     visitedUrlSet.add(url);
-
-    // Increment signal to notify subscribers that visited URLs changed
-    visitedUrlsSignal.value++;
+    visitedUrlsSignal.value++; // Increment signal to notify subscribers that visited URLs changed
 
     const historyState = getDocumentState() || {};
-    const hsitoryStateWithVisitedUrls = {
+    const historyStateWithVisitedUrls = {
       ...historyState,
       jsenv_visited_urls: Array.from(visitedUrlSet),
     };
     window.history.replaceState(
-      hsitoryStateWithVisitedUrls,
+      historyStateWithVisitedUrls,
       null,
       window.location.href,
     );
-    updateDocumentState(hsitoryStateWithVisitedUrls);
+    updateDocumentState(historyStateWithVisitedUrls);
   };
 
   let abortController = null;
@@ -95,9 +93,9 @@ export const setupBrowserIntegrationViaHistory = ({
       window.history.replaceState(state, null, url);
     }
 
-    markUrlAsVisited(url);
     updateDocumentUrl(url);
     updateDocumentState(state);
+    markUrlAsVisited(url);
     if (abortController) {
       abortController.abort(`navigating to ${url}`);
     }
@@ -155,12 +153,10 @@ export const setupBrowserIntegrationViaHistory = ({
         return;
       }
       e.preventDefault();
-      const state = null;
-      history.pushState(state, null, href);
       handleRoutingTask(href, {
         reason: `"click" on a[href="${href}"]`,
         navigationType: "push",
-        state,
+        state: null,
       });
     },
     { capture: true },
