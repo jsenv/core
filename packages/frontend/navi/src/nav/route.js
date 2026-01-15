@@ -300,6 +300,7 @@ const createRoute = (urlPatternInput) => {
   };
 
   const [publishStatus, subscribeStatus] = createPubSub();
+  const routePattern = createRoutePattern(urlPatternInput, baseUrl);
   const route = {
     urlPattern: urlPatternInput,
     isRoute: true,
@@ -654,7 +655,6 @@ const createRoute = (urlPatternInput) => {
     routePrivateProperties.relativeUrlSignal = relativeUrlSignal;
     routePrivateProperties.urlSignal = urlSignal;
     routePrivateProperties.cleanupCallbackSet = cleanupCallbackSet;
-    const routePattern = createRoutePattern(urlPatternInput, baseUrl);
     routePrivateProperties.routePattern = routePattern;
   }
 
