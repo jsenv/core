@@ -100,6 +100,7 @@ export const updateRoutes = (
     // state
   },
 ) => {
+  let validUrl;
   const routeMatchInfoSet = new Set();
   for (const route of routeSet) {
     const routePrivateProperties = getRoutePrivateProperties(route);
@@ -123,21 +124,18 @@ export const updateRoutes = (
       } else {
         newParams = extractedParams;
       }
-
-      // for (const [paramName, paramConfig] of route.paramConfigMap) {
-      //   const paramValue = newParams[paramName];
-      //   const enumValues = paramConfig.enum;
-      //   const defaultValue = paramConfig.default;
-      //   if (enumValues && !enumValues.includes(paramValue)) {
-      //     const validUrl = route.buildUrl({
-      //       ...newParams,
-      //       [paramName]:
-      //         defaultValue === undefined ? enumValues[0] : defaultValue,
-      //     });
-      //     // we need to navigate to that url right now and stop processing
-      //     // however this means the
-      //   }
-      // }
+      for (const [paramName, paramConfig] of route.paramConfigMap) {
+        const paramValue = newParams[paramName];
+        const enumValues = paramConfig.enum;
+        const defaultValue = paramConfig.default;
+        if (enumValues && !enumValues.includes(paramValue)) {
+          validUrl = route.buildUrl({
+            ...newParams,
+            [paramName]:
+              defaultValue === undefined ? enumValues[0] : defaultValue,
+          });
+        }
+      }
     } else {
       newParams = null;
     }
@@ -279,6 +277,7 @@ export const updateRoutes = (
     abortSignalMap,
     routeLoadRequestedMap,
     matchingRouteSet,
+    validUrl,
   };
 };
 
@@ -370,6 +369,7 @@ const createRoute = (urlPatternInput) => {
   routePrivatePropertiesMap.set(route, routePrivateProperties);
 
   const paramConfigMap = new Map();
+  route.paramConfigMap = paramConfigMap;
   route.describeParam = (paramName, { default: defaultValue } = {}) => {
     paramConfigMap.set(paramName, {
       default: defaultValue,

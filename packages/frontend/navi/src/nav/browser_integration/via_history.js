@@ -100,16 +100,15 @@ export const setupBrowserIntegrationViaHistory = ({
       abortController.abort(`navigating to ${url}`);
     }
     abortController = new AbortController();
-
+    const abortSignal = abortController.signal;
     const { allResult, requestedResult } = applyRouting(url, {
       globalAbortSignal: globalAbortController.signal,
-      abortSignal: abortController.signal,
+      abortSignal,
       reason,
       navigationType,
       isVisited,
       state,
     });
-
     executeWithCleanup(
       () => allResult,
       () => {
@@ -165,7 +164,8 @@ export const setupBrowserIntegrationViaHistory = ({
   window.addEventListener(
     "submit",
     () => {
-      // TODO: Handle form submissions
+      // Handle form submissions?
+      // Not needed yet
     },
     { capture: true },
   );
@@ -180,7 +180,7 @@ export const setupBrowserIntegrationViaHistory = ({
     });
   });
 
-  const navTo = async (url, { state = null, replace } = {}) => {
+  const navTo = async (url, { replace, state = null } = {}) => {
     handleRoutingTask(url, {
       reason: `navTo called with "${url}"`,
       navigationType: replace ? "replace" : "push",
