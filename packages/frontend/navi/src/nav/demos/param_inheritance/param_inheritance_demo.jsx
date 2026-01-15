@@ -18,6 +18,7 @@ const { HOME_ROUTE, COLOR_ROUTE } = setupRoutes({
 COLOR_ROUTE.describeParam("color", {
   default: "red",
   enum: ["red", "blue"],
+  invalidEffect: "redirect",
 });
 
 const App = () => {

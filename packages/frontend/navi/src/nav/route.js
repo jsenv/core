@@ -128,7 +128,11 @@ export const updateRoutes = (
         const paramValue = newParams[paramName];
         const enumValues = paramConfig.enum;
         const defaultValue = paramConfig.default;
-        if (enumValues && !enumValues.includes(paramValue)) {
+        if (
+          enumValues &&
+          !enumValues.includes(paramValue) &&
+          paramConfig.invalidEffect === "redirect"
+        ) {
           validUrl = route.buildUrl({
             ...newParams,
             [paramName]:
