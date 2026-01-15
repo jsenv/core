@@ -32,7 +32,7 @@ const DEBUG = false;
 // However, since route reactivation triggers action reload anyway, the old data won't be used
 // so it's better to abort the action to avoid unnecessary resource usage.
 const ROUTE_DEACTIVATION_STRATEGY = "abort"; // 'abort', 'keep-loading'
-const ROUTE_NOT_MATCHING_PARAMS = { id: "route_without_params" };
+const ROUTE_NOT_MATCHING_PARAMS = {};
 
 const routeSet = new Set();
 // Store previous route states to detect changes
@@ -307,19 +307,7 @@ const createRoute = (urlPatternInput) => {
     return browserIntegration.navTo(route.buildUrl(params), options);
   };
 
-  // Utility function to resolve parameters with inheritance and defaults
-  const getParamDefaultValue = (paramName) => {
-    const paramConfig = paramConfigMap.get(paramName);
-    if (!paramConfig) {
-      return undefined;
-    }
-    const { default: defaultValue } = paramConfig;
-    if (typeof defaultValue === "function") {
-      return defaultValue();
-    }
-    return defaultValue;
-  };
-  const resolveParams = (providedParams) => {
+  const resolveParams = (providedParams, { cleanupDefaults } = {}) => {
     const paramNameSet = providedParams
       ? new Set(Object.keys(providedParams))
       : new Set();
@@ -330,34 +318,53 @@ const createRoute = (urlPatternInput) => {
       if (paramNameSet.has(paramName)) {
         continue;
       }
-      const currentValue = currentParams?.[paramName];
+      const currentValue = currentParams[paramName];
       if (currentValue !== undefined) {
         paramNameSet.delete(paramName);
         mergedParams[paramName] = currentValue;
         continue;
       }
-      const defaultValue = getParamDefaultValue(paramName);
+      const paramConfig = paramConfigMap.get(paramName);
+      if (!paramConfig) {
+        continue;
+      }
+      const { getFallbackValue } = paramConfig;
+      if (getFallbackValue) {
+        const fallbackValue = getFallbackValue();
+        if (fallbackValue !== undefined) {
+          mergedParams[paramName] = fallbackValue;
+          continue;
+        }
+      }
+      if (cleanupDefaults) {
+        continue;
+      }
+      const { default: defaultValue } = paramConfig;
       if (defaultValue !== undefined) {
         mergedParams[paramName] = defaultValue;
         continue;
       }
+      continue;
     }
     for (const paramName of paramNameSet) {
-      mergedParams[paramName] = providedParams[paramName];
+      const providedValue = providedParams[paramName];
+      if (cleanupDefaults) {
+        const paramConfig = paramConfigMap.get(paramName);
+        if (paramConfig && paramConfig.defaultValue === providedValue) {
+          continue;
+        }
+      }
+      mergedParams[paramName] = providedValue;
     }
     return mergedParams;
   };
 
   const buildRelativeUrl = (providedParams, options) => {
     // Inherit current parameters that would not be expliictely provided
-    const params = resolveParams(providedParams);
-    // Remove parameters that match their default values to keep URLs shorter
-    for (const [paramName] of paramConfigMap) {
-      const defaultValue = getParamDefaultValue(paramName);
-      if (defaultValue !== undefined && params[paramName] === defaultValue) {
-        delete params[paramName];
-      }
-    }
+    const params = resolveParams(providedParams, {
+      // cleanup defaults to keep url as short as possible
+      cleanupDefaults: true,
+    });
     return buildRouteRelativeUrl(urlPatternInput, params, options);
   };
   route.buildRelativeUrl = (params = {}, options) => {

@@ -60,15 +60,14 @@ export const stateSignal = (defaultValue, options) => {
     routes,
     sourceSignal,
     oneOf,
-    invalidEffect,
-    defaultWhenInvalid,
+    fallbackWhenInvalid,
   } = options;
 
   const [readFromLocalStorage, writeIntoLocalStorage, removeFromLocalStorage] =
     localStorageKey
       ? valueInLocalStorage(localStorageKey, { type })
       : [() => undefined, () => {}, () => {}];
-  const getDefaultValue = () => {
+  const getFallbackValue = () => {
     if (sourceSignal) {
       const sourceValue = sourceSignal.peek();
       if (sourceValue !== undefined) {
@@ -81,7 +80,7 @@ export const stateSignal = (defaultValue, options) => {
     }
     return valueFromLocalStorage;
   };
-  const advancedSignal = signal(getDefaultValue());
+  const advancedSignal = signal(getFallbackValue());
 
   // ensure current value always fallback to
   // 1. source signal
@@ -102,7 +101,7 @@ export const stateSignal = (defaultValue, options) => {
       if (value !== undefined) {
         return;
       }
-      advancedSignal.value = getDefaultValue();
+      advancedSignal.value = getFallbackValue();
     });
   }
   // When source signal value is updated, it overrides current signal value
@@ -144,8 +143,8 @@ export const stateSignal = (defaultValue, options) => {
     for (const paramName of Object.keys(routes)) {
       const route = routes[paramName];
       route.describeParam(paramName, {
-        defaultValue: getDefaultValue,
-        invalidEffect,
+        getFallbackValue,
+        default: defaultValue,
       });
       const { matchingSignal, rawParamsSignal } =
         getRoutePrivateProperties(route);
@@ -163,8 +162,8 @@ export const stateSignal = (defaultValue, options) => {
           return;
         }
         if (oneOf && !oneOf.includes(urlParamValue)) {
-          if (defaultWhenInvalid) {
-            advancedSignal.value = getDefaultValue();
+          if (fallbackWhenInvalid) {
+            advancedSignal.value = getFallbackValue();
             return;
           }
         }

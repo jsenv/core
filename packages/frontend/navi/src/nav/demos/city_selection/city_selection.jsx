@@ -18,11 +18,12 @@ const { HOME_ROUTE, MAP_ROUTE, SELECT_CITY_ROUTE } = setupRoutes({
 
 const cities = ["Paris", "London", "Tokyo", "New York", "Sydney"];
 const citySignal = stateSignal(undefined, {
+  localStorageKey: "city",
   routes: {
     city: MAP_ROUTE,
   },
   oneOf: cities,
-  defaultWhenInvalid: true,
+  fallbackWhenInvalid: true,
 });
 
 const App = () => {
@@ -38,7 +39,9 @@ const App = () => {
       <TabList>
         <TabList.Tab route={HOME_ROUTE}>Home</TabList.Tab>
         <TabList.Tab route={SELECT_CITY_ROUTE}>Select City</TabList.Tab>
-        <TabList.Tab route={MAP_ROUTE}>Map</TabList.Tab>
+        <TabList.Tab route={MAP_ROUTE} routeParams={{ toto: true }}>
+          Map
+        </TabList.Tab>
       </TabList>
 
       <div style={{ marginTop: "20px" }}>
