@@ -1,6 +1,7 @@
 import { render } from "preact";
 
 import {
+  Box,
   Route,
   RouteLink,
   Routes,
@@ -82,28 +83,49 @@ const SelectCityPage = () => {
       <h2>Select a City</h2>
       <p>Choose a city from the list below:</p>
 
-      <div style={{ marginTop: "15px" }}>
-        {cities.map((city) => (
-          <div key={city} style={{ marginBottom: "10px" }}>
-            <RouteLink
-              route={MAP_ROUTE}
-              routeParams={{ city }}
-              style={{
-                padding: "8px 16px",
-                backgroundColor: currentCity === city ? "grey" : "#28a745",
-                color: "white",
-                textDecoration: "none",
-                borderRadius: "4px",
-                display: "inline-block",
-                minWidth: "120px",
-                textAlign: "center",
-              }}
-            >
-              {city}
-            </RouteLink>
-          </div>
-        ))}
-      </div>
+      <Box column marginTop="m" spacing="s">
+        <div>
+          {cities.map((city) => (
+            <div key={city} style={{ marginBottom: "10px" }}>
+              <RouteLink
+                route={MAP_ROUTE}
+                routeParams={{ city }}
+                style={{
+                  padding: "8px 16px",
+                  backgroundColor: currentCity === city ? "grey" : "#28a745",
+                  color: "white",
+                  textDecoration: "none",
+                  borderRadius: "4px",
+                  display: "inline-block",
+                  minWidth: "120px",
+                  textAlign: "center",
+                }}
+              >
+                {city}
+              </RouteLink>
+            </div>
+          ))}
+        </div>
+
+        <div>
+          <RouteLink
+            route={MAP_ROUTE}
+            routeParams={{ city: "toto" }}
+            style={{
+              padding: "8px 16px",
+              backgroundColor: "grey",
+              color: "white",
+              textDecoration: "none",
+              borderRadius: "4px",
+              display: "inline-block",
+              minWidth: "120px",
+              textAlign: "center",
+            }}
+          >
+            Toto
+          </RouteLink>
+        </div>
+      </Box>
     </div>
   );
 };

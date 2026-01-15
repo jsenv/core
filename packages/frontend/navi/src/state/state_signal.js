@@ -169,8 +169,8 @@ export const stateSignal = (
               ...params,
               [paramName]: defaultValue,
             });
+            return;
           }
-          return;
         }
         advancedSignal.value = urlParamValue;
       });
