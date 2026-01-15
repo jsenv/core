@@ -55,43 +55,114 @@ import { valueInLocalStorage } from "./value_in_local_storage.js";
  */
 export const stateSignal = (
   defaultValue,
-  { sourceSignal, localStorageKey, type, oneOf, routes, invalidEffect } = {},
+  {
+    type = "string",
+    localStorageKey,
+    routes,
+    sourceSignal,
+    oneOf,
+    invalidEffect,
+  } = {},
 ) => {
-  const advancedSignal = signal();
-  if (sourceSignal) {
-    connectSignalToSource(advancedSignal, sourceSignal, defaultValue);
-  } else {
-    advancedSignal.value = defaultValue;
-  }
-  if (localStorageKey) {
-    connectSignalWithLocalStorage(advancedSignal, localStorageKey, { type });
-  }
+  const [readFromLocalStorage, writeIntoLocalStorage, removeFromLocalStorage] =
+    localStorageKey
+      ? valueInLocalStorage(localStorageKey, { type })
+      : [() => undefined, () => {}, () => {}];
+  const getDefaultValue = () => {
+    if (sourceSignal) {
+      const sourceValue = sourceSignal.peek();
+      if (sourceValue !== undefined) {
+        return sourceValue;
+      }
+    }
+    const valueFromLocalStorage = readFromLocalStorage();
+    if (valueFromLocalStorage === undefined) {
+      return defaultValue;
+    }
+    return valueFromLocalStorage;
+  };
+  const advancedSignal = signal(getDefaultValue());
 
-  if (oneOf) {
-    // MAP_ROUTE.describeParam("city", {
-    //   enum: cities,
-    //   // pick default city would be better than redirect. Redirect should be used with an other route
-    //   // (here we could redirect to city selection)
-    //   invalidEffect: "redirect",
-    // });
+  // ensure current value always fallback to
+  // 1. source signal
+  // 2. local storage
+  // 3. default value
+  fallback: {
+    let firstRun = true;
+    effect(() => {
+      const value = advancedSignal.value;
+      if (sourceSignal) {
+        // eslint-disable-next-line no-unused-expressions
+        sourceSignal.value;
+      }
+      if (firstRun) {
+        firstRun = true;
+        return;
+      }
+      if (value !== undefined) {
+        return;
+      }
+      advancedSignal.value = getDefaultValue();
+    });
+  }
+  // When source signal value is updated, it overrides current signal value
+  source_signal_override: {
+    if (!sourceSignal) {
+      break source_signal_override;
+    }
+
+    let sourcePreviousValue = sourceSignal.value;
+    effect(() => {
+      const sourceValue = sourceSignal.value;
+      if (sourcePreviousValue === undefined) {
+        // first run
+      } else if (sourceValue === undefined) {
+        // we don't have anything in the source signal, keep current value
+      } else {
+        // the case we want to support: source signal value changes -> override current value
+        advancedSignal.value = sourceValue;
+      }
+      sourcePreviousValue = sourceValue;
+    });
+  }
+  // Read/write into local storage when enabled
+  persist_in_local_storage: {
+    if (!localStorageKey) {
+      break persist_in_local_storage;
+    }
+    effect(() => {
+      const value = advancedSignal.value;
+      if (value === undefined || value === null) {
+        removeFromLocalStorage();
+      } else {
+        writeIntoLocalStorage(value);
+      }
+    });
   }
 
   if (routes) {
     for (const paramName of Object.keys(routes)) {
       const route = routes[paramName];
       route.describeParam(paramName, {
-        defaultValue,
+        defaultValue: getDefaultValue,
         invalidEffect,
       });
-      const { rawParamsSignal } = getRoutePrivateProperties(route);
+      const { matchingSignal, rawParamsSignal } =
+        getRoutePrivateProperties(route);
       effect(() => {
+        const matching = matchingSignal.value;
         const params = rawParamsSignal.value;
         const urlParamValue = params[paramName];
         const stateValue = advancedSignal.value;
+
+        if (!matching) {
+          return;
+        }
         if (urlParamValue === stateValue) {
           // nothing to do
           return;
         }
+
         // what do we do with the param found in the url?
         if (
           oneOf &&
@@ -104,6 +175,7 @@ export const stateSignal = (
           });
           return;
         }
+
         advancedSignal.value = urlParamValue;
       });
     }
@@ -112,87 +184,63 @@ export const stateSignal = (
   return advancedSignal;
 };
 
-const connectSignalToSource = (signal, sourceSignal, defaultValue) => {
-  connectSignalFallbacks(signal, [sourceSignal], defaultValue);
-  updateSignalOnChange(sourceSignal, signal);
-};
-const connectSignalFallbacks = (signal, fallbackSignals, defaultValue) => {
-  if (fallbackSignals.length === 0) {
-    signal.value = defaultValue;
-    return () => {};
-  }
-  if (fallbackSignals.length === 1) {
-    const [fallbackSignal] = fallbackSignals;
-    const applyFallback = () => {
-      const value = signal.value;
-      const fallbackValue = fallbackSignal.value;
-      if (value !== undefined) {
-        return;
-      }
-      if (fallbackValue !== undefined) {
-        signal.value = fallbackValue;
-        return;
-      }
-      signal.value = defaultValue;
-    };
-    applyFallback();
-    return effect(() => {
-      applyFallback();
-    });
-  }
-  const applyFallback = () => {
-    const fallbackValues = fallbackSignals.map((s) => s.value);
-    const value = signal.value;
-    if (value !== undefined) {
-      return;
-    }
-    for (const fallbackValue of fallbackValues) {
-      if (fallbackValue === undefined) {
-        continue;
-      }
-      signal.value = fallbackValue;
-      return;
-    }
-    signal.value = defaultValue;
-  };
-  applyFallback();
-  return effect(() => {
-    applyFallback();
-  });
-};
-const updateSignalOnChange = (sourceSignal, targetSignal) => {
-  let sourcePreviousValue = sourceSignal.value;
-  return effect(() => {
-    const sourceValue = sourceSignal.value;
-    if (sourcePreviousValue !== undefined && sourceValue !== undefined) {
-      // console.log(
-      //   "value modified from",
-      //   sourcePreviousValue,
-      //   "to",
-      //   sourceValue,
-      // );
-      targetSignal.value = sourceValue;
-    }
-    sourcePreviousValue = sourceValue;
-  });
-};
-
-const connectSignalWithLocalStorage = (
-  signal,
-  key,
-  { type = "string" } = {},
-) => {
-  const [get, set, remove] = valueInLocalStorage(key, { type });
-  const valueFromLocalStorage = get();
-  if (valueFromLocalStorage !== undefined) {
-    signal.value = valueFromLocalStorage;
-  }
-  effect(() => {
-    const value = signal.value;
-    if (value === undefined || value === null) {
-      remove();
-    } else {
-      set(value);
-    }
-  });
-};
+// const connectSignalFallbacks = (signal, fallbackSignals, defaultValue) => {
+//   if (fallbackSignals.length === 0) {
+//     signal.value = defaultValue;
+//     return () => {};
+//   }
+//   if (fallbackSignals.length === 1) {
+//     const [fallbackSignal] = fallbackSignals;
+//     const applyFallback = () => {
+//       const value = signal.value;
+//       const fallbackValue = fallbackSignal.value;
+//       if (value !== undefined) {
+//         return;
+//       }
+//       if (fallbackValue !== undefined) {
+//         signal.value = fallbackValue;
+//         return;
+//       }
+//       signal.value = defaultValue;
+//     };
+//     applyFallback();
+//     return effect(() => {
+//       applyFallback();
+//     });
+//   }
+//   const applyFallback = () => {
+//     const fallbackValues = fallbackSignals.map((s) => s.value);
+//     const value = signal.value;
+//     if (value !== undefined) {
+//       return;
+//     }
+//     for (const fallbackValue of fallbackValues) {
+//       if (fallbackValue === undefined) {
+//         continue;
+//       }
+//       signal.value = fallbackValue;
+//       return;
+//     }
+//     signal.value = defaultValue;
+//   };
+//   applyFallback();
+//   return effect(() => {
+//     applyFallback();
+//   });
+// };
+// const updateSignalOnChange = (sourceSignal, targetSignal) => {
+//   let sourcePreviousValue = sourceSignal.value;
+//   return effect(() => {
+//     const sourceValue = sourceSignal.value;
+//     if (sourcePreviousValue !== undefined && sourceValue !== undefined) {
+//       // console.log(
+//       //   "value modified from",
+//       //   sourcePreviousValue,
+//       //   "to",
+//       //   sourceValue,
+//       // );
+//       targetSignal.value = sourceValue;
+//     }
+//     sourcePreviousValue = sourceValue;
+//   });
+// };
