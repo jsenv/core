@@ -22,6 +22,7 @@ const citySignal = stateSignal(undefined, {
     city: MAP_ROUTE,
   },
   oneOf: cities,
+  defaultWhenInvalid: true,
 });
 
 const App = () => {

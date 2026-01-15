@@ -53,17 +53,17 @@ import { valueInLocalStorage } from "./value_in_local_storage.js";
  *   type: "object"
  * });
  */
-export const stateSignal = (
-  defaultValue,
-  {
+export const stateSignal = (defaultValue, options) => {
+  const {
     type = "string",
     localStorageKey,
     routes,
     sourceSignal,
     oneOf,
     invalidEffect,
-  } = {},
-) => {
+    defaultWhenInvalid,
+  } = options;
+
   const [readFromLocalStorage, writeIntoLocalStorage, removeFromLocalStorage] =
     localStorageKey
       ? valueInLocalStorage(localStorageKey, { type })
@@ -163,12 +163,8 @@ export const stateSignal = (
           return;
         }
         if (oneOf && !oneOf.includes(urlParamValue)) {
-          if (defaultValue !== undefined) {
-            // enforce the default value
-            route.navTo({
-              ...params,
-              [paramName]: defaultValue,
-            });
+          if (defaultWhenInvalid) {
+            advancedSignal.value = getDefaultValue();
             return;
           }
         }
