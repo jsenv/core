@@ -370,9 +370,9 @@ const createRoute = (urlPatternInput) => {
 
   const paramConfigMap = new Map();
   route.paramConfigMap = paramConfigMap;
-  route.describeParam = (paramName, { default: defaultValue } = {}) => {
+  route.describeParam = (paramName, paramConfig) => {
     paramConfigMap.set(paramName, {
-      default: defaultValue,
+      ...paramConfig,
       localStorageKey: generateStorageKey(urlPatternInput, paramName),
     });
   };
