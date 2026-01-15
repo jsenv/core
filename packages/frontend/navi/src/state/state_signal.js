@@ -60,7 +60,7 @@ export const stateSignal = (defaultValue, options) => {
     routes,
     sourceSignal,
     oneOf,
-    fallbackWhenInvalid,
+    defaultWhenInvalid,
   } = options;
 
   const [readFromLocalStorage, writeIntoLocalStorage, removeFromLocalStorage] =
@@ -157,15 +157,15 @@ export const stateSignal = (defaultValue, options) => {
         if (!matching) {
           return;
         }
+        if (oneOf && !oneOf.includes(urlParamValue)) {
+          if (defaultWhenInvalid) {
+            advancedSignal.value = defaultValue;
+            return;
+          }
+        }
         if (urlParamValue === stateValue) {
           // nothing to do
           return;
-        }
-        if (oneOf && !oneOf.includes(urlParamValue)) {
-          if (fallbackWhenInvalid) {
-            advancedSignal.value = getFallbackValue();
-            return;
-          }
         }
         advancedSignal.value = urlParamValue;
       });
