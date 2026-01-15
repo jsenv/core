@@ -162,8 +162,6 @@ export const stateSignal = (
           // nothing to do
           return;
         }
-
-        // what do we do with the param found in the url?
         if (
           oneOf &&
           !oneOf.includes(urlParamValue) &&

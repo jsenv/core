@@ -308,31 +308,43 @@ const createRoute = (urlPatternInput) => {
   };
 
   // Utility function to resolve parameters with inheritance and defaults
+  const getParamDefaultValue = (paramName) => {
+    const paramConfig = paramConfigMap.get(paramName);
+    if (!paramConfig) {
+      return undefined;
+    }
+    const { default: defaultValue } = paramConfig;
+    if (typeof defaultValue === "function") {
+      return defaultValue();
+    }
+    return defaultValue;
+  };
   const resolveParams = (providedParams) => {
+    const paramNameSet = providedParams
+      ? new Set(Object.keys(providedParams))
+      : new Set();
+    const paramConfigNameSet = new Set(paramConfigMap.keys());
     const mergedParams = {};
-
-    // Use raw params (without defaults) for inheritance to avoid double-applying defaults
     const currentParams = rawParamsSignal.value;
-    for (const [paramName, paramConfig] of paramConfigMap) {
-      const providedValue = providedParams?.[paramName];
-      if (providedValue !== undefined) {
-        mergedParams[paramName] = providedValue;
+    for (const paramName of paramConfigNameSet) {
+      if (paramNameSet.has(paramName)) {
         continue;
       }
       const currentValue = currentParams?.[paramName];
       if (currentValue !== undefined) {
+        paramNameSet.delete(paramName);
         mergedParams[paramName] = currentValue;
         continue;
       }
-      let { default: defaultValue } = paramConfig;
-      if (typeof defaultValue === "function") {
-        defaultValue = defaultValue();
-      }
+      const defaultValue = getParamDefaultValue(paramName);
       if (defaultValue !== undefined) {
         mergedParams[paramName] = defaultValue;
+        continue;
       }
     }
-
+    for (const paramName of paramNameSet) {
+      mergedParams[paramName] = providedParams[paramName];
+    }
     return mergedParams;
   };
 
@@ -340,8 +352,8 @@ const createRoute = (urlPatternInput) => {
     // Inherit current parameters that would not be expliictely provided
     const params = resolveParams(providedParams);
     // Remove parameters that match their default values to keep URLs shorter
-    for (const [paramName, paramConfig] of paramConfigMap) {
-      const { default: defaultValue } = paramConfig;
+    for (const [paramName] of paramConfigMap) {
+      const defaultValue = getParamDefaultValue(paramName);
       if (defaultValue !== undefined && params[paramName] === defaultValue) {
         delete params[paramName];
       }
