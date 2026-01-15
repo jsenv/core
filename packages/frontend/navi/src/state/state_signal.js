@@ -162,18 +162,16 @@ export const stateSignal = (
           // nothing to do
           return;
         }
-        if (
-          oneOf &&
-          !oneOf.includes(urlParamValue) &&
-          invalidEffect === "redirect"
-        ) {
-          route.navTo({
-            ...params,
-            [paramName]: defaultValue === undefined ? oneOf[0] : defaultValue,
-          });
+        if (oneOf && !oneOf.includes(urlParamValue)) {
+          if (defaultValue !== undefined) {
+            // enforce the default value
+            route.navTo({
+              ...params,
+              [paramName]: defaultValue,
+            });
+          }
           return;
         }
-
         advancedSignal.value = urlParamValue;
       });
     }

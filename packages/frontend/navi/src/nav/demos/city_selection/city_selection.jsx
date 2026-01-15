@@ -20,7 +20,7 @@ const citySignal = stateSignal(undefined, {
   routes: {
     city: MAP_ROUTE,
   },
-  enum: cities,
+  oneOf: cities,
 });
 
 const App = () => {
