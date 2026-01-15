@@ -1,8 +1,23 @@
 export const createRoutePattern = (urlPatternInput, baseUrl) => {
   // Remove leading slash from urlPattern to make it relative to baseUrl
-  const normalizedUrlPattern = urlPatternInput.startsWith("/")
+  let normalizedUrlPattern = urlPatternInput.startsWith("/")
     ? urlPatternInput.slice(1)
     : urlPatternInput;
+
+  // Extract and store search parameter mappings from the pattern
+  const searchParamMappings = new Map();
+  const searchParamRegex = /[?&]([^=&]+)=:([A-Za-z0-9_]+)/g;
+  let match;
+  while ((match = searchParamRegex.exec(normalizedUrlPattern)) !== null) {
+    searchParamMappings.set(match[1], match[2]); // key -> paramName
+  }
+
+  // Strip search params from pattern to make them optional
+  const searchIndex = normalizedUrlPattern.indexOf("?");
+  if (searchIndex !== -1) {
+    normalizedUrlPattern = normalizedUrlPattern.substring(0, searchIndex);
+  }
+
   const urlPattern = new URLPattern(normalizedUrlPattern, baseUrl, {
     ignoreCase: true,
   });
@@ -72,6 +87,12 @@ export const createRoutePattern = (urlPatternInput, baseUrl) => {
     const urlObj = new URL(originalUrl, baseUrl);
     for (const [key, value] of urlObj.searchParams) {
       params[key] = value;
+
+      // Check if this search param has a mapping in the pattern
+      if (searchParamMappings.has(key)) {
+        const mappedName = searchParamMappings.get(key);
+        params[mappedName] = value;
+      }
     }
 
     // Collect all parameters from URLPattern groups, handling both named and numbered groups

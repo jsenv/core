@@ -2,10 +2,23 @@
 
 ```js
 return {
+  // Basic search param mapping
   simple_search_param: run("/search?query=:query", "/search?query=hello"),
+  
+  // Renamed search param mapping
   renamed_search_param: run("/users?city=:cityName", "/users?city=paris"),
-  multiple_search_params: run("/api?page=:page&limit=:limit", "/api?page=2&limit=10"),
-  mixed_path_and_search: run("/users/:id?status=:userStatus", "/users/123?status=active"),
+  
+  // Search params in patterns are optional
+  search_params_optional: run("/users?city=:cityName", "/users"),
+  
+  // Auto search params (no pattern needed)
+  auto_search_params: run("/toto", "/toto?foo=bar"),
+  
+  // Pattern search params + extra URL search params
+  mixed_search_params: run("/users?city=:cityName", "/users?city=paris&extra=value"),
+  
+  // Path params + auto search params
+  path_and_auto_search: run("/users/:id", "/users/123?status=active&role=admin"),
 };
 ```
 
@@ -18,11 +31,20 @@ return {
     "city": "paris",
     "cityName": "paris"
   },
-  "multiple_search_params": {
-    "page": "2",
-    "limit": "10"
+  "search_params_optional": {},
+  "auto_search_params": {
+    "foo": "bar"
   },
-  "mixed_path_and_search": null
+  "mixed_search_params": {
+    "city": "paris",
+    "cityName": "paris",
+    "extra": "value"
+  },
+  "path_and_auto_search": {
+    "status": "active",
+    "role": "admin",
+    "id": "123"
+  }
 }
 ```
 
