@@ -2,6 +2,7 @@ import { render } from "preact";
 
 import {
   Route,
+  RouteLink,
   Routes,
   setupRoutes,
   TabList,
@@ -14,8 +15,9 @@ const { HOME_ROUTE, COLOR_ROUTE } = setupRoutes({
   COLOR_ROUTE: "/colors{/:color}?",
 });
 
-COLOR_ROUTE.addUrlParam("color", {
+COLOR_ROUTE.describeParam("color", {
   default: "red",
+  enum: ["red", "blue"],
 });
 
 const App = () => {
@@ -53,6 +55,12 @@ const ColorPage = () => {
   return (
     <div>
       <div>Color page</div>
+
+      <RouteLink
+        route={COLOR_ROUTE}
+        routeParams={{ color: "black" }}
+      ></RouteLink>
+
       {params.color && <div>Selected: {params.color}</div>}
 
       <div style={{ marginTop: "15px" }}>

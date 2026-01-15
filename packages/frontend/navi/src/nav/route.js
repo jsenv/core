@@ -95,9 +95,9 @@ const actionAbortControllerWeakMap = new WeakMap();
 export const updateRoutes = (
   url,
   {
-    // state
-    replace,
+    navigationType,
     isVisited,
+    // state
   },
 ) => {
   const routeMatchInfoSet = new Set();
@@ -123,6 +123,21 @@ export const updateRoutes = (
       } else {
         newParams = extractedParams;
       }
+
+      // for (const [paramName, paramConfig] of route.paramConfigMap) {
+      //   const paramValue = newParams[paramName];
+      //   const enumValues = paramConfig.enum;
+      //   const defaultValue = paramConfig.default;
+      //   if (enumValues && !enumValues.includes(paramValue)) {
+      //     const validUrl = route.buildUrl({
+      //       ...newParams,
+      //       [paramName]:
+      //         defaultValue === undefined ? enumValues[0] : defaultValue,
+      //     });
+      //     // we need to navigate to that url right now and stop processing
+      //     // however this means the
+      //   }
+      // }
     } else {
       newParams = null;
     }
@@ -176,7 +191,11 @@ export const updateRoutes = (
     const routeAction = route.action;
     const currentAction = routeAction.getCurrentAction();
     if (shouldLoad) {
-      if (replace || currentAction.aborted || currentAction.error) {
+      if (
+        navigationType === "replace" ||
+        currentAction.aborted ||
+        currentAction.error
+      ) {
         shouldLoad = false;
       }
     }
@@ -322,7 +341,7 @@ const createRoute = (urlPatternInput) => {
       rawParamsSignal.value = params;
       if (matching) {
         // only if matching because otherwise we want to keep params in local storage to keep user prefs
-        for (const [paramName, paramConfig] of urlParamMap) {
+        for (const [paramName, paramConfig] of paramConfigMap) {
           routeParamStorage.syncParam(paramConfig, params?.[paramName]);
         }
       }
@@ -350,9 +369,9 @@ const createRoute = (urlPatternInput) => {
   };
   routePrivatePropertiesMap.set(route, routePrivateProperties);
 
-  const urlParamMap = new Map();
-  route.addUrlParam = (paramName, { default: defaultValue } = {}) => {
-    urlParamMap.set(paramName, {
+  const paramConfigMap = new Map();
+  route.describeParam = (paramName, { default: defaultValue } = {}) => {
+    paramConfigMap.set(paramName, {
       default: defaultValue,
       localStorageKey: generateStorageKey(urlPatternInput, paramName),
     });
@@ -364,7 +383,7 @@ const createRoute = (urlPatternInput) => {
 
     // Use raw params (without defaults) for inheritance to avoid double-applying defaults
     const currentParams = rawParamsSignal.value;
-    for (const [paramName, paramConfig] of urlParamMap) {
+    for (const [paramName, paramConfig] of paramConfigMap) {
       const providedValue = providedParams?.[paramName];
       if (providedValue !== undefined) {
         mergedParams[paramName] = providedValue;
@@ -395,7 +414,7 @@ const createRoute = (urlPatternInput) => {
     // Inherit current parameters that would not be expliictely provided
     const params = resolveParams(providedParams);
     // Remove parameters that match their default values to keep URLs shorter
-    for (const [paramName, paramConfig] of urlParamMap) {
+    for (const [paramName, paramConfig] of paramConfigMap) {
       const { default: defaultValue } = paramConfig;
       if (defaultValue !== undefined && params[paramName] === defaultValue) {
         delete params[paramName];
@@ -476,11 +495,11 @@ const createRoute = (urlPatternInput) => {
   const rawParamsSignal = signal(null);
   const paramsSignal = computed(() => {
     const rawParams = rawParamsSignal.value;
-    if (!rawParams && urlParamMap.size === 0) {
+    if (!rawParams && paramConfigMap.size === 0) {
       return rawParams;
     }
     const mergedParams = {};
-    const paramNameSet = new Set(urlParamMap.keys());
+    const paramNameSet = new Set(paramConfigMap.keys());
 
     // First, add raw params that have defined values
     if (rawParams) {
@@ -494,7 +513,7 @@ const createRoute = (urlPatternInput) => {
     }
     // Then, for parameters not in URL, check localStorage and apply defaults
     for (const paramName of paramNameSet) {
-      const paramConfig = urlParamMap.get(paramName);
+      const paramConfig = paramConfigMap.get(paramName);
       const { default: defaultValue } = paramConfig;
       // Always check localStorage as source of truth
       const storedValue = routeParamStorage.getStoredParam(paramConfig);

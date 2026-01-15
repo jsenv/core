@@ -32,7 +32,7 @@ const applyRouting = (
     globalAbortSignal,
     abortSignal,
     // state
-    replace,
+    navigationType,
     isVisited,
     reason,
   },
@@ -44,9 +44,9 @@ const applyRouting = (
     routeLoadRequestedMap,
     activeRouteSet,
   } = updateRoutes(url, {
-    replace,
-    // state,
+    navigationType,
     isVisited,
+    // state,
   });
   if (loadSet.size === 0 && reloadSet.size === 0) {
     return {
