@@ -73,4 +73,19 @@ await snapshotTests(import.meta.url, ({ test }) => {
       ),
     };
   });
+
+  test("search parameters in patterns", () => {
+    return {
+      simple_search_param: run("/search?query=:query", "/search?query=hello"),
+      renamed_search_param: run("/users?city=:cityName", "/users?city=paris"),
+      multiple_search_params: run(
+        "/api?page=:page&limit=:limit",
+        "/api?page=2&limit=10",
+      ),
+      mixed_path_and_search: run(
+        "/users/:id?status=:userStatus",
+        "/users/123?status=active",
+      ),
+    };
+  });
 });
