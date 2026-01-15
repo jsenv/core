@@ -380,6 +380,9 @@ const createRoute = (urlPatternInput) => {
       localStorageKey: generateStorageKey(urlPatternInput, paramName),
     });
   };
+  route.navTo = (params, options) => {
+    return browserIntegration.navTo(route.buildUrl(params), options);
+  };
 
   // Utility function to resolve parameters with inheritance and defaults
   const resolveParams = (providedParams) => {
