@@ -7,20 +7,24 @@ import { createPubSub } from "@jsenv/dom";
 import { batch, computed, effect, signal } from "@preact/signals";
 
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
-import { buildRouteRelativeUrl } from "./build_route_relative_url.js";
 import { createRoutePattern } from "./route_pattern.js";
+import { prepareRouteRelativeUrl, resolveRouteUrl } from "./route_url.js";
 
+let baseFileUrl;
 let baseUrl;
 if (typeof window === "undefined") {
-  baseUrl = "http://localhost/";
+  baseFileUrl = "http://localhost/";
+  baseUrl = new URL(".", baseFileUrl).href;
 } else {
-  baseUrl = import.meta.dev
+  baseFileUrl = import.meta.dev
     ? new URL(window.HTML_ROOT_PATHNAME, window.location).href
     : window.location.origin;
+  baseUrl = new URL(".", baseFileUrl).href;
 }
 
 export const setBaseUrl = (value) => {
-  baseUrl = new URL(value, window.location).href;
+  baseFileUrl = new URL(value, window.location).href;
+  baseUrl = new URL(".", baseFileUrl).href;
 };
 
 const DEBUG = false;
@@ -229,7 +233,7 @@ const createRoute = (urlPatternInput) => {
   };
 
   const [publishStatus, subscribeStatus] = createPubSub();
-  const routePattern = createRoutePattern(urlPatternInput, baseUrl);
+  const routePattern = createRoutePattern(urlPatternInput, baseFileUrl);
   const route = {
     urlPattern: urlPatternInput,
     isRoute: true,
@@ -359,45 +363,17 @@ const createRoute = (urlPatternInput) => {
     return mergedParams;
   };
 
-  const buildRelativeUrl = (providedParams, options) => {
-    // Inherit current parameters that would not be expliictely provided
-    const params = resolveParams(providedParams, {
+  route.buildRelativeUrl = (params = {}) => {
+    const resolvedParams = resolveParams(params, {
       // cleanup defaults to keep url as short as possible
       cleanupDefaults: true,
     });
-    return buildRouteRelativeUrl(urlPatternInput, params, options);
+    const routeRelativeUrl = prepareRouteRelativeUrl(
+      urlPatternInput,
+      resolvedParams,
+    );
+    return routeRelativeUrl;
   };
-  route.buildRelativeUrl = (params = {}, options) => {
-    const { relativeUrl } = buildRelativeUrl(params, options);
-    return relativeUrl;
-  };
-
-  route.matchesParams = (providedParams) => {
-    const otherParams = resolveParams(providedParams);
-    let currentParams = route.params;
-    // Remove wildcards from comparison (they're not user-controllable params)
-    if (currentParams) {
-      const currentParamsWithoutWildcards = {};
-      for (const key of Object.keys(currentParams)) {
-        if (!Number.isInteger(Number(key))) {
-          currentParamsWithoutWildcards[key] = currentParams[key];
-        }
-      }
-      currentParams = currentParamsWithoutWildcards;
-    }
-    const paramsIsFalsyOrEmpty =
-      !currentParams || Object.keys(currentParams).length === 0;
-    const otherParamsFalsyOrEmpty =
-      !otherParams || Object.keys(otherParams).length === 0;
-    if (paramsIsFalsyOrEmpty) {
-      return otherParamsFalsyOrEmpty;
-    }
-    if (otherParamsFalsyOrEmpty) {
-      return false;
-    }
-    return compareTwoJsValues(otherParams, currentParams);
-  };
-
   /**
    * Builds a complete URL for this route with the given parameters.
    *
@@ -416,25 +392,18 @@ const createRoute = (urlPatternInput) => {
    * route.buildUrl({ id: rawUrlPart("hello world") }) // → "https://example.com/items/hello world"
    *
    */
-  const buildUrl = (params = {}) => {
-    const { relativeUrl, hasRawUrlPartWithInvalidChars } =
-      buildRelativeUrl(params);
-    let processedRelativeUrl = relativeUrl;
-    if (processedRelativeUrl[0] === "/") {
-      // we remove the leading slash because we want to resolve against baseUrl which may
-      // not be the root url
-      processedRelativeUrl = processedRelativeUrl.slice(1);
-    }
-    if (hasRawUrlPartWithInvalidChars) {
-      if (!baseUrl.endsWith("/")) {
-        return `${baseUrl}/${processedRelativeUrl}`;
-      }
-      return `${baseUrl}${processedRelativeUrl}`;
-    }
-    const url = new URL(processedRelativeUrl, baseUrl).href;
-    return url;
+  const buildUrl = (params) => {
+    const routeRelativeUrl = route.buildRelativeUrl(params);
+    const routeUrl = resolveRouteUrl(routeRelativeUrl, baseUrl);
+    return routeUrl;
   };
   route.buildUrl = buildUrl;
+
+  route.matchesParams = (providedParams) => {
+    const currentUrl = route.url;
+    const urlWithThooseParams = route.buildUrl(providedParams);
+    return currentUrl === urlWithThooseParams;
+  };
 
   const matchingSignal = signal(false);
   const rawParamsSignal = signal(ROUTE_NOT_MATCHING_PARAMS);
@@ -472,7 +441,7 @@ const createRoute = (urlPatternInput) => {
   const visitedSignal = signal(false);
   const relativeUrlSignal = computed(() => {
     const rawParams = rawParamsSignal.value;
-    const { relativeUrl } = buildRelativeUrl(rawParams);
+    const relativeUrl = route.buildRelativeUrl(rawParams);
     return relativeUrl;
   });
   const disposeRelativeUrlEffect = effect(() => {
@@ -482,7 +451,7 @@ const createRoute = (urlPatternInput) => {
 
   const urlSignal = computed(() => {
     const relativeUrl = relativeUrlSignal.value;
-    const url = new URL(relativeUrl, baseUrl).href;
+    const url = resolveRouteUrl(relativeUrl, baseUrl);
     return url;
   });
   const disposeUrlEffect = effect(() => {

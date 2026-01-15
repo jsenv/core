@@ -221,7 +221,7 @@ export const prepareRouteRelativeUrl = (
         if (value !== undefined && value !== null) {
           const encodedKey = encodeURIComponent(key);
           // Handle boolean values - if true, just add the key without value
-          if (value === true) {
+          if (value === true || value === "") {
             searchParamPairs.push(encodedKey);
           } else {
             const encodedValue = encodeParamValue(value, false); // Search params encode slashes
