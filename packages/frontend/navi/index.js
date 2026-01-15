@@ -48,7 +48,7 @@ export {
 export { useUrlSearchParam } from "./src/nav/browser_integration/use_url_search_param.js";
 export { rawUrlPart } from "./src/nav/build_route_relative_url.js";
 export { setBaseUrl, setupRoutes, useRouteStatus } from "./src/nav/route.js";
-export { Route, Routes, useActiveRouteInfo } from "./src/nav/route.jsx";
+export { Route, Routes, useMatchingRouteInfo } from "./src/nav/route.jsx";
 export { RouteLink } from "./src/nav/route_link.jsx";
 // Navigation/components
 export { Link } from "./src/nav/link.jsx";

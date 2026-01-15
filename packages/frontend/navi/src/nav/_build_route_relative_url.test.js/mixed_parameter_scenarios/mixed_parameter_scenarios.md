@@ -1,4 +1,4 @@
-# [mixed parameter scenarios](../../build_route_relative_url.test.js#L190)
+# [mixed parameter scenarios](../../build_route_relative_url.test.js#L241)
 
 ```js
 return {
@@ -34,7 +34,7 @@ return {
 {
   "object_and_path_replacement": "/users/user123/posts/latest?featured&draft=false",
   "boolean_overwrites_path_param": "/api/true?debug",
-  "complex_pattern_with_booleans": "/search?0=recent&exact&caseSensitive=false",
+  "complex_pattern_with_booleans": "/search/javascript?exact&caseSensitive=false",
   "empty_vs_false_boolean": "/test?empty=&zero=0&false=false&true"
 }
 ```

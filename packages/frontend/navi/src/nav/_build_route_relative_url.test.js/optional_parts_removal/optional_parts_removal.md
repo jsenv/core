@@ -7,7 +7,7 @@ return {
   optional_parameter: run("/users/:id?"),
   optional_curly_parameter: run("/posts/{id}?"),
   multiple_optional_parts: run("/api/users/:id?/posts/*?"),
-  optional_group_no_params: run("/map/isochrone{/time/:duration}?"),
+  optional_group_no_params: run("/map/isochrone{/:time/:duration}?"),
 };
 ```
 

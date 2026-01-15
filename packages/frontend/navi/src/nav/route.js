@@ -10,6 +10,60 @@ import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
 import { buildRouteRelativeUrl } from "./build_route_relative_url.js";
 import { createRoutePattern } from "./route_pattern.js";
 
+// Helper for managing route parameter localStorage storage
+const generateStorageKey = (routePattern, paramName) => {
+  // Create a scoped key based on route pattern to avoid conflicts
+  const routeKey = routePattern.replace(/[^a-zA-Z0-9]/g, "_");
+  return `route_param_${routeKey}_${paramName}`;
+};
+const createRouteParamStorage = () => {
+  const storeValue = (paramConfig, value) => {
+    const { localStorageKey, default: defaultValue } = paramConfig;
+    if (value === defaultValue || value === undefined) {
+      // Remove from localStorage when value matches default or is undefined
+      localStorage.removeItem(localStorageKey);
+    } else {
+      // Store in localStorage when value deviates from default
+      try {
+        localStorage.setItem(localStorageKey, JSON.stringify(value));
+      } catch (error) {
+        // Gracefully handle localStorage errors (quota exceeded, etc.)
+        console.warn(`Failed to store parameter to localStorage:`, error);
+      }
+    }
+  };
+  const retrieveValue = (paramConfig) => {
+    const { localStorageKey } = paramConfig;
+    try {
+      const storedValue = localStorage.getItem(localStorageKey);
+      if (storedValue !== null) {
+        try {
+          return JSON.parse(storedValue);
+        } catch {
+          return storedValue;
+        }
+      }
+      return null;
+    } catch (error) {
+      console.warn(`Failed to retrieve parameter from localStorage:`, error);
+      return null;
+    }
+  };
+  const syncParam = (paramConfig, value) => {
+    storeValue(paramConfig, value);
+  };
+  const getStoredParam = (paramConfig) => {
+    return retrieveValue(paramConfig);
+  };
+
+  return {
+    syncParam,
+    getStoredParam,
+  };
+};
+
+const routeParamStorage = createRouteParamStorage();
+
 let baseUrl;
 if (typeof window === "undefined") {
   baseUrl = "http://localhost/";
@@ -24,9 +78,9 @@ export const setBaseUrl = (value) => {
 };
 
 const DEBUG = false;
-// Controls what happens to actions when their route becomes inactive:
-// 'abort' - Cancel the action immediately when route deactivates
-// 'keep-loading' - Allow action to continue running after route deactivation
+// Controls what happens to actions when their route stops matching:
+// 'abort' - Cancel the action immediately when route stops matching
+// 'keep-loading' - Allow action to continue running after route stops matching
 //
 // The 'keep-loading' strategy could act like preloading, keeping data ready for potential return.
 // However, since route reactivation triggers action reload anyway, the old data won't be used
@@ -53,13 +107,14 @@ export const updateRoutes = (
 
     // Get previous state
     const previousState = routePreviousStateMap.get(route) || {
-      active: false,
+      matching: false,
       params: null,
     };
-    const oldActive = previousState.active;
+    const oldMatching = previousState.matching;
     const oldParams = previousState.params;
     const extractedParams = routePattern.applyOn(url);
-    const newActive = Boolean(extractedParams);
+    const newMatching = Boolean(extractedParams);
+
     let newParams;
     if (extractedParams) {
       if (compareTwoJsValues(oldParams, extractedParams)) {
@@ -75,37 +130,37 @@ export const updateRoutes = (
     const routeMatchInfo = {
       route,
       routePrivateProperties,
-      oldActive,
-      newActive,
+      oldMatching,
+      newMatching,
       oldParams,
       newParams,
     };
     routeMatchInfoSet.add(routeMatchInfo);
     // Store current state for next comparison
     routePreviousStateMap.set(route, {
-      active: newActive,
+      matching: newMatching,
       params: newParams,
     });
   }
 
   // Apply all signal updates in a batch
-  const activeRouteSet = new Set();
+  const matchingRouteSet = new Set();
   batch(() => {
     for (const {
       route,
       routePrivateProperties,
-      newActive,
+      newMatching,
       newParams,
     } of routeMatchInfoSet) {
       const { updateStatus } = routePrivateProperties;
       const visited = isVisited(route.url);
       updateStatus({
-        active: newActive,
+        matching: newMatching,
         params: newParams,
         visited,
       });
-      if (newActive) {
-        activeRouteSet.add(route);
+      if (newMatching) {
+        matchingRouteSet.add(route);
       }
     }
   });
@@ -157,8 +212,8 @@ export const updateRoutes = (
   for (const {
     route,
     routePrivateProperties,
-    newActive,
-    oldActive,
+    newMatching,
+    oldMatching,
     newParams,
     oldParams,
   } of routeMatchInfoSet) {
@@ -167,16 +222,16 @@ export const updateRoutes = (
       continue;
     }
 
-    const becomesActive = newActive && !oldActive;
-    const becomesInactive = !newActive && oldActive;
-    const paramsChangedWhileActive =
-      newActive && oldActive && newParams !== oldParams;
+    const becomesMatching = newMatching && !oldMatching;
+    const becomesNotMatching = !newMatching && oldMatching;
+    const paramsChangedWhileMatching =
+      newMatching && oldMatching && newParams !== oldParams;
 
-    // Handle actions for routes that become active
-    if (becomesActive) {
+    // Handle actions for routes that become matching
+    if (becomesMatching) {
       if (DEBUG) {
         console.debug(
-          `${routePrivateProperties} became active with params:`,
+          `${routePrivateProperties} became matching with params:`,
           newParams,
         );
       }
@@ -184,14 +239,14 @@ export const updateRoutes = (
       continue;
     }
 
-    // Handle actions for routes that become inactive - abort them
-    if (becomesInactive && ROUTE_DEACTIVATION_STRATEGY === "abort") {
+    // Handle actions for routes that become not matching - abort them
+    if (becomesNotMatching && ROUTE_DEACTIVATION_STRATEGY === "abort") {
       shouldAbort(route);
       continue;
     }
 
-    // Handle parameter changes while route stays active
-    if (paramsChangedWhileActive) {
+    // Handle parameter changes while route stays matching
+    if (paramsChangedWhileMatching) {
       if (DEBUG) {
         console.debug(`${routePrivateProperties} params changed:`, newParams);
       }
@@ -204,7 +259,7 @@ export const updateRoutes = (
     reloadSet: toReloadSet,
     abortSignalMap,
     routeLoadRequestedMap,
-    activeRouteSet,
+    matchingRouteSet,
   };
 };
 
@@ -226,7 +281,7 @@ const createRoute = (urlPatternInput) => {
   const route = {
     urlPattern: urlPatternInput,
     isRoute: true,
-    active: false,
+    matching: false,
     params: null,
     buildUrl: null,
     bindAction: null,
@@ -244,61 +299,130 @@ const createRoute = (urlPatternInput) => {
 
   const routePrivateProperties = {
     routePattern: null,
-    activeSignal: null,
+    matchingSignal: null,
     paramsSignal: null,
+    rawParamsSignal: null, // params from URL without defaults
     visitedSignal: null,
     relativeUrlSignal: null,
     urlSignal: null,
-    updateStatus: ({ active, params, visited }) => {
+    updateStatus: ({ matching, params, visited }) => {
       let someChange = false;
-      activeSignal.value = active;
-      paramsSignal.value = params;
+      matchingSignal.value = matching;
+
+      if (route.matching !== matching) {
+        route.matching = matching;
+        someChange = true;
+      }
       visitedSignal.value = visited;
-      if (route.active !== active) {
-        route.active = active;
-        someChange = true;
-      }
-      if (route.params !== params) {
-        route.params = params;
-        someChange = true;
-      }
       if (route.visited !== visited) {
         route.visited = visited;
+        someChange = true;
+      }
+      // Store raw params (from URL) - paramsSignal will reactively compute merged params
+      rawParamsSignal.value = params;
+      if (matching) {
+        // only if matching because otherwise we want to keep params in local storage to keep user prefs
+        for (const [paramName, paramConfig] of urlParamMap) {
+          routeParamStorage.syncParam(paramConfig, params?.[paramName]);
+        }
+      }
+      // Get merged params for comparison (computed signal will handle the merging)
+      const mergedParams = paramsSignal.value;
+      if (route.params !== mergedParams) {
+        route.params = mergedParams;
         someChange = true;
       }
       if (someChange) {
         if (DEBUG) {
           console.debug(`${route} status changed:`, {
-            active,
-            params,
+            matching,
+            params: mergedParams,
             visited,
           });
         }
-        publishStatus({ active, params, visited });
+        publishStatus({
+          matching,
+          params: mergedParams,
+          visited,
+        });
       }
     },
   };
   routePrivatePropertiesMap.set(route, routePrivateProperties);
 
-  const buildRelativeUrl = (params, options) =>
-    buildRouteRelativeUrl(urlPatternInput, params, options);
-  route.buildRelativeUrl = (params, options) => {
+  const urlParamMap = new Map();
+  route.addUrlParam = (paramName, { default: defaultValue } = {}) => {
+    urlParamMap.set(paramName, {
+      default: defaultValue,
+      localStorageKey: generateStorageKey(urlPatternInput, paramName),
+    });
+  };
+
+  // Utility function to resolve parameters with inheritance and defaults
+  const resolveParams = (providedParams) => {
+    const mergedParams = {};
+
+    // Use raw params (without defaults) for inheritance to avoid double-applying defaults
+    const currentParams = rawParamsSignal.value;
+    for (const [paramName, paramConfig] of urlParamMap) {
+      const providedValue = providedParams?.[paramName];
+      if (providedValue !== undefined) {
+        mergedParams[paramName] = providedValue;
+        continue;
+      }
+      const currentValue = currentParams?.[paramName];
+      if (currentValue !== undefined) {
+        mergedParams[paramName] = currentValue;
+        continue;
+      }
+
+      // Always check localStorage as source of truth for stored values
+      const storedValue = routeParamStorage.getStoredParam(paramConfig);
+      if (storedValue !== null) {
+        mergedParams[paramName] = storedValue;
+        continue;
+      }
+      const defaultValue = paramConfig.default;
+      if (defaultValue !== undefined) {
+        mergedParams[paramName] = defaultValue;
+      }
+    }
+
+    return mergedParams;
+  };
+
+  const buildRelativeUrl = (providedParams, options) => {
+    // Inherit current parameters that would not be expliictely provided
+    const params = resolveParams(providedParams);
+    // Remove parameters that match their default values to keep URLs shorter
+    for (const [paramName, paramConfig] of urlParamMap) {
+      const { default: defaultValue } = paramConfig;
+      if (defaultValue !== undefined && params[paramName] === defaultValue) {
+        delete params[paramName];
+      }
+    }
+    return buildRouteRelativeUrl(urlPatternInput, params, options);
+  };
+  route.buildRelativeUrl = (params = {}, options) => {
     const { relativeUrl } = buildRelativeUrl(params, options);
     return relativeUrl;
   };
 
-  route.matchesParams = (otherParams) => {
-    let params = route.params;
-    if (params) {
-      const paramsWithoutWildcards = {};
-      for (const key of Object.keys(params)) {
+  route.matchesParams = (providedParams) => {
+    const otherParams = resolveParams(providedParams);
+    let currentParams = route.params;
+    // Remove wildcards from comparison (they're not user-controllable params)
+    if (currentParams) {
+      const currentParamsWithoutWildcards = {};
+      for (const key of Object.keys(currentParams)) {
         if (!Number.isInteger(Number(key))) {
-          paramsWithoutWildcards[key] = params[key];
+          currentParamsWithoutWildcards[key] = currentParams[key];
         }
       }
-      params = paramsWithoutWildcards;
+      currentParams = currentParamsWithoutWildcards;
     }
-    const paramsIsFalsyOrEmpty = !params || Object.keys(params).length === 0;
+    const paramsIsFalsyOrEmpty =
+      !currentParams || Object.keys(currentParams).length === 0;
     const otherParamsFalsyOrEmpty =
       !otherParams || Object.keys(otherParams).length === 0;
     if (paramsIsFalsyOrEmpty) {
@@ -307,7 +431,7 @@ const createRoute = (urlPatternInput) => {
     if (otherParamsFalsyOrEmpty) {
       return false;
     }
-    return compareTwoJsValues(params, otherParams);
+    return compareTwoJsValues(otherParams, currentParams);
   };
 
   /**
@@ -348,12 +472,47 @@ const createRoute = (urlPatternInput) => {
   };
   route.buildUrl = buildUrl;
 
-  const activeSignal = signal(false);
-  const paramsSignal = signal(null);
+  const matchingSignal = signal(false);
+  const rawParamsSignal = signal(null);
+  const paramsSignal = computed(() => {
+    const rawParams = rawParamsSignal.value;
+    if (!rawParams && urlParamMap.size === 0) {
+      return rawParams;
+    }
+    const mergedParams = {};
+    const paramNameSet = new Set(urlParamMap.keys());
+
+    // First, add raw params that have defined values
+    if (rawParams) {
+      for (const name of Object.keys(rawParams)) {
+        const value = rawParams[name];
+        if (value !== undefined) {
+          mergedParams[name] = rawParams[name];
+          paramNameSet.delete(name);
+        }
+      }
+    }
+    // Then, for parameters not in URL, check localStorage and apply defaults
+    for (const paramName of paramNameSet) {
+      const paramConfig = urlParamMap.get(paramName);
+      const { default: defaultValue } = paramConfig;
+      // Always check localStorage as source of truth
+      const storedValue = routeParamStorage.getStoredParam(paramConfig);
+      if (storedValue !== null) {
+        mergedParams[paramName] = storedValue;
+        continue;
+      }
+      // Apply default if no stored value
+      if (defaultValue !== undefined) {
+        mergedParams[paramName] = defaultValue;
+      }
+    }
+    return mergedParams;
+  });
   const visitedSignal = signal(false);
   const relativeUrlSignal = computed(() => {
-    const params = paramsSignal.value;
-    const { relativeUrl } = buildRelativeUrl(params);
+    const rawParams = rawParamsSignal.value;
+    const { relativeUrl } = buildRelativeUrl(rawParams);
     return relativeUrl;
   });
   const disposeRelativeUrlEffect = effect(() => {
@@ -372,12 +531,20 @@ const createRoute = (urlPatternInput) => {
   cleanupCallbackSet.add(disposeUrlEffect);
 
   const replaceParams = (newParams) => {
-    const currentParams = paramsSignal.peek();
-    const updatedParams = { ...currentParams, ...newParams };
-    const updatedUrl = route.buildUrl(updatedParams);
+    // Use resolved params as base (includes inheritance) but remove defaults to avoid URL pollution
+    const currentResolvedParams = resolveParams();
+    const currentRawParams = rawParamsSignal.peek() || {};
+
+    // For URL building: merge with raw params to avoid including unnecessary defaults
+    const updatedUrlParams = { ...currentRawParams, ...newParams };
+    const updatedUrl = route.buildUrl(updatedUrlParams);
+
     if (route.action) {
-      route.action.replaceParams(updatedParams);
+      // For action: merge with resolved params (includes defaults) so action gets complete params
+      const updatedActionParams = { ...currentResolvedParams, ...newParams };
+      route.action.replaceParams(updatedActionParams);
     }
+
     browserIntegration.navTo(updatedUrl, { replace: true });
   };
   route.replaceParams = replaceParams;
@@ -454,8 +621,9 @@ const createRoute = (urlPatternInput) => {
   route.bindAction = bindAction;
 
   private_properties: {
-    routePrivateProperties.activeSignal = activeSignal;
+    routePrivateProperties.matchingSignal = matchingSignal;
     routePrivateProperties.paramsSignal = paramsSignal;
+    routePrivateProperties.rawParamsSignal = rawParamsSignal;
     routePrivateProperties.visitedSignal = visitedSignal;
     routePrivateProperties.relativeUrlSignal = relativeUrlSignal;
     routePrivateProperties.urlSignal = urlSignal;
@@ -483,17 +651,17 @@ export const useRouteStatus = (route) => {
     throw new Error(`Cannot find route private properties for ${route}`);
   }
 
-  const { urlSignal, activeSignal, paramsSignal, visitedSignal } =
+  const { urlSignal, matchingSignal, paramsSignal, visitedSignal } =
     routePrivateProperties;
 
   const url = urlSignal.value;
-  const active = activeSignal.value;
+  const matching = matchingSignal.value;
   const params = paramsSignal.value;
   const visited = visitedSignal.value;
 
   return {
     url,
-    active,
+    matching,
     params,
     visited,
   };
@@ -537,7 +705,13 @@ export const setupRoutes = (routeDefinition) => {
     const route = createRoute(value);
     routes[key] = route;
   }
-  onRouteDefined();
+
+  setTimeout(() => {
+    // give a chance to call addUrlParam
+    // TODO: better API to avoid relying on this ugly hack
+    onRouteDefined();
+  });
+
   return routes;
 };
 

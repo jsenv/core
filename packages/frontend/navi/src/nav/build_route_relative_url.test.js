@@ -16,7 +16,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
       optional_parameter: run("/users/:id?"),
       optional_curly_parameter: run("/posts/{id}?"),
       multiple_optional_parts: run("/api/users/:id?/posts/*?"),
-      optional_group_no_params: run("/map/isochrone{/time/:duration}?"),
+      optional_group_no_params: run("/map/isochrone{/:time/:duration}?"),
     };
   });
 
@@ -32,8 +32,8 @@ await snapshotTests(import.meta.url, ({ test }) => {
       wildcard_parameter: run("/files/*", {
         0: "documents/readme.txt",
       }),
-      optional_group_with_params: run("/map/isochrone{/time/:duration}?", {
-        time: "15",
+      optional_group_with_params: run("/map/isochrone{/:time/:duration}?", {
+        time: 15,
         duration: "minutes",
       }),
     };
@@ -135,6 +135,57 @@ await snapshotTests(import.meta.url, ({ test }) => {
     };
   });
 
+  test("map pattern variations", () => {
+    const runLocal = (params) => {
+      return run("/map{/}?*", params);
+    };
+
+    return {
+      no_params: runLocal(),
+      empty_params: runLocal({}),
+      wildcard_only: runLocal({
+        0: "layer1/layer2",
+      }),
+      search_params_only: runLocal({
+        zoom: "10",
+        center: "paris",
+      }),
+      wildcard_and_search: runLocal({
+        0: "satellite",
+        zoom: "15",
+        lat: "48.8566",
+        lng: "2.3522",
+      }),
+    };
+  });
+
+  test("slash encoding behavior", () => {
+    const pathValue = "docs/api/guide.md";
+
+    return {
+      // Wildcards preserve slashes (they represent path segments)
+      wildcard_slashes: run("/files/*", {
+        0: pathValue,
+      }),
+
+      // Named parameters encode slashes (they're part of the parameter value)
+      named_param_slashes: run("/users/:id", {
+        id: "user/with/slashes",
+      }),
+
+      // Search parameters encode slashes
+      search_param_slashes: run("/api", {
+        path: "folder/file.txt",
+      }),
+
+      // Mixed: wildcard preserves, search params encode
+      mixed_example: run("/files/*", {
+        0: pathValue,
+        type: "text/plain",
+      }),
+    };
+  });
+
   test("boolean parameters", () => {
     return {
       single_boolean_true: run("/api/data", {
@@ -231,13 +282,26 @@ await snapshotTests(import.meta.url, ({ test }) => {
       root_path_preserved: run("/"),
       multiple_trailing_slashes: run("/path///"),
       complex_optional_with_trailing_slash: run(
-        "/map/isochrone{/time/:duration}?/",
+        "/map/isochrone{/:time/:duration}?/",
         {
           time: "15",
           duration: "minutes",
         },
       ),
       query_params_with_trailing_slash: run("/search/", { q: "test", page: 1 }),
+    };
+  });
+
+  test("optional group patterns", () => {
+    return {
+      // Pattern: /colors{/:color}?
+      colors_no_params: run("/colors{/:color}?"),
+      colors_with_color: run("/colors{/:color}?", { color: "red" }),
+      colors_with_undefined_color: run("/colors{/:color}?", {
+        color: undefined,
+      }),
+      colors_with_empty_color: run("/colors{/:color}?", { color: "" }),
+      colors_with_null_color: run("/colors{/:color}?", { color: null }),
     };
   });
 });
