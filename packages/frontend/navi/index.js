@@ -46,10 +46,10 @@ export {
   useDocumentUrl,
 } from "./src/nav/browser_integration/document_url_signal.js";
 export { useUrlSearchParam } from "./src/nav/browser_integration/use_url_search_param.js";
-export { rawUrlPart } from "./src/nav/build_route_relative_url.js";
 export { setBaseUrl, setupRoutes, useRouteStatus } from "./src/nav/route.js";
 export { Route, Routes, useMatchingRouteInfo } from "./src/nav/route.jsx";
 export { RouteLink } from "./src/nav/route_link.jsx";
+export { rawUrlPart } from "./src/nav/route_url.js";
 // Navigation/components
 export { Link } from "./src/nav/link.jsx";
 export { Tab, TabList } from "./src/nav/tablist/tablist.jsx";
