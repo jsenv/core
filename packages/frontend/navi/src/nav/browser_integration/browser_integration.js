@@ -43,21 +43,11 @@ const applyRouting = (
     abortSignalMap,
     routeLoadRequestedMap,
     activeRouteSet,
-    validUrl,
   } = updateRoutes(url, {
     navigationType,
     isVisited,
     // state,
   });
-  if (validUrl) {
-    navTo(validUrl, { replace: true });
-    return {
-      allResult: undefined,
-      requestedResult: undefined,
-      activeRouteSet: new Set(),
-    };
-  }
-
   if (loadSet.size === 0 && reloadSet.size === 0) {
     return {
       allResult: undefined,

@@ -86,6 +86,7 @@ const DEBUG = false;
 // However, since route reactivation triggers action reload anyway, the old data won't be used
 // so it's better to abort the action to avoid unnecessary resource usage.
 const ROUTE_DEACTIVATION_STRATEGY = "abort"; // 'abort', 'keep-loading'
+const ROUTE_NOT_MATCHING_PARAMS = { id: "route_without_params" };
 
 const routeSet = new Set();
 // Store previous route states to detect changes
@@ -100,7 +101,6 @@ export const updateRoutes = (
     // state
   },
 ) => {
-  let validUrl;
   const routeMatchInfoSet = new Set();
   for (const route of routeSet) {
     const routePrivateProperties = getRoutePrivateProperties(route);
@@ -109,7 +109,7 @@ export const updateRoutes = (
     // Get previous state
     const previousState = routePreviousStateMap.get(route) || {
       matching: false,
-      params: null,
+      params: ROUTE_NOT_MATCHING_PARAMS,
     };
     const oldMatching = previousState.matching;
     const oldParams = previousState.params;
@@ -124,24 +124,8 @@ export const updateRoutes = (
       } else {
         newParams = extractedParams;
       }
-      for (const [paramName, paramConfig] of route.paramConfigMap) {
-        const paramValue = newParams[paramName];
-        const enumValues = paramConfig.enum;
-        const defaultValue = paramConfig.default;
-        if (
-          enumValues &&
-          !enumValues.includes(paramValue) &&
-          paramConfig.invalidEffect === "redirect"
-        ) {
-          validUrl = route.buildUrl({
-            ...newParams,
-            [paramName]:
-              defaultValue === undefined ? enumValues[0] : defaultValue,
-          });
-        }
-      }
     } else {
-      newParams = null;
+      newParams = ROUTE_NOT_MATCHING_PARAMS;
     }
 
     const routeMatchInfo = {
@@ -281,12 +265,11 @@ export const updateRoutes = (
     abortSignalMap,
     routeLoadRequestedMap,
     matchingRouteSet,
-    validUrl,
   };
 };
 
 const routePrivatePropertiesMap = new Map();
-const getRoutePrivateProperties = (route) => {
+export const getRoutePrivateProperties = (route) => {
   return routePrivatePropertiesMap.get(route);
 };
 
@@ -305,7 +288,7 @@ const createRoute = (urlPatternInput) => {
     urlPattern: urlPatternInput,
     isRoute: true,
     matching: false,
-    params: null,
+    params: ROUTE_NOT_MATCHING_PARAMS,
     buildUrl: null,
     bindAction: null,
     relativeUrl: null,
@@ -500,7 +483,7 @@ const createRoute = (urlPatternInput) => {
   route.buildUrl = buildUrl;
 
   const matchingSignal = signal(false);
-  const rawParamsSignal = signal(null);
+  const rawParamsSignal = signal(ROUTE_NOT_MATCHING_PARAMS);
   const paramsSignal = computed(() => {
     const rawParams = rawParamsSignal.value;
     if (!rawParams && paramConfigMap.size === 0) {

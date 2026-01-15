@@ -5,8 +5,8 @@ import {
   RouteLink,
   Routes,
   setupRoutes,
+  stateSignal,
   TabList,
-  useRouteStatus,
 } from "@jsenv/navi";
 
 const { HOME_ROUTE, MAP_ROUTE, SELECT_CITY_ROUTE } = setupRoutes({
@@ -15,8 +15,10 @@ const { HOME_ROUTE, MAP_ROUTE, SELECT_CITY_ROUTE } = setupRoutes({
   SELECT_CITY_ROUTE: "/select_city",
 });
 
-MAP_ROUTE.describeParam("city", {
-  invalidEffect: "redirect",
+const cities = ["Paris", "London", "Tokyo", "New York", "Sydney"];
+const citySignal = stateSignal(undefined, {
+  routes: [MAP_ROUTE],
+  enum: cities,
 });
 
 const App = () => {
@@ -71,7 +73,7 @@ const HomePage = () => {
 };
 
 const SelectCityPage = () => {
-  const cities = ["Paris", "London", "Tokyo", "New York", "Sydney"];
+  const currentCity = citySignal.value;
 
   return (
     <div>
@@ -86,7 +88,7 @@ const SelectCityPage = () => {
               routeParams={{ city }}
               style={{
                 padding: "8px 16px",
-                backgroundColor: "#28a745",
+                backgroundColor: currentCity === city ? "grey" : "#28a745",
                 color: "white",
                 textDecoration: "none",
                 borderRadius: "4px",
@@ -105,8 +107,7 @@ const SelectCityPage = () => {
 };
 
 const MapPage = () => {
-  const { params } = useRouteStatus(MAP_ROUTE);
-  const { city } = params;
+  const city = citySignal.value;
 
   // If no city is selected, redirect to city selection
   if (!city) {

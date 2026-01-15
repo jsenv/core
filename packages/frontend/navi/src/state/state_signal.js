@@ -1,4 +1,6 @@
 import { effect, signal } from "@preact/signals";
+
+import { getRoutePrivateProperties } from "../nav/route.js";
 import { valueInLocalStorage } from "./value_in_local_storage.js";
 
 /**
@@ -53,7 +55,7 @@ import { valueInLocalStorage } from "./value_in_local_storage.js";
  */
 export const stateSignal = (
   defaultValue,
-  { sourceSignal, localStorageKey, type } = {},
+  { sourceSignal, localStorageKey, type, oneOf, routes, invalidEffect } = {},
 ) => {
   const advancedSignal = signal();
   if (sourceSignal) {
@@ -64,6 +66,49 @@ export const stateSignal = (
   if (localStorageKey) {
     connectSignalWithLocalStorage(advancedSignal, localStorageKey, { type });
   }
+
+  if (oneOf) {
+    // MAP_ROUTE.describeParam("city", {
+    //   enum: cities,
+    //   // pick default city would be better than redirect. Redirect should be used with an other route
+    //   // (here we could redirect to city selection)
+    //   invalidEffect: "redirect",
+    // });
+  }
+
+  if (routes) {
+    for (const paramName of Object.keys(routes)) {
+      const route = routes[paramName];
+      route.describeParam(paramName, {
+        defaultValue,
+        invalidEffect,
+      });
+      const { rawParamsSignal } = getRoutePrivateProperties(route);
+      effect(() => {
+        const params = rawParamsSignal.value;
+        const urlParamValue = params[paramName];
+        const stateValue = advancedSignal.value;
+        if (urlParamValue === stateValue) {
+          // nothing to do
+          return;
+        }
+        // what do we do with the param found in the url?
+        if (
+          oneOf &&
+          !oneOf.includes(urlParamValue) &&
+          invalidEffect === "redirect"
+        ) {
+          route.navTo({
+            ...params,
+            [paramName]: defaultValue === undefined ? oneOf[0] : defaultValue,
+          });
+          return;
+        }
+        advancedSignal.value = urlParamValue;
+      });
+    }
+  }
+
   return advancedSignal;
 };
 
