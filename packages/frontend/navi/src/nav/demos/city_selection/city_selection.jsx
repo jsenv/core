@@ -2,6 +2,7 @@ import { render } from "preact";
 
 import {
   Box,
+  Button,
   MessageBox,
   Route,
   RouteLink,
@@ -180,6 +181,14 @@ const MapPage = () => {
         >
           Select Different City
         </RouteLink>
+
+        <Button
+          action={() => {
+            citySignal.value = "London";
+          }}
+        >
+          Set City to London
+        </Button>
 
         <RouteLink
           route={HOME_ROUTE}
