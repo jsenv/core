@@ -202,6 +202,24 @@ const typeConverters = {
   integer: createNumberValidator({ step: 1 }),
   positive_integer: createNumberValidator({ min: 0, step: 1 }),
   percentage: {
+    cast: {
+      number: (value) => {
+        if (value >= 0 && value <= 100) {
+          return `${value}%`;
+        }
+        return value;
+      },
+      string: (value) => {
+        if (value.endsWith("%")) {
+          return value;
+        }
+        const parsed = parseFloat(value);
+        if (!isNaN(parsed) && parsed >= 0 && parsed <= 100) {
+          return `${parsed}%`;
+        }
+        return value;
+      },
+    },
     checkValidity: (value) => {
       if (typeof value !== "string") {
         return `must be a percentage`;
