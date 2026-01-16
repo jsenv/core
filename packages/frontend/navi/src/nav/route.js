@@ -303,9 +303,7 @@ const createRoute = (urlPatternInput) => {
   const paramConfigMap = new Map();
   route.paramConfigMap = paramConfigMap;
   route.describeParam = (paramName, paramConfig) => {
-    paramConfigMap.set(paramName, {
-      ...paramConfig,
-    });
+    paramConfigMap.set(paramName, paramConfig);
   };
   route.navTo = (params) => {
     return browserIntegration.navTo(route.buildUrl(params));
@@ -321,21 +319,15 @@ const createRoute = (urlPatternInput) => {
       console.warn(
         `Cannot replace params on route ${route} because it is not matching the current URL.`,
       );
-      return;
+      return null;
     }
-
-    // Use resolved params as base (includes inheritance) but remove defaults to avoid URL pollution
-    const currentResolvedParams = resolveParams();
     if (route.action) {
       // For action: merge with resolved params (includes defaults) so action gets complete params
+      const currentResolvedParams = resolveParams();
       const updatedActionParams = { ...currentResolvedParams, ...newParams };
       route.action.replaceParams(updatedActionParams);
     }
-    const currentRawParams = rawParamsSignal.peek() || {};
-    // For URL building: merge with raw params to avoid including unnecessary defaults
-    const updatedUrlParams = { ...currentRawParams, ...newParams };
-    const updatedUrl = route.buildUrl(updatedUrlParams);
-    browserIntegration.navTo(updatedUrl, { replace: true });
+    return route.redirectTo(newParams);
   };
   route.replaceParams = replaceParams;
 
@@ -391,7 +383,7 @@ const createRoute = (urlPatternInput) => {
     return mergedParams;
   };
 
-  route.buildRelativeUrl = (params = {}) => {
+  route.buildRelativeUrl = (params) => {
     const resolvedParams = resolveParams(params, {
       // cleanup defaults to keep url as short as possible
       cleanupDefaults: true,
