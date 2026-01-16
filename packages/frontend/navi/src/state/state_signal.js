@@ -54,14 +54,14 @@ import { valueInLocalStorage } from "./value_in_local_storage.js";
  * });
  */
 const NO_LOCAL_STORAGE = [() => undefined, () => {}, () => {}];
-export const stateSignal = (defaultValue, options) => {
+export const stateSignal = (defaultValue, options = {}) => {
   const {
     type = "string",
-    localStorage,
-    routes,
-    sourceSignal,
     oneOf,
     autoFix,
+    sourceSignal,
+    localStorage,
+    routes,
   } = options;
 
   const [readFromLocalStorage, writeIntoLocalStorage, removeFromLocalStorage] =

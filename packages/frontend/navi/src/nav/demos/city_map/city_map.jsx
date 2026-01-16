@@ -1,5 +1,5 @@
+import { computed, effect } from "@preact/signals";
 import { render } from "preact";
-import { useEffect, useState } from "preact/hooks";
 
 import {
   Box,
@@ -43,8 +43,15 @@ const citySignal = stateSignal(undefined, {
   },
   oneOf: cities,
 });
-const cityLongitudeSignal = stateSignal(undefined);
-const cityLatitudeSignal = stateSignal(undefined);
+const cityDataSignal = stateSignal(null);
+effect(async () => {
+  const city = citySignal.value;
+  cityDataSignal.value = null;
+  const cityData = await fetchCity(city);
+  cityDataSignal.value = cityData;
+});
+const cityLongitudeSignal = computed(() => cityDataSignal.value?.lon);
+const cityLatitudeSignal = computed(() => cityDataSignal.value?.lat);
 const longitudeSignal = stateSignal(undefined, {
   sourceSignal: cityLongitudeSignal,
   type: "float",
@@ -189,23 +196,13 @@ const MapPage = () => {
 
   return <MapWithCity />;
 };
-
 const MapWithCity = () => {
   const city = citySignal.value;
   const lon = longitudeSignal.value;
   const lat = latitudeSignal.value;
-  const [isLoading, setIsLoading] = useState(true);
+  const cityData = cityDataSignal.value;
 
-  useEffect(() => {
-    const fetchCoordinates = async () => {
-      setIsLoading(true);
-      await fetchCity(city);
-      setIsLoading(false);
-    };
-    fetchCoordinates();
-  }, [city, lon, lat]);
-
-  if (isLoading) {
+  if (!cityData) {
     return (
       <div>
         <h2>Loading Map...</h2>
@@ -217,6 +214,9 @@ const MapWithCity = () => {
 };
 
 const MapWithCoordinates = ({ city, lon, lat }) => {
+  const cityLongitude = cityLongitudeSignal.value;
+  const cityLatitude = cityLatitudeSignal.value;
+
   return (
     <div>
       <h2>Map: {city}</h2>
@@ -232,7 +232,8 @@ const MapWithCoordinates = ({ city, lon, lat }) => {
       >
         <h3 style={{ color: "#007bff", marginTop: 0 }}>📍 {city}</h3>
         <p>
-          <strong>Longitude:</strong> {lon} | <strong>Latitude:</strong> {lat}
+          <strong>Longitude:</strong> {cityLongitude} |{" "}
+          <strong>Latitude:</strong> {cityLatitude}
         </p>
       </div>
 
