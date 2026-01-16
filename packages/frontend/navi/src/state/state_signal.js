@@ -60,7 +60,7 @@ export const stateSignal = (defaultValue, options) => {
     routes,
     sourceSignal,
     oneOf,
-    defaultWhenInvalid,
+    autoFix,
   } = options;
 
   const [readFromLocalStorage, writeIntoLocalStorage, removeFromLocalStorage] =
@@ -81,6 +81,8 @@ export const stateSignal = (defaultValue, options) => {
     return valueFromLocalStorage;
   };
   const advancedSignal = signal(getFallbackValue());
+  const validity = { valid: true };
+  advancedSignal.validity = validity;
 
   // ensure current value always fallback to
   // 1. source signal
@@ -138,6 +140,17 @@ export const stateSignal = (defaultValue, options) => {
       }
     });
   }
+  // update validity object according to the advanced signal value
+  validation: {
+    effect(() => {
+      const value = advancedSignal.value;
+      updateValidity({ oneOf }, validity, value);
+      if (!validity.valid && autoFix) {
+        advancedSignal.value = autoFix();
+        return;
+      }
+    });
+  }
 
   if (routes) {
     for (const paramName of Object.keys(routes)) {
@@ -152,19 +165,8 @@ export const stateSignal = (defaultValue, options) => {
         const matching = matchingSignal.value;
         const params = rawParamsSignal.value;
         const urlParamValue = params[paramName];
-        const stateValue = advancedSignal.value;
 
         if (!matching) {
-          return;
-        }
-        if (oneOf && !oneOf.includes(urlParamValue)) {
-          if (defaultWhenInvalid) {
-            advancedSignal.value = defaultValue;
-            return;
-          }
-        }
-        if (urlParamValue === stateValue) {
-          // nothing to do
           return;
         }
         advancedSignal.value = urlParamValue;
@@ -173,6 +175,15 @@ export const stateSignal = (defaultValue, options) => {
   }
 
   return advancedSignal;
+};
+
+const updateValidity = (rules, validity, value) => {
+  const { oneOf } = rules;
+  if (oneOf && !oneOf.includes(value)) {
+    validity.valid = false;
+    return;
+  }
+  validity.valid = true;
 };
 
 // const connectSignalFallbacks = (signal, fallbackSignals, defaultValue) => {

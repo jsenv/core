@@ -307,8 +307,13 @@ const createRoute = (urlPatternInput) => {
       ...paramConfig,
     });
   };
-  route.navTo = (params, options) => {
-    return browserIntegration.navTo(route.buildUrl(params), options);
+  route.navTo = (params) => {
+    return browserIntegration.navTo(route.buildUrl(params));
+  };
+  route.redirectTo = (params) => {
+    return browserIntegration.navTo(route.buildUrl(params), {
+      replace: true,
+    });
   };
 
   const resolveParams = (providedParams, { cleanupDefaults } = {}) => {

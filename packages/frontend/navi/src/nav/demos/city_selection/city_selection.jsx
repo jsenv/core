@@ -2,6 +2,7 @@ import { render } from "preact";
 
 import {
   Box,
+  MessageBox,
   Route,
   RouteLink,
   Routes,
@@ -23,7 +24,6 @@ const citySignal = stateSignal(undefined, {
     city: MAP_ROUTE,
   },
   oneOf: cities,
-  defaultWhenInvalid: true,
 });
 
 const App = () => {
@@ -79,10 +79,18 @@ const HomePage = () => {
 
 const SelectCityPage = () => {
   const currentCity = citySignal.value;
+  const currentCityInvalid = !citySignal.validity.valid;
 
   return (
     <div>
       <h2>Select a City</h2>
+
+      {currentCityInvalid && (
+        <MessageBox status="warning">
+          The city {currentCity} is invalid.
+        </MessageBox>
+      )}
+
       <p>Choose a city from the list below:</p>
 
       <Box column marginTop="m" spacing="s">
@@ -136,8 +144,8 @@ const MapPage = () => {
   const city = citySignal.value;
 
   // If no city is selected, redirect to city selection
-  if (!city) {
-    SELECT_CITY_ROUTE.navTo();
+  if (!city || !citySignal.validity.valid) {
+    SELECT_CITY_ROUTE.redirectTo();
     return <div>Redirecting to city selection...</div>;
   }
 
