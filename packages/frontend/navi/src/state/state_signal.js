@@ -62,6 +62,7 @@ export const stateSignal = (defaultValue, options = {}) => {
     sourceSignal,
     localStorage,
     routes,
+    debug,
   } = options;
 
   const [readFromLocalStorage, writeIntoLocalStorage, removeFromLocalStorage] =
@@ -69,17 +70,30 @@ export const stateSignal = (defaultValue, options = {}) => {
       ? valueInLocalStorage(localStorage, { type })
       : NO_LOCAL_STORAGE;
   const getFallbackValue = () => {
+    const valueFromLocalStorage = readFromLocalStorage();
+    if (valueFromLocalStorage !== undefined) {
+      if (debug) {
+        console.debug(
+          `[stateSignal] using value from localStorage "${localStorage}"=${valueFromLocalStorage}`,
+        );
+      }
+      return valueFromLocalStorage;
+    }
     if (sourceSignal) {
       const sourceValue = sourceSignal.peek();
       if (sourceValue !== undefined) {
+        if (debug) {
+          console.debug(
+            `[stateSignal] using value from source signal=${sourceValue}`,
+          );
+        }
         return sourceValue;
       }
     }
-    const valueFromLocalStorage = readFromLocalStorage();
-    if (valueFromLocalStorage === undefined) {
-      return defaultValue;
+    if (debug) {
+      console.debug(`[stateSignal] using default value=${defaultValue}`);
     }
-    return valueFromLocalStorage;
+    return defaultValue;
   };
   const advancedSignal = signal(getFallbackValue());
   const validity = { valid: true };
@@ -122,6 +136,12 @@ export const stateSignal = (defaultValue, options = {}) => {
         // we don't have anything in the source signal, keep current value
       } else {
         // the case we want to support: source signal value changes -> override current value
+        if (debug) {
+          console.debug(`[stateSignal] source signal updated`, {
+            sourcePreviousValue,
+            sourceValue,
+          });
+        }
         advancedSignal.value = sourceValue;
       }
       sourcePreviousValue = sourceValue;
@@ -135,8 +155,18 @@ export const stateSignal = (defaultValue, options = {}) => {
     effect(() => {
       const value = advancedSignal.value;
       if (value === undefined || value === null) {
+        if (debug) {
+          console.debug(
+            `[stateSignal] removing "${localStorage}" from localStorage`,
+          );
+        }
         removeFromLocalStorage();
       } else {
+        if (debug) {
+          console.debug(
+            `[stateSignal] writing into localStorage "${localStorage}"=${value}`,
+          );
+        }
         writeIntoLocalStorage(value);
       }
     });
@@ -161,6 +191,11 @@ export const stateSignal = (defaultValue, options = {}) => {
         if (!matching) {
           return;
         }
+        if (debug) {
+          console.debug(
+            `[stateSignal] syncing from URL param "${paramName}"=${urlParamValue}`,
+          );
+        }
         advancedSignal.value = urlParamValue;
       });
       effect(() => {
@@ -173,6 +208,11 @@ export const stateSignal = (defaultValue, options = {}) => {
         }
         if (value === urlParamValue) {
           return;
+        }
+        if (debug) {
+          console.debug(
+            `[stateSignal] syncing to URL param "${paramName}"=${value}`,
+          );
         }
         route.replaceParams({ [paramName]: value });
       });

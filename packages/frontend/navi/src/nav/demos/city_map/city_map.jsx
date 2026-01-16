@@ -59,6 +59,7 @@ const longitudeSignal = stateSignal(undefined, {
   routes: {
     lon: MAP_ROUTE,
   },
+  debug: true,
 });
 const latitudeSignal = stateSignal(undefined, {
   sourceSignal: cityLatitudeSignal,
