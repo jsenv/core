@@ -119,14 +119,14 @@ const tryConvertValue = (value, type) => {
 
 const createNumberValidator = ({ min, max, step } = {}) => {
   return {
-    cast: (value) => {
-      if (typeof value === "string") {
+    cast: {
+      string: (value) => {
         const parsed = parseFloat(value);
         if (!isNaN(parsed) && isFinite(parsed)) {
           return parsed;
         }
-      }
-      return value;
+        return value;
+      },
     },
     decode: (value) => {
       const valueParsed = parseFloat(value);
