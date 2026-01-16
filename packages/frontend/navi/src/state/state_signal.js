@@ -19,7 +19,7 @@ import { valueInLocalStorage } from "./value_in_local_storage.js";
  * @param {any} defaultValue - The default value to use when no other value is available
  * @param {Object} [options={}] - Configuration options
  * @param {import("@preact/signals").Signal} [options.sourceSignal] - Source signal to synchronize with. When the source signal changes, this signal will be updated
- * @param {string} [options.localStorageKey] - Key for local storage persistence. When provided, the signal value will be saved to and restored from localStorage
+ * @param {string} [options.localStorage] - Key for local storage persistence. When provided, the signal value will be saved to and restored from localStorage
  * @param {"string" | "number" | "boolean" | "object"} [options.type="string"] - Type for localStorage serialization/deserialization
  * @returns {import("@preact/signals").Signal} A signal that can be synchronized with a source signal and/or persisted in localStorage
  *
@@ -40,7 +40,7 @@ import { valueInLocalStorage } from "./value_in_local_storage.js";
  * @example
  * // Signal with localStorage persistence
  * const userPreference = stateSignal("light", {
- *   localStorageKey: "theme",
+ *   localStorage: "theme",
  *   type: "string"
  * });
  *
@@ -49,14 +49,15 @@ import { valueInLocalStorage } from "./value_in_local_storage.js";
  * const serverConfig = signal({ timeout: 5000 });
  * const appConfig = stateSignal({ timeout: 3000 }, {
  *   sourceSignal: serverConfig,
- *   localStorageKey: "app-config",
+ *   localStorage: "app-config",
  *   type: "object"
  * });
  */
+const NO_LOCAL_STORAGE = [() => undefined, () => {}, () => {}];
 export const stateSignal = (defaultValue, options) => {
   const {
     type = "string",
-    localStorageKey,
+    localStorage,
     routes,
     sourceSignal,
     oneOf,
@@ -64,9 +65,9 @@ export const stateSignal = (defaultValue, options) => {
   } = options;
 
   const [readFromLocalStorage, writeIntoLocalStorage, removeFromLocalStorage] =
-    localStorageKey
-      ? valueInLocalStorage(localStorageKey, { type })
-      : [() => undefined, () => {}, () => {}];
+    localStorage
+      ? valueInLocalStorage(localStorage, { type })
+      : NO_LOCAL_STORAGE;
   const getFallbackValue = () => {
     if (sourceSignal) {
       const sourceValue = sourceSignal.peek();
@@ -128,7 +129,7 @@ export const stateSignal = (defaultValue, options) => {
   }
   // Read/write into local storage when enabled
   persist_in_local_storage: {
-    if (!localStorageKey) {
+    if (!localStorage) {
       break persist_in_local_storage;
     }
     effect(() => {
