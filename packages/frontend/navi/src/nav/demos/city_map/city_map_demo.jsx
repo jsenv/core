@@ -2,33 +2,26 @@ import { render } from "preact";
 import { useEffect, useState } from "preact/hooks";
 
 import {
+  Box,
+  Input,
+  MessageBox,
+  Paragraph,
   Route,
   RouteLink,
   Routes,
   setupRoutes,
+  stateSignal,
   TabList,
-  useRouteStatus,
 } from "@jsenv/navi";
 
 // Setup routes for city map demo
 const { HOME_ROUTE, SELECT_CITY_ROUTE, MAP_ROUTE } = setupRoutes({
   HOME_ROUTE: "/",
-  SELECT_CITY_ROUTE: "/select-city",
-  MAP_ROUTE: "/map/:cityName?lon=:lon&lat=:lat",
+  SELECT_CITY_ROUTE: "/select_city",
+  MAP_ROUTE: "/map",
 });
 
-MAP_ROUTE.describeParam("cityName", {
-  invalidEffect: "redirect",
-});
-
-MAP_ROUTE.describeParam("lon", {
-  default: "",
-});
-
-MAP_ROUTE.describeParam("lat", {
-  default: "",
-});
-
+const cities = ["Paris", "London", "Tokyo", "New York", "Sydney"];
 // Fake coordinates for cities
 const CITY_COORDINATES = {
   "Paris": { lon: 2.3522, lat: 48.8566 },
@@ -37,13 +30,44 @@ const CITY_COORDINATES = {
   "New York": { lon: -74.006, lat: 40.7128 },
   "Sydney": { lon: 151.2093, lat: -33.8688 },
 };
+const fetchCity = async (city) => {
+  // Simulate API delay
+  await new Promise((resolve) => setTimeout(resolve, 500));
+  const { lon, lat } = CITY_COORDINATES[city];
+  return { lon, lat };
+};
+const citySignal = stateSignal(undefined, {
+  localStorage: "city",
+  routes: {
+    city: MAP_ROUTE,
+  },
+  oneOf: cities,
+});
+const cityLongitudeSignal = stateSignal(undefined);
+const cityLatitudeSignal = stateSignal(undefined);
+const longitudeSignal = stateSignal(undefined, {
+  sourceSignal: cityLongitudeSignal,
+  type: "float",
+  localStorage: "longitude",
+  routes: {
+    lon: MAP_ROUTE,
+  },
+});
+const latitudeSignal = stateSignal(undefined, {
+  sourceSignal: cityLatitudeSignal,
+  type: "float",
+  localStorage: "latitude",
+  routes: {
+    lat: MAP_ROUTE,
+  },
+});
 
 const App = () => {
   return (
     <div
       style={{
         fontFamily: "Arial, sans-serif",
-        maxWidth: "800px",
+        maxWidth: "600px",
         margin: "0 auto",
         padding: "20px",
       }}
@@ -93,105 +117,109 @@ const HomePage = () => {
 };
 
 const SelectCityPage = () => {
-  const cities = Object.keys(CITY_COORDINATES);
+  const currentCity = citySignal.value;
+  const currentCityInvalid = !citySignal.validity.valid;
 
   return (
     <div>
       <h2>Select a City</h2>
-      <p>Choose a city to view on the map:</p>
 
-      <div style={{ marginTop: "15px" }}>
-        {cities.map((city) => (
-          <div key={city} style={{ marginBottom: "10px" }}>
-            <RouteLink
-              route={MAP_ROUTE}
-              routeParams={{ cityName: city }}
-              style={{
-                padding: "8px 16px",
-                backgroundColor: "#28a745",
-                color: "white",
-                textDecoration: "none",
-                borderRadius: "4px",
-                display: "inline-block",
-                minWidth: "120px",
-                textAlign: "center",
-              }}
-            >
-              {city}
-            </RouteLink>
-          </div>
-        ))}
-      </div>
+      {currentCityInvalid && (
+        <MessageBox status="warning">
+          The city {currentCity} is invalid.
+        </MessageBox>
+      )}
+
+      <p>Choose a city from the list below:</p>
+
+      <Box column marginTop="m" spacing="s">
+        <div>
+          {cities.map((city) => (
+            <div key={city} style={{ marginBottom: "10px" }}>
+              <RouteLink
+                route={MAP_ROUTE}
+                routeParams={{ city }}
+                style={{
+                  padding: "8px 16px",
+                  backgroundColor: currentCity === city ? "grey" : "#28a745",
+                  color: "white",
+                  textDecoration: "none",
+                  borderRadius: "4px",
+                  display: "inline-block",
+                  minWidth: "120px",
+                  textAlign: "center",
+                }}
+              >
+                {city}
+              </RouteLink>
+            </div>
+          ))}
+        </div>
+
+        <div>
+          <RouteLink
+            route={MAP_ROUTE}
+            routeParams={{ city: "toto" }}
+            style={{
+              padding: "8px 16px",
+              backgroundColor: "grey",
+              color: "white",
+              textDecoration: "none",
+              borderRadius: "4px",
+              display: "inline-block",
+              minWidth: "120px",
+              textAlign: "center",
+            }}
+          >
+            Toto
+          </RouteLink>
+        </div>
+      </Box>
     </div>
   );
 };
 
 const MapPage = () => {
-  const { params } = useRouteStatus(MAP_ROUTE);
-  const [coordinates, setCoordinates] = useState({ lon: "", lat: "" });
-  const [isLoading, setIsLoading] = useState(false);
-
-  // Redirect if no city is selected
-  if (!params.cityName) {
-    SELECT_CITY_ROUTE.navigate();
+  const city = citySignal.value;
+  // If no city is selected, redirect to city selection
+  if (!city || !citySignal.validity.valid) {
+    SELECT_CITY_ROUTE.redirectTo();
     return <div>Redirecting to city selection...</div>;
   }
 
-  // Fake API call to get coordinates
+  return <MapWithCity />;
+};
+
+const MapWithCity = () => {
+  const city = citySignal.value;
+  const lon = longitudeSignal.value;
+  const lat = latitudeSignal.value;
+  const [isLoading, setIsLoading] = useState(true);
+
   useEffect(() => {
     const fetchCoordinates = async () => {
       setIsLoading(true);
-
-      // Simulate API delay
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      const cityCoords = CITY_COORDINATES[params.cityName];
-      if (cityCoords && !params.lon && !params.lat) {
-        // Only set default coordinates if none are provided in URL
-        setCoordinates(cityCoords);
-        MAP_ROUTE.navigate({
-          cityName: params.cityName,
-          lon: cityCoords.lon,
-          lat: cityCoords.lat,
-        });
-      } else if (params.lon && params.lat) {
-        // Use coordinates from URL
-        setCoordinates({
-          lon: parseFloat(params.lon) || 0,
-          lat: parseFloat(params.lat) || 0,
-        });
-      }
-
+      await fetchCity(city);
       setIsLoading(false);
     };
-
     fetchCoordinates();
-  }, [params.cityName, params.lon, params.lat]);
-
-  const handleCoordinateChange = (type, value) => {
-    const newCoordinates = { ...coordinates, [type]: parseFloat(value) || 0 };
-    setCoordinates(newCoordinates);
-
-    // Update URL parameters
-    MAP_ROUTE.navigate({
-      cityName: params.cityName,
-      lon: newCoordinates.lon,
-      lat: newCoordinates.lat,
-    });
-  };
+  }, [city, lon, lat]);
 
   if (isLoading) {
     return (
       <div>
         <h2>Loading Map...</h2>
-        <p>Fetching coordinates for {params.cityName}...</p>
+        <p>Fetching coordinates for {city}...</p>
       </div>
     );
   }
+  return <MapWithCoordinates city={city} lon={lon} lat={lat} />;
+};
 
+const MapWithCoordinates = ({ city, lon, lat }) => {
   return (
     <div>
-      <h2>Map: {params.cityName}</h2>
+      <h2>Map: {city}</h2>
 
       <div
         style={{
@@ -202,10 +230,9 @@ const MapPage = () => {
           marginBottom: "20px",
         }}
       >
-        <h3 style={{ color: "#007bff", marginTop: 0 }}>📍 {params.cityName}</h3>
+        <h3 style={{ color: "#007bff", marginTop: 0 }}>📍 {city}</h3>
         <p>
-          <strong>Longitude:</strong> {coordinates.lon} |{" "}
-          <strong>Latitude:</strong> {coordinates.lat}
+          <strong>Longitude:</strong> {lon} | <strong>Latitude:</strong> {lat}
         </p>
       </div>
 
@@ -218,9 +245,11 @@ const MapPage = () => {
         }}
       >
         <h4>Adjust Coordinates</h4>
-        <p style={{ fontSize: "14px", color: "#666", marginBottom: "15px" }}>
+        <Paragraph
+          style={{ fontSize: "14px", color: "#666", marginBottom: "15px" }}
+        >
           Update the coordinates below. Changes will be reflected in the URL.
-        </p>
+        </Paragraph>
 
         <div
           style={{
@@ -240,18 +269,13 @@ const MapPage = () => {
             >
               Longitude:
             </label>
-            <input
+            <Input
               id="longitude"
               type="number"
               step="0.0001"
-              value={coordinates.lon}
-              onChange={(e) => handleCoordinateChange("lon", e.target.value)}
-              style={{
-                width: "100%",
-                padding: "8px",
-                border: "1px solid #ccc",
-                borderRadius: "4px",
-                fontSize: "14px",
+              value={lon}
+              action={(value) => {
+                longitudeSignal.value = value;
               }}
             />
           </div>
@@ -267,18 +291,13 @@ const MapPage = () => {
             >
               Latitude:
             </label>
-            <input
+            <Input
               id="latitude"
               type="number"
               step="0.0001"
-              value={coordinates.lat}
-              onChange={(e) => handleCoordinateChange("lat", e.target.value)}
-              style={{
-                width: "100%",
-                padding: "8px",
-                border: "1px solid #ccc",
-                borderRadius: "4px",
-                fontSize: "14px",
+              value={lat}
+              action={(value) => {
+                latitudeSignal.value = value;
               }}
             />
           </div>
@@ -295,10 +314,10 @@ const MapPage = () => {
         }}
       >
         <h4 style={{ marginTop: 0, color: "#0c5460" }}>🗺️ Fake Map View</h4>
-        <p style={{ margin: "5px 0", color: "#0c5460" }}>
-          This is where a real map would be displayed showing {params.cityName}{" "}
-          at coordinates ({coordinates.lon}, {coordinates.lat}).
-        </p>
+        <Paragraph style={{ margin: "5px 0", color: "#0c5460" }}>
+          This is where a real map would be displayed showing {city} at
+          coordinates ({lon}, {lat}).
+        </Paragraph>
       </div>
 
       <div>

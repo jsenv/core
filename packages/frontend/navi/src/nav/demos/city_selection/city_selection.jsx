@@ -12,10 +12,10 @@ import {
   TabList,
 } from "@jsenv/navi";
 
-const { HOME_ROUTE, MAP_ROUTE, SELECT_CITY_ROUTE } = setupRoutes({
+const { HOME_ROUTE, SELECT_CITY_ROUTE, MAP_ROUTE } = setupRoutes({
   HOME_ROUTE: "/",
-  MAP_ROUTE: "/map",
   SELECT_CITY_ROUTE: "/select_city",
+  MAP_ROUTE: "/map",
 });
 
 const cities = ["Paris", "London", "Tokyo", "New York", "Sydney"];
