@@ -315,6 +315,29 @@ const createRoute = (urlPatternInput) => {
       replace: true,
     });
   };
+  const replaceParams = (newParams) => {
+    const matching = matchingSignal.peek();
+    if (!matching) {
+      console.warn(
+        `Cannot replace params on route ${route} because it is not matching the current URL.`,
+      );
+      return;
+    }
+
+    // Use resolved params as base (includes inheritance) but remove defaults to avoid URL pollution
+    const currentResolvedParams = resolveParams();
+    if (route.action) {
+      // For action: merge with resolved params (includes defaults) so action gets complete params
+      const updatedActionParams = { ...currentResolvedParams, ...newParams };
+      route.action.replaceParams(updatedActionParams);
+    }
+    const currentRawParams = rawParamsSignal.peek() || {};
+    // For URL building: merge with raw params to avoid including unnecessary defaults
+    const updatedUrlParams = { ...currentRawParams, ...newParams };
+    const updatedUrl = route.buildUrl(updatedUrlParams);
+    browserIntegration.navTo(updatedUrl, { replace: true });
+  };
+  route.replaceParams = replaceParams;
 
   const resolveParams = (providedParams, { cleanupDefaults } = {}) => {
     const paramNameSet = providedParams
@@ -463,25 +486,6 @@ const createRoute = (urlPatternInput) => {
     route.url = urlSignal.value;
   });
   cleanupCallbackSet.add(disposeUrlEffect);
-
-  const replaceParams = (newParams) => {
-    // Use resolved params as base (includes inheritance) but remove defaults to avoid URL pollution
-    const currentResolvedParams = resolveParams();
-    const currentRawParams = rawParamsSignal.peek() || {};
-
-    // For URL building: merge with raw params to avoid including unnecessary defaults
-    const updatedUrlParams = { ...currentRawParams, ...newParams };
-    const updatedUrl = route.buildUrl(updatedUrlParams);
-
-    if (route.action) {
-      // For action: merge with resolved params (includes defaults) so action gets complete params
-      const updatedActionParams = { ...currentResolvedParams, ...newParams };
-      route.action.replaceParams(updatedActionParams);
-    }
-
-    browserIntegration.navTo(updatedUrl, { replace: true });
-  };
-  route.replaceParams = replaceParams;
 
   const bindAction = (action) => {
     /*

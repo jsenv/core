@@ -140,19 +140,11 @@ export const stateSignal = (defaultValue, options) => {
       }
     });
   }
-  // update validity object according to the advanced signal value
-  validation: {
-    effect(() => {
-      const value = advancedSignal.value;
-      updateValidity({ oneOf }, validity, value);
-      if (!validity.valid && autoFix) {
-        advancedSignal.value = autoFix();
-        return;
-      }
-    });
-  }
-
-  if (routes) {
+  // URL controls the value and value controls the URL
+  sync_with_url: {
+    if (!routes) {
+      break sync_with_url;
+    }
     for (const paramName of Object.keys(routes)) {
       const route = routes[paramName];
       route.describeParam(paramName, {
@@ -165,13 +157,36 @@ export const stateSignal = (defaultValue, options) => {
         const matching = matchingSignal.value;
         const params = rawParamsSignal.value;
         const urlParamValue = params[paramName];
-
         if (!matching) {
           return;
         }
         advancedSignal.value = urlParamValue;
       });
+      effect(() => {
+        const value = advancedSignal.value;
+        const params = rawParamsSignal.value;
+        const urlParamValue = params[paramName];
+        const matching = matchingSignal.value;
+        if (!matching) {
+          return;
+        }
+        if (value === urlParamValue) {
+          return;
+        }
+        route.replaceParams({ [paramName]: value });
+      });
     }
+  }
+  // update validity object according to the advanced signal value
+  validation: {
+    effect(() => {
+      const value = advancedSignal.value;
+      updateValidity({ oneOf }, validity, value);
+      if (!validity.valid && autoFix) {
+        advancedSignal.value = autoFix();
+        return;
+      }
+    });
   }
 
   return advancedSignal;
