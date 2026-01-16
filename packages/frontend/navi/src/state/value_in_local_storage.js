@@ -63,18 +63,35 @@ export const valueInLocalStorage = (
       window.localStorage.removeItem(key);
       return;
     }
-    const validityMessage = getValidityMessage(value);
+
+    let valueToSet = value;
+    let validityMessage = getValidityMessage(valueToSet);
+
+    // If validation fails, try to convert the value
+    if (validityMessage && converter) {
+      const convertedValue = tryConvertValue(valueToSet, type);
+      if (convertedValue !== valueToSet) {
+        const convertedValidityMessage = getValidityMessage(convertedValue);
+        if (!convertedValidityMessage) {
+          // Conversion successful and valid
+          valueToSet = convertedValue;
+          validityMessage = "";
+        }
+      }
+    }
+
     if (validityMessage) {
       console.warn(
         `The value to set in localStorage "${key}" is invalid: ${validityMessage}`,
       );
     }
+
     if (converter && converter.encode) {
-      const valueEncoded = converter.encode(value);
+      const valueEncoded = converter.encode(valueToSet);
       window.localStorage.setItem(key, valueEncoded);
       return;
     }
-    window.localStorage.setItem(key, value);
+    window.localStorage.setItem(key, valueToSet);
   };
   const remove = () => {
     window.localStorage.removeItem(key);
@@ -83,8 +100,34 @@ export const valueInLocalStorage = (
   return [get, set, remove];
 };
 
+const tryConvertValue = (value, type) => {
+  const validator = typeConverters[type];
+  if (!validator) {
+    return value;
+  }
+  if (!validator.cast) {
+    return value;
+  }
+  const fromType = typeof value;
+  const castFunction = validator.cast[fromType];
+  if (!castFunction) {
+    return value;
+  }
+  const convertedValue = castFunction(value);
+  return convertedValue;
+};
+
 const createNumberValidator = ({ min, max, step } = {}) => {
   return {
+    cast: (value) => {
+      if (typeof value === "string") {
+        const parsed = parseFloat(value);
+        if (!isNaN(parsed) && isFinite(parsed)) {
+          return parsed;
+        }
+      }
+      return value;
+    },
     decode: (value) => {
       const valueParsed = parseFloat(value);
       return valueParsed;
@@ -118,6 +161,16 @@ const createNumberValidator = ({ min, max, step } = {}) => {
 };
 const typeConverters = {
   boolean: {
+    cast: {
+      string: (value) => {
+        if (value === "true") return true;
+        if (value === "false") return false;
+        return value;
+      },
+      number: (value) => {
+        return Boolean(value);
+      },
+    },
     checkValidity: (value) => {
       if (typeof value !== "boolean") {
         return `must be a boolean`;
@@ -132,6 +185,10 @@ const typeConverters = {
     },
   },
   string: {
+    cast: {
+      number: String,
+      boolean: String,
+    },
     checkValidity: (value) => {
       if (typeof value !== "string") {
         return `must be a string`;
@@ -164,6 +221,16 @@ const typeConverters = {
     },
   },
   object: {
+    cast: {
+      string: (value) => {
+        try {
+          return JSON.parse(value);
+        } catch {
+          // Invalid JSON, can't convert
+          return value;
+        }
+      },
+    },
     decode: (value) => {
       const valueParsed = JSON.parse(value);
       return valueParsed;

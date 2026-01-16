@@ -420,9 +420,10 @@ const createRoute = (urlPatternInput) => {
   route.buildUrl = buildUrl;
 
   route.matchesParams = (providedParams) => {
-    const currentUrl = route.url;
-    const urlWithThooseParams = route.buildUrl(providedParams);
-    return currentUrl === urlWithThooseParams;
+    const currentParams = route.params;
+    const resolvedParams = resolveParams(providedParams);
+    const same = compareTwoJsValues(currentParams, resolvedParams);
+    return same;
   };
 
   const matchingSignal = signal(false);
