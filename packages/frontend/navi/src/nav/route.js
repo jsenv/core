@@ -308,52 +308,6 @@ const createRoute = (urlPatternInput) => {
   const paramConfigMap = new Map();
   route.paramConfigMap = paramConfigMap;
 
-  // route params signal connections
-  for (const { signal, paramName, options = {} } of connections) {
-    const { debug } = options;
-    paramConfigMap.set(paramName, {
-      default: () => signal.value, // Use current signal value as default
-      // Add other param config here
-    });
-
-    // URL -> Signal synchronization
-    effect(() => {
-      const matching = matchingSignal.value;
-      const params = rawParamsSignal.value;
-      const urlParamValue = params[paramName];
-
-      if (!matching) {
-        return;
-      }
-
-      if (debug) {
-        console.debug(
-          `[stateSignal] URL -> Signal: ${paramName}=${urlParamValue}`,
-        );
-      }
-
-      signal.value = urlParamValue;
-    });
-
-    // Signal -> URL synchronization
-    effect(() => {
-      const value = signal.value;
-      const params = rawParamsSignal.value;
-      const urlParamValue = params[paramName];
-      const matching = matchingSignal.value;
-
-      if (!matching || value === urlParamValue) {
-        return;
-      }
-
-      if (debug) {
-        console.debug(`[stateSignal] Signal -> URL: ${paramName}=${value}`);
-      }
-
-      route.replaceParams({ [paramName]: value });
-    });
-  }
-
   route.navTo = (params) => {
     return browserIntegration.navTo(route.buildUrl(params));
   };
@@ -518,6 +472,52 @@ const createRoute = (urlPatternInput) => {
     route.relativeUrl = relativeUrlSignal.value;
   });
   cleanupCallbackSet.add(disposeRelativeUrlEffect);
+
+  route_state_signals: {
+    // route params signal connections
+    for (const { signal, paramName, options = {} } of connections) {
+      const { debug } = options;
+      paramConfigMap.set(paramName, {
+        default: () => signal.value, // Use current signal value as default
+        // Add other param config here
+      });
+
+      // URL -> Signal synchronization
+      effect(() => {
+        const matching = matchingSignal.value;
+        const params = rawParamsSignal.value;
+        const urlParamValue = params[paramName];
+
+        if (!matching) {
+          return;
+        }
+        if (debug) {
+          console.debug(
+            `[stateSignal] URL -> Signal: ${paramName}=${urlParamValue}`,
+          );
+        }
+        signal.value = urlParamValue;
+      });
+
+      // Signal -> URL synchronization
+      effect(() => {
+        const value = signal.value;
+        const params = rawParamsSignal.value;
+        const urlParamValue = params[paramName];
+        const matching = matchingSignal.value;
+
+        if (!matching || value === urlParamValue) {
+          return;
+        }
+
+        if (debug) {
+          console.debug(`[stateSignal] Signal -> URL: ${paramName}=${value}`);
+        }
+
+        route.replaceParams({ [paramName]: value });
+      });
+    }
+  }
 
   const urlSignal = computed(() => {
     const relativeUrl = relativeUrlSignal.value;
