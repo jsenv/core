@@ -150,10 +150,6 @@ const DashboardPage = () => {
 const SettingsPanel = () => {
   const tab = settingsTabSignal.value;
 
-  const getDefaultTab = () => {
-    return tab && ["general", "advanced"].includes(tab) ? tab : "general";
-  };
-
   return (
     <div>
       <h3>Settings</h3>
@@ -184,7 +180,7 @@ const SettingsPanel = () => {
           minHeight: "300px",
         }}
       >
-        {getDefaultTab() === "general" && (
+        {tab === "general" && (
           <div>
             <h4>General Settings</h4>
             <p>Configure your basic application settings here.</p>
@@ -237,7 +233,7 @@ const SettingsPanel = () => {
           </div>
         )}
 
-        {getDefaultTab() === "advanced" && (
+        {tab === "advanced" && (
           <div>
             <h4>Advanced Settings</h4>
             <p>Configure advanced options and integrations.</p>
@@ -291,10 +287,6 @@ const SettingsPanel = () => {
 const AnalyticsPanel = () => {
   const tab = analyticsTabSignal.value;
 
-  const getDefaultTab = () => {
-    return tab && ["overview", "details"].includes(tab) ? tab : "overview";
-  };
-
   return (
     <div>
       <h3>Analytics</h3>
@@ -325,7 +317,7 @@ const AnalyticsPanel = () => {
           minHeight: "300px",
         }}
       >
-        {getDefaultTab() === "overview" && (
+        {tab === "overview" && (
           <div>
             <h4>Analytics Overview</h4>
             <p>High-level metrics and key performance indicators.</p>
@@ -404,7 +396,7 @@ const AnalyticsPanel = () => {
           </div>
         )}
 
-        {getDefaultTab() === "details" && (
+        {tab === "details" && (
           <div>
             <h4>Detailed Analytics</h4>
             <p>Comprehensive data and detailed breakdowns.</p>
