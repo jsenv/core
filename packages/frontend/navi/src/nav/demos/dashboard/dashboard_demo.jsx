@@ -148,7 +148,7 @@ const DashboardPage = () => {
 };
 
 const SettingsPanel = () => {
-  const tab = tabSignal.value;
+  const tab = settingsTabSignal.value;
 
   const getDefaultTab = () => {
     return tab && ["general", "advanced"].includes(tab) ? tab : "general";
@@ -289,7 +289,7 @@ const SettingsPanel = () => {
 };
 
 const AnalyticsPanel = () => {
-  const tab = tabSignal.value;
+  const tab = analyticsTabSignal.value;
 
   const getDefaultTab = () => {
     return tab && ["overview", "details"].includes(tab) ? tab : "overview";
