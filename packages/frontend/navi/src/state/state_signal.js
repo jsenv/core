@@ -1,7 +1,52 @@
 import { effect, signal } from "@preact/signals";
 
-import { getRoutePrivateProperties } from "../nav/route.js";
 import { valueInLocalStorage } from "./value_in_local_storage.js";
+
+// Global signal registry for route template detection
+export const globalSignalRegistry = new Map();
+let signalIdCounter = 0;
+const generateSignalId = () => {
+  return `__jsenv_signal_${++signalIdCounter}__`;
+};
+
+// Function to detect signals in route patterns and connect them
+export const detectSignals = (routePattern) => {
+  const signalConnections = [];
+
+  // Look for signal IDs in the pattern
+  // Pattern: /dashboard/settings?tab=__jsenv_signal_1__
+  const signalIdRegex = /__jsenv_signal_\d+__/g;
+  const matches = routePattern.match(signalIdRegex);
+
+  if (!matches) {
+    return { pattern: routePattern, connections: [] };
+  }
+
+  let updatedPattern = routePattern;
+
+  for (const signalId of matches) {
+    const signalData = globalSignalRegistry.get(signalId);
+    if (signalData) {
+      const { signal, options } = signalData;
+
+      // Replace signal ID with proper URL parameter
+      // __jsenv_signal_1__ becomes :signal_1
+      const paramName = signalId.replace(/__jsenv_signal_(\d+)__/, "signal_$1");
+      updatedPattern = updatedPattern.replace(signalId, `:${paramName}`);
+
+      signalConnections.push({
+        signal,
+        paramName,
+        options,
+      });
+    }
+  }
+
+  return {
+    pattern: updatedPattern,
+    connections: signalConnections,
+  };
+};
 
 /**
  * Creates an advanced signal with optional source signal synchronization and local storage persistence.
@@ -61,7 +106,6 @@ export const stateSignal = (defaultValue, options = {}) => {
     autoFix,
     sourceSignal,
     localStorage,
-    routes,
     debug,
   } = options;
 
@@ -95,7 +139,20 @@ export const stateSignal = (defaultValue, options = {}) => {
     }
     return defaultValue;
   };
+
   const advancedSignal = signal(getFallbackValue());
+
+  // Register signal globally and make it work with template literals
+  const signalId = generateSignalId();
+  advancedSignal.__signalId = signalId;
+  advancedSignal.toString = () => signalId;
+
+  // Store signal with its options for later route connection
+  globalSignalRegistry.set(signalId, {
+    signal: advancedSignal,
+    options: { defaultValue, type, localStorage, debug, ...options },
+  });
+
   const validity = { valid: true };
   advancedSignal.validity = validity;
 
@@ -170,53 +227,6 @@ export const stateSignal = (defaultValue, options = {}) => {
         writeIntoLocalStorage(value);
       }
     });
-  }
-  // URL controls the value and value controls the URL
-  sync_with_url: {
-    if (!routes) {
-      break sync_with_url;
-    }
-    for (const paramName of Object.keys(routes)) {
-      const route = routes[paramName];
-      route.describeParam(paramName, {
-        getFallbackValue,
-        default: defaultValue,
-      });
-      const { matchingSignal, rawParamsSignal } =
-        getRoutePrivateProperties(route);
-      effect(() => {
-        const matching = matchingSignal.value;
-        const params = rawParamsSignal.value;
-        const urlParamValue = params[paramName];
-        if (!matching) {
-          return;
-        }
-        if (debug) {
-          console.debug(
-            `[stateSignal] syncing from URL param "${paramName}"=${urlParamValue}`,
-          );
-        }
-        advancedSignal.value = urlParamValue;
-      });
-      effect(() => {
-        const value = advancedSignal.value;
-        const params = rawParamsSignal.value;
-        const urlParamValue = params[paramName];
-        const matching = matchingSignal.value;
-        if (!matching) {
-          return;
-        }
-        if (value === urlParamValue) {
-          return;
-        }
-        if (debug) {
-          console.debug(
-            `[stateSignal] syncing to URL param "${paramName}"=${value}`,
-          );
-        }
-        route.replaceParams({ [paramName]: value });
-      });
-    }
   }
   // update validity object according to the advanced signal value
   validation: {

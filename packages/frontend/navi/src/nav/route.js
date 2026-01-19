@@ -6,7 +6,9 @@
 import { createPubSub } from "@jsenv/dom";
 import { batch, computed, effect, signal } from "@preact/signals";
 
+import { detectSignals } from "../state/state_signal.js";
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
+import { connectSignalToRoute } from "./route_params.js";
 import { createRoutePattern } from "./route_pattern.js";
 import { prepareRouteRelativeUrl, resolveRouteUrl } from "./route_url.js";
 
@@ -632,7 +634,23 @@ export const setupRoutes = (routeDefinition) => {
   const routes = {};
   for (const key of Object.keys(routeDefinition)) {
     const value = routeDefinition[key];
-    const route = createRoute(value);
+
+    // Detect and connect signals in the route pattern
+    const { pattern, connections } = detectSignals(value);
+
+    const route = createRoute(pattern);
+
+    // Set up signal-route connections
+    for (const { signal, paramName, options } of connections) {
+      connectSignalToRoute(
+        signal,
+        route,
+        paramName,
+        getRoutePrivateProperties(route),
+        options,
+      );
+    }
+
     routes[key] = route;
   }
 
