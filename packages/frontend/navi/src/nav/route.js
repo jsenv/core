@@ -474,12 +474,11 @@ const createRoute = (urlPatternInput) => {
   cleanupCallbackSet.add(disposeRelativeUrlEffect);
 
   route_state_signals: {
-    // route params signal connections
     for (const { signal, paramName, options = {} } of connections) {
       const { debug } = options;
       paramConfigMap.set(paramName, {
-        default: () => signal.value, // Use current signal value as default
-        // Add other param config here
+        getFallbackValue: options.getFallbackValue,
+        default: () => signal.value,
       });
 
       // URL -> Signal synchronization

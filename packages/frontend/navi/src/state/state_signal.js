@@ -151,7 +151,14 @@ export const stateSignal = (defaultValue, options = {}) => {
   // Store signal with its options for later route connection
   globalSignalRegistry.set(signalId, {
     signal: advancedSignal,
-    options: { defaultValue, type, localStorage, debug, ...options },
+    options: {
+      defaultValue,
+      type,
+      localStorage,
+      debug,
+      getFallbackValue,
+      ...options,
+    },
   });
 
   const validity = { valid: true };
