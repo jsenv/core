@@ -21,12 +21,12 @@ const analyticsTabSignal = stateSignal("overview", {
   enum: ["overview", "details"],
   localStorage: "analytics_tab",
 });
-const { HOME_ROUTE, DASHBOARD_ROUTE, SETTINGS_ROUTE, ANALYTICS_ROUTE } =
+const { HOME_ROUTE, ADMIN_ROUTE, ADMIN_SETTINGS_ROUTE, ADMIN_ANALYTICS_ROUTE } =
   setupRoutes({
     HOME_ROUTE: "/",
-    DASHBOARD_ROUTE: `/dashboard/:section=${sectionSignal}`,
-    SETTINGS_ROUTE: `/dashboard/settings/:tab=${settingsTabSignal}`,
-    ANALYTICS_ROUTE: `/dashboard/analytics/?tab=${analyticsTabSignal}`,
+    ADMIN_ROUTE: `/admin/:section=${sectionSignal}`,
+    ADMIN_SETTINGS_ROUTE: `/admin/settings/:tab=${settingsTabSignal}`,
+    ADMIN_ANALYTICS_ROUTE: `/admin/analytics/?tab=${analyticsTabSignal}`,
   });
 
 const App = () => {
@@ -41,13 +41,13 @@ const App = () => {
     >
       <TabList>
         <TabList.Tab route={HOME_ROUTE}>Home</TabList.Tab>
-        <TabList.Tab route={DASHBOARD_ROUTE}>Dashboard</TabList.Tab>
+        <TabList.Tab route={ADMIN_ROUTE}>Admin</TabList.Tab>
       </TabList>
 
       <div style={{ marginTop: "20px" }}>
         <Routes>
           <Route route={HOME_ROUTE} element={<HomePage />} />
-          <Route route={DASHBOARD_ROUTE} element={<DashboardPage />} />
+          <Route route={ADMIN_ROUTE} element={<DashboardPage />} />
         </Routes>
       </div>
     </div>
@@ -65,7 +65,7 @@ const HomePage = () => {
       </p>
       <div style={{ marginTop: "15px" }}>
         <RouteLink
-          route={DASHBOARD_ROUTE}
+          route={ADMIN_ROUTE}
           style={{
             padding: "10px 20px",
             backgroundColor: "#007bff",
@@ -105,7 +105,7 @@ const DashboardPage = () => {
 
           <TabList vertical>
             <TabList.Tab
-              route={SETTINGS_ROUTE}
+              route={ADMIN_SETTINGS_ROUTE}
               style={{
                 display: "block",
                 width: "100%",
@@ -119,7 +119,7 @@ const DashboardPage = () => {
               ⚙️ Settings
             </TabList.Tab>
             <TabList.Tab
-              route={ANALYTICS_ROUTE}
+              route={ADMIN_ANALYTICS_ROUTE}
               style={{
                 display: "block",
                 width: "100%",
@@ -152,10 +152,16 @@ const SettingsPanel = () => {
 
       {/* Horizontal Tabs */}
       <TabList style={{ marginBottom: "20px" }}>
-        <TabList.Tab route={SETTINGS_ROUTE} routeParams={{ tab: "general" }}>
+        <TabList.Tab
+          route={ADMIN_SETTINGS_ROUTE}
+          routeParams={{ tab: "general" }}
+        >
           General
         </TabList.Tab>
-        <TabList.Tab route={SETTINGS_ROUTE} routeParams={{ tab: "advanced" }}>
+        <TabList.Tab
+          route={ADMIN_SETTINGS_ROUTE}
+          routeParams={{ tab: "advanced" }}
+        >
           Advanced
         </TabList.Tab>
       </TabList>
@@ -172,12 +178,12 @@ const SettingsPanel = () => {
       >
         <Routes>
           <Route
-            route={SETTINGS_ROUTE}
+            route={ADMIN_SETTINGS_ROUTE}
             routeParams={{ tab: "general" }}
             element={<GeneralSettingsTabContent />}
           />
           <Route
-            route={SETTINGS_ROUTE}
+            route={ADMIN_SETTINGS_ROUTE}
             routeParams={{ tab: "advanced" }}
             element={<AdvancedSettingsTagContent />}
           />
@@ -304,10 +310,16 @@ const AnalyticsPanel = () => {
 
       {/* Horizontal Tabs */}
       <TabList style={{ marginBottom: "20px" }}>
-        <TabList.Tab route={ANALYTICS_ROUTE} routeParams={{ tab: "overview" }}>
+        <TabList.Tab
+          route={ADMIN_ANALYTICS_ROUTE}
+          routeParams={{ tab: "overview" }}
+        >
           Overview
         </TabList.Tab>
-        <TabList.Tab route={ANALYTICS_ROUTE} routeParams={{ tab: "details" }}>
+        <TabList.Tab
+          route={ADMIN_ANALYTICS_ROUTE}
+          routeParams={{ tab: "details" }}
+        >
           Details
         </TabList.Tab>
       </TabList>
@@ -324,12 +336,12 @@ const AnalyticsPanel = () => {
       >
         <Routes>
           <Route
-            route={ANALYTICS_ROUTE}
+            route={ADMIN_ANALYTICS_ROUTE}
             routeParams={{ tab: "overview" }}
             element={<AnalyticsTabOverview />}
           />
           <Route
-            route={ANALYTICS_ROUTE}
+            route={ADMIN_ANALYTICS_ROUTE}
             routeParams={{ tab: "details" }}
             element={<AnalyticsTabDetails />}
           />
