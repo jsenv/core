@@ -105,8 +105,7 @@ const DashboardPage = () => {
 
           <TabList vertical>
             <TabList.Tab
-              route={DASHBOARD_ROUTE}
-              routeParams={{ section: "settings" }}
+              route={SETTINGS_ROUTE}
               style={{
                 display: "block",
                 width: "100%",
@@ -120,8 +119,7 @@ const DashboardPage = () => {
               ⚙️ Settings
             </TabList.Tab>
             <TabList.Tab
-              route={DASHBOARD_ROUTE}
-              routeParams={{ section: "analytics" }}
+              route={ANALYTICS_ROUTE}
               style={{
                 display: "block",
                 width: "100%",
@@ -154,16 +152,10 @@ const SettingsPanel = () => {
 
       {/* Horizontal Tabs */}
       <TabList style={{ marginBottom: "20px" }}>
-        <TabList.Tab
-          route={DASHBOARD_ROUTE}
-          routeParams={{ section: "settings", tab: "general" }}
-        >
+        <TabList.Tab route={SETTINGS_ROUTE} routeParams={{ tab: "general" }}>
           General
         </TabList.Tab>
-        <TabList.Tab
-          route={DASHBOARD_ROUTE}
-          routeParams={{ section: "settings", tab: "advanced" }}
-        >
+        <TabList.Tab route={SETTINGS_ROUTE} routeParams={{ tab: "advanced" }}>
           Advanced
         </TabList.Tab>
       </TabList>
@@ -312,16 +304,10 @@ const AnalyticsPanel = () => {
 
       {/* Horizontal Tabs */}
       <TabList style={{ marginBottom: "20px" }}>
-        <TabList.Tab
-          route={DASHBOARD_ROUTE}
-          routeParams={{ section: "analytics", tab: "overview" }}
-        >
+        <TabList.Tab route={ANALYTICS_ROUTE} routeParams={{ tab: "overview" }}>
           Overview
         </TabList.Tab>
-        <TabList.Tab
-          route={DASHBOARD_ROUTE}
-          routeParams={{ section: "analytics", tab: "details" }}
-        >
+        <TabList.Tab route={ANALYTICS_ROUTE} routeParams={{ tab: "details" }}>
           Details
         </TabList.Tab>
       </TabList>
