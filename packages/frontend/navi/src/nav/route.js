@@ -314,7 +314,7 @@ const createRoute = (urlPatternInput) => {
       const { debug } = options;
       paramConfigMap.set(paramName, {
         getFallbackValue: options.getFallbackValue,
-        default: () => signal.value,
+        defaultValue: options.defaultValue,
       });
 
       // URL -> Signal synchronization
@@ -374,10 +374,7 @@ const createRoute = (urlPatternInput) => {
     // Then, for parameters not in URL, check localStorage and apply defaults
     for (const paramName of paramNameSet) {
       const paramConfig = paramConfigMap.get(paramName);
-      let { default: defaultValue } = paramConfig;
-      if (typeof defaultValue === "function") {
-        defaultValue = defaultValue();
-      }
+      const { defaultValue } = paramConfig;
       if (defaultValue !== undefined) {
         mergedParams[paramName] = defaultValue;
       }
@@ -444,7 +441,7 @@ const createRoute = (urlPatternInput) => {
       if (cleanupDefaults) {
         continue;
       }
-      const { default: defaultValue } = paramConfig;
+      const { defaultValue } = paramConfig;
       if (defaultValue !== undefined) {
         mergedParams[paramName] = defaultValue;
         continue;
@@ -469,6 +466,7 @@ const createRoute = (urlPatternInput) => {
       // cleanup defaults to keep url as short as possible
       cleanupDefaults: true,
     });
+
     const routeRelativeUrl = prepareRouteRelativeUrl(
       urlPatternInput,
       resolvedParams,

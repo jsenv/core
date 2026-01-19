@@ -152,11 +152,11 @@ export const stateSignal = (defaultValue, options = {}) => {
   globalSignalRegistry.set(signalId, {
     signal: advancedSignal,
     options: {
+      getFallbackValue,
       defaultValue,
       type,
       localStorage,
       debug,
-      getFallbackValue,
       ...options,
     },
   });
