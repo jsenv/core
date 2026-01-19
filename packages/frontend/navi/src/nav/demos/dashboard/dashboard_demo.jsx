@@ -22,11 +22,11 @@ const analyticsTabSignal = stateSignal("overview", {
   localStorage: "analytics_tab",
 });
 // Setup routes for dashboard demo
-const { HOME_ROUTE, DASHBOARD_ROUTE } = setupRoutes({
+const { HOME_ROUTE, DASHBOARD_ROUTE, SETTINGS_ROUTE } = setupRoutes({
   HOME_ROUTE: "/",
   DASHBOARD_ROUTE: `/dashboard/:section=${sectionSignal}`,
-  SETTINGS_ROUTE: `/dashboard/settings/?tab=${settingsTabSignal}`,
-  ANALYTICS_ROUTE: `/dashboard/analytics/:tab=${analyticsTabSignal}`,
+  SETTINGS_ROUTE: `/dashboard/settings/:tab=${settingsTabSignal}`,
+  ANALYTICS_ROUTE: `/dashboard/analytics/?tab=${analyticsTabSignal}`,
 });
 
 const App = () => {
@@ -148,8 +148,6 @@ const DashboardPage = () => {
 };
 
 const SettingsPanel = () => {
-  const tab = settingsTabSignal.value;
-
   return (
     <div>
       <h3>Settings</h3>
@@ -180,105 +178,130 @@ const SettingsPanel = () => {
           minHeight: "300px",
         }}
       >
-        {tab === "general" && (
-          <div>
-            <h4>General Settings</h4>
-            <p>Configure your basic application settings here.</p>
-            <div style={{ marginTop: "20px" }}>
-              <div style={{ marginBottom: "15px" }}>
-                <label
-                  style={{
-                    display: "block",
-                    marginBottom: "5px",
-                    fontWeight: "bold",
-                  }}
-                >
-                  Application Name:
-                </label>
-                <input
-                  type="text"
-                  defaultValue="My Dashboard App"
-                  style={{
-                    width: "100%",
-                    maxWidth: "300px",
-                    padding: "8px",
-                    border: "1px solid #ccc",
-                    borderRadius: "4px",
-                  }}
-                />
-              </div>
-              <div style={{ marginBottom: "15px" }}>
-                <label
-                  style={{
-                    display: "block",
-                    marginBottom: "5px",
-                    fontWeight: "bold",
-                  }}
-                >
-                  Theme:
-                </label>
-                <select
-                  style={{
-                    padding: "8px",
-                    border: "1px solid #ccc",
-                    borderRadius: "4px",
-                  }}
-                >
-                  <option>Light</option>
-                  <option>Dark</option>
-                  <option>Auto</option>
-                </select>
-              </div>
-            </div>
-          </div>
-        )}
+        <Routes>
+          <Route
+            route={SETTINGS_ROUTE}
+            routeParams={{ tab: "general" }}
+            element={<GeneralSettingsTabContent />}
+          />
+          <Route
+            route={SETTINGS_ROUTE}
+            routeParams={{ tab: "advanced" }}
+            element={<AdvancedSettingsTagContent />}
+          />
+        </Routes>
+      </div>
+    </div>
+  );
+};
 
-        {tab === "advanced" && (
-          <div>
-            <h4>Advanced Settings</h4>
-            <p>Configure advanced options and integrations.</p>
-            <div style={{ marginTop: "20px" }}>
-              <div style={{ marginBottom: "15px" }}>
-                <label
-                  style={{ display: "flex", alignItems: "center", gap: "8px" }}
-                >
-                  <input type="checkbox" />
-                  <span>Enable debug mode</span>
-                </label>
-              </div>
-              <div style={{ marginBottom: "15px" }}>
-                <label
-                  style={{ display: "flex", alignItems: "center", gap: "8px" }}
-                >
-                  <input type="checkbox" />
-                  <span>Enable analytics tracking</span>
-                </label>
-              </div>
-              <div style={{ marginBottom: "15px" }}>
-                <label
-                  style={{
-                    display: "block",
-                    marginBottom: "5px",
-                    fontWeight: "bold",
-                  }}
-                >
-                  API Endpoint:
-                </label>
-                <input
-                  type="url"
-                  defaultValue="https://api.example.com"
-                  style={{
-                    width: "100%",
-                    maxWidth: "400px",
-                    padding: "8px",
-                    border: "1px solid #ccc",
-                    borderRadius: "4px",
-                  }}
-                />
-              </div>
-            </div>
-          </div>
-        )}
+const GeneralSettingsTabContent = () => {
+  return (
+    <div>
+      <h4>General Settings</h4>
+      <p>Configure your basic application settings here.</p>
+      <div style={{ marginTop: "20px" }}>
+        <div style={{ marginBottom: "15px" }}>
+          <label
+            style={{
+              display: "block",
+              marginBottom: "5px",
+              fontWeight: "bold",
+            }}
+          >
+            Application Name:
+          </label>
+          <input
+            type="text"
+            defaultValue="My Dashboard App"
+            style={{
+              width: "100%",
+              maxWidth: "300px",
+              padding: "8px",
+              border: "1px solid #ccc",
+              borderRadius: "4px",
+            }}
+          />
+        </div>
+        <div style={{ marginBottom: "15px" }}>
+          <label
+            style={{
+              display: "block",
+              marginBottom: "5px",
+              fontWeight: "bold",
+            }}
+          >
+            Theme:
+          </label>
+          <select
+            style={{
+              padding: "8px",
+              border: "1px solid #ccc",
+              borderRadius: "4px",
+            }}
+          >
+            <option>Light</option>
+            <option>Dark</option>
+            <option>Auto</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const AdvancedSettingsTagContent = () => {
+  return (
+    <div>
+      <h4>Advanced Settings</h4>
+      <p>Configure advanced options and integrations.</p>
+      <div style={{ marginTop: "20px" }}>
+        <div style={{ marginBottom: "15px" }}>
+          <label
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+            }}
+          >
+            <input type="checkbox" />
+            <span>Enable debug mode</span>
+          </label>
+        </div>
+        <div style={{ marginBottom: "15px" }}>
+          <label
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+            }}
+          >
+            <input type="checkbox" />
+            <span>Enable analytics tracking</span>
+          </label>
+        </div>
+        <div style={{ marginBottom: "15px" }}>
+          <label
+            style={{
+              display: "block",
+              marginBottom: "5px",
+              fontWeight: "bold",
+            }}
+          >
+            API Endpoint:
+          </label>
+          <input
+            type="url"
+            defaultValue="https://api.example.com"
+            style={{
+              width: "100%",
+              maxWidth: "400px",
+              padding: "8px",
+              border: "1px solid #ccc",
+              borderRadius: "4px",
+            }}
+          />
+        </div>
       </div>
     </div>
   );

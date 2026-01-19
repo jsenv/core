@@ -70,7 +70,15 @@ export const Routes = ({ element = RootElement, children }) => {
 };
 
 export const useMatchingRouteInfo = () => useContext(RouteInfoContext);
-export const Route = ({ element, route, index, fallback, meta, children }) => {
+export const Route = ({
+  element,
+  route,
+  index,
+  fallback,
+  meta,
+  children,
+  routeParams,
+}) => {
   const forceRender = useForceRender();
   const hasDiscoveredRef = useRef(false);
   const matchingInfoRef = useRef(null);
@@ -83,6 +91,7 @@ export const Route = ({ element, route, index, fallback, meta, children }) => {
         index={index}
         fallback={fallback}
         meta={meta}
+        routeParams={routeParams}
         onMatchingInfoChange={(matchingInfo) => {
           hasDiscoveredRef.current = true;
           matchingInfoRef.current = matchingInfo;
@@ -113,6 +122,7 @@ const MatchingRouteManager = ({
   index,
   fallback,
   meta,
+  routeParams,
   onMatchingInfoChange,
   children,
 }) => {
@@ -165,6 +175,7 @@ const MatchingRouteManager = ({
       index,
       fallback,
       meta,
+      routeParams,
       indexCandidate,
       fallbackCandidate,
       candidateSet,
@@ -186,6 +197,7 @@ const initRouteObserver = ({
   index,
   fallback,
   meta,
+  routeParams,
   indexCandidate,
   fallbackCandidate,
   candidateSet,
@@ -256,6 +268,12 @@ const initRouteObserver = ({
           // we have a route and it does not match no need to go further
           return null;
         }
+
+        // Check if routeParams match current route parameters
+        if (routeParams && !route.matchesParams(routeParams)) {
+          return null; // routeParams don't match, don't render
+        }
+
         // we have a route and it is matching
         // we search the first matching child to put it in the slot
         const matchingChildInfo = findMatchingChildInfo();
