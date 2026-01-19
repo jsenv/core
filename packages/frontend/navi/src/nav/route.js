@@ -499,6 +499,12 @@ const createRoute = (urlPatternInput) => {
   route.buildUrl = buildUrl;
 
   route.matchesParams = (providedParams) => {
+    // Wildcard routes (ending with *) should match any parameters
+    // since they are parent routes meant to catch child routes
+    if (urlPatternInput.endsWith("*")) {
+      return true;
+    }
+
     const currentParams = route.params;
     const resolvedParams = resolveParams(providedParams);
     const same = compareTwoJsValues(currentParams, resolvedParams);
