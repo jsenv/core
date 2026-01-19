@@ -24,7 +24,7 @@ const analyticsTabSignal = stateSignal("overview", {
 const { HOME_ROUTE, ADMIN_ROUTE, ADMIN_SETTINGS_ROUTE, ADMIN_ANALYTICS_ROUTE } =
   setupRoutes({
     HOME_ROUTE: "/",
-    ADMIN_ROUTE: `/admin/:section=${sectionSignal}`,
+    ADMIN_ROUTE: `/admin/:section=${sectionSignal}/*`,
     ADMIN_SETTINGS_ROUTE: `/admin/settings/:tab=${settingsTabSignal}`,
     ADMIN_ANALYTICS_ROUTE: `/admin/analytics/?tab=${analyticsTabSignal}`,
   });
