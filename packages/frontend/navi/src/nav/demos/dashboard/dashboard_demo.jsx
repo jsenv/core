@@ -12,7 +12,7 @@ import {
 // Setup routes for dashboard demo
 const { HOME_ROUTE, DASHBOARD_ROUTE } = setupRoutes({
   HOME_ROUTE: "/",
-  DASHBOARD_ROUTE: "/dashboard/:section?tab=:tab",
+  DASHBOARD_ROUTE: "/dashboard/:section",
 });
 const sectionSignal = stateSignal("settings", {
   localStorage: "section",
@@ -102,7 +102,7 @@ const DashboardPage = () => {
             Menu
           </h3>
 
-          <TabList orientation="vertical">
+          <TabList vertical>
             <TabList.Tab
               route={DASHBOARD_ROUTE}
               routeParams={{ section: "settings" }}
