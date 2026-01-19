@@ -219,7 +219,7 @@ export const stateSignal = (defaultValue, options = {}) => {
     }
     effect(() => {
       const value = advancedSignal.value;
-      if (value === undefined || value === null) {
+      if (value === undefined || value === null || value === defaultValue) {
         if (debug) {
           console.debug(
             `[stateSignal] removing "${localStorage}" from localStorage`,
