@@ -21,7 +21,6 @@ const analyticsTabSignal = stateSignal("overview", {
   enum: ["overview", "details"],
   localStorage: "analytics_tab",
 });
-// Setup routes for dashboard demo
 const { HOME_ROUTE, DASHBOARD_ROUTE, SETTINGS_ROUTE, ANALYTICS_ROUTE } =
   setupRoutes({
     HOME_ROUTE: "/",
@@ -195,7 +194,6 @@ const SettingsPanel = () => {
     </div>
   );
 };
-
 const GeneralSettingsTabContent = () => {
   return (
     <div>
@@ -250,7 +248,6 @@ const GeneralSettingsTabContent = () => {
     </div>
   );
 };
-
 const AdvancedSettingsTagContent = () => {
   return (
     <div>
@@ -309,8 +306,6 @@ const AdvancedSettingsTagContent = () => {
 };
 
 const AnalyticsPanel = () => {
-  const tab = analyticsTabSignal.value;
-
   return (
     <div>
       <h3>Analytics</h3>
@@ -357,7 +352,6 @@ const AnalyticsPanel = () => {
     </div>
   );
 };
-
 const AnalyticsTabOverview = () => {
   return (
     <div>
@@ -432,7 +426,6 @@ const AnalyticsTabOverview = () => {
     </div>
   );
 };
-
 const AnalyticsTabDetails = () => {
   return (
     <div>

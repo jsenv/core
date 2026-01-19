@@ -463,16 +463,6 @@ const createRoute = (urlPatternInput) => {
     return mergedParams;
   });
   const visitedSignal = signal(false);
-  const relativeUrlSignal = computed(() => {
-    const rawParams = rawParamsSignal.value;
-    const relativeUrl = route.buildRelativeUrl(rawParams);
-    return relativeUrl;
-  });
-  const disposeRelativeUrlEffect = effect(() => {
-    route.relativeUrl = relativeUrlSignal.value;
-  });
-  cleanupCallbackSet.add(disposeRelativeUrlEffect);
-
   route_state_signals: {
     for (const { signal, paramName, options = {} } of connections) {
       const { debug } = options;
@@ -517,6 +507,16 @@ const createRoute = (urlPatternInput) => {
       });
     }
   }
+
+  const relativeUrlSignal = computed(() => {
+    const rawParams = rawParamsSignal.value;
+    const relativeUrl = route.buildRelativeUrl(rawParams);
+    return relativeUrl;
+  });
+  const disposeRelativeUrlEffect = effect(() => {
+    route.relativeUrl = relativeUrlSignal.value;
+  });
+  cleanupCallbackSet.add(disposeRelativeUrlEffect);
 
   const urlSignal = computed(() => {
     const relativeUrl = relativeUrlSignal.value;
