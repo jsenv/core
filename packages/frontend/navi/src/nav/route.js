@@ -225,6 +225,10 @@ export const getRoutePrivateProperties = (route) => {
 };
 
 const createRoute = (urlPatternInput) => {
+  // Detect and connect signals in the route pattern
+  const { pattern, connections } = detectSignals(urlPatternInput);
+  urlPatternInput = pattern;
+
   const cleanupCallbackSet = new Set();
   const cleanup = () => {
     for (const cleanupCallback of cleanupCallbackSet) {
@@ -303,9 +307,53 @@ const createRoute = (urlPatternInput) => {
 
   const paramConfigMap = new Map();
   route.paramConfigMap = paramConfigMap;
-  route.describeParam = (paramName, paramConfig) => {
-    paramConfigMap.set(paramName, paramConfig);
-  };
+
+  // route params signal connections
+  for (const { signal, paramName, options = {} } of connections) {
+    const { debug } = options;
+    paramConfigMap.set(paramName, {
+      default: () => signal.value, // Use current signal value as default
+      // Add other param config here
+    });
+
+    // URL -> Signal synchronization
+    effect(() => {
+      const matching = matchingSignal.value;
+      const params = rawParamsSignal.value;
+      const urlParamValue = params[paramName];
+
+      if (!matching) {
+        return;
+      }
+
+      if (debug) {
+        console.debug(
+          `[stateSignal] URL -> Signal: ${paramName}=${urlParamValue}`,
+        );
+      }
+
+      signal.value = urlParamValue;
+    });
+
+    // Signal -> URL synchronization
+    effect(() => {
+      const value = signal.value;
+      const params = rawParamsSignal.value;
+      const urlParamValue = params[paramName];
+      const matching = matchingSignal.value;
+
+      if (!matching || value === urlParamValue) {
+        return;
+      }
+
+      if (debug) {
+        console.debug(`[stateSignal] Signal -> URL: ${paramName}=${value}`);
+      }
+
+      route.replaceParams({ [paramName]: value });
+    });
+  }
+
   route.navTo = (params) => {
     return browserIntegration.navTo(route.buildUrl(params));
   };
@@ -624,61 +672,6 @@ export const setOnRouteDefined = (v) => {
 // Later I'll consider adding ability to have dynamic import into the mix
 // (An async function returning an action)
 
-/**
- * Establishes bidirectional synchronization between signals and route parameters
- */
-const connectRouteSignals = ({ route, connections }) => {
-  const routePrivateProperties = getRoutePrivateProperties(route);
-  const { matchingSignal, rawParamsSignal } = routePrivateProperties;
-
-  for (const { signal, paramName, options = {} } of connections) {
-    const { defaultValue, debug } = options;
-
-    // Set up route parameter description
-    route.describeParam(paramName, {
-      default: defaultValue,
-      // Add other param config here
-    });
-
-    // URL -> Signal synchronization
-    effect(() => {
-      const matching = matchingSignal.value;
-      const params = rawParamsSignal.value;
-      const urlParamValue = params[paramName];
-
-      if (!matching) {
-        return;
-      }
-
-      if (debug) {
-        console.debug(
-          `[stateSignal] URL -> Signal: ${paramName}=${urlParamValue}`,
-        );
-      }
-
-      signal.value = urlParamValue;
-    });
-
-    // Signal -> URL synchronization
-    effect(() => {
-      const value = signal.value;
-      const params = rawParamsSignal.value;
-      const urlParamValue = params[paramName];
-      const matching = matchingSignal.value;
-
-      if (!matching || value === urlParamValue) {
-        return;
-      }
-
-      if (debug) {
-        console.debug(`[stateSignal] Signal -> URL: ${paramName}=${value}`);
-      }
-
-      route.replaceParams({ [paramName]: value });
-    });
-  }
-};
-
 export const setupRoutes = (routeDefinition) => {
   // Clean up existing routes
   for (const route of routeSet) {
@@ -689,14 +682,7 @@ export const setupRoutes = (routeDefinition) => {
   const routes = {};
   for (const key of Object.keys(routeDefinition)) {
     const value = routeDefinition[key];
-
-    // Detect and connect signals in the route pattern
-    const { pattern, connections } = detectSignals(value);
-
-    const route = createRoute(pattern);
-
-    // Set up signal-route connections
-    connectRouteSignals({ route, connections });
+    const route = createRoute(value);
 
     routes[key] = route;
   }
