@@ -307,6 +307,84 @@ const createRoute = (urlPatternInput) => {
 
   const paramConfigMap = new Map();
   route.paramConfigMap = paramConfigMap;
+  const matchingSignal = signal(false);
+  const rawParamsSignal = signal(ROUTE_NOT_MATCHING_PARAMS);
+  route_state_signals: {
+    for (const { signal, paramName, options = {} } of connections) {
+      const { debug } = options;
+      paramConfigMap.set(paramName, {
+        getFallbackValue: options.getFallbackValue,
+        default: () => signal.value,
+      });
+
+      // URL -> Signal synchronization
+      effect(() => {
+        const matching = matchingSignal.value;
+        const params = rawParamsSignal.value;
+        const urlParamValue = params[paramName];
+
+        if (!matching) {
+          return;
+        }
+        if (debug) {
+          console.debug(
+            `[stateSignal] URL -> Signal: ${paramName}=${urlParamValue}`,
+          );
+        }
+        signal.value = urlParamValue;
+      });
+
+      // Signal -> URL synchronization
+      effect(() => {
+        const value = signal.value;
+        const params = rawParamsSignal.value;
+        const urlParamValue = params[paramName];
+        const matching = matchingSignal.value;
+
+        if (!matching || value === urlParamValue) {
+          return;
+        }
+
+        if (debug) {
+          console.debug(`[stateSignal] Signal -> URL: ${paramName}=${value}`);
+        }
+
+        route.replaceParams({ [paramName]: value });
+      });
+    }
+  }
+  const paramsSignal = computed(() => {
+    const rawParams = rawParamsSignal.value;
+    if (!rawParams && paramConfigMap.size === 0) {
+      return rawParams;
+    }
+    const mergedParams = {};
+    const paramNameSet = new Set(paramConfigMap.keys());
+
+    // First, add raw params that have defined values
+    if (rawParams) {
+      for (const name of Object.keys(rawParams)) {
+        const value = rawParams[name];
+        if (value !== undefined) {
+          mergedParams[name] = rawParams[name];
+          paramNameSet.delete(name);
+        }
+      }
+    }
+    // Then, for parameters not in URL, check localStorage and apply defaults
+    for (const paramName of paramNameSet) {
+      const paramConfig = paramConfigMap.get(paramName);
+      let { default: defaultValue } = paramConfig;
+      if (typeof defaultValue === "function") {
+        defaultValue = defaultValue();
+      }
+      if (defaultValue !== undefined) {
+        mergedParams[paramName] = defaultValue;
+      }
+    }
+    return mergedParams;
+  });
+  const visitedSignal = signal(false);
 
   route.navTo = (params) => {
     return browserIntegration.navTo(route.buildUrl(params));
@@ -429,85 +507,6 @@ const createRoute = (urlPatternInput) => {
     return same;
   };
 
-  const matchingSignal = signal(false);
-  const rawParamsSignal = signal(ROUTE_NOT_MATCHING_PARAMS);
-  const paramsSignal = computed(() => {
-    const rawParams = rawParamsSignal.value;
-    if (!rawParams && paramConfigMap.size === 0) {
-      return rawParams;
-    }
-    const mergedParams = {};
-    const paramNameSet = new Set(paramConfigMap.keys());
-
-    // First, add raw params that have defined values
-    if (rawParams) {
-      for (const name of Object.keys(rawParams)) {
-        const value = rawParams[name];
-        if (value !== undefined) {
-          mergedParams[name] = rawParams[name];
-          paramNameSet.delete(name);
-        }
-      }
-    }
-    // Then, for parameters not in URL, check localStorage and apply defaults
-    for (const paramName of paramNameSet) {
-      const paramConfig = paramConfigMap.get(paramName);
-      let { default: defaultValue } = paramConfig;
-      if (typeof defaultValue === "function") {
-        defaultValue = defaultValue();
-      }
-      if (defaultValue !== undefined) {
-        mergedParams[paramName] = defaultValue;
-      }
-    }
-    return mergedParams;
-  });
-  const visitedSignal = signal(false);
-  route_state_signals: {
-    for (const { signal, paramName, options = {} } of connections) {
-      const { debug } = options;
-      paramConfigMap.set(paramName, {
-        getFallbackValue: options.getFallbackValue,
-        default: () => signal.value,
-      });
-
-      // URL -> Signal synchronization
-      effect(() => {
-        const matching = matchingSignal.value;
-        const params = rawParamsSignal.value;
-        const urlParamValue = params[paramName];
-
-        if (!matching) {
-          return;
-        }
-        if (debug) {
-          console.debug(
-            `[stateSignal] URL -> Signal: ${paramName}=${urlParamValue}`,
-          );
-        }
-        signal.value = urlParamValue;
-      });
-
-      // Signal -> URL synchronization
-      effect(() => {
-        const value = signal.value;
-        const params = rawParamsSignal.value;
-        const urlParamValue = params[paramName];
-        const matching = matchingSignal.value;
-
-        if (!matching || value === urlParamValue) {
-          return;
-        }
-
-        if (debug) {
-          console.debug(`[stateSignal] Signal -> URL: ${paramName}=${value}`);
-        }
-
-        route.replaceParams({ [paramName]: value });
-      });
-    }
-  }
-
   const relativeUrlSignal = computed(() => {
     const rawParams = rawParamsSignal.value;
     const relativeUrl = route.buildRelativeUrl(rawParams);
@@ -517,7 +516,6 @@ const createRoute = (urlPatternInput) => {
     route.relativeUrl = relativeUrlSignal.value;
   });
   cleanupCallbackSet.add(disposeRelativeUrlEffect);
-
   const urlSignal = computed(() => {
     const relativeUrl = relativeUrlSignal.value;
     const url = resolveRouteUrl(relativeUrl, baseUrl);
