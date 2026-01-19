@@ -8,7 +8,6 @@ import { batch, computed, effect, signal } from "@preact/signals";
 
 import { detectSignals } from "../state/state_signal.js";
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
-import { connectSignalToRoute } from "./route_params.js";
 import { createRoutePattern } from "./route_pattern.js";
 import { prepareRouteRelativeUrl, resolveRouteUrl } from "./route_url.js";
 
@@ -624,6 +623,65 @@ export const setOnRouteDefined = (v) => {
 // at any given time (url can be shared, reloaded, etc..)
 // Later I'll consider adding ability to have dynamic import into the mix
 // (An async function returning an action)
+
+/**
+ * Establishes bidirectional synchronization between a signal and a route parameter
+ */
+const connectSignalToRoute = (
+  signal,
+  route,
+  paramName,
+  routePrivateProperties,
+  options = {},
+) => {
+  const { defaultValue, debug } = options;
+
+  // Set up route parameter description
+  route.describeParam(paramName, {
+    default: defaultValue,
+    // Add other param config here
+  });
+
+  const { matchingSignal, rawParamsSignal } = routePrivateProperties;
+
+  // URL -> Signal synchronization
+  effect(() => {
+    const matching = matchingSignal.value;
+    const params = rawParamsSignal.value;
+    const urlParamValue = params[paramName];
+
+    if (!matching) {
+      return;
+    }
+
+    if (debug) {
+      console.debug(
+        `[stateSignal] URL -> Signal: ${paramName}=${urlParamValue}`,
+      );
+    }
+
+    signal.value = urlParamValue;
+  });
+
+  // Signal -> URL synchronization
+  effect(() => {
+    const value = signal.value;
+    const params = rawParamsSignal.value;
+    const urlParamValue = params[paramName];
+    const matching = matchingSignal.value;
+
+    if (!matching || value === urlParamValue) {
+      return;
+    }
+
+    if (debug) {
+      console.debug(`[stateSignal] Signal -> URL: ${paramName}=${value}`);
+    }
+
+    route.replaceParams({ [paramName]: value });
+  });
+};
+
 export const setupRoutes = (routeDefinition) => {
   // Clean up existing routes
   for (const route of routeSet) {

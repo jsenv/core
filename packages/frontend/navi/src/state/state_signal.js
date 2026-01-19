@@ -3,7 +3,7 @@ import { effect, signal } from "@preact/signals";
 import { valueInLocalStorage } from "./value_in_local_storage.js";
 
 // Global signal registry for route template detection
-export const globalSignalRegistry = new Map();
+const globalSignalRegistry = new Map();
 let signalIdCounter = 0;
 const generateSignalId = () => {
   return `__jsenv_signal_${++signalIdCounter}__`;
