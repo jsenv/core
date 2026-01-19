@@ -22,12 +22,13 @@ const analyticsTabSignal = stateSignal("overview", {
   localStorage: "analytics_tab",
 });
 // Setup routes for dashboard demo
-const { HOME_ROUTE, DASHBOARD_ROUTE, SETTINGS_ROUTE } = setupRoutes({
-  HOME_ROUTE: "/",
-  DASHBOARD_ROUTE: `/dashboard/:section=${sectionSignal}`,
-  SETTINGS_ROUTE: `/dashboard/settings/:tab=${settingsTabSignal}`,
-  ANALYTICS_ROUTE: `/dashboard/analytics/?tab=${analyticsTabSignal}`,
-});
+const { HOME_ROUTE, DASHBOARD_ROUTE, SETTINGS_ROUTE, ANALYTICS_ROUTE } =
+  setupRoutes({
+    HOME_ROUTE: "/",
+    DASHBOARD_ROUTE: `/dashboard/:section=${sectionSignal}`,
+    SETTINGS_ROUTE: `/dashboard/settings/:tab=${settingsTabSignal}`,
+    ANALYTICS_ROUTE: `/dashboard/analytics/?tab=${analyticsTabSignal}`,
+  });
 
 const App = () => {
   return (
@@ -340,140 +341,149 @@ const AnalyticsPanel = () => {
           minHeight: "300px",
         }}
       >
-        {tab === "overview" && (
-          <div>
-            <h4>Analytics Overview</h4>
-            <p>High-level metrics and key performance indicators.</p>
+        <Routes>
+          <Route
+            route={ANALYTICS_ROUTE}
+            routeParams={{ tab: "overview" }}
+            element={<AnalyticsTabOverview />}
+          />
+          <Route
+            route={ANALYTICS_ROUTE}
+            routeParams={{ tab: "details" }}
+            element={<AnalyticsTabDetails />}
+          />
+        </Routes>
+      </div>
+    </div>
+  );
+};
+
+const AnalyticsTabOverview = () => {
+  return (
+    <div>
+      <h4>Analytics Overview</h4>
+      <p>High-level metrics and key performance indicators.</p>
+      <div
+        style={{
+          marginTop: "20px",
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+          gap: "15px",
+        }}
+      >
+        <div
+          style={{
+            padding: "15px",
+            backgroundColor: "#e3f2fd",
+            borderRadius: "8px",
+            textAlign: "center",
+          }}
+        >
+          <div
+            style={{
+              fontSize: "24px",
+              fontWeight: "bold",
+              color: "#1976d2",
+            }}
+          >
+            1,234
+          </div>
+          <div style={{ fontSize: "14px", color: "#666" }}>Total Users</div>
+        </div>
+        <div
+          style={{
+            padding: "15px",
+            backgroundColor: "#e8f5e8",
+            borderRadius: "8px",
+            textAlign: "center",
+          }}
+        >
+          <div
+            style={{
+              fontSize: "24px",
+              fontWeight: "bold",
+              color: "#388e3c",
+            }}
+          >
+            567
+          </div>
+          <div style={{ fontSize: "14px", color: "#666" }}>Active Sessions</div>
+        </div>
+        <div
+          style={{
+            padding: "15px",
+            backgroundColor: "#fff3e0",
+            borderRadius: "8px",
+            textAlign: "center",
+          }}
+        >
+          <div
+            style={{
+              fontSize: "24px",
+              fontWeight: "bold",
+              color: "#f57c00",
+            }}
+          >
+            89%
+          </div>
+          <div style={{ fontSize: "14px", color: "#666" }}>Satisfaction</div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const AnalyticsTabDetails = () => {
+  return (
+    <div>
+      <h4>Detailed Analytics</h4>
+      <p>Comprehensive data and detailed breakdowns.</p>
+      <div style={{ marginTop: "20px" }}>
+        <div style={{ marginBottom: "20px" }}>
+          <h5 style={{ marginBottom: "10px" }}>Traffic Sources</h5>
+          <div
+            style={{
+              backgroundColor: "#f8f9fa",
+              padding: "15px",
+              borderRadius: "8px",
+            }}
+          >
             <div
               style={{
-                marginTop: "20px",
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
-                gap: "15px",
+                display: "flex",
+                justifyContent: "space-between",
+                marginBottom: "8px",
               }}
             >
-              <div
-                style={{
-                  padding: "15px",
-                  backgroundColor: "#e3f2fd",
-                  borderRadius: "8px",
-                  textAlign: "center",
-                }}
-              >
-                <div
-                  style={{
-                    fontSize: "24px",
-                    fontWeight: "bold",
-                    color: "#1976d2",
-                  }}
-                >
-                  1,234
-                </div>
-                <div style={{ fontSize: "14px", color: "#666" }}>
-                  Total Users
-                </div>
-              </div>
-              <div
-                style={{
-                  padding: "15px",
-                  backgroundColor: "#e8f5e8",
-                  borderRadius: "8px",
-                  textAlign: "center",
-                }}
-              >
-                <div
-                  style={{
-                    fontSize: "24px",
-                    fontWeight: "bold",
-                    color: "#388e3c",
-                  }}
-                >
-                  567
-                </div>
-                <div style={{ fontSize: "14px", color: "#666" }}>
-                  Active Sessions
-                </div>
-              </div>
-              <div
-                style={{
-                  padding: "15px",
-                  backgroundColor: "#fff3e0",
-                  borderRadius: "8px",
-                  textAlign: "center",
-                }}
-              >
-                <div
-                  style={{
-                    fontSize: "24px",
-                    fontWeight: "bold",
-                    color: "#f57c00",
-                  }}
-                >
-                  89%
-                </div>
-                <div style={{ fontSize: "14px", color: "#666" }}>
-                  Satisfaction
-                </div>
-              </div>
+              <span>Direct</span>
+              <span>45%</span>
+            </div>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                marginBottom: "8px",
+              }}
+            >
+              <span>Search Engines</span>
+              <span>32%</span>
+            </div>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                marginBottom: "8px",
+              }}
+            >
+              <span>Social Media</span>
+              <span>15%</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <span>Referrals</span>
+              <span>8%</span>
             </div>
           </div>
-        )}
-
-        {tab === "details" && (
-          <div>
-            <h4>Detailed Analytics</h4>
-            <p>Comprehensive data and detailed breakdowns.</p>
-            <div style={{ marginTop: "20px" }}>
-              <div style={{ marginBottom: "20px" }}>
-                <h5 style={{ marginBottom: "10px" }}>Traffic Sources</h5>
-                <div
-                  style={{
-                    backgroundColor: "#f8f9fa",
-                    padding: "15px",
-                    borderRadius: "8px",
-                  }}
-                >
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      marginBottom: "8px",
-                    }}
-                  >
-                    <span>Direct</span>
-                    <span>45%</span>
-                  </div>
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      marginBottom: "8px",
-                    }}
-                  >
-                    <span>Search Engines</span>
-                    <span>32%</span>
-                  </div>
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      marginBottom: "8px",
-                    }}
-                  >
-                    <span>Social Media</span>
-                    <span>15%</span>
-                  </div>
-                  <div
-                    style={{ display: "flex", justifyContent: "space-between" }}
-                  >
-                    <span>Referrals</span>
-                    <span>8%</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+        </div>
       </div>
     </div>
   );
