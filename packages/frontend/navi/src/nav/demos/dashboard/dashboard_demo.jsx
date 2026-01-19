@@ -15,18 +15,18 @@ const sectionSignal = stateSignal("settings", {
 });
 const settingsTabSignal = stateSignal("general", {
   enum: ["general", "advanced"],
-  localStorage: "tab",
+  localStorage: "settings_tab",
 });
 const analyticsTabSignal = stateSignal("overview", {
-  enum: ["general", "advanced"],
-  localStorage: "tab",
+  enum: ["overview", "details"],
+  localStorage: "analytics_tab",
 });
 // Setup routes for dashboard demo
 const { HOME_ROUTE, DASHBOARD_ROUTE } = setupRoutes({
   HOME_ROUTE: "/",
-  DASHBOARD_ROUTE: `/dashboard/${sectionSignal}`,
-  SETTINGS_ROUTE: `/dashboard/settings/${settingsTabSignal}`,
-  ANALYTICS_ROUTE: `/dashboard/analytics/${analyticsTabSignal}`,
+  DASHBOARD_ROUTE: `/dashboard/:section=${sectionSignal}`,
+  SETTINGS_ROUTE: `/dashboard/settings/?tab=${settingsTabSignal}`,
+  ANALYTICS_ROUTE: `/dashboard/analytics/:tab=${analyticsTabSignal}`,
 });
 
 const App = () => {

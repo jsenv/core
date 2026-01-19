@@ -13,26 +13,27 @@ const generateSignalId = () => {
 export const detectSignals = (routePattern) => {
   const signalConnections = [];
 
-  // Look for signal IDs in the pattern
-  // Pattern: /dashboard/settings?tab=__jsenv_signal_1__
-  const signalIdRegex = /__jsenv_signal_\d+__/g;
-  const matches = routePattern.match(signalIdRegex);
-
-  if (!matches) {
-    return { pattern: routePattern, connections: [] };
-  }
-
+  // Look for signals in the new syntax: :paramName=__jsenv_signal_1__ or ?paramName=__jsenv_signal_1__
+  const signalParamRegex = /([?:])(\w+)=(__jsenv_signal_\d+__)/g;
+  let match;
   let updatedPattern = routePattern;
 
-  for (const signalId of matches) {
+  while ((match = signalParamRegex.exec(routePattern)) !== null) {
+    const [fullMatch, prefix, paramName, signalId] = match;
     const signalData = globalSignalRegistry.get(signalId);
+
     if (signalData) {
       const { signal, options } = signalData;
 
-      // Replace signal ID with proper URL parameter
-      // __jsenv_signal_1__ becomes :signal_1
-      const paramName = signalId.replace(/__jsenv_signal_(\d+)__/, "signal_$1");
-      updatedPattern = updatedPattern.replace(signalId, `:${paramName}`);
+      let replacement;
+      if (prefix === ":") {
+        // Path parameter: :section=__jsenv_signal_1__ becomes :section
+        replacement = `${prefix}${paramName}`;
+      } else {
+        // Search parameter: ?tab=__jsenv_signal_1__ becomes nothing (removed entirely)
+        replacement = "";
+      }
+      updatedPattern = updatedPattern.replace(fullMatch, replacement);
 
       signalConnections.push({
         signal,
