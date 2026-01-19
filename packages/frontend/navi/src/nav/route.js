@@ -625,61 +625,58 @@ export const setOnRouteDefined = (v) => {
 // (An async function returning an action)
 
 /**
- * Establishes bidirectional synchronization between a signal and a route parameter
+ * Establishes bidirectional synchronization between signals and route parameters
  */
-const connectSignalToRoute = (
-  signal,
-  route,
-  paramName,
-  routePrivateProperties,
-  options = {},
-) => {
-  const { defaultValue, debug } = options;
-
-  // Set up route parameter description
-  route.describeParam(paramName, {
-    default: defaultValue,
-    // Add other param config here
-  });
-
+const connectRouteSignals = ({ route, connections }) => {
+  const routePrivateProperties = getRoutePrivateProperties(route);
   const { matchingSignal, rawParamsSignal } = routePrivateProperties;
 
-  // URL -> Signal synchronization
-  effect(() => {
-    const matching = matchingSignal.value;
-    const params = rawParamsSignal.value;
-    const urlParamValue = params[paramName];
+  for (const { signal, paramName, options = {} } of connections) {
+    const { defaultValue, debug } = options;
 
-    if (!matching) {
-      return;
-    }
+    // Set up route parameter description
+    route.describeParam(paramName, {
+      default: defaultValue,
+      // Add other param config here
+    });
 
-    if (debug) {
-      console.debug(
-        `[stateSignal] URL -> Signal: ${paramName}=${urlParamValue}`,
-      );
-    }
+    // URL -> Signal synchronization
+    effect(() => {
+      const matching = matchingSignal.value;
+      const params = rawParamsSignal.value;
+      const urlParamValue = params[paramName];
 
-    signal.value = urlParamValue;
-  });
+      if (!matching) {
+        return;
+      }
 
-  // Signal -> URL synchronization
-  effect(() => {
-    const value = signal.value;
-    const params = rawParamsSignal.value;
-    const urlParamValue = params[paramName];
-    const matching = matchingSignal.value;
+      if (debug) {
+        console.debug(
+          `[stateSignal] URL -> Signal: ${paramName}=${urlParamValue}`,
+        );
+      }
 
-    if (!matching || value === urlParamValue) {
-      return;
-    }
+      signal.value = urlParamValue;
+    });
 
-    if (debug) {
-      console.debug(`[stateSignal] Signal -> URL: ${paramName}=${value}`);
-    }
+    // Signal -> URL synchronization
+    effect(() => {
+      const value = signal.value;
+      const params = rawParamsSignal.value;
+      const urlParamValue = params[paramName];
+      const matching = matchingSignal.value;
 
-    route.replaceParams({ [paramName]: value });
-  });
+      if (!matching || value === urlParamValue) {
+        return;
+      }
+
+      if (debug) {
+        console.debug(`[stateSignal] Signal -> URL: ${paramName}=${value}`);
+      }
+
+      route.replaceParams({ [paramName]: value });
+    });
+  }
 };
 
 export const setupRoutes = (routeDefinition) => {
@@ -699,15 +696,7 @@ export const setupRoutes = (routeDefinition) => {
     const route = createRoute(pattern);
 
     // Set up signal-route connections
-    for (const { signal, paramName, options } of connections) {
-      connectSignalToRoute(
-        signal,
-        route,
-        paramName,
-        getRoutePrivateProperties(route),
-        options,
-      );
-    }
+    connectRouteSignals({ route, connections });
 
     routes[key] = route;
   }

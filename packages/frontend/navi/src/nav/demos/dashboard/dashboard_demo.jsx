@@ -9,23 +9,24 @@ import {
   TabList,
 } from "@jsenv/navi";
 
+const sectionSignal = stateSignal("settings", {
+  enum: ["settings", "analytics"],
+  localStorage: "section",
+});
+const settingsTabSignal = stateSignal("general", {
+  enum: ["general", "advanced"],
+  localStorage: "tab",
+});
+const analyticsTabSignal = stateSignal("overview", {
+  enum: ["general", "advanced"],
+  localStorage: "tab",
+});
 // Setup routes for dashboard demo
 const { HOME_ROUTE, DASHBOARD_ROUTE } = setupRoutes({
   HOME_ROUTE: "/",
-  DASHBOARD_ROUTE: "/dashboard/:section",
-});
-const sectionSignal = stateSignal("settings", {
-  localStorage: "section",
-  enum: ["settings", "analytics"],
-  routes: {
-    section: DASHBOARD_ROUTE,
-  },
-});
-const tabSignal = stateSignal("general", {
-  localStorage: "tab",
-  routes: {
-    tab: DASHBOARD_ROUTE,
-  },
+  DASHBOARD_ROUTE: `/dashboard/${sectionSignal}`,
+  SETTINGS_ROUTE: `/dashboard/settings/${settingsTabSignal}`,
+  ANALYTICS_ROUTE: `/dashboard/analytics/${analyticsTabSignal}`,
 });
 
 const App = () => {
