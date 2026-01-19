@@ -106,29 +106,17 @@ const DashboardPage = () => {
           <TabList vertical>
             <TabList.Tab
               route={ADMIN_SETTINGS_ROUTE}
-              style={{
-                display: "block",
-                width: "100%",
-                marginBottom: "8px",
-                padding: "10px 12px",
-                textAlign: "left",
-                borderRadius: "4px",
-                textDecoration: "none",
-              }}
+              expandX
+              borderRadius="s"
+              paddingLeft="s"
             >
               ⚙️ Settings
             </TabList.Tab>
             <TabList.Tab
               route={ADMIN_ANALYTICS_ROUTE}
-              style={{
-                display: "block",
-                width: "100%",
-                marginBottom: "8px",
-                padding: "10px 12px",
-                textAlign: "left",
-                borderRadius: "4px",
-                textDecoration: "none",
-              }}
+              expandX
+              borderRadius="s"
+              paddingLeft="s"
             >
               📊 Analytics
             </TabList.Tab>

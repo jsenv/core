@@ -327,6 +327,10 @@ const TabRoute = ({
   padding = 2,
   paddingX,
   paddingY,
+  paddingLeft,
+  paddingRight,
+  paddingTop,
+  paddingBottom,
   alignX,
   alignY,
 
@@ -355,6 +359,10 @@ const TabRoute = ({
         padding={padding}
         paddingX={paddingX}
         paddingY={paddingY}
+        paddingLeft={paddingLeft}
+        paddingRight={paddingRight}
+        paddingTop={paddingTop}
+        paddingBottom={paddingBottom}
         alignX={alignX}
         alignY={alignY}
       >
