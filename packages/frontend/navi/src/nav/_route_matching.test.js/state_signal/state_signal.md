@@ -1,24 +1,24 @@
-# [state signal](../../route.test.js#L29)
+# [state signal](../../route_matching.test.js#L29)
 
 ```js
 const sectionSignal = stateSignal("settings");
 return {
+  matching_with_default: run(`/admin/:section=${sectionSignal}`, `/admin`),
   matching_with_param: run(
     `/admin/:section=${sectionSignal}`,
     `/admin/users`,
   ),
-  matching_with_default: run(`/admin/:section=${sectionSignal}`, `/admin`),
   non_matching_url: run(`/admin/:section=${sectionSignal}`, `/different`),
 };
 ```
 
 ```js
 {
-  "matching_with_param": {
-    "section": "users"
-  },
   "matching_with_default": {
     "section": "settings"
+  },
+  "matching_with_param": {
+    "section": "users"
   },
   "non_matching_url": null
 }
