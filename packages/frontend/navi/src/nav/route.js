@@ -325,13 +325,6 @@ export const registerRoute = (urlPatternInput) => {
     }
   }
 
-  // Also include defaults from the current route's own parameters
-  for (const { paramName, options = {} } of connections) {
-    if (options.defaultValue !== undefined) {
-      literalSegmentDefaults.set(paramName, options.defaultValue);
-    }
-  }
-
   // Make trailing slashes flexible - if pattern ends with /, make it match anything after
   // Exception: don't transform root route "/" to avoid matching everything
   if (urlPatternInput.endsWith("/") && urlPatternInput !== "/") {
@@ -508,9 +501,25 @@ export const registerRoute = (urlPatternInput) => {
   const visitedSignal = signal(false);
 
   route.navTo = (params) => {
+    if (!browserIntegration) {
+      if (import.meta.dev) {
+        console.warn(
+          `navTo called but browserIntegration not set for route ${route}`,
+        );
+      }
+      return Promise.resolve();
+    }
     return browserIntegration.navTo(route.buildUrl(params));
   };
   route.redirectTo = (params) => {
+    if (!browserIntegration) {
+      if (import.meta.dev) {
+        console.warn(
+          `redirectTo called but browserIntegration not set for route ${route}`,
+        );
+      }
+      return Promise.resolve();
+    }
     return browserIntegration.navTo(route.buildUrl(params), {
       replace: true,
     });
