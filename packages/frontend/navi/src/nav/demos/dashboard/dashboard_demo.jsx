@@ -83,8 +83,6 @@ const HomePage = () => {
 };
 
 const DashboardPage = () => {
-  const section = sectionSignal.value;
-
   return (
     <div>
       <h2>Dashboard</h2>
@@ -125,8 +123,10 @@ const DashboardPage = () => {
 
         {/* Main Content Area */}
         <div style={{ flex: 1 }}>
-          {section === "settings" && <SettingsPanel />}
-          {section === "analytics" && <AnalyticsPanel />}
+          <Routes>
+            <Route route={ADMIN_SETTINGS_ROUTE} element={<SettingsPanel />} />
+            <Route route={ADMIN_ANALYTICS_ROUTE} element={<AnalyticsPanel />} />
+          </Routes>
         </div>
       </div>
     </div>
