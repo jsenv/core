@@ -13,9 +13,12 @@ export const createRoutePattern = (urlPatternInput, baseUrl) => {
   }
 
   // Strip search params from pattern to make them optional
-  const searchIndex = normalizedUrlPattern.indexOf("?");
-  if (searchIndex !== -1) {
-    normalizedUrlPattern = normalizedUrlPattern.substring(0, searchIndex);
+  // Only strip if there are actual search parameter mappings (not URLPattern optional syntax)
+  if (searchParamMappings.size > 0) {
+    const searchIndex = normalizedUrlPattern.indexOf("?");
+    if (searchIndex !== -1) {
+      normalizedUrlPattern = normalizedUrlPattern.substring(0, searchIndex);
+    }
   }
 
   const urlPattern = new URLPattern(normalizedUrlPattern, baseUrl, {
@@ -118,8 +121,8 @@ export const createRoutePattern = (urlPatternInput, baseUrl) => {
               }
               localWildcardCount++;
             }
-          } else if (!optionalParamKeySet.has(key)) {
-            // Named group (:param or {param}) - only include if not ignored
+          } else {
+            // Named group (:param or {param}) - always include named parameters
             params[key] =
               value === undefined ? undefined : decodeURIComponent(value);
           }

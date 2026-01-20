@@ -66,7 +66,6 @@ export const updateRoutes = (
     const oldParams = previousState.params;
     const extractedParams = routePattern.applyOn(url);
     const newMatching = Boolean(extractedParams);
-
     let newParams;
     if (extractedParams) {
       if (compareTwoJsValues(oldParams, extractedParams)) {
@@ -228,6 +227,18 @@ const createRoute = (urlPatternInput) => {
   // Detect and connect signals in the route pattern
   const { pattern, connections } = detectSignals(urlPatternInput);
   urlPatternInput = pattern;
+
+  // Make parameters with default values optional by modifying the pattern
+  for (const { paramName, options = {} } of connections) {
+    if (options.defaultValue !== undefined) {
+      // Replace :param with :param? to make the parameter itself optional
+      const paramRegex = new RegExp(`:${paramName}(?!\\?)\\b`, "g");
+      urlPatternInput = urlPatternInput.replace(
+        paramRegex,
+        `:${paramName}?`,
+      );
+    }
+  }
 
   const cleanupCallbackSet = new Set();
   const cleanup = () => {
