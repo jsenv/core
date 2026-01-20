@@ -243,90 +243,17 @@ export const registerRoute = (urlPattern) => {
   // Track literal segments that correspond to parameter defaults for validation
   // This allows /admin/settings/:tab to validate that "settings" matches the :section default
   const literalSegmentDefaults = new Map();
-  // Compare current pattern against previously registered routes to find relationships
-  for (const existingRoute of routeSet) {
-    const existingPrivateProps = getRoutePrivateProperties(existingRoute);
-    if (!existingPrivateProps) continue;
-    const { originalPattern, connections } = existingPrivateProps;
-    const registeredPattern = originalPattern;
+  // TODO: Cross-route optimization disabled temporarily to fix basic route matching
+  // The complex optimization logic was causing routes to fail matching
 
-    // Check if current pattern could be a specialized version of a registered pattern
-    const currentSegments = internalUrlPattern
-      .split("/")
-      .filter((s) => s !== "");
-    const registeredSegments = registeredPattern
-      .split("/")
-      .filter((s) => s !== "");
-
-    // Look for patterns where literal segments in current pattern match parameter defaults in registered pattern
-    if (currentSegments.length >= registeredSegments.length - 1) {
-      // Allow current to be shorter if registered ends with wildcard
-      let isRelated = true;
-      const validationMappings = [];
-
-      // Compare segments up to the shorter length, but handle wildcards specially
-      const compareLength = Math.min(
-        currentSegments.length,
-        registeredSegments.length,
-      );
-
-      for (let i = 0; i < compareLength; i++) {
-        const regSeg = registeredSegments[i];
-        const curSeg = currentSegments[i];
-
-        if (regSeg === curSeg) {
-          // Identical segments - continue
-          continue;
-        } else if (regSeg.startsWith(":") && !curSeg.startsWith(":")) {
-          // Registered has parameter, current has literal - check if literal matches parameter's default
-          const paramName = regSeg.replace(/[?*]/g, ""); // Remove ? and * suffixes
-          const connection = connections.find(
-            (c) =>
-              `:${c.paramName}` === paramName ||
-              c.paramName === paramName.substring(1),
-          );
-
-          if (connection && connection.options.defaultValue === curSeg) {
-            // Found match! This literal segment corresponds to a parameter with matching default
-            // Store for validation but DON'T transform the pattern - keep the literal segment
-            validationMappings.push({
-              paramName: connection.paramName,
-              literalValue: curSeg,
-              defaultValue: connection.options.defaultValue,
-            });
-          } else {
-            // No match - patterns are not related
-            isRelated = false;
-            break;
-          }
-        } else if (regSeg === "*" && i === registeredSegments.length - 1) {
-          // Registered pattern ends with wildcard - this is compatible with additional segments in current pattern
-          break; // Stop comparing, wildcard matches remaining segments
-        } else {
-          // Different non-matching segments - patterns are not related
-          isRelated = false;
-          break;
-        }
-      }
-
-      // Store validation mappings but preserve the original pattern structure
-      if (isRelated && validationMappings.length > 0) {
-        for (const { paramName, defaultValue } of validationMappings) {
-          // Store the expected literal value for validation purposes
-          // This will be used in route_pattern.js to validate that the literal segment matches the expected default
-          literalSegmentDefaults.set(paramName, defaultValue);
-        }
-        break; // Found a match, stop looking
-      }
-    }
-  }
   // Make trailing slashes flexible - if pattern ends with /, make it match anything after
   // Exception: don't transform root route "/" to avoid matching everything
-  if (internalUrlPattern.endsWith("/") && internalUrlPattern !== "/") {
-    // Transform /path/ to /path/*
-    // This allows matching /path/, /path/anything, /path/anything/else
-    internalUrlPattern = `${internalUrlPattern.slice(0, -1)}/*`;
-  }
+  // TODO: Temporarily disabled to isolate route matching issues
+  // if (internalUrlPattern.endsWith("/") && internalUrlPattern !== "/") {
+  //   // Transform /path/ to /path/*
+  //   // This allows matching /path/, /path/anything, /path/anything/else
+  //   internalUrlPattern = `${internalUrlPattern.slice(0, -1)}/*`;
+  // }
   if (DEBUG) {
     console.debug(urlPattern, `->`, internalUrlPattern);
   }

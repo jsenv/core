@@ -12,11 +12,11 @@ const generateSignalId = () => {
 // Function to detect signals in route patterns and connect them
 export const detectSignals = (routePattern) => {
   const signalConnections = [];
+  let updatedPattern = routePattern;
 
-  // Look for signals in the new syntax: :paramName=__jsenv_signal_1__ or ?paramName=__jsenv_signal_1__
+  // First, look for signals in the explicit syntax: :paramName=__jsenv_signal_1__ or ?paramName=__jsenv_signal_1__
   const signalParamRegex = /([?:])(\w+)=(__jsenv_signal_\d+__)/g;
   let match;
-  let updatedPattern = routePattern;
 
   while ((match = signalParamRegex.exec(routePattern)) !== null) {
     const [fullMatch, prefix, paramName, signalId] = match;

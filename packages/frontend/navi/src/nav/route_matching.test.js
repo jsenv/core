@@ -38,39 +38,67 @@ await snapshotTests(import.meta.url, ({ test }) => {
     };
   });
 
-  test("literal segment preservation", () => {
+  test("route optimization with multiple routes", () => {
     // Clear routes to start fresh
     clearAllRoutes();
 
     // Test the pattern combinations that were problematic
-    const sectionSignal = stateSignal("section", { defaultValue: "settings" });
-    const tabSignal = stateSignal("tab", { defaultValue: "general" });
-    const analyticsTabSignal = stateSignal("tab", { defaultValue: "overview" });
+    const sectionSignal = stateSignal("settings");
+    const tabSignal = stateSignal("general");
+    const analyticsTabSignal = stateSignal("overview");
 
-    // Register routes in problematic order
+    // Register routes using explicit parameter syntax
     const routes = [
       registerRoute("/"),
-      registerRoute(`/admin/${sectionSignal}/`),
-      registerRoute(`/admin/settings/${tabSignal}`),
+      registerRoute(`/admin/:section=${sectionSignal}/`),
+      registerRoute(`/admin/settings/:tab=${tabSignal}`),
       registerRoute(`/admin/analytics/?tab=${analyticsTabSignal}`),
     ];
 
     // Check that original patterns are preserved (not transformed to parameters)
     const patterns = routes.map((route) => route.urlPattern);
 
-    clearAllRoutes();
-
-    return {
+    // Test various URL matching scenarios
+    const testResults = {
       preserved_patterns: patterns,
-      // Also test that the settings route still works correctly
-      settings_with_tab: run(
-        `/admin/settings/${tabSignal}`,
+
+      // Test basic parameter with default - should match "/admin"
+      admin_root_matches_section_default: run(
+        `/admin/:section=${sectionSignal}/`,
+        `/admin`,
+      ),
+      admin_root_with_slash: run(
+        `/admin/:section=${sectionSignal}/`,
+        `/admin/`,
+      ),
+      admin_with_users_section: run(
+        `/admin/:section=${sectionSignal}/`,
+        `/admin/users/`,
+      ),
+
+      // Test settings route with tab parameter
+      settings_with_general_tab: run(
+        `/admin/settings/:tab=${tabSignal}`,
+        `/admin/settings/general`,
+      ),
+      settings_with_security_tab: run(
+        `/admin/settings/:tab=${tabSignal}`,
         `/admin/settings/security`,
       ),
-      analytics_with_tab: run(
+
+      // Test analytics route with query parameter
+      analytics_with_overview_tab: run(
+        `/admin/analytics/?tab=${analyticsTabSignal}`,
+        `/admin/analytics`,
+      ),
+      analytics_with_performance_tab: run(
         `/admin/analytics/?tab=${analyticsTabSignal}`,
         `/admin/analytics?tab=performance`,
       ),
     };
+
+    clearAllRoutes();
+
+    return testResults;
   });
 });
