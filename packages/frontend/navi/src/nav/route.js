@@ -240,10 +240,9 @@ export const registerRoute = (urlPattern) => {
       );
     }
   }
-
-  // Make literal path segments optional if they match parameters with defaults in related routes
-  // This allows /admin/settings/:tab to match /admin when "settings" corresponds to :section with default
-  const literalSegmentDefaults = new Map(); // Track which literal segments correspond to parameter defaults
+  // Track literal segments that correspond to parameter defaults for validation
+  // This allows /admin/settings/:tab to validate that "settings" matches the :section default
+  const literalSegmentDefaults = new Map();
   // Compare current pattern against previously registered routes to find relationships
   for (const existingRoute of routeSet) {
     const existingPrivateProps = getRoutePrivateProperties(existingRoute);
@@ -263,7 +262,7 @@ export const registerRoute = (urlPattern) => {
     if (currentSegments.length >= registeredSegments.length - 1) {
       // Allow current to be shorter if registered ends with wildcard
       let isRelated = true;
-      const transformations = [];
+      const validationMappings = [];
 
       // Compare segments up to the shorter length, but handle wildcards specially
       const compareLength = Math.min(
@@ -289,10 +288,10 @@ export const registerRoute = (urlPattern) => {
 
           if (connection && connection.options.defaultValue === curSeg) {
             // Found match! This literal segment corresponds to a parameter with matching default
-            transformations.push({
-              index: i,
-              segment: curSeg,
+            // Store for validation but DON'T transform the pattern - keep the literal segment
+            validationMappings.push({
               paramName: connection.paramName,
+              literalValue: curSeg,
               defaultValue: connection.options.defaultValue,
             });
           } else {
@@ -310,32 +309,26 @@ export const registerRoute = (urlPattern) => {
         }
       }
 
-      // Apply transformations if we found valid relationships
-      if (isRelated && transformations.length > 0) {
-        // Transform to simple optional parameters and store validation info
-        // Work with filtered segments since that's what we used for comparison
-        let segments = internalUrlPattern.split("/").filter((s) => s !== "");
-
-        for (const { index, paramName, defaultValue } of transformations) {
-          // Replace literal segment with optional parameter
-          segments[index] = `:${paramName}?`;
-          // Store the expected default value for validation
+      // Store validation mappings but preserve the original pattern structure
+      if (isRelated && validationMappings.length > 0) {
+        for (const { paramName, defaultValue } of validationMappings) {
+          // Store the expected literal value for validation purposes
+          // This will be used in route_pattern.js to validate that the literal segment matches the expected default
           literalSegmentDefaults.set(paramName, defaultValue);
         }
-
-        // Reconstruct the pattern with leading slash
-        internalUrlPattern = `/${segments.join("/")}`;
         break; // Found a match, stop looking
       }
     }
   }
-
   // Make trailing slashes flexible - if pattern ends with /, make it match anything after
   // Exception: don't transform root route "/" to avoid matching everything
   if (internalUrlPattern.endsWith("/") && internalUrlPattern !== "/") {
     // Transform /path/ to /path/*
     // This allows matching /path/, /path/anything, /path/anything/else
     internalUrlPattern = `${internalUrlPattern.slice(0, -1)}/*`;
+  }
+  if (DEBUG) {
+    console.debug(urlPattern, `->`, internalUrlPattern);
   }
 
   const cleanupCallbackSet = new Set();

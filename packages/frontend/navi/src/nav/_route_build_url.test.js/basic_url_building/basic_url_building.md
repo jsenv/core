@@ -1,12 +1,12 @@
-# [basic url building](../../route_build_url.test.js#L20)
+# [basic url building](../../route_build_url.test.js#L16)
 
 ```js
 return {
   home_route: testBuildUrl("/"),
   simple_param: testBuildUrl("/users/:id", { id: "123" }),
-  multiple_params: testBuildUrl("/users/:id/posts/:postId", { 
-    id: "123", 
-    postId: "abc" 
+  multiple_params: testBuildUrl("/users/:id/posts/:postId", {
+    id: "123",
+    postId: "abc",
   }),
 };
 ```

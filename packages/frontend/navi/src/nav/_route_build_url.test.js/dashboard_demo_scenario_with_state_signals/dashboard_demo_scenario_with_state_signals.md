@@ -1,4 +1,4 @@
-# [dashboard demo scenario with state signals](../../route_build_url.test.js#L31)
+# [dashboard demo scenario with state signals](../../route_build_url.test.js#L27)
 
 ```js
 // Recreate the signals from dashboard_demo.jsx
@@ -18,30 +18,52 @@ return {
 
   // ADMIN_ROUTE: `/admin/:section=${sectionSignal}/`
   admin_route_default: testBuildUrl(`/admin/:section=${sectionSignal}/`),
-  admin_route_explicit_settings: testBuildUrl(`/admin/:section=${sectionSignal}/`, { 
-    section: "settings" 
-  }),
-  admin_route_explicit_analytics: testBuildUrl(`/admin/:section=${sectionSignal}/`, { 
-    section: "analytics" 
-  }),
+  admin_route_explicit_settings: testBuildUrl(
+    `/admin/:section=${sectionSignal}/`,
+    {
+      section: "settings",
+    },
+  ),
+  admin_route_explicit_analytics: testBuildUrl(
+    `/admin/:section=${sectionSignal}/`,
+    {
+      section: "analytics",
+    },
+  ),
 
   // ADMIN_SETTINGS_ROUTE: `/admin/settings/:tab=${settingsTabSignal}`
-  settings_route_default: testBuildUrl(`/admin/settings/:tab=${settingsTabSignal}`),
-  settings_route_general: testBuildUrl(`/admin/settings/:tab=${settingsTabSignal}`, { 
-    tab: "general" 
-  }),
-  settings_route_advanced: testBuildUrl(`/admin/settings/:tab=${settingsTabSignal}`, { 
-    tab: "advanced" 
-  }),
+  settings_route_default: testBuildUrl(
+    `/admin/settings/:tab=${settingsTabSignal}`,
+  ),
+  settings_route_general: testBuildUrl(
+    `/admin/settings/:tab=${settingsTabSignal}`,
+    {
+      tab: "general",
+    },
+  ),
+  settings_route_advanced: testBuildUrl(
+    `/admin/settings/:tab=${settingsTabSignal}`,
+    {
+      tab: "advanced",
+    },
+  ),
 
   // ADMIN_ANALYTICS_ROUTE: `/admin/analytics/?tab=${analyticsTabSignal}`
-  analytics_route_default: testBuildUrl(`/admin/analytics/?tab=${analyticsTabSignal}`),
-  analytics_route_overview: testBuildUrl(`/admin/analytics/?tab=${analyticsTabSignal}`, { 
-    tab: "overview" 
-  }),
-  analytics_route_details: testBuildUrl(`/admin/analytics/?tab=${analyticsTabSignal}`, { 
-    tab: "details" 
-  }),
+  analytics_route_default: testBuildUrl(
+    `/admin/analytics/?tab=${analyticsTabSignal}`,
+  ),
+  analytics_route_overview: testBuildUrl(
+    `/admin/analytics/?tab=${analyticsTabSignal}`,
+    {
+      tab: "overview",
+    },
+  ),
+  analytics_route_details: testBuildUrl(
+    `/admin/analytics/?tab=${analyticsTabSignal}`,
+    {
+      tab: "details",
+    },
+  ),
 };
 ```
 

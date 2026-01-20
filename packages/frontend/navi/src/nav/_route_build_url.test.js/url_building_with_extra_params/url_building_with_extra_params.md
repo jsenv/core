@@ -1,19 +1,19 @@
-# [url building with extra params](../../route_build_url.test.js#L76)
+# [url building with extra params](../../route_build_url.test.js#L94)
 
 ```js
 const tabSignal = stateSignal("general");
 
 return {
   // Extra params should become search parameters
-  with_extra_params: testBuildUrl(`/admin/:section=${tabSignal}`, { 
+  with_extra_params: testBuildUrl(`/admin/:section=${tabSignal}`, {
     section: "settings",
     filter: "active",
-    page: "2"
+    page: "2",
   }),
   // Only extra params
-  only_search_params: testBuildUrl("/admin", { 
-    tab: "users", 
-    sort: "name" 
+  only_search_params: testBuildUrl("/admin", {
+    tab: "users",
+    sort: "name",
   }),
 };
 ```
