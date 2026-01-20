@@ -8,52 +8,33 @@ import {
 } from "./route.js";
 
 const baseUrl = "http://localhost:3000";
+setBaseUrl(baseUrl);
 
-const testRoute = (route, url) => {
-  const isVisited = () => false;
+const run = (pattern, relativeUrl) => {
+  const route = registerRoute(pattern);
+  updateRoutes(`${baseUrl}${relativeUrl}`);
+  clearAllRoutes();
 
-  updateRoutes(url, {
-    navigationType: "push",
-    isVisited,
-  });
-
-  return {
-    matching: route.matching,
-    params: route.params,
-    urlPattern: route.urlPattern,
-  };
+  return route.matching ? route.params : null;
 };
 
 await snapshotTests(import.meta.url, ({ test }) => {
-  // Set up base URL for all tests
-  setBaseUrl(baseUrl);
-
-  test("route without state signal", () => {
-    const route = registerRoute("/users/:id");
-
-    const result = {
-      matching_url: testRoute(route, `${baseUrl}/users/123`),
-      non_matching_url: testRoute(route, `${baseUrl}/admin`),
+  test("basic", () => {
+    return {
+      matching_url: run("/users/:id", `/users/123`),
+      non_matching_url: run("/users/:id", `/admin`),
     };
-
-    clearAllRoutes();
-
-    return result;
   });
 
-  test("route with state signal (pattern optimization)", () => {
-    // Create route with default parameter
-    const sectionSignal = stateSignal("settings", { defaultValue: "settings" });
-    const route = registerRoute(`/admin/:section=${sectionSignal}`);
-
-    const result = {
-      matching_with_param: testRoute(route, `${baseUrl}/admin/users`),
-      matching_with_default: testRoute(route, `${baseUrl}/admin`),
-      non_matching_url: testRoute(route, `${baseUrl}/different`),
+  test("state signal", () => {
+    const sectionSignal = stateSignal("settings");
+    return {
+      matching_with_param: run(
+        `/admin/:section=${sectionSignal}`,
+        `/admin/users`,
+      ),
+      matching_with_default: run(`/admin/:section=${sectionSignal}`, `/admin`),
+      non_matching_url: run(`/admin/:section=${sectionSignal}`, `/different`),
     };
-
-    clearAllRoutes();
-
-    return result;
   });
 });

@@ -47,10 +47,10 @@ const actionAbortControllerWeakMap = new WeakMap();
 export const updateRoutes = (
   url,
   {
-    navigationType,
-    isVisited,
+    navigationType = "push",
+    isVisited = () => false,
     // state
-  },
+  } = {},
 ) => {
   const routeMatchInfoSet = new Set();
   for (const route of routeSet) {
@@ -731,7 +731,6 @@ export const clearAllRoutes = () => {
   }
   routeSet.clear();
   routePrivatePropertiesMap.clear();
-  routePreviousStateMap.clear();
 };
 
 export const useRouteStatus = (route) => {

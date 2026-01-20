@@ -1,8 +1,8 @@
 # [route.test.js](../route.test.js)
 
 
-- [route without state signal](route_without_state_signal/route_without_state_signal.md)
-- [route with state signal (pattern optimization)](route_with_state_signal_(pattern_optimization)/route_with_state_signal_(pattern_optimization).md)
+- [basic](basic/basic.md)
+- [state signal](state_signal/state_signal.md)
 
 ---
 
