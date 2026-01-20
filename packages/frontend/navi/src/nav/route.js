@@ -233,11 +233,15 @@ const createRoute = (urlPatternInput) => {
     if (options.defaultValue !== undefined) {
       // Replace :param with :param? to make the parameter itself optional
       const paramRegex = new RegExp(`:${paramName}(?!\\?)\\b`, "g");
-      urlPatternInput = urlPatternInput.replace(
-        paramRegex,
-        `:${paramName}?`,
-      );
+      urlPatternInput = urlPatternInput.replace(paramRegex, `:${paramName}?`);
     }
+  }
+
+  // Make trailing slashes flexible - if pattern ends with /, make it match anything after
+  if (urlPatternInput.endsWith("/")) {
+    // Transform /path/ to /path/*
+    // This allows matching /path/, /path/anything, /path/anything/else
+    urlPatternInput = `${urlPatternInput.slice(0, -1)}/*`;
   }
 
   const cleanupCallbackSet = new Set();
