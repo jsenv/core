@@ -224,6 +224,7 @@ export const getRoutePrivateProperties = (route) => {
 };
 
 const createRoute = (urlPatternInput) => {
+  const originalUrlPatternInput = urlPatternInput;
   // Detect and connect signals in the route pattern
   const { pattern, connections } = detectSignals(urlPatternInput);
   urlPatternInput = pattern;
@@ -234,6 +235,94 @@ const createRoute = (urlPatternInput) => {
       // Replace :param with :param? to make the parameter itself optional
       const paramRegex = new RegExp(`:${paramName}(?!\\?)\\b`, "g");
       urlPatternInput = urlPatternInput.replace(paramRegex, `:${paramName}?`);
+    }
+  }
+
+  // Make literal path segments optional if they match parameters with defaults in related routes
+  // This allows /admin/settings/:tab to match /admin when "settings" corresponds to :section with default
+  const literalSegmentDefaults = new Map(); // Track which literal segments correspond to parameter defaults
+  // Compare current pattern against previously registered routes to find relationships
+  for (const existingRoute of routeSet) {
+    const existingPrivateProps = getRoutePrivateProperties(existingRoute);
+    if (!existingPrivateProps) continue;
+    const { originalPattern, connections } = existingPrivateProps;
+    const registeredPattern = originalPattern;
+
+    // Check if current pattern could be a specialized version of a registered pattern
+    const currentSegments = urlPatternInput.split("/");
+    const registeredSegments = registeredPattern.split("/");
+
+    // Look for patterns where literal segments in current pattern match parameter defaults in registered pattern
+    if (currentSegments.length >= registeredSegments.length - 1) {
+      // Allow current to be shorter if registered ends with wildcard
+      let isRelated = true;
+      const transformations = [];
+
+      // Compare segments up to the shorter length, but handle wildcards specially
+      const compareLength = Math.min(
+        currentSegments.length,
+        registeredSegments.length,
+      );
+
+      for (let i = 0; i < compareLength; i++) {
+        const regSeg = registeredSegments[i];
+        const curSeg = currentSegments[i];
+
+        if (regSeg === curSeg) {
+          // Identical segments - continue
+          continue;
+        } else if (regSeg.startsWith(":") && !curSeg.startsWith(":")) {
+          // Registered has parameter, current has literal - check if literal matches parameter's default
+          const paramName = regSeg.replace(/[?*]/g, ""); // Remove ? and * suffixes
+          const connection = connections.find(
+            (c) =>
+              `:${c.paramName}` === paramName ||
+              c.paramName === paramName.substring(1),
+          );
+
+          if (connection && connection.options.defaultValue === curSeg) {
+            // Found match! This literal segment corresponds to a parameter with matching default
+            transformations.push({
+              index: i,
+              segment: curSeg,
+              paramName: connection.paramName,
+              defaultValue: connection.options.defaultValue,
+            });
+          } else {
+            // No match - patterns are not related
+            isRelated = false;
+            break;
+          }
+        } else if (regSeg === "*" && i === registeredSegments.length - 1) {
+          // Registered pattern ends with wildcard - this is compatible with additional segments in current pattern
+          break; // Stop comparing, wildcard matches remaining segments
+        } else {
+          // Different non-matching segments - patterns are not related
+          isRelated = false;
+          break;
+        }
+      }
+
+      // Apply transformations if we found valid relationships
+      if (isRelated && transformations.length > 0) {
+        // Transform to simple optional parameters and store validation info
+        let segments = urlPatternInput.split("/");
+
+        for (const {
+          index,
+
+          paramName,
+          defaultValue,
+        } of transformations) {
+          // Replace literal segment with optional parameter
+          segments[index] = `:${paramName}?`;
+          // Store the expected default value for validation
+          literalSegmentDefaults.set(paramName, defaultValue);
+        }
+
+        urlPatternInput = segments.join("/");
+        break; // Found a match, stop looking
+      }
     }
   }
 
@@ -254,7 +343,17 @@ const createRoute = (urlPatternInput) => {
   };
 
   const [publishStatus, subscribeStatus] = createPubSub();
-  const routePattern = createRoutePattern(urlPatternInput, baseFileUrl);
+  const routePattern = createRoutePattern(
+    urlPatternInput,
+    baseFileUrl,
+    literalSegmentDefaults,
+  );
+
+  // Store pattern info in route private properties for future pattern matching
+  const originalPatternBeforeTransforms = detectSignals(
+    originalUrlPatternInput,
+  ).pattern;
+
   const route = {
     urlPattern: urlPatternInput,
     isRoute: true,
@@ -276,6 +375,8 @@ const createRoute = (urlPatternInput) => {
 
   const routePrivateProperties = {
     routePattern: null,
+    originalPattern: originalPatternBeforeTransforms,
+    connections,
     matchingSignal: null,
     paramsSignal: null,
     rawParamsSignal: null, // params from URL without defaults

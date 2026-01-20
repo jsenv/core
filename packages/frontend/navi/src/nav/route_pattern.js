@@ -1,4 +1,8 @@
-export const createRoutePattern = (urlPatternInput, baseUrl) => {
+export const createRoutePattern = (
+  urlPatternInput,
+  baseUrl,
+  literalSegmentDefaults = new Map(),
+) => {
   // Remove leading slash from urlPattern to make it relative to baseUrl
   let normalizedUrlPattern = urlPatternInput.startsWith("/")
     ? urlPatternInput.slice(1)
@@ -50,10 +54,36 @@ export const createRoutePattern = (urlPatternInput, baseUrl) => {
       }
     }
 
+    // Validate extracted parameters against expected defaults for literal segments
+    const validateParams = (params) => {
+      // If no literal segment defaults, all matches are valid
+      if (literalSegmentDefaults.size === 0) {
+        return true;
+      }
+
+      // Check each parameter that corresponds to a literal segment default
+      for (const [paramName, expectedDefault] of literalSegmentDefaults) {
+        const paramValue = params[paramName];
+
+        // Parameter is valid if:
+        // 1. It's undefined (using default)
+        // 2. It equals the expected default value
+        if (paramValue !== undefined && paramValue !== expectedDefault) {
+          return false; // Parameter value doesn't match expected default
+        }
+      }
+
+      return true; // All parameters are valid
+    };
+
     // Check if the URL matches the route pattern
     const match = urlPattern.exec(url);
     if (match) {
-      return extractParams(match, url);
+      const params = extractParams(match, url);
+      if (params && validateParams(params)) {
+        return params;
+      }
+      return null;
     }
 
     // If no match, try with normalized URLs (trailing slash handling)
@@ -67,7 +97,10 @@ export const createRoutePattern = (urlPatternInput, baseUrl) => {
       const normalizedUrl = urlObj.href;
       const matchWithoutTrailingSlash = urlPattern.exec(normalizedUrl);
       if (matchWithoutTrailingSlash) {
-        return extractParams(matchWithoutTrailingSlash, url);
+        const params = extractParams(matchWithoutTrailingSlash, url);
+        if (params && validateParams(params)) {
+          return params;
+        }
       }
     }
     // Try adding trailing slash to pathname
@@ -77,7 +110,10 @@ export const createRoutePattern = (urlPatternInput, baseUrl) => {
       const normalizedUrl = urlObj.href;
       const matchWithTrailingSlash = urlPattern.exec(normalizedUrl);
       if (matchWithTrailingSlash) {
-        return extractParams(matchWithTrailingSlash, url);
+        const params = extractParams(matchWithTrailingSlash, url);
+        if (params && validateParams(params)) {
+          return params;
+        }
       }
     }
     return null;
