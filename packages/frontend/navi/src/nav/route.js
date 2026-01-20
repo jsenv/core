@@ -249,8 +249,10 @@ const createRoute = (urlPatternInput) => {
     const registeredPattern = originalPattern;
 
     // Check if current pattern could be a specialized version of a registered pattern
-    const currentSegments = urlPatternInput.split("/");
-    const registeredSegments = registeredPattern.split("/");
+    const currentSegments = urlPatternInput.split("/").filter((s) => s !== "");
+    const registeredSegments = registeredPattern
+      .split("/")
+      .filter((s) => s !== "");
 
     // Look for patterns where literal segments in current pattern match parameter defaults in registered pattern
     if (currentSegments.length >= registeredSegments.length - 1) {
@@ -306,7 +308,8 @@ const createRoute = (urlPatternInput) => {
       // Apply transformations if we found valid relationships
       if (isRelated && transformations.length > 0) {
         // Transform to simple optional parameters and store validation info
-        let segments = urlPatternInput.split("/");
+        // Work with filtered segments since that's what we used for comparison
+        let segments = urlPatternInput.split("/").filter((s) => s !== "");
 
         for (const {
           index,
@@ -320,7 +323,8 @@ const createRoute = (urlPatternInput) => {
           literalSegmentDefaults.set(paramName, defaultValue);
         }
 
-        urlPatternInput = segments.join("/");
+        // Reconstruct the pattern with leading slash
+        urlPatternInput = `/${segments.join("/")}`;
         break; // Found a match, stop looking
       }
     }
