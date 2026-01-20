@@ -29,11 +29,11 @@ await snapshotTests(import.meta.url, ({ test }) => {
   test("state signal", () => {
     const sectionSignal = stateSignal("settings");
     return {
+      matching_with_default: run(`/admin/:section=${sectionSignal}`, `/admin`),
       matching_with_param: run(
         `/admin/:section=${sectionSignal}`,
         `/admin/users`,
       ),
-      matching_with_default: run(`/admin/:section=${sectionSignal}`, `/admin`),
       non_matching_url: run(`/admin/:section=${sectionSignal}`, `/different`),
     };
   });
