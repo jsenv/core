@@ -238,7 +238,8 @@ const createRoute = (urlPatternInput) => {
   }
 
   // Make trailing slashes flexible - if pattern ends with /, make it match anything after
-  if (urlPatternInput.endsWith("/")) {
+  // Exception: don't transform root route "/" to avoid matching everything
+  if (urlPatternInput.endsWith("/") && urlPatternInput !== "/") {
     // Transform /path/ to /path/*
     // This allows matching /path/, /path/anything, /path/anything/else
     urlPatternInput = `${urlPatternInput.slice(0, -1)}/*`;
