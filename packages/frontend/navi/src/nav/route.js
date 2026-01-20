@@ -223,7 +223,7 @@ export const getRoutePrivateProperties = (route) => {
   return routePrivatePropertiesMap.get(route);
 };
 
-export const createRoute = (urlPatternInput) => {
+export const registerRoute = (urlPatternInput) => {
   const originalUrlPatternInput = urlPatternInput;
   // Detect and connect signals in the route pattern
   const { pattern, connections } = detectSignals(urlPatternInput);
@@ -709,6 +709,31 @@ export const createRoute = (urlPatternInput) => {
   return route;
 };
 
+export const unregisterRoute = (route) => {
+  if (!route || !route.isRoute) {
+    return false;
+  }
+
+  const wasRegistered = routeSet.has(route);
+  if (wasRegistered) {
+    route.cleanup();
+    routeSet.delete(route);
+    routePrivatePropertiesMap.delete(route);
+    routePreviousStateMap.delete(route);
+  }
+
+  return wasRegistered;
+};
+
+export const clearAllRoutes = () => {
+  for (const route of routeSet) {
+    route.cleanup();
+  }
+  routeSet.clear();
+  routePrivatePropertiesMap.clear();
+  routePreviousStateMap.clear();
+};
+
 export const useRouteStatus = (route) => {
   if (import.meta.dev && (!route || !route.isRoute)) {
     throw new TypeError(
@@ -768,15 +793,12 @@ export const setOnRouteDefined = (v) => {
 
 export const setupRoutes = (routeDefinition) => {
   // Clean up existing routes
-  for (const route of routeSet) {
-    route.cleanup();
-  }
-  routeSet.clear();
+  clearAllRoutes();
 
   const routes = {};
   for (const key of Object.keys(routeDefinition)) {
     const value = routeDefinition[key];
-    const route = createRoute(value);
+    const route = registerRoute(value);
 
     routes[key] = route;
   }

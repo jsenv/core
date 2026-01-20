@@ -9,7 +9,7 @@
   <body>
     <script type="module">
       import { assert } from "@jsenv/assert";
-      import { createRoute } from "./route.js";
+      import { registerRoute } from "./route.js";
 
       const updateDocumentUrl = () => {};
 
@@ -21,7 +21,7 @@
       };
 
       test("buildUrl with named parameters", () => {
-        const route = createRoute("/user/:id/profile/:section");
+        const route = registerRoute("/user/:id/profile/:section");
         const url = route.buildUrl({ id: "123", section: "settings" });
         const expect = `${window.location.origin}/user/123/profile/settings`;
 
@@ -32,7 +32,7 @@
       });
 
       test("buildUrl with curly brace parameters", () => {
-        const route = createRoute("/api/{version}/user/{id}");
+        const route = registerRoute("/api/{version}/user/{id}");
         const url = route.buildUrl({ version: "v1", id: "456" });
         const expected = `${window.location.origin}/api/v1/user/456`;
 
@@ -43,7 +43,7 @@
       });
 
       test("buildUrl with wildcards and numbered parameters", () => {
-        const route = createRoute("/*/user/:name/*");
+        const route = registerRoute("/*/user/:name/*");
         const url = route.buildUrl({ 0: "admin", name: "dam", 1: "profile" });
         const expected = `${window.location.origin}/admin/user/dam/profile`;
 
@@ -54,7 +54,7 @@
       });
 
       test("buildUrl with only wildcards", () => {
-        const route = createRoute("/*/*/data");
+        const route = registerRoute("/*/*/data");
         const url = route.buildUrl({ 0: "api", 1: "v2" });
         const expected = `${window.location.origin}/api/v2/data`;
 
@@ -65,7 +65,7 @@
       });
 
       test("buildUrl with missing parameters leaves wildcards", () => {
-        const route = createRoute("/*/user/:name/*");
+        const route = registerRoute("/*/user/:name/*");
         const url = route.buildUrl({ name: "dam" });
         const expected = `${window.location.origin}/*/user/dam/*`;
 
@@ -76,7 +76,7 @@
       });
 
       test("buildUrl with URLPattern object", () => {
-        const route = createRoute("/blog/:slug/comments");
+        const route = registerRoute("/blog/:slug/comments");
         const url = route.buildUrl({ slug: "hello-world" });
         const expected = `${window.location.origin}/blog/hello-world/comments`;
 
@@ -87,7 +87,7 @@
       });
 
       test("buildUrl with special characters in parameters", () => {
-        const route = createRoute("/search/:query");
+        const route = registerRoute("/search/:query");
         const url = route.buildUrl({ query: "hello world & more" });
         const expected = `${window.location.origin}/search/hello%20world%20%26%20more`;
 
@@ -98,7 +98,7 @@
       });
 
       test("buildUrl with no parameters", () => {
-        const route = createRoute("/static/page");
+        const route = registerRoute("/static/page");
         const url = route.buildUrl();
         const expected = `${window.location.origin}/static/page`;
 
@@ -109,7 +109,7 @@
       });
 
       test("buildUrl with empty parameters object", () => {
-        const route = createRoute("/home");
+        const route = registerRoute("/home");
         const url = route.buildUrl({});
         const expected = `${window.location.origin}/home`;
 
@@ -120,7 +120,7 @@
       });
 
       test("buildUrl with mixed parameter types", () => {
-        const route = createRoute("/*/api/:version/user/{id}/*");
+        const route = registerRoute("/*/api/:version/user/{id}/*");
         const url = route.buildUrl({
           0: "public",
           version: "v1",
@@ -136,7 +136,7 @@
       });
 
       test("buildUrl with param in search", () => {
-        const route = createRoute("/before/:id/after?name=:name");
+        const route = registerRoute("/before/:id/after?name=:name");
         const url = route.buildUrl({
           id: "123",
           name: "dam",
@@ -151,7 +151,7 @@
 
       // Wildcard parameter extraction tests
       test("paramsSignal extracts single wildcard parameter", () => {
-        const route = createRoute("/*/data");
+        const route = registerRoute("/*/data");
         updateDocumentUrl(new URL("/users/data", window.location.origin));
         const params = route.paramsSignal.value;
 
@@ -162,7 +162,7 @@
       });
 
       test("paramsSignal extracts multiple wildcard parameters", () => {
-        const route = createRoute("/*/*/data");
+        const route = registerRoute("/*/*/data");
         updateDocumentUrl(new URL("/api/v1/data", window.location.origin));
         const params = route.paramsSignal.value;
 
@@ -173,7 +173,7 @@
       });
 
       test("paramsSignal mixes wildcards and named parameters", () => {
-        const route = createRoute("/*/user/:id/*");
+        const route = registerRoute("/*/user/:id/*");
         updateDocumentUrl(
           new URL("/admin/user/123/edit", window.location.origin),
         );
@@ -186,7 +186,7 @@
       });
 
       test("paramsSignal handles wildcards in search params", () => {
-        const route = createRoute("/data?type=*&format=*");
+        const route = registerRoute("/data?type=*&format=*");
         updateDocumentUrl(
           new URL("/data?type=json&format=csv", window.location.origin),
         );
@@ -199,7 +199,7 @@
       });
 
       test("paramsSignal ignores empty wildcard values", () => {
-        const route = createRoute("/*/data/*");
+        const route = registerRoute("/*/data/*");
         updateDocumentUrl(new URL("//data/", window.location.origin));
         const params = route.paramsSignal.value;
 
@@ -211,7 +211,7 @@
       });
 
       test("paramsSignal handles URL-encoded wildcard values", () => {
-        const route = createRoute("/search/*");
+        const route = registerRoute("/search/*");
         updateDocumentUrl(
           new URL("/search/hello%20world", window.location.origin),
         );
