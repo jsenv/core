@@ -101,4 +101,124 @@ await snapshotTests(import.meta.url, ({ test }) => {
       ),
     };
   });
+
+  test("literal segment defaults validation", () => {
+    const runWithDefaults = (pattern, urlOrRelativeUrl, literalDefaults) => {
+      const { applyOn } = createRoutePattern(pattern, baseUrl, literalDefaults);
+      const url = new URL(urlOrRelativeUrl, baseUrl).href;
+      return applyOn(url);
+    };
+
+    // Create a Map for section parameter with default "settings"
+    const sectionDefaults = new Map([["section", "settings"]]);
+
+    return {
+      // No defaults - all matches should work (baseline)
+      no_defaults_match: runWithDefaults(
+        "/admin/:section?/:tab?",
+        "/admin/analytics",
+        new Map(),
+      ),
+
+      // With defaults - parameter undefined (using default) should match
+      using_default_value: runWithDefaults(
+        "/admin/:section?/:tab?",
+        "/admin",
+        sectionDefaults,
+      ),
+
+      // With defaults - parameter matches expected default should match
+      matching_default_value: runWithDefaults(
+        "/admin/:section?/:tab?",
+        "/admin/settings",
+        sectionDefaults,
+      ),
+
+      // With defaults - parameter doesn't match expected default should not match
+      non_matching_default_value: runWithDefaults(
+        "/admin/:section?/:tab?",
+        "/admin/analytics",
+        sectionDefaults,
+      ),
+
+      // Complex case with multiple segments and defaults
+      multiple_segments_valid: runWithDefaults(
+        "/admin/:section?/:tab?",
+        "/admin/settings/general",
+        sectionDefaults,
+      ),
+
+      // Multiple defaults
+      multiple_defaults_valid: runWithDefaults(
+        "/admin/:section?/:tab?",
+        "/admin",
+        new Map([
+          ["section", "settings"],
+          ["tab", "overview"],
+        ]),
+      ),
+
+      // Multiple defaults with one matching, one not
+      multiple_defaults_partial_match: runWithDefaults(
+        "/admin/:section?/:tab?",
+        "/admin/settings/invalid",
+        new Map([
+          ["section", "settings"],
+          ["tab", "overview"],
+        ]),
+      ),
+    };
+  });
+
+  test("literal segment defaults edge cases", () => {
+    const runWithDefaults = (pattern, urlOrRelativeUrl, literalDefaults) => {
+      const { applyOn } = createRoutePattern(pattern, baseUrl, literalDefaults);
+      const url = new URL(urlOrRelativeUrl, baseUrl).href;
+      return applyOn(url);
+    };
+
+    return {
+      // Empty defaults map should allow all matches
+      empty_defaults_map: runWithDefaults(
+        "/admin/:section",
+        "/admin/anything",
+        new Map(),
+      ),
+
+      // Parameter not in defaults should be allowed
+      unrelated_parameter: runWithDefaults(
+        "/users/:id/:action?",
+        "/users/123/edit",
+        new Map([["section", "settings"]]), // Different parameter
+      ),
+
+      // Multiple parameters, only some with defaults
+      mixed_parameter_defaults: runWithDefaults(
+        "/app/:section/:subsection?/:id?",
+        "/app/settings/users/123",
+        new Map([["section", "settings"]]), // Only section has default
+      ),
+
+      // Default value is empty string
+      empty_string_default: runWithDefaults(
+        "/search/:query?",
+        "/search/",
+        new Map([["query", ""]]),
+      ),
+
+      // Numeric default values
+      numeric_default_match: runWithDefaults(
+        "/page/:num?",
+        "/page/1",
+        new Map([["num", "1"]]),
+      ),
+
+      // Numeric default values - non-match
+      numeric_default_non_match: runWithDefaults(
+        "/page/:num?",
+        "/page/2",
+        new Map([["num", "1"]]),
+      ),
+    };
+  });
 });

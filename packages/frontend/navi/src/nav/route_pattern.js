@@ -167,6 +167,14 @@ export const createRoutePattern = (
         wildcardOffset += localWildcardCount;
       }
     }
+
+    // Apply default values for undefined parameters from literalSegmentDefaults
+    for (const [paramName, defaultValue] of literalSegmentDefaults) {
+      if (params[paramName] === undefined) {
+        params[paramName] = defaultValue;
+      }
+    }
+
     return params;
   };
 

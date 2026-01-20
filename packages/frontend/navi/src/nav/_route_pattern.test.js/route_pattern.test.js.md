@@ -9,6 +9,8 @@
 - [root path handling](root_path_handling/root_path_handling.md)
 - [complex patterns with trailing slash](complex_patterns_with_trailing_slash/complex_patterns_with_trailing_slash.md)
 - [search parameters in patterns](search_parameters_in_patterns/search_parameters_in_patterns.md)
+- [literal segment defaults validation](literal_segment_defaults_validation/literal_segment_defaults_validation.md)
+- [literal segment defaults edge cases](literal_segment_defaults_edge_cases/literal_segment_defaults_edge_cases.md)
 
 ---
 

@@ -326,6 +326,13 @@ const createRoute = (urlPatternInput) => {
     }
   }
 
+  // Also include defaults from the current route's own parameters
+  for (const { paramName, options = {} } of connections) {
+    if (options.defaultValue !== undefined) {
+      literalSegmentDefaults.set(paramName, options.defaultValue);
+    }
+  }
+
   // Make trailing slashes flexible - if pattern ends with /, make it match anything after
   // Exception: don't transform root route "/" to avoid matching everything
   if (urlPatternInput.endsWith("/") && urlPatternInput !== "/") {
