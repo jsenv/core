@@ -430,10 +430,13 @@ const createRoute = (urlPatternInput) => {
       if (!paramConfig) {
         continue;
       }
-      const { getFallbackValue } = paramConfig;
+      const { getFallbackValue, defaultValue } = paramConfig;
       if (getFallbackValue) {
         const fallbackValue = getFallbackValue();
         if (fallbackValue !== undefined) {
+          if (cleanupDefaults && fallbackValue === defaultValue) {
+            continue;
+          }
           mergedParams[paramName] = fallbackValue;
           continue;
         }
@@ -441,7 +444,6 @@ const createRoute = (urlPatternInput) => {
       if (cleanupDefaults) {
         continue;
       }
-      const { defaultValue } = paramConfig;
       if (defaultValue !== undefined) {
         mergedParams[paramName] = defaultValue;
         continue;
