@@ -1,6 +1,5 @@
 /**
  *
- *
  */
 
 import { createPubSub } from "@jsenv/dom";
@@ -11,24 +10,24 @@ import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
 import { createRoutePattern } from "./route_pattern.js";
 import { prepareRouteRelativeUrl, resolveRouteUrl } from "./route_url.js";
 
+const DEBUG = false;
 let baseFileUrl;
 let baseUrl;
-if (typeof window === "undefined") {
-  baseFileUrl = "http://localhost/";
-  baseUrl = new URL(".", baseFileUrl).href;
-} else {
-  baseFileUrl = import.meta.dev
-    ? new URL(window.HTML_ROOT_PATHNAME, window.location).href
-    : window.location.origin;
-  baseUrl = new URL(".", baseFileUrl).href;
-}
-
 export const setBaseUrl = (value) => {
-  baseFileUrl = new URL(value, window.location).href;
+  baseFileUrl = new URL(
+    value,
+    typeof window === "undefined" ? "http://localhost" : window.location,
+  ).href;
   baseUrl = new URL(".", baseFileUrl).href;
 };
+setBaseUrl(
+  typeof window === "undefined"
+    ? "/"
+    : import.meta.dev
+      ? new URL(window.HTML_ROOT_PATHNAME, window.location).href
+      : window.location.origin,
+);
 
-const DEBUG = false;
 // Controls what happens to actions when their route stops matching:
 // 'abort' - Cancel the action immediately when route stops matching
 // 'keep-loading' - Allow action to continue running after route stops matching
@@ -44,6 +43,7 @@ const routeSet = new Set();
 const routePreviousStateMap = new WeakMap();
 // Store abort controllers per action to control their lifecycle based on route state
 const actionAbortControllerWeakMap = new WeakMap();
+
 export const updateRoutes = (
   url,
   {
@@ -223,7 +223,7 @@ export const getRoutePrivateProperties = (route) => {
   return routePrivatePropertiesMap.get(route);
 };
 
-const createRoute = (urlPatternInput) => {
+export const createRoute = (urlPatternInput) => {
   const originalUrlPatternInput = urlPatternInput;
   // Detect and connect signals in the route pattern
   const { pattern, connections } = detectSignals(urlPatternInput);
@@ -311,12 +311,7 @@ const createRoute = (urlPatternInput) => {
         // Work with filtered segments since that's what we used for comparison
         let segments = urlPatternInput.split("/").filter((s) => s !== "");
 
-        for (const {
-          index,
-
-          paramName,
-          defaultValue,
-        } of transformations) {
+        for (const { index, paramName, defaultValue } of transformations) {
           // Replace literal segment with optional parameter
           segments[index] = `:${paramName}?`;
           // Store the expected default value for validation
@@ -481,6 +476,7 @@ const createRoute = (urlPatternInput) => {
       });
     }
   }
+
   const paramsSignal = computed(() => {
     const rawParams = rawParamsSignal.value;
     if (!rawParams && paramConfigMap.size === 0) {
@@ -667,19 +663,6 @@ const createRoute = (urlPatternInput) => {
   cleanupCallbackSet.add(disposeUrlEffect);
 
   const bindAction = (action) => {
-    /*
-     *
-     * here I need to check the store for that action (if any)
-     * and listen store changes to do this:
-     *
-     * When we detect changes we want to update the route params
-     * so we'll need to use navTo(buildUrl(params), { replace: true })
-     *
-     * reinserted is useful because the item id might have changed
-     * but not the mutable key
-     *
-     */
-
     const { store } = action.meta;
     if (store) {
       const { mutableIdKeys } = store;
@@ -706,31 +689,6 @@ const createRoute = (urlPatternInput) => {
       }
     }
 
-    /*
-    store.registerPropertyLifecycle(activeItemSignal, key, {
-    changed: (value) => {
-      route.replaceParams({
-        [key]: value,
-      });
-    },
-    dropped: () => {
-      route.reload();
-    },
-    reinserted: () => {
-      // this will reload all routes which works but
-      // - most of the time only "route" is impacted, any other route could stay as is
-      // - we already have the data, reloading the route will refetch the backend which is unnecessary
-      // we could just remove routing error (which is cause by 404 likely)
-      // to actually let the data be displayed
-      // because they are available, but in reality the route has no data
-      // because the fetch failed
-      // so conceptually reloading is fine,
-      // the only thing that bothers me a little is that it reloads all routes
-      route.reload();
-    },
-  });
-    */
-
     const actionBoundToThisRoute = action.bindParams(paramsSignal);
     route.action = actionBoundToThisRoute;
     return actionBoundToThisRoute;
@@ -750,6 +708,7 @@ const createRoute = (urlPatternInput) => {
 
   return route;
 };
+
 export const useRouteStatus = (route) => {
   if (import.meta.dev && (!route || !route.isRoute)) {
     throw new TypeError(
@@ -760,7 +719,6 @@ export const useRouteStatus = (route) => {
   if (!routePrivateProperties) {
     if (import.meta.dev) {
       let errorMessage = `Cannot find route private properties for ${route}.`;
-
       errorMessage += `\nThis might be caused by hot reloading - try refreshing the page.`;
       throw new Error(errorMessage);
     }
@@ -787,7 +745,6 @@ let browserIntegration;
 export const setBrowserIntegration = (integration) => {
   browserIntegration = integration;
 };
-
 let onRouteDefined = () => {};
 export const setOnRouteDefined = (v) => {
   onRouteDefined = v;
@@ -824,14 +781,7 @@ export const setupRoutes = (routeDefinition) => {
     routes[key] = route;
   }
 
-  setTimeout(() => {
-    // give a chance to call addUrlParam
-    // TODO: better API to avoid relying on this ugly hack
-    onRouteDefined();
-  });
+  onRouteDefined();
 
   return routes;
 };
-
-// unit test exports
-export { createRoute };
