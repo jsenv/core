@@ -223,18 +223,21 @@ export const getRoutePrivateProperties = (route) => {
   return routePrivatePropertiesMap.get(route);
 };
 
-export const registerRoute = (urlPatternInput) => {
-  const originalUrlPatternInput = urlPatternInput;
+export const registerRoute = (urlPattern) => {
+  const originalUrlPatternInput = urlPattern;
   // Detect and connect signals in the route pattern
-  const { pattern, connections } = detectSignals(urlPatternInput);
-  urlPatternInput = pattern;
+  const { pattern, connections } = detectSignals(urlPattern);
+  let internalUrlPattern = pattern;
 
   // Make parameters with default values optional by modifying the pattern
   for (const { paramName, options = {} } of connections) {
     if (options.defaultValue !== undefined) {
       // Replace :param with :param? to make the parameter itself optional
       const paramRegex = new RegExp(`:${paramName}(?!\\?)\\b`, "g");
-      urlPatternInput = urlPatternInput.replace(paramRegex, `:${paramName}?`);
+      internalUrlPattern = internalUrlPattern.replace(
+        paramRegex,
+        `:${paramName}?`,
+      );
     }
   }
 
@@ -249,7 +252,9 @@ export const registerRoute = (urlPatternInput) => {
     const registeredPattern = originalPattern;
 
     // Check if current pattern could be a specialized version of a registered pattern
-    const currentSegments = urlPatternInput.split("/").filter((s) => s !== "");
+    const currentSegments = internalUrlPattern
+      .split("/")
+      .filter((s) => s !== "");
     const registeredSegments = registeredPattern
       .split("/")
       .filter((s) => s !== "");
@@ -309,7 +314,7 @@ export const registerRoute = (urlPatternInput) => {
       if (isRelated && transformations.length > 0) {
         // Transform to simple optional parameters and store validation info
         // Work with filtered segments since that's what we used for comparison
-        let segments = urlPatternInput.split("/").filter((s) => s !== "");
+        let segments = internalUrlPattern.split("/").filter((s) => s !== "");
 
         for (const { index, paramName, defaultValue } of transformations) {
           // Replace literal segment with optional parameter
@@ -319,7 +324,7 @@ export const registerRoute = (urlPatternInput) => {
         }
 
         // Reconstruct the pattern with leading slash
-        urlPatternInput = `/${segments.join("/")}`;
+        internalUrlPattern = `/${segments.join("/")}`;
         break; // Found a match, stop looking
       }
     }
@@ -327,10 +332,10 @@ export const registerRoute = (urlPatternInput) => {
 
   // Make trailing slashes flexible - if pattern ends with /, make it match anything after
   // Exception: don't transform root route "/" to avoid matching everything
-  if (urlPatternInput.endsWith("/") && urlPatternInput !== "/") {
+  if (internalUrlPattern.endsWith("/") && internalUrlPattern !== "/") {
     // Transform /path/ to /path/*
     // This allows matching /path/, /path/anything, /path/anything/else
-    urlPatternInput = `${urlPatternInput.slice(0, -1)}/*`;
+    internalUrlPattern = `${internalUrlPattern.slice(0, -1)}/*`;
   }
 
   const cleanupCallbackSet = new Set();
@@ -343,7 +348,7 @@ export const registerRoute = (urlPatternInput) => {
 
   const [publishStatus, subscribeStatus] = createPubSub();
   const routePattern = createRoutePattern(
-    urlPatternInput,
+    internalUrlPattern,
     baseFileUrl,
     literalSegmentDefaults,
   );
@@ -354,7 +359,7 @@ export const registerRoute = (urlPatternInput) => {
   ).pattern;
 
   const route = {
-    urlPattern: urlPatternInput,
+    urlPattern,
     isRoute: true,
     matching: false,
     params: ROUTE_NOT_MATCHING_PARAMS,
@@ -365,7 +370,7 @@ export const registerRoute = (urlPatternInput) => {
     action: null,
     cleanup,
     toString: () => {
-      return `route "${urlPatternInput}"`;
+      return `route "${urlPattern}"`;
     },
     replaceParams: undefined,
     subscribeStatus,
@@ -609,7 +614,7 @@ export const registerRoute = (urlPatternInput) => {
     });
 
     const routeRelativeUrl = prepareRouteRelativeUrl(
-      urlPatternInput,
+      internalUrlPattern,
       resolvedParams,
     );
     return routeRelativeUrl;
@@ -642,7 +647,7 @@ export const registerRoute = (urlPatternInput) => {
   route.matchesParams = (providedParams) => {
     // Wildcard routes (ending with *) should match any parameters
     // since they are parent routes meant to catch child routes
-    if (urlPatternInput.endsWith("*")) {
+    if (internalUrlPattern.endsWith("*")) {
       return true;
     }
 
