@@ -47,6 +47,102 @@ await snapshotTests(import.meta.url, ({ test }) => {
     };
   });
 
+  test("undefined parameter handling", () => {
+    return {
+      undefined_single_param: run("/admin/settings/:tab", {
+        tab: undefined,
+      }),
+      undefined_multiple_params: run("/admin/:section/:tab", {
+        section: "settings",
+        tab: undefined,
+      }),
+      undefined_at_end: run("/users/:id/posts/:postId", {
+        id: "123",
+        postId: undefined,
+      }),
+      undefined_in_middle: run("/api/:version/users/:id/posts", {
+        version: undefined,
+        id: "123",
+      }),
+      all_undefined: run("/admin/:section/:tab", {
+        section: undefined,
+        tab: undefined,
+      }),
+      optional_group_with_undefined: run("/map/isochrone{/:time/:duration}?", {
+        time: undefined,
+        duration: "minutes",
+      }),
+      mixed_undefined_and_values: run("/api/:version/users/:id", {
+        version: "v1",
+        id: undefined,
+        extra: "param",
+      }),
+      undefined_wildcard: run("/files/*", {
+        0: undefined,
+      }),
+      undefined_wildcard_with_slash: run("/api/files/*", {
+        0: undefined,
+      }),
+      mixed_wildcard_and_named: run("/api/:version/files/*", {
+        version: "v1",
+        0: undefined,
+      }),
+    };
+  });
+
+  test("wildcard behavior", () => {
+    return {
+      single_wildcard: run("/files/*", {
+        0: "documents/readme.txt",
+      }),
+      multiple_wildcards: run("/*/api/*/users", {
+        0: "v1",
+        1: "resources",
+      }),
+      wildcard_at_start: run("/*", {
+        0: "api/users",
+      }),
+      wildcard_at_end: run("/api/*", {
+        0: "users/123",
+      }),
+      wildcard_with_slashes: run("/files/*", {
+        0: "folder/subfolder/file.txt",
+      }),
+      wildcard_empty_string: run("/api/*", {
+        0: "",
+      }),
+      wildcard_single_char: run("/files/*", {
+        0: "a",
+      }),
+      consecutive_wildcards: run("/*/*", {
+        0: "api",
+        1: "users",
+      }),
+      wildcard_with_special_chars: run("/search/*", {
+        0: "query with spaces & symbols",
+      }),
+      wildcard_undefined: run("/files/*", {
+        0: undefined,
+      }),
+      multiple_wildcards_mixed_undefined: run("/*/*/data", {
+        0: "api",
+        1: undefined,
+      }),
+      wildcard_numeric_indices: run("/api/*/*", {
+        0: "v1",
+        1: "users",
+        2: "ignored", // Should be ignored as there's no third wildcard
+      }),
+      wildcard_with_optional_group: run("/api{/*/users}?", {
+        0: "v1",
+      }),
+      wildcard_optional_itself: run("/files/*?", {
+        0: "document.pdf",
+      }),
+      wildcard_optional_no_value: run("/files/*?"),
+    };
+  });
+
   test("extra parameters", () => {
     return {
       as_search_params: run("/api/users", {

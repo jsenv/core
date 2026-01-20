@@ -4,6 +4,8 @@
 - [optional parts removal](optional_parts_removal/optional_parts_removal.md)
 - [parameter replacement](parameter_replacement/parameter_replacement.md)
 - [raw url parts](raw_url_parts/raw_url_parts.md)
+- [undefined parameter handling](undefined_parameter_handling/undefined_parameter_handling.md)
+- [wildcard behavior](wildcard_behavior/wildcard_behavior.md)
 - [extra parameters](extra_parameters/extra_parameters.md)
 - [edge cases](edge_cases/edge_cases.md)
 - [complex patterns](complex_patterns/complex_patterns.md)

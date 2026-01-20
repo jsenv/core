@@ -1,4 +1,4 @@
-# [string params with optional parts](../../route_url.test.js#L216)
+# [string params with optional parts](../../route_url.test.js#L312)
 
 ```js
 return {

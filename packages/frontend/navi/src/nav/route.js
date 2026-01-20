@@ -435,6 +435,8 @@ const createRoute = (urlPatternInput) => {
         const fallbackValue = getFallbackValue();
         if (fallbackValue !== undefined) {
           if (cleanupDefaults && fallbackValue === defaultValue) {
+            // When cleaning up defaults, include as undefined so prepareRouteRelativeUrl can remove the param
+            mergedParams[paramName] = undefined;
             continue;
           }
           mergedParams[paramName] = fallbackValue;
@@ -442,6 +444,8 @@ const createRoute = (urlPatternInput) => {
         }
       }
       if (cleanupDefaults) {
+        // When cleaning up defaults, include as undefined so prepareRouteRelativeUrl can remove the param
+        mergedParams[paramName] = undefined;
         continue;
       }
       if (defaultValue !== undefined) {
@@ -455,6 +459,8 @@ const createRoute = (urlPatternInput) => {
       if (cleanupDefaults) {
         const paramConfig = paramConfigMap.get(paramName);
         if (paramConfig && paramConfig.defaultValue === providedValue) {
+          // When cleaning up defaults, include as undefined so prepareRouteRelativeUrl can remove the param
+          mergedParams[paramName] = undefined;
           continue;
         }
       }

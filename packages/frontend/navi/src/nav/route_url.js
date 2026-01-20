@@ -119,35 +119,58 @@ export const prepareRouteRelativeUrl = (
       }
 
       const value = params[key];
-      const encodedValue = encodeParamValue(value, false); // Named parameters should encode slashes
       const beforeReplace = relativeUrl;
 
       // Create patterns for this parameter using helper function
       const escapedKey = escapeRegexChars(key);
       const basePatterns = [`:${escapedKey}`, `\\{${escapedKey}\\}`];
 
+      // Determine replacement based on value
+      let replacement;
+      if (value === undefined) {
+        replacement = ""; // Remove parameter entirely
+      } else {
+        replacement = encodeParamValue(value, false); // Named parameters should encode slashes
+      }
+
       // Process both optional and normal patterns in a single loop
       for (const basePattern of basePatterns) {
-        // Create regex that matches both optional (?-suffixed) and normal patterns
-        const combinedPattern = new RegExp(`(${basePattern})(\\?)?`, "g");
+        if (value === undefined) {
+          // For undefined values, remove the parameter and any preceding slash
+          const paramPattern = new RegExp(
+            `\\/${basePattern}(\\?)?(?=\/|$)`,
+            "g",
+          );
+          relativeUrl = relativeUrl.replace(paramPattern, "");
 
-        relativeUrl = relativeUrl.replace(
-          combinedPattern,
-          (match, paramPart, optionalMarker, offset, string) => {
-            // Check if this match is inside an optional group {...}?
-            const beforeMatch = string.slice(0, offset);
-            const afterMatch = string.slice(offset + match.length);
+          // Also handle parameter at the start or without preceding slash
+          const startPattern = new RegExp(`(^|\\/)${basePattern}(\\?)?`, "g");
+          relativeUrl = relativeUrl.replace(startPattern, (match, prefix) => {
+            return prefix === "/" ? "" : prefix;
+          });
+        } else {
+          // For defined values, use normal replacement logic
+          // Create regex that matches both optional (?-suffixed) and normal patterns
+          const combinedPattern = new RegExp(`(${basePattern})(\\?)?`, "g");
 
-            // Count unclosed { before this match
-            const openBraces = (beforeMatch.match(/\{/g) || []).length;
-            const closeBraces = (beforeMatch.match(/\}/g) || []).length;
-            const isInsideOptionalGroup =
-              openBraces > closeBraces && afterMatch.includes("}?");
+          relativeUrl = relativeUrl.replace(
+            combinedPattern,
+            (match, paramPart, optionalMarker, offset, string) => {
+              // Check if this match is inside an optional group {...}?
+              const beforeMatch = string.slice(0, offset);
+              const afterMatch = string.slice(offset + match.length);
 
-            // Only replace if NOT inside an optional group
-            return isInsideOptionalGroup ? match : encodedValue;
-          },
-        );
+              // Count unclosed { before this match
+              const openBraces = (beforeMatch.match(/\{/g) || []).length;
+              const closeBraces = (beforeMatch.match(/\}/g) || []).length;
+              const isInsideOptionalGroup =
+                openBraces > closeBraces && afterMatch.includes("}?");
+
+              // Only replace if NOT inside an optional group
+              return isInsideOptionalGroup ? match : replacement;
+            },
+          );
+        }
       }
 
       // If the URL did not change we'll maybe delete that param
@@ -161,7 +184,7 @@ export const prepareRouteRelativeUrl = (
       let processedGroup = group;
       let hasReplacements = false;
 
-      // Check if any parameters in the group were provided
+      // Check if any parameters in the group were provided and not undefined
       for (const key of keys) {
         if (params[key] !== undefined) {
           const encodedValue = encodeParamValue(params[key], false); // Named parameters encode slashes
@@ -185,18 +208,32 @@ export const prepareRouteRelativeUrl = (
 
   // Handle remaining wildcards (those not processed by optional group + wildcard above)
   if (params) {
-    relativeUrl = relativeUrl.replace(/\*/g, () => {
+    relativeUrl = relativeUrl.replace(/\*/g, (match, offset, string) => {
       const paramKey = wildcardIndex.toString();
       const paramValue = params[paramKey];
-      if (paramValue) {
+
+      if (paramValue !== undefined) {
         extraParamMap.delete(paramKey);
         const replacement = encodeParamValue(paramValue, true); // Wildcards preserve slashes
         wildcardIndex++;
         return replacement;
       }
+      // Handle undefined wildcards by removing them and any preceding slash
+      const beforeWildcard = string.slice(0, offset);
+      if (beforeWildcard.endsWith("/")) {
+        // Remove the preceding slash as well by returning a marker that we'll clean up
+        wildcardIndex++;
+        return "___REMOVE_WILDCARD_WITH_SLASH___";
+      }
       wildcardIndex++;
-      return "*";
+      return ""; // Just remove the wildcard
     });
+
+    // Clean up wildcard removal markers
+    relativeUrl = relativeUrl.replace(
+      /\/___REMOVE_WILDCARD_WITH_SLASH___/g,
+      "",
+    );
   }
 
   // Handle optional parts after parameter replacement
