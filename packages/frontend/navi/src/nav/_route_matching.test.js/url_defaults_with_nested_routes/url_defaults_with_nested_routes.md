@@ -4,7 +4,7 @@
 // Helper function that re-creates routes for each test case
 const runWithFreshRoutes = (routeType, relativeUrl) => {
   clearAllRoutes();
-  
+
   const sectionSignal = stateSignal("settings");
   const tabSignal = stateSignal("general");
   const analyticsTabSignal = stateSignal("overview");
@@ -12,19 +12,23 @@ const runWithFreshRoutes = (routeType, relativeUrl) => {
   // Re-register all routes for each test
   registerRoute("/");
   const ADMIN_ROUTE = registerRoute(`/admin/:section=${sectionSignal}/`);
-  const ADMIN_SETTINGS_ROUTE = registerRoute(`/admin/settings/:tab=${tabSignal}`);
-  const ADMIN_ANALYTICS_ROUTE = registerRoute(`/admin/analytics/?tab=${analyticsTabSignal}`);
-  
+  const ADMIN_SETTINGS_ROUTE = registerRoute(
+    `/admin/settings/:tab=${tabSignal}`,
+  );
+  const ADMIN_ANALYTICS_ROUTE = registerRoute(
+    `/admin/analytics/?tab=${analyticsTabSignal}`,
+  );
+
   // Select the target route by type
   let targetRoute;
-  if (routeType === 'admin') {
+  if (routeType === "admin") {
     targetRoute = ADMIN_ROUTE;
-  } else if (routeType === 'settings') {
+  } else if (routeType === "settings") {
     targetRoute = ADMIN_SETTINGS_ROUTE;
-  } else if (routeType === 'analytics') {
+  } else if (routeType === "analytics") {
     targetRoute = ADMIN_ANALYTICS_ROUTE;
   }
-  
+
   updateRoutes(`${baseUrl}${relativeUrl}`);
   return targetRoute.matching ? targetRoute.params : null;
 };
@@ -32,19 +36,34 @@ const runWithFreshRoutes = (routeType, relativeUrl) => {
 // Test various URL matching scenarios
 const testResults = {
   // Test basic parameter with default - should match "/admin"
-  admin_root_matches_section_default: runWithFreshRoutes('admin', `/admin`),
-  admin_root_with_slash: runWithFreshRoutes('admin', `/admin/`),
-  admin_with_users_section: runWithFreshRoutes('admin', `/admin/users/`),
+  admin_root_matches_section_default: runWithFreshRoutes("admin", `/admin`),
+  admin_root_with_slash: runWithFreshRoutes("admin", `/admin/`),
+  admin_with_users_section: runWithFreshRoutes("admin", `/admin/users/`),
 
   // CRITICAL TEST: This should match because "settings" is the default value for :section
   // /admin/settings/:tab should match /admin because settings=default(section)
-  settings_route_matches_admin_root: runWithFreshRoutes('settings', `/admin`),
+  settings_route_matches_admin_root: runWithFreshRoutes(
+    "settings",
+    `/admin`,
+  ),
 
-  settings_with_general_tab: runWithFreshRoutes('settings', `/admin/settings/general`),
-  settings_with_security_tab: runWithFreshRoutes('settings', `/admin/settings/security`),
-  
-  analytics_with_overview_tab: runWithFreshRoutes('analytics', `/admin/analytics`),
-  analytics_with_performance_tab: runWithFreshRoutes('analytics', `/admin/analytics?tab=performance`),
+  settings_with_general_tab: runWithFreshRoutes(
+    "settings",
+    `/admin/settings/general`,
+  ),
+  settings_with_security_tab: runWithFreshRoutes(
+    "settings",
+    `/admin/settings/security`,
+  ),
+
+  analytics_with_overview_tab: runWithFreshRoutes(
+    "analytics",
+    `/admin/analytics`,
+  ),
+  analytics_with_performance_tab: runWithFreshRoutes(
+    "analytics",
+    `/admin/analytics?tab=performance`,
+  ),
 };
 
 clearAllRoutes();

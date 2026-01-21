@@ -38,6 +38,180 @@ setBaseUrl(
 const ROUTE_DEACTIVATION_STRATEGY = "abort"; // 'abort', 'keep-loading'
 const ROUTE_NOT_MATCHING_PARAMS = {};
 
+/**
+ * Analyzes if a route pattern can inherit parameter defaults from existing routes
+ * to enable shorter URL matching through parameter inheritance.
+ *
+ * @param {string} internalUrlPattern - The current route pattern to analyze
+ * @param {Set} existingRoutes - Set of existing registered routes
+ * @param {function} getRoutePrivateProperties - Function to get private route properties
+ * @returns {{ transformedPattern: string, inheritanceData: Array|null }}
+ */
+const analyzeRouteInheritance = (
+  internalUrlPattern,
+  existingRoutes,
+  getRoutePrivateProperties,
+) => {
+  if (existingRoutes.size === 0) {
+    return {
+      transformedPattern: internalUrlPattern,
+      inheritanceData: null,
+    };
+  }
+
+  if (DEBUG) {
+    console.debug(
+      `\nAnalyzing route for inheriting defaults from other routes: ${internalUrlPattern}`,
+    );
+    console.debug(`Total existing routes: ${existingRoutes.size}`);
+  }
+
+  // Compare current pattern against previously registered routes to find inheritance opportunities
+  for (const existingRoute of existingRoutes) {
+    const existingPrivateProps = getRoutePrivateProperties(existingRoute);
+    if (!existingPrivateProps) continue;
+    const { connections: existingConnections } = existingPrivateProps;
+
+    // Use the existing route's processed internal pattern for comparison
+    const existingInternalPattern = existingPrivateProps.internalPattern;
+
+    if (DEBUG) {
+      console.debug(
+        `Comparing against existing route: ${existingInternalPattern}`,
+        existingConnections.map(
+          (c) => `${c.paramName}=${c.options.defaultValue}`,
+        ),
+      );
+    }
+
+    // Check if current pattern can inherit from existing patterns
+    const currentSegments = internalUrlPattern
+      .split("/")
+      .filter((s) => s !== "");
+    const existingSegments = existingInternalPattern
+      .split("/")
+      .filter((s) => s !== "");
+
+    if (DEBUG) {
+      console.debug(`Current segments:`, currentSegments);
+      console.debug(`Existing segments:`, existingSegments);
+    }
+
+    // Look for cases where current pattern can inherit from existing patterns
+    // This includes cases where:
+    // 1. Current has more segments (existing logic)
+    // 2. Current has same number of segments but can inherit parameter values
+    if (currentSegments.length >= existingSegments.length) {
+      let canCreateShortVersion = true;
+      const defaultInheritances = [];
+
+      // Compare each segment up to the length of the existing pattern
+      for (
+        let i = 0;
+        i < existingSegments.length && i < currentSegments.length;
+        i++
+      ) {
+        const existingSeg = existingSegments[i];
+        const currentSeg = currentSegments[i];
+
+        if (DEBUG) {
+          console.debug(
+            `Comparing segment ${i}: existing="${existingSeg}" vs current="${currentSeg}"`,
+          );
+        }
+
+        if (existingSeg === currentSeg) {
+          // Identical segments - continue
+          continue;
+        } else if (existingSeg.startsWith(":") && !currentSeg.startsWith(":")) {
+          // Existing has parameter, current has literal
+          const paramName = existingSeg.replace(/[?*]/g, "").substring(1); // Remove : prefix and suffixes
+          const existingConnection = existingConnections.find(
+            (c) => c.paramName === paramName,
+          );
+
+          if (DEBUG) {
+            console.debug(
+              `Found param ${paramName} with default:`,
+              existingConnection?.options.defaultValue,
+            );
+          }
+
+          if (existingConnection) {
+            // Two types of inheritance:
+            // 1. Literal matches default - can create short version (existing behavior)
+            // 2. Literal provides value for parameter - inherit parameter structure
+            if (existingConnection.options.defaultValue === currentSeg) {
+              // Case 1: Literal segment matches parameter default - can create short version
+              defaultInheritances.push({
+                segmentIndex: i,
+                literalValue: currentSeg,
+                paramName,
+                defaultValue: existingConnection.options.defaultValue,
+              });
+            } else {
+              // Case 2: Literal provides value - inherit parameter structure
+              defaultInheritances.push({
+                segmentIndex: i,
+                literalValue: currentSeg,
+                paramName,
+                defaultValue: currentSeg, // Use literal value as the parameter value
+              });
+            }
+          } else {
+            // No parameter connection found - can't create short version with this route
+            canCreateShortVersion = false;
+            break;
+          }
+        } else {
+          // Other mismatch - can't create short version with this route
+          canCreateShortVersion = false;
+          break;
+        }
+      }
+
+      // Apply short version creation if we found valid default inheritances from other routes
+      if (canCreateShortVersion && defaultInheritances.length > 0) {
+        // Transform the internal pattern to make literal segments optional
+        let segments = internalUrlPattern.split("/").filter((s) => s !== "");
+
+        if (DEBUG) {
+          console.debug(
+            `Applying default inheritances from other routes:`,
+            defaultInheritances,
+          );
+          console.debug(`Original segments:`, segments);
+        }
+
+        // Apply each default inheritance to create short version
+        for (const inheritance of defaultInheritances) {
+          // Replace literal with optional parameter
+          segments[inheritance.segmentIndex] = `:${inheritance.paramName}?`;
+        }
+
+        const shortVersionPattern = `/${segments.join("/")}`;
+
+        if (DEBUG) {
+          console.debug(`Short version pattern: ${shortVersionPattern}`);
+          console.debug(
+            `Route transformed: ${internalUrlPattern} -> ${shortVersionPattern} inheriting defaults from other routes`,
+          );
+        }
+
+        return {
+          transformedPattern: shortVersionPattern,
+          inheritanceData: defaultInheritances,
+        };
+      }
+    }
+  }
+
+  return {
+    transformedPattern: internalUrlPattern,
+    inheritanceData: null,
+  };
+};
+
 const routeSet = new Set();
 // Store previous route states to detect changes
 const routePreviousStateMap = new WeakMap();
@@ -253,163 +427,20 @@ export const registerRoute = (urlPattern) => {
     );
   }
 
-  // Inherit parameter defaults from other routes to create short versions
-  // Check if we can make this route match shorter URLs by inheriting defaults from other registered routes
-  if (routeSet.size > 0) {
-    if (DEBUG) {
-      console.debug(
-        `\nAnalyzing route for inheriting defaults from other routes: ${internalUrlPattern}`,
-      );
-      console.debug(`Total existing routes: ${routeSet.size}`);
-    }
+  // Analyze inheritance opportunities with existing routes
+  const inheritanceResult = analyzeRouteInheritance(
+    internalUrlPattern,
+    routeSet,
+    getRoutePrivateProperties,
+  );
 
-    // Compare current pattern against previously registered routes to find inheritance opportunities
-    for (const existingRoute of routeSet) {
-      const existingPrivateProps = getRoutePrivateProperties(existingRoute);
-      if (!existingPrivateProps) continue;
-      const { connections: existingConnections } = existingPrivateProps;
-
-      // Use the existing route's processed internal pattern for comparison
-      const existingInternalPattern = existingPrivateProps.internalPattern;
-
-      if (DEBUG) {
-        console.debug(
-          `Comparing against existing route: ${existingInternalPattern}`,
-          existingConnections.map(
-            (c) => `${c.paramName}=${c.options.defaultValue}`,
-          ),
-        );
-      }
-
-      // Check if current pattern can have a short version based on defaults from existing routes
-      const currentSegments = internalUrlPattern
-        .split("/")
-        .filter((s) => s !== "");
-      const existingSegments = existingInternalPattern
-        .split("/")
-        .filter((s) => s !== "");
-
-      if (DEBUG) {
-        console.debug(`Current segments:`, currentSegments);
-        console.debug(`Existing segments:`, existingSegments);
-      }
-
-      // Look for cases where current pattern can inherit from existing patterns
-      // This includes cases where:
-      // 1. Current has more segments (existing logic)
-      // 2. Current has same number of segments but can inherit parameter values
-      if (currentSegments.length >= existingSegments.length) {
-        let canCreateShortVersion = true;
-        const defaultInheritances = [];
-
-        // Compare each segment up to the length of the existing pattern
-        for (
-          let i = 0;
-          i < existingSegments.length && i < currentSegments.length;
-          i++
-        ) {
-          const existingSeg = existingSegments[i];
-          const currentSeg = currentSegments[i];
-
-          if (DEBUG) {
-            console.debug(
-              `Comparing segment ${i}: existing="${existingSeg}" vs current="${currentSeg}"`,
-            );
-          }
-
-          if (existingSeg === currentSeg) {
-            // Identical segments - continue
-            continue;
-          } else if (
-            existingSeg.startsWith(":") &&
-            !currentSeg.startsWith(":")
-          ) {
-            // Existing has parameter, current has literal
-            const paramName = existingSeg.replace(/[?*]/g, "").substring(1); // Remove : prefix and suffixes
-            const existingConnection = existingConnections.find(
-              (c) => c.paramName === paramName,
-            );
-
-            if (DEBUG) {
-              console.debug(
-                `Found param ${paramName} with default:`,
-                existingConnection?.options.defaultValue,
-              );
-            }
-
-            if (existingConnection) {
-              // Two types of inheritance:
-              // 1. Literal matches default - can create short version (existing behavior)
-              // 2. Literal provides value for parameter - inherit parameter structure
-              if (existingConnection.options.defaultValue === currentSeg) {
-                // Case 1: Literal segment matches parameter default - can create short version
-                defaultInheritances.push({
-                  segmentIndex: i,
-                  literalValue: currentSeg,
-                  paramName,
-                  defaultValue: existingConnection.options.defaultValue,
-                });
-              } else {
-                // Case 2: Literal provides value - inherit parameter structure
-                defaultInheritances.push({
-                  segmentIndex: i,
-                  literalValue: currentSeg,
-                  paramName,
-                  defaultValue: currentSeg, // Use literal value as the parameter value
-                });
-              }
-            } else {
-              // No parameter connection found - can't create short version with this route
-              canCreateShortVersion = false;
-              break;
-            }
-          } else {
-            // Other mismatch - can't create short version with this route
-            canCreateShortVersion = false;
-            break;
-          }
-        }
-
-        // Apply short version creation if we found valid default inheritances from other routes
-        if (canCreateShortVersion && defaultInheritances.length > 0) {
-          // Transform the internal pattern to make literal segments optional
-          let segments = internalUrlPattern.split("/").filter((s) => s !== "");
-
-          if (DEBUG) {
-            console.debug(
-              `Applying default inheritances from other routes:`,
-              defaultInheritances,
-            );
-            console.debug(`Original segments:`, segments);
-          }
-
-          // Apply each default inheritance to create short version
-          for (const inheritance of defaultInheritances) {
-            // Replace literal with optional parameter
-            segments[inheritance.segmentIndex] = `:${inheritance.paramName}?`;
-          }
-
-          const shortVersionPattern = `/${segments.join("/")}`;
-
-          if (DEBUG) {
-            console.debug(`Short version pattern: ${shortVersionPattern}`);
-          }
-
-          // Update the internal pattern to the short version
-          internalUrlPattern = shortVersionPattern;
-
-          // Store the default inheritance info using the transformed pattern as key
-          literalSegmentDefaults.set(internalUrlPattern, defaultInheritances);
-
-          if (DEBUG) {
-            console.debug(
-              `Route transformed: ${urlPattern} -> ${internalUrlPattern} inheriting defaults from other routes`,
-            );
-          }
-          break; // Found transformation, stop looking at other routes
-        }
-      }
-    }
+  // Apply inheritance transformation if found
+  internalUrlPattern = inheritanceResult.transformedPattern;
+  if (inheritanceResult.inheritanceData) {
+    literalSegmentDefaults.set(
+      internalUrlPattern,
+      inheritanceResult.inheritanceData,
+    );
   }
 
   // Make trailing slashes flexible - if pattern ends with /, make it match anything after
