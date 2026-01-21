@@ -442,22 +442,17 @@ export const registerRoute = (urlPattern) => {
 
   // Create custom route pattern - it will detect and process signals internally
   const routePatternResult = createRoutePattern(urlPattern, baseFileUrl);
-
   const { cleanPattern, connections } = routePatternResult;
-
   // Analyze inheritance opportunities with existing routes using custom system
   const inheritanceResult = analyzeRouteInheritance(cleanPattern);
-
   // Build parameter defaults from inheritance and connections
   const parameterDefaults = new Map();
-
   // Add defaults from signal connections
   for (const { paramName, options = {} } of connections) {
     if (options.defaultValue !== undefined) {
       parameterDefaults.set(paramName, options.defaultValue);
     }
   }
-
   // Override with inheritance defaults if available
   if (inheritanceResult.canInherit) {
     for (const [
@@ -467,13 +462,13 @@ export const registerRoute = (urlPattern) => {
       parameterDefaults.set(paramName, defaultValue);
     }
   }
-
   // Now create the final route pattern with defaults
   const routePattern = createRoutePattern(
     urlPattern,
     baseFileUrl,
     parameterDefaults,
   );
+  urlPattern = cleanPattern;
 
   if (DEBUG) {
     console.debug(`Parameter defaults:`, parameterDefaults);
