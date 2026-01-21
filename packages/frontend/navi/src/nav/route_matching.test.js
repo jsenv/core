@@ -68,9 +68,11 @@ await snapshotTests(import.meta.url, ({ test }) => {
       // Admin route tests - basic parameter matching with defaults
       admin_root_matches_section_default: run(ADMIN_ROUTE, `/admin`),
       admin_root_with_slash: run(ADMIN_ROUTE, `/admin/`),
-      admin_with_settings_section: run(ADMIN_ROUTE, `/admin/settings/advanced`),
-      admin_with_users_section: run(ADMIN_ROUTE, `/admin/users/`),
-      admin_users_without_trailing_slash: run(ADMIN_ROUTE, `/admin/users`),
+      admin_on_settings: run(ADMIN_ROUTE, `/admin/settings`),
+      admin_on_settings_trailing_slash: run(ADMIN_ROUTE, "/admin/settings/"),
+      admin_on_settings_tab: run(ADMIN_ROUTE, `/admin/settings/advanced`),
+      admin_on_analytics: run(ADMIN_ROUTE, `/admin/analytics`),
+      admin_on_analytics_tab: run(ADMIN_ROUTE, `/admin/analytics?tab=details`),
 
       // Settings route tests - inheritance and parameter handling
       settings_route_matches_admin_root: run(ADMIN_SETTINGS_ROUTE, `/admin`),
