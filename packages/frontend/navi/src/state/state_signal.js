@@ -5,8 +5,9 @@ import { valueInLocalStorage } from "./value_in_local_storage.js";
 // Global signal registry for route template detection
 export const globalSignalRegistry = new Map();
 let signalIdCounter = 0;
-export const generateSignalId = () => {
-  return `__jsenv_signal_${++signalIdCounter}__`;
+const generateSignalId = () => {
+  const id = signalIdCounter++;
+  return id;
 };
 
 /**
@@ -24,14 +25,23 @@ export const generateSignalId = () => {
  *
  * @param {any} defaultValue - The default value to use when no other value is available
  * @param {Object} [options={}] - Configuration options
+ * @param {string} [options.id] - Custom ID for the signal. If not provided, an auto-generated ID will be used
  * @param {import("@preact/signals").Signal} [options.sourceSignal] - Source signal to synchronize with. When the source signal changes, this signal will be updated
- * @param {string} [options.localStorage] - Key for local storage persistence. When provided, the signal value will be saved to and restored from localStorage
+ * @param {boolean} [options.persists=false] - Whether to persist the signal value in localStorage
  * @param {"string" | "number" | "boolean" | "object"} [options.type="string"] - Type for localStorage serialization/deserialization
  * @returns {import("@preact/signals").Signal} A signal that can be synchronized with a source signal and/or persisted in localStorage
  *
  * @example
  * // Basic signal with default value
  * const count = stateSignal(0);
+ *
+ * @example
+ * // Signal with custom ID and persistence
+ * const theme = stateSignal("light", {
+ *   id: "user-theme",
+ *   persists: true,
+ *   type: "string"
+ * });
  *
  * @example
  * // Position that follows backend data but allows temporary overrides
@@ -42,44 +52,39 @@ export const generateSignalId = () => {
  * // User drags: currentPosition.value = { x: 150, y: 80 } (manual override)
  * // Backend updates: backendPosition.value = { x: 200, y: 60 }
  * // Result: currentPosition.value = { x: 200, y: 60 } (reset to new backend value)
- *
- * @example
- * // Signal with localStorage persistence
- * const userPreference = stateSignal("light", {
- *   localStorage: "theme",
- *   type: "string"
- * });
- *
- * @example
- * // Combined: follows source with localStorage backup
- * const serverConfig = signal({ timeout: 5000 });
- * const appConfig = stateSignal({ timeout: 3000 }, {
- *   sourceSignal: serverConfig,
- *   localStorage: "app-config",
- *   type: "object"
- * });
  */
 const NO_LOCAL_STORAGE = [() => undefined, () => {}, () => {}];
 export const stateSignal = (defaultValue, options = {}) => {
   const {
+    id,
     type = "string",
     oneOf,
     autoFix,
     sourceSignal,
-    localStorage,
+    persists = false,
     debug,
   } = options;
+  const signalId = id || generateSignalId();
+  // Convert numeric IDs to strings for consistency
+  const signalIdString = String(signalId);
+  if (globalSignalRegistry.has(signalIdString)) {
+    throw new Error(
+      `Signal ID conflict: A signal with ID "${signalIdString}" already exists`,
+    );
+  }
 
+  // Determine localStorage key: use id if persists=true, or legacy localStorage option
+  const localStorageKey = signalIdString;
   const [readFromLocalStorage, writeIntoLocalStorage, removeFromLocalStorage] =
-    localStorage
-      ? valueInLocalStorage(localStorage, { type })
+    persists
+      ? valueInLocalStorage(localStorageKey, { type })
       : NO_LOCAL_STORAGE;
   const getFallbackValue = () => {
     const valueFromLocalStorage = readFromLocalStorage();
     if (valueFromLocalStorage !== undefined) {
       if (debug) {
         console.debug(
-          `[stateSignal] using value from localStorage "${localStorage}"=${valueFromLocalStorage}`,
+          `[stateSignal] using value from localStorage "${localStorageKey}"=${valueFromLocalStorage}`,
         );
       }
       return valueFromLocalStorage;
@@ -103,19 +108,19 @@ export const stateSignal = (defaultValue, options = {}) => {
 
   const advancedSignal = signal(getFallbackValue());
 
-  // Register signal globally and make it work with template literals
-  const signalId = generateSignalId();
-  advancedSignal.__signalId = signalId;
-  advancedSignal.toString = () => signalId;
+  // Set signal ID and create meaningful string representation
+  advancedSignal.__signalId = signalIdString;
+  advancedSignal.toString = () => `__navi_state_signal:${signalIdString}__`;
 
   // Store signal with its options for later route connection
-  globalSignalRegistry.set(signalId, {
+  globalSignalRegistry.set(signalIdString, {
     signal: advancedSignal,
     options: {
       getFallbackValue,
       defaultValue,
       type,
-      localStorage,
+      persists,
+      localStorageKey,
       debug,
       ...options,
     },
@@ -174,7 +179,7 @@ export const stateSignal = (defaultValue, options = {}) => {
   }
   // Read/write into local storage when enabled
   persist_in_local_storage: {
-    if (!localStorage) {
+    if (!localStorageKey) {
       break persist_in_local_storage;
     }
     effect(() => {
@@ -182,14 +187,14 @@ export const stateSignal = (defaultValue, options = {}) => {
       if (value === undefined || value === null || value === defaultValue) {
         if (debug) {
           console.debug(
-            `[stateSignal] removing "${localStorage}" from localStorage`,
+            `[stateSignal] removing "${localStorageKey}" from localStorage`,
           );
         }
         removeFromLocalStorage();
       } else {
         if (debug) {
           console.debug(
-            `[stateSignal] writing into localStorage "${localStorage}"=${value}`,
+            `[stateSignal] writing into localStorage "${localStorageKey}"=${value}`,
           );
         }
         writeIntoLocalStorage(value);

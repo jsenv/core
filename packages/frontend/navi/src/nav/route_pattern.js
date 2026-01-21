@@ -12,12 +12,18 @@ export const detectSignals = (routePattern) => {
   const signalConnections = [];
   let updatedPattern = routePattern;
 
-  // First, look for signals in the explicit syntax: :paramName=__jsenv_signal_1__ or ?paramName=__jsenv_signal_1__
-  const signalParamRegex = /([?:])(\w+)=(__jsenv_signal_\d+__)/g;
+  // Look for signals in the new syntax: :paramName=__navi_state_signal:id__ or ?paramName=__navi_state_signal:id__
+  const signalParamRegex = /([?:])(\w+)=(__navi_state_signal:[^_]+__)/g;
   let match;
 
   while ((match = signalParamRegex.exec(routePattern)) !== null) {
-    const [fullMatch, prefix, paramName, signalId] = match;
+    const [fullMatch, prefix, paramName, signalString] = match;
+    
+    // Extract the signal ID from the new format: __navi_state_signal:id__
+    const signalIdMatch = signalString.match(/__navi_state_signal:([^_]+)__/);
+    if (!signalIdMatch) continue;
+    
+    const signalId = signalIdMatch[1];
     const signalData = globalSignalRegistry.get(signalId);
 
     if (signalData) {

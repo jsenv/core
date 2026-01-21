@@ -39,10 +39,13 @@ return {
     tab: "security",
   }),
   // Test that providing section param doesn't interfere (should be filtered as literal)
-  settings_with_section_and_tab_advanced: buildUrl(ADMIN_SETTINGS_ROUTE, {
-    section: "toto",
-    tab: "advanced",
-  }),
+  settings_with_section_toto_and_tab_advanced: buildUrl(
+    ADMIN_SETTINGS_ROUTE,
+    {
+      section: "toto",
+      tab: "advanced",
+    },
+  ),
   settings_with_extra_params: buildUrl(ADMIN_SETTINGS_ROUTE, {
     tab: "general",
     filter: "active",
@@ -57,7 +60,7 @@ return {
     tab: "performance",
   }),
   // Test that providing section param doesn't interfere (should be filtered as literal)
-  analytics_with_section_and_tab_performance: buildUrl(
+  analytics_with_section_toto_and_tab_performance: buildUrl(
     ADMIN_ANALYTICS_ROUTE,
     {
       section: "toto",
@@ -79,12 +82,12 @@ return {
   "settings_no_params": "http://127.0.0.1/admin",
   "settings_with_tab_general": "http://127.0.0.1/admin",
   "settings_with_tab_security": "http://127.0.0.1/admin/settings/security",
-  "settings_with_section_and_tab_advanced": "http://127.0.0.1/admin/settings/advanced?section=toto",
+  "settings_with_section_toto_and_tab_advanced": "http://127.0.0.1/admin/settings/advanced?section=toto",
   "settings_with_extra_params": "http://127.0.0.1/admin?filter=active",
   "analytics_no_params": "http://127.0.0.1/admin/analytics",
   "analytics_with_tab_overview": "http://127.0.0.1/admin/analytics",
   "analytics_with_tab_performance": "http://127.0.0.1/admin/analytics?tab=performance",
-  "analytics_with_section_and_tab_performance": "http://127.0.0.1/admin/analytics?section=toto&tab=performance",
+  "analytics_with_section_toto_and_tab_performance": "http://127.0.0.1/admin/analytics?section=toto&tab=performance",
   "analytics_with_extra_params": "http://127.0.0.1/admin/analytics?tab=details&dateRange=7d"
 }
 ```
