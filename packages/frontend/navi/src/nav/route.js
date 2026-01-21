@@ -15,16 +15,45 @@ const DEBUG = false;
  * Route inheritance system - simplified approach
  */
 
+let baseFileUrl;
+let baseUrl;
+export const setBaseUrl = (value) => {
+  baseFileUrl = new URL(
+    value,
+    typeof window === "undefined" ? "http://localhost" : window.location,
+  ).href;
+  baseUrl = new URL(".", baseFileUrl).href;
+};
+setBaseUrl(
+  typeof window === "undefined"
+    ? "/"
+    : import.meta.dev
+      ? new URL(window.HTML_ROOT_PATHNAME, window.location).href
+      : window.location.origin,
+);
+
+// Controls what happens to actions when their route stops matching:
+// 'abort' - Cancel the action immediately when route stops matching
+// 'keep-loading' - Allow action to continue running after route stops matching
+//
+// The 'keep-loading' strategy could act like preloading, keeping data ready for potential return.
+// However, since route reactivation triggers action reload anyway, the old data won't be used
+// so it's better to abort the action to avoid unnecessary resource usage.
+const ROUTE_DEACTIVATION_STRATEGY = "abort"; // 'abort', 'keep-loading'
+const ROUTE_NOT_MATCHING_PARAMS = {};
+
+const routeSet = new Set();
+// Store previous route states to detect changes
+const routePreviousStateMap = new WeakMap();
+// Store abort controllers per action to control their lifecycle based on route state
+const actionAbortControllerWeakMap = new WeakMap();
+
 /**
  * Analyzes route patterns to determine inheritance relationships
  * Much simpler than the previous URLPattern-based approach
  */
-const analyzeRouteInheritanceCustom = (
-  currentPattern,
-  existingRoutes,
-  getRouteProperties,
-) => {
-  if (existingRoutes.size === 0) {
+const analyzeRouteInheritanceCustom = (currentPattern) => {
+  if (routeSet.size === 0) {
     return {
       canInherit: false,
       inheritanceData: null,
@@ -39,8 +68,8 @@ const analyzeRouteInheritanceCustom = (
   const currentSegments = parsePatternSegments(currentPattern);
 
   // Look for existing routes that this pattern can inherit from
-  for (const existingRoute of existingRoutes) {
-    const existingProps = getRouteProperties(existingRoute);
+  for (const existingRoute of routeSet) {
+    const existingProps = getRoutePrivateProperties(existingRoute);
     if (!existingProps) continue;
 
     const existingPattern = existingProps.originalPattern;
@@ -80,10 +109,6 @@ const analyzeRouteInheritanceCustom = (
     parameterDefaults: new Map(),
   };
 };
-
-/**
- * Parse pattern into segments for inheritance analysis
- */
 const parsePatternSegments = (pattern) => {
   if (pattern === "/") {
     return [];
@@ -104,10 +129,6 @@ const parsePatternSegments = (pattern) => {
 
   return cleanPattern ? cleanPattern.split("/") : [];
 };
-
-/**
- * Check if current pattern can inherit from existing pattern
- */
 const checkInheritanceCompatibility = (
   currentSegments,
   existingSegments,
@@ -181,39 +202,6 @@ const checkInheritanceCompatibility = (
 
   return { canInherit: false };
 };
-
-let baseFileUrl;
-let baseUrl;
-export const setBaseUrl = (value) => {
-  baseFileUrl = new URL(
-    value,
-    typeof window === "undefined" ? "http://localhost" : window.location,
-  ).href;
-  baseUrl = new URL(".", baseFileUrl).href;
-};
-setBaseUrl(
-  typeof window === "undefined"
-    ? "/"
-    : import.meta.dev
-      ? new URL(window.HTML_ROOT_PATHNAME, window.location).href
-      : window.location.origin,
-);
-
-// Controls what happens to actions when their route stops matching:
-// 'abort' - Cancel the action immediately when route stops matching
-// 'keep-loading' - Allow action to continue running after route stops matching
-//
-// The 'keep-loading' strategy could act like preloading, keeping data ready for potential return.
-// However, since route reactivation triggers action reload anyway, the old data won't be used
-// so it's better to abort the action to avoid unnecessary resource usage.
-const ROUTE_DEACTIVATION_STRATEGY = "abort"; // 'abort', 'keep-loading'
-const ROUTE_NOT_MATCHING_PARAMS = {};
-
-const routeSet = new Set();
-// Store previous route states to detect changes
-const routePreviousStateMap = new WeakMap();
-// Store abort controllers per action to control their lifecycle based on route state
-const actionAbortControllerWeakMap = new WeakMap();
 
 export const updateRoutes = (
   url,
