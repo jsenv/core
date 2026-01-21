@@ -64,9 +64,39 @@ return testResults;
   "admin_with_users_section": {
     "section": "settings"
   },
-  "settings_route_matches_admin_root": null,
-  "settings_with_general_tab": null,
-  "settings_with_security_tab": null,
+  "settings_route_matches_admin_root": {
+    "/admin/settings/:tab?": [
+      {
+        "segmentIndex": 1,
+        "literalValue": "settings",
+        "paramName": "section",
+        "defaultValue": "settings"
+      }
+    ],
+    "tab": "general"
+  },
+  "settings_with_general_tab": {
+    "/admin/settings/:tab?": [
+      {
+        "segmentIndex": 1,
+        "literalValue": "settings",
+        "paramName": "section",
+        "defaultValue": "settings"
+      }
+    ],
+    "tab": "general"
+  },
+  "settings_with_security_tab": {
+    "/admin/settings/:tab?": [
+      {
+        "segmentIndex": 1,
+        "literalValue": "settings",
+        "paramName": "section",
+        "defaultValue": "settings"
+      }
+    ],
+    "tab": "general"
+  },
   "analytics_with_overview_tab": null,
   "analytics_with_performance_tab": null
 }

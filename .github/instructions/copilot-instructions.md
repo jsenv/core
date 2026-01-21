@@ -23,6 +23,33 @@ applyTo: "**"
 
 This approach prioritizes rapid iteration and maintains development momentum while ensuring quality through focused implementation.
 
+### Testing Strategy
+
+Testing in @jsenv/core focuses on **behavior verification** and **regression prevention** rather than exhaustive coverage. Tests capture the actual behavior of code to ensure changes don't break existing functionality.
+
+- **Snapshot Testing**: Primary method for capturing complex outputs, side effects, and multi-step behaviors
+  - Tests generate markdown files containing inputs, outputs, and debug logs
+  - Snapshots live in `_test-name.test.js/` directories alongside test files
+  - Review snapshot diffs to verify intended behavior changes
+- **Behavioral Testing**: Focus on testing what the code actually does, not implementation details
+  - Test user-facing behavior and API contracts
+  - Capture edge cases and error scenarios
+  - Verify integration points between components
+
+- **Debug Logging in Tests**:
+  - `DEBUG=true` output appears in snapshot markdown files, not terminal
+  - Use targeted logging to trace complex behaviors during development
+  - Clean up debug logs once issues are resolved
+  - Run tests from project root to ensure correct Node.js version (25.1.0)
+
+- **Test Organization**:
+  - Co-locate tests with source code or place in dedicated `tests/` directories
+  - Browser tests use Playwright for real browser behavior
+  - Node.js tests for server-side and CLI functionality
+  - Integration tests for cross-package interactions
+
+The goal is to write tests that **catch regressions** and **document expected behavior**, not to achieve high coverage metrics.
+
 ## Project Overview
 
 **@jsenv/core** is a comprehensive JavaScript development toolkit that prioritizes web standards and simplicity. It's organized as a monorepo with multiple packages serving different purposes:
@@ -126,13 +153,6 @@ const userProxy = createActionProxy(getUserAction, {
 - **Workspaces**: NPM workspaces for monorepo management
 - **Conditional Exports**: Support for development vs production builds
 
-### Testing Strategy
-
-- **Test Files**: Co-located with source or in dedicated `tests/` directories
-- **Browser Testing**: Automated browser testing with Playwright
-- **Node.js Testing**: Server-side testing for backend components
-- **Snapshot Testing**: Side effects and build output verification
-
 ## Coding Conventions
 
 ### JavaScript/JSX
@@ -205,6 +225,6 @@ This guide should help AI coding agents understand the architecture, patterns, a
 - Put helpers functions at the bottom of the file by default
 - Put constants simple variables (everything except functions) above the function using them. For the exported function is means top of the file after imports. For helper function it means above them.
 - Never write tests on your initiative.
-- Never rite documentation on your initiative.
+- Never write documentation on your initiative.
 - Never use Math.max/Math.min. Code becomes hard to follow. Prefer explicit branching.
 - To add logs for debbuging, prefer console.debug and prefer plain sentence instead of objects. (Objects are harder to copy-paste)

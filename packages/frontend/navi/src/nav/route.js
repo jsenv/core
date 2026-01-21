@@ -253,28 +253,28 @@ export const registerRoute = (urlPattern) => {
     );
   }
 
-  // Infer parameter defaults from other routes to create short versions
-  // Check if we can make this route match shorter URLs by using defaults from other registered routes
+  // Inherit parameter defaults from other routes to create short versions
+  // Check if we can make this route match shorter URLs by inheriting defaults from other registered routes
   if (routeSet.size > 0) {
     if (DEBUG) {
       console.debug(
-        `\nAnalyzing route for inferring defaults from other routes: ${internalUrlPattern}`,
+        `\nAnalyzing route for inheriting defaults from other routes: ${internalUrlPattern}`,
       );
       console.debug(`Total existing routes: ${routeSet.size}`);
     }
 
-    // Compare current pattern against previously registered routes to find inference opportunities
+    // Compare current pattern against previously registered routes to find inheritance opportunities
     for (const existingRoute of routeSet) {
       const existingPrivateProps = getRoutePrivateProperties(existingRoute);
       if (!existingPrivateProps) continue;
       const { connections: existingConnections } = existingPrivateProps;
 
-      // Use the existing route's internal pattern (after signal detection) for comparison
-      const existingInternalPattern = existingRoute.urlPattern; // This should be the processed pattern
+      // Use the existing route's processed internal pattern for comparison
+      const existingInternalPattern = existingPrivateProps.internalPattern;
 
       if (DEBUG) {
         console.debug(
-          `Comparing against existing route: ${existingInternalPattern}, connections:`,
+          `Comparing against existing route: ${existingInternalPattern}`,
           existingConnections.map(
             (c) => `${c.paramName}=${c.options.defaultValue}`,
           ),
@@ -297,7 +297,7 @@ export const registerRoute = (urlPattern) => {
       // Look for cases where current pattern has literal segments that match parameter defaults in existing patterns
       if (currentSegments.length > existingSegments.length) {
         let canCreateShortVersion = true;
-        const defaultInferences = [];
+        const defaultInheritances = [];
 
         // Compare each segment up to the length of the existing pattern
         for (
@@ -339,7 +339,7 @@ export const registerRoute = (urlPattern) => {
               existingConnection.options.defaultValue === currentSeg
             ) {
               // Literal segment matches parameter default - can create short version
-              defaultInferences.push({
+              defaultInheritances.push({
                 segmentIndex: i,
                 literalValue: currentSeg,
                 paramName,
@@ -357,23 +357,23 @@ export const registerRoute = (urlPattern) => {
           }
         }
 
-        // Apply short version creation if we found valid default inferences from other routes
-        if (canCreateShortVersion && defaultInferences.length > 0) {
+        // Apply short version creation if we found valid default inheritances from other routes
+        if (canCreateShortVersion && defaultInheritances.length > 0) {
           // Transform the internal pattern to make literal segments optional
           let segments = internalUrlPattern.split("/").filter((s) => s !== "");
 
           if (DEBUG) {
             console.debug(
-              `Applying default inferences from other routes:`,
-              defaultInferences,
+              `Applying default inheritances from other routes:`,
+              defaultInheritances,
             );
             console.debug(`Original segments:`, segments);
           }
 
-          // Apply each default inference to create short version
-          for (const inference of defaultInferences) {
+          // Apply each default inheritance to create short version
+          for (const inheritance of defaultInheritances) {
             // Replace literal with optional parameter
-            segments[inference.segmentIndex] = `:${inference.paramName}?`;
+            segments[inheritance.segmentIndex] = `:${inheritance.paramName}?`;
           }
 
           const shortVersionPattern = `/${segments.join("/")}`;
@@ -382,15 +382,15 @@ export const registerRoute = (urlPattern) => {
             console.debug(`Short version pattern: ${shortVersionPattern}`);
           }
 
-          // Store the default inferences for validation
-          literalSegmentDefaults.set(routeId, defaultInferences);
+          // Store the default inheritance info for validation
+          literalSegmentDefaults.set(internalUrlPattern, defaultInheritances);
 
           // Update the internal pattern to the short version
           internalUrlPattern = shortVersionPattern;
 
           if (DEBUG) {
             console.debug(
-              `Route transformed: ${urlPattern} -> ${internalUrlPattern} using defaults from other routes`,
+              `Route transformed: ${urlPattern} -> ${internalUrlPattern} inheriting defaults from other routes`,
             );
           }
           break; // Found transformation, stop looking at other routes
@@ -453,6 +453,8 @@ export const registerRoute = (urlPattern) => {
   const routePrivateProperties = {
     routePattern: null,
     originalPattern: originalPatternBeforeTransforms,
+    internalPattern: internalUrlPattern, // Store processed pattern for inheritance logic
+    literalSegmentDefaults, // Store inheritance info for this route
     connections,
     matchingSignal: null,
     paramsSignal: null,
@@ -566,6 +568,21 @@ export const registerRoute = (urlPattern) => {
         }
       }
     }
+
+    // Add inherited defaults from other routes for missing parameters
+    const routePrivateProps = getRoutePrivateProperties(route);
+    const inheritanceInfo =
+      routePrivateProps?.literalSegmentDefaults?.get(internalUrlPattern);
+    if (inheritanceInfo) {
+      for (const inheritance of inheritanceInfo) {
+        const { paramName, defaultValue } = inheritance;
+        if (!(paramName in mergedParams)) {
+          mergedParams[paramName] = defaultValue;
+          paramNameSet.delete(paramName);
+        }
+      }
+    }
+
     // Then, for parameters not in URL, check localStorage and apply defaults
     for (const paramName of paramNameSet) {
       const paramConfig = paramConfigMap.get(paramName);
