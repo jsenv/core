@@ -1080,9 +1080,35 @@ export const registerRoute = (urlPattern) => {
                   }
 
                   // Use parent route for URL building
+                  // Include original extra params that aren't part of the parent pattern
+                  const mergedParentParams = { ...parentRouteParams };
+
+                  // Add only extra parameters that don't match their defaults
+                  const routePrivateProperties =
+                    getRoutePrivateProperties(route);
+                  const connections = routePrivateProperties?.connections || [];
+
+                  for (const [key, value] of Object.entries(params || {})) {
+                    if (!(key in mergedParentParams)) {
+                      // Check if this parameter has a default value
+                      const connection = connections.find(
+                        (c) => c.paramName === key,
+                      );
+                      const defaultValue = connection?.options?.defaultValue;
+
+                      // Only include if it doesn't match the default value
+                      if (
+                        defaultValue === undefined ||
+                        value !== defaultValue
+                      ) {
+                        mergedParentParams[key] = value;
+                      }
+                    }
+                  }
+
                   const parentRouteRelativeUrl = buildUrlFromPattern(
                     parentParsedPattern,
-                    parentRouteParams,
+                    mergedParentParams,
                     parentParameterDefaults,
                   );
                   return parentRouteRelativeUrl;
