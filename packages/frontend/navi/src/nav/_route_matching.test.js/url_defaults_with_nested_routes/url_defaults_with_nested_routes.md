@@ -1,28 +1,18 @@
 # [url defaults with nested routes](../../route_matching.test.js#L48)
 
 ```js
-const registerRoutes = () => {
-  clearAllRoutes();
-
-  const sectionSignal = stateSignal("settings");
-  const tabSignal = stateSignal("general");
-  const analyticsTabSignal = stateSignal("overview");
-
-  // Re-register all routes for each test
-  registerRoute("/");
-  const ADMIN_ROUTE = registerRoute(`/admin/:section=${sectionSignal}/`);
-  const ADMIN_SETTINGS_ROUTE = registerRoute(
-    `/admin/settings/:tab=${tabSignal}`,
-  );
-  const ADMIN_ANALYTICS_ROUTE = registerRoute(
-    `/admin/analytics/?tab=${analyticsTabSignal}`,
-  );
-
-  return { ADMIN_ROUTE, ADMIN_SETTINGS_ROUTE, ADMIN_ANALYTICS_ROUTE };
-};
-
-const { ADMIN_ROUTE, ADMIN_SETTINGS_ROUTE, ADMIN_ANALYTICS_ROUTE } =
-  registerRoutes();
+clearAllRoutes();
+const sectionSignal = stateSignal("settings");
+const tabSignal = stateSignal("general");
+const analyticsTabSignal = stateSignal("overview");
+registerRoute("/");
+const ADMIN_ROUTE = registerRoute(`/admin/:section=${sectionSignal}/`);
+const ADMIN_SETTINGS_ROUTE = registerRoute(
+  `/admin/settings/:tab=${tabSignal}`,
+);
+const ADMIN_ANALYTICS_ROUTE = registerRoute(
+  `/admin/analytics/?tab=${analyticsTabSignal}`,
+);
 const run = (route, relativeUrl) => {
   updateRoutes(`${baseUrl}${relativeUrl}`);
   return route.matching ? route.params : null;
