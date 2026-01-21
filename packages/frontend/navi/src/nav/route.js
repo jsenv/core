@@ -6,8 +6,8 @@
 import { createPubSub } from "@jsenv/dom";
 import { batch, computed, effect, signal } from "@preact/signals";
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
-import { createRoutePattern } from "./route_pattern.js";
-import { prepareRouteRelativeUrl, resolveRouteUrl } from "./route_url.js";
+import { buildUrlFromPattern, createRoutePattern } from "./route_pattern.js";
+import { resolveRouteUrl } from "./route_url.js";
 
 const DEBUG = false;
 
@@ -494,6 +494,11 @@ export const registerRoute = (urlPattern) => {
 
   // Store pattern info in route private properties for future pattern matching
   const originalPatternBeforeTransforms = cleanPattern;
+  const originalRoutePattern = createRoutePattern(
+    originalPatternBeforeTransforms,
+    baseUrl,
+    inheritanceResult.parameterDefaults,
+  );
 
   const route = {
     urlPattern,
@@ -518,8 +523,10 @@ export const registerRoute = (urlPattern) => {
   const routePrivateProperties = {
     routePattern,
     originalPattern: originalPatternBeforeTransforms,
+    originalPatternParsed: originalRoutePattern.pattern,
     pattern: cleanPattern, // Store the current pattern used
     inheritanceData: inheritanceResult.inheritanceData, // Store inheritance info for this route
+    parameterDefaults: inheritanceResult.parameterDefaults, // Store parameter defaults
     connections,
     matchingSignal: null,
     paramsSignal: null,
@@ -776,8 +783,11 @@ export const registerRoute = (urlPattern) => {
     const paramConfigNameSet = new Set(paramConfigMap.keys());
     const mergedParams = {};
     const currentParams = rawParamsSignal.value;
+
+    // First, process parameters that have configurations (signals)
     for (const paramName of paramConfigNameSet) {
       if (paramNameSet.has(paramName)) {
+        // Skip configured params that are provided - they'll be handled in the second loop
         continue;
       }
       const currentValue = currentParams[paramName];
@@ -814,6 +824,8 @@ export const registerRoute = (urlPattern) => {
       }
       continue;
     }
+
+    // Then, process provided parameters (including those without configurations)
     for (const paramName of paramNameSet) {
       const providedValue = providedParams[paramName];
       if (cleanupDefaults) {
@@ -913,6 +925,172 @@ export const registerRoute = (urlPattern) => {
             break;
           }
         }
+
+        // If all inherited literal values match their signal defaults AND
+        // all route parameters are using defaults, we can use the parent route
+        if (
+          !shouldUseOriginalPattern &&
+          inheritanceInfo &&
+          inheritanceInfo.length > 0
+        ) {
+          let allParamsAreDefaults = true;
+
+          // Check if all provided parameters match their defaults
+          const routePrivateProperties = getRoutePrivateProperties(route);
+          const connections = routePrivateProperties?.connections || [];
+
+          for (const { paramName, options = {} } of connections) {
+            const providedValue = params?.[paramName];
+            const defaultValue = options.defaultValue;
+
+            if (providedValue !== undefined && providedValue !== defaultValue) {
+              allParamsAreDefaults = false;
+              if (DEBUG) {
+                console.debug(
+                  `Param ${paramName}=${providedValue} differs from default ${defaultValue}`,
+                );
+              }
+              break;
+            }
+          }
+
+          // If all params are defaults and all inherited literals match signal defaults,
+          // we should build using the parent route with inheritance values as parameters
+          if (allParamsAreDefaults) {
+            // Check if using parent route would be shorter/equivalent
+            let shouldUseParentRoute = true;
+            const parentRouteParams = {};
+
+            // If any literal segments in current route don't match parent defaults, keep current route
+            for (const inheritance of inheritanceInfo) {
+              const { paramName, literalValue } = inheritance;
+
+              // Check if this literal segment matches the parent signal's default
+              let parentSignalDefault;
+              for (const existingRoute of routeSet) {
+                const existingPrivateProps =
+                  getRoutePrivateProperties(existingRoute);
+                const existingConnections =
+                  existingPrivateProps?.connections || [];
+
+                for (const {
+                  signal,
+                  paramName: existingParamName,
+                } of existingConnections) {
+                  if (
+                    existingParamName === paramName &&
+                    signal &&
+                    signal.value !== undefined
+                  ) {
+                    parentSignalDefault = signal.value;
+                    break;
+                  }
+                }
+                if (parentSignalDefault !== undefined) break;
+              }
+
+              // If literal matches parent default, we can omit it
+              if (
+                parentSignalDefault !== undefined &&
+                literalValue === parentSignalDefault
+              ) {
+                // Don't include this param in parent route since it matches the default
+                if (DEBUG) {
+                  console.debug(
+                    `Literal segment ${paramName}=${literalValue} matches parent default ${parentSignalDefault}, can omit`,
+                  );
+                }
+              } else {
+                // Include this param in parent route
+                parentRouteParams[paramName] = literalValue;
+                if (DEBUG) {
+                  console.debug(
+                    `Literal segment ${paramName}=${literalValue} differs from parent default ${parentSignalDefault}`,
+                  );
+                }
+              }
+            }
+
+            if (shouldUseParentRoute) {
+              if (DEBUG) {
+                console.debug(
+                  `Using parent route with params:`,
+                  parentRouteParams,
+                );
+              }
+
+              // Find the parent route and use its pattern
+              for (const existingRoute of routeSet) {
+                if (existingRoute === route) continue;
+
+                const existingPrivateProps =
+                  getRoutePrivateProperties(existingRoute);
+                if (!existingPrivateProps) continue;
+
+                // Check if this is the actual parent route by checking inheritance data
+                const existingPattern = existingPrivateProps.originalPattern;
+
+                // The parent should be the route that this route inherits from
+                // We can identify it by checking if the current route's inheritance matches this route
+                let isParentRoute = false;
+                const existingSegments = parsePatternSegments(existingPattern);
+                const currentSegments = parsePatternSegments(
+                  routePrivateProps.originalPattern,
+                );
+
+                // Simple check: parent should have parameters where current has literals
+                if (existingSegments.length <= currentSegments.length) {
+                  for (let i = 0; i < existingSegments.length; i++) {
+                    const existingSeg = existingSegments[i];
+                    const currentSeg = currentSegments[i];
+
+                    // If existing has parameter and current has matching literal from inheritance
+                    if (
+                      existingSeg.startsWith(":") &&
+                      !currentSeg.startsWith(":")
+                    ) {
+                      const paramName = existingSeg
+                        .replace(/[?*]/g, "")
+                        .substring(1);
+                      // Check if this matches our inheritance data
+                      const matchingInheritance = inheritanceInfo.find(
+                        (inh) => inh.paramName === paramName,
+                      );
+                      if (
+                        matchingInheritance &&
+                        matchingInheritance.literalValue === currentSeg
+                      ) {
+                        isParentRoute = true;
+                      }
+                    }
+                  }
+                }
+
+                if (isParentRoute) {
+                  const parentParsedPattern =
+                    existingPrivateProps.routePattern.pattern;
+                  const parentParameterDefaults =
+                    existingPrivateProps.parameterDefaults || new Map();
+
+                  if (DEBUG) {
+                    console.debug(
+                      `Found correct parent route with pattern:`,
+                      existingPattern,
+                    );
+                  }
+
+                  // Use parent route for URL building
+                  const parentRouteRelativeUrl = buildUrlFromPattern(
+                    parentParsedPattern,
+                    parentRouteParams,
+                    parentParameterDefaults,
+                  );
+                  return parentRouteRelativeUrl;
+                }
+              }
+            }
+          }
+        }
       }
 
       // Also check if any non-inherited parameters have non-default values
@@ -952,9 +1130,20 @@ export const registerRoute = (urlPattern) => {
       );
     }
 
-    const routeRelativeUrl = prepareRouteRelativeUrl(
-      patternToUse,
+    // Determine which parsed pattern to use based on shouldUseOriginalPattern logic
+    let parsedPatternToUse;
+    if (shouldUseOriginalPattern && routePrivateProps?.originalPatternParsed) {
+      parsedPatternToUse = routePrivateProps.originalPatternParsed;
+    } else {
+      parsedPatternToUse = routePrivateProps.routePattern.pattern;
+    }
+
+    const parameterDefaults = routePrivateProps.parameterDefaults || new Map();
+
+    const routeRelativeUrl = buildUrlFromPattern(
+      parsedPatternToUse,
       resolvedParams,
+      parameterDefaults,
     );
     return routeRelativeUrl;
   };

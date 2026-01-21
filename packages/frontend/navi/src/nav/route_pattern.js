@@ -283,7 +283,11 @@ const extractSearchParams = (urlObj) => {
 /**
  * Build a URL from a pattern and parameters
  */
-export const buildUrlFromPattern = (parsedPattern, params = {}) => {
+export const buildUrlFromPattern = (
+  parsedPattern,
+  params = {},
+  parameterDefaults = new Map(),
+) => {
   if (parsedPattern.segments.length === 0) {
     // Root route
     const searchParams = new URLSearchParams();
@@ -303,10 +307,19 @@ export const buildUrlFromPattern = (parsedPattern, params = {}) => {
       segments.push(patternSeg.value);
     } else if (patternSeg.type === "param") {
       const value = params[patternSeg.name];
+      const defaultValue = parameterDefaults.get(patternSeg.name);
+
+      // If value is provided, include it (unless it's optional and matches default)
       if (value !== undefined) {
-        segments.push(encodeURIComponent(value));
+        // Only omit if parameter is optional AND matches default
+        if (patternSeg.optional && value === defaultValue) {
+          // Omit optional parameter that matches default
+        } else {
+          segments.push(encodeURIComponent(value));
+        }
       } else if (!patternSeg.optional) {
-        throw new Error(`Required parameter "${patternSeg.name}" is missing`);
+        // For required parameters without values, keep the placeholder
+        segments.push(`:${patternSeg.name}`);
       }
       // Optional parameters with undefined values are omitted
     }
@@ -314,9 +327,14 @@ export const buildUrlFromPattern = (parsedPattern, params = {}) => {
 
   let path = `/${segments.join("/")}`;
 
-  // Handle trailing slash
-  if (parsedPattern.trailingSlash && !path.endsWith("/")) {
+  // Handle trailing slash - prefer no trailing slash except for root
+  if (parsedPattern.trailingSlash && !path.endsWith("/") && path !== "/") {
     path += "/";
+  }
+
+  // Remove trailing slash for non-root paths to keep URLs clean
+  if (path.endsWith("/") && path !== "/") {
+    path = path.slice(0, -1);
   }
 
   // Add search parameters (excluding path parameters)
