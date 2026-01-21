@@ -50,11 +50,11 @@ return {
 
   // Analytics route URL building - inheritance with search params
   analytics_route_default_params: buildUrl(ADMIN_ANALYTICS_ROUTE),
-  analytics_route_with_performance_tab: buildUrl(ADMIN_ANALYTICS_ROUTE, {
-    tab: "performance",
-  }),
   analytics_route_with_overview_tab: buildUrl(ADMIN_ANALYTICS_ROUTE, {
     tab: "overview",
+  }),
+  analytics_route_with_performance_tab: buildUrl(ADMIN_ANALYTICS_ROUTE, {
+    tab: "performance",
   }),
   // Test that providing section param doesn't interfere (should be filtered as literal)
   analytics_route_with_section_param: buildUrl(ADMIN_ANALYTICS_ROUTE, {
@@ -79,8 +79,8 @@ return {
   "settings_route_with_section_param": "http://127.0.0.1/admin/settings/advanced?section=toto",
   "settings_route_with_extra_params": "http://127.0.0.1/admin?filter=active",
   "analytics_route_default_params": "http://127.0.0.1/admin/analytics",
-  "analytics_route_with_performance_tab": "http://127.0.0.1/admin/analytics?tab=performance",
   "analytics_route_with_overview_tab": "http://127.0.0.1/admin/analytics",
+  "analytics_route_with_performance_tab": "http://127.0.0.1/admin/analytics?tab=performance",
   "analytics_route_with_section_param": "http://127.0.0.1/admin/analytics?section=toto&tab=performance",
   "analytics_route_with_extra_params": "http://127.0.0.1/admin/analytics?tab=details&dateRange=7d"
 }

@@ -74,11 +74,11 @@ await snapshotTests(import.meta.url, ({ test }) => {
 
       // Analytics route URL building - inheritance with search params
       analytics_route_default_params: buildUrl(ADMIN_ANALYTICS_ROUTE),
-      analytics_route_with_performance_tab: buildUrl(ADMIN_ANALYTICS_ROUTE, {
-        tab: "performance",
-      }),
       analytics_route_with_overview_tab: buildUrl(ADMIN_ANALYTICS_ROUTE, {
         tab: "overview",
+      }),
+      analytics_route_with_performance_tab: buildUrl(ADMIN_ANALYTICS_ROUTE, {
+        tab: "performance",
       }),
       // Test that providing section param doesn't interfere (should be filtered as literal)
       analytics_route_with_section_param: buildUrl(ADMIN_ANALYTICS_ROUTE, {

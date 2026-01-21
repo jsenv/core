@@ -806,7 +806,7 @@ export const registerRoute = (urlPattern) => {
         if (fallbackValue !== undefined) {
           if (cleanupDefaults && fallbackValue === defaultValue) {
             // When cleaning up defaults, include as undefined so prepareRouteRelativeUrl can remove the param
-            mergedParams[paramName] = undefined;
+            // mergedParams[paramName] = undefined;
             continue;
           }
           mergedParams[paramName] = fallbackValue;
@@ -815,7 +815,7 @@ export const registerRoute = (urlPattern) => {
       }
       if (cleanupDefaults) {
         // When cleaning up defaults, include as undefined so prepareRouteRelativeUrl can remove the param
-        mergedParams[paramName] = undefined;
+        // mergedParams[paramName] = undefined;
         continue;
       }
       if (defaultValue !== undefined) {
@@ -832,7 +832,7 @@ export const registerRoute = (urlPattern) => {
         const paramConfig = paramConfigMap.get(paramName);
         if (paramConfig && paramConfig.defaultValue === providedValue) {
           // When cleaning up defaults, include as undefined so prepareRouteRelativeUrl can remove the param
-          mergedParams[paramName] = undefined;
+          // mergedParams[paramName] = undefined;
           continue;
         }
       }
