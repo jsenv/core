@@ -221,4 +221,17 @@ await snapshotTests(import.meta.url, ({ test }) => {
       ),
     };
   });
+
+  test("matching with a base url", () => {
+    const pattern = "/admin/:section/";
+    const baseUrl =
+      "http://127.0.0.1:3456/packages/frontend/navi/src/nav/demos/dashboard/dashboard.html";
+    const url =
+      "http://127.0.0.1:3456/packages/frontend/navi/src/nav/demos/dashboard/admin";
+    const { applyOn } = createRoutePattern(pattern, baseUrl);
+    const result = applyOn(url);
+    return {
+      result,
+    };
+  });
 });

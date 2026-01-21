@@ -65,7 +65,7 @@ export const createRoutePattern = (
   }
 
   const applyOn = (url) => {
-    const result = matchUrl(url, parsedPattern, parameterDefaults, baseUrl);
+    const result = matchUrl(parsedPattern, url, { parameterDefaults, baseUrl });
 
     if (DEBUG) {
       console.debug(
@@ -154,10 +154,22 @@ const parsePattern = (pattern, parameterDefaults = new Map()) => {
 /**
  * Match a URL against a parsed pattern
  */
-const matchUrl = (url, parsedPattern, parameterDefaults, baseUrl) => {
+const matchUrl = (parsedPattern, url, { parameterDefaults, baseUrl }) => {
   // Parse the URL
   const urlObj = new URL(url, baseUrl);
-  const pathname = urlObj.pathname;
+  let pathname = urlObj.pathname;
+
+  // If baseUrl is provided, calculate the pathname relative to the baseUrl's directory
+  if (baseUrl) {
+    const baseUrlObj = new URL(baseUrl);
+    const baseDir = baseUrlObj.pathname.substring(
+      0,
+      baseUrlObj.pathname.lastIndexOf("/"),
+    );
+    if (pathname.startsWith(baseDir)) {
+      pathname = pathname.slice(baseDir.length);
+    }
+  }
 
   // Handle root route
   if (parsedPattern.segments.length === 0) {
