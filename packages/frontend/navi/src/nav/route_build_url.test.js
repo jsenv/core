@@ -46,46 +46,52 @@ await snapshotTests(import.meta.url, ({ test }) => {
 
     return {
       // Admin route URL building - basic parameter building with defaults
-      admin_route_default_params: buildUrl(ADMIN_ROUTE),
-      admin_route_with_users_section: buildUrl(ADMIN_ROUTE, {
-        section: "users",
-      }),
-      admin_route_with_settings_section: buildUrl(ADMIN_ROUTE, {
+      admin_no_params: buildUrl(ADMIN_ROUTE),
+      admin_with_section_settings: buildUrl(ADMIN_ROUTE, {
         section: "settings",
+      }),
+      admin_with_section_users: buildUrl(ADMIN_ROUTE, {
+        section: "users",
       }),
 
       // Settings route URL building - should handle inheritance properly
-      settings_route_default_params: buildUrl(ADMIN_SETTINGS_ROUTE),
-      settings_route_with_general_tab: buildUrl(ADMIN_SETTINGS_ROUTE, {
+      settings_no_params: buildUrl(ADMIN_SETTINGS_ROUTE),
+      settings_with_tab_general: buildUrl(ADMIN_SETTINGS_ROUTE, {
         tab: "general",
       }),
-      settings_route_with_security_tab: buildUrl(ADMIN_SETTINGS_ROUTE, {
+      settings_with_tab_security: buildUrl(ADMIN_SETTINGS_ROUTE, {
         tab: "security",
       }),
       // Test that providing section param doesn't interfere (should be filtered as literal)
-      settings_route_with_section_param: buildUrl(ADMIN_SETTINGS_ROUTE, {
-        section: "toto",
-        tab: "advanced",
-      }),
-      settings_route_with_extra_params: buildUrl(ADMIN_SETTINGS_ROUTE, {
+      settings_with_section_toto_and_tab_advanced: buildUrl(
+        ADMIN_SETTINGS_ROUTE,
+        {
+          section: "toto",
+          tab: "advanced",
+        },
+      ),
+      settings_with_extra_params: buildUrl(ADMIN_SETTINGS_ROUTE, {
         tab: "general",
         filter: "active",
       }),
 
       // Analytics route URL building - inheritance with search params
-      analytics_route_default_params: buildUrl(ADMIN_ANALYTICS_ROUTE),
-      analytics_route_with_overview_tab: buildUrl(ADMIN_ANALYTICS_ROUTE, {
+      analytics_no_params: buildUrl(ADMIN_ANALYTICS_ROUTE),
+      analytics_with_tab_overview: buildUrl(ADMIN_ANALYTICS_ROUTE, {
         tab: "overview",
       }),
-      analytics_route_with_performance_tab: buildUrl(ADMIN_ANALYTICS_ROUTE, {
+      analytics_with_tab_performance: buildUrl(ADMIN_ANALYTICS_ROUTE, {
         tab: "performance",
       }),
       // Test that providing section param doesn't interfere (should be filtered as literal)
-      analytics_route_with_section_param: buildUrl(ADMIN_ANALYTICS_ROUTE, {
-        section: "toto",
-        tab: "performance",
-      }),
-      analytics_route_with_extra_params: buildUrl(ADMIN_ANALYTICS_ROUTE, {
+      analytics_with_section_toto_and_tab_performance: buildUrl(
+        ADMIN_ANALYTICS_ROUTE,
+        {
+          section: "toto",
+          tab: "performance",
+        },
+      ),
+      analytics_with_extra_params: buildUrl(ADMIN_ANALYTICS_ROUTE, {
         tab: "details",
         dateRange: "7d",
       }),
