@@ -64,7 +64,7 @@ export const createRoutePattern = (
       // Check each parameter that corresponds to a literal segment default
       for (const [paramName, expectedDefault] of literalSegmentDefaults) {
         let paramValue = params[paramName];
-        
+
         // If the named parameter is undefined, check if there's a corresponding wildcard parameter
         // The wildcard parameters are numbered starting from 0
         if (paramValue === undefined && "0" in params) {
