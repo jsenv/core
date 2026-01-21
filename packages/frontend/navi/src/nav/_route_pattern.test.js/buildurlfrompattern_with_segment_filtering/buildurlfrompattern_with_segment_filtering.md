@@ -1,4 +1,4 @@
-# [buildUrlFromPattern with segment filtering](../../route_pattern.test.js#L284)
+# [buildUrlFromPattern with segment filtering](../../route_pattern.test.js#L285)
 
 ```js
 // Test case that reproduces the issue where segments were incorrectly omitted

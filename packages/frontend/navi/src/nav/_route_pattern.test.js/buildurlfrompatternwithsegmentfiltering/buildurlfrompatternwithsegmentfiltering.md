@@ -1,4 +1,4 @@
-# [buildUrlFromPatternWithSegmentFiltering](../../route_pattern.test.js#L308)
+# [buildUrlFromPatternWithSegmentFiltering](../../route_pattern.test.js#L309)
 
 ```js
 const pattern = "/admin/settings/:tab";
@@ -16,7 +16,6 @@ const segmentDefaults = new Map([
   ],
 ]);
 
-const mockSignal = { value: "settings" };
 const connections = [
   {
     paramName: "section",

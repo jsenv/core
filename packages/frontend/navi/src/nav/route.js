@@ -6,6 +6,7 @@
 import { createPubSub } from "@jsenv/dom";
 import { batch, computed, effect, signal } from "@preact/signals";
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
+import { documentUrlSignal } from "./browser_integration/document_url_signal.js";
 import {
   buildUrlFromPatternWithSegmentFiltering,
   createRoutePattern,
@@ -940,6 +941,7 @@ export const registerRoute = (urlPatternRaw) => {
     });
 
     // Use smart segment filtering from route_pattern.js
+    // This handles both trailing slash inheritance and segment filtering
     const routePrivateProps = getRoutePrivateProperties(route);
     const parsedPattern = routePrivateProps.routePattern.pattern;
     const parameterDefaults = routePrivateProps.parameterDefaults || new Map();
@@ -955,12 +957,7 @@ export const registerRoute = (urlPatternRaw) => {
         connections,
       },
     );
-    if (
-      urlPattern === "/admin/analytics/" &&
-      routeRelativeUrl.endsWith("admin")
-    ) {
-      debugger;
-    }
+
     return routeRelativeUrl;
   };
   /**
@@ -997,6 +994,15 @@ export const registerRoute = (urlPatternRaw) => {
 
   const relativeUrlSignal = computed(() => {
     const rawParams = rawParamsSignal.value;
+
+    // For patterns with trailing slash, create dependency on documentUrlSignal
+    // to automatically update when document URL changes (for path inheritance)
+    const routePrivateProps = getRoutePrivateProperties(route);
+    if (routePrivateProps?.routePattern?.pattern?.trailingSlash) {
+      // eslint-disable-next-line no-unused-expressions
+      documentUrlSignal.value; // Create reactive dependency on documentUrlSignal
+    }
+
     const relativeUrl = route.buildRelativeUrl(rawParams);
     return relativeUrl;
   });

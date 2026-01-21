@@ -65,7 +65,7 @@ return {
       "defaultValue": "overview"
     }
   ],
-  "result": "/admin/analytics",
+  "result": "/admin/analytics/",
   "expected": "/admin/analytics/",
   "issue": "segment should not be filtered when literal value differs from signal default"
 }

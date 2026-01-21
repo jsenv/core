@@ -1,4 +1,4 @@
-# [literal segment defaults edge cases](../../route_pattern.test.js#L178)
+# [literal segment defaults edge cases](../../route_pattern.test.js#L179)
 
 ```js
 const runWithDefaults = (pattern, urlOrRelativeUrl, literalDefaults) => {

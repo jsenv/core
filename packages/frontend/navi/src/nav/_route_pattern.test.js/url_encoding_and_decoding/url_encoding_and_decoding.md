@@ -1,4 +1,4 @@
-# [url encoding and decoding](../../route_pattern.test.js#L55)
+# [url encoding and decoding](../../route_pattern.test.js#L56)
 
 ```js
 return {

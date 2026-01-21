@@ -1,4 +1,4 @@
-# [complex patterns with trailing slash](../../route_pattern.test.js#L69)
+# [complex patterns with trailing slash](../../route_pattern.test.js#L70)
 
 ```js
 return {

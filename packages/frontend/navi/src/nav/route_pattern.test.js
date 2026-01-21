@@ -1,5 +1,6 @@
 import { snapshotTests } from "@jsenv/snapshot";
 import { stateSignal } from "../state/state_signal.js";
+import { documentUrlSignal } from "./browser_integration/document_url_signal.js";
 import {
   buildUrlFromPattern,
   buildUrlFromPatternWithSegmentFiltering,
@@ -321,7 +322,6 @@ await snapshotTests(import.meta.url, ({ test }) => {
       ],
     ]);
 
-    const mockSignal = { value: "settings" };
     const connections = [
       {
         paramName: "section",
@@ -409,5 +409,89 @@ await snapshotTests(import.meta.url, ({ test }) => {
       issue:
         "segment should not be filtered when literal value differs from signal default",
     };
+  });
+
+  test("trailing slash path inheritance", () => {
+    const results = {};
+
+    // Test basic pattern matching
+    const patternWithTrailingSlash = "/admin/:section/";
+    const routePattern = createRoutePattern(patternWithTrailingSlash, baseUrl);
+
+    // Test URL matching and parameter extraction
+    const testUrl = "http://localhost:3000/admin/settings/advanced";
+    const matchResult = routePattern.applyOn(testUrl);
+    results.basic_matching = {
+      pattern: patternWithTrailingSlash,
+      url: testUrl,
+      extracted_params: matchResult,
+    };
+
+    // Test URL building WITH documentUrlSignal set (should inherit remaining path)
+    if (matchResult) {
+      // Set documentUrlSignal to simulate current URL context
+      documentUrlSignal.value = testUrl;
+
+      const builtUrl = buildUrlFromPattern(
+        routePattern.pattern,
+        matchResult,
+        new Map(),
+      );
+      results.url_building_with_document_url = {
+        input_params: matchResult,
+        document_url: testUrl,
+        built_url: builtUrl,
+        expected: "/admin/settings/advanced",
+        matches_original: builtUrl === "/admin/settings/advanced",
+      };
+    }
+
+    // Test URL building WITHOUT documentUrlSignal (should not inherit path)
+    if (matchResult) {
+      // Clear documentUrlSignal
+      documentUrlSignal.value = null;
+
+      const builtUrlNoContext = buildUrlFromPattern(
+        routePattern.pattern,
+        { section: "settings" }, // Just basic params
+        new Map(),
+      );
+      results.url_building_without_document_url = {
+        input_params: { section: "settings" },
+        document_url: null,
+        built_url: builtUrlNoContext,
+        expected: "/admin/settings/", // Should not inherit extra path
+        matches_expected: builtUrlNoContext === "/admin/settings/",
+      };
+    }
+
+    // Test with search parameters
+    const testUrlWithSearch =
+      "http://localhost:3000/admin/settings/advanced?tab=security&debug=true";
+    const matchResultWithSearch = routePattern.applyOn(testUrlWithSearch);
+    if (matchResultWithSearch) {
+      // Set documentUrlSignal to the URL with search params
+      documentUrlSignal.value = testUrlWithSearch;
+
+      const builtUrlWithSearch = buildUrlFromPattern(
+        routePattern.pattern,
+        matchResultWithSearch,
+        new Map(),
+      );
+      results.url_building_with_search = {
+        input_params: matchResultWithSearch,
+        document_url: testUrlWithSearch,
+        built_url: builtUrlWithSearch,
+        expected: "/admin/settings/advanced?tab=security&debug=true",
+        matches_original:
+          builtUrlWithSearch ===
+          "/admin/settings/advanced?tab=security&debug=true",
+      };
+    }
+
+    // Reset documentUrlSignal
+    documentUrlSignal.value = null;
+
+    return results;
   });
 });

@@ -76,19 +76,19 @@ return {
 
 ```js
 {
-  "admin_no_params": "http://127.0.0.1/admin",
-  "admin_with_section_settings": "http://127.0.0.1/admin",
-  "admin_with_section_users": "http://127.0.0.1/admin/users",
+  "admin_no_params": "http://127.0.0.1/admin/",
+  "admin_with_section_settings": "http://127.0.0.1/admin/",
+  "admin_with_section_users": "http://127.0.0.1/admin/users/",
   "settings_no_params": "http://127.0.0.1/admin",
   "settings_with_tab_general": "http://127.0.0.1/admin",
   "settings_with_tab_security": "http://127.0.0.1/admin/settings/security",
   "settings_with_section_toto_and_tab_advanced": "http://127.0.0.1/admin/settings/advanced",
   "settings_with_extra_params": "http://127.0.0.1/admin/settings?filter=active",
-  "analytics_no_params": "http://127.0.0.1/admin/analytics",
-  "analytics_with_tab_overview": "http://127.0.0.1/admin/analytics",
-  "analytics_with_tab_performance": "http://127.0.0.1/admin/analytics?tab=performance",
-  "analytics_with_section_toto_and_tab_performance": "http://127.0.0.1/admin/analytics?tab=performance",
-  "analytics_with_extra_params": "http://127.0.0.1/admin/analytics?tab=details&dateRange=7d"
+  "analytics_no_params": "http://127.0.0.1/admin/analytics/",
+  "analytics_with_tab_overview": "http://127.0.0.1/admin/analytics/",
+  "analytics_with_tab_performance": "http://127.0.0.1/admin/analytics/?tab=performance",
+  "analytics_with_section_toto_and_tab_performance": "http://127.0.0.1/admin/analytics/?tab=performance",
+  "analytics_with_extra_params": "http://127.0.0.1/admin/analytics/?tab=details&dateRange=7d"
 }
 ```
 

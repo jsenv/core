@@ -4,6 +4,7 @@
  */
 
 import { globalSignalRegistry } from "../state/state_signal.js";
+import { documentUrlSignal } from "./browser_integration/document_url_signal.js";
 
 const DEBUG = false;
 
@@ -349,13 +350,15 @@ export const buildUrlFromPattern = (
 
   let path = `/${segments.join("/")}`;
 
-  // Handle trailing slash - prefer no trailing slash except for root
+  // Handle trailing slash based on original pattern
   if (parsedPattern.trailingSlash && !path.endsWith("/") && path !== "/") {
     path += "/";
-  }
-
-  // Remove trailing slash for non-root paths to keep URLs clean
-  if (path.endsWith("/") && path !== "/") {
+  } else if (
+    !parsedPattern.trailingSlash &&
+    path.endsWith("/") &&
+    path !== "/"
+  ) {
+    // Remove trailing slash for patterns without trailing slash
     path = path.slice(0, -1);
   }
 
@@ -372,6 +375,47 @@ export const buildUrlFromPattern = (
   }
 
   const search = searchParams.toString();
+
+  // Handle trailing slash inheritance by checking documentUrlSignal
+  if (parsedPattern.trailingSlash) {
+    // Get current document URL to preserve remaining path
+    const currentUrl = documentUrlSignal?.peek?.() || documentUrlSignal?.value;
+    if (currentUrl) {
+      const currentUrlObj = new URL(currentUrl);
+      const currentPath = currentUrlObj.pathname;
+
+      // Build what this pattern would match
+      const patternPath = path;
+      const normalizedPatternPath = patternPath.endsWith("/")
+        ? patternPath
+        : `${patternPath}/`;
+
+      // If current path starts with pattern path and has extra segments, preserve them
+      if (
+        currentPath.length > normalizedPatternPath.length &&
+        currentPath.startsWith(normalizedPatternPath)
+      ) {
+        const remainingPath = currentPath.slice(normalizedPatternPath.length);
+        if (remainingPath) {
+          path = path + (path.endsWith("/") ? "" : "/") + remainingPath;
+        }
+
+        // Also preserve search params from current URL if they're not already present
+        const currentSearchParams = currentUrlObj.searchParams;
+        const existingParams = new URLSearchParams(search);
+        for (const [key, value] of currentSearchParams) {
+          if (!existingParams.has(key)) {
+            existingParams.set(key, value);
+          }
+        }
+        return (
+          path +
+          (existingParams.toString() ? `?${existingParams.toString()}` : "")
+        );
+      }
+    }
+  }
+
   return path + (search ? `?${search}` : "");
 };
 
@@ -379,7 +423,7 @@ export const buildUrlFromPattern = (
  * Build URL from pattern with smart segment omission based on inheritance and parameters
  *
  * This function handles the logic for omitting segments when they match signal defaults
- * and no non-default parameters are provided.
+ * and no non-default parameters are provided. It also handles trailing slash inheritance.
  */
 export const buildUrlFromPatternWithSegmentFiltering = (
   parsedPattern,
@@ -387,6 +431,12 @@ export const buildUrlFromPatternWithSegmentFiltering = (
   parameterDefaults = new Map(),
   { segmentDefaults = new Map(), connections = [] } = {},
 ) => {
+  // For patterns with trailing slash, use buildUrlFromPattern which handles documentUrlSignal
+  if (parsedPattern.trailingSlash) {
+    return buildUrlFromPattern(parsedPattern, params, parameterDefaults);
+  }
+
+  // For patterns without trailing slash, apply segment filtering logic
   // Check if ANY parameter has a non-default value
   // If so, we must use the full pattern to avoid ambiguity
   let hasNonDefaultParams = false;

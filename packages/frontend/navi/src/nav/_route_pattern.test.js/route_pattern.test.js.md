@@ -16,6 +16,7 @@
 - [buildUrlFromPattern with segment filtering](buildurlfrompattern_with_segment_filtering/buildurlfrompattern_with_segment_filtering.md)
 - [buildUrlFromPatternWithSegmentFiltering](buildurlfrompatternwithsegmentfiltering/buildurlfrompatternwithsegmentfiltering.md)
 - [buildUrlFromPatternWithSegmentFiltering - no connection for segmentDefault parameter](buildurlfrompatternwithsegmentfiltering_-_no_connection_for_segmentdefault_parameter/buildurlfrompatternwithsegmentfiltering_-_no_connection_for_segmentdefault_parameter.md)
+- [trailing slash path inheritance](trailing_slash_path_inheritance/trailing_slash_path_inheritance.md)
 
 ---
 
