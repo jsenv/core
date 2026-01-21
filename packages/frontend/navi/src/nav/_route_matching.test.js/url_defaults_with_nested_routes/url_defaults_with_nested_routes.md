@@ -133,60 +133,47 @@ return testResults;
     "section": "users"
   },
   "settings_route_matches_admin_root": {
-    "section": "settings",
     "tab": "general"
   },
   "settings_root_without_slash": {
-    "section": "settings",
     "tab": "general"
   },
   "settings_root_with_slash": {
-    "section": "settings",
     "tab": "general"
   },
   "settings_with_general_tab": {
-    "tab": "general",
-    "section": "settings"
+    "tab": "general"
   },
   "settings_with_security_tab": {
-    "tab": "security",
-    "section": "settings"
+    "tab": "security"
   },
   "settings_with_literal_settings_path": {
-    "section": "settings",
     "tab": "general"
   },
   "settings_with_wrong_search_param": {
     "wrongParam": "value",
-    "section": "settings",
     "tab": "general"
   },
   "settings_should_not_match_analytics_url": null,
   "settings_should_not_match_users_url": null,
   "settings_with_different_section": null,
   "analytics_with_overview_tab": {
-    "section": "analytics",
     "tab": "overview"
   },
   "analytics_with_performance_tab": {
-    "tab": "performance",
-    "section": "analytics"
+    "tab": "performance"
   },
   "analytics_root_without_slash": {
-    "section": "analytics",
     "tab": "overview"
   },
   "analytics_root_with_slash": {
-    "section": "analytics",
     "tab": "overview"
   },
   "analytics_with_literal_analytics_path": {
-    "section": "analytics",
     "tab": "overview"
   },
   "analytics_with_wrong_search_param": {
     "wrongParam": "value",
-    "section": "analytics",
     "tab": "overview"
   },
   "analytics_should_not_match_settings_url": null,

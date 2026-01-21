@@ -612,33 +612,100 @@ export const registerRoute = (urlPattern) => {
     const mergedParams = {};
     const paramNameSet = new Set(paramConfigMap.keys());
 
+    // Add inherited defaults from other routes for missing parameters
+    const routePrivateProps = getRoutePrivateProperties(route);
+    const inheritanceInfo =
+      routePrivateProps?.literalSegmentDefaults?.get(internalUrlPattern);
+    const literalParameterNames = new Set(); // Track literal parameters to exclude them throughout
+
+    if (inheritanceInfo) {
+      // Create a set of parameters that correspond to literal segments in the original pattern
+      // These should not be exposed in the final params since they're "hardcoded" in the route
+      const originalPatternSegments = routePrivateProps.originalPattern
+        .split("/")
+        .filter((s) => s !== "");
+
+      if (DEBUG) {
+        console.debug("Original pattern segments:", originalPatternSegments);
+        console.debug("Inheritance info:", inheritanceInfo);
+      }
+
+      for (const inheritance of inheritanceInfo) {
+        const { paramName, literalValue, segmentIndex } = inheritance;
+        // If the original pattern had a literal segment at this position,
+        // don't include this parameter in the final params
+        if (segmentIndex < originalPatternSegments.length) {
+          const originalSegment = originalPatternSegments[segmentIndex];
+          if (DEBUG) {
+            console.debug(
+              `Checking segment ${segmentIndex}: original="${originalSegment}" vs literal="${literalValue}"`,
+            );
+          }
+          if (originalSegment === literalValue) {
+            literalParameterNames.add(paramName);
+            if (DEBUG) {
+              console.debug(`Filtering out literal parameter: ${paramName}`);
+            }
+          }
+        }
+      }
+    }
+
     // First, add raw params that have defined values
+    // But exclude literal parameters that correspond to hardcoded segments
     if (rawParams) {
       for (const name of Object.keys(rawParams)) {
         const value = rawParams[name];
         if (value !== undefined) {
+          if (DEBUG) {
+            console.debug(`Processing raw param: ${name}=${value}`);
+          }
+          // Skip literal parameters that correspond to hardcoded segments in original pattern
+          if (literalParameterNames.has(name)) {
+            if (DEBUG) {
+              console.debug(
+                `Excluding literal parameter ${name} from raw params`,
+              );
+            }
+            continue;
+          }
           mergedParams[name] = rawParams[name];
           paramNameSet.delete(name);
         }
       }
     }
 
-    // Add inherited defaults from other routes for missing parameters
-    const routePrivateProps = getRoutePrivateProperties(route);
-    const inheritanceInfo =
-      routePrivateProps?.literalSegmentDefaults?.get(internalUrlPattern);
+    // Add inherited defaults for parameters not in raw params and not literal
     if (inheritanceInfo) {
       for (const inheritance of inheritanceInfo) {
         const { paramName, defaultValue } = inheritance;
-        if (!(paramName in mergedParams)) {
+        if (
+          !(paramName in mergedParams) &&
+          !literalParameterNames.has(paramName)
+        ) {
           mergedParams[paramName] = defaultValue;
           paramNameSet.delete(paramName);
+        } else if (literalParameterNames.has(paramName)) {
+          if (DEBUG) {
+            console.debug(
+              `Excluded literal parameter ${paramName} from inheritance defaults`,
+            );
+          }
         }
       }
     }
 
     // Then, for parameters not in URL, check localStorage and apply defaults
+    // But exclude literal parameters that correspond to hardcoded segments
     for (const paramName of paramNameSet) {
+      if (literalParameterNames.has(paramName)) {
+        if (DEBUG) {
+          console.debug(
+            `Skipping literal parameter ${paramName} in default processing`,
+          );
+        }
+        continue; // Skip literal parameters
+      }
       const paramConfig = paramConfigMap.get(paramName);
       const { defaultValue } = paramConfig;
       if (defaultValue !== undefined) {
