@@ -862,6 +862,50 @@ export const registerRoute = (urlPattern) => {
         }
       }
 
+      // Check if inherited literal values differ from signal defaults
+      // This handles cases like analytics route where section="analytics" differs from sectionSignal default="settings"
+      if (!shouldUseOriginalPattern) {
+        for (const inheritance of inheritanceInfo) {
+          const { paramName, literalValue } = inheritance;
+
+          // Find the original signal default by looking through all routes
+          let originalSignalDefault;
+          for (const existingRoute of routeSet) {
+            const existingPrivateProps =
+              getRoutePrivateProperties(existingRoute);
+            const existingConnections = existingPrivateProps?.connections || [];
+
+            for (const {
+              signal,
+              paramName: existingParamName,
+            } of existingConnections) {
+              if (
+                existingParamName === paramName &&
+                signal &&
+                signal.value !== undefined
+              ) {
+                originalSignalDefault = signal.value;
+                break;
+              }
+            }
+            if (originalSignalDefault !== undefined) break;
+          }
+
+          if (
+            originalSignalDefault !== undefined &&
+            literalValue !== originalSignalDefault
+          ) {
+            shouldUseOriginalPattern = true;
+            if (DEBUG) {
+              console.debug(
+                `Inherited literal ${paramName}=${literalValue} differs from original signal default ${originalSignalDefault}, using original pattern`,
+              );
+            }
+            break;
+          }
+        }
+      }
+
       // Also check if any non-inherited parameters have non-default values
       // This handles cases like tab=security where tab isn't inherited but requires full URL
       if (!shouldUseOriginalPattern && params) {

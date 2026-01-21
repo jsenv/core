@@ -78,9 +78,9 @@ return {
   "settings_route_with_security_tab": "http://127.0.0.1/admin/settings/security",
   "settings_route_with_section_param": "http://127.0.0.1/admin/settings/advanced?section=toto",
   "settings_route_with_extra_params": "http://127.0.0.1/admin?filter=active",
-  "analytics_route_default_params": "http://127.0.0.1/admin",
+  "analytics_route_default_params": "http://127.0.0.1/admin/analytics",
   "analytics_route_with_performance_tab": "http://127.0.0.1/admin/analytics?tab=performance",
-  "analytics_route_with_overview_tab": "http://127.0.0.1/admin",
+  "analytics_route_with_overview_tab": "http://127.0.0.1/admin/analytics",
   "analytics_route_with_section_param": "http://127.0.0.1/admin/analytics?section=toto&tab=performance",
   "analytics_route_with_extra_params": "http://127.0.0.1/admin/analytics?tab=details&dateRange=7d"
 }
