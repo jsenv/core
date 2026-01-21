@@ -26,9 +26,9 @@ await snapshotTests(import.meta.url, ({ test }) => {
 
   test("url building with nested routes inheritance", () => {
     clearAllRoutes();
-    const sectionSignal = stateSignal("settings");
-    const tabSignal = stateSignal("general");
-    const analyticsTabSignal = stateSignal("overview");
+    const sectionSignal = stateSignal("settings", { id: "section" });
+    const tabSignal = stateSignal("general", { id: "settings_tab" });
+    const analyticsTabSignal = stateSignal("overview", { id: "analytics_tab" });
 
     // Register routes with inheritance setup (same as route_matching.test.js)
     registerRoute("/");

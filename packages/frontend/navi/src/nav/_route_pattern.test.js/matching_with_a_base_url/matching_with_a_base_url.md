@@ -1,4 +1,4 @@
-# [matching with a base url](../../route_pattern.test.js#L267)
+# [matching with a base url](../../route_pattern.test.js#L264)
 
 ```js
 const sectionSignal = stateSignal("settings");

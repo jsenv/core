@@ -7,35 +7,32 @@ const categorySignal = stateSignal("products", { id: "main_category" });
 
 return {
   // Single custom signal ID in path parameter
-  custom_id_path_param: run(
-    `/admin/:tab=${tabSignal}`,
-    "/admin/security"
-  ),
-  
+  custom_id_path_param: run(`/admin/:tab=${tabSignal}`, "/admin/security"),
+
   // Custom signal ID with default value match
   custom_id_default_match: run(
     `/admin/:tab=${tabSignal}`,
-    "/admin/general"
+    "/admin/general",
   ),
-  
+
   // Multiple custom signal IDs
   multiple_custom_ids: run(
     `/shop/:category=${categorySignal}/:tab=${tabSignal}`,
-    "/shop/electronics/advanced"
+    "/shop/electronics/advanced",
   ),
-  
+
   // Custom signal ID in search parameter
   custom_id_search_param: run(
     `/dashboard?tab=${tabSignal}`,
-    "/dashboard?tab=security"
+    "/dashboard?tab=security",
   ),
-  
+
   // Mixed auto-generated and custom signal IDs
   mixed_signal_types: (() => {
     const autoSignal = stateSignal("auto_default"); // Auto-generated ID
     return run(
       `/mixed/:custom=${tabSignal}/:auto=${autoSignal}`,
-      "/mixed/custom_value/auto_value"
+      "/mixed/custom_value/auto_value",
     );
   })(),
 };
