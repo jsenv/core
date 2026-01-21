@@ -494,18 +494,25 @@ export const registerRoute = (urlPattern) => {
 
   // Store inheritance relationships during registration
   const segmentDefaults = new Map(); // Map segment index -> default value for that segment
-  
+
   if (inheritanceResult.canInherit && inheritanceResult.inheritanceData) {
     for (const inheritance of inheritanceResult.inheritanceData) {
-      const { segmentIndex, paramName, literalValue, originalDefault } = inheritance;
-      
+      const { segmentIndex, paramName, literalValue } = inheritance;
+
       // Find the parent signal that provides the default for this parameter
       for (const existingRoute of routeSet) {
         const existingPrivateProps = getRoutePrivateProperties(existingRoute);
         const existingConnections = existingPrivateProps?.connections || [];
-        
-        for (const { signal, paramName: existingParamName } of existingConnections) {
-          if (existingParamName === paramName && signal && signal.value !== undefined) {
+
+        for (const {
+          signal,
+          paramName: existingParamName,
+        } of existingConnections) {
+          if (
+            existingParamName === paramName &&
+            signal &&
+            signal.value !== undefined
+          ) {
             // Store that this segment can be omitted if its value matches the signal default
             segmentDefaults.set(segmentIndex, {
               paramName,
@@ -880,22 +887,42 @@ export const registerRoute = (urlPattern) => {
     const parsedPattern = routePrivateProps.routePattern.pattern;
     const parameterDefaults = routePrivateProps.parameterDefaults || new Map();
     const segmentDefaults = routePrivateProps.segmentDefaults || new Map();
-    
-    // Create a modified pattern where segments that match signal defaults are made optional
+
+    // Check if ANY parameter has a non-default value
+    // If so, we must use the full pattern to avoid ambiguity
+    let hasNonDefaultParams = false;
+    const connections = routePrivateProps.connections || [];
+
+    for (const { paramName, options = {} } of connections) {
+      const providedValue = params?.[paramName];
+      const defaultValue = options.defaultValue;
+
+      if (providedValue !== undefined && providedValue !== defaultValue) {
+        hasNonDefaultParams = true;
+        break;
+      }
+    }
+
+    // Only skip segments when ALL parameters are at defaults
     const modifiedPattern = {
       ...parsedPattern,
-      segments: parsedPattern.segments.map((segment, index) => {
+      segments: parsedPattern.segments.filter((segment, index) => {
         const segmentDefault = segmentDefaults.get(index);
-        if (segmentDefault && segment.type === 'literal' && 
-            segment.value === segmentDefault.literalValue &&
-            segmentDefault.literalValue === segmentDefault.signalDefault) {
-          // Make this literal segment optional since it matches the signal default
-          return { ...segment, optional: true };
+        if (
+          !hasNonDefaultParams && // Only skip when all params are defaults
+          segmentDefault &&
+          segment.type === "literal" &&
+          segment.value === segmentDefault.literalValue &&
+          segmentDefault.literalValue === segmentDefault.signalDefault
+        ) {
+          // Skip this literal segment entirely since it matches the signal default
+          // and no parameters have non-default values
+          return false;
         }
-        return segment;
-      })
+        return true;
+      }),
     };
-    
+
     const routeRelativeUrl = buildUrlFromPattern(
       modifiedPattern,
       resolvedParams,
