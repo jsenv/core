@@ -10,8 +10,13 @@ import {
 const baseUrl = "http://localhost:3000";
 setBaseUrl(baseUrl);
 
-const run = (pattern, relativeUrl) => {
-  const route = registerRoute(pattern);
+const run = (patternOrRoute, relativeUrl) => {
+  let route;
+  if (typeof patternOrRoute === "string") {
+    route = registerRoute(patternOrRoute);
+  } else {
+    route = patternOrRoute;
+  }
   updateRoutes(`${baseUrl}${relativeUrl}`);
   clearAllRoutes();
 
@@ -63,6 +68,11 @@ await snapshotTests(import.meta.url, ({ test }) => {
       admin_root_matches_section_default: run(ADMIN_ROUTE, `/admin`),
       admin_root_with_slash: run(ADMIN_ROUTE, `/admin/`),
       admin_with_users_section: run(ADMIN_ROUTE, `/admin/users/`),
+
+      // CRITICAL TEST: This should match because "settings" is the default value for :section
+      // /admin/settings/:tab should match /admin because settings=default(section)
+      settings_route_matches_admin_root: run(ADMIN_SETTINGS_ROUTE, `/admin`),
+
       settings_with_general_tab: run(
         ADMIN_SETTINGS_ROUTE,
         `/admin/settings/general`,

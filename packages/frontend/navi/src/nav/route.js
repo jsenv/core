@@ -240,11 +240,164 @@ export const registerRoute = (urlPattern) => {
       );
     }
   }
-  // Track literal segments that correspond to parameter defaults for validation
-  // This allows /admin/settings/:tab to validate that "settings" matches the :section default
+  // Cross-route optimization: allow routes with literal segments that match parameter defaults
+  // to also match shorter URLs where those segments are omitted
   const literalSegmentDefaults = new Map();
-  // TODO: Cross-route optimization disabled temporarily to fix basic route matching
-  // The complex optimization logic was causing routes to fail matching
+
+  if (DEBUG) {
+    console.debug(`Registering route: ${urlPattern} -> ${internalUrlPattern}`);
+    console.debug(
+      `Existing routes: ${Array.from(routeSet)
+        .map((r) => r.urlPattern)
+        .join(", ")}`,
+    );
+  }
+
+  // Infer parameter defaults from other routes to create short versions
+  // Check if we can make this route match shorter URLs by using defaults from other registered routes
+  if (routeSet.size > 0) {
+    if (DEBUG) {
+      console.debug(
+        `\nAnalyzing route for inferring defaults from other routes: ${internalUrlPattern}`,
+      );
+      console.debug(`Total existing routes: ${routeSet.size}`);
+    }
+
+    // Compare current pattern against previously registered routes to find inference opportunities
+    for (const existingRoute of routeSet) {
+      const existingPrivateProps = getRoutePrivateProperties(existingRoute);
+      if (!existingPrivateProps) continue;
+      const { connections: existingConnections } = existingPrivateProps;
+
+      // Use the existing route's internal pattern (after signal detection) for comparison
+      const existingInternalPattern = existingRoute.urlPattern; // This should be the processed pattern
+
+      if (DEBUG) {
+        console.debug(
+          `Comparing against existing route: ${existingInternalPattern}, connections:`,
+          existingConnections.map(
+            (c) => `${c.paramName}=${c.options.defaultValue}`,
+          ),
+        );
+      }
+
+      // Check if current pattern can have a short version based on defaults from existing routes
+      const currentSegments = internalUrlPattern
+        .split("/")
+        .filter((s) => s !== "");
+      const existingSegments = existingInternalPattern
+        .split("/")
+        .filter((s) => s !== "");
+
+      if (DEBUG) {
+        console.debug(`Current segments:`, currentSegments);
+        console.debug(`Existing segments:`, existingSegments);
+      }
+
+      // Look for cases where current pattern has literal segments that match parameter defaults in existing patterns
+      if (currentSegments.length > existingSegments.length) {
+        let canCreateShortVersion = true;
+        const defaultInferences = [];
+
+        // Compare each segment up to the length of the existing pattern
+        for (
+          let i = 0;
+          i < existingSegments.length && i < currentSegments.length;
+          i++
+        ) {
+          const existingSeg = existingSegments[i];
+          const currentSeg = currentSegments[i];
+
+          if (DEBUG) {
+            console.debug(
+              `Comparing segment ${i}: existing="${existingSeg}" vs current="${currentSeg}"`,
+            );
+          }
+
+          if (existingSeg === currentSeg) {
+            // Identical segments - continue
+            continue;
+          } else if (
+            existingSeg.startsWith(":") &&
+            !currentSeg.startsWith(":")
+          ) {
+            // Existing has parameter, current has literal
+            const paramName = existingSeg.replace(/[?*]/g, "").substring(1); // Remove : prefix and suffixes
+            const existingConnection = existingConnections.find(
+              (c) => c.paramName === paramName,
+            );
+
+            if (DEBUG) {
+              console.debug(
+                `Found param ${paramName} with default:`,
+                existingConnection?.options.defaultValue,
+              );
+            }
+
+            if (
+              existingConnection &&
+              existingConnection.options.defaultValue === currentSeg
+            ) {
+              // Literal segment matches parameter default - can create short version
+              defaultInferences.push({
+                segmentIndex: i,
+                literalValue: currentSeg,
+                paramName,
+                defaultValue: existingConnection.options.defaultValue,
+              });
+            } else {
+              // Literal doesn't match parameter default - can't create short version with this route
+              canCreateShortVersion = false;
+              break;
+            }
+          } else {
+            // Other mismatch - can't create short version with this route
+            canCreateShortVersion = false;
+            break;
+          }
+        }
+
+        // Apply short version creation if we found valid default inferences from other routes
+        if (canCreateShortVersion && defaultInferences.length > 0) {
+          // Transform the internal pattern to make literal segments optional
+          let segments = internalUrlPattern.split("/").filter((s) => s !== "");
+
+          if (DEBUG) {
+            console.debug(
+              `Applying default inferences from other routes:`,
+              defaultInferences,
+            );
+            console.debug(`Original segments:`, segments);
+          }
+
+          // Apply each default inference to create short version
+          for (const inference of defaultInferences) {
+            // Replace literal with optional parameter
+            segments[inference.segmentIndex] = `:${inference.paramName}?`;
+          }
+
+          const shortVersionPattern = `/${segments.join("/")}`;
+
+          if (DEBUG) {
+            console.debug(`Short version pattern: ${shortVersionPattern}`);
+          }
+
+          // Store the default inferences for validation
+          literalSegmentDefaults.set(routeId, defaultInferences);
+
+          // Update the internal pattern to the short version
+          internalUrlPattern = shortVersionPattern;
+
+          if (DEBUG) {
+            console.debug(
+              `Route transformed: ${urlPattern} -> ${internalUrlPattern} using defaults from other routes`,
+            );
+          }
+          break; // Found transformation, stop looking at other routes
+        }
+      }
+    }
+  }
 
   // Make trailing slashes flexible - if pattern ends with /, make it match anything after
   // Exception: don't transform root route "/" to avoid matching everything
@@ -629,7 +782,8 @@ export const registerRoute = (urlPattern) => {
   };
   route.bindAction = bindAction;
 
-  private_properties: {
+  // Store private properties for internal access
+  {
     routePrivateProperties.matchingSignal = matchingSignal;
     routePrivateProperties.paramsSignal = paramsSignal;
     routePrivateProperties.rawParamsSignal = rawParamsSignal;

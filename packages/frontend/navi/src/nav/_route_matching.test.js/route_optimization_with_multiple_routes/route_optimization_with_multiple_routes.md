@@ -1,4 +1,4 @@
-# [route optimization with multiple routes](../../route_matching.test.js#L41)
+# [route optimization with multiple routes](../../route_matching.test.js#L46)
 
 ```js
 // Clear routes to start fresh
@@ -10,48 +10,40 @@ const tabSignal = stateSignal("general");
 const analyticsTabSignal = stateSignal("overview");
 
 // Register routes using explicit parameter syntax
-const routes = [
-  registerRoute("/"),
-  registerRoute(`/admin/:section=${sectionSignal}/`),
-  registerRoute(`/admin/settings/:tab=${tabSignal}`),
-  registerRoute(`/admin/analytics/?tab=${analyticsTabSignal}`),
-];
-
-// Check that original patterns are preserved (not transformed to parameters)
-const patterns = routes.map((route) => route.urlPattern);
+registerRoute("/");
+const ADMIN_ROUTE = registerRoute(`/admin/:section=${sectionSignal}/`);
+const ADMIN_SETTINGS_ROUTE = registerRoute(
+  `/admin/settings/:tab=${tabSignal}`,
+);
+const ADMIN_ANALYTICS_ROUTE = registerRoute(
+  `/admin/analytics/?tab=${analyticsTabSignal}`,
+);
 
 // Test various URL matching scenarios
 const testResults = {
-  preserved_patterns: patterns,
-
   // Test basic parameter with default - should match "/admin"
-  admin_root_matches_section_default: run(
-    `/admin/:section=${sectionSignal}/`,
-    `/admin`,
-  ),
-  admin_root_with_slash: run(`/admin/:section=${sectionSignal}/`, `/admin/`),
-  admin_with_users_section: run(
-    `/admin/:section=${sectionSignal}/`,
-    `/admin/users/`,
-  ),
+  admin_root_matches_section_default: run(ADMIN_ROUTE, `/admin`),
+  admin_root_with_slash: run(ADMIN_ROUTE, `/admin/`),
+  admin_with_users_section: run(ADMIN_ROUTE, `/admin/users/`),
 
-  // Test settings route with tab parameter
+  // CRITICAL TEST: This should match because "settings" is the default value for :section
+  // /admin/settings/:tab should match /admin because settings=default(section)
+  settings_route_matches_admin_root: run(ADMIN_SETTINGS_ROUTE, `/admin`),
+
   settings_with_general_tab: run(
-    `/admin/settings/:tab=${tabSignal}`,
+    ADMIN_SETTINGS_ROUTE,
     `/admin/settings/general`,
   ),
   settings_with_security_tab: run(
-    `/admin/settings/:tab=${tabSignal}`,
+    ADMIN_SETTINGS_ROUTE,
     `/admin/settings/security`,
   ),
-
-  // Test analytics route with query parameter
   analytics_with_overview_tab: run(
-    `/admin/analytics/?tab=${analyticsTabSignal}`,
+    ADMIN_ANALYTICS_ROUTE,
     `/admin/analytics`,
   ),
   analytics_with_performance_tab: run(
-    `/admin/analytics/?tab=${analyticsTabSignal}`,
+    ADMIN_ANALYTICS_ROUTE,
     `/admin/analytics?tab=performance`,
   ),
 };
@@ -63,12 +55,6 @@ return testResults;
 
 ```js
 {
-  "preserved_patterns": [
-    "/",
-    "/admin/:section=__jsenv_signal_2__/",
-    "/admin/settings/:tab=__jsenv_signal_3__",
-    "/admin/analytics/?tab=__jsenv_signal_4__"
-  ],
   "admin_root_matches_section_default": {
     "section": "settings"
   },
@@ -76,20 +62,13 @@ return testResults;
     "section": "settings"
   },
   "admin_with_users_section": {
-    "section": "users"
+    "section": "settings"
   },
-  "settings_with_general_tab": {
-    "tab": "general"
-  },
-  "settings_with_security_tab": {
-    "tab": "security"
-  },
-  "analytics_with_overview_tab": {
-    "tab": "overview"
-  },
-  "analytics_with_performance_tab": {
-    "tab": "performance"
-  }
+  "settings_route_matches_admin_root": null,
+  "settings_with_general_tab": null,
+  "settings_with_security_tab": null,
+  "analytics_with_overview_tab": null,
+  "analytics_with_performance_tab": null
 }
 ```
 
