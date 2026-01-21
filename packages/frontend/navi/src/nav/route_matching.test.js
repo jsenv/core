@@ -68,6 +68,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
       // Admin route tests - basic parameter matching with defaults
       admin_root_matches_section_default: run(ADMIN_ROUTE, `/admin`),
       admin_root_with_slash: run(ADMIN_ROUTE, `/admin/`),
+      admin_with_settings_section: run(ADMIN_ROUTE, `/admin/settings/advanced`),
       admin_with_users_section: run(ADMIN_ROUTE, `/admin/users/`),
       admin_users_without_trailing_slash: run(ADMIN_ROUTE, `/admin/users`),
 

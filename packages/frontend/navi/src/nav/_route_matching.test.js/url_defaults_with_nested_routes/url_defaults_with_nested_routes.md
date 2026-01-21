@@ -23,6 +23,7 @@ const testResults = {
   // Admin route tests - basic parameter matching with defaults
   admin_root_matches_section_default: run(ADMIN_ROUTE, `/admin`),
   admin_root_with_slash: run(ADMIN_ROUTE, `/admin/`),
+  admin_with_settings_section: run(ADMIN_ROUTE, `/admin/settings/advanced`),
   admin_with_users_section: run(ADMIN_ROUTE, `/admin/users/`),
   admin_users_without_trailing_slash: run(ADMIN_ROUTE, `/admin/users`),
 
@@ -105,6 +106,9 @@ return testResults;
   "admin_root_with_slash": {
     "section": "settings"
   },
+  "admin_with_settings_section": {
+    "section": "advanced"
+  },
   "admin_with_users_section": {
     "section": "users"
   },
@@ -155,9 +159,18 @@ return testResults;
     "wrongParam": "value",
     "tab": "overview"
   },
-  "analytics_should_not_match_settings_url": null,
-  "analytics_should_not_match_users_url": null,
-  "analytics_with_different_section": null
+  "analytics_should_not_match_settings_url": {
+    "0": "settings",
+    "tab": "overview"
+  },
+  "analytics_should_not_match_users_url": {
+    "0": "users",
+    "tab": "overview"
+  },
+  "analytics_with_different_section": {
+    "0": "different",
+    "tab": "overview"
+  }
 }
 ```
 

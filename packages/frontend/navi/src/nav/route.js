@@ -11,6 +11,112 @@ import { createRoutePattern } from "./route_pattern.js";
 import { prepareRouteRelativeUrl, resolveRouteUrl } from "./route_url.js";
 
 const DEBUG = false;
+
+/**
+ * Corrects wildcard parameters by transferring values to named parameters when appropriate.
+ * This fixes cases where URLPattern captures values in wildcard slots that should
+ * be assigned to named parameters.
+ */
+const correctWildcardParams = (params, internalPattern, connections, route) => {
+  // Only correct for patterns that end with wildcard
+  if (!internalPattern.endsWith("/*")) {
+    if (DEBUG) {
+      console.debug(`Pattern ${internalPattern} does not end with /*`);
+    }
+    return params;
+  }
+
+  if (DEBUG) {
+    console.debug(
+      `Correcting wildcard params for pattern: ${internalPattern} (route: ${route})`,
+    );
+    console.debug(`Input params:`, params);
+    console.debug(`Connections:`, connections);
+  }
+
+  const correctedParams = { ...params };
+
+  // If we have a "0" wildcard parameter, check what to do with it
+  if ("0" in correctedParams && correctedParams["0"]) {
+    const wildcardValue = correctedParams["0"];
+
+    if (DEBUG) {
+      console.debug(`Found wildcard "0": "${wildcardValue}"`);
+    }
+
+    // Check if this wildcard value corresponds to a literal segment in inheritance
+    const routePrivateProps = getRoutePrivateProperties(route);
+    const inheritanceInfo =
+      routePrivateProps?.literalSegmentDefaults?.get(internalPattern);
+
+    if (inheritanceInfo) {
+      // Check if the wildcard value matches any literal segment - if so, filter it out
+      let shouldFilterWildcard = false;
+      for (const inheritance of inheritanceInfo) {
+        const { literalValue } = inheritance;
+        if (wildcardValue === literalValue) {
+          if (DEBUG) {
+            console.debug(
+              `Wildcard "0": "${wildcardValue}" matches literal inheritance, filtering it out`,
+            );
+          }
+          shouldFilterWildcard = true;
+          break;
+        }
+      }
+
+      if (shouldFilterWildcard) {
+        delete correctedParams["0"];
+        if (DEBUG) {
+          console.debug(
+            `Filtered out wildcard parameter that matches literal inheritance`,
+          );
+        }
+      }
+    } else {
+      // No inheritance info, try to transfer wildcard to named parameter
+      // Look for optional parameters that might not have been matched
+      for (const { paramName, options = {} } of connections) {
+        if (options.defaultValue !== undefined) {
+          const currentValue = correctedParams[paramName];
+
+          if (DEBUG) {
+            console.debug(
+              `Checking param ${paramName}: current="${currentValue}", default="${options.defaultValue}"`,
+            );
+          }
+
+          // If the parameter is undefined or has the default value and wildcard captured something,
+          // the wildcard value might be intended for this parameter
+          if (
+            currentValue === undefined ||
+            currentValue === options.defaultValue
+          ) {
+            if (DEBUG) {
+              console.debug(
+                `Correcting wildcard param: transferring "0": "${wildcardValue}" to "${paramName}"`,
+              );
+            }
+            correctedParams[paramName] = wildcardValue;
+            delete correctedParams["0"];
+            break;
+          }
+        }
+      }
+    }
+  } else {
+    if (DEBUG) {
+      console.debug(`No "0" wildcard parameter found`);
+    }
+  }
+
+  if (DEBUG) {
+    console.debug(`Corrected params:`, correctedParams);
+  }
+
+  return correctedParams;
+};
+
 let baseFileUrl;
 let baseUrl;
 export const setBaseUrl = (value) => {
@@ -101,16 +207,19 @@ const analyzeRouteInheritance = (
     // This includes cases where:
     // 1. Current has more segments (existing logic)
     // 2. Current has same number of segments but can inherit parameter values
-    if (currentSegments.length >= existingSegments.length) {
+    // 3. Existing pattern ends with wildcard and can match longer patterns
+    const existingHasWildcard =
+      existingSegments[existingSegments.length - 1] === "*";
+    const minCompareLength = existingHasWildcard
+      ? existingSegments.length - 1
+      : existingSegments.length;
+
+    if (currentSegments.length >= minCompareLength) {
       let canCreateShortVersion = true;
       const defaultInheritances = [];
 
-      // Compare each segment up to the length of the existing pattern
-      for (
-        let i = 0;
-        i < existingSegments.length && i < currentSegments.length;
-        i++
-      ) {
+      // Compare each segment up to the comparison length
+      for (let i = 0; i < minCompareLength && i < currentSegments.length; i++) {
         const existingSeg = existingSegments[i];
         const currentSeg = currentSegments[i];
 
@@ -242,11 +351,20 @@ export const updateRoutes = (
     const newMatching = Boolean(extractedParams);
     let newParams;
     if (extractedParams) {
-      if (compareTwoJsValues(oldParams, extractedParams)) {
+      // Post-process wildcard parameters to fix cases where wildcard captures
+      // values that should be assigned to named parameters
+      const correctedParams = correctWildcardParams(
+        extractedParams,
+        routePrivateProperties.internalPattern,
+        routePrivateProperties.connections,
+        route,
+      );
+
+      if (compareTwoJsValues(oldParams, correctedParams)) {
         // No change in parameters, keep the old params
         newParams = oldParams;
       } else {
-        newParams = extractedParams;
+        newParams = correctedParams;
       }
     } else {
       newParams = ROUTE_NOT_MATCHING_PARAMS;
@@ -414,6 +532,16 @@ export const registerRoute = (urlPattern) => {
       );
     }
   }
+
+  // Make trailing slashes flexible - if pattern ends with /, make it match anything after
+  // Exception: don't transform root route "/" to avoid matching everything
+  // This must happen BEFORE inheritance analysis so routes can inherit from wildcard patterns
+  if (internalUrlPattern.endsWith("/") && internalUrlPattern !== "/") {
+    // Transform /path/ to /path/*
+    // This allows matching /path/, /path/anything, /path/anything/else
+    internalUrlPattern = `${internalUrlPattern.slice(0, -1)}/*`;
+  }
+
   // Cross-route optimization: allow routes with literal segments that match parameter defaults
   // to also match shorter URLs where those segments are omitted
   const literalSegmentDefaults = new Map();
@@ -442,15 +570,6 @@ export const registerRoute = (urlPattern) => {
       inheritanceResult.inheritanceData,
     );
   }
-
-  // Make trailing slashes flexible - if pattern ends with /, make it match anything after
-  // Exception: don't transform root route "/" to avoid matching everything
-  // TODO: Temporarily disabled to isolate route matching issues
-  // if (internalUrlPattern.endsWith("/") && internalUrlPattern !== "/") {
-  //   // Transform /path/ to /path/*
-  //   // This allows matching /path/, /path/anything, /path/anything/else
-  //   internalUrlPattern = `${internalUrlPattern.slice(0, -1)}/*`;
-  // }
   if (DEBUG) {
     console.debug(urlPattern, `->`, internalUrlPattern);
   }
