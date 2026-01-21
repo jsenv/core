@@ -98,9 +98,9 @@ return results;
       "section": "settings"
     },
     "document_url": "http://127.0.0.1/admin/settings/advanced",
-    "built_url": "/admin/settings/advanced",
+    "built_url": "/admin/settings/",
     "expected": "/admin/settings/advanced",
-    "matches_original": true
+    "matches_original": false
   },
   "url_building_without_document_url": {
     "input_params": {
@@ -118,9 +118,9 @@ return results;
       "debug": "true"
     },
     "document_url": "http://127.0.0.1/admin/settings/advanced?tab=security&debug=true",
-    "built_url": "/admin/settings/advanced?tab=security&debug=true",
+    "built_url": "/admin/settings/?tab=security&debug=true",
     "expected": "/admin/settings/advanced?tab=security&debug=true",
-    "matches_original": true
+    "matches_original": false
   }
 }
 ```

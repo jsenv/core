@@ -6,11 +6,7 @@
 import { createPubSub } from "@jsenv/dom";
 import { batch, computed, effect, signal } from "@preact/signals";
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
-import { documentUrlSignal } from "./browser_integration/document_url_signal.js";
-import {
-  buildUrlFromPatternWithSegmentFiltering,
-  createRoutePattern,
-} from "./route_pattern.js";
+import { buildMostPreciseUrl, createRoutePattern } from "./route_pattern.js";
 import { resolveRouteUrl } from "./route_url.js";
 
 const DEBUG = false;
@@ -47,7 +43,52 @@ const ROUTE_DEACTIVATION_STRATEGY = "abort"; // 'abort', 'keep-loading'
 const ROUTE_NOT_MATCHING_PARAMS = {};
 
 const routeSet = new Set();
+// Store relationships between routes built during registration
+const routeRelationships = new Map();
 // Store previous route states to detect changes
+const routePrivatePropertiesMap = new Map();
+
+/**
+ * Check if childPattern is a child route of parentPattern
+ * E.g., "/admin/settings/:tab" is a child of "/admin/:section/"
+ */
+const isChildRoute = (childPattern, parentPattern) => {
+  // Remove trailing slashes and query params for comparison
+  const cleanChild = childPattern.split("?")[0].replace(/\/$/, "");
+  const cleanParent = parentPattern.split("?")[0].replace(/\/$/, "");
+
+  // Child must be longer and start with parent pattern structure
+  if (cleanChild.length <= cleanParent.length) {
+    return false;
+  }
+
+  // Convert patterns to comparable segments
+  const childSegments = cleanChild.split("/").filter((s) => s);
+  const parentSegments = cleanParent.split("/").filter((s) => s);
+
+  if (childSegments.length <= parentSegments.length) {
+    return false;
+  }
+
+  // Check if parent segments match child segments (allowing for parameters)
+  for (let i = 0; i < parentSegments.length; i++) {
+    const parentSeg = parentSegments[i];
+    const childSeg = childSegments[i];
+
+    // If parent has parameter, child can have anything in that position
+    if (parentSeg.startsWith(":")) {
+      // Check if child has a literal value that could match the parameter
+      continue;
+    }
+
+    // If parent has literal, child must match exactly
+    if (parentSeg !== childSeg) {
+      return false;
+    }
+  }
+
+  return true;
+};
 const routePreviousStateMap = new WeakMap();
 // Store abort controllers per action to control their lifecycle based on route state
 const actionAbortControllerWeakMap = new WeakMap();
@@ -429,7 +470,6 @@ export const updateRoutes = (
   };
 };
 
-const routePrivatePropertiesMap = new Map();
 export const getRoutePrivateProperties = (route) => {
   return routePrivatePropertiesMap.get(route);
 };
@@ -491,72 +531,49 @@ export const registerRoute = (urlPatternRaw) => {
 
   const [publishStatus, subscribeStatus] = createPubSub();
 
-  // Store inheritance relationships during registration
-  const segmentDefaults = new Map(); // Map segment index -> default value for that segment
+  // Build route relationships during registration
+  const buildRouteRelationships = () => {
+    // Store this route's properties for relationship building
+    const routeProps = {
+      pattern: routePatternResult.pattern,
+      parsedPattern: routePatternResult.pattern,
+      connections,
+      parameterDefaults,
+    };
+    routeRelationships.set(route, routeProps);
 
-  if (inheritanceResult.canInherit && inheritanceResult.inheritanceData) {
-    for (const inheritance of inheritanceResult.inheritanceData) {
-      const { segmentIndex, paramName, literalValue } = inheritance;
+    // Find parent-child relationships
+    const currentPattern = cleanPattern;
+    const parentRoutes = [];
+    const childRoutes = [];
 
-      // Find the parent signal that provides the default for this parameter
-      for (const existingRoute of routeSet) {
-        const existingPrivateProps = getRoutePrivateProperties(existingRoute);
-        const existingConnections = existingPrivateProps?.connections || [];
+    for (const existingRoute of routeSet) {
+      const existingProps = routeRelationships.get(existingRoute);
+      if (!existingProps) continue;
 
-        for (const {
-          signal,
-          paramName: existingParamName,
-        } of existingConnections) {
-          if (
-            existingParamName === paramName &&
-            signal &&
-            signal.value !== undefined
-          ) {
-            // Store that this segment can be omitted if its value matches the signal default
-            segmentDefaults.set(segmentIndex, {
-              paramName,
-              literalValue,
-              signalDefault: signal.value,
-            });
-            break;
-          }
-        }
+      const existingPattern =
+        existingProps.pattern?.original || existingRoute.pattern;
+
+      // Check if current route is a child of existing route
+      if (isChildRoute(currentPattern, existingPattern)) {
+        parentRoutes.push(existingRoute);
+
+        // Add current route to existing route's children
+        const existingChildren =
+          routeRelationships.get(`${existingRoute}_children`) || [];
+        existingChildren.push(route);
+        routeRelationships.set(`${existingRoute}_children`, existingChildren);
+      }
+
+      // Check if existing route is a child of current route
+      if (isChildRoute(existingPattern, currentPattern)) {
+        childRoutes.push(existingRoute);
       }
     }
-  }
 
-  // Also check this route's own signal connections for segment defaults
-  // This handles cases where a route has signals with defaults but doesn't inherit from other routes
-  if (connections && connections.length > 0) {
-    const parsedPattern = routePatternResult.pattern;
-
-    for (const { signal, paramName, options } of connections) {
-      if (
-        signal &&
-        signal.value !== undefined &&
-        options.defaultValue !== undefined
-      ) {
-        // Find which segment corresponds to this parameter
-        for (
-          let segmentIndex = 0;
-          segmentIndex < parsedPattern.segments.length;
-          segmentIndex++
-        ) {
-          const segment = parsedPattern.segments[segmentIndex];
-
-          if (segment.type === "param" && segment.name === paramName) {
-            // This is a parameter segment that has a signal with a default value
-            segmentDefaults.set(segmentIndex, {
-              paramName,
-              literalValue: options.defaultValue, // Use the signal's default as the literal value
-              signalDefault: signal.value,
-            });
-            break;
-          }
-        }
-      }
-    }
-  }
+    // Store children for this route
+    routeRelationships.set(`${route}_children`, childRoutes);
+  };
 
   // Store pattern info in route private properties for future pattern matching
   const originalPatternBeforeTransforms = cleanPattern;
@@ -586,6 +603,9 @@ export const registerRoute = (urlPatternRaw) => {
   };
   routeSet.add(route);
 
+  // Build route relationships
+  buildRouteRelationships();
+
   const routePrivateProperties = {
     routePattern,
     originalPattern: originalPatternBeforeTransforms,
@@ -593,7 +613,6 @@ export const registerRoute = (urlPatternRaw) => {
     pattern: cleanPattern, // Store the current pattern used
     inheritanceData: inheritanceResult.inheritanceData, // Store inheritance info for this route
     parameterDefaults: inheritanceResult.parameterDefaults, // Store parameter defaults
-    segmentDefaults, // Store which segments can be omitted based on signal defaults
     connections,
     matchingSignal: null,
     paramsSignal: null,
@@ -970,28 +989,16 @@ export const registerRoute = (urlPatternRaw) => {
   route.buildRelativeUrl = (params) => {
     const resolvedParams = resolveParams(params, {
       // cleanup defaults to keep url as short as possible
-      cleanupDefaults: true,
+      cleanupDefaults: true, // Clean up defaults so we get shorter URLs
     });
 
-    // Use smart segment filtering from route_pattern.js
-    // This handles both trailing slash inheritance and segment filtering
-    const routePrivateProps = getRoutePrivateProperties(route);
-    const parsedPattern = routePrivateProps.routePattern.pattern;
-    const parameterDefaults = routePrivateProps.parameterDefaults || new Map();
-    const segmentDefaults = routePrivateProps.segmentDefaults || new Map();
-    const connections = routePrivateProps.connections || [];
-
-    const routeRelativeUrl = buildUrlFromPatternWithSegmentFiltering(
-      parsedPattern,
+    // Use most precise URL generation approach
+    const mostPreciseUrl = buildMostPreciseUrl(
+      route,
       resolvedParams,
-      parameterDefaults,
-      {
-        segmentDefaults,
-        connections,
-      },
+      routeRelationships,
     );
-
-    return routeRelativeUrl;
+    return mostPreciseUrl;
   };
   /**
    * Builds a complete URL for this route with the given parameters.
@@ -1028,13 +1035,8 @@ export const registerRoute = (urlPatternRaw) => {
   const relativeUrlSignal = computed(() => {
     const rawParams = rawParamsSignal.value;
 
-    // For patterns with trailing slash, create dependency on documentUrlSignal
-    // to automatically update when document URL changes (for path inheritance)
-    const routePrivateProps = getRoutePrivateProperties(route);
-    if (routePrivateProps?.routePattern?.pattern?.trailingSlash) {
-      // eslint-disable-next-line no-unused-expressions
-      documentUrlSignal.value; // Create reactive dependency on documentUrlSignal
-    }
+    // Each route only listens to its own signals - no need to listen to child signals
+    // The child routes will handle their own signal reactivity
 
     const relativeUrl = route.buildRelativeUrl(rawParams);
     return relativeUrl;

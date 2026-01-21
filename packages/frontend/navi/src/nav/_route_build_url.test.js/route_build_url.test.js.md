@@ -3,6 +3,7 @@
 
 - [basic url building](basic_url_building/basic_url_building.md)
 - [url building with nested routes inheritance](url_building_with_nested_routes_inheritance/url_building_with_nested_routes_inheritance.md)
+- [deepest url generation with local storage mocking](deepest_url_generation_with_local_storage_mocking/deepest_url_generation_with_local_storage_mocking.md)
 - [url building with extra params](url_building_with_extra_params/url_building_with_extra_params.md)
 
 ---

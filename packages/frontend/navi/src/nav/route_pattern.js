@@ -4,7 +4,7 @@
  */
 
 import { globalSignalRegistry } from "../state/state_signal.js";
-import { documentUrlSignal } from "./browser_integration/document_url_signal.js";
+// Remove documentUrlSignal dependency - no longer needed
 
 const DEBUG = false;
 
@@ -376,172 +376,80 @@ export const buildUrlFromPattern = (
 
   const search = searchParams.toString();
 
-  // Handle trailing slash inheritance by checking documentUrlSignal
-  if (parsedPattern.trailingSlash) {
-    // Get current document URL to preserve remaining path
-    const currentUrl = documentUrlSignal?.peek?.() || documentUrlSignal?.value;
-    if (currentUrl) {
-      const currentUrlObj = new URL(currentUrl);
-      const currentPath = currentUrlObj.pathname;
-
-      // Build what this pattern would match
-      const patternPath = path;
-      const normalizedPatternPath = patternPath.endsWith("/")
-        ? patternPath
-        : `${patternPath}/`;
-
-      // If current path starts with pattern path and has extra segments, preserve them
-      if (
-        currentPath.length > normalizedPatternPath.length &&
-        currentPath.startsWith(normalizedPatternPath)
-      ) {
-        const remainingPath = currentPath.slice(normalizedPatternPath.length);
-        if (remainingPath) {
-          path = path + (path.endsWith("/") ? "" : "/") + remainingPath;
-        }
-
-        // Also preserve search params from current URL if they're not already present
-        const currentSearchParams = currentUrlObj.searchParams;
-        const existingParams = new URLSearchParams(search);
-        for (const [key, value] of currentSearchParams) {
-          if (!existingParams.has(key)) {
-            existingParams.set(key, value);
-          }
-        }
-        return (
-          path +
-          (existingParams.toString() ? `?${existingParams.toString()}` : "")
-        );
-      }
-    }
-  }
+  // No longer handle trailing slash inheritance here
 
   return path + (search ? `?${search}` : "");
 };
 
 /**
- * Build URL from pattern with smart segment omission based on inheritance and parameters
- *
- * This function handles the logic for omitting segments when they match signal defaults
- * and no non-default parameters are provided. It also handles trailing slash inheritance.
+ * Build the most precise URL by using local storage values for the route's own parameters.
+ * Each route is responsible for its own URL generation using its own signals.
  */
-export const buildUrlFromPatternWithSegmentFiltering = (
-  parsedPattern,
-  params = {},
-  parameterDefaults = new Map(),
-  { segmentDefaults = new Map(), connections = [] } = {},
-) => {
-  // Check if ANY parameter has a non-default value
-  // If so, we must use the full pattern to avoid ambiguity
-  let hasNonDefaultParams = false;
-
-  // First check signal connections
-  for (const { paramName, options = {} } of connections) {
-    const providedValue = params?.[paramName];
-    const defaultValue = options.defaultValue;
-
-    if (providedValue !== undefined && providedValue !== defaultValue) {
-      hasNonDefaultParams = true;
-      break;
-    }
+export const buildMostPreciseUrl = (route, params = {}, routeRelationships) => {
+  // Get route private properties to access connections and patterns
+  const routePrivateProps = routeRelationships.get(route);
+  if (!routePrivateProps) {
+    // Fallback to basic URL building if no relationships found
+    return buildUrlFromPattern(
+      route.pattern?.segments
+        ? route.pattern
+        : { segments: [], trailingSlash: false },
+      params,
+      new Map(),
+    );
   }
 
-  // Also check if any parameters are provided
-  // This catches parameters not in signal connections (like :tab in our example)
-  if (!hasNonDefaultParams && params) {
-    for (const [, value] of Object.entries(params)) {
-      if (value !== undefined) {
-        // If any parameter is explicitly provided, don't skip segments
-        hasNonDefaultParams = true;
-        break;
+  // Start with provided parameters
+  let finalParams = { ...params };
+
+  // Fill in missing parameters from local storage (signal values) for THIS route only
+  // But only include non-default values to keep URLs short
+  for (const connection of routePrivateProps.connections) {
+    const { paramName, signal, options } = connection;
+    if (!(paramName in finalParams) && signal?.value !== undefined) {
+      const defaultValue = options?.defaultValue;
+      // Only include the parameter if it's not the default value
+      if (signal.value !== defaultValue) {
+        finalParams[paramName] = signal.value;
       }
+      // If signal.value === defaultValue, omit the parameter for shorter URL
     }
   }
 
-  // Only skip segments when ALL parameters are at defaults
-  const modifiedPattern = {
+  // Get the parsed pattern
+  const parsedPattern = routePrivateProps?.parsedPattern ||
+    routePrivateProps?.routePattern?.pattern || {
+      segments: [],
+      trailingSlash: false,
+    };
+
+  if (!parsedPattern?.segments) {
+    return "/";
+  }
+
+  // Filter out segments for parameters that are not provided (omitted defaults)
+  const filteredPattern = {
     ...parsedPattern,
-    segments: parsedPattern.segments.filter((segment, index) => {
-      const segmentDefault = segmentDefaults.get(index);
-      if (!hasNonDefaultParams && segmentDefault) {
-        if (
-          segment.type === "literal" &&
-          segment.value === segmentDefault.literalValue
-        ) {
-          // Handle literal segments (from inheritance)
-          // Only omit if the literal value matches the signal default
-          if (segmentDefault.literalValue !== segmentDefault.signalDefault) {
-            return true; // Don't omit if values differ
-          }
-
-          // At this point: literalValue === signalDefault
-          const hasConnectionForParam = connections.some(
-            (conn) => conn.paramName === segmentDefault.paramName,
-          );
-
-          // If there's a direct connection, definitely allow omission
-          if (hasConnectionForParam) {
-            return false;
-          }
-
-          // No direct connection for this parameter
-          // Check if we have other connections and whether they're at defaults
-          if (connections.length > 0) {
-            // We have connections for other parameters
-            // Only omit if ALL connected parameters are at their defaults
-            const allConnectedParamsAtDefaults = connections.every((conn) => {
-              const paramValue = params?.[conn.paramName];
-              const defaultValue = conn.options?.defaultValue;
-              return paramValue === undefined || paramValue === defaultValue;
-            });
-
-            if (!allConnectedParamsAtDefaults) {
-              // Some connected parameters have non-default values
-              // Keep the segment to maintain URL structure
-              return true;
-            }
-
-            // All connected parameters are at defaults, safe to omit
-            return false;
-          }
-
-          // If no connections at all, this might be a simple inherited route
-          // Allow omission for these cases
-          return false;
-        } else if (
-          segment.type === "param" &&
-          segment.name === segmentDefault.paramName
-        ) {
-          // Handle parameter segments
-          const paramValue = params?.[segmentDefault.paramName];
-
-          // If no value provided and we have a default, we can omit this segment
-          if (paramValue === undefined) {
-            // Check if there's a connection for this parameter
-            const hasConnectionForParam = connections.some(
-              (conn) => conn.paramName === segmentDefault.paramName,
-            );
-
-            if (hasConnectionForParam) {
-              return false; // Omit the parameter segment
-            }
-          }
-        }
+    segments: parsedPattern.segments.filter((segment) => {
+      if (segment.type === "param") {
+        // Only keep parameter segments if we have a value for them
+        return segment.name in finalParams;
       }
-      return true; // Keep the segment
+      // Always keep literal segments
+      return true;
     }),
   };
 
-  // If segments were filtered and we originally had a trailing slash,
-  // remove the trailing slash since the path structure has changed
-  const segmentsWereFiltered =
-    modifiedPattern.segments.length < parsedPattern.segments.length;
-  if (segmentsWereFiltered && parsedPattern.trailingSlash) {
-    // When segments are filtered out due to inheritance, the URL structure changes
-    // We should remove the trailing slash unless we're actively inheriting additional path
-    modifiedPattern.trailingSlash = false;
+  // Remove trailing slash if we filtered out segments
+  if (
+    filteredPattern.segments.length < parsedPattern.segments.length &&
+    parsedPattern.trailingSlash
+  ) {
+    filteredPattern.trailingSlash = false;
   }
 
-  // Use buildUrlFromPattern which handles both regular URL building and trailing slash inheritance
-  return buildUrlFromPattern(modifiedPattern, params, parameterDefaults);
+  return buildUrlFromPattern(filteredPattern, finalParams, new Map());
 };
+
+// Compatibility alias for existing tests - will be updated later
+export const buildUrlFromPatternWithSegmentFiltering = buildUrlFromPattern;

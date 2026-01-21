@@ -71,7 +71,7 @@ return {
   },
   "case2_without_params": {
     "params": {},
-    "result": "/admin/:tab",
+    "result": "/admin/settings/:tab",
     "expected": "/admin/:tab"
   },
   "segmentDefaults": [

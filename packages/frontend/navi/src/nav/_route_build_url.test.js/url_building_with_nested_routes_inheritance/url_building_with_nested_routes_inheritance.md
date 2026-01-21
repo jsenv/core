@@ -21,52 +21,40 @@ const buildUrl = (route, params = {}) => {
 };
 
 return {
-  // Admin route URL building - basic parameter building with defaults
-  admin_no_params: buildUrl(ADMIN_ROUTE),
-  admin_with_section_settings: buildUrl(ADMIN_ROUTE, {
+  // Test deepest URL generation - should find child routes when possible
+  admin_no_params_should_find_settings_with_general_tab:
+    buildUrl(ADMIN_ROUTE),
+  admin_explicit_settings: buildUrl(ADMIN_ROUTE, {
     section: "settings",
   }),
-  admin_with_section_users: buildUrl(ADMIN_ROUTE, {
+  admin_explicit_users: buildUrl(ADMIN_ROUTE, {
     section: "users",
   }),
 
-  // Settings route URL building - should handle inheritance properly
-  settings_no_params: buildUrl(ADMIN_SETTINGS_ROUTE),
-  settings_with_tab_general: buildUrl(ADMIN_SETTINGS_ROUTE, {
-    tab: "general",
-  }),
-  settings_with_tab_security: buildUrl(ADMIN_SETTINGS_ROUTE, {
+  // Settings route URL building - should use deepest route
+  settings_should_include_general_tab: buildUrl(ADMIN_SETTINGS_ROUTE),
+  settings_with_security_tab: buildUrl(ADMIN_SETTINGS_ROUTE, {
     tab: "security",
   }),
-  // Test that providing section param doesn't interfere (should be filtered as literal)
-  settings_with_section_toto_and_tab_advanced: buildUrl(
-    ADMIN_SETTINGS_ROUTE,
-    {
-      section: "toto",
-      tab: "advanced",
-    },
-  ),
+  // Test that providing section param doesn't interfere
+  settings_with_explicit_section_and_tab: buildUrl(ADMIN_SETTINGS_ROUTE, {
+    section: "toto",
+    tab: "advanced",
+  }),
   settings_with_extra_params: buildUrl(ADMIN_SETTINGS_ROUTE, {
     tab: "general",
     filter: "active",
   }),
 
-  // Analytics route URL building - inheritance with search params
-  analytics_no_params: buildUrl(ADMIN_ANALYTICS_ROUTE),
-  analytics_with_tab_overview: buildUrl(ADMIN_ANALYTICS_ROUTE, {
-    tab: "overview",
-  }),
-  analytics_with_tab_performance: buildUrl(ADMIN_ANALYTICS_ROUTE, {
+  // Analytics route URL building
+  analytics_should_include_overview_tab: buildUrl(ADMIN_ANALYTICS_ROUTE),
+  analytics_with_performance_tab: buildUrl(ADMIN_ANALYTICS_ROUTE, {
     tab: "performance",
   }),
-  // Test that providing section param doesn't interfere (should be filtered as literal)
-  analytics_with_section_toto_and_tab_performance: buildUrl(
-    ADMIN_ANALYTICS_ROUTE,
-    {
-      section: "toto",
-      tab: "performance",
-    },
-  ),
+  analytics_with_explicit_section: buildUrl(ADMIN_ANALYTICS_ROUTE, {
+    section: "toto",
+    tab: "performance",
+  }),
   analytics_with_extra_params: buildUrl(ADMIN_ANALYTICS_ROUTE, {
     tab: "details",
     dateRange: "7d",
@@ -76,18 +64,16 @@ return {
 
 ```js
 {
-  "admin_no_params": "http://127.0.0.1/admin",
-  "admin_with_section_settings": "http://127.0.0.1/admin",
-  "admin_with_section_users": "http://127.0.0.1/admin/users/",
-  "settings_no_params": "http://127.0.0.1/admin",
-  "settings_with_tab_general": "http://127.0.0.1/admin",
-  "settings_with_tab_security": "http://127.0.0.1/admin/settings/security",
-  "settings_with_section_toto_and_tab_advanced": "http://127.0.0.1/admin/settings/advanced",
+  "admin_no_params_should_find_settings_with_general_tab": "http://127.0.0.1/admin",
+  "admin_explicit_settings": "http://127.0.0.1/admin",
+  "admin_explicit_users": "http://127.0.0.1/admin/users/",
+  "settings_should_include_general_tab": "http://127.0.0.1/admin/settings",
+  "settings_with_security_tab": "http://127.0.0.1/admin/settings/security",
+  "settings_with_explicit_section_and_tab": "http://127.0.0.1/admin/settings/advanced",
   "settings_with_extra_params": "http://127.0.0.1/admin/settings?filter=active",
-  "analytics_no_params": "http://127.0.0.1/admin/analytics/",
-  "analytics_with_tab_overview": "http://127.0.0.1/admin/analytics/",
-  "analytics_with_tab_performance": "http://127.0.0.1/admin/analytics/?tab=performance",
-  "analytics_with_section_toto_and_tab_performance": "http://127.0.0.1/admin/analytics/?tab=performance",
+  "analytics_should_include_overview_tab": "http://127.0.0.1/admin/analytics/",
+  "analytics_with_performance_tab": "http://127.0.0.1/admin/analytics/?tab=performance",
+  "analytics_with_explicit_section": "http://127.0.0.1/admin/analytics/?tab=performance",
   "analytics_with_extra_params": "http://127.0.0.1/admin/analytics/?tab=details&dateRange=7d"
 }
 ```
