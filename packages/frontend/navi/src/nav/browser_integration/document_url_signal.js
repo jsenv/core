@@ -1,6 +1,8 @@
 import { computed, signal } from "@preact/signals";
 
-export const documentUrlSignal = signal(window.location.href);
+export const documentUrlSignal = signal(
+  typeof window === "undefined" ? "http://localhost" : window.location.href,
+);
 export const useDocumentUrl = () => {
   return documentUrlSignal.value;
 };
