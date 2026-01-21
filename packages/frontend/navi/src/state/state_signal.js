@@ -110,7 +110,7 @@ export const stateSignal = (defaultValue, options = {}) => {
 
   // Set signal ID and create meaningful string representation
   advancedSignal.__signalId = signalIdString;
-  advancedSignal.toString = () => `__navi_state_signal:${signalIdString}__`;
+  advancedSignal.toString = () => `{navi_state_signal:${signalIdString}}`;
 
   // Store signal with its options for later route connection
   globalSignalRegistry.set(signalIdString, {

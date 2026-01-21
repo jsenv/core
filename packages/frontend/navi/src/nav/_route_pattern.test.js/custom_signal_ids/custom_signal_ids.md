@@ -41,18 +41,20 @@ return {
 ```js
 {
   "custom_id_path_param": {
-    "tab=__navi_state_signal:settings_tab__": "security"
+    "tab": "security"
   },
   "custom_id_default_match": {
-    "tab=__navi_state_signal:settings_tab__": "general"
+    "tab": "general"
   },
   "multiple_custom_ids": {
-    "category=__navi_state_signal:main_category__": "electronics",
-    "tab=__navi_state_signal:settings_tab__": "advanced"
+    "category": "electronics",
+    "tab": "advanced"
   },
-  "custom_id_search_param": null,
+  "custom_id_search_param": {
+    "tab": "security"
+  },
   "mixed_signal_types": {
-    "custom=__navi_state_signal:settings_tab__": "custom_value",
+    "custom": "custom_value",
     "auto": "auto_value"
   }
 }

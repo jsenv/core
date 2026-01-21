@@ -12,16 +12,22 @@ export const detectSignals = (routePattern) => {
   const signalConnections = [];
   let updatedPattern = routePattern;
 
-  // Look for signals in the new syntax: :paramName=__navi_state_signal:id__ or ?paramName=__navi_state_signal:id__
-  const signalParamRegex = /([?:])(\w+)=(__navi_state_signal:[^_]+__)/g;
+  // Look for signals in the new syntax: :paramName={navi_state_signal:id} or ?paramName={navi_state_signal:id}
+  // Using curly braces to avoid conflicts with underscores in signal IDs
+  const signalParamRegex = /([?:])(\w+)=(\{navi_state_signal:[^}]+\})/g;
   let match;
 
   while ((match = signalParamRegex.exec(routePattern)) !== null) {
     const [fullMatch, prefix, paramName, signalString] = match;
 
-    // Extract the signal ID from the new format: __navi_state_signal:id__
-    const signalIdMatch = signalString.match(/__navi_state_signal:([^_]+)__/);
-    if (!signalIdMatch) continue;
+    // Extract the signal ID from the new format: {navi_state_signal:id}
+    const signalIdMatch = signalString.match(/\{navi_state_signal:([^}]+)\}/);
+    if (!signalIdMatch) {
+      console.warn(
+        `[detectSignals] Failed to extract signal ID from: ${signalString}`,
+      );
+      continue;
+    }
 
     const signalId = signalIdMatch[1];
     const signalData = globalSignalRegistry.get(signalId);
@@ -44,13 +50,19 @@ export const detectSignals = (routePattern) => {
         paramName,
         options,
       });
+    } else {
+      console.warn(
+        `[detectSignals] Signal not found in registry for ID: "${signalId}"`,
+      );
+      console.warn(
+        `[detectSignals] Available signal IDs in registry:`,
+        Array.from(globalSignalRegistry.keys()),
+      );
+      console.warn(`[detectSignals] Full pattern: "${routePattern}"`);
     }
   }
 
-  return {
-    pattern: updatedPattern,
-    connections: signalConnections,
-  };
+  return [updatedPattern, signalConnections];
 };
 
 /**
@@ -62,8 +74,12 @@ export const createRoutePattern = (
   parameterDefaults = new Map(),
 ) => {
   // Detect and process signals in the pattern first
-  const { pattern: cleanPattern, connections } = detectSignals(pattern);
+  const [cleanPattern, connections] = detectSignals(pattern);
   const parsedPattern = parsePattern(cleanPattern, parameterDefaults);
+
+  if (cleanPattern.includes("__navi_state_signal:")) {
+    debugger;
+  }
 
   if (DEBUG) {
     console.debug(`[CustomPattern] Created pattern:`, parsedPattern);
