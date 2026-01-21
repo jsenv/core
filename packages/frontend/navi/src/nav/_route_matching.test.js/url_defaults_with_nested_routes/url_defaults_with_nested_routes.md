@@ -35,18 +35,22 @@ const runWithFreshRoutes = (routeType, relativeUrl) => {
 
 // Test various URL matching scenarios
 const testResults = {
-  // Test basic parameter with default - should match "/admin"
+  // Admin route tests - basic parameter matching with defaults
   admin_root_matches_section_default: runWithFreshRoutes("admin", `/admin`),
   admin_root_with_slash: runWithFreshRoutes("admin", `/admin/`),
   admin_with_users_section: runWithFreshRoutes("admin", `/admin/users/`),
+  admin_users_without_trailing_slash: runWithFreshRoutes(
+    "admin",
+    `/admin/users`,
+  ),
 
-  // CRITICAL TEST: This should match because "settings" is the default value for :section
-  // /admin/settings/:tab should match /admin because settings=default(section)
+  // Settings route tests - inheritance and parameter handling
   settings_route_matches_admin_root: runWithFreshRoutes(
     "settings",
     `/admin`,
   ),
-
+  settings_root_without_slash: runWithFreshRoutes("settings", `/admin`),
+  settings_root_with_slash: runWithFreshRoutes("settings", `/admin/`),
   settings_with_general_tab: runWithFreshRoutes(
     "settings",
     `/admin/settings/general`,
@@ -55,7 +59,28 @@ const testResults = {
     "settings",
     `/admin/settings/security`,
   ),
+  settings_with_literal_settings_path: runWithFreshRoutes(
+    "settings",
+    `/admin/settings`,
+  ),
+  settings_with_wrong_search_param: runWithFreshRoutes(
+    "settings",
+    `/admin?wrongParam=value`,
+  ),
+  settings_should_not_match_analytics_url: runWithFreshRoutes(
+    "settings",
+    `/admin/analytics`,
+  ),
+  settings_should_not_match_users_url: runWithFreshRoutes(
+    "settings",
+    `/admin/users`,
+  ),
+  settings_with_different_section: runWithFreshRoutes(
+    "settings",
+    `/admin/different`,
+  ),
 
+  // Analytics route tests - inheritance and search parameters
   analytics_with_overview_tab: runWithFreshRoutes(
     "analytics",
     `/admin/analytics`,
@@ -63,6 +88,28 @@ const testResults = {
   analytics_with_performance_tab: runWithFreshRoutes(
     "analytics",
     `/admin/analytics?tab=performance`,
+  ),
+  analytics_root_without_slash: runWithFreshRoutes("analytics", `/admin`),
+  analytics_root_with_slash: runWithFreshRoutes("analytics", `/admin/`),
+  analytics_with_literal_analytics_path: runWithFreshRoutes(
+    "analytics",
+    `/admin/analytics`,
+  ),
+  analytics_with_wrong_search_param: runWithFreshRoutes(
+    "analytics",
+    `/admin?wrongParam=value`,
+  ),
+  analytics_should_not_match_settings_url: runWithFreshRoutes(
+    "analytics",
+    `/admin/settings`,
+  ),
+  analytics_should_not_match_users_url: runWithFreshRoutes(
+    "analytics",
+    `/admin/users`,
+  ),
+  analytics_with_different_section: runWithFreshRoutes(
+    "analytics",
+    `/admin/different`,
   ),
 };
 
@@ -82,7 +129,18 @@ return testResults;
   "admin_with_users_section": {
     "section": "users"
   },
+  "admin_users_without_trailing_slash": {
+    "section": "users"
+  },
   "settings_route_matches_admin_root": {
+    "section": "settings",
+    "tab": "general"
+  },
+  "settings_root_without_slash": {
+    "section": "settings",
+    "tab": "general"
+  },
+  "settings_root_with_slash": {
     "section": "settings",
     "tab": "general"
   },
@@ -94,6 +152,18 @@ return testResults;
     "tab": "security",
     "section": "settings"
   },
+  "settings_with_literal_settings_path": {
+    "section": "settings",
+    "tab": "general"
+  },
+  "settings_with_wrong_search_param": {
+    "wrongParam": "value",
+    "section": "settings",
+    "tab": "general"
+  },
+  "settings_should_not_match_analytics_url": null,
+  "settings_should_not_match_users_url": null,
+  "settings_with_different_section": null,
   "analytics_with_overview_tab": {
     "section": "analytics",
     "tab": "overview"
@@ -101,7 +171,27 @@ return testResults;
   "analytics_with_performance_tab": {
     "tab": "performance",
     "section": "analytics"
-  }
+  },
+  "analytics_root_without_slash": {
+    "section": "analytics",
+    "tab": "overview"
+  },
+  "analytics_root_with_slash": {
+    "section": "analytics",
+    "tab": "overview"
+  },
+  "analytics_with_literal_analytics_path": {
+    "section": "analytics",
+    "tab": "overview"
+  },
+  "analytics_with_wrong_search_param": {
+    "wrongParam": "value",
+    "section": "analytics",
+    "tab": "overview"
+  },
+  "analytics_should_not_match_settings_url": null,
+  "analytics_should_not_match_users_url": null,
+  "analytics_with_different_section": null
 }
 ```
 
