@@ -18,11 +18,11 @@ export const detectSignals = (routePattern) => {
 
   while ((match = signalParamRegex.exec(routePattern)) !== null) {
     const [fullMatch, prefix, paramName, signalString] = match;
-    
+
     // Extract the signal ID from the new format: __navi_state_signal:id__
     const signalIdMatch = signalString.match(/__navi_state_signal:([^_]+)__/);
     if (!signalIdMatch) continue;
-    
+
     const signalId = signalIdMatch[1];
     const signalData = globalSignalRegistry.get(signalId);
 

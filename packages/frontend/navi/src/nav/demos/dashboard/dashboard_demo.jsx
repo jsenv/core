@@ -10,16 +10,19 @@ import {
 } from "@jsenv/navi";
 
 const sectionSignal = stateSignal("settings", {
+  id: "settings",
   enum: ["settings", "analytics"],
-  localStorage: "section",
+  persists: true,
 });
 const settingsTabSignal = stateSignal("general", {
+  id: "settings_tab",
   enum: ["general", "advanced"],
-  localStorage: "settings_tab",
+  persists: true,
 });
 const analyticsTabSignal = stateSignal("overview", {
+  id: "analytics_tab",
   enum: ["overview", "details"],
-  localStorage: "analytics_tab",
+  persists: true,
 });
 const { HOME_ROUTE, ADMIN_ROUTE, ADMIN_SETTINGS_ROUTE, ADMIN_ANALYTICS_ROUTE } =
   setupRoutes({
