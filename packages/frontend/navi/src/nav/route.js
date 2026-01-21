@@ -430,9 +430,9 @@ export const getRoutePrivateProperties = (route) => {
   return routePrivatePropertiesMap.get(route);
 };
 
-export const registerRoute = (urlPattern) => {
+export const registerRoute = (urlPatternRaw) => {
   if (DEBUG) {
-    console.debug(`Registering route: ${urlPattern}`);
+    console.debug(`Registering route: ${urlPatternRaw}`);
     console.debug(
       `Existing routes: ${Array.from(routeSet)
         .map((r) => r.urlPattern)
@@ -441,7 +441,7 @@ export const registerRoute = (urlPattern) => {
   }
 
   // Create custom route pattern - it will detect and process signals internally
-  const routePatternResult = createRoutePattern(urlPattern, baseFileUrl);
+  const routePatternResult = createRoutePattern(urlPatternRaw, baseFileUrl);
   const { cleanPattern, connections } = routePatternResult;
   // Analyze inheritance opportunities with existing routes using custom system
   const inheritanceResult = analyzeRouteInheritance(cleanPattern);
@@ -464,11 +464,11 @@ export const registerRoute = (urlPattern) => {
   }
   // Now create the final route pattern with defaults
   const routePattern = createRoutePattern(
-    urlPattern,
+    urlPatternRaw,
     baseFileUrl,
     parameterDefaults,
   );
-  urlPattern = cleanPattern;
+  const urlPattern = cleanPattern;
 
   if (DEBUG) {
     console.debug(`Parameter defaults:`, parameterDefaults);
@@ -931,6 +931,7 @@ export const registerRoute = (urlPattern) => {
   };
 
   route.buildRelativeUrl = (params) => {
+    console.log(urlPattern);
     const resolvedParams = resolveParams(params, {
       // cleanup defaults to keep url as short as possible
       cleanupDefaults: true,
