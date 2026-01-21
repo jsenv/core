@@ -382,11 +382,11 @@ export const registerRoute = (urlPattern) => {
             console.debug(`Short version pattern: ${shortVersionPattern}`);
           }
 
-          // Store the default inheritance info for validation
-          literalSegmentDefaults.set(internalUrlPattern, defaultInheritances);
-
           // Update the internal pattern to the short version
           internalUrlPattern = shortVersionPattern;
+
+          // Store the default inheritance info using the transformed pattern as key
+          literalSegmentDefaults.set(internalUrlPattern, defaultInheritances);
 
           if (DEBUG) {
             console.debug(
@@ -420,10 +420,20 @@ export const registerRoute = (urlPattern) => {
   };
 
   const [publishStatus, subscribeStatus] = createPubSub();
+
+  // Transform inheritance info into format expected by createRoutePattern
+  const parameterDefaults = new Map();
+  const inheritanceInfo = literalSegmentDefaults.get(internalUrlPattern);
+  if (inheritanceInfo) {
+    for (const inheritance of inheritanceInfo) {
+      parameterDefaults.set(inheritance.paramName, inheritance.defaultValue);
+    }
+  }
+
   const routePattern = createRoutePattern(
     internalUrlPattern,
     baseFileUrl,
-    literalSegmentDefaults,
+    parameterDefaults,
   );
 
   // Store pattern info in route private properties for future pattern matching
@@ -591,6 +601,7 @@ export const registerRoute = (urlPattern) => {
         mergedParams[paramName] = defaultValue;
       }
     }
+
     return mergedParams;
   });
   const visitedSignal = signal(false);

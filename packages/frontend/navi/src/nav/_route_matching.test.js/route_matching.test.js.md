@@ -3,7 +3,7 @@
 
 - [basic](basic/basic.md)
 - [state signal](state_signal/state_signal.md)
-- [route optimization with multiple routes](route_optimization_with_multiple_routes/route_optimization_with_multiple_routes.md)
+- [url defaults with nested routes](url_defaults_with_nested_routes/url_defaults_with_nested_routes.md)
 
 ---
 

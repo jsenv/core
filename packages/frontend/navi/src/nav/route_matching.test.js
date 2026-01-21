@@ -43,7 +43,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
     };
   });
 
-  test("route optimization with multiple routes", () => {
+  test("url defaults with nested routes", () => {
     // Clear routes to start fresh
     clearAllRoutes();
 

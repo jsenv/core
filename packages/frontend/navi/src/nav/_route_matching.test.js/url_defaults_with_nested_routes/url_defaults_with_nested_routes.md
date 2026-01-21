@@ -1,4 +1,4 @@
-# [route optimization with multiple routes](../../route_matching.test.js#L46)
+# [url defaults with nested routes](../../route_matching.test.js#L46)
 
 ```js
 // Clear routes to start fresh
@@ -65,36 +65,15 @@ return testResults;
     "section": "settings"
   },
   "settings_route_matches_admin_root": {
-    "/admin/settings/:tab?": [
-      {
-        "segmentIndex": 1,
-        "literalValue": "settings",
-        "paramName": "section",
-        "defaultValue": "settings"
-      }
-    ],
+    "section": "settings",
     "tab": "general"
   },
   "settings_with_general_tab": {
-    "/admin/settings/:tab?": [
-      {
-        "segmentIndex": 1,
-        "literalValue": "settings",
-        "paramName": "section",
-        "defaultValue": "settings"
-      }
-    ],
+    "section": "settings",
     "tab": "general"
   },
   "settings_with_security_tab": {
-    "/admin/settings/:tab?": [
-      {
-        "segmentIndex": 1,
-        "literalValue": "settings",
-        "paramName": "section",
-        "defaultValue": "settings"
-      }
-    ],
+    "section": "settings",
     "tab": "general"
   },
   "analytics_with_overview_tab": null,
