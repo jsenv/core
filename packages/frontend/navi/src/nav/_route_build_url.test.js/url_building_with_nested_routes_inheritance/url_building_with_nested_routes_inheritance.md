@@ -23,35 +23,47 @@ const buildUrl = (route, params = {}) => {
 return {
   // Admin route URL building - basic parameter building with defaults
   admin_route_default_params: buildUrl(ADMIN_ROUTE),
-  admin_route_with_users_section: buildUrl(ADMIN_ROUTE, { section: "users" }),
-  admin_route_with_settings_section: buildUrl(ADMIN_ROUTE, { section: "settings" }),
+  admin_route_with_users_section: buildUrl(ADMIN_ROUTE, {
+    section: "users",
+  }),
+  admin_route_with_settings_section: buildUrl(ADMIN_ROUTE, {
+    section: "settings",
+  }),
 
   // Settings route URL building - should handle inheritance properly
   settings_route_default_params: buildUrl(ADMIN_SETTINGS_ROUTE),
-  settings_route_with_general_tab: buildUrl(ADMIN_SETTINGS_ROUTE, { tab: "general" }),
-  settings_route_with_security_tab: buildUrl(ADMIN_SETTINGS_ROUTE, { tab: "security" }),
+  settings_route_with_general_tab: buildUrl(ADMIN_SETTINGS_ROUTE, {
+    tab: "general",
+  }),
+  settings_route_with_security_tab: buildUrl(ADMIN_SETTINGS_ROUTE, {
+    tab: "security",
+  }),
   // Test that providing section param doesn't interfere (should be filtered as literal)
-  settings_route_with_section_param: buildUrl(ADMIN_SETTINGS_ROUTE, { 
-    section: "settings", 
-    tab: "advanced" 
+  settings_route_with_section_param: buildUrl(ADMIN_SETTINGS_ROUTE, {
+    section: "toto",
+    tab: "advanced",
   }),
   settings_route_with_extra_params: buildUrl(ADMIN_SETTINGS_ROUTE, {
     tab: "general",
-    filter: "active"
+    filter: "active",
   }),
 
   // Analytics route URL building - inheritance with search params
   analytics_route_default_params: buildUrl(ADMIN_ANALYTICS_ROUTE),
-  analytics_route_with_performance_tab: buildUrl(ADMIN_ANALYTICS_ROUTE, { tab: "performance" }),
-  analytics_route_with_overview_tab: buildUrl(ADMIN_ANALYTICS_ROUTE, { tab: "overview" }),
+  analytics_route_with_performance_tab: buildUrl(ADMIN_ANALYTICS_ROUTE, {
+    tab: "performance",
+  }),
+  analytics_route_with_overview_tab: buildUrl(ADMIN_ANALYTICS_ROUTE, {
+    tab: "overview",
+  }),
   // Test that providing section param doesn't interfere (should be filtered as literal)
   analytics_route_with_section_param: buildUrl(ADMIN_ANALYTICS_ROUTE, {
-    section: "analytics",
-    tab: "performance"
+    section: "toto",
+    tab: "performance",
   }),
   analytics_route_with_extra_params: buildUrl(ADMIN_ANALYTICS_ROUTE, {
     tab: "details",
-    dateRange: "7d"
+    dateRange: "7d",
   }),
 };
 ```
@@ -64,12 +76,12 @@ return {
   "settings_route_default_params": "http://127.0.0.1/admin",
   "settings_route_with_general_tab": "http://127.0.0.1/admin",
   "settings_route_with_security_tab": "http://127.0.0.1/admin",
-  "settings_route_with_section_param": "http://127.0.0.1/admin/settings/advanced",
+  "settings_route_with_section_param": "http://127.0.0.1/admin/toto/advanced",
   "settings_route_with_extra_params": "http://127.0.0.1/admin?filter=active",
   "analytics_route_default_params": "http://127.0.0.1/admin",
   "analytics_route_with_performance_tab": "http://127.0.0.1/admin?tab=performance",
   "analytics_route_with_overview_tab": "http://127.0.0.1/admin",
-  "analytics_route_with_section_param": "http://127.0.0.1/admin/analytics?tab=performance",
+  "analytics_route_with_section_param": "http://127.0.0.1/admin/toto?tab=performance",
   "analytics_route_with_extra_params": "http://127.0.0.1/admin?tab=details&dateRange=7d"
 }
 ```

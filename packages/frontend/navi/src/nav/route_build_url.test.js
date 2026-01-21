@@ -131,7 +131,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
       }),
       // Test that providing section param doesn't interfere (should be filtered as literal)
       settings_route_with_section_param: buildUrl(ADMIN_SETTINGS_ROUTE, {
-        section: "settings",
+        section: "toto",
         tab: "advanced",
       }),
       settings_route_with_extra_params: buildUrl(ADMIN_SETTINGS_ROUTE, {
@@ -149,7 +149,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
       }),
       // Test that providing section param doesn't interfere (should be filtered as literal)
       analytics_route_with_section_param: buildUrl(ADMIN_ANALYTICS_ROUTE, {
-        section: "analytics",
+        section: "toto",
         tab: "performance",
       }),
       analytics_route_with_extra_params: buildUrl(ADMIN_ANALYTICS_ROUTE, {
