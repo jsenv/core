@@ -1,51 +1,50 @@
-# [url defaults with nested routes](../../route_matching.test.js#L46)
+# [url defaults with nested routes](../../route_matching.test.js#L48)
 
 ```js
-// Clear routes to start fresh
-clearAllRoutes();
+// Helper function that re-creates routes for each test case
+const runWithFreshRoutes = (routeType, relativeUrl) => {
+  clearAllRoutes();
+  
+  const sectionSignal = stateSignal("settings");
+  const tabSignal = stateSignal("general");
+  const analyticsTabSignal = stateSignal("overview");
 
-// Test the pattern combinations that were problematic
-const sectionSignal = stateSignal("settings");
-const tabSignal = stateSignal("general");
-const analyticsTabSignal = stateSignal("overview");
-
-// Register routes using explicit parameter syntax
-registerRoute("/");
-const ADMIN_ROUTE = registerRoute(`/admin/:section=${sectionSignal}/`);
-const ADMIN_SETTINGS_ROUTE = registerRoute(
-  `/admin/settings/:tab=${tabSignal}`,
-);
-const ADMIN_ANALYTICS_ROUTE = registerRoute(
-  `/admin/analytics/?tab=${analyticsTabSignal}`,
-);
+  // Re-register all routes for each test
+  registerRoute("/");
+  const ADMIN_ROUTE = registerRoute(`/admin/:section=${sectionSignal}/`);
+  const ADMIN_SETTINGS_ROUTE = registerRoute(`/admin/settings/:tab=${tabSignal}`);
+  const ADMIN_ANALYTICS_ROUTE = registerRoute(`/admin/analytics/?tab=${analyticsTabSignal}`);
+  
+  // Select the target route by type
+  let targetRoute;
+  if (routeType === 'admin') {
+    targetRoute = ADMIN_ROUTE;
+  } else if (routeType === 'settings') {
+    targetRoute = ADMIN_SETTINGS_ROUTE;
+  } else if (routeType === 'analytics') {
+    targetRoute = ADMIN_ANALYTICS_ROUTE;
+  }
+  
+  updateRoutes(`${baseUrl}${relativeUrl}`);
+  return targetRoute.matching ? targetRoute.params : null;
+};
 
 // Test various URL matching scenarios
 const testResults = {
   // Test basic parameter with default - should match "/admin"
-  admin_root_matches_section_default: run(ADMIN_ROUTE, `/admin`),
-  admin_root_with_slash: run(ADMIN_ROUTE, `/admin/`),
-  admin_with_users_section: run(ADMIN_ROUTE, `/admin/users/`),
+  admin_root_matches_section_default: runWithFreshRoutes('admin', `/admin`),
+  admin_root_with_slash: runWithFreshRoutes('admin', `/admin/`),
+  admin_with_users_section: runWithFreshRoutes('admin', `/admin/users/`),
 
   // CRITICAL TEST: This should match because "settings" is the default value for :section
   // /admin/settings/:tab should match /admin because settings=default(section)
-  settings_route_matches_admin_root: run(ADMIN_SETTINGS_ROUTE, `/admin`),
+  settings_route_matches_admin_root: runWithFreshRoutes('settings', `/admin`),
 
-  settings_with_general_tab: run(
-    ADMIN_SETTINGS_ROUTE,
-    `/admin/settings/general`,
-  ),
-  settings_with_security_tab: run(
-    ADMIN_SETTINGS_ROUTE,
-    `/admin/settings/security`,
-  ),
-  analytics_with_overview_tab: run(
-    ADMIN_ANALYTICS_ROUTE,
-    `/admin/analytics`,
-  ),
-  analytics_with_performance_tab: run(
-    ADMIN_ANALYTICS_ROUTE,
-    `/admin/analytics?tab=performance`,
-  ),
+  settings_with_general_tab: runWithFreshRoutes('settings', `/admin/settings/general`),
+  settings_with_security_tab: runWithFreshRoutes('settings', `/admin/settings/security`),
+  
+  analytics_with_overview_tab: runWithFreshRoutes('analytics', `/admin/analytics`),
+  analytics_with_performance_tab: runWithFreshRoutes('analytics', `/admin/analytics?tab=performance`),
 };
 
 clearAllRoutes();
@@ -62,22 +61,28 @@ return testResults;
     "section": "settings"
   },
   "admin_with_users_section": {
-    "section": "settings"
+    "section": "users"
   },
   "settings_route_matches_admin_root": {
     "section": "settings",
     "tab": "general"
   },
   "settings_with_general_tab": {
-    "section": "settings",
-    "tab": "general"
+    "tab": "general",
+    "section": "settings"
   },
   "settings_with_security_tab": {
-    "section": "settings",
-    "tab": "general"
+    "tab": "security",
+    "section": "settings"
   },
-  "analytics_with_overview_tab": null,
-  "analytics_with_performance_tab": null
+  "analytics_with_overview_tab": {
+    "section": "analytics",
+    "tab": "overview"
+  },
+  "analytics_with_performance_tab": {
+    "tab": "performance",
+    "section": "analytics"
+  }
 }
 ```
 

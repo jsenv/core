@@ -1,4 +1,4 @@
-# [state signal](../../route_matching.test.js#L34)
+# [state signal](../../route_matching.test.js#L36)
 
 ```js
 const sectionSignal = stateSignal("settings");

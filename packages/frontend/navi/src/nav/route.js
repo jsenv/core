@@ -294,8 +294,11 @@ export const registerRoute = (urlPattern) => {
         console.debug(`Existing segments:`, existingSegments);
       }
 
-      // Look for cases where current pattern has literal segments that match parameter defaults in existing patterns
-      if (currentSegments.length > existingSegments.length) {
+      // Look for cases where current pattern can inherit from existing patterns
+      // This includes cases where:
+      // 1. Current has more segments (existing logic)
+      // 2. Current has same number of segments but can inherit parameter values
+      if (currentSegments.length >= existingSegments.length) {
         let canCreateShortVersion = true;
         const defaultInheritances = [];
 
@@ -334,19 +337,29 @@ export const registerRoute = (urlPattern) => {
               );
             }
 
-            if (
-              existingConnection &&
-              existingConnection.options.defaultValue === currentSeg
-            ) {
-              // Literal segment matches parameter default - can create short version
-              defaultInheritances.push({
-                segmentIndex: i,
-                literalValue: currentSeg,
-                paramName,
-                defaultValue: existingConnection.options.defaultValue,
-              });
+            if (existingConnection) {
+              // Two types of inheritance:
+              // 1. Literal matches default - can create short version (existing behavior)
+              // 2. Literal provides value for parameter - inherit parameter structure
+              if (existingConnection.options.defaultValue === currentSeg) {
+                // Case 1: Literal segment matches parameter default - can create short version
+                defaultInheritances.push({
+                  segmentIndex: i,
+                  literalValue: currentSeg,
+                  paramName,
+                  defaultValue: existingConnection.options.defaultValue,
+                });
+              } else {
+                // Case 2: Literal provides value - inherit parameter structure
+                defaultInheritances.push({
+                  segmentIndex: i,
+                  literalValue: currentSeg,
+                  paramName,
+                  defaultValue: currentSeg, // Use literal value as the parameter value
+                });
+              }
             } else {
-              // Literal doesn't match parameter default - can't create short version with this route
+              // No parameter connection found - can't create short version with this route
               canCreateShortVersion = false;
               break;
             }
