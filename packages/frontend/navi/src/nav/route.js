@@ -492,6 +492,33 @@ export const registerRoute = (urlPattern) => {
 
   const [publishStatus, subscribeStatus] = createPubSub();
 
+  // Store inheritance relationships during registration
+  const segmentDefaults = new Map(); // Map segment index -> default value for that segment
+  
+  if (inheritanceResult.canInherit && inheritanceResult.inheritanceData) {
+    for (const inheritance of inheritanceResult.inheritanceData) {
+      const { segmentIndex, paramName, literalValue, originalDefault } = inheritance;
+      
+      // Find the parent signal that provides the default for this parameter
+      for (const existingRoute of routeSet) {
+        const existingPrivateProps = getRoutePrivateProperties(existingRoute);
+        const existingConnections = existingPrivateProps?.connections || [];
+        
+        for (const { signal, paramName: existingParamName } of existingConnections) {
+          if (existingParamName === paramName && signal && signal.value !== undefined) {
+            // Store that this segment can be omitted if its value matches the signal default
+            segmentDefaults.set(segmentIndex, {
+              paramName,
+              literalValue,
+              signalDefault: signal.value,
+            });
+            break;
+          }
+        }
+      }
+    }
+  }
+
   // Store pattern info in route private properties for future pattern matching
   const originalPatternBeforeTransforms = cleanPattern;
   const originalRoutePattern = createRoutePattern(
@@ -527,6 +554,7 @@ export const registerRoute = (urlPattern) => {
     pattern: cleanPattern, // Store the current pattern used
     inheritanceData: inheritanceResult.inheritanceData, // Store inheritance info for this route
     parameterDefaults: inheritanceResult.parameterDefaults, // Store parameter defaults
+    segmentDefaults, // Store which segments can be omitted based on signal defaults
     connections,
     matchingSignal: null,
     paramsSignal: null,
@@ -847,327 +875,29 @@ export const registerRoute = (urlPattern) => {
       cleanupDefaults: true,
     });
 
-    // Check if we should use the original pattern vs the internal (inheritance) pattern
+    // Use our own pattern but with smart segment omission based on inheritance
     const routePrivateProps = getRoutePrivateProperties(route);
-    const inheritanceInfo = routePrivateProps?.inheritanceData;
-
-    let shouldUseOriginalPattern = false;
-
-    if (inheritanceInfo && routePrivateProps?.originalPattern) {
-      if (DEBUG) {
-        console.debug(
-          `Checking if should use original pattern for params:`,
-          params,
-        );
-        console.debug(`Resolved params:`, resolvedParams);
-        console.debug(`Inheritance info:`, inheritanceInfo);
-      }
-
-      // Check if any provided parameters require showing literal segments
-      for (const inheritance of inheritanceInfo) {
-        const { paramName, literalValue } = inheritance;
-        if (
-          paramName in resolvedParams &&
-          resolvedParams[paramName] !== undefined
-        ) {
-          // If the param value differs from the literal value, we need the full URL
-          if (resolvedParams[paramName] !== literalValue) {
-            shouldUseOriginalPattern = true;
-            if (DEBUG) {
-              console.debug(
-                `Param ${paramName}=${resolvedParams[paramName]} differs from literal ${literalValue}, using original pattern`,
-              );
-            }
-            break;
-          }
-        }
-      }
-
-      // Check if inherited literal values differ from signal defaults
-      // This handles cases like analytics route where section="analytics" differs from sectionSignal default="settings"
-      if (!shouldUseOriginalPattern) {
-        for (const inheritance of inheritanceInfo) {
-          const { paramName, literalValue } = inheritance;
-
-          // Find the original signal default by looking through all routes
-          let originalSignalDefault;
-          for (const existingRoute of routeSet) {
-            const existingPrivateProps =
-              getRoutePrivateProperties(existingRoute);
-            const existingConnections = existingPrivateProps?.connections || [];
-
-            for (const {
-              signal,
-              paramName: existingParamName,
-            } of existingConnections) {
-              if (
-                existingParamName === paramName &&
-                signal &&
-                signal.value !== undefined
-              ) {
-                originalSignalDefault = signal.value;
-                break;
-              }
-            }
-            if (originalSignalDefault !== undefined) break;
-          }
-
-          if (
-            originalSignalDefault !== undefined &&
-            literalValue !== originalSignalDefault
-          ) {
-            shouldUseOriginalPattern = true;
-            if (DEBUG) {
-              console.debug(
-                `Inherited literal ${paramName}=${literalValue} differs from original signal default ${originalSignalDefault}, using original pattern`,
-              );
-            }
-            break;
-          }
-        }
-
-        // If all inherited literal values match their signal defaults AND
-        // all route parameters are using defaults, we can use the parent route
-        if (
-          !shouldUseOriginalPattern &&
-          inheritanceInfo &&
-          inheritanceInfo.length > 0
-        ) {
-          let allParamsAreDefaults = true;
-
-          // Check if all provided parameters match their defaults
-          const routePrivateProperties = getRoutePrivateProperties(route);
-          const connections = routePrivateProperties?.connections || [];
-
-          for (const { paramName, options = {} } of connections) {
-            const providedValue = params?.[paramName];
-            const defaultValue = options.defaultValue;
-
-            if (providedValue !== undefined && providedValue !== defaultValue) {
-              allParamsAreDefaults = false;
-              if (DEBUG) {
-                console.debug(
-                  `Param ${paramName}=${providedValue} differs from default ${defaultValue}`,
-                );
-              }
-              break;
-            }
-          }
-
-          // If all params are defaults and all inherited literals match signal defaults,
-          // we should build using the parent route with inheritance values as parameters
-          if (allParamsAreDefaults) {
-            // Check if using parent route would be shorter/equivalent
-            let shouldUseParentRoute = true;
-            const parentRouteParams = {};
-
-            // If any literal segments in current route don't match parent defaults, keep current route
-            for (const inheritance of inheritanceInfo) {
-              const { paramName, literalValue } = inheritance;
-
-              // Check if this literal segment matches the parent signal's default
-              let parentSignalDefault;
-              for (const existingRoute of routeSet) {
-                const existingPrivateProps =
-                  getRoutePrivateProperties(existingRoute);
-                const existingConnections =
-                  existingPrivateProps?.connections || [];
-
-                for (const {
-                  signal,
-                  paramName: existingParamName,
-                } of existingConnections) {
-                  if (
-                    existingParamName === paramName &&
-                    signal &&
-                    signal.value !== undefined
-                  ) {
-                    parentSignalDefault = signal.value;
-                    break;
-                  }
-                }
-                if (parentSignalDefault !== undefined) break;
-              }
-
-              // If literal matches parent default, we can omit it
-              if (
-                parentSignalDefault !== undefined &&
-                literalValue === parentSignalDefault
-              ) {
-                // Don't include this param in parent route since it matches the default
-                if (DEBUG) {
-                  console.debug(
-                    `Literal segment ${paramName}=${literalValue} matches parent default ${parentSignalDefault}, can omit`,
-                  );
-                }
-              } else {
-                // Include this param in parent route
-                parentRouteParams[paramName] = literalValue;
-                if (DEBUG) {
-                  console.debug(
-                    `Literal segment ${paramName}=${literalValue} differs from parent default ${parentSignalDefault}`,
-                  );
-                }
-              }
-            }
-
-            if (shouldUseParentRoute) {
-              if (DEBUG) {
-                console.debug(
-                  `Using parent route with params:`,
-                  parentRouteParams,
-                );
-              }
-
-              // Find the parent route and use its pattern
-              for (const existingRoute of routeSet) {
-                if (existingRoute === route) continue;
-
-                const existingPrivateProps =
-                  getRoutePrivateProperties(existingRoute);
-                if (!existingPrivateProps) continue;
-
-                // Check if this is the actual parent route by checking inheritance data
-                const existingPattern = existingPrivateProps.originalPattern;
-
-                // The parent should be the route that this route inherits from
-                // We can identify it by checking if the current route's inheritance matches this route
-                let isParentRoute = false;
-                const existingSegments = parsePatternSegments(existingPattern);
-                const currentSegments = parsePatternSegments(
-                  routePrivateProps.originalPattern,
-                );
-
-                // Simple check: parent should have parameters where current has literals
-                if (existingSegments.length <= currentSegments.length) {
-                  for (let i = 0; i < existingSegments.length; i++) {
-                    const existingSeg = existingSegments[i];
-                    const currentSeg = currentSegments[i];
-
-                    // If existing has parameter and current has matching literal from inheritance
-                    if (
-                      existingSeg.startsWith(":") &&
-                      !currentSeg.startsWith(":")
-                    ) {
-                      const paramName = existingSeg
-                        .replace(/[?*]/g, "")
-                        .substring(1);
-                      // Check if this matches our inheritance data
-                      const matchingInheritance = inheritanceInfo.find(
-                        (inh) => inh.paramName === paramName,
-                      );
-                      if (
-                        matchingInheritance &&
-                        matchingInheritance.literalValue === currentSeg
-                      ) {
-                        isParentRoute = true;
-                      }
-                    }
-                  }
-                }
-
-                if (isParentRoute) {
-                  const parentParsedPattern =
-                    existingPrivateProps.routePattern.pattern;
-                  const parentParameterDefaults =
-                    existingPrivateProps.parameterDefaults || new Map();
-
-                  if (DEBUG) {
-                    console.debug(
-                      `Found correct parent route with pattern:`,
-                      existingPattern,
-                    );
-                  }
-
-                  // Use parent route for URL building
-                  // Include original extra params that aren't part of the parent pattern
-                  const mergedParentParams = { ...parentRouteParams };
-
-                  // Add only extra parameters that don't match their defaults
-                  const routePrivateProperties =
-                    getRoutePrivateProperties(route);
-                  const connections = routePrivateProperties?.connections || [];
-
-                  for (const [key, value] of Object.entries(params || {})) {
-                    if (!(key in mergedParentParams)) {
-                      // Check if this parameter has a default value
-                      const connection = connections.find(
-                        (c) => c.paramName === key,
-                      );
-                      const defaultValue = connection?.options?.defaultValue;
-
-                      // Only include if it doesn't match the default value
-                      if (
-                        defaultValue === undefined ||
-                        value !== defaultValue
-                      ) {
-                        mergedParentParams[key] = value;
-                      }
-                    }
-                  }
-
-                  const parentRouteRelativeUrl = buildUrlFromPattern(
-                    parentParsedPattern,
-                    mergedParentParams,
-                    parentParameterDefaults,
-                  );
-                  return parentRouteRelativeUrl;
-                }
-              }
-            }
-          }
-        }
-      }
-
-      // Also check if any non-inherited parameters have non-default values
-      // This handles cases like tab=security where tab isn't inherited but requires full URL
-      if (!shouldUseOriginalPattern && params) {
-        // Get all parameter configurations for this route
-        const routePrivateProperties = getRoutePrivateProperties(route);
-        const connections = routePrivateProperties?.connections || [];
-
-        for (const { paramName, options = {} } of connections) {
-          if (paramName in params && params[paramName] !== undefined) {
-            const defaultValue = options.defaultValue;
-            if (
-              defaultValue !== undefined &&
-              params[paramName] !== defaultValue
-            ) {
-              shouldUseOriginalPattern = true;
-              if (DEBUG) {
-                console.debug(
-                  `Non-inherited param ${paramName}=${params[paramName]} differs from default ${defaultValue}, using original pattern`,
-                );
-              }
-              break;
-            }
-          }
-        }
-      }
-    }
-
-    const patternToUse = shouldUseOriginalPattern
-      ? routePrivateProps.originalPattern
-      : cleanPattern;
-
-    if (DEBUG && shouldUseOriginalPattern) {
-      console.debug(
-        `Building URL with original pattern: ${patternToUse} instead of internal: ${cleanPattern}`,
-      );
-    }
-
-    // Determine which parsed pattern to use based on shouldUseOriginalPattern logic
-    let parsedPatternToUse;
-    if (shouldUseOriginalPattern && routePrivateProps?.originalPatternParsed) {
-      parsedPatternToUse = routePrivateProps.originalPatternParsed;
-    } else {
-      parsedPatternToUse = routePrivateProps.routePattern.pattern;
-    }
-
+    const parsedPattern = routePrivateProps.routePattern.pattern;
     const parameterDefaults = routePrivateProps.parameterDefaults || new Map();
-
+    const segmentDefaults = routePrivateProps.segmentDefaults || new Map();
+    
+    // Create a modified pattern where segments that match signal defaults are made optional
+    const modifiedPattern = {
+      ...parsedPattern,
+      segments: parsedPattern.segments.map((segment, index) => {
+        const segmentDefault = segmentDefaults.get(index);
+        if (segmentDefault && segment.type === 'literal' && 
+            segment.value === segmentDefault.literalValue &&
+            segmentDefault.literalValue === segmentDefault.signalDefault) {
+          // Make this literal segment optional since it matches the signal default
+          return { ...segment, optional: true };
+        }
+        return segment;
+      })
+    };
+    
     const routeRelativeUrl = buildUrlFromPattern(
-      parsedPatternToUse,
+      modifiedPattern,
       resolvedParams,
       parameterDefaults,
     );
