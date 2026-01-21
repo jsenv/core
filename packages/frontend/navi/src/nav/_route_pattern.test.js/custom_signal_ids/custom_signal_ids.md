@@ -1,4 +1,4 @@
-# [custom signal IDs](../../route_pattern.test.js#L226)
+# [custom signal IDs](../../route_pattern.test.js#L230)
 
 ```js
 // Test signal with custom string ID instead of auto-generated numeric ID

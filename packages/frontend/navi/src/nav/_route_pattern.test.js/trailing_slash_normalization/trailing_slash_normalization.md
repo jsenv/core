@@ -1,4 +1,4 @@
-# [trailing slash normalization](../../route_pattern.test.js#L22)
+# [trailing slash normalization](../../route_pattern.test.js#L26)
 
 ```js
 return {

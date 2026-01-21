@@ -1,4 +1,4 @@
-# [multiple parameters](../../route_pattern.test.js#L31)
+# [multiple parameters](../../route_pattern.test.js#L35)
 
 ```js
 return {

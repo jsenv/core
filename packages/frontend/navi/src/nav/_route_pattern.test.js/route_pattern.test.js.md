@@ -13,6 +13,8 @@
 - [literal segment defaults edge cases](literal_segment_defaults_edge_cases/literal_segment_defaults_edge_cases.md)
 - [custom signal IDs](custom_signal_ids/custom_signal_ids.md)
 - [matching with a base url](matching_with_a_base_url/matching_with_a_base_url.md)
+- [buildUrlFromPattern with segment filtering](buildurlfrompattern_with_segment_filtering/buildurlfrompattern_with_segment_filtering.md)
+- [buildUrlFromPatternWithSegmentFiltering](buildurlfrompatternwithsegmentfiltering/buildurlfrompatternwithsegmentfiltering.md)
 
 ---
 

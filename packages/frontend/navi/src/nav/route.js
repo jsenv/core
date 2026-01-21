@@ -6,7 +6,10 @@
 import { createPubSub } from "@jsenv/dom";
 import { batch, computed, effect, signal } from "@preact/signals";
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
-import { buildUrlFromPattern, createRoutePattern } from "./route_pattern.js";
+import {
+  buildUrlFromPatternWithSegmentFiltering,
+  createRoutePattern,
+} from "./route_pattern.js";
 import { resolveRouteUrl } from "./route_url.js";
 
 const DEBUG = false;
@@ -931,57 +934,26 @@ export const registerRoute = (urlPatternRaw) => {
   };
 
   route.buildRelativeUrl = (params) => {
-    console.log(urlPattern);
     const resolvedParams = resolveParams(params, {
       // cleanup defaults to keep url as short as possible
       cleanupDefaults: true,
     });
 
-    // Use our own pattern but with smart segment omission based on inheritance
+    // Use smart segment filtering from route_pattern.js
     const routePrivateProps = getRoutePrivateProperties(route);
     const parsedPattern = routePrivateProps.routePattern.pattern;
     const parameterDefaults = routePrivateProps.parameterDefaults || new Map();
     const segmentDefaults = routePrivateProps.segmentDefaults || new Map();
-
-    // Check if ANY parameter has a non-default value
-    // If so, we must use the full pattern to avoid ambiguity
-    let hasNonDefaultParams = false;
     const connections = routePrivateProps.connections || [];
 
-    for (const { paramName, options = {} } of connections) {
-      const providedValue = params?.[paramName];
-      const defaultValue = options.defaultValue;
-
-      if (providedValue !== undefined && providedValue !== defaultValue) {
-        hasNonDefaultParams = true;
-        break;
-      }
-    }
-
-    // Only skip segments when ALL parameters are at defaults
-    const modifiedPattern = {
-      ...parsedPattern,
-      segments: parsedPattern.segments.filter((segment, index) => {
-        const segmentDefault = segmentDefaults.get(index);
-        if (
-          !hasNonDefaultParams && // Only skip when all params are defaults
-          segmentDefault &&
-          segment.type === "literal" &&
-          segment.value === segmentDefault.literalValue &&
-          segmentDefault.literalValue === segmentDefault.signalDefault
-        ) {
-          // Skip this literal segment entirely since it matches the signal default
-          // and no parameters have non-default values
-          return false;
-        }
-        return true;
-      }),
-    };
-
-    const routeRelativeUrl = buildUrlFromPattern(
-      modifiedPattern,
+    const routeRelativeUrl = buildUrlFromPatternWithSegmentFiltering(
+      parsedPattern,
       resolvedParams,
       parameterDefaults,
+      {
+        segmentDefaults,
+        connections,
+      },
     );
     return routeRelativeUrl;
   };

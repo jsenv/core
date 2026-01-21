@@ -374,3 +374,65 @@ export const buildUrlFromPattern = (
   const search = searchParams.toString();
   return path + (search ? `?${search}` : "");
 };
+
+/**
+ * Build URL from pattern with smart segment omission based on inheritance and parameters
+ *
+ * This function handles the logic for omitting segments when they match signal defaults
+ * and no non-default parameters are provided.
+ */
+export const buildUrlFromPatternWithSegmentFiltering = (
+  parsedPattern,
+  params = {},
+  parameterDefaults = new Map(),
+  { segmentDefaults = new Map(), connections = [] } = {},
+) => {
+  // Check if ANY parameter has a non-default value
+  // If so, we must use the full pattern to avoid ambiguity
+  let hasNonDefaultParams = false;
+
+  // First check signal connections
+  for (const { paramName, options = {} } of connections) {
+    const providedValue = params?.[paramName];
+    const defaultValue = options.defaultValue;
+
+    if (providedValue !== undefined && providedValue !== defaultValue) {
+      hasNonDefaultParams = true;
+      break;
+    }
+  }
+
+  // Also check if any parameters are provided
+  // This catches parameters not in signal connections (like :tab in our example)
+  if (!hasNonDefaultParams && params) {
+    for (const [, value] of Object.entries(params)) {
+      if (value !== undefined) {
+        // If any parameter is explicitly provided, don't skip segments
+        hasNonDefaultParams = true;
+        break;
+      }
+    }
+  }
+
+  // Only skip segments when ALL parameters are at defaults
+  const modifiedPattern = {
+    ...parsedPattern,
+    segments: parsedPattern.segments.filter((segment, index) => {
+      const segmentDefault = segmentDefaults.get(index);
+      if (
+        !hasNonDefaultParams && // Only skip when all params are defaults
+        segmentDefault &&
+        segment.type === "literal" &&
+        segment.value === segmentDefault.literalValue &&
+        segmentDefault.literalValue === segmentDefault.signalDefault
+      ) {
+        // Skip this literal segment entirely since it matches the signal default
+        // and no parameters have non-default values
+        return false;
+      }
+      return true;
+    }),
+  };
+
+  return buildUrlFromPattern(modifiedPattern, params, parameterDefaults);
+};

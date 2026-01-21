@@ -1,4 +1,4 @@
-# [literal segment defaults validation](../../route_pattern.test.js#L106)
+# [literal segment defaults validation](../../route_pattern.test.js#L110)
 
 ```js
 const runWithDefaults = (pattern, urlOrRelativeUrl, literalDefaults) => {

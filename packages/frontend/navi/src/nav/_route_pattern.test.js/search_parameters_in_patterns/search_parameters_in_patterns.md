@@ -1,4 +1,4 @@
-# [search parameters in patterns](../../route_pattern.test.js#L78)
+# [search parameters in patterns](../../route_pattern.test.js#L82)
 
 ```js
 return {

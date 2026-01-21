@@ -1,4 +1,4 @@
-# [non-matching patterns](../../route_pattern.test.js#L44)
+# [non-matching patterns](../../route_pattern.test.js#L48)
 
 ```js
 return {

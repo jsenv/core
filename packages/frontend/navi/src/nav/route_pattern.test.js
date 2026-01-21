@@ -1,6 +1,10 @@
 import { snapshotTests } from "@jsenv/snapshot";
 import { stateSignal } from "../state/state_signal.js";
-import { createRoutePattern } from "./route_pattern.js";
+import {
+  buildUrlFromPattern,
+  buildUrlFromPatternWithSegmentFiltering,
+  createRoutePattern,
+} from "./route_pattern.js";
 
 const baseUrl = "http://localhost:3000";
 
@@ -274,6 +278,90 @@ await snapshotTests(import.meta.url, ({ test }) => {
     const result = applyOn(url);
     return {
       result,
+    };
+  });
+
+  test("buildUrlFromPattern with segment filtering", () => {
+    // Test case that reproduces the issue where segments were incorrectly omitted
+    const pattern = "/admin/settings/:tab";
+    const routePattern = createRoutePattern(pattern);
+
+    const params = { tab: "advanced" };
+    const parameterDefaults = new Map([["section", "settings"]]);
+
+    const result = buildUrlFromPattern(
+      routePattern.pattern,
+      params,
+      parameterDefaults,
+    );
+
+    return {
+      pattern,
+      parsedPattern: routePattern.pattern,
+      params,
+      parameterDefaults: Object.fromEntries(parameterDefaults),
+      result,
+      expectedResult: "/admin/settings/advanced",
+    };
+  });
+
+  test("buildUrlFromPatternWithSegmentFiltering", () => {
+    const pattern = "/admin/settings/:tab";
+    const routePattern = createRoutePattern(pattern);
+
+    // Mock segment defaults and connections as would be created during inheritance
+    const segmentDefaults = new Map([
+      [
+        1,
+        {
+          paramName: "section",
+          literalValue: "settings",
+          signalDefault: "settings",
+        },
+      ],
+    ]);
+
+    const mockSignal = { value: "settings" };
+    const connections = [
+      {
+        paramName: "section",
+        options: { defaultValue: "settings" },
+      },
+    ];
+
+    // Case 1: With parameters provided - should NOT omit segments
+    const resultWithParams = buildUrlFromPatternWithSegmentFiltering(
+      routePattern.pattern,
+      { tab: "advanced" },
+      new Map(),
+      { segmentDefaults, connections },
+    );
+
+    // Case 2: Without parameters - should omit segments when all are defaults
+    const resultWithoutParams = buildUrlFromPatternWithSegmentFiltering(
+      routePattern.pattern,
+      {},
+      new Map(),
+      { segmentDefaults, connections },
+    );
+
+    return {
+      pattern,
+      case1_with_params: {
+        params: { tab: "advanced" },
+        result: resultWithParams,
+        expected: "/admin/settings/advanced",
+      },
+      case2_without_params: {
+        params: {},
+        result: resultWithoutParams,
+        expected: "/admin/:tab", // Should keep param placeholder but omit "settings" segment
+      },
+      segmentDefaults: Array.from(segmentDefaults.entries()),
+      connections: connections.map((c) => ({
+        paramName: c.paramName,
+        defaultValue: c.options.defaultValue,
+      })),
     };
   });
 });
