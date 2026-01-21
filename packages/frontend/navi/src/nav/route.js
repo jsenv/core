@@ -52,7 +52,7 @@ const actionAbortControllerWeakMap = new WeakMap();
  * Analyzes route patterns to determine inheritance relationships
  * Much simpler than the previous URLPattern-based approach
  */
-const analyzeRouteInheritanceCustom = (currentPattern) => {
+const analyzeRouteInheritance = (currentPattern) => {
   if (routeSet.size === 0) {
     return {
       canInherit: false,
@@ -109,6 +109,10 @@ const analyzeRouteInheritanceCustom = (currentPattern) => {
     parameterDefaults: new Map(),
   };
 };
+
+/**
+ * Parse pattern into segments for inheritance analysis
+ */
 const parsePatternSegments = (pattern) => {
   if (pattern === "/") {
     return [];
@@ -225,8 +229,48 @@ export const updateRoutes = (
     const oldParams = previousState.params;
 
     // Use custom pattern matching - much simpler than URLPattern approach
-    const extractedParams = routePattern.applyOn(url);
-    const newMatching = Boolean(extractedParams);
+    let extractedParams = routePattern.applyOn(url);
+    let newMatching = Boolean(extractedParams);
+
+    // If direct matching failed, try inheritance-based matching
+    if (!newMatching && routePrivateProperties.inheritanceData) {
+      // Try to match using parent route patterns
+      for (const existingRoute of routeSet) {
+        if (existingRoute === route) continue; // Skip self
+
+        const existingPrivateProps = getRoutePrivateProperties(existingRoute);
+        if (!existingPrivateProps) continue;
+
+        const existingRoutePattern = existingPrivateProps.routePattern;
+        const parentParams = existingRoutePattern.applyOn(url);
+
+        if (parentParams) {
+          // Check if this route can inherit from the parent route
+          const inheritanceInfo = routePrivateProperties.inheritanceData;
+          let canInherit = true;
+          const inheritedParams = { ...parentParams };
+
+          // Verify inheritance compatibility
+          for (const inheritance of inheritanceInfo) {
+            const { paramName, literalValue } = inheritance;
+            if (parentParams[paramName] === literalValue) {
+              // The parent route's parameter matches our literal value - we can inherit
+              continue;
+            } else {
+              canInherit = false;
+              break;
+            }
+          }
+
+          if (canInherit) {
+            extractedParams = inheritedParams;
+            newMatching = true;
+            break; // Found a matching parent
+          }
+        }
+      }
+    }
+
     let newParams;
 
     if (extractedParams) {
@@ -402,10 +446,7 @@ export const registerRoute = (urlPattern) => {
   const { cleanPattern, connections } = routePatternResult;
 
   // Analyze inheritance opportunities with existing routes using custom system
-  const inheritanceResult = analyzeRouteInheritanceCustom(
-    cleanPattern,
-    getRoutePrivateProperties,
-  );
+  const inheritanceResult = analyzeRouteInheritance(cleanPattern);
 
   // Build parameter defaults from inheritance and connections
   const parameterDefaults = new Map();

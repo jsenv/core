@@ -100,8 +100,12 @@ return testResults;
 
 ```js
 {
-  "admin_root_matches_section_default": null,
-  "admin_root_with_slash": null,
+  "admin_root_matches_section_default": {
+    "section": "settings"
+  },
+  "admin_root_with_slash": {
+    "section": "settings"
+  },
   "admin_with_settings_section": null,
   "admin_with_users_section": {
     "section": "users"
@@ -109,17 +113,28 @@ return testResults;
   "admin_users_without_trailing_slash": {
     "section": "users"
   },
-  "settings_route_matches_admin_root": null,
-  "settings_root_without_slash": null,
-  "settings_root_with_slash": null,
+  "settings_route_matches_admin_root": {
+    "tab": "general"
+  },
+  "settings_root_without_slash": {
+    "tab": "general"
+  },
+  "settings_root_with_slash": {
+    "tab": "general"
+  },
   "settings_with_general_tab": {
     "tab": "general"
   },
   "settings_with_security_tab": {
     "tab": "security"
   },
-  "settings_with_literal_settings_path": null,
-  "settings_with_wrong_search_param": null,
+  "settings_with_literal_settings_path": {
+    "tab": "general"
+  },
+  "settings_with_wrong_search_param": {
+    "wrongParam": "value",
+    "tab": "general"
+  },
   "settings_should_not_match_analytics_url": null,
   "settings_should_not_match_users_url": null,
   "settings_with_different_section": null,

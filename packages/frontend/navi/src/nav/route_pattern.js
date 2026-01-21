@@ -57,7 +57,7 @@ export const createRoutePattern = (
 ) => {
   // Detect and process signals in the pattern first
   const { pattern: cleanPattern, connections } = detectSignals(pattern);
-  const parsedPattern = parsePattern(cleanPattern);
+  const parsedPattern = parsePattern(cleanPattern, parameterDefaults);
 
   if (DEBUG) {
     console.debug(`[CustomPattern] Created pattern:`, parsedPattern);
@@ -88,7 +88,7 @@ export const createRoutePattern = (
 /**
  * Parse a route pattern string into structured segments
  */
-const parsePattern = (pattern) => {
+const parsePattern = (pattern, parameterDefaults = new Map()) => {
   // Handle root route
   if (pattern === "/") {
     return {
@@ -126,7 +126,7 @@ const parsePattern = (pattern) => {
     if (seg.startsWith(":")) {
       // Parameter segment
       const paramName = seg.slice(1).replace("?", ""); // Remove : and optional ?
-      const isOptional = seg.endsWith("?");
+      const isOptional = seg.endsWith("?") || parameterDefaults.has(paramName);
 
       return {
         type: "param",
@@ -168,12 +168,17 @@ const matchUrl = (url, parsedPattern, parameterDefaults, baseUrl) => {
   }
 
   // Remove leading slash and split into segments
-  const urlSegments = pathname.startsWith("/")
+  let urlSegments = pathname.startsWith("/")
     ? pathname
         .slice(1)
         .split("/")
         .filter((s) => s !== "")
     : pathname.split("/").filter((s) => s !== "");
+
+  // Handle trailing slash flexibility: if pattern has trailing slash but URL doesn't (or vice versa)
+  // and we're at the end of segments, allow the match
+  const urlHasTrailingSlash = pathname.endsWith("/") && pathname !== "/";
+  const patternHasTrailingSlash = parsedPattern.trailingSlash;
 
   const params = {};
   let urlSegmentIndex = 0;
@@ -197,16 +202,26 @@ const matchUrl = (url, parsedPattern, parameterDefaults, baseUrl) => {
       // Parameter segment
       if (urlSegmentIndex >= urlSegments.length) {
         // No URL segment for this parameter
-        if (patternSeg.optional || parsedPattern.wildcard) {
-          // Optional parameter or wildcard present - use default if available
+        if (patternSeg.optional) {
+          // Optional parameter - use default if available
           const defaultValue = parameterDefaults.get(patternSeg.name);
           if (defaultValue !== undefined) {
             params[patternSeg.name] = defaultValue;
           }
           continue;
-        } else {
-          return null; // Required parameter missing
         }
+        // Required parameter missing - but check if we can use trailing slash logic
+        // If this is the last segment and we have a trailing slash difference, it might still match
+        const isLastSegment = i === parsedPattern.segments.length - 1;
+        if (isLastSegment && patternHasTrailingSlash && !urlHasTrailingSlash) {
+          // Pattern expects trailing slash segment, URL doesn't have it
+          const defaultValue = parameterDefaults.get(patternSeg.name);
+          if (defaultValue !== undefined) {
+            params[patternSeg.name] = defaultValue;
+            continue;
+          }
+        }
+        return null; // Required parameter missing
       }
 
       // Capture URL segment as parameter value
