@@ -106,7 +106,9 @@ return testResults;
   "admin_root_with_slash": {
     "section": "settings"
   },
-  "admin_with_settings_section": null,
+  "admin_with_settings_section": {
+    "section": "settings"
+  },
   "admin_with_users_section": {
     "section": "users"
   },

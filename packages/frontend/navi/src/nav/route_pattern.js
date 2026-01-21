@@ -232,10 +232,15 @@ const matchUrl = (url, parsedPattern, parameterDefaults, baseUrl) => {
   }
 
   // Check for remaining URL segments
-  if (!parsedPattern.wildcard && urlSegmentIndex < urlSegments.length) {
-    // No wildcard but URL has extra segments - no match
-    return null;
-  }
+  // We don't check for remaining URL segments here.
+  // A pattern is allowed to match a prefix of a URL.
+  // The routing logic will then find the most specific route that matches.
+  // For instance /admin/:section can match /admin/settings/advanced
+  // and the router will be able to select a more specific route
+  // if one is registered for /admin/settings/:tab
+  // if (!parsedPattern.wildcard && urlSegmentIndex < urlSegments.length) {
+  //   return null;
+  // }
   // If wildcard is present, we allow extra segments (no additional check needed)
 
   // Add search parameters
