@@ -525,6 +525,31 @@ export const registerRoute = (urlPatternRaw) => {
     }
   }
 
+  // Also check this route's own signal connections for segment defaults
+  // This handles cases where a route has signals with defaults but doesn't inherit from other routes
+  if (connections && connections.length > 0) {
+    const parsedPattern = routePatternResult.pattern;
+    
+    for (const { signal, paramName, options } of connections) {
+      if (signal && signal.value !== undefined && options.defaultValue !== undefined) {
+        // Find which segment corresponds to this parameter
+        for (let segmentIndex = 0; segmentIndex < parsedPattern.segments.length; segmentIndex++) {
+          const segment = parsedPattern.segments[segmentIndex];
+          
+          if (segment.type === 'param' && segment.name === paramName) {
+            // This is a parameter segment that has a signal with a default value
+            segmentDefaults.set(segmentIndex, {
+              paramName,
+              literalValue: options.defaultValue, // Use the signal's default as the literal value
+              signalDefault: signal.value,
+            });
+            break;
+          }
+        }
+      }
+    }
+  }
+
   // Store pattern info in route private properties for future pattern matching
   const originalPatternBeforeTransforms = cleanPattern;
   const originalRoutePattern = createRoutePattern(

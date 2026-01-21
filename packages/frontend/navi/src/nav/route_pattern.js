@@ -431,12 +431,6 @@ export const buildUrlFromPatternWithSegmentFiltering = (
   parameterDefaults = new Map(),
   { segmentDefaults = new Map(), connections = [] } = {},
 ) => {
-  // For patterns with trailing slash, use buildUrlFromPattern which handles documentUrlSignal
-  if (parsedPattern.trailingSlash) {
-    return buildUrlFromPattern(parsedPattern, params, parameterDefaults);
-  }
-
-  // For patterns without trailing slash, apply segment filtering logic
   // Check if ANY parameter has a non-default value
   // If so, we must use the full pattern to avoid ambiguity
   let hasNonDefaultParams = false;
@@ -469,56 +463,78 @@ export const buildUrlFromPatternWithSegmentFiltering = (
     ...parsedPattern,
     segments: parsedPattern.segments.filter((segment, index) => {
       const segmentDefault = segmentDefaults.get(index);
-      if (
-        !hasNonDefaultParams && // Only skip when all params are defaults
-        segmentDefault &&
-        segment.type === "literal" &&
-        segment.value === segmentDefault.literalValue
-      ) {
-        // Only omit if the literal value matches the signal default
-        // This prevents omission when the segment represents a non-default value
-        if (segmentDefault.literalValue !== segmentDefault.signalDefault) {
-          return true; // Don't omit if values differ
-        }
-
-        // At this point: literalValue === signalDefault
-        const hasConnectionForParam = connections.some(
-          (conn) => conn.paramName === segmentDefault.paramName,
-        );
-
-        // If there's a direct connection, definitely allow omission
-        if (hasConnectionForParam) {
-          return false;
-        }
-
-        // No direct connection for this parameter
-        // Check if we have other connections and whether they're at defaults
-        if (connections.length > 0) {
-          // We have connections for other parameters
-          // Only omit if ALL connected parameters are at their defaults
-          const allConnectedParamsAtDefaults = connections.every((conn) => {
-            const paramValue = params?.[conn.paramName];
-            const defaultValue = conn.options?.defaultValue;
-            return paramValue === undefined || paramValue === defaultValue;
-          });
-
-          if (!allConnectedParamsAtDefaults) {
-            // Some connected parameters have non-default values
-            // Keep the segment to maintain URL structure
-            return true;
+      if (!hasNonDefaultParams && segmentDefault) {
+        if (segment.type === "literal" && segment.value === segmentDefault.literalValue) {
+          // Handle literal segments (from inheritance)
+          // Only omit if the literal value matches the signal default
+          if (segmentDefault.literalValue !== segmentDefault.signalDefault) {
+            return true; // Don't omit if values differ
           }
 
-          // All connected parameters are at defaults, safe to omit
-          return false;
-        }
+          // At this point: literalValue === signalDefault
+          const hasConnectionForParam = connections.some(
+            (conn) => conn.paramName === segmentDefault.paramName,
+          );
 
-        // If no connections at all, this might be a simple inherited route
-        // Allow omission for these cases
-        return false;
+          // If there's a direct connection, definitely allow omission
+          if (hasConnectionForParam) {
+            return false;
+          }
+
+          // No direct connection for this parameter
+          // Check if we have other connections and whether they're at defaults
+          if (connections.length > 0) {
+            // We have connections for other parameters
+            // Only omit if ALL connected parameters are at their defaults
+            const allConnectedParamsAtDefaults = connections.every((conn) => {
+              const paramValue = params?.[conn.paramName];
+              const defaultValue = conn.options?.defaultValue;
+              return paramValue === undefined || paramValue === defaultValue;
+            });
+
+            if (!allConnectedParamsAtDefaults) {
+              // Some connected parameters have non-default values
+              // Keep the segment to maintain URL structure
+              return true;
+            }
+
+            // All connected parameters are at defaults, safe to omit
+            return false;
+          }
+
+          // If no connections at all, this might be a simple inherited route
+          // Allow omission for these cases
+          return false;
+        } else if (segment.type === "param" && segment.name === segmentDefault.paramName) {
+          // Handle parameter segments
+          const paramValue = params?.[segmentDefault.paramName];
+          
+          // If no value provided and we have a default, we can omit this segment
+          if (paramValue === undefined) {
+            // Check if there's a connection for this parameter
+            const hasConnectionForParam = connections.some(
+              (conn) => conn.paramName === segmentDefault.paramName,
+            );
+            
+            if (hasConnectionForParam) {
+              return false; // Omit the parameter segment
+            }
+          }
+        }
       }
-      return true;
+      return true; // Keep the segment
     }),
   };
 
+  // If segments were filtered and we originally had a trailing slash,
+  // remove the trailing slash since the path structure has changed
+  const segmentsWereFiltered = modifiedPattern.segments.length < parsedPattern.segments.length;
+  if (segmentsWereFiltered && parsedPattern.trailingSlash) {
+    // When segments are filtered out due to inheritance, the URL structure changes
+    // We should remove the trailing slash unless we're actively inheriting additional path
+    modifiedPattern.trailingSlash = false;
+  }
+
+  // Use buildUrlFromPattern which handles both regular URL building and trailing slash inheritance
   return buildUrlFromPattern(modifiedPattern, params, parameterDefaults);
 };

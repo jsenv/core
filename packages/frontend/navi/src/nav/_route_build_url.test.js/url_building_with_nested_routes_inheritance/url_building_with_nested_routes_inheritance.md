@@ -76,8 +76,8 @@ return {
 
 ```js
 {
-  "admin_no_params": "http://127.0.0.1/admin/",
-  "admin_with_section_settings": "http://127.0.0.1/admin/",
+  "admin_no_params": "http://127.0.0.1/admin",
+  "admin_with_section_settings": "http://127.0.0.1/admin",
   "admin_with_section_users": "http://127.0.0.1/admin/users/",
   "settings_no_params": "http://127.0.0.1/admin",
   "settings_with_tab_general": "http://127.0.0.1/admin",
