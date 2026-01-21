@@ -30,26 +30,17 @@ return {
 
 ```js
 {
-  "simple_search_param": {
-    "query": "hello"
-  },
-  "renamed_search_param": {
-    "city": "paris",
-    "cityName": "paris"
-  },
-  "search_params_optional": {},
+  "simple_search_param": null,
+  "renamed_search_param": null,
+  "search_params_optional": null,
   "auto_search_params": {
     "foo": "bar"
   },
-  "mixed_search_params": {
-    "city": "paris",
-    "cityName": "paris",
-    "extra": "value"
-  },
+  "mixed_search_params": null,
   "path_and_auto_search": {
+    "id": "123",
     "status": "active",
-    "role": "admin",
-    "id": "123"
+    "role": "admin"
   }
 }
 ```

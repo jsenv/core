@@ -58,14 +58,14 @@ return {
     "section": "anything"
   },
   "unrelated_parameter": {
-    "action": "edit",
     "id": "123",
+    "action": "edit",
     "section": "settings"
   },
   "mixed_parameter_defaults": {
+    "section": "settings",
     "subsection": "users",
-    "id": "123",
-    "section": "settings"
+    "id": "123"
   },
   "empty_string_default": {
     "query": ""
@@ -73,7 +73,9 @@ return {
   "numeric_default_match": {
     "num": "1"
   },
-  "numeric_default_non_match": null
+  "numeric_default_non_match": {
+    "num": "2"
+  }
 }
 ```
 

@@ -3,20 +3,65 @@
  * Replaces URLPattern with a simpler, more predictable approach
  */
 
+import { globalSignalRegistry } from "../state/state_signal.js";
+
 const DEBUG = false;
+
+// Function to detect signals in route patterns and connect them
+export const detectSignals = (routePattern) => {
+  const signalConnections = [];
+  let updatedPattern = routePattern;
+
+  // First, look for signals in the explicit syntax: :paramName=__jsenv_signal_1__ or ?paramName=__jsenv_signal_1__
+  const signalParamRegex = /([?:])(\w+)=(__jsenv_signal_\d+__)/g;
+  let match;
+
+  while ((match = signalParamRegex.exec(routePattern)) !== null) {
+    const [fullMatch, prefix, paramName, signalId] = match;
+    const signalData = globalSignalRegistry.get(signalId);
+
+    if (signalData) {
+      const { signal, options } = signalData;
+
+      let replacement;
+      if (prefix === ":") {
+        // Path parameter: :section=__jsenv_signal_1__ becomes :section
+        replacement = `${prefix}${paramName}`;
+      } else {
+        // Search parameter: ?tab=__jsenv_signal_1__ becomes nothing (removed entirely)
+        replacement = "";
+      }
+      updatedPattern = updatedPattern.replace(fullMatch, replacement);
+
+      signalConnections.push({
+        signal,
+        paramName,
+        options,
+      });
+    }
+  }
+
+  return {
+    pattern: updatedPattern,
+    connections: signalConnections,
+  };
+};
 
 /**
  * Creates a custom route pattern matcher
  */
-export const createRoutePatternCustom = (
+export const createRoutePattern = (
   pattern,
   baseUrl,
   parameterDefaults = new Map(),
 ) => {
-  const parsedPattern = parsePattern(pattern);
+  // Detect and process signals in the pattern first
+  const { pattern: cleanPattern, connections } = detectSignals(pattern);
+  const parsedPattern = parsePattern(cleanPattern);
 
   if (DEBUG) {
     console.debug(`[CustomPattern] Created pattern:`, parsedPattern);
+    console.debug(`[CustomPattern] Signal connections:`, connections);
   }
 
   const applyOn = (url) => {
@@ -24,7 +69,7 @@ export const createRoutePatternCustom = (
 
     if (DEBUG) {
       console.debug(
-        `[CustomPattern] Matching "${url}" against "${pattern}":`,
+        `[CustomPattern] Matching "${url}" against "${cleanPattern}":`,
         result,
       );
     }
@@ -34,6 +79,7 @@ export const createRoutePatternCustom = (
 
   return {
     pattern: parsedPattern,
+    connections, // Return signal connections along with pattern
     applyOn,
   };
 };

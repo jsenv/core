@@ -5,13 +5,182 @@
 
 import { createPubSub } from "@jsenv/dom";
 import { batch, computed, effect, signal } from "@preact/signals";
-import { detectSignals } from "../state/state_signal.js";
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
-import { analyzeRouteInheritanceCustom } from "./route_inheritance_custom.js";
-import { createRoutePatternCustom } from "./route_pattern_custom.js";
+import { createRoutePattern, detectSignals } from "./route_pattern.js";
 import { prepareRouteRelativeUrl, resolveRouteUrl } from "./route_url.js";
 
 const DEBUG = false;
+
+/**
+ * Route inheritance system - simplified approach
+ */
+
+/**
+ * Analyzes route patterns to determine inheritance relationships
+ * Much simpler than the previous URLPattern-based approach
+ */
+const analyzeRouteInheritanceCustom = (
+  currentPattern,
+  existingRoutes,
+  getRouteProperties,
+) => {
+  if (existingRoutes.size === 0) {
+    return {
+      canInherit: false,
+      inheritanceData: null,
+      parameterDefaults: new Map(),
+    };
+  }
+
+  if (DEBUG) {
+    console.debug(`[Inheritance] Analyzing pattern: ${currentPattern}`);
+  }
+
+  const currentSegments = parsePatternSegments(currentPattern);
+
+  // Look for existing routes that this pattern can inherit from
+  for (const existingRoute of existingRoutes) {
+    const existingProps = getRouteProperties(existingRoute);
+    if (!existingProps) continue;
+
+    const existingPattern = existingProps.originalPattern;
+    const existingSegments = parsePatternSegments(existingPattern);
+    const existingConnections = existingProps.connections || [];
+
+    if (DEBUG) {
+      console.debug(`[Inheritance] Comparing with: ${existingPattern}`);
+    }
+
+    // Check if current pattern can inherit from existing pattern
+    const inheritanceResult = checkInheritanceCompatibility(
+      currentSegments,
+      existingSegments,
+      existingConnections,
+    );
+
+    if (inheritanceResult.canInherit) {
+      if (DEBUG) {
+        console.debug(
+          `[Inheritance] Found inheritance from ${existingPattern}:`,
+          inheritanceResult,
+        );
+      }
+
+      return {
+        canInherit: true,
+        inheritanceData: inheritanceResult.inheritanceData,
+        parameterDefaults: inheritanceResult.parameterDefaults,
+      };
+    }
+  }
+
+  return {
+    canInherit: false,
+    inheritanceData: null,
+    parameterDefaults: new Map(),
+  };
+};
+
+/**
+ * Parse pattern into segments for inheritance analysis
+ */
+const parsePatternSegments = (pattern) => {
+  if (pattern === "/") {
+    return [];
+  }
+
+  let cleanPattern = pattern.startsWith("/") ? pattern.slice(1) : pattern;
+
+  // Handle wildcards and trailing slashes
+  const hasWildcard = cleanPattern.endsWith("*");
+  const hasTrailingSlash = pattern.endsWith("/") && !hasWildcard;
+
+  if (hasWildcard) {
+    cleanPattern = cleanPattern.slice(0, -1);
+  }
+  if (hasTrailingSlash) {
+    cleanPattern = cleanPattern.slice(0, -1);
+  }
+
+  return cleanPattern ? cleanPattern.split("/") : [];
+};
+
+/**
+ * Check if current pattern can inherit from existing pattern
+ */
+const checkInheritanceCompatibility = (
+  currentSegments,
+  existingSegments,
+  existingConnections,
+) => {
+  // Simple inheritance rules:
+  // 1. Current pattern has more literal segments that match existing parameters
+  // 2. Current pattern provides literal values where existing has parameters with defaults
+
+  if (currentSegments.length < existingSegments.length) {
+    return { canInherit: false };
+  }
+
+  const inheritanceData = [];
+  const parameterDefaults = new Map();
+
+  // Check each existing segment against current segments
+  for (let i = 0; i < existingSegments.length; i++) {
+    const existingSeg = existingSegments[i];
+    const currentSeg = currentSegments[i];
+
+    if (!currentSeg) break; // Current pattern is shorter
+
+    if (existingSeg === currentSeg) {
+      // Exact match - continue
+      continue;
+    }
+
+    if (existingSeg.startsWith(":")) {
+      // Existing has parameter, current has literal
+      const paramName = existingSeg.replace(/[?*]/g, "").substring(1);
+      const connection = existingConnections.find(
+        (c) => c.paramName === paramName,
+      );
+
+      if (connection && connection.options?.defaultValue !== undefined) {
+        const defaultValue = connection.options.defaultValue;
+
+        // Two cases:
+        // 1. Literal matches default - can create short version
+        // 2. Literal provides different value - inherit with new default
+
+        inheritanceData.push({
+          segmentIndex: i,
+          paramName,
+          literalValue: currentSeg,
+          originalDefault: defaultValue,
+          canOmit: currentSeg === defaultValue,
+        });
+
+        // Set parameter default to the literal value from current pattern
+        parameterDefaults.set(paramName, currentSeg);
+      } else {
+        // No default value - can't inherit
+        return { canInherit: false };
+      }
+    } else {
+      // Both are literals but don't match - can't inherit
+      return { canInherit: false };
+    }
+  }
+
+  // If we found inheritance opportunities, return them
+  if (inheritanceData.length > 0) {
+    return {
+      canInherit: true,
+      inheritanceData,
+      parameterDefaults,
+    };
+  }
+
+  return { canInherit: false };
+};
 
 let baseFileUrl;
 let baseUrl;
@@ -231,11 +400,9 @@ export const getRoutePrivateProperties = (route) => {
 
 export const registerRoute = (urlPattern) => {
   const originalUrlPatternInput = urlPattern;
-  // Detect and connect signals in the route pattern
-  const { pattern, connections } = detectSignals(urlPattern);
 
   if (DEBUG) {
-    console.debug(`Registering route: ${urlPattern} -> ${pattern}`);
+    console.debug(`Registering route: ${urlPattern}`);
     console.debug(
       `Existing routes: ${Array.from(routeSet)
         .map((r) => r.urlPattern)
@@ -243,9 +410,18 @@ export const registerRoute = (urlPattern) => {
     );
   }
 
+  // Create custom route pattern - it will detect and process signals internally
+  const { pattern: parsedPattern, connections } = createRoutePattern(
+    urlPattern,
+    baseFileUrl,
+  );
+
+  // Get the clean pattern string for inheritance analysis
+  const { pattern: cleanPatternString } = detectSignals(urlPattern);
+
   // Analyze inheritance opportunities with existing routes using custom system
   const inheritanceResult = analyzeRouteInheritanceCustom(
-    pattern,
+    cleanPatternString,
     routeSet,
     getRoutePrivateProperties,
   );
@@ -270,6 +446,13 @@ export const registerRoute = (urlPattern) => {
     }
   }
 
+  // Now create the final route pattern with defaults
+  const routePattern = createRoutePattern(
+    urlPattern,
+    baseFileUrl,
+    parameterDefaults,
+  );
+
   if (DEBUG) {
     console.debug(`Parameter defaults:`, parameterDefaults);
     if (inheritanceResult.canInherit) {
@@ -287,17 +470,8 @@ export const registerRoute = (urlPattern) => {
 
   const [publishStatus, subscribeStatus] = createPubSub();
 
-  // Create custom route pattern - much simpler than URLPattern approach
-  const routePattern = createRoutePatternCustom(
-    pattern,
-    baseFileUrl,
-    parameterDefaults,
-  );
-
   // Store pattern info in route private properties for future pattern matching
-  const originalPatternBeforeTransforms = detectSignals(
-    originalUrlPatternInput,
-  ).pattern;
+  const originalPatternBeforeTransforms = cleanPatternString;
 
   const route = {
     urlPattern,
@@ -321,7 +495,7 @@ export const registerRoute = (urlPattern) => {
   const routePrivateProperties = {
     routePattern,
     originalPattern: originalPatternBeforeTransforms,
-    pattern: pattern, // Store the current pattern used
+    pattern: cleanPatternString, // Store the current pattern used
     inheritanceData: inheritanceResult.inheritanceData, // Store inheritance info for this route
     connections,
     matchingSignal: null,
@@ -747,11 +921,11 @@ export const registerRoute = (urlPattern) => {
 
     const patternToUse = shouldUseOriginalPattern
       ? routePrivateProps.originalPattern
-      : pattern;
+      : cleanPatternString;
 
     if (DEBUG && shouldUseOriginalPattern) {
       console.debug(
-        `Building URL with original pattern: ${patternToUse} instead of internal: ${pattern}`,
+        `Building URL with original pattern: ${patternToUse} instead of internal: ${cleanPatternString}`,
       );
     }
 
@@ -789,7 +963,7 @@ export const registerRoute = (urlPattern) => {
   route.matchesParams = (providedParams) => {
     // Wildcard routes (ending with *) should match any parameters
     // since they are parent routes meant to catch child routes
-    if (pattern.endsWith("*")) {
+    if (cleanPatternString.endsWith("*")) {
       return true;
     }
 

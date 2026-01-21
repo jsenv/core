@@ -79,16 +79,21 @@ return {
   "matching_default_value": {
     "section": "settings"
   },
-  "non_matching_default_value": null,
+  "non_matching_default_value": {
+    "section": "analytics"
+  },
   "multiple_segments_valid": {
-    "tab": "general",
-    "section": "settings"
+    "section": "settings",
+    "tab": "general"
   },
   "multiple_defaults_valid": {
-    "tab": "overview",
-    "section": "settings"
+    "section": "settings",
+    "tab": "overview"
   },
-  "multiple_defaults_partial_match": null
+  "multiple_defaults_partial_match": {
+    "section": "settings",
+    "tab": "invalid"
+  }
 }
 ```
 

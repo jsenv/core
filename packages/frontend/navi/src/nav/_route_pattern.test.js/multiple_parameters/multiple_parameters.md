@@ -16,13 +16,10 @@ return {
 ```js
 {
   "multiple_named_params": {
-    "postId": "456",
-    "userId": "123"
+    "userId": "123",
+    "postId": "456"
   },
-  "multiple_wildcard_params": {
-    "0": "v1",
-    "1": "document.pdf"
-  }
+  "multiple_wildcard_params": null
 }
 ```
 

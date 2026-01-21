@@ -3,50 +3,10 @@ import { effect, signal } from "@preact/signals";
 import { valueInLocalStorage } from "./value_in_local_storage.js";
 
 // Global signal registry for route template detection
-const globalSignalRegistry = new Map();
+export const globalSignalRegistry = new Map();
 let signalIdCounter = 0;
-const generateSignalId = () => {
+export const generateSignalId = () => {
   return `__jsenv_signal_${++signalIdCounter}__`;
-};
-
-// Function to detect signals in route patterns and connect them
-export const detectSignals = (routePattern) => {
-  const signalConnections = [];
-  let updatedPattern = routePattern;
-
-  // First, look for signals in the explicit syntax: :paramName=__jsenv_signal_1__ or ?paramName=__jsenv_signal_1__
-  const signalParamRegex = /([?:])(\w+)=(__jsenv_signal_\d+__)/g;
-  let match;
-
-  while ((match = signalParamRegex.exec(routePattern)) !== null) {
-    const [fullMatch, prefix, paramName, signalId] = match;
-    const signalData = globalSignalRegistry.get(signalId);
-
-    if (signalData) {
-      const { signal, options } = signalData;
-
-      let replacement;
-      if (prefix === ":") {
-        // Path parameter: :section=__jsenv_signal_1__ becomes :section
-        replacement = `${prefix}${paramName}`;
-      } else {
-        // Search parameter: ?tab=__jsenv_signal_1__ becomes nothing (removed entirely)
-        replacement = "";
-      }
-      updatedPattern = updatedPattern.replace(fullMatch, replacement);
-
-      signalConnections.push({
-        signal,
-        paramName,
-        options,
-      });
-    }
-  }
-
-  return {
-    pattern: updatedPattern,
-    connections: signalConnections,
-  };
 };
 
 /**

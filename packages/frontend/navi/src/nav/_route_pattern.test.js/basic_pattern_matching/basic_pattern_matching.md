@@ -14,9 +14,7 @@ return {
   "single_parameter": {
     "id": "123"
   },
-  "wildcard_parameter": {
-    "0": "v1/users"
-  }
+  "wildcard_parameter": {}
 }
 ```
 
