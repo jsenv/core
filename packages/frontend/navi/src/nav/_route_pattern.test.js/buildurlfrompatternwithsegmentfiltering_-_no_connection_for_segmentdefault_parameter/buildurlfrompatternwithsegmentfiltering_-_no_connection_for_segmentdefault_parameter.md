@@ -6,14 +6,14 @@
 const pattern = "/admin/analytics/";
 const routePattern = createRoutePattern(pattern);
 
-// segmentDefaults exists but connections only has "tab", not "section"
+// segmentDefaults with correct inheritance scenario
 const segmentDefaults = new Map([
   [
     1,
     {
       paramName: "section",
       literalValue: "analytics",
-      signalDefault: "analytics", // Even when they match, shouldn't omit without connection
+      signalDefault: "settings", // Different from literal - this is the proper case
     },
   ],
 ]);
@@ -28,7 +28,7 @@ const connections = [
 const result = buildUrlFromPatternWithSegmentFiltering(
   routePattern.pattern,
   {}, // No parameters provided
-  new Map([["section", "analytics"]]),
+  new Map([["section", "settings"]]), // parameterDefaults uses correct signal default
   { segmentDefaults, connections },
 );
 
@@ -40,9 +40,9 @@ return {
     defaultValue: c.options.defaultValue,
   })),
   result,
-  expected: "/admin/analytics/", // Should NOT omit "analytics" since no connection for "section"
+  expected: "/admin/analytics/", // Should NOT omit "analytics" since analytics ≠ settings
   issue:
-    "segment should not be filtered when no connection exists for the parameter",
+    "segment should not be filtered when literal value differs from signal default",
 };
 ```
 
@@ -55,7 +55,7 @@ return {
       {
         "paramName": "section",
         "literalValue": "analytics",
-        "signalDefault": "analytics"
+        "signalDefault": "settings"
       }
     ]
   ],
@@ -67,7 +67,7 @@ return {
   ],
   "result": "/admin/analytics",
   "expected": "/admin/analytics/",
-  "issue": "segment should not be filtered when no connection exists for the parameter"
+  "issue": "segment should not be filtered when literal value differs from signal default"
 }
 ```
 

@@ -431,20 +431,39 @@ export const buildUrlFromPatternWithSegmentFiltering = (
           return true; // Don't omit if values differ
         }
 
-        // Check if there's a connection for this parameter in the current route
-        // This prevents omission of inherited segments without local connections
+        // At this point: literalValue === signalDefault
         const hasConnectionForParam = connections.some(
           (conn) => conn.paramName === segmentDefault.paramName,
         );
 
-        if (!hasConnectionForParam) {
-          // No connection for this parameter in current route, don't omit the segment
-          // This handles cases where segmentDefault exists but shouldn't be used
-          return true;
+        // If there's a direct connection, definitely allow omission
+        if (hasConnectionForParam) {
+          return false;
         }
 
-        // Skip this literal segment entirely since it matches the signal default
-        // and no parameters have non-default values
+        // No direct connection for this parameter
+        // Check if we have other connections and whether they're at defaults
+        if (connections.length > 0) {
+          // We have connections for other parameters
+          // Only omit if ALL connected parameters are at their defaults
+          const allConnectedParamsAtDefaults = connections.every((conn) => {
+            const paramValue = params?.[conn.paramName];
+            const defaultValue = conn.options?.defaultValue;
+            return paramValue === undefined || paramValue === defaultValue;
+          });
+
+          if (!allConnectedParamsAtDefaults) {
+            // Some connected parameters have non-default values
+            // Keep the segment to maintain URL structure
+            return true;
+          }
+
+          // All connected parameters are at defaults, safe to omit
+          return false;
+        }
+
+        // If no connections at all, this might be a simple inherited route
+        // Allow omission for these cases
         return false;
       }
       return true;
