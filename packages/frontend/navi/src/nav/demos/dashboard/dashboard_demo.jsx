@@ -12,17 +12,17 @@ import {
 const sectionSignal = stateSignal("settings", {
   id: "settings",
   enum: ["settings", "analytics"],
-  persists: true,
+  // persists: true,
 });
 const settingsTabSignal = stateSignal("general", {
   id: "settings_tab",
   enum: ["general", "advanced"],
-  persists: true,
+  // persists: true,
 });
 const analyticsTabSignal = stateSignal("overview", {
   id: "analytics_tab",
   enum: ["overview", "details"],
-  persists: true,
+  // persists: true,
 });
 const { HOME_ROUTE, ADMIN_ROUTE, ADMIN_SETTINGS_ROUTE, ADMIN_ANALYTICS_ROUTE } =
   setupRoutes({

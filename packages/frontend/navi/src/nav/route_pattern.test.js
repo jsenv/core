@@ -223,6 +223,47 @@ await snapshotTests(import.meta.url, ({ test }) => {
     };
   });
 
+  test("custom signal IDs", () => {
+    // Test signal with custom string ID instead of auto-generated numeric ID
+    const tabSignal = stateSignal("general", { id: "settings_tab" });
+    const categorySignal = stateSignal("products", { id: "main_category" });
+    
+    return {
+      // Single custom signal ID in path parameter
+      custom_id_path_param: run(
+        `/admin/:tab=${tabSignal}`,
+        "/admin/security"
+      ),
+      
+      // Custom signal ID with default value match
+      custom_id_default_match: run(
+        `/admin/:tab=${tabSignal}`,
+        "/admin/general"
+      ),
+      
+      // Multiple custom signal IDs
+      multiple_custom_ids: run(
+        `/shop/:category=${categorySignal}/:tab=${tabSignal}`,
+        "/shop/electronics/advanced"
+      ),
+      
+      // Custom signal ID in search parameter
+      custom_id_search_param: run(
+        `/dashboard?tab=${tabSignal}`,
+        "/dashboard?tab=security"
+      ),
+      
+      // Mixed auto-generated and custom signal IDs
+      mixed_signal_types: (() => {
+        const autoSignal = stateSignal("auto_default"); // Auto-generated ID
+        return run(
+          `/mixed/:custom=${tabSignal}/:auto=${autoSignal}`,
+          "/mixed/custom_value/auto_value"
+        );
+      })(),
+    };
+  });
+
   test("matching with a base url", () => {
     const sectionSignal = stateSignal("settings");
     const pattern = `/admin/:section=${sectionSignal}/`;
