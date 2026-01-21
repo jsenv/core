@@ -3,6 +3,7 @@
 
 - [basic url building](basic_url_building/basic_url_building.md)
 - [dashboard demo scenario with state signals](dashboard_demo_scenario_with_state_signals/dashboard_demo_scenario_with_state_signals.md)
+- [url building with nested routes inheritance](url_building_with_nested_routes_inheritance/url_building_with_nested_routes_inheritance.md)
 - [url building with extra params](url_building_with_extra_params/url_building_with_extra_params.md)
 
 ---
