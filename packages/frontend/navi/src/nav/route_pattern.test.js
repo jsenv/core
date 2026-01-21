@@ -364,4 +364,50 @@ await snapshotTests(import.meta.url, ({ test }) => {
       })),
     };
   });
+
+  test("buildUrlFromPatternWithSegmentFiltering - no connection for segmentDefault parameter", () => {
+    // This reproduces the specific issue where a segment should NOT be filtered
+    // when there's no connection for the parameter in the current route
+    const pattern = "/admin/analytics/";
+    const routePattern = createRoutePattern(pattern);
+
+    // segmentDefaults exists but connections only has "tab", not "section"
+    const segmentDefaults = new Map([
+      [
+        1,
+        {
+          paramName: "section",
+          literalValue: "analytics",
+          signalDefault: "analytics", // Even when they match, shouldn't omit without connection
+        },
+      ],
+    ]);
+
+    const connections = [
+      {
+        paramName: "tab", // Note: different from segmentDefault paramName
+        options: { defaultValue: "overview" },
+      },
+    ];
+
+    const result = buildUrlFromPatternWithSegmentFiltering(
+      routePattern.pattern,
+      {}, // No parameters provided
+      new Map([["section", "analytics"]]),
+      { segmentDefaults, connections },
+    );
+
+    return {
+      pattern,
+      segmentDefaults: Array.from(segmentDefaults.entries()),
+      connections: connections.map((c) => ({
+        paramName: c.paramName,
+        defaultValue: c.options.defaultValue,
+      })),
+      result,
+      expected: "/admin/analytics/", // Should NOT omit "analytics" since no connection for "section"
+      issue:
+        "segment should not be filtered when no connection exists for the parameter",
+    };
+  });
 });

@@ -423,9 +423,26 @@ export const buildUrlFromPatternWithSegmentFiltering = (
         !hasNonDefaultParams && // Only skip when all params are defaults
         segmentDefault &&
         segment.type === "literal" &&
-        segment.value === segmentDefault.literalValue &&
-        segmentDefault.literalValue === segmentDefault.signalDefault
+        segment.value === segmentDefault.literalValue
       ) {
+        // Only omit if the literal value matches the signal default
+        // This prevents omission when the segment represents a non-default value
+        if (segmentDefault.literalValue !== segmentDefault.signalDefault) {
+          return true; // Don't omit if values differ
+        }
+
+        // Check if there's a connection for this parameter in the current route
+        // This prevents omission of inherited segments without local connections
+        const hasConnectionForParam = connections.some(
+          (conn) => conn.paramName === segmentDefault.paramName,
+        );
+
+        if (!hasConnectionForParam) {
+          // No connection for this parameter in current route, don't omit the segment
+          // This handles cases where segmentDefault exists but shouldn't be used
+          return true;
+        }
+
         // Skip this literal segment entirely since it matches the signal default
         // and no parameters have non-default values
         return false;

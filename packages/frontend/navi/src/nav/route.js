@@ -955,6 +955,12 @@ export const registerRoute = (urlPatternRaw) => {
         connections,
       },
     );
+    if (
+      urlPattern === "/admin/analytics/" &&
+      routeRelativeUrl.endsWith("admin")
+    ) {
+      debugger;
+    }
     return routeRelativeUrl;
   };
   /**
