@@ -825,8 +825,82 @@ export const registerRoute = (urlPattern) => {
       cleanupDefaults: true,
     });
 
+    // Check if we should use the original pattern vs the internal (inheritance) pattern
+    const routePrivateProps = getRoutePrivateProperties(route);
+    const inheritanceInfo =
+      routePrivateProps?.literalSegmentDefaults?.get(internalUrlPattern);
+
+    let shouldUseOriginalPattern = false;
+
+    if (inheritanceInfo && routePrivateProps?.originalPattern) {
+      if (DEBUG) {
+        console.debug(
+          `Checking if should use original pattern for params:`,
+          params,
+        );
+        console.debug(`Resolved params:`, resolvedParams);
+        console.debug(`Inheritance info:`, inheritanceInfo);
+      }
+
+      // Check if any provided parameters require showing literal segments
+      for (const inheritance of inheritanceInfo) {
+        const { paramName, literalValue } = inheritance;
+        if (
+          paramName in resolvedParams &&
+          resolvedParams[paramName] !== undefined
+        ) {
+          // If the param value differs from the literal value, we need the full URL
+          if (resolvedParams[paramName] !== literalValue) {
+            shouldUseOriginalPattern = true;
+            if (DEBUG) {
+              console.debug(
+                `Param ${paramName}=${resolvedParams[paramName]} differs from literal ${literalValue}, using original pattern`,
+              );
+            }
+            break;
+          }
+        }
+      }
+
+      // Also check if any non-inherited parameters have non-default values
+      // This handles cases like tab=security where tab isn't inherited but requires full URL
+      if (!shouldUseOriginalPattern && params) {
+        // Get all parameter configurations for this route
+        const routePrivateProperties = getRoutePrivateProperties(route);
+        const connections = routePrivateProperties?.connections || [];
+
+        for (const { paramName, options = {} } of connections) {
+          if (paramName in params && params[paramName] !== undefined) {
+            const defaultValue = options.defaultValue;
+            if (
+              defaultValue !== undefined &&
+              params[paramName] !== defaultValue
+            ) {
+              shouldUseOriginalPattern = true;
+              if (DEBUG) {
+                console.debug(
+                  `Non-inherited param ${paramName}=${params[paramName]} differs from default ${defaultValue}, using original pattern`,
+                );
+              }
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    const patternToUse = shouldUseOriginalPattern
+      ? routePrivateProps.originalPattern
+      : internalUrlPattern;
+
+    if (DEBUG && shouldUseOriginalPattern) {
+      console.debug(
+        `Building URL with original pattern: ${patternToUse} instead of internal: ${internalUrlPattern}`,
+      );
+    }
+
     const routeRelativeUrl = prepareRouteRelativeUrl(
-      internalUrlPattern,
+      patternToUse,
       resolvedParams,
     );
     return routeRelativeUrl;

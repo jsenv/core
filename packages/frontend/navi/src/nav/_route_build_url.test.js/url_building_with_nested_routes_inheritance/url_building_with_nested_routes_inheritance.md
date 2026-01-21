@@ -1,4 +1,4 @@
-# [url building with nested routes inheritance](../../route_build_url.test.js#L94)
+# [url building with nested routes inheritance](../../route_build_url.test.js#L27)
 
 ```js
 clearAllRoutes();
@@ -75,14 +75,14 @@ return {
   "admin_route_with_settings_section": "http://127.0.0.1/admin",
   "settings_route_default_params": "http://127.0.0.1/admin",
   "settings_route_with_general_tab": "http://127.0.0.1/admin",
-  "settings_route_with_security_tab": "http://127.0.0.1/admin",
-  "settings_route_with_section_param": "http://127.0.0.1/admin/toto/advanced",
+  "settings_route_with_security_tab": "http://127.0.0.1/admin/settings/security",
+  "settings_route_with_section_param": "http://127.0.0.1/admin/settings/advanced?section=toto",
   "settings_route_with_extra_params": "http://127.0.0.1/admin?filter=active",
   "analytics_route_default_params": "http://127.0.0.1/admin",
-  "analytics_route_with_performance_tab": "http://127.0.0.1/admin?tab=performance",
+  "analytics_route_with_performance_tab": "http://127.0.0.1/admin/analytics?tab=performance",
   "analytics_route_with_overview_tab": "http://127.0.0.1/admin",
-  "analytics_route_with_section_param": "http://127.0.0.1/admin/toto?tab=performance",
-  "analytics_route_with_extra_params": "http://127.0.0.1/admin?tab=details&dateRange=7d"
+  "analytics_route_with_section_param": "http://127.0.0.1/admin/analytics?section=toto&tab=performance",
+  "analytics_route_with_extra_params": "http://127.0.0.1/admin/analytics?tab=details&dateRange=7d"
 }
 ```
 
