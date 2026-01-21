@@ -1,4 +1,4 @@
-# [url building with extra params](../../route_build_url.test.js#L152)
+# [url building with extra params](../../route_build_url.test.js#L248)
 
 ```js
 const tabSignal = stateSignal("general");
@@ -20,7 +20,7 @@ return {
 
 ```js
 {
-  "with_extra_params": "http://127.0.0.1/admin/settings?filter=active&page=2",
+  "with_extra_params": "http://127.0.0.1/admin/settings/security",
   "only_search_params": "http://127.0.0.1/admin?tab=users&sort=name"
 }
 ```

@@ -5,6 +5,7 @@
 
 import { createPubSub } from "@jsenv/dom";
 import { batch, computed, effect, signal } from "@preact/signals";
+import { globalSignalRegistry } from "../state/state_signal.js";
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
 import { buildMostPreciseUrl, createRoutePattern } from "./route_pattern.js";
 import { resolveRouteUrl } from "./route_url.js";
@@ -539,13 +540,13 @@ export const registerRoute = (urlPatternRaw) => {
       parsedPattern: routePatternResult.pattern,
       connections,
       parameterDefaults,
+      childRoutes: [], // Initialize empty
+      parentRoutes: [], // Initialize empty
     };
     routeRelationships.set(route, routeProps);
 
     // Find parent-child relationships
     const currentPattern = cleanPattern;
-    const parentRoutes = [];
-    const childRoutes = [];
 
     for (const existingRoute of routeSet) {
       const existingProps = routeRelationships.get(existingRoute);
@@ -556,23 +557,17 @@ export const registerRoute = (urlPatternRaw) => {
 
       // Check if current route is a child of existing route
       if (isChildRoute(currentPattern, existingPattern)) {
-        parentRoutes.push(existingRoute);
+        routeProps.parentRoutes.push(existingRoute);
 
         // Add current route to existing route's children
-        const existingChildren =
-          routeRelationships.get(`${existingRoute}_children`) || [];
-        existingChildren.push(route);
-        routeRelationships.set(`${existingRoute}_children`, existingChildren);
+        existingProps.childRoutes.push(route);
       }
 
       // Check if existing route is a child of current route
       if (isChildRoute(existingPattern, currentPattern)) {
-        childRoutes.push(existingRoute);
+        routeProps.childRoutes.push(existingRoute);
       }
     }
-
-    // Store children for this route
-    routeRelationships.set(`${route}_children`, childRoutes);
   };
 
   // Store pattern info in route private properties for future pattern matching
@@ -1035,8 +1030,25 @@ export const registerRoute = (urlPatternRaw) => {
   const relativeUrlSignal = computed(() => {
     const rawParams = rawParamsSignal.value;
 
-    // Each route only listens to its own signals - no need to listen to child signals
-    // The child routes will handle their own signal reactivity
+    // Listen to child route signals for "deepest URL generation"
+    // Force reactivity by accessing child signals
+    const routePrivateProps = routeRelationships.get(route);
+    if (routePrivateProps?.childRoutes) {
+      for (const childRoute of routePrivateProps.childRoutes) {
+        const childPrivateProps = routeRelationships.get(childRoute);
+        if (childPrivateProps?.connections) {
+          // Access child signal values to create reactivity dependency
+          for (const connection of childPrivateProps.connections) {
+            const { signal } = connection;
+            if (signal?.value !== undefined) {
+              // Just access the value to create dependency - don't use it here
+              // eslint-disable-next-line no-unused-expressions
+              signal.value;
+            }
+          }
+        }
+      }
+    }
 
     const relativeUrl = route.buildRelativeUrl(rawParams);
     return relativeUrl;
@@ -1125,6 +1137,8 @@ export const clearAllRoutes = () => {
   }
   routeSet.clear();
   routePrivatePropertiesMap.clear();
+  // Clear signal registry to avoid conflicts between tests
+  globalSignalRegistry.clear();
 };
 
 export const useRouteStatus = (route) => {

@@ -416,6 +416,45 @@ export const buildMostPreciseUrl = (route, params = {}, routeRelationships) => {
     }
   }
 
+  // DEEPEST URL GENERATION: Check if we should use a child route instead
+  // This happens when:
+  // 1. This route's parameters are all defaults (would be omitted)
+  // 2. A child route has non-default parameters that should be included
+  
+  const hasNonDefaultParams = routePrivateProps.connections.some(connection => {
+    const { paramName, signal, options } = connection;
+    const defaultValue = options?.defaultValue;
+    return signal?.value !== defaultValue && (paramName in finalParams);
+  });
+
+  if (!hasNonDefaultParams && routePrivateProps.childRoutes?.length) {
+    // This route has no non-default parameters, check if child routes do
+    for (const childRoute of routePrivateProps.childRoutes) {
+      const childPrivateProps = routeRelationships.get(childRoute);
+      if (childPrivateProps?.connections) {
+        let childHasNonDefaults = false;
+        let childParams = {};
+        
+        // Check child route parameters
+        for (const connection of childPrivateProps.connections) {
+          const { paramName, signal, options } = connection;
+          if (signal?.value !== undefined) {
+            const defaultValue = options?.defaultValue;
+            if (signal.value !== defaultValue) {
+              childHasNonDefaults = true;
+              childParams[paramName] = signal.value;
+            }
+          }
+        }
+        
+        if (childHasNonDefaults) {
+          // Use child route to build URL instead
+          return buildMostPreciseUrl(childRoute, childParams, routeRelationships);
+        }
+      }
+    }
+  }
+
   // Get the parsed pattern
   const parsedPattern = routePrivateProps?.parsedPattern ||
     routePrivateProps?.routePattern?.pattern || {

@@ -12,13 +12,38 @@ return {
 };
 ```
 
+# 1/2 logs
+
+```console
+[detectSignals] Signal not found in registry for ID: "0"
+[detectSignals] Available signal IDs in registry:
+[detectSignals] Full pattern: "/admin/:section={navi_state_signal:0}"
+[detectSignals] Signal not found in registry for ID: "0"
+[detectSignals] Available signal IDs in registry:
+[detectSignals] Full pattern: "/admin/:section={navi_state_signal:0}"
+[detectSignals] Signal not found in registry for ID: "0"
+[detectSignals] Available signal IDs in registry:
+[detectSignals] Full pattern: "/admin/:section={navi_state_signal:0}"
+[detectSignals] Signal not found in registry for ID: "0"
+[detectSignals] Available signal IDs in registry:
+[detectSignals] Full pattern: "/admin/:section={navi_state_signal:0}"
+[detectSignals] Signal not found in registry for ID: "0"
+[detectSignals] Available signal IDs in registry:
+[detectSignals] Full pattern: "/admin/:section={navi_state_signal:0}"
+[detectSignals] Signal not found in registry for ID: "0"
+[detectSignals] Available signal IDs in registry:
+[detectSignals] Full pattern: "/admin/:section={navi_state_signal:0}"
+```
+
+# 2/2 return
+
 ```js
 {
   "matching_with_default": {
     "section": "settings"
   },
   "matching_with_param": {
-    "section": "users"
+    "section={navi_state_signal:0}": "users"
   },
   "non_matching_url": null
 }

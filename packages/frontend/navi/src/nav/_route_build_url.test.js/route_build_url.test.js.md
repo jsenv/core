@@ -3,7 +3,8 @@
 
 - [basic url building](basic_url_building/basic_url_building.md)
 - [url building with nested routes inheritance](url_building_with_nested_routes_inheritance/url_building_with_nested_routes_inheritance.md)
-- [deepest url generation with local storage mocking](deepest_url_generation_with_local_storage_mocking/deepest_url_generation_with_local_storage_mocking.md)
+- [url building with local storage mocking](url_building_with_local_storage_mocking/url_building_with_local_storage_mocking.md)
+- [signal reactivity - parent url updates when child signals change](signal_reactivity_-_parent_url_updates_when_child_signals_change/signal_reactivity_-_parent_url_updates_when_child_signals_change.md)
 - [url building with extra params](url_building_with_extra_params/url_building_with_extra_params.md)
 
 ---

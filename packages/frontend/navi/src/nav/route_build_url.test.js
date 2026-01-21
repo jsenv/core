@@ -1,5 +1,5 @@
 import { snapshotTests } from "@jsenv/snapshot";
-import { stateSignal } from "../state/state_signal.js";
+import { stateSignal, globalSignalRegistry } from "../state/state_signal.js";
 import { clearAllRoutes, registerRoute, setBaseUrl } from "./route.js";
 
 const baseUrl = "http://localhost:3000";
@@ -86,66 +86,162 @@ await snapshotTests(import.meta.url, ({ test }) => {
     };
   });
 
-  test("deepest url generation with local storage mocking", () => {
-    // Store original state for cleanup
-    const originalScenarios = [];
-
-    // Scenario 1: section=settings, tab=general (both defaults)
+  test("url building with local storage mocking", () => {
     clearAllRoutes();
-    const sectionSignal1 = stateSignal("settings", { id: "section_1" });
-    const tabSignal1 = stateSignal("general", { id: "settings_tab_1" });
+    globalSignalRegistry.clear();
+    
+    // Mock window.localStorage (required by valueInLocalStorage)
+    const originalWindow = globalThis.window;
+    const originalLocalStorage = originalWindow?.localStorage;
+    const localStorageMock = {
+      storage: new Map(),
+      getItem(key) { 
+        return this.storage.get(key) || null; 
+      },
+      setItem(key, value) { 
+        this.storage.set(key, String(value)); 
+      },
+      removeItem(key) {
+        this.storage.delete(key);
+      },
+      clear() { 
+        this.storage.clear(); 
+      }
+    };
+    
+    // Ensure window object exists and has localStorage
+    if (!globalThis.window) {
+      globalThis.window = {};
+    }
+    globalThis.window.localStorage = localStorageMock;
 
-    const ADMIN_ROUTE_1 = registerRoute(`/admin/:section=${sectionSignal1}/`);
-    const ADMIN_SETTINGS_ROUTE_1 = registerRoute(
-      `/admin/settings/:tab=${tabSignal1}`,
-    );
+    try {
+      // Set initial localStorage values
+      localStorageMock.setItem("section_ls", "settings");  // default
+      localStorageMock.setItem("settings_tab_ls", "general");  // default
+      
+      const sectionSignal = stateSignal("settings", { 
+        id: "section_ls", 
+        persists: true,
+        type: "string"
+      });
+      const tabSignal = stateSignal("general", { 
+        id: "settings_tab_ls", 
+        persists: true,
+        type: "string"
+      });
 
-    originalScenarios.push({
-      name: "both_at_defaults",
-      section_value: "settings",
-      tab_value: "general",
-      admin_url: ADMIN_ROUTE_1.buildUrl({}),
-      settings_url: ADMIN_SETTINGS_ROUTE_1.buildUrl({}),
-    });
+      const ADMIN_ROUTE = registerRoute(`/admin/:section=${sectionSignal}/`);
+      const ADMIN_SETTINGS_ROUTE = registerRoute(
+        `/admin/settings/:tab=${tabSignal}`,
+      );
 
-    // Scenario 2: section=settings, tab=security (section default, tab non-default)
+      const scenario1 = {
+        name: "both_at_defaults",
+        localStorage_section: localStorageMock.getItem("section_ls"),
+        localStorage_tab: localStorageMock.getItem("settings_tab_ls"),
+        signal_section: sectionSignal.value,
+        signal_tab: tabSignal.value,
+        admin_url: ADMIN_ROUTE.buildUrl({}),
+        settings_url: ADMIN_SETTINGS_ROUTE.buildUrl({}),
+      };
+
+      // Change localStorage and signal values to non-defaults
+      localStorageMock.setItem("section_ls", "users");
+      localStorageMock.setItem("settings_tab_ls", "security");
+      sectionSignal.value = "users";  // This should trigger localStorage update
+      tabSignal.value = "security";   // This should trigger localStorage update
+
+      const scenario2 = {
+        name: "both_non_defaults",
+        localStorage_section: localStorageMock.getItem("section_ls"),
+        localStorage_tab: localStorageMock.getItem("settings_tab_ls"),
+        signal_section: sectionSignal.value,
+        signal_tab: tabSignal.value,
+        admin_url: ADMIN_ROUTE.buildUrl({}),
+        settings_url: ADMIN_SETTINGS_ROUTE.buildUrl({}),
+      };
+
+      // Test mixed scenario: section=settings (default), tab=security (non-default)
+      localStorageMock.setItem("section_ls", "settings");
+      localStorageMock.setItem("settings_tab_ls", "security");
+      sectionSignal.value = "settings";
+      tabSignal.value = "security";
+
+      const scenario3 = {
+        name: "section_default_tab_non_default",
+        localStorage_section: localStorageMock.getItem("section_ls"),
+        localStorage_tab: localStorageMock.getItem("settings_tab_ls"),
+        signal_section: sectionSignal.value,
+        signal_tab: tabSignal.value,
+        admin_url: ADMIN_ROUTE.buildUrl({}),
+        settings_url: ADMIN_SETTINGS_ROUTE.buildUrl({}),
+      };
+
+      return {
+        scenario1,
+        scenario2, 
+        scenario3,
+      };
+      
+    } finally {
+      // Restore original window and localStorage
+      if (originalWindow) {
+        globalThis.window = originalWindow;
+      } else if (globalThis.window) {
+        delete globalThis.window;
+      }
+    }
+  });
+
+  test("signal reactivity - parent url updates when child signals change", () => {
     clearAllRoutes();
-    const sectionSignal2 = stateSignal("settings", { id: "section_2" });
-    const tabSignal2 = stateSignal("security", { id: "settings_tab_2" });
-
-    const ADMIN_ROUTE_2 = registerRoute(`/admin/:section=${sectionSignal2}/`);
-    const ADMIN_SETTINGS_ROUTE_2 = registerRoute(
-      `/admin/settings/:tab=${tabSignal2}`,
-    );
-
-    originalScenarios.push({
-      name: "section_default_tab_non_default",
-      section_value: "settings",
-      tab_value: "security",
-      admin_url: ADMIN_ROUTE_2.buildUrl({}),
-      settings_url: ADMIN_SETTINGS_ROUTE_2.buildUrl({}),
-    });
-
-    // Scenario 3: section=users, tab=general (section non-default, tab default)
-    clearAllRoutes();
-    const sectionSignal3 = stateSignal("users", { id: "section_3" });
-    const tabSignal3 = stateSignal("general", { id: "settings_tab_3" });
-
-    const ADMIN_ROUTE_3 = registerRoute(`/admin/:section=${sectionSignal3}/`);
-    const ADMIN_SETTINGS_ROUTE_3 = registerRoute(
-      `/admin/settings/:tab=${tabSignal3}`,
-    );
-
-    originalScenarios.push({
-      name: "section_non_default_tab_default",
-      section_value: "users",
-      tab_value: "general",
-      admin_url: ADMIN_ROUTE_3.buildUrl({}),
-      settings_url: ADMIN_SETTINGS_ROUTE_3.buildUrl({}),
-    });
-
+    globalSignalRegistry.clear();
+    
+    const sectionSignal = stateSignal("settings", { id: "section_reactive" });
+    const tabSignal = stateSignal("general", { id: "settings_tab_reactive" });
+    
+    const ADMIN_ROUTE = registerRoute(`/admin/:section=${sectionSignal}/`);
+    const ADMIN_SETTINGS_ROUTE = registerRoute(`/admin/settings/:tab=${tabSignal}`);
+    
+    // Capture initial URLs
+    const initialUrls = {
+      admin_initial: ADMIN_ROUTE.buildUrl({}),
+      settings_initial: ADMIN_SETTINGS_ROUTE.buildUrl({}),
+      admin_relativeUrl_initial: ADMIN_ROUTE.relativeUrl,
+      settings_relativeUrl_initial: ADMIN_SETTINGS_ROUTE.relativeUrl,
+    };
+    
+    // Change child route signal (tab) - this should make parent route generate deepest URL
+    tabSignal.value = "security";
+    
+    const afterTabChange = {
+      admin_after_tab_change: ADMIN_ROUTE.buildUrl({}),
+      settings_after_tab_change: ADMIN_SETTINGS_ROUTE.buildUrl({}),
+      admin_relativeUrl_after_tab: ADMIN_ROUTE.relativeUrl,
+      settings_relativeUrl_after_tab: ADMIN_SETTINGS_ROUTE.relativeUrl,
+      tab_signal_value: tabSignal.value,
+      // Key behavior: Parent route now generates deepest URL because child has non-default value
+      parent_now_uses_child_route: ADMIN_ROUTE.buildUrl({}) === ADMIN_SETTINGS_ROUTE.buildUrl({}),
+    };
+    
+    // Change parent route signal (section) - should use parent's own parameter
+    sectionSignal.value = "users";
+    
+    const afterSectionChange = {
+      admin_after_section_change: ADMIN_ROUTE.buildUrl({}),
+      settings_after_section_change: ADMIN_SETTINGS_ROUTE.buildUrl({}),
+      admin_relativeUrl_after_section: ADMIN_ROUTE.relativeUrl,
+      settings_relativeUrl_after_section: ADMIN_SETTINGS_ROUTE.relativeUrl,
+      section_signal_value: sectionSignal.value,
+      // Parent route uses its own non-default parameter now
+      parent_uses_own_param: ADMIN_ROUTE.buildUrl({}).includes("users"),
+    };
+    
     return {
-      scenarios: originalScenarios,
+      initialUrls,
+      afterTabChange,
+      afterSectionChange,
     };
   });
 
