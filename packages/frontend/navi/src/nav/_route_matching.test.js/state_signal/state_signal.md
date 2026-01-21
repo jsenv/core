@@ -12,14 +12,15 @@ return {
 };
 ```
 
-```js
-{
-  "matching_with_default": null,
-  "matching_with_param": {
-    "section": "users"
-  },
-  "non_matching_url": null
-}
+```console
+TypeError: existingRoutes is not iterable
+  at analyzeRouteInheritanceCustom (base/route.js:42:31)
+  at registerRoute (base/route.js:422:29)
+  at run (base/route_matching.test.js:16:13)
+  at base/route_matching.test.js:39:30
+  at capture (@jsenv/core/packages/tooling/snapshot/src/side_effects/create_capture_side_effects.js:342:29)
+  at snapshotTests (@jsenv/core/packages/tooling/snapshot/src/side_effects/snapshot_tests.js:182:33)
+  at async base/route_matching.test.js:28:1
 ```
 
 ---

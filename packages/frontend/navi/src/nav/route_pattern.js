@@ -79,6 +79,7 @@ export const createRoutePattern = (
 
   return {
     pattern: parsedPattern,
+    cleanPattern, // Return the clean pattern string
     connections, // Return signal connections along with pattern
     applyOn,
   };
@@ -133,14 +134,13 @@ const parsePattern = (pattern) => {
         optional: isOptional,
         index,
       };
-    } else {
-      // Literal segment
-      return {
-        type: "literal",
-        value: seg,
-        index,
-      };
     }
+    // Literal segment
+    return {
+      type: "literal",
+      value: seg,
+      index,
+    };
   });
 
   return {
@@ -251,11 +251,7 @@ const extractSearchParams = (urlObj) => {
 /**
  * Build a URL from a pattern and parameters
  */
-export const buildUrlFromPattern = (
-  parsedPattern,
-  params = {},
-  baseUrl = "",
-) => {
+export const buildUrlFromPattern = (parsedPattern, params = {}) => {
   if (parsedPattern.segments.length === 0) {
     // Root route
     const searchParams = new URLSearchParams();
@@ -265,7 +261,7 @@ export const buildUrlFromPattern = (
       }
     }
     const search = searchParams.toString();
-    return `/${search ? "?" + search : ""}`;
+    return `/${search ? `?${search}` : ""}`;
   }
 
   const segments = [];
@@ -284,7 +280,7 @@ export const buildUrlFromPattern = (
     }
   }
 
-  let path = "/" + segments.join("/");
+  let path = `/${segments.join("/")}`;
 
   // Handle trailing slash
   if (parsedPattern.trailingSlash && !path.endsWith("/")) {
@@ -304,5 +300,5 @@ export const buildUrlFromPattern = (
   }
 
   const search = searchParams.toString();
-  return path + (search ? "?" + search : "");
+  return path + (search ? `?${search}` : "");
 };

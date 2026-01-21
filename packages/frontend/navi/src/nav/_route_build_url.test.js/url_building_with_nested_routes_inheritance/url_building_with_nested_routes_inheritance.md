@@ -68,22 +68,14 @@ return {
 };
 ```
 
-```js
-{
-  "admin_route_default_params": "http://127.0.0.1/admin",
-  "admin_route_with_users_section": "http://127.0.0.1/admin/users",
-  "admin_route_with_settings_section": "http://127.0.0.1/admin",
-  "settings_route_default_params": "http://127.0.0.1/admin/settings",
-  "settings_route_with_general_tab": "http://127.0.0.1/admin/settings",
-  "settings_route_with_security_tab": "http://127.0.0.1/admin/settings/security",
-  "settings_route_with_section_param": "http://127.0.0.1/admin/settings/advanced?section=toto",
-  "settings_route_with_extra_params": "http://127.0.0.1/admin/settings?filter=active",
-  "analytics_route_default_params": "http://127.0.0.1/admin/analytics",
-  "analytics_route_with_performance_tab": "http://127.0.0.1/admin/analytics?tab=performance",
-  "analytics_route_with_overview_tab": "http://127.0.0.1/admin/analytics",
-  "analytics_route_with_section_param": "http://127.0.0.1/admin/analytics?section=toto&tab=performance",
-  "analytics_route_with_extra_params": "http://127.0.0.1/admin/analytics?tab=details&dateRange=7d"
-}
+```console
+TypeError: existingRoutes is not iterable
+  at analyzeRouteInheritanceCustom (base/route.js:42:31)
+  at registerRoute (base/route.js:422:29)
+  at base/route_build_url.test.js:34:5
+  at capture (@jsenv/core/packages/tooling/snapshot/src/side_effects/create_capture_side_effects.js:342:29)
+  at snapshotTests (@jsenv/core/packages/tooling/snapshot/src/side_effects/snapshot_tests.js:182:33)
+  at async base/route_build_url.test.js:15:1
 ```
 
 ---

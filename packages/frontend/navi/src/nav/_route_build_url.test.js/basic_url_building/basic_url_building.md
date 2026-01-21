@@ -11,12 +11,15 @@ return {
 };
 ```
 
-```js
-{
-  "home_route": "http://127.0.0.1/",
-  "simple_param": "http://127.0.0.1/users/123",
-  "multiple_params": "http://127.0.0.1/users/123/posts/abc"
-}
+```console
+TypeError: existingRoutes is not iterable
+  at analyzeRouteInheritanceCustom (base/route.js:42:31)
+  at registerRoute (base/route.js:422:29)
+  at testBuildUrl (base/route_build_url.test.js:9:17)
+  at base/route_build_url.test.js:18:19
+  at capture (@jsenv/core/packages/tooling/snapshot/src/side_effects/create_capture_side_effects.js:342:29)
+  at snapshotTests (@jsenv/core/packages/tooling/snapshot/src/side_effects/snapshot_tests.js:182:33)
+  at async base/route_build_url.test.js:15:1
 ```
 
 ---

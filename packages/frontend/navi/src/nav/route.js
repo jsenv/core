@@ -6,7 +6,7 @@
 import { createPubSub } from "@jsenv/dom";
 import { batch, computed, effect, signal } from "@preact/signals";
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
-import { createRoutePattern, detectSignals } from "./route_pattern.js";
+import { createRoutePattern } from "./route_pattern.js";
 import { prepareRouteRelativeUrl, resolveRouteUrl } from "./route_url.js";
 
 const DEBUG = false;
@@ -399,8 +399,6 @@ export const getRoutePrivateProperties = (route) => {
 };
 
 export const registerRoute = (urlPattern) => {
-  const originalUrlPatternInput = urlPattern;
-
   if (DEBUG) {
     console.debug(`Registering route: ${urlPattern}`);
     console.debug(
@@ -411,18 +409,13 @@ export const registerRoute = (urlPattern) => {
   }
 
   // Create custom route pattern - it will detect and process signals internally
-  const { pattern: parsedPattern, connections } = createRoutePattern(
-    urlPattern,
-    baseFileUrl,
-  );
+  const routePatternResult = createRoutePattern(urlPattern, baseFileUrl);
 
-  // Get the clean pattern string for inheritance analysis
-  const { pattern: cleanPatternString } = detectSignals(urlPattern);
+  const { cleanPattern, connections } = routePatternResult;
 
   // Analyze inheritance opportunities with existing routes using custom system
   const inheritanceResult = analyzeRouteInheritanceCustom(
-    cleanPatternString,
-    routeSet,
+    cleanPattern,
     getRoutePrivateProperties,
   );
 
@@ -471,10 +464,11 @@ export const registerRoute = (urlPattern) => {
   const [publishStatus, subscribeStatus] = createPubSub();
 
   // Store pattern info in route private properties for future pattern matching
-  const originalPatternBeforeTransforms = cleanPatternString;
+  const originalPatternBeforeTransforms = cleanPattern;
 
   const route = {
     urlPattern,
+    pattern: cleanPattern, // Expose the clean pattern string
     isRoute: true,
     matching: false,
     params: ROUTE_NOT_MATCHING_PARAMS,
@@ -495,7 +489,7 @@ export const registerRoute = (urlPattern) => {
   const routePrivateProperties = {
     routePattern,
     originalPattern: originalPatternBeforeTransforms,
-    pattern: cleanPatternString, // Store the current pattern used
+    pattern: cleanPattern, // Store the current pattern used
     inheritanceData: inheritanceResult.inheritanceData, // Store inheritance info for this route
     connections,
     matchingSignal: null,
@@ -921,11 +915,11 @@ export const registerRoute = (urlPattern) => {
 
     const patternToUse = shouldUseOriginalPattern
       ? routePrivateProps.originalPattern
-      : cleanPatternString;
+      : cleanPattern;
 
     if (DEBUG && shouldUseOriginalPattern) {
       console.debug(
-        `Building URL with original pattern: ${patternToUse} instead of internal: ${cleanPatternString}`,
+        `Building URL with original pattern: ${patternToUse} instead of internal: ${cleanPattern}`,
       );
     }
 
@@ -963,7 +957,7 @@ export const registerRoute = (urlPattern) => {
   route.matchesParams = (providedParams) => {
     // Wildcard routes (ending with *) should match any parameters
     // since they are parent routes meant to catch child routes
-    if (cleanPatternString.endsWith("*")) {
+    if (cleanPattern.endsWith("*")) {
       return true;
     }
 

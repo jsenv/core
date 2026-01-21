@@ -98,47 +98,14 @@ clearAllRoutes();
 return testResults;
 ```
 
-```js
-{
-  "admin_root_matches_section_default": null,
-  "admin_root_with_slash": null,
-  "admin_with_settings_section": null,
-  "admin_with_users_section": {
-    "section": "users"
-  },
-  "admin_users_without_trailing_slash": {
-    "section": "users"
-  },
-  "settings_route_matches_admin_root": null,
-  "settings_root_without_slash": null,
-  "settings_root_with_slash": null,
-  "settings_with_general_tab": {
-    "tab": "general"
-  },
-  "settings_with_security_tab": {
-    "tab": "security"
-  },
-  "settings_with_literal_settings_path": null,
-  "settings_with_wrong_search_param": null,
-  "settings_should_not_match_analytics_url": null,
-  "settings_should_not_match_users_url": null,
-  "settings_with_different_section": null,
-  "analytics_with_overview_tab": {
-    "tab": "overview"
-  },
-  "analytics_with_performance_tab": {
-    "tab": "performance"
-  },
-  "analytics_root_without_slash": null,
-  "analytics_root_with_slash": null,
-  "analytics_with_literal_analytics_path": {
-    "tab": "overview"
-  },
-  "analytics_with_wrong_search_param": null,
-  "analytics_should_not_match_settings_url": null,
-  "analytics_should_not_match_users_url": null,
-  "analytics_with_different_section": null
-}
+```console
+TypeError: existingRoutes is not iterable
+  at analyzeRouteInheritanceCustom (base/route.js:42:31)
+  at registerRoute (base/route.js:422:29)
+  at base/route_matching.test.js:53:5
+  at capture (@jsenv/core/packages/tooling/snapshot/src/side_effects/create_capture_side_effects.js:342:29)
+  at snapshotTests (@jsenv/core/packages/tooling/snapshot/src/side_effects/snapshot_tests.js:182:33)
+  at async base/route_matching.test.js:28:1
 ```
 
 ---
