@@ -159,18 +159,9 @@ return testResults;
     "wrongParam": "value",
     "tab": "overview"
   },
-  "analytics_should_not_match_settings_url": {
-    "0": "settings",
-    "tab": "overview"
-  },
-  "analytics_should_not_match_users_url": {
-    "0": "users",
-    "tab": "overview"
-  },
-  "analytics_with_different_section": {
-    "0": "different",
-    "tab": "overview"
-  }
+  "analytics_should_not_match_settings_url": null,
+  "analytics_should_not_match_users_url": null,
+  "analytics_with_different_section": null
 }
 ```
 

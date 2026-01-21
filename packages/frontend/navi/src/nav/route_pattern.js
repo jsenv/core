@@ -63,7 +63,14 @@ export const createRoutePattern = (
 
       // Check each parameter that corresponds to a literal segment default
       for (const [paramName, expectedDefault] of literalSegmentDefaults) {
-        const paramValue = params[paramName];
+        let paramValue = params[paramName];
+        
+        // If the named parameter is undefined, check if there's a corresponding wildcard parameter
+        // The wildcard parameters are numbered starting from 0
+        if (paramValue === undefined && "0" in params) {
+          // For inherited routes with wildcards, the first wildcard often corresponds to the parameter being validated
+          paramValue = params["0"];
+        }
 
         // Parameter is valid if:
         // 1. It's undefined (using default)
@@ -81,6 +88,13 @@ export const createRoutePattern = (
     if (match) {
       const params = extractParams(match, url);
       if (params && validateParams(params)) {
+        // Apply default values for undefined parameters from literalSegmentDefaults
+        // This happens AFTER validation to ensure literal segment requirements are checked first
+        for (const [paramName, defaultValue] of literalSegmentDefaults) {
+          if (params[paramName] === undefined) {
+            params[paramName] = defaultValue;
+          }
+        }
         return params;
       }
       return null;
@@ -168,12 +182,7 @@ export const createRoutePattern = (
       }
     }
 
-    // Apply default values for undefined parameters from literalSegmentDefaults
-    for (const [paramName, defaultValue] of literalSegmentDefaults) {
-      if (params[paramName] === undefined) {
-        params[paramName] = defaultValue;
-      }
-    }
+    return params;
 
     return params;
   };
