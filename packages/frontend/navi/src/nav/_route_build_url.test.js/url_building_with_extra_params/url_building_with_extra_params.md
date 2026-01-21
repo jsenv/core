@@ -1,7 +1,9 @@
-# [url building with extra params](../../route_build_url.test.js#L248)
+# [url building with extra params](../../route_build_url.test.js#L250)
 
 ```js
-const tabSignal = stateSignal("general");
+clearAllRoutes();
+globalSignalRegistry.clear();
+const tabSignal = stateSignal("general", { id: "extra_params_tab" });
 
 return {
   // Extra params should become search parameters
@@ -20,7 +22,7 @@ return {
 
 ```js
 {
-  "with_extra_params": "http://127.0.0.1/admin/settings/security",
+  "with_extra_params": "http://127.0.0.1/admin/settings?filter=active&page=2",
   "only_search_params": "http://127.0.0.1/admin?tab=users&sort=name"
 }
 ```

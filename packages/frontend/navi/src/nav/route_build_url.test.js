@@ -8,7 +8,7 @@ setBaseUrl(baseUrl);
 const testBuildUrl = (pattern, params = {}) => {
   const route = registerRoute(pattern);
   const url = route.buildUrl(params);
-  clearAllRoutes();
+  clearAllRoutes(); // Only clear routes, not signal registry
   return url;
 };
 
@@ -248,7 +248,9 @@ await snapshotTests(import.meta.url, ({ test }) => {
   });
 
   test("url building with extra params", () => {
-    const tabSignal = stateSignal("general");
+    clearAllRoutes();
+    globalSignalRegistry.clear();
+    const tabSignal = stateSignal("general", { id: "extra_params_tab" });
 
     return {
       // Extra params should become search parameters

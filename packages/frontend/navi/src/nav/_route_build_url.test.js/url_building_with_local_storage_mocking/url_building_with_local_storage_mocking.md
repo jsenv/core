@@ -9,18 +9,18 @@ const originalWindow = globalThis.window;
 const originalLocalStorage = originalWindow?.localStorage;
 const localStorageMock = {
   storage: new Map(),
-  getItem(key) { 
-    return this.storage.get(key) || null; 
+  getItem(key) {
+    return this.storage.get(key) || null;
   },
-  setItem(key, value) { 
-    this.storage.set(key, String(value)); 
+  setItem(key, value) {
+    this.storage.set(key, String(value));
   },
   removeItem(key) {
     this.storage.delete(key);
   },
-  clear() { 
-    this.storage.clear(); 
-  }
+  clear() {
+    this.storage.clear();
+  },
 };
 
 // Ensure window object exists and has localStorage
@@ -31,18 +31,18 @@ globalThis.window.localStorage = localStorageMock;
 
 try {
   // Set initial localStorage values
-  localStorageMock.setItem("section_ls", "settings");  // default
-  localStorageMock.setItem("settings_tab_ls", "general");  // default
-  
-  const sectionSignal = stateSignal("settings", { 
-    id: "section_ls", 
+  localStorageMock.setItem("section_ls", "settings"); // default
+  localStorageMock.setItem("settings_tab_ls", "general"); // default
+
+  const sectionSignal = stateSignal("settings", {
+    id: "section_ls",
     persists: true,
-    type: "string"
+    type: "string",
   });
-  const tabSignal = stateSignal("general", { 
-    id: "settings_tab_ls", 
+  const tabSignal = stateSignal("general", {
+    id: "settings_tab_ls",
     persists: true,
-    type: "string"
+    type: "string",
   });
 
   const ADMIN_ROUTE = registerRoute(`/admin/:section=${sectionSignal}/`);
@@ -63,8 +63,8 @@ try {
   // Change localStorage and signal values to non-defaults
   localStorageMock.setItem("section_ls", "users");
   localStorageMock.setItem("settings_tab_ls", "security");
-  sectionSignal.value = "users";  // This should trigger localStorage update
-  tabSignal.value = "security";   // This should trigger localStorage update
+  sectionSignal.value = "users"; // This should trigger localStorage update
+  tabSignal.value = "security"; // This should trigger localStorage update
 
   const scenario2 = {
     name: "both_non_defaults",
@@ -94,10 +94,9 @@ try {
 
   return {
     scenario1,
-    scenario2, 
+    scenario2,
     scenario3,
   };
-  
 } finally {
   // Restore original window and localStorage
   if (originalWindow) {

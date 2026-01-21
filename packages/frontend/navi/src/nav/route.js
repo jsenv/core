@@ -1137,8 +1137,8 @@ export const clearAllRoutes = () => {
   }
   routeSet.clear();
   routePrivatePropertiesMap.clear();
-  // Clear signal registry to avoid conflicts between tests
-  globalSignalRegistry.clear();
+  // Don't clear signal registry here - let tests manage it explicitly
+  // This prevents clearing signals that are still being used across multiple route registrations
 };
 
 export const useRouteStatus = (route) => {

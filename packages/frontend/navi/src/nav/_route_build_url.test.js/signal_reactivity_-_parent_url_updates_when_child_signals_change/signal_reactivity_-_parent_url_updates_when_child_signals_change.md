@@ -1,4 +1,4 @@
-# [signal reactivity - parent url updates when child signals change](../../route_build_url.test.js#L197)
+# [signal reactivity - parent url updates when child signals change](../../route_build_url.test.js#L196)
 
 ```js
 clearAllRoutes();
@@ -8,7 +8,9 @@ const sectionSignal = stateSignal("settings", { id: "section_reactive" });
 const tabSignal = stateSignal("general", { id: "settings_tab_reactive" });
 
 const ADMIN_ROUTE = registerRoute(`/admin/:section=${sectionSignal}/`);
-const ADMIN_SETTINGS_ROUTE = registerRoute(`/admin/settings/:tab=${tabSignal}`);
+const ADMIN_SETTINGS_ROUTE = registerRoute(
+  `/admin/settings/:tab=${tabSignal}`,
+);
 
 // Capture initial URLs
 const initialUrls = {
@@ -28,7 +30,8 @@ const afterTabChange = {
   settings_relativeUrl_after_tab: ADMIN_SETTINGS_ROUTE.relativeUrl,
   tab_signal_value: tabSignal.value,
   // Key behavior: Parent route now generates deepest URL because child has non-default value
-  parent_now_uses_child_route: ADMIN_ROUTE.buildUrl({}) === ADMIN_SETTINGS_ROUTE.buildUrl({}),
+  parent_now_uses_child_route:
+    ADMIN_ROUTE.buildUrl({}) === ADMIN_SETTINGS_ROUTE.buildUrl({}),
 };
 
 // Change parent route signal (section) - should use parent's own parameter

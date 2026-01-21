@@ -1,7 +1,9 @@
 # [state signal](../../route_matching.test.js#L36)
 
 ```js
-const sectionSignal = stateSignal("settings");
+clearAllRoutes();
+globalSignalRegistry.clear();
+const sectionSignal = stateSignal("settings", { id: "state_signal_section" });
 return {
   matching_with_default: run(`/admin/:section=${sectionSignal}`, `/admin`),
   matching_with_param: run(
@@ -12,38 +14,13 @@ return {
 };
 ```
 
-# 1/2 logs
-
-```console
-[detectSignals] Signal not found in registry for ID: "0"
-[detectSignals] Available signal IDs in registry:
-[detectSignals] Full pattern: "/admin/:section={navi_state_signal:0}"
-[detectSignals] Signal not found in registry for ID: "0"
-[detectSignals] Available signal IDs in registry:
-[detectSignals] Full pattern: "/admin/:section={navi_state_signal:0}"
-[detectSignals] Signal not found in registry for ID: "0"
-[detectSignals] Available signal IDs in registry:
-[detectSignals] Full pattern: "/admin/:section={navi_state_signal:0}"
-[detectSignals] Signal not found in registry for ID: "0"
-[detectSignals] Available signal IDs in registry:
-[detectSignals] Full pattern: "/admin/:section={navi_state_signal:0}"
-[detectSignals] Signal not found in registry for ID: "0"
-[detectSignals] Available signal IDs in registry:
-[detectSignals] Full pattern: "/admin/:section={navi_state_signal:0}"
-[detectSignals] Signal not found in registry for ID: "0"
-[detectSignals] Available signal IDs in registry:
-[detectSignals] Full pattern: "/admin/:section={navi_state_signal:0}"
-```
-
-# 2/2 return
-
 ```js
 {
   "matching_with_default": {
     "section": "settings"
   },
   "matching_with_param": {
-    "section={navi_state_signal:0}": "users"
+    "section": "users"
   },
   "non_matching_url": null
 }

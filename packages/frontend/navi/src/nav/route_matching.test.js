@@ -1,5 +1,5 @@
 import { snapshotTests } from "@jsenv/snapshot";
-import { stateSignal } from "../state/state_signal.js";
+import { globalSignalRegistry, stateSignal } from "../state/state_signal.js";
 import {
   clearAllRoutes,
   registerRoute,
@@ -34,7 +34,9 @@ await snapshotTests(import.meta.url, ({ test }) => {
   });
 
   test("state signal", () => {
-    const sectionSignal = stateSignal("settings");
+    clearAllRoutes();
+    globalSignalRegistry.clear();
+    const sectionSignal = stateSignal("settings", { id: "state_signal_section" });
     return {
       matching_with_default: run(`/admin/:section=${sectionSignal}`, `/admin`),
       matching_with_param: run(
@@ -47,9 +49,10 @@ await snapshotTests(import.meta.url, ({ test }) => {
 
   test("url defaults with nested routes", () => {
     clearAllRoutes();
-    const sectionSignal = stateSignal("settings");
-    const tabSignal = stateSignal("general");
-    const analyticsTabSignal = stateSignal("overview");
+    globalSignalRegistry.clear();
+    const sectionSignal = stateSignal("settings", { id: "nested_section" });
+    const tabSignal = stateSignal("general", { id: "nested_tab" });
+    const analyticsTabSignal = stateSignal("overview", { id: "nested_analytics_tab" });
     registerRoute("/");
     const ADMIN_ROUTE = registerRoute(`/admin/:section=${sectionSignal}/`);
     const ADMIN_SETTINGS_ROUTE = registerRoute(
