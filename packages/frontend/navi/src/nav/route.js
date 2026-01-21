@@ -814,16 +814,47 @@ export const registerRoute = (urlPattern) => {
   const resolveParams = (providedParams, { cleanupDefaults } = {}) => {
     const currentParams = rawParamsSignal.value;
 
+    // Determine which parameters correspond to literal segments and should be omitted
+    const routePrivateProps = getRoutePrivateProperties(route);
+    const inheritanceInfo = routePrivateProps?.inheritanceData;
+    const literalParameterNames = new Set(); // Track literal parameters to exclude them
+
+    if (inheritanceInfo) {
+      // Create a set of parameters that correspond to literal segments in the original pattern
+      // These should not be exposed in the final params since they're "hardcoded" in the route
+      const originalPatternSegments = routePrivateProps.originalPattern
+        .split("/")
+        .filter((s) => s !== "");
+
+      for (const inheritance of inheritanceInfo) {
+        const { paramName, literalValue, segmentIndex } = inheritance;
+        // If the original pattern had a literal segment at this position,
+        // don't include this parameter in the final params
+        if (segmentIndex < originalPatternSegments.length) {
+          const originalSegment = originalPatternSegments[segmentIndex];
+          if (originalSegment === literalValue) {
+            literalParameterNames.add(paramName);
+          }
+        }
+      }
+    }
+
     // Start with all current parameters, then overlay provided parameters
     const paramNameSet = new Set();
     if (currentParams) {
       for (const paramName of Object.keys(currentParams)) {
-        paramNameSet.add(paramName);
+        // Skip literal parameters that correspond to hardcoded segments
+        if (!literalParameterNames.has(paramName)) {
+          paramNameSet.add(paramName);
+        }
       }
     }
     if (providedParams) {
       for (const paramName of Object.keys(providedParams)) {
-        paramNameSet.add(paramName);
+        // Skip literal parameters that correspond to hardcoded segments
+        if (!literalParameterNames.has(paramName)) {
+          paramNameSet.add(paramName);
+        }
       }
     }
 
@@ -832,11 +863,15 @@ export const registerRoute = (urlPattern) => {
 
     // First, process parameters that have configurations (signals)
     for (const paramName of paramConfigNameSet) {
+      // Skip literal parameters
+      if (literalParameterNames.has(paramName)) {
+        continue;
+      }
       if (paramNameSet.has(paramName)) {
         // Skip configured params that are provided - they'll be handled in the second loop
         continue;
       }
-      const currentValue = currentParams[paramName];
+      const currentValue = currentParams?.[paramName];
       if (currentValue !== undefined) {
         paramNameSet.delete(paramName);
         mergedParams[paramName] = currentValue;
@@ -873,6 +908,10 @@ export const registerRoute = (urlPattern) => {
 
     // Then, process provided parameters (including those without configurations)
     for (const paramName of paramNameSet) {
+      // Skip literal parameters
+      if (literalParameterNames.has(paramName)) {
+        continue;
+      }
       const providedValue = providedParams?.[paramName];
       const currentValue = currentParams?.[paramName];
 
