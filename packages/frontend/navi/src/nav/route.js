@@ -812,12 +812,23 @@ export const registerRoute = (urlPattern) => {
   route.replaceParams = replaceParams;
 
   const resolveParams = (providedParams, { cleanupDefaults } = {}) => {
-    const paramNameSet = providedParams
-      ? new Set(Object.keys(providedParams))
-      : new Set();
+    const currentParams = rawParamsSignal.value;
+
+    // Start with all current parameters, then overlay provided parameters
+    const paramNameSet = new Set();
+    if (currentParams) {
+      for (const paramName of Object.keys(currentParams)) {
+        paramNameSet.add(paramName);
+      }
+    }
+    if (providedParams) {
+      for (const paramName of Object.keys(providedParams)) {
+        paramNameSet.add(paramName);
+      }
+    }
+
     const paramConfigNameSet = new Set(paramConfigMap.keys());
     const mergedParams = {};
-    const currentParams = rawParamsSignal.value;
 
     // First, process parameters that have configurations (signals)
     for (const paramName of paramConfigNameSet) {
@@ -862,16 +873,25 @@ export const registerRoute = (urlPattern) => {
 
     // Then, process provided parameters (including those without configurations)
     for (const paramName of paramNameSet) {
-      const providedValue = providedParams[paramName];
+      const providedValue = providedParams?.[paramName];
+      const currentValue = currentParams?.[paramName];
+
+      // Use provided value if available, otherwise use current value
+      const valueToUse =
+        providedValue !== undefined ? providedValue : currentValue;
+
       if (cleanupDefaults) {
         const paramConfig = paramConfigMap.get(paramName);
-        if (paramConfig && paramConfig.defaultValue === providedValue) {
+        if (paramConfig && paramConfig.defaultValue === valueToUse) {
           // When cleaning up defaults, include as undefined so prepareRouteRelativeUrl can remove the param
           // mergedParams[paramName] = undefined;
           continue;
         }
       }
-      mergedParams[paramName] = providedValue;
+
+      if (valueToUse !== undefined) {
+        mergedParams[paramName] = valueToUse;
+      }
     }
     return mergedParams;
   };
@@ -956,12 +976,6 @@ export const registerRoute = (urlPattern) => {
   route.buildUrl = buildUrl;
 
   route.matchesParams = (providedParams) => {
-    // Wildcard routes (ending with *) should match any parameters
-    // since they are parent routes meant to catch child routes
-    if (cleanPattern.endsWith("*")) {
-      return true;
-    }
-
     const currentParams = route.params;
     const resolvedParams = resolveParams(providedParams);
     const same = compareTwoJsValues(currentParams, resolvedParams);
