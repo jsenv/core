@@ -1,121 +1,17 @@
 /**
- *
+ * Route management with custom pattern matching system
+ * Replaces URLPattern-based approach with simpler, more predictable matching
  */
 
 import { createPubSub } from "@jsenv/dom";
 import { batch, computed, effect, signal } from "@preact/signals";
-
 import { detectSignals } from "../state/state_signal.js";
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
-import { createRoutePattern } from "./route_pattern.js";
+import { analyzeRouteInheritanceCustom } from "./route_inheritance_custom.js";
+import { createRoutePatternCustom } from "./route_pattern_custom.js";
 import { prepareRouteRelativeUrl, resolveRouteUrl } from "./route_url.js";
 
 const DEBUG = false;
-
-/**
- * Corrects wildcard parameters by transferring values to named parameters when appropriate.
- * This fixes cases where URLPattern captures values in wildcard slots that should
- * be assigned to named parameters.
- */
-const correctWildcardParams = (params, internalPattern, connections, route) => {
-  // Only correct for patterns that end with wildcard
-  if (!internalPattern.endsWith("/*")) {
-    if (DEBUG) {
-      console.debug(`Pattern ${internalPattern} does not end with /*`);
-    }
-    return params;
-  }
-
-  if (DEBUG) {
-    console.debug(
-      `Correcting wildcard params for pattern: ${internalPattern} (route: ${route})`,
-    );
-    console.debug(`Input params:`, params);
-    console.debug(`Connections:`, connections);
-  }
-
-  const correctedParams = { ...params };
-
-  // If we have a "0" wildcard parameter, check what to do with it
-  if ("0" in correctedParams && correctedParams["0"]) {
-    const wildcardValue = correctedParams["0"];
-
-    if (DEBUG) {
-      console.debug(`Found wildcard "0": "${wildcardValue}"`);
-    }
-
-    // Check if this wildcard value corresponds to a literal segment in inheritance
-    const routePrivateProps = getRoutePrivateProperties(route);
-    const inheritanceInfo =
-      routePrivateProps?.literalSegmentDefaults?.get(internalPattern);
-
-    if (inheritanceInfo) {
-      // Check if the wildcard value matches any literal segment - if so, filter it out
-      let shouldFilterWildcard = false;
-      for (const inheritance of inheritanceInfo) {
-        const { literalValue } = inheritance;
-        if (wildcardValue === literalValue) {
-          if (DEBUG) {
-            console.debug(
-              `Wildcard "0": "${wildcardValue}" matches literal inheritance, filtering it out`,
-            );
-          }
-          shouldFilterWildcard = true;
-          break;
-        }
-      }
-
-      if (shouldFilterWildcard) {
-        delete correctedParams["0"];
-        if (DEBUG) {
-          console.debug(
-            `Filtered out wildcard parameter that matches literal inheritance`,
-          );
-        }
-      }
-    } else {
-      // No inheritance info, try to transfer wildcard to named parameter
-      // Look for optional parameters that might not have been matched
-      for (const { paramName, options = {} } of connections) {
-        if (options.defaultValue !== undefined) {
-          const currentValue = correctedParams[paramName];
-
-          if (DEBUG) {
-            console.debug(
-              `Checking param ${paramName}: current="${currentValue}", default="${options.defaultValue}"`,
-            );
-          }
-
-          // If the parameter is undefined or has the default value and wildcard captured something,
-          // the wildcard value might be intended for this parameter
-          if (
-            currentValue === undefined ||
-            currentValue === options.defaultValue
-          ) {
-            if (DEBUG) {
-              console.debug(
-                `Correcting wildcard param: transferring "0": "${wildcardValue}" to "${paramName}"`,
-              );
-            }
-            correctedParams[paramName] = wildcardValue;
-            delete correctedParams["0"];
-            break;
-          }
-        }
-      }
-    }
-  } else {
-    if (DEBUG) {
-      console.debug(`No "0" wildcard parameter found`);
-    }
-  }
-
-  if (DEBUG) {
-    console.debug(`Corrected params:`, correctedParams);
-  }
-
-  return correctedParams;
-};
 
 let baseFileUrl;
 let baseUrl;
@@ -144,183 +40,6 @@ setBaseUrl(
 const ROUTE_DEACTIVATION_STRATEGY = "abort"; // 'abort', 'keep-loading'
 const ROUTE_NOT_MATCHING_PARAMS = {};
 
-/**
- * Analyzes if a route pattern can inherit parameter defaults from existing routes
- * to enable shorter URL matching through parameter inheritance.
- *
- * @param {string} internalUrlPattern - The current route pattern to analyze
- * @param {Set} existingRoutes - Set of existing registered routes
- * @param {function} getRoutePrivateProperties - Function to get private route properties
- * @returns {{ transformedPattern: string, inheritanceData: Array|null }}
- */
-const analyzeRouteInheritance = (
-  internalUrlPattern,
-  existingRoutes,
-  getRoutePrivateProperties,
-) => {
-  if (existingRoutes.size === 0) {
-    return {
-      transformedPattern: internalUrlPattern,
-      inheritanceData: null,
-    };
-  }
-
-  if (DEBUG) {
-    console.debug(
-      `\nAnalyzing route for inheriting defaults from other routes: ${internalUrlPattern}`,
-    );
-    console.debug(`Total existing routes: ${existingRoutes.size}`);
-  }
-
-  // Compare current pattern against previously registered routes to find inheritance opportunities
-  for (const existingRoute of existingRoutes) {
-    const existingPrivateProps = getRoutePrivateProperties(existingRoute);
-    if (!existingPrivateProps) continue;
-    const { connections: existingConnections } = existingPrivateProps;
-
-    // Use the existing route's processed internal pattern for comparison
-    const existingInternalPattern = existingPrivateProps.internalPattern;
-
-    if (DEBUG) {
-      console.debug(
-        `Comparing against existing route: ${existingInternalPattern}`,
-        existingConnections.map(
-          (c) => `${c.paramName}=${c.options.defaultValue}`,
-        ),
-      );
-    }
-
-    // Check if current pattern can inherit from existing patterns
-    const currentSegments = internalUrlPattern
-      .split("/")
-      .filter((s) => s !== "");
-    const existingSegments = existingInternalPattern
-      .split("/")
-      .filter((s) => s !== "");
-
-    if (DEBUG) {
-      console.debug(`Current segments:`, currentSegments);
-      console.debug(`Existing segments:`, existingSegments);
-    }
-
-    // Look for cases where current pattern can inherit from existing patterns
-    // This includes cases where:
-    // 1. Current has more segments (existing logic)
-    // 2. Current has same number of segments but can inherit parameter values
-    // 3. Existing pattern ends with wildcard and can match longer patterns
-    const existingHasWildcard =
-      existingSegments[existingSegments.length - 1] === "*";
-    const minCompareLength = existingHasWildcard
-      ? existingSegments.length - 1
-      : existingSegments.length;
-
-    if (currentSegments.length >= minCompareLength) {
-      let canCreateShortVersion = true;
-      const defaultInheritances = [];
-
-      // Compare each segment up to the comparison length
-      for (let i = 0; i < minCompareLength && i < currentSegments.length; i++) {
-        const existingSeg = existingSegments[i];
-        const currentSeg = currentSegments[i];
-
-        if (DEBUG) {
-          console.debug(
-            `Comparing segment ${i}: existing="${existingSeg}" vs current="${currentSeg}"`,
-          );
-        }
-
-        if (existingSeg === currentSeg) {
-          // Identical segments - continue
-          continue;
-        } else if (existingSeg.startsWith(":") && !currentSeg.startsWith(":")) {
-          // Existing has parameter, current has literal
-          const paramName = existingSeg.replace(/[?*]/g, "").substring(1); // Remove : prefix and suffixes
-          const existingConnection = existingConnections.find(
-            (c) => c.paramName === paramName,
-          );
-
-          if (DEBUG) {
-            console.debug(
-              `Found param ${paramName} with default:`,
-              existingConnection?.options.defaultValue,
-            );
-          }
-
-          if (existingConnection) {
-            // Two types of inheritance:
-            // 1. Literal matches default - can create short version (existing behavior)
-            // 2. Literal provides value for parameter - inherit parameter structure
-            if (existingConnection.options.defaultValue === currentSeg) {
-              // Case 1: Literal segment matches parameter default - can create short version
-              defaultInheritances.push({
-                segmentIndex: i,
-                literalValue: currentSeg,
-                paramName,
-                defaultValue: existingConnection.options.defaultValue,
-              });
-            } else {
-              // Case 2: Literal provides value - inherit parameter structure
-              defaultInheritances.push({
-                segmentIndex: i,
-                literalValue: currentSeg,
-                paramName,
-                defaultValue: currentSeg, // Use literal value as the parameter value
-              });
-            }
-          } else {
-            // No parameter connection found - can't create short version with this route
-            canCreateShortVersion = false;
-            break;
-          }
-        } else {
-          // Other mismatch - can't create short version with this route
-          canCreateShortVersion = false;
-          break;
-        }
-      }
-
-      // Apply short version creation if we found valid default inheritances from other routes
-      if (canCreateShortVersion && defaultInheritances.length > 0) {
-        // Transform the internal pattern to make literal segments optional
-        let segments = internalUrlPattern.split("/").filter((s) => s !== "");
-
-        if (DEBUG) {
-          console.debug(
-            `Applying default inheritances from other routes:`,
-            defaultInheritances,
-          );
-          console.debug(`Original segments:`, segments);
-        }
-
-        // Apply each default inheritance to create short version
-        for (const inheritance of defaultInheritances) {
-          // Replace literal with optional parameter
-          segments[inheritance.segmentIndex] = `:${inheritance.paramName}?`;
-        }
-
-        const shortVersionPattern = `/${segments.join("/")}`;
-
-        if (DEBUG) {
-          console.debug(`Short version pattern: ${shortVersionPattern}`);
-          console.debug(
-            `Route transformed: ${internalUrlPattern} -> ${shortVersionPattern} inheriting defaults from other routes`,
-          );
-        }
-
-        return {
-          transformedPattern: shortVersionPattern,
-          inheritanceData: defaultInheritances,
-        };
-      }
-    }
-  }
-
-  return {
-    transformedPattern: internalUrlPattern,
-    inheritanceData: null,
-  };
-};
-
 const routeSet = new Set();
 // Store previous route states to detect changes
 const routePreviousStateMap = new WeakMap();
@@ -347,24 +66,19 @@ export const updateRoutes = (
     };
     const oldMatching = previousState.matching;
     const oldParams = previousState.params;
+
+    // Use custom pattern matching - much simpler than URLPattern approach
     const extractedParams = routePattern.applyOn(url);
     const newMatching = Boolean(extractedParams);
     let newParams;
-    if (extractedParams) {
-      // Post-process wildcard parameters to fix cases where wildcard captures
-      // values that should be assigned to named parameters
-      const correctedParams = correctWildcardParams(
-        extractedParams,
-        routePrivateProperties.internalPattern,
-        routePrivateProperties.connections,
-        route,
-      );
 
-      if (compareTwoJsValues(oldParams, correctedParams)) {
+    if (extractedParams) {
+      // No need for complex wildcard correction - custom system handles it properly
+      if (compareTwoJsValues(oldParams, extractedParams)) {
         // No change in parameters, keep the old params
         newParams = oldParams;
       } else {
-        newParams = correctedParams;
+        newParams = extractedParams;
       }
     } else {
       newParams = ROUTE_NOT_MATCHING_PARAMS;
@@ -519,35 +233,9 @@ export const registerRoute = (urlPattern) => {
   const originalUrlPatternInput = urlPattern;
   // Detect and connect signals in the route pattern
   const { pattern, connections } = detectSignals(urlPattern);
-  let internalUrlPattern = pattern;
-
-  // Make parameters with default values optional by modifying the pattern
-  for (const { paramName, options = {} } of connections) {
-    if (options.defaultValue !== undefined) {
-      // Replace :param with :param? to make the parameter itself optional
-      const paramRegex = new RegExp(`:${paramName}(?!\\?)\\b`, "g");
-      internalUrlPattern = internalUrlPattern.replace(
-        paramRegex,
-        `:${paramName}?`,
-      );
-    }
-  }
-
-  // Make trailing slashes flexible - if pattern ends with /, make it match anything after
-  // Exception: don't transform root route "/" to avoid matching everything
-  // This must happen BEFORE inheritance analysis so routes can inherit from wildcard patterns
-  if (internalUrlPattern.endsWith("/") && internalUrlPattern !== "/") {
-    // Transform /path/ to /path/*
-    // This allows matching /path/, /path/anything, /path/anything/else
-    internalUrlPattern = `${internalUrlPattern.slice(0, -1)}/*`;
-  }
-
-  // Cross-route optimization: allow routes with literal segments that match parameter defaults
-  // to also match shorter URLs where those segments are omitted
-  const literalSegmentDefaults = new Map();
 
   if (DEBUG) {
-    console.debug(`Registering route: ${urlPattern} -> ${internalUrlPattern}`);
+    console.debug(`Registering route: ${urlPattern} -> ${pattern}`);
     console.debug(
       `Existing routes: ${Array.from(routeSet)
         .map((r) => r.urlPattern)
@@ -555,23 +243,38 @@ export const registerRoute = (urlPattern) => {
     );
   }
 
-  // Analyze inheritance opportunities with existing routes
-  const inheritanceResult = analyzeRouteInheritance(
-    internalUrlPattern,
+  // Analyze inheritance opportunities with existing routes using custom system
+  const inheritanceResult = analyzeRouteInheritanceCustom(
+    pattern,
     routeSet,
     getRoutePrivateProperties,
   );
 
-  // Apply inheritance transformation if found
-  internalUrlPattern = inheritanceResult.transformedPattern;
-  if (inheritanceResult.inheritanceData) {
-    literalSegmentDefaults.set(
-      internalUrlPattern,
-      inheritanceResult.inheritanceData,
-    );
+  // Build parameter defaults from inheritance and connections
+  const parameterDefaults = new Map();
+
+  // Add defaults from signal connections
+  for (const { paramName, options = {} } of connections) {
+    if (options.defaultValue !== undefined) {
+      parameterDefaults.set(paramName, options.defaultValue);
+    }
   }
+
+  // Override with inheritance defaults if available
+  if (inheritanceResult.canInherit) {
+    for (const [
+      paramName,
+      defaultValue,
+    ] of inheritanceResult.parameterDefaults) {
+      parameterDefaults.set(paramName, defaultValue);
+    }
+  }
+
   if (DEBUG) {
-    console.debug(urlPattern, `->`, internalUrlPattern);
+    console.debug(`Parameter defaults:`, parameterDefaults);
+    if (inheritanceResult.canInherit) {
+      console.debug(`Inheritance data:`, inheritanceResult.inheritanceData);
+    }
   }
 
   const cleanupCallbackSet = new Set();
@@ -584,17 +287,9 @@ export const registerRoute = (urlPattern) => {
 
   const [publishStatus, subscribeStatus] = createPubSub();
 
-  // Transform inheritance info into format expected by createRoutePattern
-  const parameterDefaults = new Map();
-  const inheritanceInfo = literalSegmentDefaults.get(internalUrlPattern);
-  if (inheritanceInfo) {
-    for (const inheritance of inheritanceInfo) {
-      parameterDefaults.set(inheritance.paramName, inheritance.defaultValue);
-    }
-  }
-
-  const routePattern = createRoutePattern(
-    internalUrlPattern,
+  // Create custom route pattern - much simpler than URLPattern approach
+  const routePattern = createRoutePatternCustom(
+    pattern,
     baseFileUrl,
     parameterDefaults,
   );
@@ -624,10 +319,10 @@ export const registerRoute = (urlPattern) => {
   routeSet.add(route);
 
   const routePrivateProperties = {
-    routePattern: null,
+    routePattern,
     originalPattern: originalPatternBeforeTransforms,
-    internalPattern: internalUrlPattern, // Store processed pattern for inheritance logic
-    literalSegmentDefaults, // Store inheritance info for this route
+    pattern: pattern, // Store the current pattern used
+    inheritanceData: inheritanceResult.inheritanceData, // Store inheritance info for this route
     connections,
     matchingSignal: null,
     paramsSignal: null,
@@ -733,8 +428,7 @@ export const registerRoute = (urlPattern) => {
 
     // Add inherited defaults from other routes for missing parameters
     const routePrivateProps = getRoutePrivateProperties(route);
-    const inheritanceInfo =
-      routePrivateProps?.literalSegmentDefaults?.get(internalUrlPattern);
+    const inheritanceInfo = routePrivateProps?.inheritanceData;
     const literalParameterNames = new Set(); // Track literal parameters to exclude them throughout
 
     if (inheritanceInfo) {
@@ -946,8 +640,7 @@ export const registerRoute = (urlPattern) => {
 
     // Check if we should use the original pattern vs the internal (inheritance) pattern
     const routePrivateProps = getRoutePrivateProperties(route);
-    const inheritanceInfo =
-      routePrivateProps?.literalSegmentDefaults?.get(internalUrlPattern);
+    const inheritanceInfo = routePrivateProps?.inheritanceData;
 
     let shouldUseOriginalPattern = false;
 
@@ -1054,11 +747,11 @@ export const registerRoute = (urlPattern) => {
 
     const patternToUse = shouldUseOriginalPattern
       ? routePrivateProps.originalPattern
-      : internalUrlPattern;
+      : pattern;
 
     if (DEBUG && shouldUseOriginalPattern) {
       console.debug(
-        `Building URL with original pattern: ${patternToUse} instead of internal: ${internalUrlPattern}`,
+        `Building URL with original pattern: ${patternToUse} instead of internal: ${pattern}`,
       );
     }
 
@@ -1096,7 +789,7 @@ export const registerRoute = (urlPattern) => {
   route.matchesParams = (providedParams) => {
     // Wildcard routes (ending with *) should match any parameters
     // since they are parent routes meant to catch child routes
-    if (internalUrlPattern.endsWith("*")) {
+    if (pattern.endsWith("*")) {
       return true;
     }
 

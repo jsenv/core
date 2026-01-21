@@ -14,9 +14,7 @@ return {
 
 ```js
 {
-  "matching_with_default": {
-    "section": "settings"
-  },
+  "matching_with_default": null,
   "matching_with_param": {
     "section": "users"
   },
