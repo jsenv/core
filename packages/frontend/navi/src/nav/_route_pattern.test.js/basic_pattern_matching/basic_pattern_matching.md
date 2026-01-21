@@ -1,4 +1,4 @@
-# [basic pattern matching](../../route_pattern.test.js#L13)
+# [basic pattern matching](../../route_pattern.test.js#L14)
 
 ```js
 return {

@@ -1,4 +1,4 @@
-# [root path handling](../../route_pattern.test.js#L57)
+# [root path handling](../../route_pattern.test.js#L58)
 
 ```js
 return {

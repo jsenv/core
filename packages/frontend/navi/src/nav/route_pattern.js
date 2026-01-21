@@ -162,10 +162,10 @@ const matchUrl = (parsedPattern, url, { parameterDefaults, baseUrl }) => {
   // If baseUrl is provided, calculate the pathname relative to the baseUrl's directory
   if (baseUrl) {
     const baseUrlObj = new URL(baseUrl);
-    const baseDir = baseUrlObj.pathname.substring(
-      0,
-      baseUrlObj.pathname.lastIndexOf("/"),
-    );
+    // if the base url is a file, we want to be relative to the directory containing that file
+    const baseDir = baseUrlObj.pathname.endsWith("/")
+      ? baseUrlObj.pathname
+      : baseUrlObj.pathname.substring(0, baseUrlObj.pathname.lastIndexOf("/"));
     if (pathname.startsWith(baseDir)) {
       pathname = pathname.slice(baseDir.length);
     }

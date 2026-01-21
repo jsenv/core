@@ -1,4 +1,5 @@
 import { snapshotTests } from "@jsenv/snapshot";
+import { stateSignal } from "../state/state_signal.js";
 import { createRoutePattern } from "./route_pattern.js";
 
 const baseUrl = "http://localhost:3000";
@@ -223,12 +224,15 @@ await snapshotTests(import.meta.url, ({ test }) => {
   });
 
   test("matching with a base url", () => {
-    const pattern = "/admin/:section/";
+    const sectionSignal = stateSignal("settings");
+    const pattern = `/admin/:section=${sectionSignal}/`;
     const baseUrl =
       "http://127.0.0.1:3456/packages/frontend/navi/src/nav/demos/dashboard/dashboard.html";
     const url =
       "http://127.0.0.1:3456/packages/frontend/navi/src/nav/demos/dashboard/admin";
-    const { applyOn } = createRoutePattern(pattern, baseUrl);
+    // Pass parameter defaults so that :section becomes optional via the signal default
+    const parameterDefaults = new Map([["section", sectionSignal.value]]);
+    const { applyOn } = createRoutePattern(pattern, baseUrl, parameterDefaults);
     const result = applyOn(url);
     return {
       result,
