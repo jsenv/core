@@ -529,14 +529,22 @@ export const registerRoute = (urlPatternRaw) => {
   // This handles cases where a route has signals with defaults but doesn't inherit from other routes
   if (connections && connections.length > 0) {
     const parsedPattern = routePatternResult.pattern;
-    
+
     for (const { signal, paramName, options } of connections) {
-      if (signal && signal.value !== undefined && options.defaultValue !== undefined) {
+      if (
+        signal &&
+        signal.value !== undefined &&
+        options.defaultValue !== undefined
+      ) {
         // Find which segment corresponds to this parameter
-        for (let segmentIndex = 0; segmentIndex < parsedPattern.segments.length; segmentIndex++) {
+        for (
+          let segmentIndex = 0;
+          segmentIndex < parsedPattern.segments.length;
+          segmentIndex++
+        ) {
           const segment = parsedPattern.segments[segmentIndex];
-          
-          if (segment.type === 'param' && segment.name === paramName) {
+
+          if (segment.type === "param" && segment.name === paramName) {
             // This is a parameter segment that has a signal with a default value
             segmentDefaults.set(segmentIndex, {
               paramName,

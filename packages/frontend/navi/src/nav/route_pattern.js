@@ -464,7 +464,10 @@ export const buildUrlFromPatternWithSegmentFiltering = (
     segments: parsedPattern.segments.filter((segment, index) => {
       const segmentDefault = segmentDefaults.get(index);
       if (!hasNonDefaultParams && segmentDefault) {
-        if (segment.type === "literal" && segment.value === segmentDefault.literalValue) {
+        if (
+          segment.type === "literal" &&
+          segment.value === segmentDefault.literalValue
+        ) {
           // Handle literal segments (from inheritance)
           // Only omit if the literal value matches the signal default
           if (segmentDefault.literalValue !== segmentDefault.signalDefault) {
@@ -505,17 +508,20 @@ export const buildUrlFromPatternWithSegmentFiltering = (
           // If no connections at all, this might be a simple inherited route
           // Allow omission for these cases
           return false;
-        } else if (segment.type === "param" && segment.name === segmentDefault.paramName) {
+        } else if (
+          segment.type === "param" &&
+          segment.name === segmentDefault.paramName
+        ) {
           // Handle parameter segments
           const paramValue = params?.[segmentDefault.paramName];
-          
+
           // If no value provided and we have a default, we can omit this segment
           if (paramValue === undefined) {
             // Check if there's a connection for this parameter
             const hasConnectionForParam = connections.some(
               (conn) => conn.paramName === segmentDefault.paramName,
             );
-            
+
             if (hasConnectionForParam) {
               return false; // Omit the parameter segment
             }
@@ -528,7 +534,8 @@ export const buildUrlFromPatternWithSegmentFiltering = (
 
   // If segments were filtered and we originally had a trailing slash,
   // remove the trailing slash since the path structure has changed
-  const segmentsWereFiltered = modifiedPattern.segments.length < parsedPattern.segments.length;
+  const segmentsWereFiltered =
+    modifiedPattern.segments.length < parsedPattern.segments.length;
   if (segmentsWereFiltered && parsedPattern.trailingSlash) {
     // When segments are filtered out due to inheritance, the URL structure changes
     // We should remove the trailing slash unless we're actively inheriting additional path
