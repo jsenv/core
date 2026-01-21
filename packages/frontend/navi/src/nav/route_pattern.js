@@ -420,12 +420,14 @@ export const buildMostPreciseUrl = (route, params = {}, routeRelationships) => {
   // This happens when:
   // 1. This route's parameters are all defaults (would be omitted)
   // 2. A child route has non-default parameters that should be included
-  
-  const hasNonDefaultParams = routePrivateProps.connections.some(connection => {
-    const { paramName, signal, options } = connection;
-    const defaultValue = options?.defaultValue;
-    return signal?.value !== defaultValue && (paramName in finalParams);
-  });
+
+  const hasNonDefaultParams = routePrivateProps.connections.some(
+    (connection) => {
+      const { paramName, signal, options } = connection;
+      const defaultValue = options?.defaultValue;
+      return signal?.value !== defaultValue && paramName in finalParams;
+    },
+  );
 
   if (!hasNonDefaultParams && routePrivateProps.childRoutes?.length) {
     // This route has no non-default parameters, check if child routes do
@@ -434,7 +436,7 @@ export const buildMostPreciseUrl = (route, params = {}, routeRelationships) => {
       if (childPrivateProps?.connections) {
         let childHasNonDefaults = false;
         let childParams = {};
-        
+
         // Check child route parameters
         for (const connection of childPrivateProps.connections) {
           const { paramName, signal, options } = connection;
@@ -446,10 +448,14 @@ export const buildMostPreciseUrl = (route, params = {}, routeRelationships) => {
             }
           }
         }
-        
+
         if (childHasNonDefaults) {
           // Use child route to build URL instead
-          return buildMostPreciseUrl(childRoute, childParams, routeRelationships);
+          return buildMostPreciseUrl(
+            childRoute,
+            childParams,
+            routeRelationships,
+          );
         }
       }
     }

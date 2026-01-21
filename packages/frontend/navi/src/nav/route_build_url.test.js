@@ -1,5 +1,5 @@
 import { snapshotTests } from "@jsenv/snapshot";
-import { stateSignal, globalSignalRegistry } from "../state/state_signal.js";
+import { globalSignalRegistry, stateSignal } from "../state/state_signal.js";
 import { clearAllRoutes, registerRoute, setBaseUrl } from "./route.js";
 
 const baseUrl = "http://localhost:3000";
@@ -89,26 +89,26 @@ await snapshotTests(import.meta.url, ({ test }) => {
   test("url building with local storage mocking", () => {
     clearAllRoutes();
     globalSignalRegistry.clear();
-    
+
     // Mock window.localStorage (required by valueInLocalStorage)
     const originalWindow = globalThis.window;
     const originalLocalStorage = originalWindow?.localStorage;
     const localStorageMock = {
       storage: new Map(),
-      getItem(key) { 
-        return this.storage.get(key) || null; 
+      getItem(key) {
+        return this.storage.get(key) || null;
       },
-      setItem(key, value) { 
-        this.storage.set(key, String(value)); 
+      setItem(key, value) {
+        this.storage.set(key, String(value));
       },
       removeItem(key) {
         this.storage.delete(key);
       },
-      clear() { 
-        this.storage.clear(); 
-      }
+      clear() {
+        this.storage.clear();
+      },
     };
-    
+
     // Ensure window object exists and has localStorage
     if (!globalThis.window) {
       globalThis.window = {};
@@ -117,18 +117,18 @@ await snapshotTests(import.meta.url, ({ test }) => {
 
     try {
       // Set initial localStorage values
-      localStorageMock.setItem("section_ls", "settings");  // default
-      localStorageMock.setItem("settings_tab_ls", "general");  // default
-      
-      const sectionSignal = stateSignal("settings", { 
-        id: "section_ls", 
+      localStorageMock.setItem("section_ls", "settings"); // default
+      localStorageMock.setItem("settings_tab_ls", "general"); // default
+
+      const sectionSignal = stateSignal("settings", {
+        id: "section_ls",
         persists: true,
-        type: "string"
+        type: "string",
       });
-      const tabSignal = stateSignal("general", { 
-        id: "settings_tab_ls", 
+      const tabSignal = stateSignal("general", {
+        id: "settings_tab_ls",
         persists: true,
-        type: "string"
+        type: "string",
       });
 
       const ADMIN_ROUTE = registerRoute(`/admin/:section=${sectionSignal}/`);
@@ -149,8 +149,8 @@ await snapshotTests(import.meta.url, ({ test }) => {
       // Change localStorage and signal values to non-defaults
       localStorageMock.setItem("section_ls", "users");
       localStorageMock.setItem("settings_tab_ls", "security");
-      sectionSignal.value = "users";  // This should trigger localStorage update
-      tabSignal.value = "security";   // This should trigger localStorage update
+      sectionSignal.value = "users"; // This should trigger localStorage update
+      tabSignal.value = "security"; // This should trigger localStorage update
 
       const scenario2 = {
         name: "both_non_defaults",
@@ -180,10 +180,9 @@ await snapshotTests(import.meta.url, ({ test }) => {
 
       return {
         scenario1,
-        scenario2, 
+        scenario2,
         scenario3,
       };
-      
     } finally {
       // Restore original window and localStorage
       if (originalWindow) {
@@ -197,13 +196,15 @@ await snapshotTests(import.meta.url, ({ test }) => {
   test("signal reactivity - parent url updates when child signals change", () => {
     clearAllRoutes();
     globalSignalRegistry.clear();
-    
+
     const sectionSignal = stateSignal("settings", { id: "section_reactive" });
     const tabSignal = stateSignal("general", { id: "settings_tab_reactive" });
-    
+
     const ADMIN_ROUTE = registerRoute(`/admin/:section=${sectionSignal}/`);
-    const ADMIN_SETTINGS_ROUTE = registerRoute(`/admin/settings/:tab=${tabSignal}`);
-    
+    const ADMIN_SETTINGS_ROUTE = registerRoute(
+      `/admin/settings/:tab=${tabSignal}`,
+    );
+
     // Capture initial URLs
     const initialUrls = {
       admin_initial: ADMIN_ROUTE.buildUrl({}),
@@ -211,10 +212,10 @@ await snapshotTests(import.meta.url, ({ test }) => {
       admin_relativeUrl_initial: ADMIN_ROUTE.relativeUrl,
       settings_relativeUrl_initial: ADMIN_SETTINGS_ROUTE.relativeUrl,
     };
-    
+
     // Change child route signal (tab) - this should make parent route generate deepest URL
     tabSignal.value = "security";
-    
+
     const afterTabChange = {
       admin_after_tab_change: ADMIN_ROUTE.buildUrl({}),
       settings_after_tab_change: ADMIN_SETTINGS_ROUTE.buildUrl({}),
@@ -222,12 +223,13 @@ await snapshotTests(import.meta.url, ({ test }) => {
       settings_relativeUrl_after_tab: ADMIN_SETTINGS_ROUTE.relativeUrl,
       tab_signal_value: tabSignal.value,
       // Key behavior: Parent route now generates deepest URL because child has non-default value
-      parent_now_uses_child_route: ADMIN_ROUTE.buildUrl({}) === ADMIN_SETTINGS_ROUTE.buildUrl({}),
+      parent_now_uses_child_route:
+        ADMIN_ROUTE.buildUrl({}) === ADMIN_SETTINGS_ROUTE.buildUrl({}),
     };
-    
+
     // Change parent route signal (section) - should use parent's own parameter
     sectionSignal.value = "users";
-    
+
     const afterSectionChange = {
       admin_after_section_change: ADMIN_ROUTE.buildUrl({}),
       settings_after_section_change: ADMIN_SETTINGS_ROUTE.buildUrl({}),
@@ -237,7 +239,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
       // Parent route uses its own non-default parameter now
       parent_uses_own_param: ADMIN_ROUTE.buildUrl({}).includes("users"),
     };
-    
+
     return {
       initialUrls,
       afterTabChange,
