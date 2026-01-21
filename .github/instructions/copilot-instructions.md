@@ -31,6 +31,7 @@ Testing in @jsenv/core focuses on **behavior verification** and **regression pre
   - Tests generate markdown files containing inputs, outputs, and debug logs
   - Snapshots live in `_test-name.test.js/` directories alongside test files
   - Review snapshot diffs to verify intended behavior changes
+  - **Important**: Snapshot tests do not "fail" in the traditional sense - they always pass and update snapshots automatically. You must manually read and verify snapshot files to ensure results still make sense and haven't changed unexpectedly
 - **Behavioral Testing**: Focus on testing what the code actually does, not implementation details
   - Test user-facing behavior and API contracts
   - Capture edge cases and error scenarios
