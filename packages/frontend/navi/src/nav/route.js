@@ -69,18 +69,16 @@ const isChildRoute = (childPattern, parentPattern) => {
   }
 
   // CASE 2: Traditional path-based child relationship
-  // Child must be longer and start with parent pattern structure
-  if (cleanChild.length <= cleanParent.length) {
-    return false;
-  }
-
-  // Convert patterns to comparable segments
+  // Convert patterns to comparable segments for proper comparison
   const childSegments = cleanChild.split("/").filter((s) => s);
   const parentSegments = cleanParent.split("/").filter((s) => s);
 
-  if (childSegments.length <= parentSegments.length) {
+  // Child must have at least as many segments as parent
+  if (childSegments.length < parentSegments.length) {
     return false;
   }
+
+  let hasMoreSpecificSegment = false;
 
   // Check if parent segments match child segments (allowing for parameters)
   for (let i = 0; i < parentSegments.length; i++) {
@@ -89,7 +87,11 @@ const isChildRoute = (childPattern, parentPattern) => {
 
     // If parent has parameter, child can have anything in that position
     if (parentSeg.startsWith(":")) {
-      // Check if child has a literal value that could match the parameter
+      // Child is more specific if it has a literal value for a parent parameter
+      // But if child also starts with ":", it's also a parameter (not more specific)
+      if (!childSeg.startsWith(":")) {
+        hasMoreSpecificSegment = true;
+      }
       continue;
     }
 
@@ -99,7 +101,10 @@ const isChildRoute = (childPattern, parentPattern) => {
     }
   }
 
-  return true;
+  // Child is a child route if:
+  // 1. It has more segments than parent (traditional child), OR
+  // 2. It has same segments but is more specific (literal vs parameter)
+  return childSegments.length > parentSegments.length || hasMoreSpecificSegment;
 };
 const routePreviousStateMap = new WeakMap();
 // Store abort controllers per action to control their lifecycle based on route state

@@ -341,36 +341,64 @@ await snapshotTests(import.meta.url, ({ test }) => {
     };
   });
 
+  test("debug deepest url generation", () => {
+    clearAllRoutes();
+    globalSignalRegistry.clear();
+
+    // Simple test case to see what's happening
+    const tabSignal = stateSignal("overview", { id: "debug_tab" });
+    tabSignal.value = "details"; // non-default
+
+    // Register admin route that should upgrade to analytics when section=analytics
+    const ADMIN_ROUTE = registerRoute("/admin/:section/");
+    const ANALYTICS_ROUTE = registerRoute(`/admin/analytics?tab=${tabSignal}`);
+
+    return {
+      // Test with explicit section=analytics
+      admin_with_analytics_section: ADMIN_ROUTE.buildUrl({
+        section: "analytics",
+      }),
+      // Test without params (should use default section which won't match analytics)
+      admin_with_no_params: ADMIN_ROUTE.buildUrl({}),
+
+      // For comparison
+      analytics_direct: ANALYTICS_ROUTE.buildUrl({}),
+
+      // Signal value
+      tab_signal: tabSignal.value,
+    };
+  });
+
   test("deepest url generation with search parameters", () => {
     clearAllRoutes();
     globalSignalRegistry.clear();
 
-    // Simple case: basic path + search parameter variant
-    const tabSignal = stateSignal("overview", { id: "simple_tab" });
-    tabSignal.value = "performance"; // non-default
+    // Reproduce dashboard_demo.jsx scenario: parent route with search parameter child
+    const sectionSignal = stateSignal("settings", { id: "demo_section" });
+    const analyticsTabSignal = stateSignal("overview", {
+      id: "demo_analytics_tab",
+    });
 
-    // Register routes: parent without search params, child with search params
-    const ADMIN_SETTINGS_BASE = registerRoute("/admin/settings/");
-    const ADMIN_SETTINGS_WITH_TAB = registerRoute(
-      `/admin/settings/?tab=${tabSignal}`,
+    // Set signals to non-default values to trigger deepest URL generation
+    sectionSignal.value = "analytics"; // non-default
+    analyticsTabSignal.value = "details"; // non-default
+
+    // Register routes like dashboard_demo.jsx:
+    // - Admin route with path parameter: /admin/:section/
+    // - Analytics route with search parameter: /admin/analytics/?tab=signal
+    const ADMIN_ROUTE = registerRoute(`/admin/:section=${sectionSignal}/`);
+    const ADMIN_ANALYTICS_ROUTE = registerRoute(
+      `/admin/analytics?tab=${analyticsTabSignal}`,
     );
 
     return {
-      // Parent route should upgrade to child when child has non-default search params
-      base_no_params: ADMIN_SETTINGS_BASE.buildUrl({}), // Should become /admin/settings/?tab=performance
-
-      // Child route should work normally
-      with_tab_no_params: ADMIN_SETTINGS_WITH_TAB.buildUrl({}), // Should be /admin/settings/?tab=performance
-      with_tab_explicit: ADMIN_SETTINGS_WITH_TAB.buildUrl({ tab: "custom" }), // Should be /admin/settings/?tab=custom
-      with_tab_default: ADMIN_SETTINGS_WITH_TAB.buildUrl({ tab: "overview" }), // Should be /admin/settings/ (omit default)
-
-      // Verify signal value
-      signal_values: {
-        tab: tabSignal.value, // "performance" (non-default)
-      },
-      defaults: {
-        tab: "overview",
-      },
+      // This should be /admin/analytics/?tab=details (deepest URL with search param)
+      admin_route_url: ADMIN_ROUTE.buildUrl({}),
+      // For comparison - direct analytics route URL
+      analytics_route_url: ADMIN_ANALYTICS_ROUTE.buildUrl({}),
+      // Verify signal values
+      section_signal: sectionSignal.value,
+      analytics_tab_signal: analyticsTabSignal.value,
     };
   });
 

@@ -427,17 +427,6 @@ export const buildMostPreciseUrl = (route, params = {}, routeRelationships) => {
   // 1. This route's parameters are all defaults (would be omitted)
   // 2. A child route has non-default parameters that should be included
 
-  const hasNonDefaultParams = routePrivateProps.connections.some(
-    (connection) => {
-      const { paramName, options } = connection;
-      const defaultValue = options?.defaultValue;
-      // Check the actual parameter value, not the signal value!
-      return (
-        paramName in finalParams && finalParams[paramName] !== defaultValue
-      );
-    },
-  );
-
   // DEEPEST URL GENERATION: Only activate when NO explicit parameters provided
   // This prevents overriding explicit user intentions with signal-based "smart" routing
   const hasExplicitParams = Object.keys(params).length > 0;
@@ -448,12 +437,11 @@ export const buildMostPreciseUrl = (route, params = {}, routeRelationships) => {
 
   if (
     !hasExplicitParams &&
-    !hasNonDefaultParams &&
     !isRootRoute &&
     routePrivateProps.childRoutes?.length
   ) {
     // Only use deepest URL when user didn't provide any explicit params
-    // This route has no non-default parameters, check if child routes do
+    // This route has child routes - check if any child route is more specific
     for (const childRoute of routePrivateProps.childRoutes) {
       const childPrivateProps = routeRelationships.get(childRoute);
       if (childPrivateProps?.connections) {
@@ -466,6 +454,7 @@ export const buildMostPreciseUrl = (route, params = {}, routeRelationships) => {
 
           if (signal?.value !== undefined) {
             const defaultValue = options?.defaultValue;
+
             if (signal.value !== defaultValue) {
               childHasNonDefaults = true;
               childParams[paramName] = signal.value;
@@ -475,9 +464,28 @@ export const buildMostPreciseUrl = (route, params = {}, routeRelationships) => {
 
         if (childHasNonDefaults) {
           // Use child route to build URL instead - but only when no explicit params provided
+          // IMPORTANT: Only pass parameters that the child route actually expects
+          // The child route may have literal segments that don't need parent parameters
+
+          // Get parameters that the child route expects (from its connections)
+          const childExpectedParams = new Set(
+            childPrivateProps.connections.map((conn) => conn.paramName),
+          );
+
+          // Filter merged params to only include what child route expects
+          const filteredParams = {};
+          for (const [key, value] of Object.entries({
+            ...finalParams,
+            ...childParams,
+          })) {
+            if (childExpectedParams.has(key)) {
+              filteredParams[key] = value;
+            }
+          }
+
           return buildMostPreciseUrl(
             childRoute,
-            childParams,
+            filteredParams,
             routeRelationships,
           );
         }
