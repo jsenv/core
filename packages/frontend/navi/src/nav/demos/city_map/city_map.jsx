@@ -14,14 +14,25 @@ import {
   TabList,
 } from "@jsenv/navi";
 
-// Setup routes for city map demo
-const { HOME_ROUTE, SELECT_CITY_ROUTE, MAP_ROUTE } = setupRoutes({
-  HOME_ROUTE: "/",
-  SELECT_CITY_ROUTE: "/select_city",
-  MAP_ROUTE: "/map",
-});
-
 const cities = ["Paris", "London", "Tokyo", "New York", "Sydney"];
+const citySignal = stateSignal(undefined, {
+  id: "city",
+  persists: true,
+  oneOf: cities,
+});
+const cityDataSignal = stateSignal(null);
+const fetchCity = async (city) => {
+  // Simulate API delay
+  await new Promise((resolve) => setTimeout(resolve, 500));
+  const { lon, lat } = CITY_COORDINATES[city];
+  return { lon, lat };
+};
+effect(async () => {
+  const city = citySignal.value;
+  cityDataSignal.value = null;
+  const cityData = await fetchCity(city);
+  cityDataSignal.value = cityData;
+});
 // Fake coordinates for cities
 const CITY_COORDINATES = {
   "Paris": { lon: 2.3522, lat: 48.8566 },
@@ -30,44 +41,27 @@ const CITY_COORDINATES = {
   "New York": { lon: -74.006, lat: 40.7128 },
   "Sydney": { lon: 151.2093, lat: -33.8688 },
 };
-const fetchCity = async (city) => {
-  // Simulate API delay
-  await new Promise((resolve) => setTimeout(resolve, 500));
-  const { lon, lat } = CITY_COORDINATES[city];
-  return { lon, lat };
-};
-const citySignal = stateSignal(undefined, {
-  localStorage: "city",
-  routes: {
-    city: MAP_ROUTE,
-  },
-  oneOf: cities,
-});
-const cityDataSignal = stateSignal(null);
-effect(async () => {
-  const city = citySignal.value;
-  cityDataSignal.value = null;
-  const cityData = await fetchCity(city);
-  cityDataSignal.value = cityData;
-});
+
 const cityLongitudeSignal = computed(() => cityDataSignal.value?.lon);
 const cityLatitudeSignal = computed(() => cityDataSignal.value?.lat);
 const longitudeSignal = stateSignal(undefined, {
-  sourceSignal: cityLongitudeSignal,
+  id: "longitude",
   type: "float",
-  localStorage: "longitude",
-  routes: {
-    lon: MAP_ROUTE,
-  },
+  persists: true,
+  sourceSignal: cityLongitudeSignal,
   debug: true,
 });
 const latitudeSignal = stateSignal(undefined, {
-  sourceSignal: cityLatitudeSignal,
+  id: "latitude",
   type: "float",
-  localStorage: "latitude",
-  routes: {
-    lat: MAP_ROUTE,
-  },
+  persists: true,
+  sourceSignal: cityLatitudeSignal,
+});
+
+const { HOME_ROUTE, SELECT_CITY_ROUTE, MAP_ROUTE } = setupRoutes({
+  HOME_ROUTE: "/",
+  SELECT_CITY_ROUTE: "/select_city",
+  MAP_ROUTE: `/map?city=${citySignal}&lon=${longitudeSignal}&lat=${latitudeSignal}`,
 });
 
 const App = () => {
