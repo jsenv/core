@@ -7,7 +7,6 @@ import { createPubSub } from "@jsenv/dom";
 import { batch, computed, effect, signal } from "@preact/signals";
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
 import {
-  buildMostPreciseUrl,
   clearPatterns,
   createRoutePattern,
   getPatternData,
@@ -225,24 +224,8 @@ const registerRoute = (urlPatternRaw) => {
 
   // Get pre-registered pattern data
   const patternData = getPatternData(urlPatternRaw);
-  if (!patternData) {
-    throw new Error(
-      `Pattern ${urlPatternRaw} not found in registry. Make sure to call setupRoutes() instead of registerRoute() directly.`,
-    );
-  }
-
   const { cleanPattern, connections } = patternData;
-
-  // Create route pattern with connections
   const routePattern = createRoutePattern(urlPatternRaw);
-
-  // Build parameter defaults from signal connections
-  const parameterDefaults = new Map();
-  for (const { paramName, options = {} } of connections) {
-    if (options.defaultValue !== undefined) {
-      parameterDefaults.set(paramName, options.defaultValue);
-    }
-  }
 
   const cleanupCallbackSet = new Set();
   const cleanup = () => {
@@ -271,6 +254,8 @@ const registerRoute = (urlPatternRaw) => {
     },
     replaceParams: undefined,
     subscribeStatus,
+    // Store pattern object for URL building
+    __routePattern: routePattern,
   };
 
   routeSet.add(route);
@@ -279,8 +264,6 @@ const registerRoute = (urlPatternRaw) => {
     routePattern,
     originalPattern: urlPatternRaw,
     pattern: cleanPattern,
-    connections,
-    parameterDefaults,
     matchingSignal: null,
     paramsSignal: null,
     rawParamsSignal: null,
@@ -326,18 +309,12 @@ const registerRoute = (urlPatternRaw) => {
   };
   routePrivatePropertiesMap.set(route, routePrivateProperties);
 
-  const paramConfigMap = new Map();
-  route.paramConfigMap = paramConfigMap;
   const matchingSignal = signal(false);
   const rawParamsSignal = signal(ROUTE_NOT_MATCHING_PARAMS);
 
   // Set up signal connections
   for (const { signal: stateSignal, paramName, options = {} } of connections) {
     const { debug } = options;
-    paramConfigMap.set(paramName, {
-      getFallbackValue: options.getFallbackValue,
-      defaultValue: options.defaultValue,
-    });
 
     // URL -> Signal synchronization
     effect(() => {
@@ -377,32 +354,8 @@ const registerRoute = (urlPatternRaw) => {
 
   const paramsSignal = computed(() => {
     const rawParams = rawParamsSignal.value;
-    if (!rawParams && paramConfigMap.size === 0) {
-      return rawParams;
-    }
-    const mergedParams = {};
-
-    // First, add raw params that have defined values
-    if (rawParams) {
-      for (const name of Object.keys(rawParams)) {
-        const value = rawParams[name];
-        if (value !== undefined) {
-          mergedParams[name] = value;
-        }
-      }
-    }
-
-    // Then add defaults for parameters not in raw params
-    for (const [paramName, paramConfig] of paramConfigMap) {
-      if (!(paramName in mergedParams)) {
-        const { defaultValue } = paramConfig;
-        if (defaultValue !== undefined) {
-          mergedParams[paramName] = defaultValue;
-        }
-      }
-    }
-
-    return mergedParams;
+    // Pattern system handles parameter defaults, routes just work with raw params
+    return rawParams || {};
   });
 
   const visitedSignal = signal(false);
@@ -452,71 +405,8 @@ const registerRoute = (urlPatternRaw) => {
   route.replaceParams = replaceParams;
 
   const resolveParams = (providedParams, { cleanupDefaults } = {}) => {
-    const currentParams = rawParamsSignal.value;
-    const paramNameSet = new Set();
-
-    if (currentParams) {
-      for (const paramName of Object.keys(currentParams)) {
-        paramNameSet.add(paramName);
-      }
-    }
-    if (providedParams) {
-      for (const paramName of Object.keys(providedParams)) {
-        paramNameSet.add(paramName);
-      }
-    }
-
-    const mergedParams = {};
-
-    // First, process parameters that have configurations (signals)
-    for (const [paramName, paramConfig] of paramConfigMap) {
-      if (paramNameSet.has(paramName)) {
-        continue; // Will be handled in the second loop
-      }
-      const currentValue = currentParams?.[paramName];
-      if (currentValue !== undefined) {
-        mergedParams[paramName] = currentValue;
-        continue;
-      }
-      const { getFallbackValue, defaultValue } = paramConfig;
-      if (getFallbackValue) {
-        const fallbackValue = getFallbackValue();
-        if (fallbackValue !== undefined) {
-          if (cleanupDefaults && fallbackValue === defaultValue) {
-            continue;
-          }
-          mergedParams[paramName] = fallbackValue;
-          continue;
-        }
-      }
-      if (cleanupDefaults) {
-        continue;
-      }
-      if (defaultValue !== undefined) {
-        mergedParams[paramName] = defaultValue;
-      }
-    }
-
-    // Then, process provided parameters
-    for (const paramName of paramNameSet) {
-      const providedValue = providedParams?.[paramName];
-      const currentValue = currentParams?.[paramName];
-      const valueToUse =
-        providedValue !== undefined ? providedValue : currentValue;
-
-      if (cleanupDefaults && providedValue === undefined) {
-        const paramConfig = paramConfigMap.get(paramName);
-        if (paramConfig && paramConfig.defaultValue === valueToUse) {
-          continue;
-        }
-      }
-
-      if (valueToUse !== undefined) {
-        mergedParams[paramName] = valueToUse;
-      }
-    }
-
-    return mergedParams;
+    // Delegate parameter resolution to the pattern system
+    return routePattern.resolveParams(providedParams, { cleanupDefaults });
   };
 
   route.buildRelativeUrl = (params) => {
@@ -525,7 +415,7 @@ const registerRoute = (urlPatternRaw) => {
     });
 
     // Use most precise URL generation approach - delegate to pattern system
-    const mostPreciseUrl = buildMostPreciseUrl(route, resolvedParams);
+    const mostPreciseUrl = routePattern.buildMostPreciseUrl(resolvedParams);
     return mostPreciseUrl;
   };
 
@@ -549,7 +439,7 @@ const registerRoute = (urlPatternRaw) => {
   cleanupCallbackSet.add(disposeRelativeUrlEffect);
 
   const urlSignal = computed(() => {
-    const routeUrl = route.builUrl();
+    const routeUrl = route.buildUrl();
     return routeUrl;
   });
   const buildUrl = (params) => {

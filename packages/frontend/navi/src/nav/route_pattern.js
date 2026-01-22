@@ -114,11 +114,201 @@ export const createRoutePattern = (pattern, parameterDefaults = new Map()) => {
     return result;
   };
 
+  const buildUrl = (params = {}) => {
+    return buildUrlFromPattern(parsedPattern, params, parameterDefaults);
+  };
+
+  const resolveParams = (providedParams = {}, { cleanupDefaults } = {}) => {
+    const resolvedParams = { ...providedParams };
+
+    // Process all connections for parameter resolution
+    for (const connection of connections) {
+      const { paramName, signal, options } = connection;
+      const defaultValue = options.defaultValue;
+
+      if (paramName in providedParams) {
+        // Parameter was explicitly provided
+        if (cleanupDefaults && resolvedParams[paramName] === defaultValue) {
+          delete resolvedParams[paramName];
+        }
+      } else if (signal?.value !== undefined) {
+        // Parameter was not provided, check signal value
+        if (cleanupDefaults && signal.value === defaultValue) {
+          // Omit default values for shorter URLs
+        } else {
+          resolvedParams[paramName] = signal.value;
+        }
+      }
+    }
+
+    return resolvedParams;
+  };
+
+  /**
+   * Build the most precise URL by using route relationships from pattern registry.
+   * Each route is responsible for its own URL generation using its own signals.
+   */
+  const buildMostPreciseUrl = (route, params = {}) => {
+    // Start with provided parameters
+    let finalParams = { ...params };
+
+    for (const connection of connections) {
+      const { paramName, signal, options } = connection;
+      const defaultValue = options.defaultValue;
+
+      if (paramName in finalParams) {
+        // Parameter was explicitly provided
+        // If it equals the default value, remove it for shorter URLs
+        if (finalParams[paramName] === defaultValue) {
+          delete finalParams[paramName];
+        }
+      }
+      // Parameter was NOT provided, check signal value
+      else if (signal?.value !== undefined && signal.value !== defaultValue) {
+        // Only include signal value if it's not the default
+        finalParams[paramName] = signal.value;
+        // If signal.value === defaultValue, omit the parameter for shorter URL
+      }
+    }
+
+    // DEEPEST URL GENERATION: Check if we should use a child route instead
+    // This happens when:
+    // 1. This route's parameters are all defaults (would be omitted)
+    // 2. A child route has non-default parameters that should be included
+
+    // DEEPEST URL GENERATION: Only activate when NO explicit parameters provided
+    // This prevents overriding explicit user intentions with signal-based "smart" routing
+    // We need to distinguish between user-provided params and signal-derived params
+    let hasUserProvidedParams = false;
+
+    // Check if provided params contain anything beyond what signals would provide
+    const signalDerivedParams = {};
+    for (const { paramName, signal, options } of connections) {
+      if (signal?.value !== undefined) {
+        const defaultValue = options.defaultValue;
+        // Only include signal value if it's not the default (same logic as above)
+        if (signal.value !== defaultValue) {
+          signalDerivedParams[paramName] = signal.value;
+        }
+      }
+    }
+
+    // Check if params contains anything that's not from signals
+    for (const [key, value] of Object.entries(params)) {
+      if (signalDerivedParams[key] !== value) {
+        hasUserProvidedParams = true;
+        break;
+      }
+    }
+
+    // Also check if params has extra keys beyond what signals provide
+    const providedKeys = new Set(Object.keys(params));
+    const signalKeys = new Set(Object.keys(signalDerivedParams));
+    for (const key of providedKeys) {
+      if (!signalKeys.has(key)) {
+        hasUserProvidedParams = true;
+        break;
+      }
+    }
+
+    // ROOT ROUTE PROTECTION: Never apply deepest URL generation to root route "/"
+    // Users must always be able to navigate to home page regardless of app state
+    const isRootRoute = route.pattern === "/";
+
+    const relationships = patternRelationships.get(pattern);
+    const childPatterns = relationships.childPatterns || [];
+    if (!hasUserProvidedParams && !isRootRoute && childPatterns.length) {
+      if (childPatterns.length > 0) {
+        // Try to find the most specific child pattern that has active signals
+        let bestChildUrl = null;
+        let bestChildDepth = -1;
+
+        for (const childPattern of childPatterns) {
+          // Get the child pattern data
+          const childPatternData = getPatternData(childPattern);
+          if (!childPatternData) continue;
+
+          // Check if any of this child's parameters have non-default signal values
+          let hasActiveParams = false;
+          const childParams = { ...finalParams }; // Start with parent params
+
+          for (const connection of childPatternData.connections) {
+            const { paramName, signal, options } = connection;
+            const defaultValue = options.defaultValue;
+
+            if (signal?.value !== undefined && signal.value !== defaultValue) {
+              childParams[paramName] = signal.value;
+              hasActiveParams = true;
+            }
+          }
+
+          if (hasActiveParams) {
+            // Calculate the depth/specificity of this child pattern
+            const childSegments =
+              childPatternData.parsedPattern?.segments || [];
+            const childDepth = childSegments.length;
+
+            if (childDepth > bestChildDepth) {
+              // Recursively build URL using the child pattern
+              // Create a temporary route object for the child pattern
+              const childRoute = {
+                __patternData: childPatternData,
+                pattern: childPattern,
+              };
+
+              const childUrl = buildMostPreciseUrl(childRoute, childParams);
+
+              if (childUrl) {
+                bestChildUrl = childUrl;
+                bestChildDepth = childDepth;
+              }
+            }
+          }
+        }
+
+        // If we found a better child URL, use it
+        if (bestChildUrl) {
+          return bestChildUrl;
+        }
+      }
+    }
+
+    if (!parsedPattern.segments) {
+      return "/";
+    }
+
+    // Filter out segments for parameters that are not provided (omitted defaults)
+    const filteredPattern = {
+      ...parsedPattern,
+      segments: parsedPattern.segments.filter((segment) => {
+        if (segment.type === "param") {
+          // Only keep parameter segments if we have a value for them
+          return segment.name in finalParams;
+        }
+        // Always keep literal segments
+        return true;
+      }),
+    };
+
+    // Remove trailing slash if we filtered out segments
+    if (
+      filteredPattern.segments.length < parsedPattern.segments.length &&
+      parsedPattern.trailingSlash
+    ) {
+      filteredPattern.trailingSlash = false;
+    }
+
+    return buildUrlFromPattern(filteredPattern, finalParams, new Map());
+  };
+
   return {
     pattern: parsedPattern,
     cleanPattern, // Return the clean pattern string
     connections, // Return signal connections along with pattern
     applyOn,
+    buildUrl,
+    buildMostPreciseUrl,
+    resolveParams,
   };
 };
 
@@ -331,7 +521,7 @@ const extractSearchParams = (urlObj) => {
 /**
  * Build a URL from a pattern and parameters
  */
-export const buildUrlFromPattern = (
+const buildUrlFromPattern = (
   parsedPattern,
   params = {},
   parameterDefaults = new Map(),
@@ -415,187 +605,6 @@ export const buildUrlFromPattern = (
 
   return path + (search ? `?${search}` : "");
 };
-
-/**
- * Build the most precise URL by using route relationships from pattern registry.
- * Each route is responsible for its own URL generation using its own signals.
- */
-export const buildMostPreciseUrl = (route, params = {}) => {
-  // Get the route's pattern from the pattern registry
-  const patternProps = route.__patternData || getPatternData(route.pattern);
-  if (!patternProps) {
-    // Fallback to basic URL building if no pattern found
-    return buildUrlFromPattern(
-      route.pattern?.segments
-        ? route.pattern
-        : { segments: [], trailingSlash: false },
-      params,
-      new Map(),
-    );
-  }
-
-  // Start with provided parameters
-  let finalParams = { ...params };
-
-  // Process all route connections for parameter handling
-  const { connections } = patternProps;
-  for (const connection of connections) {
-    const { paramName, signal, options } = connection;
-    const defaultValue = options.defaultValue;
-
-    if (paramName in finalParams) {
-      // Parameter was explicitly provided
-      // If it equals the default value, remove it for shorter URLs
-      if (finalParams[paramName] === defaultValue) {
-        delete finalParams[paramName];
-      }
-    }
-    // Parameter was NOT provided, check signal value
-    else if (signal?.value !== undefined && signal.value !== defaultValue) {
-      // Only include signal value if it's not the default
-      finalParams[paramName] = signal.value;
-      // If signal.value === defaultValue, omit the parameter for shorter URL
-    }
-  }
-
-  // DEEPEST URL GENERATION: Check if we should use a child route instead
-  // This happens when:
-  // 1. This route's parameters are all defaults (would be omitted)
-  // 2. A child route has non-default parameters that should be included
-
-  // DEEPEST URL GENERATION: Only activate when NO explicit parameters provided
-  // This prevents overriding explicit user intentions with signal-based "smart" routing
-  // We need to distinguish between user-provided params and signal-derived params
-  let hasUserProvidedParams = false;
-
-  // Check if provided params contain anything beyond what signals would provide
-  const signalDerivedParams = {};
-  for (const { paramName, signal, options } of patternProps.connections) {
-    if (signal?.value !== undefined) {
-      const defaultValue = options.defaultValue;
-      // Only include signal value if it's not the default (same logic as above)
-      if (signal.value !== defaultValue) {
-        signalDerivedParams[paramName] = signal.value;
-      }
-    }
-  }
-
-  // Check if params contains anything that's not from signals
-  for (const [key, value] of Object.entries(params)) {
-    if (signalDerivedParams[key] !== value) {
-      hasUserProvidedParams = true;
-      break;
-    }
-  }
-
-  // Also check if params has extra keys beyond what signals provide
-  const providedKeys = new Set(Object.keys(params));
-  const signalKeys = new Set(Object.keys(signalDerivedParams));
-  for (const key of providedKeys) {
-    if (!signalKeys.has(key)) {
-      hasUserProvidedParams = true;
-      break;
-    }
-  }
-
-  // ROOT ROUTE PROTECTION: Never apply deepest URL generation to root route "/"
-  // Users must always be able to navigate to home page regardless of app state
-  const isRootRoute = route.pattern === "/";
-
-  if (
-    !hasUserProvidedParams &&
-    !isRootRoute &&
-    patternProps.childRoutes.length
-  ) {
-    // Get child routes from routeRelationships map
-    const childRoutes = patternProps.childRoutes || [];
-
-    if (childRoutes.length > 0) {
-      // Only use deepest URL when user didn't provide any explicit params
-      // This route has child routes - check if any child route is more specific
-      for (const childRoute of childRoutes) {
-        const childRelationshipProps = patternProps.get(childRoute);
-        let childHasNonDefaults = false;
-        let childParams = {};
-
-        // Check child route parameters using only signal values (no explicit overrides)
-        for (const connection of childRelationshipProps.connections) {
-          const { paramName, signal, options } = connection;
-
-          if (signal?.value !== undefined) {
-            const defaultValue = options.defaultValue;
-
-            if (signal.value !== defaultValue) {
-              childHasNonDefaults = true;
-              childParams[paramName] = signal.value;
-            }
-          }
-        }
-
-        if (childHasNonDefaults) {
-          // Use child route to build URL instead - but only when no explicit params provided
-          // IMPORTANT: Only pass parameters that the child route actually expects
-          // The child route may have literal segments that don't need parent parameters
-
-          // Get parameters that the child route expects (from its connections)
-          const childExpectedParams = new Set(
-            childRelationshipProps.connections.map((conn) => conn.paramName),
-          );
-
-          // Filter merged params to only include what child route expects
-          const filteredParams = {};
-          for (const [key, value] of Object.entries({
-            ...finalParams,
-            ...childParams,
-          })) {
-            if (childExpectedParams.has(key)) {
-              filteredParams[key] = value;
-            }
-          }
-
-          return buildMostPreciseUrl(childRoute, filteredParams, patternProps);
-        }
-      }
-    }
-  }
-
-  // Get the parsed pattern
-  const parsedPattern = patternProps.parsedPattern ||
-    patternProps.routePattern?.pattern || {
-      segments: [],
-      trailingSlash: false,
-    };
-
-  if (!parsedPattern.segments) {
-    return "/";
-  }
-
-  // Filter out segments for parameters that are not provided (omitted defaults)
-  const filteredPattern = {
-    ...parsedPattern,
-    segments: parsedPattern.segments.filter((segment) => {
-      if (segment.type === "param") {
-        // Only keep parameter segments if we have a value for them
-        return segment.name in finalParams;
-      }
-      // Always keep literal segments
-      return true;
-    }),
-  };
-
-  // Remove trailing slash if we filtered out segments
-  if (
-    filteredPattern.segments.length < parsedPattern.segments.length &&
-    parsedPattern.trailingSlash
-  ) {
-    filteredPattern.trailingSlash = false;
-  }
-
-  return buildUrlFromPattern(filteredPattern, finalParams, new Map());
-};
-
-// Compatibility alias for existing tests - will be updated later
-export const buildUrlFromPatternWithSegmentFiltering = buildUrlFromPattern;
 
 /**
  * Check if childPattern is a child route of parentPattern

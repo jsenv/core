@@ -15,14 +15,13 @@ try {
 }
 ```
 
-```console
-TypeError: Cannot read properties of undefined (reading 'length')
-  at buildMostPreciseUrl (base/route_pattern.js:508:30)
-  at route.buildRelativeUrl (base/route.js:528:28)
-  at a.x (base/route.js:542:31)
-  at p.<anonymous> (base/route.js:547:43)
-  at registerRoute (base/route.js:546:36)
-  at setupRoutes (base/route.js:710:19)
+```js
+{
+  "matching_url": {
+    "id": "123"
+  },
+  "non_matching_url": null
+}
 ```
 
 ---
