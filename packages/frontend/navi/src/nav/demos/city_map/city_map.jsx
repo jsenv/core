@@ -3,6 +3,7 @@ import { render } from "preact";
 
 import {
   Box,
+  Button,
   Input,
   MessageBox,
   Paragraph,
@@ -333,6 +334,14 @@ const MapWithCoordinates = ({ city, lon, lat }) => {
         >
           Select Different City
         </RouteLink>
+
+        <Button
+          action={() => {
+            citySignal.value = "London";
+          }}
+        >
+          Set City to London
+        </Button>
 
         <RouteLink
           route={HOME_ROUTE}
