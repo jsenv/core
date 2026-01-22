@@ -6,6 +6,9 @@ globalSignalRegistry.clear();
 
 // Reproduce dashboard_demo.jsx scenario: parent route with search parameter child
 const sectionSignal = stateSignal("settings", { id: "demo_section" });
+const settingsTabSignal = stateSignal("general", {
+  id: "settings_tab",
+});
 const analyticsTabSignal = stateSignal("overview", {
   id: "demo_analytics_tab",
 });
@@ -18,6 +21,7 @@ analyticsTabSignal.value = "details"; // non-default
 // - Admin route with path parameter: /admin/:section/
 // - Analytics route with search parameter: /admin/analytics/?tab=signal
 const ADMIN_ROUTE = registerRoute(`/admin/:section=${sectionSignal}/`);
+registerRoute(`/admin/settings/:tab=${settingsTabSignal}`);
 const ADMIN_ANALYTICS_ROUTE = registerRoute(
   `/admin/analytics?tab=${analyticsTabSignal}`,
 );
