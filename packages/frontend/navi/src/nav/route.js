@@ -397,7 +397,7 @@ const registerRoute = (routePattern) => {
     }
     if (route.action) {
       // For action: merge with resolved params (includes defaults) so action gets complete params
-      const currentResolvedParams = resolveParams();
+      const currentResolvedParams = routePattern.resolveParams();
       const updatedActionParams = { ...currentResolvedParams, ...newParams };
       route.action.replaceParams(updatedActionParams);
     }
@@ -405,26 +405,14 @@ const registerRoute = (routePattern) => {
   };
   route.replaceParams = replaceParams;
 
-  const resolveParams = (providedParams, { cleanupDefaults } = {}) => {
-    // Delegate parameter resolution to the pattern system
-    return routePattern.resolveParams(providedParams, { cleanupDefaults });
-  };
-
   route.buildRelativeUrl = (params) => {
-    // Don't cleanup defaults here - let buildMostPreciseUrl handle it
-    // This preserves user intent for explicit parameters
-    const resolvedParams = resolveParams(params, {
-      cleanupDefaults: false, // Keep explicit parameters to detect user intent
-    });
-
-    // Use most precise URL generation approach - delegate to pattern system
-    const mostPreciseUrl = routePattern.buildMostPreciseUrl(resolvedParams);
-    return mostPreciseUrl;
+    // buildMostPreciseUrl now handles parameter resolution internally
+    return routePattern.buildMostPreciseUrl(params);
   };
 
   route.matchesParams = (providedParams) => {
     const currentParams = route.params;
-    const resolvedParams = resolveParams(providedParams);
+    const resolvedParams = routePattern.resolveParams(providedParams);
     const same = compareTwoJsValues(currentParams, resolvedParams);
     return same;
   };

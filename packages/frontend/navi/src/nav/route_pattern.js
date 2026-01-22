@@ -163,8 +163,12 @@ export const createRoutePattern = (pattern) => {
    * Each route is responsible for its own URL generation using its own signals.
    */
   const buildMostPreciseUrl = (params = {}) => {
-    // Start with provided parameters
-    let finalParams = { ...params };
+    // Handle parameter resolution internally to preserve user intent detection
+    // First pass: resolve parameters without cleaning up defaults to detect user intent
+    const resolvedParams = resolveParams(params, { cleanupDefaults: false });
+
+    // Start with resolved parameters
+    let finalParams = { ...resolvedParams };
 
     for (const connection of connections) {
       const { paramName, signal, options } = connection;
@@ -208,7 +212,8 @@ export const createRoutePattern = (pattern) => {
       }
     }
 
-    // Check if params contains anything that's not from signals
+    // Check if original params (before resolution) contains anything that's not from signals
+    // This preserves user intent detection for explicit parameters
     for (const [key, value] of Object.entries(params)) {
       if (signalDerivedParams[key] !== value) {
         hasUserProvidedParams = true;
@@ -216,7 +221,7 @@ export const createRoutePattern = (pattern) => {
       }
     }
 
-    // Also check if params has extra keys beyond what signals provide
+    // Also check if original params has extra keys beyond what signals provide
     const providedKeys = new Set(Object.keys(params));
     const signalKeys = new Set(Object.keys(signalDerivedParams));
     for (const key of providedKeys) {
