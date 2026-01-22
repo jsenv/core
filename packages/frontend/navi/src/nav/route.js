@@ -306,6 +306,12 @@ const registerRoute = (routePattern) => {
 
   const matchingSignal = signal(false);
   const rawParamsSignal = signal(ROUTE_NOT_MATCHING_PARAMS);
+  const paramsSignal = computed(() => {
+    const rawParams = rawParamsSignal.value;
+    // Pattern system handles parameter defaults, routes just work with raw params
+    return rawParams || {};
+  });
+  const visitedSignal = signal(false);
   for (const { signal: stateSignal, paramName, options = {} } of connections) {
     const { debug } = options;
 
@@ -345,14 +351,6 @@ const registerRoute = (routePattern) => {
     });
   }
 
-  const paramsSignal = computed(() => {
-    const rawParams = rawParamsSignal.value;
-    // Pattern system handles parameter defaults, routes just work with raw params
-    return rawParams || {};
-  });
-
-  const visitedSignal = signal(false);
-
   route.navTo = (params) => {
     if (!browserIntegration) {
       if (import.meta.dev) {
@@ -377,8 +375,7 @@ const registerRoute = (routePattern) => {
       replace: true,
     });
   };
-
-  const replaceParams = (newParams) => {
+  route.replaceParams = (newParams) => {
     const matching = matchingSignal.peek();
     if (!matching) {
       console.warn(
@@ -394,13 +391,15 @@ const registerRoute = (routePattern) => {
     }
     return route.redirectTo(newParams);
   };
-  route.replaceParams = replaceParams;
-
   route.buildRelativeUrl = (params) => {
     // buildMostPreciseUrl now handles parameter resolution internally
     return routePattern.buildMostPreciseUrl(params);
   };
-
+  route.buildUrl = (params) => {
+    const routeRelativeUrl = route.buildRelativeUrl(params);
+    const routeUrl = resolveRouteUrl(routeRelativeUrl);
+    return routeUrl;
+  };
   route.matchesParams = (providedParams) => {
     const currentParams = route.params;
     const resolvedParams = routePattern.resolveParams(providedParams);
@@ -408,35 +407,27 @@ const registerRoute = (routePattern) => {
     return same;
   };
 
-  // Create URL signals that can now access route relationships immediately
+  // relativeUrl/url
   const relativeUrlSignal = computed(() => {
     const rawParams = rawParamsSignal.value;
     const relativeUrl = route.buildRelativeUrl(rawParams);
     return relativeUrl;
   });
-
-  const disposeRelativeUrlEffect = effect(() => {
-    route.relativeUrl = relativeUrlSignal.value;
-  });
-  cleanupCallbackSet.add(disposeRelativeUrlEffect);
-
   const urlSignal = computed(() => {
     const routeUrl = route.buildUrl();
     return routeUrl;
   });
-  const buildUrl = (params) => {
-    const routeRelativeUrl = route.buildRelativeUrl(params);
-    const routeUrl = resolveRouteUrl(routeRelativeUrl);
-    return routeUrl;
-  };
-  route.buildUrl = buildUrl;
-
+  const disposeRelativeUrlEffect = effect(() => {
+    route.relativeUrl = relativeUrlSignal.value;
+  });
   const disposeUrlEffect = effect(() => {
     route.url = urlSignal.value;
   });
+  cleanupCallbackSet.add(disposeRelativeUrlEffect);
   cleanupCallbackSet.add(disposeUrlEffect);
 
-  const bindAction = (action) => {
+  // action stuff (for later)
+  route.bindAction = (action) => {
     const { store } = action.meta;
     if (store) {
       const { mutableIdKeys } = store;
@@ -467,7 +458,6 @@ const registerRoute = (routePattern) => {
     route.action = actionBoundToThisRoute;
     return actionBoundToThisRoute;
   };
-  route.bindAction = bindAction;
 
   // Store private properties for internal access
   routePrivateProperties.matchingSignal = matchingSignal;
