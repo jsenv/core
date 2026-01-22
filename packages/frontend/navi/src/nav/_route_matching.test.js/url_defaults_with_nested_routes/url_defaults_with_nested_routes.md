@@ -128,9 +128,15 @@ try {
     "section": "analytics",
     "tab": "details"
   },
-  "settings_route_matches_admin_root": null,
-  "settings_root_without_slash": null,
-  "settings_root_with_slash": null,
+  "settings_route_matches_admin_root": {
+    "tab": "general"
+  },
+  "settings_root_without_slash": {
+    "tab": "general"
+  },
+  "settings_root_with_slash": {
+    "tab": "general"
+  },
   "settings_with_general_tab": {
     "tab": "general"
   },
@@ -140,7 +146,10 @@ try {
   "settings_with_literal_settings_path": {
     "tab": "general"
   },
-  "settings_with_wrong_search_param": null,
+  "settings_with_wrong_search_param": {
+    "tab": "general",
+    "wrongParam": "value"
+  },
   "settings_should_not_match_analytics_url": null,
   "settings_should_not_match_users_url": null,
   "settings_with_different_section": null,

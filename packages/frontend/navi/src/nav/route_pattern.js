@@ -393,6 +393,22 @@ const parsePattern = (pattern, parameterDefaults = new Map()) => {
 };
 
 /**
+ * Check if a literal segment can be treated as optional based on parent route signal defaults
+ */
+const checkIfLiteralCanBeOptional = (literalValue, patternRegistry) => {
+  // Look through all registered patterns for parent patterns that might have this literal as a default
+  for (const [, patternData] of patternRegistry) {
+    // Check if any signal connection has this literal value as default
+    for (const connection of patternData.connections) {
+      if (connection.options.defaultValue === literalValue) {
+        return true; // This literal matches a signal default, so it can be optional
+      }
+    }
+  }
+  return false;
+};
+
+/**
  * Match a URL against a parsed pattern
  */
 const matchUrl = (parsedPattern, url, { parameterDefaults, baseUrl }) => {
@@ -452,14 +468,25 @@ const matchUrl = (parsedPattern, url, { parameterDefaults, baseUrl }) => {
     const patternSeg = parsedPattern.segments[i];
 
     if (patternSeg.type === "literal") {
-      // Must match exactly
+      // Check if URL has this segment
       if (urlSegmentIndex >= urlSegments.length) {
-        return null; // URL too short
+        // URL is too short for this literal segment
+        // Check if this literal segment can be treated as optional based on parent route defaults
+        const canBeOptional = checkIfLiteralCanBeOptional(
+          patternSeg.value,
+          patternRegistry,
+        );
+        if (canBeOptional) {
+          // Skip this literal segment, don't increment urlSegmentIndex
+          continue;
+        }
+        return null; // URL too short and literal is not optional
       }
 
       const urlSeg = urlSegments[urlSegmentIndex];
       if (urlSeg !== patternSeg.value) {
-        return null; // Literal mismatch
+        // Literal mismatch - this route doesn't match this URL
+        return null;
       }
       urlSegmentIndex++;
     } else if (patternSeg.type === "param") {
