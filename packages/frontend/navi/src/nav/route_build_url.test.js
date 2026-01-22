@@ -11,8 +11,6 @@ const testBuildUrl = (route, params = {}) => {
   return url;
 };
 
-const registerRoute = () => {};
-
 await snapshotTests(import.meta.url, ({ test }) => {
   test.ONLY("basic url building", () => {
     try {
@@ -382,12 +380,8 @@ await snapshotTests(import.meta.url, ({ test }) => {
     }
   });
 
-  test("deepest url generation with search parameters", () => {
-    clearAllRoutes();
-    globalSignalRegistry.clear();
-
+  test.ONLY("deepest url generation with search parameters", () => {
     // Mock localStorage to reproduce the real scenario
-    const originalWindow = globalThis.window;
     const localStorageMock = {
       storage: new Map(),
       getItem(key) {
@@ -403,13 +397,9 @@ await snapshotTests(import.meta.url, ({ test }) => {
         this.storage.clear();
       },
     };
-
-    // Ensure window object exists and has localStorage
-    if (!globalThis.window) {
-      globalThis.window = {};
-    }
-    globalThis.window.localStorage = localStorageMock;
-
+    globalThis.window = {
+      localStorage: localStorageMock,
+    };
     try {
       // Set up localStorage with analytics tab having non-default value
       localStorageMock.setItem("section_deepest", "analytics"); // non-default
@@ -436,12 +426,11 @@ await snapshotTests(import.meta.url, ({ test }) => {
       // Register routes like dashboard_demo.jsx:
       // - Admin route with path parameter: /admin/:section/
       // - Analytics route with search parameter: /admin/analytics/?tab=signal
-      const ROOT_ROUTE = registerRoute("/");
-      const ADMIN_ROUTE = registerRoute(`/admin/:section=${sectionSignal}/`);
-      registerRoute(`/admin/settings/:tab=${settingsTabSignal}`);
-      const ADMIN_ANALYTICS_ROUTE = registerRoute(
-        `/admin/analytics?tab=${analyticsTabSignal}`,
-      );
+      const { ROOT_ROUTE, ADMIN_ROUTE, ADMIN_ANALYTICS_ROUTE } = setupRoutes({
+        ROOT_ROUTE: "/",
+        ADMIN_ROUTE: `/admin/:section=${sectionSignal}/`,
+        ADMIN_ANALYTICS_ROUTE: `/admin/analytics/?tab=${analyticsTabSignal}`,
+      });
 
       return {
         // Reproduce the scenario: on root route, with analytics tab in localStorage
@@ -469,12 +458,10 @@ await snapshotTests(import.meta.url, ({ test }) => {
         root_route_url: ROOT_ROUTE.buildUrl({}),
       };
     } finally {
-      // Restore original window and localStorage
-      if (originalWindow) {
-        globalThis.window = originalWindow;
-      } else if (globalThis.window) {
-        delete globalThis.window;
-      }
+      clearAllRoutes();
+      globalSignalRegistry.clear();
+
+      delete globalThis.window;
     }
   });
 

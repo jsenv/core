@@ -1,4 +1,4 @@
-# [url building with local storage mocking](../../route_build_url.test.js#L100)
+# [url building with local storage mocking](../../route_build_url.test.js#L98)
 
 ```js
 // Mock window.localStorage (required by valueInLocalStorage)
