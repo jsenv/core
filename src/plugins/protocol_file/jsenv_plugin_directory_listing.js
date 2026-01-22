@@ -102,7 +102,7 @@ export const jsenvPluginDirectoryListing = ({
       if (!acceptsHtml) {
         return null;
       }
-      reference.fsStat = null; // reset fsStat, now it's not a directory anyor
+      reference.fsStat = null; // reset fsStat as it's not a directory anymore
       return `${htmlFileUrlForDirectory}?url=${encodeURIComponent(url)}`;
     },
     transformUrlContent: {
