@@ -401,7 +401,13 @@ const registerRoute = (routePattern) => {
   route.matchesParams = (providedParams) => {
     const currentParams = route.params;
     const resolvedParams = routePattern.resolveParams(providedParams);
-    const same = compareTwoJsValues(currentParams, resolvedParams);
+
+    // Filter current params to only include parameters relevant to this route's pattern
+    const relevantCurrentParams = routePattern.resolveParams(currentParams, {
+      filterToRelevantParams: true,
+    });
+
+    const same = compareTwoJsValues(relevantCurrentParams, resolvedParams);
     return same;
   };
 
@@ -467,18 +473,6 @@ const registerRoute = (routePattern) => {
   routePrivateProperties.cleanupCallbackSet = cleanupCallbackSet;
 
   return route;
-};
-
-export const clearAllRoutes = () => {
-  for (const route of routeSet) {
-    route.cleanup();
-  }
-  routeSet.clear();
-  routePrivatePropertiesMap.clear();
-  // Clear patterns as well
-  clearPatterns();
-  // Don't clear signal registry here - let tests manage it explicitly
-  // This prevents clearing signals that are still being used across multiple route registrations
 };
 
 export const useRouteStatus = (route) => {
@@ -563,4 +557,17 @@ export const setupRoutes = (routeDefinition) => {
   onRouteDefined();
 
   return routes;
+};
+
+// for unit tests
+export const clearAllRoutes = () => {
+  for (const route of routeSet) {
+    route.cleanup();
+  }
+  routeSet.clear();
+  routePrivatePropertiesMap.clear();
+  // Clear patterns as well
+  clearPatterns();
+  // Don't clear signal registry here - let tests manage it explicitly
+  // This prevents clearing signals that are still being used across multiple route registrations
 };

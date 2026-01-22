@@ -154,4 +154,63 @@ await snapshotTests(import.meta.url, ({ test }) => {
       globalSignalRegistry.clear();
     }
   });
+
+  test("matchesParams with trailing slash behavior", () => {
+    try {
+      const sectionSignal = stateSignal("settings", {
+        id: "matches_params_section",
+      });
+      const tabSignal = stateSignal("overview", {
+        id: "matches_params_tab",
+      });
+      const { ADMIN_ROUTE, ADMIN_ANALYTICS_ROUTE } = setupRoutes({
+        ADMIN_ROUTE: `/admin/:section=${sectionSignal}/`, // Note: trailing slash
+        ADMIN_ANALYTICS_ROUTE: `/admin/analytics/?tab=${tabSignal}`,
+      });
+
+      // Set the current URL to "/admin/analytics?tab=details"
+      updateRoutes(`${baseUrl}/admin/analytics?tab=details`);
+
+      return {
+        // Current route states after URL update
+        admin_route_matching: ADMIN_ROUTE.matching,
+        admin_route_params: ADMIN_ROUTE.params,
+        analytics_route_matching: ADMIN_ANALYTICS_ROUTE.matching,
+        analytics_route_params: ADMIN_ANALYTICS_ROUTE.params,
+
+        // Test matchesParams - the main focus of this test
+        // ADMIN_ROUTE should match because "/admin/:section/" with trailing slash
+        // should conceptually match "/admin/analytics?tab=details"
+        admin_matches_current_params: ADMIN_ROUTE.matchesParams({}),
+        admin_matches_explicit_analytics: ADMIN_ROUTE.matchesParams({
+          section: "analytics",
+        }),
+
+        // For comparison - analytics route matching
+        analytics_matches_current_params: ADMIN_ANALYTICS_ROUTE.matchesParams(
+          {},
+        ),
+        analytics_matches_explicit_details: ADMIN_ANALYTICS_ROUTE.matchesParams(
+          { tab: "details" },
+        ),
+
+        // Edge cases
+        admin_matches_different_section: ADMIN_ROUTE.matchesParams({
+          section: "users",
+        }),
+        analytics_matches_different_tab: ADMIN_ANALYTICS_ROUTE.matchesParams({
+          tab: "performance",
+        }),
+
+        // Signal values for reference
+        signal_values: {
+          section: sectionSignal.value,
+          tab: tabSignal.value,
+        },
+      };
+    } finally {
+      clearAllRoutes();
+      globalSignalRegistry.clear();
+    }
+  });
 });

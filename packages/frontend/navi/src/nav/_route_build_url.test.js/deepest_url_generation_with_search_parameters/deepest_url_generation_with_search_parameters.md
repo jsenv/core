@@ -49,7 +49,7 @@ try {
   const { ROOT_ROUTE, ADMIN_ROUTE, ADMIN_ANALYTICS_ROUTE } = setupRoutes({
     ROOT_ROUTE: "/",
     ADMIN_ROUTE: `/admin/:section=${sectionSignal}/`,
-    ADMIN_ANALYTICS_ROUTE: `/admin/analytics/?tab=${analyticsTabSignal}`,
+    ADMIN_ANALYTICS_ROUTE: `/admin/analytics?tab=${analyticsTabSignal}`,
   });
 
   return {
@@ -87,8 +87,8 @@ try {
 
 ```js
 {
-  "admin_route_from_root": "http://127.0.0.1/admin/analytics/?tab=details",
-  "analytics_route_direct": "http://127.0.0.1/admin/analytics/?tab=details",
+  "admin_route_from_root": "http://127.0.0.1/admin/analytics?tab=details",
+  "analytics_route_direct": "http://127.0.0.1/admin/analytics?tab=details",
   "localStorage_values": {
     "section": "analytics",
     "analytics_tab": "details",

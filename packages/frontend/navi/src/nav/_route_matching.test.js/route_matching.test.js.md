@@ -4,6 +4,7 @@
 - [basic](basic/basic.md)
 - [state signal](state_signal/state_signal.md)
 - [url defaults with nested routes](url_defaults_with_nested_routes/url_defaults_with_nested_routes.md)
+- [matchesParams with trailing slash behavior](matchesparams_with_trailing_slash_behavior/matchesparams_with_trailing_slash_behavior.md)
 
 ---
 

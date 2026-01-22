@@ -424,7 +424,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
       const { ROOT_ROUTE, ADMIN_ROUTE, ADMIN_ANALYTICS_ROUTE } = setupRoutes({
         ROOT_ROUTE: "/",
         ADMIN_ROUTE: `/admin/:section=${sectionSignal}/`,
-        ADMIN_ANALYTICS_ROUTE: `/admin/analytics/?tab=${analyticsTabSignal}`,
+        ADMIN_ANALYTICS_ROUTE: `/admin/analytics?tab=${analyticsTabSignal}`,
       });
 
       return {

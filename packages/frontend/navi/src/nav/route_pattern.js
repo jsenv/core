@@ -132,8 +132,23 @@ export const createRoutePattern = (pattern) => {
     return buildUrlFromPattern(parsedPattern, params, parameterDefaults);
   };
 
-  const resolveParams = (providedParams = {}, { cleanupDefaults } = {}) => {
-    const resolvedParams = { ...providedParams };
+  const resolveParams = (
+    providedParams = {},
+    { cleanupDefaults, filterToRelevantParams } = {},
+  ) => {
+    let resolvedParams = { ...providedParams };
+
+    // If filtering requested, only keep parameters defined in this pattern's connections
+    if (filterToRelevantParams) {
+      const relevantParams = {};
+      for (const connection of connections) {
+        const { paramName } = connection;
+        if (paramName in resolvedParams) {
+          relevantParams[paramName] = resolvedParams[paramName];
+        }
+      }
+      resolvedParams = relevantParams;
+    }
 
     // Process all connections for parameter resolution
     for (const connection of connections) {
