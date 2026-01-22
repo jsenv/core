@@ -6,13 +6,8 @@ import { setBaseUrl } from "./route_pattern.js";
 const baseUrl = "http://localhost:3000";
 setBaseUrl(baseUrl);
 
-const testBuildUrl = (route, params = {}) => {
-  const url = route.buildUrl(params);
-  return url;
-};
-
 await snapshotTests(import.meta.url, ({ test }) => {
-  test.ONLY("basic url building", () => {
+  test("basic url building", () => {
     try {
       const { HOME_ROUTE, USER_ROUTE, USER_POSTS_ROUTE } = setupRoutes({
         HOME_ROUTE: "/",
@@ -34,7 +29,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
     }
   });
 
-  test.ONLY("url building with nested routes inheritance", () => {
+  test("url building with nested routes inheritance", () => {
     try {
       const sectionSignal = stateSignal("settings", { id: "section" });
       const tabSignal = stateSignal("general", { id: "settings_tab" });
@@ -95,7 +90,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
     }
   });
 
-  test.ONLY("url building with local storage mocking", () => {
+  test("url building with local storage mocking", () => {
     // Mock window.localStorage (required by valueInLocalStorage)
     const localStorageMock = {
       storage: new Map(),
@@ -193,7 +188,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
     }
   });
 
-  test.ONLY("parent url updates when child signals change", () => {
+  test("parent url updates when child signals change", () => {
     try {
       const sectionSignal = stateSignal("settings", {
         id: "section_reactive",
@@ -253,7 +248,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
     }
   });
 
-  test.ONLY("explicit params should override signal values", () => {
+  test("explicit params should override signal values", () => {
     try {
       // Match dashboard_demo.jsx scenario: general is the default
       const sectionSignal = stateSignal("settings", {
@@ -309,7 +304,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
     }
   });
 
-  test.ONLY("root route should not use deepest url generation", () => {
+  test("root route should not use deepest url generation", () => {
     try {
       // Set up signals with non-default values that would normally trigger deepest URL
       const sectionSignal = stateSignal("settings");
@@ -349,7 +344,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
     }
   });
 
-  test.ONLY("debug deepest url generation", () => {
+  test("debug deepest url generation", () => {
     try {
       // Simple test case to see what's happening
       const tabSignal = stateSignal("overview", { id: "debug_tab" });
@@ -380,7 +375,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
     }
   });
 
-  test.ONLY("deepest url generation with search parameters", () => {
+  test("deepest url generation with search parameters", () => {
     // Mock localStorage to reproduce the real scenario
     const localStorageMock = {
       storage: new Map(),
@@ -466,19 +461,21 @@ await snapshotTests(import.meta.url, ({ test }) => {
   });
 
   test("url building with extra params", () => {
-    clearAllRoutes();
-    globalSignalRegistry.clear();
-    const tabSignal = stateSignal("general", { id: "extra_params_tab" });
+    const sectionSignal = stateSignal("general", { id: "extra_params_tab" });
+    const { ADMIN_ROUTE } = setupRoutes({
+      ROOT: "/",
+      ADMIN_ROUTE: `/admin/:section=${sectionSignal}`,
+    });
 
     return {
       // Extra params should become search parameters
-      with_extra_params: testBuildUrl(`/admin/:section=${tabSignal}`, {
+      with_extra_params: ADMIN_ROUTE.buildUrl({
         section: "settings",
         filter: "active",
         page: "2",
       }),
-      // Only extra params
-      only_search_params: testBuildUrl("/admin", {
+      // extra params (no session given)
+      _search_params: ADMIN_ROUTE.buildUrl({
         tab: "users",
         sort: "name",
       }),

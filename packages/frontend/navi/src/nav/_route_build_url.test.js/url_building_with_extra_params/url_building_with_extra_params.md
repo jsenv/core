@@ -1,19 +1,21 @@
-# [url building with extra params](../../route_build_url.test.js#L468)
+# [url building with extra params](../../route_build_url.test.js#L463)
 
 ```js
-clearAllRoutes();
-globalSignalRegistry.clear();
-const tabSignal = stateSignal("general", { id: "extra_params_tab" });
+const sectionSignal = stateSignal("general", { id: "extra_params_tab" });
+const { ADMIN_ROUTE } = setupRoutes({
+  ROOT: "/",
+  ADMIN_ROUTE: `/admin/:section=${sectionSignal}`,
+});
 
 return {
   // Extra params should become search parameters
-  with_extra_params: testBuildUrl(`/admin/:section=${tabSignal}`, {
+  with_extra_params: ADMIN_ROUTE.buildUrl({
     section: "settings",
     filter: "active",
     page: "2",
   }),
-  // Only extra params
-  only_search_params: testBuildUrl("/admin", {
+  // extra params (no session given)
+  _search_params: ADMIN_ROUTE.buildUrl({
     tab: "users",
     sort: "name",
   }),
@@ -23,7 +25,7 @@ return {
 ```js
 {
   "with_extra_params": "http://127.0.0.1/admin/settings?filter=active&page=2",
-  "only_search_params": "http://127.0.0.1/admin?tab=users&sort=name"
+  "_search_params": "http://127.0.0.1/admin?tab=users&sort=name"
 }
 ```
 
