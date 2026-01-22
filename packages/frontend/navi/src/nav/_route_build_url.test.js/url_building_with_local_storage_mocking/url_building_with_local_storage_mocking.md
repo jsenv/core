@@ -115,7 +115,7 @@ try {
     "localStorage_tab": "security",
     "signal_section": "users",
     "signal_tab": "security",
-    "admin_url": "http://127.0.0.1/admin/users",
+    "admin_url": "http://127.0.0.1/admin/settings/security?section=users",
     "settings_url": "http://127.0.0.1/admin/settings/security"
   },
   "scenario3": {
@@ -124,7 +124,7 @@ try {
     "localStorage_tab": "security",
     "signal_section": "settings",
     "signal_tab": "security",
-    "admin_url": "http://127.0.0.1/admin",
+    "admin_url": "http://127.0.0.1/admin/settings/security",
     "settings_url": "http://127.0.0.1/admin/settings/security"
   }
 }

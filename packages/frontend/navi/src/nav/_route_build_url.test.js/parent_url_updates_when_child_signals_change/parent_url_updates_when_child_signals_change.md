@@ -69,17 +69,17 @@ try {
     "settings_relativeUrl_initial": "/admin/settings"
   },
   "afterTabChange": {
-    "admin_after_tab_change": "http://127.0.0.1/admin",
+    "admin_after_tab_change": "http://127.0.0.1/admin/settings/security",
     "settings_after_tab_change": "http://127.0.0.1/admin/settings/security",
-    "admin_relativeUrl_after_tab": "/admin",
+    "admin_relativeUrl_after_tab": "/admin/settings/security",
     "settings_relativeUrl_after_tab": "/admin/settings/security",
     "tab_signal_value": "security",
-    "parent_now_uses_child_route": false
+    "parent_now_uses_child_route": true
   },
   "afterSectionChange": {
-    "admin_after_section_change": "http://127.0.0.1/admin/users",
+    "admin_after_section_change": "http://127.0.0.1/admin/settings/security?section=users",
     "settings_after_section_change": "http://127.0.0.1/admin/settings/security",
-    "admin_relativeUrl_after_section": "/admin/users",
+    "admin_relativeUrl_after_section": "/admin/settings/security?section=users",
     "settings_relativeUrl_after_section": "/admin/settings/security",
     "section_signal_value": "users",
     "parent_uses_own_param": true

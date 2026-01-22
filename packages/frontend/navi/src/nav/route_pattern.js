@@ -231,61 +231,48 @@ export const createRoutePattern = (pattern) => {
     const relationships = patternRelationships.get(pattern);
     const childPatterns = relationships?.childPatterns || [];
     if (!hasUserProvidedParams && !isRootRoute && childPatterns.length) {
-      if (childPatterns.length > 0) {
-        // Try to find the most specific child pattern that has active signals
-        let bestChildUrl = null;
-        let bestChildDepth = -1;
+      // Try to find the most specific child pattern that has active signals
+      for (const childPattern of childPatterns) {
+        const childPatternData = getPatternData(childPattern);
+        if (!childPatternData) continue;
 
-        for (const childPattern of childPatterns) {
-          // Get the child pattern data
-          const childPatternData = getPatternData(childPattern);
-          if (!childPatternData) continue;
+        // Check if any of this child's parameters have non-default signal values
+        let hasActiveParams = false;
+        const childParams = {};
 
-          // Check if any of this child's parameters have non-default signal values
-          let hasActiveParams = false;
-          const childParams = { ...finalParams }; // Start with parent params
-          
-          // Include parent signal values (even defaults) for child pattern matching
-          for (const parentConnection of connections) {
-            const { paramName, signal } = parentConnection;
-            if (signal?.value !== undefined) {
-              childParams[paramName] = signal.value;
-            }
+        // Include parent signal values for child pattern matching
+        for (const parentConnection of connections) {
+          const { paramName, signal, options } = parentConnection;
+          // Only include non-default parent signal values
+          if (
+            signal?.value !== undefined &&
+            signal.value !== options.defaultValue
+          ) {
+            childParams[paramName] = signal.value;
           }
+        }
 
-          for (const connection of childPatternData.connections) {
-            const { paramName, signal, options } = connection;
-            const defaultValue = options.defaultValue;
+        // Check child connections and see if any have non-default values
+        for (const connection of childPatternData.connections) {
+          const { paramName, signal, options } = connection;
+          const defaultValue = options.defaultValue;
 
-            if (signal?.value !== undefined && signal.value !== defaultValue) {
-              childParams[paramName] = signal.value;
+          if (signal?.value !== undefined) {
+            childParams[paramName] = signal.value;
+            if (signal.value !== defaultValue) {
               hasActiveParams = true;
-            }
-          }
-
-          if (hasActiveParams) {
-            // Calculate the depth/specificity of this child pattern
-            const childSegments =
-              childPatternData.parsedPattern?.segments || [];
-            const childDepth = childSegments.length;
-
-            if (childDepth > bestChildDepth) {
-              // Recursively build URL using the child pattern
-              // Get the child pattern object and call its buildMostPreciseUrl
-              const childPatternObj = createRoutePattern(childPattern);
-              const childUrl = childPatternObj.buildMostPreciseUrl(childParams);
-
-              if (childUrl) {
-                bestChildUrl = childUrl;
-                bestChildDepth = childDepth;
-              }
             }
           }
         }
 
-        // If we found a better child URL, use it
-        if (bestChildUrl) {
-          return bestChildUrl;
+        // If child has non-default parameters, use the child route
+        if (hasActiveParams) {
+          const childPatternObj = createRoutePattern(childPattern);
+          // Use buildUrl (not buildMostPreciseUrl) to avoid infinite recursion
+          const childUrl = childPatternObj.buildUrl(childParams);
+          if (childUrl) {
+            return childUrl;
+          }
         }
       }
     }
@@ -747,8 +734,8 @@ export const setupPatterns = (patternDefinitions) => {
       pattern: currentData.parsedPattern,
       parsedPattern: currentData.parsedPattern,
       connections: currentData.connections,
-      childRoutes: [], // Will be populated when routes are created
-      parentRoutes: [], // Will be populated when routes are created
+      childPatterns: currentData.childPatterns, // Store child patterns
+      parentPatterns: currentData.parentPatterns, // Store parent patterns
       originalPattern: currentPattern,
     });
   }
