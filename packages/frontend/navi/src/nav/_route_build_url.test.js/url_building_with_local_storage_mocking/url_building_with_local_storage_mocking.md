@@ -6,7 +6,6 @@ globalSignalRegistry.clear();
 
 // Mock window.localStorage (required by valueInLocalStorage)
 const originalWindow = globalThis.window;
-const originalLocalStorage = originalWindow?.localStorage;
 const localStorageMock = {
   storage: new Map(),
   getItem(key) {

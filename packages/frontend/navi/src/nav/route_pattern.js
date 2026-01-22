@@ -442,9 +442,14 @@ export const buildMostPreciseUrl = (route, params = {}, routeRelationships) => {
   // This prevents overriding explicit user intentions with signal-based "smart" routing
   const hasExplicitParams = Object.keys(params).length > 0;
 
+  // ROOT ROUTE PROTECTION: Never apply deepest URL generation to root route "/"
+  // Users must always be able to navigate to home page regardless of app state
+  const isRootRoute = route.pattern === "/";
+
   if (
     !hasExplicitParams &&
     !hasNonDefaultParams &&
+    !isRootRoute &&
     routePrivateProps.childRoutes?.length
   ) {
     // Only use deepest URL when user didn't provide any explicit params

@@ -6,6 +6,7 @@
 - [url building with local storage mocking](url_building_with_local_storage_mocking/url_building_with_local_storage_mocking.md)
 - [signal reactivity - parent url updates when child signals change](signal_reactivity_-_parent_url_updates_when_child_signals_change/signal_reactivity_-_parent_url_updates_when_child_signals_change.md)
 - [explicit params should override signal values](explicit_params_should_override_signal_values/explicit_params_should_override_signal_values.md)
+- [root route should not use deepest url generation](root_route_should_not_use_deepest_url_generation/root_route_should_not_use_deepest_url_generation.md)
 - [url building with extra params](url_building_with_extra_params/url_building_with_extra_params.md)
 
 ---

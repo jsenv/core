@@ -92,7 +92,6 @@ await snapshotTests(import.meta.url, ({ test }) => {
 
     // Mock window.localStorage (required by valueInLocalStorage)
     const originalWindow = globalThis.window;
-    const originalLocalStorage = originalWindow?.localStorage;
     const localStorageMock = {
       storage: new Map(),
       getItem(key) {
@@ -297,6 +296,47 @@ await snapshotTests(import.meta.url, ({ test }) => {
       signal_defaults: {
         section: "settings", // stateSignal first param
         tab: "general", // stateSignal first param
+      },
+    };
+  });
+
+  test("root route should not use deepest url generation", () => {
+    clearAllRoutes();
+    globalSignalRegistry.clear();
+
+    // Set up signals with non-default values that would normally trigger deepest URL
+    const sectionSignal = stateSignal("settings", { id: "root_test_section" });
+    const tabSignal = stateSignal("general", { id: "root_test_tab" });
+
+    // Change signals to non-default values
+    sectionSignal.value = "users"; // non-default
+    tabSignal.value = "advanced"; // non-default
+
+    // Register routes including root route
+    const ROOT_ROUTE = registerRoute("/");
+    const ADMIN_ROUTE = registerRoute(`/admin/:section=${sectionSignal}/`);
+    const ADMIN_SETTINGS_ROUTE = registerRoute(
+      `/admin/settings/:tab=${tabSignal}`,
+    );
+
+    return {
+      // Root route should ALWAYS stay as "/" even with non-default child signals
+      // Users must be able to navigate to home page regardless of app state
+      root_with_no_params: ROOT_ROUTE.buildUrl({}),
+      root_with_empty_params: ROOT_ROUTE.buildUrl(),
+
+      // For comparison - child routes should use deepest URL when no params provided
+      admin_no_params: ADMIN_ROUTE.buildUrl({}), // Should potentially use child route
+      admin_settings_no_params: ADMIN_SETTINGS_ROUTE.buildUrl({}), // Should use signal
+
+      // Verify signals have non-default values
+      signal_values: {
+        section: sectionSignal.value, // "users" (non-default)
+        tab: tabSignal.value, // "advanced" (non-default)
+      },
+      defaults: {
+        section: "settings",
+        tab: "general",
       },
     };
   });
