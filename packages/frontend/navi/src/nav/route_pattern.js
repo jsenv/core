@@ -355,10 +355,11 @@ export const buildUrlFromPattern = (
     // Only add trailing slash if the original pattern suggests there could be more content
     // For patterns like "/admin/:section/" where the slash is at the very end,
     // it's not needed in the generated URL if there are no more segments
-    const lastSegment = parsedPattern.segments[parsedPattern.segments.length - 1];
-    const hasMorePotentialContent = parsedPattern.wildcard || 
-      (lastSegment && lastSegment.type === "literal"); // Only add slash after literals, not parameters
-    
+    const lastSegment =
+      parsedPattern.segments[parsedPattern.segments.length - 1];
+    const hasMorePotentialContent =
+      parsedPattern.wildcard || (lastSegment && lastSegment.type === "literal"); // Only add slash after literals, not parameters
+
     if (hasMorePotentialContent) {
       path += "/";
     }
