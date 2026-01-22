@@ -12,19 +12,16 @@ import {
   TabList,
 } from "@jsenv/navi";
 
+const cities = ["Paris", "London", "Tokyo", "New York", "Sydney"];
+const citySignal = stateSignal(undefined, {
+  id: "city",
+  persists: true,
+  enum: cities,
+});
 const { HOME_ROUTE, SELECT_CITY_ROUTE, MAP_ROUTE } = setupRoutes({
   HOME_ROUTE: "/",
   SELECT_CITY_ROUTE: "/select_city",
-  MAP_ROUTE: "/map",
-});
-
-const cities = ["Paris", "London", "Tokyo", "New York", "Sydney"];
-const citySignal = stateSignal(undefined, {
-  localStorage: "city",
-  routes: {
-    city: MAP_ROUTE,
-  },
-  oneOf: cities,
+  MAP_ROUTE: `/map?city=${citySignal}`,
 });
 
 const App = () => {
