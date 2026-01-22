@@ -181,6 +181,7 @@ const matchUrl = (parsedPattern, url, { parameterDefaults, baseUrl }) => {
   // Parse the URL
   const urlObj = new URL(url, baseUrl);
   let pathname = urlObj.pathname;
+  const originalPathname = pathname; // Store original pathname before baseUrl processing
 
   // If baseUrl is provided, calculate the pathname relative to the baseUrl's directory
   if (baseUrl) {
@@ -194,10 +195,22 @@ const matchUrl = (parsedPattern, url, { parameterDefaults, baseUrl }) => {
     }
   }
 
-  // Handle root route - should match any URL as a fallback
+  // Handle root route - only matches empty path or just "/"
+  // OR when URL exactly matches baseUrl (treating baseUrl as root)
   if (parsedPattern.segments.length === 0) {
-    // Root route "/" matches any URL, acting as a catch-all/fallback
-    return extractSearchParams(urlObj);
+    if (pathname === "/" || pathname === "") {
+      return extractSearchParams(urlObj);
+    }
+
+    // Special case: if URL exactly matches baseUrl, treat as root route
+    if (baseUrl) {
+      const baseUrlObj = new URL(baseUrl);
+      if (originalPathname === baseUrlObj.pathname) {
+        return extractSearchParams(urlObj);
+      }
+    }
+
+    return null;
   }
 
   // Remove leading slash and split into segments
