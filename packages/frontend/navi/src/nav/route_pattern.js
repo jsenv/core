@@ -373,7 +373,7 @@ const parsePattern = (pattern, parameterDefaults = new Map()) => {
 
   // Separate path and query portions
   const [pathPortion, queryPortion] = pattern.split("?");
-  
+
   // Parse query parameters if present
   const queryParams = [];
   if (queryPortion) {
@@ -391,7 +391,7 @@ const parsePattern = (pattern, parameterDefaults = new Map()) => {
       } else {
         // Parameter without value: tab
         queryParams.push({
-          type: "query_param", 
+          type: "query_param",
           name: querySegment,
           hasDefaultValue: true,
         });
@@ -400,7 +400,9 @@ const parsePattern = (pattern, parameterDefaults = new Map()) => {
   }
 
   // Remove leading slash for processing the path portion
-  let cleanPattern = pathPortion.startsWith("/") ? pathPortion.slice(1) : pathPortion;
+  let cleanPattern = pathPortion.startsWith("/")
+    ? pathPortion.slice(1)
+    : pathPortion;
 
   // Check for wildcard first
   const wildcard = cleanPattern.endsWith("*");
@@ -686,13 +688,13 @@ const buildUrlFromPattern = (parsedPattern, params = {}) => {
   // Add query parameters defined in the pattern first
   const queryParamNames = new Set();
   const searchParams = new URLSearchParams();
-  
+
   // Handle pattern-defined query parameters (from ?tab, &lon, etc.)
   if (parsedPattern.queryParams) {
     for (const queryParam of parsedPattern.queryParams) {
       const paramName = queryParam.name;
       queryParamNames.add(paramName);
-      
+
       const value = params[paramName];
       if (value !== undefined) {
         searchParams.set(paramName, value);
@@ -703,7 +705,11 @@ const buildUrlFromPattern = (parsedPattern, params = {}) => {
 
   // Add remaining parameters as additional query parameters (excluding path and pattern query params)
   for (const [key, value] of Object.entries(params)) {
-    if (!pathParamNames.has(key) && !queryParamNames.has(key) && value !== undefined) {
+    if (
+      !pathParamNames.has(key) &&
+      !queryParamNames.has(key) &&
+      value !== undefined
+    ) {
       searchParams.set(key, value);
     }
   }
