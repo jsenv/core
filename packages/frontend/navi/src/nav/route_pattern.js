@@ -194,12 +194,10 @@ const matchUrl = (parsedPattern, url, { parameterDefaults, baseUrl }) => {
     }
   }
 
-  // Handle root route
+  // Handle root route - should match any URL as a fallback
   if (parsedPattern.segments.length === 0) {
-    if (pathname === "/" || pathname === "") {
-      return extractSearchParams(urlObj);
-    }
-    return null;
+    // Root route "/" matches any URL, acting as a catch-all/fallback
+    return extractSearchParams(urlObj);
   }
 
   // Remove leading slash and split into segments
@@ -267,16 +265,16 @@ const matchUrl = (parsedPattern, url, { parameterDefaults, baseUrl }) => {
   }
 
   // Check for remaining URL segments
-  // We don't check for remaining URL segments here.
-  // A pattern is allowed to match a prefix of a URL.
-  // The routing logic will then find the most specific route that matches.
-  // For instance /admin/:section can match /admin/settings/advanced
-  // and the router will be able to select a more specific route
-  // if one is registered for /admin/settings/:tab
-  // if (!parsedPattern.wildcard && urlSegmentIndex < urlSegments.length) {
-  //   return null;
-  // }
-  // If wildcard is present, we allow extra segments (no additional check needed)
+  // Patterns with trailing slashes can match additional URL segments (like wildcards)
+  // Patterns without trailing slashes should match exactly (unless they're wildcards)
+  if (
+    !parsedPattern.wildcard &&
+    !parsedPattern.trailingSlash &&
+    urlSegmentIndex < urlSegments.length
+  ) {
+    return null; // Pattern without trailing slash should not match extra segments
+  }
+  // If pattern has trailing slash or wildcard, allow extra segments (no additional check needed)
 
   // Add search parameters
   const searchParams = extractSearchParams(urlObj);
