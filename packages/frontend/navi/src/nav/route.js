@@ -469,22 +469,6 @@ const registerRoute = (routePattern) => {
   return route;
 };
 
-export const unregisterRoute = (route) => {
-  if (!route || !route.isRoute) {
-    return false;
-  }
-
-  const wasRegistered = routeSet.has(route);
-  if (wasRegistered) {
-    route.cleanup();
-    routeSet.delete(route);
-    routePrivatePropertiesMap.delete(route);
-    routePreviousStateMap.delete(route);
-  }
-
-  return wasRegistered;
-};
-
 export const clearAllRoutes = () => {
   for (const route of routeSet) {
     route.cleanup();

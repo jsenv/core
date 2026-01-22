@@ -49,7 +49,6 @@ export { useUrlSearchParam } from "./src/nav/browser_integration/use_url_search_
 export {
   clearAllRoutes,
   setupRoutes,
-  unregisterRoute,
   useRouteStatus,
 } from "./src/nav/route.js";
 export { Route, Routes, useMatchingRouteInfo } from "./src/nav/route.jsx";
