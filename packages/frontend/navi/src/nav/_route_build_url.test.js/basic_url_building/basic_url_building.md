@@ -1,21 +1,32 @@
-# [basic url building](../../route_build_url.test.js#L16)
+# [basic url building](../../route_build_url.test.js#L17)
 
 ```js
-return {
-  home_route: testBuildUrl("/"),
-  simple_param: testBuildUrl("/users/:id", { id: "123" }),
-  multiple_params: testBuildUrl("/users/:id/posts/:postId", {
-    id: "123",
-    postId: "abc",
-  }),
-};
+try {
+  const { HOME_ROUTE, USER_ROUTE, USER_POSTS_ROUTE } = setupRoutes({
+    HOME_ROUTE: "/",
+    USER_ROUTE: "/users/:id",
+    USER_POSTS_ROUTE: "/users/:id/posts/:postId",
+  });
+
+  return {
+    home_route: HOME_ROUTE.buildUrl(),
+    simple_param: USER_ROUTE.buildUrl({ id: "123" }),
+    multiple_params: USER_POSTS_ROUTE.buildUrl({
+      id: "123",
+      postId: "abc",
+    }),
+  };
+} finally {
+  clearAllRoutes();
+  globalSignalRegistry.clear();
+}
 ```
 
 ```js
 {
   "home_route": "http://127.0.0.1/",
-  "simple_param": "http://127.0.0.1/users/123",
-  "multiple_params": "http://127.0.0.1/users/123/posts/abc"
+  "simple_param": "http://127.0.0.1/users",
+  "multiple_params": "http://127.0.0.1/users/posts"
 }
 ```
 

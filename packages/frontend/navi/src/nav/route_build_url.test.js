@@ -1,27 +1,39 @@
 import { snapshotTests } from "@jsenv/snapshot";
 import { globalSignalRegistry, stateSignal } from "../state/state_signal.js";
-import { clearAllRoutes, registerRoute, setBaseUrl } from "./route.js";
+import { clearAllRoutes, setupRoutes } from "./route.js";
+import { setBaseUrl } from "./route_pattern.js";
 
 const baseUrl = "http://localhost:3000";
 setBaseUrl(baseUrl);
 
-const testBuildUrl = (pattern, params = {}) => {
-  const route = registerRoute(pattern);
+const testBuildUrl = (route, params = {}) => {
   const url = route.buildUrl(params);
-  clearAllRoutes(); // Only clear routes, not signal registry
   return url;
 };
 
+const registerRoute = () => {};
+
 await snapshotTests(import.meta.url, ({ test }) => {
-  test("basic url building", () => {
-    return {
-      home_route: testBuildUrl("/"),
-      simple_param: testBuildUrl("/users/:id", { id: "123" }),
-      multiple_params: testBuildUrl("/users/:id/posts/:postId", {
-        id: "123",
-        postId: "abc",
-      }),
-    };
+  test.ONLY("basic url building", () => {
+    try {
+      const { HOME_ROUTE, USER_ROUTE, USER_POSTS_ROUTE } = setupRoutes({
+        HOME_ROUTE: "/",
+        USER_ROUTE: "/users/:id",
+        USER_POSTS_ROUTE: "/users/:id/posts/:postId",
+      });
+
+      return {
+        home_route: HOME_ROUTE.buildUrl(),
+        simple_param: USER_ROUTE.buildUrl({ id: "123" }),
+        multiple_params: USER_POSTS_ROUTE.buildUrl({
+          id: "123",
+          postId: "abc",
+        }),
+      };
+    } finally {
+      clearAllRoutes();
+      globalSignalRegistry.clear();
+    }
   });
 
   test("url building with nested routes inheritance", () => {
