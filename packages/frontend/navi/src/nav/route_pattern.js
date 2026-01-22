@@ -403,122 +403,6 @@ export const buildUrlFromPattern = (
 };
 
 /**
- * Resolve parameters by merging provided params with current route state and defaults
- * This handles inheritance, literal parameter filtering, and signal fallback values
- */
-export const resolveParams = (route, providedParams = {}, options = {}) => {
-  const { cleanupDefaults = false } = options;
-  const routePrivateProps = route.routePrivateProps || route;
-  const paramConfigMap = route.paramConfigMap || new Map();
-  const currentParams = route.rawParamsSignal?.value || {};
-
-  // Determine which parameters correspond to literal segments and should be omitted
-  const inheritanceInfo = routePrivateProps?.inheritanceData;
-  const literalParameterNames = new Set();
-
-  if (inheritanceInfo) {
-    // Create a set of parameters that correspond to literal segments in the original pattern
-    const originalPatternSegments = routePrivateProps.originalPattern
-      .split("/")
-      .filter((s) => s !== "");
-
-    for (const inheritance of inheritanceInfo) {
-      const { paramName, literalValue, segmentIndex } = inheritance;
-      if (segmentIndex < originalPatternSegments.length) {
-        const originalSegment = originalPatternSegments[segmentIndex];
-        if (originalSegment === literalValue) {
-          literalParameterNames.add(paramName);
-        }
-      }
-    }
-  }
-
-  // Start with all current parameters, then overlay provided parameters
-  const paramNameSet = new Set();
-  if (currentParams) {
-    for (const paramName of Object.keys(currentParams)) {
-      if (!literalParameterNames.has(paramName)) {
-        paramNameSet.add(paramName);
-      }
-    }
-  }
-  if (providedParams) {
-    for (const paramName of Object.keys(providedParams)) {
-      if (!literalParameterNames.has(paramName)) {
-        paramNameSet.add(paramName);
-      }
-    }
-  }
-
-  const paramConfigNameSet = new Set(paramConfigMap.keys());
-  const mergedParams = {};
-
-  // First, process parameters that have configurations (signals)
-  for (const paramName of paramConfigNameSet) {
-    if (literalParameterNames.has(paramName)) {
-      continue;
-    }
-    if (paramNameSet.has(paramName)) {
-      // Skip configured params that are provided - they'll be handled in the second loop
-      continue;
-    }
-    const currentValue = currentParams?.[paramName];
-    if (currentValue !== undefined) {
-      paramNameSet.delete(paramName);
-      mergedParams[paramName] = currentValue;
-      continue;
-    }
-    const paramConfig = paramConfigMap.get(paramName);
-    if (!paramConfig) {
-      continue;
-    }
-    const { getFallbackValue, defaultValue } = paramConfig;
-    if (getFallbackValue) {
-      const fallbackValue = getFallbackValue();
-      if (fallbackValue !== undefined) {
-        if (cleanupDefaults && fallbackValue === defaultValue) {
-          continue;
-        }
-        mergedParams[paramName] = fallbackValue;
-        continue;
-      }
-    }
-    if (cleanupDefaults) {
-      continue;
-    }
-    if (defaultValue !== undefined) {
-      mergedParams[paramName] = defaultValue;
-      continue;
-    }
-  }
-
-  // Then, process provided parameters (including those without configurations)
-  for (const paramName of paramNameSet) {
-    if (literalParameterNames.has(paramName)) {
-      continue;
-    }
-    const providedValue = providedParams?.[paramName];
-    const currentValue = currentParams?.[paramName];
-
-    const valueToUse =
-      providedValue !== undefined ? providedValue : currentValue;
-
-    if (cleanupDefaults && providedValue === undefined) {
-      const paramConfig = paramConfigMap.get(paramName);
-      if (paramConfig && paramConfig.defaultValue === valueToUse) {
-        continue;
-      }
-    }
-
-    if (valueToUse !== undefined) {
-      mergedParams[paramName] = valueToUse;
-    }
-  }
-
-  return mergedParams;
-};
-
-/**
  * Build the most precise URL by using local storage values for the route's own parameters.
  * Each route is responsible for its own URL generation using its own signals.
  */
@@ -608,56 +492,60 @@ export const buildMostPreciseUrl = (route, params = {}, routeRelationships) => {
     !isRootRoute &&
     routePrivateProps.childRoutes?.length
   ) {
-    // Only use deepest URL when user didn't provide any explicit params
-    // This route has child routes - check if any child route is more specific
-    for (const childRoute of routePrivateProps.childRoutes) {
-      const childPrivateProps = routeRelationships.get(childRoute);
-      if (childPrivateProps?.connections) {
-        let childHasNonDefaults = false;
-        let childParams = {};
+    // Get child routes from routeRelationships map instead of route properties
+    const routeRelationshipProps = routeRelationships.get(route);
+    const childRoutes = routeRelationshipProps?.childRoutes || [];
 
-        // Check child route parameters using only signal values (no explicit overrides)
-        for (const connection of childPrivateProps.connections) {
-          const { paramName, signal, options } = connection;
+    if (childRoutes.length > 0) {
+      // Only use deepest URL when user didn't provide any explicit params
+      // This route has child routes - check if any child route is more specific
+      for (const childRoute of childRoutes) {
+        const childPrivateProps = routeRelationships.get(childRoute);
+        if (childPrivateProps?.connections) {
+          let childHasNonDefaults = false;
+          let childParams = {};
 
-          if (signal?.value !== undefined) {
-            const defaultValue = options?.defaultValue;
+          // Check child route parameters using only signal values (no explicit overrides)
+          for (const connection of childPrivateProps.connections) {
+            const { paramName, signal, options } = connection;
 
-            if (signal.value !== defaultValue) {
-              childHasNonDefaults = true;
-              childParams[paramName] = signal.value;
-            }
-          }
-        }
+            if (signal?.value !== undefined) {
+              const defaultValue = options?.defaultValue;
 
-        if (childHasNonDefaults) {
-          // Use child route to build URL instead - but only when no explicit params provided
-          // IMPORTANT: Only pass parameters that the child route actually expects
-          // The child route may have literal segments that don't need parent parameters
-
-          // Get parameters that the child route expects (from its connections)
-          const childExpectedParams = new Set(
-            childPrivateProps.connections.map((conn) => conn.paramName),
-          );
-
-          // Filter merged params to only include what child route expects
-          const filteredParams = {};
-          for (const [key, value] of Object.entries({
-            ...finalParams,
-            ...childParams,
-          })) {
-            if (childExpectedParams.has(key)) {
-              filteredParams[key] = value;
+              if (signal.value !== defaultValue) {
+                childHasNonDefaults = true;
+                childParams[paramName] = signal.value;
+              }
             }
           }
 
-          const result = buildMostPreciseUrl(
-            childRoute,
-            filteredParams,
-            routeRelationships,
-          );
+          if (childHasNonDefaults) {
+            // Use child route to build URL instead - but only when no explicit params provided
+            // IMPORTANT: Only pass parameters that the child route actually expects
+            // The child route may have literal segments that don't need parent parameters
 
-          return result;
+            // Get parameters that the child route expects (from its connections)
+            const childExpectedParams = new Set(
+              childPrivateProps.connections.map((conn) => conn.paramName),
+            );
+
+            // Filter merged params to only include what child route expects
+            const filteredParams = {};
+            for (const [key, value] of Object.entries({
+              ...finalParams,
+              ...childParams,
+            })) {
+              if (childExpectedParams.has(key)) {
+                filteredParams[key] = value;
+              }
+            }
+
+            return buildMostPreciseUrl(
+              childRoute,
+              filteredParams,
+              routeRelationships,
+            );
+          }
         }
       }
     }

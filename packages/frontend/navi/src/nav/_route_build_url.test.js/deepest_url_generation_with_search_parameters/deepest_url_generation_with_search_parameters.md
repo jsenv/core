@@ -56,9 +56,7 @@ try {
   // - Analytics route with search parameter: /admin/analytics/?tab=signal
   const ROOT_ROUTE = registerRoute("/");
   const ADMIN_ROUTE = registerRoute(`/admin/:section=${sectionSignal}/`);
-  const ADMIN_SETTINGS_ROUTE = registerRoute(
-    `/admin/settings/:tab=${settingsTabSignal}`,
-  );
+  registerRoute(`/admin/settings/:tab=${settingsTabSignal}`);
   const ADMIN_ANALYTICS_ROUTE = registerRoute(
     `/admin/analytics?tab=${analyticsTabSignal}`,
   );
