@@ -255,58 +255,60 @@ await snapshotTests(import.meta.url, ({ test }) => {
     }
   });
 
-  test("explicit params should override signal values", () => {
-    clearAllRoutes();
-    globalSignalRegistry.clear();
+  test.ONLY("explicit params should override signal values", () => {
+    try {
+      // Match dashboard_demo.jsx scenario: general is the default
+      const sectionSignal = stateSignal("settings", {
+        id: "param_override_section",
+      });
+      const tabSignal = stateSignal("general", { id: "param_override_tab" }); // "general" is default
+      // Simulate real scenario: tab signal gets changed to "advanced" in localStorage/state
+      tabSignal.value = "advanced"; // This simulates what happens in real app
 
-    // Match dashboard_demo.jsx scenario: general is the default
-    const sectionSignal = stateSignal("settings", {
-      id: "param_override_section",
-    });
-    const tabSignal = stateSignal("general", { id: "param_override_tab" }); // "general" is default
+      const { ADMIN_ROUTE, ADMIN_SETTINGS_ROUTE } = setupRoutes({
+        ROOT: "/",
+        ADMIN_ROUTE: `/admin/:section=${sectionSignal}/`,
+        ADMIN_SETTINGS_ROUTE: `/admin/settings/:tab=${tabSignal}`,
+      });
 
-    // Simulate real scenario: tab signal gets changed to "advanced" in localStorage/state
-    tabSignal.value = "advanced"; // This simulates what happens in real app
+      return {
+        // Test the exact issue: signal has "advanced" but we explicitly pass "general" (default)
+        // This should result in a short URL without the tab parameter
+        bug_reproduction_explicit_general: ADMIN_SETTINGS_ROUTE.buildUrl({
+          tab: "general", // Should override signal "advanced" and be omitted as default → "/admin/settings"
+        }),
 
-    const ADMIN_ROUTE = registerRoute(`/admin/:section=${sectionSignal}/`);
-    const ADMIN_SETTINGS_ROUTE = registerRoute(
-      `/admin/settings/:tab=${tabSignal}`,
-    );
+        // Test without any explicit params - should use signal value "advanced"
+        using_signal_advanced: ADMIN_SETTINGS_ROUTE.buildUrl({}), // Should use "advanced" from signal
 
-    return {
-      // Test the exact issue: signal has "advanced" but we explicitly pass "general" (default)
-      // This should result in a short URL without the tab parameter
-      bug_reproduction_explicit_general: ADMIN_SETTINGS_ROUTE.buildUrl({
-        tab: "general", // Should override signal "advanced" and be omitted as default → "/admin/settings"
-      }),
+        // Test explicit non-default override
+        explicit_security_override: ADMIN_SETTINGS_ROUTE.buildUrl({
+          tab: "security", // Should override signal "advanced" with "security"
+        }),
 
-      // Test without any explicit params - should use signal value "advanced"
-      using_signal_advanced: ADMIN_SETTINGS_ROUTE.buildUrl({}), // Should use "advanced" from signal
+        // Test section route behavior
+        section_with_default: ADMIN_ROUTE.buildUrl({
+          section: "settings", // Should be omitted as default → "/admin"
+        }),
 
-      // Test explicit non-default override
-      explicit_security_override: ADMIN_SETTINGS_ROUTE.buildUrl({
-        tab: "security", // Should override signal "advanced" with "security"
-      }),
+        section_with_non_default: ADMIN_ROUTE.buildUrl({
+          section: "users", // Should appear → "/admin/users/"
+        }),
 
-      // Test section route behavior
-      section_with_default: ADMIN_ROUTE.buildUrl({
-        section: "settings", // Should be omitted as default → "/admin"
-      }),
-
-      section_with_non_default: ADMIN_ROUTE.buildUrl({
-        section: "users", // Should appear → "/admin/users/"
-      }),
-
-      // Reference values for debugging
-      current_signal_values: {
-        section: sectionSignal.value,
-        tab: tabSignal.value,
-      },
-      signal_defaults: {
-        section: "settings", // stateSignal first param
-        tab: "general", // stateSignal first param
-      },
-    };
+        // Reference values for debugging
+        current_signal_values: {
+          section: sectionSignal.value,
+          tab: tabSignal.value,
+        },
+        signal_defaults: {
+          section: "settings", // stateSignal first param
+          tab: "general", // stateSignal first param
+        },
+      };
+    } finally {
+      clearAllRoutes();
+      globalSignalRegistry.clear();
+    }
   });
 
   test("root route should not use deepest url generation", () => {
