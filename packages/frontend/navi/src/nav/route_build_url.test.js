@@ -461,24 +461,70 @@ await snapshotTests(import.meta.url, ({ test }) => {
   });
 
   test("url building with extra params", () => {
-    const sectionSignal = stateSignal("general", { id: "extra_params_tab" });
-    const { ADMIN_ROUTE } = setupRoutes({
-      ROOT: "/",
-      ADMIN_ROUTE: `/admin/:section=${sectionSignal}`,
-    });
+    try {
+      const sectionSignal = stateSignal("general", { id: "extra_params_tab" });
+      const { ADMIN_ROUTE } = setupRoutes({
+        ROOT: "/",
+        ADMIN_ROUTE: `/admin/:section=${sectionSignal}`,
+      });
 
-    return {
-      // Extra params should become search parameters
-      with_extra_params: ADMIN_ROUTE.buildUrl({
-        section: "settings",
-        filter: "active",
-        page: "2",
-      }),
-      // extra params (no session given)
-      _search_params: ADMIN_ROUTE.buildUrl({
-        tab: "users",
-        sort: "name",
-      }),
-    };
+      return {
+        // Extra params should become search parameters
+        with_extra_params: ADMIN_ROUTE.buildUrl({
+          section: "settings",
+          filter: "active",
+          page: "2",
+        }),
+        // extra params (no session given)
+        _search_params: ADMIN_ROUTE.buildUrl({
+          tab: "users",
+          sort: "name",
+        }),
+      };
+    } finally {
+      clearAllRoutes();
+      globalSignalRegistry.clear();
+    }
+  });
+
+  test("url building with geographic coordinates (city map scenario)", () => {
+    try {
+      const citySignal = stateSignal("Paris", { 
+        id: "city",
+        oneOf: ["Paris", "London", "Tokyo", "New York", "Sydney"]
+      });
+      const longitudeSignal = stateSignal(2.3522, {
+        id: "longitude", 
+        type: "number"
+      });
+      const latitudeSignal = stateSignal(48.8566, {
+        id: "latitude",
+        type: "number"
+      });
+
+      const { HOME_ROUTE, SELECT_CITY_ROUTE, MAP_ROUTE } = setupRoutes({
+        HOME_ROUTE: "/",
+        SELECT_CITY_ROUTE: "/select_city",
+        MAP_ROUTE: `/map?city=${citySignal}`,
+      });
+
+      return {
+        // Default state with city signal value
+        map_with_paris: MAP_ROUTE.buildUrl(),
+
+        // Override city
+        map_with_explicit_city: MAP_ROUTE.buildUrl({ city: "London" }),
+
+        // Add extra search params
+        map_with_extra_params: MAP_ROUTE.buildUrl({
+          city: "Tokyo",
+          lon: 139.6917,
+          lat: 35.6895,
+        }),
+      };
+    } finally {
+      clearAllRoutes();
+      globalSignalRegistry.clear();
+    }
   });
 });

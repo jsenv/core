@@ -10,6 +10,7 @@
 - [debug deepest url generation](debug_deepest_url_generation/debug_deepest_url_generation.md)
 - [deepest url generation with search parameters](deepest_url_generation_with_search_parameters/deepest_url_generation_with_search_parameters.md)
 - [url building with extra params](url_building_with_extra_params/url_building_with_extra_params.md)
+- [url building with geographic coordinates (city map scenario)](url_building_with_geographic_coordinates_(city_map_scenario)/url_building_with_geographic_coordinates_(city_map_scenario).md)
 
 ---
 
