@@ -51,12 +51,24 @@ const routePrivatePropertiesMap = new Map();
 /**
  * Check if childPattern is a child route of parentPattern
  * E.g., "/admin/settings/:tab" is a child of "/admin/:section/"
+ * Also, "/admin/?tab=something" is a child of "/admin/"
  */
 const isChildRoute = (childPattern, parentPattern) => {
-  // Remove trailing slashes and query params for comparison
-  const cleanChild = childPattern.split("?")[0].replace(/\/$/, "");
-  const cleanParent = parentPattern.split("?")[0].replace(/\/$/, "");
+  // Split path and query parts
+  const [childPath, childQuery] = childPattern.split("?");
+  const [parentPath, parentQuery] = parentPattern.split("?");
 
+  // Remove trailing slashes for path comparison
+  const cleanChild = childPath.replace(/\/$/, "");
+  const cleanParent = parentPath.replace(/\/$/, "");
+
+  // CASE 1: Same path, child has query params, parent doesn't
+  // E.g., "/admin/?tab=something" is child of "/admin/"
+  if (cleanChild === cleanParent && childQuery && !parentQuery) {
+    return true;
+  }
+
+  // CASE 2: Traditional path-based child relationship
   // Child must be longer and start with parent pattern structure
   if (cleanChild.length <= cleanParent.length) {
     return false;
@@ -117,7 +129,8 @@ const analyzeRouteInheritance = (currentPattern) => {
     const existingProps = getRoutePrivateProperties(existingRoute);
     if (!existingProps) continue;
 
-    const existingPattern = existingProps.originalPattern;
+    // Use the clean pattern, not original pattern with signal placeholders
+    const existingPattern = existingProps.pattern; // This is the cleanPattern
     const existingSegments = parsePatternSegments(existingPattern);
     const existingConnections = existingProps.connections || [];
 
@@ -279,15 +292,16 @@ export const updateRoutes = (
 
     // If direct matching failed, try inheritance-based matching
     if (!newMatching && routePrivateProperties.inheritanceData) {
-      // Try to match using parent route patterns
-      for (const existingRoute of routeSet) {
-        if (existingRoute === route) continue; // Skip self
+      // Try to match using parent routes that this route inherits from
+      const routeProps = routeRelationships.get(route);
+      const parentRoutes = routeProps?.parentRoutes || [];
 
-        const existingPrivateProps = getRoutePrivateProperties(existingRoute);
-        if (!existingPrivateProps) continue;
+      for (const parentRoute of parentRoutes) {
+        const parentPrivateProps = getRoutePrivateProperties(parentRoute);
+        if (!parentPrivateProps) continue;
 
-        const existingRoutePattern = existingPrivateProps.routePattern;
-        const parentParams = existingRoutePattern.applyOn(url);
+        const parentRoutePattern = parentPrivateProps.routePattern;
+        const parentParams = parentRoutePattern.applyOn(url);
 
         if (parentParams) {
           // Check if this route can inherit from the parent route
@@ -541,21 +555,22 @@ export const registerRoute = (urlPatternRaw) => {
       parameterDefaults,
       childRoutes: [], // Initialize empty
       parentRoutes: [], // Initialize empty
+      originalPattern: urlPatternRaw, // Store the original pattern with search params
     };
     routeRelationships.set(route, routeProps);
 
-    // Find parent-child relationships
-    const currentPattern = cleanPattern;
+    // Find parent-child relationships using original patterns (with search params)
+    const currentOriginalPattern = urlPatternRaw;
 
     for (const existingRoute of routeSet) {
       const existingProps = routeRelationships.get(existingRoute);
       if (!existingProps) continue;
 
-      const existingPattern =
-        existingProps.pattern?.original || existingRoute.pattern;
+      const existingOriginalPattern =
+        existingProps.originalPattern || existingRoute.pattern;
 
       // Check if current route is a child of existing route
-      if (isChildRoute(currentPattern, existingPattern)) {
+      if (isChildRoute(currentOriginalPattern, existingOriginalPattern)) {
         routeProps.parentRoutes.push(existingRoute);
 
         // Add current route to existing route's children
@@ -563,14 +578,14 @@ export const registerRoute = (urlPatternRaw) => {
       }
 
       // Check if existing route is a child of current route
-      if (isChildRoute(existingPattern, currentPattern)) {
+      if (isChildRoute(existingOriginalPattern, currentOriginalPattern)) {
         routeProps.childRoutes.push(existingRoute);
       }
     }
   };
 
   // Store pattern info in route private properties for future pattern matching
-  const originalPatternBeforeTransforms = cleanPattern;
+  const originalPatternBeforeTransforms = urlPatternRaw; // Use the actual original pattern
   const originalRoutePattern = createRoutePattern(
     originalPatternBeforeTransforms,
     baseUrl,

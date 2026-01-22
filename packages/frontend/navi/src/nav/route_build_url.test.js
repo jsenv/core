@@ -341,6 +341,39 @@ await snapshotTests(import.meta.url, ({ test }) => {
     };
   });
 
+  test("deepest url generation with search parameters", () => {
+    clearAllRoutes();
+    globalSignalRegistry.clear();
+
+    // Simple case: basic path + search parameter variant
+    const tabSignal = stateSignal("overview", { id: "simple_tab" });
+    tabSignal.value = "performance"; // non-default
+
+    // Register routes: parent without search params, child with search params
+    const ADMIN_SETTINGS_BASE = registerRoute("/admin/settings/");
+    const ADMIN_SETTINGS_WITH_TAB = registerRoute(
+      `/admin/settings/?tab=${tabSignal}`,
+    );
+
+    return {
+      // Parent route should upgrade to child when child has non-default search params
+      base_no_params: ADMIN_SETTINGS_BASE.buildUrl({}), // Should become /admin/settings/?tab=performance
+
+      // Child route should work normally
+      with_tab_no_params: ADMIN_SETTINGS_WITH_TAB.buildUrl({}), // Should be /admin/settings/?tab=performance
+      with_tab_explicit: ADMIN_SETTINGS_WITH_TAB.buildUrl({ tab: "custom" }), // Should be /admin/settings/?tab=custom
+      with_tab_default: ADMIN_SETTINGS_WITH_TAB.buildUrl({ tab: "overview" }), // Should be /admin/settings/ (omit default)
+
+      // Verify signal value
+      signal_values: {
+        tab: tabSignal.value, // "performance" (non-default)
+      },
+      defaults: {
+        tab: "overview",
+      },
+    };
+  });
+
   test("url building with extra params", () => {
     clearAllRoutes();
     globalSignalRegistry.clear();
