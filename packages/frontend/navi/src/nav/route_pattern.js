@@ -10,7 +10,7 @@ const DEBUG = false;
 
 // Base URL management
 let baseFileUrl;
-let baseUrl;
+export let baseUrl;
 
 export const setBaseUrl = (value) => {
   baseFileUrl = new URL(
@@ -91,11 +91,7 @@ export const detectSignals = (routePattern) => {
 /**
  * Creates a custom route pattern matcher
  */
-export const createRoutePattern = (
-  pattern,
-  baseUrl,
-  parameterDefaults = new Map(),
-) => {
+export const createRoutePattern = (pattern, parameterDefaults = new Map()) => {
   // Detect and process signals in the pattern first
   const [cleanPattern, connections] = detectSignals(pattern);
   const parsedPattern = parsePattern(cleanPattern, parameterDefaults);
@@ -430,9 +426,8 @@ export const buildUrlFromPattern = (
  */
 export const buildMostPreciseUrl = (route, params = {}) => {
   // Get the route's pattern from the pattern registry
-  const routePrivateProps =
-    route.__patternData || getPatternData(route.pattern);
-  if (!routePrivateProps) {
+  const patternProps = route.__patternData || getPatternData(route.pattern);
+  if (!patternProps) {
     // Fallback to basic URL building if no pattern found
     return buildUrlFromPattern(
       route.pattern?.segments
@@ -447,7 +442,7 @@ export const buildMostPreciseUrl = (route, params = {}) => {
   let finalParams = { ...params };
 
   // Process all route connections for parameter handling
-  const { connections } = routePrivateProps;
+  const { connections } = patternProps;
   for (const connection of connections) {
     const { paramName, signal, options } = connection;
     const defaultValue = options.defaultValue;
@@ -479,11 +474,7 @@ export const buildMostPreciseUrl = (route, params = {}) => {
 
   // Check if provided params contain anything beyond what signals would provide
   const signalDerivedParams = {};
-  for (const {
-    paramName,
-    signal,
-    options,
-  } of routeRelationshipProps.connections) {
+  for (const { paramName, signal, options } of patternProps.connections) {
     if (signal?.value !== undefined) {
       const defaultValue = options.defaultValue;
       // Only include signal value if it's not the default (same logic as above)
@@ -518,16 +509,16 @@ export const buildMostPreciseUrl = (route, params = {}) => {
   if (
     !hasUserProvidedParams &&
     !isRootRoute &&
-    routeRelationshipProps.childRoutes.length
+    patternProps.childRoutes.length
   ) {
     // Get child routes from routeRelationships map
-    const childRoutes = routeRelationshipProps.childRoutes || [];
+    const childRoutes = patternProps.childRoutes || [];
 
     if (childRoutes.length > 0) {
       // Only use deepest URL when user didn't provide any explicit params
       // This route has child routes - check if any child route is more specific
       for (const childRoute of childRoutes) {
-        const childRelationshipProps = routeRelationships.get(childRoute);
+        const childRelationshipProps = patternProps.get(childRoute);
         let childHasNonDefaults = false;
         let childParams = {};
 
@@ -566,19 +557,15 @@ export const buildMostPreciseUrl = (route, params = {}) => {
             }
           }
 
-          return buildMostPreciseUrl(
-            childRoute,
-            filteredParams,
-            routeRelationships,
-          );
+          return buildMostPreciseUrl(childRoute, filteredParams, patternProps);
         }
       }
     }
   }
 
   // Get the parsed pattern
-  const parsedPattern = routeRelationshipProps.parsedPattern ||
-    routeRelationshipProps.routePattern?.pattern || {
+  const parsedPattern = patternProps.parsedPattern ||
+    patternProps.routePattern?.pattern || {
       segments: [],
       trailingSlash: false,
     };
@@ -674,7 +661,7 @@ const isChildPattern = (childPattern, parentPattern) => {
 /**
  * Register all patterns at once and build their relationships
  */
-export const setupPatterns = (patternDefinitions, baseFileUrl) => {
+export const setupPatterns = (patternDefinitions) => {
   // Clear existing patterns
   patternRegistry.clear();
   patternRelationships.clear();

@@ -7,11 +7,10 @@ import { createPubSub } from "@jsenv/dom";
 import { batch, computed, effect, signal } from "@preact/signals";
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
 import {
+  baseUrl,
   buildMostPreciseUrl,
   clearPatterns,
   createRoutePattern,
-  getBaseFileUrl,
-  getBaseUrl,
   getPatternData,
   setupPatterns,
 } from "./route_pattern.js";
@@ -41,166 +40,6 @@ const routePreviousStateMap = new WeakMap();
 // Store abort controllers per action to control their lifecycle based on route state
 const actionAbortControllerWeakMap = new WeakMap();
 
-/**
- * Analyzes route patterns to determine inheritance relationships
- * Much simpler than the previous URLPattern-based approach
- */
-const analyzeRouteInheritance = (currentPattern) => {
-  if (routeSet.size === 0) {
-    return {
-      canInherit: false,
-      inheritanceData: null,
-      parameterDefaults: new Map(),
-    };
-  }
-
-  if (DEBUG) {
-    console.debug(`[Inheritance] Analyzing pattern: ${currentPattern}`);
-  }
-
-  const currentSegments = parsePatternSegments(currentPattern);
-
-  // Look for existing routes that this pattern can inherit from
-  for (const existingRoute of routeSet) {
-    const existingProps = getRoutePrivateProperties(existingRoute);
-    if (!existingProps) continue;
-
-    // Use the clean pattern, not original pattern with signal placeholders
-    const existingPattern = existingProps.pattern; // This is the cleanPattern
-    const existingSegments = parsePatternSegments(existingPattern);
-    const existingConnections = existingProps.connections || [];
-
-    if (DEBUG) {
-      console.debug(`[Inheritance] Comparing with: ${existingPattern}`);
-    }
-
-    // Check if current pattern can inherit from existing pattern
-    const inheritanceResult = checkInheritanceCompatibility(
-      currentSegments,
-      existingSegments,
-      existingConnections,
-    );
-
-    if (inheritanceResult.canInherit) {
-      if (DEBUG) {
-        console.debug(
-          `[Inheritance] Found inheritance from ${existingPattern}:`,
-          inheritanceResult,
-        );
-      }
-
-      return {
-        canInherit: true,
-        inheritanceData: inheritanceResult.inheritanceData,
-        parameterDefaults: inheritanceResult.parameterDefaults,
-      };
-    }
-  }
-
-  return {
-    canInherit: false,
-    inheritanceData: null,
-    parameterDefaults: new Map(),
-  };
-};
-
-/**
- * Parse pattern into segments for inheritance analysis
- */
-const parsePatternSegments = (pattern) => {
-  if (pattern === "/") {
-    return [];
-  }
-
-  let cleanPattern = pattern.startsWith("/") ? pattern.slice(1) : pattern;
-
-  // Handle wildcards and trailing slashes
-  const hasWildcard = cleanPattern.endsWith("*");
-  const hasTrailingSlash = pattern.endsWith("/") && !hasWildcard;
-
-  if (hasWildcard) {
-    cleanPattern = cleanPattern.slice(0, -1);
-  }
-  if (hasTrailingSlash) {
-    cleanPattern = cleanPattern.slice(0, -1);
-  }
-
-  return cleanPattern ? cleanPattern.split("/") : [];
-};
-const checkInheritanceCompatibility = (
-  currentSegments,
-  existingSegments,
-  existingConnections,
-) => {
-  // Simple inheritance rules:
-  // 1. Current pattern has more literal segments that match existing parameters
-  // 2. Current pattern provides literal values where existing has parameters with defaults
-
-  if (currentSegments.length < existingSegments.length) {
-    return { canInherit: false };
-  }
-
-  const inheritanceData = [];
-  const parameterDefaults = new Map();
-
-  // Check each existing segment against current segments
-  for (let i = 0; i < existingSegments.length; i++) {
-    const existingSeg = existingSegments[i];
-    const currentSeg = currentSegments[i];
-
-    if (!currentSeg) break; // Current pattern is shorter
-
-    if (existingSeg === currentSeg) {
-      // Exact match - continue
-      continue;
-    }
-
-    if (existingSeg.startsWith(":")) {
-      // Existing has parameter, current has literal
-      const paramName = existingSeg.replace(/[?*]/g, "").substring(1);
-      const connection = existingConnections.find(
-        (c) => c.paramName === paramName,
-      );
-
-      if (connection && connection.options?.defaultValue !== undefined) {
-        const defaultValue = connection.options.defaultValue;
-
-        // Two cases:
-        // 1. Literal matches default - can create short version
-        // 2. Literal provides different value - inherit with new default
-
-        inheritanceData.push({
-          segmentIndex: i,
-          paramName,
-          literalValue: currentSeg,
-          originalDefault: defaultValue,
-          canOmit: currentSeg === defaultValue,
-        });
-
-        // Set parameter default to the literal value from current pattern
-        parameterDefaults.set(paramName, currentSeg);
-      } else {
-        // No default value - can't inherit
-        return { canInherit: false };
-      }
-    } else {
-      // Both are literals but don't match - can't inherit
-      return { canInherit: false };
-    }
-  }
-
-  // If we found inheritance opportunities, return them
-  if (inheritanceData.length > 0) {
-    return {
-      canInherit: true,
-      inheritanceData,
-      parameterDefaults,
-    };
-  }
-
-  return { canInherit: false };
-};
-
 export const updateRoutes = (
   url,
   {
@@ -225,46 +64,6 @@ export const updateRoutes = (
     // Use custom pattern matching - much simpler than URLPattern approach
     let extractedParams = routePattern.applyOn(url);
     let newMatching = Boolean(extractedParams);
-
-    // If direct matching failed, try inheritance-based matching
-    if (!newMatching && routePrivateProperties.inheritanceData) {
-      // Try to match using parent routes that this route inherits from
-      const routeProps = routeRelationships.get(route);
-      const parentRoutes = routeProps?.parentRoutes || [];
-
-      for (const parentRoute of parentRoutes) {
-        const parentPrivateProps = getRoutePrivateProperties(parentRoute);
-        if (!parentPrivateProps) continue;
-
-        const parentRoutePattern = parentPrivateProps.routePattern;
-        const parentParams = parentRoutePattern.applyOn(url);
-
-        if (parentParams) {
-          // Check if this route can inherit from the parent route
-          const inheritanceInfo = routePrivateProperties.inheritanceData;
-          let canInherit = true;
-          const inheritedParams = { ...parentParams };
-
-          // Verify inheritance compatibility
-          for (const inheritance of inheritanceInfo) {
-            const { paramName, literalValue } = inheritance;
-            if (parentParams[paramName] === literalValue) {
-              // The parent route's parameter matches our literal value - we can inherit
-              continue;
-            } else {
-              canInherit = false;
-              break;
-            }
-          }
-
-          if (canInherit) {
-            extractedParams = inheritedParams;
-            newMatching = true;
-            break; // Found a matching parent
-          }
-        }
-      }
-    }
 
     let newParams;
 
@@ -437,10 +236,10 @@ const registerRoute = (urlPatternRaw) => {
     );
   }
 
-  const { cleanPattern, connections, parsedPattern } = patternData;
+  const { cleanPattern, connections } = patternData;
 
   // Create route pattern with connections
-  const routePattern = createRoutePattern(urlPatternRaw, getBaseFileUrl());
+  const routePattern = createRoutePattern(urlPatternRaw);
 
   // Build parameter defaults from signal connections
   const parameterDefaults = new Map();
@@ -735,13 +534,6 @@ const registerRoute = (urlPatternRaw) => {
     return mostPreciseUrl;
   };
 
-  const buildUrl = (params) => {
-    const routeRelativeUrl = route.buildRelativeUrl(params);
-    const routeUrl = resolveRouteUrl(routeRelativeUrl, getBaseUrl());
-    return routeUrl;
-  };
-  route.buildUrl = buildUrl;
-
   route.matchesParams = (providedParams) => {
     const currentParams = route.params;
     const resolvedParams = resolveParams(providedParams);
@@ -762,10 +554,15 @@ const registerRoute = (urlPatternRaw) => {
   cleanupCallbackSet.add(disposeRelativeUrlEffect);
 
   const urlSignal = computed(() => {
-    const relativeUrl = relativeUrlSignal.value;
-    const url = resolveRouteUrl(relativeUrl, getBaseUrl());
-    return url;
+    const routeUrl = route.builUrl();
+    return routeUrl;
   });
+  const buildUrl = (params) => {
+    const routeRelativeUrl = route.buildRelativeUrl(params);
+    const routeUrl = resolveRouteUrl(routeRelativeUrl, baseUrl);
+    return routeUrl;
+  };
+  route.buildUrl = buildUrl;
 
   const disposeUrlEffect = effect(() => {
     route.url = urlSignal.value;
@@ -909,10 +706,8 @@ export const setupRoutes = (routeDefinition) => {
       "Routes already exist. Call clearAllRoutes() first to clean up existing routes before creating new ones. This prevents cross-test pollution and ensures clean state.",
     );
   }
-
   // PHASE 1: Register all patterns and build their relationships
-  setupPatterns(routeDefinition, getBaseFileUrl());
-
+  setupPatterns(routeDefinition);
   // PHASE 2: Create routes (patterns are ready, so routes can create signals immediately)
   const routes = {};
   for (const key of Object.keys(routeDefinition)) {
@@ -920,7 +715,6 @@ export const setupRoutes = (routeDefinition) => {
     const route = registerRoute(urlPatternRaw);
     routes[key] = route;
   }
-
   onRouteDefined();
 
   return routes;
