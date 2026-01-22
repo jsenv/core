@@ -11,7 +11,7 @@ const generateSignalId = () => {
 };
 
 /**
- * Creates an advanced signal with optional source signal synchronization and local storage persistence.
+ * Creates an advanced signal with optional source signal synchronization, local storage persistence, and validation.
  *
  * The sourceSignal option creates a fallback mechanism where:
  * 1. The signal initially takes the value from sourceSignal (if defined) or falls back to defaultValue
@@ -25,11 +25,14 @@ const generateSignalId = () => {
  *
  * @param {any} defaultValue - The default value to use when no other value is available
  * @param {Object} [options={}] - Configuration options
- * @param {string} [options.id] - Custom ID for the signal. If not provided, an auto-generated ID will be used
+ * @param {string|number} [options.id] - Custom ID for the signal. If not provided, an auto-generated ID will be used. Used for localStorage key and route pattern detection.
  * @param {import("@preact/signals").Signal} [options.sourceSignal] - Source signal to synchronize with. When the source signal changes, this signal will be updated
- * @param {boolean} [options.persists=false] - Whether to persist the signal value in localStorage
+ * @param {boolean} [options.persists=false] - Whether to persist the signal value in localStorage using the signal ID as key
  * @param {"string" | "number" | "boolean" | "object"} [options.type="string"] - Type for localStorage serialization/deserialization
- * @returns {import("@preact/signals").Signal} A signal that can be synchronized with a source signal and/or persisted in localStorage
+ * @param {Array} [options.oneOf] - Array of valid values for validation. Signal will be marked invalid if value is not in this array
+ * @param {Function} [options.autoFix] - Function to call when validation fails to automatically fix the value
+ * @param {boolean} [options.debug=false] - Enable debug logging for this signal's operations
+ * @returns {import("@preact/signals").Signal} A signal that can be synchronized with a source signal and/or persisted in localStorage. The signal includes a `validity` property for validation state.
  *
  * @example
  * // Basic signal with default value
@@ -41,6 +44,15 @@ const generateSignalId = () => {
  *   id: "user-theme",
  *   persists: true,
  *   type: "string"
+ * });
+ *
+ * @example
+ * // Signal with validation and auto-fix
+ * const tab = stateSignal("overview", {
+ *   id: "current-tab",
+ *   oneOf: ["overview", "details", "settings"],
+ *   autoFix: () => "overview",
+ *   persists: true
  * });
  *
  * @example

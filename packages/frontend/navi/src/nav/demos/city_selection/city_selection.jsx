@@ -16,7 +16,7 @@ const cities = ["Paris", "London", "Tokyo", "New York", "Sydney"];
 const citySignal = stateSignal(undefined, {
   id: "city",
   persists: true,
-  enum: cities,
+  oneOf: cities,
 });
 const { HOME_ROUTE, SELECT_CITY_ROUTE, MAP_ROUTE } = setupRoutes({
   HOME_ROUTE: "/",
