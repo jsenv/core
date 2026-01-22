@@ -69,11 +69,11 @@ return {
   "admin_explicit_users": "http://127.0.0.1/admin/users",
   "settings_should_include_general_tab": "http://127.0.0.1/admin/settings",
   "settings_with_security_tab": "http://127.0.0.1/admin/settings/security",
-  "settings_with_explicit_section_and_tab": "http://127.0.0.1/admin/settings/advanced",
+  "settings_with_explicit_section_and_tab": "http://127.0.0.1/admin/settings/advanced?section=toto",
   "settings_with_extra_params": "http://127.0.0.1/admin/settings?filter=active",
   "analytics_should_include_overview_tab": "http://127.0.0.1/admin/analytics/",
   "analytics_with_performance_tab": "http://127.0.0.1/admin/analytics/?tab=performance",
-  "analytics_with_explicit_section": "http://127.0.0.1/admin/analytics/?tab=performance",
+  "analytics_with_explicit_section": "http://127.0.0.1/admin/analytics/?section=toto&tab=performance",
   "analytics_with_extra_params": "http://127.0.0.1/admin/analytics/?tab=details&dateRange=7d"
 }
 ```

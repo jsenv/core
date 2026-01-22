@@ -403,6 +403,122 @@ export const buildUrlFromPattern = (
 };
 
 /**
+ * Resolve parameters by merging provided params with current route state and defaults
+ * This handles inheritance, literal parameter filtering, and signal fallback values
+ */
+export const resolveParams = (route, providedParams = {}, options = {}) => {
+  const { cleanupDefaults = false } = options;
+  const routePrivateProps = route.routePrivateProps || route;
+  const paramConfigMap = route.paramConfigMap || new Map();
+  const currentParams = route.rawParamsSignal?.value || {};
+
+  // Determine which parameters correspond to literal segments and should be omitted
+  const inheritanceInfo = routePrivateProps?.inheritanceData;
+  const literalParameterNames = new Set();
+
+  if (inheritanceInfo) {
+    // Create a set of parameters that correspond to literal segments in the original pattern
+    const originalPatternSegments = routePrivateProps.originalPattern
+      .split("/")
+      .filter((s) => s !== "");
+
+    for (const inheritance of inheritanceInfo) {
+      const { paramName, literalValue, segmentIndex } = inheritance;
+      if (segmentIndex < originalPatternSegments.length) {
+        const originalSegment = originalPatternSegments[segmentIndex];
+        if (originalSegment === literalValue) {
+          literalParameterNames.add(paramName);
+        }
+      }
+    }
+  }
+
+  // Start with all current parameters, then overlay provided parameters
+  const paramNameSet = new Set();
+  if (currentParams) {
+    for (const paramName of Object.keys(currentParams)) {
+      if (!literalParameterNames.has(paramName)) {
+        paramNameSet.add(paramName);
+      }
+    }
+  }
+  if (providedParams) {
+    for (const paramName of Object.keys(providedParams)) {
+      if (!literalParameterNames.has(paramName)) {
+        paramNameSet.add(paramName);
+      }
+    }
+  }
+
+  const paramConfigNameSet = new Set(paramConfigMap.keys());
+  const mergedParams = {};
+
+  // First, process parameters that have configurations (signals)
+  for (const paramName of paramConfigNameSet) {
+    if (literalParameterNames.has(paramName)) {
+      continue;
+    }
+    if (paramNameSet.has(paramName)) {
+      // Skip configured params that are provided - they'll be handled in the second loop
+      continue;
+    }
+    const currentValue = currentParams?.[paramName];
+    if (currentValue !== undefined) {
+      paramNameSet.delete(paramName);
+      mergedParams[paramName] = currentValue;
+      continue;
+    }
+    const paramConfig = paramConfigMap.get(paramName);
+    if (!paramConfig) {
+      continue;
+    }
+    const { getFallbackValue, defaultValue } = paramConfig;
+    if (getFallbackValue) {
+      const fallbackValue = getFallbackValue();
+      if (fallbackValue !== undefined) {
+        if (cleanupDefaults && fallbackValue === defaultValue) {
+          continue;
+        }
+        mergedParams[paramName] = fallbackValue;
+        continue;
+      }
+    }
+    if (cleanupDefaults) {
+      continue;
+    }
+    if (defaultValue !== undefined) {
+      mergedParams[paramName] = defaultValue;
+      continue;
+    }
+  }
+
+  // Then, process provided parameters (including those without configurations)
+  for (const paramName of paramNameSet) {
+    if (literalParameterNames.has(paramName)) {
+      continue;
+    }
+    const providedValue = providedParams?.[paramName];
+    const currentValue = currentParams?.[paramName];
+
+    const valueToUse =
+      providedValue !== undefined ? providedValue : currentValue;
+
+    if (cleanupDefaults && providedValue === undefined) {
+      const paramConfig = paramConfigMap.get(paramName);
+      if (paramConfig && paramConfig.defaultValue === valueToUse) {
+        continue;
+      }
+    }
+
+    if (valueToUse !== undefined) {
+      mergedParams[paramName] = valueToUse;
+    }
+  }
+
+  return mergedParams;
+};
+
+/**
  * Build the most precise URL by using local storage values for the route's own parameters.
  * Each route is responsible for its own URL generation using its own signals.
  */
@@ -450,14 +566,45 @@ export const buildMostPreciseUrl = (route, params = {}, routeRelationships) => {
 
   // DEEPEST URL GENERATION: Only activate when NO explicit parameters provided
   // This prevents overriding explicit user intentions with signal-based "smart" routing
-  const hasExplicitParams = Object.keys(params).length > 0;
+  // We need to distinguish between user-provided params and signal-derived params
+  let hasUserProvidedParams = false;
+
+  // Check if provided params contain anything beyond what signals would provide
+  const signalDerivedParams = {};
+  for (const { paramName, signal, options } of routePrivateProps.connections) {
+    if (signal?.value !== undefined) {
+      const defaultValue = options?.defaultValue;
+      // Only include signal value if it's not the default (same logic as above)
+      if (signal.value !== defaultValue) {
+        signalDerivedParams[paramName] = signal.value;
+      }
+    }
+  }
+
+  // Check if params contains anything that's not from signals
+  for (const [key, value] of Object.entries(params)) {
+    if (signalDerivedParams[key] !== value) {
+      hasUserProvidedParams = true;
+      break;
+    }
+  }
+
+  // Also check if params has extra keys beyond what signals provide
+  const providedKeys = new Set(Object.keys(params));
+  const signalKeys = new Set(Object.keys(signalDerivedParams));
+  for (const key of providedKeys) {
+    if (!signalKeys.has(key)) {
+      hasUserProvidedParams = true;
+      break;
+    }
+  }
 
   // ROOT ROUTE PROTECTION: Never apply deepest URL generation to root route "/"
   // Users must always be able to navigate to home page regardless of app state
   const isRootRoute = route.pattern === "/";
 
   if (
-    !hasExplicitParams &&
+    !hasUserProvidedParams &&
     !isRootRoute &&
     routePrivateProps.childRoutes?.length
   ) {
@@ -504,11 +651,13 @@ export const buildMostPreciseUrl = (route, params = {}, routeRelationships) => {
             }
           }
 
-          return buildMostPreciseUrl(
+          const result = buildMostPreciseUrl(
             childRoute,
             filteredParams,
             routeRelationships,
           );
+
+          return result;
         }
       }
     }

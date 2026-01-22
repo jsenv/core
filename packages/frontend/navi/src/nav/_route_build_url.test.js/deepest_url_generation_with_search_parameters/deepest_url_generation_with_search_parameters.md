@@ -4,45 +4,115 @@
 clearAllRoutes();
 globalSignalRegistry.clear();
 
-// Reproduce dashboard_demo.jsx scenario: parent route with search parameter child
-const sectionSignal = stateSignal("settings", { id: "demo_section" });
-const settingsTabSignal = stateSignal("general", {
-  id: "settings_tab",
-});
-const analyticsTabSignal = stateSignal("overview", {
-  id: "demo_analytics_tab",
-});
-
-// Set signals to non-default values to trigger deepest URL generation
-sectionSignal.value = "analytics"; // non-default
-analyticsTabSignal.value = "details"; // non-default
-
-// Register routes like dashboard_demo.jsx:
-// - Admin route with path parameter: /admin/:section/
-// - Analytics route with search parameter: /admin/analytics/?tab=signal
-const ADMIN_ROUTE = registerRoute(`/admin/:section=${sectionSignal}/`);
-registerRoute(`/admin/settings/:tab=${settingsTabSignal}`);
-const ADMIN_ANALYTICS_ROUTE = registerRoute(
-  `/admin/analytics?tab=${analyticsTabSignal}`,
-);
-
-return {
-  // This should be /admin/analytics/?tab=details (deepest URL with search param)
-  admin_route_url: ADMIN_ROUTE.buildUrl({}),
-  // For comparison - direct analytics route URL
-  analytics_route_url: ADMIN_ANALYTICS_ROUTE.buildUrl({}),
-  // Verify signal values
-  section_signal: sectionSignal.value,
-  analytics_tab_signal: analyticsTabSignal.value,
+// Mock localStorage to reproduce the real scenario
+const originalWindow = globalThis.window;
+const localStorageMock = {
+  storage: new Map(),
+  getItem(key) {
+    return this.storage.get(key) || null;
+  },
+  setItem(key, value) {
+    this.storage.set(key, String(value));
+  },
+  removeItem(key) {
+    this.storage.delete(key);
+  },
+  clear() {
+    this.storage.clear();
+  },
 };
+
+// Ensure window object exists and has localStorage
+if (!globalThis.window) {
+  globalThis.window = {};
+}
+globalThis.window.localStorage = localStorageMock;
+
+try {
+  // Set up localStorage with analytics tab having non-default value
+  localStorageMock.setItem("section_deepest", "analytics"); // non-default
+  localStorageMock.setItem("analytics_tab_deepest", "details"); // non-default
+  localStorageMock.setItem("settings_tab_deepest", "general"); // default
+
+  // Create signals with localStorage persistence (like real app)
+  const sectionSignal = stateSignal("settings", {
+    id: "section_deepest",
+    persists: true,
+    type: "string",
+  });
+  const settingsTabSignal = stateSignal("general", {
+    id: "settings_tab_deepest",
+    persists: true,
+    type: "string",
+  });
+  const analyticsTabSignal = stateSignal("overview", {
+    id: "analytics_tab_deepest",
+    persists: true,
+    type: "string",
+  });
+
+  // Register routes like dashboard_demo.jsx:
+  // - Admin route with path parameter: /admin/:section/
+  // - Analytics route with search parameter: /admin/analytics/?tab=signal
+  const ROOT_ROUTE = registerRoute("/");
+  const ADMIN_ROUTE = registerRoute(`/admin/:section=${sectionSignal}/`);
+  const ADMIN_SETTINGS_ROUTE = registerRoute(
+    `/admin/settings/:tab=${settingsTabSignal}`,
+  );
+  const ADMIN_ANALYTICS_ROUTE = registerRoute(
+    `/admin/analytics?tab=${analyticsTabSignal}`,
+  );
+
+  return {
+    // Reproduce the scenario: on root route, with analytics tab in localStorage
+    // This should generate deepest URL including analytics tab from localStorage
+    admin_route_from_root: ADMIN_ROUTE.buildUrl({}),
+
+    // For comparison - direct analytics route URL
+    analytics_route_direct: ADMIN_ANALYTICS_ROUTE.buildUrl({}),
+
+    // Verify localStorage values
+    localStorage_values: {
+      section: localStorageMock.getItem("section_deepest"),
+      analytics_tab: localStorageMock.getItem("analytics_tab_deepest"),
+      settings_tab: localStorageMock.getItem("settings_tab_deepest"),
+    },
+
+    // Verify signal values (should reflect localStorage)
+    signal_values: {
+      section: sectionSignal.value,
+      analytics_tab: analyticsTabSignal.value,
+      settings_tab: settingsTabSignal.value,
+    },
+
+    // Test root route (should not use deepest URL)
+    root_route_url: ROOT_ROUTE.buildUrl({}),
+  };
+} finally {
+  // Restore original window and localStorage
+  if (originalWindow) {
+    globalThis.window = originalWindow;
+  } else if (globalThis.window) {
+    delete globalThis.window;
+  }
+}
 ```
 
 ```js
 {
-  "admin_route_url": "http://127.0.0.1/admin/analytics?tab=details",
-  "analytics_route_url": "http://127.0.0.1/admin/analytics?tab=details",
-  "section_signal": "analytics",
-  "analytics_tab_signal": "details"
+  "admin_route_from_root": "http://127.0.0.1/admin/analytics?tab=details",
+  "analytics_route_direct": "http://127.0.0.1/admin/analytics?tab=details",
+  "localStorage_values": {
+    "section": "analytics",
+    "analytics_tab": "details",
+    "settings_tab": null
+  },
+  "signal_values": {
+    "section": "analytics",
+    "analytics_tab": "details",
+    "settings_tab": "general"
+  },
+  "root_route_url": "http://127.0.0.1/"
 }
 ```
 

@@ -6,7 +6,11 @@
 import { createPubSub } from "@jsenv/dom";
 import { batch, computed, effect, signal } from "@preact/signals";
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
-import { buildMostPreciseUrl, createRoutePattern } from "./route_pattern.js";
+import {
+  buildMostPreciseUrl,
+  createRoutePattern,
+  resolveParams,
+} from "./route_pattern.js";
 import { resolveRouteUrl } from "./route_url.js";
 
 const DEBUG = false;
@@ -868,7 +872,7 @@ export const registerRoute = (urlPatternRaw) => {
     }
     if (route.action) {
       // For action: merge with resolved params (includes defaults) so action gets complete params
-      const currentResolvedParams = resolveParams();
+      const currentResolvedParams = resolveParams(route);
       const updatedActionParams = { ...currentResolvedParams, ...newParams };
       route.action.replaceParams(updatedActionParams);
     }
@@ -876,135 +880,8 @@ export const registerRoute = (urlPatternRaw) => {
   };
   route.replaceParams = replaceParams;
 
-  const resolveParams = (providedParams, { cleanupDefaults } = {}) => {
-    const currentParams = rawParamsSignal.value;
-
-    // Determine which parameters correspond to literal segments and should be omitted
-    const routePrivateProps = getRoutePrivateProperties(route);
-    const inheritanceInfo = routePrivateProps?.inheritanceData;
-    const literalParameterNames = new Set(); // Track literal parameters to exclude them
-
-    if (inheritanceInfo) {
-      // Create a set of parameters that correspond to literal segments in the original pattern
-      // These should not be exposed in the final params since they're "hardcoded" in the route
-      const originalPatternSegments = routePrivateProps.originalPattern
-        .split("/")
-        .filter((s) => s !== "");
-
-      for (const inheritance of inheritanceInfo) {
-        const { paramName, literalValue, segmentIndex } = inheritance;
-        // If the original pattern had a literal segment at this position,
-        // don't include this parameter in the final params
-        if (segmentIndex < originalPatternSegments.length) {
-          const originalSegment = originalPatternSegments[segmentIndex];
-          if (originalSegment === literalValue) {
-            literalParameterNames.add(paramName);
-          }
-        }
-      }
-    }
-
-    // Start with all current parameters, then overlay provided parameters
-    const paramNameSet = new Set();
-    if (currentParams) {
-      for (const paramName of Object.keys(currentParams)) {
-        // Skip literal parameters that correspond to hardcoded segments
-        if (!literalParameterNames.has(paramName)) {
-          paramNameSet.add(paramName);
-        }
-      }
-    }
-    if (providedParams) {
-      for (const paramName of Object.keys(providedParams)) {
-        // Skip literal parameters that correspond to hardcoded segments
-        if (!literalParameterNames.has(paramName)) {
-          paramNameSet.add(paramName);
-        }
-      }
-    }
-
-    const paramConfigNameSet = new Set(paramConfigMap.keys());
-    const mergedParams = {};
-
-    // First, process parameters that have configurations (signals)
-    for (const paramName of paramConfigNameSet) {
-      // Skip literal parameters
-      if (literalParameterNames.has(paramName)) {
-        continue;
-      }
-      if (paramNameSet.has(paramName)) {
-        // Skip configured params that are provided - they'll be handled in the second loop
-        continue;
-      }
-      const currentValue = currentParams?.[paramName];
-      if (currentValue !== undefined) {
-        paramNameSet.delete(paramName);
-        mergedParams[paramName] = currentValue;
-        continue;
-      }
-      const paramConfig = paramConfigMap.get(paramName);
-      if (!paramConfig) {
-        continue;
-      }
-      const { getFallbackValue, defaultValue } = paramConfig;
-      if (getFallbackValue) {
-        const fallbackValue = getFallbackValue();
-        if (fallbackValue !== undefined) {
-          if (cleanupDefaults && fallbackValue === defaultValue) {
-            // When cleaning up defaults, include as undefined so prepareRouteRelativeUrl can remove the param
-            // mergedParams[paramName] = undefined;
-            continue;
-          }
-          mergedParams[paramName] = fallbackValue;
-          continue;
-        }
-      }
-      if (cleanupDefaults) {
-        // When cleaning up defaults, include as undefined so prepareRouteRelativeUrl can remove the param
-        // mergedParams[paramName] = undefined;
-        continue;
-      }
-      if (defaultValue !== undefined) {
-        mergedParams[paramName] = defaultValue;
-        continue;
-      }
-      continue;
-    }
-
-    // Then, process provided parameters (including those without configurations)
-    for (const paramName of paramNameSet) {
-      // Skip literal parameters
-      if (literalParameterNames.has(paramName)) {
-        continue;
-      }
-      const providedValue = providedParams?.[paramName];
-      const currentValue = currentParams?.[paramName];
-
-      // Use provided value if available, otherwise use current value
-      const valueToUse =
-        providedValue !== undefined ? providedValue : currentValue;
-
-      if (cleanupDefaults && providedValue === undefined) {
-        // Only cleanup defaults for parameters that were NOT explicitly provided
-        // If user explicitly provides a parameter, respect it even if it's the default
-        const paramConfig = paramConfigMap.get(paramName);
-        if (paramConfig && paramConfig.defaultValue === valueToUse) {
-          // When cleaning up defaults, include as undefined so prepareRouteRelativeUrl can remove the param
-          // mergedParams[paramName] = undefined;
-          continue;
-        }
-      }
-
-      if (valueToUse !== undefined) {
-        mergedParams[paramName] = valueToUse;
-      }
-    }
-    return mergedParams;
-  };
-
   route.buildRelativeUrl = (params) => {
-    const resolvedParams = resolveParams(params, {
-      // cleanup defaults to keep url as short as possible
+    const resolvedParams = resolveParams(route, params, {
       cleanupDefaults: true, // Clean up defaults so we get shorter URLs
     });
 
@@ -1043,7 +920,7 @@ export const registerRoute = (urlPatternRaw) => {
 
   route.matchesParams = (providedParams) => {
     const currentParams = route.params;
-    const resolvedParams = resolveParams(providedParams);
+    const resolvedParams = resolveParams(route, providedParams);
     const same = compareTwoJsValues(currentParams, resolvedParams);
     return same;
   };
