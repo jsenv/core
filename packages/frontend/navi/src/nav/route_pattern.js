@@ -244,6 +244,14 @@ export const createRoutePattern = (pattern) => {
           // Check if any of this child's parameters have non-default signal values
           let hasActiveParams = false;
           const childParams = { ...finalParams }; // Start with parent params
+          
+          // Include parent signal values (even defaults) for child pattern matching
+          for (const parentConnection of connections) {
+            const { paramName, signal } = parentConnection;
+            if (signal?.value !== undefined) {
+              childParams[paramName] = signal.value;
+            }
+          }
 
           for (const connection of childPatternData.connections) {
             const { paramName, signal, options } = connection;
@@ -727,8 +735,8 @@ export const setupPatterns = (patternDefinitions) => {
 
       const otherData = patternRegistry.get(otherPattern);
 
-      // Check if current pattern is a child of other pattern
-      if (isChildPattern(currentPattern, otherPattern)) {
+      // Check if current pattern is a child of other pattern using clean patterns
+      if (isChildPattern(currentData.cleanPattern, otherData.cleanPattern)) {
         currentData.parentPatterns.push(otherPattern);
         otherData.childPatterns.push(currentPattern);
       }
