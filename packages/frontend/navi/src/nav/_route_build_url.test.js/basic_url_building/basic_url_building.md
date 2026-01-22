@@ -25,8 +25,8 @@ try {
 ```js
 {
   "home_route": "http://127.0.0.1/",
-  "simple_param": "http://127.0.0.1/users",
-  "multiple_params": "http://127.0.0.1/users/posts"
+  "simple_param": "http://127.0.0.1/users/123",
+  "multiple_params": "http://127.0.0.1/users/123/posts/abc"
 }
 ```
 

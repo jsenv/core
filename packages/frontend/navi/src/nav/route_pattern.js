@@ -161,7 +161,7 @@ export const createRoutePattern = (pattern) => {
    * Build the most precise URL by using route relationships from pattern registry.
    * Each route is responsible for its own URL generation using its own signals.
    */
-  const buildMostPreciseUrl = (route, params = {}) => {
+  const buildMostPreciseUrl = (params = {}) => {
     // Start with provided parameters
     let finalParams = { ...params };
 
@@ -226,10 +226,10 @@ export const createRoutePattern = (pattern) => {
 
     // ROOT ROUTE PROTECTION: Never apply deepest URL generation to root route "/"
     // Users must always be able to navigate to home page regardless of app state
-    const isRootRoute = route.pattern === "/";
+    const isRootRoute = pattern === "/";
 
     const relationships = patternRelationships.get(pattern);
-    const childPatterns = relationships.childPatterns || [];
+    const childPatterns = relationships?.childPatterns || [];
     if (!hasUserProvidedParams && !isRootRoute && childPatterns.length) {
       if (childPatterns.length > 0) {
         // Try to find the most specific child pattern that has active signals
@@ -263,13 +263,9 @@ export const createRoutePattern = (pattern) => {
 
             if (childDepth > bestChildDepth) {
               // Recursively build URL using the child pattern
-              // Create a temporary route object for the child pattern
-              const childRoute = {
-                __patternData: childPatternData,
-                pattern: childPattern,
-              };
-
-              const childUrl = buildMostPreciseUrl(childRoute, childParams);
+              // Get the child pattern object and call its buildMostPreciseUrl
+              const childPatternObj = createRoutePattern(childPattern);
+              const childUrl = childPatternObj.buildMostPreciseUrl(childParams);
 
               if (childUrl) {
                 bestChildUrl = childUrl;
@@ -562,11 +558,7 @@ const extractSearchParams = (urlObj) => {
 /**
  * Build a URL from a pattern and parameters
  */
-const buildUrlFromPattern = (
-  parsedPattern,
-  params = {},
-  parameterDefaults = new Map(),
-) => {
+const buildUrlFromPattern = (parsedPattern, params = {}) => {
   if (parsedPattern.segments.length === 0) {
     // Root route
     const searchParams = new URLSearchParams();
@@ -586,16 +578,10 @@ const buildUrlFromPattern = (
       segments.push(patternSeg.value);
     } else if (patternSeg.type === "param") {
       const value = params[patternSeg.name];
-      const defaultValue = parameterDefaults.get(patternSeg.name);
 
-      // If value is provided, include it (unless it's optional and matches default)
+      // If value is provided, include it
       if (value !== undefined) {
-        // Only omit if parameter is optional AND matches default
-        if (patternSeg.optional && value === defaultValue) {
-          // Omit optional parameter that matches default
-        } else {
-          segments.push(encodeURIComponent(value));
-        }
+        segments.push(encodeURIComponent(value));
       } else if (!patternSeg.optional) {
         // For required parameters without values, keep the placeholder
         segments.push(`:${patternSeg.name}`);
