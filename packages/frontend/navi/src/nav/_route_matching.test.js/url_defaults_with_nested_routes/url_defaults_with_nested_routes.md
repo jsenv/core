@@ -29,6 +29,10 @@ try {
       ADMIN_ROUTE,
       `/admin/analytics?tab=details`,
     ),
+    admin_on_analytics_trailing_slash_tab: match(
+      ADMIN_ROUTE,
+      `/admin/analytics/?tab=details`,
+    ),
 
     // Settings route tests - inheritance and parameter handling
     settings_route_matches_admin_root: match(
@@ -125,6 +129,10 @@ try {
     "section": "analytics"
   },
   "admin_on_analytics_tab": {
+    "section": "analytics",
+    "tab": "details"
+  },
+  "admin_on_analytics_trailing_slash_tab": {
     "section": "analytics",
     "tab": "details"
   },
