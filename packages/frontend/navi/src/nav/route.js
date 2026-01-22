@@ -1,26 +1,21 @@
 /**
- * Route management with custom pattern matching system
- * Replaces URLPattern-based approach with simpler, more predictable matching
+ * Route management with pattern-first architecture
+ * Routes work with relative URLs, patterns handle base URL resolution
  */
 
 import { createPubSub } from "@jsenv/dom";
 import { batch, computed, effect, signal } from "@preact/signals";
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
 import {
-  baseUrl,
   buildMostPreciseUrl,
   clearPatterns,
   createRoutePattern,
   getPatternData,
+  resolveRouteUrl,
   setupPatterns,
 } from "./route_pattern.js";
-import { resolveRouteUrl } from "./route_url.js";
 
 const DEBUG = false;
-
-/**
- * Route inheritance system - simplified approach
- */
 
 // Controls what happens to actions when their route stops matching:
 // 'abort' - Cancel the action immediately when route stops matching
@@ -559,7 +554,7 @@ const registerRoute = (urlPatternRaw) => {
   });
   const buildUrl = (params) => {
     const routeRelativeUrl = route.buildRelativeUrl(params);
-    const routeUrl = resolveRouteUrl(routeRelativeUrl, baseUrl);
+    const routeUrl = resolveRouteUrl(routeRelativeUrl);
     return routeUrl;
   };
   route.buildUrl = buildUrl;

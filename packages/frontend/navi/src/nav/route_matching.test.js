@@ -1,52 +1,50 @@
 import { snapshotTests } from "@jsenv/snapshot";
 import { globalSignalRegistry, stateSignal } from "../state/state_signal.js";
-import {
-  clearAllRoutes,
-  registerRoute,
-  setBaseUrl,
-  updateRoutes,
-} from "./route.js";
+import { clearAllRoutes, setupRoutes, updateRoutes } from "./route.js";
+import { setBaseUrl } from "./route_pattern.js";
 
 const baseUrl = "http://localhost:3000";
 setBaseUrl(baseUrl);
 
-const run = (patternOrRoute, relativeUrl) => {
-  let route;
-  if (typeof patternOrRoute === "string") {
-    route = registerRoute(patternOrRoute);
-  } else {
-    route = patternOrRoute;
-  }
+const match = (route, relativeUrl) => {
   updateRoutes(`${baseUrl}${relativeUrl}`);
-
   const result = route.matching ? route.params : null;
-  clearAllRoutes();
-
   return result;
 };
 
 await snapshotTests(import.meta.url, ({ test }) => {
-  test("basic", () => {
-    return {
-      matching_url: run("/users/:id", `/users/123`),
-      non_matching_url: run("/users/:id", `/admin`),
-    };
+  test.ONLY("basic", () => {
+    try {
+      const { USER_ROUTE } = setupRoutes({
+        USER_ROUTE: "/users/:id",
+      });
+      return {
+        matching_url: match(USER_ROUTE, `/users/123`),
+        non_matching_url: match(USER_ROUTE, `/admin`),
+      };
+    } finally {
+      clearAllRoutes();
+      globalSignalRegistry.clear();
+    }
   });
 
   test("state signal", () => {
-    clearAllRoutes();
-    globalSignalRegistry.clear();
-    const sectionSignal = stateSignal("settings", {
-      id: "state_signal_section",
-    });
-    return {
-      matching_with_default: run(`/admin/:section=${sectionSignal}`, `/admin`),
-      matching_with_param: run(
-        `/admin/:section=${sectionSignal}`,
-        `/admin/users`,
-      ),
-      non_matching_url: run(`/admin/:section=${sectionSignal}`, `/different`),
-    };
+    try {
+      const sectionSignal = stateSignal("settings", {
+        id: "state_signal_section",
+      });
+      const { ADMIN_ROUTE } = setupRoutes({
+        ADMIN_ROUTE: `/admin/:section=${sectionSignal}`,
+      });
+      return {
+        matching_with_default: match(ADMIN_ROUTE, `/admin`),
+        matching_with_param: match(ADMIN_ROUTE, `/admin/users`),
+        non_matching_url: match(ADMIN_ROUTE, `/different`),
+      };
+    } finally {
+      clearAllRoutes();
+      globalSignalRegistry.clear();
+    }
   });
 
   test("url defaults with nested routes", () => {
@@ -57,21 +55,19 @@ await snapshotTests(import.meta.url, ({ test }) => {
     const analyticsTabSignal = stateSignal("overview", {
       id: "nested_analytics_tab",
     });
-    registerRoute("/");
-    const ADMIN_ROUTE = registerRoute(`/admin/:section=${sectionSignal}/`);
-    const ADMIN_SETTINGS_ROUTE = registerRoute(
-      `/admin/settings/:tab=${tabSignal}`,
-    );
-    const ADMIN_ANALYTICS_ROUTE = registerRoute(
-      `/admin/analytics/?tab=${analyticsTabSignal}`,
-    );
+    const { ADMIN_ROUTE, ADMIN_SETTINGS_ROUTE, ADMIN_ANALYTICS_ROUTE } =
+      setupRoutes({
+        ROOT: "/",
+        ADMIN_ROUTE: `/admin/:section=${sectionSignal}/`,
+        ADMIN_SETTINGS_ROUTE: `/admin/settings/:tab=${tabSignal}`,
+        ADMIN_ANALYTICS_ROUTE: `/admin/analytics/?tab=${analyticsTabSignal}`,
+      });
     const run = (route, relativeUrl) => {
       updateRoutes(`${baseUrl}${relativeUrl}`);
       return route.matching ? route.params : null;
     };
-
     // Test various URL matching scenarios
-    const testResults = {
+    const result = {
       // Admin route tests - basic parameter matching with defaults
       admin_root_matches_section_default: run(ADMIN_ROUTE, `/admin`),
       admin_root_with_slash: run(ADMIN_ROUTE, `/admin/`),
@@ -146,9 +142,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
         `/admin/different`,
       ),
     };
-
     clearAllRoutes();
-
-    return testResults;
+    return result;
   });
 });

@@ -285,19 +285,3 @@ export const prepareRouteRelativeUrl = (
 
   return relativeUrl;
 };
-
-export const resolveRouteUrl = (relativeUrl, baseUrl) => {
-  if (relativeUrl[0] === "/") {
-    // we remove the leading slash because we want to resolve against baseUrl which may
-    // not be the root url
-    relativeUrl = relativeUrl.slice(1);
-  }
-
-  // we don't use URL constructor on PURPOSE (in case the relativeUrl contains invalid url chars)
-  // and we want to support use cases where people WANT to produce invalid urls (for example rawUrlPart with spaces)
-  // because these urls will be handled by non standard clients (like a backend service allowing url like stuff)
-  if (baseUrl.endsWith("/")) {
-    return `${baseUrl}${relativeUrl}`;
-  }
-  return `${baseUrl}/${relativeUrl}`;
-};
