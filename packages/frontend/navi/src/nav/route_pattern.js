@@ -10,20 +10,21 @@ const DEBUG = false;
 
 // Base URL management
 let baseFileUrl;
-export let baseUrl;
-
+let baseUrl;
 export const setBaseUrl = (value) => {
   baseFileUrl = new URL(
-    value.endsWith("/") ? `${value}dummy.js` : value,
-    import.meta.url,
-  );
+    value,
+    typeof window === "undefined" ? "http://localhost" : window.location,
+  ).href;
   baseUrl = new URL(".", baseFileUrl).href;
 };
-
-setBaseUrl(import.meta.env?.VITE_BASE_URL || import.meta.env?.BASE_URL || "./");
-
-export const getBaseUrl = () => baseUrl;
-export const getBaseFileUrl = () => baseFileUrl;
+setBaseUrl(
+  typeof window === "undefined"
+    ? "/"
+    : import.meta.dev
+      ? new URL(window.HTML_ROOT_PATHNAME, window.location).href
+      : window.location.origin,
+);
 
 // Pattern registry for building relationships before routes are created
 const patternRegistry = new Map(); // pattern -> patternData

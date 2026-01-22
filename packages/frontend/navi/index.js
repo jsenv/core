@@ -48,14 +48,13 @@ export {
 export { useUrlSearchParam } from "./src/nav/browser_integration/use_url_search_param.js";
 export {
   clearAllRoutes,
-  registerRoute,
-  setBaseUrl,
   setupRoutes,
   unregisterRoute,
   useRouteStatus,
 } from "./src/nav/route.js";
 export { Route, Routes, useMatchingRouteInfo } from "./src/nav/route.jsx";
 export { RouteLink } from "./src/nav/route_link.jsx";
+export { setBaseUrl } from "./src/nav/route_pattern.js";
 export { rawUrlPart } from "./src/nav/route_url.js";
 // Navigation/components
 export { Link } from "./src/nav/link.jsx";
