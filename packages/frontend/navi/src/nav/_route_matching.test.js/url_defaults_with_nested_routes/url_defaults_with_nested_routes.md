@@ -1,106 +1,107 @@
-# [url defaults with nested routes](../../route_matching.test.js#L52)
+# [url defaults with nested routes](../../route_matching.test.js#L50)
 
 ```js
-clearAllRoutes();
-globalSignalRegistry.clear();
-const sectionSignal = stateSignal("settings", { id: "nested_section" });
-const tabSignal = stateSignal("general", { id: "nested_tab" });
-const analyticsTabSignal = stateSignal("overview", {
-  id: "nested_analytics_tab",
-});
-registerRoute("/");
-const ADMIN_ROUTE = registerRoute(`/admin/:section=${sectionSignal}/`);
-const ADMIN_SETTINGS_ROUTE = registerRoute(
-  `/admin/settings/:tab=${tabSignal}`,
-);
-const ADMIN_ANALYTICS_ROUTE = registerRoute(
-  `/admin/analytics/?tab=${analyticsTabSignal}`,
-);
-const run = (route, relativeUrl) => {
-  updateRoutes(`${baseUrl}${relativeUrl}`);
-  return route.matching ? route.params : null;
-};
+try {
+  const sectionSignal = stateSignal("settings", { id: "nested_section" });
+  const tabSignal = stateSignal("general", { id: "nested_tab" });
+  const analyticsTabSignal = stateSignal("overview", {
+    id: "nested_analytics_tab",
+  });
+  const { ADMIN_ROUTE, ADMIN_SETTINGS_ROUTE, ADMIN_ANALYTICS_ROUTE } =
+    setupRoutes({
+      ROOT: "/",
+      ADMIN_ROUTE: `/admin/:section=${sectionSignal}/`,
+      ADMIN_SETTINGS_ROUTE: `/admin/settings/:tab=${tabSignal}`,
+      ADMIN_ANALYTICS_ROUTE: `/admin/analytics/?tab=${analyticsTabSignal}`,
+    });
+  return {
+    // Admin route tests - basic parameter matching with defaults
+    admin_root_matches_section_default: match(ADMIN_ROUTE, `/admin`),
+    admin_root_with_slash: match(ADMIN_ROUTE, `/admin/`),
+    admin_on_settings: match(ADMIN_ROUTE, `/admin/settings`),
+    admin_on_settings_trailing_slash: match(
+      ADMIN_ROUTE,
+      "/admin/settings/",
+    ),
+    admin_on_settings_tab: match(ADMIN_ROUTE, `/admin/settings/advanced`),
+    admin_on_analytics: match(ADMIN_ROUTE, `/admin/analytics`),
+    admin_on_analytics_tab: match(
+      ADMIN_ROUTE,
+      `/admin/analytics?tab=details`,
+    ),
 
-// Test various URL matching scenarios
-const testResults = {
-  // Admin route tests - basic parameter matching with defaults
-  admin_root_matches_section_default: run(ADMIN_ROUTE, `/admin`),
-  admin_root_with_slash: run(ADMIN_ROUTE, `/admin/`),
-  admin_on_settings: run(ADMIN_ROUTE, `/admin/settings`),
-  admin_on_settings_trailing_slash: run(ADMIN_ROUTE, "/admin/settings/"),
-  admin_on_settings_tab: run(ADMIN_ROUTE, `/admin/settings/advanced`),
-  admin_on_analytics: run(ADMIN_ROUTE, `/admin/analytics`),
-  admin_on_analytics_tab: run(ADMIN_ROUTE, `/admin/analytics?tab=details`),
+    // Settings route tests - inheritance and parameter handling
+    settings_route_matches_admin_root: match(
+      ADMIN_SETTINGS_ROUTE,
+      `/admin`,
+    ),
+    settings_root_without_slash: match(ADMIN_SETTINGS_ROUTE, `/admin`),
+    settings_root_with_slash: match(ADMIN_SETTINGS_ROUTE, `/admin/`),
+    settings_with_general_tab: match(
+      ADMIN_SETTINGS_ROUTE,
+      `/admin/settings/general`,
+    ),
+    settings_with_security_tab: match(
+      ADMIN_SETTINGS_ROUTE,
+      `/admin/settings/security`,
+    ),
+    settings_with_literal_settings_path: match(
+      ADMIN_SETTINGS_ROUTE,
+      `/admin/settings`,
+    ),
+    settings_with_wrong_search_param: match(
+      ADMIN_SETTINGS_ROUTE,
+      `/admin?wrongParam=value`,
+    ),
+    settings_should_not_match_analytics_url: match(
+      ADMIN_SETTINGS_ROUTE,
+      `/admin/analytics`,
+    ),
+    settings_should_not_match_users_url: match(
+      ADMIN_SETTINGS_ROUTE,
+      `/admin/users`,
+    ),
+    settings_with_different_section: match(
+      ADMIN_SETTINGS_ROUTE,
+      `/admin/different`,
+    ),
 
-  // Settings route tests - inheritance and parameter handling
-  settings_route_matches_admin_root: run(ADMIN_SETTINGS_ROUTE, `/admin`),
-  settings_root_without_slash: run(ADMIN_SETTINGS_ROUTE, `/admin`),
-  settings_root_with_slash: run(ADMIN_SETTINGS_ROUTE, `/admin/`),
-  settings_with_general_tab: run(
-    ADMIN_SETTINGS_ROUTE,
-    `/admin/settings/general`,
-  ),
-  settings_with_security_tab: run(
-    ADMIN_SETTINGS_ROUTE,
-    `/admin/settings/security`,
-  ),
-  settings_with_literal_settings_path: run(
-    ADMIN_SETTINGS_ROUTE,
-    `/admin/settings`,
-  ),
-  settings_with_wrong_search_param: run(
-    ADMIN_SETTINGS_ROUTE,
-    `/admin?wrongParam=value`,
-  ),
-  settings_should_not_match_analytics_url: run(
-    ADMIN_SETTINGS_ROUTE,
-    `/admin/analytics`,
-  ),
-  settings_should_not_match_users_url: run(
-    ADMIN_SETTINGS_ROUTE,
-    `/admin/users`,
-  ),
-  settings_with_different_section: run(
-    ADMIN_SETTINGS_ROUTE,
-    `/admin/different`,
-  ),
-
-  // Analytics route tests - inheritance and search parameters
-  analytics_with_overview_tab: run(
-    ADMIN_ANALYTICS_ROUTE,
-    `/admin/analytics`,
-  ),
-  analytics_with_performance_tab: run(
-    ADMIN_ANALYTICS_ROUTE,
-    `/admin/analytics?tab=performance`,
-  ),
-  analytics_root_without_slash: run(ADMIN_ANALYTICS_ROUTE, `/admin`),
-  analytics_root_with_slash: run(ADMIN_ANALYTICS_ROUTE, `/admin/`),
-  analytics_with_literal_analytics_path: run(
-    ADMIN_ANALYTICS_ROUTE,
-    `/admin/analytics`,
-  ),
-  analytics_with_wrong_search_param: run(
-    ADMIN_ANALYTICS_ROUTE,
-    `/admin?wrongParam=value`,
-  ),
-  analytics_should_not_match_settings_url: run(
-    ADMIN_ANALYTICS_ROUTE,
-    `/admin/settings`,
-  ),
-  analytics_should_not_match_users_url: run(
-    ADMIN_ANALYTICS_ROUTE,
-    `/admin/users`,
-  ),
-  analytics_with_different_section: run(
-    ADMIN_ANALYTICS_ROUTE,
-    `/admin/different`,
-  ),
-};
-
-clearAllRoutes();
-
-return testResults;
+    // Analytics route tests - inheritance and search parameters
+    analytics_with_overview_tab: match(
+      ADMIN_ANALYTICS_ROUTE,
+      `/admin/analytics`,
+    ),
+    analytics_with_performance_tab: match(
+      ADMIN_ANALYTICS_ROUTE,
+      `/admin/analytics?tab=performance`,
+    ),
+    analytics_root_without_slash: match(ADMIN_ANALYTICS_ROUTE, `/admin`),
+    analytics_root_with_slash: match(ADMIN_ANALYTICS_ROUTE, `/admin/`),
+    analytics_with_literal_analytics_path: match(
+      ADMIN_ANALYTICS_ROUTE,
+      `/admin/analytics`,
+    ),
+    analytics_with_wrong_search_param: match(
+      ADMIN_ANALYTICS_ROUTE,
+      `/admin?wrongParam=value`,
+    ),
+    analytics_should_not_match_settings_url: match(
+      ADMIN_ANALYTICS_ROUTE,
+      `/admin/settings`,
+    ),
+    analytics_should_not_match_users_url: match(
+      ADMIN_ANALYTICS_ROUTE,
+      `/admin/users`,
+    ),
+    analytics_with_different_section: match(
+      ADMIN_ANALYTICS_ROUTE,
+      `/admin/different`,
+    ),
+  };
+} finally {
+  clearAllRoutes();
+  globalSignalRegistry.clear();
+}
 ```
 
 ```js
@@ -127,15 +128,9 @@ return testResults;
     "section": "analytics",
     "tab": "details"
   },
-  "settings_route_matches_admin_root": {
-    "tab": "general"
-  },
-  "settings_root_without_slash": {
-    "tab": "general"
-  },
-  "settings_root_with_slash": {
-    "tab": "general"
-  },
+  "settings_route_matches_admin_root": null,
+  "settings_root_without_slash": null,
+  "settings_root_with_slash": null,
   "settings_with_general_tab": {
     "tab": "general"
   },
@@ -145,10 +140,7 @@ return testResults;
   "settings_with_literal_settings_path": {
     "tab": "general"
   },
-  "settings_with_wrong_search_param": {
-    "wrongParam": "value",
-    "tab": "general"
-  },
+  "settings_with_wrong_search_param": null,
   "settings_should_not_match_analytics_url": null,
   "settings_should_not_match_users_url": null,
   "settings_with_different_section": null,
