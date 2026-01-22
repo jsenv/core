@@ -36,66 +36,65 @@ await snapshotTests(import.meta.url, ({ test }) => {
     }
   });
 
-  test("url building with nested routes inheritance", () => {
-    clearAllRoutes();
-    const sectionSignal = stateSignal("settings", { id: "section" });
-    const tabSignal = stateSignal("general", { id: "settings_tab" });
-    const analyticsTabSignal = stateSignal("overview", { id: "analytics_tab" });
+  test.ONLY("url building with nested routes inheritance", () => {
+    try {
+      const sectionSignal = stateSignal("settings", { id: "section" });
+      const tabSignal = stateSignal("general", { id: "settings_tab" });
+      const analyticsTabSignal = stateSignal("overview", {
+        id: "analytics_tab",
+      });
+      const { ADMIN_ROUTE, ADMIN_SETTINGS_ROUTE, ADMIN_ANALYTICS_ROUTE } =
+        setupRoutes({
+          ROOT: "/",
+          ADMIN_ROUTE: `/admin/:section=${sectionSignal}/`,
+          ADMIN_SETTINGS_ROUTE: `/admin/settings/:tab=${tabSignal}`,
+          ADMIN_ANALYTICS_ROUTE: `/admin/analytics?tab=${analyticsTabSignal}`,
+        });
 
-    // Register routes with inheritance setup (same as route_matching.test.js)
-    registerRoute("/");
-    const ADMIN_ROUTE = registerRoute(`/admin/:section=${sectionSignal}/`);
-    const ADMIN_SETTINGS_ROUTE = registerRoute(
-      `/admin/settings/:tab=${tabSignal}`,
-    );
-    const ADMIN_ANALYTICS_ROUTE = registerRoute(
-      `/admin/analytics/?tab=${analyticsTabSignal}`,
-    );
+      return {
+        // Test deepest URL generation - should find child routes when possible
+        admin_no_params_should_find_settings_with_general_tab:
+          ADMIN_ROUTE.buildUrl(),
+        admin_explicit_settings: ADMIN_ROUTE.buildUrl({
+          section: "settings",
+        }),
+        admin_explicit_users: ADMIN_ROUTE.buildUrl({
+          section: "users",
+        }),
 
-    const buildUrl = (route, params = {}) => {
-      return route.buildUrl(params);
-    };
+        // Settings route URL building - should use deepest route
+        settings_should_include_general_tab: ADMIN_SETTINGS_ROUTE.buildUrl(),
+        settings_with_security_tab: ADMIN_SETTINGS_ROUTE.buildUrl({
+          tab: "security",
+        }),
+        // Test that providing section param doesn't interfere
+        settings_with_section_toto_and_tab: ADMIN_SETTINGS_ROUTE.buildUrl({
+          section: "toto",
+          tab: "advanced",
+        }),
+        settings_with_extra_params: ADMIN_SETTINGS_ROUTE.buildUrl({
+          tab: "general",
+          filter: "active",
+        }),
 
-    return {
-      // Test deepest URL generation - should find child routes when possible
-      admin_no_params_should_find_settings_with_general_tab:
-        buildUrl(ADMIN_ROUTE),
-      admin_explicit_settings: buildUrl(ADMIN_ROUTE, {
-        section: "settings",
-      }),
-      admin_explicit_users: buildUrl(ADMIN_ROUTE, {
-        section: "users",
-      }),
-
-      // Settings route URL building - should use deepest route
-      settings_should_include_general_tab: buildUrl(ADMIN_SETTINGS_ROUTE),
-      settings_with_security_tab: buildUrl(ADMIN_SETTINGS_ROUTE, {
-        tab: "security",
-      }),
-      // Test that providing section param doesn't interfere
-      settings_with_explicit_section_and_tab: buildUrl(ADMIN_SETTINGS_ROUTE, {
-        section: "toto",
-        tab: "advanced",
-      }),
-      settings_with_extra_params: buildUrl(ADMIN_SETTINGS_ROUTE, {
-        tab: "general",
-        filter: "active",
-      }),
-
-      // Analytics route URL building
-      analytics_should_include_overview_tab: buildUrl(ADMIN_ANALYTICS_ROUTE),
-      analytics_with_performance_tab: buildUrl(ADMIN_ANALYTICS_ROUTE, {
-        tab: "performance",
-      }),
-      analytics_with_explicit_section: buildUrl(ADMIN_ANALYTICS_ROUTE, {
-        section: "toto",
-        tab: "performance",
-      }),
-      analytics_with_extra_params: buildUrl(ADMIN_ANALYTICS_ROUTE, {
-        tab: "details",
-        dateRange: "7d",
-      }),
-    };
+        // Analytics route URL building
+        analytics_should_include_overview_tab: ADMIN_ANALYTICS_ROUTE.buildUrl(),
+        analytics_with_performance_tab: ADMIN_ANALYTICS_ROUTE.buildUrl({
+          tab: "performance",
+        }),
+        analytics_with_section_toto: ADMIN_ANALYTICS_ROUTE.buildUrl({
+          section: "toto",
+          tab: "performance",
+        }),
+        analytics_with_extra_params: ADMIN_ANALYTICS_ROUTE.buildUrl({
+          tab: "details",
+          dateRange: "7d",
+        }),
+      };
+    } finally {
+      clearAllRoutes();
+      globalSignalRegistry.clear();
+    }
   });
 
   test("url building with local storage mocking", () => {
