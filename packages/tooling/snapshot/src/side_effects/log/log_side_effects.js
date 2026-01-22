@@ -3,7 +3,7 @@ import { renderConsole } from "../render_side_effects.js";
 import { groupLogSideEffects } from "./group_log_side_effects.js";
 
 const logSideEffectsOptionsDefault = {
-  prevent: true,
+  prevent: false,
   group: true,
   level: "info", // "debug", "trace", "info", "warn", "error", "off"
   onlyIfLevel: "debug",

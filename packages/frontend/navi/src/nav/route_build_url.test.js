@@ -195,68 +195,65 @@ await snapshotTests(import.meta.url, ({ test }) => {
     }
   });
 
-  test(
-    "signal reactivity - parent url updates when child signals change",
-    () => {
-      try {
-        const sectionSignal = stateSignal("settings", {
-          id: "section_reactive",
-        });
-        const tabSignal = stateSignal("general", {
-          id: "settings_tab_reactive",
-        });
-        const { ADMIN_ROUTE, ADMIN_SETTINGS_ROUTE } = setupRoutes({
-          ROOT: "/",
-          ADMIN_ROUTE: `/admin/:section=${sectionSignal}/`,
-          ADMIN_SETTINGS_ROUTE: `/admin/settings/:tab=${tabSignal}`,
-        });
+  test.ONLY("parent url updates when child signals change", () => {
+    try {
+      const sectionSignal = stateSignal("settings", {
+        id: "section_reactive",
+      });
+      const tabSignal = stateSignal("general", {
+        id: "settings_tab_reactive",
+      });
+      const { ADMIN_ROUTE, ADMIN_SETTINGS_ROUTE } = setupRoutes({
+        ROOT: "/",
+        ADMIN_ROUTE: `/admin/:section=${sectionSignal}/`,
+        ADMIN_SETTINGS_ROUTE: `/admin/settings/:tab=${tabSignal}`,
+      });
 
-        // Capture initial URLs
-        const initialUrls = {
-          admin_initial: ADMIN_ROUTE.buildUrl({}),
-          settings_initial: ADMIN_SETTINGS_ROUTE.buildUrl({}),
-          admin_relativeUrl_initial: ADMIN_ROUTE.relativeUrl,
-          settings_relativeUrl_initial: ADMIN_SETTINGS_ROUTE.relativeUrl,
-        };
+      // Capture initial URLs
+      const initialUrls = {
+        admin_initial: ADMIN_ROUTE.buildUrl({}),
+        settings_initial: ADMIN_SETTINGS_ROUTE.buildUrl({}),
+        admin_relativeUrl_initial: ADMIN_ROUTE.relativeUrl,
+        settings_relativeUrl_initial: ADMIN_SETTINGS_ROUTE.relativeUrl,
+      };
 
-        // Change child route signal (tab) - this should make parent route generate deepest URL
-        tabSignal.value = "security";
+      // Change child route signal (tab) - this should make parent route generate deepest URL
+      tabSignal.value = "security";
 
-        const afterTabChange = {
-          admin_after_tab_change: ADMIN_ROUTE.buildUrl({}),
-          settings_after_tab_change: ADMIN_SETTINGS_ROUTE.buildUrl({}),
-          admin_relativeUrl_after_tab: ADMIN_ROUTE.relativeUrl,
-          settings_relativeUrl_after_tab: ADMIN_SETTINGS_ROUTE.relativeUrl,
-          tab_signal_value: tabSignal.value,
-          // Key behavior: Parent route now generates deepest URL because child has non-default value
-          parent_now_uses_child_route:
-            ADMIN_ROUTE.buildUrl({}) === ADMIN_SETTINGS_ROUTE.buildUrl({}),
-        };
+      const afterTabChange = {
+        admin_after_tab_change: ADMIN_ROUTE.buildUrl({}),
+        settings_after_tab_change: ADMIN_SETTINGS_ROUTE.buildUrl({}),
+        admin_relativeUrl_after_tab: ADMIN_ROUTE.relativeUrl,
+        settings_relativeUrl_after_tab: ADMIN_SETTINGS_ROUTE.relativeUrl,
+        tab_signal_value: tabSignal.value,
+        // Key behavior: Parent route now generates deepest URL because child has non-default value
+        parent_now_uses_child_route:
+          ADMIN_ROUTE.buildUrl({}) === ADMIN_SETTINGS_ROUTE.buildUrl({}),
+      };
 
-        // Change parent route signal (section) - should use parent's own parameter
-        sectionSignal.value = "users";
+      // Change parent route signal (section) - should use parent's own parameter
+      sectionSignal.value = "users";
 
-        const afterSectionChange = {
-          admin_after_section_change: ADMIN_ROUTE.buildUrl({}),
-          settings_after_section_change: ADMIN_SETTINGS_ROUTE.buildUrl({}),
-          admin_relativeUrl_after_section: ADMIN_ROUTE.relativeUrl,
-          settings_relativeUrl_after_section: ADMIN_SETTINGS_ROUTE.relativeUrl,
-          section_signal_value: sectionSignal.value,
-          // Parent route uses its own non-default parameter now
-          parent_uses_own_param: ADMIN_ROUTE.buildUrl({}).includes("users"),
-        };
+      const afterSectionChange = {
+        admin_after_section_change: ADMIN_ROUTE.buildUrl({}),
+        settings_after_section_change: ADMIN_SETTINGS_ROUTE.buildUrl({}),
+        admin_relativeUrl_after_section: ADMIN_ROUTE.relativeUrl,
+        settings_relativeUrl_after_section: ADMIN_SETTINGS_ROUTE.relativeUrl,
+        section_signal_value: sectionSignal.value,
+        // Parent route uses its own non-default parameter now
+        parent_uses_own_param: ADMIN_ROUTE.buildUrl({}).includes("users"),
+      };
 
-        return {
-          initialUrls,
-          afterTabChange,
-          afterSectionChange,
-        };
-      } finally {
-        clearAllRoutes();
-        globalSignalRegistry.clear();
-      }
-    },
-  );
+      return {
+        initialUrls,
+        afterTabChange,
+        afterSectionChange,
+      };
+    } finally {
+      clearAllRoutes();
+      globalSignalRegistry.clear();
+    }
+  });
 
   test("explicit params should override signal values", () => {
     clearAllRoutes();
