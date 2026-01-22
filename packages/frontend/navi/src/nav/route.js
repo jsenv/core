@@ -400,14 +400,11 @@ const registerRoute = (routePattern) => {
   };
   route.matchesParams = (providedParams) => {
     const currentParams = route.params;
-    const resolvedParams = routePattern.resolveParams(providedParams);
-
-    // Filter current params to only include parameters relevant to this route's pattern
-    const relevantCurrentParams = routePattern.resolveParams(currentParams, {
-      filterToRelevantParams: true,
+    const resolvedParams = routePattern.resolveParams({
+      ...currentParams,
+      ...providedParams,
     });
-
-    const same = compareTwoJsValues(relevantCurrentParams, resolvedParams);
+    const same = compareTwoJsValues(currentParams, resolvedParams);
     return same;
   };
 

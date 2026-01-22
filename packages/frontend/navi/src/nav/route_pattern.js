@@ -132,42 +132,19 @@ export const createRoutePattern = (pattern) => {
     return buildUrlFromPattern(parsedPattern, params, parameterDefaults);
   };
 
-  const resolveParams = (
-    providedParams = {},
-    { cleanupDefaults, filterToRelevantParams } = {},
-  ) => {
+  const resolveParams = (providedParams = {}) => {
     let resolvedParams = { ...providedParams };
-
-    // If filtering requested, only keep parameters defined in this pattern's connections
-    if (filterToRelevantParams) {
-      const relevantParams = {};
-      for (const connection of connections) {
-        const { paramName } = connection;
-        if (paramName in resolvedParams) {
-          relevantParams[paramName] = resolvedParams[paramName];
-        }
-      }
-      resolvedParams = relevantParams;
-    }
 
     // Process all connections for parameter resolution
     for (const connection of connections) {
-      const { paramName, signal, options } = connection;
-      const defaultValue = options.defaultValue;
+      const { paramName, signal } = connection;
 
       if (paramName in providedParams) {
         // Parameter was explicitly provided - always respect explicit parameters
-        if (cleanupDefaults && resolvedParams[paramName] === defaultValue) {
-          delete resolvedParams[paramName];
-        }
         // Don't check signal value - explicit parameter takes precedence
       } else if (signal?.value !== undefined) {
         // Parameter was not provided, check signal value
-        if (cleanupDefaults && signal.value === defaultValue) {
-          // Omit default values for shorter URLs
-        } else {
-          resolvedParams[paramName] = signal.value;
-        }
+        resolvedParams[paramName] = signal.value;
       }
     }
 
@@ -180,8 +157,7 @@ export const createRoutePattern = (pattern) => {
    */
   const buildMostPreciseUrl = (params = {}) => {
     // Handle parameter resolution internally to preserve user intent detection
-    // First pass: resolve parameters without cleaning up defaults to detect user intent
-    const resolvedParams = resolveParams(params, { cleanupDefaults: false });
+    const resolvedParams = resolveParams(params);
 
     // Start with resolved parameters
     let finalParams = { ...resolvedParams };
