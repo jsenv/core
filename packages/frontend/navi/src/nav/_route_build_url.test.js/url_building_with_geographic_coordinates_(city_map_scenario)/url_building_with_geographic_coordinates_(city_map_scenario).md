@@ -2,37 +2,50 @@
 
 ```js
 try {
-  const citySignal = stateSignal("Paris", { 
+  const citySignal = stateSignal("Paris", {
     id: "city",
-    oneOf: ["Paris", "London", "Tokyo", "New York", "Sydney"]
+    oneOf: ["Paris", "London", "Tokyo", "New York", "Sydney"],
   });
   const longitudeSignal = stateSignal(2.3522, {
-    id: "longitude", 
-    type: "number"
+    id: "longitude",
+    type: "number",
   });
   const latitudeSignal = stateSignal(48.8566, {
     id: "latitude",
-    type: "number"
+    type: "number",
   });
 
-  const { HOME_ROUTE, SELECT_CITY_ROUTE, MAP_ROUTE } = setupRoutes({
+  const { MAP_ROUTE } = setupRoutes({
     HOME_ROUTE: "/",
     SELECT_CITY_ROUTE: "/select_city",
-    MAP_ROUTE: `/map?city=${citySignal}`,
+    MAP_ROUTE: `/map?city=${citySignal}&lon=${longitudeSignal}&lat=${latitudeSignal}`,
   });
 
   return {
-    // Default state with city signal value
-    map_with_paris: MAP_ROUTE.buildUrl(),
+    // Default state with all signal values
+    map_with_paris_coordinates: MAP_ROUTE.buildUrl(),
 
-    // Override city
+    // Override city but keep coordinates from signals
     map_with_explicit_city: MAP_ROUTE.buildUrl({ city: "London" }),
 
-    // Add extra search params
-    map_with_extra_params: MAP_ROUTE.buildUrl({
+    // Override all parameters
+    map_with_all_explicit_params: MAP_ROUTE.buildUrl({
       city: "Tokyo",
       lon: 139.6917,
       lat: 35.6895,
+    }),
+
+    // Override coordinates but keep city from signal
+    map_with_explicit_coordinates: MAP_ROUTE.buildUrl({
+      lon: -0.1276,
+      lat: 51.5074,
+    }),
+
+    // Add extra search params
+    map_with_extra_params: MAP_ROUTE.buildUrl({
+      city: "Sydney",
+      zoom: 10,
+      layer: "satellite",
     }),
   };
 } finally {
@@ -43,9 +56,11 @@ try {
 
 ```js
 {
-  "map_with_paris": "http://127.0.0.1/map",
+  "map_with_paris_coordinates": "http://127.0.0.1/map",
   "map_with_explicit_city": "http://127.0.0.1/map?city=London",
-  "map_with_extra_params": "http://127.0.0.1/map?city=Tokyo&lon=139.6917&lat=35.6895"
+  "map_with_all_explicit_params": "http://127.0.0.1/map?city=Tokyo&lon=139.6917&lat=35.6895",
+  "map_with_explicit_coordinates": "http://127.0.0.1/map?lon=-0.1276&lat=51.5074",
+  "map_with_extra_params": "http://127.0.0.1/map?city=Sydney&zoom=10&layer=satellite"
 }
 ```
 

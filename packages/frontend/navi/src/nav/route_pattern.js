@@ -36,9 +36,9 @@ export const detectSignals = (routePattern) => {
   const signalConnections = [];
   let updatedPattern = routePattern;
 
-  // Look for signals in the new syntax: :paramName={navi_state_signal:id} or ?paramName={navi_state_signal:id}
+  // Look for signals in the new syntax: :paramName={navi_state_signal:id} or ?paramName={navi_state_signal:id} or &paramName={navi_state_signal:id}
   // Using curly braces to avoid conflicts with underscores in signal IDs
-  const signalParamRegex = /([?:])(\w+)=(\{navi_state_signal:[^}]+\})/g;
+  const signalParamRegex = /([?:&])(\w+)=(\{navi_state_signal:[^}]+\})/g;
   let match;
 
   while ((match = signalParamRegex.exec(routePattern)) !== null) {
@@ -63,9 +63,12 @@ export const detectSignals = (routePattern) => {
       if (prefix === ":") {
         // Path parameter: :section=__jsenv_signal_1__ becomes :section
         replacement = `${prefix}${paramName}`;
-      } else {
-        // Search parameter: ?tab=__jsenv_signal_1__ becomes nothing (removed entirely)
-        replacement = "";
+      } else if (prefix === "?") {
+        // First search parameter: ?city=__jsenv_signal_1__ becomes ?city
+        replacement = `${prefix}${paramName}`;
+      } else if (prefix === "&") {
+        // Additional search parameter: &lon=__jsenv_signal_1__ becomes &lon
+        replacement = `${prefix}${paramName}`;
       }
       updatedPattern = updatedPattern.replace(fullMatch, replacement);
 
@@ -364,11 +367,40 @@ const parsePattern = (pattern, parameterDefaults = new Map()) => {
       segments: [],
       trailingSlash: true,
       wildcard: false,
+      queryParams: [],
     };
   }
 
-  // Remove leading slash for processing
-  let cleanPattern = pattern.startsWith("/") ? pattern.slice(1) : pattern;
+  // Separate path and query portions
+  const [pathPortion, queryPortion] = pattern.split("?");
+  
+  // Parse query parameters if present
+  const queryParams = [];
+  if (queryPortion) {
+    // Split query parameters by & and parse each one
+    const querySegments = queryPortion.split("&");
+    for (const querySegment of querySegments) {
+      if (querySegment.includes("=")) {
+        // Parameter with potential value: tab=value or just tab
+        const [paramName, paramValue] = querySegment.split("=", 2);
+        queryParams.push({
+          type: "query_param",
+          name: paramName,
+          hasDefaultValue: paramValue === undefined, // No value means it uses signal/default
+        });
+      } else {
+        // Parameter without value: tab
+        queryParams.push({
+          type: "query_param", 
+          name: querySegment,
+          hasDefaultValue: true,
+        });
+      }
+    }
+  }
+
+  // Remove leading slash for processing the path portion
+  let cleanPattern = pathPortion.startsWith("/") ? pathPortion.slice(1) : pathPortion;
 
   // Check for wildcard first
   const wildcard = cleanPattern.endsWith("*");
@@ -381,7 +413,7 @@ const parsePattern = (pattern, parameterDefaults = new Map()) => {
   }
 
   // Check for trailing slash (after wildcard check)
-  const trailingSlash = !wildcard && pattern.endsWith("/");
+  const trailingSlash = !wildcard && pathPortion.endsWith("/");
   if (trailingSlash) {
     cleanPattern = cleanPattern.slice(0, -1); // Remove trailing /
   }
@@ -414,6 +446,7 @@ const parsePattern = (pattern, parameterDefaults = new Map()) => {
   return {
     original: pattern,
     segments,
+    queryParams, // Add query parameters to the parsed pattern
     trailingSlash,
     wildcard,
   };
@@ -645,14 +678,32 @@ const buildUrlFromPattern = (parsedPattern, params = {}) => {
     path = path.slice(0, -1);
   }
 
-  // Add search parameters (excluding path parameters)
+  // Add search parameters
   const pathParamNames = new Set(
     parsedPattern.segments.filter((s) => s.type === "param").map((s) => s.name),
   );
 
+  // Add query parameters defined in the pattern first
+  const queryParamNames = new Set();
   const searchParams = new URLSearchParams();
+  
+  // Handle pattern-defined query parameters (from ?tab, &lon, etc.)
+  if (parsedPattern.queryParams) {
+    for (const queryParam of parsedPattern.queryParams) {
+      const paramName = queryParam.name;
+      queryParamNames.add(paramName);
+      
+      const value = params[paramName];
+      if (value !== undefined) {
+        searchParams.set(paramName, value);
+      }
+      // If no value provided, don't add the parameter to keep URLs clean
+    }
+  }
+
+  // Add remaining parameters as additional query parameters (excluding path and pattern query params)
   for (const [key, value] of Object.entries(params)) {
-    if (!pathParamNames.has(key) && value !== undefined) {
+    if (!pathParamNames.has(key) && !queryParamNames.has(key) && value !== undefined) {
       searchParams.set(key, value);
     }
   }

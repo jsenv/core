@@ -72,7 +72,7 @@ try {
   "settings_with_extra_params": "http://127.0.0.1/admin/settings?filter=active",
   "analytics_should_include_overview_tab": "http://127.0.0.1/admin/analytics",
   "analytics_with_performance_tab": "http://127.0.0.1/admin/analytics?tab=performance",
-  "analytics_with_section_toto": "http://127.0.0.1/admin/analytics?section=toto&tab=performance",
+  "analytics_with_section_toto": "http://127.0.0.1/admin/analytics?tab=performance&section=toto",
   "analytics_with_extra_params": "http://127.0.0.1/admin/analytics?tab=details&dateRange=7d"
 }
 ```
