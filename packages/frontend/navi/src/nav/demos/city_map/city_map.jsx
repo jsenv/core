@@ -42,7 +42,10 @@ const CITY_COORDINATES = {
   "Sydney": { lon: 151.2093, lat: -33.8688 },
 };
 
-const cityLongitudeSignal = computed(() => cityDataSignal.value?.lon);
+const cityLongitudeSignal = computed(() => {
+  const cityData = cityDataSignal.value;
+  return cityData?.lon;
+});
 const cityLatitudeSignal = computed(() => cityDataSignal.value?.lat);
 const longitudeSignal = stateSignal(undefined, {
   id: "longitude",

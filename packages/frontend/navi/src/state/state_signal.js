@@ -169,23 +169,38 @@ export const stateSignal = (defaultValue, options = {}) => {
       break source_signal_override;
     }
 
-    let sourcePreviousValue = sourceSignal.value;
+    let isFirstRun = true;
+    let sourcePreviousValue;
     effect(() => {
       const sourceValue = sourceSignal.value;
-      if (sourcePreviousValue === undefined) {
+      if (isFirstRun) {
         // first run
-      } else if (sourceValue === undefined) {
-        // we don't have anything in the source signal, keep current value
-      } else {
-        // the case we want to support: source signal value changes -> override current value
-        if (debug) {
-          console.debug(`[stateSignal] source signal updated`, {
-            sourcePreviousValue,
-            sourceValue,
-          });
-        }
-        advancedSignal.value = sourceValue;
+        isFirstRun = false;
+        sourcePreviousValue = sourceValue;
+        return;
       }
+      if (sourceValue === undefined) {
+        // we don't have anything in the source signal, keep current value
+        if (debug) {
+          console.debug(
+            `[stateSignal] source signal is undefined, keeping current value`,
+            {
+              sourcePreviousValue,
+              sourceValue,
+            },
+          );
+        }
+        sourcePreviousValue = undefined;
+        return;
+      }
+      // the case we want to support: source signal value changes -> override current value
+      if (debug) {
+        console.debug(`[stateSignal] source signal updated`, {
+          sourcePreviousValue,
+          sourceValue,
+        });
+      }
+      advancedSignal.value = sourceValue;
       sourcePreviousValue = sourceValue;
     });
   }
@@ -236,64 +251,3 @@ const updateValidity = (rules, validity, value) => {
   }
   validity.valid = true;
 };
-
-// const connectSignalFallbacks = (signal, fallbackSignals, defaultValue) => {
-//   if (fallbackSignals.length === 0) {
-//     signal.value = defaultValue;
-//     return () => {};
-//   }
-//   if (fallbackSignals.length === 1) {
-//     const [fallbackSignal] = fallbackSignals;
-//     const applyFallback = () => {
-//       const value = signal.value;
-//       const fallbackValue = fallbackSignal.value;
-//       if (value !== undefined) {
-//         return;
-//       }
-//       if (fallbackValue !== undefined) {
-//         signal.value = fallbackValue;
-//         return;
-//       }
-//       signal.value = defaultValue;
-//     };
-//     applyFallback();
-//     return effect(() => {
-//       applyFallback();
-//     });
-//   }
-//   const applyFallback = () => {
-//     const fallbackValues = fallbackSignals.map((s) => s.value);
-//     const value = signal.value;
-//     if (value !== undefined) {
-//       return;
-//     }
-//     for (const fallbackValue of fallbackValues) {
-//       if (fallbackValue === undefined) {
-//         continue;
-//       }
-//       signal.value = fallbackValue;
-//       return;
-//     }
-//     signal.value = defaultValue;
-//   };
-//   applyFallback();
-//   return effect(() => {
-//     applyFallback();
-//   });
-// };
-// const updateSignalOnChange = (sourceSignal, targetSignal) => {
-//   let sourcePreviousValue = sourceSignal.value;
-//   return effect(() => {
-//     const sourceValue = sourceSignal.value;
-//     if (sourcePreviousValue !== undefined && sourceValue !== undefined) {
-//       // console.log(
-//       //   "value modified from",
-//       //   sourcePreviousValue,
-//       //   "to",
-//       //   sourceValue,
-//       // );
-//       targetSignal.value = sourceValue;
-//     }
-//     sourcePreviousValue = sourceValue;
-//   });
-// };
