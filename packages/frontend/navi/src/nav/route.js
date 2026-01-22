@@ -251,8 +251,6 @@ const registerRoute = (routePattern) => {
     },
     replaceParams: undefined,
     subscribeStatus,
-    // Store pattern object for URL building
-    __routePattern: routePattern,
   };
   routeSet.add(route);
   const routePrivateProperties = {
