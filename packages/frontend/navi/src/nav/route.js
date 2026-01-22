@@ -411,8 +411,10 @@ const registerRoute = (routePattern) => {
   };
 
   route.buildRelativeUrl = (params) => {
+    // Don't cleanup defaults here - let buildMostPreciseUrl handle it
+    // This preserves user intent for explicit parameters
     const resolvedParams = resolveParams(params, {
-      cleanupDefaults: true, // Clean up defaults so we get shorter URLs
+      cleanupDefaults: false, // Keep explicit parameters to detect user intent
     });
 
     // Use most precise URL generation approach - delegate to pattern system

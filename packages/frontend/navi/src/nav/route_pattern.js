@@ -140,10 +140,11 @@ export const createRoutePattern = (pattern) => {
       const defaultValue = options.defaultValue;
 
       if (paramName in providedParams) {
-        // Parameter was explicitly provided
+        // Parameter was explicitly provided - always respect explicit parameters
         if (cleanupDefaults && resolvedParams[paramName] === defaultValue) {
           delete resolvedParams[paramName];
         }
+        // Don't check signal value - explicit parameter takes precedence
       } else if (signal?.value !== undefined) {
         // Parameter was not provided, check signal value
         if (cleanupDefaults && signal.value === defaultValue) {
@@ -170,11 +171,12 @@ export const createRoutePattern = (pattern) => {
       const defaultValue = options.defaultValue;
 
       if (paramName in finalParams) {
-        // Parameter was explicitly provided
+        // Parameter was explicitly provided - ALWAYS respect explicit values
         // If it equals the default value, remove it for shorter URLs
         if (finalParams[paramName] === defaultValue) {
           delete finalParams[paramName];
         }
+        // Note: Don't fall through to signal logic - explicit params take precedence
       }
       // Parameter was NOT provided, check signal value
       else if (signal?.value !== undefined && signal.value !== defaultValue) {

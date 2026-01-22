@@ -20,7 +20,7 @@ try {
     // Test the exact issue: signal has "advanced" but we explicitly pass "general" (default)
     // This should result in a short URL without the tab parameter
     bug_reproduction_explicit_general: ADMIN_SETTINGS_ROUTE.buildUrl({
-      tab: "general", // Should override signal "advanced" and be omitted as default → "/admin/settings"
+      tab: "general", // Should override signal "advanced" and be omitted as default → "/admin"
     }),
 
     // Test without any explicit params - should use signal value "advanced"
@@ -58,10 +58,10 @@ try {
 
 ```js
 {
-  "bug_reproduction_explicit_general": "http://127.0.0.1/admin/settings/advanced",
+  "bug_reproduction_explicit_general": "http://127.0.0.1/admin/settings",
   "using_signal_advanced": "http://127.0.0.1/admin/settings/advanced",
   "explicit_security_override": "http://127.0.0.1/admin/settings/security",
-  "section_with_default": "http://127.0.0.1/admin/settings/advanced",
+  "section_with_default": "http://127.0.0.1/admin",
   "section_with_non_default": "http://127.0.0.1/admin/users",
   "current_signal_values": {
     "section": "settings",

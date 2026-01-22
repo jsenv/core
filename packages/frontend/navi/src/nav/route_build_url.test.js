@@ -275,7 +275,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
         // Test the exact issue: signal has "advanced" but we explicitly pass "general" (default)
         // This should result in a short URL without the tab parameter
         bug_reproduction_explicit_general: ADMIN_SETTINGS_ROUTE.buildUrl({
-          tab: "general", // Should override signal "advanced" and be omitted as default → "/admin/settings"
+          tab: "general", // Should override signal "advanced" and be omitted as default → "/admin"
         }),
 
         // Test without any explicit params - should use signal value "advanced"

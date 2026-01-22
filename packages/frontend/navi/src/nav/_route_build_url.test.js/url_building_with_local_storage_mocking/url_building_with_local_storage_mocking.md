@@ -124,7 +124,7 @@ try {
     "localStorage_tab": "security",
     "signal_section": "settings",
     "signal_tab": "security",
-    "admin_url": "http://127.0.0.1/admin/settings/security",
+    "admin_url": "http://127.0.0.1/admin",
     "settings_url": "http://127.0.0.1/admin/settings/security"
   }
 }
