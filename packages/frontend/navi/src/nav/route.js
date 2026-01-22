@@ -217,15 +217,16 @@ export const getRoutePrivateProperties = (route) => {
   return routePrivatePropertiesMap.get(route);
 };
 
-const registerRoute = (urlPatternRaw) => {
+const registerRoute = (routePattern) => {
+  const urlPatternRaw = routePattern.originalPattern;
+
   if (DEBUG) {
     console.debug(`Creating route: ${urlPatternRaw}`);
   }
 
-  // Get pre-registered pattern data
+  // Get pre-registered pattern data for signal connections
   const patternData = getPatternData(urlPatternRaw);
   const { cleanPattern, connections } = patternData;
-  const routePattern = createRoutePattern(urlPatternRaw);
 
   const cleanupCallbackSet = new Set();
   const cleanup = () => {
@@ -593,11 +594,17 @@ export const setupRoutes = (routeDefinition) => {
   }
   // PHASE 1: Register all patterns and build their relationships
   setupPatterns(routeDefinition);
-  // PHASE 2: Create routes (patterns are ready, so routes can create signals immediately)
-  const routes = {};
+  // PHASE 2: Create route patterns with signal connections and parameter defaults
+  const routePatterns = {};
   for (const key of Object.keys(routeDefinition)) {
     const urlPatternRaw = routeDefinition[key];
-    const route = registerRoute(urlPatternRaw);
+    routePatterns[key] = createRoutePattern(urlPatternRaw);
+  }
+  // PHASE 3: Create routes using pre-created patterns
+  const routes = {};
+  for (const key of Object.keys(routeDefinition)) {
+    const routePattern = routePatterns[key];
+    const route = registerRoute(routePattern);
     routes[key] = route;
   }
   onRouteDefined();

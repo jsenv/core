@@ -91,9 +91,19 @@ export const detectSignals = (routePattern) => {
 /**
  * Creates a custom route pattern matcher
  */
-export const createRoutePattern = (pattern, parameterDefaults = new Map()) => {
+export const createRoutePattern = (pattern) => {
   // Detect and process signals in the pattern first
   const [cleanPattern, connections] = detectSignals(pattern);
+
+  // Build parameter defaults from signal connections
+  const parameterDefaults = new Map();
+  for (const connection of connections) {
+    const { paramName, options } = connection;
+    if (options.defaultValue !== undefined) {
+      parameterDefaults.set(paramName, options.defaultValue);
+    }
+  }
+
   const parsedPattern = parsePattern(cleanPattern, parameterDefaults);
 
   if (DEBUG) {
@@ -102,7 +112,10 @@ export const createRoutePattern = (pattern, parameterDefaults = new Map()) => {
   }
 
   const applyOn = (url) => {
-    const result = matchUrl(parsedPattern, url, { parameterDefaults, baseUrl });
+    const result = matchUrl(parsedPattern, url, {
+      parameterDefaults,
+      baseUrl,
+    });
 
     if (DEBUG) {
       console.debug(
@@ -302,6 +315,7 @@ export const createRoutePattern = (pattern, parameterDefaults = new Map()) => {
   };
 
   return {
+    originalPattern: pattern, // Return the original pattern string
     pattern: parsedPattern,
     cleanPattern, // Return the clean pattern string
     connections, // Return signal connections along with pattern
