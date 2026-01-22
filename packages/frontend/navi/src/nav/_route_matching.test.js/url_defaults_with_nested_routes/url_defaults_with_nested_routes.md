@@ -1,11 +1,13 @@
-# [url defaults with nested routes](../../route_matching.test.js#L50)
+# [url defaults with nested routes](../../route_matching.test.js#L52)
 
 ```js
 clearAllRoutes();
 globalSignalRegistry.clear();
 const sectionSignal = stateSignal("settings", { id: "nested_section" });
 const tabSignal = stateSignal("general", { id: "nested_tab" });
-const analyticsTabSignal = stateSignal("overview", { id: "nested_analytics_tab" });
+const analyticsTabSignal = stateSignal("overview", {
+  id: "nested_analytics_tab",
+});
 registerRoute("/");
 const ADMIN_ROUTE = registerRoute(`/admin/:section=${sectionSignal}/`);
 const ADMIN_SETTINGS_ROUTE = registerRoute(

@@ -5,7 +5,6 @@
 
 import { createPubSub } from "@jsenv/dom";
 import { batch, computed, effect, signal } from "@preact/signals";
-import { globalSignalRegistry } from "../state/state_signal.js";
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
 import { buildMostPreciseUrl, createRoutePattern } from "./route_pattern.js";
 import { resolveRouteUrl } from "./route_url.js";
@@ -965,7 +964,9 @@ export const registerRoute = (urlPatternRaw) => {
       const valueToUse =
         providedValue !== undefined ? providedValue : currentValue;
 
-      if (cleanupDefaults) {
+      if (cleanupDefaults && providedValue === undefined) {
+        // Only cleanup defaults for parameters that were NOT explicitly provided
+        // If user explicitly provides a parameter, respect it even if it's the default
         const paramConfig = paramConfigMap.get(paramName);
         if (paramConfig && paramConfig.defaultValue === valueToUse) {
           // When cleaning up defaults, include as undefined so prepareRouteRelativeUrl can remove the param

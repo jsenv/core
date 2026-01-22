@@ -3,7 +3,9 @@
 ```js
 clearAllRoutes();
 globalSignalRegistry.clear();
-const sectionSignal = stateSignal("settings", { id: "state_signal_section" });
+const sectionSignal = stateSignal("settings", {
+  id: "state_signal_section",
+});
 return {
   matching_with_default: run(`/admin/:section=${sectionSignal}`, `/admin`),
   matching_with_param: run(

@@ -402,16 +402,22 @@ export const buildMostPreciseUrl = (route, params = {}, routeRelationships) => {
   // Start with provided parameters
   let finalParams = { ...params };
 
-  // Fill in missing parameters from local storage (signal values) for THIS route only
-  // But only include non-default values to keep URLs short
+  // Process all route connections for parameter handling
   for (const connection of routePrivateProps.connections) {
     const { paramName, signal, options } = connection;
-    if (!(paramName in finalParams) && signal?.value !== undefined) {
-      const defaultValue = options?.defaultValue;
-      // Only include the parameter if it's not the default value
-      if (signal.value !== defaultValue) {
-        finalParams[paramName] = signal.value;
+    const defaultValue = options?.defaultValue;
+
+    if (paramName in finalParams) {
+      // Parameter was explicitly provided
+      // If it equals the default value, remove it for shorter URLs
+      if (finalParams[paramName] === defaultValue) {
+        delete finalParams[paramName];
       }
+    }
+    // Parameter was NOT provided, check signal value
+    else if (signal?.value !== undefined && signal.value !== defaultValue) {
+      // Only include signal value if it's not the default
+      finalParams[paramName] = signal.value;
       // If signal.value === defaultValue, omit the parameter for shorter URL
     }
   }
@@ -423,13 +429,25 @@ export const buildMostPreciseUrl = (route, params = {}, routeRelationships) => {
 
   const hasNonDefaultParams = routePrivateProps.connections.some(
     (connection) => {
-      const { paramName, signal, options } = connection;
+      const { paramName, options } = connection;
       const defaultValue = options?.defaultValue;
-      return signal?.value !== defaultValue && paramName in finalParams;
+      // Check the actual parameter value, not the signal value!
+      return (
+        paramName in finalParams && finalParams[paramName] !== defaultValue
+      );
     },
   );
 
-  if (!hasNonDefaultParams && routePrivateProps.childRoutes?.length) {
+  // DEEPEST URL GENERATION: Only activate when NO explicit parameters provided
+  // This prevents overriding explicit user intentions with signal-based "smart" routing
+  const hasExplicitParams = Object.keys(params).length > 0;
+
+  if (
+    !hasExplicitParams &&
+    !hasNonDefaultParams &&
+    routePrivateProps.childRoutes?.length
+  ) {
+    // Only use deepest URL when user didn't provide any explicit params
     // This route has no non-default parameters, check if child routes do
     for (const childRoute of routePrivateProps.childRoutes) {
       const childPrivateProps = routeRelationships.get(childRoute);
@@ -437,9 +455,10 @@ export const buildMostPreciseUrl = (route, params = {}, routeRelationships) => {
         let childHasNonDefaults = false;
         let childParams = {};
 
-        // Check child route parameters
+        // Check child route parameters using only signal values (no explicit overrides)
         for (const connection of childPrivateProps.connections) {
           const { paramName, signal, options } = connection;
+
           if (signal?.value !== undefined) {
             const defaultValue = options?.defaultValue;
             if (signal.value !== defaultValue) {
@@ -450,7 +469,7 @@ export const buildMostPreciseUrl = (route, params = {}, routeRelationships) => {
         }
 
         if (childHasNonDefaults) {
-          // Use child route to build URL instead
+          // Use child route to build URL instead - but only when no explicit params provided
           return buildMostPreciseUrl(
             childRoute,
             childParams,
