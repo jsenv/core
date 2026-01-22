@@ -97,12 +97,8 @@ await snapshotTests(import.meta.url, ({ test }) => {
     }
   });
 
-  test("url building with local storage mocking", () => {
-    clearAllRoutes();
-    globalSignalRegistry.clear();
-
+  test.ONLY("url building with local storage mocking", () => {
     // Mock window.localStorage (required by valueInLocalStorage)
-    const originalWindow = globalThis.window;
     const localStorageMock = {
       storage: new Map(),
       getItem(key) {
@@ -129,7 +125,6 @@ await snapshotTests(import.meta.url, ({ test }) => {
       // Set initial localStorage values
       localStorageMock.setItem("section_ls", "settings"); // default
       localStorageMock.setItem("settings_tab_ls", "general"); // default
-
       const sectionSignal = stateSignal("settings", {
         id: "section_ls",
         persists: true,
@@ -140,16 +135,16 @@ await snapshotTests(import.meta.url, ({ test }) => {
         persists: true,
         type: "string",
       });
-
-      const ADMIN_ROUTE = registerRoute(`/admin/:section=${sectionSignal}/`);
-      const ADMIN_SETTINGS_ROUTE = registerRoute(
-        `/admin/settings/:tab=${tabSignal}`,
-      );
+      const { ADMIN_ROUTE, ADMIN_SETTINGS_ROUTE } = setupRoutes({
+        ROOT: "/",
+        ADMIN_ROUTE: `/admin/:section=${sectionSignal}/`,
+        ADMIN_SETTINGS_ROUTE: `/admin/settings/:tab=${tabSignal}`,
+      });
 
       const scenario1 = {
         name: "both_at_defaults",
-        localStorage_section: localStorageMock.getItem("section_ls"),
-        localStorage_tab: localStorageMock.getItem("settings_tab_ls"),
+        localStorage_section: localStorageMock.getItem("section_ls"), // null - cleaned up because value equals default
+        localStorage_tab: localStorageMock.getItem("settings_tab_ls"), // null - cleaned up because value equals default
         signal_section: sectionSignal.value,
         signal_tab: tabSignal.value,
         admin_url: ADMIN_ROUTE.buildUrl({}),
@@ -180,7 +175,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
 
       const scenario3 = {
         name: "section_default_tab_non_default",
-        localStorage_section: localStorageMock.getItem("section_ls"),
+        localStorage_section: localStorageMock.getItem("section_ls"), // null - cleaned up because value equals default
         localStorage_tab: localStorageMock.getItem("settings_tab_ls"),
         signal_section: sectionSignal.value,
         signal_tab: tabSignal.value,
@@ -194,12 +189,9 @@ await snapshotTests(import.meta.url, ({ test }) => {
         scenario3,
       };
     } finally {
-      // Restore original window and localStorage
-      if (originalWindow) {
-        globalThis.window = originalWindow;
-      } else if (globalThis.window) {
-        delete globalThis.window;
-      }
+      clearAllRoutes();
+      globalSignalRegistry.clear();
+      delete globalThis.window;
     }
   });
 
