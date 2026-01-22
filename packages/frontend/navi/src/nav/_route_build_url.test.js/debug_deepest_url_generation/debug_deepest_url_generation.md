@@ -30,7 +30,7 @@ return {
 
 ```js
 {
-  "admin_with_analytics_section": "http://127.0.0.1/admin/analytics/",
+  "admin_with_analytics_section": "http://127.0.0.1/admin/analytics",
   "admin_with_no_params": "http://127.0.0.1/admin/analytics?tab=details",
   "analytics_direct": "http://127.0.0.1/admin/analytics?tab=details",
   "tab_signal": "details"
