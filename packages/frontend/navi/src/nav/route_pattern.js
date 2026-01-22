@@ -260,8 +260,21 @@ export const createRoutePattern = (pattern) => {
             // Check if child pattern has conflicting literal segments for this parameter
             const childParsedPattern = childPatternData.parsedPattern;
 
+            // Check if parent signal value matches a literal segment in child pattern
+            const matchesChildLiteral = childParsedPattern.segments.some(
+              (segment) =>
+                segment.type === "literal" && segment.value === signal.value,
+            );
+
+            // If parent signal matches a literal in child, don't add as parameter
+            // (it's already represented in the child URL path)
+            if (matchesChildLiteral) {
+              // Compatible - signal value matches child literal, no need to add param
+              continue;
+            }
+
             // For section parameter specifically, check if child has literal "settings"
-            // but parent signal has different value
+            // but parent signal has different value (incompatible case)
             if (paramName === "section" && signal.value !== "settings") {
               const hasSettingsLiteral = childParsedPattern.segments.some(
                 (segment) =>
@@ -273,6 +286,7 @@ export const createRoutePattern = (pattern) => {
               }
             }
 
+            // Only add parent signal as parameter if it doesn't match child literals
             childParams[paramName] = signal.value;
           }
         }

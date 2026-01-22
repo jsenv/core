@@ -87,7 +87,7 @@ try {
 
 ```js
 {
-  "admin_route_from_root": "http://127.0.0.1/admin/analytics/?section=analytics&tab=details",
+  "admin_route_from_root": "http://127.0.0.1/admin/analytics/?tab=details",
   "analytics_route_direct": "http://127.0.0.1/admin/analytics/?tab=details",
   "localStorage_values": {
     "section": "analytics",
