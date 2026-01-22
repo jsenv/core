@@ -407,9 +407,9 @@ export const buildUrlFromPattern = (
  * Each route is responsible for its own URL generation using its own signals.
  */
 export const buildMostPreciseUrl = (route, params = {}, routeRelationships) => {
-  // Get route private properties to access connections and patterns
-  const routePrivateProps = routeRelationships.get(route);
-  if (!routePrivateProps) {
+  // Get route relationship properties to access connections and patterns
+  const routeRelationshipProps = routeRelationships.get(route);
+  if (!routeRelationshipProps) {
     // Fallback to basic URL building if no relationships found
     return buildUrlFromPattern(
       route.pattern?.segments
@@ -424,9 +424,9 @@ export const buildMostPreciseUrl = (route, params = {}, routeRelationships) => {
   let finalParams = { ...params };
 
   // Process all route connections for parameter handling
-  for (const connection of routePrivateProps.connections) {
+  for (const connection of routeRelationshipProps.connections) {
     const { paramName, signal, options } = connection;
-    const defaultValue = options?.defaultValue;
+    const defaultValue = options.defaultValue;
 
     if (paramName in finalParams) {
       // Parameter was explicitly provided
@@ -455,9 +455,13 @@ export const buildMostPreciseUrl = (route, params = {}, routeRelationships) => {
 
   // Check if provided params contain anything beyond what signals would provide
   const signalDerivedParams = {};
-  for (const { paramName, signal, options } of routePrivateProps.connections) {
+  for (const {
+    paramName,
+    signal,
+    options,
+  } of routeRelationshipProps.connections) {
     if (signal?.value !== undefined) {
-      const defaultValue = options?.defaultValue;
+      const defaultValue = options.defaultValue;
       // Only include signal value if it's not the default (same logic as above)
       if (signal.value !== defaultValue) {
         signalDerivedParams[paramName] = signal.value;
@@ -490,75 +494,72 @@ export const buildMostPreciseUrl = (route, params = {}, routeRelationships) => {
   if (
     !hasUserProvidedParams &&
     !isRootRoute &&
-    routePrivateProps.childRoutes?.length
+    routeRelationshipProps.childRoutes.length
   ) {
-    // Get child routes from routeRelationships map instead of route properties
-    const routeRelationshipProps = routeRelationships.get(route);
-    const childRoutes = routeRelationshipProps?.childRoutes || [];
+    // Get child routes from routeRelationships map
+    const childRoutes = routeRelationshipProps.childRoutes || [];
 
     if (childRoutes.length > 0) {
       // Only use deepest URL when user didn't provide any explicit params
       // This route has child routes - check if any child route is more specific
       for (const childRoute of childRoutes) {
-        const childPrivateProps = routeRelationships.get(childRoute);
-        if (childPrivateProps?.connections) {
-          let childHasNonDefaults = false;
-          let childParams = {};
+        const childRelationshipProps = routeRelationships.get(childRoute);
+        let childHasNonDefaults = false;
+        let childParams = {};
 
-          // Check child route parameters using only signal values (no explicit overrides)
-          for (const connection of childPrivateProps.connections) {
-            const { paramName, signal, options } = connection;
+        // Check child route parameters using only signal values (no explicit overrides)
+        for (const connection of childRelationshipProps.connections) {
+          const { paramName, signal, options } = connection;
 
-            if (signal?.value !== undefined) {
-              const defaultValue = options?.defaultValue;
+          if (signal?.value !== undefined) {
+            const defaultValue = options.defaultValue;
 
-              if (signal.value !== defaultValue) {
-                childHasNonDefaults = true;
-                childParams[paramName] = signal.value;
-              }
+            if (signal.value !== defaultValue) {
+              childHasNonDefaults = true;
+              childParams[paramName] = signal.value;
+            }
+          }
+        }
+
+        if (childHasNonDefaults) {
+          // Use child route to build URL instead - but only when no explicit params provided
+          // IMPORTANT: Only pass parameters that the child route actually expects
+          // The child route may have literal segments that don't need parent parameters
+
+          // Get parameters that the child route expects (from its connections)
+          const childExpectedParams = new Set(
+            childRelationshipProps.connections.map((conn) => conn.paramName),
+          );
+
+          // Filter merged params to only include what child route expects
+          const filteredParams = {};
+          for (const [key, value] of Object.entries({
+            ...finalParams,
+            ...childParams,
+          })) {
+            if (childExpectedParams.has(key)) {
+              filteredParams[key] = value;
             }
           }
 
-          if (childHasNonDefaults) {
-            // Use child route to build URL instead - but only when no explicit params provided
-            // IMPORTANT: Only pass parameters that the child route actually expects
-            // The child route may have literal segments that don't need parent parameters
-
-            // Get parameters that the child route expects (from its connections)
-            const childExpectedParams = new Set(
-              childPrivateProps.connections.map((conn) => conn.paramName),
-            );
-
-            // Filter merged params to only include what child route expects
-            const filteredParams = {};
-            for (const [key, value] of Object.entries({
-              ...finalParams,
-              ...childParams,
-            })) {
-              if (childExpectedParams.has(key)) {
-                filteredParams[key] = value;
-              }
-            }
-
-            return buildMostPreciseUrl(
-              childRoute,
-              filteredParams,
-              routeRelationships,
-            );
-          }
+          return buildMostPreciseUrl(
+            childRoute,
+            filteredParams,
+            routeRelationships,
+          );
         }
       }
     }
   }
 
   // Get the parsed pattern
-  const parsedPattern = routePrivateProps?.parsedPattern ||
-    routePrivateProps?.routePattern?.pattern || {
+  const parsedPattern = routeRelationshipProps.parsedPattern ||
+    routeRelationshipProps.routePattern?.pattern || {
       segments: [],
       trailingSlash: false,
     };
 
-  if (!parsedPattern?.segments) {
+  if (!parsedPattern.segments) {
     return "/";
   }
 

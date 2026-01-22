@@ -229,3 +229,4 @@ This guide should help AI coding agents understand the architecture, patterns, a
 - Never write documentation on your initiative.
 - Never use Math.max/Math.min. Code becomes hard to follow. Prefer explicit branching.
 - To add logs for debbuging, prefer console.debug and prefer plain sentence instead of objects. (Objects are harder to copy-paste)
+- **Optional Chaining**: Only use `?.` when you know for sure the value can be undefined. Don't be overly conservative - if you control the data structure and know values exist, access them directly without optional chaining.
