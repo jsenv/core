@@ -6,7 +6,15 @@
 import { createPubSub } from "@jsenv/dom";
 import { batch, computed, effect, signal } from "@preact/signals";
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
-import { buildMostPreciseUrl, createRoutePattern } from "./route_pattern.js";
+import {
+  buildMostPreciseUrl,
+  clearPatterns,
+  createRoutePattern,
+  getBaseFileUrl,
+  getBaseUrl,
+  getPatternData,
+  setupPatterns,
+} from "./route_pattern.js";
 import { resolveRouteUrl } from "./route_url.js";
 
 const DEBUG = false;
@@ -14,23 +22,6 @@ const DEBUG = false;
 /**
  * Route inheritance system - simplified approach
  */
-
-let baseFileUrl;
-let baseUrl;
-export const setBaseUrl = (value) => {
-  baseFileUrl = new URL(
-    value,
-    typeof window === "undefined" ? "http://localhost" : window.location,
-  ).href;
-  baseUrl = new URL(".", baseFileUrl).href;
-};
-setBaseUrl(
-  typeof window === "undefined"
-    ? "/"
-    : import.meta.dev
-      ? new URL(window.HTML_ROOT_PATHNAME, window.location).href
-      : window.location.origin,
-);
 
 // Controls what happens to actions when their route stops matching:
 // 'abort' - Cancel the action immediately when route stops matching
@@ -43,69 +34,9 @@ const ROUTE_DEACTIVATION_STRATEGY = "abort"; // 'abort', 'keep-loading'
 const ROUTE_NOT_MATCHING_PARAMS = {};
 
 const routeSet = new Set();
-// Store relationships between routes built during registration
-const routeRelationships = new Map();
 // Store previous route states to detect changes
 const routePrivatePropertiesMap = new Map();
 
-/**
- * Check if childPattern is a child route of parentPattern
- * E.g., "/admin/settings/:tab" is a child of "/admin/:section/"
- * Also, "/admin/?tab=something" is a child of "/admin/"
- */
-const isChildRoute = (childPattern, parentPattern) => {
-  // Split path and query parts
-  const [childPath, childQuery] = childPattern.split("?");
-  const [parentPath, parentQuery] = parentPattern.split("?");
-
-  // Remove trailing slashes for path comparison
-  const cleanChild = childPath.replace(/\/$/, "");
-  const cleanParent = parentPath.replace(/\/$/, "");
-
-  // CASE 1: Same path, child has query params, parent doesn't
-  // E.g., "/admin/?tab=something" is child of "/admin/"
-  if (cleanChild === cleanParent && childQuery && !parentQuery) {
-    return true;
-  }
-
-  // CASE 2: Traditional path-based child relationship
-  // Convert patterns to comparable segments for proper comparison
-  const childSegments = cleanChild.split("/").filter((s) => s);
-  const parentSegments = cleanParent.split("/").filter((s) => s);
-
-  // Child must have at least as many segments as parent
-  if (childSegments.length < parentSegments.length) {
-    return false;
-  }
-
-  let hasMoreSpecificSegment = false;
-
-  // Check if parent segments match child segments (allowing for parameters)
-  for (let i = 0; i < parentSegments.length; i++) {
-    const parentSeg = parentSegments[i];
-    const childSeg = childSegments[i];
-
-    // If parent has parameter, child can have anything in that position
-    if (parentSeg.startsWith(":")) {
-      // Child is more specific if it has a literal value for a parent parameter
-      // But if child also starts with ":", it's also a parameter (not more specific)
-      if (!childSeg.startsWith(":")) {
-        hasMoreSpecificSegment = true;
-      }
-      continue;
-    }
-
-    // If parent has literal, child must match exactly
-    if (parentSeg !== childSeg) {
-      return false;
-    }
-  }
-
-  // Child is a child route if:
-  // 1. It has more segments than parent (traditional child), OR
-  // 2. It has same segments but is more specific (literal vs parameter)
-  return childSegments.length > parentSegments.length || hasMoreSpecificSegment;
-};
 const routePreviousStateMap = new WeakMap();
 // Store abort controllers per action to control their lifecycle based on route state
 const actionAbortControllerWeakMap = new WeakMap();
@@ -493,50 +424,29 @@ export const getRoutePrivateProperties = (route) => {
   return routePrivatePropertiesMap.get(route);
 };
 
-export const registerRoute = (urlPatternRaw) => {
+const registerRoute = (urlPatternRaw) => {
   if (DEBUG) {
-    console.debug(`Registering route: ${urlPatternRaw}`);
-    console.debug(
-      `Existing routes: ${Array.from(routeSet)
-        .map((r) => r.urlPattern)
-        .join(", ")}`,
+    console.debug(`Creating route: ${urlPatternRaw}`);
+  }
+
+  // Get pre-registered pattern data
+  const patternData = getPatternData(urlPatternRaw);
+  if (!patternData) {
+    throw new Error(
+      `Pattern ${urlPatternRaw} not found in registry. Make sure to call setupRoutes() instead of registerRoute() directly.`,
     );
   }
 
-  // Create custom route pattern - it will detect and process signals internally
-  const routePatternResult = createRoutePattern(urlPatternRaw, baseFileUrl);
-  const { cleanPattern, connections } = routePatternResult;
-  // Analyze inheritance opportunities with existing routes using custom system
-  const inheritanceResult = analyzeRouteInheritance(cleanPattern);
-  // Build parameter defaults from inheritance and connections
+  const { cleanPattern, connections, parsedPattern } = patternData;
+
+  // Create route pattern with connections
+  const routePattern = createRoutePattern(urlPatternRaw, getBaseFileUrl());
+
+  // Build parameter defaults from signal connections
   const parameterDefaults = new Map();
-  // Add defaults from signal connections
   for (const { paramName, options = {} } of connections) {
     if (options.defaultValue !== undefined) {
       parameterDefaults.set(paramName, options.defaultValue);
-    }
-  }
-  // Override with inheritance defaults if available
-  if (inheritanceResult.canInherit) {
-    for (const [
-      paramName,
-      defaultValue,
-    ] of inheritanceResult.parameterDefaults) {
-      parameterDefaults.set(paramName, defaultValue);
-    }
-  }
-  // Now create the final route pattern with defaults
-  const routePattern = createRoutePattern(
-    urlPatternRaw,
-    baseFileUrl,
-    parameterDefaults,
-  );
-  const urlPattern = cleanPattern;
-
-  if (DEBUG) {
-    console.debug(`Parameter defaults:`, parameterDefaults);
-    if (inheritanceResult.canInherit) {
-      console.debug(`Inheritance data:`, inheritanceResult.inheritanceData);
     }
   }
 
@@ -550,56 +460,9 @@ export const registerRoute = (urlPatternRaw) => {
 
   const [publishStatus, subscribeStatus] = createPubSub();
 
-  // Build route relationships during registration
-  const buildRouteRelationships = () => {
-    // Store this route's properties for relationship building
-    const routeProps = {
-      pattern: routePatternResult.pattern,
-      parsedPattern: routePatternResult.pattern,
-      connections,
-      parameterDefaults,
-      childRoutes: [], // Initialize empty
-      parentRoutes: [], // Initialize empty
-      originalPattern: urlPatternRaw, // Store the original pattern with search params
-    };
-    routeRelationships.set(route, routeProps);
-
-    // Find parent-child relationships using original patterns (with search params)
-    const currentOriginalPattern = urlPatternRaw;
-
-    for (const existingRoute of routeSet) {
-      const existingProps = routeRelationships.get(existingRoute);
-      if (!existingProps) continue;
-
-      const existingOriginalPattern =
-        existingProps.originalPattern || existingRoute.pattern;
-
-      // Check if current route is a child of existing route
-      if (isChildRoute(currentOriginalPattern, existingOriginalPattern)) {
-        routeProps.parentRoutes.push(existingRoute);
-
-        // Add current route to existing route's children
-        existingProps.childRoutes.push(route);
-      }
-
-      // Check if existing route is a child of current route
-      if (isChildRoute(existingOriginalPattern, currentOriginalPattern)) {
-        routeProps.childRoutes.push(existingRoute);
-      }
-    }
-  };
-
-  // Store pattern info in route private properties for future pattern matching
-  const originalPatternBeforeTransforms = urlPatternRaw; // Use the actual original pattern
-  const originalRoutePattern = createRoutePattern(
-    originalPatternBeforeTransforms,
-    baseUrl,
-    inheritanceResult.parameterDefaults,
-  );
-
   const route = {
-    urlPattern,
-    pattern: cleanPattern, // Expose the clean pattern string
+    urlPattern: cleanPattern,
+    pattern: cleanPattern,
     isRoute: true,
     matching: false,
     params: ROUTE_NOT_MATCHING_PARAMS,
@@ -610,27 +473,23 @@ export const registerRoute = (urlPatternRaw) => {
     action: null,
     cleanup,
     toString: () => {
-      return `route "${urlPattern}"`;
+      return `route "${cleanPattern}"`;
     },
     replaceParams: undefined,
     subscribeStatus,
   };
-  routeSet.add(route);
 
-  // Build route relationships
-  buildRouteRelationships();
+  routeSet.add(route);
 
   const routePrivateProperties = {
     routePattern,
-    originalPattern: originalPatternBeforeTransforms,
-    originalPatternParsed: originalRoutePattern.pattern,
-    pattern: cleanPattern, // Store the current pattern used
-    inheritanceData: inheritanceResult.inheritanceData, // Store inheritance info for this route
-    parameterDefaults: inheritanceResult.parameterDefaults, // Store parameter defaults
+    originalPattern: urlPatternRaw,
+    pattern: cleanPattern,
     connections,
+    parameterDefaults,
     matchingSignal: null,
     paramsSignal: null,
-    rawParamsSignal: null, // params from URL without defaults
+    rawParamsSignal: null,
     visitedSignal: null,
     relativeUrlSignal: null,
     urlSignal: null,
@@ -677,49 +536,49 @@ export const registerRoute = (urlPatternRaw) => {
   route.paramConfigMap = paramConfigMap;
   const matchingSignal = signal(false);
   const rawParamsSignal = signal(ROUTE_NOT_MATCHING_PARAMS);
-  route_state_signals: {
-    for (const { signal, paramName, options = {} } of connections) {
-      const { debug } = options;
-      paramConfigMap.set(paramName, {
-        getFallbackValue: options.getFallbackValue,
-        defaultValue: options.defaultValue,
-      });
 
-      // URL -> Signal synchronization
-      effect(() => {
-        const matching = matchingSignal.value;
-        const params = rawParamsSignal.value;
-        const urlParamValue = params[paramName];
+  // Set up signal connections
+  for (const { signal: stateSignal, paramName, options = {} } of connections) {
+    const { debug } = options;
+    paramConfigMap.set(paramName, {
+      getFallbackValue: options.getFallbackValue,
+      defaultValue: options.defaultValue,
+    });
 
-        if (!matching) {
-          return;
-        }
-        if (debug) {
-          console.debug(
-            `[stateSignal] URL -> Signal: ${paramName}=${urlParamValue}`,
-          );
-        }
-        signal.value = urlParamValue;
-      });
+    // URL -> Signal synchronization
+    effect(() => {
+      const matching = matchingSignal.value;
+      const params = rawParamsSignal.value;
+      const urlParamValue = params[paramName];
 
-      // Signal -> URL synchronization
-      effect(() => {
-        const value = signal.value;
-        const params = rawParamsSignal.value;
-        const urlParamValue = params[paramName];
-        const matching = matchingSignal.value;
+      if (!matching) {
+        return;
+      }
+      if (debug) {
+        console.debug(
+          `[stateSignal] URL -> Signal: ${paramName}=${urlParamValue}`,
+        );
+      }
+      stateSignal.value = urlParamValue;
+    });
 
-        if (!matching || value === urlParamValue) {
-          return;
-        }
+    // Signal -> URL synchronization
+    effect(() => {
+      const value = stateSignal.value;
+      const params = rawParamsSignal.value;
+      const urlParamValue = params[paramName];
+      const matching = matchingSignal.value;
 
-        if (debug) {
-          console.debug(`[stateSignal] Signal -> URL: ${paramName}=${value}`);
-        }
+      if (!matching || value === urlParamValue) {
+        return;
+      }
 
-        route.replaceParams({ [paramName]: value });
-      });
-    }
+      if (debug) {
+        console.debug(`[stateSignal] Signal -> URL: ${paramName}=${value}`);
+      }
+
+      route.replaceParams({ [paramName]: value });
+    });
   }
 
   const paramsSignal = computed(() => {
@@ -728,110 +587,30 @@ export const registerRoute = (urlPatternRaw) => {
       return rawParams;
     }
     const mergedParams = {};
-    const paramNameSet = new Set(paramConfigMap.keys());
-
-    // Add inherited defaults from other routes for missing parameters
-    const routePrivateProps = getRoutePrivateProperties(route);
-    const inheritanceInfo = routePrivateProps?.inheritanceData;
-    const literalParameterNames = new Set(); // Track literal parameters to exclude them throughout
-
-    if (inheritanceInfo) {
-      // Create a set of parameters that correspond to literal segments in the original pattern
-      // These should not be exposed in the final params since they're "hardcoded" in the route
-      const originalPatternSegments = routePrivateProps.originalPattern
-        .split("/")
-        .filter((s) => s !== "");
-
-      if (DEBUG) {
-        console.debug("Original pattern segments:", originalPatternSegments);
-        console.debug("Inheritance info:", inheritanceInfo);
-      }
-
-      for (const inheritance of inheritanceInfo) {
-        const { paramName, literalValue, segmentIndex } = inheritance;
-        // If the original pattern had a literal segment at this position,
-        // don't include this parameter in the final params
-        if (segmentIndex < originalPatternSegments.length) {
-          const originalSegment = originalPatternSegments[segmentIndex];
-          if (DEBUG) {
-            console.debug(
-              `Checking segment ${segmentIndex}: original="${originalSegment}" vs literal="${literalValue}"`,
-            );
-          }
-          if (originalSegment === literalValue) {
-            literalParameterNames.add(paramName);
-            if (DEBUG) {
-              console.debug(`Filtering out literal parameter: ${paramName}`);
-            }
-          }
-        }
-      }
-    }
 
     // First, add raw params that have defined values
-    // But exclude literal parameters that correspond to hardcoded segments
     if (rawParams) {
       for (const name of Object.keys(rawParams)) {
         const value = rawParams[name];
         if (value !== undefined) {
-          if (DEBUG) {
-            console.debug(`Processing raw param: ${name}=${value}`);
-          }
-          // Skip literal parameters that correspond to hardcoded segments in original pattern
-          if (literalParameterNames.has(name)) {
-            if (DEBUG) {
-              console.debug(
-                `Excluding literal parameter ${name} from raw params`,
-              );
-            }
-            continue;
-          }
-          mergedParams[name] = rawParams[name];
-          paramNameSet.delete(name);
+          mergedParams[name] = value;
         }
       }
     }
 
-    // Add inherited defaults for parameters not in raw params and not literal
-    if (inheritanceInfo) {
-      for (const inheritance of inheritanceInfo) {
-        const { paramName, defaultValue } = inheritance;
-        if (
-          !(paramName in mergedParams) &&
-          !literalParameterNames.has(paramName)
-        ) {
+    // Then add defaults for parameters not in raw params
+    for (const [paramName, paramConfig] of paramConfigMap) {
+      if (!(paramName in mergedParams)) {
+        const { defaultValue } = paramConfig;
+        if (defaultValue !== undefined) {
           mergedParams[paramName] = defaultValue;
-          paramNameSet.delete(paramName);
-        } else if (literalParameterNames.has(paramName)) {
-          if (DEBUG) {
-            console.debug(
-              `Excluded literal parameter ${paramName} from inheritance defaults`,
-            );
-          }
         }
-      }
-    }
-
-    // Then, for parameters not in URL, check localStorage and apply defaults
-    // But exclude literal parameters that correspond to hardcoded segments
-    for (const paramName of paramNameSet) {
-      if (literalParameterNames.has(paramName)) {
-        if (DEBUG) {
-          console.debug(
-            `Skipping literal parameter ${paramName} in default processing`,
-          );
-        }
-        continue; // Skip literal parameters
-      }
-      const paramConfig = paramConfigMap.get(paramName);
-      const { defaultValue } = paramConfig;
-      if (defaultValue !== undefined) {
-        mergedParams[paramName] = defaultValue;
       }
     }
 
     return mergedParams;
   });
+
   const visitedSignal = signal(false);
 
   route.navTo = (params) => {
@@ -845,6 +624,7 @@ export const registerRoute = (urlPatternRaw) => {
     }
     return browserIntegration.navTo(route.buildUrl(params));
   };
+
   route.redirectTo = (params) => {
     if (!browserIntegration) {
       if (import.meta.dev) {
@@ -858,6 +638,7 @@ export const registerRoute = (urlPatternRaw) => {
       replace: true,
     });
   };
+
   const replaceParams = (newParams) => {
     const matching = matchingSignal.peek();
     if (!matching) {
@@ -878,66 +659,29 @@ export const registerRoute = (urlPatternRaw) => {
 
   const resolveParams = (providedParams, { cleanupDefaults } = {}) => {
     const currentParams = rawParamsSignal.value;
-
-    // Determine which parameters correspond to literal segments and should be omitted
-    const routePrivateProps = getRoutePrivateProperties(route);
-    const inheritanceInfo = routePrivateProps?.inheritanceData;
-    const literalParameterNames = new Set();
-
-    if (inheritanceInfo) {
-      // Create a set of parameters that correspond to literal segments in the original pattern
-      const originalPatternSegments = routePrivateProps.originalPattern
-        .split("/")
-        .filter((s) => s !== "");
-
-      for (const inheritance of inheritanceInfo) {
-        const { paramName, literalValue, segmentIndex } = inheritance;
-        if (segmentIndex < originalPatternSegments.length) {
-          const originalSegment = originalPatternSegments[segmentIndex];
-          if (originalSegment === literalValue) {
-            literalParameterNames.add(paramName);
-          }
-        }
-      }
-    }
-
-    // Start with all current parameters, then overlay provided parameters
     const paramNameSet = new Set();
+
     if (currentParams) {
       for (const paramName of Object.keys(currentParams)) {
-        if (!literalParameterNames.has(paramName)) {
-          paramNameSet.add(paramName);
-        }
+        paramNameSet.add(paramName);
       }
     }
     if (providedParams) {
       for (const paramName of Object.keys(providedParams)) {
-        if (!literalParameterNames.has(paramName)) {
-          paramNameSet.add(paramName);
-        }
+        paramNameSet.add(paramName);
       }
     }
 
-    const paramConfigNameSet = new Set(paramConfigMap.keys());
     const mergedParams = {};
 
     // First, process parameters that have configurations (signals)
-    for (const paramName of paramConfigNameSet) {
-      if (literalParameterNames.has(paramName)) {
-        continue;
-      }
+    for (const [paramName, paramConfig] of paramConfigMap) {
       if (paramNameSet.has(paramName)) {
-        // Skip configured params that are provided - they'll be handled in the second loop
-        continue;
+        continue; // Will be handled in the second loop
       }
       const currentValue = currentParams?.[paramName];
       if (currentValue !== undefined) {
-        paramNameSet.delete(paramName);
         mergedParams[paramName] = currentValue;
-        continue;
-      }
-      const paramConfig = paramConfigMap.get(paramName);
-      if (!paramConfig) {
         continue;
       }
       const { getFallbackValue, defaultValue } = paramConfig;
@@ -956,18 +700,13 @@ export const registerRoute = (urlPatternRaw) => {
       }
       if (defaultValue !== undefined) {
         mergedParams[paramName] = defaultValue;
-        continue;
       }
     }
 
-    // Then, process provided parameters (including those without configurations)
+    // Then, process provided parameters
     for (const paramName of paramNameSet) {
-      if (literalParameterNames.has(paramName)) {
-        continue;
-      }
       const providedValue = providedParams?.[paramName];
       const currentValue = currentParams?.[paramName];
-
       const valueToUse =
         providedValue !== undefined ? providedValue : currentValue;
 
@@ -982,6 +721,7 @@ export const registerRoute = (urlPatternRaw) => {
         mergedParams[paramName] = valueToUse;
       }
     }
+
     return mergedParams;
   };
 
@@ -990,35 +730,14 @@ export const registerRoute = (urlPatternRaw) => {
       cleanupDefaults: true, // Clean up defaults so we get shorter URLs
     });
 
-    // Use most precise URL generation approach
-    const mostPreciseUrl = buildMostPreciseUrl(
-      route,
-      resolvedParams,
-      routeRelationships,
-    );
+    // Use most precise URL generation approach - delegate to pattern system
+    const mostPreciseUrl = buildMostPreciseUrl(route, resolvedParams);
     return mostPreciseUrl;
   };
-  /**
-   * Builds a complete URL for this route with the given parameters.
-   *
-   * Takes parameters and substitutes them into the route's URL pattern,
-   * automatically URL-encoding values unless wrapped with rawUrlPart().
-   * Extra parameters not in the pattern are added as search parameters.
-   *
-   * @param {Object} params - Parameters to substitute into the URL pattern
-   * @returns {string} Complete URL with base URL and encoded parameters
-   *
-   * @example
-   * // For a route with pattern "/items/:id"
-   * // Normal parameter encoding
-   * route.buildUrl({ id: "hello world" }) // → "https://example.com/items/hello%20world"
-   * // Raw parameter (no encoding)
-   * route.buildUrl({ id: rawUrlPart("hello world") }) // → "https://example.com/items/hello world"
-   *
-   */
+
   const buildUrl = (params) => {
     const routeRelativeUrl = route.buildRelativeUrl(params);
-    const routeUrl = resolveRouteUrl(routeRelativeUrl, baseUrl);
+    const routeUrl = resolveRouteUrl(routeRelativeUrl, getBaseUrl());
     return routeUrl;
   };
   route.buildUrl = buildUrl;
@@ -1030,43 +749,24 @@ export const registerRoute = (urlPatternRaw) => {
     return same;
   };
 
+  // Create URL signals that can now access route relationships immediately
   const relativeUrlSignal = computed(() => {
     const rawParams = rawParamsSignal.value;
-
-    // Listen to child route signals for "deepest URL generation"
-    // Force reactivity by accessing child signals
-    const routeRelationshipProps = routeRelationships.get(route);
-    const childRoutes = routeRelationshipProps?.childRoutes || [];
-
-    if (childRoutes.length > 0) {
-      for (const childRoute of childRoutes) {
-        const childPrivateProps = routeRelationships.get(childRoute);
-        if (childPrivateProps?.connections) {
-          // Access child signal values to create reactivity dependency
-          for (const connection of childPrivateProps.connections) {
-            const { signal } = connection;
-            if (signal?.value !== undefined) {
-              // Just access the value to create dependency - don't use it here
-              // eslint-disable-next-line no-unused-expressions
-              signal.value;
-            }
-          }
-        }
-      }
-    }
-
     const relativeUrl = route.buildRelativeUrl(rawParams);
     return relativeUrl;
   });
+
   const disposeRelativeUrlEffect = effect(() => {
     route.relativeUrl = relativeUrlSignal.value;
   });
   cleanupCallbackSet.add(disposeRelativeUrlEffect);
+
   const urlSignal = computed(() => {
     const relativeUrl = relativeUrlSignal.value;
-    const url = resolveRouteUrl(relativeUrl, baseUrl);
+    const url = resolveRouteUrl(relativeUrl, getBaseUrl());
     return url;
   });
+
   const disposeUrlEffect = effect(() => {
     route.url = urlSignal.value;
   });
@@ -1106,16 +806,13 @@ export const registerRoute = (urlPatternRaw) => {
   route.bindAction = bindAction;
 
   // Store private properties for internal access
-  {
-    routePrivateProperties.matchingSignal = matchingSignal;
-    routePrivateProperties.paramsSignal = paramsSignal;
-    routePrivateProperties.rawParamsSignal = rawParamsSignal;
-    routePrivateProperties.visitedSignal = visitedSignal;
-    routePrivateProperties.relativeUrlSignal = relativeUrlSignal;
-    routePrivateProperties.urlSignal = urlSignal;
-    routePrivateProperties.cleanupCallbackSet = cleanupCallbackSet;
-    routePrivateProperties.routePattern = routePattern;
-  }
+  routePrivateProperties.matchingSignal = matchingSignal;
+  routePrivateProperties.paramsSignal = paramsSignal;
+  routePrivateProperties.rawParamsSignal = rawParamsSignal;
+  routePrivateProperties.visitedSignal = visitedSignal;
+  routePrivateProperties.relativeUrlSignal = relativeUrlSignal;
+  routePrivateProperties.urlSignal = urlSignal;
+  routePrivateProperties.cleanupCallbackSet = cleanupCallbackSet;
 
   return route;
 };
@@ -1142,6 +839,8 @@ export const clearAllRoutes = () => {
   }
   routeSet.clear();
   routePrivatePropertiesMap.clear();
+  // Clear patterns as well
+  clearPatterns();
   // Don't clear signal registry here - let tests manage it explicitly
   // This prevents clearing signals that are still being used across multiple route registrations
 };
@@ -1204,14 +903,21 @@ export const setOnRouteDefined = (v) => {
 // (An async function returning an action)
 
 export const setupRoutes = (routeDefinition) => {
-  // Clean up existing routes
-  clearAllRoutes();
+  // Prevent calling setupRoutes when routes already exist - enforce clean setup
+  if (routeSet.size > 0) {
+    throw new Error(
+      "Routes already exist. Call clearAllRoutes() first to clean up existing routes before creating new ones. This prevents cross-test pollution and ensures clean state.",
+    );
+  }
 
+  // PHASE 1: Register all patterns and build their relationships
+  setupPatterns(routeDefinition, getBaseFileUrl());
+
+  // PHASE 2: Create routes (patterns are ready, so routes can create signals immediately)
   const routes = {};
   for (const key of Object.keys(routeDefinition)) {
-    const value = routeDefinition[key];
-    const route = registerRoute(value);
-
+    const urlPatternRaw = routeDefinition[key];
+    const route = registerRoute(urlPatternRaw);
     routes[key] = route;
   }
 

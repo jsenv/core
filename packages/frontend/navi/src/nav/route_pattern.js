@@ -8,6 +8,28 @@ import { globalSignalRegistry } from "../state/state_signal.js";
 
 const DEBUG = false;
 
+// Base URL management
+let baseFileUrl;
+let baseUrl;
+
+export const setBaseUrl = (value) => {
+  baseFileUrl = new URL(
+    value.endsWith("/") ? `${value}dummy.js` : value,
+    import.meta.url,
+  );
+  baseUrl = new URL(".", baseFileUrl).href;
+};
+
+setBaseUrl(import.meta.env?.VITE_BASE_URL || import.meta.env?.BASE_URL || "./");
+
+export const getBaseUrl = () => baseUrl;
+export const getBaseFileUrl = () => baseFileUrl;
+
+// Pattern registry for building relationships before routes are created
+const patternRegistry = new Map(); // pattern -> patternData
+const patternRelationships = new Map(); // pattern -> relationships
+let patternsRegistered = false;
+
 // Function to detect signals in route patterns and connect them
 export const detectSignals = (routePattern) => {
   const signalConnections = [];
@@ -403,14 +425,15 @@ export const buildUrlFromPattern = (
 };
 
 /**
- * Build the most precise URL by using local storage values for the route's own parameters.
+ * Build the most precise URL by using route relationships from pattern registry.
  * Each route is responsible for its own URL generation using its own signals.
  */
-export const buildMostPreciseUrl = (route, params = {}, routeRelationships) => {
-  // Get route relationship properties to access connections and patterns
-  const routeRelationshipProps = routeRelationships.get(route);
-  if (!routeRelationshipProps) {
-    // Fallback to basic URL building if no relationships found
+export const buildMostPreciseUrl = (route, params = {}) => {
+  // Get the route's pattern from the pattern registry
+  const routePrivateProps =
+    route.__patternData || getPatternData(route.pattern);
+  if (!routePrivateProps) {
+    // Fallback to basic URL building if no pattern found
     return buildUrlFromPattern(
       route.pattern?.segments
         ? route.pattern
@@ -424,7 +447,8 @@ export const buildMostPreciseUrl = (route, params = {}, routeRelationships) => {
   let finalParams = { ...params };
 
   // Process all route connections for parameter handling
-  for (const connection of routeRelationshipProps.connections) {
+  const { connections } = routePrivateProps;
+  for (const connection of connections) {
     const { paramName, signal, options } = connection;
     const defaultValue = options.defaultValue;
 
@@ -589,3 +613,156 @@ export const buildMostPreciseUrl = (route, params = {}, routeRelationships) => {
 
 // Compatibility alias for existing tests - will be updated later
 export const buildUrlFromPatternWithSegmentFiltering = buildUrlFromPattern;
+
+/**
+ * Check if childPattern is a child route of parentPattern
+ * E.g., "/admin/settings/:tab" is a child of "/admin/:section/"
+ * Also, "/admin/?tab=something" is a child of "/admin/"
+ */
+const isChildPattern = (childPattern, parentPattern) => {
+  // Split path and query parts
+  const [childPath, childQuery] = childPattern.split("?");
+  const [parentPath, parentQuery] = parentPattern.split("?");
+
+  // Remove trailing slashes for path comparison
+  const cleanChild = childPath.replace(/\/$/, "");
+  const cleanParent = parentPath.replace(/\/$/, "");
+
+  // CASE 1: Same path, child has query params, parent doesn't
+  // E.g., "/admin/?tab=something" is child of "/admin/"
+  if (cleanChild === cleanParent && childQuery && !parentQuery) {
+    return true;
+  }
+
+  // CASE 2: Traditional path-based child relationship
+  // Convert patterns to comparable segments for proper comparison
+  const childSegments = cleanChild.split("/").filter((s) => s);
+  const parentSegments = cleanParent.split("/").filter((s) => s);
+
+  // Child must have at least as many segments as parent
+  if (childSegments.length < parentSegments.length) {
+    return false;
+  }
+
+  let hasMoreSpecificSegment = false;
+
+  // Check if parent segments match child segments (allowing for parameters)
+  for (let i = 0; i < parentSegments.length; i++) {
+    const parentSeg = parentSegments[i];
+    const childSeg = childSegments[i];
+
+    // If parent has parameter, child can have anything in that position
+    if (parentSeg.startsWith(":")) {
+      // Child is more specific if it has a literal value for a parent parameter
+      // But if child also starts with ":", it's also a parameter (not more specific)
+      if (!childSeg.startsWith(":")) {
+        hasMoreSpecificSegment = true;
+      }
+      continue;
+    }
+
+    // If parent has literal, child must match exactly
+    if (parentSeg !== childSeg) {
+      return false;
+    }
+  }
+
+  // Child must be more specific (more segments OR more specific segments)
+  return childSegments.length > parentSegments.length || hasMoreSpecificSegment;
+};
+
+/**
+ * Register all patterns at once and build their relationships
+ */
+export const setupPatterns = (patternDefinitions, baseFileUrl) => {
+  // Clear existing patterns
+  patternRegistry.clear();
+  patternRelationships.clear();
+
+  // Phase 1: Register all patterns
+  for (const [key, urlPatternRaw] of Object.entries(patternDefinitions)) {
+    const [cleanPattern, connections] = detectSignals(urlPatternRaw);
+    const parsedPattern = parsePattern(cleanPattern);
+
+    const patternData = {
+      key,
+      urlPatternRaw,
+      cleanPattern,
+      connections,
+      parsedPattern,
+      childPatterns: [],
+      parentPatterns: [],
+    };
+
+    patternRegistry.set(urlPatternRaw, patternData);
+  }
+
+  // Phase 2: Build relationships between all patterns
+  const allPatterns = Array.from(patternRegistry.keys());
+
+  for (const currentPattern of allPatterns) {
+    const currentData = patternRegistry.get(currentPattern);
+
+    for (const otherPattern of allPatterns) {
+      if (currentPattern === otherPattern) continue;
+
+      const otherData = patternRegistry.get(otherPattern);
+
+      // Check if current pattern is a child of other pattern
+      if (isChildPattern(currentPattern, otherPattern)) {
+        currentData.parentPatterns.push(otherPattern);
+        otherData.childPatterns.push(currentPattern);
+      }
+    }
+
+    // Store relationships for easy access
+    patternRelationships.set(currentPattern, {
+      pattern: currentData.parsedPattern,
+      parsedPattern: currentData.parsedPattern,
+      connections: currentData.connections,
+      childRoutes: [], // Will be populated when routes are created
+      parentRoutes: [], // Will be populated when routes are created
+      originalPattern: currentPattern,
+    });
+  }
+
+  patternsRegistered = true;
+
+  if (DEBUG) {
+    console.debug("Patterns registered:", patternRegistry.size);
+    for (const [pattern, data] of patternRegistry) {
+      console.debug(`Pattern: ${pattern}`, {
+        children: data.childPatterns,
+        parents: data.parentPatterns,
+      });
+    }
+  }
+};
+
+/**
+ * Get pattern data for a registered pattern
+ */
+export const getPatternData = (urlPatternRaw) => {
+  return patternRegistry.get(urlPatternRaw);
+};
+
+/**
+ * Get pattern relationships for route creation
+ */
+export const getPatternRelationships = () => {
+  if (!patternsRegistered) {
+    throw new Error(
+      "Patterns must be registered before accessing relationships",
+    );
+  }
+  return patternRelationships;
+};
+
+/**
+ * Clear all registered patterns
+ */
+export const clearPatterns = () => {
+  patternRegistry.clear();
+  patternRelationships.clear();
+  patternsRegistered = false;
+};
