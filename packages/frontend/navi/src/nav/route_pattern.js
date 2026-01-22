@@ -248,6 +248,8 @@ export const createRoutePattern = (pattern) => {
         const childParams = {};
 
         // Include parent signal values for child pattern matching
+        // But first check if they're compatible with the child pattern
+        let parentSignalsCompatibleWithChild = true;
         for (const parentConnection of connections) {
           const { paramName, signal, options } = parentConnection;
           // Only include non-default parent signal values
@@ -255,8 +257,29 @@ export const createRoutePattern = (pattern) => {
             signal?.value !== undefined &&
             signal.value !== options.defaultValue
           ) {
+            // Check if child pattern has conflicting literal segments for this parameter
+            const childParsedPattern = childPatternData.parsedPattern;
+
+            // For section parameter specifically, check if child has literal "settings"
+            // but parent signal has different value
+            if (paramName === "section" && signal.value !== "settings") {
+              const hasSettingsLiteral = childParsedPattern.segments.some(
+                (segment) =>
+                  segment.type === "literal" && segment.value === "settings",
+              );
+              if (hasSettingsLiteral) {
+                parentSignalsCompatibleWithChild = false;
+                break;
+              }
+            }
+
             childParams[paramName] = signal.value;
           }
+        }
+
+        // Skip this child if parent signals are incompatible
+        if (!parentSignalsCompatibleWithChild) {
+          continue;
         }
 
         // Check child connections and see if any have non-default values

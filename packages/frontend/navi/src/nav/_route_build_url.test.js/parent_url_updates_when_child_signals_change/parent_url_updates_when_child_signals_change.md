@@ -77,9 +77,9 @@ try {
     "parent_now_uses_child_route": true
   },
   "afterSectionChange": {
-    "admin_after_section_change": "http://127.0.0.1/admin/settings/security?section=users",
+    "admin_after_section_change": "http://127.0.0.1/admin/users",
     "settings_after_section_change": "http://127.0.0.1/admin/settings/security",
-    "admin_relativeUrl_after_section": "/admin/settings/security?section=users",
+    "admin_relativeUrl_after_section": "/admin/users",
     "settings_relativeUrl_after_section": "/admin/settings/security",
     "section_signal_value": "users",
     "parent_uses_own_param": true
