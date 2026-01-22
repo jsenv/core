@@ -1,19 +1,28 @@
-# [basic](../../route_matching.test.js#L29)
+# [basic](../../route_matching.test.js#L16)
 
 ```js
-return {
-  matching_url: run("/users/:id", `/users/123`),
-  non_matching_url: run("/users/:id", `/admin`),
-};
+try {
+  const { USER_ROUTE } = setupRoutes({
+    USER_ROUTE: "/users/:id",
+  });
+  return {
+    matching_url: match(USER_ROUTE, `/users/123`),
+    non_matching_url: match(USER_ROUTE, `/admin`),
+  };
+} finally {
+  clearAllRoutes();
+  globalSignalRegistry.clear();
+}
 ```
 
-```js
-{
-  "matching_url": {
-    "id": "123"
-  },
-  "non_matching_url": null
-}
+```console
+TypeError: Cannot read properties of undefined (reading 'length')
+  at buildMostPreciseUrl (base/route_pattern.js:508:30)
+  at route.buildRelativeUrl (base/route.js:528:28)
+  at a.x (base/route.js:542:31)
+  at p.<anonymous> (base/route.js:547:43)
+  at registerRoute (base/route.js:546:36)
+  at setupRoutes (base/route.js:710:19)
 ```
 
 ---
