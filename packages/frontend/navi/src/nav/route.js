@@ -219,12 +219,9 @@ export const getRoutePrivateProperties = (route) => {
 
 const registerRoute = (routePattern) => {
   const urlPatternRaw = routePattern.originalPattern;
-
   if (DEBUG) {
     console.debug(`Creating route: ${urlPatternRaw}`);
   }
-
-  // Get pre-registered pattern data for signal connections
   const patternData = getPatternData(urlPatternRaw);
   const { cleanPattern, connections } = patternData;
 
@@ -235,7 +232,6 @@ const registerRoute = (routePattern) => {
     }
     cleanupCallbackSet.clear();
   };
-
   const [publishStatus, subscribeStatus] = createPubSub();
 
   const route = {
@@ -258,9 +254,7 @@ const registerRoute = (routePattern) => {
     // Store pattern object for URL building
     __routePattern: routePattern,
   };
-
   routeSet.add(route);
-
   const routePrivateProperties = {
     routePattern,
     originalPattern: urlPatternRaw,
@@ -312,8 +306,6 @@ const registerRoute = (routePattern) => {
 
   const matchingSignal = signal(false);
   const rawParamsSignal = signal(ROUTE_NOT_MATCHING_PARAMS);
-
-  // Set up signal connections
   for (const { signal: stateSignal, paramName, options = {} } of connections) {
     const { debug } = options;
 
@@ -372,7 +364,6 @@ const registerRoute = (routePattern) => {
     }
     return browserIntegration.navTo(route.buildUrl(params));
   };
-
   route.redirectTo = (params) => {
     if (!browserIntegration) {
       if (import.meta.dev) {
