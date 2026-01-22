@@ -14,7 +14,7 @@ let baseUrl;
 export const setBaseUrl = (value) => {
   baseFileUrl = new URL(
     value,
-    typeof window === "undefined" ? "http://localhost" : window.location,
+    typeof window === "undefined" ? "http://localhost/" : window.location,
   ).href;
   baseUrl = new URL(".", baseFileUrl).href;
 };
