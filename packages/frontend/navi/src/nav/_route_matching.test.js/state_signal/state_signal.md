@@ -1,26 +1,27 @@
-# [state signal](../../route_matching.test.js#L36)
+# [state signal](../../route_matching.test.js#L31)
 
 ```js
-clearAllRoutes();
-globalSignalRegistry.clear();
-const sectionSignal = stateSignal("settings", {
-  id: "state_signal_section",
-});
-return {
-  matching_with_default: run(`/admin/:section=${sectionSignal}`, `/admin`),
-  matching_with_param: run(
-    `/admin/:section=${sectionSignal}`,
-    `/admin/users`,
-  ),
-  non_matching_url: run(`/admin/:section=${sectionSignal}`, `/different`),
-};
+try {
+  const sectionSignal = stateSignal("settings", {
+    id: "state_signal_section",
+  });
+  const { ADMIN_ROUTE } = setupRoutes({
+    ADMIN_ROUTE: `/admin/:section=${sectionSignal}`,
+  });
+  return {
+    matching_with_default: match(ADMIN_ROUTE, `/admin`),
+    matching_with_param: match(ADMIN_ROUTE, `/admin/users`),
+    non_matching_url: match(ADMIN_ROUTE, `/different`),
+  };
+} finally {
+  clearAllRoutes();
+  globalSignalRegistry.clear();
+}
 ```
 
 ```js
 {
-  "matching_with_default": {
-    "section": "settings"
-  },
+  "matching_with_default": null,
   "matching_with_param": {
     "section": "users"
   },

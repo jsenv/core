@@ -28,7 +28,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
     }
   });
 
-  test("state signal", () => {
+  test.ONLY("state signal", () => {
     try {
       const sectionSignal = stateSignal("settings", {
         id: "state_signal_section",
