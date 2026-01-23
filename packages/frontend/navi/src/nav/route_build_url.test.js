@@ -568,8 +568,9 @@ await snapshotTests(import.meta.url, ({ test }) => {
         type: "boolean",
       });
 
-      const { MAP_ROUTE } = setupRoutes({
+      const { MAP_ROUTE, MAP_ISOCHRONE_ROUTE } = setupRoutes({
         MAP_ROUTE: `/map/?zone=${zoneIdSignal}&style=${mapboxStyleSignal}&lon=${mapboxLongitudeSignal}&lat=${mapboxLatitudeSignal}&zoom=${mapboxZoomSignal}&sidebar=${mapSidebarOpenedSignal}`,
+        MAP_ISOCHRONE_ROUTE: "/map/isochrone",
       });
 
       // Step 1: Generate URL with all defaults (no params passed)
@@ -578,10 +579,12 @@ await snapshotTests(import.meta.url, ({ test }) => {
       mapboxZoomSignal.value = 15;
       // Step 3: Generate URL again without params to see if changed zoom appears
       const urlAfterZoomChange = MAP_ROUTE.buildUrl();
+      const isochroneUrl = MAP_ISOCHRONE_ROUTE.buildUrl();
 
       return {
-        url_with_all_defaults: urlWithDefaults,
-        url_after_zoom_change: urlAfterZoomChange,
+        map_url_defaults: urlWithDefaults,
+        map_url_with_zoom: urlAfterZoomChange,
+        map_isochrone_url_with_zoom: isochroneUrl,
       };
     } finally {
       clearAllRoutes();
