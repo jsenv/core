@@ -10,7 +10,6 @@ import {
   clearPatterns,
   createRoutePattern,
   getPatternData,
-  getPatternRelationships,
   resolveRouteUrl,
   setupPatterns,
 } from "./route_pattern.js";
@@ -216,41 +215,6 @@ export const updateRoutes = (
 
 export const getRoutePrivateProperties = (route) => {
   return routePrivatePropertiesMap.get(route);
-};
-
-/**
- * Get child routes of a given route
- */
-const getRouteChildren = (route) => {
-  const children = [];
-  const routePrivateProperties = getRoutePrivateProperties(route);
-  if (!routePrivateProperties) {
-    return children;
-  }
-
-  const { originalPattern } = routePrivateProperties;
-  const relationships = getPatternRelationships();
-  const relationshipData = relationships.get(originalPattern);
-
-  if (!relationshipData || !relationshipData.children) {
-    return children;
-  }
-
-  // Find child routes
-  for (const childPattern of relationshipData.children) {
-    for (const otherRoute of routeSet) {
-      const otherRoutePrivateProperties = getRoutePrivateProperties(otherRoute);
-      if (
-        otherRoutePrivateProperties &&
-        otherRoutePrivateProperties.originalPattern === childPattern
-      ) {
-        children.push(otherRoute);
-        break;
-      }
-    }
-  }
-
-  return children;
 };
 
 const registerRoute = (routePattern) => {
