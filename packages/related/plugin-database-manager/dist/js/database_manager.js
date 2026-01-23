@@ -1,6 +1,6 @@
 import { d, u, useSignal, M, F, T, h, A, b, k, E, O, q, F$1 } from "../jsenv_plugin_database_manager_node_modules.js";
 import { initFlexDetailsSet, startDragToResizeGesture, getInnerWidth, getWidth, initPositionSticky } from "@jsenv/dom";
-import { useEditionController, Overflow, createUniqueValueConstraint, FontSizedSvg, Input, SINGLE_SPACE_CONSTRAINT, useSignalSync, Editable, useSelectionController, useKeyboardShortcuts, createSelectionKeyboardShortcuts, Details, Button, valueInLocalStorage, SVGMaskOverlay, resource, useActionData, setBaseUrl, defineRoutes, createAction, useRouteStatus, LinkWithIcon, TextAndCount, IconAndText, useRunOnMount, Form, Select, Label, ErrorBoundaryContext, Route, useNavState, Table, TabList, Tab, UITransition } from "@jsenv/navi";
+import { useEditionController, createAvailableConstraint, Input, SINGLE_SPACE_CONSTRAINT, useSignalSync, Editable, useSelectionController, useKeyboardShortcuts, createSelectionKeyboardShortcuts, Details, Button, valueInLocalStorage, SVGMaskOverlay, resource, useActionData, setBaseUrl, setupRoutes, createAction, useRouteStatus, useRunOnMount, Form, Select, Label, ErrorBoundaryContext, Route, useNavState, Table, TabList, Tab, UITransition } from "@jsenv/navi";
 
 /* eslint-disable */
 // construct-style-sheets-polyfill@3.1.0
@@ -324,8 +324,6 @@ import { useEditionController, Overflow, createUniqueValueConstraint, FontSizedS
   }
 })();
 
-/* eslint-env browser,node */
-
 /*
  * This file does not use export const InlineContent = function() {} on purpose:
  * - An export would be renamed by rollup,
@@ -398,6 +396,8 @@ const useTableCount = () => {
   return tableCountSignal.value;
 };
 
+const Overflow = () => {};
+const FontSizedSvg$1 = () => {};
 const ExplorerItem = ({
   nameKey,
   item,
@@ -461,7 +461,7 @@ const RenameInputOrName = ({
     }
     otherValueSet.add(itemCandidate[nameKey]);
   }
-  const uniqueNameConstraint = createUniqueValueConstraint(otherValueSet, "\"{value}\" already exist, please choose another name.");
+  const availableNameConstraint = createAvailableConstraint(otherValueSet, "\"{value}\" already exist, please choose another name.");
   return u(Editable, {
     editing: editing,
     onEditEnd: stopEditing,
@@ -469,7 +469,7 @@ const RenameInputOrName = ({
     valueSignal: nameSignal,
     action: renameAction,
     required: true,
-    constraints: [SINGLE_SPACE_CONSTRAINT, uniqueNameConstraint],
+    constraints: [SINGLE_SPACE_CONSTRAINT, availableNameConstraint],
     children: u(Overflow, {
       children: itemName
     })
@@ -490,10 +490,10 @@ const ExplorerNewItem = ({
   for (const item of itemArrayInStore) {
     valueSet.add(item[nameKey]);
   }
-  const uniqueNameConstraint = createUniqueValueConstraint(valueSet, "\"{value}\" already exists. Please choose an other name.");
+  const availableNameConstraint = createAvailableConstraint(valueSet, "\"{value}\" already exists. Please choose an other name.");
   return u("span", {
     className: "explorer_item_content",
-    children: [u(FontSizedSvg, {
+    children: [u(FontSizedSvg$1, {
       children: u(EnterNameIconSvg, {})
     }), u(Input, {
       action: createItemAction,
@@ -504,7 +504,7 @@ const ExplorerNewItem = ({
       onActionEnd: onActionEnd,
       autoFocus: true,
       required: true,
-      constraints: [SINGLE_SPACE_CONSTRAINT, uniqueNameConstraint]
+      constraints: [SINGLE_SPACE_CONSTRAINT, availableNameConstraint]
     })]
   });
 };
@@ -886,13 +886,9 @@ const DatabaseSvg = () => {
     })
   });
 };
-const DatabaseWithPlusSvg = ({
-  color
-}) => {
+const DatabaseWithPlusSvg = () => {
   return u(SvgWithPlus, {
-    children: u(DatabaseSvg, {
-      color: color
-    })
+    children: u(DatabaseSvg, {})
   });
 };
 
@@ -1425,7 +1421,7 @@ const TABLE_ROW = resource("table_row", {
 });
 
 setBaseUrl(window.DB_MANAGER_CONFIG.pathname);
-let [ROLE_ROUTE, DATABASE_ROUTE, TABLE_ROUTE, TABLE_DATA_ROUTE, TABLE_SETTINGS_ROUTE] = defineRoutes({
+let [ROLE_ROUTE, DATABASE_ROUTE, TABLE_ROUTE, TABLE_DATA_ROUTE, TABLE_SETTINGS_ROUTE] = setupRoutes({
   "/roles/:rolname": ROLE.GET,
   "/databases/:datname": DATABASE.GET,
   "/tables/:tablename/*?": TABLE.GET,
@@ -1435,6 +1431,7 @@ let [ROLE_ROUTE, DATABASE_ROUTE, TABLE_ROUTE, TABLE_DATA_ROUTE, TABLE_SETTINGS_R
   })
 });
 
+const LinkWithIcon$3 = props => props;
 const DatabaseLink = ({
   database,
   children,
@@ -1450,10 +1447,8 @@ const DatabaseLink = ({
   const activeDatname = params.datname;
   const currentDatabase = useCurrentDatabase();
   const isCurrent = currentDatabase && datname === currentDatabase.datname;
-  return u(LinkWithIcon, {
-    icon: u(DatabaseSvg, {
-      color: "#333"
-    }),
+  return u(LinkWithIcon$3, {
+    icon: u(DatabaseSvg, {}),
     isCurrent: isCurrent,
     href: databaseUrl,
     active: activeDatname === datname,
@@ -1462,6 +1457,7 @@ const DatabaseLink = ({
   });
 };
 
+const TextAndCount$4 = props => props;
 const databasesDetailsController = createExplorerGroupController("databases", {
   detailsOpenAtStart: databaseListDetailsOpenAtStart,
   detailsOnToggle: databaseListDetailsOnToggle
@@ -1475,7 +1471,7 @@ const DatabasesDetails = props => {
     detailsAction: DATABASE.GET_MANY,
     idKey: "oid",
     nameKey: "datname",
-    labelChildren: u(TextAndCount, {
+    labelChildren: u(TextAndCount$4, {
       text: "DATABASES",
       count: databaseCount
     }),
@@ -1607,6 +1603,7 @@ const RoleGroupWithPlusSvg = ({
   });
 };
 
+const LinkWithIcon$2 = props => props;
 const RoleLink = ({
   role,
   children,
@@ -1623,7 +1620,7 @@ const RoleLink = ({
   const currentRole = useCurrentRole();
   const isCurrent = currentRole && rolname === currentRole.rolname;
   const RoleIcon = pickRoleIcon(role);
-  return u(LinkWithIcon, {
+  return u(LinkWithIcon$2, {
     icon: u(RoleIcon, {
       color: "#333"
     }),
@@ -1650,6 +1647,7 @@ const roleCanLoginListDetailsOnToggle = detailsOpen => {
   }
 };
 
+const TextAndCount$3 = props => props;
 const roleCanLoginListDetailsController = createExplorerGroupController("role_can_login_list", {
   detailsOpenAtStart: roleCanLoginListDetailsOpenAtStart,
   detailsOnToggle: roleCanLoginListDetailsOnToggle
@@ -1663,7 +1661,7 @@ const RoleCanLoginListDetails = props => {
     detailsAction: ROLE_CAN_LOGIN.GET_MANY,
     idKey: "oid",
     nameKey: "rolname",
-    labelChildren: u(TextAndCount, {
+    labelChildren: u(TextAndCount$3, {
       text: "ROLE LOGINS",
       count: roleCanLoginCount
     }),
@@ -1701,6 +1699,7 @@ const roleGroupListDetailsOnToggle = detailsOpen => {
   }
 };
 
+const TextAndCount$2 = props => props;
 const roleGroupListDetailsController = createExplorerGroupController("role_group_list", {
   detailsOpenAtStart: roleGroupListDetailsOpenAtStart,
   detailsOnToggle: roleGroupListDetailsOnToggle
@@ -1714,7 +1713,7 @@ const RoleGroupListDetails = props => {
     detailsAction: ROLE_CANNOT_LOGIN.GET_MANY,
     idKey: "oid",
     nameKey: "rolname",
-    labelChildren: u(TextAndCount, {
+    labelChildren: u(TextAndCount$2, {
       text: "ROLE GROUPS",
       count: roleCannotLoginCount
     }),
@@ -1931,6 +1930,7 @@ const TableWithPlusSvg = ({
   });
 };
 
+const LinkWithIcon$1 = props => props;
 const TableLink = ({
   table,
   children,
@@ -1944,7 +1944,7 @@ const TableLink = ({
     params
   } = useRouteStatus(TABLE_ROUTE);
   const activeTablename = params.tablename;
-  return u(LinkWithIcon, {
+  return u(LinkWithIcon$1, {
     icon: u(TableSvg, {
       color: "#333"
     }),
@@ -1967,7 +1967,9 @@ const roleWithOwnershipListDetailsOnToggle = detailsOpen => {
   }
 };
 
-installImportMetaCss(import.meta);import.meta.css = /* css */"\n  .explorer_details {\n    flex: 1;\n  }\n\n  .explorer_details summary {\n    padding-left: calc(16px + var(--details-depth, 0) * 16px);\n  }\n\n  .explorer_details .explorer_item_content {\n    padding-left: calc(32px + var(--details-depth, 0) * 16px);\n  }\n";
+installImportMetaCss(import.meta);const IconAndText$1 = props => props;
+const TextAndCount$1 = props => props;
+import.meta.css = /* css */"\n  .explorer_details {\n    flex: 1;\n  }\n\n  .explorer_details summary {\n    padding-left: calc(16px + var(--details-depth, 0) * 16px);\n  }\n\n  .explorer_details .explorer_item_content {\n    padding-left: calc(32px + var(--details-depth, 0) * 16px);\n  }\n";
 const roleWithOwnershipListDetailsController = createExplorerGroupController("role_with_ownership_list", {
   detailsOpenAtStart: roleWithOwnershipListDetailsOpenAtStart,
   detailsOnToggle: roleWithOwnershipListDetailsOnToggle
@@ -1981,7 +1983,7 @@ const RoleWithOwnershipListDetails = props => {
     detailsAction: ROLE_WITH_OWNERSHIP.GET_MANY,
     idKey: "oid",
     nameKey: "rolname",
-    labelChildren: u(TextAndCount, {
+    labelChildren: u(TextAndCount$1, {
       text: "OWNERSHIP",
       count: roleWithOwnershipCount
     }),
@@ -1992,8 +1994,8 @@ const RoleWithOwnershipListDetails = props => {
         style: {
           "--details-depth": 0
         },
-        label: u(TextAndCount, {
-          text: u(IconAndText, {
+        label: u(TextAndCount$1, {
+          text: u(IconAndText$1, {
             icon: pickRoleIcon(role),
             children: role.rolname
           }),
@@ -2022,7 +2024,7 @@ const RoleWithOwnershipListDetails = props => {
                 action: ROLE_TABLES.GET_MANY.bindParams({
                   rolname: role.rolname
                 }),
-                label: u(TextAndCount, {
+                label: u(TextAndCount$1, {
                   text: "tables",
                   count: role.table_count
                 }),
@@ -2045,7 +2047,7 @@ const RoleWithOwnershipListDetails = props => {
                 style: {
                   "--details-depth": 1
                 },
-                label: u(TextAndCount, {
+                label: u(TextAndCount$1, {
                   text: "databases",
                   count: role.database_count
                 }),
@@ -2111,6 +2113,7 @@ const tableListDetailsOnToggle = detailsOpen => {
 //   name: "tables_details",
 // });
 
+const TextAndCount = props => props;
 const tablesDetailsController = createExplorerGroupController("tables", {
   detailsOpenAtStart: tableListDetailsOpenAtStart,
   detailsOnToggle: tableListDetailsOnToggle
@@ -2191,6 +2194,7 @@ const EXPLORER = resource("explorer", {
   }
 });
 
+const FontSizedSvg = props => props;
 const Explorer = () => {
   useRunOnMount(EXPLORER.GET, Explorer);
   const role = useCurrentRole();
@@ -2569,7 +2573,8 @@ const DatabaseField = ({
   });
 };
 
-installImportMetaCss(import.meta);import.meta.css = /* css */"\n  .page {\n    display: flex;\n    flex: 1;\n    flex-direction: column;\n  }\n\n  .page_head {\n    position: sticky;\n    top: 0;\n    display: flex;\n\n    padding: 20px;\n    flex-direction: column;\n    justify-content: space-between;\n    gap: 10px;\n    background: white;\n\n    background-color: rgb(239, 242, 245);\n    border-bottom: 1px solid rgb(69, 76, 84);\n  }\n\n  .page_head h1 {\n    margin: 0;\n    line-height: 1em;\n  }\n\n  .page_head_with_actions {\n    display: flex;\n    flex-direction: row;\n  }\n\n  .page_head > .actions {\n  }\n\n  .page_body {\n    padding-top: 20px;\n    padding-right: 20px;\n    padding-bottom: 20px;\n    padding-left: 20px;\n  }\n\n  .page_error {\n    margin-top: 0;\n    margin-bottom: 20px;\n    padding: 20px;\n    background: #fdd;\n    border: 1px solid red;\n  }\n";
+installImportMetaCss(import.meta);const IconAndText = props => props;
+import.meta.css = /* css */"\n  .page {\n    display: flex;\n    flex: 1;\n    flex-direction: column;\n  }\n\n  .page_head {\n    position: sticky;\n    top: 0;\n    display: flex;\n\n    padding: 20px;\n    flex-direction: column;\n    justify-content: space-between;\n    gap: 10px;\n    background: white;\n\n    background-color: rgb(239, 242, 245);\n    border-bottom: 1px solid rgb(69, 76, 84);\n  }\n\n  .page_head h1 {\n    margin: 0;\n    line-height: 1em;\n  }\n\n  .page_head_with_actions {\n    display: flex;\n    flex-direction: row;\n  }\n\n  .page_head > .actions {\n  }\n\n  .page_body {\n    padding-top: 20px;\n    padding-right: 20px;\n    padding-bottom: 20px;\n    padding-left: 20px;\n  }\n\n  .page_error {\n    margin-top: 0;\n    margin-bottom: 20px;\n    padding: 20px;\n    background: #fdd;\n    border: 1px solid red;\n  }\n";
 const Page = ({
   children,
   ...props
@@ -2985,8 +2990,8 @@ const SettingsSvg = () => {
 };
 
 installImportMetaCss(import.meta);import.meta.css = /* css */"\n  .table_data_actions {\n    margin-bottom: 15px;\n  }\n\n  .database_table_cell {\n    padding: 0;\n  }\n\n  .database_table[data-multi-selection] .database_table_cell[data-selected] {\n    background-color: light-dark(\n      rgba(0, 120, 212, 0.08),\n      rgba(59, 130, 246, 0.15)\n    );\n  }\n\n  .database_table_cell:focus {\n    /* Table cell border size impacts the visual appeareance of the outline */\n    /* (It's kinda melted into the table border, as if it was 1.5 px instead of 2) */\n    /* To avoid this we display outline on .database_table_cell_content  */\n    outline: none;\n  }\n\n  .database_table_cell:focus .database_table_cell_content {\n    outline: 2px solid #0078d4;\n    outline-color: light-dark(#355fcc, #3b82f6);\n    outline-offset: -2px;\n  }\n\n  .database_table_cell[data-editing] .database_table_cell_content {\n    outline: 2px solid #a8c7fa;\n    outline-offset: 0px;\n  }\n\n  .database_table_cell_content {\n    display: inline-flex;\n    width: 100%;\n    height: 100%;\n    flex-grow: 1;\n  }\n\n  .database_table_cell_value {\n    display: inline-flex;\n    padding: 8px;\n    flex-grow: 1;\n    user-select: none;\n  }\n\n  .database_table_cell_content input {\n    display: inline-flex;\n    width: 100%;\n    height: 100%;\n    padding-left: 8px;\n    flex-grow: 1;\n    border-radius: 0; /* match table cell border-radius */\n  }\n\n  .database_table_cell_content input[type=\"number\"]::-webkit-inner-spin-button {\n    width: 14px;\n    height: 30px;\n  }\n\n  .database_table *[data-focus-within] {\n    background-color: light-dark(\n      rgba(0, 120, 212, 0.08),\n      rgba(59, 130, 246, 0.15)\n    );\n  }\n";
-const DatabaseTableHeaderCell = () => {};
-const DatabaseTableCell = () => {};
+const DatabaseTableHeaderCell = props => props;
+const DatabaseTableCell = props => props;
 const TableData = ({
   table,
   rows
@@ -3113,6 +3118,7 @@ const TableSettings = ({
  *
  */
 
+const LinkWithIcon = props => props;
 const TablePage = ({
   table
 }) => {
@@ -3124,10 +3130,10 @@ const TablePage = ({
     tablename
   });
   const {
-    active: tableDataRouteIsActive
+    matching: tableDataRouteIsMatching
   } = useRouteStatus(TABLE_DATA_ROUTE);
   const {
-    active: tableSettingsRouteIsActive
+    matching: tableSettingsRouteIsMatching
   } = useRouteStatus(TABLE_SETTINGS_ROUTE);
   return u(Page, {
     "data-ui-name": "<TablePage />",
@@ -3139,7 +3145,7 @@ const TablePage = ({
         children: tablename
       }), u(TabList, {
         children: [u(Tab, {
-          selected: tableDataRouteIsActive,
+          selected: tableDataRouteIsMatching,
           children: u(LinkWithIcon, {
             icon: u(DataSvg, {}),
             href: tableDataUrl,
@@ -3147,7 +3153,7 @@ const TablePage = ({
             children: "Data"
           })
         }), u(Tab, {
-          selected: tableSettingsRouteIsActive,
+          selected: tableSettingsRouteIsMatching,
           children: u(LinkWithIcon, {
             icon: u(SettingsSvg, {}),
             href: tableSettingUrl,

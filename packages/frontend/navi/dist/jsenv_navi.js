@@ -2178,18 +2178,35 @@ const valueInLocalStorage = (
       window.localStorage.removeItem(key);
       return;
     }
-    const validityMessage = getValidityMessage(value);
+
+    let valueToSet = value;
+    let validityMessage = getValidityMessage(valueToSet);
+
+    // If validation fails, try to convert the value
+    if (validityMessage && converter) {
+      const convertedValue = tryConvertValue(valueToSet, type);
+      if (convertedValue !== valueToSet) {
+        const convertedValidityMessage = getValidityMessage(convertedValue);
+        if (!convertedValidityMessage) {
+          // Conversion successful and valid
+          valueToSet = convertedValue;
+          validityMessage = "";
+        }
+      }
+    }
+
     if (validityMessage) {
       console.warn(
         `The value to set in localStorage "${key}" is invalid: ${validityMessage}`,
       );
     }
+
     if (converter && converter.encode) {
-      const valueEncoded = converter.encode(value);
+      const valueEncoded = converter.encode(valueToSet);
       window.localStorage.setItem(key, valueEncoded);
       return;
     }
-    window.localStorage.setItem(key, value);
+    window.localStorage.setItem(key, valueToSet);
   };
   const remove = () => {
     window.localStorage.removeItem(key);
@@ -2198,8 +2215,34 @@ const valueInLocalStorage = (
   return [get, set, remove];
 };
 
+const tryConvertValue = (value, type) => {
+  const validator = typeConverters[type];
+  if (!validator) {
+    return value;
+  }
+  if (!validator.cast) {
+    return value;
+  }
+  const fromType = typeof value;
+  const castFunction = validator.cast[fromType];
+  if (!castFunction) {
+    return value;
+  }
+  const convertedValue = castFunction(value);
+  return convertedValue;
+};
+
 const createNumberValidator = ({ min, max, step } = {}) => {
   return {
+    cast: {
+      string: (value) => {
+        const parsed = parseFloat(value);
+        if (!isNaN(parsed) && isFinite(parsed)) {
+          return parsed;
+        }
+        return value;
+      },
+    },
     decode: (value) => {
       const valueParsed = parseFloat(value);
       return valueParsed;
@@ -2233,6 +2276,16 @@ const createNumberValidator = ({ min, max, step } = {}) => {
 };
 const typeConverters = {
   boolean: {
+    cast: {
+      string: (value) => {
+        if (value === "true") return true;
+        if (value === "false") return false;
+        return value;
+      },
+      number: (value) => {
+        return Boolean(value);
+      },
+    },
     checkValidity: (value) => {
       if (typeof value !== "boolean") {
         return `must be a boolean`;
@@ -2247,6 +2300,10 @@ const typeConverters = {
     },
   },
   string: {
+    cast: {
+      number: String,
+      boolean: String,
+    },
     checkValidity: (value) => {
       if (typeof value !== "string") {
         return `must be a string`;
@@ -2260,6 +2317,24 @@ const typeConverters = {
   integer: createNumberValidator({ step: 1 }),
   positive_integer: createNumberValidator({ min: 0, step: 1 }),
   percentage: {
+    cast: {
+      number: (value) => {
+        if (value >= 0 && value <= 100) {
+          return `${value}%`;
+        }
+        return value;
+      },
+      string: (value) => {
+        if (value.endsWith("%")) {
+          return value;
+        }
+        const parsed = parseFloat(value);
+        if (!isNaN(parsed) && parsed >= 0 && parsed <= 100) {
+          return `${parsed}%`;
+        }
+        return value;
+      },
+    },
     checkValidity: (value) => {
       if (typeof value !== "string") {
         return `must be a percentage`;
@@ -2279,6 +2354,16 @@ const typeConverters = {
     },
   },
   object: {
+    cast: {
+      string: (value) => {
+        try {
+          return JSON.parse(value);
+        } catch {
+          // Invalid JSON, can't convert
+          return value;
+        }
+      },
+    },
     decode: (value) => {
       const valueParsed = JSON.parse(value);
       return valueParsed;
@@ -2296,8 +2381,16 @@ const typeConverters = {
   },
 };
 
+// Global signal registry for route template detection
+const globalSignalRegistry = new Map();
+let signalIdCounter = 0;
+const generateSignalId = () => {
+  const id = signalIdCounter++;
+  return id;
+};
+
 /**
- * Creates an advanced signal with optional source signal synchronization and local storage persistence.
+ * Creates an advanced signal with optional source signal synchronization, local storage persistence, and validation.
  *
  * The sourceSignal option creates a fallback mechanism where:
  * 1. The signal initially takes the value from sourceSignal (if defined) or falls back to defaultValue
@@ -2311,14 +2404,35 @@ const typeConverters = {
  *
  * @param {any} defaultValue - The default value to use when no other value is available
  * @param {Object} [options={}] - Configuration options
+ * @param {string|number} [options.id] - Custom ID for the signal. If not provided, an auto-generated ID will be used. Used for localStorage key and route pattern detection.
  * @param {import("@preact/signals").Signal} [options.sourceSignal] - Source signal to synchronize with. When the source signal changes, this signal will be updated
- * @param {string} [options.localStorageKey] - Key for local storage persistence. When provided, the signal value will be saved to and restored from localStorage
+ * @param {boolean} [options.persists=false] - Whether to persist the signal value in localStorage using the signal ID as key
  * @param {"string" | "number" | "boolean" | "object"} [options.type="string"] - Type for localStorage serialization/deserialization
- * @returns {import("@preact/signals").Signal} A signal that can be synchronized with a source signal and/or persisted in localStorage
+ * @param {Array} [options.oneOf] - Array of valid values for validation. Signal will be marked invalid if value is not in this array
+ * @param {Function} [options.autoFix] - Function to call when validation fails to automatically fix the value
+ * @param {boolean} [options.debug=false] - Enable debug logging for this signal's operations
+ * @returns {import("@preact/signals").Signal} A signal that can be synchronized with a source signal and/or persisted in localStorage. The signal includes a `validity` property for validation state.
  *
  * @example
  * // Basic signal with default value
  * const count = stateSignal(0);
+ *
+ * @example
+ * // Signal with custom ID and persistence
+ * const theme = stateSignal("light", {
+ *   id: "user-theme",
+ *   persists: true,
+ *   type: "string"
+ * });
+ *
+ * @example
+ * // Signal with validation and auto-fix
+ * const tab = stateSignal("overview", {
+ *   id: "current-tab",
+ *   oneOf: ["overview", "details", "settings"],
+ *   autoFix: () => "overview",
+ *   persists: true
+ * });
  *
  * @example
  * // Position that follows backend data but allows temporary overrides
@@ -2329,122 +2443,192 @@ const typeConverters = {
  * // User drags: currentPosition.value = { x: 150, y: 80 } (manual override)
  * // Backend updates: backendPosition.value = { x: 200, y: 60 }
  * // Result: currentPosition.value = { x: 200, y: 60 } (reset to new backend value)
- *
- * @example
- * // Signal with localStorage persistence
- * const userPreference = stateSignal("light", {
- *   localStorageKey: "theme",
- *   type: "string"
- * });
- *
- * @example
- * // Combined: follows source with localStorage backup
- * const serverConfig = signal({ timeout: 5000 });
- * const appConfig = stateSignal({ timeout: 3000 }, {
- *   sourceSignal: serverConfig,
- *   localStorageKey: "app-config",
- *   type: "object"
- * });
  */
-const stateSignal = (
-  defaultValue,
-  { sourceSignal, localStorageKey, type } = {},
-) => {
-  const advancedSignal = signal();
-  if (sourceSignal) {
-    connectSignalToSource(advancedSignal, sourceSignal, defaultValue);
-  } else {
-    advancedSignal.value = defaultValue;
+const NO_LOCAL_STORAGE = [() => undefined, () => {}, () => {}];
+const stateSignal = (defaultValue, options = {}) => {
+  const {
+    id,
+    type = "string",
+    oneOf,
+    autoFix,
+    sourceSignal,
+    persists = false,
+    debug,
+  } = options;
+  const signalId = id || generateSignalId();
+  // Convert numeric IDs to strings for consistency
+  const signalIdString = String(signalId);
+  if (globalSignalRegistry.has(signalIdString)) {
+    throw new Error(
+      `Signal ID conflict: A signal with ID "${signalIdString}" already exists`,
+    );
   }
-  if (localStorageKey) {
-    connectSignalWithLocalStorage(advancedSignal, localStorageKey, { type });
-  }
-  return advancedSignal;
-};
 
-const connectSignalToSource = (signal, sourceSignal, defaultValue) => {
-  connectSignalFallbacks(signal, [sourceSignal], defaultValue);
-  updateSignalOnChange(sourceSignal, signal);
-};
-const connectSignalFallbacks = (signal, fallbackSignals, defaultValue) => {
-  if (fallbackSignals.length === 0) {
-    signal.value = defaultValue;
-    return () => {};
-  }
-  if (fallbackSignals.length === 1) {
-    const [fallbackSignal] = fallbackSignals;
-    const applyFallback = () => {
-      const value = signal.value;
-      const fallbackValue = fallbackSignal.value;
+  // Determine localStorage key: use id if persists=true, or legacy localStorage option
+  const localStorageKey = signalIdString;
+  const [readFromLocalStorage, writeIntoLocalStorage, removeFromLocalStorage] =
+    persists
+      ? valueInLocalStorage(localStorageKey, { type })
+      : NO_LOCAL_STORAGE;
+  const getFallbackValue = () => {
+    const valueFromLocalStorage = readFromLocalStorage();
+    if (valueFromLocalStorage !== undefined) {
+      if (debug) {
+        console.debug(
+          `[stateSignal] using value from localStorage "${localStorageKey}"=${valueFromLocalStorage}`,
+        );
+      }
+      return valueFromLocalStorage;
+    }
+    if (sourceSignal) {
+      const sourceValue = sourceSignal.peek();
+      if (sourceValue !== undefined) {
+        if (debug) {
+          console.debug(
+            `[stateSignal] using value from source signal=${sourceValue}`,
+          );
+        }
+        return sourceValue;
+      }
+    }
+    if (debug) {
+      console.debug(`[stateSignal] using default value=${defaultValue}`);
+    }
+    return defaultValue;
+  };
+
+  const advancedSignal = signal(getFallbackValue());
+
+  // Set signal ID and create meaningful string representation
+  advancedSignal.__signalId = signalIdString;
+  advancedSignal.toString = () => `{navi_state_signal:${signalIdString}}`;
+
+  // Store signal with its options for later route connection
+  globalSignalRegistry.set(signalIdString, {
+    signal: advancedSignal,
+    options: {
+      getFallbackValue,
+      defaultValue,
+      type,
+      persists,
+      localStorageKey,
+      debug,
+      ...options,
+    },
+  });
+
+  const validity = { valid: true };
+  advancedSignal.validity = validity;
+
+  // ensure current value always fallback to
+  // 1. source signal
+  // 2. local storage
+  // 3. default value
+  {
+    let firstRun = true;
+    effect(() => {
+      const value = advancedSignal.value;
+      if (sourceSignal) {
+        // eslint-disable-next-line no-unused-expressions
+        sourceSignal.value;
+      }
+      if (firstRun) {
+        firstRun = true;
+        return;
+      }
       if (value !== undefined) {
         return;
       }
-      if (fallbackValue !== undefined) {
-        signal.value = fallbackValue;
-        return;
-      }
-      signal.value = defaultValue;
-    };
-    applyFallback();
-    return effect(() => {
-      applyFallback();
+      advancedSignal.value = getFallbackValue();
     });
   }
-  const applyFallback = () => {
-    const fallbackValues = fallbackSignals.map((s) => s.value);
-    const value = signal.value;
-    if (value !== undefined) {
-      return;
+  // When source signal value is updated, it overrides current signal value
+  source_signal_override: {
+    if (!sourceSignal) {
+      break source_signal_override;
     }
-    for (const fallbackValue of fallbackValues) {
-      if (fallbackValue === undefined) {
-        continue;
+
+    let isFirstRun = true;
+    let sourcePreviousValue;
+    effect(() => {
+      const sourceValue = sourceSignal.value;
+      if (isFirstRun) {
+        // first run
+        isFirstRun = false;
+        sourcePreviousValue = sourceValue;
+        return;
       }
-      signal.value = fallbackValue;
-      return;
+      if (sourceValue === undefined) {
+        // we don't have anything in the source signal, keep current value
+        if (debug) {
+          console.debug(
+            `[stateSignal] source signal is undefined, keeping current value`,
+            {
+              sourcePreviousValue,
+              sourceValue,
+            },
+          );
+        }
+        sourcePreviousValue = undefined;
+        return;
+      }
+      // the case we want to support: source signal value changes -> override current value
+      if (debug) {
+        console.debug(`[stateSignal] source signal updated`, {
+          sourcePreviousValue,
+          sourceValue,
+        });
+      }
+      advancedSignal.value = sourceValue;
+      sourcePreviousValue = sourceValue;
+    });
+  }
+  // Read/write into local storage when enabled
+  persist_in_local_storage: {
+    if (!localStorageKey) {
+      break persist_in_local_storage;
     }
-    signal.value = defaultValue;
-  };
-  applyFallback();
-  return effect(() => {
-    applyFallback();
-  });
-};
-const updateSignalOnChange = (sourceSignal, targetSignal) => {
-  let sourcePreviousValue = sourceSignal.value;
-  return effect(() => {
-    const sourceValue = sourceSignal.value;
-    if (sourcePreviousValue !== undefined && sourceValue !== undefined) {
-      // console.log(
-      //   "value modified from",
-      //   sourcePreviousValue,
-      //   "to",
-      //   sourceValue,
-      // );
-      targetSignal.value = sourceValue;
-    }
-    sourcePreviousValue = sourceValue;
-  });
+    effect(() => {
+      const value = advancedSignal.value;
+      if (value === undefined || value === null || value === defaultValue) {
+        if (debug) {
+          console.debug(
+            `[stateSignal] removing "${localStorageKey}" from localStorage`,
+          );
+        }
+        removeFromLocalStorage();
+      } else {
+        if (debug) {
+          console.debug(
+            `[stateSignal] writing into localStorage "${localStorageKey}"=${value}`,
+          );
+        }
+        writeIntoLocalStorage(value);
+      }
+    });
+  }
+  // update validity object according to the advanced signal value
+  {
+    effect(() => {
+      const value = advancedSignal.value;
+      updateValidity({ oneOf }, validity, value);
+      if (!validity.valid && autoFix) {
+        advancedSignal.value = autoFix();
+        return;
+      }
+    });
+  }
+
+  return advancedSignal;
 };
 
-const connectSignalWithLocalStorage = (
-  signal,
-  key,
-  { type = "string" } = {},
-) => {
-  const [get, set, remove] = valueInLocalStorage(key, { type });
-  const valueFromLocalStorage = get();
-  if (valueFromLocalStorage !== undefined) {
-    signal.value = valueFromLocalStorage;
+const updateValidity = (rules, validity, value) => {
+  const { oneOf } = rules;
+  if (oneOf && !oneOf.includes(value)) {
+    validity.valid = false;
+    return;
   }
-  effect(() => {
-    const value = signal.value;
-    if (value === undefined || value === null) {
-      remove();
-    } else {
-      set(value);
-    }
-  });
+  validity.valid = true;
 };
 
 const getCallerInfo = (targetFunction = null, additionalOffset = 0) => {
@@ -7313,380 +7497,857 @@ const useUITransitionContentId = value => {
   }, []);
 };
 
-const rawUrlPartSymbol = Symbol("raw_url_part");
-const rawUrlPart = (value) => {
-  return {
-    [rawUrlPartSymbol]: true,
-    value,
-  };
-};
-
-const removeOptionalParts = (url) => {
-  // Only remove optional parts that still have ? (weren't replaced with actual values)
-  // Find the first unused optional part and remove everything from there onwards
-  let result = url;
-
-  // Find the first occurrence of an unused optional part (still has ?)
-  const optionalPartMatch = result.match(/(\/?\*|\/:[^/?]*|\{[^}]*\})\?/);
-
-  if (optionalPartMatch) {
-    // Remove everything from the start of the first unused optional part
-    const optionalStartIndex = optionalPartMatch.index;
-    result = result.substring(0, optionalStartIndex);
-
-    // Clean up trailing slashes
-    result = result.replace(/\/$/, "");
-  }
-
-  return result;
-};
-
-const buildRouteRelativeUrl = (
-  urlPatternInput,
-  params,
-  { extraParamEffect = "inject_as_search_param" } = {},
-) => {
-  let relativeUrl = urlPatternInput;
-  let hasRawUrlPartWithInvalidChars = false;
-  let stringQueryParams = "";
-
-  // Handle string params (query string) - store for later appending
-  if (typeof params === "string") {
-    stringQueryParams = params;
-    // Remove leading ? if present for processing
-    if (stringQueryParams.startsWith("?")) {
-      stringQueryParams = stringQueryParams.slice(1);
-    }
-    // Set params to empty object so the rest of the function processes the URL pattern
-    params = null;
-  }
-
-  // Encode parameter values for URL usage, with special handling for raw URL parts.
-  // When a parameter is wrapped with rawUrlPart(), it bypasses encoding and is
-  // inserted as-is into the URL. This allows including pre-encoded values or
-  // special characters that should not be percent-encoded.
-  //
-  // For wildcard parameters (isWildcard=true), we preserve slashes as path separators.
-  // For named parameters and search params (isWildcard=false), we encode slashes.
-  const encodeParamValue = (value, isWildcard = false) => {
-    if (value && value[rawUrlPartSymbol]) {
-      const rawValue = value.value;
-      // Check if raw value contains invalid URL characters
-      if (/[\s<>{}|\\^`]/.test(rawValue)) {
-        hasRawUrlPartWithInvalidChars = true;
-      }
-      return rawValue;
-    }
-
-    if (isWildcard) {
-      // For wildcards, only encode characters that are invalid in URL paths,
-      // but preserve slashes as they are path separators
-      return value
-        ? value.replace(/[^a-zA-Z0-9\-._~!$&'()*+,;=:@/]/g, (char) => {
-            return encodeURIComponent(char);
-          })
-        : value;
-    }
-
-    // For named parameters and search params, encode everything including slashes
-    return encodeURIComponent(value);
-  };
-  const extraParamMap = new Map();
-  let wildcardIndex = 0; // Declare wildcard index in the main scope
-
-  if (params) {
-    const keys = Object.keys(params);
-
-    // First, handle special case: optional groups immediately followed by wildcards
-    // This handles patterns like {/}?* where the optional part should be included when wildcard has content
-    relativeUrl = relativeUrl.replace(/\{([^}]*)\}\?\*/g, (match, group) => {
-      const paramKey = wildcardIndex.toString();
-      const paramValue = params[paramKey];
-
-      if (paramValue) {
-        // Don't add to extraParamMap since we're processing it here
-        // For wildcards, preserve slashes as path separators
-        const wildcardValue = encodeParamValue(paramValue, true);
-        wildcardIndex++;
-        // Include the optional group content when wildcard has value
-        return group + wildcardValue;
-      }
-      wildcardIndex++;
-      // Remove the optional group and wildcard when no value
-      return "";
-    });
-
-    // Replace named parameters (:param and {param}) and remove optional markers
-    for (const key of keys) {
-      // Skip numeric keys (wildcards) if they were already processed
-      if (!isNaN(key) && parseInt(key) < wildcardIndex) {
-        continue;
-      }
-
-      const value = params[key];
-      const encodedValue = encodeParamValue(value, false); // Named parameters should encode slashes
-      const beforeReplace = relativeUrl;
-
-      // Replace parameter and remove optional marker if present
-      relativeUrl = relativeUrl.replace(`:${key}?`, encodedValue);
-      relativeUrl = relativeUrl.replace(`:${key}`, encodedValue);
-      relativeUrl = relativeUrl.replace(`{${key}}?`, encodedValue);
-      relativeUrl = relativeUrl.replace(`{${key}}`, encodedValue);
-
-      // If the URL did not change we'll maybe delete that param
-      if (relativeUrl === beforeReplace) {
-        extraParamMap.set(key, value);
-      }
-    }
-    // Handle complex optional groups like {/time/:duration}?
-    // Replace parameters inside optional groups and remove the optional marker
-    relativeUrl = relativeUrl.replace(/\{([^}]*)\}\?/g, (match, group) => {
-      let processedGroup = group;
-      let hasReplacements = false;
-
-      // Check if any parameters in the group were provided
-      for (const key of keys) {
-        if (params[key] !== undefined) {
-          const encodedValue = encodeParamValue(params[key], false); // Named parameters encode slashes
-          const paramPattern = new RegExp(`:${key}\\b`);
-          if (paramPattern.test(processedGroup)) {
-            processedGroup = processedGroup.replace(paramPattern, encodedValue);
-            hasReplacements = true;
-            extraParamMap.delete(key);
-          }
-        }
-      }
-
-      // Also check for literal parts that match parameter names (like /time where time is a param)
-      for (const key of keys) {
-        if (params[key] !== undefined) {
-          const encodedValue = encodeParamValue(params[key], false); // Named parameters encode slashes
-          // Check for literal parts like /time that match parameter names
-          const literalPattern = new RegExp(`\\/${key}\\b`);
-          if (literalPattern.test(processedGroup)) {
-            processedGroup = processedGroup.replace(
-              literalPattern,
-              `/${encodedValue}`,
-            );
-            hasReplacements = true;
-            extraParamMap.delete(key);
-          }
-        }
-      }
-
-      // If we made replacements, include the group (without the optional marker)
-      // If no replacements, return empty string (remove the optional group)
-      return hasReplacements ? processedGroup : "";
-    });
-  }
-
-  // Clean up any double slashes or trailing slashes that might result
-  relativeUrl = relativeUrl.replace(/\/+/g, "/").replace(/\/$/, "");
-
-  // Handle remaining wildcards (those not processed by optional group + wildcard above)
-  if (params) {
-    relativeUrl = relativeUrl.replace(/\*/g, () => {
-      const paramKey = wildcardIndex.toString();
-      const paramValue = params[paramKey];
-      if (paramValue) {
-        extraParamMap.delete(paramKey);
-        const replacement = encodeParamValue(paramValue, true); // Wildcards preserve slashes
-        wildcardIndex++;
-        return replacement;
-      }
-      wildcardIndex++;
-      return "*";
-    });
-  }
-
-  // Handle optional parts after parameter replacement
-  // This includes patterns like /*?, {/time/*}?, :param?, etc.
-  relativeUrl = removeOptionalParts(relativeUrl);
-  // we did not replace anything, or not enough to remove the last "*"
-  if (relativeUrl.endsWith("*")) {
-    relativeUrl = relativeUrl.slice(0, -1);
-  }
-
-  // Normalize trailing slash: always favor URLs without trailing slash
-  // except for root path which should remain "/"
-  if (relativeUrl.endsWith("/") && relativeUrl.length > 1) {
-    relativeUrl = relativeUrl.slice(0, -1);
-  }
-
-  // Add remaining parameters as search params
-  if (extraParamMap.size > 0) {
-    if (extraParamEffect === "inject_as_search_param") {
-      const searchParamPairs = [];
-      for (const [key, value] of extraParamMap) {
-        if (value !== undefined && value !== null) {
-          const encodedKey = encodeURIComponent(key);
-          // Handle boolean values - if true, just add the key without value
-          if (value === true) {
-            searchParamPairs.push(encodedKey);
-          } else {
-            const encodedValue = encodeParamValue(value, false); // Search params encode slashes
-            searchParamPairs.push(`${encodedKey}=${encodedValue}`);
-          }
-        }
-      }
-      if (searchParamPairs.length > 0) {
-        const searchString = searchParamPairs.join("&");
-        relativeUrl += (relativeUrl.includes("?") ? "&" : "?") + searchString;
-      }
-    } else if (extraParamEffect === "warn") {
-      console.warn(
-        `Unknown parameters given to "${urlPatternInput}":`,
-        Array.from(extraParamMap.keys()),
-      );
-    }
-  }
-
-  // Append string query params if any
-  if (stringQueryParams) {
-    relativeUrl += (relativeUrl.includes("?") ? "&" : "?") + stringQueryParams;
-  }
-
-  return {
-    relativeUrl,
-    hasRawUrlPartWithInvalidChars,
-  };
-};
-
-const createRoutePattern = (urlPatternInput, baseUrl) => {
-  // Remove leading slash from urlPattern to make it relative to baseUrl
-  const normalizedUrlPattern = urlPatternInput.startsWith("/")
-    ? urlPatternInput.slice(1)
-    : urlPatternInput;
-  const urlPattern = new URLPattern(normalizedUrlPattern, baseUrl, {
-    ignoreCase: true,
-  });
-
-  // Analyze pattern once to detect optional params (named and wildcard indices)
-  // Note: Wildcard indices are stored as strings ("0", "1", ...) to match keys from extractParams
-  const optionalParamKeySet = new Set();
-  normalizedUrlPattern.replace(/:([A-Za-z0-9_]+)\?/g, (_m, name) => {
-    optionalParamKeySet.add(name);
-    return "";
-  });
-  let wildcardIndex = 0;
-  normalizedUrlPattern.replace(/\*(\?)?/g, (_m, opt) => {
-    if (opt === "?") {
-      optionalParamKeySet.add(String(wildcardIndex));
-    }
-    wildcardIndex++;
-    return "";
-  });
-
-  const applyOn = (url) => {
-
-    // Check if the URL matches the route pattern
-    const match = urlPattern.exec(url);
-    if (match) {
-      return extractParams(match, url);
-    }
-
-    // If no match, try with normalized URLs (trailing slash handling)
-    const urlObj = new URL(url, baseUrl);
-    const pathname = urlObj.pathname;
-
-    // Try removing trailing slash from pathname
-    if (pathname.endsWith("/") && pathname.length > 1) {
-      const pathnameWithoutSlash = pathname.slice(0, -1);
-      urlObj.pathname = pathnameWithoutSlash;
-      const normalizedUrl = urlObj.href;
-      const matchWithoutTrailingSlash = urlPattern.exec(normalizedUrl);
-      if (matchWithoutTrailingSlash) {
-        return extractParams(matchWithoutTrailingSlash, url);
-      }
-    }
-    // Try adding trailing slash to pathname
-    else if (!pathname.endsWith("/")) {
-      const pathnameWithSlash = `${pathname}/`;
-      urlObj.pathname = pathnameWithSlash;
-      const normalizedUrl = urlObj.href;
-      const matchWithTrailingSlash = urlPattern.exec(normalizedUrl);
-      if (matchWithTrailingSlash) {
-        return extractParams(matchWithTrailingSlash, url);
-      }
-    }
-    return null;
-  };
-
-  const extractParams = (match, originalUrl) => {
-    const params = {};
-
-    // Extract search parameters from the original URL
-    const urlObj = new URL(originalUrl, baseUrl);
-    for (const [key, value] of urlObj.searchParams) {
-      params[key] = value;
-    }
-
-    // Collect all parameters from URLPattern groups, handling both named and numbered groups
-    let wildcardOffset = 0;
-    for (const property of URL_PATTERN_PROPERTIES_WITH_GROUP_SET) {
-      const urlPartMatch = match[property];
-      if (urlPartMatch && urlPartMatch.groups) {
-        let localWildcardCount = 0;
-        for (const key of Object.keys(urlPartMatch.groups)) {
-          const value = urlPartMatch.groups[key];
-          const keyAsNumber = parseInt(key, 10);
-          if (!isNaN(keyAsNumber)) {
-            // Skip group "0" from search params as it captures the entire search string
-            if (property === "search" && key === "0") {
-              continue;
-            }
-            if (value) {
-              // Only include non-empty values and non-ignored wildcard indices
-              const wildcardKey = String(wildcardOffset + keyAsNumber);
-              if (!optionalParamKeySet.has(wildcardKey)) {
-                params[wildcardKey] = decodeURIComponent(value);
-              }
-              localWildcardCount++;
-            }
-          } else if (!optionalParamKeySet.has(key)) {
-            // Named group (:param or {param}) - only include if not ignored
-            params[key] = decodeURIComponent(value);
-          }
-        }
-        // Update wildcard offset for next URL part
-        wildcardOffset += localWildcardCount;
-      }
-    }
-    return params;
-  };
-
-  return {
-    urlPattern,
-    applyOn,
-  };
-};
-
-const URL_PATTERN_PROPERTIES_WITH_GROUP_SET = new Set([
-  "protocol",
-  "username",
-  "password",
-  "hostname",
-  "pathname",
-  "search",
-  "hash",
-]);
-
 /**
- *
- *
+ * Custom route pattern matching system
+ * Replaces URLPattern with a simpler, more predictable approach
  */
 
 
+// Base URL management
+let baseFileUrl;
 let baseUrl;
-if (typeof window === "undefined") {
-  baseUrl = "http://localhost/";
-} else {
-  baseUrl = window.location.origin;
-}
-
 const setBaseUrl = (value) => {
-  baseUrl = new URL(value, window.location).href;
+  baseFileUrl = new URL(
+    value,
+    typeof window === "undefined" ? "http://localhost/" : window.location,
+  ).href;
+  baseUrl = new URL(".", baseFileUrl).href;
 };
+setBaseUrl(
+  typeof window === "undefined"
+    ? "/"
+    : window.location.origin,
+);
+
+// Pattern registry for building relationships before routes are created
+const patternRegistry = new Map(); // pattern -> patternData
+const patternRelationships = new Map(); // pattern -> relationships
+
+// Function to detect signals in route patterns and connect them
+const detectSignals = (routePattern) => {
+  const signalConnections = [];
+  let updatedPattern = routePattern;
+
+  // Look for signals in the new syntax: :paramName={navi_state_signal:id} or ?paramName={navi_state_signal:id} or &paramName={navi_state_signal:id}
+  // Using curly braces to avoid conflicts with underscores in signal IDs
+  const signalParamRegex = /([?:&])(\w+)=(\{navi_state_signal:[^}]+\})/g;
+  let match;
+
+  while ((match = signalParamRegex.exec(routePattern)) !== null) {
+    const [fullMatch, prefix, paramName, signalString] = match;
+
+    // Extract the signal ID from the new format: {navi_state_signal:id}
+    const signalIdMatch = signalString.match(/\{navi_state_signal:([^}]+)\}/);
+    if (!signalIdMatch) {
+      console.warn(
+        `[detectSignals] Failed to extract signal ID from: ${signalString}`,
+      );
+      continue;
+    }
+
+    const signalId = signalIdMatch[1];
+    const signalData = globalSignalRegistry.get(signalId);
+
+    if (signalData) {
+      const { signal, options } = signalData;
+
+      let replacement;
+      if (prefix === ":") {
+        // Path parameter: :section=__jsenv_signal_1__ becomes :section
+        replacement = `${prefix}${paramName}`;
+      } else if (prefix === "?") {
+        // First search parameter: ?city=__jsenv_signal_1__ becomes ?city
+        replacement = `${prefix}${paramName}`;
+      } else if (prefix === "&") {
+        // Additional search parameter: &lon=__jsenv_signal_1__ becomes &lon
+        replacement = `${prefix}${paramName}`;
+      }
+      updatedPattern = updatedPattern.replace(fullMatch, replacement);
+
+      signalConnections.push({
+        signal,
+        paramName,
+        options,
+      });
+    } else {
+      console.warn(
+        `[detectSignals] Signal not found in registry for ID: "${signalId}"`,
+      );
+      console.warn(
+        `[detectSignals] Available signal IDs in registry:`,
+        Array.from(globalSignalRegistry.keys()),
+      );
+      console.warn(`[detectSignals] Full pattern: "${routePattern}"`);
+    }
+  }
+
+  return [updatedPattern, signalConnections];
+};
+
+/**
+ * Creates a custom route pattern matcher
+ */
+const createRoutePattern = (pattern) => {
+  // Detect and process signals in the pattern first
+  const [cleanPattern, connections] = detectSignals(pattern);
+
+  // Build parameter defaults from signal connections
+  const parameterDefaults = new Map();
+  for (const connection of connections) {
+    const { paramName, options } = connection;
+    if (options.defaultValue !== undefined) {
+      parameterDefaults.set(paramName, options.defaultValue);
+    }
+  }
+
+  const parsedPattern = parsePattern(cleanPattern, parameterDefaults);
+
+  const applyOn = (url) => {
+    const result = matchUrl(parsedPattern, url, {
+      parameterDefaults,
+      baseUrl,
+    });
+
+    return result;
+  };
+
+  const buildUrl = (params = {}) => {
+    return buildUrlFromPattern(parsedPattern, params);
+  };
+
+  const resolveParams = (providedParams = {}) => {
+    let resolvedParams = { ...providedParams };
+
+    // Process all connections for parameter resolution
+    for (const connection of connections) {
+      const { paramName, signal } = connection;
+
+      if (paramName in providedParams) ; else if (signal?.value !== undefined) {
+        // Parameter was not provided, check signal value
+        resolvedParams[paramName] = signal.value;
+      }
+    }
+
+    return resolvedParams;
+  };
+
+  /**
+   * Build the most precise URL by using route relationships from pattern registry.
+   * Each route is responsible for its own URL generation using its own signals.
+   */
+  const buildMostPreciseUrl = (params = {}) => {
+    // Handle parameter resolution internally to preserve user intent detection
+    const resolvedParams = resolveParams(params);
+
+    // Start with resolved parameters
+    let finalParams = { ...resolvedParams };
+
+    for (const connection of connections) {
+      const { paramName, signal, options } = connection;
+      const defaultValue = options.defaultValue;
+
+      if (paramName in finalParams) {
+        // Parameter was explicitly provided - ALWAYS respect explicit values
+        // If it equals the default value, remove it for shorter URLs
+        if (finalParams[paramName] === defaultValue) {
+          delete finalParams[paramName];
+        }
+        // Note: Don't fall through to signal logic - explicit params take precedence
+      }
+      // Parameter was NOT provided, check signal value
+      else if (signal?.value !== undefined && signal.value !== defaultValue) {
+        // Only include signal value if it's not the default
+        finalParams[paramName] = signal.value;
+        // If signal.value === defaultValue, omit the parameter for shorter URL
+      }
+    }
+
+    // DEEPEST URL GENERATION: Check if we should use a child route instead
+    // This happens when:
+    // 1. This route's parameters are all defaults (would be omitted)
+    // 2. A child route has non-default parameters that should be included
+
+    // DEEPEST URL GENERATION: Only activate when NO explicit parameters provided
+    // This prevents overriding explicit user intentions with signal-based "smart" routing
+    // We need to distinguish between user-provided params and signal-derived params
+    let hasUserProvidedParams = false;
+
+    // Check if provided params contain anything beyond what signals would provide
+    const signalDerivedParams = {};
+    for (const { paramName, signal, options } of connections) {
+      if (signal?.value !== undefined) {
+        const defaultValue = options.defaultValue;
+        // Only include signal value if it's not the default (same logic as above)
+        if (signal.value !== defaultValue) {
+          signalDerivedParams[paramName] = signal.value;
+        }
+      }
+    }
+
+    // Check if original params (before resolution) contains anything that's not from signals
+    // This preserves user intent detection for explicit parameters
+    for (const [key, value] of Object.entries(params)) {
+      if (signalDerivedParams[key] !== value) {
+        hasUserProvidedParams = true;
+        break;
+      }
+    }
+
+    // Also check if original params has extra keys beyond what signals provide
+    const providedKeys = new Set(Object.keys(params));
+    const signalKeys = new Set(Object.keys(signalDerivedParams));
+    for (const key of providedKeys) {
+      if (!signalKeys.has(key)) {
+        hasUserProvidedParams = true;
+        break;
+      }
+    }
+
+    // ROOT ROUTE PROTECTION: Never apply deepest URL generation to root route "/"
+    // Users must always be able to navigate to home page regardless of app state
+    const isRootRoute = pattern === "/";
+
+    const relationships = patternRelationships.get(pattern);
+    const childPatterns = relationships?.childPatterns || [];
+    if (!hasUserProvidedParams && !isRootRoute && childPatterns.length) {
+      // Try to find the most specific child pattern that has active signals
+      for (const childPattern of childPatterns) {
+        const childPatternData = getPatternData(childPattern);
+        if (!childPatternData) continue;
+
+        // Check if any of this child's parameters have non-default signal values
+        let hasActiveParams = false;
+        const childParams = {};
+
+        // Include parent signal values for child pattern matching
+        // But first check if they're compatible with the child pattern
+        let parentSignalsCompatibleWithChild = true;
+        for (const parentConnection of connections) {
+          const { paramName, signal, options } = parentConnection;
+          // Only include non-default parent signal values
+          if (
+            signal?.value !== undefined &&
+            signal.value !== options.defaultValue
+          ) {
+            // Check if child pattern has conflicting literal segments for this parameter
+            const childParsedPattern = childPatternData.parsedPattern;
+
+            // Check if parent signal value matches a literal segment in child pattern
+            const matchesChildLiteral = childParsedPattern.segments.some(
+              (segment) =>
+                segment.type === "literal" && segment.value === signal.value,
+            );
+
+            // If parent signal matches a literal in child, don't add as parameter
+            // (it's already represented in the child URL path)
+            if (matchesChildLiteral) {
+              // Compatible - signal value matches child literal, no need to add param
+              continue;
+            }
+
+            // For section parameter specifically, check if child has literal "settings"
+            // but parent signal has different value (incompatible case)
+            if (paramName === "section" && signal.value !== "settings") {
+              const hasSettingsLiteral = childParsedPattern.segments.some(
+                (segment) =>
+                  segment.type === "literal" && segment.value === "settings",
+              );
+              if (hasSettingsLiteral) {
+                parentSignalsCompatibleWithChild = false;
+                break;
+              }
+            }
+
+            // Only add parent signal as parameter if it doesn't match child literals
+            childParams[paramName] = signal.value;
+          }
+        }
+
+        // Skip this child if parent signals are incompatible
+        if (!parentSignalsCompatibleWithChild) {
+          continue;
+        }
+
+        // Check child connections and see if any have non-default values
+        for (const connection of childPatternData.connections) {
+          const { paramName, signal, options } = connection;
+          const defaultValue = options.defaultValue;
+
+          if (signal?.value !== undefined) {
+            childParams[paramName] = signal.value;
+            if (signal.value !== defaultValue) {
+              hasActiveParams = true;
+            }
+          }
+        }
+
+        // If child has non-default parameters, use the child route
+        if (hasActiveParams) {
+          const childPatternObj = createRoutePattern(childPattern);
+          // Use buildUrl (not buildMostPreciseUrl) to avoid infinite recursion
+          const childUrl = childPatternObj.buildUrl(childParams);
+          if (childUrl) {
+            return childUrl;
+          }
+        }
+      }
+    }
+
+    if (!parsedPattern.segments) {
+      return "/";
+    }
+
+    // Filter out segments for parameters that are not provided (omitted defaults)
+    const filteredPattern = {
+      ...parsedPattern,
+      segments: parsedPattern.segments.filter((segment) => {
+        if (segment.type === "param") {
+          // Only keep parameter segments if we have a value for them
+          return segment.name in finalParams;
+        }
+        // Always keep literal segments
+        return true;
+      }),
+    };
+
+    // Remove trailing slash if we filtered out segments
+    if (
+      filteredPattern.segments.length < parsedPattern.segments.length &&
+      parsedPattern.trailingSlash
+    ) {
+      filteredPattern.trailingSlash = false;
+    }
+
+    return buildUrlFromPattern(filteredPattern, finalParams);
+  };
+
+  return {
+    originalPattern: pattern, // Return the original pattern string
+    pattern: parsedPattern,
+    cleanPattern, // Return the clean pattern string
+    connections, // Return signal connections along with pattern
+    applyOn,
+    buildUrl,
+    buildMostPreciseUrl,
+    resolveParams,
+  };
+};
+
+/**
+ * Parse a route pattern string into structured segments
+ */
+const parsePattern = (pattern, parameterDefaults = new Map()) => {
+  // Handle root route
+  if (pattern === "/") {
+    return {
+      original: pattern,
+      segments: [],
+      trailingSlash: true,
+      wildcard: false,
+      queryParams: [],
+    };
+  }
+
+  // Separate path and query portions
+  const [pathPortion, queryPortion] = pattern.split("?");
+
+  // Parse query parameters if present
+  const queryParams = [];
+  if (queryPortion) {
+    // Split query parameters by & and parse each one
+    const querySegments = queryPortion.split("&");
+    for (const querySegment of querySegments) {
+      if (querySegment.includes("=")) {
+        // Parameter with potential value: tab=value or just tab
+        const [paramName, paramValue] = querySegment.split("=", 2);
+        queryParams.push({
+          type: "query_param",
+          name: paramName,
+          hasDefaultValue: paramValue === undefined, // No value means it uses signal/default
+        });
+      } else {
+        // Parameter without value: tab
+        queryParams.push({
+          type: "query_param",
+          name: querySegment,
+          hasDefaultValue: true,
+        });
+      }
+    }
+  }
+
+  // Remove leading slash for processing the path portion
+  let cleanPattern = pathPortion.startsWith("/")
+    ? pathPortion.slice(1)
+    : pathPortion;
+
+  // Check for wildcard first
+  const wildcard = cleanPattern.endsWith("*");
+  if (wildcard) {
+    cleanPattern = cleanPattern.slice(0, -1); // Remove *
+    // Also remove the slash before * if present
+    if (cleanPattern.endsWith("/")) {
+      cleanPattern = cleanPattern.slice(0, -1);
+    }
+  }
+
+  // Check for trailing slash (after wildcard check)
+  const trailingSlash = !wildcard && pathPortion.endsWith("/");
+  if (trailingSlash) {
+    cleanPattern = cleanPattern.slice(0, -1); // Remove trailing /
+  }
+
+  // Split into segments (filter out empty segments)
+  const segmentStrings = cleanPattern
+    ? cleanPattern.split("/").filter((s) => s !== "")
+    : [];
+  const segments = segmentStrings.map((seg, index) => {
+    if (seg.startsWith(":")) {
+      // Parameter segment
+      const paramName = seg.slice(1).replace("?", ""); // Remove : and optional ?
+      const isOptional = seg.endsWith("?") || parameterDefaults.has(paramName);
+
+      return {
+        type: "param",
+        name: paramName,
+        optional: isOptional,
+        index,
+      };
+    }
+    // Literal segment
+    return {
+      type: "literal",
+      value: seg,
+      index,
+    };
+  });
+
+  return {
+    original: pattern,
+    segments,
+    queryParams, // Add query parameters to the parsed pattern
+    trailingSlash,
+    wildcard,
+  };
+};
+
+/**
+ * Check if a literal segment can be treated as optional based on parent route signal defaults
+ */
+const checkIfLiteralCanBeOptional = (literalValue, patternRegistry) => {
+  // Look through all registered patterns for parent patterns that might have this literal as a default
+  for (const [, patternData] of patternRegistry) {
+    // Check if any signal connection has this literal value as default
+    for (const connection of patternData.connections) {
+      if (connection.options.defaultValue === literalValue) {
+        return true; // This literal matches a signal default, so it can be optional
+      }
+    }
+  }
+  return false;
+};
+
+/**
+ * Match a URL against a parsed pattern
+ */
+const matchUrl = (parsedPattern, url, { parameterDefaults, baseUrl }) => {
+  // Parse the URL
+  const urlObj = new URL(url, baseUrl);
+  let pathname = urlObj.pathname;
+  const originalPathname = pathname; // Store original pathname before baseUrl processing
+
+  // If baseUrl is provided, calculate the pathname relative to the baseUrl's directory
+  if (baseUrl) {
+    const baseUrlObj = new URL(baseUrl);
+    // if the base url is a file, we want to be relative to the directory containing that file
+    const baseDir = baseUrlObj.pathname.endsWith("/")
+      ? baseUrlObj.pathname
+      : baseUrlObj.pathname.substring(0, baseUrlObj.pathname.lastIndexOf("/"));
+    if (pathname.startsWith(baseDir)) {
+      pathname = pathname.slice(baseDir.length);
+    }
+  }
+
+  // Handle root route - only matches empty path or just "/"
+  // OR when URL exactly matches baseUrl (treating baseUrl as root)
+  if (parsedPattern.segments.length === 0) {
+    if (pathname === "/" || pathname === "") {
+      return extractSearchParams(urlObj);
+    }
+
+    // Special case: if URL exactly matches baseUrl, treat as root route
+    if (baseUrl) {
+      const baseUrlObj = new URL(baseUrl);
+      if (originalPathname === baseUrlObj.pathname) {
+        return extractSearchParams(urlObj);
+      }
+    }
+
+    return null;
+  }
+
+  // Remove leading slash and split into segments
+  let urlSegments = pathname.startsWith("/")
+    ? pathname
+        .slice(1)
+        .split("/")
+        .filter((s) => s !== "")
+    : pathname.split("/").filter((s) => s !== "");
+
+  // Handle trailing slash flexibility: if pattern has trailing slash but URL doesn't (or vice versa)
+  // and we're at the end of segments, allow the match
+  const urlHasTrailingSlash = pathname.endsWith("/") && pathname !== "/";
+  const patternHasTrailingSlash = parsedPattern.trailingSlash;
+
+  const params = {};
+  let urlSegmentIndex = 0;
+
+  // Process each pattern segment
+  for (let i = 0; i < parsedPattern.segments.length; i++) {
+    const patternSeg = parsedPattern.segments[i];
+
+    if (patternSeg.type === "literal") {
+      // Check if URL has this segment
+      if (urlSegmentIndex >= urlSegments.length) {
+        // URL is too short for this literal segment
+        // Check if this literal segment can be treated as optional based on parent route defaults
+        const canBeOptional = checkIfLiteralCanBeOptional(
+          patternSeg.value,
+          patternRegistry,
+        );
+        if (canBeOptional) {
+          // Skip this literal segment, don't increment urlSegmentIndex
+          continue;
+        }
+        return null; // URL too short and literal is not optional
+      }
+
+      const urlSeg = urlSegments[urlSegmentIndex];
+      if (urlSeg !== patternSeg.value) {
+        // Literal mismatch - this route doesn't match this URL
+        return null;
+      }
+      urlSegmentIndex++;
+    } else if (patternSeg.type === "param") {
+      // Parameter segment
+      if (urlSegmentIndex >= urlSegments.length) {
+        // No URL segment for this parameter
+        if (patternSeg.optional) {
+          // Optional parameter - use default if available
+          const defaultValue = parameterDefaults.get(patternSeg.name);
+          if (defaultValue !== undefined) {
+            params[patternSeg.name] = defaultValue;
+          }
+          continue;
+        }
+        // Required parameter missing - but check if we can use trailing slash logic
+        // If this is the last segment and we have a trailing slash difference, it might still match
+        const isLastSegment = i === parsedPattern.segments.length - 1;
+        if (isLastSegment && patternHasTrailingSlash && !urlHasTrailingSlash) {
+          // Pattern expects trailing slash segment, URL doesn't have it
+          const defaultValue = parameterDefaults.get(patternSeg.name);
+          if (defaultValue !== undefined) {
+            params[patternSeg.name] = defaultValue;
+            continue;
+          }
+        }
+        return null; // Required parameter missing
+      }
+
+      // Capture URL segment as parameter value
+      const urlSeg = urlSegments[urlSegmentIndex];
+      params[patternSeg.name] = decodeURIComponent(urlSeg);
+      urlSegmentIndex++;
+    }
+  }
+
+  // Check for remaining URL segments
+  // Patterns with trailing slashes can match additional URL segments (like wildcards)
+  // Patterns without trailing slashes should match exactly (unless they're wildcards)
+  if (
+    !parsedPattern.wildcard &&
+    !parsedPattern.trailingSlash &&
+    urlSegmentIndex < urlSegments.length
+  ) {
+    return null; // Pattern without trailing slash should not match extra segments
+  }
+  // If pattern has trailing slash or wildcard, allow extra segments (no additional check needed)
+
+  // Add search parameters
+  const searchParams = extractSearchParams(urlObj);
+  Object.assign(params, searchParams);
+
+  // Apply remaining parameter defaults for unmatched parameters
+  for (const [paramName, defaultValue] of parameterDefaults) {
+    if (!(paramName in params)) {
+      params[paramName] = defaultValue;
+    }
+  }
+
+  return params;
+};
+
+/**
+ * Extract search parameters from URL
+ */
+const extractSearchParams = (urlObj) => {
+  const params = {};
+  for (const [key, value] of urlObj.searchParams) {
+    params[key] = value;
+  }
+  return params;
+};
+
+/**
+ * Build a URL from a pattern and parameters
+ */
+const buildUrlFromPattern = (parsedPattern, params = {}) => {
+  if (parsedPattern.segments.length === 0) {
+    // Root route
+    const searchParams = new URLSearchParams();
+    for (const [key, value] of Object.entries(params)) {
+      if (value !== undefined) {
+        searchParams.set(key, value);
+      }
+    }
+    const search = searchParams.toString();
+    return `/${search ? `?${search}` : ""}`;
+  }
+
+  const segments = [];
+
+  for (const patternSeg of parsedPattern.segments) {
+    if (patternSeg.type === "literal") {
+      segments.push(patternSeg.value);
+    } else if (patternSeg.type === "param") {
+      const value = params[patternSeg.name];
+
+      // If value is provided, include it
+      if (value !== undefined) {
+        segments.push(encodeURIComponent(value));
+      } else if (!patternSeg.optional) {
+        // For required parameters without values, keep the placeholder
+        segments.push(`:${patternSeg.name}`);
+      }
+      // Optional parameters with undefined values are omitted
+    }
+  }
+
+  let path = `/${segments.join("/")}`;
+
+  // Handle trailing slash - only add if it serves a purpose
+  if (parsedPattern.trailingSlash && !path.endsWith("/") && path !== "/") {
+    // Only add trailing slash if the original pattern suggests there could be more content
+    // For patterns like "/admin/:section/" where the slash is at the very end,
+    // it's not needed in the generated URL if there are no more segments
+    const lastSegment =
+      parsedPattern.segments[parsedPattern.segments.length - 1];
+    const hasMorePotentialContent =
+      parsedPattern.wildcard || (lastSegment && lastSegment.type === "literal"); // Only add slash after literals, not parameters
+
+    if (hasMorePotentialContent) {
+      path += "/";
+    }
+  } else if (
+    !parsedPattern.trailingSlash &&
+    path.endsWith("/") &&
+    path !== "/"
+  ) {
+    // Remove trailing slash for patterns without trailing slash
+    path = path.slice(0, -1);
+  }
+
+  // Add search parameters
+  const pathParamNames = new Set(
+    parsedPattern.segments.filter((s) => s.type === "param").map((s) => s.name),
+  );
+
+  // Add query parameters defined in the pattern first
+  const queryParamNames = new Set();
+  const searchParams = new URLSearchParams();
+
+  // Handle pattern-defined query parameters (from ?tab, &lon, etc.)
+  if (parsedPattern.queryParams) {
+    for (const queryParam of parsedPattern.queryParams) {
+      const paramName = queryParam.name;
+      queryParamNames.add(paramName);
+
+      const value = params[paramName];
+      if (value !== undefined) {
+        searchParams.set(paramName, value);
+      }
+      // If no value provided, don't add the parameter to keep URLs clean
+    }
+  }
+
+  // Add remaining parameters as additional query parameters (excluding path and pattern query params)
+  for (const [key, value] of Object.entries(params)) {
+    if (
+      !pathParamNames.has(key) &&
+      !queryParamNames.has(key) &&
+      value !== undefined
+    ) {
+      searchParams.set(key, value);
+    }
+  }
+
+  const search = searchParams.toString();
+
+  // No longer handle trailing slash inheritance here
+
+  return path + (search ? `?${search}` : "");
+};
+
+/**
+ * Check if childPattern is a child route of parentPattern
+ * E.g., "/admin/settings/:tab" is a child of "/admin/:section/"
+ * Also, "/admin/?tab=something" is a child of "/admin/"
+ */
+const isChildPattern = (childPattern, parentPattern) => {
+  // Split path and query parts
+  const [childPath, childQuery] = childPattern.split("?");
+  const [parentPath, parentQuery] = parentPattern.split("?");
+
+  // Remove trailing slashes for path comparison
+  const cleanChild = childPath.replace(/\/$/, "");
+  const cleanParent = parentPath.replace(/\/$/, "");
+
+  // CASE 1: Same path, child has query params, parent doesn't
+  // E.g., "/admin/?tab=something" is child of "/admin/"
+  if (cleanChild === cleanParent && childQuery && !parentQuery) {
+    return true;
+  }
+
+  // CASE 2: Traditional path-based child relationship
+  // Convert patterns to comparable segments for proper comparison
+  const childSegments = cleanChild.split("/").filter((s) => s);
+  const parentSegments = cleanParent.split("/").filter((s) => s);
+
+  // Child must have at least as many segments as parent
+  if (childSegments.length < parentSegments.length) {
+    return false;
+  }
+
+  let hasMoreSpecificSegment = false;
+
+  // Check if parent segments match child segments (allowing for parameters)
+  for (let i = 0; i < parentSegments.length; i++) {
+    const parentSeg = parentSegments[i];
+    const childSeg = childSegments[i];
+
+    // If parent has parameter, child can have anything in that position
+    if (parentSeg.startsWith(":")) {
+      // Child is more specific if it has a literal value for a parent parameter
+      // But if child also starts with ":", it's also a parameter (not more specific)
+      if (!childSeg.startsWith(":")) {
+        hasMoreSpecificSegment = true;
+      }
+      continue;
+    }
+
+    // If parent has literal, child must match exactly
+    if (parentSeg !== childSeg) {
+      return false;
+    }
+  }
+
+  // Child must be more specific (more segments OR more specific segments)
+  return childSegments.length > parentSegments.length || hasMoreSpecificSegment;
+};
+
+/**
+ * Register all patterns at once and build their relationships
+ */
+const setupPatterns = (patternDefinitions) => {
+  // Clear existing patterns
+  patternRegistry.clear();
+  patternRelationships.clear();
+
+  // Phase 1: Register all patterns
+  for (const [key, urlPatternRaw] of Object.entries(patternDefinitions)) {
+    const [cleanPattern, connections] = detectSignals(urlPatternRaw);
+    const parsedPattern = parsePattern(cleanPattern);
+
+    const patternData = {
+      key,
+      urlPatternRaw,
+      cleanPattern,
+      connections,
+      parsedPattern,
+      childPatterns: [],
+      parentPatterns: [],
+    };
+
+    patternRegistry.set(urlPatternRaw, patternData);
+  }
+
+  // Phase 2: Build relationships between all patterns
+  const allPatterns = Array.from(patternRegistry.keys());
+
+  for (const currentPattern of allPatterns) {
+    const currentData = patternRegistry.get(currentPattern);
+
+    for (const otherPattern of allPatterns) {
+      if (currentPattern === otherPattern) continue;
+
+      const otherData = patternRegistry.get(otherPattern);
+
+      // Check if current pattern is a child of other pattern using clean patterns
+      if (isChildPattern(currentData.cleanPattern, otherData.cleanPattern)) {
+        currentData.parentPatterns.push(otherPattern);
+        otherData.childPatterns.push(currentPattern);
+      }
+    }
+
+    // Store relationships for easy access
+    patternRelationships.set(currentPattern, {
+      pattern: currentData.parsedPattern,
+      parsedPattern: currentData.parsedPattern,
+      connections: currentData.connections,
+      childPatterns: currentData.childPatterns, // Store child patterns
+      parentPatterns: currentData.parentPatterns, // Store parent patterns
+      originalPattern: currentPattern,
+    });
+  }
+};
+
+/**
+ * Get pattern data for a registered pattern
+ */
+const getPatternData = (urlPatternRaw) => {
+  return patternRegistry.get(urlPatternRaw);
+};
+
+/**
+ * Clear all registered patterns
+ */
+const clearPatterns = () => {
+  patternRegistry.clear();
+  patternRelationships.clear();
+};
+
+const resolveRouteUrl = (relativeUrl) => {
+  if (relativeUrl[0] === "/") {
+    // we remove the leading slash because we want to resolve against baseUrl which may
+    // not be the root url
+    relativeUrl = relativeUrl.slice(1);
+  }
+
+  // we don't use URL constructor on PURPOSE (in case the relativeUrl contains invalid url chars)
+  // and we want to support use cases where people WANT to produce invalid urls (for example rawUrlPart with spaces)
+  // because these urls will be handled by non standard clients (like a backend service allowing url like stuff)
+  if (baseUrl.endsWith("/")) {
+    return `${baseUrl}${relativeUrl}`;
+  }
+  return `${baseUrl}/${relativeUrl}`;
+};
+
+/**
+ * Route management with pattern-first architecture
+ * Routes work with relative URLs, patterns handle base URL resolution
+ */
+
+
 // Controls what happens to actions when their route stops matching:
 // 'abort' - Cancel the action immediately when route stops matching
 // 'keep-loading' - Allow action to continue running after route stops matching
@@ -7695,19 +8356,23 @@ const setBaseUrl = (value) => {
 // However, since route reactivation triggers action reload anyway, the old data won't be used
 // so it's better to abort the action to avoid unnecessary resource usage.
 const ROUTE_DEACTIVATION_STRATEGY = "abort"; // 'abort', 'keep-loading'
+const ROUTE_NOT_MATCHING_PARAMS = {};
 
 const routeSet = new Set();
 // Store previous route states to detect changes
+const routePrivatePropertiesMap = new Map();
+
 const routePreviousStateMap = new WeakMap();
 // Store abort controllers per action to control their lifecycle based on route state
 const actionAbortControllerWeakMap = new WeakMap();
+
 const updateRoutes = (
   url,
   {
+    navigationType = "push",
+    isVisited = () => false,
     // state
-    replace,
-    isVisited,
-  },
+  } = {},
 ) => {
   const routeMatchInfoSet = new Set();
   for (const route of routeSet) {
@@ -7717,32 +8382,19 @@ const updateRoutes = (
     // Get previous state
     const previousState = routePreviousStateMap.get(route) || {
       matching: false,
-      exactMatching: false,
-      params: null,
+      params: ROUTE_NOT_MATCHING_PARAMS,
     };
     const oldMatching = previousState.matching;
-    const oldExactMatching = previousState.exactMatching;
     const oldParams = previousState.params;
-    const extractedParams = routePattern.applyOn(url);
-    const newMatching = Boolean(extractedParams);
 
-    // Calculate exact matching - true when matching but no wildcards have content
-    let newExactMatching = false;
-    if (newMatching && extractedParams) {
-      // Check if any wildcard parameters (numeric keys) have meaningful content
-      const hasWildcardContent = Object.keys(extractedParams).some((key) => {
-        const keyAsNumber = parseInt(key, 10);
-        if (!isNaN(keyAsNumber)) {
-          // This is a wildcard parameter (numeric key)
-          const value = extractedParams[key];
-          return value && value.trim() !== "";
-        }
-        return false;
-      });
-      newExactMatching = !hasWildcardContent;
-    }
+    // Use custom pattern matching - much simpler than URLPattern approach
+    let extractedParams = routePattern.applyOn(url);
+    let newMatching = Boolean(extractedParams);
+
     let newParams;
+
     if (extractedParams) {
+      // No need for complex wildcard correction - custom system handles it properly
       if (compareTwoJsValues(oldParams, extractedParams)) {
         // No change in parameters, keep the old params
         newParams = oldParams;
@@ -7750,7 +8402,7 @@ const updateRoutes = (
         newParams = extractedParams;
       }
     } else {
-      newParams = null;
+      newParams = ROUTE_NOT_MATCHING_PARAMS;
     }
 
     const routeMatchInfo = {
@@ -7758,8 +8410,6 @@ const updateRoutes = (
       routePrivateProperties,
       oldMatching,
       newMatching,
-      oldExactMatching,
-      newExactMatching,
       oldParams,
       newParams,
     };
@@ -7767,7 +8417,6 @@ const updateRoutes = (
     // Store current state for next comparison
     routePreviousStateMap.set(route, {
       matching: newMatching,
-      exactMatching: newExactMatching,
       params: newParams,
     });
   }
@@ -7779,14 +8428,12 @@ const updateRoutes = (
       route,
       routePrivateProperties,
       newMatching,
-      newExactMatching,
       newParams,
     } of routeMatchInfoSet) {
       const { updateStatus } = routePrivateProperties;
       const visited = isVisited(route.url);
       updateStatus({
         matching: newMatching,
-        exactMatching: newExactMatching,
         params: newParams,
         visited,
       });
@@ -7807,7 +8454,11 @@ const updateRoutes = (
     const routeAction = route.action;
     const currentAction = routeAction.getCurrentAction();
     if (shouldLoad) {
-      if (replace || currentAction.aborted || currentAction.error) {
+      if (
+        navigationType === "replace" ||
+        currentAction.aborted ||
+        currentAction.error
+      ) {
         shouldLoad = false;
       }
     }
@@ -7885,12 +8536,15 @@ const updateRoutes = (
   };
 };
 
-const routePrivatePropertiesMap = new Map();
 const getRoutePrivateProperties = (route) => {
   return routePrivatePropertiesMap.get(route);
 };
 
-const createRoute = (urlPatternInput) => {
+const registerRoute = (routePattern) => {
+  const urlPatternRaw = routePattern.originalPattern;
+  const patternData = getPatternData(urlPatternRaw);
+  const { cleanPattern, connections } = patternData;
+
   const cleanupCallbackSet = new Set();
   const cleanup = () => {
     for (const cleanupCallback of cleanupCallbackSet) {
@@ -7898,14 +8552,14 @@ const createRoute = (urlPatternInput) => {
     }
     cleanupCallbackSet.clear();
   };
-
   const [publishStatus, subscribeStatus] = createPubSub();
+
   const route = {
-    urlPattern: urlPatternInput,
+    urlPattern: cleanPattern,
+    pattern: cleanPattern,
     isRoute: true,
     matching: false,
-    exactMatching: false,
-    params: null,
+    params: ROUTE_NOT_MATCHING_PARAMS,
     buildUrl: null,
     bindAction: null,
     relativeUrl: null,
@@ -7913,167 +8567,171 @@ const createRoute = (urlPatternInput) => {
     action: null,
     cleanup,
     toString: () => {
-      return `route "${urlPatternInput}"`;
+      return `route "${cleanPattern}"`;
     },
     replaceParams: undefined,
     subscribeStatus,
   };
   routeSet.add(route);
-
   const routePrivateProperties = {
-    routePattern: null,
+    routePattern,
+    originalPattern: urlPatternRaw,
+    pattern: cleanPattern,
     matchingSignal: null,
-    exactMatchingSignal: null,
     paramsSignal: null,
+    rawParamsSignal: null,
     visitedSignal: null,
     relativeUrlSignal: null,
     urlSignal: null,
-    updateStatus: ({ matching, exactMatching, params, visited }) => {
+    updateStatus: ({ matching, params, visited }) => {
       let someChange = false;
       matchingSignal.value = matching;
-      exactMatchingSignal.value = exactMatching;
-      paramsSignal.value = params;
-      visitedSignal.value = visited;
+
       if (route.matching !== matching) {
         route.matching = matching;
         someChange = true;
       }
-      if (route.exactMatching !== exactMatching) {
-        route.exactMatching = exactMatching;
-        someChange = true;
-      }
-      if (route.params !== params) {
-        route.params = params;
-        someChange = true;
-      }
+      visitedSignal.value = visited;
       if (route.visited !== visited) {
         route.visited = visited;
         someChange = true;
       }
+      // Store raw params (from URL) - paramsSignal will reactively compute merged params
+      rawParamsSignal.value = params;
+      // Get merged params for comparison (computed signal will handle the merging)
+      const mergedParams = paramsSignal.value;
+      if (route.params !== mergedParams) {
+        route.params = mergedParams;
+        someChange = true;
+      }
       if (someChange) {
-        publishStatus({ matching, exactMatching, params, visited });
+        publishStatus({
+          matching,
+          params: mergedParams,
+          visited,
+        });
       }
     },
   };
   routePrivatePropertiesMap.set(route, routePrivateProperties);
 
-  const buildRelativeUrl = (params, options) =>
-    buildRouteRelativeUrl(urlPatternInput, params, options);
-  route.buildRelativeUrl = (params, options) => {
-    const { relativeUrl } = buildRelativeUrl(params, options);
-    return relativeUrl;
-  };
-
-  route.matchesParams = (otherParams) => {
-    let params = route.params;
-    if (params) {
-      const paramsWithoutWildcards = {};
-      for (const key of Object.keys(params)) {
-        if (!Number.isInteger(Number(key))) {
-          paramsWithoutWildcards[key] = params[key];
-        }
-      }
-      params = paramsWithoutWildcards;
-    }
-    const paramsIsFalsyOrEmpty = !params || Object.keys(params).length === 0;
-    const otherParamsFalsyOrEmpty =
-      !otherParams || Object.keys(otherParams).length === 0;
-    if (paramsIsFalsyOrEmpty) {
-      return otherParamsFalsyOrEmpty;
-    }
-    if (otherParamsFalsyOrEmpty) {
-      return false;
-    }
-    return compareTwoJsValues(params, otherParams);
-  };
-
-  /**
-   * Builds a complete URL for this route with the given parameters.
-   *
-   * Takes parameters and substitutes them into the route's URL pattern,
-   * automatically URL-encoding values unless wrapped with rawUrlPart().
-   * Extra parameters not in the pattern are added as search parameters.
-   *
-   * @param {Object} params - Parameters to substitute into the URL pattern
-   * @returns {string} Complete URL with base URL and encoded parameters
-   *
-   * @example
-   * // For a route with pattern "/items/:id"
-   * // Normal parameter encoding
-   * route.buildUrl({ id: "hello world" }) // → "https://example.com/items/hello%20world"
-   * // Raw parameter (no encoding)
-   * route.buildUrl({ id: rawUrlPart("hello world") }) // → "https://example.com/items/hello world"
-   *
-   */
-  const buildUrl = (params = {}) => {
-    const { relativeUrl, hasRawUrlPartWithInvalidChars } =
-      buildRelativeUrl(params);
-    let processedRelativeUrl = relativeUrl;
-    if (processedRelativeUrl[0] === "/") {
-      // we remove the leading slash because we want to resolve against baseUrl which may
-      // not be the root url
-      processedRelativeUrl = processedRelativeUrl.slice(1);
-    }
-    if (hasRawUrlPartWithInvalidChars) {
-      if (!baseUrl.endsWith("/")) {
-        return `${baseUrl}/${processedRelativeUrl}`;
-      }
-      return `${baseUrl}${processedRelativeUrl}`;
-    }
-    const url = new URL(processedRelativeUrl, baseUrl).href;
-    return url;
-  };
-  route.buildUrl = buildUrl;
-
   const matchingSignal = signal(false);
-  const exactMatchingSignal = signal(false);
-  const paramsSignal = signal(null);
+  const rawParamsSignal = signal(ROUTE_NOT_MATCHING_PARAMS);
+  const paramsSignal = computed(() => {
+    const rawParams = rawParamsSignal.value;
+    // Pattern system handles parameter defaults, routes just work with raw params
+    return rawParams || {};
+  });
   const visitedSignal = signal(false);
+  for (const { signal: stateSignal, paramName, options = {} } of connections) {
+    const { debug } = options;
+
+    // URL -> Signal synchronization
+    effect(() => {
+      const matching = matchingSignal.value;
+      const params = rawParamsSignal.value;
+      const urlParamValue = params[paramName];
+
+      if (!matching) {
+        return;
+      }
+      if (debug) {
+        console.debug(
+          `[stateSignal] URL -> Signal: ${paramName}=${urlParamValue}`,
+        );
+      }
+      stateSignal.value = urlParamValue;
+    });
+
+    // Signal -> URL synchronization
+    effect(() => {
+      const value = stateSignal.value;
+      const params = rawParamsSignal.value;
+      const urlParamValue = params[paramName];
+      const matching = matchingSignal.value;
+
+      if (!matching || value === urlParamValue) {
+        return;
+      }
+
+      if (debug) {
+        console.debug(`[stateSignal] Signal -> URL: ${paramName}=${value}`);
+      }
+
+      route.replaceParams({ [paramName]: value });
+    });
+  }
+
+  route.navTo = (params) => {
+    if (!browserIntegration$1) {
+      return Promise.resolve();
+    }
+    return browserIntegration$1.navTo(route.buildUrl(params));
+  };
+  route.redirectTo = (params) => {
+    if (!browserIntegration$1) {
+      return Promise.resolve();
+    }
+    return browserIntegration$1.navTo(route.buildUrl(params), {
+      replace: true,
+    });
+  };
+  route.replaceParams = (newParams) => {
+    const matching = matchingSignal.peek();
+    if (!matching) {
+      console.warn(
+        `Cannot replace params on route ${route} because it is not matching the current URL.`,
+      );
+      return null;
+    }
+    if (route.action) {
+      // For action: merge with resolved params (includes defaults) so action gets complete params
+      const currentResolvedParams = routePattern.resolveParams();
+      const updatedActionParams = { ...currentResolvedParams, ...newParams };
+      route.action.replaceParams(updatedActionParams);
+    }
+    return route.redirectTo(newParams);
+  };
+  route.buildRelativeUrl = (params) => {
+    // buildMostPreciseUrl now handles parameter resolution internally
+    return routePattern.buildMostPreciseUrl(params);
+  };
+  route.buildUrl = (params) => {
+    const routeRelativeUrl = route.buildRelativeUrl(params);
+    const routeUrl = resolveRouteUrl(routeRelativeUrl);
+    return routeUrl;
+  };
+  route.matchesParams = (providedParams) => {
+    const currentParams = route.params;
+    const resolvedParams = routePattern.resolveParams({
+      ...currentParams,
+      ...providedParams,
+    });
+    const same = compareTwoJsValues(currentParams, resolvedParams);
+    return same;
+  };
+
+  // relativeUrl/url
   const relativeUrlSignal = computed(() => {
-    const params = paramsSignal.value;
-    const { relativeUrl } = buildRelativeUrl(params);
+    const rawParams = rawParamsSignal.value;
+    const relativeUrl = route.buildRelativeUrl(rawParams);
     return relativeUrl;
+  });
+  const urlSignal = computed(() => {
+    const routeUrl = route.buildUrl();
+    return routeUrl;
   });
   const disposeRelativeUrlEffect = effect(() => {
     route.relativeUrl = relativeUrlSignal.value;
   });
-  cleanupCallbackSet.add(disposeRelativeUrlEffect);
-
-  const urlSignal = computed(() => {
-    const relativeUrl = relativeUrlSignal.value;
-    const url = new URL(relativeUrl, baseUrl).href;
-    return url;
-  });
   const disposeUrlEffect = effect(() => {
     route.url = urlSignal.value;
   });
+  cleanupCallbackSet.add(disposeRelativeUrlEffect);
   cleanupCallbackSet.add(disposeUrlEffect);
 
-  const replaceParams = (newParams) => {
-    const currentParams = paramsSignal.peek();
-    const updatedParams = { ...currentParams, ...newParams };
-    const updatedUrl = route.buildUrl(updatedParams);
-    if (route.action) {
-      route.action.replaceParams(updatedParams);
-    }
-    browserIntegration$1.navTo(updatedUrl, { replace: true });
-  };
-  route.replaceParams = replaceParams;
-
-  const bindAction = (action) => {
-    /*
-     *
-     * here I need to check the store for that action (if any)
-     * and listen store changes to do this:
-     *
-     * When we detect changes we want to update the route params
-     * so we'll need to use navTo(buildUrl(params), { replace: true })
-     *
-     * reinserted is useful because the item id might have changed
-     * but not the mutable key
-     *
-     */
-
+  // action stuff (for later)
+  route.bindAction = (action) => {
     const { store } = action.meta;
     if (store) {
       const { mutableIdKeys } = store;
@@ -8100,75 +8758,40 @@ const createRoute = (urlPatternInput) => {
       }
     }
 
-    /*
-    store.registerPropertyLifecycle(activeItemSignal, key, {
-    changed: (value) => {
-      route.replaceParams({
-        [key]: value,
-      });
-    },
-    dropped: () => {
-      route.reload();
-    },
-    reinserted: () => {
-      // this will reload all routes which works but
-      // - most of the time only "route" is impacted, any other route could stay as is
-      // - we already have the data, reloading the route will refetch the backend which is unnecessary
-      // we could just remove routing error (which is cause by 404 likely)
-      // to actually let the data be displayed
-      // because they are available, but in reality the route has no data
-      // because the fetch failed
-      // so conceptually reloading is fine,
-      // the only thing that bothers me a little is that it reloads all routes
-      route.reload();
-    },
-  });
-    */
-
     const actionBoundToThisRoute = action.bindParams(paramsSignal);
     route.action = actionBoundToThisRoute;
     return actionBoundToThisRoute;
   };
-  route.bindAction = bindAction;
 
-  {
-    routePrivateProperties.matchingSignal = matchingSignal;
-    routePrivateProperties.exactMatchingSignal = exactMatchingSignal;
-    routePrivateProperties.paramsSignal = paramsSignal;
-    routePrivateProperties.visitedSignal = visitedSignal;
-    routePrivateProperties.relativeUrlSignal = relativeUrlSignal;
-    routePrivateProperties.urlSignal = urlSignal;
-    routePrivateProperties.cleanupCallbackSet = cleanupCallbackSet;
-    const routePattern = createRoutePattern(urlPatternInput, baseUrl);
-    routePrivateProperties.routePattern = routePattern;
-  }
+  // Store private properties for internal access
+  routePrivateProperties.matchingSignal = matchingSignal;
+  routePrivateProperties.paramsSignal = paramsSignal;
+  routePrivateProperties.rawParamsSignal = rawParamsSignal;
+  routePrivateProperties.visitedSignal = visitedSignal;
+  routePrivateProperties.relativeUrlSignal = relativeUrlSignal;
+  routePrivateProperties.urlSignal = urlSignal;
+  routePrivateProperties.cleanupCallbackSet = cleanupCallbackSet;
 
   return route;
 };
+
 const useRouteStatus = (route) => {
   const routePrivateProperties = getRoutePrivateProperties(route);
   if (!routePrivateProperties) {
     throw new Error(`Cannot find route private properties for ${route}`);
   }
 
-  const {
-    urlSignal,
-    matchingSignal,
-    exactMatchingSignal,
-    paramsSignal,
-    visitedSignal,
-  } = routePrivateProperties;
+  const { urlSignal, matchingSignal, paramsSignal, visitedSignal } =
+    routePrivateProperties;
 
   const url = urlSignal.value;
   const matching = matchingSignal.value;
-  const exactMatching = exactMatchingSignal.value;
   const params = paramsSignal.value;
   const visited = visitedSignal.value;
 
   return {
     url,
     matching,
-    exactMatching,
     params,
     visited,
   };
@@ -8178,7 +8801,6 @@ let browserIntegration$1;
 const setBrowserIntegration = (integration) => {
   browserIntegration$1 = integration;
 };
-
 let onRouteDefined = () => {};
 const setOnRouteDefined = (v) => {
   onRouteDefined = v;
@@ -8199,21 +8821,45 @@ const setOnRouteDefined = (v) => {
 // at any given time (url can be shared, reloaded, etc..)
 // Later I'll consider adding ability to have dynamic import into the mix
 // (An async function returning an action)
+
 const setupRoutes = (routeDefinition) => {
-  // Clean up existing routes
+  // Prevent calling setupRoutes when routes already exist - enforce clean setup
+  if (routeSet.size > 0) {
+    throw new Error(
+      "Routes already exist. Call clearAllRoutes() first to clean up existing routes before creating new ones. This prevents cross-test pollution and ensures clean state.",
+    );
+  }
+  // PHASE 1: Register all patterns and build their relationships
+  setupPatterns(routeDefinition);
+  // PHASE 2: Create route patterns with signal connections and parameter defaults
+  const routePatterns = {};
+  for (const key of Object.keys(routeDefinition)) {
+    const urlPatternRaw = routeDefinition[key];
+    routePatterns[key] = createRoutePattern(urlPatternRaw);
+  }
+  // PHASE 3: Create routes using pre-created patterns
+  const routes = {};
+  for (const key of Object.keys(routeDefinition)) {
+    const routePattern = routePatterns[key];
+    const route = registerRoute(routePattern);
+    routes[key] = route;
+  }
+  onRouteDefined();
+
+  return routes;
+};
+
+// for unit tests
+const clearAllRoutes = () => {
   for (const route of routeSet) {
     route.cleanup();
   }
   routeSet.clear();
-
-  const routes = {};
-  for (const key of Object.keys(routeDefinition)) {
-    const value = routeDefinition[key];
-    const route = createRoute(value);
-    routes[key] = route;
-  }
-  onRouteDefined();
-  return routes;
+  routePrivatePropertiesMap.clear();
+  // Clear patterns as well
+  clearPatterns();
+  // Don't clear signal registry here - let tests manage it explicitly
+  // This prevents clearing signals that are still being used across multiple route registrations
 };
 
 const arraySignal = (initialValue = []) => {
@@ -8340,7 +8986,9 @@ computed(() => {
   return reasonArray;
 });
 
-const documentUrlSignal = signal(window.location.href);
+const documentUrlSignal = signal(
+  typeof window === "undefined" ? "http://localhost" : window.location.href,
+);
 const useDocumentUrl = () => {
   return documentUrlSignal.value;
 };
@@ -8477,11 +9125,10 @@ const setupBrowserIntegrationViaHistory = ({
     { reason = "replaceDocumentState called" } = {},
   ) => {
     const url = window.location.href;
-    window.history.replaceState(newState, null, url);
     handleRoutingTask(url, {
-      replace: true,
-      state: newState,
       reason,
+      navigationType: "replace",
+      state: newState,
     });
   };
 
@@ -8504,42 +9151,52 @@ const setupBrowserIntegrationViaHistory = ({
       return;
     }
     visitedUrlSet.add(url);
-
-    // Increment signal to notify subscribers that visited URLs changed
-    visitedUrlsSignal.value++;
+    visitedUrlsSignal.value++; // Increment signal to notify subscribers that visited URLs changed
 
     const historyState = getDocumentState() || {};
-    const hsitoryStateWithVisitedUrls = {
+    const historyStateWithVisitedUrls = {
       ...historyState,
       jsenv_visited_urls: Array.from(visitedUrlSet),
     };
     window.history.replaceState(
-      hsitoryStateWithVisitedUrls,
+      historyStateWithVisitedUrls,
       null,
       window.location.href,
     );
-    updateDocumentState(hsitoryStateWithVisitedUrls);
+    updateDocumentState(historyStateWithVisitedUrls);
   };
 
   let abortController = null;
-  const handleRoutingTask = (url, { state, replace, reason }) => {
-    markUrlAsVisited(url);
+  const handleRoutingTask = (
+    url,
+    {
+      reason,
+      navigationType, // "push", "reload", "replace", "traverse"
+      state,
+    },
+  ) => {
+    if (navigationType === "push") {
+      window.history.pushState(state, null, url);
+    } else if (navigationType === "replace") {
+      window.history.replaceState(state, null, url);
+    }
+
     updateDocumentUrl(url);
     updateDocumentState(state);
+    markUrlAsVisited(url);
     if (abortController) {
       abortController.abort(`navigating to ${url}`);
     }
     abortController = new AbortController();
-
+    const abortSignal = abortController.signal;
     const { allResult, requestedResult } = applyRouting(url, {
       globalAbortSignal: globalAbortController.signal,
-      abortSignal: abortController.signal,
-      state,
-      replace,
-      isVisited,
+      abortSignal,
       reason,
+      navigationType,
+      isVisited,
+      state,
     });
-
     executeWithCleanup(
       () => allResult,
       () => {
@@ -8583,11 +9240,10 @@ const setupBrowserIntegrationViaHistory = ({
         return;
       }
       e.preventDefault();
-      const state = null;
-      history.pushState(state, null, href);
       handleRoutingTask(href, {
-        state,
         reason: `"click" on a[href="${href}"]`,
+        navigationType: "push",
+        state: null,
       });
     },
     { capture: true },
@@ -8596,7 +9252,8 @@ const setupBrowserIntegrationViaHistory = ({
   window.addEventListener(
     "submit",
     () => {
-      // TODO: Handle form submissions
+      // Handle form submissions?
+      // Not needed yet
     },
     { capture: true },
   );
@@ -8605,21 +9262,17 @@ const setupBrowserIntegrationViaHistory = ({
     const url = window.location.href;
     const state = popstateEvent.state;
     handleRoutingTask(url, {
-      state,
       reason: `"popstate" event for ${url}`,
+      navigationType: "traverse",
+      state,
     });
   });
 
-  const navTo = async (url, { state = null, replace } = {}) => {
-    if (replace) {
-      window.history.replaceState(state, null, url);
-    } else {
-      window.history.pushState(state, null, url);
-    }
+  const navTo = async (url, { replace, state = null } = {}) => {
     handleRoutingTask(url, {
-      state,
-      replace,
       reason: `navTo called with "${url}"`,
+      navigationType: replace ? "replace" : "push",
+      state,
     });
   };
 
@@ -8631,6 +9284,8 @@ const setupBrowserIntegrationViaHistory = ({
     const url = window.location.href;
     const state = history.state;
     handleRoutingTask(url, {
+      reason: "reload called",
+      navigationType: "reload",
       state,
     });
   };
@@ -8646,11 +9301,10 @@ const setupBrowserIntegrationViaHistory = ({
   const init = () => {
     const url = window.location.href;
     const state = history.state;
-    history.replaceState(state, null, url);
     handleRoutingTask(url, {
-      state,
-      replace: true,
       reason: "routing initialization",
+      navigationType: "replace",
+      state,
     });
   };
 
@@ -8686,7 +9340,7 @@ const applyRouting = (
     globalAbortSignal,
     abortSignal,
     // state
-    replace,
+    navigationType,
     isVisited,
     reason,
   },
@@ -8698,9 +9352,9 @@ const applyRouting = (
     routeLoadRequestedMap,
     activeRouteSet,
   } = updateRoutes(url, {
-    replace,
-    // state,
+    navigationType,
     isVisited,
+    // state,
   });
   if (loadSet.size === 0 && reloadSet.size === 0) {
     return {
@@ -8937,7 +9591,8 @@ const Route = ({
   index,
   fallback,
   meta,
-  children
+  children,
+  routeParams
 }) => {
   const forceRender = useForceRender();
   const hasDiscoveredRef = useRef(false);
@@ -8949,6 +9604,7 @@ const Route = ({
       index: index,
       fallback: fallback,
       meta: meta,
+      routeParams: routeParams,
       onMatchingInfoChange: matchingInfo => {
         hasDiscoveredRef.current = true;
         matchingInfoRef.current = matchingInfo;
@@ -8977,6 +9633,7 @@ const MatchingRouteManager = ({
   index,
   fallback,
   meta,
+  routeParams,
   onMatchingInfoChange,
   children
 }) => {
@@ -9018,6 +9675,7 @@ const MatchingRouteManager = ({
       index,
       fallback,
       meta,
+      routeParams,
       indexCandidate,
       fallbackCandidate,
       candidateSet,
@@ -9036,6 +9694,7 @@ const initRouteObserver = ({
   index,
   fallback,
   meta,
+  routeParams,
   indexCandidate,
   fallbackCandidate,
   candidateSet,
@@ -9092,6 +9751,12 @@ const initRouteObserver = ({
       // we have a route and it does not match no need to go further
       return null;
     }
+
+    // Check if routeParams match current route parameters
+    if (routeParams && !route.matchesParams(routeParams)) {
+      return null; // routeParams don't match, don't render
+    }
+
     // we have a route and it is matching
     // we search the first matching child to put it in the slot
     const matchingChildInfo = findMatchingChildInfo();
@@ -17322,24 +17987,21 @@ const RouteLink = ({
   if (!route) {
     throw new Error("route prop is required");
   }
-  const routeStatus = useRouteStatus(route);
+  useRouteStatus(route);
   const url = route.buildUrl(routeParams);
-  let isCurrent;
-  if (routeStatus.exactMatching) {
-    isCurrent = true;
-  } else if (routeStatus.matching) {
-    isCurrent = routeParams ? route.matchesParams(routeParams) : false;
-  } else {
-    isCurrent = false;
-  }
   return jsx(Link, {
     ...rest,
     href: url,
-    pseudoState: {
-      ":-navi-href-current": isCurrent
-    },
     children: children || route.buildRelativeUrl(routeParams)
   });
+};
+
+const rawUrlPartSymbol = Symbol("raw_url_part");
+const rawUrlPart = (value) => {
+  return {
+    [rawUrlPartSymbol]: true,
+    value,
+  };
 };
 
 installImportMetaCss(import.meta);Object.assign(PSEUDO_CLASSES, {
@@ -17649,6 +18311,10 @@ const TabRoute = ({
   padding = 2,
   paddingX,
   paddingY,
+  paddingLeft,
+  paddingRight,
+  paddingTop,
+  paddingBottom,
   alignX,
   alignY,
   ...props
@@ -17675,6 +18341,10 @@ const TabRoute = ({
       padding: padding,
       paddingX: paddingX,
       paddingY: paddingY,
+      paddingLeft: paddingLeft,
+      paddingRight: paddingRight,
+      paddingTop: paddingTop,
+      paddingBottom: paddingBottom,
       alignX: alignX,
       alignY: alignY,
       children: children
@@ -25548,5 +26218,5 @@ const UserSvg = () => jsx("svg", {
   })
 });
 
-export { ActionRenderer, ActiveKeyboardShortcuts, Address, BadgeCount, Box, Button, ButtonCopyToClipboard, Caption, CheckSvg, Checkbox, CheckboxList, Code, Col, Colgroup, ConstructionSvg, Details, DialogLayout, Editable, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Form, HeartSvg, HomeSvg, Icon, Image, Input, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, MessageBox, Paragraph, Radio, RadioList, Route, RouteLink, Routes, RowNumberCol, RowNumberTableCell, SINGLE_SPACE_CONSTRAINT, SVGMaskOverlay, SearchSvg, Select, SelectionContext, Separator, SettingsSvg, StarSvg, SummaryMarker, Svg, Tab, TabList, Table, TableCell, Tbody, Text, Thead, Title, Tr, UITransition, UserSvg, ViewportLayout, actionIntegratedVia, addCustomMessage, compareTwoJsValues, createAction, createAvailableConstraint, createRequestCanceller, createSelectionKeyboardShortcuts, enableDebugActions, enableDebugOnDocumentLoading, forwardActionRequested, installCustomConstraintValidation, isCellSelected, isColumnSelected, isRowSelected, localStorageSignal, navBack, navForward, navTo, openCallout, rawUrlPart, reload, removeCustomMessage, requestAction, rerunActions, resource, setBaseUrl, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, updateActions, useActionData, useActionStatus, useCalloutClose, useCellsAndColumns, useConstraintValidityState, useDependenciesDiff, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useMatchingRouteInfo, useNavState$1 as useNavState, useRouteStatus, useRunOnMount, useSelectableElement, useSelectionController, useSignalSync, useStateArray, useTitleLevel, useUrlSearchParam, valueInLocalStorage };
+export { ActionRenderer, ActiveKeyboardShortcuts, Address, BadgeCount, Box, Button, ButtonCopyToClipboard, Caption, CheckSvg, Checkbox, CheckboxList, Code, Col, Colgroup, ConstructionSvg, Details, DialogLayout, Editable, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Form, HeartSvg, HomeSvg, Icon, Image, Input, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, MessageBox, Paragraph, Radio, RadioList, Route, RouteLink, Routes, RowNumberCol, RowNumberTableCell, SINGLE_SPACE_CONSTRAINT, SVGMaskOverlay, SearchSvg, Select, SelectionContext, Separator, SettingsSvg, StarSvg, SummaryMarker, Svg, Tab, TabList, Table, TableCell, Tbody, Text, Thead, Title, Tr, UITransition, UserSvg, ViewportLayout, actionIntegratedVia, addCustomMessage, clearAllRoutes, compareTwoJsValues, createAction, createAvailableConstraint, createRequestCanceller, createSelectionKeyboardShortcuts, enableDebugActions, enableDebugOnDocumentLoading, forwardActionRequested, installCustomConstraintValidation, isCellSelected, isColumnSelected, isRowSelected, localStorageSignal, navBack, navForward, navTo, openCallout, rawUrlPart, reload, removeCustomMessage, requestAction, rerunActions, resource, setBaseUrl, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, updateActions, useActionData, useActionStatus, useCalloutClose, useCellsAndColumns, useConstraintValidityState, useDependenciesDiff, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useMatchingRouteInfo, useNavState$1 as useNavState, useRouteStatus, useRunOnMount, useSelectableElement, useSelectionController, useSignalSync, useStateArray, useTitleLevel, useUrlSearchParam, valueInLocalStorage };
 //# sourceMappingURL=jsenv_navi.js.map

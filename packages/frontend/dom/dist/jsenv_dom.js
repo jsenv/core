@@ -8359,7 +8359,7 @@ const createDragToMoveGestureController = ({
     { element, referenceElement, elementToMove, convertScrollablePosition },
   ) => {
     const direction = dragGesture.gestureInfo.direction;
-    dragGesture.gestureInfo.name;
+    // const dragGestureName = dragGesture.gestureInfo.name;
     const scrollContainer = dragGesture.gestureInfo.scrollContainer;
     const elementImpacted = elementToMove || element;
     const translateXAtGrab = dragStyleController.getUnderlyingValue(
@@ -8416,7 +8416,9 @@ const createDragToMoveGestureController = ({
             autoScrollArea,
             {
               scrollContainer,
-              direction},
+              direction,
+              // dragGestureName,
+            },
           );
         }
         if (autoScrollAreaPadding > 0) {

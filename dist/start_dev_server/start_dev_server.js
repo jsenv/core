@@ -6316,7 +6316,7 @@ const jsenvPluginDirectoryListing = ({
       if (!acceptsHtml) {
         return null;
       }
-      reference.fsStat = null; // reset fsStat, now it's not a directory anyor
+      reference.fsStat = null; // reset fsStat as it's not a directory anymore
       return `${htmlFileUrlForDirectory}?url=${encodeURIComponent(url)}`;
     },
     transformUrlContent: {
@@ -6735,13 +6735,13 @@ const jsenvPluginFsRedirection = ({
           applyFsStatEffectsOnUrlObject(urlObject, fsStat);
         }
       }
-      if (!fsStat) {
-        // for SPA we want to serve the root HTML file only when:
-        // 1. There is no corresponding file on the filesystem
-        // 2. The url pathname does not have an extension
-        //    This point assume client is requesting a file when there is an extension
-        //    and it assumes all routes will not use extension
-        if (spa && !urlToExtension(urlObject)) {
+      if (spa) {
+        // for SPA we want to serve the root HTML file most of the time
+        if (!fsStat) {
+          if (urlToExtension(urlObject)) {
+            // url has an extension, we assume it's a file request -> let 404 happen
+            return null;
+          }
           const { requestedUrl, rootDirectoryUrl, mainFilePath } =
             reference.ownerUrlInfo.context;
           const closestHtmlRootFile = getClosestHtmlRootFile(
@@ -6753,6 +6753,16 @@ const jsenvPluginFsRedirection = ({
           }
           return new URL(mainFilePath, rootDirectoryUrl);
         }
+        if (fsStat.isDirectory()) {
+          // When requesting a directory, check if we have an HTML entry file for that directory
+          const directoryEntryFileUrl = getDirectoryEntryFileUrl(urlObject);
+          if (directoryEntryFileUrl) {
+            reference.fsStat = readEntryStatSync(directoryEntryFileUrl);
+            return directoryEntryFileUrl;
+          }
+        }
+      }
+      if (!fsStat) {
         return null;
       }
       const urlBeforeSymlinkResolution = urlObject.href;
@@ -6800,17 +6810,24 @@ const resolveSymlink = (fileUrl) => {
   return realUrlObject.href;
 };
 
+const getDirectoryEntryFileUrl = (directoryUrl) => {
+  const indexHtmlFileUrl = new URL(`index.html`, directoryUrl);
+  if (existsSync(indexHtmlFileUrl)) {
+    return indexHtmlFileUrl.href;
+  }
+  const filename = urlToFilename(directoryUrl);
+  const htmlFileUrlCandidate = new URL(`${filename}.html`, directoryUrl);
+  if (existsSync(htmlFileUrlCandidate)) {
+    return htmlFileUrlCandidate.href;
+  }
+  return null;
+};
 const getClosestHtmlRootFile = (requestedUrl, serverRootDirectoryUrl) => {
   let directoryUrl = new URL("./", requestedUrl);
   while (true) {
-    const indexHtmlFileUrl = new URL(`index.html`, directoryUrl);
-    if (existsSync(indexHtmlFileUrl)) {
-      return indexHtmlFileUrl.href;
-    }
-    const filename = urlToFilename(directoryUrl);
-    const htmlFileUrlCandidate = new URL(`${filename}.html`, directoryUrl);
-    if (existsSync(htmlFileUrlCandidate)) {
-      return htmlFileUrlCandidate.href;
+    const directoryEntryFileUrl = getDirectoryEntryFileUrl(directoryUrl);
+    if (directoryEntryFileUrl) {
+      return directoryEntryFileUrl;
     }
     if (!urlIsOrIsInsideOf(directoryUrl, serverRootDirectoryUrl)) {
       return null;

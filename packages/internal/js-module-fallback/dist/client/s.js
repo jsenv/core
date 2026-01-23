@@ -122,8 +122,6 @@
    */
 
   (function () {
-    /* eslint-env browser */
-
     var loadRegistry = Object.create(null);
     var registerRegistry = Object.create(null);
     var inlineScriptCount = 0;
