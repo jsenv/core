@@ -11,6 +11,8 @@
 - [deepest url generation with search parameters](deepest_url_generation_with_search_parameters/deepest_url_generation_with_search_parameters.md)
 - [url building with extra params](url_building_with_extra_params/url_building_with_extra_params.md)
 - [url building with geographic coordinates (city map scenario)](url_building_with_geographic_coordinates_(city_map_scenario)/url_building_with_geographic_coordinates_(city_map_scenario).md)
+- [complex url building with multiple signals](complex_url_building_with_multiple_signals/complex_url_building_with_multiple_signals.md)
+- [trailing slash handling](trailing_slash_handling/trailing_slash_handling.md)
 
 ---
 

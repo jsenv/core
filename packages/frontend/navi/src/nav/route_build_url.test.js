@@ -540,4 +540,69 @@ await snapshotTests(import.meta.url, ({ test }) => {
       globalSignalRegistry.clear();
     }
   });
+
+  test("complex url building with multiple signals", () => {
+    try {
+      const zoneIdSignal = stateSignal("zone-123", {
+        id: "zoneId",
+        type: "string",
+      });
+      const mapboxStyleSignal = stateSignal("streets-v11", {
+        id: "mapboxStyle",
+        type: "string",
+      });
+      const mapboxLongitudeSignal = stateSignal(2.3522, {
+        id: "mapboxLongitude",
+        type: "float",
+      });
+      const mapboxLatitudeSignal = stateSignal(48.8566, {
+        id: "mapboxLatitude",
+        type: "float",
+      });
+      const mapboxZoomSignal = stateSignal(12, {
+        id: "mapboxZoom",
+        type: "number",
+      });
+      const mapSidebarOpenedSignal = stateSignal(true, {
+        id: "mapSidebarOpened",
+        type: "boolean",
+      });
+
+      const { MAP_ROUTE } = setupRoutes({
+        MAP_ROUTE: `/map/?zone=${zoneIdSignal}&style=${mapboxStyleSignal}&lon=${mapboxLongitudeSignal}&lat=${mapboxLatitudeSignal}&zoom=${mapboxZoomSignal}&sidebar=${mapSidebarOpenedSignal}`,
+      });
+
+      return {
+        // Default state with all signal values
+        complex_map_with_all_signals: MAP_ROUTE.buildUrl(),
+
+        // Override some parameters
+        complex_map_with_overrides: MAP_ROUTE.buildUrl({
+          zone: "zone-456",
+          style: "satellite-v9",
+          zoom: 15,
+        }),
+
+        // Override all parameters
+        complex_map_with_all_overrides: MAP_ROUTE.buildUrl({
+          zone: "zone-789",
+          style: "outdoors-v11",
+          lon: -0.1276,
+          lat: 51.5074,
+          zoom: 10,
+          sidebar: false,
+        }),
+
+        // Add extra search params
+        complex_map_with_extra_params: MAP_ROUTE.buildUrl({
+          zone: "zone-999",
+          layer: "traffic",
+          filter: "active",
+        }),
+      };
+    } finally {
+      clearAllRoutes();
+      globalSignalRegistry.clear();
+    }
+  });
 });
