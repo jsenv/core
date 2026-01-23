@@ -3,6 +3,8 @@
 
 - [replaceParams should use most specific route for redirect](replaceparams_should_use_most_specific_route_for_redirect/replaceparams_should_use_most_specific_route_for_redirect.md)
 - [signal updates should trigger redirect on most specific matching route](signal_updates_should_trigger_redirect_on_most_specific_matching_route/signal_updates_should_trigger_redirect_on_most_specific_matching_route.md)
+- [parameterized route vs literal route conflict after navigation](parameterized_route_vs_literal_route_conflict_after_navigation/parameterized_route_vs_literal_route_conflict_after_navigation.md)
+- [parameterized route conflict with shared signals](parameterized_route_conflict_with_shared_signals/parameterized_route_conflict_with_shared_signals.md)
 
 ---
 
