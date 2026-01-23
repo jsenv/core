@@ -6,38 +6,15 @@ run({
 })
 ```
 
-# 1/2 logs
-
-![img](log_group.svg)
-
-<details>
-  <summary>see without style</summary>
+# 1/2 console.error
 
 ```console
-⠋ start dev server
-✔ start dev server (done in <X> second)
-
-
-- http://127.0.0.1
-- http://127.0.0.1
-- http://127.0.0.1
-- http://127.0.0.1
-
-
-Error while handling http://127.0.0.1/js_syntax_error.js:
-  Unexpected token (1:11)
-  base/client/js_syntax_error.js:1:11
-1 | const a = (
-              ^
 Error while handling http://127.0.0.1/js_syntax_error.js:
   Unexpected token (1:11)
   base/client/js_syntax_error.js:1:11
 1 | const a = (
               ^
 ```
-
-</details>
-
 
 # 2/2 reject
 

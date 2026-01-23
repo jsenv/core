@@ -11,6 +11,14 @@ export const snapshotFileExecutionSideEffects = async (
       "**": "compare",
       "**/.jsenv/": "undo",
     },
+    logEffects:
+      options.logEffects === false
+        ? false
+        : {
+            prevent: true,
+            level: "warn",
+            ...(options.logEffects === true ? {} : options.logEffects),
+          },
     executionEffects: {
       catch: false,
       ...options.executionEffects,
@@ -31,6 +39,14 @@ export const snapshotTestPlanSideEffects = async (
       "**/*.gif": "ignore",
       "**/.coverage/": "ignore",
     },
+    logEffects:
+      options.logEffects === false
+        ? false
+        : {
+            prevent: true,
+            level: "warn",
+            ...(options.logEffects === true ? {} : options.logEffects),
+          },
     executionEffects: {
       catch: false,
       ...options.executionEffects,

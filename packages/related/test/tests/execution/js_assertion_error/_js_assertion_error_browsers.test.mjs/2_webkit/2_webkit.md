@@ -6,31 +6,6 @@ run({
 })
 ```
 
-# 1/2 logs
-
-![img](log_group.svg)
-
-<details>
-  <summary>see without style</summary>
-
-```console
-⠋ start dev server
-✔ start dev server (done in <X> second)
-
-
-- http://127.0.0.1
-- http://127.0.0.1
-- http://127.0.0.1
-- http://127.0.0.1
-
-
-```
-
-</details>
-
-
-# 2/2 reject
-
 ![img](reject.svg)
 
 <details>
