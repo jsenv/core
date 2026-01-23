@@ -31,33 +31,18 @@ try {
     MAP_ROUTE: `/map/?zone=${zoneIdSignal}&style=${mapboxStyleSignal}&lon=${mapboxLongitudeSignal}&lat=${mapboxLatitudeSignal}&zoom=${mapboxZoomSignal}&sidebar=${mapSidebarOpenedSignal}`,
   });
 
+  // Step 1: Generate URL with all defaults (no params passed)
+  const urlWithDefaults = MAP_ROUTE.buildUrl();
+
+  // Step 2: Change zoom signal to non-default value
+  mapboxZoomSignal.value = 15;
+
+  // Step 3: Generate URL again without params to see if changed zoom appears
+  const urlAfterZoomChange = MAP_ROUTE.buildUrl();
+
   return {
-    // Default state with all signal values
-    complex_map_with_all_signals: MAP_ROUTE.buildUrl(),
-
-    // Override some parameters
-    complex_map_with_overrides: MAP_ROUTE.buildUrl({
-      zone: "zone-456",
-      style: "satellite-v9",
-      zoom: 15,
-    }),
-
-    // Override all parameters
-    complex_map_with_all_overrides: MAP_ROUTE.buildUrl({
-      zone: "zone-789",
-      style: "outdoors-v11",
-      lon: -0.1276,
-      lat: 51.5074,
-      zoom: 10,
-      sidebar: false,
-    }),
-
-    // Add extra search params
-    complex_map_with_extra_params: MAP_ROUTE.buildUrl({
-      zone: "zone-999",
-      layer: "traffic",
-      filter: "active",
-    }),
+    url_with_all_defaults: urlWithDefaults,
+    url_after_zoom_change: urlAfterZoomChange,
   };
 } finally {
   clearAllRoutes();
@@ -67,10 +52,8 @@ try {
 
 ```js
 {
-  "complex_map_with_all_signals": "http://127.0.0.1/map/",
-  "complex_map_with_overrides": "http://127.0.0.1/map/?zone=zone-456&style=satellite-v9&zoom=15",
-  "complex_map_with_all_overrides": "http://127.0.0.1/map/?zone=zone-789&style=outdoors-v11&lon=-0.1276&lat=51.5074&zoom=10&sidebar=false",
-  "complex_map_with_extra_params": "http://127.0.0.1/map/?zone=zone-999&layer=traffic&filter=active"
+  "url_with_all_defaults": "http://127.0.0.1/map/",
+  "url_after_zoom_change": "http://127.0.0.1/map?zoom=15"
 }
 ```
 

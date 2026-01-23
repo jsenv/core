@@ -680,6 +680,27 @@ const buildUrlFromPattern = (parsedPattern, params = {}) => {
     path = path.slice(0, -1);
   }
 
+  // Check if we'll have query parameters to decide on trailing slash removal
+  const willHaveQueryParams =
+    parsedPattern.queryParams?.some((qp) => {
+      const value = params[qp.name];
+      return value !== undefined;
+    }) ||
+    Object.entries(params).some(([key, value]) => {
+      const isPathParam = parsedPattern.segments.some(
+        (s) => s.type === "param" && s.name === key,
+      );
+      const isQueryParam = parsedPattern.queryParams?.some(
+        (qp) => qp.name === key,
+      );
+      return value !== undefined && !isPathParam && !isQueryParam;
+    });
+
+  // Remove trailing slash when we have query params for prettier URLs
+  if (willHaveQueryParams && path.endsWith("/") && path !== "/") {
+    path = path.slice(0, -1);
+  }
+
   // Add search parameters
   const pathParamNames = new Set(
     parsedPattern.segments.filter((s) => s.type === "param").map((s) => s.name),
