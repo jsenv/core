@@ -8471,6 +8471,22 @@ const resolveRouteUrl = (relativeUrl) => {
  */
 
 
+// Helper to check if one route pattern is a parent of another
+const isParentRoute = (parentPattern, childPattern) => {
+  // Normalize patterns by removing query parts and trailing slashes
+  const normalizePath = (pattern) => {
+    const pathPart = pattern.split("?")[0];
+    return pathPart.replace(/\/$/, "") || "/";
+  };
+
+  const parentPath = normalizePath(parentPattern);
+  const childPath = normalizePath(childPattern);
+
+  // Parent route is a parent if child path starts with parent path
+  // and child has additional segments
+  return childPath.startsWith(parentPath) && childPath !== parentPath;
+};
+
 // Controls what happens to actions when their route stops matching:
 // 'abort' - Cancel the action immediately when route stops matching
 // 'keep-loading' - Allow action to continue running after route stops matching
@@ -8756,21 +8772,35 @@ const registerRoute = (routePattern) => {
       );
     }
 
-    // URL -> Signal synchronization
+    // URL -> Signal synchronization with parent-child route hierarchy checking
     effect(() => {
       const matching = matchingSignal.value;
       const params = rawParamsSignal.value;
       const urlParamValue = params[paramName];
 
-      if (!matching) {
-        return;
+      if (matching) {
+        // When route matches, sync signal with URL parameter value
+        // This ensures URL is the source of truth
+        stateSignal.value = urlParamValue;
+      } else {
+        // When route doesn't match, check if we're navigating to a parent route
+        const currentRoutePattern = routePattern.cleanPattern;
+        const parentRouteMatching = Array.from(routeSet).find((otherRoute) => {
+          if (otherRoute === route || !otherRoute.matching) return false;
+
+          const otherRouteProperties = getRoutePrivateProperties(otherRoute);
+          const otherPattern = otherRouteProperties.routePattern.cleanPattern;
+
+          // Check if the other route is a parent of this route
+          return isParentRoute(otherPattern, currentRoutePattern);
+        });
+
+        if (parentRouteMatching) {
+          // We're navigating to a parent route - clear this signal to reflect the hierarchy
+          const defaultValue = routePattern.parameterDefaults?.[paramName];
+          stateSignal.value = defaultValue;
+        }
       }
-      if (debug) {
-        console.debug(
-          `[stateSignal] URL -> Signal: ${paramName}=${urlParamValue}`,
-        );
-      }
-      stateSignal.value = urlParamValue;
     });
 
     // Signal -> URL synchronization
