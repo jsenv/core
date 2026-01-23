@@ -218,6 +218,41 @@ export const getRoutePrivateProperties = (route) => {
   return routePrivatePropertiesMap.get(route);
 };
 
+/**
+ * Get child routes of a given route
+ */
+const getRouteChildren = (route) => {
+  const children = [];
+  const routePrivateProperties = getRoutePrivateProperties(route);
+  if (!routePrivateProperties) {
+    return children;
+  }
+
+  const { originalPattern } = routePrivateProperties;
+  const relationships = getPatternRelationships();
+  const relationshipData = relationships.get(originalPattern);
+
+  if (!relationshipData || !relationshipData.children) {
+    return children;
+  }
+
+  // Find child routes
+  for (const childPattern of relationshipData.children) {
+    for (const otherRoute of routeSet) {
+      const otherRoutePrivateProperties = getRoutePrivateProperties(otherRoute);
+      if (
+        otherRoutePrivateProperties &&
+        otherRoutePrivateProperties.originalPattern === childPattern
+      ) {
+        children.push(otherRoute);
+        break;
+      }
+    }
+  }
+
+  return children;
+};
+
 const registerRoute = (routePattern) => {
   const urlPatternRaw = routePattern.originalPattern;
   if (DEBUG) {
@@ -418,34 +453,8 @@ const registerRoute = (routePattern) => {
       }
 
       // Find the first matching child to continue down the hierarchy
-      const routePrivateProperties = getRoutePrivateProperties(currentRoute);
-      const { originalPattern } = routePrivateProperties;
-      const relationships = getPatternRelationships();
-      const relationshipData = relationships.get(originalPattern);
-
-      if (!relationshipData || !relationshipData.children) {
-        break;
-      }
-
-      // Find the first child that is currently matching
-      let nextRoute = null;
-      for (const childPattern of relationshipData.children) {
-        for (const otherRoute of routeSet) {
-          const otherRoutePrivateProperties =
-            getRoutePrivateProperties(otherRoute);
-          if (
-            otherRoutePrivateProperties &&
-            otherRoutePrivateProperties.originalPattern === childPattern &&
-            otherRoute.matching
-          ) {
-            nextRoute = otherRoute;
-            break;
-          }
-        }
-        if (nextRoute) break;
-      }
-
-      currentRoute = nextRoute;
+      const children = getRouteChildren(currentRoute);
+      currentRoute = children.find((child) => child.matching) || null;
     }
     return mostSpecificRoute.redirectTo(newParams);
   };

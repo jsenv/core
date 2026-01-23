@@ -7522,21 +7522,31 @@ setBaseUrl(
 // Pattern registry for building relationships before routes are created
 const patternRegistry = new Map(); // pattern -> patternData
 const patternRelationships = new Map(); // pattern -> relationships
+let patternsRegistered = false;
 
 // Function to detect signals in route patterns and connect them
 const detectSignals = (routePattern) => {
   const signalConnections = [];
   let updatedPattern = routePattern;
 
-  // Look for signals in the new syntax: :paramName={navi_state_signal:id} or ?paramName={navi_state_signal:id} or &paramName={navi_state_signal:id}
-  // Using curly braces to avoid conflicts with underscores in signal IDs
-  const signalParamRegex = /([?:&])(\w+)=(\{navi_state_signal:[^}]+\})/g;
+  // Look for signals in two formats:
+  // 1. Expected format: :paramName={navi_state_signal:id} or ?paramName={navi_state_signal:id} or &paramName={navi_state_signal:id}
+  // 2. Typoe format (missing = sign): &paramName{navi_state_signal:id}
+  const signalParamRegex = /([?:&])(\w+)(=)?(\{navi_state_signal:[^}]+\})/g;
   let match;
 
   while ((match = signalParamRegex.exec(routePattern)) !== null) {
-    const [fullMatch, prefix, paramName, signalString] = match;
+    const [fullMatch, prefix, paramName, equalSign, signalString] = match;
 
-    // Extract the signal ID from the new format: {navi_state_signal:id}
+    // Emit warning if equal sign is missing
+    if (!equalSign) {
+      console.warn(
+        `[detectSignals] Missing '=' sign in route pattern: "${prefix}${paramName}${signalString}". ` +
+          `Consider using "${prefix}${paramName}=${signalString}" for better clarity.`,
+      );
+    }
+
+    // Extract the signal ID from the format: {navi_state_signal:id}
     const signalIdMatch = signalString.match(/\{navi_state_signal:([^}]+)\}/);
     if (!signalIdMatch) {
       console.warn(
@@ -7553,13 +7563,10 @@ const detectSignals = (routePattern) => {
 
       let replacement;
       if (prefix === ":") {
-        // Path parameter: :section=__jsenv_signal_1__ becomes :section
+        // Path parameter: :section={navi_state_signal:...} becomes :section
         replacement = `${prefix}${paramName}`;
-      } else if (prefix === "?") {
-        // First search parameter: ?city=__jsenv_signal_1__ becomes ?city
-        replacement = `${prefix}${paramName}`;
-      } else if (prefix === "&") {
-        // Additional search parameter: &lon=__jsenv_signal_1__ becomes &lon
+      } else if (prefix === "?" || prefix === "&") {
+        // Query parameter: ?city={navi_state_signal:...} or &lon{navi_state_signal:...} becomes ?city or &lon
         replacement = `${prefix}${paramName}`;
       }
       updatedPattern = updatedPattern.replace(fullMatch, replacement);
@@ -7606,6 +7613,7 @@ const createRoutePattern = (pattern) => {
     const result = matchUrl(parsedPattern, url, {
       parameterDefaults,
       baseUrl,
+      connections,
     });
 
     return result;
@@ -7985,7 +7993,11 @@ const checkIfLiteralCanBeOptional = (literalValue, patternRegistry) => {
 /**
  * Match a URL against a parsed pattern
  */
-const matchUrl = (parsedPattern, url, { parameterDefaults, baseUrl }) => {
+const matchUrl = (
+  parsedPattern,
+  url,
+  { parameterDefaults, baseUrl, connections = [] },
+) => {
   // Parse the URL
   const urlObj = new URL(url, baseUrl);
   let pathname = urlObj.pathname;
@@ -8007,14 +8019,14 @@ const matchUrl = (parsedPattern, url, { parameterDefaults, baseUrl }) => {
   // OR when URL exactly matches baseUrl (treating baseUrl as root)
   if (parsedPattern.segments.length === 0) {
     if (pathname === "/" || pathname === "") {
-      return extractSearchParams(urlObj);
+      return extractSearchParams(urlObj, connections);
     }
 
     // Special case: if URL exactly matches baseUrl, treat as root route
     if (baseUrl) {
       const baseUrlObj = new URL(baseUrl);
       if (originalPathname === baseUrlObj.pathname) {
-        return extractSearchParams(urlObj);
+        return extractSearchParams(urlObj, connections);
       }
     }
 
@@ -8109,7 +8121,7 @@ const matchUrl = (parsedPattern, url, { parameterDefaults, baseUrl }) => {
   // If pattern has trailing slash or wildcard, allow extra segments (no additional check needed)
 
   // Add search parameters
-  const searchParams = extractSearchParams(urlObj);
+  const searchParams = extractSearchParams(urlObj, connections);
   Object.assign(params, searchParams);
 
   // Apply remaining parameter defaults for unmatched parameters
@@ -8125,10 +8137,29 @@ const matchUrl = (parsedPattern, url, { parameterDefaults, baseUrl }) => {
 /**
  * Extract search parameters from URL
  */
-const extractSearchParams = (urlObj) => {
+const extractSearchParams = (urlObj, connections = []) => {
   const params = {};
+
+  // Create a map for quick signal type lookup
+  const signalTypes = new Map();
+  for (const connection of connections) {
+    if (connection.options.type) {
+      signalTypes.set(connection.paramName, connection.options.type);
+    }
+  }
+
   for (const [key, value] of urlObj.searchParams) {
-    params[key] = value;
+    const signalType = signalTypes.get(key);
+
+    // Cast value based on signal type
+    if (signalType === "number" || signalType === "float") {
+      const numberValue = Number(value);
+      params[key] = isNaN(numberValue) ? value : numberValue;
+    } else if (signalType === "boolean") {
+      params[key] = value === "true" || value === "1";
+    } else {
+      params[key] = value;
+    }
   }
   return params;
 };
@@ -8402,6 +8433,8 @@ const setupPatterns = (patternDefinitions) => {
       originalPattern: currentPattern,
     });
   }
+
+  patternsRegistered = true;
 };
 
 /**
@@ -8412,11 +8445,24 @@ const getPatternData = (urlPatternRaw) => {
 };
 
 /**
+ * Get pattern relationships for route creation
+ */
+const getPatternRelationships = () => {
+  if (!patternsRegistered) {
+    throw new Error(
+      "Patterns must be registered before accessing relationships",
+    );
+  }
+  return patternRelationships;
+};
+
+/**
  * Clear all registered patterns
  */
 const clearPatterns = () => {
   patternRegistry.clear();
   patternRelationships.clear();
+  patternsRegistered = false;
 };
 
 const resolveRouteUrl = (relativeUrl) => {
@@ -8633,6 +8679,41 @@ const getRoutePrivateProperties = (route) => {
   return routePrivatePropertiesMap.get(route);
 };
 
+/**
+ * Get child routes of a given route
+ */
+const getRouteChildren = (route) => {
+  const children = [];
+  const routePrivateProperties = getRoutePrivateProperties(route);
+  if (!routePrivateProperties) {
+    return children;
+  }
+
+  const { originalPattern } = routePrivateProperties;
+  const relationships = getPatternRelationships();
+  const relationshipData = relationships.get(originalPattern);
+
+  if (!relationshipData || !relationshipData.children) {
+    return children;
+  }
+
+  // Find child routes
+  for (const childPattern of relationshipData.children) {
+    for (const otherRoute of routeSet) {
+      const otherRoutePrivateProperties = getRoutePrivateProperties(otherRoute);
+      if (
+        otherRoutePrivateProperties &&
+        otherRoutePrivateProperties.originalPattern === childPattern
+      ) {
+        children.push(otherRoute);
+        break;
+      }
+    }
+  }
+
+  return children;
+};
+
 const registerRoute = (routePattern) => {
   const urlPatternRaw = routePattern.originalPattern;
   const patternData = getPatternData(urlPatternRaw);
@@ -8784,13 +8865,39 @@ const registerRoute = (routePattern) => {
       );
       return null;
     }
-    if (route.action) {
-      // For action: merge with resolved params (includes defaults) so action gets complete params
-      const currentResolvedParams = routePattern.resolveParams();
-      const updatedActionParams = { ...currentResolvedParams, ...newParams };
-      route.action.replaceParams(updatedActionParams);
+
+    // Walk down the hierarchy updating action params and tracking most specific route
+    let currentRoute = route;
+    let mostSpecificRoute;
+
+    while (currentRoute) {
+      if (!currentRoute.matching) {
+        break;
+      }
+
+      // Update the most specific route as we go
+      mostSpecificRoute = currentRoute;
+      // Update action params
+      if (currentRoute.action) {
+        const currentRoutePrivateProperties =
+          getRoutePrivateProperties(currentRoute);
+        if (currentRoutePrivateProperties) {
+          const { routePattern: currentRoutePattern } =
+            currentRoutePrivateProperties;
+          const currentResolvedParams = currentRoutePattern.resolveParams();
+          const updatedActionParams = {
+            ...currentResolvedParams,
+            ...newParams,
+          };
+          currentRoute.action.replaceParams(updatedActionParams);
+        }
+      }
+
+      // Find the first matching child to continue down the hierarchy
+      const children = getRouteChildren(currentRoute);
+      currentRoute = children.find((child) => child.matching) || null;
     }
-    return route.redirectTo(newParams);
+    return mostSpecificRoute.redirectTo(newParams);
   };
   route.buildRelativeUrl = (params) => {
     // buildMostPreciseUrl now handles parameter resolution internally
