@@ -124,6 +124,7 @@ export const createRoutePattern = (pattern) => {
     const result = matchUrl(parsedPattern, url, {
       parameterDefaults,
       baseUrl,
+      connections,
     });
 
     if (DEBUG) {
@@ -513,7 +514,11 @@ const checkIfLiteralCanBeOptional = (literalValue, patternRegistry) => {
 /**
  * Match a URL against a parsed pattern
  */
-const matchUrl = (parsedPattern, url, { parameterDefaults, baseUrl }) => {
+const matchUrl = (
+  parsedPattern,
+  url,
+  { parameterDefaults, baseUrl, connections = [] },
+) => {
   // Parse the URL
   const urlObj = new URL(url, baseUrl);
   let pathname = urlObj.pathname;
@@ -535,14 +540,14 @@ const matchUrl = (parsedPattern, url, { parameterDefaults, baseUrl }) => {
   // OR when URL exactly matches baseUrl (treating baseUrl as root)
   if (parsedPattern.segments.length === 0) {
     if (pathname === "/" || pathname === "") {
-      return extractSearchParams(urlObj);
+      return extractSearchParams(urlObj, connections);
     }
 
     // Special case: if URL exactly matches baseUrl, treat as root route
     if (baseUrl) {
       const baseUrlObj = new URL(baseUrl);
       if (originalPathname === baseUrlObj.pathname) {
-        return extractSearchParams(urlObj);
+        return extractSearchParams(urlObj, connections);
       }
     }
 
@@ -637,7 +642,7 @@ const matchUrl = (parsedPattern, url, { parameterDefaults, baseUrl }) => {
   // If pattern has trailing slash or wildcard, allow extra segments (no additional check needed)
 
   // Add search parameters
-  const searchParams = extractSearchParams(urlObj);
+  const searchParams = extractSearchParams(urlObj, connections);
   Object.assign(params, searchParams);
 
   // Apply remaining parameter defaults for unmatched parameters
@@ -653,10 +658,29 @@ const matchUrl = (parsedPattern, url, { parameterDefaults, baseUrl }) => {
 /**
  * Extract search parameters from URL
  */
-const extractSearchParams = (urlObj) => {
+const extractSearchParams = (urlObj, connections = []) => {
   const params = {};
+
+  // Create a map for quick signal type lookup
+  const signalTypes = new Map();
+  for (const connection of connections) {
+    if (connection.options.type) {
+      signalTypes.set(connection.paramName, connection.options.type);
+    }
+  }
+
   for (const [key, value] of urlObj.searchParams) {
-    params[key] = value;
+    const signalType = signalTypes.get(key);
+
+    // Cast value based on signal type
+    if (signalType === "number" || signalType === "float") {
+      const numberValue = Number(value);
+      params[key] = isNaN(numberValue) ? value : numberValue;
+    } else if (signalType === "boolean") {
+      params[key] = value === "true" || value === "1";
+    } else {
+      params[key] = value;
+    }
   }
   return params;
 };
