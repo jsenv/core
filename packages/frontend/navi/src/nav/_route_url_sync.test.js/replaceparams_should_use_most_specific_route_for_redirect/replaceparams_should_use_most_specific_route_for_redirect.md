@@ -8,11 +8,12 @@ try {
   });
 
   // Create routes with proper parent-child relationship
-  const { MAP_ROUTE, MAP_ISOCHRONE_ROUTE, MAP_ISOCHRONE_COMPARE_ROUTE } = setupRoutes({
-    MAP_ROUTE: `/map/?zoom=${zoomSignal}`, // Parent route with trailing slash
-    MAP_ISOCHRONE_ROUTE: `/map/isochrone`, // Intermediate child
-    MAP_ISOCHRONE_COMPARE_ROUTE: `/map/isochrone/compare`, // Deepest child
-  });
+  const { MAP_ROUTE, MAP_ISOCHRONE_ROUTE, MAP_ISOCHRONE_COMPARE_ROUTE } =
+    setupRoutes({
+      MAP_ROUTE: `/map/?zoom=${zoomSignal}`, // Parent route with trailing slash
+      MAP_ISOCHRONE_ROUTE: `/map/isochrone`, // Intermediate child
+      MAP_ISOCHRONE_COMPARE_ROUTE: `/map/isochrone/compare`, // Deepest child
+    });
 
   // Simulate being on the child route: /map/isochrone/compare?zoom=10
   updateRoutes(`${baseUrl}/map/isochrone/compare?zoom=10`);
@@ -34,7 +35,7 @@ try {
 
   MAP_ISOCHRONE_ROUTE.redirectTo = (params) => {
     redirectCalls.push({
-      route: "MAP_ISOCHRONE_ROUTE", 
+      route: "MAP_ISOCHRONE_ROUTE",
       params,
       url: MAP_ISOCHRONE_ROUTE.buildUrl(params),
     });

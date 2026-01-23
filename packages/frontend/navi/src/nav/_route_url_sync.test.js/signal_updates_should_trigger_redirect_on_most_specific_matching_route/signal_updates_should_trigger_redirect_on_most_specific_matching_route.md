@@ -1,4 +1,4 @@
-# [signal updates should trigger redirect on most specific matching route](../../route_url_sync.test.js#L103)
+# [signal updates should trigger redirect on most specific matching route](../../route_url_sync.test.js#L104)
 
 ```js
 try {
@@ -10,7 +10,7 @@ try {
   const { MAP_ROUTE, MAP_ISOCHRONE_ROUTE, MAP_COMPARE_ROUTE } = setupRoutes(
     {
       MAP_ROUTE: `/map?zoom=${zoomSignal}`,
-      MAP_ISOCHRONE_ROUTE: `/map/isochrone?zoom=${zoomSignal}`, 
+      MAP_ISOCHRONE_ROUTE: `/map/isochrone?zoom=${zoomSignal}`,
       MAP_COMPARE_ROUTE: `/map/isochrone/compare?zoom=${zoomSignal}`,
     },
   );
@@ -77,7 +77,9 @@ try {
 
     // Verify only the most specific route was used for redirect
     most_specific_route_used:
-      redirectCalls.length > 0 ? redirectCalls[redirectCalls.length - 1].route : "none",
+      redirectCalls.length > 0
+        ? redirectCalls[redirectCalls.length - 1].route
+        : "none",
 
     // Expected: MAP_COMPARE_ROUTE should handle the redirect
     expected_most_specific: "MAP_COMPARE_ROUTE",
