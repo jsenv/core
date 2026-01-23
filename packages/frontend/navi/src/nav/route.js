@@ -10,6 +10,7 @@ import {
   clearPatterns,
   createRoutePattern,
   getPatternData,
+  getPatternRelationships,
   resolveRouteUrl,
   setupPatterns,
 } from "./route_pattern.js";
@@ -388,13 +389,65 @@ const registerRoute = (routePattern) => {
       );
       return null;
     }
-    if (route.action) {
-      // For action: merge with resolved params (includes defaults) so action gets complete params
-      const currentResolvedParams = routePattern.resolveParams();
-      const updatedActionParams = { ...currentResolvedParams, ...newParams };
-      route.action.replaceParams(updatedActionParams);
+
+    // Walk down the hierarchy updating action params and tracking most specific route
+    let currentRoute = route;
+    let mostSpecificRoute;
+
+    while (currentRoute) {
+      if (!currentRoute.matching) {
+        break;
+      }
+
+      // Update the most specific route as we go
+      mostSpecificRoute = currentRoute;
+      // Update action params
+      if (currentRoute.action) {
+        const currentRoutePrivateProperties =
+          getRoutePrivateProperties(currentRoute);
+        if (currentRoutePrivateProperties) {
+          const { routePattern: currentRoutePattern } =
+            currentRoutePrivateProperties;
+          const currentResolvedParams = currentRoutePattern.resolveParams();
+          const updatedActionParams = {
+            ...currentResolvedParams,
+            ...newParams,
+          };
+          currentRoute.action.replaceParams(updatedActionParams);
+        }
+      }
+
+      // Find the first matching child to continue down the hierarchy
+      const routePrivateProperties = getRoutePrivateProperties(currentRoute);
+      const { originalPattern } = routePrivateProperties;
+      const relationships = getPatternRelationships();
+      const relationshipData = relationships.get(originalPattern);
+
+      if (!relationshipData || !relationshipData.children) {
+        break;
+      }
+
+      // Find the first child that is currently matching
+      let nextRoute = null;
+      for (const childPattern of relationshipData.children) {
+        for (const otherRoute of routeSet) {
+          const otherRoutePrivateProperties =
+            getRoutePrivateProperties(otherRoute);
+          if (
+            otherRoutePrivateProperties &&
+            otherRoutePrivateProperties.originalPattern === childPattern &&
+            otherRoute.matching
+          ) {
+            nextRoute = otherRoute;
+            break;
+          }
+        }
+        if (nextRoute) break;
+      }
+
+      currentRoute = nextRoute;
     }
-    return route.redirectTo(newParams);
+    return mostSpecificRoute.redirectTo(newParams);
   };
   route.buildRelativeUrl = (params) => {
     // buildMostPreciseUrl now handles parameter resolution internally
