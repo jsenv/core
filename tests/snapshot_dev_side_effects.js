@@ -18,6 +18,7 @@ export const snapshotDevSideEffects = async (
       options.logEffects === false
         ? false
         : {
+            prevent: true,
             level: "warn",
             ...(options.logEffects === true ? {} : options.logEffects),
           },
