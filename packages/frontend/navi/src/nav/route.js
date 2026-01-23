@@ -326,15 +326,12 @@ const registerRoute = (routePattern) => {
       const params = rawParamsSignal.value;
       const urlParamValue = params[paramName];
 
-      if (!matching) {
-        return;
+      if (matching) {
+        // When route matches, sync signal with URL parameter value
+        // This ensures URL is the source of truth
+        stateSignal.value = urlParamValue;
       }
-      if (debug) {
-        console.debug(
-          `[stateSignal] URL -> Signal: ${paramName}=${urlParamValue}`,
-        );
-      }
-      stateSignal.value = urlParamValue;
+      // When route doesn't match, leave signal unchanged to preserve user preferences
     });
 
     // Signal -> URL synchronization

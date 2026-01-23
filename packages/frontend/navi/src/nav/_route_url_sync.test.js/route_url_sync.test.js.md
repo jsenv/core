@@ -5,6 +5,8 @@
 - [signal updates should trigger redirect on most specific matching route](signal_updates_should_trigger_redirect_on_most_specific_matching_route/signal_updates_should_trigger_redirect_on_most_specific_matching_route.md)
 - [parameterized route vs literal route conflict after navigation](parameterized_route_vs_literal_route_conflict_after_navigation/parameterized_route_vs_literal_route_conflict_after_navigation.md)
 - [parameterized route conflict with shared signals](parameterized_route_conflict_with_shared_signals/parameterized_route_conflict_with_shared_signals.md)
+- [signal should be cleared when route stops matching](signal_should_be_cleared_when_route_stops_matching/signal_should_be_cleared_when_route_stops_matching.md)
+- [signal preservation vs clearing behavior](signal_preservation_vs_clearing_behavior/signal_preservation_vs_clearing_behavior.md)
 
 ---
 

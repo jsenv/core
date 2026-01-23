@@ -9,7 +9,7 @@ try {
 
   // Routes that create the conflict:
   // /map/ - base route with signal
-  // /map/:panel/ - parameterized route 
+  // /map/:panel/ - parameterized route
   // /map/isochrone/ - literal route that conflicts with :panel
   const { MAP_ROUTE, MAP_PANEL_ROUTE, MAP_ISOCHRONE_ROUTE } = setupRoutes({
     MAP_ROUTE: `/map?zoom=${zoomSignal}`,
@@ -25,7 +25,7 @@ try {
       routeName === "MAP_ROUTE"
         ? MAP_ROUTE
         : routeName === "MAP_PANEL_ROUTE"
-          ? MAP_PANEL_ROUTE  
+          ? MAP_PANEL_ROUTE
           : MAP_ISOCHRONE_ROUTE;
 
     redirectCalls.push({
@@ -43,16 +43,22 @@ try {
   };
 
   MAP_ROUTE.redirectTo = mockRedirectTo("MAP_ROUTE", originalMethods.map);
-  MAP_PANEL_ROUTE.redirectTo = mockRedirectTo("MAP_PANEL_ROUTE", originalMethods.panel);
-  MAP_ISOCHRONE_ROUTE.redirectTo = mockRedirectTo("MAP_ISOCHRONE_ROUTE", originalMethods.isochrone);
+  MAP_PANEL_ROUTE.redirectTo = mockRedirectTo(
+    "MAP_PANEL_ROUTE",
+    originalMethods.panel,
+  );
+  MAP_ISOCHRONE_ROUTE.redirectTo = mockRedirectTo(
+    "MAP_ISOCHRONE_ROUTE",
+    originalMethods.isochrone,
+  );
 
-  // STEP 1: Navigate to /map/isochrone/ 
+  // STEP 1: Navigate to /map/isochrone/
   // This should match both MAP_PANEL_ROUTE (:panel = "isochrone") AND MAP_ISOCHRONE_ROUTE
   updateRoutes(`${baseUrl}/map/isochrone`);
 
   const step1State = {
     map_matching: MAP_ROUTE.matching,
-    panel_matching: MAP_PANEL_ROUTE.matching, 
+    panel_matching: MAP_PANEL_ROUTE.matching,
     isochrone_matching: MAP_ISOCHRONE_ROUTE.matching,
   };
 
@@ -76,25 +82,35 @@ try {
   // Restore methods
   Object.assign(MAP_ROUTE, { redirectTo: originalMethods.map });
   Object.assign(MAP_PANEL_ROUTE, { redirectTo: originalMethods.panel });
-  Object.assign(MAP_ISOCHRONE_ROUTE, { redirectTo: originalMethods.isochrone });
+  Object.assign(MAP_ISOCHRONE_ROUTE, {
+    redirectTo: originalMethods.isochrone,
+  });
 
   return {
     step1_route_matching: step1State,
     step2_route_matching: step2State,
-    
+
     // After signal update - should only redirect MAP_ROUTE to stay on /map
     final_redirect_calls: redirectCalls,
-    
+
     // Expected behavior: Should stay on /map?zoom=15
     expected_redirect_route: "MAP_ROUTE",
     expected_url: "/map?zoom=15",
-    
+
     // Actual behavior
-    actual_redirect_route: redirectCalls.length > 0 ? redirectCalls[redirectCalls.length - 1].route : "none",
-    actual_url: redirectCalls.length > 0 ? redirectCalls[redirectCalls.length - 1].generatedUrl : "none",
-    
+    actual_redirect_route:
+      redirectCalls.length > 0
+        ? redirectCalls[redirectCalls.length - 1].route
+        : "none",
+    actual_url:
+      redirectCalls.length > 0
+        ? redirectCalls[redirectCalls.length - 1].generatedUrl
+        : "none",
+
     // Problem indicator: If MAP_ISOCHRONE_ROUTE gets called, we have the bug
-    bug_reproduced: redirectCalls.some(call => call.route === "MAP_ISOCHRONE_ROUTE"),
+    bug_reproduced: redirectCalls.some(
+      (call) => call.route === "MAP_ISOCHRONE_ROUTE",
+    ),
   };
 } finally {
   clearAllRoutes();

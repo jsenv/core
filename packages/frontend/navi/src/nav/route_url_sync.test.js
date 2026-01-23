@@ -203,7 +203,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
 
       // Routes that create the conflict:
       // /map/ - base route with signal
-      // /map/:panel/ - parameterized route 
+      // /map/:panel/ - parameterized route
       // /map/isochrone/ - literal route that conflicts with :panel
       const { MAP_ROUTE, MAP_PANEL_ROUTE, MAP_ISOCHRONE_ROUTE } = setupRoutes({
         MAP_ROUTE: `/map?zoom=${zoomSignal}`,
@@ -219,7 +219,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
           routeName === "MAP_ROUTE"
             ? MAP_ROUTE
             : routeName === "MAP_PANEL_ROUTE"
-              ? MAP_PANEL_ROUTE  
+              ? MAP_PANEL_ROUTE
               : MAP_ISOCHRONE_ROUTE;
 
         redirectCalls.push({
@@ -237,16 +237,22 @@ await snapshotTests(import.meta.url, ({ test }) => {
       };
 
       MAP_ROUTE.redirectTo = mockRedirectTo("MAP_ROUTE", originalMethods.map);
-      MAP_PANEL_ROUTE.redirectTo = mockRedirectTo("MAP_PANEL_ROUTE", originalMethods.panel);
-      MAP_ISOCHRONE_ROUTE.redirectTo = mockRedirectTo("MAP_ISOCHRONE_ROUTE", originalMethods.isochrone);
+      MAP_PANEL_ROUTE.redirectTo = mockRedirectTo(
+        "MAP_PANEL_ROUTE",
+        originalMethods.panel,
+      );
+      MAP_ISOCHRONE_ROUTE.redirectTo = mockRedirectTo(
+        "MAP_ISOCHRONE_ROUTE",
+        originalMethods.isochrone,
+      );
 
-      // STEP 1: Navigate to /map/isochrone/ 
+      // STEP 1: Navigate to /map/isochrone/
       // This should match both MAP_PANEL_ROUTE (:panel = "isochrone") AND MAP_ISOCHRONE_ROUTE
       updateRoutes(`${baseUrl}/map/isochrone`);
 
       const step1State = {
         map_matching: MAP_ROUTE.matching,
-        panel_matching: MAP_PANEL_ROUTE.matching, 
+        panel_matching: MAP_PANEL_ROUTE.matching,
         isochrone_matching: MAP_ISOCHRONE_ROUTE.matching,
       };
 
@@ -270,25 +276,35 @@ await snapshotTests(import.meta.url, ({ test }) => {
       // Restore methods
       Object.assign(MAP_ROUTE, { redirectTo: originalMethods.map });
       Object.assign(MAP_PANEL_ROUTE, { redirectTo: originalMethods.panel });
-      Object.assign(MAP_ISOCHRONE_ROUTE, { redirectTo: originalMethods.isochrone });
+      Object.assign(MAP_ISOCHRONE_ROUTE, {
+        redirectTo: originalMethods.isochrone,
+      });
 
       return {
         step1_route_matching: step1State,
         step2_route_matching: step2State,
-        
+
         // After signal update - should only redirect MAP_ROUTE to stay on /map
         final_redirect_calls: redirectCalls,
-        
+
         // Expected behavior: Should stay on /map?zoom=15
         expected_redirect_route: "MAP_ROUTE",
         expected_url: "/map?zoom=15",
-        
+
         // Actual behavior
-        actual_redirect_route: redirectCalls.length > 0 ? redirectCalls[redirectCalls.length - 1].route : "none",
-        actual_url: redirectCalls.length > 0 ? redirectCalls[redirectCalls.length - 1].generatedUrl : "none",
-        
+        actual_redirect_route:
+          redirectCalls.length > 0
+            ? redirectCalls[redirectCalls.length - 1].route
+            : "none",
+        actual_url:
+          redirectCalls.length > 0
+            ? redirectCalls[redirectCalls.length - 1].generatedUrl
+            : "none",
+
         // Problem indicator: If MAP_ISOCHRONE_ROUTE gets called, we have the bug
-        bug_reproduced: redirectCalls.some(call => call.route === "MAP_ISOCHRONE_ROUTE"),
+        bug_reproduced: redirectCalls.some(
+          (call) => call.route === "MAP_ISOCHRONE_ROUTE",
+        ),
       };
     } finally {
       clearAllRoutes();
@@ -303,16 +319,19 @@ await snapshotTests(import.meta.url, ({ test }) => {
         type: "number",
       });
 
-      const panelSignal = stateSignal("isochrone", {
-        id: "panelValue", 
+      const panelSignal = stateSignal(undefined, {
+        id: "panelValue",
         type: "string",
       });
+
+      // Set panel signal to initial value
+      panelSignal.value = "isochrone";
 
       // More realistic scenario where routes have signals that control parameters
       // This should reproduce the delegation issue
       const { MAP_ROUTE, MAP_PANEL_ROUTE, MAP_ISOCHRONE_ROUTE } = setupRoutes({
         MAP_ROUTE: `/map?zoom=${zoomSignal}`,
-        MAP_PANEL_ROUTE: `/map/:panel={navi_state_signal:panelValue}?zoom=${zoomSignal}`, 
+        MAP_PANEL_ROUTE: `/map/:panel={navi_state_signal:panelValue}?zoom=${zoomSignal}`,
         MAP_ISOCHRONE_ROUTE: `/map/isochrone?zoom=${zoomSignal}`,
       });
 
@@ -325,7 +344,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
           routeName === "MAP_ROUTE"
             ? MAP_ROUTE
             : routeName === "MAP_PANEL_ROUTE"
-              ? MAP_PANEL_ROUTE  
+              ? MAP_PANEL_ROUTE
               : MAP_ISOCHRONE_ROUTE;
 
         const call = {
@@ -333,7 +352,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
           params,
           generatedUrl: route.buildUrl(params),
         };
-        
+
         redirectCalls.push(call);
         allRedirectCalls.push(call);
         return originalRedirectTo.call(route, params);
@@ -346,10 +365,16 @@ await snapshotTests(import.meta.url, ({ test }) => {
       };
 
       MAP_ROUTE.redirectTo = mockRedirectTo("MAP_ROUTE", originalMethods.map);
-      MAP_PANEL_ROUTE.redirectTo = mockRedirectTo("MAP_PANEL_ROUTE", originalMethods.panel);
-      MAP_ISOCHRONE_ROUTE.redirectTo = mockRedirectTo("MAP_ISOCHRONE_ROUTE", originalMethods.isochrone);
+      MAP_PANEL_ROUTE.redirectTo = mockRedirectTo(
+        "MAP_PANEL_ROUTE",
+        originalMethods.panel,
+      );
+      MAP_ISOCHRONE_ROUTE.redirectTo = mockRedirectTo(
+        "MAP_ISOCHRONE_ROUTE",
+        originalMethods.isochrone,
+      );
 
-      // SCENARIO: 
+      // SCENARIO:
       // 1. Start at /map/isochrone?zoom=10 (panel signal = "isochrone")
       updateRoutes(`${baseUrl}/map/isochrone?zoom=10`);
 
@@ -363,15 +388,15 @@ await snapshotTests(import.meta.url, ({ test }) => {
           map: MAP_ROUTE.matching,
           panel: MAP_PANEL_ROUTE.matching,
           isochrone: MAP_ISOCHRONE_ROUTE.matching,
-        }
+        },
       };
-      
+
       // Clear redirect history after navigation
       redirectCalls.length = 0;
 
       // 2. Navigate to /map?zoom=10 (but panel signal still = "isochrone")
       updateRoutes(`${baseUrl}/map?zoom=10`);
-      
+
       const afterMap = {
         url: `${baseUrl}/map?zoom=10`,
         signal_values: {
@@ -382,7 +407,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
           map: MAP_ROUTE.matching,
           panel: MAP_PANEL_ROUTE.matching, // This might still be matching if panel="isochrone"!
           isochrone: MAP_ISOCHRONE_ROUTE.matching,
-        }
+        },
       };
 
       // Clear redirect history after navigation
@@ -396,35 +421,198 @@ await snapshotTests(import.meta.url, ({ test }) => {
       // Restore methods
       Object.assign(MAP_ROUTE, { redirectTo: originalMethods.map });
       Object.assign(MAP_PANEL_ROUTE, { redirectTo: originalMethods.panel });
-      Object.assign(MAP_ISOCHRONE_ROUTE, { redirectTo: originalMethods.isochrone });
+      Object.assign(MAP_ISOCHRONE_ROUTE, {
+        redirectTo: originalMethods.isochrone,
+      });
 
       return {
         after_isochrone_nav: afterIsochrone,
         after_map_nav: afterMap,
-        
-        // After signal update 
+
+        // After signal update
         signal_update_redirects: redirectCalls,
-        
+
         // Check for the bug: Should the panel route be involved when we're on /map?
-        panel_route_incorrectly_called: redirectCalls.some(call => call.route === "MAP_PANEL_ROUTE"),
-        isochrone_route_incorrectly_called: redirectCalls.some(call => call.route === "MAP_ISOCHRONE_ROUTE"),
-        
+        panel_route_incorrectly_called: redirectCalls.some(
+          (call) => call.route === "MAP_PANEL_ROUTE",
+        ),
+        isochrone_route_incorrectly_called: redirectCalls.some(
+          (call) => call.route === "MAP_ISOCHRONE_ROUTE",
+        ),
+
         // Expected: Only MAP_ROUTE should redirect to stay on /map
         expected_route: "MAP_ROUTE",
         expected_url_pattern: "/map?zoom=25",
-        
+
         // Actual
-        actual_route: redirectCalls.length > 0 ? redirectCalls[redirectCalls.length - 1].route : "none",
-        actual_url: redirectCalls.length > 0 ? redirectCalls[redirectCalls.length - 1].generatedUrl : "none",
-        
+        actual_route:
+          redirectCalls.length > 0
+            ? redirectCalls[redirectCalls.length - 1].route
+            : "none",
+        actual_url:
+          redirectCalls.length > 0
+            ? redirectCalls[redirectCalls.length - 1].generatedUrl
+            : "none",
+
         // Full redirect history for debugging
         all_redirects_during_test: allRedirectCalls,
-        
+
         // Signal values at the end
         final_signal_values: {
           zoom: zoomSignal.value,
           panel: panelSignal.value,
         },
+      };
+    } finally {
+      clearAllRoutes();
+      globalSignalRegistry.clear();
+    }
+  });
+
+  test("signal should be cleared when route stops matching", () => {
+    try {
+      const zoomSignal = stateSignal(10, {
+        id: "clearingTestZoom",
+        type: "number",
+      });
+
+      const panelSignal = stateSignal(undefined, {
+        id: "clearingTestPanel",
+        type: "string",
+      });
+
+      // Set the panel signal to "isochrone" initially
+      panelSignal.value = "isochrone";
+
+      // Use two routes: one for base map, one for panel
+      // The key is that when navigating from panel route to base route,
+      // the panel signal should be cleared because the new URL doesn't include it
+      const { MAP_ROUTE, MAP_PANEL_ROUTE } = setupRoutes({
+        MAP_ROUTE: `/map?zoom=${zoomSignal}`,
+        MAP_PANEL_ROUTE: `/map/:panel={navi_state_signal:clearingTestPanel}?zoom=${zoomSignal}`,
+      });
+
+      // Start with panel signal set to "isochrone"
+      panelSignal.value = "isochrone";
+
+      // Navigate to /map/isochrone - panel route should match
+      updateRoutes(`${baseUrl}/map/isochrone?zoom=10`);
+
+      const afterPanelNav = {
+        url: `/map/isochrone?zoom=10`,
+        panel_signal: panelSignal.value,
+        routes: {
+          map: MAP_ROUTE.matching,
+          panel: MAP_PANEL_ROUTE.matching,
+        },
+      };
+
+      // Navigate to /map - base route should match, panel route should not
+      // The panel signal should remain as is (preserving user preference)
+      updateRoutes(`${baseUrl}/map?zoom=10`);
+
+      const afterMapNav = {
+        url: `/map?zoom=10`,
+        panel_signal: panelSignal.value,
+        routes: {
+          map: MAP_ROUTE.matching,
+          panel: MAP_PANEL_ROUTE.matching,
+        },
+      };
+
+      return {
+        after_panel_nav: afterPanelNav,
+        after_map_nav: afterMapNav,
+
+        // Verify that routes match correctly
+        panel_route_stops_matching:
+          !afterMapNav.routes.panel && afterPanelNav.routes.panel,
+        base_route_starts_matching:
+          afterMapNav.routes.map && !afterPanelNav.routes.map,
+
+        // Signal should be preserved for future URL building
+        signal_preserved: panelSignal.value === "isochrone",
+      };
+    } finally {
+      clearAllRoutes();
+      globalSignalRegistry.clear();
+    }
+  });
+
+  test("signal preservation vs clearing behavior", () => {
+    try {
+      const panelSignal = stateSignal(undefined, {
+        id: "preservationTestPanel",
+        type: "string",
+      });
+
+      // Set initial value
+      panelSignal.value = "isochrone";
+
+      // Use a route pattern that can handle the panel parameter
+      const { MAP_PANEL_ROUTE, HOME_ROUTE } = setupRoutes({
+        MAP_PANEL_ROUTE: `/map/:panel={navi_state_signal:preservationTestPanel}`,
+        HOME_ROUTE: `/home`,
+      });
+
+      // SCENARIO 1: Navigate to /map/isochrone - signal should match URL
+      updateRoutes(`${baseUrl}/map/isochrone`);
+
+      const scenario1 = {
+        url: "/map/isochrone",
+        panel_signal: panelSignal.value,
+        panel_route_matches: MAP_PANEL_ROUTE.matching,
+      };
+
+      // SCENARIO 2: Navigate to /home - signal should be preserved (different route pattern)
+      updateRoutes(`${baseUrl}/home`);
+
+      const scenario2 = {
+        url: "/home",
+        panel_signal: panelSignal.value, // Should remain "isochrone"
+        panel_route_matches: MAP_PANEL_ROUTE.matching, // Should be false
+      };
+
+      // SCENARIO 3: Navigate back to /map/settings - signal should update from URL
+      updateRoutes(`${baseUrl}/map/settings`);
+
+      const scenario3 = {
+        url: "/map/settings",
+        panel_signal: panelSignal.value, // Should be "settings"
+        panel_route_matches: MAP_PANEL_ROUTE.matching, // Should be true
+      };
+
+      // SCENARIO 4: Reset signal manually, then navigate to /map/dashboard
+      panelSignal.value = "manual-value";
+      updateRoutes(`${baseUrl}/map/dashboard`);
+
+      const scenario4 = {
+        url: "/map/dashboard",
+        panel_signal: panelSignal.value, // Should be "dashboard" (URL overrides)
+        panel_route_matches: MAP_PANEL_ROUTE.matching,
+      };
+
+      return {
+        scenario1_initial_navigation: scenario1,
+        scenario2_preserve_on_different_route: scenario2,
+        scenario3_update_from_url: scenario3,
+        scenario4_url_overrides_manual_value: scenario4,
+
+        // Key behaviors to verify:
+        signal_updates_from_url_initially:
+          scenario1.panel_signal === "isochrone",
+        signal_preserved_on_different_route:
+          scenario2.panel_signal === "isochrone",
+        signal_updates_from_new_url: scenario3.panel_signal === "settings",
+        url_overrides_manual_value: scenario4.panel_signal === "dashboard",
+
+        // Route matching behavior
+        routes_match_correctly: [
+          scenario1.panel_route_matches, // true
+          scenario2.panel_route_matches, // false
+          scenario3.panel_route_matches, // true
+          scenario4.panel_route_matches, // true
+        ],
       };
     } finally {
       clearAllRoutes();
