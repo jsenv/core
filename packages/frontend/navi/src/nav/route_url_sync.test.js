@@ -530,8 +530,10 @@ await snapshotTests(import.meta.url, ({ test }) => {
         base_route_starts_matching:
           afterMapNav.routes.map && !afterPanelNav.routes.map,
 
-        // Signal should be preserved for future URL building
-        signal_preserved: panelSignal.value === "isochrone",
+        // Test pattern family behavior - signal should be cleared when navigating within same family
+        signal_cleared_within_same_family: panelSignal.value === undefined,
+        // Current signal value for debugging
+        current_panel_signal: panelSignal.value,
       };
     } finally {
       clearAllRoutes();

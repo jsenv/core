@@ -1,9 +1,9 @@
-# [signal preservation vs clearing behavior](../../route_url_sync.test.js#L540)
+# [signal preservation vs clearing behavior](../../route_url_sync.test.js#L544)
 
 ```js
 try {
   const panelSignal = stateSignal(undefined, {
-    id: "preservationTestPanel", 
+    id: "preservationTestPanel",
     type: "string",
   });
 
