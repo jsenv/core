@@ -26,11 +26,17 @@ try {
     id: "mapSidebarOpened",
     type: "boolean",
   });
-
-  const { MAP_ROUTE, MAP_ISOCHRONE_ROUTE } = setupRoutes({
-    MAP_ROUTE: `/map/?zone=${zoneIdSignal}&style=${mapboxStyleSignal}&lon=${mapboxLongitudeSignal}&lat=${mapboxLatitudeSignal}&zoom=${mapboxZoomSignal}&sidebar=${mapSidebarOpenedSignal}`,
-    MAP_ISOCHRONE_ROUTE: "/map/isochrone",
+  const isochromeWalkTimeSignal = stateSignal(20, {
+    id: "isochroneWalk",
+    type: "number",
   });
+
+  const { MAP_ROUTE, MAP_ISOCHRONE_ROUTE, MAP_ISOCHRONE_TIME_WALK_ROUTE } =
+    setupRoutes({
+      MAP_ROUTE: `/map/?zone=${zoneIdSignal}&style=${mapboxStyleSignal}&lon=${mapboxLongitudeSignal}&lat=${mapboxLatitudeSignal}&zoom=${mapboxZoomSignal}&sidebar=${mapSidebarOpenedSignal}`,
+      MAP_ISOCHRONE_ROUTE: "/map/isochrone",
+      MAP_ISOCHRONE_TIME_WALK_ROUTE: `/map/isochrone/walk?time=${isochromeWalkTimeSignal}`,
+    });
 
   // Step 1: Generate URL with all defaults (no params passed)
   const urlWithDefaults = MAP_ROUTE.buildUrl();
@@ -39,11 +45,19 @@ try {
   // Step 3: Generate URL again without params to see if changed zoom appears
   const urlAfterZoomChange = MAP_ROUTE.buildUrl();
   const isochroneUrl = MAP_ISOCHRONE_ROUTE.buildUrl();
+  const isochroneTimeWalkRoute = MAP_ISOCHRONE_TIME_WALK_ROUTE.buildUrl();
+
+  isochromeWalkTimeSignal.value = 40;
+  const isochroneTimeWalkRouteAfterChange =
+    MAP_ISOCHRONE_TIME_WALK_ROUTE.buildUrl();
 
   return {
     map_url_defaults: urlWithDefaults,
     map_url_with_zoom: urlAfterZoomChange,
     map_isochrone_url_with_zoom: isochroneUrl,
+    map_isochrone_time_walk_url_with_zoom: isochroneTimeWalkRoute,
+    map_isochrone_time_walk_url_after_change:
+      isochroneTimeWalkRouteAfterChange,
   };
 } finally {
   clearAllRoutes();
@@ -55,7 +69,9 @@ try {
 {
   "map_url_defaults": "http://127.0.0.1/map/",
   "map_url_with_zoom": "http://127.0.0.1/map?zoom=15",
-  "map_isochrone_url_with_zoom": "http://127.0.0.1/map/isochrone?zoom=15"
+  "map_isochrone_url_with_zoom": "http://127.0.0.1/map/isochrone?zoom=15",
+  "map_isochrone_time_walk_url_with_zoom": "http://127.0.0.1/map/isochrone/walk?zoom=15",
+  "map_isochrone_time_walk_url_after_change": "http://127.0.0.1/map/isochrone/walk?time=40&zoom=15"
 }
 ```
 
