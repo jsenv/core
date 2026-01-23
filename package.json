@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "40.12.3",
+  "version": "40.12.4",
   "description": "Tool to develop, test and build js projects",
   "repository": {
     "type": "git",
