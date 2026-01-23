@@ -7522,7 +7522,6 @@ setBaseUrl(
 // Pattern registry for building relationships before routes are created
 const patternRegistry = new Map(); // pattern -> patternData
 const patternRelationships = new Map(); // pattern -> relationships
-let patternsRegistered = false;
 
 // Function to detect signals in route patterns and connect them
 const detectSignals = (routePattern) => {
@@ -8433,8 +8432,6 @@ const setupPatterns = (patternDefinitions) => {
       originalPattern: currentPattern,
     });
   }
-
-  patternsRegistered = true;
 };
 
 /**
@@ -8445,24 +8442,11 @@ const getPatternData = (urlPatternRaw) => {
 };
 
 /**
- * Get pattern relationships for route creation
- */
-const getPatternRelationships = () => {
-  if (!patternsRegistered) {
-    throw new Error(
-      "Patterns must be registered before accessing relationships",
-    );
-  }
-  return patternRelationships;
-};
-
-/**
  * Clear all registered patterns
  */
 const clearPatterns = () => {
   patternRegistry.clear();
   patternRelationships.clear();
-  patternsRegistered = false;
 };
 
 const resolveRouteUrl = (relativeUrl) => {
@@ -8679,41 +8663,6 @@ const getRoutePrivateProperties = (route) => {
   return routePrivatePropertiesMap.get(route);
 };
 
-/**
- * Get child routes of a given route
- */
-const getRouteChildren = (route) => {
-  const children = [];
-  const routePrivateProperties = getRoutePrivateProperties(route);
-  if (!routePrivateProperties) {
-    return children;
-  }
-
-  const { originalPattern } = routePrivateProperties;
-  const relationships = getPatternRelationships();
-  const relationshipData = relationships.get(originalPattern);
-
-  if (!relationshipData || !relationshipData.children) {
-    return children;
-  }
-
-  // Find child routes
-  for (const childPattern of relationshipData.children) {
-    for (const otherRoute of routeSet) {
-      const otherRoutePrivateProperties = getRoutePrivateProperties(otherRoute);
-      if (
-        otherRoutePrivateProperties &&
-        otherRoutePrivateProperties.originalPattern === childPattern
-      ) {
-        children.push(otherRoute);
-        break;
-      }
-    }
-  }
-
-  return children;
-};
-
 const registerRoute = (routePattern) => {
   const urlPatternRaw = routePattern.originalPattern;
   const patternData = getPatternData(urlPatternRaw);
@@ -8866,38 +8815,48 @@ const registerRoute = (routePattern) => {
       return null;
     }
 
-    // Walk down the hierarchy updating action params and tracking most specific route
-    let currentRoute = route;
-    let mostSpecificRoute;
+    // Find all matching routes and update their actions, then delegate to most specific
+    const allMatchingRoutes = Array.from(routeSet).filter((r) => r.matching);
 
-    while (currentRoute) {
-      if (!currentRoute.matching) {
-        break;
-      }
-
-      // Update the most specific route as we go
-      mostSpecificRoute = currentRoute;
-      // Update action params
-      if (currentRoute.action) {
-        const currentRoutePrivateProperties =
-          getRoutePrivateProperties(currentRoute);
-        if (currentRoutePrivateProperties) {
-          const { routePattern: currentRoutePattern } =
-            currentRoutePrivateProperties;
-          const currentResolvedParams = currentRoutePattern.resolveParams();
+    // Update action params on all matching routes
+    for (const matchingRoute of allMatchingRoutes) {
+      if (matchingRoute.action) {
+        const matchingRoutePrivateProperties =
+          getRoutePrivateProperties(matchingRoute);
+        if (matchingRoutePrivateProperties) {
+          const { routePattern: matchingRoutePattern } =
+            matchingRoutePrivateProperties;
+          const currentResolvedParams = matchingRoutePattern.resolveParams();
           const updatedActionParams = {
             ...currentResolvedParams,
             ...newParams,
           };
-          currentRoute.action.replaceParams(updatedActionParams);
+          matchingRoute.action.replaceParams(updatedActionParams);
         }
       }
-
-      // Find the first matching child to continue down the hierarchy
-      const children = getRouteChildren(currentRoute);
-      currentRoute = children.find((child) => child.matching) || null;
     }
-    return mostSpecificRoute.redirectTo(newParams);
+
+    // Find the most specific route (the one with the longest pattern path)
+    let mostSpecificRoute = route;
+    let maxSegments = route.pattern.split("/").filter((s) => s !== "").length;
+
+    for (const matchingRoute of allMatchingRoutes) {
+      const segments = matchingRoute.pattern
+        .split("/")
+        .filter((s) => s !== "").length;
+      if (segments > maxSegments) {
+        maxSegments = segments;
+        mostSpecificRoute = matchingRoute;
+      }
+    }
+
+    // If we found a more specific route, delegate to it; otherwise handle it ourselves
+    if (mostSpecificRoute !== route) {
+      return mostSpecificRoute.redirectTo(newParams);
+    }
+
+    // This route is the most specific, handle the redirect ourselves
+    return route.redirectTo(newParams);
   };
   route.buildRelativeUrl = (params) => {
     // buildMostPreciseUrl now handles parameter resolution internally
