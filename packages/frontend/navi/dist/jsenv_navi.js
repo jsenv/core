@@ -7793,6 +7793,41 @@ const createRoutePattern = (pattern) => {
       }
     }
 
+    // PARENT PARAMETER INHERITANCE: Inherit query parameters from parent patterns
+    // This allows child routes like "/map/isochrone" to inherit "zoom=15" from parent "/map/?zoom=..."
+    const parentPatterns = relationships?.parentPatterns || [];
+    for (const parentPattern of parentPatterns) {
+      const parentPatternData = getPatternData(parentPattern);
+      if (!parentPatternData) continue;
+
+      // Check parent's signal connections for non-default values to inherit
+      for (const parentConnection of parentPatternData.connections) {
+        const { paramName, signal, options } = parentConnection;
+        const defaultValue = options.defaultValue;
+
+        // If we don't already have this parameter and parent signal has non-default value
+        if (
+          !(paramName in finalParams) &&
+          signal?.value !== undefined &&
+          signal.value !== defaultValue
+        ) {
+          // Check if this parameter corresponds to a literal segment in our path
+          // E.g., don't inherit "section=analytics" if our path is "/admin/analytics"
+          const shouldInherit = !isParameterRedundantWithLiteralSegments(
+            parsedPattern,
+            parentPatternData.parsedPattern,
+            paramName,
+            signal.value,
+          );
+
+          if (shouldInherit) {
+            // Inherit the parent's signal value
+            finalParams[paramName] = signal.value;
+          }
+        }
+      }
+    }
+
     if (!parsedPattern.segments) {
       return "/";
     }
@@ -8157,6 +8192,27 @@ const buildUrlFromPattern = (parsedPattern, params = {}) => {
     path = path.slice(0, -1);
   }
 
+  // Check if we'll have query parameters to decide on trailing slash removal
+  const willHaveQueryParams =
+    parsedPattern.queryParams?.some((qp) => {
+      const value = params[qp.name];
+      return value !== undefined;
+    }) ||
+    Object.entries(params).some(([key, value]) => {
+      const isPathParam = parsedPattern.segments.some(
+        (s) => s.type === "param" && s.name === key,
+      );
+      const isQueryParam = parsedPattern.queryParams?.some(
+        (qp) => qp.name === key,
+      );
+      return value !== undefined && !isPathParam && !isQueryParam;
+    });
+
+  // Remove trailing slash when we have query params for prettier URLs
+  if (willHaveQueryParams && path.endsWith("/") && path !== "/") {
+    path = path.slice(0, -1);
+  }
+
   // Add search parameters
   const pathParamNames = new Set(
     parsedPattern.segments.filter((s) => s.type === "param").map((s) => s.name),
@@ -8253,6 +8309,43 @@ const isChildPattern = (childPattern, parentPattern) => {
 
   // Child must be more specific (more segments OR more specific segments)
   return childSegments.length > parentSegments.length || hasMoreSpecificSegment;
+};
+
+/**
+ * Check if a parameter is redundant because the child pattern already has it as a literal segment
+ * E.g., parameter "section" is redundant for pattern "/admin/settings/:tab" because "settings" is literal
+ */
+const isParameterRedundantWithLiteralSegments = (
+  childPattern,
+  parentPattern,
+  paramName,
+) => {
+  // Find which segment position corresponds to this parameter in the parent
+  let paramSegmentIndex = -1;
+  for (let i = 0; i < parentPattern.segments.length; i++) {
+    const segment = parentPattern.segments[i];
+    if (segment.type === "param" && segment.name === paramName) {
+      paramSegmentIndex = i;
+      break;
+    }
+  }
+
+  // If parameter not found in parent segments, it's not redundant with path
+  if (paramSegmentIndex === -1) {
+    return false;
+  }
+
+  // Check if child has a literal segment at the same position
+  if (childPattern.segments.length > paramSegmentIndex) {
+    const childSegment = childPattern.segments[paramSegmentIndex];
+    if (childSegment.type === "literal") {
+      // Child has a literal segment where parent has parameter
+      // This means the child is more specific and shouldn't inherit this parameter
+      return true; // Redundant - child already specifies this position with a literal
+    }
+  }
+
+  return false;
 };
 
 /**
@@ -8625,6 +8718,13 @@ const registerRoute = (routePattern) => {
   const visitedSignal = signal(false);
   for (const { signal: stateSignal, paramName, options = {} } of connections) {
     const { debug } = options;
+
+    if (debug) {
+      console.debug(
+        `[route] connecting param "${paramName}" to signal`,
+        stateSignal,
+      );
+    }
 
     // URL -> Signal synchronization
     effect(() => {

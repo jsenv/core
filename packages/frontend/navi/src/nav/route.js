@@ -313,6 +313,13 @@ const registerRoute = (routePattern) => {
   for (const { signal: stateSignal, paramName, options = {} } of connections) {
     const { debug } = options;
 
+    if (debug) {
+      console.debug(
+        `[route] connecting param "${paramName}" to signal`,
+        stateSignal,
+      );
+    }
+
     // URL -> Signal synchronization
     effect(() => {
       const matching = matchingSignal.value;
