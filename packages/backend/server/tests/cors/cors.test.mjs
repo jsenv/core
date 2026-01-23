@@ -3,7 +3,7 @@ import {
   jsenvServiceErrorHandler,
   startServer,
 } from "@jsenv/server";
-import { snapshotTests } from "@jsenv/snapshot";
+import { snapshotServerTests } from "@jsenv/server/tests/test_helpers.mjs";
 
 const run = async ({ cors, triggerInternalError }) => {
   const server = await startServer({
@@ -57,7 +57,7 @@ const run = async ({ cors, triggerInternalError }) => {
   return actual;
 };
 
-await snapshotTests(import.meta.url, ({ test }) => {
+await snapshotServerTests(import.meta.url, ({ test }) => {
   test("0_without_cors", async () => {
     return run({ cors: false });
   });

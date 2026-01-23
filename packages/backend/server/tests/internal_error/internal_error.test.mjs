@@ -1,5 +1,5 @@
 import { jsenvServiceErrorHandler, startServer } from "@jsenv/server";
-import { snapshotTests } from "@jsenv/snapshot";
+import { snapshotServerTests } from "@jsenv/server/tests/test_helpers.mjs";
 
 const run = async (errorToThrow) => {
   const server = await startServer({
@@ -29,7 +29,7 @@ const run = async (errorToThrow) => {
   return actual;
 };
 
-await snapshotTests(import.meta.url, ({ test }) => {
+await snapshotServerTests(import.meta.url, ({ test }) => {
   test("0_throw_error", () => {
     const error = new Error("message");
     error.code = "TEST_CODE";

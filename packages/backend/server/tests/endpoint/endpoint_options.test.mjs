@@ -1,6 +1,8 @@
 import { startServer } from "@jsenv/server";
-import { snapshotTests } from "@jsenv/snapshot";
-import { fetchUsingNodeBuiltin } from "../test_helpers.mjs";
+import {
+  fetchUsingNodeBuiltin,
+  snapshotServerTests,
+} from "@jsenv/server/tests/test_helpers.mjs";
 
 const run = async ({ routes, method, path }) => {
   const apiServer = await startServer({
@@ -20,7 +22,7 @@ const run = async ({ routes, method, path }) => {
   return actual;
 };
 
-await snapshotTests(import.meta.url, ({ test }) => {
+await snapshotServerTests(import.meta.url, ({ test }) => {
   test("0_basic", async () => {
     const routes = [
       {

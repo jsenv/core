@@ -13,9 +13,6 @@ return run({ cors: false });
 
 ```console
 GET http://127.0.0.1/
-GET http://127.0.0.1/
-  404 The URL / does not exist on this server.
-  The list of existing endpoints is available at /.internal/route_inspector.
   404 The URL / does not exist on this server.
   The list of existing endpoints is available at /.internal/route_inspector.
 ```

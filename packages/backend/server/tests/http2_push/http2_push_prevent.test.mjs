@@ -1,7 +1,8 @@
 import { requestCertificate } from "@jsenv/https-local";
-import { createFileSystemFetch, startServer } from "@jsenv/server";
-import { snapshotTests } from "@jsenv/snapshot";
 import { connect } from "node:http2";
+
+import { createFileSystemFetch, startServer } from "@jsenv/server";
+import { snapshotServerTests } from "@jsenv/server/tests/test_helpers.mjs";
 
 if (process.env.CI && process.platform !== "linux") {
   // certificates only generated on linux
@@ -91,7 +92,7 @@ const run = async () => {
   };
 };
 
-await snapshotTests(import.meta.url, ({ test }) => {
+await snapshotServerTests(import.meta.url, ({ test }) => {
   test("0_basic", () => {
     return run();
   });

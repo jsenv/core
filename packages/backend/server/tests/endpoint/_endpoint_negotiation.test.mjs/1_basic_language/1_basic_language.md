@@ -1,4 +1,4 @@
-# [1_basic_language](../../endpoint_negotiation.test.mjs#L85)
+# [1_basic_language](../../endpoint_negotiation.test.mjs#L87)
 
 ```js
 const routes = [
@@ -64,9 +64,6 @@ return {
 
 ```console
 GET http://127.0.0.1/users
-GET http://127.0.0.1/users
-  406 The server cannot produce a response in any of the languages accepted by the request: "de".
-  Available languages: fr, en.
   406 The server cannot produce a response in any of the languages accepted by the request: "de".
   Available languages: fr, en.
 ```

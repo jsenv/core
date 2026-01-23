@@ -1,5 +1,5 @@
 import { startServer } from "@jsenv/server";
-import { snapshotTests } from "@jsenv/snapshot";
+import { snapshotServerTests } from "@jsenv/server/tests/test_helpers.mjs";
 
 const run = async () => {
   const server = await startServer({
@@ -16,7 +16,7 @@ const run = async () => {
   return actual;
 };
 
-await snapshotTests(import.meta.url, ({ test }) => {
+await snapshotServerTests(import.meta.url, ({ test }) => {
   test("0_basic", async () => {
     return run({ cors: false });
   });

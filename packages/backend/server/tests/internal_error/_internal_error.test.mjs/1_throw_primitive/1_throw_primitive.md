@@ -12,17 +12,10 @@ return run("here");
   <summary>see without style</summary>
 
 ```console
-server started at http://127.0.0.1
-server started at http://127.0.0.1
-GET http://127.0.0.1/
 GET http://127.0.0.1/
 internal error while handling request
 --- error stack ---
 undefined
-internal error while handling request
---- error stack ---
-undefined
-  500 Internal Server Error
   500 Internal Server Error
 ```
 

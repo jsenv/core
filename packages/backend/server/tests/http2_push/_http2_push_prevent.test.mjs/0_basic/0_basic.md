@@ -1,31 +1,8 @@
-# [0_basic](../../http2_push_prevent.test.mjs#L95)
+# [0_basic](../../http2_push_prevent.test.mjs#L97)
 
 ```js
 return run();
 ```
-
-# 1/2 logs
-
-![img](log_group.svg)
-
-<details>
-  <summary>see without style</summary>
-
-```console
-server started at https://127.0.0.1
-server started at https://127.0.0.1
-GET https://127.0.0.1/main.html
-GET https://127.0.0.1/main.html
-  Push /style.css
-  Push /style.css
-  200 OK
-  200 OK
-```
-
-</details>
-
-
-# 2/2 resolve
 
 ```js
 {

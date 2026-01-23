@@ -1,18 +1,14 @@
-<svg xmlns="http://www.w3.org/2000/svg" font-family="SauceCodePro Nerd Font, Source Code Pro, Courier" font-size="14" width="100%" viewBox="0 0 640 137.45" background-color="#282c34">
+<svg xmlns="http://www.w3.org/2000/svg" font-family="SauceCodePro Nerd Font, Source Code Pro, Courier" font-size="14" width="100%" viewBox="0 0 640 80.45" background-color="#282c34">
   <g id="background">
-    <rect x="1" y="1" width="638" height="135.45" fill="#282c34" stroke="rgba(255,255,255,0.35)" stroke-width="1" rx="8"></rect>
+    <rect x="1" y="1" width="638" height="78.45" fill="#282c34" stroke="rgba(255,255,255,0.35)" stroke-width="1" rx="8"></rect>
   </g>
-  <foreignObject id="body" y="0" width="100%" height="147.45" overflow="hidden">
-    <svg width="902.14" height="137.45" font-family="monospace" font-variant-east-asian="full-width" fill="#cccccc">
+  <foreignObject id="body" y="0" width="100%" height="90.45" overflow="hidden">
+    <svg width="902.14" height="80.45" font-family="monospace" font-variant-east-asian="full-width" fill="#cccccc">
       <g>
         <text x="10" y="24.55">GET http://127.0.0.1/users</text>
-        <text x="10" y="43.55">GET http://127.0.0.1/users</text>
-        <text x="26.8" y="62.55" fill="#DAA520">406</text>
-        <text x="52.01" y="62.55" style="white-space:pre"> The server cannot produce a response in any of the media types accepted by the request: "text/css".</text>
-        <text x="10" y="81.55" style="white-space:pre">  Available media types: application/json, text/plain.</text>
-        <text x="26.8" y="100.55" fill="#DAA520">406</text>
-        <text x="52.01" y="100.55" style="white-space:pre"> The server cannot produce a response in any of the media types accepted by the request: "text/css".</text>
-        <text x="10" y="119.55" style="white-space:pre">  Available media types: application/json, text/plain.</text>
+        <text x="26.8" y="43.55" fill="#DAA520">406</text>
+        <text x="52.01" y="43.55" style="white-space:pre"> The server cannot produce a response in any of the media types accepted by the request: "text/css".</text>
+        <text x="10" y="62.55" style="white-space:pre">  Available media types: application/json, text/plain.</text>
       </g>
     </svg>
   </foreignObject>

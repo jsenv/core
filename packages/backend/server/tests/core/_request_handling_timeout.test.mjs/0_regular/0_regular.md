@@ -4,27 +4,6 @@
 return run({ waitForEver: false });
 ```
 
-# 1/2 logs
-
-![img](log_group.svg)
-
-<details>
-  <summary>see without style</summary>
-
-```console
-server started at http://127.0.0.1
-server started at http://127.0.0.1
-GET http://127.0.0.1/
-GET http://127.0.0.1/
-  200 OK
-  200 OK
-```
-
-</details>
-
-
-# 2/2 resolve
-
 ```js
 {
   "status": 200,

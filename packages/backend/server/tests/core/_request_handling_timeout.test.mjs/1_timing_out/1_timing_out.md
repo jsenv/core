@@ -12,11 +12,7 @@ return run({ waitForEver: true });
   <summary>see without style</summary>
 
 ```console
-server started at http://127.0.0.1
-server started at http://127.0.0.1
 GET http://127.0.0.1/
-GET http://127.0.0.1/
-  504 server timeout after <X>s waiting to handle request
   504 server timeout after <X>s waiting to handle request
 ```
 
