@@ -1,5 +1,5 @@
 import { startDevServer } from "@jsenv/core";
-import { snapshotDevSideEffects } from "@jsenv/core/tests/snapshot_dev_side_effects.js";
+import { snapshotDevTests } from "@jsenv/core/tests/snapshot_dev_tests.js";
 import { replaceFileStructureSync, replaceFileSync } from "@jsenv/filesystem";
 import { jsenvPluginPreact } from "@jsenv/plugin-preact";
 import { chromium } from "playwright";
@@ -67,7 +67,7 @@ const run = async ({ browserLauncher }) => {
   };
 };
 
-await snapshotDevSideEffects(
+await snapshotDevTests(
   import.meta.url,
   ({ test }) => {
     test("0_chromium", () => run({ browserLauncher: chromium }));

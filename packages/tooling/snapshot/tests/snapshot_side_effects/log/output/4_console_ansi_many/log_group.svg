@@ -1,14 +1,18 @@
-<svg xmlns="http://www.w3.org/2000/svg" font-family="SauceCodePro Nerd Font, Source Code Pro, Courier" font-size="14" width="100%" viewBox="0 0 640 61.45" background-color="#282c34">
+<svg xmlns="http://www.w3.org/2000/svg" font-family="SauceCodePro Nerd Font, Source Code Pro, Courier" font-size="14" width="100%" viewBox="0 0 640 99.45" background-color="#282c34">
   <g id="background">
-    <rect x="1" y="1" width="638" height="59.45" fill="#282c34" stroke="rgba(255,255,255,0.35)" stroke-width="1" rx="8"></rect>
+    <rect x="1" y="1" width="638" height="97.45" fill="#282c34" stroke="rgba(255,255,255,0.35)" stroke-width="1" rx="8"></rect>
   </g>
-  <foreignObject id="body" y="0" width="100%" height="71.45" overflow="hidden">
-    <svg width="221.63" height="61.45" font-family="monospace" font-variant-east-asian="full-width" fill="#cccccc">
+  <foreignObject id="body" y="0" width="100%" height="109.45" overflow="hidden">
+    <svg width="221.63" height="99.45" font-family="monospace" font-variant-east-asian="full-width" fill="#cccccc">
       <g>
         <text x="10" y="24.55" fill="#cd5555">_</text>
-        <text x="10" y="43.55">🤖</text>
-        <text x="26.8" y="43.55" style="white-space:pre" fill="#cd5555"> DANGER</text>
-        <text x="85.61" y="43.55" style="white-space:pre"> Will Robbinson</text>
+        <text x="10" y="43.55" fill="#cd5555">_</text>
+        <text x="10" y="62.55">🤖</text>
+        <text x="26.8" y="62.55" style="white-space:pre" fill="#cd5555"> DANGER</text>
+        <text x="85.61" y="62.55" style="white-space:pre"> Will Robbinson</text>
+        <text x="10" y="81.55">🤖</text>
+        <text x="26.8" y="81.55" style="white-space:pre" fill="#cd5555"> DANGER</text>
+        <text x="85.61" y="81.55" style="white-space:pre"> Will Robbinson</text>
       </g>
     </svg>
   </foreignObject>

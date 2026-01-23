@@ -9,7 +9,9 @@ run({
 })
 ```
 
-# 1/2 console.log
+# 1/2 logs
+  <details>
+  <summary>details</summary>
 
 ```console
 --- none ---
@@ -107,7 +109,104 @@ run({
 ╔═══╗╔═══╗
 ║ c ║║ d ║
 ╚═══╝╚═══╝
+--- none ---
+ a  b 
+ c  d 
+--- around_strange ---
+╔═══╦═══╗
+║ a ║ b ║
+╠═══╬═══╝
+║   ╠═══╗
+║ c ║ d ║
+╚═══╩═══╝
+--- around_strange_2 ---
+╔═══╦════╗
+║ a ║  b ║
+╚═══╩╦═══╣
+╔════╣   ║
+║ c  ║ d ║
+╚════╩═══╝
+--- around_strange_3 ---
+╔═══╦═══╗
+║ a ║ b ║
+╠═══╣   ║
+║   ╠═══╣
+║ c ║ d ║
+╚═══╩═══╝
+--- strange_2 ---
+╔═══╦════╗
+║ a ║  b ║
+╠═══╩╦═══╣
+║ c  ║ d ║
+╚════╩═══╝
+--- left_column_full_right_column_split ---
+╔═══╦═══╗
+║ a ║ b ║
+║   ╠═══╣
+║ c ║ d ║
+╚═══╩═══╝
+--- left_column_split_right_column_full ---
+╔═══╦═══╗
+║ a ║ b ║
+╠═══╣   ║
+║ c ║ d ║
+╚═══╩═══╝
+--- first_row_full_second_row_split ---
+╔═══════╗
+║ a   b ║
+╠═══╦═══╣
+║ c ║ d ║
+╚═══╩═══╝
+--- first_row_split_second_row_full ---
+╔═══╦═══╗
+║ a ║ b ║
+╠═══╩═══╣
+║ c   d ║
+╚═══════╝
+--- first_row_right_second_row_left ---
+  a ║  b ║
+║ c  ║ d  
+--- first_column_top_second_column_bottom ---
+═══   
+ a  b 
+   ═══
+═══   
+ c  d 
+   ═══
+--- four_way_junction_bottom_right ---
+╔═══╦═══╗
+║ a ║ b ║
+╠═══╬═══╣
+║ c ║ d ║
+╚═══╩═══╝
+--- four_way_junction_bottom_left ---
+╔═══╦═══╗
+║ a ║ b ║
+╠═══╬═══╣
+║ c ║ d ║
+╚═══╩═══╝
+--- four_way_junction_top_left ---
+╔═══╦═══╗
+║ a ║ b ║
+╠═══╬═══╣
+║ c ║ d ║
+╚═══╩═══╝
+--- four_way_junction_top_right ---
+╔═══╦═══╗
+║ a ║ b ║
+╠═══╬═══╣
+║ c ║ d ║
+╚═══╩═══╝
+--- all ---
+╔═══╗╔═══╗
+║ a ║║ b ║
+╚═══╝╚═══╝
+╔═══╗╔═══╗
+║ c ║║ d ║
+╚═══╝╚═══╝
 ```
+
+</details>
 
 # 2/2 return
 

@@ -8,8 +8,8 @@ run({ browserLauncher: chromium })
 {
   "labelAtStart": "toto: 0",
   "labelAfterIncrease": "toto: 1",
-  "labelAfterUpdateTata": "tata: 1",
-  "labelTataAfterIncrease": "tata: 2"
+  "labelAfterUpdateTata": "tata: 0",
+  "labelTataAfterIncrease": "tata: 1"
 }
 ```
 

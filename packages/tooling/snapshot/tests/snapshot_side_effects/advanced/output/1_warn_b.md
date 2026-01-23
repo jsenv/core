@@ -5,9 +5,10 @@ await new Promise((resolve) => setTimeout(resolve, 100));
 console.warn("here");
 ```
 
-# 1/2 console.warn
+# 1/2 logs
 
 ```console
+here
 here
 ```
 

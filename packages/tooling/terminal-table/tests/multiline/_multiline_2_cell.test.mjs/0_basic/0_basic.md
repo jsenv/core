@@ -4,9 +4,27 @@
 run({})
 ```
 
-# 1/2 console.log
+# 1/2 logs
 
 ```console
+--- left_one_right_two ---
+┌───┬───┐
+│ a │ a │
+│   │ b │
+└───┴───┘
+--- left_two_right_one ---
+┌───┬───┐
+│ a │ a │
+│ b │   │
+└───┴───┘
+--- left_three_right_five ---
+┌───┬───┐
+│ a │ a │
+│ b │ b │
+│ c │ c │
+│   │ d │
+│   │ e │
+└───┴───┘
 --- left_one_right_two ---
 ┌───┬───┐
 │ a │ a │

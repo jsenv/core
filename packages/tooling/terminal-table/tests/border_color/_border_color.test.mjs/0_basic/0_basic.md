@@ -4,14 +4,28 @@
 run({})
 ```
 
-# 1/2 console.log
+# 1/2 logs
 
-![img](console.log.svg)
+![img](log_group.svg)
 
 <details>
   <summary>see without style</summary>
 
 ```console
+--- main ---
+│ a 
+└───
+┌───
+│ b 
+--- border_collapse ---
+│ a 
+├───
+│ b 
+--- border_collapse_but_separated_if_conflict ---
+│ a 
+└───
+┌───
+│ b 
 --- main ---
 │ a 
 └───

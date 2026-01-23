@@ -10,9 +10,10 @@ return resolver.resolve(
 );
 ```
 
-# 1/2 console.warn
+# 1/2 logs
 
 ```console
+filesystem resolution failed for "/answer.js" imported by base/client/src/index.js (file not found at base/client/answer.js)
 filesystem resolution failed for "/answer.js" imported by base/client/src/index.js (file not found at base/client/answer.js)
 ```
 

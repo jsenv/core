@@ -22,9 +22,10 @@ writeFileSync(
 
 see [./11_write_same_file_not_grouped_and_out/out/11_write_same_file_not_grouped_and_out.txt](./11_write_same_file_not_grouped_and_out/out/11_write_same_file_not_grouped_and_out.txt)
 
-# 2/4 console.log
+# 2/4 logs
 
 ```console
+hey
 hey
 ```
 

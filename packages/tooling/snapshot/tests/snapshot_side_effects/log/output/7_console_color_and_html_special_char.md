@@ -4,14 +4,15 @@
 console.log("[31m Hi[0m <toto>");
 ```
 
-# 1/2 console.log
+# 1/2 logs
 
-![img](7_console_color_and_html_special_char/console.log.svg)
+![img](7_console_color_and_html_special_char/log_group.svg)
 
 <details>
   <summary>see without style</summary>
 
 ```console
+ Hi[0m <toto>
  Hi[0m <toto>
 ```
 

@@ -13,7 +13,10 @@ return run({ waitForEver: false });
 
 ```console
 server started at http://127.0.0.1
+server started at http://127.0.0.1
 GET http://127.0.0.1/
+GET http://127.0.0.1/
+  200 OK
   200 OK
 ```
 

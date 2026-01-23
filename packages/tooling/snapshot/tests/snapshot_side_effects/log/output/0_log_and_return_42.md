@@ -5,9 +5,10 @@ console.log("Hello");
 return 42;
 ```
 
-# 1/2 console.log
+# 1/2 logs
 
 ```console
+Hello
 Hello
 ```
 

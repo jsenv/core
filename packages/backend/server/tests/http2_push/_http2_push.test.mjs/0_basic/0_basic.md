@@ -13,9 +13,14 @@ return run();
 
 ```console
 server started at https://127.0.0.1
+server started at https://127.0.0.1
+GET https://127.0.0.1/main.html
 GET https://127.0.0.1/main.html
   Push /script.js
+  Push /script.js
   Push /style.css
+  Push /style.css
+  200 OK
   200 OK
 ```
 

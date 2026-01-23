@@ -7,7 +7,7 @@
 
 import { startDevServer } from "@jsenv/core";
 import { launchBrowserPage } from "@jsenv/core/tests/launch_browser_page.js";
-import { snapshotDevSideEffects } from "@jsenv/core/tests/snapshot_dev_side_effects.js";
+import { snapshotDevTests } from "@jsenv/core/tests/snapshot_dev_tests.js";
 import { ensureEmptyDirectory, writeFileSync } from "@jsenv/filesystem";
 import { jsenvPluginPreact } from "@jsenv/plugin-preact";
 import { jsenvPluginToolbar } from "@jsenv/plugin-toolbar";
@@ -62,6 +62,6 @@ const run = async () => {
   }
 };
 
-await snapshotDevSideEffects(import.meta.url, ({ test }) => {
+await snapshotDevTests(import.meta.url, ({ test }) => {
   test("0_basic", () => run());
 });

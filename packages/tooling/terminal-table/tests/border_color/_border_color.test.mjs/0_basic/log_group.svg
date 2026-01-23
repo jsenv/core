@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" font-family="SauceCodePro Nerd Font, Source Code Pro, Courier" font-size="14" width="100%" viewBox="0 0 640 555.45" background-color="#282c34">
+  <g id="background">
+    <rect x="1" y="1" width="638" height="553.45" fill="#282c34" stroke="rgba(255,255,255,0.35)" stroke-width="1" rx="8"></rect>
+  </g>
+  <foreignObject id="body" y="0" width="100%" height="565.45" overflow="hidden">
+    <svg width="431.67" height="555.45" font-family="monospace" font-variant-east-asian="full-width" fill="#cccccc">
+      <g>
+        <text x="10" y="24.55">--- main ---</text>
+        <text x="10" y="43.55" fill="#DAA520">│</text>
+        <text x="18.4" y="43.55" style="white-space:pre"> a </text>
+        <text x="10" y="62.55" fill="#cd5555">└</text>
+        <text x="18.4" y="62.55" fill="#cd5555">───</text>
+        <text x="10" y="81.55" fill="#4169E1">┌</text>
+        <text x="18.4" y="81.55" fill="#11bc79">───</text>
+        <text x="10" y="100.55" fill="#4169E1">│</text>
+        <text x="18.4" y="100.55" style="white-space:pre"> b </text>
+        <text x="10" y="119.55">--- border_collapse ---</text>
+        <text x="10" y="138.55" fill="#DAA520">│</text>
+        <text x="18.4" y="138.55" style="white-space:pre"> a </text>
+        <text x="10" y="157.55" fill="#4169E1">├</text>
+        <text x="18.4" y="157.55" fill="#11bc79">───</text>
+        <text x="10" y="176.55" fill="#4169E1">│</text>
+        <text x="18.4" y="176.55" style="white-space:pre"> b </text>
+        <text x="10" y="195.55">--- border_collapse_but_separated_if_conflict ---</text>
+        <text x="10" y="214.55" fill="#DAA520">│</text>
+        <text x="18.4" y="214.55" style="white-space:pre"> a </text>
+        <text x="10" y="233.55" fill="#cd5555">└</text>
+        <text x="18.4" y="233.55" fill="#cd5555">───</text>
+        <text x="10" y="252.55" fill="#4169E1">┌</text>
+        <text x="18.4" y="252.55" fill="#11bc79">───</text>
+        <text x="10" y="271.55" fill="#4169E1">│</text>
+        <text x="18.4" y="271.55" style="white-space:pre"> b </text>
+        <text x="10" y="290.55">--- main ---</text>
+        <text x="10" y="309.55" fill="#DAA520">│</text>
+        <text x="18.4" y="309.55" style="white-space:pre"> a </text>
+        <text x="10" y="328.55" fill="#cd5555">└</text>
+        <text x="18.4" y="328.55" fill="#cd5555">───</text>
+        <text x="10" y="347.55" fill="#4169E1">┌</text>
+        <text x="18.4" y="347.55" fill="#11bc79">───</text>
+        <text x="10" y="366.55" fill="#4169E1">│</text>
+        <text x="18.4" y="366.55" style="white-space:pre"> b </text>
+        <text x="10" y="385.55">--- border_collapse ---</text>
+        <text x="10" y="404.55" fill="#DAA520">│</text>
+        <text x="18.4" y="404.55" style="white-space:pre"> a </text>
+        <text x="10" y="423.55" fill="#4169E1">├</text>
+        <text x="18.4" y="423.55" fill="#11bc79">───</text>
+        <text x="10" y="442.55" fill="#4169E1">│</text>
+        <text x="18.4" y="442.55" style="white-space:pre"> b </text>
+        <text x="10" y="461.55">--- border_collapse_but_separated_if_conflict ---</text>
+        <text x="10" y="480.55" fill="#DAA520">│</text>
+        <text x="18.4" y="480.55" style="white-space:pre"> a </text>
+        <text x="10" y="499.55" fill="#cd5555">└</text>
+        <text x="18.4" y="499.55" fill="#cd5555">───</text>
+        <text x="10" y="518.55" fill="#4169E1">┌</text>
+        <text x="18.4" y="518.55" fill="#11bc79">───</text>
+        <text x="10" y="537.55" fill="#4169E1">│</text>
+        <text x="18.4" y="537.55" style="white-space:pre"> b </text>
+      </g>
+    </svg>
+  </foreignObject>
+</svg>

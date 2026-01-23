@@ -1,6 +1,6 @@
 import { build, startBuildServer } from "@jsenv/core";
 import { executeHtml } from "@jsenv/core/tests/execute_html.js";
-import { snapshotBuildTests } from "@jsenv/core/tests/snapshot_build_side_effects.js";
+import { snapshotBuildTests } from "@jsenv/core/tests/snapshot_build_tests.js";
 
 if (process.env.CI) {
   process.exit(0);

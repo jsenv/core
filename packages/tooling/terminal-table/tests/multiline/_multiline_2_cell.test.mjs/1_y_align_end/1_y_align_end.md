@@ -6,9 +6,27 @@ run({
 })
 ```
 
-# 1/2 console.log
+# 1/2 logs
 
 ```console
+--- left_one_right_two ---
+┌───┬───┐
+│   │ a │
+│ a │ b │
+└───┴───┘
+--- left_two_right_one ---
+┌───┬───┐
+│ a │   │
+│ b │ a │
+└───┴───┘
+--- left_three_right_five ---
+┌───┬───┐
+│   │ a │
+│   │ b │
+│ a │ c │
+│ b │ d │
+│ c │ e │
+└───┴───┘
 --- left_one_right_two ---
 ┌───┬───┐
 │   │ a │

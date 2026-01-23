@@ -9,6 +9,8 @@ console.info("b");
 
 ```console
 a
+a
+b
 b
 ```
 

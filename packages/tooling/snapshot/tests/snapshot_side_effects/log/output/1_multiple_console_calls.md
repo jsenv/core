@@ -15,12 +15,20 @@ console.error("error_1");
 
 ```console
 log_0
+log_0
+info_0
 info_0
 warn_0
+warn_0
+error_0
 error_0
 log_1
+log_1
+info_1
 info_1
 warn_1
+warn_1
+error_1
 error_1
 ```
 

@@ -12,6 +12,8 @@ console.log("b_after_timeout_50");
 
 ```console
 b_before_timeout_50
+b_before_timeout_50
+b_after_timeout_50
 b_after_timeout_50
 ```
 

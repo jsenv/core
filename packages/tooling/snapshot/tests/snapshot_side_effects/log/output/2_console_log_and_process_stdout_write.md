@@ -10,7 +10,9 @@ console.log("after");
 
 ```console
 before
+before
 betweenafter
+after
 ```
 
 # 2/2 return

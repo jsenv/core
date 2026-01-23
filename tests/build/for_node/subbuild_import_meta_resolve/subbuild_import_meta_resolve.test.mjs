@@ -3,7 +3,7 @@
  */
 
 import { build } from "@jsenv/core";
-import { snapshotBuildTests } from "@jsenv/core/tests/snapshot_build_side_effects.js";
+import { snapshotBuildTests } from "@jsenv/core/tests/snapshot_build_tests.js";
 
 const run = async ({ bundling, clientBase }) => {
   await build({

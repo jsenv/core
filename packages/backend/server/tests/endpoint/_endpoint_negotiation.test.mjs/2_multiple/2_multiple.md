@@ -50,6 +50,12 @@ return {
 
 ```console
 GET http://127.0.0.1/users
+GET http://127.0.0.1/users
+  406 The server cannot produce a response in a format acceptable to the client:
+  - content-type The server cannot produce a response in any of the media types accepted by the request: "text/css".
+  Available media types: application/json, text/plain.
+  - language The server cannot produce a response in any of the languages accepted by the request: "de".
+  Available languages: fr, en.
   406 The server cannot produce a response in a format acceptable to the client:
   - content-type The server cannot produce a response in any of the media types accepted by the request: "text/css".
   Available media types: application/json, text/plain.

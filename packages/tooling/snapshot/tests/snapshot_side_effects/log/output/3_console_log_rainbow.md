@@ -6,14 +6,15 @@ console.log(
 );
 ```
 
-# 1/2 console.log
+# 1/2 logs
 
-![img](3_console_log_rainbow/console.log.svg)
+![img](3_console_log_rainbow/log_group.svg)
 
 <details>
   <summary>see without style</summary>
 
 ```console
+red yellow green cyan blue magenta
 red yellow green cyan blue magenta
 ```
 

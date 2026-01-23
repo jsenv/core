@@ -18,9 +18,10 @@ writeFileSync(
 first
 ```
 
-# 2/4 console.log
+# 2/4 logs
 
 ```console
+hey
 hey
 ```
 

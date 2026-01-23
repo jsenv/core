@@ -64,6 +64,9 @@ return {
 
 ```console
 GET http://127.0.0.1/users
+GET http://127.0.0.1/users
+  406 The server cannot produce a response in any of the media types accepted by the request: "text/css".
+  Available media types: application/json, text/plain.
   406 The server cannot produce a response in any of the media types accepted by the request: "text/css".
   Available media types: application/json, text/plain.
 ```

@@ -12,7 +12,10 @@ console.log("a_after_timeout_200");
 
 ```console
 a_before_timeout_200
+a_before_timeout_200
 b_before_timeout_50
+b_before_timeout_50
+b_after_timeout_50
 b_after_timeout_50
 ```
 
@@ -34,18 +37,19 @@ console.log("b_after_timeout_50");
 
 \`\`\`console
 b_before_timeout_50
+b_before_timeout_50
+b_after_timeout_50
 b_after_timeout_50
 \`\`\`
 
 # 2/2 resolve
-
-\`\`\`js
 ```
 see [./2_a_when_b_ends_before/output/3_b_when_b_ends_before.md](./2_a_when_b_ends_before/output/3_b_when_b_ends_before.md) for more
 
-# 3/4 console.log
+# 3/4 logs
 
 ```console
+a_after_timeout_200
 a_after_timeout_200
 ```
 

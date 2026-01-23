@@ -1,6 +1,6 @@
 import { startDevServer } from "@jsenv/core";
 import { executeHtml } from "@jsenv/core/tests/execute_html.js";
-import { snapshotDevSideEffects } from "@jsenv/core/tests/snapshot_dev_side_effects.js";
+import { snapshotDevTests } from "@jsenv/core/tests/snapshot_dev_tests.js";
 import { jsenvPluginReact } from "@jsenv/plugin-react";
 import { chromium, firefox } from "playwright";
 
@@ -20,7 +20,7 @@ const run = async ({ browserLauncher }) => {
   });
 };
 
-await snapshotDevSideEffects(import.meta.url, ({ test }) => {
+await snapshotDevTests(import.meta.url, ({ test }) => {
   test("0_chromium", () => run({ browserLauncher: chromium }));
   test("1_firefox", () => run({ browserLauncher: firefox }));
 });

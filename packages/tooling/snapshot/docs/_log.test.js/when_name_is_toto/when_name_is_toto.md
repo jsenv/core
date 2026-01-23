@@ -4,9 +4,10 @@
 return logMyName("toto");
 ```
 
-# 1/2 console.log
+# 1/2 logs
 
 ```console
+my name is: toto
 my name is: toto
 ```
 

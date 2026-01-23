@@ -19,8 +19,12 @@ throw new Error("in the end we throw");
 
 ```console
 start
+start
+timeout done
 timeout done
 a warning after 2nd timeout
+a warning after 2nd timeout
+and an other warning
 and an other warning
 ```
 

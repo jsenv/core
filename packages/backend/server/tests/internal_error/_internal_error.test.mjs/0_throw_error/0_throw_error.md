@@ -15,6 +15,8 @@ return run(error);
 
 ```console
 server started at http://127.0.0.1
+server started at http://127.0.0.1
+GET http://127.0.0.1/
 GET http://127.0.0.1/
 internal error while handling request
 --- error stack ---
@@ -23,6 +25,14 @@ Error: message
     at capture (@jsenv/core/packages/tooling/snapshot/src/side_effects/create_capture_side_effects.js:342:29)
     at snapshotTests (@jsenv/core/packages/tooling/snapshot/src/side_effects/snapshot_tests.js:182:33)
     at async base/internal_error.test.mjs:32:1
+internal error while handling request
+--- error stack ---
+Error: message
+    at base/internal_error.test.mjs:34:19
+    at capture (@jsenv/core/packages/tooling/snapshot/src/side_effects/create_capture_side_effects.js:342:29)
+    at snapshotTests (@jsenv/core/packages/tooling/snapshot/src/side_effects/snapshot_tests.js:182:33)
+    at async base/internal_error.test.mjs:32:1
+  500 Internal Server Error
   500 Internal Server Error
 ```
 

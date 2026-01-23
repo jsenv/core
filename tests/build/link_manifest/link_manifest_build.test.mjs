@@ -1,5 +1,5 @@
 import { build } from "@jsenv/core";
-import { snapshotBuildTests } from "@jsenv/core/tests/snapshot_build_side_effects.js";
+import { snapshotBuildTests } from "@jsenv/core/tests/snapshot_build_tests.js";
 
 await snapshotBuildTests(import.meta.url, ({ test }) => {
   test("0_basic", () =>

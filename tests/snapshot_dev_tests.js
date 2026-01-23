@@ -1,6 +1,6 @@
 import { snapshotTests } from "@jsenv/snapshot";
 
-export const snapshotDevSideEffects = async (
+export const snapshotDevTests = async (
   testFileUrl,
   fnRegisteringTests,
   options = {},

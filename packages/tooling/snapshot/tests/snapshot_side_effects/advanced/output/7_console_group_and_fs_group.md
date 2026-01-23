@@ -23,6 +23,7 @@ console.info(`--- build files ---
 
 ```console
 build "./main.html"
+build "./main.html"
 ⠋ generate source graph
 ✔ generate source graph (done in <X> second)
 ⠋ generate build graph
@@ -52,6 +53,11 @@ tata
 
 ```console
 ✔ write files in build directory (done in <X> second)
+--- build files ---  
+- html : 1 (175 B / 91 %)
+- js   : 1 (17 B / 9 %)
+- total: 2 (192 B / 100 %)
+--------------------
 --- build files ---  
 - html : 1 (175 B / 91 %)
 - js   : 1 (17 B / 9 %)

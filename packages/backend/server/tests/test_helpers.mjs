@@ -1,4 +1,22 @@
+import { snapshotTests } from "@jsenv/snapshot";
 import { request } from "node:http";
+
+export const snapshotServerTests = async (
+  testFileUrl,
+  fnRegisteringTests,
+  options = {},
+) =>
+  snapshotTests(testFileUrl, fnRegisteringTests, {
+    ...options,
+    logEffects:
+      options.logEffects === false
+        ? false
+        : {
+            prevent: true,
+            level: "warn",
+            ...(options.logEffects === true ? {} : options.logEffects),
+          },
+  });
 
 export const fetchUsingNodeBuiltin = async (
   url,
