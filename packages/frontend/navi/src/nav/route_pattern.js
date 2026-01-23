@@ -4,7 +4,6 @@
  */
 
 import { globalSignalRegistry } from "../state/state_signal.js";
-// Remove documentUrlSignal dependency - no longer needed
 
 const DEBUG = false;
 
@@ -36,15 +35,24 @@ export const detectSignals = (routePattern) => {
   const signalConnections = [];
   let updatedPattern = routePattern;
 
-  // Look for signals in the new syntax: :paramName={navi_state_signal:id} or ?paramName={navi_state_signal:id} or &paramName={navi_state_signal:id}
-  // Using curly braces to avoid conflicts with underscores in signal IDs
-  const signalParamRegex = /([?:&])(\w+)=(\{navi_state_signal:[^}]+\})/g;
+  // Look for signals in two formats:
+  // 1. Expected format: :paramName={navi_state_signal:id} or ?paramName={navi_state_signal:id} or &paramName={navi_state_signal:id}
+  // 2. Typoe format (missing = sign): &paramName{navi_state_signal:id}
+  const signalParamRegex = /([?:&])(\w+)(=)?(\{navi_state_signal:[^}]+\})/g;
   let match;
 
   while ((match = signalParamRegex.exec(routePattern)) !== null) {
-    const [fullMatch, prefix, paramName, signalString] = match;
+    const [fullMatch, prefix, paramName, equalSign, signalString] = match;
 
-    // Extract the signal ID from the new format: {navi_state_signal:id}
+    // Emit warning if equal sign is missing
+    if (!equalSign) {
+      console.warn(
+        `[detectSignals] Missing '=' sign in route pattern: "${prefix}${paramName}${signalString}". ` +
+          `Consider using "${prefix}${paramName}=${signalString}" for better clarity.`,
+      );
+    }
+
+    // Extract the signal ID from the format: {navi_state_signal:id}
     const signalIdMatch = signalString.match(/\{navi_state_signal:([^}]+)\}/);
     if (!signalIdMatch) {
       console.warn(
@@ -61,13 +69,10 @@ export const detectSignals = (routePattern) => {
 
       let replacement;
       if (prefix === ":") {
-        // Path parameter: :section=__jsenv_signal_1__ becomes :section
+        // Path parameter: :section={navi_state_signal:...} becomes :section
         replacement = `${prefix}${paramName}`;
-      } else if (prefix === "?") {
-        // First search parameter: ?city=__jsenv_signal_1__ becomes ?city
-        replacement = `${prefix}${paramName}`;
-      } else if (prefix === "&") {
-        // Additional search parameter: &lon=__jsenv_signal_1__ becomes &lon
+      } else if (prefix === "?" || prefix === "&") {
+        // Query parameter: ?city={navi_state_signal:...} or &lon{navi_state_signal:...} becomes ?city or &lon
         replacement = `${prefix}${paramName}`;
       }
       updatedPattern = updatedPattern.replace(fullMatch, replacement);
