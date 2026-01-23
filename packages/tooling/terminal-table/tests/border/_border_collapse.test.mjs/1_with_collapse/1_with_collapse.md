@@ -6,11 +6,9 @@ run({
 })
 ```
 
-# 1/2 logs
-  <details>
-  <summary>details</summary>
+# 1/2 console.log
 
-![img](log_group.svg)
+![img](console.log.svg)
 
 <details>
   <summary>see without style</summary>
@@ -66,62 +64,10 @@ run({
 ├─────────────┼────────┼──────────────┤
 │ bottom_left │ bottom │ bottom_right │
 └─────────────┴────────┴──────────────┘
---- top_left_empty ---
-              ┌──────────────┐
-  top_left    │ top_right    │
-┌─────────────┼──────────────┤
-│ bottom_left │ bottom_right │
-└─────────────┴──────────────┘
---- top_right_empty ---
-┌─────────────┐               
-│ top_left    │ top_right     
-├─────────────┼──────────────┐
-│ bottom_left │ bottom_right │
-└─────────────┴──────────────┘
---- bottom_right_empty ---
-┌─────────────┬──────────────┐
-│ top_left    │ top_right    │
-├─────────────┼──────────────┘
-│ bottom_left │ bottom_right  
-└─────────────┘               
---- bottom_left_empty ---
-┌─────────────┬──────────────┐
-│ top_left    │ top_right    │
-└─────────────┼──────────────┤
-  bottom_left │ bottom_right │
-              └──────────────┘
---- all ---
-┌─────────────┬──────────────┐
-│ top_left    │ top_right    │
-├─────────────┼──────────────┤
-│ bottom_left │ bottom_right │
-└─────────────┴──────────────┘
---- all_3_row ---
-┌──────────┬──────────┬──────────┐
-│ column_a │ column_b │ column_c │
-└──────────┴──────────┴──────────┘
---- all_3_column ---
-┌───────┐
-│ row_a │
-├───────┤
-│ row_b │
-├───────┤
-│ row_c │
-└───────┘
---- nine_cells_middle_use_yellow_borders ---
-┌─────────────┬────────┬──────────────┐
-│ top_left    │ top    │ top_right    │
-├─────────────┼────────┼──────────────┤
-│ left        │ center │ right        │
-├─────────────┼────────┼──────────────┤
-│ bottom_left │ bottom │ bottom_right │
-└─────────────┴────────┴──────────────┘
 ```
 
 </details>
 
-
-</details>
 
 # 2/2 return
 

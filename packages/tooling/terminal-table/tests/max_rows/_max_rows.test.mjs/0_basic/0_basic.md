@@ -4,38 +4,14 @@
 run({})
 ```
 
-# 1/2 logs
+# 1/2 console.log
 
-![img](log_group.svg)
+![img](console.log.svg)
 
 <details>
   <summary>see without style</summary>
 
 ```console
---- three_row_max_2 ---
-┌────────┐
-│ a      │
-├────────┤
-┊ 2 rows ┊
-↓        ↓
---- three_row_max_3 ---
-┌───┐
-│ a │
-├───┤
-│ b │
-├───┤
-│ c │
-└───┘
---- five_row_max_5_last_row_fixed ---
-┌────────┐
-│ a      │
-├────────┤
-│ b      │
-├────────┤
-┊ 2 rows ┊
-├────────┤
-│ Total  │
-└────────┘
 --- three_row_max_2 ---
 ┌────────┐
 │ a      │

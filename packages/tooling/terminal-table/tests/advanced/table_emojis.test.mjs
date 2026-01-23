@@ -1,7 +1,8 @@
 import { writeFileSync } from "@jsenv/filesystem";
-import { snapshotTests } from "@jsenv/snapshot";
 import { renderTerminalSvg } from "@jsenv/terminal-recorder";
+
 import { renderTable } from "@jsenv/terminal-table";
+import { snapshotTableTests } from "@jsenv/terminal-table/tests/snapshot_table_tests.mjs";
 
 const run = () => {
   const table = renderTable(
@@ -23,7 +24,7 @@ const run = () => {
   console.log(table);
 };
 
-await snapshotTests(import.meta.url, ({ test }) => {
+await snapshotTableTests(import.meta.url, ({ test }) => {
   test("0_basic", () => {
     run();
   });

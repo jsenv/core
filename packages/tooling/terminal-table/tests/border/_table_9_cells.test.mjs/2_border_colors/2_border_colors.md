@@ -6,60 +6,14 @@ run({
 })
 ```
 
-# 1/2 logs
+# 1/2 console.log
 
-![img](log_group.svg)
+![img](console.log.svg)
 
 <details>
   <summary>see without style</summary>
 
 ```console
---- none ---
- a  b  c 
- d  e  f 
- g  h  i 
---- center_only ---
- a   b   c 
-   ┌───┐   
- d │ e │ f 
-   └───┘   
- g   h   i 
---- bottom_right_only ---
- a  b   c  
- d  e   f  
-      ┌───┐
- g  h │ i │
-      └───┘
---- inner_only ---
- a │ b │ c 
-───┼───┼───
- d │ e │ f 
-───┼───┼───
- g │ h │ i 
---- head ---
-┌───┬───┬───┐
-│ a │ b │ c │
-├───┼───┼───┤
-│ d │ e │ f │
-│ g │ h │ i │
-└───┴───┴───┘
---- foot ---
-┌───┬───┬───┐
-│ a │ b │ c │
-│ d │ e │ f │
-├───┼───┼───┤
-│ g │ h │ i │
-└───┴───┴───┘
---- all ---
-┌───┐┌───┐┌───┐
-│ a ││ b ││ c │
-└───┘└───┘└───┘
-┌───┐┌───┐┌───┐
-│ d ││ e ││ f │
-└───┘└───┘└───┘
-┌───┐┌───┐┌───┐
-│ g ││ h ││ i │
-└───┘└───┘└───┘
 --- none ---
  a  b  c 
  d  e  f 

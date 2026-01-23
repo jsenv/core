@@ -7,35 +7,14 @@ run({
 })
 ```
 
-# 1/2 logs
+# 1/2 console.log
 
-![img](log_group.svg)
+![img](console.log.svg)
 
 <details>
   <summary>see without style</summary>
 
 ```console
---- a_b_c ---
-┌───┐
-│ a │
-│ b │
-│ c │
-└───┘
---- a_b_c_max_height_1 ---
-┌─────────────┐
-│ ↓ 3 lines ↓ │
-└─────────────┘
---- a_b_c_max_height_2 ---
-┌─────────────┐
-│ a           │
-│ ↓ 2 lines ↓ │
-└─────────────┘
---- a_b_c_max_height_3 ---
-┌───┐
-│ a │
-│ b │
-│ c │
-└───┘
 --- a_b_c ---
 ┌───┐
 │ a │

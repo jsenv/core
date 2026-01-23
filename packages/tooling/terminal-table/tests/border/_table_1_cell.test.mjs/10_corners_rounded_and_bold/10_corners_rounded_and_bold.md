@@ -14,57 +14,9 @@ run({
 })
 ```
 
-# 1/2 logs
+# 1/2 console.log
 
 ```console
---- none ---
- a 
---- top ---
-━━━
- a 
---- left ---
-┃ a 
---- bottom ---
- a 
-━━━
---- right ---
- a ┃
---- top_left ---
-┏━━━
-┃ a 
---- top_right ---
-━━━┓
- a ┃
---- bottom_right ---
- a ┃
-━━━┛
---- bottom_left ---
-┃ a 
-┗━━━
---- left_and_right ---
-┃ a ┃
---- top_and_bottom ---
-━━━
- a 
-━━━
---- all_but_top ---
-┃ a ┃
-┗━━━┛
---- all_but_right ---
-┏━━━
-┃ a 
-┗━━━
---- all_but_left ---
-━━━┓
- a ┃
-━━━┛
---- all_but_bottom ---
-┏━━━┓
-┃ a ┃
---- all ---
-┏━━━┓
-┃ a ┃
-┗━━━┛
 --- none ---
  a 
 --- top ---

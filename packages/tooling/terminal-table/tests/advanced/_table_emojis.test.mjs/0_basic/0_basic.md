@@ -1,4 +1,4 @@
-# [0_basic](../../table_emojis.test.mjs#L27)
+# [0_basic](../../table_emojis.test.mjs#L28)
 
 ```js
 run();
@@ -8,28 +8,9 @@ run();
 
 see [./table_emojis.svg](./table_emojis.svg)
 
-# 2/3 logs
+# 2/3 console.log
 
 ```console
-┌───────┐
-│ emoji │
-├───────┤
-│ ✅    │
-├───────┤
-│ ⚠     │
-├───────┤
-│ ✔     │
-├───────┤
-│ ✔️    │
-├───────┤
-│ ❌    │
-├───────┤
-│ ♥     │
-├───────┤
-│ ♀     │
-├───────┤
-│ ♂     │
-└───────┘
 ┌───────┐
 │ emoji │
 ├───────┤
