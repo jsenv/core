@@ -425,38 +425,53 @@ const registerRoute = (routePattern) => {
       return null;
     }
 
-    // Walk down the hierarchy updating action params and tracking most specific route
-    let currentRoute = route;
-    let mostSpecificRoute;
+    // Find all matching routes and update their actions, then delegate to most specific
+    const allMatchingRoutes = Array.from(routeSet).filter((r) => r.matching);
 
-    while (currentRoute) {
-      if (!currentRoute.matching) {
-        break;
-      }
-
-      // Update the most specific route as we go
-      mostSpecificRoute = currentRoute;
-      // Update action params
-      if (currentRoute.action) {
-        const currentRoutePrivateProperties =
-          getRoutePrivateProperties(currentRoute);
-        if (currentRoutePrivateProperties) {
-          const { routePattern: currentRoutePattern } =
-            currentRoutePrivateProperties;
-          const currentResolvedParams = currentRoutePattern.resolveParams();
+    // Update action params on all matching routes
+    for (const matchingRoute of allMatchingRoutes) {
+      if (matchingRoute.action) {
+        const matchingRoutePrivateProperties =
+          getRoutePrivateProperties(matchingRoute);
+        if (matchingRoutePrivateProperties) {
+          const { routePattern: matchingRoutePattern } =
+            matchingRoutePrivateProperties;
+          const currentResolvedParams = matchingRoutePattern.resolveParams();
           const updatedActionParams = {
             ...currentResolvedParams,
             ...newParams,
           };
-          currentRoute.action.replaceParams(updatedActionParams);
+          matchingRoute.action.replaceParams(updatedActionParams);
         }
       }
-
-      // Find the first matching child to continue down the hierarchy
-      const children = getRouteChildren(currentRoute);
-      currentRoute = children.find((child) => child.matching) || null;
     }
-    return mostSpecificRoute.redirectTo(newParams);
+
+    // Find the most specific route (the one with the longest pattern path)
+    let mostSpecificRoute = route;
+    let maxSegments = route.pattern.split("/").filter((s) => s !== "").length;
+
+    for (const matchingRoute of allMatchingRoutes) {
+      const segments = matchingRoute.pattern
+        .split("/")
+        .filter((s) => s !== "").length;
+      if (segments > maxSegments) {
+        maxSegments = segments;
+        mostSpecificRoute = matchingRoute;
+      }
+    }
+
+    // If we found a more specific route, delegate to it; otherwise handle it ourselves
+    if (mostSpecificRoute !== route) {
+      if (DEBUG) {
+        console.debug(
+          `${route} delegating redirect to more specific route ${mostSpecificRoute}`,
+        );
+      }
+      return mostSpecificRoute.redirectTo(newParams);
+    }
+
+    // This route is the most specific, handle the redirect ourselves
+    return route.redirectTo(newParams);
   };
   route.buildRelativeUrl = (params) => {
     // buildMostPreciseUrl now handles parameter resolution internally

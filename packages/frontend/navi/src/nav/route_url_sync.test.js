@@ -14,18 +14,21 @@ await snapshotTests(import.meta.url, ({ test }) => {
         type: "number",
       });
 
-      // Create routes where MAP_ROUTE can match with trailing slash (parent route)
-      const { MAP_ROUTE, MAP_ISOCHRONE_COMPARE_ROUTE } = setupRoutes({
-        MAP_ROUTE: `/map/?zoom=${zoomSignal}`, // Trailing slash makes it match child routes
-        MAP_ISOCHRONE_COMPARE_ROUTE: `/map/isochrone/compare?zoom=${zoomSignal}`,
-      });
+      // Create routes with proper parent-child relationship
+      const { MAP_ROUTE, MAP_ISOCHRONE_ROUTE, MAP_ISOCHRONE_COMPARE_ROUTE } =
+        setupRoutes({
+          MAP_ROUTE: `/map/?zoom=${zoomSignal}`, // Parent route with trailing slash
+          MAP_ISOCHRONE_ROUTE: `/map/isochrone`, // Intermediate child
+          MAP_ISOCHRONE_COMPARE_ROUTE: `/map/isochrone/compare`, // Deepest child
+        });
 
       // Simulate being on the child route: /map/isochrone/compare?zoom=10
       updateRoutes(`${baseUrl}/map/isochrone/compare?zoom=10`);
 
-      // Mock redirectTo on both routes to track which one gets called
+      // Mock redirectTo on all routes to track which one gets called
       const redirectCalls = [];
       const originalMapRedirectTo = MAP_ROUTE.redirectTo;
+      const originalIsochroneRedirectTo = MAP_ISOCHRONE_ROUTE.redirectTo;
       const originalCompareRedirectTo = MAP_ISOCHRONE_COMPARE_ROUTE.redirectTo;
 
       MAP_ROUTE.redirectTo = (params) => {
@@ -35,6 +38,15 @@ await snapshotTests(import.meta.url, ({ test }) => {
           url: MAP_ROUTE.buildUrl(params),
         });
         return originalMapRedirectTo.call(MAP_ROUTE, params);
+      };
+
+      MAP_ISOCHRONE_ROUTE.redirectTo = (params) => {
+        redirectCalls.push({
+          route: "MAP_ISOCHRONE_ROUTE",
+          params,
+          url: MAP_ISOCHRONE_ROUTE.buildUrl(params),
+        });
+        return originalIsochroneRedirectTo.call(MAP_ISOCHRONE_ROUTE, params);
       };
 
       MAP_ISOCHRONE_COMPARE_ROUTE.redirectTo = (params) => {
@@ -55,11 +67,13 @@ await snapshotTests(import.meta.url, ({ test }) => {
 
       // Restore original methods
       MAP_ROUTE.redirectTo = originalMapRedirectTo;
+      MAP_ISOCHRONE_ROUTE.redirectTo = originalIsochroneRedirectTo;
       MAP_ISOCHRONE_COMPARE_ROUTE.redirectTo = originalCompareRedirectTo;
 
       return {
         // Route matching states
         map_matching: MAP_ROUTE.matching,
+        isochrone_matching: MAP_ISOCHRONE_ROUTE.matching,
         compare_matching: MAP_ISOCHRONE_COMPARE_ROUTE.matching,
 
         // Track which route handled the redirect
@@ -87,7 +101,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
     }
   });
 
-  test("signal updates on parent route should delegate to child route", () => {
+  test("signal updates should trigger redirect on most specific matching route", () => {
     try {
       const zoomSignal = stateSignal(12, {
         id: "hierarchyZoom",
@@ -97,8 +111,8 @@ await snapshotTests(import.meta.url, ({ test }) => {
       const { MAP_ROUTE, MAP_ISOCHRONE_ROUTE, MAP_COMPARE_ROUTE } = setupRoutes(
         {
           MAP_ROUTE: `/map?zoom=${zoomSignal}`,
-          MAP_ISOCHRONE_ROUTE: "/map/isochrone",
-          MAP_COMPARE_ROUTE: "/map/isochrone/compare",
+          MAP_ISOCHRONE_ROUTE: `/map/isochrone?zoom=${zoomSignal}`,
+          MAP_COMPARE_ROUTE: `/map/isochrone/compare?zoom=${zoomSignal}`,
         },
       );
 
@@ -107,7 +121,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
 
       const redirectCalls = [];
 
-      // Mock all redirectTo methods
+      // Mock all redirectTo methods to track which ones get called
       const mockRedirectTo = (routeName, originalRedirectTo) => (params) => {
         const route =
           routeName === "MAP_ROUTE"
@@ -140,9 +154,9 @@ await snapshotTests(import.meta.url, ({ test }) => {
         originalMethods.compare,
       );
 
-      // Trigger replaceParams on parent route (this would happen when signal changes)
-      // This should delegate to the most specific matching route (MAP_COMPARE_ROUTE)
-      MAP_ROUTE.replaceParams({ zoom: 20 });
+      // When signal changes, this should trigger replaceParams on all matching routes
+      // but the actual redirect should happen on the most specific one
+      zoomSignal.value = 20;
 
       // Restore methods
       Object.assign(MAP_ROUTE, { redirectTo: originalMethods.map });
@@ -159,12 +173,14 @@ await snapshotTests(import.meta.url, ({ test }) => {
           compare: MAP_COMPARE_ROUTE.matching,
         },
 
-        // Track which route handled the redirect
+        // Track which routes handled redirects
         redirect_calls: redirectCalls,
 
-        // Verify the most specific route was used
+        // Verify only the most specific route was used for redirect
         most_specific_route_used:
-          redirectCalls.length > 0 ? redirectCalls[0].route : "none",
+          redirectCalls.length > 0
+            ? redirectCalls[redirectCalls.length - 1].route
+            : "none",
 
         // Expected: MAP_COMPARE_ROUTE should handle the redirect
         expected_most_specific: "MAP_COMPARE_ROUTE",

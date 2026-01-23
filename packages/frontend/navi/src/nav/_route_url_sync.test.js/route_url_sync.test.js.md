@@ -2,7 +2,7 @@
 
 
 - [replaceParams should use most specific route for redirect](replaceparams_should_use_most_specific_route_for_redirect/replaceparams_should_use_most_specific_route_for_redirect.md)
-- [signal updates on parent route should delegate to child route](signal_updates_on_parent_route_should_delegate_to_child_route/signal_updates_on_parent_route_should_delegate_to_child_route.md)
+- [signal updates should trigger redirect on most specific matching route](signal_updates_should_trigger_redirect_on_most_specific_matching_route/signal_updates_should_trigger_redirect_on_most_specific_matching_route.md)
 
 ---
 

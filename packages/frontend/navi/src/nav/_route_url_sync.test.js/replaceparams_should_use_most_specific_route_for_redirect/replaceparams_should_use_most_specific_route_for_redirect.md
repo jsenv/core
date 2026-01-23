@@ -7,18 +7,20 @@ try {
     type: "number",
   });
 
-  // Create routes where MAP_ROUTE can match with trailing slash (parent route)
-  const { MAP_ROUTE, MAP_ISOCHRONE_COMPARE_ROUTE } = setupRoutes({
-    MAP_ROUTE: `/map/?zoom=${zoomSignal}`, // Trailing slash makes it match child routes
-    MAP_ISOCHRONE_COMPARE_ROUTE: `/map/isochrone/compare?zoom=${zoomSignal}`,
+  // Create routes with proper parent-child relationship
+  const { MAP_ROUTE, MAP_ISOCHRONE_ROUTE, MAP_ISOCHRONE_COMPARE_ROUTE } = setupRoutes({
+    MAP_ROUTE: `/map/?zoom=${zoomSignal}`, // Parent route with trailing slash
+    MAP_ISOCHRONE_ROUTE: `/map/isochrone`, // Intermediate child
+    MAP_ISOCHRONE_COMPARE_ROUTE: `/map/isochrone/compare`, // Deepest child
   });
 
   // Simulate being on the child route: /map/isochrone/compare?zoom=10
   updateRoutes(`${baseUrl}/map/isochrone/compare?zoom=10`);
 
-  // Mock redirectTo on both routes to track which one gets called
+  // Mock redirectTo on all routes to track which one gets called
   const redirectCalls = [];
   const originalMapRedirectTo = MAP_ROUTE.redirectTo;
+  const originalIsochroneRedirectTo = MAP_ISOCHRONE_ROUTE.redirectTo;
   const originalCompareRedirectTo = MAP_ISOCHRONE_COMPARE_ROUTE.redirectTo;
 
   MAP_ROUTE.redirectTo = (params) => {
@@ -30,13 +32,25 @@ try {
     return originalMapRedirectTo.call(MAP_ROUTE, params);
   };
 
+  MAP_ISOCHRONE_ROUTE.redirectTo = (params) => {
+    redirectCalls.push({
+      route: "MAP_ISOCHRONE_ROUTE", 
+      params,
+      url: MAP_ISOCHRONE_ROUTE.buildUrl(params),
+    });
+    return originalIsochroneRedirectTo.call(MAP_ISOCHRONE_ROUTE, params);
+  };
+
   MAP_ISOCHRONE_COMPARE_ROUTE.redirectTo = (params) => {
     redirectCalls.push({
       route: "MAP_ISOCHRONE_COMPARE_ROUTE",
       params,
       url: MAP_ISOCHRONE_COMPARE_ROUTE.buildUrl(params),
     });
-    return originalCompareRedirectTo.call(MAP_ISOCHRONE_COMPARE_ROUTE, params);
+    return originalCompareRedirectTo.call(
+      MAP_ISOCHRONE_COMPARE_ROUTE,
+      params,
+    );
   };
 
   // This should trigger replaceParams on the parent route (which now matches due to trailing slash)
@@ -45,28 +59,33 @@ try {
 
   // Restore original methods
   MAP_ROUTE.redirectTo = originalMapRedirectTo;
+  MAP_ISOCHRONE_ROUTE.redirectTo = originalIsochroneRedirectTo;
   MAP_ISOCHRONE_COMPARE_ROUTE.redirectTo = originalCompareRedirectTo;
 
   return {
     // Route matching states
     map_matching: MAP_ROUTE.matching,
+    isochrone_matching: MAP_ISOCHRONE_ROUTE.matching,
     compare_matching: MAP_ISOCHRONE_COMPARE_ROUTE.matching,
-    
+
     // Track which route handled the redirect
     redirect_calls: redirectCalls,
-    
+
     // Expected: child route should handle its own redirect
     expected_redirect_route: "MAP_ISOCHRONE_COMPARE_ROUTE",
     expected_redirect_url: "/map/isochrone/compare?zoom=11",
-    
+
     // Actual result
-    actual_redirect_route: redirectCalls.length > 0 ? redirectCalls[0].route : "none",
-    actual_redirect_url: redirectCalls.length > 0 ? redirectCalls[0].url : "none",
-    
+    actual_redirect_route:
+      redirectCalls.length > 0 ? redirectCalls[0].route : "none",
+    actual_redirect_url:
+      redirectCalls.length > 0 ? redirectCalls[0].url : "none",
+
     // Test result
-    test_passes: redirectCalls.length > 0 && 
-                redirectCalls[0].route === "MAP_ISOCHRONE_COMPARE_ROUTE" &&
-                redirectCalls[0].url.includes("/map/isochrone/compare?zoom=11"),
+    test_passes:
+      redirectCalls.length > 0 &&
+      redirectCalls[0].route === "MAP_ISOCHRONE_COMPARE_ROUTE" &&
+      redirectCalls[0].url.includes("/map/isochrone/compare?zoom=11"),
   };
 } finally {
   clearAllRoutes();
@@ -77,21 +96,22 @@ try {
 ```js
 {
   "map_matching": true,
+  "isochrone_matching": false,
   "compare_matching": true,
   "redirect_calls": [
     {
-      "route": "MAP_ROUTE",
+      "route": "MAP_ISOCHRONE_COMPARE_ROUTE",
       "params": {
         "zoom": 11
       },
-      "url": "http://127.0.0.1/map?zoom=11"
+      "url": "http://127.0.0.1/map/isochrone/compare?zoom=11"
     }
   ],
   "expected_redirect_route": "MAP_ISOCHRONE_COMPARE_ROUTE",
   "expected_redirect_url": "/map/isochrone/compare?zoom=11",
-  "actual_redirect_route": "MAP_ROUTE",
-  "actual_redirect_url": "http://127.0.0.1/map?zoom=11",
-  "test_passes": false
+  "actual_redirect_route": "MAP_ISOCHRONE_COMPARE_ROUTE",
+  "actual_redirect_url": "http://127.0.0.1/map/isochrone/compare?zoom=11",
+  "test_passes": true
 }
 ```
 
