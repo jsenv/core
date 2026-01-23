@@ -92,6 +92,7 @@ try {
   },
   "scenario2_navigate_to_home_root": {
     "description": "After navigating to root /",
+    "zone_signal": "foo",
     "home_route_matches": true,
     "map_route_matches": false,
     "current_url": "not available"
@@ -103,7 +104,7 @@ try {
     "map_route_matches": true,
     "current_url": "not available"
   },
-  "signal_preserved_across_families": false,
+  "signal_preserved_across_families": true,
   "signal_updates_on_return": true,
   "routes_match_correctly": [
     true,

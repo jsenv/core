@@ -27,9 +27,15 @@ const isParentRoute = (parentPattern, childPattern) => {
   const parentPath = normalizePath(parentPattern);
   const childPath = normalizePath(childPattern);
 
-  // Parent route is a parent if child path starts with parent path
+  // Special case: root route "/" should never clear signals from other routes
+  // The root route is conceptually different from all other app sections
+  if (parentPath === "/") {
+    return false;
+  }
+
+  // Parent route is a parent if child path starts with parent path + "/"
   // and child has additional segments
-  return childPath.startsWith(parentPath) && childPath !== parentPath;
+  return childPath.startsWith(`${parentPath}/`) && childPath !== parentPath;
 };
 
 // Controls what happens to actions when their route stops matching:
