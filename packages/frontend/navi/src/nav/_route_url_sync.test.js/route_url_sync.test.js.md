@@ -7,6 +7,7 @@
 - [parameterized route conflict with shared signals](parameterized_route_conflict_with_shared_signals/parameterized_route_conflict_with_shared_signals.md)
 - [signal should be cleared when route stops matching](signal_should_be_cleared_when_route_stops_matching/signal_should_be_cleared_when_route_stops_matching.md)
 - [signal preservation vs clearing behavior](signal_preservation_vs_clearing_behavior/signal_preservation_vs_clearing_behavior.md)
+- [signals preserved when navigating between different route families](signals_preserved_when_navigating_between_different_route_families/signals_preserved_when_navigating_between_different_route_families.md)
 
 ---
 

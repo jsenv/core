@@ -621,4 +621,84 @@ await snapshotTests(import.meta.url, ({ test }) => {
       globalSignalRegistry.clear();
     }
   });
+
+  test("signals preserved when navigating between different route families", () => {
+    try {
+      const zoneSignal = stateSignal("foo", {
+        id: "zone",
+        type: "string",
+      });
+
+      // Create routes from different families (different tree roots)
+      const { HOME_ROUTE, OTHER_ROUTE } = setupRoutes({
+        HOME_ROUTE: `/home`, // Home page - different family
+        OTHER_ROUTE: `/other/:zone=${zoneSignal}`, // Other page with zone parameter
+      });
+
+      // Start on the other route with a zone value: /other/foo
+      updateRoutes(`${baseUrl}/other/foo`);
+
+      const scenario1 = {
+        description: "Initial state on /other/foo",
+        zone_signal: zoneSignal.value,
+        home_route_matches: HOME_ROUTE.matching,
+        other_route_matches: OTHER_ROUTE.matching,
+        current_url: globalThis.location?.href || "not available",
+      };
+
+      // Navigate to home page (different route family)
+      updateRoutes(`${baseUrl}/home`);
+
+      const scenario2 = {
+        description: "After navigating to /home",
+        zone_signal: zoneSignal.value,
+        home_route_matches: HOME_ROUTE.matching,
+        other_route_matches: OTHER_ROUTE.matching,
+        current_url: globalThis.location?.href || "not available",
+      };
+
+      // Navigate back to other route to verify signal can be used
+      updateRoutes(`${baseUrl}/other/bar`);
+
+      const scenario3 = {
+        description: "Navigate back to /other with new value",
+        zone_signal: zoneSignal.value,
+        home_route_matches: HOME_ROUTE.matching,
+        other_route_matches: OTHER_ROUTE.matching,
+        current_url: globalThis.location?.href || "not available",
+      };
+
+      return {
+        scenario1_initial_other_route: scenario1,
+        scenario2_navigate_to_home: scenario2,
+        scenario3_back_to_other_with_new_value: scenario3,
+
+        // Key test: signal should be preserved when moving between different route families
+        // This is different from parent-child navigation where signals are cleared
+        signal_preserved_across_families:
+          scenario2.zone_signal === "foo", // Should still be "foo" from initial visit
+        signal_updates_on_return: scenario3.zone_signal === "bar", // Should update to new value
+
+        // Route matching verification
+        routes_match_correctly: [
+          scenario1.other_route_matches, // true - on /other/foo
+          scenario2.home_route_matches, // true - on /home
+          scenario3.other_route_matches, // true - on /other/bar
+        ],
+
+        // Explanation of behavior:
+        explanation: {
+          why_preserved:
+            "/home and /other are different route families (different trees)",
+          why_different_from_parent_child:
+            "Unlike /map -> /map/isochrone (parent-child), /other -> /home are separate trees",
+          user_benefit:
+            "Preserves user preferences when switching between unrelated sections",
+        },
+      };
+    } finally {
+      clearAllRoutes();
+      globalSignalRegistry.clear();
+    }
+  });
 });

@@ -11,7 +11,7 @@ try {
   panelSignal.value = "isochrone";
 
   // Use a route pattern that can handle the panel parameter
-  const { MAP_PANEL_ROUTE, HOME_ROUTE } = setupRoutes({
+  const { MAP_PANEL_ROUTE } = setupRoutes({
     MAP_PANEL_ROUTE: `/map/:panel={navi_state_signal:preservationTestPanel}`,
     HOME_ROUTE: `/home`,
   });
