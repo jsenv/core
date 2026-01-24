@@ -65,7 +65,7 @@ try {
 {
   "admin_no_params_should_find_settings_with_general_tab": "http://127.0.0.1/admin",
   "admin_explicit_settings": "http://127.0.0.1/admin/settings/general",
-  "admin_explicit_users": "http://127.0.0.1/admin/settings/general?section=users",
+  "admin_explicit_users": "http://127.0.0.1/admin/analytics?tab=overview&section=users",
   "settings_should_include_general_tab": "http://127.0.0.1/admin/settings",
   "settings_with_security_tab": "http://127.0.0.1/admin/settings/security",
   "settings_with_section_toto_and_tab": "http://127.0.0.1/admin/settings/advanced?section=toto",

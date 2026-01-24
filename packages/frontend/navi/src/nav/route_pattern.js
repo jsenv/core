@@ -196,11 +196,6 @@ export const createRoutePattern = (pattern) => {
     // 1. This route's parameters are all defaults (would be omitted)
     // 2. A child route has non-default parameters that should be included
 
-    // DEEPEST URL GENERATION: Only activate when NO explicit parameters provided
-    // This prevents overriding explicit user intentions with signal-based "smart" routing
-    // We need to distinguish between user-provided params and signal-derived params
-    let hasUserProvidedParams = false;
-
     // Check if provided params contain anything beyond what signals would provide
     // This includes signals from current route AND child routes
     const signalDerivedParams = {};
@@ -236,38 +231,12 @@ export const createRoutePattern = (pattern) => {
       }
     }
 
-    // Check if original params (before resolution) contains anything that CONFLICTS with signals
-    // Allow user params to coexist with child signal detection
-    // Only set hasUserProvidedParams=true if user explicitly overrides a signal value
-    for (const [key, value] of Object.entries(params)) {
-      const signalValue = signalDerivedParams[key];
-
-      // If signal has a value and user provides a DIFFERENT value, that's a conflict
-      if (signalValue !== undefined && signalValue !== value) {
-        hasUserProvidedParams = true;
-        break;
-      }
-
-      // If user provides a parameter that matches a signal from the CURRENT pattern
-      // (not child patterns), allow it to coexist with child signal detection
-      const isCurrentPatternSignal = connections.some(
-        (conn) => conn.paramName === key,
-      );
-      if (isCurrentPatternSignal && signalValue === undefined) {
-        // User is providing a parameter for current pattern signal - allow child detection
-        continue;
-      }
-
-      // If user provides extra parameters not covered by any signals, allow child detection too
-      // This enables cases like buildUrl({walk: true}) to still find walkMinuteSignal from child
-    }
-
     // ROOT ROUTE PROTECTION: Never apply deepest URL generation to root route "/"
     // Users must always be able to navigate to home page regardless of app state
     const isRootRoute = pattern === "/";
 
-    if (!hasUserProvidedParams && !isRootRoute && childPatterns.length) {
-      // Try to find the most specific child pattern that has active signals
+    if (!isRootRoute && childPatterns.length) {
+      // Try to find the most specific child pattern that has active signals OR matches provided params
       for (const childPattern of childPatterns) {
         const childPatternData = getPatternData(childPattern);
         if (!childPatternData) continue;
@@ -279,44 +248,73 @@ export const createRoutePattern = (pattern) => {
         // Include parent signal values for child pattern matching
         // But first check if they're compatible with the child pattern
         let parentSignalsCompatibleWithChild = true;
-        for (const parentConnection of connections) {
-          const { paramName, signal, options } = parentConnection;
-          // Only include non-default parent signal values
-          if (
-            signal?.value !== undefined &&
-            signal.value !== options.defaultValue
-          ) {
-            // Check if child pattern has conflicting literal segments for this parameter
-            const childParsedPattern = childPatternData.parsedPattern;
 
-            // Check if parent signal value matches a literal segment in child pattern
-            const matchesChildLiteral = childParsedPattern.segments.some(
-              (segment) =>
-                segment.type === "literal" && segment.value === signal.value,
-            );
+        // Check both parent signals AND user-provided params for child route matching
+        const paramsToCheck = [
+          ...connections,
+          ...Object.entries(params).map(([key, value]) => ({
+            paramName: key,
+            userValue: value,
+            isUserProvided: true,
+          })),
+        ];
 
-            // If parent signal matches a literal in child, don't add as parameter
-            // (it's already represented in the child URL path)
-            if (matchesChildLiteral) {
-              // Compatible - signal value matches child literal, no need to add param
+        for (const item of paramsToCheck) {
+          let paramName;
+          let paramValue;
+
+          if (item.isUserProvided) {
+            // User-provided parameter
+            paramName = item.paramName;
+            paramValue = item.userValue;
+          } else {
+            // Parent signal connection
+            const { paramName: name, signal, options } = item;
+            paramName = name;
+            // Only include non-default parent signal values
+            if (
+              signal?.value === undefined ||
+              signal.value === options.defaultValue
+            ) {
               continue;
             }
+            paramValue = signal.value;
+          }
 
-            // For section parameter specifically, check if child has literal "settings"
-            // but parent signal has different value (incompatible case)
-            if (paramName === "section" && signal.value !== "settings") {
-              const hasSettingsLiteral = childParsedPattern.segments.some(
-                (segment) =>
-                  segment.type === "literal" && segment.value === "settings",
-              );
-              if (hasSettingsLiteral) {
-                parentSignalsCompatibleWithChild = false;
-                break;
-              }
+          // Check if child pattern has conflicting literal segments for this parameter
+          const childParsedPattern = childPatternData.parsedPattern;
+
+          // Check if parameter value matches a literal segment in child pattern
+          const matchesChildLiteral = childParsedPattern.segments.some(
+            (segment) =>
+              segment.type === "literal" && segment.value === paramValue,
+          );
+
+          // If parameter matches a literal in child, this suggests child route compatibility
+          if (matchesChildLiteral) {
+            // Compatible - parameter value matches child literal
+            if (!item.isUserProvided) {
+              childParams[paramName] = paramValue;
             }
+            continue;
+          }
 
-            // Only add parent signal as parameter if it doesn't match child literals
-            childParams[paramName] = signal.value;
+          // For section parameter specifically, check if child has literal "settings"
+          // but parameter has different value (incompatible case)
+          if (paramName === "section" && paramValue !== "settings") {
+            const hasSettingsLiteral = childParsedPattern.segments.some(
+              (segment) =>
+                segment.type === "literal" && segment.value === "settings",
+            );
+            if (hasSettingsLiteral) {
+              parentSignalsCompatibleWithChild = false;
+              break;
+            }
+          }
+
+          // Only add as parameter if it doesn't match child literals and is from signal
+          if (!matchesChildLiteral && !item.isUserProvided) {
+            childParams[paramName] = paramValue;
           }
         }
 
@@ -338,8 +336,8 @@ export const createRoutePattern = (pattern) => {
           }
         }
 
-        // Merge user-provided params with child params (user params take precedence)
-        const mergedChildParams = { ...childParams, ...params };
+        // First, merge user-provided params with child params for child route detection
+        const initialMergedParams = { ...childParams, ...params };
 
         // Check if child pattern can be fully satisfied (no missing required params)
         const childPatternObj = createRoutePattern(childPattern);
@@ -352,7 +350,7 @@ export const createRoutePattern = (pattern) => {
             if (segment.type === "param") {
               return (
                 segment.optional ||
-                mergedChildParams[segment.name] !== undefined
+                initialMergedParams[segment.name] !== undefined
               );
             }
             return true;
@@ -366,8 +364,51 @@ export const createRoutePattern = (pattern) => {
         // 1. Child has active non-default parameters, OR
         // 2. User provided params AND child can be built completely
         if (hasActiveParams || (hasProvidedParams && canBuildChildCompletely)) {
+          // NOW filter params after deciding to use the child route
+          // This allows child route detection to work with default values
+          // Start with child signal values, then override with user params
+          const baseParams = { ...childParams };
+
+          // Apply user params with filtering logic
+          for (const [paramName, userValue] of Object.entries(params)) {
+            // Check if this param corresponds to a child signal with a default value
+            const childConnection = childPatternData.connections.find(
+              (conn) => conn.paramName === paramName,
+            );
+
+            if (childConnection) {
+              const { options } = childConnection;
+              const defaultValue = options.defaultValue;
+
+              // User param overrides signal value
+              // Only include if it's NOT the signal's default value (omit redundant defaults)
+              if (userValue !== defaultValue) {
+                baseParams[paramName] = userValue;
+              } else {
+                // User provided the default value - remove signal value too (complete omission)
+                delete baseParams[paramName];
+              }
+            } else {
+              // Check if this param corresponds to a literal segment in the child pattern
+              // E.g., don't pass "section=settings" to child "/admin/settings" as it's already in the path
+              const isConsumedByChildPath =
+                childPatternData.parsedPattern.segments.some(
+                  (segment) =>
+                    segment.type === "literal" && segment.value === userValue,
+                );
+
+              if (!isConsumedByChildPath) {
+                // Not consumed by child path, keep it as query param
+                baseParams[paramName] = userValue;
+              }
+              // If consumed by path, omit it (don't add as query param)
+            }
+          }
+
+          const finalMergedParams = baseParams;
+
           // Use buildUrl (not buildMostPreciseUrl) to avoid infinite recursion
-          const childUrl = childPatternObj.buildUrl(mergedChildParams);
+          const childUrl = childPatternObj.buildUrl(finalMergedParams);
           if (childUrl && !childUrl.includes(":")) {
             // Ensure no missing params like ':postId'
             return childUrl;
