@@ -281,7 +281,11 @@ await snapshotTests(import.meta.url, ({ test }) => {
 
         // Test section route behavior
         section_with_default: ADMIN_ROUTE.buildUrl({
-          section: "settings", // Should be omitted as default → "/admin"
+          section: "settings",
+        }),
+        section_with_default_and_tab_default: ADMIN_ROUTE.buildUrl({
+          section: "settings",
+          tab: "general",
         }),
 
         section_with_non_default: ADMIN_ROUTE.buildUrl({
@@ -599,6 +603,178 @@ await snapshotTests(import.meta.url, ({ test }) => {
         map_isochrone_time_walk_url_with_zoom: isochroneTimeWalkRoute,
         map_isochrone_time_walk_url_after_change:
           isochroneTimeWalkRouteAfterChange,
+      };
+    } finally {
+      clearAllRoutes();
+      globalSignalRegistry.clear();
+    }
+  });
+
+  test("buildMostPreciseUrl should find child signal values even with provided params", () => {
+    try {
+      const walkEnabledSignal = stateSignal(false, {
+        id: "walkEnabled",
+        type: "boolean",
+      });
+      const walkMinuteSignal = stateSignal(30, {
+        id: "walkMinute",
+        type: "number",
+      });
+
+      // Set initial values: walkEnabled=false, walkMinute=40
+      walkEnabledSignal.value = false;
+      walkMinuteSignal.value = 40;
+
+      const { ISOCHRONE_ROUTE } = setupRoutes({
+        ISOCHRONE_ROUTE: `/map/isochrone/:tab?`,
+        ISOCHRONE_COMPARE_ROUTE: `/map/isochrone/compare?walk=${walkEnabledSignal}&walk_minute=${walkMinuteSignal}`,
+      });
+
+      // Test buildUrl directly to see if child signals are found
+      const urlWithWalkTrue = ISOCHRONE_ROUTE.buildUrl({ walk: true });
+      const urlWithoutParams = ISOCHRONE_ROUTE.buildUrl();
+      const urlWithTabAndWalk = ISOCHRONE_ROUTE.buildUrl({
+        tab: "settings",
+        walk: true,
+      });
+
+      return {
+        signal_values: {
+          walk_enabled: walkEnabledSignal.value, // false
+          walk_minute: walkMinuteSignal.value, // 40
+        },
+
+        url_tests: {
+          // Should find walkMinuteSignal=40 from child pattern even with walk=true provided
+          url_with_walk_true: urlWithWalkTrue,
+          // Should generate deepest URL using all signal values
+          url_without_params: urlWithoutParams,
+          // Should combine provided params with child signals
+          url_with_tab_and_walk: urlWithTabAndWalk,
+        },
+
+        expected_behavior: {
+          walk_true_should_contain: "walk_minute=40",
+          should_choose_compare_route:
+            "because it has both walk and walk_minute signals",
+          expected_url_pattern:
+            "/map/isochrone/compare?walk=true&walk_minute=40",
+        },
+      };
+    } finally {
+      clearAllRoutes();
+      globalSignalRegistry.clear();
+    }
+  });
+
+  test("search param order should be predictable", () => {
+    try {
+      const aSignal = stateSignal("a-value", { id: "a" });
+      const bSignal = stateSignal("b-value", { id: "b" });
+      const cSignal = stateSignal("c-value", { id: "c" });
+
+      // Pattern defines order: a, b, c
+      const { ROUTE } = setupRoutes({
+        ROUTE: `/test?a=${aSignal}&b=${bSignal}&c=${cSignal}`,
+      });
+
+      return {
+        pattern_order: "Pattern defines: a, b, c",
+
+        // Test 1: No provided params - should follow pattern order
+        no_provided_params: ROUTE.buildUrl(),
+
+        // Test 2: Provided params in same order as pattern
+        provided_same_order: ROUTE.buildUrl({
+          a: "new-a",
+          b: "new-b",
+          c: "new-c",
+        }),
+
+        // Test 3: Provided params in different order - should still follow pattern order
+        provided_different_order: ROUTE.buildUrl({
+          c: "new-c",
+          a: "new-a",
+          b: "new-b",
+        }),
+
+        // Test 4: Partial provided params - pattern params first, then extras
+        partial_provided: ROUTE.buildUrl({ b: "new-b" }),
+
+        // Test 5: Extra params not in pattern - should come after pattern params
+        extra_params: ROUTE.buildUrl({
+          d: "extra-d",
+          b: "new-b",
+          e: "extra-e",
+        }),
+
+        // Test 6: Mixed case - pattern params + extras, provided in random order
+        mixed_order: ROUTE.buildUrl({
+          e: "extra-e",
+          c: "new-c",
+          d: "extra-d",
+          a: "new-a",
+        }),
+
+        expected_behavior: {
+          rule1:
+            "Pattern params should always come first in their pattern order",
+          rule2: "Extra params should come after pattern params",
+          rule3:
+            "Order of provided params object should not affect URL param order",
+          rule4:
+            "Extra params order should be consistent (alphabetical or insertion order)",
+        },
+      };
+    } finally {
+      clearAllRoutes();
+      globalSignalRegistry.clear();
+    }
+  });
+
+  test("search param order with complex patterns", () => {
+    try {
+      const filterSignal = stateSignal("active", { id: "filter" });
+      const sortSignal = stateSignal("name", { id: "sort" });
+      const pageSignal = stateSignal(1, { id: "page", type: "number" });
+
+      const { SEARCH_ROUTE, SEARCH_RESULTS_ROUTE } = setupRoutes({
+        // Parent pattern with some query params
+        SEARCH_ROUTE: `/search?filter=${filterSignal}&sort=${sortSignal}`,
+        // Child pattern with additional query params
+        SEARCH_RESULTS_ROUTE: `/search/results?page=${pageSignal}&limit=20`,
+      });
+
+      return {
+        patterns: {
+          search: "?filter&sort",
+          results: "?page&limit",
+        },
+
+        // Test buildUrl with different param combinations
+        search_no_params: SEARCH_ROUTE.buildUrl(),
+        search_partial_params: SEARCH_ROUTE.buildUrl({ sort: "date" }),
+        search_with_extras: SEARCH_ROUTE.buildUrl({
+          sort: "date",
+          extra: "value",
+          filter: "inactive",
+          another: "param",
+        }),
+
+        results_no_params: SEARCH_RESULTS_ROUTE.buildUrl(),
+        results_with_extras: SEARCH_RESULTS_ROUTE.buildUrl({
+          page: 2,
+          custom: "param",
+          limit: 50,
+          filter: "all", // This should be extra since it's not in results pattern
+        }),
+
+        expected_analysis: {
+          search_param_order: "filter, sort, then extras alphabetically",
+          results_param_order: "page, limit, then extras alphabetically",
+          inheritance_note:
+            "Child routes don't inherit parent query param order",
+        },
       };
     } finally {
       clearAllRoutes();

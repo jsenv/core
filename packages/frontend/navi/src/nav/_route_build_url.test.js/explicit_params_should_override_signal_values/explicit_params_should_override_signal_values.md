@@ -33,7 +33,11 @@ try {
 
     // Test section route behavior
     section_with_default: ADMIN_ROUTE.buildUrl({
-      section: "settings", // Should be omitted as default → "/admin"
+      section: "settings",
+    }),
+    section_with_default_and_tab_default: ADMIN_ROUTE.buildUrl({
+      section: "settings",
+      tab: "general",
     }),
 
     section_with_non_default: ADMIN_ROUTE.buildUrl({
@@ -61,8 +65,9 @@ try {
   "bug_reproduction_explicit_general": "http://127.0.0.1/admin/settings",
   "using_signal_advanced": "http://127.0.0.1/admin/settings/advanced",
   "explicit_security_override": "http://127.0.0.1/admin/settings/security",
-  "section_with_default": "http://127.0.0.1/admin",
-  "section_with_non_default": "http://127.0.0.1/admin/users",
+  "section_with_default": "http://127.0.0.1/admin/settings/advanced",
+  "section_with_default_and_tab_default": "http://127.0.0.1/admin?tab=general",
+  "section_with_non_default": "http://127.0.0.1/admin/settings/advanced?section=users",
   "current_signal_values": {
     "section": "settings",
     "tab": "advanced"

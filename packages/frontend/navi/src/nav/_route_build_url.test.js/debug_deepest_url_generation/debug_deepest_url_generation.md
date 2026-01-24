@@ -1,4 +1,4 @@
-# [debug deepest url generation](../../route_build_url.test.js#L347)
+# [debug deepest url generation](../../route_build_url.test.js#L351)
 
 ```js
 try {
@@ -33,7 +33,7 @@ try {
 
 ```js
 {
-  "admin_with_analytics_section": "http://127.0.0.1/admin/analytics",
+  "admin_with_analytics_section": "http://127.0.0.1/admin/analytics?tab=details",
   "admin_with_no_params": "http://127.0.0.1/admin/analytics?tab=details",
   "analytics_direct": "http://127.0.0.1/admin/analytics?tab=details",
   "tab_signal": "details"

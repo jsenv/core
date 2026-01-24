@@ -12,6 +12,9 @@
 - [url building with extra params](url_building_with_extra_params/url_building_with_extra_params.md)
 - [url building with geographic coordinates (city map scenario)](url_building_with_geographic_coordinates_(city_map_scenario)/url_building_with_geographic_coordinates_(city_map_scenario).md)
 - [complex url building with multiple signals](complex_url_building_with_multiple_signals/complex_url_building_with_multiple_signals.md)
+- [buildMostPreciseUrl should find child signal values even with provided params](buildmostpreciseurl_should_find_child_signal_values_even_with_provided_params/buildmostpreciseurl_should_find_child_signal_values_even_with_provided_params.md)
+- [search param order should be predictable](search_param_order_should_be_predictable/search_param_order_should_be_predictable.md)
+- [search param order with complex patterns](search_param_order_with_complex_patterns/search_param_order_with_complex_patterns.md)
 
 ---
 

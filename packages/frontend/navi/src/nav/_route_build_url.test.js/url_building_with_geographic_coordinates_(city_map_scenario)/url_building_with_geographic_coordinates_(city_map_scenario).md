@@ -1,4 +1,4 @@
-# [url building with geographic coordinates (city map scenario)](../../route_build_url.test.js#L490)
+# [url building with geographic coordinates (city map scenario)](../../route_build_url.test.js#L494)
 
 ```js
 try {
@@ -60,7 +60,7 @@ try {
   "map_with_explicit_city": "http://127.0.0.1/map?city=London",
   "map_with_all_explicit_params": "http://127.0.0.1/map?city=Tokyo&lon=139.6917&lat=35.6895",
   "map_with_explicit_coordinates": "http://127.0.0.1/map?lon=-0.1276&lat=51.5074",
-  "map_with_extra_params": "http://127.0.0.1/map?city=Sydney&zoom=10&layer=satellite"
+  "map_with_extra_params": "http://127.0.0.1/map?city=Sydney&layer=satellite&zoom=10"
 }
 ```
 

@@ -236,23 +236,30 @@ export const createRoutePattern = (pattern) => {
       }
     }
 
-    // Check if original params (before resolution) contains anything that's not from signals
-    // This preserves user intent detection for explicit parameters
+    // Check if original params (before resolution) contains anything that CONFLICTS with signals
+    // Allow user params to coexist with child signal detection
+    // Only set hasUserProvidedParams=true if user explicitly overrides a signal value
     for (const [key, value] of Object.entries(params)) {
-      if (signalDerivedParams[key] !== value) {
-        hasUserProvidedParams = true;
-        break;
-      }
-    }
+      const signalValue = signalDerivedParams[key];
 
-    // Also check if original params has extra keys beyond what signals provide
-    const providedKeys = new Set(Object.keys(params));
-    const signalKeys = new Set(Object.keys(signalDerivedParams));
-    for (const key of providedKeys) {
-      if (!signalKeys.has(key)) {
+      // If signal has a value and user provides a DIFFERENT value, that's a conflict
+      if (signalValue !== undefined && signalValue !== value) {
         hasUserProvidedParams = true;
         break;
       }
+
+      // If user provides a parameter that matches a signal from the CURRENT pattern
+      // (not child patterns), allow it to coexist with child signal detection
+      const isCurrentPatternSignal = connections.some(
+        (conn) => conn.paramName === key,
+      );
+      if (isCurrentPatternSignal && signalValue === undefined) {
+        // User is providing a parameter for current pattern signal - allow child detection
+        continue;
+      }
+
+      // If user provides extra parameters not covered by any signals, allow child detection too
+      // This enables cases like buildUrl({walk: true}) to still find walkMinuteSignal from child
     }
 
     // ROOT ROUTE PROTECTION: Never apply deepest URL generation to root route "/"
@@ -331,12 +338,38 @@ export const createRoutePattern = (pattern) => {
           }
         }
 
-        // If child has non-default parameters, use the child route
-        if (hasActiveParams) {
-          const childPatternObj = createRoutePattern(childPattern);
+        // Merge user-provided params with child params (user params take precedence)
+        const mergedChildParams = { ...childParams, ...params };
+
+        // Check if child pattern can be fully satisfied (no missing required params)
+        const childPatternObj = createRoutePattern(childPattern);
+        const childParsedPattern = childPatternObj.pattern;
+
+        // Check if all required path parameters have values
+        const canBuildChildCompletely = childParsedPattern.segments.every(
+          (segment) => {
+            if (segment.type === "literal") return true;
+            if (segment.type === "param") {
+              return (
+                segment.optional ||
+                mergedChildParams[segment.name] !== undefined
+              );
+            }
+            return true;
+          },
+        );
+
+        // Check if user provided any params
+        const hasProvidedParams = Object.keys(params).length > 0;
+
+        // Only use child route if:
+        // 1. Child has active non-default parameters, OR
+        // 2. User provided params AND child can be built completely
+        if (hasActiveParams || (hasProvidedParams && canBuildChildCompletely)) {
           // Use buildUrl (not buildMostPreciseUrl) to avoid infinite recursion
-          const childUrl = childPatternObj.buildUrl(childParams);
-          if (childUrl) {
+          const childUrl = childPatternObj.buildUrl(mergedChildParams);
+          if (childUrl && !childUrl.includes(":")) {
+            // Ensure no missing params like ':postId'
             return childUrl;
           }
         }
@@ -837,14 +870,32 @@ const buildUrlFromPattern = (parsedPattern, params = {}) => {
   }
 
   // Add remaining parameters as additional query parameters (excluding path and pattern query params)
+  // Sort extra params alphabetically for consistent order
+  const extraParams = [];
   for (const [key, value] of Object.entries(params)) {
     if (
       !pathParamNames.has(key) &&
       !queryParamNames.has(key) &&
       value !== undefined
     ) {
-      searchParams.set(key, value);
+      // Check if this parameter is redundant with literal segments in the path
+      // E.g., don't add "section=analytics" if path is already "/admin/analytics"
+      const isRedundantWithPath = parsedPattern.segments.some(
+        (segment) => segment.type === "literal" && segment.value === value,
+      );
+
+      if (!isRedundantWithPath) {
+        extraParams.push([key, value]);
+      }
     }
+  }
+
+  // Sort extra params alphabetically for consistent order
+  extraParams.sort(([a], [b]) => a.localeCompare(b));
+
+  // Add sorted extra params to searchParams
+  for (const [key, value] of extraParams) {
+    searchParams.set(key, value);
   }
 
   const search = searchParams.toString();
