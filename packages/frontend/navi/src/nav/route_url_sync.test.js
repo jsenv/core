@@ -713,13 +713,16 @@ await snapshotTests(import.meta.url, ({ test }) => {
         id: "minute",
         type: "number",
       });
-      const zoneSignal = stateSignal("paris");
+      const zoneSignal = stateSignal("paris", {
+        id: "zone",
+        type: "string",
+      });
       zoneSignal.value = "nice";
       const { MAP_ROUTE, ISOCHRONE_ROUTE } = setupRoutes({
         MAP_ROUTE: `/map/?zone=${zoneSignal}`,
         ISOCHRONE_ROUTE: `/map/isochrone?enabled=${enabledSignal}&minute=${minuteSignal}`,
       });
-      updateRoutes(`${baseUrl}/map/isochrone`);
+      updateRoutes(`${baseUrl}/map/isochrone?zone=nice`);
 
       const scenario1 = {
         description: "Initial state on isochrone route with defaults",

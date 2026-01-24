@@ -10,13 +10,16 @@ try {
     id: "minute",
     type: "number",
   });
-  const zoneSignal = stateSignal("paris");
+  const zoneSignal = stateSignal("paris", {
+    id: "zone",
+    type: "string",
+  });
   zoneSignal.value = "nice";
   const { MAP_ROUTE, ISOCHRONE_ROUTE } = setupRoutes({
     MAP_ROUTE: `/map/?zone=${zoneSignal}`,
     ISOCHRONE_ROUTE: `/map/isochrone?enabled=${enabledSignal}&minute=${minuteSignal}`,
   });
-  updateRoutes(`${baseUrl}/map/isochrone`);
+  updateRoutes(`${baseUrl}/map/isochrone?zone=nice`);
 
   const scenario1 = {
     description: "Initial state on isochrone route with defaults",
@@ -102,38 +105,38 @@ try {
     "minute_signal": 30,
     "map_route_matches": true,
     "isochrone_route_matches": true,
-    "current_url": "http://127.0.0.1/map/isochrone"
+    "current_url": "http://127.0.0.1/map/isochrone?zone=nice"
   },
   "scenario2_enabled_true": {
     "description": "After updating enabled signal to true (non-default)",
     "enabled_signal": true,
     "minute_signal": 30,
-    "current_url": "http://127.0.0.1/map/isochrone?enabled=true"
+    "current_url": "http://127.0.0.1/map/isochrone?enabled=true&zone=nice"
   },
   "scenario3_minute_45": {
     "description": "After updating minute signal to 45",
     "enabled_signal": true,
     "minute_signal": 45,
-    "current_url": "http://127.0.0.1/map/isochrone?enabled=true&minute=45"
+    "current_url": "http://127.0.0.1/map/isochrone?enabled=true&minute=45&zone=nice"
   },
   "scenario4_enabled_false": {
     "description": "After setting enabled back to false (default)",
     "enabled_signal": false,
     "minute_signal": 45,
-    "current_url": "http://127.0.0.1/map/isochrone?minute=45"
+    "current_url": "http://127.0.0.1/map/isochrone?minute=45&zone=nice"
   },
   "scenario5_minute_60": {
     "description": "After updating minute signal to 60",
     "enabled_signal": false,
     "minute_signal": 60,
-    "current_url": "http://127.0.0.1/map/isochrone?minute=60"
+    "current_url": "http://127.0.0.1/map/isochrone?minute=60&zone=nice"
   },
   "url_progression": [
-    "http://127.0.0.1/map/isochrone",
-    "http://127.0.0.1/map/isochrone?enabled=true",
-    "http://127.0.0.1/map/isochrone?enabled=true&minute=45",
-    "http://127.0.0.1/map/isochrone?minute=45",
-    "http://127.0.0.1/map/isochrone?minute=60"
+    "http://127.0.0.1/map/isochrone?zone=nice",
+    "http://127.0.0.1/map/isochrone?enabled=true&zone=nice",
+    "http://127.0.0.1/map/isochrone?enabled=true&minute=45&zone=nice",
+    "http://127.0.0.1/map/isochrone?minute=45&zone=nice",
+    "http://127.0.0.1/map/isochrone?minute=60&zone=nice"
   ],
   "test_focus": "Signal updates should immediately reflect in the route URL",
   "route_under_test": "/map/isochrone/ with query parameters"
