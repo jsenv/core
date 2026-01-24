@@ -46,8 +46,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
 
       return {
         // Test deepest URL generation - should find child routes when possible
-        admin_no_params_should_find_settings_with_general_tab:
-          ADMIN_ROUTE.buildUrl(),
+        admin_no_params: ADMIN_ROUTE.buildUrl(),
         admin_explicit_settings: ADMIN_ROUTE.buildUrl({
           section: "settings",
         }),

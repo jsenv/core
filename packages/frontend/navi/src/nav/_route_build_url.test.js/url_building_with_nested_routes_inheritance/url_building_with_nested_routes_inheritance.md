@@ -17,8 +17,7 @@ try {
 
   return {
     // Test deepest URL generation - should find child routes when possible
-    admin_no_params_should_find_settings_with_general_tab:
-      ADMIN_ROUTE.buildUrl(),
+    admin_no_params: ADMIN_ROUTE.buildUrl(),
     admin_explicit_settings: ADMIN_ROUTE.buildUrl({
       section: "settings",
     }),
@@ -63,7 +62,7 @@ try {
 
 ```js
 {
-  "admin_no_params_should_find_settings_with_general_tab": "http://127.0.0.1/admin",
+  "admin_no_params": "http://127.0.0.1/admin",
   "admin_explicit_settings": "http://127.0.0.1/admin/settings/general",
   "admin_explicit_users": "http://127.0.0.1/admin/users",
   "settings_no_params": "http://127.0.0.1/admin/settings",
