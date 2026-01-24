@@ -705,11 +705,11 @@ await snapshotTests(import.meta.url, ({ test }) => {
 
   test("signal updates in child route (isochrone) with parent-child relationship", () => {
     try {
-      const enabledSignal = stateSignal(false, {
+      const walkEnabledSignal = stateSignal(false, {
         id: "enabled",
         type: "boolean",
       });
-      const minuteSignal = stateSignal(30, {
+      const walkMinuteSignal = stateSignal(30, {
         id: "minute",
         type: "number",
       });
@@ -717,59 +717,69 @@ await snapshotTests(import.meta.url, ({ test }) => {
         id: "zone",
         type: "string",
       });
+      const isochroneTabSignal = stateSignal("compare", {
+        id: "isochroneTab",
+        type: "string",
+      });
+      const isochroneLongitudeSignal = stateSignal(2.3522, {
+        id: "isochroneLongitude",
+        type: "number",
+      });
+      isochroneLongitudeSignal.value = 10;
       zoneSignal.value = "nice";
       const { MAP_ROUTE, ISOCHRONE_ROUTE } = setupRoutes({
         MAP_ROUTE: `/map/?zone=${zoneSignal}`,
-        ISOCHRONE_ROUTE: `/map/isochrone?enabled=${enabledSignal}&minute=${minuteSignal}`,
+        ISOCHRONE_ROUTE: `/map/isochrone/:tab=${isochroneTabSignal}/?iso_lon=${isochroneLongitudeSignal}`,
+        ISOCHRONE_COMPARE_ROUTE: `/map/isochrone/compare?walk=${walkEnabledSignal}&walk_minute=${walkMinuteSignal}`,
       });
-      updateRoutes(`${baseUrl}/map/isochrone?zone=nice`);
+      updateRoutes(`${baseUrl}/map/isochrone/compare?zone=nice&iso_lon=10`);
 
       const scenario1 = {
         description: "Initial state on isochrone route with defaults",
-        enabled_signal: enabledSignal.value,
-        minute_signal: minuteSignal.value,
+        enabled_signal: walkEnabledSignal.value,
+        minute_signal: walkMinuteSignal.value,
         map_route_matches: MAP_ROUTE.matching,
         isochrone_route_matches: ISOCHRONE_ROUTE.matching,
         current_url: ISOCHRONE_ROUTE.url,
       };
 
       // Update enabled signal to true (non-default)
-      enabledSignal.value = true;
+      walkEnabledSignal.value = true;
 
       const scenario2 = {
         description: "After updating enabled signal to true (non-default)",
-        enabled_signal: enabledSignal.value,
-        minute_signal: minuteSignal.value,
+        enabled_signal: walkEnabledSignal.value,
+        minute_signal: walkMinuteSignal.value,
         current_url: ISOCHRONE_ROUTE.url,
       };
 
       // Update minute signal
-      minuteSignal.value = 45;
+      walkMinuteSignal.value = 45;
 
       const scenario3 = {
         description: "After updating minute signal to 45",
-        enabled_signal: enabledSignal.value,
-        minute_signal: minuteSignal.value,
+        enabled_signal: walkEnabledSignal.value,
+        minute_signal: walkMinuteSignal.value,
         current_url: ISOCHRONE_ROUTE.url,
       };
 
       // Update enabled back to false (default)
-      enabledSignal.value = false;
+      walkEnabledSignal.value = false;
 
       const scenario4 = {
         description: "After setting enabled back to false (default)",
-        enabled_signal: enabledSignal.value,
-        minute_signal: minuteSignal.value,
+        enabled_signal: walkEnabledSignal.value,
+        minute_signal: walkMinuteSignal.value,
         current_url: ISOCHRONE_ROUTE.url,
       };
 
       // Update minute signal again
-      minuteSignal.value = 60;
+      walkMinuteSignal.value = 60;
 
       const scenario5 = {
         description: "After updating minute signal to 60",
-        enabled_signal: enabledSignal.value,
-        minute_signal: minuteSignal.value,
+        enabled_signal: walkEnabledSignal.value,
+        minute_signal: walkMinuteSignal.value,
         current_url: ISOCHRONE_ROUTE.url,
       };
 

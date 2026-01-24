@@ -2,11 +2,11 @@
 
 ```js
 try {
-  const enabledSignal = stateSignal(false, {
+  const walkEnabledSignal = stateSignal(false, {
     id: "enabled",
     type: "boolean",
   });
-  const minuteSignal = stateSignal(30, {
+  const walkMinuteSignal = stateSignal(30, {
     id: "minute",
     type: "number",
   });
@@ -14,59 +14,69 @@ try {
     id: "zone",
     type: "string",
   });
+  const isochroneTabSignal = stateSignal("compare", {
+    id: "isochroneTab",
+    type: "string",
+  });
+  const isochroneLongitudeSignal = stateSignal(2.3522, {
+    id: "isochroneLongitude",
+    type: "number",
+  });
+  isochroneLongitudeSignal.value = 10;
   zoneSignal.value = "nice";
   const { MAP_ROUTE, ISOCHRONE_ROUTE } = setupRoutes({
     MAP_ROUTE: `/map/?zone=${zoneSignal}`,
-    ISOCHRONE_ROUTE: `/map/isochrone?enabled=${enabledSignal}&minute=${minuteSignal}`,
+    ISOCHRONE_ROUTE: `/map/isochrone/:tab=${isochroneTabSignal}/?iso_lon=${isochroneLongitudeSignal}`,
+    ISOCHRONE_COMPARE_ROUTE: `/map/isochrone/compare?walk=${walkEnabledSignal}&walk_minute=${walkMinuteSignal}`,
   });
-  updateRoutes(`${baseUrl}/map/isochrone?zone=nice`);
+  updateRoutes(`${baseUrl}/map/isochrone/compare?zone=nice&iso_lon=10`);
 
   const scenario1 = {
     description: "Initial state on isochrone route with defaults",
-    enabled_signal: enabledSignal.value,
-    minute_signal: minuteSignal.value,
+    enabled_signal: walkEnabledSignal.value,
+    minute_signal: walkMinuteSignal.value,
     map_route_matches: MAP_ROUTE.matching,
     isochrone_route_matches: ISOCHRONE_ROUTE.matching,
     current_url: ISOCHRONE_ROUTE.url,
   };
 
   // Update enabled signal to true (non-default)
-  enabledSignal.value = true;
+  walkEnabledSignal.value = true;
 
   const scenario2 = {
     description: "After updating enabled signal to true (non-default)",
-    enabled_signal: enabledSignal.value,
-    minute_signal: minuteSignal.value,
+    enabled_signal: walkEnabledSignal.value,
+    minute_signal: walkMinuteSignal.value,
     current_url: ISOCHRONE_ROUTE.url,
   };
 
   // Update minute signal
-  minuteSignal.value = 45;
+  walkMinuteSignal.value = 45;
 
   const scenario3 = {
     description: "After updating minute signal to 45",
-    enabled_signal: enabledSignal.value,
-    minute_signal: minuteSignal.value,
+    enabled_signal: walkEnabledSignal.value,
+    minute_signal: walkMinuteSignal.value,
     current_url: ISOCHRONE_ROUTE.url,
   };
 
   // Update enabled back to false (default)
-  enabledSignal.value = false;
+  walkEnabledSignal.value = false;
 
   const scenario4 = {
     description: "After setting enabled back to false (default)",
-    enabled_signal: enabledSignal.value,
-    minute_signal: minuteSignal.value,
+    enabled_signal: walkEnabledSignal.value,
+    minute_signal: walkMinuteSignal.value,
     current_url: ISOCHRONE_ROUTE.url,
   };
 
   // Update minute signal again
-  minuteSignal.value = 60;
+  walkMinuteSignal.value = 60;
 
   const scenario5 = {
     description: "After updating minute signal to 60",
-    enabled_signal: enabledSignal.value,
-    minute_signal: minuteSignal.value,
+    enabled_signal: walkEnabledSignal.value,
+    minute_signal: walkMinuteSignal.value,
     current_url: ISOCHRONE_ROUTE.url,
   };
 
@@ -105,38 +115,38 @@ try {
     "minute_signal": 30,
     "map_route_matches": true,
     "isochrone_route_matches": true,
-    "current_url": "http://127.0.0.1/map/isochrone?zone=nice"
+    "current_url": "http://127.0.0.1/map/isochrone?iso_lon=10&zone=nice"
   },
   "scenario2_enabled_true": {
     "description": "After updating enabled signal to true (non-default)",
     "enabled_signal": true,
     "minute_signal": 30,
-    "current_url": "http://127.0.0.1/map/isochrone?enabled=true&zone=nice"
+    "current_url": "http://127.0.0.1/map/isochrone/compare?walk=true&walk_minute=30&iso_lon=10"
   },
   "scenario3_minute_45": {
     "description": "After updating minute signal to 45",
     "enabled_signal": true,
     "minute_signal": 45,
-    "current_url": "http://127.0.0.1/map/isochrone?enabled=true&minute=45&zone=nice"
+    "current_url": "http://127.0.0.1/map/isochrone/compare?walk=true&walk_minute=45&iso_lon=10"
   },
   "scenario4_enabled_false": {
     "description": "After setting enabled back to false (default)",
     "enabled_signal": false,
     "minute_signal": 45,
-    "current_url": "http://127.0.0.1/map/isochrone?minute=45&zone=nice"
+    "current_url": "http://127.0.0.1/map/isochrone/compare?walk=false&walk_minute=45&iso_lon=10"
   },
   "scenario5_minute_60": {
     "description": "After updating minute signal to 60",
     "enabled_signal": false,
     "minute_signal": 60,
-    "current_url": "http://127.0.0.1/map/isochrone?minute=60&zone=nice"
+    "current_url": "http://127.0.0.1/map/isochrone/compare?walk=false&walk_minute=60&iso_lon=10"
   },
   "url_progression": [
-    "http://127.0.0.1/map/isochrone?zone=nice",
-    "http://127.0.0.1/map/isochrone?enabled=true&zone=nice",
-    "http://127.0.0.1/map/isochrone?enabled=true&minute=45&zone=nice",
-    "http://127.0.0.1/map/isochrone?minute=45&zone=nice",
-    "http://127.0.0.1/map/isochrone?minute=60&zone=nice"
+    "http://127.0.0.1/map/isochrone?iso_lon=10&zone=nice",
+    "http://127.0.0.1/map/isochrone/compare?walk=true&walk_minute=30&iso_lon=10",
+    "http://127.0.0.1/map/isochrone/compare?walk=true&walk_minute=45&iso_lon=10",
+    "http://127.0.0.1/map/isochrone/compare?walk=false&walk_minute=45&iso_lon=10",
+    "http://127.0.0.1/map/isochrone/compare?walk=false&walk_minute=60&iso_lon=10"
   ],
   "test_focus": "Signal updates should immediately reflect in the route URL",
   "route_under_test": "/map/isochrone/ with query parameters"
