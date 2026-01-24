@@ -202,13 +202,36 @@ export const createRoutePattern = (pattern) => {
     let hasUserProvidedParams = false;
 
     // Check if provided params contain anything beyond what signals would provide
+    // This includes signals from current route AND child routes
     const signalDerivedParams = {};
+
+    // First, collect signal-derived params from current route
     for (const { paramName, signal, options } of connections) {
       if (signal?.value !== undefined) {
         const defaultValue = options.defaultValue;
         // Only include signal value if it's not the default (same logic as above)
         if (signal.value !== defaultValue) {
           signalDerivedParams[paramName] = signal.value;
+        }
+      }
+    }
+
+    // Also collect signal-derived params from child patterns
+    // This prevents hasUserProvidedParams from being true when params come from child signals
+    const relationships = patternRelationships.get(pattern);
+    const childPatterns = relationships?.childPatterns || [];
+    for (const childPattern of childPatterns) {
+      const childPatternData = getPatternData(childPattern);
+      if (!childPatternData) continue;
+
+      for (const childConnection of childPatternData.connections) {
+        const { paramName, signal, options } = childConnection;
+        if (signal?.value !== undefined) {
+          const defaultValue = options.defaultValue;
+          // Only include signal value if it's not the default
+          if (signal.value !== defaultValue) {
+            signalDerivedParams[paramName] = signal.value;
+          }
         }
       }
     }
@@ -236,8 +259,6 @@ export const createRoutePattern = (pattern) => {
     // Users must always be able to navigate to home page regardless of app state
     const isRootRoute = pattern === "/";
 
-    const relationships = patternRelationships.get(pattern);
-    const childPatterns = relationships?.childPatterns || [];
     if (!hasUserProvidedParams && !isRootRoute && childPatterns.length) {
       // Try to find the most specific child pattern that has active signals
       for (const childPattern of childPatterns) {

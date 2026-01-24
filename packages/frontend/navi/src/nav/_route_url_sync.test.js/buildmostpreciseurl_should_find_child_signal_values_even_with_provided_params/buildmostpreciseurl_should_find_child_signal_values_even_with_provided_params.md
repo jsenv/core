@@ -3,12 +3,12 @@
 ```js
 try {
   const walkEnabledSignal = stateSignal(false, {
-    id: "walkEnabled", 
+    id: "walkEnabled",
     type: "boolean",
   });
   const walkMinuteSignal = stateSignal(30, {
     id: "walkMinute",
-    type: "number", 
+    type: "number",
   });
 
   // Set initial values: walkEnabled=false, walkMinute=40
@@ -26,7 +26,7 @@ try {
   const initialState = {
     description: "On /map/isochrone with walk_minute=40",
     walk_enabled: walkEnabledSignal.value, // false
-    walk_minute: walkMinuteSignal.value,   // 40
+    walk_minute: walkMinuteSignal.value, // 40
     isochrone_matches: ISOCHRONE_ROUTE.matching,
     compare_matches: ISOCHRONE_COMPARE_ROUTE.matching,
     current_url: ISOCHRONE_ROUTE.url,
@@ -41,9 +41,10 @@ try {
   // from child patterns, losing the walk_minute=40 value
 
   const afterSignalUpdate = {
-    description: "After walkEnabledSignal=true, should preserve walk_minute=40",
+    description:
+      "After walkEnabledSignal=true, should preserve walk_minute=40",
     walk_enabled: walkEnabledSignal.value, // true
-    walk_minute: walkMinuteSignal.value,   // still 40
+    walk_minute: walkMinuteSignal.value, // still 40
     current_url: ISOCHRONE_ROUTE.url,
   };
 
@@ -59,7 +60,8 @@ try {
     bug_demonstration: {
       direct_build_url: urlWithWalkTrue,
       expected_url_should_contain: "walk_minute=40",
-      bug_description: "buildUrl with providedParams={walk:true} should still find walkMinuteSignal=40 from child patterns",
+      bug_description:
+        "buildUrl with providedParams={walk:true} should still find walkMinuteSignal=40 from child patterns",
     },
 
     // Expected behavior: should generate /map/isochrone/compare?walk=true&walk_minute=40
@@ -90,7 +92,7 @@ try {
     "current_url": "http://127.0.0.1/map/isochrone/compare?walk=true&walk_minute=40"
   },
   "bug_demonstration": {
-    "direct_build_url": "http://127.0.0.1/map/isochrone?walk=true",
+    "direct_build_url": "http://127.0.0.1/map/isochrone/compare?walk=true&walk_minute=40",
     "expected_url_should_contain": "walk_minute=40",
     "bug_description": "buildUrl with providedParams={walk:true} should still find walkMinuteSignal=40 from child patterns"
   },
