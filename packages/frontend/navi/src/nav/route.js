@@ -267,6 +267,7 @@ const registerRoute = (routePattern) => {
     relativeUrl: null,
     url: null,
     action: null,
+    specificity: routePattern.specificity, // Expose pattern specificity publicly
     cleanup,
     toString: () => {
       return `route "${cleanPattern}"`;
@@ -449,19 +450,22 @@ const registerRoute = (routePattern) => {
       }
     }
 
-    // Find the most specific route (the one with the longest pattern path)
+    // Find the most specific route using pre-calculated specificity scores
     let mostSpecificRoute = route;
-    let maxSegments = route.pattern.split("/").filter((s) => s !== "").length;
+    const routePrivateProperties = getRoutePrivateProperties(route);
+    let maxSpecificity = routePrivateProperties?.routePattern?.specificity || 0;
 
     for (const matchingRoute of allMatchingRoutes) {
       if (matchingRoute === route) {
         continue;
       }
-      const segments = matchingRoute.pattern
-        .split("/")
-        .filter((s) => s !== "").length;
-      if (segments > maxSegments) {
-        maxSegments = segments;
+      const matchingRoutePrivateProperties =
+        getRoutePrivateProperties(matchingRoute);
+      const specificity =
+        matchingRoutePrivateProperties?.routePattern?.specificity || 0;
+
+      if (specificity > maxSpecificity) {
+        maxSpecificity = specificity;
         mostSpecificRoute = matchingRoute;
       }
     }

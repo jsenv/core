@@ -8,6 +8,7 @@
 - [signal should be cleared when route stops matching](signal_should_be_cleared_when_route_stops_matching/signal_should_be_cleared_when_route_stops_matching.md)
 - [signal preservation vs clearing behavior](signal_preservation_vs_clearing_behavior/signal_preservation_vs_clearing_behavior.md)
 - [signals preserved when navigating between different route families](signals_preserved_when_navigating_between_different_route_families/signals_preserved_when_navigating_between_different_route_families.md)
+- [mostSpecificRoute should prefer literal over parameterized routes](mostspecificroute_should_prefer_literal_over_parameterized_routes/mostspecificroute_should_prefer_literal_over_parameterized_routes.md)
 - [buildMostPreciseUrl should find child signal values even with provided params](buildmostpreciseurl_should_find_child_signal_values_even_with_provided_params/buildmostpreciseurl_should_find_child_signal_values_even_with_provided_params.md)
 - [signal updates in child route (isochrone) with parent-child relationship](signal_updates_in_child_route_(isochrone)_with_parent-child_relationship/signal_updates_in_child_route_(isochrone)_with_parent-child_relationship.md)
 

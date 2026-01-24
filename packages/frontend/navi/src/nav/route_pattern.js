@@ -411,11 +411,38 @@ export const createRoutePattern = (pattern) => {
     pattern: parsedPattern,
     cleanPattern, // Return the clean pattern string
     connections, // Return signal connections along with pattern
+    specificity: calculatePatternSpecificity(parsedPattern), // Pre-calculate specificity
     applyOn,
     buildUrl,
     buildMostPreciseUrl,
     resolveParams,
   };
+};
+
+/**
+ * Calculate pattern specificity score for route matching
+ * Higher score = more specific route
+ */
+const calculatePatternSpecificity = (parsedPattern) => {
+  let specificity = 0;
+
+  // Count path segments (ignoring query params for specificity)
+  const pathSegments = parsedPattern.segments || [];
+
+  for (const segment of pathSegments) {
+    if (segment.type === "literal") {
+      // Literal segments are more specific than parameters
+      specificity += 100; // High score for literal segments
+    } else if (segment.type === "param") {
+      // Parameter segments are less specific
+      specificity += 10; // Lower score for parameters
+    }
+  }
+
+  // Add base score for number of path segments (more segments = more specific)
+  specificity += pathSegments.length;
+
+  return specificity;
 };
 
 /**
