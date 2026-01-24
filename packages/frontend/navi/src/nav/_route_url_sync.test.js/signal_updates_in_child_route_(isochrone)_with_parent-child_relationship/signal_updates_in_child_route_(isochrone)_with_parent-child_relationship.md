@@ -6,20 +6,15 @@ try {
     id: "enabled",
     type: "boolean",
   });
-
   const minuteSignal = stateSignal(30, {
     id: "minute",
     type: "number",
   });
-
-  // Create parent-child route structure with signals on the child
   const { MAP_ROUTE, ISOCHRONE_ROUTE } = setupRoutes({
     MAP_ROUTE: "/map/",
-    ISOCHRONE_ROUTE: `/map/isochrone/?enabled=${enabledSignal}&minute=${minuteSignal}`,
+    ISOCHRONE_ROUTE: `/map/isochrone?enabled=${enabledSignal}&minute=${minuteSignal}`,
   });
-
-  // Start on the isochrone route with default values
-  updateRoutes(`${baseUrl}/map/isochrone/?enabled=false&minute=30`);
+  updateRoutes(`${baseUrl}/map/isochrone`);
 
   const scenario1 = {
     description: "Initial state on isochrone route with defaults",
@@ -37,61 +32,59 @@ try {
     description: "After updating enabled signal to true (non-default)",
     enabled_signal: enabledSignal.value,
     minute_signal: minuteSignal.value,
-    map_route_matches: MAP_ROUTE.matching,
-    isochrone_route_matches: ISOCHRONE_ROUTE.matching,
     current_url: ISOCHRONE_ROUTE.url,
   };
 
-  // Navigate to parent route (map) - this should trigger signal clearing
-  updateRoutes(`${baseUrl}/map/`);
+  // Update minute signal
+  minuteSignal.value = 45;
 
   const scenario3 = {
-    description: "After navigating to parent route /map/",
+    description: "After updating minute signal to 45",
     enabled_signal: enabledSignal.value,
     minute_signal: minuteSignal.value,
-    map_route_matches: MAP_ROUTE.matching,
-    isochrone_route_matches: ISOCHRONE_ROUTE.matching,
-    current_url: MAP_ROUTE.url,
+    current_url: ISOCHRONE_ROUTE.url,
   };
 
-  // Navigate back to isochrone
-  updateRoutes(`${baseUrl}/map/isochrone/?enabled=true&minute=45`);
+  // Update enabled back to false (default)
+  enabledSignal.value = false;
 
   const scenario4 = {
-    description: "Navigate back to isochrone with new values",
+    description: "After setting enabled back to false (default)",
     enabled_signal: enabledSignal.value,
     minute_signal: minuteSignal.value,
-    map_route_matches: MAP_ROUTE.matching,
-    isochrone_route_matches: ISOCHRONE_ROUTE.matching,
+    current_url: ISOCHRONE_ROUTE.url,
+  };
+
+  // Update minute signal again
+  minuteSignal.value = 60;
+
+  const scenario5 = {
+    description: "After updating minute signal to 60",
+    enabled_signal: enabledSignal.value,
+    minute_signal: minuteSignal.value,
     current_url: ISOCHRONE_ROUTE.url,
   };
 
   return {
-    scenario1_initial_isochrone: scenario1,
-    scenario2_enabled_updated: scenario2,
-    scenario3_navigate_to_parent_map: scenario3,
-    scenario4_back_to_isochrone: scenario4,
+    scenario1_initial_defaults: scenario1,
+    scenario2_enabled_true: scenario2,
+    scenario3_minute_45: scenario3,
+    scenario4_enabled_false: scenario4,
+    scenario5_minute_60: scenario5,
 
-    // Track URL and signal evolution
+    // Track URL evolution as signals change
     url_progression: [
       scenario1.current_url,
       scenario2.current_url,
       scenario3.current_url,
       scenario4.current_url,
+      scenario5.current_url,
     ],
 
-    // Key behaviors to test
-    signal_behaviors: {
-      signals_update_child_route_url: scenario2.current_url.includes("enabled=true"),
-      signals_cleared_when_parent_matches: 
-        scenario3.enabled_signal === false && scenario3.minute_signal === 30,
-      signals_update_from_new_url: 
-        scenario4.enabled_signal === true && scenario4.minute_signal === 45,
-    },
-
-    // This is what we expect might fail - parent-child signal clearing
-    expected_issue: "Signals should be cleared when navigating from child to parent route",
-    route_relationship: "/map/isochrone/ is child of /map/",
+    // Test purpose
+    test_focus:
+      "Signal updates should immediately reflect in the route URL",
+    route_under_test: "/map/isochrone/ with query parameters",
   };
 } finally {
   clearAllRoutes();
@@ -101,49 +94,47 @@ try {
 
 ```js
 {
-  "scenario1_initial_isochrone": {
+  "scenario1_initial_defaults": {
     "description": "Initial state on isochrone route with defaults",
     "enabled_signal": false,
     "minute_signal": 30,
     "map_route_matches": true,
     "isochrone_route_matches": true,
-    "current_url": "http://127.0.0.1/map/isochrone/"
+    "current_url": "http://127.0.0.1/map/isochrone"
   },
-  "scenario2_enabled_updated": {
+  "scenario2_enabled_true": {
     "description": "After updating enabled signal to true (non-default)",
     "enabled_signal": true,
     "minute_signal": 30,
-    "map_route_matches": true,
-    "isochrone_route_matches": true,
     "current_url": "http://127.0.0.1/map/isochrone?enabled=true"
   },
-  "scenario3_navigate_to_parent_map": {
-    "description": "After navigating to parent route /map/",
-    "map_route_matches": true,
-    "isochrone_route_matches": false,
-    "current_url": "http://127.0.0.1/map/"
-  },
-  "scenario4_back_to_isochrone": {
-    "description": "Navigate back to isochrone with new values",
+  "scenario3_minute_45": {
+    "description": "After updating minute signal to 45",
     "enabled_signal": true,
     "minute_signal": 45,
-    "map_route_matches": true,
-    "isochrone_route_matches": true,
     "current_url": "http://127.0.0.1/map/isochrone?enabled=true&minute=45"
   },
-  "url_progression": [
-    "http://127.0.0.1/map/isochrone/",
-    "http://127.0.0.1/map/isochrone?enabled=true",
-    "http://127.0.0.1/map/",
-    "http://127.0.0.1/map/isochrone?enabled=true&minute=45"
-  ],
-  "signal_behaviors": {
-    "signals_update_child_route_url": true,
-    "signals_cleared_when_parent_matches": false,
-    "signals_update_from_new_url": true
+  "scenario4_enabled_false": {
+    "description": "After setting enabled back to false (default)",
+    "enabled_signal": false,
+    "minute_signal": 45,
+    "current_url": "http://127.0.0.1/map/isochrone?minute=45"
   },
-  "expected_issue": "Signals should be cleared when navigating from child to parent route",
-  "route_relationship": "/map/isochrone/ is child of /map/"
+  "scenario5_minute_60": {
+    "description": "After updating minute signal to 60",
+    "enabled_signal": false,
+    "minute_signal": 60,
+    "current_url": "http://127.0.0.1/map/isochrone?minute=60"
+  },
+  "url_progression": [
+    "http://127.0.0.1/map/isochrone",
+    "http://127.0.0.1/map/isochrone?enabled=true",
+    "http://127.0.0.1/map/isochrone?enabled=true&minute=45",
+    "http://127.0.0.1/map/isochrone?minute=45",
+    "http://127.0.0.1/map/isochrone?minute=60"
+  ],
+  "test_focus": "Signal updates should immediately reflect in the route URL",
+  "route_under_test": "/map/isochrone/ with query parameters"
 }
 ```
 
