@@ -80,8 +80,9 @@ export const stateSignal = (defaultValue, options = {}) => {
   // Convert numeric IDs to strings for consistency
   const signalIdString = String(signalId);
   if (globalSignalRegistry.has(signalIdString)) {
+    const conflictInfo = globalSignalRegistry.get(signalIdString);
     throw new Error(
-      `Signal ID conflict: A signal with ID "${signalIdString}" already exists`,
+      `Signal ID conflict: A signal with ID "${signalIdString}" already exists (existing default: ${conflictInfo.options.defaultValue})`,
     );
   }
 
@@ -96,7 +97,7 @@ export const stateSignal = (defaultValue, options = {}) => {
     if (valueFromLocalStorage !== undefined) {
       if (debug) {
         console.debug(
-          `[stateSignal] using value from localStorage "${localStorageKey}"=${valueFromLocalStorage}`,
+          `[stateSignal:${signalIdString}] using value from localStorage "${localStorageKey}"=${valueFromLocalStorage}`,
         );
       }
       return valueFromLocalStorage;
@@ -106,19 +107,33 @@ export const stateSignal = (defaultValue, options = {}) => {
       if (sourceValue !== undefined) {
         if (debug) {
           console.debug(
-            `[stateSignal] using value from source signal=${sourceValue}`,
+            `[stateSignal:${signalIdString}] using value from source signal=${sourceValue}`,
           );
         }
         return sourceValue;
       }
     }
     if (debug) {
-      console.debug(`[stateSignal] using default value=${defaultValue}`);
+      console.debug(
+        `[stateSignal:${signalIdString}] using default value=${defaultValue}`,
+      );
     }
     return defaultValue;
   };
 
   const advancedSignal = signal(getFallbackValue());
+
+  if (debug) {
+    console.debug(
+      `[stateSignal:${signalIdString}] created with initial value=${advancedSignal.peek()}`,
+      {
+        defaultValue,
+        hasSourceSignal: Boolean(sourceSignal),
+        persists,
+        localStorageKey: persists ? localStorageKey : undefined,
+      },
+    );
+  }
 
   // Set signal ID and create meaningful string representation
   advancedSignal.__signalId = signalIdString;
@@ -183,10 +198,11 @@ export const stateSignal = (defaultValue, options = {}) => {
         // we don't have anything in the source signal, keep current value
         if (debug) {
           console.debug(
-            `[stateSignal] source signal is undefined, keeping current value`,
+            `[stateSignal:${signalIdString}] source signal is undefined, keeping current value=${advancedSignal.peek()}`,
             {
               sourcePreviousValue,
               sourceValue,
+              currentValue: advancedSignal.peek(),
             },
           );
         }
@@ -195,10 +211,14 @@ export const stateSignal = (defaultValue, options = {}) => {
       }
       // the case we want to support: source signal value changes -> override current value
       if (debug) {
-        console.debug(`[stateSignal] source signal updated`, {
-          sourcePreviousValue,
-          sourceValue,
-        });
+        console.debug(
+          `[stateSignal:${signalIdString}] source signal updated, overriding current value`,
+          {
+            sourcePreviousValue,
+            sourceValue,
+            previousValue: advancedSignal.peek(),
+          },
+        );
       }
       advancedSignal.value = sourceValue;
       sourcePreviousValue = sourceValue;
@@ -214,14 +234,14 @@ export const stateSignal = (defaultValue, options = {}) => {
       if (value === undefined || value === null || value === defaultValue) {
         if (debug) {
           console.debug(
-            `[stateSignal] removing "${localStorageKey}" from localStorage`,
+            `[stateSignal:${signalIdString}] removing "${localStorageKey}" from localStorage (value=${value}, default=${defaultValue})`,
           );
         }
         removeFromLocalStorage();
       } else {
         if (debug) {
           console.debug(
-            `[stateSignal] writing into localStorage "${localStorageKey}"=${value}`,
+            `[stateSignal:${signalIdString}] writing into localStorage "${localStorageKey}"=${value}`,
           );
         }
         writeIntoLocalStorage(value);
@@ -232,10 +252,39 @@ export const stateSignal = (defaultValue, options = {}) => {
   validation: {
     effect(() => {
       const value = advancedSignal.value;
+      const wasValid = validity.valid;
       updateValidity({ oneOf }, validity, value);
-      if (!validity.valid && autoFix) {
-        advancedSignal.value = autoFix();
-        return;
+      if (!validity.valid) {
+        if (debug) {
+          console.debug(`[stateSignal:${signalIdString}] validation failed`, {
+            value,
+            oneOf,
+            hasAutoFix: Boolean(autoFix),
+          });
+        }
+        if (autoFix) {
+          const fixedValue = autoFix();
+          if (debug) {
+            console.debug(
+              `[stateSignal:${signalIdString}] auto-fixing invalid value`,
+              {
+                invalidValue: value,
+                fixedValue,
+              },
+            );
+          }
+          advancedSignal.value = fixedValue;
+          return;
+        }
+      } else if (!wasValid && validity.valid) {
+        if (debug) {
+          console.debug(
+            `[stateSignal:${signalIdString}] validation now passes`,
+            {
+              value,
+            },
+          );
+        }
       }
     });
   }

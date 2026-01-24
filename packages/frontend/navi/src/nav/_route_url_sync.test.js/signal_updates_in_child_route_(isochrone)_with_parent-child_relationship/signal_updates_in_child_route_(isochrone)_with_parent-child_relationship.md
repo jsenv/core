@@ -22,12 +22,22 @@ try {
     id: "isochroneLongitude",
     type: "number",
   });
+  const mapPanelSignal = stateSignal(undefined, {
+    id: "odt_map_panel",
+    type: "string",
+    oneOf: [undefined, "isochrone"],
+  });
+  mapPanelSignal.value = "isochrone";
   isochroneLongitudeSignal.value = 10;
   zoneSignal.value = "nice";
   const { MAP_ROUTE, ISOCHRONE_ROUTE } = setupRoutes({
+    HOME_ROUTE: "/",
     MAP_ROUTE: `/map/?zone=${zoneSignal}`,
+    MAP_PANEL_ROUTE: `/map/:panel=${mapPanelSignal}/`,
     ISOCHRONE_ROUTE: `/map/isochrone/:tab=${isochroneTabSignal}/?iso_lon=${isochroneLongitudeSignal}`,
     ISOCHRONE_COMPARE_ROUTE: `/map/isochrone/compare?walk=${walkEnabledSignal}&walk_minute=${walkMinuteSignal}`,
+    MAP_ISOCHRONE_TIME_ROUTE: "/map/isochrone/time/",
+    MAP_ISOCHRONE_TIME_WALK_ROUTE: "/map/isochrone/time/walk",
   });
   updateRoutes(`${baseUrl}/map/isochrone/compare?zone=nice&iso_lon=10`);
 
