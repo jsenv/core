@@ -56,7 +56,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
         }),
 
         // Settings route URL building - should use deepest route
-        settings_should_include_general_tab: ADMIN_SETTINGS_ROUTE.buildUrl(),
+        settings_no_params: ADMIN_SETTINGS_ROUTE.buildUrl(),
         settings_with_security_tab: ADMIN_SETTINGS_ROUTE.buildUrl({
           tab: "security",
         }),
