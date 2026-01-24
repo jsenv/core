@@ -299,6 +299,22 @@ export const createRoutePattern = (pattern) => {
             continue;
           }
 
+          // For any parameter, check if user provided value doesn't match child pattern
+          // This prevents using incompatible child routes
+          if (item.isUserProvided && !matchesChildLiteral) {
+            // Check if this is a path parameter from parent pattern
+            const isParentPathParam = connections.some(
+              (conn) => conn.paramName === paramName,
+            );
+
+            if (isParentPathParam) {
+              // User provided a path param value that doesn't match this child's literals
+              // This child route is incompatible
+              parentSignalsCompatibleWithChild = false;
+              break;
+            }
+          }
+
           // For section parameter specifically, check if child has literal "settings"
           // but parameter has different value (incompatible case)
           if (paramName === "section" && paramValue !== "settings") {

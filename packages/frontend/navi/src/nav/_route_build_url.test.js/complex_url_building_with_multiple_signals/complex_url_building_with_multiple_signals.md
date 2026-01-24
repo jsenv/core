@@ -44,6 +44,8 @@ try {
   mapboxZoomSignal.value = 15;
   // Step 3: Generate URL again without params to see if changed zoom appears
   const urlAfterZoomChange = MAP_ROUTE.buildUrl();
+  // Step 4: Override signal value with undefined to ignore signal
+  const urlWithZoomOverridden = MAP_ROUTE.buildUrl({ zoom: undefined });
   const isochroneUrl = MAP_ISOCHRONE_ROUTE.buildUrl();
   const isochroneTimeWalkRoute = MAP_ISOCHRONE_TIME_WALK_ROUTE.buildUrl();
 
@@ -54,6 +56,7 @@ try {
   return {
     map_url_defaults: urlWithDefaults,
     map_url_with_zoom: urlAfterZoomChange,
+    map_url_with_zoom_overridden: urlWithZoomOverridden,
     map_isochrone_url_with_zoom: isochroneUrl,
     map_isochrone_time_walk_url_with_zoom: isochroneTimeWalkRoute,
     map_isochrone_time_walk_url_after_change:
@@ -69,6 +72,7 @@ try {
 {
   "map_url_defaults": "http://127.0.0.1/map/",
   "map_url_with_zoom": "http://127.0.0.1/map?zoom=15",
+  "map_url_with_zoom_overridden": "http://127.0.0.1/map/",
   "map_isochrone_url_with_zoom": "http://127.0.0.1/map/isochrone?zoom=15",
   "map_isochrone_time_walk_url_with_zoom": "http://127.0.0.1/map/isochrone/walk?zoom=15",
   "map_isochrone_time_walk_url_after_change": "http://127.0.0.1/map/isochrone/walk?time=40&zoom=15"

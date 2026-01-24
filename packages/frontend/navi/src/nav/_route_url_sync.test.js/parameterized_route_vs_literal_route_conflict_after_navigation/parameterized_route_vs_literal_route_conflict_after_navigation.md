@@ -136,13 +136,13 @@ try {
       "params": {
         "zoom": 15
       },
-      "generatedUrl": "http://127.0.0.1/map/isochrone?zoom=15"
+      "generatedUrl": "http://127.0.0.1/map?zoom=15"
     }
   ],
   "expected_redirect_route": "MAP_ROUTE",
   "expected_url": "/map?zoom=15",
   "actual_redirect_route": "MAP_ROUTE",
-  "actual_url": "http://127.0.0.1/map/isochrone?zoom=15",
+  "actual_url": "http://127.0.0.1/map?zoom=15",
   "bug_reproduced": false
 }
 ```
