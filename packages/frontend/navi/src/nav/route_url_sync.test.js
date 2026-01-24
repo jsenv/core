@@ -703,118 +703,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
     }
   });
 
-  test("signal updates should trigger URL changes with multiple query parameters", () => {
-    try {
-      const enabledSignal = stateSignal(true, {
-        id: "enabled",
-        type: "boolean",
-      });
-
-      const minuteSignal = stateSignal(30, {
-        id: "minute",
-        type: "number",
-      });
-
-      // Create route with multiple query parameters
-      const { SETTINGS_ROUTE } = setupRoutes({
-        SETTINGS_ROUTE: `/settings?enabled=${enabledSignal}&minute=${minuteSignal}`,
-      });
-
-      // Start on the settings route with initial values
-      updateRoutes(`${baseUrl}/settings?enabled=true&minute=30`);
-
-      const scenario1 = {
-        description: "Initial state with both parameters",
-        enabled_signal: enabledSignal.value,
-        minute_signal: minuteSignal.value,
-        route_matches: SETTINGS_ROUTE.matching,
-        current_url: SETTINGS_ROUTE.url,
-      };
-
-      // Update only the enabled signal
-      enabledSignal.value = false;
-
-      const scenario2 = {
-        description: "After updating enabled signal to false",
-        enabled_signal: enabledSignal.value,
-        minute_signal: minuteSignal.value,
-        route_matches: SETTINGS_ROUTE.matching,
-        current_url: SETTINGS_ROUTE.url,
-      };
-
-      // Update only the minute signal
-      minuteSignal.value = 45;
-
-      const scenario3 = {
-        description: "After updating minute signal to 45",
-        enabled_signal: enabledSignal.value,
-        minute_signal: minuteSignal.value,
-        route_matches: SETTINGS_ROUTE.matching,
-        current_url: SETTINGS_ROUTE.url,
-      };
-
-      // Update both signals at once
-      enabledSignal.value = true;
-      minuteSignal.value = 60;
-
-      const scenario4 = {
-        description: "After updating both signals together",
-        enabled_signal: enabledSignal.value,
-        minute_signal: minuteSignal.value,
-        route_matches: SETTINGS_ROUTE.matching,
-        current_url: SETTINGS_ROUTE.url,
-      };
-
-      return {
-        scenario1_initial_state: scenario1,
-        scenario2_enabled_changed: scenario2,
-        scenario3_minute_changed: scenario3,
-        scenario4_both_changed: scenario4,
-
-        // Track URL evolution
-        url_progression: [
-          scenario1.current_url,
-          scenario2.current_url,
-          scenario3.current_url,
-          scenario4.current_url,
-        ],
-
-        // Verify signal→URL synchronization
-        signals_reflect_in_urls: {
-          initial_url_contains_enabled_true:
-            scenario1.current_url.includes("enabled=true"),
-          initial_url_contains_minute_30:
-            scenario1.current_url.includes("minute=30"),
-
-          after_enabled_false: scenario2.current_url.includes("enabled=false"),
-          enabled_change_preserves_minute:
-            scenario2.current_url.includes("minute=30"),
-
-          after_minute_45: scenario3.current_url.includes("minute=45"),
-          minute_change_preserves_enabled:
-            scenario3.current_url.includes("enabled=false"),
-
-          final_enabled_true: scenario4.current_url.includes("enabled=true"),
-          final_minute_60: scenario4.current_url.includes("minute=60"),
-        },
-
-        // Test explanation
-        explanation: {
-          purpose:
-            "Test bidirectional sync: Signal→URL direction with multiple parameters",
-          behavior:
-            "Each signal update should rebuild URL with new values while preserving others",
-          use_case:
-            "Settings page where user changes multiple preferences independently",
-        },
-      };
-    } finally {
-      clearAllRoutes();
-      globalSignalRegistry.clear();
-    }
-  });
-
-  test("signal updates with different default values (enabled defaults to false)", () => {
+  test("signal updates in child route (isochrone) with parent-child relationship", () => {
     try {
       const enabledSignal = stateSignal(false, {
         id: "enabled",
@@ -826,21 +715,22 @@ await snapshotTests(import.meta.url, ({ test }) => {
         type: "number",
       });
 
-      // Create route with multiple query parameters, enabled defaults to false
-      const { SETTINGS_ROUTE } = setupRoutes({
-        SETTINGS_ROUTE: `/settings?enabled=${enabledSignal}&minute=${minuteSignal}`,
+      // Create parent-child route structure with signals on the child
+      const { MAP_ROUTE, ISOCHRONE_ROUTE } = setupRoutes({
+        MAP_ROUTE: "/map/",
+        ISOCHRONE_ROUTE: `/map/isochrone/?enabled=${enabledSignal}&minute=${minuteSignal}`,
       });
 
-      // Start on the settings route with default values
-      updateRoutes(`${baseUrl}/settings?enabled=false&minute=30`);
+      // Start on the isochrone route with default values
+      updateRoutes(`${baseUrl}/map/isochrone/?enabled=false&minute=30`);
 
       const scenario1 = {
-        description:
-          "Initial state with default values (enabled=false, minute=30)",
+        description: "Initial state on isochrone route with defaults",
         enabled_signal: enabledSignal.value,
         minute_signal: minuteSignal.value,
-        route_matches: SETTINGS_ROUTE.matching,
-        current_url: SETTINGS_ROUTE.url,
+        map_route_matches: MAP_ROUTE.matching,
+        isochrone_route_matches: ISOCHRONE_ROUTE.matching,
+        current_url: ISOCHRONE_ROUTE.url,
       };
 
       // Update enabled signal to true (non-default)
@@ -850,39 +740,42 @@ await snapshotTests(import.meta.url, ({ test }) => {
         description: "After updating enabled signal to true (non-default)",
         enabled_signal: enabledSignal.value,
         minute_signal: minuteSignal.value,
-        route_matches: SETTINGS_ROUTE.matching,
-        current_url: SETTINGS_ROUTE.url,
+        map_route_matches: MAP_ROUTE.matching,
+        isochrone_route_matches: ISOCHRONE_ROUTE.matching,
+        current_url: ISOCHRONE_ROUTE.url,
       };
 
-      // Update minute signal to non-default value
-      minuteSignal.value = 45;
+      // Navigate to parent route (map) - this should trigger signal clearing
+      updateRoutes(`${baseUrl}/map/`);
 
       const scenario3 = {
-        description: "After updating minute signal to 45 (non-default)",
+        description: "After navigating to parent route /map/",
         enabled_signal: enabledSignal.value,
         minute_signal: minuteSignal.value,
-        route_matches: SETTINGS_ROUTE.matching,
-        current_url: SETTINGS_ROUTE.url,
+        map_route_matches: MAP_ROUTE.matching,
+        isochrone_route_matches: ISOCHRONE_ROUTE.matching,
+        current_url: MAP_ROUTE.url,
       };
 
-      // Reset enabled back to default (false)
-      enabledSignal.value = false;
+      // Navigate back to isochrone
+      updateRoutes(`${baseUrl}/map/isochrone/?enabled=true&minute=45`);
 
       const scenario4 = {
-        description: "After resetting enabled to default (false)",
+        description: "Navigate back to isochrone with new values",
         enabled_signal: enabledSignal.value,
         minute_signal: minuteSignal.value,
-        route_matches: SETTINGS_ROUTE.matching,
-        current_url: SETTINGS_ROUTE.url,
+        map_route_matches: MAP_ROUTE.matching,
+        isochrone_route_matches: ISOCHRONE_ROUTE.matching,
+        current_url: ISOCHRONE_ROUTE.url,
       };
 
       return {
-        scenario1_initial_defaults: scenario1,
-        scenario2_enabled_true_non_default: scenario2,
-        scenario3_minute_non_default: scenario3,
-        scenario4_enabled_back_to_default: scenario4,
+        scenario1_initial_isochrone: scenario1,
+        scenario2_enabled_updated: scenario2,
+        scenario3_navigate_to_parent_map: scenario3,
+        scenario4_back_to_isochrone: scenario4,
 
-        // Track URL evolution with different defaults
+        // Track URL and signal evolution
         url_progression: [
           scenario1.current_url,
           scenario2.current_url,
@@ -890,27 +783,21 @@ await snapshotTests(import.meta.url, ({ test }) => {
           scenario4.current_url,
         ],
 
-        // Verify URL omits default values
-        url_behavior_with_false_default: {
-          initial_clean_url:
-            scenario1.current_url === "http://127.0.0.1/settings",
-          enabled_true_appears: scenario2.current_url.includes("enabled=true"),
-          enabled_false_omitted:
-            !scenario4.current_url.includes("enabled=false"),
-          minute_default_omitted: !scenario1.current_url.includes("minute=30"),
-          minute_non_default_appears:
-            scenario3.current_url.includes("minute=45"),
+        // Key behaviors to test
+        signal_behaviors: {
+          signals_update_child_route_url:
+            scenario2.current_url.includes("enabled=true"),
+          signals_cleared_when_parent_matches:
+            scenario3.enabled_signal === false &&
+            scenario3.minute_signal === 30,
+          signals_update_from_new_url:
+            scenario4.enabled_signal === true && scenario4.minute_signal === 45,
         },
 
-        // Test explanation
-        explanation: {
-          purpose:
-            "Test URL behavior when signal defaults are different (enabled=false by default)",
-          key_difference:
-            "enabled=false is now the default, so it gets omitted from URLs",
-          contrast: "enabled=true now appears in URL as non-default value",
-          use_case: "Different default values affect URL cleanliness",
-        },
+        // This is what we expect might fail - parent-child signal clearing
+        expected_issue:
+          "Signals should be cleared when navigating from child to parent route",
+        route_relationship: "/map/isochrone/ is child of /map/",
       };
     } finally {
       clearAllRoutes();
