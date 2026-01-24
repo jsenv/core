@@ -427,6 +427,50 @@ export const createRoutePattern = (pattern) => {
           const childUrl = childPatternObj.buildUrl(finalMergedParams);
           if (childUrl && !childUrl.includes(":")) {
             // Ensure no missing params like ':postId'
+            // Before returning child URL, check if parent optimization applies
+            const childFinalParams =
+              Object.keys(finalMergedParams).length > 0
+                ? finalMergedParams
+                : {};
+
+            // If child route only contains default values, check parent optimization
+            if (Object.keys(childFinalParams).length === 0) {
+              const childPattern = childPatternObj.originalPattern;
+              const childRelationships = patternRelationships.get(childPattern);
+              const childParents = childRelationships?.parentPatterns || [];
+
+              for (const childParentPattern of childParents) {
+                if (childParentPattern === pattern) {
+                  // This child is indeed our direct child - check parent optimization
+                  let allChildParamsAreDefaults = true;
+                  const childPatternData = getPatternData(childPattern);
+
+                  if (childPatternData) {
+                    for (const childConnection of childPatternData.connections) {
+                      const { signal, options } = childConnection;
+                      if (signal?.value !== options.defaultValue) {
+                        allChildParamsAreDefaults = false;
+                        break;
+                      }
+                    }
+
+                    // If child has all default params, use current route instead
+                    if (allChildParamsAreDefaults) {
+                      // Build current route URL without using filteredPattern (which isn't defined yet)
+                      const currentUrl = buildUrlFromPattern(
+                        parsedPattern,
+                        finalParams,
+                        new Map(),
+                      );
+                      if (currentUrl.length < childUrl.length) {
+                        return currentUrl;
+                      }
+                    }
+                  }
+                }
+              }
+            }
+
             return childUrl;
           }
         }
@@ -493,7 +537,71 @@ export const createRoutePattern = (pattern) => {
       filteredPattern.trailingSlash = false;
     }
 
-    return buildUrlFromPattern(filteredPattern, finalParams, new Map());
+    // Build the URL normally first
+    const generatedUrl = buildUrlFromPattern(
+      filteredPattern,
+      finalParams,
+      new Map(),
+    );
+
+    // PARENT OPTIMIZATION: Check if parent route can generate a shorter equivalent URL
+    // This handles cases where all parameters are default values
+    const currentRelationships = patternRelationships.get(pattern);
+    const possibleParents = currentRelationships?.parentPatterns || [];
+
+    // Only optimize if current route has all default parameters
+    let allCurrentParamsAreDefaults = true;
+    for (const connection of connections) {
+      const { signal, options } = connection;
+      if (signal?.value !== options.defaultValue) {
+        allCurrentParamsAreDefaults = false;
+        break;
+      }
+    }
+
+    if (allCurrentParamsAreDefaults && Object.keys(finalParams).length === 0) {
+      for (const parentPattern of possibleParents) {
+        // Only consider direct parent routes, not grandparents
+        if (parentPattern === "/" || !parentPattern.includes(":")) {
+          continue; // Skip root route and routes without parameters
+        }
+
+        const parentPatternObj = createRoutePattern(parentPattern);
+        const parentPatternData = getPatternData(parentPattern);
+        if (!parentPatternData) continue;
+
+        // Check if parent route with its default values would lead to current route
+        let parentPointsToCurrentRoute = true;
+        for (const parentConnection of parentPatternData.connections) {
+          const { options } = parentConnection;
+          const defaultValue = options.defaultValue;
+
+          // Check if parent's default value matches current route's literal
+          const currentLiterals = parsedPattern.segments
+            .filter((seg) => seg.type === "literal")
+            .map((seg) => seg.value);
+
+          if (!currentLiterals.includes(defaultValue)) {
+            parentPointsToCurrentRoute = false;
+            break;
+          }
+        }
+
+        if (parentPointsToCurrentRoute) {
+          // Parent route with defaults represents current route - use parent
+          const parentUrl = parentPatternObj.buildUrl({});
+          if (
+            parentUrl &&
+            parentUrl.length < generatedUrl.length &&
+            parentUrl !== "/"
+          ) {
+            return parentUrl;
+          }
+        }
+      }
+    }
+
+    return generatedUrl;
   };
 
   return {
