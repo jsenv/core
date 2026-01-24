@@ -10,8 +10,10 @@ try {
     id: "minute",
     type: "number",
   });
+  const zoneSignal = stateSignal("paris");
+  zoneSignal.value = "nice";
   const { MAP_ROUTE, ISOCHRONE_ROUTE } = setupRoutes({
-    MAP_ROUTE: "/map/",
+    MAP_ROUTE: `/map/?zone=${zoneSignal}`,
     ISOCHRONE_ROUTE: `/map/isochrone?enabled=${enabledSignal}&minute=${minuteSignal}`,
   });
   updateRoutes(`${baseUrl}/map/isochrone`);
