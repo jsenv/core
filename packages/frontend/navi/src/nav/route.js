@@ -454,6 +454,9 @@ const registerRoute = (routePattern) => {
     let maxSegments = route.pattern.split("/").filter((s) => s !== "").length;
 
     for (const matchingRoute of allMatchingRoutes) {
+      if (matchingRoute === route) {
+        continue;
+      }
       const segments = matchingRoute.pattern
         .split("/")
         .filter((s) => s !== "").length;
