@@ -8,6 +8,8 @@
 - [signal should be cleared when route stops matching](signal_should_be_cleared_when_route_stops_matching/signal_should_be_cleared_when_route_stops_matching.md)
 - [signal preservation vs clearing behavior](signal_preservation_vs_clearing_behavior/signal_preservation_vs_clearing_behavior.md)
 - [signals preserved when navigating between different route families](signals_preserved_when_navigating_between_different_route_families/signals_preserved_when_navigating_between_different_route_families.md)
+- [signal updates should trigger URL changes with multiple query parameters](signal_updates_should_trigger_url_changes_with_multiple_query_parameters/signal_updates_should_trigger_url_changes_with_multiple_query_parameters.md)
+- [signal updates with different default values (enabled defaults to false)](signal_updates_with_different_default_values_(enabled_defaults_to_false)/signal_updates_with_different_default_values_(enabled_defaults_to_false).md)
 
 ---
 
