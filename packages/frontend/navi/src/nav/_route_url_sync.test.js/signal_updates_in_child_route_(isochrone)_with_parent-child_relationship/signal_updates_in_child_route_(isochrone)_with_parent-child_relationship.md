@@ -1,4 +1,4 @@
-# [signal updates in child route (isochrone) with parent-child relationship](../../route_url_sync.test.js#L706)
+# [signal updates in child route (isochrone) with parent-child relationship](../../route_url_sync.test.js#L779)
 
 ```js
 try {
@@ -30,22 +30,24 @@ try {
   mapPanelSignal.value = "isochrone";
   isochroneLongitudeSignal.value = 10;
   zoneSignal.value = "nice";
-  const { MAP_ROUTE, ISOCHRONE_ROUTE, ISOCHRONE_COMPARE_ROUTE } = setupRoutes({
-    HOME_ROUTE: "/",
-    MAP_ROUTE: `/map/?zone=${zoneSignal}`,
-    MAP_PANEL_ROUTE: `/map/:panel=${mapPanelSignal}/`,
-    ISOCHRONE_ROUTE: `/map/isochrone/:tab=${isochroneTabSignal}/?iso_lon=${isochroneLongitudeSignal}`,
-    ISOCHRONE_COMPARE_ROUTE: `/map/isochrone/compare?walk=${walkEnabledSignal}&walk_minute=${walkMinuteSignal}`,
-    MAP_ISOCHRONE_TIME_ROUTE: "/map/isochrone/time/",
-    MAP_ISOCHRONE_TIME_WALK_ROUTE: "/map/isochrone/time/walk",
-  });
+  const { MAP_ROUTE, ISOCHRONE_ROUTE, ISOCHRONE_COMPARE_ROUTE } =
+    setupRoutes({
+      HOME_ROUTE: "/",
+      MAP_ROUTE: `/map/?zone=${zoneSignal}`,
+      MAP_PANEL_ROUTE: `/map/:panel=${mapPanelSignal}/`,
+      ISOCHRONE_ROUTE: `/map/isochrone/:tab=${isochroneTabSignal}/?iso_lon=${isochroneLongitudeSignal}`,
+      ISOCHRONE_COMPARE_ROUTE: `/map/isochrone/compare?walk=${walkEnabledSignal}&walk_minute=${walkMinuteSignal}`,
+      MAP_ISOCHRONE_TIME_ROUTE: "/map/isochrone/time/",
+      MAP_ISOCHRONE_TIME_WALK_ROUTE: "/map/isochrone/time/walk",
+    });
   updateRoutes(`${baseUrl}/map/isochrone/compare?zone=nice&iso_lon=10`);
 
   // Mock redirectTo methods to track which routes get redirected during signal updates
   const redirectCalls = [];
   const originalMapRedirectTo = MAP_ROUTE.redirectTo;
   const originalIsochroneRedirectTo = ISOCHRONE_ROUTE.redirectTo;
-  const originalIsochroneCompareRedirectTo = ISOCHRONE_COMPARE_ROUTE.redirectTo;
+  const originalIsochroneCompareRedirectTo =
+    ISOCHRONE_COMPARE_ROUTE.redirectTo;
 
   MAP_ROUTE.redirectTo = (params) => {
     redirectCalls.push({
@@ -71,7 +73,10 @@ try {
       params,
       url: ISOCHRONE_COMPARE_ROUTE.buildUrl(params),
     });
-    return originalIsochroneCompareRedirectTo.call(ISOCHRONE_COMPARE_ROUTE, params);
+    return originalIsochroneCompareRedirectTo.call(
+      ISOCHRONE_COMPARE_ROUTE,
+      params,
+    );
   };
 
   const scenario1 = {

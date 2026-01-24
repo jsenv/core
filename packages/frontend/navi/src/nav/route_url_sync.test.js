@@ -703,6 +703,79 @@ await snapshotTests(import.meta.url, ({ test }) => {
     }
   });
 
+  test("buildMostPreciseUrl should find child signal values even with provided params", () => {
+    try {
+      const walkEnabledSignal = stateSignal(false, {
+        id: "walkEnabled", 
+        type: "boolean",
+      });
+      const walkMinuteSignal = stateSignal(30, {
+        id: "walkMinute",
+        type: "number", 
+      });
+
+      // Set initial values: walkEnabled=false, walkMinute=40
+      walkEnabledSignal.value = false;
+      walkMinuteSignal.value = 40;
+
+      const { ISOCHRONE_ROUTE, ISOCHRONE_COMPARE_ROUTE } = setupRoutes({
+        ISOCHRONE_ROUTE: `/map/isochrone/:tab?`,
+        ISOCHRONE_COMPARE_ROUTE: `/map/isochrone/compare?walk=${walkEnabledSignal}&walk_minute=${walkMinuteSignal}`,
+      });
+
+      // Simulate being on /map/isochrone with walk_minute=40 in the signals
+      updateRoutes(`${baseUrl}/map/isochrone?walk_minute=40`);
+
+      const initialState = {
+        description: "On /map/isochrone with walk_minute=40",
+        walk_enabled: walkEnabledSignal.value, // false
+        walk_minute: walkMinuteSignal.value,   // 40
+        isochrone_matches: ISOCHRONE_ROUTE.matching,
+        compare_matches: ISOCHRONE_COMPARE_ROUTE.matching,
+        current_url: ISOCHRONE_ROUTE.url,
+      };
+
+      // Now user updates walkEnabledSignal to true
+      // This triggers replaceParams on ISOCHRONE_ROUTE with { walk: true }
+      walkEnabledSignal.value = true;
+
+      // The bug: When ISOCHRONE_ROUTE.buildUrl({ walk: true }) is called,
+      // hasUserProvidedParams becomes true, so it doesn't look for walkMinuteSignal
+      // from child patterns, losing the walk_minute=40 value
+
+      const afterSignalUpdate = {
+        description: "After walkEnabledSignal=true, should preserve walk_minute=40",
+        walk_enabled: walkEnabledSignal.value, // true
+        walk_minute: walkMinuteSignal.value,   // still 40
+        current_url: ISOCHRONE_ROUTE.url,
+      };
+
+      // Test buildUrl directly to see the bug
+      const urlWithWalkTrue = ISOCHRONE_ROUTE.buildUrl({ walk: true });
+      // buildUrl already uses buildMostPreciseUrl internally
+
+      return {
+        initial_state: initialState,
+        after_signal_update: afterSignalUpdate,
+
+        // The bug: these URLs should include walk_minute=40 but they don't
+        bug_demonstration: {
+          direct_build_url: urlWithWalkTrue,
+          expected_url_should_contain: "walk_minute=40",
+          bug_description: "buildUrl with providedParams={walk:true} should still find walkMinuteSignal=40 from child patterns",
+        },
+
+        // Expected behavior: should generate /map/isochrone/compare?walk=true&walk_minute=40
+        // Actual behavior: generates /map/isochrone?walk=true (missing walk_minute)
+        expected_url: "/map/isochrone/compare?walk=true&walk_minute=40",
+        hasUserProvidedParams_prevents_child_lookup: "This is the core bug",
+      };
+    } finally {
+      clearAllRoutes();
+      globalSignalRegistry.clear();
+    }
+  });
+
   test("signal updates in child route (isochrone) with parent-child relationship", () => {
     try {
       const walkEnabledSignal = stateSignal(false, {
