@@ -1155,113 +1155,93 @@ const extractSearchParams = (urlObj, connections = []) => {
 };
 
 /**
- * Helper: Check if a parameter represents parent route inheritance
- * This detects when a parameter doesn't match the current route's parameters
- * but the route has literal segments that might correspond to parent route parameters
- */
-const detectParentParameterInheritance = (
-  paramName,
-  paramValue,
-  parsedPattern,
-  pathParamNames,
-  queryParamNames,
-) => {
-  // Parameter doesn't belong to current route
-  const isExtraParam =
-    !pathParamNames.has(paramName) && !queryParamNames.has(paramName);
-
-  // Route has literal segments (suggesting it might be a child of a parameterized parent)
-  const hasLiteralSegments = parsedPattern.segments.some(
-    (s) => s.type === "literal",
-  );
-
-  // Common parent parameter names (heuristic)
-  const commonParentParams = new Set([
-    "section",
-    "category",
-    "type",
-    "area",
-    "zone",
-  ]);
-  const looksLikeParentParam = commonParentParams.has(paramName);
-
-  return {
-    isParentInheritance:
-      isExtraParam && hasLiteralSegments && looksLikeParentParam,
-    isExtraParam,
-    hasLiteralSegments,
-    looksLikeParentParam,
-  };
-};
-
-/**
  * Build query parameters respecting hierarchical order from ancestor patterns
  */
-const buildHierarchicalQueryParams = (parsedPattern, params, originalPattern) => {
+const buildHierarchicalQueryParams = (
+  parsedPattern,
+  params,
+  originalPattern,
+) => {
   const queryParams = {};
   const processedParams = new Set();
-  
+
   // Get relationships for this pattern
   const relationships = patternRelationships.get(originalPattern);
   const parentPatterns = relationships?.parentPatterns || [];
-  
+
   // DEBUG: Log what we found
   if (DEBUG) {
     console.debug(`Building hierarchical params for ${originalPattern}`);
-    console.debug(`Found ${parentPatterns.length} parent patterns:`, parentPatterns.map(p => p.originalPattern));
+    console.debug(
+      `Found ${parentPatterns.length} parent patterns:`,
+      parentPatterns.map((p) => p.originalPattern),
+    );
   }
-  
+
   // Step 1: Add query parameters from ancestor patterns (oldest to newest)
   // This ensures ancestor parameters come first in their declaration order
   const ancestorPatterns = [...parentPatterns].reverse(); // Start from root ancestor
-  
+
   for (const ancestorPatternObj of ancestorPatterns) {
     if (ancestorPatternObj.pattern?.queryParams) {
       if (DEBUG) {
-        console.debug(`Processing ancestor ${ancestorPatternObj.originalPattern} with query params:`, ancestorPatternObj.pattern.queryParams.map(q => q.name));
+        console.debug(
+          `Processing ancestor ${ancestorPatternObj.originalPattern} with query params:`,
+          ancestorPatternObj.pattern.queryParams.map((q) => q.name),
+        );
       }
-      
+
       for (const queryParam of ancestorPatternObj.pattern.queryParams) {
         const paramName = queryParam.name;
-        if (params[paramName] !== undefined && !processedParams.has(paramName)) {
+        if (
+          params[paramName] !== undefined &&
+          !processedParams.has(paramName)
+        ) {
           queryParams[paramName] = params[paramName];
           processedParams.add(paramName);
-          
+
           if (DEBUG) {
-            console.debug(`Added ancestor param: ${paramName}=${params[paramName]}`);
+            console.debug(
+              `Added ancestor param: ${paramName}=${params[paramName]}`,
+            );
           }
         }
       }
     }
   }
-  
+
   // Step 2: Add query parameters from current pattern
   if (parsedPattern.queryParams) {
     if (DEBUG) {
-      console.debug(`Processing current pattern query params:`, parsedPattern.queryParams.map(q => q.name));
+      console.debug(
+        `Processing current pattern query params:`,
+        parsedPattern.queryParams.map((q) => q.name),
+      );
     }
-    
+
     for (const queryParam of parsedPattern.queryParams) {
       const paramName = queryParam.name;
       if (params[paramName] !== undefined && !processedParams.has(paramName)) {
         queryParams[paramName] = params[paramName];
         processedParams.add(paramName);
-        
+
         if (DEBUG) {
-          console.debug(`Added current param: ${paramName}=${params[paramName]}`);
+          console.debug(
+            `Added current param: ${paramName}=${params[paramName]}`,
+          );
         }
       }
     }
   }
-  
+
   // Step 3: Add remaining parameters (extra params) alphabetically
   const extraParams = [];
-  
+
   // Get all path parameter names to exclude them
   const pathParamNames = new Set(
     parsedPattern.segments.filter((s) => s.type === "param").map((s) => s.name),
   );
-  
+
   for (const [key, value] of Object.entries(params)) {
     if (
       !pathParamNames.has(key) &&
@@ -1271,26 +1251,30 @@ const buildHierarchicalQueryParams = (parsedPattern, params, originalPattern) =>
       extraParams.push([key, value]);
     }
   }
-  
+
   // Sort extra params alphabetically for consistent order
   extraParams.sort(([a], [b]) => a.localeCompare(b));
-  
+
   // Add sorted extra params
   for (const [key, value] of extraParams) {
     queryParams[key] = value;
-    
+
     if (DEBUG) {
       console.debug(`Added extra param: ${key}=${value}`);
     }
   }
-  
+
   return queryParams;
 };
 
 /**
  * Build a URL from a pattern and parameters
  */
-const buildUrlFromPattern = (parsedPattern, params = {}, originalPattern = null) => {
+const buildUrlFromPattern = (
+  parsedPattern,
+  params = {},
+  originalPattern = null,
+) => {
   if (parsedPattern.segments.length === 0) {
     // Root route
     const queryParams = {};
@@ -1368,7 +1352,11 @@ const buildUrlFromPattern = (parsedPattern, params = {}, originalPattern = null)
   }
 
   // Build query parameters respecting hierarchical order
-  const queryParams = buildHierarchicalQueryParams(parsedPattern, params, originalPattern);
+  const queryParams = buildHierarchicalQueryParams(
+    parsedPattern,
+    params,
+    originalPattern,
+  );
 
   const search = buildQueryString(queryParams);
 

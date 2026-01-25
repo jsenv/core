@@ -863,7 +863,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
   test("hierarchical search param order should respect ancestor patterns", () => {
     try {
       // Create a hierarchy that matches your example:
-      // /map?zone=${zoneSignal} (ancestor)  
+      // /map?zone=${zoneSignal} (ancestor)
       // /map/isochrone/?walk=${walkSignal} (child)
       const zoneSignal = stateSignal("zone-123", { id: "zone" });
       const styleSignal = stateSignal("streets", { id: "style" });
@@ -871,10 +871,10 @@ await snapshotTests(import.meta.url, ({ test }) => {
       const timeSignal = stateSignal(30, { id: "time", type: "number" });
       const modeSignal = stateSignal("driving", { id: "mode" });
 
-      const { MAP_ROUTE, MAP_ISOCHRONE_ROUTE, MAP_ISOCHRONE_WALK_ROUTE } = setupRoutes({
+      const { MAP_ISOCHRONE_ROUTE, MAP_ISOCHRONE_WALK_ROUTE } = setupRoutes({
         // Ancestor: defines zone, style order
         MAP_ROUTE: `/map?zone=${zoneSignal}&style=${styleSignal}`,
-        // Child: defines walk, time order  
+        // Child: defines walk, time order
         MAP_ISOCHRONE_ROUTE: `/map/isochrone/?walk=${walkSignal}&time=${timeSignal}`,
         // Grandchild: defines mode
         MAP_ISOCHRONE_WALK_ROUTE: `/map/isochrone/walk?mode=${modeSignal}`,
@@ -882,16 +882,17 @@ await snapshotTests(import.meta.url, ({ test }) => {
 
       return {
         hierarchy_info: {
-          ancestor: "MAP_ROUTE: ?zone&style",  
+          ancestor: "MAP_ROUTE: ?zone&style",
           child: "MAP_ISOCHRONE_ROUTE: ?walk&time",
           grandchild: "MAP_ISOCHRONE_WALK_ROUTE: ?mode",
-          expected_order: "zone, style, walk, time, mode (ancestor to child to grandchild)",
+          expected_order:
+            "zone, style, walk, time, mode (ancestor to child to grandchild)",
         },
 
         // Test 1: Child route should inherit ancestor params first
         child_with_all_params: MAP_ISOCHRONE_ROUTE.buildUrl({
           zone: "custom-zone",
-          style: "satellite", 
+          style: "satellite",
           walk: true,
           time: 45,
           extra: "param", // Should come after all pattern params
@@ -901,7 +902,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
         grandchild_with_all_params: MAP_ISOCHRONE_WALK_ROUTE.buildUrl({
           mode: "cycling",
           time: 20,
-          zone: "another-zone", 
+          zone: "another-zone",
           walk: true,
           style: "terrain",
           extra1: "first",
@@ -917,7 +918,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
         // Test 4: Only extra params - should be alphabetical
         child_only_extra_params: MAP_ISOCHRONE_ROUTE.buildUrl({
           zebra: "last",
-          alpha: "first", 
+          alpha: "first",
         }),
 
         // Test 5: Mixed signals and explicit params - hierarchy should be maintained
@@ -925,7 +926,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
           // Set some signals to non-default values
           zoneSignal.value = "signal-zone";
           walkSignal.value = true;
-          
+
           return MAP_ISOCHRONE_ROUTE.buildUrl({
             style: "explicit-style", // Should come after zone (from signal) but before walk
             time: 60, // Should come after walk (from signal)
@@ -934,7 +935,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
 
         current_signal_values: {
           zone: zoneSignal.value,
-          style: styleSignal.value, 
+          style: styleSignal.value,
           walk: walkSignal.value,
           time: timeSignal.value,
           mode: modeSignal.value,
