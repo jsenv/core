@@ -99,7 +99,7 @@ try {
   "grandchild_with_all_params": "http://127.0.0.1/map/isochrone/walk?zone=another-zone&style=terrain&walk&time=20&mode=cycling&extra1=first&extra2=second",
   "child_partial_params": "http://127.0.0.1/map/isochrone/walk?zone=partial-zone&walk",
   "child_only_extra_params": "http://127.0.0.1/map/isochrone/walk?alpha=first&zebra=last",
-  "mixed_scenario": "http://127.0.0.1/map/isochrone/walk?zone=signal-zone&style=explicit-style&walk&time=60",
+  "mixed_scenario": "http://127.0.0.1/map/isochrone/walk?style=explicit-style&walk&time=60",
   "current_signal_values": {
     "zone": "signal-zone",
     "style": "streets",
