@@ -1,4 +1,4 @@
-# [parent route optimization - settings route should return /admin when all params are defaults](../../route_build_url.test.js#L672)
+# [settings route should return /admin when all params are defaults](../../route_build_url.test.js#L672)
 
 ```js
 try {
