@@ -32,7 +32,7 @@ try {
 ```js
 {
   "map_route_url": "http://127.0.0.1/map/isochrone?zone=paris",
-  "map_url_panel_explicitely_undefined": "http://127.0.0.1/map/isochrone?zone=paris"
+  "map_url_panel_explicitely_undefined": "http://127.0.0.1/map?zone=paris"
 }
 ```
 
