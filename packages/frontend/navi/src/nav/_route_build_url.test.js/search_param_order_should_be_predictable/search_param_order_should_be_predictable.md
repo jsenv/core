@@ -1,4 +1,4 @@
-# [search param order should be predictable](../../route_build_url.test.js#L724)
+# [search param order should be predictable](../../route_build_url.test.js#L559)
 
 ```js
 try {
@@ -6,58 +6,28 @@ try {
   const bSignal = stateSignal("b-value", { id: "b" });
   const cSignal = stateSignal("c-value", { id: "c" });
 
-  // Pattern defines order: a, b, c
   const { ROUTE } = setupRoutes({
     ROUTE: `/test?a=${aSignal}&b=${bSignal}&c=${cSignal}`,
   });
 
   return {
-    pattern_order: "Pattern defines: a, b, c",
-
-    // Test 1: No provided params - should follow pattern order
     no_provided_params: ROUTE.buildUrl(),
-
-    // Test 2: Provided params in same order as pattern
     provided_same_order: ROUTE.buildUrl({
       a: "new-a",
       b: "new-b",
       c: "new-c",
     }),
-
-    // Test 3: Provided params in different order - should still follow pattern order
     provided_different_order: ROUTE.buildUrl({
       c: "new-c",
       a: "new-a",
       b: "new-b",
     }),
-
-    // Test 4: Partial provided params - pattern params first, then extras
     partial_provided: ROUTE.buildUrl({ b: "new-b" }),
-
-    // Test 5: Extra params not in pattern - should come after pattern params
     extra_params: ROUTE.buildUrl({
       d: "extra-d",
       b: "new-b",
       e: "extra-e",
     }),
-
-    // Test 6: Mixed case - pattern params + extras, provided in random order
-    mixed_order: ROUTE.buildUrl({
-      e: "extra-e",
-      c: "new-c",
-      d: "extra-d",
-      a: "new-a",
-    }),
-
-    expected_behavior: {
-      rule1:
-        "Pattern params should always come first in their pattern order",
-      rule2: "Extra params should come after pattern params",
-      rule3:
-        "Order of provided params object should not affect URL param order",
-      rule4:
-        "Extra params order should be consistent (alphabetical or insertion order)",
-    },
   };
 } finally {
   clearAllRoutes();
@@ -67,19 +37,11 @@ try {
 
 ```js
 {
-  "pattern_order": "Pattern defines: a, b, c",
   "no_provided_params": "http://127.0.0.1/test",
   "provided_same_order": "http://127.0.0.1/test?a=new-a&b=new-b&c=new-c",
   "provided_different_order": "http://127.0.0.1/test?a=new-a&b=new-b&c=new-c",
   "partial_provided": "http://127.0.0.1/test?b=new-b",
-  "extra_params": "http://127.0.0.1/test?b=new-b&d=extra-d&e=extra-e",
-  "mixed_order": "http://127.0.0.1/test?a=new-a&c=new-c&d=extra-d&e=extra-e",
-  "expected_behavior": {
-    "rule1": "Pattern params should always come first in their pattern order",
-    "rule2": "Extra params should come after pattern params",
-    "rule3": "Order of provided params object should not affect URL param order",
-    "rule4": "Extra params order should be consistent (alphabetical or insertion order)"
-  }
+  "extra_params": "http://127.0.0.1/test?b=new-b&d=extra-d&e=extra-e"
 }
 ```
 

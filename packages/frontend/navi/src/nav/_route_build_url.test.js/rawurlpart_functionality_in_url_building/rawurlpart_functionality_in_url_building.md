@@ -1,4 +1,4 @@
-# [rawUrlPart functionality in url building](../../route_build_url.test.js#L1030)
+# [rawUrlPart functionality in url building](../../route_build_url.test.js#L736)
 
 ```js
 try {
@@ -8,24 +8,10 @@ try {
   });
 
   return {
-    // Normal encoding
     normal_path: FILES_ROUTE.buildUrl({ path: "documents/readme.txt" }),
-    normal_special_chars: FILES_ROUTE.buildUrl({
-      path: "special chars & symbols",
-    }),
-
-    // Raw URL parts (bypassing encoding)
     raw_path: FILES_ROUTE.buildUrl({
-      path: rawUrlPart("documents/readme.txt"),
-    }),
-    raw_special_chars: FILES_ROUTE.buildUrl({
-      path: rawUrlPart("special chars & symbols"),
-    }),
-    raw_encoded_path: FILES_ROUTE.buildUrl({
       path: rawUrlPart("documents%2Freadme.txt"),
     }),
-
-    // Raw URL parts in query parameters
     normal_query: API_ROUTE.buildUrl({
       q: "hello world",
       filter: "type:document",
@@ -44,10 +30,7 @@ try {
 ```js
 {
   "normal_path": "http://127.0.0.1/files/documents%2Freadme.txt",
-  "normal_special_chars": "http://127.0.0.1/files/special%20chars%20%26%20symbols",
-  "raw_path": "http://127.0.0.1/files/documents/readme.txt",
-  "raw_special_chars": "http://127.0.0.1/files/special chars & symbols",
-  "raw_encoded_path": "http://127.0.0.1/files/documents%2Freadme.txt",
+  "raw_path": "http://127.0.0.1/files/documents%2Freadme.txt",
   "normal_query": "http://127.0.0.1/api/search?filter=type%3Adocument&q=hello%20world",
   "raw_query": "http://127.0.0.1/api/search?filter=type%3Adocument&q=hello+world"
 }

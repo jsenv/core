@@ -1,4 +1,4 @@
-# [to be defined](../../route_build_url.test.js#L1007)
+# [parent route should handle undefined signals correctly](../../route_build_url.test.js#L709)
 
 ```js
 try {
@@ -7,7 +7,7 @@ try {
 
   mapPanelSignal.value = "isochrone";
 
-  const { MAP_ISOCHRONE_COMPARE_ROUTE } = setupRoutes({
+  const { MAP_ROUTE, MAP_ISOCHRONE_COMPARE_ROUTE } = setupRoutes({
     MAP_ROUTE: `/map/`,
     MAP_PANEL_ROUTE: `/map/:panel=${mapPanelSignal}/`,
     MAP_ISOCHRONE_ROUTE: `/map/isochrone/:tab=${isochroneTabSignal}/`,
@@ -15,6 +15,10 @@ try {
   });
 
   return {
+    map_url_normal: MAP_ROUTE.buildUrl(),
+    map_url_panel_undefined: MAP_ROUTE.buildUrl({
+      panel: undefined,
+    }),
     isochrone_compare_url: MAP_ISOCHRONE_COMPARE_ROUTE.buildUrl({}),
   };
 } finally {
@@ -25,6 +29,8 @@ try {
 
 ```js
 {
+  "map_url_normal": "http://127.0.0.1/map/isochrone",
+  "map_url_panel_undefined": "http://127.0.0.1/map",
   "isochrone_compare_url": "http://127.0.0.1/map/isochrone"
 }
 ```

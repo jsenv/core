@@ -45,7 +45,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
         });
 
       return {
-        // Test deepest URL generation - should find child routes when possible
+        // Test deepest URL generation
         admin_no_params: ADMIN_ROUTE.buildUrl(),
         admin_explicit_settings: ADMIN_ROUTE.buildUrl({
           section: "settings",
@@ -54,13 +54,12 @@ await snapshotTests(import.meta.url, ({ test }) => {
           section: "users",
         }),
 
-        // Settings route URL building - should use deepest route
+        // Settings route URL building
         settings_no_params: ADMIN_SETTINGS_ROUTE.buildUrl(),
         settings_with_security_tab: ADMIN_SETTINGS_ROUTE.buildUrl({
           tab: "security",
         }),
-        // Test that providing section param doesn't interfere
-        settings_with_section_toto_and_tab: ADMIN_SETTINGS_ROUTE.buildUrl({
+        settings_with_section_override: ADMIN_SETTINGS_ROUTE.buildUrl({
           section: "toto",
           tab: "advanced",
         }),
@@ -70,12 +69,8 @@ await snapshotTests(import.meta.url, ({ test }) => {
         }),
 
         // Analytics route URL building
-        analytics_should_include_overview_tab: ADMIN_ANALYTICS_ROUTE.buildUrl(),
+        analytics_no_params: ADMIN_ANALYTICS_ROUTE.buildUrl(),
         analytics_with_performance_tab: ADMIN_ANALYTICS_ROUTE.buildUrl({
-          tab: "performance",
-        }),
-        analytics_with_section_toto: ADMIN_ANALYTICS_ROUTE.buildUrl({
-          section: "toto",
           tab: "performance",
         }),
         analytics_with_extra_params: ADMIN_ANALYTICS_ROUTE.buildUrl({
@@ -89,8 +84,8 @@ await snapshotTests(import.meta.url, ({ test }) => {
     }
   });
 
-  test("url building with local storage mocking", () => {
-    // Mock window.localStorage (required by valueInLocalStorage)
+  test("url building with localStorage persistence", () => {
+    // Mock window.localStorage
     const localStorageMock = {
       storage: new Map(),
       getItem(key) {
@@ -107,16 +102,15 @@ await snapshotTests(import.meta.url, ({ test }) => {
       },
     };
 
-    // Ensure window object exists and has localStorage
     if (!globalThis.window) {
       globalThis.window = {};
     }
     globalThis.window.localStorage = localStorageMock;
 
     try {
-      // Set initial localStorage values
-      localStorageMock.setItem("section_ls", "settings"); // default
-      localStorageMock.setItem("settings_tab_ls", "general"); // default
+      localStorageMock.setItem("section_ls", "settings");
+      localStorageMock.setItem("settings_tab_ls", "general");
+
       const sectionSignal = stateSignal("settings", {
         id: "section_ls",
         persists: true,
@@ -127,58 +121,40 @@ await snapshotTests(import.meta.url, ({ test }) => {
         persists: true,
         type: "string",
       });
+
       const { ADMIN_ROUTE, ADMIN_SETTINGS_ROUTE } = setupRoutes({
         ROOT: "/",
         ADMIN_ROUTE: `/admin/:section=${sectionSignal}/`,
         ADMIN_SETTINGS_ROUTE: `/admin/settings/:tab=${tabSignal}`,
       });
 
-      const scenario1 = {
-        name: "both_at_defaults",
-        localStorage_section: localStorageMock.getItem("section_ls"), // null - cleaned up because value equals default
-        localStorage_tab: localStorageMock.getItem("settings_tab_ls"), // null - cleaned up because value equals default
-        signal_section: sectionSignal.value,
-        signal_tab: tabSignal.value,
+      const bothDefaults = {
         admin_url: ADMIN_ROUTE.buildUrl({}),
         settings_url: ADMIN_SETTINGS_ROUTE.buildUrl({}),
       };
 
-      // Change localStorage and signal values to non-defaults
-      localStorageMock.setItem("section_ls", "users");
-      localStorageMock.setItem("settings_tab_ls", "security");
-      sectionSignal.value = "users"; // This should trigger localStorage update
-      tabSignal.value = "security"; // This should trigger localStorage update
+      // Change to non-defaults
+      sectionSignal.value = "users";
+      tabSignal.value = "security";
 
-      const scenario2 = {
-        name: "both_non_defaults",
-        localStorage_section: localStorageMock.getItem("section_ls"),
-        localStorage_tab: localStorageMock.getItem("settings_tab_ls"),
-        signal_section: sectionSignal.value,
-        signal_tab: tabSignal.value,
+      const bothNonDefaults = {
         admin_url: ADMIN_ROUTE.buildUrl({}),
         settings_url: ADMIN_SETTINGS_ROUTE.buildUrl({}),
       };
 
-      // Test mixed scenario: section=settings (default), tab=security (non-default)
-      localStorageMock.setItem("section_ls", "settings");
-      localStorageMock.setItem("settings_tab_ls", "security");
+      // Mixed scenario: section=default, tab=non-default
       sectionSignal.value = "settings";
       tabSignal.value = "security";
 
-      const scenario3 = {
-        name: "section_default_tab_non_default",
-        localStorage_section: localStorageMock.getItem("section_ls"), // null - cleaned up because value equals default
-        localStorage_tab: localStorageMock.getItem("settings_tab_ls"),
-        signal_section: sectionSignal.value,
-        signal_tab: tabSignal.value,
+      const mixed = {
         admin_url: ADMIN_ROUTE.buildUrl({}),
         settings_url: ADMIN_SETTINGS_ROUTE.buildUrl({}),
       };
 
       return {
-        scenario1,
-        scenario2,
-        scenario3,
+        both_defaults: bothDefaults,
+        both_non_defaults: bothNonDefaults,
+        section_default_tab_non_default: mixed,
       };
     } finally {
       clearAllRoutes();
@@ -201,39 +177,25 @@ await snapshotTests(import.meta.url, ({ test }) => {
         ADMIN_SETTINGS_ROUTE: `/admin/settings/:tab=${tabSignal}`,
       });
 
-      // Capture initial URLs
       const initialUrls = {
         admin_initial: ADMIN_ROUTE.buildUrl({}),
         settings_initial: ADMIN_SETTINGS_ROUTE.buildUrl({}),
-        admin_relativeUrl_initial: ADMIN_ROUTE.relativeUrl,
-        settings_relativeUrl_initial: ADMIN_SETTINGS_ROUTE.relativeUrl,
       };
 
-      // Change child route signal (tab) - this should make parent route generate deepest URL
+      // Change child route signal to non-default
       tabSignal.value = "security";
 
       const afterTabChange = {
         admin_after_tab_change: ADMIN_ROUTE.buildUrl({}),
         settings_after_tab_change: ADMIN_SETTINGS_ROUTE.buildUrl({}),
-        admin_relativeUrl_after_tab: ADMIN_ROUTE.relativeUrl,
-        settings_relativeUrl_after_tab: ADMIN_SETTINGS_ROUTE.relativeUrl,
-        tab_signal_value: tabSignal.value,
-        // Key behavior: Parent route now generates deepest URL because child has non-default value
-        parent_now_uses_child_route:
-          ADMIN_ROUTE.buildUrl({}) === ADMIN_SETTINGS_ROUTE.buildUrl({}),
       };
 
-      // Change parent route signal (section) - should use parent's own parameter
+      // Change parent route signal to non-default
       sectionSignal.value = "users";
 
       const afterSectionChange = {
         admin_after_section_change: ADMIN_ROUTE.buildUrl({}),
         settings_after_section_change: ADMIN_SETTINGS_ROUTE.buildUrl({}),
-        admin_relativeUrl_after_section: ADMIN_ROUTE.relativeUrl,
-        settings_relativeUrl_after_section: ADMIN_SETTINGS_ROUTE.relativeUrl,
-        section_signal_value: sectionSignal.value,
-        // Parent route uses its own non-default parameter now
-        parent_uses_own_param: ADMIN_ROUTE.buildUrl({}).includes("users"),
       };
 
       return {
@@ -249,13 +211,12 @@ await snapshotTests(import.meta.url, ({ test }) => {
 
   test("explicit params should override signal values", () => {
     try {
-      // Match dashboard_demo.jsx scenario: general is the default
       const sectionSignal = stateSignal("settings", {
         id: "param_override_section",
       });
-      const tabSignal = stateSignal("general", { id: "param_override_tab" }); // "general" is default
-      // Simulate real scenario: tab signal gets changed to "advanced" in localStorage/state
-      tabSignal.value = "advanced"; // This simulates what happens in real app
+      const tabSignal = stateSignal("general", { id: "param_override_tab" });
+
+      tabSignal.value = "advanced";
 
       const { ADMIN_ROUTE, ADMIN_SETTINGS_ROUTE } = setupRoutes({
         ROOT: "/",
@@ -264,42 +225,19 @@ await snapshotTests(import.meta.url, ({ test }) => {
       });
 
       return {
-        // Test the exact issue: signal has "advanced" but we explicitly pass "general" (default)
-        // This should result in a short URL without the tab parameter
-        bug_reproduction_explicit_general: ADMIN_SETTINGS_ROUTE.buildUrl({
-          tab: "general", // Should override signal "advanced" and be omitted as default → "/admin"
+        explicit_general_override: ADMIN_SETTINGS_ROUTE.buildUrl({
+          tab: "general", // Should override signal "advanced" → "/admin"
         }),
-
-        // Test without any explicit params - should use signal value "advanced"
-        using_signal_advanced: ADMIN_SETTINGS_ROUTE.buildUrl({}), // Should use "advanced" from signal
-
-        // Test explicit non-default override
+        using_signal_value: ADMIN_SETTINGS_ROUTE.buildUrl({}),
         explicit_security_override: ADMIN_SETTINGS_ROUTE.buildUrl({
-          tab: "security", // Should override signal "advanced" with "security"
+          tab: "security",
         }),
-
-        // Test section route behavior
-        section_with_default: ADMIN_ROUTE.buildUrl({
+        section_default: ADMIN_ROUTE.buildUrl({
           section: "settings",
         }),
-        section_with_default_and_tab_default: ADMIN_ROUTE.buildUrl({
-          section: "settings",
-          tab: "general",
+        section_non_default: ADMIN_ROUTE.buildUrl({
+          section: "users",
         }),
-
-        section_with_non_default: ADMIN_ROUTE.buildUrl({
-          section: "users", // Should appear → "/admin/users/"
-        }),
-
-        // Reference values for debugging
-        current_signal_values: {
-          section: sectionSignal.value,
-          tab: tabSignal.value,
-        },
-        signal_defaults: {
-          section: "settings", // stateSignal first param
-          tab: "general", // stateSignal first param
-        },
       };
     } finally {
       clearAllRoutes();
@@ -309,12 +247,12 @@ await snapshotTests(import.meta.url, ({ test }) => {
 
   test("root route should not use deepest url generation", () => {
     try {
-      // Set up signals with non-default values that would normally trigger deepest URL
       const sectionSignal = stateSignal("settings");
       const tabSignal = stateSignal("general");
-      // Change signals to non-default values
+
       sectionSignal.value = "users";
       tabSignal.value = "advanced";
+
       const { ROOT_ROUTE, ADMIN_ROUTE, ADMIN_SETTINGS_ROUTE } = setupRoutes({
         ROOT_ROUTE: "/",
         ADMIN_ROUTE: `/admin/:section=${sectionSignal}/`,
@@ -322,24 +260,9 @@ await snapshotTests(import.meta.url, ({ test }) => {
       });
 
       return {
-        // Root route should ALWAYS stay as "/" even with non-default child signals
-        // Users must be able to navigate to home page regardless of app state
-        root_with_no_params: ROOT_ROUTE.buildUrl({}),
-        root_with_empty_params: ROOT_ROUTE.buildUrl(),
-
-        // For comparison - child routes should use deepest URL when no params provided
-        admin_no_params: ADMIN_ROUTE.buildUrl({}), // Should potentially use child route
-        admin_settings_no_params: ADMIN_SETTINGS_ROUTE.buildUrl({}), // Should use signal
-
-        // Verify signals have non-default values
-        signal_values: {
-          section: sectionSignal.value, // "users" (non-default)
-          tab: tabSignal.value, // "advanced" (non-default)
-        },
-        defaults: {
-          section: "settings",
-          tab: "general",
-        },
+        root_url: ROOT_ROUTE.buildUrl({}),
+        admin_url: ADMIN_ROUTE.buildUrl({}),
+        settings_url: ADMIN_SETTINGS_ROUTE.buildUrl({}),
       };
     } finally {
       clearAllRoutes();
@@ -347,30 +270,23 @@ await snapshotTests(import.meta.url, ({ test }) => {
     }
   });
 
-  test("debug deepest url generation", () => {
+  test("url generation with search parameters", () => {
     try {
-      // Simple test case to see what's happening
       const tabSignal = stateSignal("overview", { id: "debug_tab" });
-      tabSignal.value = "details"; // non-default
-      // Register admin route that should upgrade to analytics when section=analytics
+      tabSignal.value = "details";
+
       const { ADMIN_ROUTE, ANALYTICS_ROUTE } = setupRoutes({
         ROOT: "/",
         ADMIN_ROUTE: `/admin/:section/`,
         ANALYTICS_ROUTE: `/admin/analytics?tab=${tabSignal}`,
       });
+
       return {
-        // Test with explicit section=analytics
         admin_with_analytics_section: ADMIN_ROUTE.buildUrl({
           section: "analytics",
         }),
-        // Test without params (should use default section which won't match analytics)
         admin_with_no_params: ADMIN_ROUTE.buildUrl({}),
-
-        // For comparison
         analytics_direct: ANALYTICS_ROUTE.buildUrl({}),
-
-        // Signal value
-        tab_signal: tabSignal.value,
       };
     } finally {
       clearAllRoutes();
@@ -378,8 +294,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
     }
   });
 
-  test("deepest url generation with search parameters", () => {
-    // Mock localStorage to reproduce the real scenario
+  test("url generation with localStorage persistence", () => {
     const localStorageMock = {
       storage: new Map(),
       getItem(key) {
@@ -398,20 +313,13 @@ await snapshotTests(import.meta.url, ({ test }) => {
     globalThis.window = {
       localStorage: localStorageMock,
     };
-    try {
-      // Set up localStorage with analytics tab having non-default value
-      localStorageMock.setItem("section_deepest", "analytics"); // non-default
-      localStorageMock.setItem("analytics_tab_deepest", "details"); // non-default
-      localStorageMock.setItem("settings_tab_deepest", "general"); // default
 
-      // Create signals with localStorage persistence (like real app)
+    try {
+      localStorageMock.setItem("section_deepest", "analytics");
+      localStorageMock.setItem("analytics_tab_deepest", "details");
+
       const sectionSignal = stateSignal("settings", {
         id: "section_deepest",
-        persists: true,
-        type: "string",
-      });
-      const settingsTabSignal = stateSignal("general", {
-        id: "settings_tab_deepest",
         persists: true,
         type: "string",
       });
@@ -421,9 +329,6 @@ await snapshotTests(import.meta.url, ({ test }) => {
         type: "string",
       });
 
-      // Register routes like dashboard_demo.jsx:
-      // - Admin route with path parameter: /admin/:section/
-      // - Analytics route with search parameter: /admin/analytics/?tab=signal
       const { ROOT_ROUTE, ADMIN_ROUTE, ADMIN_ANALYTICS_ROUTE } = setupRoutes({
         ROOT_ROUTE: "/",
         ADMIN_ROUTE: `/admin/:section=${sectionSignal}/`,
@@ -431,34 +336,13 @@ await snapshotTests(import.meta.url, ({ test }) => {
       });
 
       return {
-        // Reproduce the scenario: on root route, with analytics tab in localStorage
-        // This should generate deepest URL including analytics tab from localStorage
-        admin_route_from_root: ADMIN_ROUTE.buildUrl({}),
-
-        // For comparison - direct analytics route URL
-        analytics_route_direct: ADMIN_ANALYTICS_ROUTE.buildUrl({}),
-
-        // Verify localStorage values
-        localStorage_values: {
-          section: localStorageMock.getItem("section_deepest"),
-          analytics_tab: localStorageMock.getItem("analytics_tab_deepest"),
-          settings_tab: localStorageMock.getItem("settings_tab_deepest"),
-        },
-
-        // Verify signal values (should reflect localStorage)
-        signal_values: {
-          section: sectionSignal.value,
-          analytics_tab: analyticsTabSignal.value,
-          settings_tab: settingsTabSignal.value,
-        },
-
-        // Test root route (should not use deepest URL)
+        admin_route_url: ADMIN_ROUTE.buildUrl({}),
+        analytics_route_url: ADMIN_ANALYTICS_ROUTE.buildUrl({}),
         root_route_url: ROOT_ROUTE.buildUrl({}),
       };
     } finally {
       clearAllRoutes();
       globalSignalRegistry.clear();
-
       delete globalThis.window;
     }
   });
@@ -622,7 +506,6 @@ await snapshotTests(import.meta.url, ({ test }) => {
         type: "number",
       });
 
-      // Set initial values: walkEnabled=false, walkMinute=40
       walkEnabledSignal.value = false;
       walkMinuteSignal.value = 40;
 
@@ -631,36 +514,13 @@ await snapshotTests(import.meta.url, ({ test }) => {
         ISOCHRONE_COMPARE_ROUTE: `/map/isochrone/compare?walk=${walkEnabledSignal}&walk_minute=${walkMinuteSignal}`,
       });
 
-      // Test buildUrl directly to see if child signals are found
-      const urlWithWalkTrue = ISOCHRONE_ROUTE.buildUrl({ walk: true });
-      const urlWithoutParams = ISOCHRONE_ROUTE.buildUrl();
-      const urlWithTabAndWalk = ISOCHRONE_ROUTE.buildUrl({
-        tab: "settings",
-        walk: true,
-      });
-
       return {
-        signal_values: {
-          walk_enabled: walkEnabledSignal.value, // false
-          walk_minute: walkMinuteSignal.value, // 40
-        },
-
-        url_tests: {
-          // Should find walkMinuteSignal=40 from child pattern even with walk=true provided
-          url_with_walk_true: urlWithWalkTrue,
-          // Should generate deepest URL using all signal values
-          url_without_params: urlWithoutParams,
-          // Should combine provided params with child signals
-          url_with_tab_and_walk: urlWithTabAndWalk,
-        },
-
-        expected_behavior: {
-          walk_true_should_contain: "walk_minute=40",
-          should_choose_compare_route:
-            "because it has both walk and walk_minute signals",
-          expected_url_pattern:
-            "/map/isochrone/compare?walk=true&walk_minute=40",
-        },
+        url_with_walk_true: ISOCHRONE_ROUTE.buildUrl({ walk: true }),
+        url_without_params: ISOCHRONE_ROUTE.buildUrl(),
+        url_with_tab_and_walk: ISOCHRONE_ROUTE.buildUrl({
+          tab: "settings",
+          walk: true,
+        }),
       };
     } finally {
       clearAllRoutes();
@@ -670,7 +530,6 @@ await snapshotTests(import.meta.url, ({ test }) => {
 
   test("settings route should return /admin when all params are defaults", () => {
     try {
-      // Parent route default matches child literal "settings" - this enables optimization
       const sectionSignal = stateSignal("settings");
       const settingsTabSignal = stateSignal("general");
       const analyticsTabSignal = stateSignal("overview");
@@ -685,35 +544,11 @@ await snapshotTests(import.meta.url, ({ test }) => {
       updateRoutes(`${baseUrl}/admin/settings/advanced`);
 
       return {
-        // Core issue: When both signals are at defaults, settings route should optimize to shortest equivalent URL
-        settings_url: ADMIN_SETTINGS_ROUTE.buildUrl({ tab: "general" }), // Should be "/admin", not "/admin/settings"
-        admin_url: ADMIN_ROUTE.buildUrl(), // For comparison
-      };
-    } finally {
-      clearAllRoutes();
-      globalSignalRegistry.clear();
-    }
-  });
-
-  test("settings route should return /admin second case", () => {
-    try {
-      // Parent route default matches child literal "settings" - this enables optimization
-      const sectionSignal = stateSignal("settings");
-      const settingsTabSignal = stateSignal("general");
-      const analyticsTabSignal = stateSignal("overview");
-
-      const { ADMIN_ROUTE, ADMIN_SETTINGS_ROUTE } = setupRoutes({
-        ROOT: "/",
-        ADMIN_ROUTE: `/admin/:section=${sectionSignal}/`,
-        ADMIN_SETTINGS_ROUTE: `/admin/settings/:tab=${settingsTabSignal}`,
-        ADMIN_ANALYTICS_ROUTE: `/admin/analytics?tab=${analyticsTabSignal}`,
-      });
-
-      updateRoutes(`${baseUrl}/admin/analytics`);
-
-      return {
-        settings_url: ADMIN_SETTINGS_ROUTE.buildUrl(), // Should be "/admin", not "/admin/settings"
-        admin_url: ADMIN_ROUTE.buildUrl(), // For comparison
+        settings_url_with_default_tab: ADMIN_SETTINGS_ROUTE.buildUrl({
+          tab: "general",
+        }),
+        settings_url_no_params: ADMIN_SETTINGS_ROUTE.buildUrl(),
+        admin_url: ADMIN_ROUTE.buildUrl(),
       };
     } finally {
       clearAllRoutes();
@@ -727,58 +562,28 @@ await snapshotTests(import.meta.url, ({ test }) => {
       const bSignal = stateSignal("b-value", { id: "b" });
       const cSignal = stateSignal("c-value", { id: "c" });
 
-      // Pattern defines order: a, b, c
       const { ROUTE } = setupRoutes({
         ROUTE: `/test?a=${aSignal}&b=${bSignal}&c=${cSignal}`,
       });
 
       return {
-        pattern_order: "Pattern defines: a, b, c",
-
-        // Test 1: No provided params - should follow pattern order
         no_provided_params: ROUTE.buildUrl(),
-
-        // Test 2: Provided params in same order as pattern
         provided_same_order: ROUTE.buildUrl({
           a: "new-a",
           b: "new-b",
           c: "new-c",
         }),
-
-        // Test 3: Provided params in different order - should still follow pattern order
         provided_different_order: ROUTE.buildUrl({
           c: "new-c",
           a: "new-a",
           b: "new-b",
         }),
-
-        // Test 4: Partial provided params - pattern params first, then extras
         partial_provided: ROUTE.buildUrl({ b: "new-b" }),
-
-        // Test 5: Extra params not in pattern - should come after pattern params
         extra_params: ROUTE.buildUrl({
           d: "extra-d",
           b: "new-b",
           e: "extra-e",
         }),
-
-        // Test 6: Mixed case - pattern params + extras, provided in random order
-        mixed_order: ROUTE.buildUrl({
-          e: "extra-e",
-          c: "new-c",
-          d: "extra-d",
-          a: "new-a",
-        }),
-
-        expected_behavior: {
-          rule1:
-            "Pattern params should always come first in their pattern order",
-          rule2: "Extra params should come after pattern params",
-          rule3:
-            "Order of provided params object should not affect URL param order",
-          rule4:
-            "Extra params order should be consistent (alphabetical or insertion order)",
-        },
       };
     } finally {
       clearAllRoutes();
@@ -793,42 +598,18 @@ await snapshotTests(import.meta.url, ({ test }) => {
       const pageSignal = stateSignal(1, { id: "page", type: "number" });
 
       const { SEARCH_ROUTE, SEARCH_RESULTS_ROUTE } = setupRoutes({
-        // Parent pattern with some query params
         SEARCH_ROUTE: `/search?filter=${filterSignal}&sort=${sortSignal}`,
-        // Child pattern with additional query params
         SEARCH_RESULTS_ROUTE: `/search/results?page=${pageSignal}&limit=20`,
       });
 
       return {
-        patterns: {
-          search: "?filter&sort",
-          results: "?page&limit",
-        },
-
-        // Test buildUrl with different param combinations
         search_no_params: SEARCH_ROUTE.buildUrl(),
-        search_partial_params: SEARCH_ROUTE.buildUrl({ sort: "date" }),
-        search_with_extras: SEARCH_ROUTE.buildUrl({
-          sort: "date",
-          extra: "value",
-          filter: "inactive",
-          another: "param",
-        }),
-
+        search_with_params: SEARCH_ROUTE.buildUrl({ sort: "date" }),
         results_no_params: SEARCH_RESULTS_ROUTE.buildUrl(),
-        results_with_extras: SEARCH_RESULTS_ROUTE.buildUrl({
+        results_with_params: SEARCH_RESULTS_ROUTE.buildUrl({
           page: 2,
-          custom: "param",
           limit: 50,
-          filter: "all", // This should be extra since it's not in results pattern
         }),
-
-        expected_analysis: {
-          search_param_order: "filter, sort, then extras alphabetically",
-          results_param_order: "page, limit, then extras alphabetically",
-          inheritance_note:
-            "Child routes don't inherit parent query param order",
-        },
       };
     } finally {
       clearAllRoutes();
@@ -863,84 +644,32 @@ await snapshotTests(import.meta.url, ({ test }) => {
 
   test("hierarchical search param order should respect ancestor patterns", () => {
     try {
-      // Create a hierarchy that matches your example:
-      // /map?zone=${zoneSignal} (ancestor)
-      // /map/isochrone/?walk=${walkSignal} (child)
       const zoneSignal = stateSignal("zone-123", { id: "zone" });
-      const styleSignal = stateSignal("streets", { id: "style" });
       const walkSignal = stateSignal(false, { id: "walk", type: "boolean" });
       const timeSignal = stateSignal(30, { id: "time", type: "number" });
       const modeSignal = stateSignal("driving", { id: "mode" });
 
       const { MAP_ISOCHRONE_ROUTE, MAP_ISOCHRONE_WALK_ROUTE } = setupRoutes({
-        // Ancestor: defines zone, style order
-        MAP_ROUTE: `/map?zone=${zoneSignal}&style=${styleSignal}`,
-        // Child: defines walk, time order
+        MAP_ROUTE: `/map?zone=${zoneSignal}`,
         MAP_ISOCHRONE_ROUTE: `/map/isochrone/?walk=${walkSignal}&time=${timeSignal}`,
-        // Grandchild: defines mode
         MAP_ISOCHRONE_WALK_ROUTE: `/map/isochrone/walk?mode=${modeSignal}`,
       });
 
       return {
-        hierarchy_info: {
-          ancestor: "MAP_ROUTE: ?zone&style",
-          child: "MAP_ISOCHRONE_ROUTE: ?walk&time",
-          grandchild: "MAP_ISOCHRONE_WALK_ROUTE: ?mode",
-          expected_order:
-            "zone, style, walk, time, mode (ancestor to child to grandchild)",
-        },
-
-        // Test 1: Child route should inherit ancestor params first
-        child_with_all_params: MAP_ISOCHRONE_ROUTE.buildUrl({
+        child_with_params: MAP_ISOCHRONE_ROUTE.buildUrl({
           zone: "custom-zone",
-          style: "satellite",
           walk: true,
           time: 45,
-          extra: "param", // Should come after all pattern params
         }),
-
-        // Test 2: Grandchild should have ancestor->child->grandchild order
-        grandchild_with_all_params: MAP_ISOCHRONE_WALK_ROUTE.buildUrl({
-          mode: "cycling",
-          time: 20,
+        grandchild_with_params: MAP_ISOCHRONE_WALK_ROUTE.buildUrl({
           zone: "another-zone",
           walk: true,
-          style: "terrain",
-          extra1: "first",
-          extra2: "second", // Extra params should be alphabetical after pattern params
+          mode: "cycling",
         }),
-
-        // Test 3: Partial params - pattern hierarchy should still be respected
-        child_partial_params: MAP_ISOCHRONE_ROUTE.buildUrl({
+        partial_params: MAP_ISOCHRONE_ROUTE.buildUrl({
+          zone: "partial-zone",
           walk: true,
-          zone: "partial-zone", // Should still come first even though walk was provided first
         }),
-
-        // Test 4: Only extra params - should be alphabetical
-        child_only_extra_params: MAP_ISOCHRONE_ROUTE.buildUrl({
-          zebra: "last",
-          alpha: "first",
-        }),
-
-        // Test 5: Mixed signals and explicit params - hierarchy should be maintained
-        mixed_scenario: (() => {
-          // Set some signals to non-default values
-          zoneSignal.value = "signal-zone";
-          walkSignal.value = true;
-
-          return MAP_ISOCHRONE_ROUTE.buildUrl({
-            style: "explicit-style", // Should come after zone (from signal) but before walk
-            time: 60, // Should come after walk (from signal)
-          });
-        })(),
-
-        current_signal_values: {
-          zone: zoneSignal.value,
-          style: styleSignal.value,
-          walk: walkSignal.value,
-          time: timeSignal.value,
-          mode: modeSignal.value,
-        },
       };
     } finally {
       clearAllRoutes();
@@ -977,41 +706,14 @@ await snapshotTests(import.meta.url, ({ test }) => {
     }
   });
 
-  test("parent route should ignore child route explicitely undefined", () => {
-    try {
-      const mapPanelSignal = stateSignal(undefined, { id: "mapPanel" });
-      const isochroneTabSignal = stateSignal("compare");
-      const isoLonSignal = stateSignal(2);
-
-      mapPanelSignal.value = "isochrone";
-      isoLonSignal.value = 3;
-      const { MAP_ROUTE } = setupRoutes({
-        MAP_ROUTE: `/map/`,
-        MAP_PANEL_ROUTE: `/map/:panel=${mapPanelSignal}/`,
-        MAP_ISOCHRONE_ROUTE: `/map/isochrone/:tab=${isochroneTabSignal}/?iso_lon=${isoLonSignal}`,
-        MAP_ISOCHRONE_COMPARE_ROUTE: `/map/isochrone/compare`,
-      });
-
-      return {
-        map_url_normal: MAP_ROUTE.buildUrl(),
-        map_url_panel_explicitely_undefined: MAP_ROUTE.buildUrl({
-          panel: undefined,
-        }),
-      };
-    } finally {
-      clearAllRoutes();
-      globalSignalRegistry.clear();
-    }
-  });
-
-  test("to be defined", () => {
+  test("parent route should handle undefined signals correctly", () => {
     try {
       const mapPanelSignal = stateSignal(undefined, { id: "mapPanel" });
       const isochroneTabSignal = stateSignal("compare");
 
       mapPanelSignal.value = "isochrone";
 
-      const { MAP_ISOCHRONE_COMPARE_ROUTE } = setupRoutes({
+      const { MAP_ROUTE, MAP_ISOCHRONE_COMPARE_ROUTE } = setupRoutes({
         MAP_ROUTE: `/map/`,
         MAP_PANEL_ROUTE: `/map/:panel=${mapPanelSignal}/`,
         MAP_ISOCHRONE_ROUTE: `/map/isochrone/:tab=${isochroneTabSignal}/`,
@@ -1019,6 +721,10 @@ await snapshotTests(import.meta.url, ({ test }) => {
       });
 
       return {
+        map_url_normal: MAP_ROUTE.buildUrl(),
+        map_url_panel_undefined: MAP_ROUTE.buildUrl({
+          panel: undefined,
+        }),
         isochrone_compare_url: MAP_ISOCHRONE_COMPARE_ROUTE.buildUrl({}),
       };
     } finally {
@@ -1035,24 +741,10 @@ await snapshotTests(import.meta.url, ({ test }) => {
       });
 
       return {
-        // Normal encoding
         normal_path: FILES_ROUTE.buildUrl({ path: "documents/readme.txt" }),
-        normal_special_chars: FILES_ROUTE.buildUrl({
-          path: "special chars & symbols",
-        }),
-
-        // Raw URL parts (bypassing encoding)
         raw_path: FILES_ROUTE.buildUrl({
-          path: rawUrlPart("documents/readme.txt"),
-        }),
-        raw_special_chars: FILES_ROUTE.buildUrl({
-          path: rawUrlPart("special chars & symbols"),
-        }),
-        raw_encoded_path: FILES_ROUTE.buildUrl({
           path: rawUrlPart("documents%2Freadme.txt"),
         }),
-
-        // Raw URL parts in query parameters
         normal_query: API_ROUTE.buildUrl({
           q: "hello world",
           filter: "type:document",

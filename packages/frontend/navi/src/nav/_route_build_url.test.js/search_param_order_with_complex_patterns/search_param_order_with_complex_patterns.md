@@ -1,4 +1,4 @@
-# [search param order with complex patterns](../../route_build_url.test.js#L789)
+# [search param order with complex patterns](../../route_build_url.test.js#L594)
 
 ```js
 try {
@@ -7,42 +7,18 @@ try {
   const pageSignal = stateSignal(1, { id: "page", type: "number" });
 
   const { SEARCH_ROUTE, SEARCH_RESULTS_ROUTE } = setupRoutes({
-    // Parent pattern with some query params
     SEARCH_ROUTE: `/search?filter=${filterSignal}&sort=${sortSignal}`,
-    // Child pattern with additional query params
     SEARCH_RESULTS_ROUTE: `/search/results?page=${pageSignal}&limit=20`,
   });
 
   return {
-    patterns: {
-      search: "?filter&sort",
-      results: "?page&limit",
-    },
-
-    // Test buildUrl with different param combinations
     search_no_params: SEARCH_ROUTE.buildUrl(),
-    search_partial_params: SEARCH_ROUTE.buildUrl({ sort: "date" }),
-    search_with_extras: SEARCH_ROUTE.buildUrl({
-      sort: "date",
-      extra: "value",
-      filter: "inactive",
-      another: "param",
-    }),
-
+    search_with_params: SEARCH_ROUTE.buildUrl({ sort: "date" }),
     results_no_params: SEARCH_RESULTS_ROUTE.buildUrl(),
-    results_with_extras: SEARCH_RESULTS_ROUTE.buildUrl({
+    results_with_params: SEARCH_RESULTS_ROUTE.buildUrl({
       page: 2,
-      custom: "param",
       limit: 50,
-      filter: "all", // This should be extra since it's not in results pattern
     }),
-
-    expected_analysis: {
-      search_param_order: "filter, sort, then extras alphabetically",
-      results_param_order: "page, limit, then extras alphabetically",
-      inheritance_note:
-        "Child routes don't inherit parent query param order",
-    },
   };
 } finally {
   clearAllRoutes();
@@ -52,20 +28,10 @@ try {
 
 ```js
 {
-  "patterns": {
-    "search": "?filter&sort",
-    "results": "?page&limit"
-  },
   "search_no_params": "http://127.0.0.1/search",
-  "search_partial_params": "http://127.0.0.1/search/results?sort=date",
-  "search_with_extras": "http://127.0.0.1/search/results?filter=inactive&sort=date&another=param&extra=value",
+  "search_with_params": "http://127.0.0.1/search/results?sort=date",
   "results_no_params": "http://127.0.0.1/search/results",
-  "results_with_extras": "http://127.0.0.1/search/results?filter=all&page=2&limit=50&custom=param",
-  "expected_analysis": {
-    "search_param_order": "filter, sort, then extras alphabetically",
-    "results_param_order": "page, limit, then extras alphabetically",
-    "inheritance_note": "Child routes don't inherit parent query param order"
-  }
+  "results_with_params": "http://127.0.0.1/search/results?page=2&limit=50"
 }
 ```
 

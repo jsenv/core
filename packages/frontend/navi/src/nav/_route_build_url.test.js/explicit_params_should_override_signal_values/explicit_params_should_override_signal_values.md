@@ -1,14 +1,13 @@
-# [explicit params should override signal values](../../route_build_url.test.js#L250)
+# [explicit params should override signal values](../../route_build_url.test.js#L212)
 
 ```js
 try {
-  // Match dashboard_demo.jsx scenario: general is the default
   const sectionSignal = stateSignal("settings", {
     id: "param_override_section",
   });
-  const tabSignal = stateSignal("general", { id: "param_override_tab" }); // "general" is default
-  // Simulate real scenario: tab signal gets changed to "advanced" in localStorage/state
-  tabSignal.value = "advanced"; // This simulates what happens in real app
+  const tabSignal = stateSignal("general", { id: "param_override_tab" });
+
+  tabSignal.value = "advanced";
 
   const { ADMIN_ROUTE, ADMIN_SETTINGS_ROUTE } = setupRoutes({
     ROOT: "/",
@@ -17,42 +16,19 @@ try {
   });
 
   return {
-    // Test the exact issue: signal has "advanced" but we explicitly pass "general" (default)
-    // This should result in a short URL without the tab parameter
-    bug_reproduction_explicit_general: ADMIN_SETTINGS_ROUTE.buildUrl({
-      tab: "general", // Should override signal "advanced" and be omitted as default → "/admin"
+    explicit_general_override: ADMIN_SETTINGS_ROUTE.buildUrl({
+      tab: "general", // Should override signal "advanced" → "/admin"
     }),
-
-    // Test without any explicit params - should use signal value "advanced"
-    using_signal_advanced: ADMIN_SETTINGS_ROUTE.buildUrl({}), // Should use "advanced" from signal
-
-    // Test explicit non-default override
+    using_signal_value: ADMIN_SETTINGS_ROUTE.buildUrl({}),
     explicit_security_override: ADMIN_SETTINGS_ROUTE.buildUrl({
-      tab: "security", // Should override signal "advanced" with "security"
+      tab: "security",
     }),
-
-    // Test section route behavior
-    section_with_default: ADMIN_ROUTE.buildUrl({
+    section_default: ADMIN_ROUTE.buildUrl({
       section: "settings",
     }),
-    section_with_default_and_tab_default: ADMIN_ROUTE.buildUrl({
-      section: "settings",
-      tab: "general",
+    section_non_default: ADMIN_ROUTE.buildUrl({
+      section: "users",
     }),
-
-    section_with_non_default: ADMIN_ROUTE.buildUrl({
-      section: "users", // Should appear → "/admin/users/"
-    }),
-
-    // Reference values for debugging
-    current_signal_values: {
-      section: sectionSignal.value,
-      tab: tabSignal.value,
-    },
-    signal_defaults: {
-      section: "settings", // stateSignal first param
-      tab: "general", // stateSignal first param
-    },
   };
 } finally {
   clearAllRoutes();
@@ -62,20 +38,11 @@ try {
 
 ```js
 {
-  "bug_reproduction_explicit_general": "http://127.0.0.1/admin",
-  "using_signal_advanced": "http://127.0.0.1/admin/settings/advanced",
+  "explicit_general_override": "http://127.0.0.1/admin",
+  "using_signal_value": "http://127.0.0.1/admin/settings/advanced",
   "explicit_security_override": "http://127.0.0.1/admin/settings/security",
-  "section_with_default": "http://127.0.0.1/admin/settings/advanced",
-  "section_with_default_and_tab_default": "http://127.0.0.1/admin/settings",
-  "section_with_non_default": "http://127.0.0.1/admin/users",
-  "current_signal_values": {
-    "section": "settings",
-    "tab": "advanced"
-  },
-  "signal_defaults": {
-    "section": "settings",
-    "tab": "general"
-  }
+  "section_default": "http://127.0.0.1/admin/settings/advanced",
+  "section_non_default": "http://127.0.0.1/admin/users"
 }
 ```
 

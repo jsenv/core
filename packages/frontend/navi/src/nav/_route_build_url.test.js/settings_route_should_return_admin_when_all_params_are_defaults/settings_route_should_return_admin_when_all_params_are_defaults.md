@@ -1,8 +1,7 @@
-# [settings route should return /admin when all params are defaults](../../route_build_url.test.js#L671)
+# [settings route should return /admin when all params are defaults](../../route_build_url.test.js#L531)
 
 ```js
 try {
-  // Parent route default matches child literal "settings" - this enables optimization
   const sectionSignal = stateSignal("settings");
   const settingsTabSignal = stateSignal("general");
   const analyticsTabSignal = stateSignal("overview");
@@ -17,9 +16,11 @@ try {
   updateRoutes(`${baseUrl}/admin/settings/advanced`);
 
   return {
-    // Core issue: When both signals are at defaults, settings route should optimize to shortest equivalent URL
-    settings_url: ADMIN_SETTINGS_ROUTE.buildUrl({ tab: "general" }), // Should be "/admin", not "/admin/settings"
-    admin_url: ADMIN_ROUTE.buildUrl(), // For comparison
+    settings_url_with_default_tab: ADMIN_SETTINGS_ROUTE.buildUrl({
+      tab: "general",
+    }),
+    settings_url_no_params: ADMIN_SETTINGS_ROUTE.buildUrl(),
+    admin_url: ADMIN_ROUTE.buildUrl(),
   };
 } finally {
   clearAllRoutes();
@@ -29,7 +30,8 @@ try {
 
 ```js
 {
-  "settings_url": "http://127.0.0.1/admin",
+  "settings_url_with_default_tab": "http://127.0.0.1/admin",
+  "settings_url_no_params": "http://127.0.0.1/admin/settings/advanced",
   "admin_url": "http://127.0.0.1/admin/settings/advanced"
 }
 ```

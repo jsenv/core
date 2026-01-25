@@ -1,29 +1,22 @@
-# [debug deepest url generation](../../route_build_url.test.js#L350)
+# [url generation with search parameters](../../route_build_url.test.js#L273)
 
 ```js
 try {
-  // Simple test case to see what's happening
   const tabSignal = stateSignal("overview", { id: "debug_tab" });
-  tabSignal.value = "details"; // non-default
-  // Register admin route that should upgrade to analytics when section=analytics
+  tabSignal.value = "details";
+
   const { ADMIN_ROUTE, ANALYTICS_ROUTE } = setupRoutes({
     ROOT: "/",
     ADMIN_ROUTE: `/admin/:section/`,
     ANALYTICS_ROUTE: `/admin/analytics?tab=${tabSignal}`,
   });
+
   return {
-    // Test with explicit section=analytics
     admin_with_analytics_section: ADMIN_ROUTE.buildUrl({
       section: "analytics",
     }),
-    // Test without params (should use default section which won't match analytics)
     admin_with_no_params: ADMIN_ROUTE.buildUrl({}),
-
-    // For comparison
     analytics_direct: ANALYTICS_ROUTE.buildUrl({}),
-
-    // Signal value
-    tab_signal: tabSignal.value,
   };
 } finally {
   clearAllRoutes();
@@ -35,8 +28,7 @@ try {
 {
   "admin_with_analytics_section": "http://127.0.0.1/admin/analytics?tab=details",
   "admin_with_no_params": "http://127.0.0.1/admin/analytics?tab=details",
-  "analytics_direct": "http://127.0.0.1/admin/analytics?tab=details",
-  "tab_signal": "details"
+  "analytics_direct": "http://127.0.0.1/admin/analytics?tab=details"
 }
 ```
 

@@ -1,4 +1,4 @@
-# [parent url updates when child signals change](../../route_build_url.test.js#L190)
+# [parent url updates when child signals change](../../route_build_url.test.js#L166)
 
 ```js
 try {
@@ -14,39 +14,25 @@ try {
     ADMIN_SETTINGS_ROUTE: `/admin/settings/:tab=${tabSignal}`,
   });
 
-  // Capture initial URLs
   const initialUrls = {
     admin_initial: ADMIN_ROUTE.buildUrl({}),
     settings_initial: ADMIN_SETTINGS_ROUTE.buildUrl({}),
-    admin_relativeUrl_initial: ADMIN_ROUTE.relativeUrl,
-    settings_relativeUrl_initial: ADMIN_SETTINGS_ROUTE.relativeUrl,
   };
 
-  // Change child route signal (tab) - this should make parent route generate deepest URL
+  // Change child route signal to non-default
   tabSignal.value = "security";
 
   const afterTabChange = {
     admin_after_tab_change: ADMIN_ROUTE.buildUrl({}),
     settings_after_tab_change: ADMIN_SETTINGS_ROUTE.buildUrl({}),
-    admin_relativeUrl_after_tab: ADMIN_ROUTE.relativeUrl,
-    settings_relativeUrl_after_tab: ADMIN_SETTINGS_ROUTE.relativeUrl,
-    tab_signal_value: tabSignal.value,
-    // Key behavior: Parent route now generates deepest URL because child has non-default value
-    parent_now_uses_child_route:
-      ADMIN_ROUTE.buildUrl({}) === ADMIN_SETTINGS_ROUTE.buildUrl({}),
   };
 
-  // Change parent route signal (section) - should use parent's own parameter
+  // Change parent route signal to non-default
   sectionSignal.value = "users";
 
   const afterSectionChange = {
     admin_after_section_change: ADMIN_ROUTE.buildUrl({}),
     settings_after_section_change: ADMIN_SETTINGS_ROUTE.buildUrl({}),
-    admin_relativeUrl_after_section: ADMIN_ROUTE.relativeUrl,
-    settings_relativeUrl_after_section: ADMIN_SETTINGS_ROUTE.relativeUrl,
-    section_signal_value: sectionSignal.value,
-    // Parent route uses its own non-default parameter now
-    parent_uses_own_param: ADMIN_ROUTE.buildUrl({}).includes("users"),
   };
 
   return {
@@ -64,25 +50,15 @@ try {
 {
   "initialUrls": {
     "admin_initial": "http://127.0.0.1/admin",
-    "settings_initial": "http://127.0.0.1/admin",
-    "admin_relativeUrl_initial": "/admin",
-    "settings_relativeUrl_initial": "/admin"
+    "settings_initial": "http://127.0.0.1/admin"
   },
   "afterTabChange": {
     "admin_after_tab_change": "http://127.0.0.1/admin/settings/security",
-    "settings_after_tab_change": "http://127.0.0.1/admin/settings/security",
-    "admin_relativeUrl_after_tab": "/admin/settings/security",
-    "settings_relativeUrl_after_tab": "/admin/settings/security",
-    "tab_signal_value": "security",
-    "parent_now_uses_child_route": true
+    "settings_after_tab_change": "http://127.0.0.1/admin/settings/security"
   },
   "afterSectionChange": {
     "admin_after_section_change": "http://127.0.0.1/admin/users",
-    "settings_after_section_change": "http://127.0.0.1/admin/settings/security",
-    "admin_relativeUrl_after_section": "/admin/users",
-    "settings_relativeUrl_after_section": "/admin/settings/security",
-    "section_signal_value": "users",
-    "parent_uses_own_param": true
+    "settings_after_section_change": "http://127.0.0.1/admin/settings/security"
   }
 }
 ```

@@ -1,4 +1,4 @@
-# [buildMostPreciseUrl should find child signal values even with provided params](../../route_build_url.test.js#L614)
+# [buildMostPreciseUrl should find child signal values even with provided params](../../route_build_url.test.js#L498)
 
 ```js
 try {
@@ -11,7 +11,6 @@ try {
     type: "number",
   });
 
-  // Set initial values: walkEnabled=false, walkMinute=40
   walkEnabledSignal.value = false;
   walkMinuteSignal.value = 40;
 
@@ -20,36 +19,13 @@ try {
     ISOCHRONE_COMPARE_ROUTE: `/map/isochrone/compare?walk=${walkEnabledSignal}&walk_minute=${walkMinuteSignal}`,
   });
 
-  // Test buildUrl directly to see if child signals are found
-  const urlWithWalkTrue = ISOCHRONE_ROUTE.buildUrl({ walk: true });
-  const urlWithoutParams = ISOCHRONE_ROUTE.buildUrl();
-  const urlWithTabAndWalk = ISOCHRONE_ROUTE.buildUrl({
-    tab: "settings",
-    walk: true,
-  });
-
   return {
-    signal_values: {
-      walk_enabled: walkEnabledSignal.value, // false
-      walk_minute: walkMinuteSignal.value, // 40
-    },
-
-    url_tests: {
-      // Should find walkMinuteSignal=40 from child pattern even with walk=true provided
-      url_with_walk_true: urlWithWalkTrue,
-      // Should generate deepest URL using all signal values
-      url_without_params: urlWithoutParams,
-      // Should combine provided params with child signals
-      url_with_tab_and_walk: urlWithTabAndWalk,
-    },
-
-    expected_behavior: {
-      walk_true_should_contain: "walk_minute=40",
-      should_choose_compare_route:
-        "because it has both walk and walk_minute signals",
-      expected_url_pattern:
-        "/map/isochrone/compare?walk=true&walk_minute=40",
-    },
+    url_with_walk_true: ISOCHRONE_ROUTE.buildUrl({ walk: true }),
+    url_without_params: ISOCHRONE_ROUTE.buildUrl(),
+    url_with_tab_and_walk: ISOCHRONE_ROUTE.buildUrl({
+      tab: "settings",
+      walk: true,
+    }),
   };
 } finally {
   clearAllRoutes();
@@ -59,20 +35,9 @@ try {
 
 ```js
 {
-  "signal_values": {
-    "walk_enabled": false,
-    "walk_minute": 40
-  },
-  "url_tests": {
-    "url_with_walk_true": "http://127.0.0.1/map/isochrone/compare?walk&walk_minute=40",
-    "url_without_params": "http://127.0.0.1/map/isochrone/compare?walk_minute=40",
-    "url_with_tab_and_walk": "http://127.0.0.1/map/isochrone/compare?walk&walk_minute=40&tab=settings"
-  },
-  "expected_behavior": {
-    "walk_true_should_contain": "walk_minute=40",
-    "should_choose_compare_route": "because it has both walk and walk_minute signals",
-    "expected_url_pattern": "/map/isochrone/compare?walk=true&walk_minute=40"
-  }
+  "url_with_walk_true": "http://127.0.0.1/map/isochrone/compare?walk&walk_minute=40",
+  "url_without_params": "http://127.0.0.1/map/isochrone/compare?walk_minute=40",
+  "url_with_tab_and_walk": "http://127.0.0.1/map/isochrone/compare?walk&walk_minute=40&tab=settings"
 }
 ```
 

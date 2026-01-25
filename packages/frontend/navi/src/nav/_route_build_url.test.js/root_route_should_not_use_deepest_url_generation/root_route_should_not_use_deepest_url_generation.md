@@ -1,13 +1,13 @@
-# [root route should not use deepest url generation](../../route_build_url.test.js#L310)
+# [root route should not use deepest url generation](../../route_build_url.test.js#L248)
 
 ```js
 try {
-  // Set up signals with non-default values that would normally trigger deepest URL
   const sectionSignal = stateSignal("settings");
   const tabSignal = stateSignal("general");
-  // Change signals to non-default values
+
   sectionSignal.value = "users";
   tabSignal.value = "advanced";
+
   const { ROOT_ROUTE, ADMIN_ROUTE, ADMIN_SETTINGS_ROUTE } = setupRoutes({
     ROOT_ROUTE: "/",
     ADMIN_ROUTE: `/admin/:section=${sectionSignal}/`,
@@ -15,24 +15,9 @@ try {
   });
 
   return {
-    // Root route should ALWAYS stay as "/" even with non-default child signals
-    // Users must be able to navigate to home page regardless of app state
-    root_with_no_params: ROOT_ROUTE.buildUrl({}),
-    root_with_empty_params: ROOT_ROUTE.buildUrl(),
-
-    // For comparison - child routes should use deepest URL when no params provided
-    admin_no_params: ADMIN_ROUTE.buildUrl({}), // Should potentially use child route
-    admin_settings_no_params: ADMIN_SETTINGS_ROUTE.buildUrl({}), // Should use signal
-
-    // Verify signals have non-default values
-    signal_values: {
-      section: sectionSignal.value, // "users" (non-default)
-      tab: tabSignal.value, // "advanced" (non-default)
-    },
-    defaults: {
-      section: "settings",
-      tab: "general",
-    },
+    root_url: ROOT_ROUTE.buildUrl({}),
+    admin_url: ADMIN_ROUTE.buildUrl({}),
+    settings_url: ADMIN_SETTINGS_ROUTE.buildUrl({}),
   };
 } finally {
   clearAllRoutes();
@@ -42,18 +27,9 @@ try {
 
 ```js
 {
-  "root_with_no_params": "http://127.0.0.1/admin/settings/advanced",
-  "root_with_empty_params": "http://127.0.0.1/admin/settings/advanced",
-  "admin_no_params": "http://127.0.0.1/admin/users",
-  "admin_settings_no_params": "http://127.0.0.1/admin/settings/advanced",
-  "signal_values": {
-    "section": "users",
-    "tab": "advanced"
-  },
-  "defaults": {
-    "section": "settings",
-    "tab": "general"
-  }
+  "root_url": "http://127.0.0.1/admin/settings/advanced",
+  "admin_url": "http://127.0.0.1/admin/users",
+  "settings_url": "http://127.0.0.1/admin/settings/advanced"
 }
 ```
 

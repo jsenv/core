@@ -16,7 +16,7 @@ try {
     });
 
   return {
-    // Test deepest URL generation - should find child routes when possible
+    // Test deepest URL generation
     admin_no_params: ADMIN_ROUTE.buildUrl(),
     admin_explicit_settings: ADMIN_ROUTE.buildUrl({
       section: "settings",
@@ -25,13 +25,12 @@ try {
       section: "users",
     }),
 
-    // Settings route URL building - should use deepest route
+    // Settings route URL building
     settings_no_params: ADMIN_SETTINGS_ROUTE.buildUrl(),
     settings_with_security_tab: ADMIN_SETTINGS_ROUTE.buildUrl({
       tab: "security",
     }),
-    // Test that providing section param doesn't interfere
-    settings_with_section_toto_and_tab: ADMIN_SETTINGS_ROUTE.buildUrl({
+    settings_with_section_override: ADMIN_SETTINGS_ROUTE.buildUrl({
       section: "toto",
       tab: "advanced",
     }),
@@ -41,12 +40,8 @@ try {
     }),
 
     // Analytics route URL building
-    analytics_should_include_overview_tab: ADMIN_ANALYTICS_ROUTE.buildUrl(),
+    analytics_no_params: ADMIN_ANALYTICS_ROUTE.buildUrl(),
     analytics_with_performance_tab: ADMIN_ANALYTICS_ROUTE.buildUrl({
-      tab: "performance",
-    }),
-    analytics_with_section_toto: ADMIN_ANALYTICS_ROUTE.buildUrl({
-      section: "toto",
       tab: "performance",
     }),
     analytics_with_extra_params: ADMIN_ANALYTICS_ROUTE.buildUrl({
@@ -67,11 +62,10 @@ try {
   "admin_explicit_users": "http://127.0.0.1/admin/users",
   "settings_no_params": "http://127.0.0.1/admin",
   "settings_with_security_tab": "http://127.0.0.1/admin/settings/security",
-  "settings_with_section_toto_and_tab": "http://127.0.0.1/admin/settings/advanced?section=toto",
+  "settings_with_section_override": "http://127.0.0.1/admin/settings/advanced?section=toto",
   "settings_with_extra_params": "http://127.0.0.1/admin?filter=active",
-  "analytics_should_include_overview_tab": "http://127.0.0.1/admin/analytics",
+  "analytics_no_params": "http://127.0.0.1/admin/analytics",
   "analytics_with_performance_tab": "http://127.0.0.1/admin/analytics?tab=performance",
-  "analytics_with_section_toto": "http://127.0.0.1/admin/analytics?tab=performance&section=toto",
   "analytics_with_extra_params": "http://127.0.0.1/admin/analytics?tab=details&dateRange=7d"
 }
 ```

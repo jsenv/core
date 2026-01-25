@@ -1,4 +1,4 @@
-# [parent route should use child route when child has non-default signal](../../route_build_url.test.js#L951)
+# [parent route should use child route when child has non-default signal](../../route_build_url.test.js#L680)
 
 ```js
 try {
