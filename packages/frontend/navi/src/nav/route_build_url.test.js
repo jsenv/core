@@ -575,11 +575,11 @@ await snapshotTests(import.meta.url, ({ test }) => {
         type: "number",
       });
 
-      const { MAP_ROUTE, MAP_ISOCHRONE_ROUTE, MAP_ISOCHRONE_TIME_WALK_ROUTE } =
+      const { MAP_ROUTE, MAP_ISOCHRONE_ROUTE, MAP_ISOCHRONE_TOTO_ROUTE } =
         setupRoutes({
           MAP_ROUTE: `/map/?zone=${zoneIdSignal}&style=${mapboxStyleSignal}&lon=${mapboxLongitudeSignal}&lat=${mapboxLatitudeSignal}&zoom=${mapboxZoomSignal}&sidebar=${mapSidebarOpenedSignal}`,
-          MAP_ISOCHRONE_ROUTE: "/map/isochrone",
-          MAP_ISOCHRONE_TIME_WALK_ROUTE: `/map/isochrone/walk?time=${isochromeWalkTimeSignal}`,
+          MAP_ISOCHRONE_ROUTE: "/map/isochrone/",
+          MAP_ISOCHRONE_TOTO_ROUTE: `/map/isochrone/toto/?time=${isochromeWalkTimeSignal}`,
         });
 
       // Step 1: Generate URL with all defaults (no params passed)
@@ -591,20 +591,19 @@ await snapshotTests(import.meta.url, ({ test }) => {
       // Step 4: Override signal value with undefined to ignore signal
       const urlWithZoomOverridden = MAP_ROUTE.buildUrl({ zoom: undefined });
       const isochroneUrl = MAP_ISOCHRONE_ROUTE.buildUrl();
-      const isochroneTimeWalkRoute = MAP_ISOCHRONE_TIME_WALK_ROUTE.buildUrl();
+      const isochroneTimeWalkRoute = MAP_ISOCHRONE_TOTO_ROUTE.buildUrl();
 
       isochromeWalkTimeSignal.value = 40;
       const isochroneTimeWalkRouteAfterChange =
-        MAP_ISOCHRONE_TIME_WALK_ROUTE.buildUrl();
+        MAP_ISOCHRONE_TOTO_ROUTE.buildUrl();
 
       return {
         map_url_defaults: urlWithDefaults,
         map_url_with_zoom: urlAfterZoomChange,
         map_url_with_zoom_overridden: urlWithZoomOverridden,
         map_isochrone_url_with_zoom: isochroneUrl,
-        map_isochrone_time_walk_url_with_zoom: isochroneTimeWalkRoute,
-        map_isochrone_time_walk_url_after_change:
-          isochroneTimeWalkRouteAfterChange,
+        map_isochrone_toto_url_with_zoom: isochroneTimeWalkRoute,
+        map_isochrone_toto_url_after_change: isochroneTimeWalkRouteAfterChange,
       };
     } finally {
       clearAllRoutes();
@@ -842,9 +841,11 @@ await snapshotTests(import.meta.url, ({ test }) => {
       const zoneSignal = stateSignal(undefined);
       const isochroneTabSignal = stateSignal("compare");
       const walkSignal = stateSignal(false);
+      const panelSignal = stateSignal(undefined);
       const { MAP_ROUTE, MAP_ISOCHRONE_ROUTE, MAP_ISOCHRONE_WALK_ROUTE } =
         setupRoutes({
           MAP_ROUTE: `/map/?zone=${zoneSignal}`,
+          MAP_PANEL_ROUTE: `/map/:panel=${panelSignal}/`,
           MAP_ISOCHRONE_ROUTE: `/map/isochrone/:tab=${isochroneTabSignal}/`,
           MAP_ISOCHRONE_WALK_ROUTE: `/map/isochrone/compare/?walk=${walkSignal}`,
         });

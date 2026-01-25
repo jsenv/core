@@ -244,7 +244,7 @@ try {
     "map_route_matches": true,
     "isochrone_route_matches": true,
     "isochrone_compare_route_matches": true,
-    "current_url": "http://127.0.0.1/map/isochrone/compare?zone=nice&iso_lon=10"
+    "current_url": "http://127.0.0.1/map/isochrone?zone=nice"
   },
   "scenario2_enabled_true": {
     "description": "After updating enabled signal to true (non-default)",
@@ -314,7 +314,7 @@ try {
     ]
   },
   "url_progression": [
-    "http://127.0.0.1/map/isochrone/compare?zone=nice&iso_lon=10",
+    "http://127.0.0.1/map/isochrone?zone=nice",
     "http://127.0.0.1/map/isochrone/compare?zone=nice&iso_lon=10&walk",
     "http://127.0.0.1/map/isochrone/compare?zone=nice&iso_lon=10&walk&walk_minute=45",
     "http://127.0.0.1/map/isochrone/compare?zone=nice&iso_lon=10&walk_minute=45",

@@ -1,4 +1,4 @@
-# [settings route should return /admin second case](../../route_build_url.test.js#L699)
+# [settings route should return /admin second case](../../route_build_url.test.js#L698)
 
 ```js
 try {
@@ -28,7 +28,7 @@ try {
 
 ```js
 {
-  "settings_url": "http://127.0.0.1/admin/settings",
+  "settings_url": "http://127.0.0.1/admin",
   "admin_url": "http://127.0.0.1/admin/analytics"
 }
 ```

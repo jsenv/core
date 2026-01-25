@@ -682,7 +682,10 @@ export const createRoutePattern = (pattern) => {
       // Skip root route - never use as optimization target
       if (parentPattern.originalPattern !== "/") {
         // Try to use this ancestor and traverse up to find the highest possible
-        const highestAncestorUrl = findHighestAncestor(parentPattern);
+        const highestAncestorUrl = findHighestAncestor(
+          parentPattern,
+          resolvedParams,
+        );
         if (DEBUG) {
           console.debug(
             `[${pattern}] Highest ancestor from ${parentPattern.originalPattern}:`,
@@ -749,9 +752,9 @@ export const createRoutePattern = (pattern) => {
   /**
    * Helper: Find the highest ancestor by traversing parent chain recursively
    */
-  const findHighestAncestor = (startAncestor) => {
+  const findHighestAncestor = (startAncestor, resolvedParams) => {
     // Check if we can use this ancestor directly
-    const directUrl = tryUseAncestor(startAncestor);
+    const directUrl = tryUseAncestor(startAncestor, resolvedParams);
     if (!directUrl) {
       return null;
     }
@@ -769,7 +772,7 @@ export const createRoutePattern = (pattern) => {
       }
 
       // Recursively check if we can optimize to an even higher ancestor
-      const higherUrl = findHighestAncestor(higherAncestor);
+      const higherUrl = findHighestAncestor(higherAncestor, resolvedParams);
       if (higherUrl) {
         return higherUrl; // Found a higher ancestor, return that
       }
@@ -820,24 +823,85 @@ export const createRoutePattern = (pattern) => {
   };
 
   /**
-   * Helper: Try to use an ancestor route (only for literal routes)
+   * Helper: Try to use an ancestor route (only immediate parent for parameter optimization)
    */
-  const tryUseAncestor = (ancestorPatternObj) => {
-    // Only optimize literal routes (no parameters)
+  const tryUseAncestor = (ancestorPatternObj, resolvedParams) => {
+    // For routes with parameters, only allow optimization if all resolved parameters have default values
+    const hasNonDefaultParameters = connections.some((connection) => {
+      const resolvedValue = resolvedParams[connection.paramName];
+      const defaultValue = connection.options.defaultValue;
+      return resolvedValue !== defaultValue;
+    });
+
+    if (hasNonDefaultParameters) {
+      if (DEBUG) {
+        console.debug(
+          `[${pattern}] tryUseAncestor: Has non-default parameters, skipping`,
+        );
+      }
+      return null;
+    }
+
+    // Check if this ancestor is the immediate parent (for parameter optimization safety)
+    const relationships = patternRelationships.get(pattern);
+    const immediateParent = relationships?.parent;
+
+    if (
+      immediateParent &&
+      immediateParent.originalPattern === ancestorPatternObj.originalPattern
+    ) {
+      // This is the immediate parent - safe to use parameter optimization
+      if (DEBUG) {
+        console.debug(
+          `[${pattern}] tryUseAncestor: Trying immediate parent ${ancestorPatternObj.originalPattern}`,
+        );
+      }
+
+      const result = tryDirectOptimization(
+        parsedPattern,
+        connections,
+        ancestorPatternObj,
+      );
+      if (DEBUG) {
+        console.debug(
+          `[${pattern}] tryUseAncestor: tryDirectOptimization result:`,
+          result,
+        );
+      }
+      return result;
+    }
+    // This is not the immediate parent - only allow literal-only optimization
     const hasParameters =
       connections.length > 0 ||
       parsedPattern.segments.some((seg) => seg.type === "param");
 
     if (hasParameters) {
       if (DEBUG) {
-        console.debug(`[${pattern}] tryUseAncestor: Has parameters, skipping`);
+        console.debug(
+          `[${pattern}] tryUseAncestor: Non-immediate parent with parameters, skipping`,
+        );
       }
       return null;
     }
 
+    // Pure literal route - only optimize to pure literal ancestors (not parametric ones)
+    const ancestorHasParameters =
+      ancestorPatternObj.connections.length > 0 ||
+      ancestorPatternObj.pattern.segments.some((seg) => seg.type === "param");
+
+    if (ancestorHasParameters) {
+      if (DEBUG) {
+        console.debug(
+          `[${pattern}] tryUseAncestor: Literal route cannot optimize to parametric ancestor ${ancestorPatternObj.originalPattern}`,
+        );
+      }
+      return null;
+    }
+
+    // Both are pure literal routes - can optimize
     if (DEBUG) {
       console.debug(
-        `[${pattern}] tryUseAncestor: Trying ancestor ${ancestorPatternObj.originalPattern}`,
+        `[${pattern}] tryUseAncestor: Trying literal-to-literal optimization to ${ancestorPatternObj.originalPattern}`,
       );
     }
 
@@ -910,19 +974,20 @@ export const createRoutePattern = (pattern) => {
       }
     }
 
-    // For literal-only optimization: if both source and target have only literals,
+    // For literal-only optimization: if both source and target have only literals AND no parameters,
     // and source extends target, we can optimize directly
-    const sourceHasOnlyLiterals = sourcePattern.segments.every(
-      (seg) => seg.type === "literal",
-    );
-    const targetHasOnlyLiterals = targetAncestor.pattern.segments.every(
-      (seg) => seg.type === "literal",
-    );
+    const sourceHasOnlyLiterals =
+      sourcePattern.segments.every((seg) => seg.type === "literal") &&
+      sourceConnections.length === 0;
+
+    const targetHasOnlyLiterals =
+      targetAncestor.pattern.segments.every((seg) => seg.type === "literal") &&
+      targetAncestor.connections.length === 0;
 
     if (sourceHasOnlyLiterals && targetHasOnlyLiterals) {
       if (DEBUG) {
         console.debug(
-          `[${pattern}] tryDirectOptimization: Both are literal-only routes, allowing optimization`,
+          `[${pattern}] tryDirectOptimization: Both are pure literal-only routes, allowing optimization`,
         );
       }
       return buildUrlFromPattern(
@@ -964,9 +1029,51 @@ export const createRoutePattern = (pattern) => {
         `[${pattern}] tryDirectOptimization: SUCCESS! Returning ancestor URL`,
       );
     }
+
+    // Build ancestor URL with inherited parameters that don't conflict with optimization
+    const ancestorParams = {};
+
+    // Get all ancestors starting from the target ancestor's parent (skip the target itself)
+    const targetAncestorRelationships = patternRelationships.get(
+      targetAncestor.originalPattern,
+    );
+    let currentParent = targetAncestorRelationships?.parent;
+
+    while (currentParent) {
+      for (const connection of currentParent.connections) {
+        const { paramName, signal, options } = connection;
+        const defaultValue = options.defaultValue;
+
+        // Only inherit non-default values that we don't already have
+        if (
+          !(paramName in ancestorParams) &&
+          signal?.value !== undefined &&
+          signal.value !== defaultValue
+        ) {
+          // Check if this parameter would be redundant with target ancestor's literal segments
+          const isRedundant = isParameterRedundantWithLiteralSegments(
+            targetAncestor.pattern,
+            currentParent.pattern,
+            paramName,
+            signal.value,
+          );
+
+          if (!isRedundant) {
+            ancestorParams[paramName] = signal.value;
+          }
+        }
+      }
+
+      // Move up the parent chain
+      const parentRelationships = patternRelationships.get(
+        currentParent.originalPattern,
+      );
+      currentParent = parentRelationships?.parent;
+    }
+
     return buildUrlFromPattern(
       targetAncestor.pattern,
-      {},
+      ancestorParams,
       targetAncestor.originalPattern,
     );
   };

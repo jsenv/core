@@ -1,13 +1,15 @@
-# [map isochrone url generation from map with custom zone](../../route_build_url.test.js#L840)
+# [map isochrone url generation from map with custom zone](../../route_build_url.test.js#L839)
 
 ```js
 try {
   const zoneSignal = stateSignal(undefined);
   const isochroneTabSignal = stateSignal("compare");
   const walkSignal = stateSignal(false);
+  const panelSignal = stateSignal(undefined);
   const { MAP_ROUTE, MAP_ISOCHRONE_ROUTE, MAP_ISOCHRONE_WALK_ROUTE } =
     setupRoutes({
       MAP_ROUTE: `/map/?zone=${zoneSignal}`,
+      MAP_PANEL_ROUTE: `/map/:panel=${panelSignal}/`,
       MAP_ISOCHRONE_ROUTE: `/map/isochrone/:tab=${isochroneTabSignal}/`,
       MAP_ISOCHRONE_WALK_ROUTE: `/map/isochrone/compare/?walk=${walkSignal}`,
     });
@@ -27,7 +29,7 @@ try {
 {
   "map_url": "http://127.0.0.1/map?zone=something",
   "isochrone_url": "http://127.0.0.1/map/isochrone?zone=something",
-  "isochrone_compare_walk_url": "http://127.0.0.1/map/isochrone/compare?zone=something"
+  "isochrone_compare_walk_url": "http://127.0.0.1/map/isochrone?zone=something"
 }
 ```
 
