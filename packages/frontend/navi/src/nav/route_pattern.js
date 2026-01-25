@@ -695,39 +695,48 @@ export const createRoutePattern = (pattern) => {
     // Step 1: Resolve and clean parameters
     const resolvedParams = resolveParams(params);
 
-    // Step 2: Try ancestors first - iterate from closest to furthest
+// Step 2: Try ancestors first - find the highest ancestor that works
     const relationships = patternRelationships.get(pattern);
     const parentPatternObjs = relationships?.parentPatterns || [];
-
-    let bestAncestor = null;
+    
+    if (DEBUG) {
+      console.debug(`[${pattern}] Available ancestors:`, parentPatternObjs.map(p => p.originalPattern));
+    }
+    
+    let bestAncestorUrl = null;
     for (const parentPatternObj of parentPatternObjs) {
       // Skip root route - never use as optimization target
       if (parentPatternObj.originalPattern === "/") {
         continue;
       }
-
+      
       // Try to use this ancestor
       const ancestorUrl = tryUseAncestor(parentPatternObj, resolvedParams);
+      if (DEBUG) {
+        console.debug(`[${pattern}] Trying ancestor ${parentPatternObj.originalPattern}:`, ancestorUrl);
+      }
       if (ancestorUrl) {
-        bestAncestor = ancestorUrl;
-        // Keep iterating to find the highest ancestor that works
+        // Keep the shortest URL (highest ancestor)
+        if (!bestAncestorUrl || ancestorUrl.length < bestAncestorUrl.length) {
+          bestAncestorUrl = ancestorUrl;
+        }
       }
     }
-
-    if (bestAncestor) {
+    
+    if (bestAncestorUrl) {
       if (DEBUG) {
         console.debug(`[${pattern}] Using ancestor optimization`);
       }
-      return bestAncestor;
+      return bestAncestorUrl;
     }
 
     // Step 3: Remove default values for normal URL building
     let finalParams = removeDefaultValues(resolvedParams);
 
-    // Step 4: Try descendants - iterate and keep the deepest that works
+    // Step 4: Try descendants - find the deepest descendant that works
     const childPatternObjs = relationships?.childPatterns || [];
 
-    let bestDescendant = null;
+    let bestDescendantUrl = null;
     for (const childPatternObj of childPatternObjs) {
       const descendantUrl = tryUseDescendant(
         childPatternObj,
@@ -735,16 +744,18 @@ export const createRoutePattern = (pattern) => {
         resolvedParams,
       );
       if (descendantUrl) {
-        bestDescendant = descendantUrl;
-        // Keep iterating to find the deepest descendant that works
+        // Keep the longest URL (deepest descendant)
+        if (!bestDescendantUrl || descendantUrl.length > bestDescendantUrl.length) {
+          bestDescendantUrl = descendantUrl;
+        }
       }
     }
 
-    if (bestDescendant) {
+    if (bestDescendantUrl) {
       if (DEBUG) {
         console.debug(`[${pattern}] Using descendant optimization`);
       }
-      return bestDescendant;
+      return bestDescendantUrl;
     }
     if (DEBUG) {
       console.debug(`[${pattern}] No suitable child route found`);
@@ -760,66 +771,150 @@ export const createRoutePattern = (pattern) => {
   };
 
   /**
-   * Helper: Try to use an ancestor route (simple check for literal routes only)
+   * Helper: Try to use an ancestor route with recursive checking
    */
   const tryUseAncestor = (ancestorPatternObj, resolvedParams) => {
-    // Only optimize literal routes (no parameters) that correspond to ancestor defaults
+    // Only optimize literal routes (no parameters)
     const hasParameters =
       connections.length > 0 ||
       parsedPattern.segments.some((seg) => seg.type === "param");
 
     if (hasParameters) {
-      return null; // Don't optimize routes with parameters
+      return null; 
     }
 
-    // Check if our literal segments match this ancestor's parameter defaults
-    const currentLiterals = parsedPattern.segments
+    // Try direct optimization from current pattern to this ancestor
+    const directUrl = tryDirectOptimization(parsedPattern, connections, ancestorPatternObj);
+    if (directUrl) {
+      return directUrl;
+    }
+
+    return null;
+  };
+
+  /**
+   * Helper: Check if sourcePattern can be optimized to targetAncestor
+   */
+  const tryDirectOptimization = (sourcePattern, sourceConnections, targetAncestor) => {
+    const sourceLiterals = sourcePattern.segments
       .filter((seg) => seg.type === "literal")
       .map((seg) => seg.value);
 
-    const ancestorLiterals = ancestorPatternObj.pattern.segments
+    const targetLiterals = targetAncestor.pattern.segments
       .filter((seg) => seg.type === "literal")
       .map((seg) => seg.value);
 
-    const ancestorParams = ancestorPatternObj.pattern.segments.filter(
+    const targetParams = targetAncestor.pattern.segments.filter(
       (seg) => seg.type === "param",
     );
 
-    // Check if our literal path extends the ancestor's literal path
-    if (currentLiterals.length <= ancestorLiterals.length) {
+    // Check if our literal path extends the target's literal path
+    if (sourceLiterals.length <= targetLiterals.length) {
       return null;
     }
 
-    // Check that we start with the same literal segments as ancestor
-    for (let i = 0; i < ancestorLiterals.length; i++) {
-      if (currentLiterals[i] !== ancestorLiterals[i]) {
+    // Check that we start with the same literal segments as target
+    for (let i = 0; i < targetLiterals.length; i++) {
+      if (sourceLiterals[i] !== targetLiterals[i]) {
         return null;
       }
     }
 
-    // Check if our extra segments match ancestor's parameter defaults
-    const extraSegments = currentLiterals.slice(ancestorLiterals.length);
-    if (extraSegments.length !== ancestorParams.length) {
-      return null;
+    // Check if our extra segments can be represented by target's parameter defaults
+    // This might require going through intermediate patterns
+    const extraSegments = sourceLiterals.slice(targetLiterals.length);
+    
+    if (canSegmentsBeRepresentedByDefaults(targetAncestor, extraSegments)) {
+      return targetAncestor.buildUrl({});
     }
 
-    for (let i = 0; i < extraSegments.length; i++) {
-      const extraSegment = extraSegments[i];
-      const ancestorParam = ancestorParams[i];
+    return null;
+  };
 
-      // Find the connection for this parameter
-      const connection = ancestorPatternObj.connections.find(
-        (conn) => conn.paramName === ancestorParam.name,
-      );
+  /**
+   * Helper: Check if segments can be represented through parameter defaults (possibly through intermediates)
+   */
+  const canSegmentsBeRepresentedByDefaults = (targetAncestor, segments) => {
+    const targetParams = targetAncestor.pattern.segments.filter(
+      (seg) => seg.type === "param",
+    );
 
-      if (!connection || connection.options.defaultValue !== extraSegment) {
-        return null;
+    // Case 1: Direct match with target's parameters
+    if (segments.length === targetParams.length) {
+      for (let i = 0; i < segments.length; i++) {
+        const segment = segments[i];
+        const param = targetParams[i];
+
+        const connection = targetAncestor.connections.find(
+          (conn) => conn.paramName === param.name,
+        );
+
+        if (!connection || connection.options.defaultValue !== segment) {
+          return false;
+        }
+      }
+      return true;
+    }
+
+    // Case 2: Match through intermediate patterns - check if any child pattern can consume some segments
+    if (segments.length > targetParams.length) {
+      const targetRelationships = patternRelationships.get(targetAncestor.originalPattern);
+      const children = targetRelationships?.childPatterns || [];
+      
+      for (const childPattern of children) {
+        if (canChildPatternConsumeSegments(childPattern, segments, targetParams)) {
+          return true;
+        }
       }
     }
 
-    // Build ancestor URL using buildUrl (not buildMostPreciseUrl) to prevent recursion
-    const ancestorUrlParams = {};
-    return ancestorPatternObj.buildUrl(ancestorUrlParams);
+    return false;
+  };
+
+  /**
+   * Helper: Check if child pattern can consume segments through its defaults
+   */
+  const canChildPatternConsumeSegments = (childPattern, segments, parentParams) => {
+    const childLiterals = childPattern.pattern.segments
+      .filter((seg) => seg.type === "literal")
+      .map((seg) => seg.value);
+
+    const childParams = childPattern.pattern.segments.filter(
+      (seg) => seg.type === "param",
+    );
+
+    // Check if child's literals match start of segments
+    if (childLiterals.length > segments.length) {
+      return false;
+    }
+
+    for (let i = 0; i < childLiterals.length; i++) {
+      if (childLiterals[i] !== segments[i]) {
+        return false;
+      }
+    }
+
+    const remainingSegments = segments.slice(childLiterals.length);
+    const totalParams = parentParams.length + childParams.length;
+
+    if (remainingSegments.length === childParams.length) {
+      // Check if remaining segments match child's parameter defaults
+      for (let i = 0; i < remainingSegments.length; i++) {
+        const segment = remainingSegments[i];
+        const param = childParams[i];
+
+        const connection = childPattern.connections.find(
+          (conn) => conn.paramName === param.name,
+        );
+
+        if (!connection || connection.options.defaultValue !== segment) {
+          return false;
+        }
+      }
+      return true;
+    }
+
+    return false;
   };
 
   /**
