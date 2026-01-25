@@ -99,7 +99,7 @@ try {
     "analytics_tab": "details",
     "settings_tab": "general"
   },
-  "root_route_url": "http://127.0.0.1/"
+  "root_route_url": "http://127.0.0.1/admin/analytics?tab=details"
 }
 ```
 

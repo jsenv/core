@@ -29,7 +29,7 @@ try {
 
 ```js
 {
-  "map_url_normal": "http://127.0.0.1/map/isochrone",
+  "map_url_normal": "http://127.0.0.1/map/isochrone?iso_lon=3",
   "map_url_panel_explicitely_undefined": "http://127.0.0.1/map"
 }
 ```

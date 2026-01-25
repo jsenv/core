@@ -42,8 +42,8 @@ try {
 
 ```js
 {
-  "root_with_no_params": "http://127.0.0.1/",
-  "root_with_empty_params": "http://127.0.0.1/",
+  "root_with_no_params": "http://127.0.0.1/admin/settings/advanced",
+  "root_with_empty_params": "http://127.0.0.1/admin/settings/advanced",
   "admin_no_params": "http://127.0.0.1/admin/users",
   "admin_settings_no_params": "http://127.0.0.1/admin/settings/advanced",
   "signal_values": {
