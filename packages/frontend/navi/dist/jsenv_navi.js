@@ -7781,9 +7781,17 @@ const createRoutePattern = (pattern) => {
       return null;
     }
 
+    // Get parent route's resolved signal values to pass to child routes
+    const parentResolvedParams = resolveParams(params);
+
     // Try each child pattern object to find the most specific match
     for (const childPatternObj of childPatternObjs) {
-      const childRouteCandidate = evaluateChildRoute(childPatternObj, params);
+
+      const childRouteCandidate = evaluateChildRoute(
+        childPatternObj,
+        params,
+        parentResolvedParams,
+      );
 
       if (childRouteCandidate) {
         return childRouteCandidate;
@@ -7795,7 +7803,11 @@ const createRoutePattern = (pattern) => {
   /**
    * Helper: Evaluate if a specific child route is suitable for current params/signals
    */
-  const evaluateChildRoute = (childPatternObj, params) => {
+  const evaluateChildRoute = (
+    childPatternObj,
+    params,
+    parentResolvedParams = {},
+  ) => {
     // Step 1: Check parameter compatibility
     const compatibility = checkChildRouteCompatibility(childPatternObj, params);
     if (!compatibility.isCompatible) {
@@ -7813,7 +7825,7 @@ const createRoutePattern = (pattern) => {
     }
 
     // Step 3: Build child route URL with proper parameter filtering
-    return buildChildRouteUrl(childPatternObj, params);
+    return buildChildRouteUrl(childPatternObj, params, parentResolvedParams);
   };
 
   /**
@@ -7891,7 +7903,22 @@ const createRoutePattern = (pattern) => {
       };
     }
 
-    // Check for generic parameter-literal conflicts
+    // Check if this is a query parameter in the parent pattern
+    const isParentQueryParam = parsedPattern.queryParams.some(
+      (qp) => qp.name === paramName,
+    );
+
+    if (isParentQueryParam) {
+      // Query parameters are always compatible and can be inherited by child routes
+      return {
+        isCompatible: true,
+        shouldInclude: !item.isUserProvided && !matchesChildLiteral,
+        paramName,
+        paramValue,
+      };
+    }
+
+    // Check for generic parameter-literal conflicts (only for path parameters)
     if (!matchesChildLiteral) {
       // Check if this is a path parameter from parent pattern
       const isParentPathParam = connections.some(
@@ -7960,13 +7987,20 @@ const createRoutePattern = (pattern) => {
     // Use child route if:
     // 1. Child has active non-default parameters, OR
     // 2. User provided params AND child can be built completely
-    return hasActiveParams || (hasProvidedParams && canBuildChildCompletely);
+    const shouldUse =
+      hasActiveParams || (hasProvidedParams && canBuildChildCompletely);
+
+    return shouldUse;
   };
 
   /**
    * Helper: Build URL for selected child route with proper parameter filtering
    */
-  const buildChildRouteUrl = (childPatternObj, params) => {
+  const buildChildRouteUrl = (
+    childPatternObj,
+    params,
+    parentResolvedParams = {},
+  ) => {
     // Start with child signal values
     const baseParams = {};
     for (const connection of childPatternObj.connections) {
@@ -7977,6 +8011,40 @@ const createRoutePattern = (pattern) => {
       ) {
         baseParams[paramName] = signal.value;
       }
+    }
+
+    // Add parent parameters that should be inherited (excluding defaults and consumed parameters)
+    for (const [paramName, parentValue] of Object.entries(
+      parentResolvedParams,
+    )) {
+      // Skip if child route already handles this parameter
+      const childConnection = childPatternObj.connections.find(
+        (conn) => conn.paramName === paramName,
+      );
+      if (childConnection) {
+        continue; // Child route handles this parameter directly
+      }
+
+      // Skip if parameter is consumed by child's literal path segments
+      const isConsumedByChildPath = childPatternObj.pattern.segments.some(
+        (segment) =>
+          segment.type === "literal" && segment.value === parentValue,
+      );
+      if (isConsumedByChildPath) {
+        continue; // Parameter is consumed by child's literal path
+      }
+
+      // Check if parent parameter is at default value
+      const parentConnection = connections.find(
+        (conn) => conn.paramName === paramName,
+      );
+      const parentDefault = parentConnection?.options?.defaultValue;
+      if (parentValue === parentDefault) {
+        continue; // Don't inherit default values
+      }
+
+      // Inherit this parameter as it's not handled by child and not at default
+      baseParams[paramName] = parentValue;
     }
 
     // Apply user params with filtering logic
@@ -8068,6 +8136,7 @@ const createRoutePattern = (pattern) => {
   };
 
   const buildMostPreciseUrl = (params = {}) => {
+
     // Step 1: Resolve and clean parameters
     const resolvedParams = resolveParams(params);
 
