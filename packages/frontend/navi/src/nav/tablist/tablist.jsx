@@ -357,12 +357,12 @@ const TabRoute = ({
         expand
         discrete
         padding={padding}
+        paddingX={paddingX}
+        paddingY={paddingY}
         paddingLeft={paddingLeft}
         paddingRight={paddingRight}
         paddingTop={paddingTop}
         paddingBottom={paddingBottom}
-        paddingX={paddingX}
-        paddingY={paddingY}
         alignX={alignX}
         alignY={alignY}
       >
