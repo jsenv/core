@@ -978,19 +978,17 @@ await snapshotTests(import.meta.url, ({ test }) => {
 
   test("parent route should ignore child route explicitely undefined", () => {
     try {
-      const zoneSignal = stateSignal(undefined);
       const mapPanelSignal = stateSignal(undefined, { id: "mapPanel" });
       const isochroneTabSignal = stateSignal("compare");
-      const walkSignal = stateSignal(false);
-      zoneSignal.value = "london";
+      const isoLonSignal = stateSignal(2);
+
       mapPanelSignal.value = "isochrone";
+      isoLonSignal.value = 3;
       const { MAP_ROUTE } = setupRoutes({
-        HOME_ROUTE: "/",
-        MAP_ROUTE: `/map/?zone=${zoneSignal}`,
+        MAP_ROUTE: `/map/`,
         MAP_PANEL_ROUTE: `/map/:panel=${mapPanelSignal}/`,
-        MAP_ISOCHRONE_ROUTE: `/map/isochrone/:tab=${isochroneTabSignal}/`,
-        MAP_ISOCHRONE_COMPARE_ROUTE: `/map/isochrone/compare?walk=${walkSignal}`,
-        MAP_ISOCHRONE_TIME_ROUTE: "/map/isochrone/time/",
+        MAP_ISOCHRONE_ROUTE: `/map/isochrone/:tab=${isochroneTabSignal}/?iso_lon=${isoLonSignal}`,
+        MAP_ISOCHRONE_COMPARE_ROUTE: `/map/isochrone/compare`,
       });
 
       return {
