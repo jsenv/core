@@ -452,6 +452,57 @@ export const createRoutePattern = (pattern) => {
    * Helper: Determine if child route should be used based on active parameters
    */
   const shouldUseChildRoute = (childPatternObj, params, compatibility) => {
+    // CRITICAL: Check if user explicitly passed undefined for parameters that would
+    // normally be used to select this child route via sibling route relationships
+    for (const [paramName, paramValue] of Object.entries(params)) {
+      if (paramValue === undefined) {
+        // Look for sibling routes (other children of the same parent) that use this parameter
+        const relationships = patternRelationships.get(pattern);
+        const siblingPatternObjs = relationships?.childPatterns || [];
+
+        for (const siblingPatternObj of siblingPatternObjs) {
+          if (siblingPatternObj === childPatternObj) continue; // Skip self
+
+          // Check if sibling route uses this parameter
+          const siblingUsesParam = siblingPatternObj.connections.some(
+            (conn) => conn.paramName === paramName,
+          );
+
+          if (siblingUsesParam) {
+            // Found a sibling that uses this parameter - get the signal value
+            const siblingConnection = siblingPatternObj.connections.find(
+              (conn) => conn.paramName === paramName,
+            );
+
+            if (
+              siblingConnection &&
+              siblingConnection.signal?.value !== undefined
+            ) {
+              const signalValue = siblingConnection.signal.value;
+
+              // Check if this child route has a literal that matches the signal value
+              const signalMatchesThisChildLiteral =
+                childPatternObj.pattern.segments.some(
+                  (segment) =>
+                    segment.type === "literal" && segment.value === signalValue,
+                );
+
+              if (signalMatchesThisChildLiteral) {
+                // This child route's literal matches the sibling's signal value
+                // User passed undefined to override that signal - don't use this child route
+                if (DEBUG) {
+                  console.debug(
+                    `[${pattern}] Blocking child route ${childPatternObj.originalPattern} because ${paramName}:undefined overrides sibling signal value "${signalValue}"`,
+                  );
+                }
+                return false;
+              }
+            }
+          }
+        }
+      }
+    }
+
     // Check if child has active non-default signal values
     let hasActiveParams = false;
     const childParams = { ...compatibility.childParams };
@@ -1473,6 +1524,11 @@ const buildUrlFromPattern = (
 
   // Remove trailing slash when we have query params for prettier URLs
   if (willHaveQueryParams && path.endsWith("/") && path !== "/") {
+    path = path.slice(0, -1);
+  }
+
+  // Always remove trailing slash from simple paths (unless root) for cleaner URLs
+  if (path.endsWith("/") && path !== "/" && !willHaveQueryParams) {
     path = path.slice(0, -1);
   }
 
