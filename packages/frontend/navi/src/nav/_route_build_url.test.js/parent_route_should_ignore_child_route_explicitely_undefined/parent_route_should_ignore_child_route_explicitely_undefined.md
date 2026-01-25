@@ -5,12 +5,16 @@ try {
   const zoneSignal = stateSignal(undefined);
   const mapPanelSignal = stateSignal(undefined, { id: "mapPanel" });
   const isochroneTabSignal = stateSignal("compare");
+  const walkSignal = stateSignal(false);
+  zoneSignal.value = "london";
   mapPanelSignal.value = "isochrone";
   const { MAP_ROUTE } = setupRoutes({
+    HOME_ROUTE: "/",
     MAP_ROUTE: `/map/?zone=${zoneSignal}`,
     MAP_PANEL_ROUTE: `/map/:panel=${mapPanelSignal}/`,
-    MAP_ISOCHRONE_ROUTE: `/map/isochrone/:tab=${isochroneTabSignal}`,
-    MAP_ISOCHRONE_COMPARE_ROUTE: `/map/isochrone/compare`,
+    MAP_ISOCHRONE_ROUTE: `/map/isochrone/:tab=${isochroneTabSignal}/`,
+    MAP_ISOCHRONE_COMPARE_ROUTE: `/map/isochrone/compare?walk=${walkSignal}`,
+    MAP_ISOCHRONE_TIME_ROUTE: "/map/isochrone/time/",
   });
   updateRoutes(`${baseUrl}/map/isochrone/compare?zone=london`);
 
