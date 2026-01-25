@@ -698,14 +698,14 @@ export const createRoutePattern = (pattern) => {
     // Step 2: Try ancestors first - iterate from closest to furthest
     const relationships = patternRelationships.get(pattern);
     const parentPatternObjs = relationships?.parentPatterns || [];
-    
+
     let bestAncestor = null;
     for (const parentPatternObj of parentPatternObjs) {
       // Skip root route - never use as optimization target
       if (parentPatternObj.originalPattern === "/") {
         continue;
       }
-      
+
       // Try to use this ancestor
       const ancestorUrl = tryUseAncestor(parentPatternObj, resolvedParams);
       if (ancestorUrl) {
@@ -713,7 +713,7 @@ export const createRoutePattern = (pattern) => {
         // Keep iterating to find the highest ancestor that works
       }
     }
-    
+
     if (bestAncestor) {
       if (DEBUG) {
         console.debug(`[${pattern}] Using ancestor optimization`);
@@ -726,16 +726,20 @@ export const createRoutePattern = (pattern) => {
 
     // Step 4: Try descendants - iterate and keep the deepest that works
     const childPatternObjs = relationships?.childPatterns || [];
-    
+
     let bestDescendant = null;
     for (const childPatternObj of childPatternObjs) {
-      const descendantUrl = tryUseDescendant(childPatternObj, params, resolvedParams);
+      const descendantUrl = tryUseDescendant(
+        childPatternObj,
+        params,
+        resolvedParams,
+      );
       if (descendantUrl) {
         bestDescendant = descendantUrl;
         // Keep iterating to find the deepest descendant that works
       }
     }
-    
+
     if (bestDescendant) {
       if (DEBUG) {
         console.debug(`[${pattern}] Using descendant optimization`);
@@ -821,21 +825,36 @@ export const createRoutePattern = (pattern) => {
   /**
    * Helper: Try to use a descendant route (simple compatibility check)
    */
-  const tryUseDescendant = (descendantPatternObj, params, parentResolvedParams) => {
+  const tryUseDescendant = (
+    descendantPatternObj,
+    params,
+    parentResolvedParams,
+  ) => {
     // Check basic compatibility
-    const compatibility = checkChildRouteCompatibility(descendantPatternObj, params);
+    const compatibility = checkChildRouteCompatibility(
+      descendantPatternObj,
+      params,
+    );
     if (!compatibility.isCompatible) {
       return null;
     }
 
     // Check if we should use this descendant
-    const shouldUse = shouldUseChildRoute(descendantPatternObj, params, compatibility);
+    const shouldUse = shouldUseChildRoute(
+      descendantPatternObj,
+      params,
+      compatibility,
+    );
     if (!shouldUse) {
       return null;
     }
 
     // Build descendant URL using buildUrl (not buildMostPreciseUrl) to prevent recursion
-    return buildChildRouteUrl(descendantPatternObj, params, parentResolvedParams);
+    return buildChildRouteUrl(
+      descendantPatternObj,
+      params,
+      parentResolvedParams,
+    );
   };
 
   /**
