@@ -737,7 +737,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
     try {
       const partSignal = stateSignal(undefined, { id: "part" });
       const subpartSignal = stateSignal("details", { id: "subpart" });
-      
+
       const { TOTO_ROUTE, TOTO_SUB_ROUTE } = setupRoutes({
         TOTO_ROUTE: `/toto/:part=${partSignal}`,
         TOTO_SUB_ROUTE: `/toto/admin/:subpart=${subpartSignal}`,
