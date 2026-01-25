@@ -663,6 +663,16 @@ export const createRoutePattern = (pattern) => {
       console.debug(`[${pattern}] buildMostPreciseUrl called`);
     }
 
+    // Root routes should never optimize to descendants - always stay at "/"
+    if (pattern === "/") {
+      if (DEBUG) {
+        console.debug(`[${pattern}] Root route - skipping optimization`);
+      }
+      const resolvedParams = resolveParams(params);
+      const finalParams = removeDefaultValues(resolvedParams);
+      return buildCurrentRouteUrl(finalParams);
+    }
+
     // Step 1: Resolve and clean parameters
     const resolvedParams = resolveParams(params);
 

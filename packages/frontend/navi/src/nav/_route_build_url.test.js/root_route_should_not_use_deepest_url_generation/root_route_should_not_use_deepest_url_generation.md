@@ -27,7 +27,7 @@ try {
 
 ```js
 {
-  "root_url": "http://127.0.0.1/admin/settings/advanced",
+  "root_url": "http://127.0.0.1/",
   "admin_url": "http://127.0.0.1/admin/users",
   "settings_url": "http://127.0.0.1/admin/settings/advanced"
 }

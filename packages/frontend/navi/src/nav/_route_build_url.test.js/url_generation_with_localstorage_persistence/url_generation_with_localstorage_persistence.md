@@ -57,7 +57,7 @@ try {
 {
   "admin_route_url": "http://127.0.0.1/admin/analytics?tab=details",
   "analytics_route_url": "http://127.0.0.1/admin/analytics?tab=details",
-  "root_route_url": "http://127.0.0.1/admin/analytics?tab=details"
+  "root_route_url": "http://127.0.0.1/"
 }
 ```
 
