@@ -586,11 +586,11 @@ export const createRoutePattern = (pattern) => {
     relationships,
   ) => {
     // Only optimize if current route has no final params and all signals are default
-    const allParamsAreDefaults = connections.every(
+    const allCurrentParamsAreDefaults = connections.every(
       (conn) => conn.signal?.value === conn.options.defaultValue,
     );
 
-    if (Object.keys(finalParams).length > 0 || !allParamsAreDefaults) {
+    if (Object.keys(finalParams).length > 0 || !allCurrentParamsAreDefaults) {
       return null;
     }
 
@@ -622,6 +622,20 @@ export const createRoutePattern = (pattern) => {
    * Helper: Evaluate a specific parent pattern for URL optimization
    */
   const evaluateParentOptimization = (parentPatternObj, generatedUrl) => {
+    // First, check if ALL parent signals are also at their defaults
+    const allParentParamsAreDefaults = parentPatternObj.connections.every(
+      (parentConnection) => {
+        return (
+          parentConnection.signal?.value ===
+          parentConnection.options.defaultValue
+        );
+      },
+    );
+
+    if (!allParentParamsAreDefaults) {
+      return null; // Can't optimize if parent has non-default values
+    }
+
     // Check if parent's default values match our literals
     const parentPointsToCurrentRoute = parentPatternObj.connections.every(
       (parentConnection) => {

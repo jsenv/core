@@ -669,6 +669,29 @@ await snapshotTests(import.meta.url, ({ test }) => {
     }
   });
 
+  test("parent route optimization - settings route should return /admin when all params are defaults", () => {
+    try {
+      // Parent route default matches child literal "settings" - this enables optimization
+      const sectionSignal = stateSignal("settings", { id: "section_opt" });
+      const tabSignal = stateSignal("general", { id: "settings_tab_opt" });
+
+      const { ADMIN_ROUTE, ADMIN_SETTINGS_ROUTE } = setupRoutes({
+        ROOT: "/",
+        ADMIN_ROUTE: `/admin/:section=${sectionSignal}/`,
+        ADMIN_SETTINGS_ROUTE: `/admin/settings/:tab=${tabSignal}`,
+      });
+
+      return {
+        // Core issue: When both signals are at defaults, settings route should optimize to shortest equivalent URL
+        settings_url: ADMIN_SETTINGS_ROUTE.buildUrl(), // Should be "/admin", not "/admin/settings"
+        admin_url: ADMIN_ROUTE.buildUrl(), // For comparison
+      };
+    } finally {
+      clearAllRoutes();
+      globalSignalRegistry.clear();
+    }
+  });
+
   test("search param order should be predictable", () => {
     try {
       const aSignal = stateSignal("a-value", { id: "a" });
