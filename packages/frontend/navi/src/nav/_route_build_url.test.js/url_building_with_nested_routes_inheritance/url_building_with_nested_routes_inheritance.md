@@ -63,7 +63,7 @@ try {
 ```js
 {
   "admin_no_params": "http://127.0.0.1/admin",
-  "admin_explicit_settings": "http://127.0.0.1/admin/settings/general",
+  "admin_explicit_settings": "http://127.0.0.1/admin",
   "admin_explicit_users": "http://127.0.0.1/admin/users",
   "settings_no_params": "http://127.0.0.1/admin",
   "settings_with_security_tab": "http://127.0.0.1/admin/settings/security",
