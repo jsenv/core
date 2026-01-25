@@ -311,6 +311,13 @@ export const createRoutePattern = (pattern) => {
     const childParams = {};
     let isCompatible = true;
 
+    if (DEBUG) {
+      console.debug(
+        `[${pattern}] Checking compatibility with child: ${childPatternObj.originalPattern}`,
+      );
+      console.debug(`[${pattern}] Params passed to buildUrl:`, params);
+    }
+
     // Check both parent signals AND user-provided params for child route matching
     const paramsToCheck = [
       ...connections,
@@ -327,20 +334,31 @@ export const createRoutePattern = (pattern) => {
         childPatternObj.pattern,
       );
 
-      if (DEBUG && !result.isCompatible) {
+      if (DEBUG) {
         console.debug(
-          `[${pattern}] Param '${item.paramName}' incompatible with ${childPatternObj.originalPattern}`,
+          `[${pattern}] Processing param '${item.paramName}' (userProvided: ${item.isUserProvided}, value: ${item.isUserProvided ? item.userValue : item.signal?.value}) for child ${childPatternObj.originalPattern}: compatible=${result.isCompatible}, shouldInclude=${result.shouldInclude}`,
         );
       }
 
       if (!result.isCompatible) {
         isCompatible = false;
+        if (DEBUG) {
+          console.debug(
+            `[${pattern}] Child ${childPatternObj.originalPattern} INCOMPATIBLE due to param '${item.paramName}'`,
+          );
+        }
         break;
       }
 
       if (result.shouldInclude) {
         childParams[result.paramName] = result.paramValue;
       }
+    }
+
+    if (DEBUG) {
+      console.debug(
+        `[${pattern}] Final compatibility result for ${childPatternObj.originalPattern}: ${isCompatible}`,
+      );
     }
 
     return { isCompatible, childParams };

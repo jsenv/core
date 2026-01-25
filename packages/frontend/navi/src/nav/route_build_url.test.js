@@ -992,10 +992,9 @@ await snapshotTests(import.meta.url, ({ test }) => {
         MAP_ISOCHRONE_COMPARE_ROUTE: `/map/isochrone/compare?walk=${walkSignal}`,
         MAP_ISOCHRONE_TIME_ROUTE: "/map/isochrone/time/",
       });
-      updateRoutes(`${baseUrl}/map/isochrone/compare?zone=london`);
 
       return {
-        map_url: MAP_ROUTE.buildUrl(),
+        map_url_normal: MAP_ROUTE.buildUrl(),
         map_url_panel_explicitely_undefined: MAP_ROUTE.buildUrl({
           panel: undefined,
         }),

@@ -16,10 +16,9 @@ try {
     MAP_ISOCHRONE_COMPARE_ROUTE: `/map/isochrone/compare?walk=${walkSignal}`,
     MAP_ISOCHRONE_TIME_ROUTE: "/map/isochrone/time/",
   });
-  updateRoutes(`${baseUrl}/map/isochrone/compare?zone=london`);
 
   return {
-    map_url: MAP_ROUTE.buildUrl(),
+    map_url_normal: MAP_ROUTE.buildUrl(),
     map_url_panel_explicitely_undefined: MAP_ROUTE.buildUrl({
       panel: undefined,
     }),
@@ -32,7 +31,7 @@ try {
 
 ```js
 {
-  "map_url": "http://127.0.0.1/map/isochrone?zone=london",
+  "map_url_normal": "http://127.0.0.1/map/isochrone?zone=london",
   "map_url_panel_explicitely_undefined": "http://127.0.0.1/map?zone=london"
 }
 ```
