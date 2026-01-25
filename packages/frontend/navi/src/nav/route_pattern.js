@@ -1070,12 +1070,15 @@ export const createRoutePattern = (pattern) => {
     return buildUrlFromPattern(filteredPattern, finalParams, pattern);
   };
 
+  // Calculate depth based on pattern relationships
+  const depth = calculatePatternDepth(pattern);
+
   return {
     originalPattern: pattern, // Return the original pattern string
     pattern: parsedPattern,
     cleanPattern, // Return the clean pattern string
     connections, // Return signal connections along with pattern
-    specificity: calculatePatternSpecificity(parsedPattern), // Pre-calculate specificity
+    depth, // Depth in the pattern hierarchy
     applyOn,
     buildUrl,
     buildMostPreciseUrl,
@@ -1090,32 +1093,6 @@ const paramMatchesChildLiteral = (paramValue, childParsedPattern) => {
   return childParsedPattern.segments.some(
     (segment) => segment.type === "literal" && segment.value === paramValue,
   );
-};
-
-/**
- * Calculate pattern specificity score for route matching
- * Higher score = more specific route
- */
-const calculatePatternSpecificity = (parsedPattern) => {
-  let specificity = 0;
-
-  // Count path segments (ignoring query params for specificity)
-  const pathSegments = parsedPattern.segments || [];
-
-  for (const segment of pathSegments) {
-    if (segment.type === "literal") {
-      // Literal segments are more specific than parameters
-      specificity += 100; // High score for literal segments
-    } else if (segment.type === "param") {
-      // Parameter segments are less specific
-      specificity += 10; // Lower score for parameters
-    }
-  }
-
-  // Add base score for number of path segments (more segments = more specific)
-  specificity += pathSegments.length;
-
-  return specificity;
 };
 
 /**
@@ -1766,6 +1743,66 @@ export const setupPatterns = (patternDefinitions) => {
   if (DEBUG) {
     console.debug("Pattern registry updated");
   }
+};
+
+/**
+ * Calculate the depth of a pattern based on its parent chain
+ */
+const calculatePatternDepth = (patternString) => {
+  const relationships = patternRelationships.get(patternString);
+  if (!relationships) {
+    if (DEBUG) {
+      console.debug(`[calculatePatternDepth] No relationships found for ${patternString}`);
+    }
+    return 0;
+  }
+
+  if (DEBUG) {
+    console.debug(`[calculatePatternDepth] Calculating depth for ${patternString}`);
+    console.debug(`[calculatePatternDepth] Parent patterns:`, relationships.parentPatterns?.map(p => p.originalPattern));
+  }
+
+  // If no parents, depth is 0 (root pattern)
+  if (!relationships.parentPatterns || relationships.parentPatterns.length === 0) {
+    if (DEBUG) {
+      console.debug(`[calculatePatternDepth] Final depth for ${patternString}: 0 (no parents)`);
+    }
+    return 0;
+  }
+
+  // Find the most specific parent (the one with the most segments)
+  // This is the direct parent, not a distant ancestor
+  let mostSpecificParent = null;
+  let maxSegments = -1;
+  
+  for (const parentPattern of relationships.parentPatterns) {
+    const parentSegments = parentPattern.originalPattern.split('/').filter(Boolean);
+    if (parentSegments.length > maxSegments) {
+      maxSegments = parentSegments.length;
+      mostSpecificParent = parentPattern;
+    }
+  }
+
+  if (!mostSpecificParent) {
+    if (DEBUG) {
+      console.debug(`[calculatePatternDepth] No valid parent found for ${patternString}`);
+    }
+    return 0;
+  }
+
+  if (DEBUG) {
+    console.debug(`[calculatePatternDepth] Most specific parent: ${mostSpecificParent.originalPattern}`);
+  }
+
+  // Recursively calculate depth: 1 + parent's depth
+  const parentDepth = calculatePatternDepth(mostSpecificParent.originalPattern);
+  const depth = parentDepth + 1;
+  
+  if (DEBUG) {
+    console.debug(`[calculatePatternDepth] Final depth for ${patternString}: ${depth} (parent: ${mostSpecificParent.originalPattern} with depth ${parentDepth})`);
+  }
+  
+  return depth;
 };
 
 /**

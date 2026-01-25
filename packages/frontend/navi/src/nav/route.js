@@ -265,7 +265,6 @@ const registerRoute = (routePattern) => {
     relativeUrl: null,
     url: null,
     action: null,
-    specificity: routePattern.specificity, // Expose pattern specificity publicly
     cleanup,
     toString: () => {
       return `route "${cleanPattern}"`;
@@ -448,10 +447,10 @@ const registerRoute = (routePattern) => {
       }
     }
 
-    // Find the most specific route using pre-calculated specificity scores
+    // Find the most specific route using pattern depth (deeper = more specific)
     let mostSpecificRoute = route;
     const routePrivateProperties = getRoutePrivateProperties(route);
-    let maxSpecificity = routePrivateProperties?.routePattern?.specificity || 0;
+    let maxDepth = routePrivateProperties.routePattern.depth;
 
     for (const matchingRoute of allMatchingRoutes) {
       if (matchingRoute === route) {
@@ -459,11 +458,10 @@ const registerRoute = (routePattern) => {
       }
       const matchingRoutePrivateProperties =
         getRoutePrivateProperties(matchingRoute);
-      const specificity =
-        matchingRoutePrivateProperties?.routePattern?.specificity || 0;
+      const depth = matchingRoutePrivateProperties.routePattern.depth;
 
-      if (specificity > maxSpecificity) {
-        maxSpecificity = specificity;
+      if (depth > maxDepth) {
+        maxDepth = depth;
         mostSpecificRoute = matchingRoute;
       }
     }

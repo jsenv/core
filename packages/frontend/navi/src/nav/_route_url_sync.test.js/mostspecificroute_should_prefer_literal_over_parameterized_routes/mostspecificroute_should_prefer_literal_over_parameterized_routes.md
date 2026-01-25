@@ -95,13 +95,6 @@ try {
       issue:
         "The code might incorrectly consider ISOCHRONE_ROUTE more specific due to query params",
     },
-
-    // Verify new specificity system:
-    specificity_scores: {
-      isochrone: ISOCHRONE_ROUTE.specificity,
-      compare: ISOCHRONE_COMPARE_ROUTE.specificity,
-      note: "COMPARE should have higher specificity (literal 'compare' > parameter ':tab')",
-    },
   };
 } finally {
   clearAllRoutes();
@@ -136,11 +129,6 @@ try {
   "actual_segments_comparison": {
     "problem": "Current code counts segments: isochrone=4, compare=3",
     "issue": "The code might incorrectly consider ISOCHRONE_ROUTE more specific due to query params"
-  },
-  "specificity_scores": {
-    "isochrone": 213,
-    "compare": 303,
-    "note": "COMPARE should have higher specificity (literal 'compare' > parameter ':tab')"
   }
 }
 ```

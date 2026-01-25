@@ -798,13 +798,6 @@ await snapshotTests(import.meta.url, ({ test }) => {
           issue:
             "The code might incorrectly consider ISOCHRONE_ROUTE more specific due to query params",
         },
-
-        // Verify new specificity system:
-        specificity_scores: {
-          isochrone: ISOCHRONE_ROUTE.specificity,
-          compare: ISOCHRONE_COMPARE_ROUTE.specificity,
-          note: "COMPARE should have higher specificity (literal 'compare' > parameter ':tab')",
-        },
       };
     } finally {
       clearAllRoutes();
