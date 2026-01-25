@@ -253,12 +253,48 @@ export const createRoutePattern = (pattern) => {
       return null;
     }
 
+    if (DEBUG) {
+      console.debug(
+        `[${pattern}] Evaluating ${childPatternObjs.length} child routes for buildMostPreciseUrl`,
+      );
+      console.debug(
+        `[${pattern}] Child routes:`,
+        childPatternObjs.map((c) => ({
+          pattern: c.originalPattern,
+          specificity: c.specificity,
+        })),
+      );
+    }
+
+    // Get parent route's resolved signal values to pass to child routes
+    const parentResolvedParams = resolveParams(params);
+
     // Try each child pattern object to find the most specific match
     for (const childPatternObj of childPatternObjs) {
-      const childRouteCandidate = evaluateChildRoute(childPatternObj, params);
+      if (DEBUG) {
+        console.debug(
+          `[${pattern}] Evaluating child route: ${childPatternObj.originalPattern}`,
+        );
+      }
+
+      const childRouteCandidate = evaluateChildRoute(
+        childPatternObj,
+        params,
+        parentResolvedParams,
+      );
 
       if (childRouteCandidate) {
+        if (DEBUG) {
+          console.debug(
+            `[${pattern}] Selected child route: ${childPatternObj.originalPattern} -> ${childRouteCandidate}`,
+          );
+        }
         return childRouteCandidate;
+      }
+      if (DEBUG) {
+        console.debug(
+          `[${pattern}] Rejected child route: ${childPatternObj.originalPattern}`,
+        );
       }
     }
     return null;
@@ -267,7 +303,11 @@ export const createRoutePattern = (pattern) => {
   /**
    * Helper: Evaluate if a specific child route is suitable for current params/signals
    */
-  const evaluateChildRoute = (childPatternObj, params) => {
+  const evaluateChildRoute = (
+    childPatternObj,
+    params,
+    parentResolvedParams = {},
+  ) => {
     // Step 1: Check parameter compatibility
     const compatibility = checkChildRouteCompatibility(childPatternObj, params);
     if (!compatibility.isCompatible) {
@@ -285,7 +325,7 @@ export const createRoutePattern = (pattern) => {
     }
 
     // Step 3: Build child route URL with proper parameter filtering
-    return buildChildRouteUrl(childPatternObj, params);
+    return buildChildRouteUrl(childPatternObj, params, parentResolvedParams);
   };
 
   /**
@@ -305,11 +345,46 @@ export const createRoutePattern = (pattern) => {
       })),
     ];
 
+    if (DEBUG) {
+      console.debug(
+        `[${pattern}] checkChildRouteCompatibility(${childPatternObj.originalPattern}):`,
+        {
+          paramsToCheck: paramsToCheck.map((p) =>
+            p.isUserProvided
+              ? {
+                  paramName: p.paramName,
+                  userValue: p.userValue,
+                  isUserProvided: true,
+                }
+              : {
+                  paramName: p.paramName,
+                  signalValue: p.signal?.value,
+                  defaultValue: p.options.defaultValue,
+                },
+          ),
+          childPattern: childPatternObj.originalPattern,
+        },
+      );
+    }
+
     for (const item of paramsToCheck) {
       const result = processParameterForChildRoute(
         item,
         childPatternObj.pattern,
       );
+
+      if (DEBUG && !result.isCompatible) {
+        console.debug(
+          `[${pattern}] Parameter incompatible with child route ${childPatternObj.originalPattern}:`,
+          {
+            paramName: item.paramName || item.paramName,
+            paramValue: item.isUserProvided
+              ? item.userValue
+              : item.signal?.value,
+            result,
+          },
+        );
+      }
 
       if (!result.isCompatible) {
         isCompatible = false;
@@ -319,6 +394,13 @@ export const createRoutePattern = (pattern) => {
       if (result.shouldInclude) {
         childParams[result.paramName] = result.paramValue;
       }
+    }
+
+    if (DEBUG) {
+      console.debug(
+        `[${pattern}] checkChildRouteCompatibility result for ${childPatternObj.originalPattern}:`,
+        { isCompatible, childParams },
+      );
     }
 
     return { isCompatible, childParams };
@@ -363,7 +445,22 @@ export const createRoutePattern = (pattern) => {
       };
     }
 
-    // Check for generic parameter-literal conflicts
+    // Check if this is a query parameter in the parent pattern
+    const isParentQueryParam = parsedPattern.queryParams.some(
+      (qp) => qp.name === paramName,
+    );
+
+    if (isParentQueryParam) {
+      // Query parameters are always compatible and can be inherited by child routes
+      return {
+        isCompatible: true,
+        shouldInclude: !item.isUserProvided && !matchesChildLiteral,
+        paramName,
+        paramValue,
+      };
+    }
+
+    // Check for generic parameter-literal conflicts (only for path parameters)
     if (!matchesChildLiteral) {
       // Check if this is a path parameter from parent pattern
       const isParentPathParam = connections.some(
@@ -432,13 +529,38 @@ export const createRoutePattern = (pattern) => {
     // Use child route if:
     // 1. Child has active non-default parameters, OR
     // 2. User provided params AND child can be built completely
-    return hasActiveParams || (hasProvidedParams && canBuildChildCompletely);
+    const shouldUse =
+      hasActiveParams || (hasProvidedParams && canBuildChildCompletely);
+
+    if (DEBUG) {
+      console.debug(
+        `[${pattern}] shouldUseChildRoute(${childPatternObj.originalPattern}):`,
+        {
+          hasActiveParams,
+          canBuildChildCompletely,
+          hasProvidedParams,
+          shouldUse,
+          childParams,
+          signalValues: childPatternObj.connections.map((c) => ({
+            paramName: c.paramName,
+            signalValue: c.signal?.value,
+            defaultValue: c.options.defaultValue,
+          })),
+        },
+      );
+    }
+
+    return shouldUse;
   };
 
   /**
    * Helper: Build URL for selected child route with proper parameter filtering
    */
-  const buildChildRouteUrl = (childPatternObj, params) => {
+  const buildChildRouteUrl = (
+    childPatternObj,
+    params,
+    parentResolvedParams = {},
+  ) => {
     // Start with child signal values
     const baseParams = {};
     for (const connection of childPatternObj.connections) {
@@ -449,6 +571,40 @@ export const createRoutePattern = (pattern) => {
       ) {
         baseParams[paramName] = signal.value;
       }
+    }
+
+    // Add parent parameters that should be inherited (excluding defaults and consumed parameters)
+    for (const [paramName, parentValue] of Object.entries(
+      parentResolvedParams,
+    )) {
+      // Skip if child route already handles this parameter
+      const childConnection = childPatternObj.connections.find(
+        (conn) => conn.paramName === paramName,
+      );
+      if (childConnection) {
+        continue; // Child route handles this parameter directly
+      }
+
+      // Skip if parameter is consumed by child's literal path segments
+      const isConsumedByChildPath = childPatternObj.pattern.segments.some(
+        (segment) =>
+          segment.type === "literal" && segment.value === parentValue,
+      );
+      if (isConsumedByChildPath) {
+        continue; // Parameter is consumed by child's literal path
+      }
+
+      // Check if parent parameter is at default value
+      const parentConnection = connections.find(
+        (conn) => conn.paramName === paramName,
+      );
+      const parentDefault = parentConnection?.options?.defaultValue;
+      if (parentValue === parentDefault) {
+        continue; // Don't inherit default values
+      }
+
+      // Inherit this parameter as it's not handled by child and not at default
+      baseParams[paramName] = parentValue;
     }
 
     // Apply user params with filtering logic
@@ -540,8 +696,19 @@ export const createRoutePattern = (pattern) => {
   };
 
   const buildMostPreciseUrl = (params = {}) => {
+    if (DEBUG) {
+      console.debug(
+        `[${pattern}] buildMostPreciseUrl called with params:`,
+        params,
+      );
+    }
+
     // Step 1: Resolve and clean parameters
     const resolvedParams = resolveParams(params);
+
+    if (DEBUG) {
+      console.debug(`[${pattern}] resolvedParams:`, resolvedParams);
+    }
 
     // Step 2: Check for parent route optimization BEFORE removing defaults
     // This allows optimization when final effective values match defaults
@@ -551,16 +718,35 @@ export const createRoutePattern = (pattern) => {
       relationships,
     );
     if (optimizedUrl) {
+      if (DEBUG) {
+        console.debug(
+          `[${pattern}] Using parent route optimization:`,
+          optimizedUrl,
+        );
+      }
       return optimizedUrl;
     }
 
     // Step 3: Remove default values for normal URL building
     let finalParams = removeDefaultValues(resolvedParams);
 
+    if (DEBUG) {
+      console.debug(
+        `[${pattern}] finalParams after removing defaults:`,
+        finalParams,
+      );
+    }
+
     // Step 4: Try to find a more specific child route
     const childRouteUrl = findBestChildRoute(params, relationships);
     if (childRouteUrl) {
+      if (DEBUG) {
+        console.debug(`[${pattern}] Using child route URL:`, childRouteUrl);
+      }
       return childRouteUrl;
+    }
+    if (DEBUG) {
+      console.debug(`[${pattern}] No suitable child route found`);
     }
 
     // Step 5: Inherit parameters from parent routes
@@ -568,6 +754,10 @@ export const createRoutePattern = (pattern) => {
 
     // Step 6: Build the current route URL
     const generatedUrl = buildCurrentRouteUrl(finalParams);
+
+    if (DEBUG) {
+      console.debug(`[${pattern}] Final generated URL:`, generatedUrl);
+    }
 
     return generatedUrl;
   };

@@ -72,7 +72,7 @@ try {
 {
   "map_url_defaults": "http://127.0.0.1/map/",
   "map_url_with_zoom": "http://127.0.0.1/map?zoom=15",
-  "map_url_with_zoom_overridden": "http://127.0.0.1/map/",
+  "map_url_with_zoom_overridden": "http://127.0.0.1/map/isochrone",
   "map_isochrone_url_with_zoom": "http://127.0.0.1/map/isochrone?zoom=15",
   "map_isochrone_time_walk_url_with_zoom": "http://127.0.0.1/map/isochrone/walk?zoom=15",
   "map_isochrone_time_walk_url_after_change": "http://127.0.0.1/map/isochrone/walk?zoom=15&time=40"

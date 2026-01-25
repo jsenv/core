@@ -57,8 +57,8 @@ try {
     "results": "?page&limit"
   },
   "search_no_params": "http://127.0.0.1/search",
-  "search_partial_params": "http://127.0.0.1/search?sort=date",
-  "search_with_extras": "http://127.0.0.1/search?filter=inactive&sort=date&another=param&extra=value",
+  "search_partial_params": "http://127.0.0.1/search/results?sort=date",
+  "search_with_extras": "http://127.0.0.1/search/results?filter=inactive&sort=date&another=param&extra=value",
   "results_no_params": "http://127.0.0.1/search/results",
   "results_with_extras": "http://127.0.0.1/search/results?filter=all&page=2&limit=50&custom=param",
   "expected_analysis": {

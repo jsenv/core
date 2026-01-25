@@ -188,7 +188,7 @@ try {
       "params": {
         "zoom": 25
       },
-      "generatedUrl": "http://127.0.0.1/map?zoom=25"
+      "generatedUrl": "http://127.0.0.1/map/isochrone?zoom=25"
     }
   ],
   "panel_route_incorrectly_called": false,
@@ -196,14 +196,14 @@ try {
   "expected_route": "MAP_ROUTE",
   "expected_url_pattern": "/map?zoom=25",
   "actual_route": "MAP_ROUTE",
-  "actual_url": "http://127.0.0.1/map?zoom=25",
+  "actual_url": "http://127.0.0.1/map/isochrone?zoom=25",
   "all_redirects_during_test": [
     {
       "route": "MAP_ROUTE",
       "params": {
         "zoom": 25
       },
-      "generatedUrl": "http://127.0.0.1/map?zoom=25"
+      "generatedUrl": "http://127.0.0.1/map/isochrone?zoom=25"
     }
   ],
   "final_signal_values": {
