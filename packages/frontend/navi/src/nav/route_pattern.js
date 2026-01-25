@@ -490,11 +490,10 @@ export const createRoutePattern = (pattern) => {
     const resolvedParams = resolveParams(params);
 
     // Step 2: Check for parent route optimization BEFORE removing defaults
-    // This allows optimization when explicit params match defaults
+    // This allows optimization when final effective values match defaults
     const relationships = patternRelationships.get(pattern);
     const optimizedUrl = checkParentRouteOptimization(
-      null, // generatedUrl not needed for this check
-      resolvedParams, // Use resolvedParams instead of finalParams
+      resolvedParams,
       relationships,
     );
     if (optimizedUrl) {
@@ -586,22 +585,17 @@ export const createRoutePattern = (pattern) => {
   /**
    * Helper: Check if parent route can provide a shorter equivalent URL
    */
-  const checkParentRouteOptimization = (
-    generatedUrl,
-    finalParams,
-    relationships,
-  ) => {
+  const checkParentRouteOptimization = (resolvedParams, relationships) => {
     // Only consider parent optimization for patterns with signal connections
     if (connections.length === 0) {
       return null;
     }
 
-    // For each connection, check if the final effective value equals the default
-    // Final effective value = provided param OR signal value
+    // Check if all final effective values equal their defaults
     const allEffectiveValuesAreDefaults = connections.every((conn) => {
-      const providedValue = finalParams[conn.paramName];
+      // Final effective value is what's in resolvedParams (signals + provided params)
       const effectiveValue =
-        providedValue !== undefined ? providedValue : conn.signal?.value;
+        resolvedParams[conn.paramName] ?? conn.options.defaultValue;
       return effectiveValue === conn.options.defaultValue;
     });
 
@@ -614,7 +608,7 @@ export const createRoutePattern = (pattern) => {
     const connectionParamNames = new Set(
       connections.map((conn) => conn.paramName),
     );
-    const hasExtraParams = Object.keys(finalParams).some(
+    const hasExtraParams = Object.keys(resolvedParams).some(
       (paramName) => !connectionParamNames.has(paramName),
     );
 
@@ -636,7 +630,7 @@ export const createRoutePattern = (pattern) => {
 
       const optimizedParentUrl = evaluateParentOptimization(
         parentPatternObj,
-        generatedUrl,
+        resolvedParams,
       );
 
       if (optimizedParentUrl) {
@@ -650,14 +644,16 @@ export const createRoutePattern = (pattern) => {
   /**
    * Helper: Evaluate a specific parent pattern for URL optimization
    */
-  const evaluateParentOptimization = (parentPatternObj) => {
-    // First, check if ALL parent signals are also at their defaults
+  const evaluateParentOptimization = (parentPatternObj, resolvedParams) => {
+    // Check if parent would also have all default values
     const allParentParamsAreDefaults = parentPatternObj.connections.every(
       (parentConnection) => {
-        return (
-          parentConnection.signal?.value ===
-          parentConnection.options.defaultValue
-        );
+        // Use the resolved value if available, otherwise parent's signal value, otherwise default
+        const effectiveValue =
+          resolvedParams[parentConnection.paramName] ??
+          parentConnection.signal?.value ??
+          parentConnection.options.defaultValue;
+        return effectiveValue === parentConnection.options.defaultValue;
       },
     );
 
