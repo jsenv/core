@@ -836,4 +836,27 @@ await snapshotTests(import.meta.url, ({ test }) => {
       globalSignalRegistry.clear();
     }
   });
+
+  test("map isochrone url generation from map with custom zone", () => {
+    try {
+      const zoneSignal = stateSignal(undefined);
+      const isochroneTabSignal = stateSignal("compare");
+      const walkSignal = stateSignal(false);
+      const { MAP_ROUTE, MAP_ISOCHRONE_ROUTE, MAP_ISOCHRONE_WALK_ROUTE } =
+        setupRoutes({
+          MAP_ROUTE: `/map/?zone=${zoneSignal}`,
+          MAP_ISOCHRONE_ROUTE: `/map/isochrone/:tab=${isochroneTabSignal}/`,
+          MAP_ISOCHRONE_WALK_ROUTE: `/map/isochrone/compare/?walk=${walkSignal}`,
+        });
+      updateRoutes(`${baseUrl}/map?zone=something`);
+      return {
+        map_url: MAP_ROUTE.buildUrl(),
+        isochrone_url: MAP_ISOCHRONE_ROUTE.buildUrl(),
+        isochrone_compare_walk_url: MAP_ISOCHRONE_WALK_ROUTE.buildUrl(),
+      };
+    } finally {
+      clearAllRoutes();
+      globalSignalRegistry.clear();
+    }
+  });
 });
