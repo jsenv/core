@@ -192,10 +192,6 @@ export const createRoutePattern = (pattern) => {
     return result;
   };
 
-  const buildUrl = (params = {}) => {
-    return buildUrlFromPattern(parsedPattern, params, pattern);
-  };
-
   const resolveParams = (providedParams = {}) => {
     let resolvedParams = { ...providedParams };
 
@@ -603,7 +599,11 @@ export const createRoutePattern = (pattern) => {
     }
 
     // Build child URL using buildUrl (not buildMostPreciseUrl) to prevent recursion
-    const childUrl = childPatternObj.buildUrl(baseParams);
+    const childUrl = buildUrlFromPattern(
+      childPatternObj.pattern,
+      baseParams,
+      childPatternObj.originalPattern,
+    );
 
     if (childUrl && !childUrl.includes(":")) {
       // Check for parent optimization before returning
@@ -627,35 +627,34 @@ export const createRoutePattern = (pattern) => {
     }
 
     const childRelationships = patternRelationships.get(childPattern);
-    const childParentObjs = childRelationships?.parentPatterns || [];
+    const childParent = childRelationships?.parent;
 
-    for (const childParentObj of childParentObjs) {
-      if (childParentObj.originalPattern === pattern) {
-        // Get the child pattern object from relationships instead of recreating
-        const childPatternObj = childRelationships;
+    if (childParent && childParent.originalPattern === pattern) {
+      // Get the child pattern object from relationships instead of recreating
+      const childPatternObj = childRelationships;
 
-        const allChildParamsAreDefaults = (
-          childPatternObj.connections || []
-        ).every((childConnection) => {
-          const { signal, options } = childConnection;
-          return signal?.value === options.defaultValue;
-        });
+      const allChildParamsAreDefaults = (
+        childPatternObj.connections || []
+      ).every((childConnection) => {
+        const { signal, options } = childConnection;
+        return signal?.value === options.defaultValue;
+      });
 
-        if (allChildParamsAreDefaults) {
-          // Build current route URL for comparison
-          const resolvedParams = resolveParams({});
-          const finalParams = removeDefaultValues(resolvedParams);
-          const currentUrl = buildUrlFromPattern(
-            parsedPattern,
-            finalParams,
-            pattern,
-          );
-          if (currentUrl.length < childUrl.length) {
-            return currentUrl;
-          }
+      if (allChildParamsAreDefaults) {
+        // Build current route URL for comparison
+        const resolvedParams = resolveParams({});
+        const finalParams = removeDefaultValues(resolvedParams);
+        const currentUrl = buildUrlFromPattern(
+          parsedPattern,
+          finalParams,
+          pattern,
+        );
+        if (currentUrl.length < childUrl.length) {
+          return currentUrl;
         }
       }
     }
+
     return null;
   };
 
@@ -669,38 +668,31 @@ export const createRoutePattern = (pattern) => {
 
     // Step 2: Try ancestors first - find the highest ancestor that works
     const relationships = patternRelationships.get(pattern);
-    const parentPatternObjs = relationships?.parentPatterns || [];
+    const parentPattern = relationships?.parent;
 
-    if (DEBUG) {
+    if (DEBUG && parentPattern) {
       console.debug(
-        `[${pattern}] Available ancestors:`,
-        parentPatternObjs.map((p) => p.originalPattern),
+        `[${pattern}] Available ancestor:`,
+        parentPattern.originalPattern,
       );
     }
 
     let bestAncestorUrl = null;
-    for (const parentPatternObj of parentPatternObjs) {
+    if (parentPattern) {
       // Skip root route - never use as optimization target
-      if (parentPatternObj.originalPattern === "/") {
-        continue;
-      }
+      if (parentPattern.originalPattern !== "/") {
+        // Try to use this ancestor and traverse up to find the highest possible
+        const highestAncestorUrl = findHighestAncestor(parentPattern);
+        if (DEBUG) {
+          console.debug(
+            `[${pattern}] Highest ancestor from ${parentPattern.originalPattern}:`,
+            highestAncestorUrl,
+          );
+        }
 
-      // Try to use this ancestor and traverse up to find the highest possible
-      const highestAncestorUrl = findHighestAncestor(
-        parentPatternObj,
-        resolvedParams,
-      );
-      if (DEBUG) {
-        console.debug(
-          `[${pattern}] Highest ancestor from ${parentPatternObj.originalPattern}:`,
-          highestAncestorUrl,
-        );
-      }
-
-      if (highestAncestorUrl) {
-        // Take the first valid highest ancestor we find (they should all lead to same result)
-        bestAncestorUrl = highestAncestorUrl;
-        break;
+        if (highestAncestorUrl) {
+          bestAncestorUrl = highestAncestorUrl;
+        }
       }
     }
 
@@ -933,7 +925,11 @@ export const createRoutePattern = (pattern) => {
           `[${pattern}] tryDirectOptimization: Both are literal-only routes, allowing optimization`,
         );
       }
-      return targetAncestor.buildUrl({});
+      return buildUrlFromPattern(
+        targetAncestor.pattern,
+        {},
+        targetAncestor.originalPattern,
+      );
     }
 
     // For parametric optimization: remaining segments must match target's parameter defaults
@@ -968,7 +964,11 @@ export const createRoutePattern = (pattern) => {
         `[${pattern}] tryDirectOptimization: SUCCESS! Returning ancestor URL`,
       );
     }
-    return targetAncestor.buildUrl({});
+    return buildUrlFromPattern(
+      targetAncestor.pattern,
+      {},
+      targetAncestor.originalPattern,
+    );
   };
 
   /**
@@ -1010,11 +1010,12 @@ export const createRoutePattern = (pattern) => {
    * Helper: Inherit query parameters from parent patterns
    */
   const inheritParentParameters = (finalParams, relationships) => {
-    const parentPatternObjs = relationships?.parentPatterns || [];
+    let currentParent = relationships?.parent;
 
-    for (const parentPatternObj of parentPatternObjs) {
+    // Traverse up the parent chain to inherit parameters
+    while (currentParent) {
       // Check parent's signal connections for non-default values to inherit
-      for (const parentConnection of parentPatternObj.connections) {
+      for (const parentConnection of currentParent.connections) {
         const { paramName, signal, options } = parentConnection;
         const defaultValue = options.defaultValue;
 
@@ -1027,7 +1028,7 @@ export const createRoutePattern = (pattern) => {
           // Don't inherit if parameter corresponds to a literal in our path
           const shouldInherit = !isParameterRedundantWithLiteralSegments(
             parsedPattern,
-            parentPatternObj.pattern,
+            currentParent.pattern,
             paramName,
             signal.value,
           );
@@ -1037,6 +1038,11 @@ export const createRoutePattern = (pattern) => {
           }
         }
       }
+      // Move to the next parent up the chain
+      const parentRelationships = patternRelationships.get(
+        currentParent.originalPattern,
+      );
+      currentParent = parentRelationships?.parent;
     }
   };
 
@@ -1080,7 +1086,6 @@ export const createRoutePattern = (pattern) => {
     connections, // Return signal connections along with pattern
     depth, // Depth in the pattern hierarchy
     applyOn,
-    buildUrl,
     buildMostPreciseUrl,
     resolveParams,
   };
@@ -1396,7 +1401,17 @@ const buildHierarchicalQueryParams = (
 
   // Get relationships for this pattern
   const relationships = patternRelationships.get(originalPattern);
-  const parentPatterns = relationships?.parentPatterns || [];
+
+  // Collect all ancestors by traversing parent chain
+  const ancestorPatterns = [];
+  let currentParent = relationships?.parent;
+  while (currentParent) {
+    ancestorPatterns.unshift(currentParent); // Add to front for correct order
+    const parentRelationships = patternRelationships.get(
+      currentParent.originalPattern,
+    );
+    currentParent = parentRelationships?.parent;
+  }
 
   // DEBUG: Log what we found
   if (DEBUG) {
@@ -1405,7 +1420,7 @@ const buildHierarchicalQueryParams = (
 
   // Step 1: Add query parameters from ancestor patterns (oldest to newest)
   // This ensures ancestor parameters come first in their declaration order
-  const ancestorPatterns = parentPatterns; // Process in order: root ancestor first, then immediate parent
+  // ancestorPatterns is in correct order: root ancestor first, then immediate parent
 
   for (const ancestorPatternObj of ancestorPatterns) {
     if (ancestorPatternObj.pattern?.queryParams) {
@@ -1700,7 +1715,7 @@ export const setupPatterns = (patternDefinitions) => {
       connections,
       parsedPattern,
       childPatterns: [],
-      parentPatterns: [],
+      parent: null,
     };
 
     patternRegistry.set(urlPatternRaw, patternData);
@@ -1723,8 +1738,15 @@ export const setupPatterns = (patternDefinitions) => {
 
       // Check if current pattern is a child of other pattern using clean patterns
       if (isChildPattern(currentData.cleanPattern, otherData.cleanPattern)) {
-        // Store pattern objects instead of pattern strings
-        currentData.parentPatterns.push(patternObjects.get(otherPattern));
+        // Store the most specific parent (only one parent per pattern in tree structure)
+        const potentialParent = patternObjects.get(otherPattern);
+        if (
+          !currentData.parent ||
+          potentialParent.originalPattern.split("/").filter(Boolean).length >
+            currentData.parent.originalPattern.split("/").filter(Boolean).length
+        ) {
+          currentData.parent = potentialParent;
+        }
         otherData.childPatterns.push(patternObjects.get(currentPattern));
       }
     }
@@ -1735,7 +1757,7 @@ export const setupPatterns = (patternDefinitions) => {
       parsedPattern: currentData.parsedPattern,
       connections: currentData.connections,
       childPatterns: currentData.childPatterns, // Now contains pattern objects
-      parentPatterns: currentData.parentPatterns, // Now contains pattern objects
+      parent: currentData.parent, // Single parent pattern object
       originalPattern: currentPattern,
     });
   }
@@ -1752,56 +1774,51 @@ const calculatePatternDepth = (patternString) => {
   const relationships = patternRelationships.get(patternString);
   if (!relationships) {
     if (DEBUG) {
-      console.debug(`[calculatePatternDepth] No relationships found for ${patternString}`);
+      console.debug(
+        `[calculatePatternDepth] No relationships found for ${patternString}`,
+      );
     }
     return 0;
   }
 
   if (DEBUG) {
-    console.debug(`[calculatePatternDepth] Calculating depth for ${patternString}`);
-    console.debug(`[calculatePatternDepth] Parent patterns:`, relationships.parentPatterns?.map(p => p.originalPattern));
+    console.debug(
+      `[calculatePatternDepth] Calculating depth for ${patternString}`,
+    );
+    console.debug(
+      `[calculatePatternDepth] Parent pattern:`,
+      relationships.parent?.originalPattern,
+    );
   }
 
-  // If no parents, depth is 0 (root pattern)
-  if (!relationships.parentPatterns || relationships.parentPatterns.length === 0) {
+  // If no parent, depth is 0 (root pattern)
+  if (!relationships.parent) {
     if (DEBUG) {
-      console.debug(`[calculatePatternDepth] Final depth for ${patternString}: 0 (no parents)`);
-    }
-    return 0;
-  }
-
-  // Find the most specific parent (the one with the most segments)
-  // This is the direct parent, not a distant ancestor
-  let mostSpecificParent = null;
-  let maxSegments = -1;
-  
-  for (const parentPattern of relationships.parentPatterns) {
-    const parentSegments = parentPattern.originalPattern.split('/').filter(Boolean);
-    if (parentSegments.length > maxSegments) {
-      maxSegments = parentSegments.length;
-      mostSpecificParent = parentPattern;
-    }
-  }
-
-  if (!mostSpecificParent) {
-    if (DEBUG) {
-      console.debug(`[calculatePatternDepth] No valid parent found for ${patternString}`);
+      console.debug(
+        `[calculatePatternDepth] Final depth for ${patternString}: 0 (no parent)`,
+      );
     }
     return 0;
   }
 
   if (DEBUG) {
-    console.debug(`[calculatePatternDepth] Most specific parent: ${mostSpecificParent.originalPattern}`);
+    console.debug(
+      `[calculatePatternDepth] Parent: ${relationships.parent.originalPattern}`,
+    );
   }
 
   // Recursively calculate depth: 1 + parent's depth
-  const parentDepth = calculatePatternDepth(mostSpecificParent.originalPattern);
+  const parentDepth = calculatePatternDepth(
+    relationships.parent.originalPattern,
+  );
   const depth = parentDepth + 1;
-  
+
   if (DEBUG) {
-    console.debug(`[calculatePatternDepth] Final depth for ${patternString}: ${depth} (parent: ${mostSpecificParent.originalPattern} with depth ${parentDepth})`);
+    console.debug(
+      `[calculatePatternDepth] Final depth for ${patternString}: ${depth} (parent: ${relationships.parent.originalPattern} with depth ${parentDepth})`,
+    );
   }
-  
+
   return depth;
 };
 
