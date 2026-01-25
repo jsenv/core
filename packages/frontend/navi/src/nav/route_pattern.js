@@ -861,6 +861,7 @@ export const createRoutePattern = (pattern) => {
         parsedPattern,
         connections,
         ancestorPatternObj,
+        resolvedParams,
       );
       if (DEBUG) {
         console.debug(
@@ -909,6 +910,7 @@ export const createRoutePattern = (pattern) => {
       parsedPattern,
       connections,
       ancestorPatternObj,
+      resolvedParams,
     );
     if (DEBUG) {
       console.debug(
@@ -926,6 +928,7 @@ export const createRoutePattern = (pattern) => {
     sourcePattern,
     sourceConnections,
     targetAncestor,
+    resolvedParams,
   ) => {
     const sourceLiterals = sourcePattern.segments
       .filter((seg) => seg.type === "literal")
@@ -1033,7 +1036,26 @@ export const createRoutePattern = (pattern) => {
     // Build ancestor URL with inherited parameters that don't conflict with optimization
     const ancestorParams = {};
 
-    // Get all ancestors starting from the target ancestor's parent (skip the target itself)
+    // First, add extra parameters from the original resolvedParams
+    // These are parameters that don't correspond to any pattern segments
+    const sourcePatternParamNames = new Set(
+      sourceConnections.map((conn) => conn.paramName),
+    );
+    const targetPatternParamNames = new Set(
+      targetAncestor.connections.map((conn) => conn.paramName),
+    );
+
+    for (const [paramName, value] of Object.entries(resolvedParams)) {
+      // Include parameters that are not part of either pattern (extra parameters)
+      if (
+        !sourcePatternParamNames.has(paramName) &&
+        !targetPatternParamNames.has(paramName)
+      ) {
+        ancestorParams[paramName] = value;
+      }
+    }
+
+    // Then, get all ancestors starting from the target ancestor's parent (skip the target itself)
     const targetAncestorRelationships = patternRelationships.get(
       targetAncestor.originalPattern,
     );
