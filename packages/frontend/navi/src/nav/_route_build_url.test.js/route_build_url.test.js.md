@@ -20,6 +20,7 @@
 - [map isochrone url generation from map with custom zone](map_isochrone_url_generation_from_map_with_custom_zone/map_isochrone_url_generation_from_map_with_custom_zone.md)
 - [hierarchical search param order should respect ancestor patterns](hierarchical_search_param_order_should_respect_ancestor_patterns/hierarchical_search_param_order_should_respect_ancestor_patterns.md)
 - [parent route should use child route when child has non-default signal](parent_route_should_use_child_route_when_child_has_non-default_signal/parent_route_should_use_child_route_when_child_has_non-default_signal.md)
+- [parent route should ignore child route explicitely undefined](parent_route_should_ignore_child_route_explicitely_undefined/parent_route_should_ignore_child_route_explicitely_undefined.md)
 - [rawUrlPart functionality in url building](rawurlpart_functionality_in_url_building/rawurlpart_functionality_in_url_building.md)
 
 ---

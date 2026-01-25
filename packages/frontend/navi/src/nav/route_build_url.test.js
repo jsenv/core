@@ -976,6 +976,32 @@ await snapshotTests(import.meta.url, ({ test }) => {
     }
   });
 
+  test("parent route should ignore child route explicitely undefined", () => {
+    try {
+      const zoneSignal = stateSignal(undefined);
+      const mapPanelSignal = stateSignal(undefined, { id: "mapPanel" });
+      const isochroneTabSignal = stateSignal("compare");
+      mapPanelSignal.value = "isochrone";
+      const { MAP_ROUTE } = setupRoutes({
+        MAP_ROUTE: `/map/?zone=${zoneSignal}`,
+        MAP_PANEL_ROUTE: `/map/:panel=${mapPanelSignal}/`,
+        MAP_ISOCHRONE_ROUTE: `/map/isochrone/:tab=${isochroneTabSignal}`,
+        MAP_ISOCHRONE_COMPARE_ROUTE: `/map/isochrone/compare`,
+      });
+      updateRoutes(`${baseUrl}/map/isochrone/compare?zone=london`);
+
+      return {
+        map_url: MAP_ROUTE.buildUrl(),
+        map_url_panel_explicitely_undefined: MAP_ROUTE.buildUrl({
+          panel: undefined,
+        }),
+      };
+    } finally {
+      clearAllRoutes();
+      globalSignalRegistry.clear();
+    }
+  });
+
   test("rawUrlPart functionality in url building", () => {
     try {
       const { FILES_ROUTE, API_ROUTE } = setupRoutes({
