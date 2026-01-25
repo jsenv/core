@@ -7786,7 +7786,6 @@ const createRoutePattern = (pattern) => {
 
     // Try each child pattern object to find the most specific match
     for (const childPatternObj of childPatternObjs) {
-
       const childRouteCandidate = evaluateChildRoute(
         childPatternObj,
         params,
@@ -7960,7 +7959,18 @@ const createRoutePattern = (pattern) => {
       const { paramName, signal, options } = connection;
       const defaultValue = options.defaultValue;
 
-      if (signal?.value !== undefined) {
+      // Check if parameter was explicitly provided by user
+      const hasExplicitParam = paramName in params;
+      const explicitValue = params[paramName];
+
+      if (hasExplicitParam) {
+        // User explicitly provided this parameter - use their value
+        childParams[paramName] = explicitValue;
+        if (explicitValue !== undefined && explicitValue !== defaultValue) {
+          hasActiveParams = true;
+        }
+      } else if (signal?.value !== undefined) {
+        // No explicit override - use signal value
         childParams[paramName] = signal.value;
         if (signal.value !== defaultValue) {
           hasActiveParams = true;
@@ -7982,11 +7992,15 @@ const createRoutePattern = (pattern) => {
       },
     );
 
-    const hasProvidedParams = Object.keys(params).length > 0;
+    // Count only non-undefined provided parameters
+    const nonUndefinedParams = Object.entries(params).filter(
+      ([, value]) => value !== undefined,
+    );
+    const hasProvidedParams = nonUndefinedParams.length > 0;
 
     // Use child route if:
     // 1. Child has active non-default parameters, OR
-    // 2. User provided params AND child can be built completely
+    // 2. User provided non-undefined params AND child can be built completely
     const shouldUse =
       hasActiveParams || (hasProvidedParams && canBuildChildCompletely);
 
@@ -8005,10 +8019,22 @@ const createRoutePattern = (pattern) => {
     const baseParams = {};
     for (const connection of childPatternObj.connections) {
       const { paramName, signal, options } = connection;
-      if (
+
+      // Check if parameter was explicitly provided by user
+      const hasExplicitParam = paramName in params;
+      const explicitValue = params[paramName];
+
+      if (hasExplicitParam) {
+        // User explicitly provided this parameter - use their value (even if undefined)
+        if (explicitValue !== undefined) {
+          baseParams[paramName] = explicitValue;
+        }
+        // If explicitly undefined, don't include it (which means don't use child route)
+      } else if (
         signal?.value !== undefined &&
         signal.value !== options.defaultValue
       ) {
+        // No explicit override - use signal value if non-default
         baseParams[paramName] = signal.value;
       }
     }
@@ -8770,7 +8796,6 @@ const buildHierarchicalQueryParams = (
 
   for (const ancestorPatternObj of ancestorPatterns) {
     if (ancestorPatternObj.pattern?.queryParams) {
-
       for (const queryParam of ancestorPatternObj.pattern.queryParams) {
         const paramName = queryParam.name;
         if (
@@ -19148,12 +19173,12 @@ const TabRoute = ({
   routeParams,
   children,
   padding = 2,
-  paddingX,
-  paddingY,
-  paddingLeft,
-  paddingRight,
-  paddingTop,
-  paddingBottom,
+  paddingX = padding,
+  paddingY = padding,
+  paddingLeft = paddingX,
+  paddingRight = paddingX,
+  paddingTop = paddingY,
+  paddingBottom = paddingY,
   alignX,
   alignY,
   ...props

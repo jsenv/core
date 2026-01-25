@@ -477,7 +477,7 @@ export const createRoutePattern = (pattern) => {
 
     // Count only non-undefined provided parameters
     const nonUndefinedParams = Object.entries(params).filter(
-      ([key, value]) => value !== undefined,
+      ([, value]) => value !== undefined,
     );
     const hasProvidedParams = nonUndefinedParams.length > 0;
 
