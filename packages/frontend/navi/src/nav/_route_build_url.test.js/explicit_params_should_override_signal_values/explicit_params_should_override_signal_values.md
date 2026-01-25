@@ -62,11 +62,11 @@ try {
 
 ```js
 {
-  "bug_reproduction_explicit_general": "http://127.0.0.1/admin",
+  "bug_reproduction_explicit_general": "http://127.0.0.1/admin/settings",
   "using_signal_advanced": "http://127.0.0.1/admin/settings/advanced",
   "explicit_security_override": "http://127.0.0.1/admin/settings/security",
   "section_with_default": "http://127.0.0.1/admin/settings/advanced",
-  "section_with_default_and_tab_default": "http://127.0.0.1/admin/settings",
+  "section_with_default_and_tab_default": "http://127.0.0.1/admin/settings/advanced",
   "section_with_non_default": "http://127.0.0.1/admin/users",
   "current_signal_values": {
     "section": "settings",

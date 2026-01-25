@@ -107,7 +107,7 @@ try {
     "signal_section": "settings",
     "signal_tab": "general",
     "admin_url": "http://127.0.0.1/admin",
-    "settings_url": "http://127.0.0.1/admin"
+    "settings_url": "http://127.0.0.1/admin/settings"
   },
   "scenario2": {
     "name": "both_non_defaults",

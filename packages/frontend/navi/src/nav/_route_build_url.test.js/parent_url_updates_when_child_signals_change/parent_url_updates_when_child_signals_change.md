@@ -64,9 +64,9 @@ try {
 {
   "initialUrls": {
     "admin_initial": "http://127.0.0.1/admin",
-    "settings_initial": "http://127.0.0.1/admin",
+    "settings_initial": "http://127.0.0.1/admin/settings",
     "admin_relativeUrl_initial": "/admin",
-    "settings_relativeUrl_initial": "/admin"
+    "settings_relativeUrl_initial": "/admin/settings"
   },
   "afterTabChange": {
     "admin_after_tab_change": "http://127.0.0.1/admin/settings/security",
