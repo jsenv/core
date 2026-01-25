@@ -105,14 +105,14 @@ try {
       "params": {
         "zoom": 11
       },
-      "url": "http://127.0.0.1/map/isochrone/compare?zoom=11"
+      "url": "http://127.0.0.1/map"
     }
   ],
   "expected_redirect_route": "MAP_ISOCHRONE_COMPARE_ROUTE",
   "expected_redirect_url": "/map/isochrone/compare?zoom=11",
   "actual_redirect_route": "MAP_ISOCHRONE_COMPARE_ROUTE",
-  "actual_redirect_url": "http://127.0.0.1/map/isochrone/compare?zoom=11",
-  "test_passes": true
+  "actual_redirect_url": "http://127.0.0.1/map",
+  "test_passes": false
 }
 ```
 
