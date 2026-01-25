@@ -60,7 +60,7 @@ try {
   "search_partial_params": "http://127.0.0.1/search?sort=date",
   "search_with_extras": "http://127.0.0.1/search?filter=inactive&sort=date&another=param&extra=value",
   "results_no_params": "http://127.0.0.1/search/results",
-  "results_with_extras": "http://127.0.0.1/search/results?page=2&limit=50&custom=param&filter=all",
+  "results_with_extras": "http://127.0.0.1/search/results?filter=all&page=2&limit=50&custom=param",
   "expected_analysis": {
     "search_param_order": "filter, sort, then extras alphabetically",
     "results_param_order": "page, limit, then extras alphabetically",

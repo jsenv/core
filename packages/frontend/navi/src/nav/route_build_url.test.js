@@ -860,6 +860,92 @@ await snapshotTests(import.meta.url, ({ test }) => {
     }
   });
 
+  test("hierarchical search param order should respect ancestor patterns", () => {
+    try {
+      // Create a hierarchy that matches your example:
+      // /map?zone=${zoneSignal} (ancestor)  
+      // /map/isochrone/?walk=${walkSignal} (child)
+      const zoneSignal = stateSignal("zone-123", { id: "zone" });
+      const styleSignal = stateSignal("streets", { id: "style" });
+      const walkSignal = stateSignal(false, { id: "walk", type: "boolean" });
+      const timeSignal = stateSignal(30, { id: "time", type: "number" });
+      const modeSignal = stateSignal("driving", { id: "mode" });
+
+      const { MAP_ROUTE, MAP_ISOCHRONE_ROUTE, MAP_ISOCHRONE_WALK_ROUTE } = setupRoutes({
+        // Ancestor: defines zone, style order
+        MAP_ROUTE: `/map?zone=${zoneSignal}&style=${styleSignal}`,
+        // Child: defines walk, time order  
+        MAP_ISOCHRONE_ROUTE: `/map/isochrone/?walk=${walkSignal}&time=${timeSignal}`,
+        // Grandchild: defines mode
+        MAP_ISOCHRONE_WALK_ROUTE: `/map/isochrone/walk?mode=${modeSignal}`,
+      });
+
+      return {
+        hierarchy_info: {
+          ancestor: "MAP_ROUTE: ?zone&style",  
+          child: "MAP_ISOCHRONE_ROUTE: ?walk&time",
+          grandchild: "MAP_ISOCHRONE_WALK_ROUTE: ?mode",
+          expected_order: "zone, style, walk, time, mode (ancestor to child to grandchild)",
+        },
+
+        // Test 1: Child route should inherit ancestor params first
+        child_with_all_params: MAP_ISOCHRONE_ROUTE.buildUrl({
+          zone: "custom-zone",
+          style: "satellite", 
+          walk: true,
+          time: 45,
+          extra: "param", // Should come after all pattern params
+        }),
+
+        // Test 2: Grandchild should have ancestor->child->grandchild order
+        grandchild_with_all_params: MAP_ISOCHRONE_WALK_ROUTE.buildUrl({
+          mode: "cycling",
+          time: 20,
+          zone: "another-zone", 
+          walk: true,
+          style: "terrain",
+          extra1: "first",
+          extra2: "second", // Extra params should be alphabetical after pattern params
+        }),
+
+        // Test 3: Partial params - pattern hierarchy should still be respected
+        child_partial_params: MAP_ISOCHRONE_ROUTE.buildUrl({
+          walk: true,
+          zone: "partial-zone", // Should still come first even though walk was provided first
+        }),
+
+        // Test 4: Only extra params - should be alphabetical
+        child_only_extra_params: MAP_ISOCHRONE_ROUTE.buildUrl({
+          zebra: "last",
+          alpha: "first", 
+        }),
+
+        // Test 5: Mixed signals and explicit params - hierarchy should be maintained
+        mixed_scenario: (() => {
+          // Set some signals to non-default values
+          zoneSignal.value = "signal-zone";
+          walkSignal.value = true;
+          
+          return MAP_ISOCHRONE_ROUTE.buildUrl({
+            style: "explicit-style", // Should come after zone (from signal) but before walk
+            time: 60, // Should come after walk (from signal)
+          });
+        })(),
+
+        current_signal_values: {
+          zone: zoneSignal.value,
+          style: styleSignal.value, 
+          walk: walkSignal.value,
+          time: timeSignal.value,
+          mode: modeSignal.value,
+        },
+      };
+    } finally {
+      clearAllRoutes();
+      globalSignalRegistry.clear();
+    }
+  });
+
   test("rawUrlPart functionality in url building", () => {
     try {
       const { FILES_ROUTE, API_ROUTE } = setupRoutes({

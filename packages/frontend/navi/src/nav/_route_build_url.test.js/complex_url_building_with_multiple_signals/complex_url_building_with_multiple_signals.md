@@ -75,7 +75,7 @@ try {
   "map_url_with_zoom_overridden": "http://127.0.0.1/map/",
   "map_isochrone_url_with_zoom": "http://127.0.0.1/map/isochrone?zoom=15",
   "map_isochrone_time_walk_url_with_zoom": "http://127.0.0.1/map/isochrone/walk?zoom=15",
-  "map_isochrone_time_walk_url_after_change": "http://127.0.0.1/map/isochrone/walk?time=40&zoom=15"
+  "map_isochrone_time_walk_url_after_change": "http://127.0.0.1/map/isochrone/walk?zoom=15&time=40"
 }
 ```
 

@@ -193,7 +193,7 @@ export const createRoutePattern = (pattern) => {
   };
 
   const buildUrl = (params = {}) => {
-    return buildUrlFromPattern(parsedPattern, params, parameterDefaults);
+    return buildUrlFromPattern(parsedPattern, params, pattern);
   };
 
   const resolveParams = (providedParams = {}) => {
@@ -530,7 +530,7 @@ export const createRoutePattern = (pattern) => {
           const currentUrl = buildUrlFromPattern(
             parsedPattern,
             finalParams,
-            new Map(),
+            pattern,
           );
           if (currentUrl.length < childUrl.length) {
             return currentUrl;
@@ -635,7 +635,7 @@ export const createRoutePattern = (pattern) => {
       filteredPattern.trailingSlash = false;
     }
 
-    return buildUrlFromPattern(filteredPattern, finalParams, new Map());
+    return buildUrlFromPattern(filteredPattern, finalParams, pattern);
   };
 
   /**
@@ -1195,9 +1195,102 @@ const detectParentParameterInheritance = (
 };
 
 /**
+ * Build query parameters respecting hierarchical order from ancestor patterns
+ */
+const buildHierarchicalQueryParams = (parsedPattern, params, originalPattern) => {
+  const queryParams = {};
+  const processedParams = new Set();
+  
+  // Get relationships for this pattern
+  const relationships = patternRelationships.get(originalPattern);
+  const parentPatterns = relationships?.parentPatterns || [];
+  
+  // DEBUG: Log what we found
+  if (DEBUG) {
+    console.debug(`Building hierarchical params for ${originalPattern}`);
+    console.debug(`Found ${parentPatterns.length} parent patterns:`, parentPatterns.map(p => p.originalPattern));
+  }
+  
+  // Step 1: Add query parameters from ancestor patterns (oldest to newest)
+  // This ensures ancestor parameters come first in their declaration order
+  const ancestorPatterns = [...parentPatterns].reverse(); // Start from root ancestor
+  
+  for (const ancestorPatternObj of ancestorPatterns) {
+    if (ancestorPatternObj.pattern?.queryParams) {
+      if (DEBUG) {
+        console.debug(`Processing ancestor ${ancestorPatternObj.originalPattern} with query params:`, ancestorPatternObj.pattern.queryParams.map(q => q.name));
+      }
+      
+      for (const queryParam of ancestorPatternObj.pattern.queryParams) {
+        const paramName = queryParam.name;
+        if (params[paramName] !== undefined && !processedParams.has(paramName)) {
+          queryParams[paramName] = params[paramName];
+          processedParams.add(paramName);
+          
+          if (DEBUG) {
+            console.debug(`Added ancestor param: ${paramName}=${params[paramName]}`);
+          }
+        }
+      }
+    }
+  }
+  
+  // Step 2: Add query parameters from current pattern
+  if (parsedPattern.queryParams) {
+    if (DEBUG) {
+      console.debug(`Processing current pattern query params:`, parsedPattern.queryParams.map(q => q.name));
+    }
+    
+    for (const queryParam of parsedPattern.queryParams) {
+      const paramName = queryParam.name;
+      if (params[paramName] !== undefined && !processedParams.has(paramName)) {
+        queryParams[paramName] = params[paramName];
+        processedParams.add(paramName);
+        
+        if (DEBUG) {
+          console.debug(`Added current param: ${paramName}=${params[paramName]}`);
+        }
+      }
+    }
+  }
+  
+  // Step 3: Add remaining parameters (extra params) alphabetically
+  const extraParams = [];
+  
+  // Get all path parameter names to exclude them
+  const pathParamNames = new Set(
+    parsedPattern.segments.filter((s) => s.type === "param").map((s) => s.name),
+  );
+  
+  for (const [key, value] of Object.entries(params)) {
+    if (
+      !pathParamNames.has(key) &&
+      !processedParams.has(key) &&
+      value !== undefined
+    ) {
+      extraParams.push([key, value]);
+    }
+  }
+  
+  // Sort extra params alphabetically for consistent order
+  extraParams.sort(([a], [b]) => a.localeCompare(b));
+  
+  // Add sorted extra params
+  for (const [key, value] of extraParams) {
+    queryParams[key] = value;
+    
+    if (DEBUG) {
+      console.debug(`Added extra param: ${key}=${value}`);
+    }
+  }
+  
+  return queryParams;
+};
+
+/**
  * Build a URL from a pattern and parameters
  */
-const buildUrlFromPattern = (parsedPattern, params = {}) => {
+const buildUrlFromPattern = (parsedPattern, params = {}, originalPattern = null) => {
   if (parsedPattern.segments.length === 0) {
     // Root route
     const queryParams = {};
@@ -1274,86 +1367,8 @@ const buildUrlFromPattern = (parsedPattern, params = {}) => {
     path = path.slice(0, -1);
   }
 
-  // Add search parameters
-  const pathParamNames = new Set(
-    parsedPattern.segments.filter((s) => s.type === "param").map((s) => s.name),
-  );
-
-  // Add query parameters defined in the pattern first
-  const queryParamNames = new Set();
-  const queryParams = {};
-
-  // Handle pattern-defined query parameters (from ?tab, &lon, etc.)
-  if (parsedPattern.queryParams) {
-    for (const queryParam of parsedPattern.queryParams) {
-      const paramName = queryParam.name;
-      queryParamNames.add(paramName);
-
-      const value = params[paramName];
-      if (value !== undefined) {
-        queryParams[paramName] = value;
-      }
-      // If no value provided, don't add the parameter to keep URLs clean
-    }
-  }
-
-  // Add remaining parameters as additional query parameters (excluding path and pattern query params)
-  // Handle parameter inheritance and extra parameters
-  const extraParams = [];
-
-  for (const [key, value] of Object.entries(params)) {
-    if (
-      !pathParamNames.has(key) &&
-      !queryParamNames.has(key) &&
-      value !== undefined
-    ) {
-      // This parameter doesn't match any path or query parameter in this route pattern,
-      // so it will be treated as an extra query parameter.
-      //
-      // COMMON SCENARIOS:
-      // 1. Parent route parameter inheritance: When a child route has literal segments
-      //    that correspond to parent route parameters. For example:
-      //    - Parent: /admin/:section/
-      //    - Child: /admin/settings/:tab (has "settings" as literal)
-      //    - Calling child.buildUrl({section: "toto"}) → /admin/settings?section=toto
-      //    The "section" param becomes a query param because "settings" is hardcoded.
-      //
-      // 2. Extra state parameters: Completely additional parameters for URL state
-      //    - Calling route.buildUrl({filter: "active"}) → /route?filter=active
-
-      // Check if this parameter value is redundant with literal segments in the path
-      // E.g., don't add "section=settings" if path is already "/admin/settings"
-      const isRedundantWithPath = parsedPattern.segments.some(
-        (segment) => segment.type === "literal" && segment.value === value,
-      );
-
-      if (!isRedundantWithPath) {
-        extraParams.push([key, value]);
-
-        // Optional: Detect and log parent parameter inheritance for debugging
-        const inheritance = detectParentParameterInheritance(
-          key,
-          value,
-          parsedPattern,
-          pathParamNames,
-          queryParamNames,
-        );
-        if (inheritance.isParentInheritance) {
-          // This can be enabled for debugging parameter inheritance scenarios
-          // console.debug(`Parameter "${key}" appears to be inherited from parent route and added as query parameter to "${parsedPattern.originalPattern || 'route'}"`);
-        }
-      }
-      // Note: Redundant parameters are intentionally omitted for cleaner URLs
-    }
-  }
-
-  // Sort extra params alphabetically for consistent order
-  extraParams.sort(([a], [b]) => a.localeCompare(b));
-
-  // Add sorted extra params to queryParams object
-  for (const [key, value] of extraParams) {
-    queryParams[key] = value;
-  }
+  // Build query parameters respecting hierarchical order
+  const queryParams = buildHierarchicalQueryParams(parsedPattern, params, originalPattern);
 
   const search = buildQueryString(queryParams);
 

@@ -18,6 +18,7 @@
 - [search param order should be predictable](search_param_order_should_be_predictable/search_param_order_should_be_predictable.md)
 - [search param order with complex patterns](search_param_order_with_complex_patterns/search_param_order_with_complex_patterns.md)
 - [map isochrone url generation from map with custom zone](map_isochrone_url_generation_from_map_with_custom_zone/map_isochrone_url_generation_from_map_with_custom_zone.md)
+- [hierarchical search param order should respect ancestor patterns](hierarchical_search_param_order_should_respect_ancestor_patterns/hierarchical_search_param_order_should_respect_ancestor_patterns.md)
 - [rawUrlPart functionality in url building](rawurlpart_functionality_in_url_building/rawurlpart_functionality_in_url_building.md)
 
 ---
