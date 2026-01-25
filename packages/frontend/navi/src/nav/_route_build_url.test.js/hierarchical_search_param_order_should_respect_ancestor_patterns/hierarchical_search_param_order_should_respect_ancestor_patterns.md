@@ -96,7 +96,7 @@ try {
     "expected_order": "zone, style, walk, time, mode (ancestor to child to grandchild)"
   },
   "child_with_all_params": "http://127.0.0.1/map/isochrone?zone=custom-zone&style=satellite&walk&time=45&extra=param",
-  "grandchild_with_all_params": "http://127.0.0.1/map/isochrone/walk?walk&time=20&zone=another-zone&style=terrain&mode=cycling&extra1=first&extra2=second",
+  "grandchild_with_all_params": "http://127.0.0.1/map/isochrone/walk?zone=another-zone&style=terrain&walk&time=20&mode=cycling&extra1=first&extra2=second",
   "child_partial_params": "http://127.0.0.1/map/isochrone?zone=partial-zone&walk",
   "child_only_extra_params": "http://127.0.0.1/map/isochrone/walk?alpha=first&zebra=last",
   "mixed_scenario": "http://127.0.0.1/map/isochrone?zone=signal-zone&style=explicit-style&walk&time=60",

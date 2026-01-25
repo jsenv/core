@@ -1180,7 +1180,7 @@ const buildHierarchicalQueryParams = (
 
   // Step 1: Add query parameters from ancestor patterns (oldest to newest)
   // This ensures ancestor parameters come first in their declaration order
-  const ancestorPatterns = [...parentPatterns].reverse(); // Start from root ancestor
+  const ancestorPatterns = parentPatterns; // Process in order: root ancestor first, then immediate parent
 
   for (const ancestorPatternObj of ancestorPatterns) {
     if (ancestorPatternObj.pattern?.queryParams) {
