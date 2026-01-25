@@ -2459,8 +2459,9 @@ const stateSignal = (defaultValue, options = {}) => {
   // Convert numeric IDs to strings for consistency
   const signalIdString = String(signalId);
   if (globalSignalRegistry.has(signalIdString)) {
+    const conflictInfo = globalSignalRegistry.get(signalIdString);
     throw new Error(
-      `Signal ID conflict: A signal with ID "${signalIdString}" already exists`,
+      `Signal ID conflict: A signal with ID "${signalIdString}" already exists (existing default: ${conflictInfo.options.defaultValue})`,
     );
   }
 
@@ -2475,7 +2476,7 @@ const stateSignal = (defaultValue, options = {}) => {
     if (valueFromLocalStorage !== undefined) {
       if (debug) {
         console.debug(
-          `[stateSignal] using value from localStorage "${localStorageKey}"=${valueFromLocalStorage}`,
+          `[stateSignal:${signalIdString}] using value from localStorage "${localStorageKey}"=${valueFromLocalStorage}`,
         );
       }
       return valueFromLocalStorage;
@@ -2485,19 +2486,33 @@ const stateSignal = (defaultValue, options = {}) => {
       if (sourceValue !== undefined) {
         if (debug) {
           console.debug(
-            `[stateSignal] using value from source signal=${sourceValue}`,
+            `[stateSignal:${signalIdString}] using value from source signal=${sourceValue}`,
           );
         }
         return sourceValue;
       }
     }
     if (debug) {
-      console.debug(`[stateSignal] using default value=${defaultValue}`);
+      console.debug(
+        `[stateSignal:${signalIdString}] using default value=${defaultValue}`,
+      );
     }
     return defaultValue;
   };
 
   const advancedSignal = signal(getFallbackValue());
+
+  if (debug) {
+    console.debug(
+      `[stateSignal:${signalIdString}] created with initial value=${advancedSignal.peek()}`,
+      {
+        defaultValue,
+        hasSourceSignal: Boolean(sourceSignal),
+        persists,
+        localStorageKey: persists ? localStorageKey : undefined,
+      },
+    );
+  }
 
   // Set signal ID and create meaningful string representation
   advancedSignal.__signalId = signalIdString;
@@ -2562,10 +2577,11 @@ const stateSignal = (defaultValue, options = {}) => {
         // we don't have anything in the source signal, keep current value
         if (debug) {
           console.debug(
-            `[stateSignal] source signal is undefined, keeping current value`,
+            `[stateSignal:${signalIdString}] source signal is undefined, keeping current value=${advancedSignal.peek()}`,
             {
               sourcePreviousValue,
               sourceValue,
+              currentValue: advancedSignal.peek(),
             },
           );
         }
@@ -2574,10 +2590,14 @@ const stateSignal = (defaultValue, options = {}) => {
       }
       // the case we want to support: source signal value changes -> override current value
       if (debug) {
-        console.debug(`[stateSignal] source signal updated`, {
-          sourcePreviousValue,
-          sourceValue,
-        });
+        console.debug(
+          `[stateSignal:${signalIdString}] source signal updated, overriding current value`,
+          {
+            sourcePreviousValue,
+            sourceValue,
+            previousValue: advancedSignal.peek(),
+          },
+        );
       }
       advancedSignal.value = sourceValue;
       sourcePreviousValue = sourceValue;
@@ -2593,14 +2613,14 @@ const stateSignal = (defaultValue, options = {}) => {
       if (value === undefined || value === null || value === defaultValue) {
         if (debug) {
           console.debug(
-            `[stateSignal] removing "${localStorageKey}" from localStorage`,
+            `[stateSignal:${signalIdString}] removing "${localStorageKey}" from localStorage (value=${value}, default=${defaultValue})`,
           );
         }
         removeFromLocalStorage();
       } else {
         if (debug) {
           console.debug(
-            `[stateSignal] writing into localStorage "${localStorageKey}"=${value}`,
+            `[stateSignal:${signalIdString}] writing into localStorage "${localStorageKey}"=${value}`,
           );
         }
         writeIntoLocalStorage(value);
@@ -2611,10 +2631,39 @@ const stateSignal = (defaultValue, options = {}) => {
   {
     effect(() => {
       const value = advancedSignal.value;
+      const wasValid = validity.valid;
       updateValidity({ oneOf }, validity, value);
-      if (!validity.valid && autoFix) {
-        advancedSignal.value = autoFix();
-        return;
+      if (!validity.valid) {
+        if (debug) {
+          console.debug(`[stateSignal:${signalIdString}] validation failed`, {
+            value,
+            oneOf,
+            hasAutoFix: Boolean(autoFix),
+          });
+        }
+        if (autoFix) {
+          const fixedValue = autoFix();
+          if (debug) {
+            console.debug(
+              `[stateSignal:${signalIdString}] auto-fixing invalid value`,
+              {
+                invalidValue: value,
+                fixedValue,
+              },
+            );
+          }
+          advancedSignal.value = fixedValue;
+          return;
+        }
+      } else if (!wasValid && validity.valid) {
+        if (debug) {
+          console.debug(
+            `[stateSignal:${signalIdString}] validation now passes`,
+            {
+              value,
+            },
+          );
+        }
       }
     });
   }
@@ -7642,213 +7691,409 @@ const createRoutePattern = (pattern) => {
    * Build the most precise URL by using route relationships from pattern registry.
    * Each route is responsible for its own URL generation using its own signals.
    */
-  const buildMostPreciseUrl = (params = {}) => {
-    // Handle parameter resolution internally to preserve user intent detection
-    const resolvedParams = resolveParams(params);
 
-    // Start with resolved parameters
-    let finalParams = { ...resolvedParams };
+  /**
+   * Helper: Filter out default values from parameters for cleaner URLs
+   */
+  const removeDefaultValues = (params) => {
+    const filtered = { ...params };
 
     for (const connection of connections) {
       const { paramName, signal, options } = connection;
       const defaultValue = options.defaultValue;
 
-      if (paramName in finalParams) {
-        // Parameter was explicitly provided - ALWAYS respect explicit values
-        // If it equals the default value, remove it for shorter URLs
-        if (finalParams[paramName] === defaultValue) {
-          delete finalParams[paramName];
-        }
-        // Note: Don't fall through to signal logic - explicit params take precedence
-      }
-      // Parameter was NOT provided, check signal value
-      else if (signal?.value !== undefined && signal.value !== defaultValue) {
-        // Only include signal value if it's not the default
-        finalParams[paramName] = signal.value;
-        // If signal.value === defaultValue, omit the parameter for shorter URL
+      if (paramName in filtered && filtered[paramName] === defaultValue) {
+        delete filtered[paramName];
+      } else if (
+        !(paramName in filtered) &&
+        signal?.value !== undefined &&
+        signal.value !== defaultValue
+      ) {
+        filtered[paramName] = signal.value;
       }
     }
 
-    // DEEPEST URL GENERATION: Check if we should use a child route instead
-    // This happens when:
-    // 1. This route's parameters are all defaults (would be omitted)
-    // 2. A child route has non-default parameters that should be included
+    return filtered;
+  };
 
-    // DEEPEST URL GENERATION: Only activate when NO explicit parameters provided
-    // This prevents overriding explicit user intentions with signal-based "smart" routing
-    // We need to distinguish between user-provided params and signal-derived params
-    let hasUserProvidedParams = false;
+  /**
+   * Helper: Find the best child route that matches current parameters and signals
+   */
+  const findBestChildRoute = (params, relationships) => {
+    const childPatternObjs = relationships?.childPatterns || [];
+    if (pattern === "/" || !childPatternObjs.length) {
+      return null;
+    }
 
-    // Check if provided params contain anything beyond what signals would provide
-    const signalDerivedParams = {};
-    for (const { paramName, signal, options } of connections) {
+    // Try each child pattern object to find the most specific match
+    for (const childPatternObj of childPatternObjs) {
+      const childRouteCandidate = evaluateChildRoute(childPatternObj, params);
+
+      if (childRouteCandidate) {
+        return childRouteCandidate;
+      }
+    }
+    return null;
+  };
+
+  /**
+   * Helper: Evaluate if a specific child route is suitable for current params/signals
+   */
+  const evaluateChildRoute = (childPatternObj, params) => {
+    // Step 1: Check parameter compatibility
+    const compatibility = checkChildRouteCompatibility(childPatternObj, params);
+    if (!compatibility.isCompatible) {
+      return null;
+    }
+
+    // Step 2: Determine if child route should be used
+    const shouldUseChild = shouldUseChildRoute(
+      childPatternObj,
+      params,
+      compatibility,
+    );
+    if (!shouldUseChild) {
+      return null;
+    }
+
+    // Step 3: Build child route URL with proper parameter filtering
+    return buildChildRouteUrl(childPatternObj, params);
+  };
+
+  /**
+   * Helper: Check if parameters are compatible with child route
+   */
+  const checkChildRouteCompatibility = (childPatternObj, params) => {
+    const childParams = {};
+    let isCompatible = true;
+
+    // Check both parent signals AND user-provided params for child route matching
+    const paramsToCheck = [
+      ...connections,
+      ...Object.entries(params).map(([key, value]) => ({
+        paramName: key,
+        userValue: value,
+        isUserProvided: true,
+      })),
+    ];
+
+    for (const item of paramsToCheck) {
+      const result = processParameterForChildRoute(
+        item,
+        childPatternObj.pattern,
+      );
+
+      if (!result.isCompatible) {
+        isCompatible = false;
+        break;
+      }
+
+      if (result.shouldInclude) {
+        childParams[result.paramName] = result.paramValue;
+      }
+    }
+
+    return { isCompatible, childParams };
+  };
+
+  /**
+   * Helper: Process a single parameter for child route compatibility
+   */
+  const processParameterForChildRoute = (item, childParsedPattern) => {
+    let paramName;
+    let paramValue;
+
+    if (item.isUserProvided) {
+      paramName = item.paramName;
+      paramValue = item.userValue;
+    } else {
+      const { paramName: name, signal, options } = item;
+      paramName = name;
+      // Only include non-default parent signal values
+      if (
+        signal?.value === undefined ||
+        signal.value === options.defaultValue
+      ) {
+        return { isCompatible: true, shouldInclude: false };
+      }
+      paramValue = signal.value;
+    }
+
+    // Check if parameter value matches a literal segment in child pattern
+    const matchesChildLiteral = paramMatchesChildLiteral(
+      paramValue,
+      childParsedPattern,
+    );
+
+    if (matchesChildLiteral) {
+      // Compatible - parameter value matches child literal
+      return {
+        isCompatible: true,
+        shouldInclude: !item.isUserProvided,
+        paramName,
+        paramValue,
+      };
+    }
+
+    // Check for incompatible cases
+    if (item.isUserProvided && !matchesChildLiteral) {
+      // Check if this is a path parameter from parent pattern
+      const isParentPathParam = connections.some(
+        (conn) => conn.paramName === paramName,
+      );
+
+      if (isParentPathParam) {
+        // User provided a path param value that doesn't match this child's literals
+        return { isCompatible: false };
+      }
+    }
+
+    // Special case: section parameter with settings literal
+    if (paramName === "section" && paramValue !== "settings") {
+      const hasSettingsLiteral = childParsedPattern.segments.some(
+        (segment) => segment.type === "literal" && segment.value === "settings",
+      );
+      if (hasSettingsLiteral) {
+        return { isCompatible: false };
+      }
+    }
+
+    // Compatible but should only include if from signal (not user-provided)
+    return {
+      isCompatible: true,
+      shouldInclude: !item.isUserProvided && !matchesChildLiteral,
+      paramName,
+      paramValue,
+    };
+  };
+
+  /**
+   * Helper: Determine if child route should be used based on active parameters
+   */
+  const shouldUseChildRoute = (childPatternObj, params, compatibility) => {
+    // Check if child has active non-default signal values
+    let hasActiveParams = false;
+    const childParams = { ...compatibility.childParams };
+
+    for (const connection of childPatternObj.connections) {
+      const { paramName, signal, options } = connection;
+      const defaultValue = options.defaultValue;
+
       if (signal?.value !== undefined) {
-        const defaultValue = options.defaultValue;
-        // Only include signal value if it's not the default (same logic as above)
+        childParams[paramName] = signal.value;
         if (signal.value !== defaultValue) {
-          signalDerivedParams[paramName] = signal.value;
+          hasActiveParams = true;
         }
       }
     }
 
-    // Check if original params (before resolution) contains anything that's not from signals
-    // This preserves user intent detection for explicit parameters
-    for (const [key, value] of Object.entries(params)) {
-      if (signalDerivedParams[key] !== value) {
-        hasUserProvidedParams = true;
-        break;
+    // Check if child pattern can be fully satisfied
+    const initialMergedParams = { ...childParams, ...params };
+    const canBuildChildCompletely = childPatternObj.pattern.segments.every(
+      (segment) => {
+        if (segment.type === "literal") return true;
+        if (segment.type === "param") {
+          return (
+            segment.optional || initialMergedParams[segment.name] !== undefined
+          );
+        }
+        return true;
+      },
+    );
+
+    const hasProvidedParams = Object.keys(params).length > 0;
+
+    // Use child route if:
+    // 1. Child has active non-default parameters, OR
+    // 2. User provided params AND child can be built completely
+    return hasActiveParams || (hasProvidedParams && canBuildChildCompletely);
+  };
+
+  /**
+   * Helper: Build URL for selected child route with proper parameter filtering
+   */
+  const buildChildRouteUrl = (childPatternObj, params) => {
+    // Start with child signal values
+    const baseParams = {};
+    for (const connection of childPatternObj.connections) {
+      const { paramName, signal, options } = connection;
+      if (
+        signal?.value !== undefined &&
+        signal.value !== options.defaultValue
+      ) {
+        baseParams[paramName] = signal.value;
       }
     }
 
-    // Also check if original params has extra keys beyond what signals provide
-    const providedKeys = new Set(Object.keys(params));
-    const signalKeys = new Set(Object.keys(signalDerivedParams));
-    for (const key of providedKeys) {
-      if (!signalKeys.has(key)) {
-        hasUserProvidedParams = true;
-        break;
+    // Apply user params with filtering logic
+    for (const [paramName, userValue] of Object.entries(params)) {
+      const childConnection = childPatternObj.connections.find(
+        (conn) => conn.paramName === paramName,
+      );
+
+      if (childConnection) {
+        const { options } = childConnection;
+        const defaultValue = options.defaultValue;
+
+        // Only include if it's NOT the signal's default value
+        if (userValue !== defaultValue) {
+          baseParams[paramName] = userValue;
+        } else {
+          // User provided the default value - complete omission
+          delete baseParams[paramName];
+        }
+      } else {
+        // Check if param corresponds to a literal segment in child pattern
+        const isConsumedByChildPath = childPatternObj.pattern.segments.some(
+          (segment) =>
+            segment.type === "literal" && segment.value === userValue,
+        );
+
+        if (!isConsumedByChildPath) {
+          // Not consumed by child path, keep it as query param
+          baseParams[paramName] = userValue;
+        }
       }
     }
 
-    // ROOT ROUTE PROTECTION: Never apply deepest URL generation to root route "/"
-    // Users must always be able to navigate to home page regardless of app state
-    const isRootRoute = pattern === "/";
+    // Build child URL
+    const childUrl = childPatternObj.buildUrl(baseParams);
 
+    if (childUrl && !childUrl.includes(":")) {
+      // Check for parent optimization before returning
+      const optimizedUrl = checkChildParentOptimization(
+        childPatternObj.originalPattern,
+        childUrl,
+        baseParams,
+      );
+      return optimizedUrl || childUrl;
+    }
+
+    return null;
+  };
+
+  /**
+   * Helper: Check if parent route optimization applies to child route
+   */
+  const checkChildParentOptimization = (childPattern, childUrl, baseParams) => {
+    if (Object.keys(baseParams).length > 0) {
+      return null; // No optimization if parameters exist
+    }
+
+    const childRelationships = patternRelationships.get(childPattern);
+    const childParentObjs = childRelationships?.parentPatterns || [];
+
+    for (const childParentObj of childParentObjs) {
+      if (childParentObj.originalPattern === pattern) {
+        // Get the child pattern object from relationships instead of recreating
+        const childPatternObj = childRelationships;
+
+        const allChildParamsAreDefaults = (
+          childPatternObj.connections || []
+        ).every((childConnection) => {
+          const { signal, options } = childConnection;
+          return signal?.value === options.defaultValue;
+        });
+
+        if (allChildParamsAreDefaults) {
+          // Build current route URL for comparison
+          const resolvedParams = resolveParams({});
+          const finalParams = removeDefaultValues(resolvedParams);
+          const currentUrl = buildUrlFromPattern(
+            parsedPattern,
+            finalParams);
+          if (currentUrl.length < childUrl.length) {
+            return currentUrl;
+          }
+        }
+      }
+    }
+    return null;
+  };
+
+  const buildMostPreciseUrl = (params = {}) => {
+    // Step 1: Resolve and clean parameters
+    const resolvedParams = resolveParams(params);
+
+    // Step 2: Check for parent route optimization BEFORE removing defaults
+    // This allows optimization when final effective values match defaults
     const relationships = patternRelationships.get(pattern);
-    const childPatterns = relationships?.childPatterns || [];
-    if (!hasUserProvidedParams && !isRootRoute && childPatterns.length) {
-      // Try to find the most specific child pattern that has active signals
-      for (const childPattern of childPatterns) {
-        const childPatternData = getPatternData(childPattern);
-        if (!childPatternData) continue;
-
-        // Check if any of this child's parameters have non-default signal values
-        let hasActiveParams = false;
-        const childParams = {};
-
-        // Include parent signal values for child pattern matching
-        // But first check if they're compatible with the child pattern
-        let parentSignalsCompatibleWithChild = true;
-        for (const parentConnection of connections) {
-          const { paramName, signal, options } = parentConnection;
-          // Only include non-default parent signal values
-          if (
-            signal?.value !== undefined &&
-            signal.value !== options.defaultValue
-          ) {
-            // Check if child pattern has conflicting literal segments for this parameter
-            const childParsedPattern = childPatternData.parsedPattern;
-
-            // Check if parent signal value matches a literal segment in child pattern
-            const matchesChildLiteral = childParsedPattern.segments.some(
-              (segment) =>
-                segment.type === "literal" && segment.value === signal.value,
-            );
-
-            // If parent signal matches a literal in child, don't add as parameter
-            // (it's already represented in the child URL path)
-            if (matchesChildLiteral) {
-              // Compatible - signal value matches child literal, no need to add param
-              continue;
-            }
-
-            // For section parameter specifically, check if child has literal "settings"
-            // but parent signal has different value (incompatible case)
-            if (paramName === "section" && signal.value !== "settings") {
-              const hasSettingsLiteral = childParsedPattern.segments.some(
-                (segment) =>
-                  segment.type === "literal" && segment.value === "settings",
-              );
-              if (hasSettingsLiteral) {
-                parentSignalsCompatibleWithChild = false;
-                break;
-              }
-            }
-
-            // Only add parent signal as parameter if it doesn't match child literals
-            childParams[paramName] = signal.value;
-          }
-        }
-
-        // Skip this child if parent signals are incompatible
-        if (!parentSignalsCompatibleWithChild) {
-          continue;
-        }
-
-        // Check child connections and see if any have non-default values
-        for (const connection of childPatternData.connections) {
-          const { paramName, signal, options } = connection;
-          const defaultValue = options.defaultValue;
-
-          if (signal?.value !== undefined) {
-            childParams[paramName] = signal.value;
-            if (signal.value !== defaultValue) {
-              hasActiveParams = true;
-            }
-          }
-        }
-
-        // If child has non-default parameters, use the child route
-        if (hasActiveParams) {
-          const childPatternObj = createRoutePattern(childPattern);
-          // Use buildUrl (not buildMostPreciseUrl) to avoid infinite recursion
-          const childUrl = childPatternObj.buildUrl(childParams);
-          if (childUrl) {
-            return childUrl;
-          }
-        }
-      }
+    const optimizedUrl = checkParentRouteOptimization(
+      resolvedParams,
+      relationships,
+    );
+    if (optimizedUrl) {
+      return optimizedUrl;
     }
 
-    // PARENT PARAMETER INHERITANCE: Inherit query parameters from parent patterns
-    // This allows child routes like "/map/isochrone" to inherit "zoom=15" from parent "/map/?zoom=..."
-    const parentPatterns = relationships?.parentPatterns || [];
-    for (const parentPattern of parentPatterns) {
-      const parentPatternData = getPatternData(parentPattern);
-      if (!parentPatternData) continue;
+    // Step 3: Remove default values for normal URL building
+    let finalParams = removeDefaultValues(resolvedParams);
 
+    // Step 4: Try to find a more specific child route
+    const childRouteUrl = findBestChildRoute(params, relationships);
+    if (childRouteUrl) {
+      return childRouteUrl;
+    }
+
+    // Step 5: Inherit parameters from parent routes
+    inheritParentParameters(finalParams, relationships);
+
+    // Step 6: Build the current route URL
+    const generatedUrl = buildCurrentRouteUrl(finalParams);
+
+    return generatedUrl;
+  };
+
+  /**
+   * Helper: Inherit query parameters from parent patterns
+   */
+  const inheritParentParameters = (finalParams, relationships) => {
+    const parentPatternObjs = relationships?.parentPatterns || [];
+
+    for (const parentPatternObj of parentPatternObjs) {
       // Check parent's signal connections for non-default values to inherit
-      for (const parentConnection of parentPatternData.connections) {
+      for (const parentConnection of parentPatternObj.connections) {
         const { paramName, signal, options } = parentConnection;
         const defaultValue = options.defaultValue;
 
-        // If we don't already have this parameter and parent signal has non-default value
+        // Only inherit if we don't have this param and parent has non-default value
         if (
           !(paramName in finalParams) &&
           signal?.value !== undefined &&
           signal.value !== defaultValue
         ) {
-          // Check if this parameter corresponds to a literal segment in our path
-          // E.g., don't inherit "section=analytics" if our path is "/admin/analytics"
+          // Don't inherit if parameter corresponds to a literal in our path
           const shouldInherit = !isParameterRedundantWithLiteralSegments(
             parsedPattern,
-            parentPatternData.parsedPattern,
+            parentPatternObj.pattern,
             paramName,
             signal.value,
           );
 
           if (shouldInherit) {
-            // Inherit the parent's signal value
             finalParams[paramName] = signal.value;
           }
         }
       }
     }
+  };
 
+  /**
+   * Helper: Build URL for current route with filtered pattern
+   */
+  const buildCurrentRouteUrl = (finalParams) => {
     if (!parsedPattern.segments) {
       return "/";
     }
 
-    // Filter out segments for parameters that are not provided (omitted defaults)
+    // Filter out parameter segments that don't have values
     const filteredPattern = {
       ...parsedPattern,
       segments: parsedPattern.segments.filter((segment) => {
         if (segment.type === "param") {
-          // Only keep parameter segments if we have a value for them
           return segment.name in finalParams;
         }
-        // Always keep literal segments
-        return true;
+        return true; // Keep literal segments
       }),
     };
 
@@ -7863,16 +8108,198 @@ const createRoutePattern = (pattern) => {
     return buildUrlFromPattern(filteredPattern, finalParams);
   };
 
+  /**
+   * Helper: Check if parent route can provide a shorter equivalent URL
+   */
+  const checkParentRouteOptimization = (resolvedParams, relationships) => {
+    // Only consider parent optimization for patterns with signal connections
+    if (connections.length === 0) {
+      return null;
+    }
+
+    // Check if all final effective values equal their defaults
+    const allEffectiveValuesAreDefaults = connections.every((conn) => {
+      // Final effective value is what's in resolvedParams (signals + provided params)
+      const effectiveValue =
+        resolvedParams[conn.paramName] ?? conn.options.defaultValue;
+      return effectiveValue === conn.options.defaultValue;
+    });
+
+    // Only optimize if all effective values equal their defaults
+    if (!allEffectiveValuesAreDefaults) {
+      return null;
+    }
+
+    // Check if there are extra parameters not handled by current route's connections
+    const connectionParamNames = new Set(
+      connections.map((conn) => conn.paramName),
+    );
+    const hasExtraParams = Object.keys(resolvedParams).some(
+      (paramName) => !connectionParamNames.has(paramName),
+    );
+
+    // Don't optimize if there are extra parameters that would be lost
+    if (hasExtraParams) {
+      return null;
+    }
+
+    const possibleParentObjs = relationships?.parentPatterns || [];
+
+    for (const parentPatternObj of possibleParentObjs) {
+      // Skip root route and routes without parameters
+      if (
+        parentPatternObj.originalPattern === "/" ||
+        !parentPatternObj.originalPattern.includes(":")
+      ) {
+        continue;
+      }
+
+      const optimizedParentUrl = evaluateParentOptimization(
+        parentPatternObj,
+        resolvedParams,
+      );
+
+      if (optimizedParentUrl) {
+        return optimizedParentUrl;
+      }
+    }
+
+    return null;
+  };
+
+  /**
+   * Helper: Evaluate a specific parent pattern for URL optimization
+   */
+  const evaluateParentOptimization = (parentPatternObj, resolvedParams) => {
+    // Get literal segments from child pattern to map to parent parameters
+    const childLiterals = getPatternLiterals(parsedPattern);
+
+    // Check if parent would also have all default values
+    // For parent optimization, we consider both explicitly provided params and literal segments
+    const allParentParamsAreDefaults = parentPatternObj.connections.every(
+      (parentConnection) => {
+        const paramName = parentConnection.paramName;
+
+        // If explicitly provided in resolved params, use that
+        if (resolvedParams[paramName] !== undefined) {
+          return (
+            resolvedParams[paramName] === parentConnection.options.defaultValue
+          );
+        }
+
+        // Check if this parent parameter corresponds to a literal segment in child
+        // If parent default matches a child literal, consider it as using the default
+        const defaultValue = parentConnection.options.defaultValue;
+        if (childLiterals.includes(defaultValue)) {
+          return true; // Literal segment effectively provides the default value
+        }
+
+        // Otherwise assume parent would use its default for optimization purposes
+        return true;
+      },
+    );
+
+    if (!allParentParamsAreDefaults) {
+      return null; // Can't optimize if parent has non-default values
+    }
+
+    // Check if parent's default values match our literals
+    const parentPointsToCurrentRoute = parentPatternObj.connections.every(
+      (parentConnection) => {
+        const { options } = parentConnection;
+        const defaultValue = options.defaultValue;
+        return childLiterals.includes(defaultValue);
+      },
+    );
+
+    if (parentPointsToCurrentRoute) {
+      // Build parent URL using defaults, not current signal values
+      const parentDefaultParams = {};
+      for (const parentConnection of parentPatternObj.connections) {
+        parentDefaultParams[parentConnection.paramName] =
+          parentConnection.options.defaultValue;
+      }
+      // Build parent URL and check if it can be optimized further
+      let parentUrl = parentPatternObj.buildUrl(parentDefaultParams);
+
+      // Check if parent can optimize itself by removing default parameters
+      if (parentUrl && parentUrl !== "/") {
+        // Check if all parent's default params are actually defaults
+        const parentAllDefaults = parentPatternObj.connections.every((conn) => {
+          const paramValue = parentDefaultParams[conn.paramName];
+          return paramValue === conn.options.defaultValue;
+        });
+
+        if (parentAllDefaults) {
+          // Try to build parent URL without any parameters to see if it's shorter
+          const parentMinimalUrl = parentPatternObj.buildUrl({});
+          if (parentMinimalUrl && parentMinimalUrl.length < parentUrl.length) {
+            parentUrl = parentMinimalUrl;
+          }
+        }
+
+        return parentUrl;
+      }
+    }
+
+    return null;
+  };
+
   return {
     originalPattern: pattern, // Return the original pattern string
     pattern: parsedPattern,
     cleanPattern, // Return the clean pattern string
     connections, // Return signal connections along with pattern
+    specificity: calculatePatternSpecificity(parsedPattern), // Pre-calculate specificity
     applyOn,
     buildUrl,
     buildMostPreciseUrl,
     resolveParams,
   };
+};
+
+/**
+ * Helper: Extract literal values from pattern segments
+ */
+const getPatternLiterals = (pattern) => {
+  return pattern.segments
+    .filter((seg) => seg.type === "literal")
+    .map((seg) => seg.value);
+};
+
+/**
+ * Helper: Check if parameter matches any literal in child pattern
+ */
+const paramMatchesChildLiteral = (paramValue, childParsedPattern) => {
+  return childParsedPattern.segments.some(
+    (segment) => segment.type === "literal" && segment.value === paramValue,
+  );
+};
+
+/**
+ * Calculate pattern specificity score for route matching
+ * Higher score = more specific route
+ */
+const calculatePatternSpecificity = (parsedPattern) => {
+  let specificity = 0;
+
+  // Count path segments (ignoring query params for specificity)
+  const pathSegments = parsedPattern.segments || [];
+
+  for (const segment of pathSegments) {
+    if (segment.type === "literal") {
+      // Literal segments are more specific than parameters
+      specificity += 100; // High score for literal segments
+    } else if (segment.type === "param") {
+      // Parameter segments are less specific
+      specificity += 10; // Lower score for parameters
+    }
+  }
+
+  // Add base score for number of path segments (more segments = more specific)
+  specificity += pathSegments.length;
+
+  return specificity;
 };
 
 /**
@@ -8164,6 +8591,46 @@ const extractSearchParams = (urlObj, connections = []) => {
 };
 
 /**
+ * Helper: Check if a parameter represents parent route inheritance
+ * This detects when a parameter doesn't match the current route's parameters
+ * but the route has literal segments that might correspond to parent route parameters
+ */
+const detectParentParameterInheritance = (
+  paramName,
+  paramValue,
+  parsedPattern,
+  pathParamNames,
+  queryParamNames,
+) => {
+  // Parameter doesn't belong to current route
+  const isExtraParam =
+    !pathParamNames.has(paramName) && !queryParamNames.has(paramName);
+
+  // Route has literal segments (suggesting it might be a child of a parameterized parent)
+  const hasLiteralSegments = parsedPattern.segments.some(
+    (s) => s.type === "literal",
+  );
+
+  // Common parent parameter names (heuristic)
+  const commonParentParams = new Set([
+    "section",
+    "category",
+    "type",
+    "area",
+    "zone",
+  ]);
+  const looksLikeParentParam = commonParentParams.has(paramName);
+
+  return {
+    isParentInheritance:
+      isExtraParam && hasLiteralSegments && looksLikeParentParam,
+    isExtraParam,
+    hasLiteralSegments,
+    looksLikeParentParam,
+  };
+};
+
+/**
  * Build a URL from a pattern and parameters
  */
 const buildUrlFromPattern = (parsedPattern, params = {}) => {
@@ -8267,14 +8734,57 @@ const buildUrlFromPattern = (parsedPattern, params = {}) => {
   }
 
   // Add remaining parameters as additional query parameters (excluding path and pattern query params)
+  // Handle parameter inheritance and extra parameters
+  const extraParams = [];
+
   for (const [key, value] of Object.entries(params)) {
     if (
       !pathParamNames.has(key) &&
       !queryParamNames.has(key) &&
       value !== undefined
     ) {
-      searchParams.set(key, value);
+      // This parameter doesn't match any path or query parameter in this route pattern,
+      // so it will be treated as an extra query parameter.
+      //
+      // COMMON SCENARIOS:
+      // 1. Parent route parameter inheritance: When a child route has literal segments
+      //    that correspond to parent route parameters. For example:
+      //    - Parent: /admin/:section/
+      //    - Child: /admin/settings/:tab (has "settings" as literal)
+      //    - Calling child.buildUrl({section: "toto"}) → /admin/settings?section=toto
+      //    The "section" param becomes a query param because "settings" is hardcoded.
+      //
+      // 2. Extra state parameters: Completely additional parameters for URL state
+      //    - Calling route.buildUrl({filter: "active"}) → /route?filter=active
+
+      // Check if this parameter value is redundant with literal segments in the path
+      // E.g., don't add "section=settings" if path is already "/admin/settings"
+      const isRedundantWithPath = parsedPattern.segments.some(
+        (segment) => segment.type === "literal" && segment.value === value,
+      );
+
+      if (!isRedundantWithPath) {
+        extraParams.push([key, value]);
+
+        // Optional: Detect and log parent parameter inheritance for debugging
+        detectParentParameterInheritance(
+          key,
+          value,
+          parsedPattern,
+          pathParamNames,
+          queryParamNames,
+        );
+      }
+      // Note: Redundant parameters are intentionally omitted for cleaner URLs
     }
+  }
+
+  // Sort extra params alphabetically for consistent order
+  extraParams.sort(([a], [b]) => a.localeCompare(b));
+
+  // Add sorted extra params to searchParams
+  for (const [key, value] of extraParams) {
+    searchParams.set(key, value);
   }
 
   const search = searchParams.toString();
@@ -8386,7 +8896,9 @@ const setupPatterns = (patternDefinitions) => {
   patternRegistry.clear();
   patternRelationships.clear();
 
-  // Phase 1: Register all patterns
+  // Phase 1: Register all patterns and create pattern objects
+  const patternObjects = new Map(); // pattern string -> pattern object
+
   for (const [key, urlPatternRaw] of Object.entries(patternDefinitions)) {
     const [cleanPattern, connections] = detectSignals(urlPatternRaw);
     const parsedPattern = parsePattern(cleanPattern);
@@ -8402,6 +8914,10 @@ const setupPatterns = (patternDefinitions) => {
     };
 
     patternRegistry.set(urlPatternRaw, patternData);
+
+    // Create the full pattern object for this pattern
+    const patternObj = createRoutePattern(urlPatternRaw);
+    patternObjects.set(urlPatternRaw, patternObj);
   }
 
   // Phase 2: Build relationships between all patterns
@@ -8417,28 +8933,22 @@ const setupPatterns = (patternDefinitions) => {
 
       // Check if current pattern is a child of other pattern using clean patterns
       if (isChildPattern(currentData.cleanPattern, otherData.cleanPattern)) {
-        currentData.parentPatterns.push(otherPattern);
-        otherData.childPatterns.push(currentPattern);
+        // Store pattern objects instead of pattern strings
+        currentData.parentPatterns.push(patternObjects.get(otherPattern));
+        otherData.childPatterns.push(patternObjects.get(currentPattern));
       }
     }
 
-    // Store relationships for easy access
+    // Store relationships for easy access with pattern objects
     patternRelationships.set(currentPattern, {
       pattern: currentData.parsedPattern,
       parsedPattern: currentData.parsedPattern,
       connections: currentData.connections,
-      childPatterns: currentData.childPatterns, // Store child patterns
-      parentPatterns: currentData.parentPatterns, // Store parent patterns
+      childPatterns: currentData.childPatterns, // Now contains pattern objects
+      parentPatterns: currentData.parentPatterns, // Now contains pattern objects
       originalPattern: currentPattern,
     });
   }
-};
-
-/**
- * Get pattern data for a registered pattern
- */
-const getPatternData = (urlPatternRaw) => {
-  return patternRegistry.get(urlPatternRaw);
 };
 
 /**
@@ -8687,8 +9197,7 @@ const getRoutePrivateProperties = (route) => {
 
 const registerRoute = (routePattern) => {
   const urlPatternRaw = routePattern.originalPattern;
-  const patternData = getPatternData(urlPatternRaw);
-  const { cleanPattern, connections } = patternData;
+  const { cleanPattern, connections } = routePattern;
 
   const cleanupCallbackSet = new Set();
   const cleanup = () => {
@@ -8710,6 +9219,7 @@ const registerRoute = (routePattern) => {
     relativeUrl: null,
     url: null,
     action: null,
+    specificity: routePattern.specificity, // Expose pattern specificity publicly
     cleanup,
     toString: () => {
       return `route "${cleanPattern}"`;
@@ -8872,16 +9382,22 @@ const registerRoute = (routePattern) => {
       }
     }
 
-    // Find the most specific route (the one with the longest pattern path)
+    // Find the most specific route using pre-calculated specificity scores
     let mostSpecificRoute = route;
-    let maxSegments = route.pattern.split("/").filter((s) => s !== "").length;
+    const routePrivateProperties = getRoutePrivateProperties(route);
+    let maxSpecificity = routePrivateProperties?.routePattern?.specificity || 0;
 
     for (const matchingRoute of allMatchingRoutes) {
-      const segments = matchingRoute.pattern
-        .split("/")
-        .filter((s) => s !== "").length;
-      if (segments > maxSegments) {
-        maxSegments = segments;
+      if (matchingRoute === route) {
+        continue;
+      }
+      const matchingRoutePrivateProperties =
+        getRoutePrivateProperties(matchingRoute);
+      const specificity =
+        matchingRoutePrivateProperties?.routePattern?.specificity || 0;
+
+      if (specificity > maxSpecificity) {
+        maxSpecificity = specificity;
         mostSpecificRoute = matchingRoute;
       }
     }
@@ -18541,12 +19057,12 @@ const TabRoute = ({
       expand: true,
       discrete: true,
       padding: padding,
+      paddingX: paddingX,
+      paddingY: paddingY,
       paddingLeft: paddingLeft,
       paddingRight: paddingRight,
       paddingTop: paddingTop,
       paddingBottom: paddingBottom,
-      paddingX: paddingX,
-      paddingY: paddingY,
       alignX: alignX,
       alignY: alignY,
       children: children

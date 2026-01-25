@@ -1065,6 +1065,46 @@ const extractSearchParams = (urlObj, connections = []) => {
 };
 
 /**
+ * Helper: Check if a parameter represents parent route inheritance
+ * This detects when a parameter doesn't match the current route's parameters
+ * but the route has literal segments that might correspond to parent route parameters
+ */
+const detectParentParameterInheritance = (
+  paramName,
+  paramValue,
+  parsedPattern,
+  pathParamNames,
+  queryParamNames,
+) => {
+  // Parameter doesn't belong to current route
+  const isExtraParam =
+    !pathParamNames.has(paramName) && !queryParamNames.has(paramName);
+
+  // Route has literal segments (suggesting it might be a child of a parameterized parent)
+  const hasLiteralSegments = parsedPattern.segments.some(
+    (s) => s.type === "literal",
+  );
+
+  // Common parent parameter names (heuristic)
+  const commonParentParams = new Set([
+    "section",
+    "category",
+    "type",
+    "area",
+    "zone",
+  ]);
+  const looksLikeParentParam = commonParentParams.has(paramName);
+
+  return {
+    isParentInheritance:
+      isExtraParam && hasLiteralSegments && looksLikeParentParam,
+    isExtraParam,
+    hasLiteralSegments,
+    looksLikeParentParam,
+  };
+};
+
+/**
  * Build a URL from a pattern and parameters
  */
 const buildUrlFromPattern = (parsedPattern, params = {}) => {
@@ -1168,23 +1208,52 @@ const buildUrlFromPattern = (parsedPattern, params = {}) => {
   }
 
   // Add remaining parameters as additional query parameters (excluding path and pattern query params)
-  // Sort extra params alphabetically for consistent order
+  // Handle parameter inheritance and extra parameters
   const extraParams = [];
+
   for (const [key, value] of Object.entries(params)) {
     if (
       !pathParamNames.has(key) &&
       !queryParamNames.has(key) &&
       value !== undefined
     ) {
-      // Check if this parameter is redundant with literal segments in the path
-      // E.g., don't add "section=analytics" if path is already "/admin/analytics"
+      // This parameter doesn't match any path or query parameter in this route pattern,
+      // so it will be treated as an extra query parameter.
+      //
+      // COMMON SCENARIOS:
+      // 1. Parent route parameter inheritance: When a child route has literal segments
+      //    that correspond to parent route parameters. For example:
+      //    - Parent: /admin/:section/
+      //    - Child: /admin/settings/:tab (has "settings" as literal)
+      //    - Calling child.buildUrl({section: "toto"}) → /admin/settings?section=toto
+      //    The "section" param becomes a query param because "settings" is hardcoded.
+      //
+      // 2. Extra state parameters: Completely additional parameters for URL state
+      //    - Calling route.buildUrl({filter: "active"}) → /route?filter=active
+
+      // Check if this parameter value is redundant with literal segments in the path
+      // E.g., don't add "section=settings" if path is already "/admin/settings"
       const isRedundantWithPath = parsedPattern.segments.some(
         (segment) => segment.type === "literal" && segment.value === value,
       );
 
       if (!isRedundantWithPath) {
         extraParams.push([key, value]);
+
+        // Optional: Detect and log parent parameter inheritance for debugging
+        const inheritance = detectParentParameterInheritance(
+          key,
+          value,
+          parsedPattern,
+          pathParamNames,
+          queryParamNames,
+        );
+        if (inheritance.isParentInheritance) {
+          // This can be enabled for debugging parameter inheritance scenarios
+          // console.debug(`Parameter "${key}" appears to be inherited from parent route and added as query parameter to "${parsedPattern.originalPattern || 'route'}"`);
+        }
       }
+      // Note: Redundant parameters are intentionally omitted for cleaner URLs
     }
   }
 
