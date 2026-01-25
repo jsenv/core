@@ -947,6 +947,30 @@ await snapshotTests(import.meta.url, ({ test }) => {
     }
   });
 
+  test("parent route should use child route when child has non-default signal", () => {
+    try {
+      // Set up the scenario: zone selection page -> map route building
+      const mapPanelSignal = stateSignal(undefined, { id: "mapPanel" });
+      // Change signal to non-default value
+      mapPanelSignal.value = "isochrone";
+      const { MAP_ROUTE } = setupRoutes({
+        ZONE_SELECTION_ROUTE: "/zone_selection",
+        MAP_ROUTE: `/map/`,
+        MAP_PANEL_ROUTE: `/map/:panel=${mapPanelSignal}/`,
+      });
+
+      // Simulate being on zone selection page
+      updateRoutes(`${baseUrl}/zone_selection`);
+
+      return {
+        map_route_url: MAP_ROUTE.buildUrl(),
+      };
+    } finally {
+      clearAllRoutes();
+      globalSignalRegistry.clear();
+    }
+  });
+
   test("rawUrlPart functionality in url building", () => {
     try {
       const { FILES_ROUTE, API_ROUTE } = setupRoutes({
