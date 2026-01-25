@@ -1,10 +1,10 @@
-# [route with undefined parameter default should not optimize to children](../../route_build_url.test.js#L736)
+# [route with undefined parameter default should not optimize to children](../../route_build_url.test.js#L759)
 
 ```js
 try {
   const partSignal = stateSignal(undefined, { id: "part" });
   const subpartSignal = stateSignal("details", { id: "subpart" });
-  
+
   const { TOTO_ROUTE, TOTO_SUB_ROUTE } = setupRoutes({
     TOTO_ROUTE: `/toto/:part=${partSignal}`,
     TOTO_SUB_ROUTE: `/toto/admin/:subpart=${subpartSignal}`,

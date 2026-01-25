@@ -7,7 +7,7 @@ try {
   const mapPanelSignal = stateSignal(undefined, { id: "mapPanel" });
   mapPanelSignal.value = "isochrone";
   zoneSignal.value = "paris";
-  const { MAP_ROUTE } = setupRoutes({
+  const { MAP_ROUTE, MAP_PANEL_ROUTE, MAP_ISOCHRONE_ROUTE } = setupRoutes({
     ZONE_SELECTION_ROUTE: "/zone_selection",
     MAP_ROUTE: `/map/?zone=${zoneSignal}`,
     MAP_PANEL_ROUTE: `/map/:panel=${mapPanelSignal}/`,
@@ -22,6 +22,10 @@ try {
     map_url_panel_explicitely_undefined: MAP_ROUTE.buildUrl({
       panel: undefined,
     }),
+    // For debugging - what would isochrone route look like directly?
+    isochrone_direct: MAP_ISOCHRONE_ROUTE.buildUrl(),
+    // Check what panel route would look like
+    panel_route_direct: MAP_PANEL_ROUTE.buildUrl(),
   };
 } finally {
   clearAllRoutes();
@@ -32,7 +36,9 @@ try {
 ```js
 {
   "map_route_url": "http://127.0.0.1/map/isochrone?zone=paris",
-  "map_url_panel_explicitely_undefined": "http://127.0.0.1/map?zone=paris"
+  "map_url_panel_explicitely_undefined": "http://127.0.0.1/map?zone=paris",
+  "isochrone_direct": "http://127.0.0.1/map/isochrone?zone=paris",
+  "panel_route_direct": "http://127.0.0.1/map/isochrone?zone=paris"
 }
 ```
 

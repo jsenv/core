@@ -684,7 +684,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
       const mapPanelSignal = stateSignal(undefined, { id: "mapPanel" });
       mapPanelSignal.value = "isochrone";
       zoneSignal.value = "paris";
-      const { MAP_ROUTE } = setupRoutes({
+      const { MAP_ROUTE, MAP_PANEL_ROUTE, MAP_ISOCHRONE_ROUTE } = setupRoutes({
         ZONE_SELECTION_ROUTE: "/zone_selection",
         MAP_ROUTE: `/map/?zone=${zoneSignal}`,
         MAP_PANEL_ROUTE: `/map/:panel=${mapPanelSignal}/`,
@@ -699,6 +699,10 @@ await snapshotTests(import.meta.url, ({ test }) => {
         map_url_panel_explicitely_undefined: MAP_ROUTE.buildUrl({
           panel: undefined,
         }),
+        // For debugging - what would isochrone route look like directly?
+        isochrone_direct: MAP_ISOCHRONE_ROUTE.buildUrl(),
+        // Check what panel route would look like
+        panel_route_direct: MAP_PANEL_ROUTE.buildUrl(),
       };
     } finally {
       clearAllRoutes();
@@ -726,6 +730,25 @@ await snapshotTests(import.meta.url, ({ test }) => {
           panel: undefined,
         }),
         isochrone_compare_url: MAP_ISOCHRONE_COMPARE_ROUTE.buildUrl({}),
+      };
+    } finally {
+      clearAllRoutes();
+      globalSignalRegistry.clear();
+    }
+  });
+
+  test("literal segments should prevent descendant optimization", () => {
+    try {
+      const fileSignal = stateSignal("readme.txt", { id: "file" });
+
+      const { DIR_ROUTE, FILE_ROUTE } = setupRoutes({
+        DIR_ROUTE: `/dir/`,
+        FILE_ROUTE: `/dir/subdir/:file=${fileSignal}`,
+      });
+
+      return {
+        dir_url: DIR_ROUTE.buildUrl({}),
+        file_url: FILE_ROUTE.buildUrl({}),
       };
     } finally {
       clearAllRoutes();

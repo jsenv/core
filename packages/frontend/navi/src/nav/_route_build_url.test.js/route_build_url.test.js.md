@@ -20,6 +20,7 @@
 - [hierarchical search param order should respect ancestor patterns](hierarchical_search_param_order_should_respect_ancestor_patterns/hierarchical_search_param_order_should_respect_ancestor_patterns.md)
 - [parent route should use child route when child has non-default signal](parent_route_should_use_child_route_when_child_has_non-default_signal/parent_route_should_use_child_route_when_child_has_non-default_signal.md)
 - [parent route should handle undefined signals correctly](parent_route_should_handle_undefined_signals_correctly/parent_route_should_handle_undefined_signals_correctly.md)
+- [literal segments should prevent descendant optimization](literal_segments_should_prevent_descendant_optimization/literal_segments_should_prevent_descendant_optimization.md)
 - [route with undefined parameter default should not optimize to children](route_with_undefined_parameter_default_should_not_optimize_to_children/route_with_undefined_parameter_default_should_not_optimize_to_children.md)
 - [rawUrlPart functionality in url building](rawurlpart_functionality_in_url_building/rawurlpart_functionality_in_url_building.md)
 
