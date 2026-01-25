@@ -1003,6 +1003,29 @@ await snapshotTests(import.meta.url, ({ test }) => {
     }
   });
 
+  test("to be defined", () => {
+    try {
+      const mapPanelSignal = stateSignal(undefined, { id: "mapPanel" });
+      const isochroneTabSignal = stateSignal("compare");
+
+      mapPanelSignal.value = "isochrone";
+
+      const { MAP_ISOCHRONE_COMPARE_ROUTE } = setupRoutes({
+        MAP_ROUTE: `/map/`,
+        MAP_PANEL_ROUTE: `/map/:panel=${mapPanelSignal}/`,
+        MAP_ISOCHRONE_ROUTE: `/map/isochrone/:tab=${isochroneTabSignal}/`,
+        MAP_ISOCHRONE_COMPARE_ROUTE: `/map/isochrone/compare`,
+      });
+
+      return {
+        isochrone_compare_url: MAP_ISOCHRONE_COMPARE_ROUTE.buildUrl({}),
+      };
+    } finally {
+      clearAllRoutes();
+      globalSignalRegistry.clear();
+    }
+  });
+
   test("rawUrlPart functionality in url building", () => {
     try {
       const { FILES_ROUTE, API_ROUTE } = setupRoutes({
