@@ -4,12 +4,16 @@
 try {
   // Set up the scenario: zone selection page -> map route building
   const mapPanelSignal = stateSignal(undefined, { id: "mapPanel" });
+  const isochroneTabSignal = stateSignal("compare");
+  const isochroneWalkSignal = stateSignal(false);
   // Change signal to non-default value
   mapPanelSignal.value = "isochrone";
   const { MAP_ROUTE } = setupRoutes({
     ZONE_SELECTION_ROUTE: "/zone_selection",
     MAP_ROUTE: `/map/`,
     MAP_PANEL_ROUTE: `/map/:panel=${mapPanelSignal}/`,
+    MAP_ISOCHRONE_ROUTE: `/map/isochrone/:tab=${isochroneTabSignal}/`,
+    MAP_ISOCHRONE_COMPARE_ROUTE: `/map/isochrone/compare?walk=${isochroneWalkSignal}`,
   });
 
   // Simulate being on zone selection page
