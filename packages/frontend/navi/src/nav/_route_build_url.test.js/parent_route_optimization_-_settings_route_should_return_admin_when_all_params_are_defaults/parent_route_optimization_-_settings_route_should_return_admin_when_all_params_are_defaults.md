@@ -3,18 +3,22 @@
 ```js
 try {
   // Parent route default matches child literal "settings" - this enables optimization
-  const sectionSignal = stateSignal("settings", { id: "section_opt" });
-  const tabSignal = stateSignal("general", { id: "settings_tab_opt" });
+  const sectionSignal = stateSignal("settings");
+  const settingsTabSignal = stateSignal("general");
+  const analyticsTabSignal = stateSignal("overview");
 
   const { ADMIN_ROUTE, ADMIN_SETTINGS_ROUTE } = setupRoutes({
     ROOT: "/",
     ADMIN_ROUTE: `/admin/:section=${sectionSignal}/`,
-    ADMIN_SETTINGS_ROUTE: `/admin/settings/:tab=${tabSignal}`,
+    ADMIN_SETTINGS_ROUTE: `/admin/settings/:tab=${settingsTabSignal}`,
+    ADMIN_ANALYTICS_ROUTE: `/admin/analytics?tab=${analyticsTabSignal}`,
   });
+
+  updateRoutes(`${baseUrl}/admin/settings/advanced`);
 
   return {
     // Core issue: When both signals are at defaults, settings route should optimize to shortest equivalent URL
-    settings_url: ADMIN_SETTINGS_ROUTE.buildUrl(), // Should be "/admin", not "/admin/settings"
+    settings_url: ADMIN_SETTINGS_ROUTE.buildUrl({ tab: "general" }), // Should be "/admin", not "/admin/settings"
     admin_url: ADMIN_ROUTE.buildUrl(), // For comparison
   };
 } finally {
@@ -25,8 +29,8 @@ try {
 
 ```js
 {
-  "settings_url": "http://127.0.0.1/admin",
-  "admin_url": "http://127.0.0.1/admin"
+  "settings_url": "http://127.0.0.1/admin/settings",
+  "admin_url": "http://127.0.0.1/admin/settings/advanced"
 }
 ```
 
