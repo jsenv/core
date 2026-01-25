@@ -28,7 +28,6 @@ setBaseUrl(
 // Pattern registry for building relationships before routes are created
 const patternRegistry = new Map(); // pattern -> patternData
 const patternRelationships = new Map(); // pattern -> relationships
-let patternsRegistered = false;
 
 // Function to detect signals in route patterns and connect them
 export const detectSignals = (routePattern) => {
@@ -193,21 +192,14 @@ export const createRoutePattern = (pattern) => {
    * Helper: Find the best child route that matches current parameters and signals
    */
   const findBestChildRoute = (params, relationships) => {
-    const childPatterns = relationships?.childPatterns || [];
-    if (pattern === "/" || !childPatterns.length) {
+    const childPatternObjs = relationships?.childPatterns || [];
+    if (pattern === "/" || !childPatternObjs.length) {
       return null;
     }
 
-    // Try each child pattern to find the most specific match
-    for (const childPattern of childPatterns) {
-      const childPatternData = getPatternData(childPattern);
-      if (!childPatternData) continue;
-
-      const childRouteCandidate = evaluateChildRoute(
-        childPattern,
-        childPatternData,
-        params,
-      );
+    // Try each child pattern object to find the most specific match
+    for (const childPatternObj of childPatternObjs) {
+      const childRouteCandidate = evaluateChildRoute(childPatternObj, params);
 
       if (childRouteCandidate) {
         return childRouteCandidate;
@@ -219,19 +211,16 @@ export const createRoutePattern = (pattern) => {
   /**
    * Helper: Evaluate if a specific child route is suitable for current params/signals
    */
-  const evaluateChildRoute = (childPattern, childPatternData, params) => {
+  const evaluateChildRoute = (childPatternObj, params) => {
     // Step 1: Check parameter compatibility
-    const compatibility = checkChildRouteCompatibility(
-      childPatternData,
-      params,
-    );
+    const compatibility = checkChildRouteCompatibility(childPatternObj, params);
     if (!compatibility.isCompatible) {
       return null;
     }
 
     // Step 2: Determine if child route should be used
     const shouldUseChild = shouldUseChildRoute(
-      childPatternData,
+      childPatternObj,
       params,
       compatibility,
     );
@@ -240,13 +229,13 @@ export const createRoutePattern = (pattern) => {
     }
 
     // Step 3: Build child route URL with proper parameter filtering
-    return buildChildRouteUrl(childPattern, childPatternData, params);
+    return buildChildRouteUrl(childPatternObj, params);
   };
 
   /**
    * Helper: Check if parameters are compatible with child route
    */
-  const checkChildRouteCompatibility = (childPatternData, params) => {
+  const checkChildRouteCompatibility = (childPatternObj, params) => {
     const childParams = {};
     let isCompatible = true;
 
@@ -263,7 +252,7 @@ export const createRoutePattern = (pattern) => {
     for (const item of paramsToCheck) {
       const result = processParameterForChildRoute(
         item,
-        childPatternData.parsedPattern,
+        childPatternObj.pattern,
       );
 
       if (!result.isCompatible) {
@@ -353,12 +342,12 @@ export const createRoutePattern = (pattern) => {
   /**
    * Helper: Determine if child route should be used based on active parameters
    */
-  const shouldUseChildRoute = (childPatternData, params, compatibility) => {
+  const shouldUseChildRoute = (childPatternObj, params, compatibility) => {
     // Check if child has active non-default signal values
     let hasActiveParams = false;
     const childParams = { ...compatibility.childParams };
 
-    for (const connection of childPatternData.connections) {
+    for (const connection of childPatternObj.connections) {
       const { paramName, signal, options } = connection;
       const defaultValue = options.defaultValue;
 
@@ -372,7 +361,6 @@ export const createRoutePattern = (pattern) => {
 
     // Check if child pattern can be fully satisfied
     const initialMergedParams = { ...childParams, ...params };
-    const childPatternObj = createRoutePattern(childPatternData.urlPatternRaw);
     const canBuildChildCompletely = childPatternObj.pattern.segments.every(
       (segment) => {
         if (segment.type === "literal") return true;
@@ -396,10 +384,10 @@ export const createRoutePattern = (pattern) => {
   /**
    * Helper: Build URL for selected child route with proper parameter filtering
    */
-  const buildChildRouteUrl = (childPattern, childPatternData, params) => {
+  const buildChildRouteUrl = (childPatternObj, params) => {
     // Start with child signal values
     const baseParams = {};
-    for (const connection of childPatternData.connections) {
+    for (const connection of childPatternObj.connections) {
       const { paramName, signal, options } = connection;
       if (
         signal?.value !== undefined &&
@@ -411,7 +399,7 @@ export const createRoutePattern = (pattern) => {
 
     // Apply user params with filtering logic
     for (const [paramName, userValue] of Object.entries(params)) {
-      const childConnection = childPatternData.connections.find(
+      const childConnection = childPatternObj.connections.find(
         (conn) => conn.paramName === paramName,
       );
 
@@ -428,11 +416,10 @@ export const createRoutePattern = (pattern) => {
         }
       } else {
         // Check if param corresponds to a literal segment in child pattern
-        const isConsumedByChildPath =
-          childPatternData.parsedPattern.segments.some(
-            (segment) =>
-              segment.type === "literal" && segment.value === userValue,
-          );
+        const isConsumedByChildPath = childPatternObj.pattern.segments.some(
+          (segment) =>
+            segment.type === "literal" && segment.value === userValue,
+        );
 
         if (!isConsumedByChildPath) {
           // Not consumed by child path, keep it as query param
@@ -442,13 +429,12 @@ export const createRoutePattern = (pattern) => {
     }
 
     // Build child URL
-    const childPatternObj = createRoutePattern(childPattern);
     const childUrl = childPatternObj.buildUrl(baseParams);
 
     if (childUrl && !childUrl.includes(":")) {
       // Check for parent optimization before returning
       const optimizedUrl = checkChildParentOptimization(
-        childPattern,
+        childPatternObj.originalPattern,
         childUrl,
         baseParams,
       );
@@ -466,22 +452,20 @@ export const createRoutePattern = (pattern) => {
       return null; // No optimization if parameters exist
     }
 
-    createRoutePattern(childPattern);
     const childRelationships = patternRelationships.get(childPattern);
-    const childParents = childRelationships?.parentPatterns || [];
+    const childParentObjs = childRelationships?.parentPatterns || [];
 
-    for (const childParentPattern of childParents) {
-      if (childParentPattern === pattern) {
-        // Check if child has all default parameters
-        const childPatternData = getPatternData(childPattern);
-        if (!childPatternData) continue;
+    for (const childParentObj of childParentObjs) {
+      if (childParentObj.originalPattern === pattern) {
+        // Get the child pattern object from relationships instead of recreating
+        const childPatternObj = childRelationships;
 
-        const allChildParamsAreDefaults = childPatternData.connections.every(
-          (childConnection) => {
-            const { signal, options } = childConnection;
-            return signal?.value === options.defaultValue;
-          },
-        );
+        const allChildParamsAreDefaults = (
+          childPatternObj.connections || []
+        ).every((childConnection) => {
+          const { signal, options } = childConnection;
+          return signal?.value === options.defaultValue;
+        });
 
         if (allChildParamsAreDefaults) {
           // Build current route URL for comparison
@@ -533,14 +517,11 @@ export const createRoutePattern = (pattern) => {
    * Helper: Inherit query parameters from parent patterns
    */
   const inheritParentParameters = (finalParams, relationships) => {
-    const parentPatterns = relationships?.parentPatterns || [];
+    const parentPatternObjs = relationships?.parentPatterns || [];
 
-    for (const parentPattern of parentPatterns) {
-      const parentPatternData = getPatternData(parentPattern);
-      if (!parentPatternData) continue;
-
+    for (const parentPatternObj of parentPatternObjs) {
       // Check parent's signal connections for non-default values to inherit
-      for (const parentConnection of parentPatternData.connections) {
+      for (const parentConnection of parentPatternObj.connections) {
         const { paramName, signal, options } = parentConnection;
         const defaultValue = options.defaultValue;
 
@@ -553,7 +534,7 @@ export const createRoutePattern = (pattern) => {
           // Don't inherit if parameter corresponds to a literal in our path
           const shouldInherit = !isParameterRedundantWithLiteralSegments(
             parsedPattern,
-            parentPatternData.parsedPattern,
+            parentPatternObj.pattern,
             paramName,
             signal.value,
           );
@@ -613,16 +594,19 @@ export const createRoutePattern = (pattern) => {
       return null;
     }
 
-    const possibleParents = relationships?.parentPatterns || [];
+    const possibleParentObjs = relationships?.parentPatterns || [];
 
-    for (const parentPattern of possibleParents) {
+    for (const parentPatternObj of possibleParentObjs) {
       // Skip root route and routes without parameters
-      if (parentPattern === "/" || !parentPattern.includes(":")) {
+      if (
+        parentPatternObj.originalPattern === "/" ||
+        !parentPatternObj.originalPattern.includes(":")
+      ) {
         continue;
       }
 
       const optimizedParentUrl = evaluateParentOptimization(
-        parentPattern,
+        parentPatternObj,
         generatedUrl,
       );
 
@@ -637,13 +621,9 @@ export const createRoutePattern = (pattern) => {
   /**
    * Helper: Evaluate a specific parent pattern for URL optimization
    */
-  const evaluateParentOptimization = (parentPattern, generatedUrl) => {
-    const parentPatternObj = createRoutePattern(parentPattern);
-    const parentPatternData = getPatternData(parentPattern);
-    if (!parentPatternData) return null;
-
+  const evaluateParentOptimization = (parentPatternObj, generatedUrl) => {
     // Check if parent's default values match our literals
-    const parentPointsToCurrentRoute = parentPatternData.connections.every(
+    const parentPointsToCurrentRoute = parentPatternObj.connections.every(
       (parentConnection) => {
         const { options } = parentConnection;
         const defaultValue = options.defaultValue;
@@ -1252,7 +1232,9 @@ export const setupPatterns = (patternDefinitions) => {
   patternRegistry.clear();
   patternRelationships.clear();
 
-  // Phase 1: Register all patterns
+  // Phase 1: Register all patterns and create pattern objects
+  const patternObjects = new Map(); // pattern string -> pattern object
+
   for (const [key, urlPatternRaw] of Object.entries(patternDefinitions)) {
     const [cleanPattern, connections] = detectSignals(urlPatternRaw);
     const parsedPattern = parsePattern(cleanPattern);
@@ -1268,6 +1250,10 @@ export const setupPatterns = (patternDefinitions) => {
     };
 
     patternRegistry.set(urlPatternRaw, patternData);
+
+    // Create the full pattern object for this pattern
+    const patternObj = createRoutePattern(urlPatternRaw);
+    patternObjects.set(urlPatternRaw, patternObj);
   }
 
   // Phase 2: Build relationships between all patterns
@@ -1283,23 +1269,22 @@ export const setupPatterns = (patternDefinitions) => {
 
       // Check if current pattern is a child of other pattern using clean patterns
       if (isChildPattern(currentData.cleanPattern, otherData.cleanPattern)) {
-        currentData.parentPatterns.push(otherPattern);
-        otherData.childPatterns.push(currentPattern);
+        // Store pattern objects instead of pattern strings
+        currentData.parentPatterns.push(patternObjects.get(otherPattern));
+        otherData.childPatterns.push(patternObjects.get(currentPattern));
       }
     }
 
-    // Store relationships for easy access
+    // Store relationships for easy access with pattern objects
     patternRelationships.set(currentPattern, {
       pattern: currentData.parsedPattern,
       parsedPattern: currentData.parsedPattern,
       connections: currentData.connections,
-      childPatterns: currentData.childPatterns, // Store child patterns
-      parentPatterns: currentData.parentPatterns, // Store parent patterns
+      childPatterns: currentData.childPatterns, // Now contains pattern objects
+      parentPatterns: currentData.parentPatterns, // Now contains pattern objects
       originalPattern: currentPattern,
     });
   }
-
-  patternsRegistered = true;
 
   if (DEBUG) {
     console.debug("Patterns registered:", patternRegistry.size);
@@ -1313,31 +1298,11 @@ export const setupPatterns = (patternDefinitions) => {
 };
 
 /**
- * Get pattern data for a registered pattern
- */
-export const getPatternData = (urlPatternRaw) => {
-  return patternRegistry.get(urlPatternRaw);
-};
-
-/**
- * Get pattern relationships for route creation
- */
-export const getPatternRelationships = () => {
-  if (!patternsRegistered) {
-    throw new Error(
-      "Patterns must be registered before accessing relationships",
-    );
-  }
-  return patternRelationships;
-};
-
-/**
  * Clear all registered patterns
  */
 export const clearPatterns = () => {
   patternRegistry.clear();
   patternRelationships.clear();
-  patternsRegistered = false;
 };
 
 export const resolveRouteUrl = (relativeUrl) => {

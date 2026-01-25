@@ -9,7 +9,6 @@ import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
 import {
   clearPatterns,
   createRoutePattern,
-  getPatternData,
   resolveRouteUrl,
   setupPatterns,
 } from "./route_pattern.js";
@@ -244,8 +243,7 @@ const registerRoute = (routePattern) => {
   if (DEBUG) {
     console.debug(`Creating route: ${urlPatternRaw}`);
   }
-  const patternData = getPatternData(urlPatternRaw);
-  const { cleanPattern, connections } = patternData;
+  const { cleanPattern, connections } = routePattern;
 
   const cleanupCallbackSet = new Set();
   const cleanup = () => {
