@@ -253,30 +253,11 @@ export const createRoutePattern = (pattern) => {
       return null;
     }
 
-    if (DEBUG) {
-      console.debug(
-        `[${pattern}] Evaluating ${childPatternObjs.length} child routes for buildMostPreciseUrl`,
-      );
-      console.debug(
-        `[${pattern}] Child routes:`,
-        childPatternObjs.map((c) => ({
-          pattern: c.originalPattern,
-          specificity: c.specificity,
-        })),
-      );
-    }
-
     // Get parent route's resolved signal values to pass to child routes
     const parentResolvedParams = resolveParams(params);
 
     // Try each child pattern object to find the most specific match
     for (const childPatternObj of childPatternObjs) {
-      if (DEBUG) {
-        console.debug(
-          `[${pattern}] Evaluating child route: ${childPatternObj.originalPattern}`,
-        );
-      }
-
       const childRouteCandidate = evaluateChildRoute(
         childPatternObj,
         params,
@@ -286,15 +267,10 @@ export const createRoutePattern = (pattern) => {
       if (childRouteCandidate) {
         if (DEBUG) {
           console.debug(
-            `[${pattern}] Selected child route: ${childPatternObj.originalPattern} -> ${childRouteCandidate}`,
+            `[${pattern}] Using child: ${childPatternObj.originalPattern}`,
           );
         }
         return childRouteCandidate;
-      }
-      if (DEBUG) {
-        console.debug(
-          `[${pattern}] Rejected child route: ${childPatternObj.originalPattern}`,
-        );
       }
     }
     return null;
@@ -345,28 +321,6 @@ export const createRoutePattern = (pattern) => {
       })),
     ];
 
-    if (DEBUG) {
-      console.debug(
-        `[${pattern}] checkChildRouteCompatibility(${childPatternObj.originalPattern}):`,
-        {
-          paramsToCheck: paramsToCheck.map((p) =>
-            p.isUserProvided
-              ? {
-                  paramName: p.paramName,
-                  userValue: p.userValue,
-                  isUserProvided: true,
-                }
-              : {
-                  paramName: p.paramName,
-                  signalValue: p.signal?.value,
-                  defaultValue: p.options.defaultValue,
-                },
-          ),
-          childPattern: childPatternObj.originalPattern,
-        },
-      );
-    }
-
     for (const item of paramsToCheck) {
       const result = processParameterForChildRoute(
         item,
@@ -375,14 +329,7 @@ export const createRoutePattern = (pattern) => {
 
       if (DEBUG && !result.isCompatible) {
         console.debug(
-          `[${pattern}] Parameter incompatible with child route ${childPatternObj.originalPattern}:`,
-          {
-            paramName: item.paramName || item.paramName,
-            paramValue: item.isUserProvided
-              ? item.userValue
-              : item.signal?.value,
-            result,
-          },
+          `[${pattern}] Param '${item.paramName}' incompatible with ${childPatternObj.originalPattern}`,
         );
       }
 
@@ -394,13 +341,6 @@ export const createRoutePattern = (pattern) => {
       if (result.shouldInclude) {
         childParams[result.paramName] = result.paramValue;
       }
-    }
-
-    if (DEBUG) {
-      console.debug(
-        `[${pattern}] checkChildRouteCompatibility result for ${childPatternObj.originalPattern}:`,
-        { isCompatible, childParams },
-      );
     }
 
     return { isCompatible, childParams };
@@ -532,21 +472,9 @@ export const createRoutePattern = (pattern) => {
     const shouldUse =
       hasActiveParams || (hasProvidedParams && canBuildChildCompletely);
 
-    if (DEBUG) {
+    if (DEBUG && shouldUse) {
       console.debug(
-        `[${pattern}] shouldUseChildRoute(${childPatternObj.originalPattern}):`,
-        {
-          hasActiveParams,
-          canBuildChildCompletely,
-          hasProvidedParams,
-          shouldUse,
-          childParams,
-          signalValues: childPatternObj.connections.map((c) => ({
-            paramName: c.paramName,
-            signalValue: c.signal?.value,
-            defaultValue: c.options.defaultValue,
-          })),
-        },
+        `[${pattern}] Will use child route ${childPatternObj.originalPattern}`,
       );
     }
 
