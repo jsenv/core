@@ -28,7 +28,7 @@ try {
 
 ```js
 {
-  "settings_url": "http://127.0.0.1/admin/settings",
+  "settings_url": "http://127.0.0.1/admin",
   "admin_url": "http://127.0.0.1/admin/analytics"
 }
 ```

@@ -645,15 +645,31 @@ export const createRoutePattern = (pattern) => {
    * Helper: Evaluate a specific parent pattern for URL optimization
    */
   const evaluateParentOptimization = (parentPatternObj, resolvedParams) => {
+    // Get literal segments from child pattern to map to parent parameters
+    const childLiterals = getPatternLiterals(parsedPattern);
+
     // Check if parent would also have all default values
+    // For parent optimization, we consider both explicitly provided params and literal segments
     const allParentParamsAreDefaults = parentPatternObj.connections.every(
       (parentConnection) => {
-        // Use the resolved value if available, otherwise parent's signal value, otherwise default
-        const effectiveValue =
-          resolvedParams[parentConnection.paramName] ??
-          parentConnection.signal?.value ??
-          parentConnection.options.defaultValue;
-        return effectiveValue === parentConnection.options.defaultValue;
+        const paramName = parentConnection.paramName;
+
+        // If explicitly provided in resolved params, use that
+        if (resolvedParams[paramName] !== undefined) {
+          return (
+            resolvedParams[paramName] === parentConnection.options.defaultValue
+          );
+        }
+
+        // Check if this parent parameter corresponds to a literal segment in child
+        // If parent default matches a child literal, consider it as using the default
+        const defaultValue = parentConnection.options.defaultValue;
+        if (childLiterals.includes(defaultValue)) {
+          return true; // Literal segment effectively provides the default value
+        }
+
+        // Otherwise assume parent would use its default for optimization purposes
+        return true;
       },
     );
 
@@ -666,14 +682,36 @@ export const createRoutePattern = (pattern) => {
       (parentConnection) => {
         const { options } = parentConnection;
         const defaultValue = options.defaultValue;
-        const currentLiterals = getPatternLiterals(parsedPattern);
-        return currentLiterals.includes(defaultValue);
+        return childLiterals.includes(defaultValue);
       },
     );
 
     if (parentPointsToCurrentRoute) {
-      const parentUrl = parentPatternObj.buildUrl({});
+      // Build parent URL using defaults, not current signal values
+      const parentDefaultParams = {};
+      for (const parentConnection of parentPatternObj.connections) {
+        parentDefaultParams[parentConnection.paramName] =
+          parentConnection.options.defaultValue;
+      }
+      // Build parent URL and check if it can be optimized further
+      let parentUrl = parentPatternObj.buildUrl(parentDefaultParams);
+
+      // Check if parent can optimize itself by removing default parameters
       if (parentUrl && parentUrl !== "/") {
+        // Check if all parent's default params are actually defaults
+        const parentAllDefaults = parentPatternObj.connections.every((conn) => {
+          const paramValue = parentDefaultParams[conn.paramName];
+          return paramValue === conn.options.defaultValue;
+        });
+
+        if (parentAllDefaults) {
+          // Try to build parent URL without any parameters to see if it's shorter
+          const parentMinimalUrl = parentPatternObj.buildUrl({});
+          if (parentMinimalUrl && parentMinimalUrl.length < parentUrl.length) {
+            parentUrl = parentMinimalUrl;
+          }
+        }
+
         return parentUrl;
       }
     }
