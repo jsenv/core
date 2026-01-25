@@ -1,7 +1,7 @@
 import { snapshotTests } from "@jsenv/snapshot";
 import { globalSignalRegistry, stateSignal } from "../state/state_signal.js";
 import { clearAllRoutes, setupRoutes, updateRoutes } from "./route.js";
-import { setBaseUrl } from "./route_pattern.js";
+import { rawUrlPart, setBaseUrl } from "./route_pattern.js";
 
 const baseUrl = "http://localhost:3000";
 setBaseUrl(baseUrl);
@@ -853,6 +853,47 @@ await snapshotTests(import.meta.url, ({ test }) => {
         map_url: MAP_ROUTE.buildUrl(),
         isochrone_url: MAP_ISOCHRONE_ROUTE.buildUrl(),
         isochrone_compare_walk_url: MAP_ISOCHRONE_WALK_ROUTE.buildUrl(),
+      };
+    } finally {
+      clearAllRoutes();
+      globalSignalRegistry.clear();
+    }
+  });
+
+  test("rawUrlPart functionality in url building", () => {
+    try {
+      const { FILES_ROUTE, API_ROUTE } = setupRoutes({
+        FILES_ROUTE: "/files/:path",
+        API_ROUTE: "/api/search",
+      });
+
+      return {
+        // Normal encoding
+        normal_path: FILES_ROUTE.buildUrl({ path: "documents/readme.txt" }),
+        normal_special_chars: FILES_ROUTE.buildUrl({
+          path: "special chars & symbols",
+        }),
+
+        // Raw URL parts (bypassing encoding)
+        raw_path: FILES_ROUTE.buildUrl({
+          path: rawUrlPart("documents/readme.txt"),
+        }),
+        raw_special_chars: FILES_ROUTE.buildUrl({
+          path: rawUrlPart("special chars & symbols"),
+        }),
+        raw_encoded_path: FILES_ROUTE.buildUrl({
+          path: rawUrlPart("documents%2Freadme.txt"),
+        }),
+
+        // Raw URL parts in query parameters
+        normal_query: API_ROUTE.buildUrl({
+          q: "hello world",
+          filter: "type:document",
+        }),
+        raw_query: API_ROUTE.buildUrl({
+          q: rawUrlPart("hello+world"),
+          filter: rawUrlPart("type%3Adocument"),
+        }),
       };
     } finally {
       clearAllRoutes();

@@ -53,8 +53,7 @@ export {
 } from "./src/nav/route.js";
 export { Route, Routes, useMatchingRouteInfo } from "./src/nav/route.jsx";
 export { RouteLink } from "./src/nav/route_link.jsx";
-export { setBaseUrl } from "./src/nav/route_pattern.js";
-export { rawUrlPart } from "./src/nav/route_url.js";
+export { rawUrlPart, setBaseUrl } from "./src/nav/route_pattern.js";
 // Navigation/components
 export { Link } from "./src/nav/link.jsx";
 export { Tab, TabList } from "./src/nav/tablist/tablist.jsx";

@@ -250,14 +250,14 @@ try {
     "description": "After updating enabled signal to true (non-default)",
     "enabled_signal": true,
     "minute_signal": 30,
-    "current_url": "http://127.0.0.1/map/isochrone/compare?walk=true&iso_lon=10&zone=nice",
+    "current_url": "http://127.0.0.1/map/isochrone/compare?walk&iso_lon=10&zone=nice",
     "redirect_calls": [
       {
         "route": "ISOCHRONE_COMPARE_ROUTE",
         "params": {
           "walk": true
         },
-        "url": "http://127.0.0.1/map/isochrone/compare?walk=true&iso_lon=10&zone=nice"
+        "url": "http://127.0.0.1/map/isochrone/compare?walk&iso_lon=10&zone=nice"
       }
     ]
   },
@@ -265,21 +265,21 @@ try {
     "description": "After updating minute signal to 45",
     "enabled_signal": true,
     "minute_signal": 45,
-    "current_url": "http://127.0.0.1/map/isochrone/compare?walk=true&walk_minute=45&iso_lon=10&zone=nice",
+    "current_url": "http://127.0.0.1/map/isochrone/compare?walk&walk_minute=45&iso_lon=10&zone=nice",
     "redirect_calls": [
       {
         "route": "ISOCHRONE_COMPARE_ROUTE",
         "params": {
           "walk_minute": 45
         },
-        "url": "http://127.0.0.1/map/isochrone/compare?walk=true&walk_minute=45&iso_lon=10&zone=nice"
+        "url": "http://127.0.0.1/map/isochrone/compare?walk&walk_minute=45&iso_lon=10&zone=nice"
       },
       {
         "route": "ISOCHRONE_COMPARE_ROUTE",
         "params": {
           "walk": true
         },
-        "url": "http://127.0.0.1/map/isochrone/compare?walk=true&walk_minute=45&iso_lon=10&zone=nice"
+        "url": "http://127.0.0.1/map/isochrone/compare?walk&walk_minute=45&iso_lon=10&zone=nice"
       }
     ]
   },
@@ -315,8 +315,8 @@ try {
   },
   "url_progression": [
     "http://127.0.0.1/map/isochrone/compare?iso_lon=10&zone=nice",
-    "http://127.0.0.1/map/isochrone/compare?walk=true&iso_lon=10&zone=nice",
-    "http://127.0.0.1/map/isochrone/compare?walk=true&walk_minute=45&iso_lon=10&zone=nice",
+    "http://127.0.0.1/map/isochrone/compare?walk&iso_lon=10&zone=nice",
+    "http://127.0.0.1/map/isochrone/compare?walk&walk_minute=45&iso_lon=10&zone=nice",
     "http://127.0.0.1/map/isochrone/compare?walk_minute=45&iso_lon=10&zone=nice",
     "http://127.0.0.1/map/isochrone/compare?walk_minute=60&iso_lon=10&zone=nice"
   ],
@@ -327,7 +327,7 @@ try {
         "params": {
           "walk": true
         },
-        "url": "http://127.0.0.1/map/isochrone/compare?walk=true&iso_lon=10&zone=nice"
+        "url": "http://127.0.0.1/map/isochrone/compare?walk&iso_lon=10&zone=nice"
       }
     ],
     "minute_45_redirects": [
@@ -336,14 +336,14 @@ try {
         "params": {
           "walk_minute": 45
         },
-        "url": "http://127.0.0.1/map/isochrone/compare?walk=true&walk_minute=45&iso_lon=10&zone=nice"
+        "url": "http://127.0.0.1/map/isochrone/compare?walk&walk_minute=45&iso_lon=10&zone=nice"
       },
       {
         "route": "ISOCHRONE_COMPARE_ROUTE",
         "params": {
           "walk": true
         },
-        "url": "http://127.0.0.1/map/isochrone/compare?walk=true&walk_minute=45&iso_lon=10&zone=nice"
+        "url": "http://127.0.0.1/map/isochrone/compare?walk&walk_minute=45&iso_lon=10&zone=nice"
       }
     ],
     "enabled_false_redirects": [

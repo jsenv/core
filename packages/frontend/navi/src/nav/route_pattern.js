@@ -5,6 +5,62 @@
 
 import { globalSignalRegistry } from "../state/state_signal.js";
 
+// Raw URL part functionality for bypassing encoding
+const rawUrlPartSymbol = Symbol("raw_url_part");
+export const rawUrlPart = (value) => {
+  return {
+    [rawUrlPartSymbol]: true,
+    value,
+  };
+};
+
+/**
+ * Encode parameter values for URL usage, with special handling for raw URL parts.
+ * When a parameter is wrapped with rawUrlPart(), it bypasses encoding and is
+ * inserted as-is into the URL.
+ */
+const encodeParamValue = (value, isWildcard = false) => {
+  if (value && value[rawUrlPartSymbol]) {
+    return value.value;
+  }
+
+  if (isWildcard) {
+    // For wildcards, only encode characters that are invalid in URL paths,
+    // but preserve slashes as they are path separators
+    return value
+      ? value.replace(/[^a-zA-Z0-9\-._~!$&'()*+,;=:@/]/g, (char) => {
+          return encodeURIComponent(char);
+        })
+      : value;
+  }
+
+  // For named parameters and search params, encode everything including slashes
+  return encodeURIComponent(value);
+};
+
+/**
+ * Build query string from parameters, respecting rawUrlPart values
+ */
+const buildQueryString = (params) => {
+  const searchParamPairs = [];
+
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined && value !== null) {
+      const encodedKey = encodeURIComponent(key);
+
+      // Handle boolean values - if true, just add the key without value
+      if (value === true || value === "") {
+        searchParamPairs.push(encodedKey);
+      } else {
+        const encodedValue = encodeParamValue(value, false); // Search params encode slashes
+        searchParamPairs.push(`${encodedKey}=${encodedValue}`);
+      }
+    }
+  }
+
+  return searchParamPairs.join("&");
+};
+
 const DEBUG = false;
 
 // Base URL management
@@ -658,11 +714,14 @@ export const createRoutePattern = (pattern) => {
         );
 
         if (extraParamEntries.length > 0) {
-          const url = new URL(optimizedParentUrl, "http://localhost");
-          for (const [key, value] of extraParamEntries) {
-            url.searchParams.set(key, value);
-          }
-          return url.pathname + (url.search ? url.search : "");
+          const queryString = buildQueryString(
+            Object.fromEntries(extraParamEntries),
+          );
+          return (
+            optimizedParentUrl +
+            (optimizedParentUrl.includes("?") ? "&" : "?") +
+            queryString
+          );
         }
 
         return optimizedParentUrl;
@@ -1141,13 +1200,13 @@ const detectParentParameterInheritance = (
 const buildUrlFromPattern = (parsedPattern, params = {}) => {
   if (parsedPattern.segments.length === 0) {
     // Root route
-    const searchParams = new URLSearchParams();
+    const queryParams = {};
     for (const [key, value] of Object.entries(params)) {
       if (value !== undefined) {
-        searchParams.set(key, value);
+        queryParams[key] = value;
       }
     }
-    const search = searchParams.toString();
+    const search = buildQueryString(queryParams);
     return `/${search ? `?${search}` : ""}`;
   }
 
@@ -1161,7 +1220,7 @@ const buildUrlFromPattern = (parsedPattern, params = {}) => {
 
       // If value is provided, include it
       if (value !== undefined) {
-        segments.push(encodeURIComponent(value));
+        segments.push(encodeParamValue(value, false)); // Named parameters encode slashes
       } else if (!patternSeg.optional) {
         // For required parameters without values, keep the placeholder
         segments.push(`:${patternSeg.name}`);
@@ -1222,7 +1281,7 @@ const buildUrlFromPattern = (parsedPattern, params = {}) => {
 
   // Add query parameters defined in the pattern first
   const queryParamNames = new Set();
-  const searchParams = new URLSearchParams();
+  const queryParams = {};
 
   // Handle pattern-defined query parameters (from ?tab, &lon, etc.)
   if (parsedPattern.queryParams) {
@@ -1232,7 +1291,7 @@ const buildUrlFromPattern = (parsedPattern, params = {}) => {
 
       const value = params[paramName];
       if (value !== undefined) {
-        searchParams.set(paramName, value);
+        queryParams[paramName] = value;
       }
       // If no value provided, don't add the parameter to keep URLs clean
     }
@@ -1291,12 +1350,12 @@ const buildUrlFromPattern = (parsedPattern, params = {}) => {
   // Sort extra params alphabetically for consistent order
   extraParams.sort(([a], [b]) => a.localeCompare(b));
 
-  // Add sorted extra params to searchParams
+  // Add sorted extra params to queryParams object
   for (const [key, value] of extraParams) {
-    searchParams.set(key, value);
+    queryParams[key] = value;
   }
 
-  const search = searchParams.toString();
+  const search = buildQueryString(queryParams);
 
   // No longer handle trailing slash inheritance here
 
