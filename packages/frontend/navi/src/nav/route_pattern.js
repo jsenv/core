@@ -634,6 +634,37 @@ export const createRoutePattern = (pattern) => {
       );
 
       if (optimizedParentUrl) {
+        // Before returning optimized parent URL, check if we need to inherit parameters
+        // from our ancestors that the parent route might not inherit on its own
+        const parentFinalParams = { ...resolvedParams };
+
+        // Remove params that belong to current route (they're at defaults anyway)
+        for (const conn of connections) {
+          delete parentFinalParams[conn.paramName];
+        }
+
+        // Inherit from all ancestor routes, not just immediate parent
+        inheritParentParameters(parentFinalParams, relationships);
+
+        // If we inherited any parameters, add them to the parent URL
+        const extraParamEntries = Object.entries(parentFinalParams).filter(
+          ([key, value]) => {
+            // Only include params not handled by parent route
+            const isParentParam = parentPatternObj.connections.some(
+              (conn) => conn.paramName === key,
+            );
+            return !isParentParam && value !== undefined;
+          },
+        );
+
+        if (extraParamEntries.length > 0) {
+          const url = new URL(optimizedParentUrl, "http://localhost");
+          for (const [key, value] of extraParamEntries) {
+            url.searchParams.set(key, value);
+          }
+          return url.pathname + (url.search ? url.search : "");
+        }
+
         return optimizedParentUrl;
       }
     }
