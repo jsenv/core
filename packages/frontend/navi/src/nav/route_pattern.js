@@ -363,26 +363,24 @@ export const createRoutePattern = (pattern) => {
       };
     }
 
-    // Check for incompatible cases
-    if (item.isUserProvided && !matchesChildLiteral) {
+    // Check for generic parameter-literal conflicts
+    if (!matchesChildLiteral) {
       // Check if this is a path parameter from parent pattern
       const isParentPathParam = connections.some(
         (conn) => conn.paramName === paramName,
       );
 
       if (isParentPathParam) {
-        // User provided a path param value that doesn't match this child's literals
-        return { isCompatible: false };
-      }
-    }
+        // Parameter value (from user or signal) doesn't match this child's literals
+        // Check if child has any literal segments that would conflict with this parameter
+        const hasConflictingLiteral = childParsedPattern.segments.some(
+          (segment) =>
+            segment.type === "literal" && segment.value !== paramValue,
+        );
 
-    // Special case: section parameter with settings literal
-    if (paramName === "section" && paramValue !== "settings") {
-      const hasSettingsLiteral = childParsedPattern.segments.some(
-        (segment) => segment.type === "literal" && segment.value === "settings",
-      );
-      if (hasSettingsLiteral) {
-        return { isCompatible: false };
+        if (hasConflictingLiteral) {
+          return { isCompatible: false };
+        }
       }
     }
 
