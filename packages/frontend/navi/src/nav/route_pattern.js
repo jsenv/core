@@ -488,29 +488,35 @@ export const createRoutePattern = (pattern) => {
   const buildMostPreciseUrl = (params = {}) => {
     // Step 1: Resolve and clean parameters
     const resolvedParams = resolveParams(params);
+
+    // Step 2: Check for parent route optimization BEFORE removing defaults
+    // This allows optimization when explicit params match defaults
+    const relationships = patternRelationships.get(pattern);
+    const optimizedUrl = checkParentRouteOptimization(
+      null, // generatedUrl not needed for this check
+      resolvedParams, // Use resolvedParams instead of finalParams
+      relationships,
+    );
+    if (optimizedUrl) {
+      return optimizedUrl;
+    }
+
+    // Step 3: Remove default values for normal URL building
     let finalParams = removeDefaultValues(resolvedParams);
 
-    // Step 2: Try to find a more specific child route
-    const relationships = patternRelationships.get(pattern);
+    // Step 4: Try to find a more specific child route
     const childRouteUrl = findBestChildRoute(params, relationships);
     if (childRouteUrl) {
       return childRouteUrl;
     }
 
-    // Step 3: Inherit parameters from parent routes
+    // Step 5: Inherit parameters from parent routes
     inheritParentParameters(finalParams, relationships);
 
-    // Step 4: Build the current route URL
+    // Step 6: Build the current route URL
     const generatedUrl = buildCurrentRouteUrl(finalParams);
 
-    // Step 5: Check for parent route optimization
-    const optimizedUrl = checkParentRouteOptimization(
-      generatedUrl,
-      finalParams,
-      relationships,
-    );
-
-    return optimizedUrl || generatedUrl;
+    return generatedUrl;
   };
 
   /**
@@ -585,12 +591,35 @@ export const createRoutePattern = (pattern) => {
     finalParams,
     relationships,
   ) => {
-    // Only optimize if current route has no final params and all signals are default
-    const allCurrentParamsAreDefaults = connections.every(
-      (conn) => conn.signal?.value === conn.options.defaultValue,
+    // Only consider parent optimization for patterns with signal connections
+    if (connections.length === 0) {
+      return null;
+    }
+
+    // For each connection, check if the final effective value equals the default
+    // Final effective value = provided param OR signal value
+    const allEffectiveValuesAreDefaults = connections.every((conn) => {
+      const providedValue = finalParams[conn.paramName];
+      const effectiveValue =
+        providedValue !== undefined ? providedValue : conn.signal?.value;
+      return effectiveValue === conn.options.defaultValue;
+    });
+
+    // Only optimize if all effective values equal their defaults
+    if (!allEffectiveValuesAreDefaults) {
+      return null;
+    }
+
+    // Check if there are extra parameters not handled by current route's connections
+    const connectionParamNames = new Set(
+      connections.map((conn) => conn.paramName),
+    );
+    const hasExtraParams = Object.keys(finalParams).some(
+      (paramName) => !connectionParamNames.has(paramName),
     );
 
-    if (Object.keys(finalParams).length > 0 || !allCurrentParamsAreDefaults) {
+    // Don't optimize if there are extra parameters that would be lost
+    if (hasExtraParams) {
       return null;
     }
 
@@ -621,7 +650,7 @@ export const createRoutePattern = (pattern) => {
   /**
    * Helper: Evaluate a specific parent pattern for URL optimization
    */
-  const evaluateParentOptimization = (parentPatternObj, generatedUrl) => {
+  const evaluateParentOptimization = (parentPatternObj) => {
     // First, check if ALL parent signals are also at their defaults
     const allParentParamsAreDefaults = parentPatternObj.connections.every(
       (parentConnection) => {
@@ -648,11 +677,7 @@ export const createRoutePattern = (pattern) => {
 
     if (parentPointsToCurrentRoute) {
       const parentUrl = parentPatternObj.buildUrl({});
-      if (
-        parentUrl &&
-        parentUrl.length < generatedUrl.length &&
-        parentUrl !== "/"
-      ) {
+      if (parentUrl && parentUrl !== "/") {
         return parentUrl;
       }
     }

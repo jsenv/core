@@ -62,7 +62,7 @@ try {
 
 ```js
 {
-  "bug_reproduction_explicit_general": "http://127.0.0.1/admin/settings",
+  "bug_reproduction_explicit_general": "http://127.0.0.1/admin",
   "using_signal_advanced": "http://127.0.0.1/admin/settings/advanced",
   "explicit_security_override": "http://127.0.0.1/admin/settings/security",
   "section_with_default": "http://127.0.0.1/admin/settings/advanced",
