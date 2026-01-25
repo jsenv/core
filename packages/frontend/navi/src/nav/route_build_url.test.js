@@ -966,6 +966,9 @@ await snapshotTests(import.meta.url, ({ test }) => {
 
       return {
         map_route_url: MAP_ROUTE.buildUrl(),
+        map_url_panel_explicitely_undefined: MAP_ROUTE.buildUrl({
+          panel: undefined,
+        }),
       };
     } finally {
       clearAllRoutes();

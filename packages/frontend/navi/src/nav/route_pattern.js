@@ -625,18 +625,11 @@ export const createRoutePattern = (pattern) => {
 
   const buildMostPreciseUrl = (params = {}) => {
     if (DEBUG) {
-      console.debug(
-        `[${pattern}] buildMostPreciseUrl called with params:`,
-        params,
-      );
+      console.debug(`[${pattern}] buildMostPreciseUrl called`);
     }
 
     // Step 1: Resolve and clean parameters
     const resolvedParams = resolveParams(params);
-
-    if (DEBUG) {
-      console.debug(`[${pattern}] resolvedParams:`, resolvedParams);
-    }
 
     // Step 2: Check for parent route optimization BEFORE removing defaults
     // This allows optimization when final effective values match defaults
@@ -647,10 +640,7 @@ export const createRoutePattern = (pattern) => {
     );
     if (optimizedUrl) {
       if (DEBUG) {
-        console.debug(
-          `[${pattern}] Using parent route optimization:`,
-          optimizedUrl,
-        );
+        console.debug(`[${pattern}] Using parent route optimization`);
       }
       return optimizedUrl;
     }
@@ -658,18 +648,11 @@ export const createRoutePattern = (pattern) => {
     // Step 3: Remove default values for normal URL building
     let finalParams = removeDefaultValues(resolvedParams);
 
-    if (DEBUG) {
-      console.debug(
-        `[${pattern}] finalParams after removing defaults:`,
-        finalParams,
-      );
-    }
-
     // Step 4: Try to find a more specific child route
     const childRouteUrl = findBestChildRoute(params, relationships);
     if (childRouteUrl) {
       if (DEBUG) {
-        console.debug(`[${pattern}] Using child route URL:`, childRouteUrl);
+        console.debug(`[${pattern}] Using child route`);
       }
       return childRouteUrl;
     }
@@ -682,10 +665,6 @@ export const createRoutePattern = (pattern) => {
 
     // Step 6: Build the current route URL
     const generatedUrl = buildCurrentRouteUrl(finalParams);
-
-    if (DEBUG) {
-      console.debug(`[${pattern}] Final generated URL:`, generatedUrl);
-    }
 
     return generatedUrl;
   };
@@ -1287,11 +1266,7 @@ const buildHierarchicalQueryParams = (
 
   // DEBUG: Log what we found
   if (DEBUG) {
-    console.debug(`Building hierarchical params for ${originalPattern}`);
-    console.debug(
-      `Found ${parentPatterns.length} parent patterns:`,
-      parentPatterns.map((p) => p.originalPattern),
-    );
+    console.debug(`Building params for ${originalPattern}`);
   }
 
   // Step 1: Add query parameters from ancestor patterns (oldest to newest)
@@ -1300,13 +1275,6 @@ const buildHierarchicalQueryParams = (
 
   for (const ancestorPatternObj of ancestorPatterns) {
     if (ancestorPatternObj.pattern?.queryParams) {
-      if (DEBUG) {
-        console.debug(
-          `Processing ancestor ${ancestorPatternObj.originalPattern} with query params:`,
-          ancestorPatternObj.pattern.queryParams.map((q) => q.name),
-        );
-      }
-
       for (const queryParam of ancestorPatternObj.pattern.queryParams) {
         const paramName = queryParam.name;
         if (
@@ -1374,10 +1342,6 @@ const buildHierarchicalQueryParams = (
   // Add sorted extra params
   for (const [key, value] of extraParams) {
     queryParams[key] = value;
-
-    if (DEBUG) {
-      console.debug(`Added extra param: ${key}=${value}`);
-    }
   }
 
   return queryParams;
@@ -1638,13 +1602,7 @@ export const setupPatterns = (patternDefinitions) => {
   }
 
   if (DEBUG) {
-    console.debug("Patterns registered:", patternRegistry.size);
-    for (const [pattern, data] of patternRegistry) {
-      console.debug(`Pattern: ${pattern}`, {
-        children: data.childPatterns,
-        parents: data.parentPatterns,
-      });
-    }
+    console.debug("Pattern registry updated");
   }
 };
 

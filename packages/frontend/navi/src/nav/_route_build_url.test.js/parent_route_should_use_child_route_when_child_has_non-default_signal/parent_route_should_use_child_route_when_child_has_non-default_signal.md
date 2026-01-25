@@ -19,6 +19,9 @@ try {
 
   return {
     map_route_url: MAP_ROUTE.buildUrl(),
+    map_url_panel_explicitely_undefined: MAP_ROUTE.buildUrl({
+      panel: undefined,
+    }),
   };
 } finally {
   clearAllRoutes();
@@ -28,7 +31,8 @@ try {
 
 ```js
 {
-  "map_route_url": "http://127.0.0.1/map/isochrone?zone=paris"
+  "map_route_url": "http://127.0.0.1/map/isochrone?zone=paris",
+  "map_url_panel_explicitely_undefined": "http://127.0.0.1/map/isochrone?zone=paris"
 }
 ```
 
