@@ -35,7 +35,7 @@ try {
 
 ```js
 {
-  "isochrone_compare_url": "http://127.0.0.1/map/isochrone",
+  "isochrone_compare_url": "http://127.0.0.1/map/isochrone?iso_lon=2",
   "isochrone_time_url": "http://127.0.0.1/map/isochrone/time?iso_lon=2",
   "isochrone_time_walk_url": "http://127.0.0.1/map/isochrone/time/walk?iso_lon=2"
 }
