@@ -1,6 +1,11 @@
 import { snapshotTests } from "@jsenv/snapshot";
 import { globalSignalRegistry, stateSignal } from "../state/state_signal.js";
-import { clearAllRoutes, setupRoutes, updateRoutes } from "./route.js";
+import {
+  clearAllRoutes,
+  setBrowserIntegration,
+  setupRoutes,
+  updateRoutes,
+} from "./route.js";
 import { setBaseUrl } from "./route_pattern.js";
 
 const baseUrl = "http://localhost:3000";
@@ -1044,60 +1049,63 @@ await snapshotTests(import.meta.url, ({ test }) => {
     try {
       const zoneSignal = stateSignal("london");
       const lonSignal = stateSignal(3);
+      const isochroneTabSignal = stateSignal("compare");
       const isochroneLongitudeSignal = stateSignal(2);
       const isochroneTimeModeSignal = stateSignal("walk");
 
-      const { MAP_ISOCHRONE_TIME_ROUTE } = setupRoutes({
+      const {
+        MAP_ISOCHRONE_ROUTE,
+        MAP_ISOCHRONE_COMPARE_ROUTE,
+        MAP_ISOCHRONE_TIME_ROUTE,
+      } = setupRoutes({
         MAP_ROUTE: `/map/?zone=${zoneSignal}&lon=${lonSignal}`,
-        MAP_ISOCHRONE_ROUTE: `/map/isochrone/?iso_lon=${isochroneLongitudeSignal}`,
+        MAP_ISOCHRONE_ROUTE: `/map/isochrone/:tab=${isochroneTabSignal}/?iso_lon=${isochroneLongitudeSignal}`,
+        MAP_ISOCHRONE_COMPARE_ROUTE: `/map/isochrone/compare`,
         MAP_ISOCHRONE_TIME_ROUTE: `/map/isochrone/time/:mode=${isochroneTimeModeSignal}/`,
       });
 
-      // Set initial URL state: /map/isochrone/time?zone=london&lon=3&iso_lon=2
-      updateRoutes(`${baseUrl}/map/isochrone/time?zone=london&lon=3&iso_lon=2`);
+      // Mock browserIntegration.navTo to track redirectTo calls
+      const navToCalls = [];
+      const mockBrowserIntegration = {
+        navTo: (url, options) => {
+          navToCalls.push({ url, options });
+        },
+      };
+      setBrowserIntegration(mockBrowserIntegration);
 
+      updateRoutes(`${baseUrl}/map/isochrone?zone=london&lon=3&iso_lon=2`);
       // Capture initial state
       const initialState = {
-        zone: zoneSignal.value,
-        lon: lonSignal.value,
-        iso_lon: isochroneLongitudeSignal.value,
-        url: MAP_ISOCHRONE_TIME_ROUTE.buildUrl(),
-        matching: MAP_ISOCHRONE_TIME_ROUTE.matching,
+        matching: {
+          isochrone: MAP_ISOCHRONE_ROUTE.matching,
+          isochrone_compare: MAP_ISOCHRONE_COMPARE_ROUTE.matching,
+          isochrone_time: MAP_ISOCHRONE_TIME_ROUTE.matching,
+        },
       };
-
-      updateRoutes(`${baseUrl}/map/isochrone/time?zone=london&lon=3&iso_lon=2`);
-
+      // Clear navTo calls from initial setup
+      navToCalls.length = 0;
+      // Update URL to /map/isochrone/time?zone=longon&lon=3&iso_lon=2 (zone typo: london -> longon)
+      updateRoutes(`${baseUrl}/map/isochrone/time?zone=longon&lon=3&iso_lon=2`);
       // Capture state after URL update
       const finalState = {
-        zone: zoneSignal.value,
-        lon: lonSignal.value,
-        iso_lon: isochroneLongitudeSignal.value,
-        url: MAP_ISOCHRONE_TIME_ROUTE.buildUrl(),
-        matching: MAP_ISOCHRONE_TIME_ROUTE.matching,
+        matching: {
+          isochrone: MAP_ISOCHRONE_ROUTE.matching,
+          isochrone_compare: MAP_ISOCHRONE_COMPARE_ROUTE.matching,
+          isochrone_time: MAP_ISOCHRONE_TIME_ROUTE.matching,
+        },
       };
 
       return {
         initial_state: initialState,
         final_state: finalState,
-        signal_updates: {
-          zone_changed: initialState.zone !== finalState.zone,
-          zone_old_value: initialState.zone,
-          zone_new_value: finalState.zone,
-          lon_changed: initialState.lon !== finalState.lon,
-          iso_lon_changed: initialState.iso_lon !== finalState.iso_lon,
-        },
-        url_updates: {
-          url_changed: initialState.url !== finalState.url,
-          initial_url: initialState.url,
-          final_url: finalState.url,
-        },
-        route_matching: {
-          initially_matching: initialState.matching,
-          finally_matching: finalState.matching,
-          matching_changed: initialState.matching !== finalState.matching,
+        redirect_calls: {
+          nav_to_calls: navToCalls,
+          total_calls: navToCalls.length,
+          any_redirects_occurred: navToCalls.length > 0,
         },
       };
     } finally {
+      setBrowserIntegration(undefined);
       clearAllRoutes();
       globalSignalRegistry.clear();
     }
