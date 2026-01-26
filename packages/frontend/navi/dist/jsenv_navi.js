@@ -8709,11 +8709,17 @@ const createRoutePattern = (pattern) => {
       }
       // Include parameters that target pattern specifically needs
       if (targetQueryParamNames.has(paramName)) {
-        ancestorParams[paramName] = value;
-        if (DEBUG$2) {
-          console.debug(
-            `[${pattern}] tryDirectOptimization: Added target param ${paramName}=${value}`,
-          );
+        // Only include if the value is not the default value
+        const connection = targetAncestor.connections.find(
+          (conn) => conn.paramName === paramName,
+        );
+        if (connection && connection.options.defaultValue !== value) {
+          ancestorParams[paramName] = value;
+          if (DEBUG$2) {
+            console.debug(
+              `[${pattern}] tryDirectOptimization: Added target param ${paramName}=${value}`,
+            );
+          }
         }
       }
       // Include source query parameters (these should be inherited during ancestor optimization)
@@ -8740,6 +8746,39 @@ const createRoutePattern = (pattern) => {
         if (DEBUG$2) {
           console.debug(
             `[${pattern}] tryDirectOptimization: Added extra param ${paramName}=${value}`,
+          );
+        }
+      }
+    }
+
+    // Also check target ancestor's own signal values for parameters not in resolvedParams
+    for (const connection of targetAncestor.connections) {
+      const { paramName, signal, options } = connection;
+      const defaultValue = options.defaultValue;
+
+      // Only include if not already processed and has non-default value
+      if (
+        !(paramName in ancestorParams) &&
+        signal?.value !== undefined &&
+        signal.value !== defaultValue
+      ) {
+        // Don't include path parameters that correspond to literal segments we're optimizing away
+        const targetParam = targetParams.find((p) => p.name === paramName);
+        const isPathParam = targetParam !== undefined; // Any param in segments is a path param
+        if (isPathParam) {
+          // Skip path parameters - we want them to use default values for optimization
+          if (DEBUG$2) {
+            console.debug(
+              `[${pattern}] tryDirectOptimization: Skipping path param ${paramName}=${signal.value} (will use default)`,
+            );
+          }
+          continue;
+        }
+
+        ancestorParams[paramName] = signal.value;
+        if (DEBUG$2) {
+          console.debug(
+            `[${pattern}] tryDirectOptimization: Added target signal param ${paramName}=${signal.value}`,
           );
         }
       }
