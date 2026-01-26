@@ -12,11 +12,11 @@ try {
     MAP_ISOCHRONE_ROUTE: `/map/isochrone?zone=${zoneSignal}&iso_lon=${isoLonSignal}`,
   });
 
-  // Build initial URLs for all routes
+  // Read initial URLs for all routes
   const initialUrls = {
-    map: MAP_ROUTE.buildUrl(),
-    panel: MAP_PANEL_ROUTE.buildUrl(),
-    isochrone: MAP_ISOCHRONE_ROUTE.buildUrl(),
+    map: MAP_ROUTE.url,
+    panel: MAP_PANEL_ROUTE.url,
+    isochrone: MAP_ISOCHRONE_ROUTE.url,
   };
 
   // Change the shared zone signal
@@ -26,11 +26,11 @@ try {
   panelSignal.value = "settings";
   isoLonSignal.value = 0.1278;
 
-  // Build URLs again - all should reflect the new signal values
+  // Read URLs again - all should reflect the new signal values
   const updatedUrls = {
-    map: MAP_ROUTE.buildUrl(),
-    panel: MAP_PANEL_ROUTE.buildUrl(),
-    isochrone: MAP_ISOCHRONE_ROUTE.buildUrl(),
+    map: MAP_ROUTE.url,
+    panel: MAP_PANEL_ROUTE.url,
+    isochrone: MAP_ISOCHRONE_ROUTE.url,
   };
 
   return {

@@ -13,38 +13,38 @@ try {
     MIXED_ROUTE: `/mixed?user=${userIdSignal}&zone=${mapZoneSignal}`, // Uses both but not unrelated
   });
 
-  // Build initial URLs
+  // Read initial URLs
   const beforeUrls = {
-    user: USER_ROUTE.buildUrl(),
-    map: MAP_ROUTE.buildUrl(),
-    mixed: MIXED_ROUTE.buildUrl(),
+    user: USER_ROUTE.url,
+    map: MAP_ROUTE.url,
+    mixed: MIXED_ROUTE.url,
   };
 
   // Change ONLY the unrelated signal (shouldn't affect any routes)
   unrelatedSignal.value = "changed";
 
   const afterUnrelatedUrls = {
-    user: USER_ROUTE.buildUrl(),
-    map: MAP_ROUTE.buildUrl(),
-    mixed: MIXED_ROUTE.buildUrl(),
+    user: USER_ROUTE.url,
+    map: MAP_ROUTE.url,
+    mixed: MIXED_ROUTE.url,
   };
 
   // Now change userIdSignal (should only affect USER_ROUTE and MIXED_ROUTE)
   userIdSignal.value = "456";
 
   const afterUserUrls = {
-    user: USER_ROUTE.buildUrl(),
-    map: MAP_ROUTE.buildUrl(),
-    mixed: MIXED_ROUTE.buildUrl(),
+    user: USER_ROUTE.url,
+    map: MAP_ROUTE.url,
+    mixed: MIXED_ROUTE.url,
   };
 
   // Finally change mapZoneSignal (should only affect MAP_ROUTE and MIXED_ROUTE)
   mapZoneSignal.value = "london";
 
   const afterMapUrls = {
-    user: USER_ROUTE.buildUrl(),
-    map: MAP_ROUTE.buildUrl(),
-    mixed: MIXED_ROUTE.buildUrl(),
+    user: USER_ROUTE.url,
+    map: MAP_ROUTE.url,
+    mixed: MIXED_ROUTE.url,
   };
 
   return {

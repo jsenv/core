@@ -9,28 +9,28 @@ try {
     USER_PROFILE_ROUTE: `/user/:id=${userIdSignal}/profile?status=${statusSignal}`,
   });
 
-  // Build URL multiple times to potentially trigger caching
-  const firstCall = USER_PROFILE_ROUTE.buildUrl();
-  const secondCall = USER_PROFILE_ROUTE.buildUrl();
-  const thirdCall = USER_PROFILE_ROUTE.buildUrl();
+  // Read URL multiple times to check consistency
+  const firstCall = USER_PROFILE_ROUTE.url;
+  const secondCall = USER_PROFILE_ROUTE.url;
+  const thirdCall = USER_PROFILE_ROUTE.url;
 
   // Change signal values
   userIdSignal.value = "456";
   statusSignal.value = "inactive";
 
-  // Build URL again multiple times after signal changes
-  const fourthCall = USER_PROFILE_ROUTE.buildUrl();
-  const fifthCall = USER_PROFILE_ROUTE.buildUrl();
+  // Read URL again multiple times after signal changes
+  const fourthCall = USER_PROFILE_ROUTE.url;
+  const fifthCall = USER_PROFILE_ROUTE.url;
 
   // Change only one signal
   userIdSignal.value = "789";
 
-  const sixthCall = USER_PROFILE_ROUTE.buildUrl();
+  const sixthCall = USER_PROFILE_ROUTE.url;
 
   // Change the other signal
   statusSignal.value = "pending";
 
-  const seventhCall = USER_PROFILE_ROUTE.buildUrl();
+  const seventhCall = USER_PROFILE_ROUTE.url;
 
   return {
     signal_progression: {

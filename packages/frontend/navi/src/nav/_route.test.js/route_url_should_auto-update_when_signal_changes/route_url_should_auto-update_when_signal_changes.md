@@ -9,15 +9,15 @@ try {
     MAP_ROUTE: `/map?zone=${zoneSignal}&mode=${modeSignal}`,
   });
 
-  // Build initial URL
-  const initialUrl = MAP_ROUTE.buildUrl();
+  // Read initial URL
+  const initialUrl = MAP_ROUTE.url;
 
   // Change signal values
   zoneSignal.value = "london";
   modeSignal.value = "walking";
 
-  // Build URL again - should reflect new signal values
-  const updatedUrl = MAP_ROUTE.buildUrl();
+  // Read URL again - should reflect new signal values
+  const updatedUrl = MAP_ROUTE.url;
 
   return {
     initial_signal_values: {
