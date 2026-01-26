@@ -171,9 +171,18 @@ export const createRoutePattern = (pattern) => {
 
   const parsedPattern = parsePattern(cleanPattern, parameterDefaults);
 
+  // Create signalSet to track all signals this pattern depends on
+  const signalSet = new Set();
+  for (const connection of connections) {
+    if (connection.signal) {
+      signalSet.add(connection.signal);
+    }
+  }
+
   if (DEBUG) {
     console.debug(`[CustomPattern] Created pattern:`, parsedPattern);
     console.debug(`[CustomPattern] Signal connections:`, connections);
+    console.debug(`[CustomPattern] SignalSet size:`, signalSet.size);
   }
 
   const applyOn = (url) => {
@@ -744,6 +753,17 @@ export const createRoutePattern = (pattern) => {
   const buildMostPreciseUrl = (params = {}) => {
     if (DEBUG) {
       console.debug(`[${pattern}] buildMostPreciseUrl called`);
+    }
+
+    if (DEBUG) {
+      console.debug(
+        `[${pattern}] Reading ${signalSet.size} signals for reactive dependencies`,
+      );
+    }
+    for (const signal of signalSet) {
+      // Access signal.value to trigger dependency tracking
+      // eslint-disable-next-line no-unused-expressions
+      signal.value;
     }
 
     // Step 1: Resolve and clean parameters
@@ -2025,7 +2045,25 @@ export const setupPatterns = (patternDefinitions) => {
 
   for (const [key, urlPatternRaw] of Object.entries(patternDefinitions)) {
     const [cleanPattern, connections] = detectSignals(urlPatternRaw);
-    const parsedPattern = parsePattern(cleanPattern);
+
+    // Build parameter defaults from signal connections
+    const parameterDefaults = new Map();
+    for (const connection of connections) {
+      const { paramName, options } = connection;
+      if (options.defaultValue !== undefined) {
+        parameterDefaults.set(paramName, options.defaultValue);
+      }
+    }
+
+    const parsedPattern = parsePattern(cleanPattern, parameterDefaults);
+
+    // Create signalSet for this pattern
+    const signalSet = new Set();
+    for (const connection of connections) {
+      if (connection.signal) {
+        signalSet.add(connection.signal);
+      }
+    }
 
     const patternData = {
       key,
@@ -2033,6 +2071,7 @@ export const setupPatterns = (patternDefinitions) => {
       cleanPattern,
       connections,
       parsedPattern,
+      signalSet,
       childPatterns: [],
       parent: null,
     };
@@ -2079,6 +2118,60 @@ export const setupPatterns = (patternDefinitions) => {
       parent: currentData.parent, // Single parent pattern object
       originalPattern: currentPattern,
     });
+  }
+
+  // Phase 3: Collect all relevant signals for each pattern based on relationships
+  for (const currentPattern of allPatterns) {
+    const currentData = patternRegistry.get(currentPattern);
+    const allRelevantSignals = new Set();
+
+    // Add own signals
+    for (const signal of currentData.signalSet) {
+      allRelevantSignals.add(signal);
+    }
+
+    // Add signals from ancestors (they might be inherited)
+    let parentData = currentData.parent
+      ? patternRegistry.get(currentData.parent.originalPattern)
+      : null;
+    while (parentData) {
+      for (const connection of parentData.connections) {
+        if (connection.signal) {
+          allRelevantSignals.add(connection.signal);
+        }
+      }
+      // Move up the parent chain
+      parentData = parentData.parent
+        ? patternRegistry.get(parentData.parent.originalPattern)
+        : null;
+    }
+
+    // Add signals from descendants (they might be used for optimization)
+    const addDescendantSignals = (patternData) => {
+      for (const childPatternObj of patternData.childPatterns) {
+        const childData = patternRegistry.get(childPatternObj.originalPattern);
+        if (childData) {
+          // Add child's own signals
+          for (const connection of childData.connections) {
+            if (connection.signal) {
+              allRelevantSignals.add(connection.signal);
+            }
+          }
+          // Recursively add grandchildren signals
+          addDescendantSignals(childData);
+        }
+      }
+    };
+    addDescendantSignals(currentData);
+
+    // Update the pattern's signalSet with all relevant signals
+    currentData.signalSet = allRelevantSignals;
+
+    if (DEBUG && allRelevantSignals.size > 0) {
+      console.debug(
+        `[${currentPattern}] Collected ${allRelevantSignals.size} relevant signals`,
+      );
+    }
   }
 
   if (DEBUG) {
