@@ -5,6 +5,7 @@
 
 import { createPubSub } from "@jsenv/dom";
 import { batch, computed, effect, signal } from "@preact/signals";
+
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
 import {
   clearPatterns,
