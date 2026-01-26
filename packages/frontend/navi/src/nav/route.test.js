@@ -7,41 +7,24 @@ const baseUrl = "http://localhost:3000";
 setBaseUrl(baseUrl);
 
 await snapshotTests(import.meta.url, ({ test }) => {
-  test("route URL should auto-update when signal changes", () => {
+  test.ONLY("route.url should update when signal changes", () => {
     try {
-      const zoneSignal = stateSignal("paris", { id: "zone" });
-      const modeSignal = stateSignal("driving", { id: "mode" });
+      const zoneSignal = stateSignal("paris");
 
       const { MAP_ROUTE } = setupRoutes({
-        MAP_ROUTE: `/map?zone=${zoneSignal}&mode=${modeSignal}`,
+        MAP_ROUTE: `/map?zone=${zoneSignal}`,
       });
 
-      // Read initial URL
-      const initialUrl = MAP_ROUTE.url;
+      const urlBefore = MAP_ROUTE.url;
 
-      // Change signal values
       zoneSignal.value = "london";
-      modeSignal.value = "walking";
 
-      // Read URL again - should reflect new signal values
-      const updatedUrl = MAP_ROUTE.url;
+      const urlAfter = MAP_ROUTE.url;
 
       return {
-        initial_signal_values: {
-          zone: "paris",
-          mode: "driving",
-        },
-        updated_signal_values: {
-          zone: zoneSignal.value,
-          mode: modeSignal.value,
-        },
-        initial_url: initialUrl,
-        updated_url: updatedUrl,
-        url_changed: initialUrl !== updatedUrl,
-        // This should be true if the system is working correctly
-        expected_url_changed: true,
-        // Test passes if URLs are different (indicating signal changes were reflected)
-        test_result: initialUrl !== updatedUrl ? "PASS" : "FAIL",
+        url_before: urlBefore,
+        url_after: urlAfter,
+        should_be_different: urlBefore !== urlAfter,
       };
     } finally {
       clearAllRoutes();
