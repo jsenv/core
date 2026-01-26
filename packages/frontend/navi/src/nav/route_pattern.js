@@ -61,7 +61,8 @@ const buildQueryString = (params) => {
   return searchParamPairs.join("&");
 };
 
-const DEBUG = false;
+const DEBUG =
+  typeof process === "object" ? process.env.DEBUG === "true" : false;
 
 // Base URL management
 let baseFileUrl;
@@ -908,22 +909,6 @@ export const createRoutePattern = (pattern) => {
    * Helper: Try to use an ancestor route (only immediate parent for parameter optimization)
    */
   const tryUseAncestor = (ancestorPatternObj, resolvedParams) => {
-    // For routes with parameters, only allow optimization if all resolved parameters have default values
-    const hasNonDefaultParameters = connections.some((connection) => {
-      const resolvedValue = resolvedParams[connection.paramName];
-      const defaultValue = connection.options.defaultValue;
-      return resolvedValue !== defaultValue;
-    });
-
-    if (hasNonDefaultParameters) {
-      if (DEBUG) {
-        console.debug(
-          `[${pattern}] tryUseAncestor: Has non-default parameters, skipping`,
-        );
-      }
-      return null;
-    }
-
     // Check if this ancestor is the immediate parent (for parameter optimization safety)
     const relationships = patternRelationships.get(pattern);
     const immediateParent = relationships?.parent;
@@ -932,11 +917,34 @@ export const createRoutePattern = (pattern) => {
       immediateParent &&
       immediateParent.originalPattern === ancestorPatternObj.originalPattern
     ) {
-      // This is the immediate parent - safe to use parameter optimization
+      // This is the immediate parent - check if we can optimize
       if (DEBUG) {
         console.debug(
           `[${pattern}] tryUseAncestor: Trying immediate parent ${ancestorPatternObj.originalPattern}`,
         );
+      }
+
+      // For immediate parent optimization with parameters, only allow if:
+      // 1. All path/route parameters have default values, OR
+      // 2. The source route has only query parameters that are non-default
+      const hasNonDefaultPathParams = connections.some((connection) => {
+        const resolvedValue = resolvedParams[connection.paramName];
+        const defaultValue = connection.options.defaultValue;
+        // Check if this is a query parameter (not in the pattern path)
+        const isQueryParam = parsedPattern.queryParams.some(
+          (qp) => qp.name === connection.paramName,
+        );
+        // Allow non-default query parameters, but not path parameters
+        return !isQueryParam && resolvedValue !== defaultValue;
+      });
+
+      if (hasNonDefaultPathParams) {
+        if (DEBUG) {
+          console.debug(
+            `[${pattern}] tryUseAncestor: Has non-default path parameters, skipping`,
+          );
+        }
+        return null;
       }
 
       const result = tryDirectOptimization(
@@ -953,6 +961,23 @@ export const createRoutePattern = (pattern) => {
       }
       return result;
     }
+
+    // For non-immediate parents, only allow optimization if all resolved parameters have default values
+    const hasNonDefaultParameters = connections.some((connection) => {
+      const resolvedValue = resolvedParams[connection.paramName];
+      const defaultValue = connection.options.defaultValue;
+      return resolvedValue !== defaultValue;
+    });
+
+    if (hasNonDefaultParameters) {
+      if (DEBUG) {
+        console.debug(
+          `[${pattern}] tryUseAncestor: Non-immediate parent with non-default parameters, skipping`,
+        );
+      }
+      return null;
+    }
+
     // This is not the immediate parent - only allow literal-only optimization
     const hasParameters =
       connections.length > 0 ||
@@ -1113,27 +1138,71 @@ export const createRoutePattern = (pattern) => {
       console.debug(
         `[${pattern}] tryDirectOptimization: SUCCESS! Returning ancestor URL`,
       );
+      console.debug(
+        `[${pattern}] tryDirectOptimization: resolvedParams:`,
+        resolvedParams,
+      );
     }
 
     // Build ancestor URL with inherited parameters that don't conflict with optimization
     const ancestorParams = {};
 
     // First, add extra parameters from the original resolvedParams
-    // These are parameters that don't correspond to any pattern segments
+    // These are parameters that don't correspond to any pattern segments or query params
     const sourcePatternParamNames = new Set(
       sourceConnections.map((conn) => conn.paramName),
+    );
+    const sourceQueryParamNames = new Set(
+      sourcePattern.queryParams.map((qp) => qp.name),
     );
     const targetPatternParamNames = new Set(
       targetAncestor.connections.map((conn) => conn.paramName),
     );
+    const targetQueryParamNames = new Set(
+      targetAncestor.pattern.queryParams.map((qp) => qp.name),
+    );
 
     for (const [paramName, value] of Object.entries(resolvedParams)) {
-      // Include parameters that are not part of either pattern (extra parameters)
-      if (
+      if (DEBUG) {
+        console.debug(
+          `[${pattern}] tryDirectOptimization: Considering param ${paramName}=${value}`,
+        );
+      }
+      // Include parameters that target pattern specifically needs
+      if (targetQueryParamNames.has(paramName)) {
+        ancestorParams[paramName] = value;
+        if (DEBUG) {
+          console.debug(
+            `[${pattern}] tryDirectOptimization: Added target param ${paramName}=${value}`,
+          );
+        }
+      }
+      // Include source query parameters (these should be inherited during ancestor optimization)
+      else if (sourceQueryParamNames.has(paramName)) {
+        // Only include if the value is not the default value
+        const connection = sourceConnections.find(
+          (conn) => conn.paramName === paramName,
+        );
+        if (connection && connection.options.defaultValue !== value) {
+          ancestorParams[paramName] = value;
+          if (DEBUG) {
+            console.debug(
+              `[${pattern}] tryDirectOptimization: Added source param ${paramName}=${value}`,
+            );
+          }
+        }
+      }
+      // Include extra parameters that are not part of either pattern (true extra parameters)
+      else if (
         !sourcePatternParamNames.has(paramName) &&
         !targetPatternParamNames.has(paramName)
       ) {
         ancestorParams[paramName] = value;
+        if (DEBUG) {
+          console.debug(
+            `[${pattern}] tryDirectOptimization: Added extra param ${paramName}=${value}`,
+          );
+        }
       }
     }
 

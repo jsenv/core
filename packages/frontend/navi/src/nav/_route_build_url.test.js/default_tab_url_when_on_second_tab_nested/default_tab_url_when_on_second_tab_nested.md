@@ -6,15 +6,17 @@ try {
   const panelSignal = stateSignal(undefined);
   const isochroneTabSignal = stateSignal("compare");
   const isochroneWalkSignal = stateSignal(false);
+  const isochroneLongitudeSignal = stateSignal(undefined);
+  isochroneLongitudeSignal.value = 2;
   const { MAP_ISOCHRONE_COMPARE_ROUTE } = setupRoutes({
     MAP_ROUTE: `/map/?zone=${zoneSignal}`,
     MAP_PANEL_ROUTE: `/map/:panel=${panelSignal}/`,
     MAP_ISOCHRONE_ROUTE: `/map/isochrone/:tab=${isochroneTabSignal}/`,
-    MAP_ISOCHRONE_COMPARE_ROUTE: `/map/isochrone/compare?walk=${isochroneWalkSignal}`,
+    MAP_ISOCHRONE_COMPARE_ROUTE: `/map/isochrone/compare?walk=${isochroneWalkSignal}&iso_lon=${isochroneLongitudeSignal}`,
     MAP_ISOCHRONE_TIME_ROUTE: `/map/isochrone/time/`,
     MAP_ISOCHRONE_TIME_WALK_ROUTE: "/map/isochrone/time/walk",
   });
-  updateRoutes(`${baseUrl}/map/isochrone/time`);
+  updateRoutes(`${baseUrl}/map/isochrone/time?iso_lon=2`);
   return {
     isochrone_compare_url: MAP_ISOCHRONE_COMPARE_ROUTE.buildUrl(),
   };
@@ -26,7 +28,7 @@ try {
 
 ```js
 {
-  "isochrone_compare_url": "http://127.0.0.1/map/isochrone"
+  "isochrone_compare_url": "http://127.0.0.1/map/isochrone?iso_lon=2"
 }
 ```
 
