@@ -1,16 +1,8 @@
 # [route_url_sync.test.js](../route_url_sync.test.js)
 
 
-- [replaceParams should use most specific route for redirect](replaceparams_should_use_most_specific_route_for_redirect/replaceparams_should_use_most_specific_route_for_redirect.md)
-- [signal updates should trigger redirect on most specific matching route](signal_updates_should_trigger_redirect_on_most_specific_matching_route/signal_updates_should_trigger_redirect_on_most_specific_matching_route.md)
-- [parameterized route vs literal route conflict after navigation](parameterized_route_vs_literal_route_conflict_after_navigation/parameterized_route_vs_literal_route_conflict_after_navigation.md)
-- [parameterized route conflict with shared signals](parameterized_route_conflict_with_shared_signals/parameterized_route_conflict_with_shared_signals.md)
-- [signal should be cleared when route stops matching](signal_should_be_cleared_when_route_stops_matching/signal_should_be_cleared_when_route_stops_matching.md)
-- [signal preservation vs clearing behavior](signal_preservation_vs_clearing_behavior/signal_preservation_vs_clearing_behavior.md)
-- [signals preserved when navigating between different route families](signals_preserved_when_navigating_between_different_route_families/signals_preserved_when_navigating_between_different_route_families.md)
-- [mostSpecificRoute should prefer literal over parameterized routes](mostspecificroute_should_prefer_literal_over_parameterized_routes/mostspecificroute_should_prefer_literal_over_parameterized_routes.md)
-- [signal updates in child route (isochrone) with parent-child relationship](signal_updates_in_child_route_(isochrone)_with_parent-child_relationship/signal_updates_in_child_route_(isochrone)_with_parent-child_relationship.md)
-- [parameter value update in URL should sync to signal values](parameter_value_update_in_url_should_sync_to_signal_values/parameter_value_update_in_url_should_sync_to_signal_values.md)
+- [route URL generation bypasses signal reading](route_url_generation_bypasses_signal_reading/route_url_generation_bypasses_signal_reading.md)
+- [default value filtering bypasses signal inclusion](default_value_filtering_bypasses_signal_inclusion/default_value_filtering_bypasses_signal_inclusion.md)
 
 ---
 

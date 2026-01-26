@@ -69,7 +69,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
       // Generate URL - signal gets read but value filtered out as "default"
       const url = pattern.buildMostPreciseUrl();
 
-      return {
+      return {j
         signal_value: "default_zone",
         generated_url: url,
         expected_url: "/map/default_zone",
