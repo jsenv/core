@@ -1,4 +1,4 @@
-# [default value filtering bypasses signal inclusion](../../route_url_sync.test.js)
+# [signal not read during URL generation](../../route_url_sync.test.js)
 
 ```js
 try {
@@ -7,7 +7,6 @@ try {
 
   // Track signal access
   let signalAccessCount = 0;
-  const originalSignal = zoneSignal;
   const trackedSignal = new Proxy(zoneSignal, {
     get(target, prop) {
       if (prop === "value") {
@@ -20,7 +19,7 @@ try {
   // Create route pattern
   const pattern = createRoutePattern(`/map/:zone=${trackedSignal}`);
 
-  // Generate URL - signal gets read but value filtered out as "default"
+  // Generate URL - signal should be read but isn't due to optimization
   const url = pattern.buildMostPreciseUrl();
 
   return {
@@ -29,10 +28,8 @@ try {
     expected_url: "/map/default_zone",
     signal_access_count: signalAccessCount,
     url_missing_signal_value: !url.includes("default_zone"),
-    bug_reproduction:
-      url !== "/map/default_zone"
-        ? "SUCCESS - Signal value filtered out despite being read"
-        : "FAIL - URL generated correctly",
+    test_result:
+      signalAccessCount === 0 ? "FAIL - Signal never read" : "PASS",
   };
 } finally {
   globalSignalRegistry.clear();
@@ -46,7 +43,7 @@ try {
   "expected_url": "/map/default_zone",
   "signal_access_count": 0,
   "url_missing_signal_value": true,
-  "bug_reproduction": "SUCCESS - Signal value filtered out despite being read"
+  "test_result": "FAIL - Signal never read"
 }
 ```
 

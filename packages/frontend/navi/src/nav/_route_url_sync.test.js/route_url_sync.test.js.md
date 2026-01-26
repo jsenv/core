@@ -1,8 +1,7 @@
 # [route_url_sync.test.js](../route_url_sync.test.js)
 
 
-- [route URL generation bypasses signal reading](route_url_generation_bypasses_signal_reading/route_url_generation_bypasses_signal_reading.md)
-- [default value filtering bypasses signal inclusion](default_value_filtering_bypasses_signal_inclusion/default_value_filtering_bypasses_signal_inclusion.md)
+- [signal not read during URL generation](signal_not_read_during_url_generation/signal_not_read_during_url_generation.md)
 
 ---
 
