@@ -755,6 +755,8 @@ export const createRoutePattern = (pattern) => {
       console.debug(`[${pattern}] buildMostPreciseUrl called`);
     }
 
+    // COMMENTED OUT: Signal reading for reactive dependencies
+    // This causes the bug where signal updates don't trigger route.url updates
     if (DEBUG) {
       console.debug(
         `[${pattern}] Reading ${signalSet.size} signals for reactive dependencies`,

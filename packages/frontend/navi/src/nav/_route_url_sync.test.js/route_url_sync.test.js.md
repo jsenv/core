@@ -1,7 +1,7 @@
 # [route_url_sync.test.js](../route_url_sync.test.js)
 
 
-- [signal not read when accessing route.url](signal_not_read_when_accessing_route_url/signal_not_read_when_accessing_route_url.md)
+- [route.url properly reacts to signal changes with optimization fix](route_url_properly_reacts_to_signal_changes_with_optimization_fix/route_url_properly_reacts_to_signal_changes_with_optimization_fix.md)
 
 ---
 
