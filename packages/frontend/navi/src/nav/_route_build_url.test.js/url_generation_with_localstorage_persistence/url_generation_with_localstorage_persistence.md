@@ -1,4 +1,4 @@
-# [url generation with localStorage persistence](../../route_build_url.test.js#L297)
+# [url generation with localStorage persistence](../../route_build_url.test.js)
 
 ```js
 const localStorageMock = {

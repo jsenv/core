@@ -1,4 +1,4 @@
-# [literal segments should prevent descendant optimization](../../route_build_url.test.js#L760)
+# [literal segments should prevent descendant optimization](../../route_build_url.test.js)
 
 ```js
 try {

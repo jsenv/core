@@ -1,4 +1,4 @@
-# [parameterized route conflict with shared signals](../../route_url_sync.test.js#L315)
+# [parameterized route conflict with shared signals](../../route_url_sync.test.js)
 
 ```js
 try {

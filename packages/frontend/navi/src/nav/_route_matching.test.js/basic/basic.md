@@ -1,4 +1,4 @@
-# [basic](../../route_matching.test.js#L16)
+# [basic](../../route_matching.test.js)
 
 ```js
 try {

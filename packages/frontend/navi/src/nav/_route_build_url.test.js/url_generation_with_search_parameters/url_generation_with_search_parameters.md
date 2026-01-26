@@ -1,4 +1,4 @@
-# [url generation with search parameters](../../route_build_url.test.js#L273)
+# [url generation with search parameters](../../route_build_url.test.js)
 
 ```js
 try {

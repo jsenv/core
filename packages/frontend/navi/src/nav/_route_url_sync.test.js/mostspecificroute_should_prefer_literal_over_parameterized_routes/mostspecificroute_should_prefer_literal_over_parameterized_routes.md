@@ -1,4 +1,4 @@
-# [mostSpecificRoute should prefer literal over parameterized routes](../../route_url_sync.test.js#L706)
+# [mostSpecificRoute should prefer literal over parameterized routes](../../route_url_sync.test.js)
 
 ```js
 try {

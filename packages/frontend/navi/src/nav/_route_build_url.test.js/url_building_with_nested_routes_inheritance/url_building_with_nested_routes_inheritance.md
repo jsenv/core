@@ -1,4 +1,4 @@
-# [url building with nested routes inheritance](../../route_build_url.test.js#L32)
+# [url building with nested routes inheritance](../../route_build_url.test.js)
 
 ```js
 try {

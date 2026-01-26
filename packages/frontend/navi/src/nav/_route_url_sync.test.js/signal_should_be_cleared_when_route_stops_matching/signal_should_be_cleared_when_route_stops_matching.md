@@ -1,4 +1,4 @@
-# [signal should be cleared when route stops matching](../../route_url_sync.test.js#L472)
+# [signal should be cleared when route stops matching](../../route_url_sync.test.js)
 
 ```js
 try {

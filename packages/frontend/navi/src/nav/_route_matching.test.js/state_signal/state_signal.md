@@ -1,4 +1,4 @@
-# [state signal](../../route_matching.test.js#L31)
+# [state signal](../../route_matching.test.js)
 
 ```js
 try {

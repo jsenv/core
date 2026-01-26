@@ -1,4 +1,4 @@
-# [explicit params should override signal values](../../route_build_url.test.js#L212)
+# [explicit params should override signal values](../../route_build_url.test.js)
 
 ```js
 try {

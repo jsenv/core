@@ -1,4 +1,4 @@
-# [parameterized route vs literal route conflict after navigation](../../route_url_sync.test.js#L197)
+# [parameterized route vs literal route conflict after navigation](../../route_url_sync.test.js)
 
 ```js
 try {

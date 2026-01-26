@@ -1,4 +1,4 @@
-# [basic url building](../../route_build_url.test.js#L10)
+# [basic url building](../../route_build_url.test.js)
 
 ```js
 try {

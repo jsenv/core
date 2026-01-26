@@ -1,4 +1,4 @@
-# [signal preservation vs clearing behavior](../../route_url_sync.test.js#L544)
+# [signal preservation vs clearing behavior](../../route_url_sync.test.js)
 
 ```js
 try {

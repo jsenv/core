@@ -1,4 +1,4 @@
-# [parent url updates when child signals change](../../route_build_url.test.js#L166)
+# [parent url updates when child signals change](../../route_build_url.test.js)
 
 ```js
 try {

@@ -1,4 +1,4 @@
-# [search param order with complex patterns](../../route_build_url.test.js#L594)
+# [search param order with complex patterns](../../route_build_url.test.js)
 
 ```js
 try {

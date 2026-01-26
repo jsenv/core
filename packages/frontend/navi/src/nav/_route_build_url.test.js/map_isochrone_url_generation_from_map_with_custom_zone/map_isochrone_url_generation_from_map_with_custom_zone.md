@@ -1,4 +1,4 @@
-# [map isochrone url generation from map with custom zone](../../route_build_url.test.js#L620)
+# [map isochrone url generation from map with custom zone](../../route_build_url.test.js)
 
 ```js
 try {

@@ -1,4 +1,4 @@
-# [matchesParams with trailing slash behavior](../../route_matching.test.js#L158)
+# [matchesParams with trailing slash behavior](../../route_matching.test.js)
 
 ```js
 try {

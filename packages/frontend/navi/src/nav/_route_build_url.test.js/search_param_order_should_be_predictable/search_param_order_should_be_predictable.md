@@ -1,4 +1,4 @@
-# [search param order should be predictable](../../route_build_url.test.js#L559)
+# [search param order should be predictable](../../route_build_url.test.js)
 
 ```js
 try {

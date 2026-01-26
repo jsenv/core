@@ -1,4 +1,4 @@
-# [parent route should handle undefined signals correctly](../../route_build_url.test.js#L733)
+# [parent route should handle undefined signals correctly](../../route_build_url.test.js)
 
 ```js
 try {

@@ -1,4 +1,4 @@
-# [route with undefined parameter default should not optimize to children](../../route_build_url.test.js#L779)
+# [route with undefined parameter default should not optimize to children](../../route_build_url.test.js)
 
 ```js
 try {

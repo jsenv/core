@@ -1,4 +1,4 @@
-# [settings route should return /admin when all params are defaults](../../route_build_url.test.js#L531)
+# [settings route should return /admin when all params are defaults](../../route_build_url.test.js)
 
 ```js
 try {

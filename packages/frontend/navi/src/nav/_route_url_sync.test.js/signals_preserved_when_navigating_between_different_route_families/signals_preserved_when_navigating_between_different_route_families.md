@@ -1,4 +1,4 @@
-# [signals preserved when navigating between different route families](../../route_url_sync.test.js#L625)
+# [signals preserved when navigating between different route families](../../route_url_sync.test.js)
 
 ```js
 try {

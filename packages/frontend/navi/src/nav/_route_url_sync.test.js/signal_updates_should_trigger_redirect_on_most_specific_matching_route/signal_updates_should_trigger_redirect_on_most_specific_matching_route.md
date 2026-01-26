@@ -1,4 +1,4 @@
-# [signal updates should trigger redirect on most specific matching route](../../route_url_sync.test.js#L104)
+# [signal updates should trigger redirect on most specific matching route](../../route_url_sync.test.js)
 
 ```js
 try {

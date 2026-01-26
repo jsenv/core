@@ -1,4 +1,4 @@
-# [signal updates in child route (isochrone) with parent-child relationship](../../route_url_sync.test.js#L808)
+# [signal updates in child route (isochrone) with parent-child relationship](../../route_url_sync.test.js)
 
 ```js
 try {

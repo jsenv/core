@@ -1,4 +1,4 @@
-# [root route should not use deepest url generation](../../route_build_url.test.js#L248)
+# [root route should not use deepest url generation](../../route_build_url.test.js)
 
 ```js
 try {

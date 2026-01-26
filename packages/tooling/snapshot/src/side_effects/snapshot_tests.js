@@ -53,6 +53,7 @@ export const snapshotTests = async (
     logEffects,
     filesystemEffects,
     throwWhenDiff = process.env.CI,
+    sourceLocation = false,
   } = options;
   filesystemActions = {
     "**": "compare",
@@ -184,10 +185,13 @@ export const snapshotTests = async (
       });
       sideEffectsMap.set(scenario, sideEffects);
       const sideEffectsMarkdown = renderSideEffects(sideEffects, {
-        sourceFileUrl: `${callSite.url}#L${callSite.line}`,
+        sourceFileUrl: sourceLocation
+          ? `${callSite.url}#L${callSite.line}`
+          : callSite.url,
         sideEffectMdFileUrl: scenarioMdFileUrl,
         generateOutFileUrl: generateScenarioOutFileUrl,
         title: scenario,
+        sourceLocation,
       });
       writeFileSync(scenarioMdFileUrl, sideEffectsMarkdown);
     }

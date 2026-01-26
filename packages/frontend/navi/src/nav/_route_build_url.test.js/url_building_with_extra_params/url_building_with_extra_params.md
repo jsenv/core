@@ -1,4 +1,4 @@
-# [url building with extra params](../../route_build_url.test.js#L350)
+# [url building with extra params](../../route_build_url.test.js)
 
 ```js
 try {

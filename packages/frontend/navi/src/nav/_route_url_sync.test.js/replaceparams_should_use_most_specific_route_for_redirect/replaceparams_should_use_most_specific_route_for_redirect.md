@@ -1,4 +1,4 @@
-# [replaceParams should use most specific route for redirect](../../route_url_sync.test.js#L10)
+# [replaceParams should use most specific route for redirect](../../route_url_sync.test.js)
 
 ```js
 try {
