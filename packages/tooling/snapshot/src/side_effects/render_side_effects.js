@@ -50,6 +50,7 @@ export const renderSideEffects = (
       // and in that case we might want to move it to an other file
       dedicatedFile: { line: 50, length: 5000 },
     }),
+    sourceLocation = false,
     errorTransform,
   } = {},
 ) => {
@@ -97,6 +98,7 @@ export const renderSideEffects = (
       replace,
       errorTransform,
       lastSideEffectNumber,
+      sourceLocation,
     });
   }
   markdown += sideEffectMd;
@@ -163,6 +165,7 @@ const renderOneSideEffect = (
     replace,
     errorTransform,
     lastSideEffectNumber,
+    sourceLocation,
   },
 ) => {
   const { render } = sideEffect;
@@ -197,6 +200,7 @@ const renderOneSideEffect = (
       replace,
       rootDirectoryUrl,
       errorTransform,
+      sourceLocation,
     });
   }
   if (sideEffect.code === "source_code") {
@@ -233,6 +237,7 @@ const renderText = (
     replace,
     rootDirectoryUrl,
     errorTransform,
+    sourceLocation,
   },
 ) => {
   if (text && typeof text === "object") {
@@ -247,8 +252,15 @@ const renderText = (
         sideEffectMdFileUrl,
         { preferRelativeNotation: true },
       );
-      const sourceCodeLinkText = `${callSiteRelativeUrl}:${callSite.line}:${callSite.column}`;
-      const sourceCodeLinkHref = `${callSiteRelativeUrl}#L${callSite.line}`;
+      let sourceCodeLinkText;
+      let sourceCodeLinkHref;
+      if (sourceLocation) {
+        sourceCodeLinkText = `${callSiteRelativeUrl}:${callSite.line}:${callSite.column}`;
+        sourceCodeLinkHref = `${callSiteRelativeUrl}#L${callSite.line}`;
+      } else {
+        sourceCodeLinkText = `${callSiteRelativeUrl}`;
+        sourceCodeLinkHref = `${callSiteRelativeUrl}`;
+      }
       sourceMd += "\n";
       sourceMd += renderSmallLink({
         text: sourceCodeLinkText,

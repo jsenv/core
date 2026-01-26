@@ -254,6 +254,92 @@ export const createRoutePattern = (pattern) => {
       console.debug(`[${pattern}] Params passed to buildUrl:`, params);
     }
 
+    // CRITICAL: Check if parent route can reach all child route's literal segments
+    // A route can only optimize to a descendant if there's a viable path through parameters
+    // to reach all the descendant's literal segments (e.g., "/" cannot reach "/admin"
+    // without a parameter that produces "admin")
+    const childLiterals = childPatternObj.pattern.segments.filter(
+      (segment) => segment.type === "literal",
+    );
+    // Check each child literal segment
+    for (let i = 0; i < childLiterals.length; i++) {
+      const childLiteral = childLiterals[i];
+      const childPosition = childLiteral.index;
+      const literalValue = childLiteral.value;
+
+      // Check what the parent has at this position
+      const parentSegmentAtPosition = parsedPattern.segments.find(
+        (segment) => segment.index === childPosition,
+      );
+
+      if (parentSegmentAtPosition) {
+        if (parentSegmentAtPosition.type === "literal") {
+          // Parent has a literal at this position
+          if (parentSegmentAtPosition.value === literalValue) {
+            // Same literal - no problem
+            continue;
+          } else {
+            // Different literal - incompatible
+            if (DEBUG) {
+              console.debug(
+                `[${pattern}] INCOMPATIBLE with ${childPatternObj.originalPattern}: conflicting literal "${parentSegmentAtPosition.value}" vs "${literalValue}" at position ${childPosition}`,
+              );
+            }
+            return { isCompatible: false, childParams: {} };
+          }
+        } else if (parentSegmentAtPosition.type === "param") {
+          // Parent has a parameter at this position - child literal can satisfy this parameter
+          // This is OK - the child route provides the value for the parent's parameter
+          continue;
+        }
+      } else {
+        // Parent doesn't have a segment at this position - child extends beyond parent
+        // Check if any available parameter can produce this literal value
+        const canReachLiteral =
+          // Check parent's own parameters (signals and user params)
+          connections.some((conn) => {
+            const signalValue = conn.signal?.value;
+            const userValue = params[conn.paramName];
+            const effectiveValue =
+              userValue !== undefined ? userValue : signalValue;
+            return (
+              effectiveValue === literalValue &&
+              effectiveValue !== conn.options.defaultValue
+            );
+          }) ||
+          // Check user-provided parameters
+          Object.entries(params).some(([, value]) => value === literalValue) ||
+          // Check parameters from ALL routes in the system that could provide this literal
+          // This includes both direct parameters and signals from other routes
+          (() => {
+            // Check all pattern relationships for signals that match this literal
+            for (const [, relationship] of patternRelationships) {
+              if (relationship.connections) {
+                for (const conn of relationship.connections) {
+                  const signalValue = conn.signal?.value;
+                  if (
+                    signalValue === literalValue &&
+                    signalValue !== conn.options.defaultValue
+                  ) {
+                    return true;
+                  }
+                }
+              }
+            }
+            return false;
+          })();
+
+        if (!canReachLiteral) {
+          if (DEBUG) {
+            console.debug(
+              `[${pattern}] INCOMPATIBLE with ${childPatternObj.originalPattern}: cannot reach literal segment "${literalValue}" at position ${childPosition} - no viable parameter path`,
+            );
+          }
+          return { isCompatible: false, childParams: {} };
+        }
+      }
+    }
+
     // Check both parent signals AND user-provided params for child route matching
     const paramsToCheck = [
       ...connections,
@@ -661,16 +747,6 @@ export const createRoutePattern = (pattern) => {
   const buildMostPreciseUrl = (params = {}) => {
     if (DEBUG) {
       console.debug(`[${pattern}] buildMostPreciseUrl called`);
-    }
-
-    // Root routes should never optimize to descendants - always stay at "/"
-    if (pattern === "/") {
-      if (DEBUG) {
-        console.debug(`[${pattern}] Root route - skipping optimization`);
-      }
-      const resolvedParams = resolveParams(params);
-      const finalParams = removeDefaultValues(resolvedParams);
-      return buildCurrentRouteUrl(finalParams);
     }
 
     // Step 1: Resolve and clean parameters

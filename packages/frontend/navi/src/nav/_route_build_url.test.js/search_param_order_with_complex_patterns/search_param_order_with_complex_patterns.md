@@ -29,7 +29,7 @@ try {
 ```js
 {
   "search_no_params": "http://127.0.0.1/search",
-  "search_with_params": "http://127.0.0.1/search/results?sort=date",
+  "search_with_params": "http://127.0.0.1/search?sort=date",
   "results_no_params": "http://127.0.0.1/search/results",
   "results_with_params": "http://127.0.0.1/search/results?page=2&limit=50"
 }

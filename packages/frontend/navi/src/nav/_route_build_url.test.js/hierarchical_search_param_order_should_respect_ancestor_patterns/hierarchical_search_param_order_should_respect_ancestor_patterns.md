@@ -37,9 +37,9 @@ try {
 
 ```js
 {
-  "child_with_params": "http://127.0.0.1/map/isochrone/walk?zone=custom-zone&walk&time=45",
+  "child_with_params": "http://127.0.0.1/map/isochrone?zone=custom-zone&walk&time=45",
   "grandchild_with_params": "http://127.0.0.1/map/isochrone/walk?zone=another-zone&walk&mode=cycling",
-  "partial_params": "http://127.0.0.1/map/isochrone/walk?zone=partial-zone&walk"
+  "partial_params": "http://127.0.0.1/map/isochrone?zone=partial-zone&walk"
 }
 ```
 

@@ -699,9 +699,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
         map_url_panel_explicitely_undefined: MAP_ROUTE.buildUrl({
           panel: undefined,
         }),
-        // For debugging - what would isochrone route look like directly?
         isochrone_direct: MAP_ISOCHRONE_ROUTE.buildUrl(),
-        // Check what panel route would look like
         panel_route_direct: MAP_PANEL_ROUTE.buildUrl(),
       };
     } finally {
