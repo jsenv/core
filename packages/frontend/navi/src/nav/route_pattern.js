@@ -241,8 +241,39 @@ export const createRoutePattern = (pattern) => {
   };
 
   /**
-   * Helper: Check if parameters are compatible with child route
+   * Helper: Check if a literal value can be reached through available parameters
    */
+  const canReachLiteralValue = (literalValue, params) => {
+    // Check parent's own parameters (signals and user params)
+    const parentCanProvide = connections.some((conn) => {
+      const signalValue = conn.signal?.value;
+      const userValue = params[conn.paramName];
+      const effectiveValue = userValue !== undefined ? userValue : signalValue;
+      return (
+        effectiveValue === literalValue &&
+        effectiveValue !== conn.options.defaultValue
+      );
+    });
+
+    // Check user-provided parameters
+    const userCanProvide = Object.entries(params).some(
+      ([, value]) => value === literalValue,
+    );
+
+    // Check if any signal in the system can provide this literal
+    const systemCanProvide = Array.from(patternRelationships.values()).some(
+      (relationship) =>
+        relationship.connections?.some((conn) => {
+          const signalValue = conn.signal?.value;
+          return (
+            signalValue === literalValue &&
+            signalValue !== conn.options.defaultValue
+          );
+        }),
+    );
+
+    return parentCanProvide || userCanProvide || systemCanProvide;
+  };
   const checkChildRouteCompatibility = (childPatternObj, params) => {
     const childParams = {};
     let isCompatible = true;
@@ -278,65 +309,30 @@ export const createRoutePattern = (pattern) => {
           if (parentSegmentAtPosition.value === literalValue) {
             // Same literal - no problem
             continue;
-          } else {
-            // Different literal - incompatible
-            if (DEBUG) {
-              console.debug(
-                `[${pattern}] INCOMPATIBLE with ${childPatternObj.originalPattern}: conflicting literal "${parentSegmentAtPosition.value}" vs "${literalValue}" at position ${childPosition}`,
-              );
-            }
-            return { isCompatible: false, childParams: {} };
           }
-        } else if (parentSegmentAtPosition.type === "param") {
-          // Parent has a parameter at this position - child literal can satisfy this parameter
-          // This is OK - the child route provides the value for the parent's parameter
-          continue;
-        }
-      } else {
-        // Parent doesn't have a segment at this position - child extends beyond parent
-        // Check if any available parameter can produce this literal value
-        const canReachLiteral =
-          // Check parent's own parameters (signals and user params)
-          connections.some((conn) => {
-            const signalValue = conn.signal?.value;
-            const userValue = params[conn.paramName];
-            const effectiveValue =
-              userValue !== undefined ? userValue : signalValue;
-            return (
-              effectiveValue === literalValue &&
-              effectiveValue !== conn.options.defaultValue
-            );
-          }) ||
-          // Check user-provided parameters
-          Object.entries(params).some(([, value]) => value === literalValue) ||
-          // Check parameters from ALL routes in the system that could provide this literal
-          // This includes both direct parameters and signals from other routes
-          (() => {
-            // Check all pattern relationships for signals that match this literal
-            for (const [, relationship] of patternRelationships) {
-              if (relationship.connections) {
-                for (const conn of relationship.connections) {
-                  const signalValue = conn.signal?.value;
-                  if (
-                    signalValue === literalValue &&
-                    signalValue !== conn.options.defaultValue
-                  ) {
-                    return true;
-                  }
-                }
-              }
-            }
-            return false;
-          })();
-
-        if (!canReachLiteral) {
+          // Different literal - incompatible
           if (DEBUG) {
             console.debug(
-              `[${pattern}] INCOMPATIBLE with ${childPatternObj.originalPattern}: cannot reach literal segment "${literalValue}" at position ${childPosition} - no viable parameter path`,
+              `[${pattern}] INCOMPATIBLE with ${childPatternObj.originalPattern}: conflicting literal "${parentSegmentAtPosition.value}" vs "${literalValue}" at position ${childPosition}`,
             );
           }
           return { isCompatible: false, childParams: {} };
         }
+        if (parentSegmentAtPosition.type === "param") {
+          // Parent has a parameter at this position - child literal can satisfy this parameter
+          // This is OK - the child route provides the value for the parent's parameter
+          continue;
+        }
+      }
+      // Parent doesn't have a segment at this position - child extends beyond parent
+      // Check if any available parameter can produce this literal value
+      else if (!canReachLiteralValue(literalValue, params)) {
+        if (DEBUG) {
+          console.debug(
+            `[${pattern}] INCOMPATIBLE with ${childPatternObj.originalPattern}: cannot reach literal segment "${literalValue}" at position ${childPosition} - no viable parameter path`,
+          );
+        }
+        return { isCompatible: false, childParams: {} };
       }
     }
 
