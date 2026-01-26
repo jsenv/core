@@ -755,14 +755,17 @@ export const createRoutePattern = (pattern) => {
       console.debug(`[${pattern}] buildMostPreciseUrl called`);
     }
 
-    // COMMENTED OUT: Signal reading for reactive dependencies
-    // This causes the bug where signal updates don't trigger route.url updates
+    // Get the updated signalSet from pattern registry (set by setupPatterns)
+    const patternData = patternRegistry.get(pattern);
+    const effectiveSignalSet = patternData?.signalSet || signalSet;
+
+    // Access signal.value to trigger dependency tracking
     if (DEBUG) {
       console.debug(
-        `[${pattern}] Reading ${signalSet.size} signals for reactive dependencies`,
+        `[${pattern}] Reading ${effectiveSignalSet.size} signals for reactive dependencies`,
       );
     }
-    for (const signal of signalSet) {
+    for (const signal of effectiveSignalSet) {
       // Access signal.value to trigger dependency tracking
       // eslint-disable-next-line no-unused-expressions
       signal.value;

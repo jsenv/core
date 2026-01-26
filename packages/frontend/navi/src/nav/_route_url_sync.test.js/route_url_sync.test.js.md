@@ -1,7 +1,7 @@
 # [route_url_sync.test.js](../route_url_sync.test.js)
 
 
-- [route.url properly reacts to signal changes with optimization fix](route_url_properly_reacts_to_signal_changes_with_optimization_fix/route_url_properly_reacts_to_signal_changes_with_optimization_fix.md)
+- [BUG REPRODUCTION: parent route incorrectly uses child signals in URL building](bug_reproduction_parent_route_incorrectly_uses_child_signals_in_url_building/bug_reproduction_parent_route_incorrectly_uses_child_signals_in_url_building.md)
 
 ---
 
