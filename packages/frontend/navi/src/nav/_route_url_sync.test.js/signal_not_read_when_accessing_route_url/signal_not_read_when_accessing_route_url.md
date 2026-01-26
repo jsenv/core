@@ -1,4 +1,4 @@
-# [signal not read during URL generation](../../route_url_sync.test.js)
+# [signal not read when accessing route.url](../../route_url_sync.test.js)
 
 ```js
 try {
@@ -16,22 +16,25 @@ try {
     },
   });
 
-  // Create route pattern
-  const pattern = createRoutePattern(`/map/:zone=${trackedSignal}`);
+  // Use public API: setupRoutes
+  const { MAP_ROUTE } = setupRoutes({
+    MAP_ROUTE: `/map/:zone=${trackedSignal}`,
+  });
 
-  // Generate URL - signal should be read but isn't due to optimization
-  const url = pattern.buildMostPreciseUrl();
+  // Use public API: route.url (this should read signal but doesn't)
+  const url = MAP_ROUTE.url;
 
   return {
     signal_value: "default_zone",
     generated_url: url,
-    expected_url: "/map/default_zone",
+    expected_url: "http://127.0.0.1/map/default_zone",
     signal_access_count: signalAccessCount,
     url_missing_signal_value: !url.includes("default_zone"),
     test_result:
       signalAccessCount === 0 ? "FAIL - Signal never read" : "PASS",
   };
 } finally {
+  clearAllRoutes();
   globalSignalRegistry.clear();
 }
 ```
@@ -39,8 +42,8 @@ try {
 ```js
 {
   "signal_value": "default_zone",
-  "generated_url": "/map",
-  "expected_url": "/map/default_zone",
+  "generated_url": "http://127.0.0.1/map",
+  "expected_url": "http://127.0.0.1/map/default_zone",
   "signal_access_count": 0,
   "url_missing_signal_value": true,
   "test_result": "FAIL - Signal never read"

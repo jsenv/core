@@ -1,7 +1,7 @@
 # [route_url_sync.test.js](../route_url_sync.test.js)
 
 
-- [signal not read during URL generation](signal_not_read_during_url_generation/signal_not_read_during_url_generation.md)
+- [signal not read when accessing route.url](signal_not_read_when_accessing_route_url/signal_not_read_when_accessing_route_url.md)
 
 ---
 
