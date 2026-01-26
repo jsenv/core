@@ -7,24 +7,31 @@ const baseUrl = "http://localhost:3000";
 setBaseUrl(baseUrl);
 
 await snapshotTests(import.meta.url, ({ test }) => {
-  test.ONLY("route.url should update when signal changes", () => {
+  test.ONLY("route.url should NOT update when unrelated signal changes", () => {
     try {
       const zoneSignal = stateSignal("paris");
+      const panelSignal = stateSignal("isochrone");
 
-      const { MAP_ROUTE } = setupRoutes({
-        MAP_ROUTE: `/map?zone=${zoneSignal}`,
+      const { MAP_ROUTE, MAP_PANEL_ROUTE } = setupRoutes({
+        MAP_ROUTE: `/map?zone=${zoneSignal}`, // Uses zoneSignal only
+        MAP_PANEL_ROUTE: `/map/:panel=${panelSignal}?zone=${zoneSignal}`, // Uses both signals
       });
 
-      const urlBefore = MAP_ROUTE.url;
+      const mapUrlBefore = MAP_ROUTE.url;
 
-      zoneSignal.value = "london";
+      // Change panelSignal - should NOT affect MAP_ROUTE since it doesn't use panelSignal
+      panelSignal.value = "settings";
 
-      const urlAfter = MAP_ROUTE.url;
+      const mapUrlAfter = MAP_ROUTE.url;
 
       return {
-        url_before: urlBefore,
-        url_after: urlAfter,
-        should_be_different: urlBefore !== urlAfter,
+        map_url_before: mapUrlBefore,
+        map_url_after: mapUrlAfter,
+        should_be_same: mapUrlBefore === mapUrlAfter,
+        test_result:
+          mapUrlBefore === mapUrlAfter
+            ? "PASS"
+            : "FAIL - MAP_ROUTE affected by panelSignal",
       };
     } finally {
       clearAllRoutes();
