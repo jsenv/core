@@ -1039,4 +1039,67 @@ await snapshotTests(import.meta.url, ({ test }) => {
       globalSignalRegistry.clear();
     }
   });
+
+  test("parameter value update in URL should sync to signal values", () => {
+    try {
+      const zoneSignal = stateSignal("london");
+      const lonSignal = stateSignal(3);
+      const isochroneLongitudeSignal = stateSignal(2);
+      const isochroneTimeModeSignal = stateSignal("walk");
+
+      const { MAP_ISOCHRONE_TIME_ROUTE } = setupRoutes({
+        MAP_ROUTE: `/map/?zone=${zoneSignal}&lon=${lonSignal}`,
+        MAP_ISOCHRONE_ROUTE: `/map/isochrone/?iso_lon=${isochroneLongitudeSignal}`,
+        MAP_ISOCHRONE_TIME_ROUTE: `/map/isochrone/time/:mode=${isochroneTimeModeSignal}/`,
+      });
+
+      // Set initial URL state: /map/isochrone/time?zone=london&lon=3&iso_lon=2
+      updateRoutes(`${baseUrl}/map/isochrone/time?zone=london&lon=3&iso_lon=2`);
+
+      // Capture initial state
+      const initialState = {
+        zone: zoneSignal.value,
+        lon: lonSignal.value,
+        iso_lon: isochroneLongitudeSignal.value,
+        url: MAP_ISOCHRONE_TIME_ROUTE.buildUrl(),
+        matching: MAP_ISOCHRONE_TIME_ROUTE.matching,
+      };
+
+      updateRoutes(`${baseUrl}/map/isochrone/time?zone=london&lon=3&iso_lon=2`);
+
+      // Capture state after URL update
+      const finalState = {
+        zone: zoneSignal.value,
+        lon: lonSignal.value,
+        iso_lon: isochroneLongitudeSignal.value,
+        url: MAP_ISOCHRONE_TIME_ROUTE.buildUrl(),
+        matching: MAP_ISOCHRONE_TIME_ROUTE.matching,
+      };
+
+      return {
+        initial_state: initialState,
+        final_state: finalState,
+        signal_updates: {
+          zone_changed: initialState.zone !== finalState.zone,
+          zone_old_value: initialState.zone,
+          zone_new_value: finalState.zone,
+          lon_changed: initialState.lon !== finalState.lon,
+          iso_lon_changed: initialState.iso_lon !== finalState.iso_lon,
+        },
+        url_updates: {
+          url_changed: initialState.url !== finalState.url,
+          initial_url: initialState.url,
+          final_url: finalState.url,
+        },
+        route_matching: {
+          initially_matching: initialState.matching,
+          finally_matching: finalState.matching,
+          matching_changed: initialState.matching !== finalState.matching,
+        },
+      };
+    } finally {
+      clearAllRoutes();
+      globalSignalRegistry.clear();
+    }
+  });
 });
