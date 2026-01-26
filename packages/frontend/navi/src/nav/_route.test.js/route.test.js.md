@@ -1,6 +1,7 @@
 # [route.test.js](../route.test.js)
 
 
+- [route.url fails to update when default value optimization skips signal reading](route_url_fails_to_update_when_default_value_optimization_skips_signal_reading/route_url_fails_to_update_when_default_value_optimization_skips_signal_reading.md)
 - [route.url should NOT update when unrelated signal changes](route_url_should_not_update_when_unrelated_signal_changes/route_url_should_not_update_when_unrelated_signal_changes.md)
 - [multiple routes sharing signals should auto-update when signal changes](multiple_routes_sharing_signals_should_auto-update_when_signal_changes/multiple_routes_sharing_signals_should_auto-update_when_signal_changes.md)
 - [route URL updates should be isolated to relevant signals only](route_url_updates_should_be_isolated_to_relevant_signals_only/route_url_updates_should_be_isolated_to_relevant_signals_only.md)
