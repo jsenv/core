@@ -804,9 +804,9 @@ const weakEffect = (values, callback) => {
 
 const SYMBOL_OBJECT_SIGNAL = Symbol.for("navi_object_signal");
 
-let DEBUG$2 = false;
+let DEBUG$3 = false;
 const enableDebugActions = () => {
-  DEBUG$2 = true;
+  DEBUG$3 = true;
 };
 
 let dispatchActions = (params) => {
@@ -870,7 +870,7 @@ const prerunProtectionRegistry = (() => {
     if (protection) {
       clearTimeout(protection.timeoutId);
       protectedActionMap.delete(action);
-      if (DEBUG$2) {
+      if (DEBUG$3) {
         const elapsed = Date.now() - protection.timestamp;
         console.debug(`"${action}": GC protection removed after ${elapsed}ms`);
       }
@@ -888,7 +888,7 @@ const prerunProtectionRegistry = (() => {
       const timestamp = Date.now();
       const timeoutId = setTimeout(() => {
         unprotect(action);
-        if (DEBUG$2) {
+        if (DEBUG$3) {
           console.debug(
             `"${action}": prerun protection expired after ${PROTECTION_DURATION}ms`,
           );
@@ -897,7 +897,7 @@ const prerunProtectionRegistry = (() => {
 
       protectedActionMap.set(action, { timeoutId, timestamp });
 
-      if (DEBUG$2) {
+      if (DEBUG$3) {
         console.debug(
           `"${action}": protected from GC for ${PROTECTION_DURATION}ms`,
         );
@@ -1008,7 +1008,7 @@ const updateActions = ({
 
   const { runningSet, settledSet } = getActivationInfo();
 
-  if (DEBUG$2) {
+  if (DEBUG$3) {
     let argSource = `reason: \`${reason}\``;
     if (isReplace) {
       argSource += `, isReplace: true`;
@@ -1132,7 +1132,7 @@ ${lines.join("\n")}`,
       }
     }
   }
-  if (DEBUG$2) {
+  if (DEBUG$3) {
     const lines = [
       ...(willResetSet.size
         ? [formatActionSet(willResetSet, "- will reset:")]
@@ -1228,7 +1228,7 @@ ${lines.join("\n")}`);
       actionToPromotePrivateProperties.isPrerunSignal.value = false;
     }
   }
-  if (DEBUG$2) {
+  if (DEBUG$3) {
     console.groupEnd();
   }
 
@@ -1339,7 +1339,7 @@ const createAction = (callback, rootOptions = {}) => {
       if (!actionAbort) {
         return false;
       }
-      if (DEBUG$2) {
+      if (DEBUG$3) {
         console.log(`"${action}": aborting (reason: ${reason})`);
       }
       actionAbort(reason);
@@ -1611,7 +1611,7 @@ const createAction = (callback, rootOptions = {}) => {
           if (isPrerun && (globalAbortSignal.aborted || abortSignal.aborted)) {
             prerunProtectionRegistry.unprotect(action);
           }
-          if (DEBUG$2) {
+          if (DEBUG$3) {
             console.log(`"${action}": aborted (reason: ${abortReason})`);
           }
         };
@@ -1684,7 +1684,7 @@ const createAction = (callback, rootOptions = {}) => {
             onComplete?.(computedDataSignal.peek(), action);
             completeSideEffect?.(action);
           });
-          if (DEBUG$2) {
+          if (DEBUG$3) {
             console.log(`"${action}": completed`);
           }
           return computedDataSignal.peek();
@@ -1711,7 +1711,7 @@ const createAction = (callback, rootOptions = {}) => {
               "never supposed to happen, abort error should be handled by the abort signal",
             );
           }
-          if (DEBUG$2) {
+          if (DEBUG$3) {
             console.log(
               `"${action}": failed (error: ${e}, handled by ui: ${ui.hasRenderers})`,
             );
@@ -1781,7 +1781,7 @@ const createAction = (callback, rootOptions = {}) => {
 
       const performStop = ({ reason }) => {
         abort(reason);
-        if (DEBUG$2) {
+        if (DEBUG$3) {
           console.log(`"${action}": stopping (reason: ${reason})`);
         }
 
@@ -7608,6 +7608,9 @@ const buildQueryString = (params) => {
   return searchParamPairs.join("&");
 };
 
+const DEBUG$2 =
+  typeof process === "object" ? process.env.DEBUG === "true" : false;
+
 // Base URL management
 let baseFileUrl;
 let baseUrl;
@@ -7713,12 +7716,24 @@ const createRoutePattern = (pattern) => {
 
   const parsedPattern = parsePattern(cleanPattern, parameterDefaults);
 
+  if (DEBUG$2) {
+    console.debug(`[CustomPattern] Created pattern:`, parsedPattern);
+    console.debug(`[CustomPattern] Signal connections:`, connections);
+  }
+
   const applyOn = (url) => {
     const result = matchUrl(parsedPattern, url, {
       parameterDefaults,
       baseUrl,
       connections,
     });
+
+    if (DEBUG$2) {
+      console.debug(
+        `[CustomPattern] Matching "${url}" against "${cleanPattern}":`,
+        result,
+      );
+    }
 
     return result;
   };
@@ -7806,6 +7821,13 @@ const createRoutePattern = (pattern) => {
     const childParams = {};
     let isCompatible = true;
 
+    if (DEBUG$2) {
+      console.debug(
+        `[${pattern}] Checking compatibility with child: ${childPatternObj.originalPattern}`,
+      );
+      console.debug(`[${pattern}] Params passed to buildUrl:`, params);
+    }
+
     // CRITICAL: Check if parent route can reach all child route's literal segments
     // A route can only optimize to a descendant if there's a viable path through parameters
     // to reach all the descendant's literal segments (e.g., "/" cannot reach "/admin"
@@ -7831,6 +7853,12 @@ const createRoutePattern = (pattern) => {
             // Same literal - no problem
             continue;
           }
+          // Different literal - incompatible
+          if (DEBUG$2) {
+            console.debug(
+              `[${pattern}] INCOMPATIBLE with ${childPatternObj.originalPattern}: conflicting literal "${parentSegmentAtPosition.value}" vs "${literalValue}" at position ${childPosition}`,
+            );
+          }
           return { isCompatible: false, childParams: {} };
         }
         if (parentSegmentAtPosition.type === "param") {
@@ -7842,6 +7870,11 @@ const createRoutePattern = (pattern) => {
       // Parent doesn't have a segment at this position - child extends beyond parent
       // Check if any available parameter can produce this literal value
       else if (!canReachLiteralValue(literalValue, params)) {
+        if (DEBUG$2) {
+          console.debug(
+            `[${pattern}] INCOMPATIBLE with ${childPatternObj.originalPattern}: cannot reach literal segment "${literalValue}" at position ${childPosition} - no viable parameter path`,
+          );
+        }
         return { isCompatible: false, childParams: {} };
       }
     }
@@ -7862,14 +7895,31 @@ const createRoutePattern = (pattern) => {
         childPatternObj.pattern,
       );
 
+      if (DEBUG$2) {
+        console.debug(
+          `[${pattern}] Processing param '${item.paramName}' (userProvided: ${item.isUserProvided}, value: ${item.isUserProvided ? item.userValue : item.signal?.value}) for child ${childPatternObj.originalPattern}: compatible=${result.isCompatible}, shouldInclude=${result.shouldInclude}`,
+        );
+      }
+
       if (!result.isCompatible) {
         isCompatible = false;
+        if (DEBUG$2) {
+          console.debug(
+            `[${pattern}] Child ${childPatternObj.originalPattern} INCOMPATIBLE due to param '${item.paramName}'`,
+          );
+        }
         break;
       }
 
       if (result.shouldInclude) {
         childParams[result.paramName] = result.paramValue;
       }
+    }
+
+    if (DEBUG$2) {
+      console.debug(
+        `[${pattern}] Final compatibility result for ${childPatternObj.originalPattern}: ${isCompatible}`,
+      );
     }
 
     return { isCompatible, childParams };
@@ -7999,6 +8049,13 @@ const createRoutePattern = (pattern) => {
                 );
 
               if (signalMatchesThisChildLiteral) {
+                // This child route's literal matches the sibling's signal value
+                // User passed undefined to override that signal - don't use this child route
+                if (DEBUG$2) {
+                  console.debug(
+                    `[${pattern}] Blocking child route ${childPatternObj.originalPattern} because ${paramName}:undefined overrides sibling signal value "${signalValue}"`,
+                  );
+                }
                 return false;
               }
             }
@@ -8059,6 +8116,12 @@ const createRoutePattern = (pattern) => {
     // 2. User provided non-undefined params AND child can be built completely
     const shouldUse =
       hasActiveParams || (hasProvidedParams && canBuildChildCompletely);
+
+    if (DEBUG$2 && shouldUse) {
+      console.debug(
+        `[${pattern}] Will use child route ${childPatternObj.originalPattern}`,
+      );
+    }
 
     return shouldUse;
   };
@@ -8221,6 +8284,9 @@ const createRoutePattern = (pattern) => {
   };
 
   const buildMostPreciseUrl = (params = {}) => {
+    if (DEBUG$2) {
+      console.debug(`[${pattern}] buildMostPreciseUrl called`);
+    }
 
     // Step 1: Resolve and clean parameters
     const resolvedParams = resolveParams(params);
@@ -8228,6 +8294,13 @@ const createRoutePattern = (pattern) => {
     // Step 2: Try ancestors first - find the highest ancestor that works
     const relationships = patternRelationships.get(pattern);
     const parentPattern = relationships?.parent;
+
+    if (DEBUG$2 && parentPattern) {
+      console.debug(
+        `[${pattern}] Available ancestor:`,
+        parentPattern.originalPattern,
+      );
+    }
 
     let bestAncestorUrl = null;
     if (parentPattern) {
@@ -8238,6 +8311,12 @@ const createRoutePattern = (pattern) => {
           parentPattern,
           resolvedParams,
         );
+        if (DEBUG$2) {
+          console.debug(
+            `[${pattern}] Highest ancestor from ${parentPattern.originalPattern}:`,
+            highestAncestorUrl,
+          );
+        }
 
         if (highestAncestorUrl) {
           bestAncestorUrl = highestAncestorUrl;
@@ -8246,6 +8325,9 @@ const createRoutePattern = (pattern) => {
     }
 
     if (bestAncestorUrl) {
+      if (DEBUG$2) {
+        console.debug(`[${pattern}] Using ancestor optimization`);
+      }
       return bestAncestorUrl;
     }
 
@@ -8271,7 +8353,13 @@ const createRoutePattern = (pattern) => {
     }
 
     if (bestDescendantUrl) {
+      if (DEBUG$2) {
+        console.debug(`[${pattern}] Using descendant optimization`);
+      }
       return bestDescendantUrl;
+    }
+    if (DEBUG$2) {
+      console.debug(`[${pattern}] No suitable child route found`);
     }
 
     // Step 5: Inherit parameters from parent routes
@@ -8360,17 +8448,6 @@ const createRoutePattern = (pattern) => {
    * Helper: Try to use an ancestor route (only immediate parent for parameter optimization)
    */
   const tryUseAncestor = (ancestorPatternObj, resolvedParams) => {
-    // For routes with parameters, only allow optimization if all resolved parameters have default values
-    const hasNonDefaultParameters = connections.some((connection) => {
-      const resolvedValue = resolvedParams[connection.paramName];
-      const defaultValue = connection.options.defaultValue;
-      return resolvedValue !== defaultValue;
-    });
-
-    if (hasNonDefaultParameters) {
-      return null;
-    }
-
     // Check if this ancestor is the immediate parent (for parameter optimization safety)
     const relationships = patternRelationships.get(pattern);
     const immediateParent = relationships?.parent;
@@ -8379,6 +8456,35 @@ const createRoutePattern = (pattern) => {
       immediateParent &&
       immediateParent.originalPattern === ancestorPatternObj.originalPattern
     ) {
+      // This is the immediate parent - check if we can optimize
+      if (DEBUG$2) {
+        console.debug(
+          `[${pattern}] tryUseAncestor: Trying immediate parent ${ancestorPatternObj.originalPattern}`,
+        );
+      }
+
+      // For immediate parent optimization with parameters, only allow if:
+      // 1. All path/route parameters have default values, OR
+      // 2. The source route has only query parameters that are non-default
+      const hasNonDefaultPathParams = connections.some((connection) => {
+        const resolvedValue = resolvedParams[connection.paramName];
+        const defaultValue = connection.options.defaultValue;
+        // Check if this is a query parameter (not in the pattern path)
+        const isQueryParam = parsedPattern.queryParams.some(
+          (qp) => qp.name === connection.paramName,
+        );
+        // Allow non-default query parameters, but not path parameters
+        return !isQueryParam && resolvedValue !== defaultValue;
+      });
+
+      if (hasNonDefaultPathParams) {
+        if (DEBUG$2) {
+          console.debug(
+            `[${pattern}] tryUseAncestor: Has non-default path parameters, skipping`,
+          );
+        }
+        return null;
+      }
 
       const result = tryDirectOptimization(
         parsedPattern,
@@ -8386,14 +8492,42 @@ const createRoutePattern = (pattern) => {
         ancestorPatternObj,
         resolvedParams,
       );
+      if (DEBUG$2) {
+        console.debug(
+          `[${pattern}] tryUseAncestor: tryDirectOptimization result:`,
+          result,
+        );
+      }
       return result;
     }
+
+    // For non-immediate parents, only allow optimization if all resolved parameters have default values
+    const hasNonDefaultParameters = connections.some((connection) => {
+      const resolvedValue = resolvedParams[connection.paramName];
+      const defaultValue = connection.options.defaultValue;
+      return resolvedValue !== defaultValue;
+    });
+
+    if (hasNonDefaultParameters) {
+      if (DEBUG$2) {
+        console.debug(
+          `[${pattern}] tryUseAncestor: Non-immediate parent with non-default parameters, skipping`,
+        );
+      }
+      return null;
+    }
+
     // This is not the immediate parent - only allow literal-only optimization
     const hasParameters =
       connections.length > 0 ||
       parsedPattern.segments.some((seg) => seg.type === "param");
 
     if (hasParameters) {
+      if (DEBUG$2) {
+        console.debug(
+          `[${pattern}] tryUseAncestor: Non-immediate parent with parameters, skipping`,
+        );
+      }
       return null;
     }
 
@@ -8403,7 +8537,19 @@ const createRoutePattern = (pattern) => {
       ancestorPatternObj.pattern.segments.some((seg) => seg.type === "param");
 
     if (ancestorHasParameters) {
+      if (DEBUG$2) {
+        console.debug(
+          `[${pattern}] tryUseAncestor: Literal route cannot optimize to parametric ancestor ${ancestorPatternObj.originalPattern}`,
+        );
+      }
       return null;
+    }
+
+    // Both are pure literal routes - can optimize
+    if (DEBUG$2) {
+      console.debug(
+        `[${pattern}] tryUseAncestor: Trying literal-to-literal optimization to ${ancestorPatternObj.originalPattern}`,
+      );
     }
 
     const result = tryDirectOptimization(
@@ -8412,6 +8558,12 @@ const createRoutePattern = (pattern) => {
       ancestorPatternObj,
       resolvedParams,
     );
+    if (DEBUG$2) {
+      console.debug(
+        `[${pattern}] tryUseAncestor: tryDirectOptimization result:`,
+        result,
+      );
+    }
     return result;
   };
 
@@ -8436,14 +8588,37 @@ const createRoutePattern = (pattern) => {
       (seg) => seg.type === "param",
     );
 
+    if (DEBUG$2) {
+      console.debug(
+        `[${pattern}] tryDirectOptimization: sourceLiterals:`,
+        sourceLiterals,
+      );
+      console.debug(
+        `[${pattern}] tryDirectOptimization: targetLiterals:`,
+        targetLiterals,
+      );
+      console.debug(
+        `[${pattern}] tryDirectOptimization: targetParams:`,
+        targetParams,
+      );
+    }
+
     // Source must extend target's literal path
     if (sourceLiterals.length <= targetLiterals.length) {
+      if (DEBUG$2) {
+        console.debug(`[${pattern}] tryDirectOptimization: Source too short`);
+      }
       return null;
     }
 
     // Source must start with same literals as target
     for (let i = 0; i < targetLiterals.length; i++) {
       if (sourceLiterals[i] !== targetLiterals[i]) {
+        if (DEBUG$2) {
+          console.debug(
+            `[${pattern}] tryDirectOptimization: Literal mismatch at ${i}`,
+          );
+        }
         return null;
       }
     }
@@ -8459,6 +8634,11 @@ const createRoutePattern = (pattern) => {
       targetAncestor.connections.length === 0;
 
     if (sourceHasOnlyLiterals && targetHasOnlyLiterals) {
+      if (DEBUG$2) {
+        console.debug(
+          `[${pattern}] tryDirectOptimization: Both are pure literal-only routes, allowing optimization`,
+        );
+      }
       return buildUrlFromPattern(
         targetAncestor.pattern,
         {},
@@ -8469,6 +8649,11 @@ const createRoutePattern = (pattern) => {
     // For parametric optimization: remaining segments must match target's parameter defaults
     const extraSegments = sourceLiterals.slice(targetLiterals.length);
     if (extraSegments.length !== targetParams.length) {
+      if (DEBUG$2) {
+        console.debug(
+          `[${pattern}] tryDirectOptimization: Extra segments ${extraSegments.length} != target params ${targetParams.length}`,
+        );
+      }
       return null;
     }
 
@@ -8479,29 +8664,84 @@ const createRoutePattern = (pattern) => {
         (conn) => conn.paramName === param.name,
       );
       if (!connection || connection.options.defaultValue !== segment) {
+        if (DEBUG$2) {
+          console.debug(
+            `[${pattern}] tryDirectOptimization: Parameter default mismatch for ${param.name}`,
+          );
+        }
         return null;
       }
+    }
+
+    if (DEBUG$2) {
+      console.debug(
+        `[${pattern}] tryDirectOptimization: SUCCESS! Returning ancestor URL`,
+      );
+      console.debug(
+        `[${pattern}] tryDirectOptimization: resolvedParams:`,
+        resolvedParams,
+      );
     }
 
     // Build ancestor URL with inherited parameters that don't conflict with optimization
     const ancestorParams = {};
 
     // First, add extra parameters from the original resolvedParams
-    // These are parameters that don't correspond to any pattern segments
+    // These are parameters that don't correspond to any pattern segments or query params
     const sourcePatternParamNames = new Set(
       sourceConnections.map((conn) => conn.paramName),
+    );
+    const sourceQueryParamNames = new Set(
+      sourcePattern.queryParams.map((qp) => qp.name),
     );
     const targetPatternParamNames = new Set(
       targetAncestor.connections.map((conn) => conn.paramName),
     );
+    const targetQueryParamNames = new Set(
+      targetAncestor.pattern.queryParams.map((qp) => qp.name),
+    );
 
     for (const [paramName, value] of Object.entries(resolvedParams)) {
-      // Include parameters that are not part of either pattern (extra parameters)
-      if (
+      if (DEBUG$2) {
+        console.debug(
+          `[${pattern}] tryDirectOptimization: Considering param ${paramName}=${value}`,
+        );
+      }
+      // Include parameters that target pattern specifically needs
+      if (targetQueryParamNames.has(paramName)) {
+        ancestorParams[paramName] = value;
+        if (DEBUG$2) {
+          console.debug(
+            `[${pattern}] tryDirectOptimization: Added target param ${paramName}=${value}`,
+          );
+        }
+      }
+      // Include source query parameters (these should be inherited during ancestor optimization)
+      else if (sourceQueryParamNames.has(paramName)) {
+        // Only include if the value is not the default value
+        const connection = sourceConnections.find(
+          (conn) => conn.paramName === paramName,
+        );
+        if (connection && connection.options.defaultValue !== value) {
+          ancestorParams[paramName] = value;
+          if (DEBUG$2) {
+            console.debug(
+              `[${pattern}] tryDirectOptimization: Added source param ${paramName}=${value}`,
+            );
+          }
+        }
+      }
+      // Include extra parameters that are not part of either pattern (true extra parameters)
+      else if (
         !sourcePatternParamNames.has(paramName) &&
         !targetPatternParamNames.has(paramName)
       ) {
         ancestorParams[paramName] = value;
+        if (DEBUG$2) {
+          console.debug(
+            `[${pattern}] tryDirectOptimization: Added extra param ${paramName}=${value}`,
+          );
+        }
       }
     }
 
@@ -8992,6 +9232,11 @@ const buildHierarchicalQueryParams = (
     currentParent = parentRelationships?.parent;
   }
 
+  // DEBUG: Log what we found
+  if (DEBUG$2) {
+    console.debug(`Building params for ${originalPattern}`);
+  }
+
   // Step 1: Add query parameters from ancestor patterns (oldest to newest)
   // This ensures ancestor parameters come first in their declaration order
   // ancestorPatterns is in correct order: root ancestor first, then immediate parent
@@ -9006,6 +9251,12 @@ const buildHierarchicalQueryParams = (
         ) {
           queryParams[paramName] = params[paramName];
           processedParams.add(paramName);
+
+          if (DEBUG$2) {
+            console.debug(
+              `Added ancestor param: ${paramName}=${params[paramName]}`,
+            );
+          }
         }
       }
     }
@@ -9013,12 +9264,24 @@ const buildHierarchicalQueryParams = (
 
   // Step 2: Add query parameters from current pattern
   if (parsedPattern.queryParams) {
+    if (DEBUG$2) {
+      console.debug(
+        `Processing current pattern query params:`,
+        parsedPattern.queryParams.map((q) => q.name),
+      );
+    }
 
     for (const queryParam of parsedPattern.queryParams) {
       const paramName = queryParam.name;
       if (params[paramName] !== undefined && !processedParams.has(paramName)) {
         queryParams[paramName] = params[paramName];
         processedParams.add(paramName);
+
+        if (DEBUG$2) {
+          console.debug(
+            `Added current param: ${paramName}=${params[paramName]}`,
+          );
+        }
       }
     }
   }
@@ -9317,6 +9580,10 @@ const setupPatterns = (patternDefinitions) => {
       originalPattern: currentPattern,
     });
   }
+
+  if (DEBUG$2) {
+    console.debug("Pattern registry updated");
+  }
 };
 
 /**
@@ -9325,12 +9592,38 @@ const setupPatterns = (patternDefinitions) => {
 const calculatePatternDepth = (patternString) => {
   const relationships = patternRelationships.get(patternString);
   if (!relationships) {
+    if (DEBUG$2) {
+      console.debug(
+        `[calculatePatternDepth] No relationships found for ${patternString}`,
+      );
+    }
     return 0;
+  }
+
+  if (DEBUG$2) {
+    console.debug(
+      `[calculatePatternDepth] Calculating depth for ${patternString}`,
+    );
+    console.debug(
+      `[calculatePatternDepth] Parent pattern:`,
+      relationships.parent?.originalPattern,
+    );
   }
 
   // If no parent, depth is 0 (root pattern)
   if (!relationships.parent) {
+    if (DEBUG$2) {
+      console.debug(
+        `[calculatePatternDepth] Final depth for ${patternString}: 0 (no parent)`,
+      );
+    }
     return 0;
+  }
+
+  if (DEBUG$2) {
+    console.debug(
+      `[calculatePatternDepth] Parent: ${relationships.parent.originalPattern}`,
+    );
   }
 
   // Recursively calculate depth: 1 + parent's depth
@@ -9338,6 +9631,12 @@ const calculatePatternDepth = (patternString) => {
     relationships.parent.originalPattern,
   );
   const depth = parentDepth + 1;
+
+  if (DEBUG$2) {
+    console.debug(
+      `[calculatePatternDepth] Final depth for ${patternString}: ${depth} (parent: ${relationships.parent.originalPattern} with depth ${parentDepth})`,
+    );
+  }
 
   return depth;
 };
