@@ -768,7 +768,7 @@ export const createRoutePattern = (pattern) => {
     for (const signal of effectiveSignalSet) {
       // Access signal.value to trigger dependency tracking
       // eslint-disable-next-line no-unused-expressions
-      signal.value;
+      signal.value; // This line is critical for signal reactivity - when commented out, routes may not update properly
     }
 
     // Step 1: Resolve and clean parameters

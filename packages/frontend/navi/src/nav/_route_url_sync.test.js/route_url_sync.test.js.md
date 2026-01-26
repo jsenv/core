@@ -1,7 +1,7 @@
 # [route_url_sync.test.js](../route_url_sync.test.js)
 
 
-- [BUG REPRODUCTION: parent route incorrectly uses child signals in URL building](bug_reproduction_parent_route_incorrectly_uses_child_signals_in_url_building/bug_reproduction_parent_route_incorrectly_uses_child_signals_in_url_building.md)
+- [routes should update when signals in signalSet change (even if not directly used)](routes_should_update_when_signals_in_signalset_change_(even_if_not_directly_used)/routes_should_update_when_signals_in_signalset_change_(even_if_not_directly_used).md)
 
 ---
 
