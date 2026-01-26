@@ -10846,9 +10846,6 @@ const navTo = (target, options) => {
   }
   return browserIntegration.navTo(url, options);
 };
-const replaceUrl = (target, options = {}) => {
-  return navTo(target, { ...options, replace: true });
-};
 const stopLoad = (reason = "stopLoad() called") => {
   const windowIsLoading = windowIsLoadingSignal.value;
   if (windowIsLoading) {
@@ -11234,10 +11231,6 @@ const initRouteObserver = ({
     // ensure we re-render on document url change (useful when navigating from /users/list to /users)
     // so that we re-replace urls back to /users/list when /users/list is an index
     useDocumentUrl();
-    if (matchingRouteInfo && matchingRouteInfo.index && !matchingRouteInfo.route.matching) {
-      const routeUrl = matchingRouteInfo.route.routeFromProps.buildUrl();
-      replaceUrl(routeUrl);
-    }
     return jsx(RouteInfoContext.Provider, {
       value: matchingRouteInfo,
       children: jsx(SlotContext.Provider, {
