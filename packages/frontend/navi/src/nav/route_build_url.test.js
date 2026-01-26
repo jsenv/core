@@ -642,6 +642,28 @@ await snapshotTests(import.meta.url, ({ test }) => {
     }
   });
 
+  test("default tab url when on second tab nested", () => {
+    try {
+      const zoneSignal = stateSignal(undefined);
+      const isochroneTabSignal = stateSignal("compare");
+      const panelSignal = stateSignal(undefined);
+      const { MAP_ISOCHRONE_COMPARE_ROUTE } = setupRoutes({
+        MAP_ROUTE: `/map/?zone=${zoneSignal}`,
+        MAP_PANEL_ROUTE: `/map/:panel=${panelSignal}/`,
+        MAP_ISOCHRONE_ROUTE: `/map/isochrone/:tab=${isochroneTabSignal}/`,
+        MAP_ISOCHRONE_COMPARE_ROUTE: `/map/isochrone/compare`,
+        MAP_ISOCHRONE_TIME_ROUTE: `/map/isochrone/time/`,
+      });
+      updateRoutes(`${baseUrl}/map/isochrone/time`);
+      return {
+        isochrone_compare_url: MAP_ISOCHRONE_COMPARE_ROUTE.buildUrl(),
+      };
+    } finally {
+      clearAllRoutes();
+      globalSignalRegistry.clear();
+    }
+  });
+
   test("hierarchical search param order should respect ancestor patterns", () => {
     try {
       const zoneSignal = stateSignal("zone-123", { id: "zone" });
