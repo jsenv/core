@@ -7716,9 +7716,18 @@ const createRoutePattern = (pattern) => {
 
   const parsedPattern = parsePattern(cleanPattern, parameterDefaults);
 
+  // Create signalSet to track all signals this pattern depends on
+  const signalSet = new Set();
+  for (const connection of connections) {
+    if (connection.signal) {
+      signalSet.add(connection.signal);
+    }
+  }
+
   if (DEBUG$2) {
     console.debug(`[CustomPattern] Created pattern:`, parsedPattern);
     console.debug(`[CustomPattern] Signal connections:`, connections);
+    console.debug(`[CustomPattern] SignalSet size:`, signalSet.size);
   }
 
   const applyOn = (url) => {
@@ -7821,13 +7830,6 @@ const createRoutePattern = (pattern) => {
     const childParams = {};
     let isCompatible = true;
 
-    if (DEBUG$2) {
-      console.debug(
-        `[${pattern}] Checking compatibility with child: ${childPatternObj.originalPattern}`,
-      );
-      console.debug(`[${pattern}] Params passed to buildUrl:`, params);
-    }
-
     // CRITICAL: Check if parent route can reach all child route's literal segments
     // A route can only optimize to a descendant if there's a viable path through parameters
     // to reach all the descendant's literal segments (e.g., "/" cannot reach "/admin"
@@ -7863,7 +7865,30 @@ const createRoutePattern = (pattern) => {
         }
         if (parentSegmentAtPosition.type === "param") {
           // Parent has a parameter at this position - child literal can satisfy this parameter
-          // This is OK - the child route provides the value for the parent's parameter
+          // BUT we need to check if the parent's parameter value matches the child's literal
+
+          // Find the parent's parameter value from signals or params
+          const paramName = parentSegmentAtPosition.name;
+          let parentParamValue = params[paramName];
+
+          // If not in params, check signals
+          if (parentParamValue === undefined) {
+            const parentConnection = connections.find(
+              (conn) => conn.paramName === paramName,
+            );
+            if (parentConnection && parentConnection.signal) {
+              parentParamValue = parentConnection.signal.value;
+            }
+          }
+
+          // If parent has a specific value for this parameter, it must match the child literal
+          if (
+            parentParamValue !== undefined &&
+            parentParamValue !== literalValue
+          ) {
+            return { isCompatible: false, childParams: {} };
+          }
+
           continue;
         }
       }
@@ -7953,7 +7978,6 @@ const createRoutePattern = (pattern) => {
       paramValue,
       childParsedPattern,
     );
-
     if (matchesChildLiteral) {
       // Compatible - parameter value matches child literal
       return {
@@ -7964,11 +7988,31 @@ const createRoutePattern = (pattern) => {
       };
     }
 
+    // ROBUST FIX: For path parameters, check semantic compatibility by verifying
+    // that parent parameter values can actually produce the child route structure
+    const isParentPathParam = connections.some(
+      (conn) => conn.paramName === paramName,
+    );
+    if (isParentPathParam) {
+      // Check if parent parameter value matches any child literal where it should
+      // The key insight: if parent has a specific parameter value, child route must
+      // be reachable with that value or they're incompatible
+      const parameterCanReachChild = canParameterReachChildRoute(
+        paramName,
+        paramValue,
+        parsedPattern,
+        childParsedPattern,
+      );
+
+      if (!parameterCanReachChild) {
+        return { isCompatible: false };
+      }
+    }
+
     // Check if this is a query parameter in the parent pattern
     const isParentQueryParam = parsedPattern.queryParams.some(
       (qp) => qp.name === paramName,
     );
-
     if (isParentQueryParam) {
       // Query parameters are always compatible and can be inherited by child routes
       return {
@@ -7985,7 +8029,6 @@ const createRoutePattern = (pattern) => {
       const isParentPathParam = connections.some(
         (conn) => conn.paramName === paramName,
       );
-
       if (isParentPathParam) {
         // Parameter value (from user or signal) doesn't match this child's literals
         // Check if child has any literal segments that would conflict with this parameter
@@ -7993,7 +8036,6 @@ const createRoutePattern = (pattern) => {
           (segment) =>
             segment.type === "literal" && segment.value !== paramValue,
         );
-
         if (hasConflictingLiteral) {
           return { isCompatible: false };
         }
@@ -8287,6 +8329,22 @@ const createRoutePattern = (pattern) => {
     if (DEBUG$2) {
       console.debug(`[${pattern}] buildMostPreciseUrl called`);
     }
+
+    // Get the updated signalSet from pattern registry (set by setupPatterns)
+    const patternData = patternRegistry.get(pattern);
+    const effectiveSignalSet = patternData?.signalSet || signalSet;
+
+    // Access signal.value to trigger dependency tracking
+    if (DEBUG$2) {
+      console.debug(
+        `[${pattern}] Reading ${effectiveSignalSet.size} signals for reactive dependencies`,
+      );
+    }
+    // for (const signal of effectiveSignalSet) {
+    //   // Access signal.value to trigger dependency tracking
+    //   // eslint-disable-next-line no-unused-expressions
+    //   signal.value; // This line is critical for signal reactivity - when commented out, routes may not update properly
+    // }
 
     // Step 1: Resolve and clean parameters
     const resolvedParams = resolveParams(params);
@@ -8959,6 +9017,46 @@ const paramMatchesChildLiteral = (paramValue, childParsedPattern) => {
 };
 
 /**
+ * Helper: Check if a parent parameter can semantically reach a child route
+ * This replaces the fragile position-based matching with semantic verification
+ */
+const canParameterReachChildRoute = (
+  paramName,
+  paramValue,
+  parentPattern,
+  childPattern,
+) => {
+  // Find the parent parameter segment
+  const parentParamSegment = parentPattern.segments.find(
+    (segment) => segment.type === "param" && segment.name === paramName,
+  );
+
+  if (!parentParamSegment) {
+    return true; // Not a path parameter, no conflict
+  }
+
+  // Get parameter's logical path position (not array index)
+  const paramPathPosition = parentParamSegment.index;
+
+  // Find corresponding child segment at the same logical path position
+  const childSegmentAtSamePosition = childPattern.segments.find(
+    (segment) => segment.index === paramPathPosition,
+  );
+
+  if (!childSegmentAtSamePosition) {
+    return true; // Child doesn't extend to this position, no conflict
+  }
+
+  if (childSegmentAtSamePosition.type === "literal") {
+    // Child has a literal at this position - parent parameter must match exactly
+    return childSegmentAtSamePosition.value === paramValue;
+  }
+
+  // Child has parameter at same position - compatible
+  return true;
+};
+
+/**
  * Parse a route pattern string into structured segments
  */
 const parsePattern = (pattern, parameterDefaults = new Map()) => {
@@ -9564,7 +9662,25 @@ const setupPatterns = (patternDefinitions) => {
 
   for (const [key, urlPatternRaw] of Object.entries(patternDefinitions)) {
     const [cleanPattern, connections] = detectSignals(urlPatternRaw);
-    const parsedPattern = parsePattern(cleanPattern);
+
+    // Build parameter defaults from signal connections
+    const parameterDefaults = new Map();
+    for (const connection of connections) {
+      const { paramName, options } = connection;
+      if (options.defaultValue !== undefined) {
+        parameterDefaults.set(paramName, options.defaultValue);
+      }
+    }
+
+    const parsedPattern = parsePattern(cleanPattern, parameterDefaults);
+
+    // Create signalSet for this pattern
+    const signalSet = new Set();
+    for (const connection of connections) {
+      if (connection.signal) {
+        signalSet.add(connection.signal);
+      }
+    }
 
     const patternData = {
       key,
@@ -9572,6 +9688,7 @@ const setupPatterns = (patternDefinitions) => {
       cleanPattern,
       connections,
       parsedPattern,
+      signalSet,
       childPatterns: [],
       parent: null,
     };
@@ -9618,6 +9735,60 @@ const setupPatterns = (patternDefinitions) => {
       parent: currentData.parent, // Single parent pattern object
       originalPattern: currentPattern,
     });
+  }
+
+  // Phase 3: Collect all relevant signals for each pattern based on relationships
+  for (const currentPattern of allPatterns) {
+    const currentData = patternRegistry.get(currentPattern);
+    const allRelevantSignals = new Set();
+
+    // Add own signals
+    for (const signal of currentData.signalSet) {
+      allRelevantSignals.add(signal);
+    }
+
+    // Add signals from ancestors (they might be inherited)
+    let parentData = currentData.parent
+      ? patternRegistry.get(currentData.parent.originalPattern)
+      : null;
+    while (parentData) {
+      for (const connection of parentData.connections) {
+        if (connection.signal) {
+          allRelevantSignals.add(connection.signal);
+        }
+      }
+      // Move up the parent chain
+      parentData = parentData.parent
+        ? patternRegistry.get(parentData.parent.originalPattern)
+        : null;
+    }
+
+    // Add signals from descendants (they might be used for optimization)
+    const addDescendantSignals = (patternData) => {
+      for (const childPatternObj of patternData.childPatterns) {
+        const childData = patternRegistry.get(childPatternObj.originalPattern);
+        if (childData) {
+          // Add child's own signals
+          for (const connection of childData.connections) {
+            if (connection.signal) {
+              allRelevantSignals.add(connection.signal);
+            }
+          }
+          // Recursively add grandchildren signals
+          addDescendantSignals(childData);
+        }
+      }
+    };
+    addDescendantSignals(currentData);
+
+    // Update the pattern's signalSet with all relevant signals
+    currentData.signalSet = allRelevantSignals;
+
+    if (DEBUG$2 && allRelevantSignals.size > 0) {
+      console.debug(
+        `[${currentPattern}] Collected ${allRelevantSignals.size} relevant signals`,
+      );
+    }
   }
 
   if (DEBUG$2) {
@@ -11228,9 +11399,6 @@ const initRouteObserver = ({
       const Element = element;
       element = jsx(Element, {});
     }
-    // ensure we re-render on document url change (useful when navigating from /users/list to /users)
-    // so that we re-replace urls back to /users/list when /users/list is an index
-    useDocumentUrl();
     return jsx(RouteInfoContext.Provider, {
       value: matchingRouteInfo,
       children: jsx(SlotContext.Provider, {
