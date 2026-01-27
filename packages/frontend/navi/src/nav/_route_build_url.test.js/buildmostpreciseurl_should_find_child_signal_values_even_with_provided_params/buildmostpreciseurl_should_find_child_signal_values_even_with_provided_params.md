@@ -10,22 +10,22 @@ try {
     id: "walkMinute",
     type: "number",
   });
-
   walkEnabledSignal.value = false;
   walkMinuteSignal.value = 40;
-
   const { ISOCHRONE_ROUTE } = setupRoutes({
     ISOCHRONE_ROUTE: `/map/isochrone/:tab?`,
     ISOCHRONE_COMPARE_ROUTE: `/map/isochrone/compare?walk=${walkEnabledSignal}&walk_minute=${walkMinuteSignal}`,
   });
-
+  const url_without_params = ISOCHRONE_ROUTE.buildUrl();
+  const url_with_walk = ISOCHRONE_ROUTE.buildUrl({ walk: true });
+  const url_with_walk_and_tab = ISOCHRONE_ROUTE.buildUrl({
+    tab: "settings",
+    walk: true,
+  });
   return {
-    url_with_walk_true: ISOCHRONE_ROUTE.buildUrl({ walk: true }),
-    url_without_params: ISOCHRONE_ROUTE.buildUrl(),
-    url_with_tab_and_walk: ISOCHRONE_ROUTE.buildUrl({
-      tab: "settings",
-      walk: true,
-    }),
+    url_without_params,
+    url_with_walk,
+    url_with_walk_and_tab,
   };
 } finally {
   clearAllRoutes();
@@ -35,9 +35,9 @@ try {
 
 ```js
 {
-  "url_with_walk_true": "http://127.0.0.1/map/isochrone/compare?walk&walk_minute=40",
   "url_without_params": "http://127.0.0.1/map/isochrone/compare?walk_minute=40",
-  "url_with_tab_and_walk": "http://127.0.0.1/map/isochrone/settings?walk"
+  "url_with_walk": "http://127.0.0.1/map/isochrone/compare?walk&walk_minute=40",
+  "url_with_walk_and_tab": "http://127.0.0.1/map/isochrone/settings?walk"
 }
 ```
 
