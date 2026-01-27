@@ -24,6 +24,7 @@
 - [literal segments should prevent descendant optimization](literal_segments_should_prevent_descendant_optimization/literal_segments_should_prevent_descendant_optimization.md)
 - [route with undefined parameter default should not optimize to children](route_with_undefined_parameter_default_should_not_optimize_to_children/route_with_undefined_parameter_default_should_not_optimize_to_children.md)
 - [rawUrlPart functionality in url building](rawurlpart_functionality_in_url_building/rawurlpart_functionality_in_url_building.md)
+- [map url while on isochrone time](map_url_while_on_isochrone_time/map_url_while_on_isochrone_time.md)
 
 ---
 
