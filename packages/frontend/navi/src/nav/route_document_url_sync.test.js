@@ -811,32 +811,22 @@ await snapshotTests(import.meta.url, ({ test }) => {
   });
 
   test("signal updates in child route (isochrone) with parent-child relationship", () => {
+    // Mock browserIntegration.navTo to track redirectTo calls
+    const navToCalls = [];
+    const mockBrowserIntegration = {
+      navTo: (url, options) => {
+        navToCalls.push({ url, options });
+      },
+    };
+    setBrowserIntegration(mockBrowserIntegration);
+
     try {
-      const walkEnabledSignal = stateSignal(false, {
-        id: "enabled",
-        type: "boolean",
-      });
-      const walkMinuteSignal = stateSignal(30, {
-        id: "minute",
-        type: "number",
-      });
-      const zoneSignal = stateSignal("paris", {
-        id: "zone",
-        type: "string",
-      });
-      const isochroneTabSignal = stateSignal("compare", {
-        id: "isochroneTab",
-        type: "string",
-      });
-      const isochroneLongitudeSignal = stateSignal(2.3522, {
-        id: "isochroneLongitude",
-        type: "number",
-      });
-      const mapPanelSignal = stateSignal(undefined, {
-        id: "odt_map_panel",
-        type: "string",
-        oneOf: [undefined, "isochrone"],
-      });
+      const walkEnabledSignal = stateSignal(false);
+      const walkMinuteSignal = stateSignal(30);
+      const zoneSignal = stateSignal("paris");
+      const isochroneTabSignal = stateSignal("compare");
+      const isochroneLongitudeSignal = stateSignal(2.3522);
+      const mapPanelSignal = stateSignal(undefined);
       mapPanelSignal.value = "isochrone";
       isochroneLongitudeSignal.value = 10;
       zoneSignal.value = "nice";
@@ -851,15 +841,6 @@ await snapshotTests(import.meta.url, ({ test }) => {
       });
       updateRoutes(`${baseUrl}/map/isochrone/compare?zone=nice&iso_lon=10`);
 
-      // Mock browserIntegration.navTo to track redirectTo calls
-      const navToCalls = [];
-      const mockBrowserIntegration = {
-        navTo: (url, options) => {
-          navToCalls.push({ url, options });
-        },
-      };
-      setBrowserIntegration(mockBrowserIntegration);
-
       const scenario1 = {
         enabled_signal: walkEnabledSignal.value,
         minute_signal: walkMinuteSignal.value,
@@ -868,10 +849,8 @@ await snapshotTests(import.meta.url, ({ test }) => {
 
       // Clear redirect history before testing signal updates
       navToCalls.length = 0;
-
       // Update enabled signal to true (non-default)
       walkEnabledSignal.value = true;
-
       const scenario2 = {
         enabled_signal: walkEnabledSignal.value,
         current_url: ISOCHRONE_COMPARE_ROUTE.url,
@@ -880,10 +859,8 @@ await snapshotTests(import.meta.url, ({ test }) => {
 
       // Clear redirect history
       navToCalls.length = 0;
-
       // Update minute signal
       walkMinuteSignal.value = 45;
-
       const scenario3 = {
         minute_signal: walkMinuteSignal.value,
         current_url: ISOCHRONE_COMPARE_ROUTE.url,
@@ -892,10 +869,8 @@ await snapshotTests(import.meta.url, ({ test }) => {
 
       // Clear redirect history
       navToCalls.length = 0;
-
       // Update enabled back to false (default)
       walkEnabledSignal.value = false;
-
       const scenario4 = {
         enabled_signal: walkEnabledSignal.value,
         current_url: ISOCHRONE_COMPARE_ROUTE.url,
@@ -904,10 +879,8 @@ await snapshotTests(import.meta.url, ({ test }) => {
 
       // Clear redirect history
       navToCalls.length = 0;
-
       // Update minute signal again
       walkMinuteSignal.value = 60;
-
       const scenario5 = {
         minute_signal: walkMinuteSignal.value,
         current_url: ISOCHRONE_COMPARE_ROUTE.url,
@@ -920,7 +893,6 @@ await snapshotTests(import.meta.url, ({ test }) => {
         scenario3_minute_45: scenario3,
         scenario4_enabled_false: scenario4,
         scenario5_minute_60: scenario5,
-        total_signal_updates: 4,
       };
     } finally {
       setBrowserIntegration(undefined);

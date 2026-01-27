@@ -1,55 +1,35 @@
 # [signal updates in child route (isochrone) with parent-child relationship](../../route_document_url_sync.test.js)
 
 ```js
+// Mock browserIntegration.navTo to track redirectTo calls
+const navToCalls = [];
+const mockBrowserIntegration = {
+  navTo: (url, options) => {
+    navToCalls.push({ url, options });
+  },
+};
+setBrowserIntegration(mockBrowserIntegration);
+
 try {
-  const walkEnabledSignal = stateSignal(false, {
-    id: "enabled",
-    type: "boolean",
-  });
-  const walkMinuteSignal = stateSignal(30, {
-    id: "minute",
-    type: "number",
-  });
-  const zoneSignal = stateSignal("paris", {
-    id: "zone",
-    type: "string",
-  });
-  const isochroneTabSignal = stateSignal("compare", {
-    id: "isochroneTab",
-    type: "string",
-  });
-  const isochroneLongitudeSignal = stateSignal(2.3522, {
-    id: "isochroneLongitude",
-    type: "number",
-  });
-  const mapPanelSignal = stateSignal(undefined, {
-    id: "odt_map_panel",
-    type: "string",
-    oneOf: [undefined, "isochrone"],
-  });
+  const walkEnabledSignal = stateSignal(false);
+  const walkMinuteSignal = stateSignal(30);
+  const zoneSignal = stateSignal("paris");
+  const isochroneTabSignal = stateSignal("compare");
+  const isochroneLongitudeSignal = stateSignal(2.3522);
+  const mapPanelSignal = stateSignal(undefined);
   mapPanelSignal.value = "isochrone";
   isochroneLongitudeSignal.value = 10;
   zoneSignal.value = "nice";
-  const { MAP_ROUTE, ISOCHRONE_ROUTE, ISOCHRONE_COMPARE_ROUTE } =
-    setupRoutes({
-      HOME_ROUTE: "/",
-      MAP_ROUTE: `/map/?zone=${zoneSignal}`,
-      MAP_PANEL_ROUTE: `/map/:panel=${mapPanelSignal}/`,
-      ISOCHRONE_ROUTE: `/map/isochrone/:tab=${isochroneTabSignal}/?iso_lon=${isochroneLongitudeSignal}`,
-      ISOCHRONE_COMPARE_ROUTE: `/map/isochrone/compare?walk=${walkEnabledSignal}&walk_minute=${walkMinuteSignal}`,
-      MAP_ISOCHRONE_TIME_ROUTE: "/map/isochrone/time/",
-      MAP_ISOCHRONE_TIME_WALK_ROUTE: "/map/isochrone/time/walk",
-    });
+  const { ISOCHRONE_COMPARE_ROUTE } = setupRoutes({
+    HOME_ROUTE: "/",
+    MAP_ROUTE: `/map/?zone=${zoneSignal}`,
+    MAP_PANEL_ROUTE: `/map/:panel=${mapPanelSignal}/`,
+    ISOCHRONE_ROUTE: `/map/isochrone/:tab=${isochroneTabSignal}/?iso_lon=${isochroneLongitudeSignal}`,
+    ISOCHRONE_COMPARE_ROUTE: `/map/isochrone/compare?walk=${walkEnabledSignal}&walk_minute=${walkMinuteSignal}`,
+    MAP_ISOCHRONE_TIME_ROUTE: "/map/isochrone/time/",
+    MAP_ISOCHRONE_TIME_WALK_ROUTE: "/map/isochrone/time/walk",
+  });
   updateRoutes(`${baseUrl}/map/isochrone/compare?zone=nice&iso_lon=10`);
-
-  // Mock browserIntegration.navTo to track redirectTo calls
-  const navToCalls = [];
-  const mockBrowserIntegration = {
-    navTo: (url, options) => {
-      navToCalls.push({ url, options });
-    },
-  };
-  setBrowserIntegration(mockBrowserIntegration);
 
   const scenario1 = {
     enabled_signal: walkEnabledSignal.value,
@@ -59,10 +39,8 @@ try {
 
   // Clear redirect history before testing signal updates
   navToCalls.length = 0;
-
   // Update enabled signal to true (non-default)
   walkEnabledSignal.value = true;
-
   const scenario2 = {
     enabled_signal: walkEnabledSignal.value,
     current_url: ISOCHRONE_COMPARE_ROUTE.url,
@@ -71,10 +49,8 @@ try {
 
   // Clear redirect history
   navToCalls.length = 0;
-
   // Update minute signal
   walkMinuteSignal.value = 45;
-
   const scenario3 = {
     minute_signal: walkMinuteSignal.value,
     current_url: ISOCHRONE_COMPARE_ROUTE.url,
@@ -83,10 +59,8 @@ try {
 
   // Clear redirect history
   navToCalls.length = 0;
-
   // Update enabled back to false (default)
   walkEnabledSignal.value = false;
-
   const scenario4 = {
     enabled_signal: walkEnabledSignal.value,
     current_url: ISOCHRONE_COMPARE_ROUTE.url,
@@ -95,10 +69,8 @@ try {
 
   // Clear redirect history
   navToCalls.length = 0;
-
   // Update minute signal again
   walkMinuteSignal.value = 60;
-
   const scenario5 = {
     minute_signal: walkMinuteSignal.value,
     current_url: ISOCHRONE_COMPARE_ROUTE.url,
@@ -111,7 +83,6 @@ try {
     scenario3_minute_45: scenario3,
     scenario4_enabled_false: scenario4,
     scenario5_minute_60: scenario5,
-    total_signal_updates: 4,
   };
 } finally {
   setBrowserIntegration(undefined);
@@ -146,8 +117,7 @@ try {
     "minute_signal": 60,
     "current_url": "http://127.0.0.1/map/isochrone?zone=nice&iso_lon=10&walk_minute=60",
     "redirects_count": 1
-  },
-  "total_signal_updates": 4
+  }
 }
 ```
 
