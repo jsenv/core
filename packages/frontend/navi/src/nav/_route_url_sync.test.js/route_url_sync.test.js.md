@@ -1,7 +1,7 @@
 # [route_url_sync.test.js](../route_url_sync.test.js)
 
 
-- [routes should update when signals in signalSet change (even if not directly used)](routes_should_update_when_signals_in_signalset_change_(even_if_not_directly_used)/routes_should_update_when_signals_in_signalset_change_(even_if_not_directly_used).md)
+- [alive signal at dynamic segment position](alive_signal_at_dynamic_segment_position/alive_signal_at_dynamic_segment_position.md)
 
 ---
 

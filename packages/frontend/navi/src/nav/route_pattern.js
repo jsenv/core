@@ -288,13 +288,6 @@ export const createRoutePattern = (pattern) => {
     const childParams = {};
     let isCompatible = true;
 
-    if (DEBUG) {
-      console.debug(
-        `[${pattern}] Checking compatibility with child: ${childPatternObj.originalPattern}`,
-      );
-      console.debug(`[${pattern}] Params passed to buildUrl:`, params);
-    }
-
     // CRITICAL: Check if parent route can reach all child route's literal segments
     // A route can only optimize to a descendant if there's a viable path through parameters
     // to reach all the descendant's literal segments (e.g., "/" cannot reach "/admin"
@@ -330,7 +323,30 @@ export const createRoutePattern = (pattern) => {
         }
         if (parentSegmentAtPosition.type === "param") {
           // Parent has a parameter at this position - child literal can satisfy this parameter
-          // This is OK - the child route provides the value for the parent's parameter
+          // BUT we need to check if the parent's parameter value matches the child's literal
+
+          // Find the parent's parameter value from signals or params
+          const paramName = parentSegmentAtPosition.name;
+          let parentParamValue = params[paramName];
+
+          // If not in params, check signals
+          if (parentParamValue === undefined) {
+            const parentConnection = connections.find(
+              (conn) => conn.paramName === paramName,
+            );
+            if (parentConnection && parentConnection.signal) {
+              parentParamValue = parentConnection.signal.value;
+            }
+          }
+
+          // If parent has a specific value for this parameter, it must match the child literal
+          if (
+            parentParamValue !== undefined &&
+            parentParamValue !== literalValue
+          ) {
+            return { isCompatible: false, childParams: {} };
+          }
+
           continue;
         }
       }
@@ -429,6 +445,37 @@ export const createRoutePattern = (pattern) => {
         paramName,
         paramValue,
       };
+    }
+
+    // CRITICAL FIX: For path parameters, check if the parameter value would
+    // actually lead to this specific child route by checking position-specific matching
+    const isParentPathParam = connections.some(
+      (conn) => conn.paramName === paramName,
+    );
+
+    if (isParentPathParam) {
+      // Find the parameter's position in the parent pattern
+      const parentParamPosition = parsedPattern.segments.findIndex(
+        (segment) => segment.type === "param" && segment.name === paramName,
+      );
+
+      if (parentParamPosition !== -1) {
+        // Check if child has a literal at this position that conflicts with parameter value
+        const childSegmentAtPosition = childParsedPattern.segments.find(
+          (segment) => segment.index === parentParamPosition,
+        );
+
+        if (
+          childSegmentAtPosition &&
+          childSegmentAtPosition.type === "literal"
+        ) {
+          // Child has a literal at this position - parameter value must match exactly
+          if (childSegmentAtPosition.value !== paramValue) {
+            // Parameter value doesn't match child's literal at this position
+            return { isCompatible: false };
+          }
+        }
+      }
     }
 
     // Check if this is a query parameter in the parent pattern
@@ -765,11 +812,11 @@ export const createRoutePattern = (pattern) => {
         `[${pattern}] Reading ${effectiveSignalSet.size} signals for reactive dependencies`,
       );
     }
-    for (const signal of effectiveSignalSet) {
-      // Access signal.value to trigger dependency tracking
-      // eslint-disable-next-line no-unused-expressions
-      signal.value; // This line is critical for signal reactivity - when commented out, routes may not update properly
-    }
+    // for (const signal of effectiveSignalSet) {
+    //   // Access signal.value to trigger dependency tracking
+    //   // eslint-disable-next-line no-unused-expressions
+    //   signal.value; // This line is critical for signal reactivity - when commented out, routes may not update properly
+    // }
 
     // Step 1: Resolve and clean parameters
     const resolvedParams = resolveParams(params);

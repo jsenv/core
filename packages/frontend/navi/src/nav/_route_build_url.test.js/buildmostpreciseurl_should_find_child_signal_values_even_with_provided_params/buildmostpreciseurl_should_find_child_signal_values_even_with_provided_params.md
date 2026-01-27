@@ -37,7 +37,7 @@ try {
 {
   "url_with_walk_true": "http://127.0.0.1/map/isochrone/compare?walk&walk_minute=40",
   "url_without_params": "http://127.0.0.1/map/isochrone/compare?walk_minute=40",
-  "url_with_tab_and_walk": "http://127.0.0.1/map/isochrone/compare?walk&walk_minute=40&tab=settings"
+  "url_with_tab_and_walk": "http://127.0.0.1/map/isochrone/settings?walk"
 }
 ```
 
