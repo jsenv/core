@@ -840,28 +840,22 @@ export const createRoutePattern = (pattern) => {
     const childParent = childPatternObj.parent;
 
     if (childParent && childParent.originalPattern === pattern) {
-      // Use the child pattern object directly
+      // Check if child has any non-default signal values
+      const hasNonDefaultChildParams = (childPatternObj.connections || []).some(
+        (childConnection) => {
+          const { signal, options } = childConnection;
+          return signal?.value !== options.defaultValue;
+        },
+      );
 
-      const allChildParamsAreDefaults = (
-        childPatternObj.connections || []
-      ).every((childConnection) => {
-        const { signal, options } = childConnection;
-        return signal?.value === options.defaultValue;
-      });
-
-      if (allChildParamsAreDefaults) {
-        // Build current route URL for comparison
-        const resolvedParams = resolveParams({});
-        const finalParams = removeDefaultValues(resolvedParams);
-        const currentUrl = buildUrlFromPattern(
-          parsedPattern,
-          finalParams,
-          pattern,
-          patternObject,
-        );
-        if (currentUrl.length < childUrl.length) {
-          return currentUrl;
+      if (hasNonDefaultChildParams) {
+        // Child has non-default signal values - use child URL instead of parent
+        if (DEBUG) {
+          console.debug(
+            `[${pattern}] Using child route ${childPatternObj.originalPattern} because it has non-default signal values`,
+          );
         }
+        return childUrl;
       }
     }
 
@@ -2141,6 +2135,12 @@ const buildUrlFromPattern = (
 
 /**
  * Check if childPattern is a child route of parentPattern
+ * This determines parent-child relationships for signal clearing behavior.
+ *
+ * Route families vs parent-child relationships:
+ * - Different families: preserve signals (e.g., "/" and "/settings")
+ * - Parent-child: clear signals when navigating to parent (e.g., "/settings" and "/settings/:tab")
+ *
  * E.g., "/admin/settings/:tab" is a child of "/admin/:section/"
  * Also, "/admin/?tab=something" is a child of "/admin/"
  */
@@ -2148,6 +2148,7 @@ const isChildPattern = (childPattern, parentPattern) => {
   if (!childPattern || !parentPattern) {
     return false;
   }
+
   // Split path and query parts
   const [childPath, childQuery] = childPattern.split("?");
   const [parentPath, parentQuery] = parentPattern.split("?");
@@ -2163,33 +2164,39 @@ const isChildPattern = (childPattern, parentPattern) => {
   }
 
   // CASE 2: Traditional path-based child relationship
-  // Convert patterns to comparable segments for proper comparison
   const childSegments = cleanChild.split("/").filter((s) => s);
   const parentSegments = cleanParent.split("/").filter((s) => s);
 
-  // Child must have at least as many segments as parent
+  // Root route special handling - different families for signal preservation
+  if (parentSegments.length === 0) {
+    // Parent is root route ("/")
+    // Root can only be parent of parameterized routes like "/:section"
+    // But NOT literal routes like "/settings" (different families)
+    return childSegments.length === 1 && childSegments[0].startsWith(":");
+  }
+
+  // For non-root parents, child must have at least as many segments
   if (childSegments.length < parentSegments.length) {
     return false;
   }
 
   let hasMoreSpecificSegment = false;
 
-  // Check if parent segments match child segments (allowing for parameters)
+  // Check if all parent segments match child segments (allowing for parameters)
   for (let i = 0; i < parentSegments.length; i++) {
     const parentSeg = parentSegments[i];
     const childSeg = childSegments[i];
 
-    // If parent has parameter, child can have anything in that position
     if (parentSeg.startsWith(":")) {
+      // Parent has parameter - child can have any value in that position
       // Child is more specific if it has a literal value for a parent parameter
-      // But if child also starts with ":", it's also a parameter (not more specific)
       if (!childSeg.startsWith(":")) {
         hasMoreSpecificSegment = true;
       }
       continue;
     }
 
-    // If parent has literal, child must match exactly
+    // Parent has literal - child must match exactly
     if (parentSeg !== childSeg) {
       return false;
     }
