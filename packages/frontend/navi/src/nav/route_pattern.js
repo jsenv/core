@@ -91,6 +91,19 @@ export const detectSignals = (routePattern) => {
   const signalConnections = [];
   let updatedPattern = routePattern;
 
+  // First check for the common mistake: :${signalName} without parameter name
+  const anonymousSignalRegex = /([?:&])(\{navi_state_signal:[^}]+\})/g;
+  let anonymousMatch;
+  while ((anonymousMatch = anonymousSignalRegex.exec(routePattern)) !== null) {
+    const [fullMatch, prefix, signalString] = anonymousMatch;
+    console.warn(
+      `[detectSignals] Anonymous signal parameter detected: "${fullMatch}". ` +
+        `This pattern won't work correctly because it lacks a parameter name. ` +
+        `Consider using "${prefix}paramName=${signalString}" instead. ` +
+        `For example, if this should be a "mode" parameter, use "${prefix}mode=${signalString}".`,
+    );
+  }
+
   // Look for signals in two formats:
   // 1. Expected format: :paramName={navi_state_signal:id} or ?paramName={navi_state_signal:id} or &paramName={navi_state_signal:id}
   // 2. Typoe format (missing = sign): &paramName{navi_state_signal:id}

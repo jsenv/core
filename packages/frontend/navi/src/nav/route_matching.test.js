@@ -271,7 +271,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
           MAP_PANEL_ROUTE: `/map/:panel=${panelSignal}/`,
           MAP_ISOCHRONE_ROUTE: `/map/isochrone/:tab=${isochroneTabSignal}/`,
           MAP_ISOCHRONE_COMPARE_ROUTE: `/map/isochrone/compare?walk=${walkSignal}`,
-          MAP_ISOCHRONE_TIME_ROUTE: `/map/isochrone/time/:${isochroneTimeModeSignal}/`,
+          MAP_ISOCHRONE_TIME_ROUTE: `/map/isochrone/time/:mode=${isochroneTimeModeSignal}/`,
           MAP_ISOCHRONE_TIME_WALK_ROUTE: "/map/isochrone/time/walk",
         });
       updateRoutes(`${baseUrl}/map/isochrone/time?zone=london`);
