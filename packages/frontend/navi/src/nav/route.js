@@ -7,36 +7,9 @@ import { createPubSub } from "@jsenv/dom";
 import { batch, computed, effect, signal } from "@preact/signals";
 
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
-import {
-  clearPatterns,
-  createRoutePattern,
-  resolveRouteUrl,
-  setupPatterns,
-} from "./route_pattern.js";
+import { resolveRouteUrl, setupPatterns } from "./route_pattern.js";
 
 const DEBUG = false;
-
-// Helper to check if one route pattern is a parent of another
-const isParentRoute = (parentPattern, childPattern) => {
-  // Normalize patterns by removing query parts and trailing slashes
-  const normalizePath = (pattern) => {
-    const pathPart = pattern.split("?")[0];
-    return pathPart.replace(/\/$/, "") || "/";
-  };
-
-  const parentPath = normalizePath(parentPattern);
-  const childPath = normalizePath(childPattern);
-
-  // Special case: root route "/" should never clear signals from other routes
-  // The root route is conceptually different from all other app sections
-  if (parentPath === "/") {
-    return false;
-  }
-
-  // Parent route is a parent if child path starts with parent path + "/"
-  // and child has additional segments
-  return childPath.startsWith(`${parentPath}/`) && childPath !== parentPath;
-};
 
 // Controls what happens to actions when their route stops matching:
 // 'abort' - Cancel the action immediately when route stops matching
@@ -347,30 +320,56 @@ const registerRoute = (routePattern) => {
       const params = rawParamsSignal.value;
       const urlParamValue = params[paramName];
 
+      if (debug) {
+        console.debug(
+          `[route] URL->Signal effect triggered for ${paramName}: matching=${matching}, urlParamValue=${urlParamValue}, currentSignalValue=${stateSignal.value}`,
+        );
+      }
+
       if (matching) {
         // When route matches, sync signal with URL parameter value
         // This ensures URL is the source of truth
+        if (debug) {
+          console.debug(
+            `[route] Route matching: setting ${paramName} signal to URL value: ${urlParamValue}`,
+          );
+        }
         stateSignal.value = urlParamValue;
       } else {
         // When route doesn't match, check if we're navigating to a parent route
-        const currentRoutePattern = routePattern.cleanPattern;
         const parentRouteMatching = Array.from(routeSet).find((otherRoute) => {
           if (otherRoute === route || !otherRoute.matching) return false;
 
           const otherRouteProperties = getRoutePrivateProperties(otherRoute);
-          const otherPattern = otherRouteProperties.routePattern.cleanPattern;
+          const otherPatternObj = otherRouteProperties.routePattern;
 
-          // Check if the other route is a parent of this route
-          return isParentRoute(otherPattern, currentRoutePattern);
+          // Check if the other route pattern is a parent of this route pattern
+          // Using the built relationships in the pattern objects
+          let currentParent = routePattern.parent;
+          while (currentParent) {
+            if (currentParent === otherPatternObj) {
+              return true;
+            }
+            currentParent = currentParent.parent;
+          }
+          return false;
         });
 
         if (parentRouteMatching) {
           // We're navigating to a parent route - clear this signal to reflect the hierarchy
-          const defaultValue = routePattern.parameterDefaults?.[paramName];
+          const defaultValue = routePattern.parameterDefaults?.get(paramName);
+          if (debug) {
+            console.debug(
+              `[route] Parent route ${parentRouteMatching} matching: clearing ${paramName} signal to default: ${defaultValue}`,
+            );
+          }
           stateSignal.value = defaultValue;
-        } else {
+        } else if (debug) {
           // We're navigating to a different route family - preserve signal for future URL building
           // Keep current signal value unchanged
+          console.debug(
+            `[route] Different route family: preserving ${paramName} signal value: ${stateSignal.value}`,
+          );
         }
       }
     });
@@ -628,15 +627,10 @@ export const setupRoutes = (routeDefinition) => {
       "Routes already exist. Call clearAllRoutes() first to clean up existing routes before creating new ones. This prevents cross-test pollution and ensures clean state.",
     );
   }
-  // PHASE 1: Register all patterns and build their relationships
-  setupPatterns(routeDefinition);
-  // PHASE 2: Create route patterns with signal connections and parameter defaults
-  const routePatterns = {};
-  for (const key of Object.keys(routeDefinition)) {
-    const urlPatternRaw = routeDefinition[key];
-    routePatterns[key] = createRoutePattern(urlPatternRaw);
-  }
-  // PHASE 3: Create routes using pre-created patterns
+  // PHASE 1: Setup patterns with unified objects (includes all relationships and signal connections)
+  const routePatterns = setupPatterns(routeDefinition);
+
+  // PHASE 2: Create routes using the unified pattern objects
   const routes = {};
   for (const key of Object.keys(routeDefinition)) {
     const routePattern = routePatterns[key];
@@ -655,8 +649,7 @@ export const clearAllRoutes = () => {
   }
   routeSet.clear();
   routePrivatePropertiesMap.clear();
-  // Clear patterns as well
-  clearPatterns();
+  // Pattern registry is now local to setupPatterns, no global cleanup needed
   // Don't clear signal registry here - let tests manage it explicitly
   // This prevents clearing signals that are still being used across multiple route registrations
 };
