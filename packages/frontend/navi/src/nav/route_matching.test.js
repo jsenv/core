@@ -254,4 +254,34 @@ await snapshotTests(import.meta.url, ({ test }) => {
       globalSignalRegistry.clear();
     }
   });
+
+  test("map isochrone tab matching", () => {
+    try {
+      const zoneSignal = stateSignal(undefined);
+      const isochroneTabSignal = stateSignal("compare");
+      const walkSignal = stateSignal(false);
+      const panelSignal = stateSignal(undefined);
+      zoneSignal.value = "london";
+      panelSignal.value = "isochrone";
+      isochroneTabSignal.value = "time";
+      const isochroneTimeModeSignal = stateSignal("walk");
+      const { MAP_ISOCHRONE_COMPARE_ROUTE, MAP_ISOCHRONE_TIME_ROUTE } =
+        setupRoutes({
+          MAP_ROUTE: `/map/?zone=${zoneSignal}`,
+          MAP_PANEL_ROUTE: `/map/:panel=${panelSignal}/`,
+          MAP_ISOCHRONE_ROUTE: `/map/isochrone/:tab=${isochroneTabSignal}/`,
+          MAP_ISOCHRONE_COMPARE_ROUTE: `/map/isochrone/compare?walk=${walkSignal}`,
+          MAP_ISOCHRONE_TIME_ROUTE: `/map/isochrone/time/:${isochroneTimeModeSignal}/`,
+          MAP_ISOCHRONE_TIME_WALK_ROUTE: "/map/isochrone/time/walk",
+        });
+      updateRoutes(`${baseUrl}/map/isochrone/time?zone=london`);
+      return {
+        isochrone_compare_matching: MAP_ISOCHRONE_COMPARE_ROUTE.matching,
+        isochrone_time_matching: MAP_ISOCHRONE_TIME_ROUTE.matching,
+      };
+    } finally {
+      clearAllRoutes();
+      globalSignalRegistry.clear();
+    }
+  });
 });
