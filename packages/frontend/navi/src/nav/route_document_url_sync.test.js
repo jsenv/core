@@ -627,6 +627,31 @@ await snapshotTests(import.meta.url, ({ test }) => {
     }
   });
 
+  test("signal preserved when navigating between menu/tabs", () => {
+    try {
+      const sectionSignal = stateSignal("settings");
+      const settingsTabSignal = stateSignal("general");
+      const analyticsTabSignal = stateSignal("overview");
+      const { ADMIN_SETTINGS_ROUTE } = setupRoutes({
+        HOME_ROUTE: "/",
+        ADMIN_ROUTE: `/admin/:section=${sectionSignal}/`,
+        ADMIN_SETTINGS_ROUTE: `/admin/settings/:tab=${settingsTabSignal}`,
+        ADMIN_ANALYTICS_ROUTE: `/admin/analytics?tab=${analyticsTabSignal}`,
+      });
+      // simulate we're on settings advanced page
+      updateRoutes(`${baseUrl}/admin/settings/advanced`);
+      // and we nav to analytics
+      updateRoutes(`${baseUrl}/admin/analytics`);
+      // now we expect settings_url: to be "admin/settings/advanced" (settingsTabSignal value should be preserved)
+      return {
+        settings_url: ADMIN_SETTINGS_ROUTE.url,
+      };
+    } finally {
+      clearAllRoutes();
+      globalSignalRegistry.clear();
+    }
+  });
+
   test("signals preserved when navigating between different route families", () => {
     try {
       const zoneSignal = stateSignal("foo", {
