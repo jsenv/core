@@ -635,17 +635,39 @@ export const createRoutePattern = (pattern) => {
       },
     );
 
-    // Count only non-undefined provided parameters
-    const nonUndefinedParams = Object.entries(params).filter(
-      ([, value]) => value !== undefined,
+    // Count only non-undefined provided parameters that are NOT default values
+    const nonDefaultParams = Object.entries(params).filter(
+      ([paramName, value]) => {
+        if (value === undefined) return false;
+
+        // Check if this parameter has a default value in child's connections
+        const childConnection = childPatternObj.connections.find(
+          (conn) => conn.paramName === paramName,
+        );
+        if (childConnection) {
+          return value !== childConnection.options.defaultValue;
+        }
+
+        // Check if this parameter has a default value in parent's connections (current pattern)
+        const parentConnection = connections.find(
+          (conn) => conn.paramName === paramName,
+        );
+        if (parentConnection) {
+          return value !== parentConnection.options.defaultValue;
+        }
+
+        return true; // Non-connection parameters are considered non-default
+      },
     );
-    const hasProvidedParams = nonUndefinedParams.length > 0;
+
+    const hasNonDefaultProvidedParams = nonDefaultParams.length > 0;
 
     // Use child route if:
     // 1. Child has active non-default parameters, OR
-    // 2. User provided non-undefined params AND child can be built completely
+    // 2. User provided non-default params AND child can be built completely
     const shouldUse =
-      hasActiveParams || (hasProvidedParams && canBuildChildCompletely);
+      hasActiveParams ||
+      (hasNonDefaultProvidedParams && canBuildChildCompletely);
 
     if (DEBUG && shouldUse) {
       console.debug(
