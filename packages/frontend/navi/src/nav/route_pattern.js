@@ -436,7 +436,6 @@ export const createRoutePattern = (pattern) => {
       paramValue,
       childParsedPattern,
     );
-
     if (matchesChildLiteral) {
       // Compatible - parameter value matches child literal
       return {
@@ -447,34 +446,24 @@ export const createRoutePattern = (pattern) => {
       };
     }
 
-    // CRITICAL FIX: For path parameters, check if the parameter value would
-    // actually lead to this specific child route by checking position-specific matching
+    // ROBUST FIX: For path parameters, check semantic compatibility by verifying
+    // that parent parameter values can actually produce the child route structure
     const isParentPathParam = connections.some(
       (conn) => conn.paramName === paramName,
     );
-
     if (isParentPathParam) {
-      // Find the parameter's position in the parent pattern
-      const parentParamPosition = parsedPattern.segments.findIndex(
-        (segment) => segment.type === "param" && segment.name === paramName,
+      // Check if parent parameter value matches any child literal where it should
+      // The key insight: if parent has a specific parameter value, child route must
+      // be reachable with that value or they're incompatible
+      const parameterCanReachChild = canParameterReachChildRoute(
+        paramName,
+        paramValue,
+        parsedPattern,
+        childParsedPattern,
       );
 
-      if (parentParamPosition !== -1) {
-        // Check if child has a literal at this position that conflicts with parameter value
-        const childSegmentAtPosition = childParsedPattern.segments.find(
-          (segment) => segment.index === parentParamPosition,
-        );
-
-        if (
-          childSegmentAtPosition &&
-          childSegmentAtPosition.type === "literal"
-        ) {
-          // Child has a literal at this position - parameter value must match exactly
-          if (childSegmentAtPosition.value !== paramValue) {
-            // Parameter value doesn't match child's literal at this position
-            return { isCompatible: false };
-          }
-        }
+      if (!parameterCanReachChild) {
+        return { isCompatible: false };
       }
     }
 
@@ -482,7 +471,6 @@ export const createRoutePattern = (pattern) => {
     const isParentQueryParam = parsedPattern.queryParams.some(
       (qp) => qp.name === paramName,
     );
-
     if (isParentQueryParam) {
       // Query parameters are always compatible and can be inherited by child routes
       return {
@@ -499,7 +487,6 @@ export const createRoutePattern = (pattern) => {
       const isParentPathParam = connections.some(
         (conn) => conn.paramName === paramName,
       );
-
       if (isParentPathParam) {
         // Parameter value (from user or signal) doesn't match this child's literals
         // Check if child has any literal segments that would conflict with this parameter
@@ -507,7 +494,6 @@ export const createRoutePattern = (pattern) => {
           (segment) =>
             segment.type === "literal" && segment.value !== paramValue,
         );
-
         if (hasConflictingLiteral) {
           return { isCompatible: false };
         }
@@ -1489,6 +1475,46 @@ const paramMatchesChildLiteral = (paramValue, childParsedPattern) => {
   return childParsedPattern.segments.some(
     (segment) => segment.type === "literal" && segment.value === paramValue,
   );
+};
+
+/**
+ * Helper: Check if a parent parameter can semantically reach a child route
+ * This replaces the fragile position-based matching with semantic verification
+ */
+const canParameterReachChildRoute = (
+  paramName,
+  paramValue,
+  parentPattern,
+  childPattern,
+) => {
+  // Find the parent parameter segment
+  const parentParamSegment = parentPattern.segments.find(
+    (segment) => segment.type === "param" && segment.name === paramName,
+  );
+
+  if (!parentParamSegment) {
+    return true; // Not a path parameter, no conflict
+  }
+
+  // Get parameter's logical path position (not array index)
+  const paramPathPosition = parentParamSegment.index;
+
+  // Find corresponding child segment at the same logical path position
+  const childSegmentAtSamePosition = childPattern.segments.find(
+    (segment) => segment.index === paramPathPosition,
+  );
+
+  if (!childSegmentAtSamePosition) {
+    return true; // Child doesn't extend to this position, no conflict
+  }
+
+  if (childSegmentAtSamePosition.type === "literal") {
+    // Child has a literal at this position - parent parameter must match exactly
+    return childSegmentAtSamePosition.value === paramValue;
+  }
+
+  // Child has parameter at same position - compatible
+  return true;
 };
 
 /**
