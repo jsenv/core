@@ -403,7 +403,8 @@ const registerRoute = (routePattern) => {
       }
       return Promise.resolve();
     }
-    return browserIntegration.navTo(route.buildUrl(params));
+    const routeUrl = route.buildUrl(params);
+    return browserIntegration.navTo(routeUrl);
   };
   route.redirectTo = (params) => {
     if (!browserIntegration) {

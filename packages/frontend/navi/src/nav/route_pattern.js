@@ -671,10 +671,62 @@ export const createRoutePattern = (pattern) => {
       }
     }
 
-    // Add parent parameters that should be inherited (excluding defaults and consumed parameters)
+    // Collect parameters from ALL ancestor routes in the hierarchy (not just immediate parent)
+    const collectAncestorParameters = (currentPattern) => {
+      const relationships = patternRelationships.get(currentPattern);
+      if (!relationships?.parent) {
+        return; // No more ancestors
+      }
+
+      const parentPatternObj = relationships.parent;
+
+      // Add parent's signal parameters
+      for (const connection of parentPatternObj.connections) {
+        const { paramName, signal, options } = connection;
+        const defaultValue = options.defaultValue;
+
+        // Skip if child route already handles this parameter
+        const childConnection = childPatternObj.connections.find(
+          (conn) => conn.paramName === paramName,
+        );
+        if (childConnection) {
+          continue; // Child route handles this parameter directly
+        }
+
+        // Skip if parameter is already collected
+        if (paramName in baseParams) {
+          continue; // Already have this parameter
+        }
+
+        // Only include non-default signal values
+        if (signal?.value !== undefined && signal.value !== defaultValue) {
+          // Skip if parameter is consumed by child's literal path segments
+          const isConsumedByChildPath = childPatternObj.pattern.segments.some(
+            (segment) =>
+              segment.type === "literal" && segment.value === signal.value,
+          );
+          if (!isConsumedByChildPath) {
+            baseParams[paramName] = signal.value;
+          }
+        }
+      }
+
+      // Recursively collect from higher ancestors
+      collectAncestorParameters(parentPatternObj.originalPattern);
+    };
+
+    // Start collecting from the child's parent
+    collectAncestorParameters(childPatternObj.originalPattern);
+
+    // Add parent parameters from the immediate calling context
     for (const [paramName, parentValue] of Object.entries(
       parentResolvedParams,
     )) {
+      // Skip if already collected from ancestors or child handles it
+      if (paramName in baseParams) {
+        continue;
+      }
+
       // Skip if child route already handles this parameter
       const childConnection = childPatternObj.connections.find(
         (conn) => conn.paramName === paramName,

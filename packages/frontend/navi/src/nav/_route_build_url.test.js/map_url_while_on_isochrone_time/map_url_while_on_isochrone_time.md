@@ -32,7 +32,7 @@ try {
 
 ```js
 {
-  "map_url": "http://127.0.0.1/map/isochrone/time?zone=paris"
+  "map_url": "http://127.0.0.1/map/isochrone/time?zone=paris&iso_lon=1"
 }
 ```
 
