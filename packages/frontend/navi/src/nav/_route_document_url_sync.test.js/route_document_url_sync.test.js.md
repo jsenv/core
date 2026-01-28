@@ -16,6 +16,7 @@
 - [updating signals after url change preserves signal value (no circular dependency)](updating_signals_after_url_change_preserves_signal_value_(no_circular_dependency)/updating_signals_after_url_change_preserves_signal_value_(no_circular_dependency).md)
 - [updating url keep signals in sync](updating_url_keep_signals_in_sync/updating_url_keep_signals_in_sync.md)
 - [updating url with missing parameters uses signal current values](updating_url_with_missing_parameters_uses_signal_current_values/updating_url_with_missing_parameters_uses_signal_current_values.md)
+- [updating boolean signal](updating_boolean_signal/updating_boolean_signal.md)
 
 ---
 

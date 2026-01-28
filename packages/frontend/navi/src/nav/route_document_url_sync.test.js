@@ -1157,4 +1157,33 @@ await snapshotTests(import.meta.url, ({ test }) => {
       setBrowserIntegration(undefined);
     }
   });
+
+  test("updating boolean signal", () => {
+    // Mock browser integration
+    let urlProgression = [];
+    setBrowserIntegration({
+      navTo: (url) => {
+        urlProgression.push(url);
+        updateRoutes(url);
+        return Promise.resolve();
+      },
+    });
+
+    try {
+      const walkSignal = stateSignal(false, { type: "boolean" }); // Default walk is false
+      const walkMinuteSignal = stateSignal(20, { type: "number" }); // Default walk minutes is 10
+      setupRoutes({
+        ISOCHRONE_ROUTE: `/isochrone?walk=${walkSignal}&walk_minute=${walkMinuteSignal}`,
+      });
+      updateRoutes(`${baseUrl}/isochrone`);
+      walkSignal.value = true;
+      walkMinuteSignal.value = 30;
+
+      return urlProgression;
+    } finally {
+      clearAllRoutes();
+      globalSignalRegistry.clear();
+      setBrowserIntegration(undefined);
+    }
+  });
 });
