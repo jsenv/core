@@ -991,4 +991,88 @@ await snapshotTests(import.meta.url, ({ test }) => {
       globalSignalRegistry.clear();
     }
   });
+
+  test("circular dependency bug: signal update triggers both URL->Signal and Signal->URL effects", () => {
+    // Mock browser integration to capture navigation calls
+    let navToCalls = [];
+    setBrowserIntegration({
+      navTo: (url, options = {}) => {
+        navToCalls.push({ url, options });
+        return Promise.resolve();
+      },
+    });
+
+    try {
+      const categorySignal = stateSignal("electronics");
+      const { CATEGORY_ROUTE } = setupRoutes({
+        CATEGORY_ROUTE: `/products?category=${categorySignal}`,
+      });
+      // Navigate to initial URL - this should set signal to "electronics"
+      updateRoutes(`${baseUrl}/products?category=electronics`);
+      // Clear navigation calls from initial setup
+      navToCalls = [];
+
+      // BUG SCENARIO: Signal update should trigger Signal->URL effect only
+      // But with circular dependency, it might trigger URL->Signal effect too
+      categorySignal.value = "books";
+
+      return {
+        initialSignalValue: "electronics", // After URL parsing
+        finalSignalValue: categorySignal.value, // After programmatic update
+        navToCallsCount: navToCalls.length, // Should be 1 (Signal->URL only)
+        navToCalls: navToCalls.map((call) => ({
+          url: call.url,
+          options: call.options,
+        })),
+        routeMatching: CATEGORY_ROUTE.matching,
+        routeParams: CATEGORY_ROUTE.params,
+      };
+    } finally {
+      clearAllRoutes();
+      globalSignalRegistry.clear();
+      setBrowserIntegration(undefined);
+    }
+  });
+
+  test("circular dependency bug: URL update followed by immediate signal update", () => {
+    // Mock browser integration
+    let navToCalls = [];
+    setBrowserIntegration({
+      navTo: (url, options = {}) => {
+        navToCalls.push({ url, options });
+        return Promise.resolve();
+      },
+    });
+
+    try {
+      const priceSignal = stateSignal(100);
+      const { SHOP_ROUTE } = setupRoutes({
+        SHOP_ROUTE: `/shop?maxPrice=${priceSignal}`,
+      });
+      // Initial state - route matching with price=50
+      updateRoutes(`${baseUrl}/shop?maxPrice=50`);
+      const priceAfterUrlUpdate = priceSignal.value; // Should be 50
+      // Clear calls from setup
+      navToCalls = [];
+
+      // BUG SCENARIO: Immediately update signal after URL update
+      // This should only trigger Signal->URL effect, but circular dependency
+      // might cause URL->Signal effect to fire again, overwriting the programmatic value
+      priceSignal.value = 200;
+      const priceAfterSignalUpdate = priceSignal.value; // Should remain 200
+
+      return {
+        priceAfterUrlUpdate, // Should be 50 (from URL)
+        priceAfterSignalUpdate, // Should be 200 (from signal update)
+        signalValueStable: priceAfterSignalUpdate === 200, // Should be true
+        navToCallsCount: navToCalls.length, // Should be 1
+        lastNavigatedUrl: navToCalls[navToCalls.length - 1]?.url,
+        routeParams: SHOP_ROUTE.params,
+      };
+    } finally {
+      clearAllRoutes();
+      globalSignalRegistry.clear();
+      setBrowserIntegration(undefined);
+    }
+  });
 });

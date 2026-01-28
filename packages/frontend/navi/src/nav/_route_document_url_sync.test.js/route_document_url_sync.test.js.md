@@ -12,6 +12,8 @@
 - [mostSpecificRoute should prefer literal over parameterized routes](mostspecificroute_should_prefer_literal_over_parameterized_routes/mostspecificroute_should_prefer_literal_over_parameterized_routes.md)
 - [signal updates in child route (isochrone) with parent-child relationship](signal_updates_in_child_route_(isochrone)_with_parent-child_relationship/signal_updates_in_child_route_(isochrone)_with_parent-child_relationship.md)
 - [parameter value update in URL should sync to signal values](parameter_value_update_in_url_should_sync_to_signal_values/parameter_value_update_in_url_should_sync_to_signal_values.md)
+- [circular dependency bug: signal update triggers both URL->Signal and Signal->URL effects](circular_dependency_bug_signal_update_triggers_both_url-signal_and_signal-url_effects/circular_dependency_bug_signal_update_triggers_both_url-signal_and_signal-url_effects.md)
+- [circular dependency bug: URL update followed by immediate signal update](circular_dependency_bug_url_update_followed_by_immediate_signal_update/circular_dependency_bug_url_update_followed_by_immediate_signal_update.md)
 
 ---
 
