@@ -126,12 +126,19 @@ export const updateRoutes = (
         if (newMatching) {
           // When route matches, sync signal with URL parameter value
           // This ensures URL is the source of truth
-          if (debug) {
+          // Only update signal if URL explicitly provides the parameter value
+          if (urlParamValue !== undefined) {
+            if (debug) {
+              console.debug(
+                `[route] Route matching: setting ${paramName} signal to URL value: ${urlParamValue}`,
+              );
+            }
+            stateSignal.value = urlParamValue;
+          } else if (debug) {
             console.debug(
-              `[route] Route matching: setting ${paramName} signal to URL value: ${urlParamValue}`,
+              `[route] Route matching: preserving ${paramName} signal value (URL doesn't provide it): ${stateSignal.value}`,
             );
           }
-          stateSignal.value = urlParamValue;
         } else {
           // When route doesn't match, check if we're navigating to a parent route
           let parentRouteMatching = false;
