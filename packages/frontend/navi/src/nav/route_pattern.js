@@ -228,6 +228,53 @@ export const createRoutePattern = (pattern) => {
       }
     }
 
+    // Include active non-default parameters from child routes for URL optimization
+    // Only include from child routes that would actually match the current parameters
+    const childPatternObjs = patternObject.children || [];
+    for (const childPatternObj of childPatternObjs) {
+      // Check if this child route would match the current resolved parameters
+      // by simulating URL building and seeing if the child segments align
+      let childWouldMatch = true;
+
+      // Compare child segments with what would be built from current params
+      for (let i = 0; i < childPatternObj.pattern.segments.length; i++) {
+        const childSegment = childPatternObj.pattern.segments[i];
+        const parentSegment = parsedPattern.segments[i];
+
+        if (childSegment.type === "literal") {
+          if (parentSegment && parentSegment.type === "param") {
+            // Child has literal where parent has parameter - check if values match
+            const paramValue = resolvedParams[parentSegment.name];
+            if (paramValue !== childSegment.value) {
+              childWouldMatch = false;
+              break;
+            }
+          }
+          // If parent also has literal at this position, they should already match from route hierarchy
+        }
+        // Parameter segments are always compatible
+      }
+
+      if (childWouldMatch) {
+        for (const childConnection of childPatternObj.connections) {
+          const {
+            paramName: childParam,
+            signal: childSignal,
+            options: childOptions,
+          } = childConnection;
+
+          // Only include if not already resolved and is non-default
+          if (
+            !(childParam in resolvedParams) &&
+            childSignal?.value !== undefined &&
+            childSignal.value !== childOptions.defaultValue
+          ) {
+            resolvedParams[childParam] = childSignal.value;
+          }
+        }
+      }
+    }
+
     return resolvedParams;
   };
 
@@ -243,8 +290,8 @@ export const createRoutePattern = (pattern) => {
     const filtered = { ...params };
 
     for (const connection of connections) {
-      const { paramName, signal, options } = connection;
-      const defaultValue = options.defaultValue;
+      const { paramName, signal } = connection;
+      const defaultValue = parameterDefaults.get(paramName);
 
       if (paramName in filtered && filtered[paramName] === defaultValue) {
         delete filtered[paramName];
@@ -543,7 +590,12 @@ export const createRoutePattern = (pattern) => {
   /**
    * Helper: Determine if child route should be used based on active parameters
    */
-  const shouldUseChildRoute = (childPatternObj, params, compatibility) => {
+  const shouldUseChildRoute = (
+    childPatternObj,
+    params,
+    compatibility,
+    resolvedParams,
+  ) => {
     // CRITICAL: Check if user explicitly passed undefined for parameters that would
     // normally be used to select this child route via sibling route relationships
     for (const [paramName, paramValue] of Object.entries(params)) {
@@ -665,9 +717,113 @@ export const createRoutePattern = (pattern) => {
     // Use child route if:
     // 1. Child has active non-default parameters, OR
     // 2. User provided non-default params AND child can be built completely
-    const shouldUse =
+    // EXCEPT: Don't use child if parent can produce cleaner URL by omitting defaults
+    let shouldUse =
       hasActiveParams ||
       (hasNonDefaultProvidedParams && canBuildChildCompletely);
+
+    // Optimization: Check if child would include literal segments that represent default values
+    if (shouldUse) {
+      // Check if child pattern has literal segments that correspond to default parameter values
+      const childLiterals = childPatternObj.pattern.segments
+        .filter((seg) => seg.type === "literal")
+        .map((seg) => seg.value);
+
+      const parentLiterals = parsedPattern.segments
+        .filter((seg) => seg.type === "literal")
+        .map((seg) => seg.value);
+
+      // If child has more literal segments than parent, check if the extra ones are defaults
+      if (childLiterals.length > parentLiterals.length) {
+        const extraLiterals = childLiterals.slice(parentLiterals.length);
+
+        // Check if any extra literal matches a default parameter value
+        // BUT only skip if user didn't explicitly provide that parameter AND
+        // both conditions are true:
+        // 1. The parameters that would cause us to use this child route are defaults
+        // 2. The child route doesn't have non-default parameters that would be lost
+        let childSpecificParamsAreDefaults = true;
+
+        // Check if parameters that determine child selection are non-default
+        // OR if any descendant parameters indicate explicit navigation
+        for (const connection of connections) {
+          const { paramName } = connection;
+          const defaultValue = parameterDefaults.get(paramName);
+          const resolvedValue = resolvedParams[paramName];
+          const userProvidedParam = paramName in params;
+
+          if (extraLiterals.includes(defaultValue)) {
+            // This literal corresponds to a parameter in the parent
+            if (
+              userProvidedParam ||
+              (resolvedValue !== undefined && resolvedValue !== defaultValue)
+            ) {
+              // Parameter was explicitly provided or has non-default value - child is needed
+              childSpecificParamsAreDefaults = false;
+              break;
+            }
+          }
+        }
+
+        // Additional check: if child route has path parameters that are non-default,
+        // this indicates explicit navigation even if structural parameters happen to be default
+        // (Query parameters don't count as they don't indicate structural navigation)
+        if (childSpecificParamsAreDefaults) {
+          for (const childConnection of childPatternObj.connections) {
+            const childParamName = childConnection.paramName;
+            const childDefaultValue = childConnection.options?.defaultValue;
+            const childResolvedValue = resolvedParams[childParamName];
+
+            // Only consider path parameters, not query parameters
+            const isPathParam = childPatternObj.pattern.segments.some(
+              (seg) => seg.type === "param" && seg.name === childParamName,
+            );
+
+            if (
+              isPathParam &&
+              childResolvedValue !== undefined &&
+              childResolvedValue !== childDefaultValue
+            ) {
+              // Child has non-default path parameters, indicating explicit navigation
+              childSpecificParamsAreDefaults = false;
+              if (DEBUG) {
+                console.debug(
+                  `[${pattern}] Child has non-default path parameter '${childParamName}=${childResolvedValue}' (default: ${childDefaultValue}) - indicates explicit navigation`,
+                );
+              }
+              break;
+            }
+          }
+        }
+
+        // When structural parameters (those that determine child selection) are defaults,
+        // prefer parent route regardless of whether child has other non-default parameters
+        if (childSpecificParamsAreDefaults) {
+          for (const connection of connections) {
+            const { paramName } = connection;
+            const defaultValue = parameterDefaults.get(paramName);
+            const userProvidedParam = paramName in params;
+
+            if (extraLiterals.includes(defaultValue) && !userProvidedParam) {
+              // This child includes a literal that represents a default value
+              // AND user didn't explicitly provide this parameter
+              // When structural parameters are defaults, prefer parent for cleaner URL
+              shouldUse = false;
+              if (DEBUG) {
+                console.debug(
+                  `[${pattern}] Preferring parent over child - child includes default literal '${defaultValue}' for param '${paramName}' (structural parameter is default)`,
+                );
+              }
+              break;
+            }
+          }
+        } else if (DEBUG) {
+          console.debug(
+            `[${pattern}] Using child route - parameters that determine child selection are non-default`,
+          );
+        }
+      }
+    }
 
     if (DEBUG && shouldUse) {
       console.debug(
@@ -1457,6 +1613,7 @@ export const createRoutePattern = (pattern) => {
       descendantPatternObj,
       params,
       compatibility,
+      parentResolvedParams,
     );
     if (!shouldUse) {
       return null;

@@ -9465,7 +9465,13 @@ const extractSearchParams = (urlObj, connections = []) => {
       const numberValue = Number(value);
       params[key] = isNaN(numberValue) ? value : numberValue;
     } else if (signalType === "boolean") {
-      params[key] = value === "true" || value === "1";
+      // Handle boolean query parameters:
+      // ?walk=true → true
+      // ?walk=1 → true
+      // ?walk → true (parameter present without value)
+      // ?walk=false → false
+      // ?walk=0 → false
+      params[key] = value === "true" || value === "1" || value === "";
     } else {
       params[key] = value;
     }

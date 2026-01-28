@@ -865,4 +865,26 @@ await snapshotTests(import.meta.url, ({ test }) => {
       globalSignalRegistry.clear();
     }
   });
+
+  test("menu url when on default tab", () => {
+    try {
+      const mapPanelSignal = stateSignal(undefined);
+      const isochroneTabSignal = stateSignal("compare");
+      const isochroneWalkSignal = stateSignal(false);
+      const { MAP_ISOCHRONE_ROUTE } = setupRoutes({
+        MAP_PANEL_ROUTE: `/map/:panel=${mapPanelSignal}/`,
+        MAP_ISOCHRONE_ROUTE: `/map/isochrone/:tab=${isochroneTabSignal}/`,
+        MAP_ISOCHRONE_COMPARE_ROUTE: `/map/isochrone/compare?walk=${isochroneWalkSignal}`,
+      });
+      updateRoutes(`${baseUrl}/map/isochrone`);
+      isochroneWalkSignal.value = true;
+
+      return {
+        map_url: MAP_ISOCHRONE_ROUTE.buildUrl(),
+      };
+    } finally {
+      clearAllRoutes();
+      globalSignalRegistry.clear();
+    }
+  });
 });

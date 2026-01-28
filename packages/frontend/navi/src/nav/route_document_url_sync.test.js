@@ -1159,7 +1159,6 @@ await snapshotTests(import.meta.url, ({ test }) => {
   });
 
   test("updating boolean signal", () => {
-    // Mock browser integration
     let urlProgression = [];
     setBrowserIntegration({
       navTo: (url) => {

@@ -25,6 +25,7 @@
 - [route with undefined parameter default should not optimize to children](route_with_undefined_parameter_default_should_not_optimize_to_children/route_with_undefined_parameter_default_should_not_optimize_to_children.md)
 - [rawUrlPart functionality in url building](rawurlpart_functionality_in_url_building/rawurlpart_functionality_in_url_building.md)
 - [map url while on isochrone time](map_url_while_on_isochrone_time/map_url_while_on_isochrone_time.md)
+- [menu url when on default tab](menu_url_when_on_default_tab/menu_url_when_on_default_tab.md)
 
 ---
 
