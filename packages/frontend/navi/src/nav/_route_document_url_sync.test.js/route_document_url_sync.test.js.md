@@ -14,6 +14,8 @@
 - [parameter value update in URL should sync to signal values](parameter_value_update_in_url_should_sync_to_signal_values/parameter_value_update_in_url_should_sync_to_signal_values.md)
 - [circular dependency bug: signal update triggers both URL->Signal and Signal->URL effects](circular_dependency_bug_signal_update_triggers_both_url-signal_and_signal-url_effects/circular_dependency_bug_signal_update_triggers_both_url-signal_and_signal-url_effects.md)
 - [circular dependency bug: URL update followed by immediate signal update](circular_dependency_bug_url_update_followed_by_immediate_signal_update/circular_dependency_bug_url_update_followed_by_immediate_signal_update.md)
+- [URL -> Signal synchronization: updateRoutes should update connected signals](url_-_signal_synchronization_updateroutes_should_update_connected_signals/url_-_signal_synchronization_updateroutes_should_update_connected_signals.md)
+- [URL -> Signal synchronization: missing URL parameters should use signal defaults](url_-_signal_synchronization_missing_url_parameters_should_use_signal_defaults/url_-_signal_synchronization_missing_url_parameters_should_use_signal_defaults.md)
 
 ---
 

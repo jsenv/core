@@ -998,6 +998,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
     setBrowserIntegration({
       navTo: (url, options = {}) => {
         navToCalls.push({ url, options });
+        updateRoutes(url);
         return Promise.resolve();
       },
     });
@@ -1040,12 +1041,13 @@ await snapshotTests(import.meta.url, ({ test }) => {
     setBrowserIntegration({
       navTo: (url, options = {}) => {
         navToCalls.push({ url, options });
+        updateRoutes(url);
         return Promise.resolve();
       },
     });
 
     try {
-      const priceSignal = stateSignal(100);
+      const priceSignal = stateSignal(100, { type: "number" });
       const { SHOP_ROUTE } = setupRoutes({
         SHOP_ROUTE: `/shop?maxPrice=${priceSignal}`,
       });
@@ -1068,6 +1070,86 @@ await snapshotTests(import.meta.url, ({ test }) => {
         navToCallsCount: navToCalls.length, // Should be 1
         lastNavigatedUrl: navToCalls[navToCalls.length - 1]?.url,
         routeParams: SHOP_ROUTE.params,
+      };
+    } finally {
+      clearAllRoutes();
+      globalSignalRegistry.clear();
+      setBrowserIntegration(undefined);
+    }
+  });
+
+  test("URL -> Signal synchronization: updateRoutes should update connected signals", () => {
+    // Mock browser integration to ensure no navigation calls are made
+    let navToCalls = [];
+    setBrowserIntegration({
+      navTo: (url, options = {}) => {
+        navToCalls.push({ url, options });
+        return Promise.resolve();
+      },
+    });
+
+    try {
+      const categorySignal = stateSignal("electronics");
+      const sortSignal = stateSignal("name");
+
+      const { PRODUCTS_ROUTE } = setupRoutes({
+        PRODUCTS_ROUTE: `/products?category=${categorySignal}&sort=${sortSignal}`,
+      });
+
+      // Initial state
+      const initialCategoryValue = categorySignal.value;
+      const initialSortValue = sortSignal.value;
+
+      // URL -> Signal: Call updateRoutes with new URL parameters
+      updateRoutes(`${baseUrl}/products?category=books&sort=price`);
+
+      return {
+        initialCategoryValue, // Should be "electronics"
+        initialSortValue, // Should be "name"
+        updatedCategoryValue: categorySignal.value, // Should be "books"
+        updatedSortValue: sortSignal.value, // Should be "price"
+        navToCallsCount: navToCalls.length, // Should be 0 (no navigation triggered)
+        routeMatching: PRODUCTS_ROUTE.matching, // Should be true
+        routeParams: PRODUCTS_ROUTE.params, // Should reflect new URL params
+      };
+    } finally {
+      clearAllRoutes();
+      globalSignalRegistry.clear();
+      setBrowserIntegration(undefined);
+    }
+  });
+
+  test("URL -> Signal synchronization: missing URL parameters should use signal defaults", () => {
+    // Mock browser integration
+    let navToCalls = [];
+    setBrowserIntegration({
+      navTo: (url, options = {}) => {
+        navToCalls.push({ url, options });
+        return Promise.resolve();
+      },
+    });
+
+    try {
+      const pageSignal = stateSignal(1, { type: "number" }); // Default page is 1
+      const limitSignal = stateSignal(10, { type: "number" }); // Default limit is 10
+
+      const { SEARCH_ROUTE } = setupRoutes({
+        SEARCH_ROUTE: `/search?page=${pageSignal}&limit=${limitSignal}`,
+      });
+
+      // Set some initial non-default values
+      pageSignal.value = 5;
+      limitSignal.value = 25;
+
+      // URL -> Signal: Navigate to URL that only has one parameter
+      updateRoutes(`${baseUrl}/search?page=3`);
+
+      return {
+        pageSignalValue: pageSignal.value, // Should be 3 (from URL)
+        limitSignalValue: limitSignal.value, // Should be undefined (URL doesn't provide it)
+        navToCallsCount: navToCalls.length, // Should be 0 (no navigation triggered)
+        routeMatching: SEARCH_ROUTE.matching, // Should be true
+        routeParams: SEARCH_ROUTE.params, // Should match URL structure
       };
     } finally {
       clearAllRoutes();

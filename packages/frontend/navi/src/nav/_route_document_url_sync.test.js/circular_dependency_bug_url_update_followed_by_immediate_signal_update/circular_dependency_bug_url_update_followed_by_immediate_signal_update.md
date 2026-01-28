@@ -6,12 +6,13 @@ let navToCalls = [];
 setBrowserIntegration({
   navTo: (url, options = {}) => {
     navToCalls.push({ url, options });
+    updateRoutes(url);
     return Promise.resolve();
   },
 });
 
 try {
-  const priceSignal = stateSignal(100);
+  const priceSignal = stateSignal(100, { type: "number" });
   const { SHOP_ROUTE } = setupRoutes({
     SHOP_ROUTE: `/shop?maxPrice=${priceSignal}`,
   });
@@ -44,13 +45,13 @@ try {
 
 ```js
 {
-  "priceAfterUrlUpdate": "50",
+  "priceAfterUrlUpdate": 50,
   "priceAfterSignalUpdate": 200,
   "signalValueStable": true,
   "navToCallsCount": 1,
   "lastNavigatedUrl": "http://127.0.0.1/shop?maxPrice=200",
   "routeParams": {
-    "maxPrice": "50"
+    "maxPrice": 200
   }
 }
 ```

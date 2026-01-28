@@ -104,6 +104,110 @@ export const updateRoutes = (
         matchingRouteSet.add(route);
       }
     }
+
+    // URL -> Signal synchronization (moved from individual route effects to eliminate circular dependency)
+    for (const {
+      route,
+      routePrivateProperties,
+      newMatching,
+    } of routeMatchInfoSet) {
+      const { routePattern } = routePrivateProperties;
+      const { connections } = routePattern;
+
+      for (const {
+        signal: stateSignal,
+        paramName,
+        options = {},
+      } of connections) {
+        const { debug } = options;
+        const params = routePrivateProperties.rawParamsSignal.value;
+        const urlParamValue = params[paramName];
+
+        if (newMatching) {
+          // When route matches, sync signal with URL parameter value
+          // This ensures URL is the source of truth
+          if (debug) {
+            console.debug(
+              `[route] Route matching: setting ${paramName} signal to URL value: ${urlParamValue}`,
+            );
+          }
+          stateSignal.value = urlParamValue;
+        } else {
+          // When route doesn't match, check if we're navigating to a parent route
+          let parentRouteMatching = false;
+          for (const otherRoute of routeSet) {
+            if (otherRoute === route || !otherRoute.matching) {
+              continue;
+            }
+            const otherRouteProperties = getRoutePrivateProperties(otherRoute);
+            const otherPatternObj = otherRouteProperties.routePattern;
+
+            // Check if the other route pattern is a parent of this route pattern
+            // Using the built relationships in the pattern objects
+            let currentParent = routePattern.parent;
+            let foundParent = false;
+            while (currentParent) {
+              if (currentParent === otherPatternObj) {
+                foundParent = true;
+                break;
+              }
+              currentParent = currentParent.parent;
+            }
+
+            if (!foundParent) {
+              continue;
+            }
+
+            // Found a parent route that's matching, but check if there's a more specific
+            // sibling route also matching (indicating sibling navigation, not parent navigation)
+            let hasMatchingSibling = false;
+            for (const siblingCandidateRoute of routeSet) {
+              if (
+                siblingCandidateRoute === route ||
+                siblingCandidateRoute === otherRoute ||
+                !siblingCandidateRoute.matching
+              ) {
+                continue;
+              }
+
+              const siblingProperties = getRoutePrivateProperties(
+                siblingCandidateRoute,
+              );
+              const siblingPatternObj = siblingProperties.routePattern;
+
+              // Check if this is a sibling (shares the same parent)
+              if (siblingPatternObj.parent === currentParent) {
+                hasMatchingSibling = true;
+                break;
+              }
+            }
+
+            // Only treat as parent navigation if no sibling is matching
+            if (!hasMatchingSibling) {
+              parentRouteMatching = true;
+              break; // Found the parent route, no need to check other routes
+            }
+          }
+
+          if (parentRouteMatching) {
+            // We're navigating to a parent route - clear this signal to reflect the hierarchy
+            const defaultValue = routePattern.parameterDefaults?.get(paramName);
+            if (debug) {
+              console.debug(
+                `[route] Parent route ${parentRouteMatching} matching: clearing ${paramName} signal to default: ${defaultValue}`,
+              );
+            }
+            stateSignal.value = defaultValue;
+          } else if (debug) {
+            // We're navigating to a different route family - preserve signal for future URL building
+            // Keep current signal value unchanged
+            console.debug(
+              `[route] Different route family: preserving ${paramName} signal value: ${stateSignal.value}`,
+            );
+          }
+        }
+      }
+    }
   });
 
   // must be after paramsSignal.value update to ensure the proxy target is set
@@ -314,96 +418,7 @@ const registerRoute = (routePattern) => {
       );
     }
 
-    // URL -> Signal synchronization with parent-child route hierarchy checking
-    effect(() => {
-      const matching = matchingSignal.value;
-      const params = rawParamsSignal.value;
-      const urlParamValue = params[paramName];
-
-      if (matching) {
-        // When route matches, sync signal with URL parameter value
-        // This ensures URL is the source of truth
-        if (debug) {
-          console.debug(
-            `[route] Route matching: setting ${paramName} signal to URL value: ${urlParamValue}`,
-          );
-        }
-        stateSignal.value = urlParamValue;
-      } else {
-        // When route doesn't match, check if we're navigating to a parent route
-        let parentRouteMatching = false;
-        for (const otherRoute of routeSet) {
-          if (otherRoute === route || !otherRoute.matching) {
-            continue;
-          }
-          const otherRouteProperties = getRoutePrivateProperties(otherRoute);
-          const otherPatternObj = otherRouteProperties.routePattern;
-
-          // Check if the other route pattern is a parent of this route pattern
-          // Using the built relationships in the pattern objects
-          let currentParent = routePattern.parent;
-          let foundParent = false;
-          while (currentParent) {
-            if (currentParent === otherPatternObj) {
-              foundParent = true;
-              break;
-            }
-            currentParent = currentParent.parent;
-          }
-
-          if (!foundParent) {
-            continue;
-          }
-
-          // Found a parent route that's matching, but check if there's a more specific
-          // sibling route also matching (indicating sibling navigation, not parent navigation)
-          let hasMatchingSibling = false;
-          for (const siblingCandidateRoute of routeSet) {
-            if (
-              siblingCandidateRoute === route ||
-              siblingCandidateRoute === otherRoute ||
-              !siblingCandidateRoute.matching
-            ) {
-              continue;
-            }
-
-            const siblingProperties = getRoutePrivateProperties(
-              siblingCandidateRoute,
-            );
-            const siblingPatternObj = siblingProperties.routePattern;
-
-            // Check if this is a sibling (shares the same parent)
-            if (siblingPatternObj.parent === currentParent) {
-              hasMatchingSibling = true;
-              break;
-            }
-          }
-
-          // Only treat as parent navigation if no sibling is matching
-          if (!hasMatchingSibling) {
-            parentRouteMatching = true;
-            break; // Found the parent route, no need to check other routes
-          }
-        }
-
-        if (parentRouteMatching) {
-          // We're navigating to a parent route - clear this signal to reflect the hierarchy
-          const defaultValue = routePattern.parameterDefaults?.get(paramName);
-          if (debug) {
-            console.debug(
-              `[route] Parent route ${parentRouteMatching} matching: clearing ${paramName} signal to default: ${defaultValue}`,
-            );
-          }
-          stateSignal.value = defaultValue;
-        } else if (debug) {
-          // We're navigating to a different route family - preserve signal for future URL building
-          // Keep current signal value unchanged
-          console.debug(
-            `[route] Different route family: preserving ${paramName} signal value: ${stateSignal.value}`,
-          );
-        }
-      }
-    });
+    // URL -> Signal synchronization now handled in updateRoutes() to eliminate circular dependency
 
     // Signal -> URL synchronization
     effect(() => {

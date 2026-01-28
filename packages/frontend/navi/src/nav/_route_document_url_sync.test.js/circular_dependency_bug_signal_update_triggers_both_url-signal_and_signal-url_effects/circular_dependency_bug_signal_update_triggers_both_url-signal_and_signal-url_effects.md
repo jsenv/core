@@ -6,6 +6,7 @@ let navToCalls = [];
 setBrowserIntegration({
   navTo: (url, options = {}) => {
     navToCalls.push({ url, options });
+    updateRoutes(url);
     return Promise.resolve();
   },
 });
@@ -57,7 +58,7 @@ try {
   ],
   "routeMatching": true,
   "routeParams": {
-    "category": "electronics"
+    "category": "books"
   }
 }
 ```
