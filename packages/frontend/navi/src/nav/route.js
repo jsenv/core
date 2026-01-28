@@ -337,23 +337,60 @@ const registerRoute = (routePattern) => {
         stateSignal.value = urlParamValue;
       } else {
         // When route doesn't match, check if we're navigating to a parent route
-        const parentRouteMatching = Array.from(routeSet).find((otherRoute) => {
-          if (otherRoute === route || !otherRoute.matching) return false;
-
+        let parentRouteMatching = false;
+        for (const otherRoute of routeSet) {
+          if (otherRoute === route || !otherRoute.matching) {
+            continue;
+          }
           const otherRouteProperties = getRoutePrivateProperties(otherRoute);
           const otherPatternObj = otherRouteProperties.routePattern;
 
           // Check if the other route pattern is a parent of this route pattern
           // Using the built relationships in the pattern objects
           let currentParent = routePattern.parent;
+          let foundParent = false;
           while (currentParent) {
             if (currentParent === otherPatternObj) {
-              return true;
+              foundParent = true;
+              break;
             }
             currentParent = currentParent.parent;
           }
-          return false;
-        });
+
+          if (!foundParent) {
+            continue;
+          }
+
+          // Found a parent route that's matching, but check if there's a more specific
+          // sibling route also matching (indicating sibling navigation, not parent navigation)
+          let hasMatchingSibling = false;
+          for (const siblingCandidateRoute of routeSet) {
+            if (
+              siblingCandidateRoute === route ||
+              siblingCandidateRoute === otherRoute ||
+              !siblingCandidateRoute.matching
+            ) {
+              continue;
+            }
+
+            const siblingProperties = getRoutePrivateProperties(
+              siblingCandidateRoute,
+            );
+            const siblingPatternObj = siblingProperties.routePattern;
+
+            // Check if this is a sibling (shares the same parent)
+            if (siblingPatternObj.parent === currentParent) {
+              hasMatchingSibling = true;
+              break;
+            }
+          }
+
+          // Only treat as parent navigation if no sibling is matching
+          if (!hasMatchingSibling) {
+            parentRouteMatching = true;
+            break; // Found the parent route, no need to check other routes
+          }
+        }
 
         if (parentRouteMatching) {
           // We're navigating to a parent route - clear this signal to reflect the hierarchy
