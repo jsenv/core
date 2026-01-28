@@ -320,12 +320,6 @@ const registerRoute = (routePattern) => {
       const params = rawParamsSignal.value;
       const urlParamValue = params[paramName];
 
-      if (debug) {
-        console.debug(
-          `[route] URL->Signal effect triggered for ${paramName}: matching=${matching}, urlParamValue=${urlParamValue}, currentSignalValue=${stateSignal.value}`,
-        );
-      }
-
       if (matching) {
         // When route matches, sync signal with URL parameter value
         // This ensures URL is the source of truth
