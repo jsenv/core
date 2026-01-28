@@ -1,4 +1,4 @@
-# [circular dependency bug: URL update followed by immediate signal update](../../route_document_url_sync.test.js)
+# [updating signals after url change preserves signal value (no circular dependency)](../../route_document_url_sync.test.js)
 
 ```js
 // Mock browser integration
@@ -22,9 +22,9 @@ try {
   // Clear calls from setup
   navToCalls = [];
 
-  // BUG SCENARIO: Immediately update signal after URL update
-  // This should only trigger Signal->URL effect, but circular dependency
-  // might cause URL->Signal effect to fire again, overwriting the programmatic value
+  // TEST: After URL change updates signal, immediate signal update should be preserved
+  // This tests the timing issue: URL->Signal effect should not overwrite subsequent signal changes
+  // Different from previous test: this tests URL change FOLLOWED BY signal change stability
   priceSignal.value = 200;
   const priceAfterSignalUpdate = priceSignal.value; // Should remain 200
 

@@ -992,7 +992,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
     }
   });
 
-  test("circular dependency bug: signal update triggers both URL->Signal and Signal->URL effects", () => {
+  test("updating signals keep url in sync", () => {
     // Mock browser integration to capture navigation calls
     let navToCalls = [];
     setBrowserIntegration({
@@ -1013,8 +1013,8 @@ await snapshotTests(import.meta.url, ({ test }) => {
       // Clear navigation calls from initial setup
       navToCalls = [];
 
-      // BUG SCENARIO: Signal update should trigger Signal->URL effect only
-      // But with circular dependency, it might trigger URL->Signal effect too
+      // TEST: Signal update should trigger navigation and update route params
+      // Without circular dependency fix, route params would be stale
       categorySignal.value = "books";
 
       return {
@@ -1035,7 +1035,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
     }
   });
 
-  test("circular dependency bug: URL update followed by immediate signal update", () => {
+  test("updating signals after url change preserves signal value (no circular dependency)", () => {
     // Mock browser integration
     let navToCalls = [];
     setBrowserIntegration({
@@ -1057,9 +1057,9 @@ await snapshotTests(import.meta.url, ({ test }) => {
       // Clear calls from setup
       navToCalls = [];
 
-      // BUG SCENARIO: Immediately update signal after URL update
-      // This should only trigger Signal->URL effect, but circular dependency
-      // might cause URL->Signal effect to fire again, overwriting the programmatic value
+      // TEST: After URL change updates signal, immediate signal update should be preserved
+      // This tests the timing issue: URL->Signal effect should not overwrite subsequent signal changes
+      // Different from previous test: this tests URL change FOLLOWED BY signal change stability
       priceSignal.value = 200;
       const priceAfterSignalUpdate = priceSignal.value; // Should remain 200
 
@@ -1078,7 +1078,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
     }
   });
 
-  test("URL -> Signal synchronization: updateRoutes should update connected signals", () => {
+  test("updating url keep signals in sync", () => {
     // Mock browser integration to ensure no navigation calls are made
     let navToCalls = [];
     setBrowserIntegration({
@@ -1119,7 +1119,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
     }
   });
 
-  test("URL -> Signal synchronization: missing URL parameters should use signal defaults", () => {
+  test("updating url with missing parameters uses signal current values", () => {
     // Mock browser integration
     let navToCalls = [];
     setBrowserIntegration({

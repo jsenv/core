@@ -1,4 +1,4 @@
-# [URL -> Signal synchronization: missing URL parameters should use signal defaults](../../route_document_url_sync.test.js)
+# [updating url with missing parameters uses signal current values](../../route_document_url_sync.test.js)
 
 ```js
 // Mock browser integration

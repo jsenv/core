@@ -1,4 +1,4 @@
-# [circular dependency bug: signal update triggers both URL->Signal and Signal->URL effects](../../route_document_url_sync.test.js)
+# [updating signals keep url in sync](../../route_document_url_sync.test.js)
 
 ```js
 // Mock browser integration to capture navigation calls
@@ -21,8 +21,8 @@ try {
   // Clear navigation calls from initial setup
   navToCalls = [];
 
-  // BUG SCENARIO: Signal update should trigger Signal->URL effect only
-  // But with circular dependency, it might trigger URL->Signal effect too
+  // TEST: Signal update should trigger navigation and update route params
+  // Without circular dependency fix, route params would be stale
   categorySignal.value = "books";
 
   return {

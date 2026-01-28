@@ -1,4 +1,4 @@
-# [URL -> Signal synchronization: updateRoutes should update connected signals](../../route_document_url_sync.test.js)
+# [updating url keep signals in sync](../../route_document_url_sync.test.js)
 
 ```js
 // Mock browser integration to ensure no navigation calls are made

@@ -12,10 +12,10 @@
 - [mostSpecificRoute should prefer literal over parameterized routes](mostspecificroute_should_prefer_literal_over_parameterized_routes/mostspecificroute_should_prefer_literal_over_parameterized_routes.md)
 - [signal updates in child route (isochrone) with parent-child relationship](signal_updates_in_child_route_(isochrone)_with_parent-child_relationship/signal_updates_in_child_route_(isochrone)_with_parent-child_relationship.md)
 - [parameter value update in URL should sync to signal values](parameter_value_update_in_url_should_sync_to_signal_values/parameter_value_update_in_url_should_sync_to_signal_values.md)
-- [circular dependency bug: signal update triggers both URL->Signal and Signal->URL effects](circular_dependency_bug_signal_update_triggers_both_url-signal_and_signal-url_effects/circular_dependency_bug_signal_update_triggers_both_url-signal_and_signal-url_effects.md)
-- [circular dependency bug: URL update followed by immediate signal update](circular_dependency_bug_url_update_followed_by_immediate_signal_update/circular_dependency_bug_url_update_followed_by_immediate_signal_update.md)
-- [URL -> Signal synchronization: updateRoutes should update connected signals](url_-_signal_synchronization_updateroutes_should_update_connected_signals/url_-_signal_synchronization_updateroutes_should_update_connected_signals.md)
-- [URL -> Signal synchronization: missing URL parameters should use signal defaults](url_-_signal_synchronization_missing_url_parameters_should_use_signal_defaults/url_-_signal_synchronization_missing_url_parameters_should_use_signal_defaults.md)
+- [updating signals keep url in sync](updating_signals_keep_url_in_sync/updating_signals_keep_url_in_sync.md)
+- [updating signals after url change preserves signal value (no circular dependency)](updating_signals_after_url_change_preserves_signal_value_(no_circular_dependency)/updating_signals_after_url_change_preserves_signal_value_(no_circular_dependency).md)
+- [updating url keep signals in sync](updating_url_keep_signals_in_sync/updating_url_keep_signals_in_sync.md)
+- [updating url with missing parameters uses signal current values](updating_url_with_missing_parameters_uses_signal_current_values/updating_url_with_missing_parameters_uses_signal_current_values.md)
 
 ---
 
