@@ -6,6 +6,7 @@
 - [parameterized route vs literal route conflict after navigation](parameterized_route_vs_literal_route_conflict_after_navigation/parameterized_route_vs_literal_route_conflict_after_navigation.md)
 - [parameterized route conflict with shared signals](parameterized_route_conflict_with_shared_signals/parameterized_route_conflict_with_shared_signals.md)
 - [signal should be cleared when route stops matching](signal_should_be_cleared_when_route_stops_matching/signal_should_be_cleared_when_route_stops_matching.md)
+- [signal preserved when nav to map](signal_preserved_when_nav_to_map/signal_preserved_when_nav_to_map.md)
 - [signal preservation vs clearing behavior](signal_preservation_vs_clearing_behavior/signal_preservation_vs_clearing_behavior.md)
 - [signal preserved when navigating between menu/tabs](signal_preserved_when_navigating_between_menutabs/signal_preserved_when_navigating_between_menutabs.md)
 - [signals preserved when navigating between different route families](signals_preserved_when_navigating_between_different_route_families/signals_preserved_when_navigating_between_different_route_families.md)

@@ -546,6 +546,38 @@ await snapshotTests(import.meta.url, ({ test }) => {
     }
   });
 
+  test("signal preserved when nav to map", () => {
+    const mapPanelSignal = stateSignal(undefined);
+    const isochroneTabSignal = stateSignal("compare");
+    const isochroneModeSignal = stateSignal("walk");
+    try {
+      setupRoutes({
+        MAP_ROUTE: `/map/:panel=${mapPanelSignal}`,
+        MAP_ISOCHRONE_ROUTE: `/map/isochrone/:tab=${isochroneTabSignal}`,
+        MAP_ISOCHRONE_TIME_ROUTE: `/map/isochrone/time/:mode=${isochroneModeSignal}`,
+      });
+      updateRoutes(`${baseUrl}/map/isochrone/time/bike`);
+      const state = {
+        map_panel_signal_value: mapPanelSignal.value,
+        isochrone_tab_signal_value: isochroneTabSignal.value,
+        isochrone_mode_signal_value: isochroneModeSignal.value,
+      };
+      updateRoutes(`${baseUrl}/map`);
+      const stateAfter = {
+        map_panel_signal_value: mapPanelSignal.value,
+        isochrone_tab_signal_value: isochroneTabSignal.value,
+        isochrone_mode_signal_value: isochroneModeSignal.value,
+      };
+      return {
+        state,
+        stateAfter,
+      };
+    } finally {
+      clearAllRoutes();
+      globalSignalRegistry.clear();
+    }
+  });
+
   test("signal preservation vs clearing behavior", () => {
     try {
       const panelSignal = stateSignal(undefined, {

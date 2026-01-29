@@ -133,77 +133,107 @@ export const updateRoutes = (
           }
           stateSignal.value = urlParamValue;
         } else {
-          // When route doesn't match, check if we're navigating to a parent route
-          let parentRouteMatching = false;
+          // Route doesn't match - check if any matching route extracts this parameter
+          let parameterExtractedByMatchingRoute = false;
+          let matchingRouteInSameFamily = false;
+
           for (const otherRoute of routeSet) {
             if (otherRoute === route || !otherRoute.matching) {
               continue;
             }
             const otherRouteProperties = getRoutePrivateProperties(otherRoute);
+            const otherParams = otherRouteProperties.rawParamsSignal.value;
+
+            // Check if this matching route extracts the parameter
+            if (paramName in otherParams) {
+              parameterExtractedByMatchingRoute = true;
+            }
+
+            // Check if this matching route is in the same family using parent-child relationships
+            const thisPatternObj = routePattern;
             const otherPatternObj = otherRouteProperties.routePattern;
 
-            // Check if the other route pattern is a parent of this route pattern
-            // Using the built relationships in the pattern objects
-            let currentParent = routePattern.parent;
-            let foundParent = false;
+            // Routes are in same family if they share a hierarchical relationship:
+            // 1. One is parent/ancestor of the other
+            // 2. They share a common parent/ancestor
+            let inSameFamily = false;
+
+            // Check if other route is ancestor of this route
+            let currentParent = thisPatternObj.parent;
             while (currentParent) {
               if (currentParent === otherPatternObj) {
-                foundParent = true;
+                inSameFamily = true;
                 break;
               }
               currentParent = currentParent.parent;
             }
 
-            if (!foundParent) {
-              continue;
-            }
-
-            // Found a parent route that's matching, but check if there's a more specific
-            // sibling route also matching (indicating sibling navigation, not parent navigation)
-            let hasMatchingSibling = false;
-            for (const siblingCandidateRoute of routeSet) {
-              if (
-                siblingCandidateRoute === route ||
-                siblingCandidateRoute === otherRoute ||
-                !siblingCandidateRoute.matching
-              ) {
-                continue;
-              }
-
-              const siblingProperties = getRoutePrivateProperties(
-                siblingCandidateRoute,
-              );
-              const siblingPatternObj = siblingProperties.routePattern;
-
-              // Check if this is a sibling (shares the same parent)
-              if (siblingPatternObj.parent === currentParent) {
-                hasMatchingSibling = true;
-                break;
+            // Check if this route is ancestor of other route
+            if (!inSameFamily) {
+              currentParent = otherPatternObj.parent;
+              while (currentParent) {
+                if (currentParent === thisPatternObj) {
+                  inSameFamily = true;
+                  break;
+                }
+                currentParent = currentParent.parent;
               }
             }
 
-            // Only treat as parent navigation if no sibling is matching
-            if (!hasMatchingSibling) {
-              parentRouteMatching = true;
-              break; // Found the parent route, no need to check other routes
+            // Check if they share a common parent (siblings or cousins)
+            if (!inSameFamily) {
+              const thisAncestors = new Set();
+              currentParent = thisPatternObj.parent;
+              while (currentParent) {
+                thisAncestors.add(currentParent);
+                currentParent = currentParent.parent;
+              }
+
+              currentParent = otherPatternObj.parent;
+              while (currentParent) {
+                if (thisAncestors.has(currentParent)) {
+                  inSameFamily = true;
+                  break;
+                }
+                currentParent = currentParent.parent;
+              }
+            }
+
+            if (inSameFamily) {
+              matchingRouteInSameFamily = true;
             }
           }
 
-          if (parentRouteMatching) {
-            // We're navigating to a parent route - clear this signal to reflect the hierarchy
+          // Only reset signal if:
+          // 1. We're navigating within the same route family (not to completely unrelated routes)
+          // 2. AND no matching route extracts this parameter from URL
+          // 3. AND parameter has no default value (making it truly optional)
+          if (matchingRouteInSameFamily && !parameterExtractedByMatchingRoute) {
             const defaultValue = routePattern.parameterDefaults?.get(paramName);
-            if (debug) {
+            if (defaultValue === undefined) {
+              // Parameter is not extracted within same family and has no default - reset it
+              if (debug) {
+                console.debug(
+                  `[route] Same family navigation, ${paramName} not extracted and has no default: resetting signal`,
+                );
+              }
+              stateSignal.value = undefined;
+            } else if (debug) {
+              // Parameter has a default value - preserve current signal value
               console.debug(
-                `[route] Parent route ${parentRouteMatching} matching: clearing ${paramName} signal to default: ${defaultValue}`,
+                `[route] Parameter ${paramName} has default value ${defaultValue}: preserving signal value: ${stateSignal.value}`,
               );
             }
-            stateSignal.value = defaultValue;
           } else if (debug) {
-            // We're navigating to a different route family - preserve signal for future URL building
-            // Keep current signal value unchanged
-            console.debug(
-              `[route] Different route family: preserving ${paramName} signal value: ${stateSignal.value}`,
-            );
+            if (!matchingRouteInSameFamily) {
+              console.debug(
+                `[route] Different route family: preserving ${paramName} signal value: ${stateSignal.value}`,
+              );
+            } else {
+              console.debug(
+                `[route] Parameter ${paramName} extracted by matching route: preserving signal value: ${stateSignal.value}`,
+              );
+            }
           }
         }
       }
