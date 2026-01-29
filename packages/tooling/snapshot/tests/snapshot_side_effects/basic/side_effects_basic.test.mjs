@@ -41,4 +41,29 @@ await startTesting(({ test }) => {
     await Promise.resolve();
     throw new Error("here");
   });
+  test("7_object_with_undefined_props", () => {
+    return {
+      a: undefined,
+      b: 42,
+      c: null,
+      d: "defined",
+    };
+  });
+  test("8_complex_undefined_edge_cases", () => {
+    return {
+      plainUndefined: undefined,
+      stringWithUndefinedText: "This contains __UNDEFINED__ text",
+      nestedObject: {
+        innerUndefined: undefined,
+        innerDefined: "value",
+      },
+      arrayWithUndefined: [undefined, "defined", null],
+      undefinedString: "__UNDEFINED__", // This should not be confused with actual undefined
+      mixed: {
+        a: undefined,
+        b: "__UNDEFINED__",
+        c: null,
+      },
+    };
+  });
 });

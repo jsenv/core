@@ -1,4 +1,4 @@
-# [scenario](../../file_then_throw.test.mjs#L24)
+# [scenario](../../file_then_throw.test.mjs)
 
 ```js
 writeFileSync(fileTxtUrl, "a");

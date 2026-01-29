@@ -84,6 +84,7 @@ try {
   },
   "after_map_nav": {
     "url": "/map?zoom=10",
+    "panel_signal": undefined,
     "routes": {
       "map": true,
       "panel": false
@@ -91,7 +92,8 @@ try {
   },
   "panel_route_stops_matching": true,
   "base_route_starts_matching": false,
-  "signal_cleared_within_same_family": true
+  "signal_cleared_within_same_family": true,
+  "current_panel_signal": undefined
 }
 ```
 

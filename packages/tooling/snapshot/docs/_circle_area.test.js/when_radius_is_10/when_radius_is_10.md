@@ -1,4 +1,4 @@
-# [when radius is 10](../../circle_area.test.js#L17)
+# [when radius is 10](../../circle_area.test.js)
 
 ```js
 return getCircleArea(10);

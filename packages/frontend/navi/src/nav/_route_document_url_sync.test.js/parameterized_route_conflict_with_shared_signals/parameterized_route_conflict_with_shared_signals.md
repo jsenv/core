@@ -174,7 +174,8 @@ try {
   "after_map_nav": {
     "url": "http://127.0.0.1/map?zoom=10",
     "signal_values": {
-      "zoom": 10
+      "zoom": 10,
+      "panel": undefined
     },
     "routes": {
       "map": true,
@@ -207,7 +208,8 @@ try {
     }
   ],
   "final_signal_values": {
-    "zoom": 25
+    "zoom": 25,
+    "panel": undefined
   }
 }
 ```

@@ -109,7 +109,7 @@ export const replaceFluctuatingValues = (
     if (stringType === "json") {
       const jsValue = JSON.parse(value);
       const replaced = replaceInObject(jsValue, { replace: replaceThings });
-      return JSON.stringify(replaced, null, "  ");
+      return jsonStringifyWithUndefined(replaced);
     }
     if (stringType === "html" || stringType === "xml") {
       // do parse html
@@ -165,9 +165,50 @@ export const replaceFluctuatingValues = (
       return regexpSource;
     }
     const jsValueReplaced = replaceInObject(value, { replace: replaceThings });
-    return JSON.stringify(jsValueReplaced, null, "  ");
+    return jsonStringifyWithUndefined(jsValueReplaced);
   }
   return value;
+};
+
+// Custom JSON serializer that properly handles undefined values
+const jsonStringifyWithUndefined = (obj, indent = 2) => {
+  const serialize = (value, currentIndent = 0) => {
+    const spaces = " ".repeat(currentIndent);
+    const nextSpaces = " ".repeat(currentIndent + indent);
+
+    if (value === null) {
+      return "null";
+    }
+    if (value === undefined) {
+      return "undefined";
+    }
+    if (typeof value === "string") {
+      return JSON.stringify(value);
+    }
+    if (typeof value === "number" || typeof value === "boolean") {
+      return String(value);
+    }
+    if (Array.isArray(value)) {
+      if (value.length === 0) return "[]";
+      const items = value.map(
+        (item) => nextSpaces + serialize(item, currentIndent + indent),
+      );
+      return `[\n${items.join(",\n")}\n${spaces}]`;
+    }
+    if (typeof value === "object") {
+      const keys = Object.keys(value);
+      if (keys.length === 0) return "{}";
+      const pairs = keys.map((key) => {
+        const serializedValue = serialize(value[key], currentIndent + indent);
+        return `${nextSpaces + JSON.stringify(key)}: ${serializedValue}`;
+      });
+      return `{\n${pairs.join(",\n")}\n${spaces}}`;
+    }
+    // Fallback for other types (functions, symbols, etc.)
+    return JSON.stringify(value) || "undefined";
+  };
+
+  return serialize(obj);
 };
 
 const replaceInObject = (object, { replace }) => {

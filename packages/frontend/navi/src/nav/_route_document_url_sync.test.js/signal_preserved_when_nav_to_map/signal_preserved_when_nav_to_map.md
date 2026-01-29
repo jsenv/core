@@ -40,6 +40,7 @@ try {
     "isochrone_mode_signal_value": "bike"
   },
   "stateAfter": {
+    "map_panel_signal_value": undefined,
     "isochrone_tab_signal_value": "time",
     "isochrone_mode_signal_value": "bike"
   }

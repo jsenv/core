@@ -1,4 +1,4 @@
-# [scenario](../../file_then_throw.test.mjs#L45)
+# [scenario](../../file_then_throw.test.mjs)
 
 ```js
 throw new Error("here");

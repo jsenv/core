@@ -1,4 +1,4 @@
-# [when name is toto](../../log.test.js#L8)
+# [when name is toto](../../log.test.js)
 
 ```js
 return logMyName("toto");

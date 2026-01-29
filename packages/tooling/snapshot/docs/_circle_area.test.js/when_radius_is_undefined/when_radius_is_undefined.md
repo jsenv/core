@@ -1,4 +1,4 @@
-# [when radius is undefined](../../circle_area.test.js#L21)
+# [when radius is undefined](../../circle_area.test.js)
 
 ```js
 return getCircleArea(undefined);
