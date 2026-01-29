@@ -1,6 +1,7 @@
 # [1_with_static_default_value](../../state_signal.test.js)
 
 ```js
+clearSignalRegistry();
 const sig = stateSignal(42);
 
 const valueAtStart = sig.value;

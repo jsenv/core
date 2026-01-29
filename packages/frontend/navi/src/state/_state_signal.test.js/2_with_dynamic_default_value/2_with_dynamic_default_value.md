@@ -1,6 +1,7 @@
 # [2_with_dynamic_default_value](../../state_signal.test.js)
 
 ```js
+clearSignalRegistry();
 const dynamicDefault = signal("default_at_start");
 const sig = stateSignal(dynamicDefault);
 

@@ -1,6 +1,7 @@
 # [0_basics](../../state_signal.test.js)
 
 ```js
+clearSignalRegistry();
 const sig = stateSignal(undefined);
 
 const valueAtStart = sig.value;
