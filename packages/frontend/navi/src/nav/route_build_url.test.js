@@ -887,4 +887,33 @@ await snapshotTests(import.meta.url, ({ test }) => {
       globalSignalRegistry.clear();
     }
   });
+
+  test("sub page url when custom menu and custom tab", () => {
+    try {
+      const zoneSignal = stateSignal(undefined);
+      const mapPanelSignal = stateSignal(undefined);
+      const isochroneTabSignal = stateSignal("compare");
+      const isochroneLongitudeSignal = stateSignal(undefined);
+      const isochroneTimeModeSignal = stateSignal("walk");
+
+      const { MAP_ISOCHRONE_TIME_WALK_ROUTE } = setupRoutes({
+        HOME_ROUTE: "/",
+        MAP_ROUTE: `/map/?zone=${zoneSignal}`,
+        MAP_PANEL_ROUTE: `/map/:panel=${mapPanelSignal}/`,
+        MAP_ISOCHRONE_ROUTE: `/map/isochrone/:tab=${isochroneTabSignal}/?iso_lon=${isochroneLongitudeSignal}`,
+        MAP_ISOCHRONE_COMPARE_ROUTE: `/map/isochrone/compare`,
+        MAP_ISOCHRONE_TIME_ROUTE: `/map/isochrone/time/:mode=${isochroneTimeModeSignal}/`,
+        MAP_ISOCHRONE_TIME_WALK_ROUTE: "/map/isochrone/time/walk",
+        MAP_ISOCHRONE_TIME_BIKE_ROUTE: "/map/isochrone/time/bike",
+      });
+      updateRoutes(`${baseUrl}/map/isochrone/time?zone=london&iso_lon=1`);
+
+      return {
+        map_isochrone_time_walk_url: MAP_ISOCHRONE_TIME_WALK_ROUTE.buildUrl(),
+      };
+    } finally {
+      clearAllRoutes();
+      globalSignalRegistry.clear();
+    }
+  });
 });
