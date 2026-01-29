@@ -284,4 +284,31 @@ await snapshotTests(import.meta.url, ({ test }) => {
       globalSignalRegistry.clear();
     }
   });
+
+  test("menu matching deep", () => {
+    try {
+      const zoneSignal = stateSignal(undefined);
+      const isochroneTabSignal = stateSignal("compare");
+      const walkSignal = stateSignal(false);
+      const panelSignal = stateSignal(undefined);
+      const isochroneTimeModeSignal = stateSignal("walk");
+      const { MAP_ISOCHRONE_ROUTE } = setupRoutes({
+        MAP_ROUTE: `/map/?zone=${zoneSignal}`,
+        MAP_PANEL_ROUTE: `/map/:panel=${panelSignal}/`,
+        MAP_ISOCHRONE_ROUTE: `/map/isochrone/:tab=${isochroneTabSignal}/`,
+        MAP_ISOCHRONE_COMPARE_ROUTE: `/map/isochrone/compare?walk=${walkSignal}`,
+        MAP_ISOCHRONE_TIME_ROUTE: `/map/isochrone/time/:mode=${isochroneTimeModeSignal}/`,
+        MAP_ISOCHRONE_TIME_WALK_ROUTE: "/map/isochrone/time/walk",
+        MAP_ISOCHRONE_TIME_BIKE_ROUTE: "/map/isochrone/time/bike",
+      });
+      updateRoutes(`${baseUrl}/map/isochrone/time/bike?zone=london`);
+      return {
+        isochrone_matching: MAP_ISOCHRONE_ROUTE.matching,
+        isochrone_matches_params: MAP_ISOCHRONE_ROUTE.matchesParams(),
+      };
+    } finally {
+      clearAllRoutes();
+      globalSignalRegistry.clear();
+    }
+  });
 });

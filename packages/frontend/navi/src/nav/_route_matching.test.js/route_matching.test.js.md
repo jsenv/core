@@ -7,6 +7,7 @@
 - [matchesParams with trailing slash behavior](matchesparams_with_trailing_slash_behavior/matchesparams_with_trailing_slash_behavior.md)
 - [complex url matching with multiple signals](complex_url_matching_with_multiple_signals/complex_url_matching_with_multiple_signals.md)
 - [map isochrone tab matching](map_isochrone_tab_matching/map_isochrone_tab_matching.md)
+- [menu matching deep](menu_matching_deep/menu_matching_deep.md)
 
 ---
 
