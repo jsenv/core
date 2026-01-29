@@ -96,11 +96,25 @@ try {
 ```js
 {
   "routes_matching": {
-    "map": false,
-    "isochrone": false,
+    "map": true,
+    "isochrone": true,
     "compare": true
   },
   "redirect_calls": [
+    {
+      "route": "MAP_COMPARE_ROUTE",
+      "params": {
+        "zoom": 20
+      },
+      "generatedUrl": "http://127.0.0.1/map/isochrone/compare?zoom=20"
+    },
+    {
+      "route": "MAP_COMPARE_ROUTE",
+      "params": {
+        "zoom": 20
+      },
+      "generatedUrl": "http://127.0.0.1/map/isochrone/compare?zoom=20"
+    },
     {
       "route": "MAP_COMPARE_ROUTE",
       "params": {

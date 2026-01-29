@@ -97,7 +97,7 @@ try {
 ```js
 {
   "map_matching": true,
-  "isochrone_matching": false,
+  "isochrone_matching": true,
   "compare_matching": true,
   "redirect_calls": [
     {

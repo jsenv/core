@@ -166,7 +166,7 @@ try {
       "panel": "isochrone"
     },
     "routes": {
-      "map": false,
+      "map": true,
       "panel": true,
       "isochrone": true
     }

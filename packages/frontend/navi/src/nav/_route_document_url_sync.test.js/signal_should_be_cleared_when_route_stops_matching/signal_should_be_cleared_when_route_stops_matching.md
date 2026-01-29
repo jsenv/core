@@ -78,7 +78,7 @@ try {
     "url": "/map/isochrone?zoom=10",
     "panel_signal": "isochrone",
     "routes": {
-      "map": false,
+      "map": true,
       "panel": true
     }
   },
@@ -90,7 +90,7 @@ try {
     }
   },
   "panel_route_stops_matching": true,
-  "base_route_starts_matching": true,
+  "base_route_starts_matching": false,
   "signal_cleared_within_same_family": true
 }
 ```

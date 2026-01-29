@@ -121,7 +121,7 @@ try {
 ```js
 {
   "step1_route_matching": {
-    "map_matching": false,
+    "map_matching": true,
     "panel_matching": true,
     "isochrone_matching": true
   },
