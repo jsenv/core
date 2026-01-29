@@ -1,4 +1,4 @@
-# [7_validation_with_autoFix](../../state_signal.test.js)
+# [5_validation_with_autoFix](../../state_signal.test.js)
 
 ```js
 clearSignalRegistry();

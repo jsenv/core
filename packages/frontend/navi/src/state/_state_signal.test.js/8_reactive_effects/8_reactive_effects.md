@@ -1,4 +1,4 @@
-# [10_reactive_effects](../../state_signal.test.js)
+# [8_reactive_effects](../../state_signal.test.js)
 
 ```js
 clearSignalRegistry();

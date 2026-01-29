@@ -1,4 +1,4 @@
-# [9_signal_id_conflict](../../state_signal.test.js)
+# [7_signal_id_conflict](../../state_signal.test.js)
 
 ```js
 clearSignalRegistry();

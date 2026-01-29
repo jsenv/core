@@ -1,4 +1,4 @@
-# [13_signal_toString](../../state_signal.test.js)
+# [11_signal_toString](../../state_signal.test.js)
 
 ```js
 clearSignalRegistry();
@@ -17,7 +17,7 @@ return {
 ```js
 {
   "customToString": "{navi_state_signal:custom_id}",
-  "autoToString": "{navi_state_signal:11}"
+  "autoToString": "{navi_state_signal:9}"
 }
 ```
 

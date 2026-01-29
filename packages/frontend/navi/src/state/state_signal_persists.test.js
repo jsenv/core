@@ -293,7 +293,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
     sig.value = "second";
     sig.value = undefined;
     sig.value = "third";
-    sig.reset();
+    sig.value = undefined;
 
     // Restore original methods
     mockLocalStorage.setItem = originalSetItem;

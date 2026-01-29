@@ -1,4 +1,4 @@
-# [11_undefined_dynamic_default](../../state_signal.test.js)
+# [9_undefined_dynamic_default](../../state_signal.test.js)
 
 ```js
 clearSignalRegistry();

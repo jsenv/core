@@ -88,37 +88,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
     };
   });
 
-  test("4_reset_method", () => {
-    clearSignalRegistry();
-    const sig = stateSignal("default_value");
-
-    sig.value = "explicit";
-    const valueBeforeReset = sig.value;
-    sig.reset();
-    const valueAfterReset = sig.value;
-
-    return {
-      valueBeforeReset,
-      valueAfterReset,
-    };
-  });
-
-  test("5_reset_method_with_dynamic_default", () => {
-    clearSignalRegistry();
-    const dynamicDefault = signal("dynamic");
-    const sig = stateSignal(dynamicDefault);
-
-    sig.value = "explicit";
-    dynamicDefault.value = "changed";
-    sig.reset();
-    const valueAfterReset = sig.value;
-
-    return {
-      valueAfterReset,
-    };
-  });
-
-  test("6_validation_with_oneOf", () => {
+  test("4_validation_with_oneOf", () => {
     clearSignalRegistry();
     const sig = stateSignal("option1", {
       id: "validated",
@@ -138,7 +108,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
     };
   });
 
-  test("7_validation_with_autoFix", () => {
+  test("5_validation_with_autoFix", () => {
     clearSignalRegistry();
     let autoFixCalled = false;
     let fixedValue = null;
@@ -163,7 +133,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
     };
   });
 
-  test("8_signal_id_and_registry", () => {
+  test("6_signal_id_and_registry", () => {
     clearSignalRegistry();
     const sig1 = stateSignal("value", { id: "custom_id" });
     const sig2 = stateSignal("value"); // auto-generated id
@@ -179,7 +149,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
     };
   });
 
-  test("9_signal_id_conflict", () => {
+  test("7_signal_id_conflict", () => {
     clearSignalRegistry();
     stateSignal("first", { id: "duplicate" });
 
@@ -195,7 +165,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
     };
   });
 
-  test("10_reactive_effects", () => {
+  test("8_reactive_effects", () => {
     clearSignalRegistry();
     const results = [];
     const dynamicDefault = signal("initial");
@@ -226,7 +196,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
     };
   });
 
-  test("11_undefined_dynamic_default", () => {
+  test("9_undefined_dynamic_default", () => {
     clearSignalRegistry();
     const dynamicDefault = signal(undefined);
     const sig = stateSignal(dynamicDefault);
@@ -251,7 +221,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
     };
   });
 
-  test("12_complex_data_types", () => {
+  test("10_complex_data_types", () => {
     clearSignalRegistry();
     const objectDefault = { name: "default", count: 0 };
     const arrayDefault = [1, 2, 3];
@@ -284,7 +254,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
     };
   });
 
-  test("13_signal_toString", () => {
+  test("11_signal_toString", () => {
     clearSignalRegistry();
     const sig1 = stateSignal("value", { id: "custom_id" });
     const sig2 = stateSignal("value"); // auto-generated id

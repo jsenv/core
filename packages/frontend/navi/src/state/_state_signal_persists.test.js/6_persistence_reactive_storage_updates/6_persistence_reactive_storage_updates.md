@@ -28,7 +28,7 @@ sig.value = "first";
 sig.value = "second";
 sig.value = undefined;
 sig.value = "third";
-sig.reset();
+sig.value = undefined;
 
 // Restore original methods
 mockLocalStorage.setItem = originalSetItem;
@@ -37,12 +37,40 @@ mockLocalStorage.removeItem = originalRemoveItem;
 return { storageUpdates };
 ```
 
-```console
-TypeError: sig.reset is not a function
-  at base/state_signal_persists.test.js:296:9
-  at capture (@jsenv/core/packages/tooling/snapshot/src/side_effects/create_capture_side_effects.js:342:29)
-  at snapshotTests (@jsenv/core/packages/tooling/snapshot/src/side_effects/snapshot_tests.js:183:33)
-  at async base/state_signal_persists.test.js:32:1
+```js
+{
+  "storageUpdates": [
+    {
+      "action": "remove",
+      "key": "reactive_persist"
+    },
+    {
+      "action": "set",
+      "key": "reactive_persist",
+      "value": "first"
+    },
+    {
+      "action": "set",
+      "key": "reactive_persist",
+      "value": "second"
+    },
+    {
+      "action": "set",
+      "key": "reactive_persist",
+      "value": "second"
+    },
+    {
+      "action": "set",
+      "key": "reactive_persist",
+      "value": "third"
+    },
+    {
+      "action": "set",
+      "key": "reactive_persist",
+      "value": "third"
+    }
+  ]
+}
 ```
 
 ---

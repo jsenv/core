@@ -1,4 +1,4 @@
-# [12_complex_data_types](../../state_signal.test.js)
+# [10_complex_data_types](../../state_signal.test.js)
 
 ```js
 clearSignalRegistry();

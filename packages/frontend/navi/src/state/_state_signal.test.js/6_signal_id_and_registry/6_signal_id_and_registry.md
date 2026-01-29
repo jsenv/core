@@ -1,4 +1,4 @@
-# [8_signal_id_and_registry](../../state_signal.test.js)
+# [6_signal_id_and_registry](../../state_signal.test.js)
 
 ```js
 clearSignalRegistry();
@@ -19,7 +19,7 @@ return {
 ```js
 {
   "customId": "custom_id",
-  "autoId": "6",
+  "autoId": "4",
   "registrySize": 2
 }
 ```

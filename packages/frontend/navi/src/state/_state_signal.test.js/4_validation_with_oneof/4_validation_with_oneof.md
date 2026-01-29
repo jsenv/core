@@ -1,4 +1,4 @@
-# [6_validation_with_oneOf](../../state_signal.test.js)
+# [4_validation_with_oneOf](../../state_signal.test.js)
 
 ```js
 clearSignalRegistry();
