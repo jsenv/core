@@ -404,10 +404,20 @@ const registerRoute = (routePattern) => {
   const rawParamsSignal = signal(ROUTE_NOT_MATCHING_PARAMS);
   const paramsSignal = computed(() => {
     const rawParams = rawParamsSignal.value;
-    // Pattern system handles parameter defaults, routes just work with raw params
-    return rawParams || {};
+    const resolvedParams = routePattern.resolveParams(rawParams);
+    return resolvedParams;
   });
   const visitedSignal = signal(false);
+
+  // Keep route.params synchronized with computed paramsSignal
+  // This ensures route.params includes parameters from child routes
+  effect(() => {
+    const computedParams = paramsSignal.value;
+    if (route.params !== computedParams) {
+      route.params = computedParams;
+    }
+  });
+
   for (const { signal: stateSignal, paramName, options = {} } of connections) {
     const { debug } = options;
 
