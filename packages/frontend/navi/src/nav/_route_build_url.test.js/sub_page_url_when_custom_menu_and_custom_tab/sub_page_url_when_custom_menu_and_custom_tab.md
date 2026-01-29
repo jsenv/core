@@ -31,7 +31,7 @@ try {
 
 ```js
 {
-  "map_isochrone_time_walk_url": "http://127.0.0.1/map/isochrone/time/walk?zone=london&iso_lon=1"
+  "map_isochrone_time_walk_url": "http://127.0.0.1/map/isochrone/time?zone=london&iso_lon=1"
 }
 ```
 
