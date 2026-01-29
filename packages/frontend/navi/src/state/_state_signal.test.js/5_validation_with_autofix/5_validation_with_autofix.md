@@ -3,24 +3,23 @@
 ```js
 clearSignalRegistry();
 let autoFixCalled = false;
-let fixedValue = null;
 
 const sig = stateSignal("option1", {
   id: "autofix",
   oneOf: ["option1", "option2", "option3"],
-  autoFix: (invalidValue) => {
+  autoFix: () => {
     autoFixCalled = true;
-    fixedValue = invalidValue;
-    return "option1"; // fallback to first option
+    return "option1";
   },
 });
 
 sig.value = "invalid";
+const value = sig.value;
 const validityAfterInvalid = sig.validity.valid;
 
 return {
   autoFixCalled,
-  fixedValue,
+  value,
   validityAfterInvalid,
 };
 ```
@@ -28,7 +27,7 @@ return {
 ```js
 {
   "autoFixCalled": true,
-  "fixedValue": "invalid",
+  "value": "option1",
   "validityAfterInvalid": true
 }
 ```

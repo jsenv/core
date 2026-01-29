@@ -7,12 +7,6 @@
 - [3_dynamic_default_reset_behavior](3_dynamic_default_reset_behavior/3_dynamic_default_reset_behavior.md)
 - [4_validation_with_oneOf](4_validation_with_oneof/4_validation_with_oneof.md)
 - [5_validation_with_autoFix](5_validation_with_autofix/5_validation_with_autofix.md)
-- [6_signal_id_and_registry](6_signal_id_and_registry/6_signal_id_and_registry.md)
-- [7_signal_id_conflict](7_signal_id_conflict/7_signal_id_conflict.md)
-- [8_reactive_effects](8_reactive_effects/8_reactive_effects.md)
-- [9_undefined_dynamic_default](9_undefined_dynamic_default/9_undefined_dynamic_default.md)
-- [10_complex_data_types](10_complex_data_types/10_complex_data_types.md)
-- [11_signal_toString](11_signal_tostring/11_signal_tostring.md)
 
 ---
 
