@@ -8940,6 +8940,26 @@ const createRoutePattern = (pattern) => {
       targetAncestor.connections.length === 0;
 
     if (sourceHasOnlyLiterals && targetHasOnlyLiterals) {
+      // Check if user provided any parameters that would be lost in optimization
+      const hasUserProvidedParams = Object.keys(resolvedParams).some(
+        (paramName) => {
+          // Check if this parameter was explicitly provided by the user
+          // (not just inherited from signal values with default values)
+          const userProvided = resolvedParams[paramName] !== undefined;
+          return userProvided;
+        },
+      );
+
+      if (hasUserProvidedParams) {
+        if (DEBUG$2) {
+          console.debug(
+            `[${pattern}] tryDirectOptimization: Cannot optimize literal-only routes - would lose user-provided parameters`,
+            Object.keys(resolvedParams),
+          );
+        }
+        return null;
+      }
+
       if (DEBUG$2) {
         console.debug(
           `[${pattern}] tryDirectOptimization: Both are pure literal-only routes, allowing optimization`,
@@ -10001,12 +10021,23 @@ const setupPatterns = (patternDefinitions) => {
           otherPatternObj.cleanPattern,
         )
       ) {
-        // Store the most specific parent (only one parent per pattern in tree structure)
+        // Store the most specific parent (closest parent in hierarchy)
+        const getPathSegmentCount = (pattern) => {
+          // Only count path segments, not query parameters
+          const pathPart = pattern.split("?")[0];
+          return pathPart.split("/").filter(Boolean).length;
+        };
+
+        const currentSegmentCount = currentPatternObj.parent
+          ? getPathSegmentCount(currentPatternObj.parent.originalPattern)
+          : 0;
+        const otherSegmentCount = getPathSegmentCount(
+          otherPatternObj.originalPattern,
+        );
+
         if (
           !currentPatternObj.parent ||
-          otherPatternObj.originalPattern.split("/").filter(Boolean).length >
-            currentPatternObj.parent.originalPattern.split("/").filter(Boolean)
-              .length
+          otherSegmentCount > currentSegmentCount
         ) {
           currentPatternObj.parent = otherPatternObj;
         }
