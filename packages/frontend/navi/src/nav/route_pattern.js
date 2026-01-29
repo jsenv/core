@@ -178,7 +178,11 @@ export const createRoutePattern = (pattern) => {
     }
   }
 
-  const parsedPattern = parsePattern(cleanPattern, parameterDefaults);
+  const parsedPattern = parsePattern(
+    cleanPattern,
+    parameterDefaults,
+    connections,
+  );
 
   // Create signalSet to track all signals this pattern depends on
   const signalSet = new Set();
@@ -1795,7 +1799,11 @@ const canParameterReachChildRoute = (
 /**
  * Parse a route pattern string into structured segments
  */
-const parsePattern = (pattern, parameterDefaults = new Map()) => {
+const parsePattern = (
+  pattern,
+  parameterDefaults = new Map(),
+  connections = [],
+) => {
   // Handle root route
   if (pattern === "/") {
     return {
@@ -1864,7 +1872,27 @@ const parsePattern = (pattern, parameterDefaults = new Map()) => {
     if (seg.startsWith(":")) {
       // Parameter segment
       const paramName = seg.slice(1).replace("?", ""); // Remove : and optional ?
-      const isOptional = seg.endsWith("?") || parameterDefaults.has(paramName);
+
+      // Check if parameter should be optional:
+      // 1. Explicitly marked with ?
+      // 2. Has a default value
+      // 3. Connected signal has undefined value and no explicit default (allows /map to match /map/:panel)
+      let isOptional = seg.endsWith("?") || parameterDefaults.has(paramName);
+
+      if (!isOptional) {
+        // Check if connected signal has undefined value (making parameter optional for index routes)
+        const connection = connections.find(
+          (conn) => conn.paramName === paramName,
+        );
+        if (
+          connection &&
+          connection.signal &&
+          connection.signal.value === undefined &&
+          !parameterDefaults.has(paramName)
+        ) {
+          isOptional = true;
+        }
+      }
 
       return {
         type: "param",
@@ -2059,7 +2087,8 @@ const matchUrl = (
   // Patterns with trailing slashes can match additional URL segments (like wildcards)
   // Patterns without trailing slashes should match exactly (unless they're wildcards)
   // BUT: if pattern has children, it can also match additional segments (hierarchical matching)
-  const hasChildren = patternObj && patternObj.children && patternObj.children.length > 0;
+  const hasChildren =
+    patternObj && patternObj.children && patternObj.children.length > 0;
   if (
     !parsedPattern.wildcard &&
     !parsedPattern.trailingSlash &&
