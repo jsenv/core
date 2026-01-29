@@ -27,6 +27,7 @@
         // "node_modules/**",
         "node_modules/@babel/template/**",
         "node_modules/@jsenv/cancellation/**",
+        "node_modules/@preact/**",
         "node_modules/@rollup/**",
         "node_modules/playwright/**",
         "node_modules/playwright-chromium/**",

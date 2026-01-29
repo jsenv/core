@@ -11,22 +11,26 @@ const generateSignalId = () => {
 };
 
 /**
- * Creates an advanced signal with optional source signal synchronization, local storage persistence, and validation.
+ * Creates an advanced signal with dynamic default value, local storage persistence, and validation.
  *
- * The sourceSignal option creates a fallback mechanism where:
- * 1. The signal initially takes the value from sourceSignal (if defined) or falls back to defaultValue
- * 2. The signal can be manually overridden with any value
- * 3. When sourceSignal changes, it will override the current value again
+ * The first parameter can be either a static value or a signal acting as a "dynamic default":
+ * - If a static value: traditional default behavior
+ * - If a signal: acts as a dynamic default that updates the signal ONLY when no explicit value has been set
  *
- * This is useful for scenarios like UI state management where you want to:
- * - Start with a value from an external source (e.g., backend data)
- * - Allow temporary local overrides (e.g., user interactions)
- * - Reset to the external source when context changes (e.g., navigation, data refresh)
+ * Dynamic default behavior (when first param is a signal):
+ * 1. Initially takes value from the default signal
+ * 2. When explicitly set (programmatically or via localStorage), the explicit value takes precedence
+ * 3. When default signal changes, it only updates if no explicit value was ever set
+ * 4. Calling reset() or setting to undefined makes the signal use the dynamic default again
  *
- * @param {any} defaultValue - The default value to use when no other value is available
+ * This is useful for:
+ * - Backend data that can change but shouldn't override user preferences
+ * - Route parameters with dynamic defaults based on other state
+ * - Cascading configuration where defaults can be updated without losing user customizations
+ *
+ * @param {any|import("@preact/signals").Signal} defaultValue - Static default value OR signal for dynamic default behavior
  * @param {Object} [options={}] - Configuration options
  * @param {string|number} [options.id] - Custom ID for the signal. If not provided, an auto-generated ID will be used. Used for localStorage key and route pattern detection.
- * @param {import("@preact/signals").Signal} [options.sourceSignal] - Source signal to synchronize with. When the source signal changes, this signal will be updated
  * @param {boolean} [options.persists=false] - Whether to persist the signal value in localStorage using the signal ID as key
  * @param {"string" | "number" | "boolean" | "object"} [options.type="string"] - Type for localStorage serialization/deserialization
  * @param {Array} [options.oneOf] - Array of valid values for validation. Signal will be marked invalid if value is not in this array
@@ -56,14 +60,21 @@ const generateSignalId = () => {
  * });
  *
  * @example
- * // Position that follows backend data but allows temporary overrides
- * const backendPosition = signal({ x: 100, y: 50 });
- * const currentPosition = stateSignal({ x: 0, y: 0 }, { sourceSignal: backendPosition });
+ * // Dynamic default that doesn't override user choices
+ * const backendTheme = signal("light");
+ * const userTheme = stateSignal(backendTheme, { persists: true });
  *
- * // Initially: currentPosition.value = { x: 100, y: 50 } (from backend)
- * // User drags: currentPosition.value = { x: 150, y: 80 } (manual override)
- * // Backend updates: backendPosition.value = { x: 200, y: 60 }
- * // Result: currentPosition.value = { x: 200, y: 60 } (reset to new backend value)
+ * // Initially: userTheme.value = "light" (from dynamic default)
+ * // User sets: userTheme.value = "dark" (explicit choice, persisted)
+ * // Backend changes: backendTheme.value = "blue"
+ * // Result: userTheme.value = "dark" (user choice preserved)
+ * // Reset: userTheme.value = undefined; // Now follows dynamic default again
+ *
+ * @example
+ * // Route parameter with dynamic default from parent route
+ * const parentTab = signal("overview");
+ * const childTab = stateSignal(parentTab);
+ * // childTab follows parentTab changes unless explicitly set
  */
 const NO_LOCAL_STORAGE = [() => undefined, () => {}, () => {}];
 export const stateSignal = (defaultValue, options = {}) => {
@@ -72,10 +83,18 @@ export const stateSignal = (defaultValue, options = {}) => {
     type = "string",
     oneOf,
     autoFix,
-    sourceSignal,
     persists = false,
     debug,
   } = options;
+
+  // Check if defaultValue is a signal (dynamic default) or static value
+  const isDynamicDefault =
+    defaultValue &&
+    typeof defaultValue === "object" &&
+    "value" in defaultValue &&
+    "peek" in defaultValue;
+  const dynamicDefaultSignal = isDynamicDefault ? defaultValue : null;
+  const staticDefaultValue = isDynamicDefault ? undefined : defaultValue;
   const signalId = id || generateSignalId();
   // Convert numeric IDs to strings for consistency
   const signalIdString = String(signalId);
@@ -92,59 +111,180 @@ export const stateSignal = (defaultValue, options = {}) => {
     persists
       ? valueInLocalStorage(localStorageKey, { type })
       : NO_LOCAL_STORAGE;
-  const getFallbackValue = () => {
-    const valueFromLocalStorage = readFromLocalStorage();
-    if (valueFromLocalStorage !== undefined) {
-      if (debug) {
-        console.debug(
-          `[stateSignal:${signalIdString}] using value from localStorage "${localStorageKey}"=${valueFromLocalStorage}`,
-        );
-      }
-      return valueFromLocalStorage;
-    }
-    if (sourceSignal) {
-      const sourceValue = sourceSignal.peek();
-      if (sourceValue !== undefined) {
+  const getDefaultValue = () => {
+    if (persists) {
+      const valueFromLocalStorage = readFromLocalStorage();
+      if (valueFromLocalStorage !== undefined) {
         if (debug) {
           console.debug(
-            `[stateSignal:${signalIdString}] using value from source signal=${sourceValue}`,
+            `[stateSignal:${signalIdString}] using value from localStorage "${localStorageKey}"=${valueFromLocalStorage}`,
           );
         }
-        return sourceValue;
+        return valueFromLocalStorage;
       }
+    }
+    if (dynamicDefaultSignal) {
+      const dynamicValue = dynamicDefaultSignal.peek();
+      if (dynamicValue === undefined) {
+        return undefined;
+      }
+      if (debug) {
+        console.debug(
+          `[stateSignal:${signalIdString}] using value from dynamic default signal=${dynamicValue}`,
+        );
+      }
+      return dynamicValue;
     }
     if (debug) {
       console.debug(
-        `[stateSignal:${signalIdString}] using default value=${defaultValue}`,
+        `[stateSignal:${signalIdString}] using static default value=${staticDefaultValue}`,
       );
     }
-    return defaultValue;
+    return staticDefaultValue;
+  };
+  const isCustomValue = (value) => {
+    if (value === undefined) {
+      return false;
+    }
+    if (dynamicDefaultSignal) {
+      return value !== dynamicDefaultSignal.peek();
+    }
+    return value !== staticDefaultValue;
   };
 
-  const advancedSignal = signal(getFallbackValue());
-
-  if (debug) {
-    console.debug(
-      `[stateSignal:${signalIdString}] created with initial value=${advancedSignal.peek()}`,
-      {
-        defaultValue,
-        hasSourceSignal: Boolean(sourceSignal),
-        persists,
-        localStorageKey: persists ? localStorageKey : undefined,
-      },
-    );
-  }
-
-  // Set signal ID and create meaningful string representation
+  // Create signal with initial value: use stored value, or undefined to indicate no explicit value
+  const advancedSignal = signal(getDefaultValue());
+  const validity = { valid: true };
+  advancedSignal.validity = validity;
   advancedSignal.__signalId = signalIdString;
   advancedSignal.toString = () => `{navi_state_signal:${signalIdString}}`;
-
-  // Store signal with its options for later route connection
+  // 1. when signal value changes to undefined, it needs to fallback to default value
+  // 2. when dynamic default changes and signal value is not custom, it needs to update
+  undefined_effect: {
+    let isFirstRun = true;
+    effect(() => {
+      const value = advancedSignal.value;
+      if (isFirstRun) {
+        isFirstRun = false;
+        return;
+      }
+      if (value !== undefined) {
+        return;
+      }
+      const defaultValue = getDefaultValue();
+      if (defaultValue === value) {
+        return;
+      }
+      if (debug) {
+        console.debug(
+          `[stateSignal:${signalIdString}] becomes undefined, reset to ${defaultValue}`,
+        );
+      }
+      advancedSignal.value = defaultValue;
+    });
+  }
+  dynamic_signal_effect: {
+    if (!dynamicDefaultSignal) {
+      break dynamic_signal_effect;
+    }
+    // here we listen only on the dynamic default signal
+    let isFirstRun = true;
+    let dynamicDefaultPreviousValue;
+    effect(() => {
+      const value = advancedSignal.peek();
+      const dynamicDefaultValue = dynamicDefaultSignal.value;
+      if (isFirstRun) {
+        isFirstRun = false;
+        dynamicDefaultPreviousValue = dynamicDefaultValue;
+        return;
+      }
+      if (value !== dynamicDefaultPreviousValue) {
+        dynamicDefaultPreviousValue = dynamicDefaultValue;
+        return;
+      }
+      dynamicDefaultPreviousValue = dynamicDefaultValue;
+      const defaultValue = getDefaultValue();
+      if (defaultValue === value) {
+        return;
+      }
+      if (debug) {
+        console.debug(
+          `[stateSignal:${signalIdString}] dynamic default updated, update to ${defaultValue}`,
+        );
+      }
+      advancedSignal.value = defaultValue;
+    });
+  }
+  persist_in_local_storage: {
+    if (!localStorageKey) {
+      break persist_in_local_storage;
+    }
+    effect(() => {
+      const value = advancedSignal.value;
+      if (isCustomValue(value)) {
+        if (debug) {
+          console.debug(
+            `[stateSignal:${signalIdString}] writing into localStorage "${localStorageKey}"=${value}`,
+          );
+        }
+        writeIntoLocalStorage(value);
+      } else {
+        if (debug) {
+          console.debug(
+            `[stateSignal:${signalIdString}] removing "${localStorageKey}" from localStorage (value=${value})`,
+          );
+        }
+        removeFromLocalStorage();
+      }
+    });
+  }
+  // update validity object according to the signal value
+  validation: {
+    effect(() => {
+      const wasValid = validity.valid;
+      const value = advancedSignal.value;
+      updateValidity({ oneOf }, validity, value);
+      if (validity.valid) {
+        if (!wasValid) {
+          if (debug) {
+            console.debug(
+              `[stateSignal:${signalIdString}] validation now passes`,
+              { value },
+            );
+          }
+        }
+        return;
+      }
+      if (debug) {
+        console.debug(`[stateSignal:${signalIdString}] validation failed`, {
+          value,
+          oneOf,
+          hasAutoFix: Boolean(autoFix),
+        });
+      }
+      if (autoFix) {
+        const fixedValue = autoFix(value);
+        if (debug) {
+          console.debug(
+            `[stateSignal:${signalIdString}] autoFix applied: ${value} → ${fixedValue}`,
+            {
+              value,
+              fixedValue,
+            },
+          );
+        }
+        advancedSignal.value = fixedValue;
+        return;
+      }
+    });
+  }
+  // Store signal with its options (used by route_pattern.js)
   globalSignalRegistry.set(signalIdString, {
     signal: advancedSignal,
     options: {
-      getFallbackValue,
-      defaultValue,
+      getDefaultValue,
+      defaultValue: staticDefaultValue,
+      dynamicDefaultSignal,
       type,
       persists,
       localStorageKey,
@@ -152,141 +292,17 @@ export const stateSignal = (defaultValue, options = {}) => {
       ...options,
     },
   });
-
-  const validity = { valid: true };
-  advancedSignal.validity = validity;
-
-  // ensure current value always fallback to
-  // 1. source signal
-  // 2. local storage
-  // 3. default value
-  fallback: {
-    let firstRun = true;
-    effect(() => {
-      const value = advancedSignal.value;
-      if (sourceSignal) {
-        // eslint-disable-next-line no-unused-expressions
-        sourceSignal.value;
-      }
-      if (firstRun) {
-        firstRun = true;
-        return;
-      }
-      if (value !== undefined) {
-        return;
-      }
-      advancedSignal.value = getFallbackValue();
-    });
-  }
-  // When source signal value is updated, it overrides current signal value
-  source_signal_override: {
-    if (!sourceSignal) {
-      break source_signal_override;
-    }
-
-    let isFirstRun = true;
-    let sourcePreviousValue;
-    effect(() => {
-      const sourceValue = sourceSignal.value;
-      if (isFirstRun) {
-        // first run
-        isFirstRun = false;
-        sourcePreviousValue = sourceValue;
-        return;
-      }
-      if (sourceValue === undefined) {
-        // we don't have anything in the source signal, keep current value
-        if (debug) {
-          console.debug(
-            `[stateSignal:${signalIdString}] source signal is undefined, keeping current value=${advancedSignal.peek()}`,
-            {
-              sourcePreviousValue,
-              sourceValue,
-              currentValue: advancedSignal.peek(),
-            },
-          );
-        }
-        sourcePreviousValue = undefined;
-        return;
-      }
-      // the case we want to support: source signal value changes -> override current value
-      if (debug) {
-        console.debug(
-          `[stateSignal:${signalIdString}] source signal updated, overriding current value`,
-          {
-            sourcePreviousValue,
-            sourceValue,
-            previousValue: advancedSignal.peek(),
-          },
-        );
-      }
-      advancedSignal.value = sourceValue;
-      sourcePreviousValue = sourceValue;
-    });
-  }
-  // Read/write into local storage when enabled
-  persist_in_local_storage: {
-    if (!localStorageKey) {
-      break persist_in_local_storage;
-    }
-    effect(() => {
-      const value = advancedSignal.value;
-      if (value === undefined || value === null || value === defaultValue) {
-        if (debug) {
-          console.debug(
-            `[stateSignal:${signalIdString}] removing "${localStorageKey}" from localStorage (value=${value}, default=${defaultValue})`,
-          );
-        }
-        removeFromLocalStorage();
-      } else {
-        if (debug) {
-          console.debug(
-            `[stateSignal:${signalIdString}] writing into localStorage "${localStorageKey}"=${value}`,
-          );
-        }
-        writeIntoLocalStorage(value);
-      }
-    });
-  }
-  // update validity object according to the advanced signal value
-  validation: {
-    effect(() => {
-      const value = advancedSignal.value;
-      const wasValid = validity.valid;
-      updateValidity({ oneOf }, validity, value);
-      if (!validity.valid) {
-        if (debug) {
-          console.debug(`[stateSignal:${signalIdString}] validation failed`, {
-            value,
-            oneOf,
-            hasAutoFix: Boolean(autoFix),
-          });
-        }
-        if (autoFix) {
-          const fixedValue = autoFix();
-          if (debug) {
-            console.debug(
-              `[stateSignal:${signalIdString}] auto-fixing invalid value`,
-              {
-                invalidValue: value,
-                fixedValue,
-              },
-            );
-          }
-          advancedSignal.value = fixedValue;
-          return;
-        }
-      } else if (!wasValid && validity.valid) {
-        if (debug) {
-          console.debug(
-            `[stateSignal:${signalIdString}] validation now passes`,
-            {
-              value,
-            },
-          );
-        }
-      }
-    });
+  if (debug) {
+    console.debug(
+      `[stateSignal:${signalIdString}] created with initial value=${advancedSignal.value}`,
+      {
+        staticDefaultValue,
+        hasDynamicDefault: Boolean(dynamicDefaultSignal),
+        hasStoredValue: persists && readFromLocalStorage() !== undefined,
+        persists,
+        localStorageKey: persists ? localStorageKey : undefined,
+      },
+    );
   }
 
   return advancedSignal;

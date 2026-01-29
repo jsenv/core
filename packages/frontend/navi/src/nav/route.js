@@ -126,12 +126,15 @@ export const updateRoutes = (
         if (newMatching) {
           // When route matches, sync signal with URL parameter value
           // This ensures URL is the source of truth
-          if (debug) {
-            console.debug(
-              `[route] Route matching: setting ${paramName} signal to URL value: ${urlParamValue}`,
-            );
+          const currentValue = stateSignal.peek();
+          if (currentValue !== urlParamValue) {
+            if (debug) {
+              console.debug(
+                `[route] Route matching: setting ${paramName} signal to URL value: ${urlParamValue}`,
+              );
+            }
+            stateSignal.value = urlParamValue;
           }
-          stateSignal.value = urlParamValue;
         } else {
           // Route doesn't match - check if any matching route extracts this parameter
           let parameterExtractedByMatchingRoute = false;
