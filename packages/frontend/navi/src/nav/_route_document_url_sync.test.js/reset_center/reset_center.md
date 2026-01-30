@@ -77,9 +77,7 @@ try {
 
 ```js
 {
-  "urlProgression": [
-    "http://127.0.0.1/map/isochrone?lon=2"
-  ],
+  "urlProgression": [],
   "state_at_start": {
     "url": "http://127.0.0.1/map/isochrone",
     "signal_values": {
@@ -100,18 +98,7 @@ try {
       "isoLat": undefined
     }
   },
-  "all_state_progression": [
-    {
-      "url": "http://127.0.0.1/map/isochrone?lon=2",
-      "signal_values": {
-        "zoneLon": 2,
-        "mapLon": 2,
-        "mapLat": -2,
-        "isoLon": 2,
-        "isoLat": undefined
-      }
-    }
-  ]
+  "all_state_progression": []
 }
 ```
 

@@ -156,8 +156,8 @@ try {
     "tab": "general"
   },
   "settings_with_wrong_search_param": {
-    "tab": "general",
-    "wrongParam": "value"
+    "wrongParam": "value",
+    "tab": "general"
   },
   "settings_should_not_match_analytics_url": null,
   "settings_should_not_match_users_url": null,

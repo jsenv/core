@@ -49,9 +49,9 @@ try {
     "zoom": 12
   },
   "map_with_default_zoom": {
+    "zoom": 12,
     "zone": "zone-123",
-    "style": "streets-v11",
-    "zoom": 12
+    "style": "streets-v11"
   },
   "map_with_zoom_15": {
     "zoom": 15,
