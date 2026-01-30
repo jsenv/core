@@ -123,31 +123,7 @@ export const updateRoutes = (
         const params = routePrivateProperties.rawParamsSignal.value;
         const urlParamValue = params[paramName];
 
-        if (newMatching) {
-          // When route matches, sync signal with URL parameter value
-          // This ensures URL is the source of truth
-          const currentValue = stateSignal.peek();
-          if (urlParamValue === undefined) {
-            // If URL parameter is undefined, use the signal's default value instead
-            // to avoid cycles with signals that have dynamic defaults
-            const defaultValue = options.getDefaultValue();
-            if (defaultValue !== currentValue) {
-              if (debug) {
-                console.debug(
-                  `[route] Route matching: setting ${paramName} signal to default value: ${defaultValue}`,
-                );
-              }
-              stateSignal.value = defaultValue;
-            }
-          } else if (urlParamValue !== currentValue) {
-            if (debug) {
-              console.debug(
-                `[route] Route matching: setting ${paramName} signal to value from URL: ${urlParamValue}`,
-              );
-            }
-            stateSignal.value = urlParamValue;
-          }
-        } else {
+        if (!newMatching) {
           // Route doesn't match - check if any matching route extracts this parameter
           let parameterExtractedByMatchingRoute = false;
           let matchingRouteInSameFamily = false;
@@ -250,7 +226,37 @@ export const updateRoutes = (
               );
             }
           }
+          continue;
         }
+
+        // When route matches, sync signal with URL parameter value
+        // This ensures URL is the source of truth
+        const currentValue = stateSignal.peek();
+        if (urlParamValue === undefined) {
+          // If URL parameter is undefined, use the signal's default value instead
+          // to avoid cycles with signals that have dynamic defaults
+          const defaultValue = options.getDefaultValue();
+          if (defaultValue === currentValue) {
+            continue;
+          }
+          if (debug) {
+            console.debug(
+              `[route] Route matching: setting ${paramName} signal to default value: ${defaultValue}`,
+            );
+          }
+          stateSignal.value = defaultValue;
+          continue;
+        }
+        if (urlParamValue === currentValue) {
+          continue;
+        }
+        if (debug) {
+          console.debug(
+            `[route] Route matching: setting ${paramName} signal to value from URL: ${urlParamValue}`,
+          );
+        }
+        stateSignal.value = urlParamValue;
+        continue;
       }
     }
   });
@@ -488,32 +494,23 @@ const registerRoute = (routePattern) => {
       if (value === urlParamValue) {
         return;
       }
-
-      // Check if the signal value is custom (not a default)
-      // If signal is using static fallback, don't add it to URL
-      // If signal is using dynamic default or custom value, add it to URL
-      const isSignalValueCustom = options.isCustomValue(value);
-      if (!isSignalValueCustom && urlParamValue === undefined) {
-        // Signal is using default value and URL has no parameter
-        // Only add to URL if it's a dynamic default (not static fallback)
-        const currentDefault = options.getDefaultValue();
-        if (value !== currentDefault) {
-          // This shouldn't happen, but if it does, update URL
-          if (debug) {
-            console.debug(
-              `[stateSignal] Signal -> URL: ${paramName}=${value} (unexpected default mismatch)`,
-            );
-          }
-          route.replaceParams({ [paramName]: value });
+      if (urlParamValue === undefined) {
+        const defaultValue = options.getDefaultValue();
+        if (value === defaultValue) {
+          // signal is using the default value, no need to add it
+          return;
         }
-        // If signal is using static fallback, don't add to URL
+        if (debug) {
+          console.debug(
+            `[stateSignal] Signal -> URL: Removing default from URL for ${paramName}=${value}`,
+          );
+        }
+        route.replaceParams({ [paramName]: defaultValue });
         return;
       }
-
       if (debug) {
         console.debug(`[stateSignal] Signal -> URL: ${paramName}=${value}`);
       }
-
       route.replaceParams({ [paramName]: value });
     });
   }
