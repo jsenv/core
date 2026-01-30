@@ -1,9 +1,10 @@
-# [dynamic default](../../route_build_url.test.js)
+# [dynamic default ](../../route_build_url.test.js)
 
 ```js
 try {
-  const mapLonSignal = stateSignal(undefined);
-  const isoLonSignal = stateSignal(mapLonSignal);
+  const zoneLonSignal = stateSignal(1);
+  const mapLonSignal = stateSignal(zoneLonSignal);
+  const isoLonSignal = stateSignal(zoneLonSignal);
   const mapPanelSignal = stateSignal(undefined);
   const { MAP_ISOCHRONE_ROUTE } = setupRoutes({
     HOME_ROUTE: "/",
@@ -11,11 +12,24 @@ try {
     MAP_PANEL_ROUTE: `/map/:panel=${mapPanelSignal}/`,
     MAP_ISOCHRONE_ROUTE: `/map/isochrone?iso_lon=${isoLonSignal}`,
   });
-  updateRoutes(`${baseUrl}/map/isochrone?lon=1`);
+  updateRoutes(`${baseUrl}/map/isochrone`);
 
-  return {
-    map_isochrone_url: MAP_ISOCHRONE_ROUTE.url,
-  };
+  const urls = [];
+  urls.push(MAP_ISOCHRONE_ROUTE.url);
+  // simulate setting zone lon
+  zoneLonSignal.value = 10;
+  urls.push(MAP_ISOCHRONE_ROUTE.url);
+  // simulate setting custom map lon
+  mapLonSignal.value = 15;
+  urls.push(MAP_ISOCHRONE_ROUTE.url);
+  // set an isochrone custom lon
+  isoLonSignal.value = 20;
+  urls.push(MAP_ISOCHRONE_ROUTE.url);
+  // simulate resetting iso lon (go back to zoneLon)
+  isoLonSignal.value = undefined;
+  urls.push(MAP_ISOCHRONE_ROUTE.url);
+
+  return urls;
 } finally {
   clearAllRoutes();
   globalSignalRegistry.clear();
@@ -23,9 +37,13 @@ try {
 ```
 
 ```js
-{
-  "map_isochrone_url": "http://127.0.0.1/map/isochrone?lon=1"
-}
+[
+  "http://127.0.0.1/map/isochrone",
+  "http://127.0.0.1/map/isochrone",
+  "http://127.0.0.1/map/isochrone?lon=15",
+  "http://127.0.0.1/map/isochrone?lon=15&iso_lon=20",
+  "http://127.0.0.1/map/isochrone?lon=15"
+]
 ```
 
 ---
