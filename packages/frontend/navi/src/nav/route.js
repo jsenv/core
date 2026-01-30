@@ -231,12 +231,12 @@ export const updateRoutes = (
 
         // When route matches, sync signal with URL parameter value
         // This ensures URL is the source of truth
-        const currentValue = stateSignal.peek();
+        const value = stateSignal.peek();
         if (urlParamValue === undefined) {
           // If URL parameter is undefined, use the signal's default value instead
           // to avoid cycles with signals that have dynamic defaults
           const defaultValue = options.getDefaultValue();
-          if (defaultValue === currentValue) {
+          if (value === defaultValue) {
             continue;
           }
           if (debug) {
@@ -247,7 +247,7 @@ export const updateRoutes = (
           stateSignal.value = defaultValue;
           continue;
         }
-        if (urlParamValue === currentValue) {
+        if (urlParamValue === value) {
           continue;
         }
         if (debug) {
@@ -491,9 +491,6 @@ const registerRoute = (routePattern) => {
       if (!matching) {
         return;
       }
-      if (value === urlParamValue) {
-        return;
-      }
       if (urlParamValue === undefined) {
         const defaultValue = options.getDefaultValue();
         if (value === defaultValue) {
@@ -506,6 +503,9 @@ const registerRoute = (routePattern) => {
           );
         }
         route.replaceParams({ [paramName]: defaultValue });
+        return;
+      }
+      if (value === urlParamValue) {
         return;
       }
       if (debug) {
