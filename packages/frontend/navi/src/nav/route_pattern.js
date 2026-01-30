@@ -279,7 +279,7 @@ export const createRoutePattern = (pattern) => {
           if (
             !(childParam in resolvedParams) &&
             childSignal?.value !== undefined &&
-            childSignal.value !== childOptions.defaultValue
+            childSignal.value !== childOptions.getDefaultValue()
           ) {
             resolvedParams[childParam] = childSignal.value;
           }
@@ -721,13 +721,15 @@ export const createRoutePattern = (pattern) => {
           (conn) => conn.paramName === paramName,
         );
         if (childConnection) {
-          return value !== childConnection.options.defaultValue;
+          const childDefault = childConnection.options.getDefaultValue();
+          return value !== childDefault;
         }
 
         // Check if this parameter has a default value in parent's connections (current pattern)
         const parentOptions = parameterOptions.get(paramName);
         if (parentOptions) {
-          return value !== parentOptions.defaultValue;
+          const parentDefault = parentOptions.getDefaultValue();
+          return value !== parentDefault;
         }
 
         return true; // Non-connection parameters are considered non-default
@@ -779,7 +781,7 @@ export const createRoutePattern = (pattern) => {
             if (
               userProvidedParam ||
               (resolvedValue !== undefined &&
-                options.isCustomValue?.(resolvedValue))
+                options.isCustomValue(resolvedValue))
             ) {
               // Parameter was explicitly provided or has custom value - child is needed
               childSpecificParamsAreDefaults = false;
@@ -794,7 +796,7 @@ export const createRoutePattern = (pattern) => {
         if (childSpecificParamsAreDefaults) {
           for (const childConnection of childPatternObj.connections) {
             const childParamName = childConnection.paramName;
-            const childDefaultValue = childConnection.options?.defaultValue;
+            const childDefaultValue = childConnection.options.getDefaultValue();
             const childResolvedValue = resolvedParams[childParamName];
 
             // Only consider path parameters, not query parameters
@@ -965,7 +967,9 @@ export const createRoutePattern = (pattern) => {
 
       // Check if parent parameter is at default value
       const parentOptions = parameterOptions.get(paramName);
-      const parentDefault = parentOptions?.defaultValue;
+      const parentDefault = parentOptions
+        ? parentOptions.getDefaultValue()
+        : undefined;
       if (parentValue === parentDefault) {
         continue; // Don't inherit default values
       }
@@ -984,7 +988,7 @@ export const createRoutePattern = (pattern) => {
         const { options } = childConnection;
 
         // Only include if it's a custom value (not default)
-        if (options.isCustomValue?.(userValue)) {
+        if (options.isCustomValue(userValue)) {
           baseParams[paramName] = userValue;
         } else {
           // User provided the default value - complete omission
@@ -1473,7 +1477,7 @@ export const createRoutePattern = (pattern) => {
       const connection = targetAncestor.connections.find(
         (conn) => conn.paramName === param.name,
       );
-      if (!connection || connection.options.defaultValue !== segment) {
+      if (!connection || connection.options.getDefaultValue() !== segment) {
         if (DEBUG) {
           console.debug(
             `[${pattern}] tryDirectOptimization: Parameter default mismatch for ${param.name}`,
@@ -1523,7 +1527,7 @@ export const createRoutePattern = (pattern) => {
         const connection = targetAncestor.connections.find(
           (conn) => conn.paramName === paramName,
         );
-        if (connection && connection.options.defaultValue !== value) {
+        if (connection && connection.options.getDefaultValue() !== value) {
           ancestorParams[paramName] = value;
           if (DEBUG) {
             console.debug(
@@ -1538,7 +1542,7 @@ export const createRoutePattern = (pattern) => {
         const connection = sourceConnections.find(
           (conn) => conn.paramName === paramName,
         );
-        if (connection && connection.options.defaultValue !== value) {
+        if (connection && connection.options.getDefaultValue() !== value) {
           ancestorParams[paramName] = value;
           if (DEBUG) {
             console.debug(
@@ -1944,7 +1948,7 @@ const checkIfLiteralCanBeOptionalWithPatternObj = (
 
   // Check current pattern's connections
   for (const connection of patternObj.connections) {
-    if (connection.options.defaultValue === literalValue) {
+    if (connection.options.getDefaultValue() === literalValue) {
       return true;
     }
   }
@@ -1953,7 +1957,7 @@ const checkIfLiteralCanBeOptionalWithPatternObj = (
   let currentParent = patternObj.parent;
   while (currentParent) {
     for (const connection of currentParent.connections) {
-      if (connection.options.defaultValue === literalValue) {
+      if (connection.options.getDefaultValue() === literalValue) {
         return true;
       }
     }
@@ -1964,7 +1968,7 @@ const checkIfLiteralCanBeOptionalWithPatternObj = (
   const checkChildrenRecursively = (pattern) => {
     for (const child of pattern.children || []) {
       for (const connection of child.connections) {
-        if (connection.options.defaultValue === literalValue) {
+        if (connection.options.getDefaultValue() === literalValue) {
           return true;
         }
       }

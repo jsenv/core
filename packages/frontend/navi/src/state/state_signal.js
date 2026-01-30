@@ -120,7 +120,7 @@ export const stateSignal = (defaultValue, options = {}) => {
   if (globalSignalRegistry.has(signalIdString)) {
     const conflictInfo = globalSignalRegistry.get(signalIdString);
     throw new Error(
-      `Signal ID conflict: A signal with ID "${signalIdString}" already exists (existing default: ${conflictInfo.options.defaultValue})`,
+      `Signal ID conflict: A signal with ID "${signalIdString}" already exists (existing default: ${conflictInfo.options.getDefaultValue()})`,
     );
   }
 
@@ -130,18 +130,13 @@ export const stateSignal = (defaultValue, options = {}) => {
     persists
       ? valueInLocalStorage(localStorageKey, { type })
       : NO_LOCAL_STORAGE;
+  /**
+   * Returns the current default value from code logic only (static or dynamic).
+   * NEVER considers localStorage - used for URL building and route matching.
+   *
+   * @returns {any} The current code default value, undefined if no default
+   */
   const getDefaultValue = () => {
-    if (persists) {
-      const valueFromLocalStorage = readFromLocalStorage();
-      if (valueFromLocalStorage !== undefined) {
-        if (debug) {
-          console.debug(
-            `[stateSignal:${signalIdString}] using value from localStorage "${localStorageKey}"=${valueFromLocalStorage}`,
-          );
-        }
-        return valueFromLocalStorage;
-      }
-    }
     if (dynamicDefaultSignal) {
       const dynamicValue = dynamicDefaultSignal.peek();
       if (dynamicValue === undefined) {
@@ -169,6 +164,27 @@ export const stateSignal = (defaultValue, options = {}) => {
     }
     return staticDefaultValue;
   };
+
+  /**
+   * Returns fallback value: localStorage first, then code default.
+   * Used for signal initialization and resets.
+   *
+   * @returns {any} The fallback value (localStorage or code default)
+   */
+  const getFallbackValue = () => {
+    if (persists) {
+      const valueFromLocalStorage = readFromLocalStorage();
+      if (valueFromLocalStorage !== undefined) {
+        if (debug) {
+          console.debug(
+            `[stateSignal:${signalIdString}] using value from localStorage "${localStorageKey}"=${valueFromLocalStorage}`,
+          );
+        }
+        return valueFromLocalStorage;
+      }
+    }
+    return getDefaultValue();
+  };
   const isCustomValue = (value) => {
     if (value === undefined) {
       return false;
@@ -184,7 +200,7 @@ export const stateSignal = (defaultValue, options = {}) => {
   };
 
   // Create signal with initial value: use stored value, or undefined to indicate no explicit value
-  const advancedSignal = signal(getDefaultValue());
+  const advancedSignal = signal(getFallbackValue());
   const validity = { valid: true };
   advancedSignal.validity = validity;
   advancedSignal.__signalId = signalIdString;
@@ -202,7 +218,7 @@ export const stateSignal = (defaultValue, options = {}) => {
       if (value !== undefined) {
         return;
       }
-      const defaultValue = getDefaultValue();
+      const defaultValue = getFallbackValue();
       if (defaultValue === value) {
         return;
       }
@@ -251,7 +267,7 @@ export const stateSignal = (defaultValue, options = {}) => {
       }
 
       // Signal was using default value, update to new default
-      const newDefaultValue = getDefaultValue();
+      const newDefaultValue = getFallbackValue();
       if (newDefaultValue === value) {
         dynamicDefaultPreviousValue = dynamicDefaultValue;
         return;
@@ -332,8 +348,8 @@ export const stateSignal = (defaultValue, options = {}) => {
   globalSignalRegistry.set(signalIdString, {
     signal: advancedSignal,
     options: {
+      staticDefaultValue,
       getDefaultValue,
-      defaultValue: staticDefaultValue,
       dynamicDefaultSignal,
       isCustomValue,
       type,
