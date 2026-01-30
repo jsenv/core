@@ -335,12 +335,12 @@ export const createRoutePattern = (pattern) => {
   const canReachLiteralValue = (literalValue, params) => {
     // Check parent's own parameters (signals and user params)
     const parentCanProvide = connections.some((conn) => {
-      const signalValue = conn.signal?.value;
+      const signalValue = conn.signal.value;
       const userValue = params[conn.paramName];
       const effectiveValue = userValue !== undefined ? userValue : signalValue;
       return (
         effectiveValue === literalValue &&
-        conn.options.isCustomValue?.(effectiveValue)
+        conn.options.isCustomValue(effectiveValue)
       );
     });
 
@@ -375,7 +375,7 @@ export const createRoutePattern = (pattern) => {
     ];
 
     const systemCanProvide = allRelevantSignals.some((conn) => {
-      const signalValue = conn.signal?.value;
+      const signalValue = conn.signal.value;
       return (
         signalValue === literalValue &&
         conn.options.isCustomValue?.(signalValue)
@@ -434,7 +434,7 @@ export const createRoutePattern = (pattern) => {
             const parentConnection = connections.find(
               (conn) => conn.paramName === paramName,
             );
-            if (parentConnection && parentConnection.signal) {
+            if (parentConnection) {
               parentParamValue = parentConnection.signal.value;
             }
           }
@@ -521,14 +521,12 @@ export const createRoutePattern = (pattern) => {
     } else {
       const { paramName: name, signal, options } = item;
       paramName = name;
+      paramValue = signal.value;
+
       // Only include custom parent signal values (not using defaults)
-      if (
-        signal?.value === undefined ||
-        !options.isCustomValue?.(signal.value)
-      ) {
+      if (paramValue === undefined || !options.isCustomValue(paramValue)) {
         return { isCompatible: true, shouldInclude: false };
       }
-      paramValue = signal.value;
     }
 
     // Check if parameter value matches a literal segment in child pattern
@@ -684,11 +682,11 @@ export const createRoutePattern = (pattern) => {
         childParams[paramName] = explicitValue;
         if (
           explicitValue !== undefined &&
-          options.isCustomValue?.(explicitValue)
+          options.isCustomValue(explicitValue)
         ) {
           hasActiveParams = true;
         }
-      } else if (signal?.value !== undefined) {
+      } else if (signal.value !== undefined) {
         // No explicit override - use signal value
         childParams[paramName] = signal.value;
         if (options.isCustomValue?.(signal.value)) {
@@ -717,11 +715,9 @@ export const createRoutePattern = (pattern) => {
         if (value === undefined) return false;
 
         // Check if this parameter has a default value in child's connections
-        const childConnection = childPatternObj.connections.find(
-          (conn) => conn.paramName === paramName,
-        );
-        if (childConnection) {
-          const childDefault = childConnection.options.getDefaultValue();
+        const childOptions = childPatternObj.parameterOptions.get(paramName);
+        if (childOptions) {
+          const childDefault = childOptions.getDefaultValue();
           return value !== childDefault;
         }
 
@@ -883,8 +879,8 @@ export const createRoutePattern = (pattern) => {
         }
         // If explicitly undefined, don't include it (which means don't use child route)
       } else if (
-        signal?.value !== undefined &&
-        options.isCustomValue?.(signal.value)
+        signal.value !== undefined &&
+        options.isCustomValue(signal.value)
       ) {
         // No explicit override - use signal value if non-default
         baseParams[paramName] = signal.value;
@@ -904,10 +900,7 @@ export const createRoutePattern = (pattern) => {
         const { paramName, signal, options } = connection;
 
         // Skip if child route already handles this parameter
-        const childConnection = childPatternObj.connections.find(
-          (conn) => conn.paramName === paramName,
-        );
-        if (childConnection) {
+        if (childPatternObj.parameterOptions.has(paramName)) {
           continue; // Child route handles this parameter directly
         }
 
@@ -917,10 +910,7 @@ export const createRoutePattern = (pattern) => {
         }
 
         // Only include custom signal values (not using defaults)
-        if (
-          signal?.value !== undefined &&
-          options.isCustomValue?.(signal.value)
-        ) {
+        if (signal.value !== undefined && options.isCustomValue(signal.value)) {
           // Skip if parameter is consumed by child's literal path segments
           const isConsumedByChildPath = childPatternObj.pattern.segments.some(
             (segment) =>
@@ -949,10 +939,7 @@ export const createRoutePattern = (pattern) => {
       }
 
       // Skip if child route already handles this parameter
-      const childConnection = childPatternObj.connections.find(
-        (conn) => conn.paramName === paramName,
-      );
-      if (childConnection) {
+      if (childPatternObj.parameterOptions.has(paramName)) {
         continue; // Child route handles this parameter directly
       }
 
@@ -980,15 +967,11 @@ export const createRoutePattern = (pattern) => {
 
     // Apply user params with filtering logic
     for (const [paramName, userValue] of Object.entries(params)) {
-      const childConnection = childPatternObj.connections.find(
-        (conn) => conn.paramName === paramName,
-      );
+      const childOptions = childPatternObj.parameterOptions.get(paramName);
 
-      if (childConnection) {
-        const { options } = childConnection;
-
+      if (childOptions) {
         // Only include if it's a custom value (not default)
-        if (options.isCustomValue(userValue)) {
+        if (childOptions.isCustomValue(userValue)) {
           baseParams[paramName] = userValue;
         } else {
           // User provided the default value - complete omission
@@ -1045,10 +1028,10 @@ export const createRoutePattern = (pattern) => {
 
     if (childParent && childParent.originalPattern === pattern) {
       // Check if child has any non-default signal values
-      const hasNonDefaultChildParams = (childPatternObj.connections || []).some(
+      const hasNonDefaultChildParams = childPatternObj.connections.some(
         (childConnection) => {
           const { signal, options } = childConnection;
-          return options.isCustomValue?.(signal?.value);
+          return options.isCustomValue(signal.value);
         },
       );
 
@@ -1749,6 +1732,7 @@ export const createRoutePattern = (pattern) => {
     urlPatternRaw: pattern,
     cleanPattern,
     connections,
+    parameterOptions,
     parsedPattern,
     signalSet,
     children: [],
