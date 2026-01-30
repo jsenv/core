@@ -2401,15 +2401,18 @@ const generateSignalId = () => {
  * 2. When explicitly set (programmatically or via localStorage), the explicit value takes precedence
  * 3. When default signal changes, it only updates if no explicit value was ever set
  * 4. Calling reset() or setting to undefined makes the signal use the dynamic default again
+ * 5. If dynamic default is undefined and options.default is provided, uses the static fallback
  *
  * This is useful for:
  * - Backend data that can change but shouldn't override user preferences
  * - Route parameters with dynamic defaults based on other state
  * - Cascading configuration where defaults can be updated without losing user customizations
+ * - Having a static fallback when dynamic defaults might be undefined
  *
  * @param {any|import("@preact/signals").Signal} defaultValue - Static default value OR signal for dynamic default behavior
  * @param {Object} [options={}] - Configuration options
  * @param {string|number} [options.id] - Custom ID for the signal. If not provided, an auto-generated ID will be used. Used for localStorage key and route pattern detection.
+ * @param {any} [options.default] - Static fallback value used when defaultValue is a signal and that signal's value is undefined
  * @param {boolean} [options.persists=false] - Whether to persist the signal value in localStorage using the signal ID as key
  * @param {"string" | "number" | "boolean" | "object"} [options.type="string"] - Type for localStorage serialization/deserialization
  * @param {Array} [options.oneOf] - Array of valid values for validation. Signal will be marked invalid if value is not in this array
@@ -2450,6 +2453,21 @@ const generateSignalId = () => {
  * // Reset: userTheme.value = undefined; // Now follows dynamic default again
  *
  * @example
+ * // Dynamic default with static fallback
+ * const backendValue = signal(undefined); // might be undefined initially
+ * const userValue = stateSignal(backendValue, {
+ *   default: "fallback",
+ *   persists: true
+ * });
+ *
+ * // Initially: userValue.value = "fallback" (static fallback since dynamic is undefined)
+ * // Backend loads: backendValue.value = "loaded"; userValue.value = "loaded" (follows dynamic)
+ * // User sets: userValue.value = "custom" (explicit choice, persisted)
+ * // Backend changes: backendValue.value = "updated"
+ * // Result: userValue.value = "custom" (user choice preserved)
+ * // Reset: userValue.value = undefined; userValue.value = "updated" (follows dynamic again)
+ *
+ * @example
  * // Route parameter with dynamic default from parent route
  * const parentTab = signal("overview");
  * const childTab = stateSignal(parentTab);
@@ -2464,6 +2482,7 @@ const stateSignal = (defaultValue, options = {}) => {
     autoFix,
     persists = false,
     debug,
+    default: staticFallback,
   } = options;
 
   // Check if defaultValue is a signal (dynamic default) or static value
@@ -2473,7 +2492,7 @@ const stateSignal = (defaultValue, options = {}) => {
     "value" in defaultValue &&
     "peek" in defaultValue;
   const dynamicDefaultSignal = isDynamicDefault ? defaultValue : null;
-  const staticDefaultValue = isDynamicDefault ? undefined : defaultValue;
+  const staticDefaultValue = isDynamicDefault ? staticFallback : defaultValue;
   const signalId = id || generateSignalId();
   // Convert numeric IDs to strings for consistency
   const signalIdString = String(signalId);
@@ -2505,7 +2524,15 @@ const stateSignal = (defaultValue, options = {}) => {
     if (dynamicDefaultSignal) {
       const dynamicValue = dynamicDefaultSignal.peek();
       if (dynamicValue === undefined) {
-        return undefined;
+        if (staticDefaultValue === undefined) {
+          return undefined;
+        }
+        if (debug) {
+          console.debug(
+            `[stateSignal:${signalIdString}] dynamic default is undefined, using static default=${staticDefaultValue}`,
+          );
+        }
+        return staticDefaultValue;
       }
       if (debug) {
         console.debug(
@@ -2526,7 +2553,11 @@ const stateSignal = (defaultValue, options = {}) => {
       return false;
     }
     if (dynamicDefaultSignal) {
-      return value !== dynamicDefaultSignal.peek();
+      const dynamicValue = dynamicDefaultSignal.peek();
+      if (dynamicValue === undefined) {
+        return value !== staticDefaultValue;
+      }
+      return value !== dynamicValue;
     }
     return value !== staticDefaultValue;
   };
@@ -2577,21 +2608,40 @@ const stateSignal = (defaultValue, options = {}) => {
         dynamicDefaultPreviousValue = dynamicDefaultValue;
         return;
       }
-      if (value !== dynamicDefaultPreviousValue) {
+      // Check if current signal value matches the PREVIOUS dynamic default
+      // If so, it was following the dynamic default and should update
+      // Special case: if previous was undefined and we were using static fallback
+      let wasFollowingDefault = false;
+      if (
+        dynamicDefaultPreviousValue === undefined &&
+        staticDefaultValue !== undefined
+      ) {
+        // Signal might have been using static fallback
+        wasFollowingDefault = value === staticDefaultValue;
+      } else {
+        // Signal was following the previous dynamic default
+        wasFollowingDefault = value === dynamicDefaultPreviousValue;
+      }
+
+      if (!wasFollowingDefault) {
+        // Signal has a custom value, don't update even if dynamic default changes
         dynamicDefaultPreviousValue = dynamicDefaultValue;
         return;
       }
-      dynamicDefaultPreviousValue = dynamicDefaultValue;
-      const defaultValue = getDefaultValue();
-      if (defaultValue === value) {
+
+      // Signal was using default value, update to new default
+      const newDefaultValue = getDefaultValue();
+      if (newDefaultValue === value) {
+        dynamicDefaultPreviousValue = dynamicDefaultValue;
         return;
       }
       if (debug) {
         console.debug(
-          `[stateSignal:${signalIdString}] dynamic default updated, update to ${defaultValue}`,
+          `[stateSignal:${signalIdString}] dynamic default updated, update to ${newDefaultValue}`,
         );
       }
-      advancedSignal.value = defaultValue;
+      dynamicDefaultPreviousValue = dynamicDefaultValue;
+      advancedSignal.value = newDefaultValue;
     });
   }
   persist_in_local_storage: {

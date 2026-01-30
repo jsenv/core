@@ -930,31 +930,53 @@ await snapshotTests(import.meta.url, ({ test }) => {
         MAP_ISOCHRONE_ROUTE: `/map/isochrone?iso_lon=${isoLonSignal}`,
       });
       updateRoutes(`${baseUrl}/map/isochrone`);
+      const getState = () => {
+        return {
+          signal_values: {
+            zoneLon: zoneLonSignal.value,
+            mapLon: mapLonSignal.value,
+            isoLon: isoLonSignal.value,
+          },
+          map_url: MAP_ISOCHRONE_ROUTE.url,
+        };
+      };
 
-      const urls = [];
-      urls.push(MAP_ISOCHRONE_ROUTE.url);
-      // simulate setting zone lon
+      const state_at_start = getState();
+
       zoneLonSignal.value = 10;
-      urls.push(MAP_ISOCHRONE_ROUTE.url);
+      const state_after_setting_zone_lon = getState();
+
       // simulate setting custom map lon
       mapLonSignal.value = 15;
-      urls.push(MAP_ISOCHRONE_ROUTE.url);
+      const state_after_setting_custom_map_lon = getState();
+
       // set an isochrone custom lon
       isoLonSignal.value = 20;
-      urls.push(MAP_ISOCHRONE_ROUTE.url);
+      const state_after_setting_custom_iso_lon = getState();
+
       // reset iso lon (go back to zoneLon)
       isoLonSignal.value = undefined;
-      urls.push(MAP_ISOCHRONE_ROUTE.url);
+      const state_after_resetting_iso_lon = getState();
+
       // reset zone lon (a new zone is loading)
       zoneLonSignal.value = undefined;
       // we must also reset the map lon in that case to follow the zone lon again
       mapLonSignal.value = undefined;
-      urls.push(MAP_ISOCHRONE_ROUTE.url);
+      const state_after_resetting_zone_and_map_lon = getState();
+
       // set the new zone lon
       zoneLonSignal.value = 5;
-      urls.push(MAP_ISOCHRONE_ROUTE.url);
+      const state_after_setting_new_zone_lon = getState();
 
-      return urls;
+      return {
+        state_at_start,
+        state_after_setting_zone_lon,
+        state_after_setting_custom_map_lon,
+        state_after_setting_custom_iso_lon,
+        state_after_resetting_iso_lon,
+        state_after_resetting_zone_and_map_lon,
+        state_after_setting_new_zone_lon,
+      };
     } finally {
       clearAllRoutes();
       globalSignalRegistry.clear();
