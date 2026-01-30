@@ -1,8 +1,7 @@
 # [updating with dynamic default](../../route_document_url_sync.test.js)
 
 ```js
-let urlProgression = [];
-let stateProgression = [];
+const urlProgression = [];
 
 // Define signals first so they're available in the callback
 const zoneLonSignal = stateSignal(undefined);
@@ -26,10 +25,6 @@ const getState = () => {
 setBrowserIntegration({
   navTo: (url) => {
     urlProgression.push(url);
-    stateProgression.push({
-      url,
-      ...getState(),
-    });
     updateRoutes(url);
     return Promise.resolve();
   },
@@ -59,7 +54,6 @@ try {
     urlProgression,
     state_at_start: stateAtStart,
     state_after_zone_change: stateAfterZoneChange,
-    all_state_progression: stateProgression,
   };
 } finally {
   clearAllRoutes();
@@ -86,8 +80,7 @@ try {
       "mapLon": 2,
       "isoLon": 2
     }
-  },
-  "all_state_progression": []
+  }
 }
 ```
 
