@@ -919,8 +919,8 @@ await snapshotTests(import.meta.url, ({ test }) => {
 
   test("dynamic default ", () => {
     try {
-      const zoneLonSignal = stateSignal(1);
-      const mapLonSignal = stateSignal(zoneLonSignal);
+      const zoneLonSignal = stateSignal(undefined);
+      const mapLonSignal = stateSignal(zoneLonSignal, { default: -1 });
       const isoLonSignal = stateSignal(zoneLonSignal);
       const mapPanelSignal = stateSignal(undefined);
       const { MAP_ISOCHRONE_ROUTE } = setupRoutes({
@@ -942,8 +942,16 @@ await snapshotTests(import.meta.url, ({ test }) => {
       // set an isochrone custom lon
       isoLonSignal.value = 20;
       urls.push(MAP_ISOCHRONE_ROUTE.url);
-      // simulate resetting iso lon (go back to zoneLon)
+      // reset iso lon (go back to zoneLon)
       isoLonSignal.value = undefined;
+      urls.push(MAP_ISOCHRONE_ROUTE.url);
+      // reset zone lon (a new zone is loading)
+      zoneLonSignal.value = undefined;
+      // we must also reset the map lon in that case to follow the zone lon again
+      mapLonSignal.value = undefined;
+      urls.push(MAP_ISOCHRONE_ROUTE.url);
+      // set the new zone lon
+      zoneLonSignal.value = 5;
       urls.push(MAP_ISOCHRONE_ROUTE.url);
 
       return urls;
