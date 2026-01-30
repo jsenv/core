@@ -300,21 +300,14 @@ export const createRoutePattern = (pattern) => {
 
     for (const connection of connections) {
       const { paramName, signal, options } = connection;
-      const defaultValue = parameterDefaults.get(paramName);
 
       if (paramName in filtered) {
         // Parameter is explicitly provided - check if we should remove it
-        if (filtered[paramName] === defaultValue) {
-          // Matches static default - remove it
-          delete filtered[paramName];
-        } else if (!options.isCustomValue?.(filtered[paramName])) {
-          // Parameter value is not custom (matches dynamic default) - remove it
+        if (!options.isCustomValue?.(filtered[paramName])) {
+          // Parameter value is not custom (matches default) - remove it
           delete filtered[paramName];
         }
-      } else if (
-        signal?.value !== undefined &&
-        options.isCustomValue?.(signal.value)
-      ) {
+      } else if (options.isCustomValue?.(signal.value)) {
         // Parameter not provided but signal has custom value - add it
         filtered[paramName] = signal.value;
       }
