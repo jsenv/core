@@ -231,11 +231,15 @@ export const createRoutePattern = (pattern) => {
       }
     }
 
-    // Add static defaults for parameters that are still missing
-    // This handles cases where the URL doesn't contain the parameter and there's no signal value
-    for (const [paramName, defaultValue] of parameterDefaults) {
+    // Add defaults for parameters that are still missing
+    // Use current dynamic defaults instead of stale static defaults from parameterDefaults
+    for (const connection of connections) {
+      const { paramName, options } = connection;
       if (!(paramName in resolvedParams)) {
-        resolvedParams[paramName] = defaultValue;
+        const currentDefault = options.getDefaultValue();
+        if (currentDefault !== undefined) {
+          resolvedParams[paramName] = currentDefault;
+        }
       }
     }
 
@@ -766,11 +770,11 @@ export const createRoutePattern = (pattern) => {
         // OR if any descendant parameters indicate explicit navigation
         for (const connection of connections) {
           const { paramName, options } = connection;
-          const defaultValue = parameterDefaults.get(paramName);
+          const currentDefault = options.getDefaultValue(); // Use current dynamic default
           const resolvedValue = resolvedParams[paramName];
           const userProvidedParam = paramName in params;
 
-          if (extraLiterals.includes(defaultValue)) {
+          if (extraLiterals.includes(currentDefault)) {
             // This literal corresponds to a parameter in the parent
             if (
               userProvidedParam ||
@@ -819,18 +823,18 @@ export const createRoutePattern = (pattern) => {
         // prefer parent route regardless of whether child has other non-default parameters
         if (childSpecificParamsAreDefaults) {
           for (const connection of connections) {
-            const { paramName } = connection;
-            const defaultValue = parameterDefaults.get(paramName);
+            const { paramName, options } = connection;
+            const currentDefault = options.getDefaultValue(); // Use current dynamic default
             const userProvidedParam = paramName in params;
 
-            if (extraLiterals.includes(defaultValue) && !userProvidedParam) {
+            if (extraLiterals.includes(currentDefault) && !userProvidedParam) {
               // This child includes a literal that represents a default value
               // AND user didn't explicitly provide this parameter
               // When structural parameters are defaults, prefer parent for cleaner URL
               shouldUse = false;
               if (DEBUG) {
                 console.debug(
-                  `[${pattern}] Preferring parent over child - child includes default literal '${defaultValue}' for param '${paramName}' (structural parameter is default)`,
+                  `[${pattern}] Preferring parent over child - child includes default literal '${currentDefault}' for param '${paramName}' (structural parameter is default)`,
                 );
               }
               break;
