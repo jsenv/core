@@ -31,18 +31,14 @@ try {
 }
 ```
 
-```console
-Error: Cycle detected
-  at c.set (@jsenv/core/node_modules/@preact/signals-core/dist/signals-core.mjs:1:1781)
-  at base/route.js:136:31
-  at o (@jsenv/core/node_modules/@preact/signals-core/dist/signals-core.mjs:1:277)
-  at updateRoutes (base/route.js:89:3)
-  at Object.navTo (base/route_document_url_sync.test.js:1226:9)
-  at route.redirectTo (base/route.js:506:31)
-  at route.replaceParams (base/route.js:570:18)
-  at p.x (base/route.js:481:13)
-  at p.c (@jsenv/core/node_modules/@preact/signals-core/dist/signals-core.mjs:1:4051)
-  at t (@jsenv/core/node_modules/@preact/signals-core/dist/signals-core.mjs:1:193)
+```js
+{
+  "urlProgression": [
+    "http://127.0.0.1/map/isochrone",
+    "http://127.0.0.1/map/isochrone?lon=-1",
+    "http://127.0.0.1/map/isochrone?lon=-1"
+  ]
+}
 ```
 
 ---
