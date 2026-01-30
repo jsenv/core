@@ -19,6 +19,7 @@
 - [updating url with missing parameters uses signal current values](updating_url_with_missing_parameters_uses_signal_current_values/updating_url_with_missing_parameters_uses_signal_current_values.md)
 - [updating boolean signal](updating_boolean_signal/updating_boolean_signal.md)
 - [updating with dynamic default](updating_with_dynamic_default/updating_with_dynamic_default.md)
+- [reset center](reset_center/reset_center.md)
 
 ---
 

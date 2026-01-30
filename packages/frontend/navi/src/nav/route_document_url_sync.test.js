@@ -1227,21 +1227,26 @@ await snapshotTests(import.meta.url, ({ test }) => {
     const mapLonSignal = stateSignal(zoneLonSignal, {
       default: -1,
       type: "float",
-      debug: false, // Disable debug logging to avoid infinite loops in test output
     });
     const isoLonSignal = stateSignal(zoneLonSignal, { type: "float" });
     const mapPanelSignal = stateSignal(undefined);
+    const getState = () => {
+      return {
+        signal_values: {
+          zoneLon: zoneLonSignal.value,
+          mapLon: mapLonSignal.value,
+
+          isoLon: isoLonSignal.value,
+        },
+      };
+    };
 
     setBrowserIntegration({
       navTo: (url) => {
         urlProgression.push(url);
         stateProgression.push({
           url,
-          signal_values: {
-            zoneLon: zoneLonSignal.value,
-            mapLon: mapLonSignal.value,
-            isoLon: isoLonSignal.value,
-          },
+          ...getState(),
         });
         updateRoutes(url);
         return Promise.resolve();
@@ -1249,7 +1254,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
     });
 
     try {
-      setupRoutes({
+      const { MAP_ISOCHRONE_ROUTE } = setupRoutes({
         HOME_ROUTE: "/",
         MAP_ROUTE: `/map/?lon=${mapLonSignal}`,
         MAP_PANEL_ROUTE: `/map/:panel=${mapPanelSignal}/`,
@@ -1258,22 +1263,89 @@ await snapshotTests(import.meta.url, ({ test }) => {
 
       updateRoutes(`${baseUrl}/map/isochrone`);
       const stateAtStart = {
-        url: `${baseUrl}/map/isochrone`,
-        signal_values: {
-          zoneLon: zoneLonSignal.value,
-          mapLon: mapLonSignal.value,
-          isoLon: isoLonSignal.value,
-        },
+        url: MAP_ISOCHRONE_ROUTE.url,
+        ...getState(),
       };
 
       zoneLonSignal.value = 2;
       const stateAfterZoneChange = {
-        url: "after zone change", // Will be replaced by actual URL if navigation happens
+        url: MAP_ISOCHRONE_ROUTE.url,
+        ...getState(),
+      };
+
+      return {
+        urlProgression,
+        state_at_start: stateAtStart,
+        state_after_zone_change: stateAfterZoneChange,
+        all_state_progression: stateProgression,
+      };
+    } finally {
+      clearAllRoutes();
+      globalSignalRegistry.clear();
+      setBrowserIntegration(undefined);
+    }
+  });
+
+  test("reset center", () => {
+    let urlProgression = [];
+    let stateProgression = [];
+
+    // Define signals first so they're available in the callback
+    const zoneLonSignal = stateSignal(undefined);
+    const zoneLatSignal = stateSignal(undefined);
+    const mapLonSignal = stateSignal(zoneLonSignal, {
+      default: -1,
+      type: "float",
+    });
+    const mapLatSignal = stateSignal(zoneLatSignal, {
+      default: -2,
+      type: "float",
+    });
+    const isoLonSignal = stateSignal(zoneLonSignal, { type: "float" });
+    const isoLatSignal = stateSignal(zoneLatSignal, { type: "float" });
+    const mapPanelSignal = stateSignal(undefined);
+    const getState = () => {
+      return {
         signal_values: {
           zoneLon: zoneLonSignal.value,
           mapLon: mapLonSignal.value,
+          mapLat: mapLatSignal.value,
           isoLon: isoLonSignal.value,
+          isoLat: isoLatSignal.value,
         },
+      };
+    };
+
+    setBrowserIntegration({
+      navTo: (url) => {
+        urlProgression.push(url);
+        stateProgression.push({
+          url,
+          ...getState(),
+        });
+        updateRoutes(url);
+        return Promise.resolve();
+      },
+    });
+
+    try {
+      const { MAP_ISOCHRONE_ROUTE } = setupRoutes({
+        HOME_ROUTE: "/",
+        MAP_ROUTE: `/map/?lon=${mapLonSignal}&lat=${mapLatSignal}`,
+        MAP_PANEL_ROUTE: `/map/:panel=${mapPanelSignal}/`,
+        MAP_ISOCHRONE_ROUTE: `/map/isochrone?iso_lon=${isoLonSignal}&iso_lat=${isoLatSignal}`,
+      });
+
+      updateRoutes(`${baseUrl}/map/isochrone`);
+      const stateAtStart = {
+        url: MAP_ISOCHRONE_ROUTE.url,
+        ...getState(),
+      };
+
+      zoneLonSignal.value = 2;
+      const stateAfterZoneChange = {
+        url: MAP_ISOCHRONE_ROUTE.url,
+        ...getState(),
       };
 
       return {

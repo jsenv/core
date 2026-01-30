@@ -1,4 +1,4 @@
-# [updating with dynamic default](../../route_document_url_sync.test.js)
+# [reset center](../../route_document_url_sync.test.js)
 
 ```js
 let urlProgression = [];
@@ -6,19 +6,26 @@ let stateProgression = [];
 
 // Define signals first so they're available in the callback
 const zoneLonSignal = stateSignal(undefined);
+const zoneLatSignal = stateSignal(undefined);
 const mapLonSignal = stateSignal(zoneLonSignal, {
   default: -1,
   type: "float",
 });
+const mapLatSignal = stateSignal(zoneLatSignal, {
+  default: -2,
+  type: "float",
+});
 const isoLonSignal = stateSignal(zoneLonSignal, { type: "float" });
+const isoLatSignal = stateSignal(zoneLatSignal, { type: "float" });
 const mapPanelSignal = stateSignal(undefined);
 const getState = () => {
   return {
     signal_values: {
       zoneLon: zoneLonSignal.value,
       mapLon: mapLonSignal.value,
-
+      mapLat: mapLatSignal.value,
       isoLon: isoLonSignal.value,
+      isoLat: isoLatSignal.value,
     },
   };
 };
@@ -38,9 +45,9 @@ setBrowserIntegration({
 try {
   const { MAP_ISOCHRONE_ROUTE } = setupRoutes({
     HOME_ROUTE: "/",
-    MAP_ROUTE: `/map/?lon=${mapLonSignal}`,
+    MAP_ROUTE: `/map/?lon=${mapLonSignal}&lat=${mapLatSignal}`,
     MAP_PANEL_ROUTE: `/map/:panel=${mapPanelSignal}/`,
-    MAP_ISOCHRONE_ROUTE: `/map/isochrone?iso_lon=${isoLonSignal}`,
+    MAP_ISOCHRONE_ROUTE: `/map/isochrone?iso_lon=${isoLonSignal}&iso_lat=${isoLatSignal}`,
   });
 
   updateRoutes(`${baseUrl}/map/isochrone`);
@@ -78,7 +85,9 @@ try {
     "signal_values": {
       "zoneLon": undefined,
       "mapLon": -1,
-      "isoLon": undefined
+      "mapLat": -2,
+      "isoLon": undefined,
+      "isoLat": undefined
     }
   },
   "state_after_zone_change": {
@@ -86,7 +95,9 @@ try {
     "signal_values": {
       "zoneLon": 2,
       "mapLon": 2,
-      "isoLon": 2
+      "mapLat": -2,
+      "isoLon": 2,
+      "isoLat": undefined
     }
   },
   "all_state_progression": [
@@ -95,7 +106,9 @@ try {
       "signal_values": {
         "zoneLon": 2,
         "mapLon": 2,
-        "isoLon": 2
+        "mapLat": -2,
+        "isoLon": 2,
+        "isoLat": undefined
       }
     }
   ]
