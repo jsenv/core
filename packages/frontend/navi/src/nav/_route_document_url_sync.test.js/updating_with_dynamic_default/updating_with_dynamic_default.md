@@ -2,26 +2,6 @@
 
 ```js
 const urlProgression = [];
-
-// Define signals first so they're available in the callback
-const zoneLonSignal = stateSignal(undefined);
-const mapLonSignal = stateSignal(zoneLonSignal, {
-  default: -1,
-  type: "float",
-});
-const isoLonSignal = stateSignal(zoneLonSignal, { type: "float" });
-const mapPanelSignal = stateSignal(undefined);
-const getState = () => {
-  return {
-    signal_values: {
-      zoneLon: zoneLonSignal.value,
-      mapLon: mapLonSignal.value,
-
-      isoLon: isoLonSignal.value,
-    },
-  };
-};
-
 setBrowserIntegration({
   navTo: (url) => {
     urlProgression.push(url);
@@ -31,24 +11,36 @@ setBrowserIntegration({
 });
 
 try {
+  // Define signals first so they're available in the callback
+  const zoneLonSignal = stateSignal(undefined);
+  const mapLonSignal = stateSignal(zoneLonSignal, {
+    default: -1,
+    type: "float",
+  });
+  const isoLonSignal = stateSignal(zoneLonSignal, { type: "float" });
+  const mapPanelSignal = stateSignal(undefined);
   const { MAP_ISOCHRONE_ROUTE } = setupRoutes({
     HOME_ROUTE: "/",
     MAP_ROUTE: `/map/?lon=${mapLonSignal}`,
     MAP_PANEL_ROUTE: `/map/:panel=${mapPanelSignal}/`,
     MAP_ISOCHRONE_ROUTE: `/map/isochrone?iso_lon=${isoLonSignal}`,
   });
+  const captureState = () => {
+    return {
+      url: MAP_ISOCHRONE_ROUTE.url,
+      signal_values: {
+        zoneLon: zoneLonSignal.value,
+        mapLon: mapLonSignal.value,
+        isoLon: isoLonSignal.value,
+      },
+    };
+  };
 
   updateRoutes(`${baseUrl}/map/isochrone`);
-  const stateAtStart = {
-    url: MAP_ISOCHRONE_ROUTE.url,
-    ...getState(),
-  };
+  const stateAtStart = captureState();
 
   zoneLonSignal.value = 2;
-  const stateAfterZoneChange = {
-    url: MAP_ISOCHRONE_ROUTE.url,
-    ...getState(),
-  };
+  const stateAfterZoneChange = captureState();
 
   return {
     urlProgression,

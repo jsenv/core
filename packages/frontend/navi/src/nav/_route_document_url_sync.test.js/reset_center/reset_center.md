@@ -2,33 +2,6 @@
 
 ```js
 const urlProgression = [];
-
-// Define signals first so they're available in the callback
-const zoneLonSignal = stateSignal(undefined);
-const zoneLatSignal = stateSignal(undefined);
-const mapLonSignal = stateSignal(zoneLonSignal, {
-  default: -1,
-  type: "float",
-});
-const mapLatSignal = stateSignal(zoneLatSignal, {
-  default: -2,
-  type: "float",
-});
-const isoLonSignal = stateSignal(zoneLonSignal, { type: "float" });
-const isoLatSignal = stateSignal(zoneLatSignal, { type: "float" });
-const mapPanelSignal = stateSignal(undefined);
-const getState = () => {
-  return {
-    signal_values: {
-      zoneLon: zoneLonSignal.value,
-      mapLon: mapLonSignal.value,
-      mapLat: mapLatSignal.value,
-      isoLon: isoLonSignal.value,
-      isoLat: isoLatSignal.value,
-    },
-  };
-};
-
 setBrowserIntegration({
   navTo: (url) => {
     urlProgression.push(url);
@@ -38,30 +11,76 @@ setBrowserIntegration({
 });
 
 try {
+  // Define signals first so they're available in the callback
+  const zoneLonSignal = stateSignal(undefined);
+  const zoneLatSignal = stateSignal(undefined);
+  const mapLonSignal = stateSignal(zoneLonSignal, {
+    default: -1,
+    type: "float",
+  });
+  const mapLatSignal = stateSignal(zoneLatSignal, {
+    default: -2,
+    type: "float",
+  });
+  const isoLonSignal = stateSignal(zoneLonSignal, { type: "float" });
+  const isoLatSignal = stateSignal(zoneLatSignal, { type: "float" });
+  const mapPanelSignal = stateSignal(undefined);
   const { MAP_ISOCHRONE_ROUTE } = setupRoutes({
     HOME_ROUTE: "/",
     MAP_ROUTE: `/map/?lon=${mapLonSignal}&lat=${mapLatSignal}`,
     MAP_PANEL_ROUTE: `/map/:panel=${mapPanelSignal}/`,
     MAP_ISOCHRONE_ROUTE: `/map/isochrone?iso_lon=${isoLonSignal}&iso_lat=${isoLatSignal}`,
   });
+  const captureState = () => {
+    return {
+      url: MAP_ISOCHRONE_ROUTE.url,
+      signal_values: {
+        zoneLon: zoneLonSignal.value,
+        mapLon: mapLonSignal.value,
+        mapLat: mapLatSignal.value,
+        isoLon: isoLonSignal.value,
+        isoLat: isoLatSignal.value,
+      },
+    };
+  };
 
   updateRoutes(`${baseUrl}/map/isochrone`);
-  const stateAtStart = {
-    url: MAP_ISOCHRONE_ROUTE.url,
-    ...getState(),
-  };
+  const stateAtStart = captureState();
 
-  zoneLonSignal.value = 2;
-  zoneLatSignal.value = 3;
-  const stateAfterZoneChange = {
-    url: MAP_ISOCHRONE_ROUTE.url,
-    ...getState(),
-  };
+  batch(() => {
+    zoneLonSignal.value = 2;
+    zoneLatSignal.value = 3;
+  });
+  const stateAfterZoneChange = captureState();
+
+  batch(() => {
+    mapLonSignal.value = 5;
+    mapLatSignal.value = 6;
+  });
+
+  const stateAfterMovingMap = captureState();
+
+  batch(() => {
+    isoLonSignal.value = 7;
+    isoLatSignal.value = 8;
+  });
+
+  const stateAfterMovingIsochrone = captureState();
+
+  batch(() => {
+    isoLonSignal.value = undefined;
+    isoLatSignal.value = undefined;
+  });
+
+  const stateAfterResetIsochrone = captureState();
 
   return {
     urlProgression,
     state_at_start: stateAtStart,
     state_after_zone_change: stateAfterZoneChange,
+    state_after_moving_map: stateAfterMovingMap,
+    state_after_moving_isochrone: stateAfterMovingIsochrone,
+    state_after_reset_isochrone: stateAfterResetIsochrone,
   };
 } finally {
   clearAllRoutes();
@@ -72,7 +91,11 @@ try {
 
 ```js
 {
-  "urlProgression": [],
+  "urlProgression": [
+    "http://127.0.0.1/map/isochrone?lon=5&lat=6",
+    "http://127.0.0.1/map/isochrone?lon=5&lat=6&iso_lon=7&iso_lat=8",
+    "http://127.0.0.1/map/isochrone?lon=5&lat=6"
+  ],
   "state_at_start": {
     "url": "http://127.0.0.1/map/isochrone",
     "signal_values": {
@@ -89,6 +112,36 @@ try {
       "zoneLon": 2,
       "mapLon": 2,
       "mapLat": 3,
+      "isoLon": 2,
+      "isoLat": 3
+    }
+  },
+  "state_after_moving_map": {
+    "url": "http://127.0.0.1/map/isochrone?lon=5&lat=6",
+    "signal_values": {
+      "zoneLon": 2,
+      "mapLon": 5,
+      "mapLat": 6,
+      "isoLon": 2,
+      "isoLat": 3
+    }
+  },
+  "state_after_moving_isochrone": {
+    "url": "http://127.0.0.1/map/isochrone?lon=5&lat=6&iso_lon=7&iso_lat=8",
+    "signal_values": {
+      "zoneLon": 2,
+      "mapLon": 5,
+      "mapLat": 6,
+      "isoLon": 7,
+      "isoLat": 8
+    }
+  },
+  "state_after_reset_isochrone": {
+    "url": "http://127.0.0.1/map/isochrone?lon=5&lat=6",
+    "signal_values": {
+      "zoneLon": 2,
+      "mapLon": 5,
+      "mapLat": 6,
       "isoLon": 2,
       "isoLat": 3
     }
