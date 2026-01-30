@@ -27,6 +27,7 @@
 - [map url while on isochrone time](map_url_while_on_isochrone_time/map_url_while_on_isochrone_time.md)
 - [menu url when on default tab](menu_url_when_on_default_tab/menu_url_when_on_default_tab.md)
 - [sub page url when custom menu and custom tab](sub_page_url_when_custom_menu_and_custom_tab/sub_page_url_when_custom_menu_and_custom_tab.md)
+- [dynamic default](dynamic_default/dynamic_default.md)
 
 ---
 

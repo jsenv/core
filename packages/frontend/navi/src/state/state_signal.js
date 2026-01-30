@@ -285,6 +285,7 @@ export const stateSignal = (defaultValue, options = {}) => {
       getDefaultValue,
       defaultValue: staticDefaultValue,
       dynamicDefaultSignal,
+      isCustomValue,
       type,
       persists,
       localStorageKey,

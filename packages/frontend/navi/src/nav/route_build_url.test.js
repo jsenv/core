@@ -916,4 +916,26 @@ await snapshotTests(import.meta.url, ({ test }) => {
       globalSignalRegistry.clear();
     }
   });
+
+  test("dynamic default", () => {
+    try {
+      const mapLonSignal = stateSignal(undefined);
+      const isoLonSignal = stateSignal(mapLonSignal);
+      const mapPanelSignal = stateSignal(undefined);
+      const { MAP_ISOCHRONE_ROUTE } = setupRoutes({
+        HOME_ROUTE: "/",
+        MAP_ROUTE: `/map/?lon=${mapLonSignal}`,
+        MAP_PANEL_ROUTE: `/map/:panel=${mapPanelSignal}/`,
+        MAP_ISOCHRONE_ROUTE: `/map/isochrone?iso_lon=${isoLonSignal}`,
+      });
+      updateRoutes(`${baseUrl}/map/isochrone?lon=1`);
+
+      return {
+        map_isochrone_url: MAP_ISOCHRONE_ROUTE.url,
+      };
+    } finally {
+      clearAllRoutes();
+      globalSignalRegistry.clear();
+    }
+  });
 });
