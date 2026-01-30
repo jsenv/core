@@ -229,30 +229,32 @@ export const updateRoutes = (
           continue;
         }
 
-        // When route matches, sync signal with URL parameter value
-        // This ensures URL is the source of truth
+        // URL -> Signal sync: When route matches, ensure signal matches URL state
+        // URL is the source of truth for explicit parameters
         const value = stateSignal.peek();
         if (urlParamValue === undefined) {
-          // If URL parameter is undefined, use the signal's default value instead
-          // to avoid cycles with signals that have dynamic defaults
+          // No URL parameter - reset signal to its current default value
+          // (handles both static fallback and dynamic default cases)
           const defaultValue = options.getDefaultValue();
           if (value === defaultValue) {
+            // Signal already has correct default value, no sync needed
             continue;
           }
           if (debug) {
             console.debug(
-              `[route] Route matching: setting ${paramName} signal to default value: ${defaultValue}`,
+              `[route] URL->Signal: ${paramName} not in URL, reset signal to default (${defaultValue})`,
             );
           }
           stateSignal.value = defaultValue;
           continue;
         }
         if (urlParamValue === value) {
+          // Values already match, no sync needed
           continue;
         }
         if (debug) {
           console.debug(
-            `[route] Route matching: setting ${paramName} signal to value from URL: ${urlParamValue}`,
+            `[route] URL->Signal: ${paramName}=${urlParamValue} in url, sync signal with url`,
           );
         }
         stateSignal.value = urlParamValue;
@@ -481,7 +483,8 @@ const registerRoute = (routePattern) => {
 
     // URL -> Signal synchronization now handled in updateRoutes() to eliminate circular dependency
 
-    // Signal -> URL synchronization
+    // Signal -> URL sync: When signal changes, update URL to reflect meaningful state
+    // Only sync non-default values to keep URLs clean (static fallbacks stay invisible)
     effect(() => {
       const value = stateSignal.value;
       const params = rawParamsSignal.value;
@@ -489,27 +492,32 @@ const registerRoute = (routePattern) => {
       const matching = matchingSignal.value;
 
       if (!matching) {
+        // Route not matching, no URL sync needed
         return;
       }
       if (urlParamValue === undefined) {
+        // No URL parameter exists - check if signal has meaningful value to add
         const defaultValue = options.getDefaultValue();
         if (value === defaultValue) {
-          // signal is using the default value, no need to add it
+          // Signal using default value, keep URL clean (no parameter needed)
           return;
         }
         if (debug) {
           console.debug(
-            `[stateSignal] Signal -> URL: Removing default from URL for ${paramName}=${value}`,
+            `[route] Signal->URL: ${paramName} adding custom value ${value} to URL (default: ${defaultValue})`,
           );
         }
-        route.replaceParams({ [paramName]: defaultValue });
+        route.replaceParams({ [paramName]: value });
         return;
       }
       if (value === urlParamValue) {
+        // Values already match, no sync needed
         return;
       }
       if (debug) {
-        console.debug(`[stateSignal] Signal -> URL: ${paramName}=${value}`);
+        console.debug(
+          `[route] Signal->URL: ${paramName} updating URL ${urlParamValue} -> ${value}`,
+        );
       }
       route.replaceParams({ [paramName]: value });
     });

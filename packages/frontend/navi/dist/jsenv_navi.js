@@ -10373,19 +10373,7 @@ const updateRoutes = (
         const params = routePrivateProperties.rawParamsSignal.value;
         const urlParamValue = params[paramName];
 
-        if (newMatching) {
-          // When route matches, sync signal with URL parameter value
-          // This ensures URL is the source of truth
-          const currentValue = stateSignal.peek();
-          if (currentValue !== urlParamValue) {
-            if (debug) {
-              console.debug(
-                `[route] Route matching: setting ${paramName} signal to URL value: ${urlParamValue}`,
-              );
-            }
-            stateSignal.value = urlParamValue;
-          }
-        } else {
+        if (!newMatching) {
           // Route doesn't match - check if any matching route extracts this parameter
           let parameterExtractedByMatchingRoute = false;
           let matchingRouteInSameFamily = false;
@@ -10488,7 +10476,39 @@ const updateRoutes = (
               );
             }
           }
+          continue;
         }
+
+        // URL -> Signal sync: When route matches, ensure signal matches URL state
+        // URL is the source of truth for explicit parameters
+        const value = stateSignal.peek();
+        if (urlParamValue === undefined) {
+          // No URL parameter - reset signal to its current default value
+          // (handles both static fallback and dynamic default cases)
+          const defaultValue = options.getDefaultValue();
+          if (value === defaultValue) {
+            // Signal already has correct default value, no sync needed
+            continue;
+          }
+          if (debug) {
+            console.debug(
+              `[route] URL->Signal: ${paramName} not in URL, reset signal to default (${defaultValue})`,
+            );
+          }
+          stateSignal.value = defaultValue;
+          continue;
+        }
+        if (urlParamValue === value) {
+          // Values already match, no sync needed
+          continue;
+        }
+        if (debug) {
+          console.debug(
+            `[route] URL->Signal: ${paramName}=${urlParamValue} in url, sync signal with url`,
+          );
+        }
+        stateSignal.value = urlParamValue;
+        continue;
       }
     }
   });
@@ -10687,28 +10707,49 @@ const registerRoute = (routePattern) => {
 
     if (debug) {
       console.debug(
-        `[route] connecting param "${paramName}" to signal`,
+        `[route] connecting url param "${paramName}" to signal`,
         stateSignal,
       );
     }
 
     // URL -> Signal synchronization now handled in updateRoutes() to eliminate circular dependency
 
-    // Signal -> URL synchronization
+    // Signal -> URL sync: When signal changes, update URL to reflect meaningful state
+    // Only sync non-default values to keep URLs clean (static fallbacks stay invisible)
     effect(() => {
       const value = stateSignal.value;
       const params = rawParamsSignal.value;
       const urlParamValue = params[paramName];
       const matching = matchingSignal.value;
 
-      if (!matching || value === urlParamValue) {
+      if (!matching) {
+        // Route not matching, no URL sync needed
         return;
       }
-
-      if (debug) {
-        console.debug(`[stateSignal] Signal -> URL: ${paramName}=${value}`);
+      if (urlParamValue === undefined) {
+        // No URL parameter exists - check if signal has meaningful value to add
+        const defaultValue = options.getDefaultValue();
+        if (value === defaultValue) {
+          // Signal using default value, keep URL clean (no parameter needed)
+          return;
+        }
+        if (debug) {
+          console.debug(
+            `[route] Signal->URL: ${paramName} adding custom value ${value} to URL (default: ${defaultValue})`,
+          );
+        }
+        route.replaceParams({ [paramName]: value });
+        return;
       }
-
+      if (value === urlParamValue) {
+        // Values already match, no sync needed
+        return;
+      }
+      if (debug) {
+        console.debug(
+          `[route] Signal->URL: ${paramName} updating URL ${urlParamValue} -> ${value}`,
+        );
+      }
       route.replaceParams({ [paramName]: value });
     });
   }
