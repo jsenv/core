@@ -207,8 +207,7 @@ export const createRoutePattern = (pattern) => {
     let resolvedParams = { ...providedParams };
 
     // Process all connections for parameter resolution
-    for (const connection of connections) {
-      const { paramName } = connection;
+    for (const [paramName, connection] of connectionMap) {
       if (paramName in providedParams) {
         // Parameter was explicitly provided - always respect explicit parameters
         // Don't check signal value - explicit parameter takes precedence
@@ -223,8 +222,7 @@ export const createRoutePattern = (pattern) => {
 
     // Add defaults for parameters that are still missing
     // Use current dynamic defaults from signal connections
-    for (const connection of connections) {
-      const { paramName } = connection;
+    for (const [paramName, connection] of connectionMap) {
       if (paramName in resolvedParams) {
         continue;
       }
@@ -262,8 +260,10 @@ export const createRoutePattern = (pattern) => {
       }
 
       if (childWouldMatch) {
-        for (const childConnection of childPatternObj.connections) {
-          const { paramName: childParam } = childConnection;
+        for (const [
+          childParam,
+          childConnection,
+        ] of childPatternObj.connectionMap) {
           if (childParam in resolvedParams) {
             continue;
           }
@@ -298,8 +298,7 @@ export const createRoutePattern = (pattern) => {
   const removeDefaultValues = (params) => {
     const filtered = { ...params };
 
-    for (const connection of connections) {
-      const { paramName } = connection;
+    for (const [paramName, connection] of connectionMap) {
       if (paramName in filtered) {
         // Parameter is explicitly provided - check if we should remove it
         const paramValue = filtered[paramName];
@@ -613,9 +612,6 @@ export const createRoutePattern = (pattern) => {
         if (!siblingConnection) {
           continue;
         }
-        if (!siblingConnection.signal) {
-          debugger;
-        }
         const siblingSignalValue = siblingConnection.signal.value;
         if (siblingSignalValue === undefined) {
           continue;
@@ -644,9 +640,7 @@ export const createRoutePattern = (pattern) => {
     let hasActiveParams = false;
     const childParams = { ...compatibility.childParams };
 
-    for (const connection of childPatternObj.connections) {
-      const { paramName } = connection;
-
+    for (const [paramName, connection] of childPatternObj.connectionMap) {
       // Check if parameter was explicitly provided by user
       const hasExplicitParam = paramName in params;
       const explicitValue = params[paramName];
@@ -743,8 +737,7 @@ export const createRoutePattern = (pattern) => {
 
         // Check if parameters that determine child selection are non-default
         // OR if any descendant parameters indicate explicit navigation
-        for (const connection of connections) {
-          const { paramName } = connection;
+        for (const [paramName, connection] of connectionMap) {
           const currentDefault = connection.getDefaultValue(); // Use current dynamic default
           const resolvedValue = resolvedParams[paramName];
           const userProvidedParam = paramName in params;
@@ -797,8 +790,7 @@ export const createRoutePattern = (pattern) => {
         // When structural parameters (those that determine child selection) are defaults,
         // prefer parent route regardless of whether child has other non-default parameters
         if (childSpecificParamsAreDefaults) {
-          for (const connection of connections) {
-            const { paramName } = connection;
+          for (const [paramName, connection] of connectionMap) {
             const currentDefault = connection.getDefaultValue(); // Use current dynamic default
             const userProvidedParam = paramName in params;
 
@@ -842,9 +834,7 @@ export const createRoutePattern = (pattern) => {
   ) => {
     // Start with child signal values
     const baseParams = {};
-    for (const connection of childPatternObj.connections) {
-      const { paramName } = connection;
-
+    for (const [paramName, connection] of childPatternObj.connectionMap) {
       // Check if parameter was explicitly provided by user
       const hasExplicitParam = paramName in params;
       const explicitValue = params[paramName];
