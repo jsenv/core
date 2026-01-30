@@ -9,6 +9,7 @@ const zoneLonSignal = stateSignal(undefined);
 const mapLonSignal = stateSignal(zoneLonSignal, {
   default: -1,
   type: "float",
+  debug: false, // Disable debug logging to avoid infinite loops in test output
 });
 const isoLonSignal = stateSignal(zoneLonSignal, { type: "float" });
 const mapPanelSignal = stateSignal(undefined);
@@ -73,9 +74,7 @@ try {
 ```js
 {
   "urlProgression": [
-    "http://127.0.0.1/map/isochrone",
-    "http://127.0.0.1/map/isochrone?lon=-1",
-    "http://127.0.0.1/map/isochrone?lon=-1"
+    "http://127.0.0.1/map/isochrone?lon=2"
   ],
   "state_at_start": {
     "url": "http://127.0.0.1/map/isochrone",
@@ -89,32 +88,16 @@ try {
     "url": "after zone change",
     "signal_values": {
       "zoneLon": 2,
-      "mapLon": -1,
+      "mapLon": 2,
       "isoLon": 2
     }
   },
   "all_state_progression": [
     {
-      "url": "http://127.0.0.1/map/isochrone",
+      "url": "http://127.0.0.1/map/isochrone?lon=2",
       "signal_values": {
         "zoneLon": 2,
         "mapLon": 2,
-        "isoLon": 2
-      }
-    },
-    {
-      "url": "http://127.0.0.1/map/isochrone?lon=-1",
-      "signal_values": {
-        "zoneLon": 2,
-        "mapLon": -1,
-        "isoLon": 2
-      }
-    },
-    {
-      "url": "http://127.0.0.1/map/isochrone?lon=-1",
-      "signal_values": {
-        "zoneLon": 2,
-        "mapLon": -1,
         "isoLon": 2
       }
     }

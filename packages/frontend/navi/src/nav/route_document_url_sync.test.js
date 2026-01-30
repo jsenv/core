@@ -1227,6 +1227,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
     const mapLonSignal = stateSignal(zoneLonSignal, {
       default: -1,
       type: "float",
+      debug: false, // Disable debug logging to avoid infinite loops in test output
     });
     const isoLonSignal = stateSignal(zoneLonSignal, { type: "float" });
     const mapPanelSignal = stateSignal(undefined);

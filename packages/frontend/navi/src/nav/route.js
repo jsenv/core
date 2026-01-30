@@ -482,7 +482,31 @@ const registerRoute = (routePattern) => {
       const urlParamValue = params[paramName];
       const matching = matchingSignal.value;
 
-      if (!matching || value === urlParamValue) {
+      if (!matching) {
+        return;
+      }
+      if (value === urlParamValue) {
+        return;
+      }
+
+      // Check if the signal value is custom (not a default)
+      // If signal is using static fallback, don't add it to URL
+      // If signal is using dynamic default or custom value, add it to URL
+      const isSignalValueCustom = options.isCustomValue(value);
+      if (!isSignalValueCustom && urlParamValue === undefined) {
+        // Signal is using default value and URL has no parameter
+        // Only add to URL if it's a dynamic default (not static fallback)
+        const currentDefault = options.getDefaultValue();
+        if (value !== currentDefault) {
+          // This shouldn't happen, but if it does, update URL
+          if (debug) {
+            console.debug(
+              `[stateSignal] Signal -> URL: ${paramName}=${value} (unexpected default mismatch)`,
+            );
+          }
+          route.replaceParams({ [paramName]: value });
+        }
+        // If signal is using static fallback, don't add to URL
         return;
       }
 
