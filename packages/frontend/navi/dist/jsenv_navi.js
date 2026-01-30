@@ -2499,7 +2499,7 @@ const stateSignal = (defaultValue, options = {}) => {
   if (globalSignalRegistry.has(signalIdString)) {
     const conflictInfo = globalSignalRegistry.get(signalIdString);
     throw new Error(
-      `Signal ID conflict: A signal with ID "${signalIdString}" already exists (existing default: ${conflictInfo.options.defaultValue})`,
+      `Signal ID conflict: A signal with ID "${signalIdString}" already exists (existing default: ${conflictInfo.options.getDefaultValue()})`,
     );
   }
 
@@ -2509,18 +2509,13 @@ const stateSignal = (defaultValue, options = {}) => {
     persists
       ? valueInLocalStorage(localStorageKey, { type })
       : NO_LOCAL_STORAGE;
+  /**
+   * Returns the current default value from code logic only (static or dynamic).
+   * NEVER considers localStorage - used for URL building and route matching.
+   *
+   * @returns {any} The current code default value, undefined if no default
+   */
   const getDefaultValue = () => {
-    if (persists) {
-      const valueFromLocalStorage = readFromLocalStorage();
-      if (valueFromLocalStorage !== undefined) {
-        if (debug) {
-          console.debug(
-            `[stateSignal:${signalIdString}] using value from localStorage "${localStorageKey}"=${valueFromLocalStorage}`,
-          );
-        }
-        return valueFromLocalStorage;
-      }
-    }
     if (dynamicDefaultSignal) {
       const dynamicValue = dynamicDefaultSignal.peek();
       if (dynamicValue === undefined) {
@@ -2548,6 +2543,27 @@ const stateSignal = (defaultValue, options = {}) => {
     }
     return staticDefaultValue;
   };
+
+  /**
+   * Returns fallback value: localStorage first, then code default.
+   * Used for signal initialization and resets.
+   *
+   * @returns {any} The fallback value (localStorage or code default)
+   */
+  const getFallbackValue = () => {
+    if (persists) {
+      const valueFromLocalStorage = readFromLocalStorage();
+      if (valueFromLocalStorage !== undefined) {
+        if (debug) {
+          console.debug(
+            `[stateSignal:${signalIdString}] using value from localStorage "${localStorageKey}"=${valueFromLocalStorage}`,
+          );
+        }
+        return valueFromLocalStorage;
+      }
+    }
+    return getDefaultValue();
+  };
   const isCustomValue = (value) => {
     if (value === undefined) {
       return false;
@@ -2563,7 +2579,7 @@ const stateSignal = (defaultValue, options = {}) => {
   };
 
   // Create signal with initial value: use stored value, or undefined to indicate no explicit value
-  const advancedSignal = signal(getDefaultValue());
+  const advancedSignal = signal(getFallbackValue());
   const validity = { valid: true };
   advancedSignal.validity = validity;
   advancedSignal.__signalId = signalIdString;
@@ -2581,7 +2597,7 @@ const stateSignal = (defaultValue, options = {}) => {
       if (value !== undefined) {
         return;
       }
-      const defaultValue = getDefaultValue();
+      const defaultValue = getFallbackValue();
       if (defaultValue === value) {
         return;
       }
@@ -2630,7 +2646,7 @@ const stateSignal = (defaultValue, options = {}) => {
       }
 
       // Signal was using default value, update to new default
-      const newDefaultValue = getDefaultValue();
+      const newDefaultValue = getFallbackValue();
       if (newDefaultValue === value) {
         dynamicDefaultPreviousValue = dynamicDefaultValue;
         return;
@@ -2711,8 +2727,8 @@ const stateSignal = (defaultValue, options = {}) => {
   globalSignalRegistry.set(signalIdString, {
     signal: advancedSignal,
     options: {
+      staticDefaultValue,
       getDefaultValue,
-      defaultValue: staticDefaultValue,
       dynamicDefaultSignal,
       isCustomValue,
       type,
@@ -7755,9 +7771,9 @@ const detectSignals = (routePattern) => {
       updatedPattern = updatedPattern.replace(fullMatch, replacement);
 
       signalConnections.push({
-        signal,
         paramName,
-        options,
+        signal,
+        ...options,
       });
     } else {
       console.warn(
@@ -7780,29 +7796,17 @@ const detectSignals = (routePattern) => {
 const createRoutePattern = (pattern) => {
   // Detect and process signals in the pattern first
   const [cleanPattern, connections] = detectSignals(pattern);
-
-  // Build parameter defaults from signal connections
-  const parameterDefaults = new Map();
-  for (const connection of connections) {
-    const { paramName, options } = connection;
-    if (options.defaultValue !== undefined) {
-      parameterDefaults.set(paramName, options.defaultValue);
-    }
-  }
-
-  const parsedPattern = parsePattern(
-    cleanPattern,
-    parameterDefaults,
-    connections,
-  );
-
+  // Build parameter connection map for efficient lookups
+  const connectionMap = new Map();
   // Create signalSet to track all signals this pattern depends on
   const signalSet = new Set();
   for (const connection of connections) {
-    if (connection.signal) {
-      signalSet.add(connection.signal);
-    }
+    connectionMap.set(connection.paramName, connection);
+
+    signalSet.add(connection.signal);
   }
+
+  const parsedPattern = parsePattern(cleanPattern, connectionMap);
 
   if (DEBUG$2) {
     console.debug(`[CustomPattern] Created pattern:`, parsedPattern);
@@ -7831,26 +7835,34 @@ const createRoutePattern = (pattern) => {
     let resolvedParams = { ...providedParams };
 
     // Process all connections for parameter resolution
-    for (const connection of connections) {
-      const { paramName, signal } = connection;
-
-      if (paramName in providedParams) ; else if (signal?.value !== undefined) {
+    for (const [paramName, connection] of connectionMap) {
+      if (paramName in providedParams) {
+        // Parameter was explicitly provided - always respect explicit parameters
+        // Don't check signal value - explicit parameter takes precedence
+        continue;
+      }
+      const signalValue = connection.signal.value;
+      if (signalValue !== undefined) {
         // Parameter was not provided, check signal value
-        resolvedParams[paramName] = signal.value;
+        resolvedParams[paramName] = signalValue;
       }
     }
 
-    // Add static defaults for parameters that are still missing
-    // This handles cases where the URL doesn't contain the parameter and there's no signal value
-    for (const [paramName, defaultValue] of parameterDefaults) {
-      if (!(paramName in resolvedParams)) {
-        resolvedParams[paramName] = defaultValue;
+    // Add defaults for parameters that are still missing
+    // Use current dynamic defaults from signal connections
+    for (const [paramName, connection] of connectionMap) {
+      if (paramName in resolvedParams) {
+        continue;
+      }
+      const currentDefault = connection.getDefaultValue();
+      if (currentDefault !== undefined) {
+        resolvedParams[paramName] = currentDefault;
       }
     }
 
     // Include active non-default parameters from child routes for URL optimization
     // Only include from child routes that would actually match the current parameters
-    const childPatternObjs = patternObject.children || [];
+    const childPatternObjs = patternObject.children;
     for (const childPatternObj of childPatternObjs) {
       // Check if this child route would match the current resolved parameters
       // by simulating URL building and seeing if the child segments align
@@ -7876,20 +7888,20 @@ const createRoutePattern = (pattern) => {
       }
 
       if (childWouldMatch) {
-        for (const childConnection of childPatternObj.connections) {
-          const {
-            paramName: childParam,
-            signal: childSignal,
-            options: childOptions,
-          } = childConnection;
-
+        for (const [
+          childParam,
+          childConnection,
+        ] of childPatternObj.connectionMap) {
+          if (childParam in resolvedParams) {
+            continue;
+          }
+          const childSignalValue = childConnection.signal.value;
           // Only include if not already resolved and is non-default
           if (
-            !(childParam in resolvedParams) &&
-            childSignal?.value !== undefined &&
-            childSignal.value !== childOptions.defaultValue
+            childSignalValue !== undefined &&
+            childSignalValue !== childConnection.getDefaultValue()
           ) {
-            resolvedParams[childParam] = childSignal.value;
+            resolvedParams[childParam] = childSignalValue;
           }
         }
       }
@@ -7914,18 +7926,21 @@ const createRoutePattern = (pattern) => {
   const removeDefaultValues = (params) => {
     const filtered = { ...params };
 
-    for (const connection of connections) {
-      const { paramName, signal, options } = connection;
-
+    for (const [paramName, connection] of connectionMap) {
       if (paramName in filtered) {
         // Parameter is explicitly provided - check if we should remove it
-        if (!options.isCustomValue?.(filtered[paramName])) {
-          // Parameter value is not custom (matches default) - remove it
+        const paramValue = filtered[paramName];
+
+        if (!connection.isCustomValue(paramValue)) {
           delete filtered[paramName];
         }
-      } else if (options.isCustomValue?.(signal.value)) {
-        // Parameter not provided but signal has custom value - add it
-        filtered[paramName] = signal.value;
+      } else {
+        // Parameter not provided but signal has a value
+        const signalValue = connection.signal.value;
+        if (connection.isCustomValue(signalValue)) {
+          // Only include custom values
+          filtered[paramName] = signalValue;
+        }
       }
     }
 
@@ -7938,12 +7953,11 @@ const createRoutePattern = (pattern) => {
   const canReachLiteralValue = (literalValue, params) => {
     // Check parent's own parameters (signals and user params)
     const parentCanProvide = connections.some((conn) => {
-      const signalValue = conn.signal?.value;
+      const signalValue = conn.signal.value;
       const userValue = params[conn.paramName];
       const effectiveValue = userValue !== undefined ? userValue : signalValue;
       return (
-        effectiveValue === literalValue &&
-        conn.options.isCustomValue?.(effectiveValue)
+        effectiveValue === literalValue && conn.isCustomValue(effectiveValue)
       );
     });
 
@@ -7966,7 +7980,7 @@ const createRoutePattern = (pattern) => {
 
     const getDescendantSignals = (pattern) => {
       const signals = [...pattern.connections];
-      for (const child of pattern.children || []) {
+      for (const child of pattern.children) {
         signals.push(...getDescendantSignals(child));
       }
       return signals;
@@ -7978,11 +7992,8 @@ const createRoutePattern = (pattern) => {
     ];
 
     const systemCanProvide = allRelevantSignals.some((conn) => {
-      const signalValue = conn.signal?.value;
-      return (
-        signalValue === literalValue &&
-        conn.options.isCustomValue?.(signalValue)
-      );
+      const signalValue = conn.signal.value;
+      return signalValue === literalValue && conn.isCustomValue(signalValue);
     });
 
     return parentCanProvide || userCanProvide || systemCanProvide;
@@ -8034,10 +8045,8 @@ const createRoutePattern = (pattern) => {
 
           // If not in params, check signals
           if (parentParamValue === undefined) {
-            const parentConnection = connections.find(
-              (conn) => conn.paramName === paramName,
-            );
-            if (parentConnection && parentConnection.signal) {
+            const parentConnection = connectionMap.get(paramName);
+            if (parentConnection) {
               parentParamValue = parentConnection.signal.value;
             }
           }
@@ -8122,16 +8131,12 @@ const createRoutePattern = (pattern) => {
       paramName = item.paramName;
       paramValue = item.userValue;
     } else {
-      const { paramName: name, signal, options } = item;
-      paramName = name;
+      paramName = item.paramName;
+      paramValue = item.signal.value;
       // Only include custom parent signal values (not using defaults)
-      if (
-        signal?.value === undefined ||
-        !options.isCustomValue?.(signal.value)
-      ) {
+      if (paramValue === undefined || !item.isCustomValue(paramValue)) {
         return { isCompatible: true, shouldInclude: false };
       }
-      paramValue = signal.value;
     }
 
     // Check if parameter value matches a literal segment in child pattern
@@ -8151,9 +8156,7 @@ const createRoutePattern = (pattern) => {
 
     // ROBUST FIX: For path parameters, check semantic compatibility by verifying
     // that parent parameter values can actually produce the child route structure
-    const isParentPathParam = connections.some(
-      (conn) => conn.paramName === paramName,
-    );
+    const isParentPathParam = connectionMap.has(paramName);
     if (isParentPathParam) {
       // Check if parent parameter value matches any child literal where it should
       // The key insight: if parent has a specific parameter value, child route must
@@ -8187,9 +8190,7 @@ const createRoutePattern = (pattern) => {
     // Check for generic parameter-literal conflicts (only for path parameters)
     if (!matchesChildLiteral) {
       // Check if this is a path parameter from parent pattern
-      const isParentPathParam = connections.some(
-        (conn) => conn.paramName === paramName,
-      );
+      const isParentPathParam = connectionMap.has(paramName);
       if (isParentPathParam) {
         // Parameter value (from user or signal) doesn't match this child's literals
         // Check if child has any literal segments that would conflict with this parameter
@@ -8224,49 +8225,41 @@ const createRoutePattern = (pattern) => {
     // CRITICAL: Check if user explicitly passed undefined for parameters that would
     // normally be used to select this child route via sibling route relationships
     for (const [paramName, paramValue] of Object.entries(params)) {
-      if (paramValue === undefined) {
-        // Look for sibling routes (other children of the same parent) that use this parameter
-        const siblingPatternObjs = patternObject.children || [];
+      if (paramValue !== undefined) {
+        continue;
+      }
 
-        for (const siblingPatternObj of siblingPatternObjs) {
-          if (siblingPatternObj === childPatternObj) continue; // Skip self
+      // Look for sibling routes (other children of the same parent) that use this parameter
+      const siblingPatternObjs = patternObject.children;
+      for (const siblingPatternObj of siblingPatternObjs) {
+        if (siblingPatternObj === childPatternObj) continue; // Skip self
 
-          // Check if sibling route uses this parameter
-          const siblingUsesParam = siblingPatternObj.connections.some(
-            (conn) => conn.paramName === paramName,
+        // Check if sibling route uses this parameter and get the connection
+        const siblingConnection =
+          siblingPatternObj.connectionMap.get(paramName);
+        if (!siblingConnection) {
+          continue;
+        }
+        const siblingSignalValue = siblingConnection.signal.value;
+        if (siblingSignalValue === undefined) {
+          continue;
+        }
+        // Check if this child route has a literal that matches the signal value
+        const signalMatchesThisChildLiteral =
+          childPatternObj.pattern.segments.some(
+            (segment) =>
+              segment.type === "literal" &&
+              segment.value === siblingSignalValue,
           );
-
-          if (siblingUsesParam) {
-            // Found a sibling that uses this parameter - get the signal value
-            const siblingConnection = siblingPatternObj.connections.find(
-              (conn) => conn.paramName === paramName,
+        if (signalMatchesThisChildLiteral) {
+          // This child route's literal matches the sibling's signal value
+          // User passed undefined to override that signal - don't use this child route
+          if (DEBUG$2) {
+            console.debug(
+              `[${pattern}] Blocking child route ${childPatternObj.originalPattern} because ${paramName}:undefined overrides sibling signal value "${siblingSignalValue}"`,
             );
-
-            if (
-              siblingConnection &&
-              siblingConnection.signal?.value !== undefined
-            ) {
-              const signalValue = siblingConnection.signal.value;
-
-              // Check if this child route has a literal that matches the signal value
-              const signalMatchesThisChildLiteral =
-                childPatternObj.pattern.segments.some(
-                  (segment) =>
-                    segment.type === "literal" && segment.value === signalValue,
-                );
-
-              if (signalMatchesThisChildLiteral) {
-                // This child route's literal matches the sibling's signal value
-                // User passed undefined to override that signal - don't use this child route
-                if (DEBUG$2) {
-                  console.debug(
-                    `[${pattern}] Blocking child route ${childPatternObj.originalPattern} because ${paramName}:undefined overrides sibling signal value "${signalValue}"`,
-                  );
-                }
-                return false;
-              }
-            }
           }
+          return false;
         }
       }
     }
@@ -8275,9 +8268,7 @@ const createRoutePattern = (pattern) => {
     let hasActiveParams = false;
     const childParams = { ...compatibility.childParams };
 
-    for (const connection of childPatternObj.connections) {
-      const { paramName, signal, options } = connection;
-
+    for (const [paramName, connection] of childPatternObj.connectionMap) {
       // Check if parameter was explicitly provided by user
       const hasExplicitParam = paramName in params;
       const explicitValue = params[paramName];
@@ -8287,15 +8278,18 @@ const createRoutePattern = (pattern) => {
         childParams[paramName] = explicitValue;
         if (
           explicitValue !== undefined &&
-          options.isCustomValue?.(explicitValue)
+          connection.isCustomValue(explicitValue)
         ) {
           hasActiveParams = true;
         }
-      } else if (signal?.value !== undefined) {
-        // No explicit override - use signal value
-        childParams[paramName] = signal.value;
-        if (options.isCustomValue?.(signal.value)) {
-          hasActiveParams = true;
+      } else {
+        const signalValue = connection.signal.value;
+        if (signalValue !== undefined) {
+          // No explicit override - use signal value
+          childParams[paramName] = signalValue;
+          if (connection.isCustomValue(signalValue)) {
+            hasActiveParams = true;
+          }
         }
       }
     }
@@ -8320,19 +8314,17 @@ const createRoutePattern = (pattern) => {
         if (value === undefined) return false;
 
         // Check if this parameter has a default value in child's connections
-        const childConnection = childPatternObj.connections.find(
-          (conn) => conn.paramName === paramName,
-        );
+        const childConnection = childPatternObj.connectionMap.get(paramName);
         if (childConnection) {
-          return value !== childConnection.options.defaultValue;
+          const childDefault = childConnection.getDefaultValue();
+          return value !== childDefault;
         }
 
         // Check if this parameter has a default value in parent's connections (current pattern)
-        const parentConnection = connections.find(
-          (conn) => conn.paramName === paramName,
-        );
+        const parentConnection = connectionMap.get(paramName);
         if (parentConnection) {
-          return value !== parentConnection.options.defaultValue;
+          const parentDefault = parentConnection.getDefaultValue();
+          return value !== parentDefault;
         }
 
         return true; // Non-connection parameters are considered non-default
@@ -8373,18 +8365,17 @@ const createRoutePattern = (pattern) => {
 
         // Check if parameters that determine child selection are non-default
         // OR if any descendant parameters indicate explicit navigation
-        for (const connection of connections) {
-          const { paramName, options } = connection;
-          const defaultValue = parameterDefaults.get(paramName);
+        for (const [paramName, connection] of connectionMap) {
+          const currentDefault = connection.getDefaultValue(); // Use current dynamic default
           const resolvedValue = resolvedParams[paramName];
           const userProvidedParam = paramName in params;
 
-          if (extraLiterals.includes(defaultValue)) {
+          if (extraLiterals.includes(currentDefault)) {
             // This literal corresponds to a parameter in the parent
             if (
               userProvidedParam ||
               (resolvedValue !== undefined &&
-                options.isCustomValue?.(resolvedValue))
+                connection.isCustomValue(resolvedValue))
             ) {
               // Parameter was explicitly provided or has custom value - child is needed
               childSpecificParamsAreDefaults = false;
@@ -8399,7 +8390,7 @@ const createRoutePattern = (pattern) => {
         if (childSpecificParamsAreDefaults) {
           for (const childConnection of childPatternObj.connections) {
             const childParamName = childConnection.paramName;
-            const childDefaultValue = childConnection.options?.defaultValue;
+            const childDefaultValue = childConnection.getDefaultValue();
             const childResolvedValue = resolvedParams[childParamName];
 
             // Only consider path parameters, not query parameters
@@ -8427,19 +8418,18 @@ const createRoutePattern = (pattern) => {
         // When structural parameters (those that determine child selection) are defaults,
         // prefer parent route regardless of whether child has other non-default parameters
         if (childSpecificParamsAreDefaults) {
-          for (const connection of connections) {
-            const { paramName } = connection;
-            const defaultValue = parameterDefaults.get(paramName);
+          for (const [paramName, connection] of connectionMap) {
+            const currentDefault = connection.getDefaultValue(); // Use current dynamic default
             const userProvidedParam = paramName in params;
 
-            if (extraLiterals.includes(defaultValue) && !userProvidedParam) {
+            if (extraLiterals.includes(currentDefault) && !userProvidedParam) {
               // This child includes a literal that represents a default value
               // AND user didn't explicitly provide this parameter
               // When structural parameters are defaults, prefer parent for cleaner URL
               shouldUse = false;
               if (DEBUG$2) {
                 console.debug(
-                  `[${pattern}] Preferring parent over child - child includes default literal '${defaultValue}' for param '${paramName}' (structural parameter is default)`,
+                  `[${pattern}] Preferring parent over child - child includes default literal '${currentDefault}' for param '${paramName}' (structural parameter is default)`,
                 );
               }
               break;
@@ -8472,9 +8462,7 @@ const createRoutePattern = (pattern) => {
   ) => {
     // Start with child signal values
     const baseParams = {};
-    for (const connection of childPatternObj.connections) {
-      const { paramName, signal, options } = connection;
-
+    for (const [paramName, connection] of childPatternObj.connectionMap) {
       // Check if parameter was explicitly provided by user
       const hasExplicitParam = paramName in params;
       const explicitValue = params[paramName];
@@ -8485,12 +8473,15 @@ const createRoutePattern = (pattern) => {
           baseParams[paramName] = explicitValue;
         }
         // If explicitly undefined, don't include it (which means don't use child route)
-      } else if (
-        signal?.value !== undefined &&
-        options.isCustomValue?.(signal.value)
-      ) {
-        // No explicit override - use signal value if non-default
-        baseParams[paramName] = signal.value;
+      } else {
+        const signalValue = connection.signal.value;
+        if (
+          signalValue !== undefined &&
+          connection.isCustomValue(signalValue)
+        ) {
+          // No explicit override - use signal value if non-default
+          baseParams[paramName] = signalValue;
+        }
       }
     }
 
@@ -8504,13 +8495,10 @@ const createRoutePattern = (pattern) => {
 
       // Add parent's signal parameters
       for (const connection of parentPatternObj.connections) {
-        const { paramName, signal, options } = connection;
+        const { paramName } = connection;
 
         // Skip if child route already handles this parameter
-        const childConnection = childPatternObj.connections.find(
-          (conn) => conn.paramName === paramName,
-        );
-        if (childConnection) {
+        if (childPatternObj.connectionMap.has(paramName)) {
           continue; // Child route handles this parameter directly
         }
 
@@ -8519,18 +8507,19 @@ const createRoutePattern = (pattern) => {
           continue; // Already have this parameter
         }
 
+        const signalValue = connection.signal.value;
         // Only include custom signal values (not using defaults)
         if (
-          signal?.value !== undefined &&
-          options.isCustomValue?.(signal.value)
+          signalValue !== undefined &&
+          connection.isCustomValue(signalValue)
         ) {
           // Skip if parameter is consumed by child's literal path segments
           const isConsumedByChildPath = childPatternObj.pattern.segments.some(
             (segment) =>
-              segment.type === "literal" && segment.value === signal.value,
+              segment.type === "literal" && segment.value === signalValue,
           );
           if (!isConsumedByChildPath) {
-            baseParams[paramName] = signal.value;
+            baseParams[paramName] = signalValue;
           }
         }
       }
@@ -8552,10 +8541,7 @@ const createRoutePattern = (pattern) => {
       }
 
       // Skip if child route already handles this parameter
-      const childConnection = childPatternObj.connections.find(
-        (conn) => conn.paramName === paramName,
-      );
-      if (childConnection) {
+      if (childPatternObj.connectionMap.has(paramName)) {
         continue; // Child route handles this parameter directly
       }
 
@@ -8569,10 +8555,10 @@ const createRoutePattern = (pattern) => {
       }
 
       // Check if parent parameter is at default value
-      const parentConnection = connections.find(
-        (conn) => conn.paramName === paramName,
-      );
-      const parentDefault = parentConnection?.options?.defaultValue;
+      const parentConnection = connectionMap.get(paramName);
+      const parentDefault = parentConnection
+        ? parentConnection.getDefaultValue()
+        : undefined;
       if (parentValue === parentDefault) {
         continue; // Don't inherit default values
       }
@@ -8583,15 +8569,11 @@ const createRoutePattern = (pattern) => {
 
     // Apply user params with filtering logic
     for (const [paramName, userValue] of Object.entries(params)) {
-      const childConnection = childPatternObj.connections.find(
-        (conn) => conn.paramName === paramName,
-      );
+      const childConnection = childPatternObj.connectionMap.get(paramName);
 
       if (childConnection) {
-        const { options } = childConnection;
-
         // Only include if it's a custom value (not default)
-        if (options.isCustomValue?.(userValue)) {
+        if (childConnection.isCustomValue(userValue)) {
           baseParams[paramName] = userValue;
         } else {
           // User provided the default value - complete omission
@@ -8648,10 +8630,9 @@ const createRoutePattern = (pattern) => {
 
     if (childParent && childParent.originalPattern === pattern) {
       // Check if child has any non-default signal values
-      const hasNonDefaultChildParams = (childPatternObj.connections || []).some(
+      const hasNonDefaultChildParams = childPatternObj.connections.some(
         (childConnection) => {
-          const { signal, options } = childConnection;
-          return options.isCustomValue?.(signal?.value);
+          return childConnection.isCustomValue(childConnection.signal.value);
         },
       );
 
@@ -8867,9 +8848,7 @@ const createRoutePattern = (pattern) => {
           (qp) => qp.name === connection.paramName,
         );
         // Allow non-default query parameters, but not path parameters
-        return (
-          !isQueryParam && connection.options.isCustomValue?.(resolvedValue)
-        );
+        return !isQueryParam && connection.isCustomValue(resolvedValue);
       });
 
       if (hasNonDefaultPathParams) {
@@ -8899,7 +8878,7 @@ const createRoutePattern = (pattern) => {
     // For non-immediate parents, only allow optimization if all resolved parameters have default values
     const hasNonDefaultParameters = connections.some((connection) => {
       const resolvedValue = resolvedParams[connection.paramName];
-      return connection.options.isCustomValue?.(resolvedValue);
+      return connection.isCustomValue(resolvedValue);
     });
 
     if (hasNonDefaultParameters) {
@@ -9077,7 +9056,7 @@ const createRoutePattern = (pattern) => {
       const connection = targetAncestor.connections.find(
         (conn) => conn.paramName === param.name,
       );
-      if (!connection || connection.options.defaultValue !== segment) {
+      if (!connection || connection.getDefaultValue() !== segment) {
         if (DEBUG$2) {
           console.debug(
             `[${pattern}] tryDirectOptimization: Parameter default mismatch for ${param.name}`,
@@ -9124,10 +9103,8 @@ const createRoutePattern = (pattern) => {
       // Include parameters that target pattern specifically needs
       if (targetQueryParamNames.has(paramName)) {
         // Only include if the value is not the default value
-        const connection = targetAncestor.connections.find(
-          (conn) => conn.paramName === paramName,
-        );
-        if (connection && connection.options.defaultValue !== value) {
+        const connection = targetAncestor.connectionMap.get(paramName);
+        if (connection && connection.getDefaultValue() !== value) {
           ancestorParams[paramName] = value;
           if (DEBUG$2) {
             console.debug(
@@ -9142,7 +9119,7 @@ const createRoutePattern = (pattern) => {
         const connection = sourceConnections.find(
           (conn) => conn.paramName === paramName,
         );
-        if (connection && connection.options.defaultValue !== value) {
+        if (connection && connection.getDefaultValue() !== value) {
           ancestorParams[paramName] = value;
           if (DEBUG$2) {
             console.debug(
@@ -9167,14 +9144,14 @@ const createRoutePattern = (pattern) => {
 
     // Also check target ancestor's own signal values for parameters not in resolvedParams
     for (const connection of targetAncestor.connections) {
-      const { paramName, signal, options } = connection;
+      const { paramName } = connection;
+      if (paramName in ancestorParams) {
+        continue;
+      }
 
       // Only include if not already processed and has custom value (not default)
-      if (
-        !(paramName in ancestorParams) &&
-        signal?.value !== undefined &&
-        options.isCustomValue?.(signal.value)
-      ) {
+      const signalValue = connection.signal.value;
+      if (signalValue !== undefined && connection.isCustomValue(signalValue)) {
         // Don't include path parameters that correspond to literal segments we're optimizing away
         const targetParam = targetParams.find((p) => p.name === paramName);
         const isPathParam = targetParam !== undefined; // Any param in segments is a path param
@@ -9182,16 +9159,16 @@ const createRoutePattern = (pattern) => {
           // Skip path parameters - we want them to use default values for optimization
           if (DEBUG$2) {
             console.debug(
-              `[${pattern}] tryDirectOptimization: Skipping path param ${paramName}=${signal.value} (will use default)`,
+              `[${pattern}] tryDirectOptimization: Skipping path param ${paramName}=${signalValue} (will use default)`,
             );
           }
           continue;
         }
 
-        ancestorParams[paramName] = signal.value;
+        ancestorParams[paramName] = signalValue;
         if (DEBUG$2) {
           console.debug(
-            `[${pattern}] tryDirectOptimization: Added target signal param ${paramName}=${signal.value}`,
+            `[${pattern}] tryDirectOptimization: Added target signal param ${paramName}=${signalValue}`,
           );
         }
       }
@@ -9202,24 +9179,25 @@ const createRoutePattern = (pattern) => {
 
     while (currentParent) {
       for (const connection of currentParent.connections) {
-        const { paramName, signal, options } = connection;
+        const { paramName } = connection;
+        if (paramName in ancestorParams) {
+          continue;
+        }
 
         // Only inherit custom values (not defaults) that we don't already have
+        const signalValue = connection.signal.value;
         if (
-          !(paramName in ancestorParams) &&
-          signal?.value !== undefined &&
-          options.isCustomValue?.(signal.value)
+          signalValue !== undefined &&
+          connection.isCustomValue(signalValue)
         ) {
           // Check if this parameter would be redundant with target ancestor's literal segments
           const isRedundant = isParameterRedundantWithLiteralSegments(
             targetAncestor.pattern,
             currentParent.pattern,
-            paramName,
-            signal.value,
-          );
+            paramName);
 
           if (!isRedundant) {
-            ancestorParams[paramName] = signal.value;
+            ancestorParams[paramName] = signalValue;
           }
         }
       }
@@ -9282,24 +9260,25 @@ const createRoutePattern = (pattern) => {
     while (currentParent) {
       // Check parent's signal connections for non-default values to inherit
       for (const parentConnection of currentParent.connections) {
-        const { paramName, signal, options } = parentConnection;
+        const { paramName } = parentConnection;
+        if (paramName in finalParams) {
+          continue; // Already have this parameter
+        }
 
         // Only inherit if we don't have this param and parent has custom value (not default)
+        const parentSignalValue = parentConnection.signal.value;
         if (
-          !(paramName in finalParams) &&
-          signal?.value !== undefined &&
-          options.isCustomValue?.(signal.value)
+          parentSignalValue !== undefined &&
+          parentConnection.isCustomValue(parentSignalValue)
         ) {
           // Don't inherit if parameter corresponds to a literal in our path
           const shouldInherit = !isParameterRedundantWithLiteralSegments(
             parsedPattern,
             currentParent.pattern,
-            paramName,
-            signal.value,
-          );
+            paramName);
 
           if (shouldInherit) {
-            finalParams[paramName] = signal.value;
+            finalParams[paramName] = parentSignalValue;
           }
         }
       }
@@ -9349,9 +9328,9 @@ const createRoutePattern = (pattern) => {
     urlPatternRaw: pattern,
     cleanPattern,
     connections,
+    connectionMap,
     parsedPattern,
     signalSet,
-    parameterDefaults, // Add parameterDefaults for signal clearing logic
     children: [],
     parent: null,
     depth: 0, // Will be calculated after relationships are built
@@ -9419,11 +9398,7 @@ const canParameterReachChildRoute = (
 /**
  * Parse a route pattern string into structured segments
  */
-const parsePattern = (
-  pattern,
-  parameterDefaults = new Map(),
-  connections = [],
-) => {
+const parsePattern = (pattern, connectionMap) => {
   // Handle root route
   if (pattern === "/") {
     return {
@@ -9497,18 +9472,18 @@ const parsePattern = (
       // 1. Explicitly marked with ?
       // 2. Has a default value
       // 3. Connected signal has undefined value and no explicit default (allows /map to match /map/:panel)
-      let isOptional = seg.endsWith("?") || parameterDefaults.has(paramName);
+      const connection = connectionMap.get(paramName);
+      const hasDefault =
+        connection && connection.getDefaultValue() !== undefined;
+      let isOptional = seg.endsWith("?") || hasDefault;
 
       if (!isOptional) {
         // Check if connected signal has undefined value (making parameter optional for index routes)
-        const connection = connections.find(
-          (conn) => conn.paramName === paramName,
-        );
         if (
           connection &&
           connection.signal &&
           connection.signal.value === undefined &&
-          !parameterDefaults.has(paramName)
+          !hasDefault
         ) {
           isOptional = true;
         }
@@ -9551,7 +9526,7 @@ const checkIfLiteralCanBeOptionalWithPatternObj = (
 
   // Check current pattern's connections
   for (const connection of patternObj.connections) {
-    if (connection.options.defaultValue === literalValue) {
+    if (connection.getDefaultValue() === literalValue) {
       return true;
     }
   }
@@ -9560,7 +9535,7 @@ const checkIfLiteralCanBeOptionalWithPatternObj = (
   let currentParent = patternObj.parent;
   while (currentParent) {
     for (const connection of currentParent.connections) {
-      if (connection.options.defaultValue === literalValue) {
+      if (connection.getDefaultValue() === literalValue) {
         return true;
       }
     }
@@ -9571,7 +9546,7 @@ const checkIfLiteralCanBeOptionalWithPatternObj = (
   const checkChildrenRecursively = (pattern) => {
     for (const child of pattern.children || []) {
       for (const connection of child.connections) {
-        if (connection.options.defaultValue === literalValue) {
+        if (connection.getDefaultValue() === literalValue) {
           return true;
         }
       }
@@ -9699,8 +9674,7 @@ const matchUrl = (
   // Patterns with trailing slashes can match additional URL segments (like wildcards)
   // Patterns without trailing slashes should match exactly (unless they're wildcards)
   // BUT: if pattern has children, it can also match additional segments (hierarchical matching)
-  const hasChildren =
-    patternObj && patternObj.children && patternObj.children.length > 0;
+  const hasChildren = patternObj && patternObj.children.length > 0;
   if (
     !parsedPattern.wildcard &&
     !parsedPattern.trailingSlash &&
@@ -9730,8 +9704,8 @@ const extractSearchParams = (urlObj, connections = []) => {
   // Create a map for quick signal type lookup
   const signalTypes = new Map();
   for (const connection of connections) {
-    if (connection.options.type) {
-      signalTypes.set(connection.paramName, connection.options.type);
+    if (connection.type) {
+      signalTypes.set(connection.paramName, connection.type);
     }
   }
 
@@ -10176,9 +10150,7 @@ const setupPatterns = (patternDefinitions) => {
     let parentPatternObj = currentPatternObj.parent;
     while (parentPatternObj) {
       for (const connection of parentPatternObj.connections) {
-        if (connection.signal) {
-          allRelevantSignals.add(connection.signal);
-        }
+        allRelevantSignals.add(connection.signal);
       }
       // Move up the parent chain
       parentPatternObj = parentPatternObj.parent;
@@ -10189,9 +10161,7 @@ const setupPatterns = (patternDefinitions) => {
       for (const childPatternObj of patternObj.children || []) {
         // Add child's own signals
         for (const connection of childPatternObj.connections) {
-          if (connection.signal) {
-            allRelevantSignals.add(connection.signal);
-          }
+          allRelevantSignals.add(connection.signal);
         }
         // Recursively add grandchildren signals
         addDescendantSignals(childPatternObj);
@@ -10357,14 +10327,10 @@ const updateRoutes = (
       newMatching,
     } of routeMatchInfoSet) {
       const { routePattern } = routePrivateProperties;
-      const { connections } = routePattern;
+      const { connectionMap } = routePattern;
 
-      for (const {
-        signal: stateSignal,
-        paramName,
-        options = {},
-      } of connections) {
-        const { debug } = options;
+      for (const [paramName, connection] of connectionMap) {
+        const { signal: paramSignal, debug } = connection;
         const params = routePrivateProperties.rawParamsSignal.value;
         const urlParamValue = params[paramName];
 
@@ -10445,7 +10411,7 @@ const updateRoutes = (
           // 2. AND no matching route extracts this parameter from URL
           // 3. AND parameter has no default value (making it truly optional)
           if (matchingRouteInSameFamily && !parameterExtractedByMatchingRoute) {
-            const defaultValue = routePattern.parameterDefaults?.get(paramName);
+            const defaultValue = connection.getDefaultValue();
             if (defaultValue === undefined) {
               // Parameter is not extracted within same family and has no default - reset it
               if (debug) {
@@ -10453,21 +10419,21 @@ const updateRoutes = (
                   `[route] Same family navigation, ${paramName} not extracted and has no default: resetting signal`,
                 );
               }
-              stateSignal.value = undefined;
+              paramSignal.value = undefined;
             } else if (debug) {
               // Parameter has a default value - preserve current signal value
               console.debug(
-                `[route] Parameter ${paramName} has default value ${defaultValue}: preserving signal value: ${stateSignal.value}`,
+                `[route] Parameter ${paramName} has default value ${defaultValue}: preserving signal value: ${paramSignal.value}`,
               );
             }
           } else if (debug) {
             if (!matchingRouteInSameFamily) {
               console.debug(
-                `[route] Different route family: preserving ${paramName} signal value: ${stateSignal.value}`,
+                `[route] Different route family: preserving ${paramName} signal value: ${paramSignal.value}`,
               );
             } else {
               console.debug(
-                `[route] Parameter ${paramName} extracted by matching route: preserving signal value: ${stateSignal.value}`,
+                `[route] Parameter ${paramName} extracted by matching route: preserving signal value: ${paramSignal.value}`,
               );
             }
           }
@@ -10476,11 +10442,11 @@ const updateRoutes = (
 
         // URL -> Signal sync: When route matches, ensure signal matches URL state
         // URL is the source of truth for explicit parameters
-        const value = stateSignal.peek();
+        const value = paramSignal.peek();
         if (urlParamValue === undefined) {
           // No URL parameter - reset signal to its current default value
           // (handles both static fallback and dynamic default cases)
-          const defaultValue = options.getDefaultValue();
+          const defaultValue = connection.getDefaultValue();
           if (value === defaultValue) {
             // Signal already has correct default value, no sync needed
             continue;
@@ -10490,7 +10456,7 @@ const updateRoutes = (
               `[route] URL->Signal: ${paramName} not in URL, reset signal to default (${defaultValue})`,
             );
           }
-          stateSignal.value = defaultValue;
+          paramSignal.value = defaultValue;
           continue;
         }
         if (urlParamValue === value) {
@@ -10502,7 +10468,7 @@ const updateRoutes = (
             `[route] URL->Signal: ${paramName}=${urlParamValue} in url, sync signal with url`,
           );
         }
-        stateSignal.value = urlParamValue;
+        paramSignal.value = urlParamValue;
         continue;
       }
     }
@@ -10607,7 +10573,7 @@ const getRoutePrivateProperties = (route) => {
 
 const registerRoute = (routePattern) => {
   const urlPatternRaw = routePattern.originalPattern;
-  const { cleanPattern, connections } = routePattern;
+  const { cleanPattern, connectionMap } = routePattern;
 
   const cleanupCallbackSet = new Set();
   const cleanup = () => {
@@ -10697,22 +10663,19 @@ const registerRoute = (routePattern) => {
     }
   });
 
-  for (const { signal: stateSignal, paramName, options = {} } of connections) {
-    const { debug } = options;
+  for (const [paramName, connection] of connectionMap) {
+    const { signal: paramSignal, debug } = connection;
 
     if (debug) {
       console.debug(
         `[route] connecting url param "${paramName}" to signal`,
-        stateSignal,
+        paramSignal,
       );
     }
-
-    // URL -> Signal synchronization now handled in updateRoutes() to eliminate circular dependency
-
     // Signal -> URL sync: When signal changes, update URL to reflect meaningful state
     // Only sync non-default values to keep URLs clean (static fallbacks stay invisible)
     effect(() => {
-      const value = stateSignal.value;
+      const value = paramSignal.value;
       const params = rawParamsSignal.value;
       const urlParamValue = params[paramName];
       const matching = matchingSignal.value;
@@ -10723,7 +10686,7 @@ const registerRoute = (routePattern) => {
       }
       if (urlParamValue === undefined) {
         // No URL parameter exists - check if signal has meaningful value to add
-        const defaultValue = options.getDefaultValue();
+        const defaultValue = connection.getDefaultValue();
         if (value === defaultValue) {
           // Signal using default value, keep URL clean (no parameter needed)
           return;
