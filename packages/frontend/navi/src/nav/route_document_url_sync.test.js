@@ -1217,4 +1217,35 @@ await snapshotTests(import.meta.url, ({ test }) => {
       setBrowserIntegration(undefined);
     }
   });
+
+  test("updating with dynamic default", () => {
+    let urlProgression = [];
+    setBrowserIntegration({
+      navTo: (url) => {
+        urlProgression.push(url);
+        updateRoutes(url);
+        return Promise.resolve();
+      },
+    });
+
+    try {
+      const zoneLonSignal = stateSignal(undefined);
+      const mapLonSignal = stateSignal(zoneLonSignal, { default: -1 });
+      const isoLonSignal = stateSignal(zoneLonSignal);
+      const mapPanelSignal = stateSignal(undefined);
+      setupRoutes({
+        HOME_ROUTE: "/",
+        MAP_ROUTE: `/map/?lon=${mapLonSignal}`,
+        MAP_PANEL_ROUTE: `/map/:panel=${mapPanelSignal}/`,
+        MAP_ISOCHRONE_ROUTE: `/map/isochrone?iso_lon=${isoLonSignal}`,
+      });
+      updateRoutes(`${baseUrl}/map/isochrone?zone=london`);
+      zoneLonSignal.value = 2;
+      return { urlProgression };
+    } finally {
+      clearAllRoutes();
+      globalSignalRegistry.clear();
+      setBrowserIntegration(undefined);
+    }
+  });
 });

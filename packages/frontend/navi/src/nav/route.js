@@ -456,7 +456,7 @@ const registerRoute = (routePattern) => {
 
     if (debug) {
       console.debug(
-        `[route] connecting param "${paramName}" to signal`,
+        `[route] connecting url param "${paramName}" to signal`,
         stateSignal,
       );
     }

@@ -18,6 +18,7 @@
 - [updating url keep signals in sync](updating_url_keep_signals_in_sync/updating_url_keep_signals_in_sync.md)
 - [updating url with missing parameters uses signal current values](updating_url_with_missing_parameters_uses_signal_current_values/updating_url_with_missing_parameters_uses_signal_current_values.md)
 - [updating boolean signal](updating_boolean_signal/updating_boolean_signal.md)
+- [updating with dynamic default](updating_with_dynamic_default/updating_with_dynamic_default.md)
 
 ---
 
