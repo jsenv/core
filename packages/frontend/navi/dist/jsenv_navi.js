@@ -7812,7 +7812,6 @@ const createRoutePattern = (pattern) => {
 
   const applyOn = (url) => {
     const result = matchUrl(parsedPattern, url, {
-      parameterDefaults,
       baseUrl,
       connections,
       patternObj: patternObject,
@@ -7838,6 +7837,14 @@ const createRoutePattern = (pattern) => {
       if (paramName in providedParams) ; else if (signal?.value !== undefined) {
         // Parameter was not provided, check signal value
         resolvedParams[paramName] = signal.value;
+      }
+    }
+
+    // Add static defaults for parameters that are still missing
+    // This handles cases where the URL doesn't contain the parameter and there's no signal value
+    for (const [paramName, defaultValue] of parameterDefaults) {
+      if (!(paramName in resolvedParams)) {
+        resolvedParams[paramName] = defaultValue;
       }
     }
 
@@ -9584,7 +9591,7 @@ const checkIfLiteralCanBeOptionalWithPatternObj = (
 const matchUrl = (
   parsedPattern,
   url,
-  { parameterDefaults, baseUrl, connections = [], patternObj = null },
+  { baseUrl, connections = [], patternObj = null },
 ) => {
   // Parse the URL
   const urlObj = new URL(url, baseUrl);
@@ -9668,23 +9675,15 @@ const matchUrl = (
       if (urlSegmentIndex >= urlSegments.length) {
         // No URL segment for this parameter
         if (patternSeg.optional) {
-          // Optional parameter - use default if available
-          const defaultValue = parameterDefaults.get(patternSeg.name);
-          if (defaultValue !== undefined) {
-            params[patternSeg.name] = defaultValue;
-          }
+          // Optional parameter - don't add default here, let resolveParams handle it
           continue;
         }
         // Required parameter missing - but check if we can use trailing slash logic
         // If this is the last segment and we have a trailing slash difference, it might still match
         const isLastSegment = i === parsedPattern.segments.length - 1;
         if (isLastSegment && patternHasTrailingSlash && !urlHasTrailingSlash) {
-          // Pattern expects trailing slash segment, URL doesn't have it
-          const defaultValue = parameterDefaults.get(patternSeg.name);
-          if (defaultValue !== undefined) {
-            params[patternSeg.name] = defaultValue;
-            continue;
-          }
+          // Pattern expects trailing slash segment, URL doesn't have it - allow missing optional param
+          continue;
         }
         return null; // Required parameter missing
       }
@@ -9716,12 +9715,8 @@ const matchUrl = (
   const searchParams = extractSearchParams(urlObj, connections);
   Object.assign(params, searchParams);
 
-  // Apply remaining parameter defaults for unmatched parameters
-  for (const [paramName, defaultValue] of parameterDefaults) {
-    if (!(paramName in params)) {
-      params[paramName] = defaultValue;
-    }
-  }
+  // Don't add defaults here - rawParams should only contain what's in the URL
+  // Defaults are handled by resolveParams() to create the final merged parameters
 
   return params;
 };
