@@ -41,8 +41,8 @@ try {
   },
   "stateAfter": {
     "map_panel_signal_value": undefined,
-    "isochrone_tab_signal_value": "time",
-    "isochrone_mode_signal_value": "bike"
+    "isochrone_tab_signal_value": "compare",
+    "isochrone_mode_signal_value": "walk"
   }
 }
 ```

@@ -14,7 +14,7 @@ try {
 
   // Test initial state
   updateRoutes("http://localhost:3000/map");
-  
+
   const initialState = {
     signal_value: mapLonSignal.value,
     route_params: routes.MAP_ROUTE.params,
@@ -23,7 +23,7 @@ try {
 
   // Test with URL parameter
   updateRoutes("http://localhost:3000/map?lon=42");
-  
+
   const withUrlParam = {
     signal_value: mapLonSignal.value,
     route_params: routes.MAP_ROUTE.params,
@@ -32,7 +32,7 @@ try {
 
   // Test back to no URL parameter
   updateRoutes("http://localhost:3000/map");
-  
+
   const backToNoParam = {
     signal_value: mapLonSignal.value,
     route_params: routes.MAP_ROUTE.params,

@@ -3,7 +3,9 @@
 ```js
 try {
   const rootSignal = stateSignal(undefined);
-  const middleSignal = stateSignal(rootSignal, { default: "middle_default" });
+  const middleSignal = stateSignal(rootSignal, {
+    default: "middle_default",
+  });
   const leafSignal = stateSignal(middleSignal, { default: "leaf_default" });
 
   const routes = setupRoutes({
@@ -13,7 +15,7 @@ try {
 
   // Test initial state (all using static defaults)
   updateRoutes("http://localhost:3000/nested");
-  
+
   const initialState = {
     root_signal: rootSignal.value,
     middle_signal: middleSignal.value,
@@ -23,7 +25,7 @@ try {
 
   // Change root signal (should cascade)
   rootSignal.value = "root_changed";
-  
+
   const afterRootChange = {
     root_signal: rootSignal.value,
     middle_signal: middleSignal.value,
@@ -33,7 +35,7 @@ try {
 
   // Change middle signal (should affect only leaf)
   middleSignal.value = "middle_changed";
-  
+
   const afterMiddleChange = {
     root_signal: rootSignal.value,
     middle_signal: middleSignal.value,
@@ -42,8 +44,10 @@ try {
   };
 
   // Test with URL parameters that override signals
-  updateRoutes("http://localhost:3000/nested?root=url_root&middle=url_middle&leaf=url_leaf");
-  
+  updateRoutes(
+    "http://localhost:3000/nested?root=url_root&middle=url_middle&leaf=url_leaf",
+  );
+
   const withUrlOverrides = {
     root_signal: rootSignal.value,
     middle_signal: middleSignal.value,

@@ -169,18 +169,15 @@ export const createRoutePattern = (pattern) => {
   // Detect and process signals in the pattern first
   const [cleanPattern, connections] = detectSignals(pattern);
 
-  // Build parameter defaults from signal connections
-  const parameterDefaults = new Map();
+  // Build parameter options map for efficient lookups
+  const parameterOptions = new Map();
   for (const connection of connections) {
-    const { paramName, options } = connection;
-    if (options.defaultValue !== undefined) {
-      parameterDefaults.set(paramName, options.defaultValue);
-    }
+    parameterOptions.set(connection.paramName, connection.options);
   }
 
   const parsedPattern = parsePattern(
     cleanPattern,
-    parameterDefaults,
+    parameterOptions,
     connections,
   );
 
@@ -232,7 +229,7 @@ export const createRoutePattern = (pattern) => {
     }
 
     // Add defaults for parameters that are still missing
-    // Use current dynamic defaults instead of stale static defaults from parameterDefaults
+    // Use current dynamic defaults from signal connections
     for (const connection of connections) {
       const { paramName, options } = connection;
       if (!(paramName in resolvedParams)) {
@@ -314,13 +311,18 @@ export const createRoutePattern = (pattern) => {
 
       if (paramName in filtered) {
         // Parameter is explicitly provided - check if we should remove it
-        if (!options.isCustomValue?.(filtered[paramName])) {
-          // Parameter value is not custom (matches default) - remove it
+        const paramValue = filtered[paramName];
+
+        if (!options.isCustomValue(paramValue)) {
           delete filtered[paramName];
         }
-      } else if (options.isCustomValue?.(signal.value)) {
-        // Parameter not provided but signal has custom value - add it
-        filtered[paramName] = signal.value;
+      } else {
+        // Parameter not provided but signal has a value
+        const value = signal.value;
+        if (options.isCustomValue(value)) {
+          // Only include custom values
+          filtered[paramName] = value;
+        }
       }
     }
 
@@ -723,11 +725,9 @@ export const createRoutePattern = (pattern) => {
         }
 
         // Check if this parameter has a default value in parent's connections (current pattern)
-        const parentConnection = connections.find(
-          (conn) => conn.paramName === paramName,
-        );
-        if (parentConnection) {
-          return value !== parentConnection.options.defaultValue;
+        const parentOptions = parameterOptions.get(paramName);
+        if (parentOptions) {
+          return value !== parentOptions.defaultValue;
         }
 
         return true; // Non-connection parameters are considered non-default
@@ -964,10 +964,8 @@ export const createRoutePattern = (pattern) => {
       }
 
       // Check if parent parameter is at default value
-      const parentConnection = connections.find(
-        (conn) => conn.paramName === paramName,
-      );
-      const parentDefault = parentConnection?.options?.defaultValue;
+      const parentOptions = parameterOptions.get(paramName);
+      const parentDefault = parentOptions?.defaultValue;
       if (parentValue === parentDefault) {
         continue; // Don't inherit default values
       }
@@ -1749,7 +1747,6 @@ export const createRoutePattern = (pattern) => {
     connections,
     parsedPattern,
     signalSet,
-    parameterDefaults, // Add parameterDefaults for signal clearing logic
     children: [],
     parent: null,
     depth: 0, // Will be calculated after relationships are built
@@ -1817,11 +1814,7 @@ const canParameterReachChildRoute = (
 /**
  * Parse a route pattern string into structured segments
  */
-const parsePattern = (
-  pattern,
-  parameterDefaults = new Map(),
-  connections = [],
-) => {
+const parsePattern = (pattern, parameterOptions, connections = []) => {
   // Handle root route
   if (pattern === "/") {
     return {
@@ -1895,7 +1888,9 @@ const parsePattern = (
       // 1. Explicitly marked with ?
       // 2. Has a default value
       // 3. Connected signal has undefined value and no explicit default (allows /map to match /map/:panel)
-      let isOptional = seg.endsWith("?") || parameterDefaults.has(paramName);
+      const options = parameterOptions.get(paramName);
+      const hasDefault = options && options.getDefaultValue() !== undefined;
+      let isOptional = seg.endsWith("?") || hasDefault;
 
       if (!isOptional) {
         // Check if connected signal has undefined value (making parameter optional for index routes)
@@ -1906,7 +1901,7 @@ const parsePattern = (
           connection &&
           connection.signal &&
           connection.signal.value === undefined &&
-          !parameterDefaults.has(paramName)
+          !hasDefault
         ) {
           isOptional = true;
         }

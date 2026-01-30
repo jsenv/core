@@ -7,6 +7,7 @@
 - [route.params with path parameters and dynamic defaults](route_params_with_path_parameters_and_dynamic_defaults/route_params_with_path_parameters_and_dynamic_defaults.md)
 - [route.params with nested dynamic defaults chain](route_params_with_nested_dynamic_defaults_chain/route_params_with_nested_dynamic_defaults_chain.md)
 - [route.params comparison between static and dynamic defaults](route_params_comparison_between_static_and_dynamic_defaults/route_params_comparison_between_static_and_dynamic_defaults.md)
+- [route.params with dynamic defaults inheritance bug](route_params_with_dynamic_defaults_inheritance_bug/route_params_with_dynamic_defaults_inheritance_bug.md)
 
 ---
 

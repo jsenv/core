@@ -394,4 +394,75 @@ await snapshotTests(import.meta.url, ({ test }) => {
       globalSignalRegistry.clear();
     }
   });
+
+  test("route.params with dynamic defaults inheritance bug", () => {
+    try {
+      // This test reproduces bugs where dynamic defaults are not properly considered:
+      // 1. buildChildRouteUrl uses parentOptions.defaultValue instead of current dynamic default
+      // 2. shouldUseChildRoute uses static defaultValue instead of dynamic defaults
+      // 3. connections.find() could be optimized to use parameterOptions map
+
+      // Create a signal that will be used as dynamic default
+      const timeBasedDefaultSignal = stateSignal("morning");
+
+      const modeSignal = stateSignal(timeBasedDefaultSignal, {
+        id: "mode",
+        type: "string",
+        // This creates a dynamic default - when timeBasedDefaultSignal changes,
+        // the default value for modeSignal changes too
+      });
+
+      const categorySignal = stateSignal("general", {
+        id: "category",
+        type: "string",
+        defaultValue: "general", // Static default for comparison
+      });
+
+      // Initially, both signals are at their defaults
+      // modeSignal.value should equal timeBasedDefaultSignal.value ("morning")
+      // categorySignal.value should equal "general"
+
+      const { CHILD_ROUTE } = setupRoutes({
+        PARENT_ROUTE: `/parent/:mode=${modeSignal}&category=${categorySignal}`,
+        CHILD_ROUTE: `/parent/child/:tab?`,
+      });
+
+      // Test 1: Child route should not inherit parameters that are at their current dynamic defaults
+      const childUrlWithDefaults = CHILD_ROUTE.buildUrl({ tab: "settings" });
+
+      // Test 2: Change timeBasedDefaultSignal - this changes the dynamic default for modeSignal
+      timeBasedDefaultSignal.value = "afternoon";
+      // Now modeSignal should be at its new dynamic default ("afternoon")
+      const childUrlAfterDynamicDefaultChange = CHILD_ROUTE.buildUrl({
+        tab: "settings",
+      });
+
+      // Test 3: Set modeSignal to a custom value (not the dynamic default)
+      modeSignal.value = "evening"; // This is not the current dynamic default ("afternoon")
+      categorySignal.value = "special"; // This is not the static default ("general")
+
+      const childUrlWithCustomValues = CHILD_ROUTE.buildUrl({
+        tab: "settings",
+      });
+
+      // Test 4: Set modeSignal back to current dynamic default
+      modeSignal.value = "afternoon"; // Back to dynamic default
+      const childUrlBackToDynamicDefault = CHILD_ROUTE.buildUrl({
+        tab: "settings",
+      });
+
+      return {
+        timeBasedDefault: timeBasedDefaultSignal.value,
+        modeValue: modeSignal.value,
+        categoryValue: categorySignal.value,
+        childUrlWithDefaults, // BUG: Currently inherits params even when at dynamic defaults
+        childUrlAfterDynamicDefaultChange, // BUG: May not properly detect new dynamic default
+        childUrlWithCustomValues, // Should include: /parent/child/settings?mode=evening&category=special
+        childUrlBackToDynamicDefault, // BUG: Should be clean but may still include mode param
+      };
+    } finally {
+      clearAllRoutes();
+      globalSignalRegistry.clear();
+    }
+  });
 });

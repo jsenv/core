@@ -9,7 +9,7 @@ try {
   });
   const mapLatSignal = stateSignal(zoneSignal, {
     default: -2,
-    type: "number", 
+    type: "number",
   });
 
   const routes = setupRoutes({
@@ -19,7 +19,7 @@ try {
 
   // Test initial state
   updateRoutes("http://localhost:3000/map");
-  
+
   const initialState = {
     zone_signal: zoneSignal.value,
     lon_signal: mapLonSignal.value,
@@ -29,7 +29,7 @@ try {
 
   // Change dynamic default source
   zoneSignal.value = 42;
-  
+
   const afterDynamicChange = {
     zone_signal: zoneSignal.value,
     lon_signal: mapLonSignal.value,
@@ -39,7 +39,7 @@ try {
 
   // Test with partial URL parameters
   updateRoutes("http://localhost:3000/map?lon=100");
-  
+
   const withPartialUrl = {
     zone_signal: zoneSignal.value,
     lon_signal: mapLonSignal.value,
@@ -49,7 +49,7 @@ try {
 
   // Test with full URL parameters
   updateRoutes("http://localhost:3000/map?lon=200&lat=300");
-  
+
   const withFullUrl = {
     zone_signal: zoneSignal.value,
     lon_signal: mapLonSignal.value,

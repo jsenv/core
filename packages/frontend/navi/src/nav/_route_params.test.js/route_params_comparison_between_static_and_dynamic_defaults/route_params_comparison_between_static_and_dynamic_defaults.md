@@ -3,13 +3,15 @@
 ```js
 try {
   // Create two similar setups: one with static defaults, one with dynamic
-  
+
   // Setup 1: Static defaults only
   const staticSignal = stateSignal(undefined, { default: "static_value" });
-  
+
   // Setup 2: Dynamic defaults
   const sourceSignal = stateSignal(undefined);
-  const dynamicSignal = stateSignal(sourceSignal, { default: "static_fallback" });
+  const dynamicSignal = stateSignal(sourceSignal, {
+    default: "static_fallback",
+  });
 
   const routes = setupRoutes({
     HOME_ROUTE: "/",
@@ -42,7 +44,7 @@ try {
   // Test URL building with these different defaults
   const staticUrl = routes.STATIC_ROUTE.buildRelativeUrl({});
   const dynamicUrlBefore = routes.DYNAMIC_ROUTE.buildRelativeUrl({});
-  
+
   sourceSignal.value = "url_test_value";
   const dynamicUrlAfter = routes.DYNAMIC_ROUTE.buildRelativeUrl({});
 

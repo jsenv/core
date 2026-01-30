@@ -15,7 +15,7 @@ try {
 
   // Test with static default
   updateRoutes("http://localhost:3000/category/home");
-  
+
   const staticDefaultState = {
     category_signal: categorySignal.value,
     page_signal: pageSignal.value,
@@ -25,7 +25,7 @@ try {
 
   // Test with different path parameter
   updateRoutes("http://localhost:3000/category/products");
-  
+
   const differentPathState = {
     category_signal: categorySignal.value,
     page_signal: pageSignal.value,
@@ -35,7 +35,7 @@ try {
 
   // Change dynamic default
   categorySignal.value = "products";
-  
+
   const afterDynamicChange = {
     category_signal: categorySignal.value,
     page_signal: pageSignal.value,
@@ -45,7 +45,7 @@ try {
 
   // Navigate to URL that matches new dynamic default
   updateRoutes("http://localhost:3000/category/products");
-  
+
   const matchingDynamicDefault = {
     category_signal: categorySignal.value,
     page_signal: pageSignal.value,
@@ -55,7 +55,7 @@ try {
 
   // Navigate to URL that no longer matches dynamic default
   updateRoutes("http://localhost:3000/category/home");
-  
+
   const nonMatchingOldDefault = {
     category_signal: categorySignal.value,
     page_signal: pageSignal.value,

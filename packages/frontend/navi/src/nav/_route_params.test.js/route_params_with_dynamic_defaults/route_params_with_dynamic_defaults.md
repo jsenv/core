@@ -15,7 +15,7 @@ try {
 
   // Test initial state (should use static default)
   updateRoutes("http://localhost:3000/map");
-  
+
   const initialState = {
     zone_signal_value: zoneSignal.value,
     maplon_signal_value: mapLonSignal.value,
@@ -25,7 +25,7 @@ try {
 
   // Change dynamic default source
   zoneSignal.value = 5;
-  
+
   const afterDynamicChange = {
     zone_signal_value: zoneSignal.value,
     maplon_signal_value: mapLonSignal.value,
@@ -35,7 +35,7 @@ try {
 
   // Test with explicit URL parameter that differs from dynamic default
   updateRoutes("http://localhost:3000/map?lon=10");
-  
+
   const withUrlParam = {
     zone_signal_value: zoneSignal.value,
     maplon_signal_value: mapLonSignal.value,
@@ -45,7 +45,7 @@ try {
 
   // Remove URL parameter (should revert to dynamic default)
   updateRoutes("http://localhost:3000/map");
-  
+
   const backToDynamic = {
     zone_signal_value: zoneSignal.value,
     maplon_signal_value: mapLonSignal.value,
