@@ -21,7 +21,7 @@ try {
     MAP_PANEL_ROUTE: `/map/:panel=${mapPanelSignal}/`,
     MAP_ISOCHRONE_ROUTE: `/map/isochrone?iso_lon=${isoLonSignal}`,
   });
-  updateRoutes(`${baseUrl}/map/isochrone?zone=london`);
+  updateRoutes(`${baseUrl}/map/isochrone`);
   zoneLonSignal.value = 2;
   return { urlProgression };
 } finally {
