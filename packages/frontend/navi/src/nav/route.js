@@ -112,14 +112,10 @@ export const updateRoutes = (
       newMatching,
     } of routeMatchInfoSet) {
       const { routePattern } = routePrivateProperties;
-      const { connections } = routePattern;
+      const { connectionMap } = routePattern;
 
-      for (const {
-        signal: stateSignal,
-        paramName,
-        options = {},
-      } of connections) {
-        const { debug } = options;
+      for (const [paramName, connection] of connectionMap) {
+        const { signal: paramSignal, debug } = connection;
         const params = routePrivateProperties.rawParamsSignal.value;
         const urlParamValue = params[paramName];
 
@@ -200,7 +196,7 @@ export const updateRoutes = (
           // 2. AND no matching route extracts this parameter from URL
           // 3. AND parameter has no default value (making it truly optional)
           if (matchingRouteInSameFamily && !parameterExtractedByMatchingRoute) {
-            const defaultValue = routePattern.parameterDefaults?.get(paramName);
+            const defaultValue = connection.getDefaultValue();
             if (defaultValue === undefined) {
               // Parameter is not extracted within same family and has no default - reset it
               if (debug) {
@@ -208,21 +204,21 @@ export const updateRoutes = (
                   `[route] Same family navigation, ${paramName} not extracted and has no default: resetting signal`,
                 );
               }
-              stateSignal.value = undefined;
+              paramSignal.value = undefined;
             } else if (debug) {
               // Parameter has a default value - preserve current signal value
               console.debug(
-                `[route] Parameter ${paramName} has default value ${defaultValue}: preserving signal value: ${stateSignal.value}`,
+                `[route] Parameter ${paramName} has default value ${defaultValue}: preserving signal value: ${paramSignal.value}`,
               );
             }
           } else if (debug) {
             if (!matchingRouteInSameFamily) {
               console.debug(
-                `[route] Different route family: preserving ${paramName} signal value: ${stateSignal.value}`,
+                `[route] Different route family: preserving ${paramName} signal value: ${paramSignal.value}`,
               );
             } else {
               console.debug(
-                `[route] Parameter ${paramName} extracted by matching route: preserving signal value: ${stateSignal.value}`,
+                `[route] Parameter ${paramName} extracted by matching route: preserving signal value: ${paramSignal.value}`,
               );
             }
           }
@@ -231,11 +227,11 @@ export const updateRoutes = (
 
         // URL -> Signal sync: When route matches, ensure signal matches URL state
         // URL is the source of truth for explicit parameters
-        const value = stateSignal.peek();
+        const value = paramSignal.peek();
         if (urlParamValue === undefined) {
           // No URL parameter - reset signal to its current default value
           // (handles both static fallback and dynamic default cases)
-          const defaultValue = options.getDefaultValue();
+          const defaultValue = connection.getDefaultValue();
           if (value === defaultValue) {
             // Signal already has correct default value, no sync needed
             continue;
@@ -245,7 +241,7 @@ export const updateRoutes = (
               `[route] URL->Signal: ${paramName} not in URL, reset signal to default (${defaultValue})`,
             );
           }
-          stateSignal.value = defaultValue;
+          paramSignal.value = defaultValue;
           continue;
         }
         if (urlParamValue === value) {
@@ -257,7 +253,7 @@ export const updateRoutes = (
             `[route] URL->Signal: ${paramName}=${urlParamValue} in url, sync signal with url`,
           );
         }
-        stateSignal.value = urlParamValue;
+        paramSignal.value = urlParamValue;
         continue;
       }
     }
@@ -374,7 +370,7 @@ const registerRoute = (routePattern) => {
   if (DEBUG) {
     console.debug(`Creating route: ${urlPatternRaw}`);
   }
-  const { cleanPattern, connections } = routePattern;
+  const { cleanPattern, connectionMap } = routePattern;
 
   const cleanupCallbackSet = new Set();
   const cleanup = () => {
@@ -471,22 +467,19 @@ const registerRoute = (routePattern) => {
     }
   });
 
-  for (const { signal: stateSignal, paramName, options = {} } of connections) {
-    const { debug } = options;
+  for (const [paramName, connection] of connectionMap) {
+    const { signal: paramSignal, debug } = connection;
 
     if (debug) {
       console.debug(
         `[route] connecting url param "${paramName}" to signal`,
-        stateSignal,
+        paramSignal,
       );
     }
-
-    // URL -> Signal synchronization now handled in updateRoutes() to eliminate circular dependency
-
     // Signal -> URL sync: When signal changes, update URL to reflect meaningful state
     // Only sync non-default values to keep URLs clean (static fallbacks stay invisible)
     effect(() => {
-      const value = stateSignal.value;
+      const value = paramSignal.value;
       const params = rawParamsSignal.value;
       const urlParamValue = params[paramName];
       const matching = matchingSignal.value;
@@ -497,7 +490,7 @@ const registerRoute = (routePattern) => {
       }
       if (urlParamValue === undefined) {
         // No URL parameter exists - check if signal has meaningful value to add
-        const defaultValue = options.getDefaultValue();
+        const defaultValue = connection.getDefaultValue();
         if (value === defaultValue) {
           // Signal using default value, keep URL clean (no parameter needed)
           return;

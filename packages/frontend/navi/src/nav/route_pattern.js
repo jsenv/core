@@ -208,14 +208,16 @@ export const createRoutePattern = (pattern) => {
 
     // Process all connections for parameter resolution
     for (const connection of connections) {
-      const { paramName, signal } = connection;
-
+      const { paramName } = connection;
       if (paramName in providedParams) {
         // Parameter was explicitly provided - always respect explicit parameters
         // Don't check signal value - explicit parameter takes precedence
-      } else if (signal?.value !== undefined) {
+        continue;
+      }
+      const signalValue = connection.signal.value;
+      if (signalValue !== undefined) {
         // Parameter was not provided, check signal value
-        resolvedParams[paramName] = signal.value;
+        resolvedParams[paramName] = signalValue;
       }
     }
 
@@ -223,11 +225,12 @@ export const createRoutePattern = (pattern) => {
     // Use current dynamic defaults from signal connections
     for (const connection of connections) {
       const { paramName } = connection;
-      if (!(paramName in resolvedParams)) {
-        const currentDefault = connection.getDefaultValue();
-        if (currentDefault !== undefined) {
-          resolvedParams[paramName] = currentDefault;
-        }
+      if (paramName in resolvedParams) {
+        continue;
+      }
+      const currentDefault = connection.getDefaultValue();
+      if (currentDefault !== undefined) {
+        resolvedParams[paramName] = currentDefault;
       }
     }
 
@@ -2536,9 +2539,7 @@ export const setupPatterns = (patternDefinitions) => {
     let parentPatternObj = currentPatternObj.parent;
     while (parentPatternObj) {
       for (const connection of parentPatternObj.connections) {
-        if (connection.signal) {
-          allRelevantSignals.add(connection.signal);
-        }
+        allRelevantSignals.add(connection.signal);
       }
       // Move up the parent chain
       parentPatternObj = parentPatternObj.parent;
@@ -2549,9 +2550,7 @@ export const setupPatterns = (patternDefinitions) => {
       for (const childPatternObj of patternObj.children || []) {
         // Add child's own signals
         for (const connection of childPatternObj.connections) {
-          if (connection.signal) {
-            allRelevantSignals.add(connection.signal);
-          }
+          allRelevantSignals.add(connection.signal);
         }
         // Recursively add grandchildren signals
         addDescendantSignals(childPatternObj);
