@@ -168,7 +168,6 @@ const detectSignals = (routePattern) => {
 export const createRoutePattern = (pattern) => {
   // Detect and process signals in the pattern first
   const [cleanPattern, connections] = detectSignals(pattern);
-
   // Build parameter options map for efficient lookups
   const parameterOptions = new Map();
   for (const connection of connections) {
@@ -363,7 +362,7 @@ export const createRoutePattern = (pattern) => {
 
     const getDescendantSignals = (pattern) => {
       const signals = [...pattern.connections];
-      for (const child of pattern.children || []) {
+      for (const child of pattern.children) {
         signals.push(...getDescendantSignals(child));
       }
       return signals;
@@ -377,8 +376,7 @@ export const createRoutePattern = (pattern) => {
     const systemCanProvide = allRelevantSignals.some((conn) => {
       const signalValue = conn.signal.value;
       return (
-        signalValue === literalValue &&
-        conn.options.isCustomValue?.(signalValue)
+        signalValue === literalValue && conn.options.isCustomValue(signalValue)
       );
     });
 
@@ -522,7 +520,6 @@ export const createRoutePattern = (pattern) => {
       const { paramName: name, signal, options } = item;
       paramName = name;
       paramValue = signal.value;
-
       // Only include custom parent signal values (not using defaults)
       if (paramValue === undefined || !options.isCustomValue(paramValue)) {
         return { isCompatible: true, shouldInclude: false };
@@ -621,7 +618,7 @@ export const createRoutePattern = (pattern) => {
     for (const [paramName, paramValue] of Object.entries(params)) {
       if (paramValue === undefined) {
         // Look for sibling routes (other children of the same parent) that use this parameter
-        const siblingPatternObjs = patternObject.children || [];
+        const siblingPatternObjs = patternObject.children;
 
         for (const siblingPatternObj of siblingPatternObjs) {
           if (siblingPatternObj === childPatternObj) continue; // Skip self
@@ -639,7 +636,7 @@ export const createRoutePattern = (pattern) => {
 
             if (
               siblingConnection &&
-              siblingConnection.signal?.value !== undefined
+              siblingConnection.signal.value !== undefined
             ) {
               const signalValue = siblingConnection.signal.value;
 
@@ -686,11 +683,14 @@ export const createRoutePattern = (pattern) => {
         ) {
           hasActiveParams = true;
         }
-      } else if (signal.value !== undefined) {
-        // No explicit override - use signal value
-        childParams[paramName] = signal.value;
-        if (options.isCustomValue?.(signal.value)) {
-          hasActiveParams = true;
+      } else {
+        const signalValue = signal.value;
+        if (signalValue !== undefined) {
+          // No explicit override - use signal value
+          childParams[paramName] = signalValue;
+          if (options.isCustomValue(signalValue)) {
+            hasActiveParams = true;
+          }
         }
       }
     }
@@ -1670,8 +1670,8 @@ export const createRoutePattern = (pattern) => {
         // Only inherit if we don't have this param and parent has custom value (not default)
         if (
           !(paramName in finalParams) &&
-          signal?.value !== undefined &&
-          options.isCustomValue?.(signal.value)
+          signal.value !== undefined &&
+          options.isCustomValue(signal.value)
         ) {
           // Don't inherit if parameter corresponds to a literal in our path
           const shouldInherit = !isParameterRedundantWithLiteralSegments(
