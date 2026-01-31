@@ -20,6 +20,7 @@
 - [updating boolean signal](updating_boolean_signal/updating_boolean_signal.md)
 - [updating with dynamic default](updating_with_dynamic_default/updating_with_dynamic_default.md)
 - [reset center](reset_center/reset_center.md)
+- [signal forces url back to parameterized route incorrectly](signal_forces_url_back_to_parameterized_route_incorrectly/signal_forces_url_back_to_parameterized_route_incorrectly.md)
 
 ---
 
