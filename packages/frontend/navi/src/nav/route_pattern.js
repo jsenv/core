@@ -1088,7 +1088,7 @@ export const createRoutePattern = (pattern) => {
     let finalParams = removeDefaultValues(resolvedParams);
 
     // Step 4: Try descendants - find the deepest descendant that works
-    const childPatternObjs = patternObject.children || [];
+    const childPatternObjs = patternObject.children;
 
     let bestDescendantUrl = null;
     for (const childPatternObj of childPatternObjs) {

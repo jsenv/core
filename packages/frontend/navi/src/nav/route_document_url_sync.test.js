@@ -1387,7 +1387,6 @@ await snapshotTests(import.meta.url, ({ test }) => {
         id: "odt_map_panel",
         persist: true,
       });
-
       const zoneSignal = stateSignal(undefined);
       const isochroneTabSignal = stateSignal("compare");
       const isochroneLongitudeSignal = stateSignal(2.3522);
@@ -1436,6 +1435,42 @@ await snapshotTests(import.meta.url, ({ test }) => {
       };
     } finally {
       delete globalThis.localStorage;
+      clearAllRoutes();
+      globalSignalRegistry.clear();
+      setBrowserIntegration(null);
+    }
+  });
+
+  test.ONLY("to be defined", () => {
+    const navToCalls = [];
+    const mockBrowserIntegration = {
+      navTo: (url) => {
+        navToCalls.push(url);
+      },
+    };
+    setBrowserIntegration(mockBrowserIntegration);
+
+    try {
+      const mapPanelSignal = stateSignal(undefined, {
+        oneOf: [undefined, "flow"],
+      });
+      const zoneSignal = stateSignal(undefined);
+      const { MAP_ROUTE, MAP_PANEL_ROUTE } = setupRoutes({
+        MAP_ROUTE: `/map/?zone=${zoneSignal}`,
+        MAP_PANEL_ROUTE: `/map/:panel=${mapPanelSignal}/`,
+        MAP_FLOW_ROUTE: `/map/flow/`,
+      });
+      updateRoutes(`${baseUrl}/map?zone=london`);
+      const afterMapNav = {
+        panel_signal_value: mapPanelSignal.value,
+        map_route_matching: MAP_ROUTE.matching,
+        panel_route_matching: MAP_PANEL_ROUTE.matching,
+        navToCalls: [...navToCalls],
+      };
+      return {
+        after_map_nav: afterMapNav,
+      };
+    } finally {
       clearAllRoutes();
       globalSignalRegistry.clear();
       setBrowserIntegration(null);
