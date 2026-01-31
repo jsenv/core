@@ -33,7 +33,7 @@ try {
 
   // Step 2: Update lonSignal - this should stay on /dashboard?lon=20
   // BUG WOULD BE: System incorrectly chooses /dashboard/:tab route even though:
-  // - tabSignal.value = undefined  
+  // - tabSignal.value = undefined
   // - /dashboard/:tab requires a tab parameter
   // - These are INCOMPATIBLE (undefined cannot fill :tab parameter)
   lonSignal.value = 20;
@@ -42,7 +42,7 @@ try {
     lon_signal_value: lonSignal.value, // Should be 20
     tab_signal_value: tabSignal.value, // Should STILL be undefined
     dashboard_route_matching: DASHBOARD_ROUTE.matching,
-    dashboard_tab_route_matching: DASHBOARD_TAB_ROUTE.matching, 
+    dashboard_tab_route_matching: DASHBOARD_TAB_ROUTE.matching,
     navToCalls: [...navToCalls],
   };
 
@@ -51,7 +51,9 @@ try {
     after_updating_lon: afterUpdatingLon,
 
     // BUG DETECTION: Should NOT navigate to child route with dynamic segment
-    bug_reproduced: navToCalls.some((url) => url.includes("/dashboard/undefined")),
+    bug_reproduced: navToCalls.some((url) =>
+      url.includes("/dashboard/undefined"),
+    ),
 
     // EXPECTED: Should stay on /dashboard?lon=20
     expected_url: "/dashboard?lon=20",
@@ -64,8 +66,10 @@ try {
       are_compatible: tabSignal.value !== undefined, // Should be false
       issue:
         "/dashboard/:tab should not be selected when tabSignal.value = undefined",
-      correct_behavior: "Should stay on /dashboard/ with updated lon parameter",
-      dynamic_segment_note: "Unlike static segments, dynamic segments need actual parameter values",
+      correct_behavior:
+        "Should stay on /dashboard/ with updated lon parameter",
+      dynamic_segment_note:
+        "Unlike static segments, dynamic segments need actual parameter values",
     },
 
     // DEBUG INFO

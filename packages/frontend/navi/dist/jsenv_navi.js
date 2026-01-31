@@ -8264,6 +8264,57 @@ const createRoutePattern = (pattern) => {
       }
     }
 
+    // CRITICAL: Block child routes that have literal segments requiring specific parameter values
+    // that aren't available. Only check literal segments that replace parameter positions.
+    // Example: /map/flow/ replaces /:panel/ with "flow", so panel must equal "flow"
+    let hasIncompatibleLiterals = false;
+    let hasMatchingNonDefaultLiterals = false;
+
+    for (let i = 0; i < childPatternObj.pattern.segments.length; i++) {
+      const childSegment = childPatternObj.pattern.segments[i];
+      const parentSegment = parsedPattern.segments[i];
+
+      if (
+        childSegment.type === "literal" &&
+        parentSegment &&
+        parentSegment.type === "param"
+      ) {
+        // This literal segment replaces a parameter in the parent
+        const paramName = parentSegment.name;
+        const explicitValue = params[paramName];
+        const connection = connectionMap.get(paramName);
+        const signalValue = connection ? connection.signal.value : undefined;
+
+        // Check if the parameter has the required value
+        if (
+          explicitValue !== childSegment.value &&
+          signalValue !== childSegment.value
+        ) {
+          hasIncompatibleLiterals = true;
+          if (DEBUG$2) {
+            console.debug(
+              `[${pattern}] Blocking child route ${childPatternObj.originalPattern} because parameter "${paramName}" must be "${childSegment.value}" but current values are explicit="${explicitValue}" signal="${signalValue}"`,
+            );
+          }
+          break;
+        }
+
+        // Check if this matching literal represents a non-default parameter value
+        // (for forcing child route selection later)
+        if (explicitValue === childSegment.value && connection) {
+          const defaultValue = connection.getDefaultValue();
+          if (explicitValue !== defaultValue) {
+            hasMatchingNonDefaultLiterals = true;
+          }
+        }
+      }
+    }
+
+    // Block incompatible child routes immediately
+    if (hasIncompatibleLiterals) {
+      return false;
+    }
+
     // Check if child has active non-default signal values
     let hasActiveParams = false;
     const childParams = { ...compatibility.childParams };
@@ -8335,11 +8386,25 @@ const createRoutePattern = (pattern) => {
 
     // Use child route if:
     // 1. Child has active non-default parameters, OR
-    // 2. User provided non-default params AND child can be built completely
+    // 2. User provided non-default params AND child can be built completely, OR
+    // 3. User provided params that match child literal segments AND are non-default values
     // EXCEPT: Don't use child if parent can produce cleaner URL by omitting defaults
     let shouldUse =
       hasActiveParams ||
-      (hasNonDefaultProvidedParams && canBuildChildCompletely);
+      (hasNonDefaultProvidedParams && canBuildChildCompletely) ||
+      (hasMatchingNonDefaultLiterals && canBuildChildCompletely);
+
+    if (DEBUG$2) {
+      console.debug(
+        `[${pattern}] shouldUseChildRoute decision for ${childPatternObj.originalPattern}:`,
+        {
+          hasActiveParams,
+          hasNonDefaultProvidedParams,
+          canBuildChildCompletely,
+          shouldUse,
+        },
+      );
+    }
 
     // Optimization: Check if child would include literal segments that represent default values
     if (shouldUse) {
@@ -8716,7 +8781,7 @@ const createRoutePattern = (pattern) => {
     let finalParams = removeDefaultValues(resolvedParams);
 
     // Step 4: Try descendants - find the deepest descendant that works
-    const childPatternObjs = patternObject.children || [];
+    const childPatternObjs = patternObject.children;
 
     let bestDescendantUrl = null;
     for (const childPatternObj of childPatternObjs) {
@@ -10780,8 +10845,6 @@ const registerRoute = (routePattern) => {
     if (mostSpecificRoute !== route) {
       return mostSpecificRoute.redirectTo(newParams);
     }
-
-    // This route is the most specific, handle the redirect ourselves
     return route.redirectTo(newParams);
   };
   route.buildRelativeUrl = (params) => {
