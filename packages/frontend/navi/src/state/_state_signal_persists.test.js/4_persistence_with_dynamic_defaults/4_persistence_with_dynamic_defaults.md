@@ -83,9 +83,9 @@ return { results };
     },
     {
       "step": "reset to follow dynamic",
-      "value": "explicit",
+      "value": "ignored",
       "dynamicValue": "ignored",
-      "storage": "explicit"
+      "storage": null
     }
   ]
 }

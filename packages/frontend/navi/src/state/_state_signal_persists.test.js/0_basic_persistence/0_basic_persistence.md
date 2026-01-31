@@ -53,9 +53,9 @@ return { results };
     },
     {
       "step": "after reset to default",
-      "value": "stored",
-      "storageSize": 1,
-      "storageValue": "stored"
+      "value": "default",
+      "storageSize": 0,
+      "storageValue": null
     }
   ]
 }

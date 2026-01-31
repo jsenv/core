@@ -59,18 +59,14 @@ return { storageStates };
     {
       "label": "after resetting sig1",
       "keys": [
-        "cleanup1",
         "cleanup2"
       ],
-      "size": 2
+      "size": 1
     },
     {
       "label": "after resetting sig2",
-      "keys": [
-        "cleanup1",
-        "cleanup2"
-      ],
-      "size": 2
+      "keys": [],
+      "size": 0
     }
   ]
 }

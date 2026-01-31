@@ -55,9 +55,8 @@ return { storageUpdates };
       "value": "second"
     },
     {
-      "action": "set",
-      "key": "reactive_persist",
-      "value": "second"
+      "action": "remove",
+      "key": "reactive_persist"
     },
     {
       "action": "set",
@@ -65,9 +64,8 @@ return { storageUpdates };
       "value": "third"
     },
     {
-      "action": "set",
-      "key": "reactive_persist",
-      "value": "third"
+      "action": "remove",
+      "key": "reactive_persist"
     }
   ]
 }

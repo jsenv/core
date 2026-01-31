@@ -2515,28 +2515,28 @@ const stateSignal = (defaultValue, options = {}) => {
    *
    * @returns {any} The current code default value, undefined if no default
    */
-  const getDefaultValue = () => {
+  const getDefaultValue = (internalCall) => {
     if (dynamicDefaultSignal) {
       const dynamicValue = dynamicDefaultSignal.peek();
       if (dynamicValue === undefined) {
         if (staticDefaultValue === undefined) {
           return undefined;
         }
-        if (debug) {
+        if (debug && internalCall) {
           console.debug(
             `[stateSignal:${signalIdString}] dynamic default is undefined, using static default=${staticDefaultValue}`,
           );
         }
         return staticDefaultValue;
       }
-      if (debug) {
+      if (debug && internalCall) {
         console.debug(
           `[stateSignal:${signalIdString}] using value from dynamic default signal=${dynamicValue}`,
         );
       }
       return dynamicValue;
     }
-    if (debug) {
+    if (debug && internalCall) {
       console.debug(
         `[stateSignal:${signalIdString}] using static default value=${staticDefaultValue}`,
       );
@@ -2562,7 +2562,7 @@ const stateSignal = (defaultValue, options = {}) => {
         return valueFromLocalStorage;
       }
     }
-    return getDefaultValue();
+    return getDefaultValue(true);
   };
   const isCustomValue = (value) => {
     if (value === undefined) {
@@ -2597,7 +2597,7 @@ const stateSignal = (defaultValue, options = {}) => {
       if (value !== undefined) {
         return;
       }
-      const defaultValue = getFallbackValue();
+      const defaultValue = getDefaultValue(true);
       if (defaultValue === value) {
         return;
       }
@@ -2646,7 +2646,7 @@ const stateSignal = (defaultValue, options = {}) => {
       }
 
       // Signal was using default value, update to new default
-      const newDefaultValue = getFallbackValue();
+      const newDefaultValue = getDefaultValue(true);
       if (newDefaultValue === value) {
         dynamicDefaultPreviousValue = dynamicDefaultValue;
         return;
