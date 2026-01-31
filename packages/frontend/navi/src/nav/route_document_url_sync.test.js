@@ -1363,6 +1363,16 @@ await snapshotTests(import.meta.url, ({ test }) => {
   });
 
   test("signal forces url back to parameterized route incorrectly", () => {
+    // Mock localStorage to simulate the bug scenario
+    const mockStorage = new Map();
+    mockStorage.set("odt_map_panel", "isochrone"); // Pre-populate with previous session data
+    globalThis.localStorage = {
+      getItem: (key) => mockStorage.get(key) || null,
+      setItem: (key, value) => mockStorage.set(key, value),
+      removeItem: (key) => mockStorage.delete(key),
+      clear: () => mockStorage.clear(),
+    };
+
     const navToCalls = [];
     const mockBrowserIntegration = {
       navTo: (url) => {
@@ -1372,12 +1382,18 @@ await snapshotTests(import.meta.url, ({ test }) => {
     setBrowserIntegration(mockBrowserIntegration);
 
     try {
-      const mapPanelSignal = stateSignal(undefined);
+      // Create signal with persist: true to reproduce the localStorage issue
+      const mapPanelSignal = stateSignal(undefined, {
+        id: "odt_map_panel",
+        persist: true,
+      });
+
       const zoneSignal = stateSignal(undefined);
       const isochroneTabSignal = stateSignal("compare");
       const isochroneLongitudeSignal = stateSignal(2.3522);
       const isochroneWalkSignal = stateSignal(false);
       const isochroneTimeModeSignal = stateSignal("walk");
+
       const { MAP_ROUTE, MAP_PANEL_ROUTE } = setupRoutes({
         MAP_ROUTE: `/map/?zone=${zoneSignal}`,
         MAP_PANEL_ROUTE: `/map/:panel=${mapPanelSignal}/`,
@@ -1385,29 +1401,44 @@ await snapshotTests(import.meta.url, ({ test }) => {
         MAP_ISOCHRONE_COMPARE_ROUTE: `/map/isochrone/compare?walk=${isochroneWalkSignal}`,
         MAP_ISOCHRONE_TIME_ROUTE: `/map/isochrone/time/:mode=${isochroneTimeModeSignal}/`,
       });
+
+      // Step 1: Navigate to /map/isochrone - this should set mapPanelSignal and localStorage
       updateRoutes(`${baseUrl}/map/isochrone?zone=london`);
+
       const afterIsochroneNav = {
         panel_signal_value: mapPanelSignal.value,
         map_route_matching: MAP_ROUTE.matching,
         panel_route_matching: MAP_PANEL_ROUTE.matching,
-        nav_to_calls: [...navToCalls],
+        localStorage_value: mockStorage.get("odt_map_panel"),
       };
+
+      // Clear navTo calls before the critical test
+      navToCalls.length = 0;
+
+      // Step 2: Navigate to /map - this should NOT redirect back to /map/isochrone
+      // But the bug is: localStorage restores "isochrone" value and forces redirect
       updateRoutes(`${baseUrl}/map?zone=london`);
+
       const afterMapNav = {
         panel_signal_value: mapPanelSignal.value,
         map_route_matching: MAP_ROUTE.matching,
         panel_route_matching: MAP_PANEL_ROUTE.matching,
+        localStorage_value: mockStorage.get("odt_map_panel"),
         nav_to_calls: [...navToCalls],
       };
 
       return {
         after_isochrone_nav: afterIsochroneNav,
         after_map_nav: afterMapNav,
+        bug_reproduced: navToCalls.some((url) =>
+          url.includes("/map/isochrone"),
+        ),
       };
     } finally {
+      delete globalThis.localStorage;
       clearAllRoutes();
       globalSignalRegistry.clear();
-      setBrowserIntegration(null); // Reset browser integration
+      setBrowserIntegration(null);
     }
   });
 });
