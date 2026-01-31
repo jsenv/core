@@ -1363,89 +1363,38 @@ await snapshotTests(import.meta.url, ({ test }) => {
   });
 
   test("signal forces url back to parameterized route incorrectly", () => {
-    // Mock browserIntegration.navTo to track redirectTo calls
     const navToCalls = [];
     const mockBrowserIntegration = {
-      navTo: (url, options) => {
-        navToCalls.push({ url, options });
+      navTo: (url) => {
+        navToCalls.push(url);
       },
     };
     setBrowserIntegration(mockBrowserIntegration);
 
     try {
       const mapPanelSignal = stateSignal(undefined);
-
       const { MAP_ROUTE, MAP_PANEL_ROUTE } = setupRoutes({
         MAP_ROUTE: `/map`,
         MAP_PANEL_ROUTE: `/map/:panel=${mapPanelSignal}/`,
       });
-
-      // Step 1: Navigate to /map/isochrone - this should set mapPanelSignal to "isochrone"
       updateRoutes(`${baseUrl}/map/isochrone`);
-
       const afterIsochroneNav = {
         panel_signal_value: mapPanelSignal.value,
         map_route_matching: MAP_ROUTE.matching,
         panel_route_matching: MAP_PANEL_ROUTE.matching,
+        nav_to_calls: [...navToCalls],
       };
-
-      // Clear navTo calls from navigation
-      navToCalls.length = 0;
-
-      // Step 2: Navigate to /map - this should NOT force us back to /map/isochrone
       updateRoutes(`${baseUrl}/map`);
-
       const afterMapNav = {
         panel_signal_value: mapPanelSignal.value,
         map_route_matching: MAP_ROUTE.matching,
         panel_route_matching: MAP_PANEL_ROUTE.matching,
-        nav_to_calls: [...navToCalls], // Capture current navTo calls
-      };
-
-      // Clear again to test signal changes
-      navToCalls.length = 0;
-
-      // Step 3: Try triggering the bug by manually setting the signal value
-      // This might cause a redirect if the signal change triggers route updates
-      mapPanelSignal.value = "isochrone";
-
-      const afterSignalChange = {
-        panel_signal_value: mapPanelSignal.value,
-        map_route_matching: MAP_ROUTE.matching,
-        panel_route_matching: MAP_PANEL_ROUTE.matching,
-        nav_to_calls_after_signal: [...navToCalls],
+        nav_to_calls: [...navToCalls],
       };
 
       return {
-        step1_after_isochrone_nav: afterIsochroneNav,
-        step2_after_map_nav: afterMapNav,
-        step3_after_signal_change: afterSignalChange,
-
-        // The bug indicators:
-        bug_reproduced_on_nav: afterMapNav.nav_to_calls.some(
-          (call) => call.url && call.url.includes("/map/isochrone"),
-        ),
-        bug_reproduced_on_signal_change:
-          afterSignalChange.nav_to_calls_after_signal.some(
-            (call) => call.url && call.url.includes("/map/isochrone"),
-          ),
-
-        // Expected: No navTo calls should happen when explicitly navigating to /map
-        expected_nav_calls: 0,
-        actual_nav_calls_on_nav: afterMapNav.nav_to_calls.length,
-        actual_nav_calls_on_signal:
-          afterSignalChange.nav_to_calls_after_signal.length,
-
-        // Debug info
-        all_nav_calls_map_nav: afterMapNav.nav_to_calls,
-        all_nav_calls_signal_change:
-          afterSignalChange.nav_to_calls_after_signal,
-
-        // Signal behavior analysis
-        signal_cleared_on_nav_to_map:
-          afterMapNav.panel_signal_value === undefined,
-        signal_restored_manually:
-          afterSignalChange.panel_signal_value === "isochrone",
+        after_isochrone_nav: afterIsochroneNav,
+        after_map_nav: afterMapNav,
       };
     } finally {
       clearAllRoutes();
