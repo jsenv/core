@@ -136,28 +136,28 @@ export const stateSignal = (defaultValue, options = {}) => {
    *
    * @returns {any} The current code default value, undefined if no default
    */
-  const getDefaultValue = () => {
+  const getDefaultValue = (internalCall) => {
     if (dynamicDefaultSignal) {
       const dynamicValue = dynamicDefaultSignal.peek();
       if (dynamicValue === undefined) {
         if (staticDefaultValue === undefined) {
           return undefined;
         }
-        if (debug) {
+        if (debug && internalCall) {
           console.debug(
             `[stateSignal:${signalIdString}] dynamic default is undefined, using static default=${staticDefaultValue}`,
           );
         }
         return staticDefaultValue;
       }
-      if (debug) {
+      if (debug && internalCall) {
         console.debug(
           `[stateSignal:${signalIdString}] using value from dynamic default signal=${dynamicValue}`,
         );
       }
       return dynamicValue;
     }
-    if (debug) {
+    if (debug && internalCall) {
       console.debug(
         `[stateSignal:${signalIdString}] using static default value=${staticDefaultValue}`,
       );
@@ -183,7 +183,7 @@ export const stateSignal = (defaultValue, options = {}) => {
         return valueFromLocalStorage;
       }
     }
-    return getDefaultValue();
+    return getDefaultValue(true);
   };
   const isCustomValue = (value) => {
     if (value === undefined) {
@@ -218,16 +218,16 @@ export const stateSignal = (defaultValue, options = {}) => {
       if (value !== undefined) {
         return;
       }
-      const defaultValue = getFallbackValue();
-      if (defaultValue === value) {
+      const fallbackValue = getFallbackValue();
+      if (fallbackValue === value) {
         return;
       }
       if (debug) {
         console.debug(
-          `[stateSignal:${signalIdString}] becomes undefined, reset to ${defaultValue}`,
+          `[stateSignal:${signalIdString}] becomes undefined, reset to ${fallbackValue}`,
         );
       }
-      advancedSignal.value = defaultValue;
+      advancedSignal.value = fallbackValue;
     });
   }
   dynamic_signal_effect: {
@@ -267,18 +267,18 @@ export const stateSignal = (defaultValue, options = {}) => {
       }
 
       // Signal was using default value, update to new default
-      const newDefaultValue = getFallbackValue();
-      if (newDefaultValue === value) {
+      const newFallbackValue = getFallbackValue();
+      if (newFallbackValue === value) {
         dynamicDefaultPreviousValue = dynamicDefaultValue;
         return;
       }
       if (debug) {
         console.debug(
-          `[stateSignal:${signalIdString}] dynamic default updated, update to ${newDefaultValue}`,
+          `[stateSignal:${signalIdString}] dynamic default updated, update to ${newFallbackValue}`,
         );
       }
       dynamicDefaultPreviousValue = dynamicDefaultValue;
-      advancedSignal.value = newDefaultValue;
+      advancedSignal.value = newFallbackValue;
     });
   }
   persist_in_local_storage: {
