@@ -1373,18 +1373,26 @@ await snapshotTests(import.meta.url, ({ test }) => {
 
     try {
       const mapPanelSignal = stateSignal(undefined);
+      const zoneSignal = stateSignal(undefined);
+      const isochroneTabSignal = stateSignal("compare");
+      const isochroneLongitudeSignal = stateSignal(2.3522);
+      const isochroneWalkSignal = stateSignal(false);
+      const isochroneTimeModeSignal = stateSignal("walk");
       const { MAP_ROUTE, MAP_PANEL_ROUTE } = setupRoutes({
-        MAP_ROUTE: `/map`,
+        MAP_ROUTE: `/map/?zone=${zoneSignal}`,
         MAP_PANEL_ROUTE: `/map/:panel=${mapPanelSignal}/`,
+        MAP_ISOCHRONE_ROUTE: `/map/isochrone/:tab=${isochroneTabSignal}/?iso_lon=${isochroneLongitudeSignal}`,
+        MAP_ISOCHRONE_COMPARE_ROUTE: `/map/isochrone/compare?walk=${isochroneWalkSignal}`,
+        MAP_ISOCHRONE_TIME_ROUTE: `/map/isochrone/time/:mode=${isochroneTimeModeSignal}/`,
       });
-      updateRoutes(`${baseUrl}/map/isochrone`);
+      updateRoutes(`${baseUrl}/map/isochrone?zone=london`);
       const afterIsochroneNav = {
         panel_signal_value: mapPanelSignal.value,
         map_route_matching: MAP_ROUTE.matching,
         panel_route_matching: MAP_PANEL_ROUTE.matching,
         nav_to_calls: [...navToCalls],
       };
-      updateRoutes(`${baseUrl}/map`);
+      updateRoutes(`${baseUrl}/map?zone=london`);
       const afterMapNav = {
         panel_signal_value: mapPanelSignal.value,
         map_route_matching: MAP_ROUTE.matching,
