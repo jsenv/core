@@ -8,7 +8,7 @@ try {
   const isochroneLongitudeSignal = stateSignal(undefined);
   const isochroneTimeModeSignal = stateSignal("walk");
 
-  const { MAP_ISOCHRONE_TIME_WALK_ROUTE } = setupRoutes({
+  const { MAP_ROUTE, MAP_ISOCHRONE_TIME_WALK_ROUTE } = setupRoutes({
     HOME_ROUTE: "/",
     MAP_ROUTE: `/map/?zone=${zoneSignal}`,
     MAP_PANEL_ROUTE: `/map/:panel=${mapPanelSignal}/`,
@@ -18,9 +18,12 @@ try {
     MAP_ISOCHRONE_TIME_WALK_ROUTE: "/map/isochrone/time/walk",
     MAP_ISOCHRONE_TIME_BIKE_ROUTE: "/map/isochrone/time/bike",
   });
-  updateRoutes(`${baseUrl}/map/isochrone/time?zone=london&iso_lon=1`);
+  updateRoutes(
+    `${baseUrl}/map/isochrone/time?zone=london&iso_lon=1&mode=bike`,
+  );
 
   return {
+    map_root_url: MAP_ROUTE.buildUrl({ panel: undefined }),
     map_isochrone_time_walk_url: MAP_ISOCHRONE_TIME_WALK_ROUTE.buildUrl(),
   };
 } finally {
@@ -31,6 +34,7 @@ try {
 
 ```js
 {
+  "map_root_url": "http://127.0.0.1/map?zone=london&iso_lon=1&mode=bike&tab=time",
   "map_isochrone_time_walk_url": "http://127.0.0.1/map/isochrone/time?zone=london&iso_lon=1"
 }
 ```

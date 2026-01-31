@@ -896,7 +896,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
       const isochroneLongitudeSignal = stateSignal(undefined);
       const isochroneTimeModeSignal = stateSignal("walk");
 
-      const { MAP_ISOCHRONE_TIME_WALK_ROUTE } = setupRoutes({
+      const { MAP_ROUTE, MAP_ISOCHRONE_TIME_WALK_ROUTE } = setupRoutes({
         HOME_ROUTE: "/",
         MAP_ROUTE: `/map/?zone=${zoneSignal}`,
         MAP_PANEL_ROUTE: `/map/:panel=${mapPanelSignal}/`,
@@ -906,9 +906,12 @@ await snapshotTests(import.meta.url, ({ test }) => {
         MAP_ISOCHRONE_TIME_WALK_ROUTE: "/map/isochrone/time/walk",
         MAP_ISOCHRONE_TIME_BIKE_ROUTE: "/map/isochrone/time/bike",
       });
-      updateRoutes(`${baseUrl}/map/isochrone/time?zone=london&iso_lon=1`);
+      updateRoutes(
+        `${baseUrl}/map/isochrone/time?zone=london&iso_lon=1&mode=bike`,
+      );
 
       return {
+        map_root_url: MAP_ROUTE.buildUrl({ panel: undefined }),
         map_isochrone_time_walk_url: MAP_ISOCHRONE_TIME_WALK_ROUTE.buildUrl(),
       };
     } finally {
