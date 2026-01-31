@@ -4,11 +4,13 @@
 // Mock localStorage to simulate the bug scenario
 const mockStorage = new Map();
 mockStorage.set("odt_map_panel", "isochrone"); // Pre-populate with previous session data
-globalThis.localStorage = {
-  getItem: (key) => mockStorage.get(key) || null,
-  setItem: (key, value) => mockStorage.set(key, value),
-  removeItem: (key) => mockStorage.delete(key),
-  clear: () => mockStorage.clear(),
+globalThis.window = {
+  localStorage: {
+    getItem: (key) => mockStorage.get(key) || null,
+    setItem: (key, value) => mockStorage.set(key, value),
+    removeItem: (key) => mockStorage.delete(key),
+    clear: () => mockStorage.clear(),
+  },
 };
 
 const navToCalls = [];
@@ -25,7 +27,6 @@ try {
     id: "odt_map_panel",
     persist: true,
   });
-
   const zoneSignal = stateSignal(undefined);
   const isochroneTabSignal = stateSignal("compare");
   const isochroneLongitudeSignal = stateSignal(2.3522);
@@ -73,7 +74,7 @@ try {
     ),
   };
 } finally {
-  delete globalThis.localStorage;
+  delete globalThis.window;
   clearAllRoutes();
   globalSignalRegistry.clear();
   setBrowserIntegration(null);

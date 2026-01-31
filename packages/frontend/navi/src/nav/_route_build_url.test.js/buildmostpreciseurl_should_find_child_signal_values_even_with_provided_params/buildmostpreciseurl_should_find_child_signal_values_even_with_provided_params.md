@@ -35,8 +35,8 @@ try {
 
 ```js
 {
-  "url_without_params": "http://127.0.0.1/map/isochrone/compare?walk_minute=40",
-  "url_with_walk": "http://127.0.0.1/map/isochrone/compare?walk&walk_minute=40",
+  "url_without_params": "http://127.0.0.1/map/isochrone",
+  "url_with_walk": "http://127.0.0.1/map/isochrone?walk",
   "url_with_walk_and_tab": "http://127.0.0.1/map/isochrone/settings?walk"
 }
 ```

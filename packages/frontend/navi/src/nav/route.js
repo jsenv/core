@@ -553,6 +553,18 @@ const registerRoute = (routePattern) => {
     // Find all matching routes and update their actions, then delegate to most specific
     const allMatchingRoutes = Array.from(routeSet).filter((r) => r.matching);
 
+    if (DEBUG) {
+      console.debug(
+        `[${route}] replaceParams called with:`,
+        newParams,
+        `\nAll matching routes:`,
+        allMatchingRoutes.map(
+          (r) =>
+            `${r} (depth: ${getRoutePrivateProperties(r).routePattern.depth})`,
+        ),
+      );
+    }
+
     // Update action params on all matching routes
     for (const matchingRoute of allMatchingRoutes) {
       if (matchingRoute.action) {
@@ -590,6 +602,17 @@ const registerRoute = (routePattern) => {
       }
     }
 
+    if (DEBUG) {
+      console.debug(
+        `[${route}] Most specific route selected: ${mostSpecificRoute} (depth: ${getRoutePrivateProperties(mostSpecificRoute).routePattern.depth})`,
+      );
+      console.debug(
+        `[${route}] Building URL with params:`,
+        newParams,
+        `on route ${mostSpecificRoute}`,
+      );
+    }
+
     // If we found a more specific route, delegate to it; otherwise handle it ourselves
     if (mostSpecificRoute !== route) {
       if (DEBUG) {
@@ -601,6 +624,15 @@ const registerRoute = (routePattern) => {
     }
 
     // This route is the most specific, handle the redirect ourselves
+    if (DEBUG) {
+      const builtUrl = route.buildUrl(newParams);
+      console.debug(
+        `[${route}] Built URL:`,
+        builtUrl,
+        `with params:`,
+        newParams,
+      );
+    }
     return route.redirectTo(newParams);
   };
   route.buildRelativeUrl = (params) => {

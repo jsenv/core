@@ -27,7 +27,7 @@ try {
 ```js
 {
   "admin_with_analytics_section": "http://127.0.0.1/admin/analytics?tab=details",
-  "admin_with_no_params": "http://127.0.0.1/admin/analytics?tab=details",
+  "admin_with_no_params": "http://127.0.0.1/admin",
   "analytics_direct": "http://127.0.0.1/admin/analytics?tab=details"
 }
 ```

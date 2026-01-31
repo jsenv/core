@@ -1443,7 +1443,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
     }
   });
 
-  test.ONLY("to be defined", () => {
+  test("signal update should stay on current route", () => {
     const navToCalls = [];
     const mockBrowserIntegration = {
       navTo: (url) => {
@@ -1455,28 +1455,69 @@ await snapshotTests(import.meta.url, ({ test }) => {
     try {
       const mapPanelSignal = stateSignal(undefined);
       const lonSignal = stateSignal(undefined);
-      const { MAP_ROUTE, MAP_PANEL_ROUTE } = setupRoutes({
+      const { MAP_ROUTE, MAP_PANEL_ROUTE, MAP_FLOW_ROUTE } = setupRoutes({
         MAP_ROUTE: `/map/?lon=${lonSignal}`,
         MAP_PANEL_ROUTE: `/map/:panel=${mapPanelSignal}/`,
         MAP_FLOW_ROUTE: `/map/flow/`,
       });
-      updateRoutes(`${baseUrl}/map?zone=london`);
+
+      // Step 1: Navigate to /map - we're on the base map route
+      updateRoutes(`${baseUrl}/map`);
+
       const afterMapNav = {
-        panel_signal_value: mapPanelSignal.value,
+        current_url: "/map",
+        panel_signal_value: mapPanelSignal.value, // Should be undefined
         map_route_matching: MAP_ROUTE.matching,
         panel_route_matching: MAP_PANEL_ROUTE.matching,
+        flow_route_matching: MAP_FLOW_ROUTE.matching,
         navToCalls: [...navToCalls],
       };
+
+      // Clear navTo calls before the critical test
+      navToCalls.length = 0;
+
+      // Step 2: Update lonSignal - this should stay on /map?lon=20, NOT redirect to /map/flow/
+      // BUG: System incorrectly chooses /map/flow/ as "deepest child" even though:
+      // - mapPanelSignal.value = undefined
+      // - /map/flow/ requires panel = "flow"
+      // - These are INCOMPATIBLE
       lonSignal.value = 20;
+
       const afterUpdatingLon = {
-        panel_signal_value: mapPanelSignal.value,
+        lon_signal_value: lonSignal.value, // Should be 20
+        panel_signal_value: mapPanelSignal.value, // Should STILL be undefined
         map_route_matching: MAP_ROUTE.matching,
         panel_route_matching: MAP_PANEL_ROUTE.matching,
+        flow_route_matching: MAP_FLOW_ROUTE.matching,
         navToCalls: [...navToCalls],
       };
+
       return {
         after_map_nav: afterMapNav,
         after_updating_lon: afterUpdatingLon,
+
+        // BUG DETECTION
+        bug_reproduced: navToCalls.some((url) => url.includes("/map/flow")),
+
+        // EXPECTED: Should stay on /map?lon=20
+        expected_url: "/map?lon=20",
+        actual_nav_calls: navToCalls,
+
+        // ANALYSIS: Why /map/flow/ should be INCOMPATIBLE
+        compatibility_analysis: {
+          current_panel_signal: mapPanelSignal.value, // undefined
+          flow_route_requires: "panel = 'flow'",
+          are_compatible: mapPanelSignal.value === "flow", // Should be false
+          issue:
+            "/map/flow/ should not be selected when mapPanelSignal.value = undefined",
+          correct_behavior: "Should stay on /map/ with updated lon parameter",
+        },
+
+        // DEBUG INFO
+        signal_values_during_update: {
+          mapPanelSignal: mapPanelSignal.value,
+          lonSignal: lonSignal.value,
+        },
       };
     } finally {
       clearAllRoutes();

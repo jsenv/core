@@ -636,6 +636,40 @@ export const createRoutePattern = (pattern) => {
       }
     }
 
+    // CRITICAL: Block child routes that have literal segments requiring specific parameter values
+    // that aren't available. Only check literal segments that replace parameter positions.
+    // Example: /map/flow/ replaces /:panel/ with "flow", so panel must equal "flow"
+    for (let i = 0; i < childPatternObj.pattern.segments.length; i++) {
+      const childSegment = childPatternObj.pattern.segments[i];
+      const parentSegment = parsedPattern.segments[i];
+
+      if (
+        childSegment.type === "literal" &&
+        parentSegment &&
+        parentSegment.type === "param"
+      ) {
+        // This literal segment replaces a parameter in the parent
+        // Check if the parameter has the required value
+        const paramName = parentSegment.name;
+        const explicitValue = params[paramName];
+        const connection = connectionMap.get(paramName);
+        const signalValue = connection ? connection.signal.value : undefined;
+
+        // The parameter must match the literal value
+        if (
+          explicitValue !== childSegment.value &&
+          signalValue !== childSegment.value
+        ) {
+          if (DEBUG) {
+            console.debug(
+              `[${pattern}] Blocking child route ${childPatternObj.originalPattern} because parameter "${paramName}" must be "${childSegment.value}" but current values are explicit="${explicitValue}" signal="${signalValue}"`,
+            );
+          }
+          return false;
+        }
+      }
+    }
+
     // Check if child has active non-default signal values
     let hasActiveParams = false;
     const childParams = { ...compatibility.childParams };
@@ -705,13 +739,52 @@ export const createRoutePattern = (pattern) => {
 
     const hasNonDefaultProvidedParams = nonDefaultParams.length > 0;
 
+    // Check if user provided parameters that match child literal segments
+    // This forces child route selection when explicit params match child literals
+    // BUT only if the parameter is not a default value (we want clean URLs for defaults)
+    const childLiterals = childPatternObj.pattern.segments
+      .filter((seg) => seg.type === "literal")
+      .map((seg) => seg.value);
+
+    const hasMatchingLiteralParams = Object.entries(params).some(
+      ([paramName, paramValue]) => {
+        if (paramValue === undefined || !childLiterals.includes(paramValue)) {
+          return false;
+        }
+
+        // Check if this parameter value is NOT a default value
+        // If it's a default value, don't force child route selection for cleaner URLs
+        const parentConnection = connectionMap.get(paramName);
+        if (parentConnection) {
+          const parentDefault = parentConnection.getDefaultValue();
+          return paramValue !== parentDefault;
+        }
+
+        return true; // Non-connection parameters are considered non-default
+      },
+    );
+
     // Use child route if:
     // 1. Child has active non-default parameters, OR
-    // 2. User provided non-default params AND child can be built completely
+    // 2. User provided non-default params AND child can be built completely, OR
+    // 3. User provided params that match child literal segments (even if they're defaults)
     // EXCEPT: Don't use child if parent can produce cleaner URL by omitting defaults
     let shouldUse =
       hasActiveParams ||
-      (hasNonDefaultProvidedParams && canBuildChildCompletely);
+      (hasNonDefaultProvidedParams && canBuildChildCompletely) ||
+      (hasMatchingLiteralParams && canBuildChildCompletely);
+
+    if (DEBUG) {
+      console.debug(
+        `[${pattern}] shouldUseChildRoute decision for ${childPatternObj.originalPattern}:`,
+        {
+          hasActiveParams,
+          hasNonDefaultProvidedParams,
+          canBuildChildCompletely,
+          shouldUse,
+        },
+      );
+    }
 
     // Optimization: Check if child would include literal segments that represent default values
     if (shouldUse) {

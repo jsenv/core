@@ -21,7 +21,7 @@
 - [updating with dynamic default](updating_with_dynamic_default/updating_with_dynamic_default.md)
 - [reset center](reset_center/reset_center.md)
 - [signal forces url back to parameterized route incorrectly](signal_forces_url_back_to_parameterized_route_incorrectly/signal_forces_url_back_to_parameterized_route_incorrectly.md)
-- [to be defined](to_be_defined/to_be_defined.md)
+- [signal update should stay on current route](signal_update_should_stay_on_current_route/signal_update_should_stay_on_current_route.md)
 
 ---
 
