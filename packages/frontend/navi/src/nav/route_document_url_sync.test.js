@@ -1366,11 +1366,13 @@ await snapshotTests(import.meta.url, ({ test }) => {
     // Mock localStorage to simulate the bug scenario
     const mockStorage = new Map();
     mockStorage.set("odt_map_panel", "isochrone"); // Pre-populate with previous session data
-    globalThis.localStorage = {
-      getItem: (key) => mockStorage.get(key) || null,
-      setItem: (key, value) => mockStorage.set(key, value),
-      removeItem: (key) => mockStorage.delete(key),
-      clear: () => mockStorage.clear(),
+    globalThis.window = {
+      localStorage: {
+        getItem: (key) => mockStorage.get(key) || null,
+        setItem: (key, value) => mockStorage.set(key, value),
+        removeItem: (key) => mockStorage.delete(key),
+        clear: () => mockStorage.clear(),
+      },
     };
 
     const navToCalls = [];
@@ -1434,7 +1436,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
         ),
       };
     } finally {
-      delete globalThis.localStorage;
+      delete globalThis.window;
       clearAllRoutes();
       globalSignalRegistry.clear();
       setBrowserIntegration(null);
@@ -1451,12 +1453,10 @@ await snapshotTests(import.meta.url, ({ test }) => {
     setBrowserIntegration(mockBrowserIntegration);
 
     try {
-      const mapPanelSignal = stateSignal(undefined, {
-        oneOf: [undefined, "flow"],
-      });
-      const zoneSignal = stateSignal(undefined);
+      const mapPanelSignal = stateSignal(undefined);
+      const lonSignal = stateSignal(undefined);
       const { MAP_ROUTE, MAP_PANEL_ROUTE } = setupRoutes({
-        MAP_ROUTE: `/map/?zone=${zoneSignal}`,
+        MAP_ROUTE: `/map/?lon=${lonSignal}`,
         MAP_PANEL_ROUTE: `/map/:panel=${mapPanelSignal}/`,
         MAP_FLOW_ROUTE: `/map/flow/`,
       });
@@ -1467,8 +1467,16 @@ await snapshotTests(import.meta.url, ({ test }) => {
         panel_route_matching: MAP_PANEL_ROUTE.matching,
         navToCalls: [...navToCalls],
       };
+      lonSignal.value = 20;
+      const afterUpdatingLon = {
+        panel_signal_value: mapPanelSignal.value,
+        map_route_matching: MAP_ROUTE.matching,
+        panel_route_matching: MAP_PANEL_ROUTE.matching,
+        navToCalls: [...navToCalls],
+      };
       return {
         after_map_nav: afterMapNav,
+        after_updating_lon: afterUpdatingLon,
       };
     } finally {
       clearAllRoutes();

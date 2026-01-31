@@ -10,12 +10,10 @@ const mockBrowserIntegration = {
 setBrowserIntegration(mockBrowserIntegration);
 
 try {
-  const mapPanelSignal = stateSignal(undefined, {
-    oneOf: [undefined, "flow"],
-  });
-  const zoneSignal = stateSignal(undefined);
+  const mapPanelSignal = stateSignal(undefined);
+  const lonSignal = stateSignal(undefined);
   const { MAP_ROUTE, MAP_PANEL_ROUTE } = setupRoutes({
-    MAP_ROUTE: `/map/?zone=${zoneSignal}`,
+    MAP_ROUTE: `/map/?lon=${lonSignal}`,
     MAP_PANEL_ROUTE: `/map/:panel=${mapPanelSignal}/`,
     MAP_FLOW_ROUTE: `/map/flow/`,
   });
@@ -26,8 +24,16 @@ try {
     panel_route_matching: MAP_PANEL_ROUTE.matching,
     navToCalls: [...navToCalls],
   };
+  lonSignal.value = 20;
+  const afterUpdatingLon = {
+    panel_signal_value: mapPanelSignal.value,
+    map_route_matching: MAP_ROUTE.matching,
+    panel_route_matching: MAP_PANEL_ROUTE.matching,
+    navToCalls: [...navToCalls],
+  };
   return {
     after_map_nav: afterMapNav,
+    after_updating_lon: afterUpdatingLon,
   };
 } finally {
   clearAllRoutes();
@@ -43,6 +49,14 @@ try {
     "map_route_matching": true,
     "panel_route_matching": true,
     "navToCalls": []
+  },
+  "after_updating_lon": {
+    "panel_signal_value": undefined,
+    "map_route_matching": true,
+    "panel_route_matching": true,
+    "navToCalls": [
+      "http://127.0.0.1/map/flow?lon=20"
+    ]
   }
 }
 ```
