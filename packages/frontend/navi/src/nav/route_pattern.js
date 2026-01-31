@@ -639,6 +639,9 @@ export const createRoutePattern = (pattern) => {
     // CRITICAL: Block child routes that have literal segments requiring specific parameter values
     // that aren't available. Only check literal segments that replace parameter positions.
     // Example: /map/flow/ replaces /:panel/ with "flow", so panel must equal "flow"
+    let hasIncompatibleLiterals = false;
+    let hasMatchingNonDefaultLiterals = false;
+
     for (let i = 0; i < childPatternObj.pattern.segments.length; i++) {
       const childSegment = childPatternObj.pattern.segments[i];
       const parentSegment = parsedPattern.segments[i];
@@ -649,25 +652,39 @@ export const createRoutePattern = (pattern) => {
         parentSegment.type === "param"
       ) {
         // This literal segment replaces a parameter in the parent
-        // Check if the parameter has the required value
         const paramName = parentSegment.name;
         const explicitValue = params[paramName];
         const connection = connectionMap.get(paramName);
         const signalValue = connection ? connection.signal.value : undefined;
 
-        // The parameter must match the literal value
+        // Check if the parameter has the required value
         if (
           explicitValue !== childSegment.value &&
           signalValue !== childSegment.value
         ) {
+          hasIncompatibleLiterals = true;
           if (DEBUG) {
             console.debug(
               `[${pattern}] Blocking child route ${childPatternObj.originalPattern} because parameter "${paramName}" must be "${childSegment.value}" but current values are explicit="${explicitValue}" signal="${signalValue}"`,
             );
           }
-          return false;
+          break;
+        }
+
+        // Check if this matching literal represents a non-default parameter value
+        // (for forcing child route selection later)
+        if (explicitValue === childSegment.value && connection) {
+          const defaultValue = connection.getDefaultValue();
+          if (explicitValue !== defaultValue) {
+            hasMatchingNonDefaultLiterals = true;
+          }
         }
       }
+    }
+
+    // Block incompatible child routes immediately
+    if (hasIncompatibleLiterals) {
+      return false;
     }
 
     // Check if child has active non-default signal values
@@ -739,40 +756,15 @@ export const createRoutePattern = (pattern) => {
 
     const hasNonDefaultProvidedParams = nonDefaultParams.length > 0;
 
-    // Check if user provided parameters that match child literal segments
-    // This forces child route selection when explicit params match child literals
-    // BUT only if the parameter is not a default value (we want clean URLs for defaults)
-    const childLiterals = childPatternObj.pattern.segments
-      .filter((seg) => seg.type === "literal")
-      .map((seg) => seg.value);
-
-    const hasMatchingLiteralParams = Object.entries(params).some(
-      ([paramName, paramValue]) => {
-        if (paramValue === undefined || !childLiterals.includes(paramValue)) {
-          return false;
-        }
-
-        // Check if this parameter value is NOT a default value
-        // If it's a default value, don't force child route selection for cleaner URLs
-        const parentConnection = connectionMap.get(paramName);
-        if (parentConnection) {
-          const parentDefault = parentConnection.getDefaultValue();
-          return paramValue !== parentDefault;
-        }
-
-        return true; // Non-connection parameters are considered non-default
-      },
-    );
-
     // Use child route if:
     // 1. Child has active non-default parameters, OR
     // 2. User provided non-default params AND child can be built completely, OR
-    // 3. User provided params that match child literal segments (even if they're defaults)
+    // 3. User provided params that match child literal segments AND are non-default values
     // EXCEPT: Don't use child if parent can produce cleaner URL by omitting defaults
     let shouldUse =
       hasActiveParams ||
       (hasNonDefaultProvidedParams && canBuildChildCompletely) ||
-      (hasMatchingLiteralParams && canBuildChildCompletely);
+      (hasMatchingNonDefaultLiterals && canBuildChildCompletely);
 
     if (DEBUG) {
       console.debug(
