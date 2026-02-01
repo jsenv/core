@@ -1515,4 +1515,49 @@ await snapshotTests(import.meta.url, ({ test }) => {
       setRouteIntegration(null);
     }
   });
+
+  test("deep signal update", () => {
+    const navToCalls = [];
+    setRouteIntegration({
+      navTo: (url) => {
+        navToCalls.push(url);
+        // Simulate real browser integration: update routes to reflect new URL
+        updateRoutes(url);
+      },
+    });
+
+    try {
+      const zoneSignal = stateSignal(undefined);
+      const panelSignal = stateSignal(undefined);
+      const sportSignal = stateSignal(false, { type: "boolean" });
+      const { MAP_FACILITIES_ROUTE } = setupRoutes({
+        HOME_ROUTE: "/",
+        MAP_ROUTE: `/map/?zone=${zoneSignal}`,
+        MAP_PANEL_ROUTE: `/map/:panel=${panelSignal}/`,
+        MAP_FACILITIES_ROUTE: `/map/facilities?sport=${sportSignal}`,
+        MAP_OVERVIEW_ROUTE: "/map/overview",
+      });
+      updateRoutes(`${baseUrl}/map/facilities?zone=paris`);
+      const afterInitialNav = {
+        current_url: MAP_FACILITIES_ROUTE.url,
+        sport_signal: sportSignal.value,
+        navToCalls: [...navToCalls],
+      };
+      navToCalls.length = 0;
+      sportSignal.value = true;
+      const afterSportTrue = {
+        current_url: MAP_FACILITIES_ROUTE.url,
+        sport_signal: sportSignal.value,
+        navToCalls: [...navToCalls],
+      };
+      return {
+        after_initial_nav: afterInitialNav,
+        after_sport_true: afterSportTrue,
+      };
+    } finally {
+      clearAllRoutes();
+      globalSignalRegistry.clear();
+      setRouteIntegration(null);
+    }
+  });
 });
