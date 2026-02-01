@@ -4,8 +4,8 @@
 // Mock browser integration to capture navigation calls
 let navToCalls = [];
 setBrowserIntegration({
-  navTo: (url, options = {}) => {
-    navToCalls.push({ url, options });
+  navTo: (url) => {
+    navToCalls.push(url);
     updateRoutes(url);
     return Promise.resolve();
   },
@@ -29,10 +29,7 @@ try {
     initialSignalValue: "electronics", // After URL parsing
     finalSignalValue: categorySignal.value, // After programmatic update
     navToCallsCount: navToCalls.length, // Should be 1 (Signal->URL only)
-    navToCalls: navToCalls.map((call) => ({
-      url: call.url,
-      options: call.options,
-    })),
+    navToCalls: navToCalls,
     routeMatching: CATEGORY_ROUTE.matching,
     routeParams: CATEGORY_ROUTE.params,
   };
@@ -49,12 +46,7 @@ try {
   "finalSignalValue": "books",
   "navToCallsCount": 1,
   "navToCalls": [
-    {
-      "url": "http://127.0.0.1/products?category=books",
-      "options": {
-        "replace": true
-      }
-    }
+    "http://127.0.0.1/products?category=books"
   ],
   "routeMatching": true,
   "routeParams": {

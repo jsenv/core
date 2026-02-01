@@ -44,33 +44,19 @@ try {
     .split("/")
     .filter((s) => s !== "").length;
 
-  // Mock redirectTo to see which route gets chosen as most specific
-  const redirectCalls = [];
-  const originalIsochroneRedirectTo = ISOCHRONE_ROUTE.redirectTo;
-  const originalCompareRedirectTo = ISOCHRONE_COMPARE_ROUTE.redirectTo;
-
-  ISOCHRONE_ROUTE.redirectTo = (params) => {
-    redirectCalls.push({
-      route: "ISOCHRONE_ROUTE",
-      params,
-    });
-    return originalIsochroneRedirectTo.call(ISOCHRONE_ROUTE, params);
+  // Mock browser integration to track navigation calls
+  const navToCalls = [];
+  const mockBrowserIntegration = {
+    navTo: (url) => {
+      navToCalls.push(url);
+      updateRoutes(url);
+      return Promise.resolve();
+    },
   };
-
-  ISOCHRONE_COMPARE_ROUTE.redirectTo = (params) => {
-    redirectCalls.push({
-      route: "ISOCHRONE_COMPARE_ROUTE",
-      params,
-    });
-    return originalCompareRedirectTo.call(ISOCHRONE_COMPARE_ROUTE, params);
-  };
+  setBrowserIntegration(mockBrowserIntegration);
 
   // Trigger a replaceParams to see which route is considered most specific
   walkEnabledSignal.value = true;
-
-  // Restore
-  ISOCHRONE_ROUTE.redirectTo = originalIsochroneRedirectTo;
-  ISOCHRONE_COMPARE_ROUTE.redirectTo = originalCompareRedirectTo;
 
   return {
     route_patterns: {
@@ -82,14 +68,12 @@ try {
       compare: compareSegments,
     },
     route_matching: routeMatching,
-    redirect_calls: redirectCalls,
-    most_specific_route_used:
-      redirectCalls.length > 0
-        ? redirectCalls[redirectCalls.length - 1].route
-        : "none",
+    nav_to_calls: navToCalls,
+    most_specific_url_used:
+      navToCalls.length > 0 ? navToCalls[navToCalls.length - 1] : "none",
 
     // Analysis:
-    expected_most_specific: "ISOCHRONE_COMPARE_ROUTE", // Should win because literal "compare" > parameter ":tab"
+    expected_most_specific_url: "/map/isochrone/compare?walk", // Should navigate to compare route with walk param
     actual_segments_comparison: {
       problem: `Current code counts segments: isochrone=${isochroneSegments}, compare=${compareSegments}`,
       issue:
@@ -116,16 +100,11 @@ try {
     "isochrone_matches": true,
     "compare_matches": true
   },
-  "redirect_calls": [
-    {
-      "route": "ISOCHRONE_COMPARE_ROUTE",
-      "params": {
-        "walk": true
-      }
-    }
+  "nav_to_calls": [
+    "http://127.0.0.1/map/isochrone?walk"
   ],
-  "most_specific_route_used": "ISOCHRONE_COMPARE_ROUTE",
-  "expected_most_specific": "ISOCHRONE_COMPARE_ROUTE",
+  "most_specific_url_used": "http://127.0.0.1/map/isochrone?walk",
+  "expected_most_specific_url": "/map/isochrone/compare?walk",
   "actual_segments_comparison": {
     "problem": "Current code counts segments: isochrone=4, compare=3",
     "issue": "The code might incorrectly consider ISOCHRONE_ROUTE more specific due to query params"

@@ -23,44 +23,19 @@ try {
     MAP_ISOCHRONE_ROUTE: `/map/isochrone?zoom=${zoomSignal}`,
   });
 
-  const redirectCalls = [];
-  const allRedirectCalls = []; // Track ALL redirects including during navigation
+  const navToCalls = [];
+  const allNavToCalls = []; // Track ALL navigation calls including during navigation
 
-  // Mock all redirectTo methods to track delegation
-  const mockRedirectTo = (routeName, originalRedirectTo) => (params) => {
-    const route =
-      routeName === "MAP_ROUTE"
-        ? MAP_ROUTE
-        : routeName === "MAP_PANEL_ROUTE"
-          ? MAP_PANEL_ROUTE
-          : MAP_ISOCHRONE_ROUTE;
-
-    const call = {
-      route: routeName,
-      params,
-      generatedUrl: route.buildUrl(params),
-    };
-
-    redirectCalls.push(call);
-    allRedirectCalls.push(call);
-    return originalRedirectTo.call(route, params);
+  // Mock browser integration to track navigation calls
+  const mockBrowserIntegration = {
+    navTo: (url) => {
+      navToCalls.push(url);
+      allNavToCalls.push(url);
+      updateRoutes(url);
+      return Promise.resolve();
+    },
   };
-
-  const originalMethods = {
-    map: MAP_ROUTE.redirectTo,
-    panel: MAP_PANEL_ROUTE.redirectTo,
-    isochrone: MAP_ISOCHRONE_ROUTE.redirectTo,
-  };
-
-  MAP_ROUTE.redirectTo = mockRedirectTo("MAP_ROUTE", originalMethods.map);
-  MAP_PANEL_ROUTE.redirectTo = mockRedirectTo(
-    "MAP_PANEL_ROUTE",
-    originalMethods.panel,
-  );
-  MAP_ISOCHRONE_ROUTE.redirectTo = mockRedirectTo(
-    "MAP_ISOCHRONE_ROUTE",
-    originalMethods.isochrone,
-  );
+  setBrowserIntegration(mockBrowserIntegration);
 
   // SCENARIO:
   // 1. Start at /map/isochrone?zoom=10 (panel signal = "isochrone")
@@ -79,8 +54,8 @@ try {
     },
   };
 
-  // Clear redirect history after navigation
-  redirectCalls.length = 0;
+  // Clear navigation history after navigation
+  navToCalls.length = 0;
 
   // 2. Navigate to /map?zoom=10 (but panel signal still = "isochrone")
   updateRoutes(`${baseUrl}/map?zoom=10`);
@@ -98,52 +73,30 @@ try {
     },
   };
 
-  // Clear redirect history after navigation
-  redirectCalls.length = 0;
+  // Clear navigation history after navigation
+  navToCalls.length = 0;
 
   // 3. Update zoom signal - this is where the bug should occur
   // If MAP_PANEL_ROUTE is still matching because panel="isochrone",
   // it might be considered "more specific" and redirect incorrectly
   zoomSignal.value = 25;
 
-  // Restore methods
-  Object.assign(MAP_ROUTE, { redirectTo: originalMethods.map });
-  Object.assign(MAP_PANEL_ROUTE, { redirectTo: originalMethods.panel });
-  Object.assign(MAP_ISOCHRONE_ROUTE, {
-    redirectTo: originalMethods.isochrone,
-  });
-
   return {
     after_isochrone_nav: afterIsochrone,
     after_map_nav: afterMap,
 
     // After signal update
-    signal_update_redirects: redirectCalls,
+    signal_update_nav_calls: navToCalls,
 
-    // Check for the bug: Should the panel route be involved when we're on /map?
-    panel_route_incorrectly_called: redirectCalls.some(
-      (call) => call.route === "MAP_PANEL_ROUTE",
-    ),
-    isochrone_route_incorrectly_called: redirectCalls.some(
-      (call) => call.route === "MAP_ISOCHRONE_ROUTE",
-    ),
-
-    // Expected: Only MAP_ROUTE should redirect to stay on /map
-    expected_route: "MAP_ROUTE",
+    // Expected: Should navigate to stay on /map
     expected_url_pattern: "/map?zoom=25",
 
     // Actual
-    actual_route:
-      redirectCalls.length > 0
-        ? redirectCalls[redirectCalls.length - 1].route
-        : "none",
     actual_url:
-      redirectCalls.length > 0
-        ? redirectCalls[redirectCalls.length - 1].generatedUrl
-        : "none",
+      navToCalls.length > 0 ? navToCalls[navToCalls.length - 1] : "none",
 
-    // Full redirect history for debugging
-    all_redirects_during_test: allRedirectCalls,
+    // Full navigation history for debugging
+    all_nav_calls_during_test: allNavToCalls,
 
     // Signal values at the end
     final_signal_values: {
@@ -183,29 +136,13 @@ try {
       "isochrone": false
     }
   },
-  "signal_update_redirects": [
-    {
-      "route": "MAP_ROUTE",
-      "params": {
-        "zoom": 25
-      },
-      "generatedUrl": "http://127.0.0.1/map?zoom=25"
-    }
+  "signal_update_nav_calls": [
+    "http://127.0.0.1/map?zoom=25"
   ],
-  "panel_route_incorrectly_called": false,
-  "isochrone_route_incorrectly_called": false,
-  "expected_route": "MAP_ROUTE",
   "expected_url_pattern": "/map?zoom=25",
-  "actual_route": "MAP_ROUTE",
   "actual_url": "http://127.0.0.1/map?zoom=25",
-  "all_redirects_during_test": [
-    {
-      "route": "MAP_ROUTE",
-      "params": {
-        "zoom": 25
-      },
-      "generatedUrl": "http://127.0.0.1/map?zoom=25"
-    }
+  "all_nav_calls_during_test": [
+    "http://127.0.0.1/map?zoom=25"
   ],
   "final_signal_values": {
     "zoom": 25,

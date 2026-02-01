@@ -1,11 +1,11 @@
 # [signal updates in child route (isochrone) with parent-child relationship](../../route_document_url_sync.test.js)
 
 ```js
-// Mock browserIntegration.navTo to track redirectTo calls
-const navToCalls = [];
+// Track navTo calls as URL progression
+const urlProgression = [];
 const mockBrowserIntegration = {
-  navTo: (url, options) => {
-    navToCalls.push({ url, options });
+  navTo: (url) => {
+    urlProgression.push(url);
   },
 };
 setBrowserIntegration(mockBrowserIntegration);
@@ -37,44 +37,44 @@ try {
     current_url: ISOCHRONE_COMPARE_ROUTE.url,
   };
 
-  // Clear redirect history before testing signal updates
-  navToCalls.length = 0;
+  // Clear URL progression before testing signal updates
+  urlProgression.length = 0;
   // Update enabled signal to true (non-default)
   walkEnabledSignal.value = true;
   const scenario2 = {
     enabled_signal: walkEnabledSignal.value,
     current_url: ISOCHRONE_COMPARE_ROUTE.url,
-    redirects_count: navToCalls.length,
+    nav_to_calls: [...urlProgression],
   };
 
-  // Clear redirect history
-  navToCalls.length = 0;
+  // Clear URL progression
+  urlProgression.length = 0;
   // Update minute signal
   walkMinuteSignal.value = 45;
   const scenario3 = {
     minute_signal: walkMinuteSignal.value,
     current_url: ISOCHRONE_COMPARE_ROUTE.url,
-    redirects_count: navToCalls.length,
+    nav_to_calls: [...urlProgression],
   };
 
-  // Clear redirect history
-  navToCalls.length = 0;
+  // Clear URL progression
+  urlProgression.length = 0;
   // Update enabled back to false (default)
   walkEnabledSignal.value = false;
   const scenario4 = {
     enabled_signal: walkEnabledSignal.value,
     current_url: ISOCHRONE_COMPARE_ROUTE.url,
-    redirects_count: navToCalls.length,
+    nav_to_calls: [...urlProgression],
   };
 
-  // Clear redirect history
-  navToCalls.length = 0;
+  // Clear URL progression
+  urlProgression.length = 0;
   // Update minute signal again
   walkMinuteSignal.value = 60;
   const scenario5 = {
     minute_signal: walkMinuteSignal.value,
     current_url: ISOCHRONE_COMPARE_ROUTE.url,
-    redirects_count: navToCalls.length,
+    nav_to_calls: [...urlProgression],
   };
 
   return {
@@ -101,22 +101,31 @@ try {
   "scenario2_enabled_true": {
     "enabled_signal": true,
     "current_url": "http://127.0.0.1/map/isochrone?zone=nice&iso_lon=10&walk",
-    "redirects_count": 1
+    "nav_to_calls": [
+      "http://127.0.0.1/map/isochrone?zone=nice&iso_lon=10&walk"
+    ]
   },
   "scenario3_minute_45": {
     "minute_signal": 45,
     "current_url": "http://127.0.0.1/map/isochrone?zone=nice&iso_lon=10&walk&walk_minute=45",
-    "redirects_count": 2
+    "nav_to_calls": [
+      "http://127.0.0.1/map/isochrone?zone=nice&iso_lon=10&walk&walk_minute=45",
+      "http://127.0.0.1/map/isochrone?zone=nice&iso_lon=10&walk&walk_minute=45"
+    ]
   },
   "scenario4_enabled_false": {
     "enabled_signal": false,
     "current_url": "http://127.0.0.1/map/isochrone?zone=nice&iso_lon=10&walk_minute=45",
-    "redirects_count": 1
+    "nav_to_calls": [
+      "http://127.0.0.1/map/isochrone?zone=nice&iso_lon=10&walk_minute=45"
+    ]
   },
   "scenario5_minute_60": {
     "minute_signal": 60,
     "current_url": "http://127.0.0.1/map/isochrone?zone=nice&iso_lon=10&walk_minute=60",
-    "redirects_count": 1
+    "nav_to_calls": [
+      "http://127.0.0.1/map/isochrone?zone=nice&iso_lon=10&walk_minute=60"
+    ]
   }
 }
 ```

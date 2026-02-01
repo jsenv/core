@@ -4,8 +4,8 @@
 // Mock browser integration to ensure no navigation calls are made
 let navToCalls = [];
 setBrowserIntegration({
-  navTo: (url, options = {}) => {
-    navToCalls.push({ url, options });
+  navTo: (url) => {
+    navToCalls.push(url);
     return Promise.resolve();
   },
 });

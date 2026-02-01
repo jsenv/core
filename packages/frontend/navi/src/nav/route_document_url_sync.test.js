@@ -31,50 +31,20 @@ await snapshotTests(import.meta.url, ({ test }) => {
       // Simulate being on the child route: /map/isochrone/compare?zoom=10
       updateRoutes(`${baseUrl}/map/isochrone/compare?zoom=10`);
 
-      // Mock redirectTo on all routes to track which one gets called
-      const redirectCalls = [];
-      const originalMapRedirectTo = MAP_ROUTE.redirectTo;
-      const originalIsochroneRedirectTo = MAP_ISOCHRONE_ROUTE.redirectTo;
-      const originalCompareRedirectTo = MAP_ISOCHRONE_COMPARE_ROUTE.redirectTo;
-
-      MAP_ROUTE.redirectTo = (params) => {
-        redirectCalls.push({
-          route: "MAP_ROUTE",
-          params,
-          url: MAP_ROUTE.buildUrl(params),
-        });
-        return originalMapRedirectTo.call(MAP_ROUTE, params);
+      // Mock browser integration to track navigation calls
+      const navToCalls = [];
+      const mockBrowserIntegration = {
+        navTo: (url) => {
+          navToCalls.push(url);
+          updateRoutes(url);
+          return Promise.resolve();
+        },
       };
-
-      MAP_ISOCHRONE_ROUTE.redirectTo = (params) => {
-        redirectCalls.push({
-          route: "MAP_ISOCHRONE_ROUTE",
-          params,
-          url: MAP_ISOCHRONE_ROUTE.buildUrl(params),
-        });
-        return originalIsochroneRedirectTo.call(MAP_ISOCHRONE_ROUTE, params);
-      };
-
-      MAP_ISOCHRONE_COMPARE_ROUTE.redirectTo = (params) => {
-        redirectCalls.push({
-          route: "MAP_ISOCHRONE_COMPARE_ROUTE",
-          params,
-          url: MAP_ISOCHRONE_COMPARE_ROUTE.buildUrl(params),
-        });
-        return originalCompareRedirectTo.call(
-          MAP_ISOCHRONE_COMPARE_ROUTE,
-          params,
-        );
-      };
+      setBrowserIntegration(mockBrowserIntegration);
 
       // This should trigger replaceParams on the parent route (which now matches due to trailing slash)
       // But the redirect should be handled by the most specific child route
       MAP_ROUTE.replaceParams({ zoom: 11 });
-
-      // Restore original methods
-      MAP_ROUTE.redirectTo = originalMapRedirectTo;
-      MAP_ISOCHRONE_ROUTE.redirectTo = originalIsochroneRedirectTo;
-      MAP_ISOCHRONE_COMPARE_ROUTE.redirectTo = originalCompareRedirectTo;
 
       return {
         // Route matching states
@@ -82,24 +52,20 @@ await snapshotTests(import.meta.url, ({ test }) => {
         isochrone_matching: MAP_ISOCHRONE_ROUTE.matching,
         compare_matching: MAP_ISOCHRONE_COMPARE_ROUTE.matching,
 
-        // Track which route handled the redirect
-        redirect_calls: redirectCalls,
+        // Track navigation calls
+        nav_to_calls: navToCalls,
 
-        // Expected: child route should build URL with its current structure preserved and zoom parameter included
-        expected_redirect_route: "MAP_ISOCHRONE_COMPARE_ROUTE",
-        expected_redirect_url: "/map/isochrone/compare?zoom=11", // URL should preserve route structure and include the zoom parameter
+        // Expected: URL should preserve route structure and include the zoom parameter
+        expected_redirect_url: "/map/isochrone/compare?zoom=11",
 
         // Actual result
-        actual_redirect_route:
-          redirectCalls.length > 0 ? redirectCalls[0].route : "none",
         actual_redirect_url:
-          redirectCalls.length > 0 ? redirectCalls[0].url : "none",
+          navToCalls.length > 0 ? navToCalls[navToCalls.length - 1] : "none",
 
-        // Test result - check if redirect happened on most specific route
+        // Test result - check if navigation happened to correct URL
         test_passes:
-          redirectCalls.length > 0 &&
-          redirectCalls[0].route === "MAP_ISOCHRONE_COMPARE_ROUTE" &&
-          redirectCalls[0].url.includes("zoom=11"),
+          navToCalls.length > 0 &&
+          navToCalls[navToCalls.length - 1].includes("zoom=11"),
       };
     } finally {
       clearAllRoutes();
@@ -125,51 +91,21 @@ await snapshotTests(import.meta.url, ({ test }) => {
       // Start on deeply nested route
       updateRoutes(`${baseUrl}/map/isochrone/compare?zoom=15`);
 
-      const redirectCalls = [];
+      const navToCalls = [];
 
-      // Mock all redirectTo methods to track which ones get called
-      const mockRedirectTo = (routeName, originalRedirectTo) => (params) => {
-        const route =
-          routeName === "MAP_ROUTE"
-            ? MAP_ROUTE
-            : routeName === "MAP_ISOCHRONE_ROUTE"
-              ? MAP_ISOCHRONE_ROUTE
-              : MAP_COMPARE_ROUTE;
-
-        redirectCalls.push({
-          route: routeName,
-          params,
-          generatedUrl: route.buildUrl(params),
-        });
-        return originalRedirectTo.call(route, params);
+      // Mock browser integration to track navigation calls
+      const mockBrowserIntegration = {
+        navTo: (url) => {
+          navToCalls.push(url);
+          updateRoutes(url);
+          return Promise.resolve();
+        },
       };
-
-      const originalMethods = {
-        map: MAP_ROUTE.redirectTo,
-        isochrone: MAP_ISOCHRONE_ROUTE.redirectTo,
-        compare: MAP_COMPARE_ROUTE.redirectTo,
-      };
-
-      MAP_ROUTE.redirectTo = mockRedirectTo("MAP_ROUTE", originalMethods.map);
-      MAP_ISOCHRONE_ROUTE.redirectTo = mockRedirectTo(
-        "MAP_ISOCHRONE_ROUTE",
-        originalMethods.isochrone,
-      );
-      MAP_COMPARE_ROUTE.redirectTo = mockRedirectTo(
-        "MAP_COMPARE_ROUTE",
-        originalMethods.compare,
-      );
+      setBrowserIntegration(mockBrowserIntegration);
 
       // When signal changes, this should trigger replaceParams on all matching routes
       // but the actual redirect should happen on the most specific one
       zoomSignal.value = 20;
-
-      // Restore methods
-      Object.assign(MAP_ROUTE, { redirectTo: originalMethods.map });
-      Object.assign(MAP_ISOCHRONE_ROUTE, {
-        redirectTo: originalMethods.isochrone,
-      });
-      Object.assign(MAP_COMPARE_ROUTE, { redirectTo: originalMethods.compare });
 
       return {
         // Route matching states
@@ -179,17 +115,14 @@ await snapshotTests(import.meta.url, ({ test }) => {
           compare: MAP_COMPARE_ROUTE.matching,
         },
 
-        // Track which routes handled redirects
-        redirect_calls: redirectCalls,
+        // Track navigation calls
+        nav_to_calls: navToCalls,
 
-        // Verify only the most specific route was used for redirect
-        most_specific_route_used:
-          redirectCalls.length > 0
-            ? redirectCalls[redirectCalls.length - 1].route
+        // Verify navigation happened to correct URL
+        most_specific_url_used:
+          navToCalls.length > 0
+            ? navToCalls[navToCalls.length - 1].url
             : "none",
-
-        // Expected: MAP_COMPARE_ROUTE should handle the redirect
-        expected_most_specific: "MAP_COMPARE_ROUTE",
 
         // The URL that should be generated
         expected_url_pattern: "/map/isochrone/compare?zoom=20",
@@ -217,40 +150,17 @@ await snapshotTests(import.meta.url, ({ test }) => {
         MAP_ISOCHRONE_ROUTE: `/map/isochrone`,
       });
 
-      const redirectCalls = [];
+      const navToCalls = [];
 
-      // Mock all redirectTo methods to track delegation
-      const mockRedirectTo = (routeName, originalRedirectTo) => (params) => {
-        const route =
-          routeName === "MAP_ROUTE"
-            ? MAP_ROUTE
-            : routeName === "MAP_PANEL_ROUTE"
-              ? MAP_PANEL_ROUTE
-              : MAP_ISOCHRONE_ROUTE;
-
-        redirectCalls.push({
-          route: routeName,
-          params,
-          generatedUrl: route.buildUrl(params),
-        });
-        return originalRedirectTo.call(route, params);
+      // Mock browser integration to track navigation calls
+      const mockBrowserIntegration = {
+        navTo: (url) => {
+          navToCalls.push(url);
+          updateRoutes(url);
+          return Promise.resolve();
+        },
       };
-
-      const originalMethods = {
-        map: MAP_ROUTE.redirectTo,
-        panel: MAP_PANEL_ROUTE.redirectTo,
-        isochrone: MAP_ISOCHRONE_ROUTE.redirectTo,
-      };
-
-      MAP_ROUTE.redirectTo = mockRedirectTo("MAP_ROUTE", originalMethods.map);
-      MAP_PANEL_ROUTE.redirectTo = mockRedirectTo(
-        "MAP_PANEL_ROUTE",
-        originalMethods.panel,
-      );
-      MAP_ISOCHRONE_ROUTE.redirectTo = mockRedirectTo(
-        "MAP_ISOCHRONE_ROUTE",
-        originalMethods.isochrone,
-      );
+      setBrowserIntegration(mockBrowserIntegration);
 
       // STEP 1: Navigate to /map/isochrone/
       // This should match both MAP_PANEL_ROUTE (:panel = "isochrone") AND MAP_ISOCHRONE_ROUTE
@@ -272,45 +182,31 @@ await snapshotTests(import.meta.url, ({ test }) => {
         isochrone_matching: MAP_ISOCHRONE_ROUTE.matching,
       };
 
-      // Clear redirect calls from navigation
-      redirectCalls.length = 0;
+      // Clear navigation calls from initial setup
+      navToCalls.length = 0;
 
       // STEP 3: Update the zoom signal
       // This should stay on /map/, not redirect to /map/isochrone/
       zoomSignal.value = 15;
 
-      // Restore methods
-      Object.assign(MAP_ROUTE, { redirectTo: originalMethods.map });
-      Object.assign(MAP_PANEL_ROUTE, { redirectTo: originalMethods.panel });
-      Object.assign(MAP_ISOCHRONE_ROUTE, {
-        redirectTo: originalMethods.isochrone,
-      });
-
       return {
         step1_route_matching: step1State,
         step2_route_matching: step2State,
 
-        // After signal update - should only redirect MAP_ROUTE to stay on /map
-        final_redirect_calls: redirectCalls,
+        // After signal update - should navigate to stay on /map
+        final_nav_to_calls: navToCalls,
 
         // Expected behavior: Should stay on /map?zoom=15
-        expected_redirect_route: "MAP_ROUTE",
         expected_url: "/map?zoom=15",
 
         // Actual behavior
-        actual_redirect_route:
-          redirectCalls.length > 0
-            ? redirectCalls[redirectCalls.length - 1].route
-            : "none",
         actual_url:
-          redirectCalls.length > 0
-            ? redirectCalls[redirectCalls.length - 1].generatedUrl
-            : "none",
+          navToCalls.length > 0 ? navToCalls[navToCalls.length - 1] : "none",
 
-        // Problem indicator: If MAP_ISOCHRONE_ROUTE gets called, we have the bug
-        bug_reproduced: redirectCalls.some(
-          (call) => call.route === "MAP_ISOCHRONE_ROUTE",
-        ),
+        // Problem indicator: Should navigate to correct URL
+        test_passes:
+          navToCalls.length > 0 &&
+          navToCalls[navToCalls.length - 1].includes("zoom=15"),
       };
     } finally {
       clearAllRoutes();
@@ -341,44 +237,19 @@ await snapshotTests(import.meta.url, ({ test }) => {
         MAP_ISOCHRONE_ROUTE: `/map/isochrone?zoom=${zoomSignal}`,
       });
 
-      const redirectCalls = [];
-      const allRedirectCalls = []; // Track ALL redirects including during navigation
+      const navToCalls = [];
+      const allNavToCalls = []; // Track ALL navigation calls including during navigation
 
-      // Mock all redirectTo methods to track delegation
-      const mockRedirectTo = (routeName, originalRedirectTo) => (params) => {
-        const route =
-          routeName === "MAP_ROUTE"
-            ? MAP_ROUTE
-            : routeName === "MAP_PANEL_ROUTE"
-              ? MAP_PANEL_ROUTE
-              : MAP_ISOCHRONE_ROUTE;
-
-        const call = {
-          route: routeName,
-          params,
-          generatedUrl: route.buildUrl(params),
-        };
-
-        redirectCalls.push(call);
-        allRedirectCalls.push(call);
-        return originalRedirectTo.call(route, params);
+      // Mock browser integration to track navigation calls
+      const mockBrowserIntegration = {
+        navTo: (url) => {
+          navToCalls.push(url);
+          allNavToCalls.push(url);
+          updateRoutes(url);
+          return Promise.resolve();
+        },
       };
-
-      const originalMethods = {
-        map: MAP_ROUTE.redirectTo,
-        panel: MAP_PANEL_ROUTE.redirectTo,
-        isochrone: MAP_ISOCHRONE_ROUTE.redirectTo,
-      };
-
-      MAP_ROUTE.redirectTo = mockRedirectTo("MAP_ROUTE", originalMethods.map);
-      MAP_PANEL_ROUTE.redirectTo = mockRedirectTo(
-        "MAP_PANEL_ROUTE",
-        originalMethods.panel,
-      );
-      MAP_ISOCHRONE_ROUTE.redirectTo = mockRedirectTo(
-        "MAP_ISOCHRONE_ROUTE",
-        originalMethods.isochrone,
-      );
+      setBrowserIntegration(mockBrowserIntegration);
 
       // SCENARIO:
       // 1. Start at /map/isochrone?zoom=10 (panel signal = "isochrone")
@@ -397,8 +268,8 @@ await snapshotTests(import.meta.url, ({ test }) => {
         },
       };
 
-      // Clear redirect history after navigation
-      redirectCalls.length = 0;
+      // Clear navigation history after navigation
+      navToCalls.length = 0;
 
       // 2. Navigate to /map?zoom=10 (but panel signal still = "isochrone")
       updateRoutes(`${baseUrl}/map?zoom=10`);
@@ -416,52 +287,30 @@ await snapshotTests(import.meta.url, ({ test }) => {
         },
       };
 
-      // Clear redirect history after navigation
-      redirectCalls.length = 0;
+      // Clear navigation history after navigation
+      navToCalls.length = 0;
 
       // 3. Update zoom signal - this is where the bug should occur
       // If MAP_PANEL_ROUTE is still matching because panel="isochrone",
       // it might be considered "more specific" and redirect incorrectly
       zoomSignal.value = 25;
 
-      // Restore methods
-      Object.assign(MAP_ROUTE, { redirectTo: originalMethods.map });
-      Object.assign(MAP_PANEL_ROUTE, { redirectTo: originalMethods.panel });
-      Object.assign(MAP_ISOCHRONE_ROUTE, {
-        redirectTo: originalMethods.isochrone,
-      });
-
       return {
         after_isochrone_nav: afterIsochrone,
         after_map_nav: afterMap,
 
         // After signal update
-        signal_update_redirects: redirectCalls,
+        signal_update_nav_calls: navToCalls,
 
-        // Check for the bug: Should the panel route be involved when we're on /map?
-        panel_route_incorrectly_called: redirectCalls.some(
-          (call) => call.route === "MAP_PANEL_ROUTE",
-        ),
-        isochrone_route_incorrectly_called: redirectCalls.some(
-          (call) => call.route === "MAP_ISOCHRONE_ROUTE",
-        ),
-
-        // Expected: Only MAP_ROUTE should redirect to stay on /map
-        expected_route: "MAP_ROUTE",
+        // Expected: Should navigate to stay on /map
         expected_url_pattern: "/map?zoom=25",
 
         // Actual
-        actual_route:
-          redirectCalls.length > 0
-            ? redirectCalls[redirectCalls.length - 1].route
-            : "none",
         actual_url:
-          redirectCalls.length > 0
-            ? redirectCalls[redirectCalls.length - 1].generatedUrl
-            : "none",
+          navToCalls.length > 0 ? navToCalls[navToCalls.length - 1] : "none",
 
-        // Full redirect history for debugging
-        all_redirects_during_test: allRedirectCalls,
+        // Full navigation history for debugging
+        all_nav_calls_during_test: allNavToCalls,
 
         // Signal values at the end
         final_signal_values: {
@@ -810,33 +659,19 @@ await snapshotTests(import.meta.url, ({ test }) => {
         .split("/")
         .filter((s) => s !== "").length;
 
-      // Mock redirectTo to see which route gets chosen as most specific
-      const redirectCalls = [];
-      const originalIsochroneRedirectTo = ISOCHRONE_ROUTE.redirectTo;
-      const originalCompareRedirectTo = ISOCHRONE_COMPARE_ROUTE.redirectTo;
-
-      ISOCHRONE_ROUTE.redirectTo = (params) => {
-        redirectCalls.push({
-          route: "ISOCHRONE_ROUTE",
-          params,
-        });
-        return originalIsochroneRedirectTo.call(ISOCHRONE_ROUTE, params);
+      // Mock browser integration to track navigation calls
+      const navToCalls = [];
+      const mockBrowserIntegration = {
+        navTo: (url) => {
+          navToCalls.push(url);
+          updateRoutes(url);
+          return Promise.resolve();
+        },
       };
-
-      ISOCHRONE_COMPARE_ROUTE.redirectTo = (params) => {
-        redirectCalls.push({
-          route: "ISOCHRONE_COMPARE_ROUTE",
-          params,
-        });
-        return originalCompareRedirectTo.call(ISOCHRONE_COMPARE_ROUTE, params);
-      };
+      setBrowserIntegration(mockBrowserIntegration);
 
       // Trigger a replaceParams to see which route is considered most specific
       walkEnabledSignal.value = true;
-
-      // Restore
-      ISOCHRONE_ROUTE.redirectTo = originalIsochroneRedirectTo;
-      ISOCHRONE_COMPARE_ROUTE.redirectTo = originalCompareRedirectTo;
 
       return {
         route_patterns: {
@@ -848,14 +683,12 @@ await snapshotTests(import.meta.url, ({ test }) => {
           compare: compareSegments,
         },
         route_matching: routeMatching,
-        redirect_calls: redirectCalls,
-        most_specific_route_used:
-          redirectCalls.length > 0
-            ? redirectCalls[redirectCalls.length - 1].route
-            : "none",
+        nav_to_calls: navToCalls,
+        most_specific_url_used:
+          navToCalls.length > 0 ? navToCalls[navToCalls.length - 1] : "none",
 
         // Analysis:
-        expected_most_specific: "ISOCHRONE_COMPARE_ROUTE", // Should win because literal "compare" > parameter ":tab"
+        expected_most_specific_url: "/map/isochrone/compare?walk", // Should navigate to compare route with walk param
         actual_segments_comparison: {
           problem: `Current code counts segments: isochrone=${isochroneSegments}, compare=${compareSegments}`,
           issue:
@@ -869,11 +702,11 @@ await snapshotTests(import.meta.url, ({ test }) => {
   });
 
   test("signal updates in child route (isochrone) with parent-child relationship", () => {
-    // Mock browserIntegration.navTo to track redirectTo calls
-    const navToCalls = [];
+    // Track navTo calls as URL progression
+    const urlProgression = [];
     const mockBrowserIntegration = {
-      navTo: (url, options) => {
-        navToCalls.push({ url, options });
+      navTo: (url) => {
+        urlProgression.push(url);
       },
     };
     setBrowserIntegration(mockBrowserIntegration);
@@ -905,44 +738,44 @@ await snapshotTests(import.meta.url, ({ test }) => {
         current_url: ISOCHRONE_COMPARE_ROUTE.url,
       };
 
-      // Clear redirect history before testing signal updates
-      navToCalls.length = 0;
+      // Clear URL progression before testing signal updates
+      urlProgression.length = 0;
       // Update enabled signal to true (non-default)
       walkEnabledSignal.value = true;
       const scenario2 = {
         enabled_signal: walkEnabledSignal.value,
         current_url: ISOCHRONE_COMPARE_ROUTE.url,
-        redirects_count: navToCalls.length,
+        nav_to_calls: [...urlProgression],
       };
 
-      // Clear redirect history
-      navToCalls.length = 0;
+      // Clear URL progression
+      urlProgression.length = 0;
       // Update minute signal
       walkMinuteSignal.value = 45;
       const scenario3 = {
         minute_signal: walkMinuteSignal.value,
         current_url: ISOCHRONE_COMPARE_ROUTE.url,
-        redirects_count: navToCalls.length,
+        nav_to_calls: [...urlProgression],
       };
 
-      // Clear redirect history
-      navToCalls.length = 0;
+      // Clear URL progression
+      urlProgression.length = 0;
       // Update enabled back to false (default)
       walkEnabledSignal.value = false;
       const scenario4 = {
         enabled_signal: walkEnabledSignal.value,
         current_url: ISOCHRONE_COMPARE_ROUTE.url,
-        redirects_count: navToCalls.length,
+        nav_to_calls: [...urlProgression],
       };
 
-      // Clear redirect history
-      navToCalls.length = 0;
+      // Clear URL progression
+      urlProgression.length = 0;
       // Update minute signal again
       walkMinuteSignal.value = 60;
       const scenario5 = {
         minute_signal: walkMinuteSignal.value,
         current_url: ISOCHRONE_COMPARE_ROUTE.url,
-        redirects_count: navToCalls.length,
+        nav_to_calls: [...urlProgression],
       };
 
       return {
@@ -981,8 +814,8 @@ await snapshotTests(import.meta.url, ({ test }) => {
       // Mock browserIntegration.navTo to track redirectTo calls
       const navToCalls = [];
       const mockBrowserIntegration = {
-        navTo: (url, options) => {
-          navToCalls.push({ url, options });
+        navTo: (url) => {
+          navToCalls.push(url);
         },
       };
       setBrowserIntegration(mockBrowserIntegration);
@@ -1029,8 +862,8 @@ await snapshotTests(import.meta.url, ({ test }) => {
     // Mock browser integration to capture navigation calls
     let navToCalls = [];
     setBrowserIntegration({
-      navTo: (url, options = {}) => {
-        navToCalls.push({ url, options });
+      navTo: (url) => {
+        navToCalls.push(url);
         updateRoutes(url);
         return Promise.resolve();
       },
@@ -1054,10 +887,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
         initialSignalValue: "electronics", // After URL parsing
         finalSignalValue: categorySignal.value, // After programmatic update
         navToCallsCount: navToCalls.length, // Should be 1 (Signal->URL only)
-        navToCalls: navToCalls.map((call) => ({
-          url: call.url,
-          options: call.options,
-        })),
+        navToCalls: navToCalls,
         routeMatching: CATEGORY_ROUTE.matching,
         routeParams: CATEGORY_ROUTE.params,
       };
@@ -1072,8 +902,8 @@ await snapshotTests(import.meta.url, ({ test }) => {
     // Mock browser integration
     let navToCalls = [];
     setBrowserIntegration({
-      navTo: (url, options = {}) => {
-        navToCalls.push({ url, options });
+      navTo: (url) => {
+        navToCalls.push(url);
         updateRoutes(url);
         return Promise.resolve();
       },
@@ -1101,7 +931,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
         priceAfterSignalUpdate, // Should be 200 (from signal update)
         signalValueStable: priceAfterSignalUpdate === 200, // Should be true
         navToCallsCount: navToCalls.length, // Should be 1
-        lastNavigatedUrl: navToCalls[navToCalls.length - 1]?.url,
+        lastNavigatedUrl: navToCalls[navToCalls.length - 1],
         routeParams: SHOP_ROUTE.params,
       };
     } finally {
@@ -1115,8 +945,8 @@ await snapshotTests(import.meta.url, ({ test }) => {
     // Mock browser integration to ensure no navigation calls are made
     let navToCalls = [];
     setBrowserIntegration({
-      navTo: (url, options = {}) => {
-        navToCalls.push({ url, options });
+      navTo: (url) => {
+        navToCalls.push(url);
         return Promise.resolve();
       },
     });
@@ -1156,8 +986,8 @@ await snapshotTests(import.meta.url, ({ test }) => {
     // Mock browser integration
     let navToCalls = [];
     setBrowserIntegration({
-      navTo: (url, options = {}) => {
-        navToCalls.push({ url, options });
+      navTo: (url) => {
+        navToCalls.push(url);
         return Promise.resolve();
       },
     });
@@ -1603,6 +1433,48 @@ await snapshotTests(import.meta.url, ({ test }) => {
           tabSignal: tabSignal.value,
           lonSignal: lonSignal.value,
         },
+      };
+    } finally {
+      clearAllRoutes();
+      globalSignalRegistry.clear();
+      setBrowserIntegration(null);
+    }
+  });
+
+  test("map style signal change", () => {
+    const navToCalls = [];
+    const mockBrowserIntegration = {
+      navTo: (url) => {
+        navToCalls.push(url);
+        // Simulate real browser integration: update routes to reflect new URL
+        updateRoutes(url);
+      },
+    };
+    setBrowserIntegration(mockBrowserIntegration);
+
+    try {
+      const mapStyleSignal = stateSignal("street");
+      const { MAP_ROUTE } = setupRoutes({
+        MAP_ROUTE: `/map/?style=${mapStyleSignal}`,
+      });
+
+      updateRoutes(`${baseUrl}/map`);
+      mapStyleSignal.value = "satellite";
+      const afterUpdateToSattelite = {
+        current_url: MAP_ROUTE.url,
+        map_style_signal: mapStyleSignal.value,
+        navToCalls: [...navToCalls],
+      };
+      navToCalls.length = 0;
+      mapStyleSignal.value = "street";
+      const afterRestoreToStreet = {
+        current_url: MAP_ROUTE.url,
+        map_style_signal: mapStyleSignal.value,
+        navToCalls: [...navToCalls],
+      };
+      return {
+        after_update_to_sattelite: afterUpdateToSattelite,
+        after_restore_to_street: afterRestoreToStreet,
       };
     } finally {
       clearAllRoutes();

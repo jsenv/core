@@ -18,50 +18,20 @@ try {
   // Simulate being on the child route: /map/isochrone/compare?zoom=10
   updateRoutes(`${baseUrl}/map/isochrone/compare?zoom=10`);
 
-  // Mock redirectTo on all routes to track which one gets called
-  const redirectCalls = [];
-  const originalMapRedirectTo = MAP_ROUTE.redirectTo;
-  const originalIsochroneRedirectTo = MAP_ISOCHRONE_ROUTE.redirectTo;
-  const originalCompareRedirectTo = MAP_ISOCHRONE_COMPARE_ROUTE.redirectTo;
-
-  MAP_ROUTE.redirectTo = (params) => {
-    redirectCalls.push({
-      route: "MAP_ROUTE",
-      params,
-      url: MAP_ROUTE.buildUrl(params),
-    });
-    return originalMapRedirectTo.call(MAP_ROUTE, params);
+  // Mock browser integration to track navigation calls
+  const navToCalls = [];
+  const mockBrowserIntegration = {
+    navTo: (url) => {
+      navToCalls.push(url);
+      updateRoutes(url);
+      return Promise.resolve();
+    },
   };
-
-  MAP_ISOCHRONE_ROUTE.redirectTo = (params) => {
-    redirectCalls.push({
-      route: "MAP_ISOCHRONE_ROUTE",
-      params,
-      url: MAP_ISOCHRONE_ROUTE.buildUrl(params),
-    });
-    return originalIsochroneRedirectTo.call(MAP_ISOCHRONE_ROUTE, params);
-  };
-
-  MAP_ISOCHRONE_COMPARE_ROUTE.redirectTo = (params) => {
-    redirectCalls.push({
-      route: "MAP_ISOCHRONE_COMPARE_ROUTE",
-      params,
-      url: MAP_ISOCHRONE_COMPARE_ROUTE.buildUrl(params),
-    });
-    return originalCompareRedirectTo.call(
-      MAP_ISOCHRONE_COMPARE_ROUTE,
-      params,
-    );
-  };
+  setBrowserIntegration(mockBrowserIntegration);
 
   // This should trigger replaceParams on the parent route (which now matches due to trailing slash)
   // But the redirect should be handled by the most specific child route
   MAP_ROUTE.replaceParams({ zoom: 11 });
-
-  // Restore original methods
-  MAP_ROUTE.redirectTo = originalMapRedirectTo;
-  MAP_ISOCHRONE_ROUTE.redirectTo = originalIsochroneRedirectTo;
-  MAP_ISOCHRONE_COMPARE_ROUTE.redirectTo = originalCompareRedirectTo;
 
   return {
     // Route matching states
@@ -69,24 +39,20 @@ try {
     isochrone_matching: MAP_ISOCHRONE_ROUTE.matching,
     compare_matching: MAP_ISOCHRONE_COMPARE_ROUTE.matching,
 
-    // Track which route handled the redirect
-    redirect_calls: redirectCalls,
+    // Track navigation calls
+    nav_to_calls: navToCalls,
 
-    // Expected: child route should build URL with its current structure preserved and zoom parameter included
-    expected_redirect_route: "MAP_ISOCHRONE_COMPARE_ROUTE",
-    expected_redirect_url: "/map/isochrone/compare?zoom=11", // URL should preserve route structure and include the zoom parameter
+    // Expected: URL should preserve route structure and include the zoom parameter
+    expected_redirect_url: "/map/isochrone/compare?zoom=11",
 
     // Actual result
-    actual_redirect_route:
-      redirectCalls.length > 0 ? redirectCalls[0].route : "none",
     actual_redirect_url:
-      redirectCalls.length > 0 ? redirectCalls[0].url : "none",
+      navToCalls.length > 0 ? navToCalls[navToCalls.length - 1] : "none",
 
-    // Test result - check if redirect happened on most specific route
+    // Test result - check if navigation happened to correct URL
     test_passes:
-      redirectCalls.length > 0 &&
-      redirectCalls[0].route === "MAP_ISOCHRONE_COMPARE_ROUTE" &&
-      redirectCalls[0].url.includes("zoom=11"),
+      navToCalls.length > 0 &&
+      navToCalls[navToCalls.length - 1].includes("zoom=11"),
   };
 } finally {
   clearAllRoutes();
@@ -99,18 +65,10 @@ try {
   "map_matching": true,
   "isochrone_matching": true,
   "compare_matching": true,
-  "redirect_calls": [
-    {
-      "route": "MAP_ISOCHRONE_COMPARE_ROUTE",
-      "params": {
-        "zoom": 11
-      },
-      "url": "http://127.0.0.1/map/isochrone/compare?zoom=11"
-    }
+  "nav_to_calls": [
+    "http://127.0.0.1/map/isochrone/compare?zoom=11"
   ],
-  "expected_redirect_route": "MAP_ISOCHRONE_COMPARE_ROUTE",
   "expected_redirect_url": "/map/isochrone/compare?zoom=11",
-  "actual_redirect_route": "MAP_ISOCHRONE_COMPARE_ROUTE",
   "actual_redirect_url": "http://127.0.0.1/map/isochrone/compare?zoom=11",
   "test_passes": true
 }

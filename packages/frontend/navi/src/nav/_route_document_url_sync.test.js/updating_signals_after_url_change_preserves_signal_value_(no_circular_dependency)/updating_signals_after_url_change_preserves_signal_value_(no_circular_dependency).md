@@ -4,8 +4,8 @@
 // Mock browser integration
 let navToCalls = [];
 setBrowserIntegration({
-  navTo: (url, options = {}) => {
-    navToCalls.push({ url, options });
+  navTo: (url) => {
+    navToCalls.push(url);
     updateRoutes(url);
     return Promise.resolve();
   },
@@ -33,7 +33,7 @@ try {
     priceAfterSignalUpdate, // Should be 200 (from signal update)
     signalValueStable: priceAfterSignalUpdate === 200, // Should be true
     navToCallsCount: navToCalls.length, // Should be 1
-    lastNavigatedUrl: navToCalls[navToCalls.length - 1]?.url,
+    lastNavigatedUrl: navToCalls[navToCalls.length - 1],
     routeParams: SHOP_ROUTE.params,
   };
 } finally {

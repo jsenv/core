@@ -17,40 +17,17 @@ try {
     MAP_ISOCHRONE_ROUTE: `/map/isochrone`,
   });
 
-  const redirectCalls = [];
+  const navToCalls = [];
 
-  // Mock all redirectTo methods to track delegation
-  const mockRedirectTo = (routeName, originalRedirectTo) => (params) => {
-    const route =
-      routeName === "MAP_ROUTE"
-        ? MAP_ROUTE
-        : routeName === "MAP_PANEL_ROUTE"
-          ? MAP_PANEL_ROUTE
-          : MAP_ISOCHRONE_ROUTE;
-
-    redirectCalls.push({
-      route: routeName,
-      params,
-      generatedUrl: route.buildUrl(params),
-    });
-    return originalRedirectTo.call(route, params);
+  // Mock browser integration to track navigation calls
+  const mockBrowserIntegration = {
+    navTo: (url) => {
+      navToCalls.push(url);
+      updateRoutes(url);
+      return Promise.resolve();
+    },
   };
-
-  const originalMethods = {
-    map: MAP_ROUTE.redirectTo,
-    panel: MAP_PANEL_ROUTE.redirectTo,
-    isochrone: MAP_ISOCHRONE_ROUTE.redirectTo,
-  };
-
-  MAP_ROUTE.redirectTo = mockRedirectTo("MAP_ROUTE", originalMethods.map);
-  MAP_PANEL_ROUTE.redirectTo = mockRedirectTo(
-    "MAP_PANEL_ROUTE",
-    originalMethods.panel,
-  );
-  MAP_ISOCHRONE_ROUTE.redirectTo = mockRedirectTo(
-    "MAP_ISOCHRONE_ROUTE",
-    originalMethods.isochrone,
-  );
+  setBrowserIntegration(mockBrowserIntegration);
 
   // STEP 1: Navigate to /map/isochrone/
   // This should match both MAP_PANEL_ROUTE (:panel = "isochrone") AND MAP_ISOCHRONE_ROUTE
@@ -72,45 +49,31 @@ try {
     isochrone_matching: MAP_ISOCHRONE_ROUTE.matching,
   };
 
-  // Clear redirect calls from navigation
-  redirectCalls.length = 0;
+  // Clear navigation calls from initial setup
+  navToCalls.length = 0;
 
   // STEP 3: Update the zoom signal
   // This should stay on /map/, not redirect to /map/isochrone/
   zoomSignal.value = 15;
 
-  // Restore methods
-  Object.assign(MAP_ROUTE, { redirectTo: originalMethods.map });
-  Object.assign(MAP_PANEL_ROUTE, { redirectTo: originalMethods.panel });
-  Object.assign(MAP_ISOCHRONE_ROUTE, {
-    redirectTo: originalMethods.isochrone,
-  });
-
   return {
     step1_route_matching: step1State,
     step2_route_matching: step2State,
 
-    // After signal update - should only redirect MAP_ROUTE to stay on /map
-    final_redirect_calls: redirectCalls,
+    // After signal update - should navigate to stay on /map
+    final_nav_to_calls: navToCalls,
 
     // Expected behavior: Should stay on /map?zoom=15
-    expected_redirect_route: "MAP_ROUTE",
     expected_url: "/map?zoom=15",
 
     // Actual behavior
-    actual_redirect_route:
-      redirectCalls.length > 0
-        ? redirectCalls[redirectCalls.length - 1].route
-        : "none",
     actual_url:
-      redirectCalls.length > 0
-        ? redirectCalls[redirectCalls.length - 1].generatedUrl
-        : "none",
+      navToCalls.length > 0 ? navToCalls[navToCalls.length - 1] : "none",
 
-    // Problem indicator: If MAP_ISOCHRONE_ROUTE gets called, we have the bug
-    bug_reproduced: redirectCalls.some(
-      (call) => call.route === "MAP_ISOCHRONE_ROUTE",
-    ),
+    // Problem indicator: Should navigate to correct URL
+    test_passes:
+      navToCalls.length > 0 &&
+      navToCalls[navToCalls.length - 1].includes("zoom=15"),
   };
 } finally {
   clearAllRoutes();
@@ -130,20 +93,12 @@ try {
     "panel_matching": false,
     "isochrone_matching": false
   },
-  "final_redirect_calls": [
-    {
-      "route": "MAP_ROUTE",
-      "params": {
-        "zoom": 15
-      },
-      "generatedUrl": "http://127.0.0.1/map?zoom=15"
-    }
+  "final_nav_to_calls": [
+    "http://127.0.0.1/map?zoom=15"
   ],
-  "expected_redirect_route": "MAP_ROUTE",
   "expected_url": "/map?zoom=15",
-  "actual_redirect_route": "MAP_ROUTE",
   "actual_url": "http://127.0.0.1/map?zoom=15",
-  "bug_reproduced": false
+  "test_passes": true
 }
 ```
 

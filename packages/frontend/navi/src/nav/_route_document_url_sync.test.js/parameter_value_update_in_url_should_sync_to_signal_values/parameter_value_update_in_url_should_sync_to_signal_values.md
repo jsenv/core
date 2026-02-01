@@ -22,8 +22,8 @@ try {
   // Mock browserIntegration.navTo to track redirectTo calls
   const navToCalls = [];
   const mockBrowserIntegration = {
-    navTo: (url, options) => {
-      navToCalls.push({ url, options });
+    navTo: (url) => {
+      navToCalls.push(url);
     },
   };
   setBrowserIntegration(mockBrowserIntegration);

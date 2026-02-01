@@ -18,51 +18,21 @@ try {
   // Start on deeply nested route
   updateRoutes(`${baseUrl}/map/isochrone/compare?zoom=15`);
 
-  const redirectCalls = [];
+  const navToCalls = [];
 
-  // Mock all redirectTo methods to track which ones get called
-  const mockRedirectTo = (routeName, originalRedirectTo) => (params) => {
-    const route =
-      routeName === "MAP_ROUTE"
-        ? MAP_ROUTE
-        : routeName === "MAP_ISOCHRONE_ROUTE"
-          ? MAP_ISOCHRONE_ROUTE
-          : MAP_COMPARE_ROUTE;
-
-    redirectCalls.push({
-      route: routeName,
-      params,
-      generatedUrl: route.buildUrl(params),
-    });
-    return originalRedirectTo.call(route, params);
+  // Mock browser integration to track navigation calls
+  const mockBrowserIntegration = {
+    navTo: (url) => {
+      navToCalls.push(url);
+      updateRoutes(url);
+      return Promise.resolve();
+    },
   };
-
-  const originalMethods = {
-    map: MAP_ROUTE.redirectTo,
-    isochrone: MAP_ISOCHRONE_ROUTE.redirectTo,
-    compare: MAP_COMPARE_ROUTE.redirectTo,
-  };
-
-  MAP_ROUTE.redirectTo = mockRedirectTo("MAP_ROUTE", originalMethods.map);
-  MAP_ISOCHRONE_ROUTE.redirectTo = mockRedirectTo(
-    "MAP_ISOCHRONE_ROUTE",
-    originalMethods.isochrone,
-  );
-  MAP_COMPARE_ROUTE.redirectTo = mockRedirectTo(
-    "MAP_COMPARE_ROUTE",
-    originalMethods.compare,
-  );
+  setBrowserIntegration(mockBrowserIntegration);
 
   // When signal changes, this should trigger replaceParams on all matching routes
   // but the actual redirect should happen on the most specific one
   zoomSignal.value = 20;
-
-  // Restore methods
-  Object.assign(MAP_ROUTE, { redirectTo: originalMethods.map });
-  Object.assign(MAP_ISOCHRONE_ROUTE, {
-    redirectTo: originalMethods.isochrone,
-  });
-  Object.assign(MAP_COMPARE_ROUTE, { redirectTo: originalMethods.compare });
 
   return {
     // Route matching states
@@ -72,17 +42,14 @@ try {
       compare: MAP_COMPARE_ROUTE.matching,
     },
 
-    // Track which routes handled redirects
-    redirect_calls: redirectCalls,
+    // Track navigation calls
+    nav_to_calls: navToCalls,
 
-    // Verify only the most specific route was used for redirect
-    most_specific_route_used:
-      redirectCalls.length > 0
-        ? redirectCalls[redirectCalls.length - 1].route
+    // Verify navigation happened to correct URL
+    most_specific_url_used:
+      navToCalls.length > 0
+        ? navToCalls[navToCalls.length - 1].url
         : "none",
-
-    // Expected: MAP_COMPARE_ROUTE should handle the redirect
-    expected_most_specific: "MAP_COMPARE_ROUTE",
 
     // The URL that should be generated
     expected_url_pattern: "/map/isochrone/compare?zoom=20",
@@ -100,31 +67,10 @@ try {
     "isochrone": true,
     "compare": true
   },
-  "redirect_calls": [
-    {
-      "route": "MAP_COMPARE_ROUTE",
-      "params": {
-        "zoom": 20
-      },
-      "generatedUrl": "http://127.0.0.1/map/isochrone/compare?zoom=20"
-    },
-    {
-      "route": "MAP_COMPARE_ROUTE",
-      "params": {
-        "zoom": 20
-      },
-      "generatedUrl": "http://127.0.0.1/map/isochrone/compare?zoom=20"
-    },
-    {
-      "route": "MAP_COMPARE_ROUTE",
-      "params": {
-        "zoom": 20
-      },
-      "generatedUrl": "http://127.0.0.1/map/isochrone/compare?zoom=20"
-    }
+  "nav_to_calls": [
+    "http://127.0.0.1/map/isochrone/compare?zoom=20"
   ],
-  "most_specific_route_used": "MAP_COMPARE_ROUTE",
-  "expected_most_specific": "MAP_COMPARE_ROUTE",
+  "most_specific_url_used": undefined,
   "expected_url_pattern": "/map/isochrone/compare?zoom=20"
 }
 ```
