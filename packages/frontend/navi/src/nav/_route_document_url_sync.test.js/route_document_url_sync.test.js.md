@@ -26,6 +26,7 @@
 - [map style signal change](map_style_signal_change/map_style_signal_change.md)
 - [map style signal change advanced](map_style_signal_change_advanced/map_style_signal_change_advanced.md)
 - [deep signal update](deep_signal_update/deep_signal_update.md)
+- [step parameter should prevent redundant navigation calls](step_parameter_should_prevent_redundant_navigation_calls/step_parameter_should_prevent_redundant_navigation_calls.md)
 
 ---
 
