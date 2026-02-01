@@ -3,7 +3,7 @@
 ```js
 try {
   const signal = stateSignal(1.0, { type: "number", step: 0.1 });
-  
+
   const results = [];
   results.push({ description: "initial", value: signal.value });
 

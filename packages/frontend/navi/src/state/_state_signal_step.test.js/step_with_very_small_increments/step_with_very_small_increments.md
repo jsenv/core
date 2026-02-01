@@ -4,17 +4,26 @@
 try {
   // Test precision with very small steps
   const microSignal = stateSignal(0, { type: "number", step: 0.001 });
-  
+
   const results = [];
 
   microSignal.value = 0.0015; // Should round to 0.002
-  results.push({ description: "0.0015 with step 0.001", value: microSignal.value });
+  results.push({
+    description: "0.0015 with step 0.001",
+    value: microSignal.value,
+  });
 
   microSignal.value = 0.0014; // Should round to 0.001
-  results.push({ description: "0.0014 with step 0.001", value: microSignal.value });
+  results.push({
+    description: "0.0014 with step 0.001",
+    value: microSignal.value,
+  });
 
   microSignal.value = 1.2345678; // Should round to 1.235
-  results.push({ description: "1.2345678 with step 0.001", value: microSignal.value });
+  results.push({
+    description: "1.2345678 with step 0.001",
+    value: microSignal.value,
+  });
 
   return { results };
 } finally {

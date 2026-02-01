@@ -3,21 +3,22 @@
 ```js
 try {
   const signal = stateSignal(1.0, { type: "number", step: 0.1 });
-  
+
   const effectCalls = [];
   let effectRunCount = 0;
-  
-  // Subscribe to signal changes
-  signal.subscribe(() => {
+
+  // Use effect to track signal changes
+  const disposeEffect = effect(() => {
+    const currentValue = signal.value; // This tracks the signal
     effectRunCount++;
     effectCalls.push({
       run: effectRunCount,
-      value: signal.value,
-      timestamp: Date.now()
+      value: currentValue,
+      timestamp: Date.now(),
     });
   });
 
-  // Initial subscription call
+  // Initial effect call
   const initialEffectCount = effectRunCount;
 
   // Set values that should round to the same result
@@ -35,6 +36,8 @@ try {
   signal.value = 1.13; // Rounds to 1.1 (same as current 1.1)
   const afterSameFinalValueCount = effectRunCount;
 
+  disposeEffect();
+
   return {
     initial_effect_count: initialEffectCount,
     after_same_value_count: afterSameValueCount,
@@ -42,7 +45,10 @@ try {
     after_different_value_count: afterDifferentValueCount,
     after_same_final_value_count: afterSameFinalValueCount,
     total_effect_calls: effectCalls.length,
-    effect_calls: effectCalls.map(call => ({ run: call.run, value: call.value }))
+    effect_calls: effectCalls.map((call) => ({
+      run: call.run,
+      value: call.value,
+    })),
   };
 } finally {
   globalSignalRegistry.clear();

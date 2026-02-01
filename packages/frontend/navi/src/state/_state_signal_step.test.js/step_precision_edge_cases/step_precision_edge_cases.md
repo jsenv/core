@@ -3,7 +3,7 @@
 ```js
 try {
   const signal = stateSignal(0, { type: "number", step: 0.1 });
-  
+
   const results = [];
 
   // Test values near zero

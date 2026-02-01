@@ -4,27 +4,39 @@
 try {
   // String signal with step should be ignored
   const stringSignal = stateSignal("hello", { type: "string", step: 0.1 });
-  
+
   // Number signal without step should pass through
   const plainNumberSignal = stateSignal(3.14159, { type: "number" });
-  
+
   // Boolean signal with step should be ignored
   const boolSignal = stateSignal(true, { type: "boolean", step: 1 });
 
   const results = [];
 
   stringSignal.value = "world";
-  results.push({ description: "string with step", value: stringSignal.value });
+  results.push({
+    description: "string with step",
+    value: stringSignal.value,
+  });
 
   plainNumberSignal.value = 2.71828;
-  results.push({ description: "number without step", value: plainNumberSignal.value });
+  results.push({
+    description: "number without step",
+    value: plainNumberSignal.value,
+  });
 
   boolSignal.value = false;
-  results.push({ description: "boolean with step", value: boolSignal.value });
+  results.push({
+    description: "boolean with step",
+    value: boolSignal.value,
+  });
 
   // Test setting number values on string signal (should pass through)
   stringSignal.value = 1.234;
-  results.push({ description: "string signal with number", value: stringSignal.value });
+  results.push({
+    description: "string signal with number",
+    value: stringSignal.value,
+  });
 
   return { results };
 } finally {

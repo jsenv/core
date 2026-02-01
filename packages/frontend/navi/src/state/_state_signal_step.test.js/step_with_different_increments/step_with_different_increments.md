@@ -4,33 +4,39 @@
 try {
   // Test step 0.01 (cents)
   const centSignal = stateSignal(19.99, { type: "number", step: 0.01 });
-  
+
   // Test step 1 (whole numbers)
   const wholeSignal = stateSignal(5, { type: "number", step: 1 });
-  
+
   // Test step 0.5 (half units)
   const halfSignal = stateSignal(2.5, { type: "number", step: 0.5 });
 
   const results = [];
-  
+
   // Cent precision
   centSignal.value = 19.999999;
-  results.push({ description: "cent step 19.999999", value: centSignal.value });
-  
+  results.push({
+    description: "cent step 19.999999",
+    value: centSignal.value,
+  });
+
   centSignal.value = 20.004;
-  results.push({ description: "cent step 20.004", value: centSignal.value });
-  
+  results.push({
+    description: "cent step 20.004",
+    value: centSignal.value,
+  });
+
   // Whole number precision
   wholeSignal.value = 5.7;
   results.push({ description: "whole step 5.7", value: wholeSignal.value });
-  
+
   wholeSignal.value = 5.3;
   results.push({ description: "whole step 5.3", value: wholeSignal.value });
-  
+
   // Half unit precision
   halfSignal.value = 2.3;
   results.push({ description: "half step 2.3", value: halfSignal.value });
-  
+
   halfSignal.value = 2.8;
   results.push({ description: "half step 2.8", value: halfSignal.value });
 

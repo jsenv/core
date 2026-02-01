@@ -2,33 +2,38 @@
 
 ```js
 try {
-  const sourceSignal = stateSignal(1.0, { type: "number", step: 0.1, id: "source" });
+  const sourceSignal = stateSignal(1.0, {
+    type: "number",
+    step: 0.1,
+    id: "source",
+  });
   const derivedValues = [];
   let computationCount = 0;
 
   // Create a derived computation that depends on the stepped signal
-  const unsubscribe = sourceSignal.subscribe(() => {
+  const disposeEffect = effect(() => {
+    const sourceValue = sourceSignal.value; // Track the signal
     computationCount++;
     derivedValues.push({
       computation: computationCount,
-      source_value: sourceSignal.value,
-      doubled: sourceSignal.value * 2
+      source_value: sourceValue,
+      doubled: sourceValue * 2,
     });
   });
 
   // Set values that should trigger different numbers of computations
   sourceSignal.value = 1.04; // Should round to 1.0, might not trigger
-  sourceSignal.value = 1.02; // Should round to 1.0, might not trigger  
+  sourceSignal.value = 1.02; // Should round to 1.0, might not trigger
   sourceSignal.value = 1.15; // Should round to 1.1, should trigger
   sourceSignal.value = 1.13; // Should round to 1.1, might not trigger
   sourceSignal.value = 1.25; // Should round to 1.3, should trigger
 
-  unsubscribe();
+  disposeEffect();
 
   return {
     total_computations: computationCount,
     derived_values: derivedValues,
-    final_source_value: sourceSignal.value
+    final_source_value: sourceSignal.value,
   };
 } finally {
   globalSignalRegistry.clear();

@@ -3,8 +3,12 @@
 ```js
 try {
   // Test that isDefaultValue works correctly with step rounding
-  const signal = stateSignal(1.0, { type: "number", step: 0.1, id: "stepDefault" });
-  
+  const signal = stateSignal(1.0, {
+    type: "number",
+    step: 0.1,
+    id: "stepDefault",
+  });
+
   // Get the registry entry to test isDefaultValue
   const registryEntry = globalSignalRegistry.get("stepDefault");
   const { isDefaultValue } = registryEntry.options;
@@ -12,30 +16,30 @@ try {
   const results = [];
 
   // Test default value detection with step
-  results.push({ 
-    description: "isDefaultValue(1.0)", 
-    result: isDefaultValue(1.0) 
+  results.push({
+    description: "isDefaultValue(1.0)",
+    result: isDefaultValue(1.0),
   });
 
   // Values that round to the default should be considered default
-  results.push({ 
-    description: "isDefaultValue(1.04) - rounds to 1.0", 
-    result: isDefaultValue(1.04) 
+  results.push({
+    description: "isDefaultValue(1.04) - rounds to 1.0",
+    result: isDefaultValue(1.04),
   });
 
   // Values that round to something else should not be default
-  results.push({ 
-    description: "isDefaultValue(1.15) - rounds to 1.1", 
-    result: isDefaultValue(1.15) 
+  results.push({
+    description: "isDefaultValue(1.15) - rounds to 1.1",
+    result: isDefaultValue(1.15),
   });
 
   // Change signal value and test again
   signal.value = 2.0;
-  results.push({ 
-    description: "after changing signal to 2.0", 
+  results.push({
+    description: "after changing signal to 2.0",
     signal_value: signal.value,
     isDefaultValue_1_0: isDefaultValue(1.0),
-    isDefaultValue_2_0: isDefaultValue(2.0)
+    isDefaultValue_2_0: isDefaultValue(2.0),
   });
 
   return { results };
