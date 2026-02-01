@@ -14,12 +14,11 @@ globalThis.window = {
 };
 
 const navToCalls = [];
-const mockBrowserIntegration = {
+setRouteIntegration({
   navTo: (url) => {
     navToCalls.push(url);
   },
-};
-setBrowserIntegration(mockBrowserIntegration);
+});
 
 try {
   // Create signal with persist: true to reproduce the localStorage issue
@@ -77,7 +76,7 @@ try {
   delete globalThis.window;
   clearAllRoutes();
   globalSignalRegistry.clear();
-  setBrowserIntegration(null);
+  setRouteIntegration(null);
 }
 ```
 

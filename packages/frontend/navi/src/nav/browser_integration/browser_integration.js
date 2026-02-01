@@ -2,8 +2,8 @@ import { useEffect, useRef } from "preact/hooks";
 
 import { updateActions } from "../../action/actions.js";
 import {
-  setBrowserIntegration,
   setOnRouteDefined,
+  setRouteIntegration,
   updateRoutes,
 } from "../route.js";
 import {
@@ -82,7 +82,7 @@ const browserIntegration = setupBrowserIntegrationViaHistory({
 setOnRouteDefined(() => {
   browserIntegration.init();
 });
-setBrowserIntegration(browserIntegration);
+setRouteIntegration(browserIntegration);
 
 export const actionIntegratedVia = browserIntegration.integration;
 export const navTo = (target, options) => {

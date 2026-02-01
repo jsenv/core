@@ -1,6 +1,15 @@
 # [parameter value update in URL should sync to signal values](../../route_document_url_sync.test.js)
 
 ```js
+// Mock browserIntegration.navTo to track redirectTo calls
+const navToCalls = [];
+const routeIntegrationMock = {
+  navTo: (url) => {
+    navToCalls.push(url);
+  },
+};
+setRouteIntegration(routeIntegrationMock);
+
 try {
   const zoneSignal = stateSignal("london");
   const lonSignal = stateSignal(3);
@@ -18,15 +27,6 @@ try {
     MAP_ISOCHRONE_COMPARE_ROUTE: `/map/isochrone/compare`,
     MAP_ISOCHRONE_TIME_ROUTE: `/map/isochrone/time/:mode=${isochroneTimeModeSignal}/`,
   });
-
-  // Mock browserIntegration.navTo to track redirectTo calls
-  const navToCalls = [];
-  const mockBrowserIntegration = {
-    navTo: (url) => {
-      navToCalls.push(url);
-    },
-  };
-  setBrowserIntegration(mockBrowserIntegration);
 
   updateRoutes(`${baseUrl}/map/isochrone?zone=london&lon=3&iso_lon=2`);
   // Capture initial state
@@ -60,7 +60,7 @@ try {
     },
   };
 } finally {
-  setBrowserIntegration(undefined);
+  setRouteIntegration(undefined);
   clearAllRoutes();
   globalSignalRegistry.clear();
 }

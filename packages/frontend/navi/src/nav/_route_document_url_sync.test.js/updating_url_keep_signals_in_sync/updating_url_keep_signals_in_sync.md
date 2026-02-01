@@ -3,7 +3,7 @@
 ```js
 // Mock browser integration to ensure no navigation calls are made
 let navToCalls = [];
-setBrowserIntegration({
+setRouteIntegration({
   navTo: (url) => {
     navToCalls.push(url);
     return Promise.resolve();
@@ -37,7 +37,7 @@ try {
 } finally {
   clearAllRoutes();
   globalSignalRegistry.clear();
-  setBrowserIntegration(undefined);
+  setRouteIntegration(undefined);
 }
 ```
 

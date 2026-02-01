@@ -20,14 +20,14 @@ try {
   const navToCalls = [];
 
   // Mock browser integration to track navigation calls
-  const mockBrowserIntegration = {
+  const routeIntegrationMock = {
     navTo: (url) => {
       navToCalls.push(url);
       updateRoutes(url);
       return Promise.resolve();
     },
   };
-  setBrowserIntegration(mockBrowserIntegration);
+  setRouteIntegration(routeIntegrationMock);
 
   // STEP 1: Navigate to /map/isochrone/
   // This should match both MAP_PANEL_ROUTE (:panel = "isochrone") AND MAP_ISOCHRONE_ROUTE

@@ -21,14 +21,14 @@ try {
   const navToCalls = [];
 
   // Mock browser integration to track navigation calls
-  const mockBrowserIntegration = {
+  const routeIntegrationMock = {
     navTo: (url) => {
       navToCalls.push(url);
       updateRoutes(url);
       return Promise.resolve();
     },
   };
-  setBrowserIntegration(mockBrowserIntegration);
+  setRouteIntegration(routeIntegrationMock);
 
   // When signal changes, this should trigger replaceParams on all matching routes
   // but the actual redirect should happen on the most specific one

@@ -2,12 +2,11 @@
 
 ```js
 const navToCalls = [];
-const mockBrowserIntegration = {
+setRouteIntegration({
   navTo: (url) => {
     navToCalls.push(url);
   },
-};
-setBrowserIntegration(mockBrowserIntegration);
+});
 
 try {
   const mapPanelSignal = stateSignal(undefined);
@@ -79,7 +78,7 @@ try {
 } finally {
   clearAllRoutes();
   globalSignalRegistry.clear();
-  setBrowserIntegration(null);
+  setRouteIntegration(null);
 }
 ```
 

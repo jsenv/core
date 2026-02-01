@@ -20,14 +20,14 @@ try {
 
   // Mock browser integration to track navigation calls
   const navToCalls = [];
-  const mockBrowserIntegration = {
+  const routeIntegrationMock = {
     navTo: (url) => {
       navToCalls.push(url);
       updateRoutes(url);
       return Promise.resolve();
     },
   };
-  setBrowserIntegration(mockBrowserIntegration);
+  setRouteIntegration(routeIntegrationMock);
 
   // This should trigger replaceParams on the parent route (which now matches due to trailing slash)
   // But the redirect should be handled by the most specific child route

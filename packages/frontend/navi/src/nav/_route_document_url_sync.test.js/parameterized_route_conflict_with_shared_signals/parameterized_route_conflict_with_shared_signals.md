@@ -25,17 +25,14 @@ try {
 
   const navToCalls = [];
   const allNavToCalls = []; // Track ALL navigation calls including during navigation
-
-  // Mock browser integration to track navigation calls
-  const mockBrowserIntegration = {
+  setRouteIntegration({
     navTo: (url) => {
       navToCalls.push(url);
       allNavToCalls.push(url);
       updateRoutes(url);
       return Promise.resolve();
     },
-  };
-  setBrowserIntegration(mockBrowserIntegration);
+  });
 
   // SCENARIO:
   // 1. Start at /map/isochrone?zoom=10 (panel signal = "isochrone")

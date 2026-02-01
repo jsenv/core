@@ -546,27 +546,23 @@ const registerRoute = (routePattern) => {
   }
 
   route.navTo = (params) => {
-    if (!browserIntegration) {
+    if (!integration) {
       if (import.meta.dev) {
-        console.warn(
-          `navTo called but browserIntegration not set for route ${route}`,
-        );
+        console.warn(`navTo called on "${route}" but integration not set`);
       }
       return Promise.resolve();
     }
     const routeUrl = route.buildUrl(params);
-    return browserIntegration.navTo(routeUrl);
+    return integration.navTo(routeUrl);
   };
   route.redirectTo = (params) => {
-    if (!browserIntegration) {
+    if (!integration) {
       if (import.meta.dev) {
-        console.warn(
-          `redirectTo called but browserIntegration not set for route ${route}`,
-        );
+        console.warn(`redirectTo called on "${route}" but integration not set`);
       }
       return Promise.resolve();
     }
-    return browserIntegration.navTo(route.buildUrl(params), {
+    return integration.navTo(route.buildUrl(params), {
       replace: true,
     });
   };
@@ -779,9 +775,9 @@ export const useRouteStatus = (route) => {
   };
 };
 
-let browserIntegration;
-export const setBrowserIntegration = (integration) => {
-  browserIntegration = integration;
+let integration;
+export const setRouteIntegration = (integrationInterface) => {
+  integration = integrationInterface;
 };
 let onRouteDefined = () => {};
 export const setOnRouteDefined = (v) => {

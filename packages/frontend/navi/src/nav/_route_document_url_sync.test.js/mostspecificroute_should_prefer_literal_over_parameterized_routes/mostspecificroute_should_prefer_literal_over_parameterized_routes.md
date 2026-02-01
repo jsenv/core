@@ -1,6 +1,16 @@
 # [mostSpecificRoute should prefer literal over parameterized routes](../../route_document_url_sync.test.js)
 
 ```js
+const navToCalls = [];
+const routeIntegrationMock = {
+  navTo: (url) => {
+    navToCalls.push(url);
+    updateRoutes(url);
+    return Promise.resolve();
+  },
+};
+setRouteIntegration(routeIntegrationMock);
+
 try {
   const walkEnabledSignal = stateSignal(false, {
     id: "mostSpecificWalkEnabled",
@@ -44,17 +54,6 @@ try {
     .split("/")
     .filter((s) => s !== "").length;
 
-  // Mock browser integration to track navigation calls
-  const navToCalls = [];
-  const mockBrowserIntegration = {
-    navTo: (url) => {
-      navToCalls.push(url);
-      updateRoutes(url);
-      return Promise.resolve();
-    },
-  };
-  setBrowserIntegration(mockBrowserIntegration);
-
   // Trigger a replaceParams to see which route is considered most specific
   walkEnabledSignal.value = true;
 
@@ -83,6 +82,7 @@ try {
 } finally {
   clearAllRoutes();
   globalSignalRegistry.clear();
+  setRouteIntegration(null);
 }
 ```
 

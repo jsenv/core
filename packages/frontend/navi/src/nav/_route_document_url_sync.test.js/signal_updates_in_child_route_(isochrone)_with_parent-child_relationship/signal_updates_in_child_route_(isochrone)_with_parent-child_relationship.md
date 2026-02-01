@@ -3,12 +3,12 @@
 ```js
 // Track navTo calls as URL progression
 const urlProgression = [];
-const mockBrowserIntegration = {
+const routeIntegrationMock = {
   navTo: (url) => {
     urlProgression.push(url);
   },
 };
-setBrowserIntegration(mockBrowserIntegration);
+setRouteIntegration(routeIntegrationMock);
 
 try {
   const walkEnabledSignal = stateSignal(false);
@@ -85,7 +85,7 @@ try {
     scenario5_minute_60: scenario5,
   };
 } finally {
-  setBrowserIntegration(undefined);
+  setRouteIntegration(undefined);
   clearAllRoutes();
   globalSignalRegistry.clear();
 }

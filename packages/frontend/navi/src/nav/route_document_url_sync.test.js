@@ -3,7 +3,7 @@ import { batch } from "@preact/signals";
 import { globalSignalRegistry, stateSignal } from "../state/state_signal.js";
 import {
   clearAllRoutes,
-  setBrowserIntegration,
+  setRouteIntegration,
   setupRoutes,
   updateRoutes,
 } from "./route.js";
@@ -33,14 +33,14 @@ await snapshotTests(import.meta.url, ({ test }) => {
 
       // Mock browser integration to track navigation calls
       const navToCalls = [];
-      const mockBrowserIntegration = {
+      const routeIntegrationMock = {
         navTo: (url) => {
           navToCalls.push(url);
           updateRoutes(url);
           return Promise.resolve();
         },
       };
-      setBrowserIntegration(mockBrowserIntegration);
+      setRouteIntegration(routeIntegrationMock);
 
       // This should trigger replaceParams on the parent route (which now matches due to trailing slash)
       // But the redirect should be handled by the most specific child route
@@ -94,14 +94,14 @@ await snapshotTests(import.meta.url, ({ test }) => {
       const navToCalls = [];
 
       // Mock browser integration to track navigation calls
-      const mockBrowserIntegration = {
+      const routeIntegrationMock = {
         navTo: (url) => {
           navToCalls.push(url);
           updateRoutes(url);
           return Promise.resolve();
         },
       };
-      setBrowserIntegration(mockBrowserIntegration);
+      setRouteIntegration(routeIntegrationMock);
 
       // When signal changes, this should trigger replaceParams on all matching routes
       // but the actual redirect should happen on the most specific one
@@ -151,14 +151,14 @@ await snapshotTests(import.meta.url, ({ test }) => {
       const navToCalls = [];
 
       // Mock browser integration to track navigation calls
-      const mockBrowserIntegration = {
+      const routeIntegrationMock = {
         navTo: (url) => {
           navToCalls.push(url);
           updateRoutes(url);
           return Promise.resolve();
         },
       };
-      setBrowserIntegration(mockBrowserIntegration);
+      setRouteIntegration(routeIntegrationMock);
 
       // STEP 1: Navigate to /map/isochrone/
       // This should match both MAP_PANEL_ROUTE (:panel = "isochrone") AND MAP_ISOCHRONE_ROUTE
@@ -237,17 +237,14 @@ await snapshotTests(import.meta.url, ({ test }) => {
 
       const navToCalls = [];
       const allNavToCalls = []; // Track ALL navigation calls including during navigation
-
-      // Mock browser integration to track navigation calls
-      const mockBrowserIntegration = {
+      setRouteIntegration({
         navTo: (url) => {
           navToCalls.push(url);
           allNavToCalls.push(url);
           updateRoutes(url);
           return Promise.resolve();
         },
-      };
-      setBrowserIntegration(mockBrowserIntegration);
+      });
 
       // SCENARIO:
       // 1. Start at /map/isochrone?zoom=10 (panel signal = "isochrone")
@@ -614,6 +611,16 @@ await snapshotTests(import.meta.url, ({ test }) => {
   });
 
   test("mostSpecificRoute should prefer literal over parameterized routes", () => {
+    const navToCalls = [];
+    const routeIntegrationMock = {
+      navTo: (url) => {
+        navToCalls.push(url);
+        updateRoutes(url);
+        return Promise.resolve();
+      },
+    };
+    setRouteIntegration(routeIntegrationMock);
+
     try {
       const walkEnabledSignal = stateSignal(false, {
         id: "mostSpecificWalkEnabled",
@@ -657,17 +664,6 @@ await snapshotTests(import.meta.url, ({ test }) => {
         .split("/")
         .filter((s) => s !== "").length;
 
-      // Mock browser integration to track navigation calls
-      const navToCalls = [];
-      const mockBrowserIntegration = {
-        navTo: (url) => {
-          navToCalls.push(url);
-          updateRoutes(url);
-          return Promise.resolve();
-        },
-      };
-      setBrowserIntegration(mockBrowserIntegration);
-
       // Trigger a replaceParams to see which route is considered most specific
       walkEnabledSignal.value = true;
 
@@ -696,18 +692,19 @@ await snapshotTests(import.meta.url, ({ test }) => {
     } finally {
       clearAllRoutes();
       globalSignalRegistry.clear();
+      setRouteIntegration(null);
     }
   });
 
   test("signal updates in child route (isochrone) with parent-child relationship", () => {
     // Track navTo calls as URL progression
     const urlProgression = [];
-    const mockBrowserIntegration = {
+    const routeIntegrationMock = {
       navTo: (url) => {
         urlProgression.push(url);
       },
     };
-    setBrowserIntegration(mockBrowserIntegration);
+    setRouteIntegration(routeIntegrationMock);
 
     try {
       const walkEnabledSignal = stateSignal(false);
@@ -784,13 +781,22 @@ await snapshotTests(import.meta.url, ({ test }) => {
         scenario5_minute_60: scenario5,
       };
     } finally {
-      setBrowserIntegration(undefined);
+      setRouteIntegration(undefined);
       clearAllRoutes();
       globalSignalRegistry.clear();
     }
   });
 
   test("parameter value update in URL should sync to signal values", () => {
+    // Mock browserIntegration.navTo to track redirectTo calls
+    const navToCalls = [];
+    const routeIntegrationMock = {
+      navTo: (url) => {
+        navToCalls.push(url);
+      },
+    };
+    setRouteIntegration(routeIntegrationMock);
+
     try {
       const zoneSignal = stateSignal("london");
       const lonSignal = stateSignal(3);
@@ -808,15 +814,6 @@ await snapshotTests(import.meta.url, ({ test }) => {
         MAP_ISOCHRONE_COMPARE_ROUTE: `/map/isochrone/compare`,
         MAP_ISOCHRONE_TIME_ROUTE: `/map/isochrone/time/:mode=${isochroneTimeModeSignal}/`,
       });
-
-      // Mock browserIntegration.navTo to track redirectTo calls
-      const navToCalls = [];
-      const mockBrowserIntegration = {
-        navTo: (url) => {
-          navToCalls.push(url);
-        },
-      };
-      setBrowserIntegration(mockBrowserIntegration);
 
       updateRoutes(`${baseUrl}/map/isochrone?zone=london&lon=3&iso_lon=2`);
       // Capture initial state
@@ -850,7 +847,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
         },
       };
     } finally {
-      setBrowserIntegration(undefined);
+      setRouteIntegration(undefined);
       clearAllRoutes();
       globalSignalRegistry.clear();
     }
@@ -859,7 +856,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
   test("updating signals keep url in sync", () => {
     // Mock browser integration to capture navigation calls
     let navToCalls = [];
-    setBrowserIntegration({
+    setRouteIntegration({
       navTo: (url) => {
         navToCalls.push(url);
         updateRoutes(url);
@@ -892,14 +889,14 @@ await snapshotTests(import.meta.url, ({ test }) => {
     } finally {
       clearAllRoutes();
       globalSignalRegistry.clear();
-      setBrowserIntegration(undefined);
+      setRouteIntegration(undefined);
     }
   });
 
   test("updating signals after url change preserves signal value (no circular dependency)", () => {
     // Mock browser integration
     let navToCalls = [];
-    setBrowserIntegration({
+    setRouteIntegration({
       navTo: (url) => {
         navToCalls.push(url);
         updateRoutes(url);
@@ -935,14 +932,14 @@ await snapshotTests(import.meta.url, ({ test }) => {
     } finally {
       clearAllRoutes();
       globalSignalRegistry.clear();
-      setBrowserIntegration(undefined);
+      setRouteIntegration(undefined);
     }
   });
 
   test("updating url keep signals in sync", () => {
     // Mock browser integration to ensure no navigation calls are made
     let navToCalls = [];
-    setBrowserIntegration({
+    setRouteIntegration({
       navTo: (url) => {
         navToCalls.push(url);
         return Promise.resolve();
@@ -976,14 +973,14 @@ await snapshotTests(import.meta.url, ({ test }) => {
     } finally {
       clearAllRoutes();
       globalSignalRegistry.clear();
-      setBrowserIntegration(undefined);
+      setRouteIntegration(undefined);
     }
   });
 
   test("updating url with missing parameters uses signal current values", () => {
     // Mock browser integration
     let navToCalls = [];
-    setBrowserIntegration({
+    setRouteIntegration({
       navTo: (url) => {
         navToCalls.push(url);
         return Promise.resolve();
@@ -1015,13 +1012,13 @@ await snapshotTests(import.meta.url, ({ test }) => {
     } finally {
       clearAllRoutes();
       globalSignalRegistry.clear();
-      setBrowserIntegration(undefined);
+      setRouteIntegration(undefined);
     }
   });
 
   test("updating boolean signal", () => {
     let urlProgression = [];
-    setBrowserIntegration({
+    setRouteIntegration({
       navTo: (url) => {
         urlProgression.push(url);
         updateRoutes(url);
@@ -1043,13 +1040,13 @@ await snapshotTests(import.meta.url, ({ test }) => {
     } finally {
       clearAllRoutes();
       globalSignalRegistry.clear();
-      setBrowserIntegration(undefined);
+      setRouteIntegration(undefined);
     }
   });
 
   test("updating with dynamic default", () => {
     const urlProgression = [];
-    setBrowserIntegration({
+    setRouteIntegration({
       navTo: (url) => {
         urlProgression.push(url);
         updateRoutes(url);
@@ -1097,13 +1094,13 @@ await snapshotTests(import.meta.url, ({ test }) => {
     } finally {
       clearAllRoutes();
       globalSignalRegistry.clear();
-      setBrowserIntegration(undefined);
+      setRouteIntegration(undefined);
     }
   });
 
   test("reset center", () => {
     const urlProgression = [];
-    setBrowserIntegration({
+    setRouteIntegration({
       navTo: (url) => {
         urlProgression.push(url);
         updateRoutes(url);
@@ -1186,7 +1183,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
     } finally {
       clearAllRoutes();
       globalSignalRegistry.clear();
-      setBrowserIntegration(undefined);
+      setRouteIntegration(undefined);
     }
   });
 
@@ -1204,12 +1201,11 @@ await snapshotTests(import.meta.url, ({ test }) => {
     };
 
     const navToCalls = [];
-    const mockBrowserIntegration = {
+    setRouteIntegration({
       navTo: (url) => {
         navToCalls.push(url);
       },
-    };
-    setBrowserIntegration(mockBrowserIntegration);
+    });
 
     try {
       // Create signal with persist: true to reproduce the localStorage issue
@@ -1267,18 +1263,17 @@ await snapshotTests(import.meta.url, ({ test }) => {
       delete globalThis.window;
       clearAllRoutes();
       globalSignalRegistry.clear();
-      setBrowserIntegration(null);
+      setRouteIntegration(null);
     }
   });
 
   test("signal update should stay on current route", () => {
     const navToCalls = [];
-    const mockBrowserIntegration = {
+    setRouteIntegration({
       navTo: (url) => {
         navToCalls.push(url);
       },
-    };
-    setBrowserIntegration(mockBrowserIntegration);
+    });
 
     try {
       const mapPanelSignal = stateSignal(undefined);
@@ -1350,18 +1345,17 @@ await snapshotTests(import.meta.url, ({ test }) => {
     } finally {
       clearAllRoutes();
       globalSignalRegistry.clear();
-      setBrowserIntegration(null);
+      setRouteIntegration(null);
     }
   });
 
   test("signal update should stay on current route (dynamic segment test)", () => {
     const navToCalls = [];
-    const mockBrowserIntegration = {
+    setRouteIntegration({
       navTo: (url) => {
         navToCalls.push(url);
       },
-    };
-    setBrowserIntegration(mockBrowserIntegration);
+    });
 
     try {
       const tabSignal = stateSignal(undefined);
@@ -1435,20 +1429,19 @@ await snapshotTests(import.meta.url, ({ test }) => {
     } finally {
       clearAllRoutes();
       globalSignalRegistry.clear();
-      setBrowserIntegration(null);
+      setRouteIntegration(null);
     }
   });
 
   test("map style signal change", () => {
     const navToCalls = [];
-    const mockBrowserIntegration = {
+    setRouteIntegration({
       navTo: (url) => {
         navToCalls.push(url);
         // Simulate real browser integration: update routes to reflect new URL
         updateRoutes(url);
       },
-    };
-    setBrowserIntegration(mockBrowserIntegration);
+    });
 
     try {
       const mapStyleSignal = stateSignal("street");
@@ -1477,20 +1470,19 @@ await snapshotTests(import.meta.url, ({ test }) => {
     } finally {
       clearAllRoutes();
       globalSignalRegistry.clear();
-      setBrowserIntegration(null);
+      setRouteIntegration(null);
     }
   });
 
   test("map style signal change advanced", () => {
     const navToCalls = [];
-    const mockBrowserIntegration = {
+    setRouteIntegration({
       navTo: (url) => {
         navToCalls.push(url);
         // Simulate real browser integration: update routes to reflect new URL
         updateRoutes(url);
       },
-    };
-    setBrowserIntegration(mockBrowserIntegration);
+    });
 
     try {
       const mapStyleSignal = stateSignal("street");
@@ -1520,7 +1512,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
     } finally {
       clearAllRoutes();
       globalSignalRegistry.clear();
-      setBrowserIntegration(null);
+      setRouteIntegration(null);
     }
   });
 });

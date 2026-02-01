@@ -2,7 +2,7 @@
 
 ```js
 const urlProgression = [];
-setBrowserIntegration({
+setRouteIntegration({
   navTo: (url) => {
     urlProgression.push(url);
     updateRoutes(url);
@@ -50,7 +50,7 @@ try {
 } finally {
   clearAllRoutes();
   globalSignalRegistry.clear();
-  setBrowserIntegration(undefined);
+  setRouteIntegration(undefined);
 }
 ```
 

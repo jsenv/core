@@ -2,14 +2,13 @@
 
 ```js
 const navToCalls = [];
-const mockBrowserIntegration = {
+setRouteIntegration({
   navTo: (url) => {
     navToCalls.push(url);
     // Simulate real browser integration: update routes to reflect new URL
     updateRoutes(url);
   },
-};
-setBrowserIntegration(mockBrowserIntegration);
+});
 
 try {
   const mapStyleSignal = stateSignal("street");
@@ -38,7 +37,7 @@ try {
 } finally {
   clearAllRoutes();
   globalSignalRegistry.clear();
-  setBrowserIntegration(null);
+  setRouteIntegration(null);
 }
 ```
 
