@@ -9,6 +9,15 @@ setRouteIntegration({
     return Promise.resolve();
   },
 });
+const mockStorage = new Map();
+globalThis.window = {
+  localStorage: {
+    getItem: (key) => mockStorage.get(key) || null,
+    setItem: (key, value) => mockStorage.set(key, value),
+    removeItem: (key) => mockStorage.delete(key),
+    clear: () => mockStorage.clear(),
+  },
+};
 
 try {
   // Define signals first so they're available in the callback
@@ -16,6 +25,7 @@ try {
   const mapLonSignal = stateSignal(zoneLonSignal, {
     default: -1,
     type: "float",
+    persists: true,
   });
   const isoLonSignal = stateSignal(zoneLonSignal, { type: "float" });
   const mapPanelSignal = stateSignal(undefined);
@@ -38,16 +48,22 @@ try {
 
   updateRoutes(`${baseUrl}/map/isochrone`);
   const stateAtStart = captureState();
-
   zoneLonSignal.value = 2;
   const stateAfterZoneChange = captureState();
+  mapLonSignal.value = 5;
+  const stateAfterMovingMap = captureState();
+  mapLonSignal.value = zoneLonSignal.value;
+  const stateAfterSyncingMapToZone = captureState();
 
   return {
     urlProgression,
     state_at_start: stateAtStart,
     state_after_zone_change: stateAfterZoneChange,
+    state_after_moving_map: stateAfterMovingMap,
+    state_after_syncing_map_to_zone: stateAfterSyncingMapToZone,
   };
 } finally {
+  delete globalThis.window;
   clearAllRoutes();
   globalSignalRegistry.clear();
   setRouteIntegration(undefined);
@@ -56,7 +72,10 @@ try {
 
 ```js
 {
-  "urlProgression": [],
+  "urlProgression": [
+    "http://127.0.0.1/map/isochrone?lon=5",
+    "http://127.0.0.1/map/isochrone"
+  ],
   "state_at_start": {
     "url": "http://127.0.0.1/map/isochrone",
     "signal_values": {
@@ -66,6 +85,22 @@ try {
     }
   },
   "state_after_zone_change": {
+    "url": "http://127.0.0.1/map/isochrone",
+    "signal_values": {
+      "zoneLon": 2,
+      "mapLon": 2,
+      "isoLon": 2
+    }
+  },
+  "state_after_moving_map": {
+    "url": "http://127.0.0.1/map/isochrone?lon=5",
+    "signal_values": {
+      "zoneLon": 2,
+      "mapLon": 5,
+      "isoLon": 2
+    }
+  },
+  "state_after_syncing_map_to_zone": {
     "url": "http://127.0.0.1/map/isochrone",
     "signal_values": {
       "zoneLon": 2,

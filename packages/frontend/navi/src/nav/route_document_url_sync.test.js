@@ -1053,6 +1053,15 @@ await snapshotTests(import.meta.url, ({ test }) => {
         return Promise.resolve();
       },
     });
+    const mockStorage = new Map();
+    globalThis.window = {
+      localStorage: {
+        getItem: (key) => mockStorage.get(key) || null,
+        setItem: (key, value) => mockStorage.set(key, value),
+        removeItem: (key) => mockStorage.delete(key),
+        clear: () => mockStorage.clear(),
+      },
+    };
 
     try {
       // Define signals first so they're available in the callback
@@ -1060,6 +1069,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
       const mapLonSignal = stateSignal(zoneLonSignal, {
         default: -1,
         type: "float",
+        persists: true,
       });
       const isoLonSignal = stateSignal(zoneLonSignal, { type: "float" });
       const mapPanelSignal = stateSignal(undefined);
@@ -1082,16 +1092,22 @@ await snapshotTests(import.meta.url, ({ test }) => {
 
       updateRoutes(`${baseUrl}/map/isochrone`);
       const stateAtStart = captureState();
-
       zoneLonSignal.value = 2;
       const stateAfterZoneChange = captureState();
+      mapLonSignal.value = 5;
+      const stateAfterMovingMap = captureState();
+      mapLonSignal.value = zoneLonSignal.value;
+      const stateAfterSyncingMapToZone = captureState();
 
       return {
         urlProgression,
         state_at_start: stateAtStart,
         state_after_zone_change: stateAfterZoneChange,
+        state_after_moving_map: stateAfterMovingMap,
+        state_after_syncing_map_to_zone: stateAfterSyncingMapToZone,
       };
     } finally {
+      delete globalThis.window;
       clearAllRoutes();
       globalSignalRegistry.clear();
       setRouteIntegration(undefined);
