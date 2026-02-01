@@ -887,7 +887,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
         initialSignalValue: "electronics", // After URL parsing
         finalSignalValue: categorySignal.value, // After programmatic update
         navToCallsCount: navToCalls.length, // Should be 1 (Signal->URL only)
-        navToCalls: navToCalls,
+        navToCalls,
         routeMatching: CATEGORY_ROUTE.matching,
         routeParams: CATEGORY_ROUTE.params,
       };
