@@ -24,6 +24,7 @@
 - [signal update should stay on current route](signal_update_should_stay_on_current_route/signal_update_should_stay_on_current_route.md)
 - [signal update should stay on current route (dynamic segment test)](signal_update_should_stay_on_current_route_(dynamic_segment_test)/signal_update_should_stay_on_current_route_(dynamic_segment_test).md)
 - [map style signal change](map_style_signal_change/map_style_signal_change.md)
+- [map style signal change advanced](map_style_signal_change_advanced/map_style_signal_change_advanced.md)
 
 ---
 

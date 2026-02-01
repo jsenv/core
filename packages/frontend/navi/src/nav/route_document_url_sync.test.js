@@ -1480,4 +1480,47 @@ await snapshotTests(import.meta.url, ({ test }) => {
       setBrowserIntegration(null);
     }
   });
+
+  test("map style signal change advanced", () => {
+    const navToCalls = [];
+    const mockBrowserIntegration = {
+      navTo: (url) => {
+        navToCalls.push(url);
+        // Simulate real browser integration: update routes to reflect new URL
+        updateRoutes(url);
+      },
+    };
+    setBrowserIntegration(mockBrowserIntegration);
+
+    try {
+      const mapStyleSignal = stateSignal("street");
+      const { MAP_ISOCHRONE_ROUTE } = setupRoutes({
+        MAP_ROUTE: `/map/?style=${mapStyleSignal}`,
+        MAP_ISOCHRONE_ROUTE: `/map/isochrone`,
+      });
+
+      updateRoutes(`${baseUrl}/map/isochrone`);
+      mapStyleSignal.value = "satellite";
+      const afterUpdateToSattelite = {
+        current_url: MAP_ISOCHRONE_ROUTE.url,
+        map_style_signal: mapStyleSignal.value,
+        navToCalls: [...navToCalls],
+      };
+      navToCalls.length = 0;
+      mapStyleSignal.value = "street";
+      const afterRestoreToStreet = {
+        current_url: MAP_ISOCHRONE_ROUTE.url,
+        map_style_signal: mapStyleSignal.value,
+        navToCalls: [...navToCalls],
+      };
+      return {
+        after_update_to_sattelite: afterUpdateToSattelite,
+        after_restore_to_street: afterRestoreToStreet,
+      };
+    } finally {
+      clearAllRoutes();
+      globalSignalRegistry.clear();
+      setBrowserIntegration(null);
+    }
+  });
 });
