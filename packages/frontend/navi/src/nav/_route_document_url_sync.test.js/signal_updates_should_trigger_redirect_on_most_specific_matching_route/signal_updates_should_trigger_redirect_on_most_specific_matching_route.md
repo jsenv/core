@@ -47,9 +47,7 @@ try {
 
     // Verify navigation happened to correct URL
     most_specific_url_used:
-      navToCalls.length > 0
-        ? navToCalls[navToCalls.length - 1].url
-        : "none",
+      navToCalls.length > 0 ? navToCalls[navToCalls.length - 1] : "none",
 
     // The URL that should be generated
     expected_url_pattern: "/map/isochrone/compare?zoom=20",
@@ -70,7 +68,7 @@ try {
   "nav_to_calls": [
     "http://127.0.0.1/map/isochrone/compare?zoom=20"
   ],
-  "most_specific_url_used": undefined,
+  "most_specific_url_used": "http://127.0.0.1/map/isochrone/compare?zoom=20",
   "expected_url_pattern": "/map/isochrone/compare?zoom=20"
 }
 ```

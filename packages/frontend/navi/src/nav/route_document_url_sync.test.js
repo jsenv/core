@@ -120,9 +120,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
 
         // Verify navigation happened to correct URL
         most_specific_url_used:
-          navToCalls.length > 0
-            ? navToCalls[navToCalls.length - 1].url
-            : "none",
+          navToCalls.length > 0 ? navToCalls[navToCalls.length - 1] : "none",
 
         // The URL that should be generated
         expected_url_pattern: "/map/isochrone/compare?zoom=20",
