@@ -11,6 +11,9 @@ import { resolveRouteUrl, setupPatterns } from "./route_pattern.js";
 
 const DEBUG = false;
 
+// Flag to prevent signal-to-URL synchronization during URL-to-signal synchronization
+let isUpdatingRoutesFromUrl = false;
+
 // Controls what happens to actions when their route stops matching:
 // 'abort' - Cancel the action immediately when route stops matching
 // 'keep-loading' - Allow action to continue running after route stops matching
@@ -106,6 +109,9 @@ export const updateRoutes = (
     }
 
     // URL -> Signal synchronization (moved from individual route effects to eliminate circular dependency)
+    // Prevent signal-to-URL synchronization during URL-to-signal synchronization
+    isUpdatingRoutesFromUrl = true;
+
     for (const {
       route,
       routePrivateProperties,
@@ -258,6 +264,9 @@ export const updateRoutes = (
       }
     }
   });
+
+  // Reset flag after URL -> Signal synchronization is complete
+  isUpdatingRoutesFromUrl = false;
 
   // must be after paramsSignal.value update to ensure the proxy target is set
   // (so after the batch call)
@@ -478,11 +487,18 @@ const registerRoute = (routePattern) => {
     }
     // Signal -> URL sync: When signal changes, update URL to reflect meaningful state
     // Only sync non-default values to keep URLs clean (static fallbacks stay invisible)
+    // eslint-disable-next-line no-loop-func
     effect(() => {
       const value = paramSignal.value;
       const params = rawParamsSignal.value;
       const urlParamValue = params[paramName];
       const matching = matchingSignal.value;
+
+      // Signal returned to default - clean up URL by removing the parameter
+      // Skip cleanup during URL-to-signal synchronization to prevent recursion
+      if (isUpdatingRoutesFromUrl) {
+        return;
+      }
 
       if (!matching) {
         // Route not matching, no URL sync needed
@@ -503,6 +519,19 @@ const registerRoute = (routePattern) => {
         route.replaceParams({ [paramName]: value });
         return;
       }
+
+      // URL parameter exists - check if we need to update or clean it up
+      const defaultValue = connection.getDefaultValue();
+      if (value === defaultValue) {
+        if (debug) {
+          console.debug(
+            `[route] Signal->URL: ${paramName} cleaning URL (removing default value ${value})`,
+          );
+        }
+        route.replaceParams({ [paramName]: undefined });
+        return;
+      }
+
       if (value === urlParamValue) {
         // Values already match, no sync needed
         return;

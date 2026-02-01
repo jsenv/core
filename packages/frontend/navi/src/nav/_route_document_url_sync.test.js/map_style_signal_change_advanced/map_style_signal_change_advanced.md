@@ -56,7 +56,7 @@ try {
     "current_url": "http://127.0.0.1/map/isochrone",
     "map_style_signal": "street",
     "navToCalls": [
-      "http://127.0.0.1/map/isochrone?style=street"
+      "http://127.0.0.1/map/isochrone"
     ]
   }
 }
