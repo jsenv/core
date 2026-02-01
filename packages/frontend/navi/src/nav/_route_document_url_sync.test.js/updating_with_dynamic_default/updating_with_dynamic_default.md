@@ -45,7 +45,6 @@ try {
       },
     };
   };
-
   updateRoutes(`${baseUrl}/map/isochrone`);
   const stateAtStart = captureState();
   zoneLonSignal.value = 2;
