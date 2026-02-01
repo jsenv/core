@@ -32,6 +32,11 @@ const routePreviousStateMap = new WeakMap();
 // Store abort controllers per action to control their lifecycle based on route state
 const actionAbortControllerWeakMap = new WeakMap();
 
+/**
+ * Get the isDefaultValue function for a signal from the registry
+ * @param {import("@preact/signals").Signal} signal
+ * @returns {Function}
+ */
 export const updateRoutes = (
   url,
   {
@@ -238,7 +243,7 @@ export const updateRoutes = (
           // No URL parameter - reset signal to its current default value
           // (handles both static fallback and dynamic default cases)
           const defaultValue = connection.getDefaultValue();
-          if (value === defaultValue) {
+          if (connection.isDefaultValue(value)) {
             // Signal already has correct default value, no sync needed
             continue;
           }
@@ -506,14 +511,13 @@ const registerRoute = (routePattern) => {
       }
       if (urlParamValue === undefined) {
         // No URL parameter exists - check if signal has meaningful value to add
-        const defaultValue = connection.getDefaultValue();
-        if (value === defaultValue) {
+        if (connection.isDefaultValue(value)) {
           // Signal using default value, keep URL clean (no parameter needed)
           return;
         }
         if (debug) {
           console.debug(
-            `[route] Signal->URL: ${paramName} adding custom value ${value} to URL (default: ${defaultValue})`,
+            `[route] Signal->URL: ${paramName} adding custom value ${value} to URL (default: ${connection.getDefaultValue()})`,
           );
         }
         route.replaceParams({ [paramName]: value });
@@ -521,8 +525,7 @@ const registerRoute = (routePattern) => {
       }
 
       // URL parameter exists - check if we need to update or clean it up
-      const defaultValue = connection.getDefaultValue();
-      if (value === defaultValue) {
+      if (connection.isDefaultValue(value)) {
         if (debug) {
           console.debug(
             `[route] Signal->URL: ${paramName} cleaning URL (removing default value ${value})`,

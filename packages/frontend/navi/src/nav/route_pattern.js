@@ -1970,7 +1970,7 @@ const checkIfLiteralCanBeOptionalWithPatternObj = (
 
   // Check current pattern's connections
   for (const connection of patternObj.connections) {
-    if (connection.getDefaultValue() === literalValue) {
+    if (connection.isDefaultValue(literalValue)) {
       return true;
     }
   }
@@ -1979,7 +1979,7 @@ const checkIfLiteralCanBeOptionalWithPatternObj = (
   let currentParent = patternObj.parent;
   while (currentParent) {
     for (const connection of currentParent.connections) {
-      if (connection.getDefaultValue() === literalValue) {
+      if (connection.isDefaultValue(literalValue)) {
         return true;
       }
     }
@@ -1990,7 +1990,7 @@ const checkIfLiteralCanBeOptionalWithPatternObj = (
   const checkChildrenRecursively = (pattern) => {
     for (const child of pattern.children || []) {
       for (const connection of child.connections) {
-        if (connection.getDefaultValue() === literalValue) {
+        if (connection.isDefaultValue(literalValue)) {
           return true;
         }
       }
