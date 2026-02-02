@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/navi",
-  "version": "0.16.38",
+  "version": "0.16.39",
   "description": "Library of components including navigation to create frontend applications",
   "repository": {
     "type": "git",
@@ -34,7 +34,7 @@
   "dependencies": {
     "@jsenv/dom": "0.8.8",
     "@jsenv/humanize": "1.7.3",
-    "@jsenv/validity": "0.0.1"
+    "@jsenv/validity": "0.0.2"
   },
   "devDependencies": {
     "@jsenv/assert": "4.5.5",
