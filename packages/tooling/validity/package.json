@@ -1,0 +1,33 @@
+{
+  "name": "@jsenv/validity",
+  "version": "0.0.1",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jsenv/core",
+    "directory": "packages/tooling/validity"
+  },
+  "license": "MIT",
+  "author": {
+    "name": "dmail",
+    "email": "dmaillard06@gmail.com"
+  },
+  "sideEffects": false,
+  "type": "module",
+  "exports": {
+    ".": {
+      "browser": "./validity_browser.js",
+      "node": "./validity_node.js"
+    },
+    "./*": "./*"
+  },
+  "files": [
+    "/src/",
+    "./validity_browser.js",
+    "./validity_node.js"
+  ],
+  "dependencies": {},
+  "devDependencies": {},
+  "publishConfig": {
+    "access": "public"
+  }
+}

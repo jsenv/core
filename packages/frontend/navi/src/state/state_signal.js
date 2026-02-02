@@ -1,3 +1,4 @@
+import { createValidity } from "@jsenv/validity";
 import { effect, signal } from "@preact/signals";
 
 import { valueInLocalStorage } from "./value_in_local_storage.js";
@@ -38,7 +39,6 @@ const generateSignalId = () => {
  * @param {"string" | "number" | "boolean" | "object"} [options.type="string"] - Type for localStorage serialization/deserialization
  * @param {number} [options.step] - For number type: step size for precision. Values will be rounded to nearest multiple of step.
  * @param {Array} [options.oneOf] - Array of valid values for validation. Signal will be marked invalid if value is not in this array
- * @param {Function} [options.autoFix] - Function to call when validation fails to automatically fix the value
  * @param {boolean} [options.debug=false] - Enable debug logging for this signal's operations
  * @returns {import("@preact/signals").Signal} A signal that can be synchronized with a source signal and/or persisted in localStorage. The signal includes a `validity` property for validation state.
  *
@@ -100,9 +100,10 @@ export const stateSignal = (defaultValue, options = {}) => {
   const {
     id,
     type = "string",
+    min,
+    max,
     step,
     oneOf,
-    autoFix,
     persists = false,
     debug,
     default: staticFallback,
@@ -132,15 +133,6 @@ export const stateSignal = (defaultValue, options = {}) => {
     persists
       ? valueInLocalStorage(localStorageKey, { type })
       : NO_LOCAL_STORAGE;
-
-  /**
-   * Value processor - applies step rounding for numbers, passthrough for others
-   */
-  const processValue =
-    type === "number" && step !== undefined
-      ? (value) =>
-          typeof value === "number" ? Math.round(value / step) * step : value
-      : (value) => value;
 
   /**
    * Returns the current default value from code logic only (static or dynamic).
@@ -212,7 +204,7 @@ export const stateSignal = (defaultValue, options = {}) => {
   };
 
   // Create signal with initial value: use stored value, or undefined to indicate no explicit value
-  const preactSignal = signal(processValue(getFallbackValue()));
+  const preactSignal = signal(getFallbackValue());
 
   // Create wrapper signal that applies step rounding on setValue
   const facadeSignal = {
@@ -220,7 +212,7 @@ export const stateSignal = (defaultValue, options = {}) => {
       return preactSignal.value;
     },
     set value(newValue) {
-      preactSignal.value = processValue(newValue);
+      preactSignal.value = newValue;
     },
     peek() {
       return preactSignal.peek();
@@ -233,7 +225,13 @@ export const stateSignal = (defaultValue, options = {}) => {
     },
   };
 
-  const validity = { valid: true };
+  const [validity, updateValidity] = createValidity({
+    type,
+    min,
+    max,
+    step,
+    oneOf,
+  });
   facadeSignal.validity = validity;
   facadeSignal.__signalId = signalIdString;
   facadeSignal.toString = () => `{navi_state_signal:${signalIdString}}`;
@@ -341,7 +339,7 @@ export const stateSignal = (defaultValue, options = {}) => {
     effect(() => {
       const wasValid = validity.valid;
       const value = preactSignal.value;
-      updateValidity({ oneOf }, validity, value);
+      updateValidity(value);
       if (validity.valid) {
         if (!wasValid) {
           if (debug) {
@@ -357,21 +355,21 @@ export const stateSignal = (defaultValue, options = {}) => {
         console.debug(`[stateSignal:${signalIdString}] validation failed`, {
           value,
           oneOf,
-          hasAutoFix: Boolean(autoFix),
+          hasAutoFix: Boolean(validity.validValueSuggestion),
         });
       }
-      if (autoFix) {
-        const fixedValue = autoFix(value);
+      if (validity.validValueSuggestion) {
+        const validValue = validity.validValueSuggestion.value;
         if (debug) {
           console.debug(
-            `[stateSignal:${signalIdString}] autoFix applied: ${value} → ${fixedValue}`,
+            `[stateSignal:${signalIdString}] autoFix applied: ${value} → ${validValue}`,
             {
               value,
-              fixedValue,
+              validValue,
             },
           );
         }
-        facadeSignal.value = fixedValue;
+        facadeSignal.value = validValue;
         return;
       }
     });
@@ -394,6 +392,8 @@ export const stateSignal = (defaultValue, options = {}) => {
       isDefaultValue,
       type,
       step,
+      min,
+      max,
       persists,
       localStorageKey,
       debug,
@@ -414,13 +414,4 @@ export const stateSignal = (defaultValue, options = {}) => {
   }
 
   return facadeSignal;
-};
-
-const updateValidity = (rules, validity, value) => {
-  const { oneOf } = rules;
-  if (oneOf && !oneOf.includes(value)) {
-    validity.valid = false;
-    return;
-  }
-  validity.valid = true;
 };
