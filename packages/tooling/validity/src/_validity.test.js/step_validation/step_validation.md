@@ -39,7 +39,7 @@ return results;
     "step": "must be a multiple of 0.1",
     "valid": false,
     "validSuggestion": {
-      "value": 1.2000000000000002
+      "value": 1.2
     }
   },
   "epsilon tolerance": {

@@ -292,7 +292,11 @@ const STEP_RULE = {
         step === 1 ? `must be an integer` : `must be a multiple of ${step}`,
       autoFix: () => {
         const fixedValue = Math.round(value / step) * step;
-        return createValidValue(fixedValue);
+        // Fix floating point precision issues
+        const stepStr = step.toString();
+        const decimalPlaces = stepStr.includes('.') ? stepStr.split('.')[1].length : 0;
+        const roundedValue = Number(fixedValue.toFixed(decimalPlaces));
+        return createValidValue(roundedValue);
       },
     };
   },
