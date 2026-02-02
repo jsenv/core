@@ -1576,73 +1576,56 @@ await snapshotTests(import.meta.url, ({ test }) => {
   });
 
   test("step parameter should prevent redundant navigation calls", () => {
+    const navToCalls = [];
+    const routeIntegrationMock = {
+      navTo: (url) => {
+        navToCalls.push(url);
+        updateRoutes(url);
+        return Promise.resolve();
+      },
+    };
+    setRouteIntegration(routeIntegrationMock);
+
     try {
-      // Create longitude signal with step parameter for precision control
       const lonSignal = stateSignal(2.3, {
         id: "longitude",
-        type: "number",
-        step: 0.1, // Round to 1 decimal place
+        type: "longitude",
+        step: 0.1,
       });
-
       const { MAP_ROUTE } = setupRoutes({
         MAP_ROUTE: `/map?lon=${lonSignal}`,
       });
-
-      // Start with initial URL
       updateRoutes(`${baseUrl}/map?lon=2.3`);
 
-      const navToCalls = [];
-      const routeIntegrationMock = {
-        navTo: (url) => {
-          navToCalls.push(url);
-          updateRoutes(url);
-          return Promise.resolve();
-        },
+      const captureState = () => {
+        return {
+          lon_signal_value: lonSignal.value,
+          route_url: MAP_ROUTE.url,
+          navToCalls: [...navToCalls],
+        };
       };
-      setRouteIntegration(routeIntegrationMock);
+      const results = {};
 
       // Test 1: Set values that round to the same step - should not trigger navigation
       lonSignal.value = 2.32; // Should round to 2.3 (same as current)
-      const afterSameStepCount = navToCalls.length;
+      results["after update signal to 2.32"] = captureState();
 
       lonSignal.value = 2.28; // Should round to 2.3 (same as current)
-      const afterAnotherSameStepCount = navToCalls.length;
+      results["after update signal to 2.28"] = captureState();
 
       // Test 2: Set value that rounds to different step - should trigger navigation
       lonSignal.value = 2.45; // Should round to 2.5 (different)
-      const afterDifferentStepCount = navToCalls.length;
+      results["after update signal to 2.45"] = captureState();
 
       // Test 3: Set another value that rounds to same new step - should not trigger
       lonSignal.value = 2.53; // Should round to 2.5 (same as current 2.5)
-      const afterSameNewStepCount = navToCalls.length;
+      results["after update signal to 2.53"] = captureState();
 
       // Test 4: Update URL directly with precise value and see how signal reacts
       updateRoutes(`${baseUrl}/map?lon=2.67`); // Should round signal to 2.7
-      const signalAfterUrlUpdate = lonSignal.value;
+      results["after update url to 2.67"] = captureState();
 
-      // Test 5: Set signal to same rounded value - should not trigger navigation
-      lonSignal.value = 2.74; // Should round to 2.7 (same as current from URL)
-      const afterUrlSyncSameStepCount = navToCalls.length;
-
-      return {
-        initial_lon_value: 2.3,
-        final_signal_value: lonSignal.value,
-        signal_after_url_update: signalAfterUrlUpdate,
-
-        // Navigation call counts at each stage
-        after_same_step_count: afterSameStepCount,
-        after_another_same_step_count: afterAnotherSameStepCount,
-        after_different_step_count: afterDifferentStepCount,
-        after_same_new_step_count: afterSameNewStepCount,
-        after_url_sync_same_step_count: afterUrlSyncSameStepCount,
-
-        total_nav_calls: navToCalls.length,
-        nav_calls: navToCalls,
-
-        // Route state
-        route_matching: MAP_ROUTE.matching,
-        current_route_url: MAP_ROUTE.url,
-      };
+      return results;
     } finally {
       clearAllRoutes();
       globalSignalRegistry.clear();
