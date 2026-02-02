@@ -32,7 +32,9 @@ return {
     "type": "must be a number",
     "max": undefined,
     "valid": false,
-    "validSuggestion": null
+    "validSuggestion": {
+      "value": 100
+    }
   }
 }
 ```

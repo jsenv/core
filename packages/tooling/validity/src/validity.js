@@ -173,19 +173,50 @@ export const createValidity = (ruleConfig) => {
         // invalid and cannot autofix
         continue;
       }
-      // Test the potential suggestion against ALL rules before accepting it
-      let suggestionIsValid = true;
+      // Test the suggestion against all rules and apply one more auto-fix if needed
+      let valueCandidate = autoFixResult;
+      let candidateIsValid = true;
       for (const { rule, ruleValue } of ruleSet) {
-        const result = rule.applyOn(ruleValue, autoFixResult, ruleConfig);
+        const result = rule.applyOn(ruleValue, valueCandidate, ruleConfig);
         if (!result) {
+          // This rule passes, keep trying all rules
           continue;
         }
-        suggestionIsValid = false;
-        break;
+        // This rule fails - try to auto-fix it too (chain auto-fixes)
+        // we consider autofix is respecting previous autofixes
+        if (!result.autoFix) {
+          candidateIsValid = false;
+          break;
+        }
+        const nestedFix = result.autoFix();
+        if (nestedFix === CANNOT_AUTOFIX) {
+          candidateIsValid = false;
+          break;
+        }
+        valueCandidate = nestedFix;
+      }
+      if (!candidateIsValid) {
+        continue;
+      }
+      if (candidateIsValid) {
+        validSuggestion = {
+          value: valueCandidate,
+        };
+      }
+
+      // Test the final suggestion against all rules
+      // (in case nested autofix is actually incompatible with all rules)
+      let suggestionIsValid = true;
+      for (const { rule, ruleValue } of ruleSet) {
+        const result = rule.applyOn(ruleValue, valueCandidate, ruleConfig);
+        if (result) {
+          suggestionIsValid = false;
+          break;
+        }
       }
       if (suggestionIsValid) {
         validSuggestion = {
-          value: autoFixResult,
+          value: valueCandidate,
         };
       }
     }

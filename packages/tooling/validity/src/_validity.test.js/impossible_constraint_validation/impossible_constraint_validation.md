@@ -25,7 +25,9 @@ return {
     "min": undefined,
     "oneOf": "must be one of: 10, 20, 30",
     "valid": false,
-    "validSuggestion": null
+    "validSuggestion": {
+      "value": 10
+    }
   }
 }
 ```

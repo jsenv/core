@@ -24,19 +24,25 @@ return {
     "type": "must be a number",
     "step": undefined,
     "valid": false,
-    "validSuggestion": null
+    "validSuggestion": {
+      "value": 3
+    }
   },
   '"3.05"': {
     "type": "must be a number",
     "step": undefined,
     "valid": false,
-    "validSuggestion": null
+    "validSuggestion": {
+      "value": 3.1
+    }
   },
   '"2.67"': {
     "type": "must be a number",
     "step": undefined,
     "valid": false,
-    "validSuggestion": null
+    "validSuggestion": {
+      "value": 2.7
+    }
   }
 }
 ```

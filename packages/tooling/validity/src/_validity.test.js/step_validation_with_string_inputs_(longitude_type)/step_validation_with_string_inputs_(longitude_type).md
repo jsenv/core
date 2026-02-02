@@ -27,7 +27,9 @@ return {
     "max": undefined,
     "step": undefined,
     "valid": false,
-    "validSuggestion": null
+    "validSuggestion": {
+      "value": 3
+    }
   },
   "2.67": {
     "type": "must be a number",
@@ -35,7 +37,9 @@ return {
     "max": undefined,
     "step": undefined,
     "valid": false,
-    "validSuggestion": null
+    "validSuggestion": {
+      "value": 2.7
+    }
   },
   "-179.95": {
     "type": "must be a number",
@@ -53,7 +57,9 @@ return {
     "max": undefined,
     "step": undefined,
     "valid": false,
-    "validSuggestion": null
+    "validSuggestion": {
+      "value": 3.1
+    }
   }
 }
 ```

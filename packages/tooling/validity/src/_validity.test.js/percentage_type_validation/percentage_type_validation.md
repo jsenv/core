@@ -42,7 +42,9 @@ return {
   '"150%"': {
     "type": "must be between 0 and 100",
     "valid": false,
-    "validSuggestion": null
+    "validSuggestion": {
+      "value": "150%"
+    }
   }
 }
 ```

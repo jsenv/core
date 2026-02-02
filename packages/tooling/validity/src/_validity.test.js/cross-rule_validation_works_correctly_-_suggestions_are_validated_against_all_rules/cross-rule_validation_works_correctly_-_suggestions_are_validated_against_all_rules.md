@@ -31,7 +31,9 @@ return {
     "max": undefined,
     "step": undefined,
     "valid": false,
-    "validSuggestion": null
+    "validSuggestion": {
+      "value": 100
+    }
   },
   '"5.5"': {
     "type": "must be a number",
@@ -39,7 +41,9 @@ return {
     "max": undefined,
     "step": undefined,
     "valid": false,
-    "validSuggestion": null
+    "validSuggestion": {
+      "value": 6
+    }
   },
   '"-10"': {
     "type": "must be a number",
@@ -47,7 +51,9 @@ return {
     "max": undefined,
     "step": undefined,
     "valid": false,
-    "validSuggestion": null
+    "validSuggestion": {
+      "value": 0
+    }
   },
   '"50"': {
     "type": "must be a number",
