@@ -48,7 +48,7 @@ return {
     "step": undefined,
     "valid": false,
     "validSuggestion": {
-      "value": -179.95
+      "value": -179.9
     }
   },
   "3.05": {

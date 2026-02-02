@@ -36,7 +36,7 @@ try {
   "results": [
     {
       "description": "0.0015 with step 0.001",
-      "value": 0.001
+      "value": 0.002
     },
     {
       "description": "0.0014 with step 0.001",

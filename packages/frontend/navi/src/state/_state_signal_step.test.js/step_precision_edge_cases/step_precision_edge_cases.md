@@ -37,7 +37,7 @@ try {
   "results": [
     {
       "description": "0.05 -> 0.1",
-      "value": 0
+      "value": 0.1
     },
     {
       "description": "0.04 -> 0.0",
@@ -45,11 +45,11 @@ try {
     },
     {
       "description": "-0.05 -> -0.1",
-      "value": -0.05
+      "value": -0.1
     },
     {
       "description": "-0.04 -> 0.0",
-      "value": -0.04
+      "value": 0
     },
     {
       "description": "99.97 -> 100.0",

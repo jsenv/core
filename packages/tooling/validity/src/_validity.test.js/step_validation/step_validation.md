@@ -31,7 +31,7 @@ return {
   "1.23": {
     "type": undefined,
     "min": undefined,
-    "step": "must be a multiple of 0.1",
+    "step": "must have at most 1 decimal places",
     "valid": false,
     "validSuggestion": {
       "value": 1.2
@@ -40,9 +40,11 @@ return {
   "1.1000000001": {
     "type": undefined,
     "min": undefined,
-    "step": undefined,
-    "valid": true,
-    "validSuggestion": null
+    "step": "must have at most 1 decimal places",
+    "valid": false,
+    "validSuggestion": {
+      "value": 1.1
+    }
   }
 }
 ```

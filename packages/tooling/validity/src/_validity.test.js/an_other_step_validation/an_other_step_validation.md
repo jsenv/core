@@ -25,7 +25,7 @@ return {
     "step": undefined,
     "valid": false,
     "validSuggestion": {
-      "value": 48.86666699999998
+      "value": 48.866667
     }
   }
 }

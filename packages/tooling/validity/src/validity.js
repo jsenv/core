@@ -539,22 +539,53 @@ const STEP_RULE = {
     if (typeof value !== "number") {
       return null;
     }
-    const remainer = (value - min) % step;
-    const epsilon = 0.0000001;
-    if (remainer <= epsilon || step - remainer <= epsilon) {
-      return null;
+
+    // Get the number of decimal places in the step to determine allowed precision
+    const getDecimalPlaces = (num) => {
+      const str = num.toString();
+      return str.includes(".") ? str.split(".")[1].length : 0;
+    };
+
+    const stepDecimals = getDecimalPlaces(step);
+    const minDecimals = getDecimalPlaces(min);
+    const maxAllowedDecimals = Math.max(stepDecimals, minDecimals);
+
+    // Check precision first - round to step's precision
+    const roundedToPrecision = Number(value.toFixed(maxAllowedDecimals));
+
+    // Check if it's a multiple of the step
+    const adjustedValue = roundedToPrecision - min;
+    const ratio = adjustedValue / step;
+    const remainder = Math.abs(ratio - Math.round(ratio));
+    const epsilon = 1e-10; // Very small epsilon for floating point comparison
+
+    const isMultipleOfStep = remainder < epsilon;
+    const hasTooMuchPrecision = value !== roundedToPrecision;
+
+    if (isMultipleOfStep && !hasTooMuchPrecision) {
+      return null; // Valid
     }
+
+    // Determine the error message
+    let message;
+    if (hasTooMuchPrecision && !isMultipleOfStep) {
+      message = `must be a multiple of ${step} with at most ${maxAllowedDecimals} decimal places`;
+    } else if (hasTooMuchPrecision) {
+      message = `must have at most ${maxAllowedDecimals} decimal places`;
+    } else {
+      message =
+        step === 1 ? `must be an integer` : `must be a multiple of ${step}`;
+    }
+
     return {
-      message:
-        step === 1 ? `must be an integer` : `must be a multiple of ${step}`,
+      message,
       autoFix: () => {
-        // Fix floating point precision issues by using epsilon for rounding
-        // Account for min value in step calculation
-        const adjustedValue = value - min;
+        // First round to proper precision, then ensure it's a multiple of step
+        const precisionFixed = Number(value.toFixed(maxAllowedDecimals));
+        const adjustedValue = precisionFixed - min;
         const ratio = adjustedValue / step;
 
-        // Round down on ties (when exactly halfway between two step values)
-        // This ensures 1.15 with step 0.1 rounds to 1.1, not 1.2
+        // Round to nearest step multiple
         const fractionalPart = ratio - Math.floor(ratio);
         let roundedRatio;
         if (Math.abs(fractionalPart - 0.5) < 1e-10) {
@@ -565,14 +596,7 @@ const STEP_RULE = {
         }
 
         const fixedValue = min + roundedRatio * step;
-
-        // Fix floating point precision issues in the result
-        const stepStr = step.toString();
-        const decimalPlaces = stepStr.includes(".")
-          ? stepStr.split(".")[1].length
-          : 0;
-        const roundedValue = Number(fixedValue.toFixed(decimalPlaces));
-        return roundedValue;
+        return Number(fixedValue.toFixed(maxAllowedDecimals));
       },
     };
   },

@@ -33,7 +33,7 @@ return {
     "type": undefined,
     "min": "must be positive",
     "max": undefined,
-    "step": undefined,
+    "step": "must be a multiple of 0.5",
     "valid": false,
     "validSuggestion": {
       "value": 0

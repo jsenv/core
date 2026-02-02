@@ -56,11 +56,11 @@ try {
     },
     {
       "computation": 3,
-      "source_value": 1.2,
-      "doubled": 2.4
+      "source_value": 1.3,
+      "doubled": 2.6
     }
   ],
-  "final_source_value": 1.2
+  "final_source_value": 1.3
 }
 ```
 

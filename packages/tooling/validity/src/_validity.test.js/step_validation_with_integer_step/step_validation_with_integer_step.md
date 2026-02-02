@@ -27,10 +27,10 @@ return {
   },
   "5.5": {
     "type": undefined,
-    "step": "must be an integer",
+    "step": "must have at most 0 decimal places",
     "valid": false,
     "validSuggestion": {
-      "value": 5
+      "value": 6
     }
   }
 }
