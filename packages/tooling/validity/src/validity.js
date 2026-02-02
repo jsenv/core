@@ -305,27 +305,18 @@ const TYPE_CONVERTERS = {
   },
   integer: {
     string: (value) => {
-      const parsed = parseFloat(value);
-      if (!isNaN(parsed) && isFinite(parsed) && Number.isInteger(parsed)) {
-        return parsed;
-      }
-      // If it's not an integer, try to convert via number converter first
-      const numberResult = TYPE_CONVERTERS.number.string(value);
-      if (numberResult === CANNOT_AUTOFIX) {
+      const result = TYPE_CONVERTERS.number.string(value);
+      if (result === CANNOT_AUTOFIX) {
         return CANNOT_AUTOFIX;
       }
-      return Math.round(numberResult);
+      return Math.round(result);
     },
     number: (value) => {
-      if (Number.isInteger(value)) {
-        return value;
-      }
       return Math.round(value);
     },
   },
   ratio: {
     string: (value) => TYPE_CONVERTERS.number.string(value),
-    number: (value) => value,
   },
   longitude: {
     string: (value) => TYPE_CONVERTERS.number.string(value),
