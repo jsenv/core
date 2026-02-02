@@ -1,3 +1,71 @@
+/**
+ * Creates a validation system with configurable rules for data validation and auto-fixing.
+ *
+ * @param {Object} ruleConfig - Configuration object defining validation rules
+ * @param {string} [ruleConfig.type] - Expected data type ('number', 'string', 'boolean', 'percentage', 'object')
+ * @param {number} [ruleConfig.min] - Minimum value (for numbers)
+ * @param {number} [ruleConfig.max] - Maximum value (for numbers)
+ * @param {number} [ruleConfig.step] - Step increment for numbers (e.g., 0.1 for one decimal place, 1 for integers)
+ * @param {Array} [ruleConfig.oneOf] - Array of allowed values (enumeration validation)
+ *
+ * @returns {[Object, Function]} Tuple containing:
+ *   - validity: Reactive validity object with current validation state
+ *   - applyOn: Function to validate values and update validity state
+ *
+ * @description
+ * The returned validity object contains:
+ * - `valid` {boolean}: Overall validation status
+ * - `validSuggestion` {Object|null}: Auto-fix suggestion with `{value}` property
+ * - `type` {string|undefined}: Type validation error message or undefined if valid
+ * - `min` {string|undefined}: Minimum validation error message or undefined if valid
+ * - `max` {string|undefined}: Maximum validation error message or undefined if valid
+ * - `step` {string|undefined}: Step validation error message or undefined if valid
+ * - `oneOf` {string|undefined}: Enumeration validation error message or undefined if valid
+ *
+ * The returned applyOn function:
+ * - Takes a value to validate
+ * - Updates the validity object with current validation state
+ * - Provides auto-fix suggestions when possible
+ * - Returns the original input value
+ *
+ * @example
+ * // Number validation with range and step constraints
+ * const [validity, applyOn] = createValidity({
+ *   type: 'number',
+ *   min: 0,
+ *   max: 100,
+ *   step: 0.5
+ * });
+ *
+ * applyOn(1.23); // Invalid step
+ * console.log(validity.valid); // false
+ * console.log(validity.step); // "must be a multiple of 0.5"
+ * console.log(validity.validSuggestion); // { value: 1 }
+ *
+ * @example
+ * // Type validation with auto-conversion
+ * const [validity, applyOn] = createValidity({ type: 'number' });
+ *
+ * applyOn('123');
+ * console.log(validity.valid); // false
+ * console.log(validity.validSuggestion); // { value: 123 }
+ *
+ * @example
+ * // Enumeration validation
+ * const [validity, applyOn] = createValidity({
+ *   oneOf: ['red', 'green', 'blue']
+ * });
+ *
+ * applyOn('yellow');
+ * console.log(validity.oneOf); // "must be one of: red, green, blue"
+ * console.log(validity.validSuggestion); // { value: 'red' }
+ *
+ * @throws {Error} When ruleConfig contains invalid rule values:
+ * - type must be a string
+ * - min must be less than or equal to max
+ * - step must be a positive number
+ * - oneOf must be a non-empty array
+ */
 export const createValidity = (ruleConfig) => {
   const validity = {};
 
@@ -294,7 +362,9 @@ const STEP_RULE = {
         const fixedValue = Math.round(value / step) * step;
         // Fix floating point precision issues
         const stepStr = step.toString();
-        const decimalPlaces = stepStr.includes('.') ? stepStr.split('.')[1].length : 0;
+        const decimalPlaces = stepStr.includes(".")
+          ? stepStr.split(".")[1].length
+          : 0;
         const roundedValue = Number(fixedValue.toFixed(decimalPlaces));
         return createValidValue(roundedValue);
       },
