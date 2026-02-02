@@ -7,24 +7,20 @@ const [validity, applyOn] = createValidity({
   max: 100,
 });
 
-const results = {};
+const run = (value) => {
+  applyOn(value);
+  return structuredClone(validity);
+};
 
-// Case 1: String "50" should convert to 50 and be valid
-applyOn("50");
-results["valid conversion"] = structuredClone(validity);
-
-// Case 2: String "150" should convert to 150, but 150 > 100
-// In the old system, this would suggest 100
-// In the new system, should it suggest 100 or null?
-applyOn("150");
-results["type conversion exceeds max"] = structuredClone(validity);
-
-return results;
+return {
+  '"50"': run("50"),
+  '"150"': run("150"),
+};
 ```
 
 ```js
 {
-  "valid conversion": {
+  '"50"': {
     "type": "must be a number",
     "max": undefined,
     "valid": false,
@@ -32,7 +28,7 @@ return results;
       "value": 50
     }
   },
-  "type conversion exceeds max": {
+  '"150"': {
     "type": "must be a number",
     "max": undefined,
     "valid": false,

@@ -5,49 +5,43 @@ const [validity, applyOn] = createValidity({
   type: "date",
 });
 
-const results = {};
+const run = (value) => {
+  applyOn(value);
+  return structuredClone(validity);
+};
 
-applyOn("2023-12-25");
-results["valid date"] = structuredClone(validity);
-
-applyOn("2024-02-29");
-results["valid leap year date"] = structuredClone(validity);
-
-applyOn("2023-02-29");
-results["invalid date - not leap year"] = structuredClone(validity);
-
-applyOn("12/25/2023");
-results["invalid date format"] = structuredClone(validity);
-
-applyOn("2023-13-01");
-results["invalid month"] = structuredClone(validity);
-
-return results;
+return {
+  '"2023-12-25"': run("2023-12-25"),
+  '"2024-02-29"': run("2024-02-29"),
+  '"2023-02-29"': run("2023-02-29"),
+  '"12/25/2023"': run("12/25/2023"),
+  '"2023-13-01"': run("2023-13-01"),
+};
 ```
 
 ```js
 {
-  "valid date": {
+  '"2023-12-25"': {
     "type": undefined,
     "valid": true,
     "validSuggestion": null
   },
-  "valid leap year date": {
+  '"2024-02-29"': {
     "type": undefined,
     "valid": true,
     "validSuggestion": null
   },
-  "invalid date - not leap year": {
+  '"2023-02-29"': {
     "type": "must be a valid date",
     "valid": false,
     "validSuggestion": null
   },
-  "invalid date format": {
+  '"12/25/2023"': {
     "type": "must be in YYYY-MM-DD format",
     "valid": false,
     "validSuggestion": null
   },
-  "invalid month": {
+  '"2023-13-01"': {
     "type": "must be a valid date",
     "valid": false,
     "validSuggestion": null

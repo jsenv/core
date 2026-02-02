@@ -6,12 +6,14 @@ const [validity, applyOn] = createValidity({
   unknownRule: "should be ignored",
 });
 
-const results = {};
+const run = (value) => {
+  applyOn(value);
+  return structuredClone(validity);
+};
 
-applyOn(42);
-results["unknown rule ignored"] = structuredClone(validity);
-
-return results;
+return {
+  42: run(42),
+};
 ```
 
 # 1/2 logs
@@ -33,7 +35,7 @@ return results;
 
 ```js
 {
-  "unknown rule ignored": {
+  42: {
     "type": undefined,
     "valid": true,
     "validSuggestion": null

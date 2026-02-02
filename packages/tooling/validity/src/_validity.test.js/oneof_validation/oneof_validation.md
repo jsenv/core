@@ -5,27 +5,25 @@ const [validity, applyOn] = createValidity({
   oneOf: ["red", "green", "blue"],
 });
 
-const results = {};
+const run = (value) => {
+  applyOn(value);
+  return structuredClone(validity);
+};
 
-// Valid option
-applyOn("red");
-results["valid option"] = structuredClone(validity);
-
-// Invalid option
-applyOn("yellow");
-results["invalid option"] = structuredClone(validity);
-
-return results;
+return {
+  '"red"': run("red"),
+  '"yellow"': run("yellow"),
+};
 ```
 
 ```js
 {
-  "valid option": {
+  '"red"': {
     "oneOf": undefined,
     "valid": true,
     "validSuggestion": null
   },
-  "invalid option": {
+  '"yellow"': {
     "oneOf": "must be one of: red, green, blue",
     "valid": false,
     "validSuggestion": {

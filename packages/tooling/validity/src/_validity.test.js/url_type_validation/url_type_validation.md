@@ -5,49 +5,43 @@ const [validity, applyOn] = createValidity({
   type: "url",
 });
 
-const results = {};
+const run = (value) => {
+  applyOn(value);
+  return structuredClone(validity);
+};
 
-applyOn("https://example.com");
-results["valid https url"] = structuredClone(validity);
-
-applyOn("http://domain.org/path");
-results["valid http url with path"] = structuredClone(validity);
-
-applyOn("ftp://files.example.com");
-results["valid ftp url"] = structuredClone(validity);
-
-applyOn("not-a-url");
-results["invalid url"] = structuredClone(validity);
-
-applyOn("://missing-protocol.com");
-results["invalid url - malformed"] = structuredClone(validity);
-
-return results;
+return {
+  '"https://example.com"': run("https://example.com"),
+  '"http://domain.org/path"': run("http://domain.org/path"),
+  '"ftp://files.example.com"': run("ftp://files.example.com"),
+  '"not-a-url"': run("not-a-url"),
+  '"://missing-protocol.com"': run("://missing-protocol.com"),
+};
 ```
 
 ```js
 {
-  "valid https url": {
+  '"https://example.com"': {
     "type": undefined,
     "valid": true,
     "validSuggestion": null
   },
-  "valid http url with path": {
+  '"http://domain.org/path"': {
     "type": undefined,
     "valid": true,
     "validSuggestion": null
   },
-  "valid ftp url": {
+  '"ftp://files.example.com"': {
     "type": undefined,
     "valid": true,
     "validSuggestion": null
   },
-  "invalid url": {
+  '"not-a-url"': {
     "type": "must be a valid URL",
     "valid": false,
     "validSuggestion": null
   },
-  "invalid url - malformed": {
+  '"://missing-protocol.com"': {
     "type": "must be a valid URL",
     "valid": false,
     "validSuggestion": null

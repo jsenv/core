@@ -8,22 +8,20 @@ const [validity, applyOn] = createValidity({
   step: 0.5,
 });
 
-const results = {};
+const run = (value) => {
+  applyOn(value);
+  return structuredClone(validity);
+};
 
-// Valid value
-applyOn(5.5);
-results["valid combined"] = structuredClone(validity);
-
-// Multiple violations
-applyOn(-2.3);
-results["multiple violations"] = structuredClone(validity);
-
-return results;
+return {
+  "5.5": run(5.5),
+  "-2.3": run(-2.3),
+};
 ```
 
 ```js
 {
-  "valid combined": {
+  "5.5": {
     "type": undefined,
     "min": undefined,
     "max": undefined,
@@ -31,7 +29,7 @@ return results;
     "valid": true,
     "validSuggestion": null
   },
-  "multiple violations": {
+  "-2.3": {
     "type": undefined,
     "min": "must be positive",
     "max": undefined,

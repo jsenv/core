@@ -6,28 +6,26 @@ const [validity, applyOn] = createValidity({
   step: 1,
 });
 
-const results = {};
+const run = (value) => {
+  applyOn(value);
+  return structuredClone(validity);
+};
 
-// Valid integer
-applyOn(5);
-results["valid integer"] = structuredClone(validity);
-
-// Invalid - not an integer
-applyOn(5.5);
-results["not an integer"] = structuredClone(validity);
-
-return results;
+return {
+  5: run(5),
+  5.5: run(5.5),
+};
 ```
 
 ```js
 {
-  "valid integer": {
+  5: {
     "type": undefined,
     "step": undefined,
     "valid": true,
     "validSuggestion": null
   },
-  "not an integer": {
+  "5.5": {
     "type": undefined,
     "step": "must be an integer",
     "valid": false,

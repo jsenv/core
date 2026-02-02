@@ -7,33 +7,28 @@ const [validity, applyOn] = createValidity({
   min: 0,
 });
 
-const results = {};
+const run = (value) => {
+  applyOn(value);
+  return structuredClone(validity);
+};
 
-// Valid step
-applyOn(1.2);
-results["valid step"] = structuredClone(validity);
-
-// Invalid step - should trigger validation error
-applyOn(1.23);
-results["invalid step"] = structuredClone(validity);
-
-// Edge case - very close to valid step (within epsilon)
-applyOn(1.1000000001);
-results["epsilon tolerance"] = structuredClone(validity);
-
-return results;
+return {
+  1.2: run(1.2),
+  1.23: run(1.23),
+  1.1000000001: run(1.1000000001),
+};
 ```
 
 ```js
 {
-  "valid step": {
+  "1.2": {
     "type": undefined,
     "min": undefined,
     "step": undefined,
     "valid": true,
     "validSuggestion": null
   },
-  "invalid step": {
+  "1.23": {
     "type": undefined,
     "min": undefined,
     "step": "must be a multiple of 0.1",
@@ -42,7 +37,7 @@ return results;
       "value": 1.2
     }
   },
-  "epsilon tolerance": {
+  "1.1000000001": {
     "type": undefined,
     "min": undefined,
     "step": undefined,

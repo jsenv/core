@@ -5,52 +5,44 @@ const [validity, applyOn] = createValidity({
   type: "percentage",
 });
 
-const results = {};
+const run = (value) => {
+  applyOn(value);
+  return structuredClone(validity);
+};
 
-// Valid percentage
-applyOn("50%");
-results["valid percentage"] = structuredClone(validity);
-
-// Invalid percentage - no %
-applyOn("50");
-results["missing percent sign"] = structuredClone(validity);
-
-// Invalid percentage - out of range
-applyOn("150%");
-results["out of range"] = structuredClone(validity);
-
-// Number to percentage conversion
-applyOn(75);
-results["number conversion"] = structuredClone(validity);
-
-return results;
+return {
+  '"50%"': run("50%"),
+  '"50"': run("50"),
+  '"150%"': run("150%"),
+  "75": run(75),
+};
 ```
 
 ```js
 {
-  "valid percentage": {
+  75: {
+    "type": "must be a percentage",
+    "valid": false,
+    "validSuggestion": {
+      "value": "75%"
+    }
+  },
+  '"50%"': {
     "type": undefined,
     "valid": true,
     "validSuggestion": null
   },
-  "missing percent sign": {
+  '"50"': {
     "type": "must end with %",
     "valid": false,
     "validSuggestion": {
       "value": "50%"
     }
   },
-  "out of range": {
+  '"150%"': {
     "type": "must be between 0 and 100",
     "valid": false,
     "validSuggestion": null
-  },
-  "number conversion": {
-    "type": "must be a percentage",
-    "valid": false,
-    "validSuggestion": {
-      "value": "75%"
-    }
   }
 }
 ```

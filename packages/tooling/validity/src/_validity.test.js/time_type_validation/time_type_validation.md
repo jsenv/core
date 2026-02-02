@@ -5,57 +5,49 @@ const [validity, applyOn] = createValidity({
   type: "time",
 });
 
-const results = {};
+const run = (value) => {
+  applyOn(value);
+  return structuredClone(validity);
+};
 
-applyOn("14:30");
-results["valid time HH:MM"] = structuredClone(validity);
-
-applyOn("09:15:30");
-results["valid time HH:MM:SS"] = structuredClone(validity);
-
-applyOn("23:59:59");
-results["valid time - end of day"] = structuredClone(validity);
-
-applyOn("24:00");
-results["invalid time - 24:00"] = structuredClone(validity);
-
-applyOn("14:60");
-results["invalid minutes"] = structuredClone(validity);
-
-applyOn("2:30 PM");
-results["invalid format - 12 hour"] = structuredClone(validity);
-
-return results;
+return {
+  '"14:30"': run("14:30"),
+  '"09:15:30"': run("09:15:30"),
+  '"23:59:59"': run("23:59:59"),
+  '"24:00"': run("24:00"),
+  '"14:60"': run("14:60"),
+  '"2:30 PM"': run("2:30 PM"),
+};
 ```
 
 ```js
 {
-  "valid time HH:MM": {
+  '"14:30"': {
     "type": undefined,
     "valid": true,
     "validSuggestion": null
   },
-  "valid time HH:MM:SS": {
+  '"09:15:30"': {
     "type": undefined,
     "valid": true,
     "validSuggestion": null
   },
-  "valid time - end of day": {
+  '"23:59:59"': {
     "type": undefined,
     "valid": true,
     "validSuggestion": null
   },
-  "invalid time - 24:00": {
+  '"24:00"': {
     "type": "must be in HH:MM or HH:MM:SS format",
     "valid": false,
     "validSuggestion": null
   },
-  "invalid minutes": {
+  '"14:60"': {
     "type": "must be in HH:MM or HH:MM:SS format",
     "valid": false,
     "validSuggestion": null
   },
-  "invalid format - 12 hour": {
+  '"2:30 PM"': {
     "type": "must be in HH:MM or HH:MM:SS format",
     "valid": false,
     "validSuggestion": null

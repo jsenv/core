@@ -25,7 +25,7 @@ return {
     "valid": true,
     "validSuggestion": null
   },
-  3: {
+  "3.14": {
     "type": "must be an integer",
     "valid": false,
     "validSuggestion": {

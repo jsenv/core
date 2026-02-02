@@ -8,22 +8,19 @@ const [validity, applyOn] = createValidity({
   min: 50, // But min is 50, making oneOf values impossible
 });
 
-const results = {};
+const run = (value) => {
+  applyOn(value);
+  return structuredClone(validity);
+};
 
-// This should create an impossible situation:
-// - Type conversion suggests a number
-// - But oneOf only allows [10, 20, 30]
-// - But min is 50, so none of [10, 20, 30] are valid
-applyOn("15");
-results["impossible constraint - no valid suggestion"] =
-  structuredClone(validity);
-
-return results;
+return {
+  '"15"': run("15"),
+};
 ```
 
 ```js
 {
-  "impossible constraint - no valid suggestion": {
+  '"15"': {
     "type": "must be a number",
     "min": undefined,
     "oneOf": "must be one of: 10, 20, 30",

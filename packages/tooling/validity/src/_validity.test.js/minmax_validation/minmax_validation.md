@@ -7,49 +7,44 @@ const [validity, applyOn] = createValidity({
   max: 100,
 });
 
-const results = {};
+const run = (value) => {
+  applyOn(value);
+  return structuredClone(validity);
+};
 
-// Valid range
-applyOn(50);
-results["valid range"] = structuredClone(validity);
-
-// Below minimum
-applyOn(-10);
-results["below minimum"] = structuredClone(validity);
-
-// Above maximum
-applyOn(150);
-results["above maximum"] = structuredClone(validity);
-
-// Edge cases
-applyOn(0);
-results["exact minimum"] = structuredClone(validity);
-
-applyOn(100);
-results["exact maximum"] = structuredClone(validity);
-
-return results;
+return {
+  "50": run(50),
+  "-10": run(-10),
+  "150": run(150),
+  "0": run(0),
+  "100": run(100),
+};
 ```
 
 ```js
 {
-  "valid range": {
+  0: {
     "type": undefined,
     "min": undefined,
     "max": undefined,
     "valid": true,
     "validSuggestion": null
   },
-  "below minimum": {
+  50: {
     "type": undefined,
-    "min": "must be positive",
+    "min": undefined,
     "max": undefined,
-    "valid": false,
-    "validSuggestion": {
-      "value": 0
-    }
+    "valid": true,
+    "validSuggestion": null
   },
-  "above maximum": {
+  100: {
+    "type": undefined,
+    "min": undefined,
+    "max": undefined,
+    "valid": true,
+    "validSuggestion": null
+  },
+  150: {
     "type": undefined,
     "min": undefined,
     "max": "must be <= 100",
@@ -58,19 +53,14 @@ return results;
       "value": 100
     }
   },
-  "exact minimum": {
+  -10: {
     "type": undefined,
-    "min": undefined,
+    "min": "must be positive",
     "max": undefined,
-    "valid": true,
-    "validSuggestion": null
-  },
-  "exact maximum": {
-    "type": undefined,
-    "min": undefined,
-    "max": undefined,
-    "valid": true,
-    "validSuggestion": null
+    "valid": false,
+    "validSuggestion": {
+      "value": 0
+    }
   }
 }
 ```

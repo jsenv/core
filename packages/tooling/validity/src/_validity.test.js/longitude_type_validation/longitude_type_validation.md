@@ -5,53 +5,31 @@ const [validity, applyOn] = createValidity({
   type: "longitude",
 });
 
-const results = {};
+const run = (value) => {
+  applyOn(value);
+  return structuredClone(validity);
+};
 
-applyOn(45.5);
-results["valid longitude"] = structuredClone(validity);
-
-applyOn(0);
-results["zero longitude"] = structuredClone(validity);
-
-applyOn(-179.9);
-results["negative longitude"] = structuredClone(validity);
-
-applyOn(200);
-results["longitude over 180"] = structuredClone(validity);
-
-applyOn(-200);
-results["longitude under -180"] = structuredClone(validity);
-
-applyOn("125.5");
-results["string to longitude conversion"] = structuredClone(validity);
-
-return results;
+return {
+  "45.5": run(45.5),
+  "0": run(0),
+  "-179.9": run(-179.9),
+  "200": run(200),
+  "-200": run(-200),
+  '"125.5"': run("125.5"),
+};
 ```
 
 ```js
 {
-  "valid longitude": {
+  0: {
     "type": undefined,
     "min": undefined,
     "max": undefined,
     "valid": true,
     "validSuggestion": null
   },
-  "zero longitude": {
-    "type": undefined,
-    "min": undefined,
-    "max": undefined,
-    "valid": true,
-    "validSuggestion": null
-  },
-  "negative longitude": {
-    "type": undefined,
-    "min": undefined,
-    "max": undefined,
-    "valid": true,
-    "validSuggestion": null
-  },
-  "longitude over 180": {
+  200: {
     "type": undefined,
     "min": undefined,
     "max": "must be <= 180",
@@ -60,7 +38,21 @@ return results;
       "value": 180
     }
   },
-  "longitude under -180": {
+  "45.5": {
+    "type": undefined,
+    "min": undefined,
+    "max": undefined,
+    "valid": true,
+    "validSuggestion": null
+  },
+  "-179.9": {
+    "type": undefined,
+    "min": undefined,
+    "max": undefined,
+    "valid": true,
+    "validSuggestion": null
+  },
+  -200: {
     "type": undefined,
     "min": "must be >= -180",
     "max": undefined,
@@ -69,7 +61,7 @@ return results;
       "value": -180
     }
   },
-  "string to longitude conversion": {
+  '"125.5"': {
     "type": "must be a number",
     "min": undefined,
     "max": undefined,

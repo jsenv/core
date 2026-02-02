@@ -5,52 +5,45 @@ const [validity, applyOn] = createValidity({
   type: "boolean",
 });
 
-const results = {};
+const run = (value) => {
+  applyOn(value);
+  return structuredClone(validity);
+};
 
-// Valid boolean
-applyOn(true);
-results["valid boolean"] = structuredClone(validity);
-
-// String to boolean conversion
-applyOn("true");
-results["string true conversion"] = structuredClone(validity);
-
-applyOn("false");
-results["string false conversion"] = structuredClone(validity);
-
-// Number to boolean conversion
-applyOn(1);
-results["number conversion"] = structuredClone(validity);
-
-return results;
+return {
+  "true": run(true),
+  '"true"': run("true"),
+  '"false"': run("false"),
+  "1": run(1),
+};
 ```
 
 ```js
 {
-  "valid boolean": {
-    "type": undefined,
-    "valid": true,
-    "validSuggestion": null
-  },
-  "string true conversion": {
-    "type": "must be a boolean, got string",
-    "valid": false,
-    "validSuggestion": {
-      "value": true
-    }
-  },
-  "string false conversion": {
-    "type": "must be a boolean, got string",
-    "valid": false,
-    "validSuggestion": {
-      "value": false
-    }
-  },
-  "number conversion": {
+  1: {
     "type": "must be a boolean, got number",
     "valid": false,
     "validSuggestion": {
       "value": true
+    }
+  },
+  "true": {
+    "type": undefined,
+    "valid": true,
+    "validSuggestion": null
+  },
+  '"true"': {
+    "type": "must be a boolean, got string",
+    "valid": false,
+    "validSuggestion": {
+      "value": true
+    }
+  },
+  '"false"': {
+    "type": "must be a boolean, got string",
+    "valid": false,
+    "validSuggestion": {
+      "value": false
     }
   }
 }

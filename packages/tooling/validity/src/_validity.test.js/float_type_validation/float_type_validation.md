@@ -5,35 +5,33 @@ const [validity, applyOn] = createValidity({
   type: "float",
 });
 
-const results = {};
+const run = (value) => {
+  applyOn(value);
+  return structuredClone(validity);
+};
 
-applyOn(3.14);
-results["valid float"] = structuredClone(validity);
-
-applyOn("2.5");
-results["string to float conversion"] = structuredClone(validity);
-
-applyOn("invalid");
-results["invalid string"] = structuredClone(validity);
-
-return results;
+return {
+  "3.14": run(3.14),
+  '"2.5"': run("2.5"),
+  '"invalid"': run("invalid"),
+};
 ```
 
 ```js
 {
-  "valid float": {
+  "3.14": {
     "type": undefined,
     "valid": true,
     "validSuggestion": null
   },
-  "string to float conversion": {
+  '"2.5"': {
     "type": "must be a number",
     "valid": false,
     "validSuggestion": {
       "value": 2.5
     }
   },
-  "invalid string": {
+  '"invalid"': {
     "type": "must be a number",
     "valid": false,
     "validSuggestion": null

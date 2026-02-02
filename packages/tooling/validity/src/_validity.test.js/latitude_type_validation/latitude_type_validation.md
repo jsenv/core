@@ -5,53 +5,31 @@ const [validity, applyOn] = createValidity({
   type: "latitude",
 });
 
-const results = {};
+const run = (value) => {
+  applyOn(value);
+  return structuredClone(validity);
+};
 
-applyOn(45.5);
-results["valid latitude"] = structuredClone(validity);
-
-applyOn(0);
-results["zero latitude"] = structuredClone(validity);
-
-applyOn(-89.9);
-results["negative latitude"] = structuredClone(validity);
-
-applyOn(100);
-results["latitude over 90"] = structuredClone(validity);
-
-applyOn(-100);
-results["latitude under -90"] = structuredClone(validity);
-
-applyOn("45.5");
-results["string to latitude conversion"] = structuredClone(validity);
-
-return results;
+return {
+  "45.5": run(45.5),
+  "0": run(0),
+  "-89.9": run(-89.9),
+  "100": run(100),
+  "-100": run(-100),
+  '"45.5"': run("45.5"),
+};
 ```
 
 ```js
 {
-  "valid latitude": {
+  0: {
     "type": undefined,
     "min": undefined,
     "max": undefined,
     "valid": true,
     "validSuggestion": null
   },
-  "zero latitude": {
-    "type": undefined,
-    "min": undefined,
-    "max": undefined,
-    "valid": true,
-    "validSuggestion": null
-  },
-  "negative latitude": {
-    "type": undefined,
-    "min": undefined,
-    "max": undefined,
-    "valid": true,
-    "validSuggestion": null
-  },
-  "latitude over 90": {
+  100: {
     "type": undefined,
     "min": undefined,
     "max": "must be <= 90",
@@ -60,7 +38,21 @@ return results;
       "value": 90
     }
   },
-  "latitude under -90": {
+  "45.5": {
+    "type": undefined,
+    "min": undefined,
+    "max": undefined,
+    "valid": true,
+    "validSuggestion": null
+  },
+  "-89.9": {
+    "type": undefined,
+    "min": undefined,
+    "max": undefined,
+    "valid": true,
+    "validSuggestion": null
+  },
+  -100: {
     "type": undefined,
     "min": "must be >= -90",
     "max": undefined,
@@ -69,7 +61,7 @@ return results;
       "value": -90
     }
   },
-  "string to latitude conversion": {
+  '"45.5"': {
     "type": "must be a number",
     "min": undefined,
     "max": undefined,

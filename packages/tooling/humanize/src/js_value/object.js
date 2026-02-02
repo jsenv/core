@@ -23,9 +23,9 @@ export const inspectObject = (
 
   const propertySourceArray = [];
   Object.getOwnPropertyNames(value).forEach((propertyName) => {
-    const propertyNameAsNumber = parseInt(propertyName, 10);
+    const propertyNameAsNumber = parseFloat(propertyName);
     const propertyNameSource = nestedHumanize(
-      Number.isInteger(propertyNameAsNumber)
+      Number.isInteger(propertyNameAsNumber) && !isNaN(propertyNameAsNumber)
         ? propertyNameAsNumber
         : propertyName,
     );

@@ -36,14 +36,14 @@ return {
     "valid": true,
     "validSuggestion": null
   },
-  0: {
+  "0.5": {
     "type": undefined,
     "min": undefined,
     "max": undefined,
     "valid": true,
     "validSuggestion": null
   },
-  1: {
+  "1.5": {
     "type": undefined,
     "min": undefined,
     "max": "must be <= 1",
@@ -52,7 +52,7 @@ return {
       "value": 1
     }
   },
-  -0: {
+  "-0.5": {
     "type": undefined,
     "min": "must be positive",
     "max": undefined,

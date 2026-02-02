@@ -10,36 +10,22 @@ const [validity, applyOn] = createValidity({
   step: 1, // Rule 4: integer step
 });
 
-const results = {};
+const run = (value) => {
+  applyOn(value);
+  return structuredClone(validity);
+};
 
-// Case 1: String "150" converts to number 150, but violates max rule
-// Should suggest 100 (the max limit) instead
-applyOn("150");
-results["type conversion violates max - suggests max limit"] =
-  structuredClone(validity);
-
-// Case 2: String "5.5" converts to number 5.5, but violates step rule
-// Should suggest 6 (rounded to nearest valid step) instead
-applyOn("5.5");
-results["type conversion violates step - suggests rounded value"] =
-  structuredClone(validity);
-
-// Case 3: String "-10" converts to number -10, but violates min rule
-// Should suggest 0 (the min limit) instead
-applyOn("-10");
-results["type conversion violates min - suggests min limit"] =
-  structuredClone(validity);
-
-// Case 4: Valid case for comparison
-applyOn("50");
-results["type conversion valid for all rules"] = structuredClone(validity);
-
-return results;
+return {
+  '"150"': run("150"),
+  '"5.5"': run("5.5"),
+  '"-10"': run("-10"),
+  '"50"': run("50"),
+};
 ```
 
 ```js
 {
-  "type conversion violates max - suggests max limit": {
+  '"150"': {
     "type": "must be a number",
     "min": undefined,
     "max": undefined,
@@ -47,7 +33,7 @@ return results;
     "valid": false,
     "validSuggestion": null
   },
-  "type conversion violates step - suggests rounded value": {
+  '"5.5"': {
     "type": "must be a number",
     "min": undefined,
     "max": undefined,
@@ -55,7 +41,7 @@ return results;
     "valid": false,
     "validSuggestion": null
   },
-  "type conversion violates min - suggests min limit": {
+  '"-10"': {
     "type": "must be a number",
     "min": undefined,
     "max": undefined,
@@ -63,7 +49,7 @@ return results;
     "valid": false,
     "validSuggestion": null
   },
-  "type conversion valid for all rules": {
+  '"50"': {
     "type": "must be a number",
     "min": undefined,
     "max": undefined,

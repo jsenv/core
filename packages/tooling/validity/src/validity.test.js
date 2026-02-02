@@ -24,28 +24,18 @@ await snapshotTests(import.meta.url, ({ test }) => {
       max: 100,
     });
 
-    const results = {};
+    const run = (value) => {
+      applyOn(value);
+      return structuredClone(validity);
+    };
 
-    // Valid range
-    applyOn(50);
-    results["valid range"] = structuredClone(validity);
-
-    // Below minimum
-    applyOn(-10);
-    results["below minimum"] = structuredClone(validity);
-
-    // Above maximum
-    applyOn(150);
-    results["above maximum"] = structuredClone(validity);
-
-    // Edge cases
-    applyOn(0);
-    results["exact minimum"] = structuredClone(validity);
-
-    applyOn(100);
-    results["exact maximum"] = structuredClone(validity);
-
-    return results;
+    return {
+      "50": run(50),
+      "-10": run(-10),
+      "150": run(150),
+      "0": run(0),
+      "100": run(100),
+    };
   });
 
   test("step validation", () => {
@@ -55,21 +45,16 @@ await snapshotTests(import.meta.url, ({ test }) => {
       min: 0,
     });
 
-    const results = {};
+    const run = (value) => {
+      applyOn(value);
+      return structuredClone(validity);
+    };
 
-    // Valid step
-    applyOn(1.2);
-    results["valid step"] = structuredClone(validity);
-
-    // Invalid step - should trigger validation error
-    applyOn(1.23);
-    results["invalid step"] = structuredClone(validity);
-
-    // Edge case - very close to valid step (within epsilon)
-    applyOn(1.1000000001);
-    results["epsilon tolerance"] = structuredClone(validity);
-
-    return results;
+    return {
+      1.2: run(1.2),
+      1.23: run(1.23),
+      1.1000000001: run(1.1000000001),
+    };
   });
 
   test("step validation with integer step", () => {
@@ -78,17 +63,15 @@ await snapshotTests(import.meta.url, ({ test }) => {
       step: 1,
     });
 
-    const results = {};
+    const run = (value) => {
+      applyOn(value);
+      return structuredClone(validity);
+    };
 
-    // Valid integer
-    applyOn(5);
-    results["valid integer"] = structuredClone(validity);
-
-    // Invalid - not an integer
-    applyOn(5.5);
-    results["not an integer"] = structuredClone(validity);
-
-    return results;
+    return {
+      5: run(5),
+      5.5: run(5.5),
+    };
   });
 
   test("oneOf validation", () => {
@@ -96,17 +79,15 @@ await snapshotTests(import.meta.url, ({ test }) => {
       oneOf: ["red", "green", "blue"],
     });
 
-    const results = {};
+    const run = (value) => {
+      applyOn(value);
+      return structuredClone(validity);
+    };
 
-    // Valid option
-    applyOn("red");
-    results["valid option"] = structuredClone(validity);
-
-    // Invalid option
-    applyOn("yellow");
-    results["invalid option"] = structuredClone(validity);
-
-    return results;
+    return {
+      '"red"': run("red"),
+      '"yellow"': run("yellow"),
+    };
   });
 
   test("combined validation", () => {
@@ -117,17 +98,15 @@ await snapshotTests(import.meta.url, ({ test }) => {
       step: 0.5,
     });
 
-    const results = {};
+    const run = (value) => {
+      applyOn(value);
+      return structuredClone(validity);
+    };
 
-    // Valid value
-    applyOn(5.5);
-    results["valid combined"] = structuredClone(validity);
-
-    // Multiple violations
-    applyOn(-2.3);
-    results["multiple violations"] = structuredClone(validity);
-
-    return results;
+    return {
+      "5.5": run(5.5),
+      "-2.3": run(-2.3),
+    };
   });
 
   test("percentage type validation", () => {
@@ -135,25 +114,17 @@ await snapshotTests(import.meta.url, ({ test }) => {
       type: "percentage",
     });
 
-    const results = {};
+    const run = (value) => {
+      applyOn(value);
+      return structuredClone(validity);
+    };
 
-    // Valid percentage
-    applyOn("50%");
-    results["valid percentage"] = structuredClone(validity);
-
-    // Invalid percentage - no %
-    applyOn("50");
-    results["missing percent sign"] = structuredClone(validity);
-
-    // Invalid percentage - out of range
-    applyOn("150%");
-    results["out of range"] = structuredClone(validity);
-
-    // Number to percentage conversion
-    applyOn(75);
-    results["number conversion"] = structuredClone(validity);
-
-    return results;
+    return {
+      '"50%"': run("50%"),
+      '"50"': run("50"),
+      '"150%"': run("150%"),
+      "75": run(75),
+    };
   });
 
   test("boolean type conversion", () => {
@@ -161,24 +132,17 @@ await snapshotTests(import.meta.url, ({ test }) => {
       type: "boolean",
     });
 
-    const results = {};
+    const run = (value) => {
+      applyOn(value);
+      return structuredClone(validity);
+    };
 
-    // Valid boolean
-    applyOn(true);
-    results["valid boolean"] = structuredClone(validity);
-
-    // String to boolean conversion
-    applyOn("true");
-    results["string true conversion"] = structuredClone(validity);
-
-    applyOn("false");
-    results["string false conversion"] = structuredClone(validity);
-
-    // Number to boolean conversion
-    applyOn(1);
-    results["number conversion"] = structuredClone(validity);
-
-    return results;
+    return {
+      "true": run(true),
+      '"true"': run("true"),
+      '"false"': run("false"),
+      "1": run(1),
+    };
   });
 
   test("object type with JSON conversion", () => {
@@ -186,21 +150,16 @@ await snapshotTests(import.meta.url, ({ test }) => {
       type: "object",
     });
 
-    const results = {};
+    const run = (value) => {
+      applyOn(value);
+      return structuredClone(validity);
+    };
 
-    // Valid object
-    applyOn({ key: "value" });
-    results["valid object"] = structuredClone(validity);
-
-    // JSON string to object conversion
-    applyOn('{"key": "value"}');
-    results["JSON string conversion"] = structuredClone(validity);
-
-    // Invalid JSON string
-    applyOn("{invalid json}");
-    results["invalid JSON"] = structuredClone(validity);
-
-    return results;
+    return {
+      '{ key: "value" }': run({ key: "value" }),
+      '"{\"key\": \"value\"}"': run('{"key": "value"}'),
+      '"{invalid json}"': run("{invalid json}"),
+    };
   });
 
   test("unknown rule should be ignored", () => {
@@ -209,12 +168,14 @@ await snapshotTests(import.meta.url, ({ test }) => {
       unknownRule: "should be ignored",
     });
 
-    const results = {};
+    const run = (value) => {
+      applyOn(value);
+      return structuredClone(validity);
+    };
 
-    applyOn(42);
-    results["unknown rule ignored"] = structuredClone(validity);
-
-    return results;
+    return {
+      42: run(42),
+    };
   });
 
   test("cross-rule validation works correctly - suggestions are validated against all rules", () => {
@@ -227,31 +188,17 @@ await snapshotTests(import.meta.url, ({ test }) => {
       step: 1, // Rule 4: integer step
     });
 
-    const results = {};
+    const run = (value) => {
+      applyOn(value);
+      return structuredClone(validity);
+    };
 
-    // Case 1: String "150" converts to number 150, but violates max rule
-    // Should suggest 100 (the max limit) instead
-    applyOn("150");
-    results["type conversion violates max - suggests max limit"] =
-      structuredClone(validity);
-
-    // Case 2: String "5.5" converts to number 5.5, but violates step rule
-    // Should suggest 6 (rounded to nearest valid step) instead
-    applyOn("5.5");
-    results["type conversion violates step - suggests rounded value"] =
-      structuredClone(validity);
-
-    // Case 3: String "-10" converts to number -10, but violates min rule
-    // Should suggest 0 (the min limit) instead
-    applyOn("-10");
-    results["type conversion violates min - suggests min limit"] =
-      structuredClone(validity);
-
-    // Case 4: Valid case for comparison
-    applyOn("50");
-    results["type conversion valid for all rules"] = structuredClone(validity);
-
-    return results;
+    return {
+      '"150"': run("150"),
+      '"5.5"': run("5.5"),
+      '"-10"': run("-10"),
+      '"50"': run("50"),
+    };
   });
 
   test("debug cross-rule validation behavior", () => {
@@ -261,19 +208,15 @@ await snapshotTests(import.meta.url, ({ test }) => {
       max: 100,
     });
 
-    const results = {};
+    const run = (value) => {
+      applyOn(value);
+      return structuredClone(validity);
+    };
 
-    // Case 1: String "50" should convert to 50 and be valid
-    applyOn("50");
-    results["valid conversion"] = structuredClone(validity);
-
-    // Case 2: String "150" should convert to 150, but 150 > 100
-    // In the old system, this would suggest 100
-    // In the new system, should it suggest 100 or null?
-    applyOn("150");
-    results["type conversion exceeds max"] = structuredClone(validity);
-
-    return results;
+    return {
+      '"50"': run("50"),
+      '"150"': run("150"),
+    };
   });
 
   test("impossible constraint validation", () => {
@@ -284,35 +227,30 @@ await snapshotTests(import.meta.url, ({ test }) => {
       min: 50, // But min is 50, making oneOf values impossible
     });
 
-    const results = {};
+    const run = (value) => {
+      applyOn(value);
+      return structuredClone(validity);
+    };
 
-    // This should create an impossible situation:
-    // - Type conversion suggests a number
-    // - But oneOf only allows [10, 20, 30]
-    // - But min is 50, so none of [10, 20, 30] are valid
-    applyOn("15");
-    results["impossible constraint - no valid suggestion"] =
-      structuredClone(validity);
-
-    return results;
+    return {
+      '"15"': run("15"),
+    };
   });
   test("float type validation", () => {
     const [validity, applyOn] = createValidity({
       type: "float",
     });
 
-    const results = {};
+    const run = (value) => {
+      applyOn(value);
+      return structuredClone(validity);
+    };
 
-    applyOn(3.14);
-    results["valid float"] = structuredClone(validity);
-
-    applyOn("2.5");
-    results["string to float conversion"] = structuredClone(validity);
-
-    applyOn("invalid");
-    results["invalid string"] = structuredClone(validity);
-
-    return results;
+    return {
+      "3.14": run(3.14),
+      '"2.5"': run("2.5"),
+      '"invalid"': run("invalid"),
+    };
   });
 
   test("integer type validation", () => {
@@ -338,27 +276,19 @@ await snapshotTests(import.meta.url, ({ test }) => {
       type: "longitude",
     });
 
-    const results = {};
+    const run = (value) => {
+      applyOn(value);
+      return structuredClone(validity);
+    };
 
-    applyOn(45.5);
-    results["valid longitude"] = structuredClone(validity);
-
-    applyOn(0);
-    results["zero longitude"] = structuredClone(validity);
-
-    applyOn(-179.9);
-    results["negative longitude"] = structuredClone(validity);
-
-    applyOn(200);
-    results["longitude over 180"] = structuredClone(validity);
-
-    applyOn(-200);
-    results["longitude under -180"] = structuredClone(validity);
-
-    applyOn("125.5");
-    results["string to longitude conversion"] = structuredClone(validity);
-
-    return results;
+    return {
+      "45.5": run(45.5),
+      "0": run(0),
+      "-179.9": run(-179.9),
+      "200": run(200),
+      "-200": run(-200),
+      '"125.5"': run("125.5"),
+    };
   });
 
   test("latitude type validation", () => {
@@ -366,27 +296,19 @@ await snapshotTests(import.meta.url, ({ test }) => {
       type: "latitude",
     });
 
-    const results = {};
+    const run = (value) => {
+      applyOn(value);
+      return structuredClone(validity);
+    };
 
-    applyOn(45.5);
-    results["valid latitude"] = structuredClone(validity);
-
-    applyOn(0);
-    results["zero latitude"] = structuredClone(validity);
-
-    applyOn(-89.9);
-    results["negative latitude"] = structuredClone(validity);
-
-    applyOn(100);
-    results["latitude over 90"] = structuredClone(validity);
-
-    applyOn(-100);
-    results["latitude under -90"] = structuredClone(validity);
-
-    applyOn("45.5");
-    results["string to latitude conversion"] = structuredClone(validity);
-
-    return results;
+    return {
+      "45.5": run(45.5),
+      "0": run(0),
+      "-89.9": run(-89.9),
+      "100": run(100),
+      "-100": run(-100),
+      '"45.5"': run("45.5"),
+    };
   });
 
   test("ratio type validation", () => {
@@ -433,24 +355,18 @@ await snapshotTests(import.meta.url, ({ test }) => {
       type: "url",
     });
 
-    const results = {};
+    const run = (value) => {
+      applyOn(value);
+      return structuredClone(validity);
+    };
 
-    applyOn("https://example.com");
-    results["valid https url"] = structuredClone(validity);
-
-    applyOn("http://domain.org/path");
-    results["valid http url with path"] = structuredClone(validity);
-
-    applyOn("ftp://files.example.com");
-    results["valid ftp url"] = structuredClone(validity);
-
-    applyOn("not-a-url");
-    results["invalid url"] = structuredClone(validity);
-
-    applyOn("://missing-protocol.com");
-    results["invalid url - malformed"] = structuredClone(validity);
-
-    return results;
+    return {
+      '"https://example.com"': run("https://example.com"),
+      '"http://domain.org/path"': run("http://domain.org/path"),
+      '"ftp://files.example.com"': run("ftp://files.example.com"),
+      '"not-a-url"': run("not-a-url"),
+      '"://missing-protocol.com"': run("://missing-protocol.com"),
+    };
   });
 
   test("color type validation", () => {
@@ -480,24 +396,18 @@ await snapshotTests(import.meta.url, ({ test }) => {
       type: "date",
     });
 
-    const results = {};
+    const run = (value) => {
+      applyOn(value);
+      return structuredClone(validity);
+    };
 
-    applyOn("2023-12-25");
-    results["valid date"] = structuredClone(validity);
-
-    applyOn("2024-02-29");
-    results["valid leap year date"] = structuredClone(validity);
-
-    applyOn("2023-02-29");
-    results["invalid date - not leap year"] = structuredClone(validity);
-
-    applyOn("12/25/2023");
-    results["invalid date format"] = structuredClone(validity);
-
-    applyOn("2023-13-01");
-    results["invalid month"] = structuredClone(validity);
-
-    return results;
+    return {
+      '"2023-12-25"': run("2023-12-25"),
+      '"2024-02-29"': run("2024-02-29"),
+      '"2023-02-29"': run("2023-02-29"),
+      '"12/25/2023"': run("12/25/2023"),
+      '"2023-13-01"': run("2023-13-01"),
+    };
   });
 
   test("time type validation", () => {
@@ -505,26 +415,18 @@ await snapshotTests(import.meta.url, ({ test }) => {
       type: "time",
     });
 
-    const results = {};
+    const run = (value) => {
+      applyOn(value);
+      return structuredClone(validity);
+    };
 
-    applyOn("14:30");
-    results["valid time HH:MM"] = structuredClone(validity);
-
-    applyOn("09:15:30");
-    results["valid time HH:MM:SS"] = structuredClone(validity);
-
-    applyOn("23:59:59");
-    results["valid time - end of day"] = structuredClone(validity);
-
-    applyOn("24:00");
-    results["invalid time - 24:00"] = structuredClone(validity);
-
-    applyOn("14:60");
-    results["invalid minutes"] = structuredClone(validity);
-
-    applyOn("2:30 PM");
-    results["invalid format - 12 hour"] = structuredClone(validity);
-
-    return results;
+    return {
+      '"14:30"': run("14:30"),
+      '"09:15:30"': run("09:15:30"),
+      '"23:59:59"': run("23:59:59"),
+      '"24:00"': run("24:00"),
+      '"14:60"': run("14:60"),
+      '"2:30 PM"': run("2:30 PM"),
+    };
   });
 });

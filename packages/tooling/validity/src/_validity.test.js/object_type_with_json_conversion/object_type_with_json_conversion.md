@@ -5,31 +5,26 @@ const [validity, applyOn] = createValidity({
   type: "object",
 });
 
-const results = {};
+const run = (value) => {
+  applyOn(value);
+  return structuredClone(validity);
+};
 
-// Valid object
-applyOn({ key: "value" });
-results["valid object"] = structuredClone(validity);
-
-// JSON string to object conversion
-applyOn('{"key": "value"}');
-results["JSON string conversion"] = structuredClone(validity);
-
-// Invalid JSON string
-applyOn("{invalid json}");
-results["invalid JSON"] = structuredClone(validity);
-
-return results;
+return {
+  '{ key: "value" }': run({ key: "value" }),
+  '"{\"key\": \"value\"}"': run('{"key": "value"}'),
+  '"{invalid json}"': run("{invalid json}"),
+};
 ```
 
 ```js
 {
-  "valid object": {
+  '{ key: "value" }': {
     "type": undefined,
     "valid": true,
     "validSuggestion": null
   },
-  "JSON string conversion": {
+  '"{"key": "value"}"': {
     "type": "must be a object, got string",
     "valid": false,
     "validSuggestion": {
@@ -38,7 +33,7 @@ return results;
       }
     }
   },
-  "invalid JSON": {
+  '"{invalid json}"': {
     "type": "must be a object, got string",
     "valid": false,
     "validSuggestion": null
