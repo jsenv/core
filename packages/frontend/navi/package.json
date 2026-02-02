@@ -33,7 +33,8 @@
   },
   "dependencies": {
     "@jsenv/dom": "0.8.8",
-    "@jsenv/humanize": "1.7.2"
+    "@jsenv/humanize": "1.7.2",
+    "@jsenv/validity": "0.0.1"
   },
   "devDependencies": {
     "@jsenv/assert": "4.5.5",

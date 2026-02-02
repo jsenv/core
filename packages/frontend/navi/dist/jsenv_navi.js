@@ -2415,6 +2415,7 @@ const generateSignalId = () => {
  * @param {any} [options.default] - Static fallback value used when defaultValue is a signal and that signal's value is undefined
  * @param {boolean} [options.persists=false] - Whether to persist the signal value in localStorage using the signal ID as key
  * @param {"string" | "number" | "boolean" | "object"} [options.type="string"] - Type for localStorage serialization/deserialization
+ * @param {number} [options.step] - For number type: step size for precision. Values will be rounded to nearest multiple of step.
  * @param {Array} [options.oneOf] - Array of valid values for validation. Signal will be marked invalid if value is not in this array
  * @param {Function} [options.autoFix] - Function to call when validation fails to automatically fix the value
  * @param {boolean} [options.debug=false] - Enable debug logging for this signal's operations
@@ -2478,6 +2479,7 @@ const stateSignal = (defaultValue, options = {}) => {
   const {
     id,
     type = "string",
+    step,
     oneOf,
     autoFix,
     persists = false,
@@ -2509,6 +2511,16 @@ const stateSignal = (defaultValue, options = {}) => {
     persists
       ? valueInLocalStorage(localStorageKey, { type })
       : NO_LOCAL_STORAGE;
+
+  /**
+   * Value processor - applies step rounding for numbers, passthrough for others
+   */
+  const processValue =
+    type === "number" && step !== undefined
+      ? (value) =>
+          typeof value === "number" ? Math.round(value / step) * step : value
+      : (value) => value;
+
   /**
    * Returns the current default value from code logic only (static or dynamic).
    * NEVER considers localStorage - used for URL building and route matching.
@@ -2579,17 +2591,37 @@ const stateSignal = (defaultValue, options = {}) => {
   };
 
   // Create signal with initial value: use stored value, or undefined to indicate no explicit value
-  const advancedSignal = signal(getFallbackValue());
+  const preactSignal = signal(processValue(getFallbackValue()));
+
+  // Create wrapper signal that applies step rounding on setValue
+  const facadeSignal = {
+    get value() {
+      return preactSignal.value;
+    },
+    set value(newValue) {
+      preactSignal.value = processValue(newValue);
+    },
+    peek() {
+      return preactSignal.peek();
+    },
+    subscribe(fn) {
+      return preactSignal.subscribe(fn);
+    },
+    valueOf() {
+      return preactSignal.valueOf();
+    },
+  };
+
   const validity = { valid: true };
-  advancedSignal.validity = validity;
-  advancedSignal.__signalId = signalIdString;
-  advancedSignal.toString = () => `{navi_state_signal:${signalIdString}}`;
+  facadeSignal.validity = validity;
+  facadeSignal.__signalId = signalIdString;
+  facadeSignal.toString = () => `{navi_state_signal:${signalIdString}}`;
   // 1. when signal value changes to undefined, it needs to fallback to default value
   // 2. when dynamic default changes and signal value is not custom, it needs to update
   {
     let isFirstRun = true;
     effect(() => {
-      const value = advancedSignal.value;
+      const value = preactSignal.value;
       if (isFirstRun) {
         isFirstRun = false;
         return;
@@ -2606,7 +2638,7 @@ const stateSignal = (defaultValue, options = {}) => {
           `[stateSignal:${signalIdString}] becomes undefined, reset to ${defaultValue}`,
         );
       }
-      advancedSignal.value = defaultValue;
+      facadeSignal.value = defaultValue;
     });
   }
   dynamic_signal_effect: {
@@ -2617,7 +2649,7 @@ const stateSignal = (defaultValue, options = {}) => {
     let isFirstRun = true;
     let dynamicDefaultPreviousValue;
     effect(() => {
-      const value = advancedSignal.peek();
+      const value = preactSignal.peek();
       const dynamicDefaultValue = dynamicDefaultSignal.value;
       if (isFirstRun) {
         isFirstRun = false;
@@ -2657,7 +2689,7 @@ const stateSignal = (defaultValue, options = {}) => {
         );
       }
       dynamicDefaultPreviousValue = dynamicDefaultValue;
-      advancedSignal.value = newDefaultValue;
+      facadeSignal.value = newDefaultValue;
     });
   }
   persist_in_local_storage: {
@@ -2665,7 +2697,7 @@ const stateSignal = (defaultValue, options = {}) => {
       break persist_in_local_storage;
     }
     effect(() => {
-      const value = advancedSignal.value;
+      const value = preactSignal.value;
       if (isCustomValue(value)) {
         if (debug) {
           console.debug(
@@ -2687,7 +2719,7 @@ const stateSignal = (defaultValue, options = {}) => {
   {
     effect(() => {
       const wasValid = validity.valid;
-      const value = advancedSignal.value;
+      const value = preactSignal.value;
       updateValidity({ oneOf }, validity, value);
       if (validity.valid) {
         if (!wasValid) {
@@ -2718,20 +2750,29 @@ const stateSignal = (defaultValue, options = {}) => {
             },
           );
         }
-        advancedSignal.value = fixedValue;
+        facadeSignal.value = fixedValue;
         return;
       }
     });
   }
+
+  // Create isDefaultValue function for this signal
+  const isDefaultValue = (value) => {
+    const currentDefault = getDefaultValue(false);
+    return value === currentDefault;
+  };
+
   // Store signal with its options (used by route_pattern.js)
   globalSignalRegistry.set(signalIdString, {
-    signal: advancedSignal,
+    signal: facadeSignal,
     options: {
       staticDefaultValue,
       getDefaultValue,
       dynamicDefaultSignal,
       isCustomValue,
+      isDefaultValue,
       type,
+      step,
       persists,
       localStorageKey,
       debug,
@@ -2740,7 +2781,7 @@ const stateSignal = (defaultValue, options = {}) => {
   });
   if (debug) {
     console.debug(
-      `[stateSignal:${signalIdString}] created with initial value=${advancedSignal.value}`,
+      `[stateSignal:${signalIdString}] created with initial value=${facadeSignal.value}`,
       {
         staticDefaultValue,
         hasDynamicDefault: Boolean(dynamicDefaultSignal),
@@ -2751,7 +2792,7 @@ const stateSignal = (defaultValue, options = {}) => {
     );
   }
 
-  return advancedSignal;
+  return facadeSignal;
 };
 
 const updateValidity = (rules, validity, value) => {
@@ -9591,7 +9632,7 @@ const checkIfLiteralCanBeOptionalWithPatternObj = (
 
   // Check current pattern's connections
   for (const connection of patternObj.connections) {
-    if (connection.getDefaultValue() === literalValue) {
+    if (connection.isDefaultValue(literalValue)) {
       return true;
     }
   }
@@ -9600,7 +9641,7 @@ const checkIfLiteralCanBeOptionalWithPatternObj = (
   let currentParent = patternObj.parent;
   while (currentParent) {
     for (const connection of currentParent.connections) {
-      if (connection.getDefaultValue() === literalValue) {
+      if (connection.isDefaultValue(literalValue)) {
         return true;
       }
     }
@@ -9611,7 +9652,7 @@ const checkIfLiteralCanBeOptionalWithPatternObj = (
   const checkChildrenRecursively = (pattern) => {
     for (const child of pattern.children || []) {
       for (const connection of child.connections) {
-        if (connection.getDefaultValue() === literalValue) {
+        if (connection.isDefaultValue(literalValue)) {
           return true;
         }
       }
@@ -10312,6 +10353,11 @@ const routePreviousStateMap = new WeakMap();
 // Store abort controllers per action to control their lifecycle based on route state
 const actionAbortControllerWeakMap = new WeakMap();
 
+/**
+ * Get the isDefaultValue function for a signal from the registry
+ * @param {import("@preact/signals").Signal} signal
+ * @returns {Function}
+ */
 const updateRoutes = (
   url,
   {
@@ -10518,7 +10564,7 @@ const updateRoutes = (
           // No URL parameter - reset signal to its current default value
           // (handles both static fallback and dynamic default cases)
           const defaultValue = connection.getDefaultValue();
-          if (value === defaultValue) {
+          if (connection.isDefaultValue(value)) {
             // Signal already has correct default value, no sync needed
             continue;
           }
@@ -10767,14 +10813,13 @@ const registerRoute = (routePattern) => {
       }
       if (urlParamValue === undefined) {
         // No URL parameter exists - check if signal has meaningful value to add
-        const defaultValue = connection.getDefaultValue();
-        if (value === defaultValue) {
+        if (connection.isDefaultValue(value)) {
           // Signal using default value, keep URL clean (no parameter needed)
           return;
         }
         if (debug) {
           console.debug(
-            `[route] Signal->URL: ${paramName} adding custom value ${value} to URL (default: ${defaultValue})`,
+            `[route] Signal->URL: ${paramName} adding custom value ${value} to URL (default: ${connection.getDefaultValue()})`,
           );
         }
         route.replaceParams({ [paramName]: value });
@@ -10782,8 +10827,7 @@ const registerRoute = (routePattern) => {
       }
 
       // URL parameter exists - check if we need to update or clean it up
-      const defaultValue = connection.getDefaultValue();
-      if (value === defaultValue) {
+      if (connection.isDefaultValue(value)) {
         if (debug) {
           console.debug(
             `[route] Signal->URL: ${paramName} cleaning URL (removing default value ${value})`,
