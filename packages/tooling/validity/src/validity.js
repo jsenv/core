@@ -273,8 +273,12 @@ const TYPE_VALIDATORS = {
     if (typeof value !== "string") {
       return `must be a string`;
     }
-    const emailRegex = /^[^\s@]+@[^\s@][^\s.@]*\.[^\s@]+$/;
-    if (!emailRegex.test(value)) {
+    const emailregex =
+      /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+    if (!value.includes("@")) {
+      return `must be a valid email address`;
+    }
+    if (!emailregex.test(value)) {
       return `must be a valid email address`;
     }
     return "";

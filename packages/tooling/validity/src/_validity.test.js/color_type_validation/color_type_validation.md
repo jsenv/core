@@ -5,73 +5,61 @@ const [validity, applyOn] = createValidity({
   type: "color",
 });
 
-const results = {};
+const run = (value) => {
+  applyOn(value);
+  return structuredClone(validity);
+};
 
-applyOn("#FF0000");
-results["valid hex color"] = structuredClone(validity);
-
-applyOn("#f0a");
-results["valid short hex color"] = structuredClone(validity);
-
-applyOn("rgb(255, 128, 0)");
-results["valid rgb color"] = structuredClone(validity);
-
-applyOn("rgba(255, 128, 0, 0.5)");
-results["valid rgba color"] = structuredClone(validity);
-
-applyOn("red");
-results["valid named color"] = structuredClone(validity);
-
-applyOn("Blue");
-results["valid named color case insensitive"] = structuredClone(validity);
-
-applyOn("#GGGGGG");
-results["invalid hex color"] = structuredClone(validity);
-
-applyOn("rgb(300, 128, 0)");
-results["invalid rgb color - out of range"] = structuredClone(validity);
-
-return results;
+return {
+  '"#FF0000"': run("#FF0000"),
+  '"#f0a"': run("#f0a"),
+  '"rgb(255, 128, 0)"': run("rgb(255, 128, 0)"),
+  '"rgba(255, 128, 0, 0.5)"': run("rgba(255, 128, 0, 0.5)"),
+  '"red"': run("red"),
+  '"Blue"': run("Blue"),
+  '"#GGGGGG"': run("#GGGGGG"),
+  '"rgb(300, 128, 0)"': run("rgb(300, 128, 0)"),
+};
 ```
 
 ```js
 {
-  "valid hex color": {
+  '"#FF0000"': {
     "type": undefined,
     "valid": true,
     "validSuggestion": null
   },
-  "valid short hex color": {
+  '"#f0a"': {
     "type": undefined,
     "valid": true,
     "validSuggestion": null
   },
-  "valid rgb color": {
+  '"rgb(255, 128, 0)"': {
     "type": undefined,
     "valid": true,
     "validSuggestion": null
   },
-  "valid rgba color": {
+  '"rgba(255, 128, 0, 0.5)"': {
     "type": undefined,
     "valid": true,
     "validSuggestion": null
   },
-  "valid named color": {
+  '"red"': {
     "type": undefined,
     "valid": true,
     "validSuggestion": null
   },
-  "valid named color case insensitive": {
+  '"Blue"': {
     "type": undefined,
     "valid": true,
     "validSuggestion": null
   },
-  "invalid hex color": {
+  '"#GGGGGG"': {
     "type": "must be a valid color (hex, rgb, rgba, or named color)",
     "valid": false,
     "validSuggestion": null
   },
-  "invalid rgb color - out of range": {
+  '"rgb(300, 128, 0)"': {
     "type": "must be a valid color (hex, rgb, rgba, or named color)",
     "valid": false,
     "validSuggestion": null

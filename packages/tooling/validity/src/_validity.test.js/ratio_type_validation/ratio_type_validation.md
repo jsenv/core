@@ -5,53 +5,45 @@ const [validity, applyOn] = createValidity({
   type: "ratio",
 });
 
-const results = {};
+const run = (value) => {
+  applyOn(value);
+  return structuredClone(validity);
+};
 
-applyOn(0.5);
-results["valid ratio"] = structuredClone(validity);
-
-applyOn(0);
-results["zero ratio"] = structuredClone(validity);
-
-applyOn(1);
-results["one ratio"] = structuredClone(validity);
-
-applyOn(1.5);
-results["ratio over 1"] = structuredClone(validity);
-
-applyOn(-0.5);
-results["negative ratio"] = structuredClone(validity);
-
-applyOn("0.75");
-results["string to ratio conversion"] = structuredClone(validity);
-
-return results;
+return {
+  "0.5": run(0.5),
+  "0": run(0),
+  "1": run(1),
+  "1.5": run(1.5),
+  "-0.5": run(-0.5),
+  '"0.75"': run("0.75"),
+};
 ```
 
 ```js
 {
-  "valid ratio": {
+  0: {
     "type": undefined,
     "min": undefined,
     "max": undefined,
     "valid": true,
     "validSuggestion": null
   },
-  "zero ratio": {
+  1: {
     "type": undefined,
     "min": undefined,
     "max": undefined,
     "valid": true,
     "validSuggestion": null
   },
-  "one ratio": {
+  0: {
     "type": undefined,
     "min": undefined,
     "max": undefined,
     "valid": true,
     "validSuggestion": null
   },
-  "ratio over 1": {
+  1: {
     "type": undefined,
     "min": undefined,
     "max": "must be <= 1",
@@ -60,7 +52,7 @@ return results;
       "value": 1
     }
   },
-  "negative ratio": {
+  -0: {
     "type": undefined,
     "min": "must be positive",
     "max": undefined,
@@ -69,7 +61,7 @@ return results;
       "value": 0
     }
   },
-  "string to ratio conversion": {
+  '"0.75"': {
     "type": "must be a number",
     "min": undefined,
     "max": undefined,

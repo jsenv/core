@@ -2,48 +2,38 @@
 
 ```js
 const [validity, applyOn] = createValidity({ type: "number" });
-
-const results = {};
-
-// Valid number
-applyOn(42);
-results["valid number"] = structuredClone(validity);
-
-// Invalid type with auto-fix
-applyOn("123");
-results["string to number conversion"] = structuredClone(validity);
-
-// Invalid type without auto-fix
-applyOn("not a number");
-results["invalid string"] = structuredClone(validity);
-
-// Non-finite number
-applyOn(Infinity);
-results["infinity"] = structuredClone(validity);
-
-return results;
+const run = (value) => {
+  applyOn(value);
+  return structuredClone(validity);
+};
+return {
+  "42": run(42),
+  '"123"': run("123"),
+  '"not a number"': run("not a number"),
+  "Infinity": run(Infinity),
+};
 ```
 
 ```js
 {
-  "valid number": {
+  42: {
     "type": undefined,
     "valid": true,
     "validSuggestion": null
   },
-  "string to number conversion": {
+  '"123"': {
     "type": "must be a number",
     "valid": false,
     "validSuggestion": {
       "value": 123
     }
   },
-  "invalid string": {
+  '"not a number"': {
     "type": "must be a number",
     "valid": false,
     "validSuggestion": null
   },
-  "infinity": {
+  "Infinity": {
     "type": "must be finite",
     "valid": false,
     "validSuggestion": null

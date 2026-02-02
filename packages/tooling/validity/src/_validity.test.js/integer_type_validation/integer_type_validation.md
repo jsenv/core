@@ -5,45 +5,41 @@ const [validity, applyOn] = createValidity({
   type: "integer",
 });
 
-const results = {};
+const run = (value) => {
+  applyOn(value);
+  return structuredClone(validity);
+};
 
-applyOn(42);
-results["valid integer"] = structuredClone(validity);
-
-applyOn(3.14);
-results["float to integer conversion"] = structuredClone(validity);
-
-applyOn("123");
-results["string to integer conversion"] = structuredClone(validity);
-
-applyOn("3.7");
-results["string float to integer conversion"] = structuredClone(validity);
-
-return results;
+return {
+  "42": run(42),
+  "3.14": run(3.14),
+  '"123"': run("123"),
+  '"3.7"': run("3.7"),
+};
 ```
 
 ```js
 {
-  "valid integer": {
+  42: {
     "type": undefined,
     "valid": true,
     "validSuggestion": null
   },
-  "float to integer conversion": {
+  3: {
     "type": "must be an integer",
     "valid": false,
     "validSuggestion": {
       "value": 3
     }
   },
-  "string to integer conversion": {
+  '"123"': {
     "type": "must be a number",
     "valid": false,
     "validSuggestion": {
       "value": 123
     }
   },
-  "string float to integer conversion": {
+  '"3.7"': {
     "type": "must be a number",
     "valid": false,
     "validSuggestion": {

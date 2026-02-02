@@ -5,26 +5,16 @@ import { createValidity } from "./validity.js";
 await snapshotTests(import.meta.url, ({ test }) => {
   test("type validation", () => {
     const [validity, applyOn] = createValidity({ type: "number" });
-
-    const results = {};
-
-    // Valid number
-    applyOn(42);
-    results["valid number"] = structuredClone(validity);
-
-    // Invalid type with auto-fix
-    applyOn("123");
-    results["string to number conversion"] = structuredClone(validity);
-
-    // Invalid type without auto-fix
-    applyOn("not a number");
-    results["invalid string"] = structuredClone(validity);
-
-    // Non-finite number
-    applyOn(Infinity);
-    results["infinity"] = structuredClone(validity);
-
-    return results;
+    const run = (value) => {
+      applyOn(value);
+      return structuredClone(validity);
+    };
+    return {
+      "42": run(42),
+      '"123"': run("123"),
+      '"not a number"': run("not a number"),
+      "Infinity": run(Infinity),
+    };
   });
 
   test("min/max validation", () => {
@@ -330,21 +320,17 @@ await snapshotTests(import.meta.url, ({ test }) => {
       type: "integer",
     });
 
-    const results = {};
+    const run = (value) => {
+      applyOn(value);
+      return structuredClone(validity);
+    };
 
-    applyOn(42);
-    results["valid integer"] = structuredClone(validity);
-
-    applyOn(3.14);
-    results["float to integer conversion"] = structuredClone(validity);
-
-    applyOn("123");
-    results["string to integer conversion"] = structuredClone(validity);
-
-    applyOn("3.7");
-    results["string float to integer conversion"] = structuredClone(validity);
-
-    return results;
+    return {
+      "42": run(42),
+      "3.14": run(3.14),
+      '"123"': run("123"),
+      '"3.7"': run("3.7"),
+    };
   });
 
   test("longitude type validation", () => {
@@ -408,27 +394,19 @@ await snapshotTests(import.meta.url, ({ test }) => {
       type: "ratio",
     });
 
-    const results = {};
+    const run = (value) => {
+      applyOn(value);
+      return structuredClone(validity);
+    };
 
-    applyOn(0.5);
-    results["valid ratio"] = structuredClone(validity);
-
-    applyOn(0);
-    results["zero ratio"] = structuredClone(validity);
-
-    applyOn(1);
-    results["one ratio"] = structuredClone(validity);
-
-    applyOn(1.5);
-    results["ratio over 1"] = structuredClone(validity);
-
-    applyOn(-0.5);
-    results["negative ratio"] = structuredClone(validity);
-
-    applyOn("0.75");
-    results["string to ratio conversion"] = structuredClone(validity);
-
-    return results;
+    return {
+      "0.5": run(0.5),
+      "0": run(0),
+      "1": run(1),
+      "1.5": run(1.5),
+      "-0.5": run(-0.5),
+      '"0.75"': run("0.75"),
+    };
   });
 
   test("email type validation", () => {
@@ -436,24 +414,18 @@ await snapshotTests(import.meta.url, ({ test }) => {
       type: "email",
     });
 
-    const results = {};
+    const run = (value) => {
+      applyOn(value);
+      return structuredClone(validity);
+    };
 
-    applyOn("user@example.com");
-    results["valid email"] = structuredClone(validity);
-
-    applyOn("test@domain.org");
-    results["another valid email"] = structuredClone(validity);
-
-    applyOn("invalid-email");
-    results["invalid email - no @"] = structuredClone(validity);
-
-    applyOn("@domain.com");
-    results["invalid email - no user"] = structuredClone(validity);
-
-    applyOn("user@");
-    results["invalid email - no domain"] = structuredClone(validity);
-
-    return results;
+    return {
+      '"user@example.com"': run("user@example.com"),
+      '"test@domain.org"': run("test@domain.org"),
+      '"invalid-email"': run("invalid-email"),
+      '"@domain.com"': run("@domain.com"),
+      '"user@"': run("user@"),
+    };
   });
 
   test("url type validation", () => {
@@ -486,33 +458,21 @@ await snapshotTests(import.meta.url, ({ test }) => {
       type: "color",
     });
 
-    const results = {};
+    const run = (value) => {
+      applyOn(value);
+      return structuredClone(validity);
+    };
 
-    applyOn("#FF0000");
-    results["valid hex color"] = structuredClone(validity);
-
-    applyOn("#f0a");
-    results["valid short hex color"] = structuredClone(validity);
-
-    applyOn("rgb(255, 128, 0)");
-    results["valid rgb color"] = structuredClone(validity);
-
-    applyOn("rgba(255, 128, 0, 0.5)");
-    results["valid rgba color"] = structuredClone(validity);
-
-    applyOn("red");
-    results["valid named color"] = structuredClone(validity);
-
-    applyOn("Blue");
-    results["valid named color case insensitive"] = structuredClone(validity);
-
-    applyOn("#GGGGGG");
-    results["invalid hex color"] = structuredClone(validity);
-
-    applyOn("rgb(300, 128, 0)");
-    results["invalid rgb color - out of range"] = structuredClone(validity);
-
-    return results;
+    return {
+      '"#FF0000"': run("#FF0000"),
+      '"#f0a"': run("#f0a"),
+      '"rgb(255, 128, 0)"': run("rgb(255, 128, 0)"),
+      '"rgba(255, 128, 0, 0.5)"': run("rgba(255, 128, 0, 0.5)"),
+      '"red"': run("red"),
+      '"Blue"': run("Blue"),
+      '"#GGGGGG"': run("#GGGGGG"),
+      '"rgb(300, 128, 0)"': run("rgb(300, 128, 0)"),
+    };
   });
 
   test("date type validation", () => {

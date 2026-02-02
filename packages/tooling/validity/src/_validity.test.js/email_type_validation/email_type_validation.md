@@ -5,49 +5,43 @@ const [validity, applyOn] = createValidity({
   type: "email",
 });
 
-const results = {};
+const run = (value) => {
+  applyOn(value);
+  return structuredClone(validity);
+};
 
-applyOn("user@example.com");
-results["valid email"] = structuredClone(validity);
-
-applyOn("test@domain.org");
-results["another valid email"] = structuredClone(validity);
-
-applyOn("invalid-email");
-results["invalid email - no @"] = structuredClone(validity);
-
-applyOn("@domain.com");
-results["invalid email - no user"] = structuredClone(validity);
-
-applyOn("user@");
-results["invalid email - no domain"] = structuredClone(validity);
-
-return results;
+return {
+  '"user@example.com"': run("user@example.com"),
+  '"test@domain.org"': run("test@domain.org"),
+  '"invalid-email"': run("invalid-email"),
+  '"@domain.com"': run("@domain.com"),
+  '"user@"': run("user@"),
+};
 ```
 
 ```js
 {
-  "valid email": {
+  '"user@example.com"': {
     "type": undefined,
     "valid": true,
     "validSuggestion": null
   },
-  "another valid email": {
+  '"test@domain.org"': {
     "type": undefined,
     "valid": true,
     "validSuggestion": null
   },
-  "invalid email - no @": {
+  '"invalid-email"': {
     "type": "must be a valid email address",
     "valid": false,
     "validSuggestion": null
   },
-  "invalid email - no user": {
+  '"@domain.com"': {
     "type": "must be a valid email address",
     "valid": false,
     "validSuggestion": null
   },
-  "invalid email - no domain": {
+  '"user@"': {
     "type": "must be a valid email address",
     "valid": false,
     "validSuggestion": null
