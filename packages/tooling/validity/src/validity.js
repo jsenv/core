@@ -269,7 +269,112 @@ const TYPE_VALIDATORS = {
     }
     return "";
   },
+  email: (value) => {
+    if (typeof value !== "string") {
+      return `must be a string`;
+    }
+    const emailRegex = /^[^\s@]+@[^\s@][^\s.@]*\.[^\s@]+$/;
+    if (!emailRegex.test(value)) {
+      return `must be a valid email address`;
+    }
+    return "";
+  },
+  url: (value) => {
+    if (typeof value !== "string") {
+      return `must be a string`;
+    }
+    try {
+      // eslint-disable-next-line no-new
+      new URL(value);
+      return "";
+    } catch {
+      return `must be a valid URL`;
+    }
+  },
+  date: (value) => {
+    if (typeof value !== "string") {
+      return `must be a string`;
+    }
+    const dateRegex = /^(\d{4})-(\d{2})-(\d{2})$/;
+    const match = dateRegex.exec(value);
+    if (!match) {
+      return `must be in YYYY-MM-DD format`;
+    }
+
+    const year = parseInt(match[1], 10);
+    const month = parseInt(match[2], 10);
+    const day = parseInt(match[3], 10);
+
+    // Create date and verify it matches input (catches invalid dates like Feb 30)
+    const date = new Date(year, month - 1, day);
+    if (
+      date.getFullYear() !== year ||
+      date.getMonth() !== month - 1 ||
+      date.getDate() !== day
+    ) {
+      return `must be a valid date`;
+    }
+
+    return "";
+  },
+  time: (value) => {
+    if (typeof value !== "string") {
+      return `must be a string`;
+    }
+    const timeRegex = /^(?:[01]?[0-9]|2[0-3]):[0-5][0-9](?::[0-5][0-9])?$/;
+    if (!timeRegex.test(value)) {
+      return `must be in HH:MM or HH:MM:SS format`;
+    }
+    return "";
+  },
 };
+
+const wellKnownColorSet = new Set([
+  "black",
+  "white",
+  "red",
+  "green",
+  "blue",
+  "yellow",
+  "cyan",
+  "magenta",
+  "silver",
+  "gray",
+  "maroon",
+  "olive",
+  "lime",
+  "aqua",
+  "teal",
+  "navy",
+  "fuchsia",
+  "purple",
+  "orange",
+  "pink",
+  "brown",
+  "gold",
+  "violet",
+]);
+TYPE_VALIDATORS.color = (value) => {
+  if (typeof value !== "string") {
+    return `must be a string`;
+  }
+  const hexRegex = /^#(?:[0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/;
+  const rgbRegex =
+    /^rgb\(\s*(?:[01]?[0-9]{1,2}|2[0-4][0-9]|25[0-5])\s*,\s*(?:[01]?[0-9]{1,2}|2[0-4][0-9]|25[0-5])\s*,\s*(?:[01]?[0-9]{1,2}|2[0-4][0-9]|25[0-5])\s*\)$/;
+  const rgbaRegex =
+    /^rgba\(\s*(?:[01]?[0-9]{1,2}|2[0-4][0-9]|25[0-5])\s*,\s*(?:[01]?[0-9]{1,2}|2[0-4][0-9]|25[0-5])\s*,\s*(?:[01]?[0-9]{1,2}|2[0-4][0-9]|25[0-5])\s*,\s*(?:[01]|0?\.[0-9]+)\s*\)$/;
+
+  if (
+    hexRegex.test(value) ||
+    rgbRegex.test(value) ||
+    rgbaRegex.test(value) ||
+    wellKnownColorSet.has(value.toLowerCase())
+  ) {
+    return "";
+  }
+  return `must be a valid color (hex, rgb, rgba, or named color)`;
+};
+
 const TYPE_CONVERTERS = {
   boolean: {
     string: (value) => {

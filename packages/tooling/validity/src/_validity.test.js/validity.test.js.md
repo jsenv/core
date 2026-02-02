@@ -19,6 +19,11 @@
 - [longitude type validation](longitude_type_validation/longitude_type_validation.md)
 - [latitude type validation](latitude_type_validation/latitude_type_validation.md)
 - [ratio type validation](ratio_type_validation/ratio_type_validation.md)
+- [email type validation](email_type_validation/email_type_validation.md)
+- [url type validation](url_type_validation/url_type_validation.md)
+- [color type validation](color_type_validation/color_type_validation.md)
+- [date type validation](date_type_validation/date_type_validation.md)
+- [time type validation](time_type_validation/time_type_validation.md)
 
 ---
 

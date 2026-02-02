@@ -430,4 +430,141 @@ await snapshotTests(import.meta.url, ({ test }) => {
 
     return results;
   });
+
+  test("email type validation", () => {
+    const [validity, applyOn] = createValidity({
+      type: "email",
+    });
+
+    const results = {};
+
+    applyOn("user@example.com");
+    results["valid email"] = structuredClone(validity);
+
+    applyOn("test@domain.org");
+    results["another valid email"] = structuredClone(validity);
+
+    applyOn("invalid-email");
+    results["invalid email - no @"] = structuredClone(validity);
+
+    applyOn("@domain.com");
+    results["invalid email - no user"] = structuredClone(validity);
+
+    applyOn("user@");
+    results["invalid email - no domain"] = structuredClone(validity);
+
+    return results;
+  });
+
+  test("url type validation", () => {
+    const [validity, applyOn] = createValidity({
+      type: "url",
+    });
+
+    const results = {};
+
+    applyOn("https://example.com");
+    results["valid https url"] = structuredClone(validity);
+
+    applyOn("http://domain.org/path");
+    results["valid http url with path"] = structuredClone(validity);
+
+    applyOn("ftp://files.example.com");
+    results["valid ftp url"] = structuredClone(validity);
+
+    applyOn("not-a-url");
+    results["invalid url"] = structuredClone(validity);
+
+    applyOn("://missing-protocol.com");
+    results["invalid url - malformed"] = structuredClone(validity);
+
+    return results;
+  });
+
+  test("color type validation", () => {
+    const [validity, applyOn] = createValidity({
+      type: "color",
+    });
+
+    const results = {};
+
+    applyOn("#FF0000");
+    results["valid hex color"] = structuredClone(validity);
+
+    applyOn("#f0a");
+    results["valid short hex color"] = structuredClone(validity);
+
+    applyOn("rgb(255, 128, 0)");
+    results["valid rgb color"] = structuredClone(validity);
+
+    applyOn("rgba(255, 128, 0, 0.5)");
+    results["valid rgba color"] = structuredClone(validity);
+
+    applyOn("red");
+    results["valid named color"] = structuredClone(validity);
+
+    applyOn("Blue");
+    results["valid named color case insensitive"] = structuredClone(validity);
+
+    applyOn("#GGGGGG");
+    results["invalid hex color"] = structuredClone(validity);
+
+    applyOn("rgb(300, 128, 0)");
+    results["invalid rgb color - out of range"] = structuredClone(validity);
+
+    return results;
+  });
+
+  test("date type validation", () => {
+    const [validity, applyOn] = createValidity({
+      type: "date",
+    });
+
+    const results = {};
+
+    applyOn("2023-12-25");
+    results["valid date"] = structuredClone(validity);
+
+    applyOn("2024-02-29");
+    results["valid leap year date"] = structuredClone(validity);
+
+    applyOn("2023-02-29");
+    results["invalid date - not leap year"] = structuredClone(validity);
+
+    applyOn("12/25/2023");
+    results["invalid date format"] = structuredClone(validity);
+
+    applyOn("2023-13-01");
+    results["invalid month"] = structuredClone(validity);
+
+    return results;
+  });
+
+  test("time type validation", () => {
+    const [validity, applyOn] = createValidity({
+      type: "time",
+    });
+
+    const results = {};
+
+    applyOn("14:30");
+    results["valid time HH:MM"] = structuredClone(validity);
+
+    applyOn("09:15:30");
+    results["valid time HH:MM:SS"] = structuredClone(validity);
+
+    applyOn("23:59:59");
+    results["valid time - end of day"] = structuredClone(validity);
+
+    applyOn("24:00");
+    results["invalid time - 24:00"] = structuredClone(validity);
+
+    applyOn("14:60");
+    results["invalid minutes"] = structuredClone(validity);
+
+    applyOn("2:30 PM");
+    results["invalid format - 12 hour"] = structuredClone(validity);
+
+    return results;
+  });
 });
