@@ -1,8 +1,5 @@
 export const createValidity = (ruleConfig) => {
-  const validity = {
-    valid: true,
-    validValueSuggestion: null,
-  };
+  const validity = {};
 
   const { type, min, max, step, oneOf, ...rest } = ruleConfig;
   if (Object.keys(rest).length > 0) {
@@ -72,6 +69,9 @@ export const createValidity = (ruleConfig) => {
       ruleValue: oneOf,
     });
   }
+
+  validity.valid = true;
+  validity.validValueSuggestion = null;
 
   const applyOn = (value) => {
     let valid = true;

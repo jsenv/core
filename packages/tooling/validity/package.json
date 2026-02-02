@@ -26,7 +26,9 @@
     "./validity_node.js"
   ],
   "dependencies": {},
-  "devDependencies": {},
+  "devDependencies": {
+    "@jsenv/snapshot": "../snapshot"
+  },
   "publishConfig": {
     "access": "public"
   }

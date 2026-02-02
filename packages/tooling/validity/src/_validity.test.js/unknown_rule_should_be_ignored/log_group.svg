@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" font-family="SauceCodePro Nerd Font, Source Code Pro, Courier" font-size="14" width="100%" viewBox="0 0 640 61.45" background-color="#282c34">
+  <g id="background">
+    <rect x="1" y="1" width="638" height="59.45" fill="#282c34" stroke="rgba(255,255,255,0.35)" stroke-width="1" rx="8"></rect>
+  </g>
+  <foreignObject id="body" y="0" width="100%" height="71.45" overflow="hidden">
+    <svg width="566.09" height="61.45" font-family="monospace" font-variant-east-asian="full-width" fill="#cccccc">
+      <g>
+        <text x="10" y="24.55" style="white-space:pre">[createValidity] Unknown ruleConfig properties: [ </text>
+        <text x="430.07" y="24.55" fill="#11bc79">'unknownRule'</text>
+        <text x="539.29" y="24.55" style="white-space:pre"> ]</text>
+        <text x="10" y="43.55">[createValidity] Unknown ruleConfig properties:</text>
+      </g>
+    </svg>
+  </foreignObject>
+</svg>
