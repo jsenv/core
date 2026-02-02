@@ -4,6 +4,7 @@ import { jsxs, jsx, Fragment } from "preact/jsx-runtime";
 import { createIterableWeakSet, mergeOneStyle, stringifyStyle, createPubSub, mergeTwoStyles, normalizeStyles, createGroupTransitionController, getElementSignature, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, resolveCSSSize, findBefore, findAfter, createValueEffect, createStyleController, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, allowWheelThrough, resolveCSSColor, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, hasCSSSizeUnit, activeElementSignal, canInterceptKeys, pickLightOrDark, resolveColorLuminance, initFocusGroup, dragAfterThreshold, getScrollContainer, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement, elementIsFocusable } from "@jsenv/dom";
 import { prefixFirstAndIndentRemainingLines } from "@jsenv/humanize";
 import { effect, signal, computed, batch, useSignal } from "@preact/signals";
+import { createValidity } from "@jsenv/validity";
 import { createContext, render, isValidElement, toChildArray, createRef, cloneElement } from "preact";
 import { createPortal, forwardRef } from "preact/compat";
 
@@ -2113,100 +2114,44 @@ const localStorageSignal = (key) => {
   return valueSignal;
 };
 
-const valueInLocalStorage = (
-  key,
-  { type = "string", fallback } = {},
-) => {
-  const converter = typeConverters[type];
-  if (converter === undefined) {
-    console.warn(
-      `Invalid type "${type}" for "${key}" in local storage, expected one of ${Object.keys(
-        typeConverters,
-      ).join(", ")}`,
-    );
-  }
-  const getValidityMessage = (
-    valueToCheck,
-    valueInLocalStorage = valueToCheck,
-  ) => {
-    if (!converter) {
-      return "";
-    }
-    if (!converter.checkValidity) {
-      return "";
-    }
-    const checkValidityResult = converter.checkValidity(valueToCheck);
-    if (checkValidityResult === false) {
-      return `${valueInLocalStorage}`;
-    }
-    if (!checkValidityResult) {
-      return "";
-    }
-    return `${checkValidityResult}, got "${valueInLocalStorage}"`;
-  };
+const valueInLocalStorage = (key, { type = "any" } = {}) => {
+  const converter = TYPE_CONVERTERS[type];
 
   const get = () => {
     let valueInLocalStorage = window.localStorage.getItem(key);
     if (valueInLocalStorage === null) {
-      return fallback;
+      return undefined;
     }
+    let valueToReturn = valueInLocalStorage;
     if (converter && converter.decode) {
-      const valueDecoded = converter.decode(valueInLocalStorage);
-      const validityMessage = getValidityMessage(
-        valueDecoded,
-        valueInLocalStorage,
-      );
-      if (validityMessage) {
-        console.warn(
-          `The value found in localStorage "${key}" is invalid: ${validityMessage}`,
-        );
+      try {
+        const valueDecoded = converter.decode(valueInLocalStorage);
+        valueToReturn = valueDecoded;
+      } catch (e) {
+        console.error(`Error decoding localStorage "${key}" value:`, e);
         return undefined;
       }
-      return valueDecoded;
     }
-    const validityMessage = getValidityMessage(valueInLocalStorage);
-    if (validityMessage) {
+    if (type !== "any" && typeof valueToReturn !== type) {
       console.warn(
-        `The value found in localStorage "${key}" is invalid: ${validityMessage}`,
+        `localStorage "${key}" value is invalid: should be a "${type}", got ${valueInLocalStorage}`,
       );
       return undefined;
     }
-    return valueInLocalStorage;
+    return valueToReturn;
   };
+
   const set = (value) => {
     if (value === undefined) {
       window.localStorage.removeItem(key);
       return;
     }
-
-    let valueToSet = value;
-    let validityMessage = getValidityMessage(valueToSet);
-
-    // If validation fails, try to convert the value
-    if (validityMessage && converter) {
-      const convertedValue = tryConvertValue(valueToSet, type);
-      if (convertedValue !== valueToSet) {
-        const convertedValidityMessage = getValidityMessage(convertedValue);
-        if (!convertedValidityMessage) {
-          // Conversion successful and valid
-          valueToSet = convertedValue;
-          validityMessage = "";
-        }
-      }
-    }
-
-    if (validityMessage) {
-      console.warn(
-        `The value to set in localStorage "${key}" is invalid: ${validityMessage}`,
-      );
-    }
-
+    let valueToStore = value;
     if (converter && converter.encode) {
-      const valueEncoded = converter.encode(valueToSet);
-      window.localStorage.setItem(key, valueEncoded);
-      return;
+      const valueEncoded = converter.encode(valueToStore);
+      valueToStore = valueEncoded;
     }
-    window.localStorage.setItem(key, valueToSet);
+    window.localStorage.setItem(key, valueToStore);
   };
   const remove = () => {
     window.localStorage.removeItem(key);
@@ -2215,168 +2160,40 @@ const valueInLocalStorage = (
   return [get, set, remove];
 };
 
-const tryConvertValue = (value, type) => {
-  const validator = typeConverters[type];
-  if (!validator) {
-    return value;
-  }
-  if (!validator.cast) {
-    return value;
-  }
-  const fromType = typeof value;
-  const castFunction = validator.cast[fromType];
-  if (!castFunction) {
-    return value;
-  }
-  const convertedValue = castFunction(value);
-  return convertedValue;
-};
-
-const createNumberValidator = ({ min, max, step } = {}) => {
-  return {
-    cast: {
-      string: (value) => {
-        const parsed = parseFloat(value);
-        if (!isNaN(parsed) && isFinite(parsed)) {
-          return parsed;
-        }
-        return value;
-      },
-    },
-    decode: (value) => {
-      const valueParsed = parseFloat(value);
-      return valueParsed;
-    },
-    checkValidity: (value) => {
-      if (typeof value !== "number") {
-        return `must be a number`;
-      }
-      if (!Number.isFinite(value)) {
-        return `must be finite`;
-      }
-      if (min !== undefined && value < min) {
-        return min === 0 ? `must be positive` : `must be >= ${min}`;
-      }
-      if (max !== undefined && value > max) {
-        return max === 0 ? `must be negative` : `must be <= ${max}`;
-      }
-      if (step !== undefined) {
-        const remainder = (value - (min || 0)) % step;
-        const epsilon = 0.0000001;
-        if (remainder > epsilon && step - remainder > epsilon) {
-          if (step === 1) {
-            return `must be an integer`;
-          }
-          return `must be a multiple of ${step}`;
-        }
-      }
-      return "";
-    },
-  };
-};
-const typeConverters = {
+const TYPE_CONVERTERS = {
+  any: {
+    decode: (valueFromLocalStorage) => JSON.parse(valueFromLocalStorage),
+    encode: (value) => JSON.stringify(value),
+  },
   boolean: {
-    cast: {
-      string: (value) => {
-        if (value === "true") return true;
-        if (value === "false") return false;
-        return value;
-      },
-      number: (value) => {
-        return Boolean(value);
-      },
-    },
-    checkValidity: (value) => {
-      if (typeof value !== "boolean") {
-        return `must be a boolean`;
+    decode: (valueFromLocalStorage) => {
+      if (
+        valueFromLocalStorage === "true" ||
+        valueFromLocalStorage === "on" ||
+        valueFromLocalStorage === "1"
+      ) {
+        return true;
       }
-      return "";
-    },
-    decode: (value) => {
-      return value === "true";
+      return false;
     },
     encode: (value) => {
       return value ? "true" : "false";
     },
   },
-  string: {
-    cast: {
-      number: String,
-      boolean: String,
-    },
-    checkValidity: (value) => {
-      if (typeof value !== "string") {
-        return `must be a string`;
-      }
-      return "";
-    },
-  },
-  number: createNumberValidator(),
-  float: createNumberValidator(),
-  positive_number: createNumberValidator({ min: 0 }),
-  integer: createNumberValidator({ step: 1 }),
-  positive_integer: createNumberValidator({ min: 0, step: 1 }),
-  percentage: {
-    cast: {
-      number: (value) => {
-        if (value >= 0 && value <= 100) {
-          return `${value}%`;
-        }
-        return value;
-      },
-      string: (value) => {
-        if (value.endsWith("%")) {
-          return value;
-        }
-        const parsed = parseFloat(value);
-        if (!isNaN(parsed) && parsed >= 0 && parsed <= 100) {
-          return `${parsed}%`;
-        }
-        return value;
-      },
-    },
-    checkValidity: (value) => {
-      if (typeof value !== "string") {
-        return `must be a percentage`;
-      }
-      if (!value.endsWith("%")) {
-        return `must end with %`;
-      }
-      const percentageString = value.slice(0, -1);
-      const percentageFloat = parseFloat(percentageString);
-      if (typeof percentageFloat !== "number") {
-        return `must be a percentage`;
-      }
-      if (percentageFloat < 0 || percentageFloat > 100) {
-        return `must be between 0 and 100`;
-      }
-      return "";
+  number: {
+    decode: (valueFromLocalStorage) => {
+      const valueParsed = parseFloat(valueFromLocalStorage);
+      return valueParsed;
     },
   },
   object: {
-    cast: {
-      string: (value) => {
-        try {
-          return JSON.parse(value);
-        } catch {
-          // Invalid JSON, can't convert
-          return value;
-        }
-      },
-    },
-    decode: (value) => {
-      const valueParsed = JSON.parse(value);
+    decode: (valueFromLocalStorage) => {
+      const valueParsed = JSON.parse(valueFromLocalStorage);
       return valueParsed;
     },
     encode: (value) => {
       const valueStringified = JSON.stringify(value);
       return valueStringified;
-    },
-    checkValidity: (value) => {
-      if (value === null || typeof value !== "object") {
-        return `must be an object`;
-      }
-      return "";
     },
   },
 };
@@ -2417,7 +2234,6 @@ const generateSignalId = () => {
  * @param {"string" | "number" | "boolean" | "object"} [options.type="string"] - Type for localStorage serialization/deserialization
  * @param {number} [options.step] - For number type: step size for precision. Values will be rounded to nearest multiple of step.
  * @param {Array} [options.oneOf] - Array of valid values for validation. Signal will be marked invalid if value is not in this array
- * @param {Function} [options.autoFix] - Function to call when validation fails to automatically fix the value
  * @param {boolean} [options.debug=false] - Enable debug logging for this signal's operations
  * @returns {import("@preact/signals").Signal} A signal that can be synchronized with a source signal and/or persisted in localStorage. The signal includes a `validity` property for validation state.
  *
@@ -2478,10 +2294,11 @@ const NO_LOCAL_STORAGE = [() => undefined, () => {}, () => {}];
 const stateSignal = (defaultValue, options = {}) => {
   const {
     id,
-    type = "string",
+    type,
+    min,
+    max,
     step,
     oneOf,
-    autoFix,
     persists = false,
     debug,
     default: staticFallback,
@@ -2511,15 +2328,6 @@ const stateSignal = (defaultValue, options = {}) => {
     persists
       ? valueInLocalStorage(localStorageKey, { type })
       : NO_LOCAL_STORAGE;
-
-  /**
-   * Value processor - applies step rounding for numbers, passthrough for others
-   */
-  const processValue =
-    type === "number" && step !== undefined
-      ? (value) =>
-          typeof value === "number" ? Math.round(value / step) * step : value
-      : (value) => value;
 
   /**
    * Returns the current default value from code logic only (static or dynamic).
@@ -2591,6 +2399,49 @@ const stateSignal = (defaultValue, options = {}) => {
   };
 
   // Create signal with initial value: use stored value, or undefined to indicate no explicit value
+  const [validity, updateValidity] = createValidity({
+    type,
+    min,
+    max,
+    step,
+    oneOf,
+  });
+  const processValue = (value) => {
+    const wasValid = validity.valid;
+    updateValidity(value);
+    if (validity.valid) {
+      if (!wasValid) {
+        if (debug) {
+          console.debug(
+            `[stateSignal:${signalIdString}] validation now passes`,
+            { value },
+          );
+        }
+      }
+      return value;
+    }
+    if (debug) {
+      console.debug(`[stateSignal:${signalIdString}] validation failed`, {
+        value,
+        oneOf,
+        hasAutoFix: Boolean(validity.validSuggestion),
+      });
+    }
+    if (validity.validSuggestion) {
+      const validValue = validity.validSuggestion.value;
+      if (debug) {
+        console.debug(
+          `[stateSignal:${signalIdString}] autoFix applied: ${value} → ${validValue}`,
+          {
+            value,
+            validValue,
+          },
+        );
+      }
+      return validValue;
+    }
+    return value;
+  };
   const preactSignal = signal(processValue(getFallbackValue()));
 
   // Create wrapper signal that applies step rounding on setValue
@@ -2612,7 +2463,6 @@ const stateSignal = (defaultValue, options = {}) => {
     },
   };
 
-  const validity = { valid: true };
   facadeSignal.validity = validity;
   facadeSignal.__signalId = signalIdString;
   facadeSignal.toString = () => `{navi_state_signal:${signalIdString}}`;
@@ -2718,41 +2568,8 @@ const stateSignal = (defaultValue, options = {}) => {
   // update validity object according to the signal value
   {
     effect(() => {
-      const wasValid = validity.valid;
       const value = preactSignal.value;
-      updateValidity({ oneOf }, validity, value);
-      if (validity.valid) {
-        if (!wasValid) {
-          if (debug) {
-            console.debug(
-              `[stateSignal:${signalIdString}] validation now passes`,
-              { value },
-            );
-          }
-        }
-        return;
-      }
-      if (debug) {
-        console.debug(`[stateSignal:${signalIdString}] validation failed`, {
-          value,
-          oneOf,
-          hasAutoFix: Boolean(autoFix),
-        });
-      }
-      if (autoFix) {
-        const fixedValue = autoFix(value);
-        if (debug) {
-          console.debug(
-            `[stateSignal:${signalIdString}] autoFix applied: ${value} → ${fixedValue}`,
-            {
-              value,
-              fixedValue,
-            },
-          );
-        }
-        facadeSignal.value = fixedValue;
-        return;
-      }
+      facadeSignal.value = processValue(value);
     });
   }
 
@@ -2773,6 +2590,8 @@ const stateSignal = (defaultValue, options = {}) => {
       isDefaultValue,
       type,
       step,
+      min,
+      max,
       persists,
       localStorageKey,
       debug,
@@ -2793,15 +2612,6 @@ const stateSignal = (defaultValue, options = {}) => {
   }
 
   return facadeSignal;
-};
-
-const updateValidity = (rules, validity, value) => {
-  const { oneOf } = rules;
-  if (oneOf && !oneOf.includes(value)) {
-    validity.valid = false;
-    return;
-  }
-  validity.valid = true;
 };
 
 const getCallerInfo = (targetFunction = null, additionalOffset = 0) => {
