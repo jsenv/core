@@ -228,6 +228,9 @@ export const stateSignal = (defaultValue, options = {}) => {
     if (debug) {
       console.debug(`[stateSignal:${signalIdString}] validation failed`, {
         value,
+        min,
+        max,
+        step,
         oneOf,
         hasAutoFix: Boolean(validity.validSuggestion),
       });

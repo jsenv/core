@@ -466,4 +466,20 @@ await snapshotTests(import.meta.url, ({ test }) => {
       "3.05": run("3.05"), // String should be stepped to 3.1
     };
   });
+
+  test("an other step validation", () => {
+    const [validity, applyOn] = createValidity({
+      type: "longitude",
+      step: 0.000001,
+    });
+
+    const run = (value) => {
+      applyOn(value);
+      return structuredClone(validity);
+    };
+
+    return {
+      48.8666669999999: run("48.86666699999998"),
+    };
+  });
 });

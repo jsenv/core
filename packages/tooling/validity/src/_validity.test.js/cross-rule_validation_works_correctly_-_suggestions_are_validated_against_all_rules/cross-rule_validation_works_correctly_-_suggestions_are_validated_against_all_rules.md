@@ -42,7 +42,7 @@ return {
     "step": undefined,
     "valid": false,
     "validSuggestion": {
-      "value": 6
+      "value": 5
     }
   },
   '"-10"': {

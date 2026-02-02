@@ -1,9 +1,9 @@
-# [step validation with integer step](../../validity.test.js)
+# [an other step validation](../../validity.test.js)
 
 ```js
 const [validity, applyOn] = createValidity({
-  type: "number",
-  step: 1,
+  type: "longitude",
+  step: 0.000001,
 });
 
 const run = (value) => {
@@ -12,25 +12,20 @@ const run = (value) => {
 };
 
 return {
-  5: run(5),
-  5.5: run(5.5),
+  48.8666669999999: run("48.86666699999998"),
 };
 ```
 
 ```js
 {
-  5: {
-    "type": undefined,
+  "48.8666669999999": {
+    "type": "must be a number",
+    "min": undefined,
+    "max": undefined,
     "step": undefined,
-    "valid": true,
-    "validSuggestion": null
-  },
-  "5.5": {
-    "type": undefined,
-    "step": "must be an integer",
     "valid": false,
     "validSuggestion": {
-      "value": 5
+      "value": 48.86666699999998
     }
   }
 }
