@@ -31,21 +31,21 @@ return results;
     "min": undefined,
     "step": undefined,
     "valid": true,
-    "validValueSuggestion": null
+    "validSuggestion": null
   },
   "invalid step": {
     "type": undefined,
     "min": undefined,
     "step": "must be a multiple of 0.1",
     "valid": false,
-    "validValueSuggestion": null
+    "validSuggestion": null
   },
   "epsilon tolerance": {
     "type": undefined,
     "min": undefined,
     "step": undefined,
     "valid": true,
-    "validValueSuggestion": null
+    "validSuggestion": null
   }
 }
 ```

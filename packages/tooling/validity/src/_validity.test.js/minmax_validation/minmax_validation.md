@@ -38,35 +38,35 @@ return results;
     "min": undefined,
     "max": undefined,
     "valid": true,
-    "validValueSuggestion": null
+    "validSuggestion": null
   },
   "below minimum": {
     "type": undefined,
     "min": "must be positive",
     "max": undefined,
     "valid": false,
-    "validValueSuggestion": null
+    "validSuggestion": null
   },
   "above maximum": {
     "type": undefined,
     "min": undefined,
     "max": "must be <= 100",
     "valid": false,
-    "validValueSuggestion": null
+    "validSuggestion": null
   },
   "exact minimum": {
     "type": undefined,
     "min": undefined,
     "max": undefined,
     "valid": true,
-    "validValueSuggestion": null
+    "validSuggestion": null
   },
   "exact maximum": {
     "type": undefined,
     "min": undefined,
     "max": undefined,
     "valid": true,
-    "validValueSuggestion": null
+    "validSuggestion": null
   }
 }
 ```

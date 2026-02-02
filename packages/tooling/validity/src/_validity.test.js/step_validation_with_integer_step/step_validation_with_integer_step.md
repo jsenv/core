@@ -25,13 +25,13 @@ return results;
     "type": undefined,
     "step": undefined,
     "valid": true,
-    "validValueSuggestion": null
+    "validSuggestion": null
   },
   "not an integer": {
     "type": undefined,
     "step": "must be an integer",
     "valid": false,
-    "validValueSuggestion": null
+    "validSuggestion": null
   }
 }
 ```

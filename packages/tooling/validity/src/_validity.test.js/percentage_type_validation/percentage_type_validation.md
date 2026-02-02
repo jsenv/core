@@ -31,28 +31,28 @@ return results;
   "valid percentage": {
     "type": "",
     "valid": false,
-    "validValueSuggestion": {
+    "validSuggestion": {
       "value": "50%"
     }
   },
   "missing percent sign": {
     "type": "must end with %",
     "valid": false,
-    "validValueSuggestion": {
+    "validSuggestion": {
       "value": "50%"
     }
   },
   "out of range": {
     "type": "must be between 0 and 100",
     "valid": false,
-    "validValueSuggestion": {
+    "validSuggestion": {
       "value": "150%"
     }
   },
   "number conversion": {
     "type": "must be a percentage",
     "valid": false,
-    "validValueSuggestion": {
+    "validSuggestion": {
       "value": "75%"
     }
   }

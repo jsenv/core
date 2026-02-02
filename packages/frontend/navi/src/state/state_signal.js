@@ -355,11 +355,11 @@ export const stateSignal = (defaultValue, options = {}) => {
         console.debug(`[stateSignal:${signalIdString}] validation failed`, {
           value,
           oneOf,
-          hasAutoFix: Boolean(validity.validValueSuggestion),
+          hasAutoFix: Boolean(validity.validSuggestion),
         });
       }
-      if (validity.validValueSuggestion) {
-        const validValue = validity.validValueSuggestion.value;
+      if (validity.validSuggestion) {
+        const validValue = validity.validSuggestion.value;
         if (debug) {
           console.debug(
             `[stateSignal:${signalIdString}] autoFix applied: ${value} → ${validValue}`,

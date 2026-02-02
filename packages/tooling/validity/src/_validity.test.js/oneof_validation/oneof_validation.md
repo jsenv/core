@@ -23,12 +23,12 @@ return results;
   "valid option": {
     "oneOf": undefined,
     "valid": true,
-    "validValueSuggestion": null
+    "validSuggestion": null
   },
   "invalid option": {
     "oneOf": "must be one of: red, green, blue",
     "valid": false,
-    "validValueSuggestion": null
+    "validSuggestion": null
   }
 }
 ```

@@ -71,16 +71,16 @@ export const createValidity = (ruleConfig) => {
   }
 
   validity.valid = true;
-  validity.validValueSuggestion = null;
+  validity.validSuggestion = null;
 
   const applyOn = (value) => {
     let valid = true;
-    let validValueSuggestion = null;
+    let validSuggestion = null;
     for (const { key, rule, ruleValue } of ruleSet) {
-      if (validValueSuggestion) {
+      if (validSuggestion) {
         const suggestionResult = rule.applyOn(
           ruleValue,
-          validValueSuggestion.value,
+          validSuggestion.value,
           ruleConfig,
         );
         if (suggestionResult) {
@@ -88,12 +88,12 @@ export const createValidity = (ruleConfig) => {
           if (autoFix) {
             const autoFixResult = autoFix();
             if (autoFixResult && autoFixResult.type === "valid_value") {
-              validValueSuggestion = {
+              validSuggestion = {
                 value: autoFixResult.data,
               };
             }
           } else {
-            validValueSuggestion = null;
+            validSuggestion = null;
           }
         }
       }
@@ -106,7 +106,7 @@ export const createValidity = (ruleConfig) => {
         if (autoFix) {
           const autoFixResult = autoFix();
           if (autoFixResult && autoFixResult.type === "valid_value") {
-            validValueSuggestion = {
+            validSuggestion = {
               value: autoFixResult.data,
             };
           }
@@ -117,7 +117,7 @@ export const createValidity = (ruleConfig) => {
       continue;
     }
     validity.valid = valid;
-    validity.validValueSuggestion = validValueSuggestion;
+    validity.validSuggestion = validSuggestion;
     return value;
   };
 

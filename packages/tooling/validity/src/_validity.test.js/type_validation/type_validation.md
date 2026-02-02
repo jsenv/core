@@ -29,26 +29,26 @@ return results;
   "valid number": {
     "type": undefined,
     "valid": true,
-    "validValueSuggestion": null
+    "validSuggestion": null
   },
   "string to number conversion": {
     "type": "must be a number",
     "valid": false,
-    "validValueSuggestion": {
+    "validSuggestion": {
       "value": 123
     }
   },
   "invalid string": {
     "type": "must be a number",
     "valid": false,
-    "validValueSuggestion": {
+    "validSuggestion": {
       "value": "not a number"
     }
   },
   "infinity": {
     "type": undefined,
     "valid": true,
-    "validValueSuggestion": null
+    "validSuggestion": null
   }
 }
 ```

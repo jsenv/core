@@ -36,7 +36,7 @@ return results;
   "unknown rule ignored": {
     "type": undefined,
     "valid": true,
-    "validValueSuggestion": null
+    "validSuggestion": null
   }
 }
 ```

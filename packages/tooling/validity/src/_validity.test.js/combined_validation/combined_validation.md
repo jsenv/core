@@ -29,7 +29,7 @@ return results;
     "max": undefined,
     "step": undefined,
     "valid": true,
-    "validValueSuggestion": null
+    "validSuggestion": null
   },
   "multiple violations": {
     "type": undefined,
@@ -37,7 +37,7 @@ return results;
     "max": undefined,
     "step": undefined,
     "valid": false,
-    "validValueSuggestion": null
+    "validSuggestion": null
   }
 }
 ```

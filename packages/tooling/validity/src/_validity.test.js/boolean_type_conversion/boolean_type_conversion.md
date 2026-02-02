@@ -30,26 +30,26 @@ return results;
   "valid boolean": {
     "type": undefined,
     "valid": true,
-    "validValueSuggestion": null
+    "validSuggestion": null
   },
   "string true conversion": {
     "type": "must be a boolean, got string",
     "valid": false,
-    "validValueSuggestion": {
+    "validSuggestion": {
       "value": true
     }
   },
   "string false conversion": {
     "type": "must be a boolean, got string",
     "valid": false,
-    "validValueSuggestion": {
+    "validSuggestion": {
       "value": false
     }
   },
   "number conversion": {
     "type": "must be a boolean, got number",
     "valid": false,
-    "validValueSuggestion": {
+    "validSuggestion": {
       "value": true
     }
   }

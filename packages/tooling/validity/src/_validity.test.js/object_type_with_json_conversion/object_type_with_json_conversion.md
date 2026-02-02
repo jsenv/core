@@ -27,12 +27,12 @@ return results;
   "valid object": {
     "type": undefined,
     "valid": true,
-    "validValueSuggestion": null
+    "validSuggestion": null
   },
   "JSON string conversion": {
     "type": "must be a object, got string",
     "valid": false,
-    "validValueSuggestion": {
+    "validSuggestion": {
       "value": {
         "key": "value"
       }
@@ -41,7 +41,7 @@ return results;
   "invalid JSON": {
     "type": "must be a object, got string",
     "valid": false,
-    "validValueSuggestion": {
+    "validSuggestion": {
       "value": "{invalid json}"
     }
   }
