@@ -6,15 +6,15 @@ return {
   stringWithUndefinedText: "This contains __UNDEFINED__ text",
   nestedObject: {
     innerUndefined: undefined,
-    innerDefined: "value"
+    innerDefined: "value",
   },
   arrayWithUndefined: [undefined, "defined", null],
   undefinedString: "__UNDEFINED__", // This should not be confused with actual undefined
   mixed: {
     a: undefined,
     b: "__UNDEFINED__",
-    c: null
-  }
+    c: null,
+  },
 };
 ```
 
