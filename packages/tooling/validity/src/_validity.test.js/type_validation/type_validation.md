@@ -41,13 +41,11 @@ return results;
   "invalid string": {
     "type": "must be a number",
     "valid": false,
-    "validSuggestion": {
-      "value": "not a number"
-    }
+    "validSuggestion": null
   },
   "infinity": {
-    "type": undefined,
-    "valid": true,
+    "type": "must be finite",
+    "valid": false,
     "validSuggestion": null
   }
 }

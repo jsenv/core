@@ -144,45 +144,66 @@ export const createValidity = (ruleConfig) => {
   const applyOn = (value) => {
     let valid = true;
     let validSuggestion = null;
+    let suggestionWasInvalidated = false;
+
     for (const { key, rule, ruleValue } of ruleSet) {
-      if (validSuggestion) {
+      validate_suggestion: {
+        if (!validSuggestion) {
+          break validate_suggestion;
+        }
         const suggestionResult = rule.applyOn(
           ruleValue,
           validSuggestion.value,
           ruleConfig,
         );
-        if (suggestionResult) {
-          const { autoFix } = suggestionResult;
-          if (autoFix) {
-            const autoFixResult = autoFix();
-            if (autoFixResult && autoFixResult.type === "valid_value") {
-              validSuggestion = {
-                value: autoFixResult.data,
-              };
-            }
-          } else {
-            validSuggestion = null;
-          }
+        if (!suggestionResult) {
+          // it's valid
+          break validate_suggestion;
         }
+        const { autoFix } = suggestionResult;
+        if (!autoFix) {
+          // invalid and cannot auto fix
+          validSuggestion = null;
+          suggestionWasInvalidated = true;
+          break validate_suggestion;
+        }
+        const autoFixResult = autoFix();
+        // invalid and cannot auto fix
+        if (autoFixResult === CANNOT_AUTOFIX) {
+          validSuggestion = null;
+          suggestionWasInvalidated = true;
+          break validate_suggestion;
+        }
+        // could auto fix suggestion itself
+        validSuggestion = {
+          value: autoFixResult,
+        };
       }
 
       const result = rule.applyOn(ruleValue, value, ruleConfig);
-      if (result) {
-        const { message, autoFix } = result;
-        valid = false;
-        validity[key] = message;
-        if (autoFix) {
-          const autoFixResult = autoFix();
-          if (autoFixResult && autoFixResult.type === "valid_value") {
-            validSuggestion = {
-              value: autoFixResult.data,
-            };
-          }
-        }
+      if (!result) {
+        // valid
+        validity[key] = undefined;
         continue;
       }
-      validity[key] = undefined;
-      continue;
+      const { message, autoFix } = result;
+      valid = false;
+      validity[key] = message;
+
+      // Don't try to create a new suggestion if one was already invalidated
+      // or if we already have a valid suggestion
+      if (suggestionWasInvalidated || validSuggestion || !autoFix) {
+        continue;
+      }
+
+      const autoFixResult = autoFix();
+      if (autoFixResult === CANNOT_AUTOFIX) {
+        // invalid and cannot autofix
+        continue;
+      }
+      validSuggestion = {
+        value: autoFixResult,
+      };
     }
     validity.valid = valid;
     validity.validSuggestion = validSuggestion;
@@ -192,34 +213,27 @@ export const createValidity = (ruleConfig) => {
   return [validity, applyOn];
 };
 
-const createValidValue = (value) => {
-  return {
-    type: "valid_value",
-    data: value,
-  };
-};
+const CANNOT_AUTOFIX = {};
 
 const TYPE_RULE = {
   id: "type",
   applyOn: (type, value) => {
     const actualType = typeof value;
-    if (actualType === type) {
+    let message;
+    const validator = TYPE_VALIDATORS[type];
+    if (validator) {
+      message = validator(value);
+    } else if (actualType !== type) {
+      message = `must be a ${type}, got ${actualType}`;
+    }
+    if (!message) {
       return null;
     }
-    const validator = TYPE_VALIDATORS[type];
-    const message = validator
-      ? validator(value)
-      : `must be a ${type}, got ${actualType}`;
     const typeConverter = TYPE_CONVERTERS[type];
     const convertValue = typeConverter ? typeConverter[actualType] : null;
     return {
       message,
-      autoFix: convertValue
-        ? () => {
-            const convertedValue = convertValue(value);
-            return createValidValue(convertedValue);
-          }
-        : null,
+      autoFix: convertValue ? () => convertValue(value) : null,
     };
   },
 };
@@ -256,10 +270,16 @@ const TYPE_CONVERTERS = {
     string: (value) => {
       if (value === "true") return true;
       if (value === "false") return false;
-      return value;
+      if (value === "on") return true;
+      if (value === "off") return false;
+      if (value === "1") return true;
+      if (value === "0") return false;
+      return CANNOT_AUTOFIX;
     },
     number: (value) => {
-      return Boolean(value);
+      if (value === 0) return false;
+      if (value === 1) return true;
+      return CANNOT_AUTOFIX;
     },
   },
   string: {
@@ -272,7 +292,7 @@ const TYPE_CONVERTERS = {
       if (!isNaN(parsed) && isFinite(parsed)) {
         return parsed;
       }
-      return value;
+      return CANNOT_AUTOFIX;
     },
   },
   percentage: {
@@ -280,7 +300,7 @@ const TYPE_CONVERTERS = {
       if (value >= 0 && value <= 100) {
         return `${value}%`;
       }
-      return value;
+      return CANNOT_AUTOFIX;
     },
     string: (value) => {
       if (value.endsWith("%")) {
@@ -290,7 +310,7 @@ const TYPE_CONVERTERS = {
       if (!isNaN(parsed) && parsed >= 0 && parsed <= 100) {
         return `${parsed}%`;
       }
-      return value;
+      return CANNOT_AUTOFIX;
     },
   },
   object: {
@@ -299,7 +319,7 @@ const TYPE_CONVERTERS = {
         return JSON.parse(value);
       } catch {
         // Invalid JSON, can't convert
-        return value;
+        return CANNOT_AUTOFIX;
       }
     },
   },
@@ -319,7 +339,7 @@ const MIN_RULE = {
     }
     return {
       message: min === 0 ? `must be positive` : `must be >= ${min}`,
-      autoFix: () => createValidValue(min),
+      autoFix: () => min,
     };
   },
 };
@@ -337,7 +357,7 @@ const MAX_RULE = {
     }
     return {
       message: max === 0 ? `must be negative` : `must be <= ${max}`,
-      autoFix: () => createValidValue(max),
+      autoFix: () => max,
     };
   },
 };
@@ -366,7 +386,7 @@ const STEP_RULE = {
           ? stepStr.split(".")[1].length
           : 0;
         const roundedValue = Number(fixedValue.toFixed(decimalPlaces));
-        return createValidValue(roundedValue);
+        return roundedValue;
       },
     };
   },
@@ -382,7 +402,7 @@ const ONE_OF_RULE = {
     }
     return {
       message: `must be one of: ${oneOf.join(", ")}`,
-      autoFix: () => createValidValue(oneOf[0]),
+      autoFix: () => oneOf[0],
     };
   },
 };

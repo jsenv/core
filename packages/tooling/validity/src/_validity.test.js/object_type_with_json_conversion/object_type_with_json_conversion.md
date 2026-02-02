@@ -41,9 +41,7 @@ return results;
   "invalid JSON": {
     "type": "must be a object, got string",
     "valid": false,
-    "validSuggestion": {
-      "value": "{invalid json}"
-    }
+    "validSuggestion": null
   }
 }
 ```

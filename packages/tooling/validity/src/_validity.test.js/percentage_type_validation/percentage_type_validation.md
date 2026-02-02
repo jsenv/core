@@ -29,11 +29,9 @@ return results;
 ```js
 {
   "valid percentage": {
-    "type": "",
-    "valid": false,
-    "validSuggestion": {
-      "value": "50%"
-    }
+    "type": undefined,
+    "valid": true,
+    "validSuggestion": null
   },
   "missing percent sign": {
     "type": "must end with %",
