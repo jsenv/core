@@ -23,10 +23,12 @@ try {
   updateRoutes(`${baseUrl}/map?lon=2.3`);
 
   const captureState = () => {
+    const navToCopy = [...navToCalls];
+    navToCalls.length = 0;
     return {
       lon_signal_value: lonSignal.value,
       route_url: MAP_ROUTE.url,
-      navToCalls: [...navToCalls],
+      navToCalls: navToCopy,
     };
   };
   const results = {};
@@ -50,7 +52,15 @@ try {
   updateRoutes(`${baseUrl}/map?lon=2.67`); // Should round signal to 2.7
   results["after update url to 2.67"] = captureState();
 
-  return results;
+  lonSignal.value = 3;
+  results["after update signal to 3"] = captureState();
+
+  return {
+    setup: {
+      lon_signal_default_value: 2.3,
+    },
+    results,
+  };
 } finally {
   clearAllRoutes();
   globalSignalRegistry.clear();
@@ -60,39 +70,46 @@ try {
 
 ```js
 {
-  "after update signal to 2.32": {
-    "lon_signal_value": 2.3,
-    "route_url": "http://127.0.0.1/map",
-    "navToCalls": []
+  "setup": {
+    "lon_signal_default_value": 2.3
   },
-  "after update signal to 2.28": {
-    "lon_signal_value": 2.3,
-    "route_url": "http://127.0.0.1/map",
-    "navToCalls": []
-  },
-  "after update signal to 2.45": {
-    "lon_signal_value": 2.5,
-    "route_url": "http://127.0.0.1/map?lon=2.5",
-    "navToCalls": [
-      "http://127.0.0.1/map?lon=2.5",
-      "http://127.0.0.1/map?lon=2.5"
-    ]
-  },
-  "after update signal to 2.53": {
-    "lon_signal_value": 2.5,
-    "route_url": "http://127.0.0.1/map?lon=2.5",
-    "navToCalls": [
-      "http://127.0.0.1/map?lon=2.5",
-      "http://127.0.0.1/map?lon=2.5"
-    ]
-  },
-  "after update url to 2.67": {
-    "lon_signal_value": "2.67",
-    "route_url": "http://127.0.0.1/map?lon=2.67",
-    "navToCalls": [
-      "http://127.0.0.1/map?lon=2.5",
-      "http://127.0.0.1/map?lon=2.5"
-    ]
+  "results": {
+    "after update signal to 2.32": {
+      "lon_signal_value": 2.3,
+      "route_url": "http://127.0.0.1/map",
+      "navToCalls": []
+    },
+    "after update signal to 2.28": {
+      "lon_signal_value": 2.3,
+      "route_url": "http://127.0.0.1/map",
+      "navToCalls": []
+    },
+    "after update signal to 2.45": {
+      "lon_signal_value": 2.5,
+      "route_url": "http://127.0.0.1/map?lon=2.5",
+      "navToCalls": [
+        "http://127.0.0.1/map?lon=2.5",
+        "http://127.0.0.1/map?lon=2.5"
+      ]
+    },
+    "after update signal to 2.53": {
+      "lon_signal_value": 2.5,
+      "route_url": "http://127.0.0.1/map?lon=2.5",
+      "navToCalls": []
+    },
+    "after update url to 2.67": {
+      "lon_signal_value": "2.67",
+      "route_url": "http://127.0.0.1/map?lon=2.67",
+      "navToCalls": []
+    },
+    "after update signal to 3": {
+      "lon_signal_value": 3,
+      "route_url": "http://127.0.0.1/map?lon=3",
+      "navToCalls": [
+        "http://127.0.0.1/map?lon=3",
+        "http://127.0.0.1/map?lon=3"
+      ]
+    }
   }
 }
 ```

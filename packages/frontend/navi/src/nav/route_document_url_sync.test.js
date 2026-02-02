@@ -1598,10 +1598,12 @@ await snapshotTests(import.meta.url, ({ test }) => {
       updateRoutes(`${baseUrl}/map?lon=2.3`);
 
       const captureState = () => {
+        const navToCopy = [...navToCalls];
+        navToCalls.length = 0;
         return {
           lon_signal_value: lonSignal.value,
           route_url: MAP_ROUTE.url,
-          navToCalls: [...navToCalls],
+          navToCalls: navToCopy,
         };
       };
       const results = {};
@@ -1625,7 +1627,15 @@ await snapshotTests(import.meta.url, ({ test }) => {
       updateRoutes(`${baseUrl}/map?lon=2.67`); // Should round signal to 2.7
       results["after update url to 2.67"] = captureState();
 
-      return results;
+      lonSignal.value = 3;
+      results["after update signal to 3"] = captureState();
+
+      return {
+        setup: {
+          lon_signal_default_value: 2.3,
+        },
+        results,
+      };
     } finally {
       clearAllRoutes();
       globalSignalRegistry.clear();
