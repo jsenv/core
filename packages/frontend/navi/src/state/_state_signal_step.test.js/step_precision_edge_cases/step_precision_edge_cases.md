@@ -37,7 +37,7 @@ try {
   "results": [
     {
       "description": "0.05 -> 0.1",
-      "value": 0.1
+      "value": 0
     },
     {
       "description": "0.04 -> 0.0",

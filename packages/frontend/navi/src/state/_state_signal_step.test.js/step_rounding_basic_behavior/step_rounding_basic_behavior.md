@@ -39,7 +39,7 @@ try {
     },
     {
       "description": "after 1.05",
-      "value": 1.1
+      "value": 1
     },
     {
       "description": "after 1.04",

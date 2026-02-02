@@ -552,8 +552,18 @@ const STEP_RULE = {
         // Account for min value in step calculation
         const adjustedValue = value - min;
         const ratio = adjustedValue / step;
-        const epsilon = 1e-10;
-        const roundedRatio = Math.round(ratio + epsilon);
+
+        // Round down on ties (when exactly halfway between two step values)
+        // This ensures 1.15 with step 0.1 rounds to 1.1, not 1.2
+        const fractionalPart = ratio - Math.floor(ratio);
+        let roundedRatio;
+        if (Math.abs(fractionalPart - 0.5) < 1e-10) {
+          // Exactly halfway - round down
+          roundedRatio = Math.floor(ratio);
+        } else {
+          roundedRatio = Math.round(ratio);
+        }
+
         const fixedValue = min + roundedRatio * step;
 
         // Fix floating point precision issues in the result
