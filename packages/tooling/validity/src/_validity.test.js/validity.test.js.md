@@ -11,6 +11,9 @@
 - [boolean type conversion](boolean_type_conversion/boolean_type_conversion.md)
 - [object type with JSON conversion](object_type_with_json_conversion/object_type_with_json_conversion.md)
 - [unknown rule should be ignored](unknown_rule_should_be_ignored/unknown_rule_should_be_ignored.md)
+- [cross-rule validation works correctly - suggestions are validated against all rules](cross-rule_validation_works_correctly_-_suggestions_are_validated_against_all_rules/cross-rule_validation_works_correctly_-_suggestions_are_validated_against_all_rules.md)
+- [debug cross-rule validation behavior](debug_cross-rule_validation_behavior/debug_cross-rule_validation_behavior.md)
+- [impossible constraint validation](impossible_constraint_validation/impossible_constraint_validation.md)
 
 ---
 

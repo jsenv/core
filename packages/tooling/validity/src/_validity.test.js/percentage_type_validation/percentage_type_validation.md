@@ -43,9 +43,7 @@ return results;
   "out of range": {
     "type": "must be between 0 and 100",
     "valid": false,
-    "validSuggestion": {
-      "value": "150%"
-    }
+    "validSuggestion": null
   },
   "number conversion": {
     "type": "must be a percentage",

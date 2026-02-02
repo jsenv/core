@@ -226,4 +226,84 @@ await snapshotTests(import.meta.url, ({ test }) => {
 
     return results;
   });
+
+  test("cross-rule validation works correctly - suggestions are validated against all rules", () => {
+    // This test demonstrates that the system correctly validates suggestions
+    // from one rule against all other rules
+    const [validity, applyOn] = createValidity({
+      type: "number", // Rule 1: type conversion
+      min: 0, // Rule 2: minimum value
+      max: 100, // Rule 3: maximum value
+      step: 1, // Rule 4: integer step
+    });
+
+    const results = {};
+
+    // Case 1: String "150" converts to number 150, but violates max rule
+    // Should suggest 100 (the max limit) instead
+    applyOn("150");
+    results["type conversion violates max - suggests max limit"] =
+      structuredClone(validity);
+
+    // Case 2: String "5.5" converts to number 5.5, but violates step rule
+    // Should suggest 6 (rounded to nearest valid step) instead
+    applyOn("5.5");
+    results["type conversion violates step - suggests rounded value"] =
+      structuredClone(validity);
+
+    // Case 3: String "-10" converts to number -10, but violates min rule
+    // Should suggest 0 (the min limit) instead
+    applyOn("-10");
+    results["type conversion violates min - suggests min limit"] =
+      structuredClone(validity);
+
+    // Case 4: Valid case for comparison
+    applyOn("50");
+    results["type conversion valid for all rules"] = structuredClone(validity);
+
+    return results;
+  });
+
+  test("debug cross-rule validation behavior", () => {
+    // Simple case to understand what's happening
+    const [validity, applyOn] = createValidity({
+      type: "number",
+      max: 100,
+    });
+
+    const results = {};
+
+    // Case 1: String "50" should convert to 50 and be valid
+    applyOn("50");
+    results["valid conversion"] = structuredClone(validity);
+
+    // Case 2: String "150" should convert to 150, but 150 > 100
+    // In the old system, this would suggest 100
+    // In the new system, should it suggest 100 or null?
+    applyOn("150");
+    results["type conversion exceeds max"] = structuredClone(validity);
+
+    return results;
+  });
+
+  test("impossible constraint validation", () => {
+    // Test case where no valid suggestion is possible
+    const [validity, applyOn] = createValidity({
+      type: "number",
+      oneOf: [10, 20, 30], // Only these values allowed
+      min: 50, // But min is 50, making oneOf values impossible
+    });
+
+    const results = {};
+
+    // This should create an impossible situation:
+    // - Type conversion suggests a number
+    // - But oneOf only allows [10, 20, 30]
+    // - But min is 50, so none of [10, 20, 30] are valid
+    applyOn("15");
+    results["impossible constraint - no valid suggestion"] =
+      structuredClone(validity);
+
+    return results;
+  });
 });

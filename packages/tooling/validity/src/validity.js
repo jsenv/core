@@ -69,117 +69,83 @@
 export const createValidity = (ruleConfig) => {
   const validity = {};
 
-  const { type, min, max, step, oneOf, ...rest } = ruleConfig;
-  if (Object.keys(rest).length > 0) {
-    console.warn(
-      "[createValidity] Unknown ruleConfig properties:",
-      Object.keys(rest),
-    );
-  }
   const ruleSet = new Set();
-
-  if (type !== undefined) {
-    validity.type = undefined;
-    if (typeof type !== "string") {
-      throw new Error(`[createValidity] type must be a string`);
-    }
-    ruleSet.add({
-      key: "type",
-      rule: TYPE_RULE,
-      ruleValue: type,
-    });
-  }
-  if (min !== undefined) {
-    validity.min = undefined;
-    if (max !== undefined && min > max) {
-      throw new Error(
-        `[createValidity] min (${min}) is greater than max (${max})`,
+  setup: {
+    const { type, min, max, step, oneOf, ...rest } = ruleConfig;
+    if (Object.keys(rest).length > 0) {
+      console.warn(
+        "[createValidity] Unknown ruleConfig properties:",
+        Object.keys(rest),
       );
     }
-    ruleSet.add({
-      key: "min",
-      rule: MIN_RULE,
-      ruleValue: min,
-    });
-  }
-  if (max !== undefined) {
-    validity.max = undefined;
-    if (min !== undefined && max < min) {
-      throw new Error(
-        `[createValidity] max (${max}) is less than min (${min})`,
-      );
+    if (type !== undefined) {
+      validity.type = undefined;
+      if (typeof type !== "string") {
+        throw new Error(`[createValidity] type must be a string`);
+      }
+      ruleSet.add({
+        key: "type",
+        rule: TYPE_RULE,
+        ruleValue: type,
+      });
     }
-    ruleSet.add({
-      key: "max",
-      rule: MAX_RULE,
-      ruleValue: max,
-    });
-  }
-  if (step !== undefined) {
-    validity.step = undefined;
-    if (typeof step !== "number" || step <= 0) {
-      throw new Error(`[createValidity] step must be a positive number`);
+    if (min !== undefined) {
+      validity.min = undefined;
+      if (max !== undefined && min > max) {
+        throw new Error(
+          `[createValidity] min (${min}) is greater than max (${max})`,
+        );
+      }
+      ruleSet.add({
+        key: "min",
+        rule: MIN_RULE,
+        ruleValue: min,
+      });
     }
-    ruleSet.add({
-      key: "step",
-      rule: STEP_RULE,
-      ruleValue: step,
-    });
-  }
-  if (oneOf !== undefined) {
-    validity.oneOf = undefined;
-    if (!Array.isArray(oneOf) || oneOf.length === 0) {
-      throw new Error(`[createValidity] oneOf must be a non-empty array`);
+    if (max !== undefined) {
+      validity.max = undefined;
+      if (min !== undefined && max < min) {
+        throw new Error(
+          `[createValidity] max (${max}) is less than min (${min})`,
+        );
+      }
+      ruleSet.add({
+        key: "max",
+        rule: MAX_RULE,
+        ruleValue: max,
+      });
     }
-    ruleSet.add({
-      key: "oneOf",
-      rule: ONE_OF_RULE,
-      ruleValue: oneOf,
-    });
+    if (step !== undefined) {
+      validity.step = undefined;
+      if (typeof step !== "number" || step <= 0) {
+        throw new Error(`[createValidity] step must be a positive number`);
+      }
+      ruleSet.add({
+        key: "step",
+        rule: STEP_RULE,
+        ruleValue: step,
+      });
+    }
+    if (oneOf !== undefined) {
+      validity.oneOf = undefined;
+      if (!Array.isArray(oneOf) || oneOf.length === 0) {
+        throw new Error(`[createValidity] oneOf must be a non-empty array`);
+      }
+      ruleSet.add({
+        key: "oneOf",
+        rule: ONE_OF_RULE,
+        ruleValue: oneOf,
+      });
+    }
+    validity.valid = true;
+    validity.validSuggestion = null;
   }
-
-  validity.valid = true;
-  validity.validSuggestion = null;
 
   const applyOn = (value) => {
     let valid = true;
     let validSuggestion = null;
-    let suggestionWasInvalidated = false;
 
     for (const { key, rule, ruleValue } of ruleSet) {
-      validate_suggestion: {
-        if (!validSuggestion) {
-          break validate_suggestion;
-        }
-        const suggestionResult = rule.applyOn(
-          ruleValue,
-          validSuggestion.value,
-          ruleConfig,
-        );
-        if (!suggestionResult) {
-          // it's valid
-          break validate_suggestion;
-        }
-        const { autoFix } = suggestionResult;
-        if (!autoFix) {
-          // invalid and cannot auto fix
-          validSuggestion = null;
-          suggestionWasInvalidated = true;
-          break validate_suggestion;
-        }
-        const autoFixResult = autoFix();
-        // invalid and cannot auto fix
-        if (autoFixResult === CANNOT_AUTOFIX) {
-          validSuggestion = null;
-          suggestionWasInvalidated = true;
-          break validate_suggestion;
-        }
-        // could auto fix suggestion itself
-        validSuggestion = {
-          value: autoFixResult,
-        };
-      }
-
       const result = rule.applyOn(ruleValue, value, ruleConfig);
       if (!result) {
         // valid
@@ -189,22 +155,35 @@ export const createValidity = (ruleConfig) => {
       const { message, autoFix } = result;
       valid = false;
       validity[key] = message;
-
-      // Don't try to create a new suggestion if one was already invalidated
-      // or if we already have a valid suggestion
-      if (suggestionWasInvalidated || validSuggestion || !autoFix) {
+      if (!autoFix) {
         continue;
       }
-
+      if (validSuggestion) {
+        // Don't try to create a new suggestion if we already have a valid one
+        continue;
+      }
       const autoFixResult = autoFix();
       if (autoFixResult === CANNOT_AUTOFIX) {
         // invalid and cannot autofix
         continue;
       }
-      validSuggestion = {
-        value: autoFixResult,
-      };
+      // Test the potential suggestion against ALL rules before accepting it
+      let suggestionIsValid = true;
+      for (const { rule, ruleValue } of ruleSet) {
+        const result = rule.applyOn(ruleValue, autoFixResult, ruleConfig);
+        if (!result) {
+          continue;
+        }
+        suggestionIsValid = false;
+        break;
+      }
+      if (suggestionIsValid) {
+        validSuggestion = {
+          value: autoFixResult,
+        };
+      }
     }
+
     validity.valid = valid;
     validity.validSuggestion = validSuggestion;
     return value;
