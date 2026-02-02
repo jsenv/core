@@ -35,7 +35,7 @@ try {
     },
     {
       "description": "after 1.234567",
-      "value": 1.2000000000000002
+      "value": 1.2
     },
     {
       "description": "after 1.05",

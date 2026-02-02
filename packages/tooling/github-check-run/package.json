@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/github-check-run",
-  "version": "0.3.5",
+  "version": "0.3.6",
   "description": "Interact with GitHub check rest API",
   "repository": {
     "type": "git",
@@ -24,7 +24,7 @@
     "/src/"
   ],
   "dependencies": {
-    "@jsenv/humanize": "1.7.2"
+    "@jsenv/humanize": "1.7.3"
   },
   "engines": {
     "node": ">=18.1.0"

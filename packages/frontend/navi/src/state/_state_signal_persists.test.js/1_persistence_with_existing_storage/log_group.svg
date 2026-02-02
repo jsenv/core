@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" font-family="SauceCodePro Nerd Font, Source Code Pro, Courier" font-size="14" width="100%" viewBox="0 0 640 232.45" background-color="#282c34">
+  <g id="background">
+    <rect x="1" y="1" width="638" height="230.45" fill="#282c34" stroke="rgba(255,255,255,0.35)" stroke-width="1" rx="8"></rect>
+  </g>
+  <foreignObject id="body" y="0" width="100%" height="242.45" overflow="hidden">
+    <svg width="1019.76" height="232.45" font-family="monospace" font-variant-east-asian="full-width" fill="#cccccc">
+      <g>
+        <text x="10" y="24.55">Error decoding localStorage "existing" value: SyntaxError: Unexpected token 'p', "pre_existing_value" is not valid JSON</text>
+        <text x="10" y="43.55" style="white-space:pre">    at JSON.parse (&lt;anonymous&gt;)</text>
+        <text x="10" y="62.55" style="white-space:pre">    at Object.decode </text>
+        <text x="186.43" y="62.55" fill="#7f7f7f">(@jsenv/core/</text>
+        <text x="295.65" y="62.55">packages/frontend/navi/src/state/value_in_local_storage.js:49:45</text>
+        <text x="833.33" y="62.55" fill="#7f7f7f">)</text>
+        <text x="10" y="81.55" style="white-space:pre">    at get </text>
+        <text x="102.42" y="81.55" fill="#7f7f7f">(@jsenv/core/</text>
+        <text x="211.63" y="81.55">packages/frontend/navi/src/state/value_in_local_storage.js:12:40</text>
+        <text x="749.32" y="81.55" fill="#7f7f7f">)</text>
+        <text x="10" y="100.55" style="white-space:pre">    at getFallbackValue </text>
+        <text x="211.63" y="100.55" fill="#7f7f7f">(@jsenv/core/</text>
+        <text x="320.85" y="100.55">packages/frontend/navi/src/state/state_signal.js:180:37</text>
+        <text x="782.93" y="100.55" fill="#7f7f7f">)</text>
+        <text x="10" y="119.55" style="white-space:pre">    at stateSignal </text>
+        <text x="169.63" y="119.55" fill="#7f7f7f">(@jsenv/core/</text>
+        <text x="278.84" y="119.55">packages/frontend/navi/src/state/state_signal.js:250:44</text>
+        <text x="740.92" y="119.55" fill="#7f7f7f">)</text>
+        <text x="10" y="138.55" style="white-space:pre">    at </text>
+        <text x="68.81" y="138.55" fill="#7f7f7f">@jsenv/core/</text>
+        <text x="169.63" y="138.55">packages/frontend/navi/src/state/state_signal_persists.test.js:77:17</text>
+        <text x="10" y="157.55" style="white-space:pre">    at capture </text>
+        <text x="136.02" y="157.55" fill="#7f7f7f">(@jsenv/core/</text>
+        <text x="245.24" y="157.55">packages/tooling/snapshot/src/side_effects/create_capture_side_effects.js:342:29</text>
+        <text x="917.35" y="157.55" fill="#7f7f7f">)</text>
+        <text x="10" y="176.55" style="white-space:pre">    at snapshotTests </text>
+        <text x="186.43" y="176.55" fill="#7f7f7f">(@jsenv/core/</text>
+        <text x="295.65" y="176.55">packages/tooling/snapshot/src/side_effects/snapshot_tests.js:183:33</text>
+        <text x="858.54" y="176.55" fill="#7f7f7f">)</text>
+        <text x="10" y="195.55" style="white-space:pre">    at async </text>
+        <text x="119.22" y="195.55" fill="#7f7f7f">@jsenv/core/</text>
+        <text x="220.03" y="195.55">packages/frontend/navi/src/state/state_signal_persists.test.js:32:1</text>
+        <text x="10" y="214.55">Error decoding localStorage "existing" value:</text>
+      </g>
+    </svg>
+  </foreignObject>
+</svg>

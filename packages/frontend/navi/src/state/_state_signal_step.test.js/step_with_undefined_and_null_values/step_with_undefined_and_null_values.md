@@ -42,7 +42,7 @@ try {
     },
     {
       "description": "back to number 2.34",
-      "value": 2.3000000000000003
+      "value": 2.3
     }
   ]
 }

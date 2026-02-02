@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/urls",
-  "version": "2.9.4",
+  "version": "2.9.5",
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
@@ -24,7 +24,7 @@
     "/src/"
   ],
   "dependencies": {
-    "@jsenv/humanize": "1.7.2"
+    "@jsenv/humanize": "1.7.3"
   },
   "devDependencies": {
     "@jsenv/assert": "../assert",

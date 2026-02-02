@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/terminal-table",
-  "version": "0.0.8",
+  "version": "0.0.9",
   "sideEffects": false,
   "type": "module",
   "exports": {
@@ -15,7 +15,7 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@jsenv/humanize": "1.7.2"
+    "@jsenv/humanize": "1.7.3"
   },
   "devDependencies": {
     "@jsenv/assert": "../assert",

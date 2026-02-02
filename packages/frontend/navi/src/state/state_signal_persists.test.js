@@ -301,31 +301,4 @@ await snapshotTests(import.meta.url, ({ test }) => {
 
     return { storageUpdates };
   });
-
-  test("7_persistence_with_autofix", () => {
-    clearAll();
-
-    let autoFixCalls = [];
-    const sig = stateSignal("option1", {
-      id: "autofix_persist",
-      persists: true,
-      oneOf: ["option1", "option2", "option3"],
-      autoFix: (value) => {
-        autoFixCalls.push(value);
-        return "option1";
-      },
-    });
-
-    // Set invalid value - should persist but trigger autofix
-    sig.value = "invalid";
-
-    const results = {
-      value: sig.value,
-      valid: sig.validity.valid,
-      storage: mockLocalStorage.getItem("autofix_persist"),
-      autoFixCalls,
-    };
-
-    return { results };
-  });
 });

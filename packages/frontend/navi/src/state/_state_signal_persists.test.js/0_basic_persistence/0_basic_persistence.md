@@ -49,7 +49,7 @@ return { results };
       "step": "after setting explicit value",
       "value": "stored",
       "storageSize": 1,
-      "storageValue": "stored"
+      "storageValue": '"stored"'
     },
     {
       "step": "after reset to default",

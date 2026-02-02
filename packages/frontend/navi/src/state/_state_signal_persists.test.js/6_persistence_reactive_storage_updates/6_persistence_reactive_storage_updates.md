@@ -47,12 +47,12 @@ return { storageUpdates };
     {
       "action": "set",
       "key": "reactive_persist",
-      "value": "first"
+      "value": '"first"'
     },
     {
       "action": "set",
       "key": "reactive_persist",
-      "value": "second"
+      "value": '"second"'
     },
     {
       "action": "remove",
@@ -61,7 +61,7 @@ return { storageUpdates };
     {
       "action": "set",
       "key": "reactive_persist",
-      "value": "third"
+      "value": '"third"'
     },
     {
       "action": "remove",

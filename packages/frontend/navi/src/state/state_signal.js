@@ -99,7 +99,7 @@ const NO_LOCAL_STORAGE = [() => undefined, () => {}, () => {}];
 export const stateSignal = (defaultValue, options = {}) => {
   const {
     id,
-    type = "string",
+    type,
     min,
     max,
     step,
@@ -204,7 +204,50 @@ export const stateSignal = (defaultValue, options = {}) => {
   };
 
   // Create signal with initial value: use stored value, or undefined to indicate no explicit value
-  const preactSignal = signal(getFallbackValue());
+  const [validity, updateValidity] = createValidity({
+    type,
+    min,
+    max,
+    step,
+    oneOf,
+  });
+  const processValue = (value) => {
+    const wasValid = validity.valid;
+    updateValidity(value);
+    if (validity.valid) {
+      if (!wasValid) {
+        if (debug) {
+          console.debug(
+            `[stateSignal:${signalIdString}] validation now passes`,
+            { value },
+          );
+        }
+      }
+      return value;
+    }
+    if (debug) {
+      console.debug(`[stateSignal:${signalIdString}] validation failed`, {
+        value,
+        oneOf,
+        hasAutoFix: Boolean(validity.validSuggestion),
+      });
+    }
+    if (validity.validSuggestion) {
+      const validValue = validity.validSuggestion.value;
+      if (debug) {
+        console.debug(
+          `[stateSignal:${signalIdString}] autoFix applied: ${value} → ${validValue}`,
+          {
+            value,
+            validValue,
+          },
+        );
+      }
+      return validValue;
+    }
+    return value;
+  };
+  const preactSignal = signal(processValue(getFallbackValue()));
 
   // Create wrapper signal that applies step rounding on setValue
   const facadeSignal = {
@@ -212,7 +255,7 @@ export const stateSignal = (defaultValue, options = {}) => {
       return preactSignal.value;
     },
     set value(newValue) {
-      preactSignal.value = newValue;
+      preactSignal.value = processValue(newValue);
     },
     peek() {
       return preactSignal.peek();
@@ -225,13 +268,6 @@ export const stateSignal = (defaultValue, options = {}) => {
     },
   };
 
-  const [validity, updateValidity] = createValidity({
-    type,
-    min,
-    max,
-    step,
-    oneOf,
-  });
   facadeSignal.validity = validity;
   facadeSignal.__signalId = signalIdString;
   facadeSignal.toString = () => `{navi_state_signal:${signalIdString}}`;
@@ -337,41 +373,8 @@ export const stateSignal = (defaultValue, options = {}) => {
   // update validity object according to the signal value
   validation: {
     effect(() => {
-      const wasValid = validity.valid;
       const value = preactSignal.value;
-      updateValidity(value);
-      if (validity.valid) {
-        if (!wasValid) {
-          if (debug) {
-            console.debug(
-              `[stateSignal:${signalIdString}] validation now passes`,
-              { value },
-            );
-          }
-        }
-        return;
-      }
-      if (debug) {
-        console.debug(`[stateSignal:${signalIdString}] validation failed`, {
-          value,
-          oneOf,
-          hasAutoFix: Boolean(validity.validSuggestion),
-        });
-      }
-      if (validity.validSuggestion) {
-        const validValue = validity.validSuggestion.value;
-        if (debug) {
-          console.debug(
-            `[stateSignal:${signalIdString}] autoFix applied: ${value} → ${validValue}`,
-            {
-              value,
-              validValue,
-            },
-          );
-        }
-        facadeSignal.value = validValue;
-        return;
-      }
+      facadeSignal.value = processValue(value);
     });
   }
 

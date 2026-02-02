@@ -108,30 +108,6 @@ await snapshotTests(import.meta.url, ({ test }) => {
     };
   });
 
-  test("5_validation_with_autoFix", () => {
-    clearSignalRegistry();
-    let autoFixCalled = false;
-
-    const sig = stateSignal("option1", {
-      id: "autofix",
-      oneOf: ["option1", "option2", "option3"],
-      autoFix: () => {
-        autoFixCalled = true;
-        return "option1";
-      },
-    });
-
-    sig.value = "invalid";
-    const value = sig.value;
-    const validityAfterInvalid = sig.validity.valid;
-
-    return {
-      autoFixCalled,
-      value,
-      validityAfterInvalid,
-    };
-  });
-
   test("6_dynamic_default_with_static_fallback", () => {
     clearSignalRegistry();
     const dynamicDefault = signal(undefined);

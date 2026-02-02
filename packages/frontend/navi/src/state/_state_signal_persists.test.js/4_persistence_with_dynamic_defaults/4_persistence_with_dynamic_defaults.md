@@ -73,13 +73,13 @@ return { results };
     {
       "step": "explicit value set",
       "value": "explicit",
-      "storage": "explicit"
+      "storage": '"explicit"'
     },
     {
       "step": "dynamic default changed while explicit",
       "value": "explicit",
       "dynamicValue": "ignored",
-      "storage": "explicit"
+      "storage": '"explicit"'
     },
     {
       "step": "reset to follow dynamic",

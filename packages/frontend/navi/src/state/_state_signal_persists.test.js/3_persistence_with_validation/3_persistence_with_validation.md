@@ -38,13 +38,13 @@ return { results };
       "step": "valid value set",
       "value": "option2",
       "valid": true,
-      "storage": "option2"
+      "storage": '"option2"'
     },
     {
       "step": "invalid value set",
-      "value": "invalid",
-      "valid": false,
-      "storage": "invalid"
+      "value": "option1",
+      "valid": true,
+      "storage": null
     }
   ]
 }

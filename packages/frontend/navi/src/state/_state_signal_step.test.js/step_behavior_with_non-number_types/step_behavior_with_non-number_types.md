@@ -61,7 +61,7 @@ try {
     },
     {
       "description": "string signal with number",
-      "value": 1.234
+      "value": "1.234"
     }
   ]
 }

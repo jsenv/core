@@ -71,7 +71,7 @@ return { results };
       "strStorage": "stored_string",
       "numStorage": "123",
       "boolStorage": "false",
-      "objStorage": "{\"count\":5,\"name\":\"test\"}"
+      "objStorage": '{"count":5,"name":"test"}'
     }
   ]
 }

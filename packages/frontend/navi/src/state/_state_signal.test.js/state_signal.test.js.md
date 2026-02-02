@@ -6,7 +6,6 @@
 - [2_with_dynamic_default_value](2_with_dynamic_default_value/2_with_dynamic_default_value.md)
 - [3_dynamic_default_reset_behavior](3_dynamic_default_reset_behavior/3_dynamic_default_reset_behavior.md)
 - [4_validation_with_oneOf](4_validation_with_oneof/4_validation_with_oneof.md)
-- [5_validation_with_autoFix](5_validation_with_autofix/5_validation_with_autofix.md)
 - [6_dynamic_default_with_static_fallback](6_dynamic_default_with_static_fallback/6_dynamic_default_with_static_fallback.md)
 - [7_static_fallback_with_user_override](7_static_fallback_with_user_override/7_static_fallback_with_user_override.md)
 - [8_static_fallback_dynamic_changes](8_static_fallback_dynamic_changes/8_static_fallback_dynamic_changes.md)

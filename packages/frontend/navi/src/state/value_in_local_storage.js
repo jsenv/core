@@ -8,8 +8,13 @@ export const valueInLocalStorage = (key, { type = "any" } = {}) => {
     }
     let valueToReturn = valueInLocalStorage;
     if (converter && converter.decode) {
-      const valueDecoded = converter.decode(valueInLocalStorage);
-      valueToReturn = valueDecoded;
+      try {
+        const valueDecoded = converter.decode(valueInLocalStorage);
+        valueToReturn = valueDecoded;
+      } catch (e) {
+        console.error(`Error decoding localStorage "${key}" value:`, e);
+        return undefined;
+      }
     }
     if (type !== "any" && typeof valueToReturn !== type) {
       console.warn(

@@ -45,11 +45,11 @@ try {
     },
     {
       "description": "-0.05 -> -0.1",
-      "value": 0
+      "value": -0.05
     },
     {
       "description": "-0.04 -> 0.0",
-      "value": 0
+      "value": -0.04
     },
     {
       "description": "99.97 -> 100.0",

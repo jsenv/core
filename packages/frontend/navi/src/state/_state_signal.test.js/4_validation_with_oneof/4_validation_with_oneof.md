@@ -24,7 +24,7 @@ return {
 {
   "initialValid": true,
   "stillValid": true,
-  "nowInvalid": false
+  "nowInvalid": true
 }
 ```
 

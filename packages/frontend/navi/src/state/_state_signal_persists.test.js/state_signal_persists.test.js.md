@@ -8,7 +8,6 @@
 - [4_persistence_with_dynamic_defaults](4_persistence_with_dynamic_defaults/4_persistence_with_dynamic_defaults.md)
 - [5_persistence_storage_cleanup](5_persistence_storage_cleanup/5_persistence_storage_cleanup.md)
 - [6_persistence_reactive_storage_updates](6_persistence_reactive_storage_updates/6_persistence_reactive_storage_updates.md)
-- [7_persistence_with_autofix](7_persistence_with_autofix/7_persistence_with_autofix.md)
 
 ---
 
