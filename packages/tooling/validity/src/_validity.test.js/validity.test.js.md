@@ -14,6 +14,11 @@
 - [cross-rule validation works correctly - suggestions are validated against all rules](cross-rule_validation_works_correctly_-_suggestions_are_validated_against_all_rules/cross-rule_validation_works_correctly_-_suggestions_are_validated_against_all_rules.md)
 - [debug cross-rule validation behavior](debug_cross-rule_validation_behavior/debug_cross-rule_validation_behavior.md)
 - [impossible constraint validation](impossible_constraint_validation/impossible_constraint_validation.md)
+- [float type validation](float_type_validation/float_type_validation.md)
+- [integer type validation](integer_type_validation/integer_type_validation.md)
+- [longitude type validation](longitude_type_validation/longitude_type_validation.md)
+- [latitude type validation](latitude_type_validation/latitude_type_validation.md)
+- [ratio type validation](ratio_type_validation/ratio_type_validation.md)
 
 ---
 

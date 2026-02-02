@@ -306,4 +306,128 @@ await snapshotTests(import.meta.url, ({ test }) => {
 
     return results;
   });
+  test("float type validation", () => {
+    const [validity, applyOn] = createValidity({
+      type: "float",
+    });
+
+    const results = {};
+
+    applyOn(3.14);
+    results["valid float"] = structuredClone(validity);
+
+    applyOn("2.5");
+    results["string to float conversion"] = structuredClone(validity);
+
+    applyOn("invalid");
+    results["invalid string"] = structuredClone(validity);
+
+    return results;
+  });
+
+  test("integer type validation", () => {
+    const [validity, applyOn] = createValidity({
+      type: "integer",
+    });
+
+    const results = {};
+
+    applyOn(42);
+    results["valid integer"] = structuredClone(validity);
+
+    applyOn(3.14);
+    results["float to integer conversion"] = structuredClone(validity);
+
+    applyOn("123");
+    results["string to integer conversion"] = structuredClone(validity);
+
+    applyOn("3.7");
+    results["string float to integer conversion"] = structuredClone(validity);
+
+    return results;
+  });
+
+  test("longitude type validation", () => {
+    const [validity, applyOn] = createValidity({
+      type: "longitude",
+    });
+
+    const results = {};
+
+    applyOn(45.5);
+    results["valid longitude"] = structuredClone(validity);
+
+    applyOn(0);
+    results["zero longitude"] = structuredClone(validity);
+
+    applyOn(-179.9);
+    results["negative longitude"] = structuredClone(validity);
+
+    applyOn(200);
+    results["longitude over 180"] = structuredClone(validity);
+
+    applyOn(-200);
+    results["longitude under -180"] = structuredClone(validity);
+
+    applyOn("125.5");
+    results["string to longitude conversion"] = structuredClone(validity);
+
+    return results;
+  });
+
+  test("latitude type validation", () => {
+    const [validity, applyOn] = createValidity({
+      type: "latitude",
+    });
+
+    const results = {};
+
+    applyOn(45.5);
+    results["valid latitude"] = structuredClone(validity);
+
+    applyOn(0);
+    results["zero latitude"] = structuredClone(validity);
+
+    applyOn(-89.9);
+    results["negative latitude"] = structuredClone(validity);
+
+    applyOn(100);
+    results["latitude over 90"] = structuredClone(validity);
+
+    applyOn(-100);
+    results["latitude under -90"] = structuredClone(validity);
+
+    applyOn("45.5");
+    results["string to latitude conversion"] = structuredClone(validity);
+
+    return results;
+  });
+
+  test("ratio type validation", () => {
+    const [validity, applyOn] = createValidity({
+      type: "ratio",
+    });
+
+    const results = {};
+
+    applyOn(0.5);
+    results["valid ratio"] = structuredClone(validity);
+
+    applyOn(0);
+    results["zero ratio"] = structuredClone(validity);
+
+    applyOn(1);
+    results["one ratio"] = structuredClone(validity);
+
+    applyOn(1.5);
+    results["ratio over 1"] = structuredClone(validity);
+
+    applyOn(-0.5);
+    results["negative ratio"] = structuredClone(validity);
+
+    applyOn("0.75");
+    results["string to ratio conversion"] = structuredClone(validity);
+
+    return results;
+  });
 });

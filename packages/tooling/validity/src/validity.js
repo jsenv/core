@@ -71,11 +71,17 @@ export const createValidity = (ruleConfig) => {
 
   const ruleSet = new Set();
   setup: {
-    const { type, min, max, step, oneOf, ...rest } = ruleConfig;
-    if (Object.keys(rest).length > 0) {
+    const { type, ...rest } = ruleConfig;
+    const typeDefaults = type ? TYPE_DEFAULTS[type] || {} : {};
+    const effectiveRuleConfig = {
+      ...typeDefaults,
+      ...rest,
+    };
+    const { min, max, step, oneOf, ...unknown } = effectiveRuleConfig;
+    if (Object.keys(unknown).length > 0) {
       console.warn(
         "[createValidity] Unknown ruleConfig properties:",
-        Object.keys(rest),
+        Object.keys(unknown),
       );
     }
     if (type !== undefined) {
@@ -194,6 +200,12 @@ export const createValidity = (ruleConfig) => {
 
 const CANNOT_AUTOFIX = {};
 
+const TYPE_DEFAULTS = {
+  ratio: { min: 0, max: 1 },
+  longitude: { min: -180, max: 180 },
+  latitude: { min: -90, max: 90 },
+};
+
 const TYPE_RULE = {
   id: "type",
   applyOn: (type, value) => {
@@ -226,6 +238,20 @@ const TYPE_VALIDATORS = {
     }
     return "";
   },
+  float: (value) => TYPE_VALIDATORS.number(value),
+  integer: (value) => {
+    const numberError = TYPE_VALIDATORS.number(value);
+    if (numberError) {
+      return numberError;
+    }
+    if (!Number.isInteger(value)) {
+      return `must be an integer`;
+    }
+    return "";
+  },
+  ratio: (value) => TYPE_VALIDATORS.number(value),
+  longitude: (value) => TYPE_VALIDATORS.number(value),
+  latitude: (value) => TYPE_VALIDATORS.number(value),
   percentage: (value) => {
     if (typeof value !== "string") {
       return `must be a percentage`;
@@ -273,6 +299,39 @@ const TYPE_CONVERTERS = {
       }
       return CANNOT_AUTOFIX;
     },
+  },
+  float: {
+    string: (value) => TYPE_CONVERTERS.number.string(value),
+  },
+  integer: {
+    string: (value) => {
+      const parsed = parseFloat(value);
+      if (!isNaN(parsed) && isFinite(parsed) && Number.isInteger(parsed)) {
+        return parsed;
+      }
+      // If it's not an integer, try to convert via number converter first
+      const numberResult = TYPE_CONVERTERS.number.string(value);
+      if (numberResult === CANNOT_AUTOFIX) {
+        return CANNOT_AUTOFIX;
+      }
+      return Math.round(numberResult);
+    },
+    number: (value) => {
+      if (Number.isInteger(value)) {
+        return value;
+      }
+      return Math.round(value);
+    },
+  },
+  ratio: {
+    string: (value) => TYPE_CONVERTERS.number.string(value),
+    number: (value) => value,
+  },
+  longitude: {
+    string: (value) => TYPE_CONVERTERS.number.string(value),
+  },
+  latitude: {
+    string: (value) => TYPE_CONVERTERS.number.string(value),
   },
   percentage: {
     number: (value) => {
