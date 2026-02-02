@@ -517,8 +517,15 @@ const STEP_RULE = {
       message:
         step === 1 ? `must be an integer` : `must be a multiple of ${step}`,
       autoFix: () => {
-        const fixedValue = Math.round(value / step) * step;
-        // Fix floating point precision issues
+        // Fix floating point precision issues by using epsilon for rounding
+        // Account for min value in step calculation
+        const adjustedValue = value - min;
+        const ratio = adjustedValue / step;
+        const epsilon = 1e-10;
+        const roundedRatio = Math.round(ratio + epsilon);
+        const fixedValue = min + roundedRatio * step;
+
+        // Fix floating point precision issues in the result
         const stepStr = step.toString();
         const decimalPlaces = stepStr.includes(".")
           ? stepStr.split(".")[1].length

@@ -55,6 +55,9 @@ try {
   lonSignal.value = 3;
   results["after update signal to 3"] = captureState();
 
+  updateRoutes(`${baseUrl}/map?lon=3.000001`);
+  results["after update url to 3.000001"] = captureState();
+
   return {
     setup: {
       lon_signal_default_value: 2.3,
@@ -109,6 +112,11 @@ try {
         "http://127.0.0.1/map?lon=3",
         "http://127.0.0.1/map?lon=3"
       ]
+    },
+    "after update url to 3.000001": {
+      "lon_signal_value": "3.000001",
+      "route_url": "http://127.0.0.1/map?lon=3.000001",
+      "navToCalls": []
     }
   }
 }

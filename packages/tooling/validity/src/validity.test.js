@@ -429,4 +429,41 @@ await snapshotTests(import.meta.url, ({ test }) => {
       '"2:30 PM"': run("2:30 PM"),
     };
   });
+
+  test("step validation with string inputs (simple number type)", () => {
+    const [validity, applyOn] = createValidity({
+      type: "number",
+      step: 0.1,
+    });
+
+    const run = (value) => {
+      applyOn(value);
+      return structuredClone(validity);
+    };
+
+    return {
+      '"3.000001"': run("3.000001"), // String should be stepped to 3.0
+      '"3.05"': run("3.05"), // String should be stepped to 3.1
+      '"2.67"': run("2.67"), // String should be stepped to 2.7
+    };
+  });
+
+  test("step validation with string inputs (longitude type)", () => {
+    const [validity, applyOn] = createValidity({
+      type: "longitude",
+      step: 0.1,
+    });
+
+    const run = (value) => {
+      applyOn(value);
+      return structuredClone(validity);
+    };
+
+    return {
+      "3.000001": run("3.000001"), // String should be stepped to 3.0
+      "2.67": run("2.67"), // String should be stepped to 2.7
+      "-179.95": run("-179.95"), // String should be stepped to -179.9
+      "3.05": run("3.05"), // String should be stepped to 3.1
+    };
+  });
 });

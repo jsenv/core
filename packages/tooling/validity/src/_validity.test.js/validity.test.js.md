@@ -24,6 +24,8 @@
 - [color type validation](color_type_validation/color_type_validation.md)
 - [date type validation](date_type_validation/date_type_validation.md)
 - [time type validation](time_type_validation/time_type_validation.md)
+- [step validation with string inputs (simple number type)](step_validation_with_string_inputs_(simple_number_type)/step_validation_with_string_inputs_(simple_number_type).md)
+- [step validation with string inputs (longitude type)](step_validation_with_string_inputs_(longitude_type)/step_validation_with_string_inputs_(longitude_type).md)
 
 ---
 

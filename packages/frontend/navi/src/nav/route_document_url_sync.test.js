@@ -1630,6 +1630,9 @@ await snapshotTests(import.meta.url, ({ test }) => {
       lonSignal.value = 3;
       results["after update signal to 3"] = captureState();
 
+      updateRoutes(`${baseUrl}/map?lon=3.000001`);
+      results["after update url to 3.000001"] = captureState();
+
       return {
         setup: {
           lon_signal_default_value: 2.3,
