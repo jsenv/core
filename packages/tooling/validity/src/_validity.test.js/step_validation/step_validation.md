@@ -38,7 +38,9 @@ return results;
     "min": undefined,
     "step": "must be a multiple of 0.1",
     "valid": false,
-    "validSuggestion": null
+    "validSuggestion": {
+      "value": 1.2000000000000002
+    }
   },
   "epsilon tolerance": {
     "type": undefined,

@@ -251,7 +251,7 @@ const MIN_RULE = {
     }
     return {
       message: min === 0 ? `must be positive` : `must be >= ${min}`,
-      autoFix: () => min,
+      autoFix: () => createValidValue(min),
     };
   },
 };
@@ -269,7 +269,7 @@ const MAX_RULE = {
     }
     return {
       message: max === 0 ? `must be negative` : `must be <= ${max}`,
-      autoFix: () => max,
+      autoFix: () => createValidValue(max),
     };
   },
 };
@@ -291,7 +291,8 @@ const STEP_RULE = {
       message:
         step === 1 ? `must be an integer` : `must be a multiple of ${step}`,
       autoFix: () => {
-        return Math.round(value / step) * step;
+        const fixedValue = Math.round(value / step) * step;
+        return createValidValue(fixedValue);
       },
     };
   },
@@ -307,7 +308,7 @@ const ONE_OF_RULE = {
     }
     return {
       message: `must be one of: ${oneOf.join(", ")}`,
-      autoFix: () => oneOf[0],
+      autoFix: () => createValidValue(oneOf[0]),
     };
   },
 };

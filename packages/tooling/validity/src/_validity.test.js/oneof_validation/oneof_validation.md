@@ -28,7 +28,9 @@ return results;
   "invalid option": {
     "oneOf": "must be one of: red, green, blue",
     "valid": false,
-    "validSuggestion": null
+    "validSuggestion": {
+      "value": "red"
+    }
   }
 }
 ```

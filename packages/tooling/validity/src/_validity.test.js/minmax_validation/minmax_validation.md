@@ -45,14 +45,18 @@ return results;
     "min": "must be positive",
     "max": undefined,
     "valid": false,
-    "validSuggestion": null
+    "validSuggestion": {
+      "value": 0
+    }
   },
   "above maximum": {
     "type": undefined,
     "min": undefined,
     "max": "must be <= 100",
     "valid": false,
-    "validSuggestion": null
+    "validSuggestion": {
+      "value": 100
+    }
   },
   "exact minimum": {
     "type": undefined,

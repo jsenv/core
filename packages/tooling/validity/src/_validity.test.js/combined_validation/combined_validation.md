@@ -37,7 +37,9 @@ return results;
     "max": undefined,
     "step": undefined,
     "valid": false,
-    "validSuggestion": null
+    "validSuggestion": {
+      "value": 0
+    }
   }
 }
 ```

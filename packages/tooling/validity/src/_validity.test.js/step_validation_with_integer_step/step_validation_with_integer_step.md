@@ -31,7 +31,9 @@ return results;
     "type": undefined,
     "step": "must be an integer",
     "valid": false,
-    "validSuggestion": null
+    "validSuggestion": {
+      "value": 6
+    }
   }
 }
 ```
