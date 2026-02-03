@@ -171,3 +171,19 @@ import { humanize } from "@jsenv/humanize";
 }`;
   assert({ actual, expect });
 }
+
+{
+  const actual = humanize({
+    "a": true,
+    "1": true,
+    "1.2": true,
+    "a b": true,
+  });
+  const expect = `{
+  1: true,
+  "a": true,
+  "1.2": true,
+  "a b": true
+}`;
+  assert({ actual, expect });
+}
