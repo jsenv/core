@@ -1,0 +1,23 @@
+<!--?xml version="1.0" encoding="UTF-8"?-->
+<testsuite time="[time]" timestamp="[timestamp]" tests="2" skipped="0" failures="2">
+  <testcase file="unhandled_rejection_in_test.spec.js" name="worker_thread" time="[time]" timestamp="[timestamp]" tests="1" errors="1">
+    <properties>
+      <property name="runtimeName" value="node_worker_thread"></property>
+      <property name="runtimeVersion" value="25.1.0"></property>
+    </properties>
+  </testcase>
+  <error type="Error">1 | Promise.reject(new Error("toto"));
+                   ^
+Error: toto
+  at base/node_client/unhandled_rejection_in_test.spec.js:1:16</error>
+  <testcase file="unhandled_rejection_in_test.spec.js" name="child_process" time="[time]" timestamp="[timestamp]" tests="1" errors="1">
+    <properties>
+      <property name="runtimeName" value="node_child_process"></property>
+      <property name="runtimeVersion" value="25.1.0"></property>
+    </properties>
+  </testcase>
+  <error type="Error">1 | Promise.reject(new Error("toto"));
+                   ^
+Error: toto
+  at base/node_client/unhandled_rejection_in_test.spec.js:1:16</error>
+</testsuite>

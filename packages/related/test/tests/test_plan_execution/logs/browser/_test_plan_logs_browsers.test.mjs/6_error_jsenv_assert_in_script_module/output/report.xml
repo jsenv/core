@@ -1,0 +1,43 @@
+<!--?xml version="1.0" encoding="UTF-8"?-->
+<testsuite time="[time]" timestamp="[timestamp]" tests="3" skipped="0" failures="3">
+  <testcase file="error_jsenv_assert_in_script_module.spec.html" name="chromium" time="[time]" timestamp="[timestamp]" tests="1" failures="1">
+    <properties>
+      <property name="runtimeName" value="chromium"></property>
+      <property name="runtimeVersion" value="145.0.7632.6"></property>
+    </properties>
+  </testcase>
+  <failure type="AssertionError">11 |       import { assert } from "@jsenv/assert";
+12 | 
+13 |       assert({ actual: 1, expect: "1" });
+           ^
+AssertionError: actual and expect are different
+
+actual: 1
+expect: "1"
+  at base/client/error_jsenv_assert_in_script_module.spec.html:13:7</failure>
+  <testcase file="error_jsenv_assert_in_script_module.spec.html" name="firefox" time="[time]" timestamp="[timestamp]" tests="1" failures="1">
+    <properties>
+      <property name="runtimeName" value="firefox"></property>
+      <property name="runtimeVersion" value="146.0.1"></property>
+    </properties>
+  </testcase>
+  <failure type="AssertionError">AssertionError: actual and expect are different
+
+actual: 1
+expect: "1"</failure>
+  <testcase file="error_jsenv_assert_in_script_module.spec.html" name="webkit" time="[time]" timestamp="[timestamp]" tests="1" failures="1">
+    <properties>
+      <property name="runtimeName" value="webkit"></property>
+      <property name="runtimeVersion" value="26.0"></property>
+    </properties>
+  </testcase>
+  <failure type="AssertionError">11 |       import { assert } from "@jsenv/assert";
+12 | 
+13 |       assert({ actual: 1, expect: "1" });
+                 ^
+AssertionError: actual and expect are different
+
+actual: 1
+expect: "1"
+module code@base/client/error_jsenv_assert_in_script_module.spec.html:13:13</failure>
+</testsuite>
