@@ -29,6 +29,7 @@ function requireConstants () {
 
 	constants = {
 	  BINARY_TYPES,
+	  CLOSE_TIMEOUT: 30000,
 	  EMPTY_BUFFER: Buffer.alloc(0),
 	  GUID: '258EAFA5-E914-47DA-95CA-C5AB0DC85B11',
 	  hasBlob,
@@ -2799,6 +2800,7 @@ function requireWebsocket () {
 
 	const {
 	  BINARY_TYPES,
+	  CLOSE_TIMEOUT,
 	  EMPTY_BUFFER,
 	  GUID,
 	  kForOnEventAttribute,
@@ -2813,7 +2815,6 @@ function requireWebsocket () {
 	const { format, parse } = requireExtension();
 	const { toBuffer } = requireBufferUtil();
 
-	const closeTimeout = 30 * 1000;
 	const kAborted = Symbol('kAborted');
 	const protocolVersions = [8, 13];
 	const readyStates = ['CONNECTING', 'OPEN', 'CLOSING', 'CLOSED'];
@@ -2869,6 +2870,7 @@ function requireWebsocket () {
 	      initAsClient(this, address, protocols, options);
 	    } else {
 	      this._autoPong = options.autoPong;
+	      this._closeTimeout = options.closeTimeout;
 	      this._isServer = true;
 	    }
 	  }
@@ -3410,6 +3412,8 @@ function requireWebsocket () {
 	 *     times in the same tick
 	 * @param {Boolean} [options.autoPong=true] Specifies whether or not to
 	 *     automatically send a pong in response to a ping
+	 * @param {Number} [options.closeTimeout=30000] Duration in milliseconds to wait
+	 *     for the closing handshake to finish after `websocket.close()` is called
 	 * @param {Function} [options.finishRequest] A function which can be used to
 	 *     customize the headers of each http request before it is sent
 	 * @param {Boolean} [options.followRedirects=false] Whether or not to follow
@@ -3436,6 +3440,7 @@ function requireWebsocket () {
 	  const opts = {
 	    allowSynchronousEvents: true,
 	    autoPong: true,
+	    closeTimeout: CLOSE_TIMEOUT,
 	    protocolVersion: protocolVersions[1],
 	    maxPayload: 100 * 1024 * 1024,
 	    skipUTF8Validation: false,
@@ -3454,6 +3459,7 @@ function requireWebsocket () {
 	  };
 
 	  websocket._autoPong = opts.autoPong;
+	  websocket._closeTimeout = opts.closeTimeout;
 
 	  if (!protocolVersions.includes(opts.protocolVersion)) {
 	    throw new RangeError(
@@ -4071,7 +4077,7 @@ function requireWebsocket () {
 	function setCloseTimer(websocket) {
 	  websocket._closeTimer = setTimeout(
 	    websocket._socket.destroy.bind(websocket._socket),
-	    closeTimeout
+	    websocket._closeTimeout
 	  );
 	}
 
@@ -4089,23 +4095,23 @@ function requireWebsocket () {
 
 	  websocket._readyState = WebSocket.CLOSING;
 
-	  let chunk;
-
 	  //
 	  // The close frame might not have been received or the `'end'` event emitted,
 	  // for example, if the socket was destroyed due to an error. Ensure that the
 	  // `receiver` stream is closed after writing any remaining buffered data to
 	  // it. If the readable side of the socket is in flowing mode then there is no
-	  // buffered data as everything has been already written and `readable.read()`
-	  // will return `null`. If instead, the socket is paused, any possible buffered
-	  // data will be read as a single chunk.
+	  // buffered data as everything has been already written. If instead, the
+	  // socket is paused, any possible buffered data will be read as a single
+	  // chunk.
 	  //
 	  if (
 	    !this._readableState.endEmitted &&
 	    !websocket._closeFrameReceived &&
 	    !websocket._receiver._writableState.errorEmitted &&
-	    (chunk = websocket._socket.read()) !== null
+	    this._readableState.length !== 0
 	  ) {
+	    const chunk = this.read(this._readableState.length);
+
 	    websocket._receiver.write(chunk);
 	  }
 
@@ -4436,7 +4442,7 @@ function requireWebsocketServer () {
 	const PerMessageDeflate = requirePermessageDeflate();
 	const subprotocol = requireSubprotocol();
 	const WebSocket = requireWebsocket();
-	const { GUID, kWebSocket } = requireConstants();
+	const { CLOSE_TIMEOUT, GUID, kWebSocket } = requireConstants();
 
 	const keyRegex = /^[+/0-9A-Za-z]{22}==$/;
 
@@ -4463,6 +4469,9 @@ function requireWebsocketServer () {
 	   *     pending connections
 	   * @param {Boolean} [options.clientTracking=true] Specifies whether or not to
 	   *     track clients
+	   * @param {Number} [options.closeTimeout=30000] Duration in milliseconds to
+	   *     wait for the closing handshake to finish after `websocket.close()` is
+	   *     called
 	   * @param {Function} [options.handleProtocols] A hook to handle protocols
 	   * @param {String} [options.host] The hostname where to bind the server
 	   * @param {Number} [options.maxPayload=104857600] The maximum allowed message
@@ -4492,6 +4501,7 @@ function requireWebsocketServer () {
 	      perMessageDeflate: false,
 	      handleProtocols: null,
 	      clientTracking: true,
+	      closeTimeout: CLOSE_TIMEOUT,
 	      verifyClient: null,
 	      noServer: false,
 	      backlog: null, // use default (511 as implemented in net.js)

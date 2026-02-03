@@ -1,5 +1,5 @@
 import { IncomingForm } from "./jsenv_server_node_modules.js";
-export { DummyParser, PersistentFile as File, JSONParser, MultipartParser, OctetStreamParser, OctetStreamParser as OctetstreamParser, PersistentFile, QuerystringParser as QueryStringParser, QuerystringParser, VolatileFile, DEFAULT_OPTIONS as defaultOptions, plugin$3 as json, plugin$2 as multipart, plugin as octetstream, plugin$1 as querystring } from "./jsenv_server_node_modules.js";
+export { DummyParser, PersistentFile as File, JSONParser, MultipartParser, OctetStreamParser, OctetStreamParser as OctetstreamParser, PersistentFile, QuerystringParser as QueryStringParser, QuerystringParser, VolatileFile, DEFAULT_OPTIONS as defaultOptions, plugin as json, plugin$1 as multipart, plugin$2 as octetstream, plugin$3 as querystring } from "./jsenv_server_node_modules.js";
 import "node:domain";
 import "node:events";
 import "node:fs/promises";
@@ -14,4 +14,4 @@ import "node:stream";
 // if you want it access `const formidable.IncomingForm` as v1
 const formidable = (...args) => new IncomingForm(...args);
 
-export { IncomingForm as Formidable, IncomingForm, formidable as default, formidable };
+export { IncomingForm as Formidable, IncomingForm, formidable };
