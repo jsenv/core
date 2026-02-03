@@ -61,7 +61,7 @@ main {
   min-height: 100vh; /* Ensures content area is at least viewport height */
   padding-bottom: 0;
   flex: 1;
-  overflow-x: auto; /* Reserves space for scrollbar to prevent layout shifts */ /* Horizontal scrollbar appears when content is wider than available space */
+  overflow-x: auto; /* Horizontal scrollbar appears when content is wider than available space */ /* Reserves space for scrollbar to prevent layout shifts */
 }
 .main_body {
   display: flex;

@@ -270,7 +270,7 @@ export const jsenvPluginDatabaseManager = ({
                 GROUP BY
                   pg_roles.rolname
               ) database_count_result ON pg_roles.rolname = database_count_result.database_owner ${whereClause ||
-            sql``}
+              sql``}
             ORDER BY
               pg_roles.oid ASC
           `;

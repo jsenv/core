@@ -46,9 +46,9 @@ noscript {
   opacity: 0;
 }
 #splashscreen[data-splashin] {
-  animation-name: splashin;
   animation-duration: 0.4s;
   animation-fill-mode: forwards;
+  animation-name: splashin;
 }
 @keyframes splashin {
   from {
@@ -96,9 +96,9 @@ noscript {
   overflow: auto;
 }
 #splashscreen[data-splashout] {
-  animation-name: splashout;
   animation-duration: 0.3s;
   animation-fill-mode: forwards;
+  animation-name: splashout;
 }
 @keyframes splashout {
   from {
