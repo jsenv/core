@@ -19,9 +19,9 @@ Unexpected token (6:15)
 base/client/main.noeslint.html:10:5
 ```
 
-# 2/4 write file "./.jsenv/chrome@143.00/main.noeslint.html"
+# 2/4 write file "./.jsenv/chrome@145.00/main.noeslint.html"
 
-see [./.jsenv/chrome@143.00/main.noeslint.html](./.jsenv/chrome@143.00/main.noeslint.html)
+see [./.jsenv/chrome@145.00/main.noeslint.html](./.jsenv/chrome@145.00/main.noeslint.html)
 
 # 3/4 console.error
 
