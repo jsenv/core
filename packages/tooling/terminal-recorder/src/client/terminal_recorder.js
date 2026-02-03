@@ -13,7 +13,7 @@ https://github.com/xtermjs/xterm.js/blob/master/typings/xterm.d.ts
 */
 
 import "@xterm/addon-fit";
-import "@xterm/addon-serialize?as_js_module";
+import "@xterm/addon-serialize";
 // see https://github.com/microsoft/playwright/issues/30585 which is a problem for mac os 14
 import "@xterm/addon-webgl"; // https://github.com/xtermjs/xterm.js/tree/master/addons/addon-webgl
 import "@xterm/xterm";
