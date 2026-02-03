@@ -5,7 +5,7 @@
   "type": "module",
   "main": "./index.js",
   "dependencies": {
-    "@jsenv/urls": "2.9.5",
+    "@jsenv/urls": "2.9.6",
     "@jsenv/utils": "2.3.1"
   },
   "devDependencies": {

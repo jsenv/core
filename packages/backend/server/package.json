@@ -55,9 +55,9 @@
     "@jsenv/utils": "../../tooling/utils",
     "eventsource": "4.1.0",
     "formidable": "3.5.4",
-    "playwright": "1.57.0",
-    "undici": "7.16.0",
-    "ws": "8.18.3"
+    "playwright": "1.58.1",
+    "undici": "7.20.0",
+    "ws": "8.19.0"
   },
   "engines": {
     "node": ">=22.13.1"

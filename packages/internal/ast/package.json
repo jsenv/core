@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/ast",
-  "version": "6.7.18",
+  "version": "6.7.19",
   "description": "Parse and transform HTML, CSS and JS",
   "repository": {
     "type": "git",
@@ -24,11 +24,11 @@
     "/src/"
   ],
   "dependencies": {
-    "@babel/core": "7.28.5",
-    "@babel/helper-module-imports": "7.27.1",
-    "@babel/parser": "7.28.5",
-    "@jsenv/humanize": "1.7.3",
-    "@jsenv/urls": "2.9.5",
+    "@babel/core": "7.29.0",
+    "@babel/helper-module-imports": "7.28.6",
+    "@babel/parser": "7.29.0",
+    "@jsenv/humanize": "1.7.4",
+    "@jsenv/urls": "2.9.6",
     "@jsenv/utils": "2.3.1",
     "acorn": "8.15.0",
     "acorn-import-attributes": "1.9.5",

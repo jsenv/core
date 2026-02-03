@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/plugin-commonjs",
-  "version": "2.11.9",
+  "version": "2.11.10",
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
@@ -19,25 +19,25 @@
     "/src/"
   ],
   "dependencies": {
-    "@jsenv/filesystem": "4.15.11",
-    "@jsenv/humanize": "1.7.3",
-    "@jsenv/node-esm-resolution": "1.2.12",
+    "@jsenv/filesystem": "4.15.12",
+    "@jsenv/humanize": "1.7.4",
+    "@jsenv/node-esm-resolution": "1.2.13",
     "@jsenv/url-meta": "8.5.7",
-    "@jsenv/urls": "2.9.5",
+    "@jsenv/urls": "2.9.6",
     "@rollup/plugin-commonjs": "29.0.0",
     "@rollup/plugin-json": "6.1.0",
     "@rollup/plugin-node-resolve": "16.0.3",
     "@rollup/plugin-replace": "6.0.3",
-    "cjs-module-lexer": "2.1.1",
+    "cjs-module-lexer": "2.2.0",
     "is-valid-identifier": "2.0.2",
     "resolve": "1.22.11",
-    "rollup": "4.53.5",
+    "rollup": "4.57.1",
     "rollup-plugin-polyfill-node": "0.13.0"
   },
   "devDependencies": {
     "@jsenv/assert": "../tooling/assert",
     "@jsenv/core": "../../",
-    "playwright": "1.57.0"
+    "playwright": "1.58.1"
   },
   "publishConfig": {
     "access": "public"

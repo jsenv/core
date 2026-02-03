@@ -18,19 +18,19 @@
     "preact": "11.0.0-beta.0"
   },
   "devDependencies": {
-    "@babel/plugin-syntax-import-attributes": "7.27.1",
-    "@babel/plugin-transform-react-jsx": "7.27.1",
+    "@babel/plugin-syntax-import-attributes": "7.28.6",
+    "@babel/plugin-transform-react-jsx": "7.28.6",
     "@jsenv/assert": "4.5.5",
-    "@jsenv/core": "40.12.5",
-    "@jsenv/plugin-preact": "1.7.29",
-    "@jsenv/plugin-bundling": "2.10.5",
+    "@jsenv/core": "40.12.6",
+    "@jsenv/plugin-preact": "1.7.30",
+    "@jsenv/plugin-bundling": "2.10.6",
     "@jsenv/plugin-minification": "1.7.3",
-    "@jsenv/eslint-config-relax": "1.7.12",
-    "@jsenv/test": "3.7.16",
+    "@jsenv/eslint-config-relax": "1.7.13",
+    "@jsenv/test": "3.7.17",
     "eslint": "9.39.2",
     "open": "11.0.0",
-    "@playwright/browser-chromium": "1.57.0",
-    "prettier": "3.7.4",
-    "playwright": "1.57.0"
+    "@playwright/browser-chromium": "1.58.1",
+    "prettier": "3.8.1",
+    "playwright": "1.58.1"
   }
 }

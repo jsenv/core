@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/package-publish",
-  "version": "1.11.40",
+  "version": "1.11.41",
   "description": "Publish package to one or many registry.",
   "repository": {
     "type": "git",
@@ -20,8 +20,8 @@
     "/src/"
   ],
   "dependencies": {
-    "@jsenv/filesystem": "4.15.11",
-    "@jsenv/humanize": "1.7.3",
+    "@jsenv/filesystem": "4.15.12",
+    "@jsenv/humanize": "1.7.4",
     "semver": "7.7.3"
   },
   "devDependencies": {

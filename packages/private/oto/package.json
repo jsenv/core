@@ -23,25 +23,25 @@
   "dependencies": {
     "@jsenv/dom": "./packages/dom",
     "@jsenv/navi": "./packages/navi",
-    "@preact/signals": "2.5.1",
+    "@preact/signals": "2.6.2",
     "dom": "./packages/dom",
     "hooks": "./packages/hooks",
     "matrix": "./packages/matrix",
     "preact": "11.0.0-beta.0"
   },
   "devDependencies": {
-    "@babel/plugin-syntax-import-attributes": "7.27.1",
-    "@babel/plugin-transform-react-jsx": "7.27.1",
+    "@babel/plugin-syntax-import-attributes": "7.28.6",
+    "@babel/plugin-transform-react-jsx": "7.28.6",
     "@jsenv/assert": "../../tooling/assert",
     "@jsenv/core": "../../../",
     "@jsenv/custom-elements-redefine": "../../frontend/custom-elements-redefine",
     "@jsenv/eslint-config-relax": "../../tooling/eslint-config-relax",
     "@jsenv/plugin-preact": "../../related/plugin-preact",
     "@jsenv/test": "../../related/test",
-    "@playwright/browser-chromium": "1.57.0",
+    "@playwright/browser-chromium": "1.58.1",
     "eslint": "9.39.2",
     "open": "11.0.0",
-    "prettier": "3.7.4",
+    "prettier": "3.8.1",
     "prettier-plugin-organize-imports": "4.3.0"
   },
   "volta": {

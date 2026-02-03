@@ -28,8 +28,8 @@
     "@jsenv/sourcemap": "1.3.14",
     "@jsenv/url-meta": "8.5.7",
     "@jsenv/urls": "2.9.5",
-    "lightningcss": "1.30.2",
-    "rollup": "4.53.5"
+    "lightningcss": "1.31.1",
+    "rollup": "4.57.1"
   },
   "devDependencies": {
     "@jsenv/filesystem": "../../tooling/filesystem",
