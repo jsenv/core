@@ -16,7 +16,7 @@
         window.resolveXtermReadyPromise = resolve;
       });
     </script>
-    <script type="module">import "./jsenv_terminal_recorder_node_modules.js";
+    <script type="module">import { Dl, D, o, xr } from "./jsenv_terminal_recorder_node_modules.js";
 
 const createLzwEncoder = ({ width, height, pixels, colorDepth }) => {
   var EOF = -1;
@@ -1183,11 +1183,6 @@ https://github.com/xtermjs/xterm.js/blob/master/typings/xterm.d.ts
 */
 
 
-const { Terminal } = window;
-const { FitAddon } = window.FitAddon;
-const { WebglAddon } = window.WebglAddon;
-const { SerializeAddon } = window.SerializeAddon;
-
 const initTerminal = ({
   cols = 80,
   rows = 25,
@@ -1222,7 +1217,7 @@ const initTerminal = ({
   link.href = cssUrl;
   document.head.appendChild(link);
 
-  const term = new Terminal({
+  const term = new Dl({
     convertEol,
     disableStdin: true,
     // cursorBlink: false,
@@ -1241,11 +1236,11 @@ const initTerminal = ({
       brightBlue: "#87CEEB",
     },
   });
-  const serializeAddon = new SerializeAddon();
+  const serializeAddon = new D();
   term.loadAddon(serializeAddon);
-  const fitAddon = new FitAddon();
+  const fitAddon = new o();
   term.loadAddon(fitAddon);
-  const webglAddon = new WebglAddon(
+  const webglAddon = new xr(
     // we pass true to enable preserveDrawingBuffer
     // it's not actually useful thanks to term.write callback +
     // call on _innerRefresh() before context.drawImage
