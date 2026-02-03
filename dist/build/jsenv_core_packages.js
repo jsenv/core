@@ -1,6 +1,6 @@
 import { createSupportsColor, isUnicodeSupported, stripAnsi, emojiRegex, eastAsianWidth, clearTerminal, eraseLines } from "./jsenv_core_node_modules.js";
 import { extname } from "node:path";
-import { existsSync, readFileSync as readFileSync$1, readdir, chmod, stat, lstat, chmodSync, statSync, lstatSync, promises, readdirSync, openSync, closeSync, unlinkSync, rmdirSync, mkdirSync, writeFileSync as writeFileSync$1, unlink, rmdir, watch, realpathSync } from "node:fs";
+import { readFileSync as readFileSync$1, existsSync, readdir, chmod, stat, lstat, chmodSync, statSync, lstatSync, promises, readdirSync, openSync, closeSync, unlinkSync, rmdirSync, mkdirSync, writeFileSync as writeFileSync$1, unlink, rmdir, watch, realpathSync } from "node:fs";
 import crypto, { createHash } from "node:crypto";
 import { pathToFileURL, fileURLToPath } from "node:url";
 import { cpus, totalmem, freemem } from "node:os";
