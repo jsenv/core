@@ -1,4 +1,4 @@
-# [extends Animal vs extend Robot](../../function.test.js#L155)
+# [extends Animal vs extend Robot](../../function.test.js)
 
 ```js
 class Animal {

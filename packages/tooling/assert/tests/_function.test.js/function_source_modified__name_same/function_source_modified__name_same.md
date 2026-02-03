@@ -1,4 +1,4 @@
-# [function source modified, name same](../../function.test.js#L72)
+# [function source modified, name same](../../function.test.js)
 
 ```js
 const anonymousFunctionReturningTrue = (function () {

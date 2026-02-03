@@ -1,4 +1,4 @@
-# [error message vs object with message](../../error.test.js#L23)
+# [error message vs object with message](../../error.test.js)
 
 ```js
 assert({

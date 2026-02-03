@@ -1,4 +1,4 @@
-# [collapsed with overview when no diff](../../object.test.js#L387)
+# [collapsed with overview when no diff](../../object.test.js)
 
 ```js
 assert({

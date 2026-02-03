@@ -1,4 +1,4 @@
-# [buffer without diff are collapsed](../../array_typed.test.js#L17)
+# [buffer without diff are collapsed](../../array_typed.test.js)
 
 ```js
 assert({

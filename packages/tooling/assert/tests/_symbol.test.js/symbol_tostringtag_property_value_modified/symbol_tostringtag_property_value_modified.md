@@ -1,4 +1,4 @@
-# [Symbol.toStringTag property value modified](../../symbol.test.js#L85)
+# [Symbol.toStringTag property value modified](../../symbol.test.js)
 
 ```js
 assert({

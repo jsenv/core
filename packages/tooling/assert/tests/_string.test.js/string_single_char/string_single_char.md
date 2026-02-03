@@ -1,4 +1,4 @@
-# [string single char](../../string.test.js#L5)
+# [string single char](../../string.test.js)
 
 ```js
 assert({

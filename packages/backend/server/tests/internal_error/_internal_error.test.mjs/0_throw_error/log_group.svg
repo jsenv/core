@@ -11,7 +11,7 @@
         <text x="10" y="81.55">Error: message</text>
         <text x="10" y="100.55" style="white-space:pre">    at base/internal_error.test.mjs:34:19</text>
         <text x="10" y="119.55" style="white-space:pre">    at capture (@jsenv/core/packages/tooling/snapshot/src/side_effects/create_capture_side_effects.js:342:29)</text>
-        <text x="10" y="138.55" style="white-space:pre">    at snapshotTests (@jsenv/core/packages/tooling/snapshot/src/side_effects/snapshot_tests.js:182:33)</text>
+        <text x="10" y="138.55" style="white-space:pre">    at snapshotTests (@jsenv/core/packages/tooling/snapshot/src/side_effects/snapshot_tests.js:185:33)</text>
         <text x="26.8" y="157.55" fill="#cd5555">500</text>
         <text x="52.01" y="157.55" style="white-space:pre"> Internal Server Error</text>
       </g>

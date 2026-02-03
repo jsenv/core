@@ -1,4 +1,4 @@
-# [radial gradient with size and position](../../css_background.test.mjs#L57)
+# [radial gradient with size and position](../../css_background.test.mjs)
 
 ```js
 return run(

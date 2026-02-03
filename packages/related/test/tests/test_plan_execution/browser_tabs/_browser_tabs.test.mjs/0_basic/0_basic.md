@@ -1,4 +1,4 @@
-# [0_basic](../../browser_tabs.test.mjs#L31)
+# [0_basic](../../browser_tabs.test.mjs)
 
 ```js
 run({

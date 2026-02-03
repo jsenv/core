@@ -1,4 +1,4 @@
-# [500 not between 100, 200](../../assert_between.test.js#L37)
+# [500 not between 100, 200](../../assert_between.test.js)
 
 ```js
 assert({

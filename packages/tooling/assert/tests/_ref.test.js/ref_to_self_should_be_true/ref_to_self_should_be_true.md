@@ -1,4 +1,4 @@
-# [ref to self should be true](../../ref.test.js#L145)
+# [ref to self should be true](../../ref.test.js)
 
 ```js
 const actual = {

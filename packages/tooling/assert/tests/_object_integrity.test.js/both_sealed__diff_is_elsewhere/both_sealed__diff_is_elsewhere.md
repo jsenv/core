@@ -1,4 +1,4 @@
-# [both sealed, diff is elsewhere](../../object_integrity.test.js#L76)
+# [both sealed, diff is elsewhere](../../object_integrity.test.js)
 
 ```js
 assert({

@@ -1,4 +1,4 @@
-# [set collapsed various cases](../../set.test.js#L39)
+# [set collapsed various cases](../../set.test.js)
 
 ```js
 assert({

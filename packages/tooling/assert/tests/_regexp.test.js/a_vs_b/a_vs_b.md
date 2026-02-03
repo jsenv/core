@@ -1,4 +1,4 @@
-# [a vs b](../../regexp.test.js#L8)
+# [a vs b](../../regexp.test.js)
 
 ```js
 assert({

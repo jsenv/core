@@ -1,4 +1,4 @@
-# [anonymous function vs named function](../../function.test.js#L94)
+# [anonymous function vs named function](../../function.test.js)
 
 ```js
 const anonymousFunction = (function () {

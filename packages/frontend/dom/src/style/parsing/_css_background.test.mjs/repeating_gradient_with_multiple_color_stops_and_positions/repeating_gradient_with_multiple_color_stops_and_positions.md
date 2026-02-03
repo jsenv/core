@@ -1,4 +1,4 @@
-# [repeating gradient with multiple color stops and positions](../../css_background.test.mjs#L27)
+# [repeating gradient with multiple color stops and positions](../../css_background.test.mjs)
 
 ```js
 return run(
@@ -19,7 +19,8 @@ return run(
           122,
           204,
           1
-        ]
+        ],
+        "stops": undefined
       },
       {
         "color": [

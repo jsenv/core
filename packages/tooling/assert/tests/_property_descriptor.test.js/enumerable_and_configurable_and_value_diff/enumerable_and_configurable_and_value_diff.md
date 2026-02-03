@@ -1,4 +1,4 @@
-# [enumerable and configurable and value diff](../../property_descriptor.test.js#L6)
+# [enumerable and configurable and value diff](../../property_descriptor.test.js)
 
 ```js
 assert({

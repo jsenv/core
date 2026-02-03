@@ -1,4 +1,4 @@
-# [incorrect date string](../../date.test.js#L88)
+# [incorrect date string](../../date.test.js)
 
 ```js
 assert({

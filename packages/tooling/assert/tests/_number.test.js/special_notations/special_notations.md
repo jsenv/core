@@ -1,4 +1,4 @@
-# [special notations](../../number.test.js#L113)
+# [special notations](../../number.test.js)
 
 ```js
 assert({

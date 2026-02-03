@@ -1,4 +1,4 @@
-# [property should be there and is big](../../object.test.js#L338)
+# [property should be there and is big](../../object.test.js)
 
 ```js
 assert({

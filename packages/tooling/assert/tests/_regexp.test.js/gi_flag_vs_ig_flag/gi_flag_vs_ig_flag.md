@@ -1,4 +1,4 @@
-# [gi flag vs ig flag](../../regexp.test.js#L21)
+# [gi flag vs ig flag](../../regexp.test.js)
 
 ```js
 assert({

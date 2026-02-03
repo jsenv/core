@@ -1,4 +1,4 @@
-# [diff String object vs literal](../../string.test.js#L137)
+# [diff String object vs literal](../../string.test.js)
 
 ```js
 assert({

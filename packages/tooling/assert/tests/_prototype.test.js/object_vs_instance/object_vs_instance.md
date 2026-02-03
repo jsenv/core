@@ -1,4 +1,4 @@
-# [object vs instance](../../prototype.test.js#L46)
+# [object vs instance](../../prototype.test.js)
 
 ```js
 class User {}

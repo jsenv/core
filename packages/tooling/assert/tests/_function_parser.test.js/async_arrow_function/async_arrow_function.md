@@ -1,4 +1,4 @@
-# [async arrow function](../../function_parser.test.js#L15)
+# [async arrow function](../../function_parser.test.js)
 
 ```js
 generateFunctionBody(async () => {

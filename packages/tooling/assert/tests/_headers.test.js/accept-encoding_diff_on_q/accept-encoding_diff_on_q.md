@@ -1,4 +1,4 @@
-# [accept-encoding diff on q](../../headers.test.js#L168)
+# [accept-encoding diff on q](../../headers.test.js)
 
 ```js
 assert({

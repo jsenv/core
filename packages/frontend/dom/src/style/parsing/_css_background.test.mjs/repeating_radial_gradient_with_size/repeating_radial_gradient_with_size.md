@@ -1,4 +1,4 @@
-# [repeating radial gradient with size](../../css_background.test.mjs#L79)
+# [repeating radial gradient with size](../../css_background.test.mjs)
 
 ```js
 return run(

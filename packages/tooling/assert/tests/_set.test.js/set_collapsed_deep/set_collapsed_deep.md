@@ -1,4 +1,4 @@
-# [set collapsed deep](../../set.test.js#L53)
+# [set collapsed deep](../../set.test.js)
 
 ```js
 assert({

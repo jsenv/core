@@ -1,4 +1,4 @@
-# [max depth inside diff](../../object.test.js#L129)
+# [max depth inside diff](../../object.test.js)
 
 ```js
 assert({

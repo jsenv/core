@@ -1,4 +1,4 @@
-# [Number.MAX_VALUE and Number.MIN_VALUE](../../well_known.test.js#L11)
+# [Number.MAX_VALUE and Number.MIN_VALUE](../../well_known.test.js)
 
 ```js
 assert({

@@ -1,4 +1,4 @@
-# [gradient with percentage positions](../../css_background.test.mjs#L49)
+# [gradient with percentage positions](../../css_background.test.mjs)
 
 ```js
 return run("linear-gradient(to right, red 0%, blue 50%, green 100%)");

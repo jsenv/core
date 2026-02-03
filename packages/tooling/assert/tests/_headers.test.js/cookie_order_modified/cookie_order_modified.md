@@ -1,4 +1,4 @@
-# [cookie order modified](../../headers.test.js#L93)
+# [cookie order modified](../../headers.test.js)
 
 ```js
 assert({

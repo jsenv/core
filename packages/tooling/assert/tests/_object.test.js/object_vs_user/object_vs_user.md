@@ -1,4 +1,4 @@
-# [object vs user](../../object.test.js#L379)
+# [object vs user](../../object.test.js)
 
 ```js
 assert({

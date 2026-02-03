@@ -1,4 +1,4 @@
-# [Object.create(null) and []](../../prototype.test.js#L27)
+# [Object.create(null) and []](../../prototype.test.js)
 
 ```js
 assert({

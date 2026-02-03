@@ -1,4 +1,4 @@
-# [below or equals ok](../../assert_between.test.js#L19)
+# [below or equals ok](../../assert_between.test.js)
 
 ```js
 assert({

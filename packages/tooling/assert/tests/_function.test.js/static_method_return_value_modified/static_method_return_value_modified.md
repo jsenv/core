@@ -1,4 +1,4 @@
-# [static method return value modified](../../function.test.js#L317)
+# [static method return value modified](../../function.test.js)
 
 ```js
 const anonymousActualClass = (function () {

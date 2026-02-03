@@ -1,4 +1,4 @@
-# [0_chromium](../../script_module_jsx_error_dev.test.mjs#L20)
+# [0_chromium](../../script_module_jsx_error_dev.test.mjs)
 
 ```js
 run({ browserLauncher: chromium })

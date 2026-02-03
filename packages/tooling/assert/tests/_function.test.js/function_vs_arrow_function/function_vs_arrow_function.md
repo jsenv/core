@@ -1,4 +1,4 @@
-# [function vs arrow function](../../function.test.js#L60)
+# [function vs arrow function](../../function.test.js)
 
 ```js
 const anonymousFunction = (function () {

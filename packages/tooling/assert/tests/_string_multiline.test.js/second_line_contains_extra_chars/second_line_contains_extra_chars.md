@@ -1,4 +1,4 @@
-# [second line contains extra chars](../../string_multiline.test.js#L39)
+# [second line contains extra chars](../../string_multiline.test.js)
 
 ```js
 assert({

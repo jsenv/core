@@ -1,4 +1,4 @@
-# [compare set and array](../../set.test.js#L33)
+# [compare set and array](../../set.test.js)
 
 ```js
 assert({

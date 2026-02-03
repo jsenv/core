@@ -1,4 +1,4 @@
-# [diff new String value](../../string.test.js#L131)
+# [diff new String value](../../string.test.js)
 
 ```js
 assert({

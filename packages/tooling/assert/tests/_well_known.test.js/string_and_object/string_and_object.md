@@ -1,4 +1,4 @@
-# [String and Object](../../well_known.test.js#L5)
+# [String and Object](../../well_known.test.js)
 
 ```js
 assert({

@@ -1,4 +1,4 @@
-# [many props should not be there](../../object.test.js#L360)
+# [many props should not be there](../../object.test.js)
 
 ```js
 assert({

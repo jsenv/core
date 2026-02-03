@@ -1,4 +1,4 @@
-# [false should be an array](../../array.test.js#L73)
+# [false should be an array](../../array.test.js)
 
 ```js
 assert({

@@ -1,4 +1,4 @@
-# [Symbol.for() vs named Symbol()](../../symbol.test.js#L131)
+# [Symbol.for() vs named Symbol()](../../symbol.test.js)
 
 ```js
 assert({

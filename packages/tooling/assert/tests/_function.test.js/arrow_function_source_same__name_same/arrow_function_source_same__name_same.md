@@ -1,4 +1,4 @@
-# [arrow function source same, name same](../../function.test.js#L264)
+# [arrow function source same, name same](../../function.test.js)
 
 ```js
 const fn = () => {};

@@ -1,4 +1,4 @@
-# [41 and not(42)](../../assert_not.test.js#L11)
+# [41 and not(42)](../../assert_not.test.js)
 
 ```js
 assert({

@@ -1,4 +1,4 @@
-# [4_head_cell_background_cyan](../../table_head.test.mjs#L243)
+# [4_head_cell_background_cyan](../../table_head.test.mjs)
 
 ```js
 run({

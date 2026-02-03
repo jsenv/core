@@ -1,4 +1,4 @@
-# [object should be false](../../object.test.js#L55)
+# [object should be false](../../object.test.js)
 
 ```js
 assert({

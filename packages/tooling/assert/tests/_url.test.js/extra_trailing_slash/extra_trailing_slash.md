@@ -1,4 +1,4 @@
-# [extra trailing slash](../../url.test.js#L221)
+# [extra trailing slash](../../url.test.js)
 
 ```js
 assert({

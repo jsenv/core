@@ -1,4 +1,4 @@
-# [url string inside a prop](../../url.test.js#L151)
+# [url string inside a prop](../../url.test.js)
 
 ```js
 assert({

@@ -1,4 +1,4 @@
-# [2_x_align_center](../../number_align.test.mjs#L39)
+# [2_x_align_center](../../number_align.test.mjs)
 
 ```js
 run({

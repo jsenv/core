@@ -1,4 +1,4 @@
-# [2_border_colors](../../table_2_cells_same_column.test.mjs#L139)
+# [2_border_colors](../../table_2_cells_same_column.test.mjs)
 
 ```js
 run({

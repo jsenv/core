@@ -1,4 +1,4 @@
-# [GMT+2 vs iso](../../date.test.js#L27)
+# [GMT+2 vs iso](../../date.test.js)
 
 ```js
 assert({

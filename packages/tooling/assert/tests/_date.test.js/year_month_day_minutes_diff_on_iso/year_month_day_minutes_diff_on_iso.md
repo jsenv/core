@@ -1,4 +1,4 @@
-# [year month day minutes diff on iso](../../date.test.js#L8)
+# [year month day minutes diff on iso](../../date.test.js)
 
 ```js
 assert({

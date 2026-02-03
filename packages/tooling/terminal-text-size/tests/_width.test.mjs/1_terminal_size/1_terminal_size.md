@@ -1,4 +1,4 @@
-# [1_terminal_size](../../width.test.mjs#L119)
+# [1_terminal_size](../../width.test.mjs)
 
 ```js
 run(measureTextWidth)
@@ -13,12 +13,12 @@ run(measureTextWidth)
     "あいうabc": 9,
     "あいう★": 7,
     "±": 1,
-    "\"ノード.js\"": 11,
+    '"ノード.js"': 11,
     "你好": 4,
     "안녕하세요": 10,
     "A🈀BC": 5,
-    "\u001b[31m\u001b[39m": 0,
-    "\u001b]8;;https://github.com\u0007Click\u001b]8;;\u0007": 5,
+    "\x1B[31m\x1B[39m": 0,
+    "\x1B]8;;https://github.com\x07Click\x1B]8;;\x07": 5,
     "⌚": 2,
     "↔️": 1,
     "👩": 2,
@@ -30,12 +30,12 @@ run(measureTextWidth)
     "✔": 1
   },
   "controlChars": {
-    "\u0000": 0,
-    "\u001f": 0,
-    "": 0,
-    "": 0,
-    "": 0,
-    "\u001b": 0
+    "\x00": 0,
+    "\x1F": 0,
+    "\x7F": 0,
+    "\x86": 0,
+    "\x9F": 0,
+    "\x1B": 0
   },
   "combining": {
     "x̀": 1,

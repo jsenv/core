@@ -1,4 +1,4 @@
-# [1_star_only](../../pattern.test.mjs#L19)
+# [1_star_only](../../pattern.test.mjs)
 
 ```js
 const pattern = PATTERN.create("start/*/middle/*/end", {

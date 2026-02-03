@@ -1,4 +1,4 @@
-# [true should be object using ref](../../ref.test.js#L158)
+# [true should be object using ref](../../ref.test.js)
 
 ```js
 const item = { id: "a" };

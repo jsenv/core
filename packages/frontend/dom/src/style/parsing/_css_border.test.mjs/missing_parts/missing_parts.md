@@ -1,4 +1,4 @@
-# [missing parts](../../css_border.test.mjs#L40)
+# [missing parts](../../css_border.test.mjs)
 
 ```js
 return {

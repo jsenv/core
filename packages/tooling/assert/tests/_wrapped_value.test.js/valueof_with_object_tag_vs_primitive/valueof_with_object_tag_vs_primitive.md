@@ -1,4 +1,4 @@
-# [valueOf with object tag vs primitive](../../wrapped_value.test.js#L93)
+# [valueOf with object tag vs primitive](../../wrapped_value.test.js)
 
 ```js
 assert({

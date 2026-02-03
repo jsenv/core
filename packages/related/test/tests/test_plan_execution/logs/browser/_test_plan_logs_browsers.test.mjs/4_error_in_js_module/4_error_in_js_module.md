@@ -1,4 +1,4 @@
-# [4_error_in_js_module](../../test_plan_logs_browsers.test.mjs#L143)
+# [4_error_in_js_module](../../test_plan_logs_browsers.test.mjs)
 
 ```js
 run({

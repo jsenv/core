@@ -1,4 +1,4 @@
-# [file protocol vs http protocol](../../url.test.js#L179)
+# [file protocol vs http protocol](../../url.test.js)
 
 ```js
 assert({

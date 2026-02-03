@@ -1,4 +1,4 @@
-# [basic](../../object.test.js#L5)
+# [basic](../../object.test.js)
 
 ```js
 assert({

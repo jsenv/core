@@ -1,4 +1,4 @@
-# [1_import](../../conditions_star.test.mjs#L20)
+# [1_import](../../conditions_star.test.mjs)
 
 ```js
 return run({

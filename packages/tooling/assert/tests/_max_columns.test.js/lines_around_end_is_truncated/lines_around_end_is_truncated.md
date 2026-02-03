@@ -1,4 +1,4 @@
-# [lines around end is truncated](../../max_columns.test.js#L210)
+# [lines around end is truncated](../../max_columns.test.js)
 
 ```js
 assert({

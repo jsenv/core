@@ -1,4 +1,4 @@
-# [2_error_in_script](../../test_plan_logs_browsers.test.mjs#L135)
+# [2_error_in_script](../../test_plan_logs_browsers.test.mjs)
 
 ```js
 run({

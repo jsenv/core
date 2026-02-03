@@ -1,4 +1,4 @@
-# [second line differs](../../string_multiline.test.js#L53)
+# [second line differs](../../string_multiline.test.js)
 
 ```js
 assert({

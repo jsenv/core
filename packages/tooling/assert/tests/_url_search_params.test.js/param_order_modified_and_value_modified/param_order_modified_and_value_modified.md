@@ -1,4 +1,4 @@
-# [param order modified and value modified](../../url_search_params.test.js#L41)
+# [param order modified and value modified](../../url_search_params.test.js)
 
 ```js
 assert({

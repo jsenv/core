@@ -1,4 +1,4 @@
-# [url string vs url object port](../../url.test.js#L17)
+# [url string vs url object port](../../url.test.js)
 
 ```js
 assert({

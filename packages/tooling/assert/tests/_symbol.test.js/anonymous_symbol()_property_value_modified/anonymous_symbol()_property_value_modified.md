@@ -1,4 +1,4 @@
-# [anonymous Symbol() property value modified](../../symbol.test.js#L65)
+# [anonymous Symbol() property value modified](../../symbol.test.js)
 
 ```js
 assert({

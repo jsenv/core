@@ -1,4 +1,4 @@
-# [Uint8Array vs Array](../../array_typed.test.js#L77)
+# [Uint8Array vs Array](../../array_typed.test.js)
 
 ```js
 assert({

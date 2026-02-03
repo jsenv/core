@@ -1,4 +1,4 @@
-# [10 and any(String)](../../assert_any.test.js#L5)
+# [10 and any(String)](../../assert_any.test.js)
 
 ```js
 assert({

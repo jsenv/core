@@ -1,4 +1,4 @@
-# [search params sort](../../url_search_params.test.js#L47)
+# [search params sort](../../url_search_params.test.js)
 
 ```js
 assert({

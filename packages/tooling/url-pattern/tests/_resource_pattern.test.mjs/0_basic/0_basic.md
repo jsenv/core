@@ -1,4 +1,4 @@
-# [0_basic](../../resource_pattern.test.mjs#L5)
+# [0_basic](../../resource_pattern.test.mjs)
 
 ```js
 const pattern = createResourcePattern("/before/:id/*?url=:url");

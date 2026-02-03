@@ -1,4 +1,4 @@
-# [class method removed](../../function.test.js#L225)
+# [class method removed](../../function.test.js)
 
 ```js
 assert({

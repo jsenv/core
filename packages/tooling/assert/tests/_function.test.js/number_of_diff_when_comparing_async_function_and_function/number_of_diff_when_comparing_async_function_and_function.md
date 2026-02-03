@@ -1,4 +1,4 @@
-# [number of diff when comparing async function and function](../../function.test.js#L104)
+# [number of diff when comparing async function and function](../../function.test.js)
 
 ```js
 const anonymousAsyncFunction = (function () {

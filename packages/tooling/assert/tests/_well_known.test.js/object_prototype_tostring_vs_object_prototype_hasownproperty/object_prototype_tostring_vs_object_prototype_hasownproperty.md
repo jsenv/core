@@ -1,4 +1,4 @@
-# [Object.prototype.toString vs Object.prototype.hasOwnProperty](../../well_known.test.js#L29)
+# [Object.prototype.toString vs Object.prototype.hasOwnProperty](../../well_known.test.js)
 
 ```js
 assert({

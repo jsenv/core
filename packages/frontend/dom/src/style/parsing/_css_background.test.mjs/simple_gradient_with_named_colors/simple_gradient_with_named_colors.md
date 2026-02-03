@@ -1,4 +1,4 @@
-# [simple gradient with named colors](../../css_background.test.mjs#L33)
+# [simple gradient with named colors](../../css_background.test.mjs)
 
 ```js
 return run("linear-gradient(45deg, red, blue)");
@@ -16,7 +16,8 @@ return run("linear-gradient(45deg, red, blue)");
           0,
           0,
           1
-        ]
+        ],
+        "stops": undefined
       },
       {
         "color": [
@@ -24,7 +25,8 @@ return run("linear-gradient(45deg, red, blue)");
           0,
           255,
           1
-        ]
+        ],
+        "stops": undefined
       }
     ],
     "original": "linear-gradient(45deg, red, blue)"

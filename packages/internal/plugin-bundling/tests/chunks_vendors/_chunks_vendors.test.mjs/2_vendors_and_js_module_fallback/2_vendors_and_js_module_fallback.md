@@ -1,4 +1,4 @@
-# [2_vendors_and_js_module_fallback](../../chunks_vendors.test.mjs#L37)
+# [2_vendors_and_js_module_fallback](../../chunks_vendors.test.mjs)
 
 ```js
 run({

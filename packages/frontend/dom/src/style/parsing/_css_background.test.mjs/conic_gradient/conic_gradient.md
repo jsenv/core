@@ -1,4 +1,4 @@
-# [conic gradient](../../css_background.test.mjs#L67)
+# [conic gradient](../../css_background.test.mjs)
 
 ```js
 return run("conic-gradient(from 45deg, red 0deg, blue 180deg, red 360deg)");

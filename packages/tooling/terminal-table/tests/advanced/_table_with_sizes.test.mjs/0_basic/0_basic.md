@@ -1,4 +1,4 @@
-# [0_basic](../../table_with_sizes.test.mjs#L26)
+# [0_basic](../../table_with_sizes.test.mjs)
 
 ```js
 run();

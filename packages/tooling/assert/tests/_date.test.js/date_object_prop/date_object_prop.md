@@ -1,4 +1,4 @@
-# [date object prop](../../date.test.js#L82)
+# [date object prop](../../date.test.js)
 
 ```js
 assert({

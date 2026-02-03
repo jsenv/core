@@ -1,4 +1,4 @@
-# [array expect, object received](../../array.test.js#L12)
+# [array expect, object received](../../array.test.js)
 
 ```js
 assert({

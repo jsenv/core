@@ -1,4 +1,4 @@
-# [0_child_process](../../node_process_exit.test.mjs#L17)
+# [0_child_process](../../node_process_exit.test.mjs)
 
 ```js
 run({

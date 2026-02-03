@@ -1,4 +1,4 @@
-# [Symbol.for() key modified](../../symbol.test.js#L107)
+# [Symbol.for() key modified](../../symbol.test.js)
 
 ```js
 assert({

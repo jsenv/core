@@ -1,4 +1,4 @@
-# [millisecond only diff on iso](../../date.test.js#L14)
+# [millisecond only diff on iso](../../date.test.js)
 
 ```js
 assert({

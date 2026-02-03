@@ -1,4 +1,4 @@
-# [true should be false](../../boolean.test.js#L5)
+# [true should be false](../../boolean.test.js)
 
 ```js
 assert({

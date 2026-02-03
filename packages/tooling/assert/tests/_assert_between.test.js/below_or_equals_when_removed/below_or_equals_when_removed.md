@@ -1,4 +1,4 @@
-# [below or equals when removed](../../assert_between.test.js#L11)
+# [below or equals when removed](../../assert_between.test.js)
 
 ```js
 assert({

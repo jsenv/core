@@ -1,4 +1,4 @@
-# ["foo" and not(any(String))](../../assert_any.test.js#L23)
+# ["foo" and not(any(String))](../../assert_any.test.js)
 
 ```js
 assert({

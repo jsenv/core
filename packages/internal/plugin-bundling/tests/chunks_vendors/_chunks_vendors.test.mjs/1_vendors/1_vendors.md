@@ -1,4 +1,4 @@
-# [1_vendors](../../chunks_vendors.test.mjs#L23)
+# [1_vendors](../../chunks_vendors.test.mjs)
 
 ```js
 run({

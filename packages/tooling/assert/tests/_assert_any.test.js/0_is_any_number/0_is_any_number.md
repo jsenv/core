@@ -1,4 +1,4 @@
-# [0 is any number](../../assert_any.test.js#L41)
+# [0 is any number](../../assert_any.test.js)
 
 ```js
 assert({

@@ -1,4 +1,4 @@
-# [accept-language](../../headers.test.js#L180)
+# [accept-language](../../headers.test.js)
 
 ```js
 assert({

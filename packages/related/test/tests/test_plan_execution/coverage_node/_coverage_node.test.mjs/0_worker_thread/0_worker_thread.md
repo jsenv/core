@@ -1,4 +1,4 @@
-# [0_worker_thread](../../coverage_node.test.mjs#L52)
+# [0_worker_thread](../../coverage_node.test.mjs)
 
 ```js
 run({

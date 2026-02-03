@@ -1,4 +1,4 @@
-# [double quote in url pathname](../../quote.test.js#L88)
+# [double quote in url pathname](../../quote.test.js)
 
 ```js
 assert({

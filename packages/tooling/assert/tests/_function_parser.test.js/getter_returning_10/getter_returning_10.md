@@ -1,4 +1,4 @@
-# [getter returning 10](../../function_parser.test.js#L49)
+# [getter returning 10](../../function_parser.test.js)
 
 ```js
 generateFunctionBody(

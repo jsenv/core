@@ -1,4 +1,4 @@
-# [redirected response](../../fetch.test.js#L105)
+# [redirected response](../../fetch.test.js)
 
 ```js
 assert({

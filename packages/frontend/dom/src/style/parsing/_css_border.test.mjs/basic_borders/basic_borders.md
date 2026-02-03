@@ -1,4 +1,4 @@
-# [basic borders](../../css_border.test.mjs#L17)
+# [basic borders](../../css_border.test.mjs)
 
 ```js
 return {

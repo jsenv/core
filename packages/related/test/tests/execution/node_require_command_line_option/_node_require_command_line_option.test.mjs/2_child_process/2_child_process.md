@@ -1,4 +1,4 @@
-# [2_child_process](../../node_require_command_line_option.test.mjs#L30)
+# [2_child_process](../../node_require_command_line_option.test.mjs)
 
 ```js
 run({

@@ -1,4 +1,4 @@
-# [undefined vs empty](../../array.test.js#L55)
+# [undefined vs empty](../../array.test.js)
 
 ```js
 assert({

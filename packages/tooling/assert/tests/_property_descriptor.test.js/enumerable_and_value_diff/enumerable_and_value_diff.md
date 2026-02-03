@@ -1,4 +1,4 @@
-# [enumerable and value diff](../../property_descriptor.test.js#L64)
+# [enumerable and value diff](../../property_descriptor.test.js)
 
 ```js
 const actual = {};

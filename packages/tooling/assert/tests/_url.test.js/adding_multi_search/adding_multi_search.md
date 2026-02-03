@@ -1,4 +1,4 @@
-# [adding multi search](../../url.test.js#L60)
+# [adding multi search](../../url.test.js)
 
 ```js
 assert({

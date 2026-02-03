@@ -1,4 +1,4 @@
-# [1_console](../../test_plan_logs_node.test.mjs#L121)
+# [1_console](../../test_plan_logs_node.test.mjs)
 
 ```js
 run({

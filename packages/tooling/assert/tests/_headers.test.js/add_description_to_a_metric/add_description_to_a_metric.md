@@ -1,4 +1,4 @@
-# [add description to a metric](../../headers.test.js#L212)
+# [add description to a metric](../../headers.test.js)
 
 ```js
 assert({

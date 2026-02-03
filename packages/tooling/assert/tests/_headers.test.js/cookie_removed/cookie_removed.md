@@ -1,4 +1,4 @@
-# [cookie removed](../../headers.test.js#L83)
+# [cookie removed](../../headers.test.js)
 
 ```js
 assert({

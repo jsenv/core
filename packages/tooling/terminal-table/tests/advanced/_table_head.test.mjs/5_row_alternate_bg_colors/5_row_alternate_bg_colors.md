@@ -1,4 +1,4 @@
-# [5_row_alternate_bg_colors](../../table_head.test.mjs#L250)
+# [5_row_alternate_bg_colors](../../table_head.test.mjs)
 
 ```js
 run({

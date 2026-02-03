@@ -1,4 +1,4 @@
-# [not sealed vs sealed](../../object_integrity.test.js#L28)
+# [not sealed vs sealed](../../object_integrity.test.js)
 
 ```js
 assert({

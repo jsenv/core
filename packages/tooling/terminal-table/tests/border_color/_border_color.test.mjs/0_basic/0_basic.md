@@ -1,4 +1,4 @@
-# [0_basic](../../border_color.test.mjs#L53)
+# [0_basic](../../border_color.test.mjs)
 
 ```js
 run({})

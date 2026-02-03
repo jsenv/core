@@ -1,4 +1,4 @@
-# [2_etag_override](../../response_composition.test.mjs#L45)
+# [2_etag_override](../../response_composition.test.mjs)
 
 ```js
 return composeTwoResponses(
@@ -17,9 +17,14 @@ return composeTwoResponses(
 
 ```js
 {
+  "status": undefined,
+  "statusText": undefined,
+  "statusMessage": undefined,
   "headers": {
     "etag": "bar"
-  }
+  },
+  "body": undefined,
+  "bodyEncoding": undefined
 }
 ```
 

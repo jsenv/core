@@ -1,4 +1,4 @@
-# [max column exactly on diff](../../max_columns.test.js#L126)
+# [max column exactly on diff](../../max_columns.test.js)
 
 ```js
 assert({

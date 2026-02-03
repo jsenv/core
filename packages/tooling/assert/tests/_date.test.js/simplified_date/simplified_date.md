@@ -1,4 +1,4 @@
-# [simplified date](../../date.test.js#L33)
+# [simplified date](../../date.test.js)
 
 ```js
 assert({

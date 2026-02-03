@@ -1,4 +1,4 @@
-# [function source same, name modified](../../function.test.js#L88)
+# [function source same, name modified](../../function.test.js)
 
 ```js
 assert({

@@ -1,4 +1,4 @@
-# [+0h30 on timezone](../../date.test.js#L63)
+# [+0h30 on timezone](../../date.test.js)
 
 ```js
 assert({

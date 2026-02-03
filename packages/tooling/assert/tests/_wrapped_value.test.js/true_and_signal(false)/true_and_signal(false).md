@@ -1,4 +1,4 @@
-# [true and signal(false)](../../wrapped_value.test.js#L168)
+# [true and signal(false)](../../wrapped_value.test.js)
 
 ```js
 assert({

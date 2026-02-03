@@ -1,4 +1,4 @@
-# [property are different](../../object.test.js#L15)
+# [property are different](../../object.test.js)
 
 ```js
 assert({

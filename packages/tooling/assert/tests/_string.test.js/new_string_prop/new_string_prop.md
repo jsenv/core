@@ -1,4 +1,4 @@
-# [new String prop](../../string.test.js#L170)
+# [new String prop](../../string.test.js)
 
 ```js
 assert({

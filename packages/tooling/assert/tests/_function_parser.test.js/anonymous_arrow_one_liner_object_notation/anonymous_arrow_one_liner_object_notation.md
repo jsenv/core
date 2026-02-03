@@ -1,4 +1,4 @@
-# [anonymous arrow one liner object notation](../../function_parser.test.js#L27)
+# [anonymous arrow one liner object notation](../../function_parser.test.js)
 
 ```js
 generateFunctionBody(() => ({}))

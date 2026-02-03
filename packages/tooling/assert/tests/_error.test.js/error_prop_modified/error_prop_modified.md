@@ -1,4 +1,4 @@
-# [error prop modified](../../error.test.js#L55)
+# [error prop modified](../../error.test.js)
 
 ```js
 assert({

@@ -1,4 +1,4 @@
-# [0_basic](../../http2_push_prevent.test.mjs#L96)
+# [0_basic](../../http2_push_prevent.test.mjs)
 
 ```js
 return run();
@@ -6,7 +6,7 @@ return run();
 
 ```js
 {
-  "responseBodyAsString": "<!doctype html>\n<html lang=\"en\">\n  <head>\n    <title>Basic website</title>\n    <link rel=\"icon\" href=\"data:,\" />\n  </head>\n\n  <body>\n    <link rel=\"stylesheet\" href=\"./style.css\" />\n    <script type=\"module\" src=\"./script.js\"></script>\n  </body>\n</html>\n",
+  "responseBodyAsString": '<!doctype html>\n<html lang="en">\n  <head>\n    <title>Basic website</title>\n    <link rel="icon" href="data:," />\n  </head>\n\n  <body>\n    <link rel="stylesheet" href="./style.css" />\n    <script type="module" src="./script.js"></script>\n  </body>\n</html>\n',
   "pushedHeaders": [
     {
       ":path": "/style.css",

@@ -1,4 +1,4 @@
-# [Error vs TypeError](../../prototype.test.js#L5)
+# [Error vs TypeError](../../prototype.test.js)
 
 ```js
 assert({

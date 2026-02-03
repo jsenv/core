@@ -1,4 +1,4 @@
-# [2 added on fifth pos](../../array.test.js#L186)
+# [2 added on fifth pos](../../array.test.js)
 
 ```js
 assert({

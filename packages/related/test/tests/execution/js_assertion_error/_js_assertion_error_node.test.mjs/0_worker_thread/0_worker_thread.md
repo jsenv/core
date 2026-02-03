@@ -1,4 +1,4 @@
-# [0_worker_thread](../../js_assertion_error_node.test.mjs#L17)
+# [0_worker_thread](../../js_assertion_error_node.test.mjs)
 
 ```js
 run({

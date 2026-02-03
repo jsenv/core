@@ -1,4 +1,4 @@
-# [anonymous arrow default param arrow](../../function_parser.test.js#L19)
+# [anonymous arrow default param arrow](../../function_parser.test.js)
 
 ```js
 generateFunctionBody((a = () => {}) => {

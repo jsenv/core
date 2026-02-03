@@ -1,4 +1,4 @@
-# [object with different prototypes](../../prototype.test.js#L11)
+# [object with different prototypes](../../prototype.test.js)
 
 ```js
 assert({

@@ -1,4 +1,4 @@
-# [1_child_process](../../coverage_node.test.mjs#L56)
+# [1_child_process](../../coverage_node.test.mjs)
 
 ```js
 run({

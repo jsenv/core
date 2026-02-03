@@ -1,4 +1,4 @@
-# [2_etag_left_only](../../response_composition.test.mjs#L32)
+# [2_etag_left_only](../../response_composition.test.mjs)
 
 ```js
 return composeTwoResponses(
@@ -15,9 +15,14 @@ return composeTwoResponses(
 
 ```js
 {
+  "status": undefined,
+  "statusText": undefined,
+  "statusMessage": undefined,
   "headers": {
     "etag": "toto"
-  }
+  },
+  "body": undefined,
+  "bodyEncoding": undefined
 }
 ```
 

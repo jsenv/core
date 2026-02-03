@@ -1,4 +1,4 @@
-# [works](../../assert_matches.test.js#L5)
+# [works](../../assert_matches.test.js)
 
 ```js
 assert({

@@ -1,4 +1,4 @@
-# [at added char 2](../../max_columns.test.js#L27)
+# [at added char 2](../../max_columns.test.js)
 
 ```js
 assert({

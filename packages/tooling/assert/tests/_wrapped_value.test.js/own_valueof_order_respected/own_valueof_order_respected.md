@@ -1,4 +1,4 @@
-# [own valueOf order respected](../../wrapped_value.test.js#L318)
+# [own valueOf order respected](../../wrapped_value.test.js)
 
 ```js
 assert({

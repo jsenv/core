@@ -1,4 +1,4 @@
-# [content-type removed](../../headers.test.js#L13)
+# [content-type removed](../../headers.test.js)
 
 ```js
 assert({

@@ -1,4 +1,4 @@
-# [0_throw_error](../../internal_error.test.mjs#L33)
+# [0_throw_error](../../internal_error.test.mjs)
 
 ```js
 const error = new Error("message");
@@ -20,7 +20,7 @@ internal error while handling request
 Error: message
     at base/internal_error.test.mjs:34:19
     at capture (@jsenv/core/packages/tooling/snapshot/src/side_effects/create_capture_side_effects.js:342:29)
-    at snapshotTests (@jsenv/core/packages/tooling/snapshot/src/side_effects/snapshot_tests.js:182:33)
+    at snapshotTests (@jsenv/core/packages/tooling/snapshot/src/side_effects/snapshot_tests.js:185:33)
   500 Internal Server Error
 ```
 
@@ -42,7 +42,7 @@ Error: message
     "date": "<X>",
     "keep-alive": "timeout=5"
   },
-  "body": "{\"code\":\"TEST_CODE\"}"
+  "body": '{"code":"TEST_CODE"}'
 }
 ```
 

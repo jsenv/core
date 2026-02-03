@@ -1,4 +1,4 @@
-# [double slash and truncate line](../../max_columns.test.js#L134)
+# [double slash and truncate line](../../max_columns.test.js)
 
 ```js
 assert({

@@ -1,4 +1,4 @@
-# [last index](../../regexp.test.js#L41)
+# [last index](../../regexp.test.js)
 
 ```js
 const actual = /a/;

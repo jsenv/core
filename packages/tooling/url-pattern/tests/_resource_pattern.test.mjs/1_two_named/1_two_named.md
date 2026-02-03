@@ -1,4 +1,4 @@
-# [1_two_named](../../resource_pattern.test.mjs#L15)
+# [1_two_named](../../resource_pattern.test.mjs)
 
 ```js
 const pattern = createResourcePattern("/before/:name/name");

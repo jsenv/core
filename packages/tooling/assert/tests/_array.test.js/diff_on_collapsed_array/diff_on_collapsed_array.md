@@ -1,4 +1,4 @@
-# [diff on collapsed array](../../array.test.js#L111)
+# [diff on collapsed array](../../array.test.js)
 
 ```js
 assert({

@@ -1,4 +1,4 @@
-# [0_child_process](../../js_throw_node.test.mjs#L21)
+# [0_child_process](../../js_throw_node.test.mjs)
 
 ```js
 run({

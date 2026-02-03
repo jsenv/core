@@ -1,4 +1,4 @@
-# [boolean in property at 14](../../max_columns.test.js#L70)
+# [boolean in property at 14](../../max_columns.test.js)
 
 ```js
 assert({

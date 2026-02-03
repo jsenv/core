@@ -1,4 +1,4 @@
-# [diff in the middle of big array](../../array.test.js#L36)
+# [diff in the middle of big array](../../array.test.js)
 
 ```js
 assert({

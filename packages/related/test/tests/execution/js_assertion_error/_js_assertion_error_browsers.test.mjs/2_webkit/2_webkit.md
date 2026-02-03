@@ -1,4 +1,4 @@
-# [2_webkit](../../js_assertion_error_browsers.test.mjs#L42)
+# [2_webkit](../../js_assertion_error_browsers.test.mjs)
 
 ```js
 run({

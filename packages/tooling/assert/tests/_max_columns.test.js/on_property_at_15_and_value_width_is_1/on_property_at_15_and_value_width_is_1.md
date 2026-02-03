@@ -1,4 +1,4 @@
-# [on property at 15 and value width is 1](../../max_columns.test.js#L104)
+# [on property at 15 and value width is 1](../../max_columns.test.js)
 
 ```js
 assert({

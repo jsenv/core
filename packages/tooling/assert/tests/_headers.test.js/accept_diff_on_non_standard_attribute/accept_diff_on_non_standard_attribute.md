@@ -1,4 +1,4 @@
-# [accept diff on non standard attribute](../../headers.test.js#L136)
+# [accept diff on non standard attribute](../../headers.test.js)
 
 ```js
 assert({

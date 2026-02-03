@@ -1,4 +1,4 @@
-# [0_basic](../../http2_mtime_304.test.mjs#L90)
+# [0_basic](../../http2_mtime_304.test.mjs)
 
 ```js
 return run();

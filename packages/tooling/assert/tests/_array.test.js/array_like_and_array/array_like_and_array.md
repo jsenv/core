@@ -1,4 +1,4 @@
-# [array like and array](../../array.test.js#L154)
+# [array like and array](../../array.test.js)
 
 ```js
 assert({

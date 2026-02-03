@@ -1,4 +1,4 @@
-# [5_border_double](../../table_4_cells.test.mjs#L256)
+# [5_border_double](../../table_4_cells.test.mjs)
 
 ```js
 run({

@@ -1,4 +1,4 @@
-# [2_worker_thread](../../importmap_node.test.mjs#L37)
+# [2_worker_thread](../../importmap_node.test.mjs)
 
 ```js
 run({

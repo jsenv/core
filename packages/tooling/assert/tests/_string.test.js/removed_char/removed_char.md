@@ -1,4 +1,4 @@
-# [removed char](../../string.test.js#L95)
+# [removed char](../../string.test.js)
 
 ```js
 assert({

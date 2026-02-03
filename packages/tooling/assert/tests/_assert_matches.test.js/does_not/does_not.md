@@ -1,4 +1,4 @@
-# [does not](../../assert_matches.test.js#L17)
+# [does not](../../assert_matches.test.js)
 
 ```js
 assert({

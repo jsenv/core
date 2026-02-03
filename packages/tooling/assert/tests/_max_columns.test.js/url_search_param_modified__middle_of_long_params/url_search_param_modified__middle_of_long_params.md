@@ -1,4 +1,4 @@
-# [url search param modified, middle of long params](../../max_columns.test.js#L141)
+# [url search param modified, middle of long params](../../max_columns.test.js)
 
 ```js
 assert({

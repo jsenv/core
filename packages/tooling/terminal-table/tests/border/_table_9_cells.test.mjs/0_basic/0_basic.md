@@ -1,4 +1,4 @@
-# [0_basic](../../table_9_cells.test.mjs#L174)
+# [0_basic](../../table_9_cells.test.mjs)
 
 ```js
 run({})

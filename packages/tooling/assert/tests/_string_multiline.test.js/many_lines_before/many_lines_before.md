@@ -1,4 +1,4 @@
-# [many lines before](../../string_multiline.test.js#L154)
+# [many lines before](../../string_multiline.test.js)
 
 ```js
 assert({

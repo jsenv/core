@@ -1,4 +1,4 @@
-# [2_recommended](../../leading_slash.test.mjs#L26)
+# [2_recommended](../../leading_slash.test.mjs)
 
 ```js
 return resolver.resolve(

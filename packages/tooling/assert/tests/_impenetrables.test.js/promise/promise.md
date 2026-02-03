@@ -1,4 +1,4 @@
-# [promise](../../impenetrables.test.js#L5)
+# [promise](../../impenetrables.test.js)
 
 ```js
 assert({

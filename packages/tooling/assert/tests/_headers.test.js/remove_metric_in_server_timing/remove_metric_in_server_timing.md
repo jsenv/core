@@ -1,4 +1,4 @@
-# [remove metric in server timing](../../headers.test.js#L202)
+# [remove metric in server timing](../../headers.test.js)
 
 ```js
 assert({

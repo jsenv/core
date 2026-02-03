@@ -1,4 +1,4 @@
-# [non extensible vs frozen](../../object_integrity.test.js#L64)
+# [non extensible vs frozen](../../object_integrity.test.js)
 
 ```js
 assert({

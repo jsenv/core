@@ -1,4 +1,4 @@
-# [Symbol.for("a") and Symbol.for("b")](../../well_known.test.js#L23)
+# [Symbol.for("a") and Symbol.for("b")](../../well_known.test.js)
 
 ```js
 assert({

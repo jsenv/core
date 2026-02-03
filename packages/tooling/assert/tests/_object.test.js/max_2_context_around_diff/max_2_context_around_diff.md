@@ -1,4 +1,4 @@
-# [max 2 context around diff](../../object.test.js#L265)
+# [max 2 context around diff](../../object.test.js)
 
 ```js
 assert({

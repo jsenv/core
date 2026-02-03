@@ -1,4 +1,4 @@
-# [multi search adding a 3rd param](../../url.test.js#L66)
+# [multi search adding a 3rd param](../../url.test.js)
 
 ```js
 assert({

@@ -1,4 +1,4 @@
-# [different units and formats](../../css_border.test.mjs#L63)
+# [different units and formats](../../css_border.test.mjs)
 
 ```js
 return {

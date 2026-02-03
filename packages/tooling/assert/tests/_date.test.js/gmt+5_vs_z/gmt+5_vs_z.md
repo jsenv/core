@@ -1,4 +1,4 @@
-# [GMT+5 vs Z](../../date.test.js#L21)
+# [GMT+5 vs Z](../../date.test.js)
 
 ```js
 assert({

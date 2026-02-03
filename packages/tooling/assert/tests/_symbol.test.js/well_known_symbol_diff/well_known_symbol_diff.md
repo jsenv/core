@@ -1,4 +1,4 @@
-# [well known symbol diff](../../symbol.test.js#L95)
+# [well known symbol diff](../../symbol.test.js)
 
 ```js
 assert({

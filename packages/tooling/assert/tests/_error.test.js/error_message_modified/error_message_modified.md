@@ -1,4 +1,4 @@
-# [error message modified](../../error.test.js#L17)
+# [error message modified](../../error.test.js)
 
 ```js
 assert({

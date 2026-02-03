@@ -1,4 +1,4 @@
-# [class constructor vs function](../../function.test.js#L371)
+# [class constructor vs function](../../function.test.js)
 
 ```js
 assert({

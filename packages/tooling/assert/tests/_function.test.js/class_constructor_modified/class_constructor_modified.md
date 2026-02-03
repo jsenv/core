@@ -1,4 +1,4 @@
-# [class constructor modified](../../function.test.js#L233)
+# [class constructor modified](../../function.test.js)
 
 ```js
 assert({

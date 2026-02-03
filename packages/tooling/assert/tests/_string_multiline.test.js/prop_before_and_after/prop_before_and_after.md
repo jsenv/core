@@ -1,4 +1,4 @@
-# [prop before and after](../../string_multiline.test.js#L102)
+# [prop before and after](../../string_multiline.test.js)
 
 ```js
 assert({

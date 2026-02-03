@@ -1,4 +1,4 @@
-# [response status diff](../../fetch.test.js#L76)
+# [response status diff](../../fetch.test.js)
 
 ```js
 assert({

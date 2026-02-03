@@ -1,4 +1,4 @@
-# [property added](../../object.test.js#L38)
+# [property added](../../object.test.js)
 
 ```js
 assert({

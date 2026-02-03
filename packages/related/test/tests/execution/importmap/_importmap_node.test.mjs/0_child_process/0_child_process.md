@@ -1,4 +1,4 @@
-# [0_child_process](../../importmap_node.test.mjs#L16)
+# [0_child_process](../../importmap_node.test.mjs)
 
 ```js
 run({

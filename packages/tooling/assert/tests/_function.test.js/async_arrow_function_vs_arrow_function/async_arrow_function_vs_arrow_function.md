@@ -1,4 +1,4 @@
-# [async arrow function vs arrow function](../../function.test.js#L24)
+# [async arrow function vs arrow function](../../function.test.js)
 
 ```js
 const anonymousAsyncArrowFunction = (function () {

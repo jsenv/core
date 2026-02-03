@@ -1,4 +1,4 @@
-# [error vs CustomError](../../error.test.js#L67)
+# [error vs CustomError](../../error.test.js)
 
 ```js
 class ValidationError extends Error {}

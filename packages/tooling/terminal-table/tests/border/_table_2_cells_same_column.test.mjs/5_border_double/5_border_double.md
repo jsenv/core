@@ -1,4 +1,4 @@
-# [5_border_double](../../table_2_cells_same_column.test.mjs#L156)
+# [5_border_double](../../table_2_cells_same_column.test.mjs)
 
 ```js
 run({

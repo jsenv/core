@@ -1,4 +1,4 @@
-# [class static prop and function prop](../../function.test.js#L349)
+# [class static prop and function prop](../../function.test.js)
 
 ```js
 assert({

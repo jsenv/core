@@ -1,4 +1,4 @@
-# [valueOf(10) vs 10](../../wrapped_value.test.js#L63)
+# [valueOf(10) vs 10](../../wrapped_value.test.js)
 
 ```js
 assert({

@@ -1,4 +1,4 @@
-# [7_border_double_y](../../table_9_cells.test.mjs#L212)
+# [7_border_double_y](../../table_9_cells.test.mjs)
 
 ```js
 run({

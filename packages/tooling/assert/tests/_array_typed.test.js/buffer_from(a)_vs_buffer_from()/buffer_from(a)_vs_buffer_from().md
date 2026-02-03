@@ -1,4 +1,4 @@
-# [buffer.from("a") vs buffer.from("")](../../array_typed.test.js#L11)
+# [buffer.from("a") vs buffer.from("")](../../array_typed.test.js)
 
 ```js
 assert({

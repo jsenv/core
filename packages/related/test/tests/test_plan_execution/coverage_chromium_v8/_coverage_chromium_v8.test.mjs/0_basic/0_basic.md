@@ -1,4 +1,4 @@
-# [0_basic](../../coverage_chromium_v8.test.mjs#L42)
+# [0_basic](../../coverage_chromium_v8.test.mjs)
 
 ```js
 await run({

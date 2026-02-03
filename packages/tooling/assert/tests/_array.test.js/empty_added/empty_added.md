@@ -1,4 +1,4 @@
-# [empty added](../../array.test.js#L61)
+# [empty added](../../array.test.js)
 
 ```js
 assert({

@@ -1,4 +1,4 @@
-# [diff on associate array.foo and object.foo](../../array.test.js#L89)
+# [diff on associate array.foo and object.foo](../../array.test.js)
 
 ```js
 assert({

@@ -1,4 +1,4 @@
-# [diff at start of long string, end truncated](../../string.test.js#L108)
+# [diff at start of long string, end truncated](../../string.test.js)
 
 ```js
 assert({

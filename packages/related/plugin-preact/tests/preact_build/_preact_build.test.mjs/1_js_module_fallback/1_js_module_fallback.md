@@ -1,4 +1,4 @@
-# [1_js_module_fallback](../../preact_build.test.mjs#L34)
+# [1_js_module_fallback](../../preact_build.test.mjs)
 
 ```js
 run({

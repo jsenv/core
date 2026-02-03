@@ -1,4 +1,4 @@
-# [9_top_corners_rounded](../../table_1_cell.test.mjs#L172)
+# [9_top_corners_rounded](../../table_1_cell.test.mjs)
 
 ```js
 run({

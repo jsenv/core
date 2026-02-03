@@ -1,4 +1,4 @@
-# [1_firefox](../../performance_browsers.test.mjs#L35)
+# [1_firefox](../../performance_browsers.test.mjs)
 
 ```js
 run({

@@ -1,4 +1,4 @@
-# [date object vs date string](../../date.test.js#L76)
+# [date object vs date string](../../date.test.js)
 
 ```js
 assert({

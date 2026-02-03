@@ -1,4 +1,4 @@
-# [diff blackslash and ellipsis special chars](../../string.test.js#L77)
+# [diff blackslash and ellipsis special chars](../../string.test.js)
 
 ```js
 assert({

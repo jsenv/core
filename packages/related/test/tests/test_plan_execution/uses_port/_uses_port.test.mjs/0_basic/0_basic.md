@@ -1,4 +1,4 @@
-# [0_basic](../../uses_port.test.mjs#L35)
+# [0_basic](../../uses_port.test.mjs)
 
 ```js
 run({

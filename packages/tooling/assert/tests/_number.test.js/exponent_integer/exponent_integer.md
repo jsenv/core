@@ -1,4 +1,4 @@
-# [exponent integer](../../number.test.js#L53)
+# [exponent integer](../../number.test.js)
 
 ```js
 assert({

@@ -1,4 +1,4 @@
-# [4_error_in_test_function](../../test_plan_logs_node.test.mjs#L133)
+# [4_error_in_test_function](../../test_plan_logs_node.test.mjs)
 
 ```js
 run({

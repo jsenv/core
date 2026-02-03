@@ -1,4 +1,4 @@
-# [cookie name used several times](../../headers.test.js#L104)
+# [cookie name used several times](../../headers.test.js)
 
 ```js
 assert({

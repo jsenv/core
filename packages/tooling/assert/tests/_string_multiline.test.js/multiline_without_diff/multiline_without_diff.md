@@ -1,4 +1,4 @@
-# [multiline without diff](../../string_multiline.test.js#L128)
+# [multiline without diff](../../string_multiline.test.js)
 
 ```js
 assert({

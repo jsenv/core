@@ -1,4 +1,4 @@
-# [5_error_in_js_classic](../../test_plan_logs_browsers.test.mjs#L147)
+# [5_error_in_js_classic](../../test_plan_logs_browsers.test.mjs)
 
 ```js
 run({

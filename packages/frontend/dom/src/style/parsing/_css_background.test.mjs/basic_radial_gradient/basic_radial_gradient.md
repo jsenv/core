@@ -1,4 +1,4 @@
-# [basic radial gradient](../../css_background.test.mjs#L75)
+# [basic radial gradient](../../css_background.test.mjs)
 
 ```js
 return run("radial-gradient(red, blue)");
@@ -16,7 +16,8 @@ return run("radial-gradient(red, blue)");
           0,
           0,
           1
-        ]
+        ],
+        "stops": undefined
       },
       {
         "color": [
@@ -24,7 +25,8 @@ return run("radial-gradient(red, blue)");
           0,
           255,
           1
-        ]
+        ],
+        "stops": undefined
       }
     ],
     "original": "radial-gradient(red, blue)"

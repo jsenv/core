@@ -1,4 +1,4 @@
-# [same ref to self 2](../../ref.test.js#L43)
+# [same ref to self 2](../../ref.test.js)
 
 ```js
 const actual = {

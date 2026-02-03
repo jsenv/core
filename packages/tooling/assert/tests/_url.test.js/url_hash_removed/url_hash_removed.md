@@ -1,4 +1,4 @@
-# [url hash removed](../../url.test.js#L115)
+# [url hash removed](../../url.test.js)
 
 ```js
 assert({

@@ -1,4 +1,4 @@
-# [object vs custom proto](../../prototype.test.js#L33)
+# [object vs custom proto](../../prototype.test.js)
 
 ```js
 const User = {

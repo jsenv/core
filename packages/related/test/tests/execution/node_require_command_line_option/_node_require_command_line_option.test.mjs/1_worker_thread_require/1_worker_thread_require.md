@@ -1,4 +1,4 @@
-# [1_worker_thread_require](../../node_require_command_line_option.test.mjs#L21)
+# [1_worker_thread_require](../../node_require_command_line_option.test.mjs)
 
 ```js
 run({

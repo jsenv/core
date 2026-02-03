@@ -1,4 +1,4 @@
-# [request with custom options](../../fetch.test.js#L21)
+# [request with custom options](../../fetch.test.js)
 
 ```js
 assert({

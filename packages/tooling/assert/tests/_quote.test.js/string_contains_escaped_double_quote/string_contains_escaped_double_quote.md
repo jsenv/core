@@ -1,4 +1,4 @@
-# [string contains escaped double quote](../../quote.test.js#L6)
+# [string contains escaped double quote](../../quote.test.js)
 
 ```js
 assert({

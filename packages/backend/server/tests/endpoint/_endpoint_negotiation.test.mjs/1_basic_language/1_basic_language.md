@@ -1,4 +1,4 @@
-# [1_basic_language](../../endpoint_negotiation.test.mjs#L87)
+# [1_basic_language](../../endpoint_negotiation.test.mjs)
 
 ```js
 const routes = [
@@ -99,7 +99,7 @@ GET http://127.0.0.1/users
       "keep-alive": "timeout=5",
       "transfer-encoding": "chunked"
     },
-    "body": "{\"statusMessage\":\"The server cannot produce a response in any of the languages accepted by the request: \\\"de\\\".\\nAvailable languages: fr, en.\"}"
+    "body": '{"statusMessage":"The server cannot produce a response in any of the languages accepted by the request: \\"de\\".\\nAvailable languages: fr, en."}'
   },
   "GET users accepting FR language": {
     "status": 200,

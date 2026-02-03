@@ -1,4 +1,4 @@
-# [0_basic](../../max_rows.test.mjs#L45)
+# [0_basic](../../max_rows.test.mjs)
 
 ```js
 run({})

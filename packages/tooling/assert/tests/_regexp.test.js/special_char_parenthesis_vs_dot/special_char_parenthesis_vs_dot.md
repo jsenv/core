@@ -1,4 +1,4 @@
-# [special char: parenthesis vs dot](../../regexp.test.js#L35)
+# [special char: parenthesis vs dot](../../regexp.test.js)
 
 ```js
 assert({

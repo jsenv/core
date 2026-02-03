@@ -1,4 +1,4 @@
-# [array without diff](../../array.test.js#L24)
+# [array without diff](../../array.test.js)
 
 ```js
 assert({

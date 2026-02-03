@@ -1,4 +1,4 @@
-# [1_with_collapse](../../border_collapse.test.mjs#L112)
+# [1_with_collapse](../../border_collapse.test.mjs)
 
 ```js
 run({

@@ -1,4 +1,4 @@
-# [0_basic](../../table_head_and_table_foot.test.mjs#L52)
+# [0_basic](../../table_head_and_table_foot.test.mjs)
 
 ```js
 run({})

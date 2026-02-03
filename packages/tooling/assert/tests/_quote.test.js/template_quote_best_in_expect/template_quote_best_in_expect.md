@@ -1,4 +1,4 @@
-# [template quote best in expect](../../quote.test.js#L26)
+# [template quote best in expect](../../quote.test.js)
 
 ```js
 assert({

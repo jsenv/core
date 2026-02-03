@@ -1,4 +1,4 @@
-# [on a string](../../assert_close_to.test.js#L17)
+# [on a string](../../assert_close_to.test.js)
 
 ```js
 assert({

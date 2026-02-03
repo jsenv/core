@@ -1,4 +1,4 @@
-# [foo second value added](../../url_search_params.test.js#L23)
+# [foo second value added](../../url_search_params.test.js)
 
 ```js
 assert({

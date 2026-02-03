@@ -1,4 +1,4 @@
-# [class method diff source](../../function.test.js#L197)
+# [class method diff source](../../function.test.js)
 
 ```js
 const anonymousActualClass = (function () {

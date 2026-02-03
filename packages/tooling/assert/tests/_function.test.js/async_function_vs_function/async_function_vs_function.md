@@ -1,4 +1,4 @@
-# [async function vs function](../../function.test.js#L48)
+# [async function vs function](../../function.test.js)
 
 ```js
 const anonymousAsyncFunction = (function () {

@@ -1,4 +1,4 @@
-# [sealed vs non extensible](../../object_integrity.test.js#L58)
+# [sealed vs non extensible](../../object_integrity.test.js)
 
 ```js
 assert({

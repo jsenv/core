@@ -1,4 +1,4 @@
-# [1_background_cyan](../../cell_max_height.test.mjs#L52)
+# [1_background_cyan](../../cell_max_height.test.mjs)
 
 ```js
 run({

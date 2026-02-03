@@ -1,4 +1,4 @@
-# [tab vs space](../../string.test.js#L29)
+# [tab vs space](../../string.test.js)
 
 ```js
 assert({

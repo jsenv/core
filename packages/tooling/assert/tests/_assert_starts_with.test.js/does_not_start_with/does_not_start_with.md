@@ -1,4 +1,4 @@
-# [does not start with](../../assert_starts_with.test.js#L17)
+# [does not start with](../../assert_starts_with.test.js)
 
 ```js
 assert({

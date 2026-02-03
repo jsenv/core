@@ -1,4 +1,4 @@
-# [no diff on valueOf in constructor](../../wrapped_value.test.js#L120)
+# [no diff on valueOf in constructor](../../wrapped_value.test.js)
 
 ```js
 assert({

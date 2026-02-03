@@ -1,4 +1,4 @@
-# [2_renaming_into_array](../../sigi.test.mjs#L33)
+# [2_renaming_into_array](../../sigi.test.mjs)
 
 ```js
 const state = signal([{ name: "a" }, { name: "b" }]);

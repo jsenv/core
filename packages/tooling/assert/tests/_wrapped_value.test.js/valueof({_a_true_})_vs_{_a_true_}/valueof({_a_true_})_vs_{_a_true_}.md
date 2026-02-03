@@ -1,4 +1,4 @@
-# [valueOf({ a: true }) vs { a: true }](../../wrapped_value.test.js#L45)
+# [valueOf({ a: true }) vs { a: true }](../../wrapped_value.test.js)
 
 ```js
 assert({

@@ -1,4 +1,4 @@
-# [two line url](../../string_multiline.test.js#L17)
+# [two line url](../../string_multiline.test.js)
 
 ```js
 assert({

@@ -1,4 +1,4 @@
-# [too many lines before and after](../../string_multiline.test.js#L61)
+# [too many lines before and after](../../string_multiline.test.js)
 
 ```js
 assert({

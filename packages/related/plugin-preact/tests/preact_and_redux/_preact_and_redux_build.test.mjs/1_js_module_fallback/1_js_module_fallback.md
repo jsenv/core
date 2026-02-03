@@ -1,4 +1,4 @@
-# [1_js_module_fallback](../../preact_and_redux_build.test.mjs#L79)
+# [1_js_module_fallback](../../preact_and_redux_build.test.mjs)
 
 ```js
 run({

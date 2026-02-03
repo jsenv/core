@@ -1,4 +1,4 @@
-# [1_js_module_fallback](../../react_build.test.mjs#L38)
+# [1_js_module_fallback](../../react_build.test.mjs)
 
 ```js
 run({

@@ -1,4 +1,4 @@
-# [anonymous arrow returning string](../../function_parser.test.js#L23)
+# [anonymous arrow returning string](../../function_parser.test.js)
 
 ```js
 generateFunctionBody(() => {

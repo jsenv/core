@@ -1,4 +1,4 @@
-# [frozen array vs frozen function](../../object_integrity.test.js#L70)
+# [frozen array vs frozen function](../../object_integrity.test.js)
 
 ```js
 assert({

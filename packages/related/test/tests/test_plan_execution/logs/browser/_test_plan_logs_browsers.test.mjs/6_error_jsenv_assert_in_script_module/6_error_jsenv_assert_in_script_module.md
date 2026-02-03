@@ -1,4 +1,4 @@
-# [6_error_jsenv_assert_in_script_module](../../test_plan_logs_browsers.test.mjs#L151)
+# [6_error_jsenv_assert_in_script_module](../../test_plan_logs_browsers.test.mjs)
 
 ```js
 run({

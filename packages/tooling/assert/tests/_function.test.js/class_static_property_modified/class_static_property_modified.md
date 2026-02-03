@@ -1,4 +1,4 @@
-# [class static property modified](../../function.test.js#L171)
+# [class static property modified](../../function.test.js)
 
 ```js
 assert({

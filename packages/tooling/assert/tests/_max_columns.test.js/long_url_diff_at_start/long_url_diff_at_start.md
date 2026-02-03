@@ -1,4 +1,4 @@
-# [long url diff at start](../../max_columns.test.js#L155)
+# [long url diff at start](../../max_columns.test.js)
 
 ```js
 assert({

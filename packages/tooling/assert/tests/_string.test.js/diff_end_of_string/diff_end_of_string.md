@@ -1,4 +1,4 @@
-# [diff end of string](../../string.test.js#L11)
+# [diff end of string](../../string.test.js)
 
 ```js
 assert({

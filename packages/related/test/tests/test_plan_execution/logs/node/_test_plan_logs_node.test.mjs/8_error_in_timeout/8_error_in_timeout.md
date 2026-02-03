@@ -1,4 +1,4 @@
-# [8_error_in_timeout](../../test_plan_logs_node.test.mjs#L145)
+# [8_error_in_timeout](../../test_plan_logs_node.test.mjs)
 
 ```js
 run({

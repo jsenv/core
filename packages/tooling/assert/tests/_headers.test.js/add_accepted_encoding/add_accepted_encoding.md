@@ -1,4 +1,4 @@
-# [add accepted encoding](../../headers.test.js#L148)
+# [add accepted encoding](../../headers.test.js)
 
 ```js
 assert({

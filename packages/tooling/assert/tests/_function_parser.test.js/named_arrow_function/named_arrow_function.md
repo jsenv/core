@@ -1,4 +1,4 @@
-# [named arrow function](../../function_parser.test.js#L33)
+# [named arrow function](../../function_parser.test.js)
 
 ```js
 generateFunctionBody(

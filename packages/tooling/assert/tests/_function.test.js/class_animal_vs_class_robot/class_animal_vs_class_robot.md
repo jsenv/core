@@ -1,4 +1,4 @@
-# [class Animal vs class Robot](../../function.test.js#L149)
+# [class Animal vs class Robot](../../function.test.js)
 
 ```js
 assert({

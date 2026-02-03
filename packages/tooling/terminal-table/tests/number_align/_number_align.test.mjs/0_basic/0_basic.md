@@ -1,4 +1,4 @@
-# [0_basic](../../number_align.test.mjs#L32)
+# [0_basic](../../number_align.test.mjs)
 
 ```js
 run({})

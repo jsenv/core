@@ -1,4 +1,4 @@
-# [url search param modified](../../url.test.js#L24)
+# [url search param modified](../../url.test.js)
 
 ```js
 assert({

@@ -1,4 +1,4 @@
-# [named Symbol() property no diff](../../symbol.test.js#L53)
+# [named Symbol() property no diff](../../symbol.test.js)
 
 ```js
 assert({

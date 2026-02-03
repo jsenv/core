@@ -1,4 +1,4 @@
-# [-1 and 1](../../number.test.js#L17)
+# [-1 and 1](../../number.test.js)
 
 ```js
 assert({

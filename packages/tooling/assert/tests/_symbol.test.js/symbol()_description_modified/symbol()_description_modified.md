@@ -1,4 +1,4 @@
-# [Symbol() description modified](../../symbol.test.js#L101)
+# [Symbol() description modified](../../symbol.test.js)
 
 ```js
 assert({

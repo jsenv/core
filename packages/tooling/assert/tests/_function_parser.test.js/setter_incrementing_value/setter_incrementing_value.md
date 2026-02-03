@@ -1,4 +1,4 @@
-# [setter incrementing value](../../function_parser.test.js#L61)
+# [setter incrementing value](../../function_parser.test.js)
 
 ```js
 generateFunctionBody(

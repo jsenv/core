@@ -1,4 +1,4 @@
-# [1_importing_wit_src](../../leading_slash.test.mjs#L16)
+# [1_importing_wit_src](../../leading_slash.test.mjs)
 
 ```js
 return resolver.resolve(

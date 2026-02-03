@@ -1,4 +1,4 @@
-# [map entry removed](../../map.test.js#L13)
+# [map entry removed](../../map.test.js)
 
 ```js
 assert({

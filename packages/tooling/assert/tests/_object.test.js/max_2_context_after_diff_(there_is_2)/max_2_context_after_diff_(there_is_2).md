@@ -1,4 +1,4 @@
-# [max 2 context after diff (there is 2)](../../object.test.js#L169)
+# [max 2 context after diff (there is 2)](../../object.test.js)
 
 ```js
 assert({

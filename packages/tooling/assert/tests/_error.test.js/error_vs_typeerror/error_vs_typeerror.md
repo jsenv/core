@@ -1,4 +1,4 @@
-# [error vs typeError](../../error.test.js#L61)
+# [error vs typeError](../../error.test.js)
 
 ```js
 assert({

@@ -1,4 +1,4 @@
-# [0_js_module](../../preact_and_redux_build.test.mjs#L64)
+# [0_js_module](../../preact_and_redux_build.test.mjs)
 
 ```js
 run({

@@ -1,4 +1,4 @@
-# [different order](../../css_border.test.mjs#L74)
+# [different order](../../css_border.test.mjs)
 
 ```js
 return {

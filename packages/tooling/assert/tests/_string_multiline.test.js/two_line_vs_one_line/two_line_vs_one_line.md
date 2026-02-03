@@ -1,4 +1,4 @@
-# [two line vs one line](../../string_multiline.test.js#L32)
+# [two line vs one line](../../string_multiline.test.js)
 
 ```js
 assert({

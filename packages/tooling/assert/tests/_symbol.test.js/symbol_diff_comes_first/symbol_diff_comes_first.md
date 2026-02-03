@@ -1,4 +1,4 @@
-# [symbol diff comes first](../../symbol.test.js#L137)
+# [symbol diff comes first](../../symbol.test.js)
 
 ```js
 assert({

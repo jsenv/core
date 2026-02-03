@@ -1,4 +1,4 @@
-# [max diff per object](../../object.test.js#L149)
+# [max diff per object](../../object.test.js)
 
 ```js
 assert({

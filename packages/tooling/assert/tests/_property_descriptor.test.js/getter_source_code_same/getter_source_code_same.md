@@ -1,4 +1,4 @@
-# [getter source code same](../../property_descriptor.test.js#L129)
+# [getter source code same](../../property_descriptor.test.js)
 
 ```js
 assert({

@@ -88,20 +88,17 @@ try {
       "navToCalls": []
     },
     "after update signal to 2.45": {
-      "lon_signal_value": 2.4,
-      "route_url": "http://127.0.0.1/map?lon=2.4",
-      "navToCalls": [
-        "http://127.0.0.1/map?lon=2.4",
-        "http://127.0.0.1/map?lon=2.4"
-      ]
-    },
-    "after update signal to 2.53": {
       "lon_signal_value": 2.5,
       "route_url": "http://127.0.0.1/map?lon=2.5",
       "navToCalls": [
         "http://127.0.0.1/map?lon=2.5",
         "http://127.0.0.1/map?lon=2.5"
       ]
+    },
+    "after update signal to 2.53": {
+      "lon_signal_value": 2.5,
+      "route_url": "http://127.0.0.1/map?lon=2.5",
+      "navToCalls": []
     },
     "after update url to 2.67": {
       "lon_signal_value": 2.7,

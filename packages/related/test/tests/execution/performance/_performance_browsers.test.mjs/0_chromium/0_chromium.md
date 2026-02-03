@@ -1,4 +1,4 @@
-# [0_chromium](../../performance_browsers.test.mjs#L31)
+# [0_chromium](../../performance_browsers.test.mjs)
 
 ```js
 run({

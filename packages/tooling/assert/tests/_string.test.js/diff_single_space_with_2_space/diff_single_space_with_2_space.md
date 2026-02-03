@@ -1,4 +1,4 @@
-# [diff single space with 2 space](../../string.test.js#L83)
+# [diff single space with 2 space](../../string.test.js)
 
 ```js
 assert({

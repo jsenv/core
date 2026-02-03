@@ -1,4 +1,4 @@
-# [diff unicode](../../string.test.js#L47)
+# [diff unicode](../../string.test.js)
 
 ```js
 assert({

@@ -1,4 +1,4 @@
-# [3_border_x_dashed](../../table_head.test.mjs#L237)
+# [3_border_x_dashed](../../table_head.test.mjs)
 
 ```js
 run({

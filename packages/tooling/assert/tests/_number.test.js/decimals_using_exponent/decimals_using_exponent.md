@@ -1,4 +1,4 @@
-# [decimals using exponent](../../number.test.js#L41)
+# [decimals using exponent](../../number.test.js)
 
 ```js
 assert({

@@ -1,4 +1,4 @@
-# [error message multiline](../../error.test.js#L35)
+# [error message multiline](../../error.test.js)
 
 ```js
 assert({

@@ -1,4 +1,4 @@
-# [named color only](../../css_background.test.mjs#L45)
+# [named color only](../../css_background.test.mjs)
 
 ```js
 return run("transparent");

@@ -1,4 +1,4 @@
-# [foo removed](../../url_search_params.test.js#L11)
+# [foo removed](../../url_search_params.test.js)
 
 ```js
 assert({

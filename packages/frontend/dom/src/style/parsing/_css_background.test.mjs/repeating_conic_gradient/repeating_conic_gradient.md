@@ -1,4 +1,4 @@
-# [repeating conic gradient](../../css_background.test.mjs#L71)
+# [repeating conic gradient](../../css_background.test.mjs)
 
 ```js
 return run("repeating-conic-gradient(#ddd 0deg 90deg, #fff 90deg 180deg)");

@@ -1,4 +1,4 @@
-# [buffer.from vs Uint8Array.from](../../array_typed.test.js#L71)
+# [buffer.from vs Uint8Array.from](../../array_typed.test.js)
 
 ```js
 assert({

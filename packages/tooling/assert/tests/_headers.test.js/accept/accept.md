@@ -1,4 +1,4 @@
-# [accept](../../headers.test.js#L126)
+# [accept](../../headers.test.js)
 
 ```js
 assert({

@@ -1,4 +1,4 @@
-# [no diff](../../assert_starts_with.test.js#L5)
+# [no diff](../../assert_starts_with.test.js)
 
 ```js
 assert({

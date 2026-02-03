@@ -1,4 +1,4 @@
-# [NaN and Infinity](../../number.test.js#L35)
+# [NaN and Infinity](../../number.test.js)
 
 ```js
 assert({

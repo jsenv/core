@@ -1,4 +1,4 @@
-# [getter/setter and value](../../property_descriptor.test.js#L92)
+# [getter/setter and value](../../property_descriptor.test.js)
 
 ```js
 assert({

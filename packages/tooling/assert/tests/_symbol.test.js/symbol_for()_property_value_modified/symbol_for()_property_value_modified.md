@@ -1,4 +1,4 @@
-# [Symbol.for() property value modified](../../symbol.test.js#L21)
+# [Symbol.for() property value modified](../../symbol.test.js)
 
 ```js
 assert({

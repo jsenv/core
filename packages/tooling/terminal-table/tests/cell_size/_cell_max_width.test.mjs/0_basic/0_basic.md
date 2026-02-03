@@ -1,4 +1,4 @@
-# [0_basic](../../cell_max_width.test.mjs#L48)
+# [0_basic](../../cell_max_width.test.mjs)
 
 ```js
 run({})

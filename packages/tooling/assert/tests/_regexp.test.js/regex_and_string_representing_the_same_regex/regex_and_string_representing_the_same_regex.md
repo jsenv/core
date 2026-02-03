@@ -1,4 +1,4 @@
-# [regex and string representing the same regex](../../regexp.test.js#L50)
+# [regex and string representing the same regex](../../regexp.test.js)
 
 ```js
 assert({

@@ -1,4 +1,4 @@
-# [response body diff](../../fetch.test.js#L64)
+# [response body diff](../../fetch.test.js)
 
 ```js
 assert({

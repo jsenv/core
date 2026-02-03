@@ -1,4 +1,4 @@
-# [named function returning a + b](../../function_parser.test.js#L41)
+# [named function returning a + b](../../function_parser.test.js)
 
 ```js
 return generateFunctionBody(

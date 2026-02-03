@@ -1,4 +1,4 @@
-# [anonymous function returning a + b](../../function_parser.test.js#L29)
+# [anonymous function returning a + b](../../function_parser.test.js)
 
 ```js
 generateFunctionBody(function (a, b) {

@@ -1,4 +1,4 @@
-# [same ref to value before](../../ref.test.js#L99)
+# [same ref to value before](../../ref.test.js)
 
 ```js
 const toto = {};

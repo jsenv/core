@@ -1,4 +1,4 @@
-# [same length buffer diff at middle](../../array_typed.test.js#L41)
+# [same length buffer diff at middle](../../array_typed.test.js)
 
 ```js
 assert({

@@ -1,4 +1,4 @@
-# [one prop no diff](../../object.test.js#L399)
+# [one prop no diff](../../object.test.js)
 
 ```js
 assert({

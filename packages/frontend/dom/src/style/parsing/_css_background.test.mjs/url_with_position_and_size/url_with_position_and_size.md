@@ -1,4 +1,4 @@
-# [url with position and size](../../css_background.test.mjs#L37)
+# [url with position and size](../../css_background.test.mjs)
 
 ```js
 return run("url(image.jpg) center top / 100px 200px no-repeat");

@@ -1,4 +1,4 @@
-# [0_basic](../../border_spacing.test.mjs#L43)
+# [0_basic](../../border_spacing.test.mjs)
 
 ```js
 run({})

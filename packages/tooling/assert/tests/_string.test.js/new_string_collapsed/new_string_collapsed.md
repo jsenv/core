@@ -1,4 +1,4 @@
-# [new String collapsed](../../string.test.js#L155)
+# [new String collapsed](../../string.test.js)
 
 ```js
 assert({

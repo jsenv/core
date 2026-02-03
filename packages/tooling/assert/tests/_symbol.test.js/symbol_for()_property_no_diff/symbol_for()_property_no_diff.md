@@ -1,4 +1,4 @@
-# [Symbol.for() property no diff](../../symbol.test.js#L31)
+# [Symbol.for() property no diff](../../symbol.test.js)
 
 ```js
 assert({

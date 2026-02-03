@@ -1,4 +1,4 @@
-# [0.1 + 0.2 is close to 0.3](../../assert_close_to.test.js#L5)
+# [0.1 + 0.2 is close to 0.3](../../assert_close_to.test.js)
 
 ```js
 assert({

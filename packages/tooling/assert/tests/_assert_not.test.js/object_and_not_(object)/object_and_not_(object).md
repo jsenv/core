@@ -1,4 +1,4 @@
-# [object and not (object)](../../assert_not.test.js#L23)
+# [object and not (object)](../../assert_not.test.js)
 
 ```js
 assert({

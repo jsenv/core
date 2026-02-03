@@ -1,4 +1,4 @@
-# [round trip](../../css_border.test.mjs#L81)
+# [round trip](../../css_border.test.mjs)
 
 ```js
 return {

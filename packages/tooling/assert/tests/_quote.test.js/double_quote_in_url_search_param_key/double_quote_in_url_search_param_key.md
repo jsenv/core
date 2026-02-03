@@ -1,4 +1,4 @@
-# [double quote in url search param key](../../quote.test.js#L76)
+# [double quote in url search param key](../../quote.test.js)
 
 ```js
 assert({

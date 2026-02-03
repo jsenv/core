@@ -1,4 +1,4 @@
-# [0_basic](../../max_columns.test.mjs#L39)
+# [0_basic](../../max_columns.test.mjs)
 
 ```js
 run({})

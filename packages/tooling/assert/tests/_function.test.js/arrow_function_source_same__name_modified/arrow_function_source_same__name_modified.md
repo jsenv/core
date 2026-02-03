@@ -1,4 +1,4 @@
-# [arrow function source same, name modified](../../function.test.js#L250)
+# [arrow function source same, name modified](../../function.test.js)
 
 ```js
 const foo = () => {};

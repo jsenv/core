@@ -1,4 +1,4 @@
-# [non enumerable displayed when value modified](../../property_descriptor.test.js#L32)
+# [non enumerable displayed when value modified](../../property_descriptor.test.js)
 
 ```js
 const actual = {};

@@ -1,4 +1,4 @@
-# [named Symbol() vs anonymous symbol](../../symbol.test.js#L113)
+# [named Symbol() vs anonymous symbol](../../symbol.test.js)
 
 ```js
 assert({

@@ -1,4 +1,4 @@
-# [compare set and map](../../set.test.js#L27)
+# [compare set and map](../../set.test.js)
 
 ```js
 assert({

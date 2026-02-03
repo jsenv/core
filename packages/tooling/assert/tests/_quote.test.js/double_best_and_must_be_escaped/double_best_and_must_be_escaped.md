@@ -1,4 +1,4 @@
-# [double best and must be escaped](../../quote.test.js#L32)
+# [double best and must be escaped](../../quote.test.js)
 
 ```js
 assert({

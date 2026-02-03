@@ -1,4 +1,4 @@
-# [url vs string](../../quote.test.js#L94)
+# [url vs string](../../quote.test.js)
 
 ```js
 assert({

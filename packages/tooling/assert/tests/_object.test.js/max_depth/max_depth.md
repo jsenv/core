@@ -1,4 +1,4 @@
-# [max depth](../../object.test.js#L83)
+# [max depth](../../object.test.js)
 
 ```js
 assert({

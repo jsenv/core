@@ -1,4 +1,4 @@
-# [0_basic_content_type](../../endpoint_negotiation.test.mjs#L32)
+# [0_basic_content_type](../../endpoint_negotiation.test.mjs)
 
 ```js
 const routes = [
@@ -85,7 +85,7 @@ GET http://127.0.0.1/users
       "keep-alive": "timeout=5",
       "transfer-encoding": "chunked"
     },
-    "body": "{\"data\":\"Hello\"}"
+    "body": '{"data":"Hello"}'
   },
   "GET users accepting text/css": {
     "status": 406,
@@ -98,7 +98,7 @@ GET http://127.0.0.1/users
       "keep-alive": "timeout=5",
       "transfer-encoding": "chunked"
     },
-    "body": "{\"statusMessage\":\"The server cannot produce a response in any of the media types accepted by the request: \\\"text/css\\\".\\nAvailable media types: application/json, text/plain.\"}"
+    "body": '{"statusMessage":"The server cannot produce a response in any of the media types accepted by the request: \\"text/css\\".\\nAvailable media types: application/json, text/plain."}'
   },
   "GET users accepting anything": {
     "status": 200,
@@ -110,7 +110,7 @@ GET http://127.0.0.1/users
       "keep-alive": "timeout=5",
       "transfer-encoding": "chunked"
     },
-    "body": "{\"data\":\"Hello\"}"
+    "body": '{"data":"Hello"}'
   },
   "GET users accepting json": {
     "status": 200,
@@ -122,7 +122,7 @@ GET http://127.0.0.1/users
       "keep-alive": "timeout=5",
       "transfer-encoding": "chunked"
     },
-    "body": "{\"data\":\"Hello\"}"
+    "body": '{"data":"Hello"}'
   },
   "GET users accepting textual responses": {
     "status": 200,

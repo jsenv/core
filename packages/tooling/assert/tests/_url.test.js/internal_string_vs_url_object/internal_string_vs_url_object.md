@@ -1,4 +1,4 @@
-# [internal string vs url object](../../url.test.js#L197)
+# [internal string vs url object](../../url.test.js)
 
 ```js
 assert({

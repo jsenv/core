@@ -1,4 +1,4 @@
-# [arrow function source modified, name same](../../function.test.js#L36)
+# [arrow function source modified, name same](../../function.test.js)
 
 ```js
 const anonymousArrowReturningTrue = (function () {

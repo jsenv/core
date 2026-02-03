@@ -1,4 +1,4 @@
-# [array in property at 29](../../max_columns.test.js#L84)
+# [array in property at 29](../../max_columns.test.js)
 
 ```js
 // expecting to go through the following phases

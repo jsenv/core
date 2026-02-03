@@ -1,4 +1,4 @@
-# [multiple backgrounds](../../css_background.test.mjs#L53)
+# [multiple backgrounds](../../css_background.test.mjs)
 
 ```js
 return run("url(overlay.png), linear-gradient(45deg, red, blue), #ffffff");
@@ -24,7 +24,8 @@ return run("url(overlay.png), linear-gradient(45deg, red, blue), #ffffff");
             0,
             0,
             1
-          ]
+          ],
+          "stops": undefined
         },
         {
           "color": [
@@ -32,7 +33,8 @@ return run("url(overlay.png), linear-gradient(45deg, red, blue), #ffffff");
             0,
             255,
             1
-          ]
+          ],
+          "stops": undefined
         }
       ],
       "original": "linear-gradient(45deg, red, blue)"

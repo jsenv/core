@@ -1,4 +1,4 @@
-# [abort signal pending vs aborted](../../fetch.test.js#L7)
+# [abort signal pending vs aborted](../../fetch.test.js)
 
 ```js
 const expectAbortController = new AbortController();

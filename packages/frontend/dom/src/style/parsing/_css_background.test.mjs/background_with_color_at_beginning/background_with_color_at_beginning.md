@@ -1,4 +1,4 @@
-# [background with color at beginning](../../css_background.test.mjs#L63)
+# [background with color at beginning](../../css_background.test.mjs)
 
 ```js
 return run("red url(image.jpg) no-repeat center");

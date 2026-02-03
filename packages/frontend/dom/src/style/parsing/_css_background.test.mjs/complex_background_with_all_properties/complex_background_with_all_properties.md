@@ -1,4 +1,4 @@
-# [complex background with all properties](../../css_background.test.mjs#L21)
+# [complex background with all properties](../../css_background.test.mjs)
 
 ```js
 return run(

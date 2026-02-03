@@ -1,4 +1,4 @@
-# [0_importing_without_src](../../leading_slash.test.mjs#L6)
+# [0_importing_without_src](../../leading_slash.test.mjs)
 
 ```js
 return resolver.resolve(

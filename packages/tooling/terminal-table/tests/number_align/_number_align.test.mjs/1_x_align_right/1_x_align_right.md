@@ -1,4 +1,4 @@
-# [1_x_align_right](../../number_align.test.mjs#L34)
+# [1_x_align_right](../../number_align.test.mjs)
 
 ```js
 run({

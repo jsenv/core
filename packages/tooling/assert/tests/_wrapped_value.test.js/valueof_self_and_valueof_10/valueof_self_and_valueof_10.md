@@ -1,4 +1,4 @@
-# [valueOf self and valueOf 10](../../wrapped_value.test.js#L301)
+# [valueOf self and valueOf 10](../../wrapped_value.test.js)
 
 ```js
 const actual = { valueOf: () => actual };

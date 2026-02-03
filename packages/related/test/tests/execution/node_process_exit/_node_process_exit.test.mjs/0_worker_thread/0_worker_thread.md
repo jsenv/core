@@ -1,4 +1,4 @@
-# [0_worker_thread](../../node_process_exit.test.mjs#L13)
+# [0_worker_thread](../../node_process_exit.test.mjs)
 
 ```js
 run({

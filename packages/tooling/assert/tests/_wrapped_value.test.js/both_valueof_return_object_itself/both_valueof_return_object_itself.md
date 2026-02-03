@@ -1,4 +1,4 @@
-# [both valueOf return object itself](../../wrapped_value.test.js#L287)
+# [both valueOf return object itself](../../wrapped_value.test.js)
 
 ```js
 const actual = {

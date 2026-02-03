@@ -1,4 +1,4 @@
-# [actual message multiline, expect single](../../error.test.js#L74)
+# [actual message multiline, expect single](../../error.test.js)
 
 ```js
 assert({

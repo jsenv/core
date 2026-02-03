@@ -1,4 +1,4 @@
-# [content-type multi diff](../../headers.test.js#L31)
+# [content-type multi diff](../../headers.test.js)
 
 ```js
 assert({

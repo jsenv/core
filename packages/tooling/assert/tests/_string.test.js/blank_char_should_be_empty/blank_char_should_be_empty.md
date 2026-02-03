@@ -1,4 +1,4 @@
-# [blank char should be empty](../../string.test.js#L35)
+# [blank char should be empty](../../string.test.js)
 
 ```js
 assert({

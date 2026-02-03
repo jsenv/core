@@ -1,4 +1,4 @@
-# [not frozen vs frozen](../../object_integrity.test.js#L16)
+# [not frozen vs frozen](../../object_integrity.test.js)
 
 ```js
 assert({

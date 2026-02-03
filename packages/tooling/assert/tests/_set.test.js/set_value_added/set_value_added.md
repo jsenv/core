@@ -1,4 +1,4 @@
-# [set value added](../../set.test.js#L5)
+# [set value added](../../set.test.js)
 
 ```js
 assert({

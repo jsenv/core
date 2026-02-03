@@ -1,4 +1,4 @@
-# [3_border_bold_x](../../table_4_cells.test.mjs#L244)
+# [3_border_bold_x](../../table_4_cells.test.mjs)
 
 ```js
 run({

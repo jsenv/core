@@ -1,4 +1,4 @@
-# [0_chromium](../../preact_refresh.test.mjs#L73)
+# [0_chromium](../../preact_refresh.test.mjs)
 
 ```js
 run({ browserLauncher: chromium })
@@ -8,8 +8,8 @@ run({ browserLauncher: chromium })
 {
   "labelAtStart": "toto: 0",
   "labelAfterIncrease": "toto: 1",
-  "labelAfterUpdateTata": "tata: 0",
-  "labelTataAfterIncrease": "tata: 1"
+  "labelAfterUpdateTata": "tata: 1",
+  "labelTataAfterIncrease": "tata: 2"
 }
 ```
 

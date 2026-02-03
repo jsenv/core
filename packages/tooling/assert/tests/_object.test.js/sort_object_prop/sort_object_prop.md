@@ -1,4 +1,4 @@
-# [sort object prop](../../object.test.js#L411)
+# [sort object prop](../../object.test.js)
 
 ```js
 assert({

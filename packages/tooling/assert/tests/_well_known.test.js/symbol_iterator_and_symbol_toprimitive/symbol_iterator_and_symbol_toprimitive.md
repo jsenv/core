@@ -1,4 +1,4 @@
-# [Symbol.iterator and Symbol.toPrimitive](../../well_known.test.js#L17)
+# [Symbol.iterator and Symbol.toPrimitive](../../well_known.test.js)
 
 ```js
 assert({

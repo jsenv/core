@@ -1,4 +1,4 @@
-# [false should be an object at property](../../object.test.js#L63)
+# [false should be an object at property](../../object.test.js)
 
 ```js
 assert({

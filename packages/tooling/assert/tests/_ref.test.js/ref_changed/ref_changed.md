@@ -1,4 +1,4 @@
-# [ref changed](../../ref.test.js#L117)
+# [ref changed](../../ref.test.js)
 
 ```js
 const actual = {

@@ -1,4 +1,4 @@
-# [big array collapsed because diff is elsewhere](../../array.test.js#L42)
+# [big array collapsed because diff is elsewhere](../../array.test.js)
 
 ```js
 assert({

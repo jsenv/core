@@ -1,4 +1,4 @@
-# [on middle of property key](../../max_columns.test.js#L115)
+# [on middle of property key](../../max_columns.test.js)
 
 ```js
 assert({

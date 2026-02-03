@@ -1,4 +1,4 @@
-# [valueOf with object tag ](../../wrapped_value.test.js#L104)
+# [valueOf with object tag ](../../wrapped_value.test.js)
 
 ```js
 assert({

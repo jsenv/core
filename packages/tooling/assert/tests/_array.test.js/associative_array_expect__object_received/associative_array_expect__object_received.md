@@ -1,4 +1,4 @@
-# [associative array expect, object received](../../array.test.js#L79)
+# [associative array expect, object received](../../array.test.js)
 
 ```js
 assert({

@@ -1,4 +1,4 @@
-# [non enumerable hidden when value same](../../property_descriptor.test.js#L20)
+# [non enumerable hidden when value same](../../property_descriptor.test.js)
 
 ```js
 assert({

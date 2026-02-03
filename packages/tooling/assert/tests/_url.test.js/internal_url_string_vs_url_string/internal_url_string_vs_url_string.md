@@ -1,4 +1,4 @@
-# [internal url string vs url string](../../url.test.js#L206)
+# [internal url string vs url string](../../url.test.js)
 
 ```js
 assert({

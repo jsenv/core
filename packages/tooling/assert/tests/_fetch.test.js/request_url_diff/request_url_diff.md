@@ -1,4 +1,4 @@
-# [request url diff](../../fetch.test.js#L15)
+# [request url diff](../../fetch.test.js)
 
 ```js
 assert({

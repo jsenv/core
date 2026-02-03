@@ -1,4 +1,4 @@
-# [exactly on line break](../../string_multiline.test.js#L170)
+# [exactly on line break](../../string_multiline.test.js)
 
 ```js
 assert({

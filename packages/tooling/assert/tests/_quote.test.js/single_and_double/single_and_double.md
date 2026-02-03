@@ -1,4 +1,4 @@
-# [single and double](../../quote.test.js#L59)
+# [single and double](../../quote.test.js)
 
 ```js
 assert({

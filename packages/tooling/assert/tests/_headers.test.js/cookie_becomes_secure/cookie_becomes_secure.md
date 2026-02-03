@@ -1,4 +1,4 @@
-# [cookie becomes secure](../../headers.test.js#L114)
+# [cookie becomes secure](../../headers.test.js)
 
 ```js
 assert({

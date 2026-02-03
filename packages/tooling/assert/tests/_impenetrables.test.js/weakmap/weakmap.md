@@ -1,4 +1,4 @@
-# [weakmap](../../impenetrables.test.js#L29)
+# [weakmap](../../impenetrables.test.js)
 
 ```js
 assert({

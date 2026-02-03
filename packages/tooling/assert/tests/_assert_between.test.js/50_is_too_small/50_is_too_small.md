@@ -1,4 +1,4 @@
-# [50 is too small](../../assert_between.test.js#L31)
+# [50 is too small](../../assert_between.test.js)
 
 ```js
 assert({

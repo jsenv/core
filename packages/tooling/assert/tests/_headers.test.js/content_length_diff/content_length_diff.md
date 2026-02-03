@@ -1,4 +1,4 @@
-# [content length diff](../../headers.test.js#L224)
+# [content length diff](../../headers.test.js)
 
 ```js
 assert({

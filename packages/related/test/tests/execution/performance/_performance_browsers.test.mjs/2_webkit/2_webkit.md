@@ -1,4 +1,4 @@
-# [2_webkit](../../performance_browsers.test.mjs#L39)
+# [2_webkit](../../performance_browsers.test.mjs)
 
 ```js
 run({

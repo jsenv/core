@@ -1,4 +1,4 @@
-# [url and boolean](../../url.test.js#L145)
+# [url and boolean](../../url.test.js)
 
 ```js
 assert({

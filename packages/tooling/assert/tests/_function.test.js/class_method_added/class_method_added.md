@@ -1,4 +1,4 @@
-# [class method added](../../function.test.js#L217)
+# [class method added](../../function.test.js)
 
 ```js
 assert({

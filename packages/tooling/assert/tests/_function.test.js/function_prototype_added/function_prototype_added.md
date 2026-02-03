@@ -1,4 +1,4 @@
-# [function prototype added](../../function.test.js#L134)
+# [function prototype added](../../function.test.js)
 
 ```js
 function Foo() {}

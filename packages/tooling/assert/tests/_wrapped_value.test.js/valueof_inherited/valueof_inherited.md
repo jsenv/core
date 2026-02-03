@@ -1,4 +1,4 @@
-# [valueOf inherited](../../wrapped_value.test.js#L332)
+# [valueOf inherited](../../wrapped_value.test.js)
 
 ```js
 class Signal {

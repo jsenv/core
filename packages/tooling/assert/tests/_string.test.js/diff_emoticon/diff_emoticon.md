@@ -1,4 +1,4 @@
-# [diff emoticon](../../string.test.js#L53)
+# [diff emoticon](../../string.test.js)
 
 ```js
 assert({

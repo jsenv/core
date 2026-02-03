@@ -1,4 +1,4 @@
-# [class prototype method vs function prototype method](../../function.test.js#L359)
+# [class prototype method vs function prototype method](../../function.test.js)
 
 ```js
 const toto = function () {};

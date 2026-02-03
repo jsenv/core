@@ -1,4 +1,4 @@
-# [named Symbol() property added](../../symbol.test.js#L5)
+# [named Symbol() property added](../../symbol.test.js)
 
 ```js
 assert({

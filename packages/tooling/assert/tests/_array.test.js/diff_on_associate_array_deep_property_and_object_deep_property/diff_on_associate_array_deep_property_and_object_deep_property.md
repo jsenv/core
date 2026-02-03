@@ -1,4 +1,4 @@
-# [diff on associate array deep property and object deep property](../../array.test.js#L99)
+# [diff on associate array deep property and object deep property](../../array.test.js)
 
 ```js
 assert({

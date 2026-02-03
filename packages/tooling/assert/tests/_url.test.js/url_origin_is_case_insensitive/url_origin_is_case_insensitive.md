@@ -1,4 +1,4 @@
-# [url origin is case insensitive](../../url.test.js#L185)
+# [url origin is case insensitive](../../url.test.js)
 
 ```js
 assert({

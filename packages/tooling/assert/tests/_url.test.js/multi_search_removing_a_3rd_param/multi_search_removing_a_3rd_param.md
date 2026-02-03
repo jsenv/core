@@ -1,4 +1,4 @@
-# [multi search removing a 3rd param](../../url.test.js#L72)
+# [multi search removing a 3rd param](../../url.test.js)
 
 ```js
 assert({

@@ -1,4 +1,4 @@
-# [Symbol.iterator property value modified](../../symbol.test.js#L75)
+# [Symbol.iterator property value modified](../../symbol.test.js)
 
 ```js
 assert({

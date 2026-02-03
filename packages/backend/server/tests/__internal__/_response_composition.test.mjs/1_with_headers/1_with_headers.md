@@ -1,4 +1,4 @@
-# [1_with_headers](../../response_composition.test.mjs#L16)
+# [1_with_headers](../../response_composition.test.mjs)
 
 ```js
 return composeTwoResponses(
@@ -18,10 +18,15 @@ return composeTwoResponses(
 
 ```js
 {
+  "status": undefined,
+  "statusText": undefined,
+  "statusMessage": undefined,
   "headers": {
     "access-control-allow-headers": "a, b, c",
     "content-type": "text/javascript"
-  }
+  },
+  "body": undefined,
+  "bodyEncoding": undefined
 }
 ```
 

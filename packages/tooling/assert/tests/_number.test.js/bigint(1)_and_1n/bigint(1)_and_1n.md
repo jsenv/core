@@ -1,4 +1,4 @@
-# [BigInt(1) and "1n"](../../number.test.js#L144)
+# [BigInt(1) and "1n"](../../number.test.js)
 
 ```js
 assert({

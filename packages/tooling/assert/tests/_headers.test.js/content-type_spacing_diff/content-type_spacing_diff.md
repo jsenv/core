@@ -1,4 +1,4 @@
-# [content-type spacing diff](../../headers.test.js#L46)
+# [content-type spacing diff](../../headers.test.js)
 
 ```js
 assert({

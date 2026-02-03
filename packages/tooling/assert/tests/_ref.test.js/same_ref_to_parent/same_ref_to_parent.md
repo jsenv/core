@@ -1,4 +1,4 @@
-# [same ref to parent](../../ref.test.js#L64)
+# [same ref to parent](../../ref.test.js)
 
 ```js
 const actual = {

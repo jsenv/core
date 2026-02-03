@@ -1,4 +1,4 @@
-# [2_multiple](../../endpoint_negotiation.test.mjs#L142)
+# [2_multiple](../../endpoint_negotiation.test.mjs)
 
 ```js
 const routes = [
@@ -76,7 +76,7 @@ GET http://127.0.0.1/users
       "keep-alive": "timeout=5",
       "transfer-encoding": "chunked"
     },
-    "body": "{\"statusMessage\":\"The server cannot produce a response in a format acceptable to the client:\\n- content-type The server cannot produce a response in any of the media types accepted by the request: \\\"text/css\\\".\\nAvailable media types: application/json, text/plain.\\n- language The server cannot produce a response in any of the languages accepted by the request: \\\"de\\\".\\nAvailable languages: fr, en.\"}"
+    "body": '{"statusMessage":"The server cannot produce a response in a format acceptable to the client:\\n- content-type The server cannot produce a response in any of the media types accepted by the request: \\"text/css\\".\\nAvailable media types: application/json, text/plain.\\n- language The server cannot produce a response in any of the languages accepted by the request: \\"de\\".\\nAvailable languages: fr, en."}'
   },
   "GET users accepting text and language FR": {
     "status": 200,

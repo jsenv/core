@@ -1,4 +1,4 @@
-# [Symbol.toPrimitive vs primitive](../../wrapped_value.test.js#L25)
+# [Symbol.toPrimitive vs primitive](../../wrapped_value.test.js)
 
 ```js
 assert({

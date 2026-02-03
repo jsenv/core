@@ -1,4 +1,4 @@
-# [arrow function containing arrow function](../../function_parser.test.js#L10)
+# [arrow function containing arrow function](../../function_parser.test.js)
 
 ```js
 generateFunctionBody(() => {

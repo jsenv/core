@@ -1,4 +1,4 @@
-# [1_y_align_end](../../multiline_2_cell.test.mjs#L55)
+# [1_y_align_end](../../multiline_2_cell.test.mjs)
 
 ```js
 run({

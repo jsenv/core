@@ -1,4 +1,4 @@
-# [1_throw_primitive](../../internal_error.test.mjs#L39)
+# [1_throw_primitive](../../internal_error.test.mjs)
 
 ```js
 return run("here");
@@ -37,7 +37,7 @@ undefined
     "date": "<X>",
     "keep-alive": "timeout=5"
   },
-  "body": "{\"code\":\"VALUE_THROWED\",\"value\":\"here\"}"
+  "body": '{"code":"VALUE_THROWED","value":"here"}'
 }
 ```
 

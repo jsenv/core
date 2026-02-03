@@ -1,4 +1,4 @@
-# [remove empty line](../../string_multiline.test.js#L11)
+# [remove empty line](../../string_multiline.test.js)
 
 ```js
 assert({

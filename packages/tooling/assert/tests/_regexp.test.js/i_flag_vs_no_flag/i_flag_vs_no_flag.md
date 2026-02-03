@@ -1,4 +1,4 @@
-# [i flag vs no flag](../../regexp.test.js#L14)
+# [i flag vs no flag](../../regexp.test.js)
 
 ```js
 assert({

@@ -1,4 +1,4 @@
-# [static property value modified](../../function.test.js#L299)
+# [static property value modified](../../function.test.js)
 
 ```js
 const anonymousActualClass = (function () {

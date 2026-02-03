@@ -1,4 +1,4 @@
-# [2_named_and_star](../../pattern.test.mjs#L33)
+# [2_named_and_star](../../pattern.test.mjs)
 
 ```js
 const pattern = PATTERN.create("start/:id/*", {

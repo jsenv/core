@@ -1,4 +1,4 @@
-# [0_basic](../../coverage_timeout.test.mjs#L38)
+# [0_basic](../../coverage_timeout.test.mjs)
 
 ```js
 await run({

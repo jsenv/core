@@ -1,4 +1,4 @@
-# [file url inside array](../../url.test.js#L215)
+# [file url inside array](../../url.test.js)
 
 ```js
 assert({

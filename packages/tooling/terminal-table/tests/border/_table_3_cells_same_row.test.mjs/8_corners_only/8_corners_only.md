@@ -1,4 +1,4 @@
-# [8_corners_only](../../table_3_cells_same_row.test.mjs#L181)
+# [8_corners_only](../../table_3_cells_same_row.test.mjs)
 
 ```js
 run({

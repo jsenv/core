@@ -1,4 +1,4 @@
-# [response prop diff](../../fetch.test.js#L86)
+# [response prop diff](../../fetch.test.js)
 
 ```js
 assert({

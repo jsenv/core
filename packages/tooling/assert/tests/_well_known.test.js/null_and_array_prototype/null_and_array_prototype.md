@@ -1,4 +1,4 @@
-# [null and Array.prototype](../../well_known.test.js#L35)
+# [null and Array.prototype](../../well_known.test.js)
 
 ```js
 assert({

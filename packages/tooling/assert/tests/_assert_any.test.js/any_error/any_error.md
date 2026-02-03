@@ -1,4 +1,4 @@
-# [any Error](../../assert_any.test.js#L53)
+# [any Error](../../assert_any.test.js)
 
 ```js
 assert({

@@ -1,4 +1,4 @@
-# [set cookie added](../../headers.test.js#L57)
+# [set cookie added](../../headers.test.js)
 
 ```js
 assert({

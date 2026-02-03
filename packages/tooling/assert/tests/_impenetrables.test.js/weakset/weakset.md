@@ -1,4 +1,4 @@
-# [weakset](../../impenetrables.test.js#L17)
+# [weakset](../../impenetrables.test.js)
 
 ```js
 assert({

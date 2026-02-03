@@ -1,4 +1,4 @@
-# [solid color only](../../css_background.test.mjs#L41)
+# [solid color only](../../css_background.test.mjs)
 
 ```js
 return run("#ff0000");

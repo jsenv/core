@@ -1,4 +1,4 @@
-# [error stack vs object with stack](../../error.test.js#L29)
+# [error stack vs object with stack](../../error.test.js)
 
 ```js
 assert({

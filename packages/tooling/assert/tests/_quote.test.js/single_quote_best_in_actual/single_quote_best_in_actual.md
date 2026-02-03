@@ -1,4 +1,4 @@
-# [single quote best in actual](../../quote.test.js#L14)
+# [single quote best in actual](../../quote.test.js)
 
 ```js
 assert({

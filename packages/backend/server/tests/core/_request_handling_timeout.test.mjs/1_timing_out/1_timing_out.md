@@ -1,4 +1,4 @@
-# [1_timing_out](../../request_handling_timeout.test.mjs#L32)
+# [1_timing_out](../../request_handling_timeout.test.mjs)
 
 ```js
 return run({ waitForEver: true });

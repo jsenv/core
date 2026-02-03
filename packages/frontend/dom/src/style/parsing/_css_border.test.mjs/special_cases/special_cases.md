@@ -1,4 +1,4 @@
-# [special cases](../../css_border.test.mjs#L51)
+# [special cases](../../css_border.test.mjs)
 
 ```js
 return {

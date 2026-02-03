@@ -1,4 +1,4 @@
-# [0_basic](../../response_composition.test.mjs#L5)
+# [0_basic](../../response_composition.test.mjs)
 
 ```js
 return composeTwoResponses(
@@ -13,9 +13,14 @@ return composeTwoResponses(
 
 ```js
 {
+  "status": undefined,
+  "statusText": undefined,
+  "statusMessage": undefined,
   "headers": {
     "foo": false
-  }
+  },
+  "body": undefined,
+  "bodyEncoding": undefined
 }
 ```
 

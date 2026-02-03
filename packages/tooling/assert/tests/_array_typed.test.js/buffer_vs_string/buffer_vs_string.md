@@ -1,4 +1,4 @@
-# [buffer vs string](../../array_typed.test.js#L53)
+# [buffer vs string](../../array_typed.test.js)
 
 ```js
 assert({
