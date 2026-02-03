@@ -1,4 +1,4 @@
-# [0_js_module](../../preload_local_font_build_2.test.mjs#L27)
+# [0_js_module](../../preload_local_font_build_2.test.mjs)
 
 ```js
 run()

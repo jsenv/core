@@ -1,4 +1,4 @@
-# [0_resolve_root](../../new_url_directory_3.test.mjs#L27)
+# [0_resolve_root](../../new_url_directory_3.test.mjs)
 
 ```js
 run({

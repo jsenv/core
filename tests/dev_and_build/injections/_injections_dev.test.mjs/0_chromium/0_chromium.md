@@ -1,4 +1,4 @@
-# [0_chromium](../../injections_dev.test.mjs#L23)
+# [0_chromium](../../injections_dev.test.mjs)
 
 ```js
 run({ browserLauncher: chromium })

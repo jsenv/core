@@ -1,4 +1,4 @@
-# [1_internal_build](../../development_condition.test.mjs#L45)
+# [1_internal_build](../../development_condition.test.mjs)
 
 ```js
 run({

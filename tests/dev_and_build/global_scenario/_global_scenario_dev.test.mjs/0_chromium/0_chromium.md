@@ -1,4 +1,4 @@
-# [0_chromium](../../global_scenario_dev.test.mjs#L16)
+# [0_chromium](../../global_scenario_dev.test.mjs)
 
 ```js
 run({ browserLauncher: chromium })

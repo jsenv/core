@@ -1,4 +1,4 @@
-# [0_no_bundling](../../subbuild_import_meta_resolve.test.mjs#L36)
+# [0_no_bundling](../../subbuild_import_meta_resolve.test.mjs)
 
 ```js
 run({

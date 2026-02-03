@@ -1,4 +1,4 @@
-# [0_basic](../../vendor_and_dynamic_import.test.mjs#L22)
+# [0_basic](../../vendor_and_dynamic_import.test.mjs)
 
 ```js
 run()

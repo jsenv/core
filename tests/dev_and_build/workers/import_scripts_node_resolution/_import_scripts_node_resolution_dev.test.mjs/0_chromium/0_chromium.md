@@ -1,4 +1,4 @@
-# [0_chromium](../../import_scripts_node_resolution_dev.test.mjs#L19)
+# [0_chromium](../../import_scripts_node_resolution_dev.test.mjs)
 
 ```js
 run({ browserLauncher: chromium })

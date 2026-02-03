@@ -1,4 +1,4 @@
-# [1_js_module_fallback](../../preload_bundled_build.test.mjs#L35)
+# [1_js_module_fallback](../../preload_bundled_build.test.mjs)
 
 ```js
 run({

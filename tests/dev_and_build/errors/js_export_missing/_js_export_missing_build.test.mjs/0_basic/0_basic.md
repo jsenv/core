@@ -1,4 +1,4 @@
-# [0_basic](../../js_export_missing_build.test.mjs#L22)
+# [0_basic](../../js_export_missing_build.test.mjs)
 
 ```js
 run()

@@ -1,4 +1,4 @@
-# [0_js_module](../../import_dynamic_type_json.test.mjs#L27)
+# [0_js_module](../../import_dynamic_type_json.test.mjs)
 
 ```js
 run({

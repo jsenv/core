@@ -1,4 +1,4 @@
-# [1_js_module_fallback_no_versioning](../../preload_js_module_build.test.mjs#L35)
+# [1_js_module_fallback_no_versioning](../../preload_js_module_build.test.mjs)
 
 ```js
 run({

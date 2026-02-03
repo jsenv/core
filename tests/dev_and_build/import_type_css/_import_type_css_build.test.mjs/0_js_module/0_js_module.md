@@ -1,4 +1,4 @@
-# [0_js_module](../../import_type_css_build.test.mjs#L26)
+# [0_js_module](../../import_type_css_build.test.mjs)
 
 ```js
 run({
@@ -16,7 +16,7 @@ see [./build/](./build/)
 ```js
 {
   "bodyBackgroundColor": "rgb(255, 0, 0)",
-  "bodyBackgroundImage": "url(\"window.origin/other/jsenv.png?v=467b6542\")"
+  "bodyBackgroundImage": 'url("window.origin/other/jsenv.png?v=467b6542")'
 }
 ```
 

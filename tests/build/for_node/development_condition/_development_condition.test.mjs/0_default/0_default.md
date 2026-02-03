@@ -1,4 +1,4 @@
-# [0_default](../../development_condition.test.mjs#L40)
+# [0_default](../../development_condition.test.mjs)
 
 ```js
 run({

@@ -1,4 +1,4 @@
-# [0_js_module](../../script_type_module_inline_importing_css.test.mjs#L27)
+# [0_js_module](../../script_type_module_inline_importing_css.test.mjs)
 
 ```js
 run({

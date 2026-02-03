@@ -1,4 +1,4 @@
-# [0_importmap](../../worker_versioning_importmap_build.test.mjs#L31)
+# [0_importmap](../../worker_versioning_importmap_build.test.mjs)
 
 ```js
 run({

@@ -1,4 +1,4 @@
-# [0_chromium](../../import_meta_dev.test.mjs#L16)
+# [0_chromium](../../import_meta_dev.test.mjs)
 
 ```js
 run({ browserLauncher: chromium })
@@ -14,19 +14,34 @@ see [./.jsenv/chrome@143.00/](./.jsenv/chrome@143.00/)
 {
   "meta": {
     "url": "window.origin/main.js",
+    "resolve": undefined,
     "hot": {
       "data": {},
       "events": {
-        "beforePartialReload": {},
-        "afterPartialReload": {},
-        "beforeFullReload": {},
-        "beforePrune": {}
-      }
+        "beforePartialReload": {
+          "addCallback": undefined
+        },
+        "afterPartialReload": {
+          "addCallback": undefined
+        },
+        "beforeFullReload": {
+          "addCallback": undefined
+        },
+        "beforePrune": {
+          "addCallback": undefined
+        }
+      },
+      "accept": undefined,
+      "dispose": undefined,
+      "decline": undefined,
+      "invalidate": undefined
     }
   },
   "url": "window.origin/main.js",
   "urlDestructured": "window.origin/main.js",
-  "importMetaDev": true
+  "importMetaDev": true,
+  "importMetaTest": undefined,
+  "importMetaBuild": undefined
 }
 ```
 

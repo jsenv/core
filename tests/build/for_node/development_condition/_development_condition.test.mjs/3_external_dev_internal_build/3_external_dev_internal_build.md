@@ -1,4 +1,4 @@
-# [3_external_dev_internal_build](../../development_condition.test.mjs#L63)
+# [3_external_dev_internal_build](../../development_condition.test.mjs)
 
 ```js
 run({

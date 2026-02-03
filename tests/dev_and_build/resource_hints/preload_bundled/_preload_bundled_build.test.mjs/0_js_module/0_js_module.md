@@ -1,4 +1,4 @@
-# [0_js_module](../../preload_bundled_build.test.mjs#L31)
+# [0_js_module](../../preload_bundled_build.test.mjs)
 
 ```js
 run({

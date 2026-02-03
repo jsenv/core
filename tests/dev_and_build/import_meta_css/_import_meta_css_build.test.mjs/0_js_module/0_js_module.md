@@ -1,4 +1,4 @@
-# [0_js_module](../../import_meta_css_build.test.mjs#L26)
+# [0_js_module](../../import_meta_css_build.test.mjs)
 
 ```js
 run({

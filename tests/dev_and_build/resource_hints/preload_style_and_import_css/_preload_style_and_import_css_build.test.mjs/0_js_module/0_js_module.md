@@ -1,4 +1,4 @@
-# [0_js_module](../../preload_style_and_import_css_build.test.mjs#L28)
+# [0_js_module](../../preload_style_and_import_css_build.test.mjs)
 
 ```js
 run({

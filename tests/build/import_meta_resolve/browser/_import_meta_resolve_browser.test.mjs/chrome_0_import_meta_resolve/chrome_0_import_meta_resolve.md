@@ -1,4 +1,4 @@
-# [chrome_0_import_meta_resolve](../../import_meta_resolve_browser.test.mjs#L18)
+# [chrome_0_import_meta_resolve](../../import_meta_resolve_browser.test.mjs)
 
 ```js
 run({

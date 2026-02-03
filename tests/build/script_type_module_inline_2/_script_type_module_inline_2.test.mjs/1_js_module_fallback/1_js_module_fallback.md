@@ -1,4 +1,4 @@
-# [1_js_module_fallback](../../script_type_module_inline_2.test.mjs#L38)
+# [1_js_module_fallback](../../script_type_module_inline_2.test.mjs)
 
 ```js
 run({

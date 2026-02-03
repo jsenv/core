@@ -1,4 +1,4 @@
-# [0_basic](../../html_inside_directory.test.mjs#L27)
+# [0_basic](../../html_inside_directory.test.mjs)
 
 ```js
 run()

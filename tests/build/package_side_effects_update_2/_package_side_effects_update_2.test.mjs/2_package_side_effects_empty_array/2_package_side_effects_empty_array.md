@@ -1,4 +1,4 @@
-# [2_package_side_effects_empty_array](../../package_side_effects_update_2.test.mjs#L43)
+# [2_package_side_effects_empty_array](../../package_side_effects_update_2.test.mjs)
 
 ```js
 run([])

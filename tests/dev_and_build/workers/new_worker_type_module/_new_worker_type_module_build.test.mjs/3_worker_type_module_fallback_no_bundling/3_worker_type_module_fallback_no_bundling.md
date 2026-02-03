@@ -1,4 +1,4 @@
-# [3_worker_type_module_fallback_no_bundling](../../new_worker_type_module_build.test.mjs#L41)
+# [3_worker_type_module_fallback_no_bundling](../../new_worker_type_module_build.test.mjs)
 
 ```js
 run({

@@ -1,4 +1,4 @@
-# [0_js_module](../../babel_helper_shared.test.mjs#L26)
+# [0_js_module](../../babel_helper_shared.test.mjs)
 
 ```js
 run({

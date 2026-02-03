@@ -1,4 +1,4 @@
-# [0_basic](../../worker_babel_helpers_shared_build.test.mjs#L35)
+# [0_basic](../../worker_babel_helpers_shared_build.test.mjs)
 
 ```js
 run()

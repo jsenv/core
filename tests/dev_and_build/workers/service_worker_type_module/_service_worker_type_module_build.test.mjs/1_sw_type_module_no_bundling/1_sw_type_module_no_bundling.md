@@ -1,4 +1,4 @@
-# [1_sw_type_module_no_bundling](../../service_worker_type_module_build.test.mjs#L36)
+# [1_sw_type_module_no_bundling](../../service_worker_type_module_build.test.mjs)
 
 ```js
 run({

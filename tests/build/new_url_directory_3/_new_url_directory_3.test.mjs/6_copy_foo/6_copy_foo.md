@@ -1,4 +1,4 @@
-# [6_copy_foo](../../new_url_directory_3.test.mjs#L55)
+# [6_copy_foo](../../new_url_directory_3.test.mjs)
 
 ```js
 run({

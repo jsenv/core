@@ -1,4 +1,4 @@
-# [0_js_module](../../preload_injection_build.test.mjs#L33)
+# [0_js_module](../../preload_injection_build.test.mjs)
 
 ```js
 run()

@@ -1,4 +1,4 @@
-# [1_js_module_fallback](../../babel_helper_shared.test.mjs#L31)
+# [1_js_module_fallback](../../babel_helper_shared.test.mjs)
 
 ```js
 run({

@@ -110,7 +110,10 @@ export const replaceFluctuatingValues = (
     if (stringType === "json") {
       const jsValue = JSON.parse(value);
       const replaced = replaceInObject(jsValue, { replace: replaceThings });
-      return jsonStringifyWithUndefined(replaced);
+      return humanize(replaced, {
+        quote: `"`, // prefer double for json
+        indentSize: 2,
+      });
     }
     if (stringType === "html" || stringType === "xml") {
       // do parse html
@@ -166,17 +169,12 @@ export const replaceFluctuatingValues = (
       return regexpSource;
     }
     const jsValueReplaced = replaceInObject(value, { replace: replaceThings });
-    return jsonStringifyWithUndefined(jsValueReplaced);
+    return humanize(jsValueReplaced, {
+      quote: "auto", // Let humanize decide the best quotes
+      indentSize: 2,
+    });
   }
   return value;
-};
-
-// Use humanize for better JavaScript value representation
-const jsonStringifyWithUndefined = (obj) => {
-  return humanize(obj, {
-    quote: "auto", // Let humanize decide the best quotes
-    indentSize: 2,
-  });
 };
 
 const replaceInObject = (object, { replace }) => {

@@ -1,4 +1,4 @@
-# [1_js_module_fallback](../../import_dynamic.test.mjs#L31)
+# [1_js_module_fallback](../../import_dynamic.test.mjs)
 
 ```js
 run({

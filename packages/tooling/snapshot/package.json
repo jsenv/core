@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/snapshot",
-  "version": "2.16.2",
+  "version": "2.16.3",
   "description": "Snapshot testing",
   "repository": {
     "type": "git",

@@ -1,4 +1,4 @@
-# [1_js_module_fallback](../../import_meta_css_build.test.mjs#L31)
+# [1_js_module_fallback](../../import_meta_css_build.test.mjs)
 
 ```js
 run({

@@ -1,4 +1,4 @@
-# [2_js_module_fallback_no_bundling](../../script_type_module_inline.test.mjs#L36)
+# [2_js_module_fallback_no_bundling](../../script_type_module_inline.test.mjs)
 
 ```js
 run({

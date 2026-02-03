@@ -1,4 +1,4 @@
-# [0_chromium](../../hash_local_reference_dev.test.mjs#L16)
+# [0_chromium](../../hash_local_reference_dev.test.mjs)
 
 ```js
 run({ browserLauncher: chromium })

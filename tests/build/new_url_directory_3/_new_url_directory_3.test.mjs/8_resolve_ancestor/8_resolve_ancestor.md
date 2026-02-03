@@ -1,4 +1,4 @@
-# [8_resolve_ancestor](../../new_url_directory_3.test.mjs#L68)
+# [8_resolve_ancestor](../../new_url_directory_3.test.mjs)
 
 ```js
 run({

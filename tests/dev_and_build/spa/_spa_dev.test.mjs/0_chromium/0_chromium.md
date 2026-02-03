@@ -1,4 +1,4 @@
-# [0_chromium](../../spa_dev.test.mjs#L22)
+# [0_chromium](../../spa_dev.test.mjs)
 
 ```js
 run({ browserLauncher: chromium })

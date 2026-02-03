@@ -1,4 +1,4 @@
-# [2_webkit](../../dev_errors_snapshots.test.mjs#L112)
+# [2_webkit](../../dev_errors_snapshots.test.mjs)
 
 ```js
 run({

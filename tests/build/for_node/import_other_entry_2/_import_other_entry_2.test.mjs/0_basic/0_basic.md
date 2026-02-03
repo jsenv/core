@@ -1,4 +1,4 @@
-# [0_basic](../../import_other_entry_2.test.mjs#L25)
+# [0_basic](../../import_other_entry_2.test.mjs)
 
 ```js
 run()

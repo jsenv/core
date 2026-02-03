@@ -1,4 +1,4 @@
-# [0_js_module_http_enabled](../../html_importmap_http.test.mjs#L35)
+# [0_js_module_http_enabled](../../html_importmap_http.test.mjs)
 
 ```js
 run({

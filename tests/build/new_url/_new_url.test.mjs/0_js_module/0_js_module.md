@@ -1,4 +1,4 @@
-# [0_js_module](../../new_url.test.mjs#L26)
+# [0_js_module](../../new_url.test.mjs)
 
 ```js
 run({

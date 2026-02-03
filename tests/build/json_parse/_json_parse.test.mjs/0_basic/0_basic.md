@@ -1,4 +1,4 @@
-# [0_basic](../../json_parse.test.mjs#L33)
+# [0_basic](../../json_parse.test.mjs)
 
 ```js
 run({

@@ -1,4 +1,4 @@
-# [0_basic](../../css_inline_content_minified.test.mjs#L34)
+# [0_basic](../../css_inline_content_minified.test.mjs)
 
 ```js
 run()

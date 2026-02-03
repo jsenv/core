@@ -1,4 +1,4 @@
-# [0_basic](../../img_not_found_build.test.mjs#L22)
+# [0_basic](../../img_not_found_build.test.mjs)
 
 ```js
 run()

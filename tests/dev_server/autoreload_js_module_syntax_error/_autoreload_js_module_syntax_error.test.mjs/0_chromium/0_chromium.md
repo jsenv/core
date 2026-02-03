@@ -1,4 +1,4 @@
-# [0_chromium](../../autoreload_js_module_syntax_error.test.mjs#L66)
+# [0_chromium](../../autoreload_js_module_syntax_error.test.mjs)
 
 ```js
 run()

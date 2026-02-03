@@ -1,4 +1,4 @@
-# [1_firefox](../../spa_dev.test.mjs#L23)
+# [1_firefox](../../spa_dev.test.mjs)
 
 ```js
 run({ browserLauncher: firefox })

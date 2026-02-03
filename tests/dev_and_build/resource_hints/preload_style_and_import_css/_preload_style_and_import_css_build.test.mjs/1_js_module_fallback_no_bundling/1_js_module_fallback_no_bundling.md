@@ -1,4 +1,4 @@
-# [1_js_module_fallback_no_bundling](../../preload_style_and_import_css_build.test.mjs#L32)
+# [1_js_module_fallback_no_bundling](../../preload_style_and_import_css_build.test.mjs)
 
 ```js
 run({

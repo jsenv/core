@@ -1,4 +1,4 @@
-# [1_import_meta_resolve_fallback](../../import_meta_resolve_build.test.mjs#L32)
+# [1_import_meta_resolve_fallback](../../import_meta_resolve_build.test.mjs)
 
 ```js
 run({

@@ -1,4 +1,4 @@
-# [7_copy_fs_root](../../new_url_directory_3.test.mjs#L60)
+# [7_copy_fs_root](../../new_url_directory_3.test.mjs)
 
 ```js
 run({

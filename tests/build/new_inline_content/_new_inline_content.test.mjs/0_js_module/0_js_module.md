@@ -1,4 +1,4 @@
-# [0_js_module](../../new_inline_content.test.mjs#L8)
+# [0_js_module](../../new_inline_content.test.mjs)
 
 ```js
 build({

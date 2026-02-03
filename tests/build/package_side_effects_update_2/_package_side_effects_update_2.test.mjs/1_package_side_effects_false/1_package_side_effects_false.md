@@ -1,4 +1,4 @@
-# [1_package_side_effects_false](../../package_side_effects_update_2.test.mjs#L41)
+# [1_package_side_effects_false](../../package_side_effects_update_2.test.mjs)
 
 ```js
 run(false)

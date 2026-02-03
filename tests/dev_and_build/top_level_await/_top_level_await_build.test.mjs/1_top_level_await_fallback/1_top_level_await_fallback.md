@@ -1,4 +1,4 @@
-# [1_top_level_await_fallback](../../top_level_await_build.test.mjs#L30)
+# [1_top_level_await_fallback](../../top_level_await_build.test.mjs)
 
 ```js
 run({

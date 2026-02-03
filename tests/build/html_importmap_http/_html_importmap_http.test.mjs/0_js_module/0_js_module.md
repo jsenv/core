@@ -1,4 +1,4 @@
-# [0_js_module](../../html_importmap_http.test.mjs#L30)
+# [0_js_module](../../html_importmap_http.test.mjs)
 
 ```js
 run({

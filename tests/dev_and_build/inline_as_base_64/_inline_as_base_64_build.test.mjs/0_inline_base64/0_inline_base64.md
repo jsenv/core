@@ -1,4 +1,4 @@
-# [0_inline_base64](../../inline_as_base_64_build.test.mjs#L7)
+# [0_inline_base64](../../inline_as_base_64_build.test.mjs)
 
 ```js
 build({

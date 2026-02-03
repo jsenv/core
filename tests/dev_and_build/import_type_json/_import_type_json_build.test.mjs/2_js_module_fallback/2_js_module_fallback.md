@@ -1,4 +1,4 @@
-# [2_js_module_fallback](../../import_type_json_build.test.mjs#L35)
+# [2_js_module_fallback](../../import_type_json_build.test.mjs)
 
 ```js
 run({

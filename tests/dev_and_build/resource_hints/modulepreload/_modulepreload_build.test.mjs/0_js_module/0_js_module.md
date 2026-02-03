@@ -1,4 +1,4 @@
-# [0_js_module](../../modulepreload_build.test.mjs#L27)
+# [0_js_module](../../modulepreload_build.test.mjs)
 
 ```js
 run({

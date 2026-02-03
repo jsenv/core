@@ -1,4 +1,4 @@
-# [1_firefox](../../dev_errors_snapshots.test.mjs#L106)
+# [1_firefox](../../dev_errors_snapshots.test.mjs)
 
 ```js
 run({

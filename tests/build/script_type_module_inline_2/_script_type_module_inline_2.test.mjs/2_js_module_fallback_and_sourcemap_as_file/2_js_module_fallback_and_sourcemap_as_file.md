@@ -1,4 +1,4 @@
-# [2_js_module_fallback_and_sourcemap_as_file](../../script_type_module_inline_2.test.mjs#L48)
+# [2_js_module_fallback_and_sourcemap_as_file](../../script_type_module_inline_2.test.mjs)
 
 ```js
 run({

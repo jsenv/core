@@ -1,4 +1,4 @@
-# [3_package_side_effects_build_foo](../../package_side_effects_update.test.mjs#L46)
+# [3_package_side_effects_build_foo](../../package_side_effects_update.test.mjs)
 
 ```js
 run(["./build/js/foo.js"])

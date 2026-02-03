@@ -1,4 +1,4 @@
-# [3_js_module_fallback_no_bundling](../../import_type_css_build.test.mjs#L49)
+# [3_js_module_fallback_no_bundling](../../import_type_css_build.test.mjs)
 
 ```js
 run({
@@ -15,7 +15,7 @@ see [./build/](./build/)
 ```js
 {
   "bodyBackgroundColor": "rgb(255, 0, 0)",
-  "bodyBackgroundImage": "url(\"window.origin/other/jsenv.png?v=467b6542\")"
+  "bodyBackgroundImage": 'url("window.origin/other/jsenv.png?v=467b6542")'
 }
 ```
 

@@ -1,4 +1,4 @@
-# [2_package_side_effects_bar](../../package_side_effects_update.test.mjs#L44)
+# [2_package_side_effects_bar](../../package_side_effects_update.test.mjs)
 
 ```js
 run(["./src/bar.js"])

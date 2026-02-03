@@ -1,4 +1,4 @@
-# [0_top_level_await](../../top_level_await_2_build.test.mjs#L34)
+# [0_top_level_await](../../top_level_await_2_build.test.mjs)
 
 ```js
 run({

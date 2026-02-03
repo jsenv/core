@@ -1,4 +1,4 @@
-# [0_chromium](../../preload_style_dev.test.mjs#L21)
+# [0_chromium](../../preload_style_dev.test.mjs)
 
 ```js
 run({ browserLauncher: chromium })

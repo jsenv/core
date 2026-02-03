@@ -1,4 +1,4 @@
-# [chrome_1_import_meta_resolve_fallback](../../import_meta_resolve_browser.test.mjs#L22)
+# [chrome_1_import_meta_resolve_fallback](../../import_meta_resolve_browser.test.mjs)
 
 ```js
 run({

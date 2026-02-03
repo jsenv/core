@@ -1,4 +1,4 @@
-# [0_basic](../../build_node_esm_and_query_param.test.mjs#L21)
+# [0_basic](../../build_node_esm_and_query_param.test.mjs)
 
 ```js
 run()

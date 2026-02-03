@@ -1,4 +1,4 @@
-# [0_basic](../../new_url_and_as_js_classic.test.mjs#L25)
+# [0_basic](../../new_url_and_as_js_classic.test.mjs)
 
 ```js
 run()

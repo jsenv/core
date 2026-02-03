@@ -1,4 +1,4 @@
-# [0_node](../../code_splitting.test.mjs#L21)
+# [0_node](../../code_splitting.test.mjs)
 
 ```js
 run({

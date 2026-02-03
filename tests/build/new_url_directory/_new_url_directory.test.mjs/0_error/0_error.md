@@ -1,4 +1,4 @@
-# [0_error](../../new_url_directory.test.mjs#L30)
+# [0_error](../../new_url_directory.test.mjs)
 
 ```js
 run({

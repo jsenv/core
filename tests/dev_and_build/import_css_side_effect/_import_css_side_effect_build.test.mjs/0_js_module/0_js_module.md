@@ -1,4 +1,4 @@
-# [0_js_module](../../import_css_side_effect_build.test.mjs#L28)
+# [0_js_module](../../import_css_side_effect_build.test.mjs)
 
 ```js
 run()

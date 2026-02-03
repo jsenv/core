@@ -1,4 +1,4 @@
-# [0_chromium](../../import_type_css_dev.test.mjs#L21)
+# [0_chromium](../../import_type_css_dev.test.mjs)
 
 ```js
 run({ browserLauncher: chromium })
@@ -13,7 +13,7 @@ see [./.jsenv/chrome@143.00/](./.jsenv/chrome@143.00/)
 ```js
 {
   "bodyBackgroundColor": "rgb(255, 0, 0)",
-  "bodyBackgroundImage": "url(\"window.origin/src/jsenv.png\")"
+  "bodyBackgroundImage": 'url("window.origin/src/jsenv.png")'
 }
 ```
 

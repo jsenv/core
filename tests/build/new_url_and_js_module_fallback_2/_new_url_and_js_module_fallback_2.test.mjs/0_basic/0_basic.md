@@ -1,4 +1,4 @@
-# [0_basic](../../new_url_and_js_module_fallback_2.test.mjs#L21)
+# [0_basic](../../new_url_and_js_module_fallback_2.test.mjs)
 
 ```js
 run()

@@ -1,4 +1,4 @@
-# [1_js_module_fallback](../../import_meta_build.test.mjs#L29)
+# [1_js_module_fallback](../../import_meta_build.test.mjs)
 
 ```js
 run({
@@ -15,10 +15,13 @@ see [./build/](./build/)
 ```js
 {
   "meta": {
-    "url": "window.origin/js/main.js"
+    "url": "window.origin/js/main.js",
+    "resolve": undefined
   },
   "url": "window.origin/js/main.js",
   "urlDestructured": "window.origin/js/main.js",
+  "importMetaDev": undefined,
+  "importMetaTest": undefined,
   "importMetaBuild": true
 }
 ```
