@@ -131,7 +131,9 @@ export const stateSignal = (defaultValue, options = {}) => {
   const localStorageKey = signalIdString;
   const [readFromLocalStorage, writeIntoLocalStorage, removeFromLocalStorage] =
     persists
-      ? valueInLocalStorage(localStorageKey, { type })
+      ? valueInLocalStorage(localStorageKey, {
+          type: localStorageTypeMap[type] || type,
+        })
       : NO_LOCAL_STORAGE;
 
   /**
@@ -420,4 +422,17 @@ export const stateSignal = (defaultValue, options = {}) => {
   }
 
   return facadeSignal;
+};
+
+const localStorageTypeMap = {
+  float: "number",
+  integer: "number",
+  ratio: "number",
+  longitude: "number",
+  latitude: "number",
+  percentage: "string",
+  url: "string",
+  date: "string",
+  time: "string",
+  email: "string",
 };

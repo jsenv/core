@@ -2326,7 +2326,9 @@ const stateSignal = (defaultValue, options = {}) => {
   const localStorageKey = signalIdString;
   const [readFromLocalStorage, writeIntoLocalStorage, removeFromLocalStorage] =
     persists
-      ? valueInLocalStorage(localStorageKey, { type })
+      ? valueInLocalStorage(localStorageKey, {
+          type: localStorageTypeMap[type] || type,
+        })
       : NO_LOCAL_STORAGE;
 
   /**
@@ -2615,6 +2617,19 @@ const stateSignal = (defaultValue, options = {}) => {
   }
 
   return facadeSignal;
+};
+
+const localStorageTypeMap = {
+  float: "number",
+  integer: "number",
+  ratio: "number",
+  longitude: "number",
+  latitude: "number",
+  percentage: "string",
+  url: "string",
+  date: "string",
+  time: "string",
+  email: "string",
 };
 
 const getCallerInfo = (targetFunction = null, additionalOffset = 0) => {
@@ -4877,9 +4892,11 @@ const FLOW_PROPS = {
   row: () => {},
   column: () => {},
 
+  position: PASS_THROUGH,
   absolute: applyToCssPropWhenTruthy("position", "absolute", "static"),
   relative: applyToCssPropWhenTruthy("position", "relative", "static"),
   fixed: applyToCssPropWhenTruthy("position", "fixed", "static"),
+  sticky: applyToCssPropWhenTruthy("position", "sticky", "static"),
 };
 const OUTER_SPACING_PROPS = {
   margin: PASS_THROUGH,

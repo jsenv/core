@@ -68,9 +68,11 @@ const FLOW_PROPS = {
   row: () => {},
   column: () => {},
 
+  position: PASS_THROUGH,
   absolute: applyToCssPropWhenTruthy("position", "absolute", "static"),
   relative: applyToCssPropWhenTruthy("position", "relative", "static"),
   fixed: applyToCssPropWhenTruthy("position", "fixed", "static"),
+  sticky: applyToCssPropWhenTruthy("position", "sticky", "static"),
 };
 const OUTER_SPACING_PROPS = {
   margin: PASS_THROUGH,
