@@ -10145,6 +10145,107 @@ const resolveRouteUrl = (relativeUrl) => {
  */
 
 
+/**
+ * Set up all application routes with reactive state management.
+ *
+ * Creates route objects that automatically sync with the current URL and provide
+ * reactive signals for building dynamic UIs. Each route tracks its matching state,
+ * extracted parameters, and computed URLs.
+ *
+ * @example
+ * ```js
+ * import { setupRoutes, stateSignal } from "@jsenv/navi";
+ *
+ * const settingsTabSignal = stateSignal('general', { type: "string", oneOf: ['general', 'overview'] });
+ *
+ * let { USER_PROFILE } = setupRoutes({
+ *   HOME: "/",
+ *   SETTINGS: "/settings/:tab=${settingsTabSignal}/",
+ * });
+ *
+ * USER_PROFILE.matching // boolean
+ * USER_PROFILE.matchingSignal.value // reactive signal
+ * settingsTabSignal.value = 'overview'; // updates URL automatically
+ * ```
+ *
+ * ⚠️ HOT RELOAD: Use 'let' instead of 'const' when destructuring:
+ * ```js
+ * // ❌ const { HOME, USER_PROFILE } = setupRoutes({...})
+ * // ✅ let { HOME, USER_PROFILE } = setupRoutes({...})
+ * ```
+ *
+ * @param {Object} routeDefinition - Object mapping route names to URL patterns
+ * @param {string} routeDefinition[key] - URL pattern with optional parameters
+ * @returns {Object} Object with route names as keys and route objects as values
+ * @returns {Object.<string, {
+ *   pattern: string,
+ *   matching: boolean,
+ *   params: Object,
+ *   url: string,
+ *   relativeUrl: string,
+ *   matchingSignal: import("@preact/signals").Signal<boolean>,
+ *   paramsSignal: import("@preact/signals").Signal<Object>,
+ *   urlSignal: import("@preact/signals").Signal<string>,
+ *   navTo: (params?: Object) => Promise<void>,
+ *   redirectTo: (params?: Object) => Promise<void>,
+ *   replaceParams: (params: Object) => Promise<void>,
+ *   buildUrl: (params?: Object) => string,
+ *   buildRelativeUrl: (params?: Object) => string,
+ * }>} Route objects with reactive state and navigation methods
+ *
+ * All routes MUST be created at once because any url can be accessed
+ * at any given time (url can be shared, reloaded, etc..)
+ */
+
+const setupRoutes = (routeDefinition) => {
+  // Prevent calling setupRoutes when routes already exist - enforce clean setup
+  if (routeSet.size > 0) {
+    throw new Error(
+      "Routes already exist. Call clearAllRoutes() first to clean up existing routes before creating new ones. This prevents cross-test pollution and ensures clean state.",
+    );
+  }
+  // PHASE 1: Setup patterns with unified objects (includes all relationships and signal connections)
+  const routePatterns = setupPatterns(routeDefinition);
+
+  // PHASE 2: Create routes using the unified pattern objects
+  const routes = {};
+  for (const key of Object.keys(routeDefinition)) {
+    const routePattern = routePatterns[key];
+    const route = registerRoute(routePattern);
+    routes[key] = route;
+  }
+  onRouteDefined();
+
+  return routes;
+};
+
+const useRouteStatus = (route) => {
+  const { urlSignal, matchingSignal, paramsSignal, visitedSignal } = route;
+  const url = urlSignal.value;
+  const matching = matchingSignal.value;
+  const params = paramsSignal.value;
+  const visited = visitedSignal.value;
+
+  return {
+    url,
+    matching,
+    params,
+    visited,
+  };
+};
+
+// for unit tests
+const clearAllRoutes = () => {
+  for (const [, routePrivateProperties] of routePrivatePropertiesMap) {
+    routePrivateProperties.cleanup();
+  }
+  routeSet.clear();
+  routePrivatePropertiesMap.clear();
+  // Pattern registry is now local to setupPatterns, no global cleanup needed
+  // Don't clear signal registry here - let tests manage it explicitly
+  // This prevents clearing signals that are still being used across multiple route registrations
+};
+
 // Flag to prevent signal-to-URL synchronization during URL-to-signal synchronization
 let isUpdatingRoutesFromUrl = false;
 
@@ -10159,9 +10260,11 @@ const ROUTE_DEACTIVATION_STRATEGY = "abort"; // 'abort', 'keep-loading'
 const ROUTE_NOT_MATCHING_PARAMS = {};
 
 const routeSet = new Set();
-// Store previous route states to detect changes
 const routePrivatePropertiesMap = new Map();
-
+const getRoutePrivateProperties = (route) => {
+  return routePrivatePropertiesMap.get(route);
+};
+// Store previous route states to detect changes
 const routePreviousStateMap = new WeakMap();
 // Store abort controllers per action to control their lifecycle based on route state
 const actionAbortControllerWeakMap = new WeakMap();
@@ -10261,8 +10364,8 @@ const updateRoutes = (
 
       for (const [paramName, connection] of connectionMap) {
         const { signal: paramSignal, debug } = connection;
-        const params = routePrivateProperties.rawParamsSignal.value;
-        const urlParamValue = params[paramName];
+        const rawParams = route.rawParamsSignal.value;
+        const urlParamValue = rawParams[paramName];
 
         if (!newMatching) {
           // Route doesn't match - check if any matching route extracts this parameter
@@ -10273,17 +10376,18 @@ const updateRoutes = (
             if (otherRoute === route || !otherRoute.matching) {
               continue;
             }
-            const otherRouteProperties = getRoutePrivateProperties(otherRoute);
-            const otherParams = otherRouteProperties.rawParamsSignal.value;
+            const otherRawParams = otherRoute.rawParamsSignal.value;
+            const otherRoutePrivateProperties =
+              getRoutePrivateProperties(otherRoute);
 
             // Check if this matching route extracts the parameter
-            if (paramName in otherParams) {
+            if (paramName in otherRawParams) {
               parameterExtractedByMatchingRoute = true;
             }
 
             // Check if this matching route is in the same family using parent-child relationships
             const thisPatternObj = routePattern;
-            const otherPatternObj = otherRouteProperties.routePattern;
+            const otherPatternObj = otherRoutePrivateProperties.routePattern;
 
             // Routes are in same family if they share a hierarchical relationship:
             // 1. One is parent/ancestor of the other
@@ -10500,23 +10604,12 @@ const updateRoutes = (
   };
 };
 
-const getRoutePrivateProperties = (route) => {
-  return routePrivatePropertiesMap.get(route);
-};
-
 const registerRoute = (routePattern) => {
   const urlPatternRaw = routePattern.originalPattern;
   const { cleanPattern, connectionMap } = routePattern;
-
-  const cleanupCallbackSet = new Set();
-  const cleanup = () => {
-    for (const cleanupCallback of cleanupCallbackSet) {
-      cleanupCallback();
-    }
-    cleanupCallbackSet.clear();
-  };
   const [publishStatus, subscribeStatus] = createPubSub();
 
+  // prepare route object
   const route = {
     urlPattern: cleanPattern,
     pattern: cleanPattern,
@@ -10528,74 +10621,78 @@ const registerRoute = (routePattern) => {
     relativeUrl: null,
     url: null,
     action: null,
-    cleanup,
+    matchingSignal: null,
+    paramsSignal: null,
+    urlSignal: null,
+    replaceParams: undefined,
+    subscribeStatus,
     toString: () => {
       return `route "${cleanPattern}"`;
     },
-    replaceParams: undefined,
-    subscribeStatus,
   };
   routeSet.add(route);
   const routePrivateProperties = {
     routePattern,
     originalPattern: urlPatternRaw,
     pattern: cleanPattern,
-    matchingSignal: null,
-    paramsSignal: null,
-    rawParamsSignal: null,
-    visitedSignal: null,
-    relativeUrlSignal: null,
-    urlSignal: null,
-    updateStatus: ({ matching, params, visited }) => {
-      let someChange = false;
-      matchingSignal.value = matching;
-
-      if (route.matching !== matching) {
-        route.matching = matching;
-        someChange = true;
-      }
-      visitedSignal.value = visited;
-      if (route.visited !== visited) {
-        route.visited = visited;
-        someChange = true;
-      }
-      // Store raw params (from URL) - paramsSignal will reactively compute merged params
-      rawParamsSignal.value = params;
-      // Get merged params for comparison (computed signal will handle the merging)
-      const mergedParams = paramsSignal.value;
-      if (route.params !== mergedParams) {
-        route.params = mergedParams;
-        someChange = true;
-      }
-      if (someChange) {
-        publishStatus({
-          matching,
-          params: mergedParams,
-          visited,
-        });
-      }
-    },
+    updateStatus: null,
+    cleanup: null,
   };
   routePrivatePropertiesMap.set(route, routePrivateProperties);
+  const cleanupCallbackSet = new Set();
+  routePrivateProperties.cleanup = () => {
+    for (const cleanupCallback of cleanupCallbackSet) {
+      cleanupCallback();
+    }
+    cleanupCallbackSet.clear();
+  };
+  routePrivateProperties.updateStatus = ({ matching, params, visited }) => {
+    let someChange = false;
+    route.matchingSignal.value = matching;
 
-  const matchingSignal = signal(false);
-  const rawParamsSignal = signal(ROUTE_NOT_MATCHING_PARAMS);
-  const paramsSignal = computed(() => {
-    const rawParams = rawParamsSignal.value;
+    if (route.matching !== matching) {
+      route.matching = matching;
+      someChange = true;
+    }
+    route.visitedSignal.value = visited;
+    if (route.visited !== visited) {
+      route.visited = visited;
+      someChange = true;
+    }
+    // Store raw params (from URL) - paramsSignal will reactively compute merged params
+    route.rawParamsSignal.value = params;
+    // Get merged params for comparison (computed signal will handle the merging)
+    const mergedParams = route.paramsSignal.value;
+    if (route.params !== mergedParams) {
+      route.params = mergedParams;
+      someChange = true;
+    }
+    if (someChange) {
+      publishStatus({
+        matching,
+        params: mergedParams,
+        visited,
+      });
+    }
+  };
+
+  // populate route object
+  route.matchingSignal = signal(false);
+  route.rawParamsSignal = signal(ROUTE_NOT_MATCHING_PARAMS);
+  route.paramsSignal = computed(() => {
+    const rawParams = route.rawParamsSignal.value;
     const resolvedParams = routePattern.resolveParams(rawParams);
     return resolvedParams;
   });
-  const visitedSignal = signal(false);
-
+  route.visitedSignal = signal(false);
   // Keep route.params synchronized with computed paramsSignal
   // This ensures route.params includes parameters from child routes
   effect(() => {
-    const computedParams = paramsSignal.value;
+    const computedParams = route.paramsSignal.value;
     if (route.params !== computedParams) {
       route.params = computedParams;
     }
   });
-
   for (const [paramName, connection] of connectionMap) {
     const { signal: paramSignal, debug } = connection;
 
@@ -10610,9 +10707,9 @@ const registerRoute = (routePattern) => {
     // eslint-disable-next-line no-loop-func
     effect(() => {
       const value = paramSignal.value;
-      const params = rawParamsSignal.value;
-      const urlParamValue = params[paramName];
-      const matching = matchingSignal.value;
+      const rawParams = route.rawParamsSignal.value;
+      const urlParamValue = rawParams[paramName];
+      const matching = route.matchingSignal.value;
 
       // Signal returned to default - clean up URL by removing the parameter
       // Skip cleanup during URL-to-signal synchronization to prevent recursion
@@ -10662,7 +10759,6 @@ const registerRoute = (routePattern) => {
       route.replaceParams({ [paramName]: value });
     });
   }
-
   route.navTo = (params) => {
     if (!integration) {
       return Promise.resolve();
@@ -10679,7 +10775,7 @@ const registerRoute = (routePattern) => {
     });
   };
   route.replaceParams = (newParams) => {
-    const matching = matchingSignal.peek();
+    const matching = route.matchingSignal.peek();
     if (!matching) {
       console.warn(
         `Cannot replace params on route ${route} because it is not matching the current URL.`,
@@ -10695,16 +10791,14 @@ const registerRoute = (routePattern) => {
       if (matchingRoute.action) {
         const matchingRoutePrivateProperties =
           getRoutePrivateProperties(matchingRoute);
-        if (matchingRoutePrivateProperties) {
-          const { routePattern: matchingRoutePattern } =
-            matchingRoutePrivateProperties;
-          const currentResolvedParams = matchingRoutePattern.resolveParams();
-          const updatedActionParams = {
-            ...currentResolvedParams,
-            ...newParams,
-          };
-          matchingRoute.action.replaceParams(updatedActionParams);
-        }
+        const { routePattern: matchingRoutePattern } =
+          matchingRoutePrivateProperties;
+        const currentResolvedParams = matchingRoutePattern.resolveParams();
+        const updatedActionParams = {
+          ...currentResolvedParams,
+          ...newParams,
+        };
+        matchingRoute.action.replaceParams(updatedActionParams);
       }
     }
 
@@ -10753,20 +10847,20 @@ const registerRoute = (routePattern) => {
   };
 
   // relativeUrl/url
-  const relativeUrlSignal = computed(() => {
-    const rawParams = rawParamsSignal.value;
+  route.relativeUrlSignal = computed(() => {
+    const rawParams = route.rawParamsSignal.value;
     const relativeUrl = route.buildRelativeUrl(rawParams);
     return relativeUrl;
   });
-  const urlSignal = computed(() => {
+  route.urlSignal = computed(() => {
     const routeUrl = route.buildUrl();
     return routeUrl;
   });
   const disposeRelativeUrlEffect = effect(() => {
-    route.relativeUrl = relativeUrlSignal.value;
+    route.relativeUrl = route.relativeUrlSignal.value;
   });
   const disposeUrlEffect = effect(() => {
-    route.url = urlSignal.value;
+    route.url = route.urlSignal.value;
   });
   cleanupCallbackSet.add(disposeRelativeUrlEffect);
   cleanupCallbackSet.add(disposeUrlEffect);
@@ -10779,7 +10873,7 @@ const registerRoute = (routePattern) => {
       if (mutableIdKeys.length) {
         const mutableIdKey = mutableIdKeys[0];
         const mutableIdValueSignal = computed(() => {
-          const params = paramsSignal.value;
+          const params = route.paramsSignal.value;
           const mutableIdValue = params[mutableIdKey];
           return mutableIdValue;
         });
@@ -10799,43 +10893,12 @@ const registerRoute = (routePattern) => {
       }
     }
 
-    const actionBoundToThisRoute = action.bindParams(paramsSignal);
+    const actionBoundToThisRoute = action.bindParams(route.paramsSignal);
     route.action = actionBoundToThisRoute;
     return actionBoundToThisRoute;
   };
 
-  // Store private properties for internal access
-  routePrivateProperties.matchingSignal = matchingSignal;
-  routePrivateProperties.paramsSignal = paramsSignal;
-  routePrivateProperties.rawParamsSignal = rawParamsSignal;
-  routePrivateProperties.visitedSignal = visitedSignal;
-  routePrivateProperties.relativeUrlSignal = relativeUrlSignal;
-  routePrivateProperties.urlSignal = urlSignal;
-  routePrivateProperties.cleanupCallbackSet = cleanupCallbackSet;
-
   return route;
-};
-
-const useRouteStatus = (route) => {
-  const routePrivateProperties = getRoutePrivateProperties(route);
-  if (!routePrivateProperties) {
-    throw new Error(`Cannot find route private properties for ${route}`);
-  }
-
-  const { urlSignal, matchingSignal, paramsSignal, visitedSignal } =
-    routePrivateProperties;
-
-  const url = urlSignal.value;
-  const matching = matchingSignal.value;
-  const params = paramsSignal.value;
-  const visited = visitedSignal.value;
-
-  return {
-    url,
-    matching,
-    params,
-    visited,
-  };
 };
 
 let integration;
@@ -10845,56 +10908,6 @@ const setRouteIntegration = (integrationInterface) => {
 let onRouteDefined = () => {};
 const setOnRouteDefined = (v) => {
   onRouteDefined = v;
-};
-/**
- * Define all routes for the application.
- *
- * ⚠️ HOT RELOAD WARNING: When destructuring the returned routes, use 'let' instead of 'const'
- * to allow hot reload to update the route references:
- *
- * ❌ const [ROLE_ROUTE, DATABASE_ROUTE] = defineRoutes({...})
- * ✅ let [ROLE_ROUTE, DATABASE_ROUTE] = defineRoutes({...})
- *
- * @param {Object} routeDefinition - Object mapping URL patterns to actions
- * @returns {Array} Array of route objects in the same order as the keys
- */
-// All routes MUST be created at once because any url can be accessed
-// at any given time (url can be shared, reloaded, etc..)
-// Later I'll consider adding ability to have dynamic import into the mix
-// (An async function returning an action)
-
-const setupRoutes = (routeDefinition) => {
-  // Prevent calling setupRoutes when routes already exist - enforce clean setup
-  if (routeSet.size > 0) {
-    throw new Error(
-      "Routes already exist. Call clearAllRoutes() first to clean up existing routes before creating new ones. This prevents cross-test pollution and ensures clean state.",
-    );
-  }
-  // PHASE 1: Setup patterns with unified objects (includes all relationships and signal connections)
-  const routePatterns = setupPatterns(routeDefinition);
-
-  // PHASE 2: Create routes using the unified pattern objects
-  const routes = {};
-  for (const key of Object.keys(routeDefinition)) {
-    const routePattern = routePatterns[key];
-    const route = registerRoute(routePattern);
-    routes[key] = route;
-  }
-  onRouteDefined();
-
-  return routes;
-};
-
-// for unit tests
-const clearAllRoutes = () => {
-  for (const route of routeSet) {
-    route.cleanup();
-  }
-  routeSet.clear();
-  routePrivatePropertiesMap.clear();
-  // Pattern registry is now local to setupPatterns, no global cleanup needed
-  // Don't clear signal registry here - let tests manage it explicitly
-  // This prevents clearing signals that are still being used across multiple route registrations
 };
 
 const arraySignal = (initialValue = []) => {
