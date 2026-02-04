@@ -25,9 +25,11 @@ const ROUTE_DEACTIVATION_STRATEGY = "abort"; // 'abort', 'keep-loading'
 const ROUTE_NOT_MATCHING_PARAMS = {};
 
 const routeSet = new Set();
-// Store previous route states to detect changes
 const routePrivatePropertiesMap = new Map();
-
+const getRoutePrivateProperties = (route) => {
+  return routePrivatePropertiesMap.get(route);
+};
+// Store previous route states to detect changes
 const routePreviousStateMap = new WeakMap();
 // Store abort controllers per action to control their lifecycle based on route state
 const actionAbortControllerWeakMap = new WeakMap();
@@ -127,8 +129,8 @@ export const updateRoutes = (
 
       for (const [paramName, connection] of connectionMap) {
         const { signal: paramSignal, debug } = connection;
-        const params = routePrivateProperties.rawParamsSignal.value;
-        const urlParamValue = params[paramName];
+        const rawParams = route.rawParamsSignal.value;
+        const urlParamValue = rawParams[paramName];
 
         if (!newMatching) {
           // Route doesn't match - check if any matching route extracts this parameter
@@ -139,17 +141,18 @@ export const updateRoutes = (
             if (otherRoute === route || !otherRoute.matching) {
               continue;
             }
-            const otherRouteProperties = getRoutePrivateProperties(otherRoute);
-            const otherParams = otherRouteProperties.rawParamsSignal.value;
+            const otherRawParams = otherRoute.rawParamsSignal.value;
+            const otherRoutePrivateProperties =
+              getRoutePrivateProperties(otherRoute);
 
             // Check if this matching route extracts the parameter
-            if (paramName in otherParams) {
+            if (paramName in otherRawParams) {
               parameterExtractedByMatchingRoute = true;
             }
 
             // Check if this matching route is in the same family using parent-child relationships
             const thisPatternObj = routePattern;
-            const otherPatternObj = otherRouteProperties.routePattern;
+            const otherPatternObj = otherRoutePrivateProperties.routePattern;
 
             // Routes are in same family if they share a hierarchical relationship:
             // 1. One is parent/ancestor of the other
@@ -375,26 +378,15 @@ export const updateRoutes = (
   };
 };
 
-export const getRoutePrivateProperties = (route) => {
-  return routePrivatePropertiesMap.get(route);
-};
-
 const registerRoute = (routePattern) => {
   const urlPatternRaw = routePattern.originalPattern;
   if (DEBUG) {
     console.debug(`Creating route: ${urlPatternRaw}`);
   }
   const { cleanPattern, connectionMap } = routePattern;
-
-  const cleanupCallbackSet = new Set();
-  const cleanup = () => {
-    for (const cleanupCallback of cleanupCallbackSet) {
-      cleanupCallback();
-    }
-    cleanupCallbackSet.clear();
-  };
   const [publishStatus, subscribeStatus] = createPubSub();
 
+  // prepare route object
   const route = {
     urlPattern: cleanPattern,
     pattern: cleanPattern,
@@ -406,81 +398,85 @@ const registerRoute = (routePattern) => {
     relativeUrl: null,
     url: null,
     action: null,
-    cleanup,
+    matchingSignal: null,
+    paramsSignal: null,
+    urlSignal: null,
+    replaceParams: undefined,
+    subscribeStatus,
     toString: () => {
       return `route "${cleanPattern}"`;
     },
-    replaceParams: undefined,
-    subscribeStatus,
   };
   routeSet.add(route);
   const routePrivateProperties = {
     routePattern,
     originalPattern: urlPatternRaw,
     pattern: cleanPattern,
-    matchingSignal: null,
-    paramsSignal: null,
-    rawParamsSignal: null,
-    visitedSignal: null,
-    relativeUrlSignal: null,
-    urlSignal: null,
-    updateStatus: ({ matching, params, visited }) => {
-      let someChange = false;
-      matchingSignal.value = matching;
+    updateStatus: null,
+    cleanup: null,
+  };
+  routePrivatePropertiesMap.set(route, routePrivateProperties);
+  const cleanupCallbackSet = new Set();
+  routePrivateProperties.cleanup = () => {
+    for (const cleanupCallback of cleanupCallbackSet) {
+      cleanupCallback();
+    }
+    cleanupCallbackSet.clear();
+  };
+  routePrivateProperties.updateStatus = ({ matching, params, visited }) => {
+    let someChange = false;
+    route.matchingSignal.value = matching;
 
-      if (route.matching !== matching) {
-        route.matching = matching;
-        someChange = true;
-      }
-      visitedSignal.value = visited;
-      if (route.visited !== visited) {
-        route.visited = visited;
-        someChange = true;
-      }
-      // Store raw params (from URL) - paramsSignal will reactively compute merged params
-      rawParamsSignal.value = params;
-      // Get merged params for comparison (computed signal will handle the merging)
-      const mergedParams = paramsSignal.value;
-      if (route.params !== mergedParams) {
-        route.params = mergedParams;
-        someChange = true;
-      }
-      if (someChange) {
-        if (DEBUG) {
-          console.debug(`${route} status changed:`, {
-            matching,
-            params: mergedParams,
-            visited,
-          });
-        }
-        publishStatus({
+    if (route.matching !== matching) {
+      route.matching = matching;
+      someChange = true;
+    }
+    route.visitedSignal.value = visited;
+    if (route.visited !== visited) {
+      route.visited = visited;
+      someChange = true;
+    }
+    // Store raw params (from URL) - paramsSignal will reactively compute merged params
+    route.rawParamsSignal.value = params;
+    // Get merged params for comparison (computed signal will handle the merging)
+    const mergedParams = route.paramsSignal.value;
+    if (route.params !== mergedParams) {
+      route.params = mergedParams;
+      someChange = true;
+    }
+    if (someChange) {
+      if (DEBUG) {
+        console.debug(`${route} status changed:`, {
           matching,
           params: mergedParams,
           visited,
         });
       }
-    },
+      publishStatus({
+        matching,
+        params: mergedParams,
+        visited,
+      });
+    }
   };
-  routePrivatePropertiesMap.set(route, routePrivateProperties);
 
-  const matchingSignal = signal(false);
-  const rawParamsSignal = signal(ROUTE_NOT_MATCHING_PARAMS);
-  const paramsSignal = computed(() => {
-    const rawParams = rawParamsSignal.value;
+  // populate route object
+  route.matchingSignal = signal(false);
+  route.rawParamsSignal = signal(ROUTE_NOT_MATCHING_PARAMS);
+  route.paramsSignal = computed(() => {
+    const rawParams = route.rawParamsSignal.value;
     const resolvedParams = routePattern.resolveParams(rawParams);
     return resolvedParams;
   });
-  const visitedSignal = signal(false);
-
+  route.visitedSignal = signal(false);
   // Keep route.params synchronized with computed paramsSignal
   // This ensures route.params includes parameters from child routes
   effect(() => {
-    const computedParams = paramsSignal.value;
+    const computedParams = route.paramsSignal.value;
     if (route.params !== computedParams) {
       route.params = computedParams;
     }
   });
-
   for (const [paramName, connection] of connectionMap) {
     const { signal: paramSignal, debug } = connection;
 
@@ -495,9 +491,9 @@ const registerRoute = (routePattern) => {
     // eslint-disable-next-line no-loop-func
     effect(() => {
       const value = paramSignal.value;
-      const params = rawParamsSignal.value;
-      const urlParamValue = params[paramName];
-      const matching = matchingSignal.value;
+      const rawParams = route.rawParamsSignal.value;
+      const urlParamValue = rawParams[paramName];
+      const matching = route.matchingSignal.value;
 
       // Signal returned to default - clean up URL by removing the parameter
       // Skip cleanup during URL-to-signal synchronization to prevent recursion
@@ -547,7 +543,6 @@ const registerRoute = (routePattern) => {
       route.replaceParams({ [paramName]: value });
     });
   }
-
   route.navTo = (params) => {
     if (!integration) {
       if (import.meta.dev) {
@@ -570,7 +565,7 @@ const registerRoute = (routePattern) => {
     });
   };
   route.replaceParams = (newParams) => {
-    const matching = matchingSignal.peek();
+    const matching = route.matchingSignal.peek();
     if (!matching) {
       console.warn(
         `Cannot replace params on route ${route} because it is not matching the current URL.`,
@@ -598,16 +593,14 @@ const registerRoute = (routePattern) => {
       if (matchingRoute.action) {
         const matchingRoutePrivateProperties =
           getRoutePrivateProperties(matchingRoute);
-        if (matchingRoutePrivateProperties) {
-          const { routePattern: matchingRoutePattern } =
-            matchingRoutePrivateProperties;
-          const currentResolvedParams = matchingRoutePattern.resolveParams();
-          const updatedActionParams = {
-            ...currentResolvedParams,
-            ...newParams,
-          };
-          matchingRoute.action.replaceParams(updatedActionParams);
-        }
+        const { routePattern: matchingRoutePattern } =
+          matchingRoutePrivateProperties;
+        const currentResolvedParams = matchingRoutePattern.resolveParams();
+        const updatedActionParams = {
+          ...currentResolvedParams,
+          ...newParams,
+        };
+        matchingRoute.action.replaceParams(updatedActionParams);
       }
     }
 
@@ -683,20 +676,20 @@ const registerRoute = (routePattern) => {
   };
 
   // relativeUrl/url
-  const relativeUrlSignal = computed(() => {
-    const rawParams = rawParamsSignal.value;
+  route.relativeUrlSignal = computed(() => {
+    const rawParams = route.rawParamsSignal.value;
     const relativeUrl = route.buildRelativeUrl(rawParams);
     return relativeUrl;
   });
-  const urlSignal = computed(() => {
+  route.urlSignal = computed(() => {
     const routeUrl = route.buildUrl();
     return routeUrl;
   });
   const disposeRelativeUrlEffect = effect(() => {
-    route.relativeUrl = relativeUrlSignal.value;
+    route.relativeUrl = route.relativeUrlSignal.value;
   });
   const disposeUrlEffect = effect(() => {
-    route.url = urlSignal.value;
+    route.url = route.urlSignal.value;
   });
   cleanupCallbackSet.add(disposeRelativeUrlEffect);
   cleanupCallbackSet.add(disposeUrlEffect);
@@ -709,7 +702,7 @@ const registerRoute = (routePattern) => {
       if (mutableIdKeys.length) {
         const mutableIdKey = mutableIdKeys[0];
         const mutableIdValueSignal = computed(() => {
-          const params = paramsSignal.value;
+          const params = route.paramsSignal.value;
           const mutableIdValue = params[mutableIdKey];
           return mutableIdValue;
         });
@@ -729,19 +722,10 @@ const registerRoute = (routePattern) => {
       }
     }
 
-    const actionBoundToThisRoute = action.bindParams(paramsSignal);
+    const actionBoundToThisRoute = action.bindParams(route.paramsSignal);
     route.action = actionBoundToThisRoute;
     return actionBoundToThisRoute;
   };
-
-  // Store private properties for internal access
-  routePrivateProperties.matchingSignal = matchingSignal;
-  routePrivateProperties.paramsSignal = paramsSignal;
-  routePrivateProperties.rawParamsSignal = rawParamsSignal;
-  routePrivateProperties.visitedSignal = visitedSignal;
-  routePrivateProperties.relativeUrlSignal = relativeUrlSignal;
-  routePrivateProperties.urlSignal = urlSignal;
-  routePrivateProperties.cleanupCallbackSet = cleanupCallbackSet;
 
   return route;
 };
@@ -752,19 +736,7 @@ export const useRouteStatus = (route) => {
       `useRouteStatus() requires a route object, but received ${route}.`,
     );
   }
-  const routePrivateProperties = getRoutePrivateProperties(route);
-  if (!routePrivateProperties) {
-    if (import.meta.dev) {
-      let errorMessage = `Cannot find route private properties for ${route}.`;
-      errorMessage += `\nThis might be caused by hot reloading - try refreshing the page.`;
-      throw new Error(errorMessage);
-    }
-    throw new Error(`Cannot find route private properties for ${route}`);
-  }
-
-  const { urlSignal, matchingSignal, paramsSignal, visitedSignal } =
-    routePrivateProperties;
-
+  const { urlSignal, matchingSignal, paramsSignal, visitedSignal } = route;
   const url = urlSignal.value;
   const matching = matchingSignal.value;
   const params = paramsSignal.value;
@@ -786,6 +758,7 @@ let onRouteDefined = () => {};
 export const setOnRouteDefined = (v) => {
   onRouteDefined = v;
 };
+
 /**
  * Define all routes for the application.
  *
@@ -802,7 +775,6 @@ export const setOnRouteDefined = (v) => {
 // at any given time (url can be shared, reloaded, etc..)
 // Later I'll consider adding ability to have dynamic import into the mix
 // (An async function returning an action)
-
 export const setupRoutes = (routeDefinition) => {
   // Prevent calling setupRoutes when routes already exist - enforce clean setup
   if (routeSet.size > 0) {
@@ -827,8 +799,8 @@ export const setupRoutes = (routeDefinition) => {
 
 // for unit tests
 export const clearAllRoutes = () => {
-  for (const route of routeSet) {
-    route.cleanup();
+  for (const [, routePrivateProperties] of routePrivatePropertiesMap) {
+    routePrivateProperties.cleanup();
   }
   routeSet.clear();
   routePrivatePropertiesMap.clear();
