@@ -11,6 +11,112 @@ import { resolveRouteUrl, setupPatterns } from "./route_pattern.js";
 
 const DEBUG = false;
 
+/**
+ * Set up all application routes with reactive state management.
+ *
+ * Creates route objects that automatically sync with the current URL and provide
+ * reactive signals for building dynamic UIs. Each route tracks its matching state,
+ * extracted parameters, and computed URLs.
+ *
+ * @example
+ * ```js
+ * import { setupRoutes, stateSignal } from "@jsenv/navi";
+ *
+ * const settingsTabSignal = stateSignal('general', { type: "string", oneOf: ['general', 'overview'] });
+ *
+ * let { USER_PROFILE } = setupRoutes({
+ *   HOME: "/",
+ *   SETTINGS: "/settings/:tab=${settingsTabSignal}/",
+ * });
+ *
+ * USER_PROFILE.matching // boolean
+ * USER_PROFILE.matchingSignal.value // reactive signal
+ * settingsTabSignal.value = 'overview'; // updates URL automatically
+ * ```
+ *
+ * ⚠️ HOT RELOAD: Use 'let' instead of 'const' when destructuring:
+ * ```js
+ * // ❌ const { HOME, USER_PROFILE } = setupRoutes({...})
+ * // ✅ let { HOME, USER_PROFILE } = setupRoutes({...})
+ * ```
+ *
+ * @param {Object} routeDefinition - Object mapping route names to URL patterns
+ * @param {string} routeDefinition[key] - URL pattern with optional parameters
+ * @returns {Object} Object with route names as keys and route objects as values
+ * @returns {Object.<string, {
+ *   pattern: string,
+ *   matching: boolean,
+ *   params: Object,
+ *   url: string,
+ *   relativeUrl: string,
+ *   matchingSignal: import("@preact/signals").Signal<boolean>,
+ *   paramsSignal: import("@preact/signals").Signal<Object>,
+ *   urlSignal: import("@preact/signals").Signal<string>,
+ *   navTo: (params?: Object) => Promise<void>,
+ *   redirectTo: (params?: Object) => Promise<void>,
+ *   replaceParams: (params: Object) => Promise<void>,
+ *   buildUrl: (params?: Object) => string,
+ *   buildRelativeUrl: (params?: Object) => string,
+ * }>} Route objects with reactive state and navigation methods
+ *
+ * All routes MUST be created at once because any url can be accessed
+ * at any given time (url can be shared, reloaded, etc..)
+ */
+
+export const setupRoutes = (routeDefinition) => {
+  // Prevent calling setupRoutes when routes already exist - enforce clean setup
+  if (routeSet.size > 0) {
+    throw new Error(
+      "Routes already exist. Call clearAllRoutes() first to clean up existing routes before creating new ones. This prevents cross-test pollution and ensures clean state.",
+    );
+  }
+  // PHASE 1: Setup patterns with unified objects (includes all relationships and signal connections)
+  const routePatterns = setupPatterns(routeDefinition);
+
+  // PHASE 2: Create routes using the unified pattern objects
+  const routes = {};
+  for (const key of Object.keys(routeDefinition)) {
+    const routePattern = routePatterns[key];
+    const route = registerRoute(routePattern);
+    routes[key] = route;
+  }
+  onRouteDefined();
+
+  return routes;
+};
+
+export const useRouteStatus = (route) => {
+  if (import.meta.dev && (!route || !route.isRoute)) {
+    throw new TypeError(
+      `useRouteStatus() requires a route object, but received ${route}.`,
+    );
+  }
+  const { urlSignal, matchingSignal, paramsSignal, visitedSignal } = route;
+  const url = urlSignal.value;
+  const matching = matchingSignal.value;
+  const params = paramsSignal.value;
+  const visited = visitedSignal.value;
+
+  return {
+    url,
+    matching,
+    params,
+    visited,
+  };
+};
+
+// for unit tests
+export const clearAllRoutes = () => {
+  for (const [, routePrivateProperties] of routePrivatePropertiesMap) {
+    routePrivateProperties.cleanup();
+  }
+  routeSet.clear();
+  routePrivatePropertiesMap.clear();
+  // Pattern registry is now local to setupPatterns, no global cleanup needed
+  // Don't clear signal registry here - let tests manage it explicitly
+  // This prevents clearing signals that are still being used across multiple route registrations
+};
+
 // Flag to prevent signal-to-URL synchronization during URL-to-signal synchronization
 let isUpdatingRoutesFromUrl = false;
 
@@ -730,26 +836,6 @@ const registerRoute = (routePattern) => {
   return route;
 };
 
-export const useRouteStatus = (route) => {
-  if (import.meta.dev && (!route || !route.isRoute)) {
-    throw new TypeError(
-      `useRouteStatus() requires a route object, but received ${route}.`,
-    );
-  }
-  const { urlSignal, matchingSignal, paramsSignal, visitedSignal } = route;
-  const url = urlSignal.value;
-  const matching = matchingSignal.value;
-  const params = paramsSignal.value;
-  const visited = visitedSignal.value;
-
-  return {
-    url,
-    matching,
-    params,
-    visited,
-  };
-};
-
 let integration;
 export const setRouteIntegration = (integrationInterface) => {
   integration = integrationInterface;
@@ -757,54 +843,4 @@ export const setRouteIntegration = (integrationInterface) => {
 let onRouteDefined = () => {};
 export const setOnRouteDefined = (v) => {
   onRouteDefined = v;
-};
-
-/**
- * Define all routes for the application.
- *
- * ⚠️ HOT RELOAD WARNING: When destructuring the returned routes, use 'let' instead of 'const'
- * to allow hot reload to update the route references:
- *
- * ❌ const [ROLE_ROUTE, DATABASE_ROUTE] = defineRoutes({...})
- * ✅ let [ROLE_ROUTE, DATABASE_ROUTE] = defineRoutes({...})
- *
- * @param {Object} routeDefinition - Object mapping URL patterns to actions
- * @returns {Array} Array of route objects in the same order as the keys
- */
-// All routes MUST be created at once because any url can be accessed
-// at any given time (url can be shared, reloaded, etc..)
-// Later I'll consider adding ability to have dynamic import into the mix
-// (An async function returning an action)
-export const setupRoutes = (routeDefinition) => {
-  // Prevent calling setupRoutes when routes already exist - enforce clean setup
-  if (routeSet.size > 0) {
-    throw new Error(
-      "Routes already exist. Call clearAllRoutes() first to clean up existing routes before creating new ones. This prevents cross-test pollution and ensures clean state.",
-    );
-  }
-  // PHASE 1: Setup patterns with unified objects (includes all relationships and signal connections)
-  const routePatterns = setupPatterns(routeDefinition);
-
-  // PHASE 2: Create routes using the unified pattern objects
-  const routes = {};
-  for (const key of Object.keys(routeDefinition)) {
-    const routePattern = routePatterns[key];
-    const route = registerRoute(routePattern);
-    routes[key] = route;
-  }
-  onRouteDefined();
-
-  return routes;
-};
-
-// for unit tests
-export const clearAllRoutes = () => {
-  for (const [, routePrivateProperties] of routePrivatePropertiesMap) {
-    routePrivateProperties.cleanup();
-  }
-  routeSet.clear();
-  routePrivatePropertiesMap.clear();
-  // Pattern registry is now local to setupPatterns, no global cleanup needed
-  // Don't clear signal registry here - let tests manage it explicitly
-  // This prevents clearing signals that are still being used across multiple route registrations
 };
