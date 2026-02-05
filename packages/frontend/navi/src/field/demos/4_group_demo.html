@@ -16,59 +16,47 @@
 
       const App = () => {
         return (
-          <div>
-            <p>
-              This demo shows how the Group component handles border radius for
-              its children.
-            </p>
-
-            <Box
-              margin="30px 0"
-              padding="20px"
-              background="white"
-              borderRadius="8px"
-            >
-              <h3>Single Child (border radius preserved)</h3>
-              <p>
-                When there's only one child, its original border radius is
-                maintained:
-              </p>
+          <Box spacing="m" row>
+            <Box background="white" borderRadius="8px">
+              <h3>Single Child</h3>
               <Box row spacing="m">
                 <Group>
                   <Button>Single Button</Button>
                 </Group>
+                <Group>
+                  <Input placeholder="Single Input" />
+                </Group>
+                <Group>
+                  <Box
+                    padding="l"
+                    background="#f8f9fa"
+                    border="2px solid #dee2e6"
+                    borderRadius="l"
+                  >
+                    Single Card
+                  </Box>
+                </Group>
               </Box>
             </Box>
 
-            <Box
-              margin="30px 0"
-              padding="20px"
-              background="white"
-              borderRadius="8px"
-            >
-              <h3>Multiple Children (border radius modified)</h3>
-              <p>When there are multiple children:</p>
-              <ul>
-                <li>First child: loses bottom border radius</li>
-                <li>Last child: loses top border radius</li>
-                <li>Middle children: lose all border radius</li>
-              </ul>
+            <Box background="white" borderRadius="8px">
+              <h3>Multiple Children</h3>
 
-              <h4>Vertical Group - Buttons</h4>
+              <h4>Buttons</h4>
               <Group>
-                <Button>First Button</Button>
-                <Button>Middle Button</Button>
-                <Button>Last Button</Button>
+                <Button>First</Button>
+                <Button>Middle</Button>
+                <Button>Last</Button>
               </Group>
 
-              <h4>Vertical Group - Inputs</h4>
+              <h4>Inputs</h4>
               <Group>
-                <Input placeholder="First Input" />
-                <Input placeholder="Middle Input" />
-                <Input placeholder="Last Input" />
+                <Input placeholder="First" />
+                <Input placeholder="Middle" />
+                <Input placeholder="Last" />
               </Group>
 
-              <h4>Vertical Group - Cards</h4>
+              <h4>Cards</h4>
               <Group>
                 <Box
                   padding="l"
@@ -76,7 +64,7 @@
                   border="2px solid #dee2e6"
                   borderRadius="l"
                 >
-                  First Card - Notice how the bottom border radius is removed
+                  First Card
                 </Box>
                 <Box
                   padding="l"
@@ -84,7 +72,7 @@
                   border="2px solid #dee2e6"
                   borderRadius="l"
                 >
-                  Middle Card - All border radius removed
+                  Middle Card
                 </Box>
                 <Box
                   padding="l"
@@ -92,151 +80,52 @@
                   border="2px solid #dee2e6"
                   borderRadius="l"
                 >
-                  Last Card - Notice how the top border radius is removed
+                  Last Card
                 </Box>
               </Group>
             </Box>
 
-            <Box
-              margin="30px 0"
-              padding="20px"
-              background="white"
-              borderRadius="8px"
-            >
+            <Box background="white" borderRadius="8px">
               <h3>Horizontal Group</h3>
-              <p>The same logic applies when using flex-direction: row:</p>
 
               <Group style={{ flexDirection: "row" }}>
-                <Box
-                  as="button"
-                  padding="12px 20px"
-                  background="#007bff"
-                  color="white"
-                  border="2px solid #0056b3"
-                  borderRadius="12px"
-                  cursor="pointer"
-                >
-                  First
-                </Box>
-                <Box
-                  as="button"
-                  padding="12px 20px"
-                  background="#007bff"
-                  color="white"
-                  border="2px solid #0056b3"
-                  borderRadius="12px"
-                  cursor="pointer"
-                >
-                  Middle
-                </Box>
-                <Box
-                  as="button"
-                  padding="12px 20px"
-                  background="#007bff"
-                  color="white"
-                  border="2px solid #0056b3"
-                  borderRadius="12px"
-                  cursor="pointer"
-                >
-                  Last
-                </Box>
+                <Button>First</Button>
+                <Button>Middle</Button>
+                <Button>Last</Button>
               </Group>
             </Box>
 
-            <Box
-              margin="30px 0"
-              padding="20px"
-              background="white"
-              borderRadius="8px"
-            >
+            <Box background="white" borderRadius="8px">
               <h3>Two Children</h3>
-              <p>With just two children, one is first and one is last:</p>
 
               <Group>
-                <Box
-                  as="button"
-                  padding="12px 20px"
-                  background="#007bff"
-                  color="white"
-                  border="2px solid #0056b3"
-                  borderRadius="12px"
-                  cursor="pointer"
-                >
-                  First Button (no bottom radius)
-                </Box>
-                <Box
-                  as="button"
-                  padding="12px 20px"
-                  background="#007bff"
-                  color="white"
-                  border="2px solid #0056b3"
-                  borderRadius="12px"
-                  cursor="pointer"
-                >
-                  Last Button (no top radius)
-                </Box>
+                <Button>First</Button>
+                <Button>Last</Button>
               </Group>
 
               <Group style={{ flexDirection: "row" }}>
-                <Box
-                  as="input"
-                  placeholder="First"
-                  padding="12px 16px"
-                  border="2px solid #ddd"
-                  borderRadius="8px"
-                  minWidth="150px"
-                />
-                <Box
-                  as="input"
-                  placeholder="Last"
-                  padding="12px 16px"
-                  border="2px solid #ddd"
-                  borderRadius="8px"
-                  minWidth="150px"
-                />
+                <Input placeholder="First" />
+                <Input placeholder="Last" />
               </Group>
             </Box>
 
-            <Box
-              margin="30px 0"
-              padding="20px"
-              background="white"
-              borderRadius="8px"
-            >
+            <Box background="white" borderRadius="8px">
               <h3>Mixed Content</h3>
-              <p>The Group works with any type of children:</p>
 
               <Group>
+                <Button>Button</Button>
+                <Input placeholder="Input" />
                 <Box
-                  as="button"
-                  padding="12px 20px"
-                  background="#007bff"
-                  color="white"
-                  border="2px solid #0056b3"
-                  borderRadius="12px"
-                  cursor="pointer"
-                >
-                  Button First
-                </Box>
-                <Box
-                  as="input"
-                  placeholder="Input Middle"
-                  padding="12px 16px"
-                  border="2px solid #ddd"
-                  borderRadius="8px"
-                  minWidth="150px"
-                />
-                <Box
-                  padding="16px"
+                  padding="l"
                   background="#f8f9fa"
                   border="2px solid #dee2e6"
-                  borderRadius="16px"
+                  borderRadius="l"
                 >
-                  Card Last
+                  Card
                 </Box>
               </Group>
             </Box>
-          </div>
+          </Box>
         );
       };
 
