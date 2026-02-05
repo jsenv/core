@@ -12,6 +12,7 @@
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
+      import { useState } from "preact/hooks";
       import { Group, Box, Button, Input, Separator, Label } from "@jsenv/navi";
 
       const BasicBoxesDemo = () => {
@@ -124,8 +125,12 @@
               </Box>
 
               <Box>
-                <h3>Scaling - 5 Elements</h3>
-                <Group vertical borderWidth="2">
+                <h3>Scaling - 5 Elements (with container border)</h3>
+                <Group
+                  vertical
+                  borderWidth="2"
+                  style={{ border: "3px dashed #666" }}
+                >
                   <Box
                     padding="m"
                     background="#f1f8e9"
@@ -167,6 +172,47 @@
                     Fifth Element
                   </Box>
                 </Group>
+              </Box>
+
+              <Box>
+                <h3>Group with Large Borders - 3 Children</h3>
+                <Group
+                  vertical
+                  borderWidth="8"
+                  style={{ border: "3px dashed #999" }}
+                >
+                  <Box
+                    padding="l"
+                    background="#ffebee"
+                    border="8px solid #f44336"
+                    borderRadius="l"
+                  >
+                    Child 1 - Large Border
+                  </Box>
+                  <Box
+                    padding="l"
+                    background="#fff3e0"
+                    border="8px solid #ff9800"
+                    borderRadius="l"
+                  >
+                    Child 2 - Large Border
+                  </Box>
+                  <Box
+                    padding="l"
+                    background="#e8f5e8"
+                    border="8px solid #4caf50"
+                    borderRadius="l"
+                  >
+                    Child 3 - Large Border
+                  </Box>
+                </Group>
+                <p
+                  style={{ fontSize: "14px", color: "#666", marginTop: "10px" }}
+                >
+                  Notice how the group adjusts its content area when children
+                  are positioned. The dashed border shows the group's actual
+                  bounds.
+                </p>
               </Box>
             </Box>
           </Box>
@@ -254,12 +300,125 @@
         );
       };
 
+      const InteractiveDemo = () => {
+        const [blocks, setBlocks] = useState([
+          { id: 1, color: "#e3f2fd", borderColor: "#2196f3", text: "Block 1" },
+          { id: 2, color: "#fff3e0", borderColor: "#ff9800", text: "Block 2" },
+          { id: 3, color: "#e8f5e8", borderColor: "#4caf50", text: "Block 3" },
+        ]);
+
+        let nextId = 4;
+        const colors = [
+          { bg: "#ffebee", border: "#f44336" },
+          { bg: "#f3e5f5", border: "#9c27b0" },
+          { bg: "#e0f2f1", border: "#009688" },
+          { bg: "#fce4ec", border: "#e91e63" },
+          { bg: "#f1f8e9", border: "#8bc34a" },
+        ];
+
+        const addBlock = () => {
+          const colorIndex = blocks.length % colors.length;
+          const newBlock = {
+            id: nextId++,
+            color: colors[colorIndex].bg,
+            borderColor: colors[colorIndex].border,
+            text: `Block ${nextId - 1}`,
+          };
+          setBlocks([...blocks, newBlock]);
+        };
+
+        const removeLastBlock = () => {
+          if (blocks.length > 0) {
+            setBlocks(blocks.slice(0, -1));
+          }
+        };
+
+        const removeBlock = (id) => {
+          setBlocks(blocks.filter((block) => block.id !== id));
+        };
+
+        return (
+          <Box background="white" padding="l" borderRadius="m">
+            <h2>Part 4: Interactive Group Demo</h2>
+            <Box spacing="l">
+              <Box column spacing="m">
+                <Button onClick={addBlock}>Add Block</Button>
+                <Button
+                  onClick={removeLastBlock}
+                  disabled={blocks.length === 0}
+                >
+                  Remove Last Block
+                </Button>
+              </Box>
+
+              <Box>
+                <h3>Dynamic Group ({blocks.length} blocks)</h3>
+                <Group
+                  vertical
+                  borderWidth="2"
+                  style={{
+                    border: "3px dashed #333",
+                    minHeight: "50px",
+                  }}
+                >
+                  {blocks.map((block) => (
+                    <Box
+                      key={block.id}
+                      padding="m"
+                      background={block.color}
+                      border={`2px solid ${block.borderColor}`}
+                      borderRadius="m"
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                      }}
+                    >
+                      <span>{block.text}</span>
+                      <Button
+                        onClick={() => removeBlock(block.id)}
+                        style={{
+                          padding: "4px 8px",
+                          fontSize: "12px",
+                          background: "rgba(255,255,255,0.8)",
+                        }}
+                      >
+                        ×
+                      </Button>
+                    </Box>
+                  ))}
+                  {blocks.length === 0 && (
+                    <Box
+                      padding="xl"
+                      style={{
+                        textAlign: "center",
+                        color: "#999",
+                        fontStyle: "italic",
+                      }}
+                    >
+                      No blocks - add some to see the group in action!
+                    </Box>
+                  )}
+                </Group>
+                <p
+                  style={{ fontSize: "14px", color: "#666", marginTop: "10px" }}
+                >
+                  The dashed border shows the group container. Notice how it
+                  adjusts its size as blocks are added/removed.
+                </p>
+              </Box>
+            </Box>
+          </Box>
+        );
+      };
+
       const App = () => {
         return (
           <Box spacing="xl">
             <BasicBoxesDemo />
             <InputElementsDemo />
             <BorderlessDemo />
+            <InteractiveDemo />
           </Box>
         );
       };
