@@ -14,117 +14,181 @@
       import { render } from "preact";
       import { Group, Box, Button, Input } from "@jsenv/navi";
 
-      const App = () => {
+      const BasicBoxesDemo = () => {
         return (
-          <Box spacing="m" row>
-            <Box background="white" borderRadius="8px">
-              <h3>Single Child</h3>
-              <Box row spacing="m">
-                <Group>
-                  <Button>Single Button</Button>
-                </Group>
-                <Group>
-                  <Input placeholder="Single Input" />
-                </Group>
+          <Box background="white" padding="l" borderRadius="m">
+            <h2>Part 1: Basic Boxes</h2>
+            <Box spacing="l">
+              <Box>
+                <h3>Single Box</h3>
                 <Group>
                   <Box
+                    padding="m"
+                    background="#e3f2fd"
+                    border="2px solid #2196f3"
+                    borderRadius="m"
+                  >
+                    Single Box
+                  </Box>
+                </Group>
+              </Box>
+
+              <Box>
+                <h3>Multiple Boxes - Vertical</h3>
+                <Group>
+                  <Box
+                    padding="m"
+                    background="#e8f5e8"
+                    border="2px solid #4caf50"
+                    borderRadius="m"
+                  >
+                    First Box
+                  </Box>
+                  <Box
+                    padding="m"
+                    background="#e8f5e8"
+                    border="2px solid #4caf50"
+                    borderRadius="m"
+                  >
+                    Second Box
+                  </Box>
+                  <Box
+                    padding="m"
+                    background="#e8f5e8"
+                    border="2px solid #4caf50"
+                    borderRadius="m"
+                  >
+                    Third Box
+                  </Box>
+                </Group>
+              </Box>
+
+              <Box>
+                <h3>Multiple Boxes - Horizontal</h3>
+                <Group style={{ flexDirection: "row" }}>
+                  <Box
+                    padding="m"
+                    background="#fff3e0"
+                    border="2px solid #ff9800"
+                    borderRadius="m"
+                  >
+                    Left Box
+                  </Box>
+                  <Box
+                    padding="m"
+                    background="#fff3e0"
+                    border="2px solid #ff9800"
+                    borderRadius="m"
+                  >
+                    Middle Box
+                  </Box>
+                  <Box
+                    padding="m"
+                    background="#fff3e0"
+                    border="2px solid #ff9800"
+                    borderRadius="m"
+                  >
+                    Right Box
+                  </Box>
+                </Group>
+              </Box>
+
+              <Box>
+                <h3>Different Sizes & Styles</h3>
+                <Group>
+                  <Box
+                    padding="s"
+                    background="#fce4ec"
+                    border="1px solid #e91e63"
+                    borderRadius="s"
+                  >
+                    Small Box
+                  </Box>
+                  <Box
                     padding="l"
-                    background="#f8f9fa"
-                    border="2px solid #dee2e6"
+                    background="#f3e5f5"
+                    border="3px solid #9c27b0"
                     borderRadius="l"
                   >
-                    Single Card
+                    Large Box with Different Border
+                  </Box>
+                  <Box
+                    padding="m"
+                    background="#e0f2f1"
+                    border="2px dashed #009688"
+                    borderRadius="m"
+                  >
+                    Dashed Border Box
                   </Box>
                 </Group>
               </Box>
             </Box>
+          </Box>
+        );
+      };
 
-            <Box background="white" borderRadius="8px">
-              <h3>Multiple Children</h3>
-
-              <h4>Buttons</h4>
-              <Group>
-                <Button>First</Button>
-                <Button>Middle</Button>
-                <Button>Last</Button>
-              </Group>
-
-              <h4>Inputs</h4>
-              <Group>
-                <Input placeholder="First" />
-                <Input placeholder="Middle" />
-                <Input placeholder="Last" />
-              </Group>
-
-              <h4>Cards</h4>
-              <Group>
-                <Box
-                  padding="l"
-                  background="#f8f9fa"
-                  border="2px solid #dee2e6"
-                  borderRadius="l"
-                >
-                  First Card
+      const InputElementsDemo = () => {
+        return (
+          <Box background="white" padding="l" borderRadius="m">
+            <h2>Part 2: Input and Button Components</h2>
+            <Box spacing="l">
+              <Box>
+                <h3>Single Components</h3>
+                <Box row spacing="m">
+                  <Group>
+                    <Button>Single Button</Button>
+                  </Group>
+                  <Group>
+                    <Input placeholder="Single Input" />
+                  </Group>
                 </Box>
-                <Box
-                  padding="l"
-                  background="#f8f9fa"
-                  border="2px solid #dee2e6"
-                  borderRadius="l"
-                >
-                  Middle Card
-                </Box>
-                <Box
-                  padding="l"
-                  background="#f8f9fa"
-                  border="2px solid #dee2e6"
-                  borderRadius="l"
-                >
-                  Last Card
-                </Box>
-              </Group>
+              </Box>
+
+              <Box>
+                <h3>Multiple Buttons</h3>
+                <Group>
+                  <Button>First Button</Button>
+                  <Button>Second Button</Button>
+                  <Button>Third Button</Button>
+                </Group>
+              </Box>
+
+              <Box>
+                <h3>Multiple Inputs</h3>
+                <Group>
+                  <Input placeholder="First Input" />
+                  <Input placeholder="Second Input" />
+                  <Input placeholder="Third Input" />
+                </Group>
+              </Box>
+
+              <Box>
+                <h3>Horizontal Button Group</h3>
+                <Group style={{ flexDirection: "row" }}>
+                  <Button>Left</Button>
+                  <Button>Center</Button>
+                  <Button>Right</Button>
+                </Group>
+              </Box>
+
+              <Box>
+                <h3>Mixed Components</h3>
+                <Group>
+                  <Button>Action Button</Button>
+                  <Input placeholder="Enter value" />
+                  <Button>Submit</Button>
+                </Group>
+              </Box>
             </Box>
+          </Box>
+        );
+      };
 
-            <Box background="white" borderRadius="8px">
-              <h3>Horizontal Group</h3>
-
-              <Group style={{ flexDirection: "row" }}>
-                <Button>First</Button>
-                <Button>Middle</Button>
-                <Button>Last</Button>
-              </Group>
-            </Box>
-
-            <Box background="white" borderRadius="8px">
-              <h3>Two Children</h3>
-
-              <Group>
-                <Button>First</Button>
-                <Button>Last</Button>
-              </Group>
-
-              <Group>
-                <Input placeholder="First" />
-                <Input placeholder="Last" />
-              </Group>
-            </Box>
-
-            <Box background="white" borderRadius="8px">
-              <h3>Mixed Content</h3>
-
-              <Group>
-                <Button>Button</Button>
-                <Input placeholder="Input" />
-                <Box
-                  padding="l"
-                  background="#f8f9fa"
-                  border="2px solid #dee2e6"
-                  borderRadius="l"
-                >
-                  Card
-                </Box>
-              </Group>
-            </Box>
+      const App = () => {
+        return (
+          <Box spacing="xl">
+            <BasicBoxesDemo />
+            <InputElementsDemo />
           </Box>
         );
       };
