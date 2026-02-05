@@ -4891,12 +4891,6 @@ const FLOW_PROPS = {
   box: () => {},
   row: () => {},
   column: () => {},
-
-  position: PASS_THROUGH,
-  absolute: applyToCssPropWhenTruthy("position", "absolute", "static"),
-  relative: applyToCssPropWhenTruthy("position", "relative", "static"),
-  fixed: applyToCssPropWhenTruthy("position", "fixed", "static"),
-  sticky: applyToCssPropWhenTruthy("position", "sticky", "static"),
 };
 const OUTER_SPACING_PROPS = {
   margin: PASS_THROUGH,
@@ -5070,10 +5064,23 @@ const POSITION_PROPS = {
     }
     return undefined;
   },
-  left: PASS_THROUGH,
-  top: PASS_THROUGH,
-  bottom: PASS_THROUGH,
-  right: PASS_THROUGH,
+  position: PASS_THROUGH,
+  absolute: applyToCssPropWhenTruthy("position", "absolute", "static"),
+  relative: applyToCssPropWhenTruthy("position", "relative", "static"),
+  fixed: applyToCssPropWhenTruthy("position", "fixed", "static"),
+  sticky: applyToCssPropWhenTruthy("position", "sticky", "static"),
+  left: (value = 0) => {
+    return { left: value };
+  },
+  top: (value = 0) => {
+    return { top: value };
+  },
+  bottom: (value = 0) => {
+    return { bottom: value };
+  },
+  right: (value = 0) => {
+    return { right: value };
+  },
 
   transform: PASS_THROUGH,
   translateX: (value) => {
