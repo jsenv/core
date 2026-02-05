@@ -23118,20 +23118,22 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
   .navi_group {
     --border-width: 1px;
 
-    > * {
-      position: relative;
-    }
     > *:hover,
     > *[data-hover] {
+      position: relative;
       z-index: 1;
     }
     > *:focus-visible,
     > *[data-focus-visible] {
+      position: relative;
       z-index: 1;
     }
 
-    /* Horizontal (default): Cumulative positioning for border overlap */
+    /* Horizontal (default): Cumulative margin for border overlap */
     &:not([data-vertical]) {
+      > *:not(:first-child) {
+        margin-left: calc(var(--border-width) * -1);
+      }
       > *:first-child:not(:only-child) {
         border-top-right-radius: 0 !important;
         border-bottom-right-radius: 0 !important;
@@ -23164,8 +23166,11 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
       }
     }
 
-    /* Vertical: Cumulative positioning for border overlap */
+    /* Vertical: Cumulative margin for border overlap */
     &[data-vertical] {
+      > *:not(:first-child) {
+        margin-top: calc(var(--border-width) * -1);
+      }
       > *:first-child:not(:only-child) {
         border-bottom-right-radius: 0 !important;
         border-bottom-left-radius: 0 !important;
@@ -23206,55 +23211,19 @@ const Group = ({
   vertical = row,
   ...props
 }) => {
-  const groupRef = useRef(null);
   if (typeof borderWidth === "string") {
     borderWidth = parseFloat(borderWidth);
   }
   const borderWidthCssValue = typeof borderWidth === "number" ? `${borderWidth}px` : borderWidth;
-  useLayoutEffect(() => {
-    const group = groupRef.current;
-    if (!group) {
-      return;
-    }
-    const {
-      children
-    } = group;
-    if (children.length === 0) {
-      return;
-    }
-    let i = 0;
-    while (i < children.length) {
-      const child = children[i];
-      if (i === 0) {
-        // First child stays in place
-        if (vertical) {
-          child.style.top = "";
-        } else {
-          child.style.left = "";
-        }
-      } else {
-        // Subsequent children get cumulative positioning
-        const offset = i * borderWidth * -1;
-        if (vertical) {
-          child.style.top = borderWidth ? `${offset}px` : "";
-          child.style.left = "";
-        } else {
-          child.style.left = borderWidth ? `${offset}px` : "";
-          child.style.top = "";
-        }
-      }
-      i++;
-    }
-  }, [children, borderWidth, vertical]);
   return jsx(Box, {
-    ref: groupRef,
     baseClassName: "navi_group",
     "data-vertical": vertical ? "" : undefined,
     row: row,
-    style: {
-      "--border-width": borderWidthCssValue
-    },
     ...props,
+    style: {
+      "--border-width": borderWidthCssValue,
+      ...props.style
+    },
     children: children
   });
 };
