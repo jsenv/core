@@ -15,6 +15,8 @@ import.meta.css = /* css */ `
       }
 
       > *:not(:first-child):not(:last-child) {
+        border-right: none !important;
+        border-left: none !important;
         border-radius: 0 !important;
       }
     }
@@ -22,8 +24,6 @@ import.meta.css = /* css */ `
     /* Vertical: First child loses bottom radius, last child loses top radius */
     &[data-vertical] {
       > *:first-child:not(:only-child) {
-        border-top-left-radius: revert !important;
-        border-top-right-radius: revert !important;
         border-bottom-right-radius: 0 !important;
         border-bottom-left-radius: 0 !important;
       }
@@ -31,8 +31,12 @@ import.meta.css = /* css */ `
       > *:last-child:not(:only-child) {
         border-top-left-radius: 0 !important;
         border-top-right-radius: 0 !important;
-        border-bottom-right-radius: revert !important;
-        border-bottom-left-radius: revert !important;
+      }
+
+      > *:not(:first-child):not(:last-child) {
+        border-top: none !important;
+        border-bottom: none !important;
+        border-radius: 0 !important;
       }
     }
   }
