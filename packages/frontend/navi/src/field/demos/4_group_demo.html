@@ -12,7 +12,7 @@
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { Group, Box, Button, Input } from "@jsenv/navi";
+      import { Group, Box, Button, Input, Separator, Label } from "@jsenv/navi";
 
       const BasicBoxesDemo = () => {
         return (
@@ -122,6 +122,52 @@
                   </Box>
                 </Group>
               </Box>
+
+              <Box>
+                <h3>Scaling - 5 Elements</h3>
+                <Group vertical>
+                  <Box
+                    padding="m"
+                    background="#f1f8e9"
+                    border="2px solid #8bc34a"
+                    borderRadius="m"
+                  >
+                    First Element
+                  </Box>
+                  <Box
+                    padding="m"
+                    background="#f1f8e9"
+                    border="2px solid #8bc34a"
+                    borderRadius="m"
+                  >
+                    Second Element
+                  </Box>
+                  <Box
+                    padding="m"
+                    background="#f1f8e9"
+                    border="2px solid #8bc34a"
+                    borderRadius="m"
+                  >
+                    Third Element
+                  </Box>
+                  <Box
+                    padding="m"
+                    background="#f1f8e9"
+                    border="2px solid #8bc34a"
+                    borderRadius="m"
+                  >
+                    Fourth Element
+                  </Box>
+                  <Box
+                    padding="m"
+                    background="#f1f8e9"
+                    border="2px solid #8bc34a"
+                    borderRadius="m"
+                  >
+                    Fifth Element
+                  </Box>
+                </Group>
+              </Box>
             </Box>
           </Box>
         );
@@ -184,11 +230,36 @@
         );
       };
 
+      const BorderlessDemo = () => {
+        return (
+          <Box background="white" padding="l" borderRadius="m">
+            <h2>Part 3: Borderless Groups</h2>
+            <Box spacing="l">
+              <h3>Checkbox Items - No Borders</h3>
+              <Box background="orange" padding="l" width="200">
+                <Group borderWidth={0} row>
+                  <Label background="#F5F6F7" padding="m" borderRadius="s">
+                    <Input type="checkbox" />
+                    First Option
+                  </Label>
+                  <Separator color="#E9ECF0" margin="0" />
+                  <Label background="#F5F6F7" padding="m" borderRadius="s">
+                    <Input type="checkbox" />
+                    Second Option
+                  </Label>
+                </Group>
+              </Box>
+            </Box>
+          </Box>
+        );
+      };
+
       const App = () => {
         return (
           <Box spacing="xl">
             <BasicBoxesDemo />
             <InputElementsDemo />
+            <BorderlessDemo />
           </Box>
         );
       };
