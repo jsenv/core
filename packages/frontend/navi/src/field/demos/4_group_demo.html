@@ -124,55 +124,7 @@
                 </Group>
               </Box>
 
-              <Box>
-                <h3>Scaling - 5 Elements (with container border)</h3>
-                <Group
-                  vertical
-                  borderWidth="2"
-                  style={{ border: "3px dashed #666" }}
-                >
-                  <Box
-                    padding="m"
-                    background="#f1f8e9"
-                    border="2px solid #8bc34a"
-                    borderRadius="m"
-                  >
-                    First Element
-                  </Box>
-                  <Box
-                    padding="m"
-                    background="#f1f8e9"
-                    border="2px solid #8bc34a"
-                    borderRadius="m"
-                  >
-                    Second Element
-                  </Box>
-                  <Box
-                    padding="m"
-                    background="#f1f8e9"
-                    border="2px solid #8bc34a"
-                    borderRadius="m"
-                  >
-                    Third Element
-                  </Box>
-                  <Box
-                    padding="m"
-                    background="#f1f8e9"
-                    border="2px solid #8bc34a"
-                    borderRadius="m"
-                  >
-                    Fourth Element
-                  </Box>
-                  <Box
-                    padding="m"
-                    background="#f1f8e9"
-                    border="2px solid #8bc34a"
-                    borderRadius="m"
-                  >
-                    Fifth Element
-                  </Box>
-                </Group>
-              </Box>
+              <ManyChildrenDemo />
 
               <Box>
                 <h3>Group with Large Borders - 3 Children</h3>
@@ -215,6 +167,60 @@
                 </p>
               </Box>
             </Box>
+          </Box>
+        );
+      };
+
+      const ManyChildrenDemo = () => {
+        return (
+          <Box>
+            <h3>Scaling - 5 Elements (with container border)</h3>
+            <Group
+              vertical
+              borderWidth="2"
+              style={{ border: "3px dashed #666" }}
+            >
+              <Box
+                padding="m"
+                background="#f1f8e9"
+                border="2px solid #8bc34a"
+                borderRadius="m"
+              >
+                First Element
+              </Box>
+              <Box
+                padding="m"
+                background="#f1f8e9"
+                border="2px solid #8bc34a"
+                borderRadius="m"
+              >
+                Second Element
+              </Box>
+              <Box
+                padding="m"
+                background="#f1f8e9"
+                border="2px solid #8bc34a"
+                borderRadius="m"
+              >
+                Third Element
+              </Box>
+              <Box
+                padding="m"
+                background="#f1f8e9"
+                border="2px solid #8bc34a"
+                borderRadius="m"
+              >
+                Fourth Element
+              </Box>
+              <Box
+                padding="m"
+                background="#f1f8e9"
+                border="2px solid #8bc34a"
+                borderRadius="m"
+              >
+                Fifth Element
+              </Box>
+            </Group>
           </Box>
         );
       };
