@@ -1,3 +1,4 @@
+import { useLayoutEffect, useRef } from "preact/hooks";
 import { Box } from "../box/box.jsx";
 
 import.meta.css = /* css */ `
@@ -27,34 +28,6 @@ import.meta.css = /* css */ `
           border-top-right-radius: 0 !important;
           border-bottom-right-radius: 0 !important;
         }
-      }
-
-      > *:nth-child(2) {
-        left: calc(var(--border-width) * -1);
-      }
-      > *:nth-child(3) {
-        left: calc(var(--border-width) * -2);
-      }
-      > *:nth-child(4) {
-        left: calc(var(--border-width) * -3);
-      }
-      > *:nth-child(5) {
-        left: calc(var(--border-width) * -4);
-      }
-      > *:nth-child(6) {
-        left: calc(var(--border-width) * -5);
-      }
-      > *:nth-child(7) {
-        left: calc(var(--border-width) * -6);
-      }
-      > *:nth-child(8) {
-        left: calc(var(--border-width) * -7);
-      }
-      > *:nth-child(9) {
-        left: calc(var(--border-width) * -8);
-      }
-      > *:nth-child(10) {
-        left: calc(var(--border-width) * -9);
       }
 
       > *:last-child:not(:only-child) {
@@ -91,34 +64,6 @@ import.meta.css = /* css */ `
         }
       }
 
-      > *:nth-child(2) {
-        top: calc(var(--border-width) * -1);
-      }
-      > *:nth-child(3) {
-        top: calc(var(--border-width) * -2);
-      }
-      > *:nth-child(4) {
-        top: calc(var(--border-width) * -3);
-      }
-      > *:nth-child(5) {
-        top: calc(var(--border-width) * -4);
-      }
-      > *:nth-child(6) {
-        top: calc(var(--border-width) * -5);
-      }
-      > *:nth-child(7) {
-        top: calc(var(--border-width) * -6);
-      }
-      > *:nth-child(8) {
-        top: calc(var(--border-width) * -7);
-      }
-      > *:nth-child(9) {
-        top: calc(var(--border-width) * -8);
-      }
-      > *:nth-child(10) {
-        top: calc(var(--border-width) * -9);
-      }
-
       > *:last-child:not(:only-child) {
         border-top-left-radius: 0 !important;
         border-top-right-radius: 0 !important;
@@ -149,14 +94,51 @@ export const Group = ({
   vertical = row,
   ...props
 }) => {
+  const groupRef = useRef(null);
+
   if (typeof borderWidth === "string") {
     borderWidth = parseFloat(borderWidth);
   }
   const borderWidthCssValue =
     typeof borderWidth === "number" ? `${borderWidth}px` : borderWidth;
 
+  useLayoutEffect(() => {
+    const group = groupRef.current;
+    if (!group) {
+      return;
+    }
+    const { children } = group;
+    if (children.length === 0) {
+      return;
+    }
+    let i = 0;
+    while (i < children.length) {
+      const child = children[i];
+      if (i === 0) {
+        // First child stays in place
+        if (vertical) {
+          child.style.top = "";
+        } else {
+          child.style.left = "";
+        }
+      } else {
+        // Subsequent children get cumulative positioning
+        const offset = i * borderWidth * -1;
+        if (vertical) {
+          child.style.top = borderWidth ? `${offset}px` : "";
+          child.style.left = "";
+        } else {
+          child.style.left = borderWidth ? `${offset}px` : "";
+          child.style.top = "";
+        }
+      }
+      i++;
+    }
+  }, [children, borderWidth, vertical]);
+
   return (
     <Box
+      ref={groupRef}
       baseClassName="navi_group"
       data-vertical={vertical ? "" : undefined}
       row={row}
