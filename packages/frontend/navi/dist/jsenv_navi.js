@@ -5069,17 +5069,18 @@ const POSITION_PROPS = {
   relative: applyToCssPropWhenTruthy("position", "relative", "static"),
   fixed: applyToCssPropWhenTruthy("position", "fixed", "static"),
   sticky: applyToCssPropWhenTruthy("position", "sticky", "static"),
-  left: (value = 0) => {
-    return { left: value };
+  left: (value) => {
+    return { left: value === true ? 0 : value };
   },
-  top: (value = 0) => {
-    return { top: value };
+  // Allow to write <Box sticky top /> instead of <Box sticky top="0" />
+  top: (value) => {
+    return { top: value === true ? 0 : value };
   },
-  bottom: (value = 0) => {
-    return { bottom: value };
+  bottom: (value) => {
+    return { bottom: value === true ? 0 : value };
   },
-  right: (value = 0) => {
-    return { right: value };
+  right: (value) => {
+    return { right: value === true ? 0 : value };
   },
 
   transform: PASS_THROUGH,

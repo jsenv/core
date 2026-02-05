@@ -1,0 +1,137 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Box Position Demo</title>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { Box } from "@jsenv/navi";
+
+      const Demo = () => {
+        return (
+          <div style={{ padding: "20px", fontFamily: "system-ui, sans-serif" }}>
+            <h1>Box Position Demo</h1>
+            <p>
+              This demo shows different positioning modes using the Box
+              component.
+            </p>
+
+            <section style={{ marginBottom: "40px" }}>
+              <h2>1. Relative Positioning</h2>
+              <p>
+                Relative positioning moves an element from its normal position.
+              </p>
+              <div
+                style={{
+                  border: "1px dashed #ccc",
+                  padding: "20px",
+                  position: "relative",
+                }}
+              >
+                <Box
+                  backgroundColor="#e3f2fd"
+                  padding="10px"
+                  marginBottom="10px"
+                >
+                  Normal flow box
+                </Box>
+                <Box
+                  backgroundColor="#ffecb3"
+                  padding="10px"
+                  position="relative"
+                  left="20"
+                  top="10"
+                >
+                  Relative positioned (left: 20px, top: 10px)
+                </Box>
+                <Box backgroundColor="#e8f5e8" padding="10px" marginTop="10px">
+                  Another normal flow box
+                </Box>
+              </div>
+            </section>
+
+            <section style={{ marginBottom: "40px" }}>
+              <h2>2. Absolute Positioning</h2>
+              <p>
+                Absolute positioning removes an element from normal flow and
+                positions it relative to its nearest positioned ancestor.
+              </p>
+              <div
+                style={{
+                  border: "1px dashed #ccc",
+                  padding: "20px",
+                  position: "relative",
+                  height: "150px",
+                  backgroundColor: "#f9f9f9",
+                }}
+              >
+                <Box
+                  backgroundColor="#e3f2fd"
+                  padding="10px"
+                  marginBottom="10px"
+                >
+                  Normal flow content
+                </Box>
+                <Box
+                  backgroundColor="#ffcdd2"
+                  padding="10px"
+                  absolute
+                  top="40"
+                  left="20"
+                >
+                  Absolute positioned (top: 40px, left: 20px)
+                </Box>
+                <Box backgroundColor="#e8f5e8" padding="10px">
+                  More normal flow content
+                </Box>
+              </div>
+            </section>
+
+            <section style={{ marginBottom: "40px" }}>
+              <h2>3. Sticky Positioning</h2>
+              <p>
+                Sticky positioning acts as relative until it crosses a
+                threshold, then acts as fixed.
+              </p>
+              <div
+                style={{
+                  border: "1px dashed #ccc",
+                  height: "200px",
+                  overflow: "auto",
+                  backgroundColor: "#f9f9f9",
+                }}
+              >
+                <Box backgroundColor="#e3f2fd" padding="10px" height="50px">
+                  Scroll down to see sticky behavior
+                </Box>
+                <Box
+                  backgroundColor="#fff3e0"
+                  padding="10px"
+                  sticky
+                  top
+                  borderBottom="2px solid #ff9800"
+                >
+                  Sticky header (position: sticky, top: 0)
+                </Box>
+                <Box backgroundColor="#e8f5e8" padding="10px" height="100px">
+                  Content that scrolls under the sticky header
+                </Box>
+                <Box backgroundColor="#fce4ec" padding="10px" height="100px">
+                  More scrollable content
+                </Box>
+                <Box backgroundColor="#e1f5fe" padding="10px" height="100px">
+                  Even more content to demonstrate scrolling
+                </Box>
+              </div>
+            </section>
+          </div>
+        );
+      };
+
+      render(<Demo />, document.getElementById("app"));
+    </script>
+  </body>
+</html>
