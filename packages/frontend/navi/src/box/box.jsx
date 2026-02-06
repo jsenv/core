@@ -513,7 +513,12 @@ export const Box = (props) => {
           if (i === childCount) {
             break;
           }
-          childrenWithSeparators.push(separator);
+          // Support function separators that receive separator index
+          const separatorElement =
+            typeof separator === "function"
+              ? separator(i - 1) // i-1 because i was incremented after pushing child
+              : separator;
+          childrenWithSeparators.push(separatorElement);
         }
         innerChildren = childrenWithSeparators;
       }
