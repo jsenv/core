@@ -2,7 +2,7 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>Demo - Spacing Prop with Custom JSX Elements</title>
+    <title>Demo - Separator Prop with Custom JSX Elements</title>
     <style>
       body {
         margin: 0;
@@ -99,10 +99,10 @@
   </head>
   <body>
     <div class="demo-section">
-      <h2>Box Spacing Prop Demo</h2>
+      <h2>Box Separator Prop Demo</h2>
       <p>
-        The <code>spacing</code> prop allows you to insert custom JSX elements
-        between children. When <code>spacing</code> is a function or JSX
+        The <code>separator</code> prop allows you to insert custom JSX elements
+        between children. When <code>separator</code> is a function or JSX
         element, it gets automatically inserted between each child element.
       </p>
     </div>
@@ -124,13 +124,13 @@
           <div className="demo-section">
             <h3>1. Horizontal Layout with Dot Separators</h3>
             <div className="code-block">
-              {`<Box column spacing={<div className="separator-dot" />}>
+              {`<Box column separator={<div className="separator-dot" />}>
   <DemoItem>Item A</DemoItem>
   <DemoItem>Item B</DemoItem>
   <DemoItem>Item C</DemoItem>
 </Box>`}
             </div>
-            <Box column spacing={<div className="separator-dot" />}>
+            <Box column separator={<div className="separator-dot" />}>
               <DemoItem>Item A</DemoItem>
               <DemoItem>Item B</DemoItem>
               <DemoItem>Item C</DemoItem>
@@ -140,13 +140,13 @@
           <div className="demo-section">
             <h3>2. Vertical Layout with Line Separators</h3>
             <div className="code-block">
-              {`<Box row spacing={<div className="separator-line" />}>
+              {`<Box row separator={<div className="separator-line" />}>
   <DemoItem>First</DemoItem>
   <DemoItem>Second</DemoItem>
   <DemoItem>Third</DemoItem>
 </Box>`}
             </div>
-            <Box row spacing={<div className="separator-line" />}>
+            <Box row separator={<div className="separator-line" />}>
               <DemoItem>First</DemoItem>
               <DemoItem>Second</DemoItem>
               <DemoItem>Third</DemoItem>
@@ -156,14 +156,14 @@
           <div className="demo-section">
             <h3>3. Arrow Separators with Text</h3>
             <div className="code-block">
-              {`<Box column spacing={<div className="separator-arrow">→</div>}>
+              {`<Box column separator={<div className="separator-arrow">→</div>}>
   <DemoItem>Step 1</DemoItem>
   <DemoItem>Step 2</DemoItem>
   <DemoItem>Step 3</DemoItem>
   <DemoItem>Done!</DemoItem>
 </Box>`}
             </div>
-            <Box column spacing={<div className="separator-arrow">→</div>}>
+            <Box column separator={<div className="separator-arrow">→</div>}>
               <DemoItem>Step 1</DemoItem>
               <DemoItem>Step 2</DemoItem>
               <DemoItem>Step 3</DemoItem>
@@ -174,13 +174,13 @@
           <div className="demo-section">
             <h3>4. Custom Styled Separators</h3>
             <div className="code-block">
-              {`<Box column spacing={<div className="custom-separator">AND</div>}>
+              {`<Box column separator={<div className="custom-separator">AND</div>}>
   <DemoItem>Condition A</DemoItem>
   <DemoItem>Condition B</DemoItem>
   <DemoItem>Condition C</DemoItem>
 </Box>`}
             </div>
-            <Box column spacing={<div className="custom-separator">AND</div>}>
+            <Box column separator={<div className="custom-separator">AND</div>}>
               <DemoItem>Condition A</DemoItem>
               <DemoItem>Condition B</DemoItem>
               <DemoItem>Condition C</DemoItem>
@@ -190,13 +190,13 @@
           <div className="demo-section">
             <h3>5. Gradient Divider Separators</h3>
             <div className="code-block">
-              {`<Box row spacing={<div className="separator-divider" />}>
+              {`<Box row separator={<div className="separator-divider" />}>
   <DemoItem>Section 1</DemoItem>
   <DemoItem>Section 2</DemoItem>
   <DemoItem>Section 3</DemoItem>
 </Box>`}
             </div>
-            <Box row spacing={<div className="separator-divider" />}>
+            <Box row separator={<div className="separator-divider" />}>
               <DemoItem>Section 1</DemoItem>
               <DemoItem>Section 2</DemoItem>
               <DemoItem>Section 3</DemoItem>
@@ -206,7 +206,7 @@
           <div className="demo-section">
             <h3>6. Function-based Dynamic Separators</h3>
             <div className="code-block">
-              {`<Box column spacing={(index) => (
+              {`<Box column separator={(index) => (
   <div style={{
     background: \`hsl(\${index * 60}, 70%, 60%)\`,
     height: '4px',
@@ -223,7 +223,7 @@
             </div>
             <Box
               column
-              spacing={(index) => (
+              separator={(index) => (
                 <div
                   style={{
                     background: `hsl(${index * 60}, 70%, 60%)`,
@@ -245,11 +245,11 @@
           <div className="demo-section">
             <h3>7. No Separator with Single Child</h3>
             <div className="code-block">
-              {`<Box column spacing={<div className="separator-dot" />}>
+              {`<Box column separator={<div className="separator-dot" />}>
   <DemoItem>Single Item (no separator)</DemoItem>
 </Box>`}
             </div>
-            <Box column spacing={<div className="separator-dot" />}>
+            <Box column separator={<div className="separator-dot" />}>
               <DemoItem>Single Item (no separator)</DemoItem>
             </Box>
             <p>
@@ -263,7 +263,7 @@
           <div className="demo-section">
             <h3>8. Complex Interactive Separators</h3>
             <div className="code-block">
-              {`<Box column spacing={
+              {`<Box column separator={
   <button 
     style={{
       background: '#3498db',
@@ -287,7 +287,7 @@
             </div>
             <Box
               column
-              spacing={
+              separator={
                 <button
                   style={{
                     background: "#3498db",
