@@ -1,0 +1,318 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Demo - Spacing Prop with Custom JSX Elements</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 20px;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: #f8f9fa;
+      }
+
+      .demo-section {
+        margin-bottom: 40px;
+        padding: 20px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      .demo-item {
+        padding: 12px 16px;
+        font-weight: 500;
+        text-align: center;
+        background: #e3f2fd;
+        border: 1px solid #90caf9;
+        border-radius: 6px;
+      }
+
+      .separator-dot {
+        width: 6px;
+        height: 6px;
+        align-self: center;
+        background: #ff6b6b;
+        border-radius: 50%;
+      }
+
+      .separator-line {
+        width: 2px;
+        height: 30px;
+        align-self: center;
+        background: #ff6b6b;
+      }
+
+      .separator-arrow {
+        align-self: center;
+        color: #ff6b6b;
+        font-weight: bold;
+        font-size: 18px;
+      }
+
+      .separator-divider {
+        height: 1px;
+        flex: 0 0 40px;
+        align-self: center;
+        background: linear-gradient(
+          to right,
+          transparent,
+          #ff6b6b,
+          transparent
+        );
+      }
+
+      .custom-separator {
+        padding: 4px 8px;
+        align-self: center;
+        color: white;
+        font-weight: bold;
+        font-size: 12px;
+        background: linear-gradient(45deg, #ff9800, #f57c00);
+        border-radius: 4px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+      }
+
+      h2 {
+        margin-top: 0;
+        padding-bottom: 8px;
+        color: #2c3e50;
+        border-bottom: 2px solid #3498db;
+      }
+
+      h3 {
+        margin: 20px 0 10px 0;
+        color: #34495e;
+      }
+
+      .code-block {
+        margin: 10px 0;
+        padding: 16px;
+        font-size: 14px;
+        font-family: "Courier New", monospace;
+        background: #f4f4f4;
+        border-left: 4px solid #3498db;
+        border-radius: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="demo-section">
+      <h2>Box Spacing Prop Demo</h2>
+      <p>
+        The <code>spacing</code> prop allows you to insert custom JSX elements
+        between children. When <code>spacing</code> is a function or JSX
+        element, it gets automatically inserted between each child element.
+      </p>
+    </div>
+
+    <div id="app"></div>
+
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { Box } from "../box.jsx";
+
+      const DemoItem = ({ children, ...props }) => (
+        <div className="demo-item" {...props}>
+          {children}
+        </div>
+      );
+
+      const App = () => (
+        <>
+          <div className="demo-section">
+            <h3>1. Horizontal Layout with Dot Separators</h3>
+            <div className="code-block">
+              {`<Box column spacing={<div className="separator-dot" />}>
+  <DemoItem>Item A</DemoItem>
+  <DemoItem>Item B</DemoItem>
+  <DemoItem>Item C</DemoItem>
+</Box>`}
+            </div>
+            <Box column spacing={<div className="separator-dot" />}>
+              <DemoItem>Item A</DemoItem>
+              <DemoItem>Item B</DemoItem>
+              <DemoItem>Item C</DemoItem>
+            </Box>
+          </div>
+
+          <div className="demo-section">
+            <h3>2. Vertical Layout with Line Separators</h3>
+            <div className="code-block">
+              {`<Box row spacing={<div className="separator-line" />}>
+  <DemoItem>First</DemoItem>
+  <DemoItem>Second</DemoItem>
+  <DemoItem>Third</DemoItem>
+</Box>`}
+            </div>
+            <Box row spacing={<div className="separator-line" />}>
+              <DemoItem>First</DemoItem>
+              <DemoItem>Second</DemoItem>
+              <DemoItem>Third</DemoItem>
+            </Box>
+          </div>
+
+          <div className="demo-section">
+            <h3>3. Arrow Separators with Text</h3>
+            <div className="code-block">
+              {`<Box column spacing={<div className="separator-arrow">→</div>}>
+  <DemoItem>Step 1</DemoItem>
+  <DemoItem>Step 2</DemoItem>
+  <DemoItem>Step 3</DemoItem>
+  <DemoItem>Done!</DemoItem>
+</Box>`}
+            </div>
+            <Box column spacing={<div className="separator-arrow">→</div>}>
+              <DemoItem>Step 1</DemoItem>
+              <DemoItem>Step 2</DemoItem>
+              <DemoItem>Step 3</DemoItem>
+              <DemoItem>Done!</DemoItem>
+            </Box>
+          </div>
+
+          <div className="demo-section">
+            <h3>4. Custom Styled Separators</h3>
+            <div className="code-block">
+              {`<Box column spacing={<div className="custom-separator">AND</div>}>
+  <DemoItem>Condition A</DemoItem>
+  <DemoItem>Condition B</DemoItem>
+  <DemoItem>Condition C</DemoItem>
+</Box>`}
+            </div>
+            <Box column spacing={<div className="custom-separator">AND</div>}>
+              <DemoItem>Condition A</DemoItem>
+              <DemoItem>Condition B</DemoItem>
+              <DemoItem>Condition C</DemoItem>
+            </Box>
+          </div>
+
+          <div className="demo-section">
+            <h3>5. Gradient Divider Separators</h3>
+            <div className="code-block">
+              {`<Box row spacing={<div className="separator-divider" />}>
+  <DemoItem>Section 1</DemoItem>
+  <DemoItem>Section 2</DemoItem>
+  <DemoItem>Section 3</DemoItem>
+</Box>`}
+            </div>
+            <Box row spacing={<div className="separator-divider" />}>
+              <DemoItem>Section 1</DemoItem>
+              <DemoItem>Section 2</DemoItem>
+              <DemoItem>Section 3</DemoItem>
+            </Box>
+          </div>
+
+          <div className="demo-section">
+            <h3>6. Function-based Dynamic Separators</h3>
+            <div className="code-block">
+              {`<Box column spacing={(index) => (
+  <div style={{
+    background: \`hsl(\${index * 60}, 70%, 60%)\`,
+    height: '4px',
+    borderRadius: '2px',
+    alignSelf: 'stretch',
+    margin: '4px 0'
+  }} />
+)}>
+  <DemoItem>Dynamic 1</DemoItem>
+  <DemoItem>Dynamic 2</DemoItem>
+  <DemoItem>Dynamic 3</DemoItem>
+  <DemoItem>Dynamic 4</DemoItem>
+</Box>`}
+            </div>
+            <Box
+              column
+              spacing={(index) => (
+                <div
+                  style={{
+                    background: `hsl(${index * 60}, 70%, 60%)`,
+                    height: "4px",
+                    borderRadius: "2px",
+                    alignSelf: "stretch",
+                    margin: "4px 0",
+                  }}
+                />
+              )}
+            >
+              <DemoItem>Dynamic 1</DemoItem>
+              <DemoItem>Dynamic 2</DemoItem>
+              <DemoItem>Dynamic 3</DemoItem>
+              <DemoItem>Dynamic 4</DemoItem>
+            </Box>
+          </div>
+
+          <div className="demo-section">
+            <h3>7. No Separator with Single Child</h3>
+            <div className="code-block">
+              {`<Box column spacing={<div className="separator-dot" />}>
+  <DemoItem>Single Item (no separator)</DemoItem>
+</Box>`}
+            </div>
+            <Box column spacing={<div className="separator-dot" />}>
+              <DemoItem>Single Item (no separator)</DemoItem>
+            </Box>
+            <p>
+              <em>
+                Note: Separators are only inserted when there are 2 or more
+                children.
+              </em>
+            </p>
+          </div>
+
+          <div className="demo-section">
+            <h3>8. Complex Interactive Separators</h3>
+            <div className="code-block">
+              {`<Box column spacing={
+  <button 
+    style={{
+      background: '#3498db',
+      color: 'white',
+      border: 'none',
+      padding: '4px 12px',
+      borderRadius: '20px',
+      fontSize: '12px',
+      cursor: 'pointer',
+      alignSelf: 'center'
+    }}
+    onClick={() => alert('Separator clicked!')}
+  >
+    +
+  </button>
+}>
+  <DemoItem>First Block</DemoItem>
+  <DemoItem>Second Block</DemoItem>
+  <DemoItem>Third Block</DemoItem>
+</Box>`}
+            </div>
+            <Box
+              column
+              spacing={
+                <button
+                  style={{
+                    background: "#3498db",
+                    color: "white",
+                    border: "none",
+                    padding: "4px 12px",
+                    borderRadius: "20px",
+                    fontSize: "12px",
+                    cursor: "pointer",
+                    alignSelf: "center",
+                  }}
+                >
+                  +
+                </button>
+              }
+            >
+              <DemoItem>First Block</DemoItem>
+              <DemoItem>Second Block</DemoItem>
+              <DemoItem>Third Block</DemoItem>
+            </Box>
+          </div>
+        </>
+      );
+
+      render(<App />, document.getElementById("app"));
+    </script>
+  </body>
+</html>

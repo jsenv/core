@@ -117,6 +117,7 @@ export const Box = (props) => {
     preventInitialTransition,
 
     children,
+    separator,
     ...rest
   } = props;
   const defaultRef = useRef();
@@ -155,8 +156,13 @@ export const Box = (props) => {
   } else {
     boxFlow = defaultDisplay;
   }
-  const innerClassName = withPropsClassName(baseClassName, className);
 
+  const remainingPropKeySet = new Set(Object.keys(rest));
+  // some props not destructured but that are neither
+  // style props, nor should be forwarded to the child
+  remainingPropKeySet.delete("ref");
+
+  const innerClassName = withPropsClassName(baseClassName, className);
   const selfForwardedProps = {};
   const childForwardedProps = {};
   styling: {
@@ -410,13 +416,7 @@ export const Box = (props) => {
         assignStyle(value, key, styleContext, boxStyles, "baseStyle");
       }
     }
-    const remainingPropKeyArray = Object.keys(rest);
-    for (const propName of remainingPropKeyArray) {
-      if (propName === "ref") {
-        // some props not destructured but that are neither
-        // style props, nor should be forwarded to the child
-        continue;
-      }
+    for (const propName of remainingPropKeySet) {
       const propValue = rest[propName];
       assignStyle(propValue, propName, styleContext, boxStyles, "prop");
     }
@@ -498,6 +498,26 @@ export const Box = (props) => {
     }
   } else {
     innerChildren = children;
+  }
+
+  if (separator) {
+    if (Array.isArray(innerChildren)) {
+      const childCount = innerChildren.length;
+      if (childCount > 1) {
+        const childrenWithSeparators = [];
+        let i = 0;
+        while (true) {
+          const child = innerChildren[i];
+          childrenWithSeparators.push(child);
+          i++;
+          if (i === childCount) {
+            break;
+          }
+          childrenWithSeparators.push(separator);
+        }
+        innerChildren = childrenWithSeparators;
+      }
+    }
   }
 
   return (
