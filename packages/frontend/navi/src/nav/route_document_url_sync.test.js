@@ -1705,99 +1705,97 @@ await snapshotTests(import.meta.url, ({ test }) => {
     }
   });
 
-  /*
   test("array signal - URL to signal direction", () => {
+    const navToCalls = [];
+    setRouteIntegration({
+      navTo: (url) => {
+        navToCalls.push(url);
+        updateRoutes(url);
+        return Promise.resolve();
+      },
+    });
+
     try {
       const colorsSignal = stateSignal([], {
         id: "colorsArrayReverse",
         type: "array",
       });
-
       const { COLORS_ROUTE } = setupRoutes({
         COLORS_ROUTE: `/colors?colors=${colorsSignal}`,
       });
-
-      const captureState = () => ({
-        signal_value: JSON.parse(JSON.stringify(colorsSignal.value)),
-        route_matching: COLORS_ROUTE.matching,
-        current_url: "will be set by updateRoutes",
-      });
+      const captureState = () => {
+        const navCalls = [...navToCalls];
+        navToCalls.length = 0;
+        return {
+          signal_value: JSON.parse(JSON.stringify(colorsSignal.value)),
+          route_matching: COLORS_ROUTE.matching,
+          nav_calls: navCalls,
+        };
+      };
 
       const results = {};
-
-      // Test reverse direction: update URL with various values and check signal.value stays in sync
 
       // Empty array case
       updateRoutes(`${baseUrl}/colors?colors=`);
       results["url_empty_array"] = captureState();
-      results["url_empty_array"].current_url = `/colors?colors=`;
 
       // Single value
       updateRoutes(`${baseUrl}/colors?colors=red`);
       results["url_single_value"] = captureState();
-      results["url_single_value"].current_url = `/colors?colors=red`;
 
       // Two values
       updateRoutes(`${baseUrl}/colors?colors=red,blue`);
       results["url_two_values"] = captureState();
-      results["url_two_values"].current_url = `/colors?colors=red,blue`;
 
       // Three values
       updateRoutes(`${baseUrl}/colors?colors=red,blue,green`);
       results["url_three_values"] = captureState();
-      results["url_three_values"].current_url = `/colors?colors=red,blue,green`;
 
       // Back to single value
       updateRoutes(`${baseUrl}/colors?colors=yellow`);
       results["url_back_to_single"] = captureState();
-      results["url_back_to_single"].current_url = `/colors?colors=yellow`;
 
       // No colors param (should result in empty array)
       updateRoutes(`${baseUrl}/colors`);
       results["url_no_param"] = captureState();
-      results["url_no_param"].current_url = `/colors`;
 
-      return {
-        setup: {
-          signal_id: "colorsArrayReverse",
-          signal_type: "array",
-          initial_signal_value: [],
-        },
-        results,
-      };
+      return results;
     } finally {
       clearAllRoutes();
       globalSignalRegistry.clear();
+      setRouteIntegration(null);
     }
   });
 
   test("array signal - comma handling", () => {
+    const navToCalls = [];
+
+    setRouteIntegration({
+      navTo: (url) => {
+        navToCalls.push(url);
+        updateRoutes(url);
+        return Promise.resolve();
+      },
+    });
+
     try {
       const itemsSignal = stateSignal([], {
         id: "itemsWithCommas",
         type: "array",
       });
-
       const { ITEMS_ROUTE } = setupRoutes({
         ITEMS_ROUTE: `/items?items=${itemsSignal}`,
       });
 
-      const navToCalls = [];
-      const routeIntegrationMock = {
-        navTo: (url) => {
-          navToCalls.push(url);
-          updateRoutes(url);
-          return Promise.resolve();
-        },
+      const captureState = () => {
+        const navCalls = [...navToCalls];
+        navToCalls.length = 0;
+        return {
+          signal_value: JSON.parse(JSON.stringify(ITEMS_ROUTE.value)),
+          route_matching: ITEMS_ROUTE.matching,
+          nav_calls: navCalls,
+        };
       };
-      setRouteIntegration(routeIntegrationMock);
-
-      const captureState = () => ({
-        signal_value: JSON.parse(JSON.stringify(itemsSignal.value)),
-        route_matching: ITEMS_ROUTE.matching,
-        nav_to_url: ITEMS_ROUTE.navToUrl(),
-        last_nav_call: navToCalls[navToCalls.length - 1] || null,
-      });
 
       const results = {};
 
@@ -1810,8 +1808,6 @@ await snapshotTests(import.meta.url, ({ test }) => {
         `${baseUrl}/items?items=simple,item%2Cwith%2Ccommas,another`,
       );
       results["url_to_signal_with_commas"] = captureState();
-      results["url_to_signal_with_commas"].parsed_url =
-        `/items?items=simple,item%2Cwith%2Ccommas,another`;
 
       // Test edge case: value that is just a comma
       itemsSignal.value = ["before", ",", "after"];
@@ -1821,19 +1817,11 @@ await snapshotTests(import.meta.url, ({ test }) => {
       itemsSignal.value = ["alpha", "beta,gamma,delta", "omega"];
       results["signal_multiple_commas"] = captureState();
 
-      return {
-        setup: {
-          signal_id: "itemsWithCommas",
-          signal_type: "array",
-          test_focus: "comma_handling",
-        },
-        results,
-      };
+      return results;
     } finally {
       clearAllRoutes();
       globalSignalRegistry.clear();
       setRouteIntegration(null);
     }
   });
-  */
 });

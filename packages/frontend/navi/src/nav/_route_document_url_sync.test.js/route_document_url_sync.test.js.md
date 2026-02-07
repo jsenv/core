@@ -28,6 +28,8 @@
 - [deep signal update](deep_signal_update/deep_signal_update.md)
 - [step parameter should prevent redundant navigation calls](step_parameter_should_prevent_redundant_navigation_calls/step_parameter_should_prevent_redundant_navigation_calls.md)
 - [array signal - signal to URL direction](array_signal_-_signal_to_url_direction/array_signal_-_signal_to_url_direction.md)
+- [array signal - URL to signal direction](array_signal_-_url_to_signal_direction/array_signal_-_url_to_signal_direction.md)
+- [array signal - comma handling](array_signal_-_comma_handling/array_signal_-_comma_handling.md)
 
 ---
 
