@@ -5,29 +5,29 @@ const testCases = [
   {
     name: "same_order",
     a: ["x", "y", "z"],
-    b: ["x", "y", "z"]
+    b: ["x", "y", "z"],
   },
   {
     name: "different_order",
     a: ["x", "y", "z"],
-    b: ["z", "x", "y"]
+    b: ["z", "x", "y"],
   },
   {
     name: "with_duplicates",
     a: ["a", "b", "a", "c"],
-    b: ["c", "a", "b", "a"]
+    b: ["c", "a", "b", "a"],
   },
   {
     name: "complex_nested",
     a: [
       { id: 1, values: [10, 20] },
-      { id: 2, values: [30, 40] }
+      { id: 2, values: [30, 40] },
     ],
     b: [
       { id: 2, values: [30, 40] },
-      { id: 1, values: [10, 20] }
-    ]
-  }
+      { id: 1, values: [10, 20] },
+    ],
+  },
 ];
 
 const results = {};
@@ -35,11 +35,9 @@ const results = {};
 for (const testCase of testCases) {
   results[testCase.name] = {
     without_option: compareTwoJsValues(testCase.a, testCase.b),
-    with_ignore_array_order: compareTwoJsValues(
-      testCase.a, 
-      testCase.b, 
-      { ignoreArrayOrder: true }
-    )
+    with_ignore_array_order: compareTwoJsValues(testCase.a, testCase.b, {
+      ignoreArrayOrder: true,
+    }),
   };
 }
 

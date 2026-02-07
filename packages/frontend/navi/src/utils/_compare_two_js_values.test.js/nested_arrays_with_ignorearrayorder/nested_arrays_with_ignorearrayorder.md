@@ -5,42 +5,54 @@ const results = {};
 
 // Nested arrays - outer array order ignored, inner arrays compared normally
 results.nested_arrays_outer_order = compareTwoJsValues(
-  [["a", "b"], ["c", "d"]], 
-  [["c", "d"], ["a", "b"]], 
-  { ignoreArrayOrder: true }
+  [
+    ["a", "b"],
+    ["c", "d"],
+  ],
+  [
+    ["c", "d"],
+    ["a", "b"],
+  ],
+  { ignoreArrayOrder: true },
 );
 
 // Nested arrays - inner array order matters (no deep ignoreArrayOrder)
 results.nested_arrays_inner_order = compareTwoJsValues(
-  [["a", "b"], ["c", "d"]], 
-  [["b", "a"], ["d", "c"]], 
-  { ignoreArrayOrder: true }
+  [
+    ["a", "b"],
+    ["c", "d"],
+  ],
+  [
+    ["b", "a"],
+    ["d", "c"],
+  ],
+  { ignoreArrayOrder: true },
 );
 
 // Deep nesting with objects
 results.nested_with_objects = compareTwoJsValues(
   [
     { id: 1, tags: ["red", "blue"] },
-    { id: 2, tags: ["green", "yellow"] }
+    { id: 2, tags: ["green", "yellow"] },
   ],
   [
     { id: 2, tags: ["green", "yellow"] },
-    { id: 1, tags: ["red", "blue"] }
+    { id: 1, tags: ["red", "blue"] },
   ],
-  { ignoreArrayOrder: true }
+  { ignoreArrayOrder: true },
 );
 
 // Deep nesting - inner object arrays order should matter
 results.nested_objects_inner_arrays = compareTwoJsValues(
   [
     { id: 1, tags: ["red", "blue"] },
-    { id: 2, tags: ["green", "yellow"] }
+    { id: 2, tags: ["green", "yellow"] },
   ],
   [
     { id: 2, tags: ["yellow", "green"] }, // Inner array order changed
-    { id: 1, tags: ["blue", "red"] }      // Inner array order changed
+    { id: 1, tags: ["blue", "red"] }, // Inner array order changed
   ],
-  { ignoreArrayOrder: true }
+  { ignoreArrayOrder: true },
 );
 
 return results;

@@ -4,19 +4,31 @@
 const results = {};
 
 // Same order - should be equal
-results.same_order_strings = compareTwoJsValues(["a", "b", "c"], ["a", "b", "c"]);
+results.same_order_strings = compareTwoJsValues(
+  ["a", "b", "c"],
+  ["a", "b", "c"],
+);
 results.same_order_numbers = compareTwoJsValues([1, 2, 3], [1, 2, 3]);
-results.same_order_mixed = compareTwoJsValues(["a", 1, true], ["a", 1, true]);
+results.same_order_mixed = compareTwoJsValues(
+  ["a", 1, true],
+  ["a", 1, true],
+);
 
 // Different order - should be different
-results.different_order_strings = compareTwoJsValues(["a", "b", "c"], ["c", "b", "a"]);
+results.different_order_strings = compareTwoJsValues(
+  ["a", "b", "c"],
+  ["c", "b", "a"],
+);
 results.different_order_numbers = compareTwoJsValues([1, 2, 3], [3, 2, 1]);
-results.different_order_mixed = compareTwoJsValues(["a", 1, true], [true, "a", 1]);
+results.different_order_mixed = compareTwoJsValues(
+  ["a", 1, true],
+  [true, "a", 1],
+);
 
 // Different elements - should be different
 results.different_elements = compareTwoJsValues(["a", "b"], ["a", "c"]);
 
-// Different lengths - should be different  
+// Different lengths - should be different
 results.different_lengths = compareTwoJsValues(["a", "b"], ["a", "b", "c"]);
 
 // Empty arrays - should be equal

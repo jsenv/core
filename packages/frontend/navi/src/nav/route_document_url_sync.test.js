@@ -1826,4 +1826,78 @@ await snapshotTests(import.meta.url, ({ test }) => {
       setRouteIntegration(null);
     }
   });
+
+  test("dynamic array default - tramway lines scenario", () => {
+    const navToCalls = [];
+
+    setRouteIntegration({
+      navTo: (url) => {
+        navToCalls.push(url);
+        updateRoutes(url);
+        return Promise.resolve();
+      },
+    });
+
+    try {
+      // Simulate available tramway lines from backend (dynamic)
+      const tramAvailableLines = stateSignal([], {
+        type: "array",
+      });
+      // User-enabled tramway lines - defaults to all available lines
+      const tramEnabledLines = stateSignal(tramAvailableLines, {
+        type: "array",
+      });
+      // Master tramway visibility toggle
+      const tramVisible = stateSignal(false, {
+        type: "boolean",
+      });
+      const { TRAM_ROUTE } = setupRoutes({
+        TRAM_ROUTE: `/map?tram=${tramVisible}&trams=${tramEnabledLines}`,
+      });
+
+      const captureState = () => {
+        const navCalls = [...navToCalls];
+        navToCalls.length = 0;
+        return {
+          available_lines: JSON.parse(JSON.stringify(tramAvailableLines.value)),
+          enabled_lines: JSON.parse(JSON.stringify(tramEnabledLines.value)),
+          tram_signal_visible: tramVisible.value,
+          route_matching: TRAM_ROUTE.matching,
+          nav_calls: navCalls,
+        };
+      };
+
+      const results = {};
+
+      // Step 1: Set up available tramway lines from "backend"
+      updateRoutes(`${baseUrl}/map`);
+      tramAvailableLines.value = ["a", "b", "c"];
+      results["1_backend_loads_available_lines"] = captureState();
+
+      // Step 2: User enables tramways for first time - should use all available lines
+      tramVisible.value = true;
+      results["2_user_enables_tramways_first_time"] = captureState();
+
+      // Step 3: User disables one specific line (line "b") - now becomes custom selection
+      tramEnabledLines.value = ["a", "c"];
+      results["3_user_disables_line_b"] = captureState();
+
+      // Step 4: User toggles tramway visibility off and back on - should preserve selection
+      tramVisible.value = false;
+      results["4_user_hides_tramways"] = captureState();
+
+      tramVisible.value = true;
+      results["5_user_shows_tramways_again"] = captureState();
+
+      // Step 5: Backend adds new line - user's custom selection should be preserved
+      tramAvailableLines.value = ["a", "b", "c", "d"];
+      results["6_backend_adds_line_g"] = captureState();
+
+      return results;
+    } finally {
+      clearAllRoutes();
+      globalSignalRegistry.clear();
+      setRouteIntegration(null);
+    }
+  });
 });

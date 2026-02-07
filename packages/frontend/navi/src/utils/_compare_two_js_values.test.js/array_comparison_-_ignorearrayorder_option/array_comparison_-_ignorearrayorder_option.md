@@ -5,54 +5,52 @@ const results = {};
 
 // Same elements, different order - should be equal with ignoreArrayOrder
 results.different_order_strings = compareTwoJsValues(
-  ["a", "b", "c"], 
-  ["c", "b", "a"], 
-  { ignoreArrayOrder: true }
+  ["a", "b", "c"],
+  ["c", "b", "a"],
+  { ignoreArrayOrder: true },
 );
-results.different_order_numbers = compareTwoJsValues(
-  [1, 2, 3], 
-  [3, 1, 2], 
-  { ignoreArrayOrder: true }
-);
+results.different_order_numbers = compareTwoJsValues([1, 2, 3], [3, 1, 2], {
+  ignoreArrayOrder: true,
+});
 results.different_order_mixed = compareTwoJsValues(
-  ["hello", 42, true, null], 
-  [null, 42, "hello", true], 
-  { ignoreArrayOrder: true }
+  ["hello", 42, true, null],
+  [null, 42, "hello", true],
+  { ignoreArrayOrder: true },
 );
 
 // Same elements, same order - should still be equal
 results.same_order_with_option = compareTwoJsValues(
-  ["a", "b", "c"], 
-  ["a", "b", "c"], 
-  { ignoreArrayOrder: true }
+  ["a", "b", "c"],
+  ["a", "b", "c"],
+  { ignoreArrayOrder: true },
 );
 
 // Different elements - should be different even with ignoreArrayOrder
 results.different_elements = compareTwoJsValues(
-  ["a", "b", "c"], 
-  ["a", "b", "d"], 
-  { ignoreArrayOrder: true }
+  ["a", "b", "c"],
+  ["a", "b", "d"],
+  { ignoreArrayOrder: true },
 );
 
 // Different lengths - should be different
 results.different_lengths = compareTwoJsValues(
-  ["a", "b"], 
-  ["a", "b", "c"], 
-  { ignoreArrayOrder: true }
+  ["a", "b"],
+  ["a", "b", "c"],
+  { ignoreArrayOrder: true },
 );
 
 // Arrays with duplicates - order shouldn't matter
 results.duplicates_different_order = compareTwoJsValues(
-  ["a", "b", "a", "c"], 
-  ["c", "a", "b", "a"], 
-  { ignoreArrayOrder: true }
+  ["a", "b", "a", "c"],
+  ["c", "a", "b", "a"],
+  { ignoreArrayOrder: true },
 );
 
 // Arrays with duplicates - different counts should be different
 results.duplicates_different_counts = compareTwoJsValues(
-  ["a", "b", "a"], 
-  ["a", "b", "a", "a"], 
-  { ignoreArrayOrder: true }
+  ["a", "b", "a"],
+  ["a", "b", "a", "a"],
+  { ignoreArrayOrder: true },
 );
 
 return results;

@@ -5,38 +5,42 @@ const results = {};
 
 // Empty arrays
 results.both_empty = compareTwoJsValues([], [], { ignoreArrayOrder: true });
-results.one_empty = compareTwoJsValues([], ["a"], { ignoreArrayOrder: true });
+results.one_empty = compareTwoJsValues([], ["a"], {
+  ignoreArrayOrder: true,
+});
 
 // Single element arrays
-results.single_element_same = compareTwoJsValues(["a"], ["a"], { ignoreArrayOrder: true });
-results.single_element_different = compareTwoJsValues(["a"], ["b"], { ignoreArrayOrder: true });
+results.single_element_same = compareTwoJsValues(["a"], ["a"], {
+  ignoreArrayOrder: true,
+});
+results.single_element_different = compareTwoJsValues(["a"], ["b"], {
+  ignoreArrayOrder: true,
+});
 
 // Arrays with null, undefined, NaN
 results.with_null_undefined = compareTwoJsValues(
-  [null, undefined, "a"], 
-  ["a", null, undefined], 
-  { ignoreArrayOrder: true }
+  [null, undefined, "a"],
+  ["a", null, undefined],
+  { ignoreArrayOrder: true },
 );
-results.with_nan = compareTwoJsValues(
-  [NaN, 1, 2], 
-  [2, NaN, 1], 
-  { ignoreArrayOrder: true }
-);
+results.with_nan = compareTwoJsValues([NaN, 1, 2], [2, NaN, 1], {
+  ignoreArrayOrder: true,
+});
 
 // Arrays with objects
 results.objects_different_order = compareTwoJsValues(
-  [{ a: 1 }, { b: 2 }], 
-  [{ b: 2 }, { a: 1 }], 
-  { ignoreArrayOrder: true }
+  [{ a: 1 }, { b: 2 }],
+  [{ b: 2 }, { a: 1 }],
+  { ignoreArrayOrder: true },
 );
 
 // Arrays with functions (should handle gracefully)
 const fn1 = () => 1;
 const fn2 = () => 2;
 results.with_functions = compareTwoJsValues(
-  [fn1, "a", fn2], 
-  [fn2, fn1, "a"], 
-  { ignoreArrayOrder: true }
+  [fn1, "a", fn2],
+  [fn2, fn1, "a"],
+  { ignoreArrayOrder: true },
 );
 
 return results;

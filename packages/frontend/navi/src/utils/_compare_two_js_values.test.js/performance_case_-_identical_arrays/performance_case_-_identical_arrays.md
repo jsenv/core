@@ -5,25 +5,23 @@ const results = {};
 
 // Same reference - should be fast
 const arr = ["a", "b", "c"];
-results.same_reference = compareTwoJsValues(arr, arr, { ignoreArrayOrder: true });
+results.same_reference = compareTwoJsValues(arr, arr, {
+  ignoreArrayOrder: true,
+});
 
 // Large arrays with same elements in different order
 const largeArr1 = Array.from({ length: 10 }, (_, i) => `item-${i}`);
 const largeArr2 = [...largeArr1].reverse();
-results.large_arrays_reversed = compareTwoJsValues(
-  largeArr1, 
-  largeArr2, 
-  { ignoreArrayOrder: true }
-);
+results.large_arrays_reversed = compareTwoJsValues(largeArr1, largeArr2, {
+  ignoreArrayOrder: true,
+});
 
 // Arrays with many duplicates
 const duplicateArr1 = ["a", "b", "a", "c", "b", "a"];
 const duplicateArr2 = ["b", "a", "c", "a", "b", "a"];
-results.many_duplicates = compareTwoJsValues(
-  duplicateArr1, 
-  duplicateArr2, 
-  { ignoreArrayOrder: true }
-);
+results.many_duplicates = compareTwoJsValues(duplicateArr1, duplicateArr2, {
+  ignoreArrayOrder: true,
+});
 
 return results;
 ```
