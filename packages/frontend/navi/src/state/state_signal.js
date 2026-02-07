@@ -365,6 +365,21 @@ export const stateSignal = (defaultValue, options = {}) => {
     }
     effect(() => {
       const value = preactSignal.value;
+
+      if (dynamicDefaultSignal) {
+        // With dynamic defaults: always persist to preserve user intent
+        // even when value matches dynamic defaults that may change
+        if (value !== undefined) {
+          if (debug) {
+            console.debug(
+              `[stateSignal:${signalIdString}] dynamic default: writing to localStorage "${localStorageKey}"=${value}`,
+            );
+          }
+          writeIntoLocalStorage(value);
+        }
+        return;
+      }
+      // Static defaults: only persist custom values
       if (isCustomValue(value)) {
         if (debug) {
           console.debug(
