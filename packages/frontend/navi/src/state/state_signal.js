@@ -97,7 +97,7 @@ const generateSignalId = () => {
  */
 const NO_LOCAL_STORAGE = [() => undefined, () => {}, () => {}];
 export const stateSignal = (defaultValue, options = {}) => {
-  let {
+  const {
     id,
     type,
     min,
@@ -108,27 +108,6 @@ export const stateSignal = (defaultValue, options = {}) => {
     debug,
     default: staticFallback,
   } = options;
-
-  if (type === "infer_from_default") {
-    if (defaultValue === undefined) {
-      type = undefined;
-    } else if (Array.isArray(defaultValue)) {
-      type = "array";
-    } else if (typeof defaultValue === "string") {
-      if (defaultValue.endsWith("%")) {
-        type = "percentage";
-      } else {
-        type = "string";
-      }
-    } else if (typeof defaultValue === "number") {
-      type = "number";
-    } else if (typeof defaultValue === "boolean") {
-      type = "boolean";
-    } else if (typeof defaultValue === "object") {
-      // passing null as defaultValue would lead to this and that's what we want
-      type = "object";
-    }
-  }
 
   // Check if defaultValue is a signal (dynamic default) or static value
   const isDynamicDefault =

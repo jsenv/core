@@ -24,11 +24,13 @@ try {
     const navCalls = [...navToCalls];
     navToCalls.length = 0;
     return {
-      signal_value: JSON.parse(JSON.stringify(ITEMS_ROUTE.value)),
+      signal_value: JSON.parse(JSON.stringify(itemsSignal.value)),
       route_matching: ITEMS_ROUTE.matching,
       nav_calls: navCalls,
     };
   };
+
+  updateRoutes(`${baseUrl}/items`);
 
   const results = {};
 
@@ -58,14 +60,56 @@ try {
 }
 ```
 
-```console
-SyntaxError: "undefined" is not valid JSON
-  at JSON.parse (<anonymous>)
-  at captureState (base/route_document_url_sync.test.js:1794:30)
-  at base/route_document_url_sync.test.js:1804:46
-  at capture (@jsenv/core/packages/tooling/snapshot/src/side_effects/create_capture_side_effects.js:342:29)
-  at snapshotTests (@jsenv/core/packages/tooling/snapshot/src/side_effects/snapshot_tests.js:185:33)
-  at async base/route_document_url_sync.test.js:15:1
+```js
+{
+  "signal_to_url_with_commas": {
+    "signal_value": [
+      "item1",
+      "item",
+      "with",
+      "commas",
+      "item3"
+    ],
+    "route_matching": true,
+    "nav_calls": [
+      "http://127.0.0.1/items?items=item1,item%2Cwith%2Ccommas,item3"
+    ]
+  },
+  "url_to_signal_with_commas": {
+    "signal_value": [
+      "simple",
+      "item",
+      "with",
+      "commas",
+      "another"
+    ],
+    "route_matching": true,
+    "nav_calls": []
+  },
+  "signal_pure_comma": {
+    "signal_value": [
+      "before",
+      "after"
+    ],
+    "route_matching": true,
+    "nav_calls": [
+      "http://127.0.0.1/items?items=before,%2C,after"
+    ]
+  },
+  "signal_multiple_commas": {
+    "signal_value": [
+      "alpha",
+      "beta",
+      "gamma",
+      "delta",
+      "omega"
+    ],
+    "route_matching": true,
+    "nav_calls": [
+      "http://127.0.0.1/items?items=alpha,beta%2Cgamma%2Cdelta,omega"
+    ]
+  }
+}
 ```
 
 ---

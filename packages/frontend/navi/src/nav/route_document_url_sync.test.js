@@ -1791,11 +1791,13 @@ await snapshotTests(import.meta.url, ({ test }) => {
         const navCalls = [...navToCalls];
         navToCalls.length = 0;
         return {
-          signal_value: JSON.parse(JSON.stringify(ITEMS_ROUTE.value)),
+          signal_value: JSON.parse(JSON.stringify(itemsSignal.value)),
           route_matching: ITEMS_ROUTE.matching,
           nav_calls: navCalls,
         };
       };
+
+      updateRoutes(`${baseUrl}/items`);
 
       const results = {};
 
