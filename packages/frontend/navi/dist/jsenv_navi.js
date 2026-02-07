@@ -2630,6 +2630,7 @@ const localStorageTypeMap = {
   date: "string",
   time: "string",
   email: "string",
+  array: "object",
 };
 
 const getCallerInfo = (targetFunction = null, additionalOffset = 0) => {
@@ -7578,8 +7579,17 @@ const buildQueryString = (params) => {
     if (value !== undefined && value !== null) {
       const encodedKey = encodeURIComponent(key);
 
+      // Handle array values - join with commas
+      if (Array.isArray(value)) {
+        if (value.length === 0) ; else {
+          const encodedValue = value
+            .map((item) => encodeURIComponent(String(item)))
+            .join(",");
+          searchParamPairs.push(`${encodedKey}=${encodedValue}`);
+        }
+      }
       // Handle boolean values - if true, just add the key without value
-      if (value === true || value === "") {
+      else if (value === true || value === "") {
         searchParamPairs.push(encodedKey);
       } else {
         const encodedValue = encodeParamValue(value, false); // Search params encode slashes
@@ -7702,7 +7712,6 @@ const createRoutePattern = (pattern) => {
   const signalSet = new Set();
   for (const connection of connections) {
     connectionMap.set(connection.paramName, connection);
-
     signalSet.add(connection.signal);
   }
 
@@ -7717,7 +7726,7 @@ const createRoutePattern = (pattern) => {
   const applyOn = (url) => {
     const result = matchUrl(parsedPattern, url, {
       baseUrl,
-      connections,
+      connectionMap,
       patternObj: patternObject,
     });
 
@@ -9531,7 +9540,7 @@ const checkIfLiteralCanBeOptionalWithPatternObj = (
 const matchUrl = (
   parsedPattern,
   url,
-  { baseUrl, connections = [], patternObj = null },
+  { baseUrl, connectionMap, patternObj = null },
 ) => {
   // Parse the URL
   const urlObj = new URL(url, baseUrl);
@@ -9554,14 +9563,14 @@ const matchUrl = (
   // OR when URL exactly matches baseUrl (treating baseUrl as root)
   if (parsedPattern.segments.length === 0) {
     if (pathname === "/" || pathname === "") {
-      return extractSearchParams(urlObj, connections);
+      return extractSearchParams(urlObj, connectionMap);
     }
 
     // Special case: if URL exactly matches baseUrl, treat as root route
     if (baseUrl) {
       const baseUrlObj = new URL(baseUrl);
       if (originalPathname === baseUrlObj.pathname) {
-        return extractSearchParams(urlObj, connections);
+        return extractSearchParams(urlObj, connectionMap);
       }
     }
 
@@ -9651,7 +9660,7 @@ const matchUrl = (
   // If pattern has trailing slash, wildcard, or children, allow extra segments
 
   // Add search parameters
-  const searchParams = extractSearchParams(urlObj, connections);
+  const searchParams = extractSearchParams(urlObj, connectionMap);
   Object.assign(params, searchParams);
 
   // Don't add defaults here - rawParams should only contain what's in the URL
@@ -9663,36 +9672,75 @@ const matchUrl = (
 /**
  * Extract search parameters from URL
  */
-const extractSearchParams = (urlObj, connections = []) => {
+const extractSearchParams = (urlObj, connectionMap) => {
   const params = {};
 
-  // Create a map for quick signal type lookup
-  const signalTypes = new Map();
-  for (const connection of connections) {
-    if (connection.type) {
-      signalTypes.set(connection.paramName, connection.type);
-    }
+  // Parse the raw query string manually instead of using urlObj.searchParams
+  // This is necessary for array parameters to handle encoded commas correctly.
+  // urlObj.searchParams automatically decodes %2C to , which breaks our comma-based array splitting.
+  //
+  // Design choice: We use comma-separated values (colors=red,blue,green) instead of
+  // the standard repeated parameters (colors=red&colors=blue&colors=green) because:
+  // 1. More human-readable URLs
+  // 2. Shorter URL length
+  // 3. Easier to copy/paste and manually edit
+  if (!urlObj.search) {
+    return params;
   }
 
-  for (const [key, value] of urlObj.searchParams) {
-    const signalType = signalTypes.get(key);
+  const rawQuery = urlObj.search.slice(1); // Remove leading ?
+  const pairs = rawQuery.split("&");
+
+  for (const pair of pairs) {
+    const eqIndex = pair.indexOf("=");
+    let key;
+    let rawValue;
+
+    if (eqIndex > -1) {
+      key = decodeURIComponent(pair.slice(0, eqIndex));
+      rawValue = pair.slice(eqIndex + 1); // Keep raw for array processing
+    } else {
+      key = decodeURIComponent(pair);
+      rawValue = "";
+    }
+
+    const connection = connectionMap.get(key);
+    const signalType = connection ? connection.type : null;
 
     // Cast value based on signal type
-    if (signalType === "number" || signalType === "float") {
-      const numberValue = Number(value);
-      params[key] = isNaN(numberValue) ? value : numberValue;
+    if (signalType === "array") {
+      // Handle array query parameters with proper comma encoding:
+      // ?colors=red,blue,green → ["red", "blue", "green"]
+      // ?colors=red,blue%2Cgreen → ["red", "blue,green"] (comma in value)
+      // ?colors= → []
+      // ?colors → []
+      if (rawValue === "") {
+        params[key] = [];
+      } else {
+        params[key] = rawValue
+          .split(",")
+          .map((item) => decodeURIComponent(item))
+          .filter((item) => item.trim() !== "");
+      }
+    } else if (signalType === "number" || signalType === "float") {
+      const decodedValue = decodeURIComponent(rawValue);
+      const numberValue = Number(decodedValue);
+      params[key] = isNaN(numberValue) ? decodedValue : numberValue;
     } else if (signalType === "boolean") {
+      const decodedValue = decodeURIComponent(rawValue);
       // Handle boolean query parameters:
       // ?walk=true → true
       // ?walk=1 → true
       // ?walk → true (parameter present without value)
       // ?walk=false → false
       // ?walk=0 → false
-      params[key] = value === "true" || value === "1" || value === "";
+      params[key] =
+        decodedValue === "true" || decodedValue === "1" || decodedValue === "";
     } else {
-      params[key] = value;
+      params[key] = decodeURIComponent(rawValue);
     }
   }
+
   return params;
 };
 

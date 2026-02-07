@@ -714,7 +714,7 @@ const inspectObject = (
 
   const propertySourceArray = [];
   Object.getOwnPropertyNames(value).forEach((propertyName) => {
-    const propertyNameAsNumber = parseFloat(propertyName);
+    const propertyNameAsNumber = Number(propertyName);
     const propertyNameSource = nestedHumanize(
       Number.isInteger(propertyNameAsNumber) && !isNaN(propertyNameAsNumber)
         ? propertyNameAsNumber
