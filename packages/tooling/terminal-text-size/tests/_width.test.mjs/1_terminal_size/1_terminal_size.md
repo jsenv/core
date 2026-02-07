@@ -57,7 +57,7 @@ run(measureTextWidth)
     "x‌x": 2,
     "‍": 0,
     "x‍x": 2,
-    "﻿": 0,
+    0: 0,
     "x﻿x": 2
   },
   "variationSelectors": {
@@ -66,7 +66,7 @@ run(measureTextWidth)
     "️": 0
   },
   "edgeCases": {
-    "": 0,
+    0: 0,
     "​​": 0,
     "x​x​": 2,
     "x̀x̀": 2,
@@ -83,7 +83,7 @@ run(measureTextWidth)
     "⁢": 0,
     "⁣": 0,
     "⁤": 0,
-    "﻿": 0,
+    0: 0,
     "x⁠x": 2,
     "x⁡x": 2,
     "x⁢x": 2,
