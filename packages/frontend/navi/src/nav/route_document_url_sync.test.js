@@ -1888,9 +1888,13 @@ await snapshotTests(import.meta.url, ({ test }) => {
       tramVisible.value = true;
       results["5_user_shows_tramways_again"] = captureState();
 
-      // Step 5: Backend adds new line - user's custom selection should be preserved
+      // Step 6: User re-enables line "b" - should match available lines again (not custom)
+      tramEnabledLines.value = ["a", "b", "c"];
+      results["6_user_re_enables_line_b"] = captureState();
+
+      // Step 7: Backend adds new line - user's selection should now be default again
       tramAvailableLines.value = ["a", "b", "c", "d"];
-      results["6_backend_adds_line_g"] = captureState();
+      results["7_backend_adds_line_d"] = captureState();
 
       return results;
     } finally {

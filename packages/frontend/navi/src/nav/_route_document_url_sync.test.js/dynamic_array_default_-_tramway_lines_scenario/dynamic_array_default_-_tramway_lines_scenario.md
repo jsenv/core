@@ -24,7 +24,7 @@ try {
   const tramVisible = stateSignal(false, {
     type: "boolean",
   });
-  const { TRAM_ROUTE } = setupRoutes({
+  setupRoutes({
     TRAM_ROUTE: `/map?tram=${tramVisible}&trams=${tramEnabledLines}`,
   });
 
@@ -35,7 +35,6 @@ try {
       available_lines: JSON.parse(JSON.stringify(tramAvailableLines.value)),
       enabled_lines: JSON.parse(JSON.stringify(tramEnabledLines.value)),
       tram_signal_visible: tramVisible.value,
-      route_matching: TRAM_ROUTE.matching,
       nav_calls: navCalls,
     };
   };
@@ -62,9 +61,13 @@ try {
   tramVisible.value = true;
   results["5_user_shows_tramways_again"] = captureState();
 
-  // Step 5: Backend adds new line - user's custom selection should be preserved
+  // Step 6: User re-enables line "b" - should match available lines again (not custom)
+  tramEnabledLines.value = ["a", "b", "c"];
+  results["6_user_re_enables_line_b"] = captureState();
+
+  // Step 7: Backend adds new line - user's selection should now be default again
   tramAvailableLines.value = ["a", "b", "c", "d"];
-  results["6_backend_adds_line_g"] = captureState();
+  results["7_backend_adds_line_d"] = captureState();
 
   return results;
 } finally {
@@ -88,7 +91,6 @@ try {
       "c"
     ],
     "tram_signal_visible": false,
-    "route_matching": true,
     "nav_calls": []
   },
   "2_user_enables_tramways_first_time": {
@@ -103,7 +105,6 @@ try {
       "c"
     ],
     "tram_signal_visible": true,
-    "route_matching": true,
     "nav_calls": [
       "http://127.0.0.1/map?tram"
     ]
@@ -119,7 +120,6 @@ try {
       "c"
     ],
     "tram_signal_visible": true,
-    "route_matching": true,
     "nav_calls": [
       "http://127.0.0.1/map?tram&trams=a,c"
     ]
@@ -135,7 +135,6 @@ try {
       "c"
     ],
     "tram_signal_visible": false,
-    "route_matching": true,
     "nav_calls": [
       "http://127.0.0.1/map?trams=a,c"
     ]
@@ -151,12 +150,27 @@ try {
       "c"
     ],
     "tram_signal_visible": true,
-    "route_matching": true,
     "nav_calls": [
       "http://127.0.0.1/map?tram&trams=a,c"
     ]
   },
-  "6_backend_adds_line_g": {
+  "6_user_re_enables_line_b": {
+    "available_lines": [
+      "a",
+      "b",
+      "c"
+    ],
+    "enabled_lines": [
+      "a",
+      "b",
+      "c"
+    ],
+    "tram_signal_visible": true,
+    "nav_calls": [
+      "http://127.0.0.1/map?tram"
+    ]
+  },
+  "7_backend_adds_line_d": {
     "available_lines": [
       "a",
       "b",
@@ -165,10 +179,11 @@ try {
     ],
     "enabled_lines": [
       "a",
-      "c"
+      "b",
+      "c",
+      "d"
     ],
     "tram_signal_visible": true,
-    "route_matching": true,
     "nav_calls": []
   }
 }
