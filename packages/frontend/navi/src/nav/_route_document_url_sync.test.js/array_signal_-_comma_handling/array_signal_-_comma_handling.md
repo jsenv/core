@@ -65,9 +65,7 @@ try {
   "signal_to_url_with_commas": {
     "signal_value": [
       "item1",
-      "item",
-      "with",
-      "commas",
+      "item,with,commas",
       "item3"
     ],
     "route_matching": true,
@@ -78,9 +76,7 @@ try {
   "url_to_signal_with_commas": {
     "signal_value": [
       "simple",
-      "item",
-      "with",
-      "commas",
+      "item,with,commas",
       "another"
     ],
     "route_matching": true,
@@ -89,6 +85,7 @@ try {
   "signal_pure_comma": {
     "signal_value": [
       "before",
+      ",",
       "after"
     ],
     "route_matching": true,
@@ -99,9 +96,7 @@ try {
   "signal_multiple_commas": {
     "signal_value": [
       "alpha",
-      "beta",
-      "gamma",
-      "delta",
+      "beta,gamma,delta",
       "omega"
     ],
     "route_matching": true,

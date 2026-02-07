@@ -2158,14 +2158,55 @@ const extractSearchParams = (urlObj, connections = []) => {
 
   // Create a map for quick signal type lookup
   const signalTypes = new Map();
+  const arrayParams = new Set();
   for (const connection of connections) {
     if (connection.type) {
       signalTypes.set(connection.paramName, connection.type);
+      if (connection.type === "array") {
+        arrayParams.add(connection.paramName);
+      }
+    }
+  }
+
+  // For array parameters, we need to parse the raw query string to handle encoded commas correctly
+  // urlObj.searchParams automatically decodes %2C to , which breaks our comma-based array splitting
+  const rawArrayValues = new Map();
+  if (arrayParams.size > 0 && urlObj.search) {
+    const rawQuery = urlObj.search.slice(1); // Remove leading ?
+    const pairs = rawQuery.split("&");
+    for (const pair of pairs) {
+      const eqIndex = pair.indexOf("=");
+      if (eqIndex > -1) {
+        const key = decodeURIComponent(pair.slice(0, eqIndex));
+        const value = pair.slice(eqIndex + 1); // Keep raw value
+        if (arrayParams.has(key)) {
+          rawArrayValues.set(key, value);
+        }
+      } else {
+        const key = decodeURIComponent(pair);
+        if (arrayParams.has(key)) {
+          rawArrayValues.set(key, "");
+        }
+      }
     }
   }
 
   for (const [key, value] of urlObj.searchParams) {
     const signalType = signalTypes.get(key);
+
+    // Handle array parameters specially using raw values to preserve encoded commas
+    if (signalType === "array") {
+      const rawValue = rawArrayValues.get(key);
+      if (rawValue === "" || rawValue === undefined) {
+        params[key] = [];
+      } else {
+        params[key] = rawValue
+          .split(",")
+          .map((item) => decodeURIComponent(item))
+          .filter((item) => item.trim() !== "");
+      }
+      continue;
+    }
 
     // Cast value based on signal type
     if (signalType === "number" || signalType === "float") {
@@ -2179,20 +2220,6 @@ const extractSearchParams = (urlObj, connections = []) => {
       // ?walk=false → false
       // ?walk=0 → false
       params[key] = value === "true" || value === "1" || value === "";
-    } else if (signalType === "array") {
-      // Handle array query parameters:
-      // ?colors=red,blue,green → ["red", "blue", "green"]
-      // ?colors=red,blue%2Cgreen → ["red", "blue,green"] (comma in value)
-      // ?colors= → []
-      // ?colors → []
-      if (value === "" || value === undefined) {
-        params[key] = [];
-      } else {
-        params[key] = value
-          .split(",")
-          .map((item) => decodeURIComponent(item))
-          .filter((item) => item.trim() !== "");
-      }
     } else {
       params[key] = value;
     }
