@@ -71,7 +71,9 @@
  *
  * @param {any} a - First value to compare
  * @param {any} b - Second value to compare
- * @param {Set} seenSet - Internal cycle detection set (automatically managed)
+ * @param {Object} [options={}] - Comparison options
+ * @param {Function} [options.keyComparator] - Custom comparator function for object properties and array elements
+ * @param {boolean} [options.ignoreArrayOrder=false] - If true, arrays are considered equal regardless of element order
  * @returns {boolean} true if values are deeply equal, false otherwise
  */
 
@@ -90,7 +92,11 @@
  */
 export const SYMBOL_IDENTITY = Symbol.for("navi_object_identity");
 
-export const compareTwoJsValues = (rootA, rootB, { keyComparator } = {}) => {
+export const compareTwoJsValues = (
+  rootA,
+  rootB,
+  { keyComparator, ignoreArrayOrder = false } = {},
+) => {
   const seenSet = new Set();
   const compare = (a, b) => {
     if (a === b) {
@@ -141,6 +147,32 @@ export const compareTwoJsValues = (rootA, rootB, { keyComparator } = {}) => {
       if (a.length !== b.length) {
         return false;
       }
+      if (ignoreArrayOrder) {
+        // Unordered array comparison: each element in 'a' must have a match in 'b'
+        const usedIndices = new Set();
+        for (let i = 0; i < a.length; i++) {
+          const aValue = a[i];
+          let foundMatch = false;
+
+          for (let j = 0; j < b.length; j++) {
+            if (usedIndices.has(j)) continue; // Already matched with another element
+
+            const bValue = b[j];
+            const comparator = keyComparator || compare;
+            if (comparator(aValue, bValue, i, compare)) {
+              foundMatch = true;
+              usedIndices.add(j);
+              break;
+            }
+          }
+
+          if (!foundMatch) {
+            return false;
+          }
+        }
+        return true;
+      }
+      // Ordered array comparison (original behavior)
       let i = 0;
       while (i < a.length) {
         const aValue = a[i];

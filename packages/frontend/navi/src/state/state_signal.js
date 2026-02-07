@@ -1,6 +1,7 @@
 import { createValidity } from "@jsenv/validity";
 import { effect, signal } from "@preact/signals";
 
+import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
 import { valueInLocalStorage } from "./value_in_local_storage.js";
 
 // Global signal registry for route template detection
@@ -198,11 +199,17 @@ export const stateSignal = (defaultValue, options = {}) => {
     if (dynamicDefaultSignal) {
       const dynamicValue = dynamicDefaultSignal.peek();
       if (dynamicValue === undefined) {
-        return value !== staticDefaultValue;
+        return !compareTwoJsValues(value, staticDefaultValue, {
+          ignoreArrayOrder: true,
+        });
       }
-      return value !== dynamicValue;
+      return !compareTwoJsValues(value, dynamicValue, {
+        ignoreArrayOrder: true,
+      });
     }
-    return value !== staticDefaultValue;
+    return !compareTwoJsValues(value, staticDefaultValue, {
+      ignoreArrayOrder: true,
+    });
   };
 
   // Create signal with initial value: use stored value, or undefined to indicate no explicit value
