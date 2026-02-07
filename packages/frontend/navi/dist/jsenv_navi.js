@@ -300,7 +300,9 @@ const getSignalType = (value) => {
  *
  * @param {any} a - First value to compare
  * @param {any} b - Second value to compare
- * @param {Set} seenSet - Internal cycle detection set (automatically managed)
+ * @param {Object} [options={}] - Comparison options
+ * @param {Function} [options.keyComparator] - Custom comparator function for object properties and array elements
+ * @param {boolean} [options.ignoreArrayOrder=false] - If true, arrays are considered equal regardless of element order
  * @returns {boolean} true if values are deeply equal, false otherwise
  */
 
@@ -319,7 +321,11 @@ const getSignalType = (value) => {
  */
 const SYMBOL_IDENTITY = Symbol.for("navi_object_identity");
 
-const compareTwoJsValues = (rootA, rootB, { keyComparator } = {}) => {
+const compareTwoJsValues = (
+  rootA,
+  rootB,
+  { keyComparator, ignoreArrayOrder = false } = {},
+) => {
   const seenSet = new Set();
   const compare = (a, b) => {
     if (a === b) {
@@ -370,6 +376,32 @@ const compareTwoJsValues = (rootA, rootB, { keyComparator } = {}) => {
       if (a.length !== b.length) {
         return false;
       }
+      if (ignoreArrayOrder) {
+        // Unordered array comparison: each element in 'a' must have a match in 'b'
+        const usedIndices = new Set();
+        for (let i = 0; i < a.length; i++) {
+          const aValue = a[i];
+          let foundMatch = false;
+
+          for (let j = 0; j < b.length; j++) {
+            if (usedIndices.has(j)) continue; // Already matched with another element
+
+            const bValue = b[j];
+            const comparator = keyComparator || compare;
+            if (comparator(aValue, bValue, i, compare)) {
+              foundMatch = true;
+              usedIndices.add(j);
+              break;
+            }
+          }
+
+          if (!foundMatch) {
+            return false;
+          }
+        }
+        return true;
+      }
+      // Ordered array comparison (original behavior)
       let i = 0;
       while (i < a.length) {
         const aValue = a[i];
@@ -2393,11 +2425,17 @@ const stateSignal = (defaultValue, options = {}) => {
     if (dynamicDefaultSignal) {
       const dynamicValue = dynamicDefaultSignal.peek();
       if (dynamicValue === undefined) {
-        return value !== staticDefaultValue;
+        return !compareTwoJsValues(value, staticDefaultValue, {
+          ignoreArrayOrder: true,
+        });
       }
-      return value !== dynamicValue;
+      return !compareTwoJsValues(value, dynamicValue, {
+        ignoreArrayOrder: true,
+      });
     }
-    return value !== staticDefaultValue;
+    return !compareTwoJsValues(value, staticDefaultValue, {
+      ignoreArrayOrder: true,
+    });
   };
 
   // Create signal with initial value: use stored value, or undefined to indicate no explicit value
@@ -2553,6 +2591,21 @@ const stateSignal = (defaultValue, options = {}) => {
     }
     effect(() => {
       const value = preactSignal.value;
+
+      if (dynamicDefaultSignal) {
+        // With dynamic defaults: always persist to preserve user intent
+        // even when value matches dynamic defaults that may change
+        if (value !== undefined) {
+          if (debug) {
+            console.debug(
+              `[stateSignal:${signalIdString}] dynamic default: writing to localStorage "${localStorageKey}"=${value}`,
+            );
+          }
+          writeIntoLocalStorage(value);
+        }
+        return;
+      }
+      // Static defaults: only persist custom values
       if (isCustomValue(value)) {
         if (debug) {
           console.debug(
@@ -4517,54 +4570,6 @@ const isProps = (value) => {
   return value !== null && typeof value === "object";
 };
 
-/**
- * Creates a signal that stays synchronized with an external value,
- * only updating the signal when the value actually changes.
- *
- * This hook solves a common reactive UI pattern where:
- * 1. A signal controls a UI element (like an input field)
- * 2. The UI element can be modified by user interaction
- * 3. When the external "source of truth" changes, it should take precedence
- *
- * @param {any} value - The external value to sync with (the "source of truth")
- * @param {any} [initialValue] - Optional initial value for the signal (defaults to value)
- * @returns {Signal} A signal that tracks the external value but allows temporary local changes
- *
- * @example
- * const FileNameEditor = ({ file }) => {
- *   // Signal stays in sync with file.name, but allows user editing
- *   const nameSignal = useSignalSync(file.name);
- *
- *   return (
- *     <Editable
- *       valueSignal={nameSignal}  // User can edit this
- *       action={renameFileAction} // Saves changes
- *     />
- *   );
- * };
- *
- * // Scenario:
- * // 1. file.name = "doc.txt", nameSignal.value = "doc.txt"
- * // 2. User types "report" -> nameSignal.value = "report.txt"
- * // 3. External update: file.name = "shared-doc.txt"
- * // 4. Next render: nameSignal.value = "shared-doc.txt" (model wins!)
- *
- */
-
-const useSignalSync = (value, initialValue = value) => {
-  const signal = useSignal(initialValue);
-  const previousValueRef = useRef(value);
-
-  // Only update signal when external value actually changes
-  // This preserves user input between external changes
-  if (previousValueRef.current !== value) {
-    previousValueRef.current = value;
-    signal.value = value; // Model takes precedence
-  }
-
-  return signal;
-};
-
 const addIntoArray = (array, ...valuesToAdd) => {
   if (valuesToAdd.length === 1) {
     const [valueToAdd] = valuesToAdd;
@@ -4625,6 +4630,69 @@ const removeFromArray = (array, ...valuesToRemove) => {
     arrayWithoutTheseValues.push(value);
   }
   return hasRemovedValues ? arrayWithoutTheseValues : array;
+};
+
+const useArraySignalMembership = (arraySignal, id) => {
+  const array = arraySignal.value;
+  const found = array.includes(id);
+  return [
+    found,
+    (enabled) => {
+      if (enabled) {
+        arraySignal.value = addIntoArray(array, id);
+      } else {
+        arraySignal.value = removeFromArray(array, id);
+      }
+    },
+  ];
+};
+
+/**
+ * Creates a signal that stays synchronized with an external value,
+ * only updating the signal when the value actually changes.
+ *
+ * This hook solves a common reactive UI pattern where:
+ * 1. A signal controls a UI element (like an input field)
+ * 2. The UI element can be modified by user interaction
+ * 3. When the external "source of truth" changes, it should take precedence
+ *
+ * @param {any} value - The external value to sync with (the "source of truth")
+ * @param {any} [initialValue] - Optional initial value for the signal (defaults to value)
+ * @returns {Signal} A signal that tracks the external value but allows temporary local changes
+ *
+ * @example
+ * const FileNameEditor = ({ file }) => {
+ *   // Signal stays in sync with file.name, but allows user editing
+ *   const nameSignal = useSignalSync(file.name);
+ *
+ *   return (
+ *     <Editable
+ *       valueSignal={nameSignal}  // User can edit this
+ *       action={renameFileAction} // Saves changes
+ *     />
+ *   );
+ * };
+ *
+ * // Scenario:
+ * // 1. file.name = "doc.txt", nameSignal.value = "doc.txt"
+ * // 2. User types "report" -> nameSignal.value = "report.txt"
+ * // 3. External update: file.name = "shared-doc.txt"
+ * // 4. Next render: nameSignal.value = "shared-doc.txt" (model wins!)
+ *
+ */
+
+const useSignalSync = (value, initialValue = value) => {
+  const signal = useSignal(initialValue);
+  const previousValueRef = useRef(value);
+
+  // Only update signal when external value actually changes
+  // This preserves user input between external changes
+  if (previousValueRef.current !== value) {
+    previousValueRef.current = value;
+    signal.value = value; // Model takes precedence
+  }
+
+  return signal;
 };
 
 /**
@@ -28456,5 +28524,5 @@ const UserSvg = () => jsx("svg", {
   })
 });
 
-export { ActionRenderer, ActiveKeyboardShortcuts, Address, BadgeCount, Box, Button, ButtonCopyToClipboard, Caption, CheckSvg, Checkbox, CheckboxList, Code, Col, Colgroup, ConstructionSvg, Details, DialogLayout, Editable, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Form, Group, HeartSvg, HomeSvg, Icon, Image, Input, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, MessageBox, Paragraph, Radio, RadioList, Route, RouteLink, Routes, RowNumberCol, RowNumberTableCell, SINGLE_SPACE_CONSTRAINT, SVGMaskOverlay, SearchSvg, Select, SelectionContext, Separator, SettingsSvg, StarSvg, SummaryMarker, Svg, Tab, TabList, Table, TableCell, Tbody, Text, Thead, Title, Tr, UITransition, UserSvg, ViewportLayout, actionIntegratedVia, addCustomMessage, clearAllRoutes, compareTwoJsValues, createAction, createAvailableConstraint, createRequestCanceller, createSelectionKeyboardShortcuts, enableDebugActions, enableDebugOnDocumentLoading, forwardActionRequested, installCustomConstraintValidation, isCellSelected, isColumnSelected, isRowSelected, localStorageSignal, navBack, navForward, navTo, openCallout, rawUrlPart, reload, removeCustomMessage, requestAction, rerunActions, resource, setBaseUrl, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, updateActions, useActionData, useActionStatus, useCalloutClose, useCellsAndColumns, useConstraintValidityState, useDependenciesDiff, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useMatchingRouteInfo, useNavState$1 as useNavState, useRouteStatus, useRunOnMount, useSelectableElement, useSelectionController, useSignalSync, useStateArray, useTitleLevel, useUrlSearchParam, valueInLocalStorage };
+export { ActionRenderer, ActiveKeyboardShortcuts, Address, BadgeCount, Box, Button, ButtonCopyToClipboard, Caption, CheckSvg, Checkbox, CheckboxList, Code, Col, Colgroup, ConstructionSvg, Details, DialogLayout, Editable, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Form, Group, HeartSvg, HomeSvg, Icon, Image, Input, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, MessageBox, Paragraph, Radio, RadioList, Route, RouteLink, Routes, RowNumberCol, RowNumberTableCell, SINGLE_SPACE_CONSTRAINT, SVGMaskOverlay, SearchSvg, Select, SelectionContext, Separator, SettingsSvg, StarSvg, SummaryMarker, Svg, Tab, TabList, Table, TableCell, Tbody, Text, Thead, Title, Tr, UITransition, UserSvg, ViewportLayout, actionIntegratedVia, addCustomMessage, clearAllRoutes, compareTwoJsValues, createAction, createAvailableConstraint, createRequestCanceller, createSelectionKeyboardShortcuts, enableDebugActions, enableDebugOnDocumentLoading, forwardActionRequested, installCustomConstraintValidation, isCellSelected, isColumnSelected, isRowSelected, localStorageSignal, navBack, navForward, navTo, openCallout, rawUrlPart, reload, removeCustomMessage, requestAction, rerunActions, resource, setBaseUrl, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, updateActions, useActionData, useActionStatus, useArraySignalMembership, useCalloutClose, useCellsAndColumns, useConstraintValidityState, useDependenciesDiff, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useMatchingRouteInfo, useNavState$1 as useNavState, useRouteStatus, useRunOnMount, useSelectableElement, useSelectionController, useSignalSync, useStateArray, useTitleLevel, useUrlSearchParam, valueInLocalStorage };
 //# sourceMappingURL=jsenv_navi.js.map
