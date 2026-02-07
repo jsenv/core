@@ -31,6 +31,7 @@
 - [array signal - URL to signal direction](array_signal_-_url_to_signal_direction/array_signal_-_url_to_signal_direction.md)
 - [array signal - comma handling](array_signal_-_comma_handling/array_signal_-_comma_handling.md)
 - [dynamic array default - tramway lines scenario](dynamic_array_default_-_tramway_lines_scenario/dynamic_array_default_-_tramway_lines_scenario.md)
+- [dynamic array default - user arrives with URL before backend loads](dynamic_array_default_-_user_arrives_with_url_before_backend_loads/dynamic_array_default_-_user_arrives_with_url_before_backend_loads.md)
 
 ---
 

@@ -41,33 +41,36 @@ try {
 
   const results = {};
 
-  // Step 1: Set up available tramway lines from "backend"
+  // Step 1: Initial state before backend loads data - no available lines
   updateRoutes(`${baseUrl}/map`);
+  results["1_initial_state_no_backend_data"] = captureState();
+
+  // Step 2: User enables tramways for first time but no backend data yet
+  tramVisible.value = true;
+  results["2_user_enables_tramways_no_backend_data"] = captureState();
+
+  // Step 3: Backend loads available tramway lines - signals should update
   tramAvailableLines.value = ["a", "b", "c"];
-  results["1_backend_loads_available_lines"] = captureState();
+  results["3_backend_loads_available_lines"] = captureState();
 
-  // Step 2: User enables tramways for first time - should use all available lines
-  tramVisible.value = true;
-  results["2_user_enables_tramways_first_time"] = captureState();
-
-  // Step 3: User disables one specific line (line "b") - now becomes custom selection
+  // Step 4: User disables one specific line (line "b") - now becomes custom selection
   tramEnabledLines.value = ["a", "c"];
-  results["3_user_disables_line_b"] = captureState();
+  results["4_user_disables_line_b"] = captureState();
 
-  // Step 4: User toggles tramway visibility off and back on - should preserve selection
+  // Step 5: User toggles tramway visibility off and back on - should preserve selection
   tramVisible.value = false;
-  results["4_user_hides_tramways"] = captureState();
+  results["5_user_hides_tramways"] = captureState();
 
   tramVisible.value = true;
-  results["5_user_shows_tramways_again"] = captureState();
+  results["6_user_shows_tramways_again"] = captureState();
 
   // Step 6: User re-enables line "b" - should match available lines again (not custom)
   tramEnabledLines.value = ["a", "b", "c"];
-  results["6_user_re_enables_line_b"] = captureState();
+  results["7_user_re_enables_line_b"] = captureState();
 
   // Step 7: Backend adds new line - user's selection should now be default again
   tramAvailableLines.value = ["a", "b", "c", "d"];
-  results["7_backend_adds_line_d"] = captureState();
+  results["8_backend_adds_line_d"] = captureState();
 
   return results;
 } finally {
@@ -79,21 +82,21 @@ try {
 
 ```js
 {
-  "1_backend_loads_available_lines": {
-    "available_lines": [
-      "a",
-      "b",
-      "c"
-    ],
-    "enabled_lines": [
-      "a",
-      "b",
-      "c"
-    ],
+  "1_initial_state_no_backend_data": {
+    "available_lines": [],
+    "enabled_lines": [],
     "tram_signal_visible": false,
     "nav_calls": []
   },
-  "2_user_enables_tramways_first_time": {
+  "2_user_enables_tramways_no_backend_data": {
+    "available_lines": [],
+    "enabled_lines": [],
+    "tram_signal_visible": true,
+    "nav_calls": [
+      "http://127.0.0.1/map?tram"
+    ]
+  },
+  "3_backend_loads_available_lines": {
     "available_lines": [
       "a",
       "b",
@@ -105,11 +108,9 @@ try {
       "c"
     ],
     "tram_signal_visible": true,
-    "nav_calls": [
-      "http://127.0.0.1/map?tram"
-    ]
+    "nav_calls": []
   },
-  "3_user_disables_line_b": {
+  "4_user_disables_line_b": {
     "available_lines": [
       "a",
       "b",
@@ -124,7 +125,7 @@ try {
       "http://127.0.0.1/map?tram&trams=a,c"
     ]
   },
-  "4_user_hides_tramways": {
+  "5_user_hides_tramways": {
     "available_lines": [
       "a",
       "b",
@@ -139,7 +140,7 @@ try {
       "http://127.0.0.1/map?trams=a,c"
     ]
   },
-  "5_user_shows_tramways_again": {
+  "6_user_shows_tramways_again": {
     "available_lines": [
       "a",
       "b",
@@ -154,7 +155,7 @@ try {
       "http://127.0.0.1/map?tram&trams=a,c"
     ]
   },
-  "6_user_re_enables_line_b": {
+  "7_user_re_enables_line_b": {
     "available_lines": [
       "a",
       "b",
@@ -170,7 +171,7 @@ try {
       "http://127.0.0.1/map?tram"
     ]
   },
-  "7_backend_adds_line_d": {
+  "8_backend_adds_line_d": {
     "available_lines": [
       "a",
       "b",
