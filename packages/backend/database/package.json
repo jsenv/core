@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/database",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "description": "TODO",
   "repository": {
     "type": "git",
@@ -27,10 +27,10 @@
     "database:setup": "npx @jsenv/database setup"
   },
   "dependencies": {
-    "@jsenv/filesystem": "4.15.12",
-    "@jsenv/humanize": "1.7.4",
+    "@jsenv/filesystem": "4.15.13",
+    "@jsenv/humanize": "1.7.5",
     "@jsenv/url-meta": "8.5.7",
-    "@jsenv/urls": "2.9.6",
+    "@jsenv/urls": "2.9.7",
     "dotenv": "17.2.3",
     "postgres": "3.4.8"
   },

@@ -185,7 +185,6 @@ export const createRoutePattern = (pattern) => {
   const signalSet = new Set();
   for (const connection of connections) {
     connectionMap.set(connection.paramName, connection);
-
     signalSet.add(connection.signal);
   }
 
@@ -200,7 +199,7 @@ export const createRoutePattern = (pattern) => {
   const applyOn = (url) => {
     const result = matchUrl(parsedPattern, url, {
       baseUrl,
-      connections,
+      connectionMap,
       patternObj: patternObject,
     });
 
@@ -2021,7 +2020,7 @@ const checkIfLiteralCanBeOptionalWithPatternObj = (
 const matchUrl = (
   parsedPattern,
   url,
-  { baseUrl, connections = [], patternObj = null },
+  { baseUrl, connectionMap, patternObj = null },
 ) => {
   // Parse the URL
   const urlObj = new URL(url, baseUrl);
@@ -2044,14 +2043,14 @@ const matchUrl = (
   // OR when URL exactly matches baseUrl (treating baseUrl as root)
   if (parsedPattern.segments.length === 0) {
     if (pathname === "/" || pathname === "") {
-      return extractSearchParams(urlObj, connections);
+      return extractSearchParams(urlObj, connectionMap);
     }
 
     // Special case: if URL exactly matches baseUrl, treat as root route
     if (baseUrl) {
       const baseUrlObj = new URL(baseUrl);
       if (originalPathname === baseUrlObj.pathname) {
-        return extractSearchParams(urlObj, connections);
+        return extractSearchParams(urlObj, connectionMap);
       }
     }
 
@@ -2141,7 +2140,7 @@ const matchUrl = (
   // If pattern has trailing slash, wildcard, or children, allow extra segments
 
   // Add search parameters
-  const searchParams = extractSearchParams(urlObj, connections);
+  const searchParams = extractSearchParams(urlObj, connectionMap);
   Object.assign(params, searchParams);
 
   // Don't add defaults here - rawParams should only contain what's in the URL
@@ -2153,51 +2152,49 @@ const matchUrl = (
 /**
  * Extract search parameters from URL
  */
-const extractSearchParams = (urlObj, connections = []) => {
+const extractSearchParams = (urlObj, connectionMap) => {
   const params = {};
 
-  // Create a map for quick signal type lookup
-  const signalTypes = new Map();
-  const arrayParams = new Set();
-  for (const connection of connections) {
-    if (connection.type) {
-      signalTypes.set(connection.paramName, connection.type);
-      if (connection.type === "array") {
-        arrayParams.add(connection.paramName);
-      }
-    }
+  // Parse the raw query string manually instead of using urlObj.searchParams
+  // This is necessary for array parameters to handle encoded commas correctly.
+  // urlObj.searchParams automatically decodes %2C to , which breaks our comma-based array splitting.
+  //
+  // Design choice: We use comma-separated values (colors=red,blue,green) instead of
+  // the standard repeated parameters (colors=red&colors=blue&colors=green) because:
+  // 1. More human-readable URLs
+  // 2. Shorter URL length
+  // 3. Easier to copy/paste and manually edit
+  if (!urlObj.search) {
+    return params;
   }
 
-  // For array parameters, we need to parse the raw query string to handle encoded commas correctly
-  // urlObj.searchParams automatically decodes %2C to , which breaks our comma-based array splitting
-  const rawArrayValues = new Map();
-  if (arrayParams.size > 0 && urlObj.search) {
-    const rawQuery = urlObj.search.slice(1); // Remove leading ?
-    const pairs = rawQuery.split("&");
-    for (const pair of pairs) {
-      const eqIndex = pair.indexOf("=");
-      if (eqIndex > -1) {
-        const key = decodeURIComponent(pair.slice(0, eqIndex));
-        const value = pair.slice(eqIndex + 1); // Keep raw value
-        if (arrayParams.has(key)) {
-          rawArrayValues.set(key, value);
-        }
-      } else {
-        const key = decodeURIComponent(pair);
-        if (arrayParams.has(key)) {
-          rawArrayValues.set(key, "");
-        }
-      }
+  const rawQuery = urlObj.search.slice(1); // Remove leading ?
+  const pairs = rawQuery.split("&");
+
+  for (const pair of pairs) {
+    const eqIndex = pair.indexOf("=");
+    let key;
+    let rawValue;
+
+    if (eqIndex > -1) {
+      key = decodeURIComponent(pair.slice(0, eqIndex));
+      rawValue = pair.slice(eqIndex + 1); // Keep raw for array processing
+    } else {
+      key = decodeURIComponent(pair);
+      rawValue = "";
     }
-  }
 
-  for (const [key, value] of urlObj.searchParams) {
-    const signalType = signalTypes.get(key);
+    const connection = connectionMap.get(key);
+    const signalType = connection ? connection.type : null;
 
-    // Handle array parameters specially using raw values to preserve encoded commas
+    // Cast value based on signal type
     if (signalType === "array") {
-      const rawValue = rawArrayValues.get(key);
-      if (rawValue === "" || rawValue === undefined) {
+      // Handle array query parameters with proper comma encoding:
+      // ?colors=red,blue,green → ["red", "blue", "green"]
+      // ?colors=red,blue%2Cgreen → ["red", "blue,green"] (comma in value)
+      // ?colors= → []
+      // ?colors → []
+      if (rawValue === "") {
         params[key] = [];
       } else {
         params[key] = rawValue
@@ -2205,25 +2202,25 @@ const extractSearchParams = (urlObj, connections = []) => {
           .map((item) => decodeURIComponent(item))
           .filter((item) => item.trim() !== "");
       }
-      continue;
-    }
-
-    // Cast value based on signal type
-    if (signalType === "number" || signalType === "float") {
-      const numberValue = Number(value);
-      params[key] = isNaN(numberValue) ? value : numberValue;
+    } else if (signalType === "number" || signalType === "float") {
+      const decodedValue = decodeURIComponent(rawValue);
+      const numberValue = Number(decodedValue);
+      params[key] = isNaN(numberValue) ? decodedValue : numberValue;
     } else if (signalType === "boolean") {
+      const decodedValue = decodeURIComponent(rawValue);
       // Handle boolean query parameters:
       // ?walk=true → true
       // ?walk=1 → true
       // ?walk → true (parameter present without value)
       // ?walk=false → false
       // ?walk=0 → false
-      params[key] = value === "true" || value === "1" || value === "";
+      params[key] =
+        decodedValue === "true" || decodedValue === "1" || decodedValue === "";
     } else {
-      params[key] = value;
+      params[key] = decodeURIComponent(rawValue);
     }
   }
+
   return params;
 };
 
