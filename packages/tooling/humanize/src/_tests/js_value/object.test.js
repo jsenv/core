@@ -178,12 +178,14 @@ import { humanize } from "@jsenv/humanize";
     "1": true,
     "1.2": true,
     "a b": true,
+    "1_a": true,
   });
   const expect = `{
   1: true,
   "a": true,
   "1.2": true,
-  "a b": true
+  "a b": true,
+  "1_a": true
 }`;
   assert({ actual, expect });
 }
