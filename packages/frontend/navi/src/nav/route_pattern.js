@@ -48,8 +48,19 @@ const buildQueryString = (params) => {
     if (value !== undefined && value !== null) {
       const encodedKey = encodeURIComponent(key);
 
+      // Handle array values - join with commas
+      if (Array.isArray(value)) {
+        if (value.length === 0) {
+          // Empty array - omit entirely
+        } else {
+          const encodedValue = value
+            .map((item) => encodeURIComponent(String(item)))
+            .join(",");
+          searchParamPairs.push(`${encodedKey}=${encodedValue}`);
+        }
+      }
       // Handle boolean values - if true, just add the key without value
-      if (value === true || value === "") {
+      else if (value === true || value === "") {
         searchParamPairs.push(encodedKey);
       } else {
         const encodedValue = encodeParamValue(value, false); // Search params encode slashes
@@ -2168,6 +2179,20 @@ const extractSearchParams = (urlObj, connections = []) => {
       // ?walk=false → false
       // ?walk=0 → false
       params[key] = value === "true" || value === "1" || value === "";
+    } else if (signalType === "array") {
+      // Handle array query parameters:
+      // ?colors=red,blue,green → ["red", "blue", "green"]
+      // ?colors=red,blue%2Cgreen → ["red", "blue,green"] (comma in value)
+      // ?colors= → []
+      // ?colors → []
+      if (value === "" || value === undefined) {
+        params[key] = [];
+      } else {
+        params[key] = value
+          .split(",")
+          .map((item) => decodeURIComponent(item))
+          .filter((item) => item.trim() !== "");
+      }
     } else {
       params[key] = value;
     }

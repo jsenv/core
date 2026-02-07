@@ -1,0 +1,338 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Array Signal Demo - Color Selection</title>
+    <link rel="icon" href="data:," />
+    <style>
+      body {
+        margin: 0;
+        padding: 20px;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        line-height: 1.6;
+        background: #f5f7fa;
+      }
+
+      .demo-container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 30px;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      }
+
+      h1 {
+        margin-top: 0;
+        padding-bottom: 10px;
+        color: #2c3e50;
+        border-bottom: 3px solid #3498db;
+      }
+
+      h2 {
+        margin-top: 30px;
+        color: #34495e;
+      }
+
+      .color-grid {
+        display: grid;
+        margin: 20px 0;
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 15px;
+      }
+
+      .color-button {
+        display: flex;
+        padding: 15px;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        font-weight: 600;
+        text-align: center;
+        border: 3px solid #ddd;
+        border-radius: 8px;
+        transition: all 0.2s ease;
+        cursor: pointer;
+      }
+
+      .color-button:hover {
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        transform: translateY(-2px);
+      }
+
+      .color-button.selected {
+        background-color: #d5f4e6;
+        border-color: #27ae60;
+        box-shadow: 0 2px 8px rgba(39, 174, 96, 0.3);
+        transform: translateY(-1px);
+      }
+
+      .color-swatch {
+        width: 40px;
+        height: 40px;
+        border: 2px solid rgba(0, 0, 0, 0.1);
+        border-radius: 50%;
+      }
+
+      .info-panel {
+        margin: 20px 0;
+        padding: 20px;
+        background: #ecf0f1;
+        border-left: 4px solid #3498db;
+        border-radius: 8px;
+      }
+
+      .url-display {
+        margin: 15px 0;
+        padding: 15px;
+        color: #ecf0f1;
+        font-size: 14px;
+        font-family: "Courier New", monospace;
+        word-break: break-all;
+        background: #2c3e50;
+        border-radius: 6px;
+      }
+
+      .control-section {
+        margin: 20px 0;
+        padding: 20px;
+        background: #f8f9fa;
+        border-radius: 8px;
+      }
+
+      .control-buttons {
+        display: flex;
+        margin-top: 15px;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .control-btn {
+        padding: 8px 16px;
+        color: white;
+        font-weight: 500;
+        background: #3498db;
+        border: none;
+        border-radius: 5px;
+        transition: background 0.2s ease;
+        cursor: pointer;
+      }
+
+      .control-btn:hover {
+        background: #2980b9;
+      }
+
+      .control-btn.danger {
+        background: #e74c3c;
+      }
+
+      .control-btn.danger:hover {
+        background: #c0392b;
+      }
+
+      .signal-status {
+        display: grid;
+        margin: 15px 0;
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 10px;
+      }
+
+      .signal-item {
+        padding: 10px;
+        text-align: center;
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+      }
+
+      .signal-item.active {
+        background: #d5f4e6;
+        border-color: #27ae60;
+      }
+
+      .signal-name {
+        color: #2c3e50;
+        font-weight: 600;
+      }
+
+      .signal-value {
+        color: #7f8c8d;
+        font-size: 0.9em;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="demo-container">
+      <h1>🎨 Array Signal Demo</h1>
+      <p>
+        This demo showcases a new <strong>array signal type</strong> that allows
+        you to manage collections of values in URL search parameters. Select
+        colors below to see how the array signal updates the URL.
+      </p>
+
+      <h2>Color Selection</h2>
+      <p>Click colors to add/remove them from the selection.</p>
+
+      <div class="color-grid" id="colorGrid">
+        <!-- Populated by React -->
+      </div>
+
+      <div id="app"></div>
+    </div>
+
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useComputed } from "@preact/signals";
+      import { setupRoutes, stateSignal, useRouteStatus } from "@jsenv/navi";
+      import { Box, Button } from "@jsenv/navi";
+
+      // Available colors for the demo (reduced to 3)
+      const AVAILABLE_COLORS = [
+        { name: "red", hex: "#e74c3c", label: "Red" },
+        { name: "blue", hex: "#3498db", label: "Blue" },
+        { name: "green", hex: "#27ae60", label: "Green" },
+      ];
+
+      // Create the array signal for selected colors
+      const colorsSignal = stateSignal([], {
+        id: "colors",
+        type: "array", // New array type
+      });
+
+      // Setup routes with the array signal
+      const { COLOR_DEMO_ROUTE } = setupRoutes({
+        COLOR_DEMO_ROUTE: `/?colors=${colorsSignal}`,
+      });
+
+      // Helper functions for color manipulation
+      const selectColor = (color) => {
+        if (!colorsSignal.value.includes(color)) {
+          colorsSignal.value = [...colorsSignal.value, color];
+        }
+      };
+
+      const unselectColor = (color) => {
+        colorsSignal.value = colorsSignal.value.filter((c) => c !== color);
+      };
+
+      const toggleColor = (color) => {
+        if (colorsSignal.value.includes(color)) {
+          unselectColor(color);
+        } else {
+          selectColor(color);
+        }
+      };
+
+      const ColorButton = ({ color }) => {
+        const isSelected = useComputed(() =>
+          colorsSignal.value.includes(color.name),
+        );
+
+        return (
+          <div
+            className={`color-button ${isSelected.value ? "selected" : ""}`}
+            onClick={() => toggleColor(color.name)}
+          >
+            <div
+              className="color-swatch"
+              style={{ backgroundColor: color.hex }}
+            />
+            <div>{color.label}</div>
+          </div>
+        );
+      };
+
+      const App = () => {
+        const routeStatus = useRouteStatus(COLOR_DEMO_ROUTE);
+
+        return (
+          <>
+            <div class="control-section">
+              <h3>Route Status</h3>
+              <div
+                style={{
+                  background: "#f8f9fa",
+                  padding: "15px",
+                  borderRadius: "6px",
+                  fontFamily: "monospace",
+                  fontSize: "14px",
+                }}
+              >
+                <div>
+                  <strong>Matching:</strong> {String(routeStatus.matching)}
+                </div>
+                <div>
+                  <strong>URL:</strong> {routeStatus.url || "N/A"}
+                </div>
+                <div>
+                  <strong>Params:</strong>{" "}
+                  {JSON.stringify(routeStatus.params, null, 2)}
+                </div>
+              </div>
+            </div>
+
+            <div className="color-grid">
+              {AVAILABLE_COLORS.map((color) => (
+                <ColorButton key={color.name} color={color} />
+              ))}
+            </div>
+
+            <div class="control-section">
+              <h3>Array Signal Controls</h3>
+              <p>Test the array signal API directly:</p>
+
+              <div className="control-buttons">
+                <Button
+                  onClick={() => {
+                    colorsSignal.value = ["red", "blue"];
+                  }}
+                >
+                  Set to [red, blue]
+                </Button>
+                <Button
+                  onClick={() => {
+                    colorsSignal.value = ["green"];
+                  }}
+                >
+                  Set to [green]
+                </Button>
+                <Button
+                  onClick={() => {
+                    colorsSignal.value = [];
+                  }}
+                >
+                  Clear All
+                </Button>
+                <Button
+                  onClick={() => {
+                    const available = AVAILABLE_COLORS.map(
+                      (c) => c.name,
+                    ).filter((name) => !colorsSignal.value.includes(name));
+                    if (available.length > 0) {
+                      const randomColor =
+                        available[Math.floor(Math.random() * available.length)];
+                      selectColor(randomColor);
+                    }
+                  }}
+                  style={{ background: "#e74c3c" }}
+                >
+                  Add Random Color
+                </Button>
+              </div>
+            </div>
+          </>
+        );
+      };
+
+      render(<App />, document.getElementById("app"));
+
+      // Console demos for testing the API
+      console.log("🎨 Array Signal Demo Loaded!");
+      console.log("Try these in the console:");
+      console.log('colorsSignal.value = ["red", "blue"]');
+      console.log('selectColor("green")');
+      console.log('unselectColor("red");');
+    </script>
+  </body>
+</html>

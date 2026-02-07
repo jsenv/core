@@ -435,4 +435,5 @@ const localStorageTypeMap = {
   date: "string",
   time: "string",
   email: "string",
+  array: "object",
 };
