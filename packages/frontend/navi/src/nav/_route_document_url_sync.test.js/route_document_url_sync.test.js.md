@@ -27,6 +27,7 @@
 - [map style signal change advanced](map_style_signal_change_advanced/map_style_signal_change_advanced.md)
 - [deep signal update](deep_signal_update/deep_signal_update.md)
 - [step parameter should prevent redundant navigation calls](step_parameter_should_prevent_redundant_navigation_calls/step_parameter_should_prevent_redundant_navigation_calls.md)
+- [array signal - signal to URL direction](array_signal_-_signal_to_url_direction/array_signal_-_signal_to_url_direction.md)
 
 ---
 
