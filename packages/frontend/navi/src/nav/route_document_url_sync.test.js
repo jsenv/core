@@ -1851,7 +1851,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
       const tramVisible = stateSignal(false, {
         type: "boolean",
       });
-      const { TRAM_ROUTE } = setupRoutes({
+      setupRoutes({
         TRAM_ROUTE: `/map?tram=${tramVisible}&trams=${tramEnabledLines}`,
       });
 
@@ -1862,7 +1862,6 @@ await snapshotTests(import.meta.url, ({ test }) => {
           available_lines: JSON.parse(JSON.stringify(tramAvailableLines.value)),
           enabled_lines: JSON.parse(JSON.stringify(tramEnabledLines.value)),
           tram_signal_visible: tramVisible.value,
-          route_matching: TRAM_ROUTE.matching,
           nav_calls: navCalls,
         };
       };
