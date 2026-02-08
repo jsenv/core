@@ -1,4 +1,4 @@
-import { d, u, useSignal, M, F, T, h, A, b, k, E, O, q, F$1 } from "../jsenv_plugin_database_manager_node_modules.js";
+import { v, u, useSignal, M, F, T, h, A, b, k, m, O, q, F$1 } from "../jsenv_plugin_database_manager_node_modules.js";
 import { initFlexDetailsSet, startDragToResizeGesture, getInnerWidth, getWidth, initPositionSticky } from "@jsenv/dom";
 import { useEditionController, createAvailableConstraint, Input, SINGLE_SPACE_CONSTRAINT, useSignalSync, Editable, useSelectionController, useKeyboardShortcuts, createSelectionKeyboardShortcuts, Details, Button, valueInLocalStorage, SVGMaskOverlay, resource, useActionData, setBaseUrl, setupRoutes, createAction, useRouteStatus, useRunOnMount, Form, Select, Label, ErrorBoundaryContext, Route, useNavState, Table, TabList, Tab, UITransition } from "@jsenv/navi";
 
@@ -351,21 +351,21 @@ const stylesheet$2 = new CSSStyleSheet({
 stylesheet$2.replaceSync(inlineContent$2.text);
 document.adoptedStyleSheets = [...document.adoptedStyleSheets, stylesheet$2];
 
-const roleCanLoginCountSignal = d(0);
+const roleCanLoginCountSignal = v(0);
 const setRoleCanLoginCount = count => {
   roleCanLoginCountSignal.value = count;
 };
 const useRoleCanLoginCount = () => {
   return roleCanLoginCountSignal.value;
 };
-const roleGroupCountSignal = d(0);
+const roleGroupCountSignal = v(0);
 const useRoleGroupCount = () => {
   return roleGroupCountSignal.value;
 };
 const setRoleGroupCount = count => {
   roleGroupCountSignal.value = count;
 };
-const roleWithOwnershipCountSignal = d(0);
+const roleWithOwnershipCountSignal = v(0);
 const useRoleWithOwnershipCount = () => {
   return roleWithOwnershipCountSignal.value;
 };
@@ -381,14 +381,14 @@ const setRoleCounts = ({
   setRoleGroupCount(groupCount);
   setRoleWithOwnershipCount(withOwnershipCount);
 };
-const databaseCountSignal = d(0);
+const databaseCountSignal = v(0);
 const setDatabaseCount = count => {
   databaseCountSignal.value = count;
 };
 const useDatabaseCount = () => {
   return databaseCountSignal.value;
 };
-const tableCountSignal = d(0);
+const tableCountSignal = v(0);
 const setTableCount = count => {
   tableCountSignal.value = count;
 };
@@ -629,8 +629,8 @@ const createExplorerGroupController = (id, {
   const [restoreHeight, storeHeight] = valueInLocalStorage("explorer_group_".concat(id, "_height"), {
     type: "positive_number"
   });
-  const heightSettingSignal = d(restoreHeight());
-  E(() => {
+  const heightSettingSignal = v(restoreHeight());
+  m(() => {
     const height = heightSettingSignal.value;
     storeHeight(height);
   });
@@ -1054,7 +1054,7 @@ const useDatabaseArray = () => {
   const databaseArray = useActionData(DATABASE.GET_MANY);
   return databaseArray;
 };
-const currentDatabaseIdSignal = d(window.DB_MANAGER_CONFIG.currentDatabase.oid);
+const currentDatabaseIdSignal = v(window.DB_MANAGER_CONFIG.currentDatabase.oid);
 const useCurrentDatabase = () => {
   const currentDatabaseId = currentDatabaseIdSignal.value;
   const currentDatabase = DATABASE.store.select(currentDatabaseId);
@@ -1216,7 +1216,7 @@ const useRoleCannotLoginArray = () => {
   const roleCannotLoginArray = useActionData(ROLE_CANNOT_LOGIN.GET_MANY);
   return roleCannotLoginArray;
 };
-const currentRoleIdSignal = d(window.DB_MANAGER_CONFIG.currentRole.oid);
+const currentRoleIdSignal = v(window.DB_MANAGER_CONFIG.currentRole.oid);
 const useCurrentRole = () => {
   const currentRoleId = currentRoleIdSignal.value;
   const currentRole = ROLE.store.select(currentRoleId);
@@ -2272,8 +2272,8 @@ const ExplorerBody = () => {
 const [restoreAsideWidth, storeAsideWidth] = valueInLocalStorage("aside_width", {
   type: "positive_number"
 });
-const asideWidthSignal = d(restoreAsideWidth());
-E(() => {
+const asideWidthSignal = v(restoreAsideWidth());
+m(() => {
   const asideWidth = asideWidthSignal.value;
   storeAsideWidth(asideWidth);
 });
