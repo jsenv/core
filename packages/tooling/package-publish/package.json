@@ -22,7 +22,7 @@
   "dependencies": {
     "@jsenv/filesystem": "4.15.13",
     "@jsenv/humanize": "1.7.5",
-    "semver": "7.7.3"
+    "semver": "7.7.4"
   },
   "devDependencies": {
     "@jsenv/assert": "../assert"

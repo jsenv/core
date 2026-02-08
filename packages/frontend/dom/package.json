@@ -42,7 +42,7 @@
     "@jsenv/core": "../../../",
     "@jsenv/navi": "../navi",
     "@jsenv/snapshot": "../../tooling/snapshot",
-    "@preact/signals": "2.6.2",
+    "@preact/signals": "2.7.0",
     "preact": "11.0.0-beta.0"
   },
   "publishConfig": {

@@ -1,5 +1,5 @@
 import { installImportMetaCss } from "./jsenv_navi_side_effects.js";
-import { useErrorBoundary, useLayoutEffect, useEffect, useRef, useState, useCallback, useContext, useMemo, useImperativeHandle, useId } from "preact/hooks";
+import { useErrorBoundary, useLayoutEffect, useEffect, useCallback, useRef, useState, useContext, useMemo, useImperativeHandle, useId } from "preact/hooks";
 import { jsxs, jsx, Fragment } from "preact/jsx-runtime";
 import { createIterableWeakSet, mergeOneStyle, stringifyStyle, createPubSub, mergeTwoStyles, normalizeStyles, createGroupTransitionController, getElementSignature, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, resolveCSSSize, findBefore, findAfter, createValueEffect, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, allowWheelThrough, resolveCSSColor, createStyleController, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, hasCSSSizeUnit, activeElementSignal, canInterceptKeys, pickLightOrDark, resolveColorLuminance, initFocusGroup, dragAfterThreshold, getScrollContainer, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement, elementIsFocusable } from "@jsenv/dom";
 import { prefixFirstAndIndentRemainingLines } from "@jsenv/humanize";
@@ -4634,17 +4634,17 @@ const removeFromArray = (array, ...valuesToRemove) => {
 
 const useArraySignalMembership = (arraySignal, id) => {
   const array = arraySignal.value;
-  const found = array.includes(id);
-  return [
-    found,
-    (enabled) => {
-      if (enabled) {
-        arraySignal.value = addIntoArray(array, id);
-      } else {
-        arraySignal.value = removeFromArray(array, id);
-      }
-    },
-  ];
+  const isMember = array.includes(id);
+
+  const add = useCallback(() => {
+    arraySignal.value = addIntoArray(array, id);
+  }, []);
+
+  const remove = useCallback(() => {
+    arraySignal.value = removeFromArray(array, id);
+  }, []);
+
+  return [isMember, add, remove];
 };
 
 /**

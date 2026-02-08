@@ -46,7 +46,7 @@
     "@jsenv/assert": "../assert",
     "@jsenv/https-local": "./",
     "@jsenv/performance-impact": "../performance-impact",
-    "playwright": "1.58.1"
+    "playwright": "1.58.2"
   },
   "engines": {
     "node": ">=20.0.0"

@@ -31,7 +31,7 @@
     "@jsenv/humanize": "1.7.5",
     "@jsenv/url-meta": "8.5.7",
     "@jsenv/urls": "2.9.7",
-    "dotenv": "17.2.3",
+    "dotenv": "17.2.4",
     "postgres": "3.4.8"
   },
   "devDependencies": {

@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/navi",
-  "version": "0.16.52",
+  "version": "0.16.53",
   "description": "Library of components including navigation to create frontend applications",
   "repository": {
     "type": "git",
@@ -43,8 +43,8 @@
     "@jsenv/plugin-preact": "../../related/plugin-preact",
     "@jsenv/snapshot": "../../tooling/snapshot",
     "@jsenv/urls": "../../tooling/urls",
-    "@preact/signals": "2.6.2",
-    "playwright": "1.58.1",
+    "@preact/signals": "2.7.0",
+    "playwright": "1.58.2",
     "preact": "11.0.0-beta.0"
   },
   "publishConfig": {

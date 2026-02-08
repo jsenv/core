@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/md-up",
-  "version": "0.1.36",
+  "version": "0.1.37",
   "private": true,
   "repository": {
     "type": "git",
@@ -22,7 +22,7 @@
     "@jsenv/ast": "6.7.20",
     "@jsenv/filesystem": "4.15.13",
     "@jsenv/urls": "2.9.7",
-    "anchor-markdown-header": "0.7.0",
+    "anchor-markdown-header": "0.8.1",
     "marked": "17.0.1"
   },
   "publishConfig": {

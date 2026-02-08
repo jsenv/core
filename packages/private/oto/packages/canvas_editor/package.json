@@ -2,7 +2,7 @@
   "name": "canvas-editor",
   "private": true,
   "dependencies": {
-    "@preact/signals": "2.6.2",
+    "@preact/signals": "2.7.0",
     "preact": "11.0.0-beta.0"
   },
   "devDependencies": {
