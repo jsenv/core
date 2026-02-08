@@ -37,7 +37,7 @@
   "devDependencies": {
     "@jsenv/assert": "../tooling/assert",
     "@jsenv/core": "../../",
-    "playwright": "1.58.2"
+    "playwright": "1.58.1"
   },
   "publishConfig": {
     "access": "public"

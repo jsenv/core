@@ -20,21 +20,13 @@
   </g>
   <g id="header">
     <g transform="translate(20,20)">
-      <circle cx="0" cy="0" r="6" fill="#ff5f57" />
-      <circle cx="20" cy="0" r="6" fill="#febc2e" />
-      <circle cx="40" cy="0" r="6" fill="#28c840" />
+      <circle cx="0" cy="0" r="6" fill="#ff5f57"/>
+      <circle cx="20" cy="0" r="6" fill="#febc2e"/>
+      <circle cx="40" cy="0" r="6" fill="#28c840"/>
     </g>
-    <text fill="#abb2bf" text-anchor="middle" x="320" y="20">
-      ansi to terminal
-    </text>
+    <text fill="#abb2bf" text-anchor="middle" x="320" y="20">ansi to terminal</text>
   </g>
-  <foreignObject
-    id="body"
-    y="40"
-    width="100%"
-    height="193.45"
-    overflow="hidden"
-  >
+  <foreignObject id="body" y="40" width="100%" height="193.45" overflow="hidden">
     <svg
       width="398.06"
       height="193.45"
@@ -44,23 +36,19 @@
     >
       <g>
         <text x="10" y="14.55" fill="#DAA520">&#x26A0;</text>
-        <text x="26.8" y="14.55"> test</text>
-        <text x="26.8" y="33.55"> multiline</text>
+        <text x="18.4" y="14.55" style="white-space:pre"> test</text>
+        <text x="10" y="33.55" style="white-space:pre">  multiline</text>
         <text x="10" y="52.55" fill="#7f7f7f">&#x25C6;</text>
-        <text x="26.8" y="52.55"> verbose log</text>
-        <text x="26.8" y="71.55"> la</text>
-        <text x="10" y="90.55" fill="#7f7f7f"
-          >--------------------------------------</text
-        >
+        <text x="18.4" y="52.55" style="white-space:pre"> verbose log</text>
+        <text x="10" y="71.55" style="white-space:pre">  la</text>
+        <text x="10" y="90.55" fill="#7f7f7f">--------------------------------------</text>
         <text x="10" y="128.55" fill="#7f7f7f">------------------</text>
-        <text x="169.63" y="128.55"> summary </text>
+        <text x="161.22" y="128.55" style="white-space:pre"> summary </text>
         <text x="236.84" y="128.55" fill="#7f7f7f">------------------</text>
-        <text x="10" y="147.55">3 executions: all </text>
+        <text x="10" y="147.55" style="white-space:pre">3 executions: all </text>
         <text x="161.22" y="147.55" fill="#11bc79">completed</text>
         <text x="10" y="166.55">duration: &#x3C;mock&#x3E;</text>
-        <text x="10" y="185.55" fill="#7f7f7f"
-          >---------------------------------------------</text
-        >
+        <text x="10" y="185.55" fill="#7f7f7f">---------------------------------------------</text>
       </g>
     </svg>
   </foreignObject>

@@ -44,7 +44,7 @@
     "@jsenv/snapshot": "../../tooling/snapshot",
     "@jsenv/urls": "../../tooling/urls",
     "@preact/signals": "2.7.0",
-    "playwright": "1.58.2",
+    "playwright": "1.58.1",
     "preact": "11.0.0-beta.0"
   },
   "publishConfig": {

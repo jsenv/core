@@ -3,9 +3,10 @@ import { startTerminalRecording } from "@jsenv/terminal-recorder";
 import { readFileSync, writeFileSync } from "node:fs";
 
 if (
-  process.platform === "win32" ||
-  // fail since update of macos, see https://github.com/microsoft/playwright/issues/30585
-  process.platform === "darwin"
+  process.env.CI &&
+  (process.platform === "win32" ||
+    // fail since update of macos, see https://github.com/microsoft/playwright/issues/30585
+    process.platform === "darwin")
 ) {
   process.exit(0);
 }
