@@ -7,11 +7,15 @@ export const useArraySignalMembership = (arraySignal, id) => {
   const isMember = array.includes(id);
 
   const add = useCallback(() => {
-    arraySignal.value = addIntoArray(array, id);
+    const arrayWithId = addIntoArray(arraySignal.peek(), id);
+    arraySignal.value = arrayWithId;
+    return arrayWithId;
   }, []);
 
   const remove = useCallback(() => {
-    arraySignal.value = removeFromArray(array, id);
+    const arrayWithoutId = removeFromArray(arraySignal.peek(), id);
+    arraySignal.value = arrayWithoutId;
+    return arrayWithoutId;
   }, []);
 
   return [isMember, add, remove];
