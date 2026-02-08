@@ -21,7 +21,7 @@ return values;
 
 ```console
 TypeError: state is not iterable
-  at p.<anonymous> (base/sigi.test.mjs:39:26)
+  at S.<anonymous> (base/sigi.test.mjs:39:26)
   at base/sigi.test.mjs:37:5
   at async base/sigi.test.mjs:5:1
 ```
