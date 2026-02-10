@@ -52,7 +52,7 @@
       }
 
       .separator-divider {
-        height: 1px;
+        height: 10px;
         flex: 0 0 40px;
         align-self: center;
         background: linear-gradient(
@@ -111,7 +111,7 @@
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { Box } from "../box.jsx";
+      import { Separator, Box } from "@jsenv/navi";
 
       const DemoItem = ({ children, ...props }) => (
         <div className="demo-item" {...props}>
@@ -138,7 +138,27 @@
           </div>
 
           <div className="demo-section">
-            <h3>2. Vertical Layout with Line Separators</h3>
+            <h3>2. Using Separator Component from @jsenv/navi</h3>
+            <div className="code-block">
+              {`<Box row separator={<Separator vertical color="green" />}>
+  <DemoItem>Item 1</DemoItem>
+  <DemoItem>Item 2</DemoItem>
+  <DemoItem>Item 3</DemoItem>
+</Box>`}
+            </div>
+            <Box
+              row
+              alignX="center"
+              separator={<Separator vertical color="green" width="10" />}
+            >
+              <DemoItem>Item 1</DemoItem>
+              <DemoItem>Item 2</DemoItem>
+              <DemoItem>Item 3</DemoItem>
+            </Box>
+          </div>
+
+          <div className="demo-section">
+            <h3>3. Vertical Layout with Line Separators</h3>
             <div className="code-block">
               {`<Box row separator={<div className="separator-line" />}>
   <DemoItem>First</DemoItem>
@@ -154,7 +174,7 @@
           </div>
 
           <div className="demo-section">
-            <h3>3. Arrow Separators with Text</h3>
+            <h3>4. Arrow Separators with Text</h3>
             <div className="code-block">
               {`<Box column separator={<div className="separator-arrow">→</div>}>
   <DemoItem>Step 1</DemoItem>
@@ -172,7 +192,7 @@
           </div>
 
           <div className="demo-section">
-            <h3>4. Custom Styled Separators</h3>
+            <h3>5. Custom Styled Separators</h3>
             <div className="code-block">
               {`<Box column separator={<div className="custom-separator">AND</div>}>
   <DemoItem>Condition A</DemoItem>
@@ -188,7 +208,7 @@
           </div>
 
           <div className="demo-section">
-            <h3>5. Gradient Divider Separators</h3>
+            <h3>6. Gradient Divider Separators</h3>
             <div className="code-block">
               {`<Box row separator={<div className="separator-divider" />}>
   <DemoItem>Section 1</DemoItem>
@@ -196,7 +216,7 @@
   <DemoItem>Section 3</DemoItem>
 </Box>`}
             </div>
-            <Box row separator={<div className="separator-divider" />}>
+            <Box column separator={<div className="separator-divider" />}>
               <DemoItem>Section 1</DemoItem>
               <DemoItem>Section 2</DemoItem>
               <DemoItem>Section 3</DemoItem>
@@ -204,7 +224,7 @@
           </div>
 
           <div className="demo-section">
-            <h3>6. Function-based Dynamic Separators</h3>
+            <h3>7. Function-based Dynamic Separators</h3>
             <div className="code-block">
               {`<Box column separator={(index) => (
   <div style={{
@@ -243,7 +263,7 @@
           </div>
 
           <div className="demo-section">
-            <h3>7. No Separator with Single Child</h3>
+            <h3>8. No Separator with Single Child</h3>
             <div className="code-block">
               {`<Box column separator={<div className="separator-dot" />}>
   <DemoItem>Single Item (no separator)</DemoItem>
@@ -261,7 +281,7 @@
           </div>
 
           <div className="demo-section">
-            <h3>8. Complex Interactive Separators</h3>
+            <h3>9. Complex Interactive Separators</h3>
             <div className="code-block">
               {`<Box column separator={
   <button 

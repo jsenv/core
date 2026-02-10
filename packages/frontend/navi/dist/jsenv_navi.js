@@ -28307,7 +28307,7 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
     &[data-vertical] {
       display: inline-block;
 
-      width: var(--separator-size);
+      width: var(--size);
       height: 1lh;
       margin-top: 0;
       margin-right: var(--spacing-end, var(--spacing));
@@ -28318,7 +28318,7 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
   }
 `;
 const SeparatorStyleCSSVars = {
-  color: "--separator-color"
+  color: "--color"
 };
 const Separator = ({
   vertical,

@@ -16,13 +16,14 @@ import.meta.css = /* css */ `
     height: var(--size);
     margin-top: var(--spacing-start, var(--spacing));
     margin-bottom: var(--spacing-end, var(--spacing));
+    flex-shrink: 0;
     background: var(--color);
     border: none;
 
     &[data-vertical] {
       display: inline-block;
 
-      width: var(--separator-size);
+      width: var(--size);
       height: 1lh;
       margin-top: 0;
       margin-right: var(--spacing-end, var(--spacing));
@@ -34,7 +35,7 @@ import.meta.css = /* css */ `
 `;
 
 const SeparatorStyleCSSVars = {
-  color: "--separator-color",
+  color: "--color",
 };
 export const Separator = ({ vertical, ...props }) => {
   return (
