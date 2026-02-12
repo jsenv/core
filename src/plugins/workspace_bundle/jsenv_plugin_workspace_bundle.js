@@ -2,6 +2,7 @@ import { bundleJsModules } from "@jsenv/plugin-bundling";
 import { injectQueryParams } from "@jsenv/urls";
 
 const PACKAGE_BUNDLE_QUERY_PARAM = "package_bundle";
+const DYNAMIC_IMPORT_QUERY_PARAM = "dynamic_import";
 
 export const jsenvPluginWorkspaceBundle = ({ packageDirectory }) => {
   return {
@@ -51,7 +52,7 @@ export const jsenvPluginWorkspaceBundle = ({ packageDirectory }) => {
           preserveDynamicImports: true,
           augmentDynamicImportUrlSearchParams: () => {
             return {
-              dynamic_import: "",
+              [DYNAMIC_IMPORT_QUERY_PARAM]: "",
               [PACKAGE_BUNDLE_QUERY_PARAM]: "",
             };
           },
