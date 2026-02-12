@@ -1,0 +1,3 @@
+import { answer } from "/packages/foo/answer.js?v=0.0.1";
+
+export const getAnswer = () => answer;

@@ -6,10 +6,12 @@ export const jsenvPluginWorkspaceBundle = ({ packageDirectory }) => {
     appliesDuring: "dev",
     transformUrlContent: {
       js_module: async (urlInfo) => {
-        if (!urlInfo.packageDirectoryUrl) {
+        const { packageDirectoryUrl } = urlInfo;
+
+        if (!packageDirectoryUrl) {
           return null;
         }
-        if (urlInfo.packageDirectoryUrl === packageDirectory.url) {
+        if (packageDirectoryUrl === packageDirectory.url) {
           // root package
           return null;
         }
