@@ -47,7 +47,7 @@ const run = async () => {
   const page = await launchBrowserPage(browser, { pageErrorEffect: "log" });
   await page.setViewportSize({ width: 900, height: 550 }); // generate smaller screenshots
   await page.goto(`${devServer.origin}/main.html`);
-  // const startResult = await executePageFunction(page);
+  const { returnValue } = await executePageFunction(page);
   // writeFileSync(
   //   new URL("./client/packages/foo/answer.js", import.meta.url),
   //   `export const answer = 41;`,
@@ -59,7 +59,7 @@ const run = async () => {
     browser.close();
   }
 
-  //  return { startResult, afterUpdateResult };
+  return { returnValue };
 };
 
 await snapshotDevTests(

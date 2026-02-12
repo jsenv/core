@@ -1,6 +1,8 @@
 import { bundleJsModules } from "@jsenv/plugin-bundling";
+import { injectQueryParams, injectQueryParamsIntoSpecifier } from "@jsenv/urls";
 
 const PACKAGE_BUNDLE_QUERY_PARAM = "package_bundle";
+const PACKAGE_NO_BUNDLE_QUERY_PARAM = "package_no_bundle";
 const DYNAMIC_IMPORT_QUERY_PARAM = "dynamic_import";
 
 export const jsenvPluginWorkspaceBundle = ({ packageDirectory }) => {
@@ -11,14 +13,19 @@ export const jsenvPluginWorkspaceBundle = ({ packageDirectory }) => {
       if (reference.searchParams.has(PACKAGE_BUNDLE_QUERY_PARAM)) {
         return null;
       }
-      if (reference.ownerUrlInfo.searchParams.has(PACKAGE_BUNDLE_QUERY_PARAM)) {
-        return null;
-      }
       if (
-        reference.prev &&
-        reference.prev.searchParams.has(PACKAGE_BUNDLE_QUERY_PARAM)
+        reference.ownerUrlInfo.searchParams.has(PACKAGE_NO_BUNDLE_QUERY_PARAM)
       ) {
-        return null;
+        // we're cooking the bundle, without this check we would have infinite recursion to try to bundle
+        // we want to propagate the ?package_no_bundle
+        const noBundleUrl = injectQueryParams(reference.url, {
+          v: undefined,
+          [PACKAGE_NO_BUNDLE_QUERY_PARAM]: "",
+        });
+        // console.log(
+        //   `redirecting ${reference.url} to ${noBundleUrl} to cook the bundle`,
+        // );
+        return noBundleUrl;
       }
       const packageDirectoryUrl = packageDirectory.find(reference.url);
       if (!packageDirectoryUrl) {
@@ -36,13 +43,26 @@ export const jsenvPluginWorkspaceBundle = ({ packageDirectory }) => {
         type: "js_import",
         specifier: `${packageJSON.name}?${PACKAGE_BUNDLE_QUERY_PARAM}`,
       });
+      // console.log(
+      //   `redirecting ${reference.url} to ${rootReference.url} to target the package bundle version of the package`,
+      // );
       const packageMainUrl = rootReference.url;
       return packageMainUrl;
     },
     fetchUrlContent: async (urlInfo) => {
-      const noBundleUrlInfo = urlInfo.getWithoutSearchParam(
-        PACKAGE_BUNDLE_QUERY_PARAM,
+      if (!urlInfo.searchParams.has(PACKAGE_BUNDLE_QUERY_PARAM)) {
+        return null;
+      }
+      const noBundleSpecifier = injectQueryParamsIntoSpecifier(
+        urlInfo.firstReference.specifier,
+        {
+          [PACKAGE_BUNDLE_QUERY_PARAM]: undefined,
+          [PACKAGE_NO_BUNDLE_QUERY_PARAM]: "",
+        },
       );
+      const noBundleUrlInfo = urlInfo.redirect({
+        specifier: noBundleSpecifier,
+      });
       if (!noBundleUrlInfo) {
         return null;
       }
@@ -54,7 +74,7 @@ export const jsenvPluginWorkspaceBundle = ({ packageDirectory }) => {
         ignoreDynamicImport: true,
       });
       const bundleUrlInfos = await bundleJsModules([noBundleUrlInfo], {
-        chunks: undefined,
+        chunks: false,
         buildDirectoryUrl: new URL("./", import.meta.url),
         preserveDynamicImports: true,
         augmentDynamicImportUrlSearchParams: () => {

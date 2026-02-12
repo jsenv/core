@@ -338,6 +338,14 @@ const detailsFromPluginController = (pluginController) => {
 
 const detailsFromValueThrown = (valueThrownByPlugin) => {
   if (valueThrownByPlugin && valueThrownByPlugin instanceof Error) {
+    // if (
+    //   valueThrownByPlugin.message.includes("Maximum call stack size exceeded")
+    // ) {
+    //   return {
+    //     "error message": valueThrownByPlugin.message,
+    //     "error stack": valueThrownByPlugin.stack,
+    //   };
+    // }
     if (
       valueThrownByPlugin.code === "PARSE_ERROR" ||
       valueThrownByPlugin.code === "MODULE_NOT_FOUND" ||

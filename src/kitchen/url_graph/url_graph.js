@@ -324,26 +324,13 @@ const createUrlInfo = (url, context) => {
     }
     return false;
   };
-  urlInfo.getWithoutSearchParam = (searchParam, { expectedType } = {}) => {
-    // The search param can be
-    // 1. injected by a plugin during "redirectReference"
-    //    - import assertions
-    //    - js module fallback to systemjs
-    // 2. already inside source files
-    //    - turn js module into js classic for convenience ?as_js_classic
-    //    - turn js classic to js module for to make it importable
-    if (!urlInfo.searchParams.has(searchParam)) {
-      return null;
-    }
+  const getNextUrlInfo = (newProps) => {
     const reference = urlInfo.firstReference;
-    const newSpecifier = injectQueryParamsIntoSpecifier(reference.specifier, {
-      [searchParam]: undefined,
-    });
-    const referenceWithoutSearchParam = reference.addImplicit({
+    const nextReference = reference.addImplicit({
       type: reference.type,
       subtype: reference.subtype,
       expectedContentType: reference.expectedContentType,
-      expectedType: expectedType || reference.expectedType,
+      expectedType: reference.expectedType,
       expectedSubtype: reference.expectedSubtype,
       integrity: reference.integrity,
       crossorigin: reference.crossorigin,
@@ -367,7 +354,6 @@ const createUrlInfo = (url, context) => {
       astInfo: reference.astInfo,
       mutation: reference.mutation,
       data: { ...reference.data },
-      specifier: newSpecifier,
       isWeak: true,
       isInline: reference.isInline,
       original: reference.original || reference,
@@ -377,9 +363,37 @@ const createUrlInfo = (url, context) => {
       // generatedUrl: null,
       // generatedSpecifier: null,
       // filename: null,
+      ...newProps,
     });
-    reference.next = referenceWithoutSearchParam;
-    return referenceWithoutSearchParam.urlInfo;
+    reference.next = nextReference;
+    return nextReference.urlInfo;
+  };
+
+  urlInfo.redirect = (props) => {
+    return getNextUrlInfo(props);
+  };
+  urlInfo.getWithoutSearchParam = (searchParam, props) => {
+    // The search param can be
+    // 1. injected by a plugin during "redirectReference"
+    //    - import assertions
+    //    - js module fallback to systemjs
+    // 2. already inside source files
+    //    - turn js module into js classic for convenience ?as_js_classic
+    //    - turn js classic to js module for to make it importable
+    if (!urlInfo.searchParams.has(searchParam)) {
+      return null;
+    }
+    const reference = urlInfo.firstReference;
+    const specifierWithoutSearchParam = injectQueryParamsIntoSpecifier(
+      reference.specifier,
+      {
+        [searchParam]: undefined,
+      },
+    );
+    return urlInfo.redirect({
+      specifier: specifierWithoutSearchParam,
+      ...props,
+    });
   };
   urlInfo.onRemoved = () => {
     urlInfo.kitchen.urlInfoTransformer.resetContent(urlInfo);
