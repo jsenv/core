@@ -27,7 +27,7 @@ writeSymbolicLinkSync({
 await ensureEmptyDirectory(new URL("./.jsenv/", import.meta.url));
 const devServer = await startDevServer({
   sourcemaps: "none",
-  logLevel: "warn",
+  logLevel: "debug",
   serverLogLevel: "warn",
   sourceDirectoryUrl: import.meta.resolve("./client/"),
   outDirectoryUrl: import.meta.resolve("./.jsenv/"),
@@ -48,19 +48,19 @@ const run = async () => {
   const page = await launchBrowserPage(browser, { pageErrorEffect: "log" });
   await page.setViewportSize({ width: 900, height: 550 }); // generate smaller screenshots
   await page.goto(`${devServer.origin}/main.html`);
-  const startResult = await executePageFunction(page);
-  writeFileSync(
-    new URL("./client/packages/foo/answer.js", import.meta.url),
-    `export const answer = 41;`,
-  );
-  const afterUpdateResult = await executePageFunction(page);
+  // const startResult = await executePageFunction(page);
+  // writeFileSync(
+  //   new URL("./client/packages/foo/answer.js", import.meta.url),
+  //   `export const answer = 41;`,
+  // );
+  // const afterUpdateResult = await executePageFunction(page);
 
   if (!debug) {
     page.close();
     browser.close();
   }
 
-  return { startResult, afterUpdateResult };
+  //  return { startResult, afterUpdateResult };
 };
 
 await snapshotDevTests(

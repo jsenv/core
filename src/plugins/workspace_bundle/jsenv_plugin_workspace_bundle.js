@@ -11,6 +11,9 @@ export const jsenvPluginWorkspaceBundle = ({ packageDirectory }) => {
       if (reference.searchParams.has(PACKAGE_BUNDLE_QUERY_PARAM)) {
         return null;
       }
+      if (reference.ownerUrlInfo.searchParams.has(PACKAGE_BUNDLE_QUERY_PARAM)) {
+        return null;
+      }
       const packageDirectoryUrl = packageDirectory.find(reference.url);
       if (!packageDirectoryUrl) {
         return null;
@@ -32,6 +35,7 @@ export const jsenvPluginWorkspaceBundle = ({ packageDirectory }) => {
     },
     fetchUrlContent: {
       js_module: async (urlInfo) => {
+        debugger;
         const noBundleUrlInfo = urlInfo.getWithoutSearchParam(
           PACKAGE_BUNDLE_QUERY_PARAM,
         );

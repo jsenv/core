@@ -80,8 +80,8 @@ export const getCorePlugins = ({
   }
 
   return [
+    jsenvPluginWorkspaceBundle({ packageDirectory }),
     jsenvPluginReferenceAnalysis(referenceAnalysis),
-    jsenvPluginWorkspaceBundle({ packageDirectory }), // must be after ref analysis as it calls cookDependencies()
     jsenvPluginInjections(injections),
     jsenvPluginTranspilation(transpilation),
     // "jsenvPluginInlining" must be very soon because all other plugins will react differently once they see the file is inlined
