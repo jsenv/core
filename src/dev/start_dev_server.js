@@ -2,7 +2,6 @@ import {
   assertAndNormalizeDirectoryUrl,
   bufferToEtag,
   lookupPackageDirectory,
-  readPackageAtOrNull,
 } from "@jsenv/filesystem";
 import { createLogger, createTaskLog, formatError } from "@jsenv/humanize";
 import {
@@ -23,6 +22,7 @@ import { watchSourceFiles } from "../helpers/watch_source_files.js";
 import { WEB_URL_CONVERTER } from "../helpers/web_url_converter.js";
 import { jsenvCoreDirectoryUrl } from "../jsenv_core_directory_url.js";
 import { createKitchen } from "../kitchen/kitchen.js";
+import { createPackageDirectory } from "../kitchen/package_directory.js";
 import {
   createPluginController,
   createPluginStore,
@@ -246,11 +246,9 @@ export const startDevServer = async ({
     );
     serverStopCallbackSet.add(stopWatchingSourceFiles);
 
-    const packageDirectory = {
-      url: lookupPackageDirectory(sourceDirectoryUrl),
-      find: lookupPackageDirectory,
-      read: readPackageAtOrNull,
-    };
+    const packageDirectory = createPackageDirectory({
+      sourceDirectoryUrl,
+    });
 
     const devServerPluginStore = await createPluginStore([
       jsenvPluginServerEvents({ clientAutoreload }),

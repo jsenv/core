@@ -4,20 +4,16 @@ export const jsenvPluginWorkspaceBundle = ({ packageDirectory }) => {
   return {
     name: "jsenv:workspace_bundle",
     appliesDuring: "dev",
-    urlInfoCreated: (urlInfo) => {
-      const url = urlInfo.url;
-      if (!url.startsWith("file:")) {
-        return;
-      }
-      const closestPackageDirectoryUrl = packageDirectory.find(url);
-      urlInfo.packageDirectoryUrl = closestPackageDirectoryUrl;
-    },
     transformUrlContent: {
       js_module: async (urlInfo) => {
         if (!urlInfo.packageDirectoryUrl) {
           return null;
         }
-        console.log(urlInfo.context.requestedUrl, urlInfo.context.request);
+        if (urlInfo.packageDirectoryUrl === packageDirectory.url) {
+          // root package
+          return null;
+        }
+        console.log("should bundle", urlInfo.url);
         return null;
         debugger;
         // cook it to get content + dependencies
