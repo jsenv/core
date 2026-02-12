@@ -9,6 +9,7 @@
 
 import {
   applyNodeEsmResolution,
+  defaultLookupPackageScope,
   defaultReadPackageJson,
   readCustomConditionsFromProcessArgs,
 } from "@jsenv/node-esm-resolution";
@@ -112,40 +113,58 @@ export const createNodeEsmResolver = ({
     if (ownerUrlInfo.context.build) {
       return url;
     }
-    const dependsOnPackageJson =
-      type !== "relative_specifier" &&
-      type !== "absolute_specifier" &&
-      type !== "node_builtin_specifier";
-    if (dependsOnPackageJson) {
-      // this reference depends on package.json and node_modules
-      // to be resolved. Each file using this specifier
-      // must be invalidated when corresponding package.json changes
-      addRelationshipWithPackageJson({
-        reference,
-        packageJsonUrl: `${packageDirectoryUrl}package.json`,
-        field: type.startsWith("field:")
-          ? `#${type.slice("field:".length)}`
-          : "",
-      });
-    }
-    if (packageDirectoryUrl) {
-      const packageVersion =
-        defaultReadPackageJson(packageDirectoryUrl).version;
-      // package version can be null, see https://github.com/babel/babel/blob/2ce56e832c2dd7a7ed92c89028ba929f874c2f5c/packages/babel-runtime/helpers/esm/package.json#L2
-      if (packageVersion) {
+
+    package_relationships: {
+      // packageDirectoryUrl can be already know thanks to node resolution
+      // otherwise we look for it
+      const closestPackageDirectoryUrl =
+        packageDirectoryUrl || defaultLookupPackageScope(url);
+      if (!closestPackageDirectoryUrl) {
+        // happens for projects without package.json or some files outside of package scope
+        // (generated files like sourcemaps or cache files for example)
+        break package_relationships;
+      }
+
+      resolution_relationship: {
+        const dependsOnPackageJson = Boolean(packageDirectoryUrl);
+        if (dependsOnPackageJson) {
+          // this reference depends on package.json and node_modules
+          // to be resolved. Each file using this specifier
+          // must be invalidated when corresponding package.json changes
+          addRelationshipWithPackageJson({
+            reference,
+            packageJsonUrl: `${packageDirectoryUrl}package.json`,
+            field: type.startsWith("field:")
+              ? `#${type.slice("field:".length)}`
+              : "",
+          });
+        }
+      }
+      version_relationship: {
+        const packageVersion = defaultReadPackageJson(
+          closestPackageDirectoryUrl,
+        ).version;
+        if (!packageVersion) {
+          // package version can be null, see https://github.com/babel/babel/blob/2ce56e832c2dd7a7ed92c89028ba929f874c2f5c/packages/babel-runtime/helpers/esm/package.json#L2
+          break version_relationship;
+        }
+        const hasVersioningEffect =
+          closestPackageDirectoryUrl !==
+            ownerUrlInfo.context.rootDirectoryUrl &&
+          url.includes("/node_modules/");
         addRelationshipWithPackageJson({
           reference,
-          packageJsonUrl: `${packageDirectoryUrl}package.json`,
+          packageJsonUrl: `${closestPackageDirectoryUrl}package.json`,
           field: "version",
           // For now the versioning effect is reserved to files withing node modules with a package.json
           // So we exclude file belonging to the root package and files which have an other package.json
           // outside of node_modules (likely workspace packages)
-          hasVersioningEffect:
-            packageDirectoryUrl !== ownerUrlInfo.context.rootDirectoryUrl &&
-            url.includes("/node_modules/"),
+          hasVersioningEffect,
         });
+        if (hasVersioningEffect) {
+          reference.version = packageVersion;
+        }
       }
-      reference.version = packageVersion;
     }
 
     return url;
