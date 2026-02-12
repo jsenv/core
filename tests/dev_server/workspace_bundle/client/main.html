@@ -8,10 +8,16 @@
 
   <body>
     <div id="app">INIT</div>
+    <script>
+      window.resultPromise = new Promise((resolve) => {
+        window.resolveResultPromise = resolve;
+      });
+    </script>
+
     <script type="module">
       import { getAnswer } from "foo";
 
-      window.answer = getAnswer();
+      window.resolveResultPromise(getAnswer());
     </script>
   </body>
 </html>

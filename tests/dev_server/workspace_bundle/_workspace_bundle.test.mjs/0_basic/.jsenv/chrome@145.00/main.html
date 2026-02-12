@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8">
+    <link rel="icon" href="data:,">
+  </head>
+  <body>
+    <jsenv-scripts>
+      <script jsenv-injected-by="jsenv:inject_globals" content-indented="">
+        Object.assign(window, {
+          "HTML_ROOT_PATHNAME": "/main.html"
+        });
+      </script>
+    </jsenv-scripts>
+  
+
+  
+    <div id="app">INIT</div>
+    <script type="module" jsenv-cooked-by="jsenv:html_inline_content_analysis">
+      import { getAnswer } from "foo";
+
+      window.answer = getAnswer();
+    </script>
+  </body>
+</html>

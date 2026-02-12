@@ -63,9 +63,15 @@ const run = async () => {
   return { startResult, afterUpdateResult };
 };
 
-await snapshotDevTests(import.meta.url, ({ test }) => {
-  test("0_basic", () => run());
-});
+await snapshotDevTests(
+  import.meta.url,
+  ({ test }) => {
+    test("0_basic", () => run());
+  },
+  {
+    logEffects: false,
+  },
+);
 
 if (!debug) {
   devServer.stop(); // required because for some reason the rooms are kept alive

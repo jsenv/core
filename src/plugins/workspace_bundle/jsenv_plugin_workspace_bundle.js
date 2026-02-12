@@ -12,7 +12,7 @@ export const jsenvPluginWorkspaceBundle = ({ packageDirectory }) => {
       if (reference.searchParams.has(PACKAGE_BUNDLE_QUERY_PARAM)) {
         return null;
       }
-      const { packageDirectoryUrl } = reference.urlInfo;
+      const packageDirectoryUrl = packageDirectory.find(reference.url);
       if (!packageDirectoryUrl) {
         return null;
       }
@@ -24,8 +24,11 @@ export const jsenvPluginWorkspaceBundle = ({ packageDirectory }) => {
       // otherwise we might execute some parts of the package code multiple times.
       // so we need to redirect the potential reference to non entry point to the package main entry point
       const packageJSON = packageDirectory.read(packageDirectoryUrl);
-      reference.specifier = packageJSON.name;
-      const packageMainUrl = reference.resolve();
+      const rootReference = reference.ownerUrlInfo.dependencies.inject({
+        type: "js_import",
+        specifier: packageJSON.name,
+      });
+      const packageMainUrl = rootReference.url;
       const packageBundleUrl = injectQueryParams(packageMainUrl, {
         [PACKAGE_BUNDLE_QUERY_PARAM]: "",
       });
