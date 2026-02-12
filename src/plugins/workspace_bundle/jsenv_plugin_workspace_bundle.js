@@ -1,42 +1,62 @@
 import { bundleJsModules } from "@jsenv/plugin-bundling";
+import { injectQueryParams } from "@jsenv/urls";
+
+const PACKAGE_BUNDLE_QUERY_PARAM = "package_bundle";
 
 export const jsenvPluginWorkspaceBundle = ({ packageDirectory }) => {
   return {
     name: "jsenv:workspace_bundle",
     appliesDuring: "dev",
-    transformUrlContent: {
-      js_module: async (urlInfo) => {
-        const { packageDirectoryUrl } = urlInfo;
-
-        if (!packageDirectoryUrl) {
-          return null;
-        }
-        if (packageDirectoryUrl === packageDirectory.url) {
-          // root package
-          return null;
-        }
-        console.log("should bundle", urlInfo.url);
+    redirectReference: (reference) => {
+      if (reference.searchParams.has(PACKAGE_BUNDLE_QUERY_PARAM)) {
         return null;
-        debugger;
-        // cook it to get content + dependencies
-        await urlInfo.cook();
-        await urlInfo.cookDependencies({
+      }
+      const { packageDirectoryUrl } = reference.urlInfo;
+      if (!packageDirectoryUrl) {
+        return null;
+      }
+      if (packageDirectoryUrl === packageDirectory.url) {
+        // root package, we don't want to bundle
+        return null;
+      }
+      // we make sure we target the bundle version of the package
+      // otherwise we might execute some parts of the package code multiple times.
+      // so we need to redirect the potential reference to non entry point to the package main entry point
+      const packageJSON = packageDirectory.read(packageDirectoryUrl);
+      reference.specifier = packageJSON.name;
+      const packageMainUrl = reference.resolve();
+      const packageBundleUrl = injectQueryParams(packageMainUrl, {
+        [PACKAGE_BUNDLE_QUERY_PARAM]: "",
+      });
+      return packageBundleUrl;
+    },
+    fetchUrlContent: {
+      js_module: async (urlInfo) => {
+        const noBundleUrlInfo = urlInfo.getWithoutSearchParam(
+          PACKAGE_BUNDLE_QUERY_PARAM,
+        );
+        if (!noBundleUrlInfo) {
+          return null;
+        }
+        await noBundleUrlInfo.cook();
+        await noBundleUrlInfo.cookDependencies({
           // we ignore dynamic import to cook lazyly (as browser request the server)
-          // these dynamic imports must inherit "?as_js_classic"
+          // these dynamic imports must inherit "?package_bundle"
           // This is done inside rollup for convenience
           ignoreDynamicImport: true,
         });
-        const bundleUrlInfos = await bundleJsModules([urlInfo], {
+        const bundleUrlInfos = await bundleJsModules([noBundleUrlInfo], {
           chunks: undefined,
           buildDirectoryUrl: new URL("./", import.meta.url),
           preserveDynamicImports: true,
           augmentDynamicImportUrlSearchParams: () => {
             return {
               dynamic_import: "",
+              [PACKAGE_BUNDLE_QUERY_PARAM]: "",
             };
           },
         });
-        const bundledUrlInfo = bundleUrlInfos[urlInfo.url];
+        const bundledUrlInfo = bundleUrlInfos[noBundleUrlInfo.url];
         if (urlInfo.context.dev) {
           for (const sourceUrl of bundledUrlInfo.sourceUrls) {
             urlInfo.dependencies.inject({

@@ -726,6 +726,12 @@ const rollupPluginJsenv = ({
         }
       }
       const urlInfo = graph.getUrlInfo(resolvedUrl);
+      if (!urlInfo) {
+        throw new Error(
+          `Cannot find ${resolvedUrl} in the graph, imported by ${importer}.
+A file can be built only when all deps are in the graph (cookDependencies must be called on the importer)`,
+        );
+      }
       if (urlInfo.type === "entry_build") {
         return {
           id: resolvedUrl,
