@@ -1,5 +1,4 @@
 import { bundleJsModules } from "@jsenv/plugin-bundling";
-import { injectQueryParams } from "@jsenv/urls";
 
 const PACKAGE_BUNDLE_QUERY_PARAM = "package_bundle";
 const DYNAMIC_IMPORT_QUERY_PARAM = "dynamic_import";
@@ -26,13 +25,10 @@ export const jsenvPluginWorkspaceBundle = ({ packageDirectory }) => {
       const packageJSON = packageDirectory.read(packageDirectoryUrl);
       const rootReference = reference.ownerUrlInfo.dependencies.inject({
         type: "js_import",
-        specifier: packageJSON.name,
+        specifier: `${packageJSON.name}?${PACKAGE_BUNDLE_QUERY_PARAM}`,
       });
       const packageMainUrl = rootReference.url;
-      const packageBundleUrl = injectQueryParams(packageMainUrl, {
-        [PACKAGE_BUNDLE_QUERY_PARAM]: "",
-      });
-      return packageBundleUrl;
+      return packageMainUrl;
     },
     fetchUrlContent: {
       js_module: async (urlInfo) => {
