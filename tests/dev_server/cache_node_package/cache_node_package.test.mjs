@@ -16,24 +16,20 @@ import { startDevServer } from "@jsenv/core";
 import { launchBrowserPage } from "@jsenv/core/tests/launch_browser_page.js";
 
 const debug = false; // true to have browser UI + keep it open after test
-const fooPackageFileUrl = new URL(
-  "./client/node_modules/foo/package.json",
-  import.meta.url,
-);
+const fooPackageFileUrl = import.meta
+  .resolve("./client/node_modules/foo/package.json");
 const fooPackageFileContent = {
   beforeTest: readFileSync(fooPackageFileUrl),
   update: (content) => writeFileSync(fooPackageFileUrl, content),
   restore: () =>
     writeFileSync(fooPackageFileUrl, fooPackageFileContent.beforeTest),
 };
-const asnwerFileUrl = new URL(
-  "./client/node_modules/foo/answer.js",
-  import.meta.url,
-);
+const answerFileUrl = import.meta
+  .resolve("./client/node_modules/foo/answer.js");
 const answerFileContent = {
-  beforeTest: readFileSync(asnwerFileUrl),
-  update: (content) => writeFileSync(asnwerFileUrl, content),
-  restore: () => writeFileSync(asnwerFileUrl, answerFileContent.beforeTest),
+  beforeTest: readFileSync(answerFileUrl),
+  update: (content) => writeFileSync(answerFileUrl, content),
+  restore: () => writeFileSync(answerFileUrl, answerFileContent.beforeTest),
 };
 const serverRequests = [];
 const devServer = await startDevServer({

@@ -129,29 +129,26 @@ export const createNodeEsmResolver = ({
           : "",
       });
     }
-    // without this check a file inside a project without package.json
-    // could be considered as a node module if there is a ancestor package.json
-    // but we want to version only node modules
-    if (url.includes("/node_modules/")) {
-      const packageDirectoryUrl = defaultLookupPackageScope(url);
-      if (
-        packageDirectoryUrl &&
-        packageDirectoryUrl !== ownerUrlInfo.context.rootDirectoryUrl
-      ) {
-        const packageVersion =
-          defaultReadPackageJson(packageDirectoryUrl).version;
-        // package version can be null, see https://github.com/babel/babel/blob/2ce56e832c2dd7a7ed92c89028ba929f874c2f5c/packages/babel-runtime/helpers/esm/package.json#L2
-        if (packageVersion) {
-          addRelationshipWithPackageJson({
-            reference,
-            packageJsonUrl: `${packageDirectoryUrl}package.json`,
-            field: "version",
-            hasVersioningEffect: true,
-          });
-        }
-        reference.version = packageVersion;
+    if (packageDirectoryUrl) {
+      const packageVersion =
+        defaultReadPackageJson(packageDirectoryUrl).version;
+      // package version can be null, see https://github.com/babel/babel/blob/2ce56e832c2dd7a7ed92c89028ba929f874c2f5c/packages/babel-runtime/helpers/esm/package.json#L2
+      if (packageVersion) {
+        addRelationshipWithPackageJson({
+          reference,
+          packageJsonUrl: `${packageDirectoryUrl}package.json`,
+          field: "version",
+          // For now the versioning effect is reserved to files withing node modules with a package.json
+          // So we exclude file belonging to the root package and files which have an other package.json
+          // outside of node_modules (likely workspace packages)
+          hasVersioningEffect:
+            packageDirectoryUrl !== ownerUrlInfo.context.rootDirectoryUrl &&
+            url.includes("/node_modules/"),
+        });
       }
+      reference.version = packageVersion;
     }
+
     return url;
   };
 };
