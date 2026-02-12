@@ -1,0 +1,7 @@
+{
+  "name": "bar",
+  "private": true,
+  "dependencies": {
+    "foo": "*"
+  }
+}

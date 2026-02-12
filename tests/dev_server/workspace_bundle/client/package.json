@@ -1,7 +1,10 @@
 {
   "name": "demo",
   "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
   "dependencies": {
-    "foo": "file:./packages/foo"
+    "foo": "workspace:*"
   }
 }
