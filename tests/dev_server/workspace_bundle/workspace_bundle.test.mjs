@@ -1,12 +1,25 @@
 import { startDevServer } from "@jsenv/core";
 import { launchBrowserPage } from "@jsenv/core/tests/launch_browser_page.js";
 import { snapshotDevTests } from "@jsenv/core/tests/snapshot_dev_tests.js";
-import { ensureEmptyDirectory, writeFileSync } from "@jsenv/filesystem";
+import {
+  ensureEmptyDirectory,
+  writeFileSync,
+  writeSymbolicLinkSync,
+} from "@jsenv/filesystem";
 import { chromium } from "playwright";
 
 if (process.env.CI) {
   process.exit(0);
 }
+
+writeSymbolicLinkSync({
+  from: import.meta.resolve("./client/node_modules/foo/"),
+  to: import.meta.resolve("./client/packages/foo/"),
+});
+writeSymbolicLinkSync({
+  from: import.meta.resolve("./client/node_modules/bar/"),
+  to: import.meta.resolve("./client/packages/bar/"),
+});
 
 let debug = false;
 const run = async () => {
