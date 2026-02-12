@@ -15,10 +15,12 @@ if (process.env.CI) {
 writeSymbolicLinkSync({
   from: import.meta.resolve("./client/node_modules/foo/"),
   to: import.meta.resolve("./client/packages/foo/"),
+  allowUseless: true,
 });
 writeSymbolicLinkSync({
   from: import.meta.resolve("./client/node_modules/bar/"),
   to: import.meta.resolve("./client/packages/bar/"),
+  allowUseless: true,
 });
 
 let debug = false;
