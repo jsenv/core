@@ -97,6 +97,7 @@ export const startDevServer = async ({
   transpilation,
   cacheControl = true,
   ribbon = true,
+  dropToOpen = true,
   // toolbar = false,
   onKitchenCreated = () => {},
   spa,
@@ -277,6 +278,7 @@ export const startDevServer = async ({
         clientAutoreloadOnServerRestart,
         cacheControl,
         ribbon,
+        dropToOpen,
       }),
     ]);
     const getOrCreateKitchen = async (request) => {

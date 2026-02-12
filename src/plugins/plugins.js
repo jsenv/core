@@ -57,6 +57,7 @@ export const getCorePlugins = ({
   cacheControl,
   scenarioPlaceholders = true,
   ribbon = true,
+  dropToOpen = true,
   packageSideEffects = false,
 } = {}) => {
   if (cacheControl === true) {
@@ -151,7 +152,7 @@ export const getCorePlugins = ({
       : []),
     ...(cacheControl ? [jsenvPluginCacheControl(cacheControl)] : []),
     ...(ribbon ? [jsenvPluginRibbon({ rootDirectoryUrl, ...ribbon })] : []),
-    jsenvPluginDropToOpen(),
+    ...(dropToOpen ? [jsenvPluginDropToOpen()] : []),
     jsenvPluginCleanHTML(),
     jsenvPluginChromeDevtoolsJson(),
     ...(packageSideEffects
