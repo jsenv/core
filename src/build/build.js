@@ -24,7 +24,6 @@ import {
   compareFileUrls,
   createLookupPackageDirectory,
   ensureEmptyDirectory,
-  lookupPackageDirectory,
   readPackageAtOrNull,
   updateJsonFileSync,
   writeFileSync,
@@ -772,7 +771,7 @@ export const build = async ({
             sideEffects: sideEffectRelativeUrlArray,
           });
         };
-        const sideEffects = readPackageDirectory(
+        const sideEffects = packageDirectory.read(
           packageDirectory.url,
         )?.sideEffects;
         if (sideEffects === false) {
