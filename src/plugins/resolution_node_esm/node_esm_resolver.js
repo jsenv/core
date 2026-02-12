@@ -9,8 +9,6 @@
 
 import {
   applyNodeEsmResolution,
-  defaultLookupPackageScope,
-  defaultReadPackageJson,
   readCustomConditionsFromProcessArgs,
 } from "@jsenv/node-esm-resolution";
 import { URL_META } from "@jsenv/url-meta";
@@ -18,12 +16,19 @@ import { urlToBasename, urlToExtension } from "@jsenv/urls";
 import { readFileSync } from "node:fs";
 
 export const createNodeEsmResolver = ({
+  packageDirectory,
   runtimeCompat,
   rootDirectoryUrl,
   packageConditions = {},
   packageConditionsConfig,
   preservesSymlink,
 }) => {
+  const applyNodeEsmResolutionMemo = (params) =>
+    applyNodeEsmResolution({
+      lookupPackageScope: packageDirectory.find,
+      readPackageJson: packageDirectory.read,
+      ...params,
+    });
   const buildPackageConditions = createBuildPackageConditions(
     packageConditions,
     {
@@ -61,7 +66,7 @@ export const createNodeEsmResolver = ({
       reference.type === "sourcemap_comment";
 
     const resolveNodeEsmFallbackOnWeb = createResolverWithFallbackOnError(
-      applyNodeEsmResolution,
+      applyNodeEsmResolutionMemo,
       ({ specifier, parentUrl }) => {
         const url = new URL(specifier, parentUrl).href;
         return { url };
@@ -70,7 +75,7 @@ export const createNodeEsmResolver = ({
     const DELEGATE_TO_WEB_RESOLUTION_PLUGIN = {};
     const resolveNodeEsmFallbackNullToDelegateToWebPlugin =
       createResolverWithFallbackOnError(
-        applyNodeEsmResolution,
+        applyNodeEsmResolutionMemo,
         () => DELEGATE_TO_WEB_RESOLUTION_PLUGIN,
       );
 
@@ -78,11 +83,11 @@ export const createNodeEsmResolver = ({
       webResolutionFallback,
       resolver: webResolutionFallback
         ? resolveNodeEsmFallbackOnWeb
-        : applyNodeEsmResolution,
+        : applyNodeEsmResolutionMemo,
     });
     const resolver = webResolutionFallback
       ? resolveNodeEsmFallbackNullToDelegateToWebPlugin
-      : applyNodeEsmResolution;
+      : applyNodeEsmResolutionMemo;
 
     const result = resolver({
       conditions,
@@ -120,10 +125,10 @@ export const createNodeEsmResolver = ({
         break package_relationships;
       }
 
-      // packageDirectoryUrl can be already know thanks to node resolution
+      // packageDirectoryUrl can be already known thanks to node resolution
       // otherwise we look for it
       const closestPackageDirectoryUrl =
-        packageDirectoryUrl || defaultLookupPackageScope(url);
+        packageDirectoryUrl || packageDirectory.find(url);
       if (!closestPackageDirectoryUrl) {
         // happens for projects without package.json or some files outside of package scope
         // (generated files like sourcemaps or cache files for example)
@@ -146,24 +151,21 @@ export const createNodeEsmResolver = ({
         }
       }
       version_relationship: {
-        const packageVersion = defaultReadPackageJson(
+        const packageVersion = packageDirectory.read(
           closestPackageDirectoryUrl,
         ).version;
         if (!packageVersion) {
           // package version can be null, see https://github.com/babel/babel/blob/2ce56e832c2dd7a7ed92c89028ba929f874c2f5c/packages/babel-runtime/helpers/esm/package.json#L2
           break version_relationship;
         }
+        // Versioning effect is reserved to files with a package.json except the one being currently
+        // considered as the root package (entry point package file)
         const hasVersioningEffect =
-          closestPackageDirectoryUrl !==
-            ownerUrlInfo.context.rootDirectoryUrl &&
-          url.includes("/node_modules/");
+          closestPackageDirectoryUrl !== ownerUrlInfo.context.rootDirectoryUrl;
         addRelationshipWithPackageJson({
           reference,
           packageJsonUrl: `${closestPackageDirectoryUrl}package.json`,
           field: "version",
-          // For now the versioning effect is reserved to files withing node modules with a package.json
-          // So we exclude file belonging to the root package and files which have an other package.json
-          // outside of node_modules (likely workspace packages)
           hasVersioningEffect,
         });
         if (hasVersioningEffect) {

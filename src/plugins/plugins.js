@@ -119,11 +119,12 @@ export const getCorePlugins = ({
     },
     ...(nodeEsmResolution
       ? [
-          jsenvPluginNodeEsmResolution(
-            nodeEsmResolution,
+          jsenvPluginNodeEsmResolution({
+            packageDirectory,
+            resolutionConfig: nodeEsmResolution,
             packageConditions,
             packageConditionsConfig,
-          ),
+          }),
         ]
       : []),
     jsenvPluginWebResolution(),

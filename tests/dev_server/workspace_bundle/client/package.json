@@ -1,0 +1,7 @@
+{
+  "name": "demo",
+  "private": true,
+  "dependencies": {
+    "foo": "file:./packages/foo"
+  }
+}

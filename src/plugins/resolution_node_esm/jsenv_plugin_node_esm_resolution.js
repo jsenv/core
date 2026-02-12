@@ -1,10 +1,11 @@
 import { createNodeEsmResolver } from "./node_esm_resolver.js";
 
-export const jsenvPluginNodeEsmResolution = (
+export const jsenvPluginNodeEsmResolution = ({
+  packageDirectory,
   resolutionConfig = {},
   packageConditions,
   packageConditionsConfig = {},
-) => {
+}) => {
   let nodeEsmResolverDefault;
   const resolverMap = new Map();
   let anyTypeResolver;
@@ -22,6 +23,7 @@ export const jsenvPluginNodeEsmResolution = (
       );
     }
     return createNodeEsmResolver({
+      packageDirectory,
       runtimeCompat: kitchenContext.runtimeCompat,
       rootDirectoryUrl: kitchenContext.rootDirectoryUrl,
       packageConditions,
@@ -38,6 +40,7 @@ export const jsenvPluginNodeEsmResolution = (
     appliesDuring: "*",
     init: (kitchenContext) => {
       nodeEsmResolverDefault = createNodeEsmResolver({
+        packageDirectory,
         runtimeCompat: kitchenContext.runtimeCompat,
         rootDirectoryUrl: kitchenContext.rootDirectoryUrl,
         preservesSymlink: true,
