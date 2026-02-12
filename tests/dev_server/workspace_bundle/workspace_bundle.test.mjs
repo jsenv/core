@@ -32,7 +32,6 @@ const devServer = await startDevServer({
   sourceDirectoryUrl: import.meta.resolve("./client/"),
   outDirectoryUrl: import.meta.resolve("./.jsenv/"),
   keepProcessAlive: true,
-  port: 8888,
   clientAutoreloadOnServerRestart: false,
   dropToOpen: false,
   supervisor: false,

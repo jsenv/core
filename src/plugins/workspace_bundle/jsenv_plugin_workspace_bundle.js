@@ -14,6 +14,12 @@ export const jsenvPluginWorkspaceBundle = ({ packageDirectory }) => {
       if (reference.ownerUrlInfo.searchParams.has(PACKAGE_BUNDLE_QUERY_PARAM)) {
         return null;
       }
+      if (
+        reference.prev &&
+        reference.prev.searchParams.has(PACKAGE_BUNDLE_QUERY_PARAM)
+      ) {
+        return null;
+      }
       const packageDirectoryUrl = packageDirectory.find(reference.url);
       if (!packageDirectoryUrl) {
         return null;
@@ -33,53 +39,50 @@ export const jsenvPluginWorkspaceBundle = ({ packageDirectory }) => {
       const packageMainUrl = rootReference.url;
       return packageMainUrl;
     },
-    fetchUrlContent: {
-      js_module: async (urlInfo) => {
-        debugger;
-        const noBundleUrlInfo = urlInfo.getWithoutSearchParam(
-          PACKAGE_BUNDLE_QUERY_PARAM,
-        );
-        if (!noBundleUrlInfo) {
-          return null;
+    fetchUrlContent: async (urlInfo) => {
+      const noBundleUrlInfo = urlInfo.getWithoutSearchParam(
+        PACKAGE_BUNDLE_QUERY_PARAM,
+      );
+      if (!noBundleUrlInfo) {
+        return null;
+      }
+      await noBundleUrlInfo.cook();
+      await noBundleUrlInfo.cookDependencies({
+        // we ignore dynamic import to cook lazyly (as browser request the server)
+        // these dynamic imports must inherit "?package_bundle"
+        // This is done inside rollup for convenience
+        ignoreDynamicImport: true,
+      });
+      const bundleUrlInfos = await bundleJsModules([noBundleUrlInfo], {
+        chunks: undefined,
+        buildDirectoryUrl: new URL("./", import.meta.url),
+        preserveDynamicImports: true,
+        augmentDynamicImportUrlSearchParams: () => {
+          return {
+            [DYNAMIC_IMPORT_QUERY_PARAM]: "",
+            [PACKAGE_BUNDLE_QUERY_PARAM]: "",
+          };
+        },
+      });
+      const bundledUrlInfo = bundleUrlInfos[noBundleUrlInfo.url];
+      if (urlInfo.context.dev) {
+        for (const sourceUrl of bundledUrlInfo.sourceUrls) {
+          urlInfo.dependencies.inject({
+            isImplicit: true,
+            type: "js_url",
+            specifier: sourceUrl,
+          });
         }
-        await noBundleUrlInfo.cook();
-        await noBundleUrlInfo.cookDependencies({
-          // we ignore dynamic import to cook lazyly (as browser request the server)
-          // these dynamic imports must inherit "?package_bundle"
-          // This is done inside rollup for convenience
-          ignoreDynamicImport: true,
-        });
-        const bundleUrlInfos = await bundleJsModules([noBundleUrlInfo], {
-          chunks: undefined,
-          buildDirectoryUrl: new URL("./", import.meta.url),
-          preserveDynamicImports: true,
-          augmentDynamicImportUrlSearchParams: () => {
-            return {
-              [DYNAMIC_IMPORT_QUERY_PARAM]: "",
-              [PACKAGE_BUNDLE_QUERY_PARAM]: "",
-            };
-          },
-        });
-        const bundledUrlInfo = bundleUrlInfos[noBundleUrlInfo.url];
-        if (urlInfo.context.dev) {
-          for (const sourceUrl of bundledUrlInfo.sourceUrls) {
-            urlInfo.dependencies.inject({
-              isImplicit: true,
-              type: "js_url",
-              specifier: sourceUrl,
-            });
-          }
-        }
-        return {
-          content: bundledUrlInfo.content,
-          contentType: "text/javascript",
-          type: "js_module",
-          originalUrl: urlInfo.originalUrl,
-          originalContent: bundledUrlInfo.originalContent,
-          sourcemap: bundledUrlInfo.sourcemap,
-          data: bundledUrlInfo.data,
-        };
-      },
+      }
+      return {
+        content: bundledUrlInfo.content,
+        contentType: "text/javascript",
+        type: "js_module",
+        originalUrl: urlInfo.originalUrl,
+        originalContent: bundledUrlInfo.originalContent,
+        sourcemap: bundledUrlInfo.sourcemap,
+        data: bundledUrlInfo.data,
+      };
     },
   };
 };
