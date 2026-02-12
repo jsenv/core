@@ -115,6 +115,11 @@ export const createNodeEsmResolver = ({
     }
 
     package_relationships: {
+      if (!url.startsWith("file:")) {
+        // data:, javascript:void(0), etc...
+        break package_relationships;
+      }
+
       // packageDirectoryUrl can be already know thanks to node resolution
       // otherwise we look for it
       const closestPackageDirectoryUrl =
