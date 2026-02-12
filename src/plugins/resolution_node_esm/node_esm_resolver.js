@@ -9,7 +9,6 @@
 
 import {
   applyNodeEsmResolution,
-  defaultLookupPackageScope,
   defaultReadPackageJson,
   readCustomConditionsFromProcessArgs,
 } from "@jsenv/node-esm-resolution";
