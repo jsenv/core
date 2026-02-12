@@ -195,6 +195,7 @@ const createUrlInfo = (url, context) => {
     remapReference: null, // used solely during build for rollup
     implicitUrlSet: new Set(),
     searchParamVariantSet: new Set(),
+    packageDirectoryUrl: null,
 
     type: undefined, // "html", "css", "js_classic", "js_module", "importmap", "sourcemap", "json", "webmanifest", ...
     subtype: undefined, // "worker", "service_worker", "shared_worker" for js, otherwise undefined

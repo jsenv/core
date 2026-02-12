@@ -80,7 +80,7 @@ export const getCorePlugins = ({
   }
 
   return [
-    jsenvPluginWorkspaceBundle(),
+    jsenvPluginWorkspaceBundle({ packageDirectory }),
 
     jsenvPluginReferenceAnalysis(referenceAnalysis),
     jsenvPluginInjections(injections),

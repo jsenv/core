@@ -35,8 +35,10 @@ const run = async () => {
     keepProcessAlive: true,
     port: 8888,
     clientAutoreloadOnServerRestart: false,
-    // ribbon: false,
-    // clientAutoreload: false,
+    dropToOpen: false,
+    supervisor: false,
+    ribbon: false,
+    clientAutoreload: false,
   });
   const browser = await chromium.launch({
     ignoreHTTPSErrors: true,

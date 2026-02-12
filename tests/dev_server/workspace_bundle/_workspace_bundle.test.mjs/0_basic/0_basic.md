@@ -4,11 +4,52 @@
 run()
 ```
 
-# 1/2 write 4 files into "./"
+# 1/3 logs
+  <details>
+  <summary>details</summary>
 
-see [./](./)
+![img](log_group.svg)
 
-# 2/2 resolve
+<details>
+  <summary>see without style</summary>
+
+```console
+GET http://127.0.0.1/main.html
+  500 TypeError: Cannot set property packageDirectoryUrl of #<Object> which has only a getter
+      at applyReferenceEffectsOnUrlInfo (@jsenv/core/src/kitchen/url_graph/references.js:759:43)
+      at addDependency (@jsenv/core/src/kitchen/url_graph/references.js:506:3)
+      at createResolveAndFinalize (@jsenv/core/src/kitchen/url_graph/references.js:48:5)
+      at Object.foundInline (@jsenv/core/src/kitchen/url_graph/references.js:88:23)
+      at createInlineReference (@jsenv/core/src/plugins/reference_analysis/html/jsenv_plugin_html_reference_analysis.js:269:58)
+      at visitTextContent (@jsenv/core/src/plugins/reference_analysis/html/jsenv_plugin_html_reference_analysis.js:342:20)
+      at Object.script (@jsenv/core/src/plugins/reference_analysis/html/jsenv_plugin_html_reference_analysis.js:508:15)
+      at visitorsInstrumented.<computed> (@jsenv/core/src/plugins/reference_analysis/html/jsenv_plugin_html_reference_analysis.js:588:20)
+      at visitNode (@jsenv/core/packages/internal/ast/src/html/html_search.js:8:35)
+      at visitNode (@jsenv/core/packages/internal/ast/src/html/html_search.js:18:9)
+    [cause]: TypeError: Cannot set property packageDirectoryUrl of #<Object> which has only a getter
+        at applyReferenceEffectsOnUrlInfo (@jsenv/core/src/kitchen/url_graph/references.js:759:43)
+        at addDependency (@jsenv/core/src/kitchen/url_graph/references.js:506:3)
+        at createResolveAndFinalize (@jsenv/core/src/kitchen/url_graph/references.js:48:5)
+        at Object.foundInline (@jsenv/core/src/kitchen/url_graph/references.js:88:23)
+        at createInlineReference (@jsenv/core/src/plugins/reference_analysis/html/jsenv_plugin_html_reference_analysis.js:269:58)
+        at visitTextContent (@jsenv/core/src/plugins/reference_analysis/html/jsenv_plugin_html_reference_analysis.js:342:20)
+        at Object.script (@jsenv/core/src/plugins/reference_analysis/html/jsenv_plugin_html_reference_analysis.js:508:15)
+        at visitorsInstrumented.<computed> (@jsenv/core/src/plugins/reference_analysis/html/jsenv_plugin_html_reference_analysis.js:588:20)
+        at visitNode (@jsenv/core/packages/internal/ast/src/html/html_search.js:8:35)
+        at visitNode (@jsenv/core/packages/internal/ast/src/html/html_search.js:18:9)
+chromium console.error > Failed to load resource: the server responded with a status of 500 ("transformUrlContent" error on "html")
+```
+
+</details>
+
+
+</details>
+
+# 2/3 write file "./client/packages/foo/answer.js"
+
+see [./client/packages/foo/answer.js](./client/packages/foo/answer.js)
+
+# 3/3 resolve
 
 ```js
 undefined
