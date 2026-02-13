@@ -14,11 +14,6 @@ if (process.env.CI) {
   process.exit(0);
 }
 
-const sourceDirectoryUrl = new URL("./git_ignored/", import.meta.url);
-replaceFileStructureSync({
-  from: new URL("./fixtures/", import.meta.url),
-  to: sourceDirectoryUrl,
-});
 writeSymbolicLinkSync({
   from: import.meta.resolve("./fixtures/node_modules/foo/"),
   to: import.meta.resolve("./fixtures/packages/foo/"),
@@ -28,6 +23,22 @@ writeSymbolicLinkSync({
   from: import.meta.resolve("./fixtures/node_modules/bar/"),
   to: import.meta.resolve("./fixtures/packages/bar/"),
   allowUseless: true,
+});
+const sourceDirectoryUrl = new URL("./git_ignored/", import.meta.url);
+replaceFileStructureSync({
+  from: new URL("./fixtures/", import.meta.url),
+  to: sourceDirectoryUrl,
+});
+// restore the symlinks (replaceFileStructureSync does not preserve them)
+writeSymbolicLinkSync({
+  from: import.meta.resolve("./git_ignored/node_modules/foo/"),
+  to: import.meta.resolve("./git_ignored/packages/foo/"),
+  allowOverwrite: true,
+});
+writeSymbolicLinkSync({
+  from: import.meta.resolve("./git_ignored/node_modules/bar/"),
+  to: import.meta.resolve("./git_ignored/packages/bar/"),
+  allowOverwrite: true,
 });
 await ensureEmptyDirectory(new URL("./.jsenv/", import.meta.url));
 const devServer = await startDevServer({
@@ -58,8 +69,8 @@ const run = async () => {
     new URL("./git_ignored/packages/foo/answer.js", import.meta.url),
     `export const answer = 41;`,
   );
+  await page.reload();
   const afterUpdateResult = await executePageFunction(page);
-
   if (!debug) {
     page.close();
     browser.close();

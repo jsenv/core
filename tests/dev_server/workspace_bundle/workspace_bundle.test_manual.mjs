@@ -4,7 +4,7 @@ await startDevServer({
   sourcemaps: "none",
   logLevel: "debug",
   serverLogLevel: "warn",
-  sourceDirectoryUrl: import.meta.resolve("./client/"),
+  sourceDirectoryUrl: import.meta.resolve("./fixtures/"),
   outDirectoryUrl: import.meta.resolve("./.jsenv/"),
   keepProcessAlive: true,
   port: 8888,
