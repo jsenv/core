@@ -9,8 +9,13 @@ export const createPackageDirectory = ({
 }) => {
   const packageDirectory = {
     url: lookupPackageDirectory(sourceDirectoryUrl),
-    find: (url) =>
-      url.startsWith("file:") ? lookupPackageDirectory(url) : null,
+    find: (url) => {
+      const urlString = typeof url === "string" ? url : url?.href;
+      if (!urlString.startsWith("file:")) {
+        return null;
+      }
+      return lookupPackageDirectory(url);
+    },
     read: readPackageAtOrNull,
   };
   return packageDirectory;
