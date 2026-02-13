@@ -28,9 +28,9 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@jsenv/database": "0.0.8",
+    "@jsenv/database": "0.0.9",
     "@jsenv/dom": "0.8.8",
-    "@jsenv/navi": "0.16.53",
+    "@jsenv/navi": "0.16.55",
     "@jsenv/sigi": "0.1.5",
     "@jsenv/urls": "2.9.7",
     "@tanstack/table-core": "8.21.3",

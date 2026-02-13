@@ -20,7 +20,7 @@
   ],
   "dependencies": {
     "@jsenv/ast": "6.7.20",
-    "@jsenv/filesystem": "4.15.13",
+    "@jsenv/filesystem": "4.15.14",
     "@jsenv/urls": "2.9.7",
     "anchor-markdown-header": "0.8.1",
     "marked": "17.0.1"

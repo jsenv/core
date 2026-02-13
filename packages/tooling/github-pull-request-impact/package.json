@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/github-pull-request-impact",
-  "version": "1.8.40",
+  "version": "1.8.41",
   "description": "Report pull request impact on something",
   "repository": {
     "type": "git",
@@ -20,7 +20,7 @@
     "/src/"
   ],
   "dependencies": {
-    "@jsenv/filesystem": "4.15.13",
+    "@jsenv/filesystem": "4.15.14",
     "@jsenv/humanize": "1.7.5"
   },
   "devDependencies": {

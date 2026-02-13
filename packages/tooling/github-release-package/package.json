@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/github-release-package",
-  "version": "1.6.40",
+  "version": "1.6.41",
   "description": "Create github release when package version changes.",
   "repository": {
     "type": "git",
@@ -19,8 +19,8 @@
     "/src/"
   ],
   "dependencies": {
-    "@jsenv/filesystem": "4.15.13",
-    "@jsenv/github-pull-request-impact": "1.8.40",
+    "@jsenv/filesystem": "4.15.14",
+    "@jsenv/github-pull-request-impact": "1.8.41",
     "@jsenv/humanize": "1.7.5"
   },
   "engines": {

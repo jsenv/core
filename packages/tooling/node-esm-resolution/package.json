@@ -22,7 +22,7 @@
     "/main.js"
   ],
   "dependencies": {
-    "@jsenv/filesystem": "4.15.13"
+    "@jsenv/filesystem": "4.15.14"
   },
   "devDependencies": {
     "@jsenv/assert": "../assert",

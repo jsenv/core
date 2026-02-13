@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/https-local",
-  "version": "3.2.42",
+  "version": "3.2.43",
   "description": "A programmatic way to generate locally trusted certificates",
   "repository": {
     "type": "git",
@@ -34,7 +34,7 @@
     "test:start-node-server": "node ./scripts/certificate/start_node_server.mjs"
   },
   "dependencies": {
-    "@jsenv/filesystem": "4.15.13",
+    "@jsenv/filesystem": "4.15.14",
     "@jsenv/humanize": "1.7.5",
     "@jsenv/urls": "2.9.7",
     "command-exists": "1.2.9",

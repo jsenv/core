@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/eslint-config-relax",
-  "version": "1.7.14",
+  "version": "1.7.15",
   "description": "A pleaseant ESLint configuration for any project",
   "repository": {
     "type": "git",
@@ -25,7 +25,7 @@
   "scripts": {},
   "dependencies": {
     "@babel/eslint-parser": "7.28.6",
-    "@jsenv/eslint-import-resolver": "8.4.2",
+    "@jsenv/eslint-import-resolver": "8.4.3",
     "@jsenv/eslint-plugin": "1.2.0",
     "@jsenv/urls": "2.9.7",
     "eslint-plugin-html": "8.1.4",
