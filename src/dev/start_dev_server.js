@@ -397,7 +397,8 @@ export const startDevServer = async ({
             }
             return true;
           };
-          return checkValidity(urlInfoCreated);
+          const valid = checkValidity(urlInfoCreated);
+          return valid;
         };
       });
       kitchen.graph.urlInfoDereferencedEventEmitter.on(

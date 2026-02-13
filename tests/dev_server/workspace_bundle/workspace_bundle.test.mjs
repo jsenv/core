@@ -69,6 +69,7 @@ const run = async () => {
     new URL("./git_ignored/packages/foo/answer.js", import.meta.url),
     `export const answer = 41;`,
   );
+  await new Promise((r) => setTimeout(r, 300));
   await page.reload();
   const afterUpdateResult = await executePageFunction(page);
   if (!debug) {

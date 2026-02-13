@@ -4,7 +4,7 @@
 run()
 ```
 
-# 1/2 write 6 files into "./"
+# 1/2 write 10 files into "./"
 
 see [./](./)
 
@@ -13,7 +13,7 @@ see [./](./)
 ```js
 {
   "firstReturnValue": 42,
-  "afterUpdateReturnValue": 42
+  "afterUpdateReturnValue": 41
 }
 ```
 
