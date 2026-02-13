@@ -331,66 +331,74 @@ export const startDevServer = async ({
         urlInfoCreated.isWatched = watch;
         // when an url depends on many others, we check all these (like package.json)
         urlInfoCreated.isValid = () => {
-          if (!urlInfoCreated.url.startsWith("file:")) {
-            return false;
-          }
-          if (urlInfoCreated.content === undefined) {
-            // urlInfo content is undefined when:
-            // - url info content never fetched
-            // - it is considered as modified because undelying file is watched and got saved
-            // - it is considered as modified because underlying file content
-            //   was compared using etag and it has changed
-            return false;
-          }
-          if (!watch) {
-            // file is not watched, check the filesystem
-            let fileContentAsBuffer;
-            try {
-              fileContentAsBuffer = readFileSync(new URL(urlInfoCreated.url));
-            } catch (e) {
-              if (e.code === "ENOENT") {
+          const seenSet = new Set();
+          const checkValidity = (urlInfo) => {
+            if (seenSet.has(urlInfo)) {
+              return true;
+            }
+            seenSet.add(urlInfo);
+            if (!urlInfoCreated.url.startsWith("file:")) {
+              return false;
+            }
+            if (urlInfoCreated.content === undefined) {
+              // urlInfo content is undefined when:
+              // - url info content never fetched
+              // - it is considered as modified because undelying file is watched and got saved
+              // - it is considered as modified because underlying file content
+              //   was compared using etag and it has changed
+              return false;
+            }
+            if (!watch) {
+              // file is not watched, check the filesystem
+              let fileContentAsBuffer;
+              try {
+                fileContentAsBuffer = readFileSync(new URL(urlInfoCreated.url));
+              } catch (e) {
+                if (e.code === "ENOENT") {
+                  urlInfoCreated.onModified();
+                  return false;
+                }
+                return false;
+              }
+              const fileContentEtag = bufferToEtag(fileContentAsBuffer);
+              if (fileContentEtag !== urlInfoCreated.originalContentEtag) {
                 urlInfoCreated.onModified();
+                // restore content to be able to compare it again later
+                urlInfoCreated.kitchen.urlInfoTransformer.setContent(
+                  urlInfoCreated,
+                  String(fileContentAsBuffer),
+                  {
+                    contentEtag: fileContentEtag,
+                  },
+                );
                 return false;
               }
-              return false;
             }
-            const fileContentEtag = bufferToEtag(fileContentAsBuffer);
-            if (fileContentEtag !== urlInfoCreated.originalContentEtag) {
-              urlInfoCreated.onModified();
-              // restore content to be able to compare it again later
-              urlInfoCreated.kitchen.urlInfoTransformer.setContent(
-                urlInfoCreated,
-                String(fileContentAsBuffer),
-                {
-                  contentEtag: fileContentEtag,
-                },
-              );
-              return false;
-            }
-          }
-          for (const implicitUrl of urlInfoCreated.implicitUrlSet) {
-            const implicitUrlInfo =
-              urlInfoCreated.graph.getUrlInfo(implicitUrl);
-            if (!implicitUrlInfo) {
-              continue;
-            }
-            if (implicitUrlInfo.content === undefined) {
-              // happens when we explicitely load an url with a search param
-              // - it creates an implicit url info to the url without params
-              // - we never explicitely request the url without search param so it has no content
-              // in that case the underlying urlInfo cannot be invalidate by the implicit
-              // we use modifiedTimestamp to detect if the url was loaded once
-              // or is just here to be used later
-              if (implicitUrlInfo.modifiedTimestamp) {
+            for (const implicitUrl of urlInfoCreated.implicitUrlSet) {
+              const implicitUrlInfo =
+                urlInfoCreated.graph.getUrlInfo(implicitUrl);
+              if (!implicitUrlInfo) {
+                continue;
+              }
+              if (implicitUrlInfo.content === undefined) {
+                // happens when we explicitely load an url with a search param
+                // - it creates an implicit url info to the url without params
+                // - we never explicitely request the url without search param so it has no content
+                // in that case the underlying urlInfo cannot be invalidate by the implicit
+                // we use modifiedTimestamp to detect if the url was loaded once
+                // or is just here to be used later
+                if (implicitUrlInfo.modifiedTimestamp) {
+                  return false;
+                }
+                continue;
+              }
+              if (!checkValidity(implicitUrlInfo)) {
                 return false;
               }
-              continue;
             }
-            if (!implicitUrlInfo.isValid()) {
-              return false;
-            }
-          }
-          return true;
+            return true;
+          };
+          return checkValidity(urlInfoCreated);
         };
       });
       kitchen.graph.urlInfoDereferencedEventEmitter.on(
