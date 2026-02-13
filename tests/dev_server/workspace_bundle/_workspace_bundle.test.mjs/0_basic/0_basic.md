@@ -4,15 +4,16 @@
 run()
 ```
 
-# 1/2 write 5 files into "./.jsenv/chrome@145.00/"
+# 1/2 write 6 files into "./"
 
-see [./.jsenv/chrome@145.00/](./.jsenv/chrome@145.00/)
+see [./](./)
 
 # 2/2 resolve
 
 ```js
 {
-  "returnValue": 42
+  "firstReturnValue": 42,
+  "afterUpdateReturnValue": 42
 }
 ```
 

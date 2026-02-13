@@ -4,6 +4,7 @@ import { launchBrowserPage } from "@jsenv/core/tests/launch_browser_page.js";
 import { snapshotDevTests } from "@jsenv/core/tests/snapshot_dev_tests.js";
 import {
   ensureEmptyDirectory,
+  replaceFileStructureSync,
   writeFileSync,
   writeSymbolicLinkSync,
 } from "@jsenv/filesystem";
@@ -13,15 +14,19 @@ if (process.env.CI) {
   process.exit(0);
 }
 
-let debug = false;
+const sourceDirectoryUrl = new URL("./git_ignored/", import.meta.url);
+replaceFileStructureSync({
+  from: new URL("./fixtures/", import.meta.url),
+  to: sourceDirectoryUrl,
+});
 writeSymbolicLinkSync({
-  from: import.meta.resolve("./client/node_modules/foo/"),
-  to: import.meta.resolve("./client/packages/foo/"),
+  from: import.meta.resolve("./fixtures/node_modules/foo/"),
+  to: import.meta.resolve("./fixtures/packages/foo/"),
   allowUseless: true,
 });
 writeSymbolicLinkSync({
-  from: import.meta.resolve("./client/node_modules/bar/"),
-  to: import.meta.resolve("./client/packages/bar/"),
+  from: import.meta.resolve("./fixtures/node_modules/bar/"),
+  to: import.meta.resolve("./fixtures/packages/bar/"),
   allowUseless: true,
 });
 await ensureEmptyDirectory(new URL("./.jsenv/", import.meta.url));
@@ -29,7 +34,7 @@ const devServer = await startDevServer({
   sourcemaps: "none",
   logLevel: "debug",
   serverLogLevel: "warn",
-  sourceDirectoryUrl: import.meta.resolve("./client/"),
+  sourceDirectoryUrl,
   outDirectoryUrl: import.meta.resolve("./.jsenv/"),
   keepProcessAlive: true,
   clientAutoreloadOnServerRestart: false,
@@ -39,6 +44,7 @@ const devServer = await startDevServer({
   clientAutoreload: false,
 });
 
+let debug = false;
 const run = async () => {
   const browser = await chromium.launch({
     ignoreHTTPSErrors: true,
@@ -47,19 +53,22 @@ const run = async () => {
   const page = await launchBrowserPage(browser, { pageErrorEffect: "log" });
   await page.setViewportSize({ width: 900, height: 550 }); // generate smaller screenshots
   await page.goto(`${devServer.origin}/main.html`);
-  const { returnValue } = await executePageFunction(page);
-  // writeFileSync(
-  //   new URL("./client/packages/foo/answer.js", import.meta.url),
-  //   `export const answer = 41;`,
-  // );
-  // const afterUpdateResult = await executePageFunction(page);
+  const firstResult = await executePageFunction(page);
+  writeFileSync(
+    new URL("./git_ignored/packages/foo/answer.js", import.meta.url),
+    `export const answer = 41;`,
+  );
+  const afterUpdateResult = await executePageFunction(page);
 
   if (!debug) {
     page.close();
     browser.close();
   }
 
-  return { returnValue };
+  return {
+    firstReturnValue: firstResult.returnValue,
+    afterUpdateReturnValue: afterUpdateResult.returnValue,
+  };
 };
 
 await snapshotDevTests(
