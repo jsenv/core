@@ -1,4 +1,4 @@
-import { getAnswer } from "/packages/foo/foo.js?package_bundle&v=0.0.1";
+import { getAnswer } from "/packages/foo/foo.js?package_bundle";
 
 const answer = getAnswer();
 window.resolveResultPromise(answer);

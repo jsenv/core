@@ -27,6 +27,7 @@ export const createNodeEsmResolver = ({
     applyNodeEsmResolution({
       lookupPackageScope: packageDirectory.find,
       readPackageJson: packageDirectory.read,
+      preservesSymlink,
       ...params,
     });
   const buildPackageConditions = createBuildPackageConditions(
@@ -35,6 +36,7 @@ export const createNodeEsmResolver = ({
       packageConditionsConfig,
       rootDirectoryUrl,
       runtimeCompat,
+      preservesSymlink,
     },
   );
 
@@ -185,7 +187,12 @@ export const createNodeEsmResolver = ({
 
 const createBuildPackageConditions = (
   packageConditions,
-  { packageConditionsConfig, rootDirectoryUrl, runtimeCompat },
+  {
+    packageConditionsConfig,
+    rootDirectoryUrl,
+    runtimeCompat,
+    preservesSymlink,
+  },
 ) => {
   let resolveConditionsFromSpecifier = () => null;
   let resolveConditionsFromContext = () => [];
@@ -212,6 +219,7 @@ const createBuildPackageConditions = (
           const { packageDirectoryUrl } = applyNodeEsmResolution({
             specifier: key.slice(0, -1), // avoid package path not exported
             parentUrl: rootDirectoryUrl,
+            preservesSymlink,
           });
           const url = packageDirectoryUrl;
           associationsRaw[url] = associatedValue;
@@ -220,6 +228,7 @@ const createBuildPackageConditions = (
         const { url } = applyNodeEsmResolution({
           specifier: key,
           parentUrl: rootDirectoryUrl,
+          preservesSymlink,
         });
         associationsRaw[url] = associatedValue;
       } catch {

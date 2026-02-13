@@ -43,7 +43,7 @@ export const jsenvPluginNodeEsmResolution = ({
         packageDirectory,
         runtimeCompat: kitchenContext.runtimeCompat,
         rootDirectoryUrl: kitchenContext.rootDirectoryUrl,
-        preservesSymlink: true,
+        // preservesSymlink: true,
         packageConditions,
         packageConditionsConfig: {
           ...kitchenContext.packageConditionsConfig,
