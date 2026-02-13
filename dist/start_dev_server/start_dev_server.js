@@ -1,6 +1,6 @@
 import { WebSocketResponse, pickContentType, ServerEvents, jsenvServiceCORS, jsenvAccessControlAllowedHeaders, composeTwoResponses, serveDirectory, jsenvServiceErrorHandler, startServer } from "@jsenv/server";
 import { convertFileSystemErrorToResponseProperties } from "@jsenv/server/src/internal/convertFileSystemErrorToResponseProperties.js";
-import { lookupPackageDirectory, registerDirectoryLifecycle, urlToRelativeUrl, moveUrl, urlIsOrIsInsideOf, ensureWindowsDriveLetter, createDetailedMessage, stringifyUrlSite, generateContentFrame, validateResponseIntegrity, setUrlFilename, getCallerPosition, urlToBasename, urlToExtension, asSpecifierWithoutSearch, asUrlWithoutSearch, injectQueryParamsIntoSpecifier, bufferToEtag, isFileSystemPath, urlToPathname, setUrlBasename, urlToFileSystemPath, writeFileSync, createLogger, URL_META, applyNodeEsmResolution, normalizeUrl, ANSI, RUNTIME_COMPAT, CONTENT_TYPE, errorToHTML, DATA_URL, normalizeImportMap, composeTwoImportMaps, resolveImport, JS_QUOTES, defaultLookupPackageScope, defaultReadPackageJson, readCustomConditionsFromProcessArgs, readEntryStatSync, ensurePathnameTrailingSlash, compareFileUrls, urlToFilename, applyFileSystemMagicResolution, getExtensionsToTry, setUrlExtension, isSpecifierForNodeBuiltin, memoizeByFirstArgument, assertAndNormalizeDirectoryUrl, createTaskLog, formatError, readPackageAtOrNull } from "./jsenv_core_packages.js";
+import { lookupPackageDirectory, registerDirectoryLifecycle, urlToRelativeUrl, moveUrl, urlIsOrIsInsideOf, ensureWindowsDriveLetter, createDetailedMessage, stringifyUrlSite, generateContentFrame, validateResponseIntegrity, setUrlFilename, getCallerPosition, urlToBasename, urlToExtension, asSpecifierWithoutSearch, asUrlWithoutSearch, injectQueryParamsIntoSpecifier, bufferToEtag, isFileSystemPath, urlToPathname, setUrlBasename, urlToFileSystemPath, writeFileSync, createLogger, URL_META, applyNodeEsmResolution, normalizeUrl, ANSI, RUNTIME_COMPAT, CONTENT_TYPE, readPackageAtOrNull, errorToHTML, DATA_URL, normalizeImportMap, composeTwoImportMaps, resolveImport, JS_QUOTES, readCustomConditionsFromProcessArgs, readEntryStatSync, ensurePathnameTrailingSlash, compareFileUrls, urlToFilename, applyFileSystemMagicResolution, getExtensionsToTry, setUrlExtension, isSpecifierForNodeBuiltin, injectQueryParams, memoizeByFirstArgument, assertAndNormalizeDirectoryUrl, createTaskLog, formatError } from "./jsenv_core_packages.js";
 import { readFileSync, existsSync, readdirSync, lstatSync, realpathSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import { generateSourcemapFileUrl, createMagicSource, composeTwoSourcemaps, generateSourcemapDataUrl, SOURCEMAP } from "@jsenv/sourcemap";
@@ -9,6 +9,7 @@ import { performance } from "node:perf_hooks";
 import { jsenvPluginSupervisor } from "@jsenv/plugin-supervisor";
 import { jsenvPluginTranspilation } from "@jsenv/plugin-transpilation";
 import { randomUUID } from "node:crypto";
+import { bundleJsModules } from "@jsenv/plugin-bundling";
 import { createRequire } from "node:module";
 import "./jsenv_core_node_modules.js";
 import "node:process";
@@ -527,6 +528,14 @@ const detailsFromPluginController = (pluginController) => {
 
 const detailsFromValueThrown = (valueThrownByPlugin) => {
   if (valueThrownByPlugin && valueThrownByPlugin instanceof Error) {
+    // if (
+    //   valueThrownByPlugin.message.includes("Maximum call stack size exceeded")
+    // ) {
+    //   return {
+    //     "error message": valueThrownByPlugin.message,
+    //     "error stack": valueThrownByPlugin.stack,
+    //   };
+    // }
     if (
       valueThrownByPlugin.code === "PARSE_ERROR" ||
       valueThrownByPlugin.code === "MODULE_NOT_FOUND" ||
@@ -2047,26 +2056,13 @@ const createUrlInfo = (url, context) => {
     }
     return false;
   };
-  urlInfo.getWithoutSearchParam = (searchParam, { expectedType } = {}) => {
-    // The search param can be
-    // 1. injected by a plugin during "redirectReference"
-    //    - import assertions
-    //    - js module fallback to systemjs
-    // 2. already inside source files
-    //    - turn js module into js classic for convenience ?as_js_classic
-    //    - turn js classic to js module for to make it importable
-    if (!urlInfo.searchParams.has(searchParam)) {
-      return null;
-    }
+  const getNextUrlInfo = (newProps) => {
     const reference = urlInfo.firstReference;
-    const newSpecifier = injectQueryParamsIntoSpecifier(reference.specifier, {
-      [searchParam]: undefined,
-    });
-    const referenceWithoutSearchParam = reference.addImplicit({
+    const nextReference = reference.addImplicit({
       type: reference.type,
       subtype: reference.subtype,
       expectedContentType: reference.expectedContentType,
-      expectedType: expectedType || reference.expectedType,
+      expectedType: reference.expectedType,
       expectedSubtype: reference.expectedSubtype,
       integrity: reference.integrity,
       crossorigin: reference.crossorigin,
@@ -2090,7 +2086,6 @@ const createUrlInfo = (url, context) => {
       astInfo: reference.astInfo,
       mutation: reference.mutation,
       data: { ...reference.data },
-      specifier: newSpecifier,
       isWeak: true,
       isInline: reference.isInline,
       original: reference.original || reference,
@@ -2100,9 +2095,37 @@ const createUrlInfo = (url, context) => {
       // generatedUrl: null,
       // generatedSpecifier: null,
       // filename: null,
+      ...newProps,
     });
-    reference.next = referenceWithoutSearchParam;
-    return referenceWithoutSearchParam.urlInfo;
+    reference.next = nextReference;
+    return nextReference.urlInfo;
+  };
+
+  urlInfo.redirect = (props) => {
+    return getNextUrlInfo(props);
+  };
+  urlInfo.getWithoutSearchParam = (searchParam, props) => {
+    // The search param can be
+    // 1. injected by a plugin during "redirectReference"
+    //    - import assertions
+    //    - js module fallback to systemjs
+    // 2. already inside source files
+    //    - turn js module into js classic for convenience ?as_js_classic
+    //    - turn js classic to js module for to make it importable
+    if (!urlInfo.searchParams.has(searchParam)) {
+      return null;
+    }
+    const reference = urlInfo.firstReference;
+    const specifierWithoutSearchParam = injectQueryParamsIntoSpecifier(
+      reference.specifier,
+      {
+        [searchParam]: undefined,
+      },
+    );
+    return urlInfo.redirect({
+      specifier: specifierWithoutSearchParam,
+      ...props,
+    });
   };
   urlInfo.onRemoved = () => {
     urlInfo.kitchen.urlInfoTransformer.resetContent(urlInfo);
@@ -3802,6 +3825,24 @@ const inferUrlInfoType = (urlInfo) => {
     return "text";
   }
   return expectedType || "other";
+};
+
+const createPackageDirectory = ({
+  sourceDirectoryUrl,
+  lookupPackageDirectory: lookupPackageDirectory$1 = lookupPackageDirectory,
+}) => {
+  const packageDirectory = {
+    url: lookupPackageDirectory$1(sourceDirectoryUrl),
+    find: (url) => {
+      const urlString = typeof url === "string" ? url : url?.href;
+      if (!urlString.startsWith("file:")) {
+        return null;
+      }
+      return lookupPackageDirectory$1(url);
+    },
+    read: readPackageAtOrNull,
+  };
+  return packageDirectory;
 };
 
 const jsenvPluginHtmlSyntaxErrorFallback = () => {
@@ -5589,18 +5630,27 @@ const jsenvPluginInlineContentFetcher = () => {
 
 
 const createNodeEsmResolver = ({
+  packageDirectory,
   runtimeCompat,
   rootDirectoryUrl,
   packageConditions = {},
   packageConditionsConfig,
   preservesSymlink,
 }) => {
+  const applyNodeEsmResolutionMemo = (params) =>
+    applyNodeEsmResolution({
+      lookupPackageScope: packageDirectory.find,
+      readPackageJson: packageDirectory.read,
+      preservesSymlink,
+      ...params,
+    });
   const buildPackageConditions = createBuildPackageConditions(
     packageConditions,
     {
       packageConditionsConfig,
       rootDirectoryUrl,
       runtimeCompat,
+      preservesSymlink,
     },
   );
 
@@ -5632,7 +5682,7 @@ const createNodeEsmResolver = ({
       reference.type === "sourcemap_comment";
 
     const resolveNodeEsmFallbackOnWeb = createResolverWithFallbackOnError(
-      applyNodeEsmResolution,
+      applyNodeEsmResolutionMemo,
       ({ specifier, parentUrl }) => {
         const url = new URL(specifier, parentUrl).href;
         return { url };
@@ -5641,7 +5691,7 @@ const createNodeEsmResolver = ({
     const DELEGATE_TO_WEB_RESOLUTION_PLUGIN = {};
     const resolveNodeEsmFallbackNullToDelegateToWebPlugin =
       createResolverWithFallbackOnError(
-        applyNodeEsmResolution,
+        applyNodeEsmResolutionMemo,
         () => DELEGATE_TO_WEB_RESOLUTION_PLUGIN,
       );
 
@@ -5649,11 +5699,11 @@ const createNodeEsmResolver = ({
       webResolutionFallback,
       resolver: webResolutionFallback
         ? resolveNodeEsmFallbackOnWeb
-        : applyNodeEsmResolution,
+        : applyNodeEsmResolutionMemo,
     });
     const resolver = webResolutionFallback
       ? resolveNodeEsmFallbackNullToDelegateToWebPlugin
-      : applyNodeEsmResolution;
+      : applyNodeEsmResolutionMemo;
 
     const result = resolver({
       conditions,
@@ -5684,52 +5734,79 @@ const createNodeEsmResolver = ({
     if (ownerUrlInfo.context.build) {
       return url;
     }
-    const dependsOnPackageJson =
-      type !== "relative_specifier" &&
-      type !== "absolute_specifier" &&
-      type !== "node_builtin_specifier";
-    if (dependsOnPackageJson) {
-      // this reference depends on package.json and node_modules
-      // to be resolved. Each file using this specifier
-      // must be invalidated when corresponding package.json changes
-      addRelationshipWithPackageJson({
-        reference,
-        packageJsonUrl: `${packageDirectoryUrl}package.json`,
-        field: type.startsWith("field:")
-          ? `#${type.slice("field:".length)}`
-          : "",
-      });
-    }
-    // without this check a file inside a project without package.json
-    // could be considered as a node module if there is a ancestor package.json
-    // but we want to version only node modules
-    if (url.includes("/node_modules/")) {
-      const packageDirectoryUrl = defaultLookupPackageScope(url);
-      if (
-        packageDirectoryUrl &&
-        packageDirectoryUrl !== ownerUrlInfo.context.rootDirectoryUrl
-      ) {
-        const packageVersion =
-          defaultReadPackageJson(packageDirectoryUrl).version;
-        // package version can be null, see https://github.com/babel/babel/blob/2ce56e832c2dd7a7ed92c89028ba929f874c2f5c/packages/babel-runtime/helpers/esm/package.json#L2
-        if (packageVersion) {
+
+    package_relationships: {
+      if (!url.startsWith("file:")) {
+        // data:, javascript:void(0), etc...
+        break package_relationships;
+      }
+
+      // packageDirectoryUrl can be already known thanks to node resolution
+      // otherwise we look for it
+      const closestPackageDirectoryUrl =
+        packageDirectoryUrl || packageDirectory.find(url);
+      if (!closestPackageDirectoryUrl) {
+        // happens for projects without package.json or some files outside of package scope
+        // (generated files like sourcemaps or cache files for example)
+        break package_relationships;
+      }
+
+      {
+        const dependsOnPackageJson = Boolean(packageDirectoryUrl);
+        if (dependsOnPackageJson) {
+          // this reference depends on package.json and node_modules
+          // to be resolved. Each file using this specifier
+          // must be invalidated when corresponding package.json changes
           addRelationshipWithPackageJson({
             reference,
             packageJsonUrl: `${packageDirectoryUrl}package.json`,
-            field: "version",
-            hasVersioningEffect: true,
+            field: type.startsWith("field:")
+              ? `#${type.slice("field:".length)}`
+              : "",
           });
         }
-        reference.version = packageVersion;
+      }
+      version_relationship: {
+        const packageVersion = packageDirectory.read(
+          closestPackageDirectoryUrl,
+        ).version;
+        if (!packageVersion) {
+          // package version can be null, see https://github.com/babel/babel/blob/2ce56e832c2dd7a7ed92c89028ba929f874c2f5c/packages/babel-runtime/helpers/esm/package.json#L2
+          break version_relationship;
+        }
+        // We want the versioning effect
+        // which would put the file in browser cache for 1 year based on that version
+        // only for files we don't control and touch ourselves (node modules)
+        // which would never change until their version change
+        // (minus the case you update them yourselves in your node modules without updating the package version)
+        // (in that case you would have to clear browser cache to use the modified version of the node module files)
+        const hasVersioningEffect =
+          closestPackageDirectoryUrl !== packageDirectory.url &&
+          url.includes("/node_modules/");
+        addRelationshipWithPackageJson({
+          reference,
+          packageJsonUrl: `${closestPackageDirectoryUrl}package.json`,
+          field: "version",
+          hasVersioningEffect,
+        });
+        if (hasVersioningEffect) {
+          reference.version = packageVersion;
+        }
       }
     }
+
     return url;
   };
 };
 
 const createBuildPackageConditions = (
   packageConditions,
-  { packageConditionsConfig, rootDirectoryUrl, runtimeCompat },
+  {
+    packageConditionsConfig,
+    rootDirectoryUrl,
+    runtimeCompat,
+    preservesSymlink,
+  },
 ) => {
   let resolveConditionsFromSpecifier = () => null;
   let resolveConditionsFromContext = () => [];
@@ -5756,6 +5833,7 @@ const createBuildPackageConditions = (
           const { packageDirectoryUrl } = applyNodeEsmResolution({
             specifier: key.slice(0, -1), // avoid package path not exported
             parentUrl: rootDirectoryUrl,
+            preservesSymlink,
           });
           const url = packageDirectoryUrl;
           associationsRaw[url] = associatedValue;
@@ -5764,6 +5842,7 @@ const createBuildPackageConditions = (
         const { url } = applyNodeEsmResolution({
           specifier: key,
           parentUrl: rootDirectoryUrl,
+          preservesSymlink,
         });
         associationsRaw[url] = associatedValue;
       } catch {
@@ -6035,11 +6114,12 @@ const isBareSpecifier = (specifier) => {
   }
 };
 
-const jsenvPluginNodeEsmResolution = (
+const jsenvPluginNodeEsmResolution = ({
+  packageDirectory,
   resolutionConfig = {},
   packageConditions,
   packageConditionsConfig = {},
-) => {
+}) => {
   let nodeEsmResolverDefault;
   const resolverMap = new Map();
   let anyTypeResolver;
@@ -6057,6 +6137,7 @@ const jsenvPluginNodeEsmResolution = (
       );
     }
     return createNodeEsmResolver({
+      packageDirectory,
       runtimeCompat: kitchenContext.runtimeCompat,
       rootDirectoryUrl: kitchenContext.rootDirectoryUrl,
       packageConditions,
@@ -6073,9 +6154,10 @@ const jsenvPluginNodeEsmResolution = (
     appliesDuring: "*",
     init: (kitchenContext) => {
       nodeEsmResolverDefault = createNodeEsmResolver({
+        packageDirectory,
         runtimeCompat: kitchenContext.runtimeCompat,
         rootDirectoryUrl: kitchenContext.rootDirectoryUrl,
-        preservesSymlink: true,
+        // preservesSymlink: true,
         packageConditions,
         packageConditionsConfig: {
           ...kitchenContext.packageConditionsConfig,
@@ -9190,6 +9272,123 @@ const jsenvPluginPackageSideEffects = ({ packageDirectory }) => {
   };
 };
 
+const PACKAGE_BUNDLE_QUERY_PARAM = "package_bundle";
+const PACKAGE_NO_BUNDLE_QUERY_PARAM = "package_no_bundle";
+const DYNAMIC_IMPORT_QUERY_PARAM = "dynamic_import";
+
+const jsenvPluginWorkspaceBundle = ({ packageDirectory }) => {
+  return {
+    name: "jsenv:workspace_bundle",
+    appliesDuring: "dev",
+    redirectReference: (reference) => {
+      if (!reference.url.startsWith("file:")) {
+        return null;
+      }
+      if (reference.searchParams.has(PACKAGE_BUNDLE_QUERY_PARAM)) {
+        return null;
+      }
+      if (reference.searchParams.has(PACKAGE_NO_BUNDLE_QUERY_PARAM)) {
+        return null;
+      }
+      if (
+        reference.ownerUrlInfo.searchParams.has(PACKAGE_NO_BUNDLE_QUERY_PARAM)
+      ) {
+        // we're cooking the bundle, without this check we would have infinite recursion to try to bundle
+        // we want to propagate the ?package_no_bundle
+        const noBundleUrl = injectQueryParams(reference.url, {
+          v: undefined,
+          [PACKAGE_NO_BUNDLE_QUERY_PARAM]: "",
+        });
+        // console.log(
+        //   `redirecting ${reference.url} to ${noBundleUrl} to cook the bundle`,
+        // );
+        return noBundleUrl;
+      }
+      const packageDirectoryUrl = packageDirectory.find(reference.url);
+      if (!packageDirectoryUrl) {
+        return null;
+      }
+      if (packageDirectoryUrl === packageDirectory.url) {
+        // root package, we don't want to bundle
+        return null;
+      }
+      // we make sure we target the bundle version of the package
+      // otherwise we might execute some parts of the package code multiple times.
+      // so we need to redirect the potential reference to non entry point to the package main entry point
+      const packageJSON = packageDirectory.read(packageDirectoryUrl);
+      const rootReference = reference.ownerUrlInfo.dependencies.inject({
+        type: "js_import",
+        specifier: `${packageJSON.name}?${PACKAGE_BUNDLE_QUERY_PARAM}`,
+      });
+      // console.log(
+      //   `redirecting ${reference.url} to ${rootReference.url} to target the package bundle version of the package`,
+      // );
+      const packageMainUrl = rootReference.url;
+      return packageMainUrl;
+    },
+    fetchUrlContent: async (urlInfo) => {
+      if (!urlInfo.searchParams.has(PACKAGE_BUNDLE_QUERY_PARAM)) {
+        return null;
+      }
+      const noBundleSpecifier = injectQueryParamsIntoSpecifier(
+        urlInfo.firstReference.specifier,
+        {
+          [PACKAGE_BUNDLE_QUERY_PARAM]: undefined,
+          [PACKAGE_NO_BUNDLE_QUERY_PARAM]: "",
+        },
+      );
+      const noBundleUrlInfo = urlInfo.redirect({
+        specifier: noBundleSpecifier,
+      });
+      if (!noBundleUrlInfo) {
+        return null;
+      }
+      await noBundleUrlInfo.cook();
+      await noBundleUrlInfo.cookDependencies({
+        // we ignore dynamic import to cook lazyly (as browser request the server)
+        // these dynamic imports must inherit "?package_bundle"
+        // This is done inside rollup for convenience
+        ignoreDynamicImport: true,
+      });
+      const bundleUrlInfos = await bundleJsModules([noBundleUrlInfo], {
+        chunks: false,
+        buildDirectoryUrl: new URL("../src/plugins/workspace_bundle/", import.meta.url),
+        preserveDynamicImports: true,
+        augmentDynamicImportUrlSearchParams: () => {
+          return {
+            [DYNAMIC_IMPORT_QUERY_PARAM]: "",
+            [PACKAGE_BUNDLE_QUERY_PARAM]: "",
+          };
+        },
+      });
+      const bundledUrlInfo = bundleUrlInfos[noBundleUrlInfo.url];
+      if (urlInfo.context.dev) {
+        for (const sourceUrl of bundledUrlInfo.sourceUrls) {
+          urlInfo.dependencies.inject({
+            isImplicit: true,
+            type: "js_url",
+            specifier: sourceUrl,
+          });
+        }
+      }
+      return {
+        content: bundledUrlInfo.content,
+        contentType: "text/javascript",
+        type: "js_module",
+        originalUrl: urlInfo.originalUrl,
+        originalContent: bundledUrlInfo.originalContent,
+        sourcemap: bundledUrlInfo.sourcemap,
+        data: bundledUrlInfo.data,
+      };
+    },
+    // transformReferenceSearchParams: () => {
+    //   return {
+    //     [PACKAGE_BUNDLE_QUERY_PARAM]: undefined,
+    //   };
+    // },
+  };
+};
+
 // tslint:disable:ordered-imports
 
 
@@ -9214,12 +9413,14 @@ const getCorePlugins = ({
   inlining = true,
   http = false,
   spa,
+  packageBundle,
 
   clientAutoreload,
   clientAutoreloadOnServerRestart,
   cacheControl,
   scenarioPlaceholders = true,
   ribbon = true,
+  dropToOpen = true,
   packageSideEffects = false,
 } = {}) => {
   if (cacheControl === true) {
@@ -9242,6 +9443,9 @@ const getCorePlugins = ({
   }
 
   return [
+    ...(packageBundle
+      ? [jsenvPluginWorkspaceBundle({ packageDirectory })]
+      : []),
     jsenvPluginReferenceAnalysis(referenceAnalysis),
     jsenvPluginInjections(injections),
     jsenvPluginTranspilation(transpilation),
@@ -9280,11 +9484,12 @@ const getCorePlugins = ({
     },
     ...(nodeEsmResolution
       ? [
-          jsenvPluginNodeEsmResolution(
-            nodeEsmResolution,
+          jsenvPluginNodeEsmResolution({
+            packageDirectory,
+            resolutionConfig: nodeEsmResolution,
             packageConditions,
             packageConditionsConfig,
-          ),
+          }),
         ]
       : []),
     jsenvPluginWebResolution(),
@@ -9311,7 +9516,7 @@ const getCorePlugins = ({
       : []),
     ...(cacheControl ? [jsenvPluginCacheControl(cacheControl)] : []),
     ...(ribbon ? [jsenvPluginRibbon({ rootDirectoryUrl, ...ribbon })] : []),
-    jsenvPluginDropToOpen(),
+    ...(dropToOpen ? [jsenvPluginDropToOpen()] : []),
     jsenvPluginCleanHTML(),
     jsenvPluginChromeDevtoolsJson(),
     ...(packageSideEffects
@@ -9508,9 +9713,11 @@ const startDevServer = async ({
   transpilation,
   cacheControl = true,
   ribbon = true,
+  dropToOpen = true,
   // toolbar = false,
   onKitchenCreated = () => {},
   spa,
+  packageBundle,
 
   sourcemaps = "inline",
   sourcemapsSourcesContent,
@@ -9655,11 +9862,9 @@ const startDevServer = async ({
     );
     serverStopCallbackSet.add(stopWatchingSourceFiles);
 
-    const packageDirectory = {
-      url: lookupPackageDirectory(sourceDirectoryUrl),
-      find: lookupPackageDirectory,
-      read: readPackageAtOrNull,
-    };
+    const packageDirectory = createPackageDirectory({
+      sourceDirectoryUrl,
+    });
 
     const devServerPluginStore = await createPluginStore([
       jsenvPluginServerEvents({ clientAutoreload }),
@@ -9682,11 +9887,13 @@ const startDevServer = async ({
         injections,
         transpilation,
         spa,
+        packageBundle,
 
         clientAutoreload,
         clientAutoreloadOnServerRestart,
         cacheControl,
         ribbon,
+        dropToOpen,
       }),
     ]);
     const getOrCreateKitchen = async (request) => {
@@ -9741,66 +9948,74 @@ const startDevServer = async ({
         urlInfoCreated.isWatched = watch;
         // when an url depends on many others, we check all these (like package.json)
         urlInfoCreated.isValid = () => {
-          if (!urlInfoCreated.url.startsWith("file:")) {
-            return false;
-          }
-          if (urlInfoCreated.content === undefined) {
-            // urlInfo content is undefined when:
-            // - url info content never fetched
-            // - it is considered as modified because undelying file is watched and got saved
-            // - it is considered as modified because underlying file content
-            //   was compared using etag and it has changed
-            return false;
-          }
-          if (!watch) {
-            // file is not watched, check the filesystem
-            let fileContentAsBuffer;
-            try {
-              fileContentAsBuffer = readFileSync(new URL(urlInfoCreated.url));
-            } catch (e) {
-              if (e.code === "ENOENT") {
-                urlInfoCreated.onModified();
+          const seenSet = new Set();
+          const checkValidity = (urlInfo) => {
+            if (seenSet.has(urlInfo)) {
+              return true;
+            }
+            seenSet.add(urlInfo);
+            if (!urlInfo.url.startsWith("file:")) {
+              return false;
+            }
+            if (urlInfo.content === undefined) {
+              // urlInfo content is undefined when:
+              // - url info content never fetched
+              // - it is considered as modified because undelying file is watched and got saved
+              // - it is considered as modified because underlying file content
+              //   was compared using etag and it has changed
+              return false;
+            }
+            if (!urlInfo.isWatched) {
+              // file is not watched, check the filesystem
+              let fileContentAsBuffer;
+              try {
+                fileContentAsBuffer = readFileSync(new URL(urlInfo.url));
+              } catch (e) {
+                if (e.code === "ENOENT") {
+                  urlInfo.onModified();
+                  return false;
+                }
                 return false;
               }
-              return false;
-            }
-            const fileContentEtag = bufferToEtag(fileContentAsBuffer);
-            if (fileContentEtag !== urlInfoCreated.originalContentEtag) {
-              urlInfoCreated.onModified();
-              // restore content to be able to compare it again later
-              urlInfoCreated.kitchen.urlInfoTransformer.setContent(
-                urlInfoCreated,
-                String(fileContentAsBuffer),
-                {
-                  contentEtag: fileContentEtag,
-                },
-              );
-              return false;
-            }
-          }
-          for (const implicitUrl of urlInfoCreated.implicitUrlSet) {
-            const implicitUrlInfo =
-              urlInfoCreated.graph.getUrlInfo(implicitUrl);
-            if (!implicitUrlInfo) {
-              continue;
-            }
-            if (implicitUrlInfo.content === undefined) {
-              // happens when we explicitely load an url with a search param
-              // - it creates an implicit url info to the url without params
-              // - we never explicitely request the url without search param so it has no content
-              // in that case the underlying urlInfo cannot be invalidate by the implicit
-              // we use modifiedTimestamp to detect if the url was loaded once
-              // or is just here to be used later
-              if (implicitUrlInfo.modifiedTimestamp) {
+              const fileContentEtag = bufferToEtag(fileContentAsBuffer);
+              if (fileContentEtag !== urlInfo.originalContentEtag) {
+                urlInfo.onModified();
+                // restore content to be able to compare it again later
+                urlInfo.kitchen.urlInfoTransformer.setContent(
+                  urlInfo,
+                  String(fileContentAsBuffer),
+                  {
+                    contentEtag: fileContentEtag,
+                  },
+                );
                 return false;
               }
-              continue;
             }
-            if (!implicitUrlInfo.isValid()) {
-              return false;
+            for (const implicitUrl of urlInfo.implicitUrlSet) {
+              const implicitUrlInfo = urlInfo.graph.getUrlInfo(implicitUrl);
+              if (!implicitUrlInfo) {
+                continue;
+              }
+              if (implicitUrlInfo.content === undefined) {
+                // happens when we explicitely load an url with a search param
+                // - it creates an implicit url info to the url without params
+                // - we never explicitely request the url without search param so it has no content
+                // in that case the underlying urlInfo cannot be invalidate by the implicit
+                // we use modifiedTimestamp to detect if the url was loaded once
+                // or is just here to be used later
+                if (implicitUrlInfo.modifiedTimestamp) {
+                  return false;
+                }
+                continue;
+              }
+              if (!checkValidity(implicitUrlInfo)) {
+                return false;
+              }
             }
-          }
-          return true;
+            return true;
+          };
+          const valid = checkValidity(urlInfoCreated);
+          return valid;
         };
       });
       kitchen.graph.urlInfoDereferencedEventEmitter.on(
