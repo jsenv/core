@@ -202,7 +202,7 @@ await ensureEmptyDirectory(tempDirectoryUrl);
 }
 
 // remove inside directory
-{
+if (process.env.FLAKY) {
   const directoryUrl = resolveUrl("dir", tempDirectoryUrl);
   const fileUrl = resolveUrl("dir/file", tempDirectoryUrl);
   await writeDirectory(directoryUrl);

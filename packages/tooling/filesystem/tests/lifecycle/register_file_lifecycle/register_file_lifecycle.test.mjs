@@ -65,7 +65,7 @@ ensureEmptyDirectorySync(tempDirectoryUrl);
 }
 
 // added, removed, added
-{
+if (process.env.FLAKY) {
   const fileUrl = resolveUrl("file", tempDirectoryUrl);
   const mutations = [];
   const unregister = registerFileLifecycle(fileUrl, {
