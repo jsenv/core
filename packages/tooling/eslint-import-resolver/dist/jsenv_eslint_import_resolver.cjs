@@ -1860,6 +1860,10 @@ const applyNodeEsmResolution = ({
   return resolution;
 };
 
+const createResolutionResult = (data) => {
+  return data;
+};
+
 const applyPackageSpecifierResolution = (specifier, resolutionContext) => {
   const { parentUrl } = resolutionContext;
   // relative specifier
@@ -1877,10 +1881,10 @@ const applyPackageSpecifierResolution = (specifier, resolutionContext) => {
         return browserFieldResolution;
       }
     }
-    return {
+    return createResolutionResult({
       type: "relative_specifier",
       url: new URL(specifier, parentUrl).href,
-    };
+    });
   }
   if (specifier[0] === "#") {
     return applyPackageImportsResolution(specifier, resolutionContext);
@@ -1888,15 +1892,15 @@ const applyPackageSpecifierResolution = (specifier, resolutionContext) => {
   try {
     const urlObject = new URL(specifier);
     if (specifier.startsWith("node:")) {
-      return {
+      return createResolutionResult({
         type: "node_builtin_specifier",
         url: specifier,
-      };
+      });
     }
-    return {
+    return createResolutionResult({
       type: "absolute_specifier",
       url: urlObject.href,
-    };
+    });
   } catch {
     // bare specifier
     const browserFieldResolution = applyBrowserFieldResolution(
@@ -1957,13 +1961,13 @@ const applyBrowserFieldResolution = (specifier, resolutionContext) => {
     }
   }
   if (url) {
-    return {
+    return createResolutionResult({
       type: "field:browser",
       isMain: true,
       packageDirectoryUrl,
       packageJson,
       url,
-    };
+    });
   }
   return null;
 };
@@ -2012,10 +2016,10 @@ const applyPackageResolve = (packageSpecifier, resolutionContext) => {
     conditions.includes("node") &&
     isSpecifierForNodeBuiltin(packageSpecifier)
   ) {
-    return {
+    return createResolutionResult({
       type: "node_builtin_specifier",
       url: `node:${packageSpecifier}`,
-    };
+    });
   }
   let { packageName, packageSubpath } = parsePackageSpecifier(packageSpecifier);
   if (
@@ -2208,7 +2212,7 @@ const applyPackageTargetResolution = (target, resolutionContext) => {
           resolutionContext,
         );
       }
-      return {
+      return createResolutionResult({
         type: isImport ? "field:imports" : "field:exports",
         isMain: subpath === "" || subpath === ".",
         packageDirectoryUrl,
@@ -2216,7 +2220,7 @@ const applyPackageTargetResolution = (target, resolutionContext) => {
         url: pattern
           ? targetUrl.replaceAll("*", subpath)
           : new URL(subpath, targetUrl).href,
-      };
+      });
     }
     if (!isImport || target.startsWith("../") || isValidUrl(target)) {
       throw createInvalidPackageTargetError(
@@ -2437,13 +2441,13 @@ const applyLegacySubpathResolution = (packageSubpath, resolutionContext) => {
   if (browserFieldResolution) {
     return browserFieldResolution;
   }
-  return {
+  return createResolutionResult({
     type: "subpath",
     isMain: packageSubpath === ".",
     packageDirectoryUrl,
     packageJson,
     url: new URL(packageSubpath, packageDirectoryUrl).href,
-  };
+  });
 };
 
 const applyLegacyMainResolution = (packageSubpath, resolutionContext) => {
@@ -2455,22 +2459,22 @@ const applyLegacyMainResolution = (packageSubpath, resolutionContext) => {
     }
     const resolved = conditionResolver(resolutionContext);
     if (resolved) {
-      return {
+      return createResolutionResult({
         type: resolved.type,
         isMain: resolved.isMain,
         packageDirectoryUrl,
         packageJson,
         url: new URL(resolved.path, packageDirectoryUrl).href,
-      };
+      });
     }
   }
-  return {
+  return createResolutionResult({
     type: "field:main", // the absence of "main" field
     isMain: true,
     packageDirectoryUrl,
     packageJson,
     url: new URL("index.js", packageDirectoryUrl).href,
-  };
+  });
 };
 const mainLegacyResolvers = {
   import: ({ packageJson }) => {
@@ -12236,9 +12240,17 @@ ${packageConditions.join(",")}`);
     logger.debug(`-> module system is ${moduleSystem}`);
     if (moduleSystem === "commonjs") {
       const requireForImporter = node_module.createRequire(importer);
+
       let filesystemPath;
       try {
-        filesystemPath = requireForImporter.resolve(specifier);
+        const searchParamIndex = specifier.indexOf("?");
+        const specifierWithoutSearchParam =
+          searchParamIndex === -1
+            ? specifier
+            : specifier.slice(0, searchParamIndex);
+        filesystemPath = requireForImporter.resolve(
+          specifierWithoutSearchParam,
+        );
       } catch (e) {
         if (e.code === "MODULE_NOT_FOUND") {
           triggerNotFoundWarning({

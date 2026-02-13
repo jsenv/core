@@ -25,7 +25,7 @@
     "/src/"
   ],
   "scripts": {
-    "build": "node  --experimental-import-meta-resolve ./scripts/build.mjs",
+    "build": "node --experimental-import-meta-resolve ./scripts/build.mjs",
     "prepublishOnly": "npm run build"
   },
   "devDependencies": {
