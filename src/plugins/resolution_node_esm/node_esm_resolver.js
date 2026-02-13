@@ -158,10 +158,15 @@ export const createNodeEsmResolver = ({
           // package version can be null, see https://github.com/babel/babel/blob/2ce56e832c2dd7a7ed92c89028ba929f874c2f5c/packages/babel-runtime/helpers/esm/package.json#L2
           break version_relationship;
         }
-        // Versioning effect is reserved to files with a package.json except the one being currently
-        // considered as the root package (entry point package file)
+        // We want the versioning effect
+        // which would put the file in browser cache for 1 year based on that version
+        // only for files we don't control and touch ourselves (node modules)
+        // which would never change until their version change
+        // (minus the case you update them yourselves in your node modules without updating the package version)
+        // (in that case you would have to clear browser cache to use the modified version of the node module files)
         const hasVersioningEffect =
-          closestPackageDirectoryUrl !== ownerUrlInfo.context.rootDirectoryUrl;
+          closestPackageDirectoryUrl !== packageDirectory.url &&
+          url.includes("/node_modules/");
         addRelationshipWithPackageJson({
           reference,
           packageJsonUrl: `${closestPackageDirectoryUrl}package.json`,

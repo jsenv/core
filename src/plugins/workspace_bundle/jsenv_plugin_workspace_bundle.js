@@ -104,5 +104,10 @@ export const jsenvPluginWorkspaceBundle = ({ packageDirectory }) => {
         data: bundledUrlInfo.data,
       };
     },
+    // transformReferenceSearchParams: () => {
+    //   return {
+    //     [PACKAGE_BUNDLE_QUERY_PARAM]: undefined,
+    //   };
+    // },
   };
 };

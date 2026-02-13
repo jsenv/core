@@ -25,9 +25,9 @@ export const jsenvPluginVersionSearchParam = () => {
       if (reference.searchParams.has("v")) {
         return null;
       }
-      // return {
-      //   v: reference.version,
-      // };
+      return {
+        v: reference.version,
+      };
     },
   };
 };

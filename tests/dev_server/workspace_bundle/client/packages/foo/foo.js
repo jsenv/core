@@ -1,3 +1,3 @@
-import { answer } from "./answer.js?debug";
+import { answer } from "./answer.js";
 
 export const getAnswer = () => answer;
