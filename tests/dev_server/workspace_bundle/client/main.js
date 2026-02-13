@@ -1,3 +1,5 @@
 import { getAnswer } from "foo";
 
-window.resolveResultPromise(getAnswer());
+const answer = getAnswer();
+window.resolveResultPromise(answer);
+document.querySelector("#app").innerHTML = answer;

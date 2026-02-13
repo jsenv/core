@@ -21,7 +21,7 @@ export default [
     ],
     browserAndNodeFiles: ["packages/**/assert/**/*.js"],
     jsxPragmaAuto: true,
-    // importResolutionLogLevel: "debug",
+    importResolutionLogLevel: "debug",
     // Favor dev:jsenv package exports condition
     importResolutionDevConditions: ["dev:jsenv"],
   }),

@@ -169,9 +169,17 @@ ${packageConditions.join(",")}`);
     logger.debug(`-> module system is ${moduleSystem}`);
     if (moduleSystem === "commonjs") {
       const requireForImporter = createRequire(importer);
+
       let filesystemPath;
       try {
-        filesystemPath = requireForImporter.resolve(specifier);
+        const searchParamIndex = specifier.indexOf("?");
+        const specifierWithoutSearchParam =
+          searchParamIndex === -1
+            ? specifier
+            : specifier.slice(0, searchParamIndex);
+        filesystemPath = requireForImporter.resolve(
+          specifierWithoutSearchParam,
+        );
       } catch (e) {
         if (e.code === "MODULE_NOT_FOUND") {
           triggerNotFoundWarning({
