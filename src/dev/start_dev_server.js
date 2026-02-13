@@ -337,10 +337,10 @@ export const startDevServer = async ({
               return true;
             }
             seenSet.add(urlInfo);
-            if (!urlInfoCreated.url.startsWith("file:")) {
+            if (!urlInfo.url.startsWith("file:")) {
               return false;
             }
-            if (urlInfoCreated.content === undefined) {
+            if (urlInfo.content === undefined) {
               // urlInfo content is undefined when:
               // - url info content never fetched
               // - it is considered as modified because undelying file is watched and got saved
@@ -352,20 +352,20 @@ export const startDevServer = async ({
               // file is not watched, check the filesystem
               let fileContentAsBuffer;
               try {
-                fileContentAsBuffer = readFileSync(new URL(urlInfoCreated.url));
+                fileContentAsBuffer = readFileSync(new URL(urlInfo.url));
               } catch (e) {
                 if (e.code === "ENOENT") {
-                  urlInfoCreated.onModified();
+                  urlInfo.onModified();
                   return false;
                 }
                 return false;
               }
               const fileContentEtag = bufferToEtag(fileContentAsBuffer);
-              if (fileContentEtag !== urlInfoCreated.originalContentEtag) {
-                urlInfoCreated.onModified();
+              if (fileContentEtag !== urlInfo.originalContentEtag) {
+                urlInfo.onModified();
                 // restore content to be able to compare it again later
-                urlInfoCreated.kitchen.urlInfoTransformer.setContent(
-                  urlInfoCreated,
+                urlInfo.kitchen.urlInfoTransformer.setContent(
+                  urlInfo,
                   String(fileContentAsBuffer),
                   {
                     contentEtag: fileContentEtag,
@@ -374,9 +374,8 @@ export const startDevServer = async ({
                 return false;
               }
             }
-            for (const implicitUrl of urlInfoCreated.implicitUrlSet) {
-              const implicitUrlInfo =
-                urlInfoCreated.graph.getUrlInfo(implicitUrl);
+            for (const implicitUrl of urlInfo.implicitUrlSet) {
+              const implicitUrlInfo = urlInfo.graph.getUrlInfo(implicitUrl);
               if (!implicitUrlInfo) {
                 continue;
               }

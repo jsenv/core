@@ -43,7 +43,7 @@ writeSymbolicLinkSync({
 await ensureEmptyDirectory(new URL("./.jsenv/", import.meta.url));
 const devServer = await startDevServer({
   sourcemaps: "none",
-  logLevel: "debug",
+  logLevel: "warn",
   serverLogLevel: "warn",
   sourceDirectoryUrl,
   outDirectoryUrl: import.meta.resolve("./.jsenv/"),

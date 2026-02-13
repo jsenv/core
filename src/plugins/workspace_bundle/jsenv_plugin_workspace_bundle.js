@@ -13,6 +13,9 @@ export const jsenvPluginWorkspaceBundle = ({ packageDirectory }) => {
       if (reference.searchParams.has(PACKAGE_BUNDLE_QUERY_PARAM)) {
         return null;
       }
+      if (reference.searchParams.has(PACKAGE_NO_BUNDLE_QUERY_PARAM)) {
+        return null;
+      }
       if (
         reference.ownerUrlInfo.searchParams.has(PACKAGE_NO_BUNDLE_QUERY_PARAM)
       ) {
