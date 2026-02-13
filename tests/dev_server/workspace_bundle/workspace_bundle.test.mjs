@@ -54,6 +54,7 @@ const devServer = await startDevServer({
   ribbon: false,
   clientAutoreload: false,
   packageBundle: true,
+  port: 0,
 });
 
 let debug = false;
