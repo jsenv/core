@@ -51,6 +51,7 @@ export const getCorePlugins = ({
   inlining = true,
   http = false,
   spa,
+  packageBundle,
 
   clientAutoreload,
   clientAutoreloadOnServerRestart,
@@ -80,7 +81,9 @@ export const getCorePlugins = ({
   }
 
   return [
-    jsenvPluginWorkspaceBundle({ packageDirectory }),
+    ...(packageBundle
+      ? [jsenvPluginWorkspaceBundle({ packageDirectory })]
+      : []),
     jsenvPluginReferenceAnalysis(referenceAnalysis),
     jsenvPluginInjections(injections),
     jsenvPluginTranspilation(transpilation),

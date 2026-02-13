@@ -53,6 +53,7 @@ const devServer = await startDevServer({
   supervisor: false,
   ribbon: false,
   clientAutoreload: false,
+  packageBundle: true,
 });
 
 let debug = false;

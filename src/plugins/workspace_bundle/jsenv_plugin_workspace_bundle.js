@@ -10,6 +10,9 @@ export const jsenvPluginWorkspaceBundle = ({ packageDirectory }) => {
     name: "jsenv:workspace_bundle",
     appliesDuring: "dev",
     redirectReference: (reference) => {
+      if (!reference.url.startsWith("file:")) {
+        return null;
+      }
       if (reference.searchParams.has(PACKAGE_BUNDLE_QUERY_PARAM)) {
         return null;
       }

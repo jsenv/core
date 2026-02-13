@@ -101,6 +101,7 @@ export const startDevServer = async ({
   // toolbar = false,
   onKitchenCreated = () => {},
   spa,
+  packageBundle,
 
   sourcemaps = "inline",
   sourcemapsSourcesContent,
@@ -271,6 +272,7 @@ export const startDevServer = async ({
         injections,
         transpilation,
         spa,
+        packageBundle,
 
         clientAutoreload,
         clientAutoreloadOnServerRestart,
