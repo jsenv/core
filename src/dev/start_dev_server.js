@@ -350,7 +350,7 @@ export const startDevServer = async ({
               //   was compared using etag and it has changed
               return false;
             }
-            if (!watch) {
+            if (!urlInfo.isWatched) {
               // file is not watched, check the filesystem
               let fileContentAsBuffer;
               try {
