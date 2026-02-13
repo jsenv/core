@@ -5,6 +5,7 @@
 
 import { assert } from "@jsenv/assert";
 import {
+  ensureEmptyDirectory,
   readFileStructureSync,
   writeFileStructureSync,
 } from "@jsenv/filesystem";
@@ -34,6 +35,7 @@ const answerFileContent = {
   restore: () => writeFileSync(answerFileUrl, answerFileContent.beforeTest),
 };
 const serverRequests = [];
+await ensureEmptyDirectory(new URL("./.jsenv/", import.meta.url));
 const devServer = await startDevServer({
   logLevel: "warn",
   sourceDirectoryUrl: import.meta.resolve("./client/"),
