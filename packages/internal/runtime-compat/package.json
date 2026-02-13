@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/runtime-compat",
-  "version": "1.4.16",
+  "version": "1.4.17",
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
@@ -14,7 +14,7 @@
     "/src/"
   ],
   "dependencies": {
-    "@jsenv/filesystem": "4.15.13",
+    "@jsenv/filesystem": "4.15.14",
     "@jsenv/utils": "2.3.1",
     "browserslist": "4.28.1"
   }

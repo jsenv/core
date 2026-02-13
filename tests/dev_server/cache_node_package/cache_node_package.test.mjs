@@ -5,6 +5,7 @@
 
 import { assert } from "@jsenv/assert";
 import {
+  ensureEmptyDirectory,
   readFileStructureSync,
   writeFileStructureSync,
 } from "@jsenv/filesystem";
@@ -17,8 +18,7 @@ import { launchBrowserPage } from "@jsenv/core/tests/launch_browser_page.js";
 
 const debug = false; // true to have browser UI + keep it open after test
 const fooPackageFileUrl = new URL(
-  "./client/node_modules/foo/package.json",
-  import.meta.url,
+  import.meta.resolve("./client/node_modules/foo/package.json"),
 );
 const fooPackageFileContent = {
   beforeTest: readFileSync(fooPackageFileUrl),
@@ -26,16 +26,16 @@ const fooPackageFileContent = {
   restore: () =>
     writeFileSync(fooPackageFileUrl, fooPackageFileContent.beforeTest),
 };
-const asnwerFileUrl = new URL(
-  "./client/node_modules/foo/answer.js",
-  import.meta.url,
+const answerFileUrl = new URL(
+  import.meta.resolve("./client/node_modules/foo/answer.js"),
 );
 const answerFileContent = {
-  beforeTest: readFileSync(asnwerFileUrl),
-  update: (content) => writeFileSync(asnwerFileUrl, content),
-  restore: () => writeFileSync(asnwerFileUrl, answerFileContent.beforeTest),
+  beforeTest: readFileSync(answerFileUrl),
+  update: (content) => writeFileSync(answerFileUrl, content),
+  restore: () => writeFileSync(answerFileUrl, answerFileContent.beforeTest),
 };
 const serverRequests = [];
+await ensureEmptyDirectory(new URL("./.jsenv/", import.meta.url));
 const devServer = await startDevServer({
   logLevel: "warn",
   sourceDirectoryUrl: import.meta.resolve("./client/"),

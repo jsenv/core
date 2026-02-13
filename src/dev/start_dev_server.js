@@ -2,7 +2,6 @@ import {
   assertAndNormalizeDirectoryUrl,
   bufferToEtag,
   lookupPackageDirectory,
-  readPackageAtOrNull,
 } from "@jsenv/filesystem";
 import { createLogger, createTaskLog, formatError } from "@jsenv/humanize";
 import {
@@ -23,6 +22,7 @@ import { watchSourceFiles } from "../helpers/watch_source_files.js";
 import { WEB_URL_CONVERTER } from "../helpers/web_url_converter.js";
 import { jsenvCoreDirectoryUrl } from "../jsenv_core_directory_url.js";
 import { createKitchen } from "../kitchen/kitchen.js";
+import { createPackageDirectory } from "../kitchen/package_directory.js";
 import {
   createPluginController,
   createPluginStore,
@@ -97,9 +97,11 @@ export const startDevServer = async ({
   transpilation,
   cacheControl = true,
   ribbon = true,
+  dropToOpen = true,
   // toolbar = false,
   onKitchenCreated = () => {},
   spa,
+  packageBundle,
 
   sourcemaps = "inline",
   sourcemapsSourcesContent,
@@ -245,11 +247,9 @@ export const startDevServer = async ({
     );
     serverStopCallbackSet.add(stopWatchingSourceFiles);
 
-    const packageDirectory = {
-      url: lookupPackageDirectory(sourceDirectoryUrl),
-      find: lookupPackageDirectory,
-      read: readPackageAtOrNull,
-    };
+    const packageDirectory = createPackageDirectory({
+      sourceDirectoryUrl,
+    });
 
     const devServerPluginStore = await createPluginStore([
       jsenvPluginServerEvents({ clientAutoreload }),
@@ -272,11 +272,13 @@ export const startDevServer = async ({
         injections,
         transpilation,
         spa,
+        packageBundle,
 
         clientAutoreload,
         clientAutoreloadOnServerRestart,
         cacheControl,
         ribbon,
+        dropToOpen,
       }),
     ]);
     const getOrCreateKitchen = async (request) => {
@@ -331,66 +333,74 @@ export const startDevServer = async ({
         urlInfoCreated.isWatched = watch;
         // when an url depends on many others, we check all these (like package.json)
         urlInfoCreated.isValid = () => {
-          if (!urlInfoCreated.url.startsWith("file:")) {
-            return false;
-          }
-          if (urlInfoCreated.content === undefined) {
-            // urlInfo content is undefined when:
-            // - url info content never fetched
-            // - it is considered as modified because undelying file is watched and got saved
-            // - it is considered as modified because underlying file content
-            //   was compared using etag and it has changed
-            return false;
-          }
-          if (!watch) {
-            // file is not watched, check the filesystem
-            let fileContentAsBuffer;
-            try {
-              fileContentAsBuffer = readFileSync(new URL(urlInfoCreated.url));
-            } catch (e) {
-              if (e.code === "ENOENT") {
-                urlInfoCreated.onModified();
+          const seenSet = new Set();
+          const checkValidity = (urlInfo) => {
+            if (seenSet.has(urlInfo)) {
+              return true;
+            }
+            seenSet.add(urlInfo);
+            if (!urlInfo.url.startsWith("file:")) {
+              return false;
+            }
+            if (urlInfo.content === undefined) {
+              // urlInfo content is undefined when:
+              // - url info content never fetched
+              // - it is considered as modified because undelying file is watched and got saved
+              // - it is considered as modified because underlying file content
+              //   was compared using etag and it has changed
+              return false;
+            }
+            if (!urlInfo.isWatched) {
+              // file is not watched, check the filesystem
+              let fileContentAsBuffer;
+              try {
+                fileContentAsBuffer = readFileSync(new URL(urlInfo.url));
+              } catch (e) {
+                if (e.code === "ENOENT") {
+                  urlInfo.onModified();
+                  return false;
+                }
                 return false;
               }
-              return false;
-            }
-            const fileContentEtag = bufferToEtag(fileContentAsBuffer);
-            if (fileContentEtag !== urlInfoCreated.originalContentEtag) {
-              urlInfoCreated.onModified();
-              // restore content to be able to compare it again later
-              urlInfoCreated.kitchen.urlInfoTransformer.setContent(
-                urlInfoCreated,
-                String(fileContentAsBuffer),
-                {
-                  contentEtag: fileContentEtag,
-                },
-              );
-              return false;
-            }
-          }
-          for (const implicitUrl of urlInfoCreated.implicitUrlSet) {
-            const implicitUrlInfo =
-              urlInfoCreated.graph.getUrlInfo(implicitUrl);
-            if (!implicitUrlInfo) {
-              continue;
-            }
-            if (implicitUrlInfo.content === undefined) {
-              // happens when we explicitely load an url with a search param
-              // - it creates an implicit url info to the url without params
-              // - we never explicitely request the url without search param so it has no content
-              // in that case the underlying urlInfo cannot be invalidate by the implicit
-              // we use modifiedTimestamp to detect if the url was loaded once
-              // or is just here to be used later
-              if (implicitUrlInfo.modifiedTimestamp) {
+              const fileContentEtag = bufferToEtag(fileContentAsBuffer);
+              if (fileContentEtag !== urlInfo.originalContentEtag) {
+                urlInfo.onModified();
+                // restore content to be able to compare it again later
+                urlInfo.kitchen.urlInfoTransformer.setContent(
+                  urlInfo,
+                  String(fileContentAsBuffer),
+                  {
+                    contentEtag: fileContentEtag,
+                  },
+                );
                 return false;
               }
-              continue;
             }
-            if (!implicitUrlInfo.isValid()) {
-              return false;
+            for (const implicitUrl of urlInfo.implicitUrlSet) {
+              const implicitUrlInfo = urlInfo.graph.getUrlInfo(implicitUrl);
+              if (!implicitUrlInfo) {
+                continue;
+              }
+              if (implicitUrlInfo.content === undefined) {
+                // happens when we explicitely load an url with a search param
+                // - it creates an implicit url info to the url without params
+                // - we never explicitely request the url without search param so it has no content
+                // in that case the underlying urlInfo cannot be invalidate by the implicit
+                // we use modifiedTimestamp to detect if the url was loaded once
+                // or is just here to be used later
+                if (implicitUrlInfo.modifiedTimestamp) {
+                  return false;
+                }
+                continue;
+              }
+              if (!checkValidity(implicitUrlInfo)) {
+                return false;
+              }
             }
-          }
-          return true;
+            return true;
+          };
+          const valid = checkValidity(urlInfoCreated);
+          return valid;
         };
       });
       kitchen.graph.urlInfoDereferencedEventEmitter.on(

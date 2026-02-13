@@ -28,6 +28,7 @@ import { jsenvPluginCleanHTML } from "./clean_html/jsenv_plugin_clean_html.js";
 import { jsenvPluginChromeDevtoolsJson } from "./chrome_devtools_json/jsenv_plugin_chrome_devtools_json.js";
 import { jsenvPluginAutoreloadOnServerRestart } from "./autoreload_on_server_restart/jsenv_plugin_autoreload_on_server_restart.js";
 import { jsenvPluginPackageSideEffects } from "./package_side_effects/jsenv_plugin_package_side_effects.js";
+import { jsenvPluginWorkspaceBundle } from "./workspace_bundle/jsenv_plugin_workspace_bundle.js";
 
 export const getCorePlugins = ({
   rootDirectoryUrl,
@@ -50,12 +51,14 @@ export const getCorePlugins = ({
   inlining = true,
   http = false,
   spa,
+  packageBundle,
 
   clientAutoreload,
   clientAutoreloadOnServerRestart,
   cacheControl,
   scenarioPlaceholders = true,
   ribbon = true,
+  dropToOpen = true,
   packageSideEffects = false,
 } = {}) => {
   if (cacheControl === true) {
@@ -78,6 +81,9 @@ export const getCorePlugins = ({
   }
 
   return [
+    ...(packageBundle
+      ? [jsenvPluginWorkspaceBundle({ packageDirectory })]
+      : []),
     jsenvPluginReferenceAnalysis(referenceAnalysis),
     jsenvPluginInjections(injections),
     jsenvPluginTranspilation(transpilation),
@@ -116,11 +122,12 @@ export const getCorePlugins = ({
     },
     ...(nodeEsmResolution
       ? [
-          jsenvPluginNodeEsmResolution(
-            nodeEsmResolution,
+          jsenvPluginNodeEsmResolution({
+            packageDirectory,
+            resolutionConfig: nodeEsmResolution,
             packageConditions,
             packageConditionsConfig,
-          ),
+          }),
         ]
       : []),
     jsenvPluginWebResolution(),
@@ -147,7 +154,7 @@ export const getCorePlugins = ({
       : []),
     ...(cacheControl ? [jsenvPluginCacheControl(cacheControl)] : []),
     ...(ribbon ? [jsenvPluginRibbon({ rootDirectoryUrl, ...ribbon })] : []),
-    jsenvPluginDropToOpen(),
+    ...(dropToOpen ? [jsenvPluginDropToOpen()] : []),
     jsenvPluginCleanHTML(),
     jsenvPluginChromeDevtoolsJson(),
     ...(packageSideEffects

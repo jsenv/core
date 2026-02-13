@@ -28301,6 +28301,7 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
     height: var(--size);
     margin-top: var(--spacing-start, var(--spacing));
     margin-bottom: var(--spacing-end, var(--spacing));
+    flex-shrink: 0;
     background: var(--color);
     border: none;
 

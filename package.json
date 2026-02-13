@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "40.12.7",
+  "version": "40.12.8",
   "description": "Tool to develop, test and build js projects",
   "repository": {
     "type": "git",
@@ -77,7 +77,7 @@
     "@financial-times/polyfill-useragent-normaliser": "1.10.2",
     "@jsenv/ast": "6.7.20",
     "@jsenv/js-module-fallback": "1.4.28",
-    "@jsenv/plugin-bundling": "2.10.7",
+    "@jsenv/plugin-bundling": "2.10.8",
     "@jsenv/plugin-minification": "1.7.3",
     "@jsenv/plugin-supervisor": "1.7.14",
     "@jsenv/plugin-transpilation": "1.5.69",

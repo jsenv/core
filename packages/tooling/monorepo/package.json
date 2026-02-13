@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/monorepo",
-  "version": "0.3.12",
+  "version": "0.3.13",
   "description": "Helpers to manage packages in a monorepo",
   "repository": {
     "type": "git",
@@ -20,9 +20,9 @@
     "/src/"
   ],
   "dependencies": {
-    "@jsenv/filesystem": "4.15.13",
+    "@jsenv/filesystem": "4.15.14",
     "@jsenv/humanize": "1.7.5",
-    "@jsenv/package-publish": "1.11.42",
+    "@jsenv/package-publish": "1.11.43",
     "@jsenv/urls": "2.9.7",
     "semver": "7.7.4"
   },

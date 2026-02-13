@@ -69,9 +69,16 @@ export const writeSymbolicLinkSync = ({
         if (existingSymbolicLinkUrl === toInfo.url) {
           return;
         }
+        if (
+          toInfo.url.endsWith("/") &&
+          `${existingSymbolicLinkUrl}/` === toInfo.url
+        ) {
+          return;
+        }
       }
+
       if (allowOverwrite) {
-        removeEntrySync(fromUrl);
+        removeEntrySync(fromUrl, { recursive: true });
         symlinkSync(toInfo.value, symbolicLinkPath, type);
         return;
       }

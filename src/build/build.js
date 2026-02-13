@@ -24,7 +24,6 @@ import {
   compareFileUrls,
   createLookupPackageDirectory,
   ensureEmptyDirectory,
-  lookupPackageDirectory,
   readPackageAtOrNull,
   updateJsonFileSync,
   writeFileSync,
@@ -62,6 +61,7 @@ import { memoryUsage as processMemoryUsage } from "node:process";
 import { watchSourceFiles } from "../helpers/watch_source_files.js";
 import { jsenvCoreDirectoryUrl } from "../jsenv_core_directory_url.js";
 import { createKitchen } from "../kitchen/kitchen.js";
+import { createPackageDirectory } from "../kitchen/package_directory.js";
 import { GRAPH_VISITOR } from "../kitchen/url_graph/url_graph_visitor.js";
 import { jsenvPluginDirectoryReferenceEffect } from "../plugins/directory_reference_effect/jsenv_plugin_directory_reference_effect.js";
 import { jsenvPluginInlining } from "../plugins/inlining/jsenv_plugin_inlining.js";
@@ -562,19 +562,18 @@ export const build = async ({
     return compareFileUrls(a.sourceUrl, b.sourceUrl);
   });
 
-  const lookupPackageDirectoryUrl = createLookupPackageDirectory();
+  const lookupPackageDirectory = createLookupPackageDirectory();
+  const packageDirectory = createPackageDirectory({
+    sourceDirectoryUrl,
+    lookupPackageDirectory,
+  });
   const packageDirectoryCache = new Map();
-  const readPackageDirectory = (url) => {
+  packageDirectory.read = (url) => {
     const fromCache = packageDirectoryCache.get(url);
     if (fromCache !== undefined) {
       return fromCache;
     }
     return readPackageAtOrNull(url);
-  };
-  const packageDirectory = {
-    url: lookupPackageDirectory(sourceDirectoryUrl),
-    find: lookupPackageDirectoryUrl,
-    read: readPackageDirectory,
   };
 
   if (outDirectoryUrl === undefined) {
@@ -772,7 +771,7 @@ export const build = async ({
             sideEffects: sideEffectRelativeUrlArray,
           });
         };
-        const sideEffects = readPackageDirectory(
+        const sideEffects = packageDirectory.read(
           packageDirectory.url,
         )?.sideEffects;
         if (sideEffects === false) {

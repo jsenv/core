@@ -1,0 +1,17 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+  </head>
+
+  <body>
+    <div id="app">INIT</div>
+    <script type="module">
+      import { answerDouble } from "./bar_dep.js";
+
+      document.querySelector("#app").innerHTML = answerDouble;
+    </script>
+  </body>
+</html>

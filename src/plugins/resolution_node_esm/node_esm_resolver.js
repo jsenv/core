@@ -9,8 +9,6 @@
 
 import {
   applyNodeEsmResolution,
-  defaultLookupPackageScope,
-  defaultReadPackageJson,
   readCustomConditionsFromProcessArgs,
 } from "@jsenv/node-esm-resolution";
 import { URL_META } from "@jsenv/url-meta";
@@ -18,18 +16,27 @@ import { urlToBasename, urlToExtension } from "@jsenv/urls";
 import { readFileSync } from "node:fs";
 
 export const createNodeEsmResolver = ({
+  packageDirectory,
   runtimeCompat,
   rootDirectoryUrl,
   packageConditions = {},
   packageConditionsConfig,
   preservesSymlink,
 }) => {
+  const applyNodeEsmResolutionMemo = (params) =>
+    applyNodeEsmResolution({
+      lookupPackageScope: packageDirectory.find,
+      readPackageJson: packageDirectory.read,
+      preservesSymlink,
+      ...params,
+    });
   const buildPackageConditions = createBuildPackageConditions(
     packageConditions,
     {
       packageConditionsConfig,
       rootDirectoryUrl,
       runtimeCompat,
+      preservesSymlink,
     },
   );
 
@@ -61,7 +68,7 @@ export const createNodeEsmResolver = ({
       reference.type === "sourcemap_comment";
 
     const resolveNodeEsmFallbackOnWeb = createResolverWithFallbackOnError(
-      applyNodeEsmResolution,
+      applyNodeEsmResolutionMemo,
       ({ specifier, parentUrl }) => {
         const url = new URL(specifier, parentUrl).href;
         return { url };
@@ -70,7 +77,7 @@ export const createNodeEsmResolver = ({
     const DELEGATE_TO_WEB_RESOLUTION_PLUGIN = {};
     const resolveNodeEsmFallbackNullToDelegateToWebPlugin =
       createResolverWithFallbackOnError(
-        applyNodeEsmResolution,
+        applyNodeEsmResolutionMemo,
         () => DELEGATE_TO_WEB_RESOLUTION_PLUGIN,
       );
 
@@ -78,11 +85,11 @@ export const createNodeEsmResolver = ({
       webResolutionFallback,
       resolver: webResolutionFallback
         ? resolveNodeEsmFallbackOnWeb
-        : applyNodeEsmResolution,
+        : applyNodeEsmResolutionMemo,
     });
     const resolver = webResolutionFallback
       ? resolveNodeEsmFallbackNullToDelegateToWebPlugin
-      : applyNodeEsmResolution;
+      : applyNodeEsmResolutionMemo;
 
     const result = resolver({
       conditions,
@@ -113,52 +120,79 @@ export const createNodeEsmResolver = ({
     if (ownerUrlInfo.context.build) {
       return url;
     }
-    const dependsOnPackageJson =
-      type !== "relative_specifier" &&
-      type !== "absolute_specifier" &&
-      type !== "node_builtin_specifier";
-    if (dependsOnPackageJson) {
-      // this reference depends on package.json and node_modules
-      // to be resolved. Each file using this specifier
-      // must be invalidated when corresponding package.json changes
-      addRelationshipWithPackageJson({
-        reference,
-        packageJsonUrl: `${packageDirectoryUrl}package.json`,
-        field: type.startsWith("field:")
-          ? `#${type.slice("field:".length)}`
-          : "",
-      });
-    }
-    // without this check a file inside a project without package.json
-    // could be considered as a node module if there is a ancestor package.json
-    // but we want to version only node modules
-    if (url.includes("/node_modules/")) {
-      const packageDirectoryUrl = defaultLookupPackageScope(url);
-      if (
-        packageDirectoryUrl &&
-        packageDirectoryUrl !== ownerUrlInfo.context.rootDirectoryUrl
-      ) {
-        const packageVersion =
-          defaultReadPackageJson(packageDirectoryUrl).version;
-        // package version can be null, see https://github.com/babel/babel/blob/2ce56e832c2dd7a7ed92c89028ba929f874c2f5c/packages/babel-runtime/helpers/esm/package.json#L2
-        if (packageVersion) {
+
+    package_relationships: {
+      if (!url.startsWith("file:")) {
+        // data:, javascript:void(0), etc...
+        break package_relationships;
+      }
+
+      // packageDirectoryUrl can be already known thanks to node resolution
+      // otherwise we look for it
+      const closestPackageDirectoryUrl =
+        packageDirectoryUrl || packageDirectory.find(url);
+      if (!closestPackageDirectoryUrl) {
+        // happens for projects without package.json or some files outside of package scope
+        // (generated files like sourcemaps or cache files for example)
+        break package_relationships;
+      }
+
+      resolution_relationship: {
+        const dependsOnPackageJson = Boolean(packageDirectoryUrl);
+        if (dependsOnPackageJson) {
+          // this reference depends on package.json and node_modules
+          // to be resolved. Each file using this specifier
+          // must be invalidated when corresponding package.json changes
           addRelationshipWithPackageJson({
             reference,
             packageJsonUrl: `${packageDirectoryUrl}package.json`,
-            field: "version",
-            hasVersioningEffect: true,
+            field: type.startsWith("field:")
+              ? `#${type.slice("field:".length)}`
+              : "",
           });
         }
-        reference.version = packageVersion;
+      }
+      version_relationship: {
+        const packageVersion = packageDirectory.read(
+          closestPackageDirectoryUrl,
+        ).version;
+        if (!packageVersion) {
+          // package version can be null, see https://github.com/babel/babel/blob/2ce56e832c2dd7a7ed92c89028ba929f874c2f5c/packages/babel-runtime/helpers/esm/package.json#L2
+          break version_relationship;
+        }
+        // We want the versioning effect
+        // which would put the file in browser cache for 1 year based on that version
+        // only for files we don't control and touch ourselves (node modules)
+        // which would never change until their version change
+        // (minus the case you update them yourselves in your node modules without updating the package version)
+        // (in that case you would have to clear browser cache to use the modified version of the node module files)
+        const hasVersioningEffect =
+          closestPackageDirectoryUrl !== packageDirectory.url &&
+          url.includes("/node_modules/");
+        addRelationshipWithPackageJson({
+          reference,
+          packageJsonUrl: `${closestPackageDirectoryUrl}package.json`,
+          field: "version",
+          hasVersioningEffect,
+        });
+        if (hasVersioningEffect) {
+          reference.version = packageVersion;
+        }
       }
     }
+
     return url;
   };
 };
 
 const createBuildPackageConditions = (
   packageConditions,
-  { packageConditionsConfig, rootDirectoryUrl, runtimeCompat },
+  {
+    packageConditionsConfig,
+    rootDirectoryUrl,
+    runtimeCompat,
+    preservesSymlink,
+  },
 ) => {
   let resolveConditionsFromSpecifier = () => null;
   let resolveConditionsFromContext = () => [];
@@ -185,6 +219,7 @@ const createBuildPackageConditions = (
           const { packageDirectoryUrl } = applyNodeEsmResolution({
             specifier: key.slice(0, -1), // avoid package path not exported
             parentUrl: rootDirectoryUrl,
+            preservesSymlink,
           });
           const url = packageDirectoryUrl;
           associationsRaw[url] = associatedValue;
@@ -193,6 +228,7 @@ const createBuildPackageConditions = (
         const { url } = applyNodeEsmResolution({
           specifier: key,
           parentUrl: rootDirectoryUrl,
+          preservesSymlink,
         });
         associationsRaw[url] = associatedValue;
       } catch {

@@ -7,13 +7,20 @@ await startDevServer({
   services: [
     {
       name: "spy_request",
-      handleRequest: (request) => {
-        console.log("requested for", request.resource);
-      },
+      routes: [
+        {
+          endpoint: "GET *",
+          fetch: (request) => {
+            console.log("requested for", request.resource);
+          },
+        },
+      ],
     },
   ],
   port: 5433,
   ribbon: false,
   clientAutoreload: false,
+  clientAutoreloadOnServerRestart: false,
   supervisor: false,
+  dropToOpen: false,
 });
