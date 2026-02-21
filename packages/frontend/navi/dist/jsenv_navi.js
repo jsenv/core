@@ -17627,16 +17627,18 @@ const TextBasic = ({
   children,
   ...rest
 }) => {
-  const shouldPreserveSpacing = rest.as === "pre" || rest.box || rest.column || rest.row;
-  if (!shouldPreserveSpacing) {
-    children = applySpacingOnTextChildren(children, spacing);
-  }
   const boxProps = {
     "as": "span",
     "data-bold-transition": boldTransition ? "" : undefined,
     ...rest,
     "baseClassName": withPropsClassName("navi_text", rest.baseClassName)
   };
+  const shouldPreserveSpacing = rest.as === "pre" || rest.box || rest.column || rest.row;
+  if (shouldPreserveSpacing) {
+    boxProps.spacing = spacing;
+  } else {
+    children = applySpacingOnTextChildren(children, spacing);
+  }
   if (boldStable) {
     const {
       bold
