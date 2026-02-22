@@ -283,7 +283,7 @@ export const Box = (props) => {
     // then we'll track ":hover" state changes even for basic elements like <div>
     const pseudoClassesFromStyleSet = new Set();
     boxPseudoNamedStyles = {};
-    const assignStyle = (
+    const visitProp = (
       value,
       name,
       styleContext,
@@ -307,7 +307,7 @@ export const Box = (props) => {
         if (isPseudoElement) {
           const pseudoElementStyles = {};
           for (const key of pseudoStyleKeys) {
-            assignStyle(
+            visitProp(
               value[key],
               key,
               pseudoStyleContext,
@@ -320,7 +320,7 @@ export const Box = (props) => {
         }
         const pseudoClassStyles = {};
         for (const key of pseudoStyleKeys) {
-          assignStyle(
+          visitProp(
             value[key],
             key,
             pseudoStyleContext,
@@ -414,23 +414,28 @@ export const Box = (props) => {
     if (baseStyle) {
       for (const key of baseStyle) {
         const value = baseStyle[key];
-        assignStyle(value, key, styleContext, boxStyles, "baseStyle");
+        visitProp(value, key, styleContext, boxStyles, "baseStyle");
       }
     }
     for (const propName of remainingPropKeySet) {
       const propValue = rest[propName];
-      assignStyle(propValue, propName, styleContext, boxStyles, "prop");
+      const isDataAttribute = propName.startsWith("data-");
+      if (isDataAttribute) {
+        selfForwardedProps[propName] = propValue;
+        continue;
+      }
+      visitProp(propValue, propName, styleContext, boxStyles, "prop");
     }
     if (typeof style === "string") {
       const styleObject = normalizeStyles(style, "css");
       for (const styleName of Object.keys(styleObject)) {
         const styleValue = styleObject[styleName];
-        assignStyle(styleValue, styleName, styleContext, boxStyles, "style");
+        visitProp(styleValue, styleName, styleContext, boxStyles, "style");
       }
     } else if (style && typeof style === "object") {
       for (const styleName of Object.keys(style)) {
         const styleValue = style[styleName];
-        assignStyle(styleValue, styleName, styleContext, boxStyles, "style");
+        visitProp(styleValue, styleName, styleContext, boxStyles, "style");
       }
     }
 

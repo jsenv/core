@@ -16,13 +16,15 @@
  * - <InputRadio /> for type="radio"
  */
 
-import { useCallback, useContext, useRef } from "preact/hooks";
+import { useCallback, useContext, useId, useRef } from "preact/hooks";
 
 import { renderActionableComponent } from "../action/render_actionable_component.jsx";
 import { useActionBoundToOneParam } from "../action/use_action.js";
 import { useActionStatus } from "../action/use_action_status.js";
 import { useExecuteAction } from "../action/use_execute_action.js";
 import { Box } from "../box/box.jsx";
+import { Icon } from "../graphic/icon.jsx";
+import { SearchSvg } from "../graphic/icons/search_svg.jsx";
 import { useStableCallback } from "../utils/use_stable_callback.js";
 import { ReportReadOnlyOnLabelContext } from "./label.jsx";
 import { LoaderBackground } from "./loader/loader_background.jsx";
@@ -104,29 +106,50 @@ import.meta.css = /* css */ `
     --x-background-color: var(--background-color);
     --x-color: var(--color);
     --x-placeholder-color: var(--placeholder-color);
+
+    .navi_native_input {
+      box-sizing: border-box;
+      padding-top: var(--padding-top, var(--padding-y, var(--padding, 1px)));
+      padding-right: var(
+        --padding-right,
+        var(--padding-x, var(--padding, 2px))
+      );
+      padding-bottom: var(
+        --padding-bottom,
+        var(--padding-y, var(--padding, 1px))
+      );
+      padding-left: var(--padding-left, var(--padding-x, var(--padding, 2px)));
+      color: var(--x-color);
+      background-color: var(--x-background-color);
+      border-width: var(--x-outer-width);
+      border-width: var(--x-outer-width);
+      border-style: solid;
+      border-color: transparent;
+      border-radius: var(--x-border-radius);
+      outline-width: var(--x-border-width);
+      outline-style: solid;
+      outline-color: var(--x-border-color);
+      outline-offset: calc(-1 * (var(--x-border-width)));
+    }
+    &[data-start-icon] {
+      .navi_start_icon_label {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 0.25em;
+      }
+
+      .navi_native_input {
+        padding-left: 20px;
+      }
+    }
+    &[data-end-icon] {
+      .navi_native_input {
+        padding-right: 20px;
+      }
+    }
   }
 
-  .navi_input .navi_native_input {
-    box-sizing: border-box;
-    padding-top: var(--padding-top, var(--padding-y, var(--padding, 1px)));
-    padding-right: var(--padding-right, var(--padding-x, var(--padding, 2px)));
-    padding-bottom: var(
-      --padding-bottom,
-      var(--padding-y, var(--padding, 1px))
-    );
-    padding-left: var(--padding-left, var(--padding-x, var(--padding, 2px)));
-    color: var(--x-color);
-    background-color: var(--x-background-color);
-    border-width: var(--x-outer-width);
-    border-width: var(--x-outer-width);
-    border-style: solid;
-    border-color: transparent;
-    border-radius: var(--x-border-radius);
-    outline-width: var(--x-border-width);
-    outline-style: solid;
-    outline-color: var(--x-border-color);
-    outline-offset: calc(-1 * (var(--x-border-width)));
-  }
   .navi_input .navi_native_input::placeholder {
     color: var(--x-placeholder-color);
   }
@@ -257,11 +280,14 @@ const InputTextualBasic = (props) => {
   const remainingProps = useConstraints(ref, rest);
 
   const innerOnInput = useStableCallback(onInput);
+  const autoId = useId();
+  const innerId = rest.id || autoId;
   const renderInput = (inputProps) => {
     return (
       <Box
         {...inputProps}
         as="input"
+        id={innerId}
         ref={ref}
         type={type}
         data-value={uiState}
@@ -298,6 +324,7 @@ const InputTextualBasic = (props) => {
     uiState,
     innerValue,
     innerOnInput,
+    innerId,
   ]);
 
   return (
@@ -316,6 +343,7 @@ const InputTextualBasic = (props) => {
       pseudoClasses={InputPseudoClasses}
       pseudoElements={InputPseudoElements}
       hasChildFunction
+      data-start-icon={type === "search" ? "" : undefined}
       {...remainingProps}
       ref={undefined}
     >
@@ -324,6 +352,18 @@ const InputTextualBasic = (props) => {
         color="var(--loader-color)"
         inset={-1}
       />
+      {type === "search" && (
+        <Icon
+          className="navi_start_icon_label"
+          alignY="center"
+          as="label"
+          htmlFor={innerId}
+          color="rgba(28, 43, 52, 0.5)"
+          size="m"
+        >
+          <SearchSvg />
+        </Icon>
+      )}
       {renderInputMemoized}
     </Box>
   );

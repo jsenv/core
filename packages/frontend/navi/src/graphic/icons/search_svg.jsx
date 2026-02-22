@@ -6,3 +6,9 @@ export const SearchSvg = () => (
     />
   </svg>
 );
+
+export const SearchSvg2 = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192">
+    <path d="M181.657,170.343l-44.284-44.284a68.116,68.116,0,1,0-11.314,11.314l44.284,44.284ZM84,136a52,52,0,1,1,52-52A52.059,52.059,0,0,1,84,136Z"></path>
+  </svg>
+);

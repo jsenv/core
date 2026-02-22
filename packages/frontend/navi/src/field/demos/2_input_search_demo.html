@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Input Search Demo</title>
+    <style>
+      body {
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 20px;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: #f5f5f5;
+      }
+
+      h1 {
+        margin-bottom: 30px;
+        color: #333;
+        font-size: 2rem;
+        text-align: center;
+      }
+
+      .demo-section {
+        margin-bottom: 40px;
+        padding: 20px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      .demo-section h2 {
+        margin: 0 0 20px 0;
+        padding-bottom: 10px;
+        color: #333;
+        font-size: 1.4rem;
+        border-bottom: 2px solid #ddd;
+      }
+
+      fieldset {
+        margin: 15px 0;
+        padding: 15px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+      }
+
+      legend {
+        padding: 0 10px;
+        color: #555;
+        font-weight: 500;
+        white-space: nowrap;
+      }
+
+      .states-section {
+        margin: 20px 0;
+      }
+
+      .states-title {
+        margin: 0 0 15px 0;
+        padding: 8px 12px;
+        color: #495057;
+        font-weight: 600;
+        font-size: 0.95rem;
+        text-align: center;
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border: 1px solid #dee2e6;
+        border-radius: 6px;
+      }
+
+      .enhanced-states-title {
+        color: #1565c0;
+        background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+        border-color: #2196f3;
+      }
+
+      .states-description {
+        margin: 10px 0 15px 0;
+        padding: 10px 15px;
+        color: #666;
+        font-style: italic;
+        font-size: 0.9rem;
+        background: #f8f9fa;
+        border-left: 4px solid #007bff;
+        border-radius: 0 4px 4px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Input Search Demo</h1>
+    <div id="root"></div>
+
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { Input, Box } from "@jsenv/navi";
+
+      const App = () => {
+        return (
+          <div>
+            <BasicStatesDemo />
+          </div>
+        );
+      };
+
+      const BasicStatesDemo = () => {
+        return (
+          <div className="demo-section">
+            <h2>Search Input States</h2>
+
+            <div className="states-section">
+              <div className="states-title">Standard HTML Search Input States</div>
+              <p className="states-description">
+                These states work exactly like user agent HTML search inputs, with
+                enhanced styling and consistent behavior.
+              </p>
+
+              <Box column spacing="sm">
+                <fieldset>
+                  <legend>Default</legend>
+                  <Box row spacing="sm" alignX="start">
+                    <Input type="search" placeholder="Search..." />
+                    <input type="search" placeholder="Search..." />
+                  </Box>
+                </fieldset>
+                <fieldset>
+                  <legend>:focus-visible</legend>
+                  <Box row spacing="sm" alignX="start">
+                    <Input
+                      type="search"
+                      placeholder="Focus me"
+                      pseudoState={{ ":focus-visible": true }}
+                    />
+                    <input type="search" placeholder="Focus me" autoFocus />
+                  </Box>
+                </fieldset>
+                <fieldset>
+                  <legend>:read-only</legend>
+                  <Box row spacing="sm" alignX="start">
+                    <Input type="search" value="Read-only search term" />
+                    <input type="search" readOnly value="Read-only search term" />
+                  </Box>
+                </fieldset>
+                <fieldset>
+                  <legend>:disabled</legend>
+                  <Box row spacing="sm" alignX="start">
+                    <Input type="search" disabled placeholder="Disabled search" />
+                    <input type="search" disabled placeholder="Disabled search" />
+                  </Box>
+                </fieldset>
+              </Box>
+            </div>
+
+            <div className="states-section">
+              <div className="states-title enhanced-states-title">
+                Enhanced Navi States
+              </div>
+              <p className="states-description">
+                These additional states provide enhanced UX patterns not
+                available in standard HTML inputs.
+              </p>
+
+              <Box column spacing="sm">
+                <fieldset>
+                  <legend>Loading state</legend>
+                  <Box row spacing="sm" alignX="start">
+                    <Input type="search" loading placeholder="Searching..." />
+                  </Box>
+                </fieldset>
+              </Box>
+
+              <div
+                style={{
+                  marginTop: "15px",
+                  padding: "10px",
+                  background: "#f8f9fa",
+                  borderRadius: "4px",
+                  fontSize: "0.85rem",
+                  color: "#666",
+                }}
+              >
+                <strong>Enhanced State Explanations:</strong>
+                <ul style={{ margin: "5px 0", paddingLeft: "20px" }}>
+                  <li>
+                    <strong>Loading:</strong> Shows a spinner while searching,
+                    allowing continued interaction and value updates
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      render(<App />, document.querySelector("#root"));
+    </script>
+  </body>
+</html>

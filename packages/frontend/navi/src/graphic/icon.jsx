@@ -77,7 +77,6 @@ import.meta.css = /* css */ `
 export const Icon = ({
   href,
   children,
-  className,
   charWidth = 1,
   // 0 (zéro) is the real char width
   // but 2 zéros gives too big icons
@@ -141,7 +140,7 @@ export const Icon = ({
     <Text
       {...props}
       {...ariaProps}
-      className={withPropsClassName("navi_icon", className)}
+      className={withPropsClassName("navi_icon", props.className)}
       spacing="pre"
       data-icon-char=""
       data-has-width={hasExplicitWidth ? "" : undefined}
