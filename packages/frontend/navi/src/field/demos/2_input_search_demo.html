@@ -92,12 +92,14 @@
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
+      import { useState } from "preact/hooks";
       import { Input, Box } from "@jsenv/navi";
 
       const App = () => {
         return (
           <div>
             <BasicStatesDemo />
+            <InteractiveDemo />
           </div>
         );
       };
@@ -108,10 +110,12 @@
             <h2>Search Input States</h2>
 
             <div className="states-section">
-              <div className="states-title">Standard HTML Search Input States</div>
+              <div className="states-title">
+                Standard HTML Search Input States
+              </div>
               <p className="states-description">
-                These states work exactly like user agent HTML search inputs, with
-                enhanced styling and consistent behavior.
+                These states work exactly like user agent HTML search inputs,
+                with enhanced styling and consistent behavior.
               </p>
 
               <Box column spacing="sm">
@@ -137,14 +141,26 @@
                   <legend>:read-only</legend>
                   <Box row spacing="sm" alignX="start">
                     <Input type="search" value="Read-only search term" />
-                    <input type="search" readOnly value="Read-only search term" />
+                    <input
+                      type="search"
+                      readOnly
+                      value="Read-only search term"
+                    />
                   </Box>
                 </fieldset>
                 <fieldset>
                   <legend>:disabled</legend>
                   <Box row spacing="sm" alignX="start">
-                    <Input type="search" disabled placeholder="Disabled search" />
-                    <input type="search" disabled placeholder="Disabled search" />
+                    <Input
+                      type="search"
+                      disabled
+                      placeholder="Disabled search"
+                    />
+                    <input
+                      type="search"
+                      disabled
+                      placeholder="Disabled search"
+                    />
                   </Box>
                 </fieldset>
               </Box>
@@ -187,6 +203,86 @@
                 </ul>
               </div>
             </div>
+          </div>
+        );
+      };
+
+      const InteractiveDemo = () => {
+        const [value, setValue] = useState("Interactive search");
+        const [disabled, setDisabled] = useState(false);
+
+        const handleClear = () => {
+          setValue("");
+        };
+
+        return (
+          <div className="demo-section">
+            <h2>Interactive Search Controls</h2>
+
+            <fieldset>
+              <legend>Interactive Search Input</legend>
+              <Box column spacing="sm">
+                <Input
+                  type="search"
+                  disabled={disabled}
+                  value={value}
+                  action={async (v) => {
+                    debugger;
+                    await new Promise((resolve) => setTimeout(resolve, 2_000));
+                    setValue(v);
+                  }}
+                  placeholder="Search..."
+                />
+                <div className="value-display">Value: "{value}"</div>
+                <div
+                  style={{
+                    fontSize: "0.85rem",
+                    color: "#666",
+                    fontStyle: "italic",
+                    textAlign: "center",
+                    padding: "8px",
+                    background: "#f8f9fa",
+                    borderRadius: "4px",
+                  }}
+                >
+                  Try typing, pressing Enter to search, using Escape to clear,
+                  or clicking the search/clear buttons
+                </div>
+              </Box>
+            </fieldset>
+
+            <fieldset>
+              <legend>Toggle States</legend>
+              <Box row spacing="sm" alignX="start" wrap>
+                <button
+                  style={{
+                    padding: "8px 16px",
+                    background: disabled ? "#007bff" : "#f8f9fa",
+                    color: disabled ? "white" : "#333",
+                    border: "1px solid #ddd",
+                    borderRadius: "4px",
+                    cursor: "pointer",
+                  }}
+                  onClick={() => setDisabled(!disabled)}
+                >
+                  Disabled: {disabled ? "ON" : "OFF"}
+                </button>
+                <button
+                  style={{
+                    padding: "8px 16px",
+                    background: "#28a745",
+                    color: "white",
+                    border: "1px solid #28a745",
+                    borderRadius: "4px",
+                    cursor: "pointer",
+                  }}
+                  onClick={handleClear}
+                  disabled={disabled}
+                >
+                  Clear
+                </button>
+              </Box>
+            </fieldset>
           </div>
         );
       };

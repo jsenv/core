@@ -598,6 +598,25 @@ export const installCustomConstraintValidation = (
     });
   }
 
+  const findInteractiveElement = (el) => {
+    if (el.hasAttribute("data-action")) {
+      return el;
+    }
+    // Some element are wrapped inside others
+    // and data-action is for instance on a <div> wrapping an <input>
+    // we want to find the real interactive el in that case
+    const closestDataActionElement = el.closest("[data-action]");
+    const visualSelector = closestDataActionElement.getAttribute(
+      "data-visual-selector",
+    );
+    if (!visualSelector) {
+      return null;
+    }
+    const visualElement =
+      closestDataActionElement.querySelector(visualSelector);
+    return visualElement;
+  };
+
   request_on_enter: {
     if (element.tagName !== "INPUT") {
       // maybe we want it too for checkboxes etc, we'll see
@@ -610,13 +629,14 @@ export const installCustomConstraintValidation = (
       if (keydownEvent.key !== "Enter") {
         return;
       }
-      if (element.hasAttribute("data-action")) {
+      const interactiveElement = findInteractiveElement(element);
+      if (interactiveElement) {
         if (wouldKeydownSubmitForm(keydownEvent)) {
           keydownEvent.preventDefault();
         }
         dispatchActionRequestedCustomEvent(element, {
           event: keydownEvent,
-          requester: element,
+          requester: interactiveElement,
         });
         return;
       }
@@ -644,13 +664,14 @@ export const installCustomConstraintValidation = (
       if (element.tagName !== "BUTTON") {
         return;
       }
-      if (element.hasAttribute("data-action")) {
-        if (wouldButtonClickSubmitForm(element, clickEvent)) {
+      const interactiveElement = findInteractiveElement(element);
+      if (interactiveElement) {
+        if (wouldButtonClickSubmitForm(interactiveElement, clickEvent)) {
           clickEvent.preventDefault();
         }
-        dispatchActionRequestedCustomEvent(element, {
+        dispatchActionRequestedCustomEvent(interactiveElement, {
           event: clickEvent,
-          requester: element,
+          requester: interactiveElement,
         });
         return;
       }
@@ -682,10 +703,11 @@ export const installCustomConstraintValidation = (
       break request_on_input_change;
     }
     const stop = listenInputChange(element, (e) => {
-      if (element.hasAttribute("data-action")) {
-        dispatchActionRequestedCustomEvent(element, {
+      const interactiveElement = findInteractiveElement(element);
+      if (interactiveElement) {
+        dispatchActionRequestedCustomEvent(interactiveElement, {
           event: e,
-          requester: element,
+          requester: interactiveElement,
         });
         return;
       }
