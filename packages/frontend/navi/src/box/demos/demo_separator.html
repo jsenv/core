@@ -111,7 +111,7 @@
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { Separator, Box } from "@jsenv/navi";
+      import { Separator, Box, Text, Caption } from "@jsenv/navi";
 
       const DemoItem = ({ children, ...props }) => (
         <div className="demo-item" {...props}>
@@ -327,6 +327,22 @@
               <DemoItem>First Block</DemoItem>
               <DemoItem>Second Block</DemoItem>
               <DemoItem>Third Block</DemoItem>
+            </Box>
+          </div>
+
+          <div className="demo-section">
+            <h3>10. Mapped Array Items </h3>
+            <Box column separator={<div className="separator-dot" />}>
+              {["a", "b", "c"].map((item, index) => (
+                <DemoItem key={index}>{item}</DemoItem>
+              ))}
+            </Box>
+            <Caption> with additional element </Caption>
+            <Box column separator={<div className="separator-dot" />}>
+              {["a", "b", "c"].map((item, index) => (
+                <DemoItem key={index}>{item}</DemoItem>
+              ))}
+              <DemoItem>one more</DemoItem>
             </Box>
           </div>
         </>
