@@ -331,14 +331,14 @@
           </div>
 
           <div className="demo-section">
-            <h3>10. Mapped Array Items </h3>
+            <h3>10. Mapped Array Items with Additional Element</h3>
             <Box column separator={<div className="separator-dot" />}>
               {["a", "b", "c"].map((item, index) => (
                 <DemoItem key={index}>{item}</DemoItem>
               ))}
             </Box>
             <Caption> with additional element </Caption>
-            <Box column separator={<div className="separator-dot" />}>
+            <Box column separator={<div className="separator-dot" />} debug>
               {["a", "b", "c"].map((item, index) => (
                 <DemoItem key={index}>{item}</DemoItem>
               ))}

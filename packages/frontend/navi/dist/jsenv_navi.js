@@ -5,7 +5,7 @@ import { createIterableWeakSet, mergeOneStyle, stringifyStyle, createPubSub, mer
 import { prefixFirstAndIndentRemainingLines } from "@jsenv/humanize";
 import { effect, signal, computed, batch, useSignal } from "@preact/signals";
 import { createValidity } from "@jsenv/validity";
-import { createContext, render, isValidElement, toChildArray, createRef, cloneElement } from "preact";
+import { createContext, toChildArray, render, isValidElement, createRef, cloneElement } from "preact";
 import { createPortal, forwardRef } from "preact/compat";
 
 const actionPrivatePropertiesWeakMap = new WeakMap();
@@ -6468,25 +6468,26 @@ const Box = props => {
     innerChildren = children;
   }
   if (separator) {
-    if (Array.isArray(innerChildren)) {
-      const childCount = innerChildren.length;
-      if (childCount > 1) {
-        const childrenWithSeparators = [];
-        let i = 0;
-        while (true) {
-          const child = innerChildren[i];
-          childrenWithSeparators.push(child);
-          i++;
-          if (i === childCount) {
-            break;
-          }
-          // Support function separators that receive separator index
-          const separatorElement = typeof separator === "function" ? separator(i - 1) // i-1 because i was incremented after pushing child
-          : separator;
-          childrenWithSeparators.push(separatorElement);
+    // Flatten nested arrays (e.g., from .map()) to treat each element as individual child
+    const flattenedChildren = toChildArray(innerChildren);
+    if (flattenedChildren.length > 1) {
+      const childrenWithSeparators = [];
+      let i = 0;
+      while (true) {
+        const child = flattenedChildren[i];
+        childrenWithSeparators.push(child);
+        i++;
+        if (i === flattenedChildren.length) {
+          break;
         }
-        innerChildren = childrenWithSeparators;
+        // Support function separators that receive separator index
+        const separatorElement = typeof separator === "function" ? separator(i - 1) // i-1 because i was incremented after pushing child
+        : separator;
+        childrenWithSeparators.push(separatorElement);
       }
+      innerChildren = childrenWithSeparators;
+    } else {
+      innerChildren = flattenedChildren;
     }
   }
   return jsx(TagName, {
