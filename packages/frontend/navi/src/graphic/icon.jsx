@@ -100,7 +100,7 @@ export const Icon = ({
   const hasExplicitWidth = width !== undefined;
   const hasExplicitHeight = height !== undefined;
   if (!hasExplicitWidth && !hasExplicitHeight) {
-    if (decorative === undefined) {
+    if (decorative === undefined && !onClick) {
       decorative = true;
     }
   } else {

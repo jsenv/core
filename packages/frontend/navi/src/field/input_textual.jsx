@@ -23,7 +23,9 @@ import { useActionBoundToOneParam } from "../action/use_action.js";
 import { useActionStatus } from "../action/use_action_status.js";
 import { useExecuteAction } from "../action/use_execute_action.js";
 import { Box } from "../box/box.jsx";
+import { PSEUDO_CLASSES } from "../box/pseudo_styles.js";
 import { Icon } from "../graphic/icon.jsx";
+import { CloseSvg } from "../graphic/icons/close_svg.jsx";
 import { SearchSvg } from "../graphic/icons/search_svg.jsx";
 import { useStableCallback } from "../utils/use_stable_callback.js";
 import { ReportReadOnlyOnLabelContext } from "./label.jsx";
@@ -130,15 +132,38 @@ import.meta.css = /* css */ `
       outline-style: solid;
       outline-color: var(--x-border-color);
       outline-offset: calc(-1 * (var(--x-border-width)));
-    }
-    &[data-start-icon] {
-      .navi_start_icon_label {
-        position: absolute;
-        top: 0;
-        bottom: 0;
-        left: 0.25em;
-      }
 
+      &[type="search"] {
+        -webkit-appearance: textfield;
+
+        &::-webkit-search-cancel-button {
+          display: none;
+        }
+      }
+    }
+
+    .navi_start_icon_label {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 0.25em;
+    }
+    .navi_end_icon_label {
+      position: absolute;
+      top: 0;
+      right: 0.25em;
+      bottom: 0;
+      opacity: 0;
+      pointer-events: none;
+    }
+    &[data-has-value] {
+      .navi_end_icon_label {
+        opacity: 1;
+        pointer-events: auto;
+      }
+    }
+
+    &[data-start-icon] {
       .navi_native_input {
         padding-left: 20px;
       }
@@ -237,7 +262,53 @@ const InputPseudoClasses = [
   ":read-only",
   ":disabled",
   ":-navi-loading",
+  ":navi-has-value",
 ];
+Object.assign(PSEUDO_CLASSES, {
+  ":navi-has-value": {
+    attribute: "data-has-value",
+    setup: (el, callback) => {
+      const onValueChange = () => {
+        callback();
+      };
+
+      // Standard user input (typing)
+      el.addEventListener("input", onValueChange);
+      // Autocomplete, programmatic changes, form restoration
+      el.addEventListener("change", onValueChange);
+      // Form reset - need to check the form
+      const form = el.form;
+      const onFormReset = () => {
+        // Form reset happens asynchronously, check value after reset completes
+        setTimeout(onValueChange, 0);
+      };
+      if (form) {
+        form.addEventListener("reset", onFormReset);
+      }
+
+      // Paste events (some browsers need special handling)
+      el.addEventListener("paste", onValueChange);
+      // Focus events to catch programmatic changes that don't fire other events
+      // (like when value is set before user interaction)
+      el.addEventListener("focus", onValueChange);
+      return () => {
+        el.removeEventListener("input", onValueChange);
+        el.removeEventListener("change", onValueChange);
+        el.removeEventListener("paste", onValueChange);
+        el.removeEventListener("focus", onValueChange);
+        if (form) {
+          form.removeEventListener("reset", onFormReset);
+        }
+      };
+    },
+    test: (el) => {
+      if (el.value === "") {
+        return false;
+      }
+      return true;
+    },
+  },
+});
 const InputPseudoElements = ["::-navi-loader"];
 const InputTextualBasic = (props) => {
   const contextReadOnly = useContext(ReadOnlyContext);
@@ -258,6 +329,8 @@ const InputTextualBasic = (props) => {
     autoFocus,
     autoFocusVisible,
     autoSelect,
+    icon,
+    cancelButton = type === "search",
 
     ...rest
   } = props;
@@ -327,6 +400,15 @@ const InputTextualBasic = (props) => {
     innerId,
   ]);
 
+  let innerIcon;
+  if (icon === undefined) {
+    if (type === "search") {
+      innerIcon = <SearchSvg />;
+    }
+  } else {
+    innerIcon = icon;
+  }
+
   return (
     <Box
       as="span"
@@ -343,7 +425,8 @@ const InputTextualBasic = (props) => {
       pseudoClasses={InputPseudoClasses}
       pseudoElements={InputPseudoElements}
       hasChildFunction
-      data-start-icon={type === "search" ? "" : undefined}
+      data-start-icon={innerIcon ? "" : undefined}
+      data-end-icon={cancelButton ? "" : undefined}
       {...remainingProps}
       ref={undefined}
     >
@@ -352,19 +435,35 @@ const InputTextualBasic = (props) => {
         color="var(--loader-color)"
         inset={-1}
       />
-      {type === "search" && (
+      {innerIcon && (
         <Icon
-          className="navi_start_icon_label"
-          alignY="center"
           as="label"
           htmlFor={innerId}
+          className="navi_start_icon_label"
+          alignY="center"
           color="rgba(28, 43, 52, 0.5)"
-          size="m"
         >
-          <SearchSvg />
+          {innerIcon}
         </Icon>
       )}
       {renderInputMemoized}
+      {cancelButton && (
+        <Icon
+          as="label"
+          htmlFor={innerId}
+          className="navi_end_icon_label"
+          alignY="center"
+          color="rgba(28, 43, 52, 0.5)"
+          onMousedown={(e) => {
+            e.preventDefault(); // keep focus on the button
+          }}
+          onClick={() => {
+            uiStateController.setUIState("", { trigger: "cancel_button" });
+          }}
+        >
+          <CloseSvg />
+        </Icon>
+      )}
     </Box>
   );
 };

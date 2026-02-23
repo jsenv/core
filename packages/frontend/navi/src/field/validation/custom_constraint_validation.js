@@ -851,6 +851,9 @@ const closestElementWithAction = (el) => {
     return el;
   }
   const closestDataActionElement = el.closest("[data-action]");
+  if (!closestDataActionElement) {
+    return null;
+  }
   const visualSelector = closestDataActionElement.getAttribute(
     "data-visual-selector",
   );
