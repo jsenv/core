@@ -598,25 +598,6 @@ export const installCustomConstraintValidation = (
     });
   }
 
-  const findInteractiveElement = (el) => {
-    if (el.hasAttribute("data-action")) {
-      return el;
-    }
-    // Some element are wrapped inside others
-    // and data-action is for instance on a <div> wrapping an <input>
-    // we want to find the real interactive el in that case
-    const closestDataActionElement = el.closest("[data-action]");
-    const visualSelector = closestDataActionElement.getAttribute(
-      "data-visual-selector",
-    );
-    if (!visualSelector) {
-      return null;
-    }
-    const visualElement =
-      closestDataActionElement.querySelector(visualSelector);
-    return visualElement;
-  };
-
   request_on_enter: {
     if (element.tagName !== "INPUT") {
       // maybe we want it too for checkboxes etc, we'll see
@@ -629,25 +610,58 @@ export const installCustomConstraintValidation = (
       if (keydownEvent.key !== "Enter") {
         return;
       }
-      const interactiveElement = findInteractiveElement(element);
-      if (interactiveElement) {
-        if (wouldKeydownSubmitForm(keydownEvent)) {
-          keydownEvent.preventDefault();
+      const elementWithAction = closestElementWithAction(element);
+      if (!elementWithAction) {
+        return;
+      }
+
+      const determineClosestFormSubmitTargetForEnterKeyEvent = () => {
+        if (keydownEvent.defaultPrevented) {
+          return null;
         }
-        dispatchActionRequestedCustomEvent(element, {
-          event: keydownEvent,
-          requester: interactiveElement,
-        });
-        return;
+        const keydownTarget = keydownEvent.target;
+        const { form } = keydownTarget;
+        if (!form) {
+          return null;
+        }
+        if (keydownTarget.tagName === "BUTTON") {
+          if (
+            keydownTarget.type !== "submit" &&
+            keydownTarget.type !== "image"
+          ) {
+            return null;
+          }
+          return keydownTarget;
+        }
+        if (keydownTarget.tagName === "INPUT") {
+          if (
+            ![
+              "text",
+              "email",
+              "password",
+              "search",
+              "number",
+              "url",
+              "tel",
+            ].includes(keydownTarget.type)
+          ) {
+            return null;
+          }
+          // when present, we use first button submitting the form as the requester
+          // not the input, it aligns with browser behavior where
+          // hitting Enter in a text input triggers the first submit button of the form, not the input itself
+          return getFirstButtonSubmittingForm(keydownTarget) || keydownTarget;
+        }
+        return null;
+      };
+      const formSubmitTarget =
+        determineClosestFormSubmitTargetForEnterKeyEvent();
+      if (formSubmitTarget) {
+        keydownEvent.preventDefault();
       }
-      const { form } = element;
-      if (!form) {
-        return;
-      }
-      keydownEvent.preventDefault();
-      dispatchActionRequestedCustomEvent(form, {
+      dispatchActionRequestedCustomEvent(elementWithAction, {
         event: keydownEvent,
-        requester: getFirstButtonSubmittingForm(form) || element,
+        requester: formSubmitTarget || element,
       });
     };
     element.addEventListener("keydown", onkeydown);
@@ -664,30 +678,44 @@ export const installCustomConstraintValidation = (
       if (element.tagName !== "BUTTON") {
         return;
       }
-      const interactiveElement = findInteractiveElement(element);
-      if (interactiveElement) {
-        if (wouldButtonClickSubmitForm(interactiveElement, clickEvent)) {
-          clickEvent.preventDefault();
+      const button = element;
+      const elementWithAction = closestElementWithAction(button);
+      if (!elementWithAction) {
+        return;
+      }
+      const determineClosestFormSubmitTargetForClickEvent = () => {
+        if (clickEvent.defaultPrevented) {
+          return null;
         }
-        dispatchActionRequestedCustomEvent(interactiveElement, {
-          event: clickEvent,
-          requester: interactiveElement,
-        });
-        return;
-      }
-      const { form } = element;
-      if (!form) {
-        return;
-      }
-      if (element.type === "reset") {
-        return;
-      }
-      if (wouldButtonClickSubmitForm(element, clickEvent)) {
+        const clickTarget = clickEvent.target;
+        const { form } = clickTarget;
+        if (!form) {
+          return null;
+        }
+        const wouldSubmitFormByType =
+          button.type === "submit" || button.type === "image";
+        if (wouldSubmitFormByType) {
+          return button;
+        }
+        if (button.type) {
+          // "reset", "button" or any other non submit type, it won't submit the form
+          return null;
+        }
+        const firstButtonSubmittingForm = getFirstButtonSubmittingForm(form);
+        if (button !== firstButtonSubmittingForm) {
+          // an other button is explicitly submitting the form, this one would not submit it
+          return null;
+        }
+        // this is the only button inside the form without type attribute, so it defaults to type="submit"
+        return button;
+      };
+      const formSubmitTarget = determineClosestFormSubmitTargetForClickEvent();
+      if (formSubmitTarget) {
         clickEvent.preventDefault();
       }
-      dispatchActionRequestedCustomEvent(form, {
+      dispatchActionRequestedCustomEvent(elementWithAction, {
         event: clickEvent,
-        requester: element,
+        requester: formSubmitTarget || button,
       });
     };
     element.addEventListener("click", onclick);
@@ -703,14 +731,14 @@ export const installCustomConstraintValidation = (
       break request_on_input_change;
     }
     const stop = listenInputChange(element, (e) => {
-      const interactiveElement = findInteractiveElement(element);
-      if (interactiveElement) {
-        dispatchActionRequestedCustomEvent(interactiveElement, {
-          event: e,
-          requester: interactiveElement,
-        });
+      const elementWithAction = closestElementWithAction(element);
+      if (!elementWithAction) {
         return;
       }
+      dispatchActionRequestedCustomEvent(elementWithAction, {
+        event: e,
+        requester: element,
+      });
     });
     addTeardown(() => {
       stop();
@@ -811,6 +839,28 @@ export const installCustomConstraintValidation = (
   return validationInterface;
 };
 
+// When interacting with an element we want to find the closest element
+// eventually handling the action
+// 1. <button> itself has an action
+// 2. <button> is inside a <form> with an action
+// 3. <button> is inside a wrapper <div> with an action (data-action is not necessarly on the interactive element itself, it can be on a wrapper, we want to support that)
+// 4. <button> is inside a <fieldset> or any element that catches the action like a <form> would
+// In examples above <button> can also be <input> etc..
+const closestElementWithAction = (el) => {
+  if (el.hasAttribute("data-action")) {
+    return el;
+  }
+  const closestDataActionElement = el.closest("[data-action]");
+  const visualSelector = closestDataActionElement.getAttribute(
+    "data-visual-selector",
+  );
+  if (!visualSelector) {
+    return closestDataActionElement;
+  }
+  const visualElement = closestDataActionElement.querySelector(visualSelector);
+  return visualElement;
+};
+
 const pickConstraint = (a, b) => {
   const aPrio = getConstraintPriority(a);
   const bPrio = getConstraintPriority(b);
@@ -829,60 +879,14 @@ const getConstraintPriority = (constraint) => {
   return 1;
 };
 
-const wouldButtonClickSubmitForm = (button, clickEvent) => {
-  if (clickEvent.defaultPrevented) {
-    return false;
-  }
-  const { form } = button;
-  if (!form) {
-    return false;
-  }
-  if (!button) {
-    return false;
-  }
-  const wouldSubmitFormByType =
-    button.type === "submit" || button.type === "image";
-  if (wouldSubmitFormByType) {
-    return true;
-  }
-  if (button.type) {
-    return false;
-  }
-  if (getFirstButtonSubmittingForm(form)) {
-    // an other button is explicitly submitting the form, this one would not submit it
-    return false;
-  }
-  // this is the only button inside the form without type attribute, so it defaults to type="submit"
-  return true;
-};
 const getFirstButtonSubmittingForm = (form) => {
   return form.querySelector(
     `button[type="submit"], input[type="submit"], input[type="image"]`,
   );
 };
 
-const wouldKeydownSubmitForm = (keydownEvent) => {
-  if (keydownEvent.defaultPrevented) {
-    return false;
-  }
-  const keydownTarget = keydownEvent.target;
-  const { form } = keydownTarget;
-  if (!form) {
-    return false;
-  }
-  if (keydownEvent.key !== "Enter") {
-    return false;
-  }
-  const isTextInput =
-    keydownTarget.tagName === "INPUT" || keydownTarget.tagName === "TEXTAREA";
-  if (!isTextInput) {
-    return false;
-  }
-  return true;
-};
-
 const dispatchActionRequestedCustomEvent = (
-  fieldOrForm,
+  elementWithAction,
   { actionOrigin = "action_prop", event, requester },
 ) => {
   const actionRequestedCustomEvent = new CustomEvent("actionrequested", {
@@ -893,7 +897,7 @@ const dispatchActionRequestedCustomEvent = (
       requester,
     },
   });
-  fieldOrForm.dispatchEvent(actionRequestedCustomEvent);
+  elementWithAction.dispatchEvent(actionRequestedCustomEvent);
 };
 // https://developer.mozilla.org/en-US/docs/Web/HTML/Guides/Constraint_validation
 const requestSubmit = HTMLFormElement.prototype.requestSubmit;
