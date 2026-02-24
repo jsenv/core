@@ -1,5 +1,6 @@
 import { useRef } from "preact/hooks";
 
+import { Icon } from "../graphic/icon.jsx";
 import { LoadingDots } from "../graphic/loader/loading_dots.jsx";
 import { Text } from "./text.jsx";
 import { useContrastingColor } from "./use_contrasting_color.js";
@@ -8,63 +9,73 @@ import.meta.css = /* css */ `
   @layer navi {
   }
   .navi_badge_count {
-    --x-size: 1.5em;
-    --x-border-radius: var(--border-radius);
-    --x-number-font-size: var(--font-size);
+    --x-background: var(--background);
+    --x-background-color: var(--background-color);
     position: relative;
     display: inline-block;
-
     color: var(--color, var(--x-color-contrasting));
     font-size: var(--font-size);
     vertical-align: middle;
-    border-radius: var(--x-border-radius);
-  }
-  .navi_count_badge_overflow {
-    position: relative;
-    top: -0.1em;
-  }
-  /* Ellipse */
-  .navi_badge_count[data-ellipse] {
-    padding-right: 0.4em;
-    padding-left: 0.4em;
-    background: var(--background);
-    background-color: var(--background-color, var(--background));
-    border-radius: 1em;
-  }
-  /* Circle */
-  .navi_badge_count[data-circle] {
-    width: var(--x-size);
-    height: var(--x-size);
-  }
-  .navi_badge_count_frame {
-    position: absolute;
-    top: 50%;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: var(--background);
-    background-color: var(--background-color, var(--background));
-    border-radius: inherit;
-    transform: translateY(-50%);
-  }
-  .navi_badge_count_text {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    font-size: var(--x-number-font-size, inherit);
-    transform: translate(-50%, -50%);
-  }
-  .navi_badge_count[data-single-char] {
-    --x-border-radius: 100%;
-    --x-number-font-size: unset;
-  }
-  .navi_badge_count[data-two-chars] {
-    --x-border-radius: 100%;
-    --x-number-font-size: 0.8em;
-  }
-  .navi_badge_count[data-three-chars] {
-    --x-border-radius: 100%;
-    --x-number-font-size: 0.6em;
+
+    .navi_count_badge_overflow {
+      position: relative;
+      top: -0.1em;
+    }
+
+    /* Ellipse */
+    &[data-ellipse] {
+      padding-right: 0.4em;
+      padding-left: 0.4em;
+      background: var(--x-background);
+      background-color: var(--x-background-color, var(--x-background));
+      border-radius: 1em;
+      &[data-loading] {
+        --x-background: transparent;
+      }
+    }
+
+    /* Circle */
+    &[data-circle] {
+      --x-size: 1.5em;
+      --x-border-radius: var(--border-radius);
+      --x-number-font-size: var(--font-size);
+
+      width: var(--x-size);
+      height: var(--x-size);
+      border-radius: var(--x-border-radius);
+      &[data-single-char] {
+        --x-border-radius: 100%;
+        --x-number-font-size: unset;
+      }
+      &[data-two-chars] {
+        --x-border-radius: 100%;
+        --x-number-font-size: 0.8em;
+      }
+      &[data-three-chars] {
+        --x-border-radius: 100%;
+        --x-number-font-size: 0.6em;
+      }
+
+      .navi_badge_count_frame {
+        position: absolute;
+        top: 50%;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: var(--x-background);
+        background-color: var(--x-background-color, var(--x-background));
+        border-radius: inherit;
+        transform: translateY(-50%);
+      }
+
+      .navi_badge_count_text {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        font-size: var(--x-number-font-size, inherit);
+        transform: translate(-50%, -50%);
+      }
+    }
   }
 `;
 
@@ -201,12 +212,15 @@ const BadgeCountEllipse = ({
       bold
       data-ellipse=""
       data-value-overflow={hasOverflow ? "" : undefined}
+      data-loading={loading ? "" : undefined}
       {...props}
       styleCSSVars={BadgeStyleCSSVars}
       spacing="pre"
     >
       {loading ? (
-        <LoadingDots />
+        <Icon>
+          <LoadingDots />
+        </Icon>
       ) : (
         <>
           {/* When we double click on count we don't want to eventually select surrounding text (in case) */}
