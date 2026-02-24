@@ -141,6 +141,8 @@
     </div>
 
     <script type="module">
+      /* eslint-disable signals/no-conditional-value-read */
+
       import { signal, effect } from "@preact/signals";
       import { createAction } from "./actions.js";
       import { getActionPrivateProperties } from "./action_private_properties.js";

@@ -5,7 +5,7 @@ import {
   useDocumentState,
   useDocumentUrl,
 } from "@jsenv/navi";
-import { signal } from "@preact/signals";
+import { useSignal } from "@preact/signals";
 import { render } from "preact";
 import { useEffect, useState } from "preact/hooks";
 
@@ -163,7 +163,7 @@ const UserPage = ({ user }) => {
 const MutableIdSignalDemo = ({ currentUser }) => {
   // Create a signal that tracks the ORIGINAL user's name (this should NOT change)
   const [originalName] = useState(currentUser.name);
-  const originalUserNameSignal = signal(originalName);
+  const originalUserNameSignal = useSignal(originalName);
 
   // Use signalForMutableIdKey to get a signal that tracks the user by the ORIGINAL name
   const userFromMutableIdSignal = USER.store.signalForMutableIdKey(

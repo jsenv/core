@@ -4,6 +4,7 @@
 import babelParser from "@babel/eslint-parser";
 import jsenvPlugin from "@jsenv/eslint-plugin";
 import { urlToRelativeUrl } from "@jsenv/urls";
+import signalsPlugin from "@preact/eslint-plugin-signals";
 import html from "eslint-plugin-html";
 import pluginImportX from "eslint-plugin-import-x";
 import reactPlugin from "eslint-plugin-react";
@@ -16,6 +17,7 @@ import { rulesOffPrettier } from "./rules_off_prettier.js";
 import { rulesReactRelax } from "./rules_react_relax.js";
 import { rulesRegexpRelax } from "./rules_regexp_relax.js";
 import { rulesRelax } from "./rules_relax.js";
+import { rulesSignalsRelax } from "./rules_signals_relax.js";
 
 const patternForEachExtension = (pattern, extensions) => {
   return extensions.map((extension) =>
@@ -243,6 +245,14 @@ export const eslintConfigRelax = ({
         ...rulesRegexpRelax,
       },
     },
+    // preact signals plugin
+    {
+      plugins: {
+        signals: signalsPlugin,
+      },
+      rules: rulesSignalsRelax,
+    },
+
     // jsx plugin
     {
       files: ["**/*.jsx"],

@@ -19,7 +19,7 @@
       import { render } from "preact";
       import { useState } from "preact/hooks";
       import { createAction, useActionStatus } from "@jsenv/navi";
-      import { signal } from "@preact/signals";
+      import { useSignal } from "@preact/signals";
 
       // Base action created outside UI (persistent)
       const baseAction = createAction(
@@ -155,7 +155,7 @@
         console.log("Base action:", baseAction.name);
 
         // Créer le signal pour les paramètres
-        pageSignal = signal({ page: 1 });
+        pageSignal = useSignal({ page: 1 });
 
         // Créer le proxy via bindParams avec le signal
         currentProxy = baseAction.bindParams(pageSignal);

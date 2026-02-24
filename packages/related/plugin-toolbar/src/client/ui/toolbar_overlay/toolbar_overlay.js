@@ -17,15 +17,15 @@ export const renderToolbarOverlay = () => {
   };
 
   effect(() => {
-    if (!window.parent) {
-      // can happen while parent iframe reloads
-      return;
-    }
     const opened = openedSignal.value;
     const settingsOpened = settingsOpenedSignal.value;
     const executionTooltipOpened = executionTooltipOpenedSignal.value;
     const changesTooltipOpened = changesTooltipOpenedSignal.value;
     const serverTooltipOpened = serverTooltipOpenedSignal.value;
+    if (!window.parent) {
+      // can happen while parent iframe reloads
+      return;
+    }
     if (!opened) {
       return;
     }

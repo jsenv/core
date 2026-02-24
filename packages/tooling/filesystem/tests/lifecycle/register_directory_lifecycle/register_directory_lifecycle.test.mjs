@@ -263,7 +263,7 @@ if (process.env.FLAKY) {
 }
 
 // update file
-{
+if (process.env.FLAKY) {
   const fileUrl = resolveUrl("file", tempDirectoryUrl);
   await writeFile(fileUrl);
   const mutations = [];
