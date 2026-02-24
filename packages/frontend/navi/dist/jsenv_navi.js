@@ -1448,6 +1448,7 @@ const createAction = (callback, rootOptions = {}) => {
           for (const key of keyArray) {
             const signalForThisKey = signalMap.get(key);
             if (signalForThisKey) {
+              // eslint-disable-next-line signals/no-conditional-value-read
               params[key] = signalForThisKey.value;
             } else {
               params[key] = staticParams[key];
