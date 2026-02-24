@@ -271,12 +271,16 @@
         const [passwordValue, setPasswordValue] = useState("secret123");
         const [urlValue, setUrlValue] = useState("https://example.com");
         const [numberValue, setNumberValue] = useState("42");
+        const [searchValue, setSearchValue] = useState("search query");
 
         return (
           <div className="demo-section">
             <h2>Input Types</h2>
 
-            <div className="variation-grid">
+            <div
+              className="variation-grid"
+              style={{ gridTemplateColumns: "repeat(3, 1fr)" }}
+            >
               <div className="variation-item">
                 <p className="variation-label">Email</p>
                 <Input
@@ -285,7 +289,12 @@
                   onUIStateChange={setEmailValue}
                   placeholder="user@example.com"
                 />
-                <div className="value-display">{emailValue}</div>
+                <input
+                  type="email"
+                  value={emailValue}
+                  onChange={() => {}}
+                  placeholder="user@example.com"
+                />
               </div>
 
               <div className="variation-item">
@@ -296,7 +305,12 @@
                   onUIStateChange={setPasswordValue}
                   placeholder="Enter password"
                 />
-                <div className="value-display">{passwordValue}</div>
+                <input
+                  type="password"
+                  value={passwordValue}
+                  onChange={() => {}}
+                  placeholder="Enter password"
+                />
               </div>
 
               <div className="variation-item">
@@ -307,7 +321,12 @@
                   onUIStateChange={setUrlValue}
                   placeholder="https://example.com"
                 />
-                <div className="value-display">{urlValue}</div>
+                <input
+                  type="url"
+                  value={urlValue}
+                  onChange={() => {}}
+                  placeholder="https://example.com"
+                />
               </div>
 
               <div className="variation-item">
@@ -318,7 +337,28 @@
                   onUIStateChange={setNumberValue}
                   placeholder="Enter number"
                 />
-                <div className="value-display">{numberValue}</div>
+                <input
+                  type="number"
+                  value={numberValue}
+                  onChange={() => {}}
+                  placeholder="Enter number"
+                />
+              </div>
+
+              <div className="variation-item">
+                <p className="variation-label">Search</p>
+                <Input
+                  type="search"
+                  value={searchValue}
+                  onUIStateChange={setSearchValue}
+                  placeholder="Search..."
+                />
+                <input
+                  type="search"
+                  value={searchValue}
+                  onChange={() => {}}
+                  placeholder="Search..."
+                />
               </div>
             </div>
           </div>

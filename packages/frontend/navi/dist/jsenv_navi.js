@@ -6306,7 +6306,7 @@ const Box = props => {
     // then we'll track ":hover" state changes even for basic elements like <div>
     const pseudoClassesFromStyleSet = new Set();
     boxPseudoNamedStyles = {};
-    const assignStyle = (value, name, styleContext, boxStylesTarget, styleOrigin) => {
+    const visitProp = (value, name, styleContext, boxStylesTarget, styleOrigin) => {
       const isPseudoElement = name.startsWith("::");
       const isPseudoClass = name.startsWith(":");
       if (isPseudoElement || isPseudoClass) {
@@ -6324,14 +6324,14 @@ const Box = props => {
         if (isPseudoElement) {
           const pseudoElementStyles = {};
           for (const key of pseudoStyleKeys) {
-            assignStyle(value[key], key, pseudoStyleContext, pseudoElementStyles, "pseudo_style");
+            visitProp(value[key], key, pseudoStyleContext, pseudoElementStyles, "pseudo_style");
           }
           boxPseudoNamedStyles[name] = pseudoElementStyles;
           return;
         }
         const pseudoClassStyles = {};
         for (const key of pseudoStyleKeys) {
-          assignStyle(value[key], key, pseudoStyleContext, pseudoClassStyles, "pseudo_style");
+          visitProp(value[key], key, pseudoStyleContext, pseudoClassStyles, "pseudo_style");
           boxPseudoNamedStyles[name] = pseudoClassStyles;
         }
         return;
@@ -6395,23 +6395,28 @@ const Box = props => {
     if (baseStyle) {
       for (const key of baseStyle) {
         const value = baseStyle[key];
-        assignStyle(value, key, styleContext, boxStyles, "baseStyle");
+        visitProp(value, key, styleContext, boxStyles, "baseStyle");
       }
     }
     for (const propName of remainingPropKeySet) {
       const propValue = rest[propName];
-      assignStyle(propValue, propName, styleContext, boxStyles, "prop");
+      const isDataAttribute = propName.startsWith("data-");
+      if (isDataAttribute) {
+        selfForwardedProps[propName] = propValue;
+        continue;
+      }
+      visitProp(propValue, propName, styleContext, boxStyles, "prop");
     }
     if (typeof style === "string") {
       const styleObject = normalizeStyles(style, "css");
       for (const styleName of Object.keys(styleObject)) {
         const styleValue = styleObject[styleName];
-        assignStyle(styleValue, styleName, styleContext, boxStyles, "style");
+        visitProp(styleValue, styleName, styleContext, boxStyles, "style");
       }
     } else if (style && typeof style === "object") {
       for (const styleName of Object.keys(style)) {
         const styleValue = style[styleName];
-        assignStyle(styleValue, styleName, styleContext, boxStyles, "style");
+        visitProp(styleValue, styleName, styleContext, boxStyles, "style");
       }
     }
     const updateStyle = useCallback(state => {
@@ -16761,24 +16766,58 @@ const installCustomConstraintValidation = (
       if (keydownEvent.key !== "Enter") {
         return;
       }
-      if (element.hasAttribute("data-action")) {
-        if (wouldKeydownSubmitForm(keydownEvent)) {
-          keydownEvent.preventDefault();
+      const elementWithAction = closestElementWithAction(element);
+      if (!elementWithAction) {
+        return;
+      }
+
+      const determineClosestFormSubmitTargetForEnterKeyEvent = () => {
+        if (keydownEvent.defaultPrevented) {
+          return null;
         }
-        dispatchActionRequestedCustomEvent(element, {
-          event: keydownEvent,
-          requester: element,
-        });
-        return;
+        const keydownTarget = keydownEvent.target;
+        const { form } = keydownTarget;
+        if (!form) {
+          return null;
+        }
+        if (keydownTarget.tagName === "BUTTON") {
+          if (
+            keydownTarget.type !== "submit" &&
+            keydownTarget.type !== "image"
+          ) {
+            return null;
+          }
+          return keydownTarget;
+        }
+        if (keydownTarget.tagName === "INPUT") {
+          if (
+            ![
+              "text",
+              "email",
+              "password",
+              "search",
+              "number",
+              "url",
+              "tel",
+            ].includes(keydownTarget.type)
+          ) {
+            return null;
+          }
+          // when present, we use first button submitting the form as the requester
+          // not the input, it aligns with browser behavior where
+          // hitting Enter in a text input triggers the first submit button of the form, not the input itself
+          return getFirstButtonSubmittingForm(keydownTarget) || keydownTarget;
+        }
+        return null;
+      };
+      const formSubmitTarget =
+        determineClosestFormSubmitTargetForEnterKeyEvent();
+      if (formSubmitTarget) {
+        keydownEvent.preventDefault();
       }
-      const { form } = element;
-      if (!form) {
-        return;
-      }
-      keydownEvent.preventDefault();
-      dispatchActionRequestedCustomEvent(form, {
+      dispatchActionRequestedCustomEvent(elementWithAction, {
         event: keydownEvent,
-        requester: getFirstButtonSubmittingForm(form) || element,
+        requester: formSubmitTarget || element,
       });
     };
     element.addEventListener("keydown", onkeydown);
@@ -16795,29 +16834,44 @@ const installCustomConstraintValidation = (
       if (element.tagName !== "BUTTON") {
         return;
       }
-      if (element.hasAttribute("data-action")) {
-        if (wouldButtonClickSubmitForm(element, clickEvent)) {
-          clickEvent.preventDefault();
+      const button = element;
+      const elementWithAction = closestElementWithAction(button);
+      if (!elementWithAction) {
+        return;
+      }
+      const determineClosestFormSubmitTargetForClickEvent = () => {
+        if (clickEvent.defaultPrevented) {
+          return null;
         }
-        dispatchActionRequestedCustomEvent(element, {
-          event: clickEvent,
-          requester: element,
-        });
-        return;
-      }
-      const { form } = element;
-      if (!form) {
-        return;
-      }
-      if (element.type === "reset") {
-        return;
-      }
-      if (wouldButtonClickSubmitForm(element, clickEvent)) {
+        const clickTarget = clickEvent.target;
+        const { form } = clickTarget;
+        if (!form) {
+          return null;
+        }
+        const wouldSubmitFormByType =
+          button.type === "submit" || button.type === "image";
+        if (wouldSubmitFormByType) {
+          return button;
+        }
+        if (button.type) {
+          // "reset", "button" or any other non submit type, it won't submit the form
+          return null;
+        }
+        const firstButtonSubmittingForm = getFirstButtonSubmittingForm(form);
+        if (button !== firstButtonSubmittingForm) {
+          // an other button is explicitly submitting the form, this one would not submit it
+          return null;
+        }
+        // this is the only button inside the form without type attribute, so it defaults to type="submit"
+        return button;
+      };
+      const formSubmitTarget = determineClosestFormSubmitTargetForClickEvent();
+      if (formSubmitTarget) {
         clickEvent.preventDefault();
       }
-      dispatchActionRequestedCustomEvent(form, {
+      dispatchActionRequestedCustomEvent(elementWithAction, {
         event: clickEvent,
-        requester: element,
+        requester: formSubmitTarget || button,
       });
     };
     element.addEventListener("click", onclick);
@@ -16833,13 +16887,14 @@ const installCustomConstraintValidation = (
       break request_on_input_change;
     }
     const stop = listenInputChange(element, (e) => {
-      if (element.hasAttribute("data-action")) {
-        dispatchActionRequestedCustomEvent(element, {
-          event: e,
-          requester: element,
-        });
+      const elementWithAction = closestElementWithAction(element);
+      if (!elementWithAction) {
         return;
       }
+      dispatchActionRequestedCustomEvent(elementWithAction, {
+        event: e,
+        requester: element,
+      });
     });
     addTeardown(() => {
       stop();
@@ -16937,6 +16992,31 @@ const installCustomConstraintValidation = (
   return validationInterface;
 };
 
+// When interacting with an element we want to find the closest element
+// eventually handling the action
+// 1. <button> itself has an action
+// 2. <button> is inside a <form> with an action
+// 3. <button> is inside a wrapper <div> with an action (data-action is not necessarly on the interactive element itself, it can be on a wrapper, we want to support that)
+// 4. <button> is inside a <fieldset> or any element that catches the action like a <form> would
+// In examples above <button> can also be <input> etc..
+const closestElementWithAction = (el) => {
+  if (el.hasAttribute("data-action")) {
+    return el;
+  }
+  const closestDataActionElement = el.closest("[data-action]");
+  if (!closestDataActionElement) {
+    return null;
+  }
+  const visualSelector = closestDataActionElement.getAttribute(
+    "data-visual-selector",
+  );
+  if (!visualSelector) {
+    return closestDataActionElement;
+  }
+  const visualElement = closestDataActionElement.querySelector(visualSelector);
+  return visualElement;
+};
+
 const pickConstraint = (a, b) => {
   const aPrio = getConstraintPriority(a);
   const bPrio = getConstraintPriority(b);
@@ -16955,60 +17035,14 @@ const getConstraintPriority = (constraint) => {
   return 1;
 };
 
-const wouldButtonClickSubmitForm = (button, clickEvent) => {
-  if (clickEvent.defaultPrevented) {
-    return false;
-  }
-  const { form } = button;
-  if (!form) {
-    return false;
-  }
-  if (!button) {
-    return false;
-  }
-  const wouldSubmitFormByType =
-    button.type === "submit" || button.type === "image";
-  if (wouldSubmitFormByType) {
-    return true;
-  }
-  if (button.type) {
-    return false;
-  }
-  if (getFirstButtonSubmittingForm(form)) {
-    // an other button is explicitly submitting the form, this one would not submit it
-    return false;
-  }
-  // this is the only button inside the form without type attribute, so it defaults to type="submit"
-  return true;
-};
 const getFirstButtonSubmittingForm = (form) => {
   return form.querySelector(
     `button[type="submit"], input[type="submit"], input[type="image"]`,
   );
 };
 
-const wouldKeydownSubmitForm = (keydownEvent) => {
-  if (keydownEvent.defaultPrevented) {
-    return false;
-  }
-  const keydownTarget = keydownEvent.target;
-  const { form } = keydownTarget;
-  if (!form) {
-    return false;
-  }
-  if (keydownEvent.key !== "Enter") {
-    return false;
-  }
-  const isTextInput =
-    keydownTarget.tagName === "INPUT" || keydownTarget.tagName === "TEXTAREA";
-  if (!isTextInput) {
-    return false;
-  }
-  return true;
-};
-
 const dispatchActionRequestedCustomEvent = (
-  fieldOrForm,
+  elementWithAction,
   { actionOrigin = "action_prop", event, requester },
 ) => {
   const actionRequestedCustomEvent = new CustomEvent("actionrequested", {
@@ -17019,7 +17053,7 @@ const dispatchActionRequestedCustomEvent = (
       requester,
     },
   });
-  fieldOrForm.dispatchEvent(actionRequestedCustomEvent);
+  elementWithAction.dispatchEvent(actionRequestedCustomEvent);
 };
 // https://developer.mozilla.org/en-US/docs/Web/HTML/Guides/Constraint_validation
 const requestSubmit = HTMLFormElement.prototype.requestSubmit;
@@ -17760,7 +17794,6 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
 const Icon = ({
   href,
   children,
-  className,
   charWidth = 1,
   // 0 (zéro) is the real char width
   // but 2 zéros gives too big icons
@@ -17787,7 +17820,7 @@ const Icon = ({
   const hasExplicitWidth = width !== undefined;
   const hasExplicitHeight = height !== undefined;
   if (!hasExplicitWidth && !hasExplicitHeight) {
-    if (decorative === undefined) {
+    if (decorative === undefined && !onClick) {
       decorative = true;
     }
   } else {
@@ -17822,7 +17855,7 @@ const Icon = ({
   return jsxs(Text, {
     ...props,
     ...ariaProps,
-    className: withPropsClassName("navi_icon", className),
+    className: withPropsClassName("navi_icon", props.className),
     spacing: "pre",
     "data-icon-char": "",
     "data-has-width": hasExplicitWidth ? "" : undefined,
@@ -22451,6 +22484,15 @@ const InputRangeWithAction = props => {
   });
 };
 
+const SearchSvg = () => jsx("svg", {
+  viewBox: "0 0 24 24",
+  xmlns: "http://www.w3.org/2000/svg",
+  children: jsx("path", {
+    d: "M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z",
+    fill: "currentColor"
+  })
+});
+
 installImportMetaCss(import.meta);import.meta.css = /* css */`
   @layer navi {
     .navi_input {
@@ -22514,29 +22556,73 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
     --x-background-color: var(--background-color);
     --x-color: var(--color);
     --x-placeholder-color: var(--placeholder-color);
+
+    .navi_native_input {
+      box-sizing: border-box;
+      padding-top: var(--padding-top, var(--padding-y, var(--padding, 1px)));
+      padding-right: var(
+        --padding-right,
+        var(--padding-x, var(--padding, 2px))
+      );
+      padding-bottom: var(
+        --padding-bottom,
+        var(--padding-y, var(--padding, 1px))
+      );
+      padding-left: var(--padding-left, var(--padding-x, var(--padding, 2px)));
+      color: var(--x-color);
+      background-color: var(--x-background-color);
+      border-width: var(--x-outer-width);
+      border-width: var(--x-outer-width);
+      border-style: solid;
+      border-color: transparent;
+      border-radius: var(--x-border-radius);
+      outline-width: var(--x-border-width);
+      outline-style: solid;
+      outline-color: var(--x-border-color);
+      outline-offset: calc(-1 * (var(--x-border-width)));
+
+      &[type="search"] {
+        -webkit-appearance: textfield;
+
+        &::-webkit-search-cancel-button {
+          display: none;
+        }
+      }
+    }
+
+    .navi_start_icon_label {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 0.25em;
+    }
+    .navi_end_icon_label {
+      position: absolute;
+      top: 0;
+      right: 0.25em;
+      bottom: 0;
+      opacity: 0;
+      pointer-events: none;
+    }
+    &[data-has-value] {
+      .navi_end_icon_label {
+        opacity: 1;
+        pointer-events: auto;
+      }
+    }
+
+    &[data-start-icon] {
+      .navi_native_input {
+        padding-left: 20px;
+      }
+    }
+    &[data-end-icon] {
+      .navi_native_input {
+        padding-right: 20px;
+      }
+    }
   }
 
-  .navi_input .navi_native_input {
-    box-sizing: border-box;
-    padding-top: var(--padding-top, var(--padding-y, var(--padding, 1px)));
-    padding-right: var(--padding-right, var(--padding-x, var(--padding, 2px)));
-    padding-bottom: var(
-      --padding-bottom,
-      var(--padding-y, var(--padding, 1px))
-    );
-    padding-left: var(--padding-left, var(--padding-x, var(--padding, 2px)));
-    color: var(--x-color);
-    background-color: var(--x-background-color);
-    border-width: var(--x-outer-width);
-    border-width: var(--x-outer-width);
-    border-style: solid;
-    border-color: transparent;
-    border-radius: var(--x-border-radius);
-    outline-width: var(--x-border-width);
-    outline-style: solid;
-    outline-color: var(--x-border-color);
-    outline-offset: calc(-1 * (var(--x-border-width)));
-  }
   .navi_input .navi_native_input::placeholder {
     color: var(--x-placeholder-color);
   }
@@ -22615,7 +22701,52 @@ const InputStyleCSSVars = {
     color: "--color-disabled"
   }
 };
-const InputPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading"];
+const InputPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading", ":navi-has-value"];
+Object.assign(PSEUDO_CLASSES, {
+  ":navi-has-value": {
+    attribute: "data-has-value",
+    setup: (el, callback) => {
+      const onValueChange = () => {
+        callback();
+      };
+
+      // Standard user input (typing)
+      el.addEventListener("input", onValueChange);
+      // Autocomplete, programmatic changes, form restoration
+      el.addEventListener("change", onValueChange);
+      // Form reset - need to check the form
+      const form = el.form;
+      const onFormReset = () => {
+        // Form reset happens asynchronously, check value after reset completes
+        setTimeout(onValueChange, 0);
+      };
+      if (form) {
+        form.addEventListener("reset", onFormReset);
+      }
+
+      // Paste events (some browsers need special handling)
+      el.addEventListener("paste", onValueChange);
+      // Focus events to catch programmatic changes that don't fire other events
+      // (like when value is set before user interaction)
+      el.addEventListener("focus", onValueChange);
+      return () => {
+        el.removeEventListener("input", onValueChange);
+        el.removeEventListener("change", onValueChange);
+        el.removeEventListener("paste", onValueChange);
+        el.removeEventListener("focus", onValueChange);
+        if (form) {
+          form.removeEventListener("reset", onFormReset);
+        }
+      };
+    },
+    test: el => {
+      if (el.value === "") {
+        return false;
+      }
+      return true;
+    }
+  }
+});
 const InputPseudoElements = ["::-navi-loader"];
 const InputTextualBasic = props => {
   const contextReadOnly = useContext(ReadOnlyContext);
@@ -22634,6 +22765,8 @@ const InputTextualBasic = props => {
     autoFocus,
     autoFocusVisible,
     autoSelect,
+    icon,
+    cancelButton = type === "search",
     ...rest
   } = props;
   const defaultRef = useRef();
@@ -22650,10 +22783,13 @@ const InputTextualBasic = props => {
   });
   const remainingProps = useConstraints(ref, rest);
   const innerOnInput = useStableCallback(onInput);
+  const autoId = useId();
+  const innerId = rest.id || autoId;
   const renderInput = inputProps => {
     return jsx(Box, {
       ...inputProps,
       as: "input",
+      id: innerId,
       ref: ref,
       type: type,
       "data-value": uiState,
@@ -22684,7 +22820,15 @@ const InputTextualBasic = props => {
       baseClassName: "navi_native_input"
     });
   };
-  const renderInputMemoized = useCallback(renderInput, [type, uiState, innerValue, innerOnInput]);
+  const renderInputMemoized = useCallback(renderInput, [type, uiState, innerValue, innerOnInput, innerId]);
+  let innerIcon;
+  if (icon === undefined) {
+    if (type === "search") {
+      innerIcon = jsx(SearchSvg, {});
+    }
+  } else {
+    innerIcon = icon;
+  }
   return jsxs(Box, {
     as: "span",
     box: true,
@@ -22700,13 +22844,37 @@ const InputTextualBasic = props => {
     pseudoClasses: InputPseudoClasses,
     pseudoElements: InputPseudoElements,
     hasChildFunction: true,
+    "data-start-icon": innerIcon ? "" : undefined,
+    "data-end-icon": cancelButton ? "" : undefined,
     ...remainingProps,
     ref: undefined,
     children: [jsx(LoaderBackground, {
       loading: innerLoading,
       color: "var(--loader-color)",
       inset: -1
-    }), renderInputMemoized]
+    }), innerIcon && jsx(Icon, {
+      as: "label",
+      htmlFor: innerId,
+      className: "navi_start_icon_label",
+      alignY: "center",
+      color: "rgba(28, 43, 52, 0.5)",
+      children: innerIcon
+    }), renderInputMemoized, cancelButton && jsx(Icon, {
+      as: "label",
+      htmlFor: innerId,
+      className: "navi_end_icon_label",
+      alignY: "center",
+      color: "rgba(28, 43, 52, 0.5)",
+      onMousedown: e => {
+        e.preventDefault(); // keep focus on the button
+      },
+      onClick: () => {
+        uiStateController.setUIState("", {
+          trigger: "cancel_button"
+        });
+      },
+      children: jsx(CloseSvg, {})
+    })]
   });
 };
 const InputTextualWithAction = props => {
@@ -28492,15 +28660,6 @@ const HomeSvg = () => jsx("svg", {
   xmlns: "http://www.w3.org/2000/svg",
   children: jsx("path", {
     d: "M12 3l8 6v11h-5v-6h-6v6H4V9l8-6z",
-    fill: "currentColor"
-  })
-});
-
-const SearchSvg = () => jsx("svg", {
-  viewBox: "0 0 24 24",
-  xmlns: "http://www.w3.org/2000/svg",
-  children: jsx("path", {
-    d: "M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z",
     fill: "currentColor"
   })
 });

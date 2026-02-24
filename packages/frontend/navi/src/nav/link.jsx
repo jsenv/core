@@ -13,6 +13,7 @@ import { useAutoFocus } from "../field/use_auto_focus.js";
 import { closeValidationMessage } from "../field/validation/custom_constraint_validation.js";
 import { useConstraints } from "../field/validation/hooks/use_constraints.js";
 import { Icon } from "../graphic/icon.jsx";
+import { EmailSvg } from "../graphic/icons/email_svg.jsx";
 import {
   LinkAnchorSvg,
   LinkBlankTargetSvg,
@@ -386,27 +387,6 @@ const SmsSvg = () => {
       <path
         d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM18 14H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"
         fill="currentColor"
-      />
-    </svg>
-  );
-};
-
-const EmailSvg = () => {
-  return (
-    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-      <path
-        d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-      />
-      <path
-        d="m2 6 8 5 2 1.5 2-1.5 8-5"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
       />
     </svg>
   );

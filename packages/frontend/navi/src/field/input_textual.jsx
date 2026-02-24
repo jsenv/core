@@ -26,6 +26,7 @@ import { Box } from "../box/box.jsx";
 import { PSEUDO_CLASSES } from "../box/pseudo_styles.js";
 import { Icon } from "../graphic/icon.jsx";
 import { CloseSvg } from "../graphic/icons/close_svg.jsx";
+import { EmailSvg } from "../graphic/icons/email_svg.jsx";
 import { SearchSvg } from "../graphic/icons/search_svg.jsx";
 import { useStableCallback } from "../utils/use_stable_callback.js";
 import { ReportReadOnlyOnLabelContext } from "./label.jsx";
@@ -404,6 +405,8 @@ const InputTextualBasic = (props) => {
   if (icon === undefined) {
     if (type === "search") {
       innerIcon = <SearchSvg />;
+    } else if (type === "email") {
+      innerIcon = <EmailSvg />;
     }
   } else {
     innerIcon = icon;
