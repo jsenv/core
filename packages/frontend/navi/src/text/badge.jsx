@@ -85,11 +85,11 @@ const BadgeCountOverflow = () => (
 const MAX_CHAR_AS_CIRCLE = 3;
 export const BadgeCount = ({
   children,
-  max = 99,
   maxElement = <BadgeCountOverflow />,
   // When you use max="none" (or max > 99) it might be a good idea to force ellipse
   // so that visually the interface do not suddently switch from circle to ellipse depending on the count
   ellipse,
+  max = ellipse ? Infinity : 99,
   ...props
 }) => {
   const defaultRef = useRef();
@@ -187,7 +187,13 @@ const BadgeCountCircle = ({
     </Text>
   );
 };
-const BadgeCountEllipse = ({ ref, children, hasOverflow, ...props }) => {
+const BadgeCountEllipse = ({
+  ref,
+  loading,
+  children,
+  hasOverflow,
+  ...props
+}) => {
   return (
     <Text
       ref={ref}
@@ -199,11 +205,17 @@ const BadgeCountEllipse = ({ ref, children, hasOverflow, ...props }) => {
       styleCSSVars={BadgeStyleCSSVars}
       spacing="pre"
     >
-      {/* When we double click on count we don't want to eventually select surrounding text (in case) */}
-      {/* the surrounding text has no spaces so we add "&#8203;" (zero-width space char) */}
-      <span style="user-select: none">&#8203;</span>
-      {children}
-      <span style="user-select: none">&#8203;</span>
+      {loading ? (
+        <LoadingDots />
+      ) : (
+        <>
+          {/* When we double click on count we don't want to eventually select surrounding text (in case) */}
+          {/* the surrounding text has no spaces so we add "&#8203;" (zero-width space char) */}
+          <span style="user-select: none">&#8203;</span>
+          {children}
+          <span style="user-select: none">&#8203;</span>
+        </>
+      )}
     </Text>
   );
 };

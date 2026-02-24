@@ -50,7 +50,8 @@
       );
 
       const LoadingStateSection = () => {
-        const [loading, setLoading] = useState(false);
+        const [loading, setLoading] = useState(true);
+        const [ellipseLoading, setEllipseLoading] = useState(true);
 
         return (
           <Box as="section" marginBottom="xl">
@@ -60,33 +61,75 @@
               components. Use the buttons to test loading transitions.
             </Paragraph>
 
-            <Box row spacing="md" alignX="start">
-              <Box row spacing="sm" alignY="center">
-                <Button action={() => setLoading(true)} disabled={loading}>
-                  Start Loading
-                </Button>
-                <Button action={() => setLoading(false)} disabled={!loading}>
-                  Stop Loading
-                </Button>
+            <Box column spacing="m">
+              <Box row spacing="md" alignX="start">
+                <Caption>Loading state with default badge</Caption>
+                <Box row spacing="sm" alignY="center">
+                  <Button action={() => setLoading(true)} disabled={loading}>
+                    Start Loading
+                  </Button>
+                  <Button action={() => setLoading(false)} disabled={!loading}>
+                    Stop Loading
+                  </Button>
+                </Box>
+
+                <Box
+                  row
+                  spacing="md"
+                  alignY="center"
+                  background="lightyellow"
+                  border="1px dotted red"
+                >
+                  <Text>
+                    Inbox
+                    <BadgeCount
+                      background="#2196f3"
+                      color="white"
+                      loading={loading}
+                    >
+                      15
+                    </BadgeCount>
+                  </Text>
+                </Box>
               </Box>
 
-              <Box
-                row
-                spacing="md"
-                alignY="center"
-                background="lightyellow"
-                border="1px dotted red"
-              >
-                <Text>
-                  Inbox
-                  <BadgeCount
-                    background="#2196f3"
-                    color="white"
-                    loading={loading}
+              <Box row spacing="md" alignX="start">
+                <Caption>Loading state with ellipse</Caption>
+                <Box row spacing="sm" alignY="center">
+                  <Button
+                    action={() => setEllipseLoading(true)}
+                    disabled={ellipseLoading}
                   >
-                    15
-                  </BadgeCount>
-                </Text>
+                    Start Loading
+                  </Button>
+                  <Button
+                    action={() => setEllipseLoading(false)}
+                    disabled={!ellipseLoading}
+                  >
+                    Stop Loading
+                  </Button>
+                </Box>
+
+                <Box
+                  row
+                  spacing="md"
+                  alignY="center"
+                  background="lightyellow"
+                  border="1px dotted red"
+                >
+                  <Text>
+                    Inbox
+                    <BadgeCount
+                      ellipse
+                      background="#2196f3"
+                      color="white"
+                      loading={ellipseLoading}
+                      max={Infinity}
+                    >
+                      1500
+                    </BadgeCount>
+                  </Text>
+                </Box>
               </Box>
             </Box>
           </Box>
