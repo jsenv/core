@@ -1,5 +1,6 @@
 import { useRef } from "preact/hooks";
 
+import { LoadingDots } from "../graphic/loader/loading_dots.jsx";
 import { Text } from "./text.jsx";
 import { useContrastingColor } from "./use_contrasting_color.js";
 
@@ -153,6 +154,7 @@ const BadgeCountCircle = ({
   ref,
   charCount,
   hasOverflow,
+  loading,
   children,
   ...props
 }) => {
@@ -170,12 +172,18 @@ const BadgeCountCircle = ({
       styleCSSVars={BadgeStyleCSSVars}
       spacing="pre"
     >
-      {/* When we double click on count we don't want to eventually select surrounding text (in case) */}
-      {/* the surrounding text has no spaces so we add "&#8203;" (zero-width space char) */}
-      <span style="user-select: none">&#8203;</span>
-      <span className="navi_badge_count_frame" />
-      <span className="navi_badge_count_text">{children}</span>
-      <span style="user-select: none">&#8203;</span>
+      {loading ? (
+        <LoadingDots />
+      ) : (
+        <>
+          {/* When we double click on count we don't want to eventually select surrounding text (in case) */}
+          {/* the surrounding text has no spaces so we add "&#8203;" (zero-width space char) */}
+          <span style="user-select: none">&#8203;</span>
+          <span className="navi_badge_count_frame" />
+          <span className="navi_badge_count_text">{children}</span>
+          <span style="user-select: none">&#8203;</span>
+        </>
+      )}
     </Text>
   );
 };

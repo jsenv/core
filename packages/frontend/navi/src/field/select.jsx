@@ -5,8 +5,8 @@ import { renderActionableComponent } from "../action/render_actionable_component
 import { useActionBoundToOneParam } from "../action/use_action.js";
 import { useActionStatus } from "../action/use_action_status.js";
 import { useExecuteAction } from "../action/use_execute_action.js";
+import { LoaderBackground } from "../graphic/loader/loader_background.jsx";
 import { useRefArray } from "../utils/use_ref_array.js";
-import { LoaderBackground } from "./loader/loader_background.jsx";
 import { useActionEvents } from "./use_action_events.js";
 import { requestAction } from "./validation/custom_constraint_validation.js";
 

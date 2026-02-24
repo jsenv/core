@@ -48,6 +48,38 @@
         </Box>
       );
 
+      const LoadingStateSection = () => (
+        <Box as="section" marginBottom="xl">
+          <Title as="h2">Loading State Demo</Title>
+          <Paragraph>
+            This section demonstrates the loading prop effect on BadgeCount
+            components.
+          </Paragraph>
+
+          <Box row spacing="md" alignY="center">
+            <Box row spacing="sm">
+              <Caption>Normal State</Caption>
+              <Text>
+                Inbox
+                <BadgeCount background="#2196f3" color="white">
+                  15
+                </BadgeCount>
+              </Text>
+            </Box>
+
+            <Box row spacing="sm">
+              <Caption>Loading State</Caption>
+              <Text>
+                Inbox
+                <BadgeCount background="#2196f3" color="white" loading>
+                  15
+                </BadgeCount>
+              </Text>
+            </Box>
+          </Box>
+        </Box>
+      );
+
       const TestsComportementauxSection = () => (
         <Box as="section" marginBottom="xl">
           <Title as="h2">
@@ -807,6 +839,7 @@
             <Title as="h1">Badge Count Demo</Title>
 
             <TableOfContents />
+            <LoadingStateSection />
             <TestsComportementauxSection />
             <FontSizesSection />
             <FontFamiliesSection />

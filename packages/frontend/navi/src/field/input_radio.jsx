@@ -3,12 +3,12 @@ import { useCallback, useContext, useLayoutEffect, useRef } from "preact/hooks";
 
 import { renderActionableComponent } from "../action/render_actionable_component.jsx";
 import { Box } from "../box/box.jsx";
+import { LoaderBackground } from "../graphic/loader/loader_background.jsx";
 import { useStableCallback } from "../utils/use_stable_callback.js";
 import {
   ReportDisabledOnLabelContext,
   ReportReadOnlyOnLabelContext,
 } from "./label.jsx";
-import { LoaderBackground } from "./loader/loader_background.jsx";
 import { useAutoFocus } from "./use_auto_focus.js";
 import {
   DisabledContext,

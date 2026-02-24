@@ -6,12 +6,12 @@ import { useActionBoundToOneParam } from "../action/use_action.js";
 import { useActionStatus } from "../action/use_action_status.js";
 import { useExecuteAction } from "../action/use_execute_action.js";
 import { Box } from "../box/box.jsx";
+import { LoaderBackground } from "../graphic/loader/loader_background.jsx";
 import { useStableCallback } from "../utils/use_stable_callback.js";
 import {
   ReportDisabledOnLabelContext,
   ReportReadOnlyOnLabelContext,
 } from "./label.jsx";
-import { LoaderBackground } from "./loader/loader_background.jsx";
 import { useActionEvents } from "./use_action_events.js";
 import { useAutoFocus } from "./use_auto_focus.js";
 import {

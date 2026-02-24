@@ -3,7 +3,6 @@ import { useContext, useLayoutEffect, useRef } from "preact/hooks";
 import { renderActionableComponent } from "../action/render_actionable_component.jsx";
 import { Box } from "../box/box.jsx";
 import { PSEUDO_CLASSES } from "../box/pseudo_styles.js";
-import { LoaderBackground } from "../field/loader/loader_background.jsx";
 import {
   SelectionContext,
   useSelectableElement,
@@ -19,6 +18,7 @@ import {
   LinkBlankTargetSvg,
 } from "../graphic/icons/link_svgs.jsx";
 import { PhoneSvg } from "../graphic/icons/phone_svg.jsx";
+import { LoaderBackground } from "../graphic/loader/loader_background.jsx";
 import { useKeyboardShortcuts } from "../keyboard/keyboard_shortcuts.js";
 import { applySpacingOnTextChildren } from "../text/text.jsx";
 import { TitleLevelContext } from "../text/title.jsx";

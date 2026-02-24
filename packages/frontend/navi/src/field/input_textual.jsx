@@ -29,9 +29,9 @@ import { CloseSvg } from "../graphic/icons/close_svg.jsx";
 import { EmailSvg } from "../graphic/icons/email_svg.jsx";
 import { PhoneSvg } from "../graphic/icons/phone_svg.jsx";
 import { SearchSvg } from "../graphic/icons/search_svg.jsx";
+import { LoaderBackground } from "../graphic/loader/loader_background.jsx";
 import { useStableCallback } from "../utils/use_stable_callback.js";
 import { ReportReadOnlyOnLabelContext } from "./label.jsx";
-import { LoaderBackground } from "./loader/loader_background.jsx";
 import { useActionEvents } from "./use_action_events.js";
 import { useAutoFocus } from "./use_auto_focus.js";
 import {

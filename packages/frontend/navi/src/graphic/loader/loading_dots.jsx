@@ -1,4 +1,4 @@
-export const LoadingSpinner = ({ color = "FF156D" }) => {
+export const LoadingDots = ({ color = "FF156D" }) => {
   return (
     <svg
       viewBox="0 0 200 200"
