@@ -1,6 +1,6 @@
 {
   "name": "oto",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "private": true,
   "type": "module",
   "exports": {
@@ -23,7 +23,7 @@
   "dependencies": {
     "@jsenv/dom": "./packages/dom",
     "@jsenv/navi": "./packages/navi",
-    "@preact/signals": "2.7.0",
+    "@preact/signals": "2.8.1",
     "dom": "./packages/dom",
     "hooks": "./packages/hooks",
     "matrix": "./packages/matrix",

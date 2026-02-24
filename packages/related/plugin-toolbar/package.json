@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/plugin-toolbar",
-  "version": "1.5.25",
+  "version": "1.5.26",
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
@@ -35,7 +35,7 @@
     "@jsenv/filesystem": "../../tooling/filesystem",
     "@jsenv/plugin-toolbar": "./",
     "@jsenv/utils": "../../tooling/utils",
-    "@preact/signals": "2.7.0",
+    "@preact/signals": "2.8.1",
     "playwright": "1.58.1"
   },
   "publishConfig": {
