@@ -1,7 +1,7 @@
 import { installImportMetaCss } from "./jsenv_navi_side_effects.js";
 import { useErrorBoundary, useLayoutEffect, useEffect, useCallback, useRef, useState, useContext, useMemo, useImperativeHandle, useId } from "preact/hooks";
 import { jsxs, jsx, Fragment } from "preact/jsx-runtime";
-import { createIterableWeakSet, mergeOneStyle, stringifyStyle, createPubSub, mergeTwoStyles, normalizeStyles, createGroupTransitionController, getElementSignature, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, resolveCSSSize, findBefore, findAfter, createValueEffect, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, allowWheelThrough, resolveCSSColor, createStyleController, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, hasCSSSizeUnit, activeElementSignal, canInterceptKeys, pickLightOrDark, resolveColorLuminance, initFocusGroup, dragAfterThreshold, getScrollContainer, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement, elementIsFocusable } from "@jsenv/dom";
+import { createIterableWeakSet, mergeOneStyle, stringifyStyle, createPubSub, mergeTwoStyles, normalizeStyles, createGroupTransitionController, getElementSignature, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, findBefore, findAfter, createValueEffect, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, allowWheelThrough, resolveCSSColor, createStyleController, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, hasCSSSizeUnit, resolveCSSSize, activeElementSignal, canInterceptKeys, pickLightOrDark, resolveColorLuminance, initFocusGroup, dragAfterThreshold, getScrollContainer, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement, elementIsFocusable } from "@jsenv/dom";
 import { prefixFirstAndIndentRemainingLines } from "@jsenv/humanize";
 import { effect, signal, computed, batch, useSignal } from "@preact/signals";
 import { createValidity } from "@jsenv/validity";
@@ -12102,556 +12102,6 @@ const renderActionableComponent = (props, {
   });
 };
 
-const useDebounceTrue = (value, delay = 300) => {
-  const [debouncedTrue, setDebouncedTrue] = useState(false);
-  const timerRef = useRef(null);
-
-  useLayoutEffect(() => {
-    // If value is true or becomes true, start a timer
-    if (value) {
-      timerRef.current = setTimeout(() => {
-        setDebouncedTrue(true);
-      }, delay);
-    } else {
-      // If value becomes false, clear any pending timer and immediately set to false
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-        timerRef.current = null;
-      }
-      setDebouncedTrue(false);
-    }
-
-    // Cleanup function
-    return () => {
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-      }
-    };
-  }, [value, delay]);
-
-  return debouncedTrue;
-};
-
-const useNetworkSpeed = () => {
-  return networkSpeedSignal.value;
-};
-
-const connection =
-  window.navigator.connection ||
-  window.navigator.mozConnection ||
-  window.navigator.webkitConnection;
-
-const getNetworkSpeed = () => {
-  // ✅ Network Information API (support moderne)
-  if (!connection) {
-    return "3g";
-  }
-  if (connection) {
-    const effectiveType = connection.effectiveType;
-    if (effectiveType) {
-      return effectiveType; // "slow-2g", "2g", "3g", "4g", "5g"
-    }
-    const downlink = connection.downlink;
-    if (downlink) {
-      // downlink is in Mbps
-      if (downlink < 1) return "slow-2g"; // < 1 Mbps
-      if (downlink < 2.5) return "2g"; // 1-2.5 Mbps
-      if (downlink < 10) return "3g"; // 2.5-10 Mbps
-      return "4g"; // > 10 Mbps
-    }
-  }
-  return "3g";
-};
-
-const updateNetworkSpeed = () => {
-  networkSpeedSignal.value = getNetworkSpeed();
-};
-
-const networkSpeedSignal = signal(getNetworkSpeed());
-
-const setupNetworkMonitoring = () => {
-  const cleanupFunctions = [];
-
-  // ✅ 1. Écouter les changements natifs
-
-  if (connection) {
-    connection.addEventListener("change", updateNetworkSpeed);
-    cleanupFunctions.push(() => {
-      connection.removeEventListener("change", updateNetworkSpeed);
-    });
-  }
-
-  // ✅ 2. Polling de backup (toutes les 60 secondes)
-  const pollInterval = setInterval(updateNetworkSpeed, 60000);
-  cleanupFunctions.push(() => clearInterval(pollInterval));
-
-  // ✅ 3. Vérifier lors de la reprise d'activité
-  const handleVisibilityChange = () => {
-    if (!document.hidden) {
-      updateNetworkSpeed();
-    }
-  };
-
-  document.addEventListener("visibilitychange", handleVisibilityChange);
-  cleanupFunctions.push(() => {
-    document.removeEventListener("visibilitychange", handleVisibilityChange);
-  });
-
-  // ✅ 4. Vérifier lors de la reprise de connexion
-  const handleOnline = () => {
-    updateNetworkSpeed();
-  };
-
-  window.addEventListener("online", handleOnline);
-  cleanupFunctions.push(() => {
-    window.removeEventListener("online", handleOnline);
-  });
-
-  // Cleanup global
-  return () => {
-    cleanupFunctions.forEach((cleanup) => cleanup());
-  };
-};
-setupNetworkMonitoring();
-
-installImportMetaCss(import.meta);import.meta.css = /* css */`
-  .navi_rectangle_loading {
-    position: relative;
-    display: flex;
-    width: 100%;
-    height: 100%;
-    opacity: 0;
-  }
-
-  .navi_rectangle_loading[data-visible] {
-    opacity: 1;
-  }
-`;
-const RectangleLoading = ({
-  shouldShowSpinner,
-  color = "currentColor",
-  radius = 0,
-  size = 2
-}) => {
-  const containerRef = useRef(null);
-  const [containerWidth, setContainerWidth] = useState(0);
-  const [containerHeight, setContainerHeight] = useState(0);
-  useLayoutEffect(() => {
-    const container = containerRef.current;
-    if (!container) {
-      return null;
-    }
-    const {
-      width,
-      height
-    } = container.getBoundingClientRect();
-    setContainerWidth(width);
-    setContainerHeight(height);
-    let animationFrameId = null;
-    // Create a resize observer to detect changes in the container's dimensions
-    const resizeObserver = new ResizeObserver(entries => {
-      // Use requestAnimationFrame to debounce updates
-      if (animationFrameId) {
-        cancelAnimationFrame(animationFrameId);
-      }
-      animationFrameId = requestAnimationFrame(() => {
-        const [containerEntry] = entries;
-        const {
-          width,
-          height
-        } = containerEntry.contentRect;
-        setContainerWidth(width);
-        setContainerHeight(height);
-      });
-    });
-    resizeObserver.observe(container);
-    return () => {
-      if (animationFrameId) {
-        cancelAnimationFrame(animationFrameId);
-      }
-      resizeObserver.disconnect();
-    };
-  }, []);
-  return jsx("span", {
-    ref: containerRef,
-    className: "navi_rectangle_loading",
-    "data-visible": shouldShowSpinner ? "" : undefined,
-    children: containerWidth > 0 && containerHeight > 0 && jsx(RectangleLoadingSvg, {
-      radius: radius,
-      color: color,
-      width: containerWidth,
-      height: containerHeight,
-      strokeWidth: size
-    })
-  });
-};
-const RectangleLoadingSvg = ({
-  width,
-  height,
-  color,
-  radius,
-  trailColor = "transparent",
-  strokeWidth
-}) => {
-  const margin = Math.max(2, Math.min(width, height) * 0.03);
-
-  // Calculate the drawable area
-  const drawableWidth = width - margin * 2;
-  const drawableHeight = height - margin * 2;
-
-  // ✅ Check if this should be a circle - only if width and height are nearly equal
-  const maxPossibleRadius = Math.min(drawableWidth, drawableHeight) / 2;
-  const actualRadius = Math.min(radius || Math.min(drawableWidth, drawableHeight) * 0.05, maxPossibleRadius // ✅ Limité au radius maximum possible
-  );
-  const aspectRatio = Math.max(drawableWidth, drawableHeight) / Math.min(drawableWidth, drawableHeight);
-  const isNearlySquare = aspectRatio <= 1.2; // Allow some tolerance for nearly square shapes
-  const isCircle = isNearlySquare && actualRadius >= maxPossibleRadius * 0.95;
-  let pathLength;
-  let rectPath;
-  if (isCircle) {
-    // ✅ Circle: perimeter = 2πr
-    pathLength = 2 * Math.PI * actualRadius;
-
-    // ✅ Circle path centered in the drawable area
-    const centerX = margin + drawableWidth / 2;
-    const centerY = margin + drawableHeight / 2;
-    rectPath = `
-      M ${centerX + actualRadius},${centerY}
-      A ${actualRadius},${actualRadius} 0 1 1 ${centerX - actualRadius},${centerY}
-      A ${actualRadius},${actualRadius} 0 1 1 ${centerX + actualRadius},${centerY}
-    `;
-  } else {
-    // ✅ Rectangle: calculate perimeter properly
-    const straightEdges = 2 * (drawableWidth - 2 * actualRadius) + 2 * (drawableHeight - 2 * actualRadius);
-    const cornerArcs = actualRadius > 0 ? 2 * Math.PI * actualRadius : 0;
-    pathLength = straightEdges + cornerArcs;
-    rectPath = `
-      M ${margin + actualRadius},${margin}
-      L ${margin + drawableWidth - actualRadius},${margin}
-      A ${actualRadius},${actualRadius} 0 0 1 ${margin + drawableWidth},${margin + actualRadius}
-      L ${margin + drawableWidth},${margin + drawableHeight - actualRadius}
-      A ${actualRadius},${actualRadius} 0 0 1 ${margin + drawableWidth - actualRadius},${margin + drawableHeight}
-      L ${margin + actualRadius},${margin + drawableHeight}
-      A ${actualRadius},${actualRadius} 0 0 1 ${margin},${margin + drawableHeight - actualRadius}
-      L ${margin},${margin + actualRadius}
-      A ${actualRadius},${actualRadius} 0 0 1 ${margin + actualRadius},${margin}
-    `;
-  }
-
-  // Fixed segment size in pixels
-  const maxSegmentSize = 40;
-  const segmentLength = Math.min(maxSegmentSize, pathLength * 0.25);
-  const gapLength = pathLength - segmentLength;
-
-  // Vitesse constante en pixels par seconde
-  const networkSpeed = useNetworkSpeed();
-  const pixelsPerSecond = {
-    "slow-2g": 40,
-    "2g": 60,
-    "3g": 80,
-    "4g": 120
-  }[networkSpeed] || 80;
-  const animationDuration = Math.max(1.5, pathLength / pixelsPerSecond);
-
-  // ✅ Calculate correct offset based on actual segment size
-  const segmentRatio = segmentLength / pathLength;
-  const circleOffset = -animationDuration * segmentRatio;
-  return jsxs("svg", {
-    width: "100%",
-    height: "100%",
-    viewBox: `0 0 ${width} ${height}`,
-    preserveAspectRatio: "none",
-    style: "overflow: visible",
-    xmlns: "http://www.w3.org/2000/svg",
-    "shape-rendering": "geometricPrecision",
-    children: [isCircle ? jsx("circle", {
-      cx: margin + drawableWidth / 2,
-      cy: margin + drawableHeight / 2,
-      r: actualRadius,
-      fill: "none",
-      stroke: trailColor,
-      strokeWidth: strokeWidth
-    }) : jsx("rect", {
-      x: margin,
-      y: margin,
-      width: drawableWidth,
-      height: drawableHeight,
-      fill: "none",
-      stroke: trailColor,
-      strokeWidth: strokeWidth,
-      rx: actualRadius
-    }), jsx("path", {
-      d: rectPath,
-      fill: "none",
-      stroke: color,
-      strokeWidth: strokeWidth,
-      strokeLinecap: "round",
-      strokeDasharray: `${segmentLength} ${gapLength}`,
-      pathLength: pathLength,
-      children: jsx("animate", {
-        attributeName: "stroke-dashoffset",
-        from: pathLength,
-        to: "0",
-        dur: `${animationDuration}s`,
-        repeatCount: "indefinite",
-        begin: "0s"
-      })
-    }), jsx("circle", {
-      r: strokeWidth,
-      fill: color,
-      children: jsx("animateMotion", {
-        path: rectPath,
-        dur: `${animationDuration}s`,
-        repeatCount: "indefinite",
-        rotate: "auto",
-        begin: `${circleOffset}s`
-      })
-    })]
-  });
-};
-
-installImportMetaCss(import.meta);import.meta.css = /* css */`
-  .navi_loading_rectangle_wrapper {
-    position: absolute;
-    top: var(--rectangle-top, 0);
-    right: var(--rectangle-right, 0);
-    bottom: var(--rectangle-bottom, 0);
-    left: var(--rectangle-left, 0);
-    z-index: 1;
-    opacity: 0;
-    pointer-events: none;
-  }
-  .navi_loading_rectangle_wrapper[data-visible] {
-    opacity: 1;
-  }
-`;
-const LoaderBackground = ({
-  loading,
-  containerRef,
-  targetSelector,
-  color,
-  inset = 0,
-  spacingTop = 0,
-  spacingLeft = 0,
-  spacingBottom = 0,
-  spacingRight = 0,
-  children
-}) => {
-  if (containerRef) {
-    const container = containerRef.current;
-    if (!container) {
-      return children;
-    }
-    return createPortal(jsx(LoaderBackgroundWithPortal, {
-      container: container,
-      loading: loading,
-      color: color,
-      inset: inset,
-      spacingTop: spacingTop,
-      spacingLeft: spacingLeft,
-      spacingBottom: spacingBottom,
-      spacingRight: spacingRight,
-      children: children
-    }), container);
-  }
-  return jsx(LoaderBackgroundBasic, {
-    targetSelector: targetSelector,
-    loading: loading,
-    color: color,
-    inset: inset,
-    spacingTop: spacingTop,
-    spacingLeft: spacingLeft,
-    spacingBottom: spacingBottom,
-    spacingRight: spacingRight,
-    children: children
-  });
-};
-const LoaderBackgroundWithPortal = ({
-  container,
-  loading,
-  color,
-  inset,
-  spacingTop,
-  spacingLeft,
-  spacingBottom,
-  spacingRight,
-  children
-}) => {
-  const shouldShowSpinner = useDebounceTrue(loading, 300);
-  if (!shouldShowSpinner) {
-    return children;
-  }
-  container.style.position = "relative";
-  let paddingTop = 0;
-  if (container.nodeName === "DETAILS") {
-    paddingTop = container.querySelector("summary").offsetHeight;
-  }
-  return jsxs(Fragment, {
-    children: [jsx("div", {
-      style: {
-        position: "absolute",
-        top: `${inset + paddingTop + spacingTop}px`,
-        bottom: `${inset + spacingBottom}px`,
-        left: `${inset + spacingLeft}px`,
-        right: `${inset + spacingRight}px`
-      },
-      children: shouldShowSpinner && jsx(RectangleLoading, {
-        color: color
-      })
-    }), children]
-  });
-};
-const LoaderBackgroundBasic = ({
-  loading,
-  targetSelector,
-  color,
-  spacingTop,
-  spacingLeft,
-  spacingBottom,
-  spacingRight,
-  inset,
-  children
-}) => {
-  const shouldShowSpinner = useDebounceTrue(loading, 300);
-  const rectangleRef = useRef(null);
-  const [, setOutlineOffset] = useState(0);
-  const [borderRadius, setBorderRadius] = useState(0);
-  const [borderTopWidth, setBorderTopWidth] = useState(0);
-  const [borderLeftWidth, setBorderLeftWidth] = useState(0);
-  const [borderRightWidth, setBorderRightWidth] = useState(0);
-  const [borderBottomWidth, setBorderBottomWidth] = useState(0);
-  const [marginTop, setMarginTop] = useState(0);
-  const [marginBottom, setMarginBottom] = useState(0);
-  const [marginLeft, setMarginLeft] = useState(0);
-  const [marginRight, setMarginRight] = useState(0);
-  const [paddingTop, setPaddingTop] = useState(0);
-  const [paddingLeft, setPaddingLeft] = useState(0);
-  const [paddingRight, setPaddingRight] = useState(0);
-  const [paddingBottom, setPaddingBottom] = useState(0);
-  const [currentColor, setCurrentColor] = useState(color);
-  useLayoutEffect(() => {
-    let animationFrame;
-    const updateStyles = () => {
-      const rectangle = rectangleRef.current;
-      if (!rectangle) {
-        return;
-      }
-      const container = rectangle.parentElement;
-      const containedElement = rectangle.nextElementSibling;
-      const target = targetSelector ? container.querySelector(targetSelector) : containedElement;
-      if (target) {
-        const {
-          width,
-          height
-        } = target.getBoundingClientRect();
-        const containedComputedStyle = window.getComputedStyle(containedElement);
-        const targetComputedStyle = window.getComputedStyle(target);
-        const newBorderTopWidth = resolveCSSSize(targetComputedStyle.borderTopWidth);
-        const newBorderLeftWidth = resolveCSSSize(targetComputedStyle.borderLeftWidth);
-        const newBorderRightWidth = resolveCSSSize(targetComputedStyle.borderRightWidth);
-        const newBorderBottomWidth = resolveCSSSize(targetComputedStyle.borderBottomWidth);
-        const newBorderRadius = resolveCSSSize(targetComputedStyle.borderRadius, {
-          availableSize: Math.min(width, height)
-        });
-        const newOutlineColor = targetComputedStyle.outlineColor;
-        const newBorderColor = targetComputedStyle.borderColor;
-        const newDetectedColor = targetComputedStyle.color;
-        const newOutlineOffset = resolveCSSSize(targetComputedStyle.outlineOffset);
-        const newMarginTop = resolveCSSSize(targetComputedStyle.marginTop);
-        const newMarginBottom = resolveCSSSize(targetComputedStyle.marginBottom);
-        const newMarginLeft = resolveCSSSize(targetComputedStyle.marginLeft);
-        const newMarginRight = resolveCSSSize(targetComputedStyle.marginRight);
-        const paddingTop = resolveCSSSize(containedComputedStyle.paddingTop);
-        const paddingLeft = resolveCSSSize(containedComputedStyle.paddingLeft);
-        const paddingRight = resolveCSSSize(containedComputedStyle.paddingRight);
-        const paddingBottom = resolveCSSSize(containedComputedStyle.paddingBottom);
-        setBorderTopWidth(newBorderTopWidth);
-        setBorderLeftWidth(newBorderLeftWidth);
-        setBorderRightWidth(newBorderRightWidth);
-        setBorderBottomWidth(newBorderBottomWidth);
-        setBorderRadius(newBorderRadius);
-        setOutlineOffset(newOutlineOffset);
-        setMarginTop(newMarginTop);
-        setMarginBottom(newMarginBottom);
-        setMarginLeft(newMarginLeft);
-        setMarginRight(newMarginRight);
-        setPaddingTop(paddingTop);
-        setPaddingLeft(paddingLeft);
-        setPaddingRight(paddingRight);
-        setPaddingBottom(paddingBottom);
-        if (color) {
-          // const resolvedColor = resolveCSSColor(color, rectangle, "css");
-          //  console.log(resolvedColor);
-          setCurrentColor(color);
-        } else if (newOutlineColor && newOutlineColor !== "rgba(0, 0, 0, 0)" && (document.activeElement === containedElement || newBorderColor === "rgba(0, 0, 0, 0)")) {
-          setCurrentColor(newOutlineColor);
-        } else if (newBorderColor && newBorderColor !== "rgba(0, 0, 0, 0)") {
-          setCurrentColor(newBorderColor);
-        } else {
-          setCurrentColor(newDetectedColor);
-        }
-      }
-      // updateStyles is very cheap so we run it every frame
-      animationFrame = requestAnimationFrame(updateStyles);
-    };
-    updateStyles();
-    return () => {
-      cancelAnimationFrame(animationFrame);
-    };
-  }, [color, targetSelector]);
-  spacingTop += inset;
-  // spacingTop += outlineOffset;
-  // spacingTop -= borderTopWidth;
-  spacingTop += marginTop;
-  spacingLeft += inset;
-  // spacingLeft += outlineOffset;
-  // spacingLeft -= borderLeftWidth;
-  spacingLeft += marginLeft;
-  spacingRight += inset;
-  // spacingRight += outlineOffset;
-  // spacingRight -= borderRightWidth;
-  spacingRight += marginRight;
-  spacingBottom += inset;
-  // spacingBottom += outlineOffset;
-  // spacingBottom -= borderBottomWidth;
-  spacingBottom += marginBottom;
-  if (targetSelector) {
-    // oversimplification that actually works
-    // (simplified because it assumes the targeted element is a direct child of the contained element which may have padding)
-    spacingTop += paddingTop;
-    spacingLeft += paddingLeft;
-    spacingRight += paddingRight;
-    spacingBottom += paddingBottom;
-  }
-  const maxBorderWidth = Math.max(borderTopWidth, borderLeftWidth, borderRightWidth, borderBottomWidth);
-  const halfMaxBorderSize = maxBorderWidth / 2;
-  const size = halfMaxBorderSize < 2 ? 2 : halfMaxBorderSize;
-  const lineHalfSize = size / 2;
-  spacingTop -= lineHalfSize;
-  spacingLeft -= lineHalfSize;
-  spacingRight -= lineHalfSize;
-  spacingBottom -= lineHalfSize;
-  return jsxs(Fragment, {
-    children: [jsx("span", {
-      ref: rectangleRef,
-      className: "navi_loading_rectangle_wrapper",
-      "data-visible": shouldShowSpinner ? "" : undefined,
-      style: {
-        "--rectangle-top": `${spacingTop}px`,
-        "--rectangle-left": `${spacingLeft}px`,
-        "--rectangle-bottom": `${spacingBottom}px`,
-        "--rectangle-right": `${spacingRight}px`
-      },
-      children: loading && jsx(RectangleLoading, {
-        shouldShowSpinner: shouldShowSpinner,
-        color: currentColor,
-        radius: borderRadius,
-        size: size
-      })
-    }), children]
-  });
-};
-
 /**
  * Custom hook creating a stable callback that doesn't trigger re-renders.
  *
@@ -17874,6 +17324,26 @@ const Icon = ({
   });
 };
 
+const EmailSvg = () => {
+  return jsxs("svg", {
+    viewBox: "0 0 24 24",
+    xmlns: "http://www.w3.org/2000/svg",
+    children: [jsx("path", {
+      d: "M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z",
+      fill: "none",
+      stroke: "currentColor",
+      "stroke-width": "2"
+    }), jsx("path", {
+      d: "m2 6 8 5 2 1.5 2-1.5 8-5",
+      fill: "none",
+      stroke: "currentColor",
+      "stroke-width": "2",
+      "stroke-linecap": "round",
+      "stroke-linejoin": "round"
+    })]
+  });
+};
+
 const LinkBlankTargetSvg = () => {
   return jsx("svg", {
     viewBox: "0 0 24 24",
@@ -17901,6 +17371,567 @@ const LinkAnchorSvg = () => {
         fill: "currentColor"
       })]
     })
+  });
+};
+
+const PhoneSvg = () => {
+  return jsx("svg", {
+    viewBox: "0 0 24 24",
+    xmlns: "http://www.w3.org/2000/svg",
+    children: jsx("path", {
+      d: "M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z",
+      fill: "currentColor"
+    })
+  });
+};
+
+const useDebounceTrue = (value, delay = 300) => {
+  const [debouncedTrue, setDebouncedTrue] = useState(false);
+  const timerRef = useRef(null);
+
+  useLayoutEffect(() => {
+    // If value is true or becomes true, start a timer
+    if (value) {
+      timerRef.current = setTimeout(() => {
+        setDebouncedTrue(true);
+      }, delay);
+    } else {
+      // If value becomes false, clear any pending timer and immediately set to false
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+      setDebouncedTrue(false);
+    }
+
+    // Cleanup function
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+    };
+  }, [value, delay]);
+
+  return debouncedTrue;
+};
+
+const useNetworkSpeed = () => {
+  return networkSpeedSignal.value;
+};
+
+const connection =
+  window.navigator.connection ||
+  window.navigator.mozConnection ||
+  window.navigator.webkitConnection;
+
+const getNetworkSpeed = () => {
+  // ✅ Network Information API (support moderne)
+  if (!connection) {
+    return "3g";
+  }
+  if (connection) {
+    const effectiveType = connection.effectiveType;
+    if (effectiveType) {
+      return effectiveType; // "slow-2g", "2g", "3g", "4g", "5g"
+    }
+    const downlink = connection.downlink;
+    if (downlink) {
+      // downlink is in Mbps
+      if (downlink < 1) return "slow-2g"; // < 1 Mbps
+      if (downlink < 2.5) return "2g"; // 1-2.5 Mbps
+      if (downlink < 10) return "3g"; // 2.5-10 Mbps
+      return "4g"; // > 10 Mbps
+    }
+  }
+  return "3g";
+};
+
+const updateNetworkSpeed = () => {
+  networkSpeedSignal.value = getNetworkSpeed();
+};
+
+const networkSpeedSignal = signal(getNetworkSpeed());
+
+const setupNetworkMonitoring = () => {
+  const cleanupFunctions = [];
+
+  // ✅ 1. Écouter les changements natifs
+
+  if (connection) {
+    connection.addEventListener("change", updateNetworkSpeed);
+    cleanupFunctions.push(() => {
+      connection.removeEventListener("change", updateNetworkSpeed);
+    });
+  }
+
+  // ✅ 2. Polling de backup (toutes les 60 secondes)
+  const pollInterval = setInterval(updateNetworkSpeed, 60000);
+  cleanupFunctions.push(() => clearInterval(pollInterval));
+
+  // ✅ 3. Vérifier lors de la reprise d'activité
+  const handleVisibilityChange = () => {
+    if (!document.hidden) {
+      updateNetworkSpeed();
+    }
+  };
+
+  document.addEventListener("visibilitychange", handleVisibilityChange);
+  cleanupFunctions.push(() => {
+    document.removeEventListener("visibilitychange", handleVisibilityChange);
+  });
+
+  // ✅ 4. Vérifier lors de la reprise de connexion
+  const handleOnline = () => {
+    updateNetworkSpeed();
+  };
+
+  window.addEventListener("online", handleOnline);
+  cleanupFunctions.push(() => {
+    window.removeEventListener("online", handleOnline);
+  });
+
+  // Cleanup global
+  return () => {
+    cleanupFunctions.forEach((cleanup) => cleanup());
+  };
+};
+setupNetworkMonitoring();
+
+installImportMetaCss(import.meta);import.meta.css = /* css */`
+  .navi_rectangle_loading {
+    position: relative;
+    display: flex;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+  }
+
+  .navi_rectangle_loading[data-visible] {
+    opacity: 1;
+  }
+`;
+const RectangleLoading = ({
+  shouldShowSpinner,
+  color = "currentColor",
+  radius = 0,
+  size = 2
+}) => {
+  const containerRef = useRef(null);
+  const [containerWidth, setContainerWidth] = useState(0);
+  const [containerHeight, setContainerHeight] = useState(0);
+  useLayoutEffect(() => {
+    const container = containerRef.current;
+    if (!container) {
+      return null;
+    }
+    const {
+      width,
+      height
+    } = container.getBoundingClientRect();
+    setContainerWidth(width);
+    setContainerHeight(height);
+    let animationFrameId = null;
+    // Create a resize observer to detect changes in the container's dimensions
+    const resizeObserver = new ResizeObserver(entries => {
+      // Use requestAnimationFrame to debounce updates
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+      }
+      animationFrameId = requestAnimationFrame(() => {
+        const [containerEntry] = entries;
+        const {
+          width,
+          height
+        } = containerEntry.contentRect;
+        setContainerWidth(width);
+        setContainerHeight(height);
+      });
+    });
+    resizeObserver.observe(container);
+    return () => {
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+      }
+      resizeObserver.disconnect();
+    };
+  }, []);
+  return jsx("span", {
+    ref: containerRef,
+    className: "navi_rectangle_loading",
+    "data-visible": shouldShowSpinner ? "" : undefined,
+    children: containerWidth > 0 && containerHeight > 0 && jsx(RectangleLoadingSvg, {
+      radius: radius,
+      color: color,
+      width: containerWidth,
+      height: containerHeight,
+      strokeWidth: size
+    })
+  });
+};
+const RectangleLoadingSvg = ({
+  width,
+  height,
+  color,
+  radius,
+  trailColor = "transparent",
+  strokeWidth
+}) => {
+  const margin = Math.max(2, Math.min(width, height) * 0.03);
+
+  // Calculate the drawable area
+  const drawableWidth = width - margin * 2;
+  const drawableHeight = height - margin * 2;
+
+  // ✅ Check if this should be a circle - only if width and height are nearly equal
+  const maxPossibleRadius = Math.min(drawableWidth, drawableHeight) / 2;
+  const actualRadius = Math.min(radius || Math.min(drawableWidth, drawableHeight) * 0.05, maxPossibleRadius // ✅ Limité au radius maximum possible
+  );
+  const aspectRatio = Math.max(drawableWidth, drawableHeight) / Math.min(drawableWidth, drawableHeight);
+  const isNearlySquare = aspectRatio <= 1.2; // Allow some tolerance for nearly square shapes
+  const isCircle = isNearlySquare && actualRadius >= maxPossibleRadius * 0.95;
+  let pathLength;
+  let rectPath;
+  if (isCircle) {
+    // ✅ Circle: perimeter = 2πr
+    pathLength = 2 * Math.PI * actualRadius;
+
+    // ✅ Circle path centered in the drawable area
+    const centerX = margin + drawableWidth / 2;
+    const centerY = margin + drawableHeight / 2;
+    rectPath = `
+      M ${centerX + actualRadius},${centerY}
+      A ${actualRadius},${actualRadius} 0 1 1 ${centerX - actualRadius},${centerY}
+      A ${actualRadius},${actualRadius} 0 1 1 ${centerX + actualRadius},${centerY}
+    `;
+  } else {
+    // ✅ Rectangle: calculate perimeter properly
+    const straightEdges = 2 * (drawableWidth - 2 * actualRadius) + 2 * (drawableHeight - 2 * actualRadius);
+    const cornerArcs = actualRadius > 0 ? 2 * Math.PI * actualRadius : 0;
+    pathLength = straightEdges + cornerArcs;
+    rectPath = `
+      M ${margin + actualRadius},${margin}
+      L ${margin + drawableWidth - actualRadius},${margin}
+      A ${actualRadius},${actualRadius} 0 0 1 ${margin + drawableWidth},${margin + actualRadius}
+      L ${margin + drawableWidth},${margin + drawableHeight - actualRadius}
+      A ${actualRadius},${actualRadius} 0 0 1 ${margin + drawableWidth - actualRadius},${margin + drawableHeight}
+      L ${margin + actualRadius},${margin + drawableHeight}
+      A ${actualRadius},${actualRadius} 0 0 1 ${margin},${margin + drawableHeight - actualRadius}
+      L ${margin},${margin + actualRadius}
+      A ${actualRadius},${actualRadius} 0 0 1 ${margin + actualRadius},${margin}
+    `;
+  }
+
+  // Fixed segment size in pixels
+  const maxSegmentSize = 40;
+  const segmentLength = Math.min(maxSegmentSize, pathLength * 0.25);
+  const gapLength = pathLength - segmentLength;
+
+  // Vitesse constante en pixels par seconde
+  const networkSpeed = useNetworkSpeed();
+  const pixelsPerSecond = {
+    "slow-2g": 40,
+    "2g": 60,
+    "3g": 80,
+    "4g": 120
+  }[networkSpeed] || 80;
+  const animationDuration = Math.max(1.5, pathLength / pixelsPerSecond);
+
+  // ✅ Calculate correct offset based on actual segment size
+  const segmentRatio = segmentLength / pathLength;
+  const circleOffset = -animationDuration * segmentRatio;
+  return jsxs("svg", {
+    width: "100%",
+    height: "100%",
+    viewBox: `0 0 ${width} ${height}`,
+    preserveAspectRatio: "none",
+    style: "overflow: visible",
+    xmlns: "http://www.w3.org/2000/svg",
+    "shape-rendering": "geometricPrecision",
+    children: [isCircle ? jsx("circle", {
+      cx: margin + drawableWidth / 2,
+      cy: margin + drawableHeight / 2,
+      r: actualRadius,
+      fill: "none",
+      stroke: trailColor,
+      strokeWidth: strokeWidth
+    }) : jsx("rect", {
+      x: margin,
+      y: margin,
+      width: drawableWidth,
+      height: drawableHeight,
+      fill: "none",
+      stroke: trailColor,
+      strokeWidth: strokeWidth,
+      rx: actualRadius
+    }), jsx("path", {
+      d: rectPath,
+      fill: "none",
+      stroke: color,
+      strokeWidth: strokeWidth,
+      strokeLinecap: "round",
+      strokeDasharray: `${segmentLength} ${gapLength}`,
+      pathLength: pathLength,
+      children: jsx("animate", {
+        attributeName: "stroke-dashoffset",
+        from: pathLength,
+        to: "0",
+        dur: `${animationDuration}s`,
+        repeatCount: "indefinite",
+        begin: "0s"
+      })
+    }), jsx("circle", {
+      r: strokeWidth,
+      fill: color,
+      children: jsx("animateMotion", {
+        path: rectPath,
+        dur: `${animationDuration}s`,
+        repeatCount: "indefinite",
+        rotate: "auto",
+        begin: `${circleOffset}s`
+      })
+    })]
+  });
+};
+
+installImportMetaCss(import.meta);import.meta.css = /* css */`
+  .navi_loading_rectangle_wrapper {
+    position: absolute;
+    top: var(--rectangle-top, 0);
+    right: var(--rectangle-right, 0);
+    bottom: var(--rectangle-bottom, 0);
+    left: var(--rectangle-left, 0);
+    z-index: 1;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .navi_loading_rectangle_wrapper[data-visible] {
+    opacity: 1;
+  }
+`;
+const LoaderBackground = ({
+  loading,
+  containerRef,
+  targetSelector,
+  color,
+  inset = 0,
+  spacingTop = 0,
+  spacingLeft = 0,
+  spacingBottom = 0,
+  spacingRight = 0,
+  children
+}) => {
+  if (containerRef) {
+    const container = containerRef.current;
+    if (!container) {
+      return children;
+    }
+    return createPortal(jsx(LoaderBackgroundWithPortal, {
+      container: container,
+      loading: loading,
+      color: color,
+      inset: inset,
+      spacingTop: spacingTop,
+      spacingLeft: spacingLeft,
+      spacingBottom: spacingBottom,
+      spacingRight: spacingRight,
+      children: children
+    }), container);
+  }
+  return jsx(LoaderBackgroundBasic, {
+    targetSelector: targetSelector,
+    loading: loading,
+    color: color,
+    inset: inset,
+    spacingTop: spacingTop,
+    spacingLeft: spacingLeft,
+    spacingBottom: spacingBottom,
+    spacingRight: spacingRight,
+    children: children
+  });
+};
+const LoaderBackgroundWithPortal = ({
+  container,
+  loading,
+  color,
+  inset,
+  spacingTop,
+  spacingLeft,
+  spacingBottom,
+  spacingRight,
+  children
+}) => {
+  const shouldShowSpinner = useDebounceTrue(loading, 300);
+  if (!shouldShowSpinner) {
+    return children;
+  }
+  container.style.position = "relative";
+  let paddingTop = 0;
+  if (container.nodeName === "DETAILS") {
+    paddingTop = container.querySelector("summary").offsetHeight;
+  }
+  return jsxs(Fragment, {
+    children: [jsx("div", {
+      style: {
+        position: "absolute",
+        top: `${inset + paddingTop + spacingTop}px`,
+        bottom: `${inset + spacingBottom}px`,
+        left: `${inset + spacingLeft}px`,
+        right: `${inset + spacingRight}px`
+      },
+      children: shouldShowSpinner && jsx(RectangleLoading, {
+        color: color
+      })
+    }), children]
+  });
+};
+const LoaderBackgroundBasic = ({
+  loading,
+  targetSelector,
+  color,
+  spacingTop,
+  spacingLeft,
+  spacingBottom,
+  spacingRight,
+  inset,
+  children
+}) => {
+  const shouldShowSpinner = useDebounceTrue(loading, 300);
+  const rectangleRef = useRef(null);
+  const [, setOutlineOffset] = useState(0);
+  const [borderRadius, setBorderRadius] = useState(0);
+  const [borderTopWidth, setBorderTopWidth] = useState(0);
+  const [borderLeftWidth, setBorderLeftWidth] = useState(0);
+  const [borderRightWidth, setBorderRightWidth] = useState(0);
+  const [borderBottomWidth, setBorderBottomWidth] = useState(0);
+  const [marginTop, setMarginTop] = useState(0);
+  const [marginBottom, setMarginBottom] = useState(0);
+  const [marginLeft, setMarginLeft] = useState(0);
+  const [marginRight, setMarginRight] = useState(0);
+  const [paddingTop, setPaddingTop] = useState(0);
+  const [paddingLeft, setPaddingLeft] = useState(0);
+  const [paddingRight, setPaddingRight] = useState(0);
+  const [paddingBottom, setPaddingBottom] = useState(0);
+  const [currentColor, setCurrentColor] = useState(color);
+  useLayoutEffect(() => {
+    let animationFrame;
+    const updateStyles = () => {
+      const rectangle = rectangleRef.current;
+      if (!rectangle) {
+        return;
+      }
+      const container = rectangle.parentElement;
+      const containedElement = rectangle.nextElementSibling;
+      const target = targetSelector ? container.querySelector(targetSelector) : containedElement;
+      if (target) {
+        const {
+          width,
+          height
+        } = target.getBoundingClientRect();
+        const containedComputedStyle = window.getComputedStyle(containedElement);
+        const targetComputedStyle = window.getComputedStyle(target);
+        const newBorderTopWidth = resolveCSSSize(targetComputedStyle.borderTopWidth);
+        const newBorderLeftWidth = resolveCSSSize(targetComputedStyle.borderLeftWidth);
+        const newBorderRightWidth = resolveCSSSize(targetComputedStyle.borderRightWidth);
+        const newBorderBottomWidth = resolveCSSSize(targetComputedStyle.borderBottomWidth);
+        const newBorderRadius = resolveCSSSize(targetComputedStyle.borderRadius, {
+          availableSize: Math.min(width, height)
+        });
+        const newOutlineColor = targetComputedStyle.outlineColor;
+        const newBorderColor = targetComputedStyle.borderColor;
+        const newDetectedColor = targetComputedStyle.color;
+        const newOutlineOffset = resolveCSSSize(targetComputedStyle.outlineOffset);
+        const newMarginTop = resolveCSSSize(targetComputedStyle.marginTop);
+        const newMarginBottom = resolveCSSSize(targetComputedStyle.marginBottom);
+        const newMarginLeft = resolveCSSSize(targetComputedStyle.marginLeft);
+        const newMarginRight = resolveCSSSize(targetComputedStyle.marginRight);
+        const paddingTop = resolveCSSSize(containedComputedStyle.paddingTop);
+        const paddingLeft = resolveCSSSize(containedComputedStyle.paddingLeft);
+        const paddingRight = resolveCSSSize(containedComputedStyle.paddingRight);
+        const paddingBottom = resolveCSSSize(containedComputedStyle.paddingBottom);
+        setBorderTopWidth(newBorderTopWidth);
+        setBorderLeftWidth(newBorderLeftWidth);
+        setBorderRightWidth(newBorderRightWidth);
+        setBorderBottomWidth(newBorderBottomWidth);
+        setBorderRadius(newBorderRadius);
+        setOutlineOffset(newOutlineOffset);
+        setMarginTop(newMarginTop);
+        setMarginBottom(newMarginBottom);
+        setMarginLeft(newMarginLeft);
+        setMarginRight(newMarginRight);
+        setPaddingTop(paddingTop);
+        setPaddingLeft(paddingLeft);
+        setPaddingRight(paddingRight);
+        setPaddingBottom(paddingBottom);
+        if (color) {
+          // const resolvedColor = resolveCSSColor(color, rectangle, "css");
+          //  console.log(resolvedColor);
+          setCurrentColor(color);
+        } else if (newOutlineColor && newOutlineColor !== "rgba(0, 0, 0, 0)" && (document.activeElement === containedElement || newBorderColor === "rgba(0, 0, 0, 0)")) {
+          setCurrentColor(newOutlineColor);
+        } else if (newBorderColor && newBorderColor !== "rgba(0, 0, 0, 0)") {
+          setCurrentColor(newBorderColor);
+        } else {
+          setCurrentColor(newDetectedColor);
+        }
+      }
+      // updateStyles is very cheap so we run it every frame
+      animationFrame = requestAnimationFrame(updateStyles);
+    };
+    updateStyles();
+    return () => {
+      cancelAnimationFrame(animationFrame);
+    };
+  }, [color, targetSelector]);
+  spacingTop += inset;
+  // spacingTop += outlineOffset;
+  // spacingTop -= borderTopWidth;
+  spacingTop += marginTop;
+  spacingLeft += inset;
+  // spacingLeft += outlineOffset;
+  // spacingLeft -= borderLeftWidth;
+  spacingLeft += marginLeft;
+  spacingRight += inset;
+  // spacingRight += outlineOffset;
+  // spacingRight -= borderRightWidth;
+  spacingRight += marginRight;
+  spacingBottom += inset;
+  // spacingBottom += outlineOffset;
+  // spacingBottom -= borderBottomWidth;
+  spacingBottom += marginBottom;
+  if (targetSelector) {
+    // oversimplification that actually works
+    // (simplified because it assumes the targeted element is a direct child of the contained element which may have padding)
+    spacingTop += paddingTop;
+    spacingLeft += paddingLeft;
+    spacingRight += paddingRight;
+    spacingBottom += paddingBottom;
+  }
+  const maxBorderWidth = Math.max(borderTopWidth, borderLeftWidth, borderRightWidth, borderBottomWidth);
+  const halfMaxBorderSize = maxBorderWidth / 2;
+  const size = halfMaxBorderSize < 2 ? 2 : halfMaxBorderSize;
+  const lineHalfSize = size / 2;
+  spacingTop -= lineHalfSize;
+  spacingLeft -= lineHalfSize;
+  spacingRight -= lineHalfSize;
+  spacingBottom -= lineHalfSize;
+  return jsxs(Fragment, {
+    children: [jsx("span", {
+      ref: rectangleRef,
+      className: "navi_loading_rectangle_wrapper",
+      "data-visible": shouldShowSpinner ? "" : undefined,
+      style: {
+        "--rectangle-top": `${spacingTop}px`,
+        "--rectangle-left": `${spacingLeft}px`,
+        "--rectangle-bottom": `${spacingBottom}px`,
+        "--rectangle-right": `${spacingRight}px`
+      },
+      children: loading && jsx(RectangleLoading, {
+        shouldShowSpinner: shouldShowSpinner,
+        color: currentColor,
+        radius: borderRadius,
+        size: size
+      })
+    }), children]
   });
 };
 
@@ -20069,16 +20100,6 @@ const LinkPlain = props => {
     })]
   });
 };
-const PhoneSvg = () => {
-  return jsx("svg", {
-    viewBox: "0 0 24 24",
-    xmlns: "http://www.w3.org/2000/svg",
-    children: jsx("path", {
-      d: "M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z",
-      fill: "currentColor"
-    })
-  });
-};
 const SmsSvg = () => {
   return jsx("svg", {
     viewBox: "0 0 24 24",
@@ -20087,25 +20108,6 @@ const SmsSvg = () => {
       d: "M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM18 14H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z",
       fill: "currentColor"
     })
-  });
-};
-const EmailSvg = () => {
-  return jsxs("svg", {
-    viewBox: "0 0 24 24",
-    xmlns: "http://www.w3.org/2000/svg",
-    children: [jsx("path", {
-      d: "M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z",
-      fill: "none",
-      stroke: "currentColor",
-      "stroke-width": "2"
-    }), jsx("path", {
-      d: "m2 6 8 5 2 1.5 2-1.5 8-5",
-      fill: "none",
-      stroke: "currentColor",
-      "stroke-width": "2",
-      "stroke-linecap": "round",
-      "stroke-linejoin": "round"
-    })]
   });
 };
 const GithubSvg = () => {
@@ -22825,6 +22827,10 @@ const InputTextualBasic = props => {
   if (icon === undefined) {
     if (type === "search") {
       innerIcon = jsx(SearchSvg, {});
+    } else if (type === "email") {
+      innerIcon = jsx(EmailSvg, {});
+    } else if (type === "tel") {
+      innerIcon = jsx(PhoneSvg, {});
     }
   } else {
     innerIcon = icon;
@@ -27389,6 +27395,69 @@ const Address = ({
   });
 };
 
+const LoadingDots = ({
+  color = "FF156D"
+}) => {
+  return jsxs("svg", {
+    viewBox: "0 0 200 200",
+    width: "100%",
+    height: "100%",
+    xmlns: "http://www.w3.org/2000/svg",
+    children: [jsx("rect", {
+      fill: color,
+      stroke: color,
+      "stroke-width": "15",
+      width: "30",
+      height: "30",
+      x: "25",
+      y: "85",
+      children: jsx("animate", {
+        attributeName: "opacity",
+        calcMode: "spline",
+        dur: "2",
+        values: "1;0;1;",
+        keySplines: ".5 0 .5 1;.5 0 .5 1",
+        repeatCount: "indefinite",
+        begin: "-.4"
+      })
+    }), jsx("rect", {
+      fill: color,
+      stroke: color,
+      "stroke-width": "15",
+      width: "30",
+      height: "30",
+      x: "85",
+      y: "85",
+      children: jsx("animate", {
+        attributeName: "opacity",
+        calcMode: "spline",
+        dur: "2",
+        values: "1;0;1;",
+        keySplines: ".5 0 .5 1;.5 0 .5 1",
+        repeatCount: "indefinite",
+        begin: "-.2"
+      })
+    }), jsx("rect", {
+      fill: color,
+      stroke: color,
+      "stroke-width": "15",
+      width: "30",
+      height: "30",
+      x: "145",
+      y: "85",
+      children: jsx("animate", {
+        attributeName: "opacity",
+        calcMode: "spline",
+        dur: "2",
+        values: "1;0;1;",
+        keySplines: ".5 0 .5 1;.5 0 .5 1",
+        repeatCount: "indefinite",
+        begin: "0"
+      })
+    })]
+  });
+};
+
 const CSS_VAR_NAME = "--x-color-contrasting";
 
 const useContrastingColor = (ref, backgroundElementSelector) => {
@@ -27556,10 +27625,11 @@ const BadgeCountCircle = ({
   ref,
   charCount,
   hasOverflow,
+  loading,
   children,
   ...props
 }) => {
-  return jsxs(Text, {
+  return jsx(Text, {
     ref: ref,
     className: "navi_badge_count",
     "data-circle": "",
@@ -27571,18 +27641,20 @@ const BadgeCountCircle = ({
     ...props,
     styleCSSVars: BadgeStyleCSSVars,
     spacing: "pre",
-    children: [jsx("span", {
-      style: "user-select: none",
-      children: "\u200B"
-    }), jsx("span", {
-      className: "navi_badge_count_frame"
-    }), jsx("span", {
-      className: "navi_badge_count_text",
-      children: children
-    }), jsx("span", {
-      style: "user-select: none",
-      children: "\u200B"
-    })]
+    children: loading ? jsx(LoadingDots, {}) : jsxs(Fragment, {
+      children: [jsx("span", {
+        style: "user-select: none",
+        children: "\u200B"
+      }), jsx("span", {
+        className: "navi_badge_count_frame"
+      }), jsx("span", {
+        className: "navi_badge_count_text",
+        children: children
+      }), jsx("span", {
+        style: "user-select: none",
+        children: "\u200B"
+      })]
+    })
   });
 };
 const BadgeCountEllipse = ({
