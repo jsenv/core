@@ -9,6 +9,7 @@
     <div id="app"></div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
+      import { useState } from "preact/hooks";
       import {
         Text,
         Paragraph,
@@ -48,37 +49,49 @@
         </Box>
       );
 
-      const LoadingStateSection = () => (
-        <Box as="section" marginBottom="xl">
-          <Title as="h2">Loading State Demo</Title>
-          <Paragraph>
-            This section demonstrates the loading prop effect on BadgeCount
-            components.
-          </Paragraph>
+      const LoadingStateSection = () => {
+        const [loading, setLoading] = useState(false);
 
-          <Box row spacing="md" alignY="center">
-            <Box row spacing="sm">
-              <Caption>Normal State</Caption>
-              <Text>
-                Inbox
-                <BadgeCount background="#2196f3" color="white">
-                  15
-                </BadgeCount>
-              </Text>
-            </Box>
+        return (
+          <Box as="section" marginBottom="xl">
+            <Title as="h2">Loading State Demo</Title>
+            <Paragraph>
+              This section demonstrates the loading prop effect on BadgeCount
+              components. Use the buttons to test loading transitions.
+            </Paragraph>
 
-            <Box row spacing="sm">
-              <Caption>Loading State</Caption>
-              <Text>
-                Inbox
-                <BadgeCount background="#2196f3" color="white" loading>
-                  15
-                </BadgeCount>
-              </Text>
+            <Box row spacing="md" alignX="start">
+              <Box row spacing="sm" alignY="center">
+                <Button action={() => setLoading(true)} disabled={loading}>
+                  Start Loading
+                </Button>
+                <Button action={() => setLoading(false)} disabled={!loading}>
+                  Stop Loading
+                </Button>
+              </Box>
+
+              <Box
+                row
+                spacing="md"
+                alignY="center"
+                background="lightyellow"
+                border="1px dotted red"
+              >
+                <Text>
+                  Inbox
+                  <BadgeCount
+                    background="#2196f3"
+                    color="white"
+                    loading={loading}
+                  >
+                    15
+                  </BadgeCount>
+                </Text>
+              </Box>
             </Box>
           </Box>
-        </Box>
-      );
+        );
+      };
 
       const TestsComportementauxSection = () => (
         <Box as="section" marginBottom="xl">
