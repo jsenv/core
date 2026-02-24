@@ -267,11 +267,16 @@
       };
 
       const TypeVariationsDemo = () => {
+        const [textValue, setTextValue] = useState("Basic text");
         const [emailValue, setEmailValue] = useState("user@example.com");
         const [passwordValue, setPasswordValue] = useState("secret123");
         const [urlValue, setUrlValue] = useState("https://example.com");
         const [numberValue, setNumberValue] = useState("42");
         const [searchValue, setSearchValue] = useState("search query");
+        const [telValue, setTelValue] = useState("+1-555-123-4567");
+        const [dateValue, setDateValue] = useState("2024-06-15");
+        const [timeValue, setTimeValue] = useState("14:30");
+        const [datetimeValue, setDatetimeValue] = useState("2024-06-15T14:30");
 
         return (
           <div className="demo-section">
@@ -281,6 +286,22 @@
               className="variation-grid"
               style={{ gridTemplateColumns: "repeat(3, 1fr)" }}
             >
+              <div className="variation-item">
+                <p className="variation-label">Text</p>
+                <Input
+                  type="text"
+                  value={textValue}
+                  onUIStateChange={setTextValue}
+                  placeholder="Enter text"
+                />
+                <input
+                  type="text"
+                  value={textValue}
+                  onChange={() => {}}
+                  placeholder="Enter text"
+                />
+              </div>
+
               <div className="variation-item">
                 <p className="variation-label">Email</p>
                 <Input
@@ -358,6 +379,60 @@
                   value={searchValue}
                   onChange={() => {}}
                   placeholder="Search..."
+                />
+              </div>
+
+              <div className="variation-item">
+                <p className="variation-label">Tel</p>
+                <Input
+                  type="tel"
+                  value={telValue}
+                  onUIStateChange={setTelValue}
+                  placeholder="+1-555-000-0000"
+                />
+                <br />
+                <input
+                  type="tel"
+                  value={telValue}
+                  onChange={() => {}}
+                  placeholder="+1-555-000-0000"
+                />
+              </div>
+
+              <div className="variation-item">
+                <p className="variation-label">Date</p>
+                <Input
+                  type="date"
+                  value={dateValue}
+                  onUIStateChange={setDateValue}
+                />
+                <br />
+                <input type="date" value={dateValue} onChange={() => {}} />
+              </div>
+
+              <div className="variation-item">
+                <p className="variation-label">Time</p>
+                <Input
+                  type="time"
+                  value={timeValue}
+                  onUIStateChange={setTimeValue}
+                />
+                <br />
+                <input type="time" value={timeValue} onChange={() => {}} />
+              </div>
+
+              <div className="variation-item">
+                <p className="variation-label">DateTime Local</p>
+                <Input
+                  type="datetime-local"
+                  value={datetimeValue}
+                  onUIStateChange={setDatetimeValue}
+                />
+                <br />
+                <input
+                  type="datetime-local"
+                  value={datetimeValue}
+                  onChange={() => {}}
                 />
               </div>
             </div>
