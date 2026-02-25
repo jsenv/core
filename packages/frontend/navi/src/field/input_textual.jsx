@@ -475,6 +475,7 @@ const InputTextualWithAction = (props) => {
   const uiState = useContext(UIStateContext);
   const {
     action,
+    actionDebounce,
     actionAfterChange,
     loading,
     onCancel,
@@ -532,6 +533,7 @@ const InputTextualWithAction = (props) => {
   return (
     <InputTextualBasic
       data-action={boundAction.name}
+      data-action-debounce={actionDebounce}
       data-action-after-change={actionAfterChange ? "" : undefined}
       {...rest}
       ref={ref}

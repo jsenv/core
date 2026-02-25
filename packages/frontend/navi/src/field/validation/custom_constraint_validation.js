@@ -747,6 +747,13 @@ export const installCustomConstraintValidation = (
         waitForChange: closestElementWithActionAttr.hasAttribute(
           "data-action-after-change",
         ),
+        debounce: closestElementWithActionAttr.hasAttribute(
+          "data-action-debounce",
+        )
+          ? parseFloat(
+              closestElementWithActionAttr.getAttribute("data-action-debounce"),
+            )
+          : undefined,
       },
     );
     addTeardown(() => {

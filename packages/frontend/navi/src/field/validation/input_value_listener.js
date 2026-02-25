@@ -11,6 +11,8 @@ export const listenInputValue = (
   const [teardown, addTeardown] = createPubSub();
   let currentValue = input.value;
   let timeout;
+  let debounceTimeout;
+
   const onAsyncEvent = (e) => {
     timeout = setTimeout(() => {
       onEvent(e);
@@ -19,8 +21,7 @@ export const listenInputValue = (
 
   let onEvent;
   if (debounce) {
-    let debounceTimeout;
-    onEvent = (e) => {
+    onEvent = (e, { skipDebounce } = {}) => {
       clearTimeout(timeout);
       clearTimeout(debounceTimeout);
 
@@ -29,11 +30,22 @@ export const listenInputValue = (
         return;
       }
       currentValue = value;
-
-      debounceTimeout = setTimeout(() => {
+      if (skipDebounce) {
         callback(e);
-      }, debounce);
+      } else {
+        debounceTimeout = setTimeout(() => {
+          callback(e);
+        }, debounce);
+      }
     };
+    // no need to wait for change events (blur, enter key)
+    // we consider this as strong interactions requesting an immediate response
+    const stop = listenInputValueChange(input, (e) => {
+      onEvent(e, { skipDebounce: true });
+    });
+    addTeardown(() => {
+      stop();
+    });
   } else {
     onEvent = (e) => {
       clearTimeout(timeout);
@@ -45,18 +57,17 @@ export const listenInputValue = (
       currentValue = value;
       callback(e);
     };
+    // Autocomplete, programmatic changes, form restoration
+    input.addEventListener("change", onEvent);
+    addTeardown(() => {
+      input.removeEventListener("change", onEvent);
+    });
   }
 
   // Standard user input (typing)
   input.addEventListener("input", onEvent);
   addTeardown(() => {
     input.removeEventListener("input", onEvent);
-  });
-
-  // Autocomplete, programmatic changes, form restoration
-  input.addEventListener("change", onEvent);
-  addTeardown(() => {
-    input.removeEventListener("change", onEvent);
   });
 
   // Form reset - need to check the form
