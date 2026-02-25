@@ -471,24 +471,33 @@ const InputTextualBasic = (props) => {
       )}
       {renderInputMemoized}
       {cancelButton && (
-        <button
+        <label
+          htmlFor={innerId}
           data-readonly={innerReadOnly ? "" : undefined}
           data-disabled={innerDisabled ? "" : undefined}
           className="navi_input_end_button"
           onMouseDown={(e) => {
-            e.preventDefault(); // keep focus on the button
+            e.preventDefault(); // keep focus in the input
           }}
           onClick={() => {
-            if (innerDisabled) {
+            if (innerReadOnly || innerDisabled) {
               return;
             }
             uiStateController.setUIState("", { trigger: "cancel_button" });
+            ref.current.value = "";
+            // we need the setTimeout because
+            // our action value is updated asynchronously and we need to wait for it to be updated before dispatching the event
+            // With native interactions we are fine because
+            // the action value is updated beforehand
+            setTimeout(() => {
+              ref.current.dispatchEvent(new Event("navi_delete_content"));
+            });
           }}
         >
           <Icon color="rgba(28, 43, 52, 0.5)">
             <CloseSvg />
           </Icon>
-        </button>
+        </label>
       )}
     </Box>
   );
