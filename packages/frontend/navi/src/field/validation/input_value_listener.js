@@ -1,6 +1,72 @@
 import { createPubSub } from "@jsenv/dom";
 
-export const listenInputChange = (input, callback) => {
+export const listenInputValue = (
+  input,
+  callback,
+  { waitForChange = false } = {},
+) => {
+  if (waitForChange) {
+    return listenInputValueChange(input, callback);
+  }
+  const [teardown, addTeardown] = createPubSub();
+  let currentValue = input.value;
+
+  let timeout;
+  const onAsyncEvent = (e) => {
+    timeout = setTimeout(() => {
+      onEvent(e);
+    }, 0);
+  };
+  const onEvent = (e) => {
+    clearTimeout(timeout);
+    const value = input.value;
+    if (value === currentValue) {
+      return;
+    }
+    currentValue = value;
+    callback(e);
+  };
+
+  // Standard user input (typing)
+  input.addEventListener("input", onEvent);
+  addTeardown(() => {
+    input.removeEventListener("input", onEvent);
+  });
+
+  // Autocomplete, programmatic changes, form restoration
+  input.addEventListener("change", onEvent);
+  addTeardown(() => {
+    input.removeEventListener("change", onEvent);
+  });
+
+  // Form reset - need to check the form
+  const form = input.form;
+  if (form) {
+    // Form reset happens asynchronously, check value after reset completes
+    form.addEventListener("reset", onAsyncEvent);
+    addTeardown(() => {
+      form.removeEventListener("reset", onAsyncEvent);
+    });
+  }
+
+  // Paste events (some browsers need special handling)
+  input.addEventListener("paste", onEvent);
+  addTeardown(() => {
+    input.removeEventListener("paste", onEvent);
+  });
+
+  // Focus events to catch programmatic changes that don't fire other events
+  // (like when value is set before user interaction)
+  input.addEventListener("focus", onEvent);
+  addTeardown(() => {
+    input.removeEventListener("focus", onEvent);
+  });
+  return () => {
+    teardown();
+  };
+};
+
+const listenInputValueChange = (input, callback) => {
   const [teardown, addTeardown] = createPubSub();
 
   let valueAtInteraction;

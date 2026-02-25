@@ -78,7 +78,7 @@ import {
   TYPE_EMAIL_CONSTRAINT,
   TYPE_NUMBER_CONSTRAINT,
 } from "./constraints/standard_constraints.js";
-import { listenInputChange } from "./input_change_effect.js";
+import { listenInputValue } from "./input_value_listener.js";
 
 let debug = false;
 export const NAVI_VALIDITY_CHANGE_CUSTOM_EVENT = "navi_validity_change";
@@ -724,22 +724,28 @@ export const installCustomConstraintValidation = (
     });
   }
 
-  request_on_input_change: {
+  request_on_input_value_change: {
     const isInput =
       element.tagName === "INPUT" || element.tagName === "TEXTAREA";
     if (!isInput) {
-      break request_on_input_change;
+      break request_on_input_value_change;
     }
-    const stop = listenInputChange(element, (e) => {
-      const elementWithAction = closestElementWithAction(element);
-      if (!elementWithAction) {
-        return;
-      }
-      dispatchActionRequestedCustomEvent(elementWithAction, {
-        event: e,
-        requester: element,
-      });
-    });
+    const stop = listenInputValue(
+      element,
+      (e) => {
+        const elementWithAction = closestElementWithAction(element);
+        if (!elementWithAction) {
+          return;
+        }
+        dispatchActionRequestedCustomEvent(elementWithAction, {
+          event: e,
+          requester: element,
+        });
+      },
+      {
+        waitForChange: !element.hasAttribute("data-live-action"),
+      },
+    );
     addTeardown(() => {
       stop();
     });

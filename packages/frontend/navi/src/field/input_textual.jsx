@@ -46,6 +46,7 @@ import {
 } from "./use_ui_state_controller.js";
 import { forwardActionRequested } from "./validation/custom_constraint_validation.js";
 import { useConstraints } from "./validation/hooks/use_constraints.js";
+import { listenInputValue } from "./validation/input_value_listener.js";
 
 import.meta.css = /* css */ `
   @layer navi {
@@ -169,12 +170,16 @@ import.meta.css = /* css */ `
         opacity: 1;
         cursor: pointer;
         pointer-events: auto;
+      }
 
-        &[data-readonly] {
+      &[data-readonly] {
+        .navi_input_end_button {
           opacity: 0;
           pointer-events: none;
         }
-        &[data-disabled] {
+      }
+      &[data-disabled] {
+        .navi_input_end_button {
           opacity: 0;
           pointer-events: none;
         }
@@ -286,38 +291,7 @@ Object.assign(PSEUDO_CLASSES, {
   ":navi-has-value": {
     attribute: "data-has-value",
     setup: (el, callback) => {
-      const onValueChange = () => {
-        callback();
-      };
-
-      // Standard user input (typing)
-      el.addEventListener("input", onValueChange);
-      // Autocomplete, programmatic changes, form restoration
-      el.addEventListener("change", onValueChange);
-      // Form reset - need to check the form
-      const form = el.form;
-      const onFormReset = () => {
-        // Form reset happens asynchronously, check value after reset completes
-        setTimeout(onValueChange, 0);
-      };
-      if (form) {
-        form.addEventListener("reset", onFormReset);
-      }
-
-      // Paste events (some browsers need special handling)
-      el.addEventListener("paste", onValueChange);
-      // Focus events to catch programmatic changes that don't fire other events
-      // (like when value is set before user interaction)
-      el.addEventListener("focus", onValueChange);
-      return () => {
-        el.removeEventListener("input", onValueChange);
-        el.removeEventListener("change", onValueChange);
-        el.removeEventListener("paste", onValueChange);
-        el.removeEventListener("focus", onValueChange);
-        if (form) {
-          form.removeEventListener("reset", onFormReset);
-        }
-      };
+      return listenInputValue(el, callback);
     },
     test: (el) => {
       if (el.value === "") {
@@ -507,6 +481,7 @@ const InputTextualWithAction = (props) => {
   const uiState = useContext(UIStateContext);
   const {
     action,
+    liveAction,
     loading,
     onCancel,
     onActionPrevented,
@@ -520,7 +495,7 @@ const InputTextualWithAction = (props) => {
   } = props;
   const defaultRef = useRef();
   const ref = props.ref || defaultRef;
-  const [boundAction] = useActionBoundToOneParam(action, uiState);
+  const [boundAction] = useActionBoundToOneParam(liveAction || action, uiState);
   const { loading: actionLoading } = useActionStatus(boundAction);
   const executeAction = useExecuteAction(ref, {
     errorEffect: actionErrorEffect,
@@ -563,6 +538,7 @@ const InputTextualWithAction = (props) => {
   return (
     <InputTextualBasic
       data-action={boundAction.name}
+      data-live-action={liveAction ? "" : undefined}
       {...rest}
       ref={ref}
       loading={loading || actionLoading}

@@ -155,7 +155,12 @@
                 <fieldset>
                   <legend>:read-only</legend>
                   <Box row spacing="sm" alignX="start">
-                    <Input type="search" value="Read-only search term" />
+                    <Input
+                      type="search"
+                      action={() => {}}
+                      readOnly
+                      value="Read-only search term"
+                    />
                     <input
                       type="search"
                       readOnly
@@ -166,7 +171,12 @@
                 <fieldset>
                   <legend>:disabled</legend>
                   <Box row spacing="sm" alignX="start">
-                    <Input type="search" disabled value="test" />
+                    <Input
+                      type="search"
+                      disabled
+                      action={() => {}}
+                      value="test"
+                    />
                     <input type="search" disabled value="test" />
                   </Box>
                 </fieldset>
@@ -329,7 +339,7 @@
 
                   <Input
                     type="search"
-                    value={searchTerm}
+                    value={liveSearchTerm}
                     liveAction={(v) => {
                       setLiveSearchTerm(v);
                     }}
