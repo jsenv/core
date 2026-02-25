@@ -66,8 +66,8 @@ export const useUIStateController = (
 ) => {
   const parentUIStateController = useContext(ParentUIStateControllerContext);
   const formContext = useContext(FormContext);
-  const { id, name, onUIStateChange, action } = props;
-  const uncontrolled = !formContext && !action;
+  const { id, name, onUIStateChange, action, liveAction } = props;
+  const uncontrolled = !formContext && !action && !liveAction;
   const [navState, setNavState] = useNavState(id);
 
   const uiStateControllerRef = useRef();

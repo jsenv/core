@@ -730,20 +730,20 @@ export const installCustomConstraintValidation = (
     if (!isInput) {
       break request_on_input_value_change;
     }
+    const elementWithAction = closestElementWithAction(element);
+    if (!elementWithAction) {
+      break request_on_input_value_change;
+    }
     const stop = listenInputValue(
       element,
       (e) => {
-        const elementWithAction = closestElementWithAction(element);
-        if (!elementWithAction) {
-          return;
-        }
         dispatchActionRequestedCustomEvent(elementWithAction, {
           event: e,
           requester: element,
         });
       },
       {
-        waitForChange: !element.hasAttribute("data-live-action"),
+        waitForChange: !elementWithAction.hasAttribute("data-live-action"),
       },
     );
     addTeardown(() => {
