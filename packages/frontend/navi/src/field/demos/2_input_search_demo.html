@@ -93,7 +93,7 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState } from "preact/hooks";
-      import { Input, Box } from "@jsenv/navi";
+      import { Input, Box, Caption } from "@jsenv/navi";
 
       const App = () => {
         return (
@@ -214,9 +214,7 @@
         );
       };
 
-      const InteractiveDemo = () => {
-        const [searchTerm, setSearchTerm] = useState("");
-
+      const FilteredItems = ({ searchTerm }) => {
         const items = [
           "Apple iPhone 15",
           "Samsung Galaxy S24",
@@ -242,74 +240,104 @@
         );
 
         return (
+          <>
+            <div
+              style={{
+                fontSize: "0.9rem",
+                color: "#666",
+                textAlign: "center",
+                padding: "8px",
+                background: "#f8f9fa",
+                borderRadius: "4px",
+              }}
+            >
+              Showing {filteredItems.length} of {items.length} products
+            </div>
+
+            <div
+              style={{
+                maxHeight: "300px",
+                overflowY: "auto",
+                border: "1px solid #ddd",
+                borderRadius: "6px",
+                background: "#fff",
+              }}
+            >
+              {filteredItems.length > 0 ? (
+                filteredItems.map((item, index) => (
+                  <div
+                    key={index}
+                    style={{
+                      padding: "12px 16px",
+                      borderBottom:
+                        index < filteredItems.length - 1
+                          ? "1px solid #eee"
+                          : "none",
+                      fontSize: "0.95rem",
+                      color: "#333",
+                      background: index % 2 === 0 ? "#f9f9f9" : "#fff",
+                    }}
+                  >
+                    {item}
+                  </div>
+                ))
+              ) : (
+                <div
+                  style={{
+                    padding: "20px",
+                    textAlign: "center",
+                    color: "#999",
+                    fontStyle: "italic",
+                  }}
+                >
+                  No products found matching "{searchTerm}"
+                </div>
+              )}
+            </div>
+          </>
+        );
+      };
+
+      const InteractiveDemo = () => {
+        const [searchTerm, setSearchTerm] = useState("");
+        const [liveSearchTerm, setLiveSearchTerm] = useState("");
+
+        return (
           <div className="demo-section">
             <h2>Live Search Demo</h2>
 
             <fieldset>
               <legend>Filter Product List</legend>
-              <Box row spacing="md" alignX="start">
-                <Input
-                  type="search"
-                  value={searchTerm}
-                  action={(v) => {
-                    setSearchTerm(v);
-                  }}
-                  placeholder="Search products..."
-                />
+              <Box column spacing="m">
+                <Box row spacing="md" alignX="start">
+                  <Caption>Regular action</Caption>
 
-                <div
-                  style={{
-                    fontSize: "0.9rem",
-                    color: "#666",
-                    textAlign: "center",
-                    padding: "8px",
-                    background: "#f8f9fa",
-                    borderRadius: "4px",
-                  }}
-                >
-                  Showing {filteredItems.length} of {items.length} products
-                </div>
+                  <Input
+                    type="search"
+                    value={searchTerm}
+                    action={(v) => {
+                      setSearchTerm(v);
+                    }}
+                    placeholder="Search products..."
+                  />
 
-                <div
-                  style={{
-                    maxHeight: "300px",
-                    overflowY: "auto",
-                    border: "1px solid #ddd",
-                    borderRadius: "6px",
-                    background: "#fff",
-                  }}
-                >
-                  {filteredItems.length > 0 ? (
-                    filteredItems.map((item, index) => (
-                      <div
-                        key={index}
-                        style={{
-                          padding: "12px 16px",
-                          borderBottom:
-                            index < filteredItems.length - 1
-                              ? "1px solid #eee"
-                              : "none",
-                          fontSize: "0.95rem",
-                          color: "#333",
-                          background: index % 2 === 0 ? "#f9f9f9" : "#fff",
-                        }}
-                      >
-                        {item}
-                      </div>
-                    ))
-                  ) : (
-                    <div
-                      style={{
-                        padding: "20px",
-                        textAlign: "center",
-                        color: "#999",
-                        fontStyle: "italic",
-                      }}
-                    >
-                      No products found matching "{searchTerm}"
-                    </div>
-                  )}
-                </div>
+                  <FilteredItems searchTerm={searchTerm} />
+                </Box>
+
+                <Box row spacing="md" alignX="start">
+                  <Caption>Live action</Caption>
+
+                  <Input
+                    type="search"
+                    value={searchTerm}
+                    liveAction={(v) => {
+                      setLiveSearchTerm(v);
+                    }}
+                    placeholder="Search products..."
+                  />
+
+                  <FilteredItems searchTerm={liveSearchTerm} />
+                </Box>
               </Box>
             </fieldset>
           </div>
