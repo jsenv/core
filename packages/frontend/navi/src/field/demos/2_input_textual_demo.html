@@ -171,6 +171,7 @@
           <div>
             <BasicStatesDemo />
             <TypeVariationsDemo />
+            <ActionHandlingDemo />
             <SizeVariationsDemo />
             <ValueHandlingDemo />
             <InteractiveDemo />
@@ -436,6 +437,125 @@
                 />
               </div>
             </div>
+          </div>
+        );
+      };
+
+      const ActionHandlingDemo = () => {
+        const [basicValue, setBasicValue] = useState("");
+        const [asyncValue, setAsyncValue] = useState("");
+        const [debouncedValue, setDebouncedValue] = useState("");
+        const [afterChangeValue, setAfterChangeValue] = useState("");
+        const [actionCallCount, setActionCallCount] = useState(0);
+        const [asyncCallCount, setAsyncCallCount] = useState(0);
+        const [debouncedCallCount, setDebouncedCallCount] = useState(0);
+        const [afterChangeCallCount, setAfterChangeCallCount] = useState(0);
+
+        const slowAction = async (value, setter, counter, setCounter) => {
+          setCounter((c) => c + 1);
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+          setter(value);
+        };
+
+        return (
+          <div className="demo-section">
+            <h2>Action Handling</h2>
+
+            <fieldset>
+              <legend>Basic Action</legend>
+              <p className="states-description">
+                The <code>action</code> prop is called every time the input
+                value changes (user keydown, paste, programmatic changes, etc.)
+              </p>
+              <Box column spacing="sm">
+                <Input
+                  placeholder="Type something..."
+                  action={(value) => {
+                    setActionCallCount((c) => c + 1);
+                    setBasicValue(value);
+                  }}
+                />
+                <div className="value-display">
+                  Value: "{basicValue}" | Calls: {actionCallCount}
+                </div>
+              </Box>
+            </fieldset>
+
+            <fieldset>
+              <legend>Async Action (Poor UX)</legend>
+              <p className="states-description">
+                When the action takes time, it feels bad for UX as it blocks on
+                every keystroke.
+              </p>
+              <Box column spacing="sm">
+                <Input
+                  placeholder="Type something (slow)..."
+                  action={(value) =>
+                    slowAction(
+                      value,
+                      setAsyncValue,
+                      asyncCallCount,
+                      setAsyncCallCount,
+                    )
+                  }
+                />
+                <div className="value-display">
+                  Value: "{asyncValue}" | Calls: {asyncCallCount}
+                </div>
+              </Box>
+            </fieldset>
+
+            <fieldset>
+              <legend>Debounced Action (Better UX)</legend>
+              <p className="states-description">
+                Using <code>actionDebounce={"300"}</code> waits 300ms without
+                changes before performing the action, making slow operations
+                feel much better.
+              </p>
+              <Box column spacing="sm">
+                <Input
+                  placeholder="Type something (debounced)..."
+                  action={(value) =>
+                    slowAction(
+                      value,
+                      setDebouncedValue,
+                      debouncedCallCount,
+                      setDebouncedCallCount,
+                    )
+                  }
+                  actionDebounce={300}
+                />
+                <div className="value-display">
+                  Value: "{debouncedValue}" | Calls: {debouncedCallCount}
+                </div>
+              </Box>
+            </fieldset>
+
+            <fieldset>
+              <legend>Action After Change</legend>
+              <p className="states-description">
+                Using <code>actionAfterChange</code> performs the action only on
+                blur or when the user presses Enter. The input shows loading
+                state and becomes readonly during execution.
+              </p>
+              <Box column spacing="sm">
+                <Input
+                  placeholder="Type and press Enter or blur..."
+                  action={(value) =>
+                    slowAction(
+                      value,
+                      setAfterChangeValue,
+                      afterChangeCallCount,
+                      setAfterChangeCallCount,
+                    )
+                  }
+                  actionAfterChange
+                />
+                <div className="value-display">
+                  Value: "{afterChangeValue}" | Calls: {afterChangeCallCount}
+                </div>
+              </Box>
+            </fieldset>
           </div>
         );
       };

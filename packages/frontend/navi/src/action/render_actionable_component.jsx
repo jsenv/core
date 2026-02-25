@@ -6,11 +6,9 @@ export const renderActionableComponent = (
   props,
   { Basic, WithAction, WithActionInsideForm },
 ) => {
-  const { action, liveAction, shortcuts } = props;
+  const { action, shortcuts } = props;
   const formContext = useContext(FormContext);
-  const hasActionProps = Boolean(
-    action || liveAction || (shortcuts && shortcuts.length > 0),
-  );
+  const hasActionProps = Boolean(action || (shortcuts && shortcuts.length > 0));
   const considerInsideForm = Boolean(formContext);
 
   if (hasActionProps && WithAction) {

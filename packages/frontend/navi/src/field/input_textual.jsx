@@ -475,7 +475,7 @@ const InputTextualWithAction = (props) => {
   const uiState = useContext(UIStateContext);
   const {
     action,
-    liveAction,
+    actionAfterChange,
     loading,
     onCancel,
     onActionPrevented,
@@ -489,7 +489,7 @@ const InputTextualWithAction = (props) => {
   } = props;
   const defaultRef = useRef();
   const ref = props.ref || defaultRef;
-  const [boundAction] = useActionBoundToOneParam(liveAction || action, uiState);
+  const [boundAction] = useActionBoundToOneParam(action, uiState);
   const { loading: actionLoading } = useActionStatus(boundAction);
   const executeAction = useExecuteAction(ref, {
     errorEffect: actionErrorEffect,
@@ -532,7 +532,7 @@ const InputTextualWithAction = (props) => {
   return (
     <InputTextualBasic
       data-action={boundAction.name}
-      data-live-action={liveAction ? "" : undefined}
+      data-action-after-change={actionAfterChange ? "" : undefined}
       {...rest}
       ref={ref}
       loading={loading || actionLoading}

@@ -734,6 +734,7 @@ export const installCustomConstraintValidation = (
     if (!elementWithAction) {
       break request_on_input_value_change;
     }
+    const closestElementWithActionAttr = element.closest("[data-action]");
     const stop = listenInputValue(
       element,
       (e) => {
@@ -743,7 +744,9 @@ export const installCustomConstraintValidation = (
         });
       },
       {
-        waitForChange: !element.closest("[data-live-action]"),
+        waitForChange: closestElementWithActionAttr.hasAttribute(
+          "data-action-after-change",
+        ),
       },
     );
     addTeardown(() => {
