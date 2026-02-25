@@ -12083,10 +12083,11 @@ const renderActionableComponent = (props, {
 }) => {
   const {
     action,
+    liveAction,
     shortcuts
   } = props;
   const formContext = useContext(FormContext);
-  const hasActionProps = Boolean(action || shortcuts && shortcuts.length > 0);
+  const hasActionProps = Boolean(action || liveAction || shortcuts && shortcuts.length > 0);
   const considerInsideForm = Boolean(formContext);
   if (hasActionProps && WithAction) {
     if (considerInsideForm && WithActionInsideForm) {
@@ -15571,7 +15572,82 @@ const MAX_CONSTRAINT = {
   },
 };
 
-const listenInputChange = (input, callback) => {
+const listenInputValue = (
+  input,
+  callback,
+  { waitForChange = false } = {},
+) => {
+  if (waitForChange) {
+    return listenInputValueChange(input, callback);
+  }
+  const [teardown, addTeardown] = createPubSub();
+  let currentValue = input.value;
+
+  let timeout;
+  const onAsyncEvent = (e) => {
+    timeout = setTimeout(() => {
+      onEvent(e);
+    }, 0);
+  };
+  const onEvent = (e) => {
+    clearTimeout(timeout);
+    const value = input.value;
+    if (value === currentValue) {
+      return;
+    }
+    currentValue = value;
+    callback(e);
+  };
+
+  // Standard user input (typing)
+  input.addEventListener("input", onEvent);
+  addTeardown(() => {
+    input.removeEventListener("input", onEvent);
+  });
+
+  // Autocomplete, programmatic changes, form restoration
+  input.addEventListener("change", onEvent);
+  addTeardown(() => {
+    input.removeEventListener("change", onEvent);
+  });
+
+  // Form reset - need to check the form
+  const form = input.form;
+  if (form) {
+    // Form reset happens asynchronously, check value after reset completes
+    form.addEventListener("reset", onAsyncEvent);
+    addTeardown(() => {
+      form.removeEventListener("reset", onAsyncEvent);
+    });
+  }
+
+  // Paste events (some browsers need special handling)
+  input.addEventListener("paste", onEvent);
+  addTeardown(() => {
+    input.removeEventListener("paste", onEvent);
+  });
+
+  // Focus events to catch programmatic changes that don't fire other events
+  // (like when value is set before user interaction)
+  input.addEventListener("focus", onEvent);
+  addTeardown(() => {
+    input.removeEventListener("focus", onEvent);
+  });
+
+  // "navi_delete_content" behaves like an async event
+  // a bit like form reset because
+  // our action will be updated async after the component re-renders
+  // and we need to wait that to happen to properly call action with the right value
+  input.addEventListener("navi_delete_content", onAsyncEvent);
+  addTeardown(() => {
+    input.removeEventListener("navi_delete_content", onAsyncEvent);
+  });
+  return () => {
+    teardown();
+  };
+};
+
+const listenInputValueChange = (input, callback) => {
   const [teardown, addTeardown] = createPubSub();
 
   let valueAtInteraction;
@@ -16331,22 +16407,28 @@ const installCustomConstraintValidation = (
     });
   }
 
-  request_on_input_change: {
+  request_on_input_value_change: {
     const isInput =
       element.tagName === "INPUT" || element.tagName === "TEXTAREA";
     if (!isInput) {
-      break request_on_input_change;
+      break request_on_input_value_change;
     }
-    const stop = listenInputChange(element, (e) => {
-      const elementWithAction = closestElementWithAction(element);
-      if (!elementWithAction) {
-        return;
-      }
-      dispatchActionRequestedCustomEvent(elementWithAction, {
-        event: e,
-        requester: element,
-      });
-    });
+    const elementWithAction = closestElementWithAction(element);
+    if (!elementWithAction) {
+      break request_on_input_value_change;
+    }
+    const stop = listenInputValue(
+      element,
+      (e) => {
+        dispatchActionRequestedCustomEvent(elementWithAction, {
+          event: e,
+          requester: element,
+        });
+      },
+      {
+        waitForChange: !element.closest("[data-live-action]"),
+      },
+    );
     addTeardown(() => {
       stop();
     });
@@ -18718,8 +18800,8 @@ const useUIStateController = (
 ) => {
   const parentUIStateController = useContext(ParentUIStateControllerContext);
   const formContext = useContext(FormContext);
-  const { id, name, onUIStateChange, action } = props;
-  const uncontrolled = !formContext && !action;
+  const { id, name, onUIStateChange, action, liveAction } = props;
+  const uncontrolled = !formContext && !action && !liveAction;
   const [navState, setNavState] = useNavState$1(id);
 
   const uiStateControllerRef = useRef();
@@ -19246,6 +19328,7 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
         --button-padding-left,
         var(--button-padding-x, var(--button-padding))
       );
+      padding: var(--button-padding, unset);
       align-items: inherit;
       justify-content: inherit;
       color: var(--x-button-color);
@@ -22593,24 +22676,44 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
       }
     }
 
-    .navi_start_icon_label {
+    .navi_input_start_icon {
       position: absolute;
       top: 0;
       bottom: 0;
       left: 0.25em;
     }
-    .navi_end_icon_label {
+    .navi_input_end_button {
       position: absolute;
       top: 0;
       right: 0.25em;
       bottom: 0;
+      display: inline-flex;
+      margin: 0;
+      padding: 0;
+      justify-content: center;
+      background: none;
+      border: none;
       opacity: 0;
       pointer-events: none;
     }
     &[data-has-value] {
-      .navi_end_icon_label {
+      .navi_input_end_button {
         opacity: 1;
+        cursor: pointer;
         pointer-events: auto;
+      }
+
+      &[data-readonly] {
+        .navi_input_end_button {
+          opacity: 0;
+          pointer-events: none;
+        }
+      }
+      &[data-disabled] {
+        .navi_input_end_button {
+          opacity: 0;
+          pointer-events: none;
+        }
       }
     }
 
@@ -22709,38 +22812,7 @@ Object.assign(PSEUDO_CLASSES, {
   ":navi-has-value": {
     attribute: "data-has-value",
     setup: (el, callback) => {
-      const onValueChange = () => {
-        callback();
-      };
-
-      // Standard user input (typing)
-      el.addEventListener("input", onValueChange);
-      // Autocomplete, programmatic changes, form restoration
-      el.addEventListener("change", onValueChange);
-      // Form reset - need to check the form
-      const form = el.form;
-      const onFormReset = () => {
-        // Form reset happens asynchronously, check value after reset completes
-        setTimeout(onValueChange, 0);
-      };
-      if (form) {
-        form.addEventListener("reset", onFormReset);
-      }
-
-      // Paste events (some browsers need special handling)
-      el.addEventListener("paste", onValueChange);
-      // Focus events to catch programmatic changes that don't fire other events
-      // (like when value is set before user interaction)
-      el.addEventListener("focus", onValueChange);
-      return () => {
-        el.removeEventListener("input", onValueChange);
-        el.removeEventListener("change", onValueChange);
-        el.removeEventListener("paste", onValueChange);
-        el.removeEventListener("focus", onValueChange);
-        if (form) {
-          form.removeEventListener("reset", onFormReset);
-        }
-      };
+      return listenInputValue(el, callback);
     },
     test: el => {
       if (el.value === "") {
@@ -22859,28 +22931,39 @@ const InputTextualBasic = props => {
       loading: innerLoading,
       color: "var(--loader-color)",
       inset: -1
-    }), innerIcon && jsx(Icon, {
-      as: "label",
+    }), innerIcon && jsx(Label, {
       htmlFor: innerId,
-      className: "navi_start_icon_label",
+      disabled: innerDisabled,
+      readOnly: innerReadOnly,
+      className: "navi_input_start_icon",
+      box: true,
       alignY: "center",
-      color: "rgba(28, 43, 52, 0.5)",
-      children: innerIcon
-    }), renderInputMemoized, cancelButton && jsx(Icon, {
-      as: "label",
+      children: jsx(Icon, {
+        color: "rgba(28, 43, 52, 0.5)",
+        children: innerIcon
+      })
+    }), renderInputMemoized, cancelButton && jsx("label", {
       htmlFor: innerId,
-      className: "navi_end_icon_label",
-      alignY: "center",
-      color: "rgba(28, 43, 52, 0.5)",
-      onMousedown: e => {
-        e.preventDefault(); // keep focus on the button
+      "data-readonly": innerReadOnly ? "" : undefined,
+      "data-disabled": innerDisabled ? "" : undefined,
+      className: "navi_input_end_button",
+      onMouseDown: e => {
+        e.preventDefault(); // keep focus in the input
       },
       onClick: () => {
+        if (innerReadOnly || innerDisabled) {
+          return;
+        }
         uiStateController.setUIState("", {
           trigger: "cancel_button"
         });
+        ref.current.value = "";
+        ref.current.dispatchEvent(new Event("navi_delete_content"));
       },
-      children: jsx(CloseSvg, {})
+      children: jsx(Icon, {
+        color: "rgba(28, 43, 52, 0.5)",
+        children: jsx(CloseSvg, {})
+      })
     })]
   });
 };
@@ -22888,6 +22971,7 @@ const InputTextualWithAction = props => {
   const uiState = useContext(UIStateContext);
   const {
     action,
+    liveAction,
     loading,
     onCancel,
     onActionPrevented,
@@ -22901,7 +22985,7 @@ const InputTextualWithAction = props => {
   } = props;
   const defaultRef = useRef();
   const ref = props.ref || defaultRef;
-  const [boundAction] = useActionBoundToOneParam(action, uiState);
+  const [boundAction] = useActionBoundToOneParam(liveAction || action, uiState);
   const {
     loading: actionLoading
   } = useActionStatus(boundAction);
@@ -22942,6 +23026,7 @@ const InputTextualWithAction = props => {
   });
   return jsx(InputTextualBasic, {
     "data-action": boundAction.name,
+    "data-live-action": liveAction ? "" : undefined,
     ...rest,
     ref: ref,
     loading: loading || actionLoading
