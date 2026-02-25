@@ -340,14 +340,15 @@
                 </Box>
 
                 <Box row spacing="md" alignX="start">
-                  <Caption>Live action</Caption>
+                  <Caption>action debounced 1s</Caption>
 
                   <Input
                     type="search"
                     value={liveSearchTerm}
-                    liveAction={(v) => {
+                    action={(v) => {
                       setLiveSearchTerm(v);
                     }}
+                    actionDebounce={1000}
                     placeholder="Search products..."
                   />
 

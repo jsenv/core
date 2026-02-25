@@ -29,11 +29,13 @@ export const listenInputValue = (
       if (value === currentValue) {
         return;
       }
-      currentValue = value;
+
       if (skipDebounce) {
+        currentValue = value;
         callback(e);
       } else {
         debounceTimeout = setTimeout(() => {
+          currentValue = value;
           callback(e);
         }, debounce);
       }
@@ -49,7 +51,6 @@ export const listenInputValue = (
   } else {
     onEvent = (e) => {
       clearTimeout(timeout);
-
       const value = input.value;
       if (value === currentValue) {
         return;

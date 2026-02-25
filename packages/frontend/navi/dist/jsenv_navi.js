@@ -4858,6 +4858,15 @@ window.addEventListener("unhandledrejection", (event) => {
   }
 });
 
+const useCancelPrevious = () => {
+  const cancellerRef = useRef();
+  if (!cancellerRef.current) {
+    cancellerRef.current = createRequestCanceller();
+  }
+  const canceller = cancellerRef.current;
+  return canceller;
+};
+
 /**
  * Merges a component's base className with className received from props.
  *
@@ -12083,11 +12092,10 @@ const renderActionableComponent = (props, {
 }) => {
   const {
     action,
-    liveAction,
     shortcuts
   } = props;
   const formContext = useContext(FormContext);
-  const hasActionProps = Boolean(action || liveAction || shortcuts && shortcuts.length > 0);
+  const hasActionProps = Boolean(action || shortcuts && shortcuts.length > 0);
   const considerInsideForm = Boolean(formContext);
   if (hasActionProps && WithAction) {
     if (considerInsideForm && WithActionInsideForm) {
@@ -15575,40 +15583,72 @@ const MAX_CONSTRAINT = {
 const listenInputValue = (
   input,
   callback,
-  { waitForChange = false } = {},
+  { waitForChange = false, debounce = 0 } = {},
 ) => {
   if (waitForChange) {
     return listenInputValueChange(input, callback);
   }
   const [teardown, addTeardown] = createPubSub();
   let currentValue = input.value;
-
   let timeout;
+  let debounceTimeout;
+
   const onAsyncEvent = (e) => {
     timeout = setTimeout(() => {
       onEvent(e);
     }, 0);
   };
-  const onEvent = (e) => {
-    clearTimeout(timeout);
-    const value = input.value;
-    if (value === currentValue) {
-      return;
-    }
-    currentValue = value;
-    callback(e);
-  };
+
+  let onEvent;
+  if (debounce) {
+    onEvent = (e, { skipDebounce } = {}) => {
+      clearTimeout(timeout);
+      clearTimeout(debounceTimeout);
+
+      const value = input.value;
+      if (value === currentValue) {
+        return;
+      }
+
+      if (skipDebounce) {
+        currentValue = value;
+        callback(e);
+      } else {
+        debounceTimeout = setTimeout(() => {
+          currentValue = value;
+          callback(e);
+        }, debounce);
+      }
+    };
+    // no need to wait for change events (blur, enter key)
+    // we consider this as strong interactions requesting an immediate response
+    const stop = listenInputValueChange(input, (e) => {
+      onEvent(e, { skipDebounce: true });
+    });
+    addTeardown(() => {
+      stop();
+    });
+  } else {
+    onEvent = (e) => {
+      clearTimeout(timeout);
+      const value = input.value;
+      if (value === currentValue) {
+        return;
+      }
+      currentValue = value;
+      callback(e);
+    };
+    // Autocomplete, programmatic changes, form restoration
+    input.addEventListener("change", onEvent);
+    addTeardown(() => {
+      input.removeEventListener("change", onEvent);
+    });
+  }
 
   // Standard user input (typing)
   input.addEventListener("input", onEvent);
   addTeardown(() => {
     input.removeEventListener("input", onEvent);
-  });
-
-  // Autocomplete, programmatic changes, form restoration
-  input.addEventListener("change", onEvent);
-  addTeardown(() => {
-    input.removeEventListener("change", onEvent);
   });
 
   // Form reset - need to check the form
@@ -16417,6 +16457,7 @@ const installCustomConstraintValidation = (
     if (!elementWithAction) {
       break request_on_input_value_change;
     }
+    const closestElementWithActionAttr = element.closest("[data-action]");
     const stop = listenInputValue(
       element,
       (e) => {
@@ -16426,7 +16467,16 @@ const installCustomConstraintValidation = (
         });
       },
       {
-        waitForChange: !element.closest("[data-live-action]"),
+        waitForChange: closestElementWithActionAttr.hasAttribute(
+          "data-action-after-change",
+        ),
+        debounce: closestElementWithActionAttr.hasAttribute(
+          "data-action-debounce",
+        )
+          ? parseFloat(
+              closestElementWithActionAttr.getAttribute("data-action-debounce"),
+            )
+          : undefined,
       },
     );
     addTeardown(() => {
@@ -18800,8 +18850,8 @@ const useUIStateController = (
 ) => {
   const parentUIStateController = useContext(ParentUIStateControllerContext);
   const formContext = useContext(FormContext);
-  const { id, name, onUIStateChange, action, liveAction } = props;
-  const uncontrolled = !formContext && !action && !liveAction;
+  const { id, name, onUIStateChange, action } = props;
+  const uncontrolled = !formContext && !action;
   const [navState, setNavState] = useNavState$1(id);
 
   const uiStateControllerRef = useRef();
@@ -22971,7 +23021,8 @@ const InputTextualWithAction = props => {
   const uiState = useContext(UIStateContext);
   const {
     action,
-    liveAction,
+    actionDebounce,
+    actionAfterChange,
     loading,
     onCancel,
     onActionPrevented,
@@ -22985,7 +23036,7 @@ const InputTextualWithAction = props => {
   } = props;
   const defaultRef = useRef();
   const ref = props.ref || defaultRef;
-  const [boundAction] = useActionBoundToOneParam(liveAction || action, uiState);
+  const [boundAction] = useActionBoundToOneParam(action, uiState);
   const {
     loading: actionLoading
   } = useActionStatus(boundAction);
@@ -23026,7 +23077,8 @@ const InputTextualWithAction = props => {
   });
   return jsx(InputTextualBasic, {
     "data-action": boundAction.name,
-    "data-live-action": liveAction ? "" : undefined,
+    "data-action-debounce": actionDebounce,
+    "data-action-after-change": actionAfterChange ? "" : undefined,
     ...rest,
     ref: ref,
     loading: loading || actionLoading
@@ -28865,5 +28917,5 @@ const UserSvg = () => jsx("svg", {
   })
 });
 
-export { ActionRenderer, ActiveKeyboardShortcuts, Address, BadgeCount, Box, Button, ButtonCopyToClipboard, Caption, CheckSvg, Checkbox, CheckboxList, Code, Col, Colgroup, ConstructionSvg, Details, DialogLayout, Editable, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Form, Group, HeartSvg, HomeSvg, Icon, Image, Input, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, MessageBox, Paragraph, Radio, RadioList, Route, RouteLink, Routes, RowNumberCol, RowNumberTableCell, SINGLE_SPACE_CONSTRAINT, SVGMaskOverlay, SearchSvg, Select, SelectionContext, Separator, SettingsSvg, StarSvg, SummaryMarker, Svg, Tab, TabList, Table, TableCell, Tbody, Text, Thead, Title, Tr, UITransition, UserSvg, ViewportLayout, actionIntegratedVia, addCustomMessage, clearAllRoutes, compareTwoJsValues, createAction, createAvailableConstraint, createRequestCanceller, createSelectionKeyboardShortcuts, enableDebugActions, enableDebugOnDocumentLoading, forwardActionRequested, installCustomConstraintValidation, isCellSelected, isColumnSelected, isRowSelected, localStorageSignal, navBack, navForward, navTo, openCallout, rawUrlPart, reload, removeCustomMessage, requestAction, rerunActions, resource, setBaseUrl, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, updateActions, useActionData, useActionStatus, useArraySignalMembership, useCalloutClose, useCellsAndColumns, useConstraintValidityState, useDependenciesDiff, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useMatchingRouteInfo, useNavState$1 as useNavState, useRouteStatus, useRunOnMount, useSelectableElement, useSelectionController, useSignalSync, useStateArray, useTitleLevel, useUrlSearchParam, valueInLocalStorage };
+export { ActionRenderer, ActiveKeyboardShortcuts, Address, BadgeCount, Box, Button, ButtonCopyToClipboard, Caption, CheckSvg, Checkbox, CheckboxList, Code, Col, Colgroup, ConstructionSvg, Details, DialogLayout, Editable, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Form, Group, HeartSvg, HomeSvg, Icon, Image, Input, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, MessageBox, Paragraph, Radio, RadioList, Route, RouteLink, Routes, RowNumberCol, RowNumberTableCell, SINGLE_SPACE_CONSTRAINT, SVGMaskOverlay, SearchSvg, Select, SelectionContext, Separator, SettingsSvg, StarSvg, SummaryMarker, Svg, Tab, TabList, Table, TableCell, Tbody, Text, Thead, Title, Tr, UITransition, UserSvg, ViewportLayout, actionIntegratedVia, addCustomMessage, clearAllRoutes, compareTwoJsValues, createAction, createAvailableConstraint, createRequestCanceller, createSelectionKeyboardShortcuts, enableDebugActions, enableDebugOnDocumentLoading, forwardActionRequested, installCustomConstraintValidation, isCellSelected, isColumnSelected, isRowSelected, localStorageSignal, navBack, navForward, navTo, openCallout, rawUrlPart, reload, removeCustomMessage, requestAction, rerunActions, resource, setBaseUrl, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, updateActions, useActionData, useActionStatus, useArraySignalMembership, useCalloutClose, useCancelPrevious, useCellsAndColumns, useConstraintValidityState, useDependenciesDiff, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useMatchingRouteInfo, useNavState$1 as useNavState, useRouteStatus, useRunOnMount, useSelectableElement, useSelectionController, useSignalSync, useStateArray, useTitleLevel, useUrlSearchParam, valueInLocalStorage };
 //# sourceMappingURL=jsenv_navi.js.map
