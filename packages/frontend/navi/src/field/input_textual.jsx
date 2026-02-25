@@ -31,7 +31,7 @@ import { PhoneSvg } from "../graphic/icons/phone_svg.jsx";
 import { SearchSvg } from "../graphic/icons/search_svg.jsx";
 import { LoaderBackground } from "../graphic/loader/loader_background.jsx";
 import { useStableCallback } from "../utils/use_stable_callback.js";
-import { ReportReadOnlyOnLabelContext } from "./label.jsx";
+import { Label, ReportReadOnlyOnLabelContext } from "./label.jsx";
 import { useActionEvents } from "./use_action_events.js";
 import { useAutoFocus } from "./use_auto_focus.js";
 import {
@@ -144,24 +144,40 @@ import.meta.css = /* css */ `
       }
     }
 
-    .navi_start_icon_label {
+    .navi_input_start_icon {
       position: absolute;
       top: 0;
       bottom: 0;
       left: 0.25em;
     }
-    .navi_end_icon_label {
+    .navi_input_end_button {
       position: absolute;
       top: 0;
       right: 0.25em;
       bottom: 0;
+      display: inline-flex;
+      margin: 0;
+      padding: 0;
+      justify-content: center;
+      background: none;
+      border: none;
       opacity: 0;
       pointer-events: none;
     }
     &[data-has-value] {
-      .navi_end_icon_label {
+      .navi_input_end_button {
         opacity: 1;
+        cursor: pointer;
         pointer-events: auto;
+
+        &[data-readonly] {
+          opacity: 0;
+          pointer-events: none;
+        }
+        &[data-disabled] {
+          opacity: 0;
+          pointer-events: none;
+        }
       }
     }
 
@@ -442,33 +458,37 @@ const InputTextualBasic = (props) => {
         inset={-1}
       />
       {innerIcon && (
-        <Icon
-          as="label"
+        <Label
           htmlFor={innerId}
-          className="navi_start_icon_label"
+          disabled={innerDisabled}
+          readOnly={innerReadOnly}
+          className="navi_input_start_icon"
+          box
           alignY="center"
-          color="rgba(28, 43, 52, 0.5)"
         >
-          {innerIcon}
-        </Icon>
+          <Icon color="rgba(28, 43, 52, 0.5)">{innerIcon}</Icon>
+        </Label>
       )}
       {renderInputMemoized}
       {cancelButton && (
-        <Icon
-          as="label"
-          htmlFor={innerId}
-          className="navi_end_icon_label"
-          alignY="center"
-          color="rgba(28, 43, 52, 0.5)"
-          onMousedown={(e) => {
+        <button
+          data-readonly={innerReadOnly ? "" : undefined}
+          data-disabled={innerDisabled ? "" : undefined}
+          className="navi_input_end_button"
+          onMouseDown={(e) => {
             e.preventDefault(); // keep focus on the button
           }}
           onClick={() => {
+            if (innerDisabled) {
+              return;
+            }
             uiStateController.setUIState("", { trigger: "cancel_button" });
           }}
         >
-          <CloseSvg />
-        </Icon>
+          <Icon color="rgba(28, 43, 52, 0.5)">
+            <CloseSvg />
+          </Icon>
+        </button>
       )}
     </Box>
   );

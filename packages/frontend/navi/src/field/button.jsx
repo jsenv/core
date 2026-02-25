@@ -140,6 +140,7 @@ import.meta.css = /* css */ `
         --button-padding-left,
         var(--button-padding-x, var(--button-padding))
       );
+      padding: var(--button-padding, unset);
       align-items: inherit;
       justify-content: inherit;
       color: var(--x-button-color);
