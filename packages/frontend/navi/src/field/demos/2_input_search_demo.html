@@ -138,6 +138,21 @@
                   </Box>
                 </fieldset>
                 <fieldset>
+                  <legend>With value</legend>
+                  <Box row spacing="sm" alignX="start">
+                    <Input
+                      type="search"
+                      placeholder="Search..."
+                      value="Text"
+                      action={() => {}}
+                    />
+                    <input type="search" placeholder="Search..." value="Text" />
+                  </Box>
+                </fieldset>
+              </Box>
+
+              <Box column spacing="sm">
+                <fieldset>
                   <legend>:read-only</legend>
                   <Box row spacing="sm" alignX="start">
                     <Input type="search" value="Read-only search term" />
@@ -232,11 +247,13 @@
 
             <fieldset>
               <legend>Filter Product List</legend>
-              <Box column spacing="md">
+              <Box row spacing="md" alignX="start">
                 <Input
                   type="search"
                   value={searchTerm}
-                  onInput={setSearchTerm}
+                  action={(v) => {
+                    setSearchTerm(v);
+                  }}
                   placeholder="Search products..."
                 />
 
