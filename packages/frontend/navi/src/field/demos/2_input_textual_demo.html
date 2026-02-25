@@ -450,6 +450,26 @@
         const [asyncCallCount, setAsyncCallCount] = useState(0);
         const [debouncedCallCount, setDebouncedCallCount] = useState(0);
         const [afterChangeCallCount, setAfterChangeCallCount] = useState(0);
+        const [abortValue, setAbortValue] = useState("");
+        const [abortCallCount, setAbortCallCount] = useState(0);
+        const [abortedCount, setAbortedCount] = useState(0);
+
+        const useCancelPrevious = () => {
+          const [currentAbortController, setCurrentAbortController] =
+            useState(null);
+
+          return () => {
+            if (currentAbortController) {
+              currentAbortController.abort();
+              setAbortedCount((c) => c + 1);
+            }
+            const newController = new AbortController();
+            setCurrentAbortController(newController);
+            return newController.signal;
+          };
+        };
+
+        const cancelPrevious = useCancelPrevious();
 
         const slowAction = async (value, setter, counter, setCounter) => {
           setCounter((c) => c + 1);
@@ -553,6 +573,35 @@
                 />
                 <div className="value-display">
                   Value: "{afterChangeValue}" | Calls: {afterChangeCallCount}
+                </div>
+              </Box>
+            </fieldset>
+
+            <fieldset>
+              <legend>Async Action with Abort Mechanism</legend>
+              <p className="states-description">
+                Drop the <code>async</code> from the action to keep UI
+                responsive, but use <code>cancelPrevious()</code> to get an
+                abort signal and properly cancel previous operations.
+              </p>
+              <Box column spacing="sm">
+                <Input
+                  placeholder="Type something (with abort)..."
+                  action={(value) => {
+                    const abortSignal = cancelPrevious();
+                    setAbortCallCount((c) => c + 1);
+
+                    // Simulate async operation that can be aborted
+                    setTimeout(() => {
+                      if (!abortSignal.aborted) {
+                        setAbortValue(value);
+                      }
+                    }, 2000);
+                  }}
+                />
+                <div className="value-display">
+                  Value: "{abortValue}" | Calls: {abortCallCount} | Aborted:{" "}
+                  {abortedCount}
                 </div>
               </Box>
             </fieldset>

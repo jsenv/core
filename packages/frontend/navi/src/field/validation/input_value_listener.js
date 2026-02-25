@@ -3,29 +3,49 @@ import { createPubSub } from "@jsenv/dom";
 export const listenInputValue = (
   input,
   callback,
-  { waitForChange = false } = {},
+  { waitForChange = false, debounce = 0 } = {},
 ) => {
   if (waitForChange) {
     return listenInputValueChange(input, callback);
   }
   const [teardown, addTeardown] = createPubSub();
   let currentValue = input.value;
-
   let timeout;
   const onAsyncEvent = (e) => {
     timeout = setTimeout(() => {
       onEvent(e);
     }, 0);
   };
-  const onEvent = (e) => {
-    clearTimeout(timeout);
-    const value = input.value;
-    if (value === currentValue) {
-      return;
-    }
-    currentValue = value;
-    callback(e);
-  };
+
+  let onEvent;
+  if (debounce) {
+    let debounceTimeout;
+    onEvent = (e) => {
+      clearTimeout(timeout);
+      clearTimeout(debounceTimeout);
+
+      const value = input.value;
+      if (value === currentValue) {
+        return;
+      }
+      currentValue = value;
+
+      debounceTimeout = setTimeout(() => {
+        callback(e);
+      }, debounce);
+    };
+  } else {
+    onEvent = (e) => {
+      clearTimeout(timeout);
+
+      const value = input.value;
+      if (value === currentValue) {
+        return;
+      }
+      currentValue = value;
+      callback(e);
+    };
+  }
 
   // Standard user input (typing)
   input.addEventListener("input", onEvent);

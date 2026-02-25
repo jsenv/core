@@ -25,6 +25,7 @@ export { valueInLocalStorage } from "./src/state/value_in_local_storage.js";
 export { compareTwoJsValues } from "./src/utils/compare_two_js_values.js";
 // state fetching
 export { createRequestCanceller } from "./src/state/request_canceller.js";
+export { useCancelPrevious } from "./src/state/use_cancel_previous.js";
 
 // Box
 export { Box } from "./src/box/box.jsx";
