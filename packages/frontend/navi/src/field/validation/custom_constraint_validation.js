@@ -743,7 +743,7 @@ export const installCustomConstraintValidation = (
         });
       },
       {
-        waitForChange: !elementWithAction.hasAttribute("data-live-action"),
+        waitForChange: !element.closest("[data-live-action]"),
       },
     );
     addTeardown(() => {

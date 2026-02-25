@@ -459,13 +459,7 @@ const InputTextualBasic = (props) => {
             }
             uiStateController.setUIState("", { trigger: "cancel_button" });
             ref.current.value = "";
-            // we need the setTimeout because
-            // our action value is updated asynchronously and we need to wait for it to be updated before dispatching the event
-            // With native interactions we are fine because
-            // the action value is updated beforehand
-            setTimeout(() => {
-              ref.current.dispatchEvent(new Event("navi_delete_content"));
-            });
+            ref.current.dispatchEvent(new Event("navi_delete_content"));
           }}
         >
           <Icon color="rgba(28, 43, 52, 0.5)">

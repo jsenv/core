@@ -61,6 +61,15 @@ export const listenInputValue = (
   addTeardown(() => {
     input.removeEventListener("focus", onEvent);
   });
+
+  // "navi_delete_content" behaves like an async event
+  // a bit like form reset because
+  // our action will be updated async after the component re-renders
+  // and we need to wait that to happen to properly call action with the right value
+  input.addEventListener("navi_delete_content", onAsyncEvent);
+  addTeardown(() => {
+    input.removeEventListener("navi_delete_content", onAsyncEvent);
+  });
   return () => {
     teardown();
   };
