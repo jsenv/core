@@ -131,10 +131,10 @@
                   <Box row spacing="sm" alignX="start">
                     <Input
                       type="search"
-                      placeholder="Focus me"
+                      placeholder="Search..."
                       pseudoState={{ ":focus-visible": true }}
                     />
-                    <input type="search" placeholder="Focus me" autoFocus />
+                    <input type="search" placeholder="Search..." autoFocus />
                   </Box>
                 </fieldset>
                 <fieldset>
@@ -151,16 +151,8 @@
                 <fieldset>
                   <legend>:disabled</legend>
                   <Box row spacing="sm" alignX="start">
-                    <Input
-                      type="search"
-                      disabled
-                      placeholder="Disabled search"
-                    />
-                    <input
-                      type="search"
-                      disabled
-                      placeholder="Disabled search"
-                    />
+                    <Input type="search" disabled value="test" />
+                    <input type="search" disabled value="test" />
                   </Box>
                 </fieldset>
               </Box>
@@ -179,7 +171,7 @@
                 <fieldset>
                   <legend>Loading state</legend>
                   <Box row spacing="sm" alignX="start">
-                    <Input type="search" loading placeholder="Searching..." />
+                    <Input type="search" loading value="test" />
                   </Box>
                 </fieldset>
               </Box>
@@ -208,79 +200,99 @@
       };
 
       const InteractiveDemo = () => {
-        const [value, setValue] = useState("Interactive search");
-        const [disabled, setDisabled] = useState(false);
+        const [searchTerm, setSearchTerm] = useState("");
 
-        const handleClear = () => {
-          setValue("");
-        };
+        const items = [
+          "Apple iPhone 15",
+          "Samsung Galaxy S24",
+          "Google Pixel 8",
+          "MacBook Air M3",
+          "Dell XPS 13",
+          "Microsoft Surface Pro",
+          "Nintendo Switch",
+          "PlayStation 5",
+          "Xbox Series X",
+          "AirPods Pro",
+          "Sony WH-1000XM5",
+          "Bose QuietComfort",
+          "iPad Pro",
+          "Samsung Galaxy Tab",
+          "Tesla Model 3",
+          "BMW i4",
+          "Mercedes EQS",
+        ];
+
+        const filteredItems = items.filter((item) =>
+          item.toLowerCase().includes(searchTerm.toLowerCase()),
+        );
 
         return (
           <div className="demo-section">
-            <h2>Interactive Search Controls</h2>
+            <h2>Live Search Demo</h2>
 
             <fieldset>
-              <legend>Interactive Search Input</legend>
-              <Box column spacing="sm">
+              <legend>Filter Product List</legend>
+              <Box column spacing="md">
                 <Input
                   type="search"
-                  disabled={disabled}
-                  value={value}
-                  action={async (v) => {
-                    debugger;
-                    await new Promise((resolve) => setTimeout(resolve, 2_000));
-                    setValue(v);
-                  }}
-                  placeholder="Search..."
+                  value={searchTerm}
+                  onInput={setSearchTerm}
+                  placeholder="Search products..."
                 />
-                <div className="value-display">Value: "{value}"</div>
+
                 <div
                   style={{
-                    fontSize: "0.85rem",
+                    fontSize: "0.9rem",
                     color: "#666",
-                    fontStyle: "italic",
                     textAlign: "center",
                     padding: "8px",
                     background: "#f8f9fa",
                     borderRadius: "4px",
                   }}
                 >
-                  Try typing, pressing Enter to search, using Escape to clear,
-                  or clicking the search/clear buttons
+                  Showing {filteredItems.length} of {items.length} products
                 </div>
-              </Box>
-            </fieldset>
 
-            <fieldset>
-              <legend>Toggle States</legend>
-              <Box row spacing="sm" alignX="start" wrap>
-                <button
+                <div
                   style={{
-                    padding: "8px 16px",
-                    background: disabled ? "#007bff" : "#f8f9fa",
-                    color: disabled ? "white" : "#333",
+                    maxHeight: "300px",
+                    overflowY: "auto",
                     border: "1px solid #ddd",
-                    borderRadius: "4px",
-                    cursor: "pointer",
+                    borderRadius: "6px",
+                    background: "#fff",
                   }}
-                  onClick={() => setDisabled(!disabled)}
                 >
-                  Disabled: {disabled ? "ON" : "OFF"}
-                </button>
-                <button
-                  style={{
-                    padding: "8px 16px",
-                    background: "#28a745",
-                    color: "white",
-                    border: "1px solid #28a745",
-                    borderRadius: "4px",
-                    cursor: "pointer",
-                  }}
-                  onClick={handleClear}
-                  disabled={disabled}
-                >
-                  Clear
-                </button>
+                  {filteredItems.length > 0 ? (
+                    filteredItems.map((item, index) => (
+                      <div
+                        key={index}
+                        style={{
+                          padding: "12px 16px",
+                          borderBottom:
+                            index < filteredItems.length - 1
+                              ? "1px solid #eee"
+                              : "none",
+                          fontSize: "0.95rem",
+                          color: "#333",
+                          background: index % 2 === 0 ? "#f9f9f9" : "#fff",
+                        }}
+                      >
+                        {item}
+                      </div>
+                    ))
+                  ) : (
+                    <div
+                      style={{
+                        padding: "20px",
+                        textAlign: "center",
+                        color: "#999",
+                        fontStyle: "italic",
+                      }}
+                    >
+                      No products found matching "{searchTerm}"
+                    </div>
+                  )}
+                </div>
               </Box>
             </fieldset>
           </div>
