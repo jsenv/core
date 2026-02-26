@@ -456,37 +456,35 @@
           setter(value);
         };
 
-        const CircleVisualization = ({ radius, label, callCount }) => (
-          <div style={{ textAlign: "center", margin: "10px" }}>
-            <div
-              style={{
-                margin: "10px auto",
-                width: "120px",
-                height: "120px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                border: "2px solid #ddd",
-                borderRadius: "8px",
-                background: "#f9f9f9",
-              }}
-            >
-              <div
-                style={{
-                  width: `${Math.max(radius * 0.8, 8)}px`,
-                  height: `${Math.max(radius * 0.8, 8)}px`,
-                  borderRadius: "50%",
-                  background: "linear-gradient(135deg, #007bff, #0056b3)",
-                  transition: "all 0.3s ease",
-                }}
-              />
-            </div>
-            <div style={{ fontSize: "0.8rem", color: "#666" }}>{label}</div>
-            <div style={{ fontSize: "0.75rem", color: "#999" }}>
-              Radius: {radius}px | Calls: {callCount}
-            </div>
-          </div>
-        );
+        const CircleVisualization = ({ radius, label, callCount }) => {
+          const circleMaxRadius = 100 * 0.2;
+          const circleRadius = radius * 0.2;
+          return (
+            <Box row>
+              <Box
+                row
+                relative
+                align="center"
+                width={circleMaxRadius}
+                height={circleMaxRadius}
+                background="#eee"
+              >
+                <Box
+                  width={circleRadius}
+                  height={circleRadius}
+                  circle
+                  background="linear-gradient(135deg, #007bff, #0056b3)"
+                />
+              </Box>
+              <Box>
+                <div style={{ fontSize: "0.8rem", color: "#666" }}>{label}</div>
+                <div style={{ fontSize: "0.75rem", color: "#999" }}>
+                  Radius: {radius}px | Calls: {callCount}
+                </div>
+              </Box>
+            </Box>
+          );
+        };
 
         return (
           <div className="demo-section">
