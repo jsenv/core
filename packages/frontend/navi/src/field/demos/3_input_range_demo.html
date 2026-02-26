@@ -485,39 +485,56 @@
         };
 
         const AfterChangeDemo = () => {
-          const [afterChangeRadius, setAfterChangeRadius] = useState(50);
+          const [uiValue, setUIValue] = useState(50); // Immediate UI state
+          const [processedRadius, setProcessedRadius] = useState(50); // Async processed state
           const [afterChangeCallCount, setAfterChangeCallCount] = useState(0);
 
           return (
             <fieldset>
-              <legend>Action After Change</legend>
+              <legend>Action After Change with Separate UI State</legend>
               <p className="states-description">
-                Using <code>actionAfterChange</code> executes the action only
-                when the user releases the slider, showing loading state during
-                execution.
+                Using <code>onUIStateChange</code> for immediate UI updates and{" "}
+                <code>actionAfterChange</code>
+                for async processing. The slider shows the current UI value
+                instantly, but the circle radius represents the processed result
+                updated only after the action completes.
               </p>
               <Box column spacing="sm">
                 <InputRange
                   min="10"
                   max="100"
-                  onUIStateChange={(v) => {
-                    setAfterChangeRadius(v);
+                  value={uiValue}
+                  onUIStateChange={(value) => {
+                    // Immediate UI update
+                    setUIValue(parseInt(value));
                   }}
-                  action={(value) =>
-                    slowAction(
+                  action={(value) => {
+                    // Async processing - only updates processed state
+                    return slowAction(
                       parseInt(value),
-                      setAfterChangeRadius,
+                      setProcessedRadius,
                       afterChangeCallCount,
                       setAfterChangeCallCount,
-                    )
-                  }
+                    );
+                  }}
                   actionAfterChange
                 />
-                <CircleVisualization
-                  radius={afterChangeRadius}
-                  label="After Change Response (on release + 1.5s delay)"
-                  callCount={afterChangeCallCount}
-                />
+                <Box column spacing="sm">
+                  <div
+                    style={{
+                      fontSize: "0.85rem",
+                      color: "#666",
+                      textAlign: "center",
+                    }}
+                  >
+                    UI Value: {uiValue}px (immediate)
+                  </div>
+                  <CircleVisualization
+                    radius={processedRadius}
+                    label="Processed Radius (updates after action completes)"
+                    callCount={afterChangeCallCount}
+                  />
+                </Box>
               </Box>
             </fieldset>
           );
