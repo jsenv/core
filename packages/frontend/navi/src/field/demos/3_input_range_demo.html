@@ -443,12 +443,10 @@
         const [immediateRadius, setImmediateRadius] = useState(50);
         const [slowRadius, setSlowRadius] = useState(50);
         const [debouncedRadius, setDebouncedRadius] = useState(50);
-        const [afterChangeRadius, setAfterChangeRadius] = useState(50);
 
         const [immediateCallCount, setImmediateCallCount] = useState(0);
         const [slowCallCount, setSlowCallCount] = useState(0);
         const [debouncedCallCount, setDebouncedCallCount] = useState(0);
-        const [afterChangeCallCount, setAfterChangeCallCount] = useState(0);
 
         const slowAction = async (value, setter, counter, setCounter) => {
           setCounter((c) => c + 1);
@@ -483,6 +481,45 @@
                 </div>
               </Box>
             </Box>
+          );
+        };
+
+        const AfterChangeDemo = () => {
+          const [afterChangeRadius, setAfterChangeRadius] = useState(50);
+          const [afterChangeCallCount, setAfterChangeCallCount] = useState(0);
+
+          return (
+            <fieldset>
+              <legend>Action After Change</legend>
+              <p className="states-description">
+                Using <code>actionAfterChange</code> executes the action only
+                when the user releases the slider, showing loading state during
+                execution.
+              </p>
+              <Box column spacing="sm">
+                <InputRange
+                  min="10"
+                  max="100"
+                  onUIStateChange={(v) => {
+                    setAfterChangeRadius(v);
+                  }}
+                  action={(value) =>
+                    slowAction(
+                      parseInt(value),
+                      setAfterChangeRadius,
+                      afterChangeCallCount,
+                      setAfterChangeCallCount,
+                    )
+                  }
+                  actionAfterChange
+                />
+                <CircleVisualization
+                  radius={afterChangeRadius}
+                  label="After Change Response (on release + 1.5s delay)"
+                  callCount={afterChangeCallCount}
+                />
+              </Box>
+            </fieldset>
           );
         };
 
@@ -568,34 +605,7 @@
               </Box>
             </fieldset>
 
-            <fieldset>
-              <legend>Action After Change</legend>
-              <p className="states-description">
-                Using <code>actionAfterChange</code> executes the action only
-                when the user releases the slider, showing loading state during
-                execution.
-              </p>
-              <Box column spacing="sm">
-                <InputRange
-                  min="10"
-                  max="100"
-                  action={(value) =>
-                    slowAction(
-                      parseInt(value),
-                      setAfterChangeRadius,
-                      afterChangeCallCount,
-                      setAfterChangeCallCount,
-                    )
-                  }
-                  actionAfterChange
-                />
-                <CircleVisualization
-                  radius={afterChangeRadius}
-                  label="After Change Response (on release + 1.5s delay)"
-                  callCount={afterChangeCallCount}
-                />
-              </Box>
-            </fieldset>
+            <AfterChangeDemo />
           </div>
         );
       };
