@@ -579,7 +579,7 @@
                 <InputRange
                   min="10"
                   max="100"
-                  actionAfterChange={(value) =>
+                  action={(value) =>
                     slowAction(
                       parseInt(value),
                       setAfterChangeRadius,
@@ -587,6 +587,7 @@
                       setAfterChangeCallCount,
                     )
                   }
+                  actionAfterChange
                 />
                 <CircleVisualization
                   radius={afterChangeRadius}

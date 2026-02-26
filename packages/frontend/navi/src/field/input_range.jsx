@@ -456,6 +456,8 @@ const InputRangeWithAction = (props) => {
   const uiState = useContext(UIStateContext);
   const {
     action,
+    actionDebounce,
+    actionAfterChange,
     loading,
     onCancel,
     onActionPrevented,
@@ -512,6 +514,8 @@ const InputRangeWithAction = (props) => {
   return (
     <InputRangeBasic
       data-action={boundAction.name}
+      data-action-debounce={actionDebounce}
+      data-action-after-change={actionAfterChange ? "" : undefined}
       {...rest}
       ref={ref}
       loading={loading || actionLoading}
