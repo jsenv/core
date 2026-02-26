@@ -58,10 +58,6 @@
         gap: 15px;
       }
 
-      .range-group > * {
-        min-width: 150px;
-      }
-
       .states-section {
         margin: 20px 0;
       }
@@ -189,6 +185,7 @@
           <div>
             <BasicStatesDemo />
             <FocusStatesDemo />
+            <ActionHandlingDemo />
             <ColorVariationsDemo />
             <ThumbCustomizationDemo />
           </div>
@@ -219,7 +216,7 @@
                     <div className="range-group">
                       <InputRange
                         value={defaultValue}
-                        onUIStateChange={(v) => {
+                        action={(v) => {
                           setDefaultValue(v);
                         }}
                         min="0"
@@ -248,6 +245,7 @@
                         min="0"
                         max="100"
                         disabled
+                        action={() => {}}
                       />
                       <div className="value-display">{disabledValue}</div>
                     </div>
@@ -280,7 +278,13 @@
                   <legend>:read-only</legend>
                   <Box row spacing="sm" alignX="start">
                     <div className="range-group">
-                      <InputRange value="60" min="0" max="100" readOnly />
+                      <InputRange
+                        value="60"
+                        min="0"
+                        max="100"
+                        readOnly
+                        action={() => {}}
+                      />
                       <div className="value-display">60</div>
                     </div>
                   </Box>
@@ -294,7 +298,7 @@
                         min="0"
                         max="100"
                         loading
-                        readOnly
+                        action={() => {}}
                       />
                       <div className="value-display">40</div>
                     </div>
@@ -350,7 +354,7 @@
                   <div className="range-group">
                     <InputRange
                       value={focusedValue}
-                      onUIStateChange={(v) => setFocusedValue(v)}
+                      action={(v) => setFocusedValue(v)}
                       min="0"
                       max="100"
                       pseudoState={{ ":focus-visible": true }}
@@ -382,6 +386,7 @@
                       min="0"
                       max="100"
                       readOnly
+                      action={() => {}}
                       pseudoState={{ ":focus-visible": true }}
                     />
                     <div className="value-display">45</div>
@@ -397,7 +402,7 @@
                       min="0"
                       max="100"
                       loading
-                      readOnly
+                      action={() => {}}
                       pseudoState={{ ":focus-visible": true }}
                     />
                     <div className="value-display">75</div>
@@ -430,6 +435,168 @@
                 accessibility.
               </p>
             </div>
+          </div>
+        );
+      };
+
+      const ActionHandlingDemo = () => {
+        const [immediateRadius, setImmediateRadius] = useState(50);
+        const [slowRadius, setSlowRadius] = useState(50);
+        const [debouncedRadius, setDebouncedRadius] = useState(50);
+        const [afterChangeRadius, setAfterChangeRadius] = useState(50);
+
+        const [immediateCallCount, setImmediateCallCount] = useState(0);
+        const [slowCallCount, setSlowCallCount] = useState(0);
+        const [debouncedCallCount, setDebouncedCallCount] = useState(0);
+        const [afterChangeCallCount, setAfterChangeCallCount] = useState(0);
+
+        const slowAction = async (value, setter, counter, setCounter) => {
+          setCounter((c) => c + 1);
+          await new Promise((resolve) => setTimeout(resolve, 1500));
+          setter(value);
+        };
+
+        const CircleVisualization = ({ radius, label, callCount }) => (
+          <div style={{ textAlign: "center", margin: "10px" }}>
+            <div
+              style={{
+                margin: "10px auto",
+                width: "120px",
+                height: "120px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                border: "2px solid #ddd",
+                borderRadius: "8px",
+                background: "#f9f9f9",
+              }}
+            >
+              <div
+                style={{
+                  width: `${Math.max(radius * 0.8, 8)}px`,
+                  height: `${Math.max(radius * 0.8, 8)}px`,
+                  borderRadius: "50%",
+                  background: "linear-gradient(135deg, #007bff, #0056b3)",
+                  transition: "all 0.3s ease",
+                }}
+              />
+            </div>
+            <div style={{ fontSize: "0.8rem", color: "#666" }}>{label}</div>
+            <div style={{ fontSize: "0.75rem", color: "#999" }}>
+              Radius: {radius}px | Calls: {callCount}
+            </div>
+          </div>
+        );
+
+        return (
+          <div className="demo-section">
+            <h2>Action Handling</h2>
+
+            <fieldset>
+              <legend>Immediate Action</legend>
+              <p className="states-description">
+                Basic action called immediately on every input value change.
+              </p>
+              <Box column spacing="sm" alignX="start" alignY="center">
+                <InputRange
+                  min="10"
+                  max="100"
+                  action={(value) => {
+                    setImmediateCallCount((c) => c + 1);
+                    setImmediateRadius(parseInt(value));
+                  }}
+                />
+                <CircleVisualization
+                  radius={immediateRadius}
+                  label="Immediate Response"
+                  callCount={immediateCallCount}
+                />
+              </Box>
+            </fieldset>
+
+            <fieldset>
+              <legend>Slow Action (Poor UX)</legend>
+              <p className="states-description">
+                When the action takes time, it blocks and creates poor user
+                experience.
+              </p>
+              <Box column spacing="sm">
+                <InputRange
+                  min="10"
+                  max="100"
+                  action={(value) =>
+                    slowAction(
+                      parseInt(value),
+                      setSlowRadius,
+                      slowCallCount,
+                      setSlowCallCount,
+                    )
+                  }
+                />
+                <CircleVisualization
+                  radius={slowRadius}
+                  label="Slow Response (1.5s delay)"
+                  callCount={slowCallCount}
+                />
+              </Box>
+            </fieldset>
+
+            <fieldset>
+              <legend>Debounced Action (Better UX)</legend>
+              <p className="states-description">
+                Using <code>actionDebounce={"300"}</code> waits 300ms before
+                executing the slow action, making the experience much smoother
+                during dragging.
+              </p>
+              <Box column spacing="sm">
+                <InputRange
+                  min="10"
+                  max="100"
+                  action={(value) =>
+                    slowAction(
+                      parseInt(value),
+                      setDebouncedRadius,
+                      debouncedCallCount,
+                      setDebouncedCallCount,
+                    )
+                  }
+                  actionDebounce={300}
+                />
+                <CircleVisualization
+                  radius={debouncedRadius}
+                  label="Debounced Response (300ms + 1.5s delay)"
+                  callCount={debouncedCallCount}
+                />
+              </Box>
+            </fieldset>
+
+            <fieldset>
+              <legend>Action After Change</legend>
+              <p className="states-description">
+                Using <code>actionAfterChange</code> executes the action only
+                when the user releases the slider, showing loading state during
+                execution.
+              </p>
+              <Box column spacing="sm">
+                <InputRange
+                  min="10"
+                  max="100"
+                  actionAfterChange={(value) =>
+                    slowAction(
+                      parseInt(value),
+                      setAfterChangeRadius,
+                      afterChangeCallCount,
+                      setAfterChangeCallCount,
+                    )
+                  }
+                />
+                <CircleVisualization
+                  radius={afterChangeRadius}
+                  label="After Change Response (on release + 1.5s delay)"
+                  callCount={afterChangeCallCount}
+                />
+              </Box>
+            </fieldset>
           </div>
         );
       };

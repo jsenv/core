@@ -113,7 +113,7 @@ import.meta.css = /* css */ `
 
     position: relative;
     box-sizing: border-box;
-    width: 100%;
+    width: fit-content;
     height: var(--height);
     margin: 2px;
     flex-direction: inherit;
@@ -125,8 +125,6 @@ import.meta.css = /* css */ `
     outline-offset: 2px;
 
     .navi_native_input {
-      position: absolute;
-      inset: 0;
       margin: 0;
       opacity: 0;
       --webkit-appearance: none;
