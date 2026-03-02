@@ -2580,6 +2580,12 @@ export const setupPatterns = (patternDefinitions) => {
 
   // Phase 1: Create all pattern objects
   for (const [key, urlPatternRaw] of Object.entries(patternDefinitions)) {
+    if (typeof urlPatternRaw !== "string") {
+      throw new TypeError(
+        `expects a route pattern string, but received ${urlPatternRaw} for route "${key}".`,
+      );
+    }
+
     // Create the unified pattern object
     const pattern = createRoutePattern(urlPatternRaw);
 

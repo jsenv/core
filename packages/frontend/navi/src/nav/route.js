@@ -485,11 +485,6 @@ export const updateRoutes = (
 };
 
 const registerRoute = (routePattern) => {
-  if (typeof routePattern !== "string") {
-    throw new TypeError(
-      `registerRoute() expects a route pattern string, but received ${routePattern}.`,
-    );
-  }
   const urlPatternRaw = routePattern.originalPattern;
   if (DEBUG) {
     console.debug(`Creating route: ${urlPatternRaw}`);

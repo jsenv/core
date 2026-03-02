@@ -18,7 +18,7 @@
  *
  */
 
-import { Route, Tab, TabList, UITransition, useRouteStatus } from "@jsenv/navi";
+import { Route, Routes, Tab, TabList, useRouteStatus } from "@jsenv/navi";
 import { Page, PageBody, PageHead } from "../layout/page.jsx";
 import { TABLE_DATA_ROUTE, TABLE_SETTINGS_ROUTE } from "../routes.js";
 import { DataSvg } from "../svg/data_svg.jsx";
@@ -66,14 +66,16 @@ export const TablePage = ({ table }) => {
         </TabList>
       </PageHead>
       <PageBody>
-        <UITransition>
-          <Route route={TABLE_DATA_ROUTE}>
-            {(rows) => <TableData table={table} rows={rows} />}
-          </Route>
-          <Route route={TABLE_SETTINGS_ROUTE}>
-            {() => <TableSettings table={table} />}
-          </Route>
-        </UITransition>
+        <Routes>
+          <Route
+            route={TABLE_DATA_ROUTE}
+            element={(rows) => <TableData table={table} rows={rows} />}
+          />
+          <Route
+            route={TABLE_SETTINGS_ROUTE}
+            element={<TableSettings table={table} />}
+          />
+        </Routes>
       </PageBody>
     </Page>
   );
