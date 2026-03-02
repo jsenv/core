@@ -676,7 +676,7 @@ export const createAction = (callback, rootOptions = {}) => {
       }
 
       // ✅ CAS 2: Objet -> vérifier s'il contient des signals
-      if (newParamsOrSignal && typeof newParamsOrSignal === "object") {
+      if (isPlainObject(newParamsOrSignal)) {
         const staticParams = {};
         const signalMap = new Map();
 
@@ -727,7 +727,7 @@ export const createAction = (callback, rootOptions = {}) => {
         return createActionProxyFromSignal(action, paramsSignal, options);
       }
 
-      // ✅ CAS 3: Primitive -> action enfant
+      // ✅ CAS 3: Primitive or objects like DOMEvents etc -> action enfant
       return createChildAction({
         params: newParamsOrSignal,
         ...options,
@@ -1393,6 +1393,19 @@ const generateActionName = (name, params) => {
     asFunctionArgs: true,
   });
   return `${name}${argsString}`;
+};
+
+const isPlainObject = (obj) => {
+  if (typeof obj !== "object" || obj === null) {
+    return false;
+  }
+  let proto = obj;
+  while (Object.getPrototypeOf(proto) !== null) {
+    proto = Object.getPrototypeOf(proto);
+  }
+  return (
+    Object.getPrototypeOf(obj) === proto || Object.getPrototypeOf(obj) === null
+  );
 };
 
 if (import.meta.hot) {

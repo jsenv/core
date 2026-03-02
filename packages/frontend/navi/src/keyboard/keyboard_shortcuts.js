@@ -164,7 +164,8 @@ export const useKeyboardShortcuts = (
             return false;
           }
           const { action } = shortcutCandidate;
-          return requestAction(element, action, {
+          const actionWithEvent = action.bindParams(keyboardEvent);
+          return requestAction(element, actionWithEvent, {
             actionOrigin: "keyboard_shortcut",
             event: keyboardEvent,
             requester: document.activeElement,
