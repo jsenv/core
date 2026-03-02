@@ -9,8 +9,10 @@ effect(() => {
   for (const item of state) {
     if (item.name === currentItem.name) {
       const prev = sigi.prev(item);
-      if (prev.value.name !== item.name) {
-        values.push(`renamed from: ${prev.value.name}, to: ${item.name}`);
+      // eslint-disable-next-line signals/no-conditional-value-read
+      const prevName = prev.value.name;
+      if (prevName.name !== item.name) {
+        values.push(`renamed from: ${prevName.name}, to: ${item.name}`);
       }
     }
   }
