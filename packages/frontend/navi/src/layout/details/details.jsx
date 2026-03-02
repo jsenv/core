@@ -21,32 +21,34 @@ import.meta.css = /* css */ `
     display: flex;
     flex-shrink: 0;
     flex-direction: column;
-  }
 
-  .navi_details > summary {
-    display: flex;
-    flex-shrink: 0;
-    flex-direction: column;
-    cursor: pointer;
-    user-select: none;
-  }
-  .summary_body {
-    display: flex;
-    width: 100%;
-    flex-direction: row;
-    align-items: center;
-    gap: 0.2em;
-  }
-  .summary_label {
-    display: flex;
-    padding-right: 10px;
-    flex: 1;
-    align-items: center;
-    gap: 0.2em;
-  }
+    summary {
+      display: flex;
+      flex-shrink: 0;
+      flex-direction: column;
+      cursor: pointer;
+      user-select: none;
 
-  .navi_details > summary:focus {
-    z-index: 1;
+      &:focus {
+        z-index: 1;
+      }
+
+      .navi_summary_body {
+        display: flex;
+        width: 100%;
+        flex-direction: row;
+        align-items: center;
+        gap: 0.2em;
+
+        .navi_summary_label {
+          display: flex;
+          padding-right: 10px;
+          flex: 1;
+          align-items: center;
+          gap: 0.2em;
+        }
+      }
+    }
   }
 `;
 
@@ -178,9 +180,9 @@ const DetailsBasic = (props) => {
       open={innerOpen}
     >
       <summary ref={summaryRef}>
-        <div className="summary_body">
+        <div className="navi_summary_body">
           <SummaryMarker open={innerOpen} loading={loading} />
-          <div className="summary_label">{label}</div>
+          <div className="navi_summary_label">{label}</div>
         </div>
       </summary>
       {children}
