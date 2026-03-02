@@ -4,14 +4,8 @@
 
 import { Button, Details, valueInLocalStorage } from "@jsenv/navi";
 import { effect, signal } from "@preact/signals";
-import { forwardRef } from "preact/compat";
-import {
-  useCallback,
-  useImperativeHandle,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "preact/hooks";
+import { useCallback, useLayoutEffect, useRef, useState } from "preact/hooks";
+
 import { ExplorerItemList } from "./explorer_item_list.jsx";
 
 export const createExplorerGroupController = (
@@ -46,7 +40,7 @@ export const createExplorerGroupController = (
   };
 };
 
-export const ExplorerGroup = forwardRef((props, ref) => {
+export const ExplorerGroup = (props) => {
   const {
     controller,
     detailsAction,
@@ -65,13 +59,12 @@ export const ExplorerGroup = forwardRef((props, ref) => {
     resizable,
     ...rest
   } = props;
-
-  const innerRef = useRef();
-  useImperativeHandle(ref, () => innerRef.current);
+  const defaultRef = useRef();
+  const ref = rest.ref || defaultRef;
 
   useLayoutEffect(() => {
     setTimeout(() => {
-      innerRef.current.setAttribute("data-details-toggle-animation", "");
+      ref.current.setAttribute("data-details-toggle-animation", "");
     });
   }, []);
 
@@ -102,7 +95,7 @@ export const ExplorerGroup = forwardRef((props, ref) => {
       )}
       <Details
         {...rest}
-        ref={innerRef}
+        ref={ref}
         id={controller.id}
         open={controller.detailsOpenAtStart}
         focusGroup
@@ -177,4 +170,4 @@ export const ExplorerGroup = forwardRef((props, ref) => {
       </Details>
     </>
   );
-});
+};

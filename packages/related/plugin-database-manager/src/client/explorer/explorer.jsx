@@ -1,6 +1,7 @@
 import { initFlexDetailsSet } from "@jsenv/dom";
-import { useRunOnMount } from "@jsenv/navi";
+import { Icon, useRunOnMount } from "@jsenv/navi";
 import { useLayoutEffect, useRef, useState } from "preact/hooks";
+
 // import { DatabaseSvg } from "../database/database_icons.jsx";
 // import { useCurrentDatabase } from "../database/database_signals.js";
 import {
@@ -29,8 +30,6 @@ import "./explorer.css" with { type: "css" };
 import "./explorer_store.js";
 import { EXPLORER } from "./explorer_store.js";
 
-const FontSizedSvg = (props) => props;
-
 export const Explorer = () => {
   useRunOnMount(EXPLORER.GET, Explorer);
 
@@ -41,9 +40,9 @@ export const Explorer = () => {
   return (
     <nav className="explorer">
       <div className="explorer_head">
-        <FontSizedSvg>
+        <Icon>
           <RoleIcon />
-        </FontSizedSvg>
+        </Icon>
         <select style="margin-top: 10px; margin-bottom: 10px; margin-left: 5px;">
           <option selected>{role.rolname}</option>
         </select>

@@ -1,6 +1,6 @@
 import { elementIsFocusable, findAfter } from "@jsenv/dom";
 import { forwardRef } from "preact/compat";
-import { useEffect, useImperativeHandle, useRef, useState } from "preact/hooks";
+import { useEffect, useRef, useState } from "preact/hooks";
 
 import { ActionRenderer } from "../../action/action_renderer.jsx";
 import { renderActionableComponent } from "../../action/render_actionable_component.jsx";
@@ -57,7 +57,7 @@ export const Details = forwardRef((props, ref) => {
   });
 });
 
-const DetailsBasic = forwardRef((props, ref) => {
+const DetailsBasic = (props) => {
   const {
     id,
     label = "Summary",
@@ -73,12 +73,12 @@ const DetailsBasic = forwardRef((props, ref) => {
     children,
     ...rest
   } = props;
-  const innerRef = useRef();
-  useImperativeHandle(ref, () => innerRef.current);
+  const defaultRef = useRef();
+  const ref = rest.ref || defaultRef;
 
   const [navState, setNavState] = useNavState(id);
   const [innerOpen, innerOpenSetter] = useState(open || navState);
-  useFocusGroup(innerRef, {
+  useFocusGroup(ref, {
     enabled: focusGroup,
     name: typeof focusGroup === "string" ? focusGroup : undefined,
     direction: focusGroupDirection,
@@ -100,7 +100,7 @@ const DetailsBasic = forwardRef((props, ref) => {
    */
 
   const summaryRef = useRef(null);
-  useKeyboardShortcuts(innerRef, [
+  useKeyboardShortcuts(ref, [
     {
       key: openKeyShortcut,
       enabled: arrowKeyShortcuts,
@@ -109,7 +109,7 @@ const DetailsBasic = forwardRef((props, ref) => {
         // avoid handling openKeyShortcut twice when keydown occurs inside nested details
         !e.defaultPrevented,
       action: (e) => {
-        const details = innerRef.current;
+        const details = ref.current;
         if (!details.open) {
           e.preventDefault();
           details.open = true;
@@ -132,11 +132,11 @@ const DetailsBasic = forwardRef((props, ref) => {
       key: closeKeyShortcut,
       enabled: arrowKeyShortcuts,
       when: () => {
-        const details = innerRef.current;
+        const details = ref.current;
         return details.open;
       },
       action: (e) => {
-        const details = innerRef.current;
+        const details = ref.current;
         const summary = summaryRef.current;
         if (document.activeElement === summary) {
           e.preventDefault();
@@ -158,7 +158,7 @@ const DetailsBasic = forwardRef((props, ref) => {
   return (
     <details
       {...rest}
-      ref={innerRef}
+      ref={ref}
       id={id}
       className={[
         "navi_details",
@@ -188,9 +188,9 @@ const DetailsBasic = forwardRef((props, ref) => {
       {children}
     </details>
   );
-});
+};
 
-const DetailsWithAction = forwardRef((props, ref) => {
+const DetailsWithAction = (props) => {
   const {
     action,
     loading,
@@ -202,16 +202,16 @@ const DetailsWithAction = forwardRef((props, ref) => {
     children,
     ...rest
   } = props;
-  const innerRef = useRef();
-  useImperativeHandle(ref, () => innerRef.current);
+  const defaultRef = useRef();
+  const ref = rest.ref || defaultRef;
 
   const effectiveAction = useAction(action);
   const { loading: actionLoading } = useActionStatus(effectiveAction);
-  const executeAction = useExecuteAction(innerRef, {
+  const executeAction = useExecuteAction(ref, {
     // the error will be displayed by actionRenderer inside <details>
     errorEffect: "none",
   });
-  useActionEvents(innerRef, {
+  useActionEvents(ref, {
     onPrevented: onActionPrevented,
     onAction: (e) => {
       executeAction(e);
@@ -224,7 +224,7 @@ const DetailsWithAction = forwardRef((props, ref) => {
   return (
     <DetailsBasic
       {...rest}
-      ref={innerRef}
+      ref={ref}
       loading={loading || actionLoading}
       onToggle={(toggleEvent) => {
         const isOpen = toggleEvent.newState === "open";
@@ -242,4 +242,4 @@ const DetailsWithAction = forwardRef((props, ref) => {
       <ActionRenderer action={effectiveAction}>{children}</ActionRenderer>
     </DetailsBasic>
   );
-});
+};
