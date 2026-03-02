@@ -12,7 +12,7 @@ Jsenv is a suite of tools for JavaScript projects that prioritizes standards and
 npm install --save-dev @jsenv/core
 ```
 
-> **Compatibility**: Tested on Mac, Windows, and Linux with Node.js 20. Other environments are not officially tested.
+> **Compatibility**: Mac, Windows, and Linux with Node.js 25.
 
 ## Documentation
 
