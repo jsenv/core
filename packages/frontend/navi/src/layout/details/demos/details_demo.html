@@ -71,13 +71,6 @@
         color: #856404;
       }
 
-      .content-example {
-        margin: 10px 0;
-        padding: 15px;
-        background: #e3f2fd;
-        border-left: 4px solid #2196f3;
-      }
-
       .code-block {
         margin: 15px 0;
         padding: 15px;
@@ -159,7 +152,6 @@
       }
 
       .content-example {
-        margin: 10px 0;
         padding: 15px;
         background: #e3f2fd;
         border-left: 4px solid #2196f3;
@@ -167,6 +159,10 @@
 
       details {
         border: 1px solid black;
+      }
+
+      summary {
+        background: lightblue;
       }
     </style>
   </head>
@@ -183,7 +179,7 @@
       const App = () => {
         return (
           <div>
-            <FeaturesOverview />
+            {/* <FeaturesOverview /> */}
             <BasicUsageDemo />
             <KeyboardNavigationDemo />
             <MultipleDetailsDemo />
@@ -241,7 +237,7 @@
             <fieldset>
               <legend>With Custom Styling</legend>
               <Details label="Styled Details" className="custom-styling">
-                <Box column spacing="sm">
+                <Box column spacing="sm" alignY="center">
                   <p>
                     This details element receives custom styling through
                     className.
