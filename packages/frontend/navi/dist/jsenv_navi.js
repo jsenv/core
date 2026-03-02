@@ -22241,7 +22241,7 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
 
     position: relative;
     box-sizing: border-box;
-    width: 100%;
+    width: fit-content;
     height: var(--height);
     margin: 2px;
     flex-direction: inherit;
@@ -22253,8 +22253,6 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
     outline-offset: 2px;
 
     .navi_native_input {
-      position: absolute;
-      inset: 0;
       margin: 0;
       opacity: 0;
       --webkit-appearance: none;
@@ -22560,6 +22558,8 @@ const InputRangeWithAction = props => {
   const uiState = useContext(UIStateContext);
   const {
     action,
+    actionDebounce,
+    actionAfterChange,
     loading,
     onCancel,
     onActionPrevented,
@@ -22614,6 +22614,8 @@ const InputRangeWithAction = props => {
   });
   return jsx(InputRangeBasic, {
     "data-action": boundAction.name,
+    "data-action-debounce": actionDebounce,
+    "data-action-after-change": actionAfterChange ? "" : undefined,
     ...rest,
     ref: ref,
     loading: loading || actionLoading
