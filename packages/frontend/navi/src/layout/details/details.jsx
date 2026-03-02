@@ -1,5 +1,4 @@
 import { elementIsFocusable, findAfter } from "@jsenv/dom";
-import { forwardRef } from "preact/compat";
 import { useEffect, useRef, useState } from "preact/hooks";
 
 import { ActionRenderer } from "../../action/action_renderer.jsx";
@@ -50,12 +49,13 @@ import.meta.css = /* css */ `
   }
 `;
 
-export const Details = forwardRef((props, ref) => {
-  return renderActionableComponent(props, ref, {
+export const Details = (props) => {
+  const details = renderActionableComponent(props, {
     Basic: DetailsBasic,
     WithAction: DetailsWithAction,
   });
-});
+  return details;
+};
 
 const DetailsBasic = (props) => {
   const {
