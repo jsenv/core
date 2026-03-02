@@ -4,6 +4,9 @@ import { TablePage } from "./table_page.jsx";
 
 export const TableRoutes = () => {
   return (
-    <Route route={TABLE_ROUTE}>{(table) => <TablePage table={table} />}</Route>
+    <Route
+      route={TABLE_ROUTE}
+      element={(table) => <TablePage table={table} />}
+    />
   );
 };

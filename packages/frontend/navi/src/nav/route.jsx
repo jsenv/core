@@ -6,7 +6,8 @@
  * . Tester le code splitting avec .lazy + import dynamique
  * pour les elements des routes
  *
- * 3. Ajouter la possibilite d'avoir des action sur les routes
+ * 3. Ajouter la possibilite d'avoir des
+ *  sur les routes
  * Tester juste les data pour commencer
  * On aura ptet besoin d'un useRouteData au lieu de passer par un element qui est une fonction
  * pour que react ne re-render pas tout
