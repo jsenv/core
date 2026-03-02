@@ -6,6 +6,7 @@ import { renderActionableComponent } from "../../action/render_actionable_compon
 import { useAction } from "../../action/use_action.js";
 import { useActionStatus } from "../../action/use_action_status.js";
 import { useExecuteAction } from "../../action/use_execute_action.js";
+import { Box } from "../../box/box.jsx";
 import { useActionEvents } from "../../field/use_action_events.js";
 import { useFocusGroup } from "../../field/use_focus_group.js";
 import { requestAction } from "../../field/validation/custom_constraint_validation.js";
@@ -63,7 +64,6 @@ const DetailsBasic = (props) => {
     label = "Summary",
     open,
     loading,
-    className,
     focusGroup,
     focusGroupDirection,
     arrowKeyShortcuts = true,
@@ -156,14 +156,12 @@ const DetailsBasic = (props) => {
   }, []);
 
   return (
-    <details
+    <Box
+      as="details"
       {...rest}
       ref={ref}
       id={id}
-      className={[
-        "navi_details",
-        ...(className ? className.split(" ") : []),
-      ].join(" ")}
+      baseClassName="navi_details"
       onToggle={(e) => {
         const isOpen = e.newState === "open";
         if (mountedRef.current) {
@@ -186,7 +184,7 @@ const DetailsBasic = (props) => {
         </div>
       </summary>
       {children}
-    </details>
+    </Box>
   );
 };
 
