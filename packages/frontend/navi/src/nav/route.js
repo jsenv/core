@@ -6,6 +6,7 @@
 import { createPubSub } from "@jsenv/dom";
 import { batch, computed, effect, signal } from "@preact/signals";
 
+import { getActionStatus } from "../action/action_private_properties.js";
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
 import { resolveRouteUrl, setupPatterns } from "./route_pattern.js";
 
@@ -91,17 +92,29 @@ export const useRouteStatus = (route) => {
       `useRouteStatus() requires a route object, but received ${route}.`,
     );
   }
-  const { urlSignal, matchingSignal, paramsSignal, visitedSignal } = route;
+  const {
+    urlSignal,
+    matchingSignal,
+    paramsSignal,
+    visitedSignal,
+    actionStatusSignal,
+  } = route;
   const url = urlSignal.value;
   const matching = matchingSignal.value;
   const params = paramsSignal.value;
   const visited = visitedSignal.value;
+  const { loading, aborted, error, completed, data } = actionStatusSignal.value;
 
   return {
     url,
     matching,
     params,
     visited,
+    loading,
+    aborted,
+    error,
+    completed,
+    data,
   };
 };
 
@@ -153,6 +166,8 @@ export const updateRoutes = (
     // state
   } = {},
 ) => {
+  const returnValue = {};
+
   const routeMatchInfoSet = new Set();
   for (const route of routeSet) {
     const routePrivateProperties = getRoutePrivateProperties(route);
@@ -200,288 +215,292 @@ export const updateRoutes = (
     });
   }
 
-  // Apply all signal updates in a batch
-  const matchingRouteSet = new Set();
-  batch(() => {
-    for (const {
-      route,
-      routePrivateProperties,
-      newMatching,
-      newParams,
-    } of routeMatchInfoSet) {
-      const { updateStatus } = routePrivateProperties;
-      const visited = isVisited(route.url);
-      updateStatus({
-        matching: newMatching,
-        params: newParams,
-        visited,
-      });
-      if (newMatching) {
-        matchingRouteSet.add(route);
-      }
-    }
-
+  sync_routes_with_url: {
     // URL -> Signal synchronization (moved from individual route effects to eliminate circular dependency)
     // Prevent signal-to-URL synchronization during URL-to-signal synchronization
     isUpdatingRoutesFromUrl = true;
+    // Apply all signal updates in a batch
+    const matchingRouteSet = new Set();
+    batch(() => {
+      for (const {
+        route,
+        routePrivateProperties,
+        newMatching,
+        newParams,
+      } of routeMatchInfoSet) {
+        const { updateStatus } = routePrivateProperties;
+        const visited = isVisited(route.url);
+        updateStatus({
+          matching: newMatching,
+          params: newParams,
+          visited,
+        });
+        if (newMatching) {
+          matchingRouteSet.add(route);
+        }
+      }
 
-    for (const {
-      route,
-      routePrivateProperties,
-      newMatching,
-    } of routeMatchInfoSet) {
-      const { routePattern } = routePrivateProperties;
-      const { connectionMap } = routePattern;
+      for (const {
+        route,
+        routePrivateProperties,
+        newMatching,
+      } of routeMatchInfoSet) {
+        const { routePattern } = routePrivateProperties;
+        const { connectionMap } = routePattern;
 
-      for (const [paramName, connection] of connectionMap) {
-        const { signal: paramSignal, debug } = connection;
-        const rawParams = route.rawParamsSignal.value;
-        const urlParamValue = rawParams[paramName];
+        for (const [paramName, connection] of connectionMap) {
+          const { signal: paramSignal, debug } = connection;
+          const rawParams = route.rawParamsSignal.value;
+          const urlParamValue = rawParams[paramName];
 
-        if (!newMatching) {
-          // Route doesn't match - check if any matching route extracts this parameter
-          let parameterExtractedByMatchingRoute = false;
-          let matchingRouteInSameFamily = false;
+          if (!newMatching) {
+            // Route doesn't match - check if any matching route extracts this parameter
+            let parameterExtractedByMatchingRoute = false;
+            let matchingRouteInSameFamily = false;
 
-          for (const otherRoute of routeSet) {
-            if (otherRoute === route || !otherRoute.matching) {
-              continue;
-            }
-            const otherRawParams = otherRoute.rawParamsSignal.value;
-            const otherRoutePrivateProperties =
-              getRoutePrivateProperties(otherRoute);
-
-            // Check if this matching route extracts the parameter
-            if (paramName in otherRawParams) {
-              parameterExtractedByMatchingRoute = true;
-            }
-
-            // Check if this matching route is in the same family using parent-child relationships
-            const thisPatternObj = routePattern;
-            const otherPatternObj = otherRoutePrivateProperties.routePattern;
-
-            // Routes are in same family if they share a hierarchical relationship:
-            // 1. One is parent/ancestor of the other
-            // 2. They share a common parent/ancestor
-            let inSameFamily = false;
-
-            // Check if other route is ancestor of this route
-            let currentParent = thisPatternObj.parent;
-            while (currentParent) {
-              if (currentParent === otherPatternObj) {
-                inSameFamily = true;
-                break;
+            for (const otherRoute of routeSet) {
+              if (otherRoute === route || !otherRoute.matching) {
+                continue;
               }
-              currentParent = currentParent.parent;
-            }
+              const otherRawParams = otherRoute.rawParamsSignal.value;
+              const otherRoutePrivateProperties =
+                getRoutePrivateProperties(otherRoute);
 
-            // Check if this route is ancestor of other route
-            if (!inSameFamily) {
-              currentParent = otherPatternObj.parent;
+              // Check if this matching route extracts the parameter
+              if (paramName in otherRawParams) {
+                parameterExtractedByMatchingRoute = true;
+              }
+
+              // Check if this matching route is in the same family using parent-child relationships
+              const thisPatternObj = routePattern;
+              const otherPatternObj = otherRoutePrivateProperties.routePattern;
+
+              // Routes are in same family if they share a hierarchical relationship:
+              // 1. One is parent/ancestor of the other
+              // 2. They share a common parent/ancestor
+              let inSameFamily = false;
+
+              // Check if other route is ancestor of this route
+              let currentParent = thisPatternObj.parent;
               while (currentParent) {
-                if (currentParent === thisPatternObj) {
+                if (currentParent === otherPatternObj) {
                   inSameFamily = true;
                   break;
                 }
                 currentParent = currentParent.parent;
               }
-            }
 
-            // Check if they share a common parent (siblings or cousins)
-            if (!inSameFamily) {
-              const thisAncestors = new Set();
-              currentParent = thisPatternObj.parent;
-              while (currentParent) {
-                thisAncestors.add(currentParent);
-                currentParent = currentParent.parent;
-              }
-
-              currentParent = otherPatternObj.parent;
-              while (currentParent) {
-                if (thisAncestors.has(currentParent)) {
-                  inSameFamily = true;
-                  break;
+              // Check if this route is ancestor of other route
+              if (!inSameFamily) {
+                currentParent = otherPatternObj.parent;
+                while (currentParent) {
+                  if (currentParent === thisPatternObj) {
+                    inSameFamily = true;
+                    break;
+                  }
+                  currentParent = currentParent.parent;
                 }
-                currentParent = currentParent.parent;
+              }
+
+              // Check if they share a common parent (siblings or cousins)
+              if (!inSameFamily) {
+                const thisAncestors = new Set();
+                currentParent = thisPatternObj.parent;
+                while (currentParent) {
+                  thisAncestors.add(currentParent);
+                  currentParent = currentParent.parent;
+                }
+
+                currentParent = otherPatternObj.parent;
+                while (currentParent) {
+                  if (thisAncestors.has(currentParent)) {
+                    inSameFamily = true;
+                    break;
+                  }
+                  currentParent = currentParent.parent;
+                }
+              }
+
+              if (inSameFamily) {
+                matchingRouteInSameFamily = true;
               }
             }
 
-            if (inSameFamily) {
-              matchingRouteInSameFamily = true;
-            }
-          }
-
-          // Only reset signal if:
-          // 1. We're navigating within the same route family (not to completely unrelated routes)
-          // 2. AND no matching route extracts this parameter from URL
-          // 3. AND parameter has no default value (making it truly optional)
-          if (matchingRouteInSameFamily && !parameterExtractedByMatchingRoute) {
-            const defaultValue = connection.getDefaultValue();
-            if (defaultValue === undefined) {
-              // Parameter is not extracted within same family and has no default - reset it
-              if (debug) {
+            // Only reset signal if:
+            // 1. We're navigating within the same route family (not to completely unrelated routes)
+            // 2. AND no matching route extracts this parameter from URL
+            // 3. AND parameter has no default value (making it truly optional)
+            if (
+              matchingRouteInSameFamily &&
+              !parameterExtractedByMatchingRoute
+            ) {
+              const defaultValue = connection.getDefaultValue();
+              if (defaultValue === undefined) {
+                // Parameter is not extracted within same family and has no default - reset it
+                if (debug) {
+                  console.debug(
+                    `[route] Same family navigation, ${paramName} not extracted and has no default: resetting signal`,
+                  );
+                }
+                paramSignal.value = undefined;
+              } else if (debug) {
+                // Parameter has a default value - preserve current signal value
                 console.debug(
-                  `[route] Same family navigation, ${paramName} not extracted and has no default: resetting signal`,
+                  `[route] Parameter ${paramName} has default value ${defaultValue}: preserving signal value: ${paramSignal.value}`,
                 );
               }
-              paramSignal.value = undefined;
             } else if (debug) {
-              // Parameter has a default value - preserve current signal value
-              console.debug(
-                `[route] Parameter ${paramName} has default value ${defaultValue}: preserving signal value: ${paramSignal.value}`,
-              );
+              if (!matchingRouteInSameFamily) {
+                console.debug(
+                  `[route] Different route family: preserving ${paramName} signal value: ${paramSignal.value}`,
+                );
+              } else {
+                console.debug(
+                  `[route] Parameter ${paramName} extracted by matching route: preserving signal value: ${paramSignal.value}`,
+                );
+              }
             }
-          } else if (debug) {
-            if (!matchingRouteInSameFamily) {
-              console.debug(
-                `[route] Different route family: preserving ${paramName} signal value: ${paramSignal.value}`,
-              );
-            } else {
-              console.debug(
-                `[route] Parameter ${paramName} extracted by matching route: preserving signal value: ${paramSignal.value}`,
-              );
-            }
+            continue;
           }
-          continue;
-        }
 
-        // URL -> Signal sync: When route matches, ensure signal matches URL state
-        // URL is the source of truth for explicit parameters
-        const value = paramSignal.peek();
-        if (urlParamValue === undefined) {
-          // No URL parameter - reset signal to its current default value
-          // (handles both static fallback and dynamic default cases)
-          const defaultValue = connection.getDefaultValue();
-          if (connection.isDefaultValue(value)) {
-            // Signal already has correct default value, no sync needed
+          // URL -> Signal sync: When route matches, ensure signal matches URL state
+          // URL is the source of truth for explicit parameters
+          const value = paramSignal.peek();
+          if (urlParamValue === undefined) {
+            // No URL parameter - reset signal to its current default value
+            // (handles both static fallback and dynamic default cases)
+            const defaultValue = connection.getDefaultValue();
+            if (connection.isDefaultValue(value)) {
+              // Signal already has correct default value, no sync needed
+              continue;
+            }
+            if (debug) {
+              console.debug(
+                `[route] URL->Signal: ${paramName} not in URL, reset signal to default (${defaultValue})`,
+              );
+            }
+            paramSignal.value = defaultValue;
+            continue;
+          }
+          if (urlParamValue === value) {
+            // Values already match, no sync needed
             continue;
           }
           if (debug) {
             console.debug(
-              `[route] URL->Signal: ${paramName} not in URL, reset signal to default (${defaultValue})`,
+              `[route] URL->Signal: ${paramName}=${urlParamValue} in url, sync signal with url`,
             );
           }
-          paramSignal.value = defaultValue;
+          paramSignal.value = urlParamValue;
           continue;
         }
-        if (urlParamValue === value) {
-          // Values already match, no sync needed
-          continue;
-        }
-        if (debug) {
-          console.debug(
-            `[route] URL->Signal: ${paramName}=${urlParamValue} in url, sync signal with url`,
-          );
-        }
-        paramSignal.value = urlParamValue;
-        continue;
       }
-    }
-  });
+    });
+    // Reset flag after URL -> Signal synchronization is complete
+    isUpdatingRoutesFromUrl = false;
 
-  // Reset flag after URL -> Signal synchronization is complete
-  isUpdatingRoutesFromUrl = false;
-
-  // must be after paramsSignal.value update to ensure the proxy target is set
-  // (so after the batch call)
-  const toLoadSet = new Set();
-  const toReloadSet = new Set();
-  const abortSignalMap = new Map();
-  const routeLoadRequestedMap = new Map();
-
-  const shouldLoadOrReload = (route, shouldLoad) => {
-    const routeAction = route.action;
-    const currentAction = routeAction.getCurrentAction();
-    if (shouldLoad) {
-      if (
-        navigationType === "replace" ||
-        currentAction.aborted ||
-        currentAction.error
-      ) {
-        shouldLoad = false;
-      }
-    }
-    if (shouldLoad) {
-      toLoadSet.add(currentAction);
-    } else {
-      toReloadSet.add(currentAction);
-    }
-    routeLoadRequestedMap.set(route, currentAction);
-    // Create a new abort controller for this action
-    const actionAbortController = new AbortController();
-    actionAbortControllerWeakMap.set(currentAction, actionAbortController);
-    abortSignalMap.set(currentAction, actionAbortController.signal);
-  };
-
-  const shouldLoad = (route) => {
-    shouldLoadOrReload(route, true);
-  };
-  const shouldReload = (route) => {
-    shouldLoadOrReload(route, false);
-  };
-  const shouldAbort = (route) => {
-    const routeAction = route.action;
-    const currentAction = routeAction.getCurrentAction();
-    const actionAbortController =
-      actionAbortControllerWeakMap.get(currentAction);
-    if (actionAbortController) {
-      actionAbortController.abort(`route no longer matching`);
-      actionAbortControllerWeakMap.delete(currentAction);
-    }
-  };
-
-  for (const {
-    route,
-    routePrivateProperties,
-    newMatching,
-    oldMatching,
-    newParams,
-    oldParams,
-  } of routeMatchInfoSet) {
-    const routeAction = route.action;
-    if (!routeAction) {
-      continue;
-    }
-
-    const becomesMatching = newMatching && !oldMatching;
-    const becomesNotMatching = !newMatching && oldMatching;
-    const paramsChangedWhileMatching =
-      newMatching && oldMatching && newParams !== oldParams;
-
-    // Handle actions for routes that become matching
-    if (becomesMatching) {
-      if (DEBUG) {
-        console.debug(
-          `${routePrivateProperties} became matching with params:`,
-          newParams,
-        );
-      }
-      shouldLoad(route);
-      continue;
-    }
-
-    // Handle actions for routes that become not matching - abort them
-    if (becomesNotMatching && ROUTE_DEACTIVATION_STRATEGY === "abort") {
-      shouldAbort(route);
-      continue;
-    }
-
-    // Handle parameter changes while route stays matching
-    if (paramsChangedWhileMatching) {
-      if (DEBUG) {
-        console.debug(`${routePrivateProperties} params changed:`, newParams);
-      }
-      shouldReload(route);
-    }
+    Object.assign(returnValue, { matchingRouteSet });
   }
 
-  return {
-    loadSet: toLoadSet,
-    reloadSet: toReloadSet,
-    abortSignalMap,
-    routeLoadRequestedMap,
-    matchingRouteSet,
-  };
+  update_route_actions: {
+    // must be after paramsSignal.value update to ensure the proxy target is set
+    // (so after the batch call)
+    const toLoadSet = new Set();
+    const toReloadSet = new Set();
+    const abortSignalMap = new Map();
+    const routeLoadRequestedMap = new Map();
+    const shouldLoadOrReload = (route, shouldLoad) => {
+      const routeAction = route.action;
+      const currentAction = routeAction.getCurrentAction();
+      if (shouldLoad) {
+        if (
+          navigationType === "replace" ||
+          currentAction.aborted ||
+          currentAction.error
+        ) {
+          shouldLoad = false;
+        }
+      }
+      if (shouldLoad) {
+        toLoadSet.add(currentAction);
+      } else {
+        toReloadSet.add(currentAction);
+      }
+      routeLoadRequestedMap.set(route, currentAction);
+      // Create a new abort controller for this action
+      const actionAbortController = new AbortController();
+      actionAbortControllerWeakMap.set(currentAction, actionAbortController);
+      abortSignalMap.set(currentAction, actionAbortController.signal);
+    };
+    const shouldLoad = (route) => {
+      shouldLoadOrReload(route, true);
+    };
+    const shouldReload = (route) => {
+      shouldLoadOrReload(route, false);
+    };
+    const shouldAbort = (route) => {
+      const routeAction = route.action;
+      const currentAction = routeAction.getCurrentAction();
+      const actionAbortController =
+        actionAbortControllerWeakMap.get(currentAction);
+      if (actionAbortController) {
+        actionAbortController.abort(`route no longer matching`);
+        actionAbortControllerWeakMap.delete(currentAction);
+      }
+    };
+    for (const {
+      route,
+      routePrivateProperties,
+      newMatching,
+      oldMatching,
+      newParams,
+      oldParams,
+    } of routeMatchInfoSet) {
+      const routeAction = route.action;
+      if (!routeAction) {
+        continue;
+      }
+
+      const becomesMatching = newMatching && !oldMatching;
+      const becomesNotMatching = !newMatching && oldMatching;
+      const paramsChangedWhileMatching =
+        newMatching && oldMatching && newParams !== oldParams;
+
+      // Handle actions for routes that become matching
+      if (becomesMatching) {
+        if (DEBUG) {
+          console.debug(
+            `${routePrivateProperties} became matching with params:`,
+            newParams,
+          );
+        }
+        shouldLoad(route);
+        continue;
+      }
+
+      // Handle actions for routes that become not matching - abort them
+      if (becomesNotMatching && ROUTE_DEACTIVATION_STRATEGY === "abort") {
+        shouldAbort(route);
+        continue;
+      }
+
+      // Handle parameter changes while route stays matching
+      if (paramsChangedWhileMatching) {
+        if (DEBUG) {
+          console.debug(`${routePrivateProperties} params changed:`, newParams);
+        }
+        shouldReload(route);
+      }
+    }
+    Object.assign(returnValue, {
+      loadSet: toLoadSet,
+      reloadSet: toReloadSet,
+      abortSignalMap,
+      routeLoadRequestedMap,
+    });
+  }
+
+  return returnValue;
 };
 
 const registerRoute = (routePattern) => {
@@ -500,10 +519,8 @@ const registerRoute = (routePattern) => {
     matching: false,
     params: ROUTE_NOT_MATCHING_PARAMS,
     buildUrl: null,
-    bindAction: null,
     relativeUrl: null,
     url: null,
-    action: null,
     matchingSignal: null,
     paramsSignal: null,
     urlSignal: null,
@@ -512,6 +529,10 @@ const registerRoute = (routePattern) => {
     toString: () => {
       return `route "${cleanPattern}"`;
     },
+
+    bindAction: null,
+    action: null,
+    actionStatusSignal: null,
   };
   routeSet.add(route);
   const routePrivateProperties = {
@@ -800,7 +821,14 @@ const registerRoute = (routePattern) => {
   cleanupCallbackSet.add(disposeRelativeUrlEffect);
   cleanupCallbackSet.add(disposeUrlEffect);
 
-  // action stuff (for later)
+  // action
+  route.actionStatusSignal = signal({
+    loading: false,
+    error: null,
+    aborted: false,
+    completed: true,
+    data: undefined,
+  });
   route.bindAction = (action) => {
     const { store } = action.meta;
     if (store) {
@@ -830,6 +858,10 @@ const registerRoute = (routePattern) => {
 
     const actionBoundToThisRoute = action.bindParams(route.paramsSignal);
     route.action = actionBoundToThisRoute;
+    route.actionStatusSignal = computed(() => {
+      const actionStatus = getActionStatus(actionBoundToThisRoute);
+      return actionStatus;
+    });
     return actionBoundToThisRoute;
   };
 
