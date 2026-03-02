@@ -168,7 +168,6 @@
       details {
         border: 1px solid black;
       }
-      
     </style>
   </head>
   <body>
@@ -241,12 +240,12 @@
 
             <fieldset>
               <legend>With Custom Styling</legend>
-              <Details
-                label="Styled Details"
-                className="custom-styling"
-              >
+              <Details label="Styled Details" className="custom-styling">
                 <Box column spacing="sm">
-                  <p>This details element receives custom styling through className.</p>
+                  <p>
+                    This details element receives custom styling through
+                    className.
+                  </p>
                   <Button>Action Button Inside</Button>
                 </Box>
               </Details>
@@ -260,17 +259,19 @@
           <div className="demo-section">
             <h2>Keyboard Navigation</h2>
             <div className="keyboard-shortcuts">
-              <strong>Keyboard Shortcuts:</strong><br />
-              • <strong>Right Arrow (→)</strong>: Open details and focus first
-              element inside<br />
-              • <strong>Left Arrow (←)</strong>: Close details and return focus to
-              summary<br />
-              • <strong>Tab</strong>: Navigate through focusable elements
+              <strong>Keyboard Shortcuts:</strong>
+              <br />• <strong>Right Arrow (→)</strong>: Open details and focus
+              first element inside
+              <br />• <strong>Left Arrow (←)</strong>: Close details and return
+              focus to summary
+              <br />• <strong>Tab</strong>: Navigate through focusable elements
             </div>
 
             <fieldset>
               <legend>Try Keyboard Navigation</legend>
-              <p>Click on the summary below, then try the keyboard shortcuts:</p>
+              <p>
+                Click on the summary below, then try the keyboard shortcuts:
+              </p>
               <Details
                 label="Keyboard Navigation Example"
                 arrowKeyShortcuts={true}
@@ -412,7 +413,9 @@
                     <li>Share state across page refreshes</li>
                   </ul>
                   <p>
-                    <em>This is useful for deep-linkable expandable sections.</em>
+                    <em>
+                      This is useful for deep-linkable expandable sections.
+                    </em>
                   </p>
                 </div>
               </Details>
@@ -501,7 +504,7 @@
           <div className="demo-section">
             <h2>Props Reference</h2>
             <div className="code-block">
-{`interface DetailsProps {
+              {`interface DetailsProps {
   id?: string;                    // For nav state integration
   label?: string;                 // Summary text (default: "Summary")
   open?: boolean;                 // Initial open state
