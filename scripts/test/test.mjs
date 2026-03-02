@@ -75,6 +75,13 @@ await executeTestPlan({
             return 160_000;
           }
           if (
+            fileRelativeUrl.endsWith("coverage_browsers_and_node.test.mjs") ||
+            fileRelativeUrl.endsWith("coverage_chromium_v8.test.mjs") ||
+            fileRelativeUrl.endsWith("coverage_istanbul.test.mjs")
+          ) {
+            return 120_000;
+          }
+          if (
             fileRelativeUrl.endsWith("_browsers.test.mjs") ||
             fileRelativeUrl.endsWith("test_plan_logs_node.test.mjs") ||
             fileRelativeUrl.endsWith("test_plan_logs_mixed.test.mjs")
@@ -82,7 +89,6 @@ await executeTestPlan({
             return 90_000;
           }
           if (
-            fileRelativeUrl.endsWith("coverage_browsers_and_node.test.mjs") ||
             fileRelativeUrl.endsWith("browser_tabs.test.mjs") ||
             fileRelativeUrl.endsWith("fragment.test.mjs")
           ) {
