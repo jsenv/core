@@ -23307,6 +23307,12 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
       --end-icon-size: 1em;
     }
 
+    /* Hover */
+    &[data-hover] {
+      --x-background-color: var(--background-color-hover);
+      --x-border-color: var(--border-color-hover);
+      --x-color: var(--color-hover);
+    }
     /* Readonly */
     &[data-readonly] {
       --x-border-color: var(--border-color-readonly);
@@ -23325,13 +23331,6 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
         --x-border-color: var(--x-outline-color);
       }
     }
-    /* Hover */
-    &[data-hover] {
-      --x-background-color: var(--background-color-hover);
-      --x-border-color: var(--border-color-hover);
-      --x-color: var(--color-hover);
-    }
-
     /* Disabled */
     &[data-disabled] {
       --x-border-color: var(--border-color-disabled);
