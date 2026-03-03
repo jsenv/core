@@ -1,4 +1,3 @@
-import { TextAndCount } from "../../components/text_and_count.jsx";
 import { useRoleCanLoginCount } from "../../database_manager_signals.js";
 import {
   createExplorerGroupController,
@@ -35,9 +34,8 @@ export const RoleCanLoginListDetails = (props) => {
       detailsAction={ROLE_CAN_LOGIN.GET_MANY}
       idKey="oid"
       nameKey="rolname"
-      labelChildren={
-        <TextAndCount text={"ROLE LOGINS"} count={roleCanLoginCount} />
-      }
+      label="ROLE LOGINS"
+      count={roleCanLoginCount}
       renderNewButtonChildren={() => <RoleCanLoginWithPlusSvg />}
       renderItem={(role, props) => (
         <RoleLink draggable={false} role={role} {...props} />

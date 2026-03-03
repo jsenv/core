@@ -1,4 +1,3 @@
-import { TextAndCount } from "../components/text_and_count.jsx";
 import { useDatabaseCount } from "../database_manager_signals.js";
 import {
   createExplorerGroupController,
@@ -35,7 +34,8 @@ export const DatabasesDetails = (props) => {
       detailsAction={DATABASE.GET_MANY}
       idKey="oid"
       nameKey="datname"
-      labelChildren={<TextAndCount text={"DATABASES"} count={databaseCount} />}
+      label="DATABASES"
+      count={databaseCount}
       renderNewButtonChildren={() => <DatabaseWithPlusSvg />}
       renderItem={(database, props) => (
         <DatabaseLink

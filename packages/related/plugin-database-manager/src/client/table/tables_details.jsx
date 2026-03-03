@@ -1,4 +1,3 @@
-import { TextAndCount } from "../components/text_and_count.jsx";
 import { useTableCount } from "../database_manager_signals.js";
 import {
   createExplorerGroupController,
@@ -28,7 +27,8 @@ export const TablesDetails = (props) => {
       detailsAction={TABLE.GET_MANY}
       idKey="oid"
       nameKey="tablename"
-      labelChildren={<TextAndCount text={"TABLES"} count={tableCount} />}
+      label="TABLES"
+      count={tableCount}
       renderNewButtonChildren={() => <TableWithPlusSvg />}
       renderItem={(table, props) => (
         <TableLink

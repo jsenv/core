@@ -1,8 +1,6 @@
 import { initPositionSticky } from "@jsenv/dom";
-import { ErrorBoundaryContext } from "@jsenv/navi";
+import { ErrorBoundaryContext, Icon, Text } from "@jsenv/navi";
 import { useErrorBoundary, useLayoutEffect, useRef } from "preact/hooks";
-
-import { IconAndText } from "../components/icon_and_text.jsx";
 
 import.meta.css = /* css */ `
   .page {
@@ -107,16 +105,10 @@ export const PageHead = ({ children, spacingBottom, ...rest }) => {
 const PageHeadLabel = ({ icon, label, children, actions = [] }) => {
   const title = (
     <h1 style="display: flex; align-items: stretch; gap: 0.2em;">
-      <IconAndText
-        icon={icon}
-        style={{
-          color: "lightgrey",
-          userSelect: "none",
-          whiteSpace: "nowrap",
-        }}
-      >
+      <Icon>{icon}</Icon>
+      <Text color="lightgrey" userSelect="none" whiteSpace="nowrap">
         {label}
-      </IconAndText>
+      </Text>
       <span>{children}</span>
     </h1>
   );

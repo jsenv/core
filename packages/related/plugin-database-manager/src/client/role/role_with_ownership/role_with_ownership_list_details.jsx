@@ -1,7 +1,5 @@
-import { Details } from "@jsenv/navi";
+import { BadgeCount, Details, Icon, Text } from "@jsenv/navi";
 
-import { IconAndText } from "../../components/icon_and_text.jsx";
-import { TextAndCount } from "../../components/text_and_count.jsx";
 import { DatabaseLink } from "../../database/database_link.jsx";
 import { useRoleWithOwnershipCount } from "../../database_manager_signals.js";
 import {
@@ -54,9 +52,8 @@ export const RoleWithOwnershipListDetails = (props) => {
       detailsAction={ROLE_WITH_OWNERSHIP.GET_MANY}
       idKey="oid"
       nameKey="rolname"
-      labelChildren={
-        <TextAndCount text={"OWNERSHIP"} count={roleWithOwnershipCount} />
-      }
+      label="OWNERSHIP"
+      count={roleWithOwnershipCount}
       renderItem={(role) => {
         return (
           <Details
@@ -64,14 +61,11 @@ export const RoleWithOwnershipListDetails = (props) => {
             className="explorer_details"
             style={{ "--details-depth": 0 }}
             label={
-              <TextAndCount
-                text={
-                  <IconAndText icon={pickRoleIcon(role)}>
-                    {role.rolname}
-                  </IconAndText>
-                }
-                count={role.object_count}
-              />
+              <Text>
+                <Icon>{pickRoleIcon(role)}</Icon>
+                <Text>{role.rolname}</Text>
+                <BadgeCount>{role.object_count}</BadgeCount>
+              </Text>
             }
           >
             <ExplorerItemList
@@ -108,7 +102,10 @@ export const RoleWithOwnershipListDetails = (props) => {
                         rolname: role.rolname,
                       })}
                       label={
-                        <TextAndCount text="tables" count={role.table_count} />
+                        <Text>
+                          tables
+                          <BadgeCount>{role.table_count}</BadgeCount>
+                        </Text>
                       }
                     >
                       {(tableArray) => {
@@ -136,10 +133,10 @@ export const RoleWithOwnershipListDetails = (props) => {
                       className="explorer_details"
                       style={{ "--details-depth": 1 }}
                       label={
-                        <TextAndCount
-                          text="databases"
-                          count={role.database_count}
-                        />
+                        <Text>
+                          databases
+                          <BadgeCount>{role.database_count}</BadgeCount>
+                        </Text>
                       }
                       action={ROLE_DATABASES.GET_MANY.bindParams({
                         rolname: role.rolname,
