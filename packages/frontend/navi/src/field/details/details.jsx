@@ -3,7 +3,7 @@ import { useContext, useEffect, useRef } from "preact/hooks";
 
 import { ActionRenderer } from "../../action/action_renderer.jsx";
 import { renderActionableComponent } from "../../action/render_actionable_component.jsx";
-import { useActionBoundToOneParam } from "../../action/use_action.js";
+import { useAction } from "../../action/use_action.js";
 import { useActionStatus } from "../../action/use_action_status.js";
 import { useExecuteAction } from "../../action/use_execute_action.js";
 import { Box } from "../../box/box.jsx";
@@ -214,7 +214,6 @@ const DetailsBasic = (props) => {
 
 const DetailsWithAction = (props) => {
   const uiStateController = useContext(UIStateControllerContext);
-  const uiState = useContext(UIStateContext);
   const {
     action,
     loading,
@@ -230,8 +229,8 @@ const DetailsWithAction = (props) => {
   } = props;
   const defaultRef = useRef();
   const ref = rest.ref || defaultRef;
-  const [actionBoundToUIState] = useActionBoundToOneParam(action, uiState);
-  const actionStatus = useActionStatus(actionBoundToUIState);
+  const effectiveAction = useAction(action);
+  const actionStatus = useActionStatus(effectiveAction);
   const { loading: actionLoading } = actionStatus;
   const executeAction = useExecuteAction(ref, {
     // the error will be displayed by actionRenderer inside <details>
@@ -247,7 +246,7 @@ const DetailsWithAction = (props) => {
       onCancel?.(e, reason);
     },
     onPrevented: onActionPrevented,
-    onRequested: (e) => forwardActionRequested(e, actionBoundToUIState),
+    onRequested: (e) => forwardActionRequested(e, effectiveAction),
     onAction: executeAction,
     onStart: onActionStart,
     onAbort: (e) => {
@@ -271,17 +270,17 @@ const DetailsWithAction = (props) => {
       onToggle={(toggleEvent) => {
         const isOpen = toggleEvent.newState === "open";
         if (isOpen) {
-          requestAction(toggleEvent.target, actionBoundToUIState, {
+          requestAction(toggleEvent.target, effectiveAction, {
             event: toggleEvent,
             method: "run",
           });
         } else {
-          actionBoundToUIState.abort();
+          effectiveAction.abort();
         }
         onToggle?.(toggleEvent);
       }}
     >
-      <ActionRenderer action={actionBoundToUIState}>{children}</ActionRenderer>
+      <ActionRenderer action={effectiveAction}>{children}</ActionRenderer>
     </DetailsBasic>
   );
 };
