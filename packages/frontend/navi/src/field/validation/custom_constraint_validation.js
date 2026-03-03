@@ -904,7 +904,7 @@ const getFirstButtonSubmittingForm = (form) => {
   );
 };
 
-const dispatchActionRequestedCustomEvent = (
+export const dispatchActionRequestedCustomEvent = (
   elementWithAction,
   { actionOrigin = "action_prop", event, requester },
 ) => {

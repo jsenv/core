@@ -590,9 +590,9 @@
                 loading={loading}
                 open={open}
                 arrowKeyShortcuts={arrowKeys}
-                onToggle={(e) => {
-                  console.log("Details toggled:", e.newState);
-                  setOpen(e.newState === "open");
+                onUIStateChange={(open) => {
+                  console.log("Details toggled:", open);
+                  setOpen(open);
                 }}
               >
                 <div className="content-example">

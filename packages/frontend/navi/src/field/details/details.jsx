@@ -17,8 +17,8 @@ import {
   useUIStateController,
 } from "../use_ui_state_controller.js";
 import {
+  dispatchActionRequestedCustomEvent,
   forwardActionRequested,
-  requestAction,
 } from "../validation/custom_constraint_validation.js";
 import { SummaryMarker } from "./summary_marker.jsx";
 
@@ -270,9 +270,9 @@ const DetailsWithAction = (props) => {
       onToggle={(toggleEvent) => {
         const isOpen = toggleEvent.newState === "open";
         if (isOpen) {
-          requestAction(toggleEvent.target, effectiveAction, {
+          dispatchActionRequestedCustomEvent(toggleEvent.target, {
             event: toggleEvent,
-            method: "run",
+            requester: toggleEvent.target,
           });
         } else {
           effectiveAction.abort();
