@@ -361,6 +361,86 @@
         );
       };
 
+      const VariationsDemo = () => {
+        const [searchValue1, setSearchValue1] = useState("");
+        const [searchValue2, setSearchValue2] = useState("");
+        const [searchValue3, setSearchValue3] = useState("");
+        const [searchValue4, setSearchValue4] = useState("");
+
+        return (
+          <div className="demo-section">
+            <h2>Search Input Variations</h2>
+            <p className="states-description">
+              Different styling variations of the search input to show
+              customization possibilities.
+            </p>
+
+            <Box column spacing="lg">
+              <fieldset>
+                <legend>Extra Padding</legend>
+                <Input
+                  type="search"
+                  value={searchValue1}
+                  action={setSearchValue1}
+                  placeholder="Placholder..."
+                  paddingX="16"
+                  paddingY="20"
+                  size="l"
+                  borderRadius="12"
+                />
+              </fieldset>
+
+              <fieldset>
+                <legend>Rounded Pill Style</legend>
+                <Input
+                  type="search"
+                  value={searchValue2}
+                  action={setSearchValue2}
+                  placeholder="Pill-shaped search..."
+                  paddingX="12"
+                  paddingY="24"
+                  borderRadius="50"
+                  borderColor="#007bff"
+                />
+              </fieldset>
+            </Box>
+
+            <Box column>
+              <fieldset>
+                <legend>Large Size</legend>
+                <Input
+                  type="search"
+                  value={searchValue3}
+                  action={setSearchValue3}
+                  placeholder="Large search input..."
+                  padding="24"
+                  size="l"
+                  minHeight="56"
+                  borderRadius="8"
+                  borderWidth="2"
+                  borderColor="#ddd"
+                />
+              </fieldset>
+
+              <fieldset>
+                <legend>Subtle Style</legend>
+                <Input
+                  type="search"
+                  value={searchValue4}
+                  action={setSearchValue4}
+                  placeholder="Subtle search..."
+                  boxShadow="inset 0 1px 3px rgba(0,0,0,0.1)"
+                  borderRadius="6"
+                  borderColor="transparent"
+                  background="#f8f9fa"
+                  padding="14"
+                />
+              </fieldset>
+            </Box>
+          </div>
+        );
+      };
+
       render(<App />, document.querySelector("#root"));
     </script>
   </body>
