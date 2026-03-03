@@ -1,12 +1,18 @@
 import { installImportMetaCss } from "./jsenv_navi_side_effects.js";
+import { isValidElement, createContext, toChildArray, render, createRef, cloneElement } from "preact";
 import { useErrorBoundary, useLayoutEffect, useEffect, useCallback, useRef, useState, useContext, useMemo, useImperativeHandle, useId } from "preact/hooks";
 import { jsxs, jsx, Fragment } from "preact/jsx-runtime";
-import { createIterableWeakSet, mergeOneStyle, stringifyStyle, createPubSub, mergeTwoStyles, normalizeStyles, createGroupTransitionController, getElementSignature, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, findBefore, findAfter, createValueEffect, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, allowWheelThrough, resolveCSSColor, createStyleController, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, hasCSSSizeUnit, resolveCSSSize, activeElementSignal, canInterceptKeys, pickLightOrDark, resolveColorLuminance, initFocusGroup, dragAfterThreshold, getScrollContainer, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement, elementIsFocusable } from "@jsenv/dom";
+import { createIterableWeakSet, mergeOneStyle, stringifyStyle, createPubSub, mergeTwoStyles, normalizeStyles, createGroupTransitionController, getElementSignature, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, findBefore, findAfter, createValueEffect, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, allowWheelThrough, resolveCSSColor, createStyleController, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, hasCSSSizeUnit, resolveCSSSize, activeElementSignal, canInterceptKeys, initFocusGroup, elementIsFocusable, pickLightOrDark, resolveColorLuminance, dragAfterThreshold, getScrollContainer, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
 import { prefixFirstAndIndentRemainingLines } from "@jsenv/humanize";
 import { effect, signal, computed, batch, useSignal } from "@preact/signals";
 import { createValidity } from "@jsenv/validity";
-import { createContext, toChildArray, render, isValidElement, createRef, cloneElement } from "preact";
 import { createPortal, forwardRef } from "preact/compat";
+
+const IDLE = { id: "idle" };
+const RUNNING = { id: "running" };
+const ABORTED = { id: "aborted" };
+const FAILED = { id: "failed" };
+const COMPLETED = { id: "completed" };
 
 const actionPrivatePropertiesWeakMap = new WeakMap();
 const getActionPrivateProperties = (action) => {
@@ -20,11 +26,19 @@ const setActionPrivateProperties = (action, properties) => {
   actionPrivatePropertiesWeakMap.set(action, properties);
 };
 
-const IDLE = { id: "idle" };
-const RUNNING = { id: "running" };
-const ABORTED = { id: "aborted" };
-const FAILED = { id: "failed" };
-const COMPLETED = { id: "completed" };
+const getActionStatus = (action) => {
+  const { runningStateSignal, errorSignal, computedDataSignal } =
+    getActionPrivateProperties(action);
+  const runningState = runningStateSignal.value;
+  const idle = runningState === IDLE;
+  const aborted = runningState === ABORTED;
+  const error = errorSignal.value;
+  const loading = runningState === RUNNING;
+  const completed = runningState === COMPLETED;
+  const data = computedDataSignal.value;
+
+  return { idle, loading, aborted, error, completed, data };
+};
 
 const useActionStatus = (action) => {
   if (!action) {
@@ -96,6 +110,23 @@ const ActionRenderer = ({
   children,
   disabled
 }) => {
+  if (action === undefined) {
+    throw new Error("ActionRenderer requires an action to render, but none was provided.");
+  }
+  let renderBranches;
+  if (typeof children === "function") {
+    renderBranches = {
+      completed: children
+    };
+  } else if (isValidElement(children)) {
+    renderBranches = {
+      always: () => children
+    };
+  } else if (isPlainObject$1(children)) {
+    renderBranches = children;
+  } else {
+    renderBranches = {};
+  }
   const {
     idle: renderIdle = renderIdleDefault,
     loading: renderLoading = renderLoadingDefault,
@@ -103,15 +134,7 @@ const ActionRenderer = ({
     error: renderError = renderErrorDefault,
     completed: renderCompleted,
     always: renderAlways
-  } = typeof children === "function" ? {
-    completed: children
-  } : children || {};
-  if (disabled) {
-    return null;
-  }
-  if (action === undefined) {
-    throw new Error("ActionRenderer requires an action to render, but none was provided.");
-  }
+  } = renderBranches;
   const {
     idle,
     loading,
@@ -142,7 +165,9 @@ const ActionRenderer = ({
       actionUIRenderedPromiseWeakMap.delete(action);
     };
   }, [action]);
-
+  if (disabled) {
+    return null;
+  }
   // If renderAlways is provided, it wins and handles all rendering
   if (renderAlways) {
     return renderAlways({
@@ -204,6 +229,16 @@ const useUIRenderedPromise = action => {
   promise.resolve = resolve;
   actionUIRenderedPromiseWeakMap.set(action, promise);
   return promise;
+};
+const isPlainObject$1 = obj => {
+  if (typeof obj !== "object" || obj === null) {
+    return false;
+  }
+  let proto = obj;
+  while (Object.getPrototypeOf(proto) !== null) {
+    proto = Object.getPrototypeOf(proto);
+  }
+  return Object.getPrototypeOf(obj) === proto || Object.getPrototypeOf(obj) === null;
 };
 
 const isSignal = (value) => {
@@ -1408,7 +1443,7 @@ const createAction = (callback, rootOptions = {}) => {
       }
 
       // ✅ CAS 2: Objet -> vérifier s'il contient des signals
-      if (newParamsOrSignal && typeof newParamsOrSignal === "object") {
+      if (isPlainObject(newParamsOrSignal)) {
         const staticParams = {};
         const signalMap = new Map();
 
@@ -1459,7 +1494,7 @@ const createAction = (callback, rootOptions = {}) => {
         return createActionProxyFromSignal(action, paramsSignal, options);
       }
 
-      // ✅ CAS 3: Primitive -> action enfant
+      // ✅ CAS 3: Primitive or objects like DOMEvents etc -> action enfant
       return createChildAction({
         params: newParamsOrSignal,
         ...options,
@@ -1737,7 +1772,7 @@ const createAction = (callback, rootOptions = {}) => {
             if (isPrerun && abortSignal.aborted) {
               prerunProtectionRegistry.unprotect(action);
             }
-            onAbort(e, action);
+            onAbort?.(e, action);
             return e;
           }
           if (e.name === "AbortError") {
@@ -2112,6 +2147,19 @@ const generateActionName = (name, params) => {
     asFunctionArgs: true,
   });
   return `${name}${argsString}`;
+};
+
+const isPlainObject = (obj) => {
+  if (typeof obj !== "object" || obj === null) {
+    return false;
+  }
+  let proto = obj;
+  while (Object.getPrototypeOf(proto) !== null) {
+    proto = Object.getPrototypeOf(proto);
+  }
+  return (
+    Object.getPrototypeOf(obj) === proto || Object.getPrototypeOf(obj) === null
+  );
 };
 
 const useActionData = (action) => {
@@ -10188,6 +10236,12 @@ const setupPatterns = (patternDefinitions) => {
 
   // Phase 1: Create all pattern objects
   for (const [key, urlPatternRaw] of Object.entries(patternDefinitions)) {
+    if (typeof urlPatternRaw !== "string") {
+      throw new TypeError(
+        `expects a route pattern string, but received ${urlPatternRaw} for route "${key}".`,
+      );
+    }
+
     // Create the unified pattern object
     const pattern = createRoutePattern(urlPatternRaw);
 
@@ -10402,17 +10456,29 @@ const setupRoutes = (routeDefinition) => {
 };
 
 const useRouteStatus = (route) => {
-  const { urlSignal, matchingSignal, paramsSignal, visitedSignal } = route;
+  const {
+    urlSignal,
+    matchingSignal,
+    paramsSignal,
+    visitedSignal,
+    actionStatusSignal,
+  } = route;
   const url = urlSignal.value;
   const matching = matchingSignal.value;
   const params = paramsSignal.value;
   const visited = visitedSignal.value;
+  const { loading, aborted, error, completed, data } = actionStatusSignal.value;
 
   return {
     url,
     matching,
     params,
     visited,
+    loading,
+    aborted,
+    error,
+    completed,
+    data,
   };
 };
 
@@ -10464,6 +10530,8 @@ const updateRoutes = (
     // state
   } = {},
 ) => {
+  const returnValue = {};
+
   const routeMatchInfoSet = new Set();
   for (const route of routeSet) {
     const routePrivateProperties = getRoutePrivateProperties(route);
@@ -10511,279 +10579,283 @@ const updateRoutes = (
     });
   }
 
-  // Apply all signal updates in a batch
-  const matchingRouteSet = new Set();
-  batch(() => {
-    for (const {
-      route,
-      routePrivateProperties,
-      newMatching,
-      newParams,
-    } of routeMatchInfoSet) {
-      const { updateStatus } = routePrivateProperties;
-      const visited = isVisited(route.url);
-      updateStatus({
-        matching: newMatching,
-        params: newParams,
-        visited,
-      });
-      if (newMatching) {
-        matchingRouteSet.add(route);
-      }
-    }
-
+  {
     // URL -> Signal synchronization (moved from individual route effects to eliminate circular dependency)
     // Prevent signal-to-URL synchronization during URL-to-signal synchronization
     isUpdatingRoutesFromUrl = true;
+    // Apply all signal updates in a batch
+    const matchingRouteSet = new Set();
+    batch(() => {
+      for (const {
+        route,
+        routePrivateProperties,
+        newMatching,
+        newParams,
+      } of routeMatchInfoSet) {
+        const { updateStatus } = routePrivateProperties;
+        const visited = isVisited(route.url);
+        updateStatus({
+          matching: newMatching,
+          params: newParams,
+          visited,
+        });
+        if (newMatching) {
+          matchingRouteSet.add(route);
+        }
+      }
 
-    for (const {
-      route,
-      routePrivateProperties,
-      newMatching,
-    } of routeMatchInfoSet) {
-      const { routePattern } = routePrivateProperties;
-      const { connectionMap } = routePattern;
+      for (const {
+        route,
+        routePrivateProperties,
+        newMatching,
+      } of routeMatchInfoSet) {
+        const { routePattern } = routePrivateProperties;
+        const { connectionMap } = routePattern;
 
-      for (const [paramName, connection] of connectionMap) {
-        const { signal: paramSignal, debug } = connection;
-        const rawParams = route.rawParamsSignal.value;
-        const urlParamValue = rawParams[paramName];
+        for (const [paramName, connection] of connectionMap) {
+          const { signal: paramSignal, debug } = connection;
+          const rawParams = route.rawParamsSignal.value;
+          const urlParamValue = rawParams[paramName];
 
-        if (!newMatching) {
-          // Route doesn't match - check if any matching route extracts this parameter
-          let parameterExtractedByMatchingRoute = false;
-          let matchingRouteInSameFamily = false;
+          if (!newMatching) {
+            // Route doesn't match - check if any matching route extracts this parameter
+            let parameterExtractedByMatchingRoute = false;
+            let matchingRouteInSameFamily = false;
 
-          for (const otherRoute of routeSet) {
-            if (otherRoute === route || !otherRoute.matching) {
-              continue;
-            }
-            const otherRawParams = otherRoute.rawParamsSignal.value;
-            const otherRoutePrivateProperties =
-              getRoutePrivateProperties(otherRoute);
-
-            // Check if this matching route extracts the parameter
-            if (paramName in otherRawParams) {
-              parameterExtractedByMatchingRoute = true;
-            }
-
-            // Check if this matching route is in the same family using parent-child relationships
-            const thisPatternObj = routePattern;
-            const otherPatternObj = otherRoutePrivateProperties.routePattern;
-
-            // Routes are in same family if they share a hierarchical relationship:
-            // 1. One is parent/ancestor of the other
-            // 2. They share a common parent/ancestor
-            let inSameFamily = false;
-
-            // Check if other route is ancestor of this route
-            let currentParent = thisPatternObj.parent;
-            while (currentParent) {
-              if (currentParent === otherPatternObj) {
-                inSameFamily = true;
-                break;
+            for (const otherRoute of routeSet) {
+              if (otherRoute === route || !otherRoute.matching) {
+                continue;
               }
-              currentParent = currentParent.parent;
-            }
+              const otherRawParams = otherRoute.rawParamsSignal.value;
+              const otherRoutePrivateProperties =
+                getRoutePrivateProperties(otherRoute);
 
-            // Check if this route is ancestor of other route
-            if (!inSameFamily) {
-              currentParent = otherPatternObj.parent;
+              // Check if this matching route extracts the parameter
+              if (paramName in otherRawParams) {
+                parameterExtractedByMatchingRoute = true;
+              }
+
+              // Check if this matching route is in the same family using parent-child relationships
+              const thisPatternObj = routePattern;
+              const otherPatternObj = otherRoutePrivateProperties.routePattern;
+
+              // Routes are in same family if they share a hierarchical relationship:
+              // 1. One is parent/ancestor of the other
+              // 2. They share a common parent/ancestor
+              let inSameFamily = false;
+
+              // Check if other route is ancestor of this route
+              let currentParent = thisPatternObj.parent;
               while (currentParent) {
-                if (currentParent === thisPatternObj) {
+                if (currentParent === otherPatternObj) {
                   inSameFamily = true;
                   break;
                 }
                 currentParent = currentParent.parent;
               }
-            }
 
-            // Check if they share a common parent (siblings or cousins)
-            if (!inSameFamily) {
-              const thisAncestors = new Set();
-              currentParent = thisPatternObj.parent;
-              while (currentParent) {
-                thisAncestors.add(currentParent);
-                currentParent = currentParent.parent;
-              }
-
-              currentParent = otherPatternObj.parent;
-              while (currentParent) {
-                if (thisAncestors.has(currentParent)) {
-                  inSameFamily = true;
-                  break;
+              // Check if this route is ancestor of other route
+              if (!inSameFamily) {
+                currentParent = otherPatternObj.parent;
+                while (currentParent) {
+                  if (currentParent === thisPatternObj) {
+                    inSameFamily = true;
+                    break;
+                  }
+                  currentParent = currentParent.parent;
                 }
-                currentParent = currentParent.parent;
+              }
+
+              // Check if they share a common parent (siblings or cousins)
+              if (!inSameFamily) {
+                const thisAncestors = new Set();
+                currentParent = thisPatternObj.parent;
+                while (currentParent) {
+                  thisAncestors.add(currentParent);
+                  currentParent = currentParent.parent;
+                }
+
+                currentParent = otherPatternObj.parent;
+                while (currentParent) {
+                  if (thisAncestors.has(currentParent)) {
+                    inSameFamily = true;
+                    break;
+                  }
+                  currentParent = currentParent.parent;
+                }
+              }
+
+              if (inSameFamily) {
+                matchingRouteInSameFamily = true;
               }
             }
 
-            if (inSameFamily) {
-              matchingRouteInSameFamily = true;
-            }
-          }
-
-          // Only reset signal if:
-          // 1. We're navigating within the same route family (not to completely unrelated routes)
-          // 2. AND no matching route extracts this parameter from URL
-          // 3. AND parameter has no default value (making it truly optional)
-          if (matchingRouteInSameFamily && !parameterExtractedByMatchingRoute) {
-            const defaultValue = connection.getDefaultValue();
-            if (defaultValue === undefined) {
-              // Parameter is not extracted within same family and has no default - reset it
-              if (debug) {
+            // Only reset signal if:
+            // 1. We're navigating within the same route family (not to completely unrelated routes)
+            // 2. AND no matching route extracts this parameter from URL
+            // 3. AND parameter has no default value (making it truly optional)
+            if (
+              matchingRouteInSameFamily &&
+              !parameterExtractedByMatchingRoute
+            ) {
+              const defaultValue = connection.getDefaultValue();
+              if (defaultValue === undefined) {
+                // Parameter is not extracted within same family and has no default - reset it
+                if (debug) {
+                  console.debug(
+                    `[route] Same family navigation, ${paramName} not extracted and has no default: resetting signal`,
+                  );
+                }
+                paramSignal.value = undefined;
+              } else if (debug) {
+                // Parameter has a default value - preserve current signal value
                 console.debug(
-                  `[route] Same family navigation, ${paramName} not extracted and has no default: resetting signal`,
+                  `[route] Parameter ${paramName} has default value ${defaultValue}: preserving signal value: ${paramSignal.value}`,
                 );
               }
-              paramSignal.value = undefined;
             } else if (debug) {
-              // Parameter has a default value - preserve current signal value
-              console.debug(
-                `[route] Parameter ${paramName} has default value ${defaultValue}: preserving signal value: ${paramSignal.value}`,
-              );
+              if (!matchingRouteInSameFamily) {
+                console.debug(
+                  `[route] Different route family: preserving ${paramName} signal value: ${paramSignal.value}`,
+                );
+              } else {
+                console.debug(
+                  `[route] Parameter ${paramName} extracted by matching route: preserving signal value: ${paramSignal.value}`,
+                );
+              }
             }
-          } else if (debug) {
-            if (!matchingRouteInSameFamily) {
-              console.debug(
-                `[route] Different route family: preserving ${paramName} signal value: ${paramSignal.value}`,
-              );
-            } else {
-              console.debug(
-                `[route] Parameter ${paramName} extracted by matching route: preserving signal value: ${paramSignal.value}`,
-              );
-            }
+            continue;
           }
-          continue;
-        }
 
-        // URL -> Signal sync: When route matches, ensure signal matches URL state
-        // URL is the source of truth for explicit parameters
-        const value = paramSignal.peek();
-        if (urlParamValue === undefined) {
-          // No URL parameter - reset signal to its current default value
-          // (handles both static fallback and dynamic default cases)
-          const defaultValue = connection.getDefaultValue();
-          if (connection.isDefaultValue(value)) {
-            // Signal already has correct default value, no sync needed
+          // URL -> Signal sync: When route matches, ensure signal matches URL state
+          // URL is the source of truth for explicit parameters
+          const value = paramSignal.peek();
+          if (urlParamValue === undefined) {
+            // No URL parameter - reset signal to its current default value
+            // (handles both static fallback and dynamic default cases)
+            const defaultValue = connection.getDefaultValue();
+            if (connection.isDefaultValue(value)) {
+              // Signal already has correct default value, no sync needed
+              continue;
+            }
+            if (debug) {
+              console.debug(
+                `[route] URL->Signal: ${paramName} not in URL, reset signal to default (${defaultValue})`,
+              );
+            }
+            paramSignal.value = defaultValue;
+            continue;
+          }
+          if (urlParamValue === value) {
+            // Values already match, no sync needed
             continue;
           }
           if (debug) {
             console.debug(
-              `[route] URL->Signal: ${paramName} not in URL, reset signal to default (${defaultValue})`,
+              `[route] URL->Signal: ${paramName}=${urlParamValue} in url, sync signal with url`,
             );
           }
-          paramSignal.value = defaultValue;
+          paramSignal.value = urlParamValue;
           continue;
         }
-        if (urlParamValue === value) {
-          // Values already match, no sync needed
-          continue;
-        }
-        if (debug) {
-          console.debug(
-            `[route] URL->Signal: ${paramName}=${urlParamValue} in url, sync signal with url`,
-          );
-        }
-        paramSignal.value = urlParamValue;
-        continue;
       }
-    }
-  });
+    });
+    // Reset flag after URL -> Signal synchronization is complete
+    isUpdatingRoutesFromUrl = false;
 
-  // Reset flag after URL -> Signal synchronization is complete
-  isUpdatingRoutesFromUrl = false;
-
-  // must be after paramsSignal.value update to ensure the proxy target is set
-  // (so after the batch call)
-  const toLoadSet = new Set();
-  const toReloadSet = new Set();
-  const abortSignalMap = new Map();
-  const routeLoadRequestedMap = new Map();
-
-  const shouldLoadOrReload = (route, shouldLoad) => {
-    const routeAction = route.action;
-    const currentAction = routeAction.getCurrentAction();
-    if (shouldLoad) {
-      if (
-        navigationType === "replace" ||
-        currentAction.aborted ||
-        currentAction.error
-      ) {
-        shouldLoad = false;
-      }
-    }
-    if (shouldLoad) {
-      toLoadSet.add(currentAction);
-    } else {
-      toReloadSet.add(currentAction);
-    }
-    routeLoadRequestedMap.set(route, currentAction);
-    // Create a new abort controller for this action
-    const actionAbortController = new AbortController();
-    actionAbortControllerWeakMap.set(currentAction, actionAbortController);
-    abortSignalMap.set(currentAction, actionAbortController.signal);
-  };
-
-  const shouldLoad = (route) => {
-    shouldLoadOrReload(route, true);
-  };
-  const shouldReload = (route) => {
-    shouldLoadOrReload(route, false);
-  };
-  const shouldAbort = (route) => {
-    const routeAction = route.action;
-    const currentAction = routeAction.getCurrentAction();
-    const actionAbortController =
-      actionAbortControllerWeakMap.get(currentAction);
-    if (actionAbortController) {
-      actionAbortController.abort(`route no longer matching`);
-      actionAbortControllerWeakMap.delete(currentAction);
-    }
-  };
-
-  for (const {
-    route,
-    routePrivateProperties,
-    newMatching,
-    oldMatching,
-    newParams,
-    oldParams,
-  } of routeMatchInfoSet) {
-    const routeAction = route.action;
-    if (!routeAction) {
-      continue;
-    }
-
-    const becomesMatching = newMatching && !oldMatching;
-    const becomesNotMatching = !newMatching && oldMatching;
-    const paramsChangedWhileMatching =
-      newMatching && oldMatching && newParams !== oldParams;
-
-    // Handle actions for routes that become matching
-    if (becomesMatching) {
-      shouldLoad(route);
-      continue;
-    }
-
-    // Handle actions for routes that become not matching - abort them
-    if (becomesNotMatching && ROUTE_DEACTIVATION_STRATEGY === "abort") {
-      shouldAbort(route);
-      continue;
-    }
-
-    // Handle parameter changes while route stays matching
-    if (paramsChangedWhileMatching) {
-      shouldReload(route);
-    }
+    Object.assign(returnValue, { matchingRouteSet });
   }
 
-  return {
-    loadSet: toLoadSet,
-    reloadSet: toReloadSet,
-    abortSignalMap,
-    routeLoadRequestedMap,
-    matchingRouteSet,
-  };
+  {
+    // must be after paramsSignal.value update to ensure the proxy target is set
+    // (so after the batch call)
+    const toLoadSet = new Set();
+    const toReloadSet = new Set();
+    const abortSignalMap = new Map();
+    const routeLoadRequestedMap = new Map();
+    const shouldLoadOrReload = (route, shouldLoad) => {
+      const routeAction = route.action;
+      const currentAction = routeAction.getCurrentAction();
+      if (shouldLoad) {
+        if (
+          navigationType === "replace" ||
+          currentAction.aborted ||
+          currentAction.error
+        ) {
+          shouldLoad = false;
+        }
+      }
+      if (shouldLoad) {
+        toLoadSet.add(currentAction);
+      } else {
+        toReloadSet.add(currentAction);
+      }
+      routeLoadRequestedMap.set(route, currentAction);
+      // Create a new abort controller for this action
+      const actionAbortController = new AbortController();
+      actionAbortControllerWeakMap.set(currentAction, actionAbortController);
+      abortSignalMap.set(currentAction, actionAbortController.signal);
+    };
+    const shouldLoad = (route) => {
+      shouldLoadOrReload(route, true);
+    };
+    const shouldReload = (route) => {
+      shouldLoadOrReload(route, false);
+    };
+    const shouldAbort = (route) => {
+      const routeAction = route.action;
+      const currentAction = routeAction.getCurrentAction();
+      const actionAbortController =
+        actionAbortControllerWeakMap.get(currentAction);
+      if (actionAbortController) {
+        actionAbortController.abort(`route no longer matching`);
+        actionAbortControllerWeakMap.delete(currentAction);
+      }
+    };
+    for (const {
+      route,
+      routePrivateProperties,
+      newMatching,
+      oldMatching,
+      newParams,
+      oldParams,
+    } of routeMatchInfoSet) {
+      const routeAction = route.action;
+      if (!routeAction) {
+        continue;
+      }
+
+      const becomesMatching = newMatching && !oldMatching;
+      const becomesNotMatching = !newMatching && oldMatching;
+      const paramsChangedWhileMatching =
+        newMatching && oldMatching && newParams !== oldParams;
+
+      // Handle actions for routes that become matching
+      if (becomesMatching) {
+        shouldLoad(route);
+        continue;
+      }
+
+      // Handle actions for routes that become not matching - abort them
+      if (becomesNotMatching && ROUTE_DEACTIVATION_STRATEGY === "abort") {
+        shouldAbort(route);
+        continue;
+      }
+
+      // Handle parameter changes while route stays matching
+      if (paramsChangedWhileMatching) {
+        shouldReload(route);
+      }
+    }
+    Object.assign(returnValue, {
+      loadSet: toLoadSet,
+      reloadSet: toReloadSet,
+      abortSignalMap,
+      routeLoadRequestedMap,
+    });
+  }
+
+  return returnValue;
 };
 
 const registerRoute = (routePattern) => {
@@ -10799,10 +10871,8 @@ const registerRoute = (routePattern) => {
     matching: false,
     params: ROUTE_NOT_MATCHING_PARAMS,
     buildUrl: null,
-    bindAction: null,
     relativeUrl: null,
     url: null,
-    action: null,
     matchingSignal: null,
     paramsSignal: null,
     urlSignal: null,
@@ -10811,6 +10881,10 @@ const registerRoute = (routePattern) => {
     toString: () => {
       return `route "${cleanPattern}"`;
     },
+
+    bindAction: null,
+    action: null,
+    actionStatusSignal: null,
   };
   routeSet.add(route);
   const routePrivateProperties = {
@@ -11047,7 +11121,14 @@ const registerRoute = (routePattern) => {
   cleanupCallbackSet.add(disposeRelativeUrlEffect);
   cleanupCallbackSet.add(disposeUrlEffect);
 
-  // action stuff (for later)
+  // action
+  route.actionStatusSignal = signal({
+    loading: false,
+    error: null,
+    aborted: false,
+    completed: true,
+    data: undefined,
+  });
   route.bindAction = (action) => {
     const { store } = action.meta;
     if (store) {
@@ -11077,6 +11158,10 @@ const registerRoute = (routePattern) => {
 
     const actionBoundToThisRoute = action.bindParams(route.paramsSignal);
     route.action = actionBoundToThisRoute;
+    route.actionStatusSignal = computed(() => {
+      const actionStatus = getActionStatus(actionBoundToThisRoute);
+      return actionStatus;
+    });
     return actionBoundToThisRoute;
   };
 
@@ -11761,7 +11846,8 @@ const useForceRender = () => {
  * . Tester le code splitting avec .lazy + import dynamique
  * pour les elements des routes
  *
- * 3. Ajouter la possibilite d'avoir des action sur les routes
+ * 3. Ajouter la possibilite d'avoir des
+ *  sur les routes
  * Tester juste les data pour commencer
  * On aura ptet besoin d'un useRouteData au lieu de passer par un element qui est une fonction
  * pour que react ne re-render pas tout
@@ -18531,6 +18617,9 @@ const useKeyboardShortcuts = (
 
   useEffect(() => {
     const element = elementRef.current;
+    if (!element) {
+      return null;
+    }
     const shortcutsCopy = [];
     for (const shortcutCandidate of shortcuts) {
       shortcutsCopy.push({
@@ -18543,7 +18632,8 @@ const useKeyboardShortcuts = (
             return false;
           }
           const { action } = shortcutCandidate;
-          return requestAction(element, action, {
+          const actionWithEvent = action.bindParams(keyboardEvent);
+          return requestAction(element, actionWithEvent, {
             actionOrigin: "keyboard_shortcut",
             event: keyboardEvent,
             requester: document.activeElement,
@@ -18846,11 +18936,15 @@ const useUIStateController = (
     getStateFromProp = (prop) => prop,
     getPropFromState = (state) => state,
     getStateFromParent,
+    persists,
   } = {},
 ) => {
   const parentUIStateController = useContext(ParentUIStateControllerContext);
   const formContext = useContext(FormContext);
   const { id, name, onUIStateChange, action } = props;
+  if (persists === undefined && formContext) {
+    persists = true;
+  }
   const uncontrolled = !formContext && !action;
   const [navState, setNavState] = useNavState$1(id);
 
@@ -18867,7 +18961,7 @@ const useUIStateController = (
       // not controlled but want an initial state (a value or being checked)
       return getStateFromProp(defaultState);
     }
-    if (formContext && navState) {
+    if (persists && navState) {
       // not controlled but want to use value from nav state
       // (I think this should likely move earlier to win over the hasUIStateProp when it's undefined)
       return getStateFromProp(navState);
@@ -18971,7 +19065,7 @@ const useUIStateController = (
     getStateFromProp,
     setUIState: (prop, e) => {
       const newUIState = uiStateController.getStateFromProp(prop);
-      if (formContext) {
+      if (persists) {
         setNavState(prop);
       }
       const currentUIState = uiStateController.uiState;
@@ -18991,7 +19085,7 @@ const useUIStateController = (
       uiStateController.setUIState(currentState, e);
     },
     actionEnd: () => {
-      if (formContext) {
+      if (persists) {
         setNavState(undefined);
       }
     },
@@ -20126,7 +20220,8 @@ const LinkPlain = props => {
     discrete,
     blankTargetIcon,
     anchorIcon,
-    icon,
+    startIcon,
+    endIcon,
     spacing,
     revealOnInteraction = Boolean(titleLevel),
     hrefFallback = !anchor,
@@ -20149,29 +20244,29 @@ const LinkPlain = props => {
   } = getHrefTargetInfo(href);
   const innerTarget = target === undefined ? isSameSite ? "_self" : "_blank" : target;
   const innerRel = rel === undefined ? isSameSite ? undefined : "noopener noreferrer" : rel;
-  let innerIcon;
-  if (icon === undefined) {
+  let innerEndIcon;
+  if (endIcon === undefined) {
     // Check for special protocol or domain-specific icons first
     if (href?.startsWith("tel:")) {
-      innerIcon = jsx(PhoneSvg, {});
+      innerEndIcon = jsx(PhoneSvg, {});
     } else if (href?.startsWith("sms:")) {
-      innerIcon = jsx(SmsSvg, {});
+      innerEndIcon = jsx(SmsSvg, {});
     } else if (href?.startsWith("mailto:")) {
-      innerIcon = jsx(EmailSvg, {});
+      innerEndIcon = jsx(EmailSvg, {});
     } else if (href?.includes("github.com")) {
-      innerIcon = jsx(GithubSvg, {});
+      innerEndIcon = jsx(GithubSvg, {});
     } else {
       // Fall back to default icon logic
       const innerBlankTargetIcon = blankTargetIcon === undefined ? innerTarget === "_blank" : blankTargetIcon;
       const innerAnchorIcon = anchorIcon === undefined ? isAnchor : anchorIcon;
       if (innerBlankTargetIcon) {
-        innerIcon = innerBlankTargetIcon === true ? jsx(LinkBlankTargetSvg, {}) : innerBlankTargetIcon;
+        innerEndIcon = innerBlankTargetIcon === true ? jsx(LinkBlankTargetSvg, {}) : innerBlankTargetIcon;
       } else if (innerAnchorIcon) {
-        innerIcon = innerAnchorIcon === true ? jsx(LinkAnchorSvg, {}) : anchorIcon;
+        innerEndIcon = innerAnchorIcon === true ? jsx(LinkAnchorSvg, {}) : anchorIcon;
       }
     }
   } else {
-    innerIcon = icon;
+    innerEndIcon = endIcon;
   }
   const innerChildren = children || (hrefFallback ? href : children);
   return jsxs(Box, {
@@ -20225,12 +20320,15 @@ const LinkPlain = props => {
       }
       onKeyDown?.(e);
     },
-    children: [jsx(LoaderBackground, {
+    children: [startIcon && jsx(Icon, {
+      marginRight: innerChildren ? "xxs" : undefined,
+      children: startIcon
+    }), jsx(LoaderBackground, {
       loading: loading,
       color: "var(--link-loader-color)"
-    }), applySpacingOnTextChildren(innerChildren, spacing), innerIcon && jsx(Icon, {
+    }), applySpacingOnTextChildren(innerChildren, spacing), endIcon && jsx(Icon, {
       marginLeft: innerChildren ? "xxs" : undefined,
-      children: innerIcon
+      children: innerEndIcon
     })]
   });
 };
@@ -20756,6 +20854,420 @@ const TabBasic = ({
       ,
       children: children
     }) : children]
+  });
+};
+
+const useFocusGroup = (
+  elementRef,
+  { enabled = true, direction, skipTab, loop, name } = {},
+) => {
+  useLayoutEffect(() => {
+    if (!enabled) {
+      return null;
+    }
+    const focusGroup = initFocusGroup(elementRef.current, {
+      direction,
+      skipTab,
+      loop,
+      name,
+    });
+    return focusGroup.cleanup;
+  }, [direction, skipTab, loop, name]);
+};
+
+installImportMetaCss(import.meta);const rightArrowPath = "M680-480L360-160l-80-80 240-240-240-240 80-80 320 320z";
+const downArrowPath = "M480-280L160-600l80-80 240 240 240-240 80 80-320 320z";
+import.meta.css = /* css */`
+  .navi_summary_marker {
+    width: 1em;
+    height: 1em;
+    line-height: 1em;
+
+    .navi_summary_marker_loading_container {
+      transform: scale(0.3);
+      transition: transform 0.3s linear;
+
+      .navi_summary_marker_background_circle,
+      .navi_summary_marker_foreground_circle {
+        opacity: 0;
+        transition: opacity 0.3s ease-in-out;
+      }
+
+      .navi_summary_marker_foreground_circle {
+        stroke-dasharray: 503 1507; /* ~25% of circle perimeter */
+        stroke-dashoffset: 0;
+        animation: progress-around-circle 1.5s linear infinite;
+      }
+    }
+
+    .navi_summary_marker_arrow {
+      opacity: 1;
+      transition: opacity 0.3s ease-in-out;
+      animation-duration: 0.3s;
+      animation-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
+      animation-fill-mode: forwards;
+
+      &[data-animation-target="down"] {
+        animation-name: morph-to-down;
+      }
+
+      &[data-animation-target="right"] {
+        animation-name: morph-to-right;
+      }
+    }
+
+    &[data-loading] {
+      .navi_summary_marker_loading_container {
+        transform: scale(1);
+
+        .navi_summary_marker_background_circle {
+          opacity: 0.2;
+        }
+        .navi_summary_marker_foreground_circle {
+          opacity: 1;
+        }
+      }
+      .navi_summary_marker_arrow {
+        opacity: 0;
+      }
+    }
+  }
+  @keyframes progress-around-circle {
+    0% {
+      stroke-dashoffset: 0;
+    }
+    100% {
+      stroke-dashoffset: -2010;
+    }
+  }
+  @keyframes morph-to-down {
+    from {
+      d: path("${rightArrowPath}");
+    }
+    to {
+      d: path("${downArrowPath}");
+    }
+  }
+  @keyframes morph-to-right {
+    from {
+      d: path("${downArrowPath}");
+    }
+    to {
+      d: path("${rightArrowPath}");
+    }
+  }
+`;
+const SummaryMarker = ({
+  open,
+  loading
+}) => {
+  const showLoading = useDebounceTrue(loading, 300);
+  const mountedRef = useRef(false);
+  const prevOpenRef = useRef(open);
+  useLayoutEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+  const shouldAnimate = mountedRef.current && prevOpenRef.current !== open;
+  prevOpenRef.current = open;
+  return jsx("span", {
+    className: "navi_summary_marker",
+    "data-loading": showLoading ? "" : undefined,
+    children: jsxs("svg", {
+      viewBox: "0 -960 960 960",
+      xmlns: "http://www.w3.org/2000/svg",
+      children: [jsxs("g", {
+        className: "navi_summary_marker_loading_container",
+        "transform-origin": "480px -480px",
+        children: [jsx("circle", {
+          className: "navi_summary_marker_background_circle",
+          cx: "480",
+          cy: "-480",
+          r: "320",
+          stroke: "currentColor",
+          fill: "none",
+          strokeWidth: "60",
+          opacity: "0.2"
+        }), jsx("circle", {
+          className: "navi_summary_marker_foreground_circle",
+          cx: "480",
+          cy: "-480",
+          r: "320",
+          stroke: "currentColor",
+          fill: "none",
+          strokeWidth: "60",
+          strokeLinecap: "round",
+          strokeDasharray: "503 1507"
+        })]
+      }), jsx("g", {
+        "transform-origin": "480px -480px",
+        children: jsx("path", {
+          className: "navi_summary_marker_arrow",
+          fill: "currentColor",
+          "data-animation-target": shouldAnimate ? open ? "down" : "right" : undefined,
+          d: open ? downArrowPath : rightArrowPath
+        })
+      })]
+    })
+  });
+};
+
+installImportMetaCss(import.meta);import.meta.css = /* css */`
+  .navi_details {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-shrink: 0;
+    flex-direction: column;
+
+    summary {
+      display: flex;
+      flex-shrink: 0;
+      flex-direction: column;
+      cursor: pointer;
+      user-select: none;
+
+      &:focus {
+        z-index: 1;
+      }
+
+      .navi_summary_body {
+        display: flex;
+        width: 100%;
+        flex-direction: row;
+        align-items: center;
+        gap: 0.2em;
+
+        .navi_summary_label {
+          display: flex;
+          padding-right: 10px;
+          flex: 1;
+          align-items: center;
+          gap: 0.2em;
+        }
+      }
+    }
+  }
+`;
+const Details = props => {
+  const {
+    value = "on",
+    persists
+  } = props;
+  const uiStateController = useUIStateController(props, "details", {
+    statePropName: "open",
+    defaultStatePropName: "defaultOpen",
+    fallbackState: false,
+    getStateFromProp: open => open ? value : undefined,
+    getPropFromState: Boolean,
+    persists
+  });
+  const uiState = useUIState(uiStateController);
+  const details = renderActionableComponent(props, {
+    Basic: DetailsBasic,
+    WithAction: DetailsWithAction
+  });
+  return jsx(UIStateControllerContext.Provider, {
+    value: uiStateController,
+    children: jsx(UIStateContext.Provider, {
+      value: uiState,
+      children: details
+    })
+  });
+};
+const DetailsBasic = props => {
+  const uiStateController = useContext(UIStateControllerContext);
+  const uiState = useContext(UIStateContext);
+  const {
+    id,
+    label = "Summary",
+    loading,
+    focusGroup,
+    focusGroupDirection,
+    arrowKeyShortcuts = true,
+    openKeyShortcut = "ArrowRight",
+    closeKeyShortcut = "ArrowLeft",
+    onToggle,
+    children,
+    ...rest
+  } = props;
+  const defaultRef = useRef();
+  const ref = rest.ref || defaultRef;
+  const open = Boolean(uiState);
+  useFocusGroup(ref, {
+    enabled: focusGroup,
+    name: typeof focusGroup === "string" ? focusGroup : undefined,
+    direction: focusGroupDirection
+  });
+
+  /**
+   * Browser will dispatch "toggle" event even if we set open={true}
+   * When rendering the component for the first time
+   * We have to ensure the initial "toggle" event is ignored.
+   *
+   * If we don't do that code will think the details has changed and run logic accordingly
+   * For example it will try to navigate to the current url while we are already there
+   *
+   * See:
+   * - https://techblog.thescore.com/2024/10/08/why-we-decided-to-change-how-the-details-element-works/
+   * - https://github.com/whatwg/html/issues/4500
+   * - https://stackoverflow.com/questions/58942600/react-html-details-toggles-uncontrollably-when-starts-open
+   *
+   */
+
+  const summaryRef = useRef(null);
+  useKeyboardShortcuts(ref, [{
+    key: openKeyShortcut,
+    enabled: arrowKeyShortcuts,
+    when: e => document.activeElement === summaryRef.current &&
+    // avoid handling openKeyShortcut twice when keydown occurs inside nested details
+    !e.defaultPrevented,
+    action: e => {
+      const details = ref.current;
+      if (!details.open) {
+        e.preventDefault();
+        details.open = true;
+        return;
+      }
+      const summary = summaryRef.current;
+      const firstFocusableElementInDetails = findAfter(summary, elementIsFocusable, {
+        root: details
+      });
+      if (!firstFocusableElementInDetails) {
+        return;
+      }
+      e.preventDefault();
+      firstFocusableElementInDetails.focus();
+    }
+  }, {
+    key: closeKeyShortcut,
+    enabled: arrowKeyShortcuts,
+    when: () => {
+      const details = ref.current;
+      return details.open;
+    },
+    action: e => {
+      const details = ref.current;
+      const summary = summaryRef.current;
+      if (document.activeElement === summary) {
+        e.preventDefault();
+        summary.focus();
+        details.open = false;
+      } else {
+        e.preventDefault();
+        summary.focus();
+      }
+    }
+  }]);
+  const mountedRef = useRef(false);
+  useEffect(() => {
+    mountedRef.current = true;
+  }, []);
+  return jsxs(Box, {
+    as: "details",
+    ...rest,
+    ref: ref,
+    id: id,
+    baseClassName: "navi_details",
+    onToggle: e => {
+      const isOpen = e.newState === "open";
+      if (mountedRef.current) {
+        if (isOpen) {
+          uiStateController.setUIState(true, e);
+        } else {
+          uiStateController.setUIState(false, e);
+        }
+      }
+      onToggle?.(e);
+    },
+    open: open,
+    children: [jsx("summary", {
+      ref: summaryRef,
+      children: jsxs("div", {
+        className: "navi_summary_body",
+        children: [jsx(SummaryMarker, {
+          open: open,
+          loading: loading
+        }), jsx("div", {
+          className: "navi_summary_label",
+          children: label
+        })]
+      })
+    }), children]
+  });
+};
+const DetailsWithAction = props => {
+  const uiStateController = useContext(UIStateControllerContext);
+  const {
+    action,
+    loading,
+    onToggle,
+    onCancel,
+    onActionPrevented,
+    onActionStart,
+    onActionAbort,
+    onActionError,
+    onActionEnd,
+    children,
+    ...rest
+  } = props;
+  const defaultRef = useRef();
+  const ref = rest.ref || defaultRef;
+  const effectiveAction = useAction(action);
+  const actionStatus = useActionStatus(effectiveAction);
+  const {
+    loading: actionLoading
+  } = actionStatus;
+  const executeAction = useExecuteAction(ref, {
+    // the error will be displayed by actionRenderer inside <details>
+    errorEffect: "none"
+  });
+  useActionEvents(ref, {
+    onCancel: (e, reason) => {
+      if (reason === "blur_invalid") {
+        return;
+      }
+      uiStateController.resetUIState(e);
+      onCancel?.(e, reason);
+    },
+    onPrevented: onActionPrevented,
+    onRequested: e => forwardActionRequested(e, effectiveAction),
+    onAction: executeAction,
+    onStart: onActionStart,
+    onAbort: e => {
+      uiStateController.resetUIState(e);
+      onActionAbort?.(e);
+    },
+    onError: e => {
+      uiStateController.resetUIState(e);
+      onActionError?.(e);
+    },
+    onEnd: e => {
+      onActionEnd?.(e);
+    }
+  });
+  return jsx(DetailsBasic, {
+    ...rest,
+    ref: ref,
+    loading: loading || actionLoading,
+    onToggle: toggleEvent => {
+      const isOpen = toggleEvent.newState === "open";
+      if (isOpen) {
+        dispatchActionRequestedCustomEvent(toggleEvent.target, {
+          event: toggleEvent,
+          requester: toggleEvent.target
+        });
+      } else {
+        effectiveAction.abort();
+      }
+      onToggle?.(toggleEvent);
+    },
+    children: jsx(ActionRenderer, {
+      action: effectiveAction,
+      children: children
+    })
   });
 };
 
@@ -22638,6 +23150,7 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
       --border-width: 1px;
       --outline-width: 1px;
       --outer-width: calc(var(--border-width) + var(--outline-width));
+      --font-size: 14px;
 
       /* Default */
       --outline-color: var(--navi-focus-outline-color);
@@ -22657,6 +23170,9 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
       --color-hover: var(--color);
       /* Active */
       --border-color-active: color-mix(in srgb, var(--border-color) 90%, black);
+      /* Focus */
+      --border-color-focus: var(--border-color);
+      --background-color-focus: var(--background-color);
       /* Readonly */
       --border-color-readonly: color-mix(
         in srgb,
@@ -22685,6 +23201,8 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
     border-radius: inherit;
     cursor: inherit;
 
+    --start-icon-size: 0;
+    --end-icon-size: 0;
     --x-outline-width: var(--outline-width);
     --x-border-radius: var(--border-radius);
     --x-border-width: var(--border-width);
@@ -22695,19 +23213,31 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
     --x-color: var(--color);
     --x-placeholder-color: var(--placeholder-color);
 
+    --x-padding-top-base: var(
+      --padding-top,
+      var(--padding-y, var(--padding, 1px))
+    );
+    --x-padding-right-base: var(
+      --padding-right,
+      var(--padding-x, var(--padding, 2px))
+    );
+    --x-padding-bottom-base: var(
+      --padding-bottom,
+      var(--padding-y, var(--padding, 1px))
+    );
+    --x-padding-left-base: var(
+      --padding-left,
+      var(--padding-x, var(--padding, 2px))
+    );
+
     .navi_native_input {
       box-sizing: border-box;
-      padding-top: var(--padding-top, var(--padding-y, var(--padding, 1px)));
-      padding-right: var(
-        --padding-right,
-        var(--padding-x, var(--padding, 2px))
-      );
-      padding-bottom: var(
-        --padding-bottom,
-        var(--padding-y, var(--padding, 1px))
-      );
-      padding-left: var(--padding-left, var(--padding-x, var(--padding, 2px)));
+      padding-top: var(--x-padding-top-base);
+      padding-right: calc(var(--x-padding-right-base) + var(--end-icon-size));
+      padding-bottom: var(--x-padding-bottom-base);
+      padding-left: calc(var(--x-padding-left-base) + var(--start-icon-size));
       color: var(--x-color);
+      font-size: var(--font-size);
       background-color: var(--x-background-color);
       border-width: var(--x-outer-width);
       border-width: var(--x-outer-width);
@@ -22732,17 +23262,19 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
       position: absolute;
       top: 0;
       bottom: 0;
-      left: 0.25em;
+      left: var(--x-padding-left-base);
+      font-size: var(--font-size);
     }
     .navi_input_end_button {
       position: absolute;
       top: 0;
-      right: 0.25em;
+      right: var(--x-padding-right-base);
       bottom: 0;
       display: inline-flex;
       margin: 0;
       padding: 0;
       justify-content: center;
+      font-size: var(--font-size);
       background: none;
       border: none;
       opacity: 0;
@@ -22768,16 +23300,47 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
         }
       }
     }
-
     &[data-start-icon] {
-      .navi_native_input {
-        padding-left: 20px;
-      }
+      --start-icon-size: 1em;
     }
     &[data-end-icon] {
+      --end-icon-size: 1em;
+    }
+
+    /* Readonly */
+    &[data-readonly] {
+      --x-border-color: var(--border-color-readonly);
+      --x-background-color: var(--background-color-readonly);
+      --x-color: var(--color-readonly);
+    }
+    /* Focus */
+    &[data-focus],
+    &[data-focus-visible] {
+      --x-background-color: var(--background-color-focus);
+      --x-border-color: var(--border-color-focus);
+
       .navi_native_input {
-        padding-right: 20px;
+        outline-width: var(--x-outer-width);
+        outline-offset: calc(-1 * var(--x-outer-width));
+        --x-border-color: var(--x-outline-color);
       }
+    }
+    /* Hover */
+    &[data-hover] {
+      --x-background-color: var(--background-color-hover);
+      --x-border-color: var(--border-color-hover);
+      --x-color: var(--color-hover);
+    }
+
+    /* Disabled */
+    &[data-disabled] {
+      --x-border-color: var(--border-color-disabled);
+      --x-background-color: var(--background-color-disabled);
+      --x-color: var(--color-disabled);
+    }
+    /* Callout (info, warning, error) */
+    &[data-callout] {
+      --x-border-color: var(--callout-color);
     }
   }
 
@@ -22789,29 +23352,6 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
     /* input:-internal-autofill-selected { color: FieldText !important; } */
     /* Fortunately we can override it as follow */
     -webkit-text-fill-color: var(--x-color) !important;
-  }
-  /* Readonly */
-  .navi_input[data-readonly] {
-    --x-border-color: var(--border-color-readonly);
-    --x-background-color: var(--background-color-readonly);
-    --x-color: var(--color-readonly);
-  }
-  /* Focus */
-  .navi_input[data-focus] .navi_native_input,
-  .navi_input[data-focus-visible] .navi_native_input {
-    outline-width: var(--x-outer-width);
-    outline-offset: calc(-1 * var(--x-outer-width));
-    --x-border-color: var(--x-outline-color);
-  }
-  /* Disabled */
-  .navi_input[data-disabled] {
-    --x-border-color: var(--border-color-disabled);
-    --x-background-color: var(--background-color-disabled);
-    --x-color: var(--color-disabled);
-  }
-  /* Callout (info, warning, error) */
-  .navi_input[data-callout] {
-    --x-border-color: var(--callout-color);
   }
 `;
 const InputTextual = props => {
@@ -22833,10 +23373,14 @@ const InputStyleCSSVars = {
   "outlineWidth": "--outline-width",
   "borderWidth": "--border-width",
   "borderRadius": "--border-radius",
+  "padding": "--padding",
+  "paddingX": "--padding-x",
+  "paddingY": "--padding-y",
   "paddingTop": "--padding-top",
   "paddingRight": "--padding-right",
   "paddingBottom": "--padding-bottom",
   "paddingLeft": "--padding-left",
+  "background": "--background",
   "backgroundColor": "--background-color",
   "borderColor": "--border-color",
   "color": "--color",
@@ -22845,7 +23389,12 @@ const InputStyleCSSVars = {
     borderColor: "--border-color-hover",
     color: "--color-hover"
   },
+  ":focus": {
+    backgroundColor: "--background-color-focus",
+    borderColor: "--border-color-focus"
+  },
   ":active": {
+    backgroundColor: "--background-color-active",
     borderColor: "--border-color-active"
   },
   ":read-only": {
@@ -24353,24 +24902,6 @@ const createItemTracker = () => {
     return tracker.items;
   };
   return [useItemTrackerProvider, useTrackItem, useTrackedItem, useTrackedItems];
-};
-
-const useFocusGroup = (
-  elementRef,
-  { enabled = true, direction, skipTab, loop, name } = {},
-) => {
-  useLayoutEffect(() => {
-    if (!enabled) {
-      return null;
-    }
-    const focusGroup = initFocusGroup(elementRef.current, {
-      direction,
-      skipTab,
-      loop,
-      name,
-    });
-    return focusGroup.cleanup;
-  }, [direction, skipTab, loop, name]);
 };
 
 const Z_INDEX_EDITING = 1; /* To go above neighbours, but should not be too big to stay under the sticky cells */
@@ -28233,357 +28764,6 @@ const SVGMaskOverlay = ({
     }), maskedElement, overlaySvgs]
   });
 };
-
-installImportMetaCss(import.meta);const rightArrowPath = "M680-480L360-160l-80-80 240-240-240-240 80-80 320 320z";
-const downArrowPath = "M480-280L160-600l80-80 240 240 240-240 80 80-320 320z";
-import.meta.css = /* css */`
-  .summary_marker {
-    width: 1em;
-    height: 1em;
-    line-height: 1em;
-  }
-  .summary_marker_svg .arrow {
-    animation-duration: 0.3s;
-    animation-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
-    animation-fill-mode: forwards;
-  }
-  .summary_marker_svg .arrow[data-animation-target="down"] {
-    animation-name: morph-to-down;
-  }
-  @keyframes morph-to-down {
-    from {
-      d: path("${rightArrowPath}");
-    }
-    to {
-      d: path("${downArrowPath}");
-    }
-  }
-  .summary_marker_svg .arrow[data-animation-target="right"] {
-    animation-name: morph-to-right;
-  }
-  @keyframes morph-to-right {
-    from {
-      d: path("${downArrowPath}");
-    }
-    to {
-      d: path("${rightArrowPath}");
-    }
-  }
-
-  .summary_marker_svg .foreground_circle {
-    stroke-dasharray: 503 1507; /* ~25% of circle perimeter */
-    stroke-dashoffset: 0;
-    animation: progress-around-circle 1.5s linear infinite;
-  }
-  @keyframes progress-around-circle {
-    0% {
-      stroke-dashoffset: 0;
-    }
-    100% {
-      stroke-dashoffset: -2010;
-    }
-  }
-
-  /* fading and scaling */
-  .summary_marker_svg .arrow {
-    opacity: 1;
-    transition: opacity 0.3s ease-in-out;
-  }
-  .summary_marker_svg .loading_container {
-    transform: scale(0.3);
-    transition: transform 0.3s linear;
-  }
-  .summary_marker_svg .background_circle,
-  .summary_marker_svg .foreground_circle {
-    opacity: 0;
-    transition: opacity 0.3s ease-in-out;
-  }
-  .summary_marker_svg[data-loading] .arrow {
-    opacity: 0;
-  }
-  .summary_marker_svg[data-loading] .loading_container {
-    transform: scale(1);
-  }
-  .summary_marker_svg[data-loading] .background_circle {
-    opacity: 0.2;
-  }
-  .summary_marker_svg[data-loading] .foreground_circle {
-    opacity: 1;
-  }
-`;
-const SummaryMarker = ({
-  open,
-  loading
-}) => {
-  const showLoading = useDebounceTrue(loading, 300);
-  const mountedRef = useRef(false);
-  const prevOpenRef = useRef(open);
-  useLayoutEffect(() => {
-    mountedRef.current = true;
-    return () => {
-      mountedRef.current = false;
-    };
-  }, []);
-  const shouldAnimate = mountedRef.current && prevOpenRef.current !== open;
-  prevOpenRef.current = open;
-  return jsx("span", {
-    className: "summary_marker",
-    children: jsxs("svg", {
-      className: "summary_marker_svg",
-      viewBox: "0 -960 960 960",
-      xmlns: "http://www.w3.org/2000/svg",
-      "data-loading": open ? showLoading || undefined : undefined,
-      children: [jsxs("g", {
-        className: "loading_container",
-        "transform-origin": "480px -480px",
-        children: [jsx("circle", {
-          className: "background_circle",
-          cx: "480",
-          cy: "-480",
-          r: "320",
-          stroke: "currentColor",
-          fill: "none",
-          strokeWidth: "60",
-          opacity: "0.2"
-        }), jsx("circle", {
-          className: "foreground_circle",
-          cx: "480",
-          cy: "-480",
-          r: "320",
-          stroke: "currentColor",
-          fill: "none",
-          strokeWidth: "60",
-          strokeLinecap: "round",
-          strokeDasharray: "503 1507"
-        })]
-      }), jsx("g", {
-        className: "arrow_container",
-        "transform-origin": "480px -480px",
-        children: jsx("path", {
-          className: "arrow",
-          fill: "currentColor",
-          "data-animation-target": shouldAnimate ? open ? "down" : "right" : undefined,
-          d: open ? downArrowPath : rightArrowPath
-        })
-      })]
-    })
-  });
-};
-
-installImportMetaCss(import.meta);import.meta.css = /* css */`
-  .navi_details {
-    position: relative;
-    z-index: 1;
-    display: flex;
-    flex-shrink: 0;
-    flex-direction: column;
-  }
-
-  .navi_details > summary {
-    display: flex;
-    flex-shrink: 0;
-    flex-direction: column;
-    cursor: pointer;
-    user-select: none;
-  }
-  .summary_body {
-    display: flex;
-    width: 100%;
-    flex-direction: row;
-    align-items: center;
-    gap: 0.2em;
-  }
-  .summary_label {
-    display: flex;
-    padding-right: 10px;
-    flex: 1;
-    align-items: center;
-    gap: 0.2em;
-  }
-
-  .navi_details > summary:focus {
-    z-index: 1;
-  }
-`;
-const Details = forwardRef((props, ref) => {
-  return renderActionableComponent(props, ref);
-});
-const DetailsBasic = forwardRef((props, ref) => {
-  const {
-    id,
-    label = "Summary",
-    open,
-    loading,
-    className,
-    focusGroup,
-    focusGroupDirection,
-    arrowKeyShortcuts = true,
-    openKeyShortcut = "ArrowRight",
-    closeKeyShortcut = "ArrowLeft",
-    onToggle,
-    children,
-    ...rest
-  } = props;
-  const innerRef = useRef();
-  useImperativeHandle(ref, () => innerRef.current);
-  const [navState, setNavState] = useNavState$1(id);
-  const [innerOpen, innerOpenSetter] = useState(open || navState);
-  useFocusGroup(innerRef, {
-    enabled: focusGroup,
-    name: typeof focusGroup === "string" ? focusGroup : undefined,
-    direction: focusGroupDirection
-  });
-
-  /**
-   * Browser will dispatch "toggle" event even if we set open={true}
-   * When rendering the component for the first time
-   * We have to ensure the initial "toggle" event is ignored.
-   *
-   * If we don't do that code will think the details has changed and run logic accordingly
-   * For example it will try to navigate to the current url while we are already there
-   *
-   * See:
-   * - https://techblog.thescore.com/2024/10/08/why-we-decided-to-change-how-the-details-element-works/
-   * - https://github.com/whatwg/html/issues/4500
-   * - https://stackoverflow.com/questions/58942600/react-html-details-toggles-uncontrollably-when-starts-open
-   *
-   */
-
-  const summaryRef = useRef(null);
-  useKeyboardShortcuts(innerRef, [{
-    key: openKeyShortcut,
-    enabled: arrowKeyShortcuts,
-    when: e => document.activeElement === summaryRef.current &&
-    // avoid handling openKeyShortcut twice when keydown occurs inside nested details
-    !e.defaultPrevented,
-    action: e => {
-      const details = innerRef.current;
-      if (!details.open) {
-        e.preventDefault();
-        details.open = true;
-        return;
-      }
-      const summary = summaryRef.current;
-      const firstFocusableElementInDetails = findAfter(summary, elementIsFocusable, {
-        root: details
-      });
-      if (!firstFocusableElementInDetails) {
-        return;
-      }
-      e.preventDefault();
-      firstFocusableElementInDetails.focus();
-    }
-  }, {
-    key: closeKeyShortcut,
-    enabled: arrowKeyShortcuts,
-    when: () => {
-      const details = innerRef.current;
-      return details.open;
-    },
-    action: e => {
-      const details = innerRef.current;
-      const summary = summaryRef.current;
-      if (document.activeElement === summary) {
-        e.preventDefault();
-        summary.focus();
-        details.open = false;
-      } else {
-        e.preventDefault();
-        summary.focus();
-      }
-    }
-  }]);
-  const mountedRef = useRef(false);
-  useEffect(() => {
-    mountedRef.current = true;
-  }, []);
-  return jsxs("details", {
-    ...rest,
-    ref: innerRef,
-    id: id,
-    className: ["navi_details", ...(className ? className.split(" ") : [])].join(" "),
-    onToggle: e => {
-      const isOpen = e.newState === "open";
-      if (mountedRef.current) {
-        if (isOpen) {
-          innerOpenSetter(true);
-          setNavState(true);
-        } else {
-          innerOpenSetter(false);
-          setNavState(undefined);
-        }
-      }
-      onToggle?.(e);
-    },
-    open: innerOpen,
-    children: [jsx("summary", {
-      ref: summaryRef,
-      children: jsxs("div", {
-        className: "summary_body",
-        children: [jsx(SummaryMarker, {
-          open: innerOpen,
-          loading: loading
-        }), jsx("div", {
-          className: "summary_label",
-          children: label
-        })]
-      })
-    }), children]
-  });
-});
-forwardRef((props, ref) => {
-  const {
-    action,
-    loading,
-    onToggle,
-    onActionPrevented,
-    onActionStart,
-    onActionError,
-    onActionEnd,
-    children,
-    ...rest
-  } = props;
-  const innerRef = useRef();
-  useImperativeHandle(ref, () => innerRef.current);
-  const effectiveAction = useAction(action);
-  const {
-    loading: actionLoading
-  } = useActionStatus(effectiveAction);
-  const executeAction = useExecuteAction(innerRef, {
-    // the error will be displayed by actionRenderer inside <details>
-    errorEffect: "none"
-  });
-  useActionEvents(innerRef, {
-    onPrevented: onActionPrevented,
-    onAction: e => {
-      executeAction(e);
-    },
-    onStart: onActionStart,
-    onError: onActionError,
-    onEnd: onActionEnd
-  });
-  return jsx(DetailsBasic, {
-    ...rest,
-    ref: innerRef,
-    loading: loading || actionLoading,
-    onToggle: toggleEvent => {
-      const isOpen = toggleEvent.newState === "open";
-      if (isOpen) {
-        requestAction(toggleEvent.target, effectiveAction, {
-          event: toggleEvent,
-          method: "run"
-        });
-      } else {
-        effectiveAction.abort();
-      }
-      onToggle?.(toggleEvent);
-    },
-    children: jsx(ActionRenderer, {
-      action: effectiveAction,
-      children: children
-    })
-  });
-});
 
 installImportMetaCss(import.meta);import.meta.css = /* css */`
   @layer navi {

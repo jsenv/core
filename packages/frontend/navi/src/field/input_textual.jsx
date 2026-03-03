@@ -55,6 +55,7 @@ import.meta.css = /* css */ `
       --border-width: 1px;
       --outline-width: 1px;
       --outer-width: calc(var(--border-width) + var(--outline-width));
+      --font-size: 14px;
 
       /* Default */
       --outline-color: var(--navi-focus-outline-color);
@@ -141,6 +142,7 @@ import.meta.css = /* css */ `
       padding-bottom: var(--x-padding-bottom-base);
       padding-left: calc(var(--x-padding-left-base) + var(--start-icon-size));
       color: var(--x-color);
+      font-size: var(--font-size);
       background-color: var(--x-background-color);
       border-width: var(--x-outer-width);
       border-width: var(--x-outer-width);
@@ -166,6 +168,7 @@ import.meta.css = /* css */ `
       top: 0;
       bottom: 0;
       left: var(--x-padding-left-base);
+      font-size: var(--font-size);
     }
     .navi_input_end_button {
       position: absolute;
@@ -176,6 +179,7 @@ import.meta.css = /* css */ `
       margin: 0;
       padding: 0;
       justify-content: center;
+      font-size: var(--font-size);
       background: none;
       border: none;
       opacity: 0;
@@ -202,10 +206,10 @@ import.meta.css = /* css */ `
       }
     }
     &[data-start-icon] {
-      --start-icon-size: 1.25em;
+      --start-icon-size: 1em;
     }
     &[data-end-icon] {
-      --end-icon-size: 1.25em;
+      --end-icon-size: 1em;
     }
 
     /* Readonly */
