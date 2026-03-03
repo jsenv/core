@@ -212,36 +212,13 @@
       const App = () => {
         return (
           <div>
-            {/*<FeaturesOverview /> */}
             <BasicUsageDemo />
+            <LoadingExampleDemo />
             <InteractiveDemo />
             <ActionIntegrationDemo />
             <StateManagementDemo />
             <MultipleDetailsDemo />
             <NestedDetailsDemo />
-            <PropsReference />
-          </div>
-        );
-      };
-
-      const FeaturesOverview = () => {
-        return (
-          <div className="demo-section">
-            <h2>Features</h2>
-            <p>
-              The Details component is an enhanced version of the HTML{" "}
-              <code>&lt;details&gt;</code> element with action integration,
-              keyboard navigation, and state management.
-            </p>
-            <ul className="feature-list">
-              <li>Standard details/summary collapsible behavior</li>
-              <li>Action integration - fetch data when opening</li>
-              <li>Keyboard shortcuts (Arrow keys navigation)</li>
-              <li>Browser navigation state integration</li>
-              <li>Focus group support</li>
-              <li>Loading states with animated marker</li>
-              <li>Customizable labels and styling</li>
-            </ul>
           </div>
         );
       };
@@ -296,18 +273,41 @@
                 <br />• <kbd>Tab</kbd> Navigates through focusable elements
               </div>
             </fieldset>
+          </div>
+        );
+      };
 
+      const LoadingExampleDemo = () => {
+        const [loading, setLoading] = useState(false);
+
+        const toggleLoading = () => {
+          setLoading(!loading);
+        };
+
+        return (
+          <div className="demo-section">
+            <h2>Loading State Example</h2>
             <fieldset>
-              <legend>With Custom Styling</legend>
-              <Details label="Styled Details" className="custom-styling">
-                <Box column spacing="sm">
+              <legend>Details with Loading State</legend>
+              <p>
+                This example shows how the Details component displays a loading
+                indicator when the loading prop is true:
+              </p>
+
+              <Details label="Loading Details Example" loading={loading}>
+                <div className="content-example">
                   <p>
-                    This details element can receive custom styling and
-                    integrates with the Box component.
+                    Content inside the details element. When loading is active,
+                    the summary will show a loading indicator.
                   </p>
-                  <Button>Action Button Inside</Button>
-                </Box>
+                </div>
               </Details>
+
+              <div style={{ marginTop: "15px" }}>
+                <Button onClick={toggleLoading}>
+                  {loading ? "Stop Loading" : "Start Loading"}
+                </Button>
+              </div>
             </fieldset>
           </div>
         );
@@ -581,35 +581,6 @@
                 </div>
               </Details>
             </fieldset>
-          </div>
-        );
-      };
-
-      const PropsReference = () => {
-        return (
-          <div className="demo-section">
-            <h2>Props Reference</h2>
-            <div className="code-block">
-              {`interface DetailsProps {
-  id?: string;                    // For nav state integration
-  label?: string;                 // Summary text (default: "Summary")
-  open?: boolean;                 // Initial open state
-  loading?: boolean;              // Show loading indicator
-  className?: string;             // Additional CSS classes
-  focusGroup?: boolean | string;  // Focus group integration
-  focusGroupDirection?: string;   // Focus navigation direction
-  arrowKeyShortcuts?: boolean;    // Enable arrow key shortcuts (default: true)
-  openKeyShortcut?: string;       // Key to open (default: "ArrowRight")
-  closeKeyShortcut?: string;      // Key to close (default: "ArrowLeft")
-  onToggle?: (event) => void;     // Toggle event handler
-  action?: Action;                // Action to execute on open
-  onActionPrevented?: Function;   // Action prevention handler
-  onActionStart?: Function;       // Action start handler
-  onActionError?: Function;       // Action error handler
-  onActionEnd?: Function;         // Action end handler
-  children?: ReactNode;           // Content to display
-}`}
-            </div>
           </div>
         );
       };
