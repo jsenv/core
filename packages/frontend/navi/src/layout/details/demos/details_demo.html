@@ -157,6 +157,39 @@
         border-left: 4px solid #2196f3;
       }
 
+      .comparison-container {
+        display: grid;
+        margin: 15px 0;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+      }
+
+      .comparison-item {
+        padding: 15px;
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+      }
+
+      .comparison-item h4 {
+        margin: 0 0 15px 0;
+        padding: 5px;
+        color: #495057;
+        font-size: 0.9rem;
+        text-align: center;
+        background: #e9ecef;
+        border-radius: 4px;
+      }
+
+      .user-agent-details {
+        margin: 15px 0;
+      }
+
+      .user-agent-details summary {
+        font-weight: 500;
+        cursor: pointer;
+      }
+
       details {
         border: 1px solid black;
       }
@@ -179,13 +212,13 @@
       const App = () => {
         return (
           <div>
-            {/* <FeaturesOverview /> */}
+            <FeaturesOverview />
             <BasicUsageDemo />
-            <KeyboardNavigationDemo />
-            <MultipleDetailsDemo />
+            <InteractiveDemo />
             <ActionIntegrationDemo />
             <StateManagementDemo />
-            <InteractiveDemo />
+            <MultipleDetailsDemo />
+            <NestedDetailsDemo />
             <PropsReference />
           </div>
         );
@@ -216,70 +249,63 @@
       const BasicUsageDemo = () => {
         return (
           <div className="demo-section">
-            <h2>Basic Usage</h2>
+            <h2>Basic Usage & Keyboard Navigation</h2>
             <fieldset>
-              <legend>Simple Details</legend>
-              <p>Basic collapsible content without any special behavior:</p>
-              <Details label="Simple Details Example">
-                <div className="content-example">
-                  <p>
-                    This is the content inside the details element. It can be
-                    collapsed and expanded by clicking the summary.
-                  </p>
-                  <p>
-                    You can put any content here - text, images, forms, other
-                    components, etc.
-                  </p>
+              <legend>Side by Side Comparison</legend>
+              <p>
+                Compare the enhanced Details component with the standard HTML
+                details element.
+                <strong> Try keyboard navigation:</strong> Click on a summary
+                and use
+                <kbd>→</kbd> to open/focus content, <kbd>←</kbd> to close.
+              </p>
+
+              <div className="comparison-container">
+                <div className="comparison-item">
+                  <h4>@jsenv/navi Details</h4>
+                  <Details label="Enhanced Details" arrowKeyShortcuts={true}>
+                    <div className="content-example">
+                      <p>
+                        Enhanced with keyboard navigation and action support.
+                      </p>
+                      <Box row spacing="sm">
+                        <Button>Focus me with →</Button>
+                        <input type="text" placeholder="Then tab here" />
+                      </Box>
+                    </div>
+                  </Details>
                 </div>
-              </Details>
+
+                <div className="comparison-item">
+                  <h4>User Agent Details</h4>
+                  <details className="user-agent-details">
+                    <summary>Standard HTML Details</summary>
+                    <div className="content-example">
+                      <p>Standard HTML details element without enhancements.</p>
+                      <button>Regular button</button>
+                      <input type="text" placeholder="Standard input" />
+                    </div>
+                  </details>
+                </div>
+              </div>
+
+              <div className="keyboard-shortcuts">
+                <strong>Keyboard Shortcuts (Enhanced version only):</strong>
+                <br />• <kbd>→</kbd> Opens details and focuses first element
+                <br />• <kbd>←</kbd> Closes details and returns to summary
+                <br />• <kbd>Tab</kbd> Navigates through focusable elements
+              </div>
             </fieldset>
 
             <fieldset>
               <legend>With Custom Styling</legend>
               <Details label="Styled Details" className="custom-styling">
-                <Box column spacing="sm" alignY="center">
+                <Box column spacing="sm">
                   <p>
-                    This details element receives custom styling through
-                    className.
+                    This details element can receive custom styling and
+                    integrates with the Box component.
                   </p>
                   <Button>Action Button Inside</Button>
-                </Box>
-              </Details>
-            </fieldset>
-          </div>
-        );
-      };
-
-      const KeyboardNavigationDemo = () => {
-        return (
-          <div className="demo-section">
-            <h2>Keyboard Navigation</h2>
-            <div className="keyboard-shortcuts">
-              <strong>Keyboard Shortcuts:</strong>
-              <br />• <strong>Right Arrow (→)</strong>: Open details and focus
-              first element inside
-              <br />• <strong>Left Arrow (←)</strong>: Close details and return
-              focus to summary
-              <br />• <strong>Tab</strong>: Navigate through focusable elements
-            </div>
-
-            <fieldset>
-              <legend>Try Keyboard Navigation</legend>
-              <p>
-                Click on the summary below, then try the keyboard shortcuts:
-              </p>
-              <Details
-                label="Keyboard Navigation Example"
-                arrowKeyShortcuts={true}
-              >
-                <Box column spacing="sm">
-                  <p>Use Tab to navigate through these focusable elements:</p>
-                  <Box row spacing="sm">
-                    <Button>First Button</Button>
-                    <Button>Second Button</Button>
-                    <input type="text" placeholder="Input field" />
-                    <Button>Third Button</Button>
-                  </Box>
                 </Box>
               </Details>
             </fieldset>
@@ -292,8 +318,11 @@
           <div className="demo-section">
             <h2>Multiple Details</h2>
             <fieldset>
-              <legend>Nested Content</legend>
-              <p>Multiple details can be used together:</p>
+              <legend>Sequential Sections</legend>
+              <p>
+                Multiple details can be used together to create expandable
+                sections:
+              </p>
 
               <Details label="Section 1: Getting Started">
                 <div className="content-example">
@@ -312,16 +341,11 @@
               <Details label="Section 2: Advanced Features">
                 <div className="content-example">
                   <p>Advanced functionality and customization options.</p>
-                  <Details label="Subsection: API Integration">
-                    <div className="content-example">
-                      <p>Details about integrating with external APIs.</p>
-                    </div>
-                  </Details>
-                  <Details label="Subsection: Custom Styling">
-                    <div className="content-example">
-                      <p>How to customize the appearance and behavior.</p>
-                    </div>
-                  </Details>
+                  <ul>
+                    <li>Plugin architecture</li>
+                    <li>Action integration</li>
+                    <li>State management</li>
+                  </ul>
                 </div>
               </Details>
 
@@ -333,6 +357,72 @@
                     <li>Browser compatibility</li>
                     <li>Debugging tips</li>
                   </ul>
+                </div>
+              </Details>
+            </fieldset>
+          </div>
+        );
+      };
+
+      const NestedDetailsDemo = () => {
+        return (
+          <div className="demo-section">
+            <h2>Nested Details</h2>
+            <fieldset>
+              <legend>Hierarchical Content</legend>
+              <p>
+                Details can be nested to create hierarchical expandable content:
+              </p>
+
+              <Details label="Documentation">
+                <div className="content-example">
+                  <p>Main documentation section with nested subsections.</p>
+
+                  <Details label="API Reference">
+                    <div className="content-example">
+                      <p>Complete API documentation.</p>
+
+                      <Details label="Components">
+                        <div className="content-example">
+                          <p>Component API details:</p>
+                          <ul>
+                            <li>Props interface</li>
+                            <li>Event handlers</li>
+                            <li>CSS classes</li>
+                          </ul>
+                        </div>
+                      </Details>
+
+                      <Details label="Actions">
+                        <div className="content-example">
+                          <p>Action system documentation:</p>
+                          <ul>
+                            <li>Creating actions</li>
+                            <li>Binding parameters</li>
+                            <li>Error handling</li>
+                          </ul>
+                        </div>
+                      </Details>
+                    </div>
+                  </Details>
+
+                  <Details label="Examples">
+                    <div className="content-example">
+                      <p>Code examples and tutorials.</p>
+
+                      <Details label="Basic Usage">
+                        <div className="content-example">
+                          <p>Simple examples to get started.</p>
+                        </div>
+                      </Details>
+
+                      <Details label="Advanced Patterns">
+                        <div className="content-example">
+                          <p>Complex integration patterns.</p>
+                        </div>
+                      </Details>
+                    </div>
+                  </Details>
                 </div>
               </Details>
             </fieldset>
