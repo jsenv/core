@@ -207,7 +207,6 @@
       import { render } from "preact";
       import { useState } from "preact/hooks";
       import { Details, Box, Button } from "@jsenv/navi";
-      import { createAction } from "@jsenv/navi";
 
       const App = () => {
         return (
@@ -459,17 +458,6 @@
       };
 
       const ActionIntegrationDemo = () => {
-        const getUserProfile = createAction(async ({ userId }) => {
-          // Simulate network delay
-          await new Promise((resolve) => setTimeout(resolve, 1500));
-          return {
-            id: userId,
-            name: "John Doe",
-            email: "john.doe@example.com",
-            role: "Developer",
-          };
-        });
-
         return (
           <div className="demo-section">
             <h2>Action Integration</h2>
@@ -481,7 +469,15 @@
               </p>
 
               <Details
-                action={getUserProfile.bindParams({ userId: 123 })}
+                action={async () => {
+                  await new Promise((resolve) => setTimeout(resolve, 1_500)); // Simulate network delay
+                  return {
+                    id: 123,
+                    name: "John Doe",
+                    email: "john.doe@example.com",
+                    role: "Developer",
+                  };
+                }}
                 label="User Profile (loads data on open)"
               >
                 <div className="content-example">
