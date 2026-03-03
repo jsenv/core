@@ -1007,7 +1007,7 @@ export const createAction = (callback, rootOptions = {}) => {
             if (isPrerun && abortSignal.aborted) {
               prerunProtectionRegistry.unprotect(action);
             }
-            onAbort(e, action);
+            onAbort?.(e, action);
             return e;
           }
           if (e.name === "AbortError") {

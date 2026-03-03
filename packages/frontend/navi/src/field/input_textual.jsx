@@ -188,12 +188,12 @@ import.meta.css = /* css */ `
 
     &[data-start-icon] {
       .navi_native_input {
-        padding-left: 20px;
+        padding-left: 1.5em;
       }
     }
     &[data-end-icon] {
       .navi_native_input {
-        padding-right: 20px;
+        padding-right: 1.5em;
       }
     }
   }

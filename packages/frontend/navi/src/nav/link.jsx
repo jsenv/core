@@ -249,7 +249,8 @@ const LinkPlain = (props) => {
     discrete,
     blankTargetIcon,
     anchorIcon,
-    icon,
+    startIcon,
+    endIcon,
     spacing,
     revealOnInteraction = Boolean(titleLevel),
     hrefFallback = !anchor,
@@ -275,17 +276,17 @@ const LinkPlain = (props) => {
   const innerRel =
     rel === undefined ? (isSameSite ? undefined : "noopener noreferrer") : rel;
 
-  let innerIcon;
-  if (icon === undefined) {
+  let innerEndIcon;
+  if (endIcon === undefined) {
     // Check for special protocol or domain-specific icons first
     if (href?.startsWith("tel:")) {
-      innerIcon = <PhoneSvg />;
+      innerEndIcon = <PhoneSvg />;
     } else if (href?.startsWith("sms:")) {
-      innerIcon = <SmsSvg />;
+      innerEndIcon = <SmsSvg />;
     } else if (href?.startsWith("mailto:")) {
-      innerIcon = <EmailSvg />;
+      innerEndIcon = <EmailSvg />;
     } else if (href?.includes("github.com")) {
-      innerIcon = <GithubSvg />;
+      innerEndIcon = <GithubSvg />;
     } else {
       // Fall back to default icon logic
       const innerBlankTargetIcon =
@@ -294,18 +295,19 @@ const LinkPlain = (props) => {
           : blankTargetIcon;
       const innerAnchorIcon = anchorIcon === undefined ? isAnchor : anchorIcon;
       if (innerBlankTargetIcon) {
-        innerIcon =
+        innerEndIcon =
           innerBlankTargetIcon === true ? (
             <LinkBlankTargetSvg />
           ) : (
             innerBlankTargetIcon
           );
       } else if (innerAnchorIcon) {
-        innerIcon = innerAnchorIcon === true ? <LinkAnchorSvg /> : anchorIcon;
+        innerEndIcon =
+          innerAnchorIcon === true ? <LinkAnchorSvg /> : anchorIcon;
       }
     }
   } else {
-    innerIcon = icon;
+    innerEndIcon = endIcon;
   }
 
   const innerChildren = children || (hrefFallback ? href : children);
@@ -362,10 +364,15 @@ const LinkPlain = (props) => {
         onKeyDown?.(e);
       }}
     >
+      {startIcon && (
+        <Icon marginRight={innerChildren ? "xxs" : undefined}>{startIcon}</Icon>
+      )}
       <LoaderBackground loading={loading} color="var(--link-loader-color)" />
       {applySpacingOnTextChildren(innerChildren, spacing)}
-      {innerIcon && (
-        <Icon marginLeft={innerChildren ? "xxs" : undefined}>{innerIcon}</Icon>
+      {endIcon && (
+        <Icon marginLeft={innerChildren ? "xxs" : undefined}>
+          {innerEndIcon}
+        </Icon>
       )}
     </Box>
   );

@@ -1,7 +1,3 @@
-/**
- *
- */
-
 import {
   BadgeCount,
   Button,
@@ -108,14 +104,12 @@ export const ExplorerGroup = (props) => {
         focusGroup
         focusGroupDirection="vertical"
         className="explorer_group"
-        onToggle={(toggleEvent) => {
-          controller.detailsOnToggle(toggleEvent.newState === "open");
-          if (toggleEvent.newState === "open") {
-            if (onOpen) {
-              onOpen();
-            }
-          } else if (onClose) {
-            onClose();
+        onUIStateChange={(open) => {
+          controller.detailsOnToggle(open);
+          if (open) {
+            onOpen?.();
+          } else {
+            onClose?.();
           }
         }}
         data-resize={resizable ? "vertical" : "none"}
@@ -125,7 +119,7 @@ export const ExplorerGroup = (props) => {
         label={
           <>
             <Text>
-              <Text>{label}</Text>
+              {label}
               <BadgeCount size="xxs" circle background="gray" color="white">
                 {count}
               </BadgeCount>
@@ -135,14 +129,12 @@ export const ExplorerGroup = (props) => {
                 <span style="display: flex; flex: 1"></span>
                 <Button
                   ref={createButtonRef}
+                  selfAlignX="end"
                   className="summary_action_icon"
+                  width="22"
+                  height="22"
+                  padding="2"
                   discrete
-                  style={{
-                    width: "22px",
-                    height: "22px",
-                    cursor: "pointer",
-                    padding: "4px",
-                  }}
                   onMouseDown={(e) => {
                     // ensure when input is focused it stays focused
                     // without this preventDefault() the input would be blurred (which might cause creation of an item) and re-opened empty

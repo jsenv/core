@@ -1,15 +1,14 @@
 import {
   createAvailableConstraint,
   Editable,
+  Icon,
   Input,
   SINGLE_SPACE_CONSTRAINT,
+  Text,
   useEditionController,
   useSignalSync,
 } from "@jsenv/navi";
 import { useSignal } from "@preact/signals";
-
-const Overflow = () => {};
-const FontSizedSvg = () => {};
 
 export const ExplorerItem = ({
   nameKey,
@@ -59,7 +58,7 @@ export const ExplorerItem = ({
         stopEditing={stopEditing}
       />
     ) : (
-      <Overflow>{itemName}</Overflow>
+      <Text overflowEllipsis>{itemName}</Text>
     ),
   });
   return itemRendered;
@@ -101,7 +100,7 @@ const RenameInputOrName = ({
       required
       constraints={[SINGLE_SPACE_CONSTRAINT, availableNameConstraint]}
     >
-      <Overflow>{itemName}</Overflow>
+      <Text overflowEllipsis>{itemName}</Text>
     </Editable>
   );
 };
@@ -128,9 +127,9 @@ export const ExplorerNewItem = ({
 
   return (
     <span className="explorer_item_content">
-      <FontSizedSvg>
+      <Icon>
         <EnterNameIconSvg />
-      </FontSizedSvg>
+      </Icon>
 
       <Input
         action={createItemAction}

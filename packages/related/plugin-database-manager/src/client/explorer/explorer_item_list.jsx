@@ -4,11 +4,11 @@ import {
   useSelectionController,
 } from "@jsenv/navi";
 import { useSignal } from "@preact/signals";
-import { forwardRef } from "preact/compat";
-import { useImperativeHandle, useRef, useState } from "preact/hooks";
+import { useRef, useState } from "preact/hooks";
+
 import { ExplorerItem, ExplorerNewItem } from "./explorer_item.jsx";
 
-export const ExplorerItemList = forwardRef((props, ref) => {
+export const ExplorerItemList = (props) => {
   const {
     idKey,
     nameKey,
@@ -22,8 +22,7 @@ export const ExplorerItemList = forwardRef((props, ref) => {
     useCreateItemAction,
     stopCreatingNew,
   } = props;
-  const innerRef = useRef();
-  useImperativeHandle(ref, () => innerRef.current);
+  const ref = useRef();
 
   const itemSelectionSignal = useSignal([]);
   const [deletedItems, setDeletedItems] = useState([]);
@@ -31,7 +30,7 @@ export const ExplorerItemList = forwardRef((props, ref) => {
   const selection = itemSelectionSignal.value;
   const selectionLength = selection.length;
   const selectionController = useSelectionController({
-    elementRef: innerRef,
+    elementRef: ref,
     layout: "vertical",
     value: selection,
     onChange: (newValue) => {
@@ -39,7 +38,7 @@ export const ExplorerItemList = forwardRef((props, ref) => {
     },
     multiple: Boolean(deleteManyAction),
   });
-  useKeyboardShortcuts(innerRef, [
+  useKeyboardShortcuts(ref, [
     ...createSelectionKeyboardShortcuts(selectionController),
     {
       enabled: deleteManyAction && selectionLength > 0,
@@ -66,7 +65,7 @@ export const ExplorerItemList = forwardRef((props, ref) => {
   ]);
 
   return (
-    <ul ref={innerRef} className="explorer_item_list">
+    <ul ref={ref} className="explorer_item_list">
       {itemArray.map((item) => {
         return (
           <li className="explorer_item" key={item[idKey]}>
@@ -115,4 +114,4 @@ export const ExplorerItemList = forwardRef((props, ref) => {
       )}
     </ul>
   );
-});
+};
