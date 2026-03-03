@@ -103,7 +103,7 @@ export const SummaryMarker = ({ open, loading }) => {
   return (
     <span
       className="navi_summary_marker"
-      data-loading={open ? showLoading || undefined : undefined}
+      data-loading={showLoading ? "" : undefined}
     >
       <svg viewBox="0 -960 960 960" xmlns="http://www.w3.org/2000/svg">
         <g
