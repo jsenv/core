@@ -232,15 +232,12 @@
               <p>
                 Compare the enhanced Details component with the standard HTML
                 details element.
-                <strong> Try keyboard navigation:</strong> Click on a summary
-                and use
-                <kbd>→</kbd> to open/focus content, <kbd>←</kbd> to close.
               </p>
 
               <div className="comparison-container">
                 <div className="comparison-item">
                   <h4>@jsenv/navi Details</h4>
-                  <Details label="Enhanced Details" arrowKeyShortcuts={true}>
+                  <Details label="Summary text">
                     <div className="content-example">
                       <p>
                         Enhanced with keyboard navigation and action support.
@@ -256,7 +253,7 @@
                 <div className="comparison-item">
                   <h4>User Agent Details</h4>
                   <details className="user-agent-details">
-                    <summary>Standard HTML Details</summary>
+                    <summary>Summary text</summary>
                     <div className="content-example">
                       <p>Standard HTML details element without enhancements.</p>
                       <button>Regular button</button>
@@ -266,12 +263,43 @@
                 </div>
               </div>
 
-              <div className="keyboard-shortcuts">
-                <strong>Keyboard Shortcuts (Enhanced version only):</strong>
+              <details className="keyboard-shortcuts">
+                <summary>
+                  <strong>Enhanced Keyboard Navigation Design</strong>
+                </summary>
+                <br />
+                <br />
+                <strong>Tab Behavior:</strong>
+                <br />• <kbd>Tab</kbd> skips details content even when opened
+                <br />• This helps users quickly skip entire collapsible
+                sections, which is often the desired behavior
+                <br />• Similar to how radio buttons with the same name work as
+                a group
+                <br />
+                <br />
+                <strong>Arrow Key Navigation:</strong>
+                <br />• <kbd>↑</kbd>/<kbd>↓</kbd> Navigate through details
+                content (like radio button groups)
                 <br />• <kbd>→</kbd> Opens details and focuses first element
+                from summary
                 <br />• <kbd>←</kbd> Closes details and returns to summary
-                <br />• <kbd>Tab</kbd> Navigates through focusable elements
-              </div>
+                <br />
+                <br />
+                <strong>Expand/Collapse from Inside:</strong>
+                <br />• <kbd>←</kbd>/<kbd>→</kbd> work even when focus is inside
+                the details
+                <br />• Only applies to elements without their own left/right
+                key behavior (like buttons)
+                <br />• Makes it easy to collapse/expand without having to
+                navigate back to the summary
+                <br />
+                <br />
+                <em>
+                  This design provides better keyboard navigation by default,
+                  allowing users to efficiently skip or navigate through
+                  collapsible content as needed.
+                </em>
+              </details>
             </fieldset>
           </div>
         );
