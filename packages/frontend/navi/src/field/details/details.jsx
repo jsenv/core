@@ -61,13 +61,14 @@ import.meta.css = /* css */ `
 `;
 
 export const Details = (props) => {
-  const { value = "on" } = props;
+  const { value = "on", persists } = props;
   const uiStateController = useUIStateController(props, "details", {
     statePropName: "open",
     defaultStatePropName: "defaultOpen",
     fallbackState: false,
     getStateFromProp: (open) => (open ? value : undefined),
     getPropFromState: Boolean,
+    persists,
   });
   const uiState = useUIState(uiStateController);
 

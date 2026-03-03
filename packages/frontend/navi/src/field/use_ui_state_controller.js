@@ -62,11 +62,15 @@ export const useUIStateController = (
     getStateFromProp = (prop) => prop,
     getPropFromState = (state) => state,
     getStateFromParent,
+    persists,
   } = {},
 ) => {
   const parentUIStateController = useContext(ParentUIStateControllerContext);
   const formContext = useContext(FormContext);
   const { id, name, onUIStateChange, action } = props;
+  if (persists === undefined && formContext) {
+    persists = true;
+  }
   const uncontrolled = !formContext && !action;
   const [navState, setNavState] = useNavState(id);
 
@@ -83,7 +87,7 @@ export const useUIStateController = (
       // not controlled but want an initial state (a value or being checked)
       return getStateFromProp(defaultState);
     }
-    if (formContext && navState) {
+    if (persists && navState) {
       // not controlled but want to use value from nav state
       // (I think this should likely move earlier to win over the hasUIStateProp when it's undefined)
       return getStateFromProp(navState);
@@ -194,7 +198,7 @@ export const useUIStateController = (
     getStateFromProp,
     setUIState: (prop, e) => {
       const newUIState = uiStateController.getStateFromProp(prop);
-      if (formContext) {
+      if (persists) {
         setNavState(prop);
       }
       const currentUIState = uiStateController.uiState;
@@ -215,7 +219,7 @@ export const useUIStateController = (
     },
     actionEnd: () => {
       debugUIState(`"${componentType}" actionEnd called`);
-      if (formContext) {
+      if (persists) {
         setNavState(undefined);
       }
     },
