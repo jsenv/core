@@ -504,8 +504,9 @@
             <fieldset>
               <legend>Navigation State Integration</legend>
               <p>
-                Details state can be synchronized with the browser's navigation
-                state:
+                Details state can be persisted using browser history when both{" "}
+                <code>id</code> and <code>persists</code> props are provided (or
+                when the details is within a form):
               </p>
 
               <Details
@@ -515,17 +516,31 @@
               >
                 <div className="content-example">
                   <p>
-                    When using the <code>id</code> prop, the Details component
-                    will:
+                    When using both <code>id</code> and <code>persists</code>{" "}
+                    props, the Details component will:
                   </p>
                   <ul>
-                    <li>Remember its open/closed state in the URL</li>
+                    <li>
+                      Remember its open/closed state in browser
+                      history/navigation API
+                    </li>
                     <li>Restore state when navigating back/forward</li>
-                    <li>Share state across page refreshes</li>
+                    <li>Preserve state across regular page refreshes (F5)</li>
+                    <li>
+                      <strong>Note:</strong> The URL itself is not updated
+                    </li>
                   </ul>
                   <p>
+                    <strong>State Lifetime:</strong> The state persistence is
+                    tied to browser history and navigation behavior. Hard
+                    refreshes (Ctrl+F5) or other forms of navigation may clear
+                    this state, as it depends on how the user interacts with the
+                    page.
+                  </p>
+                  <p>
                     <em>
-                      This is useful for deep-linkable expandable sections.
+                      This is useful for maintaining UI state across normal page
+                      interactions while avoiding URL pollution.
                     </em>
                   </p>
                 </div>
