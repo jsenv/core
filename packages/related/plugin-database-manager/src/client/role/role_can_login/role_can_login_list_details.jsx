@@ -1,3 +1,4 @@
+import { TextAndCount } from "../../components/text_and_count.jsx";
 import { useRoleCanLoginCount } from "../../database_manager_signals.js";
 import {
   createExplorerGroupController,
@@ -14,8 +15,6 @@ import {
   roleCanLoginListDetailsOnToggle,
   roleCanLoginListDetailsOpenAtStart,
 } from "./role_can_login_list_details_state.js";
-
-const TextAndCount = (props) => props;
 
 export const roleCanLoginListDetailsController = createExplorerGroupController(
   "role_can_login_list",

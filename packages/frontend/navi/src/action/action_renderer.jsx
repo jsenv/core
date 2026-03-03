@@ -29,7 +29,6 @@ export const ActionRenderer = ({ action, children, disabled }) => {
       "ActionRenderer requires an action to render, but none was provided.",
     );
   }
-  console.log(children);
   let renderBranches;
   if (typeof children === "function") {
     renderBranches = { completed: children };

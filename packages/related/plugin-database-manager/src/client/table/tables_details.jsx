@@ -1,3 +1,4 @@
+import { TextAndCount } from "../components/text_and_count.jsx";
 import { useTableCount } from "../database_manager_signals.js";
 import {
   createExplorerGroupController,
@@ -10,8 +11,6 @@ import {
   tableListDetailsOnToggle,
   tableListDetailsOpenAtStart,
 } from "./tables_details_state.js";
-
-const TextAndCount = (props) => props;
 
 export const tablesDetailsController = createExplorerGroupController("tables", {
   detailsOpenAtStart: tableListDetailsOpenAtStart,

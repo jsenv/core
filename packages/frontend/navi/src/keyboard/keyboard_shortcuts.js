@@ -152,6 +152,9 @@ export const useKeyboardShortcuts = (
 
   useEffect(() => {
     const element = elementRef.current;
+    if (!element) {
+      return null;
+    }
     const shortcutsCopy = [];
     for (const shortcutCandidate of shortcuts) {
       shortcutsCopy.push({

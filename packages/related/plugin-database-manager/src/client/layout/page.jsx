@@ -2,7 +2,7 @@ import { initPositionSticky } from "@jsenv/dom";
 import { ErrorBoundaryContext } from "@jsenv/navi";
 import { useErrorBoundary, useLayoutEffect, useRef } from "preact/hooks";
 
-const IconAndText = (props) => props;
+import { IconAndText } from "../components/icon_and_text.jsx";
 
 import.meta.css = /* css */ `
   .page {
