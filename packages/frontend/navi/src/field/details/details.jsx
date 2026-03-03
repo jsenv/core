@@ -1,17 +1,25 @@
 import { elementIsFocusable, findAfter } from "@jsenv/dom";
-import { useEffect, useRef, useState } from "preact/hooks";
+import { useContext, useEffect, useRef } from "preact/hooks";
 
 import { ActionRenderer } from "../../action/action_renderer.jsx";
 import { renderActionableComponent } from "../../action/render_actionable_component.jsx";
-import { useAction } from "../../action/use_action.js";
+import { useActionBoundToOneParam } from "../../action/use_action.js";
 import { useActionStatus } from "../../action/use_action_status.js";
 import { useExecuteAction } from "../../action/use_execute_action.js";
 import { Box } from "../../box/box.jsx";
-import { useActionEvents } from "../../field/use_action_events.js";
-import { useFocusGroup } from "../../field/use_focus_group.js";
-import { requestAction } from "../../field/validation/custom_constraint_validation.js";
 import { useKeyboardShortcuts } from "../../keyboard/keyboard_shortcuts.js";
-import { useNavState } from "../../nav/browser_integration/browser_integration.js";
+import { useActionEvents } from "../use_action_events.js";
+import { useFocusGroup } from "../use_focus_group.js";
+import {
+  UIStateContext,
+  UIStateControllerContext,
+  useUIState,
+  useUIStateController,
+} from "../use_ui_state_controller.js";
+import {
+  forwardActionRequested,
+  requestAction,
+} from "../validation/custom_constraint_validation.js";
 import { SummaryMarker } from "./summary_marker.jsx";
 
 import.meta.css = /* css */ `
@@ -53,18 +61,35 @@ import.meta.css = /* css */ `
 `;
 
 export const Details = (props) => {
+  const { value = "on" } = props;
+  const uiStateController = useUIStateController(props, "details", {
+    statePropName: "open",
+    defaultStatePropName: "defaultOpen",
+    fallbackState: false,
+    getStateFromProp: (open) => (open ? value : undefined),
+    getPropFromState: Boolean,
+  });
+  const uiState = useUIState(uiStateController);
+
   const details = renderActionableComponent(props, {
     Basic: DetailsBasic,
     WithAction: DetailsWithAction,
   });
-  return details;
+  return (
+    <UIStateControllerContext.Provider value={uiStateController}>
+      <UIStateContext.Provider value={uiState}>
+        {details}
+      </UIStateContext.Provider>
+    </UIStateControllerContext.Provider>
+  );
 };
 
 const DetailsBasic = (props) => {
+  const uiStateController = useContext(UIStateControllerContext);
+  const uiState = useContext(UIStateContext);
   const {
     id,
     label = "Summary",
-    open,
     loading,
     focusGroup,
     focusGroupDirection,
@@ -77,9 +102,8 @@ const DetailsBasic = (props) => {
   } = props;
   const defaultRef = useRef();
   const ref = rest.ref || defaultRef;
+  const open = Boolean(uiState);
 
-  const [navState, setNavState] = useNavState(id);
-  const [innerOpen, innerOpenSetter] = useState(open || navState);
   useFocusGroup(ref, {
     enabled: focusGroup,
     name: typeof focusGroup === "string" ? focusGroup : undefined,
@@ -168,20 +192,18 @@ const DetailsBasic = (props) => {
         const isOpen = e.newState === "open";
         if (mountedRef.current) {
           if (isOpen) {
-            innerOpenSetter(true);
-            setNavState(true);
+            uiStateController.setUIState(true, e);
           } else {
-            innerOpenSetter(false);
-            setNavState(undefined);
+            uiStateController.setUIState(false, e);
           }
         }
         onToggle?.(e);
       }}
-      open={innerOpen}
+      open={open}
     >
       <summary ref={summaryRef}>
         <div className="navi_summary_body">
-          <SummaryMarker open={innerOpen} loading={loading} />
+          <SummaryMarker open={open} loading={loading} />
           <div className="navi_summary_label">{label}</div>
         </div>
       </summary>
@@ -191,12 +213,16 @@ const DetailsBasic = (props) => {
 };
 
 const DetailsWithAction = (props) => {
+  const uiStateController = useContext(UIStateControllerContext);
+  const uiState = useContext(UIStateContext);
   const {
     action,
     loading,
     onToggle,
+    onCancel,
     onActionPrevented,
     onActionStart,
+    onActionAbort,
     onActionError,
     onActionEnd,
     children,
@@ -204,21 +230,37 @@ const DetailsWithAction = (props) => {
   } = props;
   const defaultRef = useRef();
   const ref = rest.ref || defaultRef;
-
-  const effectiveAction = useAction(action);
-  const { loading: actionLoading } = useActionStatus(effectiveAction);
+  const [actionBoundToUIState] = useActionBoundToOneParam(action, uiState);
+  const actionStatus = useActionStatus(actionBoundToUIState);
+  const { loading: actionLoading } = actionStatus;
   const executeAction = useExecuteAction(ref, {
     // the error will be displayed by actionRenderer inside <details>
     errorEffect: "none",
   });
+
   useActionEvents(ref, {
-    onPrevented: onActionPrevented,
-    onAction: (e) => {
-      executeAction(e);
+    onCancel: (e, reason) => {
+      if (reason === "blur_invalid") {
+        return;
+      }
+      uiStateController.resetUIState(e);
+      onCancel?.(e, reason);
     },
+    onPrevented: onActionPrevented,
+    onRequested: (e) => forwardActionRequested(e, actionBoundToUIState),
+    onAction: executeAction,
     onStart: onActionStart,
-    onError: onActionError,
-    onEnd: onActionEnd,
+    onAbort: (e) => {
+      uiStateController.resetUIState(e);
+      onActionAbort?.(e);
+    },
+    onError: (e) => {
+      uiStateController.resetUIState(e);
+      onActionError?.(e);
+    },
+    onEnd: (e) => {
+      onActionEnd?.(e);
+    },
   });
 
   return (
@@ -229,17 +271,17 @@ const DetailsWithAction = (props) => {
       onToggle={(toggleEvent) => {
         const isOpen = toggleEvent.newState === "open";
         if (isOpen) {
-          requestAction(toggleEvent.target, effectiveAction, {
+          requestAction(toggleEvent.target, actionBoundToUIState, {
             event: toggleEvent,
             method: "run",
           });
         } else {
-          effectiveAction.abort();
+          actionBoundToUIState.abort();
         }
         onToggle?.(toggleEvent);
       }}
     >
-      <ActionRenderer action={effectiveAction}>{children}</ActionRenderer>
+      <ActionRenderer action={actionBoundToUIState}>{children}</ActionRenderer>
     </DetailsBasic>
   );
 };
