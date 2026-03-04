@@ -369,10 +369,10 @@ const LinkPlain = (props) => {
         onKeyDown?.(e);
       }}
     >
+      <LoaderBackground loading={loading} color="var(--link-loader-color)" />
       {startIcon && (
         <Icon marginRight={innerChildren ? "xxs" : undefined}>{startIcon}</Icon>
       )}
-      <LoaderBackground loading={loading} color="var(--link-loader-color)" />
       {applySpacingOnTextChildren(innerChildren, spacing)}
       {innerEndIcon && (
         <Icon marginLeft={innerChildren ? "xxs" : undefined}>

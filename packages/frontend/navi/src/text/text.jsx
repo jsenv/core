@@ -155,13 +155,21 @@ export const applySpacingOnTextChildren = (children, spacing) => {
   }
   return childrenWithGap;
 };
+const outsideFlowSet = new Set();
+export const markAsOutsideFlow = (jsxElement) => {
+  outsideFlowSet.add(jsxElement);
+};
+const isMarkedAsOutsideFlow = (jsxElement) => {
+  return outsideFlowSet.has(jsxElement.type);
+};
+
 const shouldInjectSpacingAfter = (jsxChild) => {
   if (typeof jsxChild === "string") {
     if (/\s$/.test(jsxChild)) {
       return false;
     }
   }
-  if (jsxChild && jsxChild.props && jsxChild.props.outsideFlow) {
+  if (isMarkedAsOutsideFlow(jsxChild)) {
     // we can mark jsx element as "outsideFlow" to avoid spacing injection between it and surrounding text
     return false;
   }
@@ -173,7 +181,7 @@ const shouldInjectSpacingBefore = (jsxChild) => {
       return false;
     }
   }
-  if (jsxChild && jsxChild.props && jsxChild.props.outsideFlow) {
+  if (isMarkedAsOutsideFlow(jsxChild)) {
     // we can mark jsx element as "outsideFlow" to avoid spacing injection between it and surrounding text
     return false;
   }
