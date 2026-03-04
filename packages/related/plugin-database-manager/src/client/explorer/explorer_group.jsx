@@ -1,10 +1,4 @@
-import {
-  BadgeCount,
-  Button,
-  Details,
-  Text,
-  valueInLocalStorage,
-} from "@jsenv/navi";
+import { BadgeCount, Button, Details, valueInLocalStorage } from "@jsenv/navi";
 import { effect, signal } from "@preact/signals";
 import { useCallback, useLayoutEffect, useRef, useState } from "preact/hooks";
 
@@ -118,12 +112,10 @@ export const ExplorerGroup = (props) => {
         action={detailsAction}
         label={
           <>
-            <Text>
-              {label}
-              <BadgeCount size="xxs" circle background="gray" color="white">
-                {count}
-              </BadgeCount>
-            </Text>
+            {label}
+            <BadgeCount size="xxs" circle background="gray" color="white">
+              {count}
+            </BadgeCount>
             {renderNewButtonChildren ? (
               <>
                 <span style="display: flex; flex: 1"></span>

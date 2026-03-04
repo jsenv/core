@@ -12,11 +12,11 @@ import.meta.css = /* css */ `
     --font-size: 0.7em;
     --x-background: var(--background);
     --x-background-color: var(--background-color);
+    --x-padding: 0.5em;
     position: relative;
     display: inline-block;
     color: var(--color, var(--x-color-contrasting));
     font-size: var(--font-size);
-    vertical-align: middle;
 
     .navi_count_badge_overflow {
       position: relative;
@@ -26,58 +26,49 @@ import.meta.css = /* css */ `
 
     /* Ellipse */
     &[data-ellipse] {
-      padding-right: 0.5em;
-      padding-left: 0.5em;
+      padding-right: var(--x-padding);
+      padding-left: var(--x-padding);
       background: var(--x-background);
       background-color: var(--x-background-color, var(--x-background));
       border-radius: 1em;
-      &[data-loading] {
-        --x-background: transparent;
-      }
     }
 
     /* Circle */
     &[data-circle] {
-      --x-border-radius: var(--border-radius);
       --x-number-font-size: var(--font-size);
 
-      border-radius: var(--x-border-radius);
+      display: inline-flex;
+      box-sizing: content-box;
+      aspect-ratio: 1/1;
+      width: var(--x-radius);
+      height: var(--x-radius);
+      align-items: center;
+      justify-content: center;
+      background: var(--x-background);
+      background-color: var(--x-background-color, var(--x-background));
+      border-radius: 50%;
+
       &[data-single-char] {
-        --x-border-radius: 100%;
+        --x-radius: 1.5em;
         --x-number-font-size: unset;
-        --x-padding-left: 0.5em;
-        --x-padding-right: 0.5em;
       }
       &[data-two-chars] {
-        --x-border-radius: 100%;
-        --x-number-font-size: 0.8em;
-        --x-padding-left: 0.4em;
-        --x-padding-right: 0.4em;
+        --x-radius: 1.8em;
+        --x-number-font-size: 0.9em;
       }
       &[data-three-chars] {
-        --x-border-radius: 100%;
-        --x-number-font-size: 0.6em;
-        --x-padding-left: 0.4em;
-        --x-padding-right: 0.4em;
-      }
-
-      .navi_badge_count_frame {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        aspect-ratio: 1/1;
-        width: 100%;
-        background: var(--x-background);
-        background-color: var(--x-background-color, var(--x-background));
-        border-radius: var(--x-border-radius);
-        transform: translate(-50%, -50%);
+        --x-radius: 2em;
+        --x-number-font-size: 0.8em;
       }
 
       .navi_badge_count_text {
-        position: relative;
-        padding-right: var(--x-padding-right);
-        padding-left: var(--x-padding-left);
+        font-size: var(--x-number-font-size);
       }
+    }
+
+    &[data-loading] {
+      --x-background: transparent;
+      --x-background-color: transparent;
     }
   }
 `;
@@ -178,6 +169,7 @@ const BadgeCountCircle = ({
       className="navi_badge_count"
       data-circle=""
       bold
+      data-loading={loading ? "" : undefined}
       data-single-char={charCount === 1 ? "" : undefined}
       data-two-chars={charCount === 2 ? "" : undefined}
       data-three-chars={charCount === 3 ? "" : undefined}
@@ -195,10 +187,7 @@ const BadgeCountCircle = ({
           {/* When we double click on count we don't want to eventually select surrounding text (in case) */}
           {/* the surrounding text has no spaces so we add "&#8203;" (zero-width space char) */}
           <span style="user-select: none">&#8203;</span>
-          <span className="navi_badge_count_text">
-            <span className="navi_badge_count_frame" />
-            <span style="position: relative">{children}</span>
-          </span>
+          <span className="navi_badge_count_text">{children}</span>
           <span style="user-select: none">&#8203;</span>
         </>
       )}
