@@ -49,18 +49,23 @@ export const ExplorerItem = ({
           ]
         : []),
     ],
-    children: useRenameItemAction ? (
+    children: itemName,
+  });
+
+  if (useRenameItemAction) {
+    return (
       <RenameInputOrName
         nameKey={nameKey}
         item={item}
         useItemArrayInStore={useItemArrayInStore}
         useRenameItemAction={useRenameItemAction}
         stopEditing={stopEditing}
-      />
-    ) : (
-      itemName
-    ),
-  });
+      >
+        {itemRendered}
+      </RenameInputOrName>
+    );
+  }
+
   return itemRendered;
 };
 
@@ -71,6 +76,7 @@ const RenameInputOrName = ({
   useRenameItemAction,
   editing,
   stopEditing,
+  children,
 }) => {
   const itemName = item[nameKey];
   const nameSignal = useSignalSync(itemName);
@@ -100,7 +106,7 @@ const RenameInputOrName = ({
       required
       constraints={[SINGLE_SPACE_CONSTRAINT, availableNameConstraint]}
     >
-      {itemName}
+      {children}
     </Editable>
   );
 };

@@ -37,9 +37,11 @@ export const RoleCanLoginListDetails = (props) => {
       label="ROLE LOGINS"
       count={roleCanLoginCount}
       renderNewButtonChildren={() => <RoleCanLoginWithPlusSvg />}
-      renderItem={(role, props) => (
-        <RoleLink draggable={false} role={role} {...props} />
-      )}
+      renderItem={(role, props) => {
+        return (
+          <RoleLink overflowEllipsis draggable={false} role={role} {...props} />
+        );
+      }}
       useItemArrayInStore={useRoleArrayInStore}
       useCreateItemAction={(valueSignal) =>
         ROLE_CAN_LOGIN.POST.bindParams({
