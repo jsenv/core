@@ -9,7 +9,17 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState } from "preact/hooks";
-      import { Text, Paragraph, Box, Title, Link, Caption } from "@jsenv/navi";
+      import {
+        Text,
+        Icon,
+        Paragraph,
+        Box,
+        Title,
+        Link,
+        Caption,
+        UserSvg,
+        StarSvg,
+      } from "@jsenv/navi";
 
       const Demo = () => {
         return (
@@ -453,6 +463,27 @@
               </Box>
 
               <Box row spacing="md">
+                <Caption>Lien interne avec overflowEllipsis</Caption>
+                <div
+                  style={{
+                    width: `${containerWidth}px`,
+                    padding: "15px",
+                    border: "2px solid #2196f3",
+                    borderRadius: "6px",
+                    background: "#f3f8ff",
+                  }}
+                >
+                  <Link
+                    href="/very/long/internal/path/that/should/also/be/truncated/properly"
+                    overflowEllipsis
+                  >
+                    This is a very long link text that should be truncated with
+                    ellipsis when it doesn't fit in the container
+                  </Link>
+                </div>
+              </Box>
+
+              <Box row spacing="md">
                 <Caption>
                   Lien interne avec overflowEllipsis et icône personnalisée
                 </Caption>
@@ -468,7 +499,8 @@
                   <Link
                     href="/very/long/internal/path/that/should/also/be/truncated/properly"
                     overflowEllipsis
-                    icon={<span style={{ color: "orange" }}>📄</span>}
+                    startIcon={<UserSvg />}
+                    endIcon={<StarSvg />}
                   >
                     This is a very long link text that should be truncated with
                     ellipsis when it doesn't fit in the container
