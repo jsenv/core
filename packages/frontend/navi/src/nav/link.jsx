@@ -20,7 +20,7 @@ import {
 import { PhoneSvg } from "../graphic/icons/phone_svg.jsx";
 import { LoaderBackground } from "../graphic/loader/loader_background.jsx";
 import { useKeyboardShortcuts } from "../keyboard/keyboard_shortcuts.js";
-import { applySpacingOnTextChildren } from "../text/text.jsx";
+import { applySpacingOnTextChildren, Text } from "../text/text.jsx";
 import { TitleLevelContext } from "../text/title.jsx";
 import { useDocumentUrl } from "./browser_integration/document_url_signal.js";
 import { getHrefTargetInfo } from "./browser_integration/href_target_info.js";
@@ -259,6 +259,7 @@ const LinkPlain = (props) => {
     spacing,
     revealOnInteraction = Boolean(titleLevel),
     hrefFallback = !anchor,
+    overflowEllipsis,
 
     children,
 
@@ -316,6 +317,26 @@ const LinkPlain = (props) => {
   }
 
   const innerChildren = children || (hrefFallback ? href : children);
+  const startIconEl = startIcon && (
+    <Icon marginRight={innerChildren ? "xxs" : undefined}>{startIcon}</Icon>
+  );
+  const endIconEl = innerEndIcon && (
+    <Icon marginLeft={innerChildren ? "xxs" : undefined}>{innerEndIcon}</Icon>
+  );
+
+  const visualChildren = overflowEllipsis ? (
+    <Text overflowEllipsis>
+      {startIconEl}
+      {innerChildren}
+      {endIconEl && <Text overflowPinned>{endIconEl}</Text>}
+    </Text>
+  ) : (
+    <>
+      {startIconEl}
+      {applySpacingOnTextChildren(innerChildren, spacing)}
+      {endIconEl}
+    </>
+  );
 
   return (
     <Box
@@ -370,15 +391,7 @@ const LinkPlain = (props) => {
       }}
     >
       <LoaderBackground loading={loading} color="var(--link-loader-color)" />
-      {startIcon && (
-        <Icon marginRight={innerChildren ? "xxs" : undefined}>{startIcon}</Icon>
-      )}
-      {applySpacingOnTextChildren(innerChildren, spacing)}
-      {innerEndIcon && (
-        <Icon marginLeft={innerChildren ? "xxs" : undefined}>
-          {innerEndIcon}
-        </Icon>
-      )}
+      {visualChildren}
     </Box>
   );
 };
