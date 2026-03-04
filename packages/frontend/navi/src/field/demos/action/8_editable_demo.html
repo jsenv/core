@@ -278,6 +278,7 @@
                   border: "2px solid #e74c3c",
                   borderRadius: "6px",
                   background: "#fff5f5",
+                  position: "relative",
                 }}
               >
                 <Editable
@@ -286,12 +287,12 @@
                     stopEditing();
                     setResult("");
                   }}
-                  value={value}
                   action={(newText) => {
                     setValue(newText);
                     return `Updated overflow text to: "${newText}"`;
                   }}
                   as="Text"
+                  value={value}
                   overflowEllipsis
                   style={{
                     display: "block",
@@ -300,7 +301,9 @@
                     border: "none",
                     outline: "none",
                   }}
-                />
+                >
+                  <Text overflowEllipsis>{value}</Text>
+                </Editable>
               </div>
               <div className="button-group">
                 <button onClick={startEditing} disabled={editing}>
