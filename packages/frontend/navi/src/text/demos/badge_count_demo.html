@@ -49,93 +49,6 @@
         </Box>
       );
 
-      const LoadingStateSection = () => {
-        const [loading, setLoading] = useState(true);
-        const [ellipseLoading, setEllipseLoading] = useState(true);
-
-        return (
-          <Box as="section" marginBottom="xl">
-            <Title as="h2">Loading State Demo</Title>
-            <Paragraph>
-              This section demonstrates the loading prop effect on BadgeCount
-              components. Use the buttons to test loading transitions.
-            </Paragraph>
-
-            <Box column spacing="m">
-              <Box row spacing="md" alignX="start">
-                <Caption>Loading state with default badge</Caption>
-                <Box row spacing="sm" alignY="center">
-                  <Button action={() => setLoading(true)} disabled={loading}>
-                    Start Loading
-                  </Button>
-                  <Button action={() => setLoading(false)} disabled={!loading}>
-                    Stop Loading
-                  </Button>
-                </Box>
-
-                <Box
-                  row
-                  spacing="md"
-                  alignY="center"
-                  background="lightyellow"
-                  border="1px dotted red"
-                >
-                  <Text>
-                    Inbox
-                    <BadgeCount
-                      background="#2196f3"
-                      color="white"
-                      loading={loading}
-                    >
-                      15
-                    </BadgeCount>
-                  </Text>
-                </Box>
-              </Box>
-
-              <Box row spacing="md" alignX="start">
-                <Caption>Loading state with ellipse</Caption>
-                <Box row spacing="sm" alignY="center">
-                  <Button
-                    action={() => setEllipseLoading(true)}
-                    disabled={ellipseLoading}
-                  >
-                    Start Loading
-                  </Button>
-                  <Button
-                    action={() => setEllipseLoading(false)}
-                    disabled={!ellipseLoading}
-                  >
-                    Stop Loading
-                  </Button>
-                </Box>
-
-                <Box
-                  row
-                  spacing="md"
-                  alignY="center"
-                  background="lightyellow"
-                  border="1px dotted red"
-                >
-                  <Text>
-                    Inbox
-                    <BadgeCount
-                      ellipse
-                      background="#2196f3"
-                      color="white"
-                      loading={ellipseLoading}
-                      max={Infinity}
-                    >
-                      1500
-                    </BadgeCount>
-                  </Text>
-                </Box>
-              </Box>
-            </Box>
-          </Box>
-        );
-      };
-
       const TestsComportementauxSection = () => (
         <Box as="section" marginBottom="xl">
           <Title as="h2">
@@ -479,6 +392,93 @@
         </Box>
       );
 
+      const LoadingStateSection = () => {
+        const [loading, setLoading] = useState(true);
+        const [ellipseLoading, setEllipseLoading] = useState(true);
+
+        return (
+          <Box as="section" marginBottom="xl">
+            <Title as="h2">Loading State Demo</Title>
+            <Paragraph>
+              This section demonstrates the loading prop effect on BadgeCount
+              components. Use the buttons to test loading transitions.
+            </Paragraph>
+
+            <Box column spacing="m">
+              <Box row spacing="md" alignX="start">
+                <Caption>Loading state with default badge</Caption>
+                <Box row spacing="sm" alignY="center">
+                  <Button action={() => setLoading(true)} disabled={loading}>
+                    Start Loading
+                  </Button>
+                  <Button action={() => setLoading(false)} disabled={!loading}>
+                    Stop Loading
+                  </Button>
+                </Box>
+
+                <Box
+                  row
+                  spacing="md"
+                  alignY="center"
+                  background="lightyellow"
+                  border="1px dotted red"
+                >
+                  <Text>
+                    Inbox
+                    <BadgeCount
+                      background="#2196f3"
+                      color="white"
+                      loading={loading}
+                    >
+                      15
+                    </BadgeCount>
+                  </Text>
+                </Box>
+              </Box>
+
+              <Box row spacing="md" alignX="start">
+                <Caption>Loading state with ellipse</Caption>
+                <Box row spacing="sm" alignY="center">
+                  <Button
+                    action={() => setEllipseLoading(true)}
+                    disabled={ellipseLoading}
+                  >
+                    Start Loading
+                  </Button>
+                  <Button
+                    action={() => setEllipseLoading(false)}
+                    disabled={!ellipseLoading}
+                  >
+                    Stop Loading
+                  </Button>
+                </Box>
+
+                <Box
+                  row
+                  spacing="md"
+                  alignY="center"
+                  background="lightyellow"
+                  border="1px dotted red"
+                >
+                  <Text>
+                    Inbox
+                    <BadgeCount
+                      ellipse
+                      background="#2196f3"
+                      color="white"
+                      loading={ellipseLoading}
+                      max={Infinity}
+                    >
+                      1500
+                    </BadgeCount>
+                  </Text>
+                </Box>
+              </Box>
+            </Box>
+          </Box>
+        );
+      };
+
       const LineHeightsSection = () => (
         <Box as="section" marginBottom="xl">
           <Title as="h2">
@@ -548,33 +548,6 @@
                 <Text noWrap>
                   Messages
                   <BadgeCount background="#795548" color="white">
-                    2
-                  </BadgeCount>
-                </Text>
-              </div>
-            </div>
-
-            <div>
-              <Caption>
-                line-height: 3 - Restoring a regular line height on the badge
-              </Caption>
-              <div
-                style={{
-                  border: "2px dashed #4caf50",
-                  backgroundColor: "rgba(76, 175, 80, 0.05)",
-                  padding: "8px",
-                  borderRadius: "4px",
-                  lineHeight: "3",
-                  fontSize: "16px",
-                }}
-              >
-                <Text noWrap>
-                  Messages
-                  <BadgeCount
-                    background="#795548"
-                    color="white"
-                    lineHeight="normal"
-                  >
                     2
                   </BadgeCount>
                 </Text>
@@ -702,16 +675,28 @@
               </Paragraph>
             </div>
 
-            <div>
-              <Caption>Button with badge</Caption>
-              <br />
-              <Button>
-                Tâches
-                <BadgeCount background="#2196f3" color="white">
-                  5
-                </BadgeCount>
-              </Button>
-            </div>
+            <Box column spacing="m">
+              <div>
+                <Caption>Button with badge</Caption>
+                <br />
+                <Button>
+                  Tâches
+                  <BadgeCount background="#2196f3" color="white">
+                    5
+                  </BadgeCount>
+                </Button>
+              </div>
+              <div>
+                <Caption>Button with badge and alignY="center"</Caption>
+                <br />
+                <Button box alignY="center" spacing="xxs">
+                  <span>Tâches</span>
+                  <BadgeCount background="#2196f3" color="white">
+                    5
+                  </BadgeCount>
+                </Button>
+              </div>
+            </Box>
 
             <div>
               <Caption>Button with badge size="s"</Caption>
@@ -806,6 +791,7 @@
                 <Box
                   column
                   alignX="start"
+                  alignY="center"
                   border="1px solid #e0e0e0"
                   borderRadius="8px"
                   padding="sm"

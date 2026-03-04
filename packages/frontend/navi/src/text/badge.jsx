@@ -9,6 +9,7 @@ import.meta.css = /* css */ `
   @layer navi {
   }
   .navi_badge_count {
+    --font-size: 0.7em;
     --x-background: var(--background);
     --x-background-color: var(--background-color);
     position: relative;
@@ -20,12 +21,13 @@ import.meta.css = /* css */ `
     .navi_count_badge_overflow {
       position: relative;
       top: -0.1em;
+      font-size: 0.8em;
     }
 
     /* Ellipse */
     &[data-ellipse] {
-      padding-right: 0.4em;
-      padding-left: 0.4em;
+      padding-right: 0.5em;
+      padding-left: 0.5em;
       background: var(--x-background);
       background-color: var(--x-background-color, var(--x-background));
       border-radius: 1em;
@@ -36,44 +38,45 @@ import.meta.css = /* css */ `
 
     /* Circle */
     &[data-circle] {
-      --x-size: 1.5em;
       --x-border-radius: var(--border-radius);
       --x-number-font-size: var(--font-size);
 
-      width: var(--x-size);
-      height: var(--x-size);
       border-radius: var(--x-border-radius);
       &[data-single-char] {
         --x-border-radius: 100%;
         --x-number-font-size: unset;
+        --x-padding-left: 0.5em;
+        --x-padding-right: 0.5em;
       }
       &[data-two-chars] {
         --x-border-radius: 100%;
         --x-number-font-size: 0.8em;
+        --x-padding-left: 0.4em;
+        --x-padding-right: 0.4em;
       }
       &[data-three-chars] {
         --x-border-radius: 100%;
         --x-number-font-size: 0.6em;
+        --x-padding-left: 0.4em;
+        --x-padding-right: 0.4em;
       }
 
       .navi_badge_count_frame {
         position: absolute;
         top: 50%;
-        left: 0;
+        left: 50%;
+        aspect-ratio: 1/1;
         width: 100%;
-        height: 100%;
         background: var(--x-background);
         background-color: var(--x-background-color, var(--x-background));
-        border-radius: inherit;
-        transform: translateY(-50%);
+        border-radius: var(--x-border-radius);
+        transform: translate(-50%, -50%);
       }
 
       .navi_badge_count_text {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        font-size: var(--x-number-font-size, inherit);
-        transform: translate(-50%, -50%);
+        position: relative;
+        padding-right: var(--x-padding-right);
+        padding-left: var(--x-padding-left);
       }
     }
   }
@@ -184,14 +187,18 @@ const BadgeCountCircle = ({
       spacing="pre"
     >
       {loading ? (
-        <LoadingDots />
+        <Icon>
+          <LoadingDots />
+        </Icon>
       ) : (
         <>
           {/* When we double click on count we don't want to eventually select surrounding text (in case) */}
           {/* the surrounding text has no spaces so we add "&#8203;" (zero-width space char) */}
           <span style="user-select: none">&#8203;</span>
-          <span className="navi_badge_count_frame" />
-          <span className="navi_badge_count_text">{children}</span>
+          <span className="navi_badge_count_text">
+            <span className="navi_badge_count_frame" />
+            <span style="position: relative">{children}</span>
+          </span>
           <span style="user-select: none">&#8203;</span>
         </>
       )}

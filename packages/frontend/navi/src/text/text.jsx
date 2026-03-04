@@ -145,27 +145,31 @@ export const applySpacingOnTextChildren = (children, spacing) => {
     }
     const currentChild = childArray[i - 1];
     const nextChild = childArray[i];
-    if (endsWithWhitespace(currentChild)) {
+    if (!shouldInjectSpacingAfter(currentChild)) {
       continue;
     }
-    if (startsWithWhitespace(nextChild)) {
+    if (!shouldInjectSpacingBefore(nextChild)) {
       continue;
     }
     childrenWithGap.push(separator);
   }
   return childrenWithGap;
 };
-const endsWithWhitespace = (jsxChild) => {
+const shouldInjectSpacingAfter = (jsxChild) => {
   if (typeof jsxChild === "string") {
-    return /\s$/.test(jsxChild);
+    if (/\s$/.test(jsxChild)) {
+      return false;
+    }
   }
-  return false;
+  return true;
 };
-const startsWithWhitespace = (jsxChild) => {
+const shouldInjectSpacingBefore = (jsxChild) => {
   if (typeof jsxChild === "string") {
-    return /^\s/.test(jsxChild);
+    if (/^\s/.test(jsxChild)) {
+      return false;
+    }
   }
-  return false;
+  return true;
 };
 
 const OverflowPinnedElementContext = createContext(null);
