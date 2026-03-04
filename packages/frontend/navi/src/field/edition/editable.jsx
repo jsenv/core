@@ -8,15 +8,9 @@
  *
  */
 
-import { forwardRef } from "preact/compat";
-import {
-  useCallback,
-  useImperativeHandle,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "preact/hooks";
+import { useCallback, useLayoutEffect, useRef, useState } from "preact/hooks";
 
+import { Box } from "../../box/box.jsx";
 import { Input } from "../input.jsx";
 
 import.meta.css = /* css */ `
@@ -44,7 +38,7 @@ export const useEditionController = () => {
   return { editing, startEditing, stopEditing, editionJustEnded };
 };
 
-export const Editable = forwardRef((props, ref) => {
+export const Editable = (props) => {
   let {
     children,
     action,
@@ -72,9 +66,8 @@ export const Editable = forwardRef((props, ref) => {
   if (import.meta.dev && !action) {
     console.warn(`Editable requires an action prop`);
   }
-
-  const innerRef = useRef();
-  useImperativeHandle(ref, () => innerRef.current);
+  const defaultRef = useRef();
+  const ref = props.ref || defaultRef;
 
   if (valueSignal) {
     value = valueSignal.value;
@@ -103,7 +96,7 @@ export const Editable = forwardRef((props, ref) => {
     if (editingEventInitialValue === undefined) {
       return;
     }
-    const input = innerRef.current;
+    const input = ref.current;
     input.value = editingEventInitialValue;
     input.dispatchEvent(
       new CustomEvent("input", {
@@ -114,7 +107,7 @@ export const Editable = forwardRef((props, ref) => {
 
   const input = (
     <Input
-      ref={innerRef}
+      ref={ref}
       {...rest}
       type={type}
       name={name}
@@ -158,6 +151,7 @@ export const Editable = forwardRef((props, ref) => {
         }
       }}
       action={action || (() => {})}
+      actionAfterChange
       onActionEnd={(e) => {
         onEditEnd({
           success: true,
@@ -171,16 +165,10 @@ export const Editable = forwardRef((props, ref) => {
     <>
       {children || <span>{value}</span>}
       {editing && (
-        <div
-          {...wrapperProps}
-          className={[
-            "navi_editable_wrapper",
-            ...(wrapperProps?.className || "").split(" "),
-          ].join(" ")}
-        >
+        <Box {...wrapperProps} baseClassName="navi_editable_wrapper">
           {input}
-        </div>
+        </Box>
       )}
     </>
   );
-});
+};

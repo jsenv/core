@@ -4,7 +4,6 @@ import {
   Icon,
   Input,
   SINGLE_SPACE_CONSTRAINT,
-  Text,
   useEditionController,
   useSignalSync,
 } from "@jsenv/navi";
@@ -31,6 +30,7 @@ export const ExplorerItem = ({
     selectionController,
     deletedItems,
     className: "explorer_item_content",
+    // overflowEllipsis: true,
     shortcuts: [
       {
         key: "enter",
@@ -58,7 +58,7 @@ export const ExplorerItem = ({
         stopEditing={stopEditing}
       />
     ) : (
-      <Text overflowEllipsis>{itemName}</Text>
+      itemName
     ),
   });
   return itemRendered;
@@ -100,7 +100,7 @@ const RenameInputOrName = ({
       required
       constraints={[SINGLE_SPACE_CONSTRAINT, availableNameConstraint]}
     >
-      <Text overflowEllipsis>{itemName}</Text>
+      {itemName}
     </Editable>
   );
 };
