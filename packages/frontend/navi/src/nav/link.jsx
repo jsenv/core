@@ -324,6 +324,9 @@ const LinkPlain = (props) => {
     <Icon marginLeft={innerChildren ? "xxs" : undefined}>{innerEndIcon}</Icon>
   );
 
+  // For now we don't do as for button.jsx where we always wrap button content inside <Text>
+  // because link can wrap images or other non-text content and we don't want to mess with it
+  // in theory this is the same for button so we'll see with time what makes more sense
   const visualChildren = overflowEllipsis ? (
     <Text overflowEllipsis>
       {startIconEl}
