@@ -352,9 +352,11 @@ const ButtonBasic = (props) => {
   const innerDisabled = disabled || contextDisabled;
 
   const renderButtonContent = (buttonProps) => {
+    const { spacing = " " } = buttonProps;
+
     return (
       <Text {...buttonProps} className="navi_button_content" spacing="pre">
-        {applySpacingOnTextChildren(children, buttonProps.spacing)}
+        {applySpacingOnTextChildren(children, spacing)}
         <span className="navi_button_shadow"></span>
       </Text>
     );
