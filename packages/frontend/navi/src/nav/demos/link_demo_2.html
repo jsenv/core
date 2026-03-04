@@ -318,8 +318,8 @@
             désactivé, lecture seule, chargement et visité.
           </Paragraph>
 
-          <Box row spacing="lg">
-            <Box row spacing="sm">
+          <Box row spacing="l" alignX="start">
+            <Box row spacing="s">
               <Caption>Lien désactivé</Caption>
               <Link href="/page" disabled>
                 Disabled Link
@@ -339,7 +339,7 @@
               </Text>
             </Box>
 
-            <Box row spacing="sm">
+            <Box row spacing="s" alignX="start">
               <Caption>Lien en cours de chargement</Caption>
               <Link href="/page" loading>
                 Loading Link
@@ -399,7 +399,7 @@
       );
 
       const OverflowEllipsisSection = () => {
-        const [containerWidth, setContainerWidth] = useState(200);
+        const [containerWidth, setContainerWidth] = useState(350);
 
         return (
           <Box as="section" marginBottom="xl">
@@ -414,21 +414,21 @@
               le texte dépasse.
             </Paragraph>
 
-            <Box column spacing="lg">
-              <Box row spacing="md" alignY="center">
-                <Caption>Largeur du conteneur:</Caption>
-                <input
-                  type="range"
-                  min="100"
-                  max="400"
-                  value={containerWidth}
-                  onChange={(e) => setContainerWidth(parseInt(e.target.value))}
-                  style={{ width: "200px" }}
-                />
-                <Text>{containerWidth}px</Text>
-              </Box>
+            <Box row spacing="md" alignY="center">
+              <Caption>Largeur du conteneur:</Caption>
+              <input
+                type="range"
+                min="100"
+                max="400"
+                value={containerWidth}
+                onChange={(e) => setContainerWidth(parseInt(e.target.value))}
+                style={{ width: "200px" }}
+              />
+              <Text>{containerWidth}px</Text>
+            </Box>
 
-              <Box column spacing="md">
+            <Box row spacing="l">
+              <Box row spacing="md">
                 <Caption>
                   Lien avec overflowEllipsis dans un conteneur contraint
                 </Caption>
@@ -450,12 +450,9 @@
                     ellipsis when it doesn't fit in the container
                   </Link>
                 </div>
-                <Text size="xs" color="#666">
-                  Ajustez la largeur du conteneur pour voir l'effet d'ellipsis
-                </Text>
               </Box>
 
-              <Box column spacing="md">
+              <Box row spacing="md">
                 <Caption>
                   Lien interne avec overflowEllipsis et icône personnalisée
                 </Caption>
@@ -479,7 +476,7 @@
                 </div>
               </Box>
 
-              <Box column spacing="md">
+              <Box row spacing="md">
                 <Caption>Comparaison : lien sans overflowEllipsis</Caption>
                 <div
                   style={{
@@ -498,10 +495,6 @@
                     wrap normally
                   </Link>
                 </div>
-                <Text size="xs" color="#666">
-                  Sans overflowEllipsis, le texte se comporte normalement (wrap
-                  ou débordement)
-                </Text>
               </Box>
             </Box>
           </Box>
