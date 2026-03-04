@@ -106,8 +106,8 @@ import.meta.css = /* css */ `
     border-radius: inherit;
     cursor: inherit;
 
-    --start-icon-size: 0;
-    --end-icon-size: 0;
+    --start-icon-size: 0px;
+    --end-icon-size: 0px;
     --x-outline-width: var(--outline-width);
     --x-border-radius: var(--border-radius);
     --x-border-width: var(--border-width);
@@ -289,6 +289,7 @@ const InputStyleCSSVars = {
   "backgroundColor": "--background-color",
   "borderColor": "--border-color",
   "color": "--color",
+  "fontSize": "--font-size",
   ":hover": {
     backgroundColor: "--background-color-hover",
     borderColor: "--border-color-hover",
