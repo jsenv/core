@@ -39,7 +39,7 @@ export const Aside = ({ children }) => {
       data-resize="horizontal"
       style={{
         width: resizing ? resizeWidth : widthSetting,
-        // Disable transition during resize to make it responsive
+        // Disable transition during resize to make it immediate
         transition: resizing ? "none" : undefined,
       }}
       onMouseDown={(e) => {
@@ -51,8 +51,11 @@ export const Aside = ({ children }) => {
             widthAtStart = getWidth(elementToResize);
           },
           onDrag: (gesture) => {
-            const xMove = gesture.xMove;
-            const newWidth = widthAtStart + xMove;
+            if (!gesture.started) {
+              return;
+            }
+            const xDelta = gesture.layout.xDelta;
+            const newWidth = widthAtStart + xDelta;
             const minWidth =
               // <aside> min-width
               100;
