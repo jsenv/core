@@ -21,6 +21,31 @@
         Caption,
       } from "@jsenv/navi";
 
+      const Demo = () => {
+        return (
+          <div
+            style={{
+              padding: "20px",
+              fontFamily: "system-ui, sans-serif",
+              maxWidth: "800px",
+              lineHeight: "1.6",
+            }}
+          >
+            <Title as="h1">Badge Count Demo</Title>
+
+            <TableOfContents />
+            <LoadingStateSection />
+            <TestsComportementauxSection />
+            <FontSizesSection />
+            <FontFamiliesSection />
+            <LineHeightsSection />
+            <IntegrationComposantsSection />
+            <BadgePositioningSection />
+            <NoWrapSection />
+          </div>
+        );
+      };
+
       // Composants JSX pour éviter les erreurs de syntaxe lors des modifications
       const TableOfContents = () => (
         <Box as="section" marginBottom="xl">
@@ -867,31 +892,6 @@
           </Box>
         </Box>
       );
-
-      const Demo = () => {
-        return (
-          <div
-            style={{
-              padding: "20px",
-              fontFamily: "system-ui, sans-serif",
-              maxWidth: "800px",
-              lineHeight: "1.6",
-            }}
-          >
-            <Title as="h1">Badge Count Demo</Title>
-
-            <TableOfContents />
-            <LoadingStateSection />
-            <TestsComportementauxSection />
-            <FontSizesSection />
-            <FontFamiliesSection />
-            <LineHeightsSection />
-            <IntegrationComposantsSection />
-            <BadgePositioningSection />
-            <NoWrapSection />
-          </div>
-        );
-      };
 
       render(<Demo />, document.getElementById("app"));
     </script>

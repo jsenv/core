@@ -161,6 +161,10 @@ const shouldInjectSpacingAfter = (jsxChild) => {
       return false;
     }
   }
+  if (jsxChild && jsxChild.props && jsxChild.props.outsideFlow) {
+    // we can mark jsx element as "outsideFlow" to avoid spacing injection between it and surrounding text
+    return false;
+  }
   return true;
 };
 const shouldInjectSpacingBefore = (jsxChild) => {
@@ -168,6 +172,10 @@ const shouldInjectSpacingBefore = (jsxChild) => {
     if (/^\s/.test(jsxChild)) {
       return false;
     }
+  }
+  if (jsxChild && jsxChild.props && jsxChild.props.outsideFlow) {
+    // we can mark jsx element as "outsideFlow" to avoid spacing injection between it and surrounding text
+    return false;
   }
   return true;
 };
