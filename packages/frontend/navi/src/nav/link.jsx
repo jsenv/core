@@ -72,6 +72,11 @@ import.meta.css = /* css */ `
     /* Current */
     &[data-href-current] {
       --x-link-cursor: default;
+      &[data-anchor] {
+        /* For anchor links, we want to keep the pointer cursor to indicate interactivity */
+        /* as anchor link will still scroll to the section even if it's the current page */
+        --x-link-cursor: pointer;
+      }
     }
     /* Hover */
     &[data-hover] {
@@ -369,7 +374,7 @@ const LinkPlain = (props) => {
       )}
       <LoaderBackground loading={loading} color="var(--link-loader-color)" />
       {applySpacingOnTextChildren(innerChildren, spacing)}
-      {endIcon && (
+      {innerEndIcon && (
         <Icon marginLeft={innerChildren ? "xxs" : undefined}>
           {innerEndIcon}
         </Icon>
