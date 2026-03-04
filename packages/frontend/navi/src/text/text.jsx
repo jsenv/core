@@ -98,7 +98,7 @@ import.meta.css = /* css */ `
 const REGULAR_SPACE = <span data-navi-space=""> </span>;
 const CustomWidthSpace = ({ value }) => {
   return (
-    <span className="navi_custom_space" style={`padding-left: ${value}`}>
+    <span className="navi_custom_space" style={`padding-left: ${value}px`}>
       &#8203;
     </span>
   );
@@ -203,7 +203,7 @@ export const Text = (props) => {
   return <TextBasic {...props} />;
 };
 
-const TextOverflow = ({ noWrap, children, ...rest }) => {
+const TextOverflow = ({ noWrap, spacing, children, ...rest }) => {
   const [OverflowPinnedElement, setOverflowPinnedElement] = useState(null);
 
   return (
@@ -221,7 +221,9 @@ const TextOverflow = ({ noWrap, children, ...rest }) => {
     >
       <span className="navi_text_overflow_wrapper">
         <OverflowPinnedElementContext.Provider value={setOverflowPinnedElement}>
-          <Text className="navi_text_overflow_text">{children}</Text>
+          <Text className="navi_text_overflow_text" spacing={spacing}>
+            {children}
+          </Text>
         </OverflowPinnedElementContext.Provider>
         {OverflowPinnedElement}
       </span>
@@ -251,7 +253,7 @@ const TextWithSelectRange = ({ selectRange, ...props }) => {
   return <Text ref={ref} {...props}></Text>;
 };
 const TextBasic = ({
-  spacing = " ",
+  spacing = REGULAR_SPACE,
   boldTransition,
   boldStable,
   preventBoldLayoutShift = boldTransition,

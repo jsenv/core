@@ -47,6 +47,7 @@ import.meta.css = /* css */ `
       --link-text-decoration: underline;
       --link-text-decoration-hover: var(--link-text-decoration);
       --link-cursor: pointer;
+      --link-loading-outline-size: 1px;
     }
   }
 
@@ -61,6 +62,8 @@ import.meta.css = /* css */ `
 
     position: relative;
     aspect-ratio: inherit;
+    /* Ensure the spacing for the loading outline is part of the <a> so that it does not create an overflow */
+    padding: var(--link-loading-outline-size);
     color: var(--x-link-color);
     text-decoration: var(--x-link-text-decoration);
     border-radius: var(--link-border-radius);
@@ -328,7 +331,12 @@ const LinkPlain = (props) => {
   // because link can wrap images or other non-text content and we don't want to mess with it
   // in theory this is the same for button so we'll see with time what makes more sense
   const visualChildren = overflowEllipsis ? (
-    <Text overflowEllipsis>
+    <Text
+      overflowEllipsis
+      // Here we can't use spaces as they would be underlined
+      // (Ce would use zero width space with paddings but that's just simpler to rely on margins here)
+      spacing="pre"
+    >
       {startIconEl}
       {innerChildren}
       {endIconEl && <Text overflowPinned>{endIconEl}</Text>}
@@ -393,7 +401,11 @@ const LinkPlain = (props) => {
         onKeyDown?.(e);
       }}
     >
-      <LoaderBackground loading={loading} color="var(--link-loader-color)" />
+      <LoaderBackground
+        loading={loading}
+        inset={1}
+        color="var(--link-loader-color)"
+      />
       {visualChildren}
     </Box>
   );
