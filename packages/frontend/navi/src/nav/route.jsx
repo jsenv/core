@@ -85,7 +85,7 @@ export const Route = ({
 
   if (!hasDiscoveredRef.current) {
     return (
-      <MatchingRouteManager
+      <RouteMatchManager
         element={element}
         route={route}
         index={index}
@@ -99,7 +99,7 @@ export const Route = ({
         }}
       >
         {children}
-      </MatchingRouteManager>
+      </RouteMatchManager>
     );
   }
 
@@ -113,10 +113,11 @@ export const Route = ({
 
 const RegisterChildRouteContext = createContext(null);
 
-/* This component is ensure to be rendered once
-So no need to cleanup things or whatever we know and ensure that 
-it's executed once for the entire app lifecycle */
-const MatchingRouteManager = ({
+/* This component is rendered once
+ * So no need to cleanup things or whatever we know and ensure that
+ * t's executed once for the entire app lifecycle
+ */
+const RouteMatchManager = ({
   element,
   route,
   index,
@@ -129,21 +130,21 @@ const MatchingRouteManager = ({
   if (route && fallback) {
     throw new Error("Route cannot have both route and fallback props");
   }
+  const parentRegisterChildRoute = useContext(RegisterChildRouteContext);
 
-  const registerChildRouteFromContext = useContext(RegisterChildRouteContext);
   const elementId = getElementSignature(element);
   const candidateSet = new Set();
   let indexCandidate = null;
   let fallbackCandidate = null;
   const registerChildRoute = (childRouteInfo) => {
-    const childElementId = getElementSignature(childRouteInfo.element);
+    const childElementId = getElementSignature(childRouteInfo.MatchingElement);
     debug(`${elementId}.registerChildRoute(${childElementId})`);
     candidateSet.add(childRouteInfo);
 
     if (childRouteInfo.index) {
       if (indexCandidate) {
         throw new Error(`Multiple index routes registered under the same parent route (${elementId}):
-- ${getElementSignature(indexCandidate.element)}
+- ${getElementSignature(indexCandidate.MatchingElement)}
 - ${childElementId}`);
       }
       indexCandidate = childRouteInfo;
@@ -151,7 +152,7 @@ const MatchingRouteManager = ({
     if (childRouteInfo.fallback) {
       if (fallbackCandidate) {
         throw new Error(`Multiple fallback routes registered under the same parent route (${elementId}):
-- ${getElementSignature(fallbackCandidate.element)}
+- ${getElementSignature(fallbackCandidate.MatchingElement)}
 - ${childElementId}`);
       }
       if (childRouteInfo.route.routeFromProps) {
@@ -162,9 +163,11 @@ const MatchingRouteManager = ({
       fallbackCandidate = childRouteInfo;
     }
   };
+
   if (DEBUG) {
     console.group(`👶 Discovery of ${elementId}`);
   }
+
   useLayoutEffect(() => {
     if (DEBUG) {
       console.groupEnd();
@@ -180,7 +183,7 @@ const MatchingRouteManager = ({
       fallbackCandidate,
       candidateSet,
       onMatchingInfoChange,
-      registerChildRouteFromContext,
+      parentRegisterChildRoute,
     });
   }, []);
 
@@ -202,7 +205,7 @@ const initRouteObserver = ({
   fallbackCandidate,
   candidateSet,
   onMatchingInfoChange,
-  registerChildRouteFromContext,
+  parentRegisterChildRoute,
 }) => {
   if (
     !fallbackCandidate &&
@@ -307,6 +310,11 @@ const initRouteObserver = ({
           : undefined,
     );
     const SlotMatchingElement = SlotMatchingElementSignal.value;
+
+    if (typeof element === "function") {
+      const Element = element;
+      element = <Element />;
+    }
     // const Element = () => {
     //   if (!route) {
     //     return element;
@@ -333,11 +341,11 @@ const initRouteObserver = ({
     if (newMatchingInfo) {
       compositeRoute.matching = true;
       matchingRouteInfoSignal.value = newMatchingInfo;
-      SlotMatchingElementSignal.value = newMatchingInfo.element;
+      SlotMatchingElementSignal.value = newMatchingInfo.MatchingElement;
       onMatchingInfoChange({
         route: newMatchingInfo.route,
         MatchingElement,
-        SlotMatchingElement: newMatchingInfo.element,
+        SlotMatchingElement: newMatchingInfo.MatchingElement,
         index: newMatchingInfo.index,
         fallback: newMatchingInfo.fallback,
         meta: newMatchingInfo.meta,
@@ -367,10 +375,10 @@ const initRouteObserver = ({
     }
     addTeardown(candidate.route.subscribeStatus(onChange));
   }
-  if (registerChildRouteFromContext) {
-    registerChildRouteFromContext({
+  if (parentRegisterChildRoute) {
+    parentRegisterChildRoute({
       route: compositeRoute,
-      element: MatchingElement,
+      MatchingElement,
       index,
       fallback,
       meta,
