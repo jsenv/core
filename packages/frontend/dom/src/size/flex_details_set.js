@@ -175,7 +175,7 @@ export const initFlexDetailsSet = (
     }
   };
 
-  const applyAllocatedSpaces = (resizeDetails) => {
+  const applyAllocatedSpaces = ({ reason, animated }) => {
     const changeSet = new Set();
     let maxChange = 0;
 
@@ -183,9 +183,8 @@ export const initFlexDetailsSet = (
       const allocatedSpace = allocatedSpaceMap.get(child);
       const allocatedSize = spaceToSize(allocatedSpace, child);
       const space = spaceMap.get(child);
-      const size = spaceToSize(space, child);
+      const size = spaceToSize(space === undefined ? 0 : space, child);
       const sizeChange = Math.abs(size - allocatedSize);
-
       if (size === allocatedSize) {
         continue;
       }
@@ -218,16 +217,18 @@ export const initFlexDetailsSet = (
     }
 
     // Don't animate if changes are too small (avoids imperceptible animations that hide scrollbars)
-    const shouldAnimate =
-      resizeDetails.animated && maxChange >= ANIMATION_THRESHOLD_PX;
+    const shouldAnimate = animated && maxChange >= ANIMATION_THRESHOLD_PX;
 
-    if (debug && resizeDetails.animated && !shouldAnimate) {
+    if (debug && animated && !shouldAnimate) {
       console.debug(
         `🚫 Skipping animation: max change ${maxChange.toFixed(2)}px < ${ANIMATION_THRESHOLD_PX}px threshold`,
       );
     }
 
     if (!shouldAnimate) {
+      if (debug) {
+        console.debug(`Applying size changes without animation`);
+      }
       const sizeChangeEntries = [];
       for (const { element, target, sideEffect } of changeSet) {
         element.style.height = `${target}px`;
@@ -237,10 +238,13 @@ export const initFlexDetailsSet = (
         }
         sizeChangeEntries.push({ element, value: target });
       }
-      onSizeChange?.(sizeChangeEntries, resizeDetails);
+      onSizeChange?.(sizeChangeEntries, { reason, animated });
       return;
     }
 
+    if (debug) {
+      console.debug(`Start animating size changes`);
+    }
     // Create height animations for each element in changeSet
     const transitions = Array.from(changeSet).map(({ element, target }) => {
       const transition = createHeightTransition(element, target, {
@@ -249,7 +253,7 @@ export const initFlexDetailsSet = (
       return transition;
     });
 
-    const transition = transitionController.animate(transitions, {
+    const transition = transitionController.update(transitions, {
       onChange: (changeEntries, isLast) => {
         // Apply side effects for each animated element
         for (const { transition, value } of changeEntries) {
@@ -273,7 +277,7 @@ export const initFlexDetailsSet = (
           );
           onSizeChange(
             sizeChangeEntries,
-            isLast ? { ...resizeDetails, animated: false } : resizeDetails,
+            isLast ? { reason, animated: false } : { reason, animated },
           );
         }
       },
@@ -524,23 +528,23 @@ export const initFlexDetailsSet = (
     }
   };
 
-  const updateSpaceDistribution = (resizeDetails) => {
+  const updateSpaceDistribution = ({ reason, animated }) => {
     if (debug) {
-      console.group(`updateSpaceDistribution: ${resizeDetails.reason}`);
+      console.group(`updateSpaceDistribution: ${reason}`);
     }
     prepareSpaceDistribution();
-    distributeAvailableSpace(resizeDetails.reason);
+    distributeAvailableSpace(reason);
     distributeRemainingSpace({
       childToGrow: openedDetailsArray[openedDetailsArray.length - 1],
       childToShrinkFrom: lastChild,
     });
     if (
-      resizeDetails.reason === "initial_space_distribution" ||
-      resizeDetails.reason === "content_change"
+      reason === "initial_space_distribution" ||
+      reason === "content_change"
     ) {
       spaceMap.clear(); // force to set size at start
     }
-    applyAllocatedSpaces(resizeDetails);
+    applyAllocatedSpaces({ reason, animated });
     saveCurrentSizeAsRequestedSizes();
     if (debug) {
       console.groupEnd();

@@ -1002,18 +1002,16 @@ export const createAction = (callback, rootOptions = {}) => {
           }
           actionAbortMap.delete(action);
           actionPromiseMap.delete(action);
-          if (internalAbortSignal.aborted && e === internalAbortSignal.reason) {
+          const isAbort =
+            (internalAbortSignal.aborted && e === internalAbortSignal.reason) ||
+            e.name === "AbortError";
+          if (isAbort) {
             runningStateSignal.value = ABORTED;
             if (isPrerun && abortSignal.aborted) {
               prerunProtectionRegistry.unprotect(action);
             }
             onAbort?.(e, action);
             return e;
-          }
-          if (e.name === "AbortError") {
-            throw new Error(
-              "never supposed to happen, abort error should be handled by the abort signal",
-            );
           }
           if (DEBUG) {
             console.log(

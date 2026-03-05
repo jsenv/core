@@ -21,22 +21,16 @@
       }
 
       .flex_details_set {
-        display: flex;
-
-        display: flex;
         box-sizing: content-box;
         width: 300px;
         height: 60vh;
         margin-top: 20px;
         margin-left: 100px;
-        flex-direction: column;
-        flex-direction: column;
 
         border: 1px solid black;
       }
 
       .flex_details {
-        flex-shrink: 1;
         overflow: hidden;
       }
       .flex_details summary {
@@ -108,7 +102,7 @@
             <fieldset>
               <legend>Flex details set controls</legend>
               <div>
-                First details height{" "}
+                First details height
                 <label>
                   <strong>requested:</strong>
                   <input
@@ -122,7 +116,7 @@
                       );
                     }}
                   />
-                </label>{" "}
+                </label>
                 <label>
                   <strong>actual:</strong>
                   <input
@@ -134,7 +128,7 @@
                 </label>
               </div>
               <div>
-                Second details height{" "}
+                Second details height
                 <label>
                   <strong>requested:</strong>
                   <input
@@ -148,7 +142,7 @@
                       );
                     }}
                   />
-                </label>{" "}
+                </label>
                 <label>
                   <strong>actual:</strong>
                   <input
@@ -160,7 +154,7 @@
                 </label>
               </div>
               <div>
-                Third details height{" "}
+                Third details height
                 <label>
                   <strong>requested:</strong>
                   <input
@@ -174,7 +168,7 @@
                       );
                     }}
                   />
-                </label>{" "}
+                </label>
                 <label>
                   <strong>actual:</strong>
                   <input
@@ -192,14 +186,14 @@
                 }}
               >
                 Toggle first details
-              </button>{" "}
+              </button>
               <button
                 onClick={() => {
                   document.querySelector("#b").toggleAttribute("open");
                 }}
               >
                 Toggle second details
-              </button>{" "}
+              </button>
               <button
                 onClick={() => {
                   document.querySelector("#c").toggleAttribute("open");
@@ -276,8 +270,8 @@
               <div
                 id={`${id}-resize-handle`}
                 data-resize-handle={id}
-                style="height: 20px; margin-top: -5px; background: orange; flex-shrink: 0;"
-              ></div>
+                style="height: 20px; margin-top: -20px; background: orange; flex-shrink: 0;"
+              />
             )}
             <details
               className="flex_details"

@@ -218,7 +218,7 @@ const DetailsWithAction = (props) => {
   const {
     action,
     loading,
-    onToggle,
+    onUIStateChange,
     onCancel,
     onActionPrevented,
     onActionStart,
@@ -268,17 +268,16 @@ const DetailsWithAction = (props) => {
       {...rest}
       ref={ref}
       loading={loading || actionLoading}
-      onToggle={(toggleEvent) => {
-        const isOpen = toggleEvent.newState === "open";
-        if (isOpen) {
-          dispatchActionRequestedCustomEvent(toggleEvent.target, {
-            event: toggleEvent,
-            requester: toggleEvent.target,
+      onUIStateChange={(open, e) => {
+        if (open) {
+          dispatchActionRequestedCustomEvent(e.target, {
+            event: e,
+            requester: e.target,
           });
         } else {
           effectiveAction.abort();
         }
-        onToggle?.(toggleEvent);
+        onUIStateChange?.(open, e);
       }}
     >
       <ActionRenderer action={effectiveAction}>{children}</ActionRenderer>
