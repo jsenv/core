@@ -33,8 +33,8 @@
           >
             <Title as="h1">Badge Count Demo</Title>
 
-            <IntroductionSection />
             <TableOfContents />
+            <IntroductionSection />
             <LoadingStateSection />
             <TestsComportementauxSection />
             <FontSizesSection />
@@ -62,113 +62,166 @@
             évidence.
           </Paragraph>
 
-          <Title as="h3">Le problème avec la forme circulaire</Title>
+          <Title as="h3">Exemples de badges par défaut</Title>
           <Paragraph>
-            La forme circulaire traditionnelle fonctionne bien pour les petits
-            nombres (1-2 chiffres), mais devient problématique avec 3 chiffres
-            ou plus. Voici une démonstration visuelle :
+            Voici des exemples de badges avec différents nombres en utilisant la
+            configuration par défaut :
           </Paragraph>
 
-          <Box row spacing="s">
-            <Box row spacing="sm" alignX="start">
-              <Box padding="md" background="#f8f9fa" borderRadius="md">
-                <Text>
-                  Messages
-                  <BadgeCount circle background="#4caf50" color="white">
-                    5
-                  </BadgeCount>
-                </Text>
-              </Box>
+          <Box row spacing="s" alignX="start">
+            <Box padding="md" background="#f8f9fa" borderRadius="md">
+              <Text>
+                Messages
+                <BadgeCount background="#4caf50" color="white">
+                  5
+                </BadgeCount>
+              </Text>
             </Box>
 
-            <Box row spacing="sm" alignX="start">
-              <Box padding="md" background="#f8f9fa" borderRadius="md">
-                <Text>
-                  Messages
-                  <BadgeCount circle background="#ff9800" color="white">
-                    42
-                  </BadgeCount>
-                </Text>
-              </Box>
+            <Box padding="md" background="#f8f9fa" borderRadius="md">
+              <Text>
+                Messages
+                <BadgeCount background="#ff9800" color="white">
+                  42
+                </BadgeCount>
+              </Text>
             </Box>
 
-            <Box row spacing="sm" alignX="start">
-              <Box padding="md" background="#f8f9fa" borderRadius="md">
-                <Text>
-                  Messages
-                  <BadgeCount
-                    circle
-                    max={Infinity}
-                    background="#f44336"
-                    color="white"
-                  >
-                    1270
-                  </BadgeCount>
-                </Text>
-              </Box>
+            <Box padding="md" background="#f8f9fa" borderRadius="md">
+              <Text>
+                Messages
+                <BadgeCount background="#2196f3" color="white">
+                  1247
+                </BadgeCount>
+              </Text>
             </Box>
           </Box>
 
-          <Paragraph
-            style={{
-              color: "#d32f2f",
-              background: "#ffebee",
-              padding: "12px",
-              borderRadius: "4px",
-            }}
-          >
-            <strong>Problème :</strong> Avec 3 chiffres ou plus, le badge
-            circulaire devient soit trop grand et disgracieux, soit le texte
-            devient illisible car trop compressé.
+          <Title as="h3">Pourquoi la forme ellipse par défaut ?</Title>
+          <Paragraph>
+            Le composant BadgeCount utilise par défaut la forme ellipse car elle
+            permet d'afficher efficacement aussi bien de petits nombres que de
+            très grands nombres.
           </Paragraph>
 
-          <Title as="h3">La solution avec la forme ellipse</Title>
           <Paragraph>
-            Pour afficher la valeur exacte de grands nombres sans compromettre
-            l'esthétique, nous recommandons d'utiliser la forme ellipse qui
-            s'adapte automatiquement au contenu :
+            À l'inverse, la forme circulaire pose des problèmes pour de grands
+            nombres : le rayon du cercle devrait devenir très grand pour
+            accommoder 3+ chiffres, rendant le badge disproportionné et peu
+            esthétique.
+          </Paragraph>
+
+          <Title as="h3">Activation de la forme circulaire</Title>
+          <Paragraph>
+            Il est néanmoins possible d'activer la forme circulaire avec la prop{" "}
+            <code>circle</code> :
           </Paragraph>
 
           <Box row spacing="s">
-            <Box row spacing="s" alignX="start">
+            <Box padding="md" background="#f8f9fa" borderRadius="md">
+              <Text>
+                Messages
+                <BadgeCount circle background="#4caf50" color="white">
+                  5
+                </BadgeCount>
+              </Text>
+            </Box>
+
+            <Box padding="md" background="#f8f9fa" borderRadius="md">
+              <Text>
+                Messages
+                <BadgeCount circle background="#ff9800" color="white">
+                  42
+                </BadgeCount>
+              </Text>
+            </Box>
+
+            <Box padding="md" background="#f8f9fa" borderRadius="md">
+              <Text>
+                Messages
+                <BadgeCount circle background="#f44336" color="white">
+                  127
+                </BadgeCount>
+              </Text>
+            </Box>
+          </Box>
+
+          <Title as="h3">Système de limitation 99+</Title>
+          <Paragraph>
+            Quand on utilise la forme circulaire, le composant affiche
+            automatiquement "99+" lorsque la valeur dépasse 99, évitant ainsi
+            d'afficher 3 chiffres qui rendraient le cercle trop grand.
+          </Paragraph>
+
+          <Box
+            padding="md"
+            background="#fff3e0"
+            borderRadius="md"
+            marginTop="md"
+          >
+            <Paragraph style={{ margin: 0 }}>
+              <strong>⚠️ Limitation :</strong> Le système ne peut pas aller
+              jusqu'à "999+" car cela ferait 4 caractères, ce qui serait encore
+              plus problématique visuellement dans un cercle. C'est pourquoi la
+              limite reste à "99+".
+            </Paragraph>
+          </Box>
+
+          <Title as="h3">Basculement automatique avec max={Infinity}</Title>
+          <Paragraph>
+            Si vous combinez <code>circle</code> avec{" "}
+            <code>max={Infinity}</code>, le composant bascule automatiquement en
+            mode ellipse si la valeur dépasse ce qui peut être raisonnablement
+            affiché dans un cercle :
+          </Paragraph>
+
+          <Box row spacing="lg" marginTop="md" marginBottom="lg">
+            <Box column spacing="sm" alignX="center">
+              <Caption>circle + max={Infinity} - Petit</Caption>
               <Box padding="md" background="#f8f9fa" borderRadius="md">
                 <Text>
-                  Messages
-                  <BadgeCount background="#4caf50" color="white">
+                  Messages{" "}
+                  <BadgeCount
+                    circle
+                    max={Infinity}
+                    background="#4caf50"
+                    color="white"
+                  >
                     5
                   </BadgeCount>
                 </Text>
               </Box>
             </Box>
 
-            <Box row spacing="s" alignX="start">
+            <Box column spacing="sm" alignX="center">
+              <Caption>circle + max={Infinity} - Moyen</Caption>
               <Box padding="md" background="#f8f9fa" borderRadius="md">
                 <Text>
-                  Messages
-                  <BadgeCount background="#ff9800" color="white">
+                  Messages{" "}
+                  <BadgeCount
+                    circle
+                    max={Infinity}
+                    background="#ff9800"
+                    color="white"
+                  >
                     42
                   </BadgeCount>
                 </Text>
               </Box>
             </Box>
 
-            <Box row spacing="s" alignX="start">
+            <Box column spacing="sm" alignX="center">
+              <Caption>circle + max={Infinity} - Bascule ellipse</Caption>
               <Box padding="md" background="#f8f9fa" borderRadius="md">
                 <Text>
-                  Messages
-                  <BadgeCount background="#4caf50" color="white">
-                    127
-                  </BadgeCount>
-                </Text>
-              </Box>
-            </Box>
-
-            <Box row spacing="s" alignX="start">
-              <Box padding="md" background="#f8f9fa" borderRadius="md">
-                <Text>
-                  Messages
-                  <BadgeCount background="#2196f3" color="white">
-                    1247
+                  Messages{" "}
+                  <BadgeCount
+                    circle
+                    max={Infinity}
+                    background="#2196f3"
+                    color="white"
+                  >
+                    1,247
                   </BadgeCount>
                 </Text>
               </Box>
@@ -182,11 +235,12 @@
             marginTop="md"
           >
             <Paragraph style={{ margin: 0 }}>
-              <strong>💡 Recommandation :</strong> Utilisez la forme ellipse (
-              <code>shape="ellipse"</code>) quand vous voulez afficher la valeur
-              exacte, particulièrement pour des nombres à 3 chiffres ou plus.
-              Gardez la forme circulaire pour de petits nombres ou quand vous
-              utilisez des limites comme <code>max=99</code>.
+              <strong>💡 Résumé :</strong> Par défaut, utilisez la forme ellipse
+              pour sa flexibilité. Utilisez <code>circle</code> pour des petits
+              nombres ou des contextes spécifiques. Combinez{" "}
+              <code>circle + max={Infinity}</code> pour le meilleur des deux
+              mondes : cercle pour les petits nombres, ellipse automatique pour
+              les grands.
             </Paragraph>
           </Box>
         </Box>
