@@ -33,6 +33,7 @@
           >
             <Title as="h1">Badge Count Demo</Title>
 
+            <IntroductionSection />
             <TableOfContents />
             <LoadingStateSection />
             <TestsComportementauxSection />
@@ -47,28 +48,173 @@
       };
 
       // Composants JSX pour éviter les erreurs de syntaxe lors des modifications
+      const IntroductionSection = () => (
+        <Box as="section" marginBottom="xl">
+          <Title as="h2">
+            <Link anchor href="#introduction" />
+            Qu'est-ce qu'un Badge Count ?
+          </Title>
+
+          <Paragraph>
+            Un badge count est un composant visuel qui affiche un nombre dans un
+            badge, typiquement utilisé pour indiquer des notifications, des
+            éléments dans un panier, ou toute autre valeur numérique à mettre en
+            évidence.
+          </Paragraph>
+
+          <Title as="h3">Le problème avec la forme circulaire</Title>
+          <Paragraph>
+            La forme circulaire traditionnelle fonctionne bien pour les petits
+            nombres (1-2 chiffres), mais devient problématique avec 3 chiffres
+            ou plus. Voici une démonstration visuelle :
+          </Paragraph>
+
+          <Box row spacing="s">
+            <Box row spacing="sm" alignX="start">
+              <Box padding="md" background="#f8f9fa" borderRadius="md">
+                <Text>
+                  Messages
+                  <BadgeCount circle background="#4caf50" color="white">
+                    5
+                  </BadgeCount>
+                </Text>
+              </Box>
+            </Box>
+
+            <Box row spacing="sm" alignX="start">
+              <Box padding="md" background="#f8f9fa" borderRadius="md">
+                <Text>
+                  Messages
+                  <BadgeCount circle background="#ff9800" color="white">
+                    42
+                  </BadgeCount>
+                </Text>
+              </Box>
+            </Box>
+
+            <Box row spacing="sm" alignX="start">
+              <Box padding="md" background="#f8f9fa" borderRadius="md">
+                <Text>
+                  Messages
+                  <BadgeCount
+                    circle
+                    max={Infinity}
+                    background="#f44336"
+                    color="white"
+                  >
+                    1270
+                  </BadgeCount>
+                </Text>
+              </Box>
+            </Box>
+          </Box>
+
+          <Paragraph
+            style={{
+              color: "#d32f2f",
+              background: "#ffebee",
+              padding: "12px",
+              borderRadius: "4px",
+            }}
+          >
+            <strong>Problème :</strong> Avec 3 chiffres ou plus, le badge
+            circulaire devient soit trop grand et disgracieux, soit le texte
+            devient illisible car trop compressé.
+          </Paragraph>
+
+          <Title as="h3">La solution avec la forme ellipse</Title>
+          <Paragraph>
+            Pour afficher la valeur exacte de grands nombres sans compromettre
+            l'esthétique, nous recommandons d'utiliser la forme ellipse qui
+            s'adapte automatiquement au contenu :
+          </Paragraph>
+
+          <Box row spacing="s">
+            <Box row spacing="s" alignX="start">
+              <Box padding="md" background="#f8f9fa" borderRadius="md">
+                <Text>
+                  Messages
+                  <BadgeCount background="#4caf50" color="white">
+                    5
+                  </BadgeCount>
+                </Text>
+              </Box>
+            </Box>
+
+            <Box row spacing="s" alignX="start">
+              <Box padding="md" background="#f8f9fa" borderRadius="md">
+                <Text>
+                  Messages
+                  <BadgeCount background="#ff9800" color="white">
+                    42
+                  </BadgeCount>
+                </Text>
+              </Box>
+            </Box>
+
+            <Box row spacing="s" alignX="start">
+              <Box padding="md" background="#f8f9fa" borderRadius="md">
+                <Text>
+                  Messages
+                  <BadgeCount background="#4caf50" color="white">
+                    127
+                  </BadgeCount>
+                </Text>
+              </Box>
+            </Box>
+
+            <Box row spacing="s" alignX="start">
+              <Box padding="md" background="#f8f9fa" borderRadius="md">
+                <Text>
+                  Messages
+                  <BadgeCount background="#2196f3" color="white">
+                    1247
+                  </BadgeCount>
+                </Text>
+              </Box>
+            </Box>
+          </Box>
+
+          <Box
+            padding="md"
+            background="#e8f5e8"
+            borderRadius="md"
+            marginTop="md"
+          >
+            <Paragraph style={{ margin: 0 }}>
+              <strong>💡 Recommandation :</strong> Utilisez la forme ellipse (
+              <code>shape="ellipse"</code>) quand vous voulez afficher la valeur
+              exacte, particulièrement pour des nombres à 3 chiffres ou plus.
+              Gardez la forme circulaire pour de petits nombres ou quand vous
+              utilisez des limites comme <code>max=99</code>.
+            </Paragraph>
+          </Box>
+        </Box>
+      );
+
       const TableOfContents = () => (
         <Box as="section" marginBottom="xl">
           <Title as="h2">Table des matières</Title>
           <Box row spacing="xs" marginTop="md">
+            <Link href="#introduction">1. Qu'est-ce qu'un Badge Count ?</Link>
             <Link href="#tests-comportementaux">
-              1. Tests comportementaux par police
+              2. Tests comportementaux par police
             </Link>
             <Link href="#font-sizes">
-              2. Comportement avec différents font-size
+              3. Comportement avec différents font-size
             </Link>
             <Link href="#font-families">
-              3. Comportement avec différents font-family
+              4. Comportement avec différents font-family
             </Link>
             <Link href="#line-heights">
-              4. Comportement avec différents line-heights
+              5. Comportement avec différents line-heights
             </Link>
             <Link href="#integration-composants">
-              5. Intégration dans différents composants
+              6. Intégration dans différents composants
             </Link>
-            <Link href="#badge-positioning">6. Badge positioning</Link>
+            <Link href="#badge-positioning">7. Badge positioning</Link>
             <Link href="#nowrap">
-              7. Association texte + badge (pas de coupure)
+              8. Association texte + badge (pas de coupure)
             </Link>
           </Box>
         </Box>
@@ -93,6 +239,7 @@
                 <Text size="60">
                   <Text>Before</Text>
                   <BadgeCount
+                    circle
                     background="#2196f3"
                     color="white"
                     size="xs"
@@ -104,70 +251,90 @@
                 </Text>
                 <Text>
                   Before
-                  <BadgeCount background="#2196f3" color="white" size="xxs">
+                  <BadgeCount
+                    circle
+                    background="#2196f3"
+                    color="white"
+                    size="xxs"
+                  >
                     1
                   </BadgeCount>
                   After
                 </Text>
                 <Text spacing="0">
                   Before
-                  <BadgeCount background="#2196f3" color="white">
+                  <BadgeCount circle background="#2196f3" color="white">
                     5
                   </BadgeCount>
                   After
                 </Text>
                 <Text>
                   Before
-                  <BadgeCount background="#2196f3" color="white">
+                  <BadgeCount circle background="#2196f3" color="white">
                     9
                   </BadgeCount>
                   After
                 </Text>
                 <Text spacing="0">
                   Before
-                  <BadgeCount background="#2196f3" color="white" max={9}>
+                  <BadgeCount circle background="#2196f3" color="white" max={9}>
                     10
                   </BadgeCount>
                   After
                 </Text>
                 <Text spacing="0">
                   Before
-                  <BadgeCount background="#2196f3" color="white">
+                  <BadgeCount circle background="#2196f3" color="white">
                     10
                   </BadgeCount>
                   After
                 </Text>
                 <Text spacing="0">
                   Before
-                  <BadgeCount background="#2196f3" color="white">
+                  <BadgeCount circle background="#2196f3" color="white">
                     99
                   </BadgeCount>
                   After
                 </Text>
                 <Text spacing="0">
                   Before
-                  <BadgeCount background="#2196f3" color="white">
+                  <BadgeCount circle background="#2196f3" color="white">
                     100
                   </BadgeCount>
                   After
                 </Text>
                 <Text spacing="0">
                   Before
-                  <BadgeCount background="#2196f3" color="white" max="none">
+                  <BadgeCount
+                    circle
+                    background="#2196f3"
+                    color="white"
+                    max="none"
+                  >
                     100
                   </BadgeCount>
                   After
                 </Text>
                 <Text spacing="0">
                   Before
-                  <BadgeCount background="#2196f3" color="white" max={999}>
+                  <BadgeCount
+                    circle
+                    background="#2196f3"
+                    color="white"
+                    max={999}
+                  >
                     1000
                   </BadgeCount>
                   After
                 </Text>
                 <Text spacing="0">
                   Before
-                  <BadgeCount background="#2196f3" color="white" max="none">
+                  <BadgeCount
+                    circle
+                    background="#2196f3"
+                    color="white"
+                    max="none"
+                  >
                     1000
                   </BadgeCount>
                   After
@@ -493,7 +660,6 @@
                   <Text>
                     Inbox
                     <BadgeCount
-                      ellipse
                       background="#2196f3"
                       color="white"
                       loading={ellipseLoading}

@@ -93,8 +93,8 @@ export const BadgeCount = ({
   maxElement = <BadgeCountOverflow />,
   // When you use max="none" (or max > 99) it might be a good idea to force ellipse
   // so that visually the interface do not suddently switch from circle to ellipse depending on the count
-  ellipse,
-  max = ellipse ? Infinity : 99,
+  circle,
+  max = circle ? 99 : Infinity,
   ...props
 }) => {
   const defaultRef = useRef();
@@ -108,27 +108,27 @@ export const BadgeCount = ({
   const valueCharCount = String(valueDisplayed).length;
   const charCount = valueCharCount + (hasOverflow ? 1 : 0);
   if (charCount > MAX_CHAR_AS_CIRCLE) {
-    ellipse = true;
+    circle = false;
   }
 
-  if (ellipse) {
+  if (circle) {
     return (
-      <BadgeCountEllipse {...props} ref={ref} hasOverflow={hasOverflow}>
+      <BadgeCountCircle
+        {...props}
+        ref={ref}
+        hasOverflow={hasOverflow}
+        charCount={charCount}
+      >
         {valueDisplayed}
         {hasOverflow && maxElement}
-      </BadgeCountEllipse>
+      </BadgeCountCircle>
     );
   }
   return (
-    <BadgeCountCircle
-      {...props}
-      ref={ref}
-      hasOverflow={hasOverflow}
-      charCount={charCount}
-    >
+    <BadgeCountEllipse {...props} ref={ref} hasOverflow={hasOverflow}>
       {valueDisplayed}
       {hasOverflow && maxElement}
-    </BadgeCountCircle>
+    </BadgeCountEllipse>
   );
 };
 const applyMaxToValue = (max, value) => {
