@@ -175,57 +175,64 @@
             affiché dans un cercle :
           </Paragraph>
 
-          <Box row spacing="lg" marginTop="md" marginBottom="lg">
-            <Box column spacing="sm" alignX="center">
-              <Caption>circle + max={Infinity} - Petit</Caption>
-              <Box padding="md" background="#f8f9fa" borderRadius="md">
-                <Text>
-                  Messages{" "}
-                  <BadgeCount
-                    circle
-                    max={Infinity}
-                    background="#4caf50"
-                    color="white"
-                  >
-                    5
-                  </BadgeCount>
-                </Text>
-              </Box>
+          <Box row spacing="s">
+            <Box padding="md" background="#f8f9fa" borderRadius="md">
+              <Text>
+                Messages
+                <BadgeCount
+                  circle
+                  max={Infinity}
+                  background="#4caf50"
+                  color="white"
+                >
+                  5
+                </BadgeCount>
+              </Text>
             </Box>
 
-            <Box column spacing="sm" alignX="center">
-              <Caption>circle + max={Infinity} - Moyen</Caption>
-              <Box padding="md" background="#f8f9fa" borderRadius="md">
-                <Text>
-                  Messages{" "}
-                  <BadgeCount
-                    circle
-                    max={Infinity}
-                    background="#ff9800"
-                    color="white"
-                  >
-                    42
-                  </BadgeCount>
-                </Text>
-              </Box>
+            <Box padding="md" background="#f8f9fa" borderRadius="md">
+              <Text>
+                Messages
+                <BadgeCount
+                  circle
+                  max={Infinity}
+                  background="#ff9800"
+                  color="white"
+                >
+                  42
+                </BadgeCount>
+              </Text>
             </Box>
 
-            <Box column spacing="sm" alignX="center">
-              <Caption>circle + max={Infinity} - Bascule ellipse</Caption>
-              <Box padding="md" background="#f8f9fa" borderRadius="md">
-                <Text>
-                  Messages{" "}
-                  <BadgeCount
-                    circle
-                    max={Infinity}
-                    background="#2196f3"
-                    color="white"
-                  >
-                    1,247
-                  </BadgeCount>
-                </Text>
-              </Box>
+            <Box padding="md" background="#f8f9fa" borderRadius="md">
+              <Text>
+                Messages
+                <BadgeCount
+                  circle
+                  max={Infinity}
+                  background="#2196f3"
+                  color="white"
+                >
+                  1247
+                </BadgeCount>
+              </Text>
             </Box>
+          </Box>
+
+          <Box
+            padding="md"
+            background="#fff3e0"
+            borderRadius="md"
+            marginTop="md"
+          >
+            <Paragraph style={{ margin: 0 }}>
+              <strong>⚠️ Important :</strong> Le basculement automatique de
+              cercle vers ellipse peut casser l'harmonie visuelle d'un design
+              system ou l'intention esthétique d'un designer qui souhaite
+              maintenir une forme circulaire cohérente. C'est pourquoi ce
+              comportement n'est pas activé par défaut et nécessite une
+              configuration explicite.
+            </Paragraph>
           </Box>
 
           <Box
@@ -237,10 +244,9 @@
             <Paragraph style={{ margin: 0 }}>
               <strong>💡 Résumé :</strong> Par défaut, utilisez la forme ellipse
               pour sa flexibilité. Utilisez <code>circle</code> pour des petits
-              nombres ou des contextes spécifiques. Combinez{" "}
-              <code>circle + max={Infinity}</code> pour le meilleur des deux
-              mondes : cercle pour les petits nombres, ellipse automatique pour
-              les grands.
+              nombres ou des contextes spécifiques. La combinaison{" "}
+              <code>circle + max={Infinity}</code> offre un comportement hybride
+              qui peut convenir dans certains cas d'usage.
             </Paragraph>
           </Box>
         </Box>
