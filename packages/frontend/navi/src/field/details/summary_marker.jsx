@@ -9,6 +9,7 @@ import.meta.css = /* css */ `
   .navi_summary_marker {
     width: 1em;
     height: 1em;
+    flex-shrink: 0;
     line-height: 1em;
 
     .navi_summary_marker_loading_container {

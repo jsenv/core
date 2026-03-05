@@ -1,4 +1,10 @@
-import { BadgeCount, Button, Details, valueInLocalStorage } from "@jsenv/navi";
+import {
+  BadgeCount,
+  Button,
+  Details,
+  Text,
+  valueInLocalStorage,
+} from "@jsenv/navi";
 import { effect, signal } from "@preact/signals";
 import { useCallback, useLayoutEffect, useRef, useState } from "preact/hooks";
 
@@ -112,35 +118,48 @@ export const ExplorerGroup = (props) => {
         action={detailsAction}
         label={
           <>
-            {label}
-            <BadgeCount size="xxs" circle background="gray" color="white">
-              {count}
-            </BadgeCount>
-            {renderNewButtonChildren ? (
-              <>
-                <span style="display: flex; flex: 1"></span>
-                <Button
-                  ref={createButtonRef}
-                  selfAlignX="end"
-                  className="summary_action_icon"
-                  width="22"
-                  height="22"
-                  padding="2"
-                  discrete
-                  onMouseDown={(e) => {
-                    // ensure when input is focused it stays focused
-                    // without this preventDefault() the input would be blurred (which might cause creation of an item) and re-opened empty
-                    e.preventDefault();
-                  }}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    startCreatingNew();
-                  }}
+            <Text overflowEllipsis>
+              {label}
+
+              <Text overflowPinned expandX box alignY="center">
+                <BadgeCount
+                  size="xxs"
+                  circle
+                  max="Infinity"
+                  background="gray"
+                  color="white"
                 >
-                  {renderNewButtonChildren()}
-                </Button>
-              </>
-            ) : null}
+                  {count}
+                </BadgeCount>
+
+                {renderNewButtonChildren && (
+                  <>
+                    <span style="display: flex; flex: 1"></span>
+                    <Button
+                      ref={createButtonRef}
+                      selfAlignX="end"
+                      className="summary_action_icon"
+                      width="22"
+                      height="22"
+                      padding="2"
+                      discrete
+                      shrink={false}
+                      onMouseDown={(e) => {
+                        // ensure when input is focused it stays focused
+                        // without this preventDefault() the input would be blurred (which might cause creation of an item) and re-opened empty
+                        e.preventDefault();
+                      }}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        startCreatingNew();
+                      }}
+                    >
+                      {renderNewButtonChildren()}
+                    </Button>
+                  </>
+                )}
+              </Text>
+            </Text>
           </>
         }
       >
