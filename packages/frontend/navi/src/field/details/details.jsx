@@ -98,6 +98,8 @@ const DetailsBasic = (props) => {
     openKeyShortcut = "ArrowRight",
     closeKeyShortcut = "ArrowLeft",
     onToggle,
+    onOpen,
+    onClose,
     children,
     ...rest
   } = props;
@@ -190,15 +192,17 @@ const DetailsBasic = (props) => {
       id={id}
       baseClassName="navi_details"
       onToggle={(e) => {
+        onToggle?.(e);
         const isOpen = e.newState === "open";
         if (mountedRef.current) {
           if (isOpen) {
             uiStateController.setUIState(true, e);
+            onOpen?.(e);
           } else {
             uiStateController.setUIState(false, e);
+            onClose?.(e);
           }
         }
-        onToggle?.(e);
       }}
       open={open}
     >
@@ -218,7 +222,8 @@ const DetailsWithAction = (props) => {
   const {
     action,
     loading,
-    onUIStateChange,
+    onOpen,
+    onClose,
     onCancel,
     onActionPrevented,
     onActionStart,
@@ -268,16 +273,16 @@ const DetailsWithAction = (props) => {
       {...rest}
       ref={ref}
       loading={loading || actionLoading}
-      onUIStateChange={(open, e) => {
-        if (open) {
-          dispatchActionRequestedCustomEvent(e.target, {
-            event: e,
-            requester: e.target,
-          });
-        } else {
-          effectiveAction.abort();
-        }
-        onUIStateChange?.(open, e);
+      onOpen={(e) => {
+        dispatchActionRequestedCustomEvent(e.target, {
+          event: e,
+          requester: e.target,
+        });
+        onOpen?.(e);
+      }}
+      onClose={(e) => {
+        effectiveAction.abort();
+        onClose?.(e);
       }}
     >
       <ActionRenderer action={effectiveAction}>{children}</ActionRenderer>
