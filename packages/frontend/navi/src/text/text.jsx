@@ -98,7 +98,7 @@ import.meta.css = /* css */ `
 const REGULAR_SPACE = <span data-navi-space=""> </span>;
 const CustomWidthSpace = ({ value }) => {
   return (
-    <span className="navi_custom_space" style={`padding-left: ${value}px`}>
+    <span className="navi_custom_space" style={`padding-left: ${value}`}>
       &#8203;
     </span>
   );
@@ -129,7 +129,7 @@ export const applySpacingOnTextChildren = (children, spacing) => {
       separator = spacing;
     }
   } else if (typeof spacing === "number") {
-    separator = <CustomWidthSpace value={spacing} />;
+    separator = <CustomWidthSpace value={`${spacing}px`} />;
   } else {
     separator = spacing;
   }

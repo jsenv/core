@@ -12,7 +12,8 @@ import.meta.css = /* css */ `
     --font-size: 0.7em;
     --x-background: var(--background);
     --x-background-color: var(--background-color);
-    --x-padding: 0.5em;
+    --padding-x: 0.5em;
+    --padding-y: 0.2em;
     position: relative;
     display: inline-block;
     color: var(--color, var(--x-color-contrasting));
@@ -24,8 +25,11 @@ import.meta.css = /* css */ `
 
     /* Ellipse */
     &[data-ellipse] {
-      padding-right: var(--x-padding);
-      padding-left: var(--x-padding);
+      padding-top: var(--padding-y);
+      padding-right: var(--padding-x);
+      padding-bottom: var(--padding-y);
+      padding-left: var(--padding-x);
+      line-height: normal;
       background: var(--x-background);
       background-color: var(--x-background-color, var(--x-background));
       border-radius: 1em;
@@ -158,6 +162,41 @@ const applyMaxToValue = (max, value) => {
   return value;
 };
 
+const BadgeCountEllipse = ({
+  ref,
+  loading,
+  children,
+  hasOverflow,
+  ...props
+}) => {
+  return (
+    <Text
+      ref={ref}
+      className="navi_badge_count"
+      bold
+      data-ellipse=""
+      data-value-overflow={hasOverflow ? "" : undefined}
+      data-loading={loading ? "" : undefined}
+      {...props}
+      styleCSSVars={BadgeStyleCSSVars}
+      spacing="pre"
+    >
+      {loading ? (
+        <Icon>
+          <LoadingDots />
+        </Icon>
+      ) : (
+        <>
+          {/* When we double click on count we don't want to eventually select surrounding text (in case) */}
+          {/* the surrounding text has no spaces so we add "&#8203;" (zero-width space char) */}
+          <span style="user-select: none">&#8203;</span>
+          {children}
+          <span style="user-select: none">&#8203;</span>
+        </>
+      )}
+    </Text>
+  );
+};
 const BadgeCountCircle = ({
   ref,
   charCount,
@@ -192,41 +231,6 @@ const BadgeCountCircle = ({
           {/* the surrounding text has no spaces so we add "&#8203;" (zero-width space char) */}
           <span style="user-select: none">&#8203;</span>
           <span className="navi_badge_count_text">{children}</span>
-          <span style="user-select: none">&#8203;</span>
-        </>
-      )}
-    </Text>
-  );
-};
-const BadgeCountEllipse = ({
-  ref,
-  loading,
-  children,
-  hasOverflow,
-  ...props
-}) => {
-  return (
-    <Text
-      ref={ref}
-      className="navi_badge_count"
-      bold
-      data-ellipse=""
-      data-value-overflow={hasOverflow ? "" : undefined}
-      data-loading={loading ? "" : undefined}
-      {...props}
-      styleCSSVars={BadgeStyleCSSVars}
-      spacing="pre"
-    >
-      {loading ? (
-        <Icon>
-          <LoadingDots />
-        </Icon>
-      ) : (
-        <>
-          {/* When we double click on count we don't want to eventually select surrounding text (in case) */}
-          {/* the surrounding text has no spaces so we add "&#8203;" (zero-width space char) */}
-          <span style="user-select: none">&#8203;</span>
-          {children}
           <span style="user-select: none">&#8203;</span>
         </>
       )}
