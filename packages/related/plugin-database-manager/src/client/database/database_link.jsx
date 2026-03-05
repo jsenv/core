@@ -1,27 +1,23 @@
-import { useRouteStatus } from "@jsenv/navi";
+import { RouteLink } from "@jsenv/navi";
+
 import { DATABASE_ROUTE } from "../routes.js";
 import { DatabaseSvg } from "./database_icons.jsx";
 import { useCurrentDatabase } from "./database_store.js";
 
-const LinkWithIcon = (props) => props;
-
 export const DatabaseLink = ({ database, children, ...rest }) => {
   const datname = database.datname;
-  const databaseUrl = DATABASE_ROUTE.buildUrl({ datname });
-  const { params } = useRouteStatus(DATABASE_ROUTE);
-  const activeDatname = params.datname;
   const currentDatabase = useCurrentDatabase();
   const isCurrent = currentDatabase && datname === currentDatabase.datname;
 
   return (
-    <LinkWithIcon
-      icon={<DatabaseSvg />}
-      isCurrent={isCurrent}
-      href={databaseUrl}
-      active={activeDatname === datname}
+    <RouteLink
+      route={DATABASE_ROUTE}
+      routeParams={{ datname }}
+      startIcon={<DatabaseSvg />}
       {...rest}
     >
+      {isCurrent && <span>(current)</span>}
       {children}
-    </LinkWithIcon>
+    </RouteLink>
   );
 };

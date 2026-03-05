@@ -55,7 +55,7 @@ export const Explorer = () => {
         </select> */}
       </div>
       <ExplorerBody />
-      <div className="explorer_foot"></div>
+      <div className="explorer_foot">Footer info</div>
     </nav>
   );
 };

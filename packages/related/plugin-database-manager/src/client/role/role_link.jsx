@@ -12,9 +12,9 @@ export const RoleLink = ({ role, children, ...rest }) => {
 
   return (
     <RouteLink
-      startIcon={<RoleIcon color="#333" />}
       route={ROLE_ROUTE}
       routeParams={{ rolname }}
+      startIcon={<RoleIcon color="#333" />}
       {...rest}
     >
       {isCurrent && <span>(current)</span>}

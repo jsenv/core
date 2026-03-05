@@ -249,6 +249,10 @@ export const initFlexDetailsSet = (
     const transitions = Array.from(changeSet).map(({ element, target }) => {
       const transition = createHeightTransition(element, target, {
         duration: HEIGHT_TRANSITION_DURATION,
+        // because we also set inline height when we don't want animation and it should win
+        // we could also commit styles for animation or cancel any animation so that when we explicitely set height
+        // sync the transition gets overriden
+        styleSynchronizer: "inline_style",
       });
       return transition;
     });
