@@ -20,8 +20,6 @@ import.meta.css = /* css */ `
 
     .navi_count_badge_overflow {
       position: relative;
-      top: -0.1em;
-      font-size: 0.8em;
     }
 
     /* Ellipse */
@@ -57,7 +55,11 @@ import.meta.css = /* css */ `
         --x-number-font-size: 0.9em;
       }
       &[data-three-chars] {
-        --x-radius: 2em;
+        --x-radius: 2.4em;
+        --x-number-font-size: 0.8em;
+      }
+      &[data-four-chars] {
+        --x-radius: 2.6em;
         --x-number-font-size: 0.8em;
       }
 
@@ -88,13 +90,14 @@ const BadgeCountOverflow = () => (
   <span className="navi_count_badge_overflow">+</span>
 );
 const MAX_CHAR_AS_CIRCLE = 3;
+const MAX_FOR_CIRCLE = 99;
 export const BadgeCount = ({
   children,
   maxElement = <BadgeCountOverflow />,
   // When you use max="none" (or max > 99) it might be a good idea to force ellipse
   // so that visually the interface do not suddently switch from circle to ellipse depending on the count
   circle,
-  max = circle ? 99 : Infinity,
+  max = circle ? MAX_FOR_CIRCLE : Infinity,
   ...props
 }) => {
   const defaultRef = useRef();
@@ -173,6 +176,7 @@ const BadgeCountCircle = ({
       data-single-char={charCount === 1 ? "" : undefined}
       data-two-chars={charCount === 2 ? "" : undefined}
       data-three-chars={charCount === 3 ? "" : undefined}
+      data-four-chars={charCount === 4 ? "" : undefined}
       data-value-overflow={hasOverflow ? "" : undefined}
       {...props}
       styleCSSVars={BadgeStyleCSSVars}
