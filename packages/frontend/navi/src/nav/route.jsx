@@ -22,6 +22,7 @@ import { signal } from "@preact/signals";
 import { createContext } from "preact";
 import { useContext, useLayoutEffect, useRef } from "preact/hooks";
 
+// import { ActionRenderer } from "../action/action_renderer.jsx";
 import { useUITransitionContentId } from "../ui_transition/ui_transition.jsx";
 import { useForceRender } from "./use_force_render.js";
 
@@ -306,10 +307,13 @@ const initRouteObserver = ({
           : undefined,
     );
     const SlotMatchingElement = SlotMatchingElementSignal.value;
-    if (typeof element === "function") {
-      const Element = element;
-      element = <Element />;
-    }
+    // const Element = () => {
+    //   if (!route) {
+    //     return element;
+    //   }
+    //    const action = route.action;
+    //   return <ActionRenderer action={action}>{element}</ActionRenderer>;
+    // };
 
     return (
       <RouteInfoContext.Provider value={matchingRouteInfo}>

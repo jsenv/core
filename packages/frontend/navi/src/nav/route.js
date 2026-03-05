@@ -7,6 +7,7 @@ import { createPubSub } from "@jsenv/dom";
 import { batch, computed, effect, signal } from "@preact/signals";
 
 import { getActionStatus } from "../action/action_private_properties.js";
+import { ACTION } from "../action/actions.js";
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
 import { resolveRouteUrl, setupPatterns } from "./route_pattern.js";
 
@@ -411,7 +412,9 @@ export const updateRoutes = (
     const routeLoadRequestedMap = new Map();
     const shouldLoadOrReload = (route, shouldLoad) => {
       const routeAction = route.action;
-      const currentAction = routeAction.getCurrentAction();
+      const currentAction = routeAction.getCurrentAction
+        ? routeAction.getCurrentAction()
+        : routeAction;
       if (shouldLoad) {
         if (
           navigationType === "replace" ||
@@ -457,7 +460,7 @@ export const updateRoutes = (
       oldParams,
     } of routeMatchInfoSet) {
       const routeAction = route.action;
-      if (!routeAction) {
+      if (!routeAction || routeAction === ACTION.COMPLETED) {
         continue;
       }
 
@@ -822,12 +825,10 @@ const registerRoute = (routePattern) => {
   cleanupCallbackSet.add(disposeUrlEffect);
 
   // action
-  route.actionStatusSignal = signal({
-    loading: false,
-    error: null,
-    aborted: false,
-    completed: true,
-    data: undefined,
+  route.action = ACTION.COMPLETED;
+  route.actionStatusSignal = computed(() => {
+    const actionStatus = getActionStatus(route.action);
+    return actionStatus;
   });
   route.bindAction = (action) => {
     const { store } = action.meta;

@@ -1406,6 +1406,16 @@ const isPlainObject = (obj) => {
   );
 };
 
+const COMPLETED_ACTION = createAction(() => undefined, {
+  name: "ACTION.COMPLETED",
+});
+COMPLETED_ACTION.run();
+
+export const ACTION = {
+  create: createAction,
+  COMPLETED: COMPLETED_ACTION,
+};
+
 if (import.meta.hot) {
   import.meta.hot.dispose(() => {
     abortRunningActions();

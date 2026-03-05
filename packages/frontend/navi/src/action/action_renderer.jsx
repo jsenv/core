@@ -37,7 +37,7 @@ export const ActionRenderer = ({ action, children, disabled }) => {
   } else if (isPlainObject(children)) {
     renderBranches = children;
   } else {
-    renderBranches = {};
+    renderBranches = { completed: children };
   }
 
   const {
