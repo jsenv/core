@@ -22,19 +22,26 @@ export const {
   TABLE_DATA_ROUTE,
   TABLE_SETTINGS_ROUTE,
 } = setupRoutes({
-  ROLE_ROUTE: `/roles/:rolname=${rolnameSignal}`,
-  DATABASE_ROUTE: `/databases/:datname=${datnameSignal}`,
-  TABLE_ROUTE: `/tables/:tablename=${tablenameSignal}/`,
-  TABLE_DATA_ROUTE: `/tables/:tablename=${tablenameSignal}`,
-  TABLE_SETTINGS_ROUTE: `/tables/:tablename=${tablenameSignal}/settings`,
+  ROLE_ROUTE: {
+    pattern: `/roles/:rolname=${rolnameSignal}`,
+    action: ROLE.GET,
+  },
+  DATABASE_ROUTE: {
+    pattern: `/databases/:datname=${datnameSignal}`,
+    action: DATABASE.GET,
+  },
+  TABLE_ROUTE: {
+    pattern: `/tables/:tablename=${tablenameSignal}/`,
+    action: TABLE.GET,
+  },
+  TABLE_DATA_ROUTE: {
+    pattern: `/tables/:tablename=${tablenameSignal}`,
+    action: TABLE_ROW.GET_MANY,
+  },
+  TABLE_SETTINGS_ROUTE: {
+    pattern: `/tables/:tablename=${tablenameSignal}/settings`,
+    action: createAction(() => {}, {
+      name: "get table settings",
+    }),
+  },
 });
-
-ROLE_ROUTE.bindAction(ROLE.GET);
-DATABASE_ROUTE.bindAction(DATABASE.GET);
-TABLE_ROUTE.bindAction(TABLE.GET);
-TABLE_DATA_ROUTE.bindAction(TABLE_ROW.GET_MANY);
-TABLE_SETTINGS_ROUTE.bindAction(
-  createAction(() => {}, {
-    name: "get table settings",
-  }),
-);

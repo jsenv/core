@@ -72,14 +72,30 @@ export const setupRoutes = (routeDefinition) => {
       "Routes already exist. Call clearAllRoutes() first to clean up existing routes before creating new ones. This prevents cross-test pollution and ensures clean state.",
     );
   }
+
+  const routeKeyedPatternStrings = {};
+  const keySet = new Set(Object.keys(routeDefinition));
+  const routeOptionsMap = new Map();
+  for (const key of keySet) {
+    const definition = routeDefinition[key];
+    if (typeof definition === "object") {
+      const { pattern, ...options } = definition;
+      routeOptionsMap.set(key, options);
+      routeKeyedPatternStrings[key] = pattern;
+    } else {
+      routeKeyedPatternStrings[key] = definition;
+    }
+  }
+
   // PHASE 1: Setup patterns with unified objects (includes all relationships and signal connections)
-  const routePatterns = setupPatterns(routeDefinition);
+  const routeKeyedPatterns = setupPatterns(routeKeyedPatternStrings);
 
   // PHASE 2: Create routes using the unified pattern objects
   const routes = {};
-  for (const key of Object.keys(routeDefinition)) {
-    const routePattern = routePatterns[key];
-    const route = registerRoute(routePattern);
+  for (const key of keySet) {
+    const routeOptions = routeOptionsMap.get(key);
+    const routePattern = routeKeyedPatterns[key];
+    const route = registerRoute(routePattern, routeOptions);
     routes[key] = route;
   }
   onRouteDefined();
@@ -506,7 +522,7 @@ export const updateRoutes = (
   return returnValue;
 };
 
-const registerRoute = (routePattern) => {
+const registerRoute = (routePattern, { action = ACTION.COMPLETED } = {}) => {
   const urlPatternRaw = routePattern.originalPattern;
   if (DEBUG) {
     console.debug(`Creating route: ${urlPatternRaw}`);
@@ -824,13 +840,16 @@ const registerRoute = (routePattern) => {
   cleanupCallbackSet.add(disposeRelativeUrlEffect);
   cleanupCallbackSet.add(disposeUrlEffect);
 
-  // action
-  route.action = ACTION.COMPLETED;
-  route.actionStatusSignal = computed(() => {
-    const actionStatus = getActionStatus(route.action);
-    return actionStatus;
-  });
-  route.bindAction = (action) => {
+  setup_action: {
+    const actionBoundToThisRoute =
+      action === ACTION.COMPLETED
+        ? action
+        : action.bindParams(route.paramsSignal);
+    route.action = actionBoundToThisRoute;
+    route.actionStatusSignal = computed(() => {
+      const actionStatus = getActionStatus(actionBoundToThisRoute);
+      return actionStatus;
+    });
     const { store } = action.meta;
     if (store) {
       const { mutableIdKeys } = store;
@@ -856,15 +875,7 @@ const registerRoute = (routePattern) => {
         });
       }
     }
-
-    const actionBoundToThisRoute = action.bindParams(route.paramsSignal);
-    route.action = actionBoundToThisRoute;
-    route.actionStatusSignal = computed(() => {
-      const actionStatus = getActionStatus(actionBoundToThisRoute);
-      return actionStatus;
-    });
-    return actionBoundToThisRoute;
-  };
+  }
 
   return route;
 };

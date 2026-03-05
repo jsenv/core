@@ -1409,7 +1409,7 @@ const isPlainObject = (obj) => {
 const COMPLETED_ACTION = createAction(() => undefined, {
   name: "ACTION.COMPLETED",
 });
-COMPLETED_ACTION.run();
+getActionPrivateProperties(COMPLETED_ACTION).performRun({});
 
 export const ACTION = {
   create: createAction,
