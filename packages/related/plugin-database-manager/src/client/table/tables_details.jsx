@@ -38,6 +38,12 @@ export const TablesDetails = (props) => {
           loading={props.deletedItems.includes(table.tablename)}
           table={table}
           draggable={false}
+          style={{
+            ":-navi-href-current": {
+              backgroundColor: "black",
+              color: "white",
+            },
+          }}
           {...props}
         />
       )}

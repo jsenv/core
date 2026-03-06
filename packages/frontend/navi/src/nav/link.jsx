@@ -55,6 +55,7 @@ import.meta.css = /* css */ `
     --x-link-color: var(--link-color);
     --x-link-color-hover: var(--link-color-hover, var(--link-color));
     --x-link-color-visited: var(--link-color-visited);
+    --x-link-color-current: var(--link-color-current);
     --x-link-color-active: var(--link-color-active);
     --x-link-text-decoration: var(--link-text-decoration);
     --x-link-text-decoration-hover: var(--link-text-decoration-hover);
@@ -72,29 +73,6 @@ import.meta.css = /* css */ `
     outline-color: var(--link-outline-color);
     cursor: var(--x-link-cursor);
 
-    /* Current */
-    &[data-href-current] {
-      --x-link-cursor: default;
-      &[data-anchor] {
-        /* For anchor links, we want to keep the pointer cursor to indicate interactivity */
-        /* as anchor link will still scroll to the section even if it's the current page */
-        --x-link-cursor: pointer;
-      }
-    }
-    /* Hover */
-    &[data-hover] {
-      --x-link-color: var(--x-link-color-hover);
-      --x-link-text-decoration: var(--x-link-text-decoration-hover);
-    }
-    /* Focus */
-    &[data-focus],
-    &[data-focus-visible] {
-      position: relative;
-      z-index: 1; /* Ensure focus outline is above other elements */
-    }
-    &[data-focus-visible] {
-      outline-width: 2px;
-    }
     /* Visited */
     &[data-visited] {
       --x-link-color: var(--x-link-color-visited);
@@ -104,6 +82,30 @@ import.meta.css = /* css */ `
         /* No need for a special color for visited anchors */
         --x-link-color: var(--link-color);
       }
+    }
+    /* Hover */
+    &[data-hover] {
+      --x-link-color: var(--x-link-color-hover);
+      --x-link-text-decoration: var(--x-link-text-decoration-hover);
+    }
+    /* Current */
+    &[data-href-current] {
+      --x-link-color: var(--link-color-current);
+      --x-link-cursor: default;
+      &[data-anchor] {
+        /* For anchor links, we want to keep the pointer cursor to indicate interactivity */
+        /* as anchor link will still scroll to the section even if it's the current page */
+        --x-link-cursor: pointer;
+      }
+    }
+    /* Focus */
+    &[data-focus],
+    &[data-focus-visible] {
+      position: relative;
+      z-index: 1; /* Ensure focus outline is above other elements */
+    }
+    &[data-focus-visible] {
+      outline-width: 2px;
     }
     /* Selected */
     &[aria-selected] {
@@ -135,7 +137,6 @@ import.meta.css = /* css */ `
     &[data-discrete] {
       --link-color: inherit;
       --link-text-decoration: none;
-      --x-link-color: var(--link-color);
     }
     /* Reveal on interaction */
     &[data-reveal-on-interaction] {
@@ -189,6 +190,9 @@ const LinkStyleCSSVars = {
   },
   ":active": {
     color: "--link-color-active",
+  },
+  ":-navi-href-current": {
+    color: "--link-color-current",
   },
 };
 const LinkPseudoClasses = [
