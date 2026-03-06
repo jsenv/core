@@ -332,10 +332,22 @@ export const createRoutePattern = (pattern) => {
               childWouldMatch = false;
               break;
             }
+          } else if (!parentSegment) {
+            // Child has literal segments beyond parent's segments - not reachable
+            // Example: root "/" cannot reach "/admin/analytics" because it can't satisfy "admin" literal
+            childWouldMatch = false;
+            break;
+          } else if (
+            parentSegment.type === "literal" &&
+            parentSegment.value !== childSegment.value
+          ) {
+            // Both have literals but they don't match
+            childWouldMatch = false;
+            break;
           }
-          // If parent also has literal at this position, they should already match from route hierarchy
+          // If parent also has matching literal at this position, continue
         }
-        // Parameter segments are always compatible
+        // Parameter segments are always compatible if parent has corresponding segment
       }
 
       if (childWouldMatch) {
