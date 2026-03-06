@@ -906,9 +906,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
         MAP_ISOCHRONE_TIME_WALK_ROUTE: "/map/isochrone/time/walk",
         MAP_ISOCHRONE_TIME_BIKE_ROUTE: "/map/isochrone/time/bike",
       });
-      updateRoutes(
-        `${baseUrl}/map/isochrone/time?zone=london&iso_lon=1&mode=bike`,
-      );
+      updateRoutes(`${baseUrl}/map/isochrone/time?zone=london&iso_lon=1`);
 
       return {
         map_root_url: MAP_ROUTE.buildUrl({ panel: undefined }),
