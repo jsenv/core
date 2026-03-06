@@ -104,12 +104,8 @@ try {
   },
   "nav_to_calls": [
     {
-      "url": "http://127.0.0.1/map/isochrone?iso_lon=2.3522&walk",
-      "callReason": 'walk signal change on route "/map/isochrone/compare?walk&walk_minute"'
-    },
-    {
       "url": "http://127.0.0.1/map/isochrone?walk",
-      "callReason": 'replaceParams delegation from route "/map/isochrone/:tab/?iso_lon" to route "/map/isochrone/compare?walk&walk_minute" (original reason: iso_lon signal reset to default on route "/map/isochrone/:tab/?iso_lon")'
+      "callReason": 'walk signal change on route "/map/isochrone/compare?walk&walk_minute"'
     }
   ],
   "most_specific_url_used": "http://127.0.0.1/map/isochrone?walk",

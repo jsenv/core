@@ -1962,10 +1962,6 @@ export const createRoutePattern = (pattern) => {
       // Only include if not already processed and has custom value (not default)
       const signalValue = connection.signal.value;
       if (signalValue !== undefined) {
-        // For ancestor optimization, include all defined signal values because they
-        // represent the active state that child routes inherit, regardless of
-        // whether they match default values or not
-
         // Don't include path parameters that correspond to literal segments we're optimizing away
         const targetParam = targetParams.find((p) => p.name === paramName);
         const isPathParam = targetParam !== undefined; // Any param in segments is a path param
@@ -1979,10 +1975,17 @@ export const createRoutePattern = (pattern) => {
           continue;
         }
 
-        ancestorParams[paramName] = signalValue;
-        if (DEBUG) {
+        // For query parameters, only include custom values (not defaults)
+        if (connection.isCustomValue(signalValue)) {
+          ancestorParams[paramName] = signalValue;
+          if (DEBUG) {
+            console.debug(
+              `[${pattern}] tryDirectOptimization: Added target signal param ${paramName}=${signalValue}`,
+            );
+          }
+        } else if (DEBUG) {
           console.debug(
-            `[${pattern}] tryDirectOptimization: Added target signal param ${paramName}=${signalValue}`,
+            `[${pattern}] tryDirectOptimization: Skipping default value ${paramName}=${signalValue}`,
           );
         }
       } else if (DEBUG) {
