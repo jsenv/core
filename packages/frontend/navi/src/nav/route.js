@@ -263,7 +263,11 @@ export const updateRoutes = (
         newMatching,
       } of routeMatchInfoSet) {
         const { routePattern } = routePrivateProperties;
-        const { connectionMap } = routePattern;
+        const { pathConnectionMap, queryConnectionMap } = routePattern;
+        const connectionMap = new Map([
+          ...pathConnectionMap,
+          ...queryConnectionMap,
+        ]);
 
         for (const [paramName, connection] of connectionMap) {
           const { signal: paramSignal, debug } = connection;
@@ -527,7 +531,8 @@ const registerRoute = (routePattern, { action = ACTION.COMPLETED } = {}) => {
   if (DEBUG) {
     console.debug(`Creating route: ${urlPatternRaw}`);
   }
-  const { cleanPattern, connectionMap } = routePattern;
+  const { cleanPattern, pathConnectionMap, queryConnectionMap } = routePattern;
+  const connectionMap = new Map([...pathConnectionMap, ...queryConnectionMap]);
   const [publishStatus, subscribeStatus] = createPubSub();
 
   // prepare route object

@@ -184,7 +184,6 @@ export const createRoutePattern = (pattern) => {
   // Build separate connection maps for path vs query parameters
   const pathConnectionMap = new Map();
   const queryConnectionMap = new Map();
-  const connectionMap = new Map(); // Keep for backward compatibility during transition
 
   // Create signalSet to track all signals this pattern depends on
   const signalSet = new Set();
@@ -196,12 +195,13 @@ export const createRoutePattern = (pattern) => {
       queryConnectionMap.set(connection.paramName, connection);
     }
 
-    // Also add to unified map for backward compatibility
-    connectionMap.set(connection.paramName, connection);
     signalSet.add(connection.signal);
   }
 
-  const parsedPattern = parsePattern(cleanPattern, connectionMap);
+  const parsedPattern = parsePattern(
+    cleanPattern,
+    new Map([...pathConnectionMap, ...queryConnectionMap]),
+  );
 
   if (DEBUG) {
     console.debug(`[CustomPattern] Created pattern:`, parsedPattern);
@@ -217,7 +217,7 @@ export const createRoutePattern = (pattern) => {
   const applyOn = (url) => {
     const result = matchUrl(parsedPattern, url, {
       baseUrl,
-      connectionMap,
+      connectionMap: new Map([...pathConnectionMap, ...queryConnectionMap]),
       patternObj: patternObject,
     });
 
@@ -535,7 +535,9 @@ export const createRoutePattern = (pattern) => {
 
           // If not in params, check signals
           if (parentParamValue === undefined) {
-            const parentConnection = connectionMap.get(paramName);
+            const parentConnection =
+              pathConnectionMap.get(paramName) ||
+              queryConnectionMap.get(paramName);
             if (parentConnection) {
               parentParamValue = parentConnection.signal.value;
             }
@@ -646,7 +648,7 @@ export const createRoutePattern = (pattern) => {
 
     // ROBUST FIX: For path parameters, check semantic compatibility by verifying
     // that parent parameter values can actually produce the child route structure
-    const isParentPathParam = connectionMap.has(paramName);
+    const isParentPathParam = pathConnectionMap.has(paramName);
     if (isParentPathParam) {
       // Check if parent parameter value matches any child literal where it should
       // The key insight: if parent has a specific parameter value, child route must
@@ -680,7 +682,7 @@ export const createRoutePattern = (pattern) => {
     // Check for generic parameter-literal conflicts (only for path parameters)
     if (!matchesChildLiteral) {
       // Check if this is a path parameter from parent pattern
-      const isParentPathParam = connectionMap.has(paramName);
+      const isParentPathParam = pathConnectionMap.has(paramName);
       if (isParentPathParam) {
         // Parameter value (from user or signal) doesn't match this child's literals
         // Check if child has any literal segments that would conflict with this parameter
@@ -726,7 +728,8 @@ export const createRoutePattern = (pattern) => {
 
         // Check if sibling route uses this parameter and get the connection
         const siblingConnection =
-          siblingPatternObj.connectionMap.get(paramName);
+          siblingPatternObj.pathConnectionMap.get(paramName) ||
+          siblingPatternObj.queryConnectionMap.get(paramName);
         if (!siblingConnection) {
           continue;
         }
@@ -772,7 +775,8 @@ export const createRoutePattern = (pattern) => {
         // This literal segment replaces a parameter in the parent
         const paramName = parentSegment.name;
         const explicitValue = params[paramName];
-        const connection = connectionMap.get(paramName);
+        const connection =
+          pathConnectionMap.get(paramName) || queryConnectionMap.get(paramName);
         const signalValue = connection ? connection.signal.value : undefined;
 
         // Check if the parameter has the required value
@@ -809,7 +813,10 @@ export const createRoutePattern = (pattern) => {
     let hasActiveParams = false;
     const childParams = { ...compatibility.childParams };
 
-    for (const [paramName, connection] of childPatternObj.connectionMap) {
+    for (const [paramName, connection] of new Map([
+      ...childPatternObj.pathConnectionMap,
+      ...childPatternObj.queryConnectionMap,
+    ])) {
       // Check if parameter was explicitly provided by user
       const hasExplicitParam = paramName in params;
       const explicitValue = params[paramName];
@@ -855,14 +862,17 @@ export const createRoutePattern = (pattern) => {
         if (value === undefined) return false;
 
         // Check if this parameter has a default value in child's connections
-        const childConnection = childPatternObj.connectionMap.get(paramName);
+        const childConnection =
+          childPatternObj.pathConnectionMap.get(paramName) ||
+          childPatternObj.queryConnectionMap.get(paramName);
         if (childConnection) {
           const childDefault = childConnection.getDefaultValue();
           return value !== childDefault;
         }
 
         // Check if this parameter has a default value in parent's connections (current pattern)
-        const parentConnection = connectionMap.get(paramName);
+        const parentConnection =
+          pathConnectionMap.get(paramName) || queryConnectionMap.get(paramName);
         if (parentConnection) {
           const parentDefault = parentConnection.getDefaultValue();
           return value !== parentDefault;
@@ -920,7 +930,10 @@ export const createRoutePattern = (pattern) => {
 
         // Check if parameters that determine child selection are non-default
         // OR if any descendant parameters indicate explicit navigation
-        for (const [paramName, connection] of connectionMap) {
+        for (const [paramName, connection] of new Map([
+          ...pathConnectionMap,
+          ...queryConnectionMap,
+        ])) {
           const currentDefault = connection.getDefaultValue(); // Use current dynamic default
           const resolvedValue = resolvedParams[paramName];
           const userProvidedParam = paramName in params;
@@ -973,7 +986,10 @@ export const createRoutePattern = (pattern) => {
         // When structural parameters (those that determine child selection) are defaults,
         // prefer parent route regardless of whether child has other non-default parameters
         if (childSpecificParamsAreDefaults) {
-          for (const [paramName, connection] of connectionMap) {
+          for (const [paramName, connection] of new Map([
+            ...pathConnectionMap,
+            ...queryConnectionMap,
+          ])) {
             const currentDefault = connection.getDefaultValue(); // Use current dynamic default
             const userProvidedParam = paramName in params;
 
@@ -1017,7 +1033,10 @@ export const createRoutePattern = (pattern) => {
   ) => {
     // Start with child signal values
     const baseParams = {};
-    for (const [paramName, connection] of childPatternObj.connectionMap) {
+    for (const [paramName, connection] of new Map([
+      ...childPatternObj.pathConnectionMap,
+      ...childPatternObj.queryConnectionMap,
+    ])) {
       // Check if parameter was explicitly provided by user
       const hasExplicitParam = paramName in params;
       const explicitValue = params[paramName];
@@ -1053,7 +1072,10 @@ export const createRoutePattern = (pattern) => {
         const { paramName } = connection;
 
         // Skip if child route already handles this parameter
-        if (childPatternObj.connectionMap.has(paramName)) {
+        if (
+          childPatternObj.pathConnectionMap.has(paramName) ||
+          childPatternObj.queryConnectionMap.has(paramName)
+        ) {
           continue; // Child route handles this parameter directly
         }
 
@@ -1096,7 +1118,10 @@ export const createRoutePattern = (pattern) => {
       }
 
       // Skip if child route already handles this parameter
-      if (childPatternObj.connectionMap.has(paramName)) {
+      if (
+        childPatternObj.pathConnectionMap.has(paramName) ||
+        childPatternObj.queryConnectionMap.has(paramName)
+      ) {
         continue; // Child route handles this parameter directly
       }
 
@@ -1110,7 +1135,8 @@ export const createRoutePattern = (pattern) => {
       }
 
       // Check if parent parameter is at default value
-      const parentConnection = connectionMap.get(paramName);
+      const parentConnection =
+        pathConnectionMap.get(paramName) || queryConnectionMap.get(paramName);
       const parentDefault = parentConnection
         ? parentConnection.getDefaultValue()
         : undefined;
@@ -1124,7 +1150,9 @@ export const createRoutePattern = (pattern) => {
 
     // Apply user params with filtering logic
     for (const [paramName, userValue] of Object.entries(params)) {
-      const childConnection = childPatternObj.connectionMap.get(paramName);
+      const childConnection =
+        childPatternObj.pathConnectionMap.get(paramName) ||
+        childPatternObj.queryConnectionMap.get(paramName);
 
       if (childConnection) {
         // Only include if it's a custom value (not default)
@@ -1650,7 +1678,9 @@ export const createRoutePattern = (pattern) => {
       // Include parameters that target pattern specifically needs
       if (targetQueryParamNames.has(paramName)) {
         // Only include if the value is not the default value
-        const connection = targetAncestor.connectionMap.get(paramName);
+        const connection =
+          targetAncestor.pathConnectionMap.get(paramName) ||
+          targetAncestor.queryConnectionMap.get(paramName);
         if (connection && connection.getDefaultValue() !== value) {
           ancestorParams[paramName] = value;
           if (DEBUG) {
@@ -1879,9 +1909,8 @@ export const createRoutePattern = (pattern) => {
     urlPatternRaw: pattern,
     cleanPattern,
     connections,
-    connectionMap, // Keep unified map for backward compatibility
-    pathConnectionMap, // New: separate map for path parameters
-    queryConnectionMap, // New: separate map for query parameters
+    pathConnectionMap, // Separate map for path parameters
+    queryConnectionMap, // Separate map for query parameters
     parsedPattern,
     signalSet,
     children: [],
@@ -2781,7 +2810,6 @@ export const setupPatterns = (patternDefinitions) => {
               ...ancestorConnection,
               inherited: true, // Mark as inherited for proper handling
             };
-            currentPatternObj.connectionMap.set(paramName, inheritedConnection);
             currentPatternObj.queryConnectionMap.set(
               paramName,
               inheritedConnection,
