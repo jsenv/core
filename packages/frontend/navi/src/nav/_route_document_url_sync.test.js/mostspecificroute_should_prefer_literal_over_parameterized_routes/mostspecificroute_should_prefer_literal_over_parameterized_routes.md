@@ -101,10 +101,10 @@ try {
     "compare_matches": true
   },
   "nav_to_calls": [
-    "http://127.0.0.1/map/isochrone/compare?walk",
-    "http://127.0.0.1/map/isochrone/compare?walk"
+    "http://127.0.0.1/map/isochrone?iso_lon=2.3522&walk",
+    "http://127.0.0.1/map/isochrone?walk"
   ],
-  "most_specific_url_used": "http://127.0.0.1/map/isochrone/compare?walk",
+  "most_specific_url_used": "http://127.0.0.1/map/isochrone?walk",
   "expected_most_specific_url": "/map/isochrone/compare?walk",
   "actual_segments_comparison": {
     "problem": "Current code counts segments: isochrone=4, compare=3",

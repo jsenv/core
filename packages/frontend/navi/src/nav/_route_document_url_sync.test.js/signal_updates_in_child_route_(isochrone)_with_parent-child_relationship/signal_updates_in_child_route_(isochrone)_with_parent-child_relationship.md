@@ -100,31 +100,31 @@ try {
   },
   "scenario2_enabled_true": {
     "enabled_signal": true,
-    "current_url": "http://127.0.0.1/map/isochrone/compare?zone=nice&iso_lon=10&walk",
+    "current_url": "http://127.0.0.1/map/isochrone?zone=nice&iso_lon=10&walk",
     "nav_to_calls": [
-      "http://127.0.0.1/map/isochrone/compare?zone=nice&iso_lon=10&walk"
+      "http://127.0.0.1/map/isochrone?zone=nice&iso_lon=10&walk"
     ]
   },
   "scenario3_minute_45": {
     "minute_signal": 45,
-    "current_url": "http://127.0.0.1/map/isochrone/compare?zone=nice&iso_lon=10&walk&walk_minute=45",
+    "current_url": "http://127.0.0.1/map/isochrone?zone=nice&iso_lon=10&walk&walk_minute=45",
     "nav_to_calls": [
-      "http://127.0.0.1/map/isochrone/compare?zone=nice&iso_lon=10&walk&walk_minute=45",
-      "http://127.0.0.1/map/isochrone/compare?zone=nice&iso_lon=10&walk&walk_minute=45"
+      "http://127.0.0.1/map/isochrone?zone=nice&iso_lon=10&walk&walk_minute=45",
+      "http://127.0.0.1/map/isochrone?zone=nice&iso_lon=10&walk&walk_minute=45"
     ]
   },
   "scenario4_enabled_false": {
     "enabled_signal": false,
-    "current_url": "http://127.0.0.1/map/isochrone/compare?zone=nice&iso_lon=10&walk_minute=45",
+    "current_url": "http://127.0.0.1/map/isochrone?zone=nice&iso_lon=10&walk_minute=45",
     "nav_to_calls": [
-      "http://127.0.0.1/map/isochrone/compare?zone=nice&iso_lon=10&walk_minute=45"
+      "http://127.0.0.1/map/isochrone?zone=nice&iso_lon=10&walk_minute=45"
     ]
   },
   "scenario5_minute_60": {
     "minute_signal": 60,
-    "current_url": "http://127.0.0.1/map/isochrone/compare?zone=nice&iso_lon=10&walk_minute=60",
+    "current_url": "http://127.0.0.1/map/isochrone?zone=nice&iso_lon=10&walk_minute=60",
     "nav_to_calls": [
-      "http://127.0.0.1/map/isochrone/compare?zone=nice&iso_lon=10&walk_minute=60"
+      "http://127.0.0.1/map/isochrone?zone=nice&iso_lon=10&walk_minute=60"
     ]
   }
 }

@@ -1596,15 +1596,23 @@ export const createRoutePattern = (pattern) => {
       );
 
       if (canOptimizeBasedOnPath) {
-        // Path-based optimization is possible, but ALSO check if current parameters are defaults
-        // This prevents over-aggressive optimization when child has non-default values
-        const hasNonDefaultChildParameters = connections.some((connection) => {
+        // Path-based optimization is possible, but ALSO check if current PATH parameters are defaults
+        // Query parameters should not block path-based optimization, only path parameters should
+        const hasNonDefaultPathParameters = connections.some((connection) => {
           const resolvedValue = resolvedParams[connection.paramName];
-          return connection.isCustomValue(resolvedValue);
+
+          // Only check path parameters, not query parameters
+          const isPathParameter = parsedPattern.segments.some(
+            (segment) =>
+              segment.type === "param" && segment.name === connection.paramName,
+          );
+
+          return isPathParameter && connection.isCustomValue(resolvedValue);
         });
 
-        if (!hasNonDefaultChildParameters) {
-          // Child has no non-default parameters - proceed with optimization
+        if (!hasNonDefaultPathParameters) {
+          // Child has no non-default path parameters - proceed with optimization
+          // Query parameters can be moved to the parent route
           const result = tryDirectOptimization(
             parsedPattern,
             connections,
@@ -1622,7 +1630,7 @@ export const createRoutePattern = (pattern) => {
 
         if (DEBUG) {
           console.debug(
-            `[${pattern}] tryUseAncestor: Path-based optimization blocked - child has non-default parameters`,
+            `[${pattern}] tryUseAncestor: Path-based optimization blocked - child has non-default path parameters`,
           );
         }
       }
