@@ -333,10 +333,28 @@ export const createRoutePattern = (pattern) => {
               break;
             }
           } else if (!parentSegment) {
-            // Child has literal segments beyond parent's segments - not reachable
-            // Example: root "/" cannot reach "/admin/analytics" because it can't satisfy "admin" literal
-            childWouldMatch = false;
-            break;
+            // Child has literal segments beyond parent's segments
+            // Check if this route can be reached through intermediate routes in the hierarchy
+            let canReachThroughIntermediates = false;
+
+            // Look for intermediate routes that could bridge the gap
+            const intermediateRoutes = patternObject.children;
+            for (const intermediateRoute of intermediateRoutes) {
+              // Check if intermediate route has a parameter at this position
+              const intermediateSegment = intermediateRoute.pattern.segments[i];
+              if (intermediateSegment && intermediateSegment.type === "param") {
+                // Check if the child's literal value could match this parameter
+                // This means there's a potential path: parent → intermediate → child
+                canReachThroughIntermediates = true;
+                break;
+              }
+            }
+
+            if (!canReachThroughIntermediates) {
+              // No viable path through intermediates - truly unreachable
+              childWouldMatch = false;
+              break;
+            }
           } else if (
             parentSegment.type === "literal" &&
             parentSegment.value !== childSegment.value
