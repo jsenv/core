@@ -2,7 +2,6 @@
 
 ```js
 const navToCalls = [];
-
 setRouteIntegration({
   navTo: (url) => {
     navToCalls.push(url);
@@ -12,7 +11,6 @@ setRouteIntegration({
 });
 
 try {
-  // Simulate available tramway lines from backend (dynamic) - starts empty
   const tableOpenedSignal = stateSignal(false, {
     type: "boolean",
   });

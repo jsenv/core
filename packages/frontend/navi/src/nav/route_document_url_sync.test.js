@@ -1964,9 +1964,8 @@ await snapshotTests(import.meta.url, ({ test }) => {
     }
   });
 
-  test.ONLY("search param on root with trailing slash", () => {
+  test("search param on root with trailing slash", () => {
     const navToCalls = [];
-
     setRouteIntegration({
       navTo: (url) => {
         navToCalls.push(url);
@@ -1976,7 +1975,6 @@ await snapshotTests(import.meta.url, ({ test }) => {
     });
 
     try {
-      // Simulate available tramway lines from backend (dynamic) - starts empty
       const tableOpenedSignal = stateSignal(false, {
         type: "boolean",
       });
@@ -1996,9 +1994,8 @@ await snapshotTests(import.meta.url, ({ test }) => {
     }
   });
 
-  test.ONLY("search param on parent with trailing slash", () => {
+  test("search param on parent with trailing slash", () => {
     const navToCalls = [];
-
     setRouteIntegration({
       navTo: (url) => {
         navToCalls.push(url);
@@ -2008,7 +2005,6 @@ await snapshotTests(import.meta.url, ({ test }) => {
     });
 
     try {
-      // Simulate available tramway lines from backend (dynamic) - starts empty
       const tableOpenedSignal = stateSignal(false, {
         type: "boolean",
       });
