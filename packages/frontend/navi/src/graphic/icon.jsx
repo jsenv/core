@@ -15,7 +15,6 @@ import.meta.css = /* css */ `
     }
     &[data-icon-char] {
       flex-grow: 0 !important;
-      line-height: normal;
     }
   }
 

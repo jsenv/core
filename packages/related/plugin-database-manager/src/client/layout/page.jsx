@@ -106,7 +106,7 @@ const PageHeadLabel = ({ icon, label, children, actions = [] }) => {
   const title = (
     <h1 style="display: flex; align-items: stretch; gap: 0.2em;">
       <Icon>{icon}</Icon>
-      <Text color="lightgrey" userSelect="none" whiteSpace="nowrap">
+      <Text color="lightgrey" userSelect="none" noWrap>
         {label}
       </Text>
       <span>{children}</span>

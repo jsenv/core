@@ -7,7 +7,6 @@ import { ROLE } from "../role_store.js";
 
 export const RoleCanLoginPage = ({ role }) => {
   const rolname = role.rolname;
-  const deleteRoleAction = ROLE.DELETE.bindParams({ rolname });
   const RoleIcon = pickRoleIcon(role);
 
   return (
@@ -18,7 +17,9 @@ export const RoleCanLoginPage = ({ role }) => {
             component: (
               <Button
                 data-confirm-message={`Are you sure you want to delete the role "${rolname}"?`}
-                action={deleteRoleAction}
+                action={() => {
+                  return ROLE.DELETE({ rolname });
+                }}
               >
                 Delete
               </Button>
@@ -26,7 +27,7 @@ export const RoleCanLoginPage = ({ role }) => {
           },
         ]}
       >
-        <PageHead.Label icon={<RoleIcon />} label={"Role Login:"}>
+        <PageHead.Label icon={<RoleIcon />} label="Role Login:">
           {rolname}
         </PageHead.Label>
       </PageHead>
