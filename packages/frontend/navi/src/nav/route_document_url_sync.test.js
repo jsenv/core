@@ -1963,4 +1963,36 @@ await snapshotTests(import.meta.url, ({ test }) => {
       setRouteIntegration(null);
     }
   });
+
+  test.ONLY("explorer root param", () => {
+    const navToCalls = [];
+
+    setRouteIntegration({
+      navTo: (url) => {
+        navToCalls.push(url);
+        updateRoutes(url);
+        return Promise.resolve();
+      },
+    });
+
+    try {
+      // Simulate available tramway lines from backend (dynamic) - starts empty
+      const tableOpenedSignal = stateSignal(false, {
+        type: "boolean",
+      });
+      setupRoutes({
+        HOME_ROUTE: `/?table_opened=${tableOpenedSignal}`,
+        TABLE_ROUTE: `/table/:table/`,
+      });
+      updateRoutes(`${baseUrl}/table/tablename`);
+      tableOpenedSignal.value = true;
+      return {
+        nav_calls: navToCalls,
+      };
+    } finally {
+      clearAllRoutes();
+      globalSignalRegistry.clear();
+      setRouteIntegration(null);
+    }
+  });
 });
