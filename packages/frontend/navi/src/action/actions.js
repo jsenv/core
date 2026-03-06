@@ -20,7 +20,7 @@ import {
 } from "./action_run_states.js";
 import { SYMBOL_OBJECT_SIGNAL } from "./symbol_object_signal.js";
 
-let DEBUG = false;
+let DEBUG = true;
 export const enableDebugActions = () => {
   DEBUG = true;
 };
@@ -793,8 +793,11 @@ export const createAction = (callback, rootOptions = {}) => {
     name = generateActionName(name, params);
     if (ACTION_AS_FUNCTION) {
       // Create the action as a function that can be called directly
-      action = function actionFunction(params) {
-        const boundAction = bindParams(params);
+      action = function actionFunction(...args) {
+        if (args.length === 0) {
+          return action.run();
+        }
+        const boundAction = bindParams(...args);
         return boundAction.rerun();
       };
       Object.defineProperty(action, "name", {

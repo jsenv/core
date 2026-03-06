@@ -48,7 +48,7 @@
         }
       });
       if (openedSignal.peek()) {
-        USER.GET_MANY.preload();
+        USER.GET_MANY.prerun();
       }
 
       const App = () => {
@@ -61,7 +61,7 @@
               onToggle={(e) => {
                 if (e.target.open) {
                   openedSignal.value = true;
-                  USER.GET_MANY.load();
+                  USER.GET_MANY.run();
                 } else {
                   openedSignal.value = false;
                   USER.GET_MANY.abort();

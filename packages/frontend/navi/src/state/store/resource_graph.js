@@ -11,7 +11,7 @@ import {
 import { getCallerInfo } from "../../utils/get_caller_info.js";
 import { arraySignalStore, primitiveCanBeId } from "./array_signal_store.js";
 
-let DEBUG = false;
+let DEBUG = true;
 
 // Resource Lifecycle Manager
 // This handles ALL resource lifecycle logic (rerun/reset) across all resources

@@ -38,7 +38,10 @@
         idKey: "id",
         mutableIdKey: "name",
         GET: getUser,
-        GET_MANY: () => users,
+        GET_MANY: () => {
+          console.log("returning all users", users);
+          return users;
+        },
         PUT: ({ name, field, value }) => {
           let userToUpdate = users.find((u) => u.name === name);
           const id = userToUpdate.id;
@@ -120,14 +123,19 @@
         name: currentTableNameSignal,
       });
       if (currentTableNameSignal.value) {
-        currentTableAction.load();
+        currentTableAction();
       }
-      TABLE.store.registerPropertyChangeCallback("name", (tableName) => {
-        currentTableNameSignal.value = tableName;
-      });
+      TABLE.store.observeItemProperties(
+        currentTableNameSignal,
+        (propertyMutations) => {
+          if (propertyMutations.name) {
+            currentTableNameSignal.value = propertyMutations.name.newValue;
+          }
+        },
+      );
 
-      TABLE.GET_MANY.load();
-      USER.GET_MANY.load();
+      TABLE.GET_MANY();
+      USER.GET_MANY();
 
       const App = () => {
         return (
@@ -170,10 +178,10 @@
         const [editOwnerId, setEditOwnerId] = useState(table.owner?.id);
 
         const handleSave = async () => {
-          await TABLE.RENAME.bindParams({
+          await TABLE.RENAME({
             name: table.name,
             value: editName,
-          }).reload();
+          });
           setIsEditing(false);
         };
 
@@ -185,14 +193,14 @@
         // ✅ NEW: Handle owner update
         const handleOwnerSave = async () => {
           if (editOwnerId) {
-            await TABLE_OWNER.PUT.bindParams({
+            await TABLE_OWNER.PUT({
               tableId: table.id,
               newOwnerId: editOwnerId,
-            }).reload();
+            });
             setIsEditingOwner(false);
             return;
           }
-          await TABLE_OWNER.DELETE.bindParams({ tableId: table.id }).reload();
+          await TABLE_OWNER.DELETE({ tableId: table.id });
           setIsEditingOwner(false);
         };
 
@@ -243,7 +251,7 @@
                   <button
                     onClick={() => {
                       currentTableNameSignal.value = table.name;
-                      currentTableAction.reload();
+                      currentTableAction.rerun();
                     }}
                     disabled={currentTableNameSignal.value === table.name}
                   >
@@ -339,7 +347,7 @@
             <details
               onToggle={(e) => {
                 if (e.target.open) {
-                  getTableOwner.load();
+                  getTableOwner.rerun();
                 } else {
                   getTableOwner.abort();
                 }
@@ -393,10 +401,10 @@
         const [editName, setEditName] = useState(user.name);
 
         const handleSave = async () => {
-          await USER.RENAME.bindParams({
+          await USER.RENAME({
             name: user.name,
             value: editName,
-          }).load();
+          });
           setIsEditing(false);
         };
 

@@ -84,7 +84,7 @@
           const open = e.target.open;
           setIsOpen(open);
           if (open) {
-            action.load();
+            action.rerun();
             localStorage.setItem(storageKey, "1");
           } else {
             action.abort();
@@ -95,7 +95,7 @@
         // Charger au montage si c'était ouvert
         useEffect(() => {
           if (isOpen) {
-            action.load();
+            action.run();
           }
         }, []);
 
@@ -122,7 +122,7 @@
 
         // Charger les données de base de l'utilisateur
         useEffect(() => {
-          getUser.load();
+          getUser.rerun();
         }, []);
 
         return (
@@ -170,7 +170,7 @@
                 <span style="flex:1"></span>
                 <button
                   onClick={() => {
-                    getUserFriends.reload();
+                    getUserFriends.rerun();
                   }}
                 >
                   Refresh
