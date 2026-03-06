@@ -148,8 +148,10 @@
         gender: undefined,
         department: undefined,
       });
-      USER.GET_MANY_FILTERED = USER.GET_MANY.bindParams(filtersSignal);
-      USER.GET_MANY_FILTERED.load();
+      USER.GET_MANY_FILTERED = USER.GET_MANY.bindParams(filtersSignal, {
+        rerunOnChange: true,
+      });
+      USER.GET_MANY_FILTERED.run();
       USER.store.observeProperties((mutations) => {
         const nameMutation = mutations.name;
         if (nameMutation) {
@@ -184,7 +186,7 @@
           setNewUserName("");
           allUsers.push(newUser);
           const createUser = USER.POST.bindParams(newUser);
-          createUser.load();
+          createUser.run();
         };
 
         return (
@@ -193,10 +195,10 @@
 
             <button
               onClick={() => {
-                USER.GET_MANY_FILTERED.reload();
+                USER.GET_MANY_FILTERED.rerun();
               }}
             >
-              Reload
+              Rerun
             </button>
 
             <div className="filters">
@@ -294,7 +296,7 @@
                         id: user.id,
                         value: name,
                       });
-                      await renameAction.load();
+                      await renameAction.run();
                       const harcodedUser = allUsers.find(
                         (u) => u.id === user.id,
                       );
@@ -390,9 +392,9 @@
             </div>
 
             <div className="button-group">
-              <button onClick={() => userAction.reload()}>Reload</button>
-              <button onClick={() => userAction.unload()}>Unload</button>
-              <button onClick={() => userAction.preload()}>Preload</button>
+              <button onClick={() => userAction.rerun()}>Rerun</button>
+              <button onClick={() => userAction.stop()}>Stop</button>
+              <button onClick={() => userAction.prerun()}>Prerun</button>
               {pending && <span>Loading...</span>}
             </div>
           </div>
