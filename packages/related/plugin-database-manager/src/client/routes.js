@@ -6,6 +6,10 @@ import {
 } from "@jsenv/navi";
 
 import { DATABASE } from "./database/database_store.js";
+import {
+  roleCanLoginHeightSignal,
+  roleCanLoginOpenSignal,
+} from "./role/role_can_login/role_can_login_state.js";
 import { ROLE } from "./role/role_store.js";
 import { TABLE, TABLE_ROW } from "./table/table_store.js";
 
@@ -22,6 +26,7 @@ export const {
   TABLE_DATA_ROUTE,
   TABLE_SETTINGS_ROUTE,
 } = setupRoutes({
+  HOME_ROUTE: `/?role_can_login=${roleCanLoginOpenSignal}&role_can_login_height=${roleCanLoginHeightSignal}`,
   ROLE_ROUTE: {
     pattern: `/roles/:rolname=${rolnameSignal}`,
     action: ROLE.GET,

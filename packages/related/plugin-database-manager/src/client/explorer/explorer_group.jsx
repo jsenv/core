@@ -44,7 +44,7 @@ export const createExplorerGroupController = (
 
 export const ExplorerGroup = (props) => {
   const {
-    controller,
+    id,
     detailsAction,
     idKey,
     nameKey,
@@ -57,8 +57,8 @@ export const ExplorerGroup = (props) => {
     createItemAction,
     deleteItemAction,
     deleteManyItemAction,
-    onOpen,
-    onClose,
+    open,
+    height,
     resizable,
     ...rest
   } = props;
@@ -88,37 +88,24 @@ export const ExplorerGroup = (props) => {
     },
     [setIsCreatingNew],
   );
-
-  const heightSetting = controller.useHeightSetting();
   const createButtonRef = useRef(null);
 
   return (
     <>
       {resizable && (
-        <div
-          data-resize-handle={controller.id}
-          id={`${controller.id}_resize_handle`}
-        ></div>
+        <div data-resize-handle={id} id={`${id}_resize_handle`}></div>
       )}
       <Details
         {...rest}
         ref={ref}
-        id={controller.id}
-        open={controller.detailsOpenAtStart}
+        id={id}
+        open={open}
         focusGroup
         focusGroupDirection="vertical"
         className="explorer_group"
-        onUIStateChange={(open) => {
-          controller.detailsOnToggle(open);
-          if (open) {
-            onOpen?.();
-          } else {
-            onClose?.();
-          }
-        }}
         data-resize={resizable ? "vertical" : "none"}
         data-min-height="150"
-        data-requested-height={heightSetting}
+        data-requested-height={height}
         action={detailsAction}
         label={
           <>

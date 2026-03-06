@@ -589,6 +589,13 @@ export const initFlexDetailsSet = (
       }
     }
     if (someNew || someOld) {
+      for (const child of container.children) {
+        child.dispatchEvent("resizablechange", {
+          detail: {
+            resizable: resizableDetailsIdSet.has(child.id),
+          },
+        });
+      }
       onResizableDetailsChange?.(resizableDetailsIdSet);
     }
   };
@@ -805,11 +812,18 @@ export const initFlexDetailsSet = (
         if (currentAllocatedSpaceMap) {
           allocatedSpaceMap = currentAllocatedSpaceMap;
           saveCurrentSizeAsRequestedSizes({ replaceExistingAttributes: true });
-          if (onRequestedSizeChange) {
-            for (const [child, allocatedSpace] of allocatedSpaceMap) {
-              const size = spaceToSize(allocatedSpace, child);
+          for (const [child, allocatedSpace] of allocatedSpaceMap) {
+            const size = spaceToSize(allocatedSpace, child);
+            if (onRequestedSizeChange) {
               onRequestedSizeChange(child, size);
             }
+            child.dispatchEvent(
+              new CustomEvent("resizeend", {
+                detail: {
+                  size,
+                },
+              }),
+            );
           }
           onMouseResizeEnd?.();
         }

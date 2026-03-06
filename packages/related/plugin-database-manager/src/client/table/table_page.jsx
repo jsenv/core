@@ -34,7 +34,7 @@ export const TablePage = ({ table }) => {
   return (
     <Page data-ui-name="<TablePage />">
       <PageHead spacingBottom={0}>
-        <PageHead.Label icon={<TableSvg />} label={"Table:"}>
+        <PageHead.Label icon={<TableSvg />} label="Table:">
           {tablename}
         </PageHead.Label>
         <TabList>

@@ -1,6 +1,6 @@
 import { initFlexDetailsSet } from "@jsenv/dom";
 import { Icon, useRunOnMount } from "@jsenv/navi";
-import { useLayoutEffect, useRef, useState } from "preact/hooks";
+import { useLayoutEffect, useRef } from "preact/hooks";
 
 // import { DatabaseSvg } from "../database/database_icons.jsx";
 // import { useCurrentDatabase } from "../database/database_signals.js";
@@ -8,10 +8,7 @@ import {
   DatabasesDetails,
   databasesDetailsController,
 } from "../database/databases_details.jsx";
-import {
-  RoleCanLoginListDetails,
-  roleCanLoginListDetailsController,
-} from "../role/role_can_login/role_can_login_list_details.jsx";
+import { RoleCanLoginListDetails } from "../role/role_can_login/role_can_login_list_details.jsx";
 import {
   RoleGroupListDetails,
   roleGroupListDetailsController,
@@ -62,60 +59,24 @@ export const Explorer = () => {
 
 const ExplorerBody = () => {
   const flexDetailsSetRef = useRef();
-  const [resizableDetailsIdSet, setResizableDetailsIdSet] = useState(new Set());
   useLayoutEffect(() => {
     const flexDetails = flexDetailsSetRef.current;
     if (!flexDetails) {
       return null;
     }
-    const flexDetailsSet = initFlexDetailsSet(flexDetails, {
-      onResizableDetailsChange: (resizableDetailsIdSet) => {
-        setResizableDetailsIdSet(new Set(resizableDetailsIdSet));
-      },
-      onRequestedSizeChange: (element, requestedHeight) => {
-        if (element.id === tablesDetailsController.id) {
-          tablesDetailsController.setHeightSetting(requestedHeight);
-        }
-        if (element.id === databasesDetailsController.id) {
-          databasesDetailsController.setHeightSetting(requestedHeight);
-        }
-        if (element.id === roleCanLoginListDetailsController.id) {
-          roleCanLoginListDetailsController.setHeightSetting(requestedHeight);
-        }
-        if (element.id === roleGroupListDetailsController.id) {
-          roleGroupListDetailsController.setHeightSetting(requestedHeight);
-        }
-        if (element.id === roleWithOwnershipListDetailsController.id) {
-          roleWithOwnershipListDetailsController.setHeightSetting(
-            requestedHeight,
-          );
-        }
-      },
-    });
+    const flexDetailsSet = initFlexDetailsSet(flexDetails);
     return flexDetailsSet.cleanup;
   }, []);
 
   return (
     <div ref={flexDetailsSetRef} className="explorer_body">
-      <RoleCanLoginListDetails
-        resizable={resizableDetailsIdSet.has(
-          roleCanLoginListDetailsController.id,
-        )}
-      />
-      <RoleGroupListDetails
-        resizable={resizableDetailsIdSet.has(roleGroupListDetailsController.id)}
-      />
-      <DatabasesDetails
-        resizable={resizableDetailsIdSet.has(databasesDetailsController.id)}
-      />
-      <TablesDetails
-        resizable={resizableDetailsIdSet.has(tablesDetailsController.id)}
-      />
+      <RoleCanLoginListDetails />
+      {/* <RoleGroupListDetails resizableDetailsIdSet={resizableDetailsIdSet} />
+      <DatabasesDetails resizableDetailsIdSet={resizableDetailsIdSet} />
+      <TablesDetails resizableDetailsIdSet={resizableDetailsIdSet} />
       <RoleWithOwnershipListDetails
-        resizable={resizableDetailsIdSet.has(
-          roleWithOwnershipListDetailsController.id,
-        )}
-      />
+        resizableDetailsIdSet={resizableDetailsIdSet}
+      /> */}
     </div>
   );
 };
