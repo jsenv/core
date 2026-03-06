@@ -667,7 +667,10 @@ const registerRoute = (routePattern, { action = ACTION.COMPLETED } = {}) => {
             `[route] Signal->URL: ${paramName} adding custom value ${value} to URL (default: ${connection.getDefaultValue()})`,
           );
         }
-        route.replaceParams({ [paramName]: value });
+        route.replaceParams(
+          { [paramName]: value },
+          { callReason: `${paramName} signal change on ${route}` },
+        );
         return;
       }
 
@@ -678,7 +681,10 @@ const registerRoute = (routePattern, { action = ACTION.COMPLETED } = {}) => {
             `[route] Signal->URL: ${paramName} cleaning URL (removing default value ${value})`,
           );
         }
-        route.replaceParams({ [paramName]: undefined });
+        route.replaceParams(
+          { [paramName]: undefined },
+          { callReason: `${paramName} signal reset to default on ${route}` },
+        );
         return;
       }
 
@@ -691,7 +697,10 @@ const registerRoute = (routePattern, { action = ACTION.COMPLETED } = {}) => {
           `[route] Signal->URL: ${paramName} updating URL ${urlParamValue} -> ${value}`,
         );
       }
-      route.replaceParams({ [paramName]: value });
+      route.replaceParams(
+        { [paramName]: value },
+        { callReason: `${paramName} signal change on ${route}` },
+      );
     });
   }
   route.navTo = (params) => {
@@ -704,7 +713,7 @@ const registerRoute = (routePattern, { action = ACTION.COMPLETED } = {}) => {
     const routeUrl = route.buildUrl(params);
     return integration.navTo(routeUrl);
   };
-  route.redirectTo = (params) => {
+  route.redirectTo = (params, { callReason } = {}) => {
     if (!integration) {
       if (import.meta.dev) {
         console.warn(`redirectTo called on "${route}" but integration not set`);
@@ -713,9 +722,10 @@ const registerRoute = (routePattern, { action = ACTION.COMPLETED } = {}) => {
     }
     return integration.navTo(route.buildUrl(params), {
       replace: true,
+      callReason,
     });
   };
-  route.replaceParams = (newParams) => {
+  route.replaceParams = (newParams, { callReason } = {}) => {
     const matching = route.matchingSignal.peek();
     if (!matching) {
       console.warn(
@@ -754,7 +764,9 @@ const registerRoute = (routePattern, { action = ACTION.COMPLETED } = {}) => {
         ...currentResolvedParams,
         ...newParams,
       };
-      matchingRouteAction.replaceParams(updatedActionParams);
+      matchingRouteAction.replaceParams(updatedActionParams, {
+        callReason: `replaceParams called on ${route} affecting ${matchingRoute}`,
+      });
     }
 
     // Find the most specific route using pattern depth (deeper = more specific)
@@ -794,7 +806,9 @@ const registerRoute = (routePattern, { action = ACTION.COMPLETED } = {}) => {
           `${route} delegating redirect to more specific route ${mostSpecificRoute}`,
         );
       }
-      return mostSpecificRoute.redirectTo(newParams);
+      return mostSpecificRoute.redirectTo(newParams, {
+        callReason: `replaceParams delegation from ${route} to ${mostSpecificRoute} (original reason: ${callReason})`,
+      });
     }
 
     // This route is the most specific, handle the redirect ourselves
@@ -807,7 +821,9 @@ const registerRoute = (routePattern, { action = ACTION.COMPLETED } = {}) => {
         newParams,
       );
     }
-    return route.redirectTo(newParams);
+    return route.redirectTo(newParams, {
+      callReason,
+    });
   };
   route.buildRelativeUrl = (params) => {
     // buildMostPreciseUrl now handles parameter resolution internally
@@ -876,9 +892,12 @@ const registerRoute = (routePattern, { action = ACTION.COMPLETED } = {}) => {
           if (!mutableIdPropertyMutation) {
             return;
           }
-          route.replaceParams({
-            [mutableIdKey]: mutableIdPropertyMutation.newValue,
-          });
+          route.replaceParams(
+            {
+              [mutableIdKey]: mutableIdPropertyMutation.newValue,
+            },
+            { callReason: `store item ${mutableIdKey} change on ${route}` },
+          );
         });
       }
     }
