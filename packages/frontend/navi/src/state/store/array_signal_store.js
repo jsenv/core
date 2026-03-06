@@ -66,14 +66,20 @@ export const arraySignalStore = (
     }
   });
 
-  const propertiesObserverSet = new Set();
-  const observeProperties = (itemSignal, callback) => {
+  const itemPropertiesObserverSet = new Set();
+  const observeItemProperties = (itemSignal, callback) => {
     const observer = { itemSignal, callback };
-    propertiesObserverSet.add(observer);
-
-    // Return cleanup function
+    itemPropertiesObserverSet.add(observer);
     return () => {
-      propertiesObserverSet.delete(observer);
+      itemPropertiesObserverSet.delete(observer);
+    };
+  };
+
+  const propertiesObserverSet = new Set();
+  const observeProperties = (callback) => {
+    propertiesObserverSet.add(callback);
+    return () => {
+      propertiesObserverSet.delete(callback);
     };
   };
 
@@ -221,23 +227,26 @@ ${[idKey, ...mutableIdKeys].join(", ")}`,
     return result;
   };
   const upsert = (...args) => {
-    const itemMutationsMap = new Map(); // Map<itemId, propertyMutations>
+    const mutationsMap = new Map(); // Map<itemId, propertyMutations>
     const triggerPropertyMutations = () => {
-      if (itemMutationsMap.size === 0) {
-        return;
-      }
       // we call at the end so that itemWithProps and arraySignal.value was set too
-      for (const observer of propertiesObserverSet) {
-        const { itemSignal, callback } = observer;
+      for (const itemPropertiesObserver of itemPropertiesObserverSet) {
+        const { itemSignal, callback } = itemPropertiesObserver;
         const watchedItem = itemSignal.peek();
         if (!watchedItem) {
           continue;
         }
 
         // Check if this item has mutations
-        const itemSpecificMutations = itemMutationsMap.get(watchedItem[idKey]);
-        if (itemSpecificMutations) {
-          callback(itemSpecificMutations);
+        const itemMutations = mutationsMap.get(watchedItem[idKey]);
+        if (itemMutations) {
+          callback(itemMutations);
+        }
+      }
+      if (propertiesObserverSet.size) {
+        const mutations = Array.from(mutationsMap.values());
+        for (const propertiesObserver of propertiesObserverSet) {
+          propertiesObserver(mutations);
         }
       }
     };
@@ -282,7 +291,7 @@ ${[idKey, ...mutableIdKeys].join(", ")}`,
       }
 
       // Store mutations for this specific item
-      itemMutationsMap.set(item[idKey], propertyMutations);
+      mutationsMap.set(item[idKey], propertyMutations);
       return itemWithProps;
     };
 
@@ -528,6 +537,7 @@ ${[idKey, ...mutableIdKeys].join(", ")}`,
     upsert,
     drop,
 
+    observeItemProperties,
     observeProperties,
     observeRemovals,
     registerItemMatchLifecycle,

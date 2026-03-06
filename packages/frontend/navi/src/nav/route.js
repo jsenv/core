@@ -864,7 +864,7 @@ const registerRoute = (routePattern, { action = ACTION.COMPLETED } = {}) => {
           mutableIdKey,
           mutableIdValueSignal,
         );
-        store.observeProperties(routeItemSignal, (propertyMutations) => {
+        store.observeItemProperties(routeItemSignal, (propertyMutations) => {
           const mutableIdPropertyMutation = propertyMutations[mutableIdKey];
           if (!mutableIdPropertyMutation) {
             return;
