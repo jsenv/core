@@ -1263,6 +1263,13 @@ export const createRoutePattern = (pattern) => {
       }
 
       if (canOptimizeToParent && Object.keys(parentPathDefaults).length > 0) {
+        if (DEBUG) {
+          console.debug(
+            `[${pattern}] checkChildParentOptimization: checking child ${childPatternObj.originalPattern}`,
+            { parentPathDefaults, canOptimizeToParent },
+          );
+        }
+
         // CRITICAL: Check if child route has non-default path parameters
         // If it does, don't optimize away the child route structure
         for (const [
@@ -1308,31 +1315,30 @@ export const createRoutePattern = (pattern) => {
           }
         }
 
-        if (Object.keys(nonDefaultQueryParams).length > 0) {
-          // Build optimized URL using parent path but child's query parameters
-          const parentParams = { ...nonDefaultQueryParams };
+        // Build optimized URL using parent path but child's query parameters
+        // Always optimize when we can, even if there are no query parameters
+        const parentParams = { ...nonDefaultQueryParams };
 
-          // Remove default path parameters to get clean parent URL
-          for (const defaultParam of Object.keys(parentPathDefaults)) {
-            delete parentParams[defaultParam];
-          }
-
-          const optimizedUrl = buildUrlFromPattern(
-            parsedPattern,
-            parentParams,
-            pattern,
-            patternObject,
-          );
-
-          if (DEBUG) {
-            console.debug(
-              `[${pattern}] Optimizing child route ${childPatternObj.originalPattern} to parent with query params:`,
-              { parentPathDefaults, nonDefaultQueryParams, optimizedUrl },
-            );
-          }
-
-          return optimizedUrl;
+        // Remove default path parameters to get clean parent URL
+        for (const defaultParam of Object.keys(parentPathDefaults)) {
+          delete parentParams[defaultParam];
         }
+
+        const optimizedUrl = buildUrlFromPattern(
+          parsedPattern,
+          parentParams,
+          pattern,
+          patternObject,
+        );
+
+        if (DEBUG) {
+          console.debug(
+            `[${pattern}] Optimizing child route ${childPatternObj.originalPattern} to parent with query params:`,
+            { parentPathDefaults, nonDefaultQueryParams, optimizedUrl },
+          );
+        }
+
+        return optimizedUrl;
       }
     }
 
@@ -1798,11 +1804,13 @@ export const createRoutePattern = (pattern) => {
       }
       // Include source query parameters (these should be inherited during ancestor optimization)
       else if (sourceQueryParamNames.has(paramName)) {
-        // Only include if the value is not the default value
+        // For ancestor optimization, include all source query parameters with values,
+        // regardless of whether they match default values, since they represent
+        // active user intent when the child route was selected
         const connection = sourceConnections.find(
           (conn) => conn.paramName === paramName,
         );
-        if (connection && connection.getDefaultValue() !== value) {
+        if (connection && value !== undefined) {
           ancestorParams[paramName] = value;
           if (DEBUG) {
             console.debug(
@@ -1826,15 +1834,35 @@ export const createRoutePattern = (pattern) => {
     }
 
     // Also check target ancestor's own signal values for parameters not in resolvedParams
+    if (DEBUG) {
+      console.debug(
+        `[${pattern}] tryDirectOptimization: Target ancestor has ${targetAncestor.connections.length} connections`,
+      );
+      for (const conn of targetAncestor.connections) {
+        console.debug(
+          `[${pattern}] tryDirectOptimization: Target connection ${conn.paramName}: value=${conn.signal.value}, isCustom=${conn.isCustomValue(conn.signal.value)}`,
+        );
+      }
+    }
+
     for (const connection of targetAncestor.connections) {
       const { paramName } = connection;
       if (paramName in ancestorParams) {
+        if (DEBUG) {
+          console.debug(
+            `[${pattern}] tryDirectOptimization: Skipping ${paramName} - already in ancestorParams`,
+          );
+        }
         continue;
       }
 
       // Only include if not already processed and has custom value (not default)
       const signalValue = connection.signal.value;
-      if (signalValue !== undefined && connection.isCustomValue(signalValue)) {
+      if (signalValue !== undefined) {
+        // For ancestor optimization, include all defined signal values because they
+        // represent the active state that child routes inherit, regardless of
+        // whether they match default values or not
+
         // Don't include path parameters that correspond to literal segments we're optimizing away
         const targetParam = targetParams.find((p) => p.name === paramName);
         const isPathParam = targetParam !== undefined; // Any param in segments is a path param
@@ -1854,6 +1882,10 @@ export const createRoutePattern = (pattern) => {
             `[${pattern}] tryDirectOptimization: Added target signal param ${paramName}=${signalValue}`,
           );
         }
+      } else if (DEBUG) {
+        console.debug(
+          `[${pattern}] tryDirectOptimization: Skipping ${paramName}=${signalValue} - undefined value`,
+        );
       }
     }
 
