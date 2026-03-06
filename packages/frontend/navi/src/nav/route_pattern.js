@@ -1187,28 +1187,103 @@ export const createRoutePattern = (pattern) => {
     childUrl,
     baseParams,
   ) => {
-    if (Object.keys(baseParams).length > 0) {
-      return null; // No optimization if parameters exist
-    }
-
     const childParent = childPatternObj.parent;
 
     if (childParent && childParent.originalPattern === pattern) {
-      // Check if child has any non-default signal values
-      const hasNonDefaultChildParams = childPatternObj.connections.some(
-        (childConnection) => {
-          return childConnection.isCustomValue(childConnection.signal.value);
-        },
-      );
+      // Check if child path segments correspond to parent's default path parameters
+      // If so, we can optimize to use parent's path but preserve child's query parameters
 
-      if (hasNonDefaultChildParams) {
-        // Child has non-default signal values - use child URL instead of parent
-        if (DEBUG) {
-          console.debug(
-            `[${pattern}] Using child route ${childPatternObj.originalPattern} because it has non-default signal values`,
-          );
+      let canOptimizeToParent = true;
+      const parentPathDefaults = {};
+
+      // Check each segment in child vs parent to see if child literals match parent defaults
+      for (
+        let i = 0;
+        i < childPatternObj.pattern.segments.length &&
+        i < parsedPattern.segments.length;
+        i++
+      ) {
+        const childSegment = childPatternObj.pattern.segments[i];
+        const parentSegment = parsedPattern.segments[i];
+
+        if (
+          childSegment.type === "literal" &&
+          parentSegment &&
+          parentSegment.type === "param"
+        ) {
+          // Child has literal where parent has parameter - check if literal matches default
+          const paramName = parentSegment.name;
+          const connection =
+            pathConnectionMap.get(paramName) ||
+            queryConnectionMap.get(paramName);
+
+          if (connection) {
+            const defaultValue = connection.getDefaultValue();
+            if (childSegment.value === defaultValue) {
+              // Child literal matches parent default - this is optimizable
+              parentPathDefaults[paramName] = defaultValue;
+            } else {
+              // Child literal doesn't match parent default - can't optimize
+              canOptimizeToParent = false;
+              break;
+            }
+          } else {
+            canOptimizeToParent = false;
+            break;
+          }
         }
-        return childUrl;
+      }
+
+      if (canOptimizeToParent && Object.keys(parentPathDefaults).length > 0) {
+        // Check if child has non-default query parameters that should be preserved
+        const nonDefaultQueryParams = {};
+
+        for (const [
+          paramName,
+          connection,
+        ] of childPatternObj.queryConnectionMap) {
+          const signalValue = connection.signal.value;
+          if (
+            signalValue !== undefined &&
+            connection.isCustomValue(signalValue)
+          ) {
+            nonDefaultQueryParams[paramName] = signalValue;
+          }
+        }
+
+        // Also include any query parameters from baseParams
+        for (const [paramName, paramValue] of Object.entries(baseParams)) {
+          // Check if this parameter is not a path parameter that we're optimizing away
+          if (!(paramName in parentPathDefaults)) {
+            nonDefaultQueryParams[paramName] = paramValue;
+          }
+        }
+
+        if (Object.keys(nonDefaultQueryParams).length > 0) {
+          // Build optimized URL using parent path but child's query parameters
+          const parentParams = { ...nonDefaultQueryParams };
+
+          // Remove default path parameters to get clean parent URL
+          for (const defaultParam of Object.keys(parentPathDefaults)) {
+            delete parentParams[defaultParam];
+          }
+
+          const optimizedUrl = buildUrlFromPattern(
+            parsedPattern,
+            parentParams,
+            pattern,
+            patternObject,
+          );
+
+          if (DEBUG) {
+            console.debug(
+              `[${pattern}] Optimizing child route ${childPatternObj.originalPattern} to parent with query params:`,
+              { parentPathDefaults, nonDefaultQueryParams, optimizedUrl },
+            );
+          }
+
+          return optimizedUrl;
+        }
       }
     }
 

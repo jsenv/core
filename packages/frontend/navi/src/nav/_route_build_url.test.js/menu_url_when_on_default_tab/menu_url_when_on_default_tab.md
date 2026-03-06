@@ -24,7 +24,7 @@ try {
 
 ```js
 {
-  "map_isochrone_url": "http://127.0.0.1/map/isochrone/compare?walk"
+  "map_isochrone_url": "http://127.0.0.1/map/isochrone?walk"
 }
 ```
 

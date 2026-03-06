@@ -53,7 +53,7 @@ try {
     "settings_initial": "http://127.0.0.1/admin"
   },
   "afterTabChange": {
-    "admin_after_tab_change": "http://127.0.0.1/admin/settings/security",
+    "admin_after_tab_change": "http://127.0.0.1/admin?tab=security",
     "settings_after_tab_change": "http://127.0.0.1/admin/settings/security"
   },
   "afterSectionChange": {
