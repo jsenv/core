@@ -720,7 +720,8 @@ const registerRoute = (routePattern, { action = ACTION.COMPLETED } = {}) => {
       }
       return Promise.resolve();
     }
-    return integration.navTo(route.buildUrl(params), {
+    const routeUrl = route.buildUrl(params);
+    return integration.navTo(routeUrl, {
       replace: true,
       callReason,
     });
