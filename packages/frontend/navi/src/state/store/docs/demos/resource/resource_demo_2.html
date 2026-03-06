@@ -50,9 +50,9 @@
       };
 
       if (activeUsernameSignal.peek()) {
-        USER.ACTIVE.GET.load();
+        USER.ACTIVE.GET.run();
       }
-      USER.GET_MANY.load();
+      USER.GET_MANY.run();
 
       const App = () => {
         const { data: users } = useActionStatus(USER.GET_MANY);
@@ -72,71 +72,71 @@
           <div>
             <button
               onClick={() => {
-                getDamAction.load();
+                getDamAction.rerun();
                 activeUsernameSignal.value = dam.name;
               }}
             >
-              Load dam
+              Run dam
             </button>
             <button
               onClick={() => {
-                getDamAction.unload();
+                getDamAction.reset();
               }}
             >
-              Unload dam
+              Reset dam
             </button>
             <button
               onClick={() => {
-                getDamAction.preload();
+                getDamAction.prerun();
               }}
             >
-              Preload dam
+              Prerun dam
             </button>
             <br />
             <button
               onClick={() => {
-                getSebAction.load();
+                getSebAction.run();
                 activeUsernameSignal.value = seb.name;
               }}
             >
-              Load seb
+              Run seb
             </button>
             <button
               onClick={() => {
-                getSebAction.unload();
+                getSebAction.reset();
               }}
             >
-              Unload seb
+              Reset seb
             </button>
             <button
               onClick={() => {
-                getSebAction.preload();
+                getSebAction.prerun();
               }}
             >
-              Preload seb
+              Prerun seb
             </button>
             <br />
             <button
               onClick={() => {
-                getJohnAction.load();
+                getJohnAction.run();
                 activeUsernameSignal.value = john.name;
               }}
             >
-              Load john
+              Run john
             </button>
             <button
               onClick={() => {
-                getJohnAction.unload();
+                getJohnAction.reset();
               }}
             >
-              Unload john
+              Reset john
             </button>
             <button
               onClick={() => {
-                getJohnAction.preload();
+                getJohnAction.prerun();
               }}
             >
-              Preload john
+              Prerun john
             </button>
 
             <ActionStatus action={getDamAction} />
@@ -148,7 +148,7 @@
               {{
                 loading: () => <div>Loading user...</div>,
                 error: (error) => <div>Error: {error.message}</div>,
-                unloaded: () => <div>User not loaded</div>,
+                idle: () => <div>User not loaded</div>,
                 loaded: (user) => {
                   return <div>{user.greeting}</div>;
                 },

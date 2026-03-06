@@ -95,7 +95,7 @@ export const abortRunningActions = (
  *
  * Actions are automatically unprotected when:
  * - The protection duration expires (default: 5 minutes)
- * - The action is explicitly stopped via .stop()
+ * - The action is explicitly stopped via .reset()
  */
 const prerunProtectionRegistry = (() => {
   const protectedActionMap = new Map(); // action -> { timeoutId, timestamp }
@@ -460,7 +460,7 @@ ${lines.join("\n")}`);
     for (const actionToReset of willResetSet) {
       const actionToResetPrivateProperties =
         getActionPrivateProperties(actionToReset);
-      actionToResetPrivateProperties.performStop({ reason });
+      actionToResetPrivateProperties.performReset({ reason });
       activationWeakSet.delete(actionToReset);
     }
   }
@@ -629,8 +629,8 @@ export const createAction = (callback, rootOptions = {}) => {
      * 3. Clean up any resources and side effects
      * 4. Reset data to initial value (unless keepOldData is true)
      */
-    const stop = (options) => {
-      return dispatchSingleAction(action, "stop", options);
+    const reset = (options) => {
+      return dispatchSingleAction(action, "reset", options);
     };
     const abort = (reason) => {
       if (runningState !== RUNNING) {
@@ -823,7 +823,7 @@ export const createAction = (callback, rootOptions = {}) => {
       prerun,
       run,
       rerun,
-      stop,
+      reset,
       abort,
       bindParams,
       matchAllSelfOrDescendant, // ✅ Add the new method
@@ -1081,10 +1081,10 @@ export const createAction = (callback, rootOptions = {}) => {
         }
       };
 
-      const performStop = ({ reason }) => {
+      const performReset = ({ reason }) => {
         abort(reason);
         if (DEBUG) {
-          console.log(`"${action}": stopping (reason: ${reason})`);
+          console.log(`"${action}": resetting (reason: ${reason})`);
         }
 
         prerunProtectionRegistry.unprotect(action);
@@ -1116,7 +1116,7 @@ export const createAction = (callback, rootOptions = {}) => {
         errorSignal,
 
         performRun,
-        performStop,
+        performReset,
         ui,
 
         childActionWeakSet,
@@ -1251,7 +1251,7 @@ const createActionProxyFromSignal = (
     prerun: proxyMethod("prerun"),
     run: proxyMethod("run"),
     rerun: proxyMethod("rerun"),
-    stop: proxyMethod("stop"),
+    reset: proxyMethod("reset"),
     abort: proxyMethod("abort"),
     matchAllSelfOrDescendant: proxyMethod("matchAllSelfOrDescendant"),
     getCurrentAction: () => {
@@ -1334,7 +1334,7 @@ const createActionProxyFromSignal = (
     dataSignal: proxyPrivateSignal("dataSignal", "data"),
     computedDataSignal: proxyPrivateSignal("computedDataSignal"),
     performRun: proxyPrivateMethod("performRun"),
-    performStop: proxyPrivateMethod("performStop"),
+    performReset: proxyPrivateMethod("performReset"),
     ui: currentActionPrivateProperties.ui,
   };
 
