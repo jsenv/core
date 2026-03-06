@@ -15,18 +15,17 @@ export const ExplorerItemList = (props) => {
     itemArray,
     renderItem,
     useItemArrayInStore,
-    useRenameItemAction,
-    useDeleteManyItemAction,
-    useDeleteItemAction,
+    renameItemAction,
+    deleteManyItemAction,
+    deleteItemAction,
     isCreatingNew,
-    useCreateItemAction,
+    createItemAction,
     stopCreatingNew,
   } = props;
   const ref = useRef();
 
   const itemSelectionSignal = useSignal([]);
   const [deletedItems, setDeletedItems] = useState([]);
-  const deleteManyAction = useDeleteManyItemAction?.(itemSelectionSignal);
   const selection = itemSelectionSignal.value;
   const selectionLength = selection.length;
   const selectionController = useSelectionController({
@@ -36,14 +35,14 @@ export const ExplorerItemList = (props) => {
     onChange: (newValue) => {
       itemSelectionSignal.value = newValue;
     },
-    multiple: Boolean(deleteManyAction),
+    multiple: Boolean(deleteManyItemAction),
   });
   useKeyboardShortcuts(ref, [
     ...createSelectionKeyboardShortcuts(selectionController),
     {
-      enabled: deleteManyAction && selectionLength > 0,
+      enabled: deleteManyItemAction && selectionLength > 0,
       key: ["command+delete"],
-      action: deleteManyAction,
+      action: () => deleteManyItemAction(itemSelectionSignal.value),
       description: "Delete selected items",
       confirmMessage:
         selectionLength === 1
@@ -76,9 +75,9 @@ export const ExplorerItemList = (props) => {
               renderItem={renderItem}
               selectionController={selectionController}
               useItemArrayInStore={useItemArrayInStore}
-              useRenameItemAction={useRenameItemAction}
-              useDeleteItemAction={
-                deleteManyAction ? () => null : useDeleteItemAction
+              renameItemAction={renameItemAction}
+              deleteItemAction={
+                deleteManyAction ? () => null : deleteItemAction
               }
             />
           </li>
@@ -89,7 +88,7 @@ export const ExplorerItemList = (props) => {
           <ExplorerNewItem
             nameKey={nameKey}
             useItemArrayInStore={useItemArrayInStore}
-            useCreateItemAction={useCreateItemAction}
+            createItemAction={createItemAction}
             cancelOnBlurInvalid
             onCancel={(e, reason) => {
               stopCreatingNew({

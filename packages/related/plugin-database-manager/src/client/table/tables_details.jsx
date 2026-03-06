@@ -42,26 +42,26 @@ export const TablesDetails = (props) => {
         />
       )}
       useItemArrayInStore={useTableArrayInStore}
-      useCreateItemAction={(nameSignal) =>
-        TABLE.POST.bindParams({
-          tablename: nameSignal,
+      createItemAction={(tablename) =>
+        TABLE.POST({
+          tablename,
         })
       }
-      useRenameItemAction={(table, valueSignal) =>
-        TABLE.PUT.bindParams({
+      renameItemAction={(table, newTablename) =>
+        TABLE.PUT({
           tablename: table.tablename,
           columnName: "tablename",
-          columnValue: valueSignal,
+          columnValue: newTablename,
         })
       }
-      useDeleteItemAction={(table) =>
-        TABLE.DELETE.bindParams({
+      deleteItemAction={(table) =>
+        TABLE.DELETE({
           tablename: table.tablename,
         })
       }
-      useDeleteManyItemAction={(itemNamesSignal) =>
-        TABLE.DELETE_MANY.bindParams({
-          tablenames: itemNamesSignal,
+      deleteManyItemAction={(itemNames) =>
+        TABLE.DELETE_MANY({
+          tablenames: itemNames,
         })
       }
     >

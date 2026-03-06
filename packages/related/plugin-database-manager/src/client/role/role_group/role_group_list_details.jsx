@@ -37,27 +37,25 @@ export const RoleGroupListDetails = (props) => {
       label="ROLE GROUPS"
       count={roleCannotLoginCount}
       renderNewButtonChildren={() => <RoleGroupWithPlusSvg />}
-      renderItem={(role, { children, ...props }) => (
-        <RoleLink draggable={false} role={role} {...props}>
-          {children}
-        </RoleLink>
+      renderItem={(role, props) => (
+        <RoleLink draggable={false} role={role} {...props} />
       )}
       useItemArrayInStore={useRoleArrayInStore}
-      useCreateItemAction={(valueSignal) =>
-        ROLE_CANNOT_LOGIN.POST.bindParams({
-          rolname: valueSignal,
+      createItemAction={(rolname) =>
+        ROLE_CANNOT_LOGIN.POST({
+          rolname,
         })
       }
-      useDeleteItemAction={(role) =>
-        ROLE_CANNOT_LOGIN.DELETE.bindParams({
+      deleteItemAction={(role) =>
+        ROLE_CANNOT_LOGIN.DELETE({
           rolname: role.rolname,
         })
       }
-      useRenameItemAction={(role, valueSignal) =>
-        ROLE_CANNOT_LOGIN.PUT.bindParams({
+      renameItemAction={(role, newRolname) =>
+        ROLE_CANNOT_LOGIN.PUT({
           rolname: role.rolname,
           columnName: "rolname",
-          columnValue: valueSignal,
+          columnValue: newRolname,
         })
       }
     >

@@ -53,10 +53,10 @@ export const ExplorerGroup = (props) => {
     renderNewButtonChildren,
     renderItem,
     useItemArrayInStore,
-    useRenameItemAction,
-    useCreateItemAction,
-    useDeleteItemAction,
-    useDeleteManyItemAction,
+    renameItemAction,
+    createItemAction,
+    deleteItemAction,
+    deleteManyItemAction,
     onOpen,
     onClose,
     resizable,
@@ -172,10 +172,10 @@ export const ExplorerGroup = (props) => {
                 itemArray={itemArray}
                 renderItem={renderItem}
                 useItemArrayInStore={useItemArrayInStore}
-                useRenameItemAction={useRenameItemAction}
-                useCreateItemAction={useCreateItemAction}
-                useDeleteItemAction={useDeleteItemAction}
-                useDeleteManyItemAction={useDeleteManyItemAction}
+                renameItemAction={renameItemAction}
+                createItemAction={createItemAction}
+                deleteItemAction={deleteItemAction}
+                deleteManyItemAction={deleteManyItemAction}
                 isCreatingNew={isCreatingNew}
                 stopCreatingNew={stopCreatingNew}
               />

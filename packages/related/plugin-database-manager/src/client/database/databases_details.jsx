@@ -47,21 +47,21 @@ export const DatabasesDetails = (props) => {
         />
       )}
       useItemArrayInStore={useDatabaseArrayInStore}
-      useCreateItemAction={(valueSignal) =>
+      createItemAction={(datname) =>
         DATABASE.POST({
-          datname: valueSignal,
+          datname,
         })
       }
-      useDeleteItemAction={(database) =>
-        DATABASE.DELETE.bindParams({
+      deleteItemAction={(database) =>
+        DATABASE.DELETE({
           datname: database.datname,
         })
       }
-      useRenameItemAction={(database, valueSignal) =>
-        DATABASE.PUT.bindParams({
+      renameItemAction={(database, newDatname) =>
+        DATABASE.PUT({
           datname: database.datname,
           columnName: "datname",
-          columnValue: valueSignal,
+          columnValue: newDatname,
         })
       }
     >

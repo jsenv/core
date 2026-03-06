@@ -80,7 +80,6 @@ const RenameInputOrName = ({
 }) => {
   const itemName = item[nameKey];
   const nameSignal = useSignalSync(itemName);
-
   const renameAction = useRenameItemAction(item, nameSignal);
 
   const itemArrayInStore = useItemArrayInStore();
@@ -114,13 +113,11 @@ const RenameInputOrName = ({
 export const ExplorerNewItem = ({
   nameKey,
   useItemArrayInStore,
-  useCreateItemAction,
+  createItemAction,
   cancelOnBlurInvalid,
   onCancel,
   onActionEnd,
 }) => {
-  const nameSignal = useSignal("");
-  const createItemAction = useCreateItemAction(nameSignal);
   const itemArrayInStore = useItemArrayInStore();
   const valueSet = new Set();
   for (const item of itemArrayInStore) {
@@ -139,7 +136,7 @@ export const ExplorerNewItem = ({
 
       <Input
         action={createItemAction}
-        valueSignal={nameSignal}
+        actionAfterChange
         cancelOnEscape
         cancelOnBlurInvalid={cancelOnBlurInvalid}
         onCancel={onCancel}
