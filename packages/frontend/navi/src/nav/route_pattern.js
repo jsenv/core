@@ -648,9 +648,7 @@ export const createRoutePattern = (pattern) => {
     }
 
     // Check if this is a query parameter in the parent pattern
-    const isParentQueryParam = parsedPattern.queryParams.some(
-      (qp) => qp.name === paramName,
-    );
+    const isParentQueryParam = queryConnectionMap.has(paramName);
     if (isParentQueryParam) {
       // Query parameters are always compatible and can be inherited by child routes
       return {
