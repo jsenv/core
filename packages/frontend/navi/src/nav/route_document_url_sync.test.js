@@ -1284,8 +1284,8 @@ await snapshotTests(import.meta.url, ({ test }) => {
   test("signal update should stay on current route", () => {
     const navToCalls = [];
     setRouteIntegration({
-      navTo: (url) => {
-        navToCalls.push(url);
+      navTo: (url, { callReason }) => {
+        navToCalls.push({ url, callReason });
       },
     });
 
@@ -1334,7 +1334,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
         after_updating_lon: afterUpdatingLon,
 
         // BUG DETECTION
-        bug_reproduced: navToCalls.some((url) => url.includes("/map/flow")),
+        bug_reproduced: navToCalls.some(({ url }) => url.includes("/map/flow")),
 
         // EXPECTED: Should stay on /map?lon=20
         expected_url: "/map?lon=20",

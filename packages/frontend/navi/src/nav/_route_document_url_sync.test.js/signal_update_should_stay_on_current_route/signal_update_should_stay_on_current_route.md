@@ -3,8 +3,8 @@
 ```js
 const navToCalls = [];
 setRouteIntegration({
-  navTo: (url) => {
-    navToCalls.push(url);
+  navTo: (url, { callReason }) => {
+    navToCalls.push({ url, callReason });
   },
 });
 
@@ -53,7 +53,7 @@ try {
     after_updating_lon: afterUpdatingLon,
 
     // BUG DETECTION
-    bug_reproduced: navToCalls.some((url) => url.includes("/map/flow")),
+    bug_reproduced: navToCalls.some(({ url }) => url.includes("/map/flow")),
 
     // EXPECTED: Should stay on /map?lon=20
     expected_url: "/map?lon=20",
@@ -99,15 +99,27 @@ try {
     "panel_route_matching": true,
     "flow_route_matching": false,
     "navToCalls": [
-      "http://127.0.0.1/map?lon=20",
-      "http://127.0.0.1/map?lon=20"
+      {
+        "url": "http://127.0.0.1/map?lon=20",
+        "callReason": 'replaceParams delegation from route "/map/?lon" to route "/map/:panel/" (original reason: lon signal change on route "/map/?lon")'
+      },
+      {
+        "url": "http://127.0.0.1/map?lon=20",
+        "callReason": 'lon signal change on route "/map/:panel/"'
+      }
     ]
   },
   "bug_reproduced": false,
   "expected_url": "/map?lon=20",
   "actual_nav_calls": [
-    "http://127.0.0.1/map?lon=20",
-    "http://127.0.0.1/map?lon=20"
+    {
+      "url": "http://127.0.0.1/map?lon=20",
+      "callReason": 'replaceParams delegation from route "/map/?lon" to route "/map/:panel/" (original reason: lon signal change on route "/map/?lon")'
+    },
+    {
+      "url": "http://127.0.0.1/map?lon=20",
+      "callReason": 'lon signal change on route "/map/:panel/"'
+    }
   ],
   "compatibility_analysis": {
     "current_panel_signal": undefined,
