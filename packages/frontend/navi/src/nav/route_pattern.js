@@ -1804,13 +1804,16 @@ export const createRoutePattern = (pattern) => {
       }
       // Include source query parameters (these should be inherited during ancestor optimization)
       else if (sourceQueryParamNames.has(paramName)) {
-        // For ancestor optimization, include all source query parameters with values,
-        // regardless of whether they match default values, since they represent
-        // active user intent when the child route was selected
+        // Only include source parameters if they're not default values
+        // Default values should still be omitted from URLs to keep them clean
         const connection = sourceConnections.find(
           (conn) => conn.paramName === paramName,
         );
-        if (connection && value !== undefined) {
+        if (
+          connection &&
+          value !== undefined &&
+          connection.getDefaultValue() !== value
+        ) {
           ancestorParams[paramName] = value;
           if (DEBUG) {
             console.debug(

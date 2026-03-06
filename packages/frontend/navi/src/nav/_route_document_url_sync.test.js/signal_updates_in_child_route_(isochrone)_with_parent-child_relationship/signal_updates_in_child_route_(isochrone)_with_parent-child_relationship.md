@@ -96,7 +96,7 @@ try {
   "scenario1_initial": {
     "enabled_signal": false,
     "minute_signal": 30,
-    "current_url": "http://127.0.0.1/map/isochrone?zone=nice&iso_lon=10&walk=false&walk_minute=30"
+    "current_url": "http://127.0.0.1/map/isochrone?zone=nice&iso_lon=10"
   },
   "scenario2_enabled_true": {
     "enabled_signal": true,
