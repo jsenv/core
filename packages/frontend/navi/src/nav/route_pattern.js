@@ -198,10 +198,10 @@ export const createRoutePattern = (pattern) => {
     signalSet.add(connection.signal);
   }
 
-  const parsedPattern = parsePattern(
-    cleanPattern,
-    new Map([...pathConnectionMap, ...queryConnectionMap]),
-  );
+  const parsedPattern = parsePattern(cleanPattern, {
+    pathConnectionMap,
+    queryConnectionMap,
+  });
 
   if (DEBUG) {
     console.debug(`[CustomPattern] Created pattern:`, parsedPattern);
@@ -217,7 +217,7 @@ export const createRoutePattern = (pattern) => {
   const applyOn = (url) => {
     const result = matchUrl(parsedPattern, url, {
       baseUrl,
-      connectionMap: new Map([...pathConnectionMap, ...queryConnectionMap]),
+      queryConnectionMap,
       patternObj: patternObject,
     });
 
@@ -1980,7 +1980,7 @@ const canParameterReachChildRoute = (
 /**
  * Parse a route pattern string into structured segments
  */
-const parsePattern = (pattern, connectionMap) => {
+const parsePattern = (pattern, { pathConnectionMap, queryConnectionMap }) => {
   // Handle root route
   if (pattern === "/") {
     return {
@@ -2054,7 +2054,8 @@ const parsePattern = (pattern, connectionMap) => {
       // 1. Explicitly marked with ?
       // 2. Has a default value
       // 3. Connected signal has undefined value and no explicit default (allows /map to match /map/:panel)
-      const connection = connectionMap.get(paramName);
+      const connection =
+        pathConnectionMap.get(paramName) || queryConnectionMap.get(paramName);
       const hasDefault =
         connection && connection.getDefaultValue() !== undefined;
       let isOptional = seg.endsWith("?") || hasDefault;
@@ -2148,7 +2149,7 @@ const checkIfLiteralCanBeOptionalWithPatternObj = (
 const matchUrl = (
   parsedPattern,
   url,
-  { baseUrl, connectionMap, patternObj = null },
+  { baseUrl, queryConnectionMap, patternObj = null },
 ) => {
   // Parse the URL
   const urlObj = new URL(url, baseUrl);
@@ -2171,14 +2172,14 @@ const matchUrl = (
   // OR when URL exactly matches baseUrl (treating baseUrl as root)
   if (parsedPattern.segments.length === 0) {
     if (pathname === "/" || pathname === "") {
-      return extractSearchParams(urlObj, connectionMap);
+      return extractSearchParams(urlObj, queryConnectionMap);
     }
 
     // Special case: if URL exactly matches baseUrl, treat as root route
     if (baseUrl) {
       const baseUrlObj = new URL(baseUrl);
       if (originalPathname === baseUrlObj.pathname) {
-        return extractSearchParams(urlObj, connectionMap);
+        return extractSearchParams(urlObj, queryConnectionMap);
       }
     }
 
@@ -2265,7 +2266,7 @@ const matchUrl = (
   // If pattern has trailing slash or wildcard, allow extra segments
 
   // Add search parameters
-  const searchParams = extractSearchParams(urlObj, connectionMap);
+  const searchParams = extractSearchParams(urlObj, queryConnectionMap);
   Object.assign(params, searchParams);
 
   // Don't add defaults here - rawParams should only contain what's in the URL
@@ -2277,7 +2278,7 @@ const matchUrl = (
 /**
  * Extract search parameters from URL
  */
-const extractSearchParams = (urlObj, connectionMap) => {
+const extractSearchParams = (urlObj, queryConnectionMap) => {
   const params = {};
 
   // Parse the raw query string manually instead of using urlObj.searchParams
@@ -2309,7 +2310,7 @@ const extractSearchParams = (urlObj, connectionMap) => {
       rawValue = "";
     }
 
-    const connection = connectionMap.get(key);
+    const connection = queryConnectionMap.get(key);
     const signalType = connection ? connection.type : null;
 
     // Cast value based on signal type
