@@ -880,7 +880,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
       isochroneWalkSignal.value = true;
 
       return {
-        map_url: MAP_ISOCHRONE_ROUTE.buildUrl(),
+        map_isochrone_url: MAP_ISOCHRONE_ROUTE.url,
       };
     } finally {
       clearAllRoutes();

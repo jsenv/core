@@ -14,7 +14,7 @@ try {
   isochroneWalkSignal.value = true;
 
   return {
-    map_url: MAP_ISOCHRONE_ROUTE.buildUrl(),
+    map_isochrone_url: MAP_ISOCHRONE_ROUTE.url,
   };
 } finally {
   clearAllRoutes();
@@ -24,7 +24,7 @@ try {
 
 ```js
 {
-  "map_url": "http://127.0.0.1/map/isochrone/compare?walk"
+  "map_isochrone_url": "http://127.0.0.1/map/isochrone/compare?walk"
 }
 ```
 
