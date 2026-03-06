@@ -20,7 +20,7 @@ import {
 } from "./action_run_states.js";
 import { SYMBOL_OBJECT_SIGNAL } from "./symbol_object_signal.js";
 
-let DEBUG = true;
+let DEBUG = false;
 export const enableDebugActions = () => {
   DEBUG = true;
 };

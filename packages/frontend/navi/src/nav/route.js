@@ -736,18 +736,20 @@ const registerRoute = (routePattern, { action = ACTION.COMPLETED } = {}) => {
 
     // Update action params on all matching routes
     for (const matchingRoute of allMatchingRoutes) {
-      if (matchingRoute.action) {
-        const matchingRoutePrivateProperties =
-          getRoutePrivateProperties(matchingRoute);
-        const { routePattern: matchingRoutePattern } =
-          matchingRoutePrivateProperties;
-        const currentResolvedParams = matchingRoutePattern.resolveParams();
-        const updatedActionParams = {
-          ...currentResolvedParams,
-          ...newParams,
-        };
-        matchingRoute.action.replaceParams(updatedActionParams);
+      const matchingRouteAction = matchingRoute.action;
+      if (!matchingRouteAction || matchingRouteAction === ACTION.COMPLETED) {
+        continue;
       }
+      const matchingRoutePrivateProperties =
+        getRoutePrivateProperties(matchingRoute);
+      const { routePattern: matchingRoutePattern } =
+        matchingRoutePrivateProperties;
+      const currentResolvedParams = matchingRoutePattern.resolveParams();
+      const updatedActionParams = {
+        ...currentResolvedParams,
+        ...newParams,
+      };
+      matchingRouteAction.replaceParams(updatedActionParams);
     }
 
     // Find the most specific route using pattern depth (deeper = more specific)
