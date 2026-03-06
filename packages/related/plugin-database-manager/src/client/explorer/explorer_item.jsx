@@ -5,9 +5,7 @@ import {
   Input,
   SINGLE_SPACE_CONSTRAINT,
   useEditionController,
-  useSignalSync,
 } from "@jsenv/navi";
-import { useSignal } from "@preact/signals";
 
 export const ExplorerItem = ({
   nameKey,
@@ -16,15 +14,12 @@ export const ExplorerItem = ({
   selectionController,
   deletedItems,
   useItemArrayInStore,
-  useRenameItemAction,
-  useDeleteItemAction,
+  renameItemAction,
+  deleteItemAction,
 }) => {
   const itemName = item[nameKey];
 
   const { editing, startEditing, stopEditing } = useEditionController();
-  const deleteItemAction = useDeleteItemAction
-    ? useDeleteItemAction(item)
-    : null;
 
   const itemRendered = renderItem(item, {
     selectionController,
@@ -42,7 +37,7 @@ export const ExplorerItem = ({
         ? [
             {
               key: "command+delete",
-              action: deleteItemAction,
+              action: () => deleteItemAction(item),
               description: "Delete item",
               confirmMessage: `Are you sure you want to delete "${itemName}"?`,
             },
@@ -52,13 +47,13 @@ export const ExplorerItem = ({
     children: itemName,
   });
 
-  if (useRenameItemAction) {
+  if (renameItemAction) {
     return (
       <RenameInputOrName
         nameKey={nameKey}
         item={item}
         useItemArrayInStore={useItemArrayInStore}
-        useRenameItemAction={useRenameItemAction}
+        renameItemAction={renameItemAction}
         stopEditing={stopEditing}
       >
         {itemRendered}
@@ -73,15 +68,12 @@ const RenameInputOrName = ({
   nameKey,
   item,
   useItemArrayInStore,
-  useRenameItemAction,
+  renameItemAction,
   editing,
   stopEditing,
   children,
 }) => {
   const itemName = item[nameKey];
-  const nameSignal = useSignalSync(itemName);
-  const renameAction = useRenameItemAction(item, nameSignal);
-
   const itemArrayInStore = useItemArrayInStore();
   const otherValueSet = new Set();
   for (const itemCandidate of itemArrayInStore) {
@@ -100,8 +92,7 @@ const RenameInputOrName = ({
       editing={editing}
       onEditEnd={stopEditing}
       value={itemName}
-      valueSignal={nameSignal}
-      action={renameAction}
+      action={(v) => renameItemAction(item, v)}
       required
       constraints={[SINGLE_SPACE_CONSTRAINT, availableNameConstraint]}
     >

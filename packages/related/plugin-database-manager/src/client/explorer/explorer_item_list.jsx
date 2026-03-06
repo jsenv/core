@@ -77,7 +77,7 @@ export const ExplorerItemList = (props) => {
               useItemArrayInStore={useItemArrayInStore}
               renameItemAction={renameItemAction}
               deleteItemAction={
-                deleteManyAction ? () => null : deleteItemAction
+                deleteManyItemAction ? () => null : deleteItemAction
               }
             />
           </li>
