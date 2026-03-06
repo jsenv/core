@@ -1133,10 +1133,25 @@ export const createAction = (callback, rootOptions = {}) => {
   return rootAction;
 };
 
+/**
+ * Creates an action proxy that automatically updates based on signal changes.
+ *
+ * @param {Object} action - The base action to proxy
+ * @param {Signal} paramsSignal - Signal containing parameters for the action
+ * @param {Object} options - Configuration options
+ * @param {boolean} options.rerunOnChange - Ensures the action is rerun every time a signal value is modified.
+ *   This enables live updates - for example, performing an HTTP GET request every time
+ *   a list of filters changes, providing real-time results without user interaction.
+ * @param {boolean} options.transferData - Ensures the new action inherits the data from the current action (if any).
+ *   This enables "Apply Filters" workflows where users modify filters but results are only
+ *   updated when they explicitly trigger the action (e.g., clicking an "Apply" button).
+ *   The old data remains visible until the new action completes.
+ * @param {function} options.onChange - Optional callback triggered when the target action changes
+ */
 const createActionProxyFromSignal = (
   action,
   paramsSignal,
-  { rerunOnChange = false, onChange } = {},
+  { rerunOnChange = false, transferData = false, onChange } = {},
 ) => {
   const actionTargetChangeCallbackSet = new Set();
   const onActionTargetChange = (callback) => {
@@ -1362,6 +1377,19 @@ const createActionProxyFromSignal = (
     return true;
   };
 
+  if (transferData) {
+    onActionTargetChange((actionTarget, actionTargetPrevious) => {
+      if (actionTarget && actionTargetPrevious) {
+        const previousTargetPrivateProperties =
+          getActionPrivateProperties(actionTargetPrevious);
+        const targetPrivateProperties =
+          getActionPrivateProperties(actionTarget);
+        const targetDataSignal = targetPrivateProperties.dataSignal;
+        const previousDataSignal = previousTargetPrivateProperties.dataSignal;
+        targetDataSignal.value = previousDataSignal.value;
+      }
+    });
+  }
   if (rerunOnChange) {
     onActionTargetChange((actionTarget, actionTargetPrevious) => {
       if (
