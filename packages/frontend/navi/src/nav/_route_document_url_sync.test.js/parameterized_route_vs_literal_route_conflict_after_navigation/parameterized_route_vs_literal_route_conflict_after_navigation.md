@@ -12,7 +12,7 @@ try {
   // /map/:panel/ - parameterized route
   // /map/isochrone/ - literal route that conflicts with :panel
   const { MAP_ROUTE, MAP_PANEL_ROUTE, MAP_ISOCHRONE_ROUTE } = setupRoutes({
-    MAP_ROUTE: `/map?zoom=${zoomSignal}`,
+    MAP_ROUTE: `/map/?zoom=${zoomSignal}`,
     MAP_PANEL_ROUTE: `/map/:panel`,
     MAP_ISOCHRONE_ROUTE: `/map/isochrone`,
   });

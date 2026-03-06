@@ -11,7 +11,7 @@ try {
   const { MAP_ROUTE, MAP_ISOCHRONE_ROUTE, MAP_ISOCHRONE_COMPARE_ROUTE } =
     setupRoutes({
       MAP_ROUTE: `/map/?zoom=${zoomSignal}`, // Parent route with trailing slash
-      MAP_ISOCHRONE_ROUTE: `/map/isochrone`, // Intermediate child
+      MAP_ISOCHRONE_ROUTE: `/map/isochrone/`, // Intermediate child
       MAP_ISOCHRONE_COMPARE_ROUTE: `/map/isochrone/compare`, // Deepest child
     });
 

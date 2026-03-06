@@ -33,7 +33,7 @@ try {
     "user_settings_route_matching": false
   },
   "secondUpdate": {
-    "user_route_matching": true,
+    "user_route_matching": false,
     "user_settings_route_matching": true
   }
 }

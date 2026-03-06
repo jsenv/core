@@ -2127,17 +2127,14 @@ const matchUrl = (
   // Check for remaining URL segments
   // Patterns with trailing slashes can match additional URL segments (like wildcards)
   // Patterns without trailing slashes should match exactly (unless they're wildcards)
-  // BUT: if pattern has children, it can also match additional segments (hierarchical matching)
-  const hasChildren = patternObj && patternObj.children.length > 0;
   if (
     !parsedPattern.wildcard &&
     !parsedPattern.trailingSlash &&
-    !hasChildren &&
     urlSegmentIndex < urlSegments.length
   ) {
-    return null; // Pattern without trailing slash/wildcard/children should not match extra segments
+    return null; // Pattern without trailing slash/wildcard should not match extra segments
   }
-  // If pattern has trailing slash, wildcard, or children, allow extra segments
+  // If pattern has trailing slash or wildcard, allow extra segments
 
   // Add search parameters
   const searchParams = extractSearchParams(urlObj, connectionMap);

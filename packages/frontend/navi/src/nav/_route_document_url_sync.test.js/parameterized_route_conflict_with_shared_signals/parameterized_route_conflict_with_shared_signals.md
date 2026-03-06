@@ -18,7 +18,7 @@ try {
   // More realistic scenario where routes have signals that control parameters
   // This should reproduce the delegation issue
   const { MAP_ROUTE, MAP_PANEL_ROUTE, MAP_ISOCHRONE_ROUTE } = setupRoutes({
-    MAP_ROUTE: `/map?zoom=${zoomSignal}`,
+    MAP_ROUTE: `/map/?zoom=${zoomSignal}`,
     MAP_PANEL_ROUTE: `/map/:panel={navi_state_signal:panelValue}?zoom=${zoomSignal}`,
     MAP_ISOCHRONE_ROUTE: `/map/isochrone?zoom=${zoomSignal}`,
   });

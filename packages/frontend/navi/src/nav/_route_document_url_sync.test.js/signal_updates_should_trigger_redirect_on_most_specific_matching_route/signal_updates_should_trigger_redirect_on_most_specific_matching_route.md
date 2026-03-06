@@ -9,8 +9,8 @@ try {
 
   const { MAP_ROUTE, MAP_ISOCHRONE_ROUTE, MAP_COMPARE_ROUTE } = setupRoutes(
     {
-      MAP_ROUTE: `/map?zoom=${zoomSignal}`,
-      MAP_ISOCHRONE_ROUTE: `/map/isochrone?zoom=${zoomSignal}`,
+      MAP_ROUTE: `/map/?zoom=${zoomSignal}`,
+      MAP_ISOCHRONE_ROUTE: `/map/isochrone/?zoom=${zoomSignal}`,
       MAP_COMPARE_ROUTE: `/map/isochrone/compare?zoom=${zoomSignal}`,
     },
   );

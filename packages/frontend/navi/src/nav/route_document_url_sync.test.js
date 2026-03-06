@@ -24,7 +24,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
       const { MAP_ROUTE, MAP_ISOCHRONE_ROUTE, MAP_ISOCHRONE_COMPARE_ROUTE } =
         setupRoutes({
           MAP_ROUTE: `/map/?zoom=${zoomSignal}`, // Parent route with trailing slash
-          MAP_ISOCHRONE_ROUTE: `/map/isochrone`, // Intermediate child
+          MAP_ISOCHRONE_ROUTE: `/map/isochrone/`, // Intermediate child
           MAP_ISOCHRONE_COMPARE_ROUTE: `/map/isochrone/compare`, // Deepest child
         });
 
@@ -82,8 +82,8 @@ await snapshotTests(import.meta.url, ({ test }) => {
 
       const { MAP_ROUTE, MAP_ISOCHRONE_ROUTE, MAP_COMPARE_ROUTE } = setupRoutes(
         {
-          MAP_ROUTE: `/map?zoom=${zoomSignal}`,
-          MAP_ISOCHRONE_ROUTE: `/map/isochrone?zoom=${zoomSignal}`,
+          MAP_ROUTE: `/map/?zoom=${zoomSignal}`,
+          MAP_ISOCHRONE_ROUTE: `/map/isochrone/?zoom=${zoomSignal}`,
           MAP_COMPARE_ROUTE: `/map/isochrone/compare?zoom=${zoomSignal}`,
         },
       );
@@ -143,7 +143,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
       // /map/:panel/ - parameterized route
       // /map/isochrone/ - literal route that conflicts with :panel
       const { MAP_ROUTE, MAP_PANEL_ROUTE, MAP_ISOCHRONE_ROUTE } = setupRoutes({
-        MAP_ROUTE: `/map?zoom=${zoomSignal}`,
+        MAP_ROUTE: `/map/?zoom=${zoomSignal}`,
         MAP_PANEL_ROUTE: `/map/:panel`,
         MAP_ISOCHRONE_ROUTE: `/map/isochrone`,
       });
@@ -230,7 +230,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
       // More realistic scenario where routes have signals that control parameters
       // This should reproduce the delegation issue
       const { MAP_ROUTE, MAP_PANEL_ROUTE, MAP_ISOCHRONE_ROUTE } = setupRoutes({
-        MAP_ROUTE: `/map?zoom=${zoomSignal}`,
+        MAP_ROUTE: `/map/?zoom=${zoomSignal}`,
         MAP_PANEL_ROUTE: `/map/:panel={navi_state_signal:panelValue}?zoom=${zoomSignal}`,
         MAP_ISOCHRONE_ROUTE: `/map/isochrone?zoom=${zoomSignal}`,
       });
@@ -338,7 +338,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
       // The key is that when navigating from panel route to base route,
       // the panel signal should be cleared because the new URL doesn't include it
       const { MAP_ROUTE, MAP_PANEL_ROUTE } = setupRoutes({
-        MAP_ROUTE: `/map?zoom=${zoomSignal}`,
+        MAP_ROUTE: `/map/?zoom=${zoomSignal}`,
         MAP_PANEL_ROUTE: `/map/:panel={navi_state_signal:clearingTestPanel}?zoom=${zoomSignal}`,
       });
 
@@ -397,8 +397,8 @@ await snapshotTests(import.meta.url, ({ test }) => {
     const isochroneModeSignal = stateSignal("walk");
     try {
       setupRoutes({
-        MAP_ROUTE: `/map/:panel=${mapPanelSignal}`,
-        MAP_ISOCHRONE_ROUTE: `/map/isochrone/:tab=${isochroneTabSignal}`,
+        MAP_ROUTE: `/map/:panel=${mapPanelSignal}/`,
+        MAP_ISOCHRONE_ROUTE: `/map/isochrone/:tab=${isochroneTabSignal}/`,
         MAP_ISOCHRONE_TIME_ROUTE: `/map/isochrone/time/:mode=${isochroneModeSignal}`,
       });
       updateRoutes(`${baseUrl}/map/isochrone/time/bike`);

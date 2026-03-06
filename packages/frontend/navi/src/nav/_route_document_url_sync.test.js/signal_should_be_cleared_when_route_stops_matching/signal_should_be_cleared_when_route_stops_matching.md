@@ -19,7 +19,7 @@ try {
   // The key is that when navigating from panel route to base route,
   // the panel signal should be cleared because the new URL doesn't include it
   const { MAP_ROUTE, MAP_PANEL_ROUTE } = setupRoutes({
-    MAP_ROUTE: `/map?zoom=${zoomSignal}`,
+    MAP_ROUTE: `/map/?zoom=${zoomSignal}`,
     MAP_PANEL_ROUTE: `/map/:panel={navi_state_signal:clearingTestPanel}?zoom=${zoomSignal}`,
   });
 
