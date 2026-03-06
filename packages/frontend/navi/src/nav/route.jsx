@@ -58,17 +58,14 @@ const RootElement = () => {
 const SlotContext = createContext(null);
 const RouteInfoContext = createContext(null);
 
-const RoutesContext = createContext(null);
 export const Routes = ({ element = <RootElement />, children }) => {
   const routeInfo = useMatchingRouteInfo();
   const route = routeInfo?.route;
 
   return (
-    <RoutesContext.Provider value={true}>
-      <Route route={route} element={element}>
-        {children}
-      </Route>
-    </RoutesContext.Provider>
+    <Route route={route} element={element}>
+      {children}
+    </Route>
   );
 };
 
@@ -82,10 +79,6 @@ export const Route = ({
   children,
   routeParams,
 }) => {
-  const insideRoutes = useContext(RoutesContext);
-  if (!insideRoutes) {
-    throw new Error("Route component must be used inside a Routes component");
-  }
   const forceRender = useForceRender();
   const hasDiscoveredRef = useRef(false);
   const matchingInfoRef = useRef(null);
