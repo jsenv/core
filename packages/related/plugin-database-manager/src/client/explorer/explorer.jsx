@@ -64,7 +64,11 @@ const ExplorerBody = () => {
   const flexDetailsSetRef = useRef();
   const [resizableDetailsIdSet, setResizableDetailsIdSet] = useState(new Set());
   useLayoutEffect(() => {
-    const flexDetailsSet = initFlexDetailsSet(flexDetailsSetRef.current, {
+    const flexDetails = flexDetailsSetRef.current;
+    if (!flexDetails) {
+      return null;
+    }
+    const flexDetailsSet = initFlexDetailsSet(flexDetails, {
       onResizableDetailsChange: (resizableDetailsIdSet) => {
         setResizableDetailsIdSet(new Set(resizableDetailsIdSet));
       },

@@ -9,7 +9,11 @@ export const useFocusGroup = (
     if (!enabled) {
       return null;
     }
-    const focusGroup = initFocusGroup(elementRef.current, {
+    const element = elementRef.current;
+    if (!element) {
+      return null;
+    }
+    const focusGroup = initFocusGroup(element, {
       direction,
       skipTab,
       loop,

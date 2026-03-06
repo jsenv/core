@@ -66,8 +66,12 @@ export const ExplorerGroup = (props) => {
   const ref = rest.ref || defaultRef;
 
   useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) {
+      return;
+    }
     setTimeout(() => {
-      ref.current.setAttribute("data-details-toggle-animation", "");
+      el.setAttribute("data-details-toggle-animation", "");
     });
   }, []);
 
