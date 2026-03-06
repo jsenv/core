@@ -613,8 +613,8 @@ await snapshotTests(import.meta.url, ({ test }) => {
   test("mostSpecificRoute should prefer literal over parameterized routes", () => {
     const navToCalls = [];
     const routeIntegrationMock = {
-      navTo: (url) => {
-        navToCalls.push(url);
+      navTo: (url, { callReason }) => {
+        navToCalls.push({ url, callReason });
         updateRoutes(url);
         return Promise.resolve();
       },
@@ -679,10 +679,12 @@ await snapshotTests(import.meta.url, ({ test }) => {
         route_matching: routeMatching,
         nav_to_calls: navToCalls,
         most_specific_url_used:
-          navToCalls.length > 0 ? navToCalls[navToCalls.length - 1] : "none",
+          navToCalls.length > 0
+            ? navToCalls[navToCalls.length - 1].url
+            : "none",
 
         // Analysis:
-        expected_most_specific_url: "/map/isochrone/compare?walk", // Should navigate to compare route with walk param
+        expected_most_specific_url: "/map/isochrone?walk", // Should navigate to compare route with walk param
         actual_segments_comparison: {
           problem: `Current code counts segments: isochrone=${isochroneSegments}, compare=${compareSegments}`,
           issue:

@@ -3,8 +3,8 @@
 ```js
 const navToCalls = [];
 const routeIntegrationMock = {
-  navTo: (url) => {
-    navToCalls.push(url);
+  navTo: (url, { callReason }) => {
+    navToCalls.push({ url, callReason });
     updateRoutes(url);
     return Promise.resolve();
   },
@@ -69,10 +69,12 @@ try {
     route_matching: routeMatching,
     nav_to_calls: navToCalls,
     most_specific_url_used:
-      navToCalls.length > 0 ? navToCalls[navToCalls.length - 1] : "none",
+      navToCalls.length > 0
+        ? navToCalls[navToCalls.length - 1].url
+        : "none",
 
     // Analysis:
-    expected_most_specific_url: "/map/isochrone/compare?walk", // Should navigate to compare route with walk param
+    expected_most_specific_url: "/map/isochrone?walk", // Should navigate to compare route with walk param
     actual_segments_comparison: {
       problem: `Current code counts segments: isochrone=${isochroneSegments}, compare=${compareSegments}`,
       issue:
@@ -101,11 +103,17 @@ try {
     "compare_matches": true
   },
   "nav_to_calls": [
-    "http://127.0.0.1/map/isochrone?iso_lon=2.3522&walk",
-    "http://127.0.0.1/map/isochrone?walk"
+    {
+      "url": "http://127.0.0.1/map/isochrone?iso_lon=2.3522&walk",
+      "callReason": 'walk signal change on route "/map/isochrone/compare?walk&walk_minute"'
+    },
+    {
+      "url": "http://127.0.0.1/map/isochrone?walk",
+      "callReason": 'replaceParams delegation from route "/map/isochrone/:tab/?iso_lon" to route "/map/isochrone/compare?walk&walk_minute" (original reason: iso_lon signal reset to default on route "/map/isochrone/:tab/?iso_lon")'
+    }
   ],
   "most_specific_url_used": "http://127.0.0.1/map/isochrone?walk",
-  "expected_most_specific_url": "/map/isochrone/compare?walk",
+  "expected_most_specific_url": "/map/isochrone?walk",
   "actual_segments_comparison": {
     "problem": "Current code counts segments: isochrone=4, compare=3",
     "issue": "The code might incorrectly consider ISOCHRONE_ROUTE more specific due to query params"
