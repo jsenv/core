@@ -1964,7 +1964,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
     }
   });
 
-  test.ONLY("explorer root param", () => {
+  test.ONLY("search param on root with trailing slash", () => {
     const navToCalls = [];
 
     setRouteIntegration({
@@ -1985,6 +1985,38 @@ await snapshotTests(import.meta.url, ({ test }) => {
         OTHER_ROUTE: `/other`,
       });
       updateRoutes(`${baseUrl}/other`);
+      tableOpenedSignal.value = true;
+      return {
+        nav_calls: navToCalls,
+      };
+    } finally {
+      clearAllRoutes();
+      globalSignalRegistry.clear();
+      setRouteIntegration(null);
+    }
+  });
+
+  test.ONLY("search param on parent with trailing slash", () => {
+    const navToCalls = [];
+
+    setRouteIntegration({
+      navTo: (url) => {
+        navToCalls.push(url);
+        updateRoutes(url);
+        return Promise.resolve();
+      },
+    });
+
+    try {
+      // Simulate available tramway lines from backend (dynamic) - starts empty
+      const tableOpenedSignal = stateSignal(false, {
+        type: "boolean",
+      });
+      setupRoutes({
+        HOME_ROUTE: `/scope/?table_opened=${tableOpenedSignal}`,
+        OTHER_ROUTE: `/scope/other`,
+      });
+      updateRoutes(`${baseUrl}/scope/other`);
       tableOpenedSignal.value = true;
       return {
         nav_calls: navToCalls,
