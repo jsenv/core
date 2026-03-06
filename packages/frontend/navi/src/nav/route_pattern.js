@@ -2126,6 +2126,55 @@ const checkIfLiteralCanBeOptionalWithPatternObj = (
 };
 
 /**
+ * Helper function to try extracting parameters from child routes for remaining URL segments
+ */
+const tryExtractChildParameters = (
+  childPattern,
+  remainingSegments,
+  existingParams,
+) => {
+  const childParsedPattern = childPattern.pattern;
+
+  // For child patterns, we need to check if they can provide additional parameters
+  // by matching segments that come after what the parent matched
+
+  // The child pattern might have literals that were already matched by the parent
+  // We need to find where in the child pattern we should start matching the remaining segments
+  let remainingIndex = 0;
+  const childParams = {};
+
+  // Simple approach: look for parameter segments in the child pattern that could
+  // match our remaining segments, but skip literals that were likely matched by parent
+  for (let i = 0; i < childParsedPattern.segments.length; i++) {
+    const segment = childParsedPattern.segments[i];
+
+    if (segment.type === "param" && remainingIndex < remainingSegments.length) {
+      // Check if this parameter segment could match a remaining URL segment
+      // We need to verify that this parameter isn't already captured by parent
+      if (!(segment.name in existingParams)) {
+        const urlSegment = remainingSegments[remainingIndex];
+        childParams[segment.name] = decodeURIComponent(urlSegment);
+        remainingIndex++;
+      }
+    } else if (
+      segment.type === "literal" &&
+      remainingIndex < remainingSegments.length
+    ) {
+      // Check if this literal matches remaining segments
+      const urlSegment = remainingSegments[remainingIndex];
+      if (urlSegment === segment.value) {
+        remainingIndex++;
+      }
+      // Note: we don't return null if literal doesn't match, because it might be
+      // a literal that was already consumed by the parent pattern
+    }
+  }
+
+  // Return extracted parameters if we found any
+  return Object.keys(childParams).length > 0 ? childParams : null;
+};
+
+/**
  * Match a URL against a parsed pattern
  */
 const matchUrl = (
@@ -2245,7 +2294,29 @@ const matchUrl = (
   ) {
     return null; // Pattern without trailing slash/wildcard should not match extra segments
   }
-  // If pattern has trailing slash or wildcard, allow extra segments
+
+  // If there are remaining URL segments and we have descendant routes,
+  // try to capture parameters from descendant routes
+  if (
+    urlSegmentIndex < urlSegments.length &&
+    patternObj &&
+    patternObj.children
+  ) {
+    const remainingSegments = urlSegments.slice(urlSegmentIndex);
+
+    // Try to match remaining segments against child routes to extract their parameters
+    for (const childPattern of patternObj.children) {
+      const childParams = tryExtractChildParameters(
+        childPattern,
+        remainingSegments,
+        params,
+      );
+      if (childParams) {
+        Object.assign(params, childParams);
+        break; // Found a matching child pattern
+      }
+    }
+  }
 
   // Add search parameters
   const searchParams = extractSearchParams(urlObj, queryConnectionMap);
