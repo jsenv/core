@@ -669,7 +669,10 @@ const registerRoute = (routePattern, { action = ACTION.COMPLETED } = {}) => {
         }
         route.replaceParams(
           { [paramName]: value },
-          { callReason: `${paramName} signal change on ${route}` },
+          {
+            callReason: `${paramName} signal change on ${route}`,
+            isSignalChange: true,
+          },
         );
         return;
       }
@@ -683,7 +686,10 @@ const registerRoute = (routePattern, { action = ACTION.COMPLETED } = {}) => {
         }
         route.replaceParams(
           { [paramName]: undefined },
-          { callReason: `${paramName} signal reset to default on ${route}` },
+          {
+            callReason: `${paramName} signal reset to default on ${route}`,
+            isSignalChange: true,
+          },
         );
         return;
       }
@@ -699,7 +705,10 @@ const registerRoute = (routePattern, { action = ACTION.COMPLETED } = {}) => {
       }
       route.replaceParams(
         { [paramName]: value },
-        { callReason: `${paramName} signal change on ${route}` },
+        {
+          callReason: `${paramName} signal change on ${route}`,
+          isSignalChange: true,
+        },
       );
     });
   }
@@ -726,7 +735,7 @@ const registerRoute = (routePattern, { action = ACTION.COMPLETED } = {}) => {
       callReason,
     });
   };
-  route.replaceParams = (newParams, { callReason } = {}) => {
+  route.replaceParams = (newParams, { callReason, isSignalChange } = {}) => {
     const matching = route.matchingSignal.peek();
     if (!matching) {
       console.warn(
@@ -802,6 +811,12 @@ const registerRoute = (routePattern, { action = ACTION.COMPLETED } = {}) => {
 
     // If we found a more specific route, delegate to it; otherwise handle it ourselves
     if (mostSpecificRoute !== route) {
+      // Check if this is a signal-originated call and there's a more specific route that will also handle it
+      // If so, skip the redirect to avoid duplicate navTo calls
+      if (isSignalChange) {
+        return null;
+      }
+
       if (DEBUG) {
         console.debug(
           `${route} delegating redirect to more specific route ${mostSpecificRoute}`,

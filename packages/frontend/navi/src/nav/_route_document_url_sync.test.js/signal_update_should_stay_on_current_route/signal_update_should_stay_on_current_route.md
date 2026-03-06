@@ -101,10 +101,6 @@ try {
     "navToCalls": [
       {
         "url": "http://127.0.0.1/map?lon=20",
-        "callReason": 'replaceParams delegation from route "/map/?lon" to route "/map/:panel/" (original reason: lon signal change on route "/map/?lon")'
-      },
-      {
-        "url": "http://127.0.0.1/map?lon=20",
         "callReason": 'lon signal change on route "/map/:panel/"'
       }
     ]
@@ -112,10 +108,6 @@ try {
   "bug_reproduced": false,
   "expected_url": "/map?lon=20",
   "actual_nav_calls": [
-    {
-      "url": "http://127.0.0.1/map?lon=20",
-      "callReason": 'replaceParams delegation from route "/map/?lon" to route "/map/:panel/" (original reason: lon signal change on route "/map/?lon")'
-    },
     {
       "url": "http://127.0.0.1/map?lon=20",
       "callReason": 'lon signal change on route "/map/:panel/"'
