@@ -28,7 +28,7 @@ try {
 ```js
 {
   "map_url": "http://127.0.0.1/map?zone=something",
-  "isochrone_url": "http://127.0.0.1/map/isochrone?zone=something",
+  "isochrone_url": "http://127.0.0.1/map/isochrone/compare?zone=something",
   "isochrone_compare_walk_url": "http://127.0.0.1/map/isochrone?zone=something"
 }
 ```

@@ -123,8 +123,7 @@ try {
     "section": "settings"
   },
   "admin_on_settings_tab": {
-    "section": "settings",
-    "tab": "advanced"
+    "section": "settings"
   },
   "admin_on_analytics": {
     "section": "analytics"

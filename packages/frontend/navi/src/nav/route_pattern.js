@@ -339,25 +339,7 @@ export const createRoutePattern = (pattern) => {
       }
 
       if (childWouldMatch) {
-        // Check child path parameters
-        for (const [
-          childParam,
-          childConnection,
-        ] of childPatternObj.pathConnectionMap) {
-          if (childParam in resolvedParams) {
-            continue;
-          }
-          const childSignalValue = childConnection.signal.value;
-          // Only include if not already resolved and is non-default
-          if (
-            childSignalValue !== undefined &&
-            childSignalValue !== childConnection.getDefaultValue()
-          ) {
-            resolvedParams[childParam] = childSignalValue;
-          }
-        }
-
-        // Check child query parameters
+        // Only check child query parameters - path parameters should not be inherited as search params
         for (const [
           childParam,
           childConnection,
@@ -984,8 +966,8 @@ export const createRoutePattern = (pattern) => {
         }
 
         // When structural parameters (those that determine child selection) are defaults,
-        // prefer parent route regardless of whether child has other non-default parameters
-        if (childSpecificParamsAreDefaults) {
+        // prefer parent route ONLY if child doesn't have any non-default parameters
+        if (childSpecificParamsAreDefaults && !hasActiveParams) {
           for (const [paramName, connection] of new Map([
             ...pathConnectionMap,
             ...queryConnectionMap,
@@ -1000,7 +982,7 @@ export const createRoutePattern = (pattern) => {
               shouldUse = false;
               if (DEBUG) {
                 console.debug(
-                  `[${pattern}] Preferring parent over child - child includes default literal '${currentDefault}' for param '${paramName}' (structural parameter is default)`,
+                  `[${pattern}] Preferring parent over child - child includes default literal '${currentDefault}' for param '${paramName}' (structural parameter is default and no active params)`,
                 );
               }
               break;
@@ -1008,7 +990,7 @@ export const createRoutePattern = (pattern) => {
           }
         } else if (DEBUG) {
           console.debug(
-            `[${pattern}] Using child route - parameters that determine child selection are non-default`,
+            `[${pattern}] Using child route - parameters that determine child selection are non-default or child has active params`,
           );
         }
       }

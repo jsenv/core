@@ -34,7 +34,7 @@ try {
 
 ```js
 {
-  "map_root_url": "http://127.0.0.1/map?zone=london&iso_lon=1&mode=bike&tab=time",
+  "map_root_url": "http://127.0.0.1/map?zone=london&iso_lon=1",
   "map_isochrone_time_walk_url": "http://127.0.0.1/map/isochrone/time?zone=london&iso_lon=1"
 }
 ```
