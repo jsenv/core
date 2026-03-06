@@ -99,12 +99,14 @@ try {
     "dashboard_route_matching": true,
     "dashboard_tab_route_matching": true,
     "navToCalls": [
+      "http://127.0.0.1/dashboard?lon=20",
       "http://127.0.0.1/dashboard?lon=20"
     ]
   },
   "bug_reproduced": false,
   "expected_url": "/dashboard?lon=20",
   "actual_nav_calls": [
+    "http://127.0.0.1/dashboard?lon=20",
     "http://127.0.0.1/dashboard?lon=20"
   ],
   "compatibility_analysis": {

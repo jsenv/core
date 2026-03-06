@@ -63,9 +63,15 @@ try {
     "style": "satellite",
     "zone": "zone-123"
   },
-  "isochrone_without_params": {},
+  "isochrone_without_params": {
+    "zone": "zone-123",
+    "style": "streets-v11",
+    "zoom": 12
+  },
   "isochrone_with_zoom_15": {
-    "zoom": "15"
+    "zoom": 15,
+    "zone": "zone-123",
+    "style": "streets-v11"
   }
 }
 ```

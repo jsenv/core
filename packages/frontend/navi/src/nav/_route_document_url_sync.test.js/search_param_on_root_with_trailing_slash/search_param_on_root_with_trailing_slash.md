@@ -32,7 +32,9 @@ try {
 
 ```js
 {
-  "nav_calls": []
+  "nav_calls": [
+    "http://127.0.0.1/other?table_opened"
+  ]
 }
 ```
 

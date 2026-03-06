@@ -99,12 +99,14 @@ try {
     "panel_route_matching": true,
     "flow_route_matching": false,
     "navToCalls": [
+      "http://127.0.0.1/map?lon=20",
       "http://127.0.0.1/map?lon=20"
     ]
   },
   "bug_reproduced": false,
   "expected_url": "/map?lon=20",
   "actual_nav_calls": [
+    "http://127.0.0.1/map?lon=20",
     "http://127.0.0.1/map?lon=20"
   ],
   "compatibility_analysis": {
