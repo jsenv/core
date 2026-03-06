@@ -8,6 +8,7 @@
 - [complex url matching with multiple signals](complex_url_matching_with_multiple_signals/complex_url_matching_with_multiple_signals.md)
 - [map isochrone tab matching](map_isochrone_tab_matching/map_isochrone_tab_matching.md)
 - [menu matching deep](menu_matching_deep/menu_matching_deep.md)
+- [trailing slash vs not trailing slash](trailing_slash_vs_not_trailing_slash/trailing_slash_vs_not_trailing_slash.md)
 
 ---
 

@@ -311,4 +311,30 @@ await snapshotTests(import.meta.url, ({ test }) => {
       globalSignalRegistry.clear();
     }
   });
+
+  test("trailing slash vs not trailing slash", () => {
+    try {
+      const { USER_ROUTE, USER_SETTINGS_ROUTE } = setupRoutes({
+        USER_ROUTE: "/users/:id",
+        USER_SETTINGS_ROUTE: "/users/:id/settings",
+      });
+      updateRoutes(`${baseUrl}/users/123`);
+      const firstUpdate = {
+        user_route_matching: USER_ROUTE.matching,
+        user_settings_route_matching: USER_SETTINGS_ROUTE.matching,
+      };
+      updateRoutes(`${baseUrl}/users/123/settings`);
+      const secondUpdate = {
+        user_route_matching: USER_ROUTE.matching,
+        user_settings_route_matching: USER_SETTINGS_ROUTE.matching,
+      };
+      return {
+        firstUpdate,
+        secondUpdate,
+      };
+    } finally {
+      clearAllRoutes();
+      globalSignalRegistry.clear();
+    }
+  });
 });
