@@ -1,5 +1,5 @@
 import { initPositionSticky } from "@jsenv/dom";
-import { ErrorBoundaryContext, Icon, Text } from "@jsenv/navi";
+import { Box, ErrorBoundaryContext, Icon, Text } from "@jsenv/navi";
 import { useErrorBoundary, useLayoutEffect, useRef } from "preact/hooks";
 
 import.meta.css = /* css */ `
@@ -120,11 +120,11 @@ const PageHeadLabel = ({ icon, label, children, actions = [] }) => {
   return (
     <div className="page_head_with_actions">
       {title}
-      <div className="actions">
+      <Box className="actions" selfAlignX="end">
         {actions.map((action) => {
           return action.component;
         })}
-      </div>
+      </Box>
     </div>
   );
 };
