@@ -2494,6 +2494,11 @@ const isChildPattern = (childPattern, parentPattern) => {
   // Root route special handling - different families for signal preservation
   if (parentSegments.length === 0) {
     // Parent is root route ("/")
+    // If parent has query parameters, it can be parent of any child route
+    // This enables parameter inheritance from root route queries to children
+    if (parentQuery) {
+      return childSegments.length >= 1;
+    }
     // Root can only be parent of parameterized routes like "/:section"
     // But NOT literal routes like "/settings" (different families)
     return childSegments.length === 1 && childSegments[0].startsWith(":");

@@ -1,4 +1,4 @@
-# [explorer root param](../../route_document_url_sync.test.js)
+# [search param on parent with trailing slash](../../route_document_url_sync.test.js)
 
 ```js
 const navToCalls = [];
@@ -17,10 +17,10 @@ try {
     type: "boolean",
   });
   setupRoutes({
-    HOME_ROUTE: `/?table_opened=${tableOpenedSignal}`,
-    OTHER_ROUTE: `/other`,
+    HOME_ROUTE: `/scope/?table_opened=${tableOpenedSignal}`,
+    OTHER_ROUTE: `/scope/other`,
   });
-  updateRoutes(`${baseUrl}/other`);
+  updateRoutes(`${baseUrl}/scope/other`);
   tableOpenedSignal.value = true;
   return {
     nav_calls: navToCalls,
@@ -34,7 +34,9 @@ try {
 
 ```js
 {
-  "nav_calls": []
+  "nav_calls": [
+    "http://127.0.0.1/scope/other?table_opened"
+  ]
 }
 ```
 
