@@ -18,9 +18,9 @@ try {
   });
   setupRoutes({
     HOME_ROUTE: `/?table_opened=${tableOpenedSignal}`,
-    TABLE_ROUTE: `/table/:table/`,
+    OTHER_ROUTE: `/other`,
   });
-  updateRoutes(`${baseUrl}/table/tablename`);
+  updateRoutes(`${baseUrl}/other`);
   tableOpenedSignal.value = true;
   return {
     nav_calls: navToCalls,
