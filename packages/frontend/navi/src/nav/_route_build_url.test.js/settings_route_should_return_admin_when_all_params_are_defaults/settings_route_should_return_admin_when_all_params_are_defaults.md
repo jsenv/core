@@ -32,7 +32,7 @@ try {
 {
   "settings_url_with_default_tab": "http://127.0.0.1/admin",
   "settings_url_no_params": "http://127.0.0.1/admin/settings/advanced",
-  "admin_url": "http://127.0.0.1/admin?tab=advanced"
+  "admin_url": "http://127.0.0.1/admin/settings/advanced"
 }
 ```
 

@@ -41,7 +41,7 @@ try {
   "explicit_general_override": "http://127.0.0.1/admin",
   "using_signal_value": "http://127.0.0.1/admin/settings/advanced",
   "explicit_security_override": "http://127.0.0.1/admin/settings/security",
-  "section_default": "http://127.0.0.1/admin?tab=advanced",
+  "section_default": "http://127.0.0.1/admin/settings/advanced",
   "section_non_default": "http://127.0.0.1/admin/users"
 }
 ```

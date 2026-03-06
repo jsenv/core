@@ -1233,22 +1233,31 @@ export const createRoutePattern = (pattern) => {
       }
 
       if (canOptimizeToParent && Object.keys(parentPathDefaults).length > 0) {
-        // Check if child has non-default query parameters that should be preserved
-        const nonDefaultQueryParams = {};
-
-        for (const [
-          paramName,
-          connection,
-        ] of childPatternObj.queryConnectionMap) {
+        // CRITICAL: Check if child route has non-default path parameters
+        // If it does, don't optimize away the child route structure
+        for (const [paramName, connection] of childPatternObj.pathConnectionMap) {
           const signalValue = connection.signal.value;
-          if (
-            signalValue !== undefined &&
-            connection.isCustomValue(signalValue)
-          ) {
-            nonDefaultQueryParams[paramName] = signalValue;
+          if (signalValue !== undefined && connection.isCustomValue(signalValue)) {
+            // Child has non-default path parameters - don't optimize away the structure
+            if (DEBUG) {
+              console.debug(
+                `[${pattern}] Not optimizing child route because it has non-default path parameter '${paramName}=${signalValue}'`
+              );
+            }
+            return null;
           }
         }
-
+        
+        // Check if child has non-default query parameters that should be preserved
+        const nonDefaultQueryParams = {};
+        
+        for (const [paramName, connection] of childPatternObj.queryConnectionMap) {
+          const signalValue = connection.signal.value;
+          if (signalValue !== undefined && connection.isCustomValue(signalValue)) {
+            nonDefaultQueryParams[paramName] = signalValue; 
+          }
+        }
+        
         // Also include any query parameters from baseParams
         for (const [paramName, paramValue] of Object.entries(baseParams)) {
           // Check if this parameter is not a path parameter that we're optimizing away
@@ -1256,7 +1265,7 @@ export const createRoutePattern = (pattern) => {
             nonDefaultQueryParams[paramName] = paramValue;
           }
         }
-
+        
         if (Object.keys(nonDefaultQueryParams).length > 0) {
           // Build optimized URL using parent path but child's query parameters
           const parentParams = { ...nonDefaultQueryParams };

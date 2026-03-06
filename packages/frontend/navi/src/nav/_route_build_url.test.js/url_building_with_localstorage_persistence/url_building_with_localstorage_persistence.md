@@ -90,7 +90,7 @@ try {
     "settings_url": "http://127.0.0.1/admin/settings/security"
   },
   "section_default_tab_non_default": {
-    "admin_url": "http://127.0.0.1/admin?tab=security",
+    "admin_url": "http://127.0.0.1/admin/settings/security",
     "settings_url": "http://127.0.0.1/admin/settings/security"
   }
 }
