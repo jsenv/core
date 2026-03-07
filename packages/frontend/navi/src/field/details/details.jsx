@@ -75,6 +75,7 @@ export const Details = (props) => {
   const details = renderActionableComponent(props, {
     Basic: DetailsBasic,
     WithAction: DetailsWithAction,
+    WithConnectedAction: DetailsWithConnectedAction,
   });
   return (
     <UIStateControllerContext.Provider value={uiStateController}>
@@ -286,6 +287,17 @@ const DetailsWithAction = (props) => {
       }}
     >
       <ActionRenderer action={effectiveAction}>{children}</ActionRenderer>
+    </DetailsBasic>
+  );
+};
+
+const DetailsWithConnectedAction = (props) => {
+  const { connectedAction, children, loading, ...rest } = props;
+  const actionStatus = useActionStatus(connectedAction);
+  const { loading: actionLoading } = actionStatus;
+  return (
+    <DetailsBasic {...rest} loading={loading || actionLoading}>
+      <ActionRenderer action={connectedAction}>{children}</ActionRenderer>
     </DetailsBasic>
   );
 };

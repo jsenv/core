@@ -67,11 +67,10 @@ export const useUIStateController = (
 ) => {
   const parentUIStateController = useContext(ParentUIStateControllerContext);
   const formContext = useContext(FormContext);
-  const { id, name, onUIStateChange, action } = props;
+  const { id, name, uiAction, action } = props;
   if (persists === undefined && formContext) {
     persists = true;
   }
-  const uncontrolled = !formContext && !action;
   const [navState, setNavState] = useNavState(id);
 
   const uiStateControllerRef = useRef();
@@ -108,14 +107,12 @@ export const useUIStateController = (
    * The component re-renders so it's the action/form that is considered as responsible
    * to update the state and as a result allowed to have "checked"/"value" prop without "onUIStateChange"
    */
-  const readOnly =
-    uncontrolled &&
-    hasStateProp &&
-    !onUIStateChange &&
-    !parentUIStateController;
+  const uncontrolled =
+    !action && !uiAction && !formContext && !parentUIStateController;
+  const readOnly = uncontrolled && hasStateProp;
   if (readOnly && import.meta.dev) {
     console.warn(
-      `"${componentType}" is controlled by "${statePropName}" prop. Replace it by "${defaultStatePropName}" or combine it with "onUIStateChange" to make field interactive.`,
+      `"${componentType}" is controlled by "${statePropName}" prop. Replace it by "${defaultStatePropName}" or pass "uiAction" or "action" to make field interactive.`,
     );
   }
 
@@ -138,7 +135,7 @@ export const useUIStateController = (
     existingUIStateController._checkForUpdates({
       readOnly,
       name,
-      onUIStateChange,
+      uiAction,
       getPropFromState,
       getStateFromProp,
       hasStateProp,
@@ -156,7 +153,7 @@ export const useUIStateController = (
     _checkForUpdates: ({
       readOnly,
       name,
-      onUIStateChange,
+      uiAction,
       getPropFromState,
       getStateFromProp,
       hasStateProp,
@@ -165,7 +162,7 @@ export const useUIStateController = (
     }) => {
       uiStateController.readOnly = readOnly;
       uiStateController.name = name;
-      uiStateController.onUIStateChange = onUIStateChange;
+      uiStateController.uiAction = uiAction;
       uiStateController.getPropFromState = getPropFromState;
       uiStateController.getStateFromProp = getStateFromProp;
       uiStateController.stateInitial = stateInitial;
@@ -193,7 +190,7 @@ export const useUIStateController = (
     hasStateProp,
     state: stateInitial,
     uiState: stateInitial,
-    onUIStateChange,
+    uiAction,
     getPropFromState,
     getStateFromProp,
     setUIState: (prop, e) => {
@@ -210,7 +207,7 @@ export const useUIStateController = (
       );
       uiStateController.uiState = newUIState;
       publishUIState(newUIState);
-      uiStateController.onUIStateChange?.(newUIState, e);
+      uiStateController.uiAction?.(newUIState, e);
       notifyParentAboutChildUIStateChange(e);
     },
     resetUIState: (e) => {
@@ -338,7 +335,7 @@ export const useUIGroupStateController = (
     throw new TypeError("aggregateChildStates must be a function");
   }
   const parentUIStateController = useContext(ParentUIStateControllerContext);
-  const { onUIStateChange, name, value } = props;
+  const { uiAction, name, value } = props;
   const childUIStateControllerArrayRef = useRef([]);
   const childUIStateControllerArray = childUIStateControllerArrayRef.current;
   const uiStateControllerRef = useRef();
@@ -389,7 +386,7 @@ export const useUIGroupStateController = (
   const existingUIStateController = uiStateControllerRef.current;
   if (existingUIStateController) {
     existingUIStateController.name = name;
-    existingUIStateController.onUIStateChange = onUIStateChange;
+    existingUIStateController.uiAction = uiAction;
     existingUIStateController.value = value;
     return existingUIStateController;
   }
@@ -410,7 +407,7 @@ export const useUIGroupStateController = (
     componentType,
     name,
     value,
-    onUIStateChange,
+    uiAction,
     uiState: emptyState,
     setUIState: (newUIState, e) => {
       const currentUIState = uiStateController.uiState;

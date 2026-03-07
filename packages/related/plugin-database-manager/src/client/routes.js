@@ -11,7 +11,7 @@ import {
   roleCanLoginHeightSignal,
   roleCanLoginOpenSignal,
 } from "./role/role_can_login/role_can_login_state.js";
-import { ROLE } from "./role/role_store.js";
+import { ROLE, ROLE_CAN_LOGIN } from "./role/role_store.js";
 import { TABLE, TABLE_ROW } from "./table/table_store.js";
 
 setBaseUrl(window.DB_MANAGER_CONFIG.pathname);
@@ -34,7 +34,7 @@ export const tablenameSignal = stateSignal(null);
 
 export const HOME_ROUTE = route(`/`, {
   searchParams: {
-    role_login_open: roleCanLoginOpenSignal,
+    role_login_open: [roleCanLoginOpenSignal, ROLE_CAN_LOGIN.GET_MANY],
     role_login_height: roleCanLoginHeightSignal,
   },
 });

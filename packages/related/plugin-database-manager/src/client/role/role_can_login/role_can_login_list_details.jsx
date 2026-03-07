@@ -23,11 +23,13 @@ export const RoleCanLoginListDetails = () => {
     <ExplorerGroup
       id="role_can_login_list"
       open={roleCanLoginOpenSignal.value}
-      onOpen={() => {
-        roleCanLoginOpenSignal.value = true;
-      }}
-      onClose={() => {
-        roleCanLoginOpenSignal.value = false;
+      // lorsquon a action + uiAction alors
+      // on considere que le UI action déclenche le action? non on peut pas affirmer cela
+      // donc c'est encore autre chose que l'on a pas encore et qui est le concept de "binding" entre une UI et une action que la UI controlle indirectement
+      // je vais travailler ce concept dans la demo du details pour commencer
+      detailsAction={ROLE_CAN_LOGIN.GET_MANY}
+      detailsUIAction={(open) => {
+        roleCanLoginOpenSignal.value = open;
       }}
       resizable={resizable}
       height={roleCanLoginHeightSignal.value}
@@ -38,7 +40,6 @@ export const RoleCanLoginListDetails = () => {
       onresizablechange={(e) => {
         setResizable(e.detail.resizable);
       }}
-      detailsAction={ROLE_CAN_LOGIN.GET_MANY}
       idKey="oid"
       nameKey="rolname"
       label="ROLE LOGINS"
