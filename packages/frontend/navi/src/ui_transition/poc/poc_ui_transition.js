@@ -903,7 +903,6 @@ export const createUITransitionController = (
         }
         if (mutation.type === "attributes") {
           const { attributeName } = mutation;
-          debugger;
           if (
             attributeName === CONTENT_ID_ATTRIBUTE ||
             attributeName === CONTENT_PHASE_ATTRIBUTE

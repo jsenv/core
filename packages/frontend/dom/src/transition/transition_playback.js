@@ -286,7 +286,6 @@ export const createTransition = ({
               `Debug breakpoint hit at ${(breakpoint * 100).toFixed(1)}% progress`,
             );
             const notifyDebuggerEnd = notifyDebuggerStart();
-            debugger;
             notifyDebuggerEnd();
           }
           if (effect === "pause") {

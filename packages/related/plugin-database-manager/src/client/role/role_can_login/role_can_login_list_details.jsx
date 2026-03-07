@@ -24,7 +24,6 @@ export const RoleCanLoginListDetails = () => {
       id="role_can_login_list"
       open={roleCanLoginOpenSignal.value}
       onOpen={() => {
-        debugger;
         roleCanLoginOpenSignal.value = true;
       }}
       onClose={() => {
