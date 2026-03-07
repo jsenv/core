@@ -1,18 +1,20 @@
 # [matchesParams with trailing slash behavior](../../route_matching.test.js)
 
 ```js
-try {
-  const sectionSignal = stateSignal("settings", {
-    id: "matches_params_section",
-  });
-  const tabSignal = stateSignal("overview", {
-    id: "matches_params_tab",
-  });
-  const { ADMIN_ROUTE, ADMIN_ANALYTICS_ROUTE } = setupRoutes({
-    ADMIN_ROUTE: `/admin/:section=${sectionSignal}/`, // Note: trailing slash
-    ADMIN_ANALYTICS_ROUTE: `/admin/analytics/?tab=${tabSignal}`,
-  });
+const sectionSignal = stateSignal("settings", {
+  id: "matches_params_section",
+});
+const tabSignal = stateSignal("overview", {
+  id: "matches_params_tab",
+});
+const ADMIN_ROUTE = route(`/admin/:section=${sectionSignal}/`);
+const ADMIN_ANALYTICS_ROUTE = route(`/admin/analytics/?tab=${tabSignal}`);
+const { updateRoutes, clearRoutes } = setupRoutes([
+  ADMIN_ROUTE,
+  ADMIN_ANALYTICS_ROUTE,
+]);
 
+try {
   // Set the current URL to "/admin/analytics?tab=details"
   updateRoutes(`${baseUrl}/admin/analytics?tab=details`);
 
@@ -54,7 +56,7 @@ try {
     },
   };
 } finally {
-  clearAllRoutes();
+  clearRoutes();
   globalSignalRegistry.clear();
 }
 ```

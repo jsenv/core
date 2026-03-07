@@ -1,42 +1,50 @@
 # [complex url matching with multiple signals](../../route_matching.test.js)
 
 ```js
+const zoneIdSignal = stateSignal("zone-123", {
+  id: "zoneId",
+  type: "string",
+});
+const mapboxStyleSignal = stateSignal("streets-v11", {
+  id: "mapboxStyle",
+  type: "string",
+});
+const mapboxZoomSignal = stateSignal(12, {
+  id: "mapboxZoom",
+  type: "number",
+});
+const MAP_ROUTE = route(
+  `/map/?zone=${zoneIdSignal}&style=${mapboxStyleSignal}&zoom=${mapboxZoomSignal}`,
+);
+const MAP_ISOCHRONE_ROUTE = route("/map/isochrone");
+const { updateRoutes, clearRoutes } = setupRoutes([
+  MAP_ROUTE,
+  MAP_ISOCHRONE_ROUTE,
+]);
+
 try {
-  const zoneIdSignal = stateSignal("zone-123", {
-    id: "zoneId",
-    type: "string",
-  });
-  const mapboxStyleSignal = stateSignal("streets-v11", {
-    id: "mapboxStyle",
-    type: "string",
-  });
-  const mapboxZoomSignal = stateSignal(12, {
-    id: "mapboxZoom",
-    type: "number",
-  });
-
-  const { MAP_ROUTE, MAP_ISOCHRONE_ROUTE } = setupRoutes({
-    MAP_ROUTE: `/map/?zone=${zoneIdSignal}&style=${mapboxStyleSignal}&zoom=${mapboxZoomSignal}`,
-    MAP_ISOCHRONE_ROUTE: "/map/isochrone",
-  });
-
+  updateRoutes(`${baseUrl}/map`);
+  const map_without_params = getMatchParams(MAP_ROUTE);
+  updateRoutes(`${baseUrl}/map?zoom=12`);
+  const map_with_default_zoom = getMatchParams(MAP_ROUTE);
+  updateRoutes(`${baseUrl}/map?zoom=15`);
+  const map_with_zoom_15 = getMatchParams(MAP_ROUTE);
+  updateRoutes(`${baseUrl}/map?zoom=8&style=satellite`);
+  const map_with_zoom_and_style = getMatchParams(MAP_ROUTE);
+  updateRoutes(`${baseUrl}/map/isochrone`);
+  const isochrone_without_params = getMatchParams(MAP_ISOCHRONE_ROUTE);
+  updateRoutes(`${baseUrl}/map/isochrone?zoom=15`);
+  const isochrone_with_zoom_15 = getMatchParams(MAP_ISOCHRONE_ROUTE);
   return {
-    map_without_params: match(MAP_ROUTE, `/map`),
-    map_with_default_zoom: match(MAP_ROUTE, `/map?zoom=12`),
-    map_with_zoom_15: match(MAP_ROUTE, `/map?zoom=15`),
-    map_with_zoom_and_style: match(
-      MAP_ROUTE,
-      `/map?zoom=8&style=satellite`,
-    ),
-
-    isochrone_without_params: match(MAP_ISOCHRONE_ROUTE, `/map/isochrone`),
-    isochrone_with_zoom_15: match(
-      MAP_ISOCHRONE_ROUTE,
-      `/map/isochrone?zoom=15`,
-    ),
+    map_without_params,
+    map_with_default_zoom,
+    map_with_zoom_15,
+    map_with_zoom_and_style,
+    isochrone_without_params,
+    isochrone_with_zoom_15,
   };
 } finally {
-  clearAllRoutes();
+  clearRoutes();
   globalSignalRegistry.clear();
 }
 ```

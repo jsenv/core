@@ -1,16 +1,21 @@
 # [basic](../../route_matching.test.js)
 
 ```js
+const USER_ROUTE = route("/users/:id");
+const { updateRoutes, clearRoutes } = setupRoutes([USER_ROUTE]);
 try {
-  const { USER_ROUTE } = setupRoutes({
-    USER_ROUTE: "/users/:id",
-  });
+  updateRoutes(`${baseUrl}/users/123`);
+  const matching_url = getMatchParams(USER_ROUTE);
+
+  updateRoutes(`${baseUrl}/admin`);
+  const non_matching_url = getMatchParams(USER_ROUTE, `/admin`);
+
   return {
-    matching_url: match(USER_ROUTE, `/users/123`),
-    non_matching_url: match(USER_ROUTE, `/admin`),
+    matching_url,
+    non_matching_url,
   };
 } finally {
-  clearAllRoutes();
+  clearRoutes();
   globalSignalRegistry.clear();
 }
 ```

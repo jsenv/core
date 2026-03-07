@@ -1,11 +1,14 @@
 # [trailing slash vs not trailing slash](../../route_matching.test.js)
 
 ```js
+const USER_ROUTE = route("/users/:id");
+const USER_SETTINGS_ROUTE = route("/users/:id/settings");
+const { updateRoutes, clearRoutes } = setupRoutes([
+  USER_ROUTE,
+  USER_SETTINGS_ROUTE,
+]);
+
 try {
-  const { USER_ROUTE, USER_SETTINGS_ROUTE } = setupRoutes({
-    USER_ROUTE: "/users/:id",
-    USER_SETTINGS_ROUTE: "/users/:id/settings",
-  });
   updateRoutes(`${baseUrl}/users/123`);
   const firstUpdate = {
     user_route_matching: USER_ROUTE.matching,
@@ -21,7 +24,7 @@ try {
     secondUpdate,
   };
 } finally {
-  clearAllRoutes();
+  clearRoutes();
   globalSignalRegistry.clear();
 }
 ```

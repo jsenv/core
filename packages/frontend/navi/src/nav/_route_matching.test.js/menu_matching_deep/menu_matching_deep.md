@@ -1,28 +1,42 @@
 # [menu matching deep](../../route_matching.test.js)
 
 ```js
+const zoneSignal = stateSignal(undefined);
+const isochroneTabSignal = stateSignal("compare");
+const walkSignal = stateSignal(false);
+const panelSignal = stateSignal(undefined);
+const isochroneTimeModeSignal = stateSignal("walk");
+const MAP_ROUTE = route(`/map/?zone=${zoneSignal}`);
+const MAP_PANEL_ROUTE = route(`/map/:panel=${panelSignal}/`);
+const MAP_ISOCHRONE_ROUTE = route(
+  `/map/isochrone/:tab=${isochroneTabSignal}/`,
+);
+const MAP_ISOCHRONE_COMPARE_ROUTE = route(
+  `/map/isochrone/compare?walk=${walkSignal}`,
+);
+const MAP_ISOCHRONE_TIME_ROUTE = route(
+  `/map/isochrone/time/:mode=${isochroneTimeModeSignal}/`,
+);
+const MAP_ISOCHRONE_TIME_WALK_ROUTE = route("/map/isochrone/time/walk");
+const MAP_ISOCHRONE_TIME_BIKE_ROUTE = route("/map/isochrone/time/bike");
+const { updateRoutes, clearRoutes } = setupRoutes([
+  MAP_ROUTE,
+  MAP_PANEL_ROUTE,
+  MAP_ISOCHRONE_ROUTE,
+  MAP_ISOCHRONE_COMPARE_ROUTE,
+  MAP_ISOCHRONE_TIME_ROUTE,
+  MAP_ISOCHRONE_TIME_WALK_ROUTE,
+  MAP_ISOCHRONE_TIME_BIKE_ROUTE,
+]);
+
 try {
-  const zoneSignal = stateSignal(undefined);
-  const isochroneTabSignal = stateSignal("compare");
-  const walkSignal = stateSignal(false);
-  const panelSignal = stateSignal(undefined);
-  const isochroneTimeModeSignal = stateSignal("walk");
-  const { MAP_ISOCHRONE_ROUTE } = setupRoutes({
-    MAP_ROUTE: `/map/?zone=${zoneSignal}`,
-    MAP_PANEL_ROUTE: `/map/:panel=${panelSignal}/`,
-    MAP_ISOCHRONE_ROUTE: `/map/isochrone/:tab=${isochroneTabSignal}/`,
-    MAP_ISOCHRONE_COMPARE_ROUTE: `/map/isochrone/compare?walk=${walkSignal}`,
-    MAP_ISOCHRONE_TIME_ROUTE: `/map/isochrone/time/:mode=${isochroneTimeModeSignal}/`,
-    MAP_ISOCHRONE_TIME_WALK_ROUTE: "/map/isochrone/time/walk",
-    MAP_ISOCHRONE_TIME_BIKE_ROUTE: "/map/isochrone/time/bike",
-  });
   updateRoutes(`${baseUrl}/map/isochrone/time/bike?zone=london`);
   return {
     isochrone_matching: MAP_ISOCHRONE_ROUTE.matching,
     isochrone_matches_params: MAP_ISOCHRONE_ROUTE.matchesParams(),
   };
 } finally {
-  clearAllRoutes();
+  clearRoutes();
   globalSignalRegistry.clear();
 }
 ```
