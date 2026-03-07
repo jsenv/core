@@ -1,6 +1,6 @@
 import { snapshotTests } from "@jsenv/snapshot";
 import { globalSignalRegistry, stateSignal } from "../state/state_signal.js";
-import { clearAllRoutes, setupRoutes } from "./route.js";
+import { route, setupRoutes } from "./route.js";
 import { setBaseUrl } from "./route_pattern.js";
 
 const baseUrl = "http://localhost:3000";
@@ -10,17 +10,15 @@ await snapshotTests(import.meta.url, ({ test }) => {
   test.ONLY(
     "route.url fails to update when default value optimization skips signal reading",
     () => {
+      // Create signals with default values - this might trigger optimization paths
+      // that skip reading signals when they have default values
+
+      const modeSignal = stateSignal("default_mode");
+
+      const PARENT_ROUTE = route(`/map/`);
+      const CHILD_ROUTE = route(`/map/:mode=${modeSignal}`);
+      const { clearRoutes } = setupRoutes([PARENT_ROUTE, CHILD_ROUTE]);
       try {
-        // Create signals with default values - this might trigger optimization paths
-        // that skip reading signals when they have default values
-
-        const modeSignal = stateSignal("default_mode");
-
-        const { PARENT_ROUTE, CHILD_ROUTE } = setupRoutes({
-          PARENT_ROUTE: `/map/`,
-          CHILD_ROUTE: `/map/:mode=${modeSignal}`,
-        });
-
         // First read PARENT_ROUTE to establish it in the optimization cache
         const parentUrl1 = PARENT_ROUTE.url;
 
@@ -53,22 +51,22 @@ await snapshotTests(import.meta.url, ({ test }) => {
               : "FAIL - Child route URL not updated when mode signal changed (default value optimization bug)",
         };
       } finally {
-        clearAllRoutes();
+        clearRoutes();
         globalSignalRegistry.clear();
       }
     },
   );
 
   test("route.url should NOT update when unrelated signal changes", () => {
+    const zoneSignal = stateSignal("paris");
+    const panelSignal = stateSignal("isochrone");
+
+    const MAP_ROUTE = route(`/map?zone=${zoneSignal}`);
+    const MAP_PANEL_ROUTE = route(
+      `/map/:panel=${panelSignal}?zone=${zoneSignal}`,
+    );
+    const { clearRoutes } = setupRoutes([MAP_ROUTE, MAP_PANEL_ROUTE]);
     try {
-      const zoneSignal = stateSignal("paris");
-      const panelSignal = stateSignal("isochrone");
-
-      const { MAP_ROUTE } = setupRoutes({
-        MAP_ROUTE: `/map?zone=${zoneSignal}`, // Uses zoneSignal only
-        MAP_PANEL_ROUTE: `/map/:panel=${panelSignal}?zone=${zoneSignal}`, // Uses both signals
-      });
-
       const mapUrlBefore = MAP_ROUTE.url;
 
       // Change panelSignal - should NOT affect MAP_ROUTE since it doesn't use panelSignal
@@ -86,23 +84,29 @@ await snapshotTests(import.meta.url, ({ test }) => {
             : "FAIL - MAP_ROUTE affected by panelSignal",
       };
     } finally {
-      clearAllRoutes();
+      clearRoutes();
       globalSignalRegistry.clear();
     }
   });
 
   test("multiple routes sharing signals should auto-update when signal changes", () => {
+    const zoneSignal = stateSignal("paris", { id: "sharedZone" });
+    const panelSignal = stateSignal("isochrone", { id: "panel" });
+    const isoLonSignal = stateSignal(2.3522, { id: "isoLon" });
+
+    const MAP_ROUTE = route(`/map?zone=${zoneSignal}`);
+    const MAP_PANEL_ROUTE = route(
+      `/map/:panel=${panelSignal}?zone=${zoneSignal}`,
+    );
+    const MAP_ISOCHRONE_ROUTE = route(
+      `/map/isochrone?zone=${zoneSignal}&iso_lon=${isoLonSignal}`,
+    );
+    const { clearRoutes } = setupRoutes([
+      MAP_ROUTE,
+      MAP_PANEL_ROUTE,
+      MAP_ISOCHRONE_ROUTE,
+    ]);
     try {
-      const zoneSignal = stateSignal("paris", { id: "sharedZone" });
-      const panelSignal = stateSignal("isochrone", { id: "panel" });
-      const isoLonSignal = stateSignal(2.3522, { id: "isoLon" });
-
-      const { MAP_ROUTE, MAP_PANEL_ROUTE, MAP_ISOCHRONE_ROUTE } = setupRoutes({
-        MAP_ROUTE: `/map?zone=${zoneSignal}`,
-        MAP_PANEL_ROUTE: `/map/:panel=${panelSignal}?zone=${zoneSignal}`,
-        MAP_ISOCHRONE_ROUTE: `/map/isochrone?zone=${zoneSignal}&iso_lon=${isoLonSignal}`,
-      });
-
       // Read initial URLs for all routes
       const initialUrls = {
         map: MAP_ROUTE.url,
@@ -158,24 +162,24 @@ await snapshotTests(import.meta.url, ({ test }) => {
             : "FAIL",
       };
     } finally {
-      clearAllRoutes();
+      clearRoutes();
       globalSignalRegistry.clear();
     }
   });
 
   test("route URL updates should be isolated to relevant signals only", () => {
+    const userIdSignal = stateSignal("123", { id: "userId" });
+    const mapZoneSignal = stateSignal("paris", { id: "mapZone" });
+    const unrelatedSignal = stateSignal("initial", { id: "unrelated" });
+
+    // Create routes where only some use specific signals
+    const USER_ROUTE = route(`/user/:id=${userIdSignal}`);
+    const MAP_ROUTE = route(`/map?zone=${mapZoneSignal}`);
+    const MIXED_ROUTE = route(
+      `/mixed?user=${userIdSignal}&zone=${mapZoneSignal}`,
+    );
+    const { clearRoutes } = setupRoutes([USER_ROUTE, MAP_ROUTE, MIXED_ROUTE]);
     try {
-      const userIdSignal = stateSignal("123", { id: "userId" });
-      const mapZoneSignal = stateSignal("paris", { id: "mapZone" });
-      const unrelatedSignal = stateSignal("initial", { id: "unrelated" });
-
-      // Create routes where only some use specific signals
-      const { USER_ROUTE, MAP_ROUTE, MIXED_ROUTE } = setupRoutes({
-        USER_ROUTE: `/user/:id=${userIdSignal}`, // Only uses userIdSignal
-        MAP_ROUTE: `/map?zone=${mapZoneSignal}`, // Only uses mapZoneSignal
-        MIXED_ROUTE: `/mixed?user=${userIdSignal}&zone=${mapZoneSignal}`, // Uses both but not unrelated
-      });
-
       // Read initial URLs
       const beforeUrls = {
         user: USER_ROUTE.url,
@@ -283,20 +287,20 @@ await snapshotTests(import.meta.url, ({ test }) => {
         },
       };
     } finally {
-      clearAllRoutes();
+      clearRoutes();
       globalSignalRegistry.clear();
     }
   });
 
   test("buildUrl caching issue with signal changes across multiple calls", () => {
+    const userIdSignal = stateSignal("123", { id: "cachingUserId" });
+    const statusSignal = stateSignal("active", { id: "cachingStatus" });
+
+    const USER_PROFILE_ROUTE = route(
+      `/user/:id=${userIdSignal}/profile?status=${statusSignal}`,
+    );
+    const { clearRoutes } = setupRoutes([USER_PROFILE_ROUTE]);
     try {
-      const userIdSignal = stateSignal("123", { id: "cachingUserId" });
-      const statusSignal = stateSignal("active", { id: "cachingStatus" });
-
-      const { USER_PROFILE_ROUTE } = setupRoutes({
-        USER_PROFILE_ROUTE: `/user/:id=${userIdSignal}/profile?status=${statusSignal}`,
-      });
-
       // Read URL multiple times to check consistency
       const firstCall = USER_PROFILE_ROUTE.url;
       const secondCall = USER_PROFILE_ROUTE.url;
@@ -371,20 +375,18 @@ await snapshotTests(import.meta.url, ({ test }) => {
             : "FAIL",
       };
     } finally {
-      clearAllRoutes();
+      clearRoutes();
       globalSignalRegistry.clear();
     }
   });
 
   test("route.url should automatically stay in sync when signals change", () => {
+    const zoneSignal = stateSignal("paris", { id: "urlSyncZone" });
+    const modeSignal = stateSignal("driving", { id: "urlSyncMode" });
+
+    const MAP_ROUTE = route(`/map?zone=${zoneSignal}&mode=${modeSignal}`);
+    const { clearRoutes } = setupRoutes([MAP_ROUTE]);
     try {
-      const zoneSignal = stateSignal("paris", { id: "urlSyncZone" });
-      const modeSignal = stateSignal("driving", { id: "urlSyncMode" });
-
-      const { MAP_ROUTE } = setupRoutes({
-        MAP_ROUTE: `/map?zone=${zoneSignal}&mode=${modeSignal}`,
-      });
-
       // Read route.url before changing signals
       const urlBeforeChange = MAP_ROUTE.url;
 
@@ -415,23 +417,29 @@ await snapshotTests(import.meta.url, ({ test }) => {
             : "FAIL - route.url not reactive",
       };
     } finally {
-      clearAllRoutes();
+      clearRoutes();
       globalSignalRegistry.clear();
     }
   });
 
   test("route.url sync with hierarchical routes and shared signals", () => {
+    const zoneSignal = stateSignal("paris", { id: "hierarchicalZone" });
+    const panelSignal = stateSignal("isochrone", { id: "hierarchicalPanel" });
+    const isoLonSignal = stateSignal(2.3522, { id: "hierarchicalIsoLon" });
+
+    const MAP_ROUTE = route(`/map?zone=${zoneSignal}`);
+    const MAP_PANEL_ROUTE = route(
+      `/map/:panel=${panelSignal}?zone=${zoneSignal}`,
+    );
+    const MAP_ISOCHRONE_ROUTE = route(
+      `/map/isochrone?zone=${zoneSignal}&iso_lon=${isoLonSignal}`,
+    );
+    const { clearRoutes } = setupRoutes([
+      MAP_ROUTE,
+      MAP_PANEL_ROUTE,
+      MAP_ISOCHRONE_ROUTE,
+    ]);
     try {
-      const zoneSignal = stateSignal("paris", { id: "hierarchicalZone" });
-      const panelSignal = stateSignal("isochrone", { id: "hierarchicalPanel" });
-      const isoLonSignal = stateSignal(2.3522, { id: "hierarchicalIsoLon" });
-
-      const { MAP_ROUTE, MAP_PANEL_ROUTE, MAP_ISOCHRONE_ROUTE } = setupRoutes({
-        MAP_ROUTE: `/map?zone=${zoneSignal}`,
-        MAP_PANEL_ROUTE: `/map/:panel=${panelSignal}?zone=${zoneSignal}`,
-        MAP_ISOCHRONE_ROUTE: `/map/isochrone?zone=${zoneSignal}&iso_lon=${isoLonSignal}`,
-      });
-
       // Read all route.url values before signal changes
       const beforeUrls = {
         map: MAP_ROUTE.url,
@@ -522,7 +530,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
         overall_result: "checking complex signal reactivity patterns",
       };
     } finally {
-      clearAllRoutes();
+      clearRoutes();
       globalSignalRegistry.clear();
     }
   });

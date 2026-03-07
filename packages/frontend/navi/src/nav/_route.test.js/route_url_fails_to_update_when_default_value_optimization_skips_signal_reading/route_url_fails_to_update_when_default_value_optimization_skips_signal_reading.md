@@ -1,17 +1,15 @@
 # [route.url fails to update when default value optimization skips signal reading](../../route.test.js)
 
 ```js
+// Create signals with default values - this might trigger optimization paths
+// that skip reading signals when they have default values
+
+const modeSignal = stateSignal("default_mode");
+
+const PARENT_ROUTE = route(`/map/`);
+const CHILD_ROUTE = route(`/map/:mode=${modeSignal}`);
+const { clearRoutes } = setupRoutes([PARENT_ROUTE, CHILD_ROUTE]);
 try {
-  // Create signals with default values - this might trigger optimization paths
-  // that skip reading signals when they have default values
-
-  const modeSignal = stateSignal("default_mode");
-
-  const { PARENT_ROUTE, CHILD_ROUTE } = setupRoutes({
-    PARENT_ROUTE: `/map/`,
-    CHILD_ROUTE: `/map/:mode=${modeSignal}`,
-  });
-
   // First read PARENT_ROUTE to establish it in the optimization cache
   const parentUrl1 = PARENT_ROUTE.url;
 
@@ -44,7 +42,7 @@ try {
         : "FAIL - Child route URL not updated when mode signal changed (default value optimization bug)",
   };
 } finally {
-  clearAllRoutes();
+  clearRoutes();
   globalSignalRegistry.clear();
 }
 ```
