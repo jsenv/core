@@ -20,7 +20,7 @@ import {
 } from "./action_run_states.js";
 import { SYMBOL_OBJECT_SIGNAL } from "./symbol_object_signal.js";
 
-let DEBUG = false;
+let DEBUG = true;
 export const enableDebugActions = () => {
   DEBUG = true;
 };
@@ -790,12 +790,11 @@ export const createAction = (callback, rootOptions = {}) => {
       return matches;
     };
 
-    name = generateActionName(name, params);
     if (ACTION_AS_FUNCTION) {
       // Create the action as a function that can be called directly
       action = function actionFunction(...args) {
         if (args.length === 0) {
-          return action.run();
+          return action.rerun();
         }
         const boundAction = bindParams(...args);
         return boundAction.rerun();
@@ -809,6 +808,7 @@ export const createAction = (callback, rootOptions = {}) => {
       action = { name };
     }
 
+    const callSource = generateActionCallSource(name, params);
     // Assign all the action properties and methods to the function
     Object.assign(action, {
       isAction: true,
@@ -850,11 +850,12 @@ export const createAction = (callback, rootOptions = {}) => {
 
         params = nextParams;
         action.params = nextParams;
-        action.name = generateActionName(name, nextParams);
+        action.callSource = generateActionCallSource(name, nextParams);
         paramsSignal.value = nextParams;
         return true;
       },
-      toString: () => action.name,
+      callSource,
+      toString: () => action.callSource,
       meta,
     });
     Object.preventExtensions(action);
@@ -1222,6 +1223,7 @@ const createActionProxyFromSignal = (
   };
 
   const nameSignal = signal();
+  const callSourceSignal = signal();
   let actionProxy;
   if (ACTION_AS_FUNCTION) {
     actionProxy = function actionProxyFunction() {
@@ -1267,7 +1269,8 @@ const createActionProxyFromSignal = (
       );
     },
     replaceParams: null, // Will be set below
-    toString: () => actionProxy.name,
+    callSource: actionProxy.callSource,
+    toString: () => actionProxy.callSource,
     meta: {},
   });
   Object.preventExtensions(actionProxy);
@@ -1275,6 +1278,7 @@ const createActionProxyFromSignal = (
   onActionTargetChange((actionTarget) => {
     const currentAction = actionTarget || action;
     nameSignal.value = `[Proxy] ${currentAction.name}`;
+    callSourceSignal.value = `[Proxy] ${currentAction.callSource}`;
     actionProxy.callback = currentAction.callback;
     actionProxy.params = currentAction.params;
     actionProxy.isPrerun = currentAction.isPrerun;
@@ -1413,7 +1417,7 @@ const createActionProxyFromSignal = (
   return actionProxy;
 };
 
-const generateActionName = (name, params) => {
+const generateActionCallSource = (name, params) => {
   if (params === NO_PARAMS) {
     return `${name}({})`;
   }

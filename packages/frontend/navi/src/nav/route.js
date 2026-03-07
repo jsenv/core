@@ -473,7 +473,6 @@ export const updateRoutes = (
     };
     for (const {
       route,
-      routePrivateProperties,
       newMatching,
       oldMatching,
       newParams,
@@ -492,10 +491,7 @@ export const updateRoutes = (
       // Handle actions for routes that become matching
       if (becomesMatching) {
         if (DEBUG) {
-          console.debug(
-            `${routePrivateProperties} became matching with params:`,
-            newParams,
-          );
+          console.debug(`${route} became matching with params:`, newParams);
         }
         shouldLoad(route);
         continue;
@@ -510,7 +506,7 @@ export const updateRoutes = (
       // Handle parameter changes while route stays matching
       if (paramsChangedWhileMatching) {
         if (DEBUG) {
-          console.debug(`${routePrivateProperties} params changed:`, newParams);
+          console.debug(`${route} params changed:`, newParams);
         }
         shouldReload(route);
       }
@@ -730,6 +726,9 @@ const registerRoute = (routePattern, { action = ACTION.COMPLETED } = {}) => {
       return Promise.resolve();
     }
     const routeUrl = route.buildUrl(params);
+    if (DEBUG) {
+      console.debug(`${route}.redirectTo(${routeUrl}) (reason: ${callReason})`);
+    }
     return integration.navTo(routeUrl, {
       replace: true,
       callReason,
