@@ -19,14 +19,18 @@ mapPanelSignal.value = "isochrone";
 isochroneLongitudeSignal.value = 10;
 zoneSignal.value = "nice";
 const HOME_ROUTE = route("/");
-const MAP_ROUTE = route(`/map/?zone=${zoneSignal}`);
+const MAP_ROUTE = route("/map/", { searchParams: { zone: zoneSignal } });
 const MAP_PANEL_ROUTE = route(`/map/:panel=${mapPanelSignal}/`);
 const ISOCHRONE_ROUTE = route(
-  `/map/isochrone/:tab=${isochroneTabSignal}/?iso_lon=${isochroneLongitudeSignal}`,
+  `/map/isochrone/:tab=${isochroneTabSignal}/`,
+  { searchParams: { iso_lon: isochroneLongitudeSignal } },
 );
-const ISOCHRONE_COMPARE_ROUTE = route(
-  `/map/isochrone/compare?walk=${walkEnabledSignal}&walk_minute=${walkMinuteSignal}`,
-);
+const ISOCHRONE_COMPARE_ROUTE = route("/map/isochrone/compare", {
+  searchParams: {
+    walk: walkEnabledSignal,
+    walk_minute: walkMinuteSignal,
+  },
+});
 const MAP_ISOCHRONE_TIME_ROUTE = route("/map/isochrone/time/");
 const MAP_ISOCHRONE_TIME_WALK_ROUTE = route("/map/isochrone/time/walk");
 const { updateRoutes, clearRoutes } = setupRoutes([

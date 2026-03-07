@@ -13,9 +13,13 @@ const mapboxZoomSignal = stateSignal(12, {
   id: "mapboxZoom",
   type: "number",
 });
-const MAP_ROUTE = route(
-  `/map/?zone=${zoneIdSignal}&style=${mapboxStyleSignal}&zoom=${mapboxZoomSignal}`,
-);
+const MAP_ROUTE = route("/map/", {
+  searchParams: {
+    zone: zoneIdSignal,
+    style: mapboxStyleSignal,
+    zoom: mapboxZoomSignal,
+  },
+});
 const MAP_ISOCHRONE_ROUTE = route("/map/isochrone");
 const { updateRoutes, clearRoutes } = setupRoutes([
   MAP_ROUTE,

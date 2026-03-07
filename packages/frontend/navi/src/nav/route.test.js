@@ -58,10 +58,10 @@ await snapshotTests(import.meta.url, ({ test }) => {
     const zoneSignal = stateSignal("paris");
     const panelSignal = stateSignal("isochrone");
 
-    const MAP_ROUTE = route(`/map?zone=${zoneSignal}`);
-    const MAP_PANEL_ROUTE = route(
-      `/map/:panel=${panelSignal}?zone=${zoneSignal}`,
-    );
+    const MAP_ROUTE = route("/map", { searchParams: { zone: zoneSignal } });
+    const MAP_PANEL_ROUTE = route(`/map/:panel=${panelSignal}`, {
+      searchParams: { zone: zoneSignal },
+    });
     const { clearRoutes } = setupRoutes([MAP_ROUTE, MAP_PANEL_ROUTE]);
     try {
       const mapUrlBefore = MAP_ROUTE.url;
@@ -91,13 +91,13 @@ await snapshotTests(import.meta.url, ({ test }) => {
     const panelSignal = stateSignal("isochrone", { id: "panel" });
     const isoLonSignal = stateSignal(2.3522, { id: "isoLon" });
 
-    const MAP_ROUTE = route(`/map?zone=${zoneSignal}`);
-    const MAP_PANEL_ROUTE = route(
-      `/map/:panel=${panelSignal}?zone=${zoneSignal}`,
-    );
-    const MAP_ISOCHRONE_ROUTE = route(
-      `/map/isochrone?zone=${zoneSignal}&iso_lon=${isoLonSignal}`,
-    );
+    const MAP_ROUTE = route("/map", { searchParams: { zone: zoneSignal } });
+    const MAP_PANEL_ROUTE = route(`/map/:panel=${panelSignal}`, {
+      searchParams: { zone: zoneSignal },
+    });
+    const MAP_ISOCHRONE_ROUTE = route("/map/isochrone", {
+      searchParams: { zone: zoneSignal, iso_lon: isoLonSignal },
+    });
     const { clearRoutes } = setupRoutes([
       MAP_ROUTE,
       MAP_PANEL_ROUTE,
@@ -171,10 +171,10 @@ await snapshotTests(import.meta.url, ({ test }) => {
 
     // Create routes where only some use specific signals
     const USER_ROUTE = route(`/user/:id=${userIdSignal}`);
-    const MAP_ROUTE = route(`/map?zone=${mapZoneSignal}`);
-    const MIXED_ROUTE = route(
-      `/mixed?user=${userIdSignal}&zone=${mapZoneSignal}`,
-    );
+    const MAP_ROUTE = route("/map", { searchParams: { zone: mapZoneSignal } });
+    const MIXED_ROUTE = route("/mixed", {
+      searchParams: { user: userIdSignal, zone: mapZoneSignal },
+    });
     const { clearRoutes } = setupRoutes([USER_ROUTE, MAP_ROUTE, MIXED_ROUTE]);
     try {
       // Read initial URLs
@@ -293,9 +293,9 @@ await snapshotTests(import.meta.url, ({ test }) => {
     const userIdSignal = stateSignal("123", { id: "cachingUserId" });
     const statusSignal = stateSignal("active", { id: "cachingStatus" });
 
-    const USER_PROFILE_ROUTE = route(
-      `/user/:id=${userIdSignal}/profile?status=${statusSignal}`,
-    );
+    const USER_PROFILE_ROUTE = route(`/user/:id=${userIdSignal}/profile`, {
+      searchParams: { status: statusSignal },
+    });
     const { clearRoutes } = setupRoutes([USER_PROFILE_ROUTE]);
     try {
       // Read URL multiple times to check consistency
@@ -381,7 +381,9 @@ await snapshotTests(import.meta.url, ({ test }) => {
     const zoneSignal = stateSignal("paris", { id: "urlSyncZone" });
     const modeSignal = stateSignal("driving", { id: "urlSyncMode" });
 
-    const MAP_ROUTE = route(`/map?zone=${zoneSignal}&mode=${modeSignal}`);
+    const MAP_ROUTE = route("/map", {
+      searchParams: { zone: zoneSignal, mode: modeSignal },
+    });
     const { clearRoutes } = setupRoutes([MAP_ROUTE]);
     try {
       // Read route.url before changing signals
@@ -424,13 +426,13 @@ await snapshotTests(import.meta.url, ({ test }) => {
     const panelSignal = stateSignal("isochrone", { id: "hierarchicalPanel" });
     const isoLonSignal = stateSignal(2.3522, { id: "hierarchicalIsoLon" });
 
-    const MAP_ROUTE = route(`/map?zone=${zoneSignal}`);
-    const MAP_PANEL_ROUTE = route(
-      `/map/:panel=${panelSignal}?zone=${zoneSignal}`,
-    );
-    const MAP_ISOCHRONE_ROUTE = route(
-      `/map/isochrone?zone=${zoneSignal}&iso_lon=${isoLonSignal}`,
-    );
+    const MAP_ROUTE = route("/map", { searchParams: { zone: zoneSignal } });
+    const MAP_PANEL_ROUTE = route(`/map/:panel=${panelSignal}`, {
+      searchParams: { zone: zoneSignal },
+    });
+    const MAP_ISOCHRONE_ROUTE = route("/map/isochrone", {
+      searchParams: { zone: zoneSignal, iso_lon: isoLonSignal },
+    });
     const { clearRoutes } = setupRoutes([
       MAP_ROUTE,
       MAP_PANEL_ROUTE,

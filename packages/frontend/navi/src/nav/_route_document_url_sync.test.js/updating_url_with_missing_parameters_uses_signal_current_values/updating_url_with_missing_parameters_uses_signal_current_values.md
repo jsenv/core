@@ -11,9 +11,9 @@ setRouteIntegration({
 });
 const pageSignal = stateSignal(1, { type: "number" }); // Default page is 1
 const limitSignal = stateSignal(10, { type: "number" }); // Default limit is 10
-const SEARCH_ROUTE = route(
-  `/search?page=${pageSignal}&limit=${limitSignal}`,
-);
+const SEARCH_ROUTE = route("/search", {
+  searchParams: { page: pageSignal, limit: limitSignal },
+});
 const { updateRoutes, clearRoutes } = setupRoutes([SEARCH_ROUTE]);
 try {
   // Set some initial non-default values

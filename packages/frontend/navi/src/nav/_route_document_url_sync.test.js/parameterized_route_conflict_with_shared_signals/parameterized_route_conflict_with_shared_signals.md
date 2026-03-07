@@ -16,11 +16,13 @@ panelSignal.value = "isochrone";
 
 // More realistic scenario where routes have signals that control parameters
 // This should reproduce the delegation issue
-const MAP_ROUTE = route(`/map/?zoom=${zoomSignal}`);
-const MAP_PANEL_ROUTE = route(
-  `/map/:panel={navi_state_signal:panelValue}?zoom=${zoomSignal}`,
-);
-const MAP_ISOCHRONE_ROUTE = route(`/map/isochrone?zoom=${zoomSignal}`);
+const MAP_ROUTE = route("/map/", { searchParams: { zoom: zoomSignal } });
+const MAP_PANEL_ROUTE = route("/map/:panel={navi_state_signal:panelValue}", {
+  searchParams: { zoom: zoomSignal },
+});
+const MAP_ISOCHRONE_ROUTE = route("/map/isochrone", {
+  searchParams: { zoom: zoomSignal },
+});
 const { updateRoutes, clearRoutes } = setupRoutes([
   MAP_ROUTE,
   MAP_PANEL_ROUTE,

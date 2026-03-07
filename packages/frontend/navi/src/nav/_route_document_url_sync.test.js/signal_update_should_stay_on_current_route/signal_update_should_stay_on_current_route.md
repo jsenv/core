@@ -9,7 +9,7 @@ setRouteIntegration({
 });
 const mapPanelSignal = stateSignal(undefined);
 const lonSignal = stateSignal(undefined);
-const MAP_ROUTE = route(`/map/?lon=${lonSignal}`);
+const MAP_ROUTE = route("/map/", { searchParams: { lon: lonSignal } });
 const MAP_PANEL_ROUTE = route(`/map/:panel=${mapPanelSignal}/`);
 const MAP_FLOW_ROUTE = route(`/map/flow/`);
 const { updateRoutes, clearRoutes } = setupRoutes([

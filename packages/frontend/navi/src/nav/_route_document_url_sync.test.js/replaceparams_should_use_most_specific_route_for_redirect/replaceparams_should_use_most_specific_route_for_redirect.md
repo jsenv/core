@@ -7,7 +7,7 @@ const zoomSignal = stateSignal(12, {
 });
 
 // Create routes with proper parent-child relationship
-const MAP_ROUTE = route(`/map/?zoom=${zoomSignal}`);
+const MAP_ROUTE = route("/map/", { searchParams: { zoom: zoomSignal } });
 const MAP_ISOCHRONE_ROUTE = route(`/map/isochrone/`);
 const MAP_ISOCHRONE_COMPARE_ROUTE = route(`/map/isochrone/compare`);
 const { updateRoutes, clearRoutes } = setupRoutes([

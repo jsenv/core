@@ -11,9 +11,9 @@ setRouteIntegration({
 });
 const walkSignal = stateSignal(false, { type: "boolean" }); // Default walk is false
 const walkMinuteSignal = stateSignal(20, { type: "number" }); // Default walk minutes is 10
-const ISOCHRONE_ROUTE = route(
-  `/isochrone?walk=${walkSignal}&walk_minute=${walkMinuteSignal}`,
-);
+const ISOCHRONE_ROUTE = route("/isochrone", {
+  searchParams: { walk: walkSignal, walk_minute: walkMinuteSignal },
+});
 const { updateRoutes, clearRoutes } = setupRoutes([ISOCHRONE_ROUTE]);
 try {
   updateRoutes(`${baseUrl}/isochrone`);

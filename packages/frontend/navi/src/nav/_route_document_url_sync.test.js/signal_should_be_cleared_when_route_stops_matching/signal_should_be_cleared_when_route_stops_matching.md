@@ -17,9 +17,10 @@ panelSignal.value = "isochrone";
 // Use two routes: one for base map, one for panel
 // The key is that when navigating from panel route to base route,
 // the panel signal should be cleared because the new URL doesn't include it
-const MAP_ROUTE = route(`/map/?zoom=${zoomSignal}`);
+const MAP_ROUTE = route("/map/", { searchParams: { zoom: zoomSignal } });
 const MAP_PANEL_ROUTE = route(
-  `/map/:panel={navi_state_signal:clearingTestPanel}?zoom=${zoomSignal}`,
+  "/map/:panel={navi_state_signal:clearingTestPanel}",
+  { searchParams: { zoom: zoomSignal } },
 );
 const { updateRoutes, clearRoutes } = setupRoutes([
   MAP_ROUTE,

@@ -6,11 +6,13 @@ const zoomSignal = stateSignal(12, {
   type: "number",
 });
 
-const MAP_ROUTE = route(`/map/?zoom=${zoomSignal}`);
-const MAP_ISOCHRONE_ROUTE = route(`/map/isochrone/?zoom=${zoomSignal}`);
-const MAP_COMPARE_ROUTE = route(
-  `/map/isochrone/compare?zoom=${zoomSignal}`,
-);
+const MAP_ROUTE = route("/map/", { searchParams: { zoom: zoomSignal } });
+const MAP_ISOCHRONE_ROUTE = route("/map/isochrone/", {
+  searchParams: { zoom: zoomSignal },
+});
+const MAP_COMPARE_ROUTE = route("/map/isochrone/compare", {
+  searchParams: { zoom: zoomSignal },
+});
 const { updateRoutes, clearRoutes } = setupRoutes([
   MAP_ROUTE,
   MAP_ISOCHRONE_ROUTE,

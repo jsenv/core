@@ -11,9 +11,9 @@ setRouteIntegration({
 });
 const categorySignal = stateSignal("electronics");
 const sortSignal = stateSignal("name");
-const PRODUCTS_ROUTE = route(
-  `/products?category=${categorySignal}&sort=${sortSignal}`,
-);
+const PRODUCTS_ROUTE = route("/products", {
+  searchParams: { category: categorySignal, sort: sortSignal },
+});
 const { updateRoutes, clearRoutes } = setupRoutes([PRODUCTS_ROUTE]);
 try {
   // Initial state

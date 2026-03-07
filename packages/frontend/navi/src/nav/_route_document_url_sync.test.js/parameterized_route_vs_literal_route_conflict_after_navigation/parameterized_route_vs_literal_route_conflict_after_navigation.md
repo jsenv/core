@@ -10,7 +10,7 @@ const zoomSignal = stateSignal(10, {
 // /map/ - base route with signal
 // /map/:panel/ - parameterized route
 // /map/isochrone/ - literal route that conflicts with :panel
-const MAP_ROUTE = route(`/map/?zoom=${zoomSignal}`);
+const MAP_ROUTE = route("/map/", { searchParams: { zoom: zoomSignal } });
 const MAP_PANEL_ROUTE = route(`/map/:panel`);
 const MAP_ISOCHRONE_ROUTE = route(`/map/isochrone`);
 const { updateRoutes, clearRoutes } = setupRoutes([

@@ -32,11 +32,15 @@ const isochroneLongitudeSignal = stateSignal(2.3522, {
 // - ISOCHRONE_COMPARE_ROUTE: `/map/isochrone/compare` (literal with "compare")
 // ISOCHRONE_COMPARE_ROUTE should be considered more specific
 const ISOCHRONE_ROUTE = route(
-  `/map/isochrone/:tab=${isochroneTabSignal}/?iso_lon=${isochroneLongitudeSignal}`,
+  `/map/isochrone/:tab=${isochroneTabSignal}/`,
+  { searchParams: { iso_lon: isochroneLongitudeSignal } },
 );
-const ISOCHRONE_COMPARE_ROUTE = route(
-  `/map/isochrone/compare?walk=${walkEnabledSignal}&walk_minute=${walkMinuteSignal}`,
-);
+const ISOCHRONE_COMPARE_ROUTE = route("/map/isochrone/compare", {
+  searchParams: {
+    walk: walkEnabledSignal,
+    walk_minute: walkMinuteSignal,
+  },
+});
 const { updateRoutes, clearRoutes } = setupRoutes([
   ISOCHRONE_ROUTE,
   ISOCHRONE_COMPARE_ROUTE,
@@ -95,11 +99,11 @@ try {
 ```js
 {
   "route_patterns": {
-    "isochrone": "/map/isochrone/:tab/?iso_lon",
-    "compare": "/map/isochrone/compare?walk&walk_minute"
+    "isochrone": "/map/isochrone/:tab/",
+    "compare": "/map/isochrone/compare"
   },
   "segment_counts": {
-    "isochrone": 4,
+    "isochrone": 3,
     "compare": 3
   },
   "route_matching": {
@@ -109,13 +113,13 @@ try {
   "nav_to_calls": [
     {
       "url": "http://127.0.0.1/map/isochrone?walk",
-      "callReason": 'walk signal change on route "/map/isochrone/compare?walk&walk_minute"'
+      "callReason": 'walk signal change on route "/map/isochrone/compare"'
     }
   ],
   "most_specific_url_used": "http://127.0.0.1/map/isochrone?walk",
   "expected_most_specific_url": "/map/isochrone?walk",
   "actual_segments_comparison": {
-    "problem": "Current code counts segments: isochrone=4, compare=3",
+    "problem": "Current code counts segments: isochrone=3, compare=3",
     "issue": "The code might incorrectly consider ISOCHRONE_ROUTE more specific due to query params"
   }
 }

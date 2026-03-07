@@ -9,7 +9,9 @@ setRouteIntegration({
 });
 const tabSignal = stateSignal(undefined);
 const lonSignal = stateSignal(undefined);
-const DASHBOARD_ROUTE = route(`/dashboard/?lon=${lonSignal}`);
+const DASHBOARD_ROUTE = route("/dashboard/", {
+  searchParams: { lon: lonSignal },
+});
 const DASHBOARD_TAB_ROUTE = route(`/dashboard/:tab=${tabSignal}/`);
 const { updateRoutes, clearRoutes } = setupRoutes([
   DASHBOARD_ROUTE,

@@ -11,7 +11,9 @@ setRouteIntegration({
   },
 });
 const categorySignal = stateSignal("electronics");
-const CATEGORY_ROUTE = route(`/products?category=${categorySignal}`);
+const CATEGORY_ROUTE = route("/products", {
+  searchParams: { category: categorySignal },
+});
 const { updateRoutes, clearRoutes } = setupRoutes([CATEGORY_ROUTE]);
 try {
   // Navigate to initial URL - this should set signal to "electronics"

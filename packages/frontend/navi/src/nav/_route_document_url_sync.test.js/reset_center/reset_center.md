@@ -24,11 +24,13 @@ const isoLonSignal = stateSignal(zoneLonSignal, { type: "float" });
 const isoLatSignal = stateSignal(zoneLatSignal, { type: "float" });
 const mapPanelSignal = stateSignal(undefined);
 const HOME_ROUTE = route("/");
-const MAP_ROUTE = route(`/map/?lon=${mapLonSignal}&lat=${mapLatSignal}`);
+const MAP_ROUTE = route("/map/", {
+  searchParams: { lon: mapLonSignal, lat: mapLatSignal },
+});
 const MAP_PANEL_ROUTE = route(`/map/:panel=${mapPanelSignal}/`);
-const MAP_ISOCHRONE_ROUTE = route(
-  `/map/isochrone?iso_lon=${isoLonSignal}&iso_lat=${isoLatSignal}`,
-);
+const MAP_ISOCHRONE_ROUTE = route("/map/isochrone", {
+  searchParams: { iso_lon: isoLonSignal, iso_lat: isoLatSignal },
+});
 const { updateRoutes, clearRoutes } = setupRoutes([
   HOME_ROUTE,
   MAP_ROUTE,

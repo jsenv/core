@@ -15,7 +15,7 @@ const lonSignal = stateSignal(2.3, {
   type: "longitude",
   step: 0.1,
 });
-const MAP_ROUTE = route(`/map?lon=${lonSignal}`);
+const MAP_ROUTE = route("/map", { searchParams: { lon: lonSignal } });
 const { updateRoutes, clearRoutes } = setupRoutes([MAP_ROUTE]);
 try {
   updateRoutes(`${baseUrl}/map?lon=2.3`);

@@ -8,7 +8,7 @@ const zoneSignal = stateSignal("foo", {
 
 // Create routes from different families with query parameter
 const HOME_ROUTE = route(`/`); // Root page
-const MAP_ROUTE = route(`/map?zone=${zoneSignal}`); // Map page with zone query parameter
+const MAP_ROUTE = route("/map", { searchParams: { zone: zoneSignal } }); // Map page with zone query parameter
 const { updateRoutes, clearRoutes } = setupRoutes([HOME_ROUTE, MAP_ROUTE]);
 try {
   // Start on the map route with a zone value: /map?zone=foo
