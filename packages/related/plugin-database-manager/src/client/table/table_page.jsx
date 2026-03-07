@@ -21,7 +21,7 @@
 import { Icon, Route, Routes, Tab, TabList } from "@jsenv/navi";
 
 import { Page, PageBody, PageHead } from "../layout/page.jsx";
-import { TABLE_DATA_ROUTE, TABLE_SETTINGS_ROUTE } from "../routes.js";
+import { TABLE_INDEX_ROUTE, TABLE_SETTINGS_ROUTE } from "../routes.js";
 import { DataSvg } from "../svg/data_svg.jsx";
 import { SettingsSvg } from "../svg/settings_svg.jsx";
 import { TableData } from "./table_data.jsx";
@@ -38,7 +38,7 @@ export const TablePage = ({ table }) => {
           {tablename}
         </PageHead.Label>
         <TabList>
-          <Tab route={TABLE_DATA_ROUTE} routeParams={{ tablename }}>
+          <Tab route={TABLE_INDEX_ROUTE} routeParams={{ tablename }}>
             <Icon>
               <DataSvg />
             </Icon>
@@ -55,7 +55,7 @@ export const TablePage = ({ table }) => {
       <PageBody>
         <Routes>
           <Route
-            route={TABLE_DATA_ROUTE}
+            route={TABLE_INDEX_ROUTE}
             element={(rows) => <TableData table={table} rows={rows} />}
           />
           <Route

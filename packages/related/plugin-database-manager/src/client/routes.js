@@ -1,5 +1,6 @@
 import {
   createAction,
+  route,
   setBaseUrl,
   setupRoutes,
   stateSignal,
@@ -31,34 +32,44 @@ export const tablenameSignal = stateSignal(null);
 // because in the end actions are core things that can often/always be triggered outside UI
 // so UI is just an other way of triggering an action but should be able to catch if anything else does
 
-export const {
-  ROLE_ROUTE,
-  DATABASE_ROUTE,
-  TABLE_ROUTE,
-  TABLE_DATA_ROUTE,
-  TABLE_SETTINGS_ROUTE,
-} = setupRoutes({
-  HOME_ROUTE: `/?role_login_opened=${roleCanLoginOpenSignal}&role_login_height=${roleCanLoginHeightSignal}`,
-  ROLE_ROUTE: {
-    pattern: `/roles/:rolname=${rolnameSignal}`,
-    action: ROLE.GET,
-  },
-  DATABASE_ROUTE: {
-    pattern: `/databases/:datname=${datnameSignal}`,
-    action: DATABASE.GET,
-  },
-  TABLE_ROUTE: {
-    pattern: `/tables/:tablename=${tablenameSignal}/`,
-    action: TABLE.GET,
-  },
-  TABLE_DATA_ROUTE: {
-    pattern: `/tables/:tablename=${tablenameSignal}`,
+export const HOME_ROUTE = route(
+  `/?role_login_opened=${roleCanLoginOpenSignal}&role_login_height=${roleCanLoginHeightSignal}`,
+  // {
+  //   searchParams: {
+  //     role_login_opened: roleCanLoginOpenSignal,
+  //     role_login_height: roleCanLoginHeightSignal,
+  //   },
+  // },
+);
+export const ROLE_ROUTE = route(`/roles/:rolname=${rolnameSignal}`, {
+  action: ROLE.GET,
+});
+export const DATABASE_ROUTE = route(`/databases/:datname=${datnameSignal}`, {
+  action: DATABASE.GET,
+});
+export const TABLE_ROUTE = route(`/tables/:tablename=${tablenameSignal}/`, {
+  action: TABLE.GET,
+});
+export const TABLE_INDEX_ROUTE = route(
+  `/tables/:tablename=${tablenameSignal}`,
+  {
     action: TABLE_ROW.GET_MANY,
   },
-  TABLE_SETTINGS_ROUTE: {
-    pattern: `/tables/:tablename=${tablenameSignal}/settings`,
+);
+export const TABLE_SETTINGS_ROUTE = route(
+  `/tables/:tablename=${tablenameSignal}/settings`,
+  {
     action: createAction(() => {}, {
       name: "get table settings",
     }),
   },
-});
+);
+
+setupRoutes([
+  HOME_ROUTE,
+  ROLE_ROUTE,
+  DATABASE_ROUTE,
+  TABLE_ROUTE,
+  TABLE_INDEX_ROUTE,
+  TABLE_SETTINGS_ROUTE,
+]);

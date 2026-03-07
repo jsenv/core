@@ -48,11 +48,7 @@ export {
   useDocumentUrl,
 } from "./src/nav/browser_integration/document_url_signal.js";
 export { useUrlSearchParam } from "./src/nav/browser_integration/use_url_search_param.js";
-export {
-  clearAllRoutes,
-  setupRoutes,
-  useRouteStatus,
-} from "./src/nav/route.js";
+export { route, setupRoutes, useRouteStatus } from "./src/nav/route.js";
 export { Route, Routes, useMatchingRouteInfo } from "./src/nav/route.jsx";
 export { RouteLink } from "./src/nav/route_link.jsx";
 export { rawUrlPart, setBaseUrl } from "./src/nav/route_pattern.js";
