@@ -1,21 +1,25 @@
 # [buildMostPreciseUrl should find child signal values even with provided params](../../route_build_url.test.js)
 
 ```js
+const walkEnabledSignal = stateSignal(false, {
+  id: "walkEnabled",
+  type: "boolean",
+});
+const walkMinuteSignal = stateSignal(30, {
+  id: "walkMinute",
+  type: "number",
+});
+walkEnabledSignal.value = false;
+walkMinuteSignal.value = 40;
+const ISOCHRONE_ROUTE = route(`/map/isochrone/:tab?`);
+const ISOCHRONE_COMPARE_ROUTE = route(
+  `/map/isochrone/compare?walk=${walkEnabledSignal}&walk_minute=${walkMinuteSignal}`,
+);
+const { clearRoutes } = setupRoutes([
+  ISOCHRONE_ROUTE,
+  ISOCHRONE_COMPARE_ROUTE,
+]);
 try {
-  const walkEnabledSignal = stateSignal(false, {
-    id: "walkEnabled",
-    type: "boolean",
-  });
-  const walkMinuteSignal = stateSignal(30, {
-    id: "walkMinute",
-    type: "number",
-  });
-  walkEnabledSignal.value = false;
-  walkMinuteSignal.value = 40;
-  const { ISOCHRONE_ROUTE } = setupRoutes({
-    ISOCHRONE_ROUTE: `/map/isochrone/:tab?`,
-    ISOCHRONE_COMPARE_ROUTE: `/map/isochrone/compare?walk=${walkEnabledSignal}&walk_minute=${walkMinuteSignal}`,
-  });
   const url_without_params = ISOCHRONE_ROUTE.buildUrl();
   const url_with_walk = ISOCHRONE_ROUTE.buildUrl({ walk: true });
   const url_with_walk_and_tab = ISOCHRONE_ROUTE.buildUrl({
@@ -28,7 +32,7 @@ try {
     url_with_walk_and_tab,
   };
 } finally {
-  clearAllRoutes();
+  clearRoutes();
   globalSignalRegistry.clear();
 }
 ```

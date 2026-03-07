@@ -1,18 +1,23 @@
 # [hierarchical search param order should respect ancestor patterns](../../route_build_url.test.js)
 
 ```js
+const zoneSignal = stateSignal("zone-123", { id: "zone" });
+const walkSignal = stateSignal(false, { id: "walk", type: "boolean" });
+const timeSignal = stateSignal(30, { id: "time", type: "number" });
+const modeSignal = stateSignal("driving", { id: "mode" });
+const MAP_ROUTE = route(`/map?zone=${zoneSignal}`);
+const MAP_ISOCHRONE_ROUTE = route(
+  `/map/isochrone/?walk=${walkSignal}&time=${timeSignal}`,
+);
+const MAP_ISOCHRONE_WALK_ROUTE = route(
+  `/map/isochrone/walk?mode=${modeSignal}`,
+);
+const { clearRoutes } = setupRoutes([
+  MAP_ROUTE,
+  MAP_ISOCHRONE_ROUTE,
+  MAP_ISOCHRONE_WALK_ROUTE,
+]);
 try {
-  const zoneSignal = stateSignal("zone-123", { id: "zone" });
-  const walkSignal = stateSignal(false, { id: "walk", type: "boolean" });
-  const timeSignal = stateSignal(30, { id: "time", type: "number" });
-  const modeSignal = stateSignal("driving", { id: "mode" });
-
-  const { MAP_ISOCHRONE_ROUTE, MAP_ISOCHRONE_WALK_ROUTE } = setupRoutes({
-    MAP_ROUTE: `/map?zone=${zoneSignal}`,
-    MAP_ISOCHRONE_ROUTE: `/map/isochrone/?walk=${walkSignal}&time=${timeSignal}`,
-    MAP_ISOCHRONE_WALK_ROUTE: `/map/isochrone/walk?mode=${modeSignal}`,
-  });
-
   return {
     child_with_params: MAP_ISOCHRONE_ROUTE.buildUrl({
       zone: "custom-zone",
@@ -30,7 +35,7 @@ try {
     }),
   };
 } finally {
-  clearAllRoutes();
+  clearRoutes();
   globalSignalRegistry.clear();
 }
 ```

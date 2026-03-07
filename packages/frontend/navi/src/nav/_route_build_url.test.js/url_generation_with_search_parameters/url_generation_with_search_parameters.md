@@ -1,16 +1,13 @@
 # [url generation with search parameters](../../route_build_url.test.js)
 
 ```js
+const tabSignal = stateSignal("overview", { id: "debug_tab" });
+tabSignal.value = "details";
+const ROOT = route("/");
+const ADMIN_ROUTE = route(`/admin/:section/`);
+const ANALYTICS_ROUTE = route(`/admin/analytics?tab=${tabSignal}`);
+const { clearRoutes } = setupRoutes([ROOT, ADMIN_ROUTE, ANALYTICS_ROUTE]);
 try {
-  const tabSignal = stateSignal("overview", { id: "debug_tab" });
-  tabSignal.value = "details";
-
-  const { ADMIN_ROUTE, ANALYTICS_ROUTE } = setupRoutes({
-    ROOT: "/",
-    ADMIN_ROUTE: `/admin/:section/`,
-    ANALYTICS_ROUTE: `/admin/analytics?tab=${tabSignal}`,
-  });
-
   return {
     admin_with_analytics_section: ADMIN_ROUTE.buildUrl({
       section: "analytics",
@@ -19,7 +16,7 @@ try {
     analytics_direct: ANALYTICS_ROUTE.buildUrl({}),
   };
 } finally {
-  clearAllRoutes();
+  clearRoutes();
   globalSignalRegistry.clear();
 }
 ```

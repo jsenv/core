@@ -1,20 +1,20 @@
 # [explicit params should override signal values](../../route_build_url.test.js)
 
 ```js
+const sectionSignal = stateSignal("settings", {
+  id: "param_override_section",
+});
+const tabSignal = stateSignal("general", { id: "param_override_tab" });
+tabSignal.value = "advanced";
+const ROOT = route("/");
+const ADMIN_ROUTE = route(`/admin/:section=${sectionSignal}/`);
+const ADMIN_SETTINGS_ROUTE = route(`/admin/settings/:tab=${tabSignal}`);
+const { clearRoutes } = setupRoutes([
+  ROOT,
+  ADMIN_ROUTE,
+  ADMIN_SETTINGS_ROUTE,
+]);
 try {
-  const sectionSignal = stateSignal("settings", {
-    id: "param_override_section",
-  });
-  const tabSignal = stateSignal("general", { id: "param_override_tab" });
-
-  tabSignal.value = "advanced";
-
-  const { ADMIN_ROUTE, ADMIN_SETTINGS_ROUTE } = setupRoutes({
-    ROOT: "/",
-    ADMIN_ROUTE: `/admin/:section=${sectionSignal}/`,
-    ADMIN_SETTINGS_ROUTE: `/admin/settings/:tab=${tabSignal}`,
-  });
-
   return {
     explicit_general_override: ADMIN_SETTINGS_ROUTE.buildUrl({
       tab: "general", // Should override signal "advanced" → "/admin"
@@ -31,7 +31,7 @@ try {
     }),
   };
 } finally {
-  clearAllRoutes();
+  clearRoutes();
   globalSignalRegistry.clear();
 }
 ```

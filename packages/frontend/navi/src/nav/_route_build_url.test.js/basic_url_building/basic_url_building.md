@@ -1,13 +1,15 @@
 # [basic url building](../../route_build_url.test.js)
 
 ```js
+const HOME_ROUTE = route("/");
+const USER_ROUTE = route("/users/:id");
+const USER_POSTS_ROUTE = route("/users/:id/posts/:postId");
+const { clearRoutes } = setupRoutes([
+  HOME_ROUTE,
+  USER_ROUTE,
+  USER_POSTS_ROUTE,
+]);
 try {
-  const { HOME_ROUTE, USER_ROUTE, USER_POSTS_ROUTE } = setupRoutes({
-    HOME_ROUTE: "/",
-    USER_ROUTE: "/users/:id",
-    USER_POSTS_ROUTE: "/users/:id/posts/:postId",
-  });
-
   return {
     home_route: HOME_ROUTE.buildUrl(),
     simple_param: USER_ROUTE.buildUrl({ id: "123" }),
@@ -17,7 +19,7 @@ try {
     }),
   };
 } finally {
-  clearAllRoutes();
+  clearRoutes();
   globalSignalRegistry.clear();
 }
 ```

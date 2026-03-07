@@ -1,13 +1,11 @@
 # [url building with extra params](../../route_build_url.test.js)
 
 ```js
+const sectionSignal = stateSignal("general", { id: "extra_params_tab" });
+const ROOT = route("/");
+const ADMIN_ROUTE = route(`/admin/:section=${sectionSignal}`);
+const { clearRoutes } = setupRoutes([ROOT, ADMIN_ROUTE]);
 try {
-  const sectionSignal = stateSignal("general", { id: "extra_params_tab" });
-  const { ADMIN_ROUTE } = setupRoutes({
-    ROOT: "/",
-    ADMIN_ROUTE: `/admin/:section=${sectionSignal}`,
-  });
-
   return {
     // Extra params should become search parameters
     with_extra_params: ADMIN_ROUTE.buildUrl({
@@ -22,7 +20,7 @@ try {
     }),
   };
 } finally {
-  clearAllRoutes();
+  clearRoutes();
   globalSignalRegistry.clear();
 }
 ```

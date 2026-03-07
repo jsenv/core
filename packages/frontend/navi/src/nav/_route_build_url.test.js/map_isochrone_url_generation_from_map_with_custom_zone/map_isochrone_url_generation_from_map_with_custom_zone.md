@@ -1,18 +1,25 @@
 # [map isochrone url generation from map with custom zone](../../route_build_url.test.js)
 
 ```js
+const zoneSignal = stateSignal(undefined);
+const isochroneTabSignal = stateSignal("compare");
+const walkSignal = stateSignal(false);
+const panelSignal = stateSignal(undefined);
+const MAP_ROUTE = route(`/map/?zone=${zoneSignal}`);
+const MAP_PANEL_ROUTE = route(`/map/:panel=${panelSignal}/`);
+const MAP_ISOCHRONE_ROUTE = route(
+  `/map/isochrone/:tab=${isochroneTabSignal}/`,
+);
+const MAP_ISOCHRONE_WALK_ROUTE = route(
+  `/map/isochrone/compare/?walk=${walkSignal}`,
+);
+const { updateRoutes, clearRoutes } = setupRoutes([
+  MAP_ROUTE,
+  MAP_PANEL_ROUTE,
+  MAP_ISOCHRONE_ROUTE,
+  MAP_ISOCHRONE_WALK_ROUTE,
+]);
 try {
-  const zoneSignal = stateSignal(undefined);
-  const isochroneTabSignal = stateSignal("compare");
-  const walkSignal = stateSignal(false);
-  const panelSignal = stateSignal(undefined);
-  const { MAP_ROUTE, MAP_ISOCHRONE_ROUTE, MAP_ISOCHRONE_WALK_ROUTE } =
-    setupRoutes({
-      MAP_ROUTE: `/map/?zone=${zoneSignal}`,
-      MAP_PANEL_ROUTE: `/map/:panel=${panelSignal}/`,
-      MAP_ISOCHRONE_ROUTE: `/map/isochrone/:tab=${isochroneTabSignal}/`,
-      MAP_ISOCHRONE_WALK_ROUTE: `/map/isochrone/compare/?walk=${walkSignal}`,
-    });
   updateRoutes(`${baseUrl}/map?zone=something`);
   return {
     map_url: MAP_ROUTE.buildUrl(),
@@ -20,7 +27,7 @@ try {
     isochrone_compare_walk_url: MAP_ISOCHRONE_WALK_ROUTE.buildUrl(),
   };
 } finally {
-  clearAllRoutes();
+  clearRoutes();
   globalSignalRegistry.clear();
 }
 ```

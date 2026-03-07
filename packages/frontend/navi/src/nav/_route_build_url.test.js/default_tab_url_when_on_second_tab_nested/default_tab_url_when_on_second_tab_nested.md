@@ -1,26 +1,34 @@
 # [default tab url when on second tab nested](../../route_build_url.test.js)
 
 ```js
+const zoneSignal = stateSignal(undefined);
+const panelSignal = stateSignal(undefined);
+const isochroneTabSignal = stateSignal("compare");
+const isochroneWalkSignal = stateSignal(false);
+const isochroneLongitudeSignal = stateSignal(undefined);
+isochroneLongitudeSignal.value = 2;
+const isochroneTimeModeSignal = stateSignal("walk");
+const MAP_ROUTE = route(`/map/?zone=${zoneSignal}`);
+const MAP_PANEL_ROUTE = route(`/map/:panel=${panelSignal}/`);
+const MAP_ISOCHRONE_ROUTE = route(
+  `/map/isochrone/:tab=${isochroneTabSignal}/?iso_lon=${isochroneLongitudeSignal}`,
+);
+const MAP_ISOCHRONE_COMPARE_ROUTE = route(
+  `/map/isochrone/compare?walk=${isochroneWalkSignal}`,
+);
+const MAP_ISOCHRONE_TIME_ROUTE = route(
+  `/map/isochrone/time/:mode=${isochroneTimeModeSignal}/`,
+);
+const MAP_ISOCHRONE_TIME_WALK_ROUTE = route("/map/isochrone/time/walk");
+const { updateRoutes, clearRoutes } = setupRoutes([
+  MAP_ROUTE,
+  MAP_PANEL_ROUTE,
+  MAP_ISOCHRONE_ROUTE,
+  MAP_ISOCHRONE_COMPARE_ROUTE,
+  MAP_ISOCHRONE_TIME_ROUTE,
+  MAP_ISOCHRONE_TIME_WALK_ROUTE,
+]);
 try {
-  const zoneSignal = stateSignal(undefined);
-  const panelSignal = stateSignal(undefined);
-  const isochroneTabSignal = stateSignal("compare");
-  const isochroneWalkSignal = stateSignal(false);
-  const isochroneLongitudeSignal = stateSignal(undefined);
-  isochroneLongitudeSignal.value = 2;
-  const isochroneTimeModeSignal = stateSignal("walk");
-  const {
-    MAP_ISOCHRONE_COMPARE_ROUTE,
-    MAP_ISOCHRONE_TIME_ROUTE,
-    MAP_ISOCHRONE_TIME_WALK_ROUTE,
-  } = setupRoutes({
-    MAP_ROUTE: `/map/?zone=${zoneSignal}`,
-    MAP_PANEL_ROUTE: `/map/:panel=${panelSignal}/`,
-    MAP_ISOCHRONE_ROUTE: `/map/isochrone/:tab=${isochroneTabSignal}/?iso_lon=${isochroneLongitudeSignal}`,
-    MAP_ISOCHRONE_COMPARE_ROUTE: `/map/isochrone/compare?walk=${isochroneWalkSignal}`,
-    MAP_ISOCHRONE_TIME_ROUTE: `/map/isochrone/time/:mode=${isochroneTimeModeSignal}/`,
-    MAP_ISOCHRONE_TIME_WALK_ROUTE: "/map/isochrone/time/walk",
-  });
   updateRoutes(`${baseUrl}/map/isochrone/time?iso_lon=2`);
   return {
     isochrone_compare_url: MAP_ISOCHRONE_COMPARE_ROUTE.buildUrl(),
@@ -28,7 +36,7 @@ try {
     isochrone_time_walk_url: MAP_ISOCHRONE_TIME_WALK_ROUTE.buildUrl(),
   };
 } finally {
-  clearAllRoutes();
+  clearRoutes();
   globalSignalRegistry.clear();
 }
 ```

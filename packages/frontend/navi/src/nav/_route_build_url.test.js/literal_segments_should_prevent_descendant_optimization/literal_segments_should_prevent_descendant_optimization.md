@@ -1,20 +1,17 @@
 # [literal segments should prevent descendant optimization](../../route_build_url.test.js)
 
 ```js
+const fileSignal = stateSignal("readme.txt", { id: "file" });
+const DIR_ROUTE = route(`/dir/`);
+const FILE_ROUTE = route(`/dir/subdir/:file=${fileSignal}`);
+const { clearRoutes } = setupRoutes([DIR_ROUTE, FILE_ROUTE]);
 try {
-  const fileSignal = stateSignal("readme.txt", { id: "file" });
-
-  const { DIR_ROUTE, FILE_ROUTE } = setupRoutes({
-    DIR_ROUTE: `/dir/`,
-    FILE_ROUTE: `/dir/subdir/:file=${fileSignal}`,
-  });
-
   return {
     dir_url: DIR_ROUTE.buildUrl({}),
     file_url: FILE_ROUTE.buildUrl({}),
   };
 } finally {
-  clearAllRoutes();
+  clearRoutes();
   globalSignalRegistry.clear();
 }
 ```

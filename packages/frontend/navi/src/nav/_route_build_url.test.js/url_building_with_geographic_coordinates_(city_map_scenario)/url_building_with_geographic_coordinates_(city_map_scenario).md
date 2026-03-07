@@ -1,26 +1,29 @@
 # [url building with geographic coordinates (city map scenario)](../../route_build_url.test.js)
 
 ```js
+const citySignal = stateSignal("Paris", {
+  id: "city",
+  oneOf: ["Paris", "London", "Tokyo", "New York", "Sydney"],
+});
+const longitudeSignal = stateSignal(2.3522, {
+  id: "longitude",
+  type: "number",
+});
+const latitudeSignal = stateSignal(48.8566, {
+  id: "latitude",
+  type: "number",
+});
+const HOME_ROUTE = route("/");
+const SELECT_CITY_ROUTE = route("/select_city");
+const MAP_ROUTE = route(
+  `/map?city=${citySignal}&lon=${longitudeSignal}&lat=${latitudeSignal}`,
+);
+const { clearRoutes } = setupRoutes([
+  HOME_ROUTE,
+  SELECT_CITY_ROUTE,
+  MAP_ROUTE,
+]);
 try {
-  const citySignal = stateSignal("Paris", {
-    id: "city",
-    oneOf: ["Paris", "London", "Tokyo", "New York", "Sydney"],
-  });
-  const longitudeSignal = stateSignal(2.3522, {
-    id: "longitude",
-    type: "number",
-  });
-  const latitudeSignal = stateSignal(48.8566, {
-    id: "latitude",
-    type: "number",
-  });
-
-  const { MAP_ROUTE } = setupRoutes({
-    HOME_ROUTE: "/",
-    SELECT_CITY_ROUTE: "/select_city",
-    MAP_ROUTE: `/map?city=${citySignal}&lon=${longitudeSignal}&lat=${latitudeSignal}`,
-  });
-
   return {
     // Default state with all signal values
     map_with_paris_coordinates: MAP_ROUTE.buildUrl(),
@@ -49,7 +52,7 @@ try {
     }),
   };
 } finally {
-  clearAllRoutes();
+  clearRoutes();
   globalSignalRegistry.clear();
 }
 ```

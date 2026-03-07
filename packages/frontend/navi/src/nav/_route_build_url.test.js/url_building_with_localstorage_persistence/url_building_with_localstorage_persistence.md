@@ -22,28 +22,28 @@ if (!globalThis.window) {
   globalThis.window = {};
 }
 globalThis.window.localStorage = localStorageMock;
+localStorageMock.setItem("section_ls", "settings");
+localStorageMock.setItem("settings_tab_ls", "general");
 
+const sectionSignal = stateSignal("settings", {
+  id: "section_ls",
+  persists: true,
+  type: "string",
+});
+const tabSignal = stateSignal("general", {
+  id: "settings_tab_ls",
+  persists: true,
+  type: "string",
+});
+const ROOT = route("/");
+const ADMIN_ROUTE = route(`/admin/:section=${sectionSignal}/`);
+const ADMIN_SETTINGS_ROUTE = route(`/admin/settings/:tab=${tabSignal}`);
+const { clearRoutes } = setupRoutes([
+  ROOT,
+  ADMIN_ROUTE,
+  ADMIN_SETTINGS_ROUTE,
+]);
 try {
-  localStorageMock.setItem("section_ls", "settings");
-  localStorageMock.setItem("settings_tab_ls", "general");
-
-  const sectionSignal = stateSignal("settings", {
-    id: "section_ls",
-    persists: true,
-    type: "string",
-  });
-  const tabSignal = stateSignal("general", {
-    id: "settings_tab_ls",
-    persists: true,
-    type: "string",
-  });
-
-  const { ADMIN_ROUTE, ADMIN_SETTINGS_ROUTE } = setupRoutes({
-    ROOT: "/",
-    ADMIN_ROUTE: `/admin/:section=${sectionSignal}/`,
-    ADMIN_SETTINGS_ROUTE: `/admin/settings/:tab=${tabSignal}`,
-  });
-
   const bothDefaults = {
     admin_url: ADMIN_ROUTE.buildUrl({}),
     settings_url: ADMIN_SETTINGS_ROUTE.buildUrl({}),
@@ -73,7 +73,7 @@ try {
     section_default_tab_non_default: mixed,
   };
 } finally {
-  clearAllRoutes();
+  clearRoutes();
   globalSignalRegistry.clear();
   delete globalThis.window;
 }

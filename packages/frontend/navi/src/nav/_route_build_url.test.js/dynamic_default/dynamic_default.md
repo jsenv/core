@@ -1,17 +1,21 @@
 # [dynamic default ](../../route_build_url.test.js)
 
 ```js
+const zoneLonSignal = stateSignal(undefined);
+const mapLonSignal = stateSignal(zoneLonSignal, { default: -1 });
+const isoLonSignal = stateSignal(zoneLonSignal);
+const mapPanelSignal = stateSignal(undefined);
+const HOME_ROUTE = route("/");
+const MAP_ROUTE = route(`/map/?lon=${mapLonSignal}`);
+const MAP_PANEL_ROUTE = route(`/map/:panel=${mapPanelSignal}/`);
+const MAP_ISOCHRONE_ROUTE = route(`/map/isochrone?iso_lon=${isoLonSignal}`);
+const { updateRoutes, clearRoutes } = setupRoutes([
+  HOME_ROUTE,
+  MAP_ROUTE,
+  MAP_PANEL_ROUTE,
+  MAP_ISOCHRONE_ROUTE,
+]);
 try {
-  const zoneLonSignal = stateSignal(undefined);
-  const mapLonSignal = stateSignal(zoneLonSignal, { default: -1 });
-  const isoLonSignal = stateSignal(zoneLonSignal);
-  const mapPanelSignal = stateSignal(undefined);
-  const { MAP_ISOCHRONE_ROUTE } = setupRoutes({
-    HOME_ROUTE: "/",
-    MAP_ROUTE: `/map/?lon=${mapLonSignal}`,
-    MAP_PANEL_ROUTE: `/map/:panel=${mapPanelSignal}/`,
-    MAP_ISOCHRONE_ROUTE: `/map/isochrone?iso_lon=${isoLonSignal}`,
-  });
   updateRoutes(`${baseUrl}/map/isochrone`);
   const getState = () => {
     return {
@@ -61,7 +65,7 @@ try {
     state_after_setting_new_zone_lon,
   };
 } finally {
-  clearAllRoutes();
+  clearRoutes();
   globalSignalRegistry.clear();
 }
 ```

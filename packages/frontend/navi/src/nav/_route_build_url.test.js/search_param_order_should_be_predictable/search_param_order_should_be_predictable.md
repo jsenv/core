@@ -1,15 +1,12 @@
 # [search param order should be predictable](../../route_build_url.test.js)
 
 ```js
+const aSignal = stateSignal("a-value", { id: "a" });
+const bSignal = stateSignal("b-value", { id: "b" });
+const cSignal = stateSignal("c-value", { id: "c" });
+const ROUTE = route(`/test?a=${aSignal}&b=${bSignal}&c=${cSignal}`);
+const { clearRoutes } = setupRoutes([ROUTE]);
 try {
-  const aSignal = stateSignal("a-value", { id: "a" });
-  const bSignal = stateSignal("b-value", { id: "b" });
-  const cSignal = stateSignal("c-value", { id: "c" });
-
-  const { ROUTE } = setupRoutes({
-    ROUTE: `/test?a=${aSignal}&b=${bSignal}&c=${cSignal}`,
-  });
-
   return {
     no_provided_params: ROUTE.buildUrl(),
     provided_same_order: ROUTE.buildUrl({
@@ -30,7 +27,7 @@ try {
     }),
   };
 } finally {
-  clearAllRoutes();
+  clearRoutes();
   globalSignalRegistry.clear();
 }
 ```

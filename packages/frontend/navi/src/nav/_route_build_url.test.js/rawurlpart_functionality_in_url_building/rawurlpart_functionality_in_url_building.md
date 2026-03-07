@@ -1,12 +1,10 @@
 # [rawUrlPart functionality in url building](../../route_build_url.test.js)
 
 ```js
+const FILES_ROUTE = route("/files/:path");
+const API_ROUTE = route("/api/search");
+const { clearRoutes } = setupRoutes([FILES_ROUTE, API_ROUTE]);
 try {
-  const { FILES_ROUTE, API_ROUTE } = setupRoutes({
-    FILES_ROUTE: "/files/:path",
-    API_ROUTE: "/api/search",
-  });
-
   return {
     normal_path: FILES_ROUTE.buildUrl({ path: "documents/readme.txt" }),
     raw_path: FILES_ROUTE.buildUrl({
@@ -22,7 +20,7 @@ try {
     }),
   };
 } finally {
-  clearAllRoutes();
+  clearRoutes();
   globalSignalRegistry.clear();
 }
 ```

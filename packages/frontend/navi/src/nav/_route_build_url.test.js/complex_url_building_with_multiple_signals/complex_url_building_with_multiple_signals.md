@@ -1,43 +1,47 @@
 # [complex url building with multiple signals](../../route_build_url.test.js)
 
 ```js
+const zoneIdSignal = stateSignal("zone-123", {
+  id: "zoneId",
+  type: "string",
+});
+const mapboxStyleSignal = stateSignal("streets-v11", {
+  id: "mapboxStyle",
+  type: "string",
+});
+const mapboxLongitudeSignal = stateSignal(2.3522, {
+  id: "mapboxLongitude",
+  type: "float",
+});
+const mapboxLatitudeSignal = stateSignal(48.8566, {
+  id: "mapboxLatitude",
+  type: "float",
+});
+const mapboxZoomSignal = stateSignal(12, {
+  id: "mapboxZoom",
+  type: "number",
+});
+const mapSidebarOpenedSignal = stateSignal(true, {
+  id: "mapSidebarOpened",
+  type: "boolean",
+});
+const isochromeWalkTimeSignal = stateSignal(20, {
+  id: "isochroneWalk",
+  type: "number",
+});
+const MAP_ROUTE = route(
+  `/map/?zone=${zoneIdSignal}&style=${mapboxStyleSignal}&lon=${mapboxLongitudeSignal}&lat=${mapboxLatitudeSignal}&zoom=${mapboxZoomSignal}&sidebar=${mapSidebarOpenedSignal}`,
+);
+const MAP_ISOCHRONE_ROUTE = route("/map/isochrone/");
+const MAP_ISOCHRONE_TOTO_ROUTE = route(
+  `/map/isochrone/toto/?time=${isochromeWalkTimeSignal}`,
+);
+const { clearRoutes } = setupRoutes([
+  MAP_ROUTE,
+  MAP_ISOCHRONE_ROUTE,
+  MAP_ISOCHRONE_TOTO_ROUTE,
+]);
 try {
-  const zoneIdSignal = stateSignal("zone-123", {
-    id: "zoneId",
-    type: "string",
-  });
-  const mapboxStyleSignal = stateSignal("streets-v11", {
-    id: "mapboxStyle",
-    type: "string",
-  });
-  const mapboxLongitudeSignal = stateSignal(2.3522, {
-    id: "mapboxLongitude",
-    type: "float",
-  });
-  const mapboxLatitudeSignal = stateSignal(48.8566, {
-    id: "mapboxLatitude",
-    type: "float",
-  });
-  const mapboxZoomSignal = stateSignal(12, {
-    id: "mapboxZoom",
-    type: "number",
-  });
-  const mapSidebarOpenedSignal = stateSignal(true, {
-    id: "mapSidebarOpened",
-    type: "boolean",
-  });
-  const isochromeWalkTimeSignal = stateSignal(20, {
-    id: "isochroneWalk",
-    type: "number",
-  });
-
-  const { MAP_ROUTE, MAP_ISOCHRONE_ROUTE, MAP_ISOCHRONE_TOTO_ROUTE } =
-    setupRoutes({
-      MAP_ROUTE: `/map/?zone=${zoneIdSignal}&style=${mapboxStyleSignal}&lon=${mapboxLongitudeSignal}&lat=${mapboxLatitudeSignal}&zoom=${mapboxZoomSignal}&sidebar=${mapSidebarOpenedSignal}`,
-      MAP_ISOCHRONE_ROUTE: "/map/isochrone/",
-      MAP_ISOCHRONE_TOTO_ROUTE: `/map/isochrone/toto/?time=${isochromeWalkTimeSignal}`,
-    });
-
   // Step 1: Generate URL with all defaults (no params passed)
   const urlWithDefaults = MAP_ROUTE.buildUrl();
   // Step 2: Change zoom signal to non-default value
@@ -62,7 +66,7 @@ try {
     map_isochrone_toto_url_after_change: isochroneTimeWalkRouteAfterChange,
   };
 } finally {
-  clearAllRoutes();
+  clearRoutes();
   globalSignalRegistry.clear();
 }
 ```

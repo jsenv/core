@@ -1,19 +1,21 @@
 # [parent url updates when child signals change](../../route_build_url.test.js)
 
 ```js
+const sectionSignal = stateSignal("settings", {
+  id: "section_reactive",
+});
+const tabSignal = stateSignal("general", {
+  id: "settings_tab_reactive",
+});
+const ROOT = route("/");
+const ADMIN_ROUTE = route(`/admin/:section=${sectionSignal}/`);
+const ADMIN_SETTINGS_ROUTE = route(`/admin/settings/:tab=${tabSignal}`);
+const { clearRoutes } = setupRoutes([
+  ROOT,
+  ADMIN_ROUTE,
+  ADMIN_SETTINGS_ROUTE,
+]);
 try {
-  const sectionSignal = stateSignal("settings", {
-    id: "section_reactive",
-  });
-  const tabSignal = stateSignal("general", {
-    id: "settings_tab_reactive",
-  });
-  const { ADMIN_ROUTE, ADMIN_SETTINGS_ROUTE } = setupRoutes({
-    ROOT: "/",
-    ADMIN_ROUTE: `/admin/:section=${sectionSignal}/`,
-    ADMIN_SETTINGS_ROUTE: `/admin/settings/:tab=${tabSignal}`,
-  });
-
   const initialUrls = {
     admin_initial: ADMIN_ROUTE.buildUrl({}),
     settings_initial: ADMIN_SETTINGS_ROUTE.buildUrl({}),
@@ -41,7 +43,7 @@ try {
     afterSectionChange,
   };
 } finally {
-  clearAllRoutes();
+  clearRoutes();
   globalSignalRegistry.clear();
 }
 ```

@@ -1,15 +1,22 @@
 # [menu url when on default tab](../../route_build_url.test.js)
 
 ```js
+const mapPanelSignal = stateSignal(undefined);
+const isochroneTabSignal = stateSignal("compare");
+const isochroneWalkSignal = stateSignal(false);
+const MAP_PANEL_ROUTE = route(`/map/:panel=${mapPanelSignal}/`);
+const MAP_ISOCHRONE_ROUTE = route(
+  `/map/isochrone/:tab=${isochroneTabSignal}/`,
+);
+const MAP_ISOCHRONE_COMPARE_ROUTE = route(
+  `/map/isochrone/compare?walk=${isochroneWalkSignal}`,
+);
+const { updateRoutes, clearRoutes } = setupRoutes([
+  MAP_PANEL_ROUTE,
+  MAP_ISOCHRONE_ROUTE,
+  MAP_ISOCHRONE_COMPARE_ROUTE,
+]);
 try {
-  const mapPanelSignal = stateSignal(undefined);
-  const isochroneTabSignal = stateSignal("compare");
-  const isochroneWalkSignal = stateSignal(false);
-  const { MAP_ISOCHRONE_ROUTE } = setupRoutes({
-    MAP_PANEL_ROUTE: `/map/:panel=${mapPanelSignal}/`,
-    MAP_ISOCHRONE_ROUTE: `/map/isochrone/:tab=${isochroneTabSignal}/`,
-    MAP_ISOCHRONE_COMPARE_ROUTE: `/map/isochrone/compare?walk=${isochroneWalkSignal}`,
-  });
   updateRoutes(`${baseUrl}/map/isochrone`);
   isochroneWalkSignal.value = true;
 
@@ -17,7 +24,7 @@ try {
     map_isochrone_url: MAP_ISOCHRONE_ROUTE.url,
   };
 } finally {
-  clearAllRoutes();
+  clearRoutes();
   globalSignalRegistry.clear();
 }
 ```

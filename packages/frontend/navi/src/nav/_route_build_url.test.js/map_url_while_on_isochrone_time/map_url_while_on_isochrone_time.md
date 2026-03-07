@@ -1,31 +1,43 @@
 # [map url while on isochrone time](../../route_build_url.test.js)
 
 ```js
+const zoneSignal = stateSignal(undefined);
+const isochroneTabSignal = stateSignal("compare");
+const walkSignal = stateSignal(false);
+const panelSignal = stateSignal(undefined);
+const isochroneLongitudeSignal = stateSignal(undefined);
+zoneSignal.value = "london";
+panelSignal.value = "isochrone";
+isochroneTabSignal.value = "time";
+isochroneLongitudeSignal.value = 1;
+const isochroneTimeModeSignal = stateSignal("walk");
+const MAP_ROUTE = route(`/map/?zone=${zoneSignal}`);
+const MAP_PANEL_ROUTE = route(`/map/:panel=${panelSignal}/`);
+const MAP_ISOCHRONE_ROUTE = route(
+  `/map/isochrone/:tab=${isochroneTabSignal}/?iso_lon=${isochroneLongitudeSignal}`,
+);
+const MAP_ISOCHRONE_COMPARE_ROUTE = route(
+  `/map/isochrone/compare?walk=${walkSignal}`,
+);
+const MAP_ISOCHRONE_TIME_ROUTE = route(
+  `/map/isochrone/time/:mode=${isochroneTimeModeSignal}/`,
+);
+const MAP_ISOCHRONE_TIME_WALK_ROUTE = route("/map/isochrone/time/walk");
+const { updateRoutes, clearRoutes } = setupRoutes([
+  MAP_ROUTE,
+  MAP_PANEL_ROUTE,
+  MAP_ISOCHRONE_ROUTE,
+  MAP_ISOCHRONE_COMPARE_ROUTE,
+  MAP_ISOCHRONE_TIME_ROUTE,
+  MAP_ISOCHRONE_TIME_WALK_ROUTE,
+]);
 try {
-  const zoneSignal = stateSignal(undefined);
-  const isochroneTabSignal = stateSignal("compare");
-  const walkSignal = stateSignal(false);
-  const panelSignal = stateSignal(undefined);
-  const isochroneLongitudeSignal = stateSignal(undefined);
-  zoneSignal.value = "london";
-  panelSignal.value = "isochrone";
-  isochroneTabSignal.value = "time";
-  isochroneLongitudeSignal.value = 1;
-  const isochroneTimeModeSignal = stateSignal("walk");
-  const { MAP_ROUTE } = setupRoutes({
-    MAP_ROUTE: `/map/?zone=${zoneSignal}`,
-    MAP_PANEL_ROUTE: `/map/:panel=${panelSignal}/`,
-    MAP_ISOCHRONE_ROUTE: `/map/isochrone/:tab=${isochroneTabSignal}/?iso_lon=${isochroneLongitudeSignal}`,
-    MAP_ISOCHRONE_COMPARE_ROUTE: `/map/isochrone/compare?walk=${walkSignal}`,
-    MAP_ISOCHRONE_TIME_ROUTE: `/map/isochrone/time/:mode=${isochroneTimeModeSignal}/`,
-    MAP_ISOCHRONE_TIME_WALK_ROUTE: "/map/isochrone/time/walk",
-  });
   updateRoutes(`${baseUrl}/zone_selection`);
   return {
     map_url: MAP_ROUTE.buildUrl({ zone: "paris" }),
   };
 } finally {
-  clearAllRoutes();
+  clearRoutes();
   globalSignalRegistry.clear();
 }
 ```

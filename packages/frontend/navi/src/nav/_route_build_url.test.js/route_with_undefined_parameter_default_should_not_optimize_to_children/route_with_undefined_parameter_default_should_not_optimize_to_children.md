@@ -1,15 +1,12 @@
 # [route with undefined parameter default should not optimize to children](../../route_build_url.test.js)
 
 ```js
+const partSignal = stateSignal(undefined, { id: "part" });
+const subpartSignal = stateSignal("details", { id: "subpart" });
+const TOTO_ROUTE = route(`/toto/:part=${partSignal}`);
+const TOTO_SUB_ROUTE = route(`/toto/admin/:subpart=${subpartSignal}`);
+const { clearRoutes } = setupRoutes([TOTO_ROUTE, TOTO_SUB_ROUTE]);
 try {
-  const partSignal = stateSignal(undefined, { id: "part" });
-  const subpartSignal = stateSignal("details", { id: "subpart" });
-
-  const { TOTO_ROUTE, TOTO_SUB_ROUTE } = setupRoutes({
-    TOTO_ROUTE: `/toto/:part=${partSignal}`,
-    TOTO_SUB_ROUTE: `/toto/admin/:subpart=${subpartSignal}`,
-  });
-
   return {
     toto_url_with_undefined_default: TOTO_ROUTE.buildUrl({}),
     toto_url_explicit_undefined: TOTO_ROUTE.buildUrl({ part: undefined }),
@@ -17,7 +14,7 @@ try {
     toto_sub_url: TOTO_SUB_ROUTE.buildUrl({}),
   };
 } finally {
-  clearAllRoutes();
+  clearRoutes();
   globalSignalRegistry.clear();
 }
 ```

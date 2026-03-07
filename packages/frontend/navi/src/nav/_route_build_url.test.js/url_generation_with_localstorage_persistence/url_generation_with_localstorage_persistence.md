@@ -19,35 +19,37 @@ const localStorageMock = {
 globalThis.window = {
   localStorage: localStorageMock,
 };
+localStorageMock.setItem("section_deepest", "analytics");
+localStorageMock.setItem("analytics_tab_deepest", "details");
 
+const sectionSignal = stateSignal("settings", {
+  id: "section_deepest",
+  persists: true,
+  type: "string",
+});
+const analyticsTabSignal = stateSignal("overview", {
+  id: "analytics_tab_deepest",
+  persists: true,
+  type: "string",
+});
+const ROOT_ROUTE = route("/");
+const ADMIN_ROUTE = route(`/admin/:section=${sectionSignal}/`);
+const ADMIN_ANALYTICS_ROUTE = route(
+  `/admin/analytics?tab=${analyticsTabSignal}`,
+);
+const { clearRoutes } = setupRoutes([
+  ROOT_ROUTE,
+  ADMIN_ROUTE,
+  ADMIN_ANALYTICS_ROUTE,
+]);
 try {
-  localStorageMock.setItem("section_deepest", "analytics");
-  localStorageMock.setItem("analytics_tab_deepest", "details");
-
-  const sectionSignal = stateSignal("settings", {
-    id: "section_deepest",
-    persists: true,
-    type: "string",
-  });
-  const analyticsTabSignal = stateSignal("overview", {
-    id: "analytics_tab_deepest",
-    persists: true,
-    type: "string",
-  });
-
-  const { ROOT_ROUTE, ADMIN_ROUTE, ADMIN_ANALYTICS_ROUTE } = setupRoutes({
-    ROOT_ROUTE: "/",
-    ADMIN_ROUTE: `/admin/:section=${sectionSignal}/`,
-    ADMIN_ANALYTICS_ROUTE: `/admin/analytics?tab=${analyticsTabSignal}`,
-  });
-
   return {
     admin_route_url: ADMIN_ROUTE.buildUrl({}),
     analytics_route_url: ADMIN_ANALYTICS_ROUTE.buildUrl({}),
     root_route_url: ROOT_ROUTE.buildUrl({}),
   };
 } finally {
-  clearAllRoutes();
+  clearRoutes();
   globalSignalRegistry.clear();
   delete globalThis.window;
 }

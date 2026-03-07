@@ -1,26 +1,26 @@
 # [root route should not use deepest url generation](../../route_build_url.test.js)
 
 ```js
+const sectionSignal = stateSignal("settings");
+const tabSignal = stateSignal("general");
+sectionSignal.value = "users";
+tabSignal.value = "advanced";
+const ROOT_ROUTE = route("/");
+const ADMIN_ROUTE = route(`/admin/:section=${sectionSignal}/`);
+const ADMIN_SETTINGS_ROUTE = route(`/admin/settings/:tab=${tabSignal}`);
+const { clearRoutes } = setupRoutes([
+  ROOT_ROUTE,
+  ADMIN_ROUTE,
+  ADMIN_SETTINGS_ROUTE,
+]);
 try {
-  const sectionSignal = stateSignal("settings");
-  const tabSignal = stateSignal("general");
-
-  sectionSignal.value = "users";
-  tabSignal.value = "advanced";
-
-  const { ROOT_ROUTE, ADMIN_ROUTE, ADMIN_SETTINGS_ROUTE } = setupRoutes({
-    ROOT_ROUTE: "/",
-    ADMIN_ROUTE: `/admin/:section=${sectionSignal}/`,
-    ADMIN_SETTINGS_ROUTE: `/admin/settings/:tab=${tabSignal}`,
-  });
-
   return {
     root_url: ROOT_ROUTE.buildUrl({}),
     admin_url: ADMIN_ROUTE.buildUrl({}),
     settings_url: ADMIN_SETTINGS_ROUTE.buildUrl({}),
   };
 } finally {
-  clearAllRoutes();
+  clearRoutes();
   globalSignalRegistry.clear();
 }
 ```

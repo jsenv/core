@@ -1,16 +1,17 @@
 # [search param order with complex patterns](../../route_build_url.test.js)
 
 ```js
+const filterSignal = stateSignal("active", { id: "filter" });
+const sortSignal = stateSignal("name", { id: "sort" });
+const pageSignal = stateSignal(1, { id: "page", type: "number" });
+const SEARCH_ROUTE = route(
+  `/search?filter=${filterSignal}&sort=${sortSignal}`,
+);
+const SEARCH_RESULTS_ROUTE = route(
+  `/search/results?page=${pageSignal}&limit=20`,
+);
+const { clearRoutes } = setupRoutes([SEARCH_ROUTE, SEARCH_RESULTS_ROUTE]);
 try {
-  const filterSignal = stateSignal("active", { id: "filter" });
-  const sortSignal = stateSignal("name", { id: "sort" });
-  const pageSignal = stateSignal(1, { id: "page", type: "number" });
-
-  const { SEARCH_ROUTE, SEARCH_RESULTS_ROUTE } = setupRoutes({
-    SEARCH_ROUTE: `/search?filter=${filterSignal}&sort=${sortSignal}`,
-    SEARCH_RESULTS_ROUTE: `/search/results?page=${pageSignal}&limit=20`,
-  });
-
   return {
     search_no_params: SEARCH_ROUTE.buildUrl(),
     search_with_params: SEARCH_ROUTE.buildUrl({ sort: "date" }),
@@ -21,7 +22,7 @@ try {
     }),
   };
 } finally {
-  clearAllRoutes();
+  clearRoutes();
   globalSignalRegistry.clear();
 }
 ```

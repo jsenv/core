@@ -1,18 +1,24 @@
 # [settings route should return /admin when all params are defaults](../../route_build_url.test.js)
 
 ```js
+const sectionSignal = stateSignal("settings");
+const settingsTabSignal = stateSignal("general");
+const analyticsTabSignal = stateSignal("overview");
+const ROOT = route("/");
+const ADMIN_ROUTE = route(`/admin/:section=${sectionSignal}/`);
+const ADMIN_SETTINGS_ROUTE = route(
+  `/admin/settings/:tab=${settingsTabSignal}`,
+);
+const ADMIN_ANALYTICS_ROUTE = route(
+  `/admin/analytics?tab=${analyticsTabSignal}`,
+);
+const { updateRoutes, clearRoutes } = setupRoutes([
+  ROOT,
+  ADMIN_ROUTE,
+  ADMIN_SETTINGS_ROUTE,
+  ADMIN_ANALYTICS_ROUTE,
+]);
 try {
-  const sectionSignal = stateSignal("settings");
-  const settingsTabSignal = stateSignal("general");
-  const analyticsTabSignal = stateSignal("overview");
-
-  const { ADMIN_ROUTE, ADMIN_SETTINGS_ROUTE } = setupRoutes({
-    ROOT: "/",
-    ADMIN_ROUTE: `/admin/:section=${sectionSignal}/`,
-    ADMIN_SETTINGS_ROUTE: `/admin/settings/:tab=${settingsTabSignal}`,
-    ADMIN_ANALYTICS_ROUTE: `/admin/analytics?tab=${analyticsTabSignal}`,
-  });
-
   updateRoutes(`${baseUrl}/admin/settings/advanced`);
 
   return {
@@ -23,7 +29,7 @@ try {
     admin_url: ADMIN_ROUTE.buildUrl(),
   };
 } finally {
-  clearAllRoutes();
+  clearRoutes();
   globalSignalRegistry.clear();
 }
 ```

@@ -1,20 +1,24 @@
 # [url building with nested routes inheritance](../../route_build_url.test.js)
 
 ```js
+const sectionSignal = stateSignal("settings", { id: "section" });
+const tabSignal = stateSignal("general", { id: "settings_tab" });
+const analyticsTabSignal = stateSignal("overview", {
+  id: "analytics_tab",
+});
+const ROOT = route("/");
+const ADMIN_ROUTE = route(`/admin/:section=${sectionSignal}/`);
+const ADMIN_SETTINGS_ROUTE = route(`/admin/settings/:tab=${tabSignal}`);
+const ADMIN_ANALYTICS_ROUTE = route(
+  `/admin/analytics?tab=${analyticsTabSignal}`,
+);
+const { clearRoutes } = setupRoutes([
+  ROOT,
+  ADMIN_ROUTE,
+  ADMIN_SETTINGS_ROUTE,
+  ADMIN_ANALYTICS_ROUTE,
+]);
 try {
-  const sectionSignal = stateSignal("settings", { id: "section" });
-  const tabSignal = stateSignal("general", { id: "settings_tab" });
-  const analyticsTabSignal = stateSignal("overview", {
-    id: "analytics_tab",
-  });
-  const { ADMIN_ROUTE, ADMIN_SETTINGS_ROUTE, ADMIN_ANALYTICS_ROUTE } =
-    setupRoutes({
-      ROOT: "/",
-      ADMIN_ROUTE: `/admin/:section=${sectionSignal}/`,
-      ADMIN_SETTINGS_ROUTE: `/admin/settings/:tab=${tabSignal}`,
-      ADMIN_ANALYTICS_ROUTE: `/admin/analytics?tab=${analyticsTabSignal}`,
-    });
-
   return {
     // Test deepest URL generation
     admin_no_params: ADMIN_ROUTE.buildUrl(),
@@ -50,7 +54,7 @@ try {
     }),
   };
 } finally {
-  clearAllRoutes();
+  clearRoutes();
   globalSignalRegistry.clear();
 }
 ```

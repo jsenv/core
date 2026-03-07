@@ -1,19 +1,22 @@
 # [parent route should handle undefined signals correctly](../../route_build_url.test.js)
 
 ```js
+const mapPanelSignal = stateSignal(undefined, { id: "mapPanel" });
+const isochroneTabSignal = stateSignal("compare");
+mapPanelSignal.value = "isochrone";
+const MAP_ROUTE = route(`/map/`);
+const MAP_PANEL_ROUTE = route(`/map/:panel=${mapPanelSignal}/`);
+const MAP_ISOCHRONE_ROUTE = route(
+  `/map/isochrone/:tab=${isochroneTabSignal}/`,
+);
+const MAP_ISOCHRONE_COMPARE_ROUTE = route(`/map/isochrone/compare`);
+const { clearRoutes } = setupRoutes([
+  MAP_ROUTE,
+  MAP_PANEL_ROUTE,
+  MAP_ISOCHRONE_ROUTE,
+  MAP_ISOCHRONE_COMPARE_ROUTE,
+]);
 try {
-  const mapPanelSignal = stateSignal(undefined, { id: "mapPanel" });
-  const isochroneTabSignal = stateSignal("compare");
-
-  mapPanelSignal.value = "isochrone";
-
-  const { MAP_ROUTE, MAP_ISOCHRONE_COMPARE_ROUTE } = setupRoutes({
-    MAP_ROUTE: `/map/`,
-    MAP_PANEL_ROUTE: `/map/:panel=${mapPanelSignal}/`,
-    MAP_ISOCHRONE_ROUTE: `/map/isochrone/:tab=${isochroneTabSignal}/`,
-    MAP_ISOCHRONE_COMPARE_ROUTE: `/map/isochrone/compare`,
-  });
-
   return {
     map_url_normal: MAP_ROUTE.buildUrl(),
     map_url_panel_undefined: MAP_ROUTE.buildUrl({
@@ -22,7 +25,7 @@ try {
     isochrone_compare_url: MAP_ISOCHRONE_COMPARE_ROUTE.buildUrl({}),
   };
 } finally {
-  clearAllRoutes();
+  clearRoutes();
   globalSignalRegistry.clear();
 }
 ```

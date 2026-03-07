@@ -1,19 +1,22 @@
 # [parent route should use child route when child has non-default signal](../../route_build_url.test.js)
 
 ```js
+// Set up the scenario: zone selection page -> map route building
+const zoneSignal = stateSignal(undefined);
+const mapPanelSignal = stateSignal(undefined, { id: "mapPanel" });
+mapPanelSignal.value = "isochrone";
+zoneSignal.value = "paris";
+const ZONE_SELECTION_ROUTE = route("/zone_selection");
+const MAP_ROUTE = route(`/map/?zone=${zoneSignal}`);
+const MAP_PANEL_ROUTE = route(`/map/:panel=${mapPanelSignal}/`);
+const MAP_ISOCHRONE_ROUTE = route(`/map/isochrone`);
+const { updateRoutes, clearRoutes } = setupRoutes([
+  ZONE_SELECTION_ROUTE,
+  MAP_ROUTE,
+  MAP_PANEL_ROUTE,
+  MAP_ISOCHRONE_ROUTE,
+]);
 try {
-  // Set up the scenario: zone selection page -> map route building
-  const zoneSignal = stateSignal(undefined);
-  const mapPanelSignal = stateSignal(undefined, { id: "mapPanel" });
-  mapPanelSignal.value = "isochrone";
-  zoneSignal.value = "paris";
-  const { MAP_ROUTE, MAP_PANEL_ROUTE, MAP_ISOCHRONE_ROUTE } = setupRoutes({
-    ZONE_SELECTION_ROUTE: "/zone_selection",
-    MAP_ROUTE: `/map/?zone=${zoneSignal}`,
-    MAP_PANEL_ROUTE: `/map/:panel=${mapPanelSignal}/`,
-    MAP_ISOCHRONE_ROUTE: `/map/isochrone`,
-  });
-
   // Simulate being on zone selection page
   updateRoutes(`${baseUrl}/zone_selection`);
 
@@ -26,7 +29,7 @@ try {
     panel_route_direct: MAP_PANEL_ROUTE.buildUrl(),
   };
 } finally {
-  clearAllRoutes();
+  clearRoutes();
   globalSignalRegistry.clear();
 }
 ```
