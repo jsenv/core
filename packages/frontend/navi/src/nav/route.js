@@ -758,26 +758,6 @@ const registerRoute = (routePattern, { action = ACTION.COMPLETED } = {}) => {
       );
     }
 
-    // Update action params on all matching routes
-    for (const matchingRoute of allMatchingRoutes) {
-      const matchingRouteAction = matchingRoute.action;
-      if (!matchingRouteAction || matchingRouteAction === ACTION.COMPLETED) {
-        continue;
-      }
-      const matchingRoutePrivateProperties =
-        getRoutePrivateProperties(matchingRoute);
-      const { routePattern: matchingRoutePattern } =
-        matchingRoutePrivateProperties;
-      const currentResolvedParams = matchingRoutePattern.resolveParams();
-      const updatedActionParams = {
-        ...currentResolvedParams,
-        ...newParams,
-      };
-      matchingRouteAction.replaceParams(updatedActionParams, {
-        callReason: `replaceParams called on ${route} affecting ${matchingRoute}`,
-      });
-    }
-
     // Find the most specific route using pattern depth (deeper = more specific)
     let mostSpecificRoute = route;
     const routePrivateProperties = getRoutePrivateProperties(route);
