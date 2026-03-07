@@ -20,31 +20,58 @@ const DEBUG = false;
  * reactive signals for building dynamic UIs. Each route tracks its matching state,
  * extracted parameters, and computed URLs.
  *
- * @example
+ * @example Basic usage
  * ```js
  * import { setupRoutes, stateSignal } from "@jsenv/navi";
  *
- * const settingsTabSignal = stateSignal('general', { type: "string", oneOf: ['general', 'overview'] });
+ * const tabSignal = stateSignal('general', { type: "string", oneOf: ['general', 'overview'] });
  *
- * let { USER_PROFILE } = setupRoutes({
- *   HOME: "/",
- *   SETTINGS: "/settings/:tab=${settingsTabSignal}/",
+ * let { HOME_ROUTE, SETTINGS_ROUTE } = setupRoutes({
+ *   HOME_ROUTE: "/",
+ *   SETTINGS_ROUTE: "/settings/:tab=${tabSignal}/",
  * });
  *
- * USER_PROFILE.matching // boolean
- * USER_PROFILE.matchingSignal.value // reactive signal
- * settingsTabSignal.value = 'overview'; // updates URL automatically
+ * SETTINGS_ROUTE.matching // boolean
+ * SETTINGS_ROUTE.matchingSignal.value // reactive signal
+ * tabSignal.value = 'overview'; // updates URL automatically
+ * ```
+ *
+ * @example Route with action
+ * ```js
+ * let { USER_ROUTE } = setupRoutes({
+ *   USER_ROUTE: {
+ *     pattern: "/users/:id=${idSignal}",
+ *     action: USER.GET,
+ *   },
+ * });
+ * ```
+ *
+ * @example Route with action and opt-in search params
+ * By default, only path params trigger the action. Use `actionSearchParams` to also
+ * re-run the action when specific search params change (e.g. backend filters).
+ * ```js
+ * let { ITEMS_ROUTE } = setupRoutes({
+ *   ITEMS_ROUTE: {
+ *     pattern: "/items?filter=${filterSignal}&panel=${panelSignal}",
+ *     action: ITEMS.GET_MANY,
+ *     actionSearchParams: ["filter"], // panel changes won't re-trigger the action
+ *   },
+ * });
  * ```
  *
  * ⚠️ HOT RELOAD: Use 'let' instead of 'const' when destructuring:
  * ```js
- * // ❌ const { HOME, USER_PROFILE } = setupRoutes({...})
- * // ✅ let { HOME, USER_PROFILE } = setupRoutes({...})
+ * // ❌ const { HOME_ROUTE } = setupRoutes({...})
+ * // ✅ let { HOME_ROUTE } = setupRoutes({...})
  * ```
  *
- * @param {Object} routeDefinition - Object mapping route names to URL patterns
- * @param {string} routeDefinition[key] - URL pattern with optional parameters
- * @returns {Object} Object with route names as keys and route objects as values
+ * @param {Object} routeDefinition - Object mapping route names to URL patterns or route config objects
+ * @param {string | { pattern: string, action?: Object, actionSearchParams?: string[] }} routeDefinition[key]
+ *   - A URL pattern string, or an object with:
+ *   - `pattern`: URL pattern with optional signal bindings
+ *   - `action`: Action to run when the route matches (defaults to ACTION.COMPLETED)
+ *   - `actionSearchParams`: Search param names that should re-trigger the action when they change.
+ *     All other search params are ignored by the action (they only affect UI state).
  * @returns {Object.<string, {
  *   pattern: string,
  *   matching: boolean,
@@ -54,6 +81,8 @@ const DEBUG = false;
  *   matchingSignal: import("@preact/signals").Signal<boolean>,
  *   paramsSignal: import("@preact/signals").Signal<Object>,
  *   urlSignal: import("@preact/signals").Signal<string>,
+ *   action: Object,
+ *   actionStatusSignal: import("@preact/signals").Signal<Object>,
  *   navTo: (params?: Object) => Promise<void>,
  *   redirectTo: (params?: Object) => Promise<void>,
  *   replaceParams: (params: Object) => Promise<void>,
@@ -64,7 +93,6 @@ const DEBUG = false;
  * All routes MUST be created at once because any url can be accessed
  * at any given time (url can be shared, reloaded, etc..)
  */
-
 export const setupRoutes = (routeDefinition) => {
   // Prevent calling setupRoutes when routes already exist - enforce clean setup
   if (routeSet.size > 0) {
@@ -79,8 +107,8 @@ export const setupRoutes = (routeDefinition) => {
   for (const key of keySet) {
     const definition = routeDefinition[key];
     if (typeof definition === "object") {
-      const { pattern, ...options } = definition;
-      routeOptionsMap.set(key, options);
+      const { pattern, action, actionSearchParams } = definition;
+      routeOptionsMap.set(key, { action, actionSearchParams });
       routeKeyedPatternStrings[key] = pattern;
     } else {
       routeKeyedPatternStrings[key] = definition;
@@ -522,7 +550,10 @@ export const updateRoutes = (
   return returnValue;
 };
 
-const registerRoute = (routePattern, { action = ACTION.COMPLETED } = {}) => {
+const registerRoute = (
+  routePattern,
+  { action = ACTION.COMPLETED, actionSearchParams } = {},
+) => {
   const urlPatternRaw = routePattern.originalPattern;
   if (DEBUG) {
     console.debug(`Creating route: ${urlPatternRaw}`);
@@ -859,10 +890,27 @@ const registerRoute = (routePattern, { action = ACTION.COMPLETED } = {}) => {
   cleanupCallbackSet.add(disposeUrlEffect);
 
   setup_action: {
+    const pathParamNames = new Set(pathConnectionMap.keys());
+    const allowedSearchParams = new Set(actionSearchParams || []);
+    // Search params are excluded from action params by default because they typically represent
+    // UI state (panel open, scroll position, filters) that is irrelevant to the backend call.
+    // Only path params (which identify the resource) are passed to the action unless a search
+    // param is explicitly opted-in via actionSearchParams.
+    const paramsSignalForAction = computed(() => {
+      const routeParams = route.paramsSignal.value;
+      const actionParams = {};
+      for (const key of Object.keys(routeParams)) {
+        if (pathParamNames.has(key) || allowedSearchParams.has(key)) {
+          actionParams[key] = routeParams[key];
+        }
+      }
+      return actionParams;
+    });
+
     const actionBoundToThisRoute =
       action === ACTION.COMPLETED
         ? action
-        : action.bindParams(route.paramsSignal);
+        : action.bindParams(paramsSignalForAction);
     route.action = actionBoundToThisRoute;
     route.actionStatusSignal = computed(() => {
       const actionStatus = getActionStatus(actionBoundToThisRoute);

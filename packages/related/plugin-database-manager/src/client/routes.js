@@ -26,7 +26,7 @@ export const {
   TABLE_DATA_ROUTE,
   TABLE_SETTINGS_ROUTE,
 } = setupRoutes({
-  HOME_ROUTE: `/?role_can_login=${roleCanLoginOpenSignal}&role_can_login_height=${roleCanLoginHeightSignal}`,
+  HOME_ROUTE: `/?role_login_opened=${roleCanLoginOpenSignal}&role_login_height=${roleCanLoginHeightSignal}`,
   ROLE_ROUTE: {
     pattern: `/roles/:rolname=${rolnameSignal}`,
     action: ROLE.GET,
