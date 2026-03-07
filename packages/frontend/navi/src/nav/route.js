@@ -499,20 +499,20 @@ export const updateRoutes = (
     };
     for (const {
       route,
-      newMatching,
       oldMatching,
-      newParams,
+      newMatching,
       oldParams,
+      newParams,
+      oldActionParams,
     } of routeMatchInfoSet) {
       const routeAction = route.action;
       if (!routeAction || routeAction === ACTION.COMPLETED) {
         continue;
       }
 
-      const becomesMatching = newMatching && !oldMatching;
-      const becomesNotMatching = !newMatching && oldMatching;
-      const paramsChangedWhileMatching =
-        newMatching && oldMatching && newParams !== oldParams;
+      const becomesMatching = !oldMatching && newMatching;
+      const becomesNotMatching = oldMatching && !newMatching;
+      const staysMatching = oldMatching && newMatching;
 
       // Handle actions for routes that become matching
       if (becomesMatching) {
@@ -529,12 +529,18 @@ export const updateRoutes = (
         continue;
       }
 
-      // Handle parameter changes while route stays matching
-      if (paramsChangedWhileMatching) {
-        if (DEBUG) {
-          console.debug(`${route} params changed:`, newParams);
+      if (staysMatching) {
+        // route params have changed
+        if (oldParams !== newParams) {
+          // do action params have changed?
+          const newActionParams = route.actionParamsSignal.value;
+          if (!compareTwoJsValues(oldActionParams, newActionParams)) {
+            if (DEBUG) {
+              console.debug(`${route} action params changed:`, newActionParams);
+            }
+            shouldReload(route);
+          }
         }
-        shouldReload(route);
       }
     }
     Object.assign(returnValue, {
@@ -571,9 +577,17 @@ const registerRoute = (
     relativeUrl: null,
     url: null,
     matchingSignal: null,
+    rawParamsSignal: null,
+    visited: false,
+    visitedSignal: null,
     paramsSignal: null,
     urlSignal: null,
     replaceParams: undefined,
+    buildRelativeUrl: undefined,
+    relativeUrlSignal: null,
+    matchesParams: undefined,
+    navTo: undefined,
+    redirectTo: undefined,
     subscribeStatus,
     toString: () => {
       return `route "${cleanPattern}"`;
@@ -582,7 +596,9 @@ const registerRoute = (
     bindAction: null,
     action: null,
     actionStatusSignal: null,
+    actionParamsSignal: null,
   };
+  Object.preventExtensions(route);
   routeSet.add(route);
   const routePrivateProperties = {
     routePattern,
@@ -894,7 +910,7 @@ const registerRoute = (
     // UI state (panel open, scroll position, filters) that is irrelevant to the backend call.
     // Only path params (which identify the resource) are passed to the action unless a search
     // param is explicitly opted-in via actionSearchParams.
-    const paramsSignalForAction = computed(() => {
+    const actionParamsSignal = computed(() => {
       const routeParams = route.paramsSignal.value;
       const actionParams = {};
       for (const key of Object.keys(routeParams)) {
@@ -904,11 +920,12 @@ const registerRoute = (
       }
       return actionParams;
     });
+    route.actionParamsSignal = actionParamsSignal;
 
     const actionBoundToThisRoute =
       action === ACTION.COMPLETED
         ? action
-        : action.bindParams(paramsSignalForAction);
+        : action.bindParams(actionParamsSignal);
     route.action = actionBoundToThisRoute;
     route.actionStatusSignal = computed(() => {
       const actionStatus = getActionStatus(actionBoundToThisRoute);
