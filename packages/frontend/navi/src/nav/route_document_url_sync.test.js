@@ -1,12 +1,7 @@
 import { snapshotTests } from "@jsenv/snapshot";
 import { batch } from "@preact/signals";
 import { globalSignalRegistry, stateSignal } from "../state/state_signal.js";
-import {
-  clearAllRoutes,
-  setRouteIntegration,
-  setupRoutes,
-  updateRoutes,
-} from "./route.js";
+import { route, setRouteIntegration, setupRoutes } from "./route.js";
 import { setBaseUrl } from "./route_pattern.js";
 
 const baseUrl = "http://localhost:3000";
@@ -14,20 +9,21 @@ setBaseUrl(baseUrl);
 
 await snapshotTests(import.meta.url, ({ test }) => {
   test("replaceParams should use most specific route for redirect", () => {
+    const zoomSignal = stateSignal(12, {
+      id: "mapZoom",
+      type: "number",
+    });
+
+    // Create routes with proper parent-child relationship
+    const MAP_ROUTE = route(`/map/?zoom=${zoomSignal}`);
+    const MAP_ISOCHRONE_ROUTE = route(`/map/isochrone/`);
+    const MAP_ISOCHRONE_COMPARE_ROUTE = route(`/map/isochrone/compare`);
+    const { updateRoutes, clearRoutes } = setupRoutes([
+      MAP_ROUTE,
+      MAP_ISOCHRONE_ROUTE,
+      MAP_ISOCHRONE_COMPARE_ROUTE,
+    ]);
     try {
-      const zoomSignal = stateSignal(12, {
-        id: "mapZoom",
-        type: "number",
-      });
-
-      // Create routes with proper parent-child relationship
-      const { MAP_ROUTE, MAP_ISOCHRONE_ROUTE, MAP_ISOCHRONE_COMPARE_ROUTE } =
-        setupRoutes({
-          MAP_ROUTE: `/map/?zoom=${zoomSignal}`, // Parent route with trailing slash
-          MAP_ISOCHRONE_ROUTE: `/map/isochrone/`, // Intermediate child
-          MAP_ISOCHRONE_COMPARE_ROUTE: `/map/isochrone/compare`, // Deepest child
-        });
-
       // Simulate being on the child route: /map/isochrone/compare?zoom=10
       updateRoutes(`${baseUrl}/map/isochrone/compare?zoom=10`);
 
@@ -68,26 +64,28 @@ await snapshotTests(import.meta.url, ({ test }) => {
           navToCalls[navToCalls.length - 1].includes("zoom=11"),
       };
     } finally {
-      clearAllRoutes();
+      clearRoutes();
       globalSignalRegistry.clear();
     }
   });
 
   test("signal updates should trigger redirect on most specific matching route", () => {
+    const zoomSignal = stateSignal(12, {
+      id: "hierarchyZoom",
+      type: "number",
+    });
+
+    const MAP_ROUTE = route(`/map/?zoom=${zoomSignal}`);
+    const MAP_ISOCHRONE_ROUTE = route(`/map/isochrone/?zoom=${zoomSignal}`);
+    const MAP_COMPARE_ROUTE = route(
+      `/map/isochrone/compare?zoom=${zoomSignal}`,
+    );
+    const { updateRoutes, clearRoutes } = setupRoutes([
+      MAP_ROUTE,
+      MAP_ISOCHRONE_ROUTE,
+      MAP_COMPARE_ROUTE,
+    ]);
     try {
-      const zoomSignal = stateSignal(12, {
-        id: "hierarchyZoom",
-        type: "number",
-      });
-
-      const { MAP_ROUTE, MAP_ISOCHRONE_ROUTE, MAP_COMPARE_ROUTE } = setupRoutes(
-        {
-          MAP_ROUTE: `/map/?zoom=${zoomSignal}`,
-          MAP_ISOCHRONE_ROUTE: `/map/isochrone/?zoom=${zoomSignal}`,
-          MAP_COMPARE_ROUTE: `/map/isochrone/compare?zoom=${zoomSignal}`,
-        },
-      );
-
       // Start on deeply nested route
       updateRoutes(`${baseUrl}/map/isochrone/compare?zoom=15`);
 
@@ -126,28 +124,30 @@ await snapshotTests(import.meta.url, ({ test }) => {
         expected_url_pattern: "/map/isochrone/compare?zoom=20",
       };
     } finally {
-      clearAllRoutes();
+      clearRoutes();
       globalSignalRegistry.clear();
     }
   });
 
   test("parameterized route vs literal route conflict after navigation", () => {
+    const zoomSignal = stateSignal(10, {
+      id: "conflictZoom",
+      type: "number",
+    });
+
+    // Routes that create the conflict:
+    // /map/ - base route with signal
+    // /map/:panel/ - parameterized route
+    // /map/isochrone/ - literal route that conflicts with :panel
+    const MAP_ROUTE = route(`/map/?zoom=${zoomSignal}`);
+    const MAP_PANEL_ROUTE = route(`/map/:panel`);
+    const MAP_ISOCHRONE_ROUTE = route(`/map/isochrone`);
+    const { updateRoutes, clearRoutes } = setupRoutes([
+      MAP_ROUTE,
+      MAP_PANEL_ROUTE,
+      MAP_ISOCHRONE_ROUTE,
+    ]);
     try {
-      const zoomSignal = stateSignal(10, {
-        id: "conflictZoom",
-        type: "number",
-      });
-
-      // Routes that create the conflict:
-      // /map/ - base route with signal
-      // /map/:panel/ - parameterized route
-      // /map/isochrone/ - literal route that conflicts with :panel
-      const { MAP_ROUTE, MAP_PANEL_ROUTE, MAP_ISOCHRONE_ROUTE } = setupRoutes({
-        MAP_ROUTE: `/map/?zoom=${zoomSignal}`,
-        MAP_PANEL_ROUTE: `/map/:panel`,
-        MAP_ISOCHRONE_ROUTE: `/map/isochrone`,
-      });
-
       const navToCalls = [];
 
       // Mock browser integration to track navigation calls
@@ -207,34 +207,38 @@ await snapshotTests(import.meta.url, ({ test }) => {
           navToCalls[navToCalls.length - 1].includes("zoom=15"),
       };
     } finally {
-      clearAllRoutes();
+      clearRoutes();
       globalSignalRegistry.clear();
     }
   });
 
   test("parameterized route conflict with shared signals", () => {
+    const zoomSignal = stateSignal(10, {
+      id: "sharedZoom",
+      type: "number",
+    });
+
+    const panelSignal = stateSignal(undefined, {
+      id: "panelValue",
+      type: "string",
+    });
+
+    // Set panel signal to initial value
+    panelSignal.value = "isochrone";
+
+    // More realistic scenario where routes have signals that control parameters
+    // This should reproduce the delegation issue
+    const MAP_ROUTE = route(`/map/?zoom=${zoomSignal}`);
+    const MAP_PANEL_ROUTE = route(
+      `/map/:panel={navi_state_signal:panelValue}?zoom=${zoomSignal}`,
+    );
+    const MAP_ISOCHRONE_ROUTE = route(`/map/isochrone?zoom=${zoomSignal}`);
+    const { updateRoutes, clearRoutes } = setupRoutes([
+      MAP_ROUTE,
+      MAP_PANEL_ROUTE,
+      MAP_ISOCHRONE_ROUTE,
+    ]);
     try {
-      const zoomSignal = stateSignal(10, {
-        id: "sharedZoom",
-        type: "number",
-      });
-
-      const panelSignal = stateSignal(undefined, {
-        id: "panelValue",
-        type: "string",
-      });
-
-      // Set panel signal to initial value
-      panelSignal.value = "isochrone";
-
-      // More realistic scenario where routes have signals that control parameters
-      // This should reproduce the delegation issue
-      const { MAP_ROUTE, MAP_PANEL_ROUTE, MAP_ISOCHRONE_ROUTE } = setupRoutes({
-        MAP_ROUTE: `/map/?zoom=${zoomSignal}`,
-        MAP_PANEL_ROUTE: `/map/:panel={navi_state_signal:panelValue}?zoom=${zoomSignal}`,
-        MAP_ISOCHRONE_ROUTE: `/map/isochrone?zoom=${zoomSignal}`,
-      });
-
       const navToCalls = [];
       const allNavToCalls = []; // Track ALL navigation calls including during navigation
       setRouteIntegration({
@@ -314,34 +318,37 @@ await snapshotTests(import.meta.url, ({ test }) => {
         },
       };
     } finally {
-      clearAllRoutes();
+      clearRoutes();
       globalSignalRegistry.clear();
     }
   });
 
   test("signal should be cleared when route stops matching", () => {
+    const zoomSignal = stateSignal(10, {
+      id: "clearingTestZoom",
+      type: "number",
+    });
+
+    const panelSignal = stateSignal(undefined, {
+      id: "clearingTestPanel",
+      type: "string",
+    });
+
+    // Set the panel signal to "isochrone" initially
+    panelSignal.value = "isochrone";
+
+    // Use two routes: one for base map, one for panel
+    // The key is that when navigating from panel route to base route,
+    // the panel signal should be cleared because the new URL doesn't include it
+    const MAP_ROUTE = route(`/map/?zoom=${zoomSignal}`);
+    const MAP_PANEL_ROUTE = route(
+      `/map/:panel={navi_state_signal:clearingTestPanel}?zoom=${zoomSignal}`,
+    );
+    const { updateRoutes, clearRoutes } = setupRoutes([
+      MAP_ROUTE,
+      MAP_PANEL_ROUTE,
+    ]);
     try {
-      const zoomSignal = stateSignal(10, {
-        id: "clearingTestZoom",
-        type: "number",
-      });
-
-      const panelSignal = stateSignal(undefined, {
-        id: "clearingTestPanel",
-        type: "string",
-      });
-
-      // Set the panel signal to "isochrone" initially
-      panelSignal.value = "isochrone";
-
-      // Use two routes: one for base map, one for panel
-      // The key is that when navigating from panel route to base route,
-      // the panel signal should be cleared because the new URL doesn't include it
-      const { MAP_ROUTE, MAP_PANEL_ROUTE } = setupRoutes({
-        MAP_ROUTE: `/map/?zoom=${zoomSignal}`,
-        MAP_PANEL_ROUTE: `/map/:panel={navi_state_signal:clearingTestPanel}?zoom=${zoomSignal}`,
-      });
-
       // Start with panel signal set to "isochrone"
       panelSignal.value = "isochrone";
 
@@ -386,7 +393,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
         current_panel_signal: panelSignal.value,
       };
     } finally {
-      clearAllRoutes();
+      clearRoutes();
       globalSignalRegistry.clear();
     }
   });
@@ -395,12 +402,19 @@ await snapshotTests(import.meta.url, ({ test }) => {
     const mapPanelSignal = stateSignal(undefined);
     const isochroneTabSignal = stateSignal("compare");
     const isochroneModeSignal = stateSignal("walk");
+    const MAP_ROUTE = route(`/map/:panel=${mapPanelSignal}/`);
+    const MAP_ISOCHRONE_ROUTE = route(
+      `/map/isochrone/:tab=${isochroneTabSignal}/`,
+    );
+    const MAP_ISOCHRONE_TIME_ROUTE = route(
+      `/map/isochrone/time/:mode=${isochroneModeSignal}`,
+    );
+    const { updateRoutes, clearRoutes } = setupRoutes([
+      MAP_ROUTE,
+      MAP_ISOCHRONE_ROUTE,
+      MAP_ISOCHRONE_TIME_ROUTE,
+    ]);
     try {
-      setupRoutes({
-        MAP_ROUTE: `/map/:panel=${mapPanelSignal}/`,
-        MAP_ISOCHRONE_ROUTE: `/map/isochrone/:tab=${isochroneTabSignal}/`,
-        MAP_ISOCHRONE_TIME_ROUTE: `/map/isochrone/time/:mode=${isochroneModeSignal}`,
-      });
       updateRoutes(`${baseUrl}/map/isochrone/time/bike`);
       const state = {
         map_panel_signal_value: mapPanelSignal.value,
@@ -418,7 +432,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
         stateAfter,
       };
     } finally {
-      clearAllRoutes();
+      clearRoutes();
       globalSignalRegistry.clear();
     }
   });
