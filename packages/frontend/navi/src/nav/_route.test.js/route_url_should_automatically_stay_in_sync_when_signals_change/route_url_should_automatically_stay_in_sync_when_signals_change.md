@@ -1,14 +1,12 @@
 # [route.url should automatically stay in sync when signals change](../../route.test.js)
 
 ```js
+const zoneSignal = stateSignal("paris", { id: "urlSyncZone" });
+const modeSignal = stateSignal("driving", { id: "urlSyncMode" });
+
+const MAP_ROUTE = route(`/map?zone=${zoneSignal}&mode=${modeSignal}`);
+const { clearRoutes } = setupRoutes([MAP_ROUTE]);
 try {
-  const zoneSignal = stateSignal("paris", { id: "urlSyncZone" });
-  const modeSignal = stateSignal("driving", { id: "urlSyncMode" });
-
-  const { MAP_ROUTE } = setupRoutes({
-    MAP_ROUTE: `/map?zone=${zoneSignal}&mode=${modeSignal}`,
-  });
-
   // Read route.url before changing signals
   const urlBeforeChange = MAP_ROUTE.url;
 
@@ -39,7 +37,7 @@ try {
         : "FAIL - route.url not reactive",
   };
 } finally {
-  clearAllRoutes();
+  clearRoutes();
   globalSignalRegistry.clear();
 }
 ```

@@ -1,14 +1,14 @@
 # [buildUrl caching issue with signal changes across multiple calls](../../route.test.js)
 
 ```js
+const userIdSignal = stateSignal("123", { id: "cachingUserId" });
+const statusSignal = stateSignal("active", { id: "cachingStatus" });
+
+const USER_PROFILE_ROUTE = route(
+  `/user/:id=${userIdSignal}/profile?status=${statusSignal}`,
+);
+const { clearRoutes } = setupRoutes([USER_PROFILE_ROUTE]);
 try {
-  const userIdSignal = stateSignal("123", { id: "cachingUserId" });
-  const statusSignal = stateSignal("active", { id: "cachingStatus" });
-
-  const { USER_PROFILE_ROUTE } = setupRoutes({
-    USER_PROFILE_ROUTE: `/user/:id=${userIdSignal}/profile?status=${statusSignal}`,
-  });
-
   // Read URL multiple times to check consistency
   const firstCall = USER_PROFILE_ROUTE.url;
   const secondCall = USER_PROFILE_ROUTE.url;
@@ -83,7 +83,7 @@ try {
         : "FAIL",
   };
 } finally {
-  clearAllRoutes();
+  clearRoutes();
   globalSignalRegistry.clear();
 }
 ```

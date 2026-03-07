@@ -7,55 +7,52 @@ const baseUrl = "http://localhost:3000";
 setBaseUrl(baseUrl);
 
 await snapshotTests(import.meta.url, ({ test }) => {
-  test.ONLY(
-    "route.url fails to update when default value optimization skips signal reading",
-    () => {
-      // Create signals with default values - this might trigger optimization paths
-      // that skip reading signals when they have default values
+  test("route.url fails to update when default value optimization skips signal reading", () => {
+    // Create signals with default values - this might trigger optimization paths
+    // that skip reading signals when they have default values
 
-      const modeSignal = stateSignal("default_mode");
+    const modeSignal = stateSignal("default_mode");
 
-      const PARENT_ROUTE = route(`/map/`);
-      const CHILD_ROUTE = route(`/map/:mode=${modeSignal}`);
-      const { clearRoutes } = setupRoutes([PARENT_ROUTE, CHILD_ROUTE]);
-      try {
-        // First read PARENT_ROUTE to establish it in the optimization cache
-        const parentUrl1 = PARENT_ROUTE.url;
+    const PARENT_ROUTE = route(`/map/`);
+    const CHILD_ROUTE = route(`/map/:mode=${modeSignal}`);
+    const { clearRoutes } = setupRoutes([PARENT_ROUTE, CHILD_ROUTE]);
+    try {
+      // First read PARENT_ROUTE to establish it in the optimization cache
+      const parentUrl1 = PARENT_ROUTE.url;
 
-        // Then read CHILD_ROUTE - optimization might choose to use PARENT_ROUTE URL
-        // without reading modeSignal because it has default value
-        const childUrlBefore = CHILD_ROUTE.url;
+      // Then read CHILD_ROUTE - optimization might choose to use PARENT_ROUTE URL
+      // without reading modeSignal because it has default value
+      const childUrlBefore = CHILD_ROUTE.url;
 
-        // Change the modeSignal - if it wasn't read during URL generation,
-        // no reactive dependency exists and URL won't update
-        modeSignal.value = "walking";
+      // Change the modeSignal - if it wasn't read during URL generation,
+      // no reactive dependency exists and URL won't update
+      modeSignal.value = "walking";
 
-        const childUrlAfter = CHILD_ROUTE.url;
+      const childUrlAfter = CHILD_ROUTE.url;
 
-        // Check if the child route URL properly includes the mode parameter
-        const expectedUrl = "http://127.0.0.1/map/default_zone/mode/walking";
-        const urlUpdated = childUrlBefore !== childUrlAfter;
-        const containsMode = childUrlAfter.includes("/mode/walking");
-        const isCorrectUrl = childUrlAfter === expectedUrl;
+      // Check if the child route URL properly includes the mode parameter
+      const expectedUrl = "http://127.0.0.1/map/default_zone/mode/walking";
+      const urlUpdated = childUrlBefore !== childUrlAfter;
+      const containsMode = childUrlAfter.includes("/mode/walking");
+      const isCorrectUrl = childUrlAfter === expectedUrl;
 
-        return {
-          parent_url: parentUrl1,
-          child_urls: {
-            before_mode_change: childUrlBefore,
-            after_mode_change: childUrlAfter,
-            expected: expectedUrl,
-          },
-          test_result:
-            urlUpdated && containsMode && isCorrectUrl
-              ? "PASS"
-              : "FAIL - Child route URL not updated when mode signal changed (default value optimization bug)",
-        };
-      } finally {
-        clearRoutes();
-        globalSignalRegistry.clear();
-      }
-    },
-  );
+      return {
+        parent_url: parentUrl1,
+        child_urls: {
+          before_mode_change: childUrlBefore,
+          after_mode_change: childUrlAfter,
+          expected: expectedUrl,
+        },
+        test_result:
+          urlUpdated && containsMode && isCorrectUrl
+            ? "PASS"
+            : "FAIL - Child route URL not updated when mode signal changed (default value optimization bug)",
+      };
+    } finally {
+      clearRoutes();
+      globalSignalRegistry.clear();
+    }
+  });
 
   test("route.url should NOT update when unrelated signal changes", () => {
     const zoneSignal = stateSignal("paris");

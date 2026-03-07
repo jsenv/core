@@ -1,17 +1,23 @@
 # [route.url sync with hierarchical routes and shared signals](../../route.test.js)
 
 ```js
+const zoneSignal = stateSignal("paris", { id: "hierarchicalZone" });
+const panelSignal = stateSignal("isochrone", { id: "hierarchicalPanel" });
+const isoLonSignal = stateSignal(2.3522, { id: "hierarchicalIsoLon" });
+
+const MAP_ROUTE = route(`/map?zone=${zoneSignal}`);
+const MAP_PANEL_ROUTE = route(
+  `/map/:panel=${panelSignal}?zone=${zoneSignal}`,
+);
+const MAP_ISOCHRONE_ROUTE = route(
+  `/map/isochrone?zone=${zoneSignal}&iso_lon=${isoLonSignal}`,
+);
+const { clearRoutes } = setupRoutes([
+  MAP_ROUTE,
+  MAP_PANEL_ROUTE,
+  MAP_ISOCHRONE_ROUTE,
+]);
 try {
-  const zoneSignal = stateSignal("paris", { id: "hierarchicalZone" });
-  const panelSignal = stateSignal("isochrone", { id: "hierarchicalPanel" });
-  const isoLonSignal = stateSignal(2.3522, { id: "hierarchicalIsoLon" });
-
-  const { MAP_ROUTE, MAP_PANEL_ROUTE, MAP_ISOCHRONE_ROUTE } = setupRoutes({
-    MAP_ROUTE: `/map?zone=${zoneSignal}`,
-    MAP_PANEL_ROUTE: `/map/:panel=${panelSignal}?zone=${zoneSignal}`,
-    MAP_ISOCHRONE_ROUTE: `/map/isochrone?zone=${zoneSignal}&iso_lon=${isoLonSignal}`,
-  });
-
   // Read all route.url values before signal changes
   const beforeUrls = {
     map: MAP_ROUTE.url,
@@ -102,7 +108,7 @@ try {
     overall_result: "checking complex signal reactivity patterns",
   };
 } finally {
-  clearAllRoutes();
+  clearRoutes();
   globalSignalRegistry.clear();
 }
 ```
@@ -131,7 +137,7 @@ try {
     },
     "after_zone_change": {
       "map": "http://127.0.0.1/map?zone=london",
-      "panel": "http://127.0.0.1/map/isochrone?zone=london",
+      "panel": "http://127.0.0.1/map?zone=london",
       "isochrone": "http://127.0.0.1/map?zone=london"
     },
     "after_panel_change": {
@@ -140,7 +146,7 @@ try {
       "isochrone": "http://127.0.0.1/map?zone=london"
     },
     "after_isolon_change": {
-      "map": "http://127.0.0.1/map/settings?zone=london",
+      "map": "http://127.0.0.1/map/settings?zone=london&iso_lon=0.1278",
       "panel": "http://127.0.0.1/map/settings?zone=london",
       "isochrone": "http://127.0.0.1/map?zone=london&iso_lon=0.1278"
     }
@@ -152,7 +158,7 @@ try {
     "panel_affected_map": true,
     "panel_affected_panel": true,
     "panel_affected_isochrone": false,
-    "isolon_affected_map": false,
+    "isolon_affected_map": true,
     "isolon_affected_panel": false,
     "isolon_affected_isochrone": true
   },
@@ -164,7 +170,7 @@ try {
   "test_results": {
     "zone_reactivity_correct": true,
     "panel_selectivity_correct": false,
-    "isolon_selectivity_correct": true
+    "isolon_selectivity_correct": false
   },
   "overall_result": "checking complex signal reactivity patterns"
 }

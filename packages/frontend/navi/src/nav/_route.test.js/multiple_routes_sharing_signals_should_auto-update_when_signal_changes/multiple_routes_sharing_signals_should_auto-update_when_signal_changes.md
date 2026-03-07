@@ -1,17 +1,23 @@
 # [multiple routes sharing signals should auto-update when signal changes](../../route.test.js)
 
 ```js
+const zoneSignal = stateSignal("paris", { id: "sharedZone" });
+const panelSignal = stateSignal("isochrone", { id: "panel" });
+const isoLonSignal = stateSignal(2.3522, { id: "isoLon" });
+
+const MAP_ROUTE = route(`/map?zone=${zoneSignal}`);
+const MAP_PANEL_ROUTE = route(
+  `/map/:panel=${panelSignal}?zone=${zoneSignal}`,
+);
+const MAP_ISOCHRONE_ROUTE = route(
+  `/map/isochrone?zone=${zoneSignal}&iso_lon=${isoLonSignal}`,
+);
+const { clearRoutes } = setupRoutes([
+  MAP_ROUTE,
+  MAP_PANEL_ROUTE,
+  MAP_ISOCHRONE_ROUTE,
+]);
 try {
-  const zoneSignal = stateSignal("paris", { id: "sharedZone" });
-  const panelSignal = stateSignal("isochrone", { id: "panel" });
-  const isoLonSignal = stateSignal(2.3522, { id: "isoLon" });
-
-  const { MAP_ROUTE, MAP_PANEL_ROUTE, MAP_ISOCHRONE_ROUTE } = setupRoutes({
-    MAP_ROUTE: `/map?zone=${zoneSignal}`,
-    MAP_PANEL_ROUTE: `/map/:panel=${panelSignal}?zone=${zoneSignal}`,
-    MAP_ISOCHRONE_ROUTE: `/map/isochrone?zone=${zoneSignal}&iso_lon=${isoLonSignal}`,
-  });
-
   // Read initial URLs for all routes
   const initialUrls = {
     map: MAP_ROUTE.url,
@@ -67,7 +73,7 @@ try {
         : "FAIL",
   };
 } finally {
-  clearAllRoutes();
+  clearRoutes();
   globalSignalRegistry.clear();
 }
 ```
@@ -90,7 +96,7 @@ try {
     "isochrone": "http://127.0.0.1/map"
   },
   "updated_urls": {
-    "map": "http://127.0.0.1/map/settings?zone=london",
+    "map": "http://127.0.0.1/map/settings?zone=london&iso_lon=0.1278",
     "panel": "http://127.0.0.1/map/settings?zone=london",
     "isochrone": "http://127.0.0.1/map?zone=london&iso_lon=0.1278"
   },

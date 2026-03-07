@@ -1,30 +1,33 @@
 # [route.url should NOT update when unrelated signal changes](../../route.test.js)
 
 ```js
+const zoneSignal = stateSignal("paris");
+const panelSignal = stateSignal("isochrone");
+
+const MAP_ROUTE = route(`/map?zone=${zoneSignal}`);
+const MAP_PANEL_ROUTE = route(
+  `/map/:panel=${panelSignal}?zone=${zoneSignal}`,
+);
+const { clearRoutes } = setupRoutes([MAP_ROUTE, MAP_PANEL_ROUTE]);
 try {
-  const zoneSignal = stateSignal("paris");
-  const panelSignal = stateSignal("isochrone");
-
-  const { MAP_ROUTE, MAP_PANEL_ROUTE } = setupRoutes({
-    MAP_ROUTE: `/map?zone=${zoneSignal}`, // Uses zoneSignal only
-    MAP_PANEL_ROUTE: `/map/:panel=${panelSignal}?zone=${zoneSignal}`, // Uses both signals
-  });
-
   const mapUrlBefore = MAP_ROUTE.url;
-  
+
   // Change panelSignal - should NOT affect MAP_ROUTE since it doesn't use panelSignal
   panelSignal.value = "settings";
-  
+
   const mapUrlAfter = MAP_ROUTE.url;
 
   return {
     map_url_before: mapUrlBefore,
     map_url_after: mapUrlAfter,
     should_be_same: mapUrlBefore === mapUrlAfter,
-    test_result: mapUrlBefore === mapUrlAfter ? "PASS" : "FAIL - MAP_ROUTE affected by panelSignal",
+    test_result:
+      mapUrlBefore === mapUrlAfter
+        ? "PASS"
+        : "FAIL - MAP_ROUTE affected by panelSignal",
   };
 } finally {
-  clearAllRoutes();
+  clearRoutes();
   globalSignalRegistry.clear();
 }
 ```

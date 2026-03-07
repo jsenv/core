@@ -1,18 +1,18 @@
 # [route URL updates should be isolated to relevant signals only](../../route.test.js)
 
 ```js
+const userIdSignal = stateSignal("123", { id: "userId" });
+const mapZoneSignal = stateSignal("paris", { id: "mapZone" });
+const unrelatedSignal = stateSignal("initial", { id: "unrelated" });
+
+// Create routes where only some use specific signals
+const USER_ROUTE = route(`/user/:id=${userIdSignal}`);
+const MAP_ROUTE = route(`/map?zone=${mapZoneSignal}`);
+const MIXED_ROUTE = route(
+  `/mixed?user=${userIdSignal}&zone=${mapZoneSignal}`,
+);
+const { clearRoutes } = setupRoutes([USER_ROUTE, MAP_ROUTE, MIXED_ROUTE]);
 try {
-  const userIdSignal = stateSignal("123", { id: "userId" });
-  const mapZoneSignal = stateSignal("paris", { id: "mapZone" });
-  const unrelatedSignal = stateSignal("initial", { id: "unrelated" });
-
-  // Create routes where only some use specific signals
-  const { USER_ROUTE, MAP_ROUTE, MIXED_ROUTE } = setupRoutes({
-    USER_ROUTE: `/user/:id=${userIdSignal}`, // Only uses userIdSignal
-    MAP_ROUTE: `/map?zone=${mapZoneSignal}`, // Only uses mapZoneSignal
-    MIXED_ROUTE: `/mixed?user=${userIdSignal}&zone=${mapZoneSignal}`, // Uses both but not unrelated
-  });
-
   // Read initial URLs
   const beforeUrls = {
     user: USER_ROUTE.url,
@@ -120,7 +120,7 @@ try {
     },
   };
 } finally {
-  clearAllRoutes();
+  clearRoutes();
   globalSignalRegistry.clear();
 }
 ```
