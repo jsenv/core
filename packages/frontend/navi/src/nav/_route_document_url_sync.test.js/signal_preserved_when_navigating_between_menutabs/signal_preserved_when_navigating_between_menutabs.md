@@ -1,16 +1,24 @@
 # [signal preserved when navigating between menu/tabs](../../route_document_url_sync.test.js)
 
 ```js
+const sectionSignal = stateSignal("settings");
+const settingsTabSignal = stateSignal("general");
+const analyticsTabSignal = stateSignal("overview");
+const HOME_ROUTE = route("/");
+const ADMIN_ROUTE = route(`/admin/:section=${sectionSignal}/`);
+const ADMIN_SETTINGS_ROUTE = route(
+  `/admin/settings/:tab=${settingsTabSignal}`,
+);
+const ADMIN_ANALYTICS_ROUTE = route(
+  `/admin/analytics?tab=${analyticsTabSignal}`,
+);
+const { updateRoutes, clearRoutes } = setupRoutes([
+  HOME_ROUTE,
+  ADMIN_ROUTE,
+  ADMIN_SETTINGS_ROUTE,
+  ADMIN_ANALYTICS_ROUTE,
+]);
 try {
-  const sectionSignal = stateSignal("settings");
-  const settingsTabSignal = stateSignal("general");
-  const analyticsTabSignal = stateSignal("overview");
-  const { ADMIN_SETTINGS_ROUTE } = setupRoutes({
-    HOME_ROUTE: "/",
-    ADMIN_ROUTE: `/admin/:section=${sectionSignal}/`,
-    ADMIN_SETTINGS_ROUTE: `/admin/settings/:tab=${settingsTabSignal}`,
-    ADMIN_ANALYTICS_ROUTE: `/admin/analytics?tab=${analyticsTabSignal}`,
-  });
   // simulate we're on settings advanced page
   updateRoutes(`${baseUrl}/admin/settings/advanced`);
   // and we nav to analytics
@@ -20,7 +28,7 @@ try {
     settings_url: ADMIN_SETTINGS_ROUTE.url,
   };
 } finally {
-  clearAllRoutes();
+  clearRoutes();
   globalSignalRegistry.clear();
 }
 ```

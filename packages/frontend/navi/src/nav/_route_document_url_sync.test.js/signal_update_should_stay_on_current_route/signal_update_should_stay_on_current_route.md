@@ -7,16 +7,17 @@ setRouteIntegration({
     navToCalls.push({ url, callReason });
   },
 });
-
+const mapPanelSignal = stateSignal(undefined);
+const lonSignal = stateSignal(undefined);
+const MAP_ROUTE = route(`/map/?lon=${lonSignal}`);
+const MAP_PANEL_ROUTE = route(`/map/:panel=${mapPanelSignal}/`);
+const MAP_FLOW_ROUTE = route(`/map/flow/`);
+const { updateRoutes, clearRoutes } = setupRoutes([
+  MAP_ROUTE,
+  MAP_PANEL_ROUTE,
+  MAP_FLOW_ROUTE,
+]);
 try {
-  const mapPanelSignal = stateSignal(undefined);
-  const lonSignal = stateSignal(undefined);
-  const { MAP_ROUTE, MAP_PANEL_ROUTE, MAP_FLOW_ROUTE } = setupRoutes({
-    MAP_ROUTE: `/map/?lon=${lonSignal}`,
-    MAP_PANEL_ROUTE: `/map/:panel=${mapPanelSignal}/`,
-    MAP_FLOW_ROUTE: `/map/flow/`,
-  });
-
   // Step 1: Navigate to /map - we're on the base map route
   updateRoutes(`${baseUrl}/map`);
 
@@ -76,7 +77,7 @@ try {
     },
   };
 } finally {
-  clearAllRoutes();
+  clearRoutes();
   globalSignalRegistry.clear();
   setRouteIntegration(null);
 }

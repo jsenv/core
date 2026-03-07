@@ -10,12 +10,10 @@ setRouteIntegration({
     return Promise.resolve();
   },
 });
-
+const priceSignal = stateSignal(100, { type: "number" });
+const SHOP_ROUTE = route(`/shop?maxPrice=${priceSignal}`);
+const { updateRoutes, clearRoutes } = setupRoutes([SHOP_ROUTE]);
 try {
-  const priceSignal = stateSignal(100, { type: "number" });
-  const { SHOP_ROUTE } = setupRoutes({
-    SHOP_ROUTE: `/shop?maxPrice=${priceSignal}`,
-  });
   // Initial state - route matching with price=50
   updateRoutes(`${baseUrl}/shop?maxPrice=50`);
   const priceAfterUrlUpdate = priceSignal.value; // Should be 50
@@ -37,7 +35,7 @@ try {
     routeParams: SHOP_ROUTE.params,
   };
 } finally {
-  clearAllRoutes();
+  clearRoutes();
   globalSignalRegistry.clear();
   setRouteIntegration(undefined);
 }

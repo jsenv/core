@@ -10,24 +10,23 @@ setRouteIntegration({
     return Promise.resolve();
   },
 });
-
+// Simulate available tramway lines from backend (dynamic) - starts empty
+const tramAvailableLines = stateSignal([], {
+  type: "array",
+});
+// User-enabled tramway lines - defaults to all available lines
+const tramEnabledLines = stateSignal(tramAvailableLines, {
+  type: "array",
+});
+// Master tramway visibility toggle
+const tramVisible = stateSignal(false, {
+  type: "boolean",
+});
+const TRAM_ROUTE = route(
+  `/map?tram=${tramVisible}&trams=${tramEnabledLines}`,
+);
+const { updateRoutes, clearRoutes } = setupRoutes([TRAM_ROUTE]);
 try {
-  // Simulate available tramway lines from backend (dynamic) - starts empty
-  const tramAvailableLines = stateSignal([], {
-    type: "array",
-  });
-  // User-enabled tramway lines - defaults to all available lines
-  const tramEnabledLines = stateSignal(tramAvailableLines, {
-    type: "array",
-  });
-  // Master tramway visibility toggle
-  const tramVisible = stateSignal(false, {
-    type: "boolean",
-  });
-  setupRoutes({
-    TRAM_ROUTE: `/map?tram=${tramVisible}&trams=${tramEnabledLines}`,
-  });
-
   const captureState = () => {
     const navCalls = [...navToCalls];
     navToCalls.length = 0;
@@ -51,7 +50,7 @@ try {
 
   return results;
 } finally {
-  clearAllRoutes();
+  clearRoutes();
   globalSignalRegistry.clear();
   setRouteIntegration(null);
 }

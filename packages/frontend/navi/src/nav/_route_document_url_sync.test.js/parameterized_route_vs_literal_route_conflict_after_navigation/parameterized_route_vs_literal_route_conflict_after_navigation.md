@@ -1,22 +1,24 @@
 # [parameterized route vs literal route conflict after navigation](../../route_document_url_sync.test.js)
 
 ```js
+const zoomSignal = stateSignal(10, {
+  id: "conflictZoom",
+  type: "number",
+});
+
+// Routes that create the conflict:
+// /map/ - base route with signal
+// /map/:panel/ - parameterized route
+// /map/isochrone/ - literal route that conflicts with :panel
+const MAP_ROUTE = route(`/map/?zoom=${zoomSignal}`);
+const MAP_PANEL_ROUTE = route(`/map/:panel`);
+const MAP_ISOCHRONE_ROUTE = route(`/map/isochrone`);
+const { updateRoutes, clearRoutes } = setupRoutes([
+  MAP_ROUTE,
+  MAP_PANEL_ROUTE,
+  MAP_ISOCHRONE_ROUTE,
+]);
 try {
-  const zoomSignal = stateSignal(10, {
-    id: "conflictZoom",
-    type: "number",
-  });
-
-  // Routes that create the conflict:
-  // /map/ - base route with signal
-  // /map/:panel/ - parameterized route
-  // /map/isochrone/ - literal route that conflicts with :panel
-  const { MAP_ROUTE, MAP_PANEL_ROUTE, MAP_ISOCHRONE_ROUTE } = setupRoutes({
-    MAP_ROUTE: `/map/?zoom=${zoomSignal}`,
-    MAP_PANEL_ROUTE: `/map/:panel`,
-    MAP_ISOCHRONE_ROUTE: `/map/isochrone`,
-  });
-
   const navToCalls = [];
 
   // Mock browser integration to track navigation calls
@@ -76,7 +78,7 @@ try {
       navToCalls[navToCalls.length - 1].includes("zoom=15"),
   };
 } finally {
-  clearAllRoutes();
+  clearRoutes();
   globalSignalRegistry.clear();
 }
 ```

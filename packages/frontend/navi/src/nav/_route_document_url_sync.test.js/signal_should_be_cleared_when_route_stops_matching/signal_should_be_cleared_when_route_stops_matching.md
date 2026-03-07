@@ -1,28 +1,31 @@
 # [signal should be cleared when route stops matching](../../route_document_url_sync.test.js)
 
 ```js
+const zoomSignal = stateSignal(10, {
+  id: "clearingTestZoom",
+  type: "number",
+});
+
+const panelSignal = stateSignal(undefined, {
+  id: "clearingTestPanel",
+  type: "string",
+});
+
+// Set the panel signal to "isochrone" initially
+panelSignal.value = "isochrone";
+
+// Use two routes: one for base map, one for panel
+// The key is that when navigating from panel route to base route,
+// the panel signal should be cleared because the new URL doesn't include it
+const MAP_ROUTE = route(`/map/?zoom=${zoomSignal}`);
+const MAP_PANEL_ROUTE = route(
+  `/map/:panel={navi_state_signal:clearingTestPanel}?zoom=${zoomSignal}`,
+);
+const { updateRoutes, clearRoutes } = setupRoutes([
+  MAP_ROUTE,
+  MAP_PANEL_ROUTE,
+]);
 try {
-  const zoomSignal = stateSignal(10, {
-    id: "clearingTestZoom",
-    type: "number",
-  });
-
-  const panelSignal = stateSignal(undefined, {
-    id: "clearingTestPanel",
-    type: "string",
-  });
-
-  // Set the panel signal to "isochrone" initially
-  panelSignal.value = "isochrone";
-
-  // Use two routes: one for base map, one for panel
-  // The key is that when navigating from panel route to base route,
-  // the panel signal should be cleared because the new URL doesn't include it
-  const { MAP_ROUTE, MAP_PANEL_ROUTE } = setupRoutes({
-    MAP_ROUTE: `/map/?zoom=${zoomSignal}`,
-    MAP_PANEL_ROUTE: `/map/:panel={navi_state_signal:clearingTestPanel}?zoom=${zoomSignal}`,
-  });
-
   // Start with panel signal set to "isochrone"
   panelSignal.value = "isochrone";
 
@@ -67,7 +70,7 @@ try {
     current_panel_signal: panelSignal.value,
   };
 } finally {
-  clearAllRoutes();
+  clearRoutes();
   globalSignalRegistry.clear();
 }
 ```

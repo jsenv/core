@@ -9,13 +9,10 @@ setRouteIntegration({
     updateRoutes(url);
   },
 });
-
+const mapStyleSignal = stateSignal("street");
+const MAP_ROUTE = route(`/map/?style=${mapStyleSignal}`);
+const { updateRoutes, clearRoutes } = setupRoutes([MAP_ROUTE]);
 try {
-  const mapStyleSignal = stateSignal("street");
-  const { MAP_ROUTE } = setupRoutes({
-    MAP_ROUTE: `/map/?style=${mapStyleSignal}`,
-  });
-
   updateRoutes(`${baseUrl}/map`);
   mapStyleSignal.value = "satellite";
   const afterUpdateToSattelite = {
@@ -35,7 +32,7 @@ try {
     after_restore_to_street: afterRestoreToStreet,
   };
 } finally {
-  clearAllRoutes();
+  clearRoutes();
   globalSignalRegistry.clear();
   setRouteIntegration(null);
 }

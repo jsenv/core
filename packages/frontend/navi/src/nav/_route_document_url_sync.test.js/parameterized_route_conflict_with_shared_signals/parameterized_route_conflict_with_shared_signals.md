@@ -1,28 +1,32 @@
 # [parameterized route conflict with shared signals](../../route_document_url_sync.test.js)
 
 ```js
+const zoomSignal = stateSignal(10, {
+  id: "sharedZoom",
+  type: "number",
+});
+
+const panelSignal = stateSignal(undefined, {
+  id: "panelValue",
+  type: "string",
+});
+
+// Set panel signal to initial value
+panelSignal.value = "isochrone";
+
+// More realistic scenario where routes have signals that control parameters
+// This should reproduce the delegation issue
+const MAP_ROUTE = route(`/map/?zoom=${zoomSignal}`);
+const MAP_PANEL_ROUTE = route(
+  `/map/:panel={navi_state_signal:panelValue}?zoom=${zoomSignal}`,
+);
+const MAP_ISOCHRONE_ROUTE = route(`/map/isochrone?zoom=${zoomSignal}`);
+const { updateRoutes, clearRoutes } = setupRoutes([
+  MAP_ROUTE,
+  MAP_PANEL_ROUTE,
+  MAP_ISOCHRONE_ROUTE,
+]);
 try {
-  const zoomSignal = stateSignal(10, {
-    id: "sharedZoom",
-    type: "number",
-  });
-
-  const panelSignal = stateSignal(undefined, {
-    id: "panelValue",
-    type: "string",
-  });
-
-  // Set panel signal to initial value
-  panelSignal.value = "isochrone";
-
-  // More realistic scenario where routes have signals that control parameters
-  // This should reproduce the delegation issue
-  const { MAP_ROUTE, MAP_PANEL_ROUTE, MAP_ISOCHRONE_ROUTE } = setupRoutes({
-    MAP_ROUTE: `/map/?zoom=${zoomSignal}`,
-    MAP_PANEL_ROUTE: `/map/:panel={navi_state_signal:panelValue}?zoom=${zoomSignal}`,
-    MAP_ISOCHRONE_ROUTE: `/map/isochrone?zoom=${zoomSignal}`,
-  });
-
   const navToCalls = [];
   const allNavToCalls = []; // Track ALL navigation calls including during navigation
   setRouteIntegration({
@@ -102,7 +106,7 @@ try {
     },
   };
 } finally {
-  clearAllRoutes();
+  clearRoutes();
   globalSignalRegistry.clear();
 }
 ```

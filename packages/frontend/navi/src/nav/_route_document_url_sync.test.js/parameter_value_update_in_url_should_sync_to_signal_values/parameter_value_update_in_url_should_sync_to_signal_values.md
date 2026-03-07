@@ -9,25 +9,26 @@ const routeIntegrationMock = {
   },
 };
 setRouteIntegration(routeIntegrationMock);
-
+const zoneSignal = stateSignal("london");
+const lonSignal = stateSignal(3);
+const isochroneTabSignal = stateSignal("compare");
+const isochroneLongitudeSignal = stateSignal(2);
+const isochroneTimeModeSignal = stateSignal("walk");
+const MAP_ROUTE = route(`/map/?zone=${zoneSignal}&lon=${lonSignal}`);
+const MAP_ISOCHRONE_ROUTE = route(
+  `/map/isochrone/:tab=${isochroneTabSignal}/?iso_lon=${isochroneLongitudeSignal}`,
+);
+const MAP_ISOCHRONE_COMPARE_ROUTE = route(`/map/isochrone/compare`);
+const MAP_ISOCHRONE_TIME_ROUTE = route(
+  `/map/isochrone/time/:mode=${isochroneTimeModeSignal}/`,
+);
+const { updateRoutes, clearRoutes } = setupRoutes([
+  MAP_ROUTE,
+  MAP_ISOCHRONE_ROUTE,
+  MAP_ISOCHRONE_COMPARE_ROUTE,
+  MAP_ISOCHRONE_TIME_ROUTE,
+]);
 try {
-  const zoneSignal = stateSignal("london");
-  const lonSignal = stateSignal(3);
-  const isochroneTabSignal = stateSignal("compare");
-  const isochroneLongitudeSignal = stateSignal(2);
-  const isochroneTimeModeSignal = stateSignal("walk");
-
-  const {
-    MAP_ISOCHRONE_ROUTE,
-    MAP_ISOCHRONE_COMPARE_ROUTE,
-    MAP_ISOCHRONE_TIME_ROUTE,
-  } = setupRoutes({
-    MAP_ROUTE: `/map/?zone=${zoneSignal}&lon=${lonSignal}`,
-    MAP_ISOCHRONE_ROUTE: `/map/isochrone/:tab=${isochroneTabSignal}/?iso_lon=${isochroneLongitudeSignal}`,
-    MAP_ISOCHRONE_COMPARE_ROUTE: `/map/isochrone/compare`,
-    MAP_ISOCHRONE_TIME_ROUTE: `/map/isochrone/time/:mode=${isochroneTimeModeSignal}/`,
-  });
-
   updateRoutes(`${baseUrl}/map/isochrone?zone=london&lon=3&iso_lon=2`);
   // Capture initial state
   const initialState = {
@@ -61,7 +62,7 @@ try {
   };
 } finally {
   setRouteIntegration(undefined);
-  clearAllRoutes();
+  clearRoutes();
   globalSignalRegistry.clear();
 }
 ```

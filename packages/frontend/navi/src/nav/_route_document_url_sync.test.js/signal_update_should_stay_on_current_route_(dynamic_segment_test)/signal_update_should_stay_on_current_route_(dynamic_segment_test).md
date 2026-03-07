@@ -7,15 +7,15 @@ setRouteIntegration({
     navToCalls.push(url);
   },
 });
-
+const tabSignal = stateSignal(undefined);
+const lonSignal = stateSignal(undefined);
+const DASHBOARD_ROUTE = route(`/dashboard/?lon=${lonSignal}`);
+const DASHBOARD_TAB_ROUTE = route(`/dashboard/:tab=${tabSignal}/`);
+const { updateRoutes, clearRoutes } = setupRoutes([
+  DASHBOARD_ROUTE,
+  DASHBOARD_TAB_ROUTE,
+]);
 try {
-  const tabSignal = stateSignal(undefined);
-  const lonSignal = stateSignal(undefined);
-  const { DASHBOARD_ROUTE, DASHBOARD_TAB_ROUTE } = setupRoutes({
-    DASHBOARD_ROUTE: `/dashboard/?lon=${lonSignal}`,
-    DASHBOARD_TAB_ROUTE: `/dashboard/:tab=${tabSignal}/`,
-  });
-
   // Step 1: Navigate to /dashboard - we're on the base dashboard route
   updateRoutes(`${baseUrl}/dashboard`);
 
@@ -78,7 +78,7 @@ try {
     },
   };
 } finally {
-  clearAllRoutes();
+  clearRoutes();
   globalSignalRegistry.clear();
   setRouteIntegration(null);
 }

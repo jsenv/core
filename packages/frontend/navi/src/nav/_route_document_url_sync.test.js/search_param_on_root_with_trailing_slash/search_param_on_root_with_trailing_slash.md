@@ -9,22 +9,23 @@ setRouteIntegration({
     return Promise.resolve();
   },
 });
-
+const tableOpenedSignal = stateSignal(false, {
+  type: "boolean",
+});
+const HOME_ROUTE = route(`/?table_opened=${tableOpenedSignal}`);
+const OTHER_ROUTE = route(`/other`);
+const { updateRoutes, clearRoutes } = setupRoutes([
+  HOME_ROUTE,
+  OTHER_ROUTE,
+]);
 try {
-  const tableOpenedSignal = stateSignal(false, {
-    type: "boolean",
-  });
-  setupRoutes({
-    HOME_ROUTE: `/?table_opened=${tableOpenedSignal}`,
-    OTHER_ROUTE: `/other`,
-  });
   updateRoutes(`${baseUrl}/other`);
   tableOpenedSignal.value = true;
   return {
     nav_calls: navToCalls,
   };
 } finally {
-  clearAllRoutes();
+  clearRoutes();
   globalSignalRegistry.clear();
   setRouteIntegration(null);
 }

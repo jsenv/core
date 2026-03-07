@@ -18,23 +18,26 @@ globalThis.window = {
     clear: () => mockStorage.clear(),
   },
 };
-
+// Define signals first so they're available in the callback
+const zoneLonSignal = stateSignal(undefined);
+const mapLonSignal = stateSignal(zoneLonSignal, {
+  default: -1,
+  type: "float",
+  persists: true,
+});
+const isoLonSignal = stateSignal(zoneLonSignal, { type: "float" });
+const mapPanelSignal = stateSignal(undefined);
+const HOME_ROUTE = route("/");
+const MAP_ROUTE = route(`/map/?lon=${mapLonSignal}`);
+const MAP_PANEL_ROUTE = route(`/map/:panel=${mapPanelSignal}/`);
+const MAP_ISOCHRONE_ROUTE = route(`/map/isochrone?iso_lon=${isoLonSignal}`);
+const { updateRoutes, clearRoutes } = setupRoutes([
+  HOME_ROUTE,
+  MAP_ROUTE,
+  MAP_PANEL_ROUTE,
+  MAP_ISOCHRONE_ROUTE,
+]);
 try {
-  // Define signals first so they're available in the callback
-  const zoneLonSignal = stateSignal(undefined);
-  const mapLonSignal = stateSignal(zoneLonSignal, {
-    default: -1,
-    type: "float",
-    persists: true,
-  });
-  const isoLonSignal = stateSignal(zoneLonSignal, { type: "float" });
-  const mapPanelSignal = stateSignal(undefined);
-  const { MAP_ISOCHRONE_ROUTE } = setupRoutes({
-    HOME_ROUTE: "/",
-    MAP_ROUTE: `/map/?lon=${mapLonSignal}`,
-    MAP_PANEL_ROUTE: `/map/:panel=${mapPanelSignal}/`,
-    MAP_ISOCHRONE_ROUTE: `/map/isochrone?iso_lon=${isoLonSignal}`,
-  });
   const captureState = () => {
     return {
       url: MAP_ISOCHRONE_ROUTE.url,
@@ -63,7 +66,7 @@ try {
   };
 } finally {
   delete globalThis.window;
-  clearAllRoutes();
+  clearRoutes();
   globalSignalRegistry.clear();
   setRouteIntegration(undefined);
 }

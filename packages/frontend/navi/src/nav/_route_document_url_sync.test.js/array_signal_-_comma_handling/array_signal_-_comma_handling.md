@@ -10,16 +10,13 @@ setRouteIntegration({
     return Promise.resolve();
   },
 });
-
+const itemsSignal = stateSignal([], {
+  id: "itemsWithCommas",
+  type: "array",
+});
+const ITEMS_ROUTE = route(`/items?items=${itemsSignal}`);
+const { updateRoutes, clearRoutes } = setupRoutes([ITEMS_ROUTE]);
 try {
-  const itemsSignal = stateSignal([], {
-    id: "itemsWithCommas",
-    type: "array",
-  });
-  const { ITEMS_ROUTE } = setupRoutes({
-    ITEMS_ROUTE: `/items?items=${itemsSignal}`,
-  });
-
   const captureState = () => {
     const navCalls = [...navToCalls];
     navToCalls.length = 0;
@@ -54,7 +51,7 @@ try {
 
   return results;
 } finally {
-  clearAllRoutes();
+  clearRoutes();
   globalSignalRegistry.clear();
   setRouteIntegration(null);
 }

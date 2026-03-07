@@ -148,16 +148,13 @@ export const createRoutePattern = (pattern) => {
           continue;
         }
 
-        // Use the stored paramType instead of deducing from pattern
-        if (ancestorConnection.paramType === "query") {
-          const ancestorSignalValue = ancestorConnection.signal.value;
+        const ancestorSignalValue = ancestorConnection.signal.value;
+        if (
+          ancestorSignalValue !== undefined &&
+          ancestorSignalValue !== ancestorConnection.getDefaultValue()
+        ) {
           // Inherit non-default values from ancestors
-          if (
-            ancestorSignalValue !== undefined &&
-            ancestorSignalValue !== ancestorConnection.getDefaultValue()
-          ) {
-            resolvedParams[paramName] = ancestorSignalValue;
-          }
+          resolvedParams[paramName] = ancestorSignalValue;
         }
       }
       ancestorPatternObj = ancestorPatternObj.parent;
@@ -3130,13 +3127,13 @@ export const setupRoutePatterns = (routePatterns) => {
 
     // Add signals from descendants (they might be used for optimization)
     const addDescendantSignals = (patternObj) => {
-      for (const childPatternObj of patternObj.children || []) {
+      for (const childPattern of patternObj.children) {
         // Add child's own signals
-        for (const connection of childPatternObj.connections) {
+        for (const connection of childPattern.connections) {
           allRelevantSignals.add(connection.signal);
         }
         // Recursively add grandchildren signals
-        addDescendantSignals(childPatternObj);
+        addDescendantSignals(childPattern);
       }
     };
     addDescendantSignals(routePattern);
@@ -3152,7 +3149,7 @@ export const setupRoutePatterns = (routePatterns) => {
   }
   // Phase 5: Calculate depths for all patterns
   for (const routePattern of routePatternSet) {
-    routePattern.depth = calculatePatternDepth(routePattern);
+    calculatePatternDepth(routePattern);
   }
   if (DEBUG) {
     console.debug("Pattern registry updated");
@@ -3164,16 +3161,19 @@ const getPathSegmentCount = (pattern) => {
   const pathPart = pattern.split("?")[0];
   return pathPart.split("/").filter(Boolean).length;
 };
-const calculatePatternDepth = (routePattern) => {
-  if (routePattern.depth !== 0) {
-    // Already calculated
-    return routePattern.depth;
+const calculatePatternDepth = (patternObj) => {
+  if (patternObj.depth !== 0) {
+    return patternObj.depth; // Already calculated
   }
-  if (!routePattern.parent) {
+
+  if (!patternObj.parent) {
+    patternObj.depth = 0;
     return 0;
   }
-  const parentDepth = calculatePatternDepth(routePattern.parent);
-  return parentDepth + 1;
+
+  const parentDepth = calculatePatternDepth(patternObj.parent);
+  patternObj.depth = parentDepth + 1;
+  return patternObj.depth;
 };
 
 export const resolveRouteUrl = (relativeUrl) => {

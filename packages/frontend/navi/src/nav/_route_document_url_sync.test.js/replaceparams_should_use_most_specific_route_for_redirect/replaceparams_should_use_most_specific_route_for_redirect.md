@@ -1,20 +1,21 @@
 # [replaceParams should use most specific route for redirect](../../route_document_url_sync.test.js)
 
 ```js
+const zoomSignal = stateSignal(12, {
+  id: "mapZoom",
+  type: "number",
+});
+
+// Create routes with proper parent-child relationship
+const MAP_ROUTE = route(`/map/?zoom=${zoomSignal}`);
+const MAP_ISOCHRONE_ROUTE = route(`/map/isochrone/`);
+const MAP_ISOCHRONE_COMPARE_ROUTE = route(`/map/isochrone/compare`);
+const { updateRoutes, clearRoutes } = setupRoutes([
+  MAP_ROUTE,
+  MAP_ISOCHRONE_ROUTE,
+  MAP_ISOCHRONE_COMPARE_ROUTE,
+]);
 try {
-  const zoomSignal = stateSignal(12, {
-    id: "mapZoom",
-    type: "number",
-  });
-
-  // Create routes with proper parent-child relationship
-  const { MAP_ROUTE, MAP_ISOCHRONE_ROUTE, MAP_ISOCHRONE_COMPARE_ROUTE } =
-    setupRoutes({
-      MAP_ROUTE: `/map/?zoom=${zoomSignal}`, // Parent route with trailing slash
-      MAP_ISOCHRONE_ROUTE: `/map/isochrone/`, // Intermediate child
-      MAP_ISOCHRONE_COMPARE_ROUTE: `/map/isochrone/compare`, // Deepest child
-    });
-
   // Simulate being on the child route: /map/isochrone/compare?zoom=10
   updateRoutes(`${baseUrl}/map/isochrone/compare?zoom=10`);
 
@@ -55,7 +56,7 @@ try {
       navToCalls[navToCalls.length - 1].includes("zoom=11"),
   };
 } finally {
-  clearAllRoutes();
+  clearRoutes();
   globalSignalRegistry.clear();
 }
 ```

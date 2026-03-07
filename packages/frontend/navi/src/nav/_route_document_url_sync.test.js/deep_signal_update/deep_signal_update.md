@@ -9,18 +9,22 @@ setRouteIntegration({
     updateRoutes(url);
   },
 });
-
+const zoneSignal = stateSignal(undefined);
+const panelSignal = stateSignal(undefined);
+const sportSignal = stateSignal(false, { type: "boolean" });
+const HOME_ROUTE = route("/");
+const MAP_ROUTE = route(`/map/?zone=${zoneSignal}`);
+const MAP_PANEL_ROUTE = route(`/map/:panel=${panelSignal}/`);
+const MAP_FACILITIES_ROUTE = route(`/map/facilities?sport=${sportSignal}`);
+const MAP_OVERVIEW_ROUTE = route("/map/overview");
+const { updateRoutes, clearRoutes } = setupRoutes([
+  HOME_ROUTE,
+  MAP_ROUTE,
+  MAP_PANEL_ROUTE,
+  MAP_FACILITIES_ROUTE,
+  MAP_OVERVIEW_ROUTE,
+]);
 try {
-  const zoneSignal = stateSignal(undefined);
-  const panelSignal = stateSignal(undefined);
-  const sportSignal = stateSignal(false, { type: "boolean" });
-  const { MAP_FACILITIES_ROUTE } = setupRoutes({
-    HOME_ROUTE: "/",
-    MAP_ROUTE: `/map/?zone=${zoneSignal}`,
-    MAP_PANEL_ROUTE: `/map/:panel=${panelSignal}/`,
-    MAP_FACILITIES_ROUTE: `/map/facilities?sport=${sportSignal}`,
-    MAP_OVERVIEW_ROUTE: "/map/overview",
-  });
   updateRoutes(`${baseUrl}/map/facilities?zone=paris`);
   const afterInitialNav = {
     current_url: MAP_FACILITIES_ROUTE.url,
@@ -39,7 +43,7 @@ try {
     after_sport_true: afterSportTrue,
   };
 } finally {
-  clearAllRoutes();
+  clearRoutes();
   globalSignalRegistry.clear();
   setRouteIntegration(null);
 }

@@ -9,14 +9,14 @@ setRouteIntegration({
     updateRoutes(url);
   },
 });
-
+const mapStyleSignal = stateSignal("street");
+const MAP_ROUTE = route(`/map/?style=${mapStyleSignal}`);
+const MAP_ISOCHRONE_ROUTE = route(`/map/isochrone`);
+const { updateRoutes, clearRoutes } = setupRoutes([
+  MAP_ROUTE,
+  MAP_ISOCHRONE_ROUTE,
+]);
 try {
-  const mapStyleSignal = stateSignal("street");
-  const { MAP_ISOCHRONE_ROUTE } = setupRoutes({
-    MAP_ROUTE: `/map/?style=${mapStyleSignal}`,
-    MAP_ISOCHRONE_ROUTE: `/map/isochrone`,
-  });
-
   updateRoutes(`${baseUrl}/map/isochrone`);
   mapStyleSignal.value = "satellite";
   const afterUpdateToSattelite = {
@@ -36,7 +36,7 @@ try {
     after_restore_to_street: afterRestoreToStreet,
   };
 } finally {
-  clearAllRoutes();
+  clearRoutes();
   globalSignalRegistry.clear();
   setRouteIntegration(null);
 }

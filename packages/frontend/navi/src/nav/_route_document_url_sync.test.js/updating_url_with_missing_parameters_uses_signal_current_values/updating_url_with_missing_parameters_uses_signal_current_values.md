@@ -9,15 +9,13 @@ setRouteIntegration({
     return Promise.resolve();
   },
 });
-
+const pageSignal = stateSignal(1, { type: "number" }); // Default page is 1
+const limitSignal = stateSignal(10, { type: "number" }); // Default limit is 10
+const SEARCH_ROUTE = route(
+  `/search?page=${pageSignal}&limit=${limitSignal}`,
+);
+const { updateRoutes, clearRoutes } = setupRoutes([SEARCH_ROUTE]);
 try {
-  const pageSignal = stateSignal(1, { type: "number" }); // Default page is 1
-  const limitSignal = stateSignal(10, { type: "number" }); // Default limit is 10
-
-  const { SEARCH_ROUTE } = setupRoutes({
-    SEARCH_ROUTE: `/search?page=${pageSignal}&limit=${limitSignal}`,
-  });
-
   // Set some initial non-default values
   pageSignal.value = 5;
   limitSignal.value = 25;
@@ -33,7 +31,7 @@ try {
     routeParams: SEARCH_ROUTE.params, // Should match URL structure
   };
 } finally {
-  clearAllRoutes();
+  clearRoutes();
   globalSignalRegistry.clear();
   setRouteIntegration(undefined);
 }

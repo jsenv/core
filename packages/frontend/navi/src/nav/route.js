@@ -32,8 +32,7 @@ export const route = (
   if (DEBUG) {
     console.debug(`Creating route: ${pattern}`);
   }
-  const { cleanPattern, pathConnectionMap, queryConnectionMap } = routePattern;
-  const connectionMap = new Map([...pathConnectionMap, ...queryConnectionMap]);
+  const { cleanPattern } = routePattern;
   const [publishStatus, subscribeStatus] = createPubSub();
 
   // prepare route object
@@ -208,6 +207,7 @@ export const route = (
           mostSpecificRoute = matchingRoute;
         }
       }
+      const isMostSpecificRoute = mostSpecificRoute === route;
 
       if (DEBUG) {
         console.debug(
@@ -221,7 +221,7 @@ export const route = (
       }
 
       // If we found a more specific route, delegate to it; otherwise handle it ourselves
-      if (mostSpecificRoute !== route) {
+      if (!isMostSpecificRoute) {
         // Check if this is a signal-originated call and there's a more specific route that will also handle it
         // If so, skip the redirect to avoid duplicate navTo calls
         if (isSignalChange) {
@@ -310,6 +310,12 @@ export const route = (
   // Only sync non-default values to keep URLs clean (static fallbacks stay invisible)
   registerSetup(() => {
     const cleanupSignalUrlEffectSet = new Set();
+    const { pathConnectionMap, queryConnectionMap } = routePattern;
+    // important: keep this connectionMap after setup so that connectionMap correctly inherits parent pattern signals
+    const connectionMap = new Map([
+      ...pathConnectionMap,
+      ...queryConnectionMap,
+    ]);
     for (const [paramName, connection] of connectionMap) {
       const { signal: paramSignal, debug } = connection;
       if (debug) {
@@ -400,6 +406,7 @@ export const route = (
   });
   // action
   registerSetup(() => {
+    const { pathConnectionMap } = routePattern;
     const pathParamNames = new Set(pathConnectionMap.keys());
     const allowedSearchParams = new Set(actionSearchParams || []);
     // Search params are excluded from action params by default because they typically represent

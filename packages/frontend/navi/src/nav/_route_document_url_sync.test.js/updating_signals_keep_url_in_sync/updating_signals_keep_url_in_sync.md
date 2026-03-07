@@ -10,12 +10,10 @@ setRouteIntegration({
     return Promise.resolve();
   },
 });
-
+const categorySignal = stateSignal("electronics");
+const CATEGORY_ROUTE = route(`/products?category=${categorySignal}`);
+const { updateRoutes, clearRoutes } = setupRoutes([CATEGORY_ROUTE]);
 try {
-  const categorySignal = stateSignal("electronics");
-  const { CATEGORY_ROUTE } = setupRoutes({
-    CATEGORY_ROUTE: `/products?category=${categorySignal}`,
-  });
   // Navigate to initial URL - this should set signal to "electronics"
   updateRoutes(`${baseUrl}/products?category=electronics`);
   // Clear navigation calls from initial setup
@@ -34,7 +32,7 @@ try {
     routeParams: CATEGORY_ROUTE.params,
   };
 } finally {
-  clearAllRoutes();
+  clearRoutes();
   globalSignalRegistry.clear();
   setRouteIntegration(undefined);
 }

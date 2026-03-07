@@ -4,12 +4,19 @@
 const mapPanelSignal = stateSignal(undefined);
 const isochroneTabSignal = stateSignal("compare");
 const isochroneModeSignal = stateSignal("walk");
+const MAP_ROUTE = route(`/map/:panel=${mapPanelSignal}/`);
+const MAP_ISOCHRONE_ROUTE = route(
+  `/map/isochrone/:tab=${isochroneTabSignal}/`,
+);
+const MAP_ISOCHRONE_TIME_ROUTE = route(
+  `/map/isochrone/time/:mode=${isochroneModeSignal}`,
+);
+const { updateRoutes, clearRoutes } = setupRoutes([
+  MAP_ROUTE,
+  MAP_ISOCHRONE_ROUTE,
+  MAP_ISOCHRONE_TIME_ROUTE,
+]);
 try {
-  setupRoutes({
-    MAP_ROUTE: `/map/:panel=${mapPanelSignal}/`,
-    MAP_ISOCHRONE_ROUTE: `/map/isochrone/:tab=${isochroneTabSignal}/`,
-    MAP_ISOCHRONE_TIME_ROUTE: `/map/isochrone/time/:mode=${isochroneModeSignal}`,
-  });
   updateRoutes(`${baseUrl}/map/isochrone/time/bike`);
   const state = {
     map_panel_signal_value: mapPanelSignal.value,
@@ -27,7 +34,7 @@ try {
     stateAfter,
   };
 } finally {
-  clearAllRoutes();
+  clearRoutes();
   globalSignalRegistry.clear();
 }
 ```

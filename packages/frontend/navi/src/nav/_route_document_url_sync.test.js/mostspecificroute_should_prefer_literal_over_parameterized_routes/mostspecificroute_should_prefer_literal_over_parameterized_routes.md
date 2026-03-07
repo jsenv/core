@@ -10,34 +10,38 @@ const routeIntegrationMock = {
   },
 };
 setRouteIntegration(routeIntegrationMock);
+const walkEnabledSignal = stateSignal(false, {
+  id: "mostSpecificWalkEnabled",
+  type: "boolean",
+});
+const walkMinuteSignal = stateSignal(30, {
+  id: "mostSpecificWalkMinute",
+  type: "number",
+});
+const isochroneTabSignal = stateSignal("compare", {
+  id: "mostSpecificIsochroneTab",
+  type: "string",
+});
+const isochroneLongitudeSignal = stateSignal(2.3522, {
+  id: "mostSpecificIsochroneLongitude",
+  type: "number",
+});
 
+// These two routes should demonstrate the specificity issue:
+// - ISOCHRONE_ROUTE: `/map/isochrone/:tab` (generic with :tab parameter)
+// - ISOCHRONE_COMPARE_ROUTE: `/map/isochrone/compare` (literal with "compare")
+// ISOCHRONE_COMPARE_ROUTE should be considered more specific
+const ISOCHRONE_ROUTE = route(
+  `/map/isochrone/:tab=${isochroneTabSignal}/?iso_lon=${isochroneLongitudeSignal}`,
+);
+const ISOCHRONE_COMPARE_ROUTE = route(
+  `/map/isochrone/compare?walk=${walkEnabledSignal}&walk_minute=${walkMinuteSignal}`,
+);
+const { updateRoutes, clearRoutes } = setupRoutes([
+  ISOCHRONE_ROUTE,
+  ISOCHRONE_COMPARE_ROUTE,
+]);
 try {
-  const walkEnabledSignal = stateSignal(false, {
-    id: "mostSpecificWalkEnabled",
-    type: "boolean",
-  });
-  const walkMinuteSignal = stateSignal(30, {
-    id: "mostSpecificWalkMinute",
-    type: "number",
-  });
-  const isochroneTabSignal = stateSignal("compare", {
-    id: "mostSpecificIsochroneTab",
-    type: "string",
-  });
-  const isochroneLongitudeSignal = stateSignal(2.3522, {
-    id: "mostSpecificIsochroneLongitude",
-    type: "number",
-  });
-
-  // These two routes should demonstrate the specificity issue:
-  // - ISOCHRONE_ROUTE: `/map/isochrone/:tab` (generic with :tab parameter)
-  // - ISOCHRONE_COMPARE_ROUTE: `/map/isochrone/compare` (literal with "compare")
-  // ISOCHRONE_COMPARE_ROUTE should be considered more specific
-  const { ISOCHRONE_ROUTE, ISOCHRONE_COMPARE_ROUTE } = setupRoutes({
-    ISOCHRONE_ROUTE: `/map/isochrone/:tab=${isochroneTabSignal}/?iso_lon=${isochroneLongitudeSignal}`,
-    ISOCHRONE_COMPARE_ROUTE: `/map/isochrone/compare?walk=${walkEnabledSignal}&walk_minute=${walkMinuteSignal}`,
-  });
-
   // Navigate to the compare route
   updateRoutes(`${baseUrl}/map/isochrone/compare`);
 
@@ -82,7 +86,7 @@ try {
     },
   };
 } finally {
-  clearAllRoutes();
+  clearRoutes();
   globalSignalRegistry.clear();
   setRouteIntegration(null);
 }

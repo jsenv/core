@@ -9,28 +9,33 @@ setRouteIntegration({
     return Promise.resolve();
   },
 });
-
+// Define signals first so they're available in the callback
+const zoneLonSignal = stateSignal(undefined);
+const zoneLatSignal = stateSignal(undefined);
+const mapLonSignal = stateSignal(zoneLonSignal, {
+  default: -1,
+  type: "float",
+});
+const mapLatSignal = stateSignal(zoneLatSignal, {
+  default: -2,
+  type: "float",
+});
+const isoLonSignal = stateSignal(zoneLonSignal, { type: "float" });
+const isoLatSignal = stateSignal(zoneLatSignal, { type: "float" });
+const mapPanelSignal = stateSignal(undefined);
+const HOME_ROUTE = route("/");
+const MAP_ROUTE = route(`/map/?lon=${mapLonSignal}&lat=${mapLatSignal}`);
+const MAP_PANEL_ROUTE = route(`/map/:panel=${mapPanelSignal}/`);
+const MAP_ISOCHRONE_ROUTE = route(
+  `/map/isochrone?iso_lon=${isoLonSignal}&iso_lat=${isoLatSignal}`,
+);
+const { updateRoutes, clearRoutes } = setupRoutes([
+  HOME_ROUTE,
+  MAP_ROUTE,
+  MAP_PANEL_ROUTE,
+  MAP_ISOCHRONE_ROUTE,
+]);
 try {
-  // Define signals first so they're available in the callback
-  const zoneLonSignal = stateSignal(undefined);
-  const zoneLatSignal = stateSignal(undefined);
-  const mapLonSignal = stateSignal(zoneLonSignal, {
-    default: -1,
-    type: "float",
-  });
-  const mapLatSignal = stateSignal(zoneLatSignal, {
-    default: -2,
-    type: "float",
-  });
-  const isoLonSignal = stateSignal(zoneLonSignal, { type: "float" });
-  const isoLatSignal = stateSignal(zoneLatSignal, { type: "float" });
-  const mapPanelSignal = stateSignal(undefined);
-  const { MAP_ISOCHRONE_ROUTE } = setupRoutes({
-    HOME_ROUTE: "/",
-    MAP_ROUTE: `/map/?lon=${mapLonSignal}&lat=${mapLatSignal}`,
-    MAP_PANEL_ROUTE: `/map/:panel=${mapPanelSignal}/`,
-    MAP_ISOCHRONE_ROUTE: `/map/isochrone?iso_lon=${isoLonSignal}&iso_lat=${isoLatSignal}`,
-  });
   const captureState = () => {
     return {
       url: MAP_ISOCHRONE_ROUTE.url,
@@ -82,7 +87,7 @@ try {
     state_after_reset_map_on_zone: stateAfterCenterMapOnZone,
   };
 } finally {
-  clearAllRoutes();
+  clearRoutes();
   globalSignalRegistry.clear();
   setRouteIntegration(undefined);
 }

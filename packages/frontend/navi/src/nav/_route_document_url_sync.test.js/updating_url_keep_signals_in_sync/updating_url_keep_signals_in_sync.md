@@ -9,15 +9,13 @@ setRouteIntegration({
     return Promise.resolve();
   },
 });
-
+const categorySignal = stateSignal("electronics");
+const sortSignal = stateSignal("name");
+const PRODUCTS_ROUTE = route(
+  `/products?category=${categorySignal}&sort=${sortSignal}`,
+);
+const { updateRoutes, clearRoutes } = setupRoutes([PRODUCTS_ROUTE]);
 try {
-  const categorySignal = stateSignal("electronics");
-  const sortSignal = stateSignal("name");
-
-  const { PRODUCTS_ROUTE } = setupRoutes({
-    PRODUCTS_ROUTE: `/products?category=${categorySignal}&sort=${sortSignal}`,
-  });
-
   // Initial state
   const initialCategoryValue = categorySignal.value;
   const initialSortValue = sortSignal.value;
@@ -35,7 +33,7 @@ try {
     routeParams: PRODUCTS_ROUTE.params, // Should reflect new URL params
   };
 } finally {
-  clearAllRoutes();
+  clearRoutes();
   globalSignalRegistry.clear();
   setRouteIntegration(undefined);
 }

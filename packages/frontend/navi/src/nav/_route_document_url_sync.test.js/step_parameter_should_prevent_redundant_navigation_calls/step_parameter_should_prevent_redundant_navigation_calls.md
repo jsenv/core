@@ -10,16 +10,14 @@ const routeIntegrationMock = {
   },
 };
 setRouteIntegration(routeIntegrationMock);
-
+const lonSignal = stateSignal(2.3, {
+  id: "longitude",
+  type: "longitude",
+  step: 0.1,
+});
+const MAP_ROUTE = route(`/map?lon=${lonSignal}`);
+const { updateRoutes, clearRoutes } = setupRoutes([MAP_ROUTE]);
 try {
-  const lonSignal = stateSignal(2.3, {
-    id: "longitude",
-    type: "longitude",
-    step: 0.1,
-  });
-  const { MAP_ROUTE } = setupRoutes({
-    MAP_ROUTE: `/map?lon=${lonSignal}`,
-  });
   updateRoutes(`${baseUrl}/map?lon=2.3`);
 
   const captureState = () => {
@@ -65,7 +63,7 @@ try {
     results,
   };
 } finally {
-  clearAllRoutes();
+  clearRoutes();
   globalSignalRegistry.clear();
   setRouteIntegration(null);
 }

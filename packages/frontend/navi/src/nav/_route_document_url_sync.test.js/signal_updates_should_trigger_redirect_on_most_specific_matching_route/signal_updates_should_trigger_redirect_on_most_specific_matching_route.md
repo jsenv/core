@@ -1,20 +1,22 @@
 # [signal updates should trigger redirect on most specific matching route](../../route_document_url_sync.test.js)
 
 ```js
+const zoomSignal = stateSignal(12, {
+  id: "hierarchyZoom",
+  type: "number",
+});
+
+const MAP_ROUTE = route(`/map/?zoom=${zoomSignal}`);
+const MAP_ISOCHRONE_ROUTE = route(`/map/isochrone/?zoom=${zoomSignal}`);
+const MAP_COMPARE_ROUTE = route(
+  `/map/isochrone/compare?zoom=${zoomSignal}`,
+);
+const { updateRoutes, clearRoutes } = setupRoutes([
+  MAP_ROUTE,
+  MAP_ISOCHRONE_ROUTE,
+  MAP_COMPARE_ROUTE,
+]);
 try {
-  const zoomSignal = stateSignal(12, {
-    id: "hierarchyZoom",
-    type: "number",
-  });
-
-  const { MAP_ROUTE, MAP_ISOCHRONE_ROUTE, MAP_COMPARE_ROUTE } = setupRoutes(
-    {
-      MAP_ROUTE: `/map/?zoom=${zoomSignal}`,
-      MAP_ISOCHRONE_ROUTE: `/map/isochrone/?zoom=${zoomSignal}`,
-      MAP_COMPARE_ROUTE: `/map/isochrone/compare?zoom=${zoomSignal}`,
-    },
-  );
-
   // Start on deeply nested route
   updateRoutes(`${baseUrl}/map/isochrone/compare?zoom=15`);
 
@@ -53,7 +55,7 @@ try {
     expected_url_pattern: "/map/isochrone/compare?zoom=20",
   };
 } finally {
-  clearAllRoutes();
+  clearRoutes();
   globalSignalRegistry.clear();
 }
 ```

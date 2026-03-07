@@ -19,27 +19,35 @@ setRouteIntegration({
     navToCalls.push(url);
   },
 });
-
+// Create signal with persist: true to reproduce the localStorage issue
+const mapPanelSignal = stateSignal(undefined, {
+  id: "odt_map_panel",
+  persist: true,
+});
+const zoneSignal = stateSignal(undefined);
+const isochroneTabSignal = stateSignal("compare");
+const isochroneLongitudeSignal = stateSignal(2.3522);
+const isochroneWalkSignal = stateSignal(false);
+const isochroneTimeModeSignal = stateSignal("walk");
+const MAP_ROUTE = route(`/map/?zone=${zoneSignal}`);
+const MAP_PANEL_ROUTE = route(`/map/:panel=${mapPanelSignal}/`);
+const MAP_ISOCHRONE_ROUTE = route(
+  `/map/isochrone/:tab=${isochroneTabSignal}/?iso_lon=${isochroneLongitudeSignal}`,
+);
+const MAP_ISOCHRONE_COMPARE_ROUTE = route(
+  `/map/isochrone/compare?walk=${isochroneWalkSignal}`,
+);
+const MAP_ISOCHRONE_TIME_ROUTE = route(
+  `/map/isochrone/time/:mode=${isochroneTimeModeSignal}/`,
+);
+const { updateRoutes, clearRoutes } = setupRoutes([
+  MAP_ROUTE,
+  MAP_PANEL_ROUTE,
+  MAP_ISOCHRONE_ROUTE,
+  MAP_ISOCHRONE_COMPARE_ROUTE,
+  MAP_ISOCHRONE_TIME_ROUTE,
+]);
 try {
-  // Create signal with persist: true to reproduce the localStorage issue
-  const mapPanelSignal = stateSignal(undefined, {
-    id: "odt_map_panel",
-    persist: true,
-  });
-  const zoneSignal = stateSignal(undefined);
-  const isochroneTabSignal = stateSignal("compare");
-  const isochroneLongitudeSignal = stateSignal(2.3522);
-  const isochroneWalkSignal = stateSignal(false);
-  const isochroneTimeModeSignal = stateSignal("walk");
-
-  const { MAP_ROUTE, MAP_PANEL_ROUTE } = setupRoutes({
-    MAP_ROUTE: `/map/?zone=${zoneSignal}`,
-    MAP_PANEL_ROUTE: `/map/:panel=${mapPanelSignal}/`,
-    MAP_ISOCHRONE_ROUTE: `/map/isochrone/:tab=${isochroneTabSignal}/?iso_lon=${isochroneLongitudeSignal}`,
-    MAP_ISOCHRONE_COMPARE_ROUTE: `/map/isochrone/compare?walk=${isochroneWalkSignal}`,
-    MAP_ISOCHRONE_TIME_ROUTE: `/map/isochrone/time/:mode=${isochroneTimeModeSignal}/`,
-  });
-
   // Step 1: Navigate to /map/isochrone - this should set mapPanelSignal and localStorage
   updateRoutes(`${baseUrl}/map/isochrone?zone=london`);
 
@@ -74,7 +82,7 @@ try {
   };
 } finally {
   delete globalThis.window;
-  clearAllRoutes();
+  clearRoutes();
   globalSignalRegistry.clear();
   setRouteIntegration(null);
 }

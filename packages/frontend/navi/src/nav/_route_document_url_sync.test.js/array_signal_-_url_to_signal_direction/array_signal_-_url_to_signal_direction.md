@@ -9,15 +9,13 @@ setRouteIntegration({
     return Promise.resolve();
   },
 });
-
+const colorsSignal = stateSignal([], {
+  id: "colorsArrayReverse",
+  type: "array",
+});
+const COLORS_ROUTE = route(`/colors?colors=${colorsSignal}`);
+const { updateRoutes, clearRoutes } = setupRoutes([COLORS_ROUTE]);
 try {
-  const colorsSignal = stateSignal([], {
-    id: "colorsArrayReverse",
-    type: "array",
-  });
-  const { COLORS_ROUTE } = setupRoutes({
-    COLORS_ROUTE: `/colors?colors=${colorsSignal}`,
-  });
   const captureState = () => {
     const navCalls = [...navToCalls];
     navToCalls.length = 0;
@@ -56,7 +54,7 @@ try {
 
   return results;
 } finally {
-  clearAllRoutes();
+  clearRoutes();
   globalSignalRegistry.clear();
   setRouteIntegration(null);
 }

@@ -1,21 +1,24 @@
 # [signal preservation vs clearing behavior](../../route_document_url_sync.test.js)
 
 ```js
+const panelSignal = stateSignal(undefined, {
+  id: "preservationTestPanel",
+  type: "string",
+});
+
+// Set initial value
+panelSignal.value = "isochrone";
+
+// Use a route pattern that can handle the panel parameter
+const MAP_PANEL_ROUTE = route(
+  `/map/:panel={navi_state_signal:preservationTestPanel}`,
+);
+const HOME_ROUTE = route(`/home`);
+const { updateRoutes, clearRoutes } = setupRoutes([
+  MAP_PANEL_ROUTE,
+  HOME_ROUTE,
+]);
 try {
-  const panelSignal = stateSignal(undefined, {
-    id: "preservationTestPanel",
-    type: "string",
-  });
-
-  // Set initial value
-  panelSignal.value = "isochrone";
-
-  // Use a route pattern that can handle the panel parameter
-  const { MAP_PANEL_ROUTE } = setupRoutes({
-    MAP_PANEL_ROUTE: `/map/:panel={navi_state_signal:preservationTestPanel}`,
-    HOME_ROUTE: `/home`,
-  });
-
   // SCENARIO 1: Navigate to /map/isochrone - signal should match URL
   updateRoutes(`${baseUrl}/map/isochrone`);
 
@@ -76,7 +79,7 @@ try {
     ],
   };
 } finally {
-  clearAllRoutes();
+  clearRoutes();
   globalSignalRegistry.clear();
 }
 ```

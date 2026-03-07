@@ -1,18 +1,16 @@
 # [signals preserved when navigating between different route families](../../route_document_url_sync.test.js)
 
 ```js
+const zoneSignal = stateSignal("foo", {
+  id: "zone",
+  type: "string",
+});
+
+// Create routes from different families with query parameter
+const HOME_ROUTE = route(`/`); // Root page
+const MAP_ROUTE = route(`/map?zone=${zoneSignal}`); // Map page with zone query parameter
+const { updateRoutes, clearRoutes } = setupRoutes([HOME_ROUTE, MAP_ROUTE]);
 try {
-  const zoneSignal = stateSignal("foo", {
-    id: "zone",
-    type: "string",
-  });
-
-  // Create routes from different families with query parameter
-  const { HOME_ROUTE, MAP_ROUTE } = setupRoutes({
-    HOME_ROUTE: `/`, // Root page
-    MAP_ROUTE: `/map?zone=${zoneSignal}`, // Map page with zone query parameter
-  });
-
   // Start on the map route with a zone value: /map?zone=foo
   updateRoutes(`${baseUrl}/map?zone=foo`);
 
@@ -76,7 +74,7 @@ try {
     },
   };
 } finally {
-  clearAllRoutes();
+  clearRoutes();
   globalSignalRegistry.clear();
 }
 ```

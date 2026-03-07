@@ -9,20 +9,20 @@ setRouteIntegration({
     return Promise.resolve();
   },
 });
-
+const walkSignal = stateSignal(false, { type: "boolean" }); // Default walk is false
+const walkMinuteSignal = stateSignal(20, { type: "number" }); // Default walk minutes is 10
+const ISOCHRONE_ROUTE = route(
+  `/isochrone?walk=${walkSignal}&walk_minute=${walkMinuteSignal}`,
+);
+const { updateRoutes, clearRoutes } = setupRoutes([ISOCHRONE_ROUTE]);
 try {
-  const walkSignal = stateSignal(false, { type: "boolean" }); // Default walk is false
-  const walkMinuteSignal = stateSignal(20, { type: "number" }); // Default walk minutes is 10
-  setupRoutes({
-    ISOCHRONE_ROUTE: `/isochrone?walk=${walkSignal}&walk_minute=${walkMinuteSignal}`,
-  });
   updateRoutes(`${baseUrl}/isochrone`);
   walkSignal.value = true;
   walkMinuteSignal.value = 30;
 
   return urlProgression;
 } finally {
-  clearAllRoutes();
+  clearRoutes();
   globalSignalRegistry.clear();
   setRouteIntegration(undefined);
 }
