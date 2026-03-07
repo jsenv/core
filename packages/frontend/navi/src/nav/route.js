@@ -229,9 +229,7 @@ export const updateRoutes = (
     // Use custom pattern matching - much simpler than URLPattern approach
     let extractedParams = routePattern.applyOn(url);
     let newMatching = Boolean(extractedParams);
-
     let newParams;
-
     if (extractedParams) {
       // No need for complex wildcard correction - custom system handles it properly
       if (compareTwoJsValues(oldParams, extractedParams)) {

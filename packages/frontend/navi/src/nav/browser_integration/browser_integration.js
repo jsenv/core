@@ -62,6 +62,7 @@ const applyRouting = (
     rerunSet: reloadSet,
     abortSignalMap,
     reason,
+    isReplace: navigationType === "replace",
   });
   const { allResult, runningActionSet } = updateActionsResult;
   const pendingTaskNameArray = [];
