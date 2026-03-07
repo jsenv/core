@@ -218,20 +218,19 @@ export const updateRoutes = (
     const routePrivateProperties = getRoutePrivateProperties(route);
     const { routePattern } = routePrivateProperties;
 
-    // Get previous state
     const previousState = routePreviousStateMap.get(route) || {
       matching: false,
       params: ROUTE_NOT_MATCHING_PARAMS,
+      actionParams: ROUTE_NOT_MATCHING_PARAMS,
     };
     const oldMatching = previousState.matching;
     const oldParams = previousState.params;
+    const oldActionParams = previousState.actionParams;
 
-    // Use custom pattern matching - much simpler than URLPattern approach
     let extractedParams = routePattern.applyOn(url);
     let newMatching = Boolean(extractedParams);
     let newParams;
     if (extractedParams) {
-      // No need for complex wildcard correction - custom system handles it properly
       if (compareTwoJsValues(oldParams, extractedParams)) {
         // No change in parameters, keep the old params
         newParams = oldParams;
@@ -249,12 +248,14 @@ export const updateRoutes = (
       newMatching,
       oldParams,
       newParams,
+      oldActionParams,
     };
     routeMatchInfoSet.add(routeMatchInfo);
     // Store current state for next comparison
     routePreviousStateMap.set(route, {
       matching: newMatching,
       params: newParams,
+      actionParams: oldActionParams, // updated to newActionParams in update_route_actions
     });
   }
 
@@ -513,6 +514,8 @@ export const updateRoutes = (
       const becomesMatching = !oldMatching && newMatching;
       const becomesNotMatching = oldMatching && !newMatching;
       const staysMatching = oldMatching && newMatching;
+      const newActionParams = route.actionParamsSignal.value;
+      routePreviousStateMap.get(route).actionParams = newActionParams;
 
       // Handle actions for routes that become matching
       if (becomesMatching) {
@@ -533,7 +536,6 @@ export const updateRoutes = (
         // route params have changed
         if (oldParams !== newParams) {
           // do action params have changed?
-          const newActionParams = route.actionParamsSignal.value;
           if (!compareTwoJsValues(oldActionParams, newActionParams)) {
             if (DEBUG) {
               console.debug(`${route} action params changed:`, newActionParams);
