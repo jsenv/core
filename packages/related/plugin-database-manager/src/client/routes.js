@@ -32,15 +32,12 @@ export const tablenameSignal = stateSignal(null);
 // because in the end actions are core things that can often/always be triggered outside UI
 // so UI is just an other way of triggering an action but should be able to catch if anything else does
 
-export const HOME_ROUTE = route(
-  `/?role_login_opened=${roleCanLoginOpenSignal}&role_login_height=${roleCanLoginHeightSignal}`,
-  // {
-  //   searchParams: {
-  //     role_login_opened: roleCanLoginOpenSignal,
-  //     role_login_height: roleCanLoginHeightSignal,
-  //   },
-  // },
-);
+export const HOME_ROUTE = route(`/`, {
+  searchParams: {
+    role_login_open: roleCanLoginOpenSignal,
+    role_login_height: roleCanLoginHeightSignal,
+  },
+});
 export const ROLE_ROUTE = route(`/roles/:rolname=${rolnameSignal}`, {
   action: ROLE.GET,
 });
