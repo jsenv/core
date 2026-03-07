@@ -217,6 +217,7 @@ if (import.meta.dev) {
           name: action.name,
           runningState: action.runningState.id,
           error: action.error,
+          data: action.data,
           params: action.params,
           isProxy: action.isProxy || false,
         });

@@ -6,7 +6,15 @@ export const TableRoutes = () => {
   return (
     <Route
       route={TABLE_ROUTE}
-      element={(table) => <TablePage table={table} />}
+      debug
+      element={{
+        always: ({ completed, data }) => {
+          if (completed) {
+            return <TablePage table={data} />;
+          }
+          return "Coucou";
+        },
+      }}
     />
   );
 };

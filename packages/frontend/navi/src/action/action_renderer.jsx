@@ -48,7 +48,8 @@ export const ActionRenderer = ({ action, children, disabled }) => {
     completed: renderCompleted,
     always: renderAlways,
   } = renderBranches;
-  const { idle, loading, aborted, error, data } = useActionStatus(action);
+  const { idle, loading, aborted, error, completed, data } =
+    useActionStatus(action);
   const UIRenderedPromise = useUIRenderedPromise(action);
   const [errorBoundary, resetErrorBoundary] = useErrorBoundary();
 
@@ -78,7 +79,7 @@ export const ActionRenderer = ({ action, children, disabled }) => {
   }
   // If renderAlways is provided, it wins and handles all rendering
   if (renderAlways) {
-    return renderAlways({ idle, loading, aborted, error, data });
+    return renderAlways({ idle, loading, aborted, completed, error, data });
   }
   if (idle) {
     return renderIdle(action);
