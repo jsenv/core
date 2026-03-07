@@ -1,46 +1,41 @@
 import { snapshotTests } from "@jsenv/snapshot";
 
 import { globalSignalRegistry, stateSignal } from "../state/state_signal.js";
-import { clearAllRoutes, setupRoutes, updateRoutes } from "./route.js";
+import { route, setupRoutes } from "./route.js";
 
 await snapshotTests(import.meta.url, ({ test }) => {
   test("route.params with static defaults", () => {
+    const mapLonSignal = stateSignal(undefined, {
+      default: -1, // static default only
+      type: "number",
+    });
+    const HOME_ROUTE = route("/");
+    const MAP_ROUTE = route(`/map/?lon=${mapLonSignal}`);
+    const { updateRoutes, clearRoutes } = setupRoutes([HOME_ROUTE, MAP_ROUTE]);
+
     try {
-      const mapLonSignal = stateSignal(undefined, {
-        default: -1, // static default only
-        type: "number",
-      });
-
-      const routes = setupRoutes({
-        HOME_ROUTE: "/",
-        MAP_ROUTE: `/map/?lon=${mapLonSignal}`,
-      });
-
       // Test initial state
       updateRoutes("http://localhost:3000/map");
-
       const initialState = {
         signal_value: mapLonSignal.value,
-        route_params: routes.MAP_ROUTE.params,
-        route_matching: routes.MAP_ROUTE.matching,
+        route_params: MAP_ROUTE.params,
+        route_matching: MAP_ROUTE.matching,
       };
 
       // Test with URL parameter
       updateRoutes("http://localhost:3000/map?lon=42");
-
       const withUrlParam = {
         signal_value: mapLonSignal.value,
-        route_params: routes.MAP_ROUTE.params,
-        route_matching: routes.MAP_ROUTE.matching,
+        route_params: MAP_ROUTE.params,
+        route_matching: MAP_ROUTE.matching,
       };
 
       // Test back to no URL parameter
       updateRoutes("http://localhost:3000/map");
-
       const backToNoParam = {
         signal_value: mapLonSignal.value,
-        route_params: routes.MAP_ROUTE.params,
-        route_matching: routes.MAP_ROUTE.matching,
+        route_params: MAP_ROUTE.params,
+        route_matching: MAP_ROUTE.matching,
       };
 
       return {
@@ -49,63 +44,46 @@ await snapshotTests(import.meta.url, ({ test }) => {
         back_to_no_param: backToNoParam,
       };
     } finally {
-      clearAllRoutes();
+      clearRoutes();
       globalSignalRegistry.clear();
     }
   });
 
   test("route.params with dynamic defaults", () => {
-    try {
-      const zoneSignal = stateSignal(undefined);
-      const mapLonSignal = stateSignal(zoneSignal, {
-        default: -1, // static fallback
-        type: "number",
-      });
+    const zoneSignal = stateSignal(undefined);
+    const mapLonSignal = stateSignal(zoneSignal, {
+      default: -1,
+      type: "number",
+    });
+    const HOME_ROUTE = route("/");
+    const MAP_ROUTE = route(`/map/?lon=${mapLonSignal}`);
+    const { updateRoutes, clearRoutes } = setupRoutes([HOME_ROUTE, MAP_ROUTE]);
 
-      const routes = setupRoutes({
-        HOME_ROUTE: "/",
-        MAP_ROUTE: `/map/?lon=${mapLonSignal}`,
-      });
+    try {
+      const getState = () => {
+        return {
+          zone_signal_value: zoneSignal.value,
+          maplon_signal_value: mapLonSignal.value,
+          route_params: MAP_ROUTE.params,
+          route_matching: MAP_ROUTE.matching,
+        };
+      };
 
       // Test initial state (should use static default)
       updateRoutes("http://localhost:3000/map");
-
-      const initialState = {
-        zone_signal_value: zoneSignal.value,
-        maplon_signal_value: mapLonSignal.value,
-        route_params: routes.MAP_ROUTE.params,
-        route_matching: routes.MAP_ROUTE.matching,
-      };
+      const initialState = getState();
 
       // Change dynamic default source
       zoneSignal.value = 5;
-
-      const afterDynamicChange = {
-        zone_signal_value: zoneSignal.value,
-        maplon_signal_value: mapLonSignal.value,
-        route_params: routes.MAP_ROUTE.params,
-        route_matching: routes.MAP_ROUTE.matching,
-      };
+      const afterDynamicChange = getState();
 
       // Test with explicit URL parameter that differs from dynamic default
       updateRoutes("http://localhost:3000/map?lon=10");
-
-      const withUrlParam = {
-        zone_signal_value: zoneSignal.value,
-        maplon_signal_value: mapLonSignal.value,
-        route_params: routes.MAP_ROUTE.params,
-        route_matching: routes.MAP_ROUTE.matching,
-      };
+      const withUrlParam = getState();
 
       // Remove URL parameter (should revert to dynamic default)
       updateRoutes("http://localhost:3000/map");
-
-      const backToDynamic = {
-        zone_signal_value: zoneSignal.value,
-        maplon_signal_value: mapLonSignal.value,
-        route_params: routes.MAP_ROUTE.params,
-        route_matching: routes.MAP_ROUTE.matching,
-      };
+      const backToDynamic = getState();
 
       return {
         initial_state_static_default: initialState,
@@ -114,67 +92,50 @@ await snapshotTests(import.meta.url, ({ test }) => {
         back_to_dynamic_default: backToDynamic,
       };
     } finally {
-      clearAllRoutes();
+      clearRoutes();
       globalSignalRegistry.clear();
     }
   });
 
   test("route.params with multiple signals and dynamic defaults", () => {
-    try {
-      const zoneSignal = stateSignal(undefined);
-      const mapLonSignal = stateSignal(zoneSignal, {
-        default: -1,
-        type: "number",
-      });
-      const mapLatSignal = stateSignal(zoneSignal, {
-        default: -2,
-        type: "number",
-      });
+    const zoneSignal = stateSignal(undefined);
+    const mapLonSignal = stateSignal(zoneSignal, {
+      default: -1,
+      type: "number",
+    });
+    const mapLatSignal = stateSignal(zoneSignal, {
+      default: -2,
+      type: "number",
+    });
+    const HOME_ROUTE = route("/");
+    const MAP_ROUTE = route(`/map/?lon=${mapLonSignal}&lat=${mapLatSignal}`);
+    const { updateRoutes, clearRoutes } = setupRoutes([HOME_ROUTE, MAP_ROUTE]);
 
-      const routes = setupRoutes({
-        HOME_ROUTE: "/",
-        MAP_ROUTE: `/map/?lon=${mapLonSignal}&lat=${mapLatSignal}`,
-      });
+    try {
+      const getState = () => {
+        return {
+          zone_signal: zoneSignal.value,
+          lon_signal: mapLonSignal.value,
+          lat_signal: mapLatSignal.value,
+          route_params: MAP_ROUTE.params,
+        };
+      };
 
       // Test initial state
       updateRoutes("http://localhost:3000/map");
-
-      const initialState = {
-        zone_signal: zoneSignal.value,
-        lon_signal: mapLonSignal.value,
-        lat_signal: mapLatSignal.value,
-        route_params: routes.MAP_ROUTE.params,
-      };
+      const initialState = getState();
 
       // Change dynamic default source
       zoneSignal.value = 42;
-
-      const afterDynamicChange = {
-        zone_signal: zoneSignal.value,
-        lon_signal: mapLonSignal.value,
-        lat_signal: mapLatSignal.value,
-        route_params: routes.MAP_ROUTE.params,
-      };
+      const afterDynamicChange = getState();
 
       // Test with partial URL parameters
       updateRoutes("http://localhost:3000/map?lon=100");
-
-      const withPartialUrl = {
-        zone_signal: zoneSignal.value,
-        lon_signal: mapLonSignal.value,
-        lat_signal: mapLatSignal.value,
-        route_params: routes.MAP_ROUTE.params,
-      };
+      const withPartialUrl = getState();
 
       // Test with full URL parameters
       updateRoutes("http://localhost:3000/map?lon=200&lat=300");
-
-      const withFullUrl = {
-        zone_signal: zoneSignal.value,
-        lon_signal: mapLonSignal.value,
-        lat_signal: mapLatSignal.value,
-        route_params: routes.MAP_ROUTE.params,
-      };
+      const withFullUrl = getState();
 
       return {
         initial_state: initialState,
@@ -183,73 +144,53 @@ await snapshotTests(import.meta.url, ({ test }) => {
         with_full_url: withFullUrl,
       };
     } finally {
-      clearAllRoutes();
+      clearRoutes();
       globalSignalRegistry.clear();
     }
   });
 
   test("route.params with path parameters and dynamic defaults", () => {
-    try {
-      const categorySignal = stateSignal(undefined);
-      const pageSignal = stateSignal(categorySignal, {
-        default: "home",
-        type: "string",
-      });
+    const categorySignal = stateSignal(undefined);
+    const pageSignal = stateSignal(categorySignal, {
+      default: "home",
+      type: "string",
+    });
+    const HOME_ROUTE = route("/");
+    const CATEGORY_ROUTE = route(`/category/:page=${pageSignal}`);
+    const { updateRoutes, clearRoutes } = setupRoutes([
+      HOME_ROUTE,
+      CATEGORY_ROUTE,
+    ]);
 
-      const routes = setupRoutes({
-        ROOT_ROUTE: "/",
-        CATEGORY_ROUTE: `/category/:page=${pageSignal}`,
-      });
-
-      // Test with static default
-      updateRoutes("http://localhost:3000/category/home");
-
-      const staticDefaultState = {
+    const getState = () => {
+      return {
         category_signal: categorySignal.value,
         page_signal: pageSignal.value,
-        route_params: routes.CATEGORY_ROUTE.params,
-        route_matching: routes.CATEGORY_ROUTE.matching,
+        route_params: CATEGORY_ROUTE.params,
+        route_matching: CATEGORY_ROUTE.matching,
       };
+    };
+
+    try {
+      // Test with static default
+      updateRoutes("http://localhost:3000/category/home");
+      const staticDefaultState = getState();
 
       // Test with different path parameter
       updateRoutes("http://localhost:3000/category/products");
-
-      const differentPathState = {
-        category_signal: categorySignal.value,
-        page_signal: pageSignal.value,
-        route_params: routes.CATEGORY_ROUTE.params,
-        route_matching: routes.CATEGORY_ROUTE.matching,
-      };
+      const differentPathState = getState();
 
       // Change dynamic default
       categorySignal.value = "products";
-
-      const afterDynamicChange = {
-        category_signal: categorySignal.value,
-        page_signal: pageSignal.value,
-        route_params: routes.CATEGORY_ROUTE.params,
-        route_matching: routes.CATEGORY_ROUTE.matching,
-      };
+      const afterDynamicChange = getState();
 
       // Navigate to URL that matches new dynamic default
       updateRoutes("http://localhost:3000/category/products");
-
-      const matchingDynamicDefault = {
-        category_signal: categorySignal.value,
-        page_signal: pageSignal.value,
-        route_params: routes.CATEGORY_ROUTE.params,
-        route_matching: routes.CATEGORY_ROUTE.matching,
-      };
+      const matchingDynamicDefault = getState();
 
       // Navigate to URL that no longer matches dynamic default
       updateRoutes("http://localhost:3000/category/home");
-
-      const nonMatchingOldDefault = {
-        category_signal: categorySignal.value,
-        page_signal: pageSignal.value,
-        route_params: routes.CATEGORY_ROUTE.params,
-        route_matching: routes.CATEGORY_ROUTE.matching,
-      };
+      const nonMatchingOldDefault = getState();
 
       return {
         static_default_state: staticDefaultState,
@@ -259,65 +200,52 @@ await snapshotTests(import.meta.url, ({ test }) => {
         non_matching_old_default: nonMatchingOldDefault,
       };
     } finally {
-      clearAllRoutes();
+      clearRoutes();
       globalSignalRegistry.clear();
     }
   });
 
   test("route.params with nested dynamic defaults chain", () => {
-    try {
-      const rootSignal = stateSignal(undefined);
-      const middleSignal = stateSignal(rootSignal, {
-        default: "middle_default",
-      });
-      const leafSignal = stateSignal(middleSignal, { default: "leaf_default" });
-
-      const routes = setupRoutes({
-        HOME_ROUTE: "/",
-        NESTED_ROUTE: `/nested/?root=${rootSignal}&middle=${middleSignal}&leaf=${leafSignal}`,
-      });
-
-      // Test initial state (all using static defaults)
-      updateRoutes("http://localhost:3000/nested");
-
-      const initialState = {
+    const rootSignal = stateSignal(undefined);
+    const middleSignal = stateSignal(rootSignal, {
+      default: "middle_default",
+    });
+    const leafSignal = stateSignal(middleSignal, { default: "leaf_default" });
+    const HOME_ROUTE = route("/");
+    const NESTED_ROUTE = route(
+      `/nested/?root=${rootSignal}&middle=${middleSignal}&leaf=${leafSignal}`,
+    );
+    const { updateRoutes, clearRoutes } = setupRoutes([
+      HOME_ROUTE,
+      NESTED_ROUTE,
+    ]);
+    const captureState = () => {
+      return {
         root_signal: rootSignal.value,
         middle_signal: middleSignal.value,
         leaf_signal: leafSignal.value,
-        route_params: routes.NESTED_ROUTE.params,
+        route_params: NESTED_ROUTE.params,
       };
+    };
+
+    try {
+      // Test initial state (all using static defaults)
+      updateRoutes("http://localhost:3000/nested");
+      const initialState = captureState();
 
       // Change root signal (should cascade)
       rootSignal.value = "root_changed";
-
-      const afterRootChange = {
-        root_signal: rootSignal.value,
-        middle_signal: middleSignal.value,
-        leaf_signal: leafSignal.value,
-        route_params: routes.NESTED_ROUTE.params,
-      };
+      const afterRootChange = captureState();
 
       // Change middle signal (should affect only leaf)
       middleSignal.value = "middle_changed";
-
-      const afterMiddleChange = {
-        root_signal: rootSignal.value,
-        middle_signal: middleSignal.value,
-        leaf_signal: leafSignal.value,
-        route_params: routes.NESTED_ROUTE.params,
-      };
+      const afterMiddleChange = captureState();
 
       // Test with URL parameters that override signals
       updateRoutes(
         "http://localhost:3000/nested?root=url_root&middle=url_middle&leaf=url_leaf",
       );
-
-      const withUrlOverrides = {
-        root_signal: rootSignal.value,
-        middle_signal: middleSignal.value,
-        leaf_signal: leafSignal.value,
-        route_params: routes.NESTED_ROUTE.params,
-      };
+      const withUrlOverrides = captureState();
 
       return {
         initial_state: initialState,
@@ -326,42 +254,42 @@ await snapshotTests(import.meta.url, ({ test }) => {
         with_url_overrides: withUrlOverrides,
       };
     } finally {
-      clearAllRoutes();
+      clearRoutes();
       globalSignalRegistry.clear();
     }
   });
 
   test("route.params comparison between static and dynamic defaults", () => {
+    // Create two similar setups: one with static defaults, one with dynamic
+    // Setup 1: Static defaults only
+    const staticSignal = stateSignal(undefined, { default: "static_value" });
+    // Setup 2: Dynamic defaults
+    const sourceSignal = stateSignal(undefined);
+    const dynamicSignal = stateSignal(sourceSignal, {
+      default: "static_fallback",
+    });
+    const HOME_ROUTE = route("/");
+    const STATIC_ROUTE = route(`/static/?param=${staticSignal}`);
+    const DYNAMIC_ROUTE = route(`/dynamic/?param=${dynamicSignal}`);
+    const { updateRoutes, clearRoutes } = setupRoutes([
+      HOME_ROUTE,
+      STATIC_ROUTE,
+      DYNAMIC_ROUTE,
+    ]);
+
     try {
-      // Create two similar setups: one with static defaults, one with dynamic
-
-      // Setup 1: Static defaults only
-      const staticSignal = stateSignal(undefined, { default: "static_value" });
-
-      // Setup 2: Dynamic defaults
-      const sourceSignal = stateSignal(undefined);
-      const dynamicSignal = stateSignal(sourceSignal, {
-        default: "static_fallback",
-      });
-
-      const routes = setupRoutes({
-        HOME_ROUTE: "/",
-        STATIC_ROUTE: `/static/?param=${staticSignal}`,
-        DYNAMIC_ROUTE: `/dynamic/?param=${dynamicSignal}`,
-      });
-
       // Test both routes initially
       updateRoutes("http://localhost:3000/static");
       const staticInitial = {
         signal_value: staticSignal.value,
-        route_params: routes.STATIC_ROUTE.params,
+        route_params: STATIC_ROUTE.params,
       };
 
       updateRoutes("http://localhost:3000/dynamic");
       const dynamicInitial = {
         source_signal: sourceSignal.value,
         dynamic_signal: dynamicSignal.value,
-        route_params: routes.DYNAMIC_ROUTE.params,
+        route_params: DYNAMIC_ROUTE.params,
       };
 
       // Change source signal for dynamic case
@@ -369,15 +297,14 @@ await snapshotTests(import.meta.url, ({ test }) => {
       const dynamicAfterChange = {
         source_signal: sourceSignal.value,
         dynamic_signal: dynamicSignal.value,
-        route_params: routes.DYNAMIC_ROUTE.params,
+        route_params: DYNAMIC_ROUTE.params,
       };
-
       // Test URL building with these different defaults
-      const staticUrl = routes.STATIC_ROUTE.buildRelativeUrl({});
-      const dynamicUrlBefore = routes.DYNAMIC_ROUTE.buildRelativeUrl({});
+      const staticUrl = STATIC_ROUTE.buildRelativeUrl({});
+      const dynamicUrlBefore = DYNAMIC_ROUTE.buildRelativeUrl({});
 
       sourceSignal.value = "url_test_value";
-      const dynamicUrlAfter = routes.DYNAMIC_ROUTE.buildRelativeUrl({});
+      const dynamicUrlAfter = DYNAMIC_ROUTE.buildRelativeUrl({});
 
       return {
         static_initial: staticInitial,
@@ -390,43 +317,41 @@ await snapshotTests(import.meta.url, ({ test }) => {
         },
       };
     } finally {
-      clearAllRoutes();
+      clearRoutes();
       globalSignalRegistry.clear();
     }
   });
 
   test("route.params with dynamic defaults inheritance bug", () => {
+    // This test reproduces bugs where dynamic defaults are not properly considered:
+    // 1. buildChildRouteUrl uses parentOptions.defaultValue instead of current dynamic default
+    // 2. shouldUseChildRoute uses static defaultValue instead of dynamic defaults
+    // 3. connections.find() could be optimized to use parameterOptions map
+
+    // Create a signal that will be used as dynamic default
+    const timeBasedDefaultSignal = stateSignal("morning");
+    const modeSignal = stateSignal(timeBasedDefaultSignal, {
+      id: "mode",
+      type: "string",
+      // This creates a dynamic default - when timeBasedDefaultSignal changes,
+      // the default value for modeSignal changes too
+    });
+    const categorySignal = stateSignal("general", {
+      id: "category",
+      type: "string",
+      defaultValue: "general", // Static default for comparison
+    });
+
+    // Initially, both signals are at their defaults
+    // modeSignal.value should equal timeBasedDefaultSignal.value ("morning")
+    // categorySignal.value should equal "general"
+    const PARENT_ROUTE = route(
+      `/parent/:mode=${modeSignal}&category=${categorySignal}`,
+    );
+    const CHILD_ROUTE = route(`/parent/child/:tab?`);
+    const { clearRoutes } = setupRoutes([PARENT_ROUTE, CHILD_ROUTE]);
+
     try {
-      // This test reproduces bugs where dynamic defaults are not properly considered:
-      // 1. buildChildRouteUrl uses parentOptions.defaultValue instead of current dynamic default
-      // 2. shouldUseChildRoute uses static defaultValue instead of dynamic defaults
-      // 3. connections.find() could be optimized to use parameterOptions map
-
-      // Create a signal that will be used as dynamic default
-      const timeBasedDefaultSignal = stateSignal("morning");
-
-      const modeSignal = stateSignal(timeBasedDefaultSignal, {
-        id: "mode",
-        type: "string",
-        // This creates a dynamic default - when timeBasedDefaultSignal changes,
-        // the default value for modeSignal changes too
-      });
-
-      const categorySignal = stateSignal("general", {
-        id: "category",
-        type: "string",
-        defaultValue: "general", // Static default for comparison
-      });
-
-      // Initially, both signals are at their defaults
-      // modeSignal.value should equal timeBasedDefaultSignal.value ("morning")
-      // categorySignal.value should equal "general"
-
-      const { CHILD_ROUTE } = setupRoutes({
-        PARENT_ROUTE: `/parent/:mode=${modeSignal}&category=${categorySignal}`,
-        CHILD_ROUTE: `/parent/child/:tab?`,
-      });
-
       // Test 1: Child route should not inherit parameters that are at their current dynamic defaults
       const childUrlWithDefaults = CHILD_ROUTE.buildUrl({ tab: "settings" });
 
@@ -461,7 +386,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
         childUrlBackToDynamicDefault, // BUG: Should be clean but may still include mode param
       };
     } finally {
-      clearAllRoutes();
+      clearRoutes();
       globalSignalRegistry.clear();
     }
   });

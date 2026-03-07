@@ -1,59 +1,46 @@
 # [route.params with nested dynamic defaults chain](../../route_params.test.js)
 
 ```js
-try {
-  const rootSignal = stateSignal(undefined);
-  const middleSignal = stateSignal(rootSignal, {
-    default: "middle_default",
-  });
-  const leafSignal = stateSignal(middleSignal, { default: "leaf_default" });
-
-  const routes = setupRoutes({
-    HOME_ROUTE: "/",
-    NESTED_ROUTE: `/nested/?root=${rootSignal}&middle=${middleSignal}&leaf=${leafSignal}`,
-  });
-
-  // Test initial state (all using static defaults)
-  updateRoutes("http://localhost:3000/nested");
-
-  const initialState = {
+const rootSignal = stateSignal(undefined);
+const middleSignal = stateSignal(rootSignal, {
+  default: "middle_default",
+});
+const leafSignal = stateSignal(middleSignal, { default: "leaf_default" });
+const HOME_ROUTE = route("/");
+const NESTED_ROUTE = route(
+  `/nested/?root=${rootSignal}&middle=${middleSignal}&leaf=${leafSignal}`,
+);
+const { updateRoutes, clearRoutes } = setupRoutes([
+  HOME_ROUTE,
+  NESTED_ROUTE,
+]);
+const captureState = () => {
+  return {
     root_signal: rootSignal.value,
     middle_signal: middleSignal.value,
     leaf_signal: leafSignal.value,
-    route_params: routes.NESTED_ROUTE.params,
+    route_params: NESTED_ROUTE.params,
   };
+};
+
+try {
+  // Test initial state (all using static defaults)
+  updateRoutes("http://localhost:3000/nested");
+  const initialState = captureState();
 
   // Change root signal (should cascade)
   rootSignal.value = "root_changed";
-
-  const afterRootChange = {
-    root_signal: rootSignal.value,
-    middle_signal: middleSignal.value,
-    leaf_signal: leafSignal.value,
-    route_params: routes.NESTED_ROUTE.params,
-  };
+  const afterRootChange = captureState();
 
   // Change middle signal (should affect only leaf)
   middleSignal.value = "middle_changed";
-
-  const afterMiddleChange = {
-    root_signal: rootSignal.value,
-    middle_signal: middleSignal.value,
-    leaf_signal: leafSignal.value,
-    route_params: routes.NESTED_ROUTE.params,
-  };
+  const afterMiddleChange = captureState();
 
   // Test with URL parameters that override signals
   updateRoutes(
     "http://localhost:3000/nested?root=url_root&middle=url_middle&leaf=url_leaf",
   );
-
-  const withUrlOverrides = {
-    root_signal: rootSignal.value,
-    middle_signal: middleSignal.value,
-    leaf_signal: leafSignal.value,
-    route_params: routes.NESTED_ROUTE.params,
-  };
+  const withUrlOverrides = captureState();
 
   return {
     initial_state: initialState,
@@ -62,7 +49,7 @@ try {
     with_url_overrides: withUrlOverrides,
   };
 } finally {
-  clearAllRoutes();
+  clearRoutes();
   globalSignalRegistry.clear();
 }
 ```

@@ -1,67 +1,47 @@
 # [route.params with path parameters and dynamic defaults](../../route_params.test.js)
 
 ```js
-try {
-  const categorySignal = stateSignal(undefined);
-  const pageSignal = stateSignal(categorySignal, {
-    default: "home",
-    type: "string",
-  });
+const categorySignal = stateSignal(undefined);
+const pageSignal = stateSignal(categorySignal, {
+  default: "home",
+  type: "string",
+});
+const HOME_ROUTE = route("/");
+const CATEGORY_ROUTE = route(`/category/:page=${pageSignal}`);
+const { updateRoutes, clearRoutes } = setupRoutes([
+  HOME_ROUTE,
+  CATEGORY_ROUTE,
+]);
 
-  const routes = setupRoutes({
-    ROOT_ROUTE: "/",
-    CATEGORY_ROUTE: `/category/:page=${pageSignal}`,
-  });
-
-  // Test with static default
-  updateRoutes("http://localhost:3000/category/home");
-
-  const staticDefaultState = {
+const getState = () => {
+  return {
     category_signal: categorySignal.value,
     page_signal: pageSignal.value,
-    route_params: routes.CATEGORY_ROUTE.params,
-    route_matching: routes.CATEGORY_ROUTE.matching,
+    route_params: CATEGORY_ROUTE.params,
+    route_matching: CATEGORY_ROUTE.matching,
   };
+};
+
+try {
+  // Test with static default
+  updateRoutes("http://localhost:3000/category/home");
+  const staticDefaultState = getState();
 
   // Test with different path parameter
   updateRoutes("http://localhost:3000/category/products");
-
-  const differentPathState = {
-    category_signal: categorySignal.value,
-    page_signal: pageSignal.value,
-    route_params: routes.CATEGORY_ROUTE.params,
-    route_matching: routes.CATEGORY_ROUTE.matching,
-  };
+  const differentPathState = getState();
 
   // Change dynamic default
   categorySignal.value = "products";
-
-  const afterDynamicChange = {
-    category_signal: categorySignal.value,
-    page_signal: pageSignal.value,
-    route_params: routes.CATEGORY_ROUTE.params,
-    route_matching: routes.CATEGORY_ROUTE.matching,
-  };
+  const afterDynamicChange = getState();
 
   // Navigate to URL that matches new dynamic default
   updateRoutes("http://localhost:3000/category/products");
-
-  const matchingDynamicDefault = {
-    category_signal: categorySignal.value,
-    page_signal: pageSignal.value,
-    route_params: routes.CATEGORY_ROUTE.params,
-    route_matching: routes.CATEGORY_ROUTE.matching,
-  };
+  const matchingDynamicDefault = getState();
 
   // Navigate to URL that no longer matches dynamic default
   updateRoutes("http://localhost:3000/category/home");
-
-  const nonMatchingOldDefault = {
-    category_signal: categorySignal.value,
-    page_signal: pageSignal.value,
-    route_params: routes.CATEGORY_ROUTE.params,
-    route_matching: routes.CATEGORY_ROUTE.matching,
-  };
+  const nonMatchingOldDefault = getState();
 
   return {
     static_default_state: staticDefaultState,
@@ -71,7 +51,7 @@ try {
     non_matching_old_default: nonMatchingOldDefault,
   };
 } finally {
-  clearAllRoutes();
+  clearRoutes();
   globalSignalRegistry.clear();
 }
 ```

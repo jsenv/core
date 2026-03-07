@@ -1,37 +1,35 @@
 # [route.params with dynamic defaults inheritance bug](../../route_params.test.js)
 
 ```js
+// This test reproduces bugs where dynamic defaults are not properly considered:
+// 1. buildChildRouteUrl uses parentOptions.defaultValue instead of current dynamic default
+// 2. shouldUseChildRoute uses static defaultValue instead of dynamic defaults
+// 3. connections.find() could be optimized to use parameterOptions map
+
+// Create a signal that will be used as dynamic default
+const timeBasedDefaultSignal = stateSignal("morning");
+const modeSignal = stateSignal(timeBasedDefaultSignal, {
+  id: "mode",
+  type: "string",
+  // This creates a dynamic default - when timeBasedDefaultSignal changes,
+  // the default value for modeSignal changes too
+});
+const categorySignal = stateSignal("general", {
+  id: "category",
+  type: "string",
+  defaultValue: "general", // Static default for comparison
+});
+
+// Initially, both signals are at their defaults
+// modeSignal.value should equal timeBasedDefaultSignal.value ("morning")
+// categorySignal.value should equal "general"
+const PARENT_ROUTE = route(
+  `/parent/:mode=${modeSignal}&category=${categorySignal}`,
+);
+const CHILD_ROUTE = route(`/parent/child/:tab?`);
+const { clearRoutes } = setupRoutes([PARENT_ROUTE, CHILD_ROUTE]);
+
 try {
-  // This test reproduces bugs where dynamic defaults are not properly considered:
-  // 1. buildChildRouteUrl uses parentOptions.defaultValue instead of current dynamic default
-  // 2. shouldUseChildRoute uses static defaultValue instead of dynamic defaults
-  // 3. connections.find() could be optimized to use parameterOptions map
-
-  // Create a signal that will be used as dynamic default
-  const timeBasedDefaultSignal = stateSignal("morning");
-
-  const modeSignal = stateSignal(timeBasedDefaultSignal, {
-    id: "mode",
-    type: "string",
-    // This creates a dynamic default - when timeBasedDefaultSignal changes,
-    // the default value for modeSignal changes too
-  });
-
-  const categorySignal = stateSignal("general", {
-    id: "category",
-    type: "string",
-    defaultValue: "general", // Static default for comparison
-  });
-
-  // Initially, both signals are at their defaults
-  // modeSignal.value should equal timeBasedDefaultSignal.value ("morning")
-  // categorySignal.value should equal "general"
-
-  const { CHILD_ROUTE } = setupRoutes({
-    PARENT_ROUTE: `/parent/:mode=${modeSignal}&category=${categorySignal}`,
-    CHILD_ROUTE: `/parent/child/:tab?`,
-  });
-
   // Test 1: Child route should not inherit parameters that are at their current dynamic defaults
   const childUrlWithDefaults = CHILD_ROUTE.buildUrl({ tab: "settings" });
 
@@ -66,7 +64,7 @@ try {
     childUrlBackToDynamicDefault, // BUG: Should be clean but may still include mode param
   };
 } finally {
-  clearAllRoutes();
+  clearRoutes();
   globalSignalRegistry.clear();
 }
 ```

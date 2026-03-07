@@ -1,57 +1,40 @@
 # [route.params with dynamic defaults](../../route_params.test.js)
 
 ```js
-try {
-  const zoneSignal = stateSignal(undefined);
-  const mapLonSignal = stateSignal(zoneSignal, {
-    default: -1, // static fallback
-    type: "number",
-  });
+const zoneSignal = stateSignal(undefined);
+const mapLonSignal = stateSignal(zoneSignal, {
+  default: -1,
+  type: "number",
+});
+const HOME_ROUTE = route("/");
+const MAP_ROUTE = route(`/map/?lon=${mapLonSignal}`);
+const { updateRoutes, clearRoutes } = setupRoutes([HOME_ROUTE, MAP_ROUTE]);
 
-  const routes = setupRoutes({
-    HOME_ROUTE: "/",
-    MAP_ROUTE: `/map/?lon=${mapLonSignal}`,
-  });
+try {
+  const getState = () => {
+    return {
+      zone_signal_value: zoneSignal.value,
+      maplon_signal_value: mapLonSignal.value,
+      route_params: MAP_ROUTE.params,
+      route_matching: MAP_ROUTE.matching,
+    };
+  };
 
   // Test initial state (should use static default)
   updateRoutes("http://localhost:3000/map");
-
-  const initialState = {
-    zone_signal_value: zoneSignal.value,
-    maplon_signal_value: mapLonSignal.value,
-    route_params: routes.MAP_ROUTE.params,
-    route_matching: routes.MAP_ROUTE.matching,
-  };
+  const initialState = getState();
 
   // Change dynamic default source
   zoneSignal.value = 5;
-
-  const afterDynamicChange = {
-    zone_signal_value: zoneSignal.value,
-    maplon_signal_value: mapLonSignal.value,
-    route_params: routes.MAP_ROUTE.params,
-    route_matching: routes.MAP_ROUTE.matching,
-  };
+  const afterDynamicChange = getState();
 
   // Test with explicit URL parameter that differs from dynamic default
   updateRoutes("http://localhost:3000/map?lon=10");
-
-  const withUrlParam = {
-    zone_signal_value: zoneSignal.value,
-    maplon_signal_value: mapLonSignal.value,
-    route_params: routes.MAP_ROUTE.params,
-    route_matching: routes.MAP_ROUTE.matching,
-  };
+  const withUrlParam = getState();
 
   // Remove URL parameter (should revert to dynamic default)
   updateRoutes("http://localhost:3000/map");
-
-  const backToDynamic = {
-    zone_signal_value: zoneSignal.value,
-    maplon_signal_value: mapLonSignal.value,
-    route_params: routes.MAP_ROUTE.params,
-    route_matching: routes.MAP_ROUTE.matching,
-  };
+  const backToDynamic = getState();
 
   return {
     initial_state_static_default: initialState,
@@ -60,7 +43,7 @@ try {
     back_to_dynamic_default: backToDynamic,
   };
 } finally {
-  clearAllRoutes();
+  clearRoutes();
   globalSignalRegistry.clear();
 }
 ```

@@ -1,61 +1,44 @@
 # [route.params with multiple signals and dynamic defaults](../../route_params.test.js)
 
 ```js
-try {
-  const zoneSignal = stateSignal(undefined);
-  const mapLonSignal = stateSignal(zoneSignal, {
-    default: -1,
-    type: "number",
-  });
-  const mapLatSignal = stateSignal(zoneSignal, {
-    default: -2,
-    type: "number",
-  });
+const zoneSignal = stateSignal(undefined);
+const mapLonSignal = stateSignal(zoneSignal, {
+  default: -1,
+  type: "number",
+});
+const mapLatSignal = stateSignal(zoneSignal, {
+  default: -2,
+  type: "number",
+});
+const HOME_ROUTE = route("/");
+const MAP_ROUTE = route(`/map/?lon=${mapLonSignal}&lat=${mapLatSignal}`);
+const { updateRoutes, clearRoutes } = setupRoutes([HOME_ROUTE, MAP_ROUTE]);
 
-  const routes = setupRoutes({
-    HOME_ROUTE: "/",
-    MAP_ROUTE: `/map/?lon=${mapLonSignal}&lat=${mapLatSignal}`,
-  });
+try {
+  const getState = () => {
+    return {
+      zone_signal: zoneSignal.value,
+      lon_signal: mapLonSignal.value,
+      lat_signal: mapLatSignal.value,
+      route_params: MAP_ROUTE.params,
+    };
+  };
 
   // Test initial state
   updateRoutes("http://localhost:3000/map");
-
-  const initialState = {
-    zone_signal: zoneSignal.value,
-    lon_signal: mapLonSignal.value,
-    lat_signal: mapLatSignal.value,
-    route_params: routes.MAP_ROUTE.params,
-  };
+  const initialState = getState();
 
   // Change dynamic default source
   zoneSignal.value = 42;
-
-  const afterDynamicChange = {
-    zone_signal: zoneSignal.value,
-    lon_signal: mapLonSignal.value,
-    lat_signal: mapLatSignal.value,
-    route_params: routes.MAP_ROUTE.params,
-  };
+  const afterDynamicChange = getState();
 
   // Test with partial URL parameters
   updateRoutes("http://localhost:3000/map?lon=100");
-
-  const withPartialUrl = {
-    zone_signal: zoneSignal.value,
-    lon_signal: mapLonSignal.value,
-    lat_signal: mapLatSignal.value,
-    route_params: routes.MAP_ROUTE.params,
-  };
+  const withPartialUrl = getState();
 
   // Test with full URL parameters
   updateRoutes("http://localhost:3000/map?lon=200&lat=300");
-
-  const withFullUrl = {
-    zone_signal: zoneSignal.value,
-    lon_signal: mapLonSignal.value,
-    lat_signal: mapLatSignal.value,
-    route_params: routes.MAP_ROUTE.params,
-  };
+  const withFullUrl = getState();
 
   return {
     initial_state: initialState,
@@ -64,7 +47,7 @@ try {
     with_full_url: withFullUrl,
   };
 } finally {
-  clearAllRoutes();
+  clearRoutes();
   globalSignalRegistry.clear();
 }
 ```

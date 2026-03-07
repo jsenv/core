@@ -1,36 +1,36 @@
 # [route.params comparison between static and dynamic defaults](../../route_params.test.js)
 
 ```js
+// Create two similar setups: one with static defaults, one with dynamic
+// Setup 1: Static defaults only
+const staticSignal = stateSignal(undefined, { default: "static_value" });
+// Setup 2: Dynamic defaults
+const sourceSignal = stateSignal(undefined);
+const dynamicSignal = stateSignal(sourceSignal, {
+  default: "static_fallback",
+});
+const HOME_ROUTE = route("/");
+const STATIC_ROUTE = route(`/static/?param=${staticSignal}`);
+const DYNAMIC_ROUTE = route(`/dynamic/?param=${dynamicSignal}`);
+const { updateRoutes, clearRoutes } = setupRoutes([
+  HOME_ROUTE,
+  STATIC_ROUTE,
+  DYNAMIC_ROUTE,
+]);
+
 try {
-  // Create two similar setups: one with static defaults, one with dynamic
-
-  // Setup 1: Static defaults only
-  const staticSignal = stateSignal(undefined, { default: "static_value" });
-
-  // Setup 2: Dynamic defaults
-  const sourceSignal = stateSignal(undefined);
-  const dynamicSignal = stateSignal(sourceSignal, {
-    default: "static_fallback",
-  });
-
-  const routes = setupRoutes({
-    HOME_ROUTE: "/",
-    STATIC_ROUTE: `/static/?param=${staticSignal}`,
-    DYNAMIC_ROUTE: `/dynamic/?param=${dynamicSignal}`,
-  });
-
   // Test both routes initially
   updateRoutes("http://localhost:3000/static");
   const staticInitial = {
     signal_value: staticSignal.value,
-    route_params: routes.STATIC_ROUTE.params,
+    route_params: STATIC_ROUTE.params,
   };
 
   updateRoutes("http://localhost:3000/dynamic");
   const dynamicInitial = {
     source_signal: sourceSignal.value,
     dynamic_signal: dynamicSignal.value,
-    route_params: routes.DYNAMIC_ROUTE.params,
+    route_params: DYNAMIC_ROUTE.params,
   };
 
   // Change source signal for dynamic case
@@ -38,15 +38,14 @@ try {
   const dynamicAfterChange = {
     source_signal: sourceSignal.value,
     dynamic_signal: dynamicSignal.value,
-    route_params: routes.DYNAMIC_ROUTE.params,
+    route_params: DYNAMIC_ROUTE.params,
   };
-
   // Test URL building with these different defaults
-  const staticUrl = routes.STATIC_ROUTE.buildRelativeUrl({});
-  const dynamicUrlBefore = routes.DYNAMIC_ROUTE.buildRelativeUrl({});
+  const staticUrl = STATIC_ROUTE.buildRelativeUrl({});
+  const dynamicUrlBefore = DYNAMIC_ROUTE.buildRelativeUrl({});
 
   sourceSignal.value = "url_test_value";
-  const dynamicUrlAfter = routes.DYNAMIC_ROUTE.buildRelativeUrl({});
+  const dynamicUrlAfter = DYNAMIC_ROUTE.buildRelativeUrl({});
 
   return {
     static_initial: staticInitial,
@@ -59,7 +58,7 @@ try {
     },
   };
 } finally {
-  clearAllRoutes();
+  clearRoutes();
   globalSignalRegistry.clear();
 }
 ```

@@ -1,42 +1,37 @@
 # [route.params with static defaults](../../route_params.test.js)
 
 ```js
+const mapLonSignal = stateSignal(undefined, {
+  default: -1, // static default only
+  type: "number",
+});
+const HOME_ROUTE = route("/");
+const MAP_ROUTE = route(`/map/?lon=${mapLonSignal}`);
+const { updateRoutes, clearRoutes } = setupRoutes([HOME_ROUTE, MAP_ROUTE]);
+
 try {
-  const mapLonSignal = stateSignal(undefined, {
-    default: -1, // static default only
-    type: "number",
-  });
-
-  const routes = setupRoutes({
-    HOME_ROUTE: "/",
-    MAP_ROUTE: `/map/?lon=${mapLonSignal}`,
-  });
-
   // Test initial state
   updateRoutes("http://localhost:3000/map");
-
   const initialState = {
     signal_value: mapLonSignal.value,
-    route_params: routes.MAP_ROUTE.params,
-    route_matching: routes.MAP_ROUTE.matching,
+    route_params: MAP_ROUTE.params,
+    route_matching: MAP_ROUTE.matching,
   };
 
   // Test with URL parameter
   updateRoutes("http://localhost:3000/map?lon=42");
-
   const withUrlParam = {
     signal_value: mapLonSignal.value,
-    route_params: routes.MAP_ROUTE.params,
-    route_matching: routes.MAP_ROUTE.matching,
+    route_params: MAP_ROUTE.params,
+    route_matching: MAP_ROUTE.matching,
   };
 
   // Test back to no URL parameter
   updateRoutes("http://localhost:3000/map");
-
   const backToNoParam = {
     signal_value: mapLonSignal.value,
-    route_params: routes.MAP_ROUTE.params,
-    route_matching: routes.MAP_ROUTE.matching,
+    route_params: MAP_ROUTE.params,
+    route_matching: MAP_ROUTE.matching,
   };
 
   return {
@@ -45,7 +40,7 @@ try {
     back_to_no_param: backToNoParam,
   };
 } finally {
-  clearAllRoutes();
+  clearRoutes();
   globalSignalRegistry.clear();
 }
 ```
