@@ -26,9 +26,9 @@ const ROUTE_NOT_MATCHING_PARAMS = {};
 let isUpdatingRoutesFromUrl = false;
 export const route = (
   pattern,
-  { action = ACTION.COMPLETED, actionSearchParams } = {},
+  { searchParams, action = ACTION.COMPLETED, actionSearchParams } = {},
 ) => {
-  const routePattern = createRoutePattern(pattern);
+  const routePattern = createRoutePattern(pattern, { searchParams });
   if (DEBUG) {
     console.debug(`Creating route: ${pattern}`);
   }
