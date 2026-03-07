@@ -1,24 +1,29 @@
 # [alive signal at dynamic segment position](../../route_url_sync.test.js)
 
 ```js
+const sectionSignal = stateSignal("settings");
+const tabSignal = stateSignal("general");
+const analyticsTabSignal = stateSignal("overview");
+const ROOT_ROUTE = route(`/`);
+const ADMIN_ROUTE = route(`/admin/:section=${sectionSignal}/`);
+const ADMIN_SETTINGS_ROUTE = route(`/admin/settings/:tab=${tabSignal}/`);
+const ADMIN_ANALYTICS_ROUTE = route(
+  `/admin/analytics?tab=${analyticsTabSignal}`,
+);
+const { clearRoutes } = setupRoutes([
+  ROOT_ROUTE,
+  ADMIN_ROUTE,
+  ADMIN_SETTINGS_ROUTE,
+  ADMIN_ANALYTICS_ROUTE,
+]);
+
 try {
-  const sectionSignal = stateSignal("settings");
-  const tabSignal = stateSignal("general");
-  const analyticsTabSignal = stateSignal("overview");
-  const { ADMIN_ROUTE } = setupRoutes({
-    ROOT: "/",
-    ADMIN_ROUTE: `/admin/:section=${sectionSignal}/`,
-    ADMIN_SETTINGS_ROUTE: `/admin/settings/:tab=${tabSignal}`,
-    ADMIN_ANALYTICS_ROUTE: `/admin/analytics?tab=${analyticsTabSignal}`,
-  });
-
   analyticsTabSignal.value = "details";
-
   return {
     admin_url: ADMIN_ROUTE.url,
   };
 } finally {
-  clearAllRoutes();
+  clearRoutes();
   globalSignalRegistry.clear();
 }
 ```
