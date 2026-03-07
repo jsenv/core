@@ -10,7 +10,9 @@ setRouteIntegration({
   },
 });
 const mapStyleSignal = stateSignal("street");
-const MAP_ROUTE = route("/map/", { searchParams: { style: mapStyleSignal } });
+const MAP_ROUTE = route("/map/", {
+  searchParams: { style: mapStyleSignal },
+});
 const { updateRoutes, clearRoutes } = setupRoutes([MAP_ROUTE]);
 try {
   updateRoutes(`${baseUrl}/map`);

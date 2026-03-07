@@ -10,8 +10,8 @@ const dynamicSignal = stateSignal(sourceSignal, {
   default: "static_fallback",
 });
 const HOME_ROUTE = route("/");
-const STATIC_ROUTE = route(`/static/?param=${staticSignal}`);
-const DYNAMIC_ROUTE = route(`/dynamic/?param=${dynamicSignal}`);
+const STATIC_ROUTE = route("/static/", { searchParams: { param: staticSignal } });
+const DYNAMIC_ROUTE = route("/dynamic/", { searchParams: { param: dynamicSignal } });
 const { updateRoutes, clearRoutes } = setupRoutes([
   HOME_ROUTE,
   STATIC_ROUTE,

@@ -76,8 +76,8 @@ try {
   "categoryValue": "special",
   "childUrlWithDefaults": "http://127.0.0.1/parent/child/settings",
   "childUrlAfterDynamicDefaultChange": "http://127.0.0.1/parent/child/settings",
-  "childUrlWithCustomValues": "http://127.0.0.1/parent/child/settings?category=special&mode=evening",
-  "childUrlBackToDynamicDefault": "http://127.0.0.1/parent/child/settings?category=special"
+  "childUrlWithCustomValues": "http://127.0.0.1/parent/child/settings?mode=evening",
+  "childUrlBackToDynamicDefault": "http://127.0.0.1/parent/child/settings"
 }
 ```
 

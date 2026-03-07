@@ -13,7 +13,9 @@ const colorsSignal = stateSignal([], {
   id: "colorsArrayReverse",
   type: "array",
 });
-const COLORS_ROUTE = route("/colors", { searchParams: { colors: colorsSignal } });
+const COLORS_ROUTE = route("/colors", {
+  searchParams: { colors: colorsSignal },
+});
 const { updateRoutes, clearRoutes } = setupRoutes([COLORS_ROUTE]);
 try {
   const captureState = () => {

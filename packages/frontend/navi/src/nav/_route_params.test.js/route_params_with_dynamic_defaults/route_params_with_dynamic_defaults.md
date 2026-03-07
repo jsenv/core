@@ -7,7 +7,7 @@ const mapLonSignal = stateSignal(zoneSignal, {
   type: "number",
 });
 const HOME_ROUTE = route("/");
-const MAP_ROUTE = route(`/map/?lon=${mapLonSignal}`);
+const MAP_ROUTE = route("/map/", { searchParams: { lon: mapLonSignal } });
 const { updateRoutes, clearRoutes } = setupRoutes([HOME_ROUTE, MAP_ROUTE]);
 
 try {

@@ -10,7 +10,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
       type: "number",
     });
     const HOME_ROUTE = route("/");
-    const MAP_ROUTE = route(`/map/?lon=${mapLonSignal}`);
+    const MAP_ROUTE = route("/map/", { searchParams: { lon: mapLonSignal } });
     const { updateRoutes, clearRoutes } = setupRoutes([HOME_ROUTE, MAP_ROUTE]);
 
     try {
@@ -56,7 +56,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
       type: "number",
     });
     const HOME_ROUTE = route("/");
-    const MAP_ROUTE = route(`/map/?lon=${mapLonSignal}`);
+    const MAP_ROUTE = route("/map/", { searchParams: { lon: mapLonSignal } });
     const { updateRoutes, clearRoutes } = setupRoutes([HOME_ROUTE, MAP_ROUTE]);
 
     try {
@@ -108,7 +108,9 @@ await snapshotTests(import.meta.url, ({ test }) => {
       type: "number",
     });
     const HOME_ROUTE = route("/");
-    const MAP_ROUTE = route(`/map/?lon=${mapLonSignal}&lat=${mapLatSignal}`);
+    const MAP_ROUTE = route("/map/", {
+      searchParams: { lon: mapLonSignal, lat: mapLatSignal },
+    });
     const { updateRoutes, clearRoutes } = setupRoutes([HOME_ROUTE, MAP_ROUTE]);
 
     try {
@@ -212,9 +214,13 @@ await snapshotTests(import.meta.url, ({ test }) => {
     });
     const leafSignal = stateSignal(middleSignal, { default: "leaf_default" });
     const HOME_ROUTE = route("/");
-    const NESTED_ROUTE = route(
-      `/nested/?root=${rootSignal}&middle=${middleSignal}&leaf=${leafSignal}`,
-    );
+    const NESTED_ROUTE = route("/nested/", {
+      searchParams: {
+        root: rootSignal,
+        middle: middleSignal,
+        leaf: leafSignal,
+      },
+    });
     const { updateRoutes, clearRoutes } = setupRoutes([
       HOME_ROUTE,
       NESTED_ROUTE,
@@ -269,8 +275,12 @@ await snapshotTests(import.meta.url, ({ test }) => {
       default: "static_fallback",
     });
     const HOME_ROUTE = route("/");
-    const STATIC_ROUTE = route(`/static/?param=${staticSignal}`);
-    const DYNAMIC_ROUTE = route(`/dynamic/?param=${dynamicSignal}`);
+    const STATIC_ROUTE = route("/static/", {
+      searchParams: { param: staticSignal },
+    });
+    const DYNAMIC_ROUTE = route("/dynamic/", {
+      searchParams: { param: dynamicSignal },
+    });
     const { updateRoutes, clearRoutes } = setupRoutes([
       HOME_ROUTE,
       STATIC_ROUTE,

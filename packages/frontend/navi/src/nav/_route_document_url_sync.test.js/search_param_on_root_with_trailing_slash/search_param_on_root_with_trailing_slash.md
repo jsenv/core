@@ -12,7 +12,9 @@ setRouteIntegration({
 const tableOpenedSignal = stateSignal(false, {
   type: "boolean",
 });
-const HOME_ROUTE = route("/", { searchParams: { table_opened: tableOpenedSignal } });
+const HOME_ROUTE = route("/", {
+  searchParams: { table_opened: tableOpenedSignal },
+});
 const OTHER_ROUTE = route(`/other`);
 const { updateRoutes, clearRoutes } = setupRoutes([
   HOME_ROUTE,

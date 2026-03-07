@@ -7,9 +7,13 @@ const middleSignal = stateSignal(rootSignal, {
 });
 const leafSignal = stateSignal(middleSignal, { default: "leaf_default" });
 const HOME_ROUTE = route("/");
-const NESTED_ROUTE = route(
-  `/nested/?root=${rootSignal}&middle=${middleSignal}&leaf=${leafSignal}`,
-);
+const NESTED_ROUTE = route("/nested/", {
+  searchParams: {
+    root: rootSignal,
+    middle: middleSignal,
+    leaf: leafSignal,
+  },
+});
 const { updateRoutes, clearRoutes } = setupRoutes([
   HOME_ROUTE,
   NESTED_ROUTE,

@@ -11,7 +11,9 @@ setRouteIntegration({
   },
 });
 const priceSignal = stateSignal(100, { type: "number" });
-const SHOP_ROUTE = route("/shop", { searchParams: { maxPrice: priceSignal } });
+const SHOP_ROUTE = route("/shop", {
+  searchParams: { maxPrice: priceSignal },
+});
 const { updateRoutes, clearRoutes } = setupRoutes([SHOP_ROUTE]);
 try {
   // Initial state - route matching with price=50

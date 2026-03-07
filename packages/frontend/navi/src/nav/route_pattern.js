@@ -29,26 +29,33 @@ setBaseUrl(
 /**
  * Creates a custom route pattern matcher
  */
-export const createRoutePattern = (pattern) => {
-  // Detect and process signals in the pattern first
-  const [cleanPattern, connections] = detectSignals(pattern);
+export const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
+  // Detect and process path signals in the pattern
+  const [cleanPattern, pathConnections] = detectSignals(pattern);
 
-  // Build separate connection maps for path vs query parameters
+  // Build pathConnectionMap from path signals
   const pathConnectionMap = new Map();
-  const queryConnectionMap = new Map();
-
-  // Create signalSet to track all signals this pattern depends on
   const signalSet = new Set();
-
-  for (const connection of connections) {
-    if (connection.paramType === "path") {
-      pathConnectionMap.set(connection.paramName, connection);
-    } else if (connection.paramType === "query") {
-      queryConnectionMap.set(connection.paramName, connection);
-    }
-
+  for (const connection of pathConnections) {
+    pathConnectionMap.set(connection.paramName, connection);
     signalSet.add(connection.signal);
   }
+
+  // Build queryConnectionMap directly from searchParams
+  const queryConnectionMap = new Map();
+  for (const [paramName, paramSignal] of Object.entries(searchParams)) {
+    const signalId = paramSignal.__signalId;
+    const registryEntry = globalSignalRegistry.get(signalId);
+    if (registryEntry) {
+      const { signal, options } = registryEntry;
+      const connection = { paramName, signal, paramType: "query", ...options };
+      queryConnectionMap.set(paramName, connection);
+      signalSet.add(signal);
+    }
+  }
+
+  // All connections (path + query) for ancestor/descendant signal resolution
+  const connections = [...pathConnections, ...queryConnectionMap.values()];
 
   const parsedPattern = parsePattern(cleanPattern, {
     pathConnectionMap,
@@ -2093,23 +2100,8 @@ const detectSignals = (routePattern) => {
   const signalConnections = [];
   let updatedPattern = routePattern;
 
-  // First check for the common mistake: :${signalName} without parameter name
-  const anonymousSignalRegex = /([?:&])(\{navi_state_signal:[^}]+\})/g;
-  let anonymousMatch;
-  while ((anonymousMatch = anonymousSignalRegex.exec(routePattern)) !== null) {
-    const [fullMatch, prefix, signalString] = anonymousMatch;
-    console.warn(
-      `[detectSignals] Anonymous signal parameter detected: "${fullMatch}". ` +
-        `This pattern won't work correctly because it lacks a parameter name. ` +
-        `Consider using "${prefix}paramName=${signalString}" instead. ` +
-        `For example, if this should be a "mode" parameter, use "${prefix}mode=${signalString}".`,
-    );
-  }
-
-  // Look for signals in two formats:
-  // 1. Expected format: :paramName={navi_state_signal:id} or ?paramName={navi_state_signal:id} or &paramName={navi_state_signal:id}
-  // 2. Typoe format (missing = sign): &paramName{navi_state_signal:id}
-  const signalParamRegex = /([?:&])(\w+)(=)?(\{navi_state_signal:[^}]+\})/g;
+  // Look for path signals: :paramName={navi_state_signal:id}
+  const signalParamRegex = /(:)(\w+)(=)?(\{navi_state_signal:[^}]+\})/g;
   let match;
 
   while ((match = signalParamRegex.exec(routePattern)) !== null) {
@@ -2137,21 +2129,11 @@ const detectSignals = (routePattern) => {
 
     if (signalData) {
       const { signal, options } = signalData;
-
-      let replacement;
-      if (prefix === ":") {
-        // Path parameter: :section={navi_state_signal:...} becomes :section
-        replacement = `${prefix}${paramName}`;
-      } else if (prefix === "?" || prefix === "&") {
-        // Query parameter: ?city={navi_state_signal:...} or &lon{navi_state_signal:...} becomes ?city or &lon
-        replacement = `${prefix}${paramName}`;
-      }
-      updatedPattern = updatedPattern.replace(fullMatch, replacement);
-
+      updatedPattern = updatedPattern.replace(fullMatch, `:${paramName}`);
       signalConnections.push({
         paramName,
         signal,
-        paramType: prefix === ":" ? "path" : "query", // Store param type during parsing
+        paramType: "path",
         ...options,
       });
     } else {
@@ -2222,6 +2204,16 @@ const canParameterReachChildRoute = (
  * Parse a route pattern string into structured segments
  */
 const parsePattern = (pattern, { pathConnectionMap, queryConnectionMap }) => {
+  // Build queryParams from queryConnectionMap
+  const queryParams = [];
+  for (const [paramName, connection] of queryConnectionMap) {
+    queryParams.push({
+      type: "query_param",
+      name: paramName,
+      hasDefaultValue: connection.getDefaultValue() !== undefined,
+    });
+  }
+
   // Handle root route
   if (pattern === "/") {
     return {
@@ -2229,42 +2221,12 @@ const parsePattern = (pattern, { pathConnectionMap, queryConnectionMap }) => {
       segments: [],
       trailingSlash: true,
       wildcard: false,
-      queryParams: [],
+      queryParams,
     };
   }
 
-  // Separate path and query portions
-  const [pathPortion, queryPortion] = pattern.split("?");
-
-  // Parse query parameters if present
-  const queryParams = [];
-  if (queryPortion) {
-    // Split query parameters by & and parse each one
-    const querySegments = queryPortion.split("&");
-    for (const querySegment of querySegments) {
-      if (querySegment.includes("=")) {
-        // Parameter with potential value: tab=value or just tab
-        const [paramName, paramValue] = querySegment.split("=", 2);
-        queryParams.push({
-          type: "query_param",
-          name: paramName,
-          hasDefaultValue: paramValue === undefined, // No value means it uses signal/default
-        });
-      } else {
-        // Parameter without value: tab
-        queryParams.push({
-          type: "query_param",
-          name: querySegment,
-          hasDefaultValue: true,
-        });
-      }
-    }
-  }
-
   // Remove leading slash for processing the path portion
-  let cleanPattern = pathPortion.startsWith("/")
-    ? pathPortion.slice(1)
-    : pathPortion;
+  let cleanPattern = pattern.startsWith("/") ? pattern.slice(1) : pattern;
 
   // Check for wildcard first
   const wildcard = cleanPattern.endsWith("*");
@@ -2277,7 +2239,7 @@ const parsePattern = (pattern, { pathConnectionMap, queryConnectionMap }) => {
   }
 
   // Check for trailing slash (after wildcard check)
-  const trailingSlash = !wildcard && pathPortion.endsWith("/");
+  const trailingSlash = !wildcard && pattern.endsWith("/");
   if (trailingSlash) {
     cleanPattern = cleanPattern.slice(0, -1); // Remove trailing /
   }
@@ -2720,21 +2682,16 @@ const buildHierarchicalQueryParams = (
   // ancestorPatterns is in correct order: root ancestor first, then immediate parent
 
   for (const ancestorPatternObj of ancestorPatterns) {
-    if (ancestorPatternObj.parsedPattern?.queryParams) {
-      for (const queryParam of ancestorPatternObj.parsedPattern.queryParams) {
-        const paramName = queryParam.name;
-        if (
-          params[paramName] !== undefined &&
-          !processedParams.has(paramName)
-        ) {
-          queryParams[paramName] = params[paramName];
-          processedParams.add(paramName);
+    for (const queryParam of ancestorPatternObj.parsedPattern.queryParams) {
+      const paramName = queryParam.name;
+      if (params[paramName] !== undefined && !processedParams.has(paramName)) {
+        queryParams[paramName] = params[paramName];
+        processedParams.add(paramName);
 
-          if (DEBUG) {
-            console.debug(
-              `Added ancestor param: ${paramName}=${params[paramName]}`,
-            );
-          }
+        if (DEBUG) {
+          console.debug(
+            `Added ancestor param: ${paramName}=${params[paramName]}`,
+          );
         }
       }
     }
@@ -2859,7 +2816,7 @@ const buildUrlFromPattern = (
 
   // Check if we'll have query parameters to decide on trailing slash removal
   const willHaveQueryParams =
-    parsedPattern.queryParams?.some((qp) => {
+    parsedPattern.queryParams.some((qp) => {
       const value = params[qp.name];
       return value !== undefined;
     }) ||
