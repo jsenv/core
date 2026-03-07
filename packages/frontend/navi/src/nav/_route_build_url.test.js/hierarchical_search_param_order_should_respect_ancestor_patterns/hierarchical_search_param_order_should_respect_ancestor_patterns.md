@@ -5,13 +5,13 @@ const zoneSignal = stateSignal("zone-123", { id: "zone" });
 const walkSignal = stateSignal(false, { id: "walk", type: "boolean" });
 const timeSignal = stateSignal(30, { id: "time", type: "number" });
 const modeSignal = stateSignal("driving", { id: "mode" });
-const MAP_ROUTE = route(`/map?zone=${zoneSignal}`);
-const MAP_ISOCHRONE_ROUTE = route(
-  `/map/isochrone/?walk=${walkSignal}&time=${timeSignal}`,
-);
-const MAP_ISOCHRONE_WALK_ROUTE = route(
-  `/map/isochrone/walk?mode=${modeSignal}`,
-);
+const MAP_ROUTE = route("/map", { searchParams: { zone: zoneSignal } });
+const MAP_ISOCHRONE_ROUTE = route("/map/isochrone/", {
+  searchParams: { walk: walkSignal, time: timeSignal },
+});
+const MAP_ISOCHRONE_WALK_ROUTE = route("/map/isochrone/walk", {
+  searchParams: { mode: modeSignal },
+});
 const { clearRoutes } = setupRoutes([
   MAP_ROUTE,
   MAP_ISOCHRONE_ROUTE,

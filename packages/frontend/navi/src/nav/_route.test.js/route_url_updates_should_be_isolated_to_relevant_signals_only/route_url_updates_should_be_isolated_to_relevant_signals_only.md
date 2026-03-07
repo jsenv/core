@@ -7,10 +7,10 @@ const unrelatedSignal = stateSignal("initial", { id: "unrelated" });
 
 // Create routes where only some use specific signals
 const USER_ROUTE = route(`/user/:id=${userIdSignal}`);
-const MAP_ROUTE = route(`/map?zone=${mapZoneSignal}`);
-const MIXED_ROUTE = route(
-  `/mixed?user=${userIdSignal}&zone=${mapZoneSignal}`,
-);
+const MAP_ROUTE = route("/map", { searchParams: { zone: mapZoneSignal } });
+const MIXED_ROUTE = route("/mixed", {
+  searchParams: { user: userIdSignal, zone: mapZoneSignal },
+});
 const { clearRoutes } = setupRoutes([USER_ROUTE, MAP_ROUTE, MIXED_ROUTE]);
 try {
   // Read initial URLs

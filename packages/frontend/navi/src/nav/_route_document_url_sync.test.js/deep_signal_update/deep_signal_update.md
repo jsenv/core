@@ -13,9 +13,11 @@ const zoneSignal = stateSignal(undefined);
 const panelSignal = stateSignal(undefined);
 const sportSignal = stateSignal(false, { type: "boolean" });
 const HOME_ROUTE = route("/");
-const MAP_ROUTE = route(`/map/?zone=${zoneSignal}`);
+const MAP_ROUTE = route("/map/", { searchParams: { zone: zoneSignal } });
 const MAP_PANEL_ROUTE = route(`/map/:panel=${panelSignal}/`);
-const MAP_FACILITIES_ROUTE = route(`/map/facilities?sport=${sportSignal}`);
+const MAP_FACILITIES_ROUTE = route("/map/facilities", {
+  searchParams: { sport: sportSignal },
+});
 const MAP_OVERVIEW_ROUTE = route("/map/overview");
 const { updateRoutes, clearRoutes } = setupRoutes([
   HOME_ROUTE,

@@ -6,9 +6,11 @@ const mapLonSignal = stateSignal(zoneLonSignal, { default: -1 });
 const isoLonSignal = stateSignal(zoneLonSignal);
 const mapPanelSignal = stateSignal(undefined);
 const HOME_ROUTE = route("/");
-const MAP_ROUTE = route(`/map/?lon=${mapLonSignal}`);
+const MAP_ROUTE = route("/map/", { searchParams: { lon: mapLonSignal } });
 const MAP_PANEL_ROUTE = route(`/map/:panel=${mapPanelSignal}/`);
-const MAP_ISOCHRONE_ROUTE = route(`/map/isochrone?iso_lon=${isoLonSignal}`);
+const MAP_ISOCHRONE_ROUTE = route("/map/isochrone", {
+  searchParams: { iso_lon: isoLonSignal },
+});
 const { updateRoutes, clearRoutes } = setupRoutes([
   HOME_ROUTE,
   MAP_ROUTE,

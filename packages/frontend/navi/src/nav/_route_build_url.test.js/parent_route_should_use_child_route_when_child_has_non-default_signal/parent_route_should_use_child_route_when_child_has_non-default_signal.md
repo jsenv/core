@@ -7,7 +7,7 @@ const mapPanelSignal = stateSignal(undefined, { id: "mapPanel" });
 mapPanelSignal.value = "isochrone";
 zoneSignal.value = "paris";
 const ZONE_SELECTION_ROUTE = route("/zone_selection");
-const MAP_ROUTE = route(`/map/?zone=${zoneSignal}`);
+const MAP_ROUTE = route("/map/", { searchParams: { zone: zoneSignal } });
 const MAP_PANEL_ROUTE = route(`/map/:panel=${mapPanelSignal}/`);
 const MAP_ISOCHRONE_ROUTE = route(`/map/isochrone`);
 const { updateRoutes, clearRoutes } = setupRoutes([

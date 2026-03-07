@@ -40,9 +40,9 @@ await snapshotTests(import.meta.url, ({ test }) => {
     const ROOT = route("/");
     const ADMIN_ROUTE = route(`/admin/:section=${sectionSignal}/`);
     const ADMIN_SETTINGS_ROUTE = route(`/admin/settings/:tab=${tabSignal}`);
-    const ADMIN_ANALYTICS_ROUTE = route(
-      `/admin/analytics?tab=${analyticsTabSignal}`,
-    );
+    const ADMIN_ANALYTICS_ROUTE = route("/admin/analytics", {
+      searchParams: { tab: analyticsTabSignal },
+    });
     const { clearRoutes } = setupRoutes([
       ROOT,
       ADMIN_ROUTE,
@@ -283,7 +283,9 @@ await snapshotTests(import.meta.url, ({ test }) => {
     tabSignal.value = "details";
     const ROOT = route("/");
     const ADMIN_ROUTE = route(`/admin/:section/`);
-    const ANALYTICS_ROUTE = route(`/admin/analytics?tab=${tabSignal}`);
+    const ANALYTICS_ROUTE = route("/admin/analytics", {
+      searchParams: { tab: tabSignal },
+    });
     const { clearRoutes } = setupRoutes([ROOT, ADMIN_ROUTE, ANALYTICS_ROUTE]);
     try {
       return {
@@ -333,9 +335,9 @@ await snapshotTests(import.meta.url, ({ test }) => {
     });
     const ROOT_ROUTE = route("/");
     const ADMIN_ROUTE = route(`/admin/:section=${sectionSignal}/`);
-    const ADMIN_ANALYTICS_ROUTE = route(
-      `/admin/analytics?tab=${analyticsTabSignal}`,
-    );
+    const ADMIN_ANALYTICS_ROUTE = route("/admin/analytics", {
+      searchParams: { tab: analyticsTabSignal },
+    });
     const { clearRoutes } = setupRoutes([
       ROOT_ROUTE,
       ADMIN_ROUTE,
@@ -394,9 +396,13 @@ await snapshotTests(import.meta.url, ({ test }) => {
     });
     const HOME_ROUTE = route("/");
     const SELECT_CITY_ROUTE = route("/select_city");
-    const MAP_ROUTE = route(
-      `/map?city=${citySignal}&lon=${longitudeSignal}&lat=${latitudeSignal}`,
-    );
+    const MAP_ROUTE = route("/map", {
+      searchParams: {
+        city: citySignal,
+        lon: longitudeSignal,
+        lat: latitudeSignal,
+      },
+    });
     const { clearRoutes } = setupRoutes([
       HOME_ROUTE,
       SELECT_CITY_ROUTE,
@@ -465,13 +471,20 @@ await snapshotTests(import.meta.url, ({ test }) => {
       id: "isochroneWalk",
       type: "number",
     });
-    const MAP_ROUTE = route(
-      `/map/?zone=${zoneIdSignal}&style=${mapboxStyleSignal}&lon=${mapboxLongitudeSignal}&lat=${mapboxLatitudeSignal}&zoom=${mapboxZoomSignal}&sidebar=${mapSidebarOpenedSignal}`,
-    );
+    const MAP_ROUTE = route("/map/", {
+      searchParams: {
+        zone: zoneIdSignal,
+        style: mapboxStyleSignal,
+        lon: mapboxLongitudeSignal,
+        lat: mapboxLatitudeSignal,
+        zoom: mapboxZoomSignal,
+        sidebar: mapSidebarOpenedSignal,
+      },
+    });
     const MAP_ISOCHRONE_ROUTE = route("/map/isochrone/");
-    const MAP_ISOCHRONE_TOTO_ROUTE = route(
-      `/map/isochrone/toto/?time=${isochromeWalkTimeSignal}`,
-    );
+    const MAP_ISOCHRONE_TOTO_ROUTE = route("/map/isochrone/toto/", {
+      searchParams: { time: isochromeWalkTimeSignal },
+    });
     const { clearRoutes } = setupRoutes([
       MAP_ROUTE,
       MAP_ISOCHRONE_ROUTE,
@@ -519,9 +532,9 @@ await snapshotTests(import.meta.url, ({ test }) => {
     walkEnabledSignal.value = false;
     walkMinuteSignal.value = 40;
     const ISOCHRONE_ROUTE = route(`/map/isochrone/:tab?`);
-    const ISOCHRONE_COMPARE_ROUTE = route(
-      `/map/isochrone/compare?walk=${walkEnabledSignal}&walk_minute=${walkMinuteSignal}`,
-    );
+    const ISOCHRONE_COMPARE_ROUTE = route("/map/isochrone/compare", {
+      searchParams: { walk: walkEnabledSignal, walk_minute: walkMinuteSignal },
+    });
     const { clearRoutes } = setupRoutes([
       ISOCHRONE_ROUTE,
       ISOCHRONE_COMPARE_ROUTE,
@@ -553,9 +566,9 @@ await snapshotTests(import.meta.url, ({ test }) => {
     const ADMIN_SETTINGS_ROUTE = route(
       `/admin/settings/:tab=${settingsTabSignal}`,
     );
-    const ADMIN_ANALYTICS_ROUTE = route(
-      `/admin/analytics?tab=${analyticsTabSignal}`,
-    );
+    const ADMIN_ANALYTICS_ROUTE = route("/admin/analytics", {
+      searchParams: { tab: analyticsTabSignal },
+    });
     const { updateRoutes, clearRoutes } = setupRoutes([
       ROOT,
       ADMIN_ROUTE,
@@ -582,7 +595,9 @@ await snapshotTests(import.meta.url, ({ test }) => {
     const aSignal = stateSignal("a-value", { id: "a" });
     const bSignal = stateSignal("b-value", { id: "b" });
     const cSignal = stateSignal("c-value", { id: "c" });
-    const ROUTE = route(`/test?a=${aSignal}&b=${bSignal}&c=${cSignal}`);
+    const ROUTE = route("/test", {
+      searchParams: { a: aSignal, b: bSignal, c: cSignal },
+    });
     const { clearRoutes } = setupRoutes([ROUTE]);
     try {
       return {
@@ -614,12 +629,12 @@ await snapshotTests(import.meta.url, ({ test }) => {
     const filterSignal = stateSignal("active", { id: "filter" });
     const sortSignal = stateSignal("name", { id: "sort" });
     const pageSignal = stateSignal(1, { id: "page", type: "number" });
-    const SEARCH_ROUTE = route(
-      `/search?filter=${filterSignal}&sort=${sortSignal}`,
-    );
-    const SEARCH_RESULTS_ROUTE = route(
-      `/search/results?page=${pageSignal}&limit=20`,
-    );
+    const SEARCH_ROUTE = route("/search", {
+      searchParams: { filter: filterSignal, sort: sortSignal },
+    });
+    const SEARCH_RESULTS_ROUTE = route("/search/results", {
+      searchParams: { page: pageSignal },
+    });
     const { clearRoutes } = setupRoutes([SEARCH_ROUTE, SEARCH_RESULTS_ROUTE]);
     try {
       return {
@@ -642,14 +657,14 @@ await snapshotTests(import.meta.url, ({ test }) => {
     const isochroneTabSignal = stateSignal("compare");
     const walkSignal = stateSignal(false);
     const panelSignal = stateSignal(undefined);
-    const MAP_ROUTE = route(`/map/?zone=${zoneSignal}`);
+    const MAP_ROUTE = route("/map/", { searchParams: { zone: zoneSignal } });
     const MAP_PANEL_ROUTE = route(`/map/:panel=${panelSignal}/`);
     const MAP_ISOCHRONE_ROUTE = route(
       `/map/isochrone/:tab=${isochroneTabSignal}/`,
     );
-    const MAP_ISOCHRONE_WALK_ROUTE = route(
-      `/map/isochrone/compare/?walk=${walkSignal}`,
-    );
+    const MAP_ISOCHRONE_WALK_ROUTE = route("/map/isochrone/compare/", {
+      searchParams: { walk: walkSignal },
+    });
     const { updateRoutes, clearRoutes } = setupRoutes([
       MAP_ROUTE,
       MAP_PANEL_ROUTE,
@@ -677,14 +692,15 @@ await snapshotTests(import.meta.url, ({ test }) => {
     const isochroneLongitudeSignal = stateSignal(undefined);
     isochroneLongitudeSignal.value = 2;
     const isochroneTimeModeSignal = stateSignal("walk");
-    const MAP_ROUTE = route(`/map/?zone=${zoneSignal}`);
+    const MAP_ROUTE = route("/map/", { searchParams: { zone: zoneSignal } });
     const MAP_PANEL_ROUTE = route(`/map/:panel=${panelSignal}/`);
     const MAP_ISOCHRONE_ROUTE = route(
-      `/map/isochrone/:tab=${isochroneTabSignal}/?iso_lon=${isochroneLongitudeSignal}`,
+      `/map/isochrone/:tab=${isochroneTabSignal}/`,
+      { searchParams: { iso_lon: isochroneLongitudeSignal } },
     );
-    const MAP_ISOCHRONE_COMPARE_ROUTE = route(
-      `/map/isochrone/compare?walk=${isochroneWalkSignal}`,
-    );
+    const MAP_ISOCHRONE_COMPARE_ROUTE = route("/map/isochrone/compare", {
+      searchParams: { walk: isochroneWalkSignal },
+    });
     const MAP_ISOCHRONE_TIME_ROUTE = route(
       `/map/isochrone/time/:mode=${isochroneTimeModeSignal}/`,
     );
@@ -715,13 +731,13 @@ await snapshotTests(import.meta.url, ({ test }) => {
     const walkSignal = stateSignal(false, { id: "walk", type: "boolean" });
     const timeSignal = stateSignal(30, { id: "time", type: "number" });
     const modeSignal = stateSignal("driving", { id: "mode" });
-    const MAP_ROUTE = route(`/map?zone=${zoneSignal}`);
-    const MAP_ISOCHRONE_ROUTE = route(
-      `/map/isochrone/?walk=${walkSignal}&time=${timeSignal}`,
-    );
-    const MAP_ISOCHRONE_WALK_ROUTE = route(
-      `/map/isochrone/walk?mode=${modeSignal}`,
-    );
+    const MAP_ROUTE = route("/map", { searchParams: { zone: zoneSignal } });
+    const MAP_ISOCHRONE_ROUTE = route("/map/isochrone/", {
+      searchParams: { walk: walkSignal, time: timeSignal },
+    });
+    const MAP_ISOCHRONE_WALK_ROUTE = route("/map/isochrone/walk", {
+      searchParams: { mode: modeSignal },
+    });
     const { clearRoutes } = setupRoutes([
       MAP_ROUTE,
       MAP_ISOCHRONE_ROUTE,
@@ -757,7 +773,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
     mapPanelSignal.value = "isochrone";
     zoneSignal.value = "paris";
     const ZONE_SELECTION_ROUTE = route("/zone_selection");
-    const MAP_ROUTE = route(`/map/?zone=${zoneSignal}`);
+    const MAP_ROUTE = route("/map/", { searchParams: { zone: zoneSignal } });
     const MAP_PANEL_ROUTE = route(`/map/:panel=${mapPanelSignal}/`);
     const MAP_ISOCHRONE_ROUTE = route(`/map/isochrone`);
     const { updateRoutes, clearRoutes } = setupRoutes([
@@ -885,14 +901,15 @@ await snapshotTests(import.meta.url, ({ test }) => {
     isochroneTabSignal.value = "time";
     isochroneLongitudeSignal.value = 1;
     const isochroneTimeModeSignal = stateSignal("walk");
-    const MAP_ROUTE = route(`/map/?zone=${zoneSignal}`);
+    const MAP_ROUTE = route("/map/", { searchParams: { zone: zoneSignal } });
     const MAP_PANEL_ROUTE = route(`/map/:panel=${panelSignal}/`);
     const MAP_ISOCHRONE_ROUTE = route(
-      `/map/isochrone/:tab=${isochroneTabSignal}/?iso_lon=${isochroneLongitudeSignal}`,
+      `/map/isochrone/:tab=${isochroneTabSignal}/`,
+      { searchParams: { iso_lon: isochroneLongitudeSignal } },
     );
-    const MAP_ISOCHRONE_COMPARE_ROUTE = route(
-      `/map/isochrone/compare?walk=${walkSignal}`,
-    );
+    const MAP_ISOCHRONE_COMPARE_ROUTE = route("/map/isochrone/compare", {
+      searchParams: { walk: walkSignal },
+    });
     const MAP_ISOCHRONE_TIME_ROUTE = route(
       `/map/isochrone/time/:mode=${isochroneTimeModeSignal}/`,
     );
@@ -924,9 +941,9 @@ await snapshotTests(import.meta.url, ({ test }) => {
     const MAP_ISOCHRONE_ROUTE = route(
       `/map/isochrone/:tab=${isochroneTabSignal}/`,
     );
-    const MAP_ISOCHRONE_COMPARE_ROUTE = route(
-      `/map/isochrone/compare?walk=${isochroneWalkSignal}`,
-    );
+    const MAP_ISOCHRONE_COMPARE_ROUTE = route("/map/isochrone/compare", {
+      searchParams: { walk: isochroneWalkSignal },
+    });
     const { updateRoutes, clearRoutes } = setupRoutes([
       MAP_PANEL_ROUTE,
       MAP_ISOCHRONE_ROUTE,
@@ -952,10 +969,11 @@ await snapshotTests(import.meta.url, ({ test }) => {
     const isochroneLongitudeSignal = stateSignal(undefined);
     const isochroneTimeModeSignal = stateSignal("walk");
     const HOME_ROUTE = route("/");
-    const MAP_ROUTE = route(`/map/?zone=${zoneSignal}`);
+    const MAP_ROUTE = route("/map/", { searchParams: { zone: zoneSignal } });
     const MAP_PANEL_ROUTE = route(`/map/:panel=${mapPanelSignal}/`);
     const MAP_ISOCHRONE_ROUTE = route(
-      `/map/isochrone/:tab=${isochroneTabSignal}/?iso_lon=${isochroneLongitudeSignal}`,
+      `/map/isochrone/:tab=${isochroneTabSignal}/`,
+      { searchParams: { iso_lon: isochroneLongitudeSignal } },
     );
     const MAP_ISOCHRONE_COMPARE_ROUTE = route(`/map/isochrone/compare`);
     const MAP_ISOCHRONE_TIME_ROUTE = route(
@@ -992,9 +1010,11 @@ await snapshotTests(import.meta.url, ({ test }) => {
     const isoLonSignal = stateSignal(zoneLonSignal);
     const mapPanelSignal = stateSignal(undefined);
     const HOME_ROUTE = route("/");
-    const MAP_ROUTE = route(`/map/?lon=${mapLonSignal}`);
+    const MAP_ROUTE = route("/map/", { searchParams: { lon: mapLonSignal } });
     const MAP_PANEL_ROUTE = route(`/map/:panel=${mapPanelSignal}/`);
-    const MAP_ISOCHRONE_ROUTE = route(`/map/isochrone?iso_lon=${isoLonSignal}`);
+    const MAP_ISOCHRONE_ROUTE = route("/map/isochrone", {
+      searchParams: { iso_lon: isoLonSignal },
+    });
     const { updateRoutes, clearRoutes } = setupRoutes([
       HOME_ROUTE,
       MAP_ROUTE,

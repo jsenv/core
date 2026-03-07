@@ -15,9 +15,13 @@ const latitudeSignal = stateSignal(48.8566, {
 });
 const HOME_ROUTE = route("/");
 const SELECT_CITY_ROUTE = route("/select_city");
-const MAP_ROUTE = route(
-  `/map?city=${citySignal}&lon=${longitudeSignal}&lat=${latitudeSignal}`,
-);
+const MAP_ROUTE = route("/map", {
+  searchParams: {
+    city: citySignal,
+    lon: longitudeSignal,
+    lat: latitudeSignal,
+  },
+});
 const { clearRoutes } = setupRoutes([
   HOME_ROUTE,
   SELECT_CITY_ROUTE,

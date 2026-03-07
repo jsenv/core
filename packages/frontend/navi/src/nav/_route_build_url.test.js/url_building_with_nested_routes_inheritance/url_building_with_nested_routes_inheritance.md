@@ -9,9 +9,9 @@ const analyticsTabSignal = stateSignal("overview", {
 const ROOT = route("/");
 const ADMIN_ROUTE = route(`/admin/:section=${sectionSignal}/`);
 const ADMIN_SETTINGS_ROUTE = route(`/admin/settings/:tab=${tabSignal}`);
-const ADMIN_ANALYTICS_ROUTE = route(
-  `/admin/analytics?tab=${analyticsTabSignal}`,
-);
+const ADMIN_ANALYTICS_ROUTE = route("/admin/analytics", {
+  searchParams: { tab: analyticsTabSignal },
+});
 const { clearRoutes } = setupRoutes([
   ROOT,
   ADMIN_ROUTE,

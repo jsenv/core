@@ -8,9 +8,9 @@ const MAP_PANEL_ROUTE = route(`/map/:panel=${mapPanelSignal}/`);
 const MAP_ISOCHRONE_ROUTE = route(
   `/map/isochrone/:tab=${isochroneTabSignal}/`,
 );
-const MAP_ISOCHRONE_COMPARE_ROUTE = route(
-  `/map/isochrone/compare?walk=${isochroneWalkSignal}`,
-);
+const MAP_ISOCHRONE_COMPARE_ROUTE = route("/map/isochrone/compare", {
+  searchParams: { walk: isochroneWalkSignal },
+});
 const { updateRoutes, clearRoutes } = setupRoutes([
   MAP_PANEL_ROUTE,
   MAP_ISOCHRONE_ROUTE,

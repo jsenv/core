@@ -5,13 +5,13 @@ const zoneSignal = stateSignal("paris", { id: "hierarchicalZone" });
 const panelSignal = stateSignal("isochrone", { id: "hierarchicalPanel" });
 const isoLonSignal = stateSignal(2.3522, { id: "hierarchicalIsoLon" });
 
-const MAP_ROUTE = route(`/map?zone=${zoneSignal}`);
-const MAP_PANEL_ROUTE = route(
-  `/map/:panel=${panelSignal}?zone=${zoneSignal}`,
-);
-const MAP_ISOCHRONE_ROUTE = route(
-  `/map/isochrone?zone=${zoneSignal}&iso_lon=${isoLonSignal}`,
-);
+const MAP_ROUTE = route("/map", { searchParams: { zone: zoneSignal } });
+const MAP_PANEL_ROUTE = route(`/map/:panel=${panelSignal}`, {
+  searchParams: { zone: zoneSignal },
+});
+const MAP_ISOCHRONE_ROUTE = route("/map/isochrone", {
+  searchParams: { zone: zoneSignal, iso_lon: isoLonSignal },
+});
 const { clearRoutes } = setupRoutes([
   MAP_ROUTE,
   MAP_PANEL_ROUTE,

@@ -5,7 +5,9 @@ const tabSignal = stateSignal("overview", { id: "debug_tab" });
 tabSignal.value = "details";
 const ROOT = route("/");
 const ADMIN_ROUTE = route(`/admin/:section/`);
-const ANALYTICS_ROUTE = route(`/admin/analytics?tab=${tabSignal}`);
+const ANALYTICS_ROUTE = route("/admin/analytics", {
+  searchParams: { tab: tabSignal },
+});
 const { clearRoutes } = setupRoutes([ROOT, ADMIN_ROUTE, ANALYTICS_ROUTE]);
 try {
   return {

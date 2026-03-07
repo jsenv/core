@@ -4,7 +4,9 @@
 const zoneSignal = stateSignal("paris", { id: "urlSyncZone" });
 const modeSignal = stateSignal("driving", { id: "urlSyncMode" });
 
-const MAP_ROUTE = route(`/map?zone=${zoneSignal}&mode=${modeSignal}`);
+const MAP_ROUTE = route("/map", {
+  searchParams: { zone: zoneSignal, mode: modeSignal },
+});
 const { clearRoutes } = setupRoutes([MAP_ROUTE]);
 try {
   // Read route.url before changing signals

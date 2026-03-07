@@ -11,14 +11,15 @@ panelSignal.value = "isochrone";
 isochroneTabSignal.value = "time";
 isochroneLongitudeSignal.value = 1;
 const isochroneTimeModeSignal = stateSignal("walk");
-const MAP_ROUTE = route(`/map/?zone=${zoneSignal}`);
+const MAP_ROUTE = route("/map/", { searchParams: { zone: zoneSignal } });
 const MAP_PANEL_ROUTE = route(`/map/:panel=${panelSignal}/`);
 const MAP_ISOCHRONE_ROUTE = route(
-  `/map/isochrone/:tab=${isochroneTabSignal}/?iso_lon=${isochroneLongitudeSignal}`,
+  `/map/isochrone/:tab=${isochroneTabSignal}/`,
+  { searchParams: { iso_lon: isochroneLongitudeSignal } },
 );
-const MAP_ISOCHRONE_COMPARE_ROUTE = route(
-  `/map/isochrone/compare?walk=${walkSignal}`,
-);
+const MAP_ISOCHRONE_COMPARE_ROUTE = route("/map/isochrone/compare", {
+  searchParams: { walk: walkSignal },
+});
 const MAP_ISOCHRONE_TIME_ROUTE = route(
   `/map/isochrone/time/:mode=${isochroneTimeModeSignal}/`,
 );

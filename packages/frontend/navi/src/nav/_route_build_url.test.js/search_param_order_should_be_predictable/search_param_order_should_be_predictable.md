@@ -4,7 +4,9 @@
 const aSignal = stateSignal("a-value", { id: "a" });
 const bSignal = stateSignal("b-value", { id: "b" });
 const cSignal = stateSignal("c-value", { id: "c" });
-const ROUTE = route(`/test?a=${aSignal}&b=${bSignal}&c=${cSignal}`);
+const ROUTE = route("/test", {
+  searchParams: { a: aSignal, b: bSignal, c: cSignal },
+});
 const { clearRoutes } = setupRoutes([ROUTE]);
 try {
   return {

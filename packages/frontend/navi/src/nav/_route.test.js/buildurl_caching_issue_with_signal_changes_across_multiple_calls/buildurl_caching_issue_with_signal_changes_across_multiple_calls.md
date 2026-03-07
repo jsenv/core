@@ -4,9 +4,9 @@
 const userIdSignal = stateSignal("123", { id: "cachingUserId" });
 const statusSignal = stateSignal("active", { id: "cachingStatus" });
 
-const USER_PROFILE_ROUTE = route(
-  `/user/:id=${userIdSignal}/profile?status=${statusSignal}`,
-);
+const USER_PROFILE_ROUTE = route(`/user/:id=${userIdSignal}/profile`, {
+  searchParams: { status: statusSignal },
+});
 const { clearRoutes } = setupRoutes([USER_PROFILE_ROUTE]);
 try {
   // Read URL multiple times to check consistency

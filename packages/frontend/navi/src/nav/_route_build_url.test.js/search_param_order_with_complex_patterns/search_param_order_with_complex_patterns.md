@@ -4,12 +4,12 @@
 const filterSignal = stateSignal("active", { id: "filter" });
 const sortSignal = stateSignal("name", { id: "sort" });
 const pageSignal = stateSignal(1, { id: "page", type: "number" });
-const SEARCH_ROUTE = route(
-  `/search?filter=${filterSignal}&sort=${sortSignal}`,
-);
-const SEARCH_RESULTS_ROUTE = route(
-  `/search/results?page=${pageSignal}&limit=20`,
-);
+const SEARCH_ROUTE = route("/search", {
+  searchParams: { filter: filterSignal, sort: sortSignal },
+});
+const SEARCH_RESULTS_ROUTE = route("/search/results", {
+  searchParams: { page: pageSignal },
+});
 const { clearRoutes } = setupRoutes([SEARCH_ROUTE, SEARCH_RESULTS_ROUTE]);
 try {
   return {

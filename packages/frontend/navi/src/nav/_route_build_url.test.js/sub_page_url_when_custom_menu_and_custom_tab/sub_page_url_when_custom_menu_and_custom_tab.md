@@ -7,10 +7,11 @@ const isochroneTabSignal = stateSignal("compare");
 const isochroneLongitudeSignal = stateSignal(undefined);
 const isochroneTimeModeSignal = stateSignal("walk");
 const HOME_ROUTE = route("/");
-const MAP_ROUTE = route(`/map/?zone=${zoneSignal}`);
+const MAP_ROUTE = route("/map/", { searchParams: { zone: zoneSignal } });
 const MAP_PANEL_ROUTE = route(`/map/:panel=${mapPanelSignal}/`);
 const MAP_ISOCHRONE_ROUTE = route(
-  `/map/isochrone/:tab=${isochroneTabSignal}/?iso_lon=${isochroneLongitudeSignal}`,
+  `/map/isochrone/:tab=${isochroneTabSignal}/`,
+  { searchParams: { iso_lon: isochroneLongitudeSignal } },
 );
 const MAP_ISOCHRONE_COMPARE_ROUTE = route(`/map/isochrone/compare`);
 const MAP_ISOCHRONE_TIME_ROUTE = route(

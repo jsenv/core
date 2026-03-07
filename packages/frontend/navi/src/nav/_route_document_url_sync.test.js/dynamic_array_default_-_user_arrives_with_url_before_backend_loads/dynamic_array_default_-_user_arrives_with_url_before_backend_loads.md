@@ -22,9 +22,9 @@ const tramEnabledLines = stateSignal(tramAvailableLines, {
 const tramVisible = stateSignal(false, {
   type: "boolean",
 });
-const TRAM_ROUTE = route(
-  `/map?tram=${tramVisible}&trams=${tramEnabledLines}`,
-);
+const TRAM_ROUTE = route("/map", {
+  searchParams: { tram: tramVisible, trams: tramEnabledLines },
+});
 const { updateRoutes, clearRoutes } = setupRoutes([TRAM_ROUTE]);
 try {
   const captureState = () => {

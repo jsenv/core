@@ -29,13 +29,20 @@ const isochromeWalkTimeSignal = stateSignal(20, {
   id: "isochroneWalk",
   type: "number",
 });
-const MAP_ROUTE = route(
-  `/map/?zone=${zoneIdSignal}&style=${mapboxStyleSignal}&lon=${mapboxLongitudeSignal}&lat=${mapboxLatitudeSignal}&zoom=${mapboxZoomSignal}&sidebar=${mapSidebarOpenedSignal}`,
-);
+const MAP_ROUTE = route("/map/", {
+  searchParams: {
+    zone: zoneIdSignal,
+    style: mapboxStyleSignal,
+    lon: mapboxLongitudeSignal,
+    lat: mapboxLatitudeSignal,
+    zoom: mapboxZoomSignal,
+    sidebar: mapSidebarOpenedSignal,
+  },
+});
 const MAP_ISOCHRONE_ROUTE = route("/map/isochrone/");
-const MAP_ISOCHRONE_TOTO_ROUTE = route(
-  `/map/isochrone/toto/?time=${isochromeWalkTimeSignal}`,
-);
+const MAP_ISOCHRONE_TOTO_ROUTE = route("/map/isochrone/toto/", {
+  searchParams: { time: isochromeWalkTimeSignal },
+});
 const { clearRoutes } = setupRoutes([
   MAP_ROUTE,
   MAP_ISOCHRONE_ROUTE,

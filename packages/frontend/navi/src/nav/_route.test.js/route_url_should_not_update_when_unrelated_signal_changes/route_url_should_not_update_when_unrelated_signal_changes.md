@@ -4,10 +4,10 @@
 const zoneSignal = stateSignal("paris");
 const panelSignal = stateSignal("isochrone");
 
-const MAP_ROUTE = route(`/map?zone=${zoneSignal}`);
-const MAP_PANEL_ROUTE = route(
-  `/map/:panel=${panelSignal}?zone=${zoneSignal}`,
-);
+const MAP_ROUTE = route("/map", { searchParams: { zone: zoneSignal } });
+const MAP_PANEL_ROUTE = route(`/map/:panel=${panelSignal}`, {
+  searchParams: { zone: zoneSignal },
+});
 const { clearRoutes } = setupRoutes([MAP_ROUTE, MAP_PANEL_ROUTE]);
 try {
   const mapUrlBefore = MAP_ROUTE.url;

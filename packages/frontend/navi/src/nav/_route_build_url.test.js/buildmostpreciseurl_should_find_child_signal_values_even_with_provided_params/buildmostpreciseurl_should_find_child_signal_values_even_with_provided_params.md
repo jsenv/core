@@ -12,9 +12,9 @@ const walkMinuteSignal = stateSignal(30, {
 walkEnabledSignal.value = false;
 walkMinuteSignal.value = 40;
 const ISOCHRONE_ROUTE = route(`/map/isochrone/:tab?`);
-const ISOCHRONE_COMPARE_ROUTE = route(
-  `/map/isochrone/compare?walk=${walkEnabledSignal}&walk_minute=${walkMinuteSignal}`,
-);
+const ISOCHRONE_COMPARE_ROUTE = route("/map/isochrone/compare", {
+  searchParams: { walk: walkEnabledSignal, walk_minute: walkMinuteSignal },
+});
 const { clearRoutes } = setupRoutes([
   ISOCHRONE_ROUTE,
   ISOCHRONE_COMPARE_ROUTE,

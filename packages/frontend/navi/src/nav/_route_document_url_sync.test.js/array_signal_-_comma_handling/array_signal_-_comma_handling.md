@@ -14,7 +14,7 @@ const itemsSignal = stateSignal([], {
   id: "itemsWithCommas",
   type: "array",
 });
-const ITEMS_ROUTE = route(`/items?items=${itemsSignal}`);
+const ITEMS_ROUTE = route("/items", { searchParams: { items: itemsSignal } });
 const { updateRoutes, clearRoutes } = setupRoutes([ITEMS_ROUTE]);
 try {
   const captureState = () => {
