@@ -20,7 +20,7 @@ import {
 } from "./action_run_states.js";
 import { SYMBOL_OBJECT_SIGNAL } from "./symbol_object_signal.js";
 
-let DEBUG = false;
+let DEBUG = true;
 export const enableDebugActions = () => {
   DEBUG = true;
 };
@@ -34,8 +34,20 @@ export const actionRunEffect = (action, deriveActionParamsFromSignals) => {
   effect(() => {
     const params = deriveActionParamsFromSignals();
     if (params) {
-      paramsSignal.value = params;
+      if (DEBUG) {
+        console.debug(
+          `Action "${action}" is triggered by actionRunEffect with params: ${stringifyForDisplay(params)}`,
+        );
+      }
+      paramsSignal.value = params === true ? {} : params;
     } else {
+      if (DEBUG) {
+        if (action.runningState === RUNNING) {
+          console.debug(
+            `Action "${action}" is not triggered by actionRunEffect because derived params is falsy: aborting`,
+          );
+        }
+      }
       actionRunnedByThisEffect.abort();
     }
   });
@@ -1436,6 +1448,16 @@ const createActionProxyFromSignal = (
   }
   if (rerunOnChange) {
     onActionTargetChange((actionTarget, actionTargetPrevious) => {
+      if (action.meta.debug) {
+        console.debug(
+          `Action proxy "${actionProxy}": target changed, rerunning action (reason: rerunOnChange)`,
+          {
+            newTarget: actionTarget,
+            previousTarget: actionTargetPrevious,
+          },
+        );
+      }
+
       if (
         actionTarget &&
         actionTargetPrevious &&

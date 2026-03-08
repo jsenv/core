@@ -26,6 +26,7 @@ export const HOME_ROUTE = route(`/`, {
     role_login_height: roleCanLoginHeightSignal,
   },
 });
+ROLE_CAN_LOGIN.GET_MANY.meta.debug = true;
 export const ROLE_CAN_LOGIN_GET_MANY_ACTION = routeAction(
   HOME_ROUTE,
   ROLE_CAN_LOGIN.GET_MANY,

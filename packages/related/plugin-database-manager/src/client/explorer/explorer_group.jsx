@@ -45,7 +45,8 @@ export const createExplorerGroupController = (
 export const ExplorerGroup = (props) => {
   const {
     id,
-    detailsAction,
+    detailsConnectedAction,
+    detailsUIAction,
     idKey,
     nameKey,
     label,
@@ -106,7 +107,8 @@ export const ExplorerGroup = (props) => {
         data-resize={resizable ? "vertical" : "none"}
         data-min-height="150"
         data-requested-height={height}
-        action={detailsAction}
+        connectedAction={detailsConnectedAction}
+        uiAction={detailsUIAction}
         label={
           <>
             <Text overflowEllipsis>
