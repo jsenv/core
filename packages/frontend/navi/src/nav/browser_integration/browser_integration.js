@@ -45,7 +45,10 @@ const applyRouting = (
     isVisited,
     // state,
   });
-  if (loadSet.size === 0 && reloadSet.size === 0) {
+  if (
+    (!loadSet || loadSet.size === 0) &&
+    (!reloadSet || reloadSet.size === 0)
+  ) {
     return {
       allResult: undefined,
       requestedResult: undefined,

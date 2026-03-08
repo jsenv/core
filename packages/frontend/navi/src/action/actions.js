@@ -25,6 +25,23 @@ export const enableDebugActions = () => {
   DEBUG = true;
 };
 
+export const actionRunEffect = (action, deriveActionParamsFromSignals) => {
+  const paramsSignal = signal(action.params);
+  const actionRunnedByThisEffect = action.bindParams(paramsSignal, {
+    runOnce: true,
+    rerunOnChange: true,
+  });
+  effect(() => {
+    const params = deriveActionParamsFromSignals();
+    if (params) {
+      paramsSignal.value = params;
+    } else {
+      actionRunnedByThisEffect.abort();
+    }
+  });
+  return actionRunnedByThisEffect;
+};
+
 const ACTION_AS_FUNCTION = true;
 
 let dispatchActions = (params) => {
@@ -1156,7 +1173,12 @@ export const createAction = (callback, rootOptions = {}) => {
 const createActionProxyFromSignal = (
   action,
   paramsSignal,
-  { rerunOnChange = false, transferData = false, onChange } = {},
+  {
+    runOnce = false,
+    rerunOnChange = false,
+    transferData = false,
+    onChange,
+  } = {},
 ) => {
   const actionTargetChangeCallbackSet = new Set();
   const onActionTargetChange = (callback) => {
@@ -1185,7 +1207,12 @@ const createActionProxyFromSignal = (
   let actionTargetPreviousWeakRef = null;
   let isFirstEffect = true;
 
-  const _updateTarget = (params) => {
+  const _updateTarget = () => {
+    const params = paramsSignal.peek();
+    const proxyParams = proxyParamsSignal.peek();
+    if (params !== proxyParams) {
+      proxyParamsSignal.value = params;
+    }
     const previousActionTarget = actionTargetPreviousWeakRef?.deref();
 
     if (params === NO_PARAMS) {
@@ -1218,7 +1245,7 @@ const createActionProxyFromSignal = (
        * internal parameter synchronization effect. Using peek() avoids creating
        * reactive dependencies within this pass-through method.
        */
-      _updateTarget(proxyParamsSignal.peek());
+      _updateTarget();
       return currentAction[method](...args);
     };
   };
@@ -1261,7 +1288,7 @@ const createActionProxyFromSignal = (
     abort: proxyMethod("abort"),
     matchAllSelfOrDescendant: proxyMethod("matchAllSelfOrDescendant"),
     getCurrentAction: () => {
-      _updateTarget(proxyParamsSignal.peek());
+      _updateTarget();
       return currentAction;
     },
     bindParams: () => {
@@ -1324,7 +1351,8 @@ const createActionProxyFromSignal = (
   weakEffect(
     [paramsSignal, proxyParamsSignal],
     (paramsSignalRef, proxyParamsSignalRef) => {
-      proxyParamsSignalRef.value = paramsSignalRef.value;
+      const newParams = paramsSignalRef.value;
+      proxyParamsSignalRef.value = newParams;
     },
   );
 
@@ -1362,8 +1390,9 @@ const createActionProxyFromSignal = (
 
   {
     weakEffect([action], () => {
-      const params = proxyParamsSignal.value;
-      _updateTarget(params);
+      // eslint-disable-next-line no-unused-expressions
+      proxyParamsSignal.value;
+      _updateTarget();
     });
   }
 
@@ -1398,6 +1427,13 @@ const createActionProxyFromSignal = (
       }
     });
   }
+  if (runOnce) {
+    onActionTargetChange((actionTarget, actionTargetPrevious) => {
+      if (!actionTargetPrevious && actionTarget) {
+        actionTarget.run({ reason: "runOnce" });
+      }
+    });
+  }
   if (rerunOnChange) {
     onActionTargetChange((actionTarget, actionTargetPrevious) => {
       if (
@@ -1405,7 +1441,7 @@ const createActionProxyFromSignal = (
         actionTargetPrevious &&
         !actionTargetPrevious.isPrerun
       ) {
-        actionTarget.rerun();
+        actionTarget.rerun({ reason: "rerunOnChange (params modified)" });
       }
     });
   }

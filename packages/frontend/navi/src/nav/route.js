@@ -6,8 +6,6 @@
 import { createPubSub } from "@jsenv/dom";
 import { batch, computed, effect, signal } from "@preact/signals";
 
-import { getActionStatus } from "../action/action_private_properties.js";
-import { ACTION } from "../action/actions.js";
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
 import {
   createRoutePattern,
@@ -24,10 +22,7 @@ const getRoutePrivateProperties = (route) => {
 const ROUTE_NOT_MATCHING_PARAMS = {};
 // Flag to prevent signal-to-URL synchronization during URL-to-signal synchronization
 let isUpdatingRoutesFromUrl = false;
-export const route = (
-  pattern,
-  { searchParams, action = ACTION.COMPLETED, actionSearchParams } = {},
-) => {
+export const route = (pattern, { searchParams } = {}) => {
   const routePattern = createRoutePattern(pattern, { searchParams });
   if (DEBUG) {
     console.debug(`Creating route: ${pattern}`);
@@ -61,11 +56,6 @@ export const route = (
     toString: () => {
       return `route "${cleanPattern}"`;
     },
-
-    bindAction: null,
-    action: null,
-    actionStatusSignal: null,
-    actionParamsSignal: null,
   };
   Object.preventExtensions(route);
 
@@ -404,65 +394,6 @@ export const route = (
       }
     };
   });
-  // action
-  registerSetup(() => {
-    const { pathConnectionMap } = routePattern;
-    const pathParamNames = new Set(pathConnectionMap.keys());
-    const allowedSearchParams = new Set(actionSearchParams || []);
-    // Search params are excluded from action params by default because they typically represent
-    // UI state (panel open, scroll position, filters) that is irrelevant to the backend call.
-    // Only path params (which identify the resource) are passed to the action unless a search
-    // param is explicitly opted-in via actionSearchParams.
-    const actionParamsSignal = computed(() => {
-      const routeParams = route.paramsSignal.value;
-      const actionParams = {};
-      for (const key of Object.keys(routeParams)) {
-        if (pathParamNames.has(key) || allowedSearchParams.has(key)) {
-          actionParams[key] = routeParams[key];
-        }
-      }
-      return actionParams;
-    });
-    const actionBoundToThisRoute =
-      action === ACTION.COMPLETED
-        ? action
-        : action.bindParams(actionParamsSignal);
-
-    route.actionParamsSignal = actionParamsSignal;
-    route.action = actionBoundToThisRoute;
-    route.actionStatusSignal = computed(() => {
-      const actionStatus = getActionStatus(actionBoundToThisRoute);
-      return actionStatus;
-    });
-    const { store } = action.meta;
-    if (store) {
-      const { mutableIdKeys } = store;
-      if (mutableIdKeys.length) {
-        const mutableIdKey = mutableIdKeys[0];
-        const mutableIdValueSignal = computed(() => {
-          const params = route.paramsSignal.value;
-          const mutableIdValue = params[mutableIdKey];
-          return mutableIdValue;
-        });
-        const routeItemSignal = store.signalForMutableIdKey(
-          mutableIdKey,
-          mutableIdValueSignal,
-        );
-        store.observeItemProperties(routeItemSignal, (propertyMutations) => {
-          const mutableIdPropertyMutation = propertyMutations[mutableIdKey];
-          if (!mutableIdPropertyMutation) {
-            return;
-          }
-          route.replaceParams(
-            {
-              [mutableIdKey]: mutableIdPropertyMutation.newValue,
-            },
-            { callReason: `store item ${mutableIdKey} change on ${route}` },
-          );
-        });
-      }
-    }
-  });
 
   return route;
 };
@@ -493,28 +424,16 @@ This prevents cross-test pollution and ensures clean state.`,
     setup({ routeSet });
   }
 
-  // Controls what happens to actions when their route stops matching:
-  // 'abort' - Cancel the action immediately when route stops matching
-  // 'keep-loading' - Allow action to continue running after route stops matching
-  //
-  // The 'keep-loading' strategy could act like preloading, keeping data ready for potential return.
-  // However, since route reactivation triggers action reload anyway, the old data won't be used
-  // so it's better to abort the action to avoid unnecessary resource usage.
-  const ROUTE_DEACTIVATION_STRATEGY = "abort"; // 'abort', 'keep-loading'
   // Store previous route states to detect changes
   const routePreviousStateMap = new WeakMap();
-  // Store abort controllers per action to control their lifecycle based on route state
-  const actionAbortControllerWeakMap = new WeakMap();
   const updateRoutes = (
     url,
     {
-      navigationType = "push",
       isVisited = () => false,
       // state
     } = {},
   ) => {
     const returnValue = {};
-
     const routeMatchInfoSet = new Set();
     for (const route of routeSet) {
       const routePrivateProperties = getRoutePrivateProperties(route);
@@ -749,114 +668,7 @@ This prevents cross-test pollution and ensures clean state.`,
       });
       // Reset flag after URL -> Signal synchronization is complete
       isUpdatingRoutesFromUrl = false;
-
       Object.assign(returnValue, { matchingRouteSet });
-    }
-
-    update_route_actions: {
-      // must be after paramsSignal.value update to ensure the proxy target is set
-      // (so after the batch call)
-      const toLoadSet = new Set();
-      const toReloadSet = new Set();
-      const abortSignalMap = new Map();
-      const routeLoadRequestedMap = new Map();
-      const shouldLoadOrReload = (route, shouldLoad) => {
-        const routeAction = route.action;
-        const currentAction = routeAction.getCurrentAction
-          ? routeAction.getCurrentAction()
-          : routeAction;
-        if (shouldLoad) {
-          if (
-            navigationType === "replace" ||
-            currentAction.aborted ||
-            currentAction.error
-          ) {
-            shouldLoad = false;
-          }
-        }
-        if (shouldLoad) {
-          toLoadSet.add(currentAction);
-        } else {
-          toReloadSet.add(currentAction);
-        }
-        routeLoadRequestedMap.set(route, currentAction);
-        // Create a new abort controller for this action
-        const actionAbortController = new AbortController();
-        actionAbortControllerWeakMap.set(currentAction, actionAbortController);
-        abortSignalMap.set(currentAction, actionAbortController.signal);
-      };
-      const shouldLoad = (route) => {
-        shouldLoadOrReload(route, true);
-      };
-      const shouldReload = (route) => {
-        shouldLoadOrReload(route, false);
-      };
-      const shouldAbort = (route) => {
-        const routeAction = route.action;
-        const currentAction = routeAction.getCurrentAction();
-        const actionAbortController =
-          actionAbortControllerWeakMap.get(currentAction);
-        if (actionAbortController) {
-          actionAbortController.abort(`route no longer matching`);
-          actionAbortControllerWeakMap.delete(currentAction);
-        }
-      };
-      for (const {
-        route,
-        oldMatching,
-        newMatching,
-        oldParams,
-        newParams,
-        oldActionParams,
-      } of routeMatchInfoSet) {
-        const routeAction = route.action;
-        if (!routeAction || routeAction === ACTION.COMPLETED) {
-          continue;
-        }
-
-        const becomesMatching = !oldMatching && newMatching;
-        const becomesNotMatching = oldMatching && !newMatching;
-        const staysMatching = oldMatching && newMatching;
-        const newActionParams = route.actionParamsSignal.value;
-        routePreviousStateMap.get(route).actionParams = newActionParams;
-
-        // Handle actions for routes that become matching
-        if (becomesMatching) {
-          if (DEBUG) {
-            console.debug(`${route} became matching with params:`, newParams);
-          }
-          shouldLoad(route);
-          continue;
-        }
-
-        // Handle actions for routes that become not matching - abort them
-        if (becomesNotMatching && ROUTE_DEACTIVATION_STRATEGY === "abort") {
-          shouldAbort(route);
-          continue;
-        }
-
-        if (staysMatching) {
-          // route params have changed
-          if (oldParams !== newParams) {
-            // do action params have changed?
-            if (!compareTwoJsValues(oldActionParams, newActionParams)) {
-              if (DEBUG) {
-                console.debug(
-                  `${route} action params changed:`,
-                  newActionParams,
-                );
-              }
-              shouldReload(route);
-            }
-          }
-        }
-      }
-      Object.assign(returnValue, {
-        loadSet: toLoadSet,
-        reloadSet: toReloadSet,
-        abortSignalMap,
-        routeLoadRequestedMap,
-      });
     }
 
     return returnValue;
@@ -887,29 +699,17 @@ export const useRouteStatus = (route) => {
       `useRouteStatus() requires a route object, but received ${route}.`,
     );
   }
-  const {
-    urlSignal,
-    matchingSignal,
-    paramsSignal,
-    visitedSignal,
-    actionStatusSignal,
-  } = route;
+  const { urlSignal, matchingSignal, paramsSignal, visitedSignal } = route;
   const url = urlSignal.value;
   const matching = matchingSignal.value;
   const params = paramsSignal.value;
   const visited = visitedSignal.value;
-  const { loading, aborted, error, completed, data } = actionStatusSignal.value;
 
   return {
     url,
     matching,
     params,
     visited,
-    loading,
-    aborted,
-    error,
-    completed,
-    data,
   };
 };
 

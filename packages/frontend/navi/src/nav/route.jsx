@@ -71,8 +71,9 @@ export const Routes = ({ element = <RootElement />, children }) => {
 
 export const useMatchingRouteInfo = () => useContext(RouteInfoContext);
 export const Route = ({
-  element,
   route,
+  element,
+  action,
   index,
   fallback,
   meta,
@@ -87,6 +88,7 @@ export const Route = ({
     return (
       <RouteMatchManager
         element={element}
+        action={action}
         route={route}
         index={index}
         fallback={fallback}
@@ -119,6 +121,7 @@ const RegisterChildRouteContext = createContext(null);
  */
 const RouteMatchManager = ({
   element,
+  action,
   route,
   index,
   fallback,
@@ -174,6 +177,7 @@ const RouteMatchManager = ({
     }
     initRouteObserver({
       element,
+      action,
       route,
       index,
       fallback,
@@ -196,6 +200,7 @@ const RouteMatchManager = ({
 
 const initRouteObserver = ({
   element,
+  action,
   route,
   index,
   fallback,
@@ -310,12 +315,11 @@ const initRouteObserver = ({
           : undefined,
     );
     const SlotMatchingElement = SlotMatchingElementSignal.value;
-    element =
-      route && route.action ? (
-        <ActionRenderer action={route.action}>{element}</ActionRenderer>
-      ) : (
-        element
-      );
+    element = action ? (
+      <ActionRenderer action={action}>{element}</ActionRenderer>
+    ) : (
+      element
+    );
     return (
       <RouteInfoContext.Provider value={matchingRouteInfo}>
         <SlotContext.Provider value={SlotMatchingElement}>

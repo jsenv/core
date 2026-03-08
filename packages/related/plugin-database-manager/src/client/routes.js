@@ -1,6 +1,6 @@
 import {
-  createAction,
   route,
+  routeAction,
   setBaseUrl,
   setupRoutes,
   stateSignal,
@@ -20,46 +20,58 @@ export const rolnameSignal = stateSignal(null);
 export const datnameSignal = stateSignal(null);
 export const tablenameSignal = stateSignal(null);
 
-// TODO: roleCanLoginOpenSignal controls ROLE_CAN_LOGIN.GET_MANY
-// so we need this logic somehow
-// we likely can groupe that with the search param debounce concept where a search param
-// controls an action but with a debouncing logic
-// as a result it means the details element should actually only controls the roleCanLoginOpenSignal
-// and not run the action itself
-// however we still want to connect the details with the state of the action
-// so we likely have a missing concept here
-// where a UI element can be bound to an action but would actuall not trigger the action per se
-// because in the end actions are core things that can often/always be triggered outside UI
-// so UI is just an other way of triggering an action but should be able to catch if anything else does
-
 export const HOME_ROUTE = route(`/`, {
   searchParams: {
-    role_login_open: [roleCanLoginOpenSignal, ROLE_CAN_LOGIN.GET_MANY],
+    role_login_open: roleCanLoginOpenSignal,
     role_login_height: roleCanLoginHeightSignal,
   },
 });
-export const ROLE_ROUTE = route(`/roles/:rolname=${rolnameSignal}`, {
-  action: ROLE.GET,
-});
-export const DATABASE_ROUTE = route(`/databases/:datname=${datnameSignal}`, {
-  action: DATABASE.GET,
-});
-export const TABLE_ROUTE = route(`/tables/:tablename=${tablenameSignal}/`, {
-  action: TABLE.GET,
-});
-export const TABLE_INDEX_ROUTE = route(
-  `/tables/:tablename=${tablenameSignal}`,
-  {
-    action: TABLE_ROW.GET_MANY,
+export const ROLE_CAN_LOGIN_GET_MANY_ACTION = routeAction(
+  HOME_ROUTE,
+  ROLE_CAN_LOGIN.GET_MANY,
+  () => {
+    const open = roleCanLoginOpenSignal.value;
+    if (!open) {
+      return null;
+    }
+    return true;
   },
 );
+
+export const ROLE_ROUTE = route(`/roles/:rolname=${rolnameSignal}`);
+export const ROLE_GET_ACTION = routeAction(ROLE_ROUTE, ROLE.GET, () => {
+  const rolname = rolnameSignal.value;
+  return { rolname };
+});
+
+export const DATABASE_ROUTE = route(`/databases/:datname=${datnameSignal}`);
+export const DATABASE_GET_ACTION = routeAction(
+  DATABASE_ROUTE,
+  DATABASE.GET,
+  () => {
+    const datname = datnameSignal.value;
+    return { datname };
+  },
+);
+
+export const TABLE_ROUTE = route(`/tables/:tablename=${tablenameSignal}/`);
+export const TABLE_GET_ACTION = routeAction(TABLE_ROUTE, TABLE.GET, () => {
+  const tablename = tablenameSignal.value;
+  return { tablename };
+});
+
+export const TABLE_INDEX_ROUTE = route(`/tables/:tablename=${tablenameSignal}`);
+export const TABLE_ROW_GET_MANY_ACTION = routeAction(
+  TABLE_INDEX_ROUTE,
+  TABLE_ROW.GET_MANY,
+  () => {
+    const tablename = tablenameSignal.value;
+    return { tablename };
+  },
+);
+
 export const TABLE_SETTINGS_ROUTE = route(
   `/tables/:tablename=${tablenameSignal}/settings`,
-  {
-    action: createAction(() => {}, {
-      name: "get table settings",
-    }),
-  },
 );
 
 setupRoutes([

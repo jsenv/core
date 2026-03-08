@@ -21,7 +21,11 @@
 import { Icon, Route, Routes, Tab, TabList } from "@jsenv/navi";
 
 import { Page, PageBody, PageHead } from "../layout/page.jsx";
-import { TABLE_INDEX_ROUTE, TABLE_SETTINGS_ROUTE } from "../routes.js";
+import {
+  TABLE_INDEX_ROUTE,
+  TABLE_ROW_GET_MANY_ACTION,
+  TABLE_SETTINGS_ROUTE,
+} from "../routes.js";
 import { DataSvg } from "../svg/data_svg.jsx";
 import { SettingsSvg } from "../svg/settings_svg.jsx";
 import { TableData } from "./table_data.jsx";
@@ -56,6 +60,7 @@ export const TablePage = ({ table }) => {
         <Routes>
           <Route
             route={TABLE_INDEX_ROUTE}
+            action={TABLE_ROW_GET_MANY_ACTION}
             element={(rows) => <TableData table={table} rows={rows} />}
           />
           <Route

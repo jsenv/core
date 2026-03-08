@@ -3,6 +3,7 @@ import "./src/navi_css_vars.js";
 // actions
 export { ActionRenderer } from "./src/action/action_renderer.jsx";
 export {
+  actionRunEffect,
   createAction,
   rerunActions,
   updateActions,
@@ -50,6 +51,7 @@ export {
 export { useUrlSearchParam } from "./src/nav/browser_integration/use_url_search_param.js";
 export { route, setupRoutes, useRouteStatus } from "./src/nav/route.js";
 export { Route, Routes, useMatchingRouteInfo } from "./src/nav/route.jsx";
+export { routeAction } from "./src/nav/route_action.js";
 export { RouteLink } from "./src/nav/route_link.jsx";
 export { rawUrlPart, setBaseUrl } from "./src/nav/route_pattern.js";
 // Navigation/components
