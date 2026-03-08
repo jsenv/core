@@ -1,6 +1,6 @@
 import { computed } from "@preact/signals";
 
-import { actionRunEffect } from "../action/actions.js";
+import { actionRunEffect } from "../action/action_run_effect.js";
 
 export const routeAction = (
   route,

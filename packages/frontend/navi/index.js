@@ -2,8 +2,8 @@ import "./src/navi_css_vars.js";
 
 // actions
 export { ActionRenderer } from "./src/action/action_renderer.jsx";
+export { actionRunEffect } from "./src/action/action_run_effect.js";
 export {
-  actionRunEffect,
   createAction,
   rerunActions,
   updateActions,
