@@ -6,15 +6,20 @@ export const routeAction = (
   route,
   action,
   paramsEffect = () => route.paramsSignal.value,
+  options,
 ) => {
-  const actionBoundToRoute = actionRunEffect(action, () => {
-    const matching = route.matchingSignal.value;
-    const params = paramsEffect();
-    if (!matching) {
-      return null;
-    }
-    return params;
-  });
+  const actionBoundToRoute = actionRunEffect(
+    action,
+    () => {
+      const matching = route.matchingSignal.value;
+      const params = paramsEffect();
+      if (!matching) {
+        return null;
+      }
+      return params;
+    },
+    options,
+  );
 
   // If the action is related to a store of items
   // we want to keep the url in sync with the item id of the store when it changes

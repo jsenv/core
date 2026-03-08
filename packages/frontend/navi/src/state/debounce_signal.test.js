@@ -8,7 +8,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
   test("update is debounced", async () => {
     const delay = 50;
     const src = signal("a");
-    const debounced = debounceSignal(src, delay);
+    const debounced = debounceSignal(src, { delay });
 
     const valueAtStart = debounced.value;
     src.value = "b";
@@ -22,7 +22,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
   test("rapid updates only apply the last value", async () => {
     const delay = 50;
     const src = signal("a");
-    const debounced = debounceSignal(src, delay);
+    const debounced = debounceSignal(src, { delay });
 
     src.value = "b";
     src.value = "c";
@@ -37,7 +37,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
   test("deep equal objects do not trigger debounced signal update", async () => {
     const delay = 50;
     const src = signal({ x: 1 });
-    const debounced = debounceSignal(src, delay);
+    const debounced = debounceSignal(src, { delay });
 
     // Wait for the initial debounce timeout to fire
     await sleep(delay + 20);
