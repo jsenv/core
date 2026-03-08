@@ -56,7 +56,12 @@ export const actionRunEffect = (
 
   const actionRunnedByThisEffect = action.bindParams(actionParamsSignal, {
     syncParams: debounce ? actionParamsSignal.flush : undefined,
-    onChange: (actionTarget, actionTargetPrevious) => {
+    onChange: (actionTarget, actionTargetPrevious, { explicitRunIntent }) => {
+      if (explicitRunIntent) {
+        // The caller already issued an explicit run/rerun/prerun/reset/abort —
+        // don't attempt to also auto-run from the params change to avoid double-runs.
+        return;
+      }
       if (!actionTargetPrevious && actionTarget) {
         // first run
         if (!actionTarget.params) {

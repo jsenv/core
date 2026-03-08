@@ -1170,13 +1170,13 @@ const createActionProxyFromSignal = (
     };
   };
   const changeCleanupCallbackSet = new Set();
-  const triggerTargetChange = (actionTarget, previousTarget) => {
+  const triggerTargetChange = (actionTarget, previousTarget, context) => {
     for (const changeCleanupCallback of changeCleanupCallbackSet) {
       changeCleanupCallback();
     }
     changeCleanupCallbackSet.clear();
     for (const callback of actionTargetChangeCallbackSet) {
-      const returnValue = callback(actionTarget, previousTarget);
+      const returnValue = callback(actionTarget, previousTarget, context);
       if (typeof returnValue === "function") {
         changeCleanupCallbackSet.add(returnValue);
       }
@@ -1189,7 +1189,7 @@ const createActionProxyFromSignal = (
   let actionTargetPreviousWeakRef = null;
   let isFirstEffect = true;
 
-  const _updateTarget = () => {
+  const _updateTarget = (context) => {
     syncParams?.();
     const params = paramsSignal.peek();
     const proxyParams = proxyParamsSignal.peek();
@@ -1217,10 +1217,10 @@ const createActionProxyFromSignal = (
     actionTargetPreviousWeakRef = actionTarget
       ? new WeakRef(actionTarget)
       : null;
-    triggerTargetChange(actionTarget, previousActionTarget);
+    triggerTargetChange(actionTarget, previousActionTarget, context);
   };
 
-  const proxyMethod = (method) => {
+  const proxyMethod = (method, { explicitRunIntent } = {}) => {
     return (...args) => {
       /*
        * Ensure the proxy targets the correct action before method execution.
@@ -1228,7 +1228,11 @@ const createActionProxyFromSignal = (
        * internal parameter synchronization effect. Using peek() avoids creating
        * reactive dependencies within this pass-through method.
        */
-      _updateTarget();
+      _updateTarget({
+        changeCause: "method_call",
+        changeCauseDetail: method,
+        explicitRunIntent,
+      });
       return currentAction[method](...args);
     };
   };
@@ -1264,14 +1268,16 @@ const createActionProxyFromSignal = (
     data: undefined,
     computedData: undefined,
     completed: undefined,
-    prerun: proxyMethod("prerun"),
-    run: proxyMethod("run"),
-    rerun: proxyMethod("rerun"),
-    reset: proxyMethod("reset"),
-    abort: proxyMethod("abort"),
+    prerun: proxyMethod("prerun", { explicitRunIntent: true }),
+    run: proxyMethod("run", { explicitRunIntent: true }),
+    rerun: proxyMethod("rerun", { explicitRunIntent: true }),
+    reset: proxyMethod("reset", { explicitRunIntent: true }),
+    abort: proxyMethod("abort", { explicitRunIntent: true }),
     matchAllSelfOrDescendant: proxyMethod("matchAllSelfOrDescendant"),
     getCurrentAction: () => {
-      _updateTarget();
+      _updateTarget({
+        changeCause: "get_current_action",
+      });
       return currentAction;
     },
     bindParams: () => {
@@ -1375,7 +1381,9 @@ const createActionProxyFromSignal = (
     weakEffect([action], () => {
       // eslint-disable-next-line no-unused-expressions
       proxyParamsSignal.value;
-      _updateTarget();
+      _updateTarget({
+        changeCause: "params_signal_change",
+      });
     });
   }
 
@@ -1422,27 +1430,34 @@ const createActionProxyFromSignal = (
     });
   }
   if (rerunOnChange) {
-    onActionTargetChange((actionTarget, actionTargetPrevious) => {
-      if (
-        actionTarget &&
-        actionTargetPrevious &&
-        !actionTargetPrevious.isPrerun
-      ) {
-        action.debug(
-          `Action proxy "${actionProxy}": target changed, rerunning action (reason: rerunOnChange)`,
-          {
-            newTarget: actionTarget,
-            previousTarget: actionTargetPrevious,
-          },
-        );
-        actionTarget.rerun({ reason: "rerunOnChange (params modified)" });
-      }
-    });
+    onActionTargetChange(
+      (actionTarget, actionTargetPrevious, { explicitRunIntent }) => {
+        if (explicitRunIntent) {
+          return;
+        }
+        if (
+          actionTarget &&
+          actionTargetPrevious &&
+          !actionTargetPrevious.isPrerun
+        ) {
+          action.debug(
+            `Action proxy "${actionProxy}": target changed, rerunning action (reason: rerunOnChange)`,
+            {
+              newTarget: actionTarget,
+              previousTarget: actionTargetPrevious,
+            },
+          );
+          actionTarget.rerun({ reason: "rerunOnChange (params modified)" });
+        }
+      },
+    );
   }
   if (onChange) {
-    onActionTargetChange((actionTarget, actionTargetPrevious) => {
-      onChange(actionTarget, actionTargetPrevious);
-    });
+    onActionTargetChange(
+      (actionTarget, actionTargetPrevious, { explicitRunIntent }) => {
+        onChange(actionTarget, actionTargetPrevious, { explicitRunIntent });
+      },
+    );
   }
 
   return actionProxy;
