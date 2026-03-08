@@ -10,6 +10,7 @@ await sleep(delay + 20);
 
 let updateCount = 0;
 const dispose = effect(() => {
+  // eslint-disable-next-line no-unused-expressions
   debounced.value; // subscribe
   updateCount++;
 });

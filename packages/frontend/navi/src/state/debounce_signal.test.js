@@ -44,6 +44,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
 
     let updateCount = 0;
     const dispose = effect(() => {
+      // eslint-disable-next-line no-unused-expressions
       debounced.value; // subscribe
       updateCount++;
     });
