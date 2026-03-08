@@ -20,11 +20,12 @@ import {
 } from "./action_run_states.js";
 import { SYMBOL_OBJECT_SIGNAL } from "./symbol_object_signal.js";
 
-let DEBUG = true;
+let DEBUG = false;
 export const enableDebugActions = () => {
   DEBUG = true;
 };
 
+const RUN_SYMBOL = Symbol("run");
 export const actionRunEffect = (action, deriveActionParamsFromSignals) => {
   const paramsSignal = signal(action.params);
   const actionRunnedByThisEffect = action.bindParams(paramsSignal, {
@@ -34,19 +35,21 @@ export const actionRunEffect = (action, deriveActionParamsFromSignals) => {
   effect(() => {
     const params = deriveActionParamsFromSignals();
     if (params) {
-      if (DEBUG) {
-        console.debug(
-          `Action "${action}" is triggered by actionRunEffect with params: ${stringifyForDisplay(params)}`,
-        );
-      }
-      paramsSignal.value = params === true ? {} : params;
+      action.debug(
+        `Action "${action}" is triggered by actionRunEffect with params: ${stringifyForDisplay(params)}`,
+      );
+      // when we receive true, we need to convert to params to be sure we run it
+      // if people want to rerun action all the time without cache even if params are the same
+      // they must return something like t=Date.now() into the params
+      // if the function return {} as a signal to run the action it won't work
+      // as it will be compared to NO_PARAMS which is also {}
+      // (we could ensure this works but for now it's good enough)
+      paramsSignal.value = params === true ? { t: RUN_SYMBOL } : params;
     } else {
-      if (DEBUG) {
-        if (action.runningState === RUNNING) {
-          console.debug(
-            `Action "${action}" is not triggered by actionRunEffect because derived params is falsy: aborting`,
-          );
-        }
+      if (action.runningState === RUNNING) {
+        action.debug(
+          `Action "${action}" is not triggered by actionRunEffect because derived params is falsy: aborting`,
+        );
       }
       actionRunnedByThisEffect.abort();
     }
@@ -135,10 +138,8 @@ const prerunProtectionRegistry = (() => {
     if (protection) {
       clearTimeout(protection.timeoutId);
       protectedActionMap.delete(action);
-      if (DEBUG) {
-        const elapsed = Date.now() - protection.timestamp;
-        console.debug(`"${action}": GC protection removed after ${elapsed}ms`);
-      }
+      const elapsed = Date.now() - protection.timestamp;
+      action.debug(`"${action}": GC protection removed after ${elapsed}ms`);
     }
   };
 
@@ -153,20 +154,14 @@ const prerunProtectionRegistry = (() => {
       const timestamp = Date.now();
       const timeoutId = setTimeout(() => {
         unprotect(action);
-        if (DEBUG) {
-          console.debug(
-            `"${action}": prerun protection expired after ${PROTECTION_DURATION}ms`,
-          );
-        }
-      }, PROTECTION_DURATION);
-
-      protectedActionMap.set(action, { timeoutId, timestamp });
-
-      if (DEBUG) {
-        console.debug(
-          `"${action}": protected from GC for ${PROTECTION_DURATION}ms`,
+        action.debug(
+          `"${action}": prerun protection expired after ${PROTECTION_DURATION}ms`,
         );
-      }
+      }, PROTECTION_DURATION);
+      protectedActionMap.set(action, { timeoutId, timestamp });
+      action.debug(
+        `"${action}": protected from GC for ${PROTECTION_DURATION}ms`,
+      );
     },
 
     unprotect,
@@ -604,7 +599,7 @@ export const createAction = (callback, rootOptions = {}) => {
     let {
       name = callback.name || "anonymous",
       params,
-      isPrerun = true,
+      isPrerun = false,
       runningState = IDLE,
       aborted = false,
       error = null,
@@ -887,6 +882,12 @@ export const createAction = (callback, rootOptions = {}) => {
       callSource,
       toString: () => action.callSource,
       meta,
+      debug: (...args) => {
+        if (!meta.debug || DEBUG) {
+          return;
+        }
+        console.debug(...args);
+      },
     });
     Object.preventExtensions(action);
 
@@ -1442,27 +1443,27 @@ const createActionProxyFromSignal = (
   if (runOnce) {
     onActionTargetChange((actionTarget, actionTargetPrevious) => {
       if (!actionTargetPrevious && actionTarget) {
+        action.debug(
+          `Action proxy "${actionProxy}": target changed, running action once (reason: runOnce)`,
+        );
         actionTarget.run({ reason: "runOnce" });
       }
     });
   }
   if (rerunOnChange) {
     onActionTargetChange((actionTarget, actionTargetPrevious) => {
-      if (action.meta.debug) {
-        console.debug(
+      if (
+        actionTarget &&
+        actionTargetPrevious &&
+        !actionTargetPrevious.isPrerun
+      ) {
+        action.debug(
           `Action proxy "${actionProxy}": target changed, rerunning action (reason: rerunOnChange)`,
           {
             newTarget: actionTarget,
             previousTarget: actionTargetPrevious,
           },
         );
-      }
-
-      if (
-        actionTarget &&
-        actionTargetPrevious &&
-        !actionTargetPrevious.isPrerun
-      ) {
         actionTarget.rerun({ reason: "rerunOnChange (params modified)" });
       }
     });
