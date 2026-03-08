@@ -55,6 +55,7 @@ export const actionRunEffect = (
   }
 
   const actionRunnedByThisEffect = action.bindParams(actionParamsSignal, {
+    syncParams: debounce ? actionParamsSignal.flush : undefined,
     onChange: (actionTarget, actionTargetPrevious) => {
       if (!actionTargetPrevious && actionTarget) {
         // first run

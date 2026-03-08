@@ -63,4 +63,45 @@ await snapshotTests(import.meta.url, ({ test }) => {
 
     return { countAfterSubscribe, countAfterDeepEqual, countAfterDifferent };
   });
+
+  test("flush applies latest value immediately", () => {
+    const delay = 50;
+    const src = signal("a");
+    const debounced = debounceSignal(src, { delay });
+
+    src.value = "b";
+    const valueBeforeFlush = debounced.value;
+    debounced.flush();
+    const valueAfterFlush = debounced.value;
+
+    return { valueBeforeFlush, valueAfterFlush };
+  });
+
+  test("flush cancels the pending debounce timeout", async () => {
+    const delay = 50;
+    const src = signal("a");
+    const debounced = debounceSignal(src, { delay });
+
+    src.value = "b";
+    debounced.flush();
+    const valueAfterFlush = debounced.value;
+    // Wait for what would have been the debounce delay — value should not change
+    await sleep(delay + 20);
+    const valueAfterWait = debounced.value;
+
+    return { valueAfterFlush, valueAfterWait };
+  });
+
+  test("flush is a no-op when debounced signal is already current", () => {
+    const delay = 50;
+    const src = signal("a");
+    const debounced = debounceSignal(src, { delay });
+
+    // No pending change
+    const valueBefore = debounced.value;
+    debounced.flush();
+    const valueAfter = debounced.value;
+
+    return { valueBefore, valueAfter };
+  });
 });

@@ -1,15 +1,13 @@
-# [rapid updates only apply the last value](../../debounce_signal.test.js)
+# [flush is a no-op when debounced signal is already current](../../debounce_signal.test.js)
 
 ```js
 const delay = 50;
 const src = signal("a");
 const debounced = debounceSignal(src, { delay });
 
-src.value = "b";
-src.value = "c";
-src.value = "d";
+// No pending change
 const valueBefore = debounced.value;
-await sleep(delay + 20);
+debounced.flush();
 const valueAfter = debounced.value;
 
 return { valueBefore, valueAfter };
@@ -18,7 +16,7 @@ return { valueBefore, valueAfter };
 ```js
 {
   "valueBefore": "a",
-  "valueAfter": "d"
+  "valueAfter": "a"
 }
 ```
 

@@ -3,7 +3,7 @@
 ```js
 const delay = 50;
 const src = signal({ x: 1 });
-const debounced = debounceSignal(src, delay);
+const debounced = debounceSignal(src, { delay });
 
 // Wait for the initial debounce timeout to fire
 await sleep(delay + 20);

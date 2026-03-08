@@ -3,7 +3,7 @@
 ```js
 const delay = 50;
 const src = signal("a");
-const debounced = debounceSignal(src, delay);
+const debounced = debounceSignal(src, { delay });
 
 const valueAtStart = debounced.value;
 src.value = "b";

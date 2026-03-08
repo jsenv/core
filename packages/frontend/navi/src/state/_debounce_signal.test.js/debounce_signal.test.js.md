@@ -4,6 +4,9 @@
 - [update is debounced](update_is_debounced/update_is_debounced.md)
 - [rapid updates only apply the last value](rapid_updates_only_apply_the_last_value/rapid_updates_only_apply_the_last_value.md)
 - [deep equal objects do not trigger debounced signal update](deep_equal_objects_do_not_trigger_debounced_signal_update/deep_equal_objects_do_not_trigger_debounced_signal_update.md)
+- [flush applies latest value immediately](flush_applies_latest_value_immediately/flush_applies_latest_value_immediately.md)
+- [flush cancels the pending debounce timeout](flush_cancels_the_pending_debounce_timeout/flush_cancels_the_pending_debounce_timeout.md)
+- [flush is a no-op when debounced signal is already current](flush_is_a_no-op_when_debounced_signal_is_already_current/flush_is_a_no-op_when_debounced_signal_is_already_current.md)
 
 ---
 

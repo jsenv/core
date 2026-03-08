@@ -7,7 +7,8 @@ export const debounceSignal = (
   { delay = 300, deepCompare = true } = {},
 ) => {
   let timeoutId;
-  const debouncedSignal = signal(signalToDebounce.peek());
+  let latestValue = signalToDebounce.peek();
+  const debouncedSignal = signal(latestValue);
 
   effect(() => {
     const value = signalToDebounce.value;
@@ -20,10 +21,16 @@ export const debounceSignal = (
       return;
     }
     clearTimeout(timeoutId);
+    latestValue = value;
     timeoutId = setTimeout(() => {
-      debouncedSignal.value = value;
+      debouncedSignal.value = latestValue;
     }, delay);
   });
+
+  debouncedSignal.flush = () => {
+    clearTimeout(timeoutId);
+    debouncedSignal.value = latestValue;
+  };
 
   return debouncedSignal;
 };

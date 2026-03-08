@@ -1159,6 +1159,7 @@ const createActionProxyFromSignal = (
     rerunOnChange = false,
     transferData = false,
     onChange,
+    syncParams,
   } = {},
 ) => {
   const actionTargetChangeCallbackSet = new Set();
@@ -1189,6 +1190,7 @@ const createActionProxyFromSignal = (
   let isFirstEffect = true;
 
   const _updateTarget = () => {
+    syncParams?.();
     const params = paramsSignal.peek();
     const proxyParams = proxyParamsSignal.peek();
     if (params !== proxyParams) {
