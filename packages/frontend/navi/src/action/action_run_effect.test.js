@@ -204,4 +204,16 @@ await snapshotTests(import.meta.url, ({ test }) => {
 
     return runCalls;
   });
+
+  test.ONLY("returning empty object", () => {
+    const paramsSignal = signal();
+    const runCalls = [];
+    const action = createAction((p) => {
+      runCalls.push(p);
+    });
+    actionRunEffect(action, () => paramsSignal.value);
+    paramsSignal.value = {};
+
+    return runCalls;
+  });
 });

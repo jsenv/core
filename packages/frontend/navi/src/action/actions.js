@@ -551,7 +551,7 @@ ${lines.join("\n")}`);
   };
 };
 
-const NO_PARAMS = {};
+const NO_PARAMS = undefined;
 const initialParamsDefault = NO_PARAMS;
 
 const actionWeakMap = new WeakMap();
@@ -583,7 +583,7 @@ export const createAction = (callback, rootOptions = {}) => {
       completeSideEffect,
     } = options;
     if (!Object.hasOwn(options, "params")) {
-      // even undefined should be respect it's only when not provided at all we use default
+      // even undefined should be respected it's only when not provided at all we use default
       params = initialParamsDefault;
     }
 
@@ -1477,7 +1477,7 @@ const createActionProxyFromSignal = (
 
 const generateActionCallSource = (name, params) => {
   if (params === NO_PARAMS) {
-    return `${name}({})`;
+    return `${name}()`;
   }
   // Use stringifyForDisplay with asFunctionArgs option for the entire args array
   const argsString = stringifyForDisplay([params], 3, 0, {
