@@ -4,25 +4,13 @@ import { useLayoutEffect, useRef } from "preact/hooks";
 
 // import { DatabaseSvg } from "../database/database_icons.jsx";
 // import { useCurrentDatabase } from "../database/database_signals.js";
-import {
-  DatabasesDetails,
-  databasesDetailsController,
-} from "../database/databases_details.jsx";
+// import { DatabasesDetails } from "../database/databases_details.jsx";
 import { RoleCanLoginListDetails } from "../role/role_can_login/role_can_login_list_details.jsx";
-import {
-  RoleGroupListDetails,
-  roleGroupListDetailsController,
-} from "../role/role_group/role_group_list_details.jsx";
+import { RoleGroupListDetails } from "../role/role_group/role_group_list_details.jsx";
 import { pickRoleIcon } from "../role/role_icons.jsx";
 import { useCurrentRole } from "../role/role_store.js";
-import {
-  RoleWithOwnershipListDetails,
-  roleWithOwnershipListDetailsController,
-} from "../role/role_with_ownership/role_with_ownership_list_details.jsx";
-import {
-  TablesDetails,
-  tablesDetailsController,
-} from "../table/tables_details.jsx";
+// import { RoleWithOwnershipListDetails } from "../role/role_with_ownership/role_with_ownership_list_details.jsx";
+// import { TablesDetails } from "../table/tables_details.jsx";
 import "./explorer.css" with { type: "css" };
 import "./explorer_store.js";
 import { EXPLORER } from "./explorer_store.js";
@@ -71,12 +59,10 @@ const ExplorerBody = () => {
   return (
     <div ref={flexDetailsSetRef} className="explorer_body">
       <RoleCanLoginListDetails />
-      {/* <RoleGroupListDetails resizableDetailsIdSet={resizableDetailsIdSet} />
-      <DatabasesDetails resizableDetailsIdSet={resizableDetailsIdSet} />
-      <TablesDetails resizableDetailsIdSet={resizableDetailsIdSet} />
-      <RoleWithOwnershipListDetails
-        resizableDetailsIdSet={resizableDetailsIdSet}
-      /> */}
+      <RoleGroupListDetails />
+      {/* <DatabasesDetails />
+      <TablesDetails />
+      <RoleWithOwnershipListDetails /> */}
     </div>
   );
 };

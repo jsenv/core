@@ -1,46 +1,7 @@
-import {
-  BadgeCount,
-  Button,
-  Details,
-  Text,
-  valueInLocalStorage,
-} from "@jsenv/navi";
-import { effect, signal } from "@preact/signals";
+import { BadgeCount, Button, Details, Text } from "@jsenv/navi";
 import { useCallback, useLayoutEffect, useRef, useState } from "preact/hooks";
 
 import { ExplorerItemList } from "./explorer_item_list.jsx";
-
-export const createExplorerGroupController = (
-  id,
-  { detailsOpenAtStart, detailsOnToggle },
-) => {
-  const [restoreHeight, storeHeight] = valueInLocalStorage(
-    `explorer_group_${id}_height`,
-    {
-      type: "positive_number",
-    },
-  );
-  const heightSettingSignal = signal(restoreHeight());
-  effect(() => {
-    const height = heightSettingSignal.value;
-    storeHeight(height);
-  });
-
-  const useHeightSetting = () => {
-    return heightSettingSignal.value;
-  };
-  const setHeightSetting = (width) => {
-    heightSettingSignal.value = width;
-  };
-
-  return {
-    id,
-    useHeightSetting,
-    setHeightSetting,
-    detailsOpenAtStart,
-    detailsOnToggle,
-  };
-};
 
 export const ExplorerGroup = (props) => {
   const {
