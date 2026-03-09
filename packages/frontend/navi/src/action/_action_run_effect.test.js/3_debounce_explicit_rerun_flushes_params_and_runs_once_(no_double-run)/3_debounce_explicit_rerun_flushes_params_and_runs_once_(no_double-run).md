@@ -4,12 +4,9 @@
 const debounceDelay = 50;
 const paramsSignal = signal({ query: "a" });
 const runCalls = [];
-const action = createAction(
-  async (params) => {
-    runCalls.push({ params });
-  },
-  { meta: { debug: true } },
-);
+const action = createAction(async (params) => {
+  runCalls.push({ params });
+});
 const effectAction = actionRunEffect(action, () => paramsSignal.value, {
   debounce: debounceDelay,
 });
@@ -23,7 +20,7 @@ const runCountImmediatelyAfterRerun = runCalls.length;
 // Wait to confirm debounce timeout does NOT fire another run
 await sleep(debounceDelay + 20);
 const runCountAfterWait = runCalls.length;
-const lastRunParams = runCalls[runCalls.length - 1]?.params;
+const lastRunParams = runCalls[runCalls.length - 1].params;
 
 return {
   runCountBeforeExplicitRun,
@@ -33,22 +30,11 @@ return {
 };
 ```
 
-# 1/2 logs
-
-```console
-Derived params for action "anonymous({})": { query: "a" }
-Derived params for action "anonymous({})": { query: "b" }
-"anonymous({ query: "b" })": params modified -> rerunning action
-
-```
-
-# 2/2 resolve
-
 ```js
 {
   "runCountBeforeExplicitRun": 1,
-  "runCountImmediatelyAfterRerun": 3,
-  "runCountAfterWait": 3,
+  "runCountImmediatelyAfterRerun": 2,
+  "runCountAfterWait": 2,
   "lastRunParams": {
     "query": "b"
   }

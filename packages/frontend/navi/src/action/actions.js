@@ -607,12 +607,15 @@ export const createAction = (callback, rootOptions = {}) => {
         : computedData;
 
     const prerun = (options) => {
+      action.debug(`${action}.prerun(${stringifyForDisplay(options)})`);
       return dispatchSingleAction(action, "prerun", options);
     };
     const run = (options) => {
+      action.debug(`${action}.run(${stringifyForDisplay(options)})`);
       return dispatchSingleAction(action, "run", options);
     };
     const rerun = (options) => {
+      action.debug(`${action}.rerun(${stringifyForDisplay(options)})`);
       return dispatchSingleAction(action, "rerun", options);
     };
     /**
@@ -1189,8 +1192,23 @@ const createActionProxyFromSignal = (
   let actionTargetPreviousWeakRef = null;
   let isFirstEffect = true;
 
+  let isUpdatingTarget = false;
   const _updateTarget = (context) => {
-    syncParams?.();
+    if (isUpdatingTarget) {
+      // likely syncParams caused the paramsSignal.value to update which
+      // calls _updateTarget. But we are already in the middle of an update
+      // likely cause by an explicit call to rerun for instance
+      // so we want to keep that rerun intent and "ignore" this updateTarget call
+      // so we don't end up running the action twice (once because we dispatch change without explicitRunIntent and one for the initial run intent)
+      return;
+    }
+    isUpdatingTarget = true;
+    action.debug(`${action}._updateTarget(${stringifyForDisplay(context)})`);
+    if (syncParams) {
+      syncParams();
+    }
+    isUpdatingTarget = false;
+
     const params = paramsSignal.peek();
     const proxyParams = proxyParamsSignal.peek();
     if (params !== proxyParams) {
@@ -1344,6 +1362,13 @@ const createActionProxyFromSignal = (
       proxyParamsSignalRef.value = newParams;
     },
   );
+  weakEffect([action], () => {
+    // eslint-disable-next-line no-unused-expressions
+    proxyParamsSignal.value;
+    _updateTarget({
+      changeCause: "params_signal_change",
+    });
+  });
 
   const proxyPrivateProperties = {
     get currentAction() {
@@ -1376,16 +1401,6 @@ const createActionProxyFromSignal = (
       currentActionPrivateProperties.childActionWeakSet;
   });
   setActionPrivateProperties(actionProxy, proxyPrivateProperties);
-
-  {
-    weakEffect([action], () => {
-      // eslint-disable-next-line no-unused-expressions
-      proxyParamsSignal.value;
-      _updateTarget({
-        changeCause: "params_signal_change",
-      });
-    });
-  }
 
   actionProxy.replaceParams = (newParams) => {
     if (currentAction === action) {

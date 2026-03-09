@@ -74,12 +74,9 @@ await snapshotTests(import.meta.url, ({ test }) => {
       const debounceDelay = 50;
       const paramsSignal = signal({ query: "a" });
       const runCalls = [];
-      const action = createAction(
-        async (params) => {
-          runCalls.push({ params });
-        },
-        { meta: { debug: true } },
-      );
+      const action = createAction(async (params) => {
+        runCalls.push({ params });
+      });
       const effectAction = actionRunEffect(action, () => paramsSignal.value, {
         debounce: debounceDelay,
       });
@@ -93,7 +90,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
       // Wait to confirm debounce timeout does NOT fire another run
       await sleep(debounceDelay + 20);
       const runCountAfterWait = runCalls.length;
-      const lastRunParams = runCalls[runCalls.length - 1]?.params;
+      const lastRunParams = runCalls[runCalls.length - 1].params;
 
       return {
         runCountBeforeExplicitRun,

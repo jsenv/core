@@ -71,7 +71,6 @@ export const actionRunEffect = (
           // falsy params, don't run
           return;
         }
-        action.debug(`"${actionTarget}": params are truthy -> running action`);
         actionTarget.run({ reason: "truthy params first run" });
         return;
       }
@@ -87,12 +86,11 @@ export const actionRunEffect = (
           actionTargetPrevious.abort("abortOnFalsyParams");
           return;
         }
-        action.debug(`"${actionTarget}": params modified -> rerunning action`);
         actionTarget.rerun({ reason: "params modified" });
       }
     },
   });
-  if (actionRunnedByThisEffect.params) {
+  if (actionParamsSignal.peek()) {
     actionRunnedByThisEffect.run({ reason: "initial truthy params" });
   }
   return actionRunnedByThisEffect;
