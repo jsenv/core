@@ -20,7 +20,7 @@ export const useActionStatus = (action) => {
     runningStateSignal,
     isPrerunSignal,
     errorSignal,
-    computedDataSignal,
+    dataSignal,
   } = getActionPrivateProperties(action);
 
   const params = paramsSignal.value;
@@ -31,7 +31,7 @@ export const useActionStatus = (action) => {
   const error = errorSignal.value;
   const loading = runningState === RUNNING;
   const completed = runningState === COMPLETED;
-  const data = computedDataSignal.value;
+  const data = dataSignal.value;
 
   return {
     params,

@@ -6,7 +6,7 @@ export const routeAction = (
   route,
   action,
   paramsEffect = () => route.paramsSignal.value,
-  options,
+  options = {},
 ) => {
   const actionBoundToRoute = actionRunEffect(
     action,

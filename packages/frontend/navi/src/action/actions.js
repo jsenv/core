@@ -551,7 +551,7 @@ ${lines.join("\n")}`);
   };
 };
 
-const NO_PARAMS = undefined;
+const NO_PARAMS = { __no_params__: true };
 const initialParamsDefault = NO_PARAMS;
 
 const actionWeakMap = new WeakMap();
@@ -571,40 +571,41 @@ export const createAction = (callback, rootOptions = {}) => {
       runningState = IDLE,
       aborted = false,
       error = null,
-      data,
-      computedData,
-      compute,
+      value,
+      resultToValue,
+      valueToData,
+      dataDefault,
+      data = dataDefault,
+
       completed = false,
       renderLoadedAsync,
       sideEffect = () => {},
       keepOldData = false,
       meta = {},
-      dataEffect,
+
       completeSideEffect,
     } = options;
     if (!Object.hasOwn(options, "params")) {
       // even undefined should be respected it's only when not provided at all we use default
       params = initialParamsDefault;
     }
+    if (value === undefined && data !== undefined) {
+      value = data;
+    }
 
-    const initialData = data;
+    const valueInitial = value;
     const paramsSignal = signal(params);
     const isPrerunSignal = signal(isPrerun);
     const runningStateSignal = signal(runningState);
     const errorSignal = signal(error);
-    const dataSignal = signal(initialData);
-    const computedDataSignal = compute
+    const valueSignal = signal(valueInitial);
+    const dataSignal = valueToData
       ? computed(() => {
-          const data = dataSignal.value;
-          return compute(data);
+          const value = valueSignal.value;
+          const data = valueToData(value);
+          return data;
         })
-      : dataSignal;
-    computedData =
-      computedData === undefined
-        ? compute
-          ? compute(data)
-          : data
-        : computedData;
+      : valueSignal;
 
     const prerun = (options) => {
       action.debug(`${action}.prerun(${stringifyForDisplay(options)})`);
@@ -814,8 +815,8 @@ export const createAction = (callback, rootOptions = {}) => {
       runningState,
       aborted,
       error,
+      value,
       data,
-      computedData,
       completed,
       prerun,
       run,
@@ -879,10 +880,10 @@ export const createAction = (callback, rootOptions = {}) => {
         actionRef.error = error;
       });
       weakEffect([action], (actionRef) => {
+        value = valueSignal.value;
         data = dataSignal.value;
-        computedData = computedDataSignal.value;
+        actionRef.value = value;
         actionRef.data = data;
-        actionRef.computedData = computedData;
       });
     }
 
@@ -985,17 +986,20 @@ export const createAction = (callback, rootOptions = {}) => {
            * before the UI attempts to render the now-missing resource.
            */
           batch(() => {
-            dataSignal.value = dataEffect
-              ? dataEffect(runResult, action)
+            const value = resultToValue
+              ? resultToValue(runResult, action)
               : runResult;
+            valueSignal.value = value;
             runningStateSignal.value = COMPLETED;
-            onComplete?.(computedDataSignal.peek(), action);
+            const data = dataSignal.value;
+            onComplete?.(data, action);
             completeSideEffect?.(action);
           });
           if (DEBUG) {
             console.log(`"${action}": completed`);
           }
-          return computedDataSignal.peek();
+          const data = dataSignal.peek();
+          return data;
         };
         const onRunError = (e) => {
           if (abortSignal) {
@@ -1102,7 +1106,7 @@ export const createAction = (callback, rootOptions = {}) => {
         batch(() => {
           errorSignal.value = null;
           if (!keepOldData) {
-            dataSignal.value = initialData;
+            valueSignal.value = valueInitial;
           }
           isPrerunSignal.value = true;
           runningStateSignal.value = IDLE;
@@ -1110,13 +1114,13 @@ export const createAction = (callback, rootOptions = {}) => {
       };
 
       const privateProperties = {
-        initialData,
+        valueInitial,
 
         paramsSignal,
         runningStateSignal,
         isPrerunSignal,
+        valueSignal,
         dataSignal,
-        computedDataSignal,
         errorSignal,
 
         performRun,
@@ -1281,8 +1285,8 @@ const createActionProxyFromSignal = (
     runningState: undefined,
     aborted: undefined,
     error: undefined,
+    value: undefined,
     data: undefined,
-    computedData: undefined,
     completed: undefined,
     prerun: proxyMethod("prerun", { explicitRunIntent: true }),
     run: proxyMethod("run", { explicitRunIntent: true }),
@@ -1318,8 +1322,8 @@ const createActionProxyFromSignal = (
     actionProxy.runningState = currentAction.runningState;
     actionProxy.aborted = currentAction.aborted;
     actionProxy.error = currentAction.error;
+    actionProxy.value = currentAction.value;
     actionProxy.data = currentAction.data;
-    actionProxy.computedData = currentAction.computedData;
     actionProxy.completed = currentAction.completed;
   });
 
@@ -1379,8 +1383,8 @@ const createActionProxyFromSignal = (
       "runningState",
     ),
     errorSignal: proxyPrivateSignal("errorSignal", "error"),
+    valueSignal: proxyPrivateSignal("valueSignal", "value"),
     dataSignal: proxyPrivateSignal("dataSignal", "data"),
-    computedDataSignal: proxyPrivateSignal("computedDataSignal"),
     performRun: proxyPrivateMethod("performRun"),
     performReset: proxyPrivateMethod("performReset"),
     ui: currentActionPrivateProperties.ui,
@@ -1425,9 +1429,9 @@ const createActionProxyFromSignal = (
           getActionPrivateProperties(actionTargetPrevious);
         const targetPrivateProperties =
           getActionPrivateProperties(actionTarget);
-        const targetDataSignal = targetPrivateProperties.dataSignal;
-        const previousDataSignal = previousTargetPrivateProperties.dataSignal;
-        targetDataSignal.value = previousDataSignal.value;
+        const targetValueSignal = targetPrivateProperties.valueSignal;
+        const previousValueSignal = previousTargetPrivateProperties.valueSignal;
+        targetValueSignal.value = previousValueSignal.value;
       }
     });
   }

@@ -5,11 +5,7 @@ import { ExplorerGroup } from "../../explorer/explorer_group.jsx";
 import { ROLE_CAN_LOGIN_GET_MANY_ACTION } from "../../routes.js";
 import { RoleCanLoginWithPlusSvg } from "../role_icons.jsx";
 import { RoleLink } from "../role_link.jsx";
-import {
-  ROLE_CAN_LOGIN,
-  useRoleArrayInStore,
-  useRoleCanLoginArray,
-} from "../role_store.js";
+import { ROLE_CAN_LOGIN, useRoleArrayInStore } from "../role_store.js";
 import {
   roleCanLoginHeightSignal,
   roleCanLoginOpenSignal,
@@ -18,7 +14,6 @@ import {
 export const RoleCanLoginListDetails = () => {
   const [resizable, setResizable] = useState(false);
   const roleCanLoginCount = useRoleCanLoginCount();
-  const roleCanLoginArray = useRoleCanLoginArray();
 
   return (
     <ExplorerGroup
@@ -65,8 +60,6 @@ export const RoleCanLoginListDetails = () => {
           columnValue: newRolname,
         })
       }
-    >
-      {roleCanLoginArray}
-    </ExplorerGroup>
+    />
   );
 };
