@@ -9,7 +9,7 @@ import { RoleCanLoginListDetails } from "../role/role_can_login/role_can_login_l
 import { RoleGroupListDetails } from "../role/role_group/role_group_list_details.jsx";
 import { pickRoleIcon } from "../role/role_icons.jsx";
 import { useCurrentRole } from "../role/role_store.js";
-// import { RoleWithOwnershipListDetails } from "../role/role_with_ownership/role_with_ownership_list_details.jsx";
+import { RoleWithOwnershipListDetails } from "../role/role_with_ownership/role_with_ownership_list_details.jsx";
 import { TableListDetails } from "../table/table_list_details.jsx";
 import "./explorer.css" with { type: "css" };
 import "./explorer_store.js";
@@ -62,7 +62,7 @@ const ExplorerBody = () => {
       <RoleGroupListDetails />
       <DatabasesDetails />
       <TableListDetails />
-      {/*<RoleWithOwnershipListDetails />  */}
+      <RoleWithOwnershipListDetails />
     </div>
   );
 };

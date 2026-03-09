@@ -1,25 +1,19 @@
 import { BadgeCount, Details, Icon, Text } from "@jsenv/navi";
+import { useState } from "preact/hooks";
 
 import { DatabaseLink } from "../../database/database_link.jsx";
 import { useRoleWithOwnershipCount } from "../../database_manager_signals.js";
-import {
-  createExplorerGroupController,
-  ExplorerGroup,
-} from "../../explorer/explorer_group.jsx";
+import { ExplorerGroup } from "../../explorer/explorer_group.jsx";
 import { ExplorerItemList } from "../../explorer/explorer_item_list.jsx";
-import {
-  ROLE_DATABASES,
-  ROLE_TABLES,
-  ROLE_WITH_OWNERSHIP,
-  useRoleWithOwnershipArray,
-} from "../../store.js";
+import { ROLE_WITH_OWNERSHIP_GET_MANY_ACTION } from "../../routes.js";
+import { ROLE_DATABASES, ROLE_TABLES } from "../../store.js";
 import { TableLink } from "../../table/table_link.jsx";
 import { pickRoleIcon } from "../role_icons.jsx";
 import { useRoleArrayInStore } from "../role_store.js";
 import {
-  roleWithOwnershipListDetailsOnToggle,
-  roleWithOwnershipListDetailsOpenAtStart,
-} from "./role_with_ownership_list_details_state.js";
+  roleOwnershipHeightSignal,
+  roleOwnershipOpenSignal,
+} from "./role_with_ownership_list_state.js";
 
 import.meta.css = /* css */ `
   .explorer_details {
@@ -35,21 +29,27 @@ import.meta.css = /* css */ `
   }
 `;
 
-export const roleWithOwnershipListDetailsController =
-  createExplorerGroupController("role_with_ownership_list", {
-    detailsOpenAtStart: roleWithOwnershipListDetailsOpenAtStart,
-    detailsOnToggle: roleWithOwnershipListDetailsOnToggle,
-  });
-
-export const RoleWithOwnershipListDetails = (props) => {
+export const RoleWithOwnershipListDetails = () => {
+  const [resizable, setResizable] = useState(false);
   const roleWithOwnershipCount = useRoleWithOwnershipCount();
-  const roleWithOwnershipArray = useRoleWithOwnershipArray();
 
   return (
     <ExplorerGroup
-      {...props}
-      controller={roleWithOwnershipListDetailsController}
-      detailsAction={ROLE_WITH_OWNERSHIP.GET_MANY}
+      id="role_ownership_list"
+      open={roleOwnershipOpenSignal.value}
+      detailsConnectedAction={ROLE_WITH_OWNERSHIP_GET_MANY_ACTION}
+      detailsUIAction={(open) => {
+        roleOwnershipOpenSignal.value = open;
+      }}
+      resizable={resizable}
+      height={roleOwnershipHeightSignal.value}
+      onresizeend={(e) => {
+        const newHeight = e.detail.size;
+        roleOwnershipHeightSignal.value = newHeight;
+      }}
+      onresizablechange={(e) => {
+        setResizable(e.detail.resizable);
+      }}
       idKey="oid"
       nameKey="rolname"
       label="OWNERSHIP"
@@ -167,8 +167,6 @@ export const RoleWithOwnershipListDetails = (props) => {
         );
       }}
       useItemArrayInStore={useRoleArrayInStore}
-    >
-      {roleWithOwnershipArray}
-    </ExplorerGroup>
+    />
   );
 };

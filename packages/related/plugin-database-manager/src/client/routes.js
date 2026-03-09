@@ -21,6 +21,11 @@ import {
 } from "./role/role_group/role_group_state.js";
 import { ROLE, ROLE_CAN_LOGIN, ROLE_CANNOT_LOGIN } from "./role/role_store.js";
 import {
+  roleOwnershipHeightSignal,
+  roleOwnershipOpenSignal,
+} from "./role/role_with_ownership/role_with_ownership_list_state.js";
+import { ROLE_WITH_OWNERSHIP } from "./store.js";
+import {
   tableListHeightSignal,
   tableListOpenSignal,
 } from "./table/table_list_state.js";
@@ -42,6 +47,8 @@ export const HOME_ROUTE = route(`/`, {
     database_height: databaseHeightSignal,
     table_list_open: tableListOpenSignal,
     table_list_height: tableListHeightSignal,
+    role_ownership_open: roleOwnershipOpenSignal,
+    role_ownership_height: roleOwnershipHeightSignal,
   },
 });
 export const ROLE_CAN_LOGIN_GET_MANY_ACTION = routeAction(
@@ -82,6 +89,17 @@ export const TABLE_GET_MANY_ACTION = routeAction(
   TABLE.GET_MANY,
   () => {
     const open = tableListOpenSignal.value;
+    if (!open) {
+      return null;
+    }
+    return {};
+  },
+);
+export const ROLE_WITH_OWNERSHIP_GET_MANY_ACTION = routeAction(
+  HOME_ROUTE,
+  ROLE_WITH_OWNERSHIP.GET_MANY,
+  () => {
+    const open = roleOwnershipOpenSignal.value;
     if (!open) {
       return null;
     }
