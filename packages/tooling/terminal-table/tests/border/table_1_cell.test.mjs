@@ -141,7 +141,7 @@ await snapshotTableTests(import.meta.url, ({ test }) => {
       borderBottomBold: true,
     }));
 
-  test("5_border_double", () =>
+  test("border_double", () =>
     run({
       borderLeftStyle: "double",
       borderRightStyle: "double",
@@ -149,19 +149,19 @@ await snapshotTableTests(import.meta.url, ({ test }) => {
       borderBottomStyle: "double",
     }));
 
-  test("6_border_double_x", () =>
+  test("border_double_x", () =>
     run({
       borderLeftStyle: "double",
       borderRightStyle: "double",
     }));
 
-  test("7_border_double_y", () =>
+  test("border_double_y", () =>
     run({
       borderTopStyle: "double",
       borderBottomStyle: "double",
     }));
 
-  test("8_rounded_corners", () =>
+  test("rounded_corners", () =>
     run({
       borderLeftRounded: true,
       borderRightRounded: true,
@@ -169,7 +169,7 @@ await snapshotTableTests(import.meta.url, ({ test }) => {
       borderBottomRounded: true,
     }));
 
-  test("9_top_corners_rounded", () =>
+  test("top_corners_rounded", () =>
     run({
       borderLeftRounded: true,
       borderRightRounded: true,
@@ -177,7 +177,7 @@ await snapshotTableTests(import.meta.url, ({ test }) => {
     }));
 
   // rounded and bold are not compatible (the output will use regular bold corners)
-  test("10_corners_rounded_and_bold", () =>
+  test("corners_rounded_and_bold", () =>
     run({
       borderLeftRounded: true,
       borderRightRounded: true,

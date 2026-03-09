@@ -114,7 +114,7 @@ const run = (measure) => {
 };
 
 await snapshotTests(import.meta.url, ({ test }) => {
-  test("0_string_width", () => run(stringWidth));
+  test("string_width", () => run(stringWidth));
 
-  test("1_terminal_size", () => run(measureTextWidth));
+  test("terminal_size", () => run(measureTextWidth));
 });

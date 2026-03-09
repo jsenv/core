@@ -1,7 +1,7 @@
 # [new_url_http_in_second_arg.test.mjs](../new_url_http_in_second_arg.test.mjs)
 
 
-- [0_basic](0_basic/0_basic.md)
+- [basic](0_basic/0_basic.md)
 
 ---
 

@@ -1,4 +1,4 @@
-# [0_chromium](../../sourcemap_js_inline_dev.test.mjs)
+# [chromium](../../sourcemap_js_inline_dev.test.mjs)
 
 ```js
 run({ browserLauncher: chromium })

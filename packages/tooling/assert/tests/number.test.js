@@ -74,13 +74,13 @@ await snapshotAssertTests(import.meta.url, ({ test }) => {
       expect: 1_464_301,
     });
   });
-  test("1_001 and 2_002", () => {
+  test("001 and 2_002", () => {
     assert({
       actual: 1_001,
       expect: 2_002,
     });
   });
-  test("2_200_002 and 1_100_001", () => {
+  test("200_002 and 1_100_001", () => {
     assert({
       actual: 2_200_002,
       expect: 1_100_001,

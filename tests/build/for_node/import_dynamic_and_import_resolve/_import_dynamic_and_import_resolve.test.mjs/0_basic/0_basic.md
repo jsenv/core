@@ -1,4 +1,4 @@
-# [0_basic](../../import_dynamic_and_import_resolve.test.mjs)
+# [basic](../../import_dynamic_and_import_resolve.test.mjs)
 
 ```js
 run()

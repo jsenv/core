@@ -1,4 +1,4 @@
-# [0_basic](../../subbuild_new_url.test.mjs)
+# [basic](../../subbuild_new_url.test.mjs)
 
 ```js
 run()

@@ -1,4 +1,4 @@
-# [0_basic](../../node_and_web.test.mjs)
+# [basic](../../node_and_web.test.mjs)
 
 ```js
 run()

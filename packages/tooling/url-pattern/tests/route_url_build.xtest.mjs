@@ -5,7 +5,7 @@ const buildRouteUrl = (pattern, url, params) =>
   createResourcePattern(pattern).build(url, params);
 
 await snapshotTests(import.meta.url, ({ test }) => {
-  test("0_basic", () => {
+  test("basic", () => {
     return {
       a: buildRouteUrl("/before/:id", "http://example.com/", { id: "test" }),
       b: buildRouteUrl("?route=:route&id=:id", "http://example.com", {

@@ -1,7 +1,7 @@
 # [css_conditional_imports_build.test.mjs](../css_conditional_imports_build.test.mjs)
 
 
-- [0_basic](0_basic/0_basic.md)
+- [basic](0_basic/0_basic.md)
 
 ---
 

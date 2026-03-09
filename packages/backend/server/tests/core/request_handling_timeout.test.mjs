@@ -26,10 +26,10 @@ const run = async ({ waitForEver }) => {
 };
 
 await snapshotServerTests(import.meta.url, ({ test }) => {
-  test("0_regular", async () => {
+  test("regular", async () => {
     return run({ waitForEver: false });
   });
-  test("1_timing_out", async () => {
+  test("timing_out", async () => {
     return run({ waitForEver: true });
   });
 });

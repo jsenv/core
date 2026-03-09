@@ -1,7 +1,7 @@
 # [auto_vendoring.test.mjs](../auto_vendoring.test.mjs)
 
 
-- [0_basic](0_basic/0_basic.md)
+- [basic](0_basic/0_basic.md)
 
 ---
 

@@ -22,5 +22,5 @@ const run = async () => {
 };
 
 await snapshotBuildTests(import.meta.url, ({ test }) => {
-  test("0_versioning", () => run());
+  test("versioning", () => run());
 });

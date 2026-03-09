@@ -18,11 +18,11 @@ const run = () => {
 };
 
 const { dirUrlMap } = await snapshotBuildTests(import.meta.url, ({ test }) => {
-  test("0_basic", () => run());
+  test("basic", () => run());
 });
 
 const actual = {
-  basic: await executeBuildHtmlInBrowser(`${dirUrlMap.get("0_basic")}build/`),
+  basic: await executeBuildHtmlInBrowser(`${dirUrlMap.get("basic")}build/`),
 };
 const expect = {
   basic: `window.origin/js/main.nomodule.js?v=9798f172`,

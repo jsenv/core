@@ -1,8 +1,8 @@
 # [new_worker_type_classic_build.test.mjs](../new_worker_type_classic_build.test.mjs)
 
 
-- [0_basic](0_basic/0_basic.md)
-- [1_no_bundling](1_no_bundling/1_no_bundling.md)
+- [basic](0_basic/0_basic.md)
+- [no_bundling](1_no_bundling/1_no_bundling.md)
 
 ---
 

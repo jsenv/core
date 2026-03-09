@@ -31,11 +31,11 @@ const run = async ({ runtimeCompat, versioning }) => {
 await snapshotBuildTests(
   import.meta.url,
   ({ test }) => {
-    test("0_top_level_await", () =>
+    test("top_level_await", () =>
       run({
         runtimeCompat: { chrome: "89" },
       }));
-    test("1_top_level_await_fallback", () =>
+    test("top_level_await_fallback", () =>
       run({
         runtimeCompat: { chrome: "55" },
       }));
@@ -45,7 +45,7 @@ await snapshotBuildTests(
     // - It would be overkill to use systemjs only because code uses TLA + export
     // -> Jsenv throw an error when TLA + exports is used and systemjs is not
     // (ideally jsenv would throw a custom error explaining all this)
-    test("2_top_level_await_throw", () =>
+    test("top_level_await_throw", () =>
       run({
         runtimeCompat: { chrome: "65" },
         versioning: false,

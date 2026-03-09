@@ -22,11 +22,11 @@ const run = () => {
 };
 
 const { dirUrlMap } = await snapshotBuildTests(import.meta.url, ({ test }) => {
-  test("0_basic", () => run());
+  test("basic", () => run());
 });
 
 replaceFileStructureSync({
-  from: new URL(`${dirUrlMap.get("0_basic")}build/`),
+  from: new URL(`${dirUrlMap.get("basic")}build/`),
   to: new URL("./git_ignored/", import.meta.url),
 });
 copyFileSync({

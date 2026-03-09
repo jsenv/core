@@ -31,11 +31,11 @@ const run = async ({ runtimeCompat, sourcemaps }) => {
 await snapshotBuildTests(
   import.meta.url,
   ({ test }) => {
-    test("0_js_module", () =>
+    test("js_module", () =>
       run({
         runtimeCompat: { chrome: "89" },
       }));
-    test("1_js_module_fallback", () =>
+    test("js_module_fallback", () =>
       run({
         runtimeCompat: { chrome: "64" },
       }));
@@ -45,7 +45,7 @@ await snapshotBuildTests(
     // What should happen instead is that js modules files are gone, so their sourcemap
     // should not appear in the url graph.
     // We generate sourcemap here to ensure there won't be a regression on that
-    test("2_js_module_fallback_and_sourcemap_as_file", () =>
+    test("js_module_fallback_and_sourcemap_as_file", () =>
       run({
         runtimeCompat: { chrome: "60" },
         sourcemaps: "file",

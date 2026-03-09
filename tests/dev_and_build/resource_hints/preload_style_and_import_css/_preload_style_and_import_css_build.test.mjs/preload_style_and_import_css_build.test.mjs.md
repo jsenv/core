@@ -1,8 +1,8 @@
 # [preload_style_and_import_css_build.test.mjs](../preload_style_and_import_css_build.test.mjs)
 
 
-- [0_js_module](0_js_module/0_js_module.md)
-- [1_js_module_fallback_no_bundling](1_js_module_fallback_no_bundling/1_js_module_fallback_no_bundling.md)
+- [js_module](0_js_module/0_js_module.md)
+- [js_module_fallback_no_bundling](1_js_module_fallback_no_bundling/1_js_module_fallback_no_bundling.md)
 
 ---
 

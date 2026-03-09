@@ -88,7 +88,7 @@ const run = async () => {
 await snapshotDevTests(
   import.meta.url,
   ({ test }) => {
-    test("0_basic", () => run());
+    test("basic", () => run());
   },
   {
     logEffects: false,

@@ -1,9 +1,9 @@
-# [6_copy_foo](../../new_url_directory_3.test.mjs)
+# [js_module_fallback_no_versioning](../../preload_js_module_build.test.mjs)
 
 ```js
 run({
-  sourceDirectoryUrl: new URL("./fixtures/1_foo/", import.meta.url),
-  directoryReferenceEffect: "copy",
+  runtimeCompat: { chrome: "60" },
+  versioning: false,
 })
 ```
 
@@ -14,7 +14,7 @@ see [./build/](./build/)
 # 2/2 resolve
 
 ```js
-{}
+42
 ```
 
 ---

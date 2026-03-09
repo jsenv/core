@@ -1,4 +1,4 @@
-# [0_basic](../../importmap_inline.test.mjs)
+# [basic](../../importmap_inline.test.mjs)
 
 ```js
 run({

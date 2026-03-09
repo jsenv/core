@@ -26,5 +26,5 @@ const run = async () => {
 };
 
 await snapshotBuildTests(import.meta.url, ({ test }) => {
-  test("0_inlining", () => run());
+  test("inlining", () => run());
 });

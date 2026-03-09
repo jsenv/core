@@ -23,7 +23,7 @@ const run = () => {
 };
 
 await snapshotTableTests(import.meta.url, ({ test }) => {
-  test("0_basic", () => {
+  test("basic", () => {
     run();
   });
 });

@@ -32,7 +32,7 @@ const clearAll = () => {
 await snapshotTests(
   import.meta.url,
   ({ test }) => {
-    test("0_basic_persistence", () => {
+    test("basic_persistence", () => {
       clearAll();
       const results = [];
 
@@ -69,7 +69,7 @@ await snapshotTests(
       return { results };
     });
 
-    test("1_persistence_with_existing_storage", () => {
+    test("persistence_with_existing_storage", () => {
       clearAll();
 
       // Pre-populate storage
@@ -90,7 +90,7 @@ await snapshotTests(
       };
     });
 
-    test("2_persistence_different_types", () => {
+    test("persistence_different_types", () => {
       clearAll();
       const results = [];
 
@@ -146,7 +146,7 @@ await snapshotTests(
       return { results };
     });
 
-    test("3_persistence_with_validation", () => {
+    test("persistence_with_validation", () => {
       clearAll();
       const results = [];
 
@@ -177,7 +177,7 @@ await snapshotTests(
       return { results };
     });
 
-    test("4_persistence_with_dynamic_defaults", () => {
+    test("persistence_with_dynamic_defaults", () => {
       clearAll();
       const results = [];
 
@@ -232,7 +232,7 @@ await snapshotTests(
       return { results };
     });
 
-    test("5_persistence_storage_cleanup", () => {
+    test("persistence_storage_cleanup", () => {
       clearAll();
       const storageStates = [];
 
@@ -267,7 +267,7 @@ await snapshotTests(
       return { storageStates };
     });
 
-    test("6_persistence_reactive_storage_updates", () => {
+    test("persistence_reactive_storage_updates", () => {
       clearAll();
       const storageUpdates = [];
 

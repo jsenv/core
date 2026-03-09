@@ -28,7 +28,7 @@ await snapshotTestPlanSideEffects(import.meta.url, async ({ test }) => {
     });
     reportAsJson(result, new URL("./result.json", import.meta.url));
   };
-  test("0_basic", () =>
+  test("basic", () =>
     run({
       testPlan: {
         "./client/*.html": {

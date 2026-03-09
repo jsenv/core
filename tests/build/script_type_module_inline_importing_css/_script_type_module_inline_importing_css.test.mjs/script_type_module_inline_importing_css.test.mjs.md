@@ -1,7 +1,7 @@
 # [script_type_module_inline_importing_css.test.mjs](../script_type_module_inline_importing_css.test.mjs)
 
 
-- [0_js_module](0_js_module/0_js_module.md)
+- [js_module](0_js_module/0_js_module.md)
 
 ---
 

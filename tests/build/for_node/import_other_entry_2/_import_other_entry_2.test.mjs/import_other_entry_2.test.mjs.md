@@ -1,7 +1,7 @@
 # [import_other_entry_2.test.mjs](../import_other_entry_2.test.mjs)
 
 
-- [0_basic](0_basic/0_basic.md)
+- [basic](0_basic/0_basic.md)
 
 ---
 

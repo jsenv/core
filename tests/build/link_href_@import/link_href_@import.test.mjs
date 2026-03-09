@@ -23,6 +23,6 @@ const run = async ({ versioning }) => {
 };
 
 await snapshotBuildTests(import.meta.url, ({ test }) => {
-  test("0_versioning", () => run({ versioning: true }));
-  test("1_versioning_disabled", () => run({ versioning: false }));
+  test("versioning", () => run({ versioning: true }));
+  test("versioning_disabled", () => run({ versioning: false }));
 });

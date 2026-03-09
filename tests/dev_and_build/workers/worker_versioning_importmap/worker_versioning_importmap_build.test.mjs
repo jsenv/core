@@ -28,11 +28,11 @@ const run = async ({ runtimeCompat }) => {
 };
 
 await snapshotBuildTests(import.meta.url, ({ test }) => {
-  test("0_importmap", () =>
+  test("importmap", () =>
     run({
       runtimeCompat: { chrome: "89" },
     }));
-  test("1_importmap_fallback", () =>
+  test("importmap_fallback", () =>
     run({
       runtimeCompat: { chrome: "88" },
     }));

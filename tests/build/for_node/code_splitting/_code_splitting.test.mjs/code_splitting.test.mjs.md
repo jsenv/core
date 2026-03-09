@@ -1,8 +1,8 @@
 # [code_splitting.test.mjs](../code_splitting.test.mjs)
 
 
-- [0_node](0_node/0_node.md)
-- [1_browser](1_browser/1_browser.md)
+- [node](0_node/0_node.md)
+- [browser](1_browser/1_browser.md)
 
 ---
 

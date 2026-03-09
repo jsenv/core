@@ -1,4 +1,4 @@
-# [2_external_dev](../../development_condition.test.mjs)
+# [external_dev](../../development_condition.test.mjs)
 
 ```js
 run({

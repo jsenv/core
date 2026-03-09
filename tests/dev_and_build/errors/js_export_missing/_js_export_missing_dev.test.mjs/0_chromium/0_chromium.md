@@ -1,4 +1,4 @@
-# [0_chromium](../../js_export_missing_dev.test.mjs)
+# [chromium](../../js_export_missing_dev.test.mjs)
 
 ```js
 run({ browserLauncher: chromium })

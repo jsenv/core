@@ -1,4 +1,4 @@
-# [0_basic](../../include_transitive_deps.test.mjs)
+# [basic](../../include_transitive_deps.test.mjs)
 
 ```js
 run()

@@ -32,14 +32,14 @@ const run = async (inlineExec) => {
 };
 
 await snapshotTestPlanSideEffects(import.meta.url, ({ test }) => {
-  test("0_basic", () =>
+  test("basic", () =>
     run({
       a: { uses: ["port:4"] },
       b: { uses: ["port:5"] },
       c: { uses: ["port:6"] },
     }));
 
-  test("0_second", () =>
+  test("second", () =>
     run({
       a: { uses: ["port:4"] },
       b: { uses: ["port:4"] },

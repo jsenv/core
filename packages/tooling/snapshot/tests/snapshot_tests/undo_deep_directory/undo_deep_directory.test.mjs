@@ -14,7 +14,7 @@ writeFileStructureSync(new URL("./git_ignored/", import.meta.url), {});
 await snapshotTests(
   import.meta.url,
   ({ test }) => {
-    test("0_first", () => {
+    test("first", () => {
       writeFileSync(new URL("./dir/deep/tata.txt", import.meta.url));
     });
   },

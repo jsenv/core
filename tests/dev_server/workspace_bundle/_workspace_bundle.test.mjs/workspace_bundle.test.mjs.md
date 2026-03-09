@@ -1,7 +1,7 @@
 # [workspace_bundle.test.mjs](../workspace_bundle.test.mjs)
 
 
-- [0_basic](0_basic/0_basic.md)
+- [basic](0_basic/0_basic.md)
 
 ---
 

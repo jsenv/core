@@ -2,7 +2,7 @@ import { composeTwoResponses } from "@jsenv/server/src/internal/response_composi
 import { snapshotTests } from "@jsenv/snapshot";
 
 await snapshotTests(import.meta.url, ({ test }) => {
-  test("0_basic", () => {
+  test("basic", () => {
     return composeTwoResponses(
       {
         headers: { foo: true },
@@ -13,7 +13,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
     );
   });
 
-  test("1_with_headers", () => {
+  test("with_headers", () => {
     return composeTwoResponses(
       {
         headers: {
@@ -29,7 +29,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
     );
   });
 
-  test("2_etag_left_only", () => {
+  test("etag_left_only", () => {
     return composeTwoResponses(
       {
         headers: {
@@ -42,7 +42,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
     );
   });
 
-  test("2_etag_override", () => {
+  test("etag_override", () => {
     return composeTwoResponses(
       {
         headers: {

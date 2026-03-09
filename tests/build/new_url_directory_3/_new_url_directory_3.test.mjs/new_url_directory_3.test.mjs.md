@@ -1,14 +1,14 @@
 # [new_url_directory_3.test.mjs](../new_url_directory_3.test.mjs)
 
 
-- [0_resolve_root](0_resolve_root/0_resolve_root.md)
-- [1_resolve_foo](1_resolve_foo/1_resolve_foo.md)
-- [2_resolve_root_and_foo](2_resolve_root_and_foo/2_resolve_root_and_foo.md)
-- [3_preserve_root](3_preserve_root/3_preserve_root.md)
-- [5_copy_root](5_copy_root/5_copy_root.md)
-- [6_copy_foo](6_copy_foo/6_copy_foo.md)
-- [7_copy_fs_root](7_copy_fs_root/7_copy_fs_root.md)
-- [8_resolve_ancestor](8_resolve_ancestor/8_resolve_ancestor.md)
+- [resolve_root](0_resolve_root/0_resolve_root.md)
+- [resolve_foo](1_resolve_foo/1_resolve_foo.md)
+- [resolve_root_and_foo](2_resolve_root_and_foo/2_resolve_root_and_foo.md)
+- [preserve_root](3_preserve_root/3_preserve_root.md)
+- [copy_root](4_copy_root/4_copy_root.md)
+- [copy_foo](5_copy_foo/5_copy_foo.md)
+- [copy_fs_root](6_copy_fs_root/6_copy_fs_root.md)
+- [resolve_ancestor](7_resolve_ancestor/7_resolve_ancestor.md)
 
 ---
 

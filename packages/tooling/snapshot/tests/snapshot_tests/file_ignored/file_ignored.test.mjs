@@ -17,7 +17,7 @@ writeFileStructureSync(outDirectoryUrl, {});
 await snapshotTests(
   import.meta.url,
   ({ test }) => {
-    test("0_first", () => {
+    test("first", () => {
       writeFileSync(fileTxtUrl, "a");
     });
   },
@@ -34,7 +34,7 @@ const existsAfterFirstRun = existsSync(fileTxtUrl);
 await snapshotTests(
   import.meta.url,
   ({ test }) => {
-    test("0_first", () => {});
+    test("first", () => {});
   },
   {
     outFilePattern: "./git_ignored/second/[filename]",

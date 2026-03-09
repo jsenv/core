@@ -1,8 +1,8 @@
 # [import_meta_resolve_node.test.mjs](../import_meta_resolve_node.test.mjs)
 
 
-- [node_0_import_meta_resolve](node_0_import_meta_resolve/node_0_import_meta_resolve.md)
-- [node_1_import_meta_resolve_fallback](node_1_import_meta_resolve_fallback/node_1_import_meta_resolve_fallback.md)
+- [node_0_import_meta_resolve](0_node_0_import_meta_resolve/0_node_0_import_meta_resolve.md)
+- [node_1_import_meta_resolve_fallback](1_node_1_import_meta_resolve_fallback/1_node_1_import_meta_resolve_fallback.md)
 
 ---
 

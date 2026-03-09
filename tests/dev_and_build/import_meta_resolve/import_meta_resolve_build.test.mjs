@@ -25,15 +25,15 @@ const run = async ({ runtimeCompat }) => {
 };
 
 await snapshotBuildTests(import.meta.url, ({ test }) => {
-  test("0_import_meta_resolve", () =>
+  test("import_meta_resolve", () =>
     run({
       runtimeCompat: { chrome: "107" }, // import.meta.resolve supported
     }));
-  test("1_import_meta_resolve_fallback", () =>
+  test("import_meta_resolve_fallback", () =>
     run({
       runtimeCompat: { chrome: "80" }, // module supported but import.meta.resolve is not
     }));
-  test("2_js_module_fallback", () =>
+  test("js_module_fallback", () =>
     run({
       runtimeCompat: { chrome: "60" },
     }));

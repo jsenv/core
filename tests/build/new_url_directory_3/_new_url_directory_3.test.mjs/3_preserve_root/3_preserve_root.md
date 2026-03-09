@@ -1,4 +1,4 @@
-# [3_preserve_root](../../new_url_directory_3.test.mjs)
+# [preserve_root](../../new_url_directory_3.test.mjs)
 
 ```js
 run({

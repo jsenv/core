@@ -54,7 +54,7 @@ await snapshotTestPlanSideEffects(import.meta.url, ({ test }) => {
     );
   };
 
-  test("0_basic", async () => {
+  test("basic", async () => {
     await run({
       testPlan: {
         "./client/main.spec.html": {

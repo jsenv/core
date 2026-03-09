@@ -16,14 +16,14 @@ const test = (scenario, fn) => {
   fn(scenarioDirectoryUrl);
 };
 
-test("0_into_nothing", (scenarioDirectoryUrl) => {
+test("into_nothing", (scenarioDirectoryUrl) => {
   moveFileSync({
     from: new URL("./a.txt", scenarioDirectoryUrl),
     to: new URL("./b.txt", scenarioDirectoryUrl),
   });
 });
 
-test("1_into_existing_file_and_overwrite_enabled", (scenarioDirectoryUrl) => {
+test("into_existing_file_and_overwrite_enabled", (scenarioDirectoryUrl) => {
   moveFileSync({
     from: new URL("./a.txt", scenarioDirectoryUrl),
     to: new URL("./b.txt", scenarioDirectoryUrl),

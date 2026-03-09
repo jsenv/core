@@ -57,13 +57,13 @@ snapshotTests.prefConfigure({
 });
 try {
   await snapshotTests(import.meta.url, ({ test }) => {
-    test("0_chromium", () =>
+    test("chromium", () =>
       run({
         browserLauncher: chromium,
         browserName: "chromium",
       }));
 
-    test("1_firefox", () =>
+    test("firefox", () =>
       run({
         browserLauncher: firefox,
         browserName: "firefox",

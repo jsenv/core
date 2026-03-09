@@ -23,11 +23,11 @@ const run = async ({ runtimeCompat }) => {
 };
 
 await snapshotBuildTests(import.meta.url, ({ test }) => {
-  test("0_top_level_await", () =>
+  test("top_level_await", () =>
     run({
       runtimeCompat: { chrome: "89" },
     }));
-  test("1_top_level_await_fallback", () =>
+  test("top_level_await_fallback", () =>
     run({
       runtimeCompat: { chrome: "55" },
     }));

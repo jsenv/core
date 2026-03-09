@@ -27,11 +27,11 @@ const run = async ({ directoryReferenceEffect }) => {
 await snapshotBuildTests(
   import.meta.url,
   ({ test }) => {
-    test("0_error", () =>
+    test("error", () =>
       run({
         directoryReferenceEffect: "error",
       }));
-    test("1_copy", () =>
+    test("copy", () =>
       run({
         directoryReferenceEffect: "copy",
       }));

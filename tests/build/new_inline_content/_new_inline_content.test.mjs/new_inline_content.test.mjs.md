@@ -1,7 +1,7 @@
 # [new_inline_content.test.mjs](../new_inline_content.test.mjs)
 
 
-- [0_js_module](0_js_module/0_js_module.md)
+- [js_module](0_js_module/0_js_module.md)
 
 ---
 

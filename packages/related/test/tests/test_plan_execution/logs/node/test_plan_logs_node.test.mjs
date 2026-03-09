@@ -114,39 +114,39 @@ const run = async ({ filename }) => {
 };
 
 await snapshotTestPlanSideEffects(import.meta.url, ({ test }) => {
-  test("0_not_found", () =>
+  test("not_found", () =>
     run({
       filename: "not_found.js",
     }));
-  test("1_console", () =>
+  test("console", () =>
     run({
       filename: "console.spec.js",
     }));
-  test("2_empty", () =>
+  test("empty", () =>
     run({
       filename: "empty.spec.js",
     }));
-  test("3_error_in_source_function", () =>
+  test("error_in_source_function", () =>
     run({
       filename: "error_in_source_function.spec.js",
     }));
-  test("4_error_in_test_function", () =>
+  test("error_in_test_function", () =>
     run({
       filename: "error_in_test_function.spec.js",
     }));
-  test("5_error_in_test_jsenv_assert", () =>
+  test("error_in_test_jsenv_assert", () =>
     run({
       filename: "error_in_test_jsenv_assert.spec.js",
     }));
-  test("6_error_in_test", () =>
+  test("error_in_test", () =>
     run({
       filename: "error_in_test.spec.js",
     }));
-  test("8_error_in_timeout", () =>
+  test("error_in_timeout", () =>
     run({
       filename: "error_in_timeout.spec.js",
     }));
-  test("9_unhandled_rejection_in_test", () =>
+  test("unhandled_rejection_in_test", () =>
     run({
       filename: "unhandled_rejection_in_test.spec.js",
     }));

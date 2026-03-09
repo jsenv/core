@@ -1,7 +1,7 @@
 # [node_import_normalization.test.mjs](../node_import_normalization.test.mjs)
 
 
-- [0_basic](0_basic/0_basic.md)
+- [basic](0_basic/0_basic.md)
 
 ---
 

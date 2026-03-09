@@ -19,7 +19,7 @@ await snapshotBuildTests(import.meta.url, ({ test }) => {
   // can use <script type="module">
   // disabled because for now it would fail as import map gets removed
   // and there is "preact" raw specifier in the html/preact package
-  test("0_basic", () => run());
+  test("basic", () => run());
 
-  test("1_include_dependencies", () => run({ packageDependencies: "include" }));
+  test("include_dependencies", () => run({ packageDependencies: "include" }));
 });

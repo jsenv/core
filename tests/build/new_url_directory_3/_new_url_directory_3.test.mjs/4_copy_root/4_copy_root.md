@@ -1,11 +1,8 @@
-# [7_copy_fs_root](../../new_url_directory_3.test.mjs)
+# [copy_root](../../new_url_directory_3.test.mjs)
 
 ```js
 run({
-  sourceDirectoryUrl: new URL(
-    "./fixtures/3_filesystem_root/",
-    import.meta.url,
-  ),
+  sourceDirectoryUrl: new URL("./fixtures/0_root/", import.meta.url),
   directoryReferenceEffect: "copy",
 })
 ```

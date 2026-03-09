@@ -1,4 +1,4 @@
-# [0_chromium](../../inline_as_base_64_dev.test.mjs)
+# [chromium](../../inline_as_base_64_dev.test.mjs)
 
 ```js
 run({ browserLauncher: chromium })

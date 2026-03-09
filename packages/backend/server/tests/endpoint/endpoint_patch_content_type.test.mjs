@@ -25,7 +25,7 @@ const run = async ({ routes, method, path, headers, body }) => {
 };
 
 await snapshotServerTests(import.meta.url, ({ test }) => {
-  test("0_basic", async () => {
+  test("basic", async () => {
     const routes = [
       {
         acceptedMediaTypes: ["text/plain"],

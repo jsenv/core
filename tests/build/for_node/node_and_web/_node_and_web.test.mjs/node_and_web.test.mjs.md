@@ -1,7 +1,7 @@
 # [node_and_web.test.mjs](../node_and_web.test.mjs)
 
 
-- [0_basic](0_basic/0_basic.md)
+- [basic](0_basic/0_basic.md)
 
 ---
 

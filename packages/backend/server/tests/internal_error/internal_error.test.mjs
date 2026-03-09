@@ -30,13 +30,13 @@ const run = async (errorToThrow) => {
 };
 
 await snapshotServerTests(import.meta.url, ({ test }) => {
-  test("0_throw_error", () => {
+  test("throw_error", () => {
     const error = new Error("message");
     error.code = "TEST_CODE";
     return run(error);
   });
 
-  test("1_throw_primitive", () => {
+  test("throw_primitive", () => {
     return run("here");
   });
 });

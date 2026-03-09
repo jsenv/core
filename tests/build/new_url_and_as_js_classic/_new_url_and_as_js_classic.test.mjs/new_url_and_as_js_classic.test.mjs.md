@@ -1,7 +1,7 @@
 # [new_url_and_as_js_classic.test.mjs](../new_url_and_as_js_classic.test.mjs)
 
 
-- [0_basic](0_basic/0_basic.md)
+- [basic](0_basic/0_basic.md)
 
 ---
 

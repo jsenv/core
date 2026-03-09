@@ -1,8 +1,8 @@
 # [import_meta_resolve_browser.test.mjs](../import_meta_resolve_browser.test.mjs)
 
 
-- [chrome_0_import_meta_resolve](chrome_0_import_meta_resolve/chrome_0_import_meta_resolve.md)
-- [chrome_1_import_meta_resolve_fallback](chrome_1_import_meta_resolve_fallback/chrome_1_import_meta_resolve_fallback.md)
+- [chrome_0_import_meta_resolve](0_chrome_0_import_meta_resolve/0_chrome_0_import_meta_resolve.md)
+- [chrome_1_import_meta_resolve_fallback](1_chrome_1_import_meta_resolve_fallback/1_chrome_1_import_meta_resolve_fallback.md)
 
 ---
 

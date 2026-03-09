@@ -24,26 +24,26 @@ const run = async ({ runtimeCompat, bundling, versioning }) => {
 };
 
 await snapshotBuildTests(import.meta.url, ({ test }) => {
-  test("0_worker_type_module", () =>
+  test("worker_type_module", () =>
     run({
       runtimeCompat: { chrome: "89" },
     }));
-  test("1_worker_type_module_no_bundling", () =>
+  test("worker_type_module_no_bundling", () =>
     run({
       runtimeCompat: { chrome: "89" },
       bundling: false,
       versioning: false,
     }));
-  test("2_worker_type_module_fallback", () =>
+  test("worker_type_module_fallback", () =>
     run({
       runtimeCompat: { chrome: "79" },
     }));
-  test("3_worker_type_module_fallback_no_bundling", () =>
+  test("worker_type_module_fallback_no_bundling", () =>
     run({
       runtimeCompat: { chrome: "79" },
       bundling: false,
     }));
-  test("4_js_module_fallback", () =>
+  test("js_module_fallback", () =>
     run({
       runtimeCompat: { chrome: "62" },
     }));

@@ -1,4 +1,4 @@
-# [0_basic](../../css_entry.test.mjs)
+# [basic](../../css_entry.test.mjs)
 
 ```js
 run()

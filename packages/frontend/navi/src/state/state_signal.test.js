@@ -8,7 +8,7 @@ const clearSignalRegistry = () => {
 };
 
 await snapshotTests(import.meta.url, ({ test }) => {
-  test("0_basics", () => {
+  test("basics", () => {
     clearSignalRegistry();
     const sig = stateSignal(undefined);
 
@@ -25,7 +25,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
     };
   });
 
-  test("1_with_static_default_value", () => {
+  test("with_static_default_value", () => {
     clearSignalRegistry();
     const sig = stateSignal(42);
 
@@ -42,7 +42,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
     };
   });
 
-  test("2_with_dynamic_default_value", () => {
+  test("with_dynamic_default_value", () => {
     clearSignalRegistry();
     const dynamicDefault = signal("default_at_start");
     const sig = stateSignal(dynamicDefault);
@@ -63,7 +63,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
     };
   });
 
-  test("3_dynamic_default_reset_behavior", () => {
+  test("dynamic_default_reset_behavior", () => {
     clearSignalRegistry();
     const dynamicDefault = signal("initial");
     const sig = stateSignal(dynamicDefault);
@@ -88,7 +88,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
     };
   });
 
-  test("4_validation_with_oneOf", () => {
+  test("validation_with_oneOf", () => {
     clearSignalRegistry();
     const sig = stateSignal("option1", {
       id: "validated",
@@ -108,7 +108,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
     };
   });
 
-  test("6_dynamic_default_with_static_fallback", () => {
+  test("dynamic_default_with_static_fallback", () => {
     clearSignalRegistry();
     const dynamicDefault = signal(undefined);
     const sig = stateSignal(dynamicDefault, { default: "fallback_value" });
@@ -131,7 +131,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
     };
   });
 
-  test("7_static_fallback_with_user_override", () => {
+  test("static_fallback_with_user_override", () => {
     clearSignalRegistry();
     const dynamicDefault = signal(undefined);
     const sig = stateSignal(dynamicDefault, { default: "fallback_value" });
@@ -159,7 +159,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
     };
   });
 
-  test("8_static_fallback_dynamic_changes", () => {
+  test("static_fallback_dynamic_changes", () => {
     clearSignalRegistry();
     const dynamicDefault = signal("initial_dynamic");
     const sig = stateSignal(dynamicDefault, { default: "fallback_value" });
@@ -197,7 +197,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
     };
   });
 
-  test("9_static_fallback_without_dynamic", () => {
+  test("static_fallback_without_dynamic", () => {
     clearSignalRegistry();
     // Test that static fallback option is ignored when not using dynamic default
     const sig = stateSignal("static_default", { default: "ignored_fallback" });
@@ -209,7 +209,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
     };
   });
 
-  test("10_static_fallback_with_persistence", () => {
+  test("static_fallback_with_persistence", () => {
     clearSignalRegistry();
     const dynamicDefault = signal(undefined);
     const sig = stateSignal(dynamicDefault, {

@@ -1,4 +1,4 @@
-# [0_chromium](../../dev_errors_snapshots.test.mjs)
+# [chromium](../../dev_errors_snapshots.test.mjs)
 
 ```js
 run({

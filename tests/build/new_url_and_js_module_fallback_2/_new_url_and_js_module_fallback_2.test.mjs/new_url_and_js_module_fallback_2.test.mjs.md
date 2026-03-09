@@ -1,7 +1,7 @@
 # [new_url_and_js_module_fallback_2.test.mjs](../new_url_and_js_module_fallback_2.test.mjs)
 
 
-- [0_basic](0_basic/0_basic.md)
+- [basic](0_basic/0_basic.md)
 
 ---
 

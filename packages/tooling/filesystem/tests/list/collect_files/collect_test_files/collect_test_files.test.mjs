@@ -4,7 +4,7 @@ import { snapshotTests } from "@jsenv/snapshot";
 await snapshotTests(
   import.meta.url,
   ({ test }) => {
-    test("0_basic", async () => {
+    test("basic", async () => {
       const matchingFileResultArray = await collectFiles({
         directoryUrl: new URL("./fixtures/", import.meta.url),
         associations: {

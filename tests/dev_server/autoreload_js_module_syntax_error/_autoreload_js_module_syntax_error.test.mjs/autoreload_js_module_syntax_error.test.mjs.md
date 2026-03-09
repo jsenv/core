@@ -1,7 +1,7 @@
 # [autoreload_js_module_syntax_error.test.mjs](../autoreload_js_module_syntax_error.test.mjs)
 
 
-- [0_chromium](0_chromium/0_chromium.md)
+- [chromium](0_chromium/0_chromium.md)
 
 ---
 

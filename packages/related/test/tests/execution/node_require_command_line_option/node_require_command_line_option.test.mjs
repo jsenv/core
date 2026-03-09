@@ -14,11 +14,11 @@ await snapshotFileExecutionSideEffects(import.meta.url, async ({ test }) => {
     });
     return { namespace };
   };
-  test("0_worker_thread", () =>
+  test("worker_thread", () =>
     run({
       runtime: nodeWorkerThread(),
     }));
-  test("1_worker_thread_require", () =>
+  test("worker_thread_require", () =>
     run({
       runtime: nodeWorkerThread({
         commandLineOptions: [
@@ -27,11 +27,11 @@ await snapshotFileExecutionSideEffects(import.meta.url, async ({ test }) => {
         ],
       }),
     }));
-  test("2_child_process", () =>
+  test("child_process", () =>
     run({
       runtime: nodeChildProcess(),
     }));
-  test("3_child_process_require", () =>
+  test("child_process_require", () =>
     run({
       runtime: nodeChildProcess({
         commandLineOptions: [

@@ -1,4 +1,4 @@
-# [0_basic](../../js_module_syntax_error_build.test.mjs)
+# [basic](../../js_module_syntax_error_build.test.mjs)
 
 ```js
 run()

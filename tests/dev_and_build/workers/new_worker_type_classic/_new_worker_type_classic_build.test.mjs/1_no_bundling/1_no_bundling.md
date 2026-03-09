@@ -1,4 +1,4 @@
-# [1_no_bundling](../../new_worker_type_classic_build.test.mjs)
+# [no_bundling](../../new_worker_type_classic_build.test.mjs)
 
 ```js
 run({

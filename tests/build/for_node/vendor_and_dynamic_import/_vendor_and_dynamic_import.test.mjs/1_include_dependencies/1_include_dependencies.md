@@ -1,4 +1,4 @@
-# [1_include_dependencies](../../vendor_and_dynamic_import.test.mjs)
+# [include_dependencies](../../vendor_and_dynamic_import.test.mjs)
 
 ```js
 run({ packageDependencies: "include" })

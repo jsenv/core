@@ -1,10 +1,10 @@
 # [service_worker_type_module_build.test.mjs](../service_worker_type_module_build.test.mjs)
 
 
-- [0_sw_type_module](0_sw_type_module/0_sw_type_module.md)
-- [1_sw_type_module_no_bundling](1_sw_type_module_no_bundling/1_sw_type_module_no_bundling.md)
-- [2_sw_type_module_fallback](2_sw_type_module_fallback/2_sw_type_module_fallback.md)
-- [3_sw_type_module_fallback_no_bundling](3_sw_type_module_fallback_no_bundling/3_sw_type_module_fallback_no_bundling.md)
+- [sw_type_module](0_sw_type_module/0_sw_type_module.md)
+- [sw_type_module_no_bundling](1_sw_type_module_no_bundling/1_sw_type_module_no_bundling.md)
+- [sw_type_module_fallback](2_sw_type_module_fallback/2_sw_type_module_fallback.md)
+- [sw_type_module_fallback_no_bundling](3_sw_type_module_fallback_no_bundling/3_sw_type_module_fallback_no_bundling.md)
 
 ---
 

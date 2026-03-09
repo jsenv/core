@@ -1,4 +1,4 @@
-# [0_basic](../../comments_removal.test.mjs)
+# [basic](../../comments_removal.test.mjs)
 
 ```js
 run()

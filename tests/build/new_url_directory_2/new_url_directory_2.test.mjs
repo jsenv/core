@@ -19,5 +19,5 @@ const run = async () => {
 };
 
 await snapshotBuildTests(import.meta.url, ({ test }) => {
-  test("0_copy", () => run());
+  test("copy", () => run());
 });

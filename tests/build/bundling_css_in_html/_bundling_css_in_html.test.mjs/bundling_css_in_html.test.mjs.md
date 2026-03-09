@@ -1,7 +1,7 @@
 # [bundling_css_in_html.test.mjs](../bundling_css_in_html.test.mjs)
 
 
-- [0_basic](0_basic/0_basic.md)
+- [basic](0_basic/0_basic.md)
 
 ---
 

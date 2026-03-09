@@ -16,11 +16,11 @@ const run = async ({ runtimeCompat, bundling }) => {
 };
 
 await snapshotBuildTests(import.meta.url, ({ test }) => {
-  test("0_default", () =>
+  test("default", () =>
     run({
       runtimeCompat: { chrome: "90" },
     }));
-  test("1_vendors", () =>
+  test("vendors", () =>
     run({
       runtimeCompat: { chrome: "90" },
       bundling: {
@@ -34,7 +34,7 @@ await snapshotBuildTests(import.meta.url, ({ test }) => {
         },
       },
     }));
-  test("2_vendors_and_js_module_fallback", () =>
+  test("vendors_and_js_module_fallback", () =>
     run({
       runtimeCompat: { chrome: "88" },
       bundling: {

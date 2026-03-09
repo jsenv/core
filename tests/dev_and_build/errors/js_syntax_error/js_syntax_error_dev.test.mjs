@@ -23,7 +23,7 @@ const run = async () => {
 await snapshotDevTests(
   import.meta.url,
   ({ test }) => {
-    test("0_chromium", () => run({ browserLauncher: chromium }));
+    test("chromium", () => run({ browserLauncher: chromium }));
   },
   {
     executionEffects: { catch: true },
