@@ -6,6 +6,10 @@ import {
   stateSignal,
 } from "@jsenv/navi";
 
+import {
+  databaseHeightSignal,
+  databaseOpenSignal,
+} from "./database/database_state.js";
 import { DATABASE } from "./database/database_store.js";
 import {
   roleCanLoginHeightSignal,
@@ -30,6 +34,8 @@ export const HOME_ROUTE = route(`/`, {
     role_login_height: roleCanLoginHeightSignal,
     role_group_open: roleGroupOpenSignal,
     role_group_height: roleGroupHeightSignal,
+    database_open: databaseOpenSignal,
+    database_height: databaseHeightSignal,
   },
 });
 export const ROLE_CAN_LOGIN_GET_MANY_ACTION = routeAction(
@@ -48,6 +54,17 @@ export const ROLE_GROUP_GET_MANY_ACTION = routeAction(
   ROLE_CANNOT_LOGIN.GET_MANY,
   () => {
     const open = roleGroupOpenSignal.value;
+    if (!open) {
+      return null;
+    }
+    return {};
+  },
+);
+export const DATABASE_GET_MANY_ACTION = routeAction(
+  HOME_ROUTE,
+  DATABASE.GET_MANY,
+  () => {
+    const open = databaseOpenSignal.value;
     if (!open) {
       return null;
     }

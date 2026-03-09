@@ -4,7 +4,7 @@ import { useLayoutEffect, useRef } from "preact/hooks";
 
 // import { DatabaseSvg } from "../database/database_icons.jsx";
 // import { useCurrentDatabase } from "../database/database_signals.js";
-// import { DatabasesDetails } from "../database/databases_details.jsx";
+import { DatabasesDetails } from "../database/databases_details.jsx";
 import { RoleCanLoginListDetails } from "../role/role_can_login/role_can_login_list_details.jsx";
 import { RoleGroupListDetails } from "../role/role_group/role_group_list_details.jsx";
 import { pickRoleIcon } from "../role/role_icons.jsx";
@@ -60,9 +60,9 @@ const ExplorerBody = () => {
     <div ref={flexDetailsSetRef} className="explorer_body">
       <RoleCanLoginListDetails />
       <RoleGroupListDetails />
-      {/* <DatabasesDetails />
-      <TablesDetails />
-      <RoleWithOwnershipListDetails /> */}
+      <DatabasesDetails />
+      {/* <TablesDetails />
+      <RoleWithOwnershipListDetails />  */}
     </div>
   );
 };
