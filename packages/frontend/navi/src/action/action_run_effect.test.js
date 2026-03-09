@@ -12,10 +12,9 @@ await snapshotTests(import.meta.url, ({ test }) => {
     const action = createAction(async (params) => {
       runCalls.push({ params });
     });
-
     actionRunEffect(action, () => paramsSignal.value);
-    const runCountWithNullParams = runCalls.length;
 
+    const runCountWithNullParams = runCalls.length;
     paramsSignal.value = { query: "hello" };
     const runCountAfterTruthyParams = runCalls.length;
 
@@ -24,18 +23,17 @@ await snapshotTests(import.meta.url, ({ test }) => {
 
   test("reruns action when params change", async () => {
     const paramsSignal = signal({ query: "a" });
-    const runLog = [];
+    const runCalls = [];
     const action = createAction(async (params) => {
-      runLog.push({ params: { ...params } });
+      runCalls.push({ params: { ...params } });
     });
-
     actionRunEffect(action, () => paramsSignal.value);
-    await sleep(10); // let first run complete
 
+    await sleep(10); // let first run complete
     paramsSignal.value = { query: "b" };
     await sleep(10);
 
-    return { runLog };
+    return { runCalls };
   });
 
   test("debounce: action is not run until params settle", async () => {
@@ -45,13 +43,12 @@ await snapshotTests(import.meta.url, ({ test }) => {
     const action = createAction(async (params) => {
       runLog.push({ params: { ...params } });
     });
-
     actionRunEffect(action, () => paramsSignal.value, {
       debounce: debounceDelay,
     });
+
     // Initial run fires after the debounce delay
     const runCountImmediately = runLog.length;
-
     // Rapid changes — only the last should be picked up
     paramsSignal.value = { query: "b" };
     paramsSignal.value = { query: "c" };
@@ -73,27 +70,26 @@ await snapshotTests(import.meta.url, ({ test }) => {
   test("debounce: explicit rerun flushes params and runs once (no double-run)", async () => {
     const debounceDelay = 50;
     const paramsSignal = signal({ query: "a" });
-    const runLog = [];
+    const runCalls = [];
     const action = createAction(async (params) => {
-      runLog.push({ params: { ...params } });
+      runCalls.push({ params: { ...params } });
     });
-
     const effectAction = actionRunEffect(action, () => paramsSignal.value, {
       debounce: debounceDelay,
     });
 
     // Change params but don't wait for debounce to settle
     paramsSignal.value = { query: "b" };
-    const runCountBeforeExplicitRun = runLog.length;
+    const runCountBeforeExplicitRun = runCalls.length;
 
     // Explicitly rerun — should flush latest params ("b") and run exactly once
     effectAction.rerun();
-    const runCountImmediatelyAfterRerun = runLog.length;
+    const runCountImmediatelyAfterRerun = runCalls.length;
 
     // Wait to confirm debounce timeout does NOT fire another run
     await sleep(debounceDelay + 20);
-    const runCountAfterWait = runLog.length;
-    const lastRunParams = runLog[runLog.length - 1]?.params;
+    const runCountAfterWait = runCalls.length;
+    const lastRunParams = runCalls[runCalls.length - 1]?.params;
 
     return {
       runCountBeforeExplicitRun,
@@ -106,11 +102,10 @@ await snapshotTests(import.meta.url, ({ test }) => {
   test("debounce: explicit rerun uses latest params, not stale ones", async () => {
     const debounceDelay = 50;
     const paramsSignal = signal({ query: "initial" });
-    const runLog = [];
+    const runCalls = [];
     const action = createAction(async (params) => {
-      runLog.push({ params: { ...params } });
+      runCalls.push({ params: { ...params } });
     });
-
     const effectAction = actionRunEffect(action, () => paramsSignal.value, {
       debounce: debounceDelay,
     });
@@ -121,7 +116,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
     // Explicit rerun must use "latest", not "initial"
     effectAction.rerun();
     const runParamsUsed =
-      runLog.length > 0 ? runLog[runLog.length - 1].params : null;
+      runCalls.length > 0 ? runCalls[runCalls.length - 1].params : null;
 
     return { runParamsUsed };
   });
@@ -129,11 +124,10 @@ await snapshotTests(import.meta.url, ({ test }) => {
   test("no auto-run when explicit reset is called while params change", async () => {
     const debounceDelay = 50;
     const paramsSignal = signal({ query: "a" });
-    const runLog = [];
+    const runCalls = [];
     const action = createAction(async (params) => {
-      runLog.push({ params: { ...params } });
+      runCalls.push({ params: { ...params } });
     });
-
     const effectAction = actionRunEffect(action, () => paramsSignal.value, {
       debounce: debounceDelay,
     });
@@ -145,7 +139,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
     effectAction.reset();
 
     await sleep(debounceDelay + 20);
-    const runCountAfterWait = runLog.length;
+    const runCountAfterWait = runCalls.length;
 
     return { runCountAfterWait };
   });

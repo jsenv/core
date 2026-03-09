@@ -6,10 +6,9 @@ const runCalls = [];
 const action = createAction(async (params) => {
   runCalls.push({ params });
 });
-
 actionRunEffect(action, () => paramsSignal.value);
-const runCountWithNullParams = runCalls.length;
 
+const runCountWithNullParams = runCalls.length;
 paramsSignal.value = { query: "hello" };
 const runCountAfterTruthyParams = runCalls.length;
 

@@ -2,23 +2,22 @@
 
 ```js
 const paramsSignal = signal({ query: "a" });
-const runLog = [];
+const runCalls = [];
 const action = createAction(async (params) => {
-  runLog.push({ params: { ...params } });
+  runCalls.push({ params } });
 });
-
 actionRunEffect(action, () => paramsSignal.value);
-await sleep(10); // let first run complete
 
+await sleep(10); // let first run complete
 paramsSignal.value = { query: "b" };
 await sleep(10);
 
-return { runLog };
+return { runCalls };
 ```
 
 ```js
 {
-  "runLog": [
+  "runCalls": [
     {
       "params": {
         "query": "b"

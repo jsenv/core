@@ -3,11 +3,10 @@
 ```js
 const debounceDelay = 50;
 const paramsSignal = signal({ query: "initial" });
-const runLog = [];
+const runCalls = [];
 const action = createAction(async (params) => {
-  runLog.push({ params: { ...params } });
+  runCalls.push({ params: { ...params } });
 });
-
 const effectAction = actionRunEffect(action, () => paramsSignal.value, {
   debounce: debounceDelay,
 });
@@ -18,7 +17,7 @@ paramsSignal.value = { query: "latest" };
 // Explicit rerun must use "latest", not "initial"
 effectAction.rerun();
 const runParamsUsed =
-  runLog.length > 0 ? runLog[runLog.length - 1].params : null;
+  runCalls.length > 0 ? runCalls[runCalls.length - 1].params : null;
 
 return { runParamsUsed };
 ```

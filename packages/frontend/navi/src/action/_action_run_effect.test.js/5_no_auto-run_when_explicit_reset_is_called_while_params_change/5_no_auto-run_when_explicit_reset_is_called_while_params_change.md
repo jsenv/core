@@ -3,11 +3,10 @@
 ```js
 const debounceDelay = 50;
 const paramsSignal = signal({ query: "a" });
-const runLog = [];
+const runCalls = [];
 const action = createAction(async (params) => {
-  runLog.push({ params: { ...params } });
+  runCalls.push({ params: { ...params } });
 });
-
 const effectAction = actionRunEffect(action, () => paramsSignal.value, {
   debounce: debounceDelay,
 });
@@ -19,7 +18,7 @@ paramsSignal.value = { query: "b" };
 effectAction.reset();
 
 await sleep(debounceDelay + 20);
-const runCountAfterWait = runLog.length;
+const runCountAfterWait = runCalls.length;
 
 return { runCountAfterWait };
 ```

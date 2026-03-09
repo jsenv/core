@@ -7,13 +7,12 @@ const runLog = [];
 const action = createAction(async (params) => {
   runLog.push({ params: { ...params } });
 });
-
 actionRunEffect(action, () => paramsSignal.value, {
   debounce: debounceDelay,
 });
+
 // Initial run fires after the debounce delay
 const runCountImmediately = runLog.length;
-
 // Rapid changes — only the last should be picked up
 paramsSignal.value = { query: "b" };
 paramsSignal.value = { query: "c" };
