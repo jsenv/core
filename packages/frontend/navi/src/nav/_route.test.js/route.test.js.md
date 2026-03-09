@@ -1,13 +1,13 @@
 # [route.test.js](../route.test.js)
 
 
-- [route.url fails to update when default value optimization skips signal reading](route_url_fails_to_update_when_default_value_optimization_skips_signal_reading/route_url_fails_to_update_when_default_value_optimization_skips_signal_reading.md)
-- [route.url should NOT update when unrelated signal changes](route_url_should_not_update_when_unrelated_signal_changes/route_url_should_not_update_when_unrelated_signal_changes.md)
-- [multiple routes sharing signals should auto-update when signal changes](multiple_routes_sharing_signals_should_auto-update_when_signal_changes/multiple_routes_sharing_signals_should_auto-update_when_signal_changes.md)
-- [route URL updates should be isolated to relevant signals only](route_url_updates_should_be_isolated_to_relevant_signals_only/route_url_updates_should_be_isolated_to_relevant_signals_only.md)
-- [buildUrl caching issue with signal changes across multiple calls](buildurl_caching_issue_with_signal_changes_across_multiple_calls/buildurl_caching_issue_with_signal_changes_across_multiple_calls.md)
-- [route.url should automatically stay in sync when signals change](route_url_should_automatically_stay_in_sync_when_signals_change/route_url_should_automatically_stay_in_sync_when_signals_change.md)
-- [route.url sync with hierarchical routes and shared signals](route_url_sync_with_hierarchical_routes_and_shared_signals/route_url_sync_with_hierarchical_routes_and_shared_signals.md)
+- [route.url fails to update when default value optimization skips signal reading](0_route_url_fails_to_update_when_default_value_optimization_skips_signal_reading/0_route_url_fails_to_update_when_default_value_optimization_skips_signal_reading.md)
+- [route.url should NOT update when unrelated signal changes](1_route_url_should_not_update_when_unrelated_signal_changes/1_route_url_should_not_update_when_unrelated_signal_changes.md)
+- [multiple routes sharing signals should auto-update when signal changes](2_multiple_routes_sharing_signals_should_auto-update_when_signal_changes/2_multiple_routes_sharing_signals_should_auto-update_when_signal_changes.md)
+- [route URL updates should be isolated to relevant signals only](3_route_url_updates_should_be_isolated_to_relevant_signals_only/3_route_url_updates_should_be_isolated_to_relevant_signals_only.md)
+- [buildUrl caching issue with signal changes across multiple calls](4_buildurl_caching_issue_with_signal_changes_across_multiple_calls/4_buildurl_caching_issue_with_signal_changes_across_multiple_calls.md)
+- [route.url should automatically stay in sync when signals change](5_route_url_should_automatically_stay_in_sync_when_signals_change/5_route_url_should_automatically_stay_in_sync_when_signals_change.md)
+- [route.url sync with hierarchical routes and shared signals](6_route_url_sync_with_hierarchical_routes_and_shared_signals/6_route_url_sync_with_hierarchical_routes_and_shared_signals.md)
 
 ---
 
