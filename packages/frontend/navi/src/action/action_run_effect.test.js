@@ -25,7 +25,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
     const paramsSignal = signal({ query: "a" });
     const runCalls = [];
     const action = createAction(async (params) => {
-      runCalls.push({ params: { ...params } });
+      runCalls.push({ params });
     });
     actionRunEffect(action, () => paramsSignal.value);
 
@@ -41,7 +41,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
     const paramsSignal = signal({ query: "a" });
     const runLog = [];
     const action = createAction(async (params) => {
-      runLog.push({ params: { ...params } });
+      runLog.push({ params });
     });
     actionRunEffect(action, () => paramsSignal.value, {
       debounce: debounceDelay,
@@ -72,7 +72,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
     const paramsSignal = signal({ query: "a" });
     const runCalls = [];
     const action = createAction(async (params) => {
-      runCalls.push({ params: { ...params } });
+      runCalls.push({ params });
     });
     const effectAction = actionRunEffect(action, () => paramsSignal.value, {
       debounce: debounceDelay,
@@ -104,7 +104,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
     const paramsSignal = signal({ query: "initial" });
     const runCalls = [];
     const action = createAction(async (params) => {
-      runCalls.push({ params: { ...params } });
+      runCalls.push({ params });
     });
     const effectAction = actionRunEffect(action, () => paramsSignal.value, {
       debounce: debounceDelay,
@@ -126,7 +126,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
     const paramsSignal = signal({ query: "a" });
     const runCalls = [];
     const action = createAction(async (params) => {
-      runCalls.push({ params: { ...params } });
+      runCalls.push({ params });
     });
     const effectAction = actionRunEffect(action, () => paramsSignal.value, {
       debounce: debounceDelay,

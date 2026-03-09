@@ -5,7 +5,7 @@ const debounceDelay = 50;
 const paramsSignal = signal({ query: "a" });
 const runLog = [];
 const action = createAction(async (params) => {
-  runLog.push({ params: { ...params } });
+  runLog.push({ params });
 });
 actionRunEffect(action, () => paramsSignal.value, {
   debounce: debounceDelay,

@@ -4,7 +4,7 @@
 const paramsSignal = signal({ query: "a" });
 const runCalls = [];
 const action = createAction(async (params) => {
-  runCalls.push({ params } });
+  runCalls.push({ params });
 });
 actionRunEffect(action, () => paramsSignal.value);
 
