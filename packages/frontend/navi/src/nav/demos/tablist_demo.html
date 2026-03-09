@@ -81,11 +81,11 @@
         SettingsSvg,
         BadgeCount,
         setupRoutes,
+        route,
       } from "@jsenv/navi";
 
-      const { TEST_ROUTE } = setupRoutes({
-        TEST_ROUTE: "/test_route",
-      });
+      const TEST_ROUTE = route("/test_route");
+      setupRoutes([TEST_ROUTE]);
 
       const Demo = () => {
         return (

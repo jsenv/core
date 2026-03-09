@@ -22,12 +22,12 @@
         SettingsSvg,
         BadgeCount,
         setupRoutes,
+        route,
       } from "@jsenv/navi";
 
-      const { A_ROUTE, B_ROUTE } = setupRoutes({
-        A_ROUTE: "/a",
-        B_ROUTE: "/b",
-      });
+      const A_ROUTE = route("/a");
+      const B_ROUTE = route("/b");
+      setupRoutes([A_ROUTE, B_ROUTE]);
 
       const ScalingTabsDemo = () => {
         return (
@@ -50,7 +50,7 @@
                     style={{
                       ":-navi-tab-selected": {
                         scale: "1.3",
-                        backgroundColor: "darkorange",
+                        backgroundColor: "lightblue",
                       },
                     }}
                   >
@@ -68,7 +68,7 @@
                     style={{
                       ":-navi-tab-selected": {
                         scale: "1.3",
-                        backgroundColor: "darkgreen",
+                        backgroundColor: "lightblue",
                       },
                     }}
                   >

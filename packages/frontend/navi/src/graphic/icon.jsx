@@ -30,6 +30,7 @@ import.meta.css = /* css */ `
   .navi_icon_foreground {
     position: absolute;
     inset: 0;
+    display: inline-flex;
   }
   .navi_icon_foreground > .navi_text {
     display: flex;

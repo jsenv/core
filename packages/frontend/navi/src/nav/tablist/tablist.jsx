@@ -3,13 +3,13 @@
  */
 
 import { createContext, toChildArray } from "preact";
-import { useContext } from "preact/hooks";
+import { useContext, useState } from "preact/hooks";
 
 import { Box } from "../../box/box.jsx";
 import { PSEUDO_CLASSES } from "../../box/pseudo_styles.js";
 import { Text } from "../../text/text.jsx";
-import { useRouteStatus } from "../route.js";
 import { RouteLink } from "../route_link.jsx";
+import { ReportSelectedOnTabContext } from "./tab_context.js";
 
 Object.assign(PSEUDO_CLASSES, {
   ":-navi-tab-selected": {
@@ -319,6 +319,57 @@ export const Tab = (props) => {
 };
 TabList.Tab = Tab;
 
+const TabBasic = ({
+  children,
+  icon,
+  selected,
+  boldWhenSelected = !icon,
+  onClick,
+  ...props
+}) => {
+  const tabListIndicator = useContext(TabListIndicatorContext);
+  const tabListAlignX = useContext(TabListAlignXContext);
+  const [selectedFromChild, setSelectedFromChild] = useState(false);
+  const innerSelected = selected || selectedFromChild;
+
+  return (
+    <Box
+      role="tab"
+      aria-selected={innerSelected ? "true" : "false"}
+      data-interactive={onClick ? "" : undefined}
+      data-bold-when-selected={boldWhenSelected ? "" : undefined}
+      onClick={onClick}
+      // Style system
+      baseClassName="navi_tab"
+      styleCSSVars={TAB_STYLE_CSS_VARS}
+      pseudoClasses={TAB_PSEUDO_CLASSES}
+      pseudoElements={TAB_PSEUDO_ELEMENTS}
+      basePseudoState={{
+        ":-navi-tab-selected": innerSelected,
+      }}
+      selfAlignX={tabListAlignX}
+      data-align-x={tabListAlignX}
+      {...props}
+    >
+      {(tabListIndicator === "start" || tabListIndicator === "end") && (
+        <span className="navi_tab_indicator" data-position={tabListIndicator} />
+      )}
+      <ReportSelectedOnTabContext.Provider value={setSelectedFromChild}>
+        {boldWhenSelected ? (
+          <Text
+            preventBoldLayoutShift
+            // boldTransition
+          >
+            {children}
+          </Text>
+        ) : (
+          children
+        )}
+      </ReportSelectedOnTabContext.Provider>
+    </Box>
+  );
+};
+
 const TabRoute = ({
   circle,
   route,
@@ -336,13 +387,8 @@ const TabRoute = ({
 
   ...props
 }) => {
-  const { matching } = useRouteStatus(route);
-  const paramsAreMatching = route.matchesParams(routeParams);
-  const selected = matching && paramsAreMatching;
-
   return (
     <TabBasic
-      selected={selected}
       {...props}
       circle={circle}
       padding="0"
@@ -369,51 +415,5 @@ const TabRoute = ({
         {children}
       </RouteLink>
     </TabBasic>
-  );
-};
-const TabBasic = ({
-  children,
-  icon,
-  selected,
-  boldWhenSelected = !icon,
-  onClick,
-  ...props
-}) => {
-  const tabListIndicator = useContext(TabListIndicatorContext);
-  const tabListAlignX = useContext(TabListAlignXContext);
-
-  return (
-    <Box
-      role="tab"
-      aria-selected={selected ? "true" : "false"}
-      data-interactive={onClick ? "" : undefined}
-      data-bold-when-selected={boldWhenSelected ? "" : undefined}
-      onClick={onClick}
-      // Style system
-      baseClassName="navi_tab"
-      styleCSSVars={TAB_STYLE_CSS_VARS}
-      pseudoClasses={TAB_PSEUDO_CLASSES}
-      pseudoElements={TAB_PSEUDO_ELEMENTS}
-      basePseudoState={{
-        ":-navi-tab-selected": selected,
-      }}
-      selfAlignX={tabListAlignX}
-      data-align-x={tabListAlignX}
-      {...props}
-    >
-      {(tabListIndicator === "start" || tabListIndicator === "end") && (
-        <span className="navi_tab_indicator" data-position={tabListIndicator} />
-      )}
-      {boldWhenSelected ? (
-        <Text
-          preventBoldLayoutShift
-          // boldTransition
-        >
-          {children}
-        </Text>
-      ) : (
-        children
-      )}
-    </Box>
   );
 };
