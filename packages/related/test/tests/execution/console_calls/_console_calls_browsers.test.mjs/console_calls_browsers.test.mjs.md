@@ -1,9 +1,9 @@
 # [console_calls_browsers.test.mjs](../console_calls_browsers.test.mjs)
 
 
-- [0_chromium](0_chromium/0_chromium.md)
-- [1_firefox](1_firefox/1_firefox.md)
-- [2_webkit](2_webkit/2_webkit.md)
+- [chromium](0_chromium/0_chromium.md)
+- [firefox](1_firefox/1_firefox.md)
+- [webkit](2_webkit/2_webkit.md)
 
 ---
 

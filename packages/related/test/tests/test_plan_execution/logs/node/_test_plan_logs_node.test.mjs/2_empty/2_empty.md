@@ -1,4 +1,4 @@
-# [2_empty](../../test_plan_logs_node.test.mjs)
+# [empty](../../test_plan_logs_node.test.mjs)
 
 ```js
 run({

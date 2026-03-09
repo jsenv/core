@@ -1,4 +1,4 @@
-# [9_corners_only](../../table_2_cells_same_column.test.mjs)
+# [corners_only](../../table_2_cells_same_column.test.mjs)
 
 ```js
 run({

@@ -1,4 +1,4 @@
-# [0_first](../../no_dir_ignored.test.mjs)
+# [first](../../no_dir_ignored.test.mjs)
 
 ```js
 writeFileSync(new URL("./output/a.txt", import.meta.url), "a");

@@ -1,15 +1,15 @@
 # [table_3_cells_same_row.test.mjs](../table_3_cells_same_row.test.mjs)
 
 
-- [0_basic](0_basic/0_basic.md)
-- [1_border_collapse](1_border_collapse/1_border_collapse.md)
-- [2_border_colors](2_border_colors/2_border_colors.md)
-- [3_border_bold_x](3_border_bold_x/3_border_bold_x.md)
-- [4_border_bold_y](4_border_bold_y/4_border_bold_y.md)
-- [5_border_double](5_border_double/5_border_double.md)
-- [6_border_double_x](6_border_double_x/6_border_double_x.md)
-- [7_border_double_y](7_border_double_y/7_border_double_y.md)
-- [8_corners_only](8_corners_only/8_corners_only.md)
+- [0_basic](0_0_basic/0_0_basic.md)
+- [1_border_collapse](1_1_border_collapse/1_1_border_collapse.md)
+- [border_colors](2_border_colors/2_border_colors.md)
+- [3_border_bold_x](3_3_border_bold_x/3_3_border_bold_x.md)
+- [4_border_bold_y](4_4_border_bold_y/4_4_border_bold_y.md)
+- [border_double](5_border_double/5_border_double.md)
+- [border_double_x](6_border_double_x/6_border_double_x.md)
+- [border_double_y](7_border_double_y/7_border_double_y.md)
+- [corners_only](8_corners_only/8_corners_only.md)
 
 ---
 

@@ -1,4 +1,4 @@
-# [0_basic](../../http2_push.test.mjs)
+# [basic](../../http2_push.test.mjs)
 
 ```js
 return run();

@@ -1,10 +1,10 @@
 # [response_composition.test.mjs](../response_composition.test.mjs)
 
 
-- [0_basic](0_basic/0_basic.md)
-- [1_with_headers](1_with_headers/1_with_headers.md)
-- [2_etag_left_only](2_etag_left_only/2_etag_left_only.md)
-- [2_etag_override](2_etag_override/2_etag_override.md)
+- [basic](0_basic/0_basic.md)
+- [with_headers](1_with_headers/1_with_headers.md)
+- [etag_left_only](2_etag_left_only/2_etag_left_only.md)
+- [etag_override](3_etag_override/3_etag_override.md)
 
 ---
 

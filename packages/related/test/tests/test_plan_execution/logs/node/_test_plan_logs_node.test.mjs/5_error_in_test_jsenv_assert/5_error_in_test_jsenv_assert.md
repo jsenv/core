@@ -1,4 +1,4 @@
-# [5_error_in_test_jsenv_assert](../../test_plan_logs_node.test.mjs)
+# [error_in_test_jsenv_assert](../../test_plan_logs_node.test.mjs)
 
 ```js
 run({

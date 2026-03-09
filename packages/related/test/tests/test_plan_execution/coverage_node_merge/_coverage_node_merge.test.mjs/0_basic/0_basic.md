@@ -1,4 +1,4 @@
-# [0_basic](../../coverage_node_merge.test.mjs)
+# [basic](../../coverage_node_merge.test.mjs)
 
 ```js
 await run({

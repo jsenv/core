@@ -1,8 +1,8 @@
 # [log.test.js](../log.test.js)
 
 
-- [when name is toto](when_name_is_toto/when_name_is_toto.md)
-- [when name is tata](when_name_is_tata/when_name_is_tata.md)
+- [when name is toto](0_when_name_is_toto/0_when_name_is_toto.md)
+- [when name is tata](1_when_name_is_tata/1_when_name_is_tata.md)
 
 ---
 

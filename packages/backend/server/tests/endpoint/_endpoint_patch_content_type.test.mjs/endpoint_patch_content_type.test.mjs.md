@@ -1,7 +1,7 @@
 # [endpoint_patch_content_type.test.mjs](../endpoint_patch_content_type.test.mjs)
 
 
-- [0_basic](0_basic/0_basic.md)
+- [basic](0_basic/0_basic.md)
 
 ---
 

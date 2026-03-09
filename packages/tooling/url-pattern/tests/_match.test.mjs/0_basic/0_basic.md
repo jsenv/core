@@ -1,4 +1,4 @@
-# [0_basic](../../match.test.mjs)
+# [basic](../../match.test.mjs)
 
 ```js
 ({

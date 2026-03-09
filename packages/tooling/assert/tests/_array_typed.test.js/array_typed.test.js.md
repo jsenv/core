@@ -1,17 +1,17 @@
 # [array_typed.test.js](../array_typed.test.js)
 
 
-- [buffer.from("") vs buffer.from("a")](buffer_from()_vs_buffer_from(a)/buffer_from()_vs_buffer_from(a).md)
-- [buffer.from("a") vs buffer.from("")](buffer_from(a)_vs_buffer_from()/buffer_from(a)_vs_buffer_from().md)
-- [buffer without diff are collapsed](buffer_without_diff_are_collapsed/buffer_without_diff_are_collapsed.md)
-- [same length buffer diff at the end](same_length_buffer_diff_at_the_end/same_length_buffer_diff_at_the_end.md)
-- [same length buffer diff at start](same_length_buffer_diff_at_start/same_length_buffer_diff_at_start.md)
-- [same length buffer diff at middle](same_length_buffer_diff_at_middle/same_length_buffer_diff_at_middle.md)
-- [same length buffer diff start, middle, end](same_length_buffer_diff_start__middle__end/same_length_buffer_diff_start__middle__end.md)
-- [buffer vs string](buffer_vs_string/buffer_vs_string.md)
-- [buffer vs array](buffer_vs_array/buffer_vs_array.md)
-- [buffer.from vs Uint8Array.from](buffer_from_vs_uint8array_from/buffer_from_vs_uint8array_from.md)
-- [Uint8Array vs Array](uint8array_vs_array/uint8array_vs_array.md)
+- [buffer.from("") vs buffer.from("a")](0_buffer_from()_vs_buffer_from(a)/0_buffer_from()_vs_buffer_from(a).md)
+- [buffer.from("a") vs buffer.from("")](1_buffer_from(a)_vs_buffer_from()/1_buffer_from(a)_vs_buffer_from().md)
+- [buffer without diff are collapsed](2_buffer_without_diff_are_collapsed/2_buffer_without_diff_are_collapsed.md)
+- [same length buffer diff at the end](3_same_length_buffer_diff_at_the_end/3_same_length_buffer_diff_at_the_end.md)
+- [same length buffer diff at start](4_same_length_buffer_diff_at_start/4_same_length_buffer_diff_at_start.md)
+- [same length buffer diff at middle](5_same_length_buffer_diff_at_middle/5_same_length_buffer_diff_at_middle.md)
+- [same length buffer diff start, middle, end](6_same_length_buffer_diff_start__middle__end/6_same_length_buffer_diff_start__middle__end.md)
+- [buffer vs string](7_buffer_vs_string/7_buffer_vs_string.md)
+- [buffer vs array](8_buffer_vs_array/8_buffer_vs_array.md)
+- [buffer.from vs Uint8Array.from](9_buffer_from_vs_uint8array_from/9_buffer_from_vs_uint8array_from.md)
+- [Uint8Array vs Array](10_uint8array_vs_array/10_uint8array_vs_array.md)
 
 ---
 

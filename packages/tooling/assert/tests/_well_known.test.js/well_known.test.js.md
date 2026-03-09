@@ -1,12 +1,12 @@
 # [well_known.test.js](../well_known.test.js)
 
 
-- [String and Object](string_and_object/string_and_object.md)
-- [Number.MAX_VALUE and Number.MIN_VALUE](number_max_value_and_number_min_value/number_max_value_and_number_min_value.md)
-- [Symbol.iterator and Symbol.toPrimitive](symbol_iterator_and_symbol_toprimitive/symbol_iterator_and_symbol_toprimitive.md)
-- [Symbol.for("a") and Symbol.for("b")](symbol_for(a)_and_symbol_for(b)/symbol_for(a)_and_symbol_for(b).md)
-- [Object.prototype.toString vs Object.prototype.hasOwnProperty](object_prototype_tostring_vs_object_prototype_hasownproperty/object_prototype_tostring_vs_object_prototype_hasownproperty.md)
-- [null and Array.prototype](null_and_array_prototype/null_and_array_prototype.md)
+- [String and Object](0_string_and_object/0_string_and_object.md)
+- [Number.MAX_VALUE and Number.MIN_VALUE](1_number_max_value_and_number_min_value/1_number_max_value_and_number_min_value.md)
+- [Symbol.iterator and Symbol.toPrimitive](2_symbol_iterator_and_symbol_toprimitive/2_symbol_iterator_and_symbol_toprimitive.md)
+- [Symbol.for("a") and Symbol.for("b")](3_symbol_for(a)_and_symbol_for(b)/3_symbol_for(a)_and_symbol_for(b).md)
+- [Object.prototype.toString vs Object.prototype.hasOwnProperty](4_object_prototype_tostring_vs_object_prototype_hasownproperty/4_object_prototype_tostring_vs_object_prototype_hasownproperty.md)
+- [null and Array.prototype](5_null_and_array_prototype/5_null_and_array_prototype.md)
 
 ---
 

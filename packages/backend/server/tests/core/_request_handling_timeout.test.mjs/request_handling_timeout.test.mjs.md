@@ -1,8 +1,8 @@
 # [request_handling_timeout.test.mjs](../request_handling_timeout.test.mjs)
 
 
-- [0_regular](0_regular/0_regular.md)
-- [1_timing_out](1_timing_out/1_timing_out.md)
+- [regular](0_regular/0_regular.md)
+- [timing_out](1_timing_out/1_timing_out.md)
 
 ---
 

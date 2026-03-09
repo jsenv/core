@@ -1,7 +1,7 @@
 # [http2_push_prevent.test.mjs](../http2_push_prevent.test.mjs)
 
 
-- [0_basic](0_basic/0_basic.md)
+- [basic](0_basic/0_basic.md)
 
 ---
 

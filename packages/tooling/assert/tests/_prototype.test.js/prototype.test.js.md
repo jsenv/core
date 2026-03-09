@@ -1,12 +1,12 @@
 # [prototype.test.js](../prototype.test.js)
 
 
-- [Error vs TypeError](error_vs_typeerror/error_vs_typeerror.md)
-- [object with different prototypes](object_with_different_prototypes/object_with_different_prototypes.md)
-- [Object.create(null) and {}](object_create(null)_and_%7B%7D/object_create(null)_and_%7B%7D.md)
-- [Object.create(null) and []](object_create(null)_and_[]/object_create(null)_and_[].md)
-- [object vs custom proto](object_vs_custom_proto/object_vs_custom_proto.md)
-- [object vs instance](object_vs_instance/object_vs_instance.md)
+- [Error vs TypeError](0_error_vs_typeerror/0_error_vs_typeerror.md)
+- [object with different prototypes](1_object_with_different_prototypes/1_object_with_different_prototypes.md)
+- [Object.create(null) and {}](2_object_create(null)_and_%7B%7D/2_object_create(null)_and_%7B%7D.md)
+- [Object.create(null) and []](3_object_create(null)_and_[]/3_object_create(null)_and_[].md)
+- [object vs custom proto](4_object_vs_custom_proto/4_object_vs_custom_proto.md)
+- [object vs instance](5_object_vs_instance/5_object_vs_instance.md)
 
 ---
 

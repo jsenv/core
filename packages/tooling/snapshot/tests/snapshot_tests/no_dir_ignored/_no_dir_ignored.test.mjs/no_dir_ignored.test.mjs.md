@@ -1,7 +1,7 @@
 # [no_dir_ignored.test.mjs](../no_dir_ignored.test.mjs)
 
 
-- [0_first](0_first/0_first.md)
+- [first](0_first/0_first.md)
 
 ---
 

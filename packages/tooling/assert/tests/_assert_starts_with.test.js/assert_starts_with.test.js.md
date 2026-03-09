@@ -1,8 +1,8 @@
 # [assert_starts_with.test.js](../assert_starts_with.test.js)
 
 
-- [no diff](no_diff/no_diff.md)
-- [does not start with](does_not_start_with/does_not_start_with.md)
+- [no diff](0_no_diff/0_no_diff.md)
+- [does not start with](1_does_not_start_with/1_does_not_start_with.md)
 
 ---
 

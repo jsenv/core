@@ -1,9 +1,9 @@
 # [leading_slash.test.mjs](../leading_slash.test.mjs)
 
 
-- [0_importing_without_src](0_importing_without_src/0_importing_without_src.md)
-- [1_importing_wit_src](1_importing_wit_src/1_importing_wit_src.md)
-- [2_recommended](2_recommended/2_recommended.md)
+- [importing_without_src](0_importing_without_src/0_importing_without_src.md)
+- [importing_wit_src](1_importing_wit_src/1_importing_wit_src.md)
+- [recommended](2_recommended/2_recommended.md)
 
 ---
 

@@ -1,17 +1,17 @@
 # [ref.test.js](../ref.test.js)
 
 
-- [reference removed](reference_removed/reference_removed.md)
-- [reference added](reference_added/reference_added.md)
-- [same ref to self](same_ref_to_self/same_ref_to_self.md)
-- [same ref to self 2](same_ref_to_self_2/same_ref_to_self_2.md)
-- [same ref to parent](same_ref_to_parent/same_ref_to_parent.md)
-- [same ref to value after](same_ref_to_value_after/same_ref_to_value_after.md)
-- [same ref to value before](same_ref_to_value_before/same_ref_to_value_before.md)
-- [ref changed](ref_changed/ref_changed.md)
-- [true should be a ref to self](true_should_be_a_ref_to_self/true_should_be_a_ref_to_self.md)
-- [ref to self should be true](ref_to_self_should_be_true/ref_to_self_should_be_true.md)
-- [true should be object using ref](true_should_be_object_using_ref/true_should_be_object_using_ref.md)
+- [reference removed](0_reference_removed/0_reference_removed.md)
+- [reference added](1_reference_added/1_reference_added.md)
+- [same ref to self](2_same_ref_to_self/2_same_ref_to_self.md)
+- [same ref to self 2](3_same_ref_to_self_2/3_same_ref_to_self_2.md)
+- [same ref to parent](4_same_ref_to_parent/4_same_ref_to_parent.md)
+- [same ref to value after](5_same_ref_to_value_after/5_same_ref_to_value_after.md)
+- [same ref to value before](6_same_ref_to_value_before/6_same_ref_to_value_before.md)
+- [ref changed](7_ref_changed/7_ref_changed.md)
+- [true should be a ref to self](8_true_should_be_a_ref_to_self/8_true_should_be_a_ref_to_self.md)
+- [ref to self should be true](9_ref_to_self_should_be_true/9_ref_to_self_should_be_true.md)
+- [true should be object using ref](10_true_should_be_object_using_ref/10_true_should_be_object_using_ref.md)
 
 ---
 

@@ -1,14 +1,14 @@
 # [fetch.test.js](../fetch.test.js)
 
 
-- [abort signal pending vs aborted](abort_signal_pending_vs_aborted/abort_signal_pending_vs_aborted.md)
-- [request url diff](request_url_diff/request_url_diff.md)
-- [request with custom options](request_with_custom_options/request_with_custom_options.md)
-- [request abort signal pending vs aborted](request_abort_signal_pending_vs_aborted/request_abort_signal_pending_vs_aborted.md)
-- [response body diff](response_body_diff/response_body_diff.md)
-- [response status diff](response_status_diff/response_status_diff.md)
-- [response prop diff](response_prop_diff/response_prop_diff.md)
-- [redirected response](redirected_response/redirected_response.md)
+- [abort signal pending vs aborted](0_abort_signal_pending_vs_aborted/0_abort_signal_pending_vs_aborted.md)
+- [request url diff](1_request_url_diff/1_request_url_diff.md)
+- [request with custom options](2_request_with_custom_options/2_request_with_custom_options.md)
+- [request abort signal pending vs aborted](3_request_abort_signal_pending_vs_aborted/3_request_abort_signal_pending_vs_aborted.md)
+- [response body diff](4_response_body_diff/4_response_body_diff.md)
+- [response status diff](5_response_status_diff/5_response_status_diff.md)
+- [response prop diff](6_response_prop_diff/6_response_prop_diff.md)
+- [redirected response](7_redirected_response/7_redirected_response.md)
 
 ---
 

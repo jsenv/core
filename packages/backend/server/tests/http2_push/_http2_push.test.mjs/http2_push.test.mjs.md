@@ -1,7 +1,7 @@
 # [http2_push.test.mjs](../http2_push.test.mjs)
 
 
-- [0_basic](0_basic/0_basic.md)
+- [basic](0_basic/0_basic.md)
 
 ---
 

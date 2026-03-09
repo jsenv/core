@@ -1,16 +1,16 @@
 # [function_parser.test.js](../function_parser.test.js)
 
 
-- [arrow function containing arrow function](arrow_function_containing_arrow_function/arrow_function_containing_arrow_function.md)
-- [async arrow function](async_arrow_function/async_arrow_function.md)
-- [anonymous arrow default param arrow](anonymous_arrow_default_param_arrow/anonymous_arrow_default_param_arrow.md)
-- [anonymous arrow returning string](anonymous_arrow_returning_string/anonymous_arrow_returning_string.md)
-- [anonymous arrow one liner object notation](anonymous_arrow_one_liner_object_notation/anonymous_arrow_one_liner_object_notation.md)
-- [anonymous function returning a + b](anonymous_function_returning_a_+_b/anonymous_function_returning_a_+_b.md)
-- [named arrow function](named_arrow_function/named_arrow_function.md)
-- [named function returning a + b](named_function_returning_a_+_b/named_function_returning_a_+_b.md)
-- [getter returning 10](getter_returning_10/getter_returning_10.md)
-- [setter incrementing value](setter_incrementing_value/setter_incrementing_value.md)
+- [arrow function containing arrow function](0_arrow_function_containing_arrow_function/0_arrow_function_containing_arrow_function.md)
+- [async arrow function](1_async_arrow_function/1_async_arrow_function.md)
+- [anonymous arrow default param arrow](2_anonymous_arrow_default_param_arrow/2_anonymous_arrow_default_param_arrow.md)
+- [anonymous arrow returning string](3_anonymous_arrow_returning_string/3_anonymous_arrow_returning_string.md)
+- [anonymous arrow one liner object notation](4_anonymous_arrow_one_liner_object_notation/4_anonymous_arrow_one_liner_object_notation.md)
+- [anonymous function returning a + b](5_anonymous_function_returning_a_+_b/5_anonymous_function_returning_a_+_b.md)
+- [named arrow function](6_named_arrow_function/6_named_arrow_function.md)
+- [named function returning a + b](7_named_function_returning_a_+_b/7_named_function_returning_a_+_b.md)
+- [getter returning 10](8_getter_returning_10/8_getter_returning_10.md)
+- [setter incrementing value](9_setter_incrementing_value/9_setter_incrementing_value.md)
 
 ---
 

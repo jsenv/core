@@ -1,4 +1,4 @@
-# [0_basic](../../esm_and_commonjs_build.test.mjs)
+# [basic](../../esm_and_commonjs_build.test.mjs)
 
 ```js
 run()

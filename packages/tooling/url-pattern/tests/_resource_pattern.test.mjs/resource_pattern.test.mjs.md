@@ -1,9 +1,9 @@
 # [resource_pattern.test.mjs](../resource_pattern.test.mjs)
 
 
-- [0_basic](0_basic/0_basic.md)
-- [1_two_named](1_two_named/1_two_named.md)
-- [2_spaces](2_spaces/2_spaces.md)
+- [basic](0_basic/0_basic.md)
+- [two_named](1_two_named/1_two_named.md)
+- [spaces](2_spaces/2_spaces.md)
 
 ---
 

@@ -1,9 +1,9 @@
 # [map.test.js](../map.test.js)
 
 
-- [map entry added](map_entry_added/map_entry_added.md)
-- [map entry removed](map_entry_removed/map_entry_removed.md)
-- [map value modified](map_value_modified/map_value_modified.md)
+- [map entry added](0_map_entry_added/0_map_entry_added.md)
+- [map entry removed](1_map_entry_removed/1_map_entry_removed.md)
+- [map value modified](2_map_value_modified/2_map_value_modified.md)
 
 ---
 

@@ -1,4 +1,4 @@
-# [2_webkit](../../console_calls_browsers.test.mjs)
+# [webkit](../../console_calls_browsers.test.mjs)
 
 ```js
 run({

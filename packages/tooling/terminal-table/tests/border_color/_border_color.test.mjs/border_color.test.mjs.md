@@ -1,7 +1,7 @@
 # [border_color.test.mjs](../border_color.test.mjs)
 
 
-- [0_basic](0_basic/0_basic.md)
+- [0_basic](0_0_basic/0_0_basic.md)
 
 ---
 

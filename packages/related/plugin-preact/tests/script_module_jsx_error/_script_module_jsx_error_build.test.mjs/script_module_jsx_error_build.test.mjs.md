@@ -1,7 +1,7 @@
 # [script_module_jsx_error_build.test.mjs](../script_module_jsx_error_build.test.mjs)
 
 
-- [0_js_module](0_js_module/0_js_module.md)
+- [js_module](0_js_module/0_js_module.md)
 
 ---
 

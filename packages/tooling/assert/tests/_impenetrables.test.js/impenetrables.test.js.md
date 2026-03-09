@@ -1,9 +1,9 @@
 # [impenetrables.test.js](../impenetrables.test.js)
 
 
-- [promise](promise/promise.md)
-- [weakset](weakset/weakset.md)
-- [weakmap](weakmap/weakmap.md)
+- [promise](0_promise/0_promise.md)
+- [weakset](1_weakset/1_weakset.md)
+- [weakmap](2_weakmap/2_weakmap.md)
 
 ---
 

@@ -1,4 +1,4 @@
-# [0_dev_star](../../conditions_star.test.mjs)
+# [dev_star](../../conditions_star.test.mjs)
 
 ```js
 return run({

@@ -1,4 +1,4 @@
-# [0_basic](../../response_composition.test.mjs)
+# [basic](../../response_composition.test.mjs)
 
 ```js
 return composeTwoResponses(

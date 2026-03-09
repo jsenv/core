@@ -1,4 +1,4 @@
-# [1_js_module_fallback](../../script_module_jsx_build.test.mjs)
+# [js_module_fallback](../../script_module_jsx_build.test.mjs)
 
 ```js
 run({

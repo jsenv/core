@@ -1,10 +1,10 @@
 # [assert_not.test.js](../assert_not.test.js)
 
 
-- [42 and not(42)](42_and_not(42)/42_and_not(42).md)
-- [41 and not(42)](41_and_not(42)/41_and_not(42).md)
-- [object and not (object)](object_and_not_(object)/object_and_not_(object).md)
-- [object and not(object)](object_and_not(object)/object_and_not(object).md)
+- [42 and not(42)](0_42_and_not(42)/0_42_and_not(42).md)
+- [41 and not(42)](1_41_and_not(42)/1_41_and_not(42).md)
+- [object and not (object)](2_object_and_not_(object)/2_object_and_not_(object).md)
+- [object and not(object)](3_object_and_not(object)/3_object_and_not(object).md)
 
 ---
 

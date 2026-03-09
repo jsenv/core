@@ -1,4 +1,4 @@
-# [0_basic](../../coverage_browsers_and_node.test.mjs)
+# [basic](../../coverage_browsers_and_node.test.mjs)
 
 ```js
 await run({

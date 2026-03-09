@@ -1,9 +1,9 @@
 # [chunks_vendors.test.mjs](../chunks_vendors.test.mjs)
 
 
-- [0_default](0_default/0_default.md)
-- [1_vendors](1_vendors/1_vendors.md)
-- [2_vendors_and_js_module_fallback](2_vendors_and_js_module_fallback/2_vendors_and_js_module_fallback.md)
+- [default](0_default/0_default.md)
+- [vendors](1_vendors/1_vendors.md)
+- [vendors_and_js_module_fallback](2_vendors_and_js_module_fallback/2_vendors_and_js_module_fallback.md)
 
 ---
 

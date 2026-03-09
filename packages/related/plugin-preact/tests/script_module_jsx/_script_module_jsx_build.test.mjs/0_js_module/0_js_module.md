@@ -1,4 +1,4 @@
-# [0_js_module](../../script_module_jsx_build.test.mjs)
+# [js_module](../../script_module_jsx_build.test.mjs)
 
 ```js
 run({

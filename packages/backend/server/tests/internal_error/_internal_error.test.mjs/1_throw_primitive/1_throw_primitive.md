@@ -1,4 +1,4 @@
-# [1_throw_primitive](../../internal_error.test.mjs)
+# [throw_primitive](../../internal_error.test.mjs)
 
 ```js
 return run("here");

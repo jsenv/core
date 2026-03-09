@@ -1,10 +1,10 @@
 # [cors.test.mjs](../cors.test.mjs)
 
 
-- [0_without_cors](0_without_cors/0_without_cors.md)
-- [1_error_without_cors](1_error_without_cors/1_error_without_cors.md)
-- [2_with_cors](2_with_cors/2_with_cors.md)
-- [3_error_with_cors](3_error_with_cors/3_error_with_cors.md)
+- [without_cors](0_without_cors/0_without_cors.md)
+- [error_without_cors](1_error_without_cors/1_error_without_cors.md)
+- [with_cors](2_with_cors/2_with_cors.md)
+- [error_with_cors](3_error_with_cors/3_error_with_cors.md)
 
 ---
 

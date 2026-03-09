@@ -1,4 +1,4 @@
-# [6_border_double_x](../../table_1_cell.test.mjs)
+# [border_double_x](../../table_1_cell.test.mjs)
 
 ```js
 run({

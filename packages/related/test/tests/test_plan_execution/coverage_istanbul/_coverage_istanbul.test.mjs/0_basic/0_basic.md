@@ -1,4 +1,4 @@
-# [0_basic](../../coverage_istanbul.test.mjs)
+# [basic](../../coverage_istanbul.test.mjs)
 
 ```js
 await run({

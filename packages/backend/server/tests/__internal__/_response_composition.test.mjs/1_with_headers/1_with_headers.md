@@ -1,4 +1,4 @@
-# [1_with_headers](../../response_composition.test.mjs)
+# [with_headers](../../response_composition.test.mjs)
 
 ```js
 return composeTwoResponses(

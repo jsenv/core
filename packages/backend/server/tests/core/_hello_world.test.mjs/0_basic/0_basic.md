@@ -1,4 +1,4 @@
-# [0_basic](../../hello_world.test.mjs)
+# [basic](../../hello_world.test.mjs)
 
 ```js
 return run({ cors: false });

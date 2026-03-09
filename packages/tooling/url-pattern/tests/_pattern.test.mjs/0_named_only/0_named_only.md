@@ -1,4 +1,4 @@
-# [0_named_only](../../pattern.test.mjs)
+# [named_only](../../pattern.test.mjs)
 
 ```js
 const pattern = PATTERN.create("before/:id/after", {

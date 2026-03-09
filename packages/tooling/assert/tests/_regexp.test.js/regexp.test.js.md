@@ -1,12 +1,12 @@
 # [regexp.test.js](../regexp.test.js)
 
 
-- [a vs b](a_vs_b/a_vs_b.md)
-- [i flag vs no flag](i_flag_vs_no_flag/i_flag_vs_no_flag.md)
-- [gi flag vs ig flag](gi_flag_vs_ig_flag/gi_flag_vs_ig_flag.md)
-- [special char: parenthesis vs dot](special_char_parenthesis_vs_dot/special_char_parenthesis_vs_dot.md)
-- [last index](last_index/last_index.md)
-- [regex and string representing the same regex](regex_and_string_representing_the_same_regex/regex_and_string_representing_the_same_regex.md)
+- [a vs b](0_a_vs_b/0_a_vs_b.md)
+- [i flag vs no flag](1_i_flag_vs_no_flag/1_i_flag_vs_no_flag.md)
+- [gi flag vs ig flag](2_gi_flag_vs_ig_flag/2_gi_flag_vs_ig_flag.md)
+- [special char: parenthesis vs dot](3_special_char_parenthesis_vs_dot/3_special_char_parenthesis_vs_dot.md)
+- [last index](4_last_index/4_last_index.md)
+- [regex and string representing the same regex](5_regex_and_string_representing_the_same_regex/5_regex_and_string_representing_the_same_regex.md)
 
 ---
 
