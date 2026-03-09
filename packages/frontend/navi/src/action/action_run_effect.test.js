@@ -68,38 +68,35 @@ await snapshotTests(import.meta.url, ({ test }) => {
     };
   });
 
-  test.ONLY(
-    "debounce: explicit rerun flushes params and runs once (no double-run)",
-    async () => {
-      const debounceDelay = 50;
-      const paramsSignal = signal({ query: "a" });
-      const runCalls = [];
-      const action = createAction(async (params) => {
-        runCalls.push({ params });
-      });
-      const effectAction = actionRunEffect(action, () => paramsSignal.value, {
-        debounce: debounceDelay,
-      });
+  test("debounce: explicit rerun flushes params and runs once (no double-run)", async () => {
+    const debounceDelay = 50;
+    const paramsSignal = signal({ query: "a" });
+    const runCalls = [];
+    const action = createAction(async (params) => {
+      runCalls.push({ params });
+    });
+    const effectAction = actionRunEffect(action, () => paramsSignal.value, {
+      debounce: debounceDelay,
+    });
 
-      // Change params but don't wait for debounce to settle
-      paramsSignal.value = { query: "b" };
-      const runCountBeforeExplicitRun = runCalls.length;
-      // Explicitly rerun — should flush latest params ("b") and run exactly once
-      effectAction();
-      const runCountImmediatelyAfterRerun = runCalls.length;
-      // Wait to confirm debounce timeout does NOT fire another run
-      await sleep(debounceDelay + 20);
-      const runCountAfterWait = runCalls.length;
-      const lastRunParams = runCalls[runCalls.length - 1].params;
+    // Change params but don't wait for debounce to settle
+    paramsSignal.value = { query: "b" };
+    const runCountBeforeExplicitRun = runCalls.length;
+    // Explicitly rerun — should flush latest params ("b") and run exactly once
+    effectAction();
+    const runCountImmediatelyAfterRerun = runCalls.length;
+    // Wait to confirm debounce timeout does NOT fire another run
+    await sleep(debounceDelay + 20);
+    const runCountAfterWait = runCalls.length;
+    const lastRunParams = runCalls[runCalls.length - 1].params;
 
-      return {
-        runCountBeforeExplicitRun,
-        runCountImmediatelyAfterRerun,
-        runCountAfterWait,
-        lastRunParams,
-      };
-    },
-  );
+    return {
+      runCountBeforeExplicitRun,
+      runCountImmediatelyAfterRerun,
+      runCountAfterWait,
+      lastRunParams,
+    };
+  });
 
   test("debounce: explicit rerun uses latest params, not stale ones", async () => {
     const debounceDelay = 50;

@@ -23,7 +23,7 @@ return { runCountAfterWait };
 
 ```js
 {
-  "runCountAfterWait": 2
+  "runCountAfterWait": 1
 }
 ```
 
