@@ -164,32 +164,44 @@ await snapshotTests(import.meta.url, ({ test }) => {
     };
   });
 
-  test.ONLY(
-    "effect returning {t: Date.now()}: reruns on every false→true transition",
-    () => {
-      const enabledSignal = signal(false);
-      const runCalls = [];
-      const action = createAction((params) => {
-        runCalls.push(params);
-      });
-      actionRunEffect(action, () =>
-        enabledSignal.value ? { t: Date.now() } : false,
-      );
+  test("effect returning {t: Date.now()}: reruns on every false→true transition", () => {
+    const enabledSignal = signal(false);
+    const runCalls = [];
+    const action = createAction((params) => {
+      runCalls.push(params);
+    });
+    actionRunEffect(action, () =>
+      enabledSignal.value ? { t: performance.now() } : false,
+    );
 
-      const countAfterFalse = runCalls.length;
-      enabledSignal.value = true;
-      const countAfterFirstTrue = runCalls.length;
-      enabledSignal.value = false;
-      const countAfterSecondFalse = runCalls.length;
-      enabledSignal.value = true;
-      const countAfterSecondTrue = runCalls.length;
+    const countAfterFalse = runCalls.length;
+    enabledSignal.value = true;
+    const countAfterFirstTrue = runCalls.length;
+    enabledSignal.value = false;
+    const countAfterSecondFalse = runCalls.length;
+    enabledSignal.value = true;
+    const countAfterSecondTrue = runCalls.length;
 
-      return {
-        countAfterFalse,
-        countAfterFirstTrue,
-        countAfterSecondFalse,
-        countAfterSecondTrue,
-      };
-    },
-  );
+    return {
+      countAfterFalse,
+      countAfterFirstTrue,
+      countAfterSecondFalse,
+      countAfterSecondTrue,
+    };
+  });
+
+  test("action with initial params", () => {
+    const paramsSignal = signal();
+    const runCalls = [];
+    const action = createAction(
+      (p) => {
+        runCalls.push(p);
+      },
+      { params: { foo: true } },
+    );
+    actionRunEffect(action, () => paramsSignal.value);
+    paramsSignal.value = { bar: true };
+
+    return runCalls;
+  });
 });

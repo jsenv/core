@@ -7,7 +7,7 @@ const action = createAction((params) => {
   runCalls.push(params);
 });
 actionRunEffect(action, () =>
-  enabledSignal.value ? { t: Date.now() } : false,
+  enabledSignal.value ? { t: performance.now() } : false,
 );
 
 const countAfterFalse = runCalls.length;

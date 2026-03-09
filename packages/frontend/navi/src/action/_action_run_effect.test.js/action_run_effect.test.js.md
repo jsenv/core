@@ -9,6 +9,7 @@
 - [no auto-run when explicit reset is called while params change](5_no_auto-run_when_explicit_reset_is_called_while_params_change/5_no_auto-run_when_explicit_reset_is_called_while_params_change.md)
 - [effect returning true: run count across false→true→false→true transitions](6_effect_returning_true_run_count_across_false%E2%86%92true%E2%86%92false%E2%86%92true_transitions/6_effect_returning_true_run_count_across_false%E2%86%92true%E2%86%92false%E2%86%92true_transitions.md)
 - [effect returning {t: Date.now()}: reruns on every false→true transition](7_effect_returning_%7Bt_date_now()%7D_reruns_on_every_false%E2%86%92true_transition/7_effect_returning_%7Bt_date_now()%7D_reruns_on_every_false%E2%86%92true_transition.md)
+- [action with initial params](8_action_with_initial_params/8_action_with_initial_params.md)
 
 ---
 
