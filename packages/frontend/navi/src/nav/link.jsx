@@ -208,6 +208,7 @@ const LinkPseudoClasses = [
   ":-navi-href-external",
   ":-navi-href-anchor",
   ":-navi-href-current",
+  ":-navi-href-match",
 ];
 const LinkPseudoElements = ["::-navi-loader"];
 
@@ -223,6 +224,9 @@ Object.assign(PSEUDO_CLASSES, {
   },
   ":-navi-href-current": {
     attribute: "data-href-current",
+  },
+  ":-navi-href-match": {
+    attribute: "data-href-match",
   },
 });
 
@@ -266,6 +270,7 @@ const LinkPlain = (props) => {
     spacing,
     revealOnInteraction = Boolean(titleLevel),
     hrefFallback = !anchor,
+    matching,
     overflowEllipsis,
 
     children,
@@ -383,6 +388,7 @@ const LinkPlain = (props) => {
         ":-navi-href-external": !isSameSite,
         ":-navi-href-anchor": isAnchor,
         ":-navi-href-current": isCurrent,
+        ":-navi-href-match": matching,
       }}
       onClick={(e) => {
         if (preventDefault) {

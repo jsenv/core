@@ -46,7 +46,7 @@ export const TableListDetails = () => {
           table={table}
           draggable={false}
           style={{
-            ":-navi-href-current": {
+            ":-navi-href-match": {
               backgroundColor: "black",
               color: "white",
             },
