@@ -590,11 +590,17 @@ export const initFlexDetailsSet = (
     }
     if (someNew || someOld) {
       for (const child of container.children) {
-        child.dispatchEvent("resizablechange", {
-          detail: {
-            resizable: resizableDetailsIdSet.has(child.id),
-          },
-        });
+        if (!child.dispatchEvent) {
+          // ignore text nodes
+          continue;
+        }
+        child.dispatchEvent(
+          new CustomEvent("resizablechange", {
+            detail: {
+              resizable: resizableDetailsIdSet.has(child.id),
+            },
+          }),
+        );
       }
       onResizableDetailsChange?.(resizableDetailsIdSet);
     }

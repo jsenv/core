@@ -40,7 +40,7 @@ export const ROLE_CAN_LOGIN_GET_MANY_ACTION = routeAction(
     if (!open) {
       return null;
     }
-    return true;
+    return {};
   },
 );
 export const ROLE_GROUP_GET_MANY_ACTION = routeAction(
@@ -51,7 +51,7 @@ export const ROLE_GROUP_GET_MANY_ACTION = routeAction(
     if (!open) {
       return null;
     }
-    return true;
+    return {};
   },
 );
 
