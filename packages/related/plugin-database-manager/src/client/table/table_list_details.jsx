@@ -45,12 +45,6 @@ export const TableListDetails = () => {
           loading={props.deletedItems.includes(table.tablename)}
           table={table}
           draggable={false}
-          style={{
-            ":-navi-href-match": {
-              backgroundColor: "black",
-              color: "white",
-            },
-          }}
           {...props}
         />
       )}
