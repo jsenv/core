@@ -10,11 +10,11 @@ await snapshotFileExecutionSideEffects(import.meta.url, async ({ test }) => {
     });
     return { status };
   };
-  test("0_worker_thread", () =>
+  test("worker_thread", () =>
     run({
       runtime: nodeWorkerThread(),
     }));
-  test("0_child_process", () =>
+  test("child_process", () =>
     run({
       runtime: nodeChildProcess(),
     }));

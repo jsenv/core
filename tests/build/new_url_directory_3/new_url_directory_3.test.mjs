@@ -24,17 +24,17 @@ const run = ({
 await snapshotBuildTests(
   import.meta.url,
   ({ test }) => {
-    test("0_resolve_root", () =>
+    test("resolve_root", () =>
       run({
         sourceDirectoryUrl: new URL("./fixtures/0_root/", import.meta.url),
         directoryReferenceEffect: "resolve",
       }));
-    test("1_resolve_foo", () =>
+    test("resolve_foo", () =>
       run({
         sourceDirectoryUrl: new URL("./fixtures/1_foo/", import.meta.url),
         directoryReferenceEffect: "resolve",
       }));
-    test("2_resolve_root_and_foo", () =>
+    test("resolve_root_and_foo", () =>
       run({
         sourceDirectoryUrl: new URL(
           "./fixtures/2_root_and_foo/",
@@ -42,22 +42,22 @@ await snapshotBuildTests(
         ),
         directoryReferenceEffect: "resolve",
       }));
-    test("3_preserve_root", () =>
+    test("preserve_root", () =>
       run({
         sourceDirectoryUrl: new URL("./fixtures/0_root/", import.meta.url),
         directoryReferenceEffect: "preserve",
       }));
-    test("5_copy_root", () =>
+    test("copy_root", () =>
       run({
         sourceDirectoryUrl: new URL("./fixtures/0_root/", import.meta.url),
         directoryReferenceEffect: "copy",
       }));
-    test("6_copy_foo", () =>
+    test("copy_foo", () =>
       run({
         sourceDirectoryUrl: new URL("./fixtures/1_foo/", import.meta.url),
         directoryReferenceEffect: "copy",
       }));
-    test("7_copy_fs_root", () =>
+    test("copy_fs_root", () =>
       run({
         sourceDirectoryUrl: new URL(
           "./fixtures/3_filesystem_root/",
@@ -65,7 +65,7 @@ await snapshotBuildTests(
         ),
         directoryReferenceEffect: "copy",
       }));
-    test("8_resolve_ancestor", () =>
+    test("resolve_ancestor", () =>
       run({
         sourceDirectoryUrl: new URL("./fixtures/4_ancestor/", import.meta.url),
         directoryReferenceEffect: "resolve",

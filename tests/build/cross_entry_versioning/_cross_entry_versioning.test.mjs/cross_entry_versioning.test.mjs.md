@@ -1,7 +1,7 @@
 # [cross_entry_versioning.test.mjs](../cross_entry_versioning.test.mjs)
 
 
-- [0_basic](0_basic/0_basic.md)
+- [basic](0_basic/0_basic.md)
 
 ---
 

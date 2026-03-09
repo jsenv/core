@@ -1,7 +1,7 @@
 # [import_scripts_node_resolution_build.test.mjs](../import_scripts_node_resolution_build.test.mjs)
 
 
-- [0_basic](0_basic/0_basic.md)
+- [basic](0_basic/0_basic.md)
 
 ---
 

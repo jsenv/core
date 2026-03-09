@@ -1,4 +1,4 @@
-# [2_multiple](../../endpoint_negotiation.test.mjs)
+# [multiple](../../endpoint_negotiation.test.mjs)
 
 ```js
 const routes = [

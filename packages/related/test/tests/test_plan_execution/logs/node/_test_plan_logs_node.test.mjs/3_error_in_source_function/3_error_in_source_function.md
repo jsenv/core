@@ -1,4 +1,4 @@
-# [3_error_in_source_function](../../test_plan_logs_node.test.mjs)
+# [error_in_source_function](../../test_plan_logs_node.test.mjs)
 
 ```js
 run({

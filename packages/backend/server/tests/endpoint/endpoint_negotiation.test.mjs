@@ -29,7 +29,7 @@ const run = async ({ routes, method, path, headers, body }) => {
 };
 
 await snapshotServerTests(import.meta.url, ({ test }) => {
-  test("0_basic_content_type", async () => {
+  test("basic_content_type", async () => {
     const routes = [
       {
         endpoint: "GET /users",
@@ -84,7 +84,7 @@ await snapshotServerTests(import.meta.url, ({ test }) => {
     };
   });
 
-  test("1_basic_language", async () => {
+  test("basic_language", async () => {
     const routes = [
       {
         endpoint: "GET /users",
@@ -139,7 +139,7 @@ await snapshotServerTests(import.meta.url, ({ test }) => {
     };
   });
 
-  test("2_multiple", async () => {
+  test("multiple", async () => {
     const routes = [
       {
         endpoint: "GET /users",
@@ -180,7 +180,7 @@ await snapshotServerTests(import.meta.url, ({ test }) => {
     };
   });
 
-  test("3_versioning", async () => {
+  test("versioning", async () => {
     const routes = [
       {
         endpoint: "GET /users",

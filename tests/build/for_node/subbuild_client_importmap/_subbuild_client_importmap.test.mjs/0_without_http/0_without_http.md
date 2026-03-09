@@ -1,4 +1,4 @@
-# [0_without_http](../../subbuild_client_importmap.test.mjs)
+# [without_http](../../subbuild_client_importmap.test.mjs)
 
 ```js
 run({

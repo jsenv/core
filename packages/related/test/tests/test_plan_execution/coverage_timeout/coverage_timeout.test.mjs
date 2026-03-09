@@ -35,7 +35,7 @@ const run = async ({ testPlan }) => {
 };
 
 await snapshotTestPlanSideEffects(import.meta.url, ({ test }) => {
-  test("0_basic", async () => {
+  test("basic", async () => {
     await run({
       testPlan: {
         "main.js": {

@@ -1,4 +1,4 @@
-# [1_js_module_fallback_css_minified](../../import_type_css_build.test.mjs)
+# [js_module_fallback_css_minified](../../import_type_css_build.test.mjs)
 
 ```js
 run({

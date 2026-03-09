@@ -4,8 +4,9 @@ import { DatabasePage } from "./database_page.jsx";
 
 export const DatabaseRoutes = () => {
   return (
-    <Route route={DATABASE_ROUTE}>
-      {(database) => <DatabasePage database={database} />}
-    </Route>
+    <Route
+      route={DATABASE_ROUTE}
+      element={(database) => <DatabasePage database={database} />}
+    />
   );
 };

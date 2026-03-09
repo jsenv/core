@@ -1,4 +1,4 @@
-# [1_terminal_size](../../width.test.mjs)
+# [terminal_size](../../width.test.mjs)
 
 ```js
 run(measureTextWidth)

@@ -1,4 +1,4 @@
-# [0_chromium](../../ignore_protocol_dev.test.mjs)
+# [chromium](../../ignore_protocol_dev.test.mjs)
 
 ```js
 run({ browserLauncher: chromium })

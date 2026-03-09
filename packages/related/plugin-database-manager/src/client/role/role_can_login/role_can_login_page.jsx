@@ -1,4 +1,5 @@
 import { Button } from "@jsenv/navi";
+
 import { DatabaseFieldset } from "../../components/database_field.jsx";
 import { Page, PageBody, PageHead } from "../../layout/page.jsx";
 import { RoleDatabaseList } from "../role_database_list.jsx";
@@ -7,26 +8,29 @@ import { ROLE } from "../role_store.js";
 
 export const RoleCanLoginPage = ({ role }) => {
   const rolname = role.rolname;
-  const deleteRoleAction = ROLE.DELETE.bindParams({ rolname });
   const RoleIcon = pickRoleIcon(role);
 
   return (
     <Page data-ui-name="<RoleCanLoginPage />">
-      <PageHead
-        actions={[
-          {
-            component: (
-              <Button
-                data-confirm-message={`Are you sure you want to delete the role "${rolname}"?`}
-                action={deleteRoleAction}
-              >
-                Delete
-              </Button>
-            ),
-          },
-        ]}
-      >
-        <PageHead.Label icon={<RoleIcon />} label={"Role Login:"}>
+      <PageHead>
+        <PageHead.Label
+          icon={<RoleIcon />}
+          label="Role Login:"
+          actions={[
+            {
+              component: (
+                <Button
+                  data-confirm-message={`Are you sure you want to delete the role "${rolname}"?`}
+                  action={() => {
+                    return ROLE.DELETE({ rolname });
+                  }}
+                >
+                  Delete
+                </Button>
+              ),
+            },
+          ]}
+        >
           {rolname}
         </PageHead.Label>
       </PageHead>

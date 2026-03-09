@@ -1,8 +1,8 @@
 # [import_circular_build.test.mjs](../import_circular_build.test.mjs)
 
 
-- [0_with_bundling](0_with_bundling/0_with_bundling.md)
-- [1_without_bundling](1_without_bundling/1_without_bundling.md)
+- [with_bundling](0_with_bundling/0_with_bundling.md)
+- [without_bundling](1_without_bundling/1_without_bundling.md)
 
 ---
 

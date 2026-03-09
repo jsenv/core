@@ -1,4 +1,4 @@
-# [0_basic](../../link_manifest_build.test.mjs)
+# [basic](../../link_manifest_build.test.mjs)
 
 ```js
 build({

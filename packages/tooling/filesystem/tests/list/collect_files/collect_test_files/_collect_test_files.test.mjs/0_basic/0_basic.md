@@ -1,4 +1,4 @@
-# [0_basic](../../collect_test_files.test.mjs)
+# [basic](../../collect_test_files.test.mjs)
 
 ```js
 const matchingFileResultArray = await collectFiles({

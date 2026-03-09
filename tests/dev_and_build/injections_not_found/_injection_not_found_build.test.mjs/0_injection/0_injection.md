@@ -1,4 +1,4 @@
-# [0_injection](../../injection_not_found_build.test.mjs)
+# [injection](../../injection_not_found_build.test.mjs)
 
 ```js
 run()

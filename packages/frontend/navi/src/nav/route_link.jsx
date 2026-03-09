@@ -5,11 +5,12 @@ export const RouteLink = ({ route, routeParams, children, ...rest }) => {
   if (!route) {
     throw new Error("route prop is required");
   }
-  useRouteStatus(route);
+  const { matching } = useRouteStatus(route);
+  const paramsAreMatching = route.matchesParams(routeParams);
   const url = route.buildUrl(routeParams);
 
   return (
-    <Link {...rest} href={url}>
+    <Link matching={matching && paramsAreMatching} href={url} {...rest}>
       {children || route.buildRelativeUrl(routeParams)}
     </Link>
   );

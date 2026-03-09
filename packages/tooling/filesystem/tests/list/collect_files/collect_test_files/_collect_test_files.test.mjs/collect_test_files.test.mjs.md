@@ -1,7 +1,7 @@
 # [collect_test_files.test.mjs](../collect_test_files.test.mjs)
 
 
-- [0_basic](0_basic/0_basic.md)
+- [basic](0_basic/0_basic.md)
 
 ---
 

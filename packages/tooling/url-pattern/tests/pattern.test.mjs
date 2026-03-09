@@ -2,7 +2,7 @@ import { snapshotTests } from "@jsenv/snapshot";
 import { PATTERN } from "@jsenv/url-pattern";
 
 await snapshotTests(import.meta.url, ({ test }) => {
-  test("0_named_only", () => {
+  test("named_only", () => {
     const pattern = PATTERN.create("before/:id/after", {
       namedGroupDelimiter: "/",
     });
@@ -16,7 +16,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
     };
   });
 
-  test("1_star_only", () => {
+  test("star_only", () => {
     const pattern = PATTERN.create("start/*/middle/*/end", {
       namedGroupDelimiter: "/",
     });
@@ -30,7 +30,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
     };
   });
 
-  test("2_named_and_star", () => {
+  test("named_and_star", () => {
     const pattern = PATTERN.create("start/:id/*", {
       namedGroupDelimiter: "/",
     });

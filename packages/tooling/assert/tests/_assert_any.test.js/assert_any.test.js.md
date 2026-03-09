@@ -1,12 +1,12 @@
 # [assert_any.test.js](../assert_any.test.js)
 
 
-- [10 and any(String)](10_and_any(string)/10_and_any(string).md)
-- ["foo" and any(String)](foo_and_any(string)/foo_and_any(string).md)
-- ["foo" and not(any(String))](foo_and_not(any(string))/foo_and_not(any(string)).md)
-- [10 is any Number](10_is_any_number/10_is_any_number.md)
-- [0 is any number](0_is_any_number/0_is_any_number.md)
-- [any Error](any_error/any_error.md)
+- [10 and any(String)](0_10_and_any(string)/0_10_and_any(string).md)
+- ["foo" and any(String)](1_foo_and_any(string)/1_foo_and_any(string).md)
+- ["foo" and not(any(String))](2_foo_and_not(any(string))/2_foo_and_not(any(string)).md)
+- [10 is any Number](3_10_is_any_number/3_10_is_any_number.md)
+- [0 is any number](4_0_is_any_number/4_0_is_any_number.md)
+- [any Error](5_any_error/5_any_error.md)
 
 ---
 

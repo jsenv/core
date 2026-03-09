@@ -152,6 +152,9 @@ export const useKeyboardShortcuts = (
 
   useEffect(() => {
     const element = elementRef.current;
+    if (!element) {
+      return null;
+    }
     const shortcutsCopy = [];
     for (const shortcutCandidate of shortcuts) {
       shortcutsCopy.push({
@@ -164,7 +167,8 @@ export const useKeyboardShortcuts = (
             return false;
           }
           const { action } = shortcutCandidate;
-          return requestAction(element, action, {
+          const actionWithEvent = action.bindParams(keyboardEvent);
+          return requestAction(element, actionWithEvent, {
             actionOrigin: "keyboard_shortcut",
             event: keyboardEvent,
             requester: document.activeElement,

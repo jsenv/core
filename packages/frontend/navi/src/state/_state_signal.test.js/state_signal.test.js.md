@@ -1,16 +1,16 @@
 # [state_signal.test.js](../state_signal.test.js)
 
 
-- [0_basics](0_basics/0_basics.md)
-- [1_with_static_default_value](1_with_static_default_value/1_with_static_default_value.md)
-- [2_with_dynamic_default_value](2_with_dynamic_default_value/2_with_dynamic_default_value.md)
-- [3_dynamic_default_reset_behavior](3_dynamic_default_reset_behavior/3_dynamic_default_reset_behavior.md)
-- [4_validation_with_oneOf](4_validation_with_oneof/4_validation_with_oneof.md)
-- [6_dynamic_default_with_static_fallback](6_dynamic_default_with_static_fallback/6_dynamic_default_with_static_fallback.md)
-- [7_static_fallback_with_user_override](7_static_fallback_with_user_override/7_static_fallback_with_user_override.md)
-- [8_static_fallback_dynamic_changes](8_static_fallback_dynamic_changes/8_static_fallback_dynamic_changes.md)
-- [9_static_fallback_without_dynamic](9_static_fallback_without_dynamic/9_static_fallback_without_dynamic.md)
-- [10_static_fallback_with_persistence](10_static_fallback_with_persistence/10_static_fallback_with_persistence.md)
+- [basics](0_basics/0_basics.md)
+- [with_static_default_value](1_with_static_default_value/1_with_static_default_value.md)
+- [with_dynamic_default_value](2_with_dynamic_default_value/2_with_dynamic_default_value.md)
+- [dynamic_default_reset_behavior](3_dynamic_default_reset_behavior/3_dynamic_default_reset_behavior.md)
+- [validation_with_oneOf](4_validation_with_oneof/4_validation_with_oneof.md)
+- [dynamic_default_with_static_fallback](5_dynamic_default_with_static_fallback/5_dynamic_default_with_static_fallback.md)
+- [static_fallback_with_user_override](6_static_fallback_with_user_override/6_static_fallback_with_user_override.md)
+- [static_fallback_dynamic_changes](7_static_fallback_dynamic_changes/7_static_fallback_dynamic_changes.md)
+- [static_fallback_without_dynamic](8_static_fallback_without_dynamic/8_static_fallback_without_dynamic.md)
+- [static_fallback_with_persistence](9_static_fallback_with_persistence/9_static_fallback_with_persistence.md)
 
 ---
 

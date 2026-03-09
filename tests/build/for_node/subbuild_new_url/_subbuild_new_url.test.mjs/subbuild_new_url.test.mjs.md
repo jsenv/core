@@ -1,7 +1,7 @@
 # [subbuild_new_url.test.mjs](../subbuild_new_url.test.mjs)
 
 
-- [0_basic](0_basic/0_basic.md)
+- [basic](0_basic/0_basic.md)
 
 ---
 

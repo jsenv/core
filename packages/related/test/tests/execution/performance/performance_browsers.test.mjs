@@ -28,15 +28,15 @@ await snapshotFileExecutionSideEffects(import.meta.url, async ({ test }) => {
     return { performance };
   };
 
-  test("0_chromium", () =>
+  test("chromium", () =>
     run({
       runtime: chromium(),
     }));
-  test("1_firefox", () =>
+  test("firefox", () =>
     run({
       runtime: firefox({ disableOnWindowsBecauseFlaky: false }),
     }));
-  test("2_webkit", () =>
+  test("webkit", () =>
     run({
       runtime: webkit(),
     }));

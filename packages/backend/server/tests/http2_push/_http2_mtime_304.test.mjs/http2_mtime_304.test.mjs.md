@@ -1,7 +1,7 @@
 # [http2_mtime_304.test.mjs](../http2_mtime_304.test.mjs)
 
 
-- [0_basic](0_basic/0_basic.md)
+- [basic](0_basic/0_basic.md)
 
 ---
 

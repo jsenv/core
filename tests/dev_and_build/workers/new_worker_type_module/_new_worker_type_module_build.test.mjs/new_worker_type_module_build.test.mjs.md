@@ -1,11 +1,11 @@
 # [new_worker_type_module_build.test.mjs](../new_worker_type_module_build.test.mjs)
 
 
-- [0_worker_type_module](0_worker_type_module/0_worker_type_module.md)
-- [1_worker_type_module_no_bundling](1_worker_type_module_no_bundling/1_worker_type_module_no_bundling.md)
-- [2_worker_type_module_fallback](2_worker_type_module_fallback/2_worker_type_module_fallback.md)
-- [3_worker_type_module_fallback_no_bundling](3_worker_type_module_fallback_no_bundling/3_worker_type_module_fallback_no_bundling.md)
-- [4_js_module_fallback](4_js_module_fallback/4_js_module_fallback.md)
+- [worker_type_module](0_worker_type_module/0_worker_type_module.md)
+- [worker_type_module_no_bundling](1_worker_type_module_no_bundling/1_worker_type_module_no_bundling.md)
+- [worker_type_module_fallback](2_worker_type_module_fallback/2_worker_type_module_fallback.md)
+- [worker_type_module_fallback_no_bundling](3_worker_type_module_fallback_no_bundling/3_worker_type_module_fallback_no_bundling.md)
+- [js_module_fallback](4_js_module_fallback/4_js_module_fallback.md)
 
 ---
 

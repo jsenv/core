@@ -1,8 +1,8 @@
 # [internal_error.test.mjs](../internal_error.test.mjs)
 
 
-- [0_throw_error](0_throw_error/0_throw_error.md)
-- [1_throw_primitive](1_throw_primitive/1_throw_primitive.md)
+- [throw_error](0_throw_error/0_throw_error.md)
+- [throw_primitive](1_throw_primitive/1_throw_primitive.md)
 
 ---
 

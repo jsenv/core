@@ -1,42 +1,38 @@
+import { useState } from "preact/hooks";
+
 import { useDatabaseCount } from "../database_manager_signals.js";
-import {
-  createExplorerGroupController,
-  ExplorerGroup,
-} from "../explorer/explorer_group.jsx";
-import {
-  databaseListDetailsOnToggle,
-  databaseListDetailsOpenAtStart,
-} from "./database_details_state.js";
+import { ExplorerGroup } from "../explorer/explorer_group.jsx";
+import { DATABASE_GET_MANY_ACTION } from "../routes.js";
 import { DatabaseWithPlusSvg } from "./database_icons.jsx";
 import { DatabaseLink } from "./database_link.jsx";
-import {
-  DATABASE,
-  useDatabaseArray,
-  useDatabaseArrayInStore,
-} from "./database_store.js";
+import { databaseHeightSignal, databaseOpenSignal } from "./database_state.js";
+import { DATABASE, useDatabaseArrayInStore } from "./database_store.js";
 
-const TextAndCount = (props) => props;
-
-export const databasesDetailsController = createExplorerGroupController(
-  "databases",
-  {
-    detailsOpenAtStart: databaseListDetailsOpenAtStart,
-    detailsOnToggle: databaseListDetailsOnToggle,
-  },
-);
-
-export const DatabasesDetails = (props) => {
+export const DatabasesDetails = () => {
+  const [resizable, setResizable] = useState(false);
   const databaseCount = useDatabaseCount();
-  const databaseArray = useDatabaseArray();
 
   return (
     <ExplorerGroup
-      {...props}
-      controller={databasesDetailsController}
-      detailsAction={DATABASE.GET_MANY}
+      id="database_list"
+      open={databaseOpenSignal.value}
+      detailsConnectedAction={DATABASE_GET_MANY_ACTION}
+      detailsUIAction={(open) => {
+        databaseOpenSignal.value = open;
+      }}
+      resizable={resizable}
+      height={databaseHeightSignal.value}
+      onresizeend={(e) => {
+        const newHeight = e.detail.size;
+        databaseHeightSignal.value = newHeight;
+      }}
+      onresizablechange={(e) => {
+        setResizable(e.detail.resizable);
+      }}
       idKey="oid"
       nameKey="datname"
-      labelChildren={<TextAndCount text={"DATABASES"} count={databaseCount} />}
+      label="DATABASES"
+      count={databaseCount}
       renderNewButtonChildren={() => <DatabaseWithPlusSvg />}
       renderItem={(database, props) => (
         <DatabaseLink
@@ -48,25 +44,23 @@ export const DatabasesDetails = (props) => {
         />
       )}
       useItemArrayInStore={useDatabaseArrayInStore}
-      useCreateItemAction={(valueSignal) =>
+      createItemAction={(datname) =>
         DATABASE.POST({
-          datname: valueSignal,
+          datname,
         })
       }
-      useDeleteItemAction={(database) =>
-        DATABASE.DELETE.bindParams({
+      deleteItemAction={(database) =>
+        DATABASE.DELETE({
           datname: database.datname,
         })
       }
-      useRenameItemAction={(database, valueSignal) =>
-        DATABASE.PUT.bindParams({
+      renameItemAction={(database, newDatname) =>
+        DATABASE.PUT({
           datname: database.datname,
           columnName: "datname",
-          columnValue: valueSignal,
+          columnValue: newDatname,
         })
       }
-    >
-      {databaseArray}
-    </ExplorerGroup>
+    />
   );
 };

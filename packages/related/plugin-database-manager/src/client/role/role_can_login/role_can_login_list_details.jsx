@@ -1,68 +1,65 @@
+import { useState } from "preact/hooks";
+
 import { useRoleCanLoginCount } from "../../database_manager_signals.js";
-import {
-  createExplorerGroupController,
-  ExplorerGroup,
-} from "../../explorer/explorer_group.jsx";
+import { ExplorerGroup } from "../../explorer/explorer_group.jsx";
+import { ROLE_CAN_LOGIN_GET_MANY_ACTION } from "../../routes.js";
 import { RoleCanLoginWithPlusSvg } from "../role_icons.jsx";
 import { RoleLink } from "../role_link.jsx";
+import { ROLE_CAN_LOGIN, useRoleArrayInStore } from "../role_store.js";
 import {
-  ROLE_CAN_LOGIN,
-  useRoleArrayInStore,
-  useRoleCanLoginArray,
-} from "../role_store.js";
-import {
-  roleCanLoginListDetailsOnToggle,
-  roleCanLoginListDetailsOpenAtStart,
-} from "./role_can_login_list_details_state.js";
+  roleCanLoginHeightSignal,
+  roleCanLoginOpenSignal,
+} from "./role_can_login_state.js";
 
-const TextAndCount = (props) => props;
-
-export const roleCanLoginListDetailsController = createExplorerGroupController(
-  "role_can_login_list",
-  {
-    detailsOpenAtStart: roleCanLoginListDetailsOpenAtStart,
-    detailsOnToggle: roleCanLoginListDetailsOnToggle,
-  },
-);
-
-export const RoleCanLoginListDetails = (props) => {
+export const RoleCanLoginListDetails = () => {
+  const [resizable, setResizable] = useState(false);
   const roleCanLoginCount = useRoleCanLoginCount();
-  const roleCanLoginArray = useRoleCanLoginArray();
 
   return (
     <ExplorerGroup
-      {...props}
-      controller={roleCanLoginListDetailsController}
-      detailsAction={ROLE_CAN_LOGIN.GET_MANY}
+      id="role_can_login_list"
+      open={roleCanLoginOpenSignal.value}
+      detailsConnectedAction={ROLE_CAN_LOGIN_GET_MANY_ACTION}
+      detailsUIAction={(open) => {
+        roleCanLoginOpenSignal.value = open;
+      }}
+      resizable={resizable}
+      height={roleCanLoginHeightSignal.value}
+      onresizeend={(e) => {
+        const newHeight = e.detail.size;
+        roleCanLoginHeightSignal.value = newHeight;
+      }}
+      onresizablechange={(e) => {
+        setResizable(e.detail.resizable);
+      }}
       idKey="oid"
       nameKey="rolname"
-      labelChildren={
-        <TextAndCount text={"ROLE LOGINS"} count={roleCanLoginCount} />
-      }
+      label="ROLE LOGINS"
+      count={roleCanLoginCount}
       renderNewButtonChildren={() => <RoleCanLoginWithPlusSvg />}
-      renderItem={(role, props) => (
-        <RoleLink draggable={false} role={role} {...props} />
-      )}
+      renderItem={(role, props) => {
+        return (
+          <RoleLink overflowEllipsis draggable={false} role={role} {...props} />
+        );
+      }}
       useItemArrayInStore={useRoleArrayInStore}
-      useCreateItemAction={(valueSignal) =>
-        ROLE_CAN_LOGIN.POST.bindParams({
-          rolname: valueSignal,
+      createItemAction={(rolname) =>
+        ROLE_CAN_LOGIN.POST({
+          rolname,
         })
       }
-      useDeleteItemAction={(role) =>
-        ROLE_CAN_LOGIN.DELETE.bindParams({
+      deleteItemAction={(role) =>
+        ROLE_CAN_LOGIN.DELETE({
           rolname: role.rolname,
         })
       }
-      useRenameItemAction={(role, valueSignal) =>
+      renameItemAction={(role, newRolname) =>
         ROLE_CAN_LOGIN.PUT.bindParams({
           rolname: role.rolname,
           columnName: "rolname",
-          columnValue: valueSignal,
+          columnValue: newRolname,
         })
       }
-    >
-      {roleCanLoginArray}
-    </ExplorerGroup>
+    />
   );
 };

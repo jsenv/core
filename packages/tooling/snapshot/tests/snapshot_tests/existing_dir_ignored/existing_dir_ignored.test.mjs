@@ -11,7 +11,7 @@ ensureEmptyDirectorySync(new URL("./output/", import.meta.url));
 await snapshotTests(
   import.meta.url,
   ({ test }) => {
-    test("0_first", () => {
+    test("first", () => {
       writeFileSync(new URL("./output/a.txt", import.meta.url), "a");
       writeFileSync(
         new URL("./output/b.css", import.meta.url),

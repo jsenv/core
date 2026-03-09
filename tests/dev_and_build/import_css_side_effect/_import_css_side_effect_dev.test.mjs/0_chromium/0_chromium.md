@@ -1,4 +1,4 @@
-# [0_chromium](../../import_css_side_effect_dev.test.mjs)
+# [chromium](../../import_css_side_effect_dev.test.mjs)
 
 ```js
 run({ browserLauncher: chromium })

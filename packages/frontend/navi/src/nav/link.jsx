@@ -20,7 +20,7 @@ import {
 import { PhoneSvg } from "../graphic/icons/phone_svg.jsx";
 import { LoaderBackground } from "../graphic/loader/loader_background.jsx";
 import { useKeyboardShortcuts } from "../keyboard/keyboard_shortcuts.js";
-import { applySpacingOnTextChildren } from "../text/text.jsx";
+import { applySpacingOnTextChildren, Text } from "../text/text.jsx";
 import { TitleLevelContext } from "../text/title.jsx";
 import { useDocumentUrl } from "./browser_integration/document_url_signal.js";
 import { getHrefTargetInfo } from "./browser_integration/href_target_info.js";
@@ -47,6 +47,7 @@ import.meta.css = /* css */ `
       --link-text-decoration: underline;
       --link-text-decoration-hover: var(--link-text-decoration);
       --link-cursor: pointer;
+      --link-loading-outline-size: 1px;
     }
   }
 
@@ -54,6 +55,7 @@ import.meta.css = /* css */ `
     --x-link-color: var(--link-color);
     --x-link-color-hover: var(--link-color-hover, var(--link-color));
     --x-link-color-visited: var(--link-color-visited);
+    --x-link-color-current: var(--link-color-current);
     --x-link-color-active: var(--link-color-active);
     --x-link-text-decoration: var(--link-text-decoration);
     --x-link-text-decoration-hover: var(--link-text-decoration-hover);
@@ -61,6 +63,8 @@ import.meta.css = /* css */ `
 
     position: relative;
     aspect-ratio: inherit;
+    /* Ensure the spacing for the loading outline is part of the <a> so that it does not create an overflow */
+    padding: var(--link-loading-outline-size);
     color: var(--x-link-color);
     text-decoration: var(--x-link-text-decoration);
     border-radius: var(--link-border-radius);
@@ -69,24 +73,6 @@ import.meta.css = /* css */ `
     outline-color: var(--link-outline-color);
     cursor: var(--x-link-cursor);
 
-    /* Current */
-    &[data-href-current] {
-      --x-link-cursor: default;
-    }
-    /* Hover */
-    &[data-hover] {
-      --x-link-color: var(--x-link-color-hover);
-      --x-link-text-decoration: var(--x-link-text-decoration-hover);
-    }
-    /* Focus */
-    &[data-focus],
-    &[data-focus-visible] {
-      position: relative;
-      z-index: 1; /* Ensure focus outline is above other elements */
-    }
-    &[data-focus-visible] {
-      outline-width: 2px;
-    }
     /* Visited */
     &[data-visited] {
       --x-link-color: var(--x-link-color-visited);
@@ -96,6 +82,30 @@ import.meta.css = /* css */ `
         /* No need for a special color for visited anchors */
         --x-link-color: var(--link-color);
       }
+    }
+    /* Hover */
+    &[data-hover] {
+      --x-link-color: var(--x-link-color-hover);
+      --x-link-text-decoration: var(--x-link-text-decoration-hover);
+    }
+    /* Current */
+    &[data-href-current] {
+      --x-link-color: var(--link-color-current);
+      --x-link-cursor: default;
+      &[data-anchor] {
+        /* For anchor links, we want to keep the pointer cursor to indicate interactivity */
+        /* as anchor link will still scroll to the section even if it's the current page */
+        --x-link-cursor: pointer;
+      }
+    }
+    /* Focus */
+    &[data-focus],
+    &[data-focus-visible] {
+      position: relative;
+      z-index: 1; /* Ensure focus outline is above other elements */
+    }
+    &[data-focus-visible] {
+      outline-width: 2px;
     }
     /* Selected */
     &[aria-selected] {
@@ -127,7 +137,6 @@ import.meta.css = /* css */ `
     &[data-discrete] {
       --link-color: inherit;
       --link-text-decoration: none;
-      --x-link-color: var(--link-color);
     }
     /* Reveal on interaction */
     &[data-reveal-on-interaction] {
@@ -182,6 +191,9 @@ const LinkStyleCSSVars = {
   ":active": {
     color: "--link-color-active",
   },
+  ":-navi-href-current": {
+    color: "--link-color-current",
+  },
 };
 const LinkPseudoClasses = [
   ":hover",
@@ -196,6 +208,7 @@ const LinkPseudoClasses = [
   ":-navi-href-external",
   ":-navi-href-anchor",
   ":-navi-href-current",
+  ":-navi-href-match",
 ];
 const LinkPseudoElements = ["::-navi-loader"];
 
@@ -211,6 +224,9 @@ Object.assign(PSEUDO_CLASSES, {
   },
   ":-navi-href-current": {
     attribute: "data-href-current",
+  },
+  ":-navi-href-match": {
+    attribute: "data-href-match",
   },
 });
 
@@ -249,10 +265,13 @@ const LinkPlain = (props) => {
     discrete,
     blankTargetIcon,
     anchorIcon,
-    icon,
+    startIcon,
+    endIcon,
     spacing,
     revealOnInteraction = Boolean(titleLevel),
     hrefFallback = !anchor,
+    matching,
+    overflowEllipsis,
 
     children,
 
@@ -275,17 +294,17 @@ const LinkPlain = (props) => {
   const innerRel =
     rel === undefined ? (isSameSite ? undefined : "noopener noreferrer") : rel;
 
-  let innerIcon;
-  if (icon === undefined) {
+  let innerEndIcon;
+  if (endIcon === undefined) {
     // Check for special protocol or domain-specific icons first
     if (href?.startsWith("tel:")) {
-      innerIcon = <PhoneSvg />;
+      innerEndIcon = <PhoneSvg />;
     } else if (href?.startsWith("sms:")) {
-      innerIcon = <SmsSvg />;
+      innerEndIcon = <SmsSvg />;
     } else if (href?.startsWith("mailto:")) {
-      innerIcon = <EmailSvg />;
+      innerEndIcon = <EmailSvg />;
     } else if (href?.includes("github.com")) {
-      innerIcon = <GithubSvg />;
+      innerEndIcon = <GithubSvg />;
     } else {
       // Fall back to default icon logic
       const innerBlankTargetIcon =
@@ -294,21 +313,50 @@ const LinkPlain = (props) => {
           : blankTargetIcon;
       const innerAnchorIcon = anchorIcon === undefined ? isAnchor : anchorIcon;
       if (innerBlankTargetIcon) {
-        innerIcon =
+        innerEndIcon =
           innerBlankTargetIcon === true ? (
             <LinkBlankTargetSvg />
           ) : (
             innerBlankTargetIcon
           );
       } else if (innerAnchorIcon) {
-        innerIcon = innerAnchorIcon === true ? <LinkAnchorSvg /> : anchorIcon;
+        innerEndIcon =
+          innerAnchorIcon === true ? <LinkAnchorSvg /> : anchorIcon;
       }
     }
   } else {
-    innerIcon = icon;
+    innerEndIcon = endIcon;
   }
 
   const innerChildren = children || (hrefFallback ? href : children);
+  const startIconEl = startIcon && (
+    <Icon marginRight={innerChildren ? "xxs" : undefined}>{startIcon}</Icon>
+  );
+  const endIconEl = innerEndIcon && (
+    <Icon marginLeft={innerChildren ? "xxs" : undefined}>{innerEndIcon}</Icon>
+  );
+
+  // For now we don't do as for button.jsx where we always wrap button content inside <Text>
+  // because link can wrap images or other non-text content and we don't want to mess with it
+  // in theory this is the same for button so we'll see with time what makes more sense
+  const visualChildren = overflowEllipsis ? (
+    <Text
+      overflowEllipsis
+      // Here we can't use spaces as they would be underlined
+      // (Ce would use zero width space with paddings but that's just simpler to rely on margins here)
+      spacing="pre"
+    >
+      {startIconEl}
+      {innerChildren}
+      {endIconEl && <Text overflowPinned>{endIconEl}</Text>}
+    </Text>
+  ) : (
+    <>
+      {startIconEl}
+      {applySpacingOnTextChildren(innerChildren, spacing)}
+      {endIconEl}
+    </>
+  );
 
   return (
     <Box
@@ -340,6 +388,7 @@ const LinkPlain = (props) => {
         ":-navi-href-external": !isSameSite,
         ":-navi-href-anchor": isAnchor,
         ":-navi-href-current": isCurrent,
+        ":-navi-href-match": matching,
       }}
       onClick={(e) => {
         if (preventDefault) {
@@ -362,11 +411,12 @@ const LinkPlain = (props) => {
         onKeyDown?.(e);
       }}
     >
-      <LoaderBackground loading={loading} color="var(--link-loader-color)" />
-      {applySpacingOnTextChildren(innerChildren, spacing)}
-      {innerIcon && (
-        <Icon marginLeft={innerChildren ? "xxs" : undefined}>{innerIcon}</Icon>
-      )}
+      <LoaderBackground
+        loading={loading}
+        inset={1}
+        color="var(--link-loader-color)"
+      />
+      {visualChildren}
     </Box>
   );
 };

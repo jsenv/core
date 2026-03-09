@@ -1,9 +1,9 @@
 # [number_align.test.mjs](../number_align.test.mjs)
 
 
-- [0_basic](0_basic/0_basic.md)
-- [1_x_align_right](1_x_align_right/1_x_align_right.md)
-- [2_x_align_center](2_x_align_center/2_x_align_center.md)
+- [0_basic](0_0_basic/0_0_basic.md)
+- [1_x_align_right](1_1_x_align_right/1_1_x_align_right.md)
+- [2_x_align_center](2_2_x_align_center/2_2_x_align_center.md)
 
 ---
 

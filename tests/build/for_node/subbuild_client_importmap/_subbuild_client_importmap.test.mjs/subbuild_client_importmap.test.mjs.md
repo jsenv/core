@@ -1,8 +1,8 @@
 # [subbuild_client_importmap.test.mjs](../subbuild_client_importmap.test.mjs)
 
 
-- [0_without_http](0_without_http/0_without_http.md)
-- [1_with_http](1_with_http/1_with_http.md)
+- [without_http](0_without_http/0_without_http.md)
+- [with_http](1_with_http/1_with_http.md)
 
 ---
 

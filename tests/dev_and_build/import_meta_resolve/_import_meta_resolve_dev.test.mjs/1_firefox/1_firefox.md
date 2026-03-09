@@ -1,4 +1,4 @@
-# [1_firefox](../../import_meta_resolve_dev.test.mjs)
+# [firefox](../../import_meta_resolve_dev.test.mjs)
 
 ```js
 run({ browserLauncher: firefox })

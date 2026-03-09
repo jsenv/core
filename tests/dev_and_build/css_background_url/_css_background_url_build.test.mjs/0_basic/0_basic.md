@@ -1,4 +1,4 @@
-# [0_basic](../../css_background_url_build.test.mjs)
+# [basic](../../css_background_url_build.test.mjs)
 
 ```js
 run()

@@ -95,7 +95,7 @@ export const abortRunningActions = (
  *
  * Actions are automatically unprotected when:
  * - The protection duration expires (default: 5 minutes)
- * - The action is explicitly stopped via .stop()
+ * - The action is explicitly stopped via .reset()
  */
 const prerunProtectionRegistry = (() => {
   const protectedActionMap = new Map(); // action -> { timeoutId, timestamp }
@@ -106,10 +106,8 @@ const prerunProtectionRegistry = (() => {
     if (protection) {
       clearTimeout(protection.timeoutId);
       protectedActionMap.delete(action);
-      if (DEBUG) {
-        const elapsed = Date.now() - protection.timestamp;
-        console.debug(`"${action}": GC protection removed after ${elapsed}ms`);
-      }
+      const elapsed = Date.now() - protection.timestamp;
+      action.debug(`"${action}": GC protection removed after ${elapsed}ms`);
     }
   };
 
@@ -124,20 +122,14 @@ const prerunProtectionRegistry = (() => {
       const timestamp = Date.now();
       const timeoutId = setTimeout(() => {
         unprotect(action);
-        if (DEBUG) {
-          console.debug(
-            `"${action}": prerun protection expired after ${PROTECTION_DURATION}ms`,
-          );
-        }
-      }, PROTECTION_DURATION);
-
-      protectedActionMap.set(action, { timeoutId, timestamp });
-
-      if (DEBUG) {
-        console.debug(
-          `"${action}": protected from GC for ${PROTECTION_DURATION}ms`,
+        action.debug(
+          `"${action}": prerun protection expired after ${PROTECTION_DURATION}ms`,
         );
-      }
+      }, PROTECTION_DURATION);
+      protectedActionMap.set(action, { timeoutId, timestamp });
+      action.debug(
+        `"${action}": protected from GC for ${PROTECTION_DURATION}ms`,
+      );
     },
 
     unprotect,
@@ -182,8 +174,7 @@ const getActivationInfo = () => {
   const settledSet = new Set();
 
   for (const action of activationWeakSet) {
-    const privateProps = getActionPrivateProperties(action);
-    const runningState = privateProps.runningStateSignal.peek();
+    const runningState = action.runningStateSignal.peek();
 
     if (runningState === RUNNING) {
       runningSet.add(action);
@@ -217,6 +208,7 @@ if (import.meta.dev) {
           name: action.name,
           runningState: action.runningState.id,
           error: action.error,
+          data: action.data,
           params: action.params,
           isProxy: action.isProxy || false,
         });
@@ -460,7 +452,7 @@ ${lines.join("\n")}`);
     for (const actionToReset of willResetSet) {
       const actionToResetPrivateProperties =
         getActionPrivateProperties(actionToReset);
-      actionToResetPrivateProperties.performStop({ reason });
+      actionToResetPrivateProperties.performReset({ reason });
       activationWeakSet.delete(actionToReset);
     }
   }
@@ -524,9 +516,7 @@ ${lines.join("\n")}`);
 
     // Execute promotions (prerun -> run requested)
     for (const actionToPromote of willPromoteSet) {
-      const actionToPromotePrivateProperties =
-        getActionPrivateProperties(actionToPromote);
-      actionToPromotePrivateProperties.isPrerunSignal.value = false;
+      actionToPromote.isPrerunSignal.value = false;
     }
   }
   if (DEBUG) {
@@ -558,8 +548,14 @@ ${lines.join("\n")}`);
   };
 };
 
-const NO_PARAMS = {};
+const NO_PARAMS = { __no_params__: true };
 const initialParamsDefault = NO_PARAMS;
+const mergeActionParams = (currentParams, newParams) => {
+  if (currentParams === NO_PARAMS) {
+    return newParams;
+  }
+  return mergeTwoJsValues(currentParams, newParams);
+};
 
 const actionWeakMap = new WeakMap();
 export const createAction = (callback, rootOptions = {}) => {
@@ -574,52 +570,56 @@ export const createAction = (callback, rootOptions = {}) => {
     let {
       name = callback.name || "anonymous",
       params,
-      isPrerun = true,
+      isPrerun = false,
       runningState = IDLE,
       aborted = false,
       error = null,
-      data,
-      computedData,
-      compute,
+      value,
+      resultToValue,
+      valueToData,
+      dataDefault,
+      data = dataDefault,
+
       completed = false,
       renderLoadedAsync,
       sideEffect = () => {},
       keepOldData = false,
       meta = {},
-      dataEffect,
+
       completeSideEffect,
     } = options;
     if (!Object.hasOwn(options, "params")) {
-      // even undefined should be respect it's only when not provided at all we use default
+      // even undefined should be respected it's only when not provided at all we use default
       params = initialParamsDefault;
     }
+    if (value === undefined && data !== undefined) {
+      value = data;
+    }
 
-    const initialData = data;
+    const valueInitial = value;
     const paramsSignal = signal(params);
     const isPrerunSignal = signal(isPrerun);
     const runningStateSignal = signal(runningState);
     const errorSignal = signal(error);
-    const dataSignal = signal(initialData);
-    const computedDataSignal = compute
+    const valueSignal = signal(valueInitial);
+    const dataSignal = valueToData
       ? computed(() => {
-          const data = dataSignal.value;
-          return compute(data);
+          const value = valueSignal.value;
+          const data = valueToData(value);
+          return data;
         })
-      : dataSignal;
-    computedData =
-      computedData === undefined
-        ? compute
-          ? compute(data)
-          : data
-        : computedData;
+      : valueSignal;
 
     const prerun = (options) => {
+      action.debug(`${action}.prerun(${stringifyForDisplay(options)})`);
       return dispatchSingleAction(action, "prerun", options);
     };
     const run = (options) => {
+      action.debug(`${action}.run(${stringifyForDisplay(options)})`);
       return dispatchSingleAction(action, "run", options);
     };
     const rerun = (options) => {
+      action.debug(`${action}.rerun(${stringifyForDisplay(options)})`);
       return dispatchSingleAction(action, "rerun", options);
     };
     /**
@@ -629,8 +629,8 @@ export const createAction = (callback, rootOptions = {}) => {
      * 3. Clean up any resources and side effects
      * 4. Reset data to initial value (unless keepOldData is true)
      */
-    const stop = (options) => {
-      return dispatchSingleAction(action, "stop", options);
+    const reset = (options) => {
+      return dispatchSingleAction(action, "reset", options);
     };
     const abort = (reason) => {
       if (runningState !== RUNNING) {
@@ -640,9 +640,7 @@ export const createAction = (callback, rootOptions = {}) => {
       if (!actionAbort) {
         return false;
       }
-      if (DEBUG) {
-        console.log(`"${action}": aborting (reason: ${reason})`);
-      }
+      action.debug(`"${action}".abort(${reason})`);
       actionAbort(reason);
       return true;
     };
@@ -665,7 +663,7 @@ export const createAction = (callback, rootOptions = {}) => {
       if (isSignal(newParamsOrSignal)) {
         const combinedParamsSignal = computed(() => {
           const newParams = newParamsOrSignal.value;
-          const result = mergeTwoJsValues(params, newParams);
+          const result = mergeActionParams(params, newParams);
           return result;
         });
         return createActionProxyFromSignal(
@@ -676,7 +674,7 @@ export const createAction = (callback, rootOptions = {}) => {
       }
 
       // ✅ CAS 2: Objet -> vérifier s'il contient des signals
-      if (newParamsOrSignal && typeof newParamsOrSignal === "object") {
+      if (isPlainObject(newParamsOrSignal)) {
         const staticParams = {};
         const signalMap = new Map();
 
@@ -697,13 +695,17 @@ export const createAction = (callback, rootOptions = {}) => {
 
         if (signalMap.size === 0) {
           // Pas de signals, merge statique normal
-          if (params === null || typeof params !== "object") {
+          if (
+            params === null ||
+            typeof params !== "object" ||
+            params === NO_PARAMS
+          ) {
             return createChildAction({
               ...options,
               params: newParamsOrSignal,
             });
           }
-          const combinedParams = mergeTwoJsValues(params, newParamsOrSignal);
+          const combinedParams = mergeActionParams(params, newParamsOrSignal);
           return createChildAction({
             ...options,
             params: combinedParams,
@@ -727,7 +729,7 @@ export const createAction = (callback, rootOptions = {}) => {
         return createActionProxyFromSignal(action, paramsSignal, options);
       }
 
-      // ✅ CAS 3: Primitive -> action enfant
+      // ✅ CAS 3: Primitive or objects like DOMEvents etc -> action enfant
       return createChildAction({
         params: newParamsOrSignal,
         ...options,
@@ -790,11 +792,13 @@ export const createAction = (callback, rootOptions = {}) => {
       return matches;
     };
 
-    name = generateActionName(name, params);
     if (ACTION_AS_FUNCTION) {
       // Create the action as a function that can be called directly
-      action = function actionFunction(params) {
-        const boundAction = bindParams(params);
+      action = function actionFunction(...args) {
+        if (args.length === 0) {
+          return action.rerun();
+        }
+        const boundAction = bindParams(...args);
         return boundAction.rerun();
       };
       Object.defineProperty(action, "name", {
@@ -806,6 +810,7 @@ export const createAction = (callback, rootOptions = {}) => {
       action = { name };
     }
 
+    const callSource = generateActionCallSource(name, params);
     // Assign all the action properties and methods to the function
     Object.assign(action, {
       isAction: true,
@@ -817,19 +822,19 @@ export const createAction = (callback, rootOptions = {}) => {
       runningState,
       aborted,
       error,
+      value,
       data,
-      computedData,
       completed,
       prerun,
       run,
       rerun,
-      stop,
+      reset,
       abort,
       bindParams,
       matchAllSelfOrDescendant, // ✅ Add the new method
       replaceParams: (newParams) => {
         const currentParams = paramsSignal.value;
-        const nextParams = mergeTwoJsValues(currentParams, newParams);
+        const nextParams = mergeActionParams(currentParams, newParams);
         if (nextParams === currentParams) {
           return false;
         }
@@ -847,12 +852,26 @@ export const createAction = (callback, rootOptions = {}) => {
 
         params = nextParams;
         action.params = nextParams;
-        action.name = generateActionName(name, nextParams);
+        action.callSource = generateActionCallSource(name, nextParams);
         paramsSignal.value = nextParams;
         return true;
       },
-      toString: () => action.name,
+      callSource,
+      toString: () => action.callSource,
       meta,
+      debug: (...args) => {
+        if (!meta.debug || DEBUG) {
+          return;
+        }
+        console.debug(...args);
+      },
+
+      paramsSignal,
+      runningStateSignal,
+      isPrerunSignal,
+      valueSignal,
+      dataSignal,
+      errorSignal,
     });
     Object.preventExtensions(action);
 
@@ -875,10 +894,10 @@ export const createAction = (callback, rootOptions = {}) => {
         actionRef.error = error;
       });
       weakEffect([action], (actionRef) => {
+        value = valueSignal.value;
         data = dataSignal.value;
-        computedData = computedDataSignal.value;
+        actionRef.value = value;
         actionRef.data = data;
-        actionRef.computedData = computedData;
       });
     }
 
@@ -916,7 +935,7 @@ export const createAction = (callback, rootOptions = {}) => {
             prerunProtectionRegistry.unprotect(action);
           }
           if (DEBUG) {
-            console.log(`"${action}": aborted (reason: ${abortReason})`);
+            console.log(`"${action}" aborted (reason: ${abortReason})`);
           }
         };
 
@@ -981,17 +1000,20 @@ export const createAction = (callback, rootOptions = {}) => {
            * before the UI attempts to render the now-missing resource.
            */
           batch(() => {
-            dataSignal.value = dataEffect
-              ? dataEffect(runResult, action)
+            const value = resultToValue
+              ? resultToValue(runResult, action)
               : runResult;
+            valueSignal.value = value;
             runningStateSignal.value = COMPLETED;
-            onComplete?.(computedDataSignal.peek(), action);
+            const data = dataSignal.value;
+            onComplete?.(data, action);
             completeSideEffect?.(action);
           });
           if (DEBUG) {
             console.log(`"${action}": completed`);
           }
-          return computedDataSignal.peek();
+          const data = dataSignal.peek();
+          return data;
         };
         const onRunError = (e) => {
           if (abortSignal) {
@@ -1002,18 +1024,16 @@ export const createAction = (callback, rootOptions = {}) => {
           }
           actionAbortMap.delete(action);
           actionPromiseMap.delete(action);
-          if (internalAbortSignal.aborted && e === internalAbortSignal.reason) {
+          const isAbort =
+            (internalAbortSignal.aborted && e === internalAbortSignal.reason) ||
+            e.name === "AbortError";
+          if (isAbort) {
             runningStateSignal.value = ABORTED;
             if (isPrerun && abortSignal.aborted) {
               prerunProtectionRegistry.unprotect(action);
             }
-            onAbort(e, action);
+            onAbort?.(e, action);
             return e;
-          }
-          if (e.name === "AbortError") {
-            throw new Error(
-              "never supposed to happen, abort error should be handled by the abort signal",
-            );
           }
           if (DEBUG) {
             console.log(
@@ -1083,10 +1103,10 @@ export const createAction = (callback, rootOptions = {}) => {
         }
       };
 
-      const performStop = ({ reason }) => {
+      const performReset = ({ reason }) => {
         abort(reason);
         if (DEBUG) {
-          console.log(`"${action}": stopping (reason: ${reason})`);
+          console.log(`"${action}": resetting (reason: ${reason})`);
         }
 
         prerunProtectionRegistry.unprotect(action);
@@ -1100,7 +1120,7 @@ export const createAction = (callback, rootOptions = {}) => {
         batch(() => {
           errorSignal.value = null;
           if (!keepOldData) {
-            dataSignal.value = initialData;
+            valueSignal.value = valueInitial;
           }
           isPrerunSignal.value = true;
           runningStateSignal.value = IDLE;
@@ -1108,17 +1128,10 @@ export const createAction = (callback, rootOptions = {}) => {
       };
 
       const privateProperties = {
-        initialData,
-
-        paramsSignal,
-        runningStateSignal,
-        isPrerunSignal,
-        dataSignal,
-        computedDataSignal,
-        errorSignal,
+        valueInitial,
 
         performRun,
-        performStop,
+        performReset,
         ui,
 
         childActionWeakSet,
@@ -1135,10 +1148,31 @@ export const createAction = (callback, rootOptions = {}) => {
   return rootAction;
 };
 
+/**
+ * Creates an action proxy that automatically updates based on signal changes.
+ *
+ * @param {Object} action - The base action to proxy
+ * @param {Signal} paramsSignal - Signal containing parameters for the action
+ * @param {Object} options - Configuration options
+ * @param {boolean} options.rerunOnChange - Ensures the action is rerun every time a signal value is modified.
+ *   This enables live updates - for example, performing an HTTP GET request every time
+ *   a list of filters changes, providing real-time results without user interaction.
+ * @param {boolean} options.transferData - Ensures the new action inherits the data from the current action (if any).
+ *   This enables "Apply Filters" workflows where users modify filters but results are only
+ *   updated when they explicitly trigger the action (e.g., clicking an "Apply" button).
+ *   The old data remains visible until the new action completes.
+ * @param {function} options.onChange - Optional callback triggered when the target action changes
+ */
 const createActionProxyFromSignal = (
   action,
   paramsSignal,
-  { rerunOnChange = false, onChange } = {},
+  {
+    runOnce = false,
+    rerunOnChange = false,
+    transferData = false,
+    onChange,
+    syncParams,
+  } = {},
 ) => {
   const actionTargetChangeCallbackSet = new Set();
   const onActionTargetChange = (callback) => {
@@ -1148,13 +1182,13 @@ const createActionProxyFromSignal = (
     };
   };
   const changeCleanupCallbackSet = new Set();
-  const triggerTargetChange = (actionTarget, previousTarget) => {
+  const triggerTargetChange = (actionTarget, previousTarget, context) => {
     for (const changeCleanupCallback of changeCleanupCallbackSet) {
       changeCleanupCallback();
     }
     changeCleanupCallbackSet.clear();
     for (const callback of actionTargetChangeCallbackSet) {
-      const returnValue = callback(actionTarget, previousTarget);
+      const returnValue = callback(actionTarget, previousTarget, context);
       if (typeof returnValue === "function") {
         changeCleanupCallbackSet.add(returnValue);
       }
@@ -1167,7 +1201,28 @@ const createActionProxyFromSignal = (
   let actionTargetPreviousWeakRef = null;
   let isFirstEffect = true;
 
-  const _updateTarget = (params) => {
+  let isUpdatingTarget = false;
+  const _updateTarget = (context) => {
+    if (isUpdatingTarget) {
+      // likely syncParams caused the paramsSignal.value to update which
+      // calls _updateTarget. But we are already in the middle of an update
+      // likely cause by an explicit call to rerun for instance
+      // so we want to keep that rerun intent and "ignore" this updateTarget call
+      // so we don't end up running the action twice (once because we dispatch change without explicitRunIntent and one for the initial run intent)
+      return;
+    }
+    isUpdatingTarget = true;
+    action.debug(`${action}._updateTarget(${stringifyForDisplay(context)})`);
+    if (syncParams) {
+      syncParams();
+    }
+    isUpdatingTarget = false;
+
+    const params = paramsSignal.peek();
+    const proxyParams = proxyParamsSignal.peek();
+    if (params !== proxyParams) {
+      proxyParamsSignal.value = params;
+    }
     const previousActionTarget = actionTargetPreviousWeakRef?.deref();
 
     if (params === NO_PARAMS) {
@@ -1189,10 +1244,10 @@ const createActionProxyFromSignal = (
     actionTargetPreviousWeakRef = actionTarget
       ? new WeakRef(actionTarget)
       : null;
-    triggerTargetChange(actionTarget, previousActionTarget);
+    triggerTargetChange(actionTarget, previousActionTarget, context);
   };
 
-  const proxyMethod = (method) => {
+  const proxyMethod = (method, { explicitRunIntent } = {}) => {
     return (...args) => {
       /*
        * Ensure the proxy targets the correct action before method execution.
@@ -1200,12 +1255,17 @@ const createActionProxyFromSignal = (
        * internal parameter synchronization effect. Using peek() avoids creating
        * reactive dependencies within this pass-through method.
        */
-      _updateTarget(proxyParamsSignal.peek());
+      _updateTarget({
+        changeCause: "method_call",
+        changeCauseDetail: method,
+        explicitRunIntent,
+      });
       return currentAction[method](...args);
     };
   };
 
   const nameSignal = signal();
+  const callSourceSignal = signal();
   let actionProxy;
   if (ACTION_AS_FUNCTION) {
     actionProxy = function actionProxyFunction() {
@@ -1224,53 +1284,10 @@ const createActionProxyFromSignal = (
       },
     };
   }
-  Object.assign(actionProxy, {
-    isProxy: true,
-    callback: undefined,
-    params: undefined,
-    isPrerun: undefined,
-    runningState: undefined,
-    aborted: undefined,
-    error: undefined,
-    data: undefined,
-    computedData: undefined,
-    completed: undefined,
-    prerun: proxyMethod("prerun"),
-    run: proxyMethod("run"),
-    rerun: proxyMethod("rerun"),
-    stop: proxyMethod("stop"),
-    abort: proxyMethod("abort"),
-    matchAllSelfOrDescendant: proxyMethod("matchAllSelfOrDescendant"),
-    getCurrentAction: () => {
-      _updateTarget(proxyParamsSignal.peek());
-      return currentAction;
-    },
-    bindParams: () => {
-      throw new Error(
-        `bindParams() is not supported on action proxies, use the underlying action instead`,
-      );
-    },
-    replaceParams: null, // Will be set below
-    toString: () => actionProxy.name,
-    meta: {},
-  });
-  Object.preventExtensions(actionProxy);
 
-  onActionTargetChange((actionTarget) => {
-    const currentAction = actionTarget || action;
-    nameSignal.value = `[Proxy] ${currentAction.name}`;
-    actionProxy.callback = currentAction.callback;
-    actionProxy.params = currentAction.params;
-    actionProxy.isPrerun = currentAction.isPrerun;
-    actionProxy.runningState = currentAction.runningState;
-    actionProxy.aborted = currentAction.aborted;
-    actionProxy.error = currentAction.error;
-    actionProxy.data = currentAction.data;
-    actionProxy.computedData = currentAction.computedData;
-    actionProxy.completed = currentAction.completed;
-  });
-
-  const proxyPrivateSignal = (signalPropertyName, propertyName) => {
+  // Create our own signal for params that we control completely
+  const proxyParamsSignal = signal(paramsSignal.value);
+  const proxySignal = (signalPropertyName, propertyName) => {
     const signalProxy = signal();
     let dispose;
     onActionTargetChange(() => {
@@ -1279,8 +1296,7 @@ const createActionProxyFromSignal = (
         dispose = undefined;
       }
       dispose = effect(() => {
-        const currentActionSignal =
-          currentActionPrivateProperties[signalPropertyName];
+        const currentActionSignal = currentAction[signalPropertyName];
         const currentActionSignalValue = currentActionSignal.value;
         signalProxy.value = currentActionSignalValue;
         if (propertyName) {
@@ -1291,65 +1307,111 @@ const createActionProxyFromSignal = (
     });
     return signalProxy;
   };
-  const proxyPrivateMethod = (method) => {
-    return (...args) => currentActionPrivateProperties[method](...args);
-  };
 
-  // Create our own signal for params that we control completely
-  const proxyParamsSignal = signal(paramsSignal.value);
+  Object.assign(actionProxy, {
+    isProxy: true,
+    callback: undefined,
+    params: undefined,
+    isPrerun: undefined,
+    runningState: undefined,
+    aborted: undefined,
+    error: undefined,
+    value: undefined,
+    data: undefined,
+    completed: undefined,
+    prerun: proxyMethod("prerun", { explicitRunIntent: true }),
+    run: proxyMethod("run", { explicitRunIntent: true }),
+    rerun: proxyMethod("rerun", { explicitRunIntent: true }),
+    reset: proxyMethod("reset", { explicitRunIntent: true }),
+    abort: proxyMethod("abort", { explicitRunIntent: true }),
+    matchAllSelfOrDescendant: proxyMethod("matchAllSelfOrDescendant"),
+    getCurrentAction: () => {
+      _updateTarget({
+        changeCause: "get_current_action",
+      });
+      return currentAction;
+    },
+    bindParams: () => {
+      throw new Error(
+        `bindParams() is not supported on action proxies, use the underlying action instead`,
+      );
+    },
+    replaceParams: null, // Will be set below
+    callSource: actionProxy.callSource,
+    toString: () => actionProxy.callSource,
+    meta: {},
 
+    paramsSignal: proxyParamsSignal,
+    isPrerunSignal: proxySignal("isPrerunSignal", "isPrerun"),
+    runningStateSignal: proxySignal("runningStateSignal", "runningState"),
+    errorSignal: proxySignal("errorSignal", "error"),
+    valueSignal: proxySignal("valueSignal", "value"),
+    dataSignal: proxySignal("dataSignal", "data"),
+  });
+  Object.preventExtensions(actionProxy);
   // Watch for changes in the original paramsSignal and update ours
   // (original signal wins over any replaceParams calls)
   weakEffect(
     [paramsSignal, proxyParamsSignal],
     (paramsSignalRef, proxyParamsSignalRef) => {
-      proxyParamsSignalRef.value = paramsSignalRef.value;
+      const newParams = paramsSignalRef.value;
+      proxyParamsSignalRef.value = newParams;
     },
   );
-
-  const proxyPrivateProperties = {
-    get currentAction() {
-      return currentAction;
-    },
-    paramsSignal: proxyParamsSignal,
-    isPrerunSignal: proxyPrivateSignal("isPrerunSignal", "isPrerun"),
-    runningStateSignal: proxyPrivateSignal(
-      "runningStateSignal",
-      "runningState",
-    ),
-    errorSignal: proxyPrivateSignal("errorSignal", "error"),
-    dataSignal: proxyPrivateSignal("dataSignal", "data"),
-    computedDataSignal: proxyPrivateSignal("computedDataSignal"),
-    performRun: proxyPrivateMethod("performRun"),
-    performStop: proxyPrivateMethod("performStop"),
-    ui: currentActionPrivateProperties.ui,
-  };
-
-  onActionTargetChange((actionTarget, previousTarget) => {
-    proxyPrivateProperties.ui = currentActionPrivateProperties.ui;
-    if (previousTarget && actionTarget) {
-      const previousPrivateProps = getActionPrivateProperties(previousTarget);
-      if (previousPrivateProps.ui.hasRenderers) {
-        const newPrivateProps = getActionPrivateProperties(actionTarget);
-        newPrivateProps.ui.hasRenderers = true;
-      }
-    }
-    proxyPrivateProperties.childActionWeakSet =
-      currentActionPrivateProperties.childActionWeakSet;
-  });
-  setActionPrivateProperties(actionProxy, proxyPrivateProperties);
-
-  {
-    weakEffect([action], () => {
-      const params = proxyParamsSignal.value;
-      _updateTarget(params);
+  weakEffect([action], () => {
+    // eslint-disable-next-line no-unused-expressions
+    proxyParamsSignal.value;
+    _updateTarget({
+      changeCause: "params_signal_change",
     });
+  });
+  onActionTargetChange((actionTarget) => {
+    const currentAction = actionTarget || action;
+    nameSignal.value = `[Proxy] ${currentAction.name}`;
+    callSourceSignal.value = `[Proxy] ${currentAction.callSource}`;
+    actionProxy.callback = currentAction.callback;
+    actionProxy.params = currentAction.params;
+    actionProxy.isPrerun = currentAction.isPrerun;
+    actionProxy.runningState = currentAction.runningState;
+    actionProxy.aborted = currentAction.aborted;
+    actionProxy.error = currentAction.error;
+    actionProxy.value = currentAction.value;
+    actionProxy.data = currentAction.data;
+    actionProxy.completed = currentAction.completed;
+  });
+
+  proxy_private_props: {
+    const proxyPrivateMethod = (method) => {
+      return (...args) => currentActionPrivateProperties[method](...args);
+    };
+    const proxyPrivateProperties = {
+      get currentAction() {
+        return currentAction;
+      },
+
+      performRun: proxyPrivateMethod("performRun"),
+      performReset: proxyPrivateMethod("performReset"),
+      ui: currentActionPrivateProperties.ui,
+    };
+    onActionTargetChange((actionTarget, previousTarget) => {
+      proxyPrivateProperties.ui = currentActionPrivateProperties.ui;
+      if (previousTarget && actionTarget) {
+        const previousPrivateProps = getActionPrivateProperties(previousTarget);
+        if (previousPrivateProps.ui.hasRenderers) {
+          const newPrivateProps = getActionPrivateProperties(actionTarget);
+          newPrivateProps.ui.hasRenderers = true;
+        }
+      }
+      proxyPrivateProperties.childActionWeakSet =
+        currentActionPrivateProperties.childActionWeakSet;
+    });
+    setActionPrivateProperties(actionProxy, proxyPrivateProperties);
   }
 
   actionProxy.replaceParams = (newParams) => {
     if (currentAction === action) {
       const currentParams = proxyParamsSignal.value;
-      const nextParams = mergeTwoJsValues(currentParams, newParams);
+      const nextParams = mergeActionParams(currentParams, newParams);
       if (nextParams === currentParams) {
         return false;
       }
@@ -1359,40 +1421,95 @@ const createActionProxyFromSignal = (
     if (!currentAction.replaceParams(newParams)) {
       return false;
     }
-    proxyParamsSignal.value =
-      currentActionPrivateProperties.paramsSignal.peek();
+    proxyParamsSignal.value = currentAction.paramsSignal.peek();
     return true;
   };
 
-  if (rerunOnChange) {
+  if (transferData) {
     onActionTargetChange((actionTarget, actionTargetPrevious) => {
-      if (
-        actionTarget &&
-        actionTargetPrevious &&
-        !actionTargetPrevious.isPrerun
-      ) {
-        actionTarget.rerun();
+      if (actionTarget && actionTargetPrevious) {
+        const targetValueSignal = actionTarget.valueSignal;
+        const previousValueSignal = actionTargetPrevious.valueSignal;
+        targetValueSignal.value = previousValueSignal.value;
       }
     });
   }
-  if (onChange) {
+  if (runOnce) {
     onActionTargetChange((actionTarget, actionTargetPrevious) => {
-      onChange(actionTarget, actionTargetPrevious);
+      if (!actionTargetPrevious && actionTarget) {
+        action.debug(
+          `Action proxy "${actionProxy}": target changed, running action once (reason: runOnce)`,
+        );
+        actionTarget.run({ reason: "runOnce" });
+      }
     });
+  }
+  if (rerunOnChange) {
+    onActionTargetChange(
+      (actionTarget, actionTargetPrevious, { explicitRunIntent }) => {
+        if (explicitRunIntent) {
+          return;
+        }
+        if (
+          actionTarget &&
+          actionTargetPrevious &&
+          !actionTargetPrevious.isPrerun
+        ) {
+          action.debug(
+            `Action proxy "${actionProxy}": target changed, rerunning action (reason: rerunOnChange)`,
+            {
+              newTarget: actionTarget,
+              previousTarget: actionTargetPrevious,
+            },
+          );
+          actionTarget.rerun({ reason: "rerunOnChange (params modified)" });
+        }
+      },
+    );
+  }
+  if (onChange) {
+    onActionTargetChange(
+      (actionTarget, actionTargetPrevious, { explicitRunIntent }) => {
+        onChange(actionTarget, actionTargetPrevious, { explicitRunIntent });
+      },
+    );
   }
 
   return actionProxy;
 };
 
-const generateActionName = (name, params) => {
+const generateActionCallSource = (name, params) => {
   if (params === NO_PARAMS) {
-    return `${name}({})`;
+    return `${name}()`;
   }
   // Use stringifyForDisplay with asFunctionArgs option for the entire args array
   const argsString = stringifyForDisplay([params], 3, 0, {
     asFunctionArgs: true,
   });
   return `${name}${argsString}`;
+};
+
+const isPlainObject = (obj) => {
+  if (typeof obj !== "object" || obj === null) {
+    return false;
+  }
+  let proto = obj;
+  while (Object.getPrototypeOf(proto) !== null) {
+    proto = Object.getPrototypeOf(proto);
+  }
+  return (
+    Object.getPrototypeOf(obj) === proto || Object.getPrototypeOf(obj) === null
+  );
+};
+
+const COMPLETED_ACTION = createAction(() => undefined, {
+  name: "ACTION.COMPLETED",
+});
+getActionPrivateProperties(COMPLETED_ACTION).performRun({});
+
+export const ACTION = {
+  create: createAction,
+  COMPLETED: COMPLETED_ACTION,
 };
 
 if (import.meta.hot) {

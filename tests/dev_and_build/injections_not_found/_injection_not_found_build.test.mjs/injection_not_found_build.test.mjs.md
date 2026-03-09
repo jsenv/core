@@ -1,7 +1,7 @@
 # [injection_not_found_build.test.mjs](../injection_not_found_build.test.mjs)
 
 
-- [0_injection](0_injection/0_injection.md)
+- [injection](0_injection/0_injection.md)
 
 ---
 

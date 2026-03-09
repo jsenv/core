@@ -1,4 +1,4 @@
-# [0_basic](../../workspace_bundle.test.mjs)
+# [basic](../../workspace_bundle.test.mjs)
 
 ```js
 run()

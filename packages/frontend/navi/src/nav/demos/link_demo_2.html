@@ -5,12 +5,563 @@
     <title>Link Demo</title>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="app"></div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { App } from "./link_demo_2.jsx";
+      import { useState } from "preact/hooks";
+      import {
+        Text,
+        Icon,
+        Paragraph,
+        Box,
+        Title,
+        Link,
+        Caption,
+        UserSvg,
+        StarSvg,
+      } from "@jsenv/navi";
 
-      render(<App />, document.querySelector("#root"));
+      const Demo = () => {
+        return (
+          <div
+            style={{
+              padding: "20px",
+              fontFamily: "system-ui, sans-serif",
+              maxWidth: "1000px",
+              lineHeight: "1.6",
+            }}
+          >
+            <Title as="h1">Link Component Demo</Title>
+
+            <TableOfContents />
+            <BasicLinkVariantsSection />
+            <TargetControlSection />
+            <IconControlSection />
+            <StateVariationsSection />
+            <OverflowEllipsisSection />
+          </div>
+        );
+      };
+
+      const TableOfContents = () => (
+        <Box as="section" marginBottom="xl">
+          <Title as="h2">Table des matières</Title>
+          <Box row spacing="xs" marginTop="md">
+            <Link href="#basic-variants">
+              1. Variantes de base par type d'href
+            </Link>
+            <Link href="#target-control">2. Contrôle du target</Link>
+            <Link href="#icon-control">3. Contrôle des icônes</Link>
+            <Link href="#state-variations">4. Variations d'état</Link>
+            <Link href="#overflow-ellipsis">
+              5. Link avec Text Overflow Ellipsis
+            </Link>
+          </Box>
+        </Box>
+      );
+
+      const BasicLinkVariantsSection = () => (
+        <Box as="section" marginBottom="xl">
+          <Title as="h2">
+            <Link anchor href="#basic-variants" />
+            Variantes de base par type d'href
+          </Title>
+          <Paragraph>
+            Cette section montre les différents comportements automatiques du
+            composant Link selon le type d'URL fourni (relative, absolue,
+            externe, ancre, email, téléphone).
+          </Paragraph>
+
+          <Box row spacing="m">
+            <Box row spacing="s">
+              <Caption>Lien interne relatif</Caption>
+              <Link href="/about">Internal Page Link</Link>
+              <Text size="xs" color="#666">
+                Chemin relatif, s'ouvre dans le même onglet
+              </Text>
+            </Box>
+
+            <Box row spacing="s">
+              <Caption>Lien interne absolu</Caption>
+              <Link href="https://example.com/internal">
+                Internal Absolute Link
+              </Link>
+              <Text size="xs" color="#666">
+                Même domaine, s'ouvre dans le même onglet
+              </Text>
+            </Box>
+
+            <Box row spacing="s">
+              <Caption>Lien externe</Caption>
+              <Link href="https://google.com">External Link</Link>
+              <Text size="xs" color="#666">
+                Domaine différent, s'ouvre dans un nouvel onglet avec icône
+              </Text>
+            </Box>
+
+            <Box row spacing="s">
+              <Caption>Lien ancre</Caption>
+              <Link href="#section1">Jump to Section 1</Link>
+              <Text size="xs" color="#666">
+                Ancre hash, affiche l'icône d'ancre
+              </Text>
+            </Box>
+
+            <Box row spacing="s">
+              <Caption>Lien email</Caption>
+              <Link href="mailto:hello@example.com">Send Email</Link>
+              <Text size="xs" color="#666">
+                Protocole email
+              </Text>
+            </Box>
+
+            <Box row spacing="s">
+              <Caption>Lien téléphone</Caption>
+              <Link href="tel:+1234567890">Call +1234567890</Link>
+              <Text size="xs" color="#666">
+                Protocole téléphone
+              </Text>
+            </Box>
+          </Box>
+        </Box>
+      );
+
+      const TargetControlSection = () => (
+        <Box as="section" marginBottom="xl">
+          <Title as="h2">
+            <Link anchor href="#target-control" />
+            Contrôle du target
+          </Title>
+          <Paragraph>
+            Exemples montrant comment contrôler explicitement le comportement
+            d'ouverture des liens avec l'attribut target.
+          </Paragraph>
+
+          <Box row spacing="l">
+            <Box row spacing="s">
+              <Caption>Lien interne forcé en nouvel onglet</Caption>
+              <Link href="/page" target="_blank">
+                Internal Link (New Tab)
+              </Link>
+              <Text size="xs" color="#666">
+                target="_blank" outrepasse le comportement par défaut, affiche
+                l'icône de nouvel onglet
+              </Text>
+            </Box>
+
+            <Box row spacing="sm">
+              <Caption>Lien externe forcé dans le même onglet</Caption>
+              <Link href="https://google.com" target="_self">
+                External Link (Same Tab)
+              </Link>
+              <Text size="xs" color="#666">
+                target="_self" outrepasse le comportement par défaut, pas
+                d'icône de nouvel onglet
+              </Text>
+            </Box>
+          </Box>
+        </Box>
+      );
+
+      const IconControlSection = () => (
+        <Box as="section" marginBottom="xl">
+          <Title as="h2">
+            <Link anchor href="#icon-control" />
+            Contrôle des icônes
+          </Title>
+          <Paragraph>
+            Cette section démontre le contrôle fin des icônes affichées avec les
+            liens : icônes de nouvel onglet, icônes d'ancre, et icônes
+            personnalisées.
+          </Paragraph>
+
+          <Box row spacing="lg">
+            <Title as="h3">Icônes de nouvel onglet</Title>
+            <Box row spacing="md">
+              <Box row spacing="sm">
+                <Caption>
+                  Lien interne avec target="_blank" - forcer l'icône
+                </Caption>
+                <Link href="/page" target="_blank" blankTargetIcon={true}>
+                  Internal Link (Show Icon)
+                </Link>
+                <Text size="xs" color="#666">
+                  blankTargetIcon=true force l'affichage de l'icône
+                </Text>
+              </Box>
+
+              <Box row spacing="sm">
+                <Caption>
+                  Lien interne avec target="_blank" - cacher l'icône
+                </Caption>
+                <Link href="/page" target="_blank" blankTargetIcon={false}>
+                  Internal Link (Hide Icon)
+                </Link>
+                <Text size="xs" color="#666">
+                  blankTargetIcon=false cache l'icône
+                </Text>
+              </Box>
+
+              <Box row spacing="sm">
+                <Caption>
+                  Lien externe - cacher l'icône de nouvel onglet
+                </Caption>
+                <Link href="https://google.com" blankTargetIcon={false}>
+                  External Link (No Icon)
+                </Link>
+                <Text size="xs" color="#666">
+                  blankTargetIcon=false cache l'icône même pour les liens
+                  externes
+                </Text>
+              </Box>
+
+              <Box row spacing="sm">
+                <Caption>Icône personnalisée de nouvel onglet</Caption>
+                <Link
+                  href="https://google.com"
+                  blankTargetIcon={<span style={{ color: "red" }}>↗️</span>}
+                >
+                  External Link (Custom Icon)
+                </Link>
+                <Text size="xs" color="#666">
+                  Élément personnalisé comme blankTargetIcon
+                </Text>
+              </Box>
+            </Box>
+
+            <Title as="h3">Icônes d'ancre</Title>
+            <Box row spacing="md">
+              <Box row spacing="sm">
+                <Caption>Lien ancre - afficher l'icône</Caption>
+                <Link href="#section1" anchorIcon={true}>
+                  Jump to Section (Show Icon)
+                </Link>
+                <Text size="xs" color="#666">
+                  anchorIcon=true affiche l'icône d'ancre
+                </Text>
+              </Box>
+
+              <Box row spacing="sm">
+                <Caption>Lien ancre - cacher l'icône</Caption>
+                <Link href="#section1" anchorIcon={false}>
+                  Jump to Section (Hide Icon)
+                </Link>
+                <Text size="xs" color="#666">
+                  anchorIcon=false cache l'icône d'ancre
+                </Text>
+              </Box>
+
+              <Box row spacing="sm">
+                <Caption>Lien non-ancre avec icône d'ancre forcée</Caption>
+                <Link href="/page" anchorIcon={true}>
+                  Regular Link (Forced Anchor Icon)
+                </Link>
+                <Text size="xs" color="#666">
+                  anchorIcon=true force l'affichage de l'icône d'ancre
+                </Text>
+              </Box>
+
+              <Box row spacing="sm">
+                <Caption>Icône d'ancre personnalisée</Caption>
+                <Link
+                  href="#section1"
+                  anchorIcon={<span style={{ color: "blue" }}>🔗</span>}
+                >
+                  Jump to Section (Custom Icon)
+                </Link>
+                <Text size="xs" color="#666">
+                  Élément personnalisé comme anchorIcon
+                </Text>
+              </Box>
+            </Box>
+
+            <Title as="h3">Contrôle d'icône global</Title>
+            <Box row spacing="md">
+              <Box row spacing="sm">
+                <Caption>Lien externe avec icône personnalisée</Caption>
+                <Link
+                  href="https://google.com"
+                  icon={<span style={{ color: "green" }}>🌐</span>}
+                >
+                  External Link (Custom Icon)
+                </Link>
+                <Text size="xs" color="#666">
+                  La prop icon outrepasse toute la logique automatique d'icônes
+                </Text>
+              </Box>
+
+              <Box row spacing="sm">
+                <Caption>Lien ancre avec icône personnalisée</Caption>
+                <Link
+                  href="#section1"
+                  icon={<span style={{ color: "purple" }}>⚓</span>}
+                >
+                  Anchor Link (Custom Icon)
+                </Link>
+                <Text size="xs" color="#666">
+                  La prop icon outrepasse l'icône d'ancre automatique
+                </Text>
+              </Box>
+
+              <Box row spacing="sm">
+                <Caption>Lien sans icône</Caption>
+                <Link href="https://google.com" icon={null}>
+                  External Link (No Icon)
+                </Link>
+                <Text size="xs" color="#666">
+                  icon=null supprime toutes les icônes
+                </Text>
+              </Box>
+            </Box>
+          </Box>
+        </Box>
+      );
+
+      const StateVariationsSection = () => (
+        <Box as="section" marginBottom="xl">
+          <Title as="h2">
+            <Link anchor href="#state-variations" />
+            Variations d'état
+          </Title>
+          <Paragraph>
+            Démonstration des différents états disponibles pour les liens :
+            désactivé, lecture seule, chargement et visité.
+          </Paragraph>
+
+          <Box row spacing="l" alignX="start">
+            <Box row spacing="s">
+              <Caption>Lien désactivé</Caption>
+              <Link href="/page" disabled>
+                Disabled Link
+              </Link>
+              <Text size="xs" color="#666">
+                La prop disabled rend le lien non-interactif
+              </Text>
+            </Box>
+
+            <Box row spacing="sm">
+              <Caption>Lien en lecture seule</Caption>
+              <Link href="/page" readOnly>
+                Read-only Link
+              </Link>
+              <Text size="xs" color="#666">
+                La prop readOnly empêche la navigation mais garde l'apparence
+              </Text>
+            </Box>
+
+            <Box row spacing="s" alignX="start">
+              <Caption>Lien en cours de chargement</Caption>
+              <Link href="/page" loading>
+                Loading Link
+              </Link>
+              <Text size="xs" color="#666">
+                La prop loading affiche l'état de chargement
+              </Text>
+            </Box>
+
+            <Box row spacing="sm">
+              <Caption>Lien visité</Caption>
+              <Link href="/page" visited>
+                Visited Link
+              </Link>
+              <Text size="xs" color="#666">
+                La prop visited affiche le style d'état visité
+              </Text>
+            </Box>
+          </Box>
+
+          <Title as="h3">Exemples combinés</Title>
+          <Box row spacing="md">
+            <Box row spacing="sm">
+              <Caption>
+                Lien interne, nouvel onglet, icône personnalisée, avec
+                espacement
+              </Caption>
+              <Link
+                href="/dashboard"
+                target="_blank"
+                icon={<span style={{ color: "orange" }}>📊</span>}
+                padding="sm"
+                margin="xs"
+              >
+                Dashboard (Complex Example)
+              </Link>
+            </Box>
+
+            <Box row spacing="sm">
+              <Caption>Lien externe, même onglet, sans icône, stylé</Caption>
+              <Link
+                href="https://github.com"
+                target="_self"
+                blankTargetIcon={false}
+                style={{
+                  backgroundColor: "#f0f0f0",
+                  padding: "8px 12px",
+                  borderRadius: "4px",
+                  textDecoration: "none",
+                }}
+              >
+                GitHub (Same Tab, No Icon)
+              </Link>
+            </Box>
+          </Box>
+        </Box>
+      );
+
+      const OverflowEllipsisSection = () => {
+        const [containerWidth, setContainerWidth] = useState(350);
+
+        return (
+          <Box as="section" marginBottom="xl">
+            <Title as="h2">
+              <Link anchor href="#overflow-ellipsis" />
+              Link avec Text Overflow Ellipsis
+            </Title>
+            <Paragraph>
+              Cette section teste le comportement du composant Link quand il
+              utilise la prop overflowEllipsis. Le lien devrait respecter les
+              contraintes de largeur et afficher des points de suspension quand
+              le texte dépasse.
+            </Paragraph>
+
+            <Box row spacing="md" alignY="center">
+              <Caption>Largeur du conteneur:</Caption>
+              <input
+                type="range"
+                min="100"
+                max="400"
+                value={containerWidth}
+                onChange={(e) => setContainerWidth(parseInt(e.target.value))}
+                style={{ width: "200px" }}
+              />
+              <Text>{containerWidth}px</Text>
+            </Box>
+
+            <Box row spacing="l">
+              <Box row spacing="md">
+                <Caption>
+                  Lien avec overflowEllipsis dans un conteneur contraint
+                </Caption>
+                <div
+                  style={{
+                    width: `${containerWidth}px`,
+                    padding: "15px",
+                    border: "2px solid #e74c3c",
+                    borderRadius: "6px",
+                    background: "#fff5f5",
+                  }}
+                >
+                  <Link
+                    href="https://very-long-domain-name-that-should-overflow.example.com/with/a/very/long/path/that/exceeds/container/width"
+                    target="_blank"
+                    overflowEllipsis
+                  >
+                    This is a very long link text that should be truncated with
+                    ellipsis when it doesn't fit in the container
+                  </Link>
+                </div>
+              </Box>
+
+              <Box row spacing="md">
+                <Caption>Lien interne avec overflowEllipsis</Caption>
+                <div
+                  style={{
+                    width: `${containerWidth}px`,
+                    padding: "15px",
+                    border: "2px solid #2196f3",
+                    borderRadius: "6px",
+                    background: "#f3f8ff",
+                  }}
+                >
+                  <Link
+                    href="/very/long/internal/path/that/should/also/be/truncated/properly"
+                    overflowEllipsis
+                  >
+                    This is a very long link text that should be truncated with
+                    ellipsis when it doesn't fit in the container
+                  </Link>
+                </div>
+              </Box>
+
+              <Box row spacing="md">
+                <Caption>
+                  Lien interne avec overflowEllipsis et icône personnalisée
+                </Caption>
+                <div
+                  style={{
+                    width: `${containerWidth}px`,
+                    padding: "15px",
+                    border: "2px solid #2196f3",
+                    borderRadius: "6px",
+                    background: "#f3f8ff",
+                  }}
+                >
+                  <Link
+                    href="/very/long/internal/path/that/should/also/be/truncated/properly"
+                    overflowEllipsis
+                    startIcon={<UserSvg />}
+                    endIcon={<StarSvg />}
+                  >
+                    This is a very long link text that should be truncated with
+                    ellipsis when it doesn't fit in the container
+                  </Link>
+                </div>
+              </Box>
+
+              <Box row spacing="md">
+                <Caption>Comparaison : lien sans overflowEllipsis</Caption>
+                <div
+                  style={{
+                    width: `${containerWidth}px`,
+                    padding: "15px",
+                    border: "2px solid #666",
+                    borderRadius: "6px",
+                    background: "#f5f5f5",
+                  }}
+                >
+                  <Link
+                    href="https://very-long-domain-name-that-should-overflow.example.com/with/a/very/long/path"
+                    target="_blank"
+                  >
+                    This is a very long link text that should be truncated with
+                    ellipsis when it doesn't fit in the container
+                  </Link>
+                </div>
+              </Box>
+            </Box>
+          </Box>
+        );
+      };
+
+      {
+        /* Anchor targets for testing */
+      }
+      const AnchorSection = () => (
+        <div
+          id="section1"
+          style={{
+            marginTop: "50px",
+            padding: "20px",
+            backgroundColor: "#f5f5f5",
+          }}
+        >
+          <Title as="h3">Section 1</Title>
+          <Paragraph>
+            Ceci est la section cible pour les liens d'ancrage.
+          </Paragraph>
+        </div>
+      );
+
+      const App = () => {
+        return (
+          <>
+            <Demo />
+            <AnchorSection />
+          </>
+        );
+      };
+
+      render(<App />, document.querySelector("#app"));
     </script>
   </body>
 </html>

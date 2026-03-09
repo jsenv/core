@@ -1,7 +1,7 @@
 # [import_css_side_effect_build.test.mjs](../import_css_side_effect_build.test.mjs)
 
 
-- [0_js_module](0_js_module/0_js_module.md)
+- [js_module](0_js_module/0_js_module.md)
 
 ---
 

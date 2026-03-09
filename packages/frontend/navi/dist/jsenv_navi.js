@@ -1,12 +1,18 @@
 import { installImportMetaCss } from "./jsenv_navi_side_effects.js";
+import { isValidElement, createContext, toChildArray, render, createRef, cloneElement } from "preact";
 import { useErrorBoundary, useLayoutEffect, useEffect, useCallback, useRef, useState, useContext, useMemo, useImperativeHandle, useId } from "preact/hooks";
 import { jsxs, jsx, Fragment } from "preact/jsx-runtime";
-import { createIterableWeakSet, mergeOneStyle, stringifyStyle, createPubSub, mergeTwoStyles, normalizeStyles, createGroupTransitionController, getElementSignature, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, findBefore, findAfter, createValueEffect, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, allowWheelThrough, resolveCSSColor, createStyleController, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, hasCSSSizeUnit, resolveCSSSize, activeElementSignal, canInterceptKeys, pickLightOrDark, resolveColorLuminance, initFocusGroup, dragAfterThreshold, getScrollContainer, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement, elementIsFocusable } from "@jsenv/dom";
+import { signal, effect, computed, batch, useSignal } from "@preact/signals";
+import { createIterableWeakSet, mergeOneStyle, stringifyStyle, createPubSub, mergeTwoStyles, normalizeStyles, createGroupTransitionController, getElementSignature, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, findBefore, findAfter, createValueEffect, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, allowWheelThrough, resolveCSSColor, createStyleController, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, hasCSSSizeUnit, resolveCSSSize, activeElementSignal, canInterceptKeys, initFocusGroup, elementIsFocusable, pickLightOrDark, resolveColorLuminance, dragAfterThreshold, getScrollContainer, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
 import { prefixFirstAndIndentRemainingLines } from "@jsenv/humanize";
-import { effect, signal, computed, batch, useSignal } from "@preact/signals";
 import { createValidity } from "@jsenv/validity";
-import { createContext, toChildArray, render, isValidElement, createRef, cloneElement } from "preact";
 import { createPortal, forwardRef } from "preact/compat";
+
+const IDLE = { id: "idle" };
+const RUNNING = { id: "running" };
+const ABORTED = { id: "aborted" };
+const FAILED = { id: "failed" };
+const COMPLETED = { id: "completed" };
 
 const actionPrivatePropertiesWeakMap = new WeakMap();
 const getActionPrivateProperties = (action) => {
@@ -19,12 +25,6 @@ const getActionPrivateProperties = (action) => {
 const setActionPrivateProperties = (action, properties) => {
   actionPrivatePropertiesWeakMap.set(action, properties);
 };
-
-const IDLE = { id: "idle" };
-const RUNNING = { id: "running" };
-const ABORTED = { id: "aborted" };
-const FAILED = { id: "failed" };
-const COMPLETED = { id: "completed" };
 
 const useActionStatus = (action) => {
   if (!action) {
@@ -45,9 +45,8 @@ const useActionStatus = (action) => {
     runningStateSignal,
     isPrerunSignal,
     errorSignal,
-    computedDataSignal,
-  } = getActionPrivateProperties(action);
-
+    dataSignal,
+  } = action;
   const params = paramsSignal.value;
   const isPrerun = isPrerunSignal.value;
   const runningState = runningStateSignal.value;
@@ -56,7 +55,7 @@ const useActionStatus = (action) => {
   const error = errorSignal.value;
   const loading = runningState === RUNNING;
   const completed = runningState === COMPLETED;
-  const data = computedDataSignal.value;
+  const data = dataSignal.value;
 
   return {
     params,
@@ -96,6 +95,25 @@ const ActionRenderer = ({
   children,
   disabled
 }) => {
+  if (action === undefined) {
+    throw new Error("ActionRenderer requires an action to render, but none was provided.");
+  }
+  let renderBranches;
+  if (typeof children === "function") {
+    renderBranches = {
+      completed: children
+    };
+  } else if (isValidElement(children)) {
+    renderBranches = {
+      always: () => children
+    };
+  } else if (isPlainObject$1(children)) {
+    renderBranches = children;
+  } else {
+    renderBranches = {
+      completed: children
+    };
+  }
   const {
     idle: renderIdle = renderIdleDefault,
     loading: renderLoading = renderLoadingDefault,
@@ -103,20 +121,13 @@ const ActionRenderer = ({
     error: renderError = renderErrorDefault,
     completed: renderCompleted,
     always: renderAlways
-  } = typeof children === "function" ? {
-    completed: children
-  } : children || {};
-  if (disabled) {
-    return null;
-  }
-  if (action === undefined) {
-    throw new Error("ActionRenderer requires an action to render, but none was provided.");
-  }
+  } = renderBranches;
   const {
     idle,
     loading,
     aborted,
     error,
+    completed,
     data
   } = useActionStatus(action);
   const UIRenderedPromise = useUIRenderedPromise(action);
@@ -142,13 +153,16 @@ const ActionRenderer = ({
       actionUIRenderedPromiseWeakMap.delete(action);
     };
   }, [action]);
-
+  if (disabled) {
+    return null;
+  }
   // If renderAlways is provided, it wins and handles all rendering
   if (renderAlways) {
     return renderAlways({
       idle,
       loading,
       aborted,
+      completed,
       error,
       data
     });
@@ -205,26 +219,15 @@ const useUIRenderedPromise = action => {
   actionUIRenderedPromiseWeakMap.set(action, promise);
   return promise;
 };
-
-const isSignal = (value) => {
-  return getSignalType(value) !== null;
-};
-
-const BRAND_SYMBOL = Symbol.for("preact-signals");
-const getSignalType = (value) => {
-  if (!value || typeof value !== "object") {
-    return null;
+const isPlainObject$1 = obj => {
+  if (typeof obj !== "object" || obj === null) {
+    return false;
   }
-
-  if (value.brand !== BRAND_SYMBOL) {
-    return null;
+  let proto = obj;
+  while (Object.getPrototypeOf(proto) !== null) {
+    proto = Object.getPrototypeOf(proto);
   }
-
-  if (typeof value._fn === "function") {
-    return "computed";
-  }
-
-  return "signal";
+  return Object.getPrototypeOf(obj) === proto || Object.getPrototypeOf(obj) === null;
 };
 
 /**
@@ -440,6 +443,286 @@ const compareTwoJsValues = (
     return true;
   };
   return compare(rootA, rootB);
+};
+
+const debounceSignal = (
+  signalToDebounce,
+  { delay = 300, deepCompare = true } = {},
+) => {
+  let timeoutId;
+  let latestValue = signalToDebounce.peek();
+  const debouncedSignal = signal(latestValue);
+
+  effect(() => {
+    const value = signalToDebounce.value;
+    const debouncedValue = debouncedSignal.peek();
+    if (
+      deepCompare
+        ? compareTwoJsValues(value, debouncedValue)
+        : value === debouncedValue
+    ) {
+      return;
+    }
+    clearTimeout(timeoutId);
+    latestValue = value;
+    timeoutId = setTimeout(() => {
+      debouncedSignal.value = latestValue;
+    }, delay);
+  });
+
+  debouncedSignal.flush = () => {
+    clearTimeout(timeoutId);
+    debouncedSignal.value = latestValue;
+  };
+
+  return debouncedSignal;
+};
+
+const isSignal = (value) => {
+  return getSignalType(value) !== null;
+};
+
+const BRAND_SYMBOL = Symbol.for("preact-signals");
+const getSignalType = (value) => {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+
+  if (value.brand !== BRAND_SYMBOL) {
+    return null;
+  }
+
+  if (typeof value._fn === "function") {
+    return "computed";
+  }
+
+  return "signal";
+};
+
+const MAX_ENTRIES = 5;
+
+const stringifyForDisplay = (
+  value,
+  maxDepth = 2,
+  currentDepth = 0,
+  options = {},
+) => {
+  const { asFunctionArgs = false } = options;
+  const indent = "  ".repeat(currentDepth);
+  const nextIndent = "  ".repeat(currentDepth + 1);
+
+  if (currentDepth >= maxDepth) {
+    return typeof value === "object" && value !== null
+      ? "[Object]"
+      : String(value);
+  }
+
+  if (value === null) {
+    return "null";
+  }
+  if (value === undefined) {
+    return "undefined";
+  }
+  if (typeof value === "string") {
+    return `"${value}"`;
+  }
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+  if (typeof value === "function") {
+    return `[Function ${value.name || "anonymous"}]`;
+  }
+  if (value instanceof Date) {
+    return `Date(${value.toISOString()})`;
+  }
+  if (value instanceof RegExp) {
+    return value.toString();
+  }
+
+  if (Array.isArray(value)) {
+    const openBracket = asFunctionArgs ? "(" : "[";
+    const closeBracket = asFunctionArgs ? ")" : "]";
+
+    if (value.length === 0) return `${openBracket}${closeBracket}`;
+
+    // Display arrays with only one element on a single line
+    if (value.length === 1) {
+      const item = stringifyForDisplay(
+        value[0],
+        maxDepth,
+        currentDepth + 1,
+        // Remove asFunctionArgs for nested calls
+        { ...options, asFunctionArgs: false },
+      );
+      return `${openBracket}${item}${closeBracket}`;
+    }
+
+    if (value.length > MAX_ENTRIES) {
+      const preview = value
+        .slice(0, MAX_ENTRIES)
+        .map(
+          (v) =>
+            `${nextIndent}${stringifyForDisplay(v, maxDepth, currentDepth + 1, { ...options, asFunctionArgs: false })}`,
+        );
+      return `${openBracket}\n${preview.join(",\n")},\n${nextIndent}...${value.length - MAX_ENTRIES} more\n${indent}${closeBracket}`;
+    }
+
+    const items = value.map(
+      (v) =>
+        `${nextIndent}${stringifyForDisplay(v, maxDepth, currentDepth + 1, { ...options, asFunctionArgs: false })}`,
+    );
+    return `${openBracket}\n${items.join(",\n")}\n${indent}${closeBracket}`;
+  }
+
+  if (typeof value === "object") {
+    const signalType = getSignalType(value);
+    if (signalType) {
+      const signalValue = value.peek();
+      const prefix = signalType === "computed" ? "computed" : "signal";
+      return `${prefix}(${stringifyForDisplay(signalValue, maxDepth, currentDepth, { ...options, asFunctionArgs: false })})`;
+    }
+
+    const entries = Object.entries(value);
+    if (entries.length === 0) return "{}";
+
+    // ✅ Inclure les clés avec valeurs undefined/null
+    const allEntries = [];
+    for (const [key, val] of entries) {
+      allEntries.push([key, val]);
+    }
+
+    // Ajouter les clés avec undefined (que Object.entries omet)
+    const descriptor = Object.getOwnPropertyDescriptors(value);
+    for (const [key, desc] of Object.entries(descriptor)) {
+      if (desc.value === undefined && !entries.some(([k]) => k === key)) {
+        allEntries.push([key, undefined]);
+      }
+    }
+
+    // Display objects with only one key on a single line
+    if (allEntries.length === 1) {
+      const [key, val] = allEntries[0];
+      const valueStr = stringifyForDisplay(val, maxDepth, currentDepth + 1, {
+        ...options,
+        asFunctionArgs: false,
+      });
+      return `{ ${key}: ${valueStr} }`;
+    }
+
+    if (allEntries.length > MAX_ENTRIES) {
+      const preview = allEntries
+        .slice(0, MAX_ENTRIES)
+        .map(
+          ([k, v]) =>
+            `${nextIndent}${k}: ${stringifyForDisplay(v, maxDepth, currentDepth + 1, { ...options, asFunctionArgs: false })}`,
+        );
+      return `{\n${preview.join(",\n")},\n${nextIndent}...${allEntries.length - MAX_ENTRIES} more\n${indent}}`;
+    }
+
+    const pairs = allEntries.map(
+      ([k, v]) =>
+        `${nextIndent}${k}: ${stringifyForDisplay(v, maxDepth, currentDepth + 1, { ...options, asFunctionArgs: false })}`,
+    );
+    return `{\n${pairs.join(",\n")}\n${indent}}`;
+  }
+
+  return String(value);
+};
+
+/**
+ * Reactively runs an action whenever the params derived from signals change.
+ *
+ * @param {object} action - The action to run.
+ * @param {Function} deriveActionParamsFromSignals - A function that reads signals and returns
+ *   the params to pass to the action. It is re-evaluated automatically whenever a signal it
+ *   read changes. Return `false`/`null`/`undefined` to skip running the action.
+ * @param {object} [options]
+ * @param {number} [options.debounce] - When set, the action is only run once the derived params
+ *   have been stable for this many milliseconds. Useful to avoid firing a backend call on every
+ *   keystroke: set `debounce: 500` and the request is sent only after the user stops interacting
+ *   with the filters for 500 ms.
+ *
+ *   Example — auto-refresh a result list while the user tweaks filters:
+ *   ```js
+ *   actionRunEffect(searchAction, () => ({
+ *     query: querySignal.value,
+ *     page: pageSignal.value,
+ *   }), { debounce: 500 });
+ *   ```
+ *   The action will not fire while the user is actively changing filters; it fires once
+ *   they pause for half a second.
+ */
+const actionRunEffect = (
+  action,
+  deriveActionParamsFromSignals,
+  { debounce, meta } = {},
+) => {
+  let lastTruthyParams;
+  let actionParamsSignal = computed(() => {
+    const params = deriveActionParamsFromSignals();
+    action.debug(
+      `Derived params for action "${action}": ${stringifyForDisplay(params)}`,
+    );
+    if (!params) {
+      // normalize falsy values to undefined so that any falsy value ends up in the same state of "don't run the action"
+      return undefined;
+    }
+    if (lastTruthyParams === undefined) {
+      lastTruthyParams = params;
+    }
+    return params;
+  });
+  if (debounce) {
+    actionParamsSignal = debounceSignal(actionParamsSignal, {
+      delay: debounce,
+    });
+  }
+
+  const actionRunnedByThisEffect = action.bindParams(actionParamsSignal, {
+    syncParams: debounce ? actionParamsSignal.flush : undefined,
+    onChange: (actionTarget, actionTargetPrevious, { explicitRunIntent }) => {
+      if (explicitRunIntent) {
+        // The caller already issued an explicit run/rerun/prerun/reset/abort —
+        // don't attempt to also auto-run from the params change to avoid double-runs.
+        action.debug(
+          `"${actionTarget}": explicit run intent detected -> skipping auto-run from params change`,
+        );
+        return;
+      }
+      if (!actionTargetPrevious && actionTarget) {
+        // first run
+        if (!actionTarget.params) {
+          // falsy params, don't run
+          return;
+        }
+        actionTarget.run({ reason: "truthy params first run" });
+        return;
+      }
+
+      if (
+        actionTargetPrevious &&
+        !actionTargetPrevious.isPrerun &&
+        actionTarget
+      ) {
+        // params changed
+        if (!actionTarget.params) {
+          // falsy params, don't run
+          actionTargetPrevious.abort("abortOnFalsyParams");
+          return;
+        }
+        if (compareTwoJsValues(lastTruthyParams, actionTarget.params)) {
+          actionTarget.run({ reason: "params restored to last truthy value" });
+        } else {
+          actionTarget.rerun({ reason: "params modified" });
+        }
+      }
+    },
+    meta,
+  });
+  if (actionParamsSignal.peek()) {
+    actionRunnedByThisEffect.run({ reason: "initial truthy params" });
+  }
+  return actionRunnedByThisEffect;
 };
 
 /**
@@ -658,136 +941,6 @@ const mergeTwoJsValues = (firstValue, secondValue) => {
   return objectMerge;
 };
 
-const MAX_ENTRIES = 5;
-
-const stringifyForDisplay = (
-  value,
-  maxDepth = 2,
-  currentDepth = 0,
-  options = {},
-) => {
-  const { asFunctionArgs = false } = options;
-  const indent = "  ".repeat(currentDepth);
-  const nextIndent = "  ".repeat(currentDepth + 1);
-
-  if (currentDepth >= maxDepth) {
-    return typeof value === "object" && value !== null
-      ? "[Object]"
-      : String(value);
-  }
-
-  if (value === null) {
-    return "null";
-  }
-  if (value === undefined) {
-    return "undefined";
-  }
-  if (typeof value === "string") {
-    return `"${value}"`;
-  }
-  if (typeof value === "number" || typeof value === "boolean") {
-    return String(value);
-  }
-  if (typeof value === "function") {
-    return `[Function ${value.name || "anonymous"}]`;
-  }
-  if (value instanceof Date) {
-    return `Date(${value.toISOString()})`;
-  }
-  if (value instanceof RegExp) {
-    return value.toString();
-  }
-
-  if (Array.isArray(value)) {
-    const openBracket = asFunctionArgs ? "(" : "[";
-    const closeBracket = asFunctionArgs ? ")" : "]";
-
-    if (value.length === 0) return `${openBracket}${closeBracket}`;
-
-    // Display arrays with only one element on a single line
-    if (value.length === 1) {
-      const item = stringifyForDisplay(
-        value[0],
-        maxDepth,
-        currentDepth + 1,
-        // Remove asFunctionArgs for nested calls
-        { ...options, asFunctionArgs: false },
-      );
-      return `${openBracket}${item}${closeBracket}`;
-    }
-
-    if (value.length > MAX_ENTRIES) {
-      const preview = value
-        .slice(0, MAX_ENTRIES)
-        .map(
-          (v) =>
-            `${nextIndent}${stringifyForDisplay(v, maxDepth, currentDepth + 1, { ...options, asFunctionArgs: false })}`,
-        );
-      return `${openBracket}\n${preview.join(",\n")},\n${nextIndent}...${value.length - MAX_ENTRIES} more\n${indent}${closeBracket}`;
-    }
-
-    const items = value.map(
-      (v) =>
-        `${nextIndent}${stringifyForDisplay(v, maxDepth, currentDepth + 1, { ...options, asFunctionArgs: false })}`,
-    );
-    return `${openBracket}\n${items.join(",\n")}\n${indent}${closeBracket}`;
-  }
-
-  if (typeof value === "object") {
-    const signalType = getSignalType(value);
-    if (signalType) {
-      const signalValue = value.peek();
-      const prefix = signalType === "computed" ? "computed" : "signal";
-      return `${prefix}(${stringifyForDisplay(signalValue, maxDepth, currentDepth, { ...options, asFunctionArgs: false })})`;
-    }
-
-    const entries = Object.entries(value);
-    if (entries.length === 0) return "{}";
-
-    // ✅ Inclure les clés avec valeurs undefined/null
-    const allEntries = [];
-    for (const [key, val] of entries) {
-      allEntries.push([key, val]);
-    }
-
-    // Ajouter les clés avec undefined (que Object.entries omet)
-    const descriptor = Object.getOwnPropertyDescriptors(value);
-    for (const [key, desc] of Object.entries(descriptor)) {
-      if (desc.value === undefined && !entries.some(([k]) => k === key)) {
-        allEntries.push([key, undefined]);
-      }
-    }
-
-    // Display objects with only one key on a single line
-    if (allEntries.length === 1) {
-      const [key, val] = allEntries[0];
-      const valueStr = stringifyForDisplay(val, maxDepth, currentDepth + 1, {
-        ...options,
-        asFunctionArgs: false,
-      });
-      return `{ ${key}: ${valueStr} }`;
-    }
-
-    if (allEntries.length > MAX_ENTRIES) {
-      const preview = allEntries
-        .slice(0, MAX_ENTRIES)
-        .map(
-          ([k, v]) =>
-            `${nextIndent}${k}: ${stringifyForDisplay(v, maxDepth, currentDepth + 1, { ...options, asFunctionArgs: false })}`,
-        );
-      return `{\n${preview.join(",\n")},\n${nextIndent}...${allEntries.length - MAX_ENTRIES} more\n${indent}}`;
-    }
-
-    const pairs = allEntries.map(
-      ([k, v]) =>
-        `${nextIndent}${k}: ${stringifyForDisplay(v, maxDepth, currentDepth + 1, { ...options, asFunctionArgs: false })}`,
-    );
-    return `{\n${pairs.join(",\n")}\n${indent}}`;
-  }
-
-  return String(value);
-};
-
 /**
  * Creates an effect that uses WeakRef to prevent garbage collection of referenced values.
  *
@@ -892,7 +1045,7 @@ const rerunActions = async (
  *
  * Actions are automatically unprotected when:
  * - The protection duration expires (default: 5 minutes)
- * - The action is explicitly stopped via .stop()
+ * - The action is explicitly stopped via .reset()
  */
 const prerunProtectionRegistry = (() => {
   const protectedActionMap = new Map(); // action -> { timeoutId, timestamp }
@@ -903,10 +1056,8 @@ const prerunProtectionRegistry = (() => {
     if (protection) {
       clearTimeout(protection.timeoutId);
       protectedActionMap.delete(action);
-      if (DEBUG$3) {
-        const elapsed = Date.now() - protection.timestamp;
-        console.debug(`"${action}": GC protection removed after ${elapsed}ms`);
-      }
+      const elapsed = Date.now() - protection.timestamp;
+      action.debug(`"${action}": GC protection removed after ${elapsed}ms`);
     }
   };
 
@@ -921,20 +1072,14 @@ const prerunProtectionRegistry = (() => {
       const timestamp = Date.now();
       const timeoutId = setTimeout(() => {
         unprotect(action);
-        if (DEBUG$3) {
-          console.debug(
-            `"${action}": prerun protection expired after ${PROTECTION_DURATION}ms`,
-          );
-        }
-      }, PROTECTION_DURATION);
-
-      protectedActionMap.set(action, { timeoutId, timestamp });
-
-      if (DEBUG$3) {
-        console.debug(
-          `"${action}": protected from GC for ${PROTECTION_DURATION}ms`,
+        action.debug(
+          `"${action}": prerun protection expired after ${PROTECTION_DURATION}ms`,
         );
-      }
+      }, PROTECTION_DURATION);
+      protectedActionMap.set(action, { timeoutId, timestamp });
+      action.debug(
+        `"${action}": protected from GC for ${PROTECTION_DURATION}ms`,
+      );
     },
 
     unprotect,
@@ -979,8 +1124,7 @@ const getActivationInfo = () => {
   const settledSet = new Set();
 
   for (const action of activationWeakSet) {
-    const privateProps = getActionPrivateProperties(action);
-    const runningState = privateProps.runningStateSignal.peek();
+    const runningState = action.runningStateSignal.peek();
 
     if (runningState === RUNNING) {
       runningSet.add(action);
@@ -1199,7 +1343,7 @@ ${lines.join("\n")}`);
     for (const actionToReset of willResetSet) {
       const actionToResetPrivateProperties =
         getActionPrivateProperties(actionToReset);
-      actionToResetPrivateProperties.performStop({ reason });
+      actionToResetPrivateProperties.performReset({ reason });
       activationWeakSet.delete(actionToReset);
     }
   }
@@ -1256,9 +1400,7 @@ ${lines.join("\n")}`);
 
     // Execute promotions (prerun -> run requested)
     for (const actionToPromote of willPromoteSet) {
-      const actionToPromotePrivateProperties =
-        getActionPrivateProperties(actionToPromote);
-      actionToPromotePrivateProperties.isPrerunSignal.value = false;
+      actionToPromote.isPrerunSignal.value = false;
     }
   }
   if (DEBUG$3) {
@@ -1290,8 +1432,14 @@ ${lines.join("\n")}`);
   };
 };
 
-const NO_PARAMS = {};
+const NO_PARAMS = { __no_params__: true };
 const initialParamsDefault = NO_PARAMS;
+const mergeActionParams = (currentParams, newParams) => {
+  if (currentParams === NO_PARAMS) {
+    return newParams;
+  }
+  return mergeTwoJsValues(currentParams, newParams);
+};
 
 const actionWeakMap = new WeakMap();
 const createAction = (callback, rootOptions = {}) => {
@@ -1306,52 +1454,56 @@ const createAction = (callback, rootOptions = {}) => {
     let {
       name = callback.name || "anonymous",
       params,
-      isPrerun = true,
+      isPrerun = false,
       runningState = IDLE,
       aborted = false,
       error = null,
-      data,
-      computedData,
-      compute,
+      value,
+      resultToValue,
+      valueToData,
+      dataDefault,
+      data = dataDefault,
+
       completed = false,
       renderLoadedAsync,
       sideEffect = () => {},
       keepOldData = false,
       meta = {},
-      dataEffect,
+
       completeSideEffect,
     } = options;
     if (!Object.hasOwn(options, "params")) {
-      // even undefined should be respect it's only when not provided at all we use default
+      // even undefined should be respected it's only when not provided at all we use default
       params = initialParamsDefault;
     }
+    if (value === undefined && data !== undefined) {
+      value = data;
+    }
 
-    const initialData = data;
+    const valueInitial = value;
     const paramsSignal = signal(params);
     const isPrerunSignal = signal(isPrerun);
     const runningStateSignal = signal(runningState);
     const errorSignal = signal(error);
-    const dataSignal = signal(initialData);
-    const computedDataSignal = compute
+    const valueSignal = signal(valueInitial);
+    const dataSignal = valueToData
       ? computed(() => {
-          const data = dataSignal.value;
-          return compute(data);
+          const value = valueSignal.value;
+          const data = valueToData(value);
+          return data;
         })
-      : dataSignal;
-    computedData =
-      computedData === undefined
-        ? compute
-          ? compute(data)
-          : data
-        : computedData;
+      : valueSignal;
 
     const prerun = (options) => {
+      action.debug(`${action}.prerun(${stringifyForDisplay(options)})`);
       return dispatchSingleAction(action, "prerun", options);
     };
     const run = (options) => {
+      action.debug(`${action}.run(${stringifyForDisplay(options)})`);
       return dispatchSingleAction(action, "run", options);
     };
     const rerun = (options) => {
+      action.debug(`${action}.rerun(${stringifyForDisplay(options)})`);
       return dispatchSingleAction(action, "rerun", options);
     };
     /**
@@ -1361,8 +1513,8 @@ const createAction = (callback, rootOptions = {}) => {
      * 3. Clean up any resources and side effects
      * 4. Reset data to initial value (unless keepOldData is true)
      */
-    const stop = (options) => {
-      return dispatchSingleAction(action, "stop", options);
+    const reset = (options) => {
+      return dispatchSingleAction(action, "reset", options);
     };
     const abort = (reason) => {
       if (runningState !== RUNNING) {
@@ -1372,9 +1524,7 @@ const createAction = (callback, rootOptions = {}) => {
       if (!actionAbort) {
         return false;
       }
-      if (DEBUG$3) {
-        console.log(`"${action}": aborting (reason: ${reason})`);
-      }
+      action.debug(`"${action}".abort(${reason})`);
       actionAbort(reason);
       return true;
     };
@@ -1397,7 +1547,7 @@ const createAction = (callback, rootOptions = {}) => {
       if (isSignal(newParamsOrSignal)) {
         const combinedParamsSignal = computed(() => {
           const newParams = newParamsOrSignal.value;
-          const result = mergeTwoJsValues(params, newParams);
+          const result = mergeActionParams(params, newParams);
           return result;
         });
         return createActionProxyFromSignal(
@@ -1408,7 +1558,7 @@ const createAction = (callback, rootOptions = {}) => {
       }
 
       // ✅ CAS 2: Objet -> vérifier s'il contient des signals
-      if (newParamsOrSignal && typeof newParamsOrSignal === "object") {
+      if (isPlainObject(newParamsOrSignal)) {
         const staticParams = {};
         const signalMap = new Map();
 
@@ -1429,13 +1579,17 @@ const createAction = (callback, rootOptions = {}) => {
 
         if (signalMap.size === 0) {
           // Pas de signals, merge statique normal
-          if (params === null || typeof params !== "object") {
+          if (
+            params === null ||
+            typeof params !== "object" ||
+            params === NO_PARAMS
+          ) {
             return createChildAction({
               ...options,
               params: newParamsOrSignal,
             });
           }
-          const combinedParams = mergeTwoJsValues(params, newParamsOrSignal);
+          const combinedParams = mergeActionParams(params, newParamsOrSignal);
           return createChildAction({
             ...options,
             params: combinedParams,
@@ -1459,7 +1613,7 @@ const createAction = (callback, rootOptions = {}) => {
         return createActionProxyFromSignal(action, paramsSignal, options);
       }
 
-      // ✅ CAS 3: Primitive -> action enfant
+      // ✅ CAS 3: Primitive or objects like DOMEvents etc -> action enfant
       return createChildAction({
         params: newParamsOrSignal,
         ...options,
@@ -1522,11 +1676,13 @@ const createAction = (callback, rootOptions = {}) => {
       return matches;
     };
 
-    name = generateActionName(name, params);
     {
       // Create the action as a function that can be called directly
-      action = function actionFunction(params) {
-        const boundAction = bindParams(params);
+      action = function actionFunction(...args) {
+        if (args.length === 0) {
+          return action.rerun();
+        }
+        const boundAction = bindParams(...args);
         return boundAction.rerun();
       };
       Object.defineProperty(action, "name", {
@@ -1536,6 +1692,7 @@ const createAction = (callback, rootOptions = {}) => {
       });
     }
 
+    const callSource = generateActionCallSource(name, params);
     // Assign all the action properties and methods to the function
     Object.assign(action, {
       isAction: true,
@@ -1547,19 +1704,19 @@ const createAction = (callback, rootOptions = {}) => {
       runningState,
       aborted,
       error,
+      value,
       data,
-      computedData,
       completed,
       prerun,
       run,
       rerun,
-      stop,
+      reset,
       abort,
       bindParams,
       matchAllSelfOrDescendant, // ✅ Add the new method
       replaceParams: (newParams) => {
         const currentParams = paramsSignal.value;
-        const nextParams = mergeTwoJsValues(currentParams, newParams);
+        const nextParams = mergeActionParams(currentParams, newParams);
         if (nextParams === currentParams) {
           return false;
         }
@@ -1577,12 +1734,26 @@ const createAction = (callback, rootOptions = {}) => {
 
         params = nextParams;
         action.params = nextParams;
-        action.name = generateActionName(name, nextParams);
+        action.callSource = generateActionCallSource(name, nextParams);
         paramsSignal.value = nextParams;
         return true;
       },
-      toString: () => action.name,
+      callSource,
+      toString: () => action.callSource,
       meta,
+      debug: (...args) => {
+        if (!meta.debug || DEBUG$3) {
+          return;
+        }
+        console.debug(...args);
+      },
+
+      paramsSignal,
+      runningStateSignal,
+      isPrerunSignal,
+      valueSignal,
+      dataSignal,
+      errorSignal,
     });
     Object.preventExtensions(action);
 
@@ -1605,10 +1776,10 @@ const createAction = (callback, rootOptions = {}) => {
         actionRef.error = error;
       });
       weakEffect([action], (actionRef) => {
+        value = valueSignal.value;
         data = dataSignal.value;
-        computedData = computedDataSignal.value;
+        actionRef.value = value;
         actionRef.data = data;
-        actionRef.computedData = computedData;
       });
     }
 
@@ -1646,7 +1817,7 @@ const createAction = (callback, rootOptions = {}) => {
             prerunProtectionRegistry.unprotect(action);
           }
           if (DEBUG$3) {
-            console.log(`"${action}": aborted (reason: ${abortReason})`);
+            console.log(`"${action}" aborted (reason: ${abortReason})`);
           }
         };
 
@@ -1711,17 +1882,20 @@ const createAction = (callback, rootOptions = {}) => {
            * before the UI attempts to render the now-missing resource.
            */
           batch(() => {
-            dataSignal.value = dataEffect
-              ? dataEffect(runResult, action)
+            const value = resultToValue
+              ? resultToValue(runResult, action)
               : runResult;
+            valueSignal.value = value;
             runningStateSignal.value = COMPLETED;
-            onComplete?.(computedDataSignal.peek(), action);
+            const data = dataSignal.value;
+            onComplete?.(data, action);
             completeSideEffect?.(action);
           });
           if (DEBUG$3) {
             console.log(`"${action}": completed`);
           }
-          return computedDataSignal.peek();
+          const data = dataSignal.peek();
+          return data;
         };
         const onRunError = (e) => {
           if (abortSignal) {
@@ -1732,18 +1906,16 @@ const createAction = (callback, rootOptions = {}) => {
           }
           actionAbortMap.delete(action);
           actionPromiseMap.delete(action);
-          if (internalAbortSignal.aborted && e === internalAbortSignal.reason) {
+          const isAbort =
+            (internalAbortSignal.aborted && e === internalAbortSignal.reason) ||
+            e.name === "AbortError";
+          if (isAbort) {
             runningStateSignal.value = ABORTED;
             if (isPrerun && abortSignal.aborted) {
               prerunProtectionRegistry.unprotect(action);
             }
-            onAbort(e, action);
+            onAbort?.(e, action);
             return e;
-          }
-          if (e.name === "AbortError") {
-            throw new Error(
-              "never supposed to happen, abort error should be handled by the abort signal",
-            );
           }
           if (DEBUG$3) {
             console.log(
@@ -1813,10 +1985,10 @@ const createAction = (callback, rootOptions = {}) => {
         }
       };
 
-      const performStop = ({ reason }) => {
+      const performReset = ({ reason }) => {
         abort(reason);
         if (DEBUG$3) {
-          console.log(`"${action}": stopping (reason: ${reason})`);
+          console.log(`"${action}": resetting (reason: ${reason})`);
         }
 
         prerunProtectionRegistry.unprotect(action);
@@ -1830,7 +2002,7 @@ const createAction = (callback, rootOptions = {}) => {
         batch(() => {
           errorSignal.value = null;
           if (!keepOldData) {
-            dataSignal.value = initialData;
+            valueSignal.value = valueInitial;
           }
           isPrerunSignal.value = true;
           runningStateSignal.value = IDLE;
@@ -1838,17 +2010,10 @@ const createAction = (callback, rootOptions = {}) => {
       };
 
       const privateProperties = {
-        initialData,
-
-        paramsSignal,
-        runningStateSignal,
-        isPrerunSignal,
-        dataSignal,
-        computedDataSignal,
-        errorSignal,
+        valueInitial,
 
         performRun,
-        performStop,
+        performReset,
         ui,
 
         childActionWeakSet,
@@ -1865,10 +2030,31 @@ const createAction = (callback, rootOptions = {}) => {
   return rootAction;
 };
 
+/**
+ * Creates an action proxy that automatically updates based on signal changes.
+ *
+ * @param {Object} action - The base action to proxy
+ * @param {Signal} paramsSignal - Signal containing parameters for the action
+ * @param {Object} options - Configuration options
+ * @param {boolean} options.rerunOnChange - Ensures the action is rerun every time a signal value is modified.
+ *   This enables live updates - for example, performing an HTTP GET request every time
+ *   a list of filters changes, providing real-time results without user interaction.
+ * @param {boolean} options.transferData - Ensures the new action inherits the data from the current action (if any).
+ *   This enables "Apply Filters" workflows where users modify filters but results are only
+ *   updated when they explicitly trigger the action (e.g., clicking an "Apply" button).
+ *   The old data remains visible until the new action completes.
+ * @param {function} options.onChange - Optional callback triggered when the target action changes
+ */
 const createActionProxyFromSignal = (
   action,
   paramsSignal,
-  { rerunOnChange = false, onChange } = {},
+  {
+    runOnce = false,
+    rerunOnChange = false,
+    transferData = false,
+    onChange,
+    syncParams,
+  } = {},
 ) => {
   const actionTargetChangeCallbackSet = new Set();
   const onActionTargetChange = (callback) => {
@@ -1878,13 +2064,13 @@ const createActionProxyFromSignal = (
     };
   };
   const changeCleanupCallbackSet = new Set();
-  const triggerTargetChange = (actionTarget, previousTarget) => {
+  const triggerTargetChange = (actionTarget, previousTarget, context) => {
     for (const changeCleanupCallback of changeCleanupCallbackSet) {
       changeCleanupCallback();
     }
     changeCleanupCallbackSet.clear();
     for (const callback of actionTargetChangeCallbackSet) {
-      const returnValue = callback(actionTarget, previousTarget);
+      const returnValue = callback(actionTarget, previousTarget, context);
       if (typeof returnValue === "function") {
         changeCleanupCallbackSet.add(returnValue);
       }
@@ -1896,7 +2082,28 @@ const createActionProxyFromSignal = (
   let currentActionPrivateProperties = getActionPrivateProperties(action);
   let actionTargetPreviousWeakRef = null;
 
-  const _updateTarget = (params) => {
+  let isUpdatingTarget = false;
+  const _updateTarget = (context) => {
+    if (isUpdatingTarget) {
+      // likely syncParams caused the paramsSignal.value to update which
+      // calls _updateTarget. But we are already in the middle of an update
+      // likely cause by an explicit call to rerun for instance
+      // so we want to keep that rerun intent and "ignore" this updateTarget call
+      // so we don't end up running the action twice (once because we dispatch change without explicitRunIntent and one for the initial run intent)
+      return;
+    }
+    isUpdatingTarget = true;
+    action.debug(`${action}._updateTarget(${stringifyForDisplay(context)})`);
+    if (syncParams) {
+      syncParams();
+    }
+    isUpdatingTarget = false;
+
+    const params = paramsSignal.peek();
+    const proxyParams = proxyParamsSignal.peek();
+    if (params !== proxyParams) {
+      proxyParamsSignal.value = params;
+    }
     const previousActionTarget = actionTargetPreviousWeakRef?.deref();
 
     if (params === NO_PARAMS) {
@@ -1914,10 +2121,10 @@ const createActionProxyFromSignal = (
     actionTargetPreviousWeakRef = actionTarget
       ? new WeakRef(actionTarget)
       : null;
-    triggerTargetChange(actionTarget, previousActionTarget);
+    triggerTargetChange(actionTarget, previousActionTarget, context);
   };
 
-  const proxyMethod = (method) => {
+  const proxyMethod = (method, { explicitRunIntent } = {}) => {
     return (...args) => {
       /*
        * Ensure the proxy targets the correct action before method execution.
@@ -1925,12 +2132,17 @@ const createActionProxyFromSignal = (
        * internal parameter synchronization effect. Using peek() avoids creating
        * reactive dependencies within this pass-through method.
        */
-      _updateTarget(proxyParamsSignal.peek());
+      _updateTarget({
+        changeCause: "method_call",
+        changeCauseDetail: method,
+        explicitRunIntent,
+      });
       return currentAction[method](...args);
     };
   };
 
   const nameSignal = signal();
+  const callSourceSignal = signal();
   let actionProxy;
   {
     actionProxy = function actionProxyFunction() {
@@ -1943,53 +2155,10 @@ const createActionProxyFromSignal = (
       },
     });
   }
-  Object.assign(actionProxy, {
-    isProxy: true,
-    callback: undefined,
-    params: undefined,
-    isPrerun: undefined,
-    runningState: undefined,
-    aborted: undefined,
-    error: undefined,
-    data: undefined,
-    computedData: undefined,
-    completed: undefined,
-    prerun: proxyMethod("prerun"),
-    run: proxyMethod("run"),
-    rerun: proxyMethod("rerun"),
-    stop: proxyMethod("stop"),
-    abort: proxyMethod("abort"),
-    matchAllSelfOrDescendant: proxyMethod("matchAllSelfOrDescendant"),
-    getCurrentAction: () => {
-      _updateTarget(proxyParamsSignal.peek());
-      return currentAction;
-    },
-    bindParams: () => {
-      throw new Error(
-        `bindParams() is not supported on action proxies, use the underlying action instead`,
-      );
-    },
-    replaceParams: null, // Will be set below
-    toString: () => actionProxy.name,
-    meta: {},
-  });
-  Object.preventExtensions(actionProxy);
 
-  onActionTargetChange((actionTarget) => {
-    const currentAction = actionTarget || action;
-    nameSignal.value = `[Proxy] ${currentAction.name}`;
-    actionProxy.callback = currentAction.callback;
-    actionProxy.params = currentAction.params;
-    actionProxy.isPrerun = currentAction.isPrerun;
-    actionProxy.runningState = currentAction.runningState;
-    actionProxy.aborted = currentAction.aborted;
-    actionProxy.error = currentAction.error;
-    actionProxy.data = currentAction.data;
-    actionProxy.computedData = currentAction.computedData;
-    actionProxy.completed = currentAction.completed;
-  });
-
-  const proxyPrivateSignal = (signalPropertyName, propertyName) => {
+  // Create our own signal for params that we control completely
+  const proxyParamsSignal = signal(paramsSignal.value);
+  const proxySignal = (signalPropertyName, propertyName) => {
     const signalProxy = signal();
     let dispose;
     onActionTargetChange(() => {
@@ -1998,8 +2167,7 @@ const createActionProxyFromSignal = (
         dispose = undefined;
       }
       dispose = effect(() => {
-        const currentActionSignal =
-          currentActionPrivateProperties[signalPropertyName];
+        const currentActionSignal = currentAction[signalPropertyName];
         const currentActionSignalValue = currentActionSignal.value;
         signalProxy.value = currentActionSignalValue;
         if (propertyName) {
@@ -2010,65 +2178,111 @@ const createActionProxyFromSignal = (
     });
     return signalProxy;
   };
-  const proxyPrivateMethod = (method) => {
-    return (...args) => currentActionPrivateProperties[method](...args);
-  };
 
-  // Create our own signal for params that we control completely
-  const proxyParamsSignal = signal(paramsSignal.value);
+  Object.assign(actionProxy, {
+    isProxy: true,
+    callback: undefined,
+    params: undefined,
+    isPrerun: undefined,
+    runningState: undefined,
+    aborted: undefined,
+    error: undefined,
+    value: undefined,
+    data: undefined,
+    completed: undefined,
+    prerun: proxyMethod("prerun", { explicitRunIntent: true }),
+    run: proxyMethod("run", { explicitRunIntent: true }),
+    rerun: proxyMethod("rerun", { explicitRunIntent: true }),
+    reset: proxyMethod("reset", { explicitRunIntent: true }),
+    abort: proxyMethod("abort", { explicitRunIntent: true }),
+    matchAllSelfOrDescendant: proxyMethod("matchAllSelfOrDescendant"),
+    getCurrentAction: () => {
+      _updateTarget({
+        changeCause: "get_current_action",
+      });
+      return currentAction;
+    },
+    bindParams: () => {
+      throw new Error(
+        `bindParams() is not supported on action proxies, use the underlying action instead`,
+      );
+    },
+    replaceParams: null, // Will be set below
+    callSource: actionProxy.callSource,
+    toString: () => actionProxy.callSource,
+    meta: {},
 
+    paramsSignal: proxyParamsSignal,
+    isPrerunSignal: proxySignal("isPrerunSignal", "isPrerun"),
+    runningStateSignal: proxySignal("runningStateSignal", "runningState"),
+    errorSignal: proxySignal("errorSignal", "error"),
+    valueSignal: proxySignal("valueSignal", "value"),
+    dataSignal: proxySignal("dataSignal", "data"),
+  });
+  Object.preventExtensions(actionProxy);
   // Watch for changes in the original paramsSignal and update ours
   // (original signal wins over any replaceParams calls)
   weakEffect(
     [paramsSignal, proxyParamsSignal],
     (paramsSignalRef, proxyParamsSignalRef) => {
-      proxyParamsSignalRef.value = paramsSignalRef.value;
+      const newParams = paramsSignalRef.value;
+      proxyParamsSignalRef.value = newParams;
     },
   );
-
-  const proxyPrivateProperties = {
-    get currentAction() {
-      return currentAction;
-    },
-    paramsSignal: proxyParamsSignal,
-    isPrerunSignal: proxyPrivateSignal("isPrerunSignal", "isPrerun"),
-    runningStateSignal: proxyPrivateSignal(
-      "runningStateSignal",
-      "runningState",
-    ),
-    errorSignal: proxyPrivateSignal("errorSignal", "error"),
-    dataSignal: proxyPrivateSignal("dataSignal", "data"),
-    computedDataSignal: proxyPrivateSignal("computedDataSignal"),
-    performRun: proxyPrivateMethod("performRun"),
-    performStop: proxyPrivateMethod("performStop"),
-    ui: currentActionPrivateProperties.ui,
-  };
-
-  onActionTargetChange((actionTarget, previousTarget) => {
-    proxyPrivateProperties.ui = currentActionPrivateProperties.ui;
-    if (previousTarget && actionTarget) {
-      const previousPrivateProps = getActionPrivateProperties(previousTarget);
-      if (previousPrivateProps.ui.hasRenderers) {
-        const newPrivateProps = getActionPrivateProperties(actionTarget);
-        newPrivateProps.ui.hasRenderers = true;
-      }
-    }
-    proxyPrivateProperties.childActionWeakSet =
-      currentActionPrivateProperties.childActionWeakSet;
+  weakEffect([action], () => {
+    // eslint-disable-next-line no-unused-expressions
+    proxyParamsSignal.value;
+    _updateTarget({
+      changeCause: "params_signal_change",
+    });
   });
-  setActionPrivateProperties(actionProxy, proxyPrivateProperties);
+  onActionTargetChange((actionTarget) => {
+    const currentAction = actionTarget || action;
+    nameSignal.value = `[Proxy] ${currentAction.name}`;
+    callSourceSignal.value = `[Proxy] ${currentAction.callSource}`;
+    actionProxy.callback = currentAction.callback;
+    actionProxy.params = currentAction.params;
+    actionProxy.isPrerun = currentAction.isPrerun;
+    actionProxy.runningState = currentAction.runningState;
+    actionProxy.aborted = currentAction.aborted;
+    actionProxy.error = currentAction.error;
+    actionProxy.value = currentAction.value;
+    actionProxy.data = currentAction.data;
+    actionProxy.completed = currentAction.completed;
+  });
 
   {
-    weakEffect([action], () => {
-      const params = proxyParamsSignal.value;
-      _updateTarget(params);
+    const proxyPrivateMethod = (method) => {
+      return (...args) => currentActionPrivateProperties[method](...args);
+    };
+    const proxyPrivateProperties = {
+      get currentAction() {
+        return currentAction;
+      },
+
+      performRun: proxyPrivateMethod("performRun"),
+      performReset: proxyPrivateMethod("performReset"),
+      ui: currentActionPrivateProperties.ui,
+    };
+    onActionTargetChange((actionTarget, previousTarget) => {
+      proxyPrivateProperties.ui = currentActionPrivateProperties.ui;
+      if (previousTarget && actionTarget) {
+        const previousPrivateProps = getActionPrivateProperties(previousTarget);
+        if (previousPrivateProps.ui.hasRenderers) {
+          const newPrivateProps = getActionPrivateProperties(actionTarget);
+          newPrivateProps.ui.hasRenderers = true;
+        }
+      }
+      proxyPrivateProperties.childActionWeakSet =
+        currentActionPrivateProperties.childActionWeakSet;
     });
+    setActionPrivateProperties(actionProxy, proxyPrivateProperties);
   }
 
   actionProxy.replaceParams = (newParams) => {
     if (currentAction === action) {
       const currentParams = proxyParamsSignal.value;
-      const nextParams = mergeTwoJsValues(currentParams, newParams);
+      const nextParams = mergeActionParams(currentParams, newParams);
       if (nextParams === currentParams) {
         return false;
       }
@@ -2078,34 +2292,66 @@ const createActionProxyFromSignal = (
     if (!currentAction.replaceParams(newParams)) {
       return false;
     }
-    proxyParamsSignal.value =
-      currentActionPrivateProperties.paramsSignal.peek();
+    proxyParamsSignal.value = currentAction.paramsSignal.peek();
     return true;
   };
 
-  if (rerunOnChange) {
+  if (transferData) {
     onActionTargetChange((actionTarget, actionTargetPrevious) => {
-      if (
-        actionTarget &&
-        actionTargetPrevious &&
-        !actionTargetPrevious.isPrerun
-      ) {
-        actionTarget.rerun();
+      if (actionTarget && actionTargetPrevious) {
+        const targetValueSignal = actionTarget.valueSignal;
+        const previousValueSignal = actionTargetPrevious.valueSignal;
+        targetValueSignal.value = previousValueSignal.value;
       }
     });
   }
-  if (onChange) {
+  if (runOnce) {
     onActionTargetChange((actionTarget, actionTargetPrevious) => {
-      onChange(actionTarget, actionTargetPrevious);
+      if (!actionTargetPrevious && actionTarget) {
+        action.debug(
+          `Action proxy "${actionProxy}": target changed, running action once (reason: runOnce)`,
+        );
+        actionTarget.run({ reason: "runOnce" });
+      }
     });
+  }
+  if (rerunOnChange) {
+    onActionTargetChange(
+      (actionTarget, actionTargetPrevious, { explicitRunIntent }) => {
+        if (explicitRunIntent) {
+          return;
+        }
+        if (
+          actionTarget &&
+          actionTargetPrevious &&
+          !actionTargetPrevious.isPrerun
+        ) {
+          action.debug(
+            `Action proxy "${actionProxy}": target changed, rerunning action (reason: rerunOnChange)`,
+            {
+              newTarget: actionTarget,
+              previousTarget: actionTargetPrevious,
+            },
+          );
+          actionTarget.rerun({ reason: "rerunOnChange (params modified)" });
+        }
+      },
+    );
+  }
+  if (onChange) {
+    onActionTargetChange(
+      (actionTarget, actionTargetPrevious, { explicitRunIntent }) => {
+        onChange(actionTarget, actionTargetPrevious, { explicitRunIntent });
+      },
+    );
   }
 
   return actionProxy;
 };
 
-const generateActionName = (name, params) => {
+const generateActionCallSource = (name, params) => {
   if (params === NO_PARAMS) {
-    return `${name}({})`;
+    return `${name}()`;
   }
   // Use stringifyForDisplay with asFunctionArgs option for the entire args array
   const argsString = stringifyForDisplay([params], 3, 0, {
@@ -2113,6 +2359,24 @@ const generateActionName = (name, params) => {
   });
   return `${name}${argsString}`;
 };
+
+const isPlainObject = (obj) => {
+  if (typeof obj !== "object" || obj === null) {
+    return false;
+  }
+  let proto = obj;
+  while (Object.getPrototypeOf(proto) !== null) {
+    proto = Object.getPrototypeOf(proto);
+  }
+  return (
+    Object.getPrototypeOf(obj) === proto || Object.getPrototypeOf(obj) === null
+  );
+};
+
+const COMPLETED_ACTION = createAction(() => undefined, {
+  name: "ACTION.COMPLETED",
+});
+getActionPrivateProperties(COMPLETED_ACTION).performRun({});
 
 const useActionData = (action) => {
   if (!action) {
@@ -2839,14 +3103,20 @@ const arraySignalStore = (
     }
   });
 
-  const propertiesObserverSet = new Set();
-  const observeProperties = (itemSignal, callback) => {
+  const itemPropertiesObserverSet = new Set();
+  const observeItemProperties = (itemSignal, callback) => {
     const observer = { itemSignal, callback };
-    propertiesObserverSet.add(observer);
-
-    // Return cleanup function
+    itemPropertiesObserverSet.add(observer);
     return () => {
-      propertiesObserverSet.delete(observer);
+      itemPropertiesObserverSet.delete(observer);
+    };
+  };
+
+  const propertiesObserverSet = new Set();
+  const observeProperties = (callback) => {
+    propertiesObserverSet.add(callback);
+    return () => {
+      propertiesObserverSet.delete(callback);
     };
   };
 
@@ -2994,23 +3264,26 @@ ${[idKey, ...mutableIdKeys].join(", ")}`,
     return result;
   };
   const upsert = (...args) => {
-    const itemMutationsMap = new Map(); // Map<itemId, propertyMutations>
+    const mutationsMap = new Map(); // Map<itemId, propertyMutations>
     const triggerPropertyMutations = () => {
-      if (itemMutationsMap.size === 0) {
-        return;
-      }
       // we call at the end so that itemWithProps and arraySignal.value was set too
-      for (const observer of propertiesObserverSet) {
-        const { itemSignal, callback } = observer;
+      for (const itemPropertiesObserver of itemPropertiesObserverSet) {
+        const { itemSignal, callback } = itemPropertiesObserver;
         const watchedItem = itemSignal.peek();
         if (!watchedItem) {
           continue;
         }
 
         // Check if this item has mutations
-        const itemSpecificMutations = itemMutationsMap.get(watchedItem[idKey]);
-        if (itemSpecificMutations) {
-          callback(itemSpecificMutations);
+        const itemMutations = mutationsMap.get(watchedItem[idKey]);
+        if (itemMutations) {
+          callback(itemMutations);
+        }
+      }
+      if (propertiesObserverSet.size) {
+        const mutations = Array.from(mutationsMap.values());
+        for (const propertiesObserver of propertiesObserverSet) {
+          propertiesObserver(mutations);
         }
       }
     };
@@ -3055,7 +3328,7 @@ ${[idKey, ...mutableIdKeys].join(", ")}`,
       }
 
       // Store mutations for this specific item
-      itemMutationsMap.set(item[idKey], propertyMutations);
+      mutationsMap.set(item[idKey], propertyMutations);
       return itemWithProps;
     };
 
@@ -3301,890 +3574,13 @@ ${[idKey, ...mutableIdKeys].join(", ")}`,
     upsert,
     drop,
 
+    observeItemProperties,
     observeProperties,
     observeRemovals,
     registerItemMatchLifecycle,
     signalForMutableIdKey,
   });
   return store;
-};
-
-// Resource Lifecycle Manager
-// This handles ALL resource lifecycle logic (rerun/reset) across all resources
-const createResourceLifecycleManager = () => {
-  const registeredResources = new Map(); // Map<resourceInstance, lifecycleConfig>
-  const resourceDependencies = new Map(); // Map<resourceInstance, Set<dependentResources>>
-
-  const registerResource = (resourceInstance, config) => {
-    const {
-      rerunOn,
-      paramScope = null,
-      dependencies = [],
-      mutableIdKeys = [],
-    } = config;
-
-    registeredResources.set(resourceInstance, {
-      rerunOn,
-      paramScope,
-      mutableIdKeys,
-      httpActions: new Set(),
-    });
-
-    // Register dependencies
-    if (dependencies.length > 0) {
-      for (const dependency of dependencies) {
-        if (!resourceDependencies.has(dependency)) {
-          resourceDependencies.set(dependency, new Set());
-        }
-        resourceDependencies.get(dependency).add(resourceInstance);
-      }
-    }
-  };
-
-  const registerAction = (resourceInstance, httpAction) => {
-    const config = registeredResources.get(resourceInstance);
-    if (config) {
-      config.httpActions.add(httpAction);
-    }
-  };
-
-  const shouldRerunAfter = (rerunConfig, httpVerb) => {
-    if (rerunConfig === false) return false;
-    if (rerunConfig === "*") return true;
-    if (Array.isArray(rerunConfig)) {
-      const verbSet = new Set(rerunConfig.map((v) => v.toUpperCase()));
-      if (verbSet.has("*")) return true;
-      return verbSet.has(httpVerb.toUpperCase());
-    }
-    return false;
-  };
-
-  const isParamSubset = (parentParams, childParams) => {
-    if (!parentParams || !childParams) return false;
-    for (const [key, value] of Object.entries(parentParams)) {
-      if (
-        !(key in childParams) ||
-        !compareTwoJsValues(childParams[key], value)
-      ) {
-        return false;
-      }
-    }
-    return true;
-  };
-
-  const findEffectOnActions = (triggeringAction) => {
-    // Determines which actions to rerun/reset when an action completes.
-
-    const actionsToRerun = new Set();
-    const actionsToReset = new Set();
-    const reasonSet = new Set();
-
-    for (const [resourceInstance, config] of registeredResources) {
-      const shouldRerunGetMany = shouldRerunAfter(
-        config.rerunOn.GET_MANY,
-        triggeringAction.meta.httpVerb,
-      );
-      const shouldRerunGet = shouldRerunAfter(
-        config.rerunOn.GET,
-        triggeringAction.meta.httpVerb,
-      );
-
-      // Skip if no rerun or reset rules apply
-      const hasMutableIdAutorerun =
-        (triggeringAction.meta.httpVerb === "POST" ||
-          triggeringAction.meta.httpVerb === "PUT" ||
-          triggeringAction.meta.httpVerb === "PATCH") &&
-        config.mutableIdKeys.length > 0;
-
-      if (
-        !shouldRerunGetMany &&
-        !shouldRerunGet &&
-        triggeringAction.meta.httpVerb !== "DELETE" &&
-        !hasMutableIdAutorerun
-      ) {
-        continue;
-      }
-
-      // Parameter scope predicate for config-driven rules
-      // Same scope ID or no scope = compatible, subset check for different scopes
-      const paramScopePredicate = config.paramScope
-        ? (candidateAction) => {
-            if (candidateAction.meta.paramScope?.id === config.paramScope.id)
-              return true;
-            if (!candidateAction.meta.paramScope) return true;
-            const candidateParams = candidateAction.meta.paramScope.params;
-            const currentParams = config.paramScope.params;
-            return isParamSubset(candidateParams, currentParams);
-          }
-        : (candidateAction) => !candidateAction.meta.paramScope;
-
-      for (const httpAction of config.httpActions) {
-        // Find all instances of this action
-        const actionCandidateArray = httpAction.matchAllSelfOrDescendant(
-          (action) =>
-            !action.isPrerun && action.completed && action !== triggeringAction,
-        );
-
-        for (const actionCandidate of actionCandidateArray) {
-          const triggerVerb = triggeringAction.meta.httpVerb;
-          const candidateVerb = actionCandidate.meta.httpVerb;
-          const candidateIsPlural = actionCandidate.meta.httpMany;
-          if (triggerVerb === candidateVerb) {
-            continue;
-          }
-
-          const triggeringResource = getResourceForAction(triggeringAction);
-          const isSameResource = triggeringResource === resourceInstance;
-
-          // Config-driven same-resource effects (respects param scope)
-          config_effect: {
-            if (
-              !isSameResource ||
-              triggerVerb === "GET" ||
-              candidateVerb !== "GET"
-            ) {
-              break config_effect;
-            }
-            const shouldRerun = candidateIsPlural
-              ? shouldRerunGetMany
-              : shouldRerunGet;
-            if (!shouldRerun) {
-              break config_effect;
-            }
-            if (!paramScopePredicate(actionCandidate)) {
-              break config_effect;
-            }
-            actionsToRerun.add(actionCandidate);
-            reasonSet.add("same-resource autorerun");
-            continue;
-          }
-
-          // DELETE effects on same resource (ignores param scope)
-          delete_effect: {
-            if (!isSameResource || triggerVerb !== "DELETE") {
-              break delete_effect;
-            }
-            if (candidateIsPlural) {
-              if (!shouldRerunGetMany) {
-                break delete_effect;
-              }
-              actionsToRerun.add(actionCandidate);
-              reasonSet.add("same-resource DELETE rerun GET_MANY");
-              continue;
-            }
-            // Get the ID(s) that were deleted
-            const { dataSignal } = getActionPrivateProperties(triggeringAction);
-            const deleteIdSet = triggeringAction.meta.httpMany
-              ? new Set(dataSignal.peek())
-              : new Set([dataSignal.peek()]);
-
-            const candidateId = actionCandidate.data;
-            const isAffected = deleteIdSet.has(candidateId);
-            if (!isAffected) {
-              break delete_effect;
-            }
-            if (candidateVerb === "GET" && shouldRerunGet) {
-              actionsToRerun.add(actionCandidate);
-              reasonSet.add("same-resource DELETE rerun GET");
-              continue;
-            }
-            actionsToReset.add(actionCandidate);
-            reasonSet.add("same-resource DELETE reset");
-            continue;
-          }
-
-          // MutableId effects: rerun GET when matching resource created/updated
-          {
-            if (
-              hasMutableIdAutorerun &&
-              candidateVerb === "GET" &&
-              !candidateIsPlural &&
-              isSameResource
-            ) {
-              const { computedDataSignal } =
-                getActionPrivateProperties(triggeringAction);
-              const modifiedData = computedDataSignal.peek();
-
-              if (modifiedData && typeof modifiedData === "object") {
-                for (const mutableIdKey of config.mutableIdKeys) {
-                  const modifiedMutableId = modifiedData[mutableIdKey];
-                  const candidateParams = actionCandidate.params;
-
-                  if (
-                    modifiedMutableId !== undefined &&
-                    candidateParams &&
-                    typeof candidateParams === "object" &&
-                    candidateParams[mutableIdKey] === modifiedMutableId
-                  ) {
-                    actionsToRerun.add(actionCandidate);
-                    reasonSet.add(
-                      `${triggeringAction.meta.httpVerb}-mutableId autorerun`,
-                    );
-                    break;
-                  }
-                }
-              }
-            }
-          }
-
-          // Cross-resource dependency effects: rerun dependent GET_MANY
-          {
-            if (
-              triggeringResource &&
-              resourceDependencies
-                .get(triggeringResource)
-                ?.has(resourceInstance) &&
-              triggerVerb !== "GET" &&
-              candidateVerb === "GET" &&
-              candidateIsPlural
-            ) {
-              actionsToRerun.add(actionCandidate);
-              reasonSet.add("dependency autorerun");
-              continue;
-            }
-          }
-        }
-      }
-    }
-
-    return {
-      actionsToRerun,
-      actionsToReset,
-      reasons: Array.from(reasonSet),
-    };
-  };
-
-  const onActionComplete = (httpAction) => {
-    const { actionsToRerun, actionsToReset, reasons } =
-      findEffectOnActions(httpAction);
-
-    if (actionsToRerun.size > 0 || actionsToReset.size > 0) {
-      const reason = `${httpAction} triggered ${reasons.join(" and ")}`;
-      const dispatchActions = getActionDispatcher();
-      dispatchActions({
-        rerunSet: actionsToRerun,
-        resetSet: actionsToReset,
-        reason,
-      });
-    }
-  };
-
-  // Helper to find which resource an action belongs to
-  const getResourceForAction = (action) => {
-    return action.meta.resourceInstance;
-  };
-
-  return {
-    registerResource,
-    registerAction,
-    onActionComplete,
-  };
-};
-
-// Global resource lifecycle manager instance
-const resourceLifecycleManager = createResourceLifecycleManager();
-
-// Cache for parameter scope identifiers
-const paramScopeWeakSet = createIterableWeakSet();
-let paramScopeIdCounter = 0;
-const getParamScope = (params) => {
-  for (const existingParamScope of paramScopeWeakSet) {
-    if (compareTwoJsValues(existingParamScope.params, params)) {
-      return existingParamScope;
-    }
-  }
-  const id = Symbol(`paramScope-${++paramScopeIdCounter}`);
-  const newParamScope = {
-    params,
-    id,
-  };
-  paramScopeWeakSet.add(newParamScope);
-  return newParamScope;
-};
-
-const createHttpHandlerForRootResource = (
-  name,
-  {
-    idKey,
-    store,
-    /*
-    Default autorerun behavior explanation:
-
-    GET: false (RECOMMENDED)
-    What happens:
-    - GET actions are reset by DELETE operations (not rerun)
-    - DELETE operation on the displayed item would display nothing in the UI (action is in IDLE state)
-    - PUT/PATCH operations update UI via signals, no rerun needed
-    - This approach minimizes unnecessary API calls
-
-    How to handle:
-    - Applications can provide custom UI for deleted items (e.g., "Item not found")
-    - Or redirect users to appropriate pages (e.g., back to list view)
-
-    Alternative (NOT RECOMMENDED):
-    - Use GET: ["DELETE"] to rerun and display 404 error received from backend
-    - Poor UX: users expect immediate feedback, not loading + error state
-
-    GET_MANY: ["POST"]
-    - POST: New items may or may not appear in lists (depends on filters, pagination, etc.)
-      Backend determines visibility better than client-side logic
-    - DELETE: Excluded by default because:
-      • UI handles deletions via store signals (selectAll filters out deleted items)
-      • DELETE operations rarely change list content beyond item removal
-      • Avoids unnecessary API calls (can be overridden if needed)
-    */
-    rerunOn = {
-      GET: false,
-      GET_MANY: [
-        "POST",
-        // "DELETE"
-      ],
-    },
-    paramScope,
-    dependencies = [],
-    resourceInstance,
-    mutableIdKeys = [],
-  },
-) => {
-  // Register this resource with the resource lifecycle manager
-  resourceLifecycleManager.registerResource(resourceInstance, {
-    rerunOn,
-    paramScope,
-    dependencies,
-    idKey,
-    mutableIdKeys,
-  });
-
-  const createActionAffectingOneItem = (httpVerb, { callback, ...options }) => {
-    const applyDataEffect =
-      httpVerb === "DELETE"
-        ? (itemIdOrItemProps) => {
-            const itemId = store.drop(itemIdOrItemProps);
-            return itemId;
-          }
-        : (data) => {
-            let item;
-            if (Array.isArray(data)) {
-              // the callback is returning something like [property, value, props]
-              // this is to support a case like:
-              // store.upsert("name", "currentName", { name: "newName" })
-              // where we want to update the name property of an existing item
-              item = store.upsert(...data);
-            } else {
-              item = store.upsert(data);
-            }
-            const itemId = item[idKey];
-            return itemId;
-          };
-
-    const callerInfo = getCallerInfo(null, 2);
-    // Provide more fallback options for better debugging
-    const locationInfo =
-      callerInfo.file && callerInfo.line && callerInfo.column
-        ? `${callerInfo.file}:${callerInfo.line}:${callerInfo.column}`
-        : callerInfo.raw || "unknown location";
-    const originalActionName = `${name}.${httpVerb}`;
-    const httpActionAffectingOneItem = createAction(callback, {
-      meta: { httpVerb, httpMany: false, paramScope, resourceInstance, store },
-      name: `${name}.${httpVerb}`,
-      dataEffect: (data, action) => {
-        const actionLabel = action.name;
-
-        if (httpVerb === "DELETE") {
-          if (!isProps(data) && !primitiveCanBeId(data)) {
-            throw new TypeError(
-              `${actionLabel} must return an object (that will be used to drop "${name}" resource), received ${data}.
-           ${originalActionName} source location: ${locationInfo}`,
-            );
-          }
-          return applyDataEffect(data);
-        }
-        if (!isProps(data)) {
-          throw new TypeError(
-            `${actionLabel} must return an object (that will be used to upsert "${name}" resource), received ${data}.
-           ${originalActionName} source location: ${locationInfo}`,
-          );
-        }
-        return applyDataEffect(data);
-      },
-      compute: (itemId) => store.select(itemId),
-      completeSideEffect: (actionCompleted) =>
-        resourceLifecycleManager.onActionComplete(actionCompleted),
-      ...options,
-    });
-    resourceLifecycleManager.registerAction(
-      resourceInstance,
-      httpActionAffectingOneItem,
-    );
-    return httpActionAffectingOneItem;
-  };
-  const GET = (callback, options) =>
-    createActionAffectingOneItem("GET", {
-      callback,
-      applyDataEffect: (data) => {
-        const item = store.upsert(data);
-        const itemId = item[idKey];
-        return itemId;
-      },
-      compute: (itemId) => store.select(itemId),
-      ...options,
-    });
-  const POST = (callback, options) =>
-    createActionAffectingOneItem("POST", {
-      callback,
-      applyDataEffect: (data) => {
-        const item = store.upsert(data);
-        const itemId = item[idKey];
-        return itemId;
-      },
-      compute: (itemId) => store.select(itemId),
-      ...options,
-    });
-  const PUT = (callback, options) =>
-    createActionAffectingOneItem("PUT", {
-      callback,
-      ...options,
-    });
-  const PATCH = (callback, options) =>
-    createActionAffectingOneItem("PATCH", {
-      callback,
-      ...options,
-    });
-  const DELETE = (callback, options) =>
-    createActionAffectingOneItem("DELETE", {
-      callback,
-      ...options,
-    });
-
-  const createActionAffectingManyItems = (
-    httpVerb,
-    { callback, ...options },
-  ) => {
-    const applyDataEffect =
-      httpVerb === "DELETE"
-        ? (idOrMutableIdArray) => {
-            const idArray = store.drop(idOrMutableIdArray);
-            return idArray;
-          }
-        : (dataArray) => {
-            const itemArray = store.upsert(dataArray);
-            const idArray = itemArray.map((item) => item[idKey]);
-            return idArray;
-          };
-
-    const httpActionAffectingManyItems = createAction(callback, {
-      meta: { httpVerb, httpMany: true, paramScope, resourceInstance, store },
-      name: `${name}.${httpVerb}_MANY`,
-      data: [],
-      dataEffect: applyDataEffect,
-      compute: (idArray) => store.selectAll(idArray),
-      completeSideEffect: (actionCompleted) =>
-        resourceLifecycleManager.onActionComplete(actionCompleted),
-      ...options,
-    });
-    resourceLifecycleManager.registerAction(
-      resourceInstance,
-      httpActionAffectingManyItems,
-    );
-    return httpActionAffectingManyItems;
-  };
-  const GET_MANY = (callback, options) =>
-    createActionAffectingManyItems("GET", { callback, ...options });
-  const POST_MANY = (callback, options) =>
-    createActionAffectingManyItems("POST", { callback, ...options });
-  const PUT_MANY = (callback, options) =>
-    createActionAffectingManyItems("PUT", { callback, ...options });
-  const PATCH_MANY = (callback, options) =>
-    createActionAffectingManyItems("PATCH", { callback, ...options });
-  const DELETE_MANY = (callback, options) =>
-    createActionAffectingManyItems("DELETE", { callback, ...options });
-
-  return {
-    GET,
-    POST,
-    PUT,
-    PATCH,
-    DELETE,
-    GET_MANY,
-    POST_MANY,
-    PUT_MANY,
-    PATCH_MANY,
-    DELETE_MANY,
-  };
-};
-const createHttpHandlerForRelationshipToOneResource = (
-  name,
-  {
-    idKey,
-    store,
-    propertyName,
-    childIdKey,
-    childStore,
-    resourceInstance,
-    resourceLifecycleManager,
-  },
-) => {
-  const createActionAffectingOneItem = (httpVerb, { callback, ...options }) => {
-    const applyDataEffect =
-      httpVerb === "DELETE"
-        ? (itemId) => {
-            const item = store.select(itemId);
-            const childItemId = item[propertyName][childIdKey];
-            store.upsert({
-              [idKey]: itemId,
-              [propertyName]: null,
-            });
-            return childItemId;
-          }
-        : // callback must return object with the following format:
-          // {
-          //   [idKey]: 123,
-          //   [propertyName]: {
-          //     [childIdKey]: 456, ...childProps
-          //   }
-          // }
-          // the following could happen too if there is no relationship
-          // {
-          //   [idKey]: 123,
-          //   [propertyName]: null
-          // }
-          (data) => {
-            const item = store.upsert(data);
-            const childItem = item[propertyName];
-            const childItemId = childItem ? childItem[childIdKey] : undefined;
-            return childItemId;
-          };
-
-    const callerInfo = getCallerInfo(null, 2);
-    // Provide more fallback options for better debugging
-    const locationInfo =
-      callerInfo.file && callerInfo.line && callerInfo.column
-        ? `${callerInfo.file}:${callerInfo.line}:${callerInfo.column}`
-        : callerInfo.raw || "unknown location";
-    const originalActionName = `${name}.${httpVerb}`;
-
-    const httpActionAffectingOneItem = createAction(callback, {
-      meta: { httpVerb, httpMany: false, resourceInstance, store },
-      name: `${name}.${httpVerb}`,
-      dataEffect: (data, action) => {
-        const actionLabel = action.name;
-
-        if (httpVerb === "DELETE") {
-          if (!isProps(data) && !primitiveCanBeId(data)) {
-            throw new TypeError(
-              `${actionLabel} must return an object (that will be used to drop "${name}" resource), received ${data}.
-           ${originalActionName} source location: ${locationInfo}`,
-            );
-          }
-          return applyDataEffect(data);
-        }
-        if (!isProps(data)) {
-          throw new TypeError(
-            `${actionLabel} must return an object (that will be used to upsert "${name}" resource), received ${data}.
-           ${originalActionName} source location: ${locationInfo}`,
-          );
-        }
-        return applyDataEffect(data);
-      },
-      compute: (childItemId) => childStore.select(childItemId),
-      completeSideEffect: (actionCompleted) =>
-        resourceLifecycleManager.onActionComplete(actionCompleted),
-      ...options,
-    });
-    resourceLifecycleManager.registerAction(
-      resourceInstance,
-      httpActionAffectingOneItem,
-    );
-    return httpActionAffectingOneItem;
-  };
-
-  const GET = (callback, options) =>
-    createActionAffectingOneItem("GET", {
-      callback,
-      ...options,
-    });
-  const PUT = (callback, options) =>
-    createActionAffectingOneItem("PUT", {
-      callback,
-      ...options,
-    });
-  const DELETE = (callback, options) =>
-    createActionAffectingOneItem("DELETE", {
-      callback,
-      ...options,
-    });
-
-  // il n'y a pas de many puisque on cible une seule resource
-  // genre table.owner -> c'est un seul owner qu'on peut
-  // GET -> recup les infos de l'objet
-  // PUT -> mettre a jour l'owner de la table
-  // DELETE -> supprimer l'owner de la table
-
-  return { GET, PUT, DELETE };
-};
-const createHttpHandlerRelationshipToManyResource = (
-  name,
-  {
-    idKey,
-    store,
-    propertyName,
-    childIdKey,
-    childStore,
-    resourceInstance,
-    resourceLifecycleManager,
-  } = {},
-) => {
-  // idéalement s'il y a un GET sur le store originel on voudrait ptet le reload
-  // parce que le store originel peut retourner cette liste ou etre impacté
-  // pour l'instant on ignore
-
-  // one item AND many child items
-  const createActionAffectingOneItem = (httpVerb, { callback, ...options }) => {
-    const applyDataEffect =
-      httpVerb === "DELETE"
-        ? ([itemId, childItemId]) => {
-            const item = store.select(itemId);
-            const childItemArray = item[propertyName];
-            const childItemArrayWithoutThisOne = [];
-            let found = false;
-            for (const childItemCandidate of childItemArray) {
-              const childItemCandidateId = childItemCandidate[childIdKey];
-              if (childItemCandidateId === childItemId) {
-                found = true;
-              } else {
-                childItemArrayWithoutThisOne.push(childItemCandidate);
-              }
-            }
-            if (found) {
-              store.upsert({
-                [idKey]: itemId,
-                [propertyName]: childItemArrayWithoutThisOne,
-              });
-            }
-            return childItemId;
-          }
-        : (childData) => {
-            const childItem = childStore.upsert(childData); // if the child item was used it will reload thanks to signals
-            const childItemId = childItem[childIdKey];
-            return childItemId;
-          };
-
-    const callerInfo = getCallerInfo(null, 2);
-    // Provide more fallback options for better debugging
-    const locationInfo =
-      callerInfo.file && callerInfo.line && callerInfo.column
-        ? `${callerInfo.file}:${callerInfo.line}:${callerInfo.column}`
-        : callerInfo.raw || "unknown location";
-    const originalActionName = `${name}.${httpVerb}`;
-
-    const httpActionAffectingOneItem = createAction(callback, {
-      meta: { httpVerb, httpMany: false, resourceInstance, store: childStore },
-      name: `${name}.${httpVerb}`,
-      dataEffect: (data, action) => {
-        const actionLabel = action.name;
-
-        if (httpVerb === "DELETE") {
-          // For DELETE in many relationship, we expect [itemId, childItemId] array
-          if (!Array.isArray(data) || data.length !== 2) {
-            throw new TypeError(
-              `${actionLabel} must return an array [itemId, childItemId] (that will be used to remove relationship), received ${data}.
-           ${originalActionName} source location: ${locationInfo}`,
-            );
-          }
-          return applyDataEffect(data);
-        }
-        if (!isProps(data)) {
-          throw new TypeError(
-            `${actionLabel} must return an object (that will be used to upsert child item), received ${data}.
-           ${originalActionName} source location: ${locationInfo}`,
-          );
-        }
-        return applyDataEffect(data);
-      },
-      compute: (childItemId) => childStore.select(childItemId),
-      completeSideEffect: (actionCompleted) =>
-        resourceLifecycleManager.onActionComplete(actionCompleted),
-      ...options,
-    });
-    resourceLifecycleManager.registerAction(
-      resourceInstance,
-      httpActionAffectingOneItem,
-    );
-    return httpActionAffectingOneItem;
-  };
-  const GET = (callback, options) =>
-    createActionAffectingOneItem("GET", {
-      callback,
-      ...options,
-    });
-  // le souci que je vois ici c'est que je n'ai pas la moindre idée d'ou
-  // inserer le childItem (ni meme s'il doit etre visible)
-  // je pense que la bonne chose a faire est de reload
-  // l'objet user.tables s'il en existe un
-  // TODO: find any GET action on "user" and reload it
-  const POST = (callback, options) =>
-    createActionAffectingOneItem("POST", {
-      callback,
-      ...options,
-    });
-  const PUT = (callback, options) =>
-    createActionAffectingOneItem("PUT", {
-      callback,
-      ...options,
-    });
-  const PATCH = (callback, options) =>
-    createActionAffectingOneItem("PATCH", {
-      callback,
-      ...options,
-    });
-  const DELETE = (callback, options) =>
-    createActionAffectingOneItem("DELETE", {
-      callback,
-      ...options,
-    });
-
-  const createActionAffectingManyItems = (
-    httpVerb,
-    { callback, ...options },
-  ) => {
-    const applyDataEffect =
-      httpVerb === "GET"
-        ? (data) => {
-            // callback must return object with the following format:
-            // {
-            //   [idKey]: 123,
-            //   [propertyName]: [
-            //      { [childIdKey]: 456, ...childProps },
-            //      { [childIdKey]: 789, ...childProps },
-            //      ...
-            //   ]
-            // }
-            // the array can be empty
-            const item = store.upsert(data);
-            const childItemArray = item[propertyName];
-            const childItemIdArray = childItemArray.map(
-              (childItem) => childItem[childIdKey],
-            );
-            return childItemIdArray;
-          }
-        : httpVerb === "DELETE"
-          ? ([itemIdOrMutableId, childItemIdOrMutableIdArray]) => {
-              const item = store.select(itemIdOrMutableId);
-              const childItemArray = item[propertyName];
-              const deletedChildItemIdArray = [];
-              const childItemArrayWithoutThoose = [];
-              let someFound = false;
-              const deletedChildItemArray = childStore.select(
-                childItemIdOrMutableIdArray,
-              );
-              for (const childItemCandidate of childItemArray) {
-                if (deletedChildItemArray.includes(childItemCandidate)) {
-                  someFound = true;
-                  deletedChildItemIdArray.push(childItemCandidate[childIdKey]);
-                } else {
-                  childItemArrayWithoutThoose.push(childItemCandidate);
-                }
-              }
-              if (someFound) {
-                store.upsert({
-                  [idKey]: item[idKey],
-                  [propertyName]: childItemArrayWithoutThoose,
-                });
-              }
-              return deletedChildItemIdArray;
-            }
-          : (childDataArray) => {
-              // hum ici aussi on voudra reload "user" pour POST
-              // les autres les signals se charge de reload si visible
-              const childItemArray = childStore.upsert(childDataArray);
-              const childItemIdArray = childItemArray.map(
-                (childItem) => childItem[childIdKey],
-              );
-              return childItemIdArray;
-            };
-
-    const callerInfo = getCallerInfo(null, 2);
-    // Provide more fallback options for better debugging
-    const locationInfo =
-      callerInfo.file && callerInfo.line && callerInfo.column
-        ? `${callerInfo.file}:${callerInfo.line}:${callerInfo.column}`
-        : callerInfo.raw || "unknown location";
-    const originalActionName = `${name}.${httpVerb}[many]`;
-
-    const httpActionAffectingManyItem = createAction(callback, {
-      meta: { httpVerb, httpMany: true, resourceInstance, store: childStore },
-      name: `${name}.${httpVerb}[many]`,
-      data: [],
-      dataEffect: (data, action) => {
-        const actionLabel = action.name;
-
-        if (httpVerb === "GET") {
-          if (!isProps(data)) {
-            throw new TypeError(
-              `${actionLabel} must return an object (that will be used to upsert "${name}" resource with many relationships), received ${data}.
-           ${originalActionName} source location: ${locationInfo}`,
-            );
-          }
-          return applyDataEffect(data);
-        }
-        if (httpVerb === "DELETE") {
-          // For DELETE_MANY in many relationship, we expect [itemId, childItemIdArray] array
-          if (
-            !Array.isArray(data) ||
-            data.length !== 2 ||
-            !Array.isArray(data[1])
-          ) {
-            throw new TypeError(
-              `${actionLabel} must return an array [itemId, childItemIdArray] (that will be used to remove relationships), received ${data}.
-           ${originalActionName} source location: ${locationInfo}`,
-            );
-          }
-          return applyDataEffect(data);
-        }
-        // For POST, PUT, PATCH - expect array of objects
-        if (!Array.isArray(data)) {
-          throw new TypeError(
-            `${actionLabel} must return an array of objects (that will be used to upsert child items), received ${data}.
-           ${originalActionName} source location: ${locationInfo}`,
-          );
-        }
-        return applyDataEffect(data);
-      },
-      compute: (childItemIdArray) => childStore.selectAll(childItemIdArray),
-      completeSideEffect: (actionCompleted) =>
-        resourceLifecycleManager.onActionComplete(actionCompleted),
-      ...options,
-    });
-    resourceLifecycleManager.registerAction(
-      resourceInstance,
-      httpActionAffectingManyItem,
-    );
-    return httpActionAffectingManyItem;
-  };
-
-  const GET_MANY = (callback, options) =>
-    createActionAffectingManyItems("GET", { callback, ...options });
-  const POST_MANY = (callback, options) =>
-    createActionAffectingManyItems("POST", { callback, ...options });
-  const PUT_MANY = (callback, options) =>
-    createActionAffectingManyItems("PUT", { callback, ...options });
-  const PATCH_MANY = (callback, options) =>
-    createActionAffectingManyItems("PATCH", { callback, ...options });
-  const DELETE_MANY = (callback, options) =>
-    createActionAffectingManyItems("DELETE", { callback, ...options });
-
-  return {
-    GET,
-    POST,
-    PUT,
-    PATCH,
-    DELETE,
-    GET_MANY,
-    POST_MANY,
-    PUT_MANY,
-    PATCH_MANY,
-    DELETE_MANY,
-  };
 };
 
 const resource = (
@@ -4565,6 +3961,884 @@ const resource = (
   resourceInstance.withParams = withParams;
 
   return resourceInstance;
+};
+
+// Resource Lifecycle Manager
+// This handles ALL resource lifecycle logic (rerun/reset) across all resources
+const createResourceLifecycleManager = () => {
+  const registeredResources = new Map(); // Map<resourceInstance, lifecycleConfig>
+  const resourceDependencies = new Map(); // Map<resourceInstance, Set<dependentResources>>
+
+  const registerResource = (resourceInstance, config) => {
+    const {
+      rerunOn,
+      paramScope = null,
+      dependencies = [],
+      mutableIdKeys = [],
+    } = config;
+
+    registeredResources.set(resourceInstance, {
+      rerunOn,
+      paramScope,
+      mutableIdKeys,
+      httpActions: new Set(),
+    });
+
+    // Register dependencies
+    if (dependencies.length > 0) {
+      for (const dependency of dependencies) {
+        if (!resourceDependencies.has(dependency)) {
+          resourceDependencies.set(dependency, new Set());
+        }
+        resourceDependencies.get(dependency).add(resourceInstance);
+      }
+    }
+  };
+
+  const registerAction = (resourceInstance, httpAction) => {
+    const config = registeredResources.get(resourceInstance);
+    if (config) {
+      config.httpActions.add(httpAction);
+    }
+  };
+
+  const shouldRerunAfter = (rerunConfig, httpVerb) => {
+    if (rerunConfig === false) return false;
+    if (rerunConfig === "*") return true;
+    if (Array.isArray(rerunConfig)) {
+      const verbSet = new Set(rerunConfig.map((v) => v.toUpperCase()));
+      if (verbSet.has("*")) return true;
+      return verbSet.has(httpVerb.toUpperCase());
+    }
+    return false;
+  };
+
+  const isParamSubset = (parentParams, childParams) => {
+    if (!parentParams || !childParams) return false;
+    for (const [key, value] of Object.entries(parentParams)) {
+      if (
+        !(key in childParams) ||
+        !compareTwoJsValues(childParams[key], value)
+      ) {
+        return false;
+      }
+    }
+    return true;
+  };
+
+  const findEffectOnActions = (triggeringAction) => {
+    // Determines which actions to rerun/reset when an action completes.
+
+    const actionsToRerun = new Set();
+    const actionsToReset = new Set();
+    const reasonSet = new Set();
+
+    for (const [resourceInstance, config] of registeredResources) {
+      const shouldRerunGetMany = shouldRerunAfter(
+        config.rerunOn.GET_MANY,
+        triggeringAction.meta.httpVerb,
+      );
+      const shouldRerunGet = shouldRerunAfter(
+        config.rerunOn.GET,
+        triggeringAction.meta.httpVerb,
+      );
+
+      // Skip if no rerun or reset rules apply
+      const hasMutableIdAutorerun =
+        (triggeringAction.meta.httpVerb === "POST" ||
+          triggeringAction.meta.httpVerb === "PUT" ||
+          triggeringAction.meta.httpVerb === "PATCH") &&
+        config.mutableIdKeys.length > 0;
+
+      if (
+        !shouldRerunGetMany &&
+        !shouldRerunGet &&
+        triggeringAction.meta.httpVerb !== "DELETE" &&
+        !hasMutableIdAutorerun
+      ) {
+        continue;
+      }
+
+      // Parameter scope predicate for config-driven rules
+      // Same scope ID or no scope = compatible, subset check for different scopes
+      const paramScopePredicate = config.paramScope
+        ? (candidateAction) => {
+            if (candidateAction.meta.paramScope?.id === config.paramScope.id)
+              return true;
+            if (!candidateAction.meta.paramScope) return true;
+            const candidateParams = candidateAction.meta.paramScope.params;
+            const currentParams = config.paramScope.params;
+            return isParamSubset(candidateParams, currentParams);
+          }
+        : (candidateAction) => !candidateAction.meta.paramScope;
+
+      for (const httpAction of config.httpActions) {
+        // Find all instances of this action
+        const actionCandidateArray = httpAction.matchAllSelfOrDescendant(
+          (action) =>
+            !action.isPrerun && action.completed && action !== triggeringAction,
+        );
+
+        for (const actionCandidate of actionCandidateArray) {
+          const triggerVerb = triggeringAction.meta.httpVerb;
+          const candidateVerb = actionCandidate.meta.httpVerb;
+          const candidateIsPlural = actionCandidate.meta.httpMany;
+          if (triggerVerb === candidateVerb) {
+            continue;
+          }
+
+          const triggeringResource = getResourceForAction(triggeringAction);
+          const isSameResource = triggeringResource === resourceInstance;
+
+          // Config-driven same-resource effects (respects param scope)
+          config_effect: {
+            if (
+              !isSameResource ||
+              triggerVerb === "GET" ||
+              candidateVerb !== "GET"
+            ) {
+              break config_effect;
+            }
+            const shouldRerun = candidateIsPlural
+              ? shouldRerunGetMany
+              : shouldRerunGet;
+            if (!shouldRerun) {
+              break config_effect;
+            }
+            if (!paramScopePredicate(actionCandidate)) {
+              break config_effect;
+            }
+            actionsToRerun.add(actionCandidate);
+            reasonSet.add("same-resource autorerun");
+            continue;
+          }
+
+          // DELETE effects on same resource (ignores param scope)
+          delete_effect: {
+            if (!isSameResource || triggerVerb !== "DELETE") {
+              break delete_effect;
+            }
+            if (candidateIsPlural) {
+              if (!shouldRerunGetMany) {
+                break delete_effect;
+              }
+              actionsToRerun.add(actionCandidate);
+              reasonSet.add("same-resource DELETE rerun GET_MANY");
+              continue;
+            }
+            // Get the ID(s) that were deleted
+            const { dataSignal } = getActionPrivateProperties(triggeringAction);
+            const deleteIdSet = triggeringAction.meta.httpMany
+              ? new Set(dataSignal.peek())
+              : new Set([dataSignal.peek()]);
+
+            const candidateId = actionCandidate.data;
+            const isAffected = deleteIdSet.has(candidateId);
+            if (!isAffected) {
+              break delete_effect;
+            }
+            if (candidateVerb === "GET" && shouldRerunGet) {
+              actionsToRerun.add(actionCandidate);
+              reasonSet.add("same-resource DELETE rerun GET");
+              continue;
+            }
+            actionsToReset.add(actionCandidate);
+            reasonSet.add("same-resource DELETE reset");
+            continue;
+          }
+
+          // MutableId effects: rerun GET when matching resource created/updated
+          {
+            if (
+              hasMutableIdAutorerun &&
+              candidateVerb === "GET" &&
+              !candidateIsPlural &&
+              isSameResource
+            ) {
+              const { computedDataSignal } =
+                getActionPrivateProperties(triggeringAction);
+              const modifiedData = computedDataSignal.peek();
+
+              if (modifiedData && typeof modifiedData === "object") {
+                for (const mutableIdKey of config.mutableIdKeys) {
+                  const modifiedMutableId = modifiedData[mutableIdKey];
+                  const candidateParams = actionCandidate.params;
+
+                  if (
+                    modifiedMutableId !== undefined &&
+                    candidateParams &&
+                    typeof candidateParams === "object" &&
+                    candidateParams[mutableIdKey] === modifiedMutableId
+                  ) {
+                    actionsToRerun.add(actionCandidate);
+                    reasonSet.add(
+                      `${triggeringAction.meta.httpVerb}-mutableId autorerun`,
+                    );
+                    break;
+                  }
+                }
+              }
+            }
+          }
+
+          // Cross-resource dependency effects: rerun dependent GET_MANY
+          {
+            if (
+              triggeringResource &&
+              resourceDependencies
+                .get(triggeringResource)
+                ?.has(resourceInstance) &&
+              triggerVerb !== "GET" &&
+              candidateVerb === "GET" &&
+              candidateIsPlural
+            ) {
+              actionsToRerun.add(actionCandidate);
+              reasonSet.add("dependency autorerun");
+              continue;
+            }
+          }
+        }
+      }
+    }
+
+    return {
+      actionsToRerun,
+      actionsToReset,
+      reasons: Array.from(reasonSet),
+    };
+  };
+
+  const onActionComplete = (httpAction) => {
+    const { actionsToRerun, actionsToReset, reasons } =
+      findEffectOnActions(httpAction);
+
+    if (actionsToRerun.size > 0 || actionsToReset.size > 0) {
+      const reason = `${httpAction} triggered ${reasons.join(" and ")}`;
+      const dispatchActions = getActionDispatcher();
+      dispatchActions({
+        rerunSet: actionsToRerun,
+        resetSet: actionsToReset,
+        reason,
+      });
+    }
+  };
+
+  // Helper to find which resource an action belongs to
+  const getResourceForAction = (action) => {
+    return action.meta.resourceInstance;
+  };
+
+  return {
+    registerResource,
+    registerAction,
+    onActionComplete,
+  };
+};
+
+// Global resource lifecycle manager instance
+const resourceLifecycleManager = createResourceLifecycleManager();
+
+// Cache for parameter scope identifiers
+const paramScopeWeakSet = createIterableWeakSet();
+let paramScopeIdCounter = 0;
+const getParamScope = (params) => {
+  for (const existingParamScope of paramScopeWeakSet) {
+    if (compareTwoJsValues(existingParamScope.params, params)) {
+      return existingParamScope;
+    }
+  }
+  const id = Symbol(`paramScope-${++paramScopeIdCounter}`);
+  const newParamScope = {
+    params,
+    id,
+  };
+  paramScopeWeakSet.add(newParamScope);
+  return newParamScope;
+};
+
+const createHttpHandlerForRootResource = (
+  name,
+  {
+    idKey,
+    store,
+    /*
+    Default autorerun behavior explanation:
+
+    GET: false (RECOMMENDED)
+    What happens:
+    - GET actions are reset by DELETE operations (not rerun)
+    - DELETE operation on the displayed item would display nothing in the UI (action is in IDLE state)
+    - PUT/PATCH operations update UI via signals, no rerun needed
+    - This approach minimizes unnecessary API calls
+
+    How to handle:
+    - Applications can provide custom UI for deleted items (e.g., "Item not found")
+    - Or redirect users to appropriate pages (e.g., back to list view)
+
+    Alternative (NOT RECOMMENDED):
+    - Use GET: ["DELETE"] to rerun and display 404 error received from backend
+    - Poor UX: users expect immediate feedback, not loading + error state
+
+    GET_MANY: ["POST"]
+    - POST: New items may or may not appear in lists (depends on filters, pagination, etc.)
+      Backend determines visibility better than client-side logic
+    - DELETE: Excluded by default because:
+      • UI handles deletions via store signals (selectAll filters out deleted items)
+      • DELETE operations rarely change list content beyond item removal
+      • Avoids unnecessary API calls (can be overridden if needed)
+    */
+    rerunOn = {
+      GET: false,
+      GET_MANY: [
+        "POST",
+        // "DELETE"
+      ],
+    },
+    paramScope,
+    dependencies = [],
+    resourceInstance,
+    mutableIdKeys = [],
+  },
+) => {
+  // Register this resource with the resource lifecycle manager
+  resourceLifecycleManager.registerResource(resourceInstance, {
+    rerunOn,
+    paramScope,
+    dependencies,
+    idKey,
+    mutableIdKeys,
+  });
+
+  const createActionAffectingOneItem = (httpVerb, { callback, ...options }) => {
+    const applyResultToValue =
+      httpVerb === "DELETE"
+        ? (itemIdOrItemProps) => {
+            const itemId = store.drop(itemIdOrItemProps);
+            return itemId;
+          }
+        : (result) => {
+            let item;
+            if (Array.isArray(result)) {
+              // the callback is returning something like [property, value, props]
+              // this is to support a case like:
+              // store.upsert("name", "currentName", { name: "newName" })
+              // where we want to update the name property of an existing item
+              item = store.upsert(...result);
+            } else {
+              item = store.upsert(result);
+            }
+            const itemId = item[idKey];
+            return itemId;
+          };
+
+    const callerInfo = getCallerInfo(null, 2);
+    // Provide more fallback options for better debugging
+    const locationInfo =
+      callerInfo.file && callerInfo.line && callerInfo.column
+        ? `${callerInfo.file}:${callerInfo.line}:${callerInfo.column}`
+        : callerInfo.raw || "unknown location";
+    const originalActionName = `${name}.${httpVerb}`;
+    const httpActionAffectingOneItem = createAction(callback, {
+      meta: { httpVerb, httpMany: false, paramScope, resourceInstance, store },
+      name: `${name}.${httpVerb}`,
+      resultToValue: (result, action) => {
+        const actionLabel = action.name;
+
+        if (httpVerb === "DELETE") {
+          if (!isProps(result) && !primitiveCanBeId(result)) {
+            throw new TypeError(
+              `${actionLabel} must return an object (that will be used to drop "${name}" resource), received ${result}.
+           ${originalActionName} source location: ${locationInfo}`,
+            );
+          }
+          return applyResultToValue(result);
+        }
+        if (!isProps(result)) {
+          throw new TypeError(
+            `${actionLabel} must return an object (that will be used to upsert "${name}" resource), received ${result}.
+           ${originalActionName} source location: ${locationInfo}`,
+          );
+        }
+        return applyResultToValue(result);
+      },
+      valueToData: (itemId) => store.select(itemId),
+      completeSideEffect: (actionCompleted) =>
+        resourceLifecycleManager.onActionComplete(actionCompleted),
+      ...options,
+    });
+    resourceLifecycleManager.registerAction(
+      resourceInstance,
+      httpActionAffectingOneItem,
+    );
+    return httpActionAffectingOneItem;
+  };
+  const GET = (callback, options) =>
+    createActionAffectingOneItem("GET", {
+      callback,
+      resultToValue: (result) => {
+        const item = store.upsert(result);
+        const itemId = item[idKey];
+        return itemId;
+      },
+      valueToData: (itemId) => store.select(itemId),
+      ...options,
+    });
+  const POST = (callback, options) =>
+    createActionAffectingOneItem("POST", {
+      callback,
+      resultToValue: (result) => {
+        const item = store.upsert(result);
+        const itemId = item[idKey];
+        return itemId;
+      },
+      valueToData: (itemId) => store.select(itemId),
+      ...options,
+    });
+  const PUT = (callback, options) =>
+    createActionAffectingOneItem("PUT", {
+      callback,
+      ...options,
+    });
+  const PATCH = (callback, options) =>
+    createActionAffectingOneItem("PATCH", {
+      callback,
+      ...options,
+    });
+  const DELETE = (callback, options) =>
+    createActionAffectingOneItem("DELETE", {
+      callback,
+      ...options,
+    });
+
+  const createActionAffectingManyItems = (
+    httpVerb,
+    { callback, ...options },
+  ) => {
+    const applyResultToValue =
+      httpVerb === "DELETE"
+        ? (idOrMutableIdArray) => {
+            const idArray = store.drop(idOrMutableIdArray);
+            return idArray;
+          }
+        : (dataArray) => {
+            const itemArray = store.upsert(dataArray);
+            const idArray = itemArray.map((item) => item[idKey]);
+            return idArray;
+          };
+
+    const httpActionAffectingManyItems = createAction(callback, {
+      meta: { httpVerb, httpMany: true, paramScope, resourceInstance, store },
+      name: `${name}.${httpVerb}_MANY`,
+      dataDefault: [],
+      resultToValue: applyResultToValue,
+      valueToData: (idArray) => store.selectAll(idArray),
+      completeSideEffect: (actionCompleted) =>
+        resourceLifecycleManager.onActionComplete(actionCompleted),
+      ...options,
+    });
+    resourceLifecycleManager.registerAction(
+      resourceInstance,
+      httpActionAffectingManyItems,
+    );
+    return httpActionAffectingManyItems;
+  };
+  const GET_MANY = (callback, options) =>
+    createActionAffectingManyItems("GET", { callback, ...options });
+  const POST_MANY = (callback, options) =>
+    createActionAffectingManyItems("POST", { callback, ...options });
+  const PUT_MANY = (callback, options) =>
+    createActionAffectingManyItems("PUT", { callback, ...options });
+  const PATCH_MANY = (callback, options) =>
+    createActionAffectingManyItems("PATCH", { callback, ...options });
+  const DELETE_MANY = (callback, options) =>
+    createActionAffectingManyItems("DELETE", { callback, ...options });
+
+  return {
+    GET,
+    POST,
+    PUT,
+    PATCH,
+    DELETE,
+    GET_MANY,
+    POST_MANY,
+    PUT_MANY,
+    PATCH_MANY,
+    DELETE_MANY,
+  };
+};
+const createHttpHandlerForRelationshipToOneResource = (
+  name,
+  {
+    idKey,
+    store,
+    propertyName,
+    childIdKey,
+    childStore,
+    resourceInstance,
+    resourceLifecycleManager,
+  },
+) => {
+  const createActionAffectingOneItem = (httpVerb, { callback, ...options }) => {
+    const applyResultToValue =
+      httpVerb === "DELETE"
+        ? (itemId) => {
+            const item = store.select(itemId);
+            const childItemId = item[propertyName][childIdKey];
+            store.upsert({
+              [idKey]: itemId,
+              [propertyName]: null,
+            });
+            return childItemId;
+          }
+        : // callback must return object with the following format:
+          // {
+          //   [idKey]: 123,
+          //   [propertyName]: {
+          //     [childIdKey]: 456, ...childProps
+          //   }
+          // }
+          // the following could happen too if there is no relationship
+          // {
+          //   [idKey]: 123,
+          //   [propertyName]: null
+          // }
+          (result) => {
+            const item = store.upsert(result);
+            const childItem = item[propertyName];
+            const childItemId = childItem ? childItem[childIdKey] : undefined;
+            return childItemId;
+          };
+
+    const callerInfo = getCallerInfo(null, 2);
+    // Provide more fallback options for better debugging
+    const locationInfo =
+      callerInfo.file && callerInfo.line && callerInfo.column
+        ? `${callerInfo.file}:${callerInfo.line}:${callerInfo.column}`
+        : callerInfo.raw || "unknown location";
+    const originalActionName = `${name}.${httpVerb}`;
+
+    const httpActionAffectingOneItem = createAction(callback, {
+      meta: { httpVerb, httpMany: false, resourceInstance, store },
+      name: `${name}.${httpVerb}`,
+      resultToValue: (result, action) => {
+        const actionLabel = action.name;
+
+        if (httpVerb === "DELETE") {
+          if (!isProps(result) && !primitiveCanBeId(result)) {
+            throw new TypeError(
+              `${actionLabel} must return an object (that will be used to drop "${name}" resource), received ${result}.
+           ${originalActionName} source location: ${locationInfo}`,
+            );
+          }
+          return applyResultToValue(result);
+        }
+        if (!isProps(result)) {
+          throw new TypeError(
+            `${actionLabel} must return an object (that will be used to upsert "${name}" resource), received ${result}.
+           ${originalActionName} source location: ${locationInfo}`,
+          );
+        }
+        return applyResultToValue(result);
+      },
+      valueToData: (childItemId) => childStore.select(childItemId),
+      completeSideEffect: (actionCompleted) =>
+        resourceLifecycleManager.onActionComplete(actionCompleted),
+      ...options,
+    });
+    resourceLifecycleManager.registerAction(
+      resourceInstance,
+      httpActionAffectingOneItem,
+    );
+    return httpActionAffectingOneItem;
+  };
+
+  const GET = (callback, options) =>
+    createActionAffectingOneItem("GET", {
+      callback,
+      ...options,
+    });
+  const PUT = (callback, options) =>
+    createActionAffectingOneItem("PUT", {
+      callback,
+      ...options,
+    });
+  const DELETE = (callback, options) =>
+    createActionAffectingOneItem("DELETE", {
+      callback,
+      ...options,
+    });
+
+  // il n'y a pas de many puisque on cible une seule resource
+  // genre table.owner -> c'est un seul owner qu'on peut
+  // GET -> recup les infos de l'objet
+  // PUT -> mettre a jour l'owner de la table
+  // DELETE -> supprimer l'owner de la table
+
+  return { GET, PUT, DELETE };
+};
+const createHttpHandlerRelationshipToManyResource = (
+  name,
+  {
+    idKey,
+    store,
+    propertyName,
+    childIdKey,
+    childStore,
+    resourceInstance,
+    resourceLifecycleManager,
+  } = {},
+) => {
+  // idéalement s'il y a un GET sur le store originel on voudrait ptet le reload
+  // parce que le store originel peut retourner cette liste ou etre impacté
+  // pour l'instant on ignore
+
+  // one item AND many child items
+  const createActionAffectingOneItem = (httpVerb, { callback, ...options }) => {
+    const applyResultToValue =
+      httpVerb === "DELETE"
+        ? ([itemId, childItemId]) => {
+            const item = store.select(itemId);
+            const childItemArray = item[propertyName];
+            const childItemArrayWithoutThisOne = [];
+            let found = false;
+            for (const childItemCandidate of childItemArray) {
+              const childItemCandidateId = childItemCandidate[childIdKey];
+              if (childItemCandidateId === childItemId) {
+                found = true;
+              } else {
+                childItemArrayWithoutThisOne.push(childItemCandidate);
+              }
+            }
+            if (found) {
+              store.upsert({
+                [idKey]: itemId,
+                [propertyName]: childItemArrayWithoutThisOne,
+              });
+            }
+            return childItemId;
+          }
+        : (childData) => {
+            const childItem = childStore.upsert(childData); // if the child item was used it will reload thanks to signals
+            const childItemId = childItem[childIdKey];
+            return childItemId;
+          };
+
+    const callerInfo = getCallerInfo(null, 2);
+    // Provide more fallback options for better debugging
+    const locationInfo =
+      callerInfo.file && callerInfo.line && callerInfo.column
+        ? `${callerInfo.file}:${callerInfo.line}:${callerInfo.column}`
+        : callerInfo.raw || "unknown location";
+    const originalActionName = `${name}.${httpVerb}`;
+
+    const httpActionAffectingOneItem = createAction(callback, {
+      meta: { httpVerb, httpMany: false, resourceInstance, store: childStore },
+      name: `${name}.${httpVerb}`,
+      resultToValue: (result, action) => {
+        const actionLabel = action.name;
+
+        if (httpVerb === "DELETE") {
+          // For DELETE in many relationship, we expect [itemId, childItemId] array
+          if (!Array.isArray(result) || result.length !== 2) {
+            throw new TypeError(
+              `${actionLabel} must return an array [itemId, childItemId] (that will be used to remove relationship), received ${result}.
+           ${originalActionName} source location: ${locationInfo}`,
+            );
+          }
+          return applyResultToValue(result);
+        }
+        if (!isProps(result)) {
+          throw new TypeError(
+            `${actionLabel} must return an object (that will be used to upsert child item), received ${result}.
+           ${originalActionName} source location: ${locationInfo}`,
+          );
+        }
+        return applyResultToValue(result);
+      },
+      valueToData: (childItemId) => childStore.select(childItemId),
+      completeSideEffect: (actionCompleted) =>
+        resourceLifecycleManager.onActionComplete(actionCompleted),
+      ...options,
+    });
+    resourceLifecycleManager.registerAction(
+      resourceInstance,
+      httpActionAffectingOneItem,
+    );
+    return httpActionAffectingOneItem;
+  };
+  const GET = (callback, options) =>
+    createActionAffectingOneItem("GET", {
+      callback,
+      ...options,
+    });
+  // le souci que je vois ici c'est que je n'ai pas la moindre idée d'ou
+  // inserer le childItem (ni meme s'il doit etre visible)
+  // je pense que la bonne chose a faire est de reload
+  // l'objet user.tables s'il en existe un
+  // TODO: find any GET action on "user" and reload it
+  const POST = (callback, options) =>
+    createActionAffectingOneItem("POST", {
+      callback,
+      ...options,
+    });
+  const PUT = (callback, options) =>
+    createActionAffectingOneItem("PUT", {
+      callback,
+      ...options,
+    });
+  const PATCH = (callback, options) =>
+    createActionAffectingOneItem("PATCH", {
+      callback,
+      ...options,
+    });
+  const DELETE = (callback, options) =>
+    createActionAffectingOneItem("DELETE", {
+      callback,
+      ...options,
+    });
+
+  const createActionAffectingManyItems = (
+    httpVerb,
+    { callback, ...options },
+  ) => {
+    const applyResultToValue =
+      httpVerb === "GET"
+        ? (result) => {
+            // callback must return object with the following format:
+            // {
+            //   [idKey]: 123,
+            //   [propertyName]: [
+            //      { [childIdKey]: 456, ...childProps },
+            //      { [childIdKey]: 789, ...childProps },
+            //      ...
+            //   ]
+            // }
+            // the array can be empty
+            const item = store.upsert(result);
+            const childItemArray = item[propertyName];
+            const childItemIdArray = childItemArray.map(
+              (childItem) => childItem[childIdKey],
+            );
+            return childItemIdArray;
+          }
+        : httpVerb === "DELETE"
+          ? ([itemIdOrMutableId, childItemIdOrMutableIdArray]) => {
+              const item = store.select(itemIdOrMutableId);
+              const childItemArray = item[propertyName];
+              const deletedChildItemIdArray = [];
+              const childItemArrayWithoutThoose = [];
+              let someFound = false;
+              const deletedChildItemArray = childStore.select(
+                childItemIdOrMutableIdArray,
+              );
+              for (const childItemCandidate of childItemArray) {
+                if (deletedChildItemArray.includes(childItemCandidate)) {
+                  someFound = true;
+                  deletedChildItemIdArray.push(childItemCandidate[childIdKey]);
+                } else {
+                  childItemArrayWithoutThoose.push(childItemCandidate);
+                }
+              }
+              if (someFound) {
+                store.upsert({
+                  [idKey]: item[idKey],
+                  [propertyName]: childItemArrayWithoutThoose,
+                });
+              }
+              return deletedChildItemIdArray;
+            }
+          : (childDataArray) => {
+              // hum ici aussi on voudra reload "user" pour POST
+              // les autres les signals se charge de reload si visible
+              const childItemArray = childStore.upsert(childDataArray);
+              const childItemIdArray = childItemArray.map(
+                (childItem) => childItem[childIdKey],
+              );
+              return childItemIdArray;
+            };
+
+    const callerInfo = getCallerInfo(null, 2);
+    // Provide more fallback options for better debugging
+    const locationInfo =
+      callerInfo.file && callerInfo.line && callerInfo.column
+        ? `${callerInfo.file}:${callerInfo.line}:${callerInfo.column}`
+        : callerInfo.raw || "unknown location";
+    const originalActionName = `${name}.${httpVerb}[many]`;
+
+    const httpActionAffectingManyItem = createAction(callback, {
+      meta: { httpVerb, httpMany: true, resourceInstance, store: childStore },
+      name: `${name}.${httpVerb}[many]`,
+      dataDefault: [],
+      resultToValue: (result, action) => {
+        const actionLabel = action.name;
+
+        if (httpVerb === "GET") {
+          if (!isProps(result)) {
+            throw new TypeError(
+              `${actionLabel} must return an object (that will be used to upsert "${name}" resource with many relationships), received ${result}.
+           ${originalActionName} source location: ${locationInfo}`,
+            );
+          }
+          return applyResultToValue(result);
+        }
+        if (httpVerb === "DELETE") {
+          // For DELETE_MANY in many relationship, we expect [itemId, childItemIdArray] array
+          if (
+            !Array.isArray(result) ||
+            result.length !== 2 ||
+            !Array.isArray(result[1])
+          ) {
+            throw new TypeError(
+              `${actionLabel} must return an array [itemId, childItemIdArray] (that will be used to remove relationships), received ${result}.
+           ${originalActionName} source location: ${locationInfo}`,
+            );
+          }
+          return applyResultToValue(result);
+        }
+        // For POST, PUT, PATCH - expect array of objects
+        if (!Array.isArray(result)) {
+          throw new TypeError(
+            `${actionLabel} must return an array of objects (that will be used to upsert child items), received ${result}.
+           ${originalActionName} source location: ${locationInfo}`,
+          );
+        }
+        return applyResultToValue(result);
+      },
+      valueToData: (childItemIdArray) => childStore.selectAll(childItemIdArray),
+      completeSideEffect: (actionCompleted) =>
+        resourceLifecycleManager.onActionComplete(actionCompleted),
+      ...options,
+    });
+    resourceLifecycleManager.registerAction(
+      resourceInstance,
+      httpActionAffectingManyItem,
+    );
+    return httpActionAffectingManyItem;
+  };
+
+  const GET_MANY = (callback, options) =>
+    createActionAffectingManyItems("GET", { callback, ...options });
+  const POST_MANY = (callback, options) =>
+    createActionAffectingManyItems("POST", { callback, ...options });
+  const PUT_MANY = (callback, options) =>
+    createActionAffectingManyItems("PUT", { callback, ...options });
+  const PATCH_MANY = (callback, options) =>
+    createActionAffectingManyItems("PATCH", { callback, ...options });
+  const DELETE_MANY = (callback, options) =>
+    createActionAffectingManyItems("DELETE", { callback, ...options });
+
+  return {
+    GET,
+    POST,
+    PUT,
+    PATCH,
+    DELETE,
+    GET_MANY,
+    POST_MANY,
+    PUT_MANY,
+    PATCH_MANY,
+    DELETE_MANY,
+  };
 };
 
 const isProps = (value) => {
@@ -5055,23 +5329,17 @@ const DIMENSION_PROPS = {
     }
     return { minHeight: "100%", height: "auto" }; // Take full height outside flex
   },
-  shrinkX: (value, { parentBoxFlow }) => {
-    if (parentBoxFlow === "row" || parentBoxFlow === "inline-row") {
-      if (!value || value === "0") {
-        return { flexShrink: 0 };
-      }
-      return { flexShrink: 1 };
+  shrinkX: (value) => {
+    if (!value || value === "0") {
+      return { flexShrink: 0 };
     }
-    return { maxWidth: "100%" };
+    return { flexShrink: 1 };
   },
-  shrinkY: (value, { parentBoxFlow }) => {
-    if (parentBoxFlow === "column" || parentBoxFlow === "inline-column") {
-      if (!value || value === "0") {
-        return { flexShrink: 0 };
-      }
-      return { flexShrink: 1 };
+  shrinkY: (value) => {
+    if (!value || value === "0") {
+      return { flexShrink: 0 };
     }
-    return { maxHeight: "100%" };
+    return { flexShrink: 1 };
   },
 
   scaleX: (value) => {
@@ -7624,71 +7892,6 @@ const useUITransitionContentId = value => {
  */
 
 
-// Raw URL part functionality for bypassing encoding
-const rawUrlPartSymbol = Symbol("raw_url_part");
-const rawUrlPart = (value) => {
-  return {
-    [rawUrlPartSymbol]: true,
-    value,
-  };
-};
-
-/**
- * Encode parameter values for URL usage, with special handling for raw URL parts.
- * When a parameter is wrapped with rawUrlPart(), it bypasses encoding and is
- * inserted as-is into the URL.
- */
-const encodeParamValue = (value, isWildcard = false) => {
-  if (value && value[rawUrlPartSymbol]) {
-    return value.value;
-  }
-
-  if (isWildcard) {
-    // For wildcards, only encode characters that are invalid in URL paths,
-    // but preserve slashes as they are path separators
-    return value
-      ? value.replace(/[^a-zA-Z0-9\-._~!$&'()*+,;=:@/]/g, (char) => {
-          return encodeURIComponent(char);
-        })
-      : value;
-  }
-
-  // For named parameters and search params, encode everything including slashes
-  return encodeURIComponent(value);
-};
-
-/**
- * Build query string from parameters, respecting rawUrlPart values
- */
-const buildQueryString = (params) => {
-  const searchParamPairs = [];
-
-  for (const [key, value] of Object.entries(params)) {
-    if (value !== undefined && value !== null) {
-      const encodedKey = encodeURIComponent(key);
-
-      // Handle array values - join with commas
-      if (Array.isArray(value)) {
-        if (value.length === 0) ; else {
-          const encodedValue = value
-            .map((item) => encodeURIComponent(String(item)))
-            .join(",");
-          searchParamPairs.push(`${encodedKey}=${encodedValue}`);
-        }
-      }
-      // Handle boolean values - if true, just add the key without value
-      else if (value === true || value === "") {
-        searchParamPairs.push(encodedKey);
-      } else {
-        const encodedValue = encodeParamValue(value, false); // Search params encode slashes
-        searchParamPairs.push(`${encodedKey}=${encodedValue}`);
-      }
-    }
-  }
-
-  return searchParamPairs.join("&");
-};
-
 const DEBUG$2 =
   typeof process === "object" ? process.env.DEBUG === "true" : false;
 
@@ -7708,113 +7911,57 @@ setBaseUrl(
     : window.location.origin,
 );
 
-// Function to detect signals in route patterns and connect them
-const detectSignals = (routePattern) => {
-  const signalConnections = [];
-  let updatedPattern = routePattern;
-
-  // First check for the common mistake: :${signalName} without parameter name
-  const anonymousSignalRegex = /([?:&])(\{navi_state_signal:[^}]+\})/g;
-  let anonymousMatch;
-  while ((anonymousMatch = anonymousSignalRegex.exec(routePattern)) !== null) {
-    const [fullMatch, prefix, signalString] = anonymousMatch;
-    console.warn(
-      `[detectSignals] Anonymous signal parameter detected: "${fullMatch}". ` +
-        `This pattern won't work correctly because it lacks a parameter name. ` +
-        `Consider using "${prefix}paramName=${signalString}" instead. ` +
-        `For example, if this should be a "mode" parameter, use "${prefix}mode=${signalString}".`,
-    );
-  }
-
-  // Look for signals in two formats:
-  // 1. Expected format: :paramName={navi_state_signal:id} or ?paramName={navi_state_signal:id} or &paramName={navi_state_signal:id}
-  // 2. Typoe format (missing = sign): &paramName{navi_state_signal:id}
-  const signalParamRegex = /([?:&])(\w+)(=)?(\{navi_state_signal:[^}]+\})/g;
-  let match;
-
-  while ((match = signalParamRegex.exec(routePattern)) !== null) {
-    const [fullMatch, prefix, paramName, equalSign, signalString] = match;
-
-    // Emit warning if equal sign is missing
-    if (!equalSign) {
-      console.warn(
-        `[detectSignals] Missing '=' sign in route pattern: "${prefix}${paramName}${signalString}". ` +
-          `Consider using "${prefix}${paramName}=${signalString}" for better clarity.`,
-      );
-    }
-
-    // Extract the signal ID from the format: {navi_state_signal:id}
-    const signalIdMatch = signalString.match(/\{navi_state_signal:([^}]+)\}/);
-    if (!signalIdMatch) {
-      console.warn(
-        `[detectSignals] Failed to extract signal ID from: ${signalString}`,
-      );
-      continue;
-    }
-
-    const signalId = signalIdMatch[1];
-    const signalData = globalSignalRegistry.get(signalId);
-
-    if (signalData) {
-      const { signal, options } = signalData;
-
-      let replacement;
-      if (prefix === ":") {
-        // Path parameter: :section={navi_state_signal:...} becomes :section
-        replacement = `${prefix}${paramName}`;
-      } else if (prefix === "?" || prefix === "&") {
-        // Query parameter: ?city={navi_state_signal:...} or &lon{navi_state_signal:...} becomes ?city or &lon
-        replacement = `${prefix}${paramName}`;
-      }
-      updatedPattern = updatedPattern.replace(fullMatch, replacement);
-
-      signalConnections.push({
-        paramName,
-        signal,
-        ...options,
-      });
-    } else {
-      console.warn(
-        `[detectSignals] Signal not found in registry for ID: "${signalId}"`,
-      );
-      console.warn(
-        `[detectSignals] Available signal IDs in registry:`,
-        Array.from(globalSignalRegistry.keys()),
-      );
-      console.warn(`[detectSignals] Full pattern: "${routePattern}"`);
-    }
-  }
-
-  return [updatedPattern, signalConnections];
-};
-
 /**
  * Creates a custom route pattern matcher
  */
-const createRoutePattern = (pattern) => {
-  // Detect and process signals in the pattern first
-  const [cleanPattern, connections] = detectSignals(pattern);
-  // Build parameter connection map for efficient lookups
-  const connectionMap = new Map();
-  // Create signalSet to track all signals this pattern depends on
+const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
+  // Detect and process path signals in the pattern
+  const [cleanPattern, pathConnections] = detectSignals(pattern);
+
+  // Build pathConnectionMap from path signals
+  const pathConnectionMap = new Map();
   const signalSet = new Set();
-  for (const connection of connections) {
-    connectionMap.set(connection.paramName, connection);
+  for (const connection of pathConnections) {
+    pathConnectionMap.set(connection.paramName, connection);
     signalSet.add(connection.signal);
   }
 
-  const parsedPattern = parsePattern(cleanPattern, connectionMap);
+  // Build queryConnectionMap directly from searchParams
+  const queryConnectionMap = new Map();
+  for (const [paramName, paramSignal] of Object.entries(searchParams)) {
+    const signalId = paramSignal.__signalId;
+    const registryEntry = globalSignalRegistry.get(signalId);
+    if (registryEntry) {
+      const { signal, options } = registryEntry;
+      const connection = { paramName, signal, paramType: "query", ...options };
+      queryConnectionMap.set(paramName, connection);
+      signalSet.add(signal);
+    }
+  }
+
+  // All connections (path + query) for ancestor/descendant signal resolution
+  const connections = [...pathConnections, ...queryConnectionMap.values()];
+
+  const parsedPattern = parsePattern(cleanPattern, {
+    pathConnectionMap,
+    queryConnectionMap,
+  });
 
   if (DEBUG$2) {
     console.debug(`[CustomPattern] Created pattern:`, parsedPattern);
     console.debug(`[CustomPattern] Signal connections:`, connections);
+    console.debug(`[CustomPattern] Path connections:`, pathConnectionMap.size);
+    console.debug(
+      `[CustomPattern] Query connections:`,
+      queryConnectionMap.size,
+    );
     console.debug(`[CustomPattern] SignalSet size:`, signalSet.size);
   }
 
   const applyOn = (url) => {
     const result = matchUrl(parsedPattern, url, {
       baseUrl,
-      connectionMap,
+      queryConnectionMap,
       patternObj: patternObject,
     });
 
@@ -7831,11 +7978,10 @@ const createRoutePattern = (pattern) => {
   const resolveParams = (providedParams = {}) => {
     let resolvedParams = { ...providedParams };
 
-    // Process all connections for parameter resolution
-    for (const [paramName, connection] of connectionMap) {
+    // Process path connections for parameter resolution
+    for (const [paramName, connection] of pathConnectionMap) {
       if (paramName in providedParams) {
         // Parameter was explicitly provided - always respect explicit parameters
-        // Don't check signal value - explicit parameter takes precedence
         continue;
       }
       const signalValue = connection.signal.value;
@@ -7845,9 +7991,21 @@ const createRoutePattern = (pattern) => {
       }
     }
 
-    // Add defaults for parameters that are still missing
-    // Use current dynamic defaults from signal connections
-    for (const [paramName, connection] of connectionMap) {
+    // Process query connections for parameter resolution
+    for (const [paramName, connection] of queryConnectionMap) {
+      if (paramName in providedParams) {
+        // Parameter was explicitly provided - always respect explicit parameters
+        continue;
+      }
+      const signalValue = connection.signal.value;
+      if (signalValue !== undefined) {
+        // Parameter was not provided, check signal value
+        resolvedParams[paramName] = signalValue;
+      }
+    }
+
+    // Add defaults for path parameters that are still missing
+    for (const [paramName, connection] of pathConnectionMap) {
       if (paramName in resolvedParams) {
         continue;
       }
@@ -7855,6 +8013,43 @@ const createRoutePattern = (pattern) => {
       if (currentDefault !== undefined) {
         resolvedParams[paramName] = currentDefault;
       }
+    }
+
+    // Add defaults for query parameters that are still missing
+    for (const [paramName, connection] of queryConnectionMap) {
+      if (paramName in resolvedParams) {
+        continue;
+      }
+      const currentDefault = connection.getDefaultValue();
+      if (currentDefault !== undefined) {
+        resolvedParams[paramName] = currentDefault;
+      }
+    }
+
+    // Inherit search parameters from ancestry chain
+    // Search params are global and should be inherited from any matching ancestor
+    // regardless of path segment relationships
+    let ancestorPatternObj = patternObject.parent;
+    while (ancestorPatternObj) {
+      for (const [
+        paramName,
+        ancestorConnection,
+      ] of ancestorPatternObj.queryConnectionMap) {
+        // Skip if this parameter is already resolved
+        if (paramName in resolvedParams) {
+          continue;
+        }
+
+        const ancestorSignalValue = ancestorConnection.signal.value;
+        if (
+          ancestorSignalValue !== undefined &&
+          ancestorSignalValue !== ancestorConnection.getDefaultValue()
+        ) {
+          // Inherit non-default values from ancestors
+          resolvedParams[paramName] = ancestorSignalValue;
+        }
+      }
+      ancestorPatternObj = ancestorPatternObj.parent;
     }
 
     // Include active non-default parameters from child routes for URL optimization
@@ -7878,17 +8073,48 @@ const createRoutePattern = (pattern) => {
               childWouldMatch = false;
               break;
             }
+          } else if (!parentSegment) {
+            // Child has literal segments beyond parent's segments
+            // Check if this route can be reached through intermediate routes in the hierarchy
+            let canReachThroughIntermediates = false;
+
+            // Look for intermediate routes that could bridge the gap
+            const intermediateRoutes = patternObject.children;
+            for (const intermediateRoute of intermediateRoutes) {
+              // Check if intermediate route has a parameter at this position
+              const intermediateSegment = intermediateRoute.pattern.segments[i];
+              if (intermediateSegment && intermediateSegment.type === "param") {
+                // Check if the child's literal value could match this parameter
+                // This means there's a potential path: parent → intermediate → child
+                canReachThroughIntermediates = true;
+                break;
+              }
+            }
+
+            if (!canReachThroughIntermediates) {
+              // No viable path through intermediates - truly unreachable
+              childWouldMatch = false;
+              break;
+            }
+          } else if (
+            parentSegment.type === "literal" &&
+            parentSegment.value !== childSegment.value
+          ) {
+            // Both have literals but they don't match
+            childWouldMatch = false;
+            break;
           }
-          // If parent also has literal at this position, they should already match from route hierarchy
+          // If parent also has matching literal at this position, continue
         }
-        // Parameter segments are always compatible
+        // Parameter segments are always compatible if parent has corresponding segment
       }
 
       if (childWouldMatch) {
+        // Only check child query parameters - path parameters should not be inherited as search params
         for (const [
           childParam,
           childConnection,
-        ] of childPatternObj.connectionMap) {
+        ] of childPatternObj.queryConnectionMap) {
           if (childParam in resolvedParams) {
             continue;
           }
@@ -7923,7 +8149,27 @@ const createRoutePattern = (pattern) => {
   const removeDefaultValues = (params) => {
     const filtered = { ...params };
 
-    for (const [paramName, connection] of connectionMap) {
+    // Process path parameters
+    for (const [paramName, connection] of pathConnectionMap) {
+      if (paramName in filtered) {
+        // Parameter is explicitly provided - check if we should remove it
+        const paramValue = filtered[paramName];
+
+        if (!connection.isCustomValue(paramValue)) {
+          delete filtered[paramName];
+        }
+      } else {
+        // Parameter not provided but signal has a value
+        const signalValue = connection.signal.value;
+        if (connection.isCustomValue(signalValue)) {
+          // Only include custom values
+          filtered[paramName] = signalValue;
+        }
+      }
+    }
+
+    // Process query parameters
+    for (const [paramName, connection] of queryConnectionMap) {
       if (paramName in filtered) {
         // Parameter is explicitly provided - check if we should remove it
         const paramValue = filtered[paramName];
@@ -8042,7 +8288,9 @@ const createRoutePattern = (pattern) => {
 
           // If not in params, check signals
           if (parentParamValue === undefined) {
-            const parentConnection = connectionMap.get(paramName);
+            const parentConnection =
+              pathConnectionMap.get(paramName) ||
+              queryConnectionMap.get(paramName);
             if (parentConnection) {
               parentParamValue = parentConnection.signal.value;
             }
@@ -8153,7 +8401,7 @@ const createRoutePattern = (pattern) => {
 
     // ROBUST FIX: For path parameters, check semantic compatibility by verifying
     // that parent parameter values can actually produce the child route structure
-    const isParentPathParam = connectionMap.has(paramName);
+    const isParentPathParam = pathConnectionMap.has(paramName);
     if (isParentPathParam) {
       // Check if parent parameter value matches any child literal where it should
       // The key insight: if parent has a specific parameter value, child route must
@@ -8171,9 +8419,7 @@ const createRoutePattern = (pattern) => {
     }
 
     // Check if this is a query parameter in the parent pattern
-    const isParentQueryParam = parsedPattern.queryParams.some(
-      (qp) => qp.name === paramName,
-    );
+    const isParentQueryParam = queryConnectionMap.has(paramName);
     if (isParentQueryParam) {
       // Query parameters are always compatible and can be inherited by child routes
       return {
@@ -8187,7 +8433,7 @@ const createRoutePattern = (pattern) => {
     // Check for generic parameter-literal conflicts (only for path parameters)
     if (!matchesChildLiteral) {
       // Check if this is a path parameter from parent pattern
-      const isParentPathParam = connectionMap.has(paramName);
+      const isParentPathParam = pathConnectionMap.has(paramName);
       if (isParentPathParam) {
         // Parameter value (from user or signal) doesn't match this child's literals
         // Check if child has any literal segments that would conflict with this parameter
@@ -8233,7 +8479,8 @@ const createRoutePattern = (pattern) => {
 
         // Check if sibling route uses this parameter and get the connection
         const siblingConnection =
-          siblingPatternObj.connectionMap.get(paramName);
+          siblingPatternObj.pathConnectionMap.get(paramName) ||
+          siblingPatternObj.queryConnectionMap.get(paramName);
         if (!siblingConnection) {
           continue;
         }
@@ -8279,7 +8526,8 @@ const createRoutePattern = (pattern) => {
         // This literal segment replaces a parameter in the parent
         const paramName = parentSegment.name;
         const explicitValue = params[paramName];
-        const connection = connectionMap.get(paramName);
+        const connection =
+          pathConnectionMap.get(paramName) || queryConnectionMap.get(paramName);
         const signalValue = connection ? connection.signal.value : undefined;
 
         // Check if the parameter has the required value
@@ -8316,7 +8564,10 @@ const createRoutePattern = (pattern) => {
     let hasActiveParams = false;
     const childParams = { ...compatibility.childParams };
 
-    for (const [paramName, connection] of childPatternObj.connectionMap) {
+    for (const [paramName, connection] of new Map([
+      ...childPatternObj.pathConnectionMap,
+      ...childPatternObj.queryConnectionMap,
+    ])) {
       // Check if parameter was explicitly provided by user
       const hasExplicitParam = paramName in params;
       const explicitValue = params[paramName];
@@ -8362,14 +8613,17 @@ const createRoutePattern = (pattern) => {
         if (value === undefined) return false;
 
         // Check if this parameter has a default value in child's connections
-        const childConnection = childPatternObj.connectionMap.get(paramName);
+        const childConnection =
+          childPatternObj.pathConnectionMap.get(paramName) ||
+          childPatternObj.queryConnectionMap.get(paramName);
         if (childConnection) {
           const childDefault = childConnection.getDefaultValue();
           return value !== childDefault;
         }
 
         // Check if this parameter has a default value in parent's connections (current pattern)
-        const parentConnection = connectionMap.get(paramName);
+        const parentConnection =
+          pathConnectionMap.get(paramName) || queryConnectionMap.get(paramName);
         if (parentConnection) {
           const parentDefault = parentConnection.getDefaultValue();
           return value !== parentDefault;
@@ -8427,7 +8681,10 @@ const createRoutePattern = (pattern) => {
 
         // Check if parameters that determine child selection are non-default
         // OR if any descendant parameters indicate explicit navigation
-        for (const [paramName, connection] of connectionMap) {
+        for (const [paramName, connection] of new Map([
+          ...pathConnectionMap,
+          ...queryConnectionMap,
+        ])) {
           const currentDefault = connection.getDefaultValue(); // Use current dynamic default
           const resolvedValue = resolvedParams[paramName];
           const userProvidedParam = paramName in params;
@@ -8478,9 +8735,12 @@ const createRoutePattern = (pattern) => {
         }
 
         // When structural parameters (those that determine child selection) are defaults,
-        // prefer parent route regardless of whether child has other non-default parameters
-        if (childSpecificParamsAreDefaults) {
-          for (const [paramName, connection] of connectionMap) {
+        // prefer parent route ONLY if child doesn't have any non-default parameters
+        if (childSpecificParamsAreDefaults && !hasActiveParams) {
+          for (const [paramName, connection] of new Map([
+            ...pathConnectionMap,
+            ...queryConnectionMap,
+          ])) {
             const currentDefault = connection.getDefaultValue(); // Use current dynamic default
             const userProvidedParam = paramName in params;
 
@@ -8491,7 +8751,7 @@ const createRoutePattern = (pattern) => {
               shouldUse = false;
               if (DEBUG$2) {
                 console.debug(
-                  `[${pattern}] Preferring parent over child - child includes default literal '${currentDefault}' for param '${paramName}' (structural parameter is default)`,
+                  `[${pattern}] Preferring parent over child - child includes default literal '${currentDefault}' for param '${paramName}' (structural parameter is default and no active params)`,
                 );
               }
               break;
@@ -8499,7 +8759,7 @@ const createRoutePattern = (pattern) => {
           }
         } else if (DEBUG$2) {
           console.debug(
-            `[${pattern}] Using child route - parameters that determine child selection are non-default`,
+            `[${pattern}] Using child route - parameters that determine child selection are non-default or child has active params`,
           );
         }
       }
@@ -8524,7 +8784,10 @@ const createRoutePattern = (pattern) => {
   ) => {
     // Start with child signal values
     const baseParams = {};
-    for (const [paramName, connection] of childPatternObj.connectionMap) {
+    for (const [paramName, connection] of new Map([
+      ...childPatternObj.pathConnectionMap,
+      ...childPatternObj.queryConnectionMap,
+    ])) {
       // Check if parameter was explicitly provided by user
       const hasExplicitParam = paramName in params;
       const explicitValue = params[paramName];
@@ -8560,7 +8823,10 @@ const createRoutePattern = (pattern) => {
         const { paramName } = connection;
 
         // Skip if child route already handles this parameter
-        if (childPatternObj.connectionMap.has(paramName)) {
+        if (
+          childPatternObj.pathConnectionMap.has(paramName) ||
+          childPatternObj.queryConnectionMap.has(paramName)
+        ) {
           continue; // Child route handles this parameter directly
         }
 
@@ -8603,7 +8869,10 @@ const createRoutePattern = (pattern) => {
       }
 
       // Skip if child route already handles this parameter
-      if (childPatternObj.connectionMap.has(paramName)) {
+      if (
+        childPatternObj.pathConnectionMap.has(paramName) ||
+        childPatternObj.queryConnectionMap.has(paramName)
+      ) {
         continue; // Child route handles this parameter directly
       }
 
@@ -8617,7 +8886,8 @@ const createRoutePattern = (pattern) => {
       }
 
       // Check if parent parameter is at default value
-      const parentConnection = connectionMap.get(paramName);
+      const parentConnection =
+        pathConnectionMap.get(paramName) || queryConnectionMap.get(paramName);
       const parentDefault = parentConnection
         ? parentConnection.getDefaultValue()
         : undefined;
@@ -8631,7 +8901,9 @@ const createRoutePattern = (pattern) => {
 
     // Apply user params with filtering logic
     for (const [paramName, userValue] of Object.entries(params)) {
-      const childConnection = childPatternObj.connectionMap.get(paramName);
+      const childConnection =
+        childPatternObj.pathConnectionMap.get(paramName) ||
+        childPatternObj.queryConnectionMap.get(paramName);
 
       if (childConnection) {
         // Only include if it's a custom value (not default)
@@ -8684,28 +8956,130 @@ const createRoutePattern = (pattern) => {
     childUrl,
     baseParams,
   ) => {
-    if (Object.keys(baseParams).length > 0) {
-      return null; // No optimization if parameters exist
-    }
-
     const childParent = childPatternObj.parent;
 
     if (childParent && childParent.originalPattern === pattern) {
-      // Check if child has any non-default signal values
-      const hasNonDefaultChildParams = childPatternObj.connections.some(
-        (childConnection) => {
-          return childConnection.isCustomValue(childConnection.signal.value);
-        },
-      );
+      // Check if child path segments correspond to parent's default path parameters
+      // If so, we can optimize to use parent's path but preserve child's query parameters
 
-      if (hasNonDefaultChildParams) {
-        // Child has non-default signal values - use child URL instead of parent
+      let canOptimizeToParent = true;
+      const parentPathDefaults = {};
+
+      // Check each segment in child vs parent to see if child literals match parent defaults
+      for (
+        let i = 0;
+        i < childPatternObj.pattern.segments.length &&
+        i < parsedPattern.segments.length;
+        i++
+      ) {
+        const childSegment = childPatternObj.pattern.segments[i];
+        const parentSegment = parsedPattern.segments[i];
+
+        if (
+          childSegment.type === "literal" &&
+          parentSegment &&
+          parentSegment.type === "param"
+        ) {
+          // Child has literal where parent has parameter - check if literal matches default
+          const paramName = parentSegment.name;
+          const connection =
+            pathConnectionMap.get(paramName) ||
+            queryConnectionMap.get(paramName);
+
+          if (connection) {
+            const defaultValue = connection.getDefaultValue();
+            if (childSegment.value === defaultValue) {
+              // Child literal matches parent default - this is optimizable
+              parentPathDefaults[paramName] = defaultValue;
+            } else {
+              // Child literal doesn't match parent default - can't optimize
+              canOptimizeToParent = false;
+              break;
+            }
+          } else {
+            canOptimizeToParent = false;
+            break;
+          }
+        }
+      }
+
+      if (canOptimizeToParent && Object.keys(parentPathDefaults).length > 0) {
         if (DEBUG$2) {
           console.debug(
-            `[${pattern}] Using child route ${childPatternObj.originalPattern} because it has non-default signal values`,
+            `[${pattern}] checkChildParentOptimization: checking child ${childPatternObj.originalPattern}`,
+            { parentPathDefaults, canOptimizeToParent },
           );
         }
-        return childUrl;
+
+        // CRITICAL: Check if child route has non-default path parameters
+        // If it does, don't optimize away the child route structure
+        for (const [
+          paramName,
+          connection,
+        ] of childPatternObj.pathConnectionMap) {
+          const signalValue = connection.signal.value;
+          if (
+            signalValue !== undefined &&
+            connection.isCustomValue(signalValue)
+          ) {
+            // Child has non-default path parameters - don't optimize away the structure
+            if (DEBUG$2) {
+              console.debug(
+                `[${pattern}] Not optimizing child route because it has non-default path parameter '${paramName}=${signalValue}'`,
+              );
+            }
+            return null;
+          }
+        }
+
+        // Check if child has non-default query parameters that should be preserved
+        const nonDefaultQueryParams = {};
+
+        for (const [
+          paramName,
+          connection,
+        ] of childPatternObj.queryConnectionMap) {
+          const signalValue = connection.signal.value;
+          if (
+            signalValue !== undefined &&
+            connection.isCustomValue(signalValue)
+          ) {
+            nonDefaultQueryParams[paramName] = signalValue;
+          }
+        }
+
+        // Also include any query parameters from baseParams
+        for (const [paramName, paramValue] of Object.entries(baseParams)) {
+          // Check if this parameter is not a path parameter that we're optimizing away
+          if (!(paramName in parentPathDefaults)) {
+            nonDefaultQueryParams[paramName] = paramValue;
+          }
+        }
+
+        // Build optimized URL using parent path but child's query parameters
+        // Always optimize when we can, even if there are no query parameters
+        const parentParams = { ...nonDefaultQueryParams };
+
+        // Remove default path parameters to get clean parent URL
+        for (const defaultParam of Object.keys(parentPathDefaults)) {
+          delete parentParams[defaultParam];
+        }
+
+        const optimizedUrl = buildUrlFromPattern(
+          parsedPattern,
+          parentParams,
+          pattern,
+          patternObject,
+        );
+
+        if (DEBUG$2) {
+          console.debug(
+            `[${pattern}] Optimizing child route ${childPatternObj.originalPattern} to parent with query params:`,
+            { parentPathDefaults, nonDefaultQueryParams, optimizedUrl },
+          );
+        }
+
+        return optimizedUrl;
       }
     }
 
@@ -8882,6 +9256,57 @@ const createRoutePattern = (pattern) => {
   };
 
   /**
+   * Helper: Check if child route can optimize to parent based on path segment matching
+   */
+  const canChildOptimizeToParentPath = (
+    childPattern,
+    parentPattern,
+    parentConnections,
+  ) => {
+    if (!childPattern || !parentPattern) {
+      return false;
+    }
+
+    // Check each segment in child vs parent to see if child literals match parent defaults
+    let hasMatchingPathOptimization = false;
+    for (
+      let i = 0;
+      i < childPattern.segments.length && i < parentPattern.segments.length;
+      i++
+    ) {
+      const childSegment = childPattern.segments[i];
+      const parentSegment = parentPattern.segments[i];
+
+      if (
+        childSegment.type === "literal" &&
+        parentSegment &&
+        parentSegment.type === "param"
+      ) {
+        // Child has literal where parent has parameter - check if literal matches default
+        const paramName = parentSegment.name;
+        const connection = parentConnections.find(
+          (conn) => conn.paramName === paramName,
+        );
+
+        if (connection) {
+          const defaultValue = connection.getDefaultValue();
+          if (childSegment.value === defaultValue) {
+            // Child literal matches parent default - this enables path-based optimization
+            hasMatchingPathOptimization = true;
+          } else {
+            // Child literal doesn't match parent default - can't optimize
+            return false;
+          }
+        } else {
+          return false;
+        }
+      }
+    }
+
+    return hasMatchingPathOptimization;
+  };
+
+  /**
    * Helper: Try to use an ancestor route (only immediate parent for parameter optimization)
    */
   const tryUseAncestor = (ancestorPatternObj, resolvedParams) => {
@@ -8899,29 +9324,76 @@ const createRoutePattern = (pattern) => {
         );
       }
 
-      // For immediate parent optimization with parameters, only allow if:
-      // 1. All path/route parameters have default values, OR
-      // 2. The source route has only query parameters that are non-default
-      const hasNonDefaultPathParams = connections.some((connection) => {
-        const resolvedValue = resolvedParams[connection.paramName];
+      // For immediate parent optimization, check if we can optimize based on path segments
+      // Even if query parameters are non-default, we should still optimize if the child's
+      // literal path segments correspond to the parent's default path parameter values
+      const canOptimizeBasedOnPath = canChildOptimizeToParentPath(
+        parsedPattern,
+        ancestorPatternObj.pattern,
+        ancestorPatternObj.connections,
+      );
 
-        // Check if this is a query parameter (not in the pattern path)
-        const isQueryParam = parsedPattern.queryParams.some(
-          (qp) => qp.name === connection.paramName,
-        );
-        // Allow non-default query parameters, but not path parameters
-        return !isQueryParam && connection.isCustomValue(resolvedValue);
-      });
+      if (canOptimizeBasedOnPath) {
+        // Path-based optimization is possible, but ALSO check if current PATH parameters are defaults
+        // Query parameters should not block path-based optimization, only path parameters should
+        const hasNonDefaultPathParameters = connections.some((connection) => {
+          const resolvedValue = resolvedParams[connection.paramName];
 
-      if (hasNonDefaultPathParams) {
+          // Only check path parameters, not query parameters
+          const isPathParameter = parsedPattern.segments.some(
+            (segment) =>
+              segment.type === "param" && segment.name === connection.paramName,
+          );
+
+          return isPathParameter && connection.isCustomValue(resolvedValue);
+        });
+
+        if (!hasNonDefaultPathParameters) {
+          // Child has no non-default path parameters - proceed with optimization
+          // Query parameters can be moved to the parent route
+          const result = tryDirectOptimization(
+            parsedPattern,
+            connections,
+            ancestorPatternObj,
+            resolvedParams,
+          );
+          if (DEBUG$2) {
+            console.debug(
+              `[${pattern}] tryUseAncestor: Path-based optimization result:`,
+              result,
+            );
+          }
+          return result;
+        }
+
         if (DEBUG$2) {
           console.debug(
-            `[${pattern}] tryUseAncestor: Has non-default path parameters, skipping`,
+            `[${pattern}] tryUseAncestor: Path-based optimization blocked - child has non-default path parameters`,
+          );
+        }
+      }
+
+      // For other cases, check if current route's OWN parameters have non-default values
+      // Only check parameters that belong to this route, not inherited ones
+      const hasNonDefaultOwnParameters = connections.some((connection) => {
+        // Skip inherited connections - they shouldn't block optimization
+        if (connection.inherited) {
+          return false;
+        }
+        const resolvedValue = resolvedParams[connection.paramName];
+        return connection.isCustomValue(resolvedValue);
+      });
+
+      if (hasNonDefaultOwnParameters) {
+        if (DEBUG$2) {
+          console.debug(
+            `[${pattern}] tryUseAncestor: Has non-default own parameters, skipping immediate parent optimization`,
           );
         }
         return null;
       }
 
+      // All own parameters have default values - proceed with optimization
       const result = tryDirectOptimization(
         parsedPattern,
         connections,
@@ -8937,16 +9409,20 @@ const createRoutePattern = (pattern) => {
       return result;
     }
 
-    // For non-immediate parents, only allow optimization if all resolved parameters have default values
-    const hasNonDefaultParameters = connections.some((connection) => {
+    // For non-immediate parents, only allow optimization if all own parameters have default values
+    const hasNonDefaultOwnParameters = connections.some((connection) => {
+      // Skip inherited connections - they shouldn't block optimization
+      if (connection.inherited) {
+        return false;
+      }
       const resolvedValue = resolvedParams[connection.paramName];
       return connection.isCustomValue(resolvedValue);
     });
 
-    if (hasNonDefaultParameters) {
+    if (hasNonDefaultOwnParameters) {
       if (DEBUG$2) {
         console.debug(
-          `[${pattern}] tryUseAncestor: Non-immediate parent with non-default parameters, skipping`,
+          `[${pattern}] tryUseAncestor: Non-immediate parent with non-default own parameters, skipping`,
         );
       }
       return null;
@@ -8966,24 +9442,11 @@ const createRoutePattern = (pattern) => {
       return null;
     }
 
-    // Pure literal route - only optimize to pure literal ancestors (not parametric ones)
-    const ancestorHasParameters =
-      ancestorPatternObj.connections.length > 0 ||
-      ancestorPatternObj.pattern.segments.some((seg) => seg.type === "param");
-
-    if (ancestorHasParameters) {
-      if (DEBUG$2) {
-        console.debug(
-          `[${pattern}] tryUseAncestor: Literal route cannot optimize to parametric ancestor ${ancestorPatternObj.originalPattern}`,
-        );
-      }
-      return null;
-    }
-
-    // Both are pure literal routes - can optimize
+    // Pure literal route optimization
+    // Allow literal routes to optimize to parametric ancestors if literal segments match parameter defaults
     if (DEBUG$2) {
       console.debug(
-        `[${pattern}] tryUseAncestor: Trying literal-to-literal optimization to ${ancestorPatternObj.originalPattern}`,
+        `[${pattern}] tryUseAncestor: Trying optimization to ${ancestorPatternObj.originalPattern}`,
       );
     }
 
@@ -9165,7 +9628,9 @@ const createRoutePattern = (pattern) => {
       // Include parameters that target pattern specifically needs
       if (targetQueryParamNames.has(paramName)) {
         // Only include if the value is not the default value
-        const connection = targetAncestor.connectionMap.get(paramName);
+        const connection =
+          targetAncestor.pathConnectionMap.get(paramName) ||
+          targetAncestor.queryConnectionMap.get(paramName);
         if (connection && connection.getDefaultValue() !== value) {
           ancestorParams[paramName] = value;
           if (DEBUG$2) {
@@ -9177,11 +9642,16 @@ const createRoutePattern = (pattern) => {
       }
       // Include source query parameters (these should be inherited during ancestor optimization)
       else if (sourceQueryParamNames.has(paramName)) {
-        // Only include if the value is not the default value
+        // Only include source parameters if they're not default values
+        // Default values should still be omitted from URLs to keep them clean
         const connection = sourceConnections.find(
           (conn) => conn.paramName === paramName,
         );
-        if (connection && connection.getDefaultValue() !== value) {
+        if (
+          connection &&
+          value !== undefined &&
+          connection.getDefaultValue() !== value
+        ) {
           ancestorParams[paramName] = value;
           if (DEBUG$2) {
             console.debug(
@@ -9205,15 +9675,31 @@ const createRoutePattern = (pattern) => {
     }
 
     // Also check target ancestor's own signal values for parameters not in resolvedParams
+    if (DEBUG$2) {
+      console.debug(
+        `[${pattern}] tryDirectOptimization: Target ancestor has ${targetAncestor.connections.length} connections`,
+      );
+      for (const conn of targetAncestor.connections) {
+        console.debug(
+          `[${pattern}] tryDirectOptimization: Target connection ${conn.paramName}: value=${conn.signal.value}, isCustom=${conn.isCustomValue(conn.signal.value)}`,
+        );
+      }
+    }
+
     for (const connection of targetAncestor.connections) {
       const { paramName } = connection;
       if (paramName in ancestorParams) {
+        if (DEBUG$2) {
+          console.debug(
+            `[${pattern}] tryDirectOptimization: Skipping ${paramName} - already in ancestorParams`,
+          );
+        }
         continue;
       }
 
       // Only include if not already processed and has custom value (not default)
       const signalValue = connection.signal.value;
-      if (signalValue !== undefined && connection.isCustomValue(signalValue)) {
+      if (signalValue !== undefined) {
         // Don't include path parameters that correspond to literal segments we're optimizing away
         const targetParam = targetParams.find((p) => p.name === paramName);
         const isPathParam = targetParam !== undefined; // Any param in segments is a path param
@@ -9227,12 +9713,23 @@ const createRoutePattern = (pattern) => {
           continue;
         }
 
-        ancestorParams[paramName] = signalValue;
-        if (DEBUG$2) {
+        // For query parameters, only include custom values (not defaults)
+        if (connection.isCustomValue(signalValue)) {
+          ancestorParams[paramName] = signalValue;
+          if (DEBUG$2) {
+            console.debug(
+              `[${pattern}] tryDirectOptimization: Added target signal param ${paramName}=${signalValue}`,
+            );
+          }
+        } else if (DEBUG$2) {
           console.debug(
-            `[${pattern}] tryDirectOptimization: Added target signal param ${paramName}=${signalValue}`,
+            `[${pattern}] tryDirectOptimization: Skipping default value ${paramName}=${signalValue}`,
           );
         }
+      } else if (DEBUG$2) {
+        console.debug(
+          `[${pattern}] tryDirectOptimization: Skipping ${paramName}=${signalValue} - undefined value`,
+        );
       }
     }
 
@@ -9390,7 +9887,8 @@ const createRoutePattern = (pattern) => {
     urlPatternRaw: pattern,
     cleanPattern,
     connections,
-    connectionMap,
+    pathConnectionMap, // Separate map for path parameters
+    queryConnectionMap, // Separate map for query parameters
     parsedPattern,
     signalSet,
     children: [],
@@ -9406,6 +9904,127 @@ const createRoutePattern = (pattern) => {
   };
 
   return patternObject;
+};
+
+// Raw URL part functionality for bypassing encoding
+const rawUrlPartSymbol = Symbol("raw_url_part");
+const rawUrlPart = (value) => {
+  return {
+    [rawUrlPartSymbol]: true,
+    value,
+  };
+};
+
+/**
+ * Encode parameter values for URL usage, with special handling for raw URL parts.
+ * When a parameter is wrapped with rawUrlPart(), it bypasses encoding and is
+ * inserted as-is into the URL.
+ */
+const encodeParamValue = (value, isWildcard = false) => {
+  if (value && value[rawUrlPartSymbol]) {
+    return value.value;
+  }
+
+  if (isWildcard) {
+    // For wildcards, only encode characters that are invalid in URL paths,
+    // but preserve slashes as they are path separators
+    return value
+      ? value.replace(/[^a-zA-Z0-9\-._~!$&'()*+,;=:@/]/g, (char) => {
+          return encodeURIComponent(char);
+        })
+      : value;
+  }
+
+  // For named parameters and search params, encode everything including slashes
+  return encodeURIComponent(value);
+};
+
+/**
+ * Build query string from parameters, respecting rawUrlPart values
+ */
+const buildQueryString = (params) => {
+  const searchParamPairs = [];
+
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined && value !== null) {
+      const encodedKey = encodeURIComponent(key);
+
+      // Handle array values - join with commas
+      if (Array.isArray(value)) {
+        if (value.length === 0) ; else {
+          const encodedValue = value
+            .map((item) => encodeURIComponent(String(item)))
+            .join(",");
+          searchParamPairs.push(`${encodedKey}=${encodedValue}`);
+        }
+      }
+      // Handle boolean values - if true, just add the key without value
+      else if (value === true || value === "") {
+        searchParamPairs.push(encodedKey);
+      } else {
+        const encodedValue = encodeParamValue(value, false); // Search params encode slashes
+        searchParamPairs.push(`${encodedKey}=${encodedValue}`);
+      }
+    }
+  }
+
+  return searchParamPairs.join("&");
+};
+
+// Function to detect signals in route patterns and connect them
+const detectSignals = (routePattern) => {
+  const signalConnections = [];
+  let updatedPattern = routePattern;
+
+  // Look for path signals: :paramName={navi_state_signal:id}
+  const signalParamRegex = /(:)(\w+)(=)?(\{navi_state_signal:[^}]+\})/g;
+  let match;
+
+  while ((match = signalParamRegex.exec(routePattern)) !== null) {
+    const [fullMatch, prefix, paramName, equalSign, signalString] = match;
+
+    // Emit warning if equal sign is missing
+    if (!equalSign) {
+      console.warn(
+        `[detectSignals] Missing '=' sign in route pattern: "${prefix}${paramName}${signalString}". ` +
+          `Consider using "${prefix}${paramName}=${signalString}" for better clarity.`,
+      );
+    }
+
+    // Extract the signal ID from the format: {navi_state_signal:id}
+    const signalIdMatch = signalString.match(/\{navi_state_signal:([^}]+)\}/);
+    if (!signalIdMatch) {
+      console.warn(
+        `[detectSignals] Failed to extract signal ID from: ${signalString}`,
+      );
+      continue;
+    }
+
+    const signalId = signalIdMatch[1];
+    const signalData = globalSignalRegistry.get(signalId);
+
+    if (signalData) {
+      const { signal, options } = signalData;
+      updatedPattern = updatedPattern.replace(fullMatch, `:${paramName}`);
+      signalConnections.push({
+        paramName,
+        signal,
+        paramType: "path",
+        ...options,
+      });
+    } else {
+      console.warn(
+        `[detectSignals] Signal not found in registry for ID: "${signalId}"`,
+      );
+      console.warn(
+        `[detectSignals] Available signal IDs in registry:`,
+        Array.from(globalSignalRegistry.keys()),
+      );
+      console.warn(`[detectSignals] Full pattern: "${routePattern}"`);
+    }
+  }
+
+  return [updatedPattern, signalConnections];
 };
 
 /**
@@ -9460,7 +10079,17 @@ const canParameterReachChildRoute = (
 /**
  * Parse a route pattern string into structured segments
  */
-const parsePattern = (pattern, connectionMap) => {
+const parsePattern = (pattern, { pathConnectionMap, queryConnectionMap }) => {
+  // Build queryParams from queryConnectionMap
+  const queryParams = [];
+  for (const [paramName, connection] of queryConnectionMap) {
+    queryParams.push({
+      type: "query_param",
+      name: paramName,
+      hasDefaultValue: connection.getDefaultValue() !== undefined,
+    });
+  }
+
   // Handle root route
   if (pattern === "/") {
     return {
@@ -9468,42 +10097,12 @@ const parsePattern = (pattern, connectionMap) => {
       segments: [],
       trailingSlash: true,
       wildcard: false,
-      queryParams: [],
+      queryParams,
     };
   }
 
-  // Separate path and query portions
-  const [pathPortion, queryPortion] = pattern.split("?");
-
-  // Parse query parameters if present
-  const queryParams = [];
-  if (queryPortion) {
-    // Split query parameters by & and parse each one
-    const querySegments = queryPortion.split("&");
-    for (const querySegment of querySegments) {
-      if (querySegment.includes("=")) {
-        // Parameter with potential value: tab=value or just tab
-        const [paramName, paramValue] = querySegment.split("=", 2);
-        queryParams.push({
-          type: "query_param",
-          name: paramName,
-          hasDefaultValue: paramValue === undefined, // No value means it uses signal/default
-        });
-      } else {
-        // Parameter without value: tab
-        queryParams.push({
-          type: "query_param",
-          name: querySegment,
-          hasDefaultValue: true,
-        });
-      }
-    }
-  }
-
   // Remove leading slash for processing the path portion
-  let cleanPattern = pathPortion.startsWith("/")
-    ? pathPortion.slice(1)
-    : pathPortion;
+  let cleanPattern = pattern.startsWith("/") ? pattern.slice(1) : pattern;
 
   // Check for wildcard first
   const wildcard = cleanPattern.endsWith("*");
@@ -9516,7 +10115,7 @@ const parsePattern = (pattern, connectionMap) => {
   }
 
   // Check for trailing slash (after wildcard check)
-  const trailingSlash = !wildcard && pathPortion.endsWith("/");
+  const trailingSlash = !wildcard && pattern.endsWith("/");
   if (trailingSlash) {
     cleanPattern = cleanPattern.slice(0, -1); // Remove trailing /
   }
@@ -9534,7 +10133,8 @@ const parsePattern = (pattern, connectionMap) => {
       // 1. Explicitly marked with ?
       // 2. Has a default value
       // 3. Connected signal has undefined value and no explicit default (allows /map to match /map/:panel)
-      const connection = connectionMap.get(paramName);
+      const connection =
+        pathConnectionMap.get(paramName) || queryConnectionMap.get(paramName);
       const hasDefault =
         connection && connection.getDefaultValue() !== undefined;
       let isOptional = seg.endsWith("?") || hasDefault;
@@ -9623,12 +10223,61 @@ const checkIfLiteralCanBeOptionalWithPatternObj = (
 };
 
 /**
+ * Helper function to try extracting parameters from child routes for remaining URL segments
+ */
+const tryExtractChildParameters = (
+  childPattern,
+  remainingSegments,
+  existingParams,
+) => {
+  const childParsedPattern = childPattern.pattern;
+
+  // For child patterns, we need to check if they can provide additional parameters
+  // by matching segments that come after what the parent matched
+
+  // The child pattern might have literals that were already matched by the parent
+  // We need to find where in the child pattern we should start matching the remaining segments
+  let remainingIndex = 0;
+  const childParams = {};
+
+  // Simple approach: look for parameter segments in the child pattern that could
+  // match our remaining segments, but skip literals that were likely matched by parent
+  for (let i = 0; i < childParsedPattern.segments.length; i++) {
+    const segment = childParsedPattern.segments[i];
+
+    if (segment.type === "param" && remainingIndex < remainingSegments.length) {
+      // Check if this parameter segment could match a remaining URL segment
+      // We need to verify that this parameter isn't already captured by parent
+      if (!(segment.name in existingParams)) {
+        const urlSegment = remainingSegments[remainingIndex];
+        childParams[segment.name] = decodeURIComponent(urlSegment);
+        remainingIndex++;
+      }
+    } else if (
+      segment.type === "literal" &&
+      remainingIndex < remainingSegments.length
+    ) {
+      // Check if this literal matches remaining segments
+      const urlSegment = remainingSegments[remainingIndex];
+      if (urlSegment === segment.value) {
+        remainingIndex++;
+      }
+      // Note: we don't return null if literal doesn't match, because it might be
+      // a literal that was already consumed by the parent pattern
+    }
+  }
+
+  // Return extracted parameters if we found any
+  return Object.keys(childParams).length > 0 ? childParams : null;
+};
+
+/**
  * Match a URL against a parsed pattern
  */
 const matchUrl = (
   parsedPattern,
   url,
-  { baseUrl, connectionMap, patternObj = null },
+  { baseUrl, queryConnectionMap, patternObj = null },
 ) => {
   // Parse the URL
   const urlObj = new URL(url, baseUrl);
@@ -9649,17 +10298,23 @@ const matchUrl = (
 
   // Handle root route - only matches empty path or just "/"
   // OR when URL exactly matches baseUrl (treating baseUrl as root)
+  // OR any sub-path when the route has a trailing slash (prefix matching)
   if (parsedPattern.segments.length === 0) {
     if (pathname === "/" || pathname === "") {
-      return extractSearchParams(urlObj, connectionMap);
+      return extractSearchParams(urlObj, queryConnectionMap);
     }
 
     // Special case: if URL exactly matches baseUrl, treat as root route
     if (baseUrl) {
       const baseUrlObj = new URL(baseUrl);
       if (originalPathname === baseUrlObj.pathname) {
-        return extractSearchParams(urlObj, connectionMap);
+        return extractSearchParams(urlObj, queryConnectionMap);
       }
+    }
+
+    // Root route with trailing slash matches all sub-paths (prefix matching, like other trailing-slash routes)
+    if (parsedPattern.trailingSlash) {
+      return extractSearchParams(urlObj, queryConnectionMap);
     }
 
     return null;
@@ -9735,20 +10390,39 @@ const matchUrl = (
   // Check for remaining URL segments
   // Patterns with trailing slashes can match additional URL segments (like wildcards)
   // Patterns without trailing slashes should match exactly (unless they're wildcards)
-  // BUT: if pattern has children, it can also match additional segments (hierarchical matching)
-  const hasChildren = patternObj && patternObj.children.length > 0;
   if (
     !parsedPattern.wildcard &&
     !parsedPattern.trailingSlash &&
-    !hasChildren &&
     urlSegmentIndex < urlSegments.length
   ) {
-    return null; // Pattern without trailing slash/wildcard/children should not match extra segments
+    return null; // Pattern without trailing slash/wildcard should not match extra segments
   }
-  // If pattern has trailing slash, wildcard, or children, allow extra segments
+
+  // If there are remaining URL segments and we have descendant routes,
+  // try to capture parameters from descendant routes
+  if (
+    urlSegmentIndex < urlSegments.length &&
+    patternObj &&
+    patternObj.children
+  ) {
+    const remainingSegments = urlSegments.slice(urlSegmentIndex);
+
+    // Try to match remaining segments against child routes to extract their parameters
+    for (const childPattern of patternObj.children) {
+      const childParams = tryExtractChildParameters(
+        childPattern,
+        remainingSegments,
+        params,
+      );
+      if (childParams) {
+        Object.assign(params, childParams);
+        break; // Found a matching child pattern
+      }
+    }
+  }
 
   // Add search parameters
-  const searchParams = extractSearchParams(urlObj, connectionMap);
+  const searchParams = extractSearchParams(urlObj, queryConnectionMap);
   Object.assign(params, searchParams);
 
   // Don't add defaults here - rawParams should only contain what's in the URL
@@ -9760,7 +10434,7 @@ const matchUrl = (
 /**
  * Extract search parameters from URL
  */
-const extractSearchParams = (urlObj, connectionMap) => {
+const extractSearchParams = (urlObj, queryConnectionMap) => {
   const params = {};
 
   // Parse the raw query string manually instead of using urlObj.searchParams
@@ -9792,7 +10466,7 @@ const extractSearchParams = (urlObj, connectionMap) => {
       rawValue = "";
     }
 
-    const connection = connectionMap.get(key);
+    const connection = queryConnectionMap.get(key);
     const signalType = connection ? connection.type : null;
 
     // Cast value based on signal type
@@ -9890,21 +10564,16 @@ const buildHierarchicalQueryParams = (
   // ancestorPatterns is in correct order: root ancestor first, then immediate parent
 
   for (const ancestorPatternObj of ancestorPatterns) {
-    if (ancestorPatternObj.parsedPattern?.queryParams) {
-      for (const queryParam of ancestorPatternObj.parsedPattern.queryParams) {
-        const paramName = queryParam.name;
-        if (
-          params[paramName] !== undefined &&
-          !processedParams.has(paramName)
-        ) {
-          queryParams[paramName] = params[paramName];
-          processedParams.add(paramName);
+    for (const queryParam of ancestorPatternObj.parsedPattern.queryParams) {
+      const paramName = queryParam.name;
+      if (params[paramName] !== undefined && !processedParams.has(paramName)) {
+        queryParams[paramName] = params[paramName];
+        processedParams.add(paramName);
 
-          if (DEBUG$2) {
-            console.debug(
-              `Added ancestor param: ${paramName}=${params[paramName]}`,
-            );
-          }
+        if (DEBUG$2) {
+          console.debug(
+            `Added ancestor param: ${paramName}=${params[paramName]}`,
+          );
         }
       }
     }
@@ -10029,7 +10698,7 @@ const buildUrlFromPattern = (
 
   // Check if we'll have query parameters to decide on trailing slash removal
   const willHaveQueryParams =
-    parsedPattern.queryParams?.some((qp) => {
+    parsedPattern.queryParams.some((qp) => {
       const value = params[qp.name];
       return value !== undefined;
     }) ||
@@ -10102,15 +10771,7 @@ const isChildPattern = (childPattern, parentPattern) => {
   const childSegments = cleanChild.split("/").filter((s) => s);
   const parentSegments = cleanParent.split("/").filter((s) => s);
 
-  // Root route special handling - different families for signal preservation
-  if (parentSegments.length === 0) {
-    // Parent is root route ("/")
-    // Root can only be parent of parameterized routes like "/:section"
-    // But NOT literal routes like "/settings" (different families)
-    return childSegments.length === 1 && childSegments[0].startsWith(":");
-  }
-
-  // For non-root parents, child must have at least as many segments
+  // Child must have at least as many segments as parent (or more for specificity)
   if (childSegments.length < parentSegments.length) {
     return false;
   }
@@ -10181,128 +10842,177 @@ const isParameterRedundantWithLiteralSegments = (
 /**
  * Register all patterns at once and build their relationships
  */
-const setupPatterns = (patternDefinitions) => {
-  // Create local pattern registry as Set
-  const patternRegistry = new Set(); // Set of pattern objects
-  const patternsByKey = {}; // key -> pattern object
-
-  // Phase 1: Create all pattern objects
-  for (const [key, urlPatternRaw] of Object.entries(patternDefinitions)) {
-    // Create the unified pattern object
-    const pattern = createRoutePattern(urlPatternRaw);
-
-    // Register in both collections
-    patternRegistry.add(pattern);
-    patternsByKey[key] = pattern;
+const setupRoutePatterns = (routePatterns) => {
+  const routePatternSet = new Set(); // Set of pattern objects
+  // Phase 1: Fill pattern set
+  for (const routePattern of routePatterns) {
+    routePatternSet.add(routePattern);
   }
-
-  // Phase 2: Build relationships between all patterns
-  const allPatterns = Array.from(patternRegistry); // Convert Set to Array
-
-  for (const currentPatternObj of allPatterns) {
-    for (const otherPatternObj of allPatterns) {
-      if (currentPatternObj === otherPatternObj) continue;
-
-      // Check if current pattern is a child of other pattern using clean patterns
+  // Phase 2: Determine parent-child relationships based on pattern analysis
+  for (const routePattern of routePatternSet) {
+    for (const otherRoutePattern of routePatternSet) {
+      if (otherRoutePattern === routePattern) {
+        continue;
+      }
       if (
-        currentPatternObj.cleanPattern &&
-        otherPatternObj.cleanPattern &&
-        isChildPattern(
-          currentPatternObj.cleanPattern,
-          otherPatternObj.cleanPattern,
+        !isChildPattern(
+          routePattern.cleanPattern,
+          otherRoutePattern.cleanPattern,
         )
       ) {
-        // Store the most specific parent (closest parent in hierarchy)
-        const getPathSegmentCount = (pattern) => {
-          // Only count path segments, not query parameters
-          const pathPart = pattern.split("?")[0];
-          return pathPart.split("/").filter(Boolean).length;
-        };
-
-        const currentSegmentCount = currentPatternObj.parent
-          ? getPathSegmentCount(currentPatternObj.parent.originalPattern)
-          : 0;
-        const otherSegmentCount = getPathSegmentCount(
-          otherPatternObj.originalPattern,
-        );
-
-        if (
-          !currentPatternObj.parent ||
-          otherSegmentCount > currentSegmentCount
-        ) {
-          currentPatternObj.parent = otherPatternObj;
-        }
-        otherPatternObj.children = otherPatternObj.children || [];
-        otherPatternObj.children.push(currentPatternObj);
+        continue;
       }
+      const currentSegmentCount = routePattern.parent
+        ? getPathSegmentCount(routePattern.parent.originalPattern)
+        : 0;
+      const otherSegmentCount = getPathSegmentCount(
+        otherRoutePattern.originalPattern,
+      );
+      if (!routePattern.parent || otherSegmentCount > currentSegmentCount) {
+        routePattern.parent = otherRoutePattern;
+      }
+      otherRoutePattern.children.push(routePattern);
     }
   }
+  // Phase 3: Inherit search parameter connections from ancestors
+  // Search params are global and should be inherited by descendants regardless of path segments
+  for (const routePattern of routePatternSet) {
+    let ancestorRoutePattern = routePattern.parent;
+    while (ancestorRoutePattern) {
+      // For each ancestor's query connection, check if it should be inherited
+      for (const [
+        paramName,
+        ancestorConnection,
+      ] of ancestorRoutePattern.queryConnectionMap) {
+        // Skip if descendant already has this parameter
+        if (routePattern.queryConnectionMap.has(paramName)) {
+          continue;
+        }
 
-  // Phase 3: Collect all relevant signals for each pattern based on relationships
-  for (const currentPatternObj of patternRegistry) {
+        // Check if child route is truly more specific than parent, or just using default values
+        // If child has literal segments that match parent's parameter defaults, skip inheritance
+        let shouldInherit = true;
+
+        // Compare path segments to see if child is just parent with default values
+        const childSegments = routePattern.pattern.segments;
+        const parentSegments = ancestorRoutePattern.pattern.segments;
+
+        for (
+          let i = 0;
+          i < Math.min(childSegments.length, parentSegments.length);
+          i++
+        ) {
+          const childSeg = childSegments[i];
+          const parentSeg = parentSegments[i];
+
+          if (parentSeg.type === "param" && childSeg.type === "literal") {
+            // Check if this literal value matches the parent parameter's default
+            const parentConnection = ancestorRoutePattern.pathConnectionMap.get(
+              parentSeg.name,
+            );
+            if (
+              parentConnection &&
+              parentConnection.getDefaultValue() === childSeg.value
+            ) {
+              // Child uses literal that matches parent's parameter default
+              // This means they're essentially the same route, not parent-child
+              shouldInherit = false;
+              break;
+            }
+          }
+        }
+
+        if (shouldInherit) {
+          // Create inherited connection
+          const inheritedConnection = {
+            ...ancestorConnection,
+            inherited: true, // Mark as inherited for proper handling
+          };
+          routePattern.queryConnectionMap.set(paramName, inheritedConnection);
+          routePattern.connections.push(inheritedConnection);
+
+          if (DEBUG$2) {
+            console.debug(
+              `[${routePattern.originalPattern}] Inherited search param "${paramName}" from ancestor [${ancestorRoutePattern.originalPattern}]`,
+            );
+          }
+        } else if (DEBUG$2) {
+          console.debug(
+            `[${routePattern.originalPattern}] Skipped inheriting "${paramName}" - child uses default values, not truly more specific`,
+          );
+        }
+      }
+      ancestorRoutePattern = ancestorRoutePattern.parent;
+    }
+  }
+  // Phase 4: Collect all relevant signals for each pattern based on relationships
+  for (const routePattern of routePatternSet) {
     const allRelevantSignals = new Set();
 
     // Add own signals
-    for (const signal of currentPatternObj.signalSet) {
+    for (const signal of routePattern.signalSet) {
       allRelevantSignals.add(signal);
     }
 
     // Add signals from ancestors (they might be inherited)
-    let parentPatternObj = currentPatternObj.parent;
-    while (parentPatternObj) {
-      for (const connection of parentPatternObj.connections) {
+    let parentRoutePattern = routePattern.parent;
+    while (parentRoutePattern) {
+      for (const connection of parentRoutePattern.connections) {
         allRelevantSignals.add(connection.signal);
       }
       // Move up the parent chain
-      parentPatternObj = parentPatternObj.parent;
+      parentRoutePattern = parentRoutePattern.parent;
     }
 
     // Add signals from descendants (they might be used for optimization)
     const addDescendantSignals = (patternObj) => {
-      for (const childPatternObj of patternObj.children || []) {
+      for (const childPattern of patternObj.children) {
         // Add child's own signals
-        for (const connection of childPatternObj.connections) {
+        for (const connection of childPattern.connections) {
           allRelevantSignals.add(connection.signal);
         }
         // Recursively add grandchildren signals
-        addDescendantSignals(childPatternObj);
+        addDescendantSignals(childPattern);
       }
     };
-    addDescendantSignals(currentPatternObj);
+    addDescendantSignals(routePattern);
 
     // Update the pattern's signalSet with all relevant signals
-    currentPatternObj.signalSet = allRelevantSignals;
+    routePattern.signalSet = allRelevantSignals;
 
     if (DEBUG$2 && allRelevantSignals.size > 0) {
       console.debug(
-        `[${currentPatternObj.urlPatternRaw}] Collected ${allRelevantSignals.size} relevant signals`,
+        `[${routePattern.urlPatternRaw}] Collected ${allRelevantSignals.size} relevant signals`,
       );
     }
   }
-
-  // Phase 4: Calculate depths for all patterns
-  const calculatePatternDepth = (patternObj) => {
-    if (patternObj.depth !== 0) return patternObj.depth; // Already calculated
-
-    if (!patternObj.parent) {
-      patternObj.depth = 0;
-      return 0;
-    }
-
-    const parentDepth = calculatePatternDepth(patternObj.parent);
-    patternObj.depth = parentDepth + 1;
-    return patternObj.depth;
-  };
-
-  for (const patternObj of patternRegistry) {
-    calculatePatternDepth(patternObj);
+  // Phase 5: Calculate depths for all patterns
+  for (const routePattern of routePatternSet) {
+    calculatePatternDepth(routePattern);
   }
-
   if (DEBUG$2) {
     console.debug("Pattern registry updated");
   }
+};
+// Store the most specific parent (closest parent in hierarchy)
+const getPathSegmentCount = (pattern) => {
+  // Only count path segments, not query parameters
+  const pathPart = pattern.split("?")[0];
+  return pathPart.split("/").filter(Boolean).length;
+};
+const calculatePatternDepth = (patternObj) => {
+  if (patternObj.depth !== 0) {
+    return patternObj.depth; // Already calculated
+  }
 
-  return patternsByKey;
+  if (!patternObj.parent) {
+    patternObj.depth = 0;
+    return 0;
+  }
+
+  const parentDepth = calculatePatternDepth(patternObj.parent);
+  patternObj.depth = parentDepth + 1;
+  return patternObj.depth;
 };
 
 const resolveRouteUrl = (relativeUrl) => {
@@ -10327,78 +11037,632 @@ const resolveRouteUrl = (relativeUrl) => {
  */
 
 
-/**
- * Set up all application routes with reactive state management.
- *
- * Creates route objects that automatically sync with the current URL and provide
- * reactive signals for building dynamic UIs. Each route tracks its matching state,
- * extracted parameters, and computed URLs.
- *
- * @example
- * ```js
- * import { setupRoutes, stateSignal } from "@jsenv/navi";
- *
- * const settingsTabSignal = stateSignal('general', { type: "string", oneOf: ['general', 'overview'] });
- *
- * let { USER_PROFILE } = setupRoutes({
- *   HOME: "/",
- *   SETTINGS: "/settings/:tab=${settingsTabSignal}/",
- * });
- *
- * USER_PROFILE.matching // boolean
- * USER_PROFILE.matchingSignal.value // reactive signal
- * settingsTabSignal.value = 'overview'; // updates URL automatically
- * ```
- *
- * ⚠️ HOT RELOAD: Use 'let' instead of 'const' when destructuring:
- * ```js
- * // ❌ const { HOME, USER_PROFILE } = setupRoutes({...})
- * // ✅ let { HOME, USER_PROFILE } = setupRoutes({...})
- * ```
- *
- * @param {Object} routeDefinition - Object mapping route names to URL patterns
- * @param {string} routeDefinition[key] - URL pattern with optional parameters
- * @returns {Object} Object with route names as keys and route objects as values
- * @returns {Object.<string, {
- *   pattern: string,
- *   matching: boolean,
- *   params: Object,
- *   url: string,
- *   relativeUrl: string,
- *   matchingSignal: import("@preact/signals").Signal<boolean>,
- *   paramsSignal: import("@preact/signals").Signal<Object>,
- *   urlSignal: import("@preact/signals").Signal<string>,
- *   navTo: (params?: Object) => Promise<void>,
- *   redirectTo: (params?: Object) => Promise<void>,
- *   replaceParams: (params: Object) => Promise<void>,
- *   buildUrl: (params?: Object) => string,
- *   buildRelativeUrl: (params?: Object) => string,
- * }>} Route objects with reactive state and navigation methods
- *
- * All routes MUST be created at once because any url can be accessed
- * at any given time (url can be shared, reloaded, etc..)
- */
+const routePrivatePropertiesMap = new WeakMap();
+const getRoutePrivateProperties = (route) => {
+  return routePrivatePropertiesMap.get(route);
+};
+const ROUTE_NOT_MATCHING_PARAMS = {};
+// Flag to prevent signal-to-URL synchronization during URL-to-signal synchronization
+let isUpdatingRoutesFromUrl = false;
+const route = (pattern, { searchParams } = {}) => {
+  const routePattern = createRoutePattern(pattern, { searchParams });
+  const { cleanPattern } = routePattern;
+  const [publishStatus, subscribeStatus] = createPubSub();
 
-const setupRoutes = (routeDefinition) => {
-  // Prevent calling setupRoutes when routes already exist - enforce clean setup
-  if (routeSet.size > 0) {
+  // prepare route object
+  const route = {
+    urlPattern: cleanPattern,
+    pattern: cleanPattern,
+    isRoute: true,
+    matching: false,
+    params: ROUTE_NOT_MATCHING_PARAMS,
+    buildUrl: null,
+    relativeUrl: null,
+    url: null,
+    matchingSignal: signal(false),
+    rawParamsSignal: signal(ROUTE_NOT_MATCHING_PARAMS),
+    visited: false,
+    visitedSignal: signal(false),
+    paramsSignal: null,
+    urlSignal: null,
+    replaceParams: undefined,
+    buildRelativeUrl: undefined,
+    relativeUrlSignal: null,
+    matchesParams: undefined,
+    navTo: undefined,
+    redirectTo: undefined,
+    subscribeStatus,
+    toString: () => {
+      return `route "${cleanPattern}"`;
+    },
+  };
+  Object.preventExtensions(route);
+
+  // route private props
+  const cleanupCallbackSet = new Set();
+  const setupCallbackSet = new Set();
+  const registerSetup = (callback) => {
+    setupCallbackSet.add(callback);
+  };
+  {
+    const routePrivateProperties = {
+      routePattern,
+      setup: null,
+      updateStatus: null,
+      cleanup: null,
+    };
+    routePrivatePropertiesMap.set(route, routePrivateProperties);
+    routePrivateProperties.cleanup = () => {
+      for (const cleanupCallback of cleanupCallbackSet) {
+        cleanupCallback();
+      }
+      cleanupCallbackSet.clear();
+    };
+    routePrivateProperties.updateStatus = ({ matching, params, visited }) => {
+      let someChange = false;
+      route.matchingSignal.value = matching;
+
+      if (route.matching !== matching) {
+        route.matching = matching;
+        someChange = true;
+      }
+      route.visitedSignal.value = visited;
+      if (route.visited !== visited) {
+        route.visited = visited;
+        someChange = true;
+      }
+      // Store raw params (from URL) - paramsSignal will reactively compute merged params
+      route.rawParamsSignal.value = params;
+      // Get merged params for comparison (computed signal will handle the merging)
+      const mergedParams = route.paramsSignal.value;
+      if (route.params !== mergedParams) {
+        route.params = mergedParams;
+        someChange = true;
+      }
+      if (someChange) {
+        publishStatus({
+          matching,
+          params: mergedParams,
+          visited,
+        });
+      }
+    };
+    // (for now data contains only { routeSet })
+    routePrivateProperties.setup = (data) => {
+      for (const setupCallback of setupCallbackSet) {
+        const returnValue = setupCallback(data);
+        if (typeof returnValue === "function") {
+          cleanupCallbackSet.add(returnValue);
+        }
+      }
+      setupCallbackSet.clear();
+    };
+  }
+
+  // methods
+  registerSetup(({ routeSet }) => {
+    route.buildRelativeUrl = (params) => {
+      // buildMostPreciseUrl now handles parameter resolution internally
+      return routePattern.buildMostPreciseUrl(params);
+    };
+    route.buildUrl = (params) => {
+      const routeRelativeUrl = route.buildRelativeUrl(params);
+      const routeUrl = resolveRouteUrl(routeRelativeUrl);
+      return routeUrl;
+    };
+    route.navTo = (params) => {
+      if (!integration) {
+        return Promise.resolve();
+      }
+      const routeUrl = route.buildUrl(params);
+      return integration.navTo(routeUrl);
+    };
+    route.redirectTo = (params, { callReason } = {}) => {
+      if (!integration) {
+        return Promise.resolve();
+      }
+      const routeUrl = route.buildUrl(params);
+      return integration.navTo(routeUrl, {
+        replace: true,
+        callReason,
+      });
+    };
+    route.replaceParams = (newParams, { callReason, isSignalChange } = {}) => {
+      const matching = route.matchingSignal.peek();
+      if (!matching) {
+        console.warn(
+          `Cannot replace params on route ${route} because it is not matching the current URL.`,
+        );
+        return null;
+      }
+
+      // Find all matching routes and update their actions, then delegate to most specific (deeper = more specific)
+      let mostSpecificRoute = route;
+      const routePrivateProperties = getRoutePrivateProperties(route);
+      let maxDepth = routePrivateProperties.routePattern.depth;
+      for (const routeCandidate of routeSet) {
+        if (routeCandidate === route) {
+          continue;
+        }
+        if (!routeCandidate.matching) {
+          continue;
+        }
+        const matchingRoute = routeCandidate;
+        const matchingRoutePrivateProperties =
+          getRoutePrivateProperties(matchingRoute);
+        const depth = matchingRoutePrivateProperties.routePattern.depth;
+        if (depth > maxDepth) {
+          maxDepth = depth;
+          mostSpecificRoute = matchingRoute;
+        }
+      }
+      const isMostSpecificRoute = mostSpecificRoute === route;
+
+      // If we found a more specific route, delegate to it; otherwise handle it ourselves
+      if (!isMostSpecificRoute) {
+        // Check if this is a signal-originated call and there's a more specific route that will also handle it
+        // If so, skip the redirect to avoid duplicate navTo calls
+        if (isSignalChange) {
+          return null;
+        }
+        return mostSpecificRoute.redirectTo(newParams, {
+          callReason: `replaceParams delegation from ${route} to ${mostSpecificRoute} (original reason: ${callReason})`,
+        });
+      }
+      return route.redirectTo(newParams, {
+        callReason,
+      });
+    };
+    route.matchesParams = (providedParams) => {
+      const currentParams = route.params;
+      const resolvedParams = routePattern.resolveParams({
+        ...currentParams,
+        ...providedParams,
+      });
+      const same = compareTwoJsValues(currentParams, resolvedParams);
+      return same;
+    };
+  });
+  // relativeUrl/url
+  registerSetup(() => {
+    route.relativeUrlSignal = computed(() => {
+      const rawParams = route.rawParamsSignal.value;
+      const relativeUrl = route.buildRelativeUrl(rawParams);
+      return relativeUrl;
+    });
+    route.urlSignal = computed(() => {
+      const routeUrl = route.buildUrl();
+      return routeUrl;
+    });
+    const cleanupRelativeUrlSignalEffect = effect(() => {
+      const routeRelativeUrl = route.relativeUrlSignal.value;
+      route.relativeUrl = routeRelativeUrl;
+    });
+    const cleanupUrlSignalEffect = effect(() => {
+      const routeUrl = route.urlSignal.value;
+      route.url = routeUrl;
+    });
+    return () => {
+      cleanupRelativeUrlSignalEffect();
+      cleanupUrlSignalEffect();
+    };
+  });
+  // params
+  registerSetup(() => {
+    route.paramsSignal = computed(() => {
+      const rawParams = route.rawParamsSignal.value;
+      const resolvedParams = routePattern.resolveParams(rawParams);
+      return resolvedParams;
+    });
+
+    // Keep route.params synchronized with paramsSignal
+    // Doing this with the signal instead of in the updateStatus function ensures route.params includes parameters from child routes
+    const cleanupParamsSignalEffect = effect(() => {
+      const params = route.paramsSignal.value;
+      if (route.params !== params) {
+        route.params = params;
+      }
+    });
+
+    return () => {
+      cleanupParamsSignalEffect();
+    };
+  });
+  // Signal -> URL sync: When signal changes, update URL to reflect meaningful state
+  // Only sync non-default values to keep URLs clean (static fallbacks stay invisible)
+  registerSetup(() => {
+    const cleanupSignalUrlEffectSet = new Set();
+    const { pathConnectionMap, queryConnectionMap } = routePattern;
+    // important: keep this connectionMap after setup so that connectionMap correctly inherits parent pattern signals
+    const connectionMap = new Map([
+      ...pathConnectionMap,
+      ...queryConnectionMap,
+    ]);
+    for (const [paramName, connection] of connectionMap) {
+      const { signal: paramSignal, debug } = connection;
+      if (debug) {
+        console.debug(
+          `[route] connecting url param "${paramName}" to signal`,
+          paramSignal,
+        );
+      }
+      // eslint-disable-next-line no-loop-func
+      const cleanupSignalUrlEffect = effect(() => {
+        const value = paramSignal.value;
+        const rawParams = route.rawParamsSignal.value;
+        const urlParamValue = rawParams[paramName];
+        const matching = route.matchingSignal.value;
+
+        // Signal returned to default - clean up URL by removing the parameter
+        // Skip cleanup during URL-to-signal synchronization to prevent recursion
+        if (isUpdatingRoutesFromUrl) {
+          return;
+        }
+
+        if (!matching) {
+          // Route not matching, no URL sync needed
+          return;
+        }
+        if (urlParamValue === undefined) {
+          // No URL parameter exists - check if signal has meaningful value to add
+          if (connection.isDefaultValue(value)) {
+            // Signal using default value, keep URL clean (no parameter needed)
+            return;
+          }
+          if (debug) {
+            console.debug(
+              `[route] Signal->URL: ${paramName} adding custom value ${value} to URL (default: ${connection.getDefaultValue()})`,
+            );
+          }
+          route.replaceParams(
+            { [paramName]: value },
+            {
+              callReason: `${paramName} signal change on ${route}`,
+              isSignalChange: true,
+            },
+          );
+          return;
+        }
+
+        // URL parameter exists - check if we need to update or clean it up
+        if (connection.isDefaultValue(value)) {
+          if (debug) {
+            console.debug(
+              `[route] Signal->URL: ${paramName} cleaning URL (removing default value ${value})`,
+            );
+          }
+          route.replaceParams(
+            { [paramName]: undefined },
+            {
+              callReason: `${paramName} signal reset to default on ${route}`,
+              isSignalChange: true,
+            },
+          );
+          return;
+        }
+
+        if (value === urlParamValue) {
+          // Values already match, no sync needed
+          return;
+        }
+        if (debug) {
+          console.debug(
+            `[route] Signal->URL: ${paramName} updating URL ${urlParamValue} -> ${value}`,
+          );
+        }
+        route.replaceParams(
+          { [paramName]: value },
+          {
+            callReason: `${paramName} signal change on ${route}`,
+            isSignalChange: true,
+          },
+        );
+      });
+      cleanupSignalUrlEffectSet.add(cleanupSignalUrlEffect);
+    }
+    return () => {
+      for (const cleanupSignalUrlEffect of cleanupSignalUrlEffectSet) {
+        cleanupSignalUrlEffect();
+      }
+    };
+  });
+
+  return route;
+};
+
+let setupRoutesCalled = false;
+const setupRoutes = (routes) => {
+  if (setupRoutesCalled) {
     throw new Error(
-      "Routes already exist. Call clearAllRoutes() first to clean up existing routes before creating new ones. This prevents cross-test pollution and ensures clean state.",
+      `There is an active set of routes already.
+Some code called setupRoutes before and did not properly cleanup routes with clearRoutes().
+This prevents cross-test pollution and ensures clean state.`,
     );
   }
+
+  const routeSet = new Set();
   // PHASE 1: Setup patterns with unified objects (includes all relationships and signal connections)
-  const routePatterns = setupPatterns(routeDefinition);
-
-  // PHASE 2: Create routes using the unified pattern objects
-  const routes = {};
-  for (const key of Object.keys(routeDefinition)) {
-    const routePattern = routePatterns[key];
-    const route = registerRoute(routePattern);
-    routes[key] = route;
+  const routePatterns = [];
+  for (const route of routes) {
+    const { routePattern } = getRoutePrivateProperties(route);
+    routePatterns.push(routePattern);
+    routeSet.add(route);
   }
-  onRouteDefined();
+  setupRoutePatterns(routePatterns);
 
-  return routes;
+  // Setup routes now that patterns are correctly initialized
+  for (const route of routeSet) {
+    const { setup } = getRoutePrivateProperties(route);
+    setup({ routeSet });
+  }
+
+  // Store previous route states to detect changes
+  const routePreviousStateMap = new WeakMap();
+  const updateRoutes = (
+    url,
+    {
+      isVisited = () => false,
+      // state
+    } = {},
+  ) => {
+    const returnValue = {};
+    const routeMatchInfoSet = new Set();
+    for (const route of routeSet) {
+      const routePrivateProperties = getRoutePrivateProperties(route);
+      const { routePattern } = routePrivateProperties;
+
+      const previousState = routePreviousStateMap.get(route) || {
+        matching: false,
+        params: ROUTE_NOT_MATCHING_PARAMS,
+        actionParams: ROUTE_NOT_MATCHING_PARAMS,
+      };
+      const oldMatching = previousState.matching;
+      const oldParams = previousState.params;
+      const oldActionParams = previousState.actionParams;
+
+      let extractedParams = routePattern.applyOn(url);
+      let newMatching = Boolean(extractedParams);
+      let newParams;
+      if (extractedParams) {
+        if (compareTwoJsValues(oldParams, extractedParams)) {
+          // No change in parameters, keep the old params
+          newParams = oldParams;
+        } else {
+          newParams = extractedParams;
+        }
+      } else {
+        newParams = ROUTE_NOT_MATCHING_PARAMS;
+      }
+
+      const routeMatchInfo = {
+        route,
+        routePrivateProperties,
+        oldMatching,
+        newMatching,
+        oldParams,
+        newParams,
+        oldActionParams,
+      };
+      routeMatchInfoSet.add(routeMatchInfo);
+      // Store current state for next comparison
+      routePreviousStateMap.set(route, {
+        matching: newMatching,
+        params: newParams,
+        actionParams: oldActionParams, // updated to newActionParams in update_route_actions
+      });
+    }
+
+    {
+      // URL -> Signal synchronization (moved from individual route effects to eliminate circular dependency)
+      // Prevent signal-to-URL synchronization during URL-to-signal synchronization
+      isUpdatingRoutesFromUrl = true;
+      // Apply all signal updates in a batch
+      const matchingRouteSet = new Set();
+      batch(() => {
+        for (const {
+          route,
+          routePrivateProperties,
+          newMatching,
+          newParams,
+        } of routeMatchInfoSet) {
+          const { updateStatus } = routePrivateProperties;
+          const visited = isVisited(route.url);
+          updateStatus({
+            matching: newMatching,
+            params: newParams,
+            visited,
+          });
+          if (newMatching) {
+            matchingRouteSet.add(route);
+          }
+        }
+
+        for (const {
+          route,
+          routePrivateProperties,
+          newMatching,
+        } of routeMatchInfoSet) {
+          const { routePattern } = routePrivateProperties;
+          const { pathConnectionMap, queryConnectionMap } = routePattern;
+          const connectionMap = new Map([
+            ...pathConnectionMap,
+            ...queryConnectionMap,
+          ]);
+
+          for (const [paramName, connection] of connectionMap) {
+            const { signal: paramSignal, debug } = connection;
+            const rawParams = route.rawParamsSignal.value;
+            const urlParamValue = rawParams[paramName];
+
+            if (!newMatching) {
+              // Route doesn't match - check if any matching route extracts this parameter
+              let parameterExtractedByMatchingRoute = false;
+              let matchingRouteInSameFamily = false;
+
+              for (const otherRoute of routeSet) {
+                if (otherRoute === route || !otherRoute.matching) {
+                  continue;
+                }
+                const otherRawParams = otherRoute.rawParamsSignal.value;
+                const otherRoutePrivateProperties =
+                  getRoutePrivateProperties(otherRoute);
+
+                // Check if this matching route extracts the parameter
+                if (paramName in otherRawParams) {
+                  parameterExtractedByMatchingRoute = true;
+                }
+
+                // Check if this matching route is in the same family using parent-child relationships
+                const thisPatternObj = routePattern;
+                const otherPatternObj =
+                  otherRoutePrivateProperties.routePattern;
+
+                // Routes are in same family if they share a hierarchical relationship:
+                // 1. One is parent/ancestor of the other
+                // 2. They share a common parent/ancestor
+                let inSameFamily = false;
+
+                // Check if other route is ancestor of this route
+                let currentParent = thisPatternObj.parent;
+                while (currentParent) {
+                  if (currentParent === otherPatternObj) {
+                    inSameFamily = true;
+                    break;
+                  }
+                  currentParent = currentParent.parent;
+                }
+
+                // Check if this route is ancestor of other route
+                if (!inSameFamily) {
+                  currentParent = otherPatternObj.parent;
+                  while (currentParent) {
+                    if (currentParent === thisPatternObj) {
+                      inSameFamily = true;
+                      break;
+                    }
+                    currentParent = currentParent.parent;
+                  }
+                }
+
+                // Check if they share a common parent (siblings or cousins)
+                if (!inSameFamily) {
+                  const thisAncestors = new Set();
+                  currentParent = thisPatternObj.parent;
+                  while (currentParent) {
+                    thisAncestors.add(currentParent);
+                    currentParent = currentParent.parent;
+                  }
+
+                  currentParent = otherPatternObj.parent;
+                  while (currentParent) {
+                    if (thisAncestors.has(currentParent)) {
+                      inSameFamily = true;
+                      break;
+                    }
+                    currentParent = currentParent.parent;
+                  }
+                }
+
+                if (inSameFamily) {
+                  matchingRouteInSameFamily = true;
+                }
+              }
+
+              // Only reset signal if:
+              // 1. We're navigating within the same route family (not to completely unrelated routes)
+              // 2. AND no matching route extracts this parameter from URL
+              // 3. AND parameter has no default value (making it truly optional)
+              if (
+                matchingRouteInSameFamily &&
+                !parameterExtractedByMatchingRoute
+              ) {
+                const defaultValue = connection.getDefaultValue();
+                if (defaultValue === undefined) {
+                  // Parameter is not extracted within same family and has no default - reset it
+                  if (debug) {
+                    console.debug(
+                      `[route] Same family navigation, ${paramName} not extracted and has no default: resetting signal`,
+                    );
+                  }
+                  paramSignal.value = undefined;
+                } else if (debug) {
+                  // Parameter has a default value - preserve current signal value
+                  console.debug(
+                    `[route] Parameter ${paramName} has default value ${defaultValue}: preserving signal value: ${paramSignal.value}`,
+                  );
+                }
+              } else if (debug) {
+                if (!matchingRouteInSameFamily) {
+                  console.debug(
+                    `[route] Different route family: preserving ${paramName} signal value: ${paramSignal.value}`,
+                  );
+                } else {
+                  console.debug(
+                    `[route] Parameter ${paramName} extracted by matching route: preserving signal value: ${paramSignal.value}`,
+                  );
+                }
+              }
+              continue;
+            }
+
+            // URL -> Signal sync: When route matches, ensure signal matches URL state
+            // URL is the source of truth for explicit parameters
+            const value = paramSignal.peek();
+            if (urlParamValue === undefined) {
+              // No URL parameter - reset signal to its current default value
+              // (handles both static fallback and dynamic default cases)
+              const defaultValue = connection.getDefaultValue();
+              if (connection.isDefaultValue(value)) {
+                // Signal already has correct default value, no sync needed
+                continue;
+              }
+              if (debug) {
+                console.debug(
+                  `[route] URL->Signal: ${paramName} not in URL, reset signal to default (${defaultValue})`,
+                );
+              }
+              paramSignal.value = defaultValue;
+              continue;
+            }
+            if (urlParamValue === value) {
+              // Values already match, no sync needed
+              continue;
+            }
+            if (debug) {
+              console.debug(
+                `[route] URL->Signal: ${paramName}=${urlParamValue} in url, sync signal with url`,
+              );
+            }
+            paramSignal.value = urlParamValue;
+            continue;
+          }
+        }
+      });
+      // Reset flag after URL -> Signal synchronization is complete
+      isUpdatingRoutesFromUrl = false;
+      Object.assign(returnValue, { matchingRouteSet });
+    }
+
+    return returnValue;
+  };
+
+  // notify all routes are now ready (signals are initialized and patterns are set up) so integrations can safely read route state
+  // and call updateRoutes
+  onAllRouteReady(updateRoutes);
+
+  // for unit test purposes code can call updateRoutes and clearRoutes
+  return {
+    updateRoutes,
+    clearRoutes: () => {
+      for (const route of routeSet) {
+        const routePrivateProperties = getRoutePrivateProperties(route);
+        routePrivateProperties.cleanup();
+        routePrivatePropertiesMap.delete(route);
+      }
+      routeSet.clear();
+      setupRoutesCalled = false;
+    },
+  };
 };
 
 const useRouteStatus = (route) => {
@@ -10416,680 +11680,13 @@ const useRouteStatus = (route) => {
   };
 };
 
-// for unit tests
-const clearAllRoutes = () => {
-  for (const [, routePrivateProperties] of routePrivatePropertiesMap) {
-    routePrivateProperties.cleanup();
-  }
-  routeSet.clear();
-  routePrivatePropertiesMap.clear();
-  // Pattern registry is now local to setupPatterns, no global cleanup needed
-  // Don't clear signal registry here - let tests manage it explicitly
-  // This prevents clearing signals that are still being used across multiple route registrations
-};
-
-// Flag to prevent signal-to-URL synchronization during URL-to-signal synchronization
-let isUpdatingRoutesFromUrl = false;
-
-// Controls what happens to actions when their route stops matching:
-// 'abort' - Cancel the action immediately when route stops matching
-// 'keep-loading' - Allow action to continue running after route stops matching
-//
-// The 'keep-loading' strategy could act like preloading, keeping data ready for potential return.
-// However, since route reactivation triggers action reload anyway, the old data won't be used
-// so it's better to abort the action to avoid unnecessary resource usage.
-const ROUTE_DEACTIVATION_STRATEGY = "abort"; // 'abort', 'keep-loading'
-const ROUTE_NOT_MATCHING_PARAMS = {};
-
-const routeSet = new Set();
-const routePrivatePropertiesMap = new Map();
-const getRoutePrivateProperties = (route) => {
-  return routePrivatePropertiesMap.get(route);
-};
-// Store previous route states to detect changes
-const routePreviousStateMap = new WeakMap();
-// Store abort controllers per action to control their lifecycle based on route state
-const actionAbortControllerWeakMap = new WeakMap();
-
-/**
- * Get the isDefaultValue function for a signal from the registry
- * @param {import("@preact/signals").Signal} signal
- * @returns {Function}
- */
-const updateRoutes = (
-  url,
-  {
-    navigationType = "push",
-    isVisited = () => false,
-    // state
-  } = {},
-) => {
-  const routeMatchInfoSet = new Set();
-  for (const route of routeSet) {
-    const routePrivateProperties = getRoutePrivateProperties(route);
-    const { routePattern } = routePrivateProperties;
-
-    // Get previous state
-    const previousState = routePreviousStateMap.get(route) || {
-      matching: false,
-      params: ROUTE_NOT_MATCHING_PARAMS,
-    };
-    const oldMatching = previousState.matching;
-    const oldParams = previousState.params;
-
-    // Use custom pattern matching - much simpler than URLPattern approach
-    let extractedParams = routePattern.applyOn(url);
-    let newMatching = Boolean(extractedParams);
-
-    let newParams;
-
-    if (extractedParams) {
-      // No need for complex wildcard correction - custom system handles it properly
-      if (compareTwoJsValues(oldParams, extractedParams)) {
-        // No change in parameters, keep the old params
-        newParams = oldParams;
-      } else {
-        newParams = extractedParams;
-      }
-    } else {
-      newParams = ROUTE_NOT_MATCHING_PARAMS;
-    }
-
-    const routeMatchInfo = {
-      route,
-      routePrivateProperties,
-      oldMatching,
-      newMatching,
-      oldParams,
-      newParams,
-    };
-    routeMatchInfoSet.add(routeMatchInfo);
-    // Store current state for next comparison
-    routePreviousStateMap.set(route, {
-      matching: newMatching,
-      params: newParams,
-    });
-  }
-
-  // Apply all signal updates in a batch
-  const matchingRouteSet = new Set();
-  batch(() => {
-    for (const {
-      route,
-      routePrivateProperties,
-      newMatching,
-      newParams,
-    } of routeMatchInfoSet) {
-      const { updateStatus } = routePrivateProperties;
-      const visited = isVisited(route.url);
-      updateStatus({
-        matching: newMatching,
-        params: newParams,
-        visited,
-      });
-      if (newMatching) {
-        matchingRouteSet.add(route);
-      }
-    }
-
-    // URL -> Signal synchronization (moved from individual route effects to eliminate circular dependency)
-    // Prevent signal-to-URL synchronization during URL-to-signal synchronization
-    isUpdatingRoutesFromUrl = true;
-
-    for (const {
-      route,
-      routePrivateProperties,
-      newMatching,
-    } of routeMatchInfoSet) {
-      const { routePattern } = routePrivateProperties;
-      const { connectionMap } = routePattern;
-
-      for (const [paramName, connection] of connectionMap) {
-        const { signal: paramSignal, debug } = connection;
-        const rawParams = route.rawParamsSignal.value;
-        const urlParamValue = rawParams[paramName];
-
-        if (!newMatching) {
-          // Route doesn't match - check if any matching route extracts this parameter
-          let parameterExtractedByMatchingRoute = false;
-          let matchingRouteInSameFamily = false;
-
-          for (const otherRoute of routeSet) {
-            if (otherRoute === route || !otherRoute.matching) {
-              continue;
-            }
-            const otherRawParams = otherRoute.rawParamsSignal.value;
-            const otherRoutePrivateProperties =
-              getRoutePrivateProperties(otherRoute);
-
-            // Check if this matching route extracts the parameter
-            if (paramName in otherRawParams) {
-              parameterExtractedByMatchingRoute = true;
-            }
-
-            // Check if this matching route is in the same family using parent-child relationships
-            const thisPatternObj = routePattern;
-            const otherPatternObj = otherRoutePrivateProperties.routePattern;
-
-            // Routes are in same family if they share a hierarchical relationship:
-            // 1. One is parent/ancestor of the other
-            // 2. They share a common parent/ancestor
-            let inSameFamily = false;
-
-            // Check if other route is ancestor of this route
-            let currentParent = thisPatternObj.parent;
-            while (currentParent) {
-              if (currentParent === otherPatternObj) {
-                inSameFamily = true;
-                break;
-              }
-              currentParent = currentParent.parent;
-            }
-
-            // Check if this route is ancestor of other route
-            if (!inSameFamily) {
-              currentParent = otherPatternObj.parent;
-              while (currentParent) {
-                if (currentParent === thisPatternObj) {
-                  inSameFamily = true;
-                  break;
-                }
-                currentParent = currentParent.parent;
-              }
-            }
-
-            // Check if they share a common parent (siblings or cousins)
-            if (!inSameFamily) {
-              const thisAncestors = new Set();
-              currentParent = thisPatternObj.parent;
-              while (currentParent) {
-                thisAncestors.add(currentParent);
-                currentParent = currentParent.parent;
-              }
-
-              currentParent = otherPatternObj.parent;
-              while (currentParent) {
-                if (thisAncestors.has(currentParent)) {
-                  inSameFamily = true;
-                  break;
-                }
-                currentParent = currentParent.parent;
-              }
-            }
-
-            if (inSameFamily) {
-              matchingRouteInSameFamily = true;
-            }
-          }
-
-          // Only reset signal if:
-          // 1. We're navigating within the same route family (not to completely unrelated routes)
-          // 2. AND no matching route extracts this parameter from URL
-          // 3. AND parameter has no default value (making it truly optional)
-          if (matchingRouteInSameFamily && !parameterExtractedByMatchingRoute) {
-            const defaultValue = connection.getDefaultValue();
-            if (defaultValue === undefined) {
-              // Parameter is not extracted within same family and has no default - reset it
-              if (debug) {
-                console.debug(
-                  `[route] Same family navigation, ${paramName} not extracted and has no default: resetting signal`,
-                );
-              }
-              paramSignal.value = undefined;
-            } else if (debug) {
-              // Parameter has a default value - preserve current signal value
-              console.debug(
-                `[route] Parameter ${paramName} has default value ${defaultValue}: preserving signal value: ${paramSignal.value}`,
-              );
-            }
-          } else if (debug) {
-            if (!matchingRouteInSameFamily) {
-              console.debug(
-                `[route] Different route family: preserving ${paramName} signal value: ${paramSignal.value}`,
-              );
-            } else {
-              console.debug(
-                `[route] Parameter ${paramName} extracted by matching route: preserving signal value: ${paramSignal.value}`,
-              );
-            }
-          }
-          continue;
-        }
-
-        // URL -> Signal sync: When route matches, ensure signal matches URL state
-        // URL is the source of truth for explicit parameters
-        const value = paramSignal.peek();
-        if (urlParamValue === undefined) {
-          // No URL parameter - reset signal to its current default value
-          // (handles both static fallback and dynamic default cases)
-          const defaultValue = connection.getDefaultValue();
-          if (connection.isDefaultValue(value)) {
-            // Signal already has correct default value, no sync needed
-            continue;
-          }
-          if (debug) {
-            console.debug(
-              `[route] URL->Signal: ${paramName} not in URL, reset signal to default (${defaultValue})`,
-            );
-          }
-          paramSignal.value = defaultValue;
-          continue;
-        }
-        if (urlParamValue === value) {
-          // Values already match, no sync needed
-          continue;
-        }
-        if (debug) {
-          console.debug(
-            `[route] URL->Signal: ${paramName}=${urlParamValue} in url, sync signal with url`,
-          );
-        }
-        paramSignal.value = urlParamValue;
-        continue;
-      }
-    }
-  });
-
-  // Reset flag after URL -> Signal synchronization is complete
-  isUpdatingRoutesFromUrl = false;
-
-  // must be after paramsSignal.value update to ensure the proxy target is set
-  // (so after the batch call)
-  const toLoadSet = new Set();
-  const toReloadSet = new Set();
-  const abortSignalMap = new Map();
-  const routeLoadRequestedMap = new Map();
-
-  const shouldLoadOrReload = (route, shouldLoad) => {
-    const routeAction = route.action;
-    const currentAction = routeAction.getCurrentAction();
-    if (shouldLoad) {
-      if (
-        navigationType === "replace" ||
-        currentAction.aborted ||
-        currentAction.error
-      ) {
-        shouldLoad = false;
-      }
-    }
-    if (shouldLoad) {
-      toLoadSet.add(currentAction);
-    } else {
-      toReloadSet.add(currentAction);
-    }
-    routeLoadRequestedMap.set(route, currentAction);
-    // Create a new abort controller for this action
-    const actionAbortController = new AbortController();
-    actionAbortControllerWeakMap.set(currentAction, actionAbortController);
-    abortSignalMap.set(currentAction, actionAbortController.signal);
-  };
-
-  const shouldLoad = (route) => {
-    shouldLoadOrReload(route, true);
-  };
-  const shouldReload = (route) => {
-    shouldLoadOrReload(route, false);
-  };
-  const shouldAbort = (route) => {
-    const routeAction = route.action;
-    const currentAction = routeAction.getCurrentAction();
-    const actionAbortController =
-      actionAbortControllerWeakMap.get(currentAction);
-    if (actionAbortController) {
-      actionAbortController.abort(`route no longer matching`);
-      actionAbortControllerWeakMap.delete(currentAction);
-    }
-  };
-
-  for (const {
-    route,
-    routePrivateProperties,
-    newMatching,
-    oldMatching,
-    newParams,
-    oldParams,
-  } of routeMatchInfoSet) {
-    const routeAction = route.action;
-    if (!routeAction) {
-      continue;
-    }
-
-    const becomesMatching = newMatching && !oldMatching;
-    const becomesNotMatching = !newMatching && oldMatching;
-    const paramsChangedWhileMatching =
-      newMatching && oldMatching && newParams !== oldParams;
-
-    // Handle actions for routes that become matching
-    if (becomesMatching) {
-      shouldLoad(route);
-      continue;
-    }
-
-    // Handle actions for routes that become not matching - abort them
-    if (becomesNotMatching && ROUTE_DEACTIVATION_STRATEGY === "abort") {
-      shouldAbort(route);
-      continue;
-    }
-
-    // Handle parameter changes while route stays matching
-    if (paramsChangedWhileMatching) {
-      shouldReload(route);
-    }
-  }
-
-  return {
-    loadSet: toLoadSet,
-    reloadSet: toReloadSet,
-    abortSignalMap,
-    routeLoadRequestedMap,
-    matchingRouteSet,
-  };
-};
-
-const registerRoute = (routePattern) => {
-  const urlPatternRaw = routePattern.originalPattern;
-  const { cleanPattern, connectionMap } = routePattern;
-  const [publishStatus, subscribeStatus] = createPubSub();
-
-  // prepare route object
-  const route = {
-    urlPattern: cleanPattern,
-    pattern: cleanPattern,
-    isRoute: true,
-    matching: false,
-    params: ROUTE_NOT_MATCHING_PARAMS,
-    buildUrl: null,
-    bindAction: null,
-    relativeUrl: null,
-    url: null,
-    action: null,
-    matchingSignal: null,
-    paramsSignal: null,
-    urlSignal: null,
-    replaceParams: undefined,
-    subscribeStatus,
-    toString: () => {
-      return `route "${cleanPattern}"`;
-    },
-  };
-  routeSet.add(route);
-  const routePrivateProperties = {
-    routePattern,
-    originalPattern: urlPatternRaw,
-    pattern: cleanPattern,
-    updateStatus: null,
-    cleanup: null,
-  };
-  routePrivatePropertiesMap.set(route, routePrivateProperties);
-  const cleanupCallbackSet = new Set();
-  routePrivateProperties.cleanup = () => {
-    for (const cleanupCallback of cleanupCallbackSet) {
-      cleanupCallback();
-    }
-    cleanupCallbackSet.clear();
-  };
-  routePrivateProperties.updateStatus = ({ matching, params, visited }) => {
-    let someChange = false;
-    route.matchingSignal.value = matching;
-
-    if (route.matching !== matching) {
-      route.matching = matching;
-      someChange = true;
-    }
-    route.visitedSignal.value = visited;
-    if (route.visited !== visited) {
-      route.visited = visited;
-      someChange = true;
-    }
-    // Store raw params (from URL) - paramsSignal will reactively compute merged params
-    route.rawParamsSignal.value = params;
-    // Get merged params for comparison (computed signal will handle the merging)
-    const mergedParams = route.paramsSignal.value;
-    if (route.params !== mergedParams) {
-      route.params = mergedParams;
-      someChange = true;
-    }
-    if (someChange) {
-      publishStatus({
-        matching,
-        params: mergedParams,
-        visited,
-      });
-    }
-  };
-
-  // populate route object
-  route.matchingSignal = signal(false);
-  route.rawParamsSignal = signal(ROUTE_NOT_MATCHING_PARAMS);
-  route.paramsSignal = computed(() => {
-    const rawParams = route.rawParamsSignal.value;
-    const resolvedParams = routePattern.resolveParams(rawParams);
-    return resolvedParams;
-  });
-  route.visitedSignal = signal(false);
-  // Keep route.params synchronized with computed paramsSignal
-  // This ensures route.params includes parameters from child routes
-  effect(() => {
-    const computedParams = route.paramsSignal.value;
-    if (route.params !== computedParams) {
-      route.params = computedParams;
-    }
-  });
-  for (const [paramName, connection] of connectionMap) {
-    const { signal: paramSignal, debug } = connection;
-
-    if (debug) {
-      console.debug(
-        `[route] connecting url param "${paramName}" to signal`,
-        paramSignal,
-      );
-    }
-    // Signal -> URL sync: When signal changes, update URL to reflect meaningful state
-    // Only sync non-default values to keep URLs clean (static fallbacks stay invisible)
-    // eslint-disable-next-line no-loop-func
-    effect(() => {
-      const value = paramSignal.value;
-      const rawParams = route.rawParamsSignal.value;
-      const urlParamValue = rawParams[paramName];
-      const matching = route.matchingSignal.value;
-
-      // Signal returned to default - clean up URL by removing the parameter
-      // Skip cleanup during URL-to-signal synchronization to prevent recursion
-      if (isUpdatingRoutesFromUrl) {
-        return;
-      }
-
-      if (!matching) {
-        // Route not matching, no URL sync needed
-        return;
-      }
-      if (urlParamValue === undefined) {
-        // No URL parameter exists - check if signal has meaningful value to add
-        if (connection.isDefaultValue(value)) {
-          // Signal using default value, keep URL clean (no parameter needed)
-          return;
-        }
-        if (debug) {
-          console.debug(
-            `[route] Signal->URL: ${paramName} adding custom value ${value} to URL (default: ${connection.getDefaultValue()})`,
-          );
-        }
-        route.replaceParams({ [paramName]: value });
-        return;
-      }
-
-      // URL parameter exists - check if we need to update or clean it up
-      if (connection.isDefaultValue(value)) {
-        if (debug) {
-          console.debug(
-            `[route] Signal->URL: ${paramName} cleaning URL (removing default value ${value})`,
-          );
-        }
-        route.replaceParams({ [paramName]: undefined });
-        return;
-      }
-
-      if (value === urlParamValue) {
-        // Values already match, no sync needed
-        return;
-      }
-      if (debug) {
-        console.debug(
-          `[route] Signal->URL: ${paramName} updating URL ${urlParamValue} -> ${value}`,
-        );
-      }
-      route.replaceParams({ [paramName]: value });
-    });
-  }
-  route.navTo = (params) => {
-    if (!integration) {
-      return Promise.resolve();
-    }
-    const routeUrl = route.buildUrl(params);
-    return integration.navTo(routeUrl);
-  };
-  route.redirectTo = (params) => {
-    if (!integration) {
-      return Promise.resolve();
-    }
-    return integration.navTo(route.buildUrl(params), {
-      replace: true,
-    });
-  };
-  route.replaceParams = (newParams) => {
-    const matching = route.matchingSignal.peek();
-    if (!matching) {
-      console.warn(
-        `Cannot replace params on route ${route} because it is not matching the current URL.`,
-      );
-      return null;
-    }
-
-    // Find all matching routes and update their actions, then delegate to most specific
-    const allMatchingRoutes = Array.from(routeSet).filter((r) => r.matching);
-
-    // Update action params on all matching routes
-    for (const matchingRoute of allMatchingRoutes) {
-      if (matchingRoute.action) {
-        const matchingRoutePrivateProperties =
-          getRoutePrivateProperties(matchingRoute);
-        const { routePattern: matchingRoutePattern } =
-          matchingRoutePrivateProperties;
-        const currentResolvedParams = matchingRoutePattern.resolveParams();
-        const updatedActionParams = {
-          ...currentResolvedParams,
-          ...newParams,
-        };
-        matchingRoute.action.replaceParams(updatedActionParams);
-      }
-    }
-
-    // Find the most specific route using pattern depth (deeper = more specific)
-    let mostSpecificRoute = route;
-    const routePrivateProperties = getRoutePrivateProperties(route);
-    let maxDepth = routePrivateProperties.routePattern.depth;
-
-    for (const matchingRoute of allMatchingRoutes) {
-      if (matchingRoute === route) {
-        continue;
-      }
-      const matchingRoutePrivateProperties =
-        getRoutePrivateProperties(matchingRoute);
-      const depth = matchingRoutePrivateProperties.routePattern.depth;
-
-      if (depth > maxDepth) {
-        maxDepth = depth;
-        mostSpecificRoute = matchingRoute;
-      }
-    }
-
-    // If we found a more specific route, delegate to it; otherwise handle it ourselves
-    if (mostSpecificRoute !== route) {
-      return mostSpecificRoute.redirectTo(newParams);
-    }
-    return route.redirectTo(newParams);
-  };
-  route.buildRelativeUrl = (params) => {
-    // buildMostPreciseUrl now handles parameter resolution internally
-    return routePattern.buildMostPreciseUrl(params);
-  };
-  route.buildUrl = (params) => {
-    const routeRelativeUrl = route.buildRelativeUrl(params);
-    const routeUrl = resolveRouteUrl(routeRelativeUrl);
-    return routeUrl;
-  };
-  route.matchesParams = (providedParams) => {
-    const currentParams = route.params;
-    const resolvedParams = routePattern.resolveParams({
-      ...currentParams,
-      ...providedParams,
-    });
-    const same = compareTwoJsValues(currentParams, resolvedParams);
-    return same;
-  };
-
-  // relativeUrl/url
-  route.relativeUrlSignal = computed(() => {
-    const rawParams = route.rawParamsSignal.value;
-    const relativeUrl = route.buildRelativeUrl(rawParams);
-    return relativeUrl;
-  });
-  route.urlSignal = computed(() => {
-    const routeUrl = route.buildUrl();
-    return routeUrl;
-  });
-  const disposeRelativeUrlEffect = effect(() => {
-    route.relativeUrl = route.relativeUrlSignal.value;
-  });
-  const disposeUrlEffect = effect(() => {
-    route.url = route.urlSignal.value;
-  });
-  cleanupCallbackSet.add(disposeRelativeUrlEffect);
-  cleanupCallbackSet.add(disposeUrlEffect);
-
-  // action stuff (for later)
-  route.bindAction = (action) => {
-    const { store } = action.meta;
-    if (store) {
-      const { mutableIdKeys } = store;
-      if (mutableIdKeys.length) {
-        const mutableIdKey = mutableIdKeys[0];
-        const mutableIdValueSignal = computed(() => {
-          const params = route.paramsSignal.value;
-          const mutableIdValue = params[mutableIdKey];
-          return mutableIdValue;
-        });
-        const routeItemSignal = store.signalForMutableIdKey(
-          mutableIdKey,
-          mutableIdValueSignal,
-        );
-        store.observeProperties(routeItemSignal, (propertyMutations) => {
-          const mutableIdPropertyMutation = propertyMutations[mutableIdKey];
-          if (!mutableIdPropertyMutation) {
-            return;
-          }
-          route.replaceParams({
-            [mutableIdKey]: mutableIdPropertyMutation.newValue,
-          });
-        });
-      }
-    }
-
-    const actionBoundToThisRoute = action.bindParams(route.paramsSignal);
-    route.action = actionBoundToThisRoute;
-    return actionBoundToThisRoute;
-  };
-
-  return route;
-};
-
 let integration;
 const setRouteIntegration = (integrationInterface) => {
   integration = integrationInterface;
 };
-let onRouteDefined = () => {};
-const setOnRouteDefined = (v) => {
-  onRouteDefined = v;
+let onAllRouteReady = () => {};
+const setOnAllRouteReady = (callback) => {
+  onAllRouteReady = callback;
 };
 
 const arraySignal = (initialValue = []) => {
@@ -11553,6 +12150,8 @@ const setupBrowserIntegrationViaHistory = ({
   };
 };
 
+let updateRoutes;
+
 const applyActions = (params) => {
   const updateActionsResult = updateActions(params);
   const { allResult, runningActionSet } = updateActionsResult;
@@ -11563,7 +12162,6 @@ const applyActions = (params) => {
   workingWhile(() => allResult, pendingTaskNameArray);
   return updateActionsResult;
 };
-
 const applyRouting = (
   url,
   {
@@ -11586,7 +12184,10 @@ const applyRouting = (
     isVisited,
     // state,
   });
-  if (loadSet.size === 0 && reloadSet.size === 0) {
+  if (
+    (!loadSet || loadSet.size === 0) &&
+    (!reloadSet || reloadSet.size === 0)
+  ) {
     return {
       allResult: undefined,
       requestedResult: undefined,
@@ -11600,6 +12201,7 @@ const applyRouting = (
     rerunSet: reloadSet,
     abortSignalMap,
     reason,
+    isReplace: navigationType === "replace",
   });
   const { allResult, runningActionSet } = updateActionsResult;
   const pendingTaskNameArray = [];
@@ -11617,7 +12219,8 @@ const browserIntegration = setupBrowserIntegrationViaHistory({
   applyRouting,
 });
 
-setOnRouteDefined(() => {
+setOnAllRouteReady((v) => {
+  updateRoutes = v;
   browserIntegration.init();
 });
 setRouteIntegration(browserIntegration);
@@ -11761,7 +12364,8 @@ const useForceRender = () => {
  * . Tester le code splitting avec .lazy + import dynamique
  * pour les elements des routes
  *
- * 3. Ajouter la possibilite d'avoir des action sur les routes
+ * 3. Ajouter la possibilite d'avoir des
+ *  sur les routes
  * Tester juste les data pour commencer
  * On aura ptet besoin d'un useRouteData au lieu de passer par un element qui est une fonction
  * pour que react ne re-render pas tout
@@ -11800,7 +12404,7 @@ const RootElement = () => {
 const SlotContext = createContext(null);
 const RouteInfoContext = createContext(null);
 const Routes = ({
-  element = RootElement,
+  element = jsx(RootElement, {}),
   children
 }) => {
   const routeInfo = useMatchingRouteInfo();
@@ -11813,8 +12417,9 @@ const Routes = ({
 };
 const useMatchingRouteInfo = () => useContext(RouteInfoContext);
 const Route = ({
-  element,
   route,
+  element,
+  action,
   index,
   fallback,
   meta,
@@ -11825,8 +12430,9 @@ const Route = ({
   const hasDiscoveredRef = useRef(false);
   const matchingInfoRef = useRef(null);
   if (!hasDiscoveredRef.current) {
-    return jsx(MatchingRouteManager, {
+    return jsx(RouteMatchManager, {
       element: element,
+      action: action,
       route: route,
       index: index,
       fallback: fallback,
@@ -11851,11 +12457,13 @@ const Route = ({
 };
 const RegisterChildRouteContext = createContext(null);
 
-/* This component is ensure to be rendered once
-So no need to cleanup things or whatever we know and ensure that 
-it's executed once for the entire app lifecycle */
-const MatchingRouteManager = ({
+/* This component is rendered once
+ * So no need to cleanup things or whatever we know and ensure that
+ * t's executed once for the entire app lifecycle
+ */
+const RouteMatchManager = ({
   element,
+  action,
   route,
   index,
   fallback,
@@ -11867,18 +12475,18 @@ const MatchingRouteManager = ({
   if (route && fallback) {
     throw new Error("Route cannot have both route and fallback props");
   }
-  const registerChildRouteFromContext = useContext(RegisterChildRouteContext);
+  const parentRegisterChildRoute = useContext(RegisterChildRouteContext);
   const elementId = getElementSignature(element);
   const candidateSet = new Set();
   let indexCandidate = null;
   let fallbackCandidate = null;
   const registerChildRoute = childRouteInfo => {
-    const childElementId = getElementSignature(childRouteInfo.element);
+    const childElementId = getElementSignature(childRouteInfo.MatchingElement);
     candidateSet.add(childRouteInfo);
     if (childRouteInfo.index) {
       if (indexCandidate) {
         throw new Error(`Multiple index routes registered under the same parent route (${elementId}):
-- ${getElementSignature(indexCandidate.element)}
+- ${getElementSignature(indexCandidate.MatchingElement)}
 - ${childElementId}`);
       }
       indexCandidate = childRouteInfo;
@@ -11886,7 +12494,7 @@ const MatchingRouteManager = ({
     if (childRouteInfo.fallback) {
       if (fallbackCandidate) {
         throw new Error(`Multiple fallback routes registered under the same parent route (${elementId}):
-- ${getElementSignature(fallbackCandidate.element)}
+- ${getElementSignature(fallbackCandidate.MatchingElement)}
 - ${childElementId}`);
       }
       if (childRouteInfo.route.routeFromProps) {
@@ -11898,6 +12506,7 @@ const MatchingRouteManager = ({
   useLayoutEffect(() => {
     initRouteObserver({
       element,
+      action,
       route,
       index,
       fallback,
@@ -11907,7 +12516,7 @@ const MatchingRouteManager = ({
       fallbackCandidate,
       candidateSet,
       onMatchingInfoChange,
-      registerChildRouteFromContext
+      parentRegisterChildRoute
     });
   }, []);
   return jsx(RegisterChildRouteContext.Provider, {
@@ -11917,6 +12526,7 @@ const MatchingRouteManager = ({
 };
 const initRouteObserver = ({
   element,
+  action,
   route,
   index,
   fallback,
@@ -11926,7 +12536,7 @@ const initRouteObserver = ({
   fallbackCandidate,
   candidateSet,
   onMatchingInfoChange,
-  registerChildRouteFromContext
+  parentRegisterChildRoute
 }) => {
   if (!fallbackCandidate && indexCandidate && indexCandidate.fallback !== false) {
     // no fallback + an index -> index behaves as a fallback (handle urls under a parent when no sibling matches)
@@ -12009,10 +12619,10 @@ const initRouteObserver = ({
     const matchingRouteInfo = matchingRouteInfoSignal.value;
     useUITransitionContentId(matchingRouteInfo ? matchingRouteInfo.route.urlPattern : fallback ? "fallback" : undefined);
     const SlotMatchingElement = SlotMatchingElementSignal.value;
-    if (typeof element === "function") {
-      const Element = element;
-      element = jsx(Element, {});
-    }
+    element = action ? jsx(ActionRenderer, {
+      action: action,
+      children: element
+    }) : element;
     return jsx(RouteInfoContext.Provider, {
       value: matchingRouteInfo,
       children: jsx(SlotContext.Provider, {
@@ -12027,11 +12637,11 @@ const initRouteObserver = ({
     if (newMatchingInfo) {
       compositeRoute.matching = true;
       matchingRouteInfoSignal.value = newMatchingInfo;
-      SlotMatchingElementSignal.value = newMatchingInfo.element;
+      SlotMatchingElementSignal.value = newMatchingInfo.MatchingElement;
       onMatchingInfoChange({
         route: newMatchingInfo.route,
         MatchingElement,
-        SlotMatchingElement: newMatchingInfo.element,
+        SlotMatchingElement: newMatchingInfo.MatchingElement,
         index: newMatchingInfo.index,
         fallback: newMatchingInfo.fallback,
         meta: newMatchingInfo.meta
@@ -12053,10 +12663,10 @@ const initRouteObserver = ({
   for (const candidate of candidateSet) {
     addTeardown(candidate.route.subscribeStatus(onChange));
   }
-  if (registerChildRouteFromContext) {
-    registerChildRouteFromContext({
+  if (parentRegisterChildRoute) {
+    parentRegisterChildRoute({
       route: compositeRoute,
-      element: MatchingElement,
+      MatchingElement,
       index,
       fallback,
       meta
@@ -12081,6 +12691,70 @@ const RouteSlot = () => {
 };
 Route.Slot = RouteSlot;
 
+const routeAction = (
+  route,
+  action,
+  paramsEffect = () => route.paramsSignal.value,
+  options = {},
+) => {
+  const actionBoundToRoute = actionRunEffect(
+    action,
+    () => {
+      const matching = route.matchingSignal.value;
+      const params = paramsEffect();
+      if (!matching) {
+        return null;
+      }
+      return params;
+    },
+    options,
+  );
+
+  // If the action is related to a store of items
+  // we want to keep the url in sync with the item id of the store when it changes
+  // This way whenever an item with a mutable id is updated, the url is also updated
+  // (renaming a user while being on the user page)
+  // In case the route does not use this param, then this code won't have an effect
+  // To work the route params MUST use the same name (case sensitive) as the mutable id key
+  // so "/users/:id/" with mutableIdKey "id" will work but "/users/:userId/" with mutableIdKey "id" won't work
+  sync_url_and_item_id: {
+    const { store } = actionBoundToRoute.meta;
+    if (!store) {
+      break sync_url_and_item_id;
+    }
+    const { mutableIdKeys } = store;
+    const [firstMutableIdKey] = mutableIdKeys;
+    if (!firstMutableIdKey) {
+      break sync_url_and_item_id;
+    }
+    const mutableIdValueSignal = computed(() => {
+      const params = route.paramsSignal.value;
+      const mutableIdValue = params[firstMutableIdKey];
+      return mutableIdValue;
+    });
+    const routeItemSignal = store.signalForMutableIdKey(
+      firstMutableIdKey,
+      mutableIdValueSignal,
+    );
+    store.observeItemProperties(routeItemSignal, (propertyMutations) => {
+      const mutableIdPropertyMutation = propertyMutations[firstMutableIdKey];
+      if (!mutableIdPropertyMutation) {
+        return;
+      }
+      route.replaceParams(
+        {
+          [firstMutableIdKey]: mutableIdPropertyMutation.newValue,
+        },
+        {
+          callReason: `store item ${firstMutableIdKey} change on ${route}`,
+        },
+      );
+    });
+  }
+
+  return actionBoundToRoute;
+};
+
 const FormContext = createContext();
 
 const FormActionContext = createContext();
@@ -12088,10 +12762,12 @@ const FormActionContext = createContext();
 const renderActionableComponent = (props, {
   Basic,
   WithAction,
-  WithActionInsideForm
+  WithActionInsideForm,
+  WithConnectedAction
 }) => {
   const {
     action,
+    connectedAction,
     shortcuts
   } = props;
   const formContext = useContext(FormContext);
@@ -12104,6 +12780,11 @@ const renderActionableComponent = (props, {
       });
     }
     return jsx(WithAction, {
+      ...props
+    });
+  }
+  if (WithConnectedAction && connectedAction) {
+    return jsx(WithConnectedAction, {
       ...props
     });
   }
@@ -17113,7 +17794,7 @@ const applySpacingOnTextChildren = (children, spacing) => {
     }
   } else if (typeof spacing === "number") {
     separator = jsx(CustomWidthSpace, {
-      value: spacing
+      value: `${spacing}px`
     });
   } else {
     separator = spacing;
@@ -17129,27 +17810,46 @@ const applySpacingOnTextChildren = (children, spacing) => {
     }
     const currentChild = childArray[i - 1];
     const nextChild = childArray[i];
-    if (endsWithWhitespace(currentChild)) {
+    if (!shouldInjectSpacingAfter(currentChild)) {
       continue;
     }
-    if (startsWithWhitespace(nextChild)) {
+    if (!shouldInjectSpacingBefore(nextChild)) {
       continue;
     }
     childrenWithGap.push(separator);
   }
   return childrenWithGap;
 };
-const endsWithWhitespace = jsxChild => {
-  if (typeof jsxChild === "string") {
-    return /\s$/.test(jsxChild);
-  }
-  return false;
+const outsideFlowSet = new Set();
+const markAsOutsideFlow = jsxElement => {
+  outsideFlowSet.add(jsxElement);
 };
-const startsWithWhitespace = jsxChild => {
+const isMarkedAsOutsideFlow = jsxElement => {
+  return outsideFlowSet.has(jsxElement.type);
+};
+const shouldInjectSpacingAfter = jsxChild => {
   if (typeof jsxChild === "string") {
-    return /^\s/.test(jsxChild);
+    if (/\s$/.test(jsxChild)) {
+      return false;
+    }
   }
-  return false;
+  if (isMarkedAsOutsideFlow(jsxChild)) {
+    // we can mark jsx element as "outsideFlow" to avoid spacing injection between it and surrounding text
+    return false;
+  }
+  return true;
+};
+const shouldInjectSpacingBefore = jsxChild => {
+  if (typeof jsxChild === "string") {
+    if (/^\s/.test(jsxChild)) {
+      return false;
+    }
+  }
+  if (isMarkedAsOutsideFlow(jsxChild)) {
+    // we can mark jsx element as "outsideFlow" to avoid spacing injection between it and surrounding text
+    return false;
+  }
+  return true;
 };
 const OverflowPinnedElementContext = createContext(null);
 const Text = props => {
@@ -17178,6 +17878,7 @@ const Text = props => {
 };
 const TextOverflow = ({
   noWrap,
+  spacing,
   children,
   ...rest
 }) => {
@@ -17200,6 +17901,7 @@ const TextOverflow = ({
         value: setOverflowPinnedElement,
         children: jsx(Text, {
           className: "navi_text_overflow_text",
+          spacing: spacing,
           children: children
         })
       }), OverflowPinnedElement]
@@ -17238,7 +17940,7 @@ const TextWithSelectRange = ({
   });
 };
 const TextBasic = ({
-  spacing = " ",
+  spacing = REGULAR_SPACE,
   boldTransition,
   boldStable,
   preventBoldLayoutShift = boldTransition,
@@ -17316,7 +18018,6 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
     }
     &[data-icon-char] {
       flex-grow: 0 !important;
-      line-height: normal;
     }
   }
 
@@ -18531,6 +19232,9 @@ const useKeyboardShortcuts = (
 
   useEffect(() => {
     const element = elementRef.current;
+    if (!element) {
+      return null;
+    }
     const shortcutsCopy = [];
     for (const shortcutCandidate of shortcuts) {
       shortcutsCopy.push({
@@ -18543,7 +19247,8 @@ const useKeyboardShortcuts = (
             return false;
           }
           const { action } = shortcutCandidate;
-          return requestAction(element, action, {
+          const actionWithEvent = action.bindParams(keyboardEvent);
+          return requestAction(element, actionWithEvent, {
             actionOrigin: "keyboard_shortcut",
             event: keyboardEvent,
             requester: document.activeElement,
@@ -18846,12 +19551,15 @@ const useUIStateController = (
     getStateFromProp = (prop) => prop,
     getPropFromState = (state) => state,
     getStateFromParent,
+    persists,
   } = {},
 ) => {
   const parentUIStateController = useContext(ParentUIStateControllerContext);
   const formContext = useContext(FormContext);
-  const { id, name, onUIStateChange, action } = props;
-  const uncontrolled = !formContext && !action;
+  const { id, name, uiAction, action } = props;
+  if (persists === undefined && formContext) {
+    persists = true;
+  }
   const [navState, setNavState] = useNavState$1(id);
 
   const uiStateControllerRef = useRef();
@@ -18867,7 +19575,7 @@ const useUIStateController = (
       // not controlled but want an initial state (a value or being checked)
       return getStateFromProp(defaultState);
     }
-    if (formContext && navState) {
+    if (persists && navState) {
       // not controlled but want to use value from nav state
       // (I think this should likely move earlier to win over the hasUIStateProp when it's undefined)
       return getStateFromProp(navState);
@@ -18888,11 +19596,9 @@ const useUIStateController = (
    * The component re-renders so it's the action/form that is considered as responsible
    * to update the state and as a result allowed to have "checked"/"value" prop without "onUIStateChange"
    */
-  const readOnly =
-    uncontrolled &&
-    hasStateProp &&
-    !onUIStateChange &&
-    !parentUIStateController;
+  const uncontrolled =
+    !action && !uiAction && !formContext && !parentUIStateController;
+  const readOnly = uncontrolled && hasStateProp;
 
   const [
     notifyParentAboutChildMount,
@@ -18911,7 +19617,7 @@ const useUIStateController = (
     existingUIStateController._checkForUpdates({
       readOnly,
       name,
-      onUIStateChange,
+      uiAction,
       getPropFromState,
       getStateFromProp,
       hasStateProp,
@@ -18929,7 +19635,7 @@ const useUIStateController = (
     _checkForUpdates: ({
       readOnly,
       name,
-      onUIStateChange,
+      uiAction,
       getPropFromState,
       getStateFromProp,
       hasStateProp,
@@ -18938,7 +19644,7 @@ const useUIStateController = (
     }) => {
       uiStateController.readOnly = readOnly;
       uiStateController.name = name;
-      uiStateController.onUIStateChange = onUIStateChange;
+      uiStateController.uiAction = uiAction;
       uiStateController.getPropFromState = getPropFromState;
       uiStateController.getStateFromProp = getStateFromProp;
       uiStateController.stateInitial = stateInitial;
@@ -18966,12 +19672,12 @@ const useUIStateController = (
     hasStateProp,
     state: stateInitial,
     uiState: stateInitial,
-    onUIStateChange,
+    uiAction,
     getPropFromState,
     getStateFromProp,
     setUIState: (prop, e) => {
       const newUIState = uiStateController.getStateFromProp(prop);
-      if (formContext) {
+      if (persists) {
         setNavState(prop);
       }
       const currentUIState = uiStateController.uiState;
@@ -18983,7 +19689,7 @@ const useUIStateController = (
       );
       uiStateController.uiState = newUIState;
       publishUIState(newUIState);
-      uiStateController.onUIStateChange?.(newUIState, e);
+      uiStateController.uiAction?.(newUIState, e);
       notifyParentAboutChildUIStateChange(e);
     },
     resetUIState: (e) => {
@@ -18991,7 +19697,7 @@ const useUIStateController = (
       uiStateController.setUIState(currentState, e);
     },
     actionEnd: () => {
-      if (formContext) {
+      if (persists) {
         setNavState(undefined);
       }
     },
@@ -19101,7 +19807,7 @@ const useUIGroupStateController = (
     throw new TypeError("aggregateChildStates must be a function");
   }
   const parentUIStateController = useContext(ParentUIStateControllerContext);
-  const { onUIStateChange, name, value } = props;
+  const { uiAction, name, value } = props;
   const childUIStateControllerArrayRef = useRef([]);
   const childUIStateControllerArray = childUIStateControllerArrayRef.current;
   const uiStateControllerRef = useRef();
@@ -19150,7 +19856,7 @@ const useUIGroupStateController = (
   const existingUIStateController = uiStateControllerRef.current;
   if (existingUIStateController) {
     existingUIStateController.name = name;
-    existingUIStateController.onUIStateChange = onUIStateChange;
+    existingUIStateController.uiAction = uiAction;
     existingUIStateController.value = value;
     return existingUIStateController;
   }
@@ -19166,7 +19872,7 @@ const useUIGroupStateController = (
     componentType,
     name,
     value,
-    onUIStateChange,
+    uiAction,
     uiState: emptyState,
     setUIState: (newUIState, e) => {
       const currentUIState = uiStateController.uiState;
@@ -19577,9 +20283,7 @@ const ButtonBasic = props => {
     return jsxs(Text, {
       ...buttonProps,
       className: "navi_button_content",
-      children: [children, jsx("span", {
-        className: "navi_button_shadow"
-      })]
+      children: [children, jsx(ButtonShadow, {})]
     });
   };
   const renderButtonContentMemoized = useCallback(renderButtonContent, [children]);
@@ -19613,6 +20317,12 @@ const ButtonBasic = props => {
     }), renderButtonContentMemoized]
   });
 };
+const ButtonShadow = () => {
+  return jsx("span", {
+    className: "navi_button_shadow"
+  });
+};
+markAsOutsideFlow(ButtonShadow);
 const ButtonWithAction = props => {
   const {
     action,
@@ -19939,6 +20649,7 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
       --link-text-decoration: underline;
       --link-text-decoration-hover: var(--link-text-decoration);
       --link-cursor: pointer;
+      --link-loading-outline-size: 1px;
     }
   }
 
@@ -19946,6 +20657,7 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
     --x-link-color: var(--link-color);
     --x-link-color-hover: var(--link-color-hover, var(--link-color));
     --x-link-color-visited: var(--link-color-visited);
+    --x-link-color-current: var(--link-color-current);
     --x-link-color-active: var(--link-color-active);
     --x-link-text-decoration: var(--link-text-decoration);
     --x-link-text-decoration-hover: var(--link-text-decoration-hover);
@@ -19953,6 +20665,8 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
 
     position: relative;
     aspect-ratio: inherit;
+    /* Ensure the spacing for the loading outline is part of the <a> so that it does not create an overflow */
+    padding: var(--link-loading-outline-size);
     color: var(--x-link-color);
     text-decoration: var(--x-link-text-decoration);
     border-radius: var(--link-border-radius);
@@ -19961,24 +20675,6 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
     outline-color: var(--link-outline-color);
     cursor: var(--x-link-cursor);
 
-    /* Current */
-    &[data-href-current] {
-      --x-link-cursor: default;
-    }
-    /* Hover */
-    &[data-hover] {
-      --x-link-color: var(--x-link-color-hover);
-      --x-link-text-decoration: var(--x-link-text-decoration-hover);
-    }
-    /* Focus */
-    &[data-focus],
-    &[data-focus-visible] {
-      position: relative;
-      z-index: 1; /* Ensure focus outline is above other elements */
-    }
-    &[data-focus-visible] {
-      outline-width: 2px;
-    }
     /* Visited */
     &[data-visited] {
       --x-link-color: var(--x-link-color-visited);
@@ -19988,6 +20684,30 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
         /* No need for a special color for visited anchors */
         --x-link-color: var(--link-color);
       }
+    }
+    /* Hover */
+    &[data-hover] {
+      --x-link-color: var(--x-link-color-hover);
+      --x-link-text-decoration: var(--x-link-text-decoration-hover);
+    }
+    /* Current */
+    &[data-href-current] {
+      --x-link-color: var(--link-color-current);
+      --x-link-cursor: default;
+      &[data-anchor] {
+        /* For anchor links, we want to keep the pointer cursor to indicate interactivity */
+        /* as anchor link will still scroll to the section even if it's the current page */
+        --x-link-cursor: pointer;
+      }
+    }
+    /* Focus */
+    &[data-focus],
+    &[data-focus-visible] {
+      position: relative;
+      z-index: 1; /* Ensure focus outline is above other elements */
+    }
+    &[data-focus-visible] {
+      outline-width: 2px;
     }
     /* Selected */
     &[aria-selected] {
@@ -20019,7 +20739,6 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
     &[data-discrete] {
       --link-color: inherit;
       --link-text-decoration: none;
-      --x-link-color: var(--link-color);
     }
     /* Reveal on interaction */
     &[data-reveal-on-interaction] {
@@ -20072,9 +20791,12 @@ const LinkStyleCSSVars = {
   },
   ":active": {
     color: "--link-color-active"
+  },
+  ":-navi-href-current": {
+    color: "--link-color-current"
   }
 };
-const LinkPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":visited", ":-navi-loading", ":-navi-href-internal", ":-navi-href-external", ":-navi-href-anchor", ":-navi-href-current"];
+const LinkPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":visited", ":-navi-loading", ":-navi-href-internal", ":-navi-href-external", ":-navi-href-anchor", ":-navi-href-current", ":-navi-href-match"];
 const LinkPseudoElements = ["::-navi-loader"];
 Object.assign(PSEUDO_CLASSES, {
   ":-navi-href-internal": {
@@ -20088,6 +20810,9 @@ Object.assign(PSEUDO_CLASSES, {
   },
   ":-navi-href-current": {
     attribute: "data-href-current"
+  },
+  ":-navi-href-match": {
+    attribute: "data-href-match"
   }
 });
 const Link = props => {
@@ -20126,10 +20851,13 @@ const LinkPlain = props => {
     discrete,
     blankTargetIcon,
     anchorIcon,
-    icon,
+    startIcon,
+    endIcon,
     spacing,
     revealOnInteraction = Boolean(titleLevel),
     hrefFallback = !anchor,
+    matching,
+    overflowEllipsis,
     children,
     ...rest
   } = props;
@@ -20149,31 +20877,56 @@ const LinkPlain = props => {
   } = getHrefTargetInfo(href);
   const innerTarget = target === undefined ? isSameSite ? "_self" : "_blank" : target;
   const innerRel = rel === undefined ? isSameSite ? undefined : "noopener noreferrer" : rel;
-  let innerIcon;
-  if (icon === undefined) {
+  let innerEndIcon;
+  if (endIcon === undefined) {
     // Check for special protocol or domain-specific icons first
     if (href?.startsWith("tel:")) {
-      innerIcon = jsx(PhoneSvg, {});
+      innerEndIcon = jsx(PhoneSvg, {});
     } else if (href?.startsWith("sms:")) {
-      innerIcon = jsx(SmsSvg, {});
+      innerEndIcon = jsx(SmsSvg, {});
     } else if (href?.startsWith("mailto:")) {
-      innerIcon = jsx(EmailSvg, {});
+      innerEndIcon = jsx(EmailSvg, {});
     } else if (href?.includes("github.com")) {
-      innerIcon = jsx(GithubSvg, {});
+      innerEndIcon = jsx(GithubSvg, {});
     } else {
       // Fall back to default icon logic
       const innerBlankTargetIcon = blankTargetIcon === undefined ? innerTarget === "_blank" : blankTargetIcon;
       const innerAnchorIcon = anchorIcon === undefined ? isAnchor : anchorIcon;
       if (innerBlankTargetIcon) {
-        innerIcon = innerBlankTargetIcon === true ? jsx(LinkBlankTargetSvg, {}) : innerBlankTargetIcon;
+        innerEndIcon = innerBlankTargetIcon === true ? jsx(LinkBlankTargetSvg, {}) : innerBlankTargetIcon;
       } else if (innerAnchorIcon) {
-        innerIcon = innerAnchorIcon === true ? jsx(LinkAnchorSvg, {}) : anchorIcon;
+        innerEndIcon = innerAnchorIcon === true ? jsx(LinkAnchorSvg, {}) : anchorIcon;
       }
     }
   } else {
-    innerIcon = icon;
+    innerEndIcon = endIcon;
   }
   const innerChildren = children || (hrefFallback ? href : children);
+  const startIconEl = startIcon && jsx(Icon, {
+    marginRight: innerChildren ? "xxs" : undefined,
+    children: startIcon
+  });
+  const endIconEl = innerEndIcon && jsx(Icon, {
+    marginLeft: innerChildren ? "xxs" : undefined,
+    children: innerEndIcon
+  });
+
+  // For now we don't do as for button.jsx where we always wrap button content inside <Text>
+  // because link can wrap images or other non-text content and we don't want to mess with it
+  // in theory this is the same for button so we'll see with time what makes more sense
+  const visualChildren = overflowEllipsis ? jsxs(Text, {
+    overflowEllipsis: true
+    // Here we can't use spaces as they would be underlined
+    // (Ce would use zero width space with paddings but that's just simpler to rely on margins here)
+    ,
+    spacing: "pre",
+    children: [startIconEl, innerChildren, endIconEl && jsx(Text, {
+      overflowPinned: true,
+      children: endIconEl
+    })]
+  }) : jsxs(Fragment, {
+    children: [startIconEl, applySpacingOnTextChildren(innerChildren, spacing), endIconEl]
+  });
   return jsxs(Box, {
     as: "a",
     color: anchor && !innerChildren ? "inherit" : undefined,
@@ -20203,7 +20956,8 @@ const LinkPlain = props => {
       ":-navi-href-internal": isSameSite,
       ":-navi-href-external": !isSameSite,
       ":-navi-href-anchor": isAnchor,
-      ":-navi-href-current": isCurrent
+      ":-navi-href-current": isCurrent,
+      ":-navi-href-match": matching
     },
     onClick: e => {
       if (preventDefault) {
@@ -20227,11 +20981,9 @@ const LinkPlain = props => {
     },
     children: [jsx(LoaderBackground, {
       loading: loading,
+      inset: 1,
       color: "var(--link-loader-color)"
-    }), applySpacingOnTextChildren(innerChildren, spacing), innerIcon && jsx(Icon, {
-      marginLeft: innerChildren ? "xxs" : undefined,
-      children: innerIcon
-    })]
+    }), visualChildren]
   });
 };
 const SmsSvg = () => {
@@ -20363,11 +21115,15 @@ const RouteLink = ({
   if (!route) {
     throw new Error("route prop is required");
   }
-  useRouteStatus(route);
+  const {
+    matching
+  } = useRouteStatus(route);
+  const paramsAreMatching = route.matchesParams(routeParams);
   const url = route.buildUrl(routeParams);
   return jsx(Link, {
-    ...rest,
+    matching: matching && paramsAreMatching,
     href: url,
+    ...rest,
     children: children || route.buildRelativeUrl(routeParams)
   });
 };
@@ -20756,6 +21512,450 @@ const TabBasic = ({
       ,
       children: children
     }) : children]
+  });
+};
+
+const useFocusGroup = (
+  elementRef,
+  { enabled = true, direction, skipTab, loop, name } = {},
+) => {
+  useLayoutEffect(() => {
+    if (!enabled) {
+      return null;
+    }
+    const element = elementRef.current;
+    if (!element) {
+      return null;
+    }
+    const focusGroup = initFocusGroup(element, {
+      direction,
+      skipTab,
+      loop,
+      name,
+    });
+    return focusGroup.cleanup;
+  }, [direction, skipTab, loop, name]);
+};
+
+installImportMetaCss(import.meta);const rightArrowPath = "M680-480L360-160l-80-80 240-240-240-240 80-80 320 320z";
+const downArrowPath = "M480-280L160-600l80-80 240 240 240-240 80 80-320 320z";
+import.meta.css = /* css */`
+  .navi_summary_marker {
+    width: 1em;
+    height: 1em;
+    flex-shrink: 0;
+    line-height: 1em;
+
+    .navi_summary_marker_loading_container {
+      transform: scale(0.3);
+      transition: transform 0.3s linear;
+
+      .navi_summary_marker_background_circle,
+      .navi_summary_marker_foreground_circle {
+        opacity: 0;
+        transition: opacity 0.3s ease-in-out;
+      }
+
+      .navi_summary_marker_foreground_circle {
+        stroke-dasharray: 503 1507; /* ~25% of circle perimeter */
+        stroke-dashoffset: 0;
+        animation: progress-around-circle 1.5s linear infinite;
+      }
+    }
+
+    .navi_summary_marker_arrow {
+      opacity: 1;
+      transition: opacity 0.3s ease-in-out;
+      animation-duration: 0.3s;
+      animation-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
+      animation-fill-mode: forwards;
+
+      &[data-animation-target="down"] {
+        animation-name: morph-to-down;
+      }
+
+      &[data-animation-target="right"] {
+        animation-name: morph-to-right;
+      }
+    }
+
+    &[data-loading] {
+      .navi_summary_marker_loading_container {
+        transform: scale(1);
+
+        .navi_summary_marker_background_circle {
+          opacity: 0.2;
+        }
+        .navi_summary_marker_foreground_circle {
+          opacity: 1;
+        }
+      }
+      .navi_summary_marker_arrow {
+        opacity: 0;
+      }
+    }
+  }
+  @keyframes progress-around-circle {
+    0% {
+      stroke-dashoffset: 0;
+    }
+    100% {
+      stroke-dashoffset: -2010;
+    }
+  }
+  @keyframes morph-to-down {
+    from {
+      d: path("${rightArrowPath}");
+    }
+    to {
+      d: path("${downArrowPath}");
+    }
+  }
+  @keyframes morph-to-right {
+    from {
+      d: path("${downArrowPath}");
+    }
+    to {
+      d: path("${rightArrowPath}");
+    }
+  }
+`;
+const SummaryMarker = ({
+  open,
+  loading
+}) => {
+  const showLoading = useDebounceTrue(loading, 300);
+  const mountedRef = useRef(false);
+  const prevOpenRef = useRef(open);
+  useLayoutEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+  const shouldAnimate = mountedRef.current && prevOpenRef.current !== open;
+  prevOpenRef.current = open;
+  return jsx("span", {
+    className: "navi_summary_marker",
+    "data-loading": showLoading ? "" : undefined,
+    children: jsxs("svg", {
+      viewBox: "0 -960 960 960",
+      xmlns: "http://www.w3.org/2000/svg",
+      children: [jsxs("g", {
+        className: "navi_summary_marker_loading_container",
+        "transform-origin": "480px -480px",
+        children: [jsx("circle", {
+          className: "navi_summary_marker_background_circle",
+          cx: "480",
+          cy: "-480",
+          r: "320",
+          stroke: "currentColor",
+          fill: "none",
+          strokeWidth: "60",
+          opacity: "0.2"
+        }), jsx("circle", {
+          className: "navi_summary_marker_foreground_circle",
+          cx: "480",
+          cy: "-480",
+          r: "320",
+          stroke: "currentColor",
+          fill: "none",
+          strokeWidth: "60",
+          strokeLinecap: "round",
+          strokeDasharray: "503 1507"
+        })]
+      }), jsx("g", {
+        "transform-origin": "480px -480px",
+        children: jsx("path", {
+          className: "navi_summary_marker_arrow",
+          fill: "currentColor",
+          "data-animation-target": shouldAnimate ? open ? "down" : "right" : undefined,
+          d: open ? downArrowPath : rightArrowPath
+        })
+      })]
+    })
+  });
+};
+
+installImportMetaCss(import.meta);import.meta.css = /* css */`
+  .navi_details {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-shrink: 0;
+    flex-direction: column;
+
+    summary {
+      display: flex;
+      flex-shrink: 0;
+      flex-direction: column;
+      cursor: pointer;
+      user-select: none;
+
+      &:focus {
+        z-index: 1;
+      }
+
+      .navi_summary_body {
+        display: flex;
+        width: 100%;
+        flex-direction: row;
+        align-items: center;
+        gap: 0.2em;
+
+        .navi_summary_label {
+          display: flex;
+          padding-right: 10px;
+          flex: 1;
+          align-items: center;
+          gap: 0.2em;
+        }
+      }
+    }
+  }
+`;
+const Details = props => {
+  const {
+    value = "on",
+    persists
+  } = props;
+  const uiStateController = useUIStateController(props, "details", {
+    statePropName: "open",
+    defaultStatePropName: "defaultOpen",
+    fallbackState: false,
+    getStateFromProp: open => open ? value : undefined,
+    getPropFromState: Boolean,
+    persists
+  });
+  const uiState = useUIState(uiStateController);
+  const details = renderActionableComponent(props, {
+    Basic: DetailsBasic,
+    WithAction: DetailsWithAction,
+    WithConnectedAction: DetailsWithConnectedAction
+  });
+  return jsx(UIStateControllerContext.Provider, {
+    value: uiStateController,
+    children: jsx(UIStateContext.Provider, {
+      value: uiState,
+      children: details
+    })
+  });
+};
+const DetailsBasic = props => {
+  const uiStateController = useContext(UIStateControllerContext);
+  const uiState = useContext(UIStateContext);
+  const {
+    id,
+    label = "Summary",
+    loading,
+    focusGroup,
+    focusGroupDirection,
+    arrowKeyShortcuts = true,
+    openKeyShortcut = "ArrowRight",
+    closeKeyShortcut = "ArrowLeft",
+    onToggle,
+    onOpen,
+    onClose,
+    children,
+    ...rest
+  } = props;
+  const defaultRef = useRef();
+  const ref = rest.ref || defaultRef;
+  const open = Boolean(uiState);
+  useFocusGroup(ref, {
+    enabled: focusGroup,
+    name: typeof focusGroup === "string" ? focusGroup : undefined,
+    direction: focusGroupDirection
+  });
+
+  /**
+   * Browser will dispatch "toggle" event even if we set open={true}
+   * When rendering the component for the first time
+   * We have to ensure the initial "toggle" event is ignored.
+   *
+   * If we don't do that code will think the details has changed and run logic accordingly
+   * For example it will try to navigate to the current url while we are already there
+   *
+   * See:
+   * - https://techblog.thescore.com/2024/10/08/why-we-decided-to-change-how-the-details-element-works/
+   * - https://github.com/whatwg/html/issues/4500
+   * - https://stackoverflow.com/questions/58942600/react-html-details-toggles-uncontrollably-when-starts-open
+   *
+   */
+
+  const summaryRef = useRef(null);
+  useKeyboardShortcuts(ref, [{
+    key: openKeyShortcut,
+    enabled: arrowKeyShortcuts,
+    when: e => document.activeElement === summaryRef.current &&
+    // avoid handling openKeyShortcut twice when keydown occurs inside nested details
+    !e.defaultPrevented,
+    action: e => {
+      const details = ref.current;
+      if (!details.open) {
+        e.preventDefault();
+        details.open = true;
+        return;
+      }
+      const summary = summaryRef.current;
+      const firstFocusableElementInDetails = findAfter(summary, elementIsFocusable, {
+        root: details
+      });
+      if (!firstFocusableElementInDetails) {
+        return;
+      }
+      e.preventDefault();
+      firstFocusableElementInDetails.focus();
+    }
+  }, {
+    key: closeKeyShortcut,
+    enabled: arrowKeyShortcuts,
+    when: () => {
+      const details = ref.current;
+      return details.open;
+    },
+    action: e => {
+      const details = ref.current;
+      const summary = summaryRef.current;
+      if (document.activeElement === summary) {
+        e.preventDefault();
+        summary.focus();
+        details.open = false;
+      } else {
+        e.preventDefault();
+        summary.focus();
+      }
+    }
+  }]);
+  const mountedRef = useRef(false);
+  useEffect(() => {
+    mountedRef.current = true;
+  }, []);
+  return jsxs(Box, {
+    as: "details",
+    ...rest,
+    ref: ref,
+    id: id,
+    baseClassName: "navi_details",
+    onToggle: e => {
+      onToggle?.(e);
+      const isOpen = e.newState === "open";
+      if (mountedRef.current) {
+        if (isOpen) {
+          uiStateController.setUIState(true, e);
+          onOpen?.(e);
+        } else {
+          uiStateController.setUIState(false, e);
+          onClose?.(e);
+        }
+      }
+    },
+    open: open,
+    children: [jsx("summary", {
+      ref: summaryRef,
+      children: jsxs("div", {
+        className: "navi_summary_body",
+        children: [jsx(SummaryMarker, {
+          open: open,
+          loading: loading
+        }), jsx("div", {
+          className: "navi_summary_label",
+          children: label
+        })]
+      })
+    }), children]
+  });
+};
+const DetailsWithAction = props => {
+  const uiStateController = useContext(UIStateControllerContext);
+  const {
+    action,
+    loading,
+    onOpen,
+    onClose,
+    onCancel,
+    onActionPrevented,
+    onActionStart,
+    onActionAbort,
+    onActionError,
+    onActionEnd,
+    children,
+    ...rest
+  } = props;
+  const defaultRef = useRef();
+  const ref = rest.ref || defaultRef;
+  const effectiveAction = useAction(action);
+  const actionStatus = useActionStatus(effectiveAction);
+  const {
+    loading: actionLoading
+  } = actionStatus;
+  const executeAction = useExecuteAction(ref, {
+    // the error will be displayed by actionRenderer inside <details>
+    errorEffect: "none"
+  });
+  useActionEvents(ref, {
+    onCancel: (e, reason) => {
+      if (reason === "blur_invalid") {
+        return;
+      }
+      uiStateController.resetUIState(e);
+      onCancel?.(e, reason);
+    },
+    onPrevented: onActionPrevented,
+    onRequested: e => forwardActionRequested(e, effectiveAction),
+    onAction: executeAction,
+    onStart: onActionStart,
+    onAbort: e => {
+      uiStateController.resetUIState(e);
+      onActionAbort?.(e);
+    },
+    onError: e => {
+      uiStateController.resetUIState(e);
+      onActionError?.(e);
+    },
+    onEnd: e => {
+      onActionEnd?.(e);
+    }
+  });
+  return jsx(DetailsBasic, {
+    ...rest,
+    ref: ref,
+    loading: loading || actionLoading,
+    onOpen: e => {
+      dispatchActionRequestedCustomEvent(e.target, {
+        event: e,
+        requester: e.target
+      });
+      onOpen?.(e);
+    },
+    onClose: e => {
+      effectiveAction.abort();
+      onClose?.(e);
+    },
+    children: jsx(ActionRenderer, {
+      action: effectiveAction,
+      children: children
+    })
+  });
+};
+const DetailsWithConnectedAction = props => {
+  const {
+    connectedAction,
+    children,
+    loading,
+    ...rest
+  } = props;
+  const actionStatus = useActionStatus(connectedAction);
+  const {
+    loading: actionLoading
+  } = actionStatus;
+  return jsx(DetailsBasic, {
+    ...rest,
+    loading: loading || actionLoading,
+    children: jsx(ActionRenderer, {
+      action: connectedAction,
+      children: children
+    })
   });
 };
 
@@ -22638,6 +23838,7 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
       --border-width: 1px;
       --outline-width: 1px;
       --outer-width: calc(var(--border-width) + var(--outline-width));
+      --font-size: 14px;
 
       /* Default */
       --outline-color: var(--navi-focus-outline-color);
@@ -22657,6 +23858,9 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
       --color-hover: var(--color);
       /* Active */
       --border-color-active: color-mix(in srgb, var(--border-color) 90%, black);
+      /* Focus */
+      --border-color-focus: var(--border-color);
+      --background-color-focus: var(--background-color);
       /* Readonly */
       --border-color-readonly: color-mix(
         in srgb,
@@ -22685,6 +23889,8 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
     border-radius: inherit;
     cursor: inherit;
 
+    --start-icon-size: 0px;
+    --end-icon-size: 0px;
     --x-outline-width: var(--outline-width);
     --x-border-radius: var(--border-radius);
     --x-border-width: var(--border-width);
@@ -22695,19 +23901,31 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
     --x-color: var(--color);
     --x-placeholder-color: var(--placeholder-color);
 
+    --x-padding-top-base: var(
+      --padding-top,
+      var(--padding-y, var(--padding, 1px))
+    );
+    --x-padding-right-base: var(
+      --padding-right,
+      var(--padding-x, var(--padding, 2px))
+    );
+    --x-padding-bottom-base: var(
+      --padding-bottom,
+      var(--padding-y, var(--padding, 1px))
+    );
+    --x-padding-left-base: var(
+      --padding-left,
+      var(--padding-x, var(--padding, 2px))
+    );
+
     .navi_native_input {
       box-sizing: border-box;
-      padding-top: var(--padding-top, var(--padding-y, var(--padding, 1px)));
-      padding-right: var(
-        --padding-right,
-        var(--padding-x, var(--padding, 2px))
-      );
-      padding-bottom: var(
-        --padding-bottom,
-        var(--padding-y, var(--padding, 1px))
-      );
-      padding-left: var(--padding-left, var(--padding-x, var(--padding, 2px)));
+      padding-top: var(--x-padding-top-base);
+      padding-right: calc(var(--x-padding-right-base) + var(--end-icon-size));
+      padding-bottom: var(--x-padding-bottom-base);
+      padding-left: calc(var(--x-padding-left-base) + var(--start-icon-size));
       color: var(--x-color);
+      font-size: var(--font-size);
       background-color: var(--x-background-color);
       border-width: var(--x-outer-width);
       border-width: var(--x-outer-width);
@@ -22732,17 +23950,19 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
       position: absolute;
       top: 0;
       bottom: 0;
-      left: 0.25em;
+      left: var(--x-padding-left-base);
+      font-size: var(--font-size);
     }
     .navi_input_end_button {
       position: absolute;
       top: 0;
-      right: 0.25em;
+      right: var(--x-padding-right-base);
       bottom: 0;
       display: inline-flex;
       margin: 0;
       padding: 0;
       justify-content: center;
+      font-size: var(--font-size);
       background: none;
       border: none;
       opacity: 0;
@@ -22768,16 +23988,46 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
         }
       }
     }
-
     &[data-start-icon] {
-      .navi_native_input {
-        padding-left: 20px;
-      }
+      --start-icon-size: 1em;
     }
     &[data-end-icon] {
+      --end-icon-size: 1em;
+    }
+
+    /* Hover */
+    &[data-hover] {
+      --x-background-color: var(--background-color-hover);
+      --x-border-color: var(--border-color-hover);
+      --x-color: var(--color-hover);
+    }
+    /* Readonly */
+    &[data-readonly] {
+      --x-border-color: var(--border-color-readonly);
+      --x-background-color: var(--background-color-readonly);
+      --x-color: var(--color-readonly);
+    }
+    /* Focus */
+    &[data-focus],
+    &[data-focus-visible] {
+      --x-background-color: var(--background-color-focus);
+      --x-border-color: var(--border-color-focus);
+
       .navi_native_input {
-        padding-right: 20px;
+        outline-width: var(--x-outer-width);
+        outline-offset: calc(-1 * var(--x-outer-width));
+        --x-border-color: var(--x-outline-color);
       }
+    }
+    /* Disabled */
+    &[data-disabled] {
+      --x-border-color: var(--border-color-disabled);
+      --x-background-color: var(--background-color-disabled);
+      --x-color: var(--color-disabled);
+    }
+    /* Callout (info, warning, error) */
+    &[data-callout] {
+      --x-border-color: var(--callout-color);
     }
   }
 
@@ -22789,29 +24039,6 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
     /* input:-internal-autofill-selected { color: FieldText !important; } */
     /* Fortunately we can override it as follow */
     -webkit-text-fill-color: var(--x-color) !important;
-  }
-  /* Readonly */
-  .navi_input[data-readonly] {
-    --x-border-color: var(--border-color-readonly);
-    --x-background-color: var(--background-color-readonly);
-    --x-color: var(--color-readonly);
-  }
-  /* Focus */
-  .navi_input[data-focus] .navi_native_input,
-  .navi_input[data-focus-visible] .navi_native_input {
-    outline-width: var(--x-outer-width);
-    outline-offset: calc(-1 * var(--x-outer-width));
-    --x-border-color: var(--x-outline-color);
-  }
-  /* Disabled */
-  .navi_input[data-disabled] {
-    --x-border-color: var(--border-color-disabled);
-    --x-background-color: var(--background-color-disabled);
-    --x-color: var(--color-disabled);
-  }
-  /* Callout (info, warning, error) */
-  .navi_input[data-callout] {
-    --x-border-color: var(--callout-color);
   }
 `;
 const InputTextual = props => {
@@ -22833,19 +24060,29 @@ const InputStyleCSSVars = {
   "outlineWidth": "--outline-width",
   "borderWidth": "--border-width",
   "borderRadius": "--border-radius",
+  "padding": "--padding",
+  "paddingX": "--padding-x",
+  "paddingY": "--padding-y",
   "paddingTop": "--padding-top",
   "paddingRight": "--padding-right",
   "paddingBottom": "--padding-bottom",
   "paddingLeft": "--padding-left",
+  "background": "--background",
   "backgroundColor": "--background-color",
   "borderColor": "--border-color",
   "color": "--color",
+  "fontSize": "--font-size",
   ":hover": {
     backgroundColor: "--background-color-hover",
     borderColor: "--border-color-hover",
     color: "--color-hover"
   },
+  ":focus": {
+    backgroundColor: "--background-color-focus",
+    borderColor: "--border-color-focus"
+  },
   ":active": {
+    backgroundColor: "--background-color-active",
     borderColor: "--border-color-active"
   },
   ":read-only": {
@@ -23188,7 +24425,7 @@ const useEditionController = () => {
     editionJustEnded
   };
 };
-const Editable = forwardRef((props, ref) => {
+const Editable = props => {
   let {
     children,
     action,
@@ -23213,8 +24450,8 @@ const Editable = forwardRef((props, ref) => {
     height,
     ...rest
   } = props;
-  const innerRef = useRef();
-  useImperativeHandle(ref, () => innerRef.current);
+  const defaultRef = useRef();
+  const ref = props.ref || defaultRef;
   if (valueSignal) {
     value = valueSignal.value;
   }
@@ -23240,14 +24477,14 @@ const Editable = forwardRef((props, ref) => {
     if (editingEventInitialValue === undefined) {
       return;
     }
-    const input = innerRef.current;
+    const input = ref.current;
     input.value = editingEventInitialValue;
     input.dispatchEvent(new CustomEvent("input", {
       bubbles: false
     }));
   }, [editing]);
   const input = jsx(Input, {
-    ref: innerRef,
+    ref: ref,
     ...rest,
     type: type,
     name: name,
@@ -23290,6 +24527,7 @@ const Editable = forwardRef((props, ref) => {
       }
     },
     action: action || (() => {}),
+    actionAfterChange: true,
     onActionEnd: e => {
       onEditEnd({
         success: true,
@@ -23300,13 +24538,13 @@ const Editable = forwardRef((props, ref) => {
   return jsxs(Fragment, {
     children: [children || jsx("span", {
       children: value
-    }), editing && jsx("div", {
+    }), editing && jsx(Box, {
       ...wrapperProps,
-      className: ["navi_editable_wrapper", ...(wrapperProps?.className || "").split(" ")].join(" "),
+      baseClassName: "navi_editable_wrapper",
       children: input
     })]
   });
-});
+};
 
 const collectFormElementValues = (element) => {
   let formElements;
@@ -24353,24 +25591,6 @@ const createItemTracker = () => {
     return tracker.items;
   };
   return [useItemTrackerProvider, useTrackItem, useTrackedItem, useTrackedItems];
-};
-
-const useFocusGroup = (
-  elementRef,
-  { enabled = true, direction, skipTab, loop, name } = {},
-) => {
-  useLayoutEffect(() => {
-    if (!enabled) {
-      return null;
-    }
-    const focusGroup = initFocusGroup(elementRef.current, {
-      direction,
-      skipTab,
-      loop,
-      name,
-    });
-    return focusGroup.cleanup;
-  }, [direction, skipTab, loop, name]);
 };
 
 const Z_INDEX_EDITING = 1; /* To go above neighbours, but should not be too big to stay under the sticky cells */
@@ -27634,72 +28854,72 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
   @layer navi {
   }
   .navi_badge_count {
+    --font-size: 0.7em;
     --x-background: var(--background);
     --x-background-color: var(--background-color);
+    --padding-x: 0.5em;
+    --padding-y: 0.2em;
     position: relative;
     display: inline-block;
     color: var(--color, var(--x-color-contrasting));
     font-size: var(--font-size);
-    vertical-align: middle;
 
     .navi_count_badge_overflow {
       position: relative;
-      top: -0.1em;
     }
 
     /* Ellipse */
     &[data-ellipse] {
-      padding-right: 0.4em;
-      padding-left: 0.4em;
+      padding-top: var(--padding-y);
+      padding-right: var(--padding-x);
+      padding-bottom: var(--padding-y);
+      padding-left: var(--padding-x);
+      line-height: normal;
       background: var(--x-background);
       background-color: var(--x-background-color, var(--x-background));
       border-radius: 1em;
-      &[data-loading] {
-        --x-background: transparent;
-      }
     }
 
     /* Circle */
     &[data-circle] {
-      --x-size: 1.5em;
-      --x-border-radius: var(--border-radius);
       --x-number-font-size: var(--font-size);
 
-      width: var(--x-size);
-      height: var(--x-size);
-      border-radius: var(--x-border-radius);
+      display: inline-flex;
+      box-sizing: content-box;
+      aspect-ratio: 1/1;
+      width: var(--x-radius);
+      height: var(--x-radius);
+      align-items: center;
+      justify-content: center;
+      background: var(--x-background);
+      background-color: var(--x-background-color, var(--x-background));
+      border-radius: 50%;
+
       &[data-single-char] {
-        --x-border-radius: 100%;
+        --x-radius: 1.5em;
         --x-number-font-size: unset;
       }
       &[data-two-chars] {
-        --x-border-radius: 100%;
-        --x-number-font-size: 0.8em;
+        --x-radius: 1.8em;
+        --x-number-font-size: 0.9em;
       }
       &[data-three-chars] {
-        --x-border-radius: 100%;
-        --x-number-font-size: 0.6em;
+        --x-radius: 2.4em;
+        --x-number-font-size: 0.8em;
       }
-
-      .navi_badge_count_frame {
-        position: absolute;
-        top: 50%;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: var(--x-background);
-        background-color: var(--x-background-color, var(--x-background));
-        border-radius: inherit;
-        transform: translateY(-50%);
+      &[data-four-chars] {
+        --x-radius: 2.6em;
+        --x-number-font-size: 0.8em;
       }
 
       .navi_badge_count_text {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        font-size: var(--x-number-font-size, inherit);
-        transform: translate(-50%, -50%);
+        font-size: var(--x-number-font-size);
       }
+    }
+
+    &[data-loading] {
+      --x-background: transparent;
+      --x-background-color: transparent;
     }
   }
 `;
@@ -27719,13 +28939,14 @@ const BadgeCountOverflow = () => jsx("span", {
   children: "+"
 });
 const MAX_CHAR_AS_CIRCLE = 3;
+const MAX_FOR_CIRCLE = 99;
 const BadgeCount = ({
   children,
   maxElement = jsx(BadgeCountOverflow, {}),
   // When you use max="none" (or max > 99) it might be a good idea to force ellipse
   // so that visually the interface do not suddently switch from circle to ellipse depending on the count
-  ellipse,
-  max = ellipse ? Infinity : 99,
+  circle,
+  max = circle ? MAX_FOR_CIRCLE : Infinity,
   ...props
 }) => {
   const defaultRef = useRef();
@@ -27737,21 +28958,21 @@ const BadgeCount = ({
   const valueCharCount = String(valueDisplayed).length;
   const charCount = valueCharCount + (hasOverflow ? 1 : 0);
   if (charCount > MAX_CHAR_AS_CIRCLE) {
-    ellipse = true;
+    circle = false;
   }
-  if (ellipse) {
-    return jsxs(BadgeCountEllipse, {
+  if (circle) {
+    return jsxs(BadgeCountCircle, {
       ...props,
       ref: ref,
       hasOverflow: hasOverflow,
+      charCount: charCount,
       children: [valueDisplayed, hasOverflow && maxElement]
     });
   }
-  return jsxs(BadgeCountCircle, {
+  return jsxs(BadgeCountEllipse, {
     ...props,
     ref: ref,
     hasOverflow: hasOverflow,
-    charCount: charCount,
     children: [valueDisplayed, hasOverflow && maxElement]
   });
 };
@@ -27770,42 +28991,6 @@ const applyMaxToValue = (max, value) => {
     return numericMax;
   }
   return value;
-};
-const BadgeCountCircle = ({
-  ref,
-  charCount,
-  hasOverflow,
-  loading,
-  children,
-  ...props
-}) => {
-  return jsx(Text, {
-    ref: ref,
-    className: "navi_badge_count",
-    "data-circle": "",
-    bold: true,
-    "data-single-char": charCount === 1 ? "" : undefined,
-    "data-two-chars": charCount === 2 ? "" : undefined,
-    "data-three-chars": charCount === 3 ? "" : undefined,
-    "data-value-overflow": hasOverflow ? "" : undefined,
-    ...props,
-    styleCSSVars: BadgeStyleCSSVars,
-    spacing: "pre",
-    children: loading ? jsx(LoadingDots, {}) : jsxs(Fragment, {
-      children: [jsx("span", {
-        style: "user-select: none",
-        children: "\u200B"
-      }), jsx("span", {
-        className: "navi_badge_count_frame"
-      }), jsx("span", {
-        className: "navi_badge_count_text",
-        children: children
-      }), jsx("span", {
-        style: "user-select: none",
-        children: "\u200B"
-      })]
-    })
-  });
 };
 const BadgeCountEllipse = ({
   ref,
@@ -27831,6 +29016,44 @@ const BadgeCountEllipse = ({
         style: "user-select: none",
         children: "\u200B"
       }), children, jsx("span", {
+        style: "user-select: none",
+        children: "\u200B"
+      })]
+    })
+  });
+};
+const BadgeCountCircle = ({
+  ref,
+  charCount,
+  hasOverflow,
+  loading,
+  children,
+  ...props
+}) => {
+  return jsx(Text, {
+    ref: ref,
+    className: "navi_badge_count",
+    "data-circle": "",
+    bold: true,
+    "data-loading": loading ? "" : undefined,
+    "data-single-char": charCount === 1 ? "" : undefined,
+    "data-two-chars": charCount === 2 ? "" : undefined,
+    "data-three-chars": charCount === 3 ? "" : undefined,
+    "data-four-chars": charCount === 4 ? "" : undefined,
+    "data-value-overflow": hasOverflow ? "" : undefined,
+    ...props,
+    styleCSSVars: BadgeStyleCSSVars,
+    spacing: "pre",
+    children: loading ? jsx(Icon, {
+      children: jsx(LoadingDots, {})
+    }) : jsxs(Fragment, {
+      children: [jsx("span", {
+        style: "user-select: none",
+        children: "\u200B"
+      }), jsx("span", {
+        className: "navi_badge_count_text",
+        children: children
+      }), jsx("span", {
         style: "user-select: none",
         children: "\u200B"
       })]
@@ -28234,357 +29457,6 @@ const SVGMaskOverlay = ({
   });
 };
 
-installImportMetaCss(import.meta);const rightArrowPath = "M680-480L360-160l-80-80 240-240-240-240 80-80 320 320z";
-const downArrowPath = "M480-280L160-600l80-80 240 240 240-240 80 80-320 320z";
-import.meta.css = /* css */`
-  .summary_marker {
-    width: 1em;
-    height: 1em;
-    line-height: 1em;
-  }
-  .summary_marker_svg .arrow {
-    animation-duration: 0.3s;
-    animation-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
-    animation-fill-mode: forwards;
-  }
-  .summary_marker_svg .arrow[data-animation-target="down"] {
-    animation-name: morph-to-down;
-  }
-  @keyframes morph-to-down {
-    from {
-      d: path("${rightArrowPath}");
-    }
-    to {
-      d: path("${downArrowPath}");
-    }
-  }
-  .summary_marker_svg .arrow[data-animation-target="right"] {
-    animation-name: morph-to-right;
-  }
-  @keyframes morph-to-right {
-    from {
-      d: path("${downArrowPath}");
-    }
-    to {
-      d: path("${rightArrowPath}");
-    }
-  }
-
-  .summary_marker_svg .foreground_circle {
-    stroke-dasharray: 503 1507; /* ~25% of circle perimeter */
-    stroke-dashoffset: 0;
-    animation: progress-around-circle 1.5s linear infinite;
-  }
-  @keyframes progress-around-circle {
-    0% {
-      stroke-dashoffset: 0;
-    }
-    100% {
-      stroke-dashoffset: -2010;
-    }
-  }
-
-  /* fading and scaling */
-  .summary_marker_svg .arrow {
-    opacity: 1;
-    transition: opacity 0.3s ease-in-out;
-  }
-  .summary_marker_svg .loading_container {
-    transform: scale(0.3);
-    transition: transform 0.3s linear;
-  }
-  .summary_marker_svg .background_circle,
-  .summary_marker_svg .foreground_circle {
-    opacity: 0;
-    transition: opacity 0.3s ease-in-out;
-  }
-  .summary_marker_svg[data-loading] .arrow {
-    opacity: 0;
-  }
-  .summary_marker_svg[data-loading] .loading_container {
-    transform: scale(1);
-  }
-  .summary_marker_svg[data-loading] .background_circle {
-    opacity: 0.2;
-  }
-  .summary_marker_svg[data-loading] .foreground_circle {
-    opacity: 1;
-  }
-`;
-const SummaryMarker = ({
-  open,
-  loading
-}) => {
-  const showLoading = useDebounceTrue(loading, 300);
-  const mountedRef = useRef(false);
-  const prevOpenRef = useRef(open);
-  useLayoutEffect(() => {
-    mountedRef.current = true;
-    return () => {
-      mountedRef.current = false;
-    };
-  }, []);
-  const shouldAnimate = mountedRef.current && prevOpenRef.current !== open;
-  prevOpenRef.current = open;
-  return jsx("span", {
-    className: "summary_marker",
-    children: jsxs("svg", {
-      className: "summary_marker_svg",
-      viewBox: "0 -960 960 960",
-      xmlns: "http://www.w3.org/2000/svg",
-      "data-loading": open ? showLoading || undefined : undefined,
-      children: [jsxs("g", {
-        className: "loading_container",
-        "transform-origin": "480px -480px",
-        children: [jsx("circle", {
-          className: "background_circle",
-          cx: "480",
-          cy: "-480",
-          r: "320",
-          stroke: "currentColor",
-          fill: "none",
-          strokeWidth: "60",
-          opacity: "0.2"
-        }), jsx("circle", {
-          className: "foreground_circle",
-          cx: "480",
-          cy: "-480",
-          r: "320",
-          stroke: "currentColor",
-          fill: "none",
-          strokeWidth: "60",
-          strokeLinecap: "round",
-          strokeDasharray: "503 1507"
-        })]
-      }), jsx("g", {
-        className: "arrow_container",
-        "transform-origin": "480px -480px",
-        children: jsx("path", {
-          className: "arrow",
-          fill: "currentColor",
-          "data-animation-target": shouldAnimate ? open ? "down" : "right" : undefined,
-          d: open ? downArrowPath : rightArrowPath
-        })
-      })]
-    })
-  });
-};
-
-installImportMetaCss(import.meta);import.meta.css = /* css */`
-  .navi_details {
-    position: relative;
-    z-index: 1;
-    display: flex;
-    flex-shrink: 0;
-    flex-direction: column;
-  }
-
-  .navi_details > summary {
-    display: flex;
-    flex-shrink: 0;
-    flex-direction: column;
-    cursor: pointer;
-    user-select: none;
-  }
-  .summary_body {
-    display: flex;
-    width: 100%;
-    flex-direction: row;
-    align-items: center;
-    gap: 0.2em;
-  }
-  .summary_label {
-    display: flex;
-    padding-right: 10px;
-    flex: 1;
-    align-items: center;
-    gap: 0.2em;
-  }
-
-  .navi_details > summary:focus {
-    z-index: 1;
-  }
-`;
-const Details = forwardRef((props, ref) => {
-  return renderActionableComponent(props, ref);
-});
-const DetailsBasic = forwardRef((props, ref) => {
-  const {
-    id,
-    label = "Summary",
-    open,
-    loading,
-    className,
-    focusGroup,
-    focusGroupDirection,
-    arrowKeyShortcuts = true,
-    openKeyShortcut = "ArrowRight",
-    closeKeyShortcut = "ArrowLeft",
-    onToggle,
-    children,
-    ...rest
-  } = props;
-  const innerRef = useRef();
-  useImperativeHandle(ref, () => innerRef.current);
-  const [navState, setNavState] = useNavState$1(id);
-  const [innerOpen, innerOpenSetter] = useState(open || navState);
-  useFocusGroup(innerRef, {
-    enabled: focusGroup,
-    name: typeof focusGroup === "string" ? focusGroup : undefined,
-    direction: focusGroupDirection
-  });
-
-  /**
-   * Browser will dispatch "toggle" event even if we set open={true}
-   * When rendering the component for the first time
-   * We have to ensure the initial "toggle" event is ignored.
-   *
-   * If we don't do that code will think the details has changed and run logic accordingly
-   * For example it will try to navigate to the current url while we are already there
-   *
-   * See:
-   * - https://techblog.thescore.com/2024/10/08/why-we-decided-to-change-how-the-details-element-works/
-   * - https://github.com/whatwg/html/issues/4500
-   * - https://stackoverflow.com/questions/58942600/react-html-details-toggles-uncontrollably-when-starts-open
-   *
-   */
-
-  const summaryRef = useRef(null);
-  useKeyboardShortcuts(innerRef, [{
-    key: openKeyShortcut,
-    enabled: arrowKeyShortcuts,
-    when: e => document.activeElement === summaryRef.current &&
-    // avoid handling openKeyShortcut twice when keydown occurs inside nested details
-    !e.defaultPrevented,
-    action: e => {
-      const details = innerRef.current;
-      if (!details.open) {
-        e.preventDefault();
-        details.open = true;
-        return;
-      }
-      const summary = summaryRef.current;
-      const firstFocusableElementInDetails = findAfter(summary, elementIsFocusable, {
-        root: details
-      });
-      if (!firstFocusableElementInDetails) {
-        return;
-      }
-      e.preventDefault();
-      firstFocusableElementInDetails.focus();
-    }
-  }, {
-    key: closeKeyShortcut,
-    enabled: arrowKeyShortcuts,
-    when: () => {
-      const details = innerRef.current;
-      return details.open;
-    },
-    action: e => {
-      const details = innerRef.current;
-      const summary = summaryRef.current;
-      if (document.activeElement === summary) {
-        e.preventDefault();
-        summary.focus();
-        details.open = false;
-      } else {
-        e.preventDefault();
-        summary.focus();
-      }
-    }
-  }]);
-  const mountedRef = useRef(false);
-  useEffect(() => {
-    mountedRef.current = true;
-  }, []);
-  return jsxs("details", {
-    ...rest,
-    ref: innerRef,
-    id: id,
-    className: ["navi_details", ...(className ? className.split(" ") : [])].join(" "),
-    onToggle: e => {
-      const isOpen = e.newState === "open";
-      if (mountedRef.current) {
-        if (isOpen) {
-          innerOpenSetter(true);
-          setNavState(true);
-        } else {
-          innerOpenSetter(false);
-          setNavState(undefined);
-        }
-      }
-      onToggle?.(e);
-    },
-    open: innerOpen,
-    children: [jsx("summary", {
-      ref: summaryRef,
-      children: jsxs("div", {
-        className: "summary_body",
-        children: [jsx(SummaryMarker, {
-          open: innerOpen,
-          loading: loading
-        }), jsx("div", {
-          className: "summary_label",
-          children: label
-        })]
-      })
-    }), children]
-  });
-});
-forwardRef((props, ref) => {
-  const {
-    action,
-    loading,
-    onToggle,
-    onActionPrevented,
-    onActionStart,
-    onActionError,
-    onActionEnd,
-    children,
-    ...rest
-  } = props;
-  const innerRef = useRef();
-  useImperativeHandle(ref, () => innerRef.current);
-  const effectiveAction = useAction(action);
-  const {
-    loading: actionLoading
-  } = useActionStatus(effectiveAction);
-  const executeAction = useExecuteAction(innerRef, {
-    // the error will be displayed by actionRenderer inside <details>
-    errorEffect: "none"
-  });
-  useActionEvents(innerRef, {
-    onPrevented: onActionPrevented,
-    onAction: e => {
-      executeAction(e);
-    },
-    onStart: onActionStart,
-    onError: onActionError,
-    onEnd: onActionEnd
-  });
-  return jsx(DetailsBasic, {
-    ...rest,
-    ref: innerRef,
-    loading: loading || actionLoading,
-    onToggle: toggleEvent => {
-      const isOpen = toggleEvent.newState === "open";
-      if (isOpen) {
-        requestAction(toggleEvent.target, effectiveAction, {
-          event: toggleEvent,
-          method: "run"
-        });
-      } else {
-        effectiveAction.abort();
-      }
-      onToggle?.(toggleEvent);
-    },
-    children: jsx(ActionRenderer, {
-      action: effectiveAction,
-      children: children
-    })
-  });
-});
-
 installImportMetaCss(import.meta);import.meta.css = /* css */`
   @layer navi {
     .navi_dialog_layout {
@@ -28919,5 +29791,5 @@ const UserSvg = () => jsx("svg", {
   })
 });
 
-export { ActionRenderer, ActiveKeyboardShortcuts, Address, BadgeCount, Box, Button, ButtonCopyToClipboard, Caption, CheckSvg, Checkbox, CheckboxList, Code, Col, Colgroup, ConstructionSvg, Details, DialogLayout, Editable, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Form, Group, HeartSvg, HomeSvg, Icon, Image, Input, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, MessageBox, Paragraph, Radio, RadioList, Route, RouteLink, Routes, RowNumberCol, RowNumberTableCell, SINGLE_SPACE_CONSTRAINT, SVGMaskOverlay, SearchSvg, Select, SelectionContext, Separator, SettingsSvg, StarSvg, SummaryMarker, Svg, Tab, TabList, Table, TableCell, Tbody, Text, Thead, Title, Tr, UITransition, UserSvg, ViewportLayout, actionIntegratedVia, addCustomMessage, clearAllRoutes, compareTwoJsValues, createAction, createAvailableConstraint, createRequestCanceller, createSelectionKeyboardShortcuts, enableDebugActions, enableDebugOnDocumentLoading, forwardActionRequested, installCustomConstraintValidation, isCellSelected, isColumnSelected, isRowSelected, localStorageSignal, navBack, navForward, navTo, openCallout, rawUrlPart, reload, removeCustomMessage, requestAction, rerunActions, resource, setBaseUrl, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, updateActions, useActionData, useActionStatus, useArraySignalMembership, useCalloutClose, useCancelPrevious, useCellsAndColumns, useConstraintValidityState, useDependenciesDiff, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useMatchingRouteInfo, useNavState$1 as useNavState, useRouteStatus, useRunOnMount, useSelectableElement, useSelectionController, useSignalSync, useStateArray, useTitleLevel, useUrlSearchParam, valueInLocalStorage };
+export { ActionRenderer, ActiveKeyboardShortcuts, Address, BadgeCount, Box, Button, ButtonCopyToClipboard, Caption, CheckSvg, Checkbox, CheckboxList, Code, Col, Colgroup, ConstructionSvg, Details, DialogLayout, Editable, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Form, Group, HeartSvg, HomeSvg, Icon, Image, Input, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, MessageBox, Paragraph, Radio, RadioList, Route, RouteLink, Routes, RowNumberCol, RowNumberTableCell, SINGLE_SPACE_CONSTRAINT, SVGMaskOverlay, SearchSvg, Select, SelectionContext, Separator, SettingsSvg, StarSvg, SummaryMarker, Svg, Tab, TabList, Table, TableCell, Tbody, Text, Thead, Title, Tr, UITransition, UserSvg, ViewportLayout, actionIntegratedVia, actionRunEffect, addCustomMessage, compareTwoJsValues, createAction, createAvailableConstraint, createRequestCanceller, createSelectionKeyboardShortcuts, enableDebugActions, enableDebugOnDocumentLoading, forwardActionRequested, installCustomConstraintValidation, isCellSelected, isColumnSelected, isRowSelected, localStorageSignal, navBack, navForward, navTo, openCallout, rawUrlPart, reload, removeCustomMessage, requestAction, rerunActions, resource, route, routeAction, setBaseUrl, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, updateActions, useActionData, useActionStatus, useArraySignalMembership, useCalloutClose, useCancelPrevious, useCellsAndColumns, useConstraintValidityState, useDependenciesDiff, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useMatchingRouteInfo, useNavState$1 as useNavState, useRouteStatus, useRunOnMount, useSelectableElement, useSelectionController, useSignalSync, useStateArray, useTitleLevel, useUrlSearchParam, valueInLocalStorage };
 //# sourceMappingURL=jsenv_navi.js.map

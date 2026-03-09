@@ -3,7 +3,7 @@ import { snapshotTests } from "@jsenv/snapshot";
 import { effect, signal } from "@preact/signals";
 
 await snapshotTests(import.meta.url, ({ test }) => {
-  test("0_get_set_get", () => {
+  test("get_set_get", () => {
     const state = sigi({
       a: 1,
     });
@@ -16,7 +16,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
     return values;
   });
 
-  test("1_effect", async () => {
+  test("effect", async () => {
     const state = sigi({
       a: 1,
     });
@@ -30,7 +30,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
     return values;
   });
 
-  test("2_renaming_into_array", () => {
+  test("renaming_into_array", () => {
     const state = signal([{ name: "a" }, { name: "b" }]);
     const currentItemSignal = signal({ name: "a" });
     const values = [];

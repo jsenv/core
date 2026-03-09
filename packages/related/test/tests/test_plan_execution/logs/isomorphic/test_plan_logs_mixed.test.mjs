@@ -118,7 +118,7 @@ const run = async ({ testPlan }) => {
 };
 
 await snapshotTestPlanSideEffects(import.meta.url, ({ test }) => {
-  test("0_empty", () =>
+  test("empty", () =>
     run({
       testPlan: {
         "./client/empty.spec.js": {

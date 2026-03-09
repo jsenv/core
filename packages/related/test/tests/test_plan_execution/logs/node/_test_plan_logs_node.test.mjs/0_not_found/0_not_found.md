@@ -1,4 +1,4 @@
-# [0_not_found](../../test_plan_logs_node.test.mjs)
+# [not_found](../../test_plan_logs_node.test.mjs)
 
 ```js
 run({

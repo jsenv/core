@@ -11,13 +11,13 @@ const run = (params) => {
 };
 
 await snapshotTests(import.meta.url, ({ test }) => {
-  test("0_dev_star", () => {
+  test("dev_star", () => {
     return run({
       conditions: ["dev:*", "import"],
     });
   });
 
-  test("1_import", () => {
+  test("import", () => {
     return run({
       conditions: ["import"],
     });

@@ -1,4 +1,4 @@
-# [0_basic](../../cross_entry_versioning.test.mjs)
+# [basic](../../cross_entry_versioning.test.mjs)
 
 ```js
 run()

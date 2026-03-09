@@ -1,7 +1,7 @@
 # [comments_removal.test.mjs](../comments_removal.test.mjs)
 
 
-- [0_basic](0_basic/0_basic.md)
+- [basic](0_basic/0_basic.md)
 
 ---
 

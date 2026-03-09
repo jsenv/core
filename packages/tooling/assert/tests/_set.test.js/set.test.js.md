@@ -1,11 +1,11 @@
 # [set.test.js](../set.test.js)
 
 
-- [set value added](set_value_added/set_value_added.md)
-- [compare set and map](compare_set_and_map/compare_set_and_map.md)
-- [compare set and array](compare_set_and_array/compare_set_and_array.md)
-- [set collapsed various cases](set_collapsed_various_cases/set_collapsed_various_cases.md)
-- [set collapsed deep](set_collapsed_deep/set_collapsed_deep.md)
+- [set value added](0_set_value_added/0_set_value_added.md)
+- [compare set and map](1_compare_set_and_map/1_compare_set_and_map.md)
+- [compare set and array](2_compare_set_and_array/2_compare_set_and_array.md)
+- [set collapsed various cases](3_set_collapsed_various_cases/3_set_collapsed_various_cases.md)
+- [set collapsed deep](4_set_collapsed_deep/4_set_collapsed_deep.md)
 
 ---
 

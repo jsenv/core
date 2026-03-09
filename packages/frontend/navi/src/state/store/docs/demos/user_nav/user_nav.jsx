@@ -1,7 +1,9 @@
 import {
   resource,
   Route,
+  Routes,
   setupRoutes,
+  TabList,
   useDocumentState,
   useDocumentUrl,
 } from "@jsenv/navi";
@@ -81,12 +83,76 @@ import.meta.css = /* css */ `
   }
 `;
 
+const initialUsers = [
+  {
+    id: 1,
+    name: "alice",
+    email: "alice@example.com",
+    originalName: "alice",
+  },
+  {
+    id: 2,
+    name: "bob",
+    email: "bob@example.com",
+    originalName: "bob",
+  },
+  {
+    id: 3,
+    name: "charlie",
+    email: "charlie@example.com",
+    originalName: "charlie",
+  },
+];
+const USER = resource("user", {
+  idKey: "id",
+  mutableIdKeys: ["name"],
+  GET_MANY: () => initialUsers,
+  GET: async ({ name }) => {
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    return initialUsers.find((user) => user.name === name);
+  },
+  PUT: ({ name, property, value }) => {
+    console.log("PUT action called:", { name, property, value });
+    const userIndex = initialUsers.findIndex((user) => user.name === name);
+    if (userIndex === -1) {
+      throw new Error(`User with name "${name}" not found`);
+    }
+    const user = initialUsers[userIndex];
+    console.log("Found user:", user);
+    const updatedUser = {
+      ...user,
+      [property]: value,
+    };
+    console.log("Updated user:", updatedUser);
+
+    // Update the initialUsers array so future lookups work
+    initialUsers[userIndex] = updatedUser;
+
+    return updatedUser;
+  },
+});
+// Populate initial users in the store
+USER.store.upsert(initialUsers);
+const { USER_ROUTE } = setupRoutes({
+  USER_ROUTE: {
+    pattern: "/user/:name",
+    action: USER.GET,
+  },
+});
+
 const App = () => {
   return (
     <div>
       <h1>User Navigation Test</h1>
       <Navigation />
-      <Route route={USER_ROUTE}>{(user) => <UserPage user={user} />}</Route>
+      <Routes>
+        <Route
+          route={USER_ROUTE}
+          element={(user) => <UserPage user={user} />}
+        />
+        <Route fallback element={"404"} />
+      </Routes>
+
       <DocumentInfo />
     </div>
   );
@@ -96,16 +162,19 @@ const Navigation = () => {
   const users = USER.useArray();
 
   return (
-    <div className="nav-links">
+    <TabList>
       {users.map((user) => {
-        const url = USER_ROUTE.buildUrl({ name: user.name });
         return (
-          <a key={user.id} href={url}>
+          <TabList.Tab
+            route={USER_ROUTE}
+            routeParams={{ name: user.name }}
+            key={user.id}
+          >
             {user.name}
-          </a>
+          </TabList.Tab>
         );
       })}
-    </div>
+    </TabList>
   );
 };
 
@@ -120,7 +189,7 @@ const UserPage = ({ user }) => {
       value: `${user.name}_2`,
     });
     console.log("About to call renameAction.load()");
-    await renameAction.reload();
+    await renameAction.rerun();
     console.log("renameAction.load() completed");
   };
 
@@ -130,7 +199,7 @@ const UserPage = ({ user }) => {
       property: "name",
       value: user.originalName,
     });
-    await revertAction.reload();
+    await revertAction.rerun();
   };
 
   return (
@@ -270,61 +339,5 @@ const DocumentInfo = () => {
     </div>
   );
 };
-
-const initialUsers = [
-  {
-    id: 1,
-    name: "alice",
-    email: "alice@example.com",
-    originalName: "alice",
-  },
-  {
-    id: 2,
-    name: "bob",
-    email: "bob@example.com",
-    originalName: "bob",
-  },
-  {
-    id: 3,
-    name: "charlie",
-    email: "charlie@example.com",
-    originalName: "charlie",
-  },
-];
-const USER = resource("user", {
-  idKey: "id",
-  mutableIdKeys: ["name"],
-  GET_MANY: () => initialUsers,
-  GET: async ({ name }) => {
-    await new Promise((resolve) => setTimeout(resolve, 100));
-    return initialUsers.find((user) => user.name === name);
-  },
-  PUT: ({ name, property, value }) => {
-    console.log("PUT action called:", { name, property, value });
-    const userIndex = initialUsers.findIndex((user) => user.name === name);
-    if (userIndex === -1) {
-      throw new Error(`User with name "${name}" not found`);
-    }
-    const user = initialUsers[userIndex];
-    console.log("Found user:", user);
-    const updatedUser = {
-      ...user,
-      [property]: value,
-    };
-    console.log("Updated user:", updatedUser);
-
-    // Update the initialUsers array so future lookups work
-    initialUsers[userIndex] = updatedUser;
-
-    return updatedUser;
-  },
-});
-
-const [USER_ROUTE] = setupRoutes({
-  "/user/:name": USER.GET,
-});
-
-// Populate initial users in the store
-USER.store.upsert(initialUsers);
 
 render(<App />, document.querySelector("#app"));

@@ -55,6 +55,7 @@ import.meta.css = /* css */ `
       --border-width: 1px;
       --outline-width: 1px;
       --outer-width: calc(var(--border-width) + var(--outline-width));
+      --font-size: 14px;
 
       /* Default */
       --outline-color: var(--navi-focus-outline-color);
@@ -74,6 +75,9 @@ import.meta.css = /* css */ `
       --color-hover: var(--color);
       /* Active */
       --border-color-active: color-mix(in srgb, var(--border-color) 90%, black);
+      /* Focus */
+      --border-color-focus: var(--border-color);
+      --background-color-focus: var(--background-color);
       /* Readonly */
       --border-color-readonly: color-mix(
         in srgb,
@@ -102,6 +106,8 @@ import.meta.css = /* css */ `
     border-radius: inherit;
     cursor: inherit;
 
+    --start-icon-size: 0px;
+    --end-icon-size: 0px;
     --x-outline-width: var(--outline-width);
     --x-border-radius: var(--border-radius);
     --x-border-width: var(--border-width);
@@ -112,19 +118,31 @@ import.meta.css = /* css */ `
     --x-color: var(--color);
     --x-placeholder-color: var(--placeholder-color);
 
+    --x-padding-top-base: var(
+      --padding-top,
+      var(--padding-y, var(--padding, 1px))
+    );
+    --x-padding-right-base: var(
+      --padding-right,
+      var(--padding-x, var(--padding, 2px))
+    );
+    --x-padding-bottom-base: var(
+      --padding-bottom,
+      var(--padding-y, var(--padding, 1px))
+    );
+    --x-padding-left-base: var(
+      --padding-left,
+      var(--padding-x, var(--padding, 2px))
+    );
+
     .navi_native_input {
       box-sizing: border-box;
-      padding-top: var(--padding-top, var(--padding-y, var(--padding, 1px)));
-      padding-right: var(
-        --padding-right,
-        var(--padding-x, var(--padding, 2px))
-      );
-      padding-bottom: var(
-        --padding-bottom,
-        var(--padding-y, var(--padding, 1px))
-      );
-      padding-left: var(--padding-left, var(--padding-x, var(--padding, 2px)));
+      padding-top: var(--x-padding-top-base);
+      padding-right: calc(var(--x-padding-right-base) + var(--end-icon-size));
+      padding-bottom: var(--x-padding-bottom-base);
+      padding-left: calc(var(--x-padding-left-base) + var(--start-icon-size));
       color: var(--x-color);
+      font-size: var(--font-size);
       background-color: var(--x-background-color);
       border-width: var(--x-outer-width);
       border-width: var(--x-outer-width);
@@ -149,17 +167,19 @@ import.meta.css = /* css */ `
       position: absolute;
       top: 0;
       bottom: 0;
-      left: 0.25em;
+      left: var(--x-padding-left-base);
+      font-size: var(--font-size);
     }
     .navi_input_end_button {
       position: absolute;
       top: 0;
-      right: 0.25em;
+      right: var(--x-padding-right-base);
       bottom: 0;
       display: inline-flex;
       margin: 0;
       padding: 0;
       justify-content: center;
+      font-size: var(--font-size);
       background: none;
       border: none;
       opacity: 0;
@@ -185,16 +205,46 @@ import.meta.css = /* css */ `
         }
       }
     }
-
     &[data-start-icon] {
-      .navi_native_input {
-        padding-left: 20px;
-      }
+      --start-icon-size: 1em;
     }
     &[data-end-icon] {
+      --end-icon-size: 1em;
+    }
+
+    /* Hover */
+    &[data-hover] {
+      --x-background-color: var(--background-color-hover);
+      --x-border-color: var(--border-color-hover);
+      --x-color: var(--color-hover);
+    }
+    /* Readonly */
+    &[data-readonly] {
+      --x-border-color: var(--border-color-readonly);
+      --x-background-color: var(--background-color-readonly);
+      --x-color: var(--color-readonly);
+    }
+    /* Focus */
+    &[data-focus],
+    &[data-focus-visible] {
+      --x-background-color: var(--background-color-focus);
+      --x-border-color: var(--border-color-focus);
+
       .navi_native_input {
-        padding-right: 20px;
+        outline-width: var(--x-outer-width);
+        outline-offset: calc(-1 * var(--x-outer-width));
+        --x-border-color: var(--x-outline-color);
       }
+    }
+    /* Disabled */
+    &[data-disabled] {
+      --x-border-color: var(--border-color-disabled);
+      --x-background-color: var(--background-color-disabled);
+      --x-color: var(--color-disabled);
+    }
+    /* Callout (info, warning, error) */
+    &[data-callout] {
+      --x-border-color: var(--callout-color);
     }
   }
 
@@ -206,29 +256,6 @@ import.meta.css = /* css */ `
     /* input:-internal-autofill-selected { color: FieldText !important; } */
     /* Fortunately we can override it as follow */
     -webkit-text-fill-color: var(--x-color) !important;
-  }
-  /* Readonly */
-  .navi_input[data-readonly] {
-    --x-border-color: var(--border-color-readonly);
-    --x-background-color: var(--background-color-readonly);
-    --x-color: var(--color-readonly);
-  }
-  /* Focus */
-  .navi_input[data-focus] .navi_native_input,
-  .navi_input[data-focus-visible] .navi_native_input {
-    outline-width: var(--x-outer-width);
-    outline-offset: calc(-1 * var(--x-outer-width));
-    --x-border-color: var(--x-outline-color);
-  }
-  /* Disabled */
-  .navi_input[data-disabled] {
-    --x-border-color: var(--border-color-disabled);
-    --x-background-color: var(--background-color-disabled);
-    --x-color: var(--color-disabled);
-  }
-  /* Callout (info, warning, error) */
-  .navi_input[data-callout] {
-    --x-border-color: var(--callout-color);
   }
 `;
 
@@ -251,19 +278,29 @@ const InputStyleCSSVars = {
   "outlineWidth": "--outline-width",
   "borderWidth": "--border-width",
   "borderRadius": "--border-radius",
+  "padding": "--padding",
+  "paddingX": "--padding-x",
+  "paddingY": "--padding-y",
   "paddingTop": "--padding-top",
   "paddingRight": "--padding-right",
   "paddingBottom": "--padding-bottom",
   "paddingLeft": "--padding-left",
+  "background": "--background",
   "backgroundColor": "--background-color",
   "borderColor": "--border-color",
   "color": "--color",
+  "fontSize": "--font-size",
   ":hover": {
     backgroundColor: "--background-color-hover",
     borderColor: "--border-color-hover",
     color: "--color-hover",
   },
+  ":focus": {
+    backgroundColor: "--background-color-focus",
+    borderColor: "--border-color-focus",
+  },
   ":active": {
+    backgroundColor: "--background-color-active",
     borderColor: "--border-color-active",
   },
   ":read-only": {

@@ -1,4 +1,4 @@
-# [3_sw_type_module_fallback_no_bundling](../../service_worker_type_module_build.test.mjs)
+# [sw_type_module_fallback_no_bundling](../../service_worker_type_module_build.test.mjs)
 
 ```js
 run({

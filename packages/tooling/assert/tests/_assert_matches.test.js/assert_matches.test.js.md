@@ -1,8 +1,8 @@
 # [assert_matches.test.js](../assert_matches.test.js)
 
 
-- [works](works/works.md)
-- [does not](does_not/does_not.md)
+- [works](0_works/0_works.md)
+- [does not](1_does_not/1_does_not.md)
 
 ---
 

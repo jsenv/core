@@ -1,3 +1,4 @@
+import { isValidElement } from "preact";
 import { useErrorBoundary, useLayoutEffect } from "preact/hooks";
 
 import { getActionPrivateProperties } from "./action_private_properties.js";
@@ -23,6 +24,22 @@ const renderErrorDefault = (error) => {
 const renderCompletedDefault = () => null;
 
 export const ActionRenderer = ({ action, children, disabled }) => {
+  if (action === undefined) {
+    throw new Error(
+      "ActionRenderer requires an action to render, but none was provided.",
+    );
+  }
+  let renderBranches;
+  if (typeof children === "function") {
+    renderBranches = { completed: children };
+  } else if (isValidElement(children)) {
+    renderBranches = { always: () => children };
+  } else if (isPlainObject(children)) {
+    renderBranches = children;
+  } else {
+    renderBranches = { completed: children };
+  }
+
   const {
     idle: renderIdle = renderIdleDefault,
     loading: renderLoading = renderLoadingDefault,
@@ -30,18 +47,9 @@ export const ActionRenderer = ({ action, children, disabled }) => {
     error: renderError = renderErrorDefault,
     completed: renderCompleted,
     always: renderAlways,
-  } = typeof children === "function" ? { completed: children } : children || {};
-
-  if (disabled) {
-    return null;
-  }
-
-  if (action === undefined) {
-    throw new Error(
-      "ActionRenderer requires an action to render, but none was provided.",
-    );
-  }
-  const { idle, loading, aborted, error, data } = useActionStatus(action);
+  } = renderBranches;
+  const { idle, loading, aborted, error, completed, data } =
+    useActionStatus(action);
   const UIRenderedPromise = useUIRenderedPromise(action);
   const [errorBoundary, resetErrorBoundary] = useErrorBoundary();
 
@@ -66,11 +74,13 @@ export const ActionRenderer = ({ action, children, disabled }) => {
     };
   }, [action]);
 
+  if (disabled) {
+    return null;
+  }
   // If renderAlways is provided, it wins and handles all rendering
   if (renderAlways) {
-    return renderAlways({ idle, loading, aborted, error, data });
+    return renderAlways({ idle, loading, aborted, completed, error, data });
   }
-
   if (idle) {
     return renderIdle(action);
   }
@@ -100,7 +110,6 @@ export const ActionRenderer = ({ action, children, disabled }) => {
     }
     return renderLoading(action);
   }
-
   return renderCompletedSafe(data, action);
 };
 
@@ -123,4 +132,17 @@ const useUIRenderedPromise = (action) => {
   promise.resolve = resolve;
   actionUIRenderedPromiseWeakMap.set(action, promise);
   return promise;
+};
+
+const isPlainObject = (obj) => {
+  if (typeof obj !== "object" || obj === null) {
+    return false;
+  }
+  let proto = obj;
+  while (Object.getPrototypeOf(proto) !== null) {
+    proto = Object.getPrototypeOf(proto);
+  }
+  return (
+    Object.getPrototypeOf(obj) === proto || Object.getPrototypeOf(obj) === null
+  );
 };

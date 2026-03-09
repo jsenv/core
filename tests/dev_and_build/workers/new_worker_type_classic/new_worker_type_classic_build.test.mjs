@@ -25,11 +25,11 @@ const run = async ({ bundling }) => {
 };
 
 await snapshotBuildTests(import.meta.url, ({ test }) => {
-  test("0_basic", () =>
+  test("basic", () =>
     run({
       bundling: true,
     }));
-  test("1_no_bundling", () =>
+  test("no_bundling", () =>
     run({
       bundling: false,
     }));

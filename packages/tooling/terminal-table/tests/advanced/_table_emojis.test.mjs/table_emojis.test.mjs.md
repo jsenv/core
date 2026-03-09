@@ -1,7 +1,7 @@
 # [table_emojis.test.mjs](../table_emojis.test.mjs)
 
 
-- [0_basic](0_basic/0_basic.md)
+- [basic](0_basic/0_basic.md)
 
 ---
 

@@ -1,4 +1,4 @@
-# [0_basics](../../state_signal.test.js)
+# [basics](../../state_signal.test.js)
 
 ```js
 clearSignalRegistry();

@@ -1,4 +1,4 @@
-# [0_basic](../../new_url_http_in_second_arg.test.mjs)
+# [basic](../../new_url_http_in_second_arg.test.mjs)
 
 ```js
 run()

@@ -1,4 +1,4 @@
-# [2_js_module_sourcemaps_file](../../script_type_module_basic_2.test.mjs)
+# [js_module_sourcemaps_file](../../script_type_module_basic_2.test.mjs)
 
 ```js
 run({

@@ -1,8 +1,8 @@
 # [node_process_exit.test.mjs](../node_process_exit.test.mjs)
 
 
-- [0_worker_thread](0_worker_thread/0_worker_thread.md)
-- [0_child_process](0_child_process/0_child_process.md)
+- [worker_thread](0_worker_thread/0_worker_thread.md)
+- [child_process](1_child_process/1_child_process.md)
 
 ---
 

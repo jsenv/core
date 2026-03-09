@@ -1,7 +1,7 @@
 # [as_js_classic_mapping_build.test.mjs](../as_js_classic_mapping_build.test.mjs)
 
 
-- [0_basic](0_basic/0_basic.md)
+- [basic](0_basic/0_basic.md)
 
 ---
 

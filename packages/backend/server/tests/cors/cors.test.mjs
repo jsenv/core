@@ -58,16 +58,16 @@ const run = async ({ cors, triggerInternalError }) => {
 };
 
 await snapshotServerTests(import.meta.url, ({ test }) => {
-  test("0_without_cors", async () => {
+  test("without_cors", async () => {
     return run({ cors: false });
   });
-  test("1_error_without_cors", async () => {
+  test("error_without_cors", async () => {
     return run({ cors: false, triggerInternalError: true });
   });
-  test("2_with_cors", async () => {
+  test("with_cors", async () => {
     return run({ cors: true });
   });
-  test("3_error_with_cors", async () => {
+  test("error_with_cors", async () => {
     return run({ cors: true, triggerInternalError: true });
   });
 });

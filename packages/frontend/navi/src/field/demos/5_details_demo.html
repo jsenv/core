@@ -1,0 +1,631 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Details Component Demo</title>
+    <style>
+      body {
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 20px;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: #f5f5f5;
+      }
+
+      h1 {
+        margin-bottom: 30px;
+        color: #333;
+        font-size: 2rem;
+        text-align: center;
+      }
+
+      .demo-section {
+        margin-bottom: 40px;
+        padding: 20px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      .demo-section h2 {
+        margin: 0 0 20px 0;
+        padding-bottom: 10px;
+        color: #333;
+        font-size: 1.4rem;
+        border-bottom: 2px solid #ddd;
+      }
+
+      .feature-list {
+        padding: 0;
+        list-style-type: none;
+      }
+
+      .feature-list li {
+        padding: 8px 0;
+        border-bottom: 1px solid #dee2e6;
+      }
+
+      .feature-list li:last-child {
+        border-bottom: none;
+      }
+
+      .feature-list li::before {
+        margin-right: 10px;
+        color: #28a745;
+        font-weight: bold;
+        content: "✓";
+      }
+
+      .keyboard-shortcuts {
+        margin: 15px 0;
+        padding: 15px;
+        background: #fff3cd;
+        border: 1px solid #ffeaa7;
+        border-radius: 6px;
+      }
+
+      .keyboard-shortcuts strong {
+        color: #856404;
+      }
+
+      .code-block {
+        margin: 15px 0;
+        padding: 15px;
+        color: #e2e8f0;
+        font-size: 14px;
+        font-family: "Courier New", monospace;
+        background: #2d3748;
+        border-radius: 8px;
+        overflow-x: auto;
+      }
+
+      .demo-example {
+        margin: 15px 0;
+        padding: 15px;
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+      }
+
+      .demo-section h3 {
+        margin-top: 0;
+        color: #495057;
+      }
+
+      .code-block {
+        margin: 15px 0;
+        padding: 15px;
+        color: #e2e8f0;
+        font-size: 14px;
+        font-family: "Courier New", monospace;
+        background: #2d3748;
+        border-radius: 8px;
+        overflow-x: auto;
+      }
+
+      .demo-example {
+        margin: 15px 0;
+        padding: 15px;
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 6px;
+      }
+
+      .demo-details {
+        margin: 20px 0;
+      }
+
+      .feature-list {
+        padding: 0;
+        list-style-type: none;
+      }
+
+      .feature-list li {
+        padding: 8px 0;
+        border-bottom: 1px solid #dee2e6;
+      }
+
+      .feature-list li:last-child {
+        border-bottom: none;
+      }
+
+      .feature-list li::before {
+        margin-right: 10px;
+        color: #28a745;
+        font-weight: bold;
+        content: "✓";
+      }
+
+      .keyboard-shortcuts {
+        margin: 15px 0;
+        padding: 15px;
+        background: #fff3cd;
+        border: 1px solid #ffeaa7;
+        border-radius: 6px;
+      }
+
+      .keyboard-shortcuts strong {
+        color: #856404;
+      }
+
+      .content-example {
+        padding: 15px;
+        background: #e3f2fd;
+        border-left: 4px solid #2196f3;
+      }
+
+      .comparison-container {
+        display: grid;
+        margin: 15px 0;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+      }
+
+      .comparison-item {
+        padding: 15px;
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+      }
+
+      .comparison-item h4 {
+        margin: 0 0 15px 0;
+        padding: 5px;
+        color: #495057;
+        font-size: 0.9rem;
+        text-align: center;
+        background: #e9ecef;
+        border-radius: 4px;
+      }
+
+      .user-agent-details {
+        margin: 15px 0;
+      }
+
+      .user-agent-details summary {
+        font-weight: 500;
+        cursor: pointer;
+      }
+
+      details {
+        border: 1px solid black;
+      }
+
+      summary {
+        background: lightblue;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Details Component Demo</h1>
+    <div id="root"></div>
+
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useState } from "preact/hooks";
+      import { Details, Box, Button } from "@jsenv/navi";
+
+      const App = () => {
+        return (
+          <div>
+            <BasicUsageDemo />
+            <LoadingExampleDemo />
+            <InteractiveDemo />
+            <ActionIntegrationDemo />
+            <StateManagementDemo />
+            <MultipleDetailsDemo />
+            <NestedDetailsDemo />
+          </div>
+        );
+      };
+
+      const BasicUsageDemo = () => {
+        return (
+          <div className="demo-section">
+            <h2>Basic Usage & Keyboard Navigation</h2>
+            <fieldset>
+              <legend>Side by Side Comparison</legend>
+              <p>
+                Compare the enhanced Details component with the standard HTML
+                details element.
+              </p>
+
+              <div className="comparison-container">
+                <div className="comparison-item">
+                  <h4>@jsenv/navi Details</h4>
+                  <Details label="Summary text">
+                    <div className="content-example">
+                      <p>
+                        Enhanced with keyboard navigation and action support.
+                      </p>
+                      <Box row spacing="sm">
+                        <Button>Focus me with →</Button>
+                        <input type="text" placeholder="Then tab here" />
+                      </Box>
+                    </div>
+                  </Details>
+                </div>
+
+                <div className="comparison-item">
+                  <h4>User Agent Details</h4>
+                  <details className="user-agent-details">
+                    <summary>Summary text</summary>
+                    <div className="content-example">
+                      <p>Standard HTML details element without enhancements.</p>
+                      <button>Regular button</button>
+                      <input type="text" placeholder="Standard input" />
+                    </div>
+                  </details>
+                </div>
+              </div>
+
+              <details className="keyboard-shortcuts">
+                <summary>
+                  <strong>Enhanced Keyboard Navigation Design</strong>
+                </summary>
+                <br />
+                <br />
+                <strong>Tab Behavior:</strong>
+                <br />• <kbd>Tab</kbd> skips details content even when opened
+                <br />• This helps users quickly skip entire collapsible
+                sections, which is often the desired behavior
+                <br />• Similar to how radio buttons with the same name work as
+                a group
+                <br />
+                <br />
+                <strong>Arrow Key Navigation:</strong>
+                <br />• <kbd>↑</kbd>/<kbd>↓</kbd> Navigate through details
+                content (like radio button groups)
+                <br />• <kbd>→</kbd> Opens details and focuses first element
+                from summary
+                <br />• <kbd>←</kbd> Closes details and returns to summary
+                <br />
+                <br />
+                <strong>Expand/Collapse from Inside:</strong>
+                <br />• <kbd>←</kbd>/<kbd>→</kbd> work even when focus is inside
+                the details
+                <br />• Only applies to elements without their own left/right
+                key behavior (like buttons)
+                <br />• Makes it easy to collapse/expand without having to
+                navigate back to the summary
+                <br />
+                <br />
+                <em>
+                  This design provides better keyboard navigation by default,
+                  allowing users to efficiently skip or navigate through
+                  collapsible content as needed.
+                </em>
+              </details>
+            </fieldset>
+          </div>
+        );
+      };
+
+      const LoadingExampleDemo = () => {
+        const [loading, setLoading] = useState(true);
+
+        const toggleLoading = () => {
+          setLoading(!loading);
+        };
+
+        return (
+          <div className="demo-section">
+            <h2>Loading State Example</h2>
+            <fieldset>
+              <legend>Details with Loading State</legend>
+              <p>
+                This example shows how the Details component displays a loading
+                indicator when the loading prop is true:
+              </p>
+
+              <Details label="Loading Details Example" loading={loading}>
+                <div className="content-example">
+                  <p>
+                    Content inside the details element. When loading is active,
+                    the summary will show a loading indicator.
+                  </p>
+                </div>
+              </Details>
+
+              <div style={{ marginTop: "15px" }}>
+                <Button onClick={toggleLoading}>
+                  {loading ? "Stop Loading" : "Start Loading"}
+                </Button>
+              </div>
+            </fieldset>
+          </div>
+        );
+      };
+
+      const MultipleDetailsDemo = () => {
+        return (
+          <div className="demo-section">
+            <h2>Multiple Details</h2>
+            <fieldset>
+              <legend>Sequential Sections</legend>
+              <p>
+                Multiple details can be used together to create expandable
+                sections:
+              </p>
+
+              <Details label="Section 1: Getting Started">
+                <div className="content-example">
+                  <p>
+                    This section contains information about getting started with
+                    the project.
+                  </p>
+                  <ul>
+                    <li>Installation instructions</li>
+                    <li>Basic configuration</li>
+                    <li>First steps</li>
+                  </ul>
+                </div>
+              </Details>
+
+              <Details label="Section 2: Advanced Features">
+                <div className="content-example">
+                  <p>Advanced functionality and customization options.</p>
+                  <ul>
+                    <li>Plugin architecture</li>
+                    <li>Action integration</li>
+                    <li>State management</li>
+                  </ul>
+                </div>
+              </Details>
+
+              <Details label="Section 3: Troubleshooting">
+                <div className="content-example">
+                  <p>Common issues and solutions.</p>
+                  <ul>
+                    <li>Performance considerations</li>
+                    <li>Browser compatibility</li>
+                    <li>Debugging tips</li>
+                  </ul>
+                </div>
+              </Details>
+            </fieldset>
+          </div>
+        );
+      };
+
+      const NestedDetailsDemo = () => {
+        return (
+          <div className="demo-section">
+            <h2>Nested Details</h2>
+            <fieldset>
+              <legend>Hierarchical Content</legend>
+              <p>
+                Details can be nested to create hierarchical expandable content:
+              </p>
+
+              <Details label="Documentation">
+                <div className="content-example">
+                  <p>Main documentation section with nested subsections.</p>
+
+                  <Details label="API Reference">
+                    <div className="content-example">
+                      <p>Complete API documentation.</p>
+
+                      <Details label="Components">
+                        <div className="content-example">
+                          <p>Component API details:</p>
+                          <ul>
+                            <li>Props interface</li>
+                            <li>Event handlers</li>
+                            <li>CSS classes</li>
+                          </ul>
+                        </div>
+                      </Details>
+
+                      <Details label="Actions">
+                        <div className="content-example">
+                          <p>Action system documentation:</p>
+                          <ul>
+                            <li>Creating actions</li>
+                            <li>Binding parameters</li>
+                            <li>Error handling</li>
+                          </ul>
+                        </div>
+                      </Details>
+                    </div>
+                  </Details>
+
+                  <Details label="Examples">
+                    <div className="content-example">
+                      <p>Code examples and tutorials.</p>
+
+                      <Details label="Basic Usage">
+                        <div className="content-example">
+                          <p>Simple examples to get started.</p>
+                        </div>
+                      </Details>
+
+                      <Details label="Advanced Patterns">
+                        <div className="content-example">
+                          <p>Complex integration patterns.</p>
+                        </div>
+                      </Details>
+                    </div>
+                  </Details>
+                </div>
+              </Details>
+            </fieldset>
+          </div>
+        );
+      };
+
+      const ActionIntegrationDemo = () => {
+        return (
+          <div className="demo-section">
+            <h2>Action Integration</h2>
+            <fieldset>
+              <legend>Loading Data on Open</legend>
+              <p>
+                The Details component can integrate with actions to fetch data
+                when opened:
+              </p>
+
+              <Details
+                action={async () => {
+                  await new Promise((resolve) => setTimeout(resolve, 1_500)); // Simulate network delay
+                  return {
+                    id: 123,
+                    name: "John Doe",
+                    email: "john.doe@example.com",
+                    role: "Developer",
+                  };
+                }}
+                label="User Profile (loads data on open)"
+              >
+                <div className="content-example">
+                  <p>
+                    <strong>Action Integration Features:</strong>
+                  </p>
+                  <ul>
+                    <li>Automatic loading state management</li>
+                    <li>Error handling and display</li>
+                    <li>Abort requests when closing</li>
+                    <li>Caching and memoization</li>
+                  </ul>
+                </div>
+              </Details>
+            </fieldset>
+          </div>
+        );
+      };
+
+      const StateManagementDemo = () => {
+        return (
+          <div className="demo-section">
+            <h2>State Management</h2>
+            <fieldset>
+              <legend>Navigation State Integration</legend>
+              <p>
+                Details state can be persisted using browser history when both{" "}
+                <code>id</code> and <code>persists</code> props are provided (or
+                when the details is within a form):
+              </p>
+
+              <Details
+                id="persistent-state-example"
+                label="Persistent State Example"
+                persists
+              >
+                <div className="content-example">
+                  <p>
+                    When using both <code>id</code> and <code>persists</code>{" "}
+                    props, the Details component will:
+                  </p>
+                  <ul>
+                    <li>
+                      Remember its open/closed state in browser
+                      history/navigation API
+                    </li>
+                    <li>Restore state when navigating back/forward</li>
+                    <li>Preserve state across regular page refreshes (F5)</li>
+                    <li>
+                      <strong>Note:</strong> The URL itself is not updated
+                    </li>
+                  </ul>
+                  <p>
+                    <strong>State Lifetime:</strong> The state persistence is
+                    tied to browser history and navigation behavior. Hard
+                    refreshes (Ctrl+F5) or other forms of navigation may clear
+                    this state, as it depends on how the user interacts with the
+                    page.
+                  </p>
+                  <p>
+                    <em>
+                      This is useful for maintaining UI state across normal page
+                      interactions while avoiding URL pollution.
+                    </em>
+                  </p>
+                </div>
+              </Details>
+            </fieldset>
+          </div>
+        );
+      };
+
+      const InteractiveDemo = () => {
+        const [label, setLabel] = useState("Interactive Details");
+        const [loading, setLoading] = useState(false);
+        const [open, setOpen] = useState(false);
+        const [arrowKeys, setArrowKeys] = useState(true);
+
+        return (
+          <div className="demo-section">
+            <h2>Interactive Configuration</h2>
+            <fieldset>
+              <legend>Controls</legend>
+              <Box column spacing="sm">
+                <div className="interactive-controls">
+                  <label>
+                    Label:
+                    <input
+                      type="text"
+                      value={label}
+                      onChange={(e) => setLabel(e.target.value)}
+                    />
+                  </label>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={loading}
+                      onChange={(e) => setLoading(e.target.checked)}
+                    />
+                    Loading
+                  </label>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={open}
+                      onChange={(e) => setOpen(e.target.checked)}
+                    />
+                    Open
+                  </label>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={arrowKeys}
+                      onChange={(e) => setArrowKeys(e.target.checked)}
+                    />
+                    Arrow Keys
+                  </label>
+                </div>
+              </Box>
+            </fieldset>
+
+            <fieldset>
+              <legend>Result</legend>
+              <Details
+                label={label}
+                loading={loading}
+                open={open}
+                arrowKeyShortcuts={arrowKeys}
+                onUIStateChange={(open) => {
+                  console.log("Details toggled:", open);
+                  setOpen(open);
+                }}
+              >
+                <div className="content-example">
+                  <p>This is the configurable details content.</p>
+                  <div className="value-display">
+                    Label: "{label}" | Loading: {loading ? "Yes" : "No"} | Open:{" "}
+                    {open ? "Yes" : "No"} | Arrow Keys:{" "}
+                    {arrowKeys ? "Enabled" : "Disabled"}
+                  </div>
+                </div>
+              </Details>
+            </fieldset>
+          </div>
+        );
+      };
+
+      render(<App />, document.querySelector("#root"));
+    </script>
+  </body>
+</html>

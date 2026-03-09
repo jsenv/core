@@ -1,4 +1,4 @@
-# [0_string_width](../../width.test.mjs)
+# [string_width](../../width.test.mjs)
 
 ```js
 run(stringWidth)

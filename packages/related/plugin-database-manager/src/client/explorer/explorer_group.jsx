@@ -1,77 +1,39 @@
-/**
- *
- */
+import { BadgeCount, Button, Details, Text } from "@jsenv/navi";
+import { useCallback, useLayoutEffect, useRef, useState } from "preact/hooks";
 
-import { Button, Details, valueInLocalStorage } from "@jsenv/navi";
-import { effect, signal } from "@preact/signals";
-import { forwardRef } from "preact/compat";
-import {
-  useCallback,
-  useImperativeHandle,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "preact/hooks";
 import { ExplorerItemList } from "./explorer_item_list.jsx";
 
-export const createExplorerGroupController = (
-  id,
-  { detailsOpenAtStart, detailsOnToggle },
-) => {
-  const [restoreHeight, storeHeight] = valueInLocalStorage(
-    `explorer_group_${id}_height`,
-    {
-      type: "positive_number",
-    },
-  );
-  const heightSettingSignal = signal(restoreHeight());
-  effect(() => {
-    const height = heightSettingSignal.value;
-    storeHeight(height);
-  });
-
-  const useHeightSetting = () => {
-    return heightSettingSignal.value;
-  };
-  const setHeightSetting = (width) => {
-    heightSettingSignal.value = width;
-  };
-
-  return {
-    id,
-    useHeightSetting,
-    setHeightSetting,
-    detailsOpenAtStart,
-    detailsOnToggle,
-  };
-};
-
-export const ExplorerGroup = forwardRef((props, ref) => {
+export const ExplorerGroup = (props) => {
   const {
-    controller,
-    detailsAction,
+    id,
+    detailsConnectedAction,
+    detailsUIAction,
     idKey,
     nameKey,
-    labelChildren,
+    label,
+    count,
     renderNewButtonChildren,
     renderItem,
     useItemArrayInStore,
-    useRenameItemAction,
-    useCreateItemAction,
-    useDeleteItemAction,
-    useDeleteManyItemAction,
-    onOpen,
-    onClose,
+    renameItemAction,
+    createItemAction,
+    deleteItemAction,
+    deleteManyItemAction,
+    open,
+    height,
     resizable,
     ...rest
   } = props;
-
-  const innerRef = useRef();
-  useImperativeHandle(ref, () => innerRef.current);
+  const defaultRef = useRef();
+  const ref = rest.ref || defaultRef;
 
   useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) {
+      return;
+    }
     setTimeout(() => {
-      innerRef.current.setAttribute("data-details-toggle-animation", "");
+      el.setAttribute("data-details-toggle-animation", "");
     });
   }, []);
 
@@ -88,70 +50,70 @@ export const ExplorerGroup = forwardRef((props, ref) => {
     },
     [setIsCreatingNew],
   );
-
-  const heightSetting = controller.useHeightSetting();
   const createButtonRef = useRef(null);
 
   return (
     <>
       {resizable && (
-        <div
-          data-resize-handle={controller.id}
-          id={`${controller.id}_resize_handle`}
-        ></div>
+        <div data-resize-handle={id} id={`${id}_resize_handle`}></div>
       )}
       <Details
         {...rest}
-        ref={innerRef}
-        id={controller.id}
-        open={controller.detailsOpenAtStart}
+        ref={ref}
+        id={id}
+        open={open}
         focusGroup
         focusGroupDirection="vertical"
         className="explorer_group"
-        onToggle={(toggleEvent) => {
-          controller.detailsOnToggle(toggleEvent.newState === "open");
-          if (toggleEvent.newState === "open") {
-            if (onOpen) {
-              onOpen();
-            }
-          } else if (onClose) {
-            onClose();
-          }
-        }}
         data-resize={resizable ? "vertical" : "none"}
         data-min-height="150"
-        data-requested-height={heightSetting}
-        action={detailsAction}
+        data-requested-height={height}
+        connectedAction={detailsConnectedAction}
+        uiAction={detailsUIAction}
         label={
           <>
-            {labelChildren}
-            {renderNewButtonChildren ? (
-              <>
-                <span style="display: flex; flex: 1"></span>
-                <Button
-                  ref={createButtonRef}
-                  className="summary_action_icon"
-                  discrete
-                  style={{
-                    width: "22px",
-                    height: "22px",
-                    cursor: "pointer",
-                    padding: "4px",
-                  }}
-                  onMouseDown={(e) => {
-                    // ensure when input is focused it stays focused
-                    // without this preventDefault() the input would be blurred (which might cause creation of an item) and re-opened empty
-                    e.preventDefault();
-                  }}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    startCreatingNew();
-                  }}
+            <Text overflowEllipsis>
+              {label}
+
+              <Text overflowPinned expandX box alignY="center">
+                <BadgeCount
+                  size="xxs"
+                  circle
+                  max="Infinity"
+                  background="gray"
+                  color="white"
                 >
-                  {renderNewButtonChildren()}
-                </Button>
-              </>
-            ) : null}
+                  {count}
+                </BadgeCount>
+
+                {renderNewButtonChildren && (
+                  <>
+                    <span style="display: flex; flex: 1"></span>
+                    <Button
+                      ref={createButtonRef}
+                      selfAlignX="end"
+                      className="summary_action_icon"
+                      width="22"
+                      height="22"
+                      padding="2"
+                      discrete
+                      shrink={false}
+                      onMouseDown={(e) => {
+                        // ensure when input is focused it stays focused
+                        // without this preventDefault() the input would be blurred (which might cause creation of an item) and re-opened empty
+                        e.preventDefault();
+                      }}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        startCreatingNew();
+                      }}
+                    >
+                      {renderNewButtonChildren()}
+                    </Button>
+                  </>
+                )}
+              </Text>
+            </Text>
           </>
         }
       >
@@ -164,10 +126,10 @@ export const ExplorerGroup = forwardRef((props, ref) => {
                 itemArray={itemArray}
                 renderItem={renderItem}
                 useItemArrayInStore={useItemArrayInStore}
-                useRenameItemAction={useRenameItemAction}
-                useCreateItemAction={useCreateItemAction}
-                useDeleteItemAction={useDeleteItemAction}
-                useDeleteManyItemAction={useDeleteManyItemAction}
+                renameItemAction={renameItemAction}
+                createItemAction={createItemAction}
+                deleteItemAction={deleteItemAction}
+                deleteManyItemAction={deleteManyItemAction}
                 isCreatingNew={isCreatingNew}
                 stopCreatingNew={stopCreatingNew}
               />
@@ -177,4 +139,4 @@ export const ExplorerGroup = forwardRef((props, ref) => {
       </Details>
     </>
   );
-});
+};

@@ -17,7 +17,7 @@ const run = async () => {
 };
 
 await snapshotServerTests(import.meta.url, ({ test }) => {
-  test("0_basic", async () => {
+  test("basic", async () => {
     return run({ cors: false });
   });
 });

@@ -7,7 +7,7 @@ const run = (resourcePattern, url) => {
 };
 
 await snapshotTests(import.meta.url, ({ test }) => {
-  test("0_basic", () => ({
+  test("basic", () => ({
     a: run("/users/:id", "/users/123"),
     d: run("/users/:id", "/users/123/"),
     b: run("/users/:id", "/users"),

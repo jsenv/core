@@ -1,4 +1,4 @@
-# [0_get_set_get](../../sigi.test.mjs)
+# [get_set_get](../../sigi.test.mjs)
 
 ```js
 const state = sigi({

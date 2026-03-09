@@ -1,4 +1,4 @@
-# [3_versioning](../../endpoint_negotiation.test.mjs)
+# [versioning](../../endpoint_negotiation.test.mjs)
 
 ```js
 const routes = [

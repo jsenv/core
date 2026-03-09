@@ -1,8 +1,8 @@
 # [vendor_and_dynamic_import.test.mjs](../vendor_and_dynamic_import.test.mjs)
 
 
-- [0_basic](0_basic/0_basic.md)
-- [1_include_dependencies](1_include_dependencies/1_include_dependencies.md)
+- [basic](0_basic/0_basic.md)
+- [include_dependencies](1_include_dependencies/1_include_dependencies.md)
 
 ---
 

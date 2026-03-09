@@ -3,7 +3,7 @@ import { snapshotTests } from "@jsenv/snapshot";
 import { urlToFileSystemPath } from "@jsenv/urls";
 
 await snapshotTests(import.meta.url, ({ test }) => {
-  test("0_importing_without_src", () => {
+  test("importing_without_src", () => {
     return resolver.resolve(
       "/answer.js",
       urlToFileSystemPath(import.meta.resolve("./client/src/index.js")),
@@ -13,7 +13,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
     );
   });
 
-  test("1_importing_wit_src", () => {
+  test("importing_wit_src", () => {
     return resolver.resolve(
       "/src/answer.js",
       urlToFileSystemPath(import.meta.resolve("./client/src/index.js")),
@@ -23,7 +23,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
     );
   });
 
-  test("2_recommended", () => {
+  test("recommended", () => {
     return resolver.resolve(
       "self/src/answer.js",
       urlToFileSystemPath(import.meta.resolve("./client/src/index.js")),

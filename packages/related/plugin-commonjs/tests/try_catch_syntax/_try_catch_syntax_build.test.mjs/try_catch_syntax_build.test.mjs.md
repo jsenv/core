@@ -1,7 +1,7 @@
 # [try_catch_syntax_build.test.mjs](../try_catch_syntax_build.test.mjs)
 
 
-- [0_basic](0_basic/0_basic.md)
+- [basic](0_basic/0_basic.md)
 
 ---
 

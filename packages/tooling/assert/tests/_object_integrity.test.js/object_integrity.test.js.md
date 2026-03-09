@@ -1,18 +1,18 @@
 # [object_integrity.test.js](../object_integrity.test.js)
 
 
-- [frozen vs not frozen](frozen_vs_not_frozen/frozen_vs_not_frozen.md)
-- [not frozen vs frozen](not_frozen_vs_frozen/not_frozen_vs_frozen.md)
-- [sealed vs not sealed](sealed_vs_not_sealed/sealed_vs_not_sealed.md)
-- [not sealed vs sealed](not_sealed_vs_sealed/not_sealed_vs_sealed.md)
-- [frozen vs sealed](frozen_vs_sealed/frozen_vs_sealed.md)
-- [sealed vs frozen](sealed_vs_frozen/sealed_vs_frozen.md)
-- [extensible vs non extensible](extensible_vs_non_extensible/extensible_vs_non_extensible.md)
-- [non extensible vs extensible](non_extensible_vs_extensible/non_extensible_vs_extensible.md)
-- [sealed vs non extensible](sealed_vs_non_extensible/sealed_vs_non_extensible.md)
-- [non extensible vs frozen](non_extensible_vs_frozen/non_extensible_vs_frozen.md)
-- [frozen array vs frozen function](frozen_array_vs_frozen_function/frozen_array_vs_frozen_function.md)
-- [both sealed, diff is elsewhere](both_sealed__diff_is_elsewhere/both_sealed__diff_is_elsewhere.md)
+- [frozen vs not frozen](0_frozen_vs_not_frozen/0_frozen_vs_not_frozen.md)
+- [not frozen vs frozen](1_not_frozen_vs_frozen/1_not_frozen_vs_frozen.md)
+- [sealed vs not sealed](2_sealed_vs_not_sealed/2_sealed_vs_not_sealed.md)
+- [not sealed vs sealed](3_not_sealed_vs_sealed/3_not_sealed_vs_sealed.md)
+- [frozen vs sealed](4_frozen_vs_sealed/4_frozen_vs_sealed.md)
+- [sealed vs frozen](5_sealed_vs_frozen/5_sealed_vs_frozen.md)
+- [extensible vs non extensible](6_extensible_vs_non_extensible/6_extensible_vs_non_extensible.md)
+- [non extensible vs extensible](7_non_extensible_vs_extensible/7_non_extensible_vs_extensible.md)
+- [sealed vs non extensible](8_sealed_vs_non_extensible/8_sealed_vs_non_extensible.md)
+- [non extensible vs frozen](9_non_extensible_vs_frozen/9_non_extensible_vs_frozen.md)
+- [frozen array vs frozen function](10_frozen_array_vs_frozen_function/10_frozen_array_vs_frozen_function.md)
+- [both sealed, diff is elsewhere](11_both_sealed__diff_is_elsewhere/11_both_sealed__diff_is_elsewhere.md)
 
 ---
 

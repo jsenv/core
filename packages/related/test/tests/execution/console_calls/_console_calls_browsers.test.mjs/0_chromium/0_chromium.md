@@ -1,4 +1,4 @@
-# [0_chromium](../../console_calls_browsers.test.mjs)
+# [chromium](../../console_calls_browsers.test.mjs)
 
 ```js
 run({

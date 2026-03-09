@@ -1,8 +1,8 @@
 # [html_importmap_http.test.mjs](../html_importmap_http.test.mjs)
 
 
-- [0_js_module](0_js_module/0_js_module.md)
-- [0_js_module_http_enabled](0_js_module_http_enabled/0_js_module_http_enabled.md)
+- [js_module](0_js_module/0_js_module.md)
+- [js_module_http_enabled](1_js_module_http_enabled/1_js_module_http_enabled.md)
 
 ---
 

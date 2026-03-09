@@ -25,7 +25,7 @@ const run = async ({ runtimeCompat }) => {
 
 await snapshotBuildTests(import.meta.url, ({ test }) => {
   // cannot use <script type="module">
-  test("0_js_module_fallback", () =>
+  test("js_module_fallback", () =>
     run({
       runtimeCompat: { chrome: "60" },
     }));

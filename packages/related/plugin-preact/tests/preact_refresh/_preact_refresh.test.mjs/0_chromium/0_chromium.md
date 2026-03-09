@@ -1,4 +1,4 @@
-# [0_chromium](../../preact_refresh.test.mjs)
+# [chromium](../../preact_refresh.test.mjs)
 
 ```js
 run({ browserLauncher: chromium })

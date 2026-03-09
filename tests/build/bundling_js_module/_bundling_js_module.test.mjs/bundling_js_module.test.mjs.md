@@ -1,7 +1,7 @@
 # [bundling_js_module.test.mjs](../bundling_js_module.test.mjs)
 
 
-- [0_basic](0_basic/0_basic.md)
+- [basic](0_basic/0_basic.md)
 
 ---
 

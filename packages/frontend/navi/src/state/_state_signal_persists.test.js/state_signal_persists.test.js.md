@@ -1,13 +1,13 @@
 # [state_signal_persists.test.js](../state_signal_persists.test.js)
 
 
-- [0_basic_persistence](0_basic_persistence/0_basic_persistence.md)
-- [1_persistence_with_existing_storage](1_persistence_with_existing_storage/1_persistence_with_existing_storage.md)
-- [2_persistence_different_types](2_persistence_different_types/2_persistence_different_types.md)
-- [3_persistence_with_validation](3_persistence_with_validation/3_persistence_with_validation.md)
-- [4_persistence_with_dynamic_defaults](4_persistence_with_dynamic_defaults/4_persistence_with_dynamic_defaults.md)
-- [5_persistence_storage_cleanup](5_persistence_storage_cleanup/5_persistence_storage_cleanup.md)
-- [6_persistence_reactive_storage_updates](6_persistence_reactive_storage_updates/6_persistence_reactive_storage_updates.md)
+- [basic_persistence](0_basic_persistence/0_basic_persistence.md)
+- [persistence_with_existing_storage](1_persistence_with_existing_storage/1_persistence_with_existing_storage.md)
+- [persistence_different_types](2_persistence_different_types/2_persistence_different_types.md)
+- [persistence_with_validation](3_persistence_with_validation/3_persistence_with_validation.md)
+- [persistence_with_dynamic_defaults](4_persistence_with_dynamic_defaults/4_persistence_with_dynamic_defaults.md)
+- [persistence_storage_cleanup](5_persistence_storage_cleanup/5_persistence_storage_cleanup.md)
+- [persistence_reactive_storage_updates](6_persistence_reactive_storage_updates/6_persistence_reactive_storage_updates.md)
 
 ---
 

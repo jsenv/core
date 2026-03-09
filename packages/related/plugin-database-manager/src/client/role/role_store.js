@@ -1,5 +1,6 @@
-import { resource, useActionData } from "@jsenv/navi";
+import { resource } from "@jsenv/navi";
 import { signal } from "@preact/signals";
+
 import { setRoleCounts } from "../database_manager_signals.js";
 import { errorFromResponse } from "../error_from_response.js";
 
@@ -106,14 +107,6 @@ export const useRoleArrayInStore = ROLE.useArray;
 
 export const ROLE_CAN_LOGIN = ROLE.withParams({ canlogin: true });
 export const ROLE_CANNOT_LOGIN = ROLE.withParams({ canlogin: false });
-export const useRoleCanLoginArray = () => {
-  const roleCanLoginArray = useActionData(ROLE_CAN_LOGIN.GET_MANY);
-  return roleCanLoginArray;
-};
-export const useRoleCannotLoginArray = () => {
-  const roleCannotLoginArray = useActionData(ROLE_CANNOT_LOGIN.GET_MANY);
-  return roleCannotLoginArray;
-};
 
 const currentRoleIdSignal = signal(window.DB_MANAGER_CONFIG.currentRole.oid);
 export const setCurrentRoleId = (id) => {

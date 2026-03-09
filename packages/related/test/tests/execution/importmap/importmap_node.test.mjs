@@ -13,7 +13,7 @@ await snapshotFileExecutionSideEffects(import.meta.url, async ({ test }) => {
     return result;
   };
 
-  test("0_child_process", () =>
+  test("child_process", () =>
     run({
       runtime: nodeChildProcess({
         commandLineOptions: [
@@ -21,7 +21,7 @@ await snapshotFileExecutionSideEffects(import.meta.url, async ({ test }) => {
         ],
       }),
     }));
-  test("1_child_process_importmap", () =>
+  test("child_process_importmap", () =>
     run({
       runtime: nodeChildProcess({
         commandLineOptions: [
@@ -34,7 +34,7 @@ await snapshotFileExecutionSideEffects(import.meta.url, async ({ test }) => {
         },
       }),
     }));
-  test("2_worker_thread", () =>
+  test("worker_thread", () =>
     run({
       runtime: nodeWorkerThread({
         commandLineOptions: [
@@ -42,7 +42,7 @@ await snapshotFileExecutionSideEffects(import.meta.url, async ({ test }) => {
         ],
       }),
     }));
-  test("3_worker_thread_importmap", () =>
+  test("worker_thread_importmap", () =>
     run({
       runtime: nodeWorkerThread({
         commandLineOptions: [

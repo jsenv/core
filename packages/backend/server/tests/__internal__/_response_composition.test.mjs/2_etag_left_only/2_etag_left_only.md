@@ -1,4 +1,4 @@
-# [2_etag_left_only](../../response_composition.test.mjs)
+# [etag_left_only](../../response_composition.test.mjs)
 
 ```js
 return composeTwoResponses(

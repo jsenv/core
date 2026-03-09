@@ -1,4 +1,4 @@
-# [0_basic](../../bundling_css_in_html.test.mjs)
+# [basic](../../bundling_css_in_html.test.mjs)
 
 ```js
 run()

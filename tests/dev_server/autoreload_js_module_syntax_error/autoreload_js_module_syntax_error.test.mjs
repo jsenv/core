@@ -63,7 +63,7 @@ const run = async () => {
 await snapshotTests(
   import.meta.url,
   ({ test }) => {
-    test("0_chromium", () => run());
+    test("chromium", () => run());
   },
   {
     filesystemActions: {

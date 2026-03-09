@@ -4,7 +4,7 @@ import { executeBuildHtmlInBrowser } from "@jsenv/core/tests/execute_build_html_
 import { snapshotBuildTests } from "@jsenv/core/tests/snapshot_build_tests.js";
 
 const { dirUrlMap } = await snapshotBuildTests(import.meta.url, ({ test }) => {
-  test("0_inline_base64", () =>
+  test("inline_base64", () =>
     build({
       sourceDirectoryUrl: import.meta.resolve("./client/"),
       buildDirectoryUrl: import.meta.resolve("./build/"),
@@ -21,7 +21,7 @@ const { dirUrlMap } = await snapshotBuildTests(import.meta.url, ({ test }) => {
 
 const actual = {
   inlineBase64: await executeBuildHtmlInBrowser(
-    `${dirUrlMap.get("0_inline_base64")}build/`,
+    `${dirUrlMap.get("inline_base64")}build/`,
   ),
 };
 const expect = {

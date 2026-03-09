@@ -23,15 +23,15 @@ const run = async ({ runtimeCompat, bundling }) => {
 };
 
 await snapshotBuildTests(import.meta.url, ({ test }) => {
-  test("0_js_module", () =>
+  test("js_module", () =>
     run({
       runtimeCompat: { chrome: "89" },
     }));
-  test("1_js_module_fallback", () =>
+  test("js_module_fallback", () =>
     run({
       runtimeCompat: { chrome: "60" },
     }));
-  test("2_js_module_fallback_no_bundling", () =>
+  test("js_module_fallback_no_bundling", () =>
     run({
       runtimeCompat: { chrome: "60" },
       bundling: false,

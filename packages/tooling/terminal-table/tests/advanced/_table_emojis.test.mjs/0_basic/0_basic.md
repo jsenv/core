@@ -1,4 +1,4 @@
-# [0_basic](../../table_emojis.test.mjs)
+# [basic](../../table_emojis.test.mjs)
 
 ```js
 run();

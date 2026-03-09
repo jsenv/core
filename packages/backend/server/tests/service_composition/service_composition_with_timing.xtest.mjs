@@ -35,7 +35,7 @@ const server = await startServer({
 await snapshotTests(
   import.meta.url,
   ({ test }) => {
-    test("0_fetch_root", async () => {
+    test("fetch_root", async () => {
       const response = await fetch(server.origin);
       const actual = {
         status: response.status,
@@ -44,7 +44,7 @@ await snapshotTests(
       return actual;
     });
 
-    test("1_fetch_whatever", async () => {
+    test("fetch_whatever", async () => {
       const response = await fetch(`${server.origin}/whatever`);
       const actual = {
         status: response.status,

@@ -1,4 +1,4 @@
-# [1_browser](../../code_splitting.test.mjs)
+# [browser](../../code_splitting.test.mjs)
 
 ```js
 run({

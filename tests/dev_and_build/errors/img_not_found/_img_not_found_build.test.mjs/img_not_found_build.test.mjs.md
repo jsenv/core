@@ -1,7 +1,7 @@
 # [img_not_found_build.test.mjs](../img_not_found_build.test.mjs)
 
 
-- [0_basic](0_basic/0_basic.md)
+- [basic](0_basic/0_basic.md)
 
 ---
 

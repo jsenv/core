@@ -11,7 +11,7 @@
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { createAction, Details, Form } from "@jsenv/navi";
+      import { createAction, Details, Button, Form } from "@jsenv/navi";
 
       const App = () => {
         return (
@@ -24,6 +24,7 @@
 
             <DetailsFullControlDemo />
             <DetailsWithActionPreloadedDemo />
+            <DetailsConnectedActionDemo />
           </>
         );
       };
@@ -181,6 +182,45 @@
               label="Action using bind params"
             >
               {(content) => content}
+            </Details>
+          </div>
+        );
+      };
+
+      const connectedAction = createAction(async () => {
+        await new Promise((resolve) => {
+          setTimeout(resolve, 1_000);
+        });
+        return `Loaded at ${new Date().toLocaleTimeString()}`;
+      });
+
+      const DetailsConnectedActionDemo = () => {
+        return (
+          <div>
+            <p>
+              <strong>Connected action</strong>
+            </p>
+            <p>
+              The details watches an action it does not directly trigger.
+              Toggling the details open <em>and</em> clicking the button below
+              both drive the same action — the details reflects the loading
+              state regardless of which one initiated it.
+            </p>
+            <Button
+              onClick={() => {
+                connectedAction();
+              }}
+            >
+              Trigger from outside
+            </Button>
+            <Details
+              label="Details with connected action"
+              connectedAction={connectedAction}
+              onUIStateChange={(open) => {
+                if (open) connectedAction();
+              }}
+            >
+              {(result) => <span>{result}</span>}
             </Details>
           </div>
         );

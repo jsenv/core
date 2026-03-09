@@ -1,8 +1,8 @@
 # [width.test.mjs](../width.test.mjs)
 
 
-- [0_string_width](0_string_width/0_string_width.md)
-- [1_terminal_size](1_terminal_size/1_terminal_size.md)
+- [string_width](0_string_width/0_string_width.md)
+- [terminal_size](1_terminal_size/1_terminal_size.md)
 
 ---
 

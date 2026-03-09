@@ -1,8 +1,8 @@
 # [worker_versioning_importmap_build.test.mjs](../worker_versioning_importmap_build.test.mjs)
 
 
-- [0_importmap](0_importmap/0_importmap.md)
-- [1_importmap_fallback](1_importmap_fallback/1_importmap_fallback.md)
+- [importmap](0_importmap/0_importmap.md)
+- [importmap_fallback](1_importmap_fallback/1_importmap_fallback.md)
 
 ---
 

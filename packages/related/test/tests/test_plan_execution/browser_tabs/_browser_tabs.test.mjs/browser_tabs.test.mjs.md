@@ -1,7 +1,7 @@
 # [browser_tabs.test.mjs](../browser_tabs.test.mjs)
 
 
-- [0_basic](0_basic/0_basic.md)
+- [basic](0_basic/0_basic.md)
 
 ---
 

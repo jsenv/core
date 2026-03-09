@@ -1,7 +1,7 @@
 # [service_worker_type_classic_build.test.mjs](../service_worker_type_classic_build.test.mjs)
 
 
-- [0_basic](0_basic/0_basic.md)
+- [basic](0_basic/0_basic.md)
 
 ---
 

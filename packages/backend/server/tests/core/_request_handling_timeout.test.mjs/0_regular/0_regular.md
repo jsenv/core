@@ -1,4 +1,4 @@
-# [0_regular](../../request_handling_timeout.test.mjs)
+# [regular](../../request_handling_timeout.test.mjs)
 
 ```js
 return run({ waitForEver: false });

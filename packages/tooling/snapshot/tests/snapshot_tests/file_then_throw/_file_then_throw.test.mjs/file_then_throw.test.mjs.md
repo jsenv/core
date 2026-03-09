@@ -30,7 +30,7 @@ try {
   <summary>see without style</summary>
 
 ```console
-AssertionError: snapshot comparison failed for "scenario.md"
+AssertionError: snapshot comparison failed for "0_scenario.md"
 
 actual:  1| # [scenario](../../file_then_throw.test.mjs)
          2| 
@@ -74,7 +74,7 @@ expect:  1| # [scenario](../../file_then_throw.test.mjs)
         21| </sub>
         22| 
 --- details ---
-"@jsenv/core/packages/tooling/snapshot/tests/snapshot_tests/file_then_throw/git_ignored/scenario/scenario.md"
+"@jsenv/core/packages/tooling/snapshot/tests/snapshot_tests/file_then_throw/git_ignored/0_scenario/0_scenario.md"
 ---------------
   at async snapshotSideEffects.filesystemEffects (@jsenv/core/packages/tooling/snapshot/tests/snapshot_tests/file_then_throw/file_then_throw.test.mjs:42:7)
   at async @jsenv/core/packages/tooling/snapshot/tests/snapshot_tests/file_then_throw/file_then_throw.test.mjs:38:1

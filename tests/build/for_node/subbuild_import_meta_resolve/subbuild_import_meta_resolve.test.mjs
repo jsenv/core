@@ -33,18 +33,18 @@ const run = async ({ bundling, clientBase }) => {
 };
 
 await snapshotBuildTests(import.meta.url, ({ test }) => {
-  test("0_no_bundling", () =>
+  test("no_bundling", () =>
     run({
       bundling: false,
     }));
 
-  test("1_no_bundling_relative_base", () =>
+  test("no_bundling_relative_base", () =>
     run({
       bundling: false,
       clientBase: "./",
     }));
 
-  test("2_with_bundling", () =>
+  test("with_bundling", () =>
     run({
       bundling: true,
     }));

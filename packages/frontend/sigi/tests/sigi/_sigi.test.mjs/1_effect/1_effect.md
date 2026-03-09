@@ -1,4 +1,4 @@
-# [1_effect](../../sigi.test.mjs)
+# [effect](../../sigi.test.mjs)
 
 ```js
 const state = sigi({

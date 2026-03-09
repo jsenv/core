@@ -1,10 +1,10 @@
 # [import_type_json_build.test.mjs](../import_type_json_build.test.mjs)
 
 
-- [0_js_module](0_js_module/0_js_module.md)
-- [1_js_module_no_bundling](1_js_module_no_bundling/1_js_module_no_bundling.md)
-- [2_js_module_fallback](2_js_module_fallback/2_js_module_fallback.md)
-- [3_js_module_fallback_no_bundling](3_js_module_fallback_no_bundling/3_js_module_fallback_no_bundling.md)
+- [js_module](0_js_module/0_js_module.md)
+- [js_module_no_bundling](1_js_module_no_bundling/1_js_module_no_bundling.md)
+- [js_module_fallback](2_js_module_fallback/2_js_module_fallback.md)
+- [js_module_fallback_no_bundling](3_js_module_fallback_no_bundling/3_js_module_fallback_no_bundling.md)
 
 ---
 

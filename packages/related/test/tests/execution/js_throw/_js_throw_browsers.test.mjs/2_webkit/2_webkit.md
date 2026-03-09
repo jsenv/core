@@ -1,4 +1,4 @@
-# [2_webkit](../../js_throw_browsers.test.mjs)
+# [webkit](../../js_throw_browsers.test.mjs)
 
 ```js
 run({

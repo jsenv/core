@@ -9,72 +9,72 @@ import.meta.css = /* css */ `
   @layer navi {
   }
   .navi_badge_count {
+    --font-size: 0.7em;
     --x-background: var(--background);
     --x-background-color: var(--background-color);
+    --padding-x: 0.5em;
+    --padding-y: 0.2em;
     position: relative;
     display: inline-block;
     color: var(--color, var(--x-color-contrasting));
     font-size: var(--font-size);
-    vertical-align: middle;
 
     .navi_count_badge_overflow {
       position: relative;
-      top: -0.1em;
     }
 
     /* Ellipse */
     &[data-ellipse] {
-      padding-right: 0.4em;
-      padding-left: 0.4em;
+      padding-top: var(--padding-y);
+      padding-right: var(--padding-x);
+      padding-bottom: var(--padding-y);
+      padding-left: var(--padding-x);
+      line-height: normal;
       background: var(--x-background);
       background-color: var(--x-background-color, var(--x-background));
       border-radius: 1em;
-      &[data-loading] {
-        --x-background: transparent;
-      }
     }
 
     /* Circle */
     &[data-circle] {
-      --x-size: 1.5em;
-      --x-border-radius: var(--border-radius);
       --x-number-font-size: var(--font-size);
 
-      width: var(--x-size);
-      height: var(--x-size);
-      border-radius: var(--x-border-radius);
+      display: inline-flex;
+      box-sizing: content-box;
+      aspect-ratio: 1/1;
+      width: var(--x-radius);
+      height: var(--x-radius);
+      align-items: center;
+      justify-content: center;
+      background: var(--x-background);
+      background-color: var(--x-background-color, var(--x-background));
+      border-radius: 50%;
+
       &[data-single-char] {
-        --x-border-radius: 100%;
+        --x-radius: 1.5em;
         --x-number-font-size: unset;
       }
       &[data-two-chars] {
-        --x-border-radius: 100%;
-        --x-number-font-size: 0.8em;
+        --x-radius: 1.8em;
+        --x-number-font-size: 0.9em;
       }
       &[data-three-chars] {
-        --x-border-radius: 100%;
-        --x-number-font-size: 0.6em;
+        --x-radius: 2.4em;
+        --x-number-font-size: 0.8em;
       }
-
-      .navi_badge_count_frame {
-        position: absolute;
-        top: 50%;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: var(--x-background);
-        background-color: var(--x-background-color, var(--x-background));
-        border-radius: inherit;
-        transform: translateY(-50%);
+      &[data-four-chars] {
+        --x-radius: 2.6em;
+        --x-number-font-size: 0.8em;
       }
 
       .navi_badge_count_text {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        font-size: var(--x-number-font-size, inherit);
-        transform: translate(-50%, -50%);
+        font-size: var(--x-number-font-size);
       }
+    }
+
+    &[data-loading] {
+      --x-background: transparent;
+      --x-background-color: transparent;
     }
   }
 `;
@@ -94,13 +94,14 @@ const BadgeCountOverflow = () => (
   <span className="navi_count_badge_overflow">+</span>
 );
 const MAX_CHAR_AS_CIRCLE = 3;
+const MAX_FOR_CIRCLE = 99;
 export const BadgeCount = ({
   children,
   maxElement = <BadgeCountOverflow />,
   // When you use max="none" (or max > 99) it might be a good idea to force ellipse
   // so that visually the interface do not suddently switch from circle to ellipse depending on the count
-  ellipse,
-  max = ellipse ? Infinity : 99,
+  circle,
+  max = circle ? MAX_FOR_CIRCLE : Infinity,
   ...props
 }) => {
   const defaultRef = useRef();
@@ -114,27 +115,27 @@ export const BadgeCount = ({
   const valueCharCount = String(valueDisplayed).length;
   const charCount = valueCharCount + (hasOverflow ? 1 : 0);
   if (charCount > MAX_CHAR_AS_CIRCLE) {
-    ellipse = true;
+    circle = false;
   }
 
-  if (ellipse) {
+  if (circle) {
     return (
-      <BadgeCountEllipse {...props} ref={ref} hasOverflow={hasOverflow}>
+      <BadgeCountCircle
+        {...props}
+        ref={ref}
+        hasOverflow={hasOverflow}
+        charCount={charCount}
+      >
         {valueDisplayed}
         {hasOverflow && maxElement}
-      </BadgeCountEllipse>
+      </BadgeCountCircle>
     );
   }
   return (
-    <BadgeCountCircle
-      {...props}
-      ref={ref}
-      hasOverflow={hasOverflow}
-      charCount={charCount}
-    >
+    <BadgeCountEllipse {...props} ref={ref} hasOverflow={hasOverflow}>
       {valueDisplayed}
       {hasOverflow && maxElement}
-    </BadgeCountCircle>
+    </BadgeCountEllipse>
   );
 };
 const applyMaxToValue = (max, value) => {
@@ -161,43 +162,6 @@ const applyMaxToValue = (max, value) => {
   return value;
 };
 
-const BadgeCountCircle = ({
-  ref,
-  charCount,
-  hasOverflow,
-  loading,
-  children,
-  ...props
-}) => {
-  return (
-    <Text
-      ref={ref}
-      className="navi_badge_count"
-      data-circle=""
-      bold
-      data-single-char={charCount === 1 ? "" : undefined}
-      data-two-chars={charCount === 2 ? "" : undefined}
-      data-three-chars={charCount === 3 ? "" : undefined}
-      data-value-overflow={hasOverflow ? "" : undefined}
-      {...props}
-      styleCSSVars={BadgeStyleCSSVars}
-      spacing="pre"
-    >
-      {loading ? (
-        <LoadingDots />
-      ) : (
-        <>
-          {/* When we double click on count we don't want to eventually select surrounding text (in case) */}
-          {/* the surrounding text has no spaces so we add "&#8203;" (zero-width space char) */}
-          <span style="user-select: none">&#8203;</span>
-          <span className="navi_badge_count_frame" />
-          <span className="navi_badge_count_text">{children}</span>
-          <span style="user-select: none">&#8203;</span>
-        </>
-      )}
-    </Text>
-  );
-};
 const BadgeCountEllipse = ({
   ref,
   loading,
@@ -227,6 +191,46 @@ const BadgeCountEllipse = ({
           {/* the surrounding text has no spaces so we add "&#8203;" (zero-width space char) */}
           <span style="user-select: none">&#8203;</span>
           {children}
+          <span style="user-select: none">&#8203;</span>
+        </>
+      )}
+    </Text>
+  );
+};
+const BadgeCountCircle = ({
+  ref,
+  charCount,
+  hasOverflow,
+  loading,
+  children,
+  ...props
+}) => {
+  return (
+    <Text
+      ref={ref}
+      className="navi_badge_count"
+      data-circle=""
+      bold
+      data-loading={loading ? "" : undefined}
+      data-single-char={charCount === 1 ? "" : undefined}
+      data-two-chars={charCount === 2 ? "" : undefined}
+      data-three-chars={charCount === 3 ? "" : undefined}
+      data-four-chars={charCount === 4 ? "" : undefined}
+      data-value-overflow={hasOverflow ? "" : undefined}
+      {...props}
+      styleCSSVars={BadgeStyleCSSVars}
+      spacing="pre"
+    >
+      {loading ? (
+        <Icon>
+          <LoadingDots />
+        </Icon>
+      ) : (
+        <>
+          {/* When we double click on count we don't want to eventually select surrounding text (in case) */}
+          {/* the surrounding text has no spaces so we add "&#8203;" (zero-width space char) */}
+          <span style="user-select: none">&#8203;</span>
+          <span className="navi_badge_count_text">{children}</span>
           <span style="user-select: none">&#8203;</span>
         </>
       )}

@@ -1,4 +1,4 @@
-# [1_firefox](../../import_type_css_dev.test.mjs)
+# [firefox](../../import_type_css_dev.test.mjs)
 
 ```js
 run({ browserLauncher: firefox })

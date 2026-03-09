@@ -1,9 +1,9 @@
 # [pattern.test.mjs](../pattern.test.mjs)
 
 
-- [0_named_only](0_named_only/0_named_only.md)
-- [1_star_only](1_star_only/1_star_only.md)
-- [2_named_and_star](2_named_and_star/2_named_and_star.md)
+- [named_only](0_named_only/0_named_only.md)
+- [star_only](1_star_only/1_star_only.md)
+- [named_and_star](2_named_and_star/2_named_and_star.md)
 
 ---
 

@@ -1,4 +1,4 @@
-# [3_persistence_with_validation](../../state_signal_persists.test.js)
+# [persistence_with_validation](../../state_signal_persists.test.js)
 
 ```js
 clearAll();

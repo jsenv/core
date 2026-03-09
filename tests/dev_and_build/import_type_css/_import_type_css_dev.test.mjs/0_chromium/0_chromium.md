@@ -1,4 +1,4 @@
-# [0_chromium](../../import_type_css_dev.test.mjs)
+# [chromium](../../import_type_css_dev.test.mjs)
 
 ```js
 run({ browserLauncher: chromium })

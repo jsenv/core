@@ -1,8 +1,8 @@
 # [new_url_directory.test.mjs](../new_url_directory.test.mjs)
 
 
-- [0_error](0_error/0_error.md)
-- [1_copy](1_copy/1_copy.md)
+- [error](0_error/0_error.md)
+- [copy](1_copy/1_copy.md)
 
 ---
 

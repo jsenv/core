@@ -12,11 +12,11 @@ await snapshotFileExecutionSideEffects(import.meta.url, async ({ test }) => {
     });
     return { performance };
   };
-  test("0_worker_thread", () =>
+  test("worker_thread", () =>
     run({
       runtime: nodeWorkerThread(),
     }));
-  test("1_child_process", () =>
+  test("child_process", () =>
     run({
       runtime: nodeChildProcess(),
     }));

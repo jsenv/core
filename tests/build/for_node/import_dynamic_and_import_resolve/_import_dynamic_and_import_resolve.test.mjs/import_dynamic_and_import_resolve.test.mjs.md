@@ -1,7 +1,7 @@
 # [import_dynamic_and_import_resolve.test.mjs](../import_dynamic_and_import_resolve.test.mjs)
 
 
-- [0_basic](0_basic/0_basic.md)
+- [basic](0_basic/0_basic.md)
 
 ---
 

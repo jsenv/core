@@ -7,7 +7,7 @@ import { useActionStatus } from "../action/use_action_status.js";
 import { useExecuteAction } from "../action/use_execute_action.js";
 import { Box } from "../box/box.jsx";
 import { LoaderBackground } from "../graphic/loader/loader_background.jsx";
-import { Text } from "../text/text.jsx";
+import { Text, markAsOutsideFlow } from "../text/text.jsx";
 import { FormActionContext } from "./form_context.js";
 import { useActionEvents } from "./use_action_events.js";
 import { useAutoFocus } from "./use_auto_focus.js";
@@ -355,7 +355,7 @@ const ButtonBasic = (props) => {
     return (
       <Text {...buttonProps} className="navi_button_content">
         {children}
-        <span className="navi_button_shadow"></span>
+        <ButtonShadow />
       </Text>
     );
   };
@@ -396,6 +396,11 @@ const ButtonBasic = (props) => {
     </Box>
   );
 };
+
+const ButtonShadow = () => {
+  return <span className="navi_button_shadow"></span>;
+};
+markAsOutsideFlow(ButtonShadow);
 
 const ButtonWithAction = (props) => {
   const {

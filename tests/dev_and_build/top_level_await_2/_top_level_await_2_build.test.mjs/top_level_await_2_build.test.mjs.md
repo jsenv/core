@@ -1,9 +1,9 @@
 # [top_level_await_2_build.test.mjs](../top_level_await_2_build.test.mjs)
 
 
-- [0_top_level_await](0_top_level_await/0_top_level_await.md)
-- [1_top_level_await_fallback](1_top_level_await_fallback/1_top_level_await_fallback.md)
-- [2_top_level_await_throw](2_top_level_await_throw/2_top_level_await_throw.md)
+- [top_level_await](0_top_level_await/0_top_level_await.md)
+- [top_level_await_fallback](1_top_level_await_fallback/1_top_level_await_fallback.md)
+- [top_level_await_throw](2_top_level_await_throw/2_top_level_await_throw.md)
 
 ---
 

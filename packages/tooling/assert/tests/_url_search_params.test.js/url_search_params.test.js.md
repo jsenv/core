@@ -1,14 +1,14 @@
 # [url_search_params.test.js](../url_search_params.test.js)
 
 
-- [foo added](foo_added/foo_added.md)
-- [foo removed](foo_removed/foo_removed.md)
-- [foo modified](foo_modified/foo_modified.md)
-- [foo second value added](foo_second_value_added/foo_second_value_added.md)
-- [foo second value removed](foo_second_value_removed/foo_second_value_removed.md)
-- [foo second value modified](foo_second_value_modified/foo_second_value_modified.md)
-- [param order modified and value modified](param_order_modified_and_value_modified/param_order_modified_and_value_modified.md)
-- [search params sort](search_params_sort/search_params_sort.md)
+- [foo added](0_foo_added/0_foo_added.md)
+- [foo removed](1_foo_removed/1_foo_removed.md)
+- [foo modified](2_foo_modified/2_foo_modified.md)
+- [foo second value added](3_foo_second_value_added/3_foo_second_value_added.md)
+- [foo second value removed](4_foo_second_value_removed/4_foo_second_value_removed.md)
+- [foo second value modified](5_foo_second_value_modified/5_foo_second_value_modified.md)
+- [param order modified and value modified](6_param_order_modified_and_value_modified/6_param_order_modified_and_value_modified.md)
+- [search params sort](7_search_params_sort/7_search_params_sort.md)
 
 ---
 

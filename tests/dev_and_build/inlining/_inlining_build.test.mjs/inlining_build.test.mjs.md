@@ -1,7 +1,7 @@
 # [inlining_build.test.mjs](../inlining_build.test.mjs)
 
 
-- [0_inlining](0_inlining/0_inlining.md)
+- [inlining](0_inlining/0_inlining.md)
 
 ---
 

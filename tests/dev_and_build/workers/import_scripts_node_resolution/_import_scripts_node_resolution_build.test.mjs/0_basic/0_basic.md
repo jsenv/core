@@ -1,4 +1,4 @@
-# [0_basic](../../import_scripts_node_resolution_build.test.mjs)
+# [basic](../../import_scripts_node_resolution_build.test.mjs)
 
 ```js
 run({

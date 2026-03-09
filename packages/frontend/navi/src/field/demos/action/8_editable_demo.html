@@ -7,22 +7,14 @@
     <title>Editable Text Demo</title>
     <style>
       body {
-        max-width: 1400px;
-        margin: 0 auto;
-        padding: 20px;
+        margin: 0;
         font-family:
           -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-        background-color: #f8f9fa;
-      }
-
-      h1 {
-        margin-bottom: 30px;
-        color: #333;
-        text-align: center;
       }
 
       .demo-grid {
         display: grid;
+        margin-top: 20px;
         grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
         gap: 20px;
       }
@@ -32,7 +24,7 @@
         background: white;
         border: 1px solid #e1e8ed;
         border-radius: 8px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
       }
 
       .demo-title {
@@ -150,7 +142,6 @@
     </style>
   </head>
   <body>
-    <h1>Editable Text Demo</h1>
     <div id="root"></div>
 
     <script type="module" jsenv-type="module/jsx">
@@ -162,16 +153,182 @@
         useEditionController,
         Editable,
         createAction,
+        Text,
+        Box,
+        Title,
+        Link,
+        Paragraph,
+        Caption,
       } from "@jsenv/navi";
 
       const App = () => {
         return (
+          <div
+            style={{
+              padding: "20px",
+              fontFamily: "system-ui, sans-serif",
+              maxWidth: "1200px",
+              lineHeight: "1.6",
+              margin: "0 auto",
+              background: "#f8f9fa",
+            }}
+          >
+            <Title as="h1">Editable Text Demo</Title>
+
+            <TableOfContents />
+            <OverflowEllipsisSection />
+            <BasicActionsSection />
+            <AdvancedFeaturesSection />
+          </div>
+        );
+      };
+
+      // Table of Contents Component
+      const TableOfContents = () => (
+        <Box as="section" marginBottom="xl">
+          <Title as="h2">Table des matières</Title>
+          <Box row spacing="xs" marginTop="md">
+            <Link href="#overflow-ellipsis">
+              1. Editable avec Text Overflow Ellipsis
+            </Link>
+            <Link href="#basic-actions">
+              2. Actions de base et gestion d'erreurs
+            </Link>
+            <Link href="#advanced-features">3. Fonctionnalités avancées</Link>
+          </Box>
+        </Box>
+      );
+
+      // Section 1: Overflow Ellipsis
+      const OverflowEllipsisSection = () => (
+        <Box as="section" marginBottom="xl">
+          <Title as="h2">
+            <Link anchor href="#overflow-ellipsis" />
+            Editable avec Text Overflow Ellipsis
+          </Title>
+          <Paragraph>
+            Cette section démontre comment le composant Editable fonctionne en
+            combinaison avec Text overflowEllipsis. Le texte affiche des points
+            de suspension quand il dépasse la largeur disponible, mais se
+            transforme en champ de saisie complet lors de l'édition.
+          </Paragraph>
+
+          <div className="demo-grid">
+            <OverflowEllipsisDemo />
+          </div>
+        </Box>
+      );
+
+      // Section 2: Basic Actions
+      const BasicActionsSection = () => (
+        <Box as="section" marginBottom="xl">
+          <Title as="h2">
+            <Link anchor href="#basic-actions" />
+            Actions de base et gestion d'erreurs
+          </Title>
+          <Paragraph>
+            Ces exemples montrent les comportements fondamentaux d'Editable :
+            édition basique, gestion du loading et traitement des erreurs.
+          </Paragraph>
+
           <div className="demo-grid">
             <BasicDemo />
             <LoadingDemo />
             <ErrorDemo />
+          </div>
+        </Box>
+      );
+
+      // Section 3: Advanced Features
+      const AdvancedFeaturesSection = () => (
+        <Box as="section" marginBottom="xl">
+          <Title as="h2">
+            <Link anchor href="#advanced-features" />
+            Fonctionnalités avancées
+          </Title>
+          <Paragraph>
+            Exemples avancés montrant le styling personnalisé et l'utilisation
+            d'objets Action avec des signaux pour la gestion d'état réactive.
+          </Paragraph>
+
+          <div className="demo-grid">
             <CustomStyleDemo />
             <ActionObjectDemo />
+          </div>
+        </Box>
+      );
+
+      const OverflowEllipsisDemo = () => {
+        const { editing, startEditing, stopEditing } = useEditionController();
+        const [value, setValue] = useState(
+          "This is a very long text that should overflow and show ellipsis when it doesn't fit in the constrained container width",
+        );
+        const [result, setResult] = useState("");
+
+        return (
+          <div className="demo-card" style={{ maxWidth: "600px" }}>
+            <h3 className="demo-title">Interactive Example</h3>
+            <div className="control-group">
+              <label>Constrained Width Container (300px):</label>
+              <div
+                style={{
+                  width: "300px",
+                  padding: "15px",
+                  margin: "15px 0",
+                  border: editing ? "" : "2px solid #e74c3c",
+                  borderRadius: "6px",
+                  background: "#fff5f5",
+                  position: "relative",
+                }}
+              >
+                <Editable
+                  editing={editing}
+                  onEditEnd={() => {
+                    stopEditing();
+                    setResult("");
+                  }}
+                  action={(newText) => {
+                    setValue(newText);
+                    return `Updated overflow text to: "${newText}"`;
+                  }}
+                  value={value}
+                  paddingLeft="14"
+                  borderWidth="2"
+                  borderRadius="6"
+                  paddingTop="18"
+                  paddingBottom="18"
+                  size="16"
+                  expandX
+                  font="Arial"
+                >
+                  <Text overflowEllipsis font="Arial">
+                    {value}
+                  </Text>
+                </Editable>
+              </div>
+              <div className="button-group">
+                <button onClick={startEditing} disabled={editing}>
+                  Start Editing
+                </button>
+                <button onClick={stopEditing} disabled={!editing}>
+                  Stop Editing
+                </button>
+              </div>
+              <div className="control-group">
+                <label>Current State:</label>
+                <div style={{ fontSize: "14px", color: "#666" }}>
+                  Editing: {editing ? "Yes" : "No"}
+                </div>
+              </div>
+              {result && (
+                <div className="result-display result-success">{result}</div>
+              )}
+            </div>
+            <div style={{ marginTop: "15px", fontSize: "14px", color: "#666" }}>
+              <strong>Note:</strong> When not editing, the text shows with
+              ellipsis if it overflows. When editing, it becomes a full input
+              field. Try editing to see how it behaves.
+            </div>
           </div>
         );
       };
@@ -235,7 +392,7 @@
                   onEditEnd={() => {
                     stopEditing();
                     setIsLoading(false);
-                    setResult();
+                    setResult("");
                   }}
                   value={value}
                   action={async (newText) => {

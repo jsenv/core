@@ -129,7 +129,7 @@ export const applySpacingOnTextChildren = (children, spacing) => {
       separator = spacing;
     }
   } else if (typeof spacing === "number") {
-    separator = <CustomWidthSpace value={spacing} />;
+    separator = <CustomWidthSpace value={`${spacing}px`} />;
   } else {
     separator = spacing;
   }
@@ -145,27 +145,47 @@ export const applySpacingOnTextChildren = (children, spacing) => {
     }
     const currentChild = childArray[i - 1];
     const nextChild = childArray[i];
-    if (endsWithWhitespace(currentChild)) {
+    if (!shouldInjectSpacingAfter(currentChild)) {
       continue;
     }
-    if (startsWithWhitespace(nextChild)) {
+    if (!shouldInjectSpacingBefore(nextChild)) {
       continue;
     }
     childrenWithGap.push(separator);
   }
   return childrenWithGap;
 };
-const endsWithWhitespace = (jsxChild) => {
-  if (typeof jsxChild === "string") {
-    return /\s$/.test(jsxChild);
-  }
-  return false;
+const outsideFlowSet = new Set();
+export const markAsOutsideFlow = (jsxElement) => {
+  outsideFlowSet.add(jsxElement);
 };
-const startsWithWhitespace = (jsxChild) => {
+const isMarkedAsOutsideFlow = (jsxElement) => {
+  return outsideFlowSet.has(jsxElement.type);
+};
+
+const shouldInjectSpacingAfter = (jsxChild) => {
   if (typeof jsxChild === "string") {
-    return /^\s/.test(jsxChild);
+    if (/\s$/.test(jsxChild)) {
+      return false;
+    }
   }
-  return false;
+  if (isMarkedAsOutsideFlow(jsxChild)) {
+    // we can mark jsx element as "outsideFlow" to avoid spacing injection between it and surrounding text
+    return false;
+  }
+  return true;
+};
+const shouldInjectSpacingBefore = (jsxChild) => {
+  if (typeof jsxChild === "string") {
+    if (/^\s/.test(jsxChild)) {
+      return false;
+    }
+  }
+  if (isMarkedAsOutsideFlow(jsxChild)) {
+    // we can mark jsx element as "outsideFlow" to avoid spacing injection between it and surrounding text
+    return false;
+  }
+  return true;
 };
 
 const OverflowPinnedElementContext = createContext(null);
@@ -183,7 +203,7 @@ export const Text = (props) => {
   return <TextBasic {...props} />;
 };
 
-const TextOverflow = ({ noWrap, children, ...rest }) => {
+const TextOverflow = ({ noWrap, spacing, children, ...rest }) => {
   const [OverflowPinnedElement, setOverflowPinnedElement] = useState(null);
 
   return (
@@ -201,7 +221,9 @@ const TextOverflow = ({ noWrap, children, ...rest }) => {
     >
       <span className="navi_text_overflow_wrapper">
         <OverflowPinnedElementContext.Provider value={setOverflowPinnedElement}>
-          <Text className="navi_text_overflow_text">{children}</Text>
+          <Text className="navi_text_overflow_text" spacing={spacing}>
+            {children}
+          </Text>
         </OverflowPinnedElementContext.Provider>
         {OverflowPinnedElement}
       </span>
@@ -231,7 +253,7 @@ const TextWithSelectRange = ({ selectRange, ...props }) => {
   return <Text ref={ref} {...props}></Text>;
 };
 const TextBasic = ({
-  spacing = " ",
+  spacing = REGULAR_SPACE,
   boldTransition,
   boldStable,
   preventBoldLayoutShift = boldTransition,

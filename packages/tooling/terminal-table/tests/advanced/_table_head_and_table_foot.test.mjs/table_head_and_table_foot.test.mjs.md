@@ -1,7 +1,7 @@
 # [table_head_and_table_foot.test.mjs](../table_head_and_table_foot.test.mjs)
 
 
-- [0_basic](0_basic/0_basic.md)
+- [0_basic](0_0_basic/0_0_basic.md)
 
 ---
 

@@ -2,6 +2,7 @@ import "./src/navi_css_vars.js";
 
 // actions
 export { ActionRenderer } from "./src/action/action_renderer.jsx";
+export { actionRunEffect } from "./src/action/action_run_effect.js";
 export {
   createAction,
   rerunActions,
@@ -48,12 +49,9 @@ export {
   useDocumentUrl,
 } from "./src/nav/browser_integration/document_url_signal.js";
 export { useUrlSearchParam } from "./src/nav/browser_integration/use_url_search_param.js";
-export {
-  clearAllRoutes,
-  setupRoutes,
-  useRouteStatus,
-} from "./src/nav/route.js";
+export { route, setupRoutes, useRouteStatus } from "./src/nav/route.js";
 export { Route, Routes, useMatchingRouteInfo } from "./src/nav/route.jsx";
+export { routeAction } from "./src/nav/route_action.js";
 export { RouteLink } from "./src/nav/route_link.jsx";
 export { rawUrlPart, setBaseUrl } from "./src/nav/route_pattern.js";
 // Navigation/components
@@ -61,6 +59,10 @@ export { Link } from "./src/nav/link.jsx";
 export { Tab, TabList } from "./src/nav/tablist/tablist.jsx";
 // debug/tests
 export { enableDebugOnDocumentLoading } from "./src/nav/browser_integration/document_loading_signal.js";
+
+// Details (in between navigation/interaction and fields)
+export { Details } from "./src/field/details/details.jsx";
+export { SummaryMarker } from "./src/field/details/summary_marker.jsx";
 
 // Form
 // Validation
@@ -76,7 +78,7 @@ export {
   removeCustomMessage,
 } from "./src/field/validation/custom_message.js";
 export { useConstraintValidityState } from "./src/field/validation/hooks/use_constraint_validity_state.js";
-// popover (callout, dialogs, ...)
+// Popover (callout, dialogs, ...)
 export { openCallout } from "./src/field/validation/callout/callout.js";
 export { useCalloutClose } from "./src/field/validation/callout/callout.jsx";
 // Selection
@@ -142,8 +144,6 @@ export { Svg } from "./src/graphic/svg.jsx";
 export { SVGMaskOverlay } from "./src/graphic/svg_mask_overlay.jsx";
 
 // Layout
-export { Details } from "./src/layout/details/details.jsx";
-export { SummaryMarker } from "./src/layout/details/summary_marker.jsx";
 export { DialogLayout } from "./src/layout/dialog_layout.jsx";
 export { Separator } from "./src/layout/separator.jsx";
 export { ViewportLayout } from "./src/layout/viewport_layout.jsx";
@@ -152,9 +152,10 @@ export { ViewportLayout } from "./src/layout/viewport_layout.jsx";
 export { useFocusGroup } from "./src/field/use_focus_group.js";
 export { useDependenciesDiff } from "./src/utils/use_dependencies_diff.js";
 
-// keyboard
+// Keyboard
 export { useKeyboardShortcuts } from "./src/keyboard/keyboard_shortcuts.js";
 
+// More graphic stuff
 export { CheckSvg } from "./src/graphic/icons/check_svg.jsx";
 export { ConstructionSvg } from "./src/graphic/icons/construction_svg.jsx";
 export { ExclamationSvg } from "./src/graphic/icons/exclamation_svg.jsx";

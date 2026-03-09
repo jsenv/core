@@ -1,8 +1,8 @@
 # [border_collapse.test.mjs](../border_collapse.test.mjs)
 
 
-- [0_without_collapse](0_without_collapse/0_without_collapse.md)
-- [1_with_collapse](1_with_collapse/1_with_collapse.md)
+- [0_without_collapse](0_0_without_collapse/0_0_without_collapse.md)
+- [1_with_collapse](1_1_with_collapse/1_1_with_collapse.md)
 
 ---
 

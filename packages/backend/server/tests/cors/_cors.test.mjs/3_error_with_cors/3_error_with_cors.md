@@ -1,4 +1,4 @@
-# [3_error_with_cors](../../cors.test.mjs)
+# [error_with_cors](../../cors.test.mjs)
 
 ```js
 return run({ cors: true, triggerInternalError: true });

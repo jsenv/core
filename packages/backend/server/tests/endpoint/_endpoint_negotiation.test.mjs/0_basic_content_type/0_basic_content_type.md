@@ -1,4 +1,4 @@
-# [0_basic_content_type](../../endpoint_negotiation.test.mjs)
+# [basic_content_type](../../endpoint_negotiation.test.mjs)
 
 ```js
 const routes = [

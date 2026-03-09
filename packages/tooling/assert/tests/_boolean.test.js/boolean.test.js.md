@@ -1,10 +1,10 @@
 # [boolean.test.js](../boolean.test.js)
 
 
-- [true should be false](true_should_be_false/true_should_be_false.md)
-- [false should be true](false_should_be_true/false_should_be_true.md)
-- [true should be 1](true_should_be_1/true_should_be_1.md)
-- [false should be 0](false_should_be_0/false_should_be_0.md)
+- [true should be false](0_true_should_be_false/0_true_should_be_false.md)
+- [false should be true](1_false_should_be_true/1_false_should_be_true.md)
+- [true should be 1](2_true_should_be_1/2_true_should_be_1.md)
+- [false should be 0](3_false_should_be_0/3_false_should_be_0.md)
 
 ---
 

@@ -1,4 +1,4 @@
-# [0_js_module](../../react_build.test.mjs)
+# [js_module](../../react_build.test.mjs)
 
 ```js
 run({

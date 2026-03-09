@@ -1,4 +1,4 @@
-# [0_default](../../chunks_vendors.test.mjs)
+# [default](../../chunks_vendors.test.mjs)
 
 ```js
 run({

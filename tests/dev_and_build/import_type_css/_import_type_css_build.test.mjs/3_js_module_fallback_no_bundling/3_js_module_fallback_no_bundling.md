@@ -1,4 +1,4 @@
-# [3_js_module_fallback_no_bundling](../../import_type_css_build.test.mjs)
+# [js_module_fallback_no_bundling](../../import_type_css_build.test.mjs)
 
 ```js
 run({

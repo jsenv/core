@@ -1,4 +1,4 @@
-# [0_inlining](../../inlining_build.test.mjs)
+# [inlining](../../inlining_build.test.mjs)
 
 ```js
 run()

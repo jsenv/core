@@ -1,7 +1,7 @@
 # [global_scenario_build.test.mjs](../global_scenario_build.test.mjs)
 
 
-- [0_js_module](0_js_module/0_js_module.md)
+- [js_module](0_js_module/0_js_module.md)
 
 ---
 

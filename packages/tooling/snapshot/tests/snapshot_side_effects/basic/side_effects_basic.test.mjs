@@ -26,22 +26,22 @@ const startTesting = async (fn) => {
 };
 
 await startTesting(({ test }) => {
-  test("0_no_op", () => {});
-  test("1_return_undefined", () => undefined);
-  test("2_return_null", () => null);
-  test("3_return_hello_world", () => "hello world");
-  test("4_throw_error", () => {
+  test("no_op", () => {});
+  test("return_undefined", () => undefined);
+  test("return_null", () => null);
+  test("return_hello_world", () => "hello world");
+  test("throw_error", () => {
     throw new Error("here");
   });
-  test("5_async_resolving_to_42", async () => {
+  test("async_resolving_to_42", async () => {
     const value = await Promise.resolve(42);
     return value;
   });
-  test("6_async_rejecting", async () => {
+  test("async_rejecting", async () => {
     await Promise.resolve();
     throw new Error("here");
   });
-  test("7_object_with_undefined_props", () => {
+  test("object_with_undefined_props", () => {
     return {
       a: undefined,
       b: 42,
@@ -49,7 +49,7 @@ await startTesting(({ test }) => {
       d: "defined",
     };
   });
-  test("8_complex_undefined_edge_cases", () => {
+  test("complex_undefined_edge_cases", () => {
     return {
       plainUndefined: undefined,
       stringWithUndefinedText: "This contains __UNDEFINED__ text",

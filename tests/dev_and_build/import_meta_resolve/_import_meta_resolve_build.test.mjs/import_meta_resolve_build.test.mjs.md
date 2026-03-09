@@ -1,9 +1,9 @@
 # [import_meta_resolve_build.test.mjs](../import_meta_resolve_build.test.mjs)
 
 
-- [0_import_meta_resolve](0_import_meta_resolve/0_import_meta_resolve.md)
-- [1_import_meta_resolve_fallback](1_import_meta_resolve_fallback/1_import_meta_resolve_fallback.md)
-- [2_js_module_fallback](2_js_module_fallback/2_js_module_fallback.md)
+- [import_meta_resolve](0_import_meta_resolve/0_import_meta_resolve.md)
+- [import_meta_resolve_fallback](1_import_meta_resolve_fallback/1_import_meta_resolve_fallback.md)
+- [js_module_fallback](2_js_module_fallback/2_js_module_fallback.md)
 
 ---
 

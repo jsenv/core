@@ -1,4 +1,5 @@
-import { resource, useActionData } from "@jsenv/navi";
+import { resource } from "@jsenv/navi";
+
 import { setTableCount } from "../database_manager_signals.js";
 import { errorFromResponse } from "../error_from_response.js";
 
@@ -112,10 +113,6 @@ export const TABLE = resource("table", {
 });
 
 export const useTableArrayInStore = TABLE.useArray;
-export const useTableArray = () => {
-  const tableArray = useActionData(TABLE.GET_MANY);
-  return tableArray;
-};
 
 export const TABLE_ROW = resource("table_row", {
   GET_MANY: async ({ tablename }, { signal }) => {

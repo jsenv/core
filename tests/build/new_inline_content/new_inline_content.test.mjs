@@ -5,7 +5,7 @@ import { snapshotBuildTests } from "@jsenv/core/tests/snapshot_build_tests.js";
 import { readFileSync } from "@jsenv/filesystem";
 
 const { dirUrlMap } = await snapshotBuildTests(import.meta.url, ({ test }) => {
-  test("0_js_module", () =>
+  test("js_module", () =>
     build({
       sourceDirectoryUrl: import.meta.resolve("./client/"),
       buildDirectoryUrl: import.meta.resolve("./build/"),
@@ -23,10 +23,10 @@ const { dirUrlMap } = await snapshotBuildTests(import.meta.url, ({ test }) => {
 });
 
 const buildManifest = readFileSync(
-  `${dirUrlMap.get("0_js_module")}build/asset-manifest.json`,
+  `${dirUrlMap.get("js_module")}build/asset-manifest.json`,
 );
 const actual = await executeBuildHtmlInBrowser(
-  `${dirUrlMap.get("0_js_module")}build/`,
+  `${dirUrlMap.get("js_module")}build/`,
   "main.html",
   {
     /* eslint-disable no-undef */

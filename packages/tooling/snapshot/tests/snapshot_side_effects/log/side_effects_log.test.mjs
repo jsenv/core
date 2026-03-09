@@ -27,11 +27,11 @@ const startTesting = async (fn) => {
 };
 
 await startTesting(({ test }) => {
-  test("0_log_and_return_42", () => {
+  test("log_and_return_42", () => {
     console.log("Hello");
     return 42;
   });
-  test("1_multiple_console_calls", () => {
+  test("multiple_console_calls", () => {
     console.log("log_0");
     console.info("info_0");
     console.warn("warn_0");
@@ -41,17 +41,17 @@ await startTesting(({ test }) => {
     console.warn("warn_1");
     console.error("error_1");
   });
-  test("2_console_log_and_process_stdout_write", () => {
+  test("console_log_and_process_stdout_write", () => {
     console.log("before");
     process.stdout.write("between");
     console.log("after");
   });
-  test("3_console_log_rainbow", () => {
+  test("console_log_rainbow", () => {
     console.log(
       "[31mred [39m[33myellow [39m[32mgreen [39m[36mcyan [39m[34mblue [39m[35mmagenta[39m",
     );
   });
-  test("4_console_ansi_many", () => {
+  test("console_ansi_many", () => {
     console.log("[31m_[39m");
     console.log("🤖[31m DANGER[0m Will Robbinson");
   });
@@ -67,7 +67,7 @@ await startTesting(({ test }) => {
       },
     },
   );
-  test("7_console_color_and_html_special_char", () => {
+  test("console_color_and_html_special_char", () => {
     console.log("[31m Hi[0m <toto>");
   });
 });

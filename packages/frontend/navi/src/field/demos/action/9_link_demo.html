@@ -16,6 +16,7 @@
         Link,
         useSelectionController,
         SelectionContext,
+        Box,
       } from "@jsenv/navi";
 
       const App = () => {
@@ -60,37 +61,8 @@
               </Box>
             </section>
 
-            <section style="margin-bottom: 40px;">
-              <h2>Styled Links</h2>
-              <div style="border: 1px solid #e0e0e0; border-radius: 8px; padding: 16px; background: #f8f9fa;">
-                <div style="display: flex; flex-direction: column; gap: 12px;">
-                  <Link
-                    href="#"
-                    style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 12px 20px; border-radius: 6px; text-decoration: none; font-weight: 500; display: inline-block; transition: transform 0.2s;"
-                  >
-                    Gradient button link
-                  </Link>
-
-                  <Link
-                    href="#"
-                    style="background: #28a745; color: white; padding: 12px 20px; border-radius: 6px; text-decoration: none; font-weight: 500; display: inline-block; transition: transform 0.2s;"
-                  >
-                    Success button link
-                  </Link>
-
-                  <Link
-                    href="#"
-                    style="background: #dc3545; color: white; padding: 12px 20px; border-radius: 6px; text-decoration: none; font-weight: 500; display: inline-block; transition: transform 0.2s;"
-                    data-outline-inset
-                    loading
-                  >
-                    Loading button link
-                  </Link>
-                </div>
-              </div>
-            </section>
-
             <SelectableLinkDemo />
+            <StyledLinkDemo />
 
             <section>
               <h2>Navigation Instructions</h2>
@@ -115,6 +87,40 @@
               </div>
             </section>
           </div>
+        );
+      };
+
+      const StyledLinkDemo = () => {
+        return (
+          <section style="margin-bottom: 40px;">
+            <h2>Styled Links</h2>
+            <div style="border: 1px solid #e0e0e0; border-radius: 8px; padding: 16px; background: #f8f9fa;">
+              <div style="display: flex; flex-direction: column; gap: 12px;">
+                <Link
+                  href="#"
+                  style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 12px 20px; border-radius: 6px; text-decoration: none; font-weight: 500; display: inline-block; transition: transform 0.2s;"
+                >
+                  Gradient button link
+                </Link>
+
+                <Link
+                  href="#"
+                  style="background: #28a745; color: white; padding: 12px 20px; border-radius: 6px; text-decoration: none; font-weight: 500; display: inline-block; transition: transform 0.2s;"
+                >
+                  Success button link
+                </Link>
+
+                <Link
+                  href="#"
+                  style="background: #dc3545; color: white; padding: 12px 20px; border-radius: 6px; text-decoration: none; font-weight: 500; display: inline-block; transition: transform 0.2s;"
+                  data-outline-inset
+                  loading
+                >
+                  Loading button link
+                </Link>
+              </div>
+            </div>
+          </section>
         );
       };
 

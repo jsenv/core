@@ -1,4 +1,4 @@
-# [1_persistence_with_existing_storage](../../state_signal_persists.test.js)
+# [persistence_with_existing_storage](../../state_signal_persists.test.js)
 
 ```js
 clearAll();

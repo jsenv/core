@@ -1,7 +1,7 @@
 # [table_with_sizes.test.mjs](../table_with_sizes.test.mjs)
 
 
-- [0_basic](0_basic/0_basic.md)
+- [basic](0_basic/0_basic.md)
 
 ---
 

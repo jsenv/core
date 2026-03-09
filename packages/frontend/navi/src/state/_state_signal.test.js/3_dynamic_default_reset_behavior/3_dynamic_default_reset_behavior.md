@@ -1,4 +1,4 @@
-# [3_dynamic_default_reset_behavior](../../state_signal.test.js)
+# [dynamic_default_reset_behavior](../../state_signal.test.js)
 
 ```js
 clearSignalRegistry();

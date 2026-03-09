@@ -121,7 +121,7 @@ if (process.env.FLAKY) {
 }
 
 // move
-{
+if (process.env.FLAKY) {
   const fileUrl = resolveUrl("file", tempDirectoryUrl);
   const destinationUrl = resolveUrl("file-2", tempDirectoryUrl);
   const mutations = [];

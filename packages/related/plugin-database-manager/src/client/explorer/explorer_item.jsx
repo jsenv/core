@@ -1,15 +1,11 @@
 import {
   createAvailableConstraint,
   Editable,
+  Icon,
   Input,
   SINGLE_SPACE_CONSTRAINT,
   useEditionController,
-  useSignalSync,
 } from "@jsenv/navi";
-import { useSignal } from "@preact/signals";
-
-const Overflow = () => {};
-const FontSizedSvg = () => {};
 
 export const ExplorerItem = ({
   nameKey,
@@ -18,20 +14,18 @@ export const ExplorerItem = ({
   selectionController,
   deletedItems,
   useItemArrayInStore,
-  useRenameItemAction,
-  useDeleteItemAction,
+  renameItemAction,
+  deleteItemAction,
 }) => {
   const itemName = item[nameKey];
 
   const { editing, startEditing, stopEditing } = useEditionController();
-  const deleteItemAction = useDeleteItemAction
-    ? useDeleteItemAction(item)
-    : null;
 
   const itemRendered = renderItem(item, {
     selectionController,
     deletedItems,
     className: "explorer_item_content",
+    // overflowEllipsis: true,
     shortcuts: [
       {
         key: "enter",
@@ -43,25 +37,30 @@ export const ExplorerItem = ({
         ? [
             {
               key: "command+delete",
-              action: deleteItemAction,
+              action: () => deleteItemAction(item),
               description: "Delete item",
               confirmMessage: `Are you sure you want to delete "${itemName}"?`,
             },
           ]
         : []),
     ],
-    children: useRenameItemAction ? (
+    children: itemName,
+  });
+
+  if (renameItemAction) {
+    return (
       <RenameInputOrName
         nameKey={nameKey}
         item={item}
         useItemArrayInStore={useItemArrayInStore}
-        useRenameItemAction={useRenameItemAction}
+        renameItemAction={renameItemAction}
         stopEditing={stopEditing}
-      />
-    ) : (
-      <Overflow>{itemName}</Overflow>
-    ),
-  });
+      >
+        {itemRendered}
+      </RenameInputOrName>
+    );
+  }
+
   return itemRendered;
 };
 
@@ -69,15 +68,12 @@ const RenameInputOrName = ({
   nameKey,
   item,
   useItemArrayInStore,
-  useRenameItemAction,
+  renameItemAction,
   editing,
   stopEditing,
+  children,
 }) => {
   const itemName = item[nameKey];
-  const nameSignal = useSignalSync(itemName);
-
-  const renameAction = useRenameItemAction(item, nameSignal);
-
   const itemArrayInStore = useItemArrayInStore();
   const otherValueSet = new Set();
   for (const itemCandidate of itemArrayInStore) {
@@ -96,12 +92,11 @@ const RenameInputOrName = ({
       editing={editing}
       onEditEnd={stopEditing}
       value={itemName}
-      valueSignal={nameSignal}
-      action={renameAction}
+      action={(v) => renameItemAction(item, v)}
       required
       constraints={[SINGLE_SPACE_CONSTRAINT, availableNameConstraint]}
     >
-      <Overflow>{itemName}</Overflow>
+      {children}
     </Editable>
   );
 };
@@ -109,13 +104,11 @@ const RenameInputOrName = ({
 export const ExplorerNewItem = ({
   nameKey,
   useItemArrayInStore,
-  useCreateItemAction,
+  createItemAction,
   cancelOnBlurInvalid,
   onCancel,
   onActionEnd,
 }) => {
-  const nameSignal = useSignal("");
-  const createItemAction = useCreateItemAction(nameSignal);
   const itemArrayInStore = useItemArrayInStore();
   const valueSet = new Set();
   for (const item of itemArrayInStore) {
@@ -128,13 +121,13 @@ export const ExplorerNewItem = ({
 
   return (
     <span className="explorer_item_content">
-      <FontSizedSvg>
+      <Icon>
         <EnterNameIconSvg />
-      </FontSizedSvg>
+      </Icon>
 
       <Input
         action={createItemAction}
-        valueSignal={nameSignal}
+        actionAfterChange
         cancelOnEscape
         cancelOnBlurInvalid={cancelOnBlurInvalid}
         onCancel={onCancel}

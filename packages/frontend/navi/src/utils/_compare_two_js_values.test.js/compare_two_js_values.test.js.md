@@ -1,12 +1,12 @@
 # [compare_two_js_values.test.js](../compare_two_js_values.test.js)
 
 
-- [array comparison - ordered (default behavior)](array_comparison_-_ordered_(default_behavior)/array_comparison_-_ordered_(default_behavior).md)
-- [array comparison - ignoreArrayOrder option](array_comparison_-_ignorearrayorder_option/array_comparison_-_ignorearrayorder_option.md)
-- [nested arrays with ignoreArrayOrder](nested_arrays_with_ignorearrayorder/nested_arrays_with_ignorearrayorder.md)
-- [edge cases with ignoreArrayOrder](edge_cases_with_ignorearrayorder/edge_cases_with_ignorearrayorder.md)
-- [performance case - identical arrays](performance_case_-_identical_arrays/performance_case_-_identical_arrays.md)
-- [comparison without ignoreArrayOrder vs with ignoreArrayOrder](comparison_without_ignorearrayorder_vs_with_ignorearrayorder/comparison_without_ignorearrayorder_vs_with_ignorearrayorder.md)
+- [array comparison - ordered (default behavior)](0_array_comparison_-_ordered_(default_behavior)/0_array_comparison_-_ordered_(default_behavior).md)
+- [array comparison - ignoreArrayOrder option](1_array_comparison_-_ignorearrayorder_option/1_array_comparison_-_ignorearrayorder_option.md)
+- [nested arrays with ignoreArrayOrder](2_nested_arrays_with_ignorearrayorder/2_nested_arrays_with_ignorearrayorder.md)
+- [edge cases with ignoreArrayOrder](3_edge_cases_with_ignorearrayorder/3_edge_cases_with_ignorearrayorder.md)
+- [performance case - identical arrays](4_performance_case_-_identical_arrays/4_performance_case_-_identical_arrays.md)
+- [comparison without ignoreArrayOrder vs with ignoreArrayOrder](5_comparison_without_ignorearrayorder_vs_with_ignorearrayorder/5_comparison_without_ignorearrayorder_vs_with_ignorearrayorder.md)
 
 ---
 

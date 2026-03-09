@@ -1,8 +1,8 @@
 # [link_href_@import.test.mjs](../link_href_@import.test.mjs)
 
 
-- [0_versioning](0_versioning/0_versioning.md)
-- [1_versioning_disabled](1_versioning_disabled/1_versioning_disabled.md)
+- [versioning](0_versioning/0_versioning.md)
+- [versioning_disabled](1_versioning_disabled/1_versioning_disabled.md)
 
 ---
 

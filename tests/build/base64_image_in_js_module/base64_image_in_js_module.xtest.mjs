@@ -24,7 +24,7 @@ const run = async ({ runtimeCompat }) => {
 };
 
 await snapshotBuildTests(import.meta.url, ({ test }) => {
-  test("0_js_module", () =>
+  test("js_module", () =>
     run({
       runtimeCompat: { chrome: "89" },
     }));

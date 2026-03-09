@@ -1,4 +1,4 @@
-# [8_rounded_corners](../../table_2_cells_same_column.test.mjs)
+# [rounded_corners](../../table_2_cells_same_column.test.mjs)
 
 ```js
 run({

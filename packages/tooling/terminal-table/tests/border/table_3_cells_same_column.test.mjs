@@ -86,14 +86,14 @@ const run = ({
 };
 
 await snapshotTableTests(import.meta.url, ({ test }) => {
-  test("0_basic", () => run({}));
+  test("basic", () => run({}));
 
   test(`1_border_collapse`, () =>
     run({
       borderCollapse: true,
     }));
 
-  test("2_border_colors", () =>
+  test("border_colors", () =>
     run({
       borderColors: true,
     }));
@@ -110,7 +110,7 @@ await snapshotTableTests(import.meta.url, ({ test }) => {
       borderBottomBold: true,
     }));
 
-  test("5_border_double", () =>
+  test("border_double", () =>
     run({
       borderLeftStyle: "double",
       borderRightStyle: "double",
@@ -118,13 +118,13 @@ await snapshotTableTests(import.meta.url, ({ test }) => {
       borderBottomStyle: "double",
     }));
 
-  test("6_border_double_x", () =>
+  test("border_double_x", () =>
     run({
       borderLeftStyle: "double",
       borderRightStyle: "double",
     }));
 
-  test("7_border_double_y", () =>
+  test("border_double_y", () =>
     run({
       borderTopStyle: "double",
       borderBottomStyle: "double",

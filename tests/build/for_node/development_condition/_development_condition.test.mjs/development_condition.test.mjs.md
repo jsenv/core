@@ -1,10 +1,10 @@
 # [development_condition.test.mjs](../development_condition.test.mjs)
 
 
-- [0_default](0_default/0_default.md)
-- [1_internal_build](1_internal_build/1_internal_build.md)
-- [2_external_dev](2_external_dev/2_external_dev.md)
-- [3_external_dev_internal_build](3_external_dev_internal_build/3_external_dev_internal_build.md)
+- [default](0_default/0_default.md)
+- [internal_build](1_internal_build/1_internal_build.md)
+- [external_dev](2_external_dev/2_external_dev.md)
+- [external_dev_internal_build](3_external_dev_internal_build/3_external_dev_internal_build.md)
 
 ---
 

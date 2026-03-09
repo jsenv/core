@@ -101,27 +101,29 @@ export const getElementSignature = (element) => {
   if (element.nodeType === Node.TEXT_NODE) {
     return `#text(${getElementSignature(element.nodeValue)})`;
   }
+  if (element instanceof HTMLElement) {
+    const tagName = element.tagName.toLowerCase();
+    const dataUIName = element.getAttribute("data-ui-name");
+    if (dataUIName) {
+      return `${tagName}[data-ui-name="${dataUIName}"]`;
+    }
+    if (element === document.body) {
+      return "<body>";
+    }
+    if (element === document.documentElement) {
+      return "<html>";
+    }
+    const elementId = element.id;
+    if (elementId) {
+      return `${tagName}#${elementId}`;
+    }
+    const className = element.className;
+    if (className) {
+      return `${tagName}.${className.split(" ").join(".")}`;
+    }
 
-  const tagName = element.tagName.toLowerCase();
-  const dataUIName = element.getAttribute("data-ui-name");
-  if (dataUIName) {
-    return `${tagName}[data-ui-name="${dataUIName}"]`;
+    const parentSignature = getElementSignature(element.parentElement);
+    return `${parentSignature} > ${tagName}`;
   }
-  if (element === document.body) {
-    return "<body>";
-  }
-  if (element === document.documentElement) {
-    return "<html>";
-  }
-  const elementId = element.id;
-  if (elementId) {
-    return `${tagName}#${elementId}`;
-  }
-  const className = element.className;
-  if (className) {
-    return `${tagName}.${className.split(" ").join(".")}`;
-  }
-
-  const parentSignature = getElementSignature(element.parentElement);
-  return `${parentSignature} > ${tagName}`;
+  return String(element);
 };

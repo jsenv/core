@@ -1,4 +1,4 @@
-# [4_persistence_with_dynamic_defaults](../../state_signal_persists.test.js)
+# [persistence_with_dynamic_defaults](../../state_signal_persists.test.js)
 
 ```js
 clearAll();

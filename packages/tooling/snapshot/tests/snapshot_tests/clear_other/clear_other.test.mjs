@@ -24,10 +24,10 @@ const fileStructures = {
 };
 writeFileStructureSync(outDirectoryUrl, fileStructures["0_at_start"]);
 await snapshotTests(import.meta.url, ({ test }) => {
-  test("0_first", () => {
+  test("first", () => {
     writeFileSync(new URL("./first.txt", import.meta.url));
   });
-  test("1_second", () => {
+  test("second", () => {
     writeFileSync(new URL("./second.txt", import.meta.url));
   });
 });
@@ -35,7 +35,7 @@ const firstRunFileStructure = readFileStructureSync(outDirectoryUrl);
 await snapshotTests(
   import.meta.url,
   ({ test }) => {
-    test("0_first", () => {
+    test("first", () => {
       writeFileSync(new URL("./tata.txt", import.meta.url));
     });
   },

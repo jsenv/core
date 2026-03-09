@@ -1,7 +1,7 @@
 # [include_transitive_deps.test.mjs](../include_transitive_deps.test.mjs)
 
 
-- [0_basic](0_basic/0_basic.md)
+- [basic](0_basic/0_basic.md)
 
 ---
 

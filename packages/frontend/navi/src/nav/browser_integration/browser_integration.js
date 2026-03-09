@@ -1,11 +1,7 @@
 import { useEffect, useRef } from "preact/hooks";
 
 import { updateActions } from "../../action/actions.js";
-import {
-  setOnRouteDefined,
-  setRouteIntegration,
-  updateRoutes,
-} from "../route.js";
+import { setOnAllRouteReady, setRouteIntegration } from "../route.js";
 import {
   documentIsBusySignal,
   routingWhile,
@@ -14,6 +10,8 @@ import {
 } from "./document_loading_signal.js";
 import { documentUrlSignal } from "./document_url_signal.js";
 import { setupBrowserIntegrationViaHistory } from "./via_history.js";
+
+let updateRoutes;
 
 const applyActions = (params) => {
   const updateActionsResult = updateActions(params);
@@ -25,7 +23,6 @@ const applyActions = (params) => {
   workingWhile(() => allResult, pendingTaskNameArray);
   return updateActionsResult;
 };
-
 const applyRouting = (
   url,
   {
@@ -48,7 +45,10 @@ const applyRouting = (
     isVisited,
     // state,
   });
-  if (loadSet.size === 0 && reloadSet.size === 0) {
+  if (
+    (!loadSet || loadSet.size === 0) &&
+    (!reloadSet || reloadSet.size === 0)
+  ) {
     return {
       allResult: undefined,
       requestedResult: undefined,
@@ -62,6 +62,7 @@ const applyRouting = (
     rerunSet: reloadSet,
     abortSignalMap,
     reason,
+    isReplace: navigationType === "replace",
   });
   const { allResult, runningActionSet } = updateActionsResult;
   const pendingTaskNameArray = [];
@@ -79,7 +80,8 @@ const browserIntegration = setupBrowserIntegrationViaHistory({
   applyRouting,
 });
 
-setOnRouteDefined(() => {
+setOnAllRouteReady((v) => {
+  updateRoutes = v;
   browserIntegration.init();
 });
 setRouteIntegration(browserIntegration);

@@ -1,4 +1,4 @@
-# [0_worker_thread](../../performance_node.test.mjs)
+# [worker_thread](../../performance_node.test.mjs)
 
 ```js
 run({

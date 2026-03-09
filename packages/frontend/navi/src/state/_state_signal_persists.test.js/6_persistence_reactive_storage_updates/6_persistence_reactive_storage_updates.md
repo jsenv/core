@@ -1,4 +1,4 @@
-# [6_persistence_reactive_storage_updates](../../state_signal_persists.test.js)
+# [persistence_reactive_storage_updates](../../state_signal_persists.test.js)
 
 ```js
 clearAll();

@@ -1,7 +1,7 @@
 # [endpoint_options.test.mjs](../endpoint_options.test.mjs)
 
 
-- [0_basic](0_basic/0_basic.md)
+- [basic](0_basic/0_basic.md)
 
 ---
 

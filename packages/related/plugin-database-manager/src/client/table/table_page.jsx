@@ -18,62 +18,56 @@
  *
  */
 
-import { Route, Tab, TabList, UITransition, useRouteStatus } from "@jsenv/navi";
+import { Icon, Route, Routes, Tab, TabList } from "@jsenv/navi";
+
 import { Page, PageBody, PageHead } from "../layout/page.jsx";
-import { TABLE_DATA_ROUTE, TABLE_SETTINGS_ROUTE } from "../routes.js";
+import {
+  TABLE_INDEX_ROUTE,
+  TABLE_ROW_GET_MANY_ACTION,
+  TABLE_SETTINGS_ROUTE,
+} from "../routes.js";
 import { DataSvg } from "../svg/data_svg.jsx";
 import { SettingsSvg } from "../svg/settings_svg.jsx";
 import { TableData } from "./table_data.jsx";
 import { TableSvg } from "./table_icons.jsx";
 import { TableSettings } from "./table_settings.jsx";
 
-const LinkWithIcon = (props) => props;
-
 export const TablePage = ({ table }) => {
   const tablename = table.tablename;
-  const tableDataUrl = TABLE_DATA_ROUTE.buildUrl({ tablename });
-  const tableSettingUrl = TABLE_SETTINGS_ROUTE.buildUrl({ tablename });
-  const { matching: tableDataRouteIsMatching } =
-    useRouteStatus(TABLE_DATA_ROUTE);
-  const { matching: tableSettingsRouteIsMatching } =
-    useRouteStatus(TABLE_SETTINGS_ROUTE);
 
   return (
     <Page data-ui-name="<TablePage />">
       <PageHead spacingBottom={0}>
-        <PageHead.Label icon={<TableSvg />} label={"Table:"}>
+        <PageHead.Label icon={<TableSvg />} label="Table:">
           {tablename}
         </PageHead.Label>
         <TabList>
-          <Tab selected={tableDataRouteIsMatching}>
-            <LinkWithIcon
-              icon={<DataSvg />}
-              href={tableDataUrl}
-              data-no-text-decoration
-            >
-              Data
-            </LinkWithIcon>
+          <Tab route={TABLE_INDEX_ROUTE} routeParams={{ tablename }}>
+            <Icon>
+              <DataSvg />
+            </Icon>
+            Data
           </Tab>
-          <Tab selected={tableSettingsRouteIsMatching}>
-            <LinkWithIcon
-              icon={<SettingsSvg />}
-              href={tableSettingUrl}
-              data-no-text-decoration
-            >
-              Settings
-            </LinkWithIcon>
+          <Tab route={TABLE_SETTINGS_ROUTE} routeParams={{ tablename }}>
+            <Icon>
+              <SettingsSvg />
+            </Icon>
+            Settings
           </Tab>
         </TabList>
       </PageHead>
       <PageBody>
-        <UITransition>
-          <Route route={TABLE_DATA_ROUTE}>
-            {(rows) => <TableData table={table} rows={rows} />}
-          </Route>
-          <Route route={TABLE_SETTINGS_ROUTE}>
-            {() => <TableSettings table={table} />}
-          </Route>
-        </UITransition>
+        <Routes>
+          <Route
+            route={TABLE_INDEX_ROUTE}
+            action={TABLE_ROW_GET_MANY_ACTION}
+            element={(rows) => <TableData table={table} rows={rows} />}
+          />
+          <Route
+            route={TABLE_SETTINGS_ROUTE}
+            element={<TableSettings table={table} />}
+          />
+        </Routes>
       </PageBody>
     </Page>
   );

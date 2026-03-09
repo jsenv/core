@@ -1,4 +1,4 @@
-# [0_basic](../../css_conditional_imports_build.test.mjs)
+# [basic](../../css_conditional_imports_build.test.mjs)
 
 ```js
 run({

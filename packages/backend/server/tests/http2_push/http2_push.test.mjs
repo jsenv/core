@@ -97,7 +97,7 @@ const run = async () => {
 };
 
 await snapshotServerTests(import.meta.url, ({ test }) => {
-  test("0_basic", () => {
+  test("basic", () => {
     return run();
   });
 });

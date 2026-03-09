@@ -1,4 +1,4 @@
-# [0_inlining](../../spa_build.test.mjs)
+# [inlining](../../spa_build.test.mjs)
 
 ```js
 run()

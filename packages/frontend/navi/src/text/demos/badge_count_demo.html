@@ -21,120 +21,273 @@
         Caption,
       } from "@jsenv/navi";
 
+      const Demo = () => {
+        return (
+          <div
+            style={{
+              padding: "20px",
+              fontFamily: "system-ui, sans-serif",
+              maxWidth: "800px",
+              lineHeight: "1.6",
+            }}
+          >
+            <Title as="h1">Badge Count Demo</Title>
+
+            <TableOfContents />
+            <IntroductionSection />
+            <LoadingStateSection />
+            <TestsComportementauxSection />
+            <FontSizesSection />
+            <FontFamiliesSection />
+            <LineHeightsSection />
+            <IntegrationComposantsSection />
+            <BadgePositioningSection />
+            <NoWrapSection />
+          </div>
+        );
+      };
+
       // Composants JSX pour éviter les erreurs de syntaxe lors des modifications
-      const TableOfContents = () => (
+      const IntroductionSection = () => (
         <Box as="section" marginBottom="xl">
-          <Title as="h2">Table des matières</Title>
-          <Box row spacing="xs" marginTop="md">
-            <Link href="#tests-comportementaux">
-              1. Tests comportementaux par police
-            </Link>
-            <Link href="#font-sizes">
-              2. Comportement avec différents font-size
-            </Link>
-            <Link href="#font-families">
-              3. Comportement avec différents font-family
-            </Link>
-            <Link href="#line-heights">
-              4. Comportement avec différents line-heights
-            </Link>
-            <Link href="#integration-composants">
-              5. Intégration dans différents composants
-            </Link>
-            <Link href="#badge-positioning">6. Badge positioning</Link>
-            <Link href="#nowrap">
-              7. Association texte + badge (pas de coupure)
-            </Link>
+          <Title as="h2">
+            <Link anchor href="#introduction" />
+            Qu'est-ce qu'un Badge Count ?
+          </Title>
+
+          <Paragraph>
+            Un badge count est un composant visuel qui affiche un nombre dans un
+            badge, typiquement utilisé pour indiquer des notifications, des
+            éléments dans un panier, ou toute autre valeur numérique à mettre en
+            évidence.
+          </Paragraph>
+
+          <Title as="h3">Exemples de badges par défaut</Title>
+          <Paragraph>
+            Voici des exemples de badges avec différents nombres en utilisant la
+            configuration par défaut :
+          </Paragraph>
+
+          <Box row spacing="s" alignX="start">
+            <Box padding="md" background="#f8f9fa" borderRadius="md">
+              <Text>
+                Messages
+                <BadgeCount background="#4caf50" color="white">
+                  5
+                </BadgeCount>
+              </Text>
+            </Box>
+
+            <Box padding="md" background="#f8f9fa" borderRadius="md">
+              <Text>
+                Messages
+                <BadgeCount background="#ff9800" color="white">
+                  42
+                </BadgeCount>
+              </Text>
+            </Box>
+
+            <Box padding="md" background="#f8f9fa" borderRadius="md">
+              <Text>
+                Messages
+                <BadgeCount background="#2196f3" color="white">
+                  1247
+                </BadgeCount>
+              </Text>
+            </Box>
+          </Box>
+
+          <Title as="h3">Pourquoi la forme ellipse par défaut ?</Title>
+          <Paragraph>
+            Le composant BadgeCount utilise par défaut la forme ellipse car elle
+            permet d'afficher efficacement aussi bien de petits nombres que de
+            très grands nombres.
+          </Paragraph>
+
+          <Paragraph>
+            À l'inverse, la forme circulaire pose des problèmes pour de grands
+            nombres : le rayon du cercle devrait devenir très grand pour
+            accommoder 3+ chiffres, rendant le badge disproportionné et peu
+            esthétique.
+          </Paragraph>
+
+          <Title as="h3">Activation de la forme circulaire</Title>
+          <Paragraph>
+            Il est néanmoins possible d'activer la forme circulaire avec la prop{" "}
+            <code>circle</code> :
+          </Paragraph>
+
+          <Box row spacing="s">
+            <Box padding="md" background="#f8f9fa" borderRadius="md">
+              <Text>
+                Messages
+                <BadgeCount circle background="#4caf50" color="white">
+                  5
+                </BadgeCount>
+              </Text>
+            </Box>
+
+            <Box padding="md" background="#f8f9fa" borderRadius="md">
+              <Text>
+                Messages
+                <BadgeCount circle background="#ff9800" color="white">
+                  42
+                </BadgeCount>
+              </Text>
+            </Box>
+
+            <Box padding="md" background="#f8f9fa" borderRadius="md">
+              <Text>
+                Messages
+                <BadgeCount circle background="#f44336" color="white">
+                  127
+                </BadgeCount>
+              </Text>
+            </Box>
+
+            <Box padding="md" background="#f8f9fa" borderRadius="md">
+              <Text>
+                Messages
+                <BadgeCount circle background="#f44336" color="white">
+                  1270
+                </BadgeCount>
+              </Text>
+            </Box>
+          </Box>
+
+          <Title as="h3">Système de limitation 99+</Title>
+          <Paragraph>
+            Quand on utilise la forme circulaire, le composant affiche
+            automatiquement "99+" lorsque la valeur dépasse 99, évitant ainsi
+            d'afficher 3 chiffres qui rendraient le cercle trop grand.
+          </Paragraph>
+
+          <Box
+            padding="md"
+            background="#fff3e0"
+            borderRadius="md"
+            marginTop="md"
+          >
+            <Paragraph style={{ margin: 0 }}>
+              <strong>⚠️ Limitation :</strong> Le système ne peut pas aller
+              jusqu'à "999+" car cela ferait 4 caractères, ce qui serait encore
+              plus problématique visuellement dans un cercle. C'est pourquoi la
+              limite reste à "99+".
+            </Paragraph>
+          </Box>
+
+          <Title as="h3">Basculement automatique avec max={Infinity}</Title>
+          <Paragraph>
+            Si vous combinez <code>circle</code> avec{" "}
+            <code>max={Infinity}</code>, le composant bascule automatiquement en
+            mode ellipse si la valeur dépasse ce qui peut être raisonnablement
+            affiché dans un cercle :
+          </Paragraph>
+
+          <Box row spacing="s">
+            <Box padding="md" background="#f8f9fa" borderRadius="md">
+              <Text>
+                Messages
+                <BadgeCount
+                  circle
+                  max={Infinity}
+                  background="#4caf50"
+                  color="white"
+                >
+                  5
+                </BadgeCount>
+              </Text>
+            </Box>
+
+            <Box padding="md" background="#f8f9fa" borderRadius="md">
+              <Text>
+                Messages
+                <BadgeCount
+                  circle
+                  max={Infinity}
+                  background="#ff9800"
+                  color="white"
+                >
+                  42
+                </BadgeCount>
+              </Text>
+            </Box>
+
+            <Box padding="md" background="#f8f9fa" borderRadius="md">
+              <Text>
+                Messages
+                <BadgeCount
+                  circle
+                  max={Infinity}
+                  background="#2196f3"
+                  color="white"
+                >
+                  1247
+                </BadgeCount>
+              </Text>
+            </Box>
+          </Box>
+
+          <Box
+            padding="md"
+            background="#fff3e0"
+            borderRadius="md"
+            marginTop="md"
+          >
+            <Paragraph style={{ margin: 0 }}>
+              <strong>⚠️ Important :</strong> Le basculement automatique de
+              cercle vers ellipse peut casser l'harmonie visuelle d'un design
+              system ou l'intention esthétique d'un designer qui souhaite
+              maintenir une forme circulaire cohérente. C'est pourquoi ce
+              comportement n'est pas activé par défaut et nécessite une
+              configuration explicite.
+            </Paragraph>
+          </Box>
+
+          <Box
+            padding="md"
+            background="#e8f5e8"
+            borderRadius="md"
+            marginTop="md"
+          >
+            <Paragraph style={{ margin: 0 }}>
+              <strong>💡 Résumé :</strong> Par défaut, utilisez la forme ellipse
+              pour sa flexibilité. Utilisez <code>circle</code> pour des petits
+              nombres ou des contextes spécifiques. La combinaison{" "}
+              <code>circle + max={Infinity}</code> offre un comportement hybride
+              qui peut convenir dans certains cas d'usage.
+            </Paragraph>
           </Box>
         </Box>
       );
 
-      const LoadingStateSection = () => {
-        const [loading, setLoading] = useState(true);
-        const [ellipseLoading, setEllipseLoading] = useState(true);
-
-        return (
-          <Box as="section" marginBottom="xl">
-            <Title as="h2">Loading State Demo</Title>
-            <Paragraph>
-              This section demonstrates the loading prop effect on BadgeCount
-              components. Use the buttons to test loading transitions.
-            </Paragraph>
-
-            <Box column spacing="m">
-              <Box row spacing="md" alignX="start">
-                <Caption>Loading state with default badge</Caption>
-                <Box row spacing="sm" alignY="center">
-                  <Button action={() => setLoading(true)} disabled={loading}>
-                    Start Loading
-                  </Button>
-                  <Button action={() => setLoading(false)} disabled={!loading}>
-                    Stop Loading
-                  </Button>
-                </Box>
-
-                <Box
-                  row
-                  spacing="md"
-                  alignY="center"
-                  background="lightyellow"
-                  border="1px dotted red"
-                >
-                  <Text>
-                    Inbox
-                    <BadgeCount
-                      background="#2196f3"
-                      color="white"
-                      loading={loading}
-                    >
-                      15
-                    </BadgeCount>
-                  </Text>
-                </Box>
-              </Box>
-
-              <Box row spacing="md" alignX="start">
-                <Caption>Loading state with ellipse</Caption>
-                <Box row spacing="sm" alignY="center">
-                  <Button
-                    action={() => setEllipseLoading(true)}
-                    disabled={ellipseLoading}
-                  >
-                    Start Loading
-                  </Button>
-                  <Button
-                    action={() => setEllipseLoading(false)}
-                    disabled={!ellipseLoading}
-                  >
-                    Stop Loading
-                  </Button>
-                </Box>
-
-                <Box
-                  row
-                  spacing="md"
-                  alignY="center"
-                  background="lightyellow"
-                  border="1px dotted red"
-                >
-                  <Text>
-                    Inbox
-                    <BadgeCount
-                      ellipse
-                      background="#2196f3"
-                      color="white"
-                      loading={ellipseLoading}
-                      max={Infinity}
-                    >
-                      1500
-                    </BadgeCount>
-                  </Text>
-                </Box>
-              </Box>
-            </Box>
+      const TableOfContents = () => (
+        <Box as="section" marginBottom="xl">
+          <Title as="h2">Table des matières</Title>
+          <Box row spacing="xs" marginTop="md">
+            <Link href="#introduction">1. Qu'est-ce qu'un Badge Count ?</Link>
+            <Link href="#tests-comportementaux">
+              2. Tests comportementaux par police
+            </Link>
+            <Link href="#font-sizes">
+              3. Comportement avec différents font-size
+            </Link>
+            <Link href="#font-families">
+              4. Comportement avec différents font-family
+            </Link>
+            <Link href="#line-heights">
+              5. Comportement avec différents line-heights
+            </Link>
+            <Link href="#integration-composants">
+              6. Intégration dans différents composants
+            </Link>
+            <Link href="#badge-positioning">7. Badge positioning</Link>
+            <Link href="#nowrap">
+              8. Association texte + badge (pas de coupure)
+            </Link>
           </Box>
-        );
-      };
+        </Box>
+      );
 
       const TestsComportementauxSection = () => (
         <Box as="section" marginBottom="xl">
@@ -154,77 +307,103 @@
               <Box row>
                 <Text size="60">
                   <Text>Before</Text>
-                  <BadgeCount background="#2196f3" color="white" size="m">
+                  <BadgeCount
+                    circle
+                    background="#2196f3"
+                    color="white"
+                    size="xs"
+                    alignY="center"
+                  >
                     0
                   </BadgeCount>
                   <Text>After</Text>
                 </Text>
                 <Text>
                   Before
-                  <BadgeCount background="#2196f3" color="white" size="xxs">
+                  <BadgeCount
+                    circle
+                    background="#2196f3"
+                    color="white"
+                    size="xxs"
+                  >
                     1
                   </BadgeCount>
                   After
                 </Text>
                 <Text spacing="0">
                   Before
-                  <BadgeCount background="#2196f3" color="white">
+                  <BadgeCount circle background="#2196f3" color="white">
                     5
                   </BadgeCount>
                   After
                 </Text>
                 <Text>
                   Before
-                  <BadgeCount background="#2196f3" color="white">
+                  <BadgeCount circle background="#2196f3" color="white">
                     9
                   </BadgeCount>
                   After
                 </Text>
                 <Text spacing="0">
                   Before
-                  <BadgeCount background="#2196f3" color="white" max={9}>
+                  <BadgeCount circle background="#2196f3" color="white" max={9}>
                     10
                   </BadgeCount>
                   After
                 </Text>
                 <Text spacing="0">
                   Before
-                  <BadgeCount background="#2196f3" color="white">
+                  <BadgeCount circle background="#2196f3" color="white">
                     10
                   </BadgeCount>
                   After
                 </Text>
                 <Text spacing="0">
                   Before
-                  <BadgeCount background="#2196f3" color="white">
+                  <BadgeCount circle background="#2196f3" color="white">
                     99
                   </BadgeCount>
                   After
                 </Text>
                 <Text spacing="0">
                   Before
-                  <BadgeCount background="#2196f3" color="white">
+                  <BadgeCount circle background="#2196f3" color="white">
                     100
                   </BadgeCount>
                   After
                 </Text>
                 <Text spacing="0">
                   Before
-                  <BadgeCount background="#2196f3" color="white" max="none">
+                  <BadgeCount
+                    circle
+                    background="#2196f3"
+                    color="white"
+                    max="none"
+                  >
                     100
                   </BadgeCount>
                   After
                 </Text>
                 <Text spacing="0">
                   Before
-                  <BadgeCount background="#2196f3" color="white" max={999}>
+                  <BadgeCount
+                    circle
+                    background="#2196f3"
+                    color="white"
+                    max={999}
+                  >
                     1000
                   </BadgeCount>
                   After
                 </Text>
                 <Text spacing="0">
                   Before
-                  <BadgeCount background="#2196f3" color="white" max="none">
+                  <BadgeCount
+                    circle
+                    background="#2196f3"
+                    color="white"
+                    max="none"
+                  >
                     1000
                   </BadgeCount>
                   After
@@ -479,6 +658,92 @@
         </Box>
       );
 
+      const LoadingStateSection = () => {
+        const [loading, setLoading] = useState(true);
+        const [ellipseLoading, setEllipseLoading] = useState(true);
+
+        return (
+          <Box as="section" marginBottom="xl">
+            <Title as="h2">Loading State Demo</Title>
+            <Paragraph>
+              This section demonstrates the loading prop effect on BadgeCount
+              components. Use the buttons to test loading transitions.
+            </Paragraph>
+
+            <Box column spacing="m">
+              <Box row spacing="md" alignX="start">
+                <Caption>Loading state with default badge</Caption>
+                <Box row spacing="sm" alignY="center">
+                  <Button action={() => setLoading(true)} disabled={loading}>
+                    Start Loading
+                  </Button>
+                  <Button action={() => setLoading(false)} disabled={!loading}>
+                    Stop Loading
+                  </Button>
+                </Box>
+
+                <Box
+                  row
+                  spacing="md"
+                  alignY="center"
+                  background="lightyellow"
+                  border="1px dotted red"
+                >
+                  <Text>
+                    Inbox
+                    <BadgeCount
+                      background="#2196f3"
+                      color="white"
+                      loading={loading}
+                    >
+                      15
+                    </BadgeCount>
+                  </Text>
+                </Box>
+              </Box>
+
+              <Box row spacing="md" alignX="start">
+                <Caption>Loading state with ellipse</Caption>
+                <Box row spacing="sm" alignY="center">
+                  <Button
+                    action={() => setEllipseLoading(true)}
+                    disabled={ellipseLoading}
+                  >
+                    Start Loading
+                  </Button>
+                  <Button
+                    action={() => setEllipseLoading(false)}
+                    disabled={!ellipseLoading}
+                  >
+                    Stop Loading
+                  </Button>
+                </Box>
+
+                <Box
+                  row
+                  spacing="md"
+                  alignY="center"
+                  background="lightyellow"
+                  border="1px dotted red"
+                >
+                  <Text>
+                    Inbox
+                    <BadgeCount
+                      background="#2196f3"
+                      color="white"
+                      loading={ellipseLoading}
+                      max={Infinity}
+                    >
+                      1500
+                    </BadgeCount>
+                  </Text>
+                </Box>
+              </Box>
+            </Box>
+          </Box>
+        );
+      };
+
       const LineHeightsSection = () => (
         <Box as="section" marginBottom="xl">
           <Title as="h2">
@@ -548,33 +813,6 @@
                 <Text noWrap>
                   Messages
                   <BadgeCount background="#795548" color="white">
-                    2
-                  </BadgeCount>
-                </Text>
-              </div>
-            </div>
-
-            <div>
-              <Caption>
-                line-height: 3 - Restoring a regular line height on the badge
-              </Caption>
-              <div
-                style={{
-                  border: "2px dashed #4caf50",
-                  backgroundColor: "rgba(76, 175, 80, 0.05)",
-                  padding: "8px",
-                  borderRadius: "4px",
-                  lineHeight: "3",
-                  fontSize: "16px",
-                }}
-              >
-                <Text noWrap>
-                  Messages
-                  <BadgeCount
-                    background="#795548"
-                    color="white"
-                    lineHeight="normal"
-                  >
                     2
                   </BadgeCount>
                 </Text>
@@ -702,16 +940,39 @@
               </Paragraph>
             </div>
 
-            <div>
-              <Caption>Button with badge</Caption>
-              <br />
-              <Button>
-                Tâches
-                <BadgeCount background="#2196f3" color="white">
-                  5
-                </BadgeCount>
-              </Button>
-            </div>
+            <Box column spacing="m">
+              <div>
+                <Caption>Button with badge</Caption>
+                <br />
+                <Button>
+                  Tâches
+                  <BadgeCount background="#2196f3" color="white">
+                    5
+                  </BadgeCount>
+                </Button>
+              </div>
+              <div>
+                <Caption>Vertically aligned</Caption>
+                <br />
+                <Button box alignY="center" spacing="xxs">
+                  <span>Tâches</span>
+                  <BadgeCount background="#2196f3" color="white">
+                    5
+                  </BadgeCount>
+                </Button>
+              </div>
+
+              <div>
+                <Caption>Vertically aligned + "m" spacing</Caption>
+                <br />
+                <Button box alignY="center" spacing="m">
+                  <span>Tâches</span>
+                  <BadgeCount background="#2196f3" color="white">
+                    5
+                  </BadgeCount>
+                </Button>
+              </div>
+            </Box>
 
             <div>
               <Caption>Button with badge size="s"</Caption>
@@ -806,6 +1067,7 @@
                 <Box
                   column
                   alignX="start"
+                  alignY="center"
                   border="1px solid #e0e0e0"
                   borderRadius="8px"
                   padding="sm"
@@ -881,31 +1143,6 @@
           </Box>
         </Box>
       );
-
-      const Demo = () => {
-        return (
-          <div
-            style={{
-              padding: "20px",
-              fontFamily: "system-ui, sans-serif",
-              maxWidth: "800px",
-              lineHeight: "1.6",
-            }}
-          >
-            <Title as="h1">Badge Count Demo</Title>
-
-            <TableOfContents />
-            <LoadingStateSection />
-            <TestsComportementauxSection />
-            <FontSizesSection />
-            <FontFamiliesSection />
-            <LineHeightsSection />
-            <IntegrationComposantsSection />
-            <BadgePositioningSection />
-            <NoWrapSection />
-          </div>
-        );
-      };
 
       render(<Demo />, document.getElementById("app"));
     </script>
