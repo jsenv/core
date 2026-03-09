@@ -3,34 +3,14 @@
 ```js
 const paramsSignal = signal();
 const runCalls = [];
-const action = createAction(
-  (p) => {
-    runCalls.push(p);
-  },
-  { meta: { debug: true } },
-);
+const action = createAction((p) => {
+  runCalls.push(p);
+});
 actionRunEffect(action, () => paramsSignal.value);
 paramsSignal.value = {};
 
 return runCalls;
 ```
-
-# 1/2 logs
-
-```console
-updateActions({ reason: `truthy params first run` })
-updateActions({ reason: `truthy params first run` })
-  requested operations:
-  - run:
-    - anonymous({})
-  operations that will be performed:
-  - will run:
-    - anonymous({})
-  "anonymous({})": completed
-"anonymous({})": completed
-```
-
-# 2/2 return
 
 ```js
 [

@@ -550,6 +550,12 @@ ${lines.join("\n")}`);
 
 const NO_PARAMS = { __no_params__: true };
 const initialParamsDefault = NO_PARAMS;
+const mergeActionParams = (currentParams, newParams) => {
+  if (currentParams === NO_PARAMS) {
+    return newParams;
+  }
+  return mergeTwoJsValues(currentParams, newParams);
+};
 
 const actionWeakMap = new WeakMap();
 export const createAction = (callback, rootOptions = {}) => {
@@ -657,7 +663,7 @@ export const createAction = (callback, rootOptions = {}) => {
       if (isSignal(newParamsOrSignal)) {
         const combinedParamsSignal = computed(() => {
           const newParams = newParamsOrSignal.value;
-          const result = mergeTwoJsValues(params, newParams);
+          const result = mergeActionParams(params, newParams);
           return result;
         });
         return createActionProxyFromSignal(
@@ -689,13 +695,17 @@ export const createAction = (callback, rootOptions = {}) => {
 
         if (signalMap.size === 0) {
           // Pas de signals, merge statique normal
-          if (params === null || typeof params !== "object") {
+          if (
+            params === null ||
+            typeof params !== "object" ||
+            params === NO_PARAMS
+          ) {
             return createChildAction({
               ...options,
               params: newParamsOrSignal,
             });
           }
-          const combinedParams = mergeTwoJsValues(params, newParamsOrSignal);
+          const combinedParams = mergeActionParams(params, newParamsOrSignal);
           return createChildAction({
             ...options,
             params: combinedParams,
@@ -824,7 +834,7 @@ export const createAction = (callback, rootOptions = {}) => {
       matchAllSelfOrDescendant, // ✅ Add the new method
       replaceParams: (newParams) => {
         const currentParams = paramsSignal.value;
-        const nextParams = mergeTwoJsValues(currentParams, newParams);
+        const nextParams = mergeActionParams(currentParams, newParams);
         if (nextParams === currentParams) {
           return false;
         }
@@ -1401,7 +1411,7 @@ const createActionProxyFromSignal = (
   actionProxy.replaceParams = (newParams) => {
     if (currentAction === action) {
       const currentParams = proxyParamsSignal.value;
-      const nextParams = mergeTwoJsValues(currentParams, newParams);
+      const nextParams = mergeActionParams(currentParams, newParams);
       if (nextParams === currentParams) {
         return false;
       }
