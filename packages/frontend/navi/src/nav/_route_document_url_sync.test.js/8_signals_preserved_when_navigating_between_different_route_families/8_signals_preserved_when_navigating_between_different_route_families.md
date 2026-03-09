@@ -84,7 +84,7 @@ try {
   "scenario1_initial_map_route": {
     "description": "Initial state on /map?zone=foo",
     "zone_signal": "foo",
-    "home_route_matches": false,
+    "home_route_matches": true,
     "map_route_matches": true,
     "current_url": "not available"
   },
@@ -98,7 +98,7 @@ try {
   "scenario3_back_to_map_with_new_value": {
     "description": "Navigate back to /map with new zone value",
     "zone_signal": "bar",
-    "home_route_matches": false,
+    "home_route_matches": true,
     "map_route_matches": true,
     "current_url": "not available"
   },

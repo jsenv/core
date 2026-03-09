@@ -2422,6 +2422,7 @@ const matchUrl = (
 
   // Handle root route - only matches empty path or just "/"
   // OR when URL exactly matches baseUrl (treating baseUrl as root)
+  // OR any sub-path when the route has a trailing slash (prefix matching)
   if (parsedPattern.segments.length === 0) {
     if (pathname === "/" || pathname === "") {
       return extractSearchParams(urlObj, queryConnectionMap);
@@ -2433,6 +2434,11 @@ const matchUrl = (
       if (originalPathname === baseUrlObj.pathname) {
         return extractSearchParams(urlObj, queryConnectionMap);
       }
+    }
+
+    // Root route with trailing slash matches all sub-paths (prefix matching, like other trailing-slash routes)
+    if (parsedPattern.trailingSlash) {
+      return extractSearchParams(urlObj, queryConnectionMap);
     }
 
     return null;

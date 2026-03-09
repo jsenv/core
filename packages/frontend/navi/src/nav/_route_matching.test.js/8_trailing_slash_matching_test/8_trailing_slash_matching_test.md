@@ -20,7 +20,7 @@ try {
 
 ```js
 {
-  "home_matching": false
+  "home_matching": true
 }
 ```
 
