@@ -174,8 +174,7 @@ const getActivationInfo = () => {
   const settledSet = new Set();
 
   for (const action of activationWeakSet) {
-    const privateProps = getActionPrivateProperties(action);
-    const runningState = privateProps.runningStateSignal.peek();
+    const runningState = action.runningStateSignal.peek();
 
     if (runningState === RUNNING) {
       runningSet.add(action);
@@ -517,9 +516,7 @@ ${lines.join("\n")}`);
 
     // Execute promotions (prerun -> run requested)
     for (const actionToPromote of willPromoteSet) {
-      const actionToPromotePrivateProperties =
-        getActionPrivateProperties(actionToPromote);
-      actionToPromotePrivateProperties.isPrerunSignal.value = false;
+      actionToPromote.isPrerunSignal.value = false;
     }
   }
   if (DEBUG) {
@@ -858,6 +855,13 @@ export const createAction = (callback, rootOptions = {}) => {
         }
         console.debug(...args);
       },
+
+      paramsSignal,
+      runningStateSignal,
+      isPrerunSignal,
+      valueSignal,
+      dataSignal,
+      errorSignal,
     });
     Object.preventExtensions(action);
 
@@ -1116,13 +1120,6 @@ export const createAction = (callback, rootOptions = {}) => {
       const privateProperties = {
         valueInitial,
 
-        paramsSignal,
-        runningStateSignal,
-        isPrerunSignal,
-        valueSignal,
-        dataSignal,
-        errorSignal,
-
         performRun,
         performReset,
         ui,
@@ -1277,6 +1274,30 @@ const createActionProxyFromSignal = (
       },
     };
   }
+
+  // Create our own signal for params that we control completely
+  const proxyParamsSignal = signal(paramsSignal.value);
+  const proxySignal = (signalPropertyName, propertyName) => {
+    const signalProxy = signal();
+    let dispose;
+    onActionTargetChange(() => {
+      if (dispose) {
+        dispose();
+        dispose = undefined;
+      }
+      dispose = effect(() => {
+        const currentActionSignal = currentAction[signalPropertyName];
+        const currentActionSignalValue = currentActionSignal.value;
+        signalProxy.value = currentActionSignalValue;
+        if (propertyName) {
+          actionProxy[propertyName] = currentActionSignalValue;
+        }
+      });
+      return dispose;
+    });
+    return signalProxy;
+  };
+
   Object.assign(actionProxy, {
     isProxy: true,
     callback: undefined,
@@ -1309,52 +1330,15 @@ const createActionProxyFromSignal = (
     callSource: actionProxy.callSource,
     toString: () => actionProxy.callSource,
     meta: {},
+
+    paramsSignal: proxyParamsSignal,
+    isPrerunSignal: proxySignal("isPrerunSignal", "isPrerun"),
+    runningStateSignal: proxySignal("runningStateSignal", "runningState"),
+    errorSignal: proxySignal("errorSignal", "error"),
+    valueSignal: proxySignal("valueSignal", "value"),
+    dataSignal: proxySignal("dataSignal", "data"),
   });
   Object.preventExtensions(actionProxy);
-
-  onActionTargetChange((actionTarget) => {
-    const currentAction = actionTarget || action;
-    nameSignal.value = `[Proxy] ${currentAction.name}`;
-    callSourceSignal.value = `[Proxy] ${currentAction.callSource}`;
-    actionProxy.callback = currentAction.callback;
-    actionProxy.params = currentAction.params;
-    actionProxy.isPrerun = currentAction.isPrerun;
-    actionProxy.runningState = currentAction.runningState;
-    actionProxy.aborted = currentAction.aborted;
-    actionProxy.error = currentAction.error;
-    actionProxy.value = currentAction.value;
-    actionProxy.data = currentAction.data;
-    actionProxy.completed = currentAction.completed;
-  });
-
-  const proxyPrivateSignal = (signalPropertyName, propertyName) => {
-    const signalProxy = signal();
-    let dispose;
-    onActionTargetChange(() => {
-      if (dispose) {
-        dispose();
-        dispose = undefined;
-      }
-      dispose = effect(() => {
-        const currentActionSignal =
-          currentActionPrivateProperties[signalPropertyName];
-        const currentActionSignalValue = currentActionSignal.value;
-        signalProxy.value = currentActionSignalValue;
-        if (propertyName) {
-          actionProxy[propertyName] = currentActionSignalValue;
-        }
-      });
-      return dispose;
-    });
-    return signalProxy;
-  };
-  const proxyPrivateMethod = (method) => {
-    return (...args) => currentActionPrivateProperties[method](...args);
-  };
-
-  // Create our own signal for params that we control completely
-  const proxyParamsSignal = signal(paramsSignal.value);
-
   // Watch for changes in the original paramsSignal and update ours
   // (original signal wins over any replaceParams calls)
   weakEffect(
@@ -1371,38 +1355,48 @@ const createActionProxyFromSignal = (
       changeCause: "params_signal_change",
     });
   });
-
-  const proxyPrivateProperties = {
-    get currentAction() {
-      return currentAction;
-    },
-    paramsSignal: proxyParamsSignal,
-    isPrerunSignal: proxyPrivateSignal("isPrerunSignal", "isPrerun"),
-    runningStateSignal: proxyPrivateSignal(
-      "runningStateSignal",
-      "runningState",
-    ),
-    errorSignal: proxyPrivateSignal("errorSignal", "error"),
-    valueSignal: proxyPrivateSignal("valueSignal", "value"),
-    dataSignal: proxyPrivateSignal("dataSignal", "data"),
-    performRun: proxyPrivateMethod("performRun"),
-    performReset: proxyPrivateMethod("performReset"),
-    ui: currentActionPrivateProperties.ui,
-  };
-
-  onActionTargetChange((actionTarget, previousTarget) => {
-    proxyPrivateProperties.ui = currentActionPrivateProperties.ui;
-    if (previousTarget && actionTarget) {
-      const previousPrivateProps = getActionPrivateProperties(previousTarget);
-      if (previousPrivateProps.ui.hasRenderers) {
-        const newPrivateProps = getActionPrivateProperties(actionTarget);
-        newPrivateProps.ui.hasRenderers = true;
-      }
-    }
-    proxyPrivateProperties.childActionWeakSet =
-      currentActionPrivateProperties.childActionWeakSet;
+  onActionTargetChange((actionTarget) => {
+    const currentAction = actionTarget || action;
+    nameSignal.value = `[Proxy] ${currentAction.name}`;
+    callSourceSignal.value = `[Proxy] ${currentAction.callSource}`;
+    actionProxy.callback = currentAction.callback;
+    actionProxy.params = currentAction.params;
+    actionProxy.isPrerun = currentAction.isPrerun;
+    actionProxy.runningState = currentAction.runningState;
+    actionProxy.aborted = currentAction.aborted;
+    actionProxy.error = currentAction.error;
+    actionProxy.value = currentAction.value;
+    actionProxy.data = currentAction.data;
+    actionProxy.completed = currentAction.completed;
   });
-  setActionPrivateProperties(actionProxy, proxyPrivateProperties);
+
+  proxy_private_props: {
+    const proxyPrivateMethod = (method) => {
+      return (...args) => currentActionPrivateProperties[method](...args);
+    };
+    const proxyPrivateProperties = {
+      get currentAction() {
+        return currentAction;
+      },
+
+      performRun: proxyPrivateMethod("performRun"),
+      performReset: proxyPrivateMethod("performReset"),
+      ui: currentActionPrivateProperties.ui,
+    };
+    onActionTargetChange((actionTarget, previousTarget) => {
+      proxyPrivateProperties.ui = currentActionPrivateProperties.ui;
+      if (previousTarget && actionTarget) {
+        const previousPrivateProps = getActionPrivateProperties(previousTarget);
+        if (previousPrivateProps.ui.hasRenderers) {
+          const newPrivateProps = getActionPrivateProperties(actionTarget);
+          newPrivateProps.ui.hasRenderers = true;
+        }
+      }
+      proxyPrivateProperties.childActionWeakSet =
+        currentActionPrivateProperties.childActionWeakSet;
+    });
+    setActionPrivateProperties(actionProxy, proxyPrivateProperties);
+  }
 
   actionProxy.replaceParams = (newParams) => {
     if (currentAction === action) {
@@ -1417,20 +1411,15 @@ const createActionProxyFromSignal = (
     if (!currentAction.replaceParams(newParams)) {
       return false;
     }
-    proxyParamsSignal.value =
-      currentActionPrivateProperties.paramsSignal.peek();
+    proxyParamsSignal.value = currentAction.paramsSignal.peek();
     return true;
   };
 
   if (transferData) {
     onActionTargetChange((actionTarget, actionTargetPrevious) => {
       if (actionTarget && actionTargetPrevious) {
-        const previousTargetPrivateProperties =
-          getActionPrivateProperties(actionTargetPrevious);
-        const targetPrivateProperties =
-          getActionPrivateProperties(actionTarget);
-        const targetValueSignal = targetPrivateProperties.valueSignal;
-        const previousValueSignal = previousTargetPrivateProperties.valueSignal;
+        const targetValueSignal = actionTarget.valueSignal;
+        const previousValueSignal = actionTargetPrevious.valueSignal;
         targetValueSignal.value = previousValueSignal.value;
       }
     });

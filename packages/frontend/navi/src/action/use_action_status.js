@@ -1,4 +1,3 @@
-import { getActionPrivateProperties } from "./action_private_properties.js";
 import { ABORTED, COMPLETED, IDLE, RUNNING } from "./action_run_states.js";
 
 export const useActionStatus = (action) => {
@@ -21,8 +20,7 @@ export const useActionStatus = (action) => {
     isPrerunSignal,
     errorSignal,
     dataSignal,
-  } = getActionPrivateProperties(action);
-
+  } = action;
   const params = paramsSignal.value;
   const isPrerun = isPrerunSignal.value;
   const runningState = runningStateSignal.value;
