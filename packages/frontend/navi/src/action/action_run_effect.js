@@ -30,7 +30,7 @@ import { stringifyForDisplay } from "../utils/stringify_for_display.js";
 export const actionRunEffect = (
   action,
   deriveActionParamsFromSignals,
-  { debounce } = {},
+  { debounce, meta } = {},
 ) => {
   let lastTruthyParams;
   let actionParamsSignal = computed(() => {
@@ -92,6 +92,7 @@ export const actionRunEffect = (
         }
       }
     },
+    meta,
   });
   if (actionParamsSignal.peek()) {
     actionRunnedByThisEffect.run({ reason: "initial truthy params" });

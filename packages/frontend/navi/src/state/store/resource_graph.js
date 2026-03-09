@@ -13,6 +13,414 @@ import { arraySignalStore, primitiveCanBeId } from "./array_signal_store.js";
 
 let DEBUG = false;
 
+export const resource = (
+  name,
+  { idKey, mutableIdKeys = [], rerunOn, httpHandler, ...rest } = {},
+) => {
+  if (idKey === undefined) {
+    idKey = mutableIdKeys.length === 0 ? "id" : mutableIdKeys[0];
+  }
+  const resourceInstance = {
+    isResource: true,
+    name,
+    idKey,
+    httpActions: {},
+    addItemSetup: undefined,
+    httpHandler,
+  };
+  if (!httpHandler) {
+    const setupCallbackSet = new Set();
+    const addItemSetup = (callback) => {
+      setupCallbackSet.add(callback);
+    };
+    resourceInstance.addItemSetup = addItemSetup;
+
+    const itemPrototype = {
+      [Symbol.toStringTag]: name,
+      toString() {
+        let string = `${name}`;
+        if (mutableIdKeys.length) {
+          for (const mutableIdKey of mutableIdKeys) {
+            const mutableId = this[mutableIdKey];
+            if (mutableId !== undefined) {
+              string += `[${mutableIdKey}=${mutableId}]`;
+              return string;
+            }
+          }
+        }
+        const id = this[idKey];
+        if (id) {
+          string += `[${idKey}=${id}]`;
+        }
+        return string;
+      },
+    };
+
+    const store = arraySignalStore([], idKey, {
+      mutableIdKeys,
+      name: `${name} store`,
+      createItem: (props) => {
+        const item = Object.create(itemPrototype);
+        Object.assign(item, props);
+        Object.defineProperty(item, SYMBOL_IDENTITY, {
+          value: item[idKey],
+          writable: false,
+          enumerable: false,
+          configurable: false,
+        });
+        for (const setupCallback of setupCallbackSet) {
+          setupCallback(item);
+        }
+        return item;
+      },
+    });
+    const useArray = () => {
+      return store.arraySignal.value;
+    };
+    const useById = (id) => {
+      return store.select(idKey, id);
+    };
+
+    Object.assign(resourceInstance, {
+      useArray,
+      useById,
+      store,
+    });
+
+    httpHandler = createHttpHandlerForRootResource(name, {
+      idKey,
+      store,
+      rerunOn,
+      resourceInstance,
+      mutableIdKeys,
+    });
+  }
+  resourceInstance.httpHandler = httpHandler;
+
+  // Store the action callback definitions for withParams to use later
+  resourceInstance.httpActions = rest;
+
+  // Create HTTP actions
+  for (const key of Object.keys(rest)) {
+    const method = httpHandler[key];
+    if (!method) {
+      continue;
+    }
+    const action = method(rest[key]);
+    resourceInstance[key] = action;
+  }
+
+  resourceInstance.one = (propertyName, childResource, options) => {
+    const childIdKey = childResource.idKey;
+    const childName = `${name}.${propertyName}`;
+    resourceInstance.addItemSetup((item) => {
+      const childItemIdSignal = signal();
+      const updateChildItemId = (value) => {
+        const currentChildItemId = childItemIdSignal.peek();
+        if (isProps(value)) {
+          const childItem = childResource.store.upsert(value);
+          const childItemId = childItem[childIdKey];
+          if (currentChildItemId === childItemId) {
+            return false;
+          }
+          childItemIdSignal.value = childItemId;
+          return true;
+        }
+        if (primitiveCanBeId(value)) {
+          const childItemProps = { [childIdKey]: value };
+          const childItem = childResource.store.upsert(childItemProps);
+          const childItemId = childItem[childIdKey];
+          if (currentChildItemId === childItemId) {
+            return false;
+          }
+          childItemIdSignal.value = childItemId;
+          return true;
+        }
+        if (currentChildItemId === undefined) {
+          return false;
+        }
+        childItemIdSignal.value = undefined;
+        return true;
+      };
+      updateChildItemId(item[propertyName]);
+
+      const childItemSignal = computed(() => {
+        const childItemId = childItemIdSignal.value;
+        const childItem = childResource.store.select(childItemId);
+        return childItem;
+      });
+      const childItemFacadeSignal = computed(() => {
+        const childItem = childItemSignal.value;
+        if (childItem) {
+          const childItemCopy = Object.create(
+            Object.getPrototypeOf(childItem),
+            Object.getOwnPropertyDescriptors(childItem),
+          );
+          Object.defineProperty(childItemCopy, SYMBOL_OBJECT_SIGNAL, {
+            value: childItemSignal,
+            writable: false,
+            enumerable: false,
+            configurable: false,
+          });
+          return childItemCopy;
+        }
+        const nullItem = {
+          [SYMBOL_OBJECT_SIGNAL]: childItemSignal,
+          valueOf: () => null,
+        };
+        return nullItem;
+      });
+
+      if (DEBUG) {
+        console.debug(
+          `setup ${item}.${propertyName} is one "${childResource.name}" (current value: ${childItemSignal.peek()})`,
+        );
+      }
+
+      Object.defineProperty(item, propertyName, {
+        get: () => {
+          const childItemFacade = childItemFacadeSignal.value;
+          return childItemFacade;
+        },
+        set: (value) => {
+          if (!updateChildItemId(value)) {
+            return;
+          }
+          if (DEBUG) {
+            console.debug(
+              `${item}.${propertyName} updated to ${childItemSignal.peek()}`,
+            );
+          }
+        },
+      });
+    });
+    const httpHandlerForRelationshipToOneChild =
+      createHttpHandlerForRelationshipToOneResource(childName, {
+        idKey,
+        store: resourceInstance.store,
+        propertyName,
+        childIdKey,
+        childStore: childResource.store,
+        resourceInstance,
+        resourceLifecycleManager,
+      });
+    return resource(childName, {
+      idKey: childIdKey,
+      httpHandler: httpHandlerForRelationshipToOneChild,
+      ...options,
+    });
+  };
+  resourceInstance.many = (propertyName, childResource, options) => {
+    const childIdKey = childResource.idKey;
+    const childName = `${name}.${propertyName}`;
+    resourceInstance.addItemSetup((item) => {
+      const childItemIdArraySignal = signal([]);
+      const updateChildItemIdArray = (valueArray) => {
+        const currentIdArray = childItemIdArraySignal.peek();
+
+        if (!Array.isArray(valueArray)) {
+          if (currentIdArray.length === 0) {
+            return;
+          }
+          childItemIdArraySignal.value = [];
+          return;
+        }
+
+        let i = 0;
+        const idArray = [];
+        let modified = false;
+        while (i < valueArray.length) {
+          const value = valueArray[i];
+          const currentIdAtIndex = currentIdArray[idArray.length];
+          i++;
+          if (isProps(value)) {
+            const childItem = childResource.store.upsert(value);
+            const childItemId = childItem[childIdKey];
+            if (currentIdAtIndex !== childItemId) {
+              modified = true;
+            }
+            idArray.push(childItemId);
+            continue;
+          }
+          if (primitiveCanBeId(value)) {
+            const childItemProps = { [childIdKey]: value };
+            const childItem = childResource.store.upsert(childItemProps);
+            const childItemId = childItem[childIdKey];
+            if (currentIdAtIndex !== childItemId) {
+              modified = true;
+            }
+            idArray.push(childItemId);
+            continue;
+          }
+        }
+        if (modified || currentIdArray.length !== idArray.length) {
+          childItemIdArraySignal.value = idArray;
+        }
+      };
+      updateChildItemIdArray(item[propertyName]);
+
+      const childItemArraySignal = computed(() => {
+        const childItemIdArray = childItemIdArraySignal.value;
+        const childItemArray = childResource.store.selectAll(childItemIdArray);
+        Object.defineProperty(childItemArray, SYMBOL_OBJECT_SIGNAL, {
+          value: childItemArraySignal,
+          writable: false,
+          enumerable: false,
+          configurable: false,
+        });
+        return childItemArray;
+      });
+
+      if (DEBUG) {
+        const childItemArray = childItemArraySignal.peek();
+        console.debug(
+          `setup ${item}.${propertyName} is many "${childResource.name}" (current value: ${childItemArray.length ? childItemArray.join(",") : "[]"})`,
+        );
+      }
+
+      Object.defineProperty(item, propertyName, {
+        get: () => {
+          const childItemArray = childItemArraySignal.value;
+          if (DEBUG) {
+            console.debug(
+              `return ${childItemArray.length ? childItemArray.join(",") : "[]"} for ${item}.${propertyName}`,
+            );
+          }
+          return childItemArray;
+        },
+        set: (value) => {
+          updateChildItemIdArray(value);
+          if (DEBUG) {
+            console.debug(
+              `${item}.${propertyName} updated to ${childItemIdArraySignal.peek()}`,
+            );
+          }
+        },
+      });
+    });
+    const httpHandleForChildManyResource =
+      createHttpHandlerRelationshipToManyResource(childName, {
+        idKey,
+        store: resourceInstance.store,
+        propertyName,
+        childIdKey,
+        childStore: childResource.store,
+        resourceInstance,
+        resourceLifecycleManager,
+      });
+    return resource(childName, {
+      idKey: childIdKey,
+      httpHandler: httpHandleForChildManyResource,
+      ...options,
+    });
+  };
+
+  /**
+   * Creates a parameterized version of the resource with isolated resource lifecycle behavior.
+   *
+   * Actions from parameterized resources only trigger rerun/reset for other actions with
+   * identical parameters, preventing cross-contamination between different parameter sets.
+   *
+   * @param {Object} params - Parameters to bind to all actions of this resource (required)
+   * @param {Object} options - Additional options for the parameterized resource
+   * @param {Array} options.dependencies - Array of resources that should trigger autorerun when modified
+   * @param {Object} options.rerunOn - Configuration for when to rerun GET/GET_MANY actions
+   * @param {false|Array|string} options.rerunOn.GET - HTTP verbs that trigger GET rerun (false = reset on DELETE)
+   * @param {false|Array|string} options.rerunOn.GET_MANY - HTTP verbs that trigger GET_MANY rerun (false = reset on DELETE)
+   * @returns {Object} A new resource instance with parameter-bound actions and isolated lifecycle
+   * @see {@link ./docs/resource_with_params.md} for detailed documentation and examples
+   *
+   * @example
+   * const ROLE = resource("role", { GET: (params) => fetchRole(params) });
+   * const adminRoles = ROLE.withParams({ canlogin: true });
+   * const guestRoles = ROLE.withParams({ canlogin: false });
+   * // adminRoles and guestRoles have isolated autorerun behavior
+   *
+   * @example
+   * // Cross-resource dependencies
+   * const role = resource("role");
+   * const database = resource("database");
+   * const tables = resource("tables");
+   * const ROLE_WITH_OWNERSHIP = role.withParams({ owners: true }, {
+   *   dependencies: [role, database, tables],
+   * });
+   * // ROLE_WITH_OWNERSHIP.GET_MANY will autorerun when any table/database/role is POST/DELETE
+   */
+  const withParams = (params, options = {}) => {
+    // Require parameters
+    if (!params || Object.keys(params).length === 0) {
+      throw new Error(`resource(${name}).withParams() requires parameters`);
+    }
+
+    const { dependencies = [], rerunOn: customRerunOn } = options;
+
+    // Generate unique param scope for these parameters
+    const paramScopeObject = getParamScope(params);
+
+    // Use custom rerunOn settings if provided, otherwise use resource defaults
+    const finalRerunOn = customRerunOn || rerunOn;
+
+    // Create a new httpHandler with the param scope for isolated autorerun
+    const parameterizedHttpHandler = createHttpHandlerForRootResource(name, {
+      idKey,
+      store: resourceInstance.store,
+      rerunOn: finalRerunOn,
+      paramScope: paramScopeObject,
+      dependencies,
+      resourceInstance,
+      mutableIdKeys,
+    });
+
+    // Create parameterized resource
+    const parameterizedResource = {
+      isResource: true,
+      name,
+      idKey,
+      useArray: resourceInstance.useArray,
+      useById: resourceInstance.useById,
+      store: resourceInstance.store,
+      addItemSetup: resourceInstance.addItemSetup,
+      httpHandler: parameterizedHttpHandler,
+      one: resourceInstance.one,
+      many: resourceInstance.many,
+      dependencies, // Store dependencies for debugging/inspection
+      httpActions: resourceInstance.httpActions,
+    };
+
+    // Create HTTP actions from the parameterized handler and bind parameters
+    for (const key of Object.keys(resourceInstance.httpActions)) {
+      const method = parameterizedHttpHandler[key];
+      if (method) {
+        const action = method(resourceInstance.httpActions[key]);
+        // Bind the parameters to get a parameterized action instance
+        parameterizedResource[key] = action.bindParams(params);
+      }
+    }
+
+    // Add withParams method to the parameterized resource for chaining
+    parameterizedResource.withParams = (newParams, newOptions = {}) => {
+      if (!newParams || Object.keys(newParams).length === 0) {
+        throw new Error(`resource(${name}).withParams() requires parameters`);
+      }
+      // Merge current params with new ones for chaining
+      const mergedParams = { ...params, ...newParams };
+      // Merge options, with new options taking precedence
+      const mergedOptions = {
+        dependencies,
+        rerunOn: finalRerunOn,
+        ...newOptions,
+      };
+      return withParams(mergedParams, mergedOptions);
+    };
+
+    return parameterizedResource;
+  };
+
+  resourceInstance.withParams = withParams;
+
+  return resourceInstance;
+};
+
 // Resource Lifecycle Manager
 // This handles ALL resource lifecycle logic (rerun/reset) across all resources
 const createResourceLifecycleManager = () => {
@@ -889,414 +1297,6 @@ const createHttpHandlerRelationshipToManyResource = (
     PATCH_MANY,
     DELETE_MANY,
   };
-};
-
-export const resource = (
-  name,
-  { idKey, mutableIdKeys = [], rerunOn, httpHandler, ...rest } = {},
-) => {
-  if (idKey === undefined) {
-    idKey = mutableIdKeys.length === 0 ? "id" : mutableIdKeys[0];
-  }
-  const resourceInstance = {
-    isResource: true,
-    name,
-    idKey,
-    httpActions: {},
-    addItemSetup: undefined,
-    httpHandler,
-  };
-  if (!httpHandler) {
-    const setupCallbackSet = new Set();
-    const addItemSetup = (callback) => {
-      setupCallbackSet.add(callback);
-    };
-    resourceInstance.addItemSetup = addItemSetup;
-
-    const itemPrototype = {
-      [Symbol.toStringTag]: name,
-      toString() {
-        let string = `${name}`;
-        if (mutableIdKeys.length) {
-          for (const mutableIdKey of mutableIdKeys) {
-            const mutableId = this[mutableIdKey];
-            if (mutableId !== undefined) {
-              string += `[${mutableIdKey}=${mutableId}]`;
-              return string;
-            }
-          }
-        }
-        const id = this[idKey];
-        if (id) {
-          string += `[${idKey}=${id}]`;
-        }
-        return string;
-      },
-    };
-
-    const store = arraySignalStore([], idKey, {
-      mutableIdKeys,
-      name: `${name} store`,
-      createItem: (props) => {
-        const item = Object.create(itemPrototype);
-        Object.assign(item, props);
-        Object.defineProperty(item, SYMBOL_IDENTITY, {
-          value: item[idKey],
-          writable: false,
-          enumerable: false,
-          configurable: false,
-        });
-        for (const setupCallback of setupCallbackSet) {
-          setupCallback(item);
-        }
-        return item;
-      },
-    });
-    const useArray = () => {
-      return store.arraySignal.value;
-    };
-    const useById = (id) => {
-      return store.select(idKey, id);
-    };
-
-    Object.assign(resourceInstance, {
-      useArray,
-      useById,
-      store,
-    });
-
-    httpHandler = createHttpHandlerForRootResource(name, {
-      idKey,
-      store,
-      rerunOn,
-      resourceInstance,
-      mutableIdKeys,
-    });
-  }
-  resourceInstance.httpHandler = httpHandler;
-
-  // Store the action callback definitions for withParams to use later
-  resourceInstance.httpActions = rest;
-
-  // Create HTTP actions
-  for (const key of Object.keys(rest)) {
-    const method = httpHandler[key];
-    if (!method) {
-      continue;
-    }
-    const action = method(rest[key]);
-    resourceInstance[key] = action;
-  }
-
-  resourceInstance.one = (propertyName, childResource, options) => {
-    const childIdKey = childResource.idKey;
-    const childName = `${name}.${propertyName}`;
-    resourceInstance.addItemSetup((item) => {
-      const childItemIdSignal = signal();
-      const updateChildItemId = (value) => {
-        const currentChildItemId = childItemIdSignal.peek();
-        if (isProps(value)) {
-          const childItem = childResource.store.upsert(value);
-          const childItemId = childItem[childIdKey];
-          if (currentChildItemId === childItemId) {
-            return false;
-          }
-          childItemIdSignal.value = childItemId;
-          return true;
-        }
-        if (primitiveCanBeId(value)) {
-          const childItemProps = { [childIdKey]: value };
-          const childItem = childResource.store.upsert(childItemProps);
-          const childItemId = childItem[childIdKey];
-          if (currentChildItemId === childItemId) {
-            return false;
-          }
-          childItemIdSignal.value = childItemId;
-          return true;
-        }
-        if (currentChildItemId === undefined) {
-          return false;
-        }
-        childItemIdSignal.value = undefined;
-        return true;
-      };
-      updateChildItemId(item[propertyName]);
-
-      const childItemSignal = computed(() => {
-        const childItemId = childItemIdSignal.value;
-        const childItem = childResource.store.select(childItemId);
-        return childItem;
-      });
-      const childItemFacadeSignal = computed(() => {
-        const childItem = childItemSignal.value;
-        if (childItem) {
-          const childItemCopy = Object.create(
-            Object.getPrototypeOf(childItem),
-            Object.getOwnPropertyDescriptors(childItem),
-          );
-          Object.defineProperty(childItemCopy, SYMBOL_OBJECT_SIGNAL, {
-            value: childItemSignal,
-            writable: false,
-            enumerable: false,
-            configurable: false,
-          });
-          return childItemCopy;
-        }
-        const nullItem = {
-          [SYMBOL_OBJECT_SIGNAL]: childItemSignal,
-          valueOf: () => null,
-        };
-        return nullItem;
-      });
-
-      if (DEBUG) {
-        console.debug(
-          `setup ${item}.${propertyName} is one "${childResource.name}" (current value: ${childItemSignal.peek()})`,
-        );
-      }
-
-      Object.defineProperty(item, propertyName, {
-        get: () => {
-          const childItemFacade = childItemFacadeSignal.value;
-          return childItemFacade;
-        },
-        set: (value) => {
-          if (!updateChildItemId(value)) {
-            return;
-          }
-          if (DEBUG) {
-            console.debug(
-              `${item}.${propertyName} updated to ${childItemSignal.peek()}`,
-            );
-          }
-        },
-      });
-    });
-    const httpHandlerForRelationshipToOneChild =
-      createHttpHandlerForRelationshipToOneResource(childName, {
-        idKey,
-        store: resourceInstance.store,
-        propertyName,
-        childIdKey,
-        childStore: childResource.store,
-        resourceInstance,
-        resourceLifecycleManager,
-      });
-    return resource(childName, {
-      idKey: childIdKey,
-      httpHandler: httpHandlerForRelationshipToOneChild,
-      ...options,
-    });
-  };
-  resourceInstance.many = (propertyName, childResource, options) => {
-    const childIdKey = childResource.idKey;
-    const childName = `${name}.${propertyName}`;
-    resourceInstance.addItemSetup((item) => {
-      const childItemIdArraySignal = signal([]);
-      const updateChildItemIdArray = (valueArray) => {
-        const currentIdArray = childItemIdArraySignal.peek();
-
-        if (!Array.isArray(valueArray)) {
-          if (currentIdArray.length === 0) {
-            return;
-          }
-          childItemIdArraySignal.value = [];
-          return;
-        }
-
-        let i = 0;
-        const idArray = [];
-        let modified = false;
-        while (i < valueArray.length) {
-          const value = valueArray[i];
-          const currentIdAtIndex = currentIdArray[idArray.length];
-          i++;
-          if (isProps(value)) {
-            const childItem = childResource.store.upsert(value);
-            const childItemId = childItem[childIdKey];
-            if (currentIdAtIndex !== childItemId) {
-              modified = true;
-            }
-            idArray.push(childItemId);
-            continue;
-          }
-          if (primitiveCanBeId(value)) {
-            const childItemProps = { [childIdKey]: value };
-            const childItem = childResource.store.upsert(childItemProps);
-            const childItemId = childItem[childIdKey];
-            if (currentIdAtIndex !== childItemId) {
-              modified = true;
-            }
-            idArray.push(childItemId);
-            continue;
-          }
-        }
-        if (modified || currentIdArray.length !== idArray.length) {
-          childItemIdArraySignal.value = idArray;
-        }
-      };
-      updateChildItemIdArray(item[propertyName]);
-
-      const childItemArraySignal = computed(() => {
-        const childItemIdArray = childItemIdArraySignal.value;
-        const childItemArray = childResource.store.selectAll(childItemIdArray);
-        Object.defineProperty(childItemArray, SYMBOL_OBJECT_SIGNAL, {
-          value: childItemArraySignal,
-          writable: false,
-          enumerable: false,
-          configurable: false,
-        });
-        return childItemArray;
-      });
-
-      if (DEBUG) {
-        const childItemArray = childItemArraySignal.peek();
-        console.debug(
-          `setup ${item}.${propertyName} is many "${childResource.name}" (current value: ${childItemArray.length ? childItemArray.join(",") : "[]"})`,
-        );
-      }
-
-      Object.defineProperty(item, propertyName, {
-        get: () => {
-          const childItemArray = childItemArraySignal.value;
-          if (DEBUG) {
-            console.debug(
-              `return ${childItemArray.length ? childItemArray.join(",") : "[]"} for ${item}.${propertyName}`,
-            );
-          }
-          return childItemArray;
-        },
-        set: (value) => {
-          updateChildItemIdArray(value);
-          if (DEBUG) {
-            console.debug(
-              `${item}.${propertyName} updated to ${childItemIdArraySignal.peek()}`,
-            );
-          }
-        },
-      });
-    });
-    const httpHandleForChildManyResource =
-      createHttpHandlerRelationshipToManyResource(childName, {
-        idKey,
-        store: resourceInstance.store,
-        propertyName,
-        childIdKey,
-        childStore: childResource.store,
-        resourceInstance,
-        resourceLifecycleManager,
-      });
-    return resource(childName, {
-      idKey: childIdKey,
-      httpHandler: httpHandleForChildManyResource,
-      ...options,
-    });
-  };
-
-  /**
-   * Creates a parameterized version of the resource with isolated resource lifecycle behavior.
-   *
-   * Actions from parameterized resources only trigger rerun/reset for other actions with
-   * identical parameters, preventing cross-contamination between different parameter sets.
-   *
-   * @param {Object} params - Parameters to bind to all actions of this resource (required)
-   * @param {Object} options - Additional options for the parameterized resource
-   * @param {Array} options.dependencies - Array of resources that should trigger autorerun when modified
-   * @param {Object} options.rerunOn - Configuration for when to rerun GET/GET_MANY actions
-   * @param {false|Array|string} options.rerunOn.GET - HTTP verbs that trigger GET rerun (false = reset on DELETE)
-   * @param {false|Array|string} options.rerunOn.GET_MANY - HTTP verbs that trigger GET_MANY rerun (false = reset on DELETE)
-   * @returns {Object} A new resource instance with parameter-bound actions and isolated lifecycle
-   * @see {@link ./docs/resource_with_params.md} for detailed documentation and examples
-   *
-   * @example
-   * const ROLE = resource("role", { GET: (params) => fetchRole(params) });
-   * const adminRoles = ROLE.withParams({ canlogin: true });
-   * const guestRoles = ROLE.withParams({ canlogin: false });
-   * // adminRoles and guestRoles have isolated autorerun behavior
-   *
-   * @example
-   * // Cross-resource dependencies
-   * const role = resource("role");
-   * const database = resource("database");
-   * const tables = resource("tables");
-   * const ROLE_WITH_OWNERSHIP = role.withParams({ owners: true }, {
-   *   dependencies: [role, database, tables],
-   * });
-   * // ROLE_WITH_OWNERSHIP.GET_MANY will autorerun when any table/database/role is POST/DELETE
-   */
-  const withParams = (params, options = {}) => {
-    // Require parameters
-    if (!params || Object.keys(params).length === 0) {
-      throw new Error(`resource(${name}).withParams() requires parameters`);
-    }
-
-    const { dependencies = [], rerunOn: customRerunOn } = options;
-
-    // Generate unique param scope for these parameters
-    const paramScopeObject = getParamScope(params);
-
-    // Use custom rerunOn settings if provided, otherwise use resource defaults
-    const finalRerunOn = customRerunOn || rerunOn;
-
-    // Create a new httpHandler with the param scope for isolated autorerun
-    const parameterizedHttpHandler = createHttpHandlerForRootResource(name, {
-      idKey,
-      store: resourceInstance.store,
-      rerunOn: finalRerunOn,
-      paramScope: paramScopeObject,
-      dependencies,
-      resourceInstance,
-      mutableIdKeys,
-    });
-
-    // Create parameterized resource
-    const parameterizedResource = {
-      isResource: true,
-      name,
-      idKey,
-      useArray: resourceInstance.useArray,
-      useById: resourceInstance.useById,
-      store: resourceInstance.store,
-      addItemSetup: resourceInstance.addItemSetup,
-      httpHandler: parameterizedHttpHandler,
-      one: resourceInstance.one,
-      many: resourceInstance.many,
-      dependencies, // Store dependencies for debugging/inspection
-      httpActions: resourceInstance.httpActions,
-    };
-
-    // Create HTTP actions from the parameterized handler and bind parameters
-    for (const key of Object.keys(resourceInstance.httpActions)) {
-      const method = parameterizedHttpHandler[key];
-      if (method) {
-        const action = method(resourceInstance.httpActions[key]);
-        // Bind the parameters to get a parameterized action instance
-        parameterizedResource[key] = action.bindParams(params);
-      }
-    }
-
-    // Add withParams method to the parameterized resource for chaining
-    parameterizedResource.withParams = (newParams, newOptions = {}) => {
-      if (!newParams || Object.keys(newParams).length === 0) {
-        throw new Error(`resource(${name}).withParams() requires parameters`);
-      }
-      // Merge current params with new ones for chaining
-      const mergedParams = { ...params, ...newParams };
-      // Merge options, with new options taking precedence
-      const mergedOptions = {
-        dependencies,
-        rerunOn: finalRerunOn,
-        ...newOptions,
-      };
-      return withParams(mergedParams, mergedOptions);
-    };
-
-    return parameterizedResource;
-  };
-
-  resourceInstance.withParams = withParams;
-
-  return resourceInstance;
 };
 
 const isProps = (value) => {
