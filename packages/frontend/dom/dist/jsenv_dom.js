@@ -104,29 +104,31 @@ const getElementSignature = (element) => {
   if (element.nodeType === Node.TEXT_NODE) {
     return `#text(${getElementSignature(element.nodeValue)})`;
   }
+  if (element instanceof HTMLElement) {
+    const tagName = element.tagName.toLowerCase();
+    const dataUIName = element.getAttribute("data-ui-name");
+    if (dataUIName) {
+      return `${tagName}[data-ui-name="${dataUIName}"]`;
+    }
+    if (element === document.body) {
+      return "<body>";
+    }
+    if (element === document.documentElement) {
+      return "<html>";
+    }
+    const elementId = element.id;
+    if (elementId) {
+      return `${tagName}#${elementId}`;
+    }
+    const className = element.className;
+    if (className) {
+      return `${tagName}.${className.split(" ").join(".")}`;
+    }
 
-  const tagName = element.tagName.toLowerCase();
-  const dataUIName = element.getAttribute("data-ui-name");
-  if (dataUIName) {
-    return `${tagName}[data-ui-name="${dataUIName}"]`;
+    const parentSignature = getElementSignature(element.parentElement);
+    return `${parentSignature} > ${tagName}`;
   }
-  if (element === document.body) {
-    return "<body>";
-  }
-  if (element === document.documentElement) {
-    return "<html>";
-  }
-  const elementId = element.id;
-  if (elementId) {
-    return `${tagName}#${elementId}`;
-  }
-  const className = element.className;
-  if (className) {
-    return `${tagName}.${className.split(" ").join(".")}`;
-  }
-
-  const parentSignature = getElementSignature(element.parentElement);
-  return `${parentSignature} > ${tagName}`;
+  return String(element);
 };
 
 const createIterableWeakSet = () => {
@@ -9991,7 +9993,6 @@ const createTransition = ({
               `Debug breakpoint hit at ${(breakpoint * 100).toFixed(1)}% progress`,
             );
             const notifyDebuggerEnd = notifyDebuggerStart();
-            debugger;
             notifyDebuggerEnd();
           }
           if (effect === "pause") {
@@ -11615,7 +11616,7 @@ const initFlexDetailsSet = (
     }
   };
 
-  const applyAllocatedSpaces = (resizeDetails) => {
+  const applyAllocatedSpaces = ({ reason, animated }) => {
     const changeSet = new Set();
     let maxChange = 0;
 
@@ -11623,9 +11624,8 @@ const initFlexDetailsSet = (
       const allocatedSpace = allocatedSpaceMap.get(child);
       const allocatedSize = spaceToSize(allocatedSpace, child);
       const space = spaceMap.get(child);
-      const size = spaceToSize(space, child);
+      const size = spaceToSize(space === undefined ? 0 : space, child);
       const sizeChange = Math.abs(size - allocatedSize);
-
       if (size === allocatedSize) {
         continue;
       }
@@ -11658,16 +11658,18 @@ const initFlexDetailsSet = (
     }
 
     // Don't animate if changes are too small (avoids imperceptible animations that hide scrollbars)
-    const shouldAnimate =
-      resizeDetails.animated && maxChange >= ANIMATION_THRESHOLD_PX;
+    const shouldAnimate = animated && maxChange >= ANIMATION_THRESHOLD_PX;
 
-    if (debug && resizeDetails.animated && !shouldAnimate) {
+    if (debug && animated && !shouldAnimate) {
       console.debug(
         `🚫 Skipping animation: max change ${maxChange.toFixed(2)}px < ${ANIMATION_THRESHOLD_PX}px threshold`,
       );
     }
 
     if (!shouldAnimate) {
+      if (debug) {
+        console.debug(`Applying size changes without animation`);
+      }
       const sizeChangeEntries = [];
       for (const { element, target, sideEffect } of changeSet) {
         element.style.height = `${target}px`;
@@ -11677,19 +11679,26 @@ const initFlexDetailsSet = (
         }
         sizeChangeEntries.push({ element, value: target });
       }
-      onSizeChange?.(sizeChangeEntries, resizeDetails);
+      onSizeChange?.(sizeChangeEntries, { reason, animated });
       return;
     }
 
+    if (debug) {
+      console.debug(`Start animating size changes`);
+    }
     // Create height animations for each element in changeSet
     const transitions = Array.from(changeSet).map(({ element, target }) => {
       const transition = createHeightTransition(element, target, {
         duration: HEIGHT_TRANSITION_DURATION,
+        // because we also set inline height when we don't want animation and it should win
+        // we could also commit styles for animation or cancel any animation so that when we explicitely set height
+        // sync the transition gets overriden
+        styleSynchronizer: "inline_style",
       });
       return transition;
     });
 
-    const transition = transitionController.animate(transitions, {
+    const transition = transitionController.update(transitions, {
       onChange: (changeEntries, isLast) => {
         // Apply side effects for each animated element
         for (const { transition, value } of changeEntries) {
@@ -11713,7 +11722,7 @@ const initFlexDetailsSet = (
           );
           onSizeChange(
             sizeChangeEntries,
-            isLast ? { ...resizeDetails, animated: false } : resizeDetails,
+            isLast ? { reason, animated: false } : { reason, animated },
           );
         }
       },
@@ -11958,23 +11967,23 @@ const initFlexDetailsSet = (
     }
   };
 
-  const updateSpaceDistribution = (resizeDetails) => {
+  const updateSpaceDistribution = ({ reason, animated }) => {
     if (debug) {
-      console.group(`updateSpaceDistribution: ${resizeDetails.reason}`);
+      console.group(`updateSpaceDistribution: ${reason}`);
     }
     prepareSpaceDistribution();
-    distributeAvailableSpace(resizeDetails.reason);
+    distributeAvailableSpace(reason);
     distributeRemainingSpace({
       childToGrow: openedDetailsArray[openedDetailsArray.length - 1],
       childToShrinkFrom: lastChild,
     });
     if (
-      resizeDetails.reason === "initial_space_distribution" ||
-      resizeDetails.reason === "content_change"
+      reason === "initial_space_distribution" ||
+      reason === "content_change"
     ) {
       spaceMap.clear(); // force to set size at start
     }
-    applyAllocatedSpaces(resizeDetails);
+    applyAllocatedSpaces({ reason, animated });
     saveCurrentSizeAsRequestedSizes();
     if (debug) {
       console.groupEnd();
@@ -12015,6 +12024,19 @@ const initFlexDetailsSet = (
       }
     }
     if (someNew || someOld) {
+      for (const child of container.children) {
+        if (!child.dispatchEvent) {
+          // ignore text nodes
+          continue;
+        }
+        child.dispatchEvent(
+          new CustomEvent("resizablechange", {
+            detail: {
+              resizable: resizableDetailsIdSet.has(child.id),
+            },
+          }),
+        );
+      }
       onResizableDetailsChange?.(resizableDetailsIdSet);
     }
   };
@@ -12231,11 +12253,18 @@ const initFlexDetailsSet = (
         if (currentAllocatedSpaceMap) {
           allocatedSpaceMap = currentAllocatedSpaceMap;
           saveCurrentSizeAsRequestedSizes({ replaceExistingAttributes: true });
-          if (onRequestedSizeChange) {
-            for (const [child, allocatedSpace] of allocatedSpaceMap) {
-              const size = spaceToSize(allocatedSpace, child);
+          for (const [child, allocatedSpace] of allocatedSpaceMap) {
+            const size = spaceToSize(allocatedSpace, child);
+            if (onRequestedSizeChange) {
               onRequestedSizeChange(child, size);
             }
+            child.dispatchEvent(
+              new CustomEvent("resizeend", {
+                detail: {
+                  size,
+                },
+              }),
+            );
           }
           onMouseResizeEnd?.();
         }
