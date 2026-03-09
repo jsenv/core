@@ -1,6 +1,7 @@
 import { computed } from "@preact/signals";
 
 import { debounceSignal } from "../state/debounce_signal.js";
+import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
 import { stringifyForDisplay } from "../utils/stringify_for_display.js";
 
 /**
@@ -31,6 +32,7 @@ export const actionRunEffect = (
   deriveActionParamsFromSignals,
   { debounce } = {},
 ) => {
+  let lastTruthyParams;
   let actionParamsSignal = computed(() => {
     const params = deriveActionParamsFromSignals();
     action.debug(
@@ -39,6 +41,9 @@ export const actionRunEffect = (
     if (!params) {
       // normalize falsy values to undefined so that any falsy value ends up in the same state of "don't run the action"
       return undefined;
+    }
+    if (lastTruthyParams === undefined) {
+      lastTruthyParams = params;
     }
     return params;
   });
@@ -80,7 +85,11 @@ export const actionRunEffect = (
           actionTargetPrevious.abort("abortOnFalsyParams");
           return;
         }
-        actionTarget.rerun({ reason: "params modified" });
+        if (compareTwoJsValues(lastTruthyParams, actionTarget.params)) {
+          actionTarget.run({ reason: "params restored to last truthy value" });
+        } else {
+          actionTarget.rerun({ reason: "params modified" });
+        }
       }
     },
   });

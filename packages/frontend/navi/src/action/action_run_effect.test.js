@@ -143,7 +143,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
   test("effect returning true: run count across false→true→false→true transitions", () => {
     const enabledSignal = signal(false);
     const runCalls = [];
-    const action = createAction(async () => {
+    const action = createAction(() => {
       runCalls.push("run");
     });
     actionRunEffect(action, () => enabledSignal.value);

@@ -636,9 +636,7 @@ export const createAction = (callback, rootOptions = {}) => {
       if (!actionAbort) {
         return false;
       }
-      if (DEBUG) {
-        console.log(`"${action}": aborting (reason: ${reason})`);
-      }
+      action.debug(`"${action}".abort(${reason})`);
       actionAbort(reason);
       return true;
     };
@@ -922,7 +920,7 @@ export const createAction = (callback, rootOptions = {}) => {
             prerunProtectionRegistry.unprotect(action);
           }
           if (DEBUG) {
-            console.log(`"${action}": aborted (reason: ${abortReason})`);
+            console.log(`"${action}" aborted (reason: ${abortReason})`);
           }
         };
 

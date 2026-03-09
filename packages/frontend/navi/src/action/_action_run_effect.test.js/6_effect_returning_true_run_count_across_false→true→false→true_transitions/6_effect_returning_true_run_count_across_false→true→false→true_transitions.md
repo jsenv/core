@@ -3,7 +3,7 @@
 ```js
 const enabledSignal = signal(false);
 const runCalls = [];
-const action = createAction(async () => {
+const action = createAction(() => {
   runCalls.push("run");
 });
 actionRunEffect(action, () => enabledSignal.value);
@@ -29,7 +29,7 @@ return {
   "countAfterFalse": 0,
   "countAfterFirstTrue": 1,
   "countAfterSecondFalse": 1,
-  "countAfterSecondTrue": 2
+  "countAfterSecondTrue": 1
 }
 ```
 
