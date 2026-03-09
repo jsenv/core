@@ -1,30 +1,37 @@
+import { useState } from "preact/hooks";
+
 import { useTableCount } from "../database_manager_signals.js";
-import {
-  createExplorerGroupController,
-  ExplorerGroup,
-} from "../explorer/explorer_group.jsx";
+import { ExplorerGroup } from "../explorer/explorer_group.jsx";
+import { TABLE_GET_MANY_ACTION } from "../routes.js";
 import { TableWithPlusSvg } from "./table_icons.jsx";
 import { TableLink } from "./table_link.jsx";
-import { TABLE, useTableArray, useTableArrayInStore } from "./table_store.js";
 import {
-  tableListDetailsOnToggle,
-  tableListDetailsOpenAtStart,
-} from "./tables_details_state.js";
+  tableListHeightSignal,
+  tableListOpenSignal,
+} from "./table_list_state.js";
+import { TABLE, useTableArrayInStore } from "./table_store.js";
 
-export const tablesDetailsController = createExplorerGroupController("tables", {
-  detailsOpenAtStart: tableListDetailsOpenAtStart,
-  detailsOnToggle: tableListDetailsOnToggle,
-});
-
-export const TablesDetails = (props) => {
+export const TableListDetails = () => {
+  const [resizable, setResizable] = useState(false);
   const tableCount = useTableCount();
-  const tableArray = useTableArray();
 
   return (
     <ExplorerGroup
-      {...props}
-      controller={tablesDetailsController}
-      detailsAction={TABLE.GET_MANY}
+      id="table_list"
+      open={tableListOpenSignal.value}
+      detailsConnectedAction={TABLE_GET_MANY_ACTION}
+      detailsUIAction={(open) => {
+        tableListOpenSignal.value = open;
+      }}
+      resizable={resizable}
+      height={tableListHeightSignal.value}
+      onresizeend={(e) => {
+        const newHeight = e.detail.size;
+        tableListHeightSignal.value = newHeight;
+      }}
+      onresizablechange={(e) => {
+        setResizable(e.detail.resizable);
+      }}
       idKey="oid"
       nameKey="tablename"
       label="TABLES"
@@ -70,8 +77,6 @@ export const TablesDetails = (props) => {
           tablenames: itemNames,
         })
       }
-    >
-      {tableArray}
-    </ExplorerGroup>
+    />
   );
 };

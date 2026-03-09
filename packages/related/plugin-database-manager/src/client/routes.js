@@ -20,6 +20,10 @@ import {
   roleGroupOpenSignal,
 } from "./role/role_group/role_group_state.js";
 import { ROLE, ROLE_CAN_LOGIN, ROLE_CANNOT_LOGIN } from "./role/role_store.js";
+import {
+  tableListHeightSignal,
+  tableListOpenSignal,
+} from "./table/table_list_state.js";
 import { TABLE, TABLE_ROW } from "./table/table_store.js";
 
 setBaseUrl(window.DB_MANAGER_CONFIG.pathname);
@@ -36,6 +40,8 @@ export const HOME_ROUTE = route(`/`, {
     role_group_height: roleGroupHeightSignal,
     database_open: databaseOpenSignal,
     database_height: databaseHeightSignal,
+    table_list_open: tableListOpenSignal,
+    table_list_height: tableListHeightSignal,
   },
 });
 export const ROLE_CAN_LOGIN_GET_MANY_ACTION = routeAction(
@@ -65,6 +71,17 @@ export const DATABASE_GET_MANY_ACTION = routeAction(
   DATABASE.GET_MANY,
   () => {
     const open = databaseOpenSignal.value;
+    if (!open) {
+      return null;
+    }
+    return {};
+  },
+);
+export const TABLE_GET_MANY_ACTION = routeAction(
+  HOME_ROUTE,
+  TABLE.GET_MANY,
+  () => {
+    const open = tableListOpenSignal.value;
     if (!open) {
       return null;
     }

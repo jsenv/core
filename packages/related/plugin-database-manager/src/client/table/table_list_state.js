@@ -1,23 +1,15 @@
-import { valueInLocalStorage } from "@jsenv/navi";
+import { stateSignal } from "@jsenv/navi";
 
-const [
-  readTableListDetailsOpened,
-  storeTableListDetailsOpened,
-  eraseTableListDetailsOpened,
-] = valueInLocalStorage("table_list_details_opened", {
+export const tableListOpenSignal = stateSignal(false, {
   type: "boolean",
-  default: true,
+  id: "jsenv_db_table_list_open",
+  persist: true,
 });
-
-export const tableListDetailsOpenAtStart = readTableListDetailsOpened();
-
-export const tableListDetailsOnToggle = (detailsOpen) => {
-  if (detailsOpen) {
-    eraseTableListDetailsOpened();
-  } else {
-    storeTableListDetailsOpened(false);
-  }
-};
+export const tableListHeightSignal = stateSignal(undefined, {
+  type: "float",
+  id: "jsenv_db_table_list_height",
+  persist: true,
+});
 
 // const [readTablesDetailsOpened, storeTablesDetailsOpened] = valueInLocalStorage(
 //   "table_details_opened",
