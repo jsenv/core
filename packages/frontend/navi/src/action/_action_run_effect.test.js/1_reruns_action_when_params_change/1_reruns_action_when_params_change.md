@@ -20,6 +20,11 @@ return { runCalls };
   "runCalls": [
     {
       "params": {
+        "query": "a"
+      }
+    },
+    {
+      "params": {
         "query": "b"
       }
     }

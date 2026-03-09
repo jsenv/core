@@ -1418,7 +1418,6 @@ const createActionProxyFromSignal = (
       }
     });
   }
-
   if (runOnce) {
     onActionTargetChange((actionTarget, actionTargetPrevious) => {
       if (!actionTargetPrevious && actionTarget) {

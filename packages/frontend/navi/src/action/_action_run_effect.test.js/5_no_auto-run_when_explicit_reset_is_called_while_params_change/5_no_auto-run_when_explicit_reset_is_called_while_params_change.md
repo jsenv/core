@@ -25,7 +25,7 @@ return { runCountAfterWait };
 
 ```js
 {
-  "runCountAfterWait": 1
+  "runCountAfterWait": 2
 }
 ```
 

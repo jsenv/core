@@ -34,9 +34,9 @@ return {
 
 ```js
 {
-  "runCountBeforeExplicitRun": 0,
-  "runCountImmediatelyAfterRerun": 2,
-  "runCountAfterWait": 2,
+  "runCountBeforeExplicitRun": 1,
+  "runCountImmediatelyAfterRerun": 3,
+  "runCountAfterWait": 3,
   "lastRunParams": {
     "query": "b"
   }

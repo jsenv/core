@@ -60,6 +60,9 @@ export const actionRunEffect = (
       if (explicitRunIntent) {
         // The caller already issued an explicit run/rerun/prerun/reset/abort —
         // don't attempt to also auto-run from the params change to avoid double-runs.
+        action.debug(
+          `"${actionTarget}": explicit run intent detected -> skipping auto-run from params change`,
+        );
         return;
       }
       if (!actionTargetPrevious && actionTarget) {
@@ -89,5 +92,8 @@ export const actionRunEffect = (
       }
     },
   });
+  if (actionRunnedByThisEffect.params) {
+    actionRunnedByThisEffect.run({ reason: "initial truthy params" });
+  }
   return actionRunnedByThisEffect;
 };

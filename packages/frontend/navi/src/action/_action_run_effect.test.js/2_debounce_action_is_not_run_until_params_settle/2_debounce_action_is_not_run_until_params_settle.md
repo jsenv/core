@@ -33,9 +33,9 @@ return {
 
 ```js
 {
-  "runCountImmediately": 0,
-  "runCountBeforeDelay": 0,
-  "runCountAfterDelay": 1,
+  "runCountImmediately": 1,
+  "runCountBeforeDelay": 1,
+  "runCountAfterDelay": 2,
   "lastRunParams": {
     "query": "d"
   }
