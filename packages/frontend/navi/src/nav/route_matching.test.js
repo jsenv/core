@@ -419,7 +419,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
     }
   });
 
-  test("trailing slash matching test", () => {
+  test("root with trailing slash should match", () => {
     const HOME_ROUTE = route("/");
     const TABLE_ROUTE = route("/tables/:tablename");
     const { updateRoutes, clearRoutes } = setupRoutes([

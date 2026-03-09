@@ -1,4 +1,4 @@
-# [trailing slash matching test](../../route_matching.test.js)
+# [root with trailing slash should match](../../route_matching.test.js)
 
 ```js
 const HOME_ROUTE = route("/");
