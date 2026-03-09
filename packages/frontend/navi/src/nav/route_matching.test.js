@@ -418,4 +418,22 @@ await snapshotTests(import.meta.url, ({ test }) => {
       globalSignalRegistry.clear();
     }
   });
+
+  test("trailing slash matching test", () => {
+    const HOME_ROUTE = route("/");
+    const TABLE_ROUTE = route("/tables/:tablename");
+    const { updateRoutes, clearRoutes } = setupRoutes([
+      HOME_ROUTE,
+      TABLE_ROUTE,
+    ]);
+    try {
+      updateRoutes(`${baseUrl}/tables/a`);
+
+      const home_matching = HOME_ROUTE.matching;
+      return { home_matching };
+    } finally {
+      clearRoutes();
+      globalSignalRegistry.clear();
+    }
+  });
 });

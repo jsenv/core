@@ -9,6 +9,7 @@
 - [map isochrone tab matching](5_map_isochrone_tab_matching/5_map_isochrone_tab_matching.md)
 - [menu matching deep](6_menu_matching_deep/6_menu_matching_deep.md)
 - [trailing slash vs not trailing slash](7_trailing_slash_vs_not_trailing_slash/7_trailing_slash_vs_not_trailing_slash.md)
+- [trailing slash matching test](8_trailing_slash_matching_test/8_trailing_slash_matching_test.md)
 
 ---
 
