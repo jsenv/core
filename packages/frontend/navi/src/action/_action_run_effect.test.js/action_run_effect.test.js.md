@@ -7,6 +7,7 @@
 - [debounce: explicit rerun flushes params and runs once (no double-run)](3_debounce_explicit_rerun_flushes_params_and_runs_once_(no_double-run)/3_debounce_explicit_rerun_flushes_params_and_runs_once_(no_double-run).md)
 - [debounce: explicit rerun uses latest params, not stale ones](4_debounce_explicit_rerun_uses_latest_params__not_stale_ones/4_debounce_explicit_rerun_uses_latest_params__not_stale_ones.md)
 - [no auto-run when explicit reset is called while params change](5_no_auto-run_when_explicit_reset_is_called_while_params_change/5_no_auto-run_when_explicit_reset_is_called_while_params_change.md)
+- [effect returning true: run count across false→true→false→true transitions](6_effect_returning_true_run_count_across_false%E2%86%92true%E2%86%92false%E2%86%92true_transitions/6_effect_returning_true_run_count_across_false%E2%86%92true%E2%86%92false%E2%86%92true_transitions.md)
 
 ---
 

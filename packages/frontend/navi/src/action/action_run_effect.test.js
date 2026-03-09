@@ -139,4 +139,28 @@ await snapshotTests(import.meta.url, ({ test }) => {
 
     return { runCountAfterWait };
   });
+
+  test("effect returning true: run count across false→true→false→true transitions", () => {
+    const enabledSignal = signal(false);
+    const runCalls = [];
+    const action = createAction(async () => {
+      runCalls.push("run");
+    });
+    actionRunEffect(action, () => enabledSignal.value);
+
+    const countAfterFalse = runCalls.length;
+    enabledSignal.value = true;
+    const countAfterFirstTrue = runCalls.length;
+    enabledSignal.value = false;
+    const countAfterSecondFalse = runCalls.length;
+    enabledSignal.value = true;
+    const countAfterSecondTrue = runCalls.length;
+
+    return {
+      countAfterFalse,
+      countAfterFirstTrue,
+      countAfterSecondFalse,
+      countAfterSecondTrue,
+    };
+  });
 });
