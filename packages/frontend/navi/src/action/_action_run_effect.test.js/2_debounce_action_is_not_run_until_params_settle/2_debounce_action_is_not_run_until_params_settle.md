@@ -15,6 +15,7 @@ actionRunEffect(action, () => paramsSignal.value, {
 const runCountImmediately = runLog.length;
 // Rapid changes — only the last should be picked up
 paramsSignal.value = { query: "b" };
+await sleep(10);
 paramsSignal.value = { query: "c" };
 paramsSignal.value = { query: "d" };
 const runCountBeforeDelay = runLog.length;

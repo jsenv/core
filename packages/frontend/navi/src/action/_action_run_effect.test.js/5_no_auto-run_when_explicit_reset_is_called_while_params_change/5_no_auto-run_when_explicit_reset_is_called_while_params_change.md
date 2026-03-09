@@ -13,10 +13,8 @@ const effectAction = actionRunEffect(action, () => paramsSignal.value, {
 
 // Change params (still debouncing)
 paramsSignal.value = { query: "b" };
-
 // Explicit reset — params flush to "b" but onChange should NOT auto-run
 effectAction.reset();
-
 await sleep(debounceDelay + 20);
 const runCountAfterWait = runCalls.length;
 

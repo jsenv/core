@@ -13,9 +13,8 @@ const effectAction = actionRunEffect(action, () => paramsSignal.value, {
 
 // Mutate params without waiting for debounce
 paramsSignal.value = { query: "latest" };
-
 // Explicit rerun must use "latest", not "initial"
-effectAction.rerun();
+effectAction();
 const runParamsUsed =
   runCalls.length > 0 ? runCalls[runCalls.length - 1].params : null;
 
