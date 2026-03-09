@@ -205,7 +205,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
     return runCalls;
   });
 
-  test.ONLY("returning empty object", () => {
+  test("returning empty object", () => {
     const paramsSignal = signal();
     const runCalls = [];
     const action = createAction((p) => {
