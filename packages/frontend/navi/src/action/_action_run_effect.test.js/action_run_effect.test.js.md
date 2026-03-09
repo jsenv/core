@@ -1,12 +1,12 @@
 # [action_run_effect.test.js](../action_run_effect.test.js)
 
 
-- [runs action when params signal becomes truthy](runs_action_when_params_signal_becomes_truthy/runs_action_when_params_signal_becomes_truthy.md)
-- [reruns action when params change](reruns_action_when_params_change/reruns_action_when_params_change.md)
-- [debounce: action is not run until params settle](debounce_action_is_not_run_until_params_settle/debounce_action_is_not_run_until_params_settle.md)
-- [debounce: explicit rerun flushes params and runs once (no double-run)](debounce_explicit_rerun_flushes_params_and_runs_once_(no_double-run)/debounce_explicit_rerun_flushes_params_and_runs_once_(no_double-run).md)
-- [debounce: explicit rerun uses latest params, not stale ones](debounce_explicit_rerun_uses_latest_params__not_stale_ones/debounce_explicit_rerun_uses_latest_params__not_stale_ones.md)
-- [no auto-run when explicit reset is called while params change](no_auto-run_when_explicit_reset_is_called_while_params_change/no_auto-run_when_explicit_reset_is_called_while_params_change.md)
+- [runs action when params signal becomes truthy](0_runs_action_when_params_signal_becomes_truthy/0_runs_action_when_params_signal_becomes_truthy.md)
+- [reruns action when params change](1_reruns_action_when_params_change/1_reruns_action_when_params_change.md)
+- [debounce: action is not run until params settle](2_debounce_action_is_not_run_until_params_settle/2_debounce_action_is_not_run_until_params_settle.md)
+- [debounce: explicit rerun flushes params and runs once (no double-run)](3_debounce_explicit_rerun_flushes_params_and_runs_once_(no_double-run)/3_debounce_explicit_rerun_flushes_params_and_runs_once_(no_double-run).md)
+- [debounce: explicit rerun uses latest params, not stale ones](4_debounce_explicit_rerun_uses_latest_params__not_stale_ones/4_debounce_explicit_rerun_uses_latest_params__not_stale_ones.md)
+- [no auto-run when explicit reset is called while params change](5_no_auto-run_when_explicit_reset_is_called_while_params_change/5_no_auto-run_when_explicit_reset_is_called_while_params_change.md)
 
 ---
 

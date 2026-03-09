@@ -8,16 +8,16 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 await snapshotTests(import.meta.url, ({ test }) => {
   test("runs action when params signal becomes truthy", () => {
     const paramsSignal = signal(null);
-    const runLog = [];
+    const runCalls = [];
     const action = createAction(async (params) => {
-      runLog.push({ params });
+      runCalls.push({ params });
     });
 
     actionRunEffect(action, () => paramsSignal.value);
-    const runCountWithNullParams = runLog.length;
+    const runCountWithNullParams = runCalls.length;
 
     paramsSignal.value = { query: "hello" };
-    const runCountAfterTruthyParams = runLog.length;
+    const runCountAfterTruthyParams = runCalls.length;
 
     return { runCountWithNullParams, runCountAfterTruthyParams };
   });

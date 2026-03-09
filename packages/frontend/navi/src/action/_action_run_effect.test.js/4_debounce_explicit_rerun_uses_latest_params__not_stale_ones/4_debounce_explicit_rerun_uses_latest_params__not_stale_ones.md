@@ -8,18 +8,17 @@ const action = createAction(async (params) => {
   runLog.push({ params: { ...params } });
 });
 
-const effectAction = actionRunEffect(
-  action,
-  () => paramsSignal.value,
-  { debounce: debounceDelay },
-);
+const effectAction = actionRunEffect(action, () => paramsSignal.value, {
+  debounce: debounceDelay,
+});
 
 // Mutate params without waiting for debounce
 paramsSignal.value = { query: "latest" };
 
 // Explicit rerun must use "latest", not "initial"
 effectAction.rerun();
-const runParamsUsed = runLog.length > 0 ? runLog[runLog.length - 1].params : null;
+const runParamsUsed =
+  runLog.length > 0 ? runLog[runLog.length - 1].params : null;
 
 return { runParamsUsed };
 ```

@@ -148,9 +148,12 @@ export const snapshotTests = async (
     const scenarioDirs = [];
     const scenarioIgnoreActions = {};
     const testToExecuteArray = [];
+    let testIndex = 0;
     for (const testRegistered of testArray) {
       const { scenario, only } = testRegistered;
-      const scenarioFilename = asValidFilename(scenario);
+      let scenarioFilename = asValidFilename(scenario);
+      scenarioFilename = `${testIndex}_${scenarioFilename}`;
+      testIndex++;
       scenarioDirs.push(scenarioFilename);
       const generateScenarioOutFileUrl = (outFilename) => {
         return generateOutFileUrl(`${scenarioFilename}/${outFilename}`);

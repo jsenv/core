@@ -8,11 +8,9 @@ const action = createAction(async (params) => {
   runLog.push({ params: { ...params } });
 });
 
-const effectAction = actionRunEffect(
-  action,
-  () => paramsSignal.value,
-  { debounce: debounceDelay },
-);
+const effectAction = actionRunEffect(action, () => paramsSignal.value, {
+  debounce: debounceDelay,
+});
 
 // Change params (still debouncing)
 paramsSignal.value = { query: "b" };
@@ -28,7 +26,7 @@ return { runCountAfterWait };
 
 ```js
 {
-  "runCountAfterWait": 0
+  "runCountAfterWait": 1
 }
 ```
 
