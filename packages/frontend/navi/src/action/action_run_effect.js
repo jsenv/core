@@ -42,6 +42,13 @@ export const actionRunEffect = (
       // normalize falsy values to undefined so that any falsy value ends up in the same state of "don't run the action"
       return undefined;
     }
+    if (params && typeof params.then === "function") {
+      {
+        console.warn(
+          `actionRunEffect second arg is returning a promise. This is not supported, the function should be sync and return params to give to the action`,
+        );
+      }
+    }
     if (lastTruthyParams === undefined) {
       lastTruthyParams = params;
     }
