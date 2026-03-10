@@ -126,21 +126,20 @@ import.meta.css = /* css */ `
       height: 100%;
       padding-top: var(
         --button-padding-top,
-        var(--button-padding-y, var(--button-padding))
+        var(--button-padding-y, var(--button-padding, unset))
       );
       padding-right: var(
         --button-padding-right,
-        var(--button-padding-x, var(--button-padding))
+        var(--button-padding-x, var(--button-padding, unset))
       );
       padding-bottom: var(
         --button-padding-bottom,
-        var(--button-padding-y, var(--button-padding))
+        var(--button-padding-y, var(--button-padding, unset))
       );
       padding-left: var(
         --button-padding-left,
-        var(--button-padding-x, var(--button-padding))
+        var(--button-padding-x, var(--button-padding, unset))
       );
-      padding: var(--button-padding, unset);
       align-items: inherit;
       justify-content: inherit;
       color: var(--x-button-color);

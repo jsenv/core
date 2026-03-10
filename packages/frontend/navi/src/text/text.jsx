@@ -14,6 +14,7 @@ import { useInitialTextSelection } from "./use_initial_text_selection.jsx";
 import.meta.css = /* css */ `
   *[data-navi-space] {
     /* user-select: none; */
+    min-width: 0.2em;
   }
 
   .navi_text {
@@ -104,7 +105,10 @@ const CustomWidthSpace = ({ value }) => {
   );
 };
 
-export const applySpacingOnTextChildren = (children, spacing) => {
+export const applySpacingOnTextChildren = (
+  children,
+  spacing = REGULAR_SPACE,
+) => {
   if (spacing === "pre" || spacing === "0" || spacing === 0) {
     return children;
   }

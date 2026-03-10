@@ -17672,6 +17672,7 @@ const selectByTextStrings = (element, range, startText, endText) => {
 installImportMetaCss(import.meta);import.meta.css = /* css */`
   *[data-navi-space] {
     /* user-select: none; */
+    min-width: 0.2em;
   }
 
   .navi_text {
@@ -17765,7 +17766,7 @@ const CustomWidthSpace = ({
     children: "\u200B"
   });
 };
-const applySpacingOnTextChildren = (children, spacing) => {
+const applySpacingOnTextChildren = (children, spacing = REGULAR_SPACE) => {
   if (spacing === "pre" || spacing === "0" || spacing === 0) {
     return children;
   }
@@ -18033,6 +18034,7 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
   .navi_icon_foreground {
     position: absolute;
     inset: 0;
+    display: inline-flex;
   }
   .navi_icon_foreground > .navi_text {
     display: flex;
@@ -20070,21 +20072,20 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
       height: 100%;
       padding-top: var(
         --button-padding-top,
-        var(--button-padding-y, var(--button-padding))
+        var(--button-padding-y, var(--button-padding, unset))
       );
       padding-right: var(
         --button-padding-right,
-        var(--button-padding-x, var(--button-padding))
+        var(--button-padding-x, var(--button-padding, unset))
       );
       padding-bottom: var(
         --button-padding-bottom,
-        var(--button-padding-y, var(--button-padding))
+        var(--button-padding-y, var(--button-padding, unset))
       );
       padding-left: var(
         --button-padding-left,
-        var(--button-padding-x, var(--button-padding))
+        var(--button-padding-x, var(--button-padding, unset))
       );
-      padding: var(--button-padding, unset);
       align-items: inherit;
       justify-content: inherit;
       color: var(--x-button-color);
@@ -20650,6 +20651,7 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
       --link-text-decoration-hover: var(--link-text-decoration);
       --link-cursor: pointer;
       --link-loading-outline-size: 1px;
+      --link-color-current: var(--link-color);
     }
   }
 
@@ -21106,6 +21108,8 @@ const LinkWithAction = props => {
   });
 };
 
+const ReportSelectedOnTabContext = createContext();
+
 const RouteLink = ({
   route,
   routeParams,
@@ -21115,13 +21119,16 @@ const RouteLink = ({
   if (!route) {
     throw new Error("route prop is required");
   }
+  const url = route.buildUrl(routeParams);
+  const reportSelectedOnTab = useContext(ReportSelectedOnTabContext);
   const {
     matching
   } = useRouteStatus(route);
   const paramsAreMatching = route.matchesParams(routeParams);
-  const url = route.buildUrl(routeParams);
+  const linkMatching = matching && paramsAreMatching;
+  reportSelectedOnTab?.(linkMatching);
   return jsx(Link, {
-    matching: matching && paramsAreMatching,
+    matching: linkMatching,
     href: url,
     ...rest,
     children: children || route.buildRelativeUrl(routeParams)
@@ -21427,6 +21434,50 @@ const Tab = props => {
   });
 };
 TabList.Tab = Tab;
+const TabBasic = ({
+  children,
+  icon,
+  selected,
+  boldWhenSelected = !icon,
+  onClick,
+  ...props
+}) => {
+  const tabListIndicator = useContext(TabListIndicatorContext);
+  const tabListAlignX = useContext(TabListAlignXContext);
+  const [selectedFromChild, setSelectedFromChild] = useState(false);
+  const innerSelected = selected || selectedFromChild;
+  return jsxs(Box, {
+    role: "tab",
+    "aria-selected": innerSelected ? "true" : "false",
+    "data-interactive": onClick ? "" : undefined,
+    "data-bold-when-selected": boldWhenSelected ? "" : undefined,
+    onClick: onClick
+    // Style system
+    ,
+    baseClassName: "navi_tab",
+    styleCSSVars: TAB_STYLE_CSS_VARS,
+    pseudoClasses: TAB_PSEUDO_CLASSES,
+    pseudoElements: TAB_PSEUDO_ELEMENTS,
+    basePseudoState: {
+      ":-navi-tab-selected": innerSelected
+    },
+    selfAlignX: tabListAlignX,
+    "data-align-x": tabListAlignX,
+    ...props,
+    children: [(tabListIndicator === "start" || tabListIndicator === "end") && jsx("span", {
+      className: "navi_tab_indicator",
+      "data-position": tabListIndicator
+    }), jsx(ReportSelectedOnTabContext.Provider, {
+      value: setSelectedFromChild,
+      children: boldWhenSelected ? jsx(Text, {
+        preventBoldLayoutShift: true
+        // boldTransition
+        ,
+        children: children
+      }) : children
+    })]
+  });
+};
 const TabRoute = ({
   circle,
   route,
@@ -21443,13 +21494,7 @@ const TabRoute = ({
   alignY,
   ...props
 }) => {
-  const {
-    matching
-  } = useRouteStatus(route);
-  const paramsAreMatching = route.matchesParams(routeParams);
-  const selected = matching && paramsAreMatching;
   return jsx(TabBasic, {
-    selected: selected,
     ...props,
     circle: circle,
     padding: "0",
@@ -21473,45 +21518,6 @@ const TabRoute = ({
       alignY: alignY,
       children: children
     })
-  });
-};
-const TabBasic = ({
-  children,
-  icon,
-  selected,
-  boldWhenSelected = !icon,
-  onClick,
-  ...props
-}) => {
-  const tabListIndicator = useContext(TabListIndicatorContext);
-  const tabListAlignX = useContext(TabListAlignXContext);
-  return jsxs(Box, {
-    role: "tab",
-    "aria-selected": selected ? "true" : "false",
-    "data-interactive": onClick ? "" : undefined,
-    "data-bold-when-selected": boldWhenSelected ? "" : undefined,
-    onClick: onClick
-    // Style system
-    ,
-    baseClassName: "navi_tab",
-    styleCSSVars: TAB_STYLE_CSS_VARS,
-    pseudoClasses: TAB_PSEUDO_CLASSES,
-    pseudoElements: TAB_PSEUDO_ELEMENTS,
-    basePseudoState: {
-      ":-navi-tab-selected": selected
-    },
-    selfAlignX: tabListAlignX,
-    "data-align-x": tabListAlignX,
-    ...props,
-    children: [(tabListIndicator === "start" || tabListIndicator === "end") && jsx("span", {
-      className: "navi_tab_indicator",
-      "data-position": tabListIndicator
-    }), boldWhenSelected ? jsx(Text, {
-      preventBoldLayoutShift: true
-      // boldTransition
-      ,
-      children: children
-    }) : children]
   });
 };
 
