@@ -740,9 +740,7 @@
             </Box>
             <Box row spacing="s" wrap marginTop="s">
               <Box column spacing="xs" alignX="center">
-                <Caption style={{ fontSize: "0.8em" }}>
-                  Yellow — low fill (20%)
-                </Caption>
+                <Caption style={{ fontSize: "0.8em" }}>Low fill (20%)</Caption>
                 <Meter
                   value={20}
                   min={0}
@@ -755,9 +753,7 @@
                 />
               </Box>
               <Box column spacing="xs" alignX="center">
-                <Caption style={{ fontSize: "0.8em" }}>
-                  Yellow — high fill (80%)
-                </Caption>
+                <Caption style={{ fontSize: "0.8em" }}>High fill (80%)</Caption>
                 <Meter
                   value={80}
                   min={0}
@@ -775,7 +771,9 @@
                   value={0.3}
                   width="8em"
                   caption="30%"
-                  trackColor="#333"
+                  style={{
+                    "--track-color": "#333",
+                  }}
                   borderColor="transparent"
                 />
               </Box>
@@ -785,7 +783,9 @@
                   value={0.7}
                   width="8em"
                   caption="70%"
-                  trackColor="#333"
+                  style={{
+                    "--track-color": "#333",
+                  }}
                   borderColor="transparent"
                 />
               </Box>
