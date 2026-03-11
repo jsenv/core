@@ -17,47 +17,52 @@ import.meta.css = /* css */ `
   }
 
   .navi_meter {
-    display: inline-block;
+    position: relative;
+    display: inline-flex;
     box-sizing: border-box;
     width: var(--width);
     height: var(--height);
+    align-items: center;
     vertical-align: middle;
-    background-color: var(--track-color);
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius);
-    overflow: hidden;
 
-    .navi_meter_fill {
-      width: var(--x-fill-percent, 0%);
-      height: 100%;
-      /* subtle gloss overlay, same as native meter */
-      background-image: linear-gradient(
-        to bottom,
-        rgba(255, 255, 255, 0.25) 0%,
-        transparent 50%,
-        rgba(0, 0, 0, 0.06) 100%
-      );
-      background-color: var(--x-fill-color);
-    }
-
-    &[data-loading] {
-      background-image: linear-gradient(
-        90deg,
-        var(--track-color) 25%,
-        color-mix(in srgb, var(--track-color) 55%, white) 50%,
-        var(--track-color) 75%
-      );
-      background-size: 200% 100%;
+    .navi_meter_track {
+      position: relative;
+      width: 100%;
+      height: calc(var(--height) * 0.5);
       background-color: var(--track-color);
-      animation: navi_meter_loading 1.5s linear infinite;
+      border: 1px solid var(--border-color);
+      border-radius: var(--border-radius);
+      overflow: hidden;
 
       .navi_meter_fill {
-        display: none;
+        position: absolute;
+        left: 0;
+        width: var(--x-fill-percent, 0%);
+        height: 100%;
+        background-color: var(--x-fill-color);
       }
     }
 
     &[data-disabled] {
       opacity: 0.4;
+    }
+
+    &[data-loading] {
+      .navi_meter_track {
+        background-image: linear-gradient(
+          90deg,
+          var(--track-color) 25%,
+          color-mix(in srgb, var(--track-color) 55%, white) 50%,
+          var(--track-color) 75%
+        );
+        background-size: 200% 100%;
+        background-color: var(--track-color);
+        animation: navi_meter_loading 1.5s linear infinite;
+
+        .navi_meter_fill {
+          display: none;
+        }
+      }
     }
   }
 
@@ -137,7 +142,9 @@ export const Meter = ({
       }}
       {...props}
     >
-      <span className="navi_meter_fill" />
+      <span className="navi_meter_track">
+        <span className="navi_meter_fill" />
+      </span>
     </Box>
   );
 };
