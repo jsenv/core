@@ -1,11 +1,7 @@
-import {
-  isSizeSpacingScaleKey,
-  resolveSpacingSize,
-} from "../box/box_style_util.js";
 import { Icon } from "../graphic/icon.jsx";
 import { LoadingDots } from "../graphic/loader/loading_dots.jsx";
-import { withPropsClassName } from "../utils/with_props_class_name.js";
 import { formatNumber } from "./format_number.js";
+import { Text } from "./text.jsx";
 
 import.meta.css = /* css */ `
   @layer navi {
@@ -25,92 +21,100 @@ import.meta.css = /* css */ `
     flex-direction: column;
     align-items: flex-start;
     gap: 0.3em;
-  }
-
-  .navi_stat_label {
-    font-weight: 600;
-    font-size: 0.75em;
-    text-transform: uppercase;
     line-height: 1;
-    letter-spacing: 0.06em;
-  }
 
-  .navi_stat_body {
-    display: inline-flex;
-    flex-direction: row;
-    align-items: baseline;
-    gap: 0.15em;
-  }
+    .navi_stat_label {
+      font-weight: 600;
+      font-size: 0.75em;
+      text-transform: uppercase;
+      line-height: 1;
+      letter-spacing: 0.06em;
+    }
+    .navi_stat_body {
+      .navi_stat_value {
+        font-weight: bold;
+      }
+      .navi_stat_unit {
+        color: var(--unit-color);
+        font-weight: normal;
+        font-size: 0.7em;
+      }
+    }
 
-  .navi_stat_body[data-unit-bottom] {
-    flex-direction: column;
-    align-items: center;
-    gap: 0.1em;
-  }
+    &[data-readonly] {
+      opacity: 0.7;
+      cursor: default;
+    }
 
-  .navi_stat_value {
-    font-weight: bold;
-    line-height: 1;
-  }
+    &[data-disabled] {
+      opacity: 0.4;
+      cursor: not-allowed;
+      user-select: none;
+    }
 
-  .navi_stat_unit {
-    color: var(--unit-color);
-    font-weight: normal;
-    font-size: 0.65em;
-    line-height: 1;
-  }
-
-  .navi_stat[data-unit-bottom] .navi_stat_unit {
-    line-height: 1.2;
-  }
-
-  .navi_stat[data-read-only] {
-    opacity: 0.7;
-    cursor: default;
-  }
-
-  .navi_stat[data-disabled] {
-    opacity: 0.4;
-    cursor: not-allowed;
-    user-select: none;
+    &[data-unit-bottom] {
+      .navi_stat_body {
+        .navi_stat_unit {
+          display: inline-block;
+          width: 100%;
+          text-align: center;
+        }
+      }
+    }
   }
 `;
 
+const StatPseudoClasses = [
+  ":hover",
+  ":active",
+  ":read-only",
+  ":disabled",
+  ":-navi-loading",
+];
 export const Stat = ({
   children,
   unit,
   unitPosition = "right",
   label,
-  size = "xl",
+  size,
   lang,
   loading,
   readOnly,
   disabled,
-  className,
-  style,
   ...props
 }) => {
   const value = parseStatValue(children);
   const valueFormatted =
     typeof value === "number" ? formatNumber(value, { lang }) : value;
-  const resolvedSize = isSizeSpacingScaleKey(size)
-    ? resolveSpacingSize(size, "fontSize")
-    : size;
+  const unitBottom = unitPosition === "bottom";
+
+  let unitEl;
+  if (unit) {
+    if (unitBottom) {
+      unitEl = <span className="navi_stat_unit">{unit}</span>;
+    } else {
+      unitEl = <span className="navi_stat_unit">{unit}</span>;
+    }
+  }
 
   return (
-    <span
-      className={withPropsClassName("navi_stat", className)}
-      data-read-only={readOnly ? "" : undefined}
-      data-disabled={disabled ? "" : undefined}
-      data-loading={loading ? "" : undefined}
-      style={style}
+    <Text
+      baseClassName="navi_stat"
+      data-unit-bottom={unitBottom ? "" : undefined}
+      basePseudoState={{
+        ":read-only": readOnly,
+        ":disabled": disabled,
+        ":-navi-loading": loading,
+      }}
+      pseudoClasses={StatPseudoClasses}
+      spacing="pre"
       {...props}
     >
       {label && <span className="navi_stat_label">{label}</span>}
-      <span
+      <Text
         className="navi_stat_body"
-        data-unit-bottom={unitPosition === "bottom" ? "" : undefined}
-        style={{ fontSize: resolvedSize }}
+        size={size}
+        spacing={unitBottom ? <br /> : undefined}
       >
         <span className="navi_stat_value">
           {loading ? (
@@ -121,9 +125,9 @@ export const Stat = ({
             valueFormatted
           )}
         </span>
-        {unit && <span className="navi_stat_unit">{unit}</span>}
-      </span>
-    </span>
+        {unitEl}
+      </Text>
+    </Text>
   );
 };
 
