@@ -3,10 +3,9 @@ import { Box } from "../box/box.jsx";
 import.meta.css = /* css */ `
   @layer navi {
     .navi_meter {
-      --track-color: light-dark(#ddd, #3f3f3f);
-      --track-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.3);
-      --border-color: light-dark(rgba(0, 0, 0, 0.3), rgba(255, 255, 255, 0.15));
-      --border-radius: 3px;
+      --track-color: #efefef;
+      --border-color: #cbcbcb;
+      --border-radius: 5px;
       --height: 1em;
       --width: 5em;
 
@@ -26,7 +25,6 @@ import.meta.css = /* css */ `
     background-color: var(--track-color);
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius);
-    box-shadow: var(--track-shadow);
     overflow: hidden;
 
     .navi_meter_fill {
