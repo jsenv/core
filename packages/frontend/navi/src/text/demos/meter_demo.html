@@ -104,8 +104,8 @@
           <SemanticColorsDemo />
           <EnhancedStatesDemo />
           <ColorCustomizationDemo />
-          <CaptionDemo />
           <LabelDemo />
+          <CaptionDemo />
         </div>
       );
 
@@ -156,46 +156,6 @@
                   <div className="comparison-row">
                     <span className="comparison-label">Native</span>
                     <meter value={value} />
-                  </div>
-                </fieldset>
-              ))}
-            </Box>
-          </div>
-
-          <div className="states-section">
-            <div className="states-title">Children (texte)</div>
-            <p className="states-description">
-              Le navigateur accepte du texte enfant dans{" "}
-              <code>&lt;meter&gt;</code> comme texte de fallback (affiché
-              uniquement si l'élément n'est pas supporté). Notre composant
-              affiche ce texte <em>sur</em> le meter.
-            </p>
-            <Box column spacing="s">
-              {[
-                { value: 0.25, label: "value=0.25" },
-                { value: 0.5, label: "value=0.5" },
-                { value: 0.75, label: "value=0.75" },
-              ].map(({ value, label }) => (
-                <fieldset key={label}>
-                  <legend>{label} with children</legend>
-                  <div className="comparison-row">
-                    <span className="comparison-label">Navi</span>
-                    <Meter value={value} width="8em">
-                      {Math.round(value * 100)}%
-                    </Meter>
-                  </div>
-                  <div className="comparison-row">
-                    <span className="comparison-label">Native</span>
-                    <meter value={value}>{Math.round(value * 100)}%</meter>
-                    <Caption
-                      style={{
-                        fontStyle: "italic",
-                        color: "#888",
-                        fontSize: "0.8em",
-                      }}
-                    >
-                      (fallback, hidden when supported)
-                    </Caption>
                   </div>
                 </fieldset>
               ))}
@@ -601,140 +561,6 @@
       );
 
       /* ------------------------------------------------------------------ */
-      /* Caption — text overlaid on the meter fill                           */
-      /* ------------------------------------------------------------------ */
-      const CaptionDemo = () => (
-        <div className="demo-section">
-          <h2>Caption</h2>
-
-          <div className="states-section">
-            <div className="states-title">
-              percentage — auto-computed percentage
-            </div>
-            <p className="states-description">
-              <code>percentage</code> automatically displays the fill percentage
-              on top of the meter. Text color is chosen for contrast against the
-              fill color.
-            </p>
-            <Box row spacing="s">
-              {[0, 0.25, 0.5, 0.75, 1].map((v) => (
-                <div className="comparison-row" key={v}>
-                  <span className="comparison-label">
-                    {Math.round(v * 100)}%
-                  </span>
-                  <Meter value={v} percentage width="8em" />
-                </div>
-              ))}
-            </Box>
-          </div>
-
-          <div className="states-section">
-            <div className="states-title">
-              caption — custom text, various fill levels
-            </div>
-            <p className="states-description">
-              The caption text adapts its color (light/dark) based on the
-              current fill color. A text-shadow in the opposite color keeps it
-              readable when spanning the filled and empty zones.
-            </p>
-            <Box row spacing="s">
-              <fieldset>
-                <legend>Green fill — text mostly on fill</legend>
-                <div className="comparison-row">
-                  <Meter value={0.8} width="10em">
-                    80 / 10
-                  </Meter>
-                </div>
-              </fieldset>
-              <fieldset>
-                <legend>Green fill — text spans boundary (50%)</legend>
-                <div className="comparison-row">
-                  <Meter value={0.5} width="10em">
-                    50 / 100
-                  </Meter>
-                </div>
-              </fieldset>
-              <fieldset>
-                <legend>Red fill (subsuboptimum) — low fill (15%)</legend>
-                <div className="comparison-row">
-                  <Meter
-                    value={15}
-                    min={0}
-                    max={100}
-                    low={25}
-                    high={75}
-                    optimum={10}
-                    width="10em"
-                  >
-                    15 / 100
-                  </Meter>
-                </div>
-              </fieldset>
-              <fieldset>
-                <legend>Yellow fill (suboptimum)</legend>
-                <div className="comparison-row">
-                  <Meter
-                    value={50}
-                    min={0}
-                    max={100}
-                    low={25}
-                    high={75}
-                    optimum={10}
-                    width="10em"
-                  >
-                    50 / 100
-                  </Meter>
-                </div>
-              </fieldset>
-              <fieldset>
-                <legend>
-                  Custom blue fill — caption + fillOnly + borderless
-                </legend>
-                <div className="comparison-row">
-                  <Meter
-                    value={0.6}
-                    fillOnly
-                    borderless
-                    width="10em"
-                    style={{ "--fill-color-optimum": "#1976d2" }}
-                  >
-                    60%
-                  </Meter>
-                </div>
-              </fieldset>
-            </Box>
-          </div>
-
-          <div className="states-section">
-            <div className="states-title">fillOnly + borderless</div>
-            <p className="states-description">
-              <code>fillOnly</code> hides the empty track,{" "}
-              <code>borderless</code> removes the border. Useful for compact
-              inline displays.
-            </p>
-            <Box row spacing="m" alignY="center">
-              <Box column spacing="xs" alignX="center">
-                <Caption>default</Caption>
-                <Meter value={0.6} percentage width="6em" />
-              </Box>
-              <Box column spacing="xs" alignX="center">
-                <Caption>fillOnly</Caption>
-                <Meter value={0.6} percentage fillOnly width="6em" />
-              </Box>
-              <Box column spacing="xs" alignX="center">
-                <Caption>borderless</Caption>
-                <Meter value={0.6} percentage borderless width="6em" />
-              </Box>
-              <Box column spacing="xs" alignX="center">
-                <Caption>fillOnly + borderless</Caption>
-                <Meter value={0.6} percentage fillOnly borderless width="6em" />
-              </Box>
-            </Box>
-          </div>
-        </div>
-      );
-
-      /* ------------------------------------------------------------------ */
       /* Label association                                                    */
       /* ------------------------------------------------------------------ */
       const LabelDemo = () => (
@@ -791,6 +617,207 @@
               </Label>
             </Box>
           </Box>
+        </div>
+      );
+
+      /* ------------------------------------------------------------------ */
+      /* Caption — text overlaid on the meter fill                           */
+      /* ------------------------------------------------------------------ */
+      const CaptionDemo = () => (
+        <div className="demo-section">
+          <h2>Caption</h2>
+
+          <div className="states-section">
+            <div className="states-title">
+              percentage — auto-computed percentage
+            </div>
+            <p className="states-description">
+              <code>percentage</code> automatically displays the fill percentage
+              on top of the meter. Text color is chosen for contrast against the
+              fill color.
+            </p>
+            <Box row spacing="s">
+              {[0, 0.25, 0.5, 0.75, 1].map((v) => (
+                <div className="comparison-row" key={v}>
+                  <span className="comparison-label">
+                    {Math.round(v * 100)}%
+                  </span>
+                  <Meter value={v} percentage width="8em" />
+                </div>
+              ))}
+            </Box>
+          </div>
+
+          <div className="states-section">
+            <div className="states-title">
+              caption — custom text, various fill levels
+            </div>
+            <p className="states-description">
+              The caption text adapts its color (light/dark) based on the
+              current fill color. A text-shadow in the opposite color keeps it
+              readable when spanning the filled and empty zones.
+            </p>
+            <Box row spacing="s">
+              <fieldset>
+                <legend>Green fill — text mostly on fill</legend>
+                <div className="comparison-row">
+                  <Meter value={0.8} width="10em" caption="80 / 100" />
+                </div>
+              </fieldset>
+              <fieldset>
+                <legend>Green fill — text spans boundary (50%)</legend>
+                <div className="comparison-row">
+                  <Meter value={0.5} width="10em" caption="50 / 100" />
+                </div>
+              </fieldset>
+              <fieldset>
+                <legend>Red fill (subsuboptimum) — low fill (15%)</legend>
+                <div className="comparison-row">
+                  <Meter
+                    value={15}
+                    min={0}
+                    max={100}
+                    low={25}
+                    high={75}
+                    optimum={10}
+                    width="10em"
+                    caption="15 / 100"
+                  />
+                </div>
+              </fieldset>
+              <fieldset>
+                <legend>Yellow fill (suboptimum)</legend>
+                <div className="comparison-row">
+                  <Meter
+                    value={50}
+                    min={0}
+                    max={100}
+                    low={25}
+                    high={75}
+                    optimum={10}
+                    width="10em"
+                    caption="50 / 100"
+                  />
+                </div>
+              </fieldset>
+              <fieldset>
+                <legend>
+                  Custom blue fill — caption + fillOnly + borderless
+                </legend>
+                <div className="comparison-row">
+                  <Meter
+                    value={0.6}
+                    fillOnly
+                    borderless
+                    width="10em"
+                    caption="60%"
+                    style={{ "--fill-color-optimum": "#1976d2" }}
+                  />
+                </div>
+              </fieldset>
+            </Box>
+          </div>
+
+          <div className="states-section">
+            <div className="states-title">
+              Caption color based on fill ratio
+            </div>
+            <p className="states-description">
+              When fill ratio is below 0.5, the caption center sits on the empty
+              track — text color is chosen for contrast against the{" "}
+              <strong>track</strong> color. When fill ratio is 0.5 or above, it
+              contrasts against the <strong>fill</strong> color instead.
+            </p>
+            <Box row spacing="s" wrap>
+              {[0.05, 0.15, 0.3, 0.45, 0.5, 0.6, 0.75, 0.9].map((v) => (
+                <Box key={v} column spacing="xs" alignX="center">
+                  <Meter value={v} percentage width="7em" />
+                  <Caption style={{ fontSize: "0.75em", color: "#888" }}>
+                    {Math.round(v * 100)}%
+                  </Caption>
+                </Box>
+              ))}
+            </Box>
+            <Box row spacing="s" wrap marginTop="s">
+              <Box column spacing="xs" alignX="center">
+                <Caption style={{ fontSize: "0.8em" }}>
+                  Yellow — low fill (20%)
+                </Caption>
+                <Meter
+                  value={20}
+                  min={0}
+                  max={100}
+                  low={25}
+                  high={75}
+                  optimum={10}
+                  width="8em"
+                  caption="20 / 100"
+                />
+              </Box>
+              <Box column spacing="xs" alignX="center">
+                <Caption style={{ fontSize: "0.8em" }}>
+                  Yellow — high fill (80%)
+                </Caption>
+                <Meter
+                  value={80}
+                  min={0}
+                  max={100}
+                  low={25}
+                  high={75}
+                  optimum={10}
+                  width="8em"
+                  caption="80 / 100"
+                />
+              </Box>
+              <Box column spacing="xs" alignX="center">
+                <Caption style={{ fontSize: "0.8em" }}>Dark track</Caption>
+                <Meter
+                  value={0.3}
+                  width="8em"
+                  caption="30%"
+                  trackColor="#333"
+                  borderColor="transparent"
+                />
+              </Box>
+              <Box column spacing="xs" alignX="center">
+                <Caption style={{ fontSize: "0.8em" }}>Dark track</Caption>
+                <Meter
+                  value={0.7}
+                  width="8em"
+                  caption="70%"
+                  trackColor="#333"
+                  borderColor="transparent"
+                />
+              </Box>
+            </Box>
+          </div>
+
+          <div className="states-section">
+            <div className="states-title">fillOnly + borderless</div>
+            <p className="states-description">
+              <code>fillOnly</code> hides the empty track,{" "}
+              <code>borderless</code> removes the border. Useful for compact
+              inline displays.
+            </p>
+            <Box row spacing="m" alignY="center">
+              <Box column spacing="xs" alignX="center">
+                <Caption>default</Caption>
+                <Meter value={0.6} percentage width="6em" />
+              </Box>
+              <Box column spacing="xs" alignX="center">
+                <Caption>fillOnly</Caption>
+                <Meter value={0.6} percentage fillOnly width="6em" />
+              </Box>
+              <Box column spacing="xs" alignX="center">
+                <Caption>borderless</Caption>
+                <Meter value={0.6} percentage borderless width="6em" />
+              </Box>
+              <Box column spacing="xs" alignX="center">
+                <Caption>fillOnly + borderless</Caption>
+                <Meter value={0.6} percentage fillOnly borderless width="6em" />
+              </Box>
+            </Box>
+          </div>
         </div>
       );
 

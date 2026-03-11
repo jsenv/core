@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/navi",
-  "version": "0.18.6",
+  "version": "0.18.7",
   "description": "Library of components including navigation to create frontend applications",
   "repository": {
     "type": "git",

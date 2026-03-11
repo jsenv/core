@@ -29701,7 +29701,7 @@ const Meter = ({
   loading,
   readOnly,
   disabled,
-  children,
+  caption,
   percentage,
   fillOnly,
   fillRound = fillOnly,
@@ -29711,6 +29711,7 @@ const Meter = ({
 }) => {
   const clampedValue = value < min ? min : value > max ? max : value;
   const fillRatio = max === min ? 0 : (clampedValue - min) / (max - min);
+  let children = caption;
   if (children === undefined && percentage) {
     children = jsx(Stat, {
       unit: "%",
@@ -29731,22 +29732,24 @@ const Meter = ({
     if (!trackContainer) {
       return;
     }
-    const fillEl = trackContainer.querySelector(".navi_meter_fill");
-    if (!fillEl) {
+    // When fill covers less than half the track, the text center sits on the
+    // empty track — use the track color for contrast. Otherwise use fill color.
+    const bgEl = fillRatio >= 0.5 ? trackContainer.querySelector(".navi_meter_fill") : trackContainer.querySelector(".navi_meter_track");
+    if (!bgEl) {
       return;
     }
-    const fillBgColor = getComputedStyle(fillEl).backgroundColor;
-    const textColor = pickLightOrDark(fillBgColor, "white", "black", fillEl);
+    const bgColor = getComputedStyle(bgEl).backgroundColor;
+    const textColor = pickLightOrDark(bgColor, "white", "black", bgEl);
     const shadowColor = textColor === "white" ? "black" : "white";
     trackContainer.style.setProperty("--x-caption-color", textColor);
     trackContainer.style.setProperty("--x-caption-shadow-color", shadowColor);
-  }, [children, level]);
+  }, [children, level, fillRatio]);
   return jsx(Box, {
     role: "meter",
     "aria-valuenow": clampedValue,
     "aria-valuemin": min,
     "aria-valuemax": max,
-    "aria-label": typeof children === "string" ? children : undefined,
+    "aria-label": typeof caption === "string" ? caption : undefined,
     baseClassName: "navi_meter",
     styleCSSVars: MeterStyleCSSVars,
     basePseudoState: {
