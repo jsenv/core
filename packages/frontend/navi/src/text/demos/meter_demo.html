@@ -749,13 +749,27 @@
             <Box row spacing="m" alignY="center">
               <Label box alignY="center" spacing="s">
                 Femmes
-                <Meter value={0.62} percentage />
+                <Meter
+                  value={0.62}
+                  percentage
+                  borderless
+                  fillRound
+                  borderRadius="m"
+                  height="20"
+                />
               </Label>
             </Box>
             <Box row spacing="m" alignY="center">
               <Label box alignY="center" spacing="s">
                 Hommes
-                <Meter value={0.38} percentage />
+                <Meter
+                  value={0.38}
+                  percentage
+                  borderless
+                  fillRound
+                  borderRadius="m"
+                  height="20"
+                />
               </Label>
             </Box>
             <Box row spacing="m" alignY="center">
@@ -770,6 +784,9 @@
                   optimum={20}
                   percentage
                   borderless
+                  fillOnly
+                  borderRadius="m"
+                  height="20"
                 />
               </Label>
             </Box>

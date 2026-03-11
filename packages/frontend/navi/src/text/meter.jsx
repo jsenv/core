@@ -96,6 +96,12 @@ import.meta.css = /* css */ `
         border-color: transparent;
       }
     }
+    &[data-fill-round] {
+      .navi_meter_fill {
+        width: calc(var(--x-fill-ratio) * 100%);
+        clip-path: unset;
+      }
+    }
     /* borderless: remove border */
     &[data-borderless] {
       .navi_meter_track {
@@ -135,6 +141,7 @@ export const Meter = ({
   children,
   percentage,
   fillOnly,
+  fillRound = fillOnly,
   borderless,
   style,
   ...props
@@ -192,6 +199,7 @@ export const Meter = ({
       pseudoClasses={MeterPseudoClasses}
       data-has-caption={children !== undefined ? "" : undefined}
       data-fill-only={fillOnly ? "" : undefined}
+      data-fill-round={fillRound ? "" : undefined}
       data-borderless={borderless ? "" : undefined}
       style={{
         "--x-fill-ratio": fillRatio,
