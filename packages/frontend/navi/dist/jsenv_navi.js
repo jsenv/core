@@ -5374,6 +5374,11 @@ const POSITION_PROPS = {
   // only the first item will be positioned as expected because subsequent items
   // will be positioned relative to the previous item's margins, not the container edge.
   selfAlignX: (value, { parentBoxFlow }) => {
+    const inGridFlow = parentBoxFlow === "grid";
+    if (inGridFlow) {
+      return { justifySelf: value };
+    }
+
     const inRowFlow = parentBoxFlow === "row" || parentBoxFlow === "inline-row";
 
     if (value === "start") {
@@ -5400,6 +5405,11 @@ const POSITION_PROPS = {
     return undefined;
   },
   selfAlignY: (value, { parentBoxFlow }) => {
+    const inGridFlow = parentBoxFlow === "grid";
+    if (inGridFlow) {
+      return { alignSelf: value };
+    }
+
     const inColumnFlow =
       parentBoxFlow === "column" || parentBoxFlow === "inline-column";
 
