@@ -152,7 +152,7 @@ export const Meter = ({
   let children = caption;
   if (children === undefined && percentage) {
     children = (
-      <Stat unit="%" unitRatio="1">
+      <Stat unit="%" unitSizeRatio="1">
         {Math.round(fillRatio * 100)}
       </Stat>
     );

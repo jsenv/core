@@ -793,6 +793,35 @@
           </div>
 
           <div className="states-section">
+            <div className="states-title">
+              Custom darkred fill — caption at 20%, 50%, 80%
+            </div>
+            <p className="states-description">
+              Custom fill color (<code>--fill-color-optimum: darkred</code>).
+              Tests caption contrast at low, mid, and high fill levels.
+            </p>
+            <Box row spacing="s">
+              {[
+                { value: 0.2, label: "20%" },
+                { value: 0.5, label: "50%" },
+                { value: 0.8, label: "80%" },
+              ].map(({ value, label }) => (
+                <fieldset key={label}>
+                  <legend>{label}</legend>
+                  <div className="comparison-row">
+                    <Meter
+                      value={value}
+                      width="10em"
+                      caption={label}
+                      style={{ "--fill-color-optimum": "darkred" }}
+                    />
+                  </div>
+                </fieldset>
+              ))}
+            </Box>
+          </div>
+
+          <div className="states-section">
             <div className="states-title">fillOnly + borderless</div>
             <p className="states-description">
               <code>fillOnly</code> hides the empty track,{" "}

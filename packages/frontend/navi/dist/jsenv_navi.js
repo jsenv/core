@@ -29460,7 +29460,7 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
   @layer navi {
     .navi_stat {
       --unit-color: color-mix(in srgb, currentColor 50%, white);
-      --unit-ratio: 0.7;
+      --unit-size-ratio: 0.7;
     }
   }
 
@@ -29485,7 +29485,7 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
       .navi_stat_unit {
         color: var(--unit-color);
         font-weight: normal;
-        font-size: calc(var(--unit-ratio) * 1em);
+        font-size: calc(var(--unit-size-ratio) * 1em);
       }
     }
 
@@ -29521,7 +29521,7 @@ const Stat = ({
   children,
   unit,
   unitPosition = "right",
-  unitRatio,
+  unitSizeRatio,
   label,
   size,
   lang,
@@ -29564,8 +29564,8 @@ const Stat = ({
       }), unit && jsx("span", {
         className: "navi_stat_unit",
         style: {
-          ...(unitRatio === undefined ? {} : {
-            "--unit-ratio": unitRatio
+          ...(unitSizeRatio === undefined ? {} : {
+            "--unit-size-ratio": unitSizeRatio
           })
         },
         children: unit
@@ -29715,7 +29715,7 @@ const Meter = ({
   if (children === undefined && percentage) {
     children = jsx(Stat, {
       unit: "%",
-      unitRatio: "1",
+      unitSizeRatio: "1",
       children: Math.round(fillRatio * 100)
     });
   }
