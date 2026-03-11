@@ -4,6 +4,7 @@ import { LoaderBackground } from "../graphic/loader/loader_background.jsx";
 import.meta.css = /* css */ `
   @layer navi {
     .navi_meter {
+      --loader-color: var(--navi-loader-color);
       --track-color: #efefef;
       --border-color: #cbcbcb;
       --border-width: 1px;
@@ -66,9 +67,6 @@ const MeterStyleCSSVars = {
   borderRadius: "--border-radius",
   height: "--height",
   width: "--width",
-  fillColorOptimum: "--fill-color-optimum",
-  fillColorSuboptimum: "--fill-color-suboptimum",
-  fillColorSubsuboptimum: "--fill-color-subsuboptimum",
 };
 const MeterPseudoClasses = [
   ":hover",
@@ -96,7 +94,6 @@ export const Meter = ({
   const clampedValue = value < min ? min : value > max ? max : value;
   const fillRatio = max === min ? 0 : (clampedValue - min) / (max - min);
   const level = getMeterLevel(clampedValue, min, max, low, high, optimum);
-
   const fillColorVar =
     level === "optimum"
       ? "var(--fill-color-optimum)"
@@ -128,7 +125,7 @@ export const Meter = ({
       <span className="navi_meter_track_container">
         <LoaderBackground
           loading={loading}
-          color="var(--fill-color-optimum)"
+          color="var(--loader-color)"
           inset={-1}
         />
         <span className="navi_meter_track" />

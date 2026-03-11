@@ -448,7 +448,12 @@
               <fieldset>
                 <legend>Couleur optimum personnalisée (bleu)</legend>
                 <div className="comparison-row">
-                  <Meter value={0.65} fillColorOptimum="#1976d2" />
+                  <Meter
+                    value={0.65}
+                    style={{
+                      "--fill-color-optimum": "#1976d2",
+                    }}
+                  />
                 </div>
               </fieldset>
 
@@ -458,8 +463,10 @@
                   <Meter
                     value={0.5}
                     trackColor="#333"
-                    fillColorOptimum="#ff6f00"
                     borderColor="transparent"
+                    style={{
+                      "--fill-color-optimum": "#ff6f00",
+                    }}
                   />
                 </div>
               </fieldset>
@@ -480,9 +487,11 @@
                     low={25}
                     high={75}
                     optimum={50}
-                    fillColorOptimum="violet"
-                    fillColorSuboptimum="blue"
-                    fillColorSubsuboptimum="pink"
+                    style={{
+                      "--fill-color-optimum": "violet",
+                      "--fill-color-suboptimum": "blue",
+                      "--fill-color-subsuboptimum": "pink",
+                    }}
                   />
                 </div>
                 <div className="comparison-row">
@@ -494,9 +503,11 @@
                     low={25}
                     high={75}
                     optimum={50}
-                    fillColorOptimum="violet"
-                    fillColorSuboptimum="blue"
-                    fillColorSubsuboptimum="pink"
+                    style={{
+                      "--fill-color-optimum": "violet",
+                      "--fill-color-suboptimum": "blue",
+                      "--fill-color-subsuboptimum": "pink",
+                    }}
                   />
                 </div>
                 <div className="comparison-row">
@@ -508,9 +519,11 @@
                     low={25}
                     high={75}
                     optimum={10}
-                    fillColorOptimum="violet"
-                    fillColorSuboptimum="blue"
-                    fillColorSubsuboptimum="pink"
+                    style={{
+                      "--fill-color-optimum": "violet",
+                      "--fill-color-suboptimum": "blue",
+                      "--fill-color-subsuboptimum": "pink",
+                    }}
                   />
                 </div>
               </fieldset>
