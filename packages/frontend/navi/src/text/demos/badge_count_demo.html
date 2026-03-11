@@ -43,6 +43,7 @@
             <IntegrationComposantsSection />
             <BadgePositioningSection />
             <NoWrapSection />
+            <BigNumbersSection />
           </div>
         );
       };
@@ -285,6 +286,7 @@
             <Link href="#nowrap">
               8. Association texte + badge (pas de coupure)
             </Link>
+            <Link href="#big-numbers">9. Grands nombres</Link>
           </Box>
         </Box>
       );
@@ -1135,6 +1137,142 @@
                 <Text noWrap>
                   <BadgeCount background="#673ab7" color="white">
                     15
+                  </BadgeCount>
+                  messages
+                </Text>
+              </Paragraph>
+            </div>
+          </Box>
+        </Box>
+      );
+
+      const BigNumbersSection = () => (
+        <Box as="section" marginBottom="xl">
+          <Title as="h2">
+            <Link anchor href="#big-numbers" />
+            Grands nombres
+          </Title>
+          <Paragraph>
+            Cette section montre comment les grands nombres sont affichés dans
+            un badge. Pour l'instant aucune mise en forme particulière n'est
+            appliquée, mais à l'avenir le composant utilisera{" "}
+            <code>Intl.NumberFormat</code> pour formater les nombres selon la
+            langue : <code>1 000</code> en français, <code>1,000</code> en
+            anglais. La langue sera détectée automatiquement depuis le navigateur
+            et pourra être contrôlée via une prop <code>lang</code> sur le badge.
+          </Paragraph>
+
+          <Title as="h3">Affichage actuel (pas de formatage)</Title>
+          <Box row spacing="s" alignX="start">
+            <Box padding="md" background="#f8f9fa" borderRadius="md">
+              <Text>
+                Items
+                <BadgeCount background="#2196f3" color="white">
+                  1000
+                </BadgeCount>
+              </Text>
+            </Box>
+
+            <Box padding="md" background="#f8f9fa" borderRadius="md">
+              <Text>
+                Items
+                <BadgeCount background="#2196f3" color="white">
+                  10000
+                </BadgeCount>
+              </Text>
+            </Box>
+
+            <Box padding="md" background="#f8f9fa" borderRadius="md">
+              <Text>
+                Items
+                <BadgeCount background="#2196f3" color="white">
+                  1000000
+                </BadgeCount>
+              </Text>
+            </Box>
+          </Box>
+
+          <Title as="h3">Avec max (limitation)</Title>
+          <Paragraph>
+            On peut toujours combiner avec <code>max</code> pour limiter
+            l'affichage :
+          </Paragraph>
+          <Box row spacing="s" alignX="start">
+            <Box padding="md" background="#f8f9fa" borderRadius="md">
+              <Text>
+                Items
+                <BadgeCount background="#ff9800" color="white" max={999}>
+                  1000
+                </BadgeCount>
+              </Text>
+            </Box>
+
+            <Box padding="md" background="#f8f9fa" borderRadius="md">
+              <Text>
+                Items
+                <BadgeCount background="#ff9800" color="white" max={9999}>
+                  10000
+                </BadgeCount>
+              </Text>
+            </Box>
+
+            <Box padding="md" background="#f8f9fa" borderRadius="md">
+              <Text>
+                Items
+                <BadgeCount background="#ff9800" color="white" max={999999}>
+                  1000000
+                </BadgeCount>
+              </Text>
+            </Box>
+          </Box>
+
+          <Title as="h3">noWrap avec nombres formatés (futur)</Title>
+          <Paragraph>
+            Lorsque le formatage sera activé, <code>1000</code> sera rendu{" "}
+            <code>1 000</code> (fr) ou <code>1,000</code> (en). L'espace
+            insécable introduit par <code>Intl.NumberFormat</code> peut
+            provoquer un retour à la ligne au milieu du nombre si le badge
+            se trouve en bordure d'un conteneur étroit. Il faudra donc
+            utiliser <code>noWrap</code> sur le badge pour garder le nombre
+            sur une seule ligne.
+          </Paragraph>
+          <Box row spacing="lg" alignX="start">
+            <div>
+              <Caption>Sans noWrap — le nombre peut se couper</Caption>
+              <Paragraph
+                overflowEllipsis
+                style={{
+                  width: "110px",
+                  border: "1px solid #ddd",
+                  padding: "8px",
+                  backgroundColor: "#fff3f3",
+                }}
+              >
+                <Text>
+                  Vous avez
+                  <BadgeCount background="#f44336" color="white">
+                    1 000
+                  </BadgeCount>
+                  messages
+                </Text>
+              </Paragraph>
+            </div>
+
+            <div>
+              <Caption>Avec noWrap — le nombre reste entier</Caption>
+              <Paragraph
+                overflowEllipsis
+                style={{
+                  width: "110px",
+                  border: "1px solid #ddd",
+                  padding: "8px",
+                  backgroundColor: "#e8f5e8",
+                }}
+              >
+                Vous avez
+                <Text noWrap>
+                  <BadgeCount background="#4caf50" color="white">
+                    1 000
                   </BadgeCount>
                   messages
                 </Text>
