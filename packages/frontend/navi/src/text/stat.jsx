@@ -6,13 +6,8 @@ import { Text } from "./text.jsx";
 import.meta.css = /* css */ `
   @layer navi {
     .navi_stat {
-      --unit-color: #6b7280;
-    }
-
-    @media (prefers-color-scheme: dark) {
-      .navi_stat {
-        --unit-color: rgb(129, 134, 140);
-      }
+      --unit-color: color-mix(in srgb, currentColor 50%, white);
+      --unit-ratio: 0.7;
     }
   }
 
@@ -83,14 +78,19 @@ export const Stat = ({
   label,
   size,
   lang,
+  integer,
   loading,
   readOnly,
   disabled,
   ...props
 }) => {
   const value = parseStatValue(children);
+  const valueRounded =
+    integer && typeof value === "number" ? Math.round(value) : value;
   const valueFormatted =
-    typeof value === "number" ? formatNumber(value, { lang }) : value;
+    typeof valueRounded === "number"
+      ? formatNumber(valueRounded, { lang })
+      : valueRounded;
   const unitBottom = unitPosition === "bottom";
 
   return (
@@ -128,7 +128,9 @@ export const Stat = ({
 };
 
 const parseStatValue = (children) => {
-  if (typeof children !== "string") return children;
+  if (typeof children !== "string") {
+    return children;
+  }
   const parsed = Number(children);
   return Number.isNaN(parsed) ? children : parsed;
 };

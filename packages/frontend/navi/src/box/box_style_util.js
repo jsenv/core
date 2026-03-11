@@ -67,6 +67,7 @@ const FLOW_PROPS = {
   box: () => {},
   row: () => {},
   column: () => {},
+  grid: () => {},
 };
 const OUTER_SPACING_PROPS = {
   margin: PASS_THROUGH,
@@ -390,6 +391,22 @@ const CONTENT_PROPS = {
     ) {
       return {
         gap: resolveSpacingSize(value, "gap"),
+      };
+    }
+    return undefined;
+  },
+  spacingX: (value, { boxFlow }) => {
+    if (boxFlow === "grid") {
+      return {
+        columnGap: resolveSpacingSize(value, "columnGap"),
+      };
+    }
+    return undefined;
+  },
+  spacingY: (value, { boxFlow }) => {
+    if (boxFlow === "grid") {
+      return {
+        rowGap: resolveSpacingSize(value, "rowGap"),
       };
     }
     return undefined;

@@ -7,6 +7,7 @@ import {
   reportReadOnlyToLabel,
 } from "../field/label.jsx";
 import { LoaderBackground } from "../graphic/loader/loader_background.jsx";
+import { Stat } from "./stat.jsx";
 
 import.meta.css = /* css */ `
   @layer navi {
@@ -149,7 +150,7 @@ export const Meter = ({
   const clampedValue = value < min ? min : value > max ? max : value;
   const fillRatio = max === min ? 0 : (clampedValue - min) / (max - min);
   if (children === undefined && percentage) {
-    children = `${Math.round(fillRatio * 100)}%`;
+    children = <Stat unit="%">{Math.round(fillRatio * 100)}</Stat>;
   }
   const level = getMeterLevel(clampedValue, min, max, low, high, optimum);
   const fillColorVar =

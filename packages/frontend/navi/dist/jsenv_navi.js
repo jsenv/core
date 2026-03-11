@@ -667,6 +667,13 @@ const actionRunEffect = (
       // normalize falsy values to undefined so that any falsy value ends up in the same state of "don't run the action"
       return undefined;
     }
+    if (params && typeof params.then === "function") {
+      {
+        console.warn(
+          `actionRunEffect second arg is returning a promise. This is not supported, the function should be sync and return params to give to the action`,
+        );
+      }
+    }
     if (lastTruthyParams === undefined) {
       lastTruthyParams = params;
     }
@@ -5248,6 +5255,7 @@ const FLOW_PROPS = {
   box: () => {},
   row: () => {},
   column: () => {},
+  grid: () => {},
 };
 const OUTER_SPACING_PROPS = {
   margin: PASS_THROUGH,
@@ -5571,6 +5579,22 @@ const CONTENT_PROPS = {
     ) {
       return {
         gap: resolveSpacingSize(value, "gap"),
+      };
+    }
+    return undefined;
+  },
+  spacingX: (value, { boxFlow }) => {
+    if (boxFlow === "grid") {
+      return {
+        columnGap: resolveSpacingSize(value, "columnGap"),
+      };
+    }
+    return undefined;
+  },
+  spacingY: (value, { boxFlow }) => {
+    if (boxFlow === "grid") {
+      return {
+        rowGap: resolveSpacingSize(value, "rowGap"),
       };
     }
     return undefined;
@@ -6407,6 +6431,9 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
   [data-flow-inline][data-flow-column] {
     display: inline-flex;
   }
+  [data-flow-grid] {
+    display: grid;
+  }
 `;
 const PSEUDO_CLASSES_DEFAULT = [];
 const PSEUDO_ELEMENTS_DEFAULT = [];
@@ -6452,7 +6479,8 @@ const Box = props => {
     box,
     inline,
     row,
-    column
+    column,
+    grid
   } = rest;
   if (box === "auto" || inline || defaultDisplay === "inline") {
     if (rest.width !== undefined || rest.height !== undefined) {
@@ -6463,7 +6491,7 @@ const Box = props => {
     if (inline === undefined) {
       inline = true;
     }
-    if (column === undefined && !row) {
+    if (column === undefined && !row && !grid) {
       column = true;
     }
   }
@@ -6480,6 +6508,8 @@ const Box = props => {
     boxFlow = "row";
   } else if (column) {
     boxFlow = "column";
+  } else if (grid) {
+    boxFlow = "grid";
   } else {
     boxFlow = defaultDisplay;
   }
@@ -6779,6 +6809,7 @@ const Box = props => {
     "data-flow-inline": inline ? "" : undefined,
     "data-flow-row": row ? "" : undefined,
     "data-flow-column": column ? "" : undefined,
+    "data-flow-grid": boxFlow === "grid" ? "" : undefined,
     "data-visual-selector": visualSelector,
     ...selfForwardedProps,
     children: jsx(BoxFlowContext.Provider, {
@@ -12173,6 +12204,11 @@ const applyRouting = (
     reason,
   },
 ) => {
+  if (!updateRoutes) {
+    // .init() not called yet
+    // likely because code does not uses routing at all
+    return {};
+  }
   const {
     loadSet,
     reloadSet,
@@ -22031,18 +22067,33 @@ const useConstraintValidityState = (ref) => {
 installImportMetaCss(import.meta);import.meta.css = /* css */`
   @layer navi {
     label {
-      cursor: pointer;
-    }
+      &[data-interactive] {
+        cursor: pointer;
+      }
 
-    label[data-readonly],
-    label[data-disabled] {
-      color: rgba(0, 0, 0, 0.5);
-      cursor: default;
+      &[data-read-only],
+      &[data-disabled] {
+        color: rgba(0, 0, 0, 0.5);
+        cursor: default;
+      }
     }
   }
 `;
 const ReportReadOnlyOnLabelContext = createContext();
 const ReportDisabledOnLabelContext = createContext();
+const ReportInteractiveOnLabelContext = createContext();
+const reportReadOnlyToLabel = value => {
+  const reportReadOnly = useContext(ReportReadOnlyOnLabelContext);
+  reportReadOnly?.(value);
+};
+const reportInteractiveToLabel = value => {
+  const reportInteractive = useContext(ReportInteractiveOnLabelContext);
+  reportInteractive?.(value);
+};
+const reportDisabledToLabel = value => {
+  const reportDisabled = useContext(ReportDisabledOnLabelContext);
+  reportDisabled?.(value);
+};
 const LabelPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading"];
 const Label = props => {
   const {
@@ -22051,6 +22102,7 @@ const Label = props => {
     children,
     ...rest
   } = props;
+  const [interactive, setInteractive] = useState(false);
   const [inputReadOnly, setInputReadOnly] = useState(false);
   const innerReadOnly = readOnly || inputReadOnly;
   const [inputDisabled, setInputDisabled] = useState(false);
@@ -22063,11 +22115,15 @@ const Label = props => {
       ":read-only": innerReadOnly,
       ":disabled": innerDisabled
     },
-    children: jsx(ReportReadOnlyOnLabelContext.Provider, {
-      value: setInputReadOnly,
-      children: jsx(ReportDisabledOnLabelContext.Provider, {
-        value: setInputDisabled,
-        children: children
+    "data-interactive": interactive ? "" : undefined,
+    children: jsx(ReportInteractiveOnLabelContext.Provider, {
+      value: setInteractive,
+      children: jsx(ReportReadOnlyOnLabelContext.Provider, {
+        value: setInputReadOnly,
+        children: jsx(ReportDisabledOnLabelContext.Provider, {
+          value: setInputDisabled,
+          children: children
+        })
       })
     })
   });
@@ -22479,8 +22535,6 @@ const InputCheckboxBasic = props => {
   const loadingElement = useContext(LoadingElementContext);
   const uiStateController = useContext(UIStateControllerContext);
   const uiState = useContext(UIStateContext);
-  const reportReadOnlyOnLabel = useContext(ReportReadOnlyOnLabelContext);
-  const reportDisabledOnLabel = useContext(ReportDisabledOnLabelContext);
   const {
     /* eslint-disable no-unused-vars */
     type,
@@ -22509,8 +22563,9 @@ const InputCheckboxBasic = props => {
   const innerRequired = required || contextRequired;
   const innerLoading = loading || contextLoading && loadingElement === ref.current;
   const innerReadOnly = readOnly || contextReadOnly || innerLoading || uiStateController.readOnly;
-  reportReadOnlyOnLabel?.(innerReadOnly);
-  reportDisabledOnLabel?.(innerDisabled);
+  reportReadOnlyToLabel(innerReadOnly);
+  reportDisabledToLabel(innerDisabled);
+  reportInteractiveToLabel(true);
   useAutoFocus(ref, autoFocus);
   const remainingProps = useConstraints(ref, rest);
   const checked = Boolean(uiState);
@@ -23204,8 +23259,6 @@ const InputRadioBasic = props => {
   const contextLoadingElement = useContext(LoadingElementContext);
   const uiStateController = useContext(UIStateControllerContext);
   const uiState = useContext(UIStateContext);
-  const reportReadOnlyOnLabel = useContext(ReportReadOnlyOnLabelContext);
-  const reportDisabledOnLabel = useContext(ReportDisabledOnLabelContext);
   const {
     /* eslint-disable no-unused-vars */
     type,
@@ -23231,8 +23284,9 @@ const InputRadioBasic = props => {
   const innerRequired = required || contextRequired;
   const innerLoading = loading || contextLoading && contextLoadingElement === ref.current;
   const innerReadOnly = readOnly || contextReadOnly || innerLoading || uiStateController.readOnly;
-  reportReadOnlyOnLabel?.(innerReadOnly);
-  reportDisabledOnLabel?.(innerDisabled);
+  reportReadOnlyToLabel(innerReadOnly);
+  reportDisabledToLabel(innerDisabled);
+  reportInteractiveToLabel(true);
   useAutoFocus(ref, autoFocus);
   const remainingProps = useConstraints(ref, rest);
   const checked = Boolean(uiState);
@@ -23624,7 +23678,6 @@ const InputRangeBasic = props => {
   const contextDisabled = useContext(DisabledContext);
   const contextLoading = useContext(LoadingContext);
   const contextLoadingElement = useContext(LoadingElementContext);
-  const reportReadOnlyOnLabel = useContext(ReportReadOnlyOnLabelContext);
   const uiStateController = useContext(UIStateControllerContext);
   const uiState = useContext(UIStateContext);
   const {
@@ -23644,7 +23697,9 @@ const InputRangeBasic = props => {
   const innerReadOnly = readOnly || contextReadOnly || innerLoading || uiStateController.readOnly;
   const innerDisabled = disabled || contextDisabled;
   // infom any <label> parent of our readOnly state
-  reportReadOnlyOnLabel?.(innerReadOnly);
+  reportReadOnlyToLabel(innerReadOnly);
+  reportDisabledToLabel(innerDisabled);
+  reportInteractiveToLabel(true);
   useAutoFocus(ref, autoFocus, {
     autoFocusVisible,
     autoSelect
@@ -24123,7 +24178,6 @@ const InputTextualBasic = props => {
   const contextDisabled = useContext(DisabledContext);
   const contextLoading = useContext(LoadingContext);
   const contextLoadingElement = useContext(LoadingElementContext);
-  const reportReadOnlyOnLabel = useContext(ReportReadOnlyOnLabelContext);
   const uiStateController = useContext(UIStateControllerContext);
   const uiState = useContext(UIStateContext);
   const {
@@ -24145,8 +24199,10 @@ const InputTextualBasic = props => {
   const innerLoading = loading || contextLoading && contextLoadingElement === ref.current;
   const innerReadOnly = readOnly || contextReadOnly || innerLoading || uiStateController.readOnly;
   const innerDisabled = disabled || contextDisabled;
-  // infom any <label> parent of our readOnly state
-  reportReadOnlyOnLabel?.(innerReadOnly);
+  // infom any <label> parent of our readOnly state + that we are interactive
+  reportReadOnlyToLabel(innerReadOnly);
+  reportDisabledToLabel(innerDisabled);
+  reportInteractiveToLabel(true);
   useAutoFocus(ref, autoFocus, {
     autoFocusVisible,
     autoSelect
@@ -28824,6 +28880,10 @@ const LoadingDots = ({
   });
 };
 
+const formatNumber = (value, { lang } = {}) => {
+  return new Intl.NumberFormat(lang).format(value);
+};
+
 const CSS_VAR_NAME = "--x-color-contrasting";
 
 const useContrastingColor = (ref, backgroundElementSelector) => {
@@ -28953,12 +29013,21 @@ const BadgeCount = ({
   // so that visually the interface do not suddently switch from circle to ellipse depending on the count
   circle,
   max = circle ? MAX_FOR_CIRCLE : Infinity,
+  integer,
+  lang,
   ...props
 }) => {
   const defaultRef = useRef();
   const ref = props.ref || defaultRef;
   useContrastingColor(ref, ".navi_badge_count_visual");
-  const valueRequested = typeof children === "string" ? parseInt(children, 10) : children;
+  let valueRequested = (() => {
+    if (typeof children !== "string") return children;
+    const parsed = Number(children);
+    return Number.isNaN(parsed) ? children : parsed;
+  })();
+  if (integer && typeof valueRequested === "number") {
+    valueRequested = Math.round(valueRequested);
+  }
   const valueDisplayed = applyMaxToValue(max, valueRequested);
   const hasOverflow = valueDisplayed !== valueRequested;
   const valueCharCount = String(valueDisplayed).length;
@@ -28975,11 +29044,14 @@ const BadgeCount = ({
       children: [valueDisplayed, hasOverflow && maxElement]
     });
   }
+  const valueFormatted = typeof valueDisplayed === "number" ? formatNumber(valueDisplayed, {
+    lang
+  }) : valueDisplayed;
   return jsxs(BadgeCountEllipse, {
     ...props,
     ref: ref,
     hasOverflow: hasOverflow,
-    children: [valueDisplayed, hasOverflow && maxElement]
+    children: [valueFormatted, hasOverflow && maxElement]
   });
 };
 const applyMaxToValue = (max, value) => {
@@ -29374,6 +29446,226 @@ const CodeBox = ({
   });
 };
 
+installImportMetaCss(import.meta);import.meta.css = /* css */`
+  @layer navi {
+    .navi_meter {
+      --loader-color: var(--navi-loader-color);
+      --track-color: #efefef;
+      --border-color: #cbcbcb;
+      --border-width: 1px;
+      --border-radius: 5px;
+      --height: 1em;
+      --width: 5em;
+
+      /* Semantic fill colors, matching native meter on Chrome/macOS */
+      --fill-color-optimum: light-dark(#0f7c0f, #4caf50);
+      --fill-color-suboptimum: light-dark(#fdb900, #ffc107);
+      --fill-color-subsuboptimum: light-dark(#d83b01, #f44336);
+    }
+  }
+
+  .navi_meter {
+    position: relative;
+    display: inline-flex;
+    box-sizing: border-box;
+    width: var(--width);
+    height: var(--height);
+    align-items: center;
+    vertical-align: middle;
+
+    .navi_meter_track_container {
+      position: relative;
+      width: 100%;
+      height: calc(var(--height) * 0.5);
+      border-radius: var(--border-radius);
+
+      .navi_meter_track {
+        position: absolute;
+        inset: 0;
+        background-color: var(--track-color);
+        border: var(--border-width) solid var(--border-color);
+        border-radius: inherit;
+      }
+
+      .navi_meter_fill {
+        position: absolute;
+        inset: 0;
+        background-clip: content-box;
+        background-color: var(--x-fill-color);
+        border-width: var(--border-width);
+        border-style: solid;
+        border-color: transparent;
+        border-radius: inherit;
+        clip-path: inset(0 calc((1 - var(--x-fill-ratio, 0)) * 100%) 0 0);
+      }
+
+      .navi_meter_caption {
+        position: absolute;
+        inset: 0;
+        z-index: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--x-caption-color, white);
+        font-size: calc(var(--height) * 0.55);
+        text-shadow:
+          0 0 4px var(--x-caption-shadow-color, black),
+          0 0 2px var(--x-caption-shadow-color, black);
+        white-space: nowrap;
+        pointer-events: none;
+        user-select: none;
+      }
+    }
+
+    &[data-disabled] {
+      opacity: 0.4;
+    }
+
+    /* When caption is shown, the track takes the full height */
+    &[data-has-caption] {
+      .navi_meter_track_container {
+        height: var(--height);
+      }
+    }
+    /* fillOnly: hide the empty track background */
+    &[data-fill-only] {
+      .navi_meter_track {
+        background-color: transparent;
+        border-color: transparent;
+      }
+    }
+    &[data-fill-round] {
+      .navi_meter_fill {
+        width: calc(var(--x-fill-ratio) * 100%);
+        clip-path: unset;
+      }
+    }
+    /* borderless: remove border */
+    &[data-borderless] {
+      .navi_meter_track {
+        border-color: transparent;
+      }
+    }
+  }
+`;
+const MeterStyleCSSVars = {
+  trackColor: "--track-color",
+  borderColor: "--border-color",
+  borderRadius: "--border-radius",
+  height: "--height",
+  width: "--width"
+};
+const MeterPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading"];
+const Meter = ({
+  value = 0,
+  min = 0,
+  max = 1,
+  low,
+  high,
+  optimum,
+  loading,
+  readOnly,
+  disabled,
+  children,
+  percentage,
+  fillOnly,
+  fillRound = fillOnly,
+  borderless,
+  style,
+  ...props
+}) => {
+  const clampedValue = value < min ? min : value > max ? max : value;
+  const fillRatio = max === min ? 0 : (clampedValue - min) / (max - min);
+  if (children === undefined && percentage) {
+    children = `${Math.round(fillRatio * 100)}%`;
+  }
+  const level = getMeterLevel(clampedValue, min, max, low, high, optimum);
+  const fillColorVar = level === "optimum" ? "var(--fill-color-optimum)" : level === "suboptimum" ? "var(--fill-color-suboptimum)" : "var(--fill-color-subsuboptimum)";
+  reportDisabledToLabel(disabled);
+  reportReadOnlyToLabel(readOnly);
+  const trackContainerRef = useRef();
+  useLayoutEffect(() => {
+    if (!children) {
+      return;
+    }
+    const trackContainer = trackContainerRef.current;
+    if (!trackContainer) {
+      return;
+    }
+    const fillEl = trackContainer.querySelector(".navi_meter_fill");
+    if (!fillEl) {
+      return;
+    }
+    const fillBgColor = getComputedStyle(fillEl).backgroundColor;
+    const textColor = pickLightOrDark(fillBgColor, "white", "black", fillEl);
+    const shadowColor = textColor === "white" ? "black" : "white";
+    trackContainer.style.setProperty("--x-caption-color", textColor);
+    trackContainer.style.setProperty("--x-caption-shadow-color", shadowColor);
+  }, [children, level]);
+  return jsx(Box, {
+    role: "meter",
+    "aria-valuenow": clampedValue,
+    "aria-valuemin": min,
+    "aria-valuemax": max,
+    "aria-label": typeof children === "string" ? children : undefined,
+    baseClassName: "navi_meter",
+    styleCSSVars: MeterStyleCSSVars,
+    basePseudoState: {
+      ":read-only": readOnly,
+      ":disabled": disabled,
+      ":-navi-loading": loading
+    },
+    pseudoClasses: MeterPseudoClasses,
+    "data-has-caption": children !== undefined ? "" : undefined,
+    "data-fill-only": fillOnly ? "" : undefined,
+    "data-fill-round": fillRound ? "" : undefined,
+    "data-borderless": borderless ? "" : undefined,
+    style: {
+      "--x-fill-ratio": fillRatio,
+      "--x-fill-color": fillColorVar,
+      ...style
+    },
+    ...props,
+    children: jsxs("span", {
+      className: "navi_meter_track_container",
+      ref: trackContainerRef,
+      children: [jsx(LoaderBackground, {
+        loading: loading,
+        color: "var(--loader-color)",
+        inset: -1
+      }), jsx("span", {
+        className: "navi_meter_track"
+      }), jsx("span", {
+        className: "navi_meter_fill"
+      }), children && jsx("span", {
+        className: "navi_meter_caption",
+        "aria-hidden": "true",
+        children: children
+      })]
+    })
+  });
+};
+const getMeterLevel = (value, min, max, low, high, optimum) => {
+  // Without low/high thresholds the whole range is one region → always optimum
+  if (low === undefined && high === undefined) {
+    return "optimum";
+  }
+  const effectiveLow = low !== undefined ? low : min;
+  const effectiveHigh = high !== undefined ? high : max;
+  const effectiveOptimum = optimum !== undefined ? optimum : (min + max) / 2;
+  const getRegion = v => {
+    if (v < effectiveLow) return 1; // below-low region
+    if (v > effectiveHigh) return 3; // above-high region
+    return 2; // middle region
+  };
+  const optimumRegion = getRegion(effectiveOptimum);
+  const valueRegion = getRegion(value);
+  const distance = Math.abs(optimumRegion - valueRegion);
+  if (distance === 0) return "optimum";
+  if (distance === 1) return "suboptimum";
+  return "subsuboptimum";
+};
+
 const Paragraph = props => {
   return jsx(Text, {
     marginTop: "md",
@@ -29381,6 +29673,126 @@ const Paragraph = props => {
     as: "p",
     ...props
   });
+};
+
+installImportMetaCss(import.meta);import.meta.css = /* css */`
+  @layer navi {
+    .navi_stat {
+      --unit-color: #6b7280;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .navi_stat {
+        --unit-color: rgb(129, 134, 140);
+      }
+    }
+  }
+
+  .navi_stat {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.3em;
+    line-height: 1;
+
+    .navi_stat_label {
+      font-weight: 600;
+      font-size: 0.75em;
+      text-transform: uppercase;
+      line-height: 1;
+      letter-spacing: 0.06em;
+    }
+    .navi_stat_body {
+      .navi_stat_value {
+        font-weight: bold;
+      }
+      .navi_stat_unit {
+        color: var(--unit-color);
+        font-weight: normal;
+        font-size: 0.7em;
+      }
+    }
+
+    &[data-readonly] {
+      opacity: 0.7;
+      cursor: default;
+    }
+
+    &[data-disabled] {
+      opacity: 0.4;
+      cursor: not-allowed;
+      user-select: none;
+    }
+
+    &[data-unit-bottom] {
+      .navi_stat_value {
+        display: inline-block;
+        width: 100%;
+        text-align: center;
+      }
+      .navi_stat_body {
+        .navi_stat_unit {
+          display: inline-block;
+          width: 100%;
+          text-align: center;
+        }
+      }
+    }
+  }
+`;
+const StatPseudoClasses = [":hover", ":active", ":read-only", ":disabled", ":-navi-loading"];
+const Stat = ({
+  children,
+  unit,
+  unitPosition = "right",
+  label,
+  size,
+  lang,
+  loading,
+  readOnly,
+  disabled,
+  ...props
+}) => {
+  const value = parseStatValue(children);
+  const valueFormatted = typeof value === "number" ? formatNumber(value, {
+    lang
+  }) : value;
+  const unitBottom = unitPosition === "bottom";
+  return jsxs(Text, {
+    baseClassName: "navi_stat",
+    "data-unit-bottom": unitBottom ? "" : undefined,
+    basePseudoState: {
+      ":read-only": readOnly,
+      ":disabled": disabled,
+      ":-navi-loading": loading
+    },
+    pseudoClasses: StatPseudoClasses,
+    spacing: "pre",
+    ...props,
+    children: [label && jsx("span", {
+      className: "navi_stat_label",
+      children: label
+    }), jsxs(Text, {
+      className: "navi_stat_body",
+      size: size,
+      spacing: unitBottom ? jsx("br", {}) : undefined,
+      children: [jsx("span", {
+        className: "navi_stat_value",
+        children: loading ? jsx(Icon, {
+          flowInline: true,
+          children: jsx(LoadingDots, {})
+        }) : valueFormatted
+      }), unit && jsx("span", {
+        className: "navi_stat_unit",
+        children: unit
+      })]
+    })]
+  });
+};
+const parseStatValue = children => {
+  if (typeof children !== "string") return children;
+  const parsed = Number(children);
+  return Number.isNaN(parsed) ? children : parsed;
 };
 
 const Image = props => {
@@ -29797,5 +30209,5 @@ const UserSvg = () => jsx("svg", {
   })
 });
 
-export { ActionRenderer, ActiveKeyboardShortcuts, Address, BadgeCount, Box, Button, ButtonCopyToClipboard, Caption, CheckSvg, Checkbox, CheckboxList, Code, Col, Colgroup, ConstructionSvg, Details, DialogLayout, Editable, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Form, Group, HeartSvg, HomeSvg, Icon, Image, Input, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, MessageBox, Paragraph, Radio, RadioList, Route, RouteLink, Routes, RowNumberCol, RowNumberTableCell, SINGLE_SPACE_CONSTRAINT, SVGMaskOverlay, SearchSvg, Select, SelectionContext, Separator, SettingsSvg, StarSvg, SummaryMarker, Svg, Tab, TabList, Table, TableCell, Tbody, Text, Thead, Title, Tr, UITransition, UserSvg, ViewportLayout, actionIntegratedVia, actionRunEffect, addCustomMessage, compareTwoJsValues, createAction, createAvailableConstraint, createRequestCanceller, createSelectionKeyboardShortcuts, enableDebugActions, enableDebugOnDocumentLoading, forwardActionRequested, installCustomConstraintValidation, isCellSelected, isColumnSelected, isRowSelected, localStorageSignal, navBack, navForward, navTo, openCallout, rawUrlPart, reload, removeCustomMessage, requestAction, rerunActions, resource, route, routeAction, setBaseUrl, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, updateActions, useActionData, useActionStatus, useArraySignalMembership, useCalloutClose, useCancelPrevious, useCellsAndColumns, useConstraintValidityState, useDependenciesDiff, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useMatchingRouteInfo, useNavState$1 as useNavState, useRouteStatus, useRunOnMount, useSelectableElement, useSelectionController, useSignalSync, useStateArray, useTitleLevel, useUrlSearchParam, valueInLocalStorage };
+export { ActionRenderer, ActiveKeyboardShortcuts, Address, BadgeCount, Box, Button, ButtonCopyToClipboard, Caption, CheckSvg, Checkbox, CheckboxList, Code, Col, Colgroup, ConstructionSvg, Details, DialogLayout, Editable, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Form, Group, HeartSvg, HomeSvg, Icon, Image, Input, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, MessageBox, Meter, Paragraph, Radio, RadioList, Route, RouteLink, Routes, RowNumberCol, RowNumberTableCell, SINGLE_SPACE_CONSTRAINT, SVGMaskOverlay, SearchSvg, Select, SelectionContext, Separator, SettingsSvg, StarSvg, Stat, SummaryMarker, Svg, Tab, TabList, Table, TableCell, Tbody, Text, Thead, Title, Tr, UITransition, UserSvg, ViewportLayout, actionIntegratedVia, actionRunEffect, addCustomMessage, compareTwoJsValues, createAction, createAvailableConstraint, createRequestCanceller, createSelectionKeyboardShortcuts, enableDebugActions, enableDebugOnDocumentLoading, forwardActionRequested, installCustomConstraintValidation, isCellSelected, isColumnSelected, isRowSelected, localStorageSignal, navBack, navForward, navTo, openCallout, rawUrlPart, reload, removeCustomMessage, requestAction, rerunActions, resource, route, routeAction, setBaseUrl, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, updateActions, useActionData, useActionStatus, useArraySignalMembership, useCalloutClose, useCancelPrevious, useCellsAndColumns, useConstraintValidityState, useDependenciesDiff, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useMatchingRouteInfo, useNavState$1 as useNavState, useRouteStatus, useRunOnMount, useSelectableElement, useSelectionController, useSignalSync, useStateArray, useTitleLevel, useUrlSearchParam, valueInLocalStorage };
 //# sourceMappingURL=jsenv_navi.js.map

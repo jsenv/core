@@ -81,6 +81,9 @@ import.meta.css = /* css */ `
   [data-flow-inline][data-flow-column] {
     display: inline-flex;
   }
+  [data-flow-grid] {
+    display: grid;
+  }
 `;
 
 const PSEUDO_CLASSES_DEFAULT = [];
@@ -126,7 +129,7 @@ export const Box = (props) => {
   const TagName = as;
 
   const defaultDisplay = getDefaultDisplay(TagName);
-  let { box, inline, row, column } = rest;
+  let { box, inline, row, column, grid } = rest;
   if (box === "auto" || inline || defaultDisplay === "inline") {
     if (rest.width !== undefined || rest.height !== undefined) {
       box = true;
@@ -136,7 +139,7 @@ export const Box = (props) => {
     if (inline === undefined) {
       inline = true;
     }
-    if (column === undefined && !row) {
+    if (column === undefined && !row && !grid) {
       column = true;
     }
   }
@@ -154,6 +157,8 @@ export const Box = (props) => {
     boxFlow = "row";
   } else if (column) {
     boxFlow = "column";
+  } else if (grid) {
+    boxFlow = "grid";
   } else {
     boxFlow = defaultDisplay;
   }
@@ -539,6 +544,7 @@ export const Box = (props) => {
       data-flow-inline={inline ? "" : undefined}
       data-flow-row={row ? "" : undefined}
       data-flow-column={column ? "" : undefined}
+      data-flow-grid={boxFlow === "grid" ? "" : undefined}
       data-visual-selector={visualSelector}
       {...selfForwardedProps}
     >
