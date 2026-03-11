@@ -96,7 +96,7 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState } from "preact/hooks";
-      import { Box, Caption, Meter } from "@jsenv/navi";
+      import { Box, Caption, Label, Meter } from "@jsenv/navi";
 
       const App = () => (
         <div>
@@ -104,6 +104,8 @@
           <SemanticColorsDemo />
           <EnhancedStatesDemo />
           <ColorCustomizationDemo />
+          <CaptionDemo />
+          <LabelDemo />
         </div>
       );
 
@@ -555,6 +557,177 @@
               </Box>
             </Box>
           </div>
+        </div>
+      );
+
+      /* ------------------------------------------------------------------ */
+      /* Caption — text overlaid on the meter fill                           */
+      /* ------------------------------------------------------------------ */
+      const CaptionDemo = () => (
+        <div className="demo-section">
+          <h2>Caption</h2>
+
+          <div className="states-section">
+            <div className="states-title">
+              percentage — auto-computed percentage
+            </div>
+            <p className="states-description">
+              <code>percentage</code> automatically displays the fill percentage
+              on top of the meter. Text color is chosen for contrast against the
+              fill color.
+            </p>
+            <Box row spacing="s">
+              {[0, 0.25, 0.5, 0.75, 1].map((v) => (
+                <div className="comparison-row" key={v}>
+                  <span className="comparison-label">
+                    {Math.round(v * 100)}%
+                  </span>
+                  <Meter value={v} percentage width="8em" />
+                </div>
+              ))}
+            </Box>
+          </div>
+
+          <div className="states-section">
+            <div className="states-title">
+              caption — custom text, various fill levels
+            </div>
+            <p className="states-description">
+              The caption text adapts its color (light/dark) based on the
+              current fill color. A text-shadow in the opposite color keeps it
+              readable when spanning the filled and empty zones.
+            </p>
+            <Box row spacing="s">
+              <fieldset>
+                <legend>Green fill — text mostly on fill</legend>
+                <div className="comparison-row">
+                  <Meter value={0.8} caption="80 / 100" width="10em" />
+                </div>
+              </fieldset>
+              <fieldset>
+                <legend>Green fill — text spans boundary (50%)</legend>
+                <div className="comparison-row">
+                  <Meter value={0.5} caption="50 / 100" width="10em" />
+                </div>
+              </fieldset>
+              <fieldset>
+                <legend>Red fill (subsuboptimum) — low fill (15%)</legend>
+                <div className="comparison-row">
+                  <Meter
+                    value={15}
+                    min={0}
+                    max={100}
+                    low={25}
+                    high={75}
+                    optimum={10}
+                    caption="15 / 100"
+                    width="10em"
+                  />
+                </div>
+              </fieldset>
+              <fieldset>
+                <legend>Yellow fill (suboptimum)</legend>
+                <div className="comparison-row">
+                  <Meter
+                    value={50}
+                    min={0}
+                    max={100}
+                    low={25}
+                    high={75}
+                    optimum={10}
+                    caption="50 / 100"
+                    width="10em"
+                  />
+                </div>
+              </fieldset>
+              <fieldset>
+                <legend>
+                  Custom blue fill — caption + fillOnly + borderless
+                </legend>
+                <div className="comparison-row">
+                  <Meter
+                    value={0.6}
+                    caption="60%"
+                    fillOnly
+                    borderless
+                    width="10em"
+                    style={{ "--fill-color-optimum": "#1976d2" }}
+                  />
+                </div>
+              </fieldset>
+            </Box>
+          </div>
+
+          <div className="states-section">
+            <div className="states-title">fillOnly + borderless</div>
+            <p className="states-description">
+              <code>fillOnly</code> hides the empty track,{" "}
+              <code>borderless</code> removes the border. Useful for compact
+              inline displays.
+            </p>
+            <Box row spacing="m" alignY="center">
+              <Box column spacing="xs" alignX="center">
+                <Caption>default</Caption>
+                <Meter value={0.6} percentage width="6em" />
+              </Box>
+              <Box column spacing="xs" alignX="center">
+                <Caption>fillOnly</Caption>
+                <Meter value={0.6} percentage fillOnly width="6em" />
+              </Box>
+              <Box column spacing="xs" alignX="center">
+                <Caption>borderless</Caption>
+                <Meter value={0.6} percentage borderless width="6em" />
+              </Box>
+              <Box column spacing="xs" alignX="center">
+                <Caption>fillOnly + borderless</Caption>
+                <Meter value={0.6} percentage fillOnly borderless width="6em" />
+              </Box>
+            </Box>
+          </div>
+        </div>
+      );
+
+      /* ------------------------------------------------------------------ */
+      /* Label association                                                    */
+      /* ------------------------------------------------------------------ */
+      const LabelDemo = () => (
+        <div className="demo-section">
+          <h2>Association avec un label</h2>
+          <p className="states-description">
+            Un <code>&lt;Label&gt;</code> peut wraper le Meter. Le clic sur le
+            label met le focus sur le meter, et les lecteurs d'écran associent
+            automatiquement le texte au meter.
+          </p>
+
+          <Box column spacing="m">
+            <Box row spacing="m" alignY="center">
+              <Label>
+                Femmes
+                <Meter value={0.62} percentage width="8em" />
+              </Label>
+            </Box>
+            <Box row spacing="m" alignY="center">
+              <Label>
+                Hommes
+                <Meter value={0.38} percentage width="8em" />
+              </Label>
+            </Box>
+            <Box row spacing="m" alignY="center">
+              <Label>
+                CPU
+                <Meter
+                  value={85}
+                  min={0}
+                  max={100}
+                  low={50}
+                  high={80}
+                  optimum={20}
+                  percentage
+                  width="8em"
+                />
+              </Label>
+            </Box>
+          </Box>
         </div>
       );
 

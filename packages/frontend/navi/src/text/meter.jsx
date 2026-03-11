@@ -125,7 +125,8 @@ export const Meter = ({
   loading,
   readOnly,
   disabled,
-  caption,
+  children,
+  percentage,
   fillOnly,
   borderless,
   style,
@@ -133,6 +134,12 @@ export const Meter = ({
 }) => {
   const clampedValue = value < min ? min : value > max ? max : value;
   const fillRatio = max === min ? 0 : (clampedValue - min) / (max - min);
+  const resolvedCaption =
+    children !== undefined
+      ? children
+      : percentage
+        ? `${Math.round(fillRatio * 100)}%`
+        : undefined;
   const level = getMeterLevel(clampedValue, min, max, low, high, optimum);
   const fillColorVar =
     level === "optimum"
@@ -143,7 +150,7 @@ export const Meter = ({
 
   const trackContainerRef = useRef();
   useLayoutEffect(() => {
-    if (caption === undefined) return;
+    if (resolvedCaption === undefined) return;
     const trackContainer = trackContainerRef.current;
     if (!trackContainer) return;
     const fillEl = trackContainer.querySelector(".navi_meter_fill");
@@ -153,7 +160,7 @@ export const Meter = ({
     const shadowColor = textColor === "white" ? "black" : "white";
     trackContainer.style.setProperty("--x-caption-color", textColor);
     trackContainer.style.setProperty("--x-caption-shadow-color", shadowColor);
-  }, [caption, level]);
+  }, [resolvedCaption, level]);
 
   return (
     <Box
@@ -161,6 +168,9 @@ export const Meter = ({
       aria-valuenow={clampedValue}
       aria-valuemin={min}
       aria-valuemax={max}
+      aria-label={
+        typeof resolvedCaption === "string" ? resolvedCaption : undefined
+      }
       baseClassName="navi_meter"
       styleCSSVars={MeterStyleCSSVars}
       basePseudoState={{
@@ -169,7 +179,7 @@ export const Meter = ({
         ":-navi-loading": loading,
       }}
       pseudoClasses={MeterPseudoClasses}
-      data-has-caption={caption !== undefined ? "" : undefined}
+      data-has-caption={resolvedCaption !== undefined ? "" : undefined}
       data-fill-only={fillOnly ? "" : undefined}
       data-borderless={borderless ? "" : undefined}
       style={{
@@ -187,9 +197,9 @@ export const Meter = ({
         />
         <span className="navi_meter_track" />
         <span className="navi_meter_fill" />
-        {caption !== undefined && (
+        {resolvedCaption !== undefined && (
           <span className="navi_meter_caption" aria-hidden="true">
-            {caption}
+            {resolvedCaption}
           </span>
         )}
       </span>
