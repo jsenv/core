@@ -51,9 +51,9 @@ import.meta.css = /* css */ `
       .navi_meter_track {
         .navi_meter_fill {
           width: 35%;
-          background-color: var(--fill-color-optimum);
           background-image: none;
-          animation: navi_meter_loading 1.5s ease-in-out infinite;
+          background-color: var(--fill-color-optimum);
+          animation: navi_meter_loading 2.5s ease-in-out infinite;
         }
       }
     }
@@ -63,7 +63,7 @@ import.meta.css = /* css */ `
     0% {
       transform: translateX(-150%);
     }
-    65% {
+    70% {
       transform: translateX(320%);
     }
     100% {
