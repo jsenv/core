@@ -29448,6 +29448,131 @@ const CodeBox = ({
 
 installImportMetaCss(import.meta);import.meta.css = /* css */`
   @layer navi {
+    .navi_stat {
+      --unit-color: color-mix(in srgb, currentColor 50%, white);
+      --unit-ratio: 0.7;
+    }
+  }
+
+  .navi_stat {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.3em;
+    line-height: 1;
+
+    .navi_stat_label {
+      font-weight: 600;
+      font-size: 0.75em;
+      text-transform: uppercase;
+      line-height: 1;
+      letter-spacing: 0.06em;
+    }
+    .navi_stat_body {
+      .navi_stat_value {
+        font-weight: bold;
+      }
+      .navi_stat_unit {
+        color: var(--unit-color);
+        font-weight: normal;
+        font-size: calc(var(--unit-ratio) * 1em);
+      }
+    }
+
+    &[data-readonly] {
+      opacity: 0.7;
+      cursor: default;
+    }
+
+    &[data-disabled] {
+      opacity: 0.4;
+      cursor: not-allowed;
+      user-select: none;
+    }
+
+    &[data-unit-bottom] {
+      .navi_stat_value {
+        display: inline-block;
+        width: 100%;
+        text-align: center;
+      }
+      .navi_stat_body {
+        .navi_stat_unit {
+          display: inline-block;
+          width: 100%;
+          text-align: center;
+        }
+      }
+    }
+  }
+`;
+const StatPseudoClasses = [":hover", ":active", ":read-only", ":disabled", ":-navi-loading"];
+const Stat = ({
+  children,
+  unit,
+  unitPosition = "right",
+  unitRatio,
+  label,
+  size,
+  lang,
+  integer,
+  loading,
+  readOnly,
+  disabled,
+  ...props
+}) => {
+  const value = parseStatValue(children);
+  const valueRounded = integer && typeof value === "number" ? Math.round(value) : value;
+  const valueFormatted = typeof valueRounded === "number" ? formatNumber(valueRounded, {
+    lang
+  }) : valueRounded;
+  const unitBottom = unitPosition === "bottom";
+  return jsxs(Text, {
+    baseClassName: "navi_stat",
+    "data-unit-bottom": unitBottom ? "" : undefined,
+    basePseudoState: {
+      ":read-only": readOnly,
+      ":disabled": disabled,
+      ":-navi-loading": loading
+    },
+    pseudoClasses: StatPseudoClasses,
+    spacing: "pre",
+    ...props,
+    children: [label && jsx("span", {
+      className: "navi_stat_label",
+      children: label
+    }), jsxs(Text, {
+      className: "navi_stat_body",
+      size: size,
+      spacing: unitBottom ? jsx("br", {}) : undefined,
+      children: [jsx("span", {
+        className: "navi_stat_value",
+        children: loading ? jsx(Icon, {
+          flowInline: true,
+          children: jsx(LoadingDots, {})
+        }) : valueFormatted
+      }), unit && jsx("span", {
+        className: "navi_stat_unit",
+        style: {
+          ...(unitRatio === undefined ? {} : {
+            "--unit-ratio": unitRatio
+          })
+        },
+        children: unit
+      })]
+    })]
+  });
+};
+const parseStatValue = children => {
+  if (typeof children !== "string") {
+    return children;
+  }
+  const parsed = Number(children);
+  return Number.isNaN(parsed) ? children : parsed;
+};
+
+installImportMetaCss(import.meta);import.meta.css = /* css */`
+  @layer navi {
     .navi_meter {
       --loader-color: var(--navi-loader-color);
       --track-color: #efefef;
@@ -29577,7 +29702,11 @@ const Meter = ({
   const clampedValue = value < min ? min : value > max ? max : value;
   const fillRatio = max === min ? 0 : (clampedValue - min) / (max - min);
   if (children === undefined && percentage) {
-    children = `${Math.round(fillRatio * 100)}%`;
+    children = jsx(Stat, {
+      unit: "%",
+      unitRatio: "1",
+      children: Math.round(fillRatio * 100)
+    });
   }
   const level = getMeterLevel(clampedValue, min, max, low, high, optimum);
   const fillColorVar = level === "optimum" ? "var(--fill-color-optimum)" : level === "suboptimum" ? "var(--fill-color-suboptimum)" : "var(--fill-color-subsuboptimum)";
@@ -29673,126 +29802,6 @@ const Paragraph = props => {
     as: "p",
     ...props
   });
-};
-
-installImportMetaCss(import.meta);import.meta.css = /* css */`
-  @layer navi {
-    .navi_stat {
-      --unit-color: #6b7280;
-    }
-
-    @media (prefers-color-scheme: dark) {
-      .navi_stat {
-        --unit-color: rgb(129, 134, 140);
-      }
-    }
-  }
-
-  .navi_stat {
-    display: inline-flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.3em;
-    line-height: 1;
-
-    .navi_stat_label {
-      font-weight: 600;
-      font-size: 0.75em;
-      text-transform: uppercase;
-      line-height: 1;
-      letter-spacing: 0.06em;
-    }
-    .navi_stat_body {
-      .navi_stat_value {
-        font-weight: bold;
-      }
-      .navi_stat_unit {
-        color: var(--unit-color);
-        font-weight: normal;
-        font-size: 0.7em;
-      }
-    }
-
-    &[data-readonly] {
-      opacity: 0.7;
-      cursor: default;
-    }
-
-    &[data-disabled] {
-      opacity: 0.4;
-      cursor: not-allowed;
-      user-select: none;
-    }
-
-    &[data-unit-bottom] {
-      .navi_stat_value {
-        display: inline-block;
-        width: 100%;
-        text-align: center;
-      }
-      .navi_stat_body {
-        .navi_stat_unit {
-          display: inline-block;
-          width: 100%;
-          text-align: center;
-        }
-      }
-    }
-  }
-`;
-const StatPseudoClasses = [":hover", ":active", ":read-only", ":disabled", ":-navi-loading"];
-const Stat = ({
-  children,
-  unit,
-  unitPosition = "right",
-  label,
-  size,
-  lang,
-  loading,
-  readOnly,
-  disabled,
-  ...props
-}) => {
-  const value = parseStatValue(children);
-  const valueFormatted = typeof value === "number" ? formatNumber(value, {
-    lang
-  }) : value;
-  const unitBottom = unitPosition === "bottom";
-  return jsxs(Text, {
-    baseClassName: "navi_stat",
-    "data-unit-bottom": unitBottom ? "" : undefined,
-    basePseudoState: {
-      ":read-only": readOnly,
-      ":disabled": disabled,
-      ":-navi-loading": loading
-    },
-    pseudoClasses: StatPseudoClasses,
-    spacing: "pre",
-    ...props,
-    children: [label && jsx("span", {
-      className: "navi_stat_label",
-      children: label
-    }), jsxs(Text, {
-      className: "navi_stat_body",
-      size: size,
-      spacing: unitBottom ? jsx("br", {}) : undefined,
-      children: [jsx("span", {
-        className: "navi_stat_value",
-        children: loading ? jsx(Icon, {
-          flowInline: true,
-          children: jsx(LoadingDots, {})
-        }) : valueFormatted
-      }), unit && jsx("span", {
-        className: "navi_stat_unit",
-        children: unit
-      })]
-    })]
-  });
-};
-const parseStatValue = children => {
-  if (typeof children !== "string") return children;
-  const parsed = Number(children);
-  return Number.isNaN(parsed) ? children : parsed;
 };
 
 const Image = props => {

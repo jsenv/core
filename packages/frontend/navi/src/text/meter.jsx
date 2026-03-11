@@ -150,7 +150,11 @@ export const Meter = ({
   const clampedValue = value < min ? min : value > max ? max : value;
   const fillRatio = max === min ? 0 : (clampedValue - min) / (max - min);
   if (children === undefined && percentage) {
-    children = <Stat unit="%">{Math.round(fillRatio * 100)}</Stat>;
+    children = (
+      <Stat unit="%" unitRatio="1">
+        {Math.round(fillRatio * 100)}
+      </Stat>
+    );
   }
   const level = getMeterLevel(clampedValue, min, max, low, high, optimum);
   const fillColorVar =

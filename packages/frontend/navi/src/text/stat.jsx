@@ -32,7 +32,7 @@ import.meta.css = /* css */ `
       .navi_stat_unit {
         color: var(--unit-color);
         font-weight: normal;
-        font-size: 0.7em;
+        font-size: calc(var(--unit-ratio) * 1em);
       }
     }
 
@@ -75,6 +75,7 @@ export const Stat = ({
   children,
   unit,
   unitPosition = "right",
+  unitRatio,
   label,
   size,
   lang,
@@ -121,7 +122,16 @@ export const Stat = ({
             valueFormatted
           )}
         </span>
-        {unit && <span className="navi_stat_unit">{unit}</span>}
+        {unit && (
+          <span
+            className="navi_stat_unit"
+            style={{
+              ...(unitRatio === undefined ? {} : { "--unit-ratio": unitRatio }),
+            }}
+          >
+            {unit}
+          </span>
+        )}
       </Text>
     </Text>
   );
