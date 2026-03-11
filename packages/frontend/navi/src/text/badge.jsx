@@ -111,8 +111,11 @@ export const BadgeCount = ({
   const ref = props.ref || defaultRef;
   useContrastingColor(ref, ".navi_badge_count_visual");
 
-  let valueRequested =
-    typeof children === "string" ? parseInt(children, 10) : children;
+  let valueRequested = (() => {
+    if (typeof children !== "string") return children;
+    const parsed = Number(children);
+    return Number.isNaN(parsed) ? children : parsed;
+  })();
   if (integer && typeof valueRequested === "number") {
     valueRequested = Math.round(valueRequested);
   }
