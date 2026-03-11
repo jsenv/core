@@ -79,24 +79,28 @@ import.meta.css = /* css */ `
       }
     }
 
-    /* When caption is shown, the track takes the full height */
-    &[data-has-caption] .navi_meter_track_container {
-      height: var(--height);
-    }
-
-    /* fillOnly: hide the empty track background */
-    &[data-fill-only] .navi_meter_track {
-      background-color: transparent;
-      border-color: transparent;
-    }
-
-    /* borderless: remove border */
-    &[data-borderless] .navi_meter_track {
-      border-color: transparent;
-    }
-
     &[data-disabled] {
       opacity: 0.4;
+    }
+
+    /* When caption is shown, the track takes the full height */
+    &[data-has-caption] {
+      .navi_meter_track_container {
+        height: var(--height);
+      }
+    }
+    /* fillOnly: hide the empty track background */
+    &[data-fill-only] {
+      .navi_meter_track {
+        background-color: transparent;
+        border-color: transparent;
+      }
+    }
+    /* borderless: remove border */
+    &[data-borderless] {
+      .navi_meter_track {
+        border-color: transparent;
+      }
     }
   }
 `;
@@ -137,12 +141,9 @@ export const Meter = ({
 }) => {
   const clampedValue = value < min ? min : value > max ? max : value;
   const fillRatio = max === min ? 0 : (clampedValue - min) / (max - min);
-  const resolvedCaption =
-    children !== undefined
-      ? children
-      : percentage
-        ? `${Math.round(fillRatio * 100)}%`
-        : undefined;
+  if (children === undefined && percentage) {
+    children = `${Math.round(fillRatio * 100)}%`;
+  }
   const level = getMeterLevel(clampedValue, min, max, low, high, optimum);
   const fillColorVar =
     level === "optimum"
@@ -156,17 +157,23 @@ export const Meter = ({
 
   const trackContainerRef = useRef();
   useLayoutEffect(() => {
-    if (resolvedCaption === undefined) return;
+    if (!children) {
+      return;
+    }
     const trackContainer = trackContainerRef.current;
-    if (!trackContainer) return;
+    if (!trackContainer) {
+      return;
+    }
     const fillEl = trackContainer.querySelector(".navi_meter_fill");
-    if (!fillEl) return;
+    if (!fillEl) {
+      return;
+    }
     const fillBgColor = getComputedStyle(fillEl).backgroundColor;
     const textColor = pickLightOrDark(fillBgColor, "white", "black", fillEl);
     const shadowColor = textColor === "white" ? "black" : "white";
     trackContainer.style.setProperty("--x-caption-color", textColor);
     trackContainer.style.setProperty("--x-caption-shadow-color", shadowColor);
-  }, [resolvedCaption, level]);
+  }, [children, level]);
 
   return (
     <Box
@@ -174,9 +181,7 @@ export const Meter = ({
       aria-valuenow={clampedValue}
       aria-valuemin={min}
       aria-valuemax={max}
-      aria-label={
-        typeof resolvedCaption === "string" ? resolvedCaption : undefined
-      }
+      aria-label={typeof children === "string" ? children : undefined}
       baseClassName="navi_meter"
       styleCSSVars={MeterStyleCSSVars}
       basePseudoState={{
@@ -185,7 +190,7 @@ export const Meter = ({
         ":-navi-loading": loading,
       }}
       pseudoClasses={MeterPseudoClasses}
-      data-has-caption={resolvedCaption !== undefined ? "" : undefined}
+      data-has-caption={children !== undefined ? "" : undefined}
       data-fill-only={fillOnly ? "" : undefined}
       data-borderless={borderless ? "" : undefined}
       style={{
@@ -203,9 +208,9 @@ export const Meter = ({
         />
         <span className="navi_meter_track" />
         <span className="navi_meter_fill" />
-        {resolvedCaption !== undefined && (
+        {children && (
           <span className="navi_meter_caption" aria-hidden="true">
-            {resolvedCaption}
+            {children}
           </span>
         )}
       </span>
