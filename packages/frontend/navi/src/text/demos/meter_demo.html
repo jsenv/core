@@ -1,0 +1,535 @@
+<!doctype html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Meter Demo</title>
+    <style>
+      body {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 20px;
+        font-family: system-ui, sans-serif;
+        background: #f5f5f5;
+      }
+
+      .demo-section {
+        margin-bottom: 40px;
+        padding: 20px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      .demo-section h2 {
+        margin: 0 0 20px 0;
+        padding-bottom: 10px;
+        color: #333;
+        font-size: 1.4rem;
+        border-bottom: 2px solid #ddd;
+      }
+
+      .states-section {
+        margin: 20px 0;
+      }
+
+      .states-title {
+        margin: 0 0 15px 0;
+        padding: 8px 12px;
+        color: #495057;
+        font-weight: 600;
+        font-size: 0.95rem;
+        text-align: center;
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border: 1px solid #dee2e6;
+        border-radius: 6px;
+      }
+
+      .enhanced-states-title {
+        color: #1565c0;
+        background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+        border-color: #2196f3;
+      }
+
+      .states-description {
+        margin: 10px 0 15px 0;
+        padding: 10px 15px;
+        color: #666;
+        font-style: italic;
+        font-size: 0.9rem;
+        background: #f8f9fa;
+        border-left: 4px solid #007bff;
+        border-radius: 0 4px 4px 0;
+      }
+
+      fieldset {
+        margin: 10px 0;
+        padding: 12px 15px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+      }
+
+      legend {
+        padding: 0 8px;
+        color: #555;
+        font-weight: 500;
+        font-size: 0.9rem;
+      }
+
+      .comparison-row {
+        display: flex;
+        margin: 6px 0;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .comparison-label {
+        min-width: 50px;
+        color: #666;
+        font-size: 0.85rem;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Meter Demo</h1>
+    <div id="app"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useState } from "preact/hooks";
+      import { Box, Caption, Meter } from "@jsenv/navi";
+
+      const App = () => (
+        <div>
+          <StandardStatesDemo />
+          <SemanticColorsDemo />
+          <EnhancedStatesDemo />
+          <ColorCustomizationDemo />
+        </div>
+      );
+
+      /* ------------------------------------------------------------------ */
+      /* Standard States — side-by-side comparison with the native element   */
+      /* ------------------------------------------------------------------ */
+      const StandardStatesDemo = () => (
+        <div className="demo-section">
+          <h2>Comparison with native &lt;meter&gt;</h2>
+
+          <div className="states-section">
+            <div className="states-title">Value range</div>
+            <p className="states-description">
+              Same value/min/max semantics as the HTML meter element. The fill
+              width is <code>(value − min) / (max − min)</code>.
+            </p>
+
+            <Box column spacing="s">
+              {[
+                { value: 0, label: "value=0" },
+                { value: 0.25, label: "value=0.25" },
+                { value: 0.5, label: "value=0.5" },
+                { value: 0.75, label: "value=0.75" },
+                { value: 1, label: "value=1" },
+              ].map(({ value, label }) => (
+                <fieldset key={label}>
+                  <legend>{label}</legend>
+                  <div className="comparison-row">
+                    <span className="comparison-label">Navi</span>
+                    <Meter value={value} />
+                  </div>
+                  <div className="comparison-row">
+                    <span className="comparison-label">Native</span>
+                    <meter value={value} />
+                  </div>
+                </fieldset>
+              ))}
+            </Box>
+          </div>
+
+          <div className="states-section">
+            <div className="states-title">Custom min / max</div>
+            <p className="states-description">
+              Arbitrary numeric ranges — identical to the native{" "}
+              <code>min</code> / <code>max</code> attributes.
+            </p>
+
+            <Box column spacing="s">
+              {[
+                {
+                  value: 30,
+                  min: 0,
+                  max: 200,
+                  label: "value=30 min=0 max=200",
+                },
+                {
+                  value: 100,
+                  min: 0,
+                  max: 200,
+                  label: "value=100 min=0 max=200",
+                },
+                {
+                  value: 170,
+                  min: 0,
+                  max: 200,
+                  label: "value=170 min=0 max=200",
+                },
+              ].map(({ value, min, max, label }) => (
+                <fieldset key={label}>
+                  <legend>{label}</legend>
+                  <div className="comparison-row">
+                    <span className="comparison-label">Navi</span>
+                    <Meter value={value} min={min} max={max} />
+                  </div>
+                  <div className="comparison-row">
+                    <span className="comparison-label">Native</span>
+                    <meter value={value} min={min} max={max} />
+                  </div>
+                </fieldset>
+              ))}
+            </Box>
+          </div>
+        </div>
+      );
+
+      /* ------------------------------------------------------------------ */
+      /* Semantic colors — low / high / optimum                              */
+      /* ------------------------------------------------------------------ */
+      const SemanticColorsDemo = () => (
+        <div className="demo-section">
+          <h2>Semantic colors (low / high / optimum)</h2>
+
+          <div className="states-section">
+            <div className="states-title">
+              optimum in the middle (default) — no red possible
+            </div>
+            <p className="states-description">
+              When <code>optimum</code> is in the middle region (between{" "}
+              <code>low</code> and <code>high</code>) values in the same region
+              are green, values in the outer regions are yellow.
+            </p>
+
+            <Box column spacing="s">
+              {[
+                {
+                  value: 10,
+                  label: "value=10 — below low → yellow",
+                  color: "yellow",
+                },
+                {
+                  value: 50,
+                  label: "value=50 — in middle → green",
+                  color: "green",
+                },
+                {
+                  value: 90,
+                  label: "value=90 — above high → yellow",
+                  color: "yellow",
+                },
+              ].map(({ value, label }) => (
+                <fieldset key={label}>
+                  <legend>{label}</legend>
+                  <div className="comparison-row">
+                    <span className="comparison-label">Navi</span>
+                    <Meter
+                      value={value}
+                      min={0}
+                      max={100}
+                      low={25}
+                      high={75}
+                      optimum={50}
+                    />
+                  </div>
+                  <div className="comparison-row">
+                    <span className="comparison-label">Native</span>
+                    <meter
+                      value={value}
+                      min={0}
+                      max={100}
+                      low={25}
+                      high={75}
+                      optimum={50}
+                    />
+                  </div>
+                </fieldset>
+              ))}
+            </Box>
+          </div>
+
+          <div className="states-section">
+            <div className="states-title">
+              optimum in the low region — red possible
+            </div>
+            <p className="states-description">
+              When <code>optimum</code> is in the low region, low = green,
+              middle = yellow, high = red.
+            </p>
+
+            <Box column spacing="s">
+              {[
+                {
+                  value: 10,
+                  label: "value=10 — in low (optimum region) → green",
+                },
+                { value: 50, label: "value=50 — in middle → yellow" },
+                { value: 90, label: "value=90 — in high → red" },
+              ].map(({ value, label }) => (
+                <fieldset key={label}>
+                  <legend>{label}</legend>
+                  <div className="comparison-row">
+                    <span className="comparison-label">Navi</span>
+                    <Meter
+                      value={value}
+                      min={0}
+                      max={100}
+                      low={25}
+                      high={75}
+                      optimum={10}
+                    />
+                  </div>
+                  <div className="comparison-row">
+                    <span className="comparison-label">Native</span>
+                    <meter
+                      value={value}
+                      min={0}
+                      max={100}
+                      low={25}
+                      high={75}
+                      optimum={10}
+                    />
+                  </div>
+                </fieldset>
+              ))}
+            </Box>
+          </div>
+
+          <div className="states-section">
+            <div className="states-title">
+              optimum in the high region — red possible
+            </div>
+
+            <Box column spacing="s">
+              {[
+                { value: 10, label: "value=10 — in low → red" },
+                { value: 50, label: "value=50 — in middle → yellow" },
+                {
+                  value: 90,
+                  label: "value=90 — in high (optimum region) → green",
+                },
+              ].map(({ value, label }) => (
+                <fieldset key={label}>
+                  <legend>{label}</legend>
+                  <div className="comparison-row">
+                    <span className="comparison-label">Navi</span>
+                    <Meter
+                      value={value}
+                      min={0}
+                      max={100}
+                      low={25}
+                      high={75}
+                      optimum={90}
+                    />
+                  </div>
+                  <div className="comparison-row">
+                    <span className="comparison-label">Native</span>
+                    <meter
+                      value={value}
+                      min={0}
+                      max={100}
+                      low={25}
+                      high={75}
+                      optimum={90}
+                    />
+                  </div>
+                </fieldset>
+              ))}
+            </Box>
+          </div>
+        </div>
+      );
+
+      /* ------------------------------------------------------------------ */
+      /* Enhanced States — loading & disabled (not in native)                */
+      /* ------------------------------------------------------------------ */
+      const EnhancedStatesDemo = () => {
+        const [loading, setLoading] = useState(true);
+
+        return (
+          <div className="demo-section">
+            <h2>Enhanced states</h2>
+
+            <div className="states-section">
+              <div className="states-title enhanced-states-title">
+                States not available in native &lt;meter&gt;
+              </div>
+
+              <Box column spacing="s">
+                <fieldset>
+                  <legend>disabled</legend>
+                  <div className="comparison-row">
+                    <span className="comparison-label">Navi</span>
+                    <Meter value={0.6} disabled />
+                  </div>
+                  <div className="comparison-row">
+                    <span className="comparison-label">Native</span>
+                    <meter value={0.6} />
+                    <Caption>(pas de disabled natif)</Caption>
+                  </div>
+                </fieldset>
+              </Box>
+
+              <Box column spacing="s" marginTop="s">
+                <fieldset>
+                  <legend>loading</legend>
+                  <div className="comparison-row">
+                    <span className="comparison-label">Navi</span>
+                    <Meter value={0} loading />
+                  </div>
+                  <div className="comparison-row">
+                    <span className="comparison-label">Native</span>
+                    <meter value={0} />
+                    <Caption>(pas de loading natif)</Caption>
+                  </div>
+                </fieldset>
+              </Box>
+
+              <Box row spacing="m" alignY="center" marginTop="m">
+                <button onClick={() => setLoading((v) => !v)}>
+                  {loading ? "Arrêter le chargement" : "Remettre en chargement"}
+                </button>
+                <Box row spacing="l" alignY="center">
+                  <Meter value={0.4} loading={loading} />
+                  <Meter value={0.7} loading={loading} width="8em" />
+                  <Meter
+                    value={0.9}
+                    min={0}
+                    max={100}
+                    low={25}
+                    high={75}
+                    optimum={90}
+                    loading={loading}
+                  />
+                </Box>
+              </Box>
+            </div>
+          </div>
+        );
+      };
+
+      /* ------------------------------------------------------------------ */
+      /* Color customization                                                  */
+      /* ------------------------------------------------------------------ */
+      const ColorCustomizationDemo = () => (
+        <div className="demo-section">
+          <h2>Couleurs personnalisées</h2>
+
+          <div className="states-section">
+            <div className="states-title">CSS variables</div>
+            <p className="states-description">
+              Toutes les couleurs sémantiques et la couleur de la piste sont
+              contrôlables via des CSS variables. On peut par exemple utiliser
+              les couleurs d'un design system, ou coder une couleur progressive.
+            </p>
+
+            <Box column spacing="s">
+              <fieldset>
+                <legend>Couleur optimum personnalisée (bleu)</legend>
+                <div className="comparison-row">
+                  <Meter value={0.65} fillColorOptimum="#1976d2" />
+                </div>
+              </fieldset>
+
+              <fieldset>
+                <legend>Piste sombre + fill orange</legend>
+                <div className="comparison-row">
+                  <Meter
+                    value={0.5}
+                    trackColor="#333"
+                    fillColorOptimum="#ff6f00"
+                    borderColor="transparent"
+                  />
+                </div>
+              </fieldset>
+
+              <fieldset>
+                <legend>Couleurs sémantiques toutes personnalisées</legend>
+                <div className="comparison-row">
+                  <span className="comparison-label">green</span>
+                  <Meter
+                    value={50}
+                    min={0}
+                    max={100}
+                    low={25}
+                    high={75}
+                    optimum={50}
+                    fillColorOptimum="#6200ea"
+                    fillColorSuboptimum="#ff6d00"
+                    fillColorSubsuboptimum="#c51162"
+                  />
+                </div>
+                <div className="comparison-row">
+                  <span className="comparison-label">yellow</span>
+                  <Meter
+                    value={10}
+                    min={0}
+                    max={100}
+                    low={25}
+                    high={75}
+                    optimum={50}
+                    fillColorOptimum="#6200ea"
+                    fillColorSuboptimum="#ff6d00"
+                    fillColorSubsuboptimum="#c51162"
+                  />
+                </div>
+                <div className="comparison-row">
+                  <span className="comparison-label">red</span>
+                  <Meter
+                    value={90}
+                    min={0}
+                    max={100}
+                    low={25}
+                    high={75}
+                    optimum={10}
+                    fillColorOptimum="#6200ea"
+                    fillColorSuboptimum="#ff6d00"
+                    fillColorSubsuboptimum="#c51162"
+                  />
+                </div>
+              </fieldset>
+            </Box>
+          </div>
+
+          <div className="states-section">
+            <div className="states-title">Taille</div>
+            <Box column spacing="s">
+              <fieldset>
+                <legend>width / height CSS values</legend>
+                <Box column spacing="xs">
+                  <div className="comparison-row">
+                    <Caption>width="3em"</Caption>
+                    <Meter value={0.7} width="3em" />
+                  </div>
+                  <div className="comparison-row">
+                    <Caption>width="8em"</Caption>
+                    <Meter value={0.7} width="8em" />
+                  </div>
+                  <div className="comparison-row">
+                    <Caption>width="200px"</Caption>
+                    <Meter value={0.7} width="200px" />
+                  </div>
+                  <div className="comparison-row">
+                    <Caption>height="0.5em"</Caption>
+                    <Meter value={0.7} height="0.5em" />
+                  </div>
+                  <div className="comparison-row">
+                    <Caption>height="2em"</Caption>
+                    <Meter value={0.7} height="2em" />
+                  </div>
+                </Box>
+              </fieldset>
+            </Box>
+          </div>
+        </div>
+      );
+
+      render(<App />, document.getElementById("app"));
+    </script>
+  </body>
+</html>
