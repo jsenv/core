@@ -1,3 +1,6 @@
+import { pickLightOrDark } from "@jsenv/dom";
+import { useLayoutEffect, useRef } from "preact/hooks";
+
 import { Box } from "../box/box.jsx";
 import { LoaderBackground } from "../graphic/loader/loader_background.jsx";
 
@@ -53,6 +56,40 @@ import.meta.css = /* css */ `
         border-radius: inherit;
         clip-path: inset(0 calc((1 - var(--x-fill-ratio, 0)) * 100%) 0 0);
       }
+
+      .navi_meter_caption {
+        position: absolute;
+        inset: 0;
+        z-index: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--x-caption-color, white);
+        font-size: calc(var(--height) * 0.55);
+        text-shadow:
+          0 0 4px var(--x-caption-shadow-color, black),
+          0 0 2px var(--x-caption-shadow-color, black);
+        line-height: 1;
+        white-space: nowrap;
+        pointer-events: none;
+        user-select: none;
+      }
+    }
+
+    /* When caption is shown, the track takes the full height */
+    &[data-has-caption] .navi_meter_track_container {
+      height: var(--height);
+    }
+
+    /* fillOnly: hide the empty track background */
+    &[data-fill-only] .navi_meter_track {
+      background-color: transparent;
+      border-color: transparent;
+    }
+
+    /* borderless: remove border */
+    &[data-borderless] .navi_meter_track {
+      border-color: transparent;
     }
 
     &[data-disabled] {
@@ -88,6 +125,9 @@ export const Meter = ({
   loading,
   readOnly,
   disabled,
+  caption,
+  fillOnly,
+  borderless,
   style,
   ...props
 }) => {
@@ -100,6 +140,20 @@ export const Meter = ({
       : level === "suboptimum"
         ? "var(--fill-color-suboptimum)"
         : "var(--fill-color-subsuboptimum)";
+
+  const trackContainerRef = useRef();
+  useLayoutEffect(() => {
+    if (caption === undefined) return;
+    const trackContainer = trackContainerRef.current;
+    if (!trackContainer) return;
+    const fillEl = trackContainer.querySelector(".navi_meter_fill");
+    if (!fillEl) return;
+    const fillBgColor = getComputedStyle(fillEl).backgroundColor;
+    const textColor = pickLightOrDark(fillBgColor, "white", "black", fillEl);
+    const shadowColor = textColor === "white" ? "black" : "white";
+    trackContainer.style.setProperty("--x-caption-color", textColor);
+    trackContainer.style.setProperty("--x-caption-shadow-color", shadowColor);
+  }, [caption, level]);
 
   return (
     <Box
@@ -115,6 +169,9 @@ export const Meter = ({
         ":-navi-loading": loading,
       }}
       pseudoClasses={MeterPseudoClasses}
+      data-has-caption={caption !== undefined ? "" : undefined}
+      data-fill-only={fillOnly ? "" : undefined}
+      data-borderless={borderless ? "" : undefined}
       style={{
         "--x-fill-ratio": fillRatio,
         "--x-fill-color": fillColorVar,
@@ -122,7 +179,7 @@ export const Meter = ({
       }}
       {...props}
     >
-      <span className="navi_meter_track_container">
+      <span className="navi_meter_track_container" ref={trackContainerRef}>
         <LoaderBackground
           loading={loading}
           color="var(--loader-color)"
@@ -130,6 +187,11 @@ export const Meter = ({
         />
         <span className="navi_meter_track" />
         <span className="navi_meter_fill" />
+        {caption !== undefined && (
+          <span className="navi_meter_caption" aria-hidden="true">
+            {caption}
+          </span>
+        )}
       </span>
     </Box>
   );
