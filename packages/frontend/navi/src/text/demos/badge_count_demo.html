@@ -1260,54 +1260,47 @@
 
           <Title as="h3">noWrap</Title>
           <Paragraph>
-            Le formatage produit un espace insécable dans <code>1 000</code>{" "}
-            (fr) ou une virgule dans <code>1,000</code> (en). L'espace peut
-            provoquer un retour à la ligne au milieu du nombre si le badge se
-            trouve en bordure d'un conteneur étroit. Utiliser{" "}
-            <code>noWrap</code> sur le badge pour garder le nombre sur une seule
-            ligne.
+            <code>BadgeCount</code> est un <code>inline-block</code>, ce qui
+            garantit que la version formatée du nombre ne peut pas être coupée
+            en plusieurs lignes. C'est particulièrement utile pour le français
+            où <code>Intl.NumberFormat</code> insère un espace entre les groupes
+            de chiffres (ex.&nbsp;<code>1 000 000</code>).
           </Paragraph>
           <Box row spacing="lg" alignX="start">
             <div>
-              <Caption>Sans noWrap — le nombre peut se couper</Caption>
-              <Paragraph
-                overflowEllipsis
+              <Caption>Sans BadgeCount — "1 000 000" peut se couper</Caption>
+              <div
                 style={{
-                  width: "110px",
+                  width: "120px",
                   border: "1px solid #ddd",
                   padding: "8px",
                   backgroundColor: "#fff3f3",
+                  lineHeight: "1.6",
+                }}
+              >
+                Vous avez 1 000 000 messages
+              </div>
+            </div>
+
+            <div>
+              <Caption>Avec BadgeCount — le nombre reste entier</Caption>
+              <div
+                style={{
+                  width: "120px",
+                  border: "1px solid #ddd",
+                  padding: "8px",
+                  backgroundColor: "#e8f5e8",
+                  lineHeight: "1.6",
                 }}
               >
                 <Text>
                   Vous avez
-                  <BadgeCount background="#f44336" color="white">
-                    {1000}
-                  </BadgeCount>
-                  messages
-                </Text>
-              </Paragraph>
-            </div>
-
-            <div>
-              <Caption>Avec noWrap — le nombre reste entier</Caption>
-              <Paragraph
-                overflowEllipsis
-                style={{
-                  width: "110px",
-                  border: "1px solid #ddd",
-                  padding: "8px",
-                  backgroundColor: "#e8f5e8",
-                }}
-              >
-                Vous avez
-                <Text noWrap>
                   <BadgeCount background="#4caf50" color="white">
-                    {1000}
+                    {1000000}
                   </BadgeCount>
                   messages
                 </Text>
-              </Paragraph>
+              </div>
             </div>
           </Box>
 
