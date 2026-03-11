@@ -3,9 +3,9 @@ import { Box } from "../box/box.jsx";
 import.meta.css = /* css */ `
   @layer navi {
     .navi_meter {
-      --track-color: light-dark(#c0c0c0, #4a4a4a);
-      --track-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.25);
-      --border-color: light-dark(rgba(0, 0, 0, 0.2), rgba(255, 255, 255, 0.12));
+      --track-color: light-dark(#ddd, #3f3f3f);
+      --track-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.3);
+      --border-color: light-dark(rgba(0, 0, 0, 0.3), rgba(255, 255, 255, 0.15));
       --border-radius: 3px;
       --height: 1em;
       --width: 5em;
@@ -124,7 +124,7 @@ export const Meter = ({
       aria-valuenow={clampedValue}
       aria-valuemin={min}
       aria-valuemax={max}
-      baseClassname="navi_meter"
+      baseClassName="navi_meter"
       styleCSSVars={MeterStyleCSSVars}
       basePseudoState={{
         ":read-only": readOnly,

@@ -514,32 +514,27 @@
 
           <div className="states-section">
             <div className="states-title">Taille</div>
-            <Box column spacing="s">
-              <fieldset>
-                <legend>width / height CSS values</legend>
-                <Box column spacing="xs">
-                  <div className="comparison-row">
-                    <Caption>width="3em"</Caption>
-                    <Meter value={0.7} width="3em" />
-                  </div>
-                  <div className="comparison-row">
-                    <Caption>width="8em"</Caption>
-                    <Meter value={0.7} width="8em" />
-                  </div>
-                  <div className="comparison-row">
-                    <Caption>width="200px"</Caption>
-                    <Meter value={0.7} width="200px" />
-                  </div>
-                  <div className="comparison-row">
-                    <Caption>height="0.5em"</Caption>
-                    <Meter value={0.7} height="0.5em" />
-                  </div>
-                  <div className="comparison-row">
-                    <Caption>height="2em"</Caption>
-                    <Meter value={0.7} height="2em" />
-                  </div>
-                </Box>
-              </fieldset>
+            <Box row spacing="m">
+              <Box row spacing="s">
+                <Caption>width="3em"</Caption>
+                <Meter value={0.7} width="3em" />
+              </Box>
+              <Box row spacing="s">
+                <Caption>width="8em"</Caption>
+                <Meter value={0.7} width="8em" />
+              </Box>
+              <Box row spacing="s">
+                <Caption>width="200px"</Caption>
+                <Meter value={0.7} width="200px" />
+              </Box>
+              <Box row spacing="s">
+                <Caption>height="0.5em"</Caption>
+                <Meter value={0.7} height="0.5em" />
+              </Box>
+              <Box row spacing="s">
+                <Caption>height="2em"</Caption>
+                <Meter value={0.7} height="2em" />
+              </Box>
             </Box>
           </div>
         </div>
