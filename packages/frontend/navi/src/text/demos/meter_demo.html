@@ -466,8 +466,13 @@
 
               <fieldset>
                 <legend>Couleurs sémantiques toutes personnalisées</legend>
+                <Caption>
+                  optimum="violet" suboptimum="blue" subsuboptimum="pink"
+                </Caption>
+                <br />
+
                 <div className="comparison-row">
-                  <span className="comparison-label">green</span>
+                  <span className="comparison-label">optimum</span>
                   <Meter
                     value={50}
                     min={0}
@@ -475,13 +480,13 @@
                     low={25}
                     high={75}
                     optimum={50}
-                    fillColorOptimum="#6200ea"
-                    fillColorSuboptimum="#ff6d00"
-                    fillColorSubsuboptimum="#c51162"
+                    fillColorOptimum="violet"
+                    fillColorSuboptimum="blue"
+                    fillColorSubsuboptimum="pink"
                   />
                 </div>
                 <div className="comparison-row">
-                  <span className="comparison-label">yellow</span>
+                  <span className="comparison-label">suboptimum</span>
                   <Meter
                     value={10}
                     min={0}
@@ -489,13 +494,13 @@
                     low={25}
                     high={75}
                     optimum={50}
-                    fillColorOptimum="#6200ea"
-                    fillColorSuboptimum="#ff6d00"
-                    fillColorSubsuboptimum="#c51162"
+                    fillColorOptimum="violet"
+                    fillColorSuboptimum="blue"
+                    fillColorSubsuboptimum="pink"
                   />
                 </div>
                 <div className="comparison-row">
-                  <span className="comparison-label">red</span>
+                  <span className="comparison-label">subsuboptimum</span>
                   <Meter
                     value={90}
                     min={0}
@@ -503,9 +508,9 @@
                     low={25}
                     high={75}
                     optimum={10}
-                    fillColorOptimum="#6200ea"
-                    fillColorSuboptimum="#ff6d00"
-                    fillColorSubsuboptimum="#c51162"
+                    fillColorOptimum="violet"
+                    fillColorSuboptimum="blue"
+                    fillColorSubsuboptimum="pink"
                   />
                 </div>
               </fieldset>

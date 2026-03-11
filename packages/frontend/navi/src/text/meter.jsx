@@ -6,6 +6,7 @@ import.meta.css = /* css */ `
     .navi_meter {
       --track-color: #efefef;
       --border-color: #cbcbcb;
+      --border-width: 1px;
       --border-radius: 5px;
       --height: 1em;
       --width: 5em;
@@ -36,7 +37,7 @@ import.meta.css = /* css */ `
         position: absolute;
         inset: 0;
         background-color: var(--track-color);
-        border: 1px solid var(--border-color);
+        border: var(--border-width) solid var(--border-color);
         border-radius: inherit;
       }
 
@@ -45,6 +46,9 @@ import.meta.css = /* css */ `
         inset: 0;
         background-clip: content-box;
         background-color: var(--x-fill-color);
+        border-width: var(--border-width);
+        border-style: solid;
+        border-color: transparent;
         border-radius: inherit;
         clip-path: inset(0 calc((1 - var(--x-fill-ratio, 0)) * 100%) 0 0);
       }
