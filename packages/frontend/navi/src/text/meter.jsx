@@ -1,4 +1,4 @@
-import { withPropsClassName } from "../utils/with_props_class_name.js";
+import { Box } from "../box/box.jsx";
 
 import.meta.css = /* css */ `
   @layer navi {
@@ -28,19 +28,39 @@ import.meta.css = /* css */ `
     border-radius: var(--border-radius);
     box-shadow: var(--track-shadow);
     overflow: hidden;
-  }
 
-  .navi_meter_fill {
-    width: var(--x-fill-percent, 0%);
-    height: 100%;
-    /* subtle gloss overlay, same as native meter */
-    background-image: linear-gradient(
-      to bottom,
-      rgba(255, 255, 255, 0.25) 0%,
-      transparent 50%,
-      rgba(0, 0, 0, 0.06) 100%
-    );
-    background-color: var(--x-fill-color);
+    .navi_meter_fill {
+      width: var(--x-fill-percent, 0%);
+      height: 100%;
+      /* subtle gloss overlay, same as native meter */
+      background-image: linear-gradient(
+        to bottom,
+        rgba(255, 255, 255, 0.25) 0%,
+        transparent 50%,
+        rgba(0, 0, 0, 0.06) 100%
+      );
+      background-color: var(--x-fill-color);
+    }
+
+    &[data-loading] {
+      background-image: linear-gradient(
+        90deg,
+        var(--track-color) 25%,
+        color-mix(in srgb, var(--track-color) 55%, white) 50%,
+        var(--track-color) 75%
+      );
+      background-size: 200% 100%;
+      background-color: var(--track-color);
+      animation: navi_meter_loading 1.5s linear infinite;
+
+      .navi_meter_fill {
+        display: none;
+      }
+    }
+
+    &[data-disabled] {
+      opacity: 0.4;
+    }
   }
 
   @keyframes navi_meter_loading {
@@ -50,26 +70,6 @@ import.meta.css = /* css */ `
     100% {
       background-position: -200% 0;
     }
-  }
-
-  .navi_meter[data-loading] {
-    background-image: linear-gradient(
-      90deg,
-      var(--track-color) 25%,
-      color-mix(in srgb, var(--track-color) 55%, white) 50%,
-      var(--track-color) 75%
-    );
-    background-size: 200% 100%;
-    background-color: var(--track-color);
-    animation: navi_meter_loading 1.5s linear infinite;
-
-    .navi_meter_fill {
-      display: none;
-    }
-  }
-
-  .navi_meter[data-disabled] {
-    opacity: 0.4;
   }
 `;
 
@@ -83,6 +83,15 @@ const MeterStyleCSSVars = {
   fillColorSuboptimum: "--fill-color-suboptimum",
   fillColorSubsuboptimum: "--fill-color-subsuboptimum",
 };
+const MeterPseudoClasses = [
+  ":hover",
+  ":active",
+  ":focus",
+  ":focus-visible",
+  ":read-only",
+  ":disabled",
+  ":-navi-loading",
+];
 
 export const Meter = ({
   value = 0,
@@ -92,10 +101,9 @@ export const Meter = ({
   high,
   optimum,
   loading,
+  readOnly,
   disabled,
-  className,
   style,
-  styleCSSVars,
   ...props
 }) => {
   const clampedValue = value < min ? min : value > max ? max : value;
@@ -110,38 +118,29 @@ export const Meter = ({
         ? "var(--fill-color-suboptimum)"
         : "var(--fill-color-subsuboptimum)";
 
-  const resolvedStyleCSSVars = styleCSSVars
-    ? { ...MeterStyleCSSVars, ...styleCSSVars }
-    : MeterStyleCSSVars;
-
-  // Apply CSS vars from styleCSSVars props
-  const cssVarStyle = {};
-  for (const [propName, cssVar] of Object.entries(resolvedStyleCSSVars)) {
-    if (props[propName] !== undefined) {
-      cssVarStyle[cssVar] = props[propName];
-      delete props[propName];
-    }
-  }
-
   return (
-    <span
+    <Box
       role="meter"
       aria-valuenow={clampedValue}
       aria-valuemin={min}
       aria-valuemax={max}
-      className={withPropsClassName("navi_meter", className)}
-      data-loading={loading ? "" : undefined}
-      data-disabled={disabled ? "" : undefined}
+      baseClassname="navi_meter"
+      styleCSSVars={MeterStyleCSSVars}
+      basePseudoState={{
+        ":read-only": readOnly,
+        ":disabled": disabled,
+        ":-navi-loading": loading,
+      }}
+      pseudoClasses={MeterPseudoClasses}
       style={{
         "--x-fill-percent": `${fillPercent}%`,
         "--x-fill-color": fillColorVar,
-        ...cssVarStyle,
         ...style,
       }}
       {...props}
     >
       <span className="navi_meter_fill" />
-    </span>
+    </Box>
   );
 };
 

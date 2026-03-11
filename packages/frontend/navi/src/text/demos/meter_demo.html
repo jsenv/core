@@ -126,6 +126,22 @@
                 { value: 0, label: "value=0" },
                 { value: 0.25, label: "value=0.25" },
                 { value: 0.5, label: "value=0.5" },
+              ].map(({ value, label }) => (
+                <fieldset key={label}>
+                  <legend>{label}</legend>
+                  <div className="comparison-row">
+                    <span className="comparison-label">Navi</span>
+                    <Meter value={value} />
+                  </div>
+                  <div className="comparison-row">
+                    <span className="comparison-label">Native</span>
+                    <meter value={value} />
+                  </div>
+                </fieldset>
+              ))}
+            </Box>
+            <Box column spacing="s">
+              {[
                 { value: 0.75, label: "value=0.75" },
                 { value: 1, label: "value=1" },
               ].map(({ value, label }) => (
