@@ -134,6 +134,7 @@ export { Caption } from "./src/text/caption.jsx";
 export { Code } from "./src/text/code.jsx";
 export { MessageBox } from "./src/text/message_box.jsx";
 export { Paragraph } from "./src/text/paragraph.jsx";
+export { Stat } from "./src/text/stat.jsx";
 export { Text } from "./src/text/text.jsx";
 export { Title, useTitleLevel } from "./src/text/title.jsx";
 

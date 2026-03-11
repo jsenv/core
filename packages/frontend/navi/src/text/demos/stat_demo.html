@@ -1,0 +1,349 @@
+<!doctype html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Stat Demo</title>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useState } from "preact/hooks";
+      import {
+        Box,
+        Caption,
+        Link,
+        Paragraph,
+        Stat,
+        Text,
+        Title,
+      } from "@jsenv/navi";
+
+      const Demo = () => {
+        return (
+          <div
+            style={{
+              padding: "20px",
+              fontFamily: "system-ui, sans-serif",
+              maxWidth: "800px",
+              lineHeight: "1.6",
+            }}
+          >
+            <Title as="h1">Stat Demo</Title>
+
+            <TableOfContents />
+            <IntroductionSection />
+            <UnitPositionSection />
+            <SizeSection />
+            <LangSection />
+            <LoadingSection />
+            <ReadOnlyDisabledSection />
+          </div>
+        );
+      };
+
+      const TableOfContents = () => (
+        <Box as="section" marginBottom="xl">
+          <Title as="h2">Table des matières</Title>
+          <Box row spacing="xs" marginTop="md">
+            <Link href="#introduction">1. Introduction</Link>
+            <Link href="#unit-position">2. Position de l'unité</Link>
+            <Link href="#size">3. Taille</Link>
+            <Link href="#lang">4. Langue (formatage des nombres)</Link>
+            <Link href="#loading">5. État de chargement</Link>
+            <Link href="#readonly-disabled">6. readOnly et disabled</Link>
+          </Box>
+        </Box>
+      );
+
+      const IntroductionSection = () => (
+        <Box as="section" marginBottom="xl">
+          <Title as="h2">
+            <Link anchor href="#introduction" />
+            Introduction
+          </Title>
+          <Paragraph>
+            <code>Stat</code> affiche une valeur (le plus souvent un nombre)
+            avec optionnellement une unité et un label. Les nombres sont
+            formatés automatiquement via <code>Intl.NumberFormat</code> selon la
+            locale du navigateur.
+          </Paragraph>
+
+          <Title as="h3">Exemples de base</Title>
+          <Box row spacing="xl" alignY="end">
+            <Box row spacing="s">
+              <Caption>Valeur seule</Caption>
+              <Stat>{42}</Stat>
+            </Box>
+
+            <Box row spacing="s">
+              <Caption>Avec unité</Caption>
+              <Stat unit="minutes">{42}</Stat>
+            </Box>
+
+            <Box row spacing="s">
+              <Caption>Avec label</Caption>
+              <Stat label="Durée" unit="minutes">
+                {42}
+              </Stat>
+            </Box>
+
+            <Box row spacing="s">
+              <Caption>Grand nombre formaté</Caption>
+              <Stat label="Utilisateurs" unit="personnes">
+                {1234567}
+              </Stat>
+            </Box>
+          </Box>
+        </Box>
+      );
+
+      const UnitPositionSection = () => (
+        <Box as="section" marginBottom="xl">
+          <Title as="h2">
+            <Link anchor href="#unit-position" />
+            Position de l'unité
+          </Title>
+          <Paragraph>
+            Par défaut l'unité s'affiche à droite de la valeur (
+            <code>unitPosition="right"</code>). Elle peut aussi s'afficher en
+            dessous avec <code>unitPosition="bottom"</code>.
+          </Paragraph>
+
+          <Box row spacing="xl" alignY="end">
+            <Box row spacing="s">
+              <Caption>unitPosition="right" (défaut)</Caption>
+              <Stat label="Vitesse" unit="km/h">
+                {120}
+              </Stat>
+            </Box>
+
+            <Box row spacing="s">
+              <Caption>unitPosition="bottom"</Caption>
+              <Stat label="Vitesse" unit="km/h" unitPosition="bottom">
+                {120}
+              </Stat>
+            </Box>
+
+            <Box row spacing="s">
+              <Caption>unitPosition="right" — grand nombre</Caption>
+              <Stat label="Population" unit="habitants">
+                {8100000}
+              </Stat>
+            </Box>
+
+            <Box row spacing="s">
+              <Caption>unitPosition="bottom" — grand nombre</Caption>
+              <Stat label="Population" unit="habitants" unitPosition="bottom">
+                {8100000}
+              </Stat>
+            </Box>
+          </Box>
+        </Box>
+      );
+
+      const SizeSection = () => (
+        <Box as="section" marginBottom="xl">
+          <Title as="h2">
+            <Link anchor href="#size" />
+            Taille
+          </Title>
+          <Paragraph>
+            La prop <code>size</code> contrôle la taille de la valeur et de
+            l'unité. Le label n'est pas affecté. La valeur par défaut est{" "}
+            <code>2em</code>.
+          </Paragraph>
+
+          <Box row spacing="xl" alignY="end">
+            <Box column spacing="xs">
+              <Caption>size="1em"</Caption>
+              <Stat label="Score" unit="pts" size="1em">
+                {98}
+              </Stat>
+            </Box>
+
+            <Box column spacing="xs">
+              <Caption>size="1.5em"</Caption>
+              <Stat label="Score" unit="pts" size="1.5em">
+                {98}
+              </Stat>
+            </Box>
+
+            <Box column spacing="xs">
+              <Caption>size="2em" (défaut)</Caption>
+              <Stat label="Score" unit="pts">
+                {98}
+              </Stat>
+            </Box>
+
+            <Box column spacing="xs">
+              <Caption>size="3em"</Caption>
+              <Stat label="Score" unit="pts" size="3em">
+                {98}
+              </Stat>
+            </Box>
+
+            <Box column spacing="xs">
+              <Caption>size="4em"</Caption>
+              <Stat label="Score" unit="pts" size="4em">
+                {98}
+              </Stat>
+            </Box>
+          </Box>
+        </Box>
+      );
+
+      const LangSection = () => (
+        <Box as="section" marginBottom="xl">
+          <Title as="h2">
+            <Link anchor href="#lang" />
+            Langue (formatage des nombres)
+          </Title>
+          <Paragraph>
+            La prop <code>lang</code> est passée à{" "}
+            <code>Intl.NumberFormat</code>. Sans <code>lang</code>, c'est la
+            locale du navigateur qui est utilisée.
+          </Paragraph>
+
+          <Box row spacing="xl" alignY="end">
+            <Box column spacing="xs">
+              <Caption>Locale navigateur (fr)</Caption>
+              <Stat label="Ventes" unit="articles">
+                {1234567}
+              </Stat>
+            </Box>
+
+            <Box column spacing="xs">
+              <Caption>lang="en"</Caption>
+              <Stat label="Sales" unit="items" lang="en">
+                {1234567}
+              </Stat>
+            </Box>
+
+            <Box column spacing="xs">
+              <Caption>lang="de"</Caption>
+              <Stat label="Verkäufe" unit="Artikel" lang="de">
+                {1234567}
+              </Stat>
+            </Box>
+
+            <Box column spacing="xs">
+              <Caption>lang="ja"</Caption>
+              <Stat label="売上" unit="点" lang="ja">
+                {1234567}
+              </Stat>
+            </Box>
+          </Box>
+        </Box>
+      );
+
+      const LoadingSection = () => {
+        const [loading, setLoading] = useState(true);
+
+        return (
+          <Box as="section" marginBottom="xl">
+            <Title as="h2">
+              <Link anchor href="#loading" />
+              État de chargement
+            </Title>
+            <Paragraph>
+              Lorsque <code>loading</code> est activé, la valeur est remplacée
+              par un indicateur de chargement. L'unité est aussi masquée.
+            </Paragraph>
+
+            <Box row spacing="xl" alignY="end" marginBottom="md">
+              <Box column spacing="xs">
+                <Caption>loading</Caption>
+                <Stat label="Utilisateurs" unit="personnes" loading>
+                  {0}
+                </Stat>
+              </Box>
+
+              <Box column spacing="xs">
+                <Caption>loading — unitPosition="bottom"</Caption>
+                <Stat
+                  label="Utilisateurs"
+                  unit="personnes"
+                  unitPosition="bottom"
+                  loading
+                >
+                  {0}
+                </Stat>
+              </Box>
+
+              <Box column spacing="xs">
+                <Caption>loading — size="3em"</Caption>
+                <Stat label="Utilisateurs" unit="personnes" size="3em" loading>
+                  {0}
+                </Stat>
+              </Box>
+            </Box>
+
+            <Box row spacing="md" alignY="center">
+              <button onClick={() => setLoading((v) => !v)}>
+                {loading ? "Terminer le chargement" : "Remettre en chargement"}
+              </button>
+              <Box row spacing="xl" alignY="end">
+                <Stat
+                  label="Connexions actives"
+                  unit="utilisateurs"
+                  loading={loading}
+                >
+                  {4821}
+                </Stat>
+                <Stat
+                  label="Requêtes"
+                  unit="/ sec"
+                  unitPosition="bottom"
+                  loading={loading}
+                >
+                  {342}
+                </Stat>
+              </Box>
+            </Box>
+          </Box>
+        );
+      };
+
+      const ReadOnlyDisabledSection = () => (
+        <Box as="section" marginBottom="xl">
+          <Title as="h2">
+            <Link anchor href="#readonly-disabled" />
+            readOnly et disabled
+          </Title>
+          <Paragraph>
+            <code>readOnly</code> indique que la valeur n'est pas modifiable
+            (légèrement atténuée). <code>disabled</code> indique que le
+            composant n'est pas actif (fortement atténué, curseur not-allowed).
+          </Paragraph>
+
+          <Box row spacing="xl" alignY="end">
+            <Box column spacing="xs">
+              <Caption>Normal</Caption>
+              <Stat label="Capacité" unit="places">
+                {250}
+              </Stat>
+            </Box>
+
+            <Box column spacing="xs">
+              <Caption>readOnly</Caption>
+              <Stat label="Capacité" unit="places" readOnly>
+                {250}
+              </Stat>
+            </Box>
+
+            <Box column spacing="xs">
+              <Caption>disabled</Caption>
+              <Stat label="Capacité" unit="places" disabled>
+                {250}
+              </Stat>
+            </Box>
+          </Box>
+        </Box>
+      );
+
+      render(<Demo />, document.getElementById("app"));
+    </script>
+  </body>
+</html>
