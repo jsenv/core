@@ -34,6 +34,11 @@ const applyRouting = (
     reason,
   },
 ) => {
+  if (!updateRoutes) {
+    // .init() not called yet
+    // likely because code does not uses routing at all
+    return {};
+  }
   const {
     loadSet,
     reloadSet,
