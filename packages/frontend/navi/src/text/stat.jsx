@@ -1,3 +1,7 @@
+import {
+  isSizeSpacingScaleKey,
+  resolveSpacingSize,
+} from "../box/box_style_util.js";
 import { Icon } from "../graphic/icon.jsx";
 import { LoadingDots } from "../graphic/loader/loading_dots.jsx";
 import { withPropsClassName } from "../utils/with_props_class_name.js";
@@ -6,13 +10,11 @@ import { formatNumber } from "./format_number.js";
 import.meta.css = /* css */ `
   @layer navi {
     .navi_stat {
-      --label-color: #6b7280;
       --unit-color: #6b7280;
     }
 
     @media (prefers-color-scheme: dark) {
       .navi_stat {
-        --label-color: rgb(129, 134, 140);
         --unit-color: rgb(129, 134, 140);
       }
     }
@@ -26,7 +28,6 @@ import.meta.css = /* css */ `
   }
 
   .navi_stat_label {
-    color: var(--label-color);
     font-weight: 600;
     font-size: 0.75em;
     text-transform: uppercase;
@@ -38,12 +39,12 @@ import.meta.css = /* css */ `
     display: inline-flex;
     flex-direction: row;
     align-items: baseline;
-    gap: 0.3em;
+    gap: 0.15em;
   }
 
   .navi_stat_body[data-unit-bottom] {
     flex-direction: column;
-    align-items: flex-start;
+    align-items: center;
     gap: 0.1em;
   }
 
@@ -80,7 +81,7 @@ export const Stat = ({
   unit,
   unitPosition = "right",
   label,
-  size = "2em",
+  size = "xl",
   lang,
   loading,
   readOnly,
@@ -92,6 +93,9 @@ export const Stat = ({
   const value = parseStatValue(children);
   const valueFormatted =
     typeof value === "number" ? formatNumber(value, { lang }) : value;
+  const resolvedSize = isSizeSpacingScaleKey(size)
+    ? resolveSpacingSize(size, "fontSize")
+    : size;
 
   return (
     <span
@@ -106,7 +110,7 @@ export const Stat = ({
       <span
         className="navi_stat_body"
         data-unit-bottom={unitPosition === "bottom" ? "" : undefined}
-        style={{ fontSize: size }}
+        style={{ fontSize: resolvedSize }}
       >
         <span className="navi_stat_value">
           {loading ? (
@@ -117,7 +121,7 @@ export const Stat = ({
             valueFormatted
           )}
         </span>
-        {unit && !loading && <span className="navi_stat_unit">{unit}</span>}
+        {unit && <span className="navi_stat_unit">{unit}</span>}
       </span>
     </span>
   );

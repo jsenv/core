@@ -150,43 +150,44 @@
             Taille
           </Title>
           <Paragraph>
-            La prop <code>size</code> contrôle la taille de la valeur et de
-            l'unité. Le label n'est pas affecté. La valeur par défaut est{" "}
-            <code>2em</code>.
+            La prop <code>size</code> accepte les clés de l'échelle de taille :
+            <code>s</code>, <code>m</code>, <code>l</code>, <code>xl</code>{" "}
+            (défaut), <code>xxl</code>. Elle peut aussi recevoir une valeur CSS
+            arbitraire. Le label n'est pas affecté.
           </Paragraph>
 
           <Box row spacing="xl" alignY="end">
-            <Box column spacing="xs">
-              <Caption>size="1em"</Caption>
-              <Stat label="Score" unit="pts" size="1em">
+            <Box row spacing="s">
+              <Caption>size="s"</Caption>
+              <Stat label="Score" unit="pts" size="s">
                 {98}
               </Stat>
             </Box>
 
-            <Box column spacing="xs">
-              <Caption>size="1.5em"</Caption>
-              <Stat label="Score" unit="pts" size="1.5em">
+            <Box row spacing="s">
+              <Caption>size="m"</Caption>
+              <Stat label="Score" unit="pts" size="m">
                 {98}
               </Stat>
             </Box>
 
-            <Box column spacing="xs">
-              <Caption>size="2em" (défaut)</Caption>
+            <Box row spacing="s">
+              <Caption>size="l"</Caption>
+              <Stat label="Score" unit="pts" size="l">
+                {98}
+              </Stat>
+            </Box>
+
+            <Box row spacing="s">
+              <Caption>size="xl" (défaut)</Caption>
               <Stat label="Score" unit="pts">
                 {98}
               </Stat>
             </Box>
 
-            <Box column spacing="xs">
-              <Caption>size="3em"</Caption>
-              <Stat label="Score" unit="pts" size="3em">
-                {98}
-              </Stat>
-            </Box>
-
-            <Box column spacing="xs">
-              <Caption>size="4em"</Caption>
-              <Stat label="Score" unit="pts" size="4em">
+            <Box row spacing="s">
+              <Caption>size="xxl"</Caption>
+              <Stat label="Score" unit="pts" size="xxl">
                 {98}
               </Stat>
             </Box>
@@ -207,28 +208,28 @@
           </Paragraph>
 
           <Box row spacing="xl" alignY="end">
-            <Box column spacing="xs">
+            <Box row spacing="s">
               <Caption>Locale navigateur (fr)</Caption>
               <Stat label="Ventes" unit="articles">
                 {1234567}
               </Stat>
             </Box>
 
-            <Box column spacing="xs">
+            <Box row spacing="s">
               <Caption>lang="en"</Caption>
               <Stat label="Sales" unit="items" lang="en">
                 {1234567}
               </Stat>
             </Box>
 
-            <Box column spacing="xs">
+            <Box row spacing="s">
               <Caption>lang="de"</Caption>
               <Stat label="Verkäufe" unit="Artikel" lang="de">
                 {1234567}
               </Stat>
             </Box>
 
-            <Box column spacing="xs">
+            <Box row spacing="s">
               <Caption>lang="ja"</Caption>
               <Stat label="売上" unit="点" lang="ja">
                 {1234567}
@@ -252,15 +253,15 @@
               par un indicateur de chargement. L'unité est aussi masquée.
             </Paragraph>
 
-            <Box row spacing="xl" alignY="end" marginBottom="md">
-              <Box column spacing="xs">
+            <Box row spacing="xl" alignY="end" marginBottom="m">
+              <Box row spacing="s">
                 <Caption>loading</Caption>
                 <Stat label="Utilisateurs" unit="personnes" loading>
                   {0}
                 </Stat>
               </Box>
 
-              <Box column spacing="xs">
+              <Box row spacing="s">
                 <Caption>loading — unitPosition="bottom"</Caption>
                 <Stat
                   label="Utilisateurs"
@@ -272,7 +273,7 @@
                 </Stat>
               </Box>
 
-              <Box column spacing="xs">
+              <Box row spacing="s">
                 <Caption>loading — size="3em"</Caption>
                 <Stat label="Utilisateurs" unit="personnes" size="3em" loading>
                   {0}
@@ -280,7 +281,7 @@
               </Box>
             </Box>
 
-            <Box row spacing="md" alignY="center">
+            <Box row spacing="m" alignY="center">
               <button onClick={() => setLoading((v) => !v)}>
                 {loading ? "Terminer le chargement" : "Remettre en chargement"}
               </button>
@@ -319,21 +320,21 @@
           </Paragraph>
 
           <Box row spacing="xl" alignY="end">
-            <Box column spacing="xs">
+            <Box row spacing="s">
               <Caption>Normal</Caption>
               <Stat label="Capacité" unit="places">
                 {250}
               </Stat>
             </Box>
 
-            <Box column spacing="xs">
+            <Box row spacing="s">
               <Caption>readOnly</Caption>
               <Stat label="Capacité" unit="places" readOnly>
                 {250}
               </Stat>
             </Box>
 
-            <Box column spacing="xs">
+            <Box row spacing="s">
               <Caption>disabled</Caption>
               <Stat label="Capacité" unit="places" disabled>
                 {250}
