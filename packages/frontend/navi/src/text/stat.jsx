@@ -53,6 +53,11 @@ import.meta.css = /* css */ `
     }
 
     &[data-unit-bottom] {
+      .navi_stat_value {
+        display: inline-block;
+        width: 100%;
+        text-align: center;
+      }
       .navi_stat_body {
         .navi_stat_unit {
           display: inline-block;
@@ -88,15 +93,6 @@ export const Stat = ({
     typeof value === "number" ? formatNumber(value, { lang }) : value;
   const unitBottom = unitPosition === "bottom";
 
-  let unitEl;
-  if (unit) {
-    if (unitBottom) {
-      unitEl = <span className="navi_stat_unit">{unit}</span>;
-    } else {
-      unitEl = <span className="navi_stat_unit">{unit}</span>;
-    }
-  }
-
   return (
     <Text
       baseClassName="navi_stat"
@@ -125,7 +121,7 @@ export const Stat = ({
             valueFormatted
           )}
         </span>
-        {unitEl}
+        {unit && <span className="navi_stat_unit">{unit}</span>}
       </Text>
     </Text>
   );

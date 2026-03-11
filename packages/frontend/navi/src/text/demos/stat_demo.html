@@ -253,10 +253,16 @@
               par un indicateur de chargement. L'unité est aussi masquée.
             </Paragraph>
 
+            <Box row spacing="m" alignY="center" marginBottom="m">
+              <button onClick={() => setLoading((v) => !v)}>
+                {loading ? "Terminer le chargement" : "Remettre en chargement"}
+              </button>
+            </Box>
+
             <Box row spacing="xl" alignY="end" marginBottom="m">
               <Box row spacing="s">
                 <Caption>loading</Caption>
-                <Stat label="Utilisateurs" unit="personnes" loading>
+                <Stat label="Utilisateurs" unit="personnes" loading={loading}>
                   {0}
                 </Stat>
               </Box>
@@ -267,41 +273,36 @@
                   label="Utilisateurs"
                   unit="personnes"
                   unitPosition="bottom"
-                  loading
+                  loading={loading}
                 >
                   {0}
                 </Stat>
               </Box>
 
               <Box row spacing="s">
-                <Caption>loading — size="3em"</Caption>
-                <Stat label="Utilisateurs" unit="personnes" size="3em" loading>
+                <Caption>loading — size="xxl"</Caption>
+                <Stat
+                  label="Utilisateurs"
+                  unit="personnes"
+                  size="xxl"
+                  loading={loading}
+                >
                   {0}
                 </Stat>
               </Box>
             </Box>
 
-            <Box row spacing="m" alignY="center">
-              <button onClick={() => setLoading((v) => !v)}>
-                {loading ? "Terminer le chargement" : "Remettre en chargement"}
-              </button>
-              <Box row spacing="xl" alignY="end">
-                <Stat
-                  label="Connexions actives"
-                  unit="utilisateurs"
-                  loading={loading}
-                >
-                  {4821}
-                </Stat>
-                <Stat
-                  label="Requêtes"
-                  unit="/ sec"
-                  unitPosition="bottom"
-                  loading={loading}
-                >
-                  {342}
-                </Stat>
-              </Box>
+            <Box row spacing="xl" alignY="end">
+              <Stat
+                label="Connexions actives"
+                unit="utilisateurs"
+                loading={loading}
+              >
+                {4821}
+              </Stat>
+              <Stat label="Requêtes" unit="/ sec" loading={loading}>
+                {342}
+              </Stat>
             </Box>
           </Box>
         );
