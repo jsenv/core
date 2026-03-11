@@ -1,4 +1,5 @@
 import { Box } from "../box/box.jsx";
+import { LoaderBackground } from "../graphic/loader/loader_background.jsx";
 
 import.meta.css = /* css */ `
   @layer navi {
@@ -25,14 +26,19 @@ import.meta.css = /* css */ `
     align-items: center;
     vertical-align: middle;
 
-    .navi_meter_track {
+    .navi_meter_track_container {
       position: relative;
       width: 100%;
       height: calc(var(--height) * 0.5);
-      background-color: var(--track-color);
-      border: 1px solid var(--border-color);
       border-radius: var(--border-radius);
-      overflow: hidden;
+
+      .navi_meter_track {
+        position: absolute;
+        inset: 0;
+        background-color: var(--track-color);
+        border: 1px solid var(--border-color);
+        border-radius: inherit;
+      }
 
       .navi_meter_fill {
         position: absolute;
@@ -40,34 +46,12 @@ import.meta.css = /* css */ `
         width: var(--x-fill-percent, 0%);
         height: 100%;
         background-color: var(--x-fill-color);
+        border-radius: inherit;
       }
     }
 
     &[data-disabled] {
       opacity: 0.4;
-    }
-
-    &[data-loading] {
-      .navi_meter_track {
-        .navi_meter_fill {
-          width: 35%;
-          background-image: none;
-          background-color: var(--fill-color-optimum);
-          animation: navi_meter_loading 2.5s ease-in-out infinite;
-        }
-      }
-    }
-  }
-
-  @keyframes navi_meter_loading {
-    0% {
-      transform: translateX(-150%);
-    }
-    70% {
-      transform: translateX(320%);
-    }
-    100% {
-      transform: translateX(320%);
     }
   }
 `;
@@ -138,7 +122,13 @@ export const Meter = ({
       }}
       {...props}
     >
-      <span className="navi_meter_track">
+      <span className="navi_meter_track_container">
+        <LoaderBackground
+          loading={loading}
+          color="var(--fill-color-optimum)"
+          inset={-1}
+        />
+        <span className="navi_meter_track" />
         <span className="navi_meter_fill" />
       </span>
     </Box>
