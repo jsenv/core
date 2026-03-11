@@ -42,11 +42,11 @@ import.meta.css = /* css */ `
 
       .navi_meter_fill {
         position: absolute;
-        left: 0;
-        width: var(--x-fill-percent, 0%);
-        height: 100%;
+        inset: 0;
+        background-clip: content-box;
         background-color: var(--x-fill-color);
         border-radius: inherit;
+        clip-path: inset(0 calc((1 - var(--x-fill-ratio, 0)) * 100%) 0 0);
       }
     }
 
@@ -90,8 +90,7 @@ export const Meter = ({
   ...props
 }) => {
   const clampedValue = value < min ? min : value > max ? max : value;
-  const fillPercent =
-    max === min ? 0 : ((clampedValue - min) / (max - min)) * 100;
+  const fillRatio = max === min ? 0 : (clampedValue - min) / (max - min);
   const level = getMeterLevel(clampedValue, min, max, low, high, optimum);
 
   const fillColorVar =
@@ -116,7 +115,7 @@ export const Meter = ({
       }}
       pseudoClasses={MeterPseudoClasses}
       style={{
-        "--x-fill-percent": `${fillPercent}%`,
+        "--x-fill-ratio": fillRatio,
         "--x-fill-color": fillColorVar,
         ...style,
       }}
