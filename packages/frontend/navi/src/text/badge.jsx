@@ -2,6 +2,7 @@ import { useRef } from "preact/hooks";
 
 import { Icon } from "../graphic/icon.jsx";
 import { LoadingDots } from "../graphic/loader/loading_dots.jsx";
+import { formatNumber } from "./format_number.js";
 import { Text } from "./text.jsx";
 import { useContrastingColor } from "./use_contrasting_color.js";
 
@@ -102,14 +103,19 @@ export const BadgeCount = ({
   // so that visually the interface do not suddently switch from circle to ellipse depending on the count
   circle,
   max = circle ? MAX_FOR_CIRCLE : Infinity,
+  integer,
+  lang,
   ...props
 }) => {
   const defaultRef = useRef();
   const ref = props.ref || defaultRef;
   useContrastingColor(ref, ".navi_badge_count_visual");
 
-  const valueRequested =
+  let valueRequested =
     typeof children === "string" ? parseInt(children, 10) : children;
+  if (integer && typeof valueRequested === "number") {
+    valueRequested = Math.round(valueRequested);
+  }
   const valueDisplayed = applyMaxToValue(max, valueRequested);
   const hasOverflow = valueDisplayed !== valueRequested;
   const valueCharCount = String(valueDisplayed).length;
@@ -131,9 +137,13 @@ export const BadgeCount = ({
       </BadgeCountCircle>
     );
   }
+  const valueFormatted =
+    typeof valueDisplayed === "number"
+      ? formatNumber(valueDisplayed, { lang })
+      : valueDisplayed;
   return (
     <BadgeCountEllipse {...props} ref={ref} hasOverflow={hasOverflow}>
-      {valueDisplayed}
+      {valueFormatted}
       {hasOverflow && maxElement}
     </BadgeCountEllipse>
   );
