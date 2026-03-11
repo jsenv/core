@@ -10,9 +10,9 @@ import.meta.css = /* css */ `
       --width: 5em;
 
       /* Semantic fill colors, matching native meter on Chrome/macOS */
-      --fill-color-optimum: light-dark(#3b9c3b, #4caf50);
-      --fill-color-suboptimum: light-dark(#c8a005, #ffc107);
-      --fill-color-subsuboptimum: light-dark(#aa0000, #f44336);
+      --fill-color-optimum: light-dark(#0f7c0f, #4caf50);
+      --fill-color-suboptimum: light-dark(#fdb900, #ffc107);
+      --fill-color-subsuboptimum: light-dark(#d83b01, #f44336);
     }
   }
 
