@@ -163,6 +163,46 @@
           </div>
 
           <div className="states-section">
+            <div className="states-title">Children (texte)</div>
+            <p className="states-description">
+              Le navigateur accepte du texte enfant dans{" "}
+              <code>&lt;meter&gt;</code> comme texte de fallback (affiché
+              uniquement si l'élément n'est pas supporté). Notre composant
+              affiche ce texte <em>sur</em> le meter.
+            </p>
+            <Box column spacing="s">
+              {[
+                { value: 0.25, label: "value=0.25" },
+                { value: 0.5, label: "value=0.5" },
+                { value: 0.75, label: "value=0.75" },
+              ].map(({ value, label }) => (
+                <fieldset key={label}>
+                  <legend>{label} with children</legend>
+                  <div className="comparison-row">
+                    <span className="comparison-label">Navi</span>
+                    <Meter value={value} width="8em">
+                      {Math.round(value * 100)}%
+                    </Meter>
+                  </div>
+                  <div className="comparison-row">
+                    <span className="comparison-label">Native</span>
+                    <meter value={value}>{Math.round(value * 100)}%</meter>
+                    <Caption
+                      style={{
+                        fontStyle: "italic",
+                        color: "#888",
+                        fontSize: "0.8em",
+                      }}
+                    >
+                      (fallback, hidden when supported)
+                    </Caption>
+                  </div>
+                </fieldset>
+              ))}
+            </Box>
+          </div>
+
+          <div className="states-section">
             <div className="states-title">Custom min / max</div>
             <p className="states-description">
               Arbitrary numeric ranges — identical to the native{" "}

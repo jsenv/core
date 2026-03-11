@@ -2,6 +2,10 @@ import { pickLightOrDark } from "@jsenv/dom";
 import { useLayoutEffect, useRef } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
+import {
+  reportDisabledToLabel,
+  reportReadOnlyToLabel,
+} from "../field/label.jsx";
 import { LoaderBackground } from "../graphic/loader/loader_background.jsx";
 
 import.meta.css = /* css */ `
@@ -69,7 +73,6 @@ import.meta.css = /* css */ `
         text-shadow:
           0 0 4px var(--x-caption-shadow-color, black),
           0 0 2px var(--x-caption-shadow-color, black);
-        line-height: 1;
         white-space: nowrap;
         pointer-events: none;
         user-select: none;
@@ -147,6 +150,9 @@ export const Meter = ({
       : level === "suboptimum"
         ? "var(--fill-color-suboptimum)"
         : "var(--fill-color-subsuboptimum)";
+
+  reportDisabledToLabel(disabled);
+  reportReadOnlyToLabel(readOnly);
 
   const trackContainerRef = useRef();
   useLayoutEffect(() => {

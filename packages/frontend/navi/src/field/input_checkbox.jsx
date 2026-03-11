@@ -9,8 +9,9 @@ import { Box } from "../box/box.jsx";
 import { LoaderBackground } from "../graphic/loader/loader_background.jsx";
 import { useStableCallback } from "../utils/use_stable_callback.js";
 import {
-  ReportDisabledOnLabelContext,
-  ReportReadOnlyOnLabelContext,
+  reportDisabledToLabel,
+  reportInteractiveToLabel,
+  reportReadOnlyToLabel,
 } from "./label.jsx";
 import { useActionEvents } from "./use_action_events.js";
 import { useAutoFocus } from "./use_auto_focus.js";
@@ -445,8 +446,6 @@ const InputCheckboxBasic = (props) => {
   const loadingElement = useContext(LoadingElementContext);
   const uiStateController = useContext(UIStateControllerContext);
   const uiState = useContext(UIStateContext);
-  const reportReadOnlyOnLabel = useContext(ReportReadOnlyOnLabelContext);
-  const reportDisabledOnLabel = useContext(ReportDisabledOnLabelContext);
   const {
     /* eslint-disable no-unused-vars */
     type,
@@ -478,8 +477,9 @@ const InputCheckboxBasic = (props) => {
     loading || (contextLoading && loadingElement === ref.current);
   const innerReadOnly =
     readOnly || contextReadOnly || innerLoading || uiStateController.readOnly;
-  reportReadOnlyOnLabel?.(innerReadOnly);
-  reportDisabledOnLabel?.(innerDisabled);
+  reportReadOnlyToLabel(innerReadOnly);
+  reportDisabledToLabel(innerDisabled);
+  reportInteractiveToLabel(true);
   useAutoFocus(ref, autoFocus);
   const remainingProps = useConstraints(ref, rest);
 

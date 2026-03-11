@@ -1,24 +1,40 @@
 import { createContext } from "preact";
-import { useState } from "preact/hooks";
+import { useContext, useState } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
 
 import.meta.css = /* css */ `
   @layer navi {
     label {
-      cursor: pointer;
-    }
+      &[data-interactive] {
+        cursor: pointer;
+      }
 
-    label[data-readonly],
-    label[data-disabled] {
-      color: rgba(0, 0, 0, 0.5);
-      cursor: default;
+      &[data-read-only],
+      &[data-disabled] {
+        color: rgba(0, 0, 0, 0.5);
+        cursor: default;
+      }
     }
   }
 `;
 
-export const ReportReadOnlyOnLabelContext = createContext();
-export const ReportDisabledOnLabelContext = createContext();
+const ReportReadOnlyOnLabelContext = createContext();
+const ReportDisabledOnLabelContext = createContext();
+const ReportInteractiveOnLabelContext = createContext();
+
+export const reportReadOnlyToLabel = (value) => {
+  const reportReadOnly = useContext(ReportReadOnlyOnLabelContext);
+  reportReadOnly?.(value);
+};
+export const reportInteractiveToLabel = (value) => {
+  const reportInteractive = useContext(ReportInteractiveOnLabelContext);
+  reportInteractive?.(value);
+};
+export const reportDisabledToLabel = (value) => {
+  const reportDisabled = useContext(ReportDisabledOnLabelContext);
+  reportDisabled?.(value);
+};
 
 const LabelPseudoClasses = [
   ":hover",
@@ -32,6 +48,7 @@ const LabelPseudoClasses = [
 export const Label = (props) => {
   const { readOnly, disabled, children, ...rest } = props;
 
+  const [interactive, setInteractive] = useState(false);
   const [inputReadOnly, setInputReadOnly] = useState(false);
   const innerReadOnly = readOnly || inputReadOnly;
   const [inputDisabled, setInputDisabled] = useState(false);
@@ -46,12 +63,15 @@ export const Label = (props) => {
         ":read-only": innerReadOnly,
         ":disabled": innerDisabled,
       }}
+      data-interactive={interactive ? "" : undefined}
     >
-      <ReportReadOnlyOnLabelContext.Provider value={setInputReadOnly}>
-        <ReportDisabledOnLabelContext.Provider value={setInputDisabled}>
-          {children}
-        </ReportDisabledOnLabelContext.Provider>
-      </ReportReadOnlyOnLabelContext.Provider>
+      <ReportInteractiveOnLabelContext.Provider value={setInteractive}>
+        <ReportReadOnlyOnLabelContext.Provider value={setInputReadOnly}>
+          <ReportDisabledOnLabelContext.Provider value={setInputDisabled}>
+            {children}
+          </ReportDisabledOnLabelContext.Provider>
+        </ReportReadOnlyOnLabelContext.Provider>
+      </ReportInteractiveOnLabelContext.Provider>
     </Box>
   );
 };

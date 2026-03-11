@@ -31,7 +31,12 @@ import { PhoneSvg } from "../graphic/icons/phone_svg.jsx";
 import { SearchSvg } from "../graphic/icons/search_svg.jsx";
 import { LoaderBackground } from "../graphic/loader/loader_background.jsx";
 import { useStableCallback } from "../utils/use_stable_callback.js";
-import { Label, ReportReadOnlyOnLabelContext } from "./label.jsx";
+import {
+  Label,
+  reportDisabledToLabel,
+  reportInteractiveToLabel,
+  reportReadOnlyToLabel,
+} from "./label.jsx";
 import { useActionEvents } from "./use_action_events.js";
 import { useAutoFocus } from "./use_auto_focus.js";
 import {
@@ -344,7 +349,6 @@ const InputTextualBasic = (props) => {
   const contextDisabled = useContext(DisabledContext);
   const contextLoading = useContext(LoadingContext);
   const contextLoadingElement = useContext(LoadingElementContext);
-  const reportReadOnlyOnLabel = useContext(ReportReadOnlyOnLabelContext);
   const uiStateController = useContext(UIStateControllerContext);
   const uiState = useContext(UIStateContext);
   const {
@@ -373,8 +377,10 @@ const InputTextualBasic = (props) => {
   const innerReadOnly =
     readOnly || contextReadOnly || innerLoading || uiStateController.readOnly;
   const innerDisabled = disabled || contextDisabled;
-  // infom any <label> parent of our readOnly state
-  reportReadOnlyOnLabel?.(innerReadOnly);
+  // infom any <label> parent of our readOnly state + that we are interactive
+  reportReadOnlyToLabel(innerReadOnly);
+  reportDisabledToLabel(innerDisabled);
+  reportInteractiveToLabel(true);
   useAutoFocus(ref, autoFocus, {
     autoFocusVisible,
     autoSelect,
