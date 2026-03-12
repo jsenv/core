@@ -2,6 +2,7 @@ import { pickLightOrDark } from "@jsenv/dom";
 import { useLayoutEffect, useRef } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
+import { PSEUDO_CLASSES } from "../box/pseudo_styles.js";
 import {
   reportDisabledToLabel,
   reportReadOnlyToLabel,
@@ -23,7 +24,7 @@ import.meta.css = /* css */ `
       /* Semantic fill colors, matching native meter on Chrome/macOS */
       --fill-color-optimum: light-dark(#0f7c0f, #4caf50);
       --fill-color-suboptimum: light-dark(#fdb900, #ffc107);
-      --fill-color-subsuboptimum: light-dark(#d83b01, #f44336);
+      --fill-color-even-less-good: light-dark(#d83b01, #f44336);
     }
   }
 
@@ -135,7 +136,21 @@ const MeterPseudoClasses = [
   ":read-only",
   ":disabled",
   ":-navi-loading",
+  ":-navi-meter-optimum",
+  ":-navi-meter-suboptimum",
+  ":-navi-meter-even-less-good",
 ];
+Object.assign(PSEUDO_CLASSES, {
+  ":-navi-meter-optimum": {
+    attribute: "data-optimum",
+  },
+  ":-navi-meter-suboptimum": {
+    attribute: "data-suboptimum",
+  },
+  ":-navi-meter-even-less-good": {
+    attribute: "data-even-less-good",
+  },
+});
 
 export const Meter = ({
   value = 0,
@@ -172,7 +187,7 @@ export const Meter = ({
       ? "var(--fill-color-optimum)"
       : level === "suboptimum"
         ? "var(--fill-color-suboptimum)"
-        : "var(--fill-color-subsuboptimum)";
+        : "var(--fill-color-even-less-good)";
 
   reportDisabledToLabel(disabled);
   reportReadOnlyToLabel(readOnly);
@@ -215,6 +230,9 @@ export const Meter = ({
         ":read-only": readOnly,
         ":disabled": disabled,
         ":-navi-loading": loading,
+        ":-navi-meter-optimum": level === "optimum",
+        ":-navi-meter-suboptimum": level === "suboptimum",
+        ":-navi-meter-even-less-good": level === "even-less-good",
       }}
       pseudoClasses={MeterPseudoClasses}
       data-has-caption={children !== undefined ? "" : undefined}
@@ -269,5 +287,5 @@ const getMeterLevel = (value, min, max, low, high, optimum) => {
 
   if (distance === 0) return "optimum";
   if (distance === 1) return "suboptimum";
-  return "subsuboptimum";
+  return "even-less-good";
 };

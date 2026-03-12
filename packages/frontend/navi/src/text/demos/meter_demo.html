@@ -512,7 +512,7 @@
               <fieldset>
                 <legend>Couleurs sémantiques toutes personnalisées</legend>
                 <Caption>
-                  Navi: optimum="violet" suboptimum="blue" subsuboptimum="pink"
+                  Navi: optimum="violet" suboptimum="blue" even-less-good="pink"
                 </Caption>
                 <br />
 
@@ -528,7 +528,7 @@
                     style={{
                       "--fill-color-optimum": "violet",
                       "--fill-color-suboptimum": "blue",
-                      "--fill-color-subsuboptimum": "pink",
+                      "--fill-color-even-less-good": "pink",
                     }}
                   />
                 </div>
@@ -544,12 +544,12 @@
                     style={{
                       "--fill-color-optimum": "violet",
                       "--fill-color-suboptimum": "blue",
-                      "--fill-color-subsuboptimum": "pink",
+                      "--fill-color-even-less-good": "pink",
                     }}
                   />
                 </div>
                 <div className="comparison-row">
-                  <span className="comparison-label">Navi subsuboptimum</span>
+                  <span className="comparison-label">Navi even-less-good</span>
                   <Meter
                     value={90}
                     min={0}
@@ -560,7 +560,7 @@
                     style={{
                       "--fill-color-optimum": "violet",
                       "--fill-color-suboptimum": "blue",
-                      "--fill-color-subsuboptimum": "pink",
+                      "--fill-color-even-less-good": "pink",
                     }}
                   />
                 </div>
@@ -590,7 +590,7 @@
                   />
                 </div>
                 <div className="comparison-row">
-                  <span className="comparison-label">UA subsuboptimum</span>
+                  <span className="comparison-label">UA even-less-good</span>
                   <meter
                     value={90}
                     min={0}
@@ -744,7 +744,7 @@
                 </div>
               </fieldset>
               <fieldset>
-                <legend>Red fill (subsuboptimum) — low fill (15%)</legend>
+                <legend>Red fill (even-less-good) — low fill (15%)</legend>
                 <div className="comparison-row">
                   <Meter
                     value={15}
