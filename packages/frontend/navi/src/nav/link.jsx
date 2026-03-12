@@ -42,7 +42,8 @@ import.meta.css = /* css */ `
       --link-outline-color: var(--navi-focus-outline-color);
       --link-loader-color: var(--navi-loader-color);
       --link-color: rgb(0, 0, 238);
-      --link-color-visited: light-dark(#6a1b9a, #ab47bc);
+      --link-color-visited: color-mix(in srgb, var(--link-color), black 40%);
+
       --link-color-active: red;
       --link-text-decoration: underline;
       --link-text-decoration-hover: var(--link-text-decoration);
@@ -89,22 +90,6 @@ import.meta.css = /* css */ `
       --x-link-color: var(--x-link-color-hover);
       --x-link-text-decoration: var(--x-link-text-decoration-hover);
     }
-    /* Current */
-    &[data-href-current] {
-      --x-link-color: var(--link-color-current);
-      --x-link-cursor: default;
-      &[data-anchor] {
-        /* For anchor links, we want to keep the pointer cursor to indicate interactivity */
-        /* as anchor link will still scroll to the section even if it's the current page */
-        --x-link-cursor: pointer;
-      }
-    }
-    /* Focus */
-    &[data-focus],
-    &[data-focus-visible] {
-      position: relative;
-      z-index: 1; /* Ensure focus outline is above other elements */
-    }
     &[data-focus-visible] {
       outline-width: 2px;
     }
@@ -123,6 +108,22 @@ import.meta.css = /* css */ `
     &[data-active] {
       /* Redefine it otherwise [data-visited] prevails */
       --x-link-color: var(--x-link-color-active);
+    }
+    /* Current */
+    &[data-href-current] {
+      --x-link-color: var(--link-color-current);
+      --x-link-cursor: default;
+      &[data-anchor] {
+        /* For anchor links, we want to keep the pointer cursor to indicate interactivity */
+        /* as anchor link will still scroll to the section even if it's the current page */
+        --x-link-cursor: pointer;
+      }
+    }
+    /* Focus */
+    &[data-focus],
+    &[data-focus-visible] {
+      position: relative;
+      z-index: 1; /* Ensure focus outline is above other elements */
     }
     /* Readonly */
     &[data-readonly] > * {

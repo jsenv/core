@@ -283,6 +283,7 @@
 
             <AutomaticIconDemo />
             <ColorsAndSizesDemo />
+            <CustomColorStatesDemo />
             <InteractiveStatesDemo />
             <AnchorFeatureDemo />
           </div>
@@ -375,6 +376,71 @@
                 <Link href="./purple" preventDefault color="purple" size="xl">
                   Link text
                 </Link>
+              </Box>
+            </Box>
+          </Box>
+        );
+      };
+
+      const CustomColorStatesDemo = () => {
+        const states = [
+          { label: "default", pseudoState: {} },
+          { label: ":hover", pseudoState: { ":hover": true } },
+          { label: ":visited", pseudoState: { ":visited": true } },
+          { label: ":active", pseudoState: { ":active": true } },
+        ];
+
+        return (
+          <Box as="section" marginBottom="xl">
+            <Title as="h2">Custom color — states behavior</Title>
+            <p className="states-description">
+              Shows how a custom base color propagates (or not) to{" "}
+              <code>:hover</code>, <code>:visited</code>, and{" "}
+              <code>:active</code> states.
+            </p>
+
+            <Box column spacing="m">
+              <Box row spacing="s" padding="m">
+                <Caption>Green link — light background</Caption>
+                <Box row spacing="xs">
+                  {states.map(({ label, pseudoState }) => (
+                    <fieldset key={label}>
+                      <legend>{label}</legend>
+                      <Link
+                        href="./green"
+                        preventDefault
+                        color="green"
+                        pseudoState={pseudoState}
+                      >
+                        Link text
+                      </Link>
+                    </fieldset>
+                  ))}
+                </Box>
+              </Box>
+
+              <Box row spacing="s" background="#1a1a2e" padding="m">
+                <Caption style={{ color: "#ccc" }}>
+                  White link — dark background
+                </Caption>
+                <Box row spacing="xs">
+                  {states.map(({ label, pseudoState }) => (
+                    <fieldset
+                      key={label}
+                      style={{ borderColor: "#444", color: "#ccc" }}
+                    >
+                      <legend style={{ color: "#aaa" }}>{label}</legend>
+                      <Link
+                        href="./white"
+                        preventDefault
+                        color="white"
+                        pseudoState={pseudoState}
+                      >
+                        Link text
+                      </Link>
+                    </fieldset>
+                  ))}
+                </Box>
               </Box>
             </Box>
           </Box>
