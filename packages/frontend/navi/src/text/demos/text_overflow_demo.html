@@ -25,17 +25,13 @@
 
             <section>
               <h2>Two-column layout</h2>
-              <p style={{ color: "#555", fontSize: "14px" }}>
-                First column uses <code>overflowEllipsis</code> and grows to
-                fill available space. Second column has a fixed width of 100px.
-              </p>
-              <Box column spacing="12" width="200">
-                <Text overflowEllipsis>
+              <Box column spacing="12" width="300">
+                <Text overflowEllipsis border="1px solid #ccc">
                   This is a long text in the first column that should be
                   truncated with an ellipsis when there is not enough space.
                 </Text>
-                <Box width="100" border="1px solid #4caf50" shrink={false}>
-                  100px column
+                <Box border="1px solid #4caf50" shrink={false}>
+                  Second column
                 </Box>
               </Box>
             </section>
