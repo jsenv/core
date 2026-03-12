@@ -8,6 +8,7 @@
  *
  */
 
+import { getBorderSizes } from "@jsenv/dom";
 import { useCallback, useLayoutEffect, useRef, useState } from "preact/hooks";
 
 import { Box } from "../../box/box.jsx";
@@ -15,8 +16,21 @@ import { Input } from "../input.jsx";
 
 import.meta.css = /* css */ `
   .navi_editable_wrapper {
+    --inset-top: 0px;
+    --inset-right: 0px;
+    --inset-bottom: 0px;
+    --inset-left: 0px;
+
     position: absolute;
-    inset: 0;
+    top: var(--inset-top);
+    right: var(--inset-right);
+    bottom: var(--inset-bottom);
+    left: var(--inset-left);
+
+    pointer-events: none;
+    &[data-editing] {
+      pointer-events: auto;
+    }
   }
 `;
 
@@ -75,7 +89,6 @@ export const Editable = (props) => {
 
   const editingPreviousRef = useRef(editing);
   const valueWhenEditStartRef = useRef(editing ? value : undefined);
-
   if (editingPreviousRef.current !== editing) {
     if (editing) {
       valueWhenEditStartRef.current = value; // Always store the external value
@@ -161,14 +174,32 @@ export const Editable = (props) => {
     />
   );
 
+  const wrapperRef = useRef();
+  useLayoutEffect(() => {
+    const wrapper = wrapperRef.current;
+    if (!wrapper) {
+      return;
+    }
+    const parent = wrapper.parentElement;
+    const borderSizes = getBorderSizes(parent);
+
+    wrapper.style.setProperty("--inset-left", `-${borderSizes.left}px`);
+    wrapper.style.setProperty("--inset-top", `-${borderSizes.top}px`);
+    wrapper.style.setProperty("--inset-right", `-${borderSizes.right}px`);
+    wrapper.style.setProperty("--inset-bottom", `-${borderSizes.bottom}px`);
+  });
+
   return (
     <>
       {children || <span>{value}</span>}
-      {editing && (
-        <Box {...wrapperProps} baseClassName="navi_editable_wrapper">
-          {input}
-        </Box>
-      )}
+      <Box
+        className="navi_editable_wrapper"
+        ref={wrapperRef}
+        {...wrapperProps}
+        data-editing={editing ? "" : undefined}
+      >
+        {input}
+      </Box>
     </>
   );
 };
