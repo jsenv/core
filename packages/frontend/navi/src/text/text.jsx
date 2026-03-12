@@ -34,7 +34,7 @@ import.meta.css = /* css */ `
 
   .navi_text_overflow_wrapper {
     display: flex;
-    width: 0;
+    width: 100%;
     flex-grow: 1;
     gap: 0.3em;
   }
@@ -220,7 +220,6 @@ const TextOverflow = ({ noWrap, spacing, children, ...rest }) => {
       preLine={rest.as === "p"}
       {...rest}
       className="navi_text_overflow"
-      expandX
       spacing="pre"
     >
       <span className="navi_text_overflow_wrapper">
