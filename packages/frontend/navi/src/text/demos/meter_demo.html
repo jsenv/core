@@ -106,6 +106,7 @@
           <ColorCustomizationDemo />
           <LabelDemo />
           <CaptionDemo />
+          <InteractiveDemo />
         </div>
       );
 
@@ -849,6 +850,78 @@
           </div>
         </div>
       );
+
+      /* ------------------------------------------------------------------ */
+      /* Interactive — value + transition controls                           */
+      /* ------------------------------------------------------------------ */
+      const Checkbox = ({ checked, onChange, children }) => (
+        <label
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "6px",
+            cursor: "pointer",
+          }}
+        >
+          <input type="checkbox" checked={checked} onChange={onChange} />
+          {children}
+        </label>
+      );
+
+      const InteractiveDemo = () => {
+        const [value, setValue] = useState(0.5);
+        const [transition, setTransition] = useState(false);
+        const [fillRound, setFillRound] = useState(false);
+
+        return (
+          <div className="demo-section">
+            <h2>Interactive controls</h2>
+
+            <div className="states-section">
+              <div className="states-title">
+                Value buttons + transition toggle
+              </div>
+              <p className="states-description">
+                Use the buttons to jump to 0 %, 50 % or 100 %. Enable{" "}
+                <code>transition</code> to animate the fill.{" "}
+                <code>fillRound</code> switches from clip-path to width-based
+                fill, letting you verify both transition paths.
+              </p>
+
+              <Box column spacing="m">
+                <Box row spacing="m" alignY="center">
+                  <Checkbox
+                    checked={transition}
+                    onChange={(e) => setTransition(e.target.checked)}
+                  >
+                    Enable transition
+                  </Checkbox>
+                  <Checkbox
+                    checked={fillRound}
+                    onChange={(e) => setFillRound(e.target.checked)}
+                  >
+                    fillRound
+                  </Checkbox>
+                </Box>
+
+                <Box row spacing="s" alignY="center">
+                  <button onClick={() => setValue(0)}>0 %</button>
+                  <button onClick={() => setValue(0.5)}>50 %</button>
+                  <button onClick={() => setValue(1)}>100 %</button>
+                </Box>
+
+                <Meter
+                  value={value}
+                  percentage
+                  width="16em"
+                  transition={transition}
+                  fillRound={fillRound}
+                />
+              </Box>
+            </div>
+          </div>
+        );
+      };
 
       render(<App />, document.getElementById("app"));
     </script>

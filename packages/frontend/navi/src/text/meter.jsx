@@ -109,6 +109,14 @@ import.meta.css = /* css */ `
         border-color: transparent;
       }
     }
+    &[data-transition] {
+      .navi_meter_fill {
+        transition: clip-path 0.4s ease;
+      }
+      &[data-fill-round] .navi_meter_fill {
+        transition: width 0.4s ease;
+      }
+    }
   }
 `;
 
@@ -144,6 +152,7 @@ export const Meter = ({
   fillOnly,
   fillRound = fillOnly,
   borderless,
+  transition,
   style,
   ...props
 }) => {
@@ -212,6 +221,7 @@ export const Meter = ({
       data-fill-only={fillOnly ? "" : undefined}
       data-fill-round={fillRound ? "" : undefined}
       data-borderless={borderless ? "" : undefined}
+      data-transition={transition ? "" : undefined}
       style={{
         "--x-fill-ratio": fillRatio,
         "--x-fill-color": fillColorVar,
