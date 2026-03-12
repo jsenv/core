@@ -29,34 +29,15 @@
                 First column uses <code>overflowEllipsis</code> and grows to
                 fill available space. Second column has a fixed width of 100px.
               </p>
-              <div
-                style={{
-                  display: "flex",
-                  gap: "12px",
-                  border: "1px solid #ccc",
-                  padding: "8px",
-                }}
-              >
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <Text overflowEllipsis>
-                    This is a long text in the first column that should be
-                    truncated with an ellipsis when there is not enough space.
-                  </Text>
-                </div>
-                <div
-                  style={{
-                    width: "100px",
-                    flexShrink: 0,
-                    border: "1px solid #4caf50",
-                    padding: "4px",
-                    textAlign: "center",
-                    fontSize: "13px",
-                    color: "#4caf50",
-                  }}
-                >
+              <Box column spacing="12" width="200">
+                <Text overflowEllipsis>
+                  This is a long text in the first column that should be
+                  truncated with an ellipsis when there is not enough space.
+                </Text>
+                <Box width="100" border="1px solid #4caf50" shrink={false}>
                   100px column
-                </div>
-              </div>
+                </Box>
+              </Box>
             </section>
 
             <section>
