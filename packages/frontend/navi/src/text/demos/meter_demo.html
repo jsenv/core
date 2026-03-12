@@ -84,7 +84,7 @@
       }
 
       .comparison-label {
-        min-width: 50px;
+        min-width: 70px;
         color: #666;
         font-size: 0.85rem;
       }
@@ -111,11 +111,11 @@
       );
 
       /* ------------------------------------------------------------------ */
-      /* Standard States — side-by-side comparison with the native element   */
+      /* Standard States — side-by-side comparison with the user agent element */
       /* ------------------------------------------------------------------ */
       const StandardStatesDemo = () => (
         <div className="demo-section">
-          <h2>Comparison with native &lt;meter&gt;</h2>
+          <h2>Comparison with user agent &lt;meter&gt;</h2>
 
           <div className="states-section">
             <div className="states-title">Value range</div>
@@ -137,7 +137,7 @@
                     <Meter value={value} />
                   </div>
                   <div className="comparison-row">
-                    <span className="comparison-label">Native</span>
+                    <span className="comparison-label">User Agent</span>
                     <meter value={value} />
                   </div>
                 </fieldset>
@@ -155,7 +155,7 @@
                     <Meter value={value} />
                   </div>
                   <div className="comparison-row">
-                    <span className="comparison-label">Native</span>
+                    <span className="comparison-label">User Agent</span>
                     <meter value={value} />
                   </div>
                 </fieldset>
@@ -198,7 +198,7 @@
                     <Meter value={value} min={min} max={max} />
                   </div>
                   <div className="comparison-row">
-                    <span className="comparison-label">Native</span>
+                    <span className="comparison-label">User Agent</span>
                     <meter value={value} min={min} max={max} />
                   </div>
                 </fieldset>
@@ -257,7 +257,7 @@
                     />
                   </div>
                   <div className="comparison-row">
-                    <span className="comparison-label">Native</span>
+                    <span className="comparison-label">User Agent</span>
                     <meter
                       value={value}
                       min={0}
@@ -304,7 +304,7 @@
                     />
                   </div>
                   <div className="comparison-row">
-                    <span className="comparison-label">Native</span>
+                    <span className="comparison-label">User Agent</span>
                     <meter
                       value={value}
                       min={0}
@@ -347,7 +347,7 @@
                     />
                   </div>
                   <div className="comparison-row">
-                    <span className="comparison-label">Native</span>
+                    <span className="comparison-label">User Agent</span>
                     <meter
                       value={value}
                       min={0}
@@ -365,7 +365,7 @@
       );
 
       /* ------------------------------------------------------------------ */
-      /* Enhanced States — loading & disabled (not in native)                */
+      /* Enhanced States — loading & disabled (not in user agent)             */
       /* ------------------------------------------------------------------ */
       const EnhancedStatesDemo = () => {
         const [loading, setLoading] = useState(true);
@@ -376,7 +376,7 @@
 
             <div className="states-section">
               <div className="states-title enhanced-states-title">
-                States not available in native &lt;meter&gt;
+                States not available in user agent &lt;meter&gt;
               </div>
 
               <Box column spacing="s">
@@ -387,7 +387,7 @@
                     <Meter value={0.6} disabled />
                   </div>
                   <div className="comparison-row">
-                    <span className="comparison-label">Native</span>
+                    <span className="comparison-label">User Agent</span>
                     <meter value={0.6} />
                     <Caption>(pas de disabled natif)</Caption>
                   </div>
@@ -402,7 +402,7 @@
                     <Meter value={0} loading />
                   </div>
                   <div className="comparison-row">
-                    <span className="comparison-label">Native</span>
+                    <span className="comparison-label">User Agent</span>
                     <meter value={0} />
                     <Caption>(pas de loading natif)</Caption>
                   </div>
@@ -451,6 +451,7 @@
               <fieldset>
                 <legend>Couleur optimum personnalisée (bleu)</legend>
                 <div className="comparison-row">
+                  <span className="comparison-label">Navi</span>
                   <Meter
                     value={0.65}
                     style={{
@@ -458,11 +459,17 @@
                     }}
                   />
                 </div>
+                <div className="comparison-row">
+                  <span className="comparison-label">User Agent</span>
+                  <meter value={0.65} />
+                  <Caption>(couleur non contrôlable)</Caption>
+                </div>
               </fieldset>
 
               <fieldset>
                 <legend>Piste sombre + fill orange</legend>
                 <div className="comparison-row">
+                  <span className="comparison-label">Navi</span>
                   <Meter
                     value={0.5}
                     trackColor="#333"
@@ -472,17 +479,22 @@
                     }}
                   />
                 </div>
+                <div className="comparison-row">
+                  <span className="comparison-label">User Agent</span>
+                  <meter value={0.5} />
+                  <Caption>(couleur non contrôlable)</Caption>
+                </div>
               </fieldset>
 
               <fieldset>
                 <legend>Couleurs sémantiques toutes personnalisées</legend>
                 <Caption>
-                  optimum="violet" suboptimum="blue" subsuboptimum="pink"
+                  Navi: optimum="violet" suboptimum="blue" subsuboptimum="pink"
                 </Caption>
                 <br />
 
                 <div className="comparison-row">
-                  <span className="comparison-label">optimum</span>
+                  <span className="comparison-label">Navi optimum</span>
                   <Meter
                     value={50}
                     min={0}
@@ -498,7 +510,19 @@
                   />
                 </div>
                 <div className="comparison-row">
-                  <span className="comparison-label">suboptimum</span>
+                  <span className="comparison-label">UA optimum</span>
+                  <meter
+                    value={50}
+                    min={0}
+                    max={100}
+                    low={25}
+                    high={75}
+                    optimum={50}
+                  />
+                </div>
+
+                <div className="comparison-row">
+                  <span className="comparison-label">Navi suboptimum</span>
                   <Meter
                     value={10}
                     min={0}
@@ -514,7 +538,21 @@
                   />
                 </div>
                 <div className="comparison-row">
-                  <span className="comparison-label">subsuboptimum</span>
+                  <span className="comparison-label">UA suboptimum</span>
+                  <meter
+                    value={10}
+                    min={0}
+                    max={100}
+                    low={25}
+                    high={75}
+                    optimum={50}
+                  />
+                </div>
+
+                <div className="comparison-row">
+                  <span className="comparison-label">
+                    Navi Navi subsuboptimum
+                  </span>
                   <Meter
                     value={90}
                     min={0}
@@ -527,6 +565,17 @@
                       "--fill-color-suboptimum": "blue",
                       "--fill-color-subsuboptimum": "pink",
                     }}
+                  />
+                </div>
+                <div className="comparison-row">
+                  <span className="comparison-label">UA subsuboptimum</span>
+                  <meter
+                    value={90}
+                    min={0}
+                    max={100}
+                    low={25}
+                    high={75}
+                    optimum={10}
                   />
                 </div>
               </fieldset>
