@@ -14364,10 +14364,7 @@ const useAutoFocus = (
   autoFocus,
   { autoFocusVisible, autoSelect } = {},
 ) => {
-  useLayoutEffect(() => {
-    if (!autoFocus) {
-      return null;
-    }
+  const triggerAutofocus = () => {
     const activeElement = document.activeElement;
     const focusableElement = focusableElementRef.current;
     focusableElement.focus({ focusVisible: autoFocusVisible });
@@ -14418,7 +14415,14 @@ const useAutoFocus = (
 
       activeElement.focus();
     };
-  }, []);
+  };
+
+  useLayoutEffect(() => {
+    if (!autoFocus) {
+      return null;
+    }
+    return triggerAutofocus();
+  }, [autoFocus]);
 
   useEffect(() => {
     if (autoFocus) {
@@ -14426,6 +14430,8 @@ const useAutoFocus = (
       focusableElement.scrollIntoView({ inline: "nearest", block: "nearest" });
     }
   }, []);
+
+  return triggerAutofocus;
 };
 
 const CalloutCloseContext = createContext();
@@ -17738,7 +17744,7 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
 
   .navi_text_overflow_wrapper {
     display: flex;
-    width: 0;
+    width: 100%;
     flex-grow: 1;
     gap: 0.3em;
   }
@@ -17940,7 +17946,6 @@ const TextOverflow = ({
     preLine: rest.as === "p",
     ...rest,
     className: "navi_text_overflow",
-    expandX: true,
     spacing: "pre",
     children: jsxs("span", {
       className: "navi_text_overflow_wrapper",
@@ -20691,7 +20696,8 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
       --link-outline-color: var(--navi-focus-outline-color);
       --link-loader-color: var(--navi-loader-color);
       --link-color: rgb(0, 0, 238);
-      --link-color-visited: light-dark(#6a1b9a, #ab47bc);
+      --link-color-visited: color-mix(in srgb, var(--link-color), black 40%);
+
       --link-color-active: red;
       --link-text-decoration: underline;
       --link-text-decoration-hover: var(--link-text-decoration);
@@ -20738,22 +20744,6 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
       --x-link-color: var(--x-link-color-hover);
       --x-link-text-decoration: var(--x-link-text-decoration-hover);
     }
-    /* Current */
-    &[data-href-current] {
-      --x-link-color: var(--link-color-current);
-      --x-link-cursor: default;
-      &[data-anchor] {
-        /* For anchor links, we want to keep the pointer cursor to indicate interactivity */
-        /* as anchor link will still scroll to the section even if it's the current page */
-        --x-link-cursor: pointer;
-      }
-    }
-    /* Focus */
-    &[data-focus],
-    &[data-focus-visible] {
-      position: relative;
-      z-index: 1; /* Ensure focus outline is above other elements */
-    }
     &[data-focus-visible] {
       outline-width: 2px;
     }
@@ -20772,6 +20762,22 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
     &[data-active] {
       /* Redefine it otherwise [data-visited] prevails */
       --x-link-color: var(--x-link-color-active);
+    }
+    /* Current */
+    &[data-href-current] {
+      --x-link-color: var(--link-color-current);
+      --x-link-cursor: default;
+      &[data-anchor] {
+        /* For anchor links, we want to keep the pointer cursor to indicate interactivity */
+        /* as anchor link will still scroll to the section even if it's the current page */
+        --x-link-cursor: pointer;
+      }
+    }
+    /* Focus */
+    &[data-focus],
+    &[data-focus-visible] {
+      position: relative;
+      z-index: 1; /* Ensure focus outline is above other elements */
     }
     /* Readonly */
     &[data-readonly] > * {
@@ -24471,8 +24477,21 @@ const Input = props => {
 
 installImportMetaCss(import.meta);import.meta.css = /* css */`
   .navi_editable_wrapper {
+    --inset-top: 0px;
+    --inset-right: 0px;
+    --inset-bottom: 0px;
+    --inset-left: 0px;
+
     position: absolute;
-    inset: 0;
+    top: var(--inset-top);
+    right: var(--inset-right);
+    bottom: var(--inset-bottom);
+    left: var(--inset-left);
+
+    opacity: 0;
+    &[data-editing] {
+      opacity: 1;
+    }
   }
 `;
 const useEditionController = () => {
@@ -24562,7 +24581,7 @@ const Editable = props => {
     name: name,
     value: value,
     valueSignal: valueSignal,
-    autoFocus: true,
+    autoFocus: editing,
     autoFocusVisible: true,
     autoSelect: autoSelect,
     cancelOnEscape: true,
@@ -24607,12 +24626,32 @@ const Editable = props => {
       });
     }
   });
+  const wrapperRef = useRef();
+  useLayoutEffect(() => {
+    const wrapper = wrapperRef.current;
+    if (!wrapper) {
+      return;
+    }
+    const parent = wrapper.parentElement;
+    const borderSizes = getBorderSizes(parent);
+    wrapper.style.setProperty("--inset-left", `-${borderSizes.left}px`);
+    wrapper.style.setProperty("--inset-top", `-${borderSizes.top}px`);
+    wrapper.style.setProperty("--inset-right", `-${borderSizes.right}px`);
+    wrapper.style.setProperty("--inset-bottom", `-${borderSizes.bottom}px`);
+  });
   return jsxs(Fragment, {
     children: [children || jsx("span", {
       children: value
-    }), editing && jsx(Box, {
+    }), jsx(Box, {
+      className: "navi_editable_wrapper",
+      ref: wrapperRef,
       ...wrapperProps,
-      baseClassName: "navi_editable_wrapper",
+      // inert ensure input while not editing that:
+      // - input not focusable (via keyboard or anything)
+      // - cannot be interacted with pointer (click, hover, etc)
+      // - is ignored by screen readers
+      inert: editing ? undefined : "",
+      "data-editing": editing ? "" : undefined,
       children: input
     })]
   });
@@ -29595,7 +29634,7 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
       /* Semantic fill colors, matching native meter on Chrome/macOS */
       --fill-color-optimum: light-dark(#0f7c0f, #4caf50);
       --fill-color-suboptimum: light-dark(#fdb900, #ffc107);
-      --fill-color-subsuboptimum: light-dark(#d83b01, #f44336);
+      --fill-color-even-less-good: light-dark(#d83b01, #f44336);
     }
   }
 
@@ -29698,7 +29737,18 @@ const MeterStyleCSSVars = {
   height: "--height",
   width: "--width"
 };
-const MeterPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading"];
+const MeterPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading", ":-navi-meter-optimum", ":-navi-meter-suboptimum", ":-navi-meter-even-less-good"];
+Object.assign(PSEUDO_CLASSES, {
+  ":-navi-meter-optimum": {
+    attribute: "data-optimum"
+  },
+  ":-navi-meter-suboptimum": {
+    attribute: "data-suboptimum"
+  },
+  ":-navi-meter-even-less-good": {
+    attribute: "data-even-less-good"
+  }
+});
 const Meter = ({
   value = 0,
   min = 0,
@@ -29729,7 +29779,7 @@ const Meter = ({
     });
   }
   const level = getMeterLevel(clampedValue, min, max, low, high, optimum);
-  const fillColorVar = level === "optimum" ? "var(--fill-color-optimum)" : level === "suboptimum" ? "var(--fill-color-suboptimum)" : "var(--fill-color-subsuboptimum)";
+  const fillColorVar = level === "optimum" ? "var(--fill-color-optimum)" : level === "suboptimum" ? "var(--fill-color-suboptimum)" : "var(--fill-color-even-less-good)";
   reportDisabledToLabel(disabled);
   reportReadOnlyToLabel(readOnly);
   const trackContainerRef = useRef();
@@ -29764,7 +29814,10 @@ const Meter = ({
     basePseudoState: {
       ":read-only": readOnly,
       ":disabled": disabled,
-      ":-navi-loading": loading
+      ":-navi-loading": loading,
+      ":-navi-meter-optimum": level === "optimum",
+      ":-navi-meter-suboptimum": level === "suboptimum",
+      ":-navi-meter-even-less-good": level === "even-less-good"
     },
     pseudoClasses: MeterPseudoClasses,
     "data-has-caption": children !== undefined ? "" : undefined,
@@ -29815,7 +29868,7 @@ const getMeterLevel = (value, min, max, low, high, optimum) => {
   const distance = Math.abs(optimumRegion - valueRegion);
   if (distance === 0) return "optimum";
   if (distance === 1) return "suboptimum";
-  return "subsuboptimum";
+  return "even-less-good";
 };
 
 const Paragraph = props => {

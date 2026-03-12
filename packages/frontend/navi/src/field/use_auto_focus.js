@@ -29,10 +29,7 @@ export const useAutoFocus = (
   autoFocus,
   { autoFocusVisible, autoSelect } = {},
 ) => {
-  useLayoutEffect(() => {
-    if (!autoFocus) {
-      return null;
-    }
+  const triggerAutofocus = () => {
     const activeElement = document.activeElement;
     const focusableElement = focusableElementRef.current;
     focusableElement.focus({ focusVisible: autoFocusVisible });
@@ -83,7 +80,14 @@ export const useAutoFocus = (
 
       activeElement.focus();
     };
-  }, []);
+  };
+
+  useLayoutEffect(() => {
+    if (!autoFocus) {
+      return null;
+    }
+    return triggerAutofocus();
+  }, [autoFocus]);
 
   useEffect(() => {
     if (autoFocus) {
@@ -91,4 +95,6 @@ export const useAutoFocus = (
       focusableElement.scrollIntoView({ inline: "nearest", block: "nearest" });
     }
   }, []);
+
+  return triggerAutofocus;
 };

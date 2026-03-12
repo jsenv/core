@@ -27,9 +27,9 @@ import.meta.css = /* css */ `
     bottom: var(--inset-bottom);
     left: var(--inset-left);
 
-    pointer-events: none;
+    opacity: 0;
     &[data-editing] {
-      pointer-events: auto;
+      opacity: 1;
     }
   }
 `;
@@ -126,7 +126,7 @@ export const Editable = (props) => {
       name={name}
       value={value}
       valueSignal={valueSignal}
-      autoFocus
+      autoFocus={editing}
       autoFocusVisible
       autoSelect={autoSelect}
       cancelOnEscape
@@ -196,6 +196,11 @@ export const Editable = (props) => {
         className="navi_editable_wrapper"
         ref={wrapperRef}
         {...wrapperProps}
+        // inert ensure input while not editing that:
+        // - input not focusable (via keyboard or anything)
+        // - cannot be interacted with pointer (click, hover, etc)
+        // - is ignored by screen readers
+        inert={editing ? undefined : ""}
         data-editing={editing ? "" : undefined}
       >
         {input}
