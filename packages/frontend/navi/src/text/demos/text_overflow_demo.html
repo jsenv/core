@@ -38,20 +38,37 @@
 
             <section>
               <h2>Two-column grid layout</h2>
-              <Box
-                grid
-                style="grid-template-columns: fit-content(80px) 1fr;"
-                spacing="12"
-                width="300"
-              >
-                <Text overflowEllipsis border="1px solid #ccc">
-                  This is a long text in the first column that should be
-                  truncated with an ellipsis when there is not enough space.
-                </Text>
-                <Box border="1px solid #4caf50" shrink={false}>
-                  Second column
-                </Box>
-              </Box>
+              {[
+                "fit-content(80px) 1fr",
+                "minmax(0, 1fr) 100px",
+                "auto 100px",
+              ].map((cols) => (
+                <div key={cols} style={{ marginBottom: "12px" }}>
+                  <div
+                    style={{
+                      fontSize: "12px",
+                      color: "#666",
+                      marginBottom: "4px",
+                    }}
+                  >
+                    grid-template-columns: <code>{cols}</code>
+                  </div>
+                  <Box
+                    grid
+                    style={{ gridTemplateColumns: cols }}
+                    spacing="12"
+                    width="300"
+                  >
+                    <Text overflowEllipsis border="1px solid #ccc">
+                      This is a long text in the first column that should be
+                      truncated with an ellipsis when there is not enough space.
+                    </Text>
+                    <Box border="1px solid #4caf50" shrink={false}>
+                      Second column
+                    </Box>
+                  </Box>
+                </div>
+              ))}
             </section>
 
             <section>
