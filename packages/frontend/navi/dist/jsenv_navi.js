@@ -2472,7 +2472,9 @@ const useArraySignalMembership = (...args) => {
   }
 
   return useMemo(() => {
-    return arraySignalMembership(...args);
+    const [useIsMember, add, remove] = arraySignalMembership(...args);
+    const isMember = useIsMember();
+    return [isMember, add, remove];
   }, args);
 };
 
@@ -2483,8 +2485,12 @@ const arraySignalMembership = (...args) => {
     );
   }
   const [arraySignal, id] = args;
-  const array = arraySignal.value;
-  const isMember = array.includes(id);
+
+  const useIsMember = () => {
+    const array = arraySignal.value; // use value to subscribe to signal changes
+    const idFoundInArray = array.includes(id);
+    return idFoundInArray;
+  };
 
   const add = () => {
     const arrayWithId = addIntoArray(arraySignal.peek(), id);
@@ -2498,7 +2504,7 @@ const arraySignalMembership = (...args) => {
     return arrayWithoutId;
   };
 
-  return [isMember, add, remove];
+  return [useIsMember, add, remove];
 };
 
 const localStorageSignal = (key) => {
