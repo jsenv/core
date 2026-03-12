@@ -1,6 +1,6 @@
 import { installImportMetaCss } from "./jsenv_navi_side_effects.js";
 import { isValidElement, createContext, toChildArray, render, createRef, cloneElement } from "preact";
-import { useErrorBoundary, useLayoutEffect, useEffect, useCallback, useRef, useState, useContext, useMemo, useImperativeHandle, useId } from "preact/hooks";
+import { useErrorBoundary, useLayoutEffect, useEffect, useMemo, useRef, useState, useCallback, useContext, useImperativeHandle, useId } from "preact/hooks";
 import { jsxs, jsx, Fragment } from "preact/jsx-runtime";
 import { signal, effect, computed, batch, useSignal } from "@preact/signals";
 import { createIterableWeakSet, mergeOneStyle, stringifyStyle, createPubSub, mergeTwoStyles, normalizeStyles, createGroupTransitionController, getElementSignature, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, findBefore, findAfter, createValueEffect, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, allowWheelThrough, resolveCSSColor, createStyleController, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, hasCSSSizeUnit, resolveCSSSize, activeElementSignal, canInterceptKeys, initFocusGroup, elementIsFocusable, pickLightOrDark, resolveColorLuminance, dragAfterThreshold, getScrollContainer, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
@@ -2400,6 +2400,105 @@ const useRunOnMount = (action, Component) => {
       reason: `<${Component.name} /> mounted`,
     });
   }, []);
+};
+
+const addIntoArray = (array, ...valuesToAdd) => {
+  if (valuesToAdd.length === 1) {
+    const [valueToAdd] = valuesToAdd;
+    const arrayWithThisValue = [];
+    for (const value of array) {
+      if (value === valueToAdd) {
+        return array;
+      }
+      arrayWithThisValue.push(value);
+    }
+    arrayWithThisValue.push(valueToAdd);
+    return arrayWithThisValue;
+  }
+
+  const existingValueSet = new Set();
+  const arrayWithTheseValues = [];
+  for (const existingValue of array) {
+    arrayWithTheseValues.push(existingValue);
+    existingValueSet.add(existingValue);
+  }
+  let hasNewValues = false;
+  for (const valueToAdd of valuesToAdd) {
+    if (existingValueSet.has(valueToAdd)) {
+      continue;
+    }
+    arrayWithTheseValues.push(valueToAdd);
+    hasNewValues = true;
+  }
+  return hasNewValues ? arrayWithTheseValues : array;
+};
+
+const removeFromArray = (array, ...valuesToRemove) => {
+  if (valuesToRemove.length === 1) {
+    const [valueToRemove] = valuesToRemove;
+    const arrayWithoutThisValue = [];
+    let found = false;
+    for (const value of array) {
+      if (value === valueToRemove) {
+        found = true;
+        continue;
+      }
+      arrayWithoutThisValue.push(value);
+    }
+    if (!found) {
+      return array;
+    }
+    return arrayWithoutThisValue;
+  }
+
+  const valuesToRemoveSet = new Set(valuesToRemove);
+  const arrayWithoutTheseValues = [];
+  let hasRemovedValues = false;
+  for (const value of array) {
+    if (valuesToRemoveSet.has(value)) {
+      hasRemovedValues = true;
+      continue;
+    }
+    arrayWithoutTheseValues.push(value);
+  }
+  return hasRemovedValues ? arrayWithoutTheseValues : array;
+};
+
+const useArraySignalMembership = (...args) => {
+  if (args.length < 2) {
+    throw new Error(
+      "useArraySignalMembership requires at least 2 arguments: [arraySignal, id]",
+    );
+  }
+
+  return useMemo(() => {
+    return arraySignalMembership(...args);
+  }, args);
+};
+
+const arraySignalMembership = (...args) => {
+  if (args.length < 2) {
+    throw new Error(
+      "arraySignalMemberShip requires at least 2 arguments: [arraySignal, id]",
+    );
+  }
+  const [arraySignal, id] = args;
+  const array = arraySignal.value;
+  const isMember = array.includes(id);
+
+  const add = () => {
+    const arrayWithId = addIntoArray(arraySignal.peek(), id);
+    arraySignal.value = arrayWithId;
+    return arrayWithId;
+  };
+
+  const remove = () => {
+    const arrayWithoutId = removeFromArray(arraySignal.peek(), id);
+    arraySignal.value = arrayWithoutId;
+    return arrayWithoutId;
+  };
+
+  return [isMember, add, remove];
 };
 
 const localStorageSignal = (key) => {
@@ -4850,87 +4949,6 @@ const createHttpHandlerRelationshipToManyResource = (
 
 const isProps = (value) => {
   return value !== null && typeof value === "object";
-};
-
-const addIntoArray = (array, ...valuesToAdd) => {
-  if (valuesToAdd.length === 1) {
-    const [valueToAdd] = valuesToAdd;
-    const arrayWithThisValue = [];
-    for (const value of array) {
-      if (value === valueToAdd) {
-        return array;
-      }
-      arrayWithThisValue.push(value);
-    }
-    arrayWithThisValue.push(valueToAdd);
-    return arrayWithThisValue;
-  }
-
-  const existingValueSet = new Set();
-  const arrayWithTheseValues = [];
-  for (const existingValue of array) {
-    arrayWithTheseValues.push(existingValue);
-    existingValueSet.add(existingValue);
-  }
-  let hasNewValues = false;
-  for (const valueToAdd of valuesToAdd) {
-    if (existingValueSet.has(valueToAdd)) {
-      continue;
-    }
-    arrayWithTheseValues.push(valueToAdd);
-    hasNewValues = true;
-  }
-  return hasNewValues ? arrayWithTheseValues : array;
-};
-
-const removeFromArray = (array, ...valuesToRemove) => {
-  if (valuesToRemove.length === 1) {
-    const [valueToRemove] = valuesToRemove;
-    const arrayWithoutThisValue = [];
-    let found = false;
-    for (const value of array) {
-      if (value === valueToRemove) {
-        found = true;
-        continue;
-      }
-      arrayWithoutThisValue.push(value);
-    }
-    if (!found) {
-      return array;
-    }
-    return arrayWithoutThisValue;
-  }
-
-  const valuesToRemoveSet = new Set(valuesToRemove);
-  const arrayWithoutTheseValues = [];
-  let hasRemovedValues = false;
-  for (const value of array) {
-    if (valuesToRemoveSet.has(value)) {
-      hasRemovedValues = true;
-      continue;
-    }
-    arrayWithoutTheseValues.push(value);
-  }
-  return hasRemovedValues ? arrayWithoutTheseValues : array;
-};
-
-const useArraySignalMembership = (arraySignal, id) => {
-  const array = arraySignal.value;
-  const isMember = array.includes(id);
-
-  const add = useCallback(() => {
-    const arrayWithId = addIntoArray(arraySignal.peek(), id);
-    arraySignal.value = arrayWithId;
-    return arrayWithId;
-  }, []);
-
-  const remove = useCallback(() => {
-    const arrayWithoutId = removeFromArray(arraySignal.peek(), id);
-    arraySignal.value = arrayWithoutId;
-    return arrayWithoutId;
-  }, []);
-
-  return [isMember, add, remove];
 };
 
 /**
@@ -30294,5 +30312,5 @@ const UserSvg = () => jsx("svg", {
   })
 });
 
-export { ActionRenderer, ActiveKeyboardShortcuts, Address, BadgeCount, Box, Button, ButtonCopyToClipboard, Caption, CheckSvg, Checkbox, CheckboxList, Code, Col, Colgroup, ConstructionSvg, Details, DialogLayout, Editable, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Form, Group, HeartSvg, HomeSvg, Icon, Image, Input, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, MessageBox, Meter, Paragraph, Radio, RadioList, Route, RouteLink, Routes, RowNumberCol, RowNumberTableCell, SINGLE_SPACE_CONSTRAINT, SVGMaskOverlay, SearchSvg, Select, SelectionContext, Separator, SettingsSvg, StarSvg, Stat, SummaryMarker, Svg, Tab, TabList, Table, TableCell, Tbody, Text, Thead, Title, Tr, UITransition, UserSvg, ViewportLayout, actionIntegratedVia, actionRunEffect, addCustomMessage, compareTwoJsValues, createAction, createAvailableConstraint, createRequestCanceller, createSelectionKeyboardShortcuts, enableDebugActions, enableDebugOnDocumentLoading, forwardActionRequested, installCustomConstraintValidation, isCellSelected, isColumnSelected, isRowSelected, localStorageSignal, navBack, navForward, navTo, openCallout, rawUrlPart, reload, removeCustomMessage, requestAction, rerunActions, resource, route, routeAction, setBaseUrl, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, updateActions, useActionData, useActionStatus, useArraySignalMembership, useCalloutClose, useCancelPrevious, useCellsAndColumns, useConstraintValidityState, useDependenciesDiff, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useMatchingRouteInfo, useNavState$1 as useNavState, useRouteStatus, useRunOnMount, useSelectableElement, useSelectionController, useSignalSync, useStateArray, useTitleLevel, useUrlSearchParam, valueInLocalStorage };
+export { ActionRenderer, ActiveKeyboardShortcuts, Address, BadgeCount, Box, Button, ButtonCopyToClipboard, Caption, CheckSvg, Checkbox, CheckboxList, Code, Col, Colgroup, ConstructionSvg, Details, DialogLayout, Editable, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Form, Group, HeartSvg, HomeSvg, Icon, Image, Input, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, MessageBox, Meter, Paragraph, Radio, RadioList, Route, RouteLink, Routes, RowNumberCol, RowNumberTableCell, SINGLE_SPACE_CONSTRAINT, SVGMaskOverlay, SearchSvg, Select, SelectionContext, Separator, SettingsSvg, StarSvg, Stat, SummaryMarker, Svg, Tab, TabList, Table, TableCell, Tbody, Text, Thead, Title, Tr, UITransition, UserSvg, ViewportLayout, actionIntegratedVia, actionRunEffect, addCustomMessage, arraySignalMembership, compareTwoJsValues, createAction, createAvailableConstraint, createRequestCanceller, createSelectionKeyboardShortcuts, enableDebugActions, enableDebugOnDocumentLoading, forwardActionRequested, installCustomConstraintValidation, isCellSelected, isColumnSelected, isRowSelected, localStorageSignal, navBack, navForward, navTo, openCallout, rawUrlPart, reload, removeCustomMessage, requestAction, rerunActions, resource, route, routeAction, setBaseUrl, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, updateActions, useActionData, useActionStatus, useArraySignalMembership, useCalloutClose, useCancelPrevious, useCellsAndColumns, useConstraintValidityState, useDependenciesDiff, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useMatchingRouteInfo, useNavState$1 as useNavState, useRouteStatus, useRunOnMount, useSelectableElement, useSelectionController, useSignalSync, useStateArray, useTitleLevel, useUrlSearchParam, valueInLocalStorage };
 //# sourceMappingURL=jsenv_navi.js.map

@@ -16,10 +16,13 @@ export { useRunOnMount } from "./src/action/use_run_on_mount.js";
 export { enableDebugActions } from "./src/action/actions.js";
 
 // state management (store)
+export {
+  arraySignalMembership,
+  useArraySignalMembership,
+} from "./src/state/array_signal_membership.js";
 export { localStorageSignal } from "./src/state/local_storage_signal.js";
 export { stateSignal } from "./src/state/state_signal.js";
 export { resource } from "./src/state/store/resource_graph.js";
-export { useArraySignalMembership } from "./src/state/use_array_signal_membership.js";
 export { useSignalSync } from "./src/state/use_signal_sync.js";
 export { useStateArray } from "./src/state/use_state_array.js";
 export { valueInLocalStorage } from "./src/state/value_in_local_storage.js";
