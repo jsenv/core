@@ -88,6 +88,31 @@
         color: #666;
         font-size: 0.85rem;
       }
+
+      #meter_optimum_blue::-webkit-meter-optimum-value {
+        background: #1976d2;
+      }
+
+      #meter_dark_track_fill_orange {
+        &::-webkit-meter-bar {
+          background: #333;
+        }
+        &::-webkit-meter-optimum-value {
+          background: #ff6f00;
+        }
+      }
+
+      #meter_all_custom {
+        &::-webkit-meter-optimum-value {
+          background: violet;
+        }
+        &::-webkit-meter-suboptimum-value {
+          background: blue;
+        }
+        &::-webkit-meter-even-less-good-value {
+          background: pink;
+        }
+      }
     </style>
   </head>
   <body>
@@ -461,8 +486,7 @@
                 </div>
                 <div className="comparison-row">
                   <span className="comparison-label">User Agent</span>
-                  <meter value={0.65} />
-                  <Caption>(couleur non contrôlable)</Caption>
+                  <meter value={0.65} id="meter_optimum_blue" />
                 </div>
               </fieldset>
 
@@ -472,17 +496,16 @@
                   <span className="comparison-label">Navi</span>
                   <Meter
                     value={0.5}
-                    trackColor="#333"
                     borderColor="transparent"
                     style={{
+                      "--track-color": "#333",
                       "--fill-color-optimum": "#ff6f00",
                     }}
                   />
                 </div>
                 <div className="comparison-row">
                   <span className="comparison-label">User Agent</span>
-                  <meter value={0.5} />
-                  <Caption>(couleur non contrôlable)</Caption>
+                  <meter value={0.5} id="meter_dark_track_fill_orange" />
                 </div>
               </fieldset>
 
@@ -510,18 +533,6 @@
                   />
                 </div>
                 <div className="comparison-row">
-                  <span className="comparison-label">UA optimum</span>
-                  <meter
-                    value={50}
-                    min={0}
-                    max={100}
-                    low={25}
-                    high={75}
-                    optimum={50}
-                  />
-                </div>
-
-                <div className="comparison-row">
                   <span className="comparison-label">Navi suboptimum</span>
                   <Meter
                     value={10}
@@ -538,21 +549,7 @@
                   />
                 </div>
                 <div className="comparison-row">
-                  <span className="comparison-label">UA suboptimum</span>
-                  <meter
-                    value={10}
-                    min={0}
-                    max={100}
-                    low={25}
-                    high={75}
-                    optimum={50}
-                  />
-                </div>
-
-                <div className="comparison-row">
-                  <span className="comparison-label">
-                    Navi Navi subsuboptimum
-                  </span>
+                  <span className="comparison-label">Navi subsuboptimum</span>
                   <Meter
                     value={90}
                     min={0}
@@ -567,6 +564,31 @@
                     }}
                   />
                 </div>
+
+                <div className="comparison-row">
+                  <span className="comparison-label">UA optimum</span>
+                  <meter
+                    value={50}
+                    min={0}
+                    max={100}
+                    low={25}
+                    high={75}
+                    optimum={50}
+                    id="meter_all_custom"
+                  />
+                </div>
+                <div className="comparison-row">
+                  <span className="comparison-label">UA suboptimum</span>
+                  <meter
+                    value={10}
+                    min={0}
+                    max={100}
+                    low={25}
+                    high={75}
+                    optimum={50}
+                    id="meter_all_custom"
+                  />
+                </div>
                 <div className="comparison-row">
                   <span className="comparison-label">UA subsuboptimum</span>
                   <meter
@@ -576,6 +598,7 @@
                     low={25}
                     high={75}
                     optimum={10}
+                    id="meter_all_custom"
                   />
                 </div>
               </fieldset>
