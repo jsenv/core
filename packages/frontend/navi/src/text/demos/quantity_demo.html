@@ -3,7 +3,7 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>Stat Demo</title>
+    <title>Quantity Demo</title>
   </head>
   <body>
     <div id="app"></div>
@@ -15,7 +15,7 @@
         Caption,
         Link,
         Paragraph,
-        Stat,
+        Quantity,
         Text,
         Title,
       } from "@jsenv/navi";
@@ -30,7 +30,7 @@
               lineHeight: "1.6",
             }}
           >
-            <Title as="h1">Stat Demo</Title>
+            <Title as="h1">Quantity Demo</Title>
 
             <TableOfContents />
             <IntroductionSection />
@@ -64,7 +64,7 @@
             Introduction
           </Title>
           <Paragraph>
-            <code>Stat</code> affiche une valeur (le plus souvent un nombre)
+            <code>Quantity</code> affiche une valeur (le plus souvent un nombre)
             avec optionnellement une unité et un label. Les nombres sont
             formatés automatiquement via <code>Intl.NumberFormat</code> selon la
             locale du navigateur.
@@ -74,26 +74,26 @@
           <Box row spacing="xl" alignY="end">
             <Box row spacing="s">
               <Caption>Valeur seule</Caption>
-              <Stat>{42}</Stat>
+              <Quantity>{42}</Quantity>
             </Box>
 
             <Box row spacing="s">
               <Caption>Avec unité</Caption>
-              <Stat unit="minutes">{42}</Stat>
+              <Quantity unit="minutes">{42}</Quantity>
             </Box>
 
             <Box row spacing="s">
               <Caption>Avec label</Caption>
-              <Stat label="Durée" unit="minutes">
+              <Quantity label="Durée" unit="minutes">
                 {42}
-              </Stat>
+              </Quantity>
             </Box>
 
             <Box row spacing="s">
               <Caption>Grand nombre formaté</Caption>
-              <Stat label="Utilisateurs" unit="personnes">
+              <Quantity label="Utilisateurs" unit="personnes">
                 {1234567}
-              </Stat>
+              </Quantity>
             </Box>
           </Box>
         </Box>
@@ -114,30 +114,34 @@
           <Box row spacing="xl" alignY="end">
             <Box row spacing="s">
               <Caption>unitPosition="right" (défaut)</Caption>
-              <Stat label="Vitesse" unit="km/h">
+              <Quantity label="Vitesse" unit="km/h">
                 {120}
-              </Stat>
+              </Quantity>
             </Box>
 
             <Box row spacing="s">
               <Caption>unitPosition="bottom"</Caption>
-              <Stat label="Vitesse" unit="km/h" unitPosition="bottom">
+              <Quantity label="Vitesse" unit="km/h" unitPosition="bottom">
                 {120}
-              </Stat>
+              </Quantity>
             </Box>
 
             <Box row spacing="s">
               <Caption>unitPosition="right" — grand nombre</Caption>
-              <Stat label="Population" unit="habitants">
+              <Quantity label="Population" unit="habitants">
                 {8100000}
-              </Stat>
+              </Quantity>
             </Box>
 
             <Box row spacing="s">
               <Caption>unitPosition="bottom" — grand nombre</Caption>
-              <Stat label="Population" unit="habitants" unitPosition="bottom">
+              <Quantity
+                label="Population"
+                unit="habitants"
+                unitPosition="bottom"
+              >
                 {8100000}
-              </Stat>
+              </Quantity>
             </Box>
           </Box>
         </Box>
@@ -159,37 +163,37 @@
           <Box row spacing="xl" alignY="end">
             <Box row spacing="s">
               <Caption>size="s"</Caption>
-              <Stat label="Score" unit="pts" size="s">
+              <Quantity label="Score" unit="pts" size="s">
                 {98}
-              </Stat>
+              </Quantity>
             </Box>
 
             <Box row spacing="s">
               <Caption>size="m"</Caption>
-              <Stat label="Score" unit="pts" size="m">
+              <Quantity label="Score" unit="pts" size="m">
                 {98}
-              </Stat>
+              </Quantity>
             </Box>
 
             <Box row spacing="s">
               <Caption>size="l"</Caption>
-              <Stat label="Score" unit="pts" size="l">
+              <Quantity label="Score" unit="pts" size="l">
                 {98}
-              </Stat>
+              </Quantity>
             </Box>
 
             <Box row spacing="s">
               <Caption>size="xl" (défaut)</Caption>
-              <Stat label="Score" unit="pts">
+              <Quantity label="Score" unit="pts">
                 {98}
-              </Stat>
+              </Quantity>
             </Box>
 
             <Box row spacing="s">
               <Caption>size="xxl"</Caption>
-              <Stat label="Score" unit="pts" size="xxl">
+              <Quantity label="Score" unit="pts" size="xxl">
                 {98}
-              </Stat>
+              </Quantity>
             </Box>
           </Box>
         </Box>
@@ -210,30 +214,30 @@
           <Box row spacing="xl" alignY="end">
             <Box row spacing="s">
               <Caption>Locale navigateur (fr)</Caption>
-              <Stat label="Ventes" unit="articles">
+              <Quantity label="Ventes" unit="articles">
                 {1234567}
-              </Stat>
+              </Quantity>
             </Box>
 
             <Box row spacing="s">
               <Caption>lang="en"</Caption>
-              <Stat label="Sales" unit="items" lang="en">
+              <Quantity label="Sales" unit="items" lang="en">
                 {1234567}
-              </Stat>
+              </Quantity>
             </Box>
 
             <Box row spacing="s">
               <Caption>lang="de"</Caption>
-              <Stat label="Verkäufe" unit="Artikel" lang="de">
+              <Quantity label="Verkäufe" unit="Artikel" lang="de">
                 {1234567}
-              </Stat>
+              </Quantity>
             </Box>
 
             <Box row spacing="s">
               <Caption>lang="ja"</Caption>
-              <Stat label="売上" unit="点" lang="ja">
+              <Quantity label="売上" unit="点" lang="ja">
                 {1234567}
-              </Stat>
+              </Quantity>
             </Box>
           </Box>
         </Box>
@@ -262,47 +266,51 @@
             <Box row spacing="xl" alignY="end" marginBottom="m">
               <Box row spacing="s">
                 <Caption>loading</Caption>
-                <Stat label="Utilisateurs" unit="personnes" loading={loading}>
+                <Quantity
+                  label="Utilisateurs"
+                  unit="personnes"
+                  loading={loading}
+                >
                   {0}
-                </Stat>
+                </Quantity>
               </Box>
 
               <Box row spacing="s">
                 <Caption>loading — unitPosition="bottom"</Caption>
-                <Stat
+                <Quantity
                   label="Utilisateurs"
                   unit="personnes"
                   unitPosition="bottom"
                   loading={loading}
                 >
                   {0}
-                </Stat>
+                </Quantity>
               </Box>
 
               <Box row spacing="s">
                 <Caption>loading — size="xxl"</Caption>
-                <Stat
+                <Quantity
                   label="Utilisateurs"
                   unit="personnes"
                   size="xxl"
                   loading={loading}
                 >
                   {0}
-                </Stat>
+                </Quantity>
               </Box>
             </Box>
 
             <Box row spacing="xl" alignY="end">
-              <Stat
+              <Quantity
                 label="Connexions actives"
                 unit="utilisateurs"
                 loading={loading}
               >
                 {4821}
-              </Stat>
-              <Stat label="Requêtes" unit="/ sec" loading={loading}>
+              </Quantity>
+              <Quantity label="Requêtes" unit="/ sec" loading={loading}>
                 {342}
-              </Stat>
+              </Quantity>
             </Box>
           </Box>
         );
@@ -323,23 +331,23 @@
           <Box row spacing="xl" alignY="end">
             <Box row spacing="s">
               <Caption>Normal</Caption>
-              <Stat label="Capacité" unit="places">
+              <Quantity label="Capacité" unit="places">
                 {250}
-              </Stat>
+              </Quantity>
             </Box>
 
             <Box row spacing="s">
               <Caption>readOnly</Caption>
-              <Stat label="Capacité" unit="places" readOnly>
+              <Quantity label="Capacité" unit="places" readOnly>
                 {250}
-              </Stat>
+              </Quantity>
             </Box>
 
             <Box row spacing="s">
               <Caption>disabled</Caption>
-              <Stat label="Capacité" unit="places" disabled>
+              <Quantity label="Capacité" unit="places" disabled>
                 {250}
-              </Stat>
+              </Quantity>
             </Box>
           </Box>
         </Box>

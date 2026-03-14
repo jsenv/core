@@ -5,31 +5,31 @@ import { Text } from "./text.jsx";
 
 import.meta.css = /* css */ `
   @layer navi {
-    .navi_stat {
+    .navi_quantity {
       --unit-color: color-mix(in srgb, currentColor 50%, white);
       --unit-size-ratio: 0.7;
     }
   }
 
-  .navi_stat {
+  .navi_quantity {
     display: inline-flex;
     flex-direction: column;
     align-items: flex-start;
     gap: 0.3em;
     line-height: 1;
 
-    .navi_stat_label {
+    .navi_quantity_label {
       font-weight: 600;
       font-size: 0.75em;
       text-transform: uppercase;
       line-height: 1;
       letter-spacing: 0.06em;
     }
-    .navi_stat_body {
-      .navi_stat_value {
+    .navi_quantity_body {
+      .navi_quantity_value {
         font-weight: bold;
       }
-      .navi_stat_unit {
+      .navi_quantity_unit {
         color: var(--unit-color);
         font-weight: normal;
         font-size: calc(var(--unit-size-ratio) * 1em);
@@ -48,13 +48,13 @@ import.meta.css = /* css */ `
     }
 
     &[data-unit-bottom] {
-      .navi_stat_value {
+      .navi_quantity_value {
         display: inline-block;
         width: 100%;
         text-align: center;
       }
-      .navi_stat_body {
-        .navi_stat_unit {
+      .navi_quantity_body {
+        .navi_quantity_unit {
           display: inline-block;
           width: 100%;
           text-align: center;
@@ -64,14 +64,14 @@ import.meta.css = /* css */ `
   }
 `;
 
-const StatPseudoClasses = [
+const QuantityPseudoClasses = [
   ":hover",
   ":active",
   ":read-only",
   ":disabled",
   ":-navi-loading",
 ];
-export const Stat = ({
+export const Quantity = ({
   children,
   unit,
   unitPosition = "right",
@@ -85,7 +85,7 @@ export const Stat = ({
   disabled,
   ...props
 }) => {
-  const value = parseStatValue(children);
+  const value = parseQuantityValue(children);
   const valueRounded =
     integer && typeof value === "number" ? Math.round(value) : value;
   const valueFormatted =
@@ -96,24 +96,24 @@ export const Stat = ({
 
   return (
     <Text
-      baseClassName="navi_stat"
+      baseClassName="navi_quantity"
       data-unit-bottom={unitBottom ? "" : undefined}
       basePseudoState={{
         ":read-only": readOnly,
         ":disabled": disabled,
         ":-navi-loading": loading,
       }}
-      pseudoClasses={StatPseudoClasses}
+      pseudoClasses={QuantityPseudoClasses}
       spacing="pre"
       {...props}
     >
-      {label && <span className="navi_stat_label">{label}</span>}
+      {label && <span className="navi_quantity_label">{label}</span>}
       <Text
-        className="navi_stat_body"
+        className="navi_quantity_body"
         size={size}
         spacing={unitBottom ? <br /> : undefined}
       >
-        <span className="navi_stat_value">
+        <span className="navi_quantity_value">
           {loading ? (
             <Icon flowInline>
               <LoadingDots />
@@ -124,7 +124,7 @@ export const Stat = ({
         </span>
         {unit && (
           <span
-            className="navi_stat_unit"
+            className="navi_quantity_unit"
             style={{
               ...(unitSizeRatio === undefined
                 ? {}
@@ -139,7 +139,7 @@ export const Stat = ({
   );
 };
 
-const parseStatValue = (children) => {
+const parseQuantityValue = (children) => {
   if (typeof children !== "string") {
     return children;
   }

@@ -29521,31 +29521,31 @@ const CodeBox = ({
 
 installImportMetaCss(import.meta);import.meta.css = /* css */`
   @layer navi {
-    .navi_stat {
+    .navi_quantity {
       --unit-color: color-mix(in srgb, currentColor 50%, white);
       --unit-size-ratio: 0.7;
     }
   }
 
-  .navi_stat {
+  .navi_quantity {
     display: inline-flex;
     flex-direction: column;
     align-items: flex-start;
     gap: 0.3em;
     line-height: 1;
 
-    .navi_stat_label {
+    .navi_quantity_label {
       font-weight: 600;
       font-size: 0.75em;
       text-transform: uppercase;
       line-height: 1;
       letter-spacing: 0.06em;
     }
-    .navi_stat_body {
-      .navi_stat_value {
+    .navi_quantity_body {
+      .navi_quantity_value {
         font-weight: bold;
       }
-      .navi_stat_unit {
+      .navi_quantity_unit {
         color: var(--unit-color);
         font-weight: normal;
         font-size: calc(var(--unit-size-ratio) * 1em);
@@ -29564,13 +29564,13 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
     }
 
     &[data-unit-bottom] {
-      .navi_stat_value {
+      .navi_quantity_value {
         display: inline-block;
         width: 100%;
         text-align: center;
       }
-      .navi_stat_body {
-        .navi_stat_unit {
+      .navi_quantity_body {
+        .navi_quantity_unit {
           display: inline-block;
           width: 100%;
           text-align: center;
@@ -29579,8 +29579,8 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
     }
   }
 `;
-const StatPseudoClasses = [":hover", ":active", ":read-only", ":disabled", ":-navi-loading"];
-const Stat = ({
+const QuantityPseudoClasses = [":hover", ":active", ":read-only", ":disabled", ":-navi-loading"];
+const Quantity = ({
   children,
   unit,
   unitPosition = "right",
@@ -29594,38 +29594,38 @@ const Stat = ({
   disabled,
   ...props
 }) => {
-  const value = parseStatValue(children);
+  const value = parseQuantityValue(children);
   const valueRounded = integer && typeof value === "number" ? Math.round(value) : value;
   const valueFormatted = typeof valueRounded === "number" ? formatNumber(valueRounded, {
     lang
   }) : valueRounded;
   const unitBottom = unitPosition === "bottom";
   return jsxs(Text, {
-    baseClassName: "navi_stat",
+    baseClassName: "navi_quantity",
     "data-unit-bottom": unitBottom ? "" : undefined,
     basePseudoState: {
       ":read-only": readOnly,
       ":disabled": disabled,
       ":-navi-loading": loading
     },
-    pseudoClasses: StatPseudoClasses,
+    pseudoClasses: QuantityPseudoClasses,
     spacing: "pre",
     ...props,
     children: [label && jsx("span", {
-      className: "navi_stat_label",
+      className: "navi_quantity_label",
       children: label
     }), jsxs(Text, {
-      className: "navi_stat_body",
+      className: "navi_quantity_body",
       size: size,
       spacing: unitBottom ? jsx("br", {}) : undefined,
       children: [jsx("span", {
-        className: "navi_stat_value",
+        className: "navi_quantity_value",
         children: loading ? jsx(Icon, {
           flowInline: true,
           children: jsx(LoadingDots, {})
         }) : valueFormatted
       }), unit && jsx("span", {
-        className: "navi_stat_unit",
+        className: "navi_quantity_unit",
         style: {
           ...(unitSizeRatio === undefined ? {} : {
             "--unit-size-ratio": unitSizeRatio
@@ -29636,7 +29636,7 @@ const Stat = ({
     })]
   });
 };
-const parseStatValue = children => {
+const parseQuantityValue = children => {
   if (typeof children !== "string") {
     return children;
   }
@@ -29796,7 +29796,7 @@ const Meter = ({
   const fillRatio = max === min ? 0 : (clampedValue - min) / (max - min);
   let children = caption;
   if (children === undefined && percentage) {
-    children = jsx(Stat, {
+    children = jsx(Quantity, {
       unit: "%",
       unitSizeRatio: "1",
       children: Math.round(fillRatio * 100)
@@ -30318,5 +30318,5 @@ const UserSvg = () => jsx("svg", {
   })
 });
 
-export { ActionRenderer, ActiveKeyboardShortcuts, Address, BadgeCount, Box, Button, ButtonCopyToClipboard, Caption, CheckSvg, Checkbox, CheckboxList, Code, Col, Colgroup, ConstructionSvg, Details, DialogLayout, Editable, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Form, Group, HeartSvg, HomeSvg, Icon, Image, Input, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, MessageBox, Meter, Paragraph, Radio, RadioList, Route, RouteLink, Routes, RowNumberCol, RowNumberTableCell, SINGLE_SPACE_CONSTRAINT, SVGMaskOverlay, SearchSvg, Select, SelectionContext, Separator, SettingsSvg, StarSvg, Stat, SummaryMarker, Svg, Tab, TabList, Table, TableCell, Tbody, Text, Thead, Title, Tr, UITransition, UserSvg, ViewportLayout, actionIntegratedVia, actionRunEffect, addCustomMessage, arraySignalMembership, compareTwoJsValues, createAction, createAvailableConstraint, createRequestCanceller, createSelectionKeyboardShortcuts, enableDebugActions, enableDebugOnDocumentLoading, forwardActionRequested, installCustomConstraintValidation, isCellSelected, isColumnSelected, isRowSelected, localStorageSignal, navBack, navForward, navTo, openCallout, rawUrlPart, reload, removeCustomMessage, requestAction, rerunActions, resource, route, routeAction, setBaseUrl, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, updateActions, useActionData, useActionStatus, useArraySignalMembership, useCalloutClose, useCancelPrevious, useCellsAndColumns, useConstraintValidityState, useDependenciesDiff, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useMatchingRouteInfo, useNavState$1 as useNavState, useRouteStatus, useRunOnMount, useSelectableElement, useSelectionController, useSignalSync, useStateArray, useTitleLevel, useUrlSearchParam, valueInLocalStorage };
+export { ActionRenderer, ActiveKeyboardShortcuts, Address, BadgeCount, Box, Button, ButtonCopyToClipboard, Caption, CheckSvg, Checkbox, CheckboxList, Code, Col, Colgroup, ConstructionSvg, Details, DialogLayout, Editable, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Form, Group, HeartSvg, HomeSvg, Icon, Image, Input, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, MessageBox, Meter, Paragraph, Quantity, Radio, RadioList, Route, RouteLink, Routes, RowNumberCol, RowNumberTableCell, SINGLE_SPACE_CONSTRAINT, SVGMaskOverlay, SearchSvg, Select, SelectionContext, Separator, SettingsSvg, StarSvg, SummaryMarker, Svg, Tab, TabList, Table, TableCell, Tbody, Text, Thead, Title, Tr, UITransition, UserSvg, ViewportLayout, actionIntegratedVia, actionRunEffect, addCustomMessage, arraySignalMembership, compareTwoJsValues, createAction, createAvailableConstraint, createRequestCanceller, createSelectionKeyboardShortcuts, enableDebugActions, enableDebugOnDocumentLoading, forwardActionRequested, installCustomConstraintValidation, isCellSelected, isColumnSelected, isRowSelected, localStorageSignal, navBack, navForward, navTo, openCallout, rawUrlPart, reload, removeCustomMessage, requestAction, rerunActions, resource, route, routeAction, setBaseUrl, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, updateActions, useActionData, useActionStatus, useArraySignalMembership, useCalloutClose, useCancelPrevious, useCellsAndColumns, useConstraintValidityState, useDependenciesDiff, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useMatchingRouteInfo, useNavState$1 as useNavState, useRouteStatus, useRunOnMount, useSelectableElement, useSelectionController, useSignalSync, useStateArray, useTitleLevel, useUrlSearchParam, valueInLocalStorage };
 //# sourceMappingURL=jsenv_navi.js.map

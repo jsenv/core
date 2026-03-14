@@ -138,7 +138,7 @@ export { Code } from "./src/text/code.jsx";
 export { MessageBox } from "./src/text/message_box.jsx";
 export { Meter } from "./src/text/meter.jsx";
 export { Paragraph } from "./src/text/paragraph.jsx";
-export { Stat } from "./src/text/stat.jsx";
+export { Quantity } from "./src/text/quantity.jsx";
 export { Text } from "./src/text/text.jsx";
 export { Title, useTitleLevel } from "./src/text/title.jsx";
 
