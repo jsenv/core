@@ -1,4 +1,4 @@
-import { v, m, b } from "../jsenv_plugin_toolbar_node_modules.js";
+import { a, C, g } from "../jsenv_plugin_toolbar_node_modules.js";
 
 const paramsFromParentWindow = {};
 const searchParams = new URLSearchParams(window.location.search);
@@ -9,9 +9,9 @@ const parentWindowReloader = window.parent.__reloader__;
 
 const stateFromLocalStorage = localStorage.hasOwnProperty("jsenv_toolbar") ? JSON.parse(localStorage.getItem("jsenv_toolbar")) : {};
 
-const animationsEnabledSignal = v(typeof stateFromLocalStorage.animationsEnabled === "boolean" ? stateFromLocalStorage.animationsEnabled : typeof paramsFromParentWindow.animationsEnabled === "boolean" ? paramsFromParentWindow.animationsEnabled : false);
+const animationsEnabledSignal = a(typeof stateFromLocalStorage.animationsEnabled === "boolean" ? stateFromLocalStorage.animationsEnabled : typeof paramsFromParentWindow.animationsEnabled === "boolean" ? paramsFromParentWindow.animationsEnabled : false);
 
-m(() => {
+C(() => {
   const animationsEnabled = animationsEnabledSignal.value;
   if (animationsEnabled) {
     document.documentElement.removeAttribute("data-animation-disabled");
@@ -20,11 +20,11 @@ m(() => {
   }
 });
 
-const executionTooltipOpenedSignal = v(false);
-const executionSignal = v({
+const executionTooltipOpenedSignal = a(false);
+const executionSignal = a({
   status: "running"
 });
-const previousExecutionSignal = v(sessionStorage.hasOwnProperty(window.location.href) ? JSON.parse(sessionStorage.getItem(window.location.href)) : null);
+const previousExecutionSignal = a(sessionStorage.hasOwnProperty(window.location.href) ? JSON.parse(sessionStorage.getItem(window.location.href)) : null);
 window.parent.__supervisor__.getDocumentExecutionResult().then(({
   status,
   startTime,
@@ -39,8 +39,8 @@ window.parent.__supervisor__.getDocumentExecutionResult().then(({
 
 const notificationAPIDetected = typeof window.Notification === "function";
 
-const notificationsEnabledSignal = v(typeof stateFromLocalStorage.notificationsEnabled === "boolean" ? stateFromLocalStorage.notificationsEnabled : typeof paramsFromParentWindow.notificationsEnabled === "boolean" ? paramsFromParentWindow.notificationsEnabled : false);
-const notificationPermissionSignal = v(Notification.permission);
+const notificationsEnabledSignal = a(typeof stateFromLocalStorage.notificationsEnabled === "boolean" ? stateFromLocalStorage.notificationsEnabled : typeof paramsFromParentWindow.notificationsEnabled === "boolean" ? paramsFromParentWindow.notificationsEnabled : false);
+const notificationPermissionSignal = a(Notification.permission);
 
 const enableNotifications = () => {
   notificationsEnabledSignal.value = true;
@@ -146,13 +146,13 @@ const getFaviconHref = () => {
   return link ? link.href : undefined;
 };
 
-m(() => {
+C(() => {
   const execution = executionSignal.value;
   if (execution) {
     sessionStorage.setItem(window.location.href, JSON.stringify(execution));
   }
 });
-m(() => {
+C(() => {
   const execution = executionSignal.value;
   const previousExecution = previousExecutionSignal.value;
   if (execution) {
@@ -160,14 +160,14 @@ m(() => {
   }
 });
 
-m(() => {
+C(() => {
   const notificationsEnabled = notificationsEnabledSignal.value;
   if (!notificationsEnabled) {
     closeAllNotifications();
   }
 });
 
-const changesTooltipOpenedSignal = v(false);
+const changesTooltipOpenedSignal = a(false);
 
 const openChangesToolip = () => {
   changesTooltipOpenedSignal.value = true;
@@ -176,9 +176,9 @@ const closeChangesToolip = () => {
   changesTooltipOpenedSignal.value = false;
 };
 
-const autoreloadEnabledSignal = v(false);
-const reloaderStatusSignal = v("idle");
-const changesSignal = v(0);
+const autoreloadEnabledSignal = a(false);
+const reloaderStatusSignal = a("idle");
+const changesSignal = a(0);
 if (parentWindowReloader) {
   autoreloadEnabledSignal.value = parentWindowReloader.autoreload.enabled;
   parentWindowReloader.autoreload.onchange = () => {
@@ -252,7 +252,7 @@ const renameAttribute = (node, name, newName) => {
 
 const changesIndicator = document.querySelector("#changes_indicator");
 const renderChangesIndicator = () => {
-  m(() => {
+  C(() => {
     const autoreloadEnabled = autoreloadEnabledSignal.value;
     const changes = changesSignal.value;
     const changeCount = changes.length;
@@ -274,7 +274,7 @@ const renderChangesIndicator = () => {
   changesIndicator.querySelector(".tooltip_action").onclick = () => {
     parentWindowReloader.reload();
   };
-  m(() => {
+  C(() => {
     const changesTooltipOpened = changesTooltipOpenedSignal.value;
     if (changesTooltipOpened) {
       changesIndicator.setAttribute("data-tooltip-visible", "");
@@ -345,11 +345,11 @@ const deactivateToolbarSection = element => {
 const executionIndicator = document.querySelector("#document_execution_indicator");
 const renderDocumentExecutionIndicator = async () => {
   removeForceHideElement(document.querySelector("#document_execution_indicator"));
-  m(() => {
+  C(() => {
     const execution = executionSignal.value;
     updateExecutionIndicator(execution);
   });
-  m(() => {
+  C(() => {
     const executionTooltipOpened = executionTooltipOpenedSignal.value;
     if (executionTooltipOpened) {
       executionIndicator.setAttribute("data-tooltip-visible", "");
@@ -415,8 +415,8 @@ const renderDocumentIndexLink = () => {
   setLinkHrefForParentWindow(document.querySelector("#document_index_link"), "/");
 };
 
-const serverTooltipOpenedSignal = v(false);
-const serverConnectionSignal = v("default");
+const serverTooltipOpenedSignal = a(false);
+const serverConnectionSignal = a("default");
 const serverEvents$1 = window.__server_events__;
 if (serverEvents$1) {
   serverEvents$1.readyState.onchange = () => {
@@ -437,11 +437,11 @@ const serverEvents = window.__server_events__;
 const serverIndicator = document.querySelector("#server_indicator");
 const renderServerIndicator = () => {
   removeForceHideElement(document.querySelector("#server_indicator"));
-  m(() => {
+  C(() => {
     const serverConnection = serverConnectionSignal.value;
     updateServerIndicator(serverConnection);
   });
-  m(() => {
+  C(() => {
     const serverTooltipOpened = serverTooltipOpenedSignal.value;
     if (serverTooltipOpened) {
       serverIndicator.setAttribute("data-tooltip-visible", "");
@@ -480,7 +480,7 @@ const updateServerIndicator = connectionState => {
   }
 };
 
-const openedSignal = v(typeof stateFromLocalStorage.opened === "boolean" ? stateFromLocalStorage.opened : typeof paramsFromParentWindow.opened === "boolean" ? paramsFromParentWindow.opened : false);
+const openedSignal = a(typeof stateFromLocalStorage.opened === "boolean" ? stateFromLocalStorage.opened : typeof paramsFromParentWindow.opened === "boolean" ? paramsFromParentWindow.opened : false);
 
 const openToolbar = () => {
   openedSignal.value = true;
@@ -745,7 +745,7 @@ const startJavaScriptAnimation = ({
 };
 
 const initToolbarOpening = () => {
-  m(() => {
+  C(() => {
     const opened = openedSignal.value;
     if (opened) {
       showToolbar();
@@ -803,7 +803,7 @@ const showToolbar = () => {
   }
 };
 
-const settingsOpenedSignal = v(false);
+const settingsOpenedSignal = a(false);
 
 const openSettings = () => {
   settingsOpenedSignal.value = true;
@@ -818,7 +818,7 @@ const renderToolbarOverlay = () => {
     closeAllTooltips();
     closeSettings();
   };
-  m(() => {
+  C(() => {
     const opened = openedSignal.value;
     const settingsOpened = settingsOpenedSignal.value;
     const executionTooltipOpened = executionTooltipOpenedSignal.value;
@@ -882,7 +882,7 @@ const disableAnimations = () => {
 
 const renderToolbarAnimationSetting = () => {
   const animCheckbox = document.querySelector("#toggle_anims");
-  m(() => {
+  C(() => {
     const animationsEnabled = animationsEnabledSignal.value;
     animCheckbox.checked = animationsEnabled;
   });
@@ -945,7 +945,7 @@ const renderToolbarAutoreloadSetting = () => {
     return;
   }
   const autoreloadCheckbox = document.querySelector("#toggle_autoreload");
-  m(() => {
+  C(() => {
     const autoreloadEnabled = autoreloadEnabledSignal.value;
     if (autoreloadEnabled) {
       autoreloadCheckbox.checked = true;
@@ -1005,11 +1005,11 @@ const disableAutoreloadSetting = () => {
 
 const notifCheckbox = document.querySelector("#toggle_notifs");
 const renderToolbarNotificationSetting = () => {
-  m(() => {
+  C(() => {
     const notificationsEnabled = notificationsEnabledSignal.value;
     notifCheckbox.checked = notificationsEnabled;
   });
-  m(() => {
+  C(() => {
     const notificationPermission = notificationPermissionSignal.value;
     if (!notificationAPIDetected) {
       applyNotificationNotAvailableEffects();
@@ -1071,7 +1071,7 @@ const applyNotificationNOTGrantedEffects = () => {
   };
 };
 
-const ribbonDisplayedSignal = v(typeof stateFromLocalStorage.ribbonDisplayed === "boolean" ? stateFromLocalStorage.ribbonDisplayed : true);
+const ribbonDisplayedSignal = a(typeof stateFromLocalStorage.ribbonDisplayed === "boolean" ? stateFromLocalStorage.ribbonDisplayed : true);
 
 const ribbonBox = document.querySelector("#ribbon_box");
 const ribbonCheckbox = ribbonBox.querySelector("input");
@@ -1079,7 +1079,7 @@ const renderToolbarRibbonSetting = () => {
   const ribbonContainer = window.parent.document.querySelector("#jsenv_ribbon_container");
   if (ribbonContainer) {
     ribbonBox.style.display = "block";
-    m(() => {
+    C(() => {
       const ribbonDisplayed = ribbonDisplayedSignal.value;
       ribbonCheckbox.checked = ribbonDisplayed;
       if (ribbonDisplayed) {
@@ -1098,7 +1098,7 @@ const renderToolbarRibbonSetting = () => {
   }
 };
 
-const themeSignal = v(typeof stateFromLocalStorage.theme === "string" ? stateFromLocalStorage.theme : typeof paramsFromParentWindow.theme === "string" ? paramsFromParentWindow.theme : "dark");
+const themeSignal = a(typeof stateFromLocalStorage.theme === "string" ? stateFromLocalStorage.theme : typeof paramsFromParentWindow.theme === "string" ? paramsFromParentWindow.theme : "dark");
 
 const switchToLightTheme = () => {
   themeSignal.value = "light";
@@ -1128,7 +1128,7 @@ const renderToolbarSettings = () => {
   renderToolbarNotificationSetting();
   renderToolbarThemeSetting();
   renderToolbarRibbonSetting();
-  m(() => {
+  C(() => {
     const settingsOpened = settingsOpenedSignal.value;
     if (settingsOpened) {
       activateToolbarSection(document.querySelector("#settings"));
@@ -1176,14 +1176,14 @@ addExternalCommandCallback("initToolbar", () => {
 });
 sendEventToParent("toolbar_ready");
 
-m(() => {
+C(() => {
   const serverConnection = serverConnectionSignal.value;
   if (serverConnection === "connecting" || serverConnection === "closed") {
     openServerTooltip();
   }
 });
 
-m(() => {
+C(() => {
   const theme = themeSignal.value;
   document.querySelector("html").setAttribute("data-theme", theme);
 });
@@ -1191,7 +1191,7 @@ m(() => {
 addExternalCommandCallback("openToolbar", openToolbar);
 addExternalCommandCallback("closeToolbar", closeToolbar);
 
-const toolbarStateSignal = b(() => {
+const toolbarStateSignal = g(() => {
   const opened = openedSignal.value;
   const theme = themeSignal.value;
   const animationsEnabled = animationsEnabledSignal.value;
@@ -1206,7 +1206,7 @@ const toolbarStateSignal = b(() => {
   };
 });
 
-m(() => {
+C(() => {
   const toolbarState = toolbarStateSignal.value;
   localStorage.setItem("jsenv_toolbar", JSON.stringify(toolbarState));
   sendEventToParent("toolbar_state_change", toolbarState);

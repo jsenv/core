@@ -118,7 +118,7 @@ input:focus-visible {
 @keyframes rotateLoader {
   0% {
     opacity: 1;
-    transform: scaleX(-1)rotate(360deg);
+    transform: scaleX(-1) rotate(360deg);
   }
 
   50% {
@@ -127,7 +127,7 @@ input:focus-visible {
 
   100% {
     opacity: 1;
-    transform: scaleX(-1)rotate(0);
+    transform: scaleX(-1) rotate(0);
   }
 }
 

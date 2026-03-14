@@ -1,6 +1,6 @@
-import { v, u, useSignal, M, F, T, h, A, b, k, m, O, q, F$1 } from "../jsenv_plugin_database_manager_node_modules.js";
+import { a, u, F, useSignal, h, A, b, k, C, O, q, F$1 } from "../jsenv_plugin_database_manager_node_modules.js";
 import { initFlexDetailsSet, startDragToResizeGesture, getInnerWidth, getWidth, initPositionSticky } from "@jsenv/dom";
-import { useEditionController, createAvailableConstraint, Input, SINGLE_SPACE_CONSTRAINT, useSignalSync, Editable, useSelectionController, useKeyboardShortcuts, createSelectionKeyboardShortcuts, Details, Button, valueInLocalStorage, SVGMaskOverlay, resource, useActionData, setBaseUrl, setupRoutes, createAction, useRouteStatus, useRunOnMount, Form, Select, Label, ErrorBoundaryContext, Route, useNavState, Table, TabList, Tab, UITransition } from "@jsenv/navi";
+import { useEditionController, createAvailableConstraint, Icon, Input, SINGLE_SPACE_CONSTRAINT, Editable, useSelectionController, useKeyboardShortcuts, createSelectionKeyboardShortcuts, TabList, Details, Text, BadgeCount, Button, stateSignal, resource, setBaseUrl, route, routeAction, setupRoutes, SVGMaskOverlay, RouteLink, useRunOnMount, valueInLocalStorage, Form, Select, Label, useSignalSync, ErrorBoundaryContext, Box, Route, useNavState, Table, Tab, Routes } from "@jsenv/navi";
 
 /* eslint-disable */
 // construct-style-sheets-polyfill@3.1.0
@@ -351,21 +351,21 @@ const stylesheet$2 = new CSSStyleSheet({
 stylesheet$2.replaceSync(inlineContent$2.text);
 document.adoptedStyleSheets = [...document.adoptedStyleSheets, stylesheet$2];
 
-const roleCanLoginCountSignal = v(0);
+const roleCanLoginCountSignal = a(0);
 const setRoleCanLoginCount = count => {
   roleCanLoginCountSignal.value = count;
 };
 const useRoleCanLoginCount = () => {
   return roleCanLoginCountSignal.value;
 };
-const roleGroupCountSignal = v(0);
+const roleGroupCountSignal = a(0);
 const useRoleGroupCount = () => {
   return roleGroupCountSignal.value;
 };
 const setRoleGroupCount = count => {
   roleGroupCountSignal.value = count;
 };
-const roleWithOwnershipCountSignal = v(0);
+const roleWithOwnershipCountSignal = a(0);
 const useRoleWithOwnershipCount = () => {
   return roleWithOwnershipCountSignal.value;
 };
@@ -381,14 +381,14 @@ const setRoleCounts = ({
   setRoleGroupCount(groupCount);
   setRoleWithOwnershipCount(withOwnershipCount);
 };
-const databaseCountSignal = v(0);
+const databaseCountSignal = a(0);
 const setDatabaseCount = count => {
   databaseCountSignal.value = count;
 };
 const useDatabaseCount = () => {
   return databaseCountSignal.value;
 };
-const tableCountSignal = v(0);
+const tableCountSignal = a(0);
 const setTableCount = count => {
   tableCountSignal.value = count;
 };
@@ -396,8 +396,6 @@ const useTableCount = () => {
   return tableCountSignal.value;
 };
 
-const Overflow = () => {};
-const FontSizedSvg$1 = () => {};
 const ExplorerItem = ({
   nameKey,
   item,
@@ -405,8 +403,8 @@ const ExplorerItem = ({
   selectionController,
   deletedItems,
   useItemArrayInStore,
-  useRenameItemAction,
-  useDeleteItemAction
+  renameItemAction,
+  deleteItemAction
 }) => {
   const itemName = item[nameKey];
   const {
@@ -414,11 +412,11 @@ const ExplorerItem = ({
     startEditing,
     stopEditing
   } = useEditionController();
-  const deleteItemAction = useDeleteItemAction ? useDeleteItemAction(item) : null;
   const itemRendered = renderItem(item, {
     selectionController,
     deletedItems,
     className: "explorer_item_content",
+    // overflowEllipsis: true,
     shortcuts: [{
       key: "enter",
       enabled: !editing,
@@ -426,33 +424,34 @@ const ExplorerItem = ({
       description: "Edit item name"
     }, ...(deleteItemAction ? [{
       key: "command+delete",
-      action: deleteItemAction,
+      action: () => deleteItemAction(item),
       description: "Delete item",
       confirmMessage: "Are you sure you want to delete \"".concat(itemName, "\"?")
     }] : [])],
-    children: useRenameItemAction ? u(RenameInputOrName, {
+    children: itemName
+  });
+  if (renameItemAction) {
+    return u(RenameInputOrName, {
       nameKey: nameKey,
       item: item,
       useItemArrayInStore: useItemArrayInStore,
-      useRenameItemAction: useRenameItemAction,
-      stopEditing: stopEditing
-    }) : u(Overflow, {
-      children: itemName
-    })
-  });
+      renameItemAction: renameItemAction,
+      stopEditing: stopEditing,
+      children: itemRendered
+    });
+  }
   return itemRendered;
 };
 const RenameInputOrName = ({
   nameKey,
   item,
   useItemArrayInStore,
-  useRenameItemAction,
+  renameItemAction,
   editing,
-  stopEditing
+  stopEditing,
+  children
 }) => {
   const itemName = item[nameKey];
-  const nameSignal = useSignalSync(itemName);
-  const renameAction = useRenameItemAction(item, nameSignal);
   const itemArrayInStore = useItemArrayInStore();
   const otherValueSet = new Set();
   for (const itemCandidate of itemArrayInStore) {
@@ -466,25 +465,20 @@ const RenameInputOrName = ({
     editing: editing,
     onEditEnd: stopEditing,
     value: itemName,
-    valueSignal: nameSignal,
-    action: renameAction,
+    action: v => renameItemAction(item, v),
     required: true,
     constraints: [SINGLE_SPACE_CONSTRAINT, availableNameConstraint],
-    children: u(Overflow, {
-      children: itemName
-    })
+    children: children
   });
 };
 const ExplorerNewItem = ({
   nameKey,
   useItemArrayInStore,
-  useCreateItemAction,
+  createItemAction,
   cancelOnBlurInvalid,
   onCancel,
   onActionEnd
 }) => {
-  const nameSignal = useSignal("");
-  const createItemAction = useCreateItemAction(nameSignal);
   const itemArrayInStore = useItemArrayInStore();
   const valueSet = new Set();
   for (const item of itemArrayInStore) {
@@ -493,11 +487,11 @@ const ExplorerNewItem = ({
   const availableNameConstraint = createAvailableConstraint(valueSet, "\"{value}\" already exists. Please choose an other name.");
   return u("span", {
     className: "explorer_item_content",
-    children: [u(FontSizedSvg$1, {
+    children: [u(Icon, {
       children: u(EnterNameIconSvg, {})
     }), u(Input, {
       action: createItemAction,
-      valueSignal: nameSignal,
+      actionAfterChange: true,
       cancelOnEscape: true,
       cancelOnBlurInvalid: cancelOnBlurInvalid,
       onCancel: onCancel,
@@ -524,40 +518,38 @@ const EnterNameIconSvg = ({
   });
 };
 
-const ExplorerItemList = M((props, ref) => {
+const ExplorerItemList = props => {
   const {
     idKey,
     nameKey,
     itemArray,
     renderItem,
     useItemArrayInStore,
-    useRenameItemAction,
-    useDeleteManyItemAction,
-    useDeleteItemAction,
+    renameItemAction,
+    deleteManyItemAction,
+    deleteItemAction,
     isCreatingNew,
-    useCreateItemAction,
+    createItemAction,
     stopCreatingNew
   } = props;
-  const innerRef = F();
-  T(ref, () => innerRef.current);
+  const ref = F();
   const itemSelectionSignal = useSignal([]);
   const [deletedItems, setDeletedItems] = h([]);
-  const deleteManyAction = useDeleteManyItemAction?.(itemSelectionSignal);
   const selection = itemSelectionSignal.value;
   const selectionLength = selection.length;
   const selectionController = useSelectionController({
-    elementRef: innerRef,
+    elementRef: ref,
     layout: "vertical",
     value: selection,
     onChange: newValue => {
       itemSelectionSignal.value = newValue;
     },
-    multiple: Boolean(deleteManyAction)
+    multiple: Boolean(deleteManyItemAction)
   });
-  useKeyboardShortcuts(innerRef, [...createSelectionKeyboardShortcuts(selectionController), {
-    enabled: deleteManyAction && selectionLength > 0,
+  useKeyboardShortcuts(ref, [...createSelectionKeyboardShortcuts(selectionController), {
+    enabled: deleteManyItemAction && selectionLength > 0,
     key: ["command+delete"],
-    action: deleteManyAction,
+    action: () => deleteManyItemAction(itemSelectionSignal.value),
     description: "Delete selected items",
     confirmMessage: selectionLength === 1 ? "Are you sure you want to delete \"".concat(selection[0], "\"?") : "Are you sure you want to delete the ".concat(selectionLength, " selected items?"),
     onStart: () => {
@@ -573,11 +565,16 @@ const ExplorerItemList = M((props, ref) => {
       setDeletedItems([]);
     }
   }]);
-  return u("ul", {
-    ref: innerRef,
+  return u(TabList, {
+    ref: ref,
+    vertical: true,
     className: "explorer_item_list",
+    indicator: "end",
+    expandX: true,
+    spacing: "0",
+    lineHeight: "normal",
     children: [itemArray.map(item => {
-      return u("li", {
+      return u(TabList.Tab, {
         className: "explorer_item",
         children: u(ExplorerItem, {
           nameKey: nameKey,
@@ -586,16 +583,16 @@ const ExplorerItemList = M((props, ref) => {
           renderItem: renderItem,
           selectionController: selectionController,
           useItemArrayInStore: useItemArrayInStore,
-          useRenameItemAction: useRenameItemAction,
-          useDeleteItemAction: deleteManyAction ? () => null : useDeleteItemAction
+          renameItemAction: renameItemAction,
+          deleteItemAction: deleteManyItemAction ? () => null : deleteItemAction
         })
       }, item[idKey]);
-    }), isCreatingNew && u("li", {
+    }), isCreatingNew && u(TabList.Tab, {
       className: "explorer_item",
       children: u(ExplorerNewItem, {
         nameKey: nameKey,
         useItemArrayInStore: useItemArrayInStore,
-        useCreateItemAction: useCreateItemAction,
+        createItemAction: createItemAction,
         cancelOnBlurInvalid: true,
         onCancel: (e, reason) => {
           stopCreatingNew({
@@ -616,62 +613,38 @@ const ExplorerItemList = M((props, ref) => {
       })
     }, "new_item")]
   });
-});
-
-/**
- *
- */
-
-const createExplorerGroupController = (id, {
-  detailsOpenAtStart,
-  detailsOnToggle
-}) => {
-  const [restoreHeight, storeHeight] = valueInLocalStorage("explorer_group_".concat(id, "_height"), {
-    type: "positive_number"
-  });
-  const heightSettingSignal = v(restoreHeight());
-  m(() => {
-    const height = heightSettingSignal.value;
-    storeHeight(height);
-  });
-  const useHeightSetting = () => {
-    return heightSettingSignal.value;
-  };
-  const setHeightSetting = width => {
-    heightSettingSignal.value = width;
-  };
-  return {
-    id,
-    useHeightSetting,
-    setHeightSetting,
-    detailsOpenAtStart,
-    detailsOnToggle
-  };
 };
-const ExplorerGroup = M((props, ref) => {
+
+const ExplorerGroup = props => {
   const {
-    controller,
-    detailsAction,
+    id,
+    detailsConnectedAction,
+    detailsUIAction,
     idKey,
     nameKey,
-    labelChildren,
+    label,
+    count,
     renderNewButtonChildren,
     renderItem,
     useItemArrayInStore,
-    useRenameItemAction,
-    useCreateItemAction,
-    useDeleteItemAction,
-    useDeleteManyItemAction,
-    onOpen,
-    onClose,
+    renameItemAction,
+    createItemAction,
+    deleteItemAction,
+    deleteManyItemAction,
+    open,
+    height,
     resizable,
     ...rest
   } = props;
-  const innerRef = F();
-  T(ref, () => innerRef.current);
+  const defaultRef = F();
+  const ref = rest.ref || defaultRef;
   A(() => {
+    const el = ref.current;
+    if (!el) {
+      return;
+    }
     setTimeout(() => {
-      innerRef.current.setAttribute("data-details-toggle-animation", "");
+      el.setAttribute("data-details-toggle-animation", "");
     });
   }, []);
   const [isCreatingNew, setIsCreatingNew] = h(false);
@@ -686,60 +659,65 @@ const ExplorerGroup = M((props, ref) => {
     }
     setIsCreatingNew(false);
   }, [setIsCreatingNew]);
-  const heightSetting = controller.useHeightSetting();
   const createButtonRef = F(null);
   return u(k, {
     children: [resizable && u("div", {
-      "data-resize-handle": controller.id,
-      id: "".concat(controller.id, "_resize_handle")
+      "data-resize-handle": id,
+      id: "".concat(id, "_resize_handle")
     }), u(Details, {
       ...rest,
-      ref: innerRef,
-      id: controller.id,
-      open: controller.detailsOpenAtStart,
+      ref: ref,
+      id: id,
+      open: open,
       focusGroup: true,
       focusGroupDirection: "vertical",
       className: "explorer_group",
-      onToggle: toggleEvent => {
-        controller.detailsOnToggle(toggleEvent.newState === "open");
-        if (toggleEvent.newState === "open") {
-          if (onOpen) {
-            onOpen();
-          }
-        } else if (onClose) {
-          onClose();
-        }
-      },
       "data-resize": resizable ? "vertical" : "none",
       "data-min-height": "150",
-      "data-requested-height": heightSetting,
-      action: detailsAction,
+      "data-requested-height": height,
+      connectedAction: detailsConnectedAction,
+      uiAction: detailsUIAction,
       label: u(k, {
-        children: [labelChildren, renderNewButtonChildren ? u(k, {
-          children: [u("span", {
-            style: "display: flex; flex: 1"
-          }), u(Button, {
-            ref: createButtonRef,
-            className: "summary_action_icon",
-            discrete: true,
-            style: {
-              width: "22px",
-              height: "22px",
-              cursor: "pointer",
-              padding: "4px"
-            },
-            onMouseDown: e => {
-              // ensure when input is focused it stays focused
-              // without this preventDefault() the input would be blurred (which might cause creation of an item) and re-opened empty
-              e.preventDefault();
-            },
-            onClick: e => {
-              e.preventDefault();
-              startCreatingNew();
-            },
-            children: renderNewButtonChildren()
+        children: u(Text, {
+          overflowEllipsis: true,
+          children: [label, u(Text, {
+            overflowPinned: true,
+            expandX: true,
+            box: true,
+            alignY: "center",
+            children: [u(BadgeCount, {
+              size: "xxs",
+              circle: true,
+              max: "Infinity",
+              background: "gray",
+              color: "white",
+              children: count
+            }), renderNewButtonChildren && u(k, {
+              children: [u("span", {
+                style: "display: flex; flex: 1"
+              }), u(Button, {
+                ref: createButtonRef,
+                selfAlignX: "end",
+                className: "summary_action_icon",
+                width: "22",
+                height: "22",
+                padding: "2",
+                discrete: true,
+                shrink: false,
+                onMouseDown: e => {
+                  // ensure when input is focused it stays focused
+                  // without this preventDefault() the input would be blurred (which might cause creation of an item) and re-opened empty
+                  e.preventDefault();
+                },
+                onClick: e => {
+                  e.preventDefault();
+                  startCreatingNew();
+                },
+                children: renderNewButtonChildren()
+              })]
+            })]
           })]
-        }) : null]
+        })
       }),
       children: itemArray => {
         return u("div", {
@@ -750,10 +728,10 @@ const ExplorerGroup = M((props, ref) => {
             itemArray: itemArray,
             renderItem: renderItem,
             useItemArrayInStore: useItemArrayInStore,
-            useRenameItemAction: useRenameItemAction,
-            useCreateItemAction: useCreateItemAction,
-            useDeleteItemAction: useDeleteItemAction,
-            useDeleteManyItemAction: useDeleteManyItemAction,
+            renameItemAction: renameItemAction,
+            createItemAction: createItemAction,
+            deleteItemAction: deleteItemAction,
+            deleteManyItemAction: deleteManyItemAction,
             isCreatingNew: isCreatingNew,
             stopCreatingNew: stopCreatingNew
           })
@@ -761,136 +739,18 @@ const ExplorerGroup = M((props, ref) => {
       }
     })]
   });
+};
+
+const databaseOpenSignal = stateSignal(false, {
+  type: "boolean",
+  id: "jsenv_db_database_open",
+  persist: true
 });
-
-const [readDatabaseListDetailsOpened, storeDatabaseListDetailsOpened, eraseDatabaseListDetailsOpened] = valueInLocalStorage("databases_details_opened", {
-  type: "boolean"
+const databaseHeightSignal = stateSignal(undefined, {
+  type: "float",
+  id: "jsenv_db_database_height",
+  persist: true
 });
-const databaseListDetailsOpenAtStart = readDatabaseListDetailsOpened();
-const databaseListDetailsOnToggle = detailsOpen => {
-  if (detailsOpen) {
-    storeDatabaseListDetailsOpened(true);
-  } else {
-    eraseDatabaseListDetailsOpened();
-  }
-};
-
-// https://www.svgrepo.com/svg/437987/plus-circle
-const PlusSvg = ({
-  circle,
-  backgroundColor = "",
-  color = "currentColor"
-}) => {
-  return u("svg", {
-    width: "100%",
-    height: "100%",
-    viewBox: "0 0 24 24",
-    fill: "none",
-    xmlns: "http://www.w3.org/2000/svg",
-    children: [backgroundColor && u("rect", {
-      x: "0",
-      y: "0",
-      width: "24",
-      height: "24",
-      fill: backgroundColor
-    }), circle && u("rect", {
-      x: "3",
-      y: "3",
-      width: "18",
-      height: "18",
-      rx: "9",
-      stroke: color,
-      "stroke-width": "2",
-      "stroke-linecap": "round",
-      "stroke-linejoin": "round"
-    }), u("path", {
-      d: "M12 7.75732L12 16.2426",
-      stroke: color,
-      "stroke-width": "2",
-      "stroke-linecap": "round"
-    }), u("path", {
-      d: "M7.75735 12L16.2426 12",
-      stroke: color,
-      "stroke-width": "2",
-      "stroke-linecap": "round"
-    })]
-  });
-};
-
-const SvgIconGroup = ({
-  children
-}) => {
-  return u(SVGMaskOverlay, {
-    viewBox: "0 0 24 24",
-    children: [u("svg", {
-      children: [u("svg", {
-        x: "2",
-        y: "4",
-        width: "12",
-        height: "12",
-        overflow: "visible",
-        children: children
-      }), u("svg", {
-        x: "10",
-        y: "4",
-        width: "12",
-        height: "12",
-        overflow: "visible",
-        children: children
-      })]
-    }), u("svg", {
-      x: "6",
-      y: "8",
-      width: "12",
-      height: "12",
-      overflow: "visible",
-      children: children
-    })]
-  });
-};
-const SvgWithPlus = ({
-  children
-}) => {
-  return u(SVGMaskOverlay, {
-    viewBox: "0 0 24 24",
-    children: [children, u("svg", {
-      x: "12",
-      y: "12",
-      width: "16",
-      height: "16",
-      overflow: "visible",
-      children: [u("circle", {
-        cx: "8",
-        cy: "8",
-        r: "5",
-        fill: "transparent"
-      }), u(PlusSvg, {
-        color: "green"
-      })]
-    })]
-  });
-};
-
-const DatabaseSvg = () => {
-  return u("svg", {
-    viewBox: "0 0 24 24",
-    width: "100%",
-    height: "100%",
-    fill: "none",
-    xmlns: "http://www.w3.org/2000/svg",
-    children: u("path", {
-      "fill-rule": "evenodd",
-      "clip-rule": "evenodd",
-      d: "M3.25 6C3.25 4.45831 4.48029 3.26447 6.00774 2.50075C7.58004 1.7146 9.69967 1.25 12 1.25C14.3003 1.25 16.42 1.7146 17.9923 2.50075C19.5197 3.26447 20.75 4.45831 20.75 6V18C20.75 19.5417 19.5197 20.7355 17.9923 21.4992C16.42 22.2854 14.3003 22.75 12 22.75C9.69967 22.75 7.58004 22.2854 6.00774 21.4992C4.48029 20.7355 3.25 19.5417 3.25 18V6ZM4.75 6C4.75 5.33255 5.31057 4.52639 6.67856 3.84239C8.00168 3.18083 9.88205 2.75 12 2.75C14.118 2.75 15.9983 3.18083 17.3214 3.84239C18.6894 4.52639 19.25 5.33255 19.25 6C19.25 6.66745 18.6894 7.47361 17.3214 8.15761C15.9983 8.81917 14.118 9.25 12 9.25C9.88205 9.25 8.00168 8.81917 6.67856 8.15761C5.31057 7.47361 4.75 6.66745 4.75 6ZM4.75 18C4.75 18.6674 5.31057 19.4736 6.67856 20.1576C8.00168 20.8192 9.88205 21.25 12 21.25C14.118 21.25 15.9983 20.8192 17.3214 20.1576C18.6894 19.4736 19.25 18.6674 19.25 18V14.7072C18.8733 15.0077 18.4459 15.2724 17.9923 15.4992C16.42 16.2854 14.3003 16.75 12 16.75C9.69967 16.75 7.58004 16.2854 6.00774 15.4992C5.55414 15.2724 5.12675 15.0077 4.75 14.7072V18ZM19.25 8.70722V12C19.25 12.6674 18.6894 13.4736 17.3214 14.1576C15.9983 14.8192 14.118 15.25 12 15.25C9.88205 15.25 8.00168 14.8192 6.67856 14.1576C5.31057 13.4736 4.75 12.6674 4.75 12V8.70722C5.12675 9.00772 5.55414 9.27245 6.00774 9.49925C7.58004 10.2854 9.69967 10.75 12 10.75C14.3003 10.75 16.42 10.2854 17.9923 9.49925C18.4459 9.27245 18.8733 9.00772 19.25 8.70722Z",
-      fill: "currentColor"
-    })
-  });
-};
-const DatabaseWithPlusSvg = () => {
-  return u(SvgWithPlus, {
-    children: u(DatabaseSvg, {})
-  });
-};
 
 const errorFromResponse = async (response, message) => {
   const status = response.status;
@@ -1050,16 +910,34 @@ const DATABASE = resource("database", {
   }
 });
 const useDatabaseArrayInStore = DATABASE.useArray;
-const useDatabaseArray = () => {
-  const databaseArray = useActionData(DATABASE.GET_MANY);
-  return databaseArray;
-};
-const currentDatabaseIdSignal = v(window.DB_MANAGER_CONFIG.currentDatabase.oid);
+const currentDatabaseIdSignal = a(window.DB_MANAGER_CONFIG.currentDatabase.oid);
 const useCurrentDatabase = () => {
   const currentDatabaseId = currentDatabaseIdSignal.value;
   const currentDatabase = DATABASE.store.select(currentDatabaseId);
   return currentDatabase;
 };
+
+const roleCanLoginOpenSignal = stateSignal(false, {
+  type: "boolean",
+  id: "jsenv_db_role_can_login_open",
+  persist: true
+});
+const roleCanLoginHeightSignal = stateSignal(undefined, {
+  type: "float",
+  id: "jsenv_db_role_can_login_height",
+  persist: true
+});
+
+const roleGroupOpenSignal = stateSignal(false, {
+  type: "boolean",
+  id: "jsenv_db_role_group_open",
+  persist: true
+});
+const roleGroupHeightSignal = stateSignal(undefined, {
+  type: "float",
+  id: "jsenv_db_role_group_height",
+  persist: true
+});
 
 const ROLE = resource("role", {
   idKey: "oid",
@@ -1208,20 +1086,23 @@ const ROLE_CAN_LOGIN = ROLE.withParams({
 const ROLE_CANNOT_LOGIN = ROLE.withParams({
   canlogin: false
 });
-const useRoleCanLoginArray = () => {
-  const roleCanLoginArray = useActionData(ROLE_CAN_LOGIN.GET_MANY);
-  return roleCanLoginArray;
-};
-const useRoleCannotLoginArray = () => {
-  const roleCannotLoginArray = useActionData(ROLE_CANNOT_LOGIN.GET_MANY);
-  return roleCannotLoginArray;
-};
-const currentRoleIdSignal = v(window.DB_MANAGER_CONFIG.currentRole.oid);
+const currentRoleIdSignal = a(window.DB_MANAGER_CONFIG.currentRole.oid);
 const useCurrentRole = () => {
   const currentRoleId = currentRoleIdSignal.value;
   const currentRole = ROLE.store.select(currentRoleId);
   return currentRole;
 };
+
+const roleOwnershipOpenSignal = stateSignal(false, {
+  type: "boolean",
+  id: "jsenv_db_role_ownership_open",
+  persist: true
+});
+const roleOwnershipHeightSignal = stateSignal(undefined, {
+  type: "float",
+  id: "jsenv_db_role_ownership_height",
+  persist: true
+});
 
 const TABLE = resource("table", {
   idKey: "tableoid",
@@ -1375,10 +1256,6 @@ const TABLE = resource("table", {
   }
 });
 const useTableArrayInStore = TABLE.useArray;
-const useTableArray = () => {
-  const tableArray = useActionData(TABLE.GET_MANY);
-  return tableArray;
-};
 const TABLE_ROW = resource("table_row", {
   GET_MANY: async ({
     tablename
@@ -1420,357 +1297,11 @@ const TABLE_ROW = resource("table_row", {
   }
 });
 
-setBaseUrl(window.DB_MANAGER_CONFIG.pathname);
-let [ROLE_ROUTE, DATABASE_ROUTE, TABLE_ROUTE, TABLE_DATA_ROUTE, TABLE_SETTINGS_ROUTE] = setupRoutes({
-  "/roles/:rolname": ROLE.GET,
-  "/databases/:datname": DATABASE.GET,
-  "/tables/:tablename/*?": TABLE.GET,
-  "/tables/:tablename": TABLE_ROW.GET_MANY,
-  "/tables/:tablename/settings": createAction(() => {}, {
-    name: "get table settings"
-  })
-});
-
-const LinkWithIcon$3 = props => props;
-const DatabaseLink = ({
-  database,
-  children,
-  ...rest
-}) => {
-  const datname = database.datname;
-  const databaseUrl = DATABASE_ROUTE.buildUrl({
-    datname
-  });
-  const {
-    params
-  } = useRouteStatus(DATABASE_ROUTE);
-  const activeDatname = params.datname;
-  const currentDatabase = useCurrentDatabase();
-  const isCurrent = currentDatabase && datname === currentDatabase.datname;
-  return u(LinkWithIcon$3, {
-    icon: u(DatabaseSvg, {}),
-    isCurrent: isCurrent,
-    href: databaseUrl,
-    active: activeDatname === datname,
-    ...rest,
-    children: children
-  });
-};
-
-const TextAndCount$4 = props => props;
-const databasesDetailsController = createExplorerGroupController("databases", {
-  detailsOpenAtStart: databaseListDetailsOpenAtStart,
-  detailsOnToggle: databaseListDetailsOnToggle
-});
-const DatabasesDetails = props => {
-  const databaseCount = useDatabaseCount();
-  const databaseArray = useDatabaseArray();
-  return u(ExplorerGroup, {
-    ...props,
-    controller: databasesDetailsController,
-    detailsAction: DATABASE.GET_MANY,
-    idKey: "oid",
-    nameKey: "datname",
-    labelChildren: u(TextAndCount$4, {
-      text: "DATABASES",
-      count: databaseCount
-    }),
-    renderNewButtonChildren: () => u(DatabaseWithPlusSvg, {}),
-    renderItem: (database, props) => u(DatabaseLink, {
-      draggable: false,
-      value: database.datname,
-      database: database,
-      ...props
-    }, database.oid),
-    useItemArrayInStore: useDatabaseArrayInStore,
-    useCreateItemAction: valueSignal => DATABASE.POST({
-      datname: valueSignal
-    }),
-    useDeleteItemAction: database => DATABASE.DELETE.bindParams({
-      datname: database.datname
-    }),
-    useRenameItemAction: (database, valueSignal) => DATABASE.PUT.bindParams({
-      datname: database.datname,
-      columnName: "datname",
-      columnValue: valueSignal
-    }),
-    children: databaseArray
-  });
-};
-
-// https://www.svgrepo.com/collection/zest-interface-icons/12
-// https://flowbite.com/icons/
-
-const pickRoleIcon = role => {
-  if (!role.rolcanlogin) {
-    if (role.rolsuper) {
-      return SuperRoleGroupSvg;
-    }
-    return RoleGroupSvg;
-  }
-  if (role.rolsuper) {
-    return SuperRoleCanLoginSvg;
-  }
-  return RoleCanLoginSvg;
-};
-const RoleCanLoginSvg = ({
-  color = "currentColor",
-  headColor = "transparent",
-  bodyColor = "transparent"
-}) => {
-  return u("svg", {
-    viewBox: "0 0 24 24",
-    width: "100%",
-    height: "100%",
-    fill: "none",
-    xmlns: "http://www.w3.org/2000/svg",
-    children: [bodyColor && u("path", {
-      d: "M4.5 19.8C4.5 17.5 6.8 15 12 15C17.2 15 19.5 17.5 19.5 19.8C19.5 20.4 19.2 20.8 18.8 20.8H5.2C4.8 20.8 4.5 20.4 4.5 19.8Z",
-      fill: bodyColor
-    }), headColor && u("circle", {
-      cx: "12",
-      cy: "9",
-      r: "4",
-      fill: headColor
-    }), u("path", {
-      "fill-rule": "evenodd",
-      "clip-rule": "evenodd",
-      d: "M8 9C8 6.79086 9.79086 5 12 5C14.2091 5 16 6.79086 16 9C16 11.2091 14.2091 13 12 13C9.79086 13 8 11.2091 8 9ZM15.8243 13.6235C17.1533 12.523 18 10.8604 18 9C18 5.68629 15.3137 3 12 3C8.68629 3 6 5.68629 6 9C6 10.8604 6.84668 12.523 8.17572 13.6235C4.98421 14.7459 3 17.2474 3 20C3 20.5523 3.44772 21 4 21C4.55228 21 5 20.5523 5 20C5 17.7306 7.3553 15 12 15C16.6447 15 19 17.7306 19 20C19 20.5523 19.4477 21 20 21C20.5523 21 21 20.5523 21 20C21 17.2474 19.0158 14.7459 15.8243 13.6235Z",
-      fill: color,
-      "fill-opacity": "1"
-    })]
-  });
-};
-const RoleCanLoginWithPlusSvg = ({
-  color
-}) => {
-  return u(SvgWithPlus, {
-    children: u(RoleCanLoginSvg, {
-      color: color
-    })
-  });
-};
-const SuperRoleCanLoginSvg = ({
-  color = "currentColor",
-  hatColor = "transparent",
-  headColor = "transparent"
-}) => {
-  return u("svg", {
-    viewBox: "0 0 24 24",
-    width: "100%",
-    height: "100%",
-    fill: "none",
-    xmlns: "http://www.w3.org/2000/svg",
-    children: [headColor && u("path", {
-      d: "M8 10C8 12.2091 9.79086 14 12 14C14.2091 14 16 12.2091 16 10C16 9.4 15.87 8.83 15.63 8.31L12.45 9.89C12.17 10.03 11.83 10.03 11.55 9.89L8.37 8.31C8.13 8.83 8 9.4 8 10Z",
-      fill: headColor
-    }), hatColor && u("path", {
-      d: "M4.55279 4.60557L11.5528 1.10557C11.8343 0.964809 12.1657 0.964809 12.4472 1.10557L19.4472 4.60557C19.786 4.77496 20 5.12123 20 5.5C20 5.87877 19.786 6.22504 19.4472 6.39443L12.4472 9.89443C12.1657 10.0352 11.8343 10.0352 11.5528 9.89443L4.55279 6.39443C4.214 6.22504 4 5.87877 4 5.5C4 5.12123 4.214 4.77496 4.55279 4.60557Z",
-      fill: hatColor
-    }), u("path", {
-      "fill-rule": "evenodd",
-      "clip-rule": "evenodd",
-      d: "M12.4472 1.10557C12.1657 0.964809 11.8343 0.964809 11.5528 1.10557L4.55279 4.60557C4.214 4.77496 4 5.12123 4 5.5C4 5.87877 4.214 6.22504 4.55279 6.39443L6.58603 7.41105C6.21046 8.19525 6 9.07373 6 10C6 11.8604 6.84668 13.523 8.17572 14.6235C4.98421 15.7459 3 18.2474 3 21C3 21.5523 3.44772 22 4 22C4.55228 22 5 21.5523 5 21C5 18.7306 7.3553 16 12 16C16.6447 16 19 18.7306 19 21C19 21.5523 19.4477 22 20 22C20.5523 22 21 21.5523 21 21C21 18.2474 19.0158 15.7459 15.8243 14.6235C17.1533 13.523 18 11.8604 18 10C18 9.07373 17.7895 8.19525 17.414 7.41105L19.4472 6.39443C19.786 6.22504 20 5.87877 20 5.5C20 5.12123 19.786 4.77496 19.4472 4.60557L12.4472 1.10557ZM12 14C14.2091 14 16 12.2091 16 10C16 9.39352 15.8656 8.81975 15.6248 8.30566L12.4472 9.89443C12.1657 10.0352 11.8343 10.0352 11.5528 9.89443L8.37525 8.30566C8.13443 8.81975 8 9.39352 8 10C8 12.2091 9.79086 14 12 14ZM8.44695 6.10544L7.23607 5.5L12 3.11803L16.7639 5.5L15.5531 6.10544L12 7.88197L8.44695 6.10544Z",
-      fill: color
-    })]
-  });
-};
-const SuperRoleGroupSvg = ({
-  color = "currentColor"
-}) => {
-  return u(SvgIconGroup, {
-    children: u(SuperRoleCanLoginSvg, {
-      color: color
-    })
-  });
-};
-const RoleGroupSvg = ({
-  color = "currentColor"
-}) => {
-  return u(SvgIconGroup, {
-    children: u(RoleCanLoginSvg, {
-      color: color
-    })
-  });
-};
-const RoleGroupWithPlusSvg = ({
-  color
-}) => {
-  return u(SvgWithPlus, {
-    children: u(RoleGroupSvg, {
-      color: color
-    })
-  });
-};
-
-const LinkWithIcon$2 = props => props;
-const RoleLink = ({
-  role,
-  children,
-  ...rest
-}) => {
-  const rolname = role.rolname;
-  const roleUrl = ROLE_ROUTE.buildUrl({
-    rolname
-  });
-  const {
-    params
-  } = useRouteStatus(ROLE_ROUTE);
-  const activeRolname = params.rolname;
-  const currentRole = useCurrentRole();
-  const isCurrent = currentRole && rolname === currentRole.rolname;
-  const RoleIcon = pickRoleIcon(role);
-  return u(LinkWithIcon$2, {
-    icon: u(RoleIcon, {
-      color: "#333"
-    }),
-    isCurrent: isCurrent,
-    active: activeRolname === rolname,
-    href: roleUrl,
-    ...rest,
-    children: children
-  });
-};
-
-const [readRoleCanLoginListDetailsOpened, storeRoleCanLoginListDetailsOpened, eraseRoleCanLoginListDetailsOpened] = valueInLocalStorage("role_can_login_list_details_opened", {
-  type: "boolean"
-});
-const roleCanLoginListDetailsOpenAtStart = readRoleCanLoginListDetailsOpened();
-if (roleCanLoginListDetailsOpenAtStart) {
-  ROLE_CAN_LOGIN.GET_MANY.prerun(); // et encore c'est seulement si on est sur la bonne page sinon c'est con
-}
-const roleCanLoginListDetailsOnToggle = detailsOpen => {
-  if (detailsOpen) {
-    storeRoleCanLoginListDetailsOpened(true);
-  } else {
-    eraseRoleCanLoginListDetailsOpened();
-  }
-};
-
-const TextAndCount$3 = props => props;
-const roleCanLoginListDetailsController = createExplorerGroupController("role_can_login_list", {
-  detailsOpenAtStart: roleCanLoginListDetailsOpenAtStart,
-  detailsOnToggle: roleCanLoginListDetailsOnToggle
-});
-const RoleCanLoginListDetails = props => {
-  const roleCanLoginCount = useRoleCanLoginCount();
-  const roleCanLoginArray = useRoleCanLoginArray();
-  return u(ExplorerGroup, {
-    ...props,
-    controller: roleCanLoginListDetailsController,
-    detailsAction: ROLE_CAN_LOGIN.GET_MANY,
-    idKey: "oid",
-    nameKey: "rolname",
-    labelChildren: u(TextAndCount$3, {
-      text: "ROLE LOGINS",
-      count: roleCanLoginCount
-    }),
-    renderNewButtonChildren: () => u(RoleCanLoginWithPlusSvg, {}),
-    renderItem: (role, props) => u(RoleLink, {
-      draggable: false,
-      role: role,
-      ...props
-    }),
-    useItemArrayInStore: useRoleArrayInStore,
-    useCreateItemAction: valueSignal => ROLE_CAN_LOGIN.POST.bindParams({
-      rolname: valueSignal
-    }),
-    useDeleteItemAction: role => ROLE_CAN_LOGIN.DELETE.bindParams({
-      rolname: role.rolname
-    }),
-    useRenameItemAction: (role, valueSignal) => ROLE_CAN_LOGIN.PUT.bindParams({
-      rolname: role.rolname,
-      columnName: "rolname",
-      columnValue: valueSignal
-    }),
-    children: roleCanLoginArray
-  });
-};
-
-const [readRoleGroupListDetailsOpened, storeRoleGroupListDetailsOpened, eraseRoleGroupListDetailsOpened] = valueInLocalStorage("role_group_list_details_opened", {
-  type: "boolean"
-});
-const roleGroupListDetailsOpenAtStart = readRoleGroupListDetailsOpened();
-const roleGroupListDetailsOnToggle = detailsOpen => {
-  if (detailsOpen) {
-    storeRoleGroupListDetailsOpened(true);
-  } else {
-    eraseRoleGroupListDetailsOpened();
-  }
-};
-
-const TextAndCount$2 = props => props;
-const roleGroupListDetailsController = createExplorerGroupController("role_group_list", {
-  detailsOpenAtStart: roleGroupListDetailsOpenAtStart,
-  detailsOnToggle: roleGroupListDetailsOnToggle
-});
-const RoleGroupListDetails = props => {
-  const roleCannotLoginCount = useRoleGroupCount();
-  const roleCannotLoginArray = useRoleCannotLoginArray();
-  return u(ExplorerGroup, {
-    ...props,
-    controller: roleGroupListDetailsController,
-    detailsAction: ROLE_CANNOT_LOGIN.GET_MANY,
-    idKey: "oid",
-    nameKey: "rolname",
-    labelChildren: u(TextAndCount$2, {
-      text: "ROLE GROUPS",
-      count: roleCannotLoginCount
-    }),
-    renderNewButtonChildren: () => u(RoleGroupWithPlusSvg, {}),
-    renderItem: (role, {
-      children,
-      ...props
-    }) => u(RoleLink, {
-      draggable: false,
-      role: role,
-      ...props,
-      children: children
-    }),
-    useItemArrayInStore: useRoleArrayInStore,
-    useCreateItemAction: valueSignal => ROLE_CANNOT_LOGIN.POST.bindParams({
-      rolname: valueSignal
-    }),
-    useDeleteItemAction: role => ROLE_CANNOT_LOGIN.DELETE.bindParams({
-      rolname: role.rolname
-    }),
-    useRenameItemAction: (role, valueSignal) => ROLE_CANNOT_LOGIN.PUT.bindParams({
-      rolname: role.rolname,
-      columnName: "rolname",
-      columnValue: valueSignal
-    }),
-    children: roleCannotLoginArray
-  });
-};
-
-const installImportMetaCss = importMeta => {
-  const stylesheet = new CSSStyleSheet({
-    baseUrl: importMeta.url
-  });
-  let called = false;
-  // eslint-disable-next-line accessor-pairs
-  Object.defineProperty(importMeta, "css", {
-    configurable: true,
-    set(value) {
-      if (called) {
-        throw new Error("import.meta.css setter can only be called once");
-      }
-      called = true;
-      stylesheet.replaceSync(value);
-      document.adoptedStyleSheets = [...document.adoptedStyleSheets, stylesheet];
-    }
-  });
-};
-
 const ROLE_WITH_OWNERSHIP = ROLE.withParams({
   owners: true
 }, {
   dependencies: [ROLE, DATABASE, TABLE]
 });
-const useRoleWithOwnershipArray = () => {
-  const roleWithOwnershipArray = useActionData(ROLE_WITH_OWNERSHIP.GET_MANY);
-  return roleWithOwnershipArray;
-};
 const ROLE_MEMBERS = ROLE.many("members", ROLE, {
   GET_MANY: async ({
     rolname
@@ -1880,6 +1411,548 @@ const ROLE_TABLES = ROLE.many("tables", TABLE, {
 DATABASE.one("ownerRole", ROLE);
 ROLE.store.upsert(window.DB_MANAGER_CONFIG.currentRole);
 
+const tableListOpenSignal = stateSignal(false, {
+  type: "boolean",
+  id: "jsenv_db_table_list_open",
+  persist: true
+});
+const tableListHeightSignal = stateSignal(undefined, {
+  type: "float",
+  id: "jsenv_db_table_list_height",
+  persist: true
+});
+
+// const [readTablesDetailsOpened, storeTablesDetailsOpened] = valueInLocalStorage(
+//   "table_details_opened",
+//   {
+//     type: "boolean",
+//     default: true,
+//   },
+// );
+// export const TABLES_DETAILS_ROUTE = registerRoute({
+//   match: () => readTablesDetailsOpened(),
+//   enter: () => {
+//     storeTablesDetailsOpened(true);
+//   },
+//   leave: () => {
+//     storeTablesDetailsOpened(false);
+//   },
+//   load: async () => {
+//     const response = await fetch(`${window.DB_MANAGER_CONFIG.apiUrl}/tables`);
+//     const { data } = await response.json();
+//     const tables = data;
+//     tableStore.upsert(tables);
+//   },
+//   name: "tables_details",
+// });
+
+setBaseUrl(window.DB_MANAGER_CONFIG.pathname);
+const rolnameSignal = stateSignal(null);
+const datnameSignal = stateSignal(null);
+const tablenameSignal = stateSignal(null);
+const HOME_ROUTE = route("/", {
+  searchParams: {
+    role_login_open: roleCanLoginOpenSignal,
+    role_login_height: roleCanLoginHeightSignal,
+    role_group_open: roleGroupOpenSignal,
+    role_group_height: roleGroupHeightSignal,
+    database_open: databaseOpenSignal,
+    database_height: databaseHeightSignal,
+    table_list_open: tableListOpenSignal,
+    table_list_height: tableListHeightSignal,
+    role_ownership_open: roleOwnershipOpenSignal,
+    role_ownership_height: roleOwnershipHeightSignal
+  }
+});
+const ROLE_CAN_LOGIN_GET_MANY_ACTION = routeAction(HOME_ROUTE, ROLE_CAN_LOGIN.GET_MANY, () => {
+  const open = roleCanLoginOpenSignal.value;
+  if (!open) {
+    return null;
+  }
+  return {};
+});
+const ROLE_GROUP_GET_MANY_ACTION = routeAction(HOME_ROUTE, ROLE_CANNOT_LOGIN.GET_MANY, () => {
+  const open = roleGroupOpenSignal.value;
+  if (!open) {
+    return null;
+  }
+  return {};
+});
+const DATABASE_GET_MANY_ACTION = routeAction(HOME_ROUTE, DATABASE.GET_MANY, () => {
+  const open = databaseOpenSignal.value;
+  if (!open) {
+    return null;
+  }
+  return {};
+});
+const TABLE_GET_MANY_ACTION = routeAction(HOME_ROUTE, TABLE.GET_MANY, () => {
+  const open = tableListOpenSignal.value;
+  if (!open) {
+    return null;
+  }
+  return {};
+});
+const ROLE_WITH_OWNERSHIP_GET_MANY_ACTION = routeAction(HOME_ROUTE, ROLE_WITH_OWNERSHIP.GET_MANY, () => {
+  const open = roleOwnershipOpenSignal.value;
+  if (!open) {
+    return null;
+  }
+  return {};
+});
+const ROLE_ROUTE = route("/roles/:rolname=".concat(rolnameSignal));
+routeAction(ROLE_ROUTE, ROLE.GET, () => {
+  const rolname = rolnameSignal.value;
+  return {
+    rolname
+  };
+});
+const DATABASE_ROUTE = route("/databases/:datname=".concat(datnameSignal));
+routeAction(DATABASE_ROUTE, DATABASE.GET, () => {
+  const datname = datnameSignal.value;
+  return {
+    datname
+  };
+});
+const TABLE_ROUTE = route("/tables/:tablename=".concat(tablenameSignal, "/"));
+const TABLE_GET_ACTION = routeAction(TABLE_ROUTE, TABLE.GET, () => {
+  const tablename = tablenameSignal.value;
+  return {
+    tablename
+  };
+});
+const TABLE_INDEX_ROUTE = route("/tables/:tablename=".concat(tablenameSignal));
+const TABLE_ROW_GET_MANY_ACTION = routeAction(TABLE_INDEX_ROUTE, TABLE_ROW.GET_MANY, () => {
+  const tablename = tablenameSignal.value;
+  return {
+    tablename
+  };
+});
+const TABLE_SETTINGS_ROUTE = route("/tables/:tablename=".concat(tablenameSignal, "/settings"));
+setupRoutes([HOME_ROUTE, ROLE_ROUTE, DATABASE_ROUTE, TABLE_ROUTE, TABLE_INDEX_ROUTE, TABLE_SETTINGS_ROUTE]);
+
+// https://www.svgrepo.com/svg/437987/plus-circle
+const PlusSvg = ({
+  circle,
+  backgroundColor = "",
+  color = "currentColor"
+}) => {
+  return u("svg", {
+    width: "100%",
+    height: "100%",
+    viewBox: "0 0 24 24",
+    fill: "none",
+    xmlns: "http://www.w3.org/2000/svg",
+    children: [backgroundColor && u("rect", {
+      x: "0",
+      y: "0",
+      width: "24",
+      height: "24",
+      fill: backgroundColor
+    }), circle && u("rect", {
+      x: "3",
+      y: "3",
+      width: "18",
+      height: "18",
+      rx: "9",
+      stroke: color,
+      "stroke-width": "2",
+      "stroke-linecap": "round",
+      "stroke-linejoin": "round"
+    }), u("path", {
+      d: "M12 7.75732L12 16.2426",
+      stroke: color,
+      "stroke-width": "2",
+      "stroke-linecap": "round"
+    }), u("path", {
+      d: "M7.75735 12L16.2426 12",
+      stroke: color,
+      "stroke-width": "2",
+      "stroke-linecap": "round"
+    })]
+  });
+};
+
+const SvgIconGroup = ({
+  children
+}) => {
+  return u(SVGMaskOverlay, {
+    viewBox: "0 0 24 24",
+    children: [u("svg", {
+      children: [u("svg", {
+        x: "2",
+        y: "4",
+        width: "12",
+        height: "12",
+        overflow: "visible",
+        children: children
+      }), u("svg", {
+        x: "10",
+        y: "4",
+        width: "12",
+        height: "12",
+        overflow: "visible",
+        children: children
+      })]
+    }), u("svg", {
+      x: "6",
+      y: "8",
+      width: "12",
+      height: "12",
+      overflow: "visible",
+      children: children
+    })]
+  });
+};
+const SvgWithPlus = ({
+  children
+}) => {
+  return u(SVGMaskOverlay, {
+    viewBox: "0 0 24 24",
+    children: [children, u("svg", {
+      x: "12",
+      y: "12",
+      width: "16",
+      height: "16",
+      overflow: "visible",
+      children: [u("circle", {
+        cx: "8",
+        cy: "8",
+        r: "5",
+        fill: "transparent"
+      }), u(PlusSvg, {
+        color: "green"
+      })]
+    })]
+  });
+};
+
+const DatabaseSvg = () => {
+  return u("svg", {
+    viewBox: "0 0 24 24",
+    width: "100%",
+    height: "100%",
+    fill: "none",
+    xmlns: "http://www.w3.org/2000/svg",
+    children: u("path", {
+      "fill-rule": "evenodd",
+      "clip-rule": "evenodd",
+      d: "M3.25 6C3.25 4.45831 4.48029 3.26447 6.00774 2.50075C7.58004 1.7146 9.69967 1.25 12 1.25C14.3003 1.25 16.42 1.7146 17.9923 2.50075C19.5197 3.26447 20.75 4.45831 20.75 6V18C20.75 19.5417 19.5197 20.7355 17.9923 21.4992C16.42 22.2854 14.3003 22.75 12 22.75C9.69967 22.75 7.58004 22.2854 6.00774 21.4992C4.48029 20.7355 3.25 19.5417 3.25 18V6ZM4.75 6C4.75 5.33255 5.31057 4.52639 6.67856 3.84239C8.00168 3.18083 9.88205 2.75 12 2.75C14.118 2.75 15.9983 3.18083 17.3214 3.84239C18.6894 4.52639 19.25 5.33255 19.25 6C19.25 6.66745 18.6894 7.47361 17.3214 8.15761C15.9983 8.81917 14.118 9.25 12 9.25C9.88205 9.25 8.00168 8.81917 6.67856 8.15761C5.31057 7.47361 4.75 6.66745 4.75 6ZM4.75 18C4.75 18.6674 5.31057 19.4736 6.67856 20.1576C8.00168 20.8192 9.88205 21.25 12 21.25C14.118 21.25 15.9983 20.8192 17.3214 20.1576C18.6894 19.4736 19.25 18.6674 19.25 18V14.7072C18.8733 15.0077 18.4459 15.2724 17.9923 15.4992C16.42 16.2854 14.3003 16.75 12 16.75C9.69967 16.75 7.58004 16.2854 6.00774 15.4992C5.55414 15.2724 5.12675 15.0077 4.75 14.7072V18ZM19.25 8.70722V12C19.25 12.6674 18.6894 13.4736 17.3214 14.1576C15.9983 14.8192 14.118 15.25 12 15.25C9.88205 15.25 8.00168 14.8192 6.67856 14.1576C5.31057 13.4736 4.75 12.6674 4.75 12V8.70722C5.12675 9.00772 5.55414 9.27245 6.00774 9.49925C7.58004 10.2854 9.69967 10.75 12 10.75C14.3003 10.75 16.42 10.2854 17.9923 9.49925C18.4459 9.27245 18.8733 9.00772 19.25 8.70722Z",
+      fill: "currentColor"
+    })
+  });
+};
+const DatabaseWithPlusSvg = () => {
+  return u(SvgWithPlus, {
+    children: u(DatabaseSvg, {})
+  });
+};
+
+const DatabaseLink = ({
+  database,
+  children,
+  ...rest
+}) => {
+  const datname = database.datname;
+  const currentDatabase = useCurrentDatabase();
+  const isCurrent = currentDatabase && datname === currentDatabase.datname;
+  return u(RouteLink, {
+    route: DATABASE_ROUTE,
+    routeParams: {
+      datname
+    },
+    startIcon: u(DatabaseSvg, {}),
+    ...rest,
+    children: [isCurrent && u("span", {
+      children: "(current)"
+    }), children]
+  });
+};
+
+const DatabasesDetails = () => {
+  const [resizable, setResizable] = h(false);
+  const databaseCount = useDatabaseCount();
+  return u(ExplorerGroup, {
+    id: "database_list",
+    open: databaseOpenSignal.value,
+    detailsConnectedAction: DATABASE_GET_MANY_ACTION,
+    detailsUIAction: open => {
+      databaseOpenSignal.value = open;
+    },
+    resizable: resizable,
+    height: databaseHeightSignal.value,
+    onresizeend: e => {
+      const newHeight = e.detail.size;
+      databaseHeightSignal.value = newHeight;
+    },
+    onresizablechange: e => {
+      setResizable(e.detail.resizable);
+    },
+    idKey: "oid",
+    nameKey: "datname",
+    label: "DATABASES",
+    count: databaseCount,
+    renderNewButtonChildren: () => u(DatabaseWithPlusSvg, {}),
+    renderItem: (database, props) => u(DatabaseLink, {
+      draggable: false,
+      value: database.datname,
+      database: database,
+      ...props
+    }, database.oid),
+    useItemArrayInStore: useDatabaseArrayInStore,
+    createItemAction: datname => DATABASE.POST({
+      datname
+    }),
+    deleteItemAction: database => DATABASE.DELETE({
+      datname: database.datname
+    }),
+    renameItemAction: (database, newDatname) => DATABASE.PUT({
+      datname: database.datname,
+      columnName: "datname",
+      columnValue: newDatname
+    })
+  });
+};
+
+// https://www.svgrepo.com/collection/zest-interface-icons/12
+// https://flowbite.com/icons/
+
+const pickRoleIcon = role => {
+  if (!role.rolcanlogin) {
+    if (role.rolsuper) {
+      return SuperRoleGroupSvg;
+    }
+    return RoleGroupSvg;
+  }
+  if (role.rolsuper) {
+    return SuperRoleCanLoginSvg;
+  }
+  return RoleCanLoginSvg;
+};
+const RoleCanLoginSvg = ({
+  color = "currentColor",
+  headColor = "transparent",
+  bodyColor = "transparent"
+}) => {
+  return u("svg", {
+    viewBox: "0 0 24 24",
+    width: "100%",
+    height: "100%",
+    fill: "none",
+    xmlns: "http://www.w3.org/2000/svg",
+    children: [bodyColor && u("path", {
+      d: "M4.5 19.8C4.5 17.5 6.8 15 12 15C17.2 15 19.5 17.5 19.5 19.8C19.5 20.4 19.2 20.8 18.8 20.8H5.2C4.8 20.8 4.5 20.4 4.5 19.8Z",
+      fill: bodyColor
+    }), headColor && u("circle", {
+      cx: "12",
+      cy: "9",
+      r: "4",
+      fill: headColor
+    }), u("path", {
+      "fill-rule": "evenodd",
+      "clip-rule": "evenodd",
+      d: "M8 9C8 6.79086 9.79086 5 12 5C14.2091 5 16 6.79086 16 9C16 11.2091 14.2091 13 12 13C9.79086 13 8 11.2091 8 9ZM15.8243 13.6235C17.1533 12.523 18 10.8604 18 9C18 5.68629 15.3137 3 12 3C8.68629 3 6 5.68629 6 9C6 10.8604 6.84668 12.523 8.17572 13.6235C4.98421 14.7459 3 17.2474 3 20C3 20.5523 3.44772 21 4 21C4.55228 21 5 20.5523 5 20C5 17.7306 7.3553 15 12 15C16.6447 15 19 17.7306 19 20C19 20.5523 19.4477 21 20 21C20.5523 21 21 20.5523 21 20C21 17.2474 19.0158 14.7459 15.8243 13.6235Z",
+      fill: color,
+      "fill-opacity": "1"
+    })]
+  });
+};
+const RoleCanLoginWithPlusSvg = ({
+  color
+}) => {
+  return u(SvgWithPlus, {
+    children: u(RoleCanLoginSvg, {
+      color: color
+    })
+  });
+};
+const SuperRoleCanLoginSvg = ({
+  color = "currentColor",
+  hatColor = "transparent",
+  headColor = "transparent"
+}) => {
+  return u("svg", {
+    viewBox: "0 0 24 24",
+    width: "100%",
+    height: "100%",
+    fill: "none",
+    xmlns: "http://www.w3.org/2000/svg",
+    children: [headColor && u("path", {
+      d: "M8 10C8 12.2091 9.79086 14 12 14C14.2091 14 16 12.2091 16 10C16 9.4 15.87 8.83 15.63 8.31L12.45 9.89C12.17 10.03 11.83 10.03 11.55 9.89L8.37 8.31C8.13 8.83 8 9.4 8 10Z",
+      fill: headColor
+    }), hatColor && u("path", {
+      d: "M4.55279 4.60557L11.5528 1.10557C11.8343 0.964809 12.1657 0.964809 12.4472 1.10557L19.4472 4.60557C19.786 4.77496 20 5.12123 20 5.5C20 5.87877 19.786 6.22504 19.4472 6.39443L12.4472 9.89443C12.1657 10.0352 11.8343 10.0352 11.5528 9.89443L4.55279 6.39443C4.214 6.22504 4 5.87877 4 5.5C4 5.12123 4.214 4.77496 4.55279 4.60557Z",
+      fill: hatColor
+    }), u("path", {
+      "fill-rule": "evenodd",
+      "clip-rule": "evenodd",
+      d: "M12.4472 1.10557C12.1657 0.964809 11.8343 0.964809 11.5528 1.10557L4.55279 4.60557C4.214 4.77496 4 5.12123 4 5.5C4 5.87877 4.214 6.22504 4.55279 6.39443L6.58603 7.41105C6.21046 8.19525 6 9.07373 6 10C6 11.8604 6.84668 13.523 8.17572 14.6235C4.98421 15.7459 3 18.2474 3 21C3 21.5523 3.44772 22 4 22C4.55228 22 5 21.5523 5 21C5 18.7306 7.3553 16 12 16C16.6447 16 19 18.7306 19 21C19 21.5523 19.4477 22 20 22C20.5523 22 21 21.5523 21 21C21 18.2474 19.0158 15.7459 15.8243 14.6235C17.1533 13.523 18 11.8604 18 10C18 9.07373 17.7895 8.19525 17.414 7.41105L19.4472 6.39443C19.786 6.22504 20 5.87877 20 5.5C20 5.12123 19.786 4.77496 19.4472 4.60557L12.4472 1.10557ZM12 14C14.2091 14 16 12.2091 16 10C16 9.39352 15.8656 8.81975 15.6248 8.30566L12.4472 9.89443C12.1657 10.0352 11.8343 10.0352 11.5528 9.89443L8.37525 8.30566C8.13443 8.81975 8 9.39352 8 10C8 12.2091 9.79086 14 12 14ZM8.44695 6.10544L7.23607 5.5L12 3.11803L16.7639 5.5L15.5531 6.10544L12 7.88197L8.44695 6.10544Z",
+      fill: color
+    })]
+  });
+};
+const SuperRoleGroupSvg = ({
+  color = "currentColor"
+}) => {
+  return u(SvgIconGroup, {
+    children: u(SuperRoleCanLoginSvg, {
+      color: color
+    })
+  });
+};
+const RoleGroupSvg = ({
+  color = "currentColor"
+}) => {
+  return u(SvgIconGroup, {
+    children: u(RoleCanLoginSvg, {
+      color: color
+    })
+  });
+};
+const RoleGroupWithPlusSvg = ({
+  color
+}) => {
+  return u(SvgWithPlus, {
+    children: u(RoleGroupSvg, {
+      color: color
+    })
+  });
+};
+
+const RoleLink = ({
+  role,
+  children,
+  ...rest
+}) => {
+  const rolname = role.rolname;
+  const currentRole = useCurrentRole();
+  const isCurrent = currentRole && rolname === currentRole.rolname;
+  const RoleIcon = pickRoleIcon(role);
+  return u(RouteLink, {
+    route: ROLE_ROUTE,
+    routeParams: {
+      rolname
+    },
+    startIcon: u(RoleIcon, {
+      color: "#333"
+    }),
+    ...rest,
+    children: [isCurrent && u("span", {
+      children: "(current)"
+    }), children]
+  });
+};
+
+const RoleCanLoginListDetails = () => {
+  const [resizable, setResizable] = h(false);
+  const roleCanLoginCount = useRoleCanLoginCount();
+  return u(ExplorerGroup, {
+    id: "role_can_login_list",
+    open: roleCanLoginOpenSignal.value,
+    detailsConnectedAction: ROLE_CAN_LOGIN_GET_MANY_ACTION,
+    detailsUIAction: open => {
+      roleCanLoginOpenSignal.value = open;
+    },
+    resizable: resizable,
+    height: roleCanLoginHeightSignal.value,
+    onresizeend: e => {
+      const newHeight = e.detail.size;
+      roleCanLoginHeightSignal.value = newHeight;
+    },
+    onresizablechange: e => {
+      setResizable(e.detail.resizable);
+    },
+    idKey: "oid",
+    nameKey: "rolname",
+    label: "ROLE LOGINS",
+    count: roleCanLoginCount,
+    renderNewButtonChildren: () => u(RoleCanLoginWithPlusSvg, {}),
+    renderItem: (role, props) => {
+      return u(RoleLink, {
+        overflowEllipsis: true,
+        draggable: false,
+        role: role,
+        ...props
+      });
+    },
+    useItemArrayInStore: useRoleArrayInStore,
+    createItemAction: rolname => ROLE_CAN_LOGIN.POST({
+      rolname
+    }),
+    deleteItemAction: role => ROLE_CAN_LOGIN.DELETE({
+      rolname: role.rolname
+    }),
+    renameItemAction: (role, newRolname) => ROLE_CAN_LOGIN.PUT.bindParams({
+      rolname: role.rolname,
+      columnName: "rolname",
+      columnValue: newRolname
+    })
+  });
+};
+
+const RoleGroupListDetails = () => {
+  const [resizable, setResizable] = h(false);
+  const roleCannotLoginCount = useRoleGroupCount();
+  return u(ExplorerGroup, {
+    id: "role_group_list",
+    open: roleGroupOpenSignal.value,
+    detailsConnectedAction: ROLE_GROUP_GET_MANY_ACTION,
+    detailsUIAction: open => {
+      roleGroupOpenSignal.value = open;
+    },
+    resizable: resizable,
+    height: roleGroupHeightSignal.value,
+    onresizeend: e => {
+      const newHeight = e.detail.size;
+      roleGroupHeightSignal.value = newHeight;
+    },
+    onresizablechange: e => {
+      setResizable(e.detail.resizable);
+    },
+    idKey: "oid",
+    nameKey: "rolname",
+    label: "ROLE GROUPS",
+    count: roleCannotLoginCount,
+    renderNewButtonChildren: () => u(RoleGroupWithPlusSvg, {}),
+    renderItem: (role, props) => u(RoleLink, {
+      overflowEllipsis: true,
+      draggable: false,
+      role: role,
+      ...props
+    }),
+    useItemArrayInStore: useRoleArrayInStore,
+    createItemAction: rolname => ROLE_CANNOT_LOGIN.POST({
+      rolname
+    }),
+    deleteItemAction: role => ROLE_CANNOT_LOGIN.DELETE({
+      rolname: role.rolname
+    }),
+    renameItemAction: (role, newRolname) => ROLE_CANNOT_LOGIN.PUT({
+      rolname: role.rolname,
+      columnName: "rolname",
+      columnValue: newRolname
+    })
+  });
+};
+
+const installImportMetaCss = importMeta => {
+  const stylesheet = new CSSStyleSheet({
+    baseUrl: importMeta.url
+  });
+  let called = false;
+  // eslint-disable-next-line accessor-pairs
+  Object.defineProperty(importMeta, "css", {
+    configurable: true,
+    set(value) {
+      if (called) {
+        throw new Error("import.meta.css setter can only be called once");
+      }
+      called = true;
+      stylesheet.replaceSync(value);
+      document.adoptedStyleSheets = [...document.adoptedStyleSheets, stylesheet];
+    }
+  });
+};
+
 // https://www.svgrepo.com/collection/zest-interface-icons/12
 // https://flowbite.com/icons/
 
@@ -1930,63 +2003,49 @@ const TableWithPlusSvg = ({
   });
 };
 
-const LinkWithIcon$1 = props => props;
 const TableLink = ({
   table,
   children,
   ...rest
 }) => {
   const tablename = table.tablename;
-  const tableUrl = TABLE_ROUTE.buildUrl({
-    tablename
-  });
-  const {
-    params
-  } = useRouteStatus(TABLE_ROUTE);
-  const activeTablename = params.tablename;
-  return u(LinkWithIcon$1, {
-    icon: u(TableSvg, {
-      color: "#333"
+  return u(RouteLink, {
+    route: TABLE_ROUTE,
+    routeParams: {
+      tablename
+    },
+    startIcon: u(TableSvg, {
+      color: "currentColor"
     }),
-    href: tableUrl,
-    active: activeTablename === tablename,
     ...rest,
     children: children
   });
 };
 
-const [readRoleWithOwnershipListDetailsOpened, storeRoleWithOwnershipListDetailsOpened, eraseRoleWithOwnsershipListDetailsOpened] = valueInLocalStorage("role_with_ownership_list_details_opened", {
-  type: "boolean"
-});
-const roleWithOwnershipListDetailsOpenAtStart = readRoleWithOwnershipListDetailsOpened();
-const roleWithOwnershipListDetailsOnToggle = detailsOpen => {
-  if (detailsOpen) {
-    storeRoleWithOwnershipListDetailsOpened(true);
-  } else {
-    eraseRoleWithOwnsershipListDetailsOpened();
-  }
-};
-
-installImportMetaCss(import.meta);const IconAndText$1 = props => props;
-const TextAndCount$1 = props => props;
-import.meta.css = /* css */"\n  .explorer_details {\n    flex: 1;\n  }\n\n  .explorer_details summary {\n    padding-left: calc(16px + var(--details-depth, 0) * 16px);\n  }\n\n  .explorer_details .explorer_item_content {\n    padding-left: calc(32px + var(--details-depth, 0) * 16px);\n  }\n";
-const roleWithOwnershipListDetailsController = createExplorerGroupController("role_with_ownership_list", {
-  detailsOpenAtStart: roleWithOwnershipListDetailsOpenAtStart,
-  detailsOnToggle: roleWithOwnershipListDetailsOnToggle
-});
-const RoleWithOwnershipListDetails = props => {
+installImportMetaCss(import.meta);import.meta.css = /* css */"\n  .explorer_details {\n    flex: 1;\n  }\n\n  .explorer_details summary {\n    padding-left: calc(16px + var(--details-depth, 0) * 16px);\n  }\n\n  .explorer_details .explorer_item_content {\n    padding-left: calc(32px + var(--details-depth, 0) * 16px);\n  }\n";
+const RoleWithOwnershipListDetails = () => {
+  const [resizable, setResizable] = h(false);
   const roleWithOwnershipCount = useRoleWithOwnershipCount();
-  const roleWithOwnershipArray = useRoleWithOwnershipArray();
   return u(ExplorerGroup, {
-    ...props,
-    controller: roleWithOwnershipListDetailsController,
-    detailsAction: ROLE_WITH_OWNERSHIP.GET_MANY,
+    id: "role_ownership_list",
+    open: roleOwnershipOpenSignal.value,
+    detailsConnectedAction: ROLE_WITH_OWNERSHIP_GET_MANY_ACTION,
+    detailsUIAction: open => {
+      roleOwnershipOpenSignal.value = open;
+    },
+    resizable: resizable,
+    height: roleOwnershipHeightSignal.value,
+    onresizeend: e => {
+      const newHeight = e.detail.size;
+      roleOwnershipHeightSignal.value = newHeight;
+    },
+    onresizablechange: e => {
+      setResizable(e.detail.resizable);
+    },
     idKey: "oid",
     nameKey: "rolname",
-    labelChildren: u(TextAndCount$1, {
-      text: "OWNERSHIP",
-      count: roleWithOwnershipCount
-    }),
+    label: "OWNERSHIP",
+    count: roleWithOwnershipCount,
     renderItem: role => {
       return u(Details, {
         id: "role_".concat(role.rolname, "_ownership_details"),
@@ -1994,12 +2053,14 @@ const RoleWithOwnershipListDetails = props => {
         style: {
           "--details-depth": 0
         },
-        label: u(TextAndCount$1, {
-          text: u(IconAndText$1, {
-            icon: pickRoleIcon(role),
+        label: u(Text, {
+          children: [u(Icon, {
+            children: pickRoleIcon(role)
+          }), u(Text, {
             children: role.rolname
-          }),
-          count: role.object_count
+          }), u(BadgeCount, {
+            children: role.object_count
+          })]
         }),
         children: u(ExplorerItemList, {
           idKey: "id",
@@ -2024,9 +2085,10 @@ const RoleWithOwnershipListDetails = props => {
                 action: ROLE_TABLES.GET_MANY.bindParams({
                   rolname: role.rolname
                 }),
-                label: u(TextAndCount$1, {
-                  text: "tables",
-                  count: role.table_count
+                label: u(Text, {
+                  children: ["tables", u(BadgeCount, {
+                    children: role.table_count
+                  })]
                 }),
                 children: tableArray => {
                   return u(ExplorerItemList, {
@@ -2047,9 +2109,10 @@ const RoleWithOwnershipListDetails = props => {
                 style: {
                   "--details-depth": 1
                 },
-                label: u(TextAndCount$1, {
-                  text: "databases",
-                  count: role.database_count
+                label: u(Text, {
+                  children: ["databases", u(BadgeCount, {
+                    children: role.database_count
+                  })]
                 }),
                 action: ROLE_DATABASES.GET_MANY.bindParams({
                   rolname: role.rolname
@@ -2071,66 +2134,33 @@ const RoleWithOwnershipListDetails = props => {
         })
       });
     },
-    useItemArrayInStore: useRoleArrayInStore,
-    children: roleWithOwnershipArray
+    useItemArrayInStore: useRoleArrayInStore
   });
 };
 
-const [readTableListDetailsOpened, storeTableListDetailsOpened, eraseTableListDetailsOpened] = valueInLocalStorage("table_list_details_opened", {
-  type: "boolean",
-  default: true
-});
-const tableListDetailsOpenAtStart = readTableListDetailsOpened();
-const tableListDetailsOnToggle = detailsOpen => {
-  if (detailsOpen) {
-    eraseTableListDetailsOpened();
-  } else {
-    storeTableListDetailsOpened(false);
-  }
-};
-
-// const [readTablesDetailsOpened, storeTablesDetailsOpened] = valueInLocalStorage(
-//   "table_details_opened",
-//   {
-//     type: "boolean",
-//     default: true,
-//   },
-// );
-// export const TABLES_DETAILS_ROUTE = registerRoute({
-//   match: () => readTablesDetailsOpened(),
-//   enter: () => {
-//     storeTablesDetailsOpened(true);
-//   },
-//   leave: () => {
-//     storeTablesDetailsOpened(false);
-//   },
-//   load: async () => {
-//     const response = await fetch(`${window.DB_MANAGER_CONFIG.apiUrl}/tables`);
-//     const { data } = await response.json();
-//     const tables = data;
-//     tableStore.upsert(tables);
-//   },
-//   name: "tables_details",
-// });
-
-const TextAndCount = props => props;
-const tablesDetailsController = createExplorerGroupController("tables", {
-  detailsOpenAtStart: tableListDetailsOpenAtStart,
-  detailsOnToggle: tableListDetailsOnToggle
-});
-const TablesDetails = props => {
+const TableListDetails = () => {
+  const [resizable, setResizable] = h(false);
   const tableCount = useTableCount();
-  const tableArray = useTableArray();
   return u(ExplorerGroup, {
-    ...props,
-    controller: tablesDetailsController,
-    detailsAction: TABLE.GET_MANY,
+    id: "table_list",
+    open: tableListOpenSignal.value,
+    detailsConnectedAction: TABLE_GET_MANY_ACTION,
+    detailsUIAction: open => {
+      tableListOpenSignal.value = open;
+    },
+    resizable: resizable,
+    height: tableListHeightSignal.value,
+    onresizeend: e => {
+      const newHeight = e.detail.size;
+      tableListHeightSignal.value = newHeight;
+    },
+    onresizablechange: e => {
+      setResizable(e.detail.resizable);
+    },
     idKey: "oid",
     nameKey: "tablename",
-    labelChildren: u(TextAndCount, {
-      text: "TABLES",
-      count: tableCount
-    }),
+    label: "TABLES",
+    count: tableCount,
     renderNewButtonChildren: () => u(TableWithPlusSvg, {}),
     renderItem: (table, props) => u(TableLink, {
       value: table.tablename,
@@ -2141,25 +2171,24 @@ const TablesDetails = props => {
       ...props
     }, table.oid),
     useItemArrayInStore: useTableArrayInStore,
-    useCreateItemAction: nameSignal => TABLE.POST.bindParams({
-      tablename: nameSignal
+    createItemAction: tablename => TABLE.POST({
+      tablename
     }),
-    useRenameItemAction: (table, valueSignal) => TABLE.PUT.bindParams({
+    renameItemAction: (table, newTablename) => TABLE.PUT({
       tablename: table.tablename,
       columnName: "tablename",
-      columnValue: valueSignal
+      columnValue: newTablename
     }),
-    useDeleteItemAction: table => TABLE.DELETE.bindParams({
+    deleteItemAction: table => TABLE.DELETE({
       tablename: table.tablename
     }),
-    useDeleteManyItemAction: itemNamesSignal => TABLE.DELETE_MANY.bindParams({
-      tablenames: itemNamesSignal
-    }),
-    children: tableArray
+    deleteManyItemAction: itemNames => TABLE.DELETE_MANY({
+      tablenames: itemNames
+    })
   });
 };
 
-const inlineContent$1 = new __InlineContent__(".explorer {\n  background: #f5f5f5;\n  flex-direction: column;\n  flex: 1;\n  width: 100%;\n  height: 100%;\n  margin-bottom: 20px;\n  display: flex;\n  overflow: auto;\n}\n\n.explorer_head {\n  flex-direction: row;\n  align-items: center;\n  padding-left: 6px;\n  display: flex;\n}\n\n.explorer_head h2 {\n  -webkit-user-select: none;\n  -moz-user-select: none;\n  user-select: none;\n  margin-top: .5em;\n  margin-bottom: .5em;\n  margin-left: 24px;\n  font-size: 16px;\n}\n\n.explorer_body {\n  flex-direction: column;\n  flex: 1;\n  min-height: 0;\n  display: flex;\n  overflow: hidden;\n}\n\n.explorer_group > summary {\n  cursor: pointer;\n  -webkit-user-select: none;\n  -moz-user-select: none;\n  user-select: none;\n  border: 1px solid #0000;\n  border-top-color: #e0e0e0;\n  flex-shrink: 0;\n  font-size: 14px;\n}\n\n.explorer_group:first-of-type > summary {\n  border-top-color: #0000;\n}\n\n.explorer_group > summary:focus {\n  border-color: #00f;\n}\n\n.summary_action_icon {\n  visibility: hidden;\n  pointer-events: none;\n  padding: 0;\n}\n\n.explorer_group[open] .summary_action_icon {\n  visibility: visible;\n  pointer-events: auto;\n}\n\n.summary_label {\n  flex: 1;\n  align-items: center;\n  gap: .2em;\n  padding-right: 10px;\n  display: flex;\n}\n\n.explorer_group > summary .summary_label {\n  font-weight: 500;\n}\n\n.explorer_body > [data-resize-handle] {\n  z-index: 2;\n  opacity: 0;\n  cursor: ns-resize;\n  background-color: #0000;\n  flex-shrink: 0;\n  justify-content: center;\n  align-items: center;\n  width: 100%;\n  height: 5px;\n  margin-top: -2.5px;\n  margin-bottom: -2.5px;\n  transition: background-color .15s, opacity .15s;\n  display: flex;\n  position: relative;\n}\n\n.explorer_body > [data-resize-handle]:hover, .explorer_body > [data-resize-handle][data-active] {\n  opacity: .5;\n  background-color: #00f;\n  transition-delay: .3s;\n}\n\n.explorer_group_content {\n  overscroll-behavior: contain;\n  scrollbar-width: thin;\n  flex: 1;\n  height: 100%;\n  min-height: 0;\n  overflow-y: auto;\n}\n\n.explorer_group[data-size-animated] .explorer_group_content {\n  overflow-y: hidden;\n}\n\n.explorer_item_list {\n  margin-top: 0;\n  margin-bottom: 0;\n  padding-left: 0;\n}\n\n.explorer_item {\n  display: flex;\n}\n\n.explorer_item .navi_link {\n  border-radius: 0;\n}\n\n.explorer_item_content {\n  flex: 1;\n  padding-left: 16px;\n}\n\n.explorer_item input {\n  flex: 1;\n  margin-left: -3.5px;\n  padding-top: .1em;\n  padding-bottom: 0;\n  font-size: 16px;\n}\n\n.explorer_item_content {\n  white-space: nowrap;\n  align-items: center;\n  gap: .3em;\n  min-width: 0;\n  display: flex;\n}\n\n.explorer_foot {\n  height: 10px;\n}\n", {
+const inlineContent$1 = new __InlineContent__(".explorer {\n  background: #f5f5f5;\n  flex-direction: column;\n  flex: 1;\n  width: 100%;\n  height: 100%;\n  margin-bottom: 20px;\n  display: flex;\n  overflow: auto;\n}\n\n.explorer_head {\n  flex-direction: row;\n  align-items: center;\n  padding-left: 6px;\n  display: flex;\n}\n\n.explorer_head h2 {\n  -webkit-user-select: none;\n  -moz-user-select: none;\n  user-select: none;\n  margin-top: .5em;\n  margin-bottom: .5em;\n  margin-left: 24px;\n  font-size: 16px;\n}\n\n.explorer_body {\n  flex-direction: column;\n  flex: 1;\n  min-height: 0;\n  display: flex;\n  overflow: hidden;\n}\n\n.explorer_group > summary {\n  cursor: pointer;\n  -webkit-user-select: none;\n  -moz-user-select: none;\n  user-select: none;\n  border: 1px solid #0000;\n  border-top-color: #e0e0e0;\n  flex-shrink: 0;\n  font-size: 14px;\n}\n\n.explorer_group:first-of-type > summary {\n  border-top-color: #0000;\n}\n\n.explorer_group > summary:focus {\n  border-color: #00f;\n}\n\n.summary_action_icon {\n  visibility: hidden;\n  pointer-events: none;\n  padding: 0;\n}\n\n.explorer_group[open] .summary_action_icon {\n  visibility: visible;\n  pointer-events: auto;\n}\n\n.summary_label {\n  flex: 1;\n  align-items: center;\n  gap: .2em;\n  padding-right: 10px;\n  display: flex;\n}\n\n.explorer_group > summary .summary_label {\n  font-weight: 500;\n}\n\n.explorer_body > [data-resize-handle] {\n  z-index: 2;\n  opacity: 0;\n  cursor: ns-resize;\n  background-color: #0000;\n  flex-shrink: 0;\n  justify-content: center;\n  align-items: center;\n  width: 100%;\n  height: 5px;\n  margin-top: -2.5px;\n  margin-bottom: -2.5px;\n  transition: background-color .15s, opacity .15s;\n  display: flex;\n  position: relative;\n}\n\n.explorer_body > [data-resize-handle]:hover, .explorer_body > [data-resize-handle][data-active] {\n  opacity: .5;\n  background-color: #00f;\n  transition-delay: .3s;\n}\n\n.explorer_group_content {\n  overscroll-behavior: contain;\n  scrollbar-width: thin;\n  flex: 1;\n  height: 100%;\n  min-height: 0;\n  overflow-y: auto;\n}\n\n.explorer_group[data-size-animated] .explorer_group_content {\n  overflow-y: hidden;\n}\n\n.explorer_item_content {\n  flex: 1;\n  padding-left: 16px;\n}\n\n.explorer_item input {\n  flex: 1;\n  margin-left: -3.5px;\n  padding-top: .1em;\n  padding-bottom: 0;\n  font-size: 16px;\n}\n\n.explorer_item_content {\n  white-space: nowrap;\n  align-items: center;\n  gap: .3em;\n  min-width: 0;\n  display: flex;\n}\n\n.explorer_foot {\n  height: 50px;\n}\n", {
   type: "text/css"
 });
 const stylesheet$1 = new CSSStyleSheet({
@@ -2194,7 +2223,6 @@ const EXPLORER = resource("explorer", {
   }
 });
 
-const FontSizedSvg = props => props;
 const Explorer = () => {
   useRunOnMount(EXPLORER.GET, Explorer);
   const role = useCurrentRole();
@@ -2204,7 +2232,7 @@ const Explorer = () => {
     className: "explorer",
     children: [u("div", {
       className: "explorer_head",
-      children: [u(FontSizedSvg, {
+      children: [u(Icon, {
         children: u(RoleIcon, {})
       }), u("select", {
         style: "margin-top: 10px; margin-bottom: 10px; margin-left: 5px;",
@@ -2216,52 +2244,25 @@ const Explorer = () => {
         style: "width: 10px"
       })]
     }), u(ExplorerBody, {}), u("div", {
-      className: "explorer_foot"
+      className: "explorer_foot",
+      children: "Footer info"
     })]
   });
 };
 const ExplorerBody = () => {
   const flexDetailsSetRef = F();
-  const [resizableDetailsIdSet, setResizableDetailsIdSet] = h(new Set());
   A(() => {
-    const flexDetailsSet = initFlexDetailsSet(flexDetailsSetRef.current, {
-      onResizableDetailsChange: resizableDetailsIdSet => {
-        setResizableDetailsIdSet(new Set(resizableDetailsIdSet));
-      },
-      onRequestedSizeChange: (element, requestedHeight) => {
-        if (element.id === tablesDetailsController.id) {
-          tablesDetailsController.setHeightSetting(requestedHeight);
-        }
-        if (element.id === databasesDetailsController.id) {
-          databasesDetailsController.setHeightSetting(requestedHeight);
-        }
-        if (element.id === roleCanLoginListDetailsController.id) {
-          roleCanLoginListDetailsController.setHeightSetting(requestedHeight);
-        }
-        if (element.id === roleGroupListDetailsController.id) {
-          roleGroupListDetailsController.setHeightSetting(requestedHeight);
-        }
-        if (element.id === roleWithOwnershipListDetailsController.id) {
-          roleWithOwnershipListDetailsController.setHeightSetting(requestedHeight);
-        }
-      }
-    });
+    const flexDetails = flexDetailsSetRef.current;
+    if (!flexDetails) {
+      return null;
+    }
+    const flexDetailsSet = initFlexDetailsSet(flexDetails);
     return flexDetailsSet.cleanup;
   }, []);
   return u("div", {
     ref: flexDetailsSetRef,
     className: "explorer_body",
-    children: [u(RoleCanLoginListDetails, {
-      resizable: resizableDetailsIdSet.has(roleCanLoginListDetailsController.id)
-    }), u(RoleGroupListDetails, {
-      resizable: resizableDetailsIdSet.has(roleGroupListDetailsController.id)
-    }), u(DatabasesDetails, {
-      resizable: resizableDetailsIdSet.has(databasesDetailsController.id)
-    }), u(TablesDetails, {
-      resizable: resizableDetailsIdSet.has(tablesDetailsController.id)
-    }), u(RoleWithOwnershipListDetails, {
-      resizable: resizableDetailsIdSet.has(roleWithOwnershipListDetailsController.id)
-    })]
+    children: [u(RoleCanLoginListDetails, {}), u(RoleGroupListDetails, {}), u(DatabasesDetails, {}), u(TableListDetails, {}), u(RoleWithOwnershipListDetails, {})]
   });
 };
 
@@ -2272,8 +2273,8 @@ const ExplorerBody = () => {
 const [restoreAsideWidth, storeAsideWidth] = valueInLocalStorage("aside_width", {
   type: "positive_number"
 });
-const asideWidthSignal = v(restoreAsideWidth());
-m(() => {
+const asideWidthSignal = a(restoreAsideWidth());
+C(() => {
   const asideWidth = asideWidthSignal.value;
   storeAsideWidth(asideWidth);
 });
@@ -2297,7 +2298,7 @@ const Aside = ({
     "data-resize": "horizontal",
     style: {
       width: resizing ? resizeWidth : widthSetting,
-      // Disable transition during resize to make it responsive
+      // Disable transition during resize to make it immediate
       transition: resizing ? "none" : undefined
     },
     onMouseDown: e => {
@@ -2309,8 +2310,11 @@ const Aside = ({
           widthAtStart = getWidth(elementToResize);
         },
         onDrag: gesture => {
-          const xMove = gesture.xMove;
-          const newWidth = widthAtStart + xMove;
+          if (!gesture.started) {
+            return;
+          }
+          const xDelta = gesture.layout.xDelta;
+          const newWidth = widthAtStart + xDelta;
           const minWidth =
           // <aside> min-width
           100;
@@ -2342,7 +2346,7 @@ const Aside = ({
   });
 };
 
-const inlineContent = new __InlineContent__("body {\n  scrollbar-gutter: stable;\n  overflow-x: hidden;\n}\n\n#app {\n  flex-direction: row;\n  display: flex;\n}\n\naside {\n  z-index: 1;\n  border-right: 1px solid #e0e0e0;\n  flex-shrink: 0;\n  width: 250px;\n  min-width: 100px;\n  height: 100vh;\n  min-height: 600px;\n  position: -webkit-sticky;\n  position: sticky;\n  top: 0;\n}\n\naside > [data-resize-handle] {\n  z-index: 1;\n  cursor: ew-resize;\n  width: 5px;\n  position: absolute;\n  top: 0;\n  bottom: 0;\n  right: -2.5px;\n}\n\naside > [data-resize-handle]:hover, aside[data-resizing] > [data-resize-handle] {\n  opacity: .5;\n  background-color: #00f;\n}\n\nmain {\n  z-index: 0;\n  box-sizing: border-box;\n  flex: 1;\n  min-width: 200px;\n  min-height: 100vh;\n  padding-bottom: 0;\n  position: relative;\n  overflow-x: auto;\n}\n\n.main_body {\n  flex: 1;\n  min-width: 100%;\n  display: flex;\n}\n", {
+const inlineContent = new __InlineContent__("body {\n  scrollbar-gutter: stable;\n  overflow-x: hidden;\n}\n\n#app {\n  flex-direction: row;\n  display: flex;\n}\n\naside {\n  z-index: 1;\n  border-right: 1px solid #e0e0e0;\n  flex-shrink: 0;\n  width: 250px;\n  min-width: 100px;\n  height: 100vh;\n  min-height: 300px;\n  position: -webkit-sticky;\n  position: sticky;\n  top: 0;\n}\n\naside > [data-resize-handle] {\n  z-index: 1;\n  cursor: ew-resize;\n  width: 5px;\n  position: absolute;\n  top: 0;\n  bottom: 0;\n  right: -2.5px;\n}\n\naside > [data-resize-handle]:hover, aside[data-resizing] > [data-resize-handle] {\n  opacity: .5;\n  background-color: #00f;\n}\n\nmain {\n  z-index: 0;\n  box-sizing: border-box;\n  flex: 1;\n  min-width: 200px;\n  min-height: 100vh;\n  padding-bottom: 0;\n  position: relative;\n  overflow-x: auto;\n}\n\n.main_body {\n  flex: 1;\n  min-width: 100%;\n  display: flex;\n}\n", {
   type: "text/css"
 });
 const stylesheet = new CSSStyleSheet({
@@ -2573,8 +2577,7 @@ const DatabaseField = ({
   });
 };
 
-installImportMetaCss(import.meta);const IconAndText = props => props;
-import.meta.css = /* css */"\n  .page {\n    display: flex;\n    flex: 1;\n    flex-direction: column;\n  }\n\n  .page_head {\n    position: sticky;\n    top: 0;\n    display: flex;\n\n    padding: 20px;\n    flex-direction: column;\n    justify-content: space-between;\n    gap: 10px;\n    background: white;\n\n    background-color: rgb(239, 242, 245);\n    border-bottom: 1px solid rgb(69, 76, 84);\n  }\n\n  .page_head h1 {\n    margin: 0;\n    line-height: 1em;\n  }\n\n  .page_head_with_actions {\n    display: flex;\n    flex-direction: row;\n  }\n\n  .page_head > .actions {\n  }\n\n  .page_body {\n    padding-top: 20px;\n    padding-right: 20px;\n    padding-bottom: 20px;\n    padding-left: 20px;\n  }\n\n  .page_error {\n    margin-top: 0;\n    margin-bottom: 20px;\n    padding: 20px;\n    background: #fdd;\n    border: 1px solid red;\n  }\n";
+installImportMetaCss(import.meta);import.meta.css = /* css */"\n  .page {\n    display: flex;\n    flex: 1;\n    flex-direction: column;\n  }\n\n  .page_head {\n    position: sticky;\n    top: 0;\n    display: flex;\n\n    padding: 20px;\n    flex-direction: column;\n    justify-content: space-between;\n    gap: 10px;\n    background: white;\n\n    background-color: rgb(239, 242, 245);\n    border-bottom: 1px solid rgb(69, 76, 84);\n  }\n\n  .page_head h1 {\n    margin: 0;\n    line-height: 1em;\n  }\n\n  .page_head_with_actions {\n    display: flex;\n    flex-direction: row;\n  }\n\n  .page_head > .actions {\n  }\n\n  .page_body {\n    padding-top: 20px;\n    padding-right: 20px;\n    padding-bottom: 20px;\n    padding-left: 20px;\n  }\n\n  .page_error {\n    margin-top: 0;\n    margin-bottom: 20px;\n    padding: 20px;\n    background: #fdd;\n    border: 1px solid red;\n  }\n";
 const Page = ({
   children,
   ...props
@@ -2636,13 +2639,12 @@ const PageHeadLabel = ({
 }) => {
   const title = u("h1", {
     style: "display: flex; align-items: stretch; gap: 0.2em;",
-    children: [u(IconAndText, {
-      icon: icon,
-      style: {
-        color: "lightgrey",
-        userSelect: "none",
-        whiteSpace: "nowrap"
-      },
+    children: [u(Icon, {
+      children: icon
+    }), u(Text, {
+      color: "lightgrey",
+      userSelect: "none",
+      noWrap: true,
       children: label
     }), u("span", {
       children: children
@@ -2653,8 +2655,9 @@ const PageHeadLabel = ({
   }
   return u("div", {
     className: "page_head_with_actions",
-    children: [title, u("div", {
+    children: [title, u(Box, {
       className: "actions",
+      selfAlignX: "end",
       children: actions.map(action => {
         return action.component;
       })
@@ -2722,7 +2725,7 @@ const DatabasePage = ({
 const DatabaseRoutes = () => {
   return u(Route, {
     route: DATABASE_ROUTE,
-    children: database => u(DatabasePage, {
+    element: database => u(DatabasePage, {
       database: database
     })
   });
@@ -2754,23 +2757,24 @@ const RoleCanLoginPage = ({
   role
 }) => {
   const rolname = role.rolname;
-  const deleteRoleAction = ROLE.DELETE.bindParams({
-    rolname
-  });
   const RoleIcon = pickRoleIcon(role);
   return u(Page, {
     "data-ui-name": "<RoleCanLoginPage />",
     children: [u(PageHead, {
-      actions: [{
-        component: u(Button, {
-          "data-confirm-message": "Are you sure you want to delete the role \"".concat(rolname, "\"?"),
-          action: deleteRoleAction,
-          children: "Delete"
-        })
-      }],
       children: u(PageHead.Label, {
         icon: u(RoleIcon, {}),
         label: "Role Login:",
+        actions: [{
+          component: u(Button, {
+            "data-confirm-message": "Are you sure you want to delete the role \"".concat(rolname, "\"?"),
+            action: () => {
+              return ROLE.DELETE({
+                rolname
+              });
+            },
+            children: "Delete"
+          })
+        }],
         children: rolname
       })
     }), u(PageBody, {
@@ -2935,7 +2939,7 @@ const RolePage = ({
 const RoleRoutes = () => {
   return u(Route, {
     route: ROLE_ROUTE,
-    children: role => u(RolePage, {
+    element: role => u(RolePage, {
       role: role
     })
   });
@@ -3118,23 +3122,10 @@ const TableSettings = ({
  *
  */
 
-const LinkWithIcon = props => props;
 const TablePage = ({
   table
 }) => {
   const tablename = table.tablename;
-  const tableDataUrl = TABLE_DATA_ROUTE.buildUrl({
-    tablename
-  });
-  const tableSettingUrl = TABLE_SETTINGS_ROUTE.buildUrl({
-    tablename
-  });
-  const {
-    matching: tableDataRouteIsMatching
-  } = useRouteStatus(TABLE_DATA_ROUTE);
-  const {
-    matching: tableSettingsRouteIsMatching
-  } = useRouteStatus(TABLE_SETTINGS_ROUTE);
   return u(Page, {
     "data-ui-name": "<TablePage />",
     children: [u(PageHead, {
@@ -3145,34 +3136,35 @@ const TablePage = ({
         children: tablename
       }), u(TabList, {
         children: [u(Tab, {
-          selected: tableDataRouteIsMatching,
-          children: u(LinkWithIcon, {
-            icon: u(DataSvg, {}),
-            href: tableDataUrl,
-            "data-no-text-decoration": true,
-            children: "Data"
-          })
+          route: TABLE_INDEX_ROUTE,
+          routeParams: {
+            tablename
+          },
+          children: [u(Icon, {
+            children: u(DataSvg, {})
+          }), "Data"]
         }), u(Tab, {
-          selected: tableSettingsRouteIsMatching,
-          children: u(LinkWithIcon, {
-            icon: u(SettingsSvg, {}),
-            href: tableSettingUrl,
-            "data-no-text-decoration": true,
-            children: "Settings"
-          })
+          route: TABLE_SETTINGS_ROUTE,
+          routeParams: {
+            tablename
+          },
+          children: [u(Icon, {
+            children: u(SettingsSvg, {})
+          }), "Settings"]
         })]
       })]
     }), u(PageBody, {
-      children: u(UITransition, {
+      children: u(Routes, {
         children: [u(Route, {
-          route: TABLE_DATA_ROUTE,
-          children: rows => u(TableData, {
+          route: TABLE_INDEX_ROUTE,
+          action: TABLE_ROW_GET_MANY_ACTION,
+          element: rows => u(TableData, {
             table: table,
             rows: rows
           })
         }), u(Route, {
           route: TABLE_SETTINGS_ROUTE,
-          children: () => u(TableSettings, {
+          element: u(TableSettings, {
             table: table
           })
         })]
@@ -3184,14 +3176,15 @@ const TablePage = ({
 const TableRoutes = () => {
   return u(Route, {
     route: TABLE_ROUTE,
-    children: table => u(TablePage, {
+    action: TABLE_GET_ACTION,
+    element: table => u(TablePage, {
       table: table
     })
   });
 };
 
 const MainRoutes = () => {
-  return u(UITransition, {
+  return u(k, {
     children: [u(RoleRoutes, {}), u(DatabaseRoutes, {}), u(TableRoutes, {})]
   });
 };
