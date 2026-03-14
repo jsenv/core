@@ -27,15 +27,15 @@ const { dirUrlMap } = await snapshotBuildTests(import.meta.url, ({ test }) => {
 
 replaceFileStructureSync({
   from: new URL(`${dirUrlMap.get("basic")}build/`),
-  to: new URL("./git_ignored/", import.meta.url),
+  to: import.meta.resolve("./git_ignored/"),
 });
 copyFileSync({
-  from: new URL("./client/main.html", import.meta.url),
-  to: new URL("./git_ignored/main.html", import.meta.url),
+  from: import.meta.resolve("./client/main.html"),
+  to: import.meta.resolve("./git_ignored/main.html"),
   overwrite: true,
 });
 const actual = await executeBuildHtmlInBrowser(
-  new URL("./git_ignored/", import.meta.url),
+  import.meta.resolve("./git_ignored/"),
 );
 const expect = `window.origin/foo/other/file.txt?v=ead31da8`;
 assert({ actual, expect });
