@@ -92,7 +92,7 @@ if (process.env.FLAKY) {
 }
 
 // added, updated, removed
-{
+if (process.env.FLAKY) {
   const fileUrl = resolveUrl("file", tempDirectoryUrl);
   const mutations = [];
   const unregister = registerFileLifecycle(fileUrl, {

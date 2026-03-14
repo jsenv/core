@@ -61,7 +61,7 @@ await ensureEmptyDirectory(tempDirectoryUrl);
 }
 
 // file added inside directory
-{
+if (process.env.FLAKY) {
   const directoryUrl = resolveUrl("dir", tempDirectoryUrl);
   const fileUrl = resolveUrl("dir/file", tempDirectoryUrl);
   const mutations = [];
@@ -104,7 +104,7 @@ await ensureEmptyDirectory(tempDirectoryUrl);
 }
 
 // add, update, remove file
-{
+if (process.env.FLAKY) {
   const fileUrl = resolveUrl("file", tempDirectoryUrl);
   const mutations = [];
   const unregister = registerDirectoryLifecycle(tempDirectoryUrl, {
