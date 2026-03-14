@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/eslint-config-relax",
-  "version": "1.8.0",
+  "version": "1.8.1",
   "description": "A pleaseant ESLint configuration for any project",
   "repository": {
     "type": "git",
@@ -27,13 +27,13 @@
     "@babel/eslint-parser": "7.28.6",
     "@jsenv/eslint-import-resolver": "8.4.3",
     "@jsenv/eslint-plugin": "1.2.0",
-    "@jsenv/urls": "2.9.7",
-    "@preact/eslint-plugin-signals": "0.1.0",
+    "@jsenv/urls": "2.9.8",
+    "@preact/eslint-plugin-signals": "0.2.0",
     "eslint-plugin-html": "8.1.4",
-    "eslint-plugin-import-x": "4.16.1",
+    "eslint-plugin-import-x": "4.16.2",
     "eslint-plugin-react": "7.37.5",
-    "eslint-plugin-regexp": "3.0.0",
-    "globals": "17.3.0"
+    "eslint-plugin-regexp": "3.1.0",
+    "globals": "17.4.0"
   },
   "devDependencies": {},
   "engines": {

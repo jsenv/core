@@ -20,7 +20,7 @@
   ],
   "dependencies": {
     "html-minifier": "4.0.0",
-    "lightningcss": "1.31.1",
+    "lightningcss": "1.32.0",
     "terser": "5.46.0"
   },
   "devDependencies": {

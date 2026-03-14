@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/snapshot",
-  "version": "2.17.0",
+  "version": "2.17.1",
   "description": "Snapshot testing",
   "repository": {
     "type": "git",
@@ -26,19 +26,19 @@
   ],
   "dependencies": {
     "@jsenv/assert": "4.5.5",
-    "@jsenv/ast": "6.7.20",
+    "@jsenv/ast": "6.7.21",
     "@jsenv/exception": "1.2.1",
-    "@jsenv/filesystem": "4.15.14",
-    "@jsenv/humanize": "1.7.5",
-    "@jsenv/terminal-recorder": "1.5.35",
+    "@jsenv/filesystem": "4.15.15",
+    "@jsenv/humanize": "1.7.6",
+    "@jsenv/terminal-recorder": "1.5.36",
     "@jsenv/url-meta": "8.5.7",
-    "@jsenv/urls": "2.9.7",
+    "@jsenv/urls": "2.9.8",
     "@jsenv/utils": "2.3.1",
     "ansi-regex": "6.2.2",
     "pixelmatch": "7.1.0",
     "pngjs": "7.0.0",
     "prettier": "3.8.1",
-    "strip-ansi": "7.1.2"
+    "strip-ansi": "7.2.0"
   },
   "devDependencies": {
     "@jsenv/assert": "../assert",

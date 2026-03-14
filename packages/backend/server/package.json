@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/server",
-  "version": "16.3.5",
+  "version": "16.3.6",
   "description": "A modern Node.js HTTP server with declarative routing, content negotiation, and WebSocket support",
   "repository": {
     "type": "git",
@@ -35,7 +35,7 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "launch-editor": "2.12.0"
+    "launch-editor": "2.13.1"
   },
   "devDependencies": {
     "@jsenv/abort": "../../tooling/abort",
@@ -56,7 +56,7 @@
     "eventsource": "4.1.0",
     "formidable": "3.5.4",
     "playwright": "1.58.1",
-    "undici": "7.21.0",
+    "undici": "7.24.2",
     "ws": "8.19.0"
   },
   "engines": {

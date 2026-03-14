@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/humanize",
-  "version": "1.7.5",
+  "version": "1.7.6",
   "description": "Generate messages meant to read by humans",
   "repository": {
     "type": "git",
@@ -34,7 +34,7 @@
   },
   "dependencies": {
     "ansi-escapes": "7.3.0",
-    "strip-ansi": "7.1.2"
+    "strip-ansi": "7.2.0"
   },
   "devDependencies": {
     "@jsenv/assert": "../assert",
