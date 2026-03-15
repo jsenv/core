@@ -4,8 +4,10 @@ const browserLang =
     ? (navigator.language ?? navigator.languages?.[0])
     : undefined;
 
-export const createIntl = () => {
+export const createIntl = ({ systemLang = browserLang } = {}) => {
   const languageMap = new Map();
+
+  let bestLang = systemLang;
 
   const add = (lang, translations) => {
     // Derived language inherits all keys not explicitly overridden
@@ -19,21 +21,17 @@ export const createIntl = () => {
       }
     }
     languageMap.set(lang, translations);
+
+    bestLang = matchBestLang(lang, languageMap);
   };
 
-  const format = (key, values, { lang = browserLang } = {}) => {
-    const resolvedLang = matchBestLang(lang, languageMap);
-    const translations = resolvedLang ? languageMap.get(resolvedLang) : null;
-    let template = key;
-    if (translations) {
-      const translation = translations[key];
-      if (translation !== undefined) {
-        template = Array.isArray(translation)
-          ? selectPluralForm(translation, values, resolvedLang)
-          : translation;
-      }
+  const format = (key, values, { lang = bestLang } = {}) => {
+    const translationMap = languageMap.get(lang);
+    const translationTemplate = translationMap.get(key);
+    if (!translationTemplate) {
+      return interpolate(key, values);
     }
-    return interpolate(template, values);
+    return interpolate(translationTemplate, values);
   };
 
   return { add, format };
@@ -64,20 +62,6 @@ const matchBestLang = (lang, languageMap) => {
     }
   }
   return null;
-};
-
-// forms[0] = singular ("one"), forms[1] = plural ("other")
-// Uses Intl.PluralRules for correct locale-aware selection
-const selectPluralForm = (forms, values, lang) => {
-  if (forms.length <= 1) return forms[0] ?? "";
-  const count = values?.count;
-  if (count === undefined) return forms[0];
-  try {
-    const category = new Intl.PluralRules(lang).select(count);
-    return category === "one" ? forms[0] : (forms[1] ?? forms[0]);
-  } catch {
-    return count === 1 ? forms[0] : (forms[1] ?? forms[0]);
-  }
 };
 
 const interpolate = (template, values) => {
