@@ -252,8 +252,9 @@ const convertColorToRgba = (color) => {
   }
 
   // Named colors (basic set)
-  if (namedColors[color]) {
-    return [...namedColors[color], 1];
+  const namedColorRgb = namedColors[color];
+  if (namedColorRgb) {
+    return [...namedColorRgb, 1];
   }
   return null;
 };

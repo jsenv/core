@@ -40,9 +40,15 @@ export const useDarkBackgroundAttribute = (
     hardcoded = {},
   } = {},
 ) => {
-  const innerDeps = [];
-  innerDeps.push(ref, backgroundElementSelector);
-  innerDeps.push(...deps);
+  const innerDeps = [
+    ...deps,
+    // ref can change is the component pass a different ref on different render based on some logic
+    // (can be used to control which element backgroundColor is being checked by switching the ref to another element)
+    ref,
+    // backgroundElementSelector can change if the component pass a different selector on different render based on some logic
+    // (can be used to control which element backgroundColor is being checked by switching the selector to point to another element)
+    backgroundElementSelector,
+  ];
 
   const hardcodedMap = new Map();
   for (const key of Object.keys(hardcoded)) {
@@ -70,7 +76,6 @@ export const useDarkBackgroundAttribute = (
       return null;
     }
     const backgroundColorString = normalizeColorString(backgroundColor, el);
-    console.log({ backgroundColor, backgroundColorString });
     const hardcodedContrast = hardcodedMap.get(backgroundColorString);
     const contrastingColor =
       hardcodedContrast || contrastColor(backgroundColor, el);
