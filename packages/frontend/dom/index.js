@@ -40,7 +40,7 @@ export {
   getContrastRatio,
   getLuminance,
   resolveColorLuminance,
-} from "./src/style/color_constrast.js";
+} from "./src/style/color_contrast.js";
 export {
   getPreferedColorScheme,
   prefersDarkColors,
