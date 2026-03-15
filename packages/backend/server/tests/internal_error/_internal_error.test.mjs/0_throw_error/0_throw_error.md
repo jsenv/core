@@ -20,7 +20,7 @@ internal error while handling request
 Error: message
     at base/internal_error.test.mjs:34:19
     at capture (@jsenv/core/packages/tooling/snapshot/src/side_effects/create_capture_side_effects.js:342:29)
-    at snapshotTests (@jsenv/core/packages/tooling/snapshot/src/side_effects/snapshot_tests.js:188:33)
+    at snapshotTests (@jsenv/core/packages/tooling/snapshot/src/side_effects/snapshot_tests.js:194:33)
   500 Internal Server Error
 ```
 
