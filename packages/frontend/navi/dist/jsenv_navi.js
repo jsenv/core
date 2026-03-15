@@ -3,7 +3,8 @@ import { isValidElement, createContext, toChildArray, render, createRef, cloneEl
 import { useErrorBoundary, useLayoutEffect, useEffect, useMemo, useRef, useState, useCallback, useContext, useImperativeHandle, useId } from "preact/hooks";
 import { jsxs, jsx, Fragment } from "preact/jsx-runtime";
 import { signal, effect, computed, batch, useSignal } from "@preact/signals";
-import { createIterableWeakSet, mergeOneStyle, stringifyStyle, createPubSub, mergeTwoStyles, normalizeStyles, createGroupTransitionController, getElementSignature, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, findBefore, findAfter, createValueEffect, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, allowWheelThrough, resolveCSSColor, createStyleController, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, hasCSSSizeUnit, resolveCSSSize, activeElementSignal, canInterceptKeys, initFocusGroup, elementIsFocusable, pickLightOrDark, resolveColorLuminance, dragAfterThreshold, getScrollContainer, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
+import { createIterableWeakSet, mergeOneStyle, stringifyStyle, createPubSub, mergeTwoStyles, normalizeStyles, createGroupTransitionController, getElementSignature, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, findBefore, findAfter, createValueEffect, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, allowWheelThrough, resolveCSSColor, createStyleController, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, hasCSSSizeUnit, resolveCSSSize, activeElementSignal, canInterceptKeys, initFocusGroup, elementIsFocusable, contrastColor, resolveColorLuminance, dragAfterThreshold, getScrollContainer, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
+export { contrastColor } from "@jsenv/dom";
 import { prefixFirstAndIndentRemainingLines } from "@jsenv/humanize";
 import { createValidity } from "@jsenv/validity";
 import { createPortal, forwardRef } from "preact/compat";
@@ -6472,6 +6473,7 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
 const PSEUDO_CLASSES_DEFAULT = [];
 const PSEUDO_ELEMENTS_DEFAULT = [];
 const STYLE_CSS_VARS_DEFAULT = {};
+const PROPS_CSS_VARS_DEFAULT = {};
 const Box = props => {
   const {
     as = "div",
@@ -6481,6 +6483,7 @@ const Box = props => {
     // style management
     style,
     styleCSSVars = STYLE_CSS_VARS_DEFAULT,
+    propsCSSVars = PROPS_CSS_VARS_DEFAULT,
     basePseudoState,
     pseudoState,
     // for demo purposes it's possible to control pseudo state from props
@@ -6614,15 +6617,19 @@ const Box = props => {
     let boxPseudoNamedStyles = PSEUDO_NAMED_STYLES_DEFAULT;
     const shouldForwardAllToChild = visualSelector && pseudoStateSelector;
     const addStyle = (value, name, styleContext, stylesTarget, context) => {
-      styleDeps.push(name, value); // impact box style -> add to deps
-      const cssVar = styleContext.styleCSSVars[name];
       const mergedValue = prepareStyleValue(stylesTarget[name], value, name, styleContext, context);
+      const cssVar = styleContext.styleCSSVars[name];
       if (cssVar) {
-        stylesTarget[cssVar] = mergedValue;
+        addCSSVar(mergedValue, cssVar, stylesTarget);
         return true;
       }
+      styleDeps.push(name, value); // impact box style -> add to deps
       stylesTarget[name] = mergedValue;
       return false;
+    };
+    const addCSSVar = (value, name, stylesTarget) => {
+      styleDeps.push(name, value); // impact box style -> add to deps
+      stylesTarget[name] = value;
     };
     const addStyleMaybeForwarding = (value, name, styleContext, stylesTarget, context, visualChildPropStrategy) => {
       if (!visualChildPropStrategy) {
@@ -6686,6 +6693,11 @@ const Box = props => {
       }
       if (isCSSVar(name)) {
         addStyle(value, name, styleContext, boxStylesTarget, context);
+        return;
+      }
+      const propCssVar = propsCSSVars[name];
+      if (propCssVar) {
+        addCSSVar(value, propCssVar, boxStylesTarget);
         return;
       }
       const isPseudoStyle = styleOrigin === "pseudo_style";
@@ -16350,9 +16362,9 @@ const listenInputValue = (
   let timeout;
   let debounceTimeout;
 
-  const onAsyncEvent = (e) => {
+  const onAsyncEvent = (e, options) => {
     timeout = setTimeout(() => {
-      onEvent(e);
+      onEvent(e, options);
     }, 0);
   };
 
@@ -16431,13 +16443,16 @@ const listenInputValue = (
     input.removeEventListener("focus", onEvent);
   });
 
-  // "navi_delete_content" behaves like an async event
-  // a bit like form reset because
-  // our action will be updated async after the component re-renders
-  // and we need to wait that to happen to properly call action with the right value
-  input.addEventListener("navi_delete_content", onAsyncEvent);
+  const onNaviDeleteContent = (e) => {
+    // "navi_delete_content" behaves like an async event
+    // a bit like form reset because
+    // our action will be updated async after the component re-renders
+    // and we need to wait that to happen to properly call action with the right value
+    onAsyncEvent(e, { skipDebounce: true });
+  };
+  input.addEventListener("navi_delete_content", onNaviDeleteContent);
   addTeardown(() => {
-    input.removeEventListener("navi_delete_content", onAsyncEvent);
+    input.removeEventListener("navi_delete_content", onNaviDeleteContent);
   });
   return () => {
     teardown();
@@ -22104,6 +22119,103 @@ const useConstraintValidityState = (ref) => {
   return constraintValidityState;
 };
 
+/**
+ * Toggles a `data-dark-background` attribute on the referenced element based on its
+ * computed background color. Pair it with a CSS variable to get automatic
+ * light/dark text without hard-coding colors:
+ *
+ * ```css
+ * .my-element {
+ *   --color-contrasting: black;
+ *   &[data-dark-background] {
+ *     --color-contrasting: white;
+ *   }
+ *   color: var(--color-contrasting);
+ * }
+ * ```
+ *
+ * - `data-dark-background` is **set** when the background is dark enough that white text
+ *   provides better (or equal) contrast.
+ * - `data-dark-background` is **absent** when black text is the better choice.
+ *
+ * @param {import("preact").RefObject} ref - Ref to the element that receives
+ *   the `data-dark-background` attribute and is also passed to `contrastColor` for
+ *   resolving CSS variables.
+ * @param {object} [options]
+ * @param {string} [options.backgroundElementSelector] - CSS selector relative
+ *   to `ref.current` pointing to a child element whose `background-color`
+ *   should be tested instead of the element itself. Useful when the element
+ *   has a transparent background but contains a coloured child (e.g. a fill
+ *   bar inside a track).
+ */
+
+const useDarkBackgroundAttribute = (
+  ref,
+  deps = [],
+  {
+    backgroundElementSelector,
+    attributeName = "data-dark-background",
+    hardcoded = {},
+  } = {},
+) => {
+  const innerDeps = [
+    ...deps,
+    // ref can change is the component pass a different ref on different render based on some logic
+    // (can be used to control which element backgroundColor is being checked by switching the ref to another element)
+    ref,
+    // backgroundElementSelector can change if the component pass a different selector on different render based on some logic
+    // (can be used to control which element backgroundColor is being checked by switching the selector to point to another element)
+    backgroundElementSelector,
+  ];
+
+  const hardcodedMap = new Map();
+  for (const key of Object.keys(hardcoded)) {
+    const value = hardcoded[key];
+    innerDeps.push(key, value);
+    const colorString = normalizeColorString(key);
+    hardcodedMap.set(colorString, value);
+  }
+
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) {
+      return null;
+    }
+    let elementToCheck = el;
+    if (backgroundElementSelector) {
+      elementToCheck = el.querySelector(backgroundElementSelector);
+      if (!elementToCheck) {
+        return null;
+      }
+    }
+    const backgroundColor = getComputedStyle(elementToCheck).backgroundColor;
+    if (!backgroundColor) {
+      el.removeAttribute(attributeName);
+      return null;
+    }
+    const backgroundColorString = normalizeColorString(backgroundColor, el);
+    const hardcodedContrast = hardcodedMap.get(backgroundColorString);
+    const contrastingColor =
+      hardcodedContrast || contrastColor(backgroundColor, el);
+    if (contrastingColor === "white") {
+      el.setAttribute(attributeName, "");
+      return () => {
+        el.removeAttribute(attributeName);
+      };
+    }
+    el.removeAttribute(attributeName);
+    return null;
+  }, innerDeps);
+};
+
+const normalizeColorString = (color, el) => {
+  const colorRgba = resolveCSSColor(color, el);
+  if (!colorRgba) {
+    return "";
+  }
+  return String(colorRgba);
+};
+
 installImportMetaCss(import.meta);import.meta.css = /* css */`
   @layer navi {
     label {
@@ -22111,7 +22223,7 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
         cursor: pointer;
       }
 
-      &[data-read-only],
+      &[data-readonly],
       &[data-disabled] {
         color: rgba(0, 0, 0, 0.5);
         cursor: default;
@@ -22187,14 +22299,9 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
       --accent-color: light-dark(#4476ff, #3b82f6);
       --background-color-checked: var(--accent-color);
       --border-color-checked: var(--accent-color);
-      --checkmark-color-light: white;
-      --checkmark-color-dark: rgb(55, 55, 55);
-      --checkmark-color: var(--checkmark-color-light);
+      --checkmark-color: rgb(55, 55, 55);
       --cursor: pointer;
-
-      --color-mix-light: black;
-      --color-mix-dark: white;
-      --color-mix: var(--color-mix-light);
+      --color-mix: white;
 
       /* Hover */
       --border-color-hover: color-mix(in srgb, var(--border-color) 60%, black);
@@ -22288,9 +22395,9 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
         black
       );
 
-      &[data-dark] {
-        --color-mix: var(--color-mix-dark);
-        --checkmark-color: var(--checkmark-color-dark);
+      &[data-dark-background] {
+        --color-mix: black;
+        --checkmark-color: white;
       }
     }
   }
@@ -22643,17 +22750,14 @@ const InputCheckboxBasic = props => {
   });
   const renderCheckboxMemoized = useCallback(renderCheckbox, [id, innerName, checked, innerRequired]);
   const boxRef = useRef();
-  useLayoutEffect(() => {
-    const naviCheckbox = boxRef.current;
-    const lightColor = "var(--checkmark-color-light)";
-    const darkColor = "var(--checkmark-color-dark)";
-    const colorPicked = pickLightOrDark("var(--accent-color)", lightColor, darkColor, naviCheckbox);
-    if (colorPicked === lightColor) {
-      naviCheckbox.removeAttribute("data-dark");
-    } else {
-      naviCheckbox.setAttribute("data-dark", "");
+  useDarkBackgroundAttribute(boxRef, [accentColor, checked], {
+    backgroundElementSelector: ".navi_checkbox_field",
+    // the browser (chrome at least) prefer white in this scenario even if
+    // the contrast is better with black, so we force it to white to match chrome behavior on this specific color
+    hardcoded: {
+      "#4476ff": "white"
     }
-  }, [accentColor]);
+  });
   return jsxs(Box, {
     as: "span",
     ...remainingProps,
@@ -24417,7 +24521,7 @@ const InputTextualWithAction = props => {
     onEnd: onActionEnd
   });
   return jsx(InputTextualBasic, {
-    "data-action": boundAction.name,
+    "data-action": boundAction.name || "anonymous",
     "data-action-debounce": actionDebounce,
     "data-action-after-change": actionAfterChange ? "" : undefined,
     ...rest,
@@ -28957,51 +29061,30 @@ const formatNumber = (value, { lang } = {}) => {
   return new Intl.NumberFormat(lang).format(value);
 };
 
-const CSS_VAR_NAME = "--x-color-contrasting";
-
-const useContrastingColor = (ref, backgroundElementSelector) => {
-  useLayoutEffect(() => {
-    const el = ref.current;
-    if (!el) {
-      return;
-    }
-    let elementToCheck = el;
-    {
-      elementToCheck = el.querySelector(backgroundElementSelector);
-      if (!elementToCheck) {
-        return;
-      }
-    }
-    const lightColor = "var(--navi-color-light)";
-    const darkColor = "var(--navi-color-dark)";
-    const backgroundColor = getComputedStyle(elementToCheck).backgroundColor;
-    if (!backgroundColor) {
-      el.style.removeProperty(CSS_VAR_NAME);
-      return;
-    }
-    const colorPicked = pickLightOrDark(
-      backgroundColor,
-      lightColor,
-      darkColor,
-      el,
-    );
-    el.style.setProperty(CSS_VAR_NAME, colorPicked);
-  }, []);
-};
-
 installImportMetaCss(import.meta);import.meta.css = /* css */`
   @layer navi {
   }
   .navi_badge_count {
     --font-size: 0.7em;
     --x-background: var(--background);
-    --x-background-color: var(--background-color);
+    --x-background-color: var(--background-color, var(--x-background));
+    --x-color-contrasting: var(--navi-color-black);
+    --x-color: var(--color, var(--x-color-contrasting));
     --padding-x: 0.5em;
     --padding-y: 0.2em;
     position: relative;
     display: inline-block;
-    color: var(--color, var(--x-color-contrasting));
+    color: var(--x-color);
     font-size: var(--font-size);
+
+    &[data-dark-background] {
+      --x-color-contrasting: var(--navi-color-white);
+    }
+
+    &[data-loading] {
+      --x-background: transparent;
+      --x-background-color: transparent;
+    }
 
     .navi_count_badge_overflow {
       position: relative;
@@ -29015,7 +29098,7 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
       padding-left: var(--padding-x);
       line-height: normal;
       background: var(--x-background);
-      background-color: var(--x-background-color, var(--x-background));
+      background-color: var(--x-background-color);
       border-radius: 1em;
     }
 
@@ -29031,7 +29114,7 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
       align-items: center;
       justify-content: center;
       background: var(--x-background);
-      background-color: var(--x-background-color, var(--x-background));
+      background-color: var(--x-background-color);
       border-radius: 50%;
 
       &[data-single-char] {
@@ -29054,11 +29137,6 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
       .navi_badge_count_text {
         font-size: var(--x-number-font-size);
       }
-    }
-
-    &[data-loading] {
-      --x-background: transparent;
-      --x-background-color: transparent;
     }
   }
 `;
@@ -29092,7 +29170,7 @@ const BadgeCount = ({
 }) => {
   const defaultRef = useRef();
   const ref = props.ref || defaultRef;
-  useContrastingColor(ref, ".navi_badge_count_visual");
+  useDarkBackgroundAttribute(ref);
   let valueRequested = (() => {
     if (typeof children !== "string") return children;
     const parsed = Number(children);
@@ -29519,6 +29597,99 @@ const CodeBox = ({
   });
 };
 
+const navigator = typeof window === "undefined" ? undefined : window.navigator;
+const browserLang =
+  typeof navigator !== "undefined"
+    ? (navigator.language ?? navigator.languages?.[0])
+    : undefined;
+
+const createIntl = ({ systemLang = browserLang } = {}) => {
+  const languageMap = new Map();
+
+  let defaultLang = systemLang;
+
+  const add = (lang, translations) => {
+    // Accumulate: merge with any existing translations for this lang
+    const existing = languageMap.get(lang);
+    if (existing) {
+      translations = { ...existing, ...translations };
+    }
+    // Derived language inherits all keys not explicitly overridden
+    // e.g. "fr-provencal" inherits from "fr"
+    const dashIndex = lang.indexOf("-");
+    if (dashIndex !== -1) {
+      const parentLang = lang.slice(0, dashIndex);
+      const parentTranslations = languageMap.get(parentLang);
+      if (parentTranslations) {
+        translations = { ...parentTranslations, ...translations };
+      }
+    }
+    languageMap.set(lang, translations);
+
+    defaultLang = matchBestLang(systemLang, languageMap);
+  };
+
+  const _getTranslationTemplate = (key, lang) => {
+    if (!lang) {
+      // no lang specified
+      return key;
+    }
+    const translations = languageMap.get(lang);
+    if (!translations) {
+      // code don't know this language
+      return key;
+    }
+    const template = translations[key];
+    if (!template) {
+      // code know this language but have no translation for this key
+      return key;
+    }
+    return template;
+  };
+
+  const format = (key, values, { lang = defaultLang } = {}) => {
+    const template = _getTranslationTemplate(key, lang);
+    return interpolate(template, values);
+  };
+
+  return { languageMap, add, format };
+};
+
+// Walk "fr-CA-variant" → "fr-CA" → "fr" until a registered lang is found
+const matchLang = (lang, languageMap) => {
+  if (languageMap.has(lang)) return lang;
+  const parts = lang.split("-");
+  while (parts.length > 1) {
+    parts.pop();
+    const candidate = parts.join("-");
+    if (languageMap.has(candidate)) return candidate;
+  }
+  return null;
+};
+
+// lang can be a string or an ordered array of preference strings
+const matchBestLang = (lang, languageMap) => {
+  if (!lang) {
+    return null;
+  }
+  const candidates = Array.isArray(lang) ? lang : [lang];
+  for (const candidate of candidates) {
+    const match = matchLang(candidate, languageMap);
+    if (match) {
+      return match;
+    }
+  }
+  return null;
+};
+
+const interpolate = (template, values) => {
+  if (!values || typeof template !== "string") return template;
+  return template.replace(/\{(\w+)\}/g, (_, key) => {
+    const value = values[key];
+    return value !== undefined ? String(value) : `{${key}}`;
+  });
+};
+
 installImportMetaCss(import.meta);import.meta.css = /* css */`
   @layer navi {
     .navi_quantity {
@@ -29579,12 +29750,49 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
     }
   }
 `;
+const QuantityIntl = createIntl();
+const wellKnownUnitMap = new Map();
+/**
+ * Registers a unit with its translations per language, making it a "well-known"
+ * unit that Quantity will automatically translate and pluralize.
+ *
+ * @param {string} unitName - The unit identifier used in the `unit` prop, e.g. `"minute"`.
+ * @param {Record<string, string | [string, string]>} langTranslations
+ *   A map of language codes to translations. Each value is either:
+ *   - A tuple `[singular, plural]` for languages with distinct plural forms.
+ *   - A plain string for languages that use the same form for singular and plural (e.g. Japanese).
+ *
+ * @example
+ * Quantity.Intl.addUnit("minute", {
+ *   en: ["minute", "minutes"],
+ *   fr: ["minute", "minutes"],
+ *   ja: "分",
+ * });
+ */
+QuantityIntl.addUnit = (unitName, langTranslations) => {
+  const singularKey = unitName;
+  const pluralKey = `${unitName}__plural`;
+  wellKnownUnitMap.set(unitName, {
+    singularKey,
+    pluralKey
+  });
+  for (const [lang, translation] of Object.entries(langTranslations)) {
+    const [singular, plural] = Array.isArray(translation) ? translation : [translation, translation];
+    QuantityIntl.add(lang, {
+      [singularKey]: singular,
+      [pluralKey]: plural
+    });
+  }
+};
+const QuantityPropsCSSVars = {
+  unitColor: "--unit-color",
+  unitSizeRatio: "--unit-size-ratio"
+};
 const QuantityPseudoClasses = [":hover", ":active", ":read-only", ":disabled", ":-navi-loading"];
 const Quantity = ({
   children,
   unit,
   unitPosition = "right",
-  unitSizeRatio,
   label,
   size,
   lang,
@@ -29603,6 +29811,7 @@ const Quantity = ({
   return jsxs(Text, {
     baseClassName: "navi_quantity",
     "data-unit-bottom": unitBottom ? "" : undefined,
+    propsCSSVars: QuantityPropsCSSVars,
     basePseudoState: {
       ":read-only": readOnly,
       ":disabled": disabled,
@@ -29624,16 +29833,47 @@ const Quantity = ({
           flowInline: true,
           children: jsx(LoadingDots, {})
         }) : valueFormatted
-      }), unit && jsx("span", {
-        className: "navi_quantity_unit",
-        style: {
-          ...(unitSizeRatio === undefined ? {} : {
-            "--unit-size-ratio": unitSizeRatio
-          })
-        },
-        children: unit
+      }), unit && jsx(Unit, {
+        value: value,
+        unit: unit,
+        lang: lang
       })]
     })]
+  });
+};
+Quantity.Intl = QuantityIntl;
+const Unit = ({
+  value,
+  unit,
+  lang
+}) => {
+  let unitText = unit;
+  if (Array.isArray(unit)) {
+    const [singular, plural] = unit;
+    unitText = value > 1 ? plural : singular;
+  } else {
+    const wellKnownUnit = wellKnownUnitMap.get(unit);
+    if (wellKnownUnit) {
+      const {
+        singularKey,
+        pluralKey
+      } = wellKnownUnit;
+      if (value > 1) {
+        unitText = QuantityIntl.format(pluralKey, {
+          x: value
+        }, {
+          lang
+        });
+      } else {
+        unitText = QuantityIntl.format(singularKey, undefined, {
+          lang
+        });
+      }
+    }
+  }
+  return jsx("span", {
+    className: "navi_quantity_unit",
+    children: unitText
   });
 };
 const parseQuantityValue = children => {
@@ -29659,6 +29899,14 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
       --fill-color-optimum: light-dark(#0f7c0f, #4caf50);
       --fill-color-suboptimum: light-dark(#fdb900, #ffc107);
       --fill-color-even-less-good: light-dark(#d83b01, #f44336);
+
+      --x-color: var(--navi-color-white);
+      --x-shadow-color: black;
+      --shadow-size: 0.5em;
+      &[data-dark-background] {
+        --x-color: black;
+        --x-shadow-color: var(--navi-color-white);
+      }
     }
   }
 
@@ -29704,11 +29952,11 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
         display: flex;
         align-items: center;
         justify-content: center;
-        color: var(--x-caption-color, white);
+        color: var(--x-color);
         font-size: calc(var(--height) * 0.55);
         text-shadow:
-          0 0 4px var(--x-caption-shadow-color, black),
-          0 0 2px var(--x-caption-shadow-color, black);
+          0 0 var(--shadow-size) var(--x-shadow-color),
+          0 0 calc(var(--shadow-size) * 0.5) var(--x-shadow-color);
         white-space: nowrap;
         pointer-events: none;
         user-select: none;
@@ -29790,8 +30038,10 @@ const Meter = ({
   borderless,
   transition,
   style,
-  ...props
+  ...rest
 }) => {
+  const defaultRef = useRef();
+  const ref = rest.ref || defaultRef;
   const clampedValue = value < min ? min : value > max ? max : value;
   const fillRatio = max === min ? 0 : (clampedValue - min) / (max - min);
   let children = caption;
@@ -29799,6 +30049,7 @@ const Meter = ({
     children = jsx(Quantity, {
       unit: "%",
       unitSizeRatio: "1",
+      unitColor: "inherit",
       children: Math.round(fillRatio * 100)
     });
   }
@@ -29806,28 +30057,15 @@ const Meter = ({
   const fillColorVar = level === "optimum" ? "var(--fill-color-optimum)" : level === "suboptimum" ? "var(--fill-color-suboptimum)" : "var(--fill-color-even-less-good)";
   reportDisabledToLabel(disabled);
   reportReadOnlyToLabel(readOnly);
-  const trackContainerRef = useRef();
-  useLayoutEffect(() => {
-    if (!children) {
-      return;
-    }
-    const trackContainer = trackContainerRef.current;
-    if (!trackContainer) {
-      return;
-    }
-    // When fill covers less than half the track, the text center sits on the
-    // empty track — use the track color for contrast. Otherwise use fill color.
-    const bgEl = fillRatio >= 0.5 ? trackContainer.querySelector(".navi_meter_fill") : trackContainer.querySelector(".navi_meter_track");
-    if (!bgEl) {
-      return;
-    }
-    const bgColor = getComputedStyle(bgEl).backgroundColor;
-    const textColor = pickLightOrDark(bgColor, "white", "black", bgEl);
-    const shadowColor = textColor === "white" ? "black" : "white";
-    trackContainer.style.setProperty("--x-caption-color", textColor);
-    trackContainer.style.setProperty("--x-caption-shadow-color", shadowColor);
-  }, [children, level, fillRatio]);
+
+  // When fill covers less than half the track, the text center sits on the
+  // empty track — use the track color for contrast. Otherwise use fill color.
+  const backgroundElementSelector = fillRatio >= 0.5 ? ".navi_meter_fill" : ".navi_meter_track";
+  useDarkBackgroundAttribute(ref, [], {
+    backgroundElementSelector
+  });
   return jsx(Box, {
+    ref: ref,
     role: "meter",
     "aria-valuenow": clampedValue,
     "aria-valuemin": min,
@@ -29854,10 +30092,9 @@ const Meter = ({
       "--x-fill-color": fillColorVar,
       ...style
     },
-    ...props,
+    ...rest,
     children: jsxs("span", {
       className: "navi_meter_track_container",
-      ref: trackContainerRef,
       children: [jsx(LoaderBackground, {
         loading: loading,
         color: "var(--loader-color)",
@@ -30318,5 +30555,5 @@ const UserSvg = () => jsx("svg", {
   })
 });
 
-export { ActionRenderer, ActiveKeyboardShortcuts, Address, BadgeCount, Box, Button, ButtonCopyToClipboard, Caption, CheckSvg, Checkbox, CheckboxList, Code, Col, Colgroup, ConstructionSvg, Details, DialogLayout, Editable, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Form, Group, HeartSvg, HomeSvg, Icon, Image, Input, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, MessageBox, Meter, Paragraph, Quantity, Radio, RadioList, Route, RouteLink, Routes, RowNumberCol, RowNumberTableCell, SINGLE_SPACE_CONSTRAINT, SVGMaskOverlay, SearchSvg, Select, SelectionContext, Separator, SettingsSvg, StarSvg, SummaryMarker, Svg, Tab, TabList, Table, TableCell, Tbody, Text, Thead, Title, Tr, UITransition, UserSvg, ViewportLayout, actionIntegratedVia, actionRunEffect, addCustomMessage, arraySignalMembership, compareTwoJsValues, createAction, createAvailableConstraint, createRequestCanceller, createSelectionKeyboardShortcuts, enableDebugActions, enableDebugOnDocumentLoading, forwardActionRequested, installCustomConstraintValidation, isCellSelected, isColumnSelected, isRowSelected, localStorageSignal, navBack, navForward, navTo, openCallout, rawUrlPart, reload, removeCustomMessage, requestAction, rerunActions, resource, route, routeAction, setBaseUrl, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, updateActions, useActionData, useActionStatus, useArraySignalMembership, useCalloutClose, useCancelPrevious, useCellsAndColumns, useConstraintValidityState, useDependenciesDiff, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useMatchingRouteInfo, useNavState$1 as useNavState, useRouteStatus, useRunOnMount, useSelectableElement, useSelectionController, useSignalSync, useStateArray, useTitleLevel, useUrlSearchParam, valueInLocalStorage };
+export { ActionRenderer, ActiveKeyboardShortcuts, Address, BadgeCount, Box, Button, ButtonCopyToClipboard, Caption, CheckSvg, Checkbox, CheckboxList, Code, Col, Colgroup, ConstructionSvg, Details, DialogLayout, Editable, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Form, Group, HeartSvg, HomeSvg, Icon, Image, Input, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, MessageBox, Meter, Paragraph, Quantity, QuantityIntl, Radio, RadioList, Route, RouteLink, Routes, RowNumberCol, RowNumberTableCell, SINGLE_SPACE_CONSTRAINT, SVGMaskOverlay, SearchSvg, Select, SelectionContext, Separator, SettingsSvg, StarSvg, SummaryMarker, Svg, Tab, TabList, Table, TableCell, Tbody, Text, Thead, Title, Tr, UITransition, UserSvg, ViewportLayout, actionIntegratedVia, actionRunEffect, addCustomMessage, arraySignalMembership, compareTwoJsValues, createAction, createAvailableConstraint, createIntl, createRequestCanceller, createSelectionKeyboardShortcuts, enableDebugActions, enableDebugOnDocumentLoading, forwardActionRequested, installCustomConstraintValidation, isCellSelected, isColumnSelected, isRowSelected, localStorageSignal, navBack, navForward, navTo, openCallout, rawUrlPart, reload, removeCustomMessage, requestAction, rerunActions, resource, route, routeAction, setBaseUrl, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, updateActions, useActionData, useActionStatus, useArraySignalMembership, useCalloutClose, useCancelPrevious, useCellsAndColumns, useConstraintValidityState, useDarkBackgroundAttribute, useDependenciesDiff, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useMatchingRouteInfo, useNavState$1 as useNavState, useRouteStatus, useRunOnMount, useSelectableElement, useSelectionController, useSignalSync, useStateArray, useTitleLevel, useUrlSearchParam, valueInLocalStorage };
 //# sourceMappingURL=jsenv_navi.js.map

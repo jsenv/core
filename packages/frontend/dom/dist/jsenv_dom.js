@@ -442,7 +442,6 @@ const parseCSSColor = (color, element) => {
 
   // Pass through CSS color functions we don't handle
   if (
-    color.startsWith("color(") ||
     color.startsWith("lch(") ||
     color.startsWith("oklch(") ||
     color.startsWith("lab(") ||
@@ -450,6 +449,21 @@ const parseCSSColor = (color, element) => {
     color.startsWith("hwb(") ||
     color.includes("color-contrast(")
   ) {
+    return color;
+  }
+
+  // color(srgb r g b) and color(srgb r g b / a)
+  if (color.startsWith("color(")) {
+    const srgbMatch = color.match(
+      /^color\(\s*srgb\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)(?:\s*\/\s*([\d.]+))?\s*\)$/,
+    );
+    if (srgbMatch) {
+      const r = Math.round(parseFloat(srgbMatch[1]) * 255);
+      const g = Math.round(parseFloat(srgbMatch[2]) * 255);
+      const b = Math.round(parseFloat(srgbMatch[3]) * 255);
+      const a = srgbMatch[4] !== undefined ? parseFloat(srgbMatch[4]) : 1;
+      return [r, g, b, a];
+    }
     return color;
   }
 
@@ -600,8 +614,9 @@ const convertColorToRgba = (color) => {
   }
 
   // Named colors (basic set)
-  if (namedColors[color]) {
-    return [...namedColors[color], 1];
+  const namedColorRgb = namedColors[color];
+  if (namedColorRgb) {
+    return [...namedColorRgb, 1];
   }
   return null;
 };
@@ -3324,45 +3339,59 @@ const createSetMany = (setter) => {
 
 const setAttributes = createSetMany(setAttribute);
 
+const isSameColor = (color1, color2) => {
+  if (color1 === color2) {
+    return true;
+  }
+  const color1String = String(parseCSSColor(color1));
+  const color2String = String(parseCSSColor(color2));
+  return color1String === color2String;
+};
+
 /**
- * Chooses between light and dark colors based on which provides better contrast against a background
- * @param {string} backgroundColor - CSS color value (hex, rgb, hsl, CSS variable, etc.) to test against
- * @param {string} [lightColor="white"] - Light color option (typically for dark backgrounds)
- * @param {string} [darkColor="black"] - Dark color option (typically for light backgrounds)
- * @param {Element} [element] - DOM element to resolve CSS variables against
- * @returns {string} The color that provides better contrast (lightColor or darkColor)
- * @example
- * // Choose text color for a dark blue background
- * pickLightOrDark("#1a202c") // returns "white"
+ * Returns `"white"` or `"black"`, whichever provides better contrast against
+ * the given background color — mirroring the CSS `contrast-color()` function.
  *
- * // Choose text color for a light background with CSS variable
- * pickLightOrDark("var(--bg-color)", "white", "black", element) // returns "black" or "white"
+ * `"white"` is preferred when both colors yield the same contrast ratio.
+ *
+ * @param {string} backgroundColor - CSS color value (hex, rgb, hsl, CSS variable, …)
+ * @param {Element} [element] - DOM element used to resolve CSS variables / computed styles
+ * @returns {"white"|"black"}
+ * @example
+ * contrastColor("#1a202c")                 // "white"  (dark background)
+ * contrastColor("#f5f5f5")                 // "black"  (light background)
+ * contrastColor("var(--bg)", el)             // "white" or "black"
  */
 
 
-const pickLightOrDark = (
-  backgroundColor,
-  lightColor = "white",
-  darkColor = "black",
-  element,
-) => {
+const contrastColor = (backgroundColor, element) => {
   const resolvedBgColor = parseCSSColor(backgroundColor, element);
-  const resolvedLightColor = parseCSSColor(lightColor, element);
-  const resolvedDarkColor = parseCSSColor(darkColor, element);
-
-  if (!resolvedBgColor || !resolvedLightColor || !resolvedDarkColor) {
-    // Fallback to light color if parsing fails
-    return lightColor;
+  if (!resolvedBgColor) {
+    return "white";
   }
 
-  const contrastWithLight = getContrastRatio(
-    resolvedBgColor,
-    resolvedLightColor,
-  );
-  const contrastWithDark = getContrastRatio(resolvedBgColor, resolvedDarkColor);
+  // Composite against white when the background has transparency so the
+  // luminance reflects what the user actually sees.
+  const [r, g, b] =
+    resolvedBgColor[3] === 1
+      ? resolvedBgColor
+      : compositeColor(resolvedBgColor, WHITE_RGBA);
 
-  return contrastWithLight > contrastWithDark ? lightColor : darkColor;
+  const bgLuminance = getLuminance(r, g, b);
+
+  // One luminance comparison replaces two full contrast-ratio computations.
+  // White wins (or ties) when bgLuminance <= the crossover point where both
+  // colors yield identical ratios:
+  //   contrastWithWhite = contrastWithBlack
+  //   1.05 / (L + 0.05) = (L + 0.05) / 0.05
+  //   L = √(1.05 × 0.05) − 0.05  ≈ 0.179
+  return bgLuminance <= EQUAL_CONTRAST_LUMINANCE ? "white" : "black";
 };
+
+// Luminance threshold at which white and black yield the same contrast ratio
+// against a background. Below → white wins or ties; above → black wins.
+const EQUAL_CONTRAST_LUMINANCE = Math.sqrt(1.05 * 0.05) - 0.05;
+const WHITE_RGBA = [255, 255, 255, 1];
 
 /**
  * Resolves the luminance value of a CSS color
@@ -12702,4 +12731,4 @@ const useResizeStatus = (elementRef, { as = "number" } = {}) => {
   };
 };
 
-export { EASING, activeElementSignal, addActiveElementEffect, addAttributeEffect, allowWheelThrough, appendStyles, canInterceptKeys, captureScrollState, createBackgroundColorTransition, createBackgroundTransition, createBorderRadiusTransition, createBorderTransition, createDragGestureController, createDragToMoveGestureController, createGroupTransitionController, createHeightTransition, createIterableWeakSet, createOpacityTransition, createPubSub, createStyleController, createTimelineTransition, createTransition, createTranslateXTransition, createValueEffect, createWidthTransition, cubicBezier, dragAfterThreshold, elementIsFocusable, elementIsVisibleForFocus, elementIsVisuallyVisible, findAfter, findAncestor, findBefore, findDescendant, findFocusable, getAvailableHeight, getAvailableWidth, getBackground, getBackgroundColor, getBorder, getBorderRadius, getBorderSizes, getContrastRatio, getDefaultStyles, getDragCoordinates, getDropTargetInfo, getElementSignature, getFirstVisuallyVisibleAncestor, getFocusVisibilityInfo, getHeight, getHeightWithoutTransition, getInnerHeight, getInnerWidth, getLuminance, getMarginSizes, getMaxHeight, getMaxWidth, getMinHeight, getMinWidth, getOpacity, getOpacityWithoutTransition, getPaddingSizes, getPositionedParent, getPreferedColorScheme, getScrollBox, getScrollContainer, getScrollContainerSet, getScrollRelativeRect, getSelfAndAncestorScrolls, getStyle, getTranslateX, getTranslateXWithoutTransition, getTranslateY, getVisuallyVisibleInfo, getWidth, getWidthWithoutTransition, hasCSSSizeUnit, initFlexDetailsSet, initFocusGroup, initPositionSticky, isScrollable, measureScrollbar, mergeOneStyle, mergeTwoStyles, normalizeStyles, parseStyle, pickLightOrDark, pickPositionRelativeTo, prefersDarkColors, prefersLightColors, preventFocusNav, preventFocusNavViaKeyboard, preventIntermediateScrollbar, resolveCSSColor, resolveCSSSize, resolveColorLuminance, setAttribute, setAttributes, setStyles, startDragToResizeGesture, stickyAsRelativeCoords, stringifyStyle, trapFocusInside, trapScrollInside, useActiveElement, useAvailableHeight, useAvailableWidth, useMaxHeight, useMaxWidth, useResizeStatus, visibleRectEffect };
+export { EASING, activeElementSignal, addActiveElementEffect, addAttributeEffect, allowWheelThrough, appendStyles, canInterceptKeys, captureScrollState, contrastColor, createBackgroundColorTransition, createBackgroundTransition, createBorderRadiusTransition, createBorderTransition, createDragGestureController, createDragToMoveGestureController, createGroupTransitionController, createHeightTransition, createIterableWeakSet, createOpacityTransition, createPubSub, createStyleController, createTimelineTransition, createTransition, createTranslateXTransition, createValueEffect, createWidthTransition, cubicBezier, dragAfterThreshold, elementIsFocusable, elementIsVisibleForFocus, elementIsVisuallyVisible, findAfter, findAncestor, findBefore, findDescendant, findFocusable, getAvailableHeight, getAvailableWidth, getBackground, getBackgroundColor, getBorder, getBorderRadius, getBorderSizes, getContrastRatio, getDefaultStyles, getDragCoordinates, getDropTargetInfo, getElementSignature, getFirstVisuallyVisibleAncestor, getFocusVisibilityInfo, getHeight, getHeightWithoutTransition, getInnerHeight, getInnerWidth, getLuminance, getMarginSizes, getMaxHeight, getMaxWidth, getMinHeight, getMinWidth, getOpacity, getOpacityWithoutTransition, getPaddingSizes, getPositionedParent, getPreferedColorScheme, getScrollBox, getScrollContainer, getScrollContainerSet, getScrollRelativeRect, getSelfAndAncestorScrolls, getStyle, getTranslateX, getTranslateXWithoutTransition, getTranslateY, getVisuallyVisibleInfo, getWidth, getWidthWithoutTransition, hasCSSSizeUnit, initFlexDetailsSet, initFocusGroup, initPositionSticky, isSameColor, isScrollable, measureScrollbar, mergeOneStyle, mergeTwoStyles, normalizeStyles, parseStyle, pickPositionRelativeTo, prefersDarkColors, prefersLightColors, preventFocusNav, preventFocusNavViaKeyboard, preventIntermediateScrollbar, resolveCSSColor, resolveCSSSize, resolveColorLuminance, setAttribute, setAttributes, setStyles, startDragToResizeGesture, stickyAsRelativeCoords, stringifyStyle, trapFocusInside, trapScrollInside, useActiveElement, useAvailableHeight, useAvailableWidth, useMaxHeight, useMaxWidth, useResizeStatus, visibleRectEffect };
