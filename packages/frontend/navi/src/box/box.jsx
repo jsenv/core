@@ -89,6 +89,7 @@ import.meta.css = /* css */ `
 const PSEUDO_CLASSES_DEFAULT = [];
 const PSEUDO_ELEMENTS_DEFAULT = [];
 const STYLE_CSS_VARS_DEFAULT = {};
+const PROPS_CSS_VARS_DEFAULT = {};
 
 export const Box = (props) => {
   const {
@@ -100,6 +101,7 @@ export const Box = (props) => {
     // style management
     style,
     styleCSSVars = STYLE_CSS_VARS_DEFAULT,
+    propsCSSVars = PROPS_CSS_VARS_DEFAULT,
     basePseudoState,
     pseudoState, // for demo purposes it's possible to control pseudo state from props
     pseudoClasses = PSEUDO_CLASSES_DEFAULT,
@@ -241,8 +243,6 @@ export const Box = (props) => {
     const shouldForwardAllToChild = visualSelector && pseudoStateSelector;
 
     const addStyle = (value, name, styleContext, stylesTarget, context) => {
-      styleDeps.push(name, value); // impact box style -> add to deps
-      const cssVar = styleContext.styleCSSVars[name];
       const mergedValue = prepareStyleValue(
         stylesTarget[name],
         value,
@@ -250,12 +250,18 @@ export const Box = (props) => {
         styleContext,
         context,
       );
+      const cssVar = styleContext.styleCSSVars[name];
       if (cssVar) {
-        stylesTarget[cssVar] = mergedValue;
+        addCSSVar(mergedValue, cssVar, stylesTarget);
         return true;
       }
+      styleDeps.push(name, value); // impact box style -> add to deps
       stylesTarget[name] = mergedValue;
       return false;
+    };
+    const addCSSVar = (value, name, stylesTarget) => {
+      styleDeps.push(name, value); // impact box style -> add to deps
+      stylesTarget[name] = value;
     };
     const addStyleMaybeForwarding = (
       value,
@@ -345,6 +351,11 @@ export const Box = (props) => {
       }
       if (isCSSVar(name)) {
         addStyle(value, name, styleContext, boxStylesTarget, context);
+        return;
+      }
+      const propCssVar = propsCSSVars[name];
+      if (propCssVar) {
+        addCSSVar(value, propCssVar, boxStylesTarget);
         return;
       }
       const isPseudoStyle = styleOrigin === "pseudo_style";

@@ -39,27 +39,29 @@ export const useDarkBackgroundAttribute = (
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) {
-      return;
+      return null;
     }
     let elementToCheck = el;
     if (backgroundElementSelector) {
       elementToCheck = el.querySelector(backgroundElementSelector);
-      console.log({ el, backgroundElementSelector, elementToCheck });
       if (!elementToCheck) {
-        return;
+        return null;
       }
     }
     const backgroundColor = getComputedStyle(elementToCheck).backgroundColor;
     if (!backgroundColor) {
       el.removeAttribute(attributeName);
-      return;
+      return null;
     }
 
     const colorPicked = contrastColor(backgroundColor, el);
     if (colorPicked === "white") {
       el.setAttribute(attributeName, "");
-    } else {
-      el.removeAttribute(attributeName);
+      return () => {
+        el.removeAttribute(attributeName);
+      };
     }
-  }, deps);
+    el.removeAttribute(attributeName);
+    return null;
+  }, [ref, backgroundElementSelector, ...deps]);
 };

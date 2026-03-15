@@ -64,6 +64,10 @@ import.meta.css = /* css */ `
   }
 `;
 
+const QuantityPropsCSSVars = {
+  unitColor: "--unit-color",
+  unitSizeRatio: "--unit-size-ratio",
+};
 const QuantityPseudoClasses = [
   ":hover",
   ":active",
@@ -75,7 +79,6 @@ export const Quantity = ({
   children,
   unit,
   unitPosition = "right",
-  unitSizeRatio,
   label,
   size,
   lang,
@@ -98,6 +101,7 @@ export const Quantity = ({
     <Text
       baseClassName="navi_quantity"
       data-unit-bottom={unitBottom ? "" : undefined}
+      propsCSSVars={QuantityPropsCSSVars}
       basePseudoState={{
         ":read-only": readOnly,
         ":disabled": disabled,
@@ -122,18 +126,7 @@ export const Quantity = ({
             valueFormatted
           )}
         </span>
-        {unit && (
-          <span
-            className="navi_quantity_unit"
-            style={{
-              ...(unitSizeRatio === undefined
-                ? {}
-                : { "--unit-size-ratio": unitSizeRatio }),
-            }}
-          >
-            {unit}
-          </span>
-        )}
+        {unit && <span className="navi_quantity_unit">{unit}</span>}
       </Text>
     </Text>
   );
