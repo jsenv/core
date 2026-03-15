@@ -65,19 +65,43 @@ import.meta.css = /* css */ `
   }
 `;
 
-const QuantityIntl = createIntl();
-QuantityIntl.add("fr", {
-  minute: "minute",
-  minutes: "minutes",
-  people: "personne",
-  peoples: "personnes",
-});
-const wellKnownUnitMap = new Map(
-  Object.entries({
-    minute: { intl: ["minute", "minutes"] },
-    people: { intl: ["people", "peoples"] },
-  }),
-);
+export const QuantityIntl = createIntl();
+const wellKnownUnitMap = new Map();
+/**
+ * Registers a unit with its translations per language, making it a "well-known"
+ * unit that Quantity will automatically translate and pluralize.
+ *
+ * @param {string} unitName - The unit identifier used in the `unit` prop, e.g. `"minute"`.
+ * @param {Record<string, string | [string, string]>} langTranslations
+ *   A map of language codes to translations. Each value is either:
+ *   - A tuple `[singular, plural]` for languages with distinct plural forms.
+ *   - A plain string for languages that use the same form for singular and plural (e.g. Japanese).
+ *
+ * @example
+ * Quantity.Intl.addUnit("minute", {
+ *   en: ["minute", "minutes"],
+ *   fr: ["minute", "minutes"],
+ *   ja: "分",
+ * });
+ */
+QuantityIntl.addUnit = (unitName, langTranslations) => {
+  const singularKey = unitName;
+  for (const [lang, translation] of Object.entries(langTranslations)) {
+    if (Array.isArray(translation)) {
+      const pluralKey = `${unitName}__plural`;
+      wellKnownUnitMap.set(unitName, { singularKey, pluralKey });
+      QuantityIntl.add(lang, {
+        [singularKey]: translation[0],
+        [pluralKey]: translation[1],
+      });
+    } else {
+      wellKnownUnitMap.set(unitName, { singularKey });
+      QuantityIntl.add(lang, {
+        [singularKey]: translation,
+      });
+    }
+  }
+};
 
 const QuantityPropsCSSVars = {
   unitColor: "--unit-color",
@@ -141,28 +165,26 @@ export const Quantity = ({
             valueFormatted
           )}
         </span>
-        {unit && <Unit value={value} unit={unit} />}
+        {unit && <Unit value={value} unit={unit} lang={lang} />}
       </Text>
     </Text>
   );
 };
+Quantity.Intl = QuantityIntl;
 
-const Unit = ({ value, unit }) => {
+const Unit = ({ value, unit, lang }) => {
   let unitText = unit;
-  const wellKnownUnit = wellKnownUnitMap.get(unit);
-
-  if (wellKnownUnit) {
-    const intl = wellKnownUnit.intl;
-    if (intl) {
-      if (Array.isArray(intl)) {
-        const [singular, plural] = intl;
-        if (value > 1) {
-          unitText = QuantityIntl.format(plural, { x: value });
-        } else {
-          unitText = QuantityIntl.format(singular);
-        }
+  if (Array.isArray(unit)) {
+    const [singular, plural] = unit;
+    unitText = value > 1 ? plural : singular;
+  } else {
+    const wellKnownUnit = wellKnownUnitMap.get(unit);
+    if (wellKnownUnit) {
+      const { singularKey, pluralKey } = wellKnownUnit;
+      if (pluralKey && value > 1) {
+        unitText = QuantityIntl.format(pluralKey, { x: value }, { lang });
       } else {
-        unitText = QuantityIntl.format(intl);
+        unitText = QuantityIntl.format(singularKey, undefined, { lang });
       }
     }
   }

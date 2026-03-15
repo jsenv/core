@@ -20,6 +20,25 @@
         Title,
       } from "@jsenv/navi";
 
+      Quantity.Intl.addUnit("item", {
+        en: ["item", "items"],
+        fr: ["article", "articles"],
+        de: "artikel",
+        ja: "点",
+      });
+      Quantity.Intl.addUnit("minute", {
+        en: ["minute", "minutes"],
+        fr: ["minute", "minutes"],
+        de: ["Minute", "Minuten"],
+        ja: "分",
+      });
+      Quantity.Intl.addUnit("people", {
+        en: ["person", "people"],
+        fr: ["personne", "personnes"],
+        de: ["Person", "Personen"],
+        ja: "人",
+      });
+
       const Demo = () => {
         return (
           <div
@@ -209,35 +228,36 @@
           </Title>
           <Paragraph>
             La prop <code>lang</code> est passée à{" "}
-            <code>Intl.NumberFormat</code>. Sans <code>lang</code>, c'est la
-            locale du navigateur qui est utilisée.
+            <code>Intl.NumberFormat</code> pour formater les nombres, et à
+            l'intl interne pour traduire les unités connues (comme{" "}
+            <code>item</code>).
           </Paragraph>
 
           <Box row spacing="xl" alignY="end">
             <Box row spacing="s">
-              <Caption>Locale navigateur (fr)</Caption>
-              <Quantity label="Ventes" unit="articles">
+              <Caption>lang="fr"</Caption>
+              <Quantity label="Ventes" unit="item" lang="fr">
                 {1234567}
               </Quantity>
             </Box>
 
             <Box row spacing="s">
               <Caption>lang="en"</Caption>
-              <Quantity label="Sales" unit="items" lang="en">
+              <Quantity label="Sales" unit="item" lang="en">
                 {1234567}
               </Quantity>
             </Box>
 
             <Box row spacing="s">
               <Caption>lang="de"</Caption>
-              <Quantity label="Verkäufe" unit="Artikel" lang="de">
+              <Quantity label="Verkäufe" unit="item" lang="de">
                 {1234567}
               </Quantity>
             </Box>
 
             <Box row spacing="s">
               <Caption>lang="ja"</Caption>
-              <Quantity label="売上" unit="点" lang="ja">
+              <Quantity label="売上" unit="item" lang="ja">
                 {1234567}
               </Quantity>
             </Box>
@@ -252,10 +272,11 @@
             Unités traduites (intl)
           </Title>
           <Paragraph>
-            Certaines unités reconnues (comme <code>minute</code> et{" "}
-            <code>people</code>) sont automatiquement traduites selon la langue
-            du navigateur, et choisissent la forme singulière ou plurielle selon
-            la valeur. Les unités inconnues s'affichent telles quelles.
+            <code>Quantity.Intl.addUnit()</code> enregistre une unité connue
+            avec ses traductions par langue. La forme singulière ou plurielle
+            est choisie automatiquement selon la valeur. Les langues qui n'ont
+            pas de distinction de nombre acceptent une chaîne simple. Les unités
+            non enregistrées s'affichent telles quelles.
           </Paragraph>
 
           <Title as="h3">minute</Title>
@@ -292,6 +313,29 @@
               <Caption>42 personnes (pluriel)</Caption>
               <Quantity label="Participants" unit="people">
                 {42}
+              </Quantity>
+            </Box>
+          </Box>
+
+          <Title as="h3">
+            unit={`["singular", "plural"]`} — tableau direct
+          </Title>
+          <Paragraph>
+            Passer un tableau <code>[singulier, pluriel]</code> directement
+            bypasse l'intl : la forme est choisie selon{" "}
+            <code>value &gt; 1</code>, sans traduction.
+          </Paragraph>
+          <Box row spacing="xl" alignY="end" marginBottom="m">
+            <Box row spacing="s">
+              <Caption>1 cheval (singulier)</Caption>
+              <Quantity label="Montures" unit={["cheval", "chevaux"]}>
+                {1}
+              </Quantity>
+            </Box>
+            <Box row spacing="s">
+              <Caption>3 chevaux (pluriel)</Caption>
+              <Quantity label="Montures" unit={["cheval", "chevaux"]}>
+                {3}
               </Quantity>
             </Box>
           </Box>
