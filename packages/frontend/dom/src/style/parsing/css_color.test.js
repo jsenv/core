@@ -1,0 +1,95 @@
+import { snapshotTests } from "@jsenv/snapshot";
+
+import { parseCSSColor } from "./css_color.js";
+
+await snapshotTests(import.meta.url, ({ test }) => {
+  test("hex colors", () => {
+    return {
+      "#rgb shorthand": parseCSSColor("#f0c"),
+      "#rrggbb": parseCSSColor("#ff0000"),
+      "#rrggbbaa with transparency": parseCSSColor("#ff000080"),
+      "uppercase hex": parseCSSColor("#FF6600"),
+    };
+  });
+
+  test("rgb / rgba", () => {
+    return {
+      "rgb()": parseCSSColor("rgb(100, 149, 237)"),
+      "rgba() fully opaque": parseCSSColor("rgba(0, 128, 0, 1)"),
+      "rgba() semi-transparent": parseCSSColor("rgba(255, 0, 0, 0.5)"),
+    };
+  });
+
+  test("hsl / hsla", () => {
+    return {
+      "hsl()": parseCSSColor("hsl(120, 100%, 50%)"),
+      "hsla() semi-transparent": parseCSSColor("hsla(240, 100%, 50%, 0.3)"),
+    };
+  });
+
+  test("named colors", () => {
+    return {
+      white: parseCSSColor("white"),
+      black: parseCSSColor("black"),
+      red: parseCSSColor("red"),
+      transparent: parseCSSColor("transparent"),
+    };
+  });
+
+  test("special values", () => {
+    return {
+      "empty string": parseCSSColor(""),
+      "null": parseCSSColor(null),
+      "unknown color": parseCSSColor("notacolor"),
+      "raw CSS variable without element": parseCSSColor("var(--my-color)"),
+      "bare custom property warns and returns null":
+        parseCSSColor("--my-color"),
+    };
+  });
+
+  test("CSS variable resolved via element mock", () => {
+    const mockElement = {};
+    globalThis.getComputedStyle = () => ({
+      getPropertyValue: (prop) => {
+        if (prop === "--brand-color") return "#1976d2";
+        return "";
+      },
+    });
+    try {
+      return {
+        "var(--brand-color)": parseCSSColor("var(--brand-color)", mockElement),
+        "var(--missing) with fallback": parseCSSColor(
+          "var(--missing, #ff6f00)",
+          mockElement,
+        ),
+        "var(--missing) without fallback": parseCSSColor(
+          "var(--missing)",
+          mockElement,
+        ),
+      };
+    } finally {
+      delete globalThis.getComputedStyle;
+    }
+  });
+
+  test("light-dark() resolved via element mock", () => {
+    const mockElement = {};
+    // Simulate light color scheme
+    globalThis.getComputedStyle = () => ({
+      getPropertyValue: (prop) => {
+        if (prop === "color-scheme") return "light";
+        return "";
+      },
+    });
+    try {
+      return {
+        "light-dark() in light scheme": parseCSSColor(
+          "light-dark(#ffffff, #000000)",
+          mockElement,
+        ),
+      };
+    } finally {
+      delete globalThis.getComputedStyle;
+    }
+  });
+});
