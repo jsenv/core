@@ -140,7 +140,7 @@ export { createIntl } from "./src/text/intl.js";
 export { MessageBox } from "./src/text/message_box.jsx";
 export { Meter } from "./src/text/meter.jsx";
 export { Paragraph } from "./src/text/paragraph.jsx";
-export { Quantity } from "./src/text/quantity.jsx";
+export { Quantity, QuantityIntl } from "./src/text/quantity.jsx";
 export { Text } from "./src/text/text.jsx";
 export { Title, useTitleLevel } from "./src/text/title.jsx";
 export { useDarkBackgroundAttribute } from "./src/text/use_dark_background_attribute.js";

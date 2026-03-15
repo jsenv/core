@@ -71,4 +71,14 @@ await snapshotTests(import.meta.url, ({ test }) => {
     const after = intl.format("one minute");
     return { before, after };
   });
+
+  test("add() is accumulative — multiple calls merge translations", () => {
+    const intl = createIntl({ systemLang: "fr" });
+    intl.add("fr", { "one minute": "une minute" });
+    intl.add("fr", { "one person": "une personne" });
+    return {
+      "first batch key": intl.format("one minute"),
+      "second batch key": intl.format("one person"),
+    };
+  });
 });

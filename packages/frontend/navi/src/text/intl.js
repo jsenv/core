@@ -10,6 +10,11 @@ export const createIntl = ({ systemLang = browserLang } = {}) => {
   let defaultLang = systemLang;
 
   const add = (lang, translations) => {
+    // Accumulate: merge with any existing translations for this lang
+    const existing = languageMap.get(lang);
+    if (existing) {
+      translations = { ...existing, ...translations };
+    }
     // Derived language inherits all keys not explicitly overridden
     // e.g. "fr-provencal" inherits from "fr"
     const dashIndex = lang.indexOf("-");
