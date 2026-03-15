@@ -53,7 +53,7 @@ export const createIntl = ({ systemLang = browserLang } = {}) => {
     return interpolate(template, values);
   };
 
-  return { add, format };
+  return { languageMap, add, format };
 };
 
 // Walk "fr-CA-variant" → "fr-CA" → "fr" until a registered lang is found

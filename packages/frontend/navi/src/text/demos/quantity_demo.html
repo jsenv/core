@@ -20,6 +20,8 @@
         Title,
       } from "@jsenv/navi";
 
+      window.QuantityIntl = Quantity.Intl; // expose intl for debugging
+
       Quantity.Intl.addUnit("item", {
         en: ["item", "items"],
         fr: ["article", "articles"],
@@ -289,7 +291,7 @@
             </Box>
             <Box row spacing="s">
               <Caption>5 minutes (pluriel)</Caption>
-              <Quantity label="Durée" unit="minute">
+              <Quantity debug label="Durée" unit="minute">
                 {5}
               </Quantity>
             </Box>
