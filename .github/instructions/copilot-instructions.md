@@ -41,7 +41,7 @@ Testing in @jsenv/core focuses on **behavior verification** and **regression pre
   - `DEBUG=true` output appears in snapshot markdown files, not terminal
   - Use targeted logging to trace complex behaviors during development
   - Clean up debug logs once issues are resolved
-  - Run tests from project root to ensure correct Node.js version (25.1.0)
+  - Run tests from project root to ensure correct Node.js version (25.8.1)
 
 - **Test Organization**:
   - Co-locate tests with source code or place in dedicated `tests/` directories
