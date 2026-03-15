@@ -575,7 +575,7 @@ const InputTextualWithAction = (props) => {
 
   return (
     <InputTextualBasic
-      data-action={boundAction.name}
+      data-action={boundAction.name || "anonymous"}
       data-action-debounce={actionDebounce}
       data-action-after-change={actionAfterChange ? "" : undefined}
       {...rest}
