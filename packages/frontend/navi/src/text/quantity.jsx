@@ -86,20 +86,16 @@ const wellKnownUnitMap = new Map();
  */
 QuantityIntl.addUnit = (unitName, langTranslations) => {
   const singularKey = unitName;
+  const pluralKey = `${unitName}__plural`;
+  wellKnownUnitMap.set(unitName, { singularKey, pluralKey });
   for (const [lang, translation] of Object.entries(langTranslations)) {
-    if (Array.isArray(translation)) {
-      const pluralKey = `${unitName}__plural`;
-      wellKnownUnitMap.set(unitName, { singularKey, pluralKey });
-      QuantityIntl.add(lang, {
-        [singularKey]: translation[0],
-        [pluralKey]: translation[1],
-      });
-    } else {
-      wellKnownUnitMap.set(unitName, { singularKey });
-      QuantityIntl.add(lang, {
-        [singularKey]: translation,
-      });
-    }
+    const [singular, plural] = Array.isArray(translation)
+      ? translation
+      : [translation, translation];
+    QuantityIntl.add(lang, {
+      [singularKey]: singular,
+      [pluralKey]: plural,
+    });
   }
 };
 
@@ -181,7 +177,7 @@ const Unit = ({ value, unit, lang }) => {
     const wellKnownUnit = wellKnownUnitMap.get(unit);
     if (wellKnownUnit) {
       const { singularKey, pluralKey } = wellKnownUnit;
-      if (pluralKey && value > 1) {
+      if (value > 1) {
         unitText = QuantityIntl.format(pluralKey, { x: value }, { lang });
       } else {
         unitText = QuantityIntl.format(singularKey, undefined, { lang });
