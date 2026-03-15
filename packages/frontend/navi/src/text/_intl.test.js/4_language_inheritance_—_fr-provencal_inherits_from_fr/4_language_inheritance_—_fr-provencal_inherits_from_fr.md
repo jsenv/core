@@ -20,9 +20,9 @@ return {
 
 ```js
 {
-  "overridden key": "one minute",
-  "overridden with interpolation": "2 minutes",
-  "inherited key": "one person"
+  "overridden key": "un minuto",
+  "overridden with interpolation": "2 minutos",
+  "inherited key": "une personne"
 }
 ```
 

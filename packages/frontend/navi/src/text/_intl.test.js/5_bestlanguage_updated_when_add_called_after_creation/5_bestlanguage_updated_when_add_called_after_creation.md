@@ -11,7 +11,7 @@ return { before, after };
 ```js
 {
   "before": "one minute",
-  "after": "one minute"
+  "after": "une minute"
 }
 ```
 

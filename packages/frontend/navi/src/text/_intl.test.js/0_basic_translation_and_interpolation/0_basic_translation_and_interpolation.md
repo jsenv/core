@@ -9,15 +9,15 @@ intl.add("fr", {
   "{x} persons": "{x} personnes",
 });
 return {
-  singular: intl.format("one minute"),
-  plural: intl.format("{x} minutes", { x: 3 }),
+  "singular": intl.format("one minute"),
+  "plural": intl.format("{x} minutes", { x: 3 }),
   "missing placeholder kept": intl.format("{x} minutes"),
 };
 ```
 
 ```js
 {
-  "singular": "one minute",
+  "singular": "une minute",
   "plural": "3 minutes",
   "missing placeholder kept": "{x} minutes"
 }

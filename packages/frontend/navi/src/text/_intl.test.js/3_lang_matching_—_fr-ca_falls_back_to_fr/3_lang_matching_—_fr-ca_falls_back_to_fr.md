@@ -14,7 +14,7 @@ return {
 
 ```js
 {
-  "singular": "one minute",
+  "singular": "une minute",
   "plural": "5 minutes"
 }
 ```

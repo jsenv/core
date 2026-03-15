@@ -7,7 +7,7 @@ const browserLang =
 export const createIntl = ({ systemLang = browserLang } = {}) => {
   const languageMap = new Map();
 
-  let bestLang = systemLang;
+  let defaultLang = systemLang;
 
   const add = (lang, translations) => {
     // Derived language inherits all keys not explicitly overridden
@@ -22,16 +22,30 @@ export const createIntl = ({ systemLang = browserLang } = {}) => {
     }
     languageMap.set(lang, translations);
 
-    bestLang = matchBestLang(lang, languageMap);
+    defaultLang = matchBestLang(systemLang, languageMap);
   };
 
-  const format = (key, values, { lang = bestLang } = {}) => {
-    const translationMap = languageMap.get(lang);
-    const translationTemplate = translationMap.get(key);
-    if (!translationTemplate) {
-      return interpolate(key, values);
+  const _getTranslationTemplate = (key, lang) => {
+    if (!lang) {
+      // no lang specified
+      return key;
     }
-    return interpolate(translationTemplate, values);
+    const translations = languageMap.get(lang);
+    if (!translations) {
+      // code don't know this language
+      return key;
+    }
+    const template = translations[key];
+    if (!template) {
+      // code know this language but have no translation for this key
+      return key;
+    }
+    return template;
+  };
+
+  const format = (key, values, { lang = defaultLang } = {}) => {
+    const template = _getTranslationTemplate(key, lang);
+    return interpolate(template, values);
   };
 
   return { add, format };
