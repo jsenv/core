@@ -64,6 +64,14 @@ import.meta.css = /* css */ `
   }
 `;
 
+const QuantityIntl = createIntl();
+QuantityIntl.add("fr", {
+  "one minute": "une minute",
+  "{x} minutes": "{x} minutes",
+  "one people": "une personne",
+  "{x} peoples": "{x} personnes",
+});
+
 const QuantityPropsCSSVars = {
   unitColor: "--unit-color",
   unitSizeRatio: "--unit-size-ratio",
