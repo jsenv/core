@@ -130,6 +130,7 @@ export { ErrorBoundaryContext } from "./src/error_boundary_context.js";
 export { ActiveKeyboardShortcuts } from "./src/keyboard/active_keyboard_shortcuts.jsx";
 
 // Text
+export { contrastColor } from "@jsenv/dom";
 export { ButtonCopyToClipboard } from "./src/field/button_copy_to_clipboard.jsx";
 export { Address } from "./src/text/address.jsx";
 export { BadgeCount } from "./src/text/badge.jsx";
@@ -141,6 +142,7 @@ export { Paragraph } from "./src/text/paragraph.jsx";
 export { Quantity } from "./src/text/quantity.jsx";
 export { Text } from "./src/text/text.jsx";
 export { Title, useTitleLevel } from "./src/text/title.jsx";
+export { useDarkBackgroundAttribute } from "./src/text/use_dark_background_attribute.js";
 
 // Graphics
 export { Icon } from "./src/graphic/icon.jsx";

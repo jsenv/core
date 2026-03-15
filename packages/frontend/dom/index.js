@@ -36,9 +36,9 @@ export { setAttribute, setAttributes } from "./src/attr/attributes.js";
 
 // colors
 export {
+  contrastColor,
   getContrastRatio,
   getLuminance,
-  pickLightOrDark,
   resolveColorLuminance,
 } from "./src/style/color_constrast.js";
 export {
