@@ -28,6 +28,7 @@ import.meta.css = /* css */ `
 
       --x-color: var(--navi-color-white);
       --x-shadow-color: black;
+      --shadow-size: 0.5em;
       &[data-dark-background] {
         --x-color: black;
         --x-shadow-color: var(--navi-color-white);
@@ -80,8 +81,8 @@ import.meta.css = /* css */ `
         color: var(--x-color);
         font-size: calc(var(--height) * 0.55);
         text-shadow:
-          0 0 4px var(--x-shadow-color),
-          0 0 2px var(--x-shadow-color);
+          0 0 var(--shadow-size) var(--x-shadow-color),
+          0 0 calc(var(--shadow-size) * 0.5) var(--x-shadow-color);
         white-space: nowrap;
         pointer-events: none;
         user-select: none;
