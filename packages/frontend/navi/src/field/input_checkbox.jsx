@@ -522,6 +522,10 @@ const InputCheckboxBasic = (props) => {
 
   const boxRef = useRef();
   useDarkBackgroundAttribute(boxRef, [accentColor, checked], {
+    hardcoded: {
+      "#4476ff": "white",
+    },
+    debug: props.debug,
     backgroundElementSelector: ".navi_checkbox_field",
   });
 

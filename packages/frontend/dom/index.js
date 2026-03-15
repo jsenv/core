@@ -35,6 +35,7 @@ export { addAttributeEffect } from "./src/attr/add_attribute_effect.js";
 export { setAttribute, setAttributes } from "./src/attr/attributes.js";
 
 // colors
+export { isSameColor } from "./src/style/color_compare.js";
 export {
   contrastColor,
   getContrastRatio,

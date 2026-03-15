@@ -1,4 +1,4 @@
-import { contrastColor } from "@jsenv/dom";
+import { contrastColor, resolveCSSColor } from "@jsenv/dom";
 import { useLayoutEffect } from "preact/hooks";
 
 /**
@@ -34,8 +34,24 @@ import { useLayoutEffect } from "preact/hooks";
 export const useDarkBackgroundAttribute = (
   ref,
   deps = [],
-  { backgroundElementSelector, attributeName = "data-dark-background" } = {},
+  {
+    backgroundElementSelector,
+    attributeName = "data-dark-background",
+    hardcoded = {},
+  } = {},
 ) => {
+  const innerDeps = [];
+  innerDeps.push(ref, backgroundElementSelector);
+  innerDeps.push(...deps);
+
+  const hardcodedMap = new Map();
+  for (const key of Object.keys(hardcoded)) {
+    const value = hardcoded[key];
+    innerDeps.push(key, value);
+    const colorString = normalizeColorString(key);
+    hardcodedMap.set(colorString, value);
+  }
+
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) {
@@ -53,9 +69,12 @@ export const useDarkBackgroundAttribute = (
       el.removeAttribute(attributeName);
       return null;
     }
-
-    const colorPicked = contrastColor(backgroundColor, el);
-    if (colorPicked === "white") {
+    const backgroundColorString = normalizeColorString(backgroundColor, el);
+    console.log({ backgroundColor, backgroundColorString });
+    const hardcodedContrast = hardcodedMap.get(backgroundColorString);
+    const contrastingColor =
+      hardcodedContrast || contrastColor(backgroundColor, el);
+    if (contrastingColor === "white") {
       el.setAttribute(attributeName, "");
       return () => {
         el.removeAttribute(attributeName);
@@ -63,5 +82,13 @@ export const useDarkBackgroundAttribute = (
     }
     el.removeAttribute(attributeName);
     return null;
-  }, [ref, backgroundElementSelector, ...deps]);
+  }, innerDeps);
+};
+
+const normalizeColorString = (color, el) => {
+  const colorRgba = resolveCSSColor(color, el);
+  if (!colorRgba) {
+    return "";
+  }
+  return String(colorRgba);
 };

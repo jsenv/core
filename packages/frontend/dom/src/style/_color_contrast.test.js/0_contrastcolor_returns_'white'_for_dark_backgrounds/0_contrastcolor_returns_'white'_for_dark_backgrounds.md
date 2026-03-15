@@ -3,12 +3,16 @@
 ```js
 return {
   "#4476ff": contrastColor("#4476ff"),
+  "#1875FF": contrastColor("#1875FF"),
+  "#105CC8": contrastColor("#105CC8"),
 };
 ```
 
 ```js
 {
-  "#4476ff": "black"
+  "#4476ff": "black",
+  "#1875FF": "black",
+  "#105CC8": "white"
 }
 ```
 
