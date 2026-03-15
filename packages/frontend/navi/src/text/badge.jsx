@@ -4,7 +4,7 @@ import { Icon } from "../graphic/icon.jsx";
 import { LoadingDots } from "../graphic/loader/loading_dots.jsx";
 import { formatNumber } from "./format_number.js";
 import { Text } from "./text.jsx";
-import { useContrastingColor } from "./use_contrasting_color.js";
+import { useDarkBackgroundAttribute } from "./use_dark_background_attribute.js";
 
 import.meta.css = /* css */ `
   @layer navi {
@@ -12,13 +12,24 @@ import.meta.css = /* css */ `
   .navi_badge_count {
     --font-size: 0.7em;
     --x-background: var(--background);
-    --x-background-color: var(--background-color);
+    --x-background-color: var(--background-color, var(--x-background));
+    --x-color-contrasting: var(--navi-color-black);
+    --x-color: var(--color, var(--x-color-contrasting));
     --padding-x: 0.5em;
     --padding-y: 0.2em;
     position: relative;
     display: inline-block;
-    color: var(--color, var(--x-color-contrasting));
+    color: var(--x-color);
     font-size: var(--font-size);
+
+    &[data-dark-background] {
+      --x-color-contrasting: var(--navi-color-white);
+    }
+
+    &[data-loading] {
+      --x-background: transparent;
+      --x-background-color: transparent;
+    }
 
     .navi_count_badge_overflow {
       position: relative;
@@ -32,7 +43,7 @@ import.meta.css = /* css */ `
       padding-left: var(--padding-x);
       line-height: normal;
       background: var(--x-background);
-      background-color: var(--x-background-color, var(--x-background));
+      background-color: var(--x-background-color);
       border-radius: 1em;
     }
 
@@ -48,7 +59,7 @@ import.meta.css = /* css */ `
       align-items: center;
       justify-content: center;
       background: var(--x-background);
-      background-color: var(--x-background-color, var(--x-background));
+      background-color: var(--x-background-color);
       border-radius: 50%;
 
       &[data-single-char] {
@@ -71,11 +82,6 @@ import.meta.css = /* css */ `
       .navi_badge_count_text {
         font-size: var(--x-number-font-size);
       }
-    }
-
-    &[data-loading] {
-      --x-background: transparent;
-      --x-background-color: transparent;
     }
   }
 `;
@@ -109,7 +115,7 @@ export const BadgeCount = ({
 }) => {
   const defaultRef = useRef();
   const ref = props.ref || defaultRef;
-  useContrastingColor(ref, ".navi_badge_count_visual");
+  useDarkBackgroundAttribute(ref);
 
   let valueRequested = (() => {
     if (typeof children !== "string") return children;
