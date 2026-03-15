@@ -2,34 +2,51 @@
 
 ```js
 const mockElement = {};
-// Simulate light color scheme
+const originalGetComputedStyle = globalThis.getComputedStyle;
+const originalWindow = globalThis.window;
+
 globalThis.getComputedStyle = () => ({
-  getPropertyValue: (prop) => {
-    if (prop === "color-scheme") return "light";
-    return "";
-  },
+  colorScheme: "light",
+  getPropertyValue: () => "",
 });
+globalThis.window = {
+  matchMedia: () => ({ matches: false }),
+};
 try {
   return {
     "light-dark() in light scheme": parseCSSColor(
       "light-dark(#ffffff, #000000)",
       mockElement,
     ),
+    "light-dark() in dark scheme": (() => {
+      globalThis.getComputedStyle = () => ({
+        colorScheme: "dark",
+        getPropertyValue: () => "",
+      });
+      return parseCSSColor("light-dark(#ffffff, #000000)", mockElement);
+    })(),
   };
 } finally {
-  delete globalThis.getComputedStyle;
+  globalThis.getComputedStyle = originalGetComputedStyle;
+  globalThis.window = originalWindow;
 }
 ```
 
-```console
-ReferenceError: window is not defined
-  at getPreferedColorScheme (@jsenv/core/packages/frontend/dom/src/style/color_scheme.js:20:5)
-  at prefersDarkColors (@jsenv/core/packages/frontend/dom/src/style/color_scheme.js:7:23)
-  at parseCSSColor (base/css_color.js:60:25)
-  at base/css_color.test.js:86:41
-  at capture (@jsenv/core/packages/tooling/snapshot/src/side_effects/create_capture_side_effects.js:342:29)
-  at snapshotTests (@jsenv/core/packages/tooling/snapshot/src/side_effects/snapshot_tests.js:194:33)
-  at async base/css_color.test.js:5:1
+```js
+{
+  "light-dark() in light scheme": [
+    255,
+    255,
+    255,
+    1
+  ],
+  "light-dark() in dark scheme": [
+    0,
+    0,
+    0,
+    1
+  ]
+}
 ```
 
 ---

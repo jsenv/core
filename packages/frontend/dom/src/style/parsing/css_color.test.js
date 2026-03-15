@@ -49,6 +49,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
 
   test("CSS variable resolved via element mock", () => {
     const mockElement = {};
+    const originalGetComputedStyle = globalThis.getComputedStyle;
     globalThis.getComputedStyle = () => ({
       getPropertyValue: (prop) => {
         if (prop === "--brand-color") return "#1976d2";
@@ -68,28 +69,39 @@ await snapshotTests(import.meta.url, ({ test }) => {
         ),
       };
     } finally {
-      delete globalThis.getComputedStyle;
+      globalThis.getComputedStyle = originalGetComputedStyle;
     }
   });
 
   test("light-dark() resolved via element mock", () => {
     const mockElement = {};
-    // Simulate light color scheme
+    const originalGetComputedStyle = globalThis.getComputedStyle;
+    const originalWindow = globalThis.window;
+
     globalThis.getComputedStyle = () => ({
-      getPropertyValue: (prop) => {
-        if (prop === "color-scheme") return "light";
-        return "";
-      },
+      colorScheme: "light",
+      getPropertyValue: () => "",
     });
+    globalThis.window = {
+      matchMedia: () => ({ matches: false }),
+    };
     try {
       return {
         "light-dark() in light scheme": parseCSSColor(
           "light-dark(#ffffff, #000000)",
           mockElement,
         ),
+        "light-dark() in dark scheme": (() => {
+          globalThis.getComputedStyle = () => ({
+            colorScheme: "dark",
+            getPropertyValue: () => "",
+          });
+          return parseCSSColor("light-dark(#ffffff, #000000)", mockElement);
+        })(),
       };
     } finally {
-      delete globalThis.getComputedStyle;
+      globalThis.getComputedStyle = originalGetComputedStyle;
+      globalThis.window = originalWindow;
     }
   });
 });

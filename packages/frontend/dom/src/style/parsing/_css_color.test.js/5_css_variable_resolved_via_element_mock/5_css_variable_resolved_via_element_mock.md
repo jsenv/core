@@ -2,6 +2,7 @@
 
 ```js
 const mockElement = {};
+const originalGetComputedStyle = globalThis.getComputedStyle;
 globalThis.getComputedStyle = () => ({
   getPropertyValue: (prop) => {
     if (prop === "--brand-color") return "#1976d2";
@@ -21,7 +22,7 @@ try {
     ),
   };
 } finally {
-  delete globalThis.getComputedStyle;
+  globalThis.getComputedStyle = originalGetComputedStyle;
 }
 ```
 
