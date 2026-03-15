@@ -1,5 +1,4 @@
-import { pickLightOrDark } from "@jsenv/dom";
-import { useCallback, useContext, useLayoutEffect, useRef } from "preact/hooks";
+import { useCallback, useContext, useRef } from "preact/hooks";
 
 import { renderActionableComponent } from "../action/render_actionable_component.jsx";
 import { useActionBoundToOneParam } from "../action/use_action.js";
@@ -7,6 +6,7 @@ import { useActionStatus } from "../action/use_action_status.js";
 import { useExecuteAction } from "../action/use_execute_action.js";
 import { Box } from "../box/box.jsx";
 import { LoaderBackground } from "../graphic/loader/loader_background.jsx";
+import { useDarkBackgroundAttribute } from "../text/use_dark_background_attribute.js";
 import { useStableCallback } from "../utils/use_stable_callback.js";
 import {
   reportDisabledToLabel,
@@ -48,14 +48,9 @@ import.meta.css = /* css */ `
       --accent-color: light-dark(#4476ff, #3b82f6);
       --background-color-checked: var(--accent-color);
       --border-color-checked: var(--accent-color);
-      --checkmark-color-light: white;
-      --checkmark-color-dark: rgb(55, 55, 55);
-      --checkmark-color: var(--checkmark-color-light);
+      --checkmark-color: rgb(55, 55, 55);
       --cursor: pointer;
-
-      --color-mix-light: black;
-      --color-mix-dark: white;
-      --color-mix: var(--color-mix-light);
+      --color-mix: white;
 
       /* Hover */
       --border-color-hover: color-mix(in srgb, var(--border-color) 60%, black);
@@ -149,9 +144,9 @@ import.meta.css = /* css */ `
         black
       );
 
-      &[data-dark] {
-        --color-mix: var(--color-mix-dark);
-        --checkmark-color: var(--checkmark-color-dark);
+      &[data-dark-background] {
+        --color-mix: black;
+        --checkmark-color: white;
       }
     }
   }
@@ -526,22 +521,14 @@ const InputCheckboxBasic = (props) => {
   ]);
 
   const boxRef = useRef();
-  useLayoutEffect(() => {
-    const naviCheckbox = boxRef.current;
-    const lightColor = "var(--checkmark-color-light)";
-    const darkColor = "var(--checkmark-color-dark)";
-    const colorPicked = pickLightOrDark(
-      "var(--accent-color)",
-      lightColor,
-      darkColor,
-      naviCheckbox,
-    );
-    if (colorPicked === lightColor) {
-      naviCheckbox.removeAttribute("data-dark");
-    } else {
-      naviCheckbox.setAttribute("data-dark", "");
-    }
-  }, [accentColor]);
+  useDarkBackgroundAttribute(boxRef, [accentColor, checked], {
+    backgroundElementSelector: ".navi_checkbox_field",
+    // the browser (chrome at least) prefer white in this scenario even if
+    // the contrast is better with black, so we force it to white to match chrome behavior on this specific color
+    hardcoded: {
+      "#4476ff": "white",
+    },
+  });
 
   return (
     <Box

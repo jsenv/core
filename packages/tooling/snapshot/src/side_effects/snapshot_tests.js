@@ -42,6 +42,12 @@ export const snapshotTests = async (
   fnRegisteringTest,
   options = {},
 ) => {
+  if (!sourceFileUrl) {
+    throw new Error(
+      "snapshotTests: sourceFileUrl is required, usually in the form of snapshotTests(import.meta.url, ...)",
+    );
+  }
+
   if (preconfiguredOptions) {
     Object.assign(options, preconfiguredOptions);
     preconfiguredOptions = null;

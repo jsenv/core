@@ -1,5 +1,4 @@
-import { pickLightOrDark } from "@jsenv/dom";
-import { useLayoutEffect, useRef } from "preact/hooks";
+import { useRef } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
 import { PSEUDO_CLASSES } from "../box/pseudo_styles.js";
@@ -9,6 +8,7 @@ import {
 } from "../field/label.jsx";
 import { LoaderBackground } from "../graphic/loader/loader_background.jsx";
 import { Quantity } from "./quantity.jsx";
+import { useDarkBackgroundAttribute } from "./use_dark_background_attribute.js";
 
 import.meta.css = /* css */ `
   @layer navi {
@@ -25,6 +25,14 @@ import.meta.css = /* css */ `
       --fill-color-optimum: light-dark(#0f7c0f, #4caf50);
       --fill-color-suboptimum: light-dark(#fdb900, #ffc107);
       --fill-color-even-less-good: light-dark(#d83b01, #f44336);
+
+      --x-color: var(--navi-color-white);
+      --x-shadow-color: black;
+      --shadow-size: 0.5em;
+      &[data-dark-background] {
+        --x-color: black;
+        --x-shadow-color: var(--navi-color-white);
+      }
     }
   }
 
@@ -70,11 +78,11 @@ import.meta.css = /* css */ `
         display: flex;
         align-items: center;
         justify-content: center;
-        color: var(--x-caption-color, white);
+        color: var(--x-color);
         font-size: calc(var(--height) * 0.55);
         text-shadow:
-          0 0 4px var(--x-caption-shadow-color, black),
-          0 0 2px var(--x-caption-shadow-color, black);
+          0 0 var(--shadow-size) var(--x-shadow-color),
+          0 0 calc(var(--shadow-size) * 0.5) var(--x-shadow-color);
         white-space: nowrap;
         pointer-events: none;
         user-select: none;
@@ -169,14 +177,16 @@ export const Meter = ({
   borderless,
   transition,
   style,
-  ...props
+  ...rest
 }) => {
+  const defaultRef = useRef();
+  const ref = rest.ref || defaultRef;
   const clampedValue = value < min ? min : value > max ? max : value;
   const fillRatio = max === min ? 0 : (clampedValue - min) / (max - min);
   let children = caption;
   if (children === undefined && percentage) {
     children = (
-      <Quantity unit="%" unitSizeRatio="1">
+      <Quantity unit="%" unitSizeRatio="1" unitColor="inherit">
         {Math.round(fillRatio * 100)}
       </Quantity>
     );
@@ -192,33 +202,17 @@ export const Meter = ({
   reportDisabledToLabel(disabled);
   reportReadOnlyToLabel(readOnly);
 
-  const trackContainerRef = useRef();
-  useLayoutEffect(() => {
-    if (!children) {
-      return;
-    }
-    const trackContainer = trackContainerRef.current;
-    if (!trackContainer) {
-      return;
-    }
-    // When fill covers less than half the track, the text center sits on the
-    // empty track — use the track color for contrast. Otherwise use fill color.
-    const bgEl =
-      fillRatio >= 0.5
-        ? trackContainer.querySelector(".navi_meter_fill")
-        : trackContainer.querySelector(".navi_meter_track");
-    if (!bgEl) {
-      return;
-    }
-    const bgColor = getComputedStyle(bgEl).backgroundColor;
-    const textColor = pickLightOrDark(bgColor, "white", "black", bgEl);
-    const shadowColor = textColor === "white" ? "black" : "white";
-    trackContainer.style.setProperty("--x-caption-color", textColor);
-    trackContainer.style.setProperty("--x-caption-shadow-color", shadowColor);
-  }, [children, level, fillRatio]);
+  // When fill covers less than half the track, the text center sits on the
+  // empty track — use the track color for contrast. Otherwise use fill color.
+  const backgroundElementSelector =
+    fillRatio >= 0.5 ? ".navi_meter_fill" : ".navi_meter_track";
+  useDarkBackgroundAttribute(ref, [], {
+    backgroundElementSelector,
+  });
 
   return (
     <Box
+      ref={ref}
       role="meter"
       aria-valuenow={clampedValue}
       aria-valuemin={min}
@@ -245,9 +239,9 @@ export const Meter = ({
         "--x-fill-color": fillColorVar,
         ...style,
       }}
-      {...props}
+      {...rest}
     >
-      <span className="navi_meter_track_container" ref={trackContainerRef}>
+      <span className="navi_meter_track_container">
         <LoaderBackground
           loading={loading}
           color="var(--loader-color)"

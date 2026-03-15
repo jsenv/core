@@ -146,7 +146,7 @@
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { useState } from "preact/hooks";
+      import { useState, useLayoutEffect } from "preact/hooks";
       import {
         Input,
         Label,
@@ -356,6 +356,16 @@
       };
 
       const ColorDemo = () => {
+        // we checke after 2s, to ensure the checkbox can start unchecked and the checkmark will
+        // still end up being white on dark bacground because the component properly reacts to state changes
+        const [checkedAfterDelay, setCheckedAfterDelay] = useState(false);
+        useLayoutEffect(() => {
+          const timeout = setTimeout(() => {
+            setCheckedAfterDelay(true);
+          }, 2000);
+          return () => clearTimeout(timeout);
+        }, []);
+
         return (
           <div className="demo-section">
             <h2>Custom Colors</h2>
@@ -426,6 +436,29 @@
                         type="checkbox"
                         style={{ accentColor: "#34495e" }}
                         defaultChecked
+                      />
+                      Native
+                    </label>
+                  </Box>
+                </fieldset>
+
+                <fieldset>
+                  <legend>Dark grey (checked after 2s)</legend>
+                  <Box row spacing="sm" alignX="start">
+                    <Label>
+                      <Input
+                        type="checkbox"
+                        accentColor="#34495e"
+                        checked={checkedAfterDelay}
+                        uiAction={() => {}}
+                      />
+                      Navi
+                    </Label>
+                    <label>
+                      <input
+                        type="checkbox"
+                        style={{ accentColor: "#34495e" }}
+                        checked={checkedAfterDelay}
                       />
                       Native
                     </label>

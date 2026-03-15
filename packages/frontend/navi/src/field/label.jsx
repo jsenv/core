@@ -10,7 +10,7 @@ import.meta.css = /* css */ `
         cursor: pointer;
       }
 
-      &[data-read-only],
+      &[data-readonly],
       &[data-disabled] {
         color: rgba(0, 0, 0, 0.5);
         cursor: default;

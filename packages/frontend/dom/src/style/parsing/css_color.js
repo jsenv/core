@@ -80,7 +80,6 @@ export const parseCSSColor = (color, element) => {
 
   // Pass through CSS color functions we don't handle
   if (
-    color.startsWith("color(") ||
     color.startsWith("lch(") ||
     color.startsWith("oklch(") ||
     color.startsWith("lab(") ||
@@ -88,6 +87,21 @@ export const parseCSSColor = (color, element) => {
     color.startsWith("hwb(") ||
     color.includes("color-contrast(")
   ) {
+    return color;
+  }
+
+  // color(srgb r g b) and color(srgb r g b / a)
+  if (color.startsWith("color(")) {
+    const srgbMatch = color.match(
+      /^color\(\s*srgb\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)(?:\s*\/\s*([\d.]+))?\s*\)$/,
+    );
+    if (srgbMatch) {
+      const r = Math.round(parseFloat(srgbMatch[1]) * 255);
+      const g = Math.round(parseFloat(srgbMatch[2]) * 255);
+      const b = Math.round(parseFloat(srgbMatch[3]) * 255);
+      const a = srgbMatch[4] !== undefined ? parseFloat(srgbMatch[4]) : 1;
+      return [r, g, b, a];
+    }
     return color;
   }
 
@@ -238,8 +252,9 @@ const convertColorToRgba = (color) => {
   }
 
   // Named colors (basic set)
-  if (namedColors[color]) {
-    return [...namedColors[color], 1];
+  const namedColorRgb = namedColors[color];
+  if (namedColorRgb) {
+    return [...namedColorRgb, 1];
   }
   return null;
 };
