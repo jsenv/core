@@ -8,6 +8,7 @@
 - [special values](4_special_values/4_special_values.md)
 - [CSS variable resolved via element mock](5_css_variable_resolved_via_element_mock/5_css_variable_resolved_via_element_mock.md)
 - [light-dark() resolved via element mock](6_light-dark()_resolved_via_element_mock/6_light-dark()_resolved_via_element_mock.md)
+- [color(srgb ...) syntax](7_color(srgb____)_syntax/7_color(srgb____)_syntax.md)
 
 ---
 

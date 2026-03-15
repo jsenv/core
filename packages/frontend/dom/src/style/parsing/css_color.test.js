@@ -104,4 +104,18 @@ await snapshotTests(import.meta.url, ({ test }) => {
       globalThis.window = originalWindow;
     }
   });
+
+  test("color(srgb ...) syntax", () => {
+    return {
+      "semi-transparent blue": parseCSSColor(
+        "color(srgb 0.266667 0.462745 1 / 0.4)",
+      ),
+      "semi-transparent grey": parseCSSColor(
+        "color(srgb 0.462745 0.462745 0.462745 / 0.4)",
+      ),
+      "opaque blue-grey (no alpha)": parseCSSColor(
+        "color(srgb 0.743333 0.772745 0.853333)",
+      ),
+    };
+  });
 });
