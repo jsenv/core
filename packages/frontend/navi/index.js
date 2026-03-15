@@ -136,6 +136,7 @@ export { Address } from "./src/text/address.jsx";
 export { BadgeCount } from "./src/text/badge.jsx";
 export { Caption } from "./src/text/caption.jsx";
 export { Code } from "./src/text/code.jsx";
+export { createIntl } from "./src/text/intl.js";
 export { MessageBox } from "./src/text/message_box.jsx";
 export { Meter } from "./src/text/meter.jsx";
 export { Paragraph } from "./src/text/paragraph.jsx";

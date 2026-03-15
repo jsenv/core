@@ -37,6 +37,7 @@
             <UnitPositionSection />
             <SizeSection />
             <LangSection />
+            <IntlUnitSection />
             <LoadingSection />
             <ReadOnlyDisabledSection />
           </div>
@@ -51,8 +52,9 @@
             <Link href="#unit-position">2. Position de l'unité</Link>
             <Link href="#size">3. Taille</Link>
             <Link href="#lang">4. Langue (formatage des nombres)</Link>
-            <Link href="#loading">5. État de chargement</Link>
-            <Link href="#readonly-disabled">6. readOnly et disabled</Link>
+            <Link href="#intl-unit">5. Unités traduites (intl)</Link>
+            <Link href="#loading">6. État de chargement</Link>
+            <Link href="#readonly-disabled">7. readOnly et disabled</Link>
           </Box>
         </Box>
       );
@@ -237,6 +239,75 @@
               <Caption>lang="ja"</Caption>
               <Quantity label="売上" unit="点" lang="ja">
                 {1234567}
+              </Quantity>
+            </Box>
+          </Box>
+        </Box>
+      );
+
+      const IntlUnitSection = () => (
+        <Box as="section" marginBottom="xl">
+          <Title as="h2">
+            <Link anchor href="#intl-unit" />
+            Unités traduites (intl)
+          </Title>
+          <Paragraph>
+            Certaines unités reconnues (comme <code>minute</code> et{" "}
+            <code>people</code>) sont automatiquement traduites selon la langue
+            du navigateur, et choisissent la forme singulière ou plurielle selon
+            la valeur. Les unités inconnues s'affichent telles quelles.
+          </Paragraph>
+
+          <Title as="h3">minute</Title>
+          <Box row spacing="xl" alignY="end" marginBottom="m">
+            <Box row spacing="s">
+              <Caption>1 minute (singulier)</Caption>
+              <Quantity label="Durée" unit="minute">
+                {1}
+              </Quantity>
+            </Box>
+            <Box row spacing="s">
+              <Caption>5 minutes (pluriel)</Caption>
+              <Quantity label="Durée" unit="minute">
+                {5}
+              </Quantity>
+            </Box>
+            <Box row spacing="s">
+              <Caption>unitPosition="bottom"</Caption>
+              <Quantity label="Durée" unit="minute" unitPosition="bottom">
+                {5}
+              </Quantity>
+            </Box>
+          </Box>
+
+          <Title as="h3">people</Title>
+          <Box row spacing="xl" alignY="end" marginBottom="m">
+            <Box row spacing="s">
+              <Caption>1 personne (singulier)</Caption>
+              <Quantity label="Participants" unit="people">
+                {1}
+              </Quantity>
+            </Box>
+            <Box row spacing="s">
+              <Caption>42 personnes (pluriel)</Caption>
+              <Quantity label="Participants" unit="people">
+                {42}
+              </Quantity>
+            </Box>
+          </Box>
+
+          <Title as="h3">Unité inconnue (fallback)</Title>
+          <Box row spacing="xl" alignY="end">
+            <Box row spacing="s">
+              <Caption>unit="km" (inchangé)</Caption>
+              <Quantity label="Distance" unit="km">
+                {12}
+              </Quantity>
+            </Box>
+            <Box row spacing="s">
+              <Caption>unit="pts" (inchangé)</Caption>
+              <Quantity label="Score" unit="pts">
+                {1337}
               </Quantity>
             </Box>
           </Box>

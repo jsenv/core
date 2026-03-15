@@ -67,11 +67,17 @@ import.meta.css = /* css */ `
 
 const QuantityIntl = createIntl();
 QuantityIntl.add("fr", {
-  "one minute": "une minute",
-  "{x} minutes": "{x} minutes",
-  "one people": "une personne",
-  "{x} peoples": "{x} personnes",
+  minute: "minute",
+  minutes: "minutes",
+  people: "personne",
+  peoples: "personnes",
 });
+const wellKnownUnitMap = new Map(
+  Object.entries({
+    minute: { intl: ["minute", "minutes"] },
+    people: { intl: ["people", "peoples"] },
+  }),
+);
 
 const QuantityPropsCSSVars = {
   unitColor: "--unit-color",
@@ -135,10 +141,33 @@ export const Quantity = ({
             valueFormatted
           )}
         </span>
-        {unit && <span className="navi_quantity_unit">{unit}</span>}
+        {unit && <Unit value={value} unit={unit} />}
       </Text>
     </Text>
   );
+};
+
+const Unit = ({ value, unit }) => {
+  let unitText = unit;
+  const wellKnownUnit = wellKnownUnitMap.get(unit);
+
+  if (wellKnownUnit) {
+    const intl = wellKnownUnit.intl;
+    if (intl) {
+      if (Array.isArray(intl)) {
+        const [singular, plural] = intl;
+        if (value > 1) {
+          unitText = QuantityIntl.format(plural, { x: value });
+        } else {
+          unitText = QuantityIntl.format(singular);
+        }
+      } else {
+        unitText = QuantityIntl.format(intl);
+      }
+    }
+  }
+
+  return <span className="navi_quantity_unit">{unitText}</span>;
 };
 
 const parseQuantityValue = (children) => {
