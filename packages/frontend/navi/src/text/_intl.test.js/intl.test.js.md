@@ -7,6 +7,7 @@
 - [lang matching — fr-CA falls back to fr](3_lang_matching_%E2%80%94_fr-ca_falls_back_to_fr/3_lang_matching_%E2%80%94_fr-ca_falls_back_to_fr.md)
 - [language inheritance — fr-provencal inherits from fr](4_language_inheritance_%E2%80%94_fr-provencal_inherits_from_fr/4_language_inheritance_%E2%80%94_fr-provencal_inherits_from_fr.md)
 - [bestLanguage updated when add called after creation](5_bestlanguage_updated_when_add_called_after_creation/5_bestlanguage_updated_when_add_called_after_creation.md)
+- [add() is accumulative — multiple calls merge translations](6_add()_is_accumulative_%E2%80%94_multiple_calls_merge_translations/6_add()_is_accumulative_%E2%80%94_multiple_calls_merge_translations.md)
 
 ---
 
