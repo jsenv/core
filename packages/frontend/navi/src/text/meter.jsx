@@ -26,12 +26,12 @@ import.meta.css = /* css */ `
       --fill-color-suboptimum: light-dark(#fdb900, #ffc107);
       --fill-color-even-less-good: light-dark(#d83b01, #f44336);
 
-      --x-color: var(--navi-color-white);
-      --x-shadow-color: black;
+      --x-color: var(--navi-color-black);
+      --x-shadow-color: white;
       --shadow-size: 0.5em;
       &[data-dark-background] {
-        --x-color: black;
-        --x-shadow-color: var(--navi-color-white);
+        --x-color: white;
+        --x-shadow-color: black;
       }
     }
   }
