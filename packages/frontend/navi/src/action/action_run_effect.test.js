@@ -264,4 +264,27 @@ await snapshotTests(import.meta.url, ({ test }) => {
     };
   });
   /* eslint-enable signals/no-value-after-await */
+
+  test.ONLY("signal default to empty array", () => {
+    const valueSignal = signal([]);
+    const action = createAction(
+      () => {
+        return ["a", "b"];
+      },
+      {
+        name: "demo",
+        outputSignal: valueSignal,
+        // meta: { debug: true },
+      },
+    );
+    const actionBound = actionRunEffect(action, () => {});
+
+    const atStart = valueSignal.value;
+    actionBound.run();
+    const afterRun = valueSignal.value;
+    actionBound.reset();
+    const afterReset = valueSignal.value;
+
+    return { atStart, afterRun, afterReset };
+  });
 });

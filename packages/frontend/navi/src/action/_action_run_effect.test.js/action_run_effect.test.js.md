@@ -12,6 +12,7 @@
 - [action with initial params](8_action_with_initial_params/8_action_with_initial_params.md)
 - [returning empty object](9_returning_empty_object/9_returning_empty_object.md)
 - [outputSignal lifecycle with actionRunEffect and userIdSignal](10_outputsignal_lifecycle_with_actionruneffect_and_useridsignal/10_outputsignal_lifecycle_with_actionruneffect_and_useridsignal.md)
+- [signal default to empty array](11_signal_default_to_empty_array/11_signal_default_to_empty_array.md)
 
 ---
 

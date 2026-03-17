@@ -807,6 +807,9 @@ export const createAction = (callback, rootOptions = {}) => {
         writable: true,
         value: name,
       });
+      // Register the action function itself so that createAction(action) returns
+      // the same action instead of creating a new one
+      actionWeakMap.set(action, action);
     } else {
       action = { name };
     }
