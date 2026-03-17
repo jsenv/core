@@ -735,6 +735,9 @@ export const installCustomConstraintValidation = (
       break request_on_input_value_change;
     }
     const closestElementWithActionAttr = element.closest("[data-action]");
+    if (closestElementWithActionAttr.tagName === "FORM") {
+      break request_on_input_value_change;
+    }
     const stop = listenInputValue(
       element,
       (e) => {
@@ -786,6 +789,9 @@ export const installCustomConstraintValidation = (
     }
     // We will dispatch "action" when "submit" occurs (code called from.submit() to bypass validation)
     const form = element;
+    if (!form.hasAttribute("data-action")) {
+      form.setAttribute("data-action", "toto");
+    }
     form.setAttribute("novalidate", ""); // make sure browser don't prevent "submit" nor display messages
     const removeListener = addEventListener(form, "submit", (e) => {
       e.preventDefault();
