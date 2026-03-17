@@ -49,6 +49,7 @@ import {
   useUIState,
   useUIStateController,
 } from "./use_ui_state_controller.js";
+import { CONSTRAINT_ATTRIBUTE_SET } from "./validation/constraint_attribute_set.js";
 import { forwardActionRequested } from "./validation/custom_constraint_validation.js";
 import { useConstraints } from "./validation/hooks/use_constraints.js";
 import { listenInputValue } from "./validation/input_value_listener.js";
@@ -344,6 +345,7 @@ Object.assign(PSEUDO_CLASSES, {
   },
 });
 const InputPseudoElements = ["::-navi-loader"];
+const InputPropSet = new Set([...CONSTRAINT_ATTRIBUTE_SET]);
 const InputTextualBasic = (props) => {
   const contextReadOnly = useContext(ReadOnlyContext);
   const contextDisabled = useContext(DisabledContext);
@@ -423,6 +425,7 @@ const InputTextualBasic = (props) => {
         }}
         // style management
         baseClassName="navi_native_input"
+        data-rendered-by=".navi_input"
       />
     );
   };
@@ -464,6 +467,7 @@ const InputTextualBasic = (props) => {
       pseudoClasses={InputPseudoClasses}
       pseudoElements={InputPseudoElements}
       hasChildFunction
+      childPropSet={InputPropSet}
       data-start-icon={innerIcon ? "" : undefined}
       data-end-icon={cancelButton ? "" : undefined}
       {...remainingProps}

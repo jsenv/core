@@ -1,3 +1,4 @@
+import { CONSTRAINT_ATTRIBUTE_SET } from "../constraint_attribute_set.js";
 import { generateFieldInvalidMessage } from "./constraint_message_util.js";
 
 export const SINGLE_SPACE_CONSTRAINT = {
@@ -33,3 +34,5 @@ export const SINGLE_SPACE_CONSTRAINT = {
     return "";
   },
 };
+CONSTRAINT_ATTRIBUTE_SET.add("data-single-space");
+CONSTRAINT_ATTRIBUTE_SET.add("data-single-space-message");

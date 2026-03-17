@@ -1,3 +1,5 @@
+import { CONSTRAINT_ATTRIBUTE_SET } from "../constraint_attribute_set.js";
+
 import { generateFieldInvalidMessage } from "./constraint_message_util.js";
 
 export const MIN_LOWER_LETTER_CONSTRAINT = {
@@ -34,6 +36,9 @@ export const MIN_LOWER_LETTER_CONSTRAINT = {
     return "";
   },
 };
+CONSTRAINT_ATTRIBUTE_SET.add("data-min-lower-letter");
+CONSTRAINT_ATTRIBUTE_SET.add("data-min-lower-letter-message");
+
 export const MIN_UPPER_LETTER_CONSTRAINT = {
   name: "min_upper_letter",
   messageAttribute: "data-min-upper-letter-message",
@@ -68,6 +73,9 @@ export const MIN_UPPER_LETTER_CONSTRAINT = {
     return "";
   },
 };
+CONSTRAINT_ATTRIBUTE_SET.add("data-min-upper-letter");
+CONSTRAINT_ATTRIBUTE_SET.add("data-min-upper-letter-message");
+
 export const MIN_DIGIT_CONSTRAINT = {
   name: "min_digit",
   messageAttribute: "data-min-digit-message",
@@ -102,6 +110,9 @@ export const MIN_DIGIT_CONSTRAINT = {
     return "";
   },
 };
+CONSTRAINT_ATTRIBUTE_SET.add("data-min-digit");
+CONSTRAINT_ATTRIBUTE_SET.add("data-min-digit-message");
+
 export const MIN_SPECIAL_CHAR_CONSTRAINT = {
   name: "min_special_char",
   messageAttribute: "data-min-special-char-message",
@@ -141,3 +152,6 @@ export const MIN_SPECIAL_CHAR_CONSTRAINT = {
     return "";
   },
 };
+CONSTRAINT_ATTRIBUTE_SET.add("data-special-charset");
+CONSTRAINT_ATTRIBUTE_SET.add("data-min-special-char");
+CONSTRAINT_ATTRIBUTE_SET.add("data-min-special-char-message");

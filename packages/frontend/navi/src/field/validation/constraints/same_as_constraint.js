@@ -1,3 +1,5 @@
+import { CONSTRAINT_ATTRIBUTE_SET } from "../constraint_attribute_set.js";
+
 export const SAME_AS_CONSTRAINT = {
   name: "same_as",
   messageAttribute: "data-same-as-message",
@@ -35,3 +37,5 @@ export const SAME_AS_CONSTRAINT = {
     return `Ce champ doit être identique au précédent.`;
   },
 };
+CONSTRAINT_ATTRIBUTE_SET.add("data-same-as");
+CONSTRAINT_ATTRIBUTE_SET.add("data-same-as-message");
