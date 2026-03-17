@@ -27,9 +27,6 @@ import.meta.css = /* css */ `
       letter-spacing: 0.06em;
     }
     .navi_quantity_body {
-      .navi_quantity_value {
-        font-weight: bold;
-      }
       .navi_quantity_unit {
         color: var(--unit-color);
         font-weight: normal;
@@ -121,6 +118,7 @@ export const Quantity = ({
   loading,
   readOnly,
   disabled,
+  bold = true,
   ...props
 }) => {
   const value = parseQuantityValue(children);
@@ -144,6 +142,7 @@ export const Quantity = ({
       }}
       pseudoClasses={QuantityPseudoClasses}
       spacing="pre"
+      bold={bold}
       {...props}
     >
       {label && <span className="navi_quantity_label">{label}</span>}

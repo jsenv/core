@@ -3,6 +3,7 @@ import { computed } from "@preact/signals";
 import { debounceSignal } from "../state/debounce_signal.js";
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
 import { stringifyForDisplay } from "../utils/stringify_for_display.js";
+import { createAction } from "./actions.js";
 
 /**
  * Reactively runs an action whenever the params derived from signals change.
@@ -32,6 +33,7 @@ export const actionRunEffect = (
   deriveActionParamsFromSignals,
   { debounce, meta } = {},
 ) => {
+  if (typeof action === "function") action = createAction(action);
   let lastTruthyParams;
   let actionParamsSignal = computed(() => {
     const params = deriveActionParamsFromSignals();
