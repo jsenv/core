@@ -586,6 +586,7 @@ export const createAction = (callback, rootOptions = {}) => {
       keepOldData = false,
       meta = {},
 
+      outputSignal,
       completeSideEffect,
     } = options;
     if (!Object.hasOwn(options, "params")) {
@@ -1006,6 +1007,9 @@ export const createAction = (callback, rootOptions = {}) => {
             valueSignal.value = value;
             runningStateSignal.value = COMPLETED;
             const data = dataSignal.value;
+            if (outputSignal) {
+              outputSignal.value = data;
+            }
             onComplete?.(data, action);
             completeSideEffect?.(action);
           });
@@ -1121,6 +1125,9 @@ export const createAction = (callback, rootOptions = {}) => {
           errorSignal.value = null;
           if (!keepOldData) {
             valueSignal.value = valueInitial;
+          }
+          if (outputSignal) {
+            outputSignal.value = null;
           }
           isPrerunSignal.value = true;
           runningStateSignal.value = IDLE;
