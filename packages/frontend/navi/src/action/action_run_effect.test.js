@@ -1,5 +1,6 @@
 import { snapshotTests } from "@jsenv/snapshot";
 import { signal } from "@preact/signals";
+import { stateSignal } from "../state/state_signal.js";
 import { actionRunEffect } from "./action_run_effect.js";
 import { createAction } from "./actions.js";
 
@@ -265,18 +266,27 @@ await snapshotTests(import.meta.url, ({ test }) => {
   });
   /* eslint-enable signals/no-value-after-await */
 
-  test.ONLY("signal default to empty array", () => {
+  test("signal default to empty array", () => {
     const valueSignal = signal([]);
-    const action = createAction(
-      () => {
-        return ["a", "b"];
-      },
-      {
-        name: "demo",
-        outputSignal: valueSignal,
-        // meta: { debug: true },
-      },
-    );
+    const action = createAction(() => ["a", "b"], {
+      outputSignal: valueSignal,
+    });
+    const actionBound = actionRunEffect(action, () => {});
+
+    const atStart = valueSignal.value;
+    actionBound.run();
+    const afterRun = valueSignal.value;
+    actionBound.reset();
+    const afterReset = valueSignal.value;
+
+    return { atStart, afterRun, afterReset };
+  });
+
+  test("state signal default to empty array", () => {
+    const valueSignal = stateSignal([]);
+    const action = createAction(() => ["a", "b"], {
+      outputSignal: valueSignal,
+    });
     const actionBound = actionRunEffect(action, () => {});
 
     const atStart = valueSignal.value;

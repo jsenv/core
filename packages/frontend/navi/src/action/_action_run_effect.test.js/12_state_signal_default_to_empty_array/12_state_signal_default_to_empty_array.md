@@ -1,7 +1,7 @@
-# [signal default to empty array](../../action_run_effect.test.js)
+# [state signal default to empty array](../../action_run_effect.test.js)
 
 ```js
-const valueSignal = signal([]);
+const valueSignal = stateSignal([]);
 const action = createAction(() => ["a", "b"], {
   outputSignal: valueSignal,
 });
