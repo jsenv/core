@@ -23,7 +23,7 @@ return { atStart, afterRun, afterReset };
     "a",
     "b"
   ],
-  "afterReset": null
+  "afterReset": []
 }
 ```
 

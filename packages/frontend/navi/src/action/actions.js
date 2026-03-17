@@ -1130,7 +1130,7 @@ export const createAction = (callback, rootOptions = {}) => {
             valueSignal.value = valueInitial;
           }
           if (outputSignal) {
-            outputSignal.value = null;
+            outputSignal.value = undefined;
           }
           isPrerunSignal.value = true;
           runningStateSignal.value = IDLE;
