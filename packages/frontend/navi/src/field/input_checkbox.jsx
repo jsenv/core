@@ -8,6 +8,7 @@ import { Box } from "../box/box.jsx";
 import { LoaderBackground } from "../graphic/loader/loader_background.jsx";
 import { useDarkBackgroundAttribute } from "../text/use_dark_background_attribute.js";
 import { useStableCallback } from "../utils/use_stable_callback.js";
+import { fieldPropSet } from "./field_prop_set.js";
 import {
   reportDisabledToLabel,
   reportInteractiveToLabel,
@@ -432,6 +433,7 @@ const CheckboxPseudoClasses = [
   ":-navi-loading",
 ];
 const CheckboxPseudoElements = ["::-navi-loader", "::-navi-checkmark"];
+const CheckboxChildPropSet = new Set([...fieldPropSet]);
 const InputCheckboxBasic = (props) => {
   const contextFieldName = useContext(FieldNameContext);
   const contextReadOnly = useContext(ReadOnlyContext);
@@ -554,6 +556,7 @@ const InputCheckboxBasic = (props) => {
       }}
       accentColor={accentColor}
       hasChildFunction
+      baseChildPropSet={CheckboxChildPropSet}
       preventInitialTransition
     >
       <LoaderBackground

@@ -6511,6 +6511,8 @@ const Box = props => {
     // -> introduced for <Input /> with a wrapped for loading, checkboxes, etc
     pseudoStateSelector,
     hasChildFunction,
+    baseChildPropSet,
+    childPropSet,
     // preventInitialTransition can be used to prevent transition on mount
     // (when transition is set via props, this is done automatically)
     // so this prop is useful only when transition is enabled from "outside" (via CSS)
@@ -6765,6 +6767,10 @@ const Box = props => {
     }
     for (const propName of remainingPropKeySet) {
       const propValue = rest[propName];
+      if (baseChildPropSet?.has(propName) || childPropSet?.has(propName)) {
+        childForwardedProps[propName] = propValue;
+        continue;
+      }
       const isDataAttribute = propName.startsWith("data-");
       if (isDataAttribute) {
         selfForwardedProps[propName] = propValue;
@@ -15736,6 +15742,8 @@ const fromSelectorAttribute = (messageAttributeValue) => {
   return mirror;
 };
 
+const CONSTRAINT_ATTRIBUTE_SET = new Set();
+
 const generateFieldInvalidMessage = (template, { field }) => {
   return replaceStringVars(template, {
     "{field}": () => generateThisFieldText(field),
@@ -15791,7 +15799,7 @@ const MIN_LOWER_LETTER_CONSTRAINT = {
       }
     }
     if (numberOfLowercaseChars < min) {
-      if (min === 0) {
+      if (min === 1) {
         return generateFieldInvalidMessage(
           `{field} doit contenir au moins une lettre minuscule.`,
           { field },
@@ -15805,6 +15813,9 @@ const MIN_LOWER_LETTER_CONSTRAINT = {
     return "";
   },
 };
+CONSTRAINT_ATTRIBUTE_SET.add("data-min-lower-letter");
+CONSTRAINT_ATTRIBUTE_SET.add("data-min-lower-letter-message");
+
 const MIN_UPPER_LETTER_CONSTRAINT = {
   name: "min_upper_letter",
   messageAttribute: "data-min-upper-letter-message",
@@ -15825,7 +15836,7 @@ const MIN_UPPER_LETTER_CONSTRAINT = {
       }
     }
     if (numberOfUppercaseChars < min) {
-      if (min === 0) {
+      if (min === 1) {
         return generateFieldInvalidMessage(
           `{field} doit contenir au moins une lettre majuscule.`,
           { field },
@@ -15839,6 +15850,9 @@ const MIN_UPPER_LETTER_CONSTRAINT = {
     return "";
   },
 };
+CONSTRAINT_ATTRIBUTE_SET.add("data-min-upper-letter");
+CONSTRAINT_ATTRIBUTE_SET.add("data-min-upper-letter-message");
+
 const MIN_DIGIT_CONSTRAINT = {
   name: "min_digit",
   messageAttribute: "data-min-digit-message",
@@ -15859,7 +15873,7 @@ const MIN_DIGIT_CONSTRAINT = {
       }
     }
     if (numberOfDigitChars < min) {
-      if (min === 0) {
+      if (min === 1) {
         return generateFieldInvalidMessage(
           `{field} doit contenir au moins un chiffre.`,
           { field },
@@ -15873,6 +15887,9 @@ const MIN_DIGIT_CONSTRAINT = {
     return "";
   },
 };
+CONSTRAINT_ATTRIBUTE_SET.add("data-min-digit");
+CONSTRAINT_ATTRIBUTE_SET.add("data-min-digit-message");
+
 const MIN_SPECIAL_CHAR_CONSTRAINT = {
   name: "min_special_char",
   messageAttribute: "data-min-special-char-message",
@@ -15912,6 +15929,9 @@ const MIN_SPECIAL_CHAR_CONSTRAINT = {
     return "";
   },
 };
+CONSTRAINT_ATTRIBUTE_SET.add("data-special-charset");
+CONSTRAINT_ATTRIBUTE_SET.add("data-min-special-char");
+CONSTRAINT_ATTRIBUTE_SET.add("data-min-special-char-message");
 
 const READONLY_CONSTRAINT = {
   name: "readonly",
@@ -15948,6 +15968,10 @@ const READONLY_CONSTRAINT = {
     };
   },
 };
+CONSTRAINT_ATTRIBUTE_SET.add("readOnly");
+CONSTRAINT_ATTRIBUTE_SET.add("data-readonly");
+CONSTRAINT_ATTRIBUTE_SET.add("data-readonly-message");
+CONSTRAINT_ATTRIBUTE_SET.add("data-readonly-silent");
 
 const SAME_AS_CONSTRAINT = {
   name: "same_as",
@@ -15986,6 +16010,8 @@ const SAME_AS_CONSTRAINT = {
     return `Ce champ doit être identique au précédent.`;
   },
 };
+CONSTRAINT_ATTRIBUTE_SET.add("data-same-as");
+CONSTRAINT_ATTRIBUTE_SET.add("data-same-as-message");
 
 const SINGLE_SPACE_CONSTRAINT = {
   name: "single_space",
@@ -16020,6 +16046,8 @@ const SINGLE_SPACE_CONSTRAINT = {
     return "";
   },
 };
+CONSTRAINT_ATTRIBUTE_SET.add("data-single-space");
+CONSTRAINT_ATTRIBUTE_SET.add("data-single-space-message");
 
 /**
  * https://developer.mozilla.org/en-US/docs/Web/HTML/Guides/Constraint_validation
@@ -16038,6 +16066,9 @@ const DISABLED_CONSTRAINT = {
     return null;
   },
 };
+CONSTRAINT_ATTRIBUTE_SET.add("disabled");
+CONSTRAINT_ATTRIBUTE_SET.add("data-disabled");
+CONSTRAINT_ATTRIBUTE_SET.add("data-disabled-message");
 
 const REQUIRED_CONSTRAINT = {
   name: "required",
@@ -16107,6 +16138,8 @@ const REQUIRED_CONSTRAINT = {
       : `Veuillez remplir ce champ.`;
   },
 };
+CONSTRAINT_ATTRIBUTE_SET.add("required");
+CONSTRAINT_ATTRIBUTE_SET.add("data-required-message");
 
 const PATTERN_CONSTRAINT = {
   name: "pattern",
@@ -16135,6 +16168,9 @@ const PATTERN_CONSTRAINT = {
     return message;
   },
 };
+CONSTRAINT_ATTRIBUTE_SET.add("pattern");
+CONSTRAINT_ATTRIBUTE_SET.add("data-pattern-message");
+
 // https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/input/email#validation
 const emailregex =
   /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
@@ -16158,6 +16194,7 @@ const TYPE_EMAIL_CONSTRAINT = {
     return null;
   },
 };
+CONSTRAINT_ATTRIBUTE_SET.add("data-type-message");
 
 const MIN_LENGTH_CONSTRAINT = {
   name: "min_length",
@@ -16170,7 +16207,6 @@ const MIN_LENGTH_CONSTRAINT = {
     } else if (field.tagName !== "TEXTAREA") {
       return null;
     }
-
     const minLength = field.minLength;
     if (minLength === -1) {
       return null;
@@ -16195,6 +16231,8 @@ const MIN_LENGTH_CONSTRAINT = {
     );
   },
 };
+CONSTRAINT_ATTRIBUTE_SET.add("minLength");
+CONSTRAINT_ATTRIBUTE_SET.add("data-min-length-message");
 const INPUT_TYPE_SUPPORTING_MIN_LENGTH_SET = new Set([
   "text",
   "search",
@@ -16230,6 +16268,8 @@ const MAX_LENGTH_CONSTRAINT = {
     );
   },
 };
+CONSTRAINT_ATTRIBUTE_SET.add("maxLength");
+CONSTRAINT_ATTRIBUTE_SET.add("data-max-length-message");
 const INPUT_TYPE_SUPPORTING_MAX_LENGTH_SET = new Set(
   INPUT_TYPE_SUPPORTING_MIN_LENGTH_SET,
 );
@@ -16258,6 +16298,7 @@ const TYPE_NUMBER_CONSTRAINT = {
     return null;
   },
 };
+CONSTRAINT_ATTRIBUTE_SET.add("data-type-message");
 
 const MIN_CONSTRAINT = {
   name: "min",
@@ -16311,6 +16352,8 @@ const MIN_CONSTRAINT = {
     return null;
   },
 };
+CONSTRAINT_ATTRIBUTE_SET.add("min");
+CONSTRAINT_ATTRIBUTE_SET.add("data-min-message");
 
 const MAX_CONSTRAINT = {
   name: "max",
@@ -16359,6 +16402,8 @@ const MAX_CONSTRAINT = {
     return null;
   },
 };
+CONSTRAINT_ATTRIBUTE_SET.add("max");
+CONSTRAINT_ATTRIBUTE_SET.add("data-max-message");
 
 const listenInputValue = (
   input,
@@ -16812,6 +16857,8 @@ const installCustomConstraintValidation = (
   }
 
   const isForm = element.tagName === "FORM";
+  const isInput = element.tagName === "INPUT" || element.tagName === "TEXTAREA";
+  const isCheckbox = element.tagName === "INPUT" && element.type === "checkbox";
   if (isForm) {
     formInstrumentedWeakSet.add(element);
     addTeardown(() => {
@@ -17231,8 +17278,6 @@ const installCustomConstraintValidation = (
   }
 
   request_on_input_value_change: {
-    const isInput =
-      element.tagName === "INPUT" || element.tagName === "TEXTAREA";
     if (!isInput) {
       break request_on_input_value_change;
     }
@@ -17241,6 +17286,9 @@ const installCustomConstraintValidation = (
       break request_on_input_value_change;
     }
     const closestElementWithActionAttr = element.closest("[data-action]");
+    if (closestElementWithActionAttr.tagName === "FORM") {
+      break request_on_input_value_change;
+    }
     const stop = listenInputValue(
       element,
       (e) => {
@@ -17268,8 +17316,6 @@ const installCustomConstraintValidation = (
   }
 
   request_on_checkbox_change: {
-    const isCheckbox =
-      element.tagName === "INPUT" && element.type === "checkbox";
     if (!isCheckbox) {
       break request_on_checkbox_change;
     }
@@ -17294,6 +17340,10 @@ const installCustomConstraintValidation = (
     }
     // We will dispatch "action" when "submit" occurs (code called from.submit() to bypass validation)
     const form = element;
+    if (!form.hasAttribute("data-action")) {
+      form.setAttribute("data-action", "toto");
+    }
+    form.setAttribute("novalidate", ""); // make sure browser don't prevent "submit" nor display messages
     const removeListener = addEventListener(form, "submit", (e) => {
       e.preventDefault();
       const actionCustomEvent = new CustomEvent("action", {
@@ -22067,6 +22117,8 @@ const DetailsWithConnectedAction = props => {
   });
 };
 
+CONSTRAINT_ATTRIBUTE_SET.add("data-available-message");
+
 const createAvailableConstraint = (
   // the set might be incomplete (the front usually don't have the full copy of all the items from the backend)
   // but this is already nice to help user with what we know
@@ -22226,6 +22278,11 @@ const normalizeColorString = (color, el) => {
   }
   return String(colorRgba);
 };
+
+const fieldPropSet = new Set([
+  ...CONSTRAINT_ATTRIBUTE_SET,
+  "data-testid",
+]);
 
 installImportMetaCss(import.meta);import.meta.css = /* css */`
   @layer navi {
@@ -22684,6 +22741,7 @@ const CheckboxButtonStyleCSSVars = {
 };
 const CheckboxPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":checked", ":-navi-loading"];
 const CheckboxPseudoElements = ["::-navi-loader", "::-navi-checkmark"];
+const CheckboxChildPropSet = new Set([...fieldPropSet]);
 const InputCheckboxBasic = props => {
   const contextFieldName = useContext(FieldNameContext);
   const contextReadOnly = useContext(ReadOnlyContext);
@@ -22786,6 +22844,7 @@ const InputCheckboxBasic = props => {
     },
     accentColor: accentColor,
     hasChildFunction: true,
+    baseChildPropSet: CheckboxChildPropSet,
     preventInitialTransition: true,
     children: [jsx(LoaderBackground, {
       loading: innerLoading,
@@ -23405,6 +23464,7 @@ const RadioButtonStyleCSSVars = {
 };
 const RadioPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":checked", ":-navi-loading"];
 const RadioPseudoElements = ["::-navi-loader", "::-navi-radiomark"];
+const RadioChildPropSet = new Set([...fieldPropSet]);
 const InputRadioBasic = props => {
   const contextName = useContext(FieldNameContext);
   const contextReadOnly = useContext(ReadOnlyContext);
@@ -23533,6 +23593,7 @@ const InputRadioBasic = props => {
     },
     color: color,
     hasChildFunction: true,
+    baseChildPropSet: RadioChildPropSet,
     children: [jsx(LoaderBackground, {
       loading: innerLoading,
       inset: -1,
@@ -23795,7 +23856,7 @@ const InputRange = props => {
     })
   });
 };
-const InputStyleCSSVars$1 = {
+const RangeStyleCSSVars = {
   "outlineWidth": "--outline-width",
   "borderRadius": "--border-radius",
   "borderColor": "--border-color",
@@ -23826,8 +23887,9 @@ const InputStyleCSSVars$1 = {
     thumbColor: "--thumb-color-disabled"
   }
 };
-const InputPseudoClasses$1 = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading"];
-const InputPseudoElements$1 = ["::-navi-loader"];
+const RangePseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading"];
+const RangePseudoElements = ["::-navi-loader"];
+const RangeChildPropSet = new Set([...fieldPropSet]);
 const InputRangeBasic = props => {
   const contextReadOnly = useContext(ReadOnlyContext);
   const contextDisabled = useContext(DisabledContext);
@@ -23938,7 +24000,7 @@ const InputRangeBasic = props => {
     as: "span",
     box: true,
     baseClassName: "navi_input_range",
-    styleCSSVars: InputStyleCSSVars$1,
+    styleCSSVars: RangeStyleCSSVars,
     pseudoStateSelector: ".navi_native_input",
     visualSelector: ".navi_native_input",
     basePseudoState: {
@@ -23946,9 +24008,10 @@ const InputRangeBasic = props => {
       ":disabled": innerDisabled,
       ":-navi-loading": innerLoading
     },
-    pseudoClasses: InputPseudoClasses$1,
-    pseudoElements: InputPseudoElements$1,
+    pseudoClasses: RangePseudoClasses,
+    pseudoElements: RangePseudoElements,
     hasChildFunction: true,
+    baseChildPropSet: RangeChildPropSet,
     ...remainingProps,
     ref: undefined,
     children: [jsx(LoaderBackground, {
@@ -24328,6 +24391,7 @@ Object.assign(PSEUDO_CLASSES, {
   }
 });
 const InputPseudoElements = ["::-navi-loader"];
+const InputChildPropSet = new Set([...fieldPropSet]);
 const InputTextualBasic = props => {
   const contextReadOnly = useContext(ReadOnlyContext);
   const contextDisabled = useContext(DisabledContext);
@@ -24398,7 +24462,8 @@ const InputTextualBasic = props => {
       }
       // style management
       ,
-      baseClassName: "navi_native_input"
+      baseClassName: "navi_native_input",
+      "data-rendered-by": ".navi_input"
     });
   };
   const renderInputMemoized = useCallback(renderInput, [type, uiState, innerValue, innerOnInput, innerId]);
@@ -24429,6 +24494,7 @@ const InputTextualBasic = props => {
     pseudoClasses: InputPseudoClasses,
     pseudoElements: InputPseudoElements,
     hasChildFunction: true,
+    baseChildPropSet: InputChildPropSet,
     "data-start-icon": innerIcon ? "" : undefined,
     "data-end-icon": cancelButton ? "" : undefined,
     ...remainingProps,

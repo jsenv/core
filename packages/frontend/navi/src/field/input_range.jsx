@@ -13,6 +13,7 @@ import { useExecuteAction } from "../action/use_execute_action.js";
 import { Box } from "../box/box.jsx";
 import { LoaderBackground } from "../graphic/loader/loader_background.jsx";
 import { useStableCallback } from "../utils/use_stable_callback.js";
+import { fieldPropSet } from "./field_prop_set.js";
 import {
   reportDisabledToLabel,
   reportInteractiveToLabel,
@@ -257,7 +258,7 @@ export const InputRange = (props) => {
   );
 };
 
-const InputStyleCSSVars = {
+const RangeStyleCSSVars = {
   "outlineWidth": "--outline-width",
   "borderRadius": "--border-radius",
   "borderColor": "--border-color",
@@ -288,7 +289,7 @@ const InputStyleCSSVars = {
     thumbColor: "--thumb-color-disabled",
   },
 };
-const InputPseudoClasses = [
+const RangePseudoClasses = [
   ":hover",
   ":active",
   ":focus",
@@ -297,7 +298,8 @@ const InputPseudoClasses = [
   ":disabled",
   ":-navi-loading",
 ];
-const InputPseudoElements = ["::-navi-loader"];
+const RangePseudoElements = ["::-navi-loader"];
+const RangeChildPropSet = new Set([...fieldPropSet]);
 const InputRangeBasic = (props) => {
   const contextReadOnly = useContext(ReadOnlyContext);
   const contextDisabled = useContext(DisabledContext);
@@ -424,7 +426,7 @@ const InputRangeBasic = (props) => {
       as="span"
       box
       baseClassName="navi_input_range"
-      styleCSSVars={InputStyleCSSVars}
+      styleCSSVars={RangeStyleCSSVars}
       pseudoStateSelector=".navi_native_input"
       visualSelector=".navi_native_input"
       basePseudoState={{
@@ -432,9 +434,10 @@ const InputRangeBasic = (props) => {
         ":disabled": innerDisabled,
         ":-navi-loading": innerLoading,
       }}
-      pseudoClasses={InputPseudoClasses}
-      pseudoElements={InputPseudoElements}
+      pseudoClasses={RangePseudoClasses}
+      pseudoElements={RangePseudoElements}
       hasChildFunction
+      baseChildPropSet={RangeChildPropSet}
       {...remainingProps}
       ref={undefined}
     >

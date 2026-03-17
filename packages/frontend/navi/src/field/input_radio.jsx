@@ -5,6 +5,7 @@ import { renderActionableComponent } from "../action/render_actionable_component
 import { Box } from "../box/box.jsx";
 import { LoaderBackground } from "../graphic/loader/loader_background.jsx";
 import { useStableCallback } from "../utils/use_stable_callback.js";
+import { fieldPropSet } from "./field_prop_set.js";
 import {
   reportDisabledToLabel,
   reportInteractiveToLabel,
@@ -401,6 +402,7 @@ const RadioPseudoClasses = [
   ":-navi-loading",
 ];
 const RadioPseudoElements = ["::-navi-loader", "::-navi-radiomark"];
+const RadioChildPropSet = new Set([...fieldPropSet]);
 const InputRadioBasic = (props) => {
   const contextName = useContext(FieldNameContext);
   const contextReadOnly = useContext(ReadOnlyContext);
@@ -548,6 +550,7 @@ const InputRadioBasic = (props) => {
       }}
       color={color}
       hasChildFunction
+      baseChildPropSet={RadioChildPropSet}
     >
       <LoaderBackground
         loading={innerLoading}

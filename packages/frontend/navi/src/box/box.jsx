@@ -90,7 +90,6 @@ const PSEUDO_CLASSES_DEFAULT = [];
 const PSEUDO_ELEMENTS_DEFAULT = [];
 const STYLE_CSS_VARS_DEFAULT = {};
 const PROPS_CSS_VARS_DEFAULT = {};
-const CHILD_PROP_SET_DEFAULT = new Set();
 
 export const Box = (props) => {
   const {
@@ -118,7 +117,8 @@ export const Box = (props) => {
     // -> introduced for <Input /> with a wrapped for loading, checkboxes, etc
     pseudoStateSelector,
     hasChildFunction,
-    childPropSet = CHILD_PROP_SET_DEFAULT,
+    baseChildPropSet,
+    childPropSet,
     // preventInitialTransition can be used to prevent transition on mount
     // (when transition is set via props, this is done automatically)
     // so this prop is useful only when transition is enabled from "outside" (via CSS)
@@ -437,7 +437,7 @@ export const Box = (props) => {
     }
     for (const propName of remainingPropKeySet) {
       const propValue = rest[propName];
-      if (childPropSet.has(propName)) {
+      if (baseChildPropSet?.has(propName) || childPropSet?.has(propName)) {
         childForwardedProps[propName] = propValue;
         continue;
       }
