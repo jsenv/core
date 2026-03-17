@@ -1596,6 +1596,9 @@ const createAction = (callback, rootOptions = {}) => {
         writable: true,
         value: name,
       });
+      // Register the action function itself so that createAction(action) returns
+      // the same action instead of creating a new one
+      actionWeakMap.set(action, action);
     }
 
     const callSource = generateActionCallSource(name, params);
@@ -1914,7 +1917,7 @@ const createAction = (callback, rootOptions = {}) => {
             valueSignal.value = valueInitial;
           }
           if (outputSignal) {
-            outputSignal.value = null;
+            outputSignal.value = undefined;
           }
           isPrerunSignal.value = true;
           runningStateSignal.value = IDLE;
