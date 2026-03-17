@@ -11,7 +11,10 @@ const action = createAction(
   { outputSignal: parentSignal },
 );
 
-const childAction = action.bindParams({ id: 99 }, { outputSignal: childSignal });
+const childAction = action.bindParams(
+  { id: 99 },
+  { outputSignal: childSignal },
+);
 
 await childAction.run();
 

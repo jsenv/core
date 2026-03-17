@@ -216,4 +216,52 @@ await snapshotTests(import.meta.url, ({ test }) => {
 
     return runCalls;
   });
+
+  /* eslint-disable signals/no-value-after-await */
+  test("outputSignal lifecycle with actionRunEffect and userIdSignal", async () => {
+    const userIdSignal = signal(undefined);
+    const userSignal = signal(null);
+    const fetchUserAction = createAction(
+      async ({ userId }) => {
+        await new Promise((r) => setTimeout(r, 10));
+        return { id: userId, name: `User ${userId}` };
+      },
+      { outputSignal: userSignal },
+    );
+    actionRunEffect(fetchUserAction, () => {
+      const userId = userIdSignal.value;
+      if (!userId) {
+        return null;
+      }
+      return { userId };
+    });
+
+    // 1. userIdSignal is initially undefined — action never ran
+    const whenUserIdUndefined = userSignal.value;
+    // 2. Set userId — action starts loading
+    userIdSignal.value = 1;
+    const afterSettingUserId = userSignal.value;
+    await new Promise((r) => setTimeout(r, 100)); // wait for action to complete
+    const onceLoaded = userSignal.value;
+
+    // 4. Update userId to a new value — new fetch starts, old data still in signal
+    userIdSignal.value = 2;
+    const afterUpdatingUserId = userSignal.value;
+    await new Promise((r) => setTimeout(r, 100)); // wait for action to complete
+    const onceSecondUserLoaded = userSignal.value;
+
+    // 5. Set userId back to undefined — action resets, signal cleared
+    userIdSignal.value = undefined;
+    const afterUserIdCleared = userSignal.value;
+
+    return {
+      whenUserIdUndefined,
+      afterSettingUserId,
+      onceLoaded,
+      afterUpdatingUserId,
+      onceSecondUserLoaded,
+      afterUserIdCleared,
+    };
+  });
+  /* eslint-enable signals/no-value-after-await */
 });
