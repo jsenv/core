@@ -22,7 +22,7 @@ export const MIN_LOWER_LETTER_CONSTRAINT = {
       }
     }
     if (numberOfLowercaseChars < min) {
-      if (min === 0) {
+      if (min === 1) {
         return generateFieldInvalidMessage(
           `{field} doit contenir au moins une lettre minuscule.`,
           { field },
@@ -59,7 +59,7 @@ export const MIN_UPPER_LETTER_CONSTRAINT = {
       }
     }
     if (numberOfUppercaseChars < min) {
-      if (min === 0) {
+      if (min === 1) {
         return generateFieldInvalidMessage(
           `{field} doit contenir au moins une lettre majuscule.`,
           { field },
@@ -96,7 +96,7 @@ export const MIN_DIGIT_CONSTRAINT = {
       }
     }
     if (numberOfDigitChars < min) {
-      if (min === 0) {
+      if (min === 1) {
         return generateFieldInvalidMessage(
           `{field} doit contenir au moins un chiffre.`,
           { field },

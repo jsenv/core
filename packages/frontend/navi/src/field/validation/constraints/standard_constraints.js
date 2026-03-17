@@ -158,7 +158,6 @@ export const MIN_LENGTH_CONSTRAINT = {
     } else if (field.tagName !== "TEXTAREA") {
       return null;
     }
-
     const minLength = field.minLength;
     if (minLength === -1) {
       return null;

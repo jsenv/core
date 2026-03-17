@@ -304,6 +304,8 @@ export const installCustomConstraintValidation = (
   }
 
   const isForm = element.tagName === "FORM";
+  const isInput = element.tagName === "INPUT" || element.tagName === "TEXTAREA";
+  const isCheckbox = element.tagName === "INPUT" && element.type === "checkbox";
   if (isForm) {
     formInstrumentedWeakSet.add(element);
     addTeardown(() => {
@@ -725,8 +727,6 @@ export const installCustomConstraintValidation = (
   }
 
   request_on_input_value_change: {
-    const isInput =
-      element.tagName === "INPUT" || element.tagName === "TEXTAREA";
     if (!isInput) {
       break request_on_input_value_change;
     }
@@ -762,8 +762,6 @@ export const installCustomConstraintValidation = (
   }
 
   request_on_checkbox_change: {
-    const isCheckbox =
-      element.tagName === "INPUT" && element.type === "checkbox";
     if (!isCheckbox) {
       break request_on_checkbox_change;
     }
@@ -788,6 +786,7 @@ export const installCustomConstraintValidation = (
     }
     // We will dispatch "action" when "submit" occurs (code called from.submit() to bypass validation)
     const form = element;
+    form.setAttribute("novalidate", ""); // make sure browser don't prevent "submit" nor display messages
     const removeListener = addEventListener(form, "submit", (e) => {
       e.preventDefault();
       if (debug) {
