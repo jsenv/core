@@ -15,6 +15,7 @@
 - [signal default to empty array](11_signal_default_to_empty_array/11_signal_default_to_empty_array.md)
 - [state signal default to empty array](12_state_signal_default_to_empty_array/12_state_signal_default_to_empty_array.md)
 - [dataSignal values](13_datasignal_values/13_datasignal_values.md)
+- [outputSignal with run effect](14_outputsignal_with_run_effect/14_outputsignal_with_run_effect.md)
 
 ---
 

@@ -340,4 +340,33 @@ await snapshotTests(import.meta.url, ({ test }) => {
 
     return sequence;
   });
+
+  test("outputSignal with run effect", () => {
+    const zoneIdSignal = signal();
+    const zoneSignal = signal();
+    const loadZoneAction = createAction(
+      (id) => {
+        return { id };
+      },
+      { outputSignal: zoneSignal },
+    );
+    actionRunEffect(loadZoneAction, () => {
+      const zoneId = zoneIdSignal.value;
+      return zoneId;
+    });
+    const at_start = zoneSignal.value;
+    zoneIdSignal.value = "paris";
+    const after_set_paris = zoneSignal.value;
+    zoneIdSignal.value = "nice";
+    const after_set_nice = zoneSignal.value;
+    zoneIdSignal.value = "paris";
+    const after_set_paris_again = zoneSignal.value;
+
+    return {
+      at_start,
+      after_set_paris,
+      after_set_nice,
+      after_set_paris_again,
+    };
+  });
 });
