@@ -1170,12 +1170,14 @@ export const createAction = (callback, rootOptions = {}) => {
  * @param {boolean} options.rerunOnChange - Ensures the action is rerun every time a signal value is modified.
  *   This enables live updates - for example, performing an HTTP GET request every time
  *   a list of filters changes, providing real-time results without user interaction.
- * @param {boolean} options.isolate - Ensures the new action is fresh (does not inherit value/error from previous action)
- * By default the proxy action inherits the current value and error of the previous action to provide a seamless transition.
- * Setting isolate to true creates a completely new action instance with default state on each update.
- * The default behavior allow for instance "Apply Filters" workflows where users modify filters but results are only
- * updated when they explicitly trigger the action (e.g., clicking an "Apply" button).
- * The old data remains visible until the new action completes.
+ * @param {boolean} options.inheritData - When true, each new target action starts fresh with no inherited state.
+ *   By default (false), the proxy carries over the previous target's value and error into the new action.
+ *   This keeps the facade in sync with the latest known data: `action.dataSignal.value` only changes when a
+ *   new action completes, not when it starts loading. Code that needs to distinguish loading state can still
+ *   check `action.runningState`, while code that just reads `action.data` always sees the most recent
+ *   available data — even while a newer action is in flight.
+ *   This default also enables "Apply Filters" workflows where parameters change but the action only reruns
+ *   on an explicit user trigger: the previous results remain visible until the new action completes.
  * @param {function} options.onChange - Optional callback triggered when the target action changes
  */
 const createActionProxyFromSignal = (
@@ -1184,7 +1186,7 @@ const createActionProxyFromSignal = (
   {
     runOnce = false,
     rerunOnChange = false,
-    isolate = false,
+    inheritData = true,
     onChange,
     syncParams,
   } = {},
@@ -1217,15 +1219,15 @@ const createActionProxyFromSignal = (
   let isFirstEffect = true;
 
   const createTarget = (params) => {
-    if (isolate) {
-      return action.bindParams(params);
+    if (inheritData) {
+      const previousActionTarget = actionTargetPreviousWeakRef?.deref();
+      const previousTarget = previousActionTarget || action;
+      return action.bindParams(params, {
+        error: previousTarget.errorSignal.peek(),
+        value: previousTarget.valueSignal.peek(),
+      });
     }
-    const previousActionTarget = actionTargetPreviousWeakRef?.deref();
-    const previousTarget = previousActionTarget || action;
-    return action.bindParams(params, {
-      error: previousTarget.errorSignal.peek(),
-      value: previousTarget.valueSignal.peek(),
-    });
+    return action.bindParams(params);
   };
 
   let isUpdatingTarget = false;

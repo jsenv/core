@@ -174,9 +174,6 @@ const ActionRenderer = ({
   if (errorBoundary) {
     return renderError(errorBoundary, "ui_error", action);
   }
-  if (error) {
-    return renderError(error, "action_error", action);
-  }
   if (aborted) {
     return renderAborted(action);
   }
@@ -198,6 +195,9 @@ const ActionRenderer = ({
       return renderCompletedSafe(data, action);
     }
     return renderLoading(action);
+  }
+  if (error) {
+    return renderError(error, "action_error", action);
   }
   return renderCompletedSafe(data, action);
 };
@@ -1376,7 +1376,6 @@ const createAction = (callback, rootOptions = {}) => {
       completed = false,
       renderLoadedAsync,
       sideEffect = () => {},
-      keepOldData = false,
       meta = {},
 
       outputSignal,
@@ -1418,10 +1417,10 @@ const createAction = (callback, rootOptions = {}) => {
     };
     /**
      * Stop the action completely - this will:
-     * 1. Abort the action if it's currently running
-     * 2. Reset the action to IDLE state
+     * 1. Abort if it's currently running
+     * 2. Reset action running signal to IDLE state
      * 3. Clean up any resources and side effects
-     * 4. Reset data to initial value (unless keepOldData is true)
+     * 4. Reset data/error to initial value
      */
     const reset = (options) => {
       return dispatchSingleAction(action, "reset", options);
@@ -1751,7 +1750,6 @@ const createAction = (callback, rootOptions = {}) => {
         actionAbortMap.set(action, abort);
 
         batch(() => {
-          errorSignal.value = null;
           runningStateSignal.value = RUNNING;
           if (!isPrerun) {
             isPrerunSignal.value = false;
@@ -1798,6 +1796,7 @@ const createAction = (callback, rootOptions = {}) => {
             const value = resultToValue
               ? resultToValue(runResult, action)
               : runResult;
+            errorSignal.value = undefined;
             valueSignal.value = value;
             runningStateSignal.value = COMPLETED;
             const data = dataSignal.value;
@@ -1916,8 +1915,8 @@ const createAction = (callback, rootOptions = {}) => {
 
         actionPromiseMap.delete(action);
         batch(() => {
-          errorSignal.value = null;
-          if (!keepOldData && !willRunOrPrerun) {
+          if (!willRunOrPrerun) {
+            errorSignal.value = undefined;
             valueSignal.value = valueInitial;
             if (outputSignal) {
               outputSignal.value = undefined;
@@ -1958,10 +1957,14 @@ const createAction = (callback, rootOptions = {}) => {
  * @param {boolean} options.rerunOnChange - Ensures the action is rerun every time a signal value is modified.
  *   This enables live updates - for example, performing an HTTP GET request every time
  *   a list of filters changes, providing real-time results without user interaction.
- * @param {boolean} options.transferData - Ensures the new action inherits the data from the current action (if any).
- *   This enables "Apply Filters" workflows where users modify filters but results are only
- *   updated when they explicitly trigger the action (e.g., clicking an "Apply" button).
- *   The old data remains visible until the new action completes.
+ * @param {boolean} options.inheritData - When true, each new target action starts fresh with no inherited state.
+ *   By default (false), the proxy carries over the previous target's value and error into the new action.
+ *   This keeps the facade in sync with the latest known data: `action.dataSignal.value` only changes when a
+ *   new action completes, not when it starts loading. Code that needs to distinguish loading state can still
+ *   check `action.runningState`, while code that just reads `action.data` always sees the most recent
+ *   available data — even while a newer action is in flight.
+ *   This default also enables "Apply Filters" workflows where parameters change but the action only reruns
+ *   on an explicit user trigger: the previous results remain visible until the new action completes.
  * @param {function} options.onChange - Optional callback triggered when the target action changes
  */
 const createActionProxyFromSignal = (
@@ -1970,7 +1973,7 @@ const createActionProxyFromSignal = (
   {
     runOnce = false,
     rerunOnChange = false,
-    transferData = false,
+    inheritData = true,
     onChange,
     syncParams,
   } = {},
@@ -2001,6 +2004,18 @@ const createActionProxyFromSignal = (
   let currentActionPrivateProperties = getActionPrivateProperties(action);
   let actionTargetPreviousWeakRef = null;
 
+  const createTarget = (params) => {
+    if (inheritData) {
+      const previousActionTarget = actionTargetPreviousWeakRef?.deref();
+      const previousTarget = previousActionTarget || action;
+      return action.bindParams(params, {
+        error: previousTarget.errorSignal.peek(),
+        value: previousTarget.valueSignal.peek(),
+      });
+    }
+    return action.bindParams(params);
+  };
+
   let isUpdatingTarget = false;
   const _updateTarget = (context) => {
     if (isUpdatingTarget) {
@@ -2030,7 +2045,7 @@ const createActionProxyFromSignal = (
       currentAction = action;
       currentActionPrivateProperties = getActionPrivateProperties(action);
     } else {
-      actionTarget = action.bindParams(params);
+      actionTarget = createTarget(params);
       if (previousActionTarget === actionTarget) {
         return;
       }
@@ -2073,6 +2088,7 @@ const createActionProxyFromSignal = (
         return nameSignal.value;
       },
     });
+    actionWeakMap.set(actionProxy, actionProxy);
   }
 
   // Create our own signal for params that we control completely
@@ -2215,15 +2231,6 @@ const createActionProxyFromSignal = (
     return true;
   };
 
-  if (transferData) {
-    onActionTargetChange((actionTarget, actionTargetPrevious) => {
-      if (actionTarget && actionTargetPrevious) {
-        const targetValueSignal = actionTarget.valueSignal;
-        const previousValueSignal = actionTargetPrevious.valueSignal;
-        targetValueSignal.value = previousValueSignal.value;
-      }
-    });
-  }
   if (runOnce) {
     onActionTargetChange((actionTarget, actionTargetPrevious) => {
       if (!actionTargetPrevious && actionTarget) {
@@ -2323,9 +2330,11 @@ getActionPrivateProperties(COMPLETED_ACTION).performRun({});
 const actionRunEffect = (
   action,
   deriveActionParamsFromSignals,
-  { debounce, actionOptions } = {},
+  { debounce, ...options } = {},
 ) => {
-  if (typeof action === "function") action = createAction(action);
+  if (typeof action === "function") {
+    action = createAction(action);
+  }
   let lastTruthyParams;
   let actionParamsSignal = computed(() => {
     const params = deriveActionParamsFromSignals();
@@ -2393,7 +2402,7 @@ const actionRunEffect = (
         }
       }
     },
-    ...actionOptions,
+    ...options,
   });
   if (actionParamsSignal.peek()) {
     actionRunnedByThisEffect.run({ reason: "initial truthy params" });
