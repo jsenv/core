@@ -87,9 +87,6 @@ export const ActionRenderer = ({ action, children, disabled }) => {
   if (errorBoundary) {
     return renderError(errorBoundary, "ui_error", action);
   }
-  if (error) {
-    return renderError(error, "action_error", action);
-  }
   if (aborted) {
     return renderAborted(action);
   }
@@ -109,6 +106,9 @@ export const ActionRenderer = ({ action, children, disabled }) => {
       return renderCompletedSafe(data, action);
     }
     return renderLoading(action);
+  }
+  if (error) {
+    return renderError(error, "action_error", action);
   }
   return renderCompletedSafe(data, action);
 };

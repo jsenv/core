@@ -587,7 +587,6 @@ export const createAction = (callback, rootOptions = {}) => {
       completed = false,
       renderLoadedAsync,
       sideEffect = () => {},
-      keepOldData = false,
       meta = {},
 
       outputSignal,
@@ -629,10 +628,10 @@ export const createAction = (callback, rootOptions = {}) => {
     };
     /**
      * Stop the action completely - this will:
-     * 1. Abort the action if it's currently running
-     * 2. Reset the action to IDLE state
+     * 1. Abort if it's currently running
+     * 2. Reset action running signal to IDLE state
      * 3. Clean up any resources and side effects
-     * 4. Reset data to initial value (unless keepOldData is true)
+     * 4. Reset data/error to initial value
      */
     const reset = (options) => {
       return dispatchSingleAction(action, "reset", options);
@@ -964,7 +963,6 @@ export const createAction = (callback, rootOptions = {}) => {
         actionAbortMap.set(action, abort);
 
         batch(() => {
-          errorSignal.value = null;
           runningStateSignal.value = RUNNING;
           if (!isPrerun) {
             isPrerunSignal.value = false;
@@ -1129,8 +1127,8 @@ export const createAction = (callback, rootOptions = {}) => {
 
         actionPromiseMap.delete(action);
         batch(() => {
-          errorSignal.value = null;
-          if (!keepOldData && !willRunOrPrerun) {
+          if (!willRunOrPrerun) {
+            errorSignal.value = null;
             valueSignal.value = valueInitial;
             if (outputSignal) {
               outputSignal.value = undefined;
@@ -1183,7 +1181,7 @@ const createActionProxyFromSignal = (
   {
     runOnce = false,
     rerunOnChange = false,
-    transferData = false,
+    transferData = true,
     onChange,
     syncParams,
   } = {},

@@ -23,7 +23,7 @@ return { afterRun, afterReset };
     "id": 1,
     "name": "Alice"
   },
-  "afterReset": null
+  "afterReset": undefined
 }
 ```
 
