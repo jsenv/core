@@ -1,3 +1,9 @@
+- Ecrire un test montrant ce qui se passe si une action est run
+  plusieurs fois par un run effect.
+  Et faire en sorte que la résolution soit non predictible dans son ordre
+  On voudra surement introduire in requestCanceller ou quelque chose pour annuler
+  l'execution précédente (une option permettra cela, activée par defaut)
+
 - Drag to move row and column
 
   (ideally we keep an empty "clone" in the table and we create a visually identic clone to drag)

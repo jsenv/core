@@ -1248,7 +1248,11 @@ ${lines.join("\n")}`);
     for (const actionToReset of willResetSet) {
       const actionToResetPrivateProperties =
         getActionPrivateProperties(actionToReset);
-      actionToResetPrivateProperties.performReset({ reason });
+      actionToResetPrivateProperties.performReset({
+        reason,
+        willRunOrPrerun:
+          willRunSet.has(actionToReset) || willPrerunSet.has(actionToReset),
+      });
       activationWeakSet.delete(actionToReset);
     }
   }
@@ -1897,7 +1901,7 @@ const createAction = (callback, rootOptions = {}) => {
         }
       };
 
-      const performReset = ({ reason }) => {
+      const performReset = ({ reason, willRunOrPrerun }) => {
         abort(reason);
         if (DEBUG$3) {
           console.log(`"${action}": resetting (reason: ${reason})`);
@@ -1913,11 +1917,11 @@ const createAction = (callback, rootOptions = {}) => {
         actionPromiseMap.delete(action);
         batch(() => {
           errorSignal.value = null;
-          if (!keepOldData) {
+          if (!keepOldData && !willRunOrPrerun) {
             valueSignal.value = valueInitial;
-          }
-          if (outputSignal) {
-            outputSignal.value = undefined;
+            if (outputSignal) {
+              outputSignal.value = undefined;
+            }
           }
           isPrerunSignal.value = true;
           runningStateSignal.value = IDLE;
@@ -2319,7 +2323,7 @@ getActionPrivateProperties(COMPLETED_ACTION).performRun({});
 const actionRunEffect = (
   action,
   deriveActionParamsFromSignals,
-  { debounce, meta } = {},
+  { debounce, actionOptions } = {},
 ) => {
   if (typeof action === "function") action = createAction(action);
   let lastTruthyParams;
@@ -2389,7 +2393,7 @@ const actionRunEffect = (
         }
       }
     },
-    meta,
+    ...actionOptions,
   });
   if (actionParamsSignal.peek()) {
     actionRunnedByThisEffect.run({ reason: "initial truthy params" });

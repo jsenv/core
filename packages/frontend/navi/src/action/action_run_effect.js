@@ -31,7 +31,7 @@ import { createAction } from "./actions.js";
 export const actionRunEffect = (
   action,
   deriveActionParamsFromSignals,
-  { debounce, meta } = {},
+  { debounce, actionOptions } = {},
 ) => {
   if (typeof action === "function") action = createAction(action);
   let lastTruthyParams;
@@ -101,7 +101,7 @@ export const actionRunEffect = (
         }
       }
     },
-    meta,
+    ...actionOptions,
   });
   if (actionParamsSignal.peek()) {
     actionRunnedByThisEffect.run({ reason: "initial truthy params" });

@@ -452,7 +452,11 @@ ${lines.join("\n")}`);
     for (const actionToReset of willResetSet) {
       const actionToResetPrivateProperties =
         getActionPrivateProperties(actionToReset);
-      actionToResetPrivateProperties.performReset({ reason });
+      actionToResetPrivateProperties.performReset({
+        reason,
+        willRunOrPrerun:
+          willRunSet.has(actionToReset) || willPrerunSet.has(actionToReset),
+      });
       activationWeakSet.delete(actionToReset);
     }
   }
@@ -1110,7 +1114,7 @@ export const createAction = (callback, rootOptions = {}) => {
         }
       };
 
-      const performReset = ({ reason }) => {
+      const performReset = ({ reason, willRunOrPrerun }) => {
         abort(reason);
         if (DEBUG) {
           console.log(`"${action}": resetting (reason: ${reason})`);
@@ -1126,11 +1130,11 @@ export const createAction = (callback, rootOptions = {}) => {
         actionPromiseMap.delete(action);
         batch(() => {
           errorSignal.value = null;
-          if (!keepOldData) {
+          if (!keepOldData && !willRunOrPrerun) {
             valueSignal.value = valueInitial;
-          }
-          if (outputSignal) {
-            outputSignal.value = undefined;
+            if (outputSignal) {
+              outputSignal.value = undefined;
+            }
           }
           isPrerunSignal.value = true;
           runningStateSignal.value = IDLE;
