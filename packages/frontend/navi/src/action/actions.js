@@ -1009,6 +1009,7 @@ export const createAction = (callback, rootOptions = {}) => {
             const value = resultToValue
               ? resultToValue(runResult, action)
               : runResult;
+            errorSignal.value = undefined;
             valueSignal.value = value;
             runningStateSignal.value = COMPLETED;
             const data = dataSignal.value;
@@ -1128,7 +1129,7 @@ export const createAction = (callback, rootOptions = {}) => {
         actionPromiseMap.delete(action);
         batch(() => {
           if (!willRunOrPrerun) {
-            errorSignal.value = null;
+            errorSignal.value = undefined;
             valueSignal.value = valueInitial;
             if (outputSignal) {
               outputSignal.value = undefined;
