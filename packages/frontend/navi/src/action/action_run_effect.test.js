@@ -1,5 +1,5 @@
 import { snapshotTests } from "@jsenv/snapshot";
-import { signal } from "@preact/signals";
+import { effect, signal } from "@preact/signals";
 import { stateSignal } from "../state/state_signal.js";
 import { actionRunEffect } from "./action_run_effect.js";
 import { createAction } from "./actions.js";
@@ -296,5 +296,48 @@ await snapshotTests(import.meta.url, ({ test }) => {
     const afterReset = valueSignal.value;
 
     return { atStart, afterRun, afterReset };
+  });
+
+  test.ONLY("dataSignal values", async () => {
+    const aParamSignal = signal();
+    const action = actionRunEffect(
+      async ({ a }) => {
+        await sleep(0);
+        return a;
+      },
+      () => {
+        const a = aParamSignal.value;
+        if (!a) {
+          return null;
+        }
+        return { a };
+      },
+    );
+    const sequence = [];
+    effect(() => {
+      const data = action.dataSignal.value;
+      sequence.push(`action data signal set to ${data}`);
+    });
+
+    aParamSignal.value = "value_1";
+    sequence.push(`set "value_1"`);
+    await sleep(50);
+    sequence.push("sleep 50");
+    await sleep(50);
+    sequence.push(`set "value_2"`);
+    aParamSignal.value = "value_2";
+    await sleep(50);
+    sequence.push("sleep 50 after a change");
+    await sleep(50);
+    sequence.push(`set null`);
+    aParamSignal.value = null;
+    await sleep(50);
+    sequence.push("sleep 50 after a change to null");
+    await sleep(50);
+    sequence.push(`set "value_3"`);
+    aParamSignal.value = "value_3";
+    await sleep(50);
+
+    return sequence;
   });
 });

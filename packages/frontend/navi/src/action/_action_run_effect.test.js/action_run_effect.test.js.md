@@ -14,6 +14,7 @@
 - [outputSignal lifecycle with actionRunEffect and userIdSignal](10_outputsignal_lifecycle_with_actionruneffect_and_useridsignal/10_outputsignal_lifecycle_with_actionruneffect_and_useridsignal.md)
 - [signal default to empty array](11_signal_default_to_empty_array/11_signal_default_to_empty_array.md)
 - [state signal default to empty array](12_state_signal_default_to_empty_array/12_state_signal_default_to_empty_array.md)
+- [dataSignal values](13_datasignal_values/13_datasignal_values.md)
 
 ---
 
