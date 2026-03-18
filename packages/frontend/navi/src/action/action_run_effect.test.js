@@ -298,7 +298,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
     return { atStart, afterRun, afterReset };
   });
 
-  test.ONLY("dataSignal values", async () => {
+  test("dataSignal values", async () => {
     const aParamSignal = signal();
     const action = actionRunEffect(
       async ({ a }) => {

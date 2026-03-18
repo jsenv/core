@@ -1170,10 +1170,12 @@ export const createAction = (callback, rootOptions = {}) => {
  * @param {boolean} options.rerunOnChange - Ensures the action is rerun every time a signal value is modified.
  *   This enables live updates - for example, performing an HTTP GET request every time
  *   a list of filters changes, providing real-time results without user interaction.
- * @param {boolean} options.transferData - Ensures the new action inherits the data from the current action (if any).
- *   This enables "Apply Filters" workflows where users modify filters but results are only
- *   updated when they explicitly trigger the action (e.g., clicking an "Apply" button).
- *   The old data remains visible until the new action completes.
+ * @param {boolean} options.isolate - Ensures the new action is fresh (does not inherit value/error from previous action)
+ * By default the proxy action inherits the current value and error of the previous action to provide a seamless transition.
+ * Setting isolate to true creates a completely new action instance with default state on each update.
+ * The default behavior allow for instance "Apply Filters" workflows where users modify filters but results are only
+ * updated when they explicitly trigger the action (e.g., clicking an "Apply" button).
+ * The old data remains visible until the new action completes.
  * @param {function} options.onChange - Optional callback triggered when the target action changes
  */
 const createActionProxyFromSignal = (
@@ -1182,7 +1184,7 @@ const createActionProxyFromSignal = (
   {
     runOnce = false,
     rerunOnChange = false,
-    transferData = true,
+    isolate = false,
     onChange,
     syncParams,
   } = {},
@@ -1214,6 +1216,18 @@ const createActionProxyFromSignal = (
   let actionTargetPreviousWeakRef = null;
   let isFirstEffect = true;
 
+  const createTarget = (params) => {
+    if (isolate) {
+      return action.bindParams(params);
+    }
+    const previousActionTarget = actionTargetPreviousWeakRef?.deref();
+    const previousTarget = previousActionTarget || action;
+    return action.bindParams(params, {
+      error: previousTarget.errorSignal.peek(),
+      value: previousTarget.valueSignal.peek(),
+    });
+  };
+
   let isUpdatingTarget = false;
   const _updateTarget = (context) => {
     if (isUpdatingTarget) {
@@ -1243,7 +1257,7 @@ const createActionProxyFromSignal = (
       currentAction = action;
       currentActionPrivateProperties = getActionPrivateProperties(action);
     } else {
-      actionTarget = action.bindParams(params);
+      actionTarget = createTarget(params);
       if (previousActionTarget === actionTarget) {
         return;
       }
@@ -1290,6 +1304,7 @@ const createActionProxyFromSignal = (
         return nameSignal.value;
       },
     });
+    actionWeakMap.set(actionProxy, actionProxy);
   } else {
     actionProxy = {
       get name() {
@@ -1438,15 +1453,6 @@ const createActionProxyFromSignal = (
     return true;
   };
 
-  if (transferData) {
-    onActionTargetChange((actionTarget, actionTargetPrevious) => {
-      if (actionTarget && actionTargetPrevious) {
-        const targetValueSignal = actionTarget.valueSignal;
-        const previousValueSignal = actionTargetPrevious.valueSignal;
-        targetValueSignal.value = previousValueSignal.value;
-      }
-    });
-  }
   if (runOnce) {
     onActionTargetChange((actionTarget, actionTargetPrevious) => {
       if (!actionTargetPrevious && actionTarget) {
