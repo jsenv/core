@@ -29081,17 +29081,15 @@ const Address = ({
   });
 };
 
-const LoadingDots = ({
-  color = "FF156D"
-}) => {
+const LoadingDots = () => {
   return jsxs("svg", {
     viewBox: "0 0 200 200",
     width: "100%",
     height: "100%",
     xmlns: "http://www.w3.org/2000/svg",
     children: [jsx("rect", {
-      fill: color,
-      stroke: color,
+      fill: "currentColor",
+      stroke: "currentColor",
       "stroke-width": "15",
       width: "30",
       height: "30",
@@ -29107,8 +29105,8 @@ const LoadingDots = ({
         begin: "-.4"
       })
     }), jsx("rect", {
-      fill: color,
-      stroke: color,
+      fill: "currentColor",
+      stroke: "currentColor",
       "stroke-width": "15",
       width: "30",
       height: "30",
@@ -29124,8 +29122,8 @@ const LoadingDots = ({
         begin: "-.2"
       })
     }), jsx("rect", {
-      fill: color,
-      stroke: color,
+      fill: "currentColor",
+      stroke: "currentColor",
       "stroke-width": "15",
       width: "30",
       height: "30",
@@ -30133,6 +30131,7 @@ const Meter = ({
   let children = caption;
   if (children === undefined && percentage) {
     children = jsx(Quantity, {
+      loading: loading,
       unit: "%",
       unitSizeRatio: "1",
       unitColor: "inherit",
