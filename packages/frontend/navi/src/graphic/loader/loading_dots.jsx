@@ -1,4 +1,4 @@
-export const LoadingDots = ({ color = "FF156D" }) => {
+export const LoadingDots = () => {
   return (
     <svg
       viewBox="0 0 200 200"
@@ -7,8 +7,8 @@ export const LoadingDots = ({ color = "FF156D" }) => {
       xmlns="http://www.w3.org/2000/svg"
     >
       <rect
-        fill={color}
-        stroke={color}
+        fill="currentColor"
+        stroke="currentColor"
         stroke-width="15"
         width="30"
         height="30"
@@ -26,8 +26,8 @@ export const LoadingDots = ({ color = "FF156D" }) => {
         ></animate>
       </rect>
       <rect
-        fill={color}
-        stroke={color}
+        fill="currentColor"
+        stroke="currentColor"
         stroke-width="15"
         width="30"
         height="30"
@@ -45,8 +45,8 @@ export const LoadingDots = ({ color = "FF156D" }) => {
         ></animate>
       </rect>
       <rect
-        fill={color}
-        stroke={color}
+        fill="currentColor"
+        stroke="currentColor"
         stroke-width="15"
         width="30"
         height="30"

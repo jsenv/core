@@ -186,7 +186,12 @@ export const Meter = ({
   let children = caption;
   if (children === undefined && percentage) {
     children = (
-      <Quantity unit="%" unitSizeRatio="1" unitColor="inherit">
+      <Quantity
+        loading={loading}
+        unit="%"
+        unitSizeRatio="1"
+        unitColor="inherit"
+      >
         {Math.round(fillRatio * 100)}
       </Quantity>
     );

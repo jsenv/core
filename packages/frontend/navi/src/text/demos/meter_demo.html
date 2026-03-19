@@ -392,70 +392,32 @@
       /* ------------------------------------------------------------------ */
       /* Enhanced States — loading & disabled (not in user agent)             */
       /* ------------------------------------------------------------------ */
-      const EnhancedStatesDemo = () => {
-        const [loading, setLoading] = useState(true);
+      const EnhancedStatesDemo = () => (
+        <div className="demo-section">
+          <h2>Enhanced states</h2>
 
-        return (
-          <div className="demo-section">
-            <h2>Enhanced states</h2>
-
-            <div className="states-section">
-              <div className="states-title enhanced-states-title">
-                States not available in user agent &lt;meter&gt;
-              </div>
-
-              <Box column spacing="s">
-                <fieldset>
-                  <legend>disabled</legend>
-                  <div className="comparison-row">
-                    <span className="comparison-label">Navi</span>
-                    <Meter value={0.6} disabled />
-                  </div>
-                  <div className="comparison-row">
-                    <span className="comparison-label">User Agent</span>
-                    <meter value={0.6} />
-                    <Caption>(pas de disabled natif)</Caption>
-                  </div>
-                </fieldset>
-              </Box>
-
-              <Box column spacing="s" marginTop="s">
-                <fieldset>
-                  <legend>loading</legend>
-                  <div className="comparison-row">
-                    <span className="comparison-label">Navi</span>
-                    <Meter value={0} loading />
-                  </div>
-                  <div className="comparison-row">
-                    <span className="comparison-label">User Agent</span>
-                    <meter value={0} />
-                    <Caption>(pas de loading natif)</Caption>
-                  </div>
-                </fieldset>
-              </Box>
-
-              <Box row spacing="m" alignY="center" marginTop="m">
-                <button onClick={() => setLoading((v) => !v)}>
-                  {loading ? "Arrêter le chargement" : "Remettre en chargement"}
-                </button>
-                <Box row spacing="l" alignY="center">
-                  <Meter value={0.4} loading={loading} />
-                  <Meter value={0.7} loading={loading} width="8em" />
-                  <Meter
-                    value={0.9}
-                    min={0}
-                    max={100}
-                    low={25}
-                    high={75}
-                    optimum={90}
-                    loading={loading}
-                  />
-                </Box>
-              </Box>
+          <div className="states-section">
+            <div className="states-title enhanced-states-title">
+              States not available in user agent &lt;meter&gt;
             </div>
+
+            <Box column spacing="s">
+              <fieldset>
+                <legend>disabled</legend>
+                <div className="comparison-row">
+                  <span className="comparison-label">Navi</span>
+                  <Meter value={0.6} disabled />
+                </div>
+                <div className="comparison-row">
+                  <span className="comparison-label">User Agent</span>
+                  <meter value={0.6} />
+                  <Caption>(pas de disabled natif)</Caption>
+                </div>
+              </fieldset>
+            </Box>
           </div>
-        );
-      };
+        </div>
+      );
 
       /* ------------------------------------------------------------------ */
       /* Color customization                                                  */
@@ -944,6 +906,7 @@
         const [value, setValue] = useState(0.5);
         const [transition, setTransition] = useState(false);
         const [fillRound, setFillRound] = useState(false);
+        const [loading, setLoading] = useState(false);
 
         return (
           <div className="demo-section">
@@ -974,6 +937,12 @@
                   >
                     fillRound
                   </Checkbox>
+                  <Checkbox
+                    checked={loading}
+                    onChange={(e) => setLoading(e.target.checked)}
+                  >
+                    loading
+                  </Checkbox>
                 </Box>
 
                 <Box row spacing="s" alignY="center">
@@ -989,6 +958,7 @@
                   height="3em"
                   transition={transition}
                   fillRound={fillRound}
+                  loading={loading}
                 />
               </Box>
             </div>
