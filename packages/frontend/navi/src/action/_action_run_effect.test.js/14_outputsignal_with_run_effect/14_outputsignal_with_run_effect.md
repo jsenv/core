@@ -39,7 +39,7 @@ return {
     "id": "nice"
   },
   "after_set_paris_again": {
-    "id": "nice"
+    "id": "paris"
   }
 }
 ```

@@ -1,7 +1,6 @@
 import { computed } from "@preact/signals";
 
 import { debounceSignal } from "../state/debounce_signal.js";
-import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
 import { stringifyForDisplay } from "../utils/stringify_for_display.js";
 import { createAction } from "./actions.js";
 
@@ -36,7 +35,6 @@ export const actionRunEffect = (
   if (typeof action === "function") {
     action = createAction(action);
   }
-  let lastTruthyParams;
   let actionParamsSignal = computed(() => {
     const params = deriveActionParamsFromSignals();
     action.debug(
@@ -52,9 +50,6 @@ export const actionRunEffect = (
           `actionRunEffect second arg is returning a promise. This is not supported, the function should be sync and return params to give to the action`,
         );
       }
-    }
-    if (lastTruthyParams === undefined) {
-      lastTruthyParams = params;
     }
     return params;
   });
@@ -96,8 +91,9 @@ export const actionRunEffect = (
           actionTargetPrevious.abort("abortOnFalsyParams");
           return;
         }
-        if (compareTwoJsValues(lastTruthyParams, actionTarget.params)) {
-          actionTarget.run({ reason: "params restored to last truthy value" });
+        if (!actionTargetPrevious.params) {
+          // coming from falsy-params state: action may already be cached, avoid unnecessary rerun
+          actionTarget.run({ reason: "params restored from falsy state" });
         } else {
           actionTarget.rerun({ reason: "params modified" });
         }

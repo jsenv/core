@@ -2335,7 +2335,6 @@ const actionRunEffect = (
   if (typeof action === "function") {
     action = createAction(action);
   }
-  let lastTruthyParams;
   let actionParamsSignal = computed(() => {
     const params = deriveActionParamsFromSignals();
     action.debug(
@@ -2351,9 +2350,6 @@ const actionRunEffect = (
           `actionRunEffect second arg is returning a promise. This is not supported, the function should be sync and return params to give to the action`,
         );
       }
-    }
-    if (lastTruthyParams === undefined) {
-      lastTruthyParams = params;
     }
     return params;
   });
@@ -2395,8 +2391,9 @@ const actionRunEffect = (
           actionTargetPrevious.abort("abortOnFalsyParams");
           return;
         }
-        if (compareTwoJsValues(lastTruthyParams, actionTarget.params)) {
-          actionTarget.run({ reason: "params restored to last truthy value" });
+        if (!actionTargetPrevious.params) {
+          // coming from falsy-params state: action may already be cached, avoid unnecessary rerun
+          actionTarget.run({ reason: "params restored from falsy state" });
         } else {
           actionTarget.rerun({ reason: "params modified" });
         }
