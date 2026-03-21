@@ -2,7 +2,7 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>Shared state across Routes demo</title>
+    <title>Route local state demo</title>
     <style>
       body {
         max-width: 700px;
@@ -11,37 +11,99 @@
         font-family: system-ui, sans-serif;
         background: #f5f5f5;
       }
-      .panel {
+
+      /* ContentView — the main renderable area */
+      .content-view {
         padding: 16px;
         background: white;
-        border: 1px solid #ddd;
+        border: 2px solid #ccc;
         border-radius: 6px;
       }
-      .status-bar {
+      .content-view-header {
+        display: flex;
+        margin-bottom: 12px;
+        align-items: center;
+        gap: 8px;
+      }
+      .content-item {
+        display: flex;
+        width: 72px;
+        height: 72px;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        font-size: 1.1rem;
+        border: 3px solid transparent;
+        border-radius: 6px;
+        transition: border-color 0.15s;
+        cursor: pointer;
+        user-select: none;
+      }
+      .content-item.selected {
+        border-color: #222;
+        box-shadow: 0 0 0 2px #222;
+      }
+
+      /* Legend — the companion panel */
+      .legend {
         padding: 16px;
-        background: #e8f4fd;
-        border: 1px solid #90caf9;
+        background: #f0f7ff;
+        border: 2px solid #90caf9;
         border-radius: 6px;
       }
+      .legend-header {
+        display: flex;
+        margin-bottom: 12px;
+        align-items: center;
+        gap: 8px;
+      }
+      .legend-entry {
+        display: flex;
+        padding: 6px 10px;
+        align-items: center;
+        gap: 8px;
+        border: 2px solid transparent;
+        border-radius: 4px;
+        cursor: pointer;
+        user-select: none;
+      }
+      .legend-entry:hover {
+        background: #dceeff;
+      }
+      .legend-entry.selected {
+        font-weight: 600;
+        background: #dceeff;
+        border-color: #1976d2;
+      }
+      .legend-dot {
+        width: 14px;
+        height: 14px;
+        flex-shrink: 0;
+        border-radius: 50%;
+      }
+      .legend-none {
+        padding: 6px 10px;
+        color: #aaa;
+        font-style: italic;
+        font-size: 0.9rem;
+      }
+
+      /* shared */
       .render-count {
         display: inline-block;
         padding: 2px 8px;
         color: #fff;
-        font-size: 0.8rem;
-        background: #555;
+        font-size: 0.75rem;
+        background: #888;
         border-radius: 10px;
       }
-      .hovered-value {
-        display: inline-block;
-        padding: 2px 8px;
-        color: #fff;
-        font-weight: bold;
-        font-size: 0.9rem;
-        background: #1976d2;
-        border-radius: 4px;
-      }
-      .hovered-value.none {
-        background: #aaa;
+      .component-label {
+        color: #555;
+        font-weight: 700;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
       }
     </style>
   </head>
@@ -65,8 +127,19 @@
       const BETA_ROUTE = route("/beta");
       setupRoutes([ALPHA_ROUTE, BETA_ROUTE]);
 
+      const ALPHA_ITEMS = [
+        { value: "A1", color: "#e53935" },
+        { value: "A2", color: "#43a047" },
+        { value: "A3", color: "#1e88e5" },
+      ];
+      const BETA_ITEMS = [
+        { value: "B1", color: "#8e24aa" },
+        { value: "B2", color: "#f4511e" },
+        { value: "B3", color: "#00897b" },
+      ];
+
       const App = () => {
-        const [hoveredValue, setHoveredValue] = useState(undefined);
+        const [selectedValue, setSelectedValue] = useState(undefined);
 
         return (
           <Box row spacing="m">
@@ -75,106 +148,130 @@
               <Tab route={BETA_ROUTE}>Beta</Tab>
             </TabList>
 
+            {/*
+             * Routes renders the active ContentView.
+             * ContentView is responsible for displaying items and lets the user
+             * select one by clicking. It reads selectedValue to highlight the
+             * active item, and calls onSelectedValueChange when the user clicks.
+             */}
             <Routes>
               <Route
                 route={ALPHA_ROUTE}
                 element={
-                  <ContentPanel
-                    name="Alpha panel"
-                    hoveredValue={hoveredValue}
-                    onHoveredValueChange={setHoveredValue}
+                  <ContentView
+                    items={ALPHA_ITEMS}
+                    selectedValue={selectedValue}
+                    onSelectedValueChange={setSelectedValue}
                   />
                 }
               />
               <Route
                 route={BETA_ROUTE}
                 element={
-                  <ContentPanel
-                    name="Beta panel"
-                    hoveredValue={hoveredValue}
-                    onHoveredValueChange={setHoveredValue}
+                  <ContentView
+                    items={BETA_ITEMS}
+                    selectedValue={selectedValue}
+                    onSelectedValueChange={setSelectedValue}
                   />
                 }
               />
             </Routes>
 
-            <StatusBar
-              hoveredValue={hoveredValue}
-              onHoveredValueChange={setHoveredValue}
+            {/*
+             * Legend lives outside Routes and is always visible.
+             * It shows a label for each item of the active tab so the user
+             * understands what is rendered. Clicking a legend entry selects
+             * that item — ContentView must reflect it. When ContentView changes
+             * the selection, Legend must update too.
+             */}
+            <Legend
+              items={
+                window.location.pathname.startsWith("/beta")
+                  ? BETA_ITEMS
+                  : ALPHA_ITEMS
+              }
+              selectedValue={selectedValue}
+              onSelectedValueChange={setSelectedValue}
             />
           </Box>
         );
       };
 
       /*
-       * ContentPanel simulates a component that both READS and WRITES hoveredValue.
-       * Goal: verify it re-renders when hoveredValue changes from StatusBar,
-       * and that clicking its own buttons propagates the change to StatusBar.
+       * ContentView — the main renderable area.
+       * Displays items as colored boxes. Clicking an item selects it.
+       * Re-renders when selectedValue changes (from Legend or from itself).
        */
-      const ContentPanel = ({ name, hoveredValue, onHoveredValueChange }) => {
+      const ContentView = ({ items, selectedValue, onSelectedValueChange }) => {
         const renderCount = useRef(0);
         renderCount.current++;
 
         return (
-          <div className="panel">
-            <Box row spacing="s" alignY="center">
-              <strong>{name}</strong>
+          <div className="content-view">
+            <div className="content-view-header">
+              <span className="component-label">ContentView</span>
               <span className="render-count">
                 render #{renderCount.current}
               </span>
+            </div>
+            <Box row spacing="s">
+              {items.map(({ value, color }) => (
+                <div
+                  key={value}
+                  className={`content-item${selectedValue === value ? " selected" : ""}`}
+                  style={{ background: color }}
+                  onClick={() =>
+                    onSelectedValueChange(
+                      selectedValue === value ? undefined : value,
+                    )
+                  }
+                >
+                  {value}
+                </div>
+              ))}
             </Box>
-            <Box row spacing="s" alignY="center" marginTop="s">
-              <Caption>hoveredValue:</Caption>
-              <span
-                className={`hovered-value${hoveredValue === undefined ? " none" : ""}`}
-              >
-                {hoveredValue !== undefined ? hoveredValue : "none"}
-              </span>
-            </Box>
-            <Box row spacing="s" marginTop="s">
-              <button onClick={() => onHoveredValueChange(10)}>Set 10</button>
-              <button onClick={() => onHoveredValueChange(20)}>Set 20</button>
-              <button onClick={() => onHoveredValueChange(30)}>Set 30</button>
-              <button onClick={() => onHoveredValueChange(undefined)}>
-                Clear
-              </button>
-            </Box>
+            <Caption marginTop="s">
+              Click an item to select it. Click again to deselect.
+            </Caption>
           </div>
         );
       };
 
       /*
-       * StatusBar simulates a component OUTSIDE Routes that shares the same state.
-       * Goal: verify it re-renders when ContentPanel changes hoveredValue,
-       * and that its own buttons propagate changes into the active ContentPanel.
+       * Legend — the companion panel tied to what ContentView renders.
+       * Clicking a legend entry drives selection into ContentView.
+       * Re-renders when selectedValue changes (from ContentView or from itself).
        */
-      const StatusBar = ({ hoveredValue, onHoveredValueChange }) => {
+      const Legend = ({ items, selectedValue, onSelectedValueChange }) => {
         const renderCount = useRef(0);
         renderCount.current++;
 
         return (
-          <div className="status-bar">
-            <Box row spacing="s" alignY="center">
-              <strong>StatusBar</strong>
+          <div className="legend">
+            <div className="legend-header">
+              <span className="component-label">Legend</span>
               <span className="render-count">
                 render #{renderCount.current}
               </span>
-            </Box>
-            <Box row spacing="s" alignY="center" marginTop="s">
-              <Caption>hoveredValue:</Caption>
-              <span
-                className={`hovered-value${hoveredValue === undefined ? " none" : ""}`}
-              >
-                {hoveredValue !== undefined ? hoveredValue : "none"}
-              </span>
-            </Box>
-            <Box row spacing="s" marginTop="s">
-              <button onClick={() => onHoveredValueChange(40)}>Set 40</button>
-              <button onClick={() => onHoveredValueChange(50)}>Set 50</button>
-              <button onClick={() => onHoveredValueChange(60)}>Set 60</button>
-              <button onClick={() => onHoveredValueChange(undefined)}>
-                Clear
-              </button>
+            </div>
+            <Box column spacing="xs">
+              {items.map(({ value, color }) => (
+                <div
+                  key={value}
+                  className={`legend-entry${selectedValue === value ? " selected" : ""}`}
+                  onClick={() =>
+                    onSelectedValueChange(
+                      selectedValue === value ? undefined : value,
+                    )
+                  }
+                >
+                  <span className="legend-dot" style={{ background: color }} />
+                  {value}
+                </div>
+              ))}
+              {selectedValue === undefined && (
+                <div className="legend-none">Nothing selected</div>
+              )}
             </Box>
           </div>
         );
