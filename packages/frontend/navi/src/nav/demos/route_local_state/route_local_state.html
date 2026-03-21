@@ -1,0 +1,186 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Shared state across Routes demo</title>
+    <style>
+      body {
+        max-width: 700px;
+        margin: 0 auto;
+        padding: 20px;
+        font-family: system-ui, sans-serif;
+        background: #f5f5f5;
+      }
+      .panel {
+        padding: 16px;
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+      }
+      .status-bar {
+        padding: 16px;
+        background: #e8f4fd;
+        border: 1px solid #90caf9;
+        border-radius: 6px;
+      }
+      .render-count {
+        display: inline-block;
+        padding: 2px 8px;
+        color: #fff;
+        font-size: 0.8rem;
+        background: #555;
+        border-radius: 10px;
+      }
+      .hovered-value {
+        display: inline-block;
+        padding: 2px 8px;
+        color: #fff;
+        font-weight: bold;
+        font-size: 0.9rem;
+        background: #1976d2;
+        border-radius: 4px;
+      }
+      .hovered-value.none {
+        background: #aaa;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useRef, useState } from "preact/hooks";
+      import {
+        Box,
+        Caption,
+        Route,
+        Routes,
+        Tab,
+        TabList,
+        route,
+        setupRoutes,
+      } from "@jsenv/navi";
+
+      const ALPHA_ROUTE = route("/alpha");
+      const BETA_ROUTE = route("/beta");
+      setupRoutes([ALPHA_ROUTE, BETA_ROUTE]);
+
+      const App = () => {
+        const [hoveredValue, setHoveredValue] = useState(undefined);
+
+        return (
+          <Box row spacing="m">
+            <TabList>
+              <Tab route={ALPHA_ROUTE}>Alpha</Tab>
+              <Tab route={BETA_ROUTE}>Beta</Tab>
+            </TabList>
+
+            <Routes>
+              <Route
+                route={ALPHA_ROUTE}
+                element={
+                  <ContentPanel
+                    name="Alpha panel"
+                    hoveredValue={hoveredValue}
+                    onHoveredValueChange={setHoveredValue}
+                  />
+                }
+              />
+              <Route
+                route={BETA_ROUTE}
+                element={
+                  <ContentPanel
+                    name="Beta panel"
+                    hoveredValue={hoveredValue}
+                    onHoveredValueChange={setHoveredValue}
+                  />
+                }
+              />
+            </Routes>
+
+            <StatusBar
+              hoveredValue={hoveredValue}
+              onHoveredValueChange={setHoveredValue}
+            />
+          </Box>
+        );
+      };
+
+      /*
+       * ContentPanel simulates a component that both READS and WRITES hoveredValue.
+       * Goal: verify it re-renders when hoveredValue changes from StatusBar,
+       * and that clicking its own buttons propagates the change to StatusBar.
+       */
+      const ContentPanel = ({ name, hoveredValue, onHoveredValueChange }) => {
+        const renderCount = useRef(0);
+        renderCount.current++;
+
+        return (
+          <div className="panel">
+            <Box row spacing="s" alignY="center">
+              <strong>{name}</strong>
+              <span className="render-count">
+                render #{renderCount.current}
+              </span>
+            </Box>
+            <Box row spacing="s" alignY="center" marginTop="s">
+              <Caption>hoveredValue:</Caption>
+              <span
+                className={`hovered-value${hoveredValue === undefined ? " none" : ""}`}
+              >
+                {hoveredValue !== undefined ? hoveredValue : "none"}
+              </span>
+            </Box>
+            <Box row spacing="s" marginTop="s">
+              <button onClick={() => onHoveredValueChange(10)}>Set 10</button>
+              <button onClick={() => onHoveredValueChange(20)}>Set 20</button>
+              <button onClick={() => onHoveredValueChange(30)}>Set 30</button>
+              <button onClick={() => onHoveredValueChange(undefined)}>
+                Clear
+              </button>
+            </Box>
+          </div>
+        );
+      };
+
+      /*
+       * StatusBar simulates a component OUTSIDE Routes that shares the same state.
+       * Goal: verify it re-renders when ContentPanel changes hoveredValue,
+       * and that its own buttons propagate changes into the active ContentPanel.
+       */
+      const StatusBar = ({ hoveredValue, onHoveredValueChange }) => {
+        const renderCount = useRef(0);
+        renderCount.current++;
+
+        return (
+          <div className="status-bar">
+            <Box row spacing="s" alignY="center">
+              <strong>StatusBar</strong>
+              <span className="render-count">
+                render #{renderCount.current}
+              </span>
+            </Box>
+            <Box row spacing="s" alignY="center" marginTop="s">
+              <Caption>hoveredValue:</Caption>
+              <span
+                className={`hovered-value${hoveredValue === undefined ? " none" : ""}`}
+              >
+                {hoveredValue !== undefined ? hoveredValue : "none"}
+              </span>
+            </Box>
+            <Box row spacing="s" marginTop="s">
+              <button onClick={() => onHoveredValueChange(40)}>Set 40</button>
+              <button onClick={() => onHoveredValueChange(50)}>Set 50</button>
+              <button onClick={() => onHoveredValueChange(60)}>Set 60</button>
+              <button onClick={() => onHoveredValueChange(undefined)}>
+                Clear
+              </button>
+            </Box>
+          </div>
+        );
+      };
+
+      render(<App />, document.getElementById("app"));
+    </script>
+  </body>
+</html>
