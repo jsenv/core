@@ -12512,6 +12512,8 @@ const RootElement = () => {
 };
 const SlotContext = createContext(null);
 const RouteInfoContext = createContext(null);
+const UpdateOnlyContext = createContext(false);
+const elementSignals = new WeakMap();
 const Routes = ({
   element = jsx(RootElement, {}),
   children
@@ -12538,7 +12540,28 @@ const Route = ({
   const forceRender = useForceRender();
   const hasDiscoveredRef = useRef(false);
   const matchingInfoRef = useRef(null);
+  const isUpdateOnly = useContext(UpdateOnlyContext);
+
+  // Update the element signal for this route.
+  // In update-only mode this is the only purpose of rendering this Route.
+  if (route && elementSignals.has(route)) {
+    elementSignals.get(route).value = element;
+  }
+  if (isUpdateOnly) {
+    if (children) {
+      return jsx(UpdateOnlyContext.Provider, {
+        value: true,
+        children: children
+      });
+    }
+    return null;
+  }
   if (!hasDiscoveredRef.current) {
+    // Create the element signal during discovery
+    if (route && !elementSignals.has(route)) {
+      // eslint-disable-next-line signals/no-signal-in-component-body
+      elementSignals.set(route, signal(element));
+    }
     return jsx(RouteMatchManager, {
       element: element,
       action: action,
@@ -12562,7 +12585,14 @@ const Route = ({
   const {
     MatchingElement
   } = matchingInfo;
-  return jsx(MatchingElement, {});
+  // After discovery: render MatchingElement for visible output, and keep
+  // children alive in update-only mode so their element signals stay current.
+  return jsxs(Fragment, {
+    children: [jsx(MatchingElement, {}), children ? jsx(UpdateOnlyContext.Provider, {
+      value: true,
+      children: children
+    }) : null]
+  });
 };
 const RegisterChildRouteContext = createContext(null);
 
@@ -12725,18 +12755,23 @@ const initRouteObserver = ({
   const matchingRouteInfoSignal = signal();
   const SlotMatchingElementSignal = signal();
   const MatchingElement = () => {
+    // Read element from the signal (updated by update-only renders) when
+    // available, falling back to the closure variable for routes without
+    // a route prop (e.g. the Routes wrapper).
+    const elementSignal = route ? elementSignals.get(route) : undefined;
+    const currentElement = elementSignal ? elementSignal.value : element;
     const matchingRouteInfo = matchingRouteInfoSignal.value;
     useUITransitionContentId(matchingRouteInfo ? matchingRouteInfo.route.urlPattern : fallback ? "fallback" : undefined);
     const SlotMatchingElement = SlotMatchingElementSignal.value;
-    element = action ? jsx(ActionRenderer, {
+    const renderedElement = action ? jsx(ActionRenderer, {
       action: action,
-      children: element
-    }) : element;
+      children: currentElement
+    }) : currentElement;
     return jsx(RouteInfoContext.Provider, {
       value: matchingRouteInfo,
       children: jsx(SlotContext.Provider, {
         value: SlotMatchingElement,
-        children: element
+        children: renderedElement
       })
     });
   };
