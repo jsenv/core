@@ -132,6 +132,7 @@
           <LabelDemo />
           <CaptionDemo />
           <InteractiveDemo />
+          <EdgeCasesDemo />
         </div>
       );
 
@@ -225,6 +226,155 @@
                   <div className="comparison-row">
                     <span className="comparison-label">User Agent</span>
                     <meter value={value} min={min} max={max} />
+                  </div>
+                </fieldset>
+              ))}
+            </Box>
+          </div>
+        </div>
+      );
+
+      /* ------------------------------------------------------------------ */
+      /* Edge cases — strange/boundary values                                */
+      /* ------------------------------------------------------------------ */
+      const EdgeCasesDemo = () => (
+        <div className="demo-section">
+          <h2>Edge cases</h2>
+
+          <div className="states-section">
+            <div className="states-title">value=0 max=0 (both zero)</div>
+            <p className="states-description">
+              When both <code>value</code> and <code>max</code> are 0, the range
+              is empty (<code>max === min</code>) so <code>fillRatio</code> is
+              clamped to 0 — no NaN.
+            </p>
+            <Box column spacing="s">
+              <fieldset>
+                <legend>value=0 min=0 max=0</legend>
+                <div className="comparison-row">
+                  <span className="comparison-label">Navi</span>
+                  <Meter value={0} min={0} max={0} />
+                </div>
+                <div className="comparison-row">
+                  <span className="comparison-label">User Agent</span>
+                  <meter value={0} min={0} max={0} />
+                </div>
+              </fieldset>
+              <fieldset>
+                <legend>value=0 min=0 max=0 percentage</legend>
+                <div className="comparison-row">
+                  <span className="comparison-label">Navi</span>
+                  <Meter value={0} min={0} max={0} percentage />
+                </div>
+              </fieldset>
+            </Box>
+          </div>
+
+          <div className="states-section">
+            <div className="states-title">value out of range</div>
+            <p className="states-description">
+              Values below <code>min</code> or above <code>max</code> are
+              clamped — they never overflow the track.
+            </p>
+            <Box column spacing="s">
+              {[
+                {
+                  value: -5,
+                  min: 0,
+                  max: 100,
+                  label: "value=-5 (below min=0)",
+                },
+                {
+                  value: 150,
+                  min: 0,
+                  max: 100,
+                  label: "value=150 (above max=100)",
+                },
+              ].map(({ value, min, max, label }) => (
+                <fieldset key={label}>
+                  <legend>{label}</legend>
+                  <div className="comparison-row">
+                    <span className="comparison-label">Navi</span>
+                    <Meter value={value} min={min} max={max} />
+                  </div>
+                  <div className="comparison-row">
+                    <span className="comparison-label">User Agent</span>
+                    <meter value={value} min={min} max={max} />
+                  </div>
+                </fieldset>
+              ))}
+            </Box>
+          </div>
+
+          <div className="states-section">
+            <div className="states-title">Negative range</div>
+            <Box column spacing="s">
+              {[
+                {
+                  value: -50,
+                  min: -100,
+                  max: 0,
+                  label: "value=-50 min=-100 max=0",
+                },
+                { value: -100, min: -100, max: 0, label: "value=-100 (min)" },
+                { value: 0, min: -100, max: 0, label: "value=0 (max)" },
+              ].map(({ value, min, max, label }) => (
+                <fieldset key={label}>
+                  <legend>{label}</legend>
+                  <div className="comparison-row">
+                    <span className="comparison-label">Navi</span>
+                    <Meter value={value} min={min} max={max} />
+                  </div>
+                  <div className="comparison-row">
+                    <span className="comparison-label">User Agent</span>
+                    <meter value={value} min={min} max={max} />
+                  </div>
+                </fieldset>
+              ))}
+            </Box>
+          </div>
+
+          <div className="states-section">
+            <div className="states-title">String inputs</div>
+            <p className="states-description">
+              Props passed as strings (e.g. from HTML attributes or dynamic
+              data) must be coerced to numbers. The fills below should look
+              identical to their number equivalents above. The critical case is{" "}
+              <code>value="0" max="0"</code> which would produce NaN without
+              explicit coercion (<code>"0" === 0</code> is false).
+            </p>
+            <Box column spacing="s">
+              {[
+                {
+                  value: "0.5",
+                  min: "0",
+                  max: "1",
+                  label: 'value="0.5" min="0" max="1" → 50%',
+                },
+                {
+                  value: "30",
+                  min: "0",
+                  max: "100",
+                  label: 'value="30" min="0" max="100" → 30%',
+                },
+                {
+                  value: "0",
+                  min: "0",
+                  max: "0",
+                  label: 'value="0" min="0" max="0" → 0% (NaN guard)',
+                },
+                {
+                  value: "-50",
+                  min: "-100",
+                  max: "0",
+                  label: 'value="-50" min="-100" max="0" → 50%',
+                },
+              ].map(({ value, min, max, label }) => (
+                <fieldset key={label}>
+                  <legend>{label}</legend>
+                  <div className="comparison-row">
+                    <span className="comparison-label">Navi</span>
+                    <Meter value={value} min={min} max={max} percentage />
                   </div>
                 </fieldset>
               ))}

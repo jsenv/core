@@ -30172,6 +30172,12 @@ const Meter = ({
 }) => {
   const defaultRef = useRef();
   const ref = rest.ref || defaultRef;
+  value = Number(value);
+  min = Number(min);
+  max = Number(max);
+  if (low !== undefined) low = Number(low);
+  if (high !== undefined) high = Number(high);
+  if (optimum !== undefined) optimum = Number(optimum);
   const clampedValue = value < min ? min : value > max ? max : value;
   const fillRatio = max === min ? 0 : (clampedValue - min) / (max - min);
   let children = caption;
