@@ -58,16 +58,22 @@ const RootElement = () => {
 const SlotContext = createContext(null);
 const RouteInfoContext = createContext(null);
 const UpdateOnlyContext = createContext(false);
-const elementSignals = new WeakMap();
+const ElementSignalMapContext = createContext(null);
 
 export const Routes = ({ element = <RootElement />, children }) => {
   const routeInfo = useMatchingRouteInfo();
   const route = routeInfo?.route;
+  const elementSignalMapRef = useRef(null);
+  if (!elementSignalMapRef.current) {
+    elementSignalMapRef.current = new Map();
+  }
 
   return (
-    <Route route={route} element={element}>
-      {children}
-    </Route>
+    <ElementSignalMapContext.Provider value={elementSignalMapRef.current}>
+      <Route route={route} element={element}>
+        {children}
+      </Route>
+    </ElementSignalMapContext.Provider>
   );
 };
 
@@ -86,11 +92,12 @@ export const Route = ({
   const hasDiscoveredRef = useRef(false);
   const matchingInfoRef = useRef(null);
   const isUpdateOnly = useContext(UpdateOnlyContext);
+  const elementSignalMap = useContext(ElementSignalMapContext);
 
   // Update the element signal for this route.
   // In update-only mode this is the only purpose of rendering this Route.
-  if (route && elementSignals.has(route)) {
-    elementSignals.get(route).value = element;
+  if (route && elementSignalMap && elementSignalMap.has(route)) {
+    elementSignalMap.get(route).value = element;
   }
 
   if (isUpdateOnly) {
@@ -106,9 +113,9 @@ export const Route = ({
 
   if (!hasDiscoveredRef.current) {
     // Create the element signal during discovery
-    if (route && !elementSignals.has(route)) {
+    if (route && elementSignalMap && !elementSignalMap.has(route)) {
       // eslint-disable-next-line signals/no-signal-in-component-body
-      elementSignals.set(route, signal(element));
+      elementSignalMap.set(route, signal(element));
     }
     return (
       <RouteMatchManager
@@ -170,6 +177,7 @@ const RouteMatchManager = ({
     throw new Error("Route cannot have both route and fallback props");
   }
   const parentRegisterChildRoute = useContext(RegisterChildRouteContext);
+  const elementSignalMap = useContext(ElementSignalMapContext);
 
   const elementId = getElementSignature(element);
   const candidateSet = new Set();
@@ -213,6 +221,7 @@ const RouteMatchManager = ({
     }
     initRouteObserver({
       element,
+      elementSignalMap,
       action,
       route,
       index,
@@ -236,6 +245,7 @@ const RouteMatchManager = ({
 
 const initRouteObserver = ({
   element,
+  elementSignalMap,
   action,
   route,
   index,
@@ -345,7 +355,8 @@ const initRouteObserver = ({
     // Read element from the signal (updated by update-only renders) when
     // available, falling back to the closure variable for routes without
     // a route prop (e.g. the Routes wrapper).
-    const elementSignal = route ? elementSignals.get(route) : undefined;
+    const elementSignal =
+      route && elementSignalMap ? elementSignalMap.get(route) : undefined;
     const currentElement = elementSignal ? elementSignal.value : element;
     const matchingRouteInfo = matchingRouteInfoSignal.value;
     useUITransitionContentId(

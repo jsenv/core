@@ -5,6 +5,7 @@ import {
   Button,
   MessageBox,
   Route,
+  route,
   RouteLink,
   Routes,
   setupRoutes,
@@ -18,11 +19,10 @@ const citySignal = stateSignal(undefined, {
   persists: true,
   oneOf: cities,
 });
-const { HOME_ROUTE, SELECT_CITY_ROUTE, MAP_ROUTE } = setupRoutes({
-  HOME_ROUTE: "/",
-  SELECT_CITY_ROUTE: "/select_city",
-  MAP_ROUTE: `/map?city=${citySignal}`,
-});
+const HOME_ROUTE = route("");
+const SELECT_CITY_ROUTE = route("/select_city");
+const MAP_ROUTE = route(`/map`, { searchParams: { city: citySignal } });
+setupRoutes([HOME_ROUTE, SELECT_CITY_ROUTE, MAP_ROUTE]);
 
 const App = () => {
   return (
