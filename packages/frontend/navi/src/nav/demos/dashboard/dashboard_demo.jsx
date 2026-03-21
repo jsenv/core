@@ -2,6 +2,7 @@ import { render } from "preact";
 
 import {
   Route,
+  route,
   RouteLink,
   Routes,
   setupRoutes,
@@ -25,13 +26,20 @@ const analyticsTabSignal = stateSignal("overview", {
   enum: ["overview", "details"],
   persists: true,
 });
-const { HOME_ROUTE, ADMIN_ROUTE, ADMIN_SETTINGS_ROUTE, ADMIN_ANALYTICS_ROUTE } =
-  setupRoutes({
-    HOME_ROUTE: "/",
-    ADMIN_ROUTE: `/admin/:section=${sectionSignal}/`,
-    ADMIN_SETTINGS_ROUTE: `/admin/settings/:tab=${settingsTabSignal}`,
-    ADMIN_ANALYTICS_ROUTE: `/admin/analytics?tab=${analyticsTabSignal}`,
-  });
+const HOME_ROUTE = route("");
+const ADMIN_ROUTE = route(`/admin/:section=${sectionSignal}/`);
+const ADMIN_SETTINGS_ROUTE = route(`/admin/settings/:tab=${settingsTabSignal}`);
+const ADMIN_ANALYTICS_ROUTE = route(`/admin/analytics`, {
+  searchParams: {
+    tab: analyticsTabSignal,
+  },
+});
+setupRoutes([
+  HOME_ROUTE,
+  ADMIN_ROUTE,
+  ADMIN_SETTINGS_ROUTE,
+  ADMIN_ANALYTICS_ROUTE,
+]);
 
 const App = () => {
   return (
