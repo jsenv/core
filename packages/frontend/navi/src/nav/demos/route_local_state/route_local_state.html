@@ -5,7 +5,7 @@
     <title>Route local state demo</title>
     <style>
       body {
-        max-width: 700px;
+        max-width: 760px;
         margin: 0 auto;
         padding: 20px;
         font-family: system-ui, sans-serif;
@@ -27,22 +27,43 @@
       }
       .content-item {
         display: flex;
-        width: 72px;
-        height: 72px;
+        padding: 10px 12px;
         align-items: center;
-        justify-content: center;
-        color: white;
-        font-weight: bold;
-        font-size: 1.1rem;
-        border: 3px solid transparent;
+        gap: 10px;
+        border: 2px solid transparent;
+        border-left-width: 4px;
         border-radius: 6px;
-        transition: border-color 0.15s;
+        transition:
+          opacity 0.15s,
+          background 0.15s;
         cursor: pointer;
         user-select: none;
       }
+      .content-item:hover {
+        background: #f5f5f5;
+      }
       .content-item.selected {
-        border-color: #222;
-        box-shadow: 0 0 0 2px #222;
+        background: #f0f7ff;
+        border-color: inherit;
+      }
+      .content-item.dimmed {
+        opacity: 0.35;
+      }
+      .content-item-dot {
+        width: 12px;
+        height: 12px;
+        flex-shrink: 0;
+        border-radius: 50%;
+      }
+      .content-item-label {
+        flex: 1;
+        font-weight: 500;
+      }
+      .content-item-category {
+        font-weight: 600;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
       }
 
       /* Legend — the companion panel */
@@ -127,122 +148,166 @@
       const BETA_ROUTE = route("/beta");
       setupRoutes([ALPHA_ROUTE, BETA_ROUTE]);
 
-      const ALPHA_ITEMS = [
-        { value: "A1", color: "#e53935" },
-        { value: "A2", color: "#43a047" },
-        { value: "A3", color: "#1e88e5" },
-      ];
-      const BETA_ITEMS = [
-        { value: "B1", color: "#8e24aa" },
-        { value: "B2", color: "#f4511e" },
-        { value: "B3", color: "#00897b" },
+      /*
+       * CATEGORIES — shared by both ContentViews and the Legend.
+       * The Legend lists these. Each ContentView has its own objects,
+       * but every object belongs to one of these categories.
+       * "selectedCategory" is the shared state: it belongs to neither
+       * ContentView nor the Legend — it flows between them.
+       */
+      const CATEGORIES = [
+        { id: "low", label: "Low", color: "#43a047" },
+        { id: "medium", label: "Medium", color: "#fb8c00" },
+        { id: "high", label: "High", color: "#e53935" },
       ];
 
+      // Alpha tab: tasks. Each task belongs to a category.
+      const ALPHA_ITEMS = [
+        { id: "task-a", label: "Task A", category: "low" },
+        { id: "task-b", label: "Task B", category: "high" },
+        { id: "task-c", label: "Task C", category: "medium" },
+      ];
+
+      // Beta tab: zones. Same categories, different objects.
+      const BETA_ITEMS = [
+        { id: "zone-1", label: "Zone 1", category: "medium" },
+        { id: "zone-2", label: "Zone 2", category: "low" },
+        { id: "zone-3", label: "Zone 3", category: "high" },
+      ];
+
+      const categoryById = Object.fromEntries(CATEGORIES.map((c) => [c.id, c]));
+
       const App = () => {
-        const [selectedValue, setSelectedValue] = useState(undefined);
+        /*
+         * selectedCategory is the shared state.
+         * It is not "which item is selected in the ContentView" —
+         * it is "which category is currently active".
+         * Both ContentView and Legend read + write it.
+         */
+        const [selectedCategory, setSelectedCategory] = useState(undefined);
 
         return (
           <Box row spacing="m">
             <TabList>
-              <Tab route={ALPHA_ROUTE}>Alpha</Tab>
-              <Tab route={BETA_ROUTE}>Beta</Tab>
+              <Tab route={ALPHA_ROUTE}>Tasks</Tab>
+              <Tab route={BETA_ROUTE}>Zones</Tab>
             </TabList>
 
-            {/*
-             * Routes renders the active ContentView.
-             * ContentView is responsible for displaying items and lets the user
-             * select one by clicking. It reads selectedValue to highlight the
-             * active item, and calls onSelectedValueChange when the user clicks.
-             */}
-            <Routes>
-              <Route
-                route={ALPHA_ROUTE}
-                element={
-                  <ContentView
-                    items={ALPHA_ITEMS}
-                    selectedValue={selectedValue}
-                    onSelectedValueChange={setSelectedValue}
-                  />
-                }
-              />
-              <Route
-                route={BETA_ROUTE}
-                element={
-                  <ContentView
-                    items={BETA_ITEMS}
-                    selectedValue={selectedValue}
-                    onSelectedValueChange={setSelectedValue}
-                  />
-                }
-              />
-            </Routes>
+            <Box row spacing="m" alignY="start">
+              {/*
+               * The active ContentView renders its own objects but
+               * highlights those whose category matches selectedCategory.
+               * Clicking an object selects its category.
+               */}
+              <Routes>
+                <Route
+                  route={ALPHA_ROUTE}
+                  element={
+                    <ContentView
+                      items={ALPHA_ITEMS}
+                      selectedCategory={selectedCategory}
+                      onSelectedCategoryChange={setSelectedCategory}
+                    />
+                  }
+                />
+                <Route
+                  route={BETA_ROUTE}
+                  element={
+                    <ContentView
+                      items={BETA_ITEMS}
+                      selectedCategory={selectedCategory}
+                      onSelectedCategoryChange={setSelectedCategory}
+                    />
+                  }
+                />
+              </Routes>
 
-            {/*
-             * Legend lives outside Routes and is always visible.
-             * It shows a label for each item of the active tab so the user
-             * understands what is rendered. Clicking a legend entry selects
-             * that item — ContentView must reflect it. When ContentView changes
-             * the selection, Legend must update too.
-             */}
-            <Legend
-              items={
-                window.location.pathname.startsWith("/beta")
-                  ? BETA_ITEMS
-                  : ALPHA_ITEMS
-              }
-              selectedValue={selectedValue}
-              onSelectedValueChange={setSelectedValue}
-            />
+              {/*
+               * Legend is always visible, independent of the active tab.
+               * It lists the shared categories. Selecting a category here
+               * drives the highlight in the active ContentView.
+               * When ContentView changes selectedCategory, Legend reflects it.
+               */}
+              <Legend
+                categories={CATEGORIES}
+                selectedCategory={selectedCategory}
+                onSelectedCategoryChange={setSelectedCategory}
+              />
+            </Box>
           </Box>
         );
       };
 
       /*
-       * ContentView — the main renderable area.
-       * Displays items as colored boxes. Clicking an item selects it.
-       * Re-renders when selectedValue changes (from Legend or from itself).
+       * ContentView — renders its own objects.
+       * Each object is tagged with a category. When selectedCategory is set,
+       * objects matching that category are highlighted; others are dimmed.
+       * Clicking an object selects its category (or clears if already selected).
        */
-      const ContentView = ({ items, selectedValue, onSelectedValueChange }) => {
+      const ContentView = ({
+        items,
+        selectedCategory,
+        onSelectedCategoryChange,
+      }) => {
         const renderCount = useRef(0);
         renderCount.current++;
 
         return (
-          <div className="content-view">
+          <div className="content-view" style={{ flex: 1 }}>
             <div className="content-view-header">
               <span className="component-label">ContentView</span>
               <span className="render-count">
                 render #{renderCount.current}
               </span>
             </div>
-            <Box row spacing="s">
-              {items.map(({ value, color }) => (
-                <div
-                  key={value}
-                  className={`content-item${selectedValue === value ? " selected" : ""}`}
-                  style={{ background: color }}
-                  onClick={() =>
-                    onSelectedValueChange(
-                      selectedValue === value ? undefined : value,
-                    )
-                  }
-                >
-                  {value}
-                </div>
-              ))}
+            <Box column spacing="s">
+              {items.map(({ id, label, category }) => {
+                const cat = categoryById[category];
+                const isSelected = selectedCategory === category;
+                const isDimmed = selectedCategory !== undefined && !isSelected;
+                return (
+                  <div
+                    key={id}
+                    className={`content-item${isSelected ? " selected" : ""}${isDimmed ? " dimmed" : ""}`}
+                    style={{ borderLeftColor: cat.color }}
+                    onClick={() =>
+                      onSelectedCategoryChange(
+                        isSelected ? undefined : category,
+                      )
+                    }
+                  >
+                    <span
+                      className="content-item-dot"
+                      style={{ background: cat.color }}
+                    />
+                    <span className="content-item-label">{label}</span>
+                    <span
+                      className="content-item-category"
+                      style={{ color: cat.color }}
+                    >
+                      {cat.label}
+                    </span>
+                  </div>
+                );
+              })}
             </Box>
             <Caption marginTop="s">
-              Click an item to select it. Click again to deselect.
+              Click an item to select its category.
             </Caption>
           </div>
         );
       };
 
       /*
-       * Legend — the companion panel tied to what ContentView renders.
-       * Clicking a legend entry drives selection into ContentView.
-       * Re-renders when selectedValue changes (from ContentView or from itself).
+       * Legend — lists the shared categories.
+       * Completely unaware of what objects the ContentView is rendering.
+       * Selecting a category here is reflected in the active ContentView.
        */
-      const Legend = ({ items, selectedValue, onSelectedValueChange }) => {
+      const Legend = ({
+        categories,
+        selectedCategory,
+        onSelectedCategoryChange,
+      }) => {
         const renderCount = useRef(0);
         renderCount.current++;
 
@@ -255,21 +320,21 @@
               </span>
             </div>
             <Box column spacing="xs">
-              {items.map(({ value, color }) => (
+              {categories.map(({ id, label, color }) => (
                 <div
-                  key={value}
-                  className={`legend-entry${selectedValue === value ? " selected" : ""}`}
+                  key={id}
+                  className={`legend-entry${selectedCategory === id ? " selected" : ""}`}
                   onClick={() =>
-                    onSelectedValueChange(
-                      selectedValue === value ? undefined : value,
+                    onSelectedCategoryChange(
+                      selectedCategory === id ? undefined : id,
                     )
                   }
                 >
                   <span className="legend-dot" style={{ background: color }} />
-                  {value}
+                  {label}
                 </div>
               ))}
-              {selectedValue === undefined && (
+              {selectedCategory === undefined && (
                 <div className="legend-none">Nothing selected</div>
               )}
             </Box>
