@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <title>S-curve tab corners demo</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 40px;
+        color: #222;
+        font-family: system-ui, sans-serif;
+        background: #e8eaed;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 1.4rem;
+      }
+      p.desc {
+        margin: 0 0 40px;
+        color: #555;
+        font-size: 0.9rem;
+      }
+      h2 {
+        margin: 0 0 4px;
+        font-weight: 700;
+        font-size: 1rem;
+      }
+      .technique {
+        margin-bottom: 60px;
+      }
+      .technique > p {
+        max-width: 680px;
+        margin: 0 0 16px;
+        color: #666;
+        font-size: 0.85rem;
+      }
+
+      /* ── shared tab strip layout ──────────────────────── */
+      .tabstrip {
+        display: flex;
+        align-items: flex-end;
+        gap: 0;
+      }
+      .panel {
+        width: 460px;
+        padding: 20px 24px;
+        color: #444;
+        font-size: 0.9rem;
+        background: #fff;
+        border: 1.5px solid #bbb;
+        border-radius: 0 8px 8px 8px;
+      }
+
+      /* ================================================================
+         TECHNIQUE 1 — CSS mask (radial-gradient punched corners)
+         Top corners: regular border-radius.
+         Bottom corners: the mask punches a concave circle arc, revealing
+         the background color behind — creating the S silhouette.
+         Limitation: the border line does NOT follow the arc; it is just
+         clipped away. Works best when the tab background matches the page bg.
+      ================================================================ */
+      .mask-tab {
+        position: relative;
+        padding: 8px 24px 10px;
+        color: #888;
+        font-weight: 600;
+        font-size: 0.9rem;
+        background: #fff;
+        border: 1.5px solid #bbb;
+        border-bottom: none;
+        border-radius: 8px 8px 0 0;
+        cursor: pointer;
+        --r: 8px;
+        /* Four layers: punch concave arc bottom-left + bottom-right,
+           fill the rest of the box. */
+        mask:
+          /* bottom-left concave quarter-circle: transparent inside the arc */
+          radial-gradient(
+              circle var(--r) at 0 100%,
+              transparent calc(var(--r) - 1px),
+              #000 var(--r)
+            )
+            bottom left / var(--r) var(--r) no-repeat,
+          /* bottom-right concave quarter-circle */
+          radial-gradient(
+              circle var(--r) at 100% 100%,
+              transparent calc(var(--r) - 1px),
+              #000 var(--r)
+            )
+            bottom right / var(--r) var(--r) no-repeat,
+          /* fill the horizontal band above the corner area */
+          linear-gradient(#000 0 0) top / 100% calc(100% - var(--r)) no-repeat,
+          /* fill the middle vertical band between the two arcs */
+          linear-gradient(#000 0 0) center / calc(100% - 2 * var(--r)) var(--r)
+            no-repeat;
+        -webkit-mask:
+          radial-gradient(
+              circle var(--r) at 0 100%,
+              transparent calc(var(--r) - 1px),
+              #000 var(--r)
+            )
+            bottom left / var(--r) var(--r) no-repeat,
+          radial-gradient(
+              circle var(--r) at 100% 100%,
+              transparent calc(var(--r) - 1px),
+              #000 var(--r)
+            )
+            bottom right / var(--r) var(--r) no-repeat,
+          linear-gradient(#000 0 0) top / 100% calc(100% - var(--r)) no-repeat,
+          linear-gradient(#000 0 0) center / calc(100% - 2 * var(--r)) var(--r)
+            no-repeat;
+      }
+      .mask-tab.active {
+        z-index: 1;
+        margin-bottom: -1.5px;
+        color: #222;
+      }
+      .mask-tab:not(.active) {
+        margin-bottom: 4px;
+        background: #f0f0f0;
+        border-color: #ccc;
+      }
+
+      /* ================================================================
+         TECHNIQUE 2 — CSS clip-path polygon (approximated via polygon)
+         clip-path: polygon() can only produce straight lines — no curves.
+         This shows the limitation: we can get chamfered (diagonal) corners
+         but not true arcs. Included for comparison.
+      ================================================================ */
+      .clip-tab {
+        position: relative;
+        padding: 8px 24px 10px;
+        color: #888;
+        font-weight: 600;
+        font-size: 0.9rem;
+        background: #fff;
+        border: 1.5px solid #bbb;
+        /* polygon: top corners convex-chamfered, bottom corners concave-chamfered
+           Points go clockwise:
+             top-left:     8px,0
+             top-right:    calc(100%-8px),0  →  100%,8px
+             bottom-right corner: 100%,100%  →  out to  calc(100%+8px),calc(100%-8px)
+               then back in to  100%,100%  — we can't go outside, so we just chamfer inward
+           For a true concave corner with polygon we cut a triangle inward:
+             right side: 100%, 8px → 100%, calc(100%-8px) → calc(100%-8px),100%
+             ... that gives a convex chamfer, not a concave one.
+           So we fake it: the polygon dips outside the box with negative coords
+           — but clip-path clips to the element box. Not a real S-curve.
+           We show this as the "limitation" example.
+        */
+        clip-path: polygon(
+          8px 0%,
+          calc(100% - 8px) 0%,
+          100% 8px,
+          100% 100%,
+          0% 100%,
+          0% 8px
+        );
+        cursor: pointer;
+      }
+      .clip-tab.active {
+        z-index: 1;
+        margin-bottom: -1.5px;
+        color: #222;
+        border-bottom: none;
+      }
+      .clip-tab:not(.active) {
+        margin-bottom: 4px;
+        background: #f0f0f0;
+        border-color: #ccc;
+      }
+
+      /* ================================================================
+         TECHNIQUE 3 — Full inline SVG per tab
+         Each tab has an absolutely-positioned <svg> that draws the
+         complete shape with quadratic bezier arcs:
+           - convex at top-left and top-right (normal rounded corner feel)
+           - concave at bottom-left and bottom-right (S-curve, inverted arc)
+         The control point for the concave arc is pushed BELOW the baseline
+         (outside the tab box), which pulls the curve inward — the true S.
+         Text label sits above via position:relative / z-index.
+      ================================================================ */
+      .svg-full-tab {
+        position: relative;
+        display: inline-flex;
+        padding: 8px 24px 10px;
+        align-items: center;
+        justify-content: center;
+        color: #888;
+        font-weight: 600;
+        font-size: 0.9rem;
+        cursor: pointer;
+      }
+      .svg-full-tab.active {
+        z-index: 1;
+        margin-bottom: -1.5px;
+        color: #222;
+      }
+      .svg-full-tab:not(.active) {
+        margin-bottom: 4px;
+      }
+      .svg-full-tab svg {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        overflow: visible;
+      }
+      .svg-full-tab .label {
+        position: relative;
+        z-index: 1;
+        pointer-events: none;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>S-curve tab corners</h1>
+    <p class="desc">
+      Three techniques to achieve the "binder" S-curve at the bottom corners of
+      a selected tab — a convex arc at the top, a concave arc at the bottom
+      where the tab meets the panel border. No pseudo-elements used.
+    </p>
+
+    <!-- ── TECHNIQUE 1: CSS mask ─────────────────────────────────── -->
+    <div class="technique">
+      <h2>1 — CSS <code>mask</code> (radial-gradient punched corners)</h2>
+      <p>
+        Four mask layers: two radial-gradient circles punch concave arcs at the
+        bottom corners; two linear-gradient fills cover the rest of the tab.
+        <strong>Limitation:</strong> the border stroke does not follow the arc —
+        it is just hidden by the mask. Works cleanly when the tab background
+        matches the page background.
+      </p>
+      <div class="tabstrip">
+        <div class="mask-tab active">Approved</div>
+        <div class="mask-tab">Pending</div>
+        <div class="mask-tab">Archived</div>
+      </div>
+      <div class="panel">Content for the active tab goes here.</div>
+    </div>
+
+    <!-- ── TECHNIQUE 2: CSS clip-path polygon ────────────────────── -->
+    <div class="technique">
+      <h2>2 — CSS <code>clip-path: polygon()</code> (chamfered, no curves)</h2>
+      <p>
+        <code>polygon()</code> only supports straight-line vertices — no bezier
+        curves. The result is chamfered (diagonal) corners, not arcs. Shown here
+        to illustrate the limitation; the S-curve is not achievable with polygon
+        alone. <code>path()</code> inside <code>clip-path</code> supports
+        beziers but uses absolute pixel coordinates and does not scale with the
+        element.
+      </p>
+      <div class="tabstrip">
+        <div class="clip-tab active">Approved</div>
+        <div class="clip-tab">Pending</div>
+        <div class="clip-tab">Archived</div>
+      </div>
+      <div class="panel">Content for the active tab goes here.</div>
+    </div>
+
+    <!-- ── TECHNIQUE 3: Full inline SVG ──────────────────────────── -->
+    <div class="technique">
+      <h2>3 — Inline SVG per tab (true bezier S-curve)</h2>
+      <p>
+        Each tab has an absolutely-positioned SVG that draws the full shape.
+        Quadratic beziers: convex arcs at the top corners (control point inside
+        the tab), concave arcs at the bottom corners (control point pushed
+        <em>below</em> the tab baseline, creating the inward S-curve). Fill and
+        stroke both follow the exact geometry. <strong>Best result</strong> —
+        the stroke traces the true S-curve. The active tab erases its bottom
+        stroke line to seamlessly connect with the panel border.
+      </p>
+      <div class="tabstrip">
+        <!-- Active tab: white fill, bottom stroke erased to blend with panel -->
+        <div class="svg-full-tab active">
+          <svg viewBox="0 0 120 36" preserveAspectRatio="none">
+            <!--
+              Path (W=120, H=36, r=8):
+              M 0,8          — start left side at convex arc tangent
+              Q 0,0 8,0      — convex top-left arc
+              L 112,0        — top edge
+              Q 120,0 120,8  — convex top-right arc
+              L 120,36       — right edge down to bottom
+              Q 120,44 112,36 — concave bottom-right arc (control point BELOW)
+              L 8,36         — bottom edge
+              Q 0,44 0,36    — concave bottom-left arc (control point BELOW)
+              Z              — close back up left side
+            -->
+            <path
+              d="M 0,8 Q 0,0 8,0 L 112,0 Q 120,0 120,8 L 120,36 Q 120,44 112,36 L 8,36 Q 0,44 0,36 Z"
+              fill="white"
+              stroke="#bbb"
+              stroke-width="1.5"
+            />
+            <!-- Erase bottom edge so active tab bleeds into panel -->
+            <line
+              x1="1"
+              y1="36"
+              x2="119"
+              y2="36"
+              stroke="white"
+              stroke-width="3"
+            />
+          </svg>
+          <span class="label">Approved</span>
+        </div>
+
+        <!-- Inactive tab -->
+        <div class="svg-full-tab">
+          <svg viewBox="0 0 120 36" preserveAspectRatio="none">
+            <path
+              d="M 0,8 Q 0,0 8,0 L 112,0 Q 120,0 120,8 L 120,36 Q 120,44 112,36 L 8,36 Q 0,44 0,36 Z"
+              fill="#f0f0f0"
+              stroke="#ccc"
+              stroke-width="1.5"
+            />
+          </svg>
+          <span class="label">Pending</span>
+        </div>
+
+        <!-- Inactive tab -->
+        <div class="svg-full-tab">
+          <svg viewBox="0 0 120 36" preserveAspectRatio="none">
+            <path
+              d="M 0,8 Q 0,0 8,0 L 112,0 Q 120,0 120,8 L 120,36 Q 120,44 112,36 L 8,36 Q 0,44 0,36 Z"
+              fill="#f0f0f0"
+              stroke="#ccc"
+              stroke-width="1.5"
+            />
+          </svg>
+          <span class="label">Archived</span>
+        </div>
+      </div>
+      <div class="panel">Content for the active tab goes here.</div>
+    </div>
+  </body>
+</html>

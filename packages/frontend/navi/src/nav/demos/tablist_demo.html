@@ -119,58 +119,66 @@
               </em>
             </Text>
             <div className="example-block">
-              <TabList
-                spacing="0"
-                indicator="none"
-                style={{
-                  "--tab-background": "transparent",
-                  "--tab-color": "#9ca3af",
-                  "--tab-background-hover": "#f9fafb",
-                  "--tab-color-hover": "#374151",
-                  "--tab-background-selected": "#ffffff",
-                  "--tab-color-selected": "#111827",
-                }}
-              >
-                <Tab
-                  column
-                  spacing="xs"
-                  selected={active === "approved"}
-                  onClick={() => setActive("approved")}
-                  paddingX="m"
-                  bold
-                  uppercase
-                  boldWhenSelected={false}
+              <Box padding="m" background="lightgrey">
+                <TabList
+                  spacing="0"
+                  indicator="none"
+                  style={{
+                    '--tablist-border-width': '10px',
+                    "--tab-background": "transparent",
+                    "--tab-color": "#9ca3af",
+                    "--tab-background-hover": "#f9fafb",
+                    "--tab-color-hover": "#374151",
+                    "--tab-background-selected": "#ffffff",
+                    "--tab-color-selected": "#111827",
+                  }}
+                  panelPosition="after"
+                  panelBorderConnection
                 >
-                  Approved
-                  <BadgeCount background="#1976d2" color="white">
-                    3
-                  </BadgeCount>
-                </Tab>
-                <Tab
-                  column
-                  spacing="xs"
-                  selected={active === "pending"}
-                  onClick={() => setActive("pending")}
-                  paddingX="m"
-                  bold
-                  uppercase
-                  boldWhenSelected={false}
+                  <Tab
+                    column
+                    spacing="xs"
+                    selected={active === "approved"}
+                    onClick={() => setActive("approved")}
+                    paddingX="m"
+                    bold
+                    uppercase
+                    boldWhenSelected={false}
+                  >
+                    Approved
+                    <BadgeCount background="#1976d2" color="white">
+                      3
+                    </BadgeCount>
+                  </Tab>
+                  <Tab
+                    column
+                    spacing="xs"
+                    selected={active === "pending"}
+                    onClick={() => setActive("pending")}
+                    paddingX="m"
+                    bold
+                    uppercase
+                    boldWhenSelected={false}
+                  >
+                    Pending
+                    <BadgeCount background="red" color="white">
+                      2
+                    </BadgeCount>
+                  </Tab>
+                </TabList>
+                <Box
+                  role="tabpanel"
+                  padding="m"
+                  border="10px solid grey"
+                  background="#ffffff"
+                  relative
+                  top="-1"
+                  style="border-bottom-left-radius: 5px; border-bottom-right-radius: 5px;"
                 >
-                  Pending
-                  <BadgeCount background="red" color="white">
-                    2
-                  </BadgeCount>
-                </Tab>
-              </TabList>
-              <Box
-                role="tabpanel"
-                padding="m"
-                border="1px solid grey"
-                borderTop="none"
-              >
-                {active === "approved"
-                  ? "These 3 items have been reviewed and approved."
-                  : "These 2 items are awaiting review."}
+                  {active === "approved"
+                    ? "These 3 items have been reviewed and approved."
+                    : "These 2 items are awaiting review."}
+                </Box>
               </Box>
             </div>
           </Box>

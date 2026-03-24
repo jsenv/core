@@ -288,6 +288,24 @@ import.meta.css = /* css */ `
         }
       }
     }
+
+    &[data-panel-border-connection] {
+      --tablist-border-width: 10px;
+      position: relative;
+      z-index: 1;
+
+      .navi_tab {
+        border: var(--tablist-border-width) solid transparent;
+
+        &[data-tab-selected] {
+          border-color: gray;
+          border-bottom-color: var(--tablist-background);
+
+          border-top-left-radius: 5px;
+          border-top-right-radius: 5px;
+        }
+      }
+    }
   }
 `;
 
@@ -315,6 +333,8 @@ export const TabList = ({
   expand,
   expandX,
   tabBorderRadius,
+  panelPosition, // before or after
+  panelBorderConnection,
   ...props
 }) => {
   children = toChildArray(children);
@@ -330,6 +350,8 @@ export const TabList = ({
       data-tab-border-radius={tabBorderRadius}
       data-expand={expand || expandX ? "" : undefined}
       data-vertical={vertical ? "" : undefined}
+      data-panel-position={panelPosition}
+      data-panel-border-connection={panelBorderConnection ? "" : undefined}
       expand={expand}
       expandX={expandX}
       {...props}
