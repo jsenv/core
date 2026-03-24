@@ -302,7 +302,7 @@
           <Box as="section" className="demo-section">
             <Title as="h2">Rounded / Pill Style</Title>
             <Text className="note">
-              Setting <code>--tablist-border-radius</code> with{" "}
+              Setting <code>borderRadius="100px"</code> with{" "}
               <code>indicator="none"</code> and a background color creates a
               pill-shaped tablist. The tab border-radius is automatically kept 2
               px smaller than the container so each tab pill also appears
@@ -312,21 +312,14 @@
             <div className="example-block">
               <div className="caption">Interactive — click to select</div>
               <TabList
+                background="#ede9f5"
                 border="10px solid blue"
                 borderRadius="100px"
                 spacing="0"
                 indicator="none"
-                style={{
-                  "--tablist-background": "#ede9f5",
-                  "--tab-background": "transparent",
-                  "--tab-color": "#4a3880",
-                  "--tab-background-hover": "rgba(255,255,255,0.6)",
-                  "--tab-color-hover": "#2a1a60",
-                  "--tab-background-selected": "#7b68cc",
-                  "--tab-color-selected": "white",
-                }}
               >
                 <Tab
+                  background="#F3E8FF"
                   paddingX="m"
                   selected={active === "0-0"}
                   onClick={() => setActive("0-0")}
@@ -334,16 +327,15 @@
                   0-0
                 </Tab>
                 <Tab
+                  background="#C4B5FD"
                   paddingX="m"
                   selected={active === "1-3"}
                   onClick={() => setActive("1-3")}
-                  pseudoState={{
-                    ":hover": true,
-                  }}
                 >
                   1-3
                 </Tab>
                 <Tab
+                  background="#8B5CF6"
                   paddingX="m"
                   selected={active === "3-6"}
                   onClick={() => setActive("3-6")}
@@ -351,6 +343,104 @@
                   3-6
                 </Tab>
                 <Tab
+                  background="#7C3AED"
+                  paddingX="m"
+                  selected={active === "6+"}
+                  onClick={() => setActive("6+")}
+                >
+                  6+
+                </Tab>
+              </TabList>
+            </div>
+
+            <div className="example-block">
+              <div className="caption">Same design with first tab hovered</div>
+              <TabList
+                background="#ede9f5"
+                border="10px solid blue"
+                borderRadius="100px"
+                spacing="0"
+                indicator="none"
+              >
+                <Tab
+                  background="#F3E8FF"
+                  paddingX="m"
+                  pseudoState={{ ":hover": true }}
+                >
+                  0-0
+                </Tab>
+                <Tab background="#C4B5FD" paddingX="m">
+                  1-3
+                </Tab>
+                <Tab background="#8B5CF6" paddingX="m">
+                  3-6
+                </Tab>
+                <Tab background="#7C3AED" paddingX="m">
+                  6+
+                </Tab>
+              </TabList>
+            </div>
+
+            <div className="example-block">
+              <div className="caption">Same design with first tab selected</div>
+              <TabList
+                background="#ede9f5"
+                border="10px solid blue"
+                borderRadius="100px"
+                spacing="0"
+                indicator="none"
+              >
+                <Tab background="#F3E8FF" paddingX="m" selected>
+                  0-0
+                </Tab>
+                <Tab background="#C4B5FD" paddingX="m">
+                  1-3
+                </Tab>
+                <Tab background="#8B5CF6" paddingX="m">
+                  3-6
+                </Tab>
+                <Tab background="#7C3AED" paddingX="m">
+                  6+
+                </Tab>
+              </TabList>
+            </div>
+
+            <div className="example-block">
+              <div className="caption">Same design with padding on tablist</div>
+              <TabList
+                background="#ede9f5"
+                border="10px solid blue"
+                borderRadius="100px"
+                spacing="0"
+                indicator="none"
+                padding="15"
+              >
+                <Tab
+                  background="#F3E8FF"
+                  paddingX="m"
+                  selected={active === "0-0"}
+                  onClick={() => setActive("0-0")}
+                >
+                  0-0
+                </Tab>
+                <Tab
+                  background="#C4B5FD"
+                  paddingX="m"
+                  selected={active === "1-3"}
+                  onClick={() => setActive("1-3")}
+                >
+                  1-3
+                </Tab>
+                <Tab
+                  background="#8B5CF6"
+                  paddingX="m"
+                  selected={active === "3-6"}
+                  onClick={() => setActive("3-6")}
+                >
+                  3-6
+                </Tab>
+                <Tab
+                  background="#7C3AED"
                   paddingX="m"
                   selected={active === "6+"}
                   onClick={() => setActive("6+")}

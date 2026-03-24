@@ -24,7 +24,7 @@ import.meta.css = /* css */ `
       --tablist-background: transparent;
 
       --tab-background: transparent;
-      --tab-background-hover: #dae0e7;
+      --tab-background-hover: color-mix(in srgb, transparent, #010409 10%);
       --tab-background-selected: transparent;
       --tab-color: inherit;
       --tab-color-hover: #010409;
