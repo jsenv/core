@@ -274,45 +274,40 @@
         stroke line to seamlessly connect with the panel border.
       </p>
       <div class="tabstrip">
-        <!-- Active tab: white fill, bottom stroke erased to blend with panel -->
+        <!-- Active tab: white fill, stroke skips the flat bottom but keeps both S-arcs -->
         <div class="svg-full-tab active">
           <svg viewBox="0 0 120 36" preserveAspectRatio="none">
             <!--
-              Path (W=120, H=36, r=8):
-              M 0,8          — start left side at convex arc tangent
-              Q 0,0 8,0      — convex top-left arc
-              L 112,0        — top edge
-              Q 120,0 120,8  — convex top-right arc
-              L 120,36       — right edge down to bottom
-              Q 120,44 112,36 — concave bottom-right arc (control point BELOW)
-              L 8,36         — bottom edge
-              Q 0,44 0,36    — concave bottom-left arc (control point BELOW)
-              Z              — close back up left side
+              Fill: complete closed shape including S-curve arcs below baseline.
+              Q control points at y=44 (below viewBox) create the concave arcs.
             -->
             <path
               d="M 0,8 Q 0,0 8,0 L 112,0 Q 120,0 120,8 L 120,36 Q 120,44 112,36 L 8,36 Q 0,44 0,36 Z"
               fill="white"
+              stroke="none"
+            />
+            <!--
+              Stroke: two disconnected subpaths — the flat bottom line is omitted
+              so the active tab bleeds into the panel with no visible bottom edge.
+              Subpath 1: left edge + top + right edge + right S-arc  (M ... Q 120,44 112,36)
+              Subpath 2: left S-arc alone                             (M 8,36 Q 0,44 0,36)
+            -->
+            <path
+              d="M 0,36 L 0,8 Q 0,0 8,0 L 112,0 Q 120,0 120,8 L 120,36 Q 120,44 112,36 M 8,36 Q 0,44 0,36"
+              fill="none"
               stroke="#bbb"
               stroke-width="1.5"
-            />
-            <!-- Erase bottom edge so active tab bleeds into panel -->
-            <line
-              x1="1"
-              y1="36"
-              x2="119"
-              y2="36"
-              stroke="white"
-              stroke-width="3"
+              stroke-linecap="round"
             />
           </svg>
           <span class="label">Approved</span>
         </div>
 
-        <!-- Inactive tab -->
+        <!-- Inactive tab: flat bottom, no S-curve (just a rounded-top rectangle) -->
         <div class="svg-full-tab">
           <svg viewBox="0 0 120 36" preserveAspectRatio="none">
             <path
-              d="M 0,8 Q 0,0 8,0 L 112,0 Q 120,0 120,8 L 120,36 Q 120,44 112,36 L 8,36 Q 0,44 0,36 Z"
+              d="M 0,8 Q 0,0 8,0 L 112,0 Q 120,0 120,8 L 120,36 L 0,36 Z"
               fill="#f0f0f0"
               stroke="#ccc"
               stroke-width="1.5"
@@ -325,7 +320,7 @@
         <div class="svg-full-tab">
           <svg viewBox="0 0 120 36" preserveAspectRatio="none">
             <path
-              d="M 0,8 Q 0,0 8,0 L 112,0 Q 120,0 120,8 L 120,36 Q 120,44 112,36 L 8,36 Q 0,44 0,36 Z"
+              d="M 0,8 Q 0,0 8,0 L 112,0 Q 120,0 120,8 L 120,36 L 0,36 Z"
               fill="#f0f0f0"
               stroke="#ccc"
               stroke-width="1.5"
