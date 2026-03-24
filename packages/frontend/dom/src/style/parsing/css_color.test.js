@@ -105,6 +105,18 @@ await snapshotTests(import.meta.url, ({ test }) => {
     }
   });
 
+  test("oklab() syntax", () => {
+    return {
+      "oklab(0 0 0 / 0) - transparent black": parseCSSColor(
+        "oklab(0 0 0 / 0)",
+      ),
+      "oklab(1 0 0) - white": parseCSSColor("oklab(1 0 0)"),
+      "oklab(0.5 0.1 -0.1) - semi-opaque": parseCSSColor(
+        "oklab(0.5 0.1 -0.1)",
+      ),
+    };
+  });
+
   test("color(srgb ...) syntax", () => {
     return {
       "semi-transparent blue": parseCSSColor(

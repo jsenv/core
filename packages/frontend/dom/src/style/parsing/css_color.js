@@ -23,7 +23,8 @@ export const areSameRGBA = (first, second) => {
 };
 export const resolveCSSColor = (color, element) => {
   const rgba = parseCSSColor(color, element);
-  return stringifyCSSColor(rgba);
+  const colorString = stringifyCSSColor(rgba);
+  return colorString;
 };
 
 /**
@@ -78,12 +79,27 @@ export const parseCSSColor = (color, element) => {
     return color;
   }
 
+  // oklab(L a b) and oklab(L a b / alpha)
+  if (color.startsWith("oklab(")) {
+    const oklabMatch = color.match(
+      /^oklab\(\s*([\d.]+)\s+(-?[\d.]+)\s+(-?[\d.]+)(?:\s*\/\s*([\d.]+))?\s*\)$/,
+    );
+    if (oklabMatch) {
+      const L = parseFloat(oklabMatch[1]);
+      const a = parseFloat(oklabMatch[2]);
+      const b = parseFloat(oklabMatch[3]);
+      const alpha = oklabMatch[4] !== undefined ? parseFloat(oklabMatch[4]) : 1;
+      const [r, g, bChannel] = oklabToRgb(L, a, b);
+      return [r, g, bChannel, alpha];
+    }
+    return color;
+  }
+
   // Pass through CSS color functions we don't handle
   if (
     color.startsWith("lch(") ||
     color.startsWith("oklch(") ||
     color.startsWith("lab(") ||
-    color.startsWith("oklab(") ||
     color.startsWith("hwb(") ||
     color.includes("color-contrast(")
   ) {
@@ -143,6 +159,27 @@ export const parseCSSColor = (color, element) => {
   const rgba = convertColorToRgba(resolvedColor);
   return rgba;
 };
+const oklabToRgb = (L, a, b) => {
+  const l_ = L + 0.3963377774 * a + 0.2158037573 * b;
+  const m_ = L - 0.1055613458 * a - 0.0638541728 * b;
+  const s_ = L - 0.0894841775 * a - 1.291485548 * b;
+  const l = l_ * l_ * l_;
+  const m = m_ * m_ * m_;
+  const s = s_ * s_ * s_;
+  const rLinear = 4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s;
+  const gLinear = -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s;
+  const bLinear = -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s;
+  const toSrgb = (linear) => {
+    const clamped = linear < 0 ? 0 : linear > 1 ? 1 : linear;
+    const srgb =
+      clamped <= 0.0031308
+        ? 12.92 * clamped
+        : 1.055 * Math.pow(clamped, 1 / 2.4) - 0.055;
+    return Math.round(srgb * 255);
+  };
+  return [toSrgb(rLinear), toSrgb(gLinear), toSrgb(bLinear)];
+};
+
 /**
  * Converts HSL color to RGB
  * @param {number} h - Hue (0-360)
@@ -275,12 +312,10 @@ export const stringifyCSSColor = (value) => {
   }
   const rgba = value;
   const [r, g, b, a = 1] = rgba;
-
   // Validate RGB values
   if (r < 0 || r > 255 || g < 0 || g > 255 || b < 0 || b > 255) {
     return null;
   }
-
   // Validate alpha value
   if (a < 0 || a > 1) {
     return null;
@@ -298,10 +333,7 @@ export const stringifyCSSColor = (value) => {
         return name;
       }
     }
-  }
-
-  // Use rgb() for opaque colors, rgba() for transparent
-  if (a === 1) {
+    // Use rgb() for opaque colors, rgba() for transparent
     return `rgb(${rInt}, ${gInt}, ${bInt})`;
   }
   if (a === 0 && rInt === 0 && gInt === 0 && bInt === 0) {
