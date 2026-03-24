@@ -324,6 +324,9 @@ const TYPO_PROPS = {
   preWrap: applyToCssPropWhenTruthy("whiteSpace", "pre-wrap", "normal"),
   preLine: applyToCssPropWhenTruthy("whiteSpace", "pre-line", "normal"),
   userSelect: PASS_THROUGH,
+  capitalize: applyToCssPropWhenTruthy("textTransform", "capitalize", "none"),
+  uppercase: applyToCssPropWhenTruthy("textTransform", "uppercase", "none"),
+  lowercase: applyToCssPropWhenTruthy("textTransform", "lowercase", "none"),
 };
 const VISUAL_PROPS = {
   outline: PASS_THROUGH,
