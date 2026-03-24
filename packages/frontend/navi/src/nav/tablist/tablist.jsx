@@ -271,6 +271,12 @@ import.meta.css = /* css */ `
           }
         }
       }
+
+      &[data-expand] {
+        .navi_tab {
+          align-items: stretch;
+        }
+      }
     }
 
     &[data-expand] {
@@ -278,7 +284,6 @@ import.meta.css = /* css */ `
         .navi_tab {
           width: 100%;
           flex: 1;
-          align-items: stretch;
           justify-content: start;
         }
       }
@@ -336,9 +341,9 @@ export const TabList = ({
             {children.map((child) => {
               return (
                 <Box
+                  key={child.props.key}
                   as="li"
                   column
-                  key={child.props.key}
                   expandX={expandX}
                   expand={expand}
                 >

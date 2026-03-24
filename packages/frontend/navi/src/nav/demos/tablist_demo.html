@@ -122,7 +122,6 @@
               <div
                 style={{
                   borderBottom: "1px solid #e0e0e0",
-                  display: "inline-block",
                 }}
               >
                 <TabList
@@ -168,6 +167,11 @@
                     </BadgeCount>
                   </Tab>
                 </TabList>
+              </div>
+              <div className="dynamic-panel" role="tabpanel">
+                {active === "approved"
+                  ? "These 3 items have been reviewed and approved."
+                  : "These 2 items are awaiting review."}
               </div>
             </div>
           </Box>
@@ -294,6 +298,7 @@
                       pseudoState={{
                         ":hover": name === "activity" || undefined,
                       }}
+                      expandX
                     >
                       <Link
                         paddingX="md"
