@@ -1,5 +1,6 @@
 /**
  * TabList component with support for horizontal and vertical layouts
+ * https://dribbble.com/search/tabs
  */
 
 import { createContext, toChildArray } from "preact";
@@ -112,7 +113,7 @@ import.meta.css = /* css */ `
 
           display: flex;
           padding: 2px; /* Space for eventual outline inside the tab (link) */
-          flex-direction: column;
+          align-items: center;
           color: var(--x-tab-color);
           white-space: nowrap;
           background: var(--x-tab-background);
@@ -125,7 +126,7 @@ import.meta.css = /* css */ `
             --tab-color: white;
           }
 
-          > .navi_text,
+          > .navi_text:not(.navi_badge_count),
           .navi_link,
           .navi_button,
           .navi_text_bold_wrapper,
@@ -383,6 +384,8 @@ const TabBasic = ({
   selected,
   boldWhenSelected = !icon,
   onClick,
+  row,
+  column = !row,
   ...props
 }) => {
   const tabListIndicator = useContext(TabListIndicatorContext);
@@ -412,6 +415,8 @@ const TabBasic = ({
       }}
       selfAlignX={tabListAlignX}
       data-align-x={tabListAlignX}
+      row={row}
+      column={column}
       {...props}
     >
       {(tabListIndicator === "start" || tabListIndicator === "end") && (

@@ -92,6 +92,7 @@
           <div style={{ padding: "10px" }}>
             <Title as="h1">TabList Component Demo</Title>
             <BasicTabs />
+            <BinderTabs />
             <UnderlineInteractiveTabs />
             <RoundedTabList />
             <VerticalTabs />
@@ -100,6 +101,76 @@
             <StylingVariables />
             <DynamicAddRemove />
           </div>
+        );
+      };
+
+      const BinderTabs = () => {
+        const [active, setActive] = useState("approved");
+        return (
+          <Box as="section" className="demo-section">
+            <Title as="h2">Binder / Folder Tabs</Title>
+            <Text className="note">
+              "Intercalaire / classeur" style — tabs with category badges. Uses{" "}
+              <code>indicator="none"</code>, a bottom border on the wrapper to
+              simulate the panel separator, and <code>BadgeCount</code>.{" "}
+              <em>
+                The "open bottom on selected tab" effect requires future TabList
+                support; this is the closest approximation with current options.
+              </em>
+            </Text>
+            <div className="example-block">
+              <div
+                style={{
+                  borderBottom: "1px solid #e0e0e0",
+                  display: "inline-block",
+                }}
+              >
+                <TabList
+                  spacing="0"
+                  indicator="none"
+                  style={{
+                    "--tab-background": "transparent",
+                    "--tab-color": "#9ca3af",
+                    "--tab-background-hover": "#f9fafb",
+                    "--tab-color-hover": "#374151",
+                    "--tab-background-selected": "#ffffff",
+                    "--tab-color-selected": "#111827",
+                  }}
+                >
+                  <Tab
+                    column
+                    spacing="xs"
+                    selected={active === "approved"}
+                    onClick={() => setActive("approved")}
+                    paddingX="m"
+                    bold
+                    uppercase
+                    boldWhenSelected={false}
+                  >
+                    Approved
+                    <BadgeCount background="#1976d2" color="white">
+                      3
+                    </BadgeCount>
+                  </Tab>
+                  <Tab
+                    column
+                    spacing="xs"
+                    selected={active === "pending"}
+                    onClick={() => setActive("pending")}
+                    paddingX="m"
+                    bold
+                    uppercase
+                    boldWhenSelected={false}
+                  >
+                    Pending
+                    <BadgeCount background="red" color="white">
+                      2
+                    </BadgeCount>
+                  </Tab>
+                </TabList>
+              </div>
+            </div>
+          </Box>
         );
       };
 
