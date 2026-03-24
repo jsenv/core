@@ -77,11 +77,11 @@ import.meta.css = /* css */ `
         --tablist-padding-left,
         var(--tablist-padding-x, var(--tablist-padding, unset))
       );
-      flex-grow: 1;
       align-items: center;
       gap: 0.5rem;
       list-style: none;
       background: var(--tablist-background);
+      border: var(--tablist-border);
       border-radius: var(--tablist-border-radius);
 
       > li {
@@ -191,6 +191,12 @@ import.meta.css = /* css */ `
       }
     }
 
+    &[data-expand] {
+      > ul {
+        flex-grow: 1;
+      }
+    }
+
     /* Vertical layout */
     &[data-vertical] {
       /* overflow-x: hidden; */
@@ -270,6 +276,7 @@ import.meta.css = /* css */ `
 const TabListIndicatorContext = createContext();
 const TabListAlignXContext = createContext();
 const TabListStyleCSSVars = {
+  border: "--tablist-border",
   borderRadius: "--tablist-border-radius",
   padding: "--tablist-padding",
   paddingX: "--tablist-padding-x",

@@ -312,10 +312,10 @@
             <div className="example-block">
               <div className="caption">Interactive — click to select</div>
               <TabList
+                border="10px solid blue"
                 borderRadius="100px"
                 spacing="0"
                 indicator="none"
-                padding="2"
                 style={{
                   "--tablist-background": "#ede9f5",
                   "--tab-background": "transparent",
@@ -327,12 +327,14 @@
                 }}
               >
                 <Tab
+                  paddingX="m"
                   selected={active === "0-0"}
                   onClick={() => setActive("0-0")}
                 >
                   0-0
                 </Tab>
                 <Tab
+                  paddingX="m"
                   selected={active === "1-3"}
                   onClick={() => setActive("1-3")}
                   pseudoState={{
@@ -342,12 +344,17 @@
                   1-3
                 </Tab>
                 <Tab
+                  paddingX="m"
                   selected={active === "3-6"}
                   onClick={() => setActive("3-6")}
                 >
                   3-6
                 </Tab>
-                <Tab selected={active === "6+"} onClick={() => setActive("6+")}>
+                <Tab
+                  paddingX="m"
+                  selected={active === "6+"}
+                  onClick={() => setActive("6+")}
+                >
                   6+
                 </Tab>
               </TabList>
