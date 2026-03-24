@@ -3,11 +3,12 @@
  */
 
 import { createContext, toChildArray } from "preact";
-import { useContext, useState } from "preact/hooks";
+import { useContext, useRef, useState } from "preact/hooks";
 
 import { Box } from "../../box/box.jsx";
 import { PSEUDO_CLASSES } from "../../box/pseudo_styles.js";
 import { Text } from "../../text/text.jsx";
+import { useDarkBackgroundAttribute } from "../../text/use_dark_background_attribute.js";
 import { RouteLink } from "../route_link.jsx";
 import { ReportSelectedOnTabContext } from "./tab_context.js";
 
@@ -89,6 +90,13 @@ import.meta.css = /* css */ `
         display: inline-flex;
 
         .navi_tab {
+          --contrasting-color: black;
+          --tab-background-hover: color-mix(
+            in srgb,
+            var(--tab-background),
+            var(--contrasting-color) 30%
+          );
+
           --x-tab-background: var(
             --tab-background-color,
             var(--tab-background)
@@ -110,8 +118,13 @@ import.meta.css = /* css */ `
           white-space: nowrap;
           background: var(--x-tab-background);
           border-radius: var(--tab-border-radius);
-          transition: background 0.12s ease-out;
+          /* transition: background 0.12s ease-out; */
           user-select: none;
+
+          &[data-dark-background] {
+            --contrasting-color: white;
+            --tab-color: white;
+          }
 
           > .navi_text,
           .navi_link,
@@ -375,11 +388,16 @@ const TabBasic = ({
 }) => {
   const tabListIndicator = useContext(TabListIndicatorContext);
   const tabListAlignX = useContext(TabListAlignXContext);
+  const defaultRef = useRef();
+  const ref = props.ref || defaultRef;
   const [selectedFromChild, setSelectedFromChild] = useState(false);
   const innerSelected = selected || selectedFromChild;
 
+  useDarkBackgroundAttribute(ref, [innerSelected], {});
+
   return (
     <Box
+      ref={ref}
       role="tab"
       aria-selected={innerSelected ? "true" : "false"}
       data-interactive={onClick ? "" : undefined}

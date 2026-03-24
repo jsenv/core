@@ -296,7 +296,7 @@
       };
 
       const RoundedTabList = () => {
-        const [active, setActive] = useState("3-6");
+        const [active, setActive] = useState(undefined);
 
         return (
           <Box as="section" className="demo-section">
@@ -354,7 +354,9 @@
             </div>
 
             <div className="example-block">
-              <div className="caption">Same design with first tab hovered</div>
+              <div className="caption">
+                Same design with first and last tab hovered
+              </div>
               <TabList
                 background="#ede9f5"
                 border="10px solid blue"
@@ -375,14 +377,18 @@
                 <Tab background="#8B5CF6" paddingX="m">
                   3-6
                 </Tab>
-                <Tab background="#7C3AED" paddingX="m">
+                <Tab
+                  background="#7C3AED"
+                  paddingX="m"
+                  pseudoState={{ ":hover": true }}
+                >
                   6+
                 </Tab>
               </TabList>
             </div>
 
             <div className="example-block">
-              <div className="caption">Same design with first tab selected</div>
+              <div className="caption">Same design with last tab selected</div>
               <TabList
                 background="#ede9f5"
                 border="10px solid blue"
@@ -390,7 +396,7 @@
                 spacing="0"
                 indicator="none"
               >
-                <Tab background="#F3E8FF" paddingX="m" selected>
+                <Tab background="#F3E8FF" paddingX="m">
                   0-0
                 </Tab>
                 <Tab background="#C4B5FD" paddingX="m">
@@ -399,7 +405,7 @@
                 <Tab background="#8B5CF6" paddingX="m">
                   3-6
                 </Tab>
-                <Tab background="#7C3AED" paddingX="m">
+                <Tab background="#7C3AED" paddingX="m" selected>
                   6+
                 </Tab>
               </TabList>

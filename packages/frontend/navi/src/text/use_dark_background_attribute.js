@@ -70,7 +70,8 @@ export const useDarkBackgroundAttribute = (
         return null;
       }
     }
-    const backgroundColor = getComputedStyle(elementToCheck).backgroundColor;
+    const computedStyle = getComputedStyle(elementToCheck);
+    const backgroundColor = computedStyle.backgroundColor;
     if (!backgroundColor) {
       el.removeAttribute(attributeName);
       return null;
