@@ -22,9 +22,6 @@ import.meta.css = /* css */ `
     .navi_tablist {
       --tablist-border-radius: 0px;
       --tablist-background: transparent;
-      --tab-border-radius: calc(
-        var(--tablist-border-radius) - var(--tablist-padding)
-      );
 
       --tab-background: transparent;
       --tab-background-hover: #dae0e7;
@@ -35,6 +32,12 @@ import.meta.css = /* css */ `
       --tab-indicator-size: 2px;
       --tab-indicator-spacing: 0;
       --tab-indicator-color: rgb(205, 52, 37);
+
+      &[data-tab-border-radius="inherit"] {
+        --tab-border-radius: calc(
+          var(--tablist-border-radius) - var(--tablist-padding)
+        );
+      }
     }
   }
 
@@ -57,7 +60,6 @@ import.meta.css = /* css */ `
 
     > ul {
       display: flex;
-      width: 100%;
       margin: 0;
       padding-top: var(
         --tablist-padding-top,
@@ -75,6 +77,7 @@ import.meta.css = /* css */ `
         --tablist-padding-left,
         var(--tablist-padding-x, var(--tablist-padding, unset))
       );
+      flex-grow: 1;
       align-items: center;
       gap: 0.5rem;
       list-style: none;
@@ -163,6 +166,26 @@ import.meta.css = /* css */ `
             .navi_tab_indicator {
               background: var(--tab-indicator-color);
             }
+          }
+        }
+
+        &:first-child {
+          border-top-left-radius: inherit;
+          border-bottom-left-radius: inherit;
+
+          .navi_tab {
+            border-top-left-radius: inherit;
+            border-bottom-left-radius: inherit;
+          }
+        }
+
+        &:last-child {
+          border-top-right-radius: inherit;
+          border-bottom-right-radius: inherit;
+
+          .navi_tab {
+            border-top-right-radius: inherit;
+            border-bottom-right-radius: inherit;
           }
         }
       }
@@ -266,6 +289,7 @@ export const TabList = ({
   alignX,
   expand,
   expandX,
+  tabBorderRadius,
   ...props
 }) => {
   children = toChildArray(children);
@@ -278,6 +302,7 @@ export const TabList = ({
       data-tab-indicator-position={
         indicator === "start" || indicator === "end" ? indicator : undefined
       }
+      data-tab-border-radius={tabBorderRadius}
       data-expand={expand || expandX ? "" : undefined}
       data-vertical={vertical ? "" : undefined}
       expand={expand}
