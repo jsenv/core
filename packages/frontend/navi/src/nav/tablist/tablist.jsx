@@ -22,7 +22,9 @@ import.meta.css = /* css */ `
     .navi_tablist {
       --tablist-border-radius: 0px;
       --tablist-background: transparent;
-      --tab-border-radius: calc(var(--tablist-border-radius) - 2px);
+      --tab-border-radius: calc(
+        var(--tablist-border-radius) - var(--tablist-padding)
+      );
 
       --tab-background: transparent;
       --tab-background-hover: #dae0e7;
@@ -57,7 +59,22 @@ import.meta.css = /* css */ `
       display: flex;
       width: 100%;
       margin: 0;
-      padding: 0;
+      padding-top: var(
+        --tablist-padding-top,
+        var(--tablist-padding-y, var(--tablist-padding, unset))
+      );
+      padding-right: var(
+        --tablist-padding-right,
+        var(--tablist-padding-x, var(--tablist-padding, unset))
+      );
+      padding-bottom: var(
+        --tablist-padding-bottom,
+        var(--tablist-padding-y, var(--tablist-padding, unset))
+      );
+      padding-left: var(
+        --tablist-padding-left,
+        var(--tablist-padding-x, var(--tablist-padding, unset))
+      );
       align-items: center;
       gap: 0.5rem;
       list-style: none;
@@ -231,8 +248,16 @@ const TabListIndicatorContext = createContext();
 const TabListAlignXContext = createContext();
 const TabListStyleCSSVars = {
   borderRadius: "--tablist-border-radius",
+  padding: "--tablist-padding",
+  paddingX: "--tablist-padding-x",
+  paddingY: "--tablist-padding-y",
+  paddingTop: "--tablist-padding-top",
+  paddingRight: "--tablist-padding-right",
+  paddingBottom: "--tablist-padding-bottom",
+  paddingLeft: "--tablist-padding-left",
   background: "--tablist-background",
 };
+
 export const TabList = ({
   children,
   spacing,
@@ -241,9 +266,6 @@ export const TabList = ({
   alignX,
   expand,
   expandX,
-  paddingX,
-  paddingY,
-  padding,
   ...props
 }) => {
   children = toChildArray(children);
@@ -263,15 +285,7 @@ export const TabList = ({
       {...props}
       styleCSSVars={TabListStyleCSSVars}
     >
-      <Box
-        as="ul"
-        column
-        role="list"
-        paddingX={paddingX}
-        paddingY={paddingY}
-        padding={padding}
-        spacing={spacing}
-      >
+      <Box as="ul" column role="list" spacing={spacing}>
         <TabListIndicatorContext.Provider value={indicator}>
           <TabListAlignXContext.Provider value={alignX}>
             {children.map((child) => {

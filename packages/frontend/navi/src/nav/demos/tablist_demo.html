@@ -93,6 +93,7 @@
             <Title as="h1">TabList Component Demo</Title>
             <BasicTabs />
             <UnderlineInteractiveTabs />
+            <RoundedTabList />
             <VerticalTabs />
             <VerticalTabsWithIcons />
             <SpacingVariants />
@@ -288,6 +289,67 @@
                   ))}
                 </TabList>
               </Box>
+            </div>
+          </Box>
+        );
+      };
+
+      const RoundedTabList = () => {
+        const [active, setActive] = useState("3-6");
+
+        return (
+          <Box as="section" className="demo-section">
+            <Title as="h2">Rounded / Pill Style</Title>
+            <Text className="note">
+              Setting <code>--tablist-border-radius</code> with{" "}
+              <code>indicator="none"</code> and a background color creates a
+              pill-shaped tablist. The tab border-radius is automatically kept 2
+              px smaller than the container so each tab pill also appears
+              rounded.
+            </Text>
+
+            <div className="example-block">
+              <div className="caption">Interactive — click to select</div>
+              <TabList
+                borderRadius="100px"
+                spacing="0"
+                indicator="none"
+                padding="2"
+                style={{
+                  "--tablist-background": "#ede9f5",
+                  "--tab-background": "transparent",
+                  "--tab-color": "#4a3880",
+                  "--tab-background-hover": "rgba(255,255,255,0.6)",
+                  "--tab-color-hover": "#2a1a60",
+                  "--tab-background-selected": "#7b68cc",
+                  "--tab-color-selected": "white",
+                }}
+              >
+                <Tab
+                  selected={active === "0-0"}
+                  onClick={() => setActive("0-0")}
+                >
+                  0-0
+                </Tab>
+                <Tab
+                  selected={active === "1-3"}
+                  onClick={() => setActive("1-3")}
+                  pseudoState={{
+                    ":hover": true,
+                  }}
+                >
+                  1-3
+                </Tab>
+                <Tab
+                  selected={active === "3-6"}
+                  onClick={() => setActive("3-6")}
+                >
+                  3-6
+                </Tab>
+                <Tab selected={active === "6+"} onClick={() => setActive("6+")}>
+                  6+
+                </Tab>
+              </TabList>
             </div>
           </Box>
         );
