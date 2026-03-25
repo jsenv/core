@@ -143,54 +143,14 @@
       const arcConvex = arcSweep1;
       const arcConcave = arcSweep0;
 
-      // Builds the outer boundary of the binder shape as a single closed filled path.
-      // Rendered beneath the white interior fill to produce the visible border.
-      const buildBinderOuterPath = ({
-        tabX, // active tab left offset from panel left edge
-        tabWidth, // active tab outer width
-        tabRowHeight, // height of the tab-strip area (panel.offsetTop − borderWidth)
-        panelWidth, // panel outer width
-        panelHeight, // panel outer height
-        borderWidth,
-        cornerRadius, // corner radius for all corners (tab top, panel bottom, and junctions)
-      }) => {
-        // Junction arcs only appear when the tab side is set back from the panel edge.
-        const hasRightJunction = tabX + tabWidth < panelWidth;
-        const hasLeftJunction = tabX > 0;
-        const rightJR = hasRightJunction ? cornerRadius : 0;
-        const leftJR = hasLeftJunction ? cornerRadius : 0;
-
-        // CW from tab TL: right → TR → down right → junction → panel TR → BR → BL → up left → junction → tab TL
-        const d = [];
-        d.push(`M ${tabX + cornerRadius},0`);
-        d.push(`h ${tabWidth - 2 * cornerRadius}`); // tab top →
-        d.push(arcConvex(cornerRadius, cornerRadius, cornerRadius)); // tab TR: right→down
-        if (rightJR > 0) {
-          d.push(`v ${tabRowHeight - 2 * cornerRadius}`); // tab right ↓
-          d.push(arcConcave(rightJR, rightJR, rightJR)); // right junction: down→right (concave)
-        } else {
-          d.push(`v ${tabRowHeight - cornerRadius}`); // tab right ↓
-        }
-        d.push(`h ${panelWidth - tabX - tabWidth - cornerRadius - rightJR}`); // panel top-right →
-        d.push(arcConvex(cornerRadius, cornerRadius, cornerRadius)); // panel TR: right→down
-        d.push(`v ${panelHeight - 2 * cornerRadius}`); // panel right ↓
-        d.push(arcConvex(cornerRadius, -cornerRadius, cornerRadius)); // panel BR: down→left
-        d.push(`h -${panelWidth - 2 * cornerRadius}`); // panel bottom ←
-        d.push(arcConvex(cornerRadius, -cornerRadius, -cornerRadius)); // panel BL: left→up
-        d.push(`v -${panelHeight - cornerRadius}`); // panel left ↑ to y=tabRowHeight
-        d.push(`h ${tabX - leftJR}`); // panel top-left → (skipped if tabX=0)
-        if (leftJR > 0) d.push(arcConcave(leftJR, leftJR, -leftJR)); // left junction: right→up (concave)
-        d.push(`v -${tabRowHeight - cornerRadius - leftJR}`); // tab left ↑
-        d.push(arcConvex(cornerRadius, cornerRadius, -cornerRadius)); // tab TL: up→right
-        d.push("Z");
-
-        return d.join(" ");
-      };
-
-      // Builds the background fill path: traces the inner boundary of the border ring
-      // (CCW winding) so the white fill covers exactly the area inside the border.
-      // In a CCW path: convex (outward) corners use sweep=0, concave (inward) use sweep=1.
-      const buildBinderBgPath = ({
+      // Builds the centerline path of the border (inset by borderWidth/2 from the outer edge).
+      // Rendered as a stroked path with strokeWidth=1 so we can see exactly where the border
+      // center runs, without worrying about fill or inner/outer boundary math.
+      //
+      // Centerline radii:
+      //   convex corners:  r - borderWidth/2  (center moves inward → smaller arc)
+      //   concave corners: r + borderWidth/2  (center moves outward from corner → larger arc)
+      const buildBinderCenterlinePath = ({
         tabX,
         tabWidth,
         tabRowHeight,
@@ -199,47 +159,57 @@
         borderWidth,
         cornerRadius,
       }) => {
-        const innerCornerR = Math.max(0, cornerRadius - borderWidth);
-        const innerPanelW = panelWidth - 2 * borderWidth;
-        const innerPanelH = panelHeight - 2 * borderWidth;
-        const innerTabW = tabWidth - 2 * borderWidth;
+        const h = borderWidth / 2; // half border width = inset amount
+        const convR = Math.max(0, cornerRadius - h); // centerline convex radius
+        const concR = cornerRadius + h; // centerline concave radius
+
         const hasRightJunction = tabX + tabWidth < panelWidth;
         const hasLeftJunction = tabX > 0;
-        // Junction corners are concave. Their center of curvature is OUTSIDE the white region
-        // (between the tab side and the panel top). The inner boundary is therefore FURTHER
-        // from the center than the outer boundary → inner radius = cornerRadius + borderWidth.
-        // This gives uniform border width along the arc (outer tight, inner gradual).
-        const innerRightJR = hasRightJunction ? cornerRadius + borderWidth : 0;
-        const innerLeftJR = hasLeftJunction ? cornerRadius + borderWidth : 0;
+        const rightConcR = hasRightJunction ? concR : 0;
+        const leftConcR = hasLeftJunction ? concR : 0;
+
+        // Inset coords
+        const left = h;
+        const top = h;
+        const right = panelWidth - h;
+        const bottom = tabRowHeight + panelHeight - h;
+        const tabLeft = tabX + h;
+        const tabRight = tabX + tabWidth - h;
+        const junctionY = tabRowHeight - h; // y of the junction point (tab bottom / panel top)
+
         const d = [];
-        d.push(
-          `M ${borderWidth + innerCornerR},${tabRowHeight + panelHeight - borderWidth}`,
-        );
-        d.push(`h ${innerPanelW - innerCornerR - innerCornerR}`);
-        d.push(arcSweep0(innerCornerR, innerCornerR, -innerCornerR)); // inner panel BR
-        d.push(`v -${innerPanelH - innerCornerR - innerCornerR}`);
-        d.push(arcSweep0(innerCornerR, -innerCornerR, -innerCornerR)); // inner panel TR
-        d.push(
-          `h -${panelWidth - tabX - tabWidth - innerCornerR - innerRightJR}`,
-        );
-        if (innerRightJR > 0)
-          d.push(arcSweep1(innerRightJR, -innerRightJR, -innerRightJR)); // inner right junction corner (concave)
-        d.push(`v -${tabRowHeight - innerCornerR - innerRightJR}`);
-        d.push(arcSweep0(innerCornerR, -innerCornerR, -innerCornerR)); // inner tab TR
-        d.push(`h -${innerTabW - innerCornerR - innerCornerR}`);
-        d.push(arcSweep0(innerCornerR, -innerCornerR, innerCornerR)); // inner tab TL
-        d.push(`v ${tabRowHeight - innerCornerR - innerLeftJR}`);
-        if (innerLeftJR > 0)
-          d.push(arcSweep1(innerLeftJR, -innerLeftJR, innerLeftJR)); // inner left junction corner (concave)
-        d.push(`h -${tabX - innerLeftJR}`);
-        d.push(`v ${innerPanelH - innerCornerR}`);
-        d.push(arcSweep0(innerCornerR, innerCornerR, innerCornerR)); // inner panel BL
+        // Start at tab TL, move right along tab top
+        d.push(`M ${tabLeft + convR},${top}`);
+        d.push(`h ${tabRight - tabLeft - 2 * convR}`); // tab top →
+        d.push(arcConvex(convR, convR, convR)); // tab TR: right→down
+        if (rightConcR > 0) {
+          d.push(`v ${junctionY - top - convR - rightConcR}`); // tab right ↓
+          d.push(arcConcave(rightConcR, rightConcR, rightConcR)); // right junction: down→right (concave)
+        } else {
+          d.push(`v ${junctionY - top - convR}`); // tab right ↓ (no junction arc)
+        }
+        d.push(`h ${right - tabRight - convR - rightConcR}`); // panel top-right →
+        d.push(arcConvex(convR, convR, convR)); // panel TR: right→down
+        d.push(`v ${bottom - junctionY - 2 * convR}`); // panel right ↓
+        d.push(arcConvex(convR, -convR, convR)); // panel BR: down→left
+        d.push(`h -${right - left - 2 * convR}`); // panel bottom ←
+        d.push(arcConvex(convR, -convR, -convR)); // panel BL: left→up
+        d.push(`v -${bottom - junctionY - convR}`); // panel left ↑ to junction y
+        if (leftConcR > 0) {
+          d.push(`h ${tabLeft - left - leftConcR}`); // panel top-left →
+          d.push(arcConcave(leftConcR, leftConcR, -leftConcR)); // left junction: right→up (concave)
+        } else {
+          d.push(`h ${tabLeft - left}`); // panel top-left → (no junction arc)
+        }
+        d.push(`v -${junctionY - top - convR - leftConcR}`); // tab left ↑
+        d.push(arcConvex(convR, convR, -convR)); // tab TL: up→right
         d.push("Z");
+
         return d.join(" ");
       };
 
       // The unified binder SVG: covers the full binder area (tab row + panel).
-      // Draws both the white background fill and the border ring in one SVG.
+      // Draws the border centerline as a thin stroke so the shape is visible.
       const BinderSvg = ({
         tabX,
         tabWidth,
@@ -250,17 +220,7 @@
         cornerRadius,
         borderColor,
       }) => {
-        const bgPath = buildBinderBgPath({
-          tabX,
-          tabWidth,
-          tabRowHeight,
-          panelWidth,
-          panelHeight,
-          borderWidth,
-          cornerRadius,
-        });
-
-        const outerPath = buildBinderOuterPath({
+        const centerlinePath = buildBinderCenterlinePath({
           tabX,
           tabWidth,
           tabRowHeight,
@@ -282,8 +242,12 @@
             width={panelWidth}
             height={tabRowHeight + panelHeight}
           >
-            <path d={outerPath} fill={borderColor} />
-            <path d={bgPath} fill="rgba(0, 0, 0, 0.5)" />
+            <path
+              d={centerlinePath}
+              fill="none"
+              stroke={borderColor}
+              stroke-width="1"
+            />
           </svg>
         );
       };
