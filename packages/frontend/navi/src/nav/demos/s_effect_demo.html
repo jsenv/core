@@ -170,17 +170,21 @@
 
         /*
           Arc helper.
-          For a convex corner: standard quarter-circle arc sweeping around the
-          outside of the rectangle — same visual as CSS border-radius.
-          For an inverted corner: the arc curves inward (concave), achieved by
-          flipping the sweep direction.
+          The path walks clockwise (right along bottom → up right → left along top
+          → down left). CSS border-radius places the arc center at the INNER corner
+          of the rectangle (e.g., top-left corner arc has center at (r, r)), which
+          means the arc sweeps counter-clockwise (sweep-flag=0) relative to our
+          clockwise traversal.
 
-          SVG arc flags: large-arc-flag=0, sweep-flag=1 for convex (clockwise),
-                         sweep-flag=0 for inverted (counter-clockwise).
+          Inverting that: the inverted/concave arc uses the OUTER corner as center,
+          which sweeps clockwise (sweep-flag=1) relative to our traversal.
+
+          SVG arc flags: large-arc-flag=0, sweep-flag=0 for convex (CSS-like),
+                         sweep-flag=1 for inverted (concave).
         */
         const arc = (r, type, dx, dy) => {
           if (!r) return `l ${dx},${dy}`;
-          const sweep = type === "inverted" ? 0 : 1;
+          const sweep = type === "inverted" ? 1 : 0;
           return `a ${r},${r} 0 0 ${sweep} ${dx},${dy}`;
         };
 
