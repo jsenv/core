@@ -120,139 +120,143 @@
         For each corner we choose one of three styles:
           "convex"   — normal CSS-like border-radius (arc curves outward)
           "inverted" — concave arc (curves inward, like the notch where a tab meets
-                       its panel)
+                       its panel) [not yet implemented, coming later]
           null / 0   — sharp right-angle corner
 
         Between corners we draw the connecting side line.  A side can be skipped
         entirely (set its skip flag to true) so the path stays open there — this is
         how the active tab omits its bottom edge and blends seamlessly into the panel.
 
-        The path is always open (no Z close) so a stroked path renders only what is
-        explicitly drawn.  For a filled background shape the caller closes it with Z.
+        The border is drawn as a filled shape (not a stroke) to have precise control
+        over the border's position.  Inspiration from multi_border.jsx:
+        the shape is a "ring" — the area between the outer rectangle and the inner
+        rectangle (inset by the border width).  The inner corner radius equals the
+        outer corner radius minus the border width (floored at 0).
+
+        For a full border (no sides skipped) we use two closed sub-paths with
+        fill-rule="evenodd": the outer closed rect and the inner closed rect.
+        The evenodd rule fills only the ring between them.
+
+        For a border with a side skipped (e.g. active tab with no bottom border)
+        we use a single connected open-ring path: starting at the gap, we trace
+        along the inner edge, cap across to the outer edge, trace back along the
+        outer edge, then close (Z) back to the gap start.
 
         Parameters
-          x, y          — top-left corner of the rectangle
-          w, h          — width and height
-          size          — border thickness (used for fill shape inset)
+          x, y          — top-left corner of the outer rectangle
+          w, h          — width and height of the outer rectangle
+          b             — border width
           corners: {
             bottomLeft, topLeft, topRight, bottomRight
-          }             — each can be:
-                          { radius: number, type: "convex"|"inverted" }
-                          or null / omitted for a sharp corner
+          }             — each: { radius: number } or omitted for sharp
           sides: {
             bottom, left, top, right
-          }             — each can be { skip: true } to omit that segment
+          }             — each: { skip: true } to omit that side entirely
       */
-      const buildBorderPath = ({ x, y, w, h, corners = {}, sides = {} }) => {
+      const buildFilledBorderPath = ({
+        x,
+        y,
+        w,
+        h,
+        b,
+        corners = {},
+        sides = {},
+      }) => {
         const bl = corners.bottomLeft || {};
         const tl = corners.topLeft || {};
         const tr = corners.topRight || {};
         const br = corners.bottomRight || {};
 
-        const skipBottom = sides.bottom && sides.bottom.skip;
-        const skipLeft = sides.left && sides.left.skip;
-        const skipTop = sides.top && sides.top.skip;
-        const skipRight = sides.right && sides.right.skip;
+        const skipBottom = Boolean(sides.bottom && sides.bottom.skip);
+        const skipRight = Boolean(sides.right && sides.right.skip);
+        const skipTop = Boolean(sides.top && sides.top.skip);
+        const skipLeft = Boolean(sides.left && sides.left.skip);
 
-        // clamp radius so it never exceeds half the adjacent sides
-        const clamp = (r) => {
-          if (!r) return 0;
-          let clamped = r;
-          if (clamped > w / 2) clamped = w / 2;
-          if (clamped > h / 2) clamped = h / 2;
-          return clamped;
-        };
+        // Outer corner radii — a corner only gets a radius when BOTH adjacent sides
+        // are present (otherwise it's a square end/cap).
+        const clampR = (r, maxR) => (r > 0 && maxR > 0 ? Math.min(r, maxR) : 0);
+        const maxR = Math.min(w / 2, h / 2);
+        const oBlr =
+          !skipBottom && !skipLeft ? clampR(bl.radius || 0, maxR) : 0;
+        const oBrr =
+          !skipBottom && !skipRight ? clampR(br.radius || 0, maxR) : 0;
+        const oTrr = !skipTop && !skipRight ? clampR(tr.radius || 0, maxR) : 0;
+        const oTlr = !skipTop && !skipLeft ? clampR(tl.radius || 0, maxR) : 0;
 
-        const blr = clamp(bl.radius);
-        const tlr = clamp(tl.radius);
-        const trr = clamp(tr.radius);
-        const brr = clamp(br.radius);
+        // Inner dimensions
+        const iw = w - 2 * b;
+        const ih = h - 2 * b;
+        const imaxR = Math.min(iw / 2, ih / 2);
+
+        // Inner radii = outer - b, floored at 0 and clamped to inner rect
+        const iBlr = clampR(oBlr - b, imaxR);
+        const iBrr = clampR(oBrr - b, imaxR);
+        const iTrr = clampR(oTrr - b, imaxR);
+        const iTlr = clampR(oTlr - b, imaxR);
 
         /*
-          Arc helper.
-          The path walks clockwise (right along bottom → up right → left along top
-          → down left). CSS border-radius places the arc center at the INNER corner
-          of the rectangle (e.g., top-left corner arc has center at (r, r)), which
-          means the arc sweeps counter-clockwise (sweep-flag=0) relative to our
-          clockwise traversal.
-
-          Inverting that: the inverted/concave arc uses the OUTER corner as center,
-          which sweeps clockwise (sweep-flag=1) relative to our traversal.
-
-          SVG arc flags: large-arc-flag=0, sweep-flag=0 for convex (CSS-like),
-                         sweep-flag=1 for inverted (concave).
+          Convex arc helper.
+          sweep=0 produces the "inner-center" quarter-circle arc that matches CSS
+          border-radius, regardless of whether we are tracing the path clockwise or
+          counter-clockwise.
         */
-        const arc = (r, type, dx, dy) => {
-          if (!r) return `l ${dx},${dy}`;
-          const sweep = type === "inverted" ? 1 : 0;
-          return `a ${r},${r} 0 0 ${sweep} ${dx},${dy}`;
+        const arc = (r, dx, dy) => {
+          if (r <= 0) return `l ${dx},${dy}`;
+          return `a ${r},${r} 0 0 0 ${dx},${dy}`;
         };
 
         const d = [];
 
-        // ── Start: bottom-left corner arrival point ───────────────────────────
-        // We start from the point just to the right of the bottom-left corner.
-        d.push(`M ${x + blr},${y + h}`);
+        if (!skipBottom && !skipRight && !skipTop && !skipLeft) {
+          // ── Full border ring: two closed sub-paths + fill-rule="evenodd" ─────
+          // Outer sub-path (traces outer boundary, clockwise in screen coords)
+          d.push(`M ${x + oBlr},${y + h}`);
+          d.push(`h ${w - oBlr - oBrr}`);
+          d.push(arc(oBrr, oBrr, -oBrr));
+          d.push(`v -${h - oBrr - oTrr}`);
+          d.push(arc(oTrr, -oTrr, -oTrr));
+          d.push(`h -${w - oTrr - oTlr}`);
+          d.push(arc(oTlr, -oTlr, oTlr));
+          d.push(`v ${h - oTlr - oBlr}`);
+          d.push(arc(oBlr, oBlr, oBlr));
+          d.push("Z");
+          // Inner sub-path (same winding; evenodd fills the ring between them)
+          d.push(`M ${x + b + iBlr},${y + h - b}`);
+          d.push(`h ${iw - iBlr - iBrr}`);
+          d.push(arc(iBrr, iBrr, -iBrr));
+          d.push(`v -${ih - iBrr - iTrr}`);
+          d.push(arc(iTrr, -iTrr, -iTrr));
+          d.push(`h -${iw - iTrr - iTlr}`);
+          d.push(arc(iTlr, -iTlr, iTlr));
+          d.push(`v ${ih - iTlr - iBlr}`);
+          d.push(arc(iBlr, iBlr, iBlr));
+          d.push("Z");
+        } else if (skipBottom && !skipRight && !skipTop && !skipLeft) {
+          // ── Bottom side skipped: single connected open ring ───────────────────
+          //
+          // We start at the open gap (outer BR), cut inward to the inner edge,
+          // trace the inner U-shape back, cut outward to the outer edge, trace the
+          // outer U-shape forward, then Z closes back to the gap start.
+          //
+          //  outer BR → (cap) → inner BR → up inner right → inner TR corner
+          //  → left inner top → inner TL corner → down inner left → inner BL
+          //  → (cap) → outer BL → up outer left → outer TL corner
+          //  → right outer top → outer TR corner → down outer right → Z
 
-        // ── Bottom side (left → right) ────────────────────────────────────────
-        const bottomLineW = w - blr - brr;
-        if (!skipBottom && bottomLineW > 0) {
-          d.push(`h ${bottomLineW}`);
-        } else if (bottomLineW > 0) {
-          d.push(`m ${bottomLineW},0`);
-        }
-
-        // ── Bottom-right corner ───────────────────────────────────────────────
-        if (br.type === "inverted") {
-          // inverted: arc curves inward, so we go up then left
-          d.push(arc(brr, "inverted", brr, -brr));
-        } else {
-          d.push(arc(brr, "convex", brr, -brr));
-        }
-
-        // ── Right side (bottom → top) ─────────────────────────────────────────
-        const rightLineH = h - brr - trr;
-        if (!skipRight && rightLineH > 0) {
-          d.push(`v -${rightLineH}`);
-        } else if (rightLineH > 0) {
-          d.push(`m 0,-${rightLineH}`);
-        }
-
-        // ── Top-right corner ──────────────────────────────────────────────────
-        if (tr.type === "inverted") {
-          d.push(arc(trr, "inverted", -trr, -trr));
-        } else {
-          d.push(arc(trr, "convex", -trr, -trr));
-        }
-
-        // ── Top side (right → left) ───────────────────────────────────────────
-        const topLineW = w - trr - tlr;
-        if (!skipTop && topLineW > 0) {
-          d.push(`h -${topLineW}`);
-        } else if (topLineW > 0) {
-          d.push(`m -${topLineW},0`);
-        }
-
-        // ── Top-left corner ───────────────────────────────────────────────────
-        if (tl.type === "inverted") {
-          d.push(arc(tlr, "inverted", -tlr, tlr));
-        } else {
-          d.push(arc(tlr, "convex", -tlr, tlr));
-        }
-
-        // ── Left side (top → bottom) ──────────────────────────────────────────
-        const leftLineH = h - tlr - blr;
-        if (!skipLeft && leftLineH > 0) {
-          d.push(`v ${leftLineH}`);
-        } else if (leftLineH > 0) {
-          d.push(`m 0,${leftLineH}`);
-        }
-
-        // ── Bottom-left corner ────────────────────────────────────────────────
-        if (bl.type === "inverted") {
-          d.push(arc(blr, "inverted", blr, blr));
-        } else {
-          d.push(arc(blr, "convex", blr, blr));
+          d.push(`M ${x + w},${y + h}`); // outer BR (no corner arc, bottom skipped)
+          d.push(`l -${b},0`); // cap inward → inner BR
+          d.push(`v -${h - b - iTrr}`); // up inner right side
+          d.push(arc(iTrr, -iTrr, -iTrr)); // inner TR corner
+          d.push(`h -${iw - iTrr - iTlr}`); // left inner top
+          d.push(arc(iTlr, -iTlr, iTlr)); // inner TL corner
+          d.push(`v ${h - b - iTlr}`); // down inner left side → inner BL
+          d.push(`l -${b},0`); // cap outward → outer BL
+          d.push(`v -${h - oTlr}`); // up outer left side
+          d.push(arc(oTlr, oTlr, -oTlr)); // outer TL corner
+          d.push(`h ${w - oTlr - oTrr}`); // right outer top
+          d.push(arc(oTrr, oTrr, oTrr)); // outer TR corner
+          d.push(`v ${h - oTrr}`); // down outer right side → outer BR
+          d.push("Z"); // closes back to outer BR
         }
 
         return d.join(" ");
@@ -261,39 +265,49 @@
       // ── Tab SVG components ────────────────────────────────────────────────────
       //
       // Active tab:
-      //   - white fill shape (closed, no bottom gap so it covers the panel border)
-      //   - border stroke: skip bottom side, inverted radius on bottom-left and
-      //     bottom-right corners so the tab visually connects to the panel
+      //   - white fill background (closed rect with rounded top corners)
+      //   - border as filled shape: bottom side skipped, drawn with buildFilledBorderPath
       //
       // Inactive tab:
-      //   - tinted fill, full rectangular border with convex top corners
+      //   - tinted fill background
+      //   - full rectangular border as filled shape
+
+      // Builds a closed path for the background fill rectangle (rounded top corners).
+      const buildRectFillPath = ({ x, y, w, h, tlr = 0, trr = 0 }) => {
+        const arc = (r, dx, dy) => {
+          if (r <= 0) return `l ${dx},${dy}`;
+          return `a ${r},${r} 0 0 0 ${dx},${dy}`;
+        };
+        return [
+          `M ${x},${y + h}`,
+          `v -${h - tlr}`,
+          arc(tlr, tlr, -tlr),
+          `h ${w - tlr - trr}`,
+          arc(trr, trr, trr),
+          `v ${h - trr}`,
+          "Z",
+        ].join(" ");
+      };
 
       const ActiveTabSvg = ({ W, H, r, b, borderColor }) => {
-        // Fill: close the shape so the white background covers the panel top border.
-        // The bottom edge simply runs straight across (no inverted arcs needed for fill).
-        const fillPath = `${buildBorderPath({
+        const fillPath = buildRectFillPath({
           x: 0,
           y: 0,
           w: W,
           h: H,
-          corners: {
-            topLeft: { radius: r, type: "convex" },
-            topRight: { radius: r, type: "convex" },
-          },
-        })} Z`;
+          tlr: r,
+          trr: r,
+        });
 
-        // Stroke: skip the bottom side, use inverted arcs at the two bottom corners
-        // so the stroke blends smoothly into the panel border below.
-        const strokePath = buildBorderPath({
+        const borderPath = buildFilledBorderPath({
           x: 0,
           y: 0,
           w: W,
           h: H,
+          b,
           corners: {
-            bottomLeft: { radius: r, type: "inverted" },
-            topLeft: { radius: r, type: "convex" },
-            topRight: { radius: r, type: "convex" },
-            bottomRight: { radius: r, type: "inverted" },
+            topLeft: { radius: r },
+            topRight: { radius: r },
           },
           sides: { bottom: { skip: true } },
         });
@@ -310,30 +324,33 @@
             viewBox={`0 0 ${W} ${H}`}
             preserveAspectRatio="none"
           >
-            <path d={fillPath} fill="white" stroke="none" />
-            <path
-              d={strokePath}
-              fill="none"
-              stroke={borderColor}
-              stroke-width={b}
-              vector-effect="non-scaling-stroke"
-              stroke-linecap="square"
-            />
+            <path d={fillPath} fill="white" />
+            <path d={borderPath} fill={borderColor} fill-rule="evenodd" />
           </svg>
         );
       };
 
       const InactiveTabSvg = ({ W, H, r, b, borderColor }) => {
-        const path = `${buildBorderPath({
+        const fillPath = buildRectFillPath({
           x: 0,
           y: 0,
           w: W,
           h: H,
+          tlr: r,
+          trr: r,
+        });
+
+        const borderPath = buildFilledBorderPath({
+          x: 0,
+          y: 0,
+          w: W,
+          h: H,
+          b,
           corners: {
-            topLeft: { radius: r, type: "convex" },
-            topRight: { radius: r, type: "convex" },
+            topLeft: { radius: r },
+            topRight: { radius: r },
           },
-        })} Z`;
+        });
 
         return (
           <svg
@@ -347,14 +364,8 @@
             viewBox={`0 0 ${W} ${H}`}
             preserveAspectRatio="none"
           >
-            <path
-              d={path}
-              fill="#f0f0f0"
-              stroke={borderColor}
-              stroke-width={b}
-              vector-effect="non-scaling-stroke"
-              stroke-linejoin="round"
-            />
+            <path d={fillPath} fill="#f0f0f0" />
+            <path d={borderPath} fill={borderColor} fill-rule="evenodd" />
           </svg>
         );
       };
