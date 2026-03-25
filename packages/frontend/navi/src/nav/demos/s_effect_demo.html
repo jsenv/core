@@ -94,20 +94,20 @@
       import { useState } from "preact/hooks";
 
       /*
-        SVG tab shape — all geometry computed from:
-          W   = viewBox width  (we use 120)
-          H   = viewBox height (we use 36)
-          r   = corner radius for convex top arcs
-          b   = border width (stroke-width)
-          arc = concave arc depth below baseline (= r, control point at H+r)
+            SVG tab shape — all geometry computed from:
+              W   = viewBox width  (we use 120)
+              H   = viewBox height (we use 36)
+              r   = corner radius for convex top arcs
+              b   = border width (stroke-width)
+              arc = concave arc depth below baseline (= r, control point at H+r)
 
-        Active tab:
-          - Fill: closed shape with S-arcs below baseline
-          - Stroke: two subpaths omitting the flat bottom → opens into panel
+            Active tab:
+              - Fill: closed shape with S-arcs below baseline
+              - Stroke: two subpaths omitting the flat bottom → opens into panel
 
-        Inactive tab:
-          - Rounded-top rect, flat bottom, full stroke
-      */
+            Inactive tab:
+              - Rounded-top rect, flat bottom, full stroke
+          */
 
       const W = 120;
       const H = 36;
@@ -121,65 +121,62 @@
       const inactiveTabPath = (r) =>
         `M 0,${r} Q 0,0 ${r},0 L ${W - r},0 Q ${W},0 ${W},${r} L ${W},${H} L 0,${H} Z`;
 
-      const ActiveTabSvg = ({ r, b, borderColor }) => (
-        <svg
-          viewBox={`0 0 ${W} ${H}`}
-          preserveAspectRatio="none"
-          style={{ width: "100%", height: "100%" }}
-        >
-          <path d={activeTabPath(r)} fill="white" stroke="none" />
-          <path
-            d={activeTabStrokePath(r)}
-            fill="none"
-            stroke={borderColor}
-            stroke-width={b}
-            stroke-linecap="round"
-          />
-        </svg>
-      );
+      const ActiveTabSvg = ({ r, b, borderColor }) => {
+        return (
+          <svg
+            viewBox={`0 0 ${W} ${H}`}
+            preserveAspectRatio="none"
+            style={{ width: "100%", height: "100%" }}
+          >
+            <path d={activeTabPath(r)} fill="white" stroke="none" />
+            <path
+              d={activeTabStrokePath(r)}
+              fill="none"
+              stroke={borderColor}
+              stroke-width={b}
+              vector-effect="non-scaling-stroke"
+              stroke-linecap="round"
+            />
+          </svg>
+        );
+      };
 
-      const InactiveTabSvg = ({ r, b, borderColor }) => (
-        <svg
-          viewBox={`0 0 ${W} ${H}`}
-          preserveAspectRatio="none"
-          style={{ width: "100%", height: "100%" }}
-        >
-          <path
-            d={inactiveTabPath(r)}
-            fill="#f0f0f0"
-            stroke={borderColor}
-            stroke-width={b}
-            stroke-linejoin="round"
-          />
-        </svg>
-      );
+      const InactiveTabSvg = ({ r, b, borderColor }) => {
+        return (
+          <svg
+            viewBox={`0 0 ${W} ${H}`}
+            preserveAspectRatio="none"
+            style={{ width: "100%", height: "100%" }}
+          >
+            <path
+              d={inactiveTabPath(r)}
+              fill="#f0f0f0"
+              stroke={borderColor}
+              stroke-width={b}
+              vector-effect="non-scaling-stroke"
+              stroke-linejoin="round"
+            />
+          </svg>
+        );
+      };
 
       const SvgTab = ({ label, active, onClick, r, b, borderColor }) => {
-        // Invisible CSS border reserves space matching the SVG stroke width.
-        // This ensures the tab content area aligns with the panel content area.
-        // The SVG is expanded via negative inset to cover the border area.
-        const halfB = b / 2;
-        const style = active
-          ? {
-              border: `${halfB}px solid transparent`,
-              borderBottom: "none",
-              marginBottom: `${-halfB}px`,
-            }
-          : {
-              border: `${halfB}px solid transparent`,
-            };
-        const svgStyle = {
-          inset: `${-halfB}px`,
-          width: `calc(100% + ${b}px)`,
-          height: `calc(100% + ${b}px)`,
-        };
         return (
           <div
             class={`svg-tab${active ? " active" : ""}`}
-            style={style}
+            style={{
+              borderWidth: `${b}px`,
+              borderStyle: "solid",
+              borderColor: "rgba(0,0,0,0.1)",
+            }}
             onClick={onClick}
           >
-            <div style={{ position: "absolute", ...svgStyle }}>
+            <div
+              style={{
+                position: "absolute",
+                inset: `${-b}px`,
+              }}
+            >
               {active ? (
                 <ActiveTabSvg r={r} b={b} borderColor={borderColor} />
               ) : (
