@@ -151,6 +151,7 @@
         tabRowHeight, // height of the tab-strip area (panel.offsetTop − borderWidth)
         panelWidth, // panel outer width
         panelHeight, // panel outer height
+        borderWidth,
         cornerRadius, // corner radius for all corners (tab top, panel bottom, and junctions)
       }) => {
         // Junction arcs only appear when the tab side is set back from the panel edge.
@@ -164,8 +165,12 @@
         d.push(`M ${tabX + cornerRadius},0`);
         d.push(`h ${tabWidth - 2 * cornerRadius}`); // tab top →
         d.push(arcConvex(cornerRadius, cornerRadius, cornerRadius)); // tab TR: right→down
-        d.push(`v ${tabRowHeight - cornerRadius - rightJR}`); // tab right ↓
-        if (rightJR > 0) d.push(arcConcave(rightJR, rightJR, rightJR)); // right junction: down→right (concave)
+        if (rightJR > 0) {
+          d.push(`v ${tabRowHeight - 2 * cornerRadius}`); // tab right ↓
+          d.push(arcConcave(rightJR, rightJR, rightJR)); // right junction: down→right (concave)
+        } else {
+          d.push(`v ${tabRowHeight - cornerRadius}`); // tab right ↓
+        }
         d.push(`h ${panelWidth - tabX - tabWidth - cornerRadius - rightJR}`); // panel top-right →
         d.push(arcConvex(cornerRadius, cornerRadius, cornerRadius)); // panel TR: right→down
         d.push(`v ${panelHeight - 2 * cornerRadius}`); // panel right ↓
@@ -261,6 +266,7 @@
           tabRowHeight,
           panelWidth,
           panelHeight,
+          borderWidth,
           cornerRadius,
         });
 
