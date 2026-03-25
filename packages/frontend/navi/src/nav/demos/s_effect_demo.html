@@ -409,7 +409,7 @@
 
       // The unified binder SVG: covers the full binder area (tab row + panel).
       // Draws both the white background fill and the border ring in one SVG.
-      const BinderSvg = ({ TW, TH, PW, PH, b, r, borderColor }) => {
+      const BinderSvg = ({ TW, TH, PW, PH, tabTop, b, r, borderColor }) => {
         // Background fill: the full combined shape (outer boundary only, closed)
         const bgPath = (() => {
           const arcCCW = (radius, dx, dy) => {
@@ -441,7 +441,8 @@
           <svg
             style={{
               position: "absolute",
-              inset: 0,
+              top: tabTop,
+              left: 0,
               overflow: "visible",
               pointerEvents: "none",
             }}
@@ -471,6 +472,7 @@
               ...(active
                 ? {
                     borderColor: "transparent",
+                    background: "transparent",
                   }
                 : {}),
             }}
@@ -507,21 +509,19 @@
         useLayoutEffect(() => {
           const el = panelRef.current;
           if (!el) return null;
-          const obs = new ResizeObserver(([entry]) => {
-            const { width, height } = entry.contentRect;
-            // contentRect excludes padding — we want the full border-box size
-            const style = window.getComputedStyle(el);
-            const totalW =
-              width +
-              parseFloat(style.paddingLeft) +
-              parseFloat(style.paddingRight);
-            const totalH =
-              height +
-              parseFloat(style.paddingTop) +
-              parseFloat(style.paddingBottom);
-            setPanelSize({ width: totalW, height: totalH });
-          });
+          const measure = () => {
+            // offsetWidth/Height give the border-box size (what we draw over)
+            // offsetTop gives the distance from container top to panel top,
+            // which equals the actual rendered tabstrip height
+            setPanelSize({
+              width: el.offsetWidth,
+              height: el.offsetHeight,
+              top: el.offsetTop,
+            });
+          };
+          const obs = new ResizeObserver(measure);
           obs.observe(el);
+          measure();
           return () => obs.disconnect();
         }, []);
 
@@ -534,6 +534,7 @@
                 TH={TAB_H}
                 PW={panelSize.width}
                 PH={panelSize.height}
+                tabTop={panelSize.top - TAB_H}
                 b={b}
                 r={r}
                 borderColor={borderColor}
