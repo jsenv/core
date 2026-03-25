@@ -94,6 +94,22 @@
       import { useState } from "preact/hooks";
 
       /*
+        Why we draw borders with SVG instead of using CSS borders:
+
+        The tab shape requires two features that CSS borders cannot provide:
+          1. Skipping border segments — the active tab must have no bottom border so it
+             visually merges with the panel below it. CSS has no way to omit one side of
+             a border while keeping the surrounding corners intact.
+          2. Inverted (concave) border-radius — the corners where the tab meets the panel
+             need an inward curve (like a notch), the opposite of what CSS border-radius
+             produces. CSS only supports convex (outward) rounding.
+
+        Both canvas and SVG can draw arbitrary paths that solve these problems.
+        We use SVG rather than canvas so the shapes are part of the DOM and fully
+        visible / inspectable in the browser dev tools.
+      */
+
+      /*
             SVG tab shape — all geometry computed from:
               W   = viewBox width  (we use 120)
               H   = viewBox height (we use 36)
