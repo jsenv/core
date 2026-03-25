@@ -365,7 +365,7 @@
         const hasLeftJunction = TX > 0;
         const rir = hasRightJunction ? ir : 0; // outer right junction radius
         const lir = hasLeftJunction ? ir : 0; // outer left junction radius
-        const iir = Math.max(0, ir - b); // inner junction radius
+        const iir = ir + b; // inner junction radius: concave arc, inward offset increases radius
         const irir = hasRightJunction ? iir : 0;
         const ilir = hasLeftJunction ? iir : 0;
 
@@ -433,7 +433,7 @@
           };
           const ipr = Math.max(0, r - b);
           const itr = Math.max(0, r - b);
-          const iir = Math.max(0, ir - b);
+          const iir = ir + b; // inner junction radius: concave arc, inward offset increases radius
           const iPW = PW - 2 * b;
           const iPH = PH - 2 * b;
           const iTW = TW - 2 * b;
