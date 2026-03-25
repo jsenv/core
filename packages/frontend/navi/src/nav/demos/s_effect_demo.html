@@ -334,6 +334,7 @@
       // opening (no horizontal inner segment connecting tab bottom to panel top).
 
       const buildBinderBorderPath = ({
+        TX, // tab x offset from panel left edge
         TW,
         TH, // tab outer width/height
         PW,
@@ -346,17 +347,6 @@
           if (radius <= 0) return `l ${dx},${dy}`;
           return `a ${radius},${radius} 0 0 0 ${dx},${dy}`;
         };
-        // Convex arc (CW in left→up→right→down traversal, i.e. outer U reversed)
-        // const arcCW = (radius, dx, dy) => {
-        //   if (radius <= 0) return `l ${dx},${dy}`;
-        //   return `a ${radius},${radius} 0 0 1 ${dx},${dy}`;
-        // };
-        // // Concave (inverted) arc — center is the outer corner point, CW sweep
-        // // used at the active tab's bottom-right notch.
-        // const arcInv = (radius, dx, dy) => {
-        //   if (radius <= 0) return `l ${dx},${dy}`;
-        //   return `a ${radius},${radius} 0 0 1 ${dx},${dy}`;
-        // };
 
         const pr = r; // panel corner radius
         const tr = r; // tab top corner radius
@@ -370,22 +360,22 @@
         d.push(arcCCW(pr, pr, -pr)); // panel BR corner
         d.push(`v -${PH - pr - pr}`); // panel right side up
         d.push(arcCCW(pr, -pr, -pr)); // panel TR corner (convex)
-        d.push(`h -${PW - pr - TW}`); // panel top → tab right edge
+        d.push(`h -${PW - pr - TX - TW}`); // panel top right segment → tab right edge
         d.push(`v -${TH - tr}`); // tab right side up
         d.push(arcCCW(tr, -tr, -tr)); // tab TR corner
         d.push(`h -${TW - tr - tr}`); // tab top
         d.push(arcCCW(tr, -tr, tr)); // tab TL corner
-        d.push(`v ${TH - tr}`); // tab left down (arc moved us to y=tr)
+        d.push(`v ${TH - tr}`); // tab left down
+        d.push(`h -${TX}`); // panel top left segment → panel left edge
         d.push(`v ${PH - pr}`); // panel left side down
         d.push(arcCCW(pr, pr, pr)); // panel BL corner
         d.push("Z");
 
         // ── Inner boundary (inset by b, same winding → evenodd fills ring) ─────
-        // Inner panel: full 4-side inset
         const iPW = PW - 2 * b;
         const iPH = PH - 2 * b;
-        // Inner tab: 3 sides (no bottom — open into panel)
         const iTW = TW - 2 * b;
+        const iTX = TX; // inner tab x offset: inner panel left is at x=b, inner tab left is at x=TX+b, so relative distance = TX
 
         // Start: inner panel BL
         d.push(`M ${b + ipr},${TH + PH - b}`);
@@ -393,12 +383,13 @@
         d.push(arcCCW(ipr, ipr, -ipr)); // inner panel BR
         d.push(`v -${iPH - ipr - ipr}`); // inner panel right side up
         d.push(arcCCW(ipr, -ipr, -ipr)); // inner panel TR corner
-        d.push(`h -${PW - TW - ipr}`); // inner panel top → inner tab right
+        d.push(`h -${PW - 2 * b - iTX - iTW - ipr}`); // panel top right segment → inner tab right
         d.push(`v -${TH - itr}`); // inner tab right up
         d.push(arcCCW(itr, -itr, -itr)); // inner tab TR
         d.push(`h -${iTW - itr - itr}`); // inner tab top
         d.push(arcCCW(itr, -itr, itr)); // inner tab TL
         d.push(`v ${TH - itr}`); // inner tab left down → panel inner top
+        d.push(`h -${iTX}`); // panel top left segment → inner left edge
         d.push(`v ${iPH - ipr}`); // inner panel left side down
         d.push(arcCCW(ipr, ipr, ipr)); // inner panel BL
         d.push("Z");
@@ -408,7 +399,7 @@
 
       // The unified binder SVG: covers the full binder area (tab row + panel).
       // Draws both the white background fill and the border ring in one SVG.
-      const BinderSvg = ({ TW, TH, PW, PH, b, r, borderColor }) => {
+      const BinderSvg = ({ TX, TW, TH, PW, PH, b, r, borderColor }) => {
         // Background fill: the full combined shape (outer boundary only, closed)
         const bgPath = (() => {
           const arcCCW = (radius, dx, dy) => {
@@ -423,18 +414,19 @@
           d.push(arcCCW(pr, pr, -pr)); // panel BR
           d.push(`v -${PH - pr - pr}`);
           d.push(arcCCW(pr, -pr, -pr)); // panel TR
-          d.push(`h -${PW - pr - TW}`);
+          d.push(`h -${PW - pr - TX - TW}`);
           d.push(`v -${TH - tr}`);
           d.push(arcCCW(tr, -tr, -tr)); // tab TR
           d.push(`h -${TW - tr - tr}`);
           d.push(arcCCW(tr, -tr, tr)); // tab TL
+          d.push(`h -${TX}`); // panel top left segment
           d.push(`v ${TH - tr + PH - pr}`); // left side (tab + panel combined)
           d.push(arcCCW(pr, pr, pr)); // panel BL
           d.push("Z");
           return d.join(" ");
         })();
 
-        const borderPath = buildBinderBorderPath({ TW, TH, PW, PH, b, r });
+        const borderPath = buildBinderBorderPath({ TX, TW, TH, PW, PH, b, r });
 
         return (
           <svg
@@ -513,15 +505,13 @@
           const el = panelRef.current;
           if (!el) return null;
           const measure = () => {
-            // offsetWidth/Height give the border-box size (what we draw over)
-            // offsetTop gives the distance from container top to panel top,
-            // which equals the actual rendered tabstrip height
             const tabEl = activeTabRef.current;
             setPanelSize({
               width: el.offsetWidth,
               height: el.offsetHeight,
-              top: el.offsetTop, // = actual rendered tabstrip height
+              top: el.offsetTop,
               tabWidth: tabEl ? tabEl.offsetWidth : TAB_W,
+              tabLeft: tabEl ? tabEl.offsetLeft : 0,
             });
           };
           const obs = new ResizeObserver(measure);
@@ -530,13 +520,18 @@
           return () => obs.disconnect();
         }, []);
 
-        // Re-measure when the active tab changes (different tab may have different width)
+        // Re-measure when the active tab changes (different tab may have different width/position)
         useLayoutEffect(() => {
           const tabEl = activeTabRef.current;
-          const panelEl = panelRef.current;
-          if (!tabEl || !panelEl) return;
+          if (!tabEl) return;
           setPanelSize((prev) =>
-            prev ? { ...prev, tabWidth: tabEl.offsetWidth } : prev,
+            prev
+              ? {
+                  ...prev,
+                  tabWidth: tabEl.offsetWidth,
+                  tabLeft: tabEl.offsetLeft,
+                }
+              : prev,
           );
         }, [active]);
 
@@ -545,6 +540,7 @@
             {/* The unified SVG sits behind everything, covering tabstrip + panel */}
             {panelSize && (
               <BinderSvg
+                TX={panelSize.tabLeft}
                 TW={panelSize.tabWidth}
                 TH={panelSize.top - b}
                 PW={panelSize.width}
