@@ -137,15 +137,16 @@
         panelHeight, // panel outer height
         cornerRadius, // corner radius for all corners (tab top, panel bottom, and junctions)
       }) => {
-        // Convex arc: outward curve, CCW sweep (sweep=0).
+        // All arcs drawn clockwise (CW).
+        // Convex corners bow outward: sweep=1.
+        // Concave junction corners bow inward: sweep=0.
         const arcConvex = (r, dx, dy) => {
           if (r <= 0) return `l ${dx},${dy}`;
-          return `a ${r},${r} 0 0 0 ${dx},${dy}`;
+          return `a ${r},${r} 0 0 1 ${dx},${dy}`;
         };
-        // Concave arc: inward curve, CW sweep (sweep=1). Used for junction corners.
         const arcConcave = (r, dx, dy) => {
           if (r <= 0) return `l ${dx},${dy}`;
-          return `a ${r},${r} 0 0 1 ${dx},${dy}`;
+          return `a ${r},${r} 0 0 0 ${dx},${dy}`;
         };
 
         // Junction arcs only appear when the tab side is set back from the panel edge.
@@ -154,25 +155,24 @@
         const rightJR = hasRightJunction ? cornerRadius : 0;
         const leftJR = hasLeftJunction ? cornerRadius : 0;
 
+        // CW from tab TL: right → TR → down right → junction → panel TR → BR → BL → up left → junction → tab TL
         const d = [];
-        d.push(`M ${cornerRadius},${tabRowHeight + panelHeight}`);
-        d.push(`h ${panelWidth - cornerRadius - cornerRadius}`); // panel bottom
-        d.push(arcConvex(cornerRadius, cornerRadius, -cornerRadius)); // panel BR corner
-        d.push(`v -${panelHeight - cornerRadius - cornerRadius}`); // panel right side up
-        d.push(arcConvex(cornerRadius, -cornerRadius, -cornerRadius)); // panel TR corner
-        d.push(`h -${panelWidth - cornerRadius - tabX - tabWidth - rightJR}`); // panel top-right → stop before tab right
-        if (rightJR > 0) {
-          d.push(arcConcave(rightJR, -rightJR, -rightJR)); // right junction corner
-        }
-        d.push(`v -${tabRowHeight - cornerRadius - rightJR}`); // tab right side up
-        d.push(arcConvex(cornerRadius, -cornerRadius, -cornerRadius)); // tab TR corner
-        d.push(`h -${tabWidth - cornerRadius - cornerRadius}`); // tab top
-        d.push(arcConvex(cornerRadius, -cornerRadius, cornerRadius)); // tab TL corner
-        d.push(`v ${tabRowHeight - cornerRadius - leftJR}`); // tab left side down
-        if (leftJR > 0) d.push(arcConcave(leftJR, -leftJR, leftJR)); // left junction corner
-        d.push(`h -${tabX - leftJR}`); // panel top-left → panel left edge
-        d.push(`v ${panelHeight - cornerRadius}`); // panel left side down
-        d.push(arcConvex(cornerRadius, cornerRadius, cornerRadius)); // panel BL corner
+        d.push(`M ${tabX + cornerRadius},0`);
+        d.push(`h ${tabWidth - 2 * cornerRadius}`); // tab top →
+        d.push(arcConvex(cornerRadius, cornerRadius, cornerRadius)); // tab TR: right→down
+        d.push(`v ${tabRowHeight - cornerRadius - rightJR}`); // tab right ↓
+        if (rightJR > 0) d.push(arcConcave(rightJR, rightJR, rightJR)); // right junction: down→right (concave)
+        d.push(`h ${panelWidth - tabX - tabWidth - cornerRadius - rightJR}`); // panel top-right →
+        d.push(arcConvex(cornerRadius, cornerRadius, cornerRadius)); // panel TR: right→down
+        d.push(`v ${panelHeight - 2 * cornerRadius}`); // panel right ↓
+        d.push(arcConvex(cornerRadius, -cornerRadius, cornerRadius)); // panel BR: down→left
+        d.push(`h -${panelWidth - 2 * cornerRadius}`); // panel bottom ←
+        d.push(arcConvex(cornerRadius, -cornerRadius, -cornerRadius)); // panel BL: left→up
+        d.push(`v -${panelHeight - cornerRadius}`); // panel left ↑ to y=tabRowHeight
+        d.push(`h ${tabX - leftJR}`); // panel top-left → (skipped if tabX=0)
+        if (leftJR > 0) d.push(arcConcave(leftJR, leftJR, -leftJR)); // left junction: right→up (concave)
+        d.push(`v -${tabRowHeight - cornerRadius - leftJR}`); // tab left ↑
+        d.push(arcConvex(cornerRadius, cornerRadius, -cornerRadius)); // tab TL: up→right
         d.push("Z");
 
         return d.join(" ");
