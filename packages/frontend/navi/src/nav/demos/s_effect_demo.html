@@ -173,12 +173,16 @@
 
         // Outer corner radii — a corner only gets a radius when BOTH adjacent sides
         // are present (otherwise it's a square end/cap).
+        // Inverted corners are separated: they curve inward at open-gap edges.
         const clampR = (r, maxR) => (r > 0 && maxR > 0 ? Math.min(r, maxR) : 0);
         const maxR = Math.min(w / 2, h / 2);
         const oBlr =
           !skipBottom && !skipLeft ? clampR(bl.radius || 0, maxR) : 0;
         const oBrr =
-          !skipBottom && !skipRight ? clampR(br.radius || 0, maxR) : 0;
+          !skipBottom && !skipRight && !br.inverted
+            ? clampR(br.radius || 0, maxR)
+            : 0;
+        const oBrrInv = br.inverted ? clampR(br.radius || 0, maxR) : 0;
         const oTrr = !skipTop && !skipRight ? clampR(tr.radius || 0, maxR) : 0;
         const oTlr = !skipTop && !skipLeft ? clampR(tl.radius || 0, maxR) : 0;
 
@@ -249,23 +253,39 @@
           // ── Bottom side skipped: single connected open ring ───────────────────
           //
           // Inner U goes up-left-down (same winding as full ring) → arcCCW (sweep=0).
-          // Outer U goes up-right-down → each corner's short arc increases in SVG
-          // angle → CW → arcCW (sweep=1).
+          // Outer U goes up-right-down → arcCW (sweep=1).
+          //
+          // If bottomRight has inverted:true, the outer right side ends oBrrInv
+          // pixels above the bottom, then a concave arc (arcCCW) curves inward along
+          // the bottom edge to the start point. The start point is shifted left by
+          // oBrrInv, and the initial cap goes rightward (oBrrInv-b pixels) to reach
+          // the inner right edge at (x+w-b, y+h).
 
-          d.push(`M ${x + w},${y + h}`); // outer BR (no corner arc, bottom skipped)
-          d.push(`l -${b},0`); // cap inward → inner BR
+          // Start point along the bottom edge
+          d.push(`M ${x + w - oBrrInv},${y + h}`);
+          // Cap to inner BR: rightward if inverted (start is left of inner), leftward otherwise
+          if (oBrrInv > 0) {
+            d.push(`h ${oBrrInv - b}`); // right → inner BR at (x+w-b, y+h)
+          } else {
+            d.push(`l -${b},0`); // left → inner BR at (x+w-b, y+h)
+          }
           d.push(`v -${h - b - iTrr}`); // up inner right side
           d.push(arcCCW(iTrr, -iTrr, -iTrr)); // inner TR corner
           d.push(`h -${iw - iTrr - iTlr}`); // left inner top
           d.push(arcCCW(iTlr, -iTlr, iTlr)); // inner TL corner
-          d.push(`v ${h - b - iTlr}`); // down inner left side → inner BL
-          d.push(`l -${b},0`); // cap outward → outer BL
+          d.push(`v ${h - b - iTlr}`); // down inner left side → inner BL at (x+b, y+h)
+          d.push(`l -${b},0`); // cap outward → outer BL at (x, y+h)
           d.push(`v -${h - oTlr}`); // up outer left side
           d.push(arcCW(oTlr, oTlr, -oTlr)); // outer TL corner
           d.push(`h ${w - oTlr - oTrr}`); // right outer top
           d.push(arcCW(oTrr, oTrr, oTrr)); // outer TR corner
-          d.push(`v ${h - oTrr}`); // down outer right side → outer BR
-          d.push("Z"); // closes back to outer BR
+          d.push(`v ${h - oTrr - oBrrInv}`); // down outer right side (shortened if inverted)
+          if (oBrrInv > 0) {
+            // Inverted (concave) arc: center is the outer corner (x+w, y+h).
+            // From (x+w, y+h-oBrrInv) CCW to (x+w-oBrrInv, y+h) → arcCCW.
+            d.push(arcCCW(oBrrInv, -oBrrInv, oBrrInv));
+          }
+          d.push("Z"); // closes back to start
         }
 
         return d.join(" ");
@@ -318,6 +338,7 @@
           corners: {
             topLeft: { radius: r },
             topRight: { radius: r },
+            bottomRight: { radius: r, inverted: true },
           },
           sides: { bottom: { skip: true } },
         });
