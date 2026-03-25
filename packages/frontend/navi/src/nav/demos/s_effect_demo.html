@@ -341,6 +341,7 @@
         PH, // panel outer width/height
         b, // border width
         r, // corner radius (convex corners on tab top, panel bottom)
+        ir = r, // junction radius (concave S-curve corners where tab meets panel top)
       }) => {
         // Convex arc (inner-center, CCW in right→up→left→down traversal)
         const arcCCW = (radius, dx, dy) => {
@@ -353,6 +354,16 @@
         const ipr = Math.max(0, pr - b);
         const itr = Math.max(0, tr - b);
 
+        // Concave junction corners: only when the tab edge is not flush with the panel edge.
+        // A junction where tab right/left meets panel top gets a concave arc (S-curve).
+        const hasRightJunction = TX + TW < PW;
+        const hasLeftJunction = TX > 0;
+        const rir = hasRightJunction ? ir : 0; // outer right junction radius
+        const lir = hasLeftJunction ? ir : 0; // outer left junction radius
+        const iir = Math.max(0, ir - b); // inner junction radius
+        const irir = hasRightJunction ? iir : 0;
+        const ilir = hasLeftJunction ? iir : 0;
+
         // ── Outer boundary (clockwise from panel BL) ───────────────────────────
         const d = [];
         d.push(`M ${pr},${TH + PH}`);
@@ -360,13 +371,15 @@
         d.push(arcCCW(pr, pr, -pr)); // panel BR corner
         d.push(`v -${PH - pr - pr}`); // panel right side up
         d.push(arcCCW(pr, -pr, -pr)); // panel TR corner (convex)
-        d.push(`h -${PW - pr - TX - TW}`); // panel top right segment → tab right edge
-        d.push(`v -${TH - tr}`); // tab right side up
+        d.push(`h -${PW - pr - TX - TW - rir}`); // panel top right segment → stop rir before tab right
+        if (rir > 0) d.push(arcCCW(rir, -rir, -rir)); // concave junction: tab BR meets panel top
+        d.push(`v -${TH - tr - rir}`); // tab right side up
         d.push(arcCCW(tr, -tr, -tr)); // tab TR corner
         d.push(`h -${TW - tr - tr}`); // tab top
         d.push(arcCCW(tr, -tr, tr)); // tab TL corner
-        d.push(`v ${TH - tr}`); // tab left down
-        d.push(`h -${TX}`); // panel top left segment → panel left edge
+        d.push(`v ${TH - tr - lir}`); // tab left down (stop lir above panel top)
+        if (lir > 0) d.push(arcCCW(lir, -lir, lir)); // concave junction: tab BL meets panel top
+        d.push(`h -${TX - lir}`); // panel top left segment → panel left edge
         d.push(`v ${PH - pr}`); // panel left side down
         d.push(arcCCW(pr, pr, pr)); // panel BL corner
         d.push("Z");
@@ -383,13 +396,15 @@
         d.push(arcCCW(ipr, ipr, -ipr)); // inner panel BR
         d.push(`v -${iPH - ipr - ipr}`); // inner panel right side up
         d.push(arcCCW(ipr, -ipr, -ipr)); // inner panel TR corner
-        d.push(`h -${PW - 2 * b - iTX - iTW - ipr}`); // panel top right segment → inner tab right
-        d.push(`v -${TH - itr}`); // inner tab right up
+        d.push(`h -${PW - 2 * b - iTX - iTW - ipr - irir}`); // inner panel top right segment
+        if (irir > 0) d.push(arcCCW(irir, -irir, -irir)); // inner concave junction: tab BR
+        d.push(`v -${TH - itr - irir}`); // inner tab right up
         d.push(arcCCW(itr, -itr, -itr)); // inner tab TR
         d.push(`h -${iTW - itr - itr}`); // inner tab top
         d.push(arcCCW(itr, -itr, itr)); // inner tab TL
-        d.push(`v ${TH - itr}`); // inner tab left down → panel inner top
-        d.push(`h -${iTX}`); // panel top left segment → inner left edge
+        d.push(`v ${TH - itr - ilir}`); // inner tab left down
+        if (ilir > 0) d.push(arcCCW(ilir, -ilir, ilir)); // inner concave junction: tab BL
+        d.push(`h -${iTX - ilir}`); // inner panel top left segment
         d.push(`v ${iPH - ipr}`); // inner panel left side down
         d.push(arcCCW(ipr, ipr, ipr)); // inner panel BL
         d.push("Z");
@@ -399,7 +414,7 @@
 
       // The unified binder SVG: covers the full binder area (tab row + panel).
       // Draws both the white background fill and the border ring in one SVG.
-      const BinderSvg = ({ TX, TW, TH, PW, PH, b, r, borderColor }) => {
+      const BinderSvg = ({ TX, TW, TH, PW, PH, b, r, ir = r, borderColor }) => {
         // Background fill: the inner boundary of the border ring (inset by b),
         // so white only fills the area inside the border.
         const bgPath = (() => {
@@ -409,30 +424,46 @@
           };
           const ipr = Math.max(0, r - b);
           const itr = Math.max(0, r - b);
+          const iir = Math.max(0, ir - b);
           const iPW = PW - 2 * b;
           const iPH = PH - 2 * b;
           const iTW = TW - 2 * b;
           const iTX = TX;
+          const hasRightJunction = TX + TW < PW;
+          const hasLeftJunction = TX > 0;
+          const irir = hasRightJunction ? iir : 0;
+          const ilir = hasLeftJunction ? iir : 0;
           const d = [];
           d.push(`M ${b + ipr},${TH + PH - b}`);
           d.push(`h ${iPW - ipr - ipr}`);
           d.push(arcCCW(ipr, ipr, -ipr)); // inner panel BR
           d.push(`v -${iPH - ipr - ipr}`);
           d.push(arcCCW(ipr, -ipr, -ipr)); // inner panel TR
-          d.push(`h -${PW - 2 * b - iTX - iTW - ipr}`);
-          d.push(`v -${TH - itr}`);
+          d.push(`h -${PW - 2 * b - iTX - iTW - ipr - irir}`);
+          if (irir > 0) d.push(arcCCW(irir, -irir, -irir)); // inner concave junction: tab BR
+          d.push(`v -${TH - itr - irir}`);
           d.push(arcCCW(itr, -itr, -itr)); // inner tab TR
           d.push(`h -${iTW - itr - itr}`);
           d.push(arcCCW(itr, -itr, itr)); // inner tab TL
-          d.push(`v ${TH - itr}`);
-          d.push(`h -${iTX}`);
+          d.push(`v ${TH - itr - ilir}`);
+          if (ilir > 0) d.push(arcCCW(ilir, -ilir, ilir)); // inner concave junction: tab BL
+          d.push(`h -${iTX - ilir}`);
           d.push(`v ${iPH - ipr}`);
           d.push(arcCCW(ipr, ipr, ipr)); // inner panel BL
           d.push("Z");
           return d.join(" ");
         })();
 
-        const borderPath = buildBinderBorderPath({ TX, TW, TH, PW, PH, b, r });
+        const borderPath = buildBinderBorderPath({
+          TX,
+          TW,
+          TH,
+          PW,
+          PH,
+          b,
+          r,
+          ir,
+        });
 
         return (
           <svg
@@ -553,6 +584,7 @@
                 PH={panelSize.height}
                 b={b}
                 r={r}
+                ir={r}
                 borderColor={borderColor}
               />
             )}
