@@ -430,7 +430,9 @@
       const Binder = ({ initialActive, b, r, borderColor }) => {
         const [active, setActive] = useState(initialActive);
         const panelStyle = {
-          border: `${b}px solid ${borderColor}`,
+          borderWidth: `${b}px`,
+          borderStyle: `solid`,
+          borderColor,
           borderTop: "none",
         };
         return (
