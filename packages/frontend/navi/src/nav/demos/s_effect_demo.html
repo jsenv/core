@@ -459,9 +459,10 @@
       const TAB_H = 36;
 
       // Inactive tabs use plain CSS borders for now.
-      const SvgTab = ({ label, active, onClick, r, b }) => {
+      const SvgTab = ({ label, active, onClick, r, b, tabRef }) => {
         return (
           <div
+            ref={tabRef}
             class={`svg-tab${active ? " active" : ""}`}
             style={{
               borderWidth: `${b}px`,
@@ -504,6 +505,7 @@
       const Binder = ({ initialActive, b, r, borderColor }) => {
         const [active, setActive] = useState(initialActive);
         const panelRef = useRef(null);
+        const activeTabRef = useRef(null);
         const [panelSize, setPanelSize] = useState(null);
 
         useLayoutEffect(() => {
@@ -513,10 +515,12 @@
             // offsetWidth/Height give the border-box size (what we draw over)
             // offsetTop gives the distance from container top to panel top,
             // which equals the actual rendered tabstrip height
+            const tabEl = activeTabRef.current;
             setPanelSize({
               width: el.offsetWidth,
               height: el.offsetHeight,
               top: el.offsetTop, // = actual rendered tabstrip height
+              tabWidth: tabEl ? tabEl.offsetWidth : TAB_W,
             });
           };
           const obs = new ResizeObserver(measure);
@@ -525,12 +529,22 @@
           return () => obs.disconnect();
         }, []);
 
+        // Re-measure when the active tab changes (different tab may have different width)
+        useLayoutEffect(() => {
+          const tabEl = activeTabRef.current;
+          const panelEl = panelRef.current;
+          if (!tabEl || !panelEl) return;
+          setPanelSize((prev) =>
+            prev ? { ...prev, tabWidth: tabEl.offsetWidth } : prev,
+          );
+        }, [active]);
+
         return (
           <div style={{ position: "relative", display: "inline-block" }}>
             {/* The unified SVG sits behind everything, covering tabstrip + panel */}
             {panelSize && (
               <BinderSvg
-                TW={TAB_W}
+                TW={panelSize.tabWidth}
                 TH={panelSize.top}
                 PW={panelSize.width}
                 PH={panelSize.height}
@@ -548,6 +562,7 @@
                   onClick={() => setActive(tab.key)}
                   r={r}
                   b={b}
+                  tabRef={active === tab.key ? activeTabRef : null}
                 />
               ))}
             </div>
