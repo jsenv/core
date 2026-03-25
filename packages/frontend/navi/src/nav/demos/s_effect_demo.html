@@ -136,10 +136,15 @@
         borderWidth, // border thickness
         cornerRadius, // corner radius for all corners (tab top, panel bottom, and junctions)
       }) => {
-        // All arcs are convex (outward curve, CCW sweep in screen coords).
+        // Convex arc: outward curve, CCW sweep (sweep=0).
         const arcConvex = (r, dx, dy) => {
           if (r <= 0) return `l ${dx},${dy}`;
           return `a ${r},${r} 0 0 0 ${dx},${dy}`;
+        };
+        // Concave arc: inward curve, CW sweep (sweep=1). Used for junction corners.
+        const arcConcave = (r, dx, dy) => {
+          if (r <= 0) return `l ${dx},${dy}`;
+          return `a ${r},${r} 0 0 1 ${dx},${dy}`;
         };
 
         // Inner corner radius shrinks by borderWidth; floored at 0.
@@ -161,13 +166,13 @@
         d.push(`v -${panelHeight - cornerRadius - cornerRadius}`); // panel right side up
         d.push(arcConvex(cornerRadius, -cornerRadius, -cornerRadius)); // panel TR corner
         d.push(`h -${panelWidth - cornerRadius - tabX - tabWidth - rightJR}`); // panel top-right → stop before tab right
-        if (rightJR > 0) d.push(arcConvex(rightJR, -rightJR, -rightJR)); // right junction corner
+        if (rightJR > 0) d.push(arcConcave(rightJR, -rightJR, -rightJR)); // right junction corner
         d.push(`v -${tabRowHeight - cornerRadius - rightJR}`); // tab right side up
         d.push(arcConvex(cornerRadius, -cornerRadius, -cornerRadius)); // tab TR corner
         d.push(`h -${tabWidth - cornerRadius - cornerRadius}`); // tab top
         d.push(arcConvex(cornerRadius, -cornerRadius, cornerRadius)); // tab TL corner
         d.push(`v ${tabRowHeight - cornerRadius - leftJR}`); // tab left side down
-        if (leftJR > 0) d.push(arcConvex(leftJR, -leftJR, leftJR)); // left junction corner
+        if (leftJR > 0) d.push(arcConcave(leftJR, -leftJR, leftJR)); // left junction corner
         d.push(`h -${tabX - leftJR}`); // panel top-left → panel left edge
         d.push(`v ${panelHeight - cornerRadius}`); // panel left side down
         d.push(arcConvex(cornerRadius, cornerRadius, cornerRadius)); // panel BL corner
@@ -192,14 +197,14 @@
           `h -${panelWidth - tabX - tabWidth - innerCornerR - innerRightJR}`,
         ); // inner panel top-right
         if (innerRightJR > 0)
-          d.push(arcConvex(innerRightJR, -innerRightJR, -innerRightJR)); // inner right junction corner
+          d.push(arcConcave(innerRightJR, -innerRightJR, -innerRightJR)); // inner right junction corner
         d.push(`v -${tabRowHeight - innerCornerR - innerRightJR}`); // inner tab right up
         d.push(arcConvex(innerCornerR, -innerCornerR, -innerCornerR)); // inner tab TR
         d.push(`h -${innerTabW - innerCornerR - innerCornerR}`); // inner tab top
         d.push(arcConvex(innerCornerR, -innerCornerR, innerCornerR)); // inner tab TL
         d.push(`v ${tabRowHeight - innerCornerR - innerLeftJR}`); // inner tab left down
         if (innerLeftJR > 0)
-          d.push(arcConvex(innerLeftJR, -innerLeftJR, innerLeftJR)); // inner left junction corner
+          d.push(arcConcave(innerLeftJR, -innerLeftJR, innerLeftJR)); // inner left junction corner
         d.push(`h -${innerTabX - innerLeftJR}`); // inner panel top-left
         d.push(`v ${innerPanelH - innerCornerR}`); // inner panel left down
         d.push(arcConvex(innerCornerR, innerCornerR, innerCornerR)); // inner panel BL
@@ -227,6 +232,10 @@
             if (r <= 0) return `l ${dx},${dy}`;
             return `a ${r},${r} 0 0 0 ${dx},${dy}`;
           };
+          const arcConcave = (r, dx, dy) => {
+            if (r <= 0) return `l ${dx},${dy}`;
+            return `a ${r},${r} 0 0 1 ${dx},${dy}`;
+          };
           const innerCornerR = Math.max(0, cornerRadius - borderWidth);
           const innerPanelW = panelWidth - 2 * borderWidth;
           const innerPanelH = panelHeight - 2 * borderWidth;
@@ -247,14 +256,14 @@
             `h -${panelWidth - tabX - tabWidth - innerCornerR - innerRightJR}`,
           );
           if (innerRightJR > 0)
-            d.push(arcConvex(innerRightJR, -innerRightJR, -innerRightJR)); // inner right junction corner
+            d.push(arcConcave(innerRightJR, -innerRightJR, -innerRightJR)); // inner right junction corner
           d.push(`v -${tabRowHeight - innerCornerR - innerRightJR}`);
           d.push(arcConvex(innerCornerR, -innerCornerR, -innerCornerR)); // inner tab TR
           d.push(`h -${innerTabW - innerCornerR - innerCornerR}`);
           d.push(arcConvex(innerCornerR, -innerCornerR, innerCornerR)); // inner tab TL
           d.push(`v ${tabRowHeight - innerCornerR - innerLeftJR}`);
           if (innerLeftJR > 0)
-            d.push(arcConvex(innerLeftJR, -innerLeftJR, innerLeftJR)); // inner left junction corner
+            d.push(arcConcave(innerLeftJR, -innerLeftJR, innerLeftJR)); // inner left junction corner
           d.push(`h -${tabX - innerLeftJR}`);
           d.push(`v ${innerPanelH - innerCornerR}`);
           d.push(arcConvex(innerCornerR, innerCornerR, innerCornerR)); // inner panel BL
