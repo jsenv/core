@@ -78,6 +78,7 @@
       }
       .svg-tab svg {
         position: absolute;
+        inset: 0;
         overflow: visible;
       }
       .svg-tab span {
@@ -110,62 +111,240 @@
       */
 
       /*
-            SVG tab shape — all geometry computed from:
-              W   = viewBox width  (we use 120)
-              H   = viewBox height (we use 36)
-              r   = corner radius for convex top arcs
-              b   = border width (stroke-width)
-              arc = concave arc depth below baseline (= r, control point at H+r)
+        buildBorderPath — incrementally builds a single SVG <path> that draws a
+        rectangular border with per-corner control.
 
-            Active tab:
-              - Fill: closed shape with S-arcs below baseline
-              - Stroke: two subpaths omitting the flat bottom → opens into panel
+        We walk the rectangle counter-clockwise starting at the bottom-left corner:
+          bottom-left → top-left → top-right → bottom-right
 
-            Inactive tab:
-              - Rounded-top rect, flat bottom, full stroke
-          */
+        For each corner we choose one of three styles:
+          "convex"   — normal CSS-like border-radius (arc curves outward)
+          "inverted" — concave arc (curves inward, like the notch where a tab meets
+                       its panel)
+          null / 0   — sharp right-angle corner
 
-      const W = 120;
-      const H = 36;
+        Between corners we draw the connecting side line.  A side can be skipped
+        entirely (set its skip flag to true) so the path stays open there — this is
+        how the active tab omits its bottom edge and blends seamlessly into the panel.
 
-      const activeTabPath = (r) =>
-        `M 0,${r} Q 0,0 ${r},0 L ${W - r},0 Q ${W},0 ${W},${r} L ${W},${H} Q ${W},${H + r} ${W - r},${H} L ${r},${H} Q 0,${H + r} 0,${H} Z`;
+        The path is always open (no Z close) so a stroked path renders only what is
+        explicitly drawn.  For a filled background shape the caller closes it with Z.
 
-      const activeTabStrokePath = (r) =>
-        `M 0,${H} L 0,${r} Q 0,0 ${r},0 L ${W - r},0 Q ${W},0 ${W},${r} L ${W},${H} Q ${W},${H + r} ${W - r},${H} M ${r},${H} Q 0,${H + r} 0,${H}`;
+        Parameters
+          x, y          — top-left corner of the rectangle
+          w, h          — width and height
+          size          — border thickness (used for fill shape inset)
+          corners: {
+            bottomLeft, topLeft, topRight, bottomRight
+          }             — each can be:
+                          { radius: number, type: "convex"|"inverted" }
+                          or null / omitted for a sharp corner
+          sides: {
+            bottom, left, top, right
+          }             — each can be { skip: true } to omit that segment
+      */
+      const buildBorderPath = ({ x, y, w, h, corners = {}, sides = {} }) => {
+        const bl = corners.bottomLeft || {};
+        const tl = corners.topLeft || {};
+        const tr = corners.topRight || {};
+        const br = corners.bottomRight || {};
 
-      const inactiveTabPath = (r) =>
-        `M 0,${r} Q 0,0 ${r},0 L ${W - r},0 Q ${W},0 ${W},${r} L ${W},${H} L 0,${H} Z`;
+        const skipBottom = sides.bottom && sides.bottom.skip;
+        const skipLeft = sides.left && sides.left.skip;
+        const skipTop = sides.top && sides.top.skip;
+        const skipRight = sides.right && sides.right.skip;
 
-      const ActiveTabSvg = ({ r, b, borderColor }) => {
+        // clamp radius so it never exceeds half the adjacent sides
+        const clamp = (r) => {
+          if (!r) return 0;
+          let clamped = r;
+          if (clamped > w / 2) clamped = w / 2;
+          if (clamped > h / 2) clamped = h / 2;
+          return clamped;
+        };
+
+        const blr = clamp(bl.radius);
+        const tlr = clamp(tl.radius);
+        const trr = clamp(tr.radius);
+        const brr = clamp(br.radius);
+
+        /*
+          Arc helper.
+          For a convex corner: standard quarter-circle arc sweeping around the
+          outside of the rectangle — same visual as CSS border-radius.
+          For an inverted corner: the arc curves inward (concave), achieved by
+          flipping the sweep direction.
+
+          SVG arc flags: large-arc-flag=0, sweep-flag=1 for convex (clockwise),
+                         sweep-flag=0 for inverted (counter-clockwise).
+        */
+        const arc = (r, type, dx, dy) => {
+          if (!r) return `l ${dx},${dy}`;
+          const sweep = type === "inverted" ? 0 : 1;
+          return `a ${r},${r} 0 0 ${sweep} ${dx},${dy}`;
+        };
+
+        const d = [];
+
+        // ── Start: bottom-left corner arrival point ───────────────────────────
+        // We start from the point just to the right of the bottom-left corner.
+        d.push(`M ${x + blr},${y + h}`);
+
+        // ── Bottom side (left → right) ────────────────────────────────────────
+        const bottomLineW = w - blr - brr;
+        if (!skipBottom && bottomLineW > 0) {
+          d.push(`h ${bottomLineW}`);
+        } else if (bottomLineW > 0) {
+          d.push(`m ${bottomLineW},0`);
+        }
+
+        // ── Bottom-right corner ───────────────────────────────────────────────
+        if (br.type === "inverted") {
+          // inverted: arc curves inward, so we go up then left
+          d.push(arc(brr, "inverted", brr, -brr));
+        } else {
+          d.push(arc(brr, "convex", brr, -brr));
+        }
+
+        // ── Right side (bottom → top) ─────────────────────────────────────────
+        const rightLineH = h - brr - trr;
+        if (!skipRight && rightLineH > 0) {
+          d.push(`v -${rightLineH}`);
+        } else if (rightLineH > 0) {
+          d.push(`m 0,-${rightLineH}`);
+        }
+
+        // ── Top-right corner ──────────────────────────────────────────────────
+        if (tr.type === "inverted") {
+          d.push(arc(trr, "inverted", -trr, -trr));
+        } else {
+          d.push(arc(trr, "convex", -trr, -trr));
+        }
+
+        // ── Top side (right → left) ───────────────────────────────────────────
+        const topLineW = w - trr - tlr;
+        if (!skipTop && topLineW > 0) {
+          d.push(`h -${topLineW}`);
+        } else if (topLineW > 0) {
+          d.push(`m -${topLineW},0`);
+        }
+
+        // ── Top-left corner ───────────────────────────────────────────────────
+        if (tl.type === "inverted") {
+          d.push(arc(tlr, "inverted", -tlr, tlr));
+        } else {
+          d.push(arc(tlr, "convex", -tlr, tlr));
+        }
+
+        // ── Left side (top → bottom) ──────────────────────────────────────────
+        const leftLineH = h - tlr - blr;
+        if (!skipLeft && leftLineH > 0) {
+          d.push(`v ${leftLineH}`);
+        } else if (leftLineH > 0) {
+          d.push(`m 0,${leftLineH}`);
+        }
+
+        // ── Bottom-left corner ────────────────────────────────────────────────
+        if (bl.type === "inverted") {
+          d.push(arc(blr, "inverted", blr, blr));
+        } else {
+          d.push(arc(blr, "convex", blr, blr));
+        }
+
+        return d.join(" ");
+      };
+
+      // ── Tab SVG components ────────────────────────────────────────────────────
+      //
+      // Active tab:
+      //   - white fill shape (closed, no bottom gap so it covers the panel border)
+      //   - border stroke: skip bottom side, inverted radius on bottom-left and
+      //     bottom-right corners so the tab visually connects to the panel
+      //
+      // Inactive tab:
+      //   - tinted fill, full rectangular border with convex top corners
+
+      const ActiveTabSvg = ({ W, H, r, b, borderColor }) => {
+        // Fill: close the shape so the white background covers the panel top border.
+        // The bottom edge simply runs straight across (no inverted arcs needed for fill).
+        const fillPath = `${buildBorderPath({
+          x: 0,
+          y: 0,
+          w: W,
+          h: H,
+          corners: {
+            topLeft: { radius: r, type: "convex" },
+            topRight: { radius: r, type: "convex" },
+          },
+        })} Z`;
+
+        // Stroke: skip the bottom side, use inverted arcs at the two bottom corners
+        // so the stroke blends smoothly into the panel border below.
+        const strokePath = buildBorderPath({
+          x: 0,
+          y: 0,
+          w: W,
+          h: H,
+          corners: {
+            bottomLeft: { radius: r, type: "inverted" },
+            topLeft: { radius: r, type: "convex" },
+            topRight: { radius: r, type: "convex" },
+            bottomRight: { radius: r, type: "inverted" },
+          },
+          sides: { bottom: { skip: true } },
+        });
+
         return (
           <svg
+            style={{
+              position: "absolute",
+              inset: 0,
+              overflow: "visible",
+              width: "100%",
+              height: "100%",
+            }}
             viewBox={`0 0 ${W} ${H}`}
             preserveAspectRatio="none"
-            style={{ width: "100%", height: "100%" }}
           >
-            <path d={activeTabPath(r)} fill="white" stroke="none" />
+            <path d={fillPath} fill="white" stroke="none" />
             <path
-              d={activeTabStrokePath(r)}
+              d={strokePath}
               fill="none"
               stroke={borderColor}
               stroke-width={b}
               vector-effect="non-scaling-stroke"
-              stroke-linecap="round"
+              stroke-linecap="square"
             />
           </svg>
         );
       };
 
-      const InactiveTabSvg = ({ r, b, borderColor }) => {
+      const InactiveTabSvg = ({ W, H, r, b, borderColor }) => {
+        const path = `${buildBorderPath({
+          x: 0,
+          y: 0,
+          w: W,
+          h: H,
+          corners: {
+            topLeft: { radius: r, type: "convex" },
+            topRight: { radius: r, type: "convex" },
+          },
+        })} Z`;
+
         return (
           <svg
+            style={{
+              position: "absolute",
+              inset: 0,
+              overflow: "visible",
+              width: "100%",
+              height: "100%",
+            }}
             viewBox={`0 0 ${W} ${H}`}
             preserveAspectRatio="none"
-            style={{ width: "100%", height: "100%" }}
           >
             <path
-              d={inactiveTabPath(r)}
+              d={path}
               fill="#f0f0f0"
               stroke={borderColor}
               stroke-width={b}
@@ -176,29 +355,29 @@
         );
       };
 
+      const TAB_W = 120;
+      const TAB_H = 36;
+
       const SvgTab = ({ label, active, onClick, r, b, borderColor }) => {
         return (
-          <div
-            class={`svg-tab${active ? " active" : ""}`}
-            style={{
-              borderWidth: `${b}px`,
-              borderStyle: "solid",
-              borderColor: "rgba(0,0,0,0.1)",
-            }}
-            onClick={onClick}
-          >
-            <div
-              style={{
-                position: "absolute",
-                inset: `${-b}px`,
-              }}
-            >
-              {active ? (
-                <ActiveTabSvg r={r} b={b} borderColor={borderColor} />
-              ) : (
-                <InactiveTabSvg r={r} b={b} borderColor={borderColor} />
-              )}
-            </div>
+          <div class={`svg-tab${active ? " active" : ""}`} onClick={onClick}>
+            {active ? (
+              <ActiveTabSvg
+                W={TAB_W}
+                H={TAB_H}
+                r={r}
+                b={b}
+                borderColor={borderColor}
+              />
+            ) : (
+              <InactiveTabSvg
+                W={TAB_W}
+                H={TAB_H}
+                r={r}
+                b={b}
+                borderColor={borderColor}
+              />
+            )}
             <span>{label}</span>
           </div>
         );
