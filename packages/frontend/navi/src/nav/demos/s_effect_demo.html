@@ -41,7 +41,6 @@
       /* ── tab strip ───────────────────────────────────── */
       .tabstrip {
         position: relative;
-        z-index: 1;
         display: flex;
         align-items: flex-end;
         gap: 0;
@@ -441,8 +440,8 @@
           <svg
             style={{
               position: "absolute",
-              top: 0,
-              left: 0,
+              inset: 0,
+              zIndex: 1,
               overflow: "visible",
               pointerEvents: "none",
             }}
@@ -475,7 +474,9 @@
                     borderColor: "transparent",
                     background: "transparent",
                   }
-                : {}),
+                : {
+                    zIndex: 0,
+                  }),
             }}
             onClick={onClick}
           >
@@ -545,7 +546,7 @@
             {panelSize && (
               <BinderSvg
                 TW={panelSize.tabWidth}
-                TH={panelSize.top}
+                TH={panelSize.top - b}
                 PW={panelSize.width}
                 PH={panelSize.height}
                 b={b}
