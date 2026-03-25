@@ -202,8 +202,8 @@
         const hasLeftJunction = tabX > 0;
         // Junction corners are concave: their center of curvature is outside the shape,
         // so insetting by borderWidth increases the radius (opposite of convex corners).
-        const innerRightJR = hasRightJunction ? cornerRadius + borderWidth : 0;
-        const innerLeftJR = hasLeftJunction ? cornerRadius + borderWidth : 0;
+        const innerRightJR = hasRightJunction ? innerCornerR : 0;
+        const innerLeftJR = hasLeftJunction ? innerCornerR : 0;
         const d = [];
         d.push(
           `M ${borderWidth + innerCornerR},${tabRowHeight + panelHeight - borderWidth}`,
@@ -216,14 +216,14 @@
           `h -${panelWidth - tabX - tabWidth - innerCornerR - innerRightJR}`,
         );
         if (innerRightJR > 0)
-          d.push(arcSweep1(innerRightJR, -innerRightJR, -innerRightJR)); // inner right junction corner
+          d.push(arcSweep1(innerRightJR, -innerRightJR, -innerRightJR)); // inner right junction corner (concave)
         d.push(`v -${tabRowHeight - innerCornerR - innerRightJR}`);
         d.push(arcSweep0(innerCornerR, -innerCornerR, -innerCornerR)); // inner tab TR
         d.push(`h -${innerTabW - innerCornerR - innerCornerR}`);
         d.push(arcSweep0(innerCornerR, -innerCornerR, innerCornerR)); // inner tab TL
         d.push(`v ${tabRowHeight - innerCornerR - innerLeftJR}`);
         if (innerLeftJR > 0)
-          d.push(arcSweep1(innerLeftJR, -innerLeftJR, innerLeftJR)); // inner left junction corner
+          d.push(arcSweep1(innerLeftJR, -innerLeftJR, innerLeftJR)); // inner left junction corner (concave)
         d.push(`h -${tabX - innerLeftJR}`);
         d.push(`v ${innerPanelH - innerCornerR}`);
         d.push(arcSweep0(innerCornerR, innerCornerR, innerCornerR)); // inner panel BL
