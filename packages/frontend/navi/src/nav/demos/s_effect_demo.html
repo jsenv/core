@@ -161,7 +161,7 @@
       }) => {
         const h = borderWidth / 2; // half border width = inset amount
         const convR = Math.max(0, cornerRadius - h); // centerline convex radius
-        const concR = cornerRadius + h; // centerline concave radius
+        const concR = convR; // concave junction uses same visual radius as convex corners
 
         const hasRightJunction = tabX + tabWidth < panelWidth;
         const hasLeftJunction = tabX > 0;
