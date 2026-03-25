@@ -441,8 +441,7 @@
           <svg
             style={{
               position: "absolute",
-              top: 0,
-              left: 0,
+              inset: 0,
               overflow: "visible",
               pointerEvents: "none",
             }}
@@ -459,18 +458,22 @@
       const TAB_H = 36;
 
       // Inactive tabs use plain CSS borders for now.
-      const SvgTab = ({ label, active, onClick, r, b, borderColor }) => {
-        const inactiveStyle = !active
-          ? {
-              border: `${b}px solid ${borderColor}`,
-              borderRadius: `${r}px ${r}px 0 0`,
-              background: "#f0f0f0",
-            }
-          : {};
+      const SvgTab = ({ label, active, onClick, r, b }) => {
         return (
           <div
             class={`svg-tab${active ? " active" : ""}`}
-            style={inactiveStyle}
+            style={{
+              borderWidth: `${b}px`,
+              borderStyle: "solid",
+              borderColor: "violet",
+              borderRadius: `${r}px ${r}px 0 0`,
+              background: "#f0f0f0",
+              ...(active
+                ? {
+                    borderColor: "transparent",
+                  }
+                : {}),
+            }}
             onClick={onClick}
           >
             <span>{label}</span>
