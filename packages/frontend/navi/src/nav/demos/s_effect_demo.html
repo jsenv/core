@@ -40,17 +40,20 @@
 
       /* ── tab strip ───────────────────────────────────── */
       .tabstrip {
+        position: relative;
+        z-index: 1;
         display: flex;
         align-items: flex-end;
         gap: 0;
       }
       .panel {
+        position: relative;
+        z-index: 1;
         width: 460px;
         min-height: 60px;
         padding: 20px 24px;
         color: #444;
         font-size: 0.9rem;
-        background: #fff;
       }
       .binder-group {
         display: flex;
@@ -91,7 +94,7 @@
     <div id="app"></div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { useState } from "preact/hooks";
+      import { useState, useLayoutEffect, useRef } from "preact/hooks";
 
       /*
         Why we draw borders with SVG instead of using CSS borders:
@@ -293,20 +296,14 @@
 
       // ── Tab SVG components ────────────────────────────────────────────────────
       //
-      // Active tab:
-      //   - white fill background (closed rect with rounded top corners)
-      //   - border as filled shape: bottom side skipped, drawn with buildFilledBorderPath
-      //
-      // Inactive tab:
-      //   - tinted fill background
-      //   - full rectangular border as filled shape
+      // The active tab and its panel share a single SVG border drawn as a filled
 
       // Builds a closed path for the background fill rectangle (rounded top corners).
-      // Traces up-right-down (same direction as outer U-shape) → CW arcs → sweep=1.
+      // Traces up-right-down → CW arcs → sweep=1.
       const buildRectFillPath = ({ x, y, w, h, tlr = 0, trr = 0 }) => {
-        const arc = (r, dx, dy) => {
-          if (r <= 0) return `l ${dx},${dy}`;
-          return `a ${r},${r} 0 0 1 ${dx},${dy}`;
+        const arc = (radius, dx, dy) => {
+          if (radius <= 0) return `l ${dx},${dy}`;
+          return `a ${radius},${radius} 0 0 1 ${dx},${dy}`;
         };
         return [
           `M ${x},${y + h}`,
@@ -319,48 +316,147 @@
         ].join(" ");
       };
 
-      const ActiveTabSvg = ({ W, H, r, b, borderColor }) => {
-        const fillPath = buildRectFillPath({
-          x: 0,
-          y: 0,
-          w: W,
-          h: H,
-          tlr: r,
-          trr: r,
-        });
+      // The active tab and its panel share a single SVG border drawn as a filled
+      // path. This avoids any visual seam between CSS borders and SVG borders.
+      //
+      // The SVG is absolutely positioned over the whole binder area (tabstrip +
+      // panel). Its coordinate origin is the top-left of the tab row.
+      //
+      // Shape (outer boundary, clockwise from panel bottom-left):
+      //   panel BL corner → panel bottom → panel BR corner
+      //   → panel right up → panel TR (square, no radius here yet)
+      //   → left along panel top to tab right edge
+      //   → inverted BR corner of active tab (concave notch)
+      //   → tab right side up → tab TR corner → tab top → tab TL corner
+      //   → tab left side down → tab BL = panel TL
+      //   → panel left side down → panel BL corner → Z
+      //
+      // The inner boundary is the same shape inset by b, with the tab bottom
+      // opening (no horizontal inner segment connecting tab bottom to panel top).
 
-        const borderPath = buildFilledBorderPath({
-          x: 0,
-          y: 0,
-          w: W,
-          h: H,
-          b,
-          corners: {
-            topLeft: { radius: r },
-            topRight: { radius: r },
-            bottomRight: { radius: r, inverted: true },
-          },
-          sides: { bottom: { skip: true } },
-        });
+      const buildBinderBorderPath = ({
+        TW,
+        TH, // tab outer width/height
+        PW,
+        PH, // panel outer width/height
+        b, // border width
+        r, // corner radius (convex corners on tab top, panel bottom)
+      }) => {
+        // Convex arc (inner-center, CCW in right→up→left→down traversal)
+        const arcCCW = (radius, dx, dy) => {
+          if (radius <= 0) return `l ${dx},${dy}`;
+          return `a ${radius},${radius} 0 0 0 ${dx},${dy}`;
+        };
+        // Convex arc (CW in left→up→right→down traversal, i.e. outer U reversed)
+        // const arcCW = (radius, dx, dy) => {
+        //   if (radius <= 0) return `l ${dx},${dy}`;
+        //   return `a ${radius},${radius} 0 0 1 ${dx},${dy}`;
+        // };
+        // // Concave (inverted) arc — center is the outer corner point, CW sweep
+        // // used at the active tab's bottom-right notch.
+        // const arcInv = (radius, dx, dy) => {
+        //   if (radius <= 0) return `l ${dx},${dy}`;
+        //   return `a ${radius},${radius} 0 0 1 ${dx},${dy}`;
+        // };
+
+        const pr = r; // panel bottom corner radius
+        const tr = r; // tab top corner radius
+
+        // ── Outer boundary (clockwise) ─────────────────────────────────────────
+        // Start: panel BL, just right of corner arc
+        const d = [];
+        d.push(`M ${pr},${TH + PH}`);
+        d.push(`h ${PW - pr - pr}`); // panel bottom
+        d.push(arcCCW(pr, pr, -pr)); // panel BR corner
+        d.push(`v -${PH - pr}`); // panel right side up to panel TR
+        d.push(`h -${PW - TW}`); // panel top: right → tab right edge
+        // Inverted (concave) notch at active tab's bottom-right
+        d.push(`v -${TH - r}`); // tab right side up (stop before TR arc)
+        d.push(arcCCW(tr, -tr, -tr)); // tab TR corner (convex)
+        d.push(`h -${TW - tr - tr}`); // tab top
+        d.push(arcCCW(tr, -tr, tr)); // tab TL corner (convex)
+        d.push(`v ${TH}`); // tab left = panel left, down to panel top
+        d.push(`v ${PH - pr}`); // panel left side down
+        d.push(arcCCW(pr, pr, pr)); // panel BL corner
+        d.push("Z");
+
+        // ── Inner boundary (inset by b, same clockwise winding for evenodd) ───
+        // Panel inner dims
+        const iPW = PW - 2 * b;
+        const iPH = PH - b; // only 3 sides (no top border on panel, tab fills it)
+        const iTW = TW - 2 * b;
+        const iTH = TH - b; // only top+left+right (no bottom, open into panel)
+        const ipr = Math.max(0, pr - b);
+        const itr = Math.max(0, tr - b);
+
+        // Inner panel bottom-right corner x
+        // Start: inner panel BL
+        d.push(`M ${b + ipr},${TH + PH - b}`);
+        d.push(`h ${iPW - ipr - ipr}`); // inner panel bottom
+        d.push(arcCCW(ipr, ipr, -ipr)); // inner panel BR
+        d.push(`v -${iPH - ipr}`); // inner panel right up to panel inner TR
+        d.push(`h -${iPW - iTW}`); // inner panel top: right → inner tab right
+        // Inner tab right side + top + left (no bottom, open)
+        d.push(`v -${iTH - itr}`); // inner tab right up
+        d.push(arcCCW(itr, -itr, -itr)); // inner tab TR
+        d.push(`h -${iTW - itr - itr}`); // inner tab top
+        d.push(arcCCW(itr, -itr, itr)); // inner tab TL
+        d.push(`v ${iTH}`); // inner tab left down (into panel region)
+        d.push(`v ${iPH - ipr}`); // inner panel left down
+        d.push(arcCCW(ipr, ipr, ipr)); // inner panel BL
+        d.push("Z");
+
+        return d.join(" ");
+      };
+
+      // The unified binder SVG: covers the full binder area (tab row + panel).
+      // Draws both the white background fill and the border ring in one SVG.
+      const BinderSvg = ({ TW, TH, PW, PH, b, r, borderColor }) => {
+        // Background fill: the full combined shape (outer boundary only, closed)
+        const bgPath = (() => {
+          const arcCCW = (radius, dx, dy) => {
+            if (radius <= 0) return `l ${dx},${dy}`;
+            return `a ${radius},${radius} 0 0 0 ${dx},${dy}`;
+          };
+          const pr = r;
+          const tr = r;
+          const d = [];
+          d.push(`M ${pr},${TH + PH}`);
+          d.push(`h ${PW - pr - pr}`);
+          d.push(arcCCW(pr, pr, -pr));
+          d.push(`v -${PH - pr}`);
+          d.push(`h -${PW - TW}`);
+          d.push(`v -${TH - tr}`);
+          d.push(arcCCW(tr, -tr, -tr));
+          d.push(`h -${TW - tr - tr}`);
+          d.push(arcCCW(tr, -tr, tr));
+          d.push(`v ${TH + PH - pr}`);
+          d.push(arcCCW(pr, pr, pr));
+          d.push("Z");
+          return d.join(" ");
+        })();
+
+        const borderPath = buildBinderBorderPath({ TW, TH, PW, PH, b, r });
 
         return (
           <svg
             style={{
               position: "absolute",
-              inset: 0,
+              top: 0,
+              left: 0,
               overflow: "visible",
-              width: "100%",
-              height: "100%",
+              pointerEvents: "none",
             }}
-            viewBox={`0 0 ${W} ${H}`}
-            preserveAspectRatio="none"
+            width={PW}
+            height={TH + PH}
           >
-            <path d={fillPath} fill="white" />
-            <path d={borderPath} fill={borderColor} />
+            <path d={bgPath} fill="white" />
+            <path d={borderPath} fill={borderColor} fill-rule="evenodd" />
           </svg>
         );
       };
 
+      // Inactive tabs still use self-contained SVG borders.
       const InactiveTabSvg = ({ W, H, r, b, borderColor }) => {
         const fillPath = buildRectFillPath({
           x: 0,
@@ -407,15 +503,7 @@
       const SvgTab = ({ label, active, onClick, r, b, borderColor }) => {
         return (
           <div class={`svg-tab${active ? " active" : ""}`} onClick={onClick}>
-            {active ? (
-              <ActiveTabSvg
-                W={TAB_W}
-                H={TAB_H}
-                r={r}
-                b={b}
-                borderColor={borderColor}
-              />
-            ) : (
+            {!active && (
               <InactiveTabSvg
                 W={TAB_W}
                 H={TAB_H}
@@ -449,16 +537,44 @@
 
       const Binder = ({ initialActive, b, r, borderColor }) => {
         const [active, setActive] = useState(initialActive);
-        const panelStyle = {
-          borderWidth: `${b}px`,
-          borderStyle: `solid`,
-          borderColor: "violet",
-          borderTop: "none",
-          borderBottomLeftRadius: "8px",
-          borderBottomRightRadius: "8px",
-        };
+        const panelRef = useRef(null);
+        const [panelSize, setPanelSize] = useState(null);
+
+        useLayoutEffect(() => {
+          const el = panelRef.current;
+          if (!el) return null;
+          const obs = new ResizeObserver(([entry]) => {
+            const { width, height } = entry.contentRect;
+            // contentRect excludes padding — we want the full border-box size
+            const style = window.getComputedStyle(el);
+            const totalW =
+              width +
+              parseFloat(style.paddingLeft) +
+              parseFloat(style.paddingRight);
+            const totalH =
+              height +
+              parseFloat(style.paddingTop) +
+              parseFloat(style.paddingBottom);
+            setPanelSize({ width: totalW, height: totalH });
+          });
+          obs.observe(el);
+          return () => obs.disconnect();
+        }, []);
+
         return (
-          <div>
+          <div style={{ position: "relative", display: "inline-block" }}>
+            {/* The unified SVG sits behind everything, covering tabstrip + panel */}
+            {panelSize && (
+              <BinderSvg
+                TW={TAB_W}
+                TH={TAB_H}
+                PW={panelSize.width}
+                PH={panelSize.height}
+                b={b}
+                r={r}
+                borderColor={borderColor}
+              />
+            )}
             <div class="tabstrip">
               {TABS.map((tab) => (
                 <SvgTab
@@ -472,7 +588,7 @@
                 />
               ))}
             </div>
-            <div class="panel" style={panelStyle}>
+            <div ref={panelRef} class="panel">
               {TABS.find((t) => t.key === active).content}
             </div>
           </div>
