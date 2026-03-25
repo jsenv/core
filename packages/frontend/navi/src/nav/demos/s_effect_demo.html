@@ -541,7 +541,13 @@
         },
       ];
 
-      const Binder = ({ initialActive, b, r, borderColor }) => {
+      const Binder = ({
+        initialActive,
+        b,
+        r,
+        borderColor,
+        curvedOuterJunctions,
+      }) => {
         const [active, setActive] = useState(initialActive);
         const panelRef = useRef(null);
         const activeTabRef = useRef(null);
@@ -593,7 +599,7 @@
                 PH={panelSize.height}
                 b={b}
                 r={r}
-                ir={r}
+                ir={curvedOuterJunctions ? r : 0}
                 borderColor={borderColor}
               />
             )}
@@ -628,6 +634,7 @@
 
       const Demo = () => {
         const [b, setB] = useState(10);
+        const [curvedOuterJunctions, setCurvedOuterJunctions] = useState(false);
         const r = 8;
         const borderColor = "#bbb";
 
@@ -645,6 +652,14 @@
                 onInput={(e) => setB(Number(e.target.value))}
               />
               <output>{b}px</output>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={curvedOuterJunctions}
+                  onChange={(e) => setCurvedOuterJunctions(e.target.checked)}
+                />{" "}
+                Curved outer junctions
+              </label>
             </div>
             <div class="binder-group">
               <Binder
@@ -652,18 +667,21 @@
                 b={b}
                 r={r}
                 borderColor={borderColor}
+                curvedOuterJunctions={curvedOuterJunctions}
               />
               <Binder
                 initialActive="pending"
                 b={b}
                 r={r}
                 borderColor={borderColor}
+                curvedOuterJunctions={curvedOuterJunctions}
               />
               <Binder
                 initialActive="archived"
                 b={b}
                 r={r}
                 borderColor={borderColor}
+                curvedOuterJunctions={curvedOuterJunctions}
               />
             </div>
           </div>
