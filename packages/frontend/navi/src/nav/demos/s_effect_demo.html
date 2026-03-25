@@ -74,7 +74,6 @@
         user-select: none;
       }
       .svg-tab.active {
-        z-index: 1;
         color: #222;
       }
       .svg-tab svg {
@@ -84,7 +83,6 @@
       }
       .svg-tab span {
         position: relative;
-        z-index: 1;
         pointer-events: none;
       }
     </style>
@@ -479,7 +477,6 @@
             style={{
               position: "absolute",
               inset: 0,
-              zIndex: 1,
               overflow: "visible",
               pointerEvents: "none",
             }}
@@ -514,9 +511,7 @@
                     borderColor: "transparent",
                     background: "transparent",
                   }
-                : {
-                    zIndex: 0,
-                  }),
+                : {}),
             }}
             onClick={onClick}
           >
