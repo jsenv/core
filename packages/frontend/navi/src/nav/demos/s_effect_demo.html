@@ -200,10 +200,10 @@
         const innerTabW = tabWidth - 2 * borderWidth;
         const hasRightJunction = tabX + tabWidth < panelWidth;
         const hasLeftJunction = tabX > 0;
-        // Inner junction radius uses the same formula as convex corners:
-        // center is inside the white region, so moving inward decreases the radius.
-        const innerRightJR = hasRightJunction ? innerCornerR : 0;
-        const innerLeftJR = hasLeftJunction ? innerCornerR : 0;
+        // Junction corners are concave: their center of curvature is outside the shape,
+        // so insetting by borderWidth increases the radius (opposite of convex corners).
+        const innerRightJR = hasRightJunction ? cornerRadius + borderWidth : 0;
+        const innerLeftJR = hasLeftJunction ? cornerRadius + borderWidth : 0;
         const d = [];
         d.push(
           `M ${borderWidth + innerCornerR},${tabRowHeight + panelHeight - borderWidth}`,
