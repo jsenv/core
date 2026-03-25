@@ -409,7 +409,7 @@
 
       // The unified binder SVG: covers the full binder area (tab row + panel).
       // Draws both the white background fill and the border ring in one SVG.
-      const BinderSvg = ({ TW, TH, PW, PH, tabTop, b, r, borderColor }) => {
+      const BinderSvg = ({ TW, TH, PW, PH, b, r, borderColor }) => {
         // Background fill: the full combined shape (outer boundary only, closed)
         const bgPath = (() => {
           const arcCCW = (radius, dx, dy) => {
@@ -441,7 +441,7 @@
           <svg
             style={{
               position: "absolute",
-              top: tabTop,
+              top: 0,
               left: 0,
               overflow: "visible",
               pointerEvents: "none",
@@ -516,7 +516,7 @@
             setPanelSize({
               width: el.offsetWidth,
               height: el.offsetHeight,
-              top: el.offsetTop,
+              top: el.offsetTop, // = actual rendered tabstrip height
             });
           };
           const obs = new ResizeObserver(measure);
@@ -531,10 +531,9 @@
             {panelSize && (
               <BinderSvg
                 TW={TAB_W}
-                TH={TAB_H}
+                TH={panelSize.top}
                 PW={panelSize.width}
                 PH={panelSize.height}
-                tabTop={panelSize.top - TAB_H}
                 b={b}
                 r={r}
                 borderColor={borderColor}
