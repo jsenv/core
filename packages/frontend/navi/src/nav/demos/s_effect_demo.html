@@ -207,11 +207,10 @@
           const innerTabW = tabWidth - 2 * borderWidth;
           const hasRightJunction = tabX + tabWidth < panelWidth;
           const hasLeftJunction = tabX > 0;
-          // Concave junction arcs: center is OUTSIDE the shape, so moving inward (toward white)
-          // moves AWAY from the arc center → larger radius. r + b*(√2-1) gives uniform thickness.
-          const innerJunctionR = cornerRadius + borderWidth * (Math.SQRT2 - 1);
-          const innerRightJR = hasRightJunction ? innerJunctionR : 0;
-          const innerLeftJR = hasLeftJunction ? innerJunctionR : 0;
+          // Inner junction radius uses the same formula as convex corners:
+          // center is inside the white region, so moving inward decreases the radius.
+          const innerRightJR = hasRightJunction ? innerCornerR : 0;
+          const innerLeftJR = hasLeftJunction ? innerCornerR : 0;
           const d = [];
           d.push(
             `M ${borderWidth + innerCornerR},${tabRowHeight + panelHeight - borderWidth}`,
