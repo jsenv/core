@@ -343,10 +343,15 @@
         r, // corner radius (convex corners on tab top, panel bottom)
         ir = r, // junction radius (concave S-curve corners where tab meets panel top)
       }) => {
-        // Convex arc (inner-center, CCW in right→up→left→down traversal)
+        // Convex arc (CCW, sweep=0) for tab top corners and panel bottom corners.
         const arcCCW = (radius, dx, dy) => {
           if (radius <= 0) return `l ${dx},${dy}`;
           return `a ${radius},${radius} 0 0 0 ${dx},${dy}`;
+        };
+        // Concave arc (CW, sweep=1) for junction S-curve corners.
+        const arcCW = (radius, dx, dy) => {
+          if (radius <= 0) return `l ${dx},${dy}`;
+          return `a ${radius},${radius} 0 0 1 ${dx},${dy}`;
         };
 
         const pr = r; // panel corner radius
@@ -372,13 +377,13 @@
         d.push(`v -${PH - pr - pr}`); // panel right side up
         d.push(arcCCW(pr, -pr, -pr)); // panel TR corner (convex)
         d.push(`h -${PW - pr - TX - TW - rir}`); // panel top right segment → stop rir before tab right
-        if (rir > 0) d.push(arcCCW(rir, -rir, -rir)); // concave junction: tab BR meets panel top
+        if (rir > 0) d.push(arcCW(rir, -rir, -rir)); // concave junction: tab BR meets panel top
         d.push(`v -${TH - tr - rir}`); // tab right side up
         d.push(arcCCW(tr, -tr, -tr)); // tab TR corner
         d.push(`h -${TW - tr - tr}`); // tab top
         d.push(arcCCW(tr, -tr, tr)); // tab TL corner
         d.push(`v ${TH - tr - lir}`); // tab left down (stop lir above panel top)
-        if (lir > 0) d.push(arcCCW(lir, -lir, lir)); // concave junction: tab BL meets panel top
+        if (lir > 0) d.push(arcCW(lir, -lir, lir)); // concave junction: tab BL meets panel top
         d.push(`h -${TX - lir}`); // panel top left segment → panel left edge
         d.push(`v ${PH - pr}`); // panel left side down
         d.push(arcCCW(pr, pr, pr)); // panel BL corner
@@ -397,13 +402,13 @@
         d.push(`v -${iPH - ipr - ipr}`); // inner panel right side up
         d.push(arcCCW(ipr, -ipr, -ipr)); // inner panel TR corner
         d.push(`h -${PW - 2 * b - iTX - iTW - ipr - irir}`); // inner panel top right segment
-        if (irir > 0) d.push(arcCCW(irir, -irir, -irir)); // inner concave junction: tab BR
+        if (irir > 0) d.push(arcCW(irir, -irir, -irir)); // inner concave junction: tab BR
         d.push(`v -${TH - itr - irir}`); // inner tab right up
         d.push(arcCCW(itr, -itr, -itr)); // inner tab TR
         d.push(`h -${iTW - itr - itr}`); // inner tab top
         d.push(arcCCW(itr, -itr, itr)); // inner tab TL
         d.push(`v ${TH - itr - ilir}`); // inner tab left down
-        if (ilir > 0) d.push(arcCCW(ilir, -ilir, ilir)); // inner concave junction: tab BL
+        if (ilir > 0) d.push(arcCW(ilir, -ilir, ilir)); // inner concave junction: tab BL
         d.push(`h -${iTX - ilir}`); // inner panel top left segment
         d.push(`v ${iPH - ipr}`); // inner panel left side down
         d.push(arcCCW(ipr, ipr, ipr)); // inner panel BL
@@ -421,6 +426,10 @@
           const arcCCW = (radius, dx, dy) => {
             if (radius <= 0) return `l ${dx},${dy}`;
             return `a ${radius},${radius} 0 0 0 ${dx},${dy}`;
+          };
+          const arcCW = (radius, dx, dy) => {
+            if (radius <= 0) return `l ${dx},${dy}`;
+            return `a ${radius},${radius} 0 0 1 ${dx},${dy}`;
           };
           const ipr = Math.max(0, r - b);
           const itr = Math.max(0, r - b);
@@ -440,13 +449,13 @@
           d.push(`v -${iPH - ipr - ipr}`);
           d.push(arcCCW(ipr, -ipr, -ipr)); // inner panel TR
           d.push(`h -${PW - 2 * b - iTX - iTW - ipr - irir}`);
-          if (irir > 0) d.push(arcCCW(irir, -irir, -irir)); // inner concave junction: tab BR
+          if (irir > 0) d.push(arcCW(irir, -irir, -irir)); // inner concave junction: tab BR
           d.push(`v -${TH - itr - irir}`);
           d.push(arcCCW(itr, -itr, -itr)); // inner tab TR
           d.push(`h -${iTW - itr - itr}`);
           d.push(arcCCW(itr, -itr, itr)); // inner tab TL
           d.push(`v ${TH - itr - ilir}`);
-          if (ilir > 0) d.push(arcCCW(ilir, -ilir, ilir)); // inner concave junction: tab BL
+          if (ilir > 0) d.push(arcCW(ilir, -ilir, ilir)); // inner concave junction: tab BL
           d.push(`h -${iTX - ilir}`);
           d.push(`v ${iPH - ipr}`);
           d.push(arcCCW(ipr, ipr, ipr)); // inner panel BL
