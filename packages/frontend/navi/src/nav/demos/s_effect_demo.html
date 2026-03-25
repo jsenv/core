@@ -634,32 +634,54 @@
 
       const Demo = () => {
         const [b, setB] = useState(10);
+        const [r, setR] = useState(8);
         const [curvedOuterJunctions, setCurvedOuterJunctions] = useState(false);
-        const r = 8;
         const borderColor = "#bbb";
 
         return (
           <div>
             <h1>S-curve tab corners — inline SVG</h1>
             <div class="controls">
-              <label for="border-slider">Border width</label>
-              <input
-                id="border-slider"
-                type="range"
-                min="1"
-                max="20"
-                value={b}
-                onInput={(e) => setB(Number(e.target.value))}
-              />
-              <output>{b}px</output>
-              <label>
-                <input
-                  type="checkbox"
-                  checked={curvedOuterJunctions}
-                  onChange={(e) => setCurvedOuterJunctions(e.target.checked)}
-                />{" "}
-                Curved outer junctions
-              </label>
+              <div style="display: flex; align-items: start; justify-content: start; flex-direction: column; gap: 4px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <label for="border-slider">Border width</label>
+                  <input
+                    id="border-slider"
+                    type="range"
+                    min="1"
+                    max="20"
+                    value={b}
+                    onInput={(e) => setB(Number(e.target.value))}
+                  />
+                  <output>{b}px</output>
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <label for="radius-slider">Border radius</label>
+                  <input
+                    id="radius-slider"
+                    type="range"
+                    min="0"
+                    max="30"
+                    value={r}
+                    onInput={(e) => setR(Number(e.target.value))}
+                  />
+                  <output>{r}px</output>
+                </div>
+
+                <div style="display: flex; align-items: center; justify-content:start;  gap: 8px;">
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={curvedOuterJunctions}
+                      onChange={(e) =>
+                        setCurvedOuterJunctions(e.target.checked)
+                      }
+                    />{" "}
+                    Curved outer junctions
+                  </label>
+                </div>
+              </div>
             </div>
             <div class="binder-group">
               <Binder
