@@ -294,6 +294,7 @@
               inset: 0,
               overflow: "visible",
               pointerEvents: "none",
+              zIndex: 1,
             }}
             width={panelWidth}
             height={tabRowHeight + panelHeight}
@@ -318,12 +319,16 @@
               background: "#f0f0f0",
               borderBottom: "none",
               marginBottom: `${b}px`,
+
               ...(active
                 ? {
                     borderColor: "transparent",
                     background: "transparent",
+                    zIndex: 2,
                   }
-                : {}),
+                : {
+                    zIndex: 0,
+                  }),
             }}
             onClick={onClick}
           >
