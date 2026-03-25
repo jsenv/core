@@ -195,12 +195,28 @@
         const iTlr = clampR(oTlr - b, imaxR);
 
         /*
-          Convex arc helper.
-          sweep=0 produces the "inner-center" quarter-circle arc that matches CSS
-          border-radius, regardless of whether we are tracing the path clockwise or
-          counter-clockwise.
+          SVG arc flags: large-arc-flag=0, sweep-flag.
+          sweep=1 draws CW (clockwise in screen space, y-down).
+          sweep=0 draws CCW.
+
+          A convex CSS-style corner arc always uses the inner corner point as center.
+          The required sweep depends on the winding direction of the sub-path being
+          traced:
+            - CW sub-path  → sweep=1
+            - CCW sub-path → sweep=0
+
+          Full border outer sub-path: CW  → sweep=1 for all corners.
+          Full border inner sub-path: CW  → sweep=1 for all corners.
+          Skip-bottom outer U-shape: goes up-left, TL (turn right), right, TR (turn
+            down), down — this is CCW in screen space → sweep=0 for outer arcs.
+          Skip-bottom inner U-shape: goes up-right, TR (turn left), left, TL (turn
+            down), down — this is CW in screen space → sweep=1 for inner arcs.
         */
-        const arc = (r, dx, dy) => {
+        const arcCW = (r, dx, dy) => {
+          if (r <= 0) return `l ${dx},${dy}`;
+          return `a ${r},${r} 0 0 1 ${dx},${dy}`;
+        };
+        const arcCCW = (r, dx, dy) => {
           if (r <= 0) return `l ${dx},${dy}`;
           return `a ${r},${r} 0 0 0 ${dx},${dy}`;
         };
@@ -209,52 +225,47 @@
 
         if (!skipBottom && !skipRight && !skipTop && !skipLeft) {
           // ── Full border ring: two closed sub-paths + fill-rule="evenodd" ─────
-          // Outer sub-path (traces outer boundary, clockwise in screen coords)
+          // Both sub-paths trace CW → sweep=1 for all arcs.
+          // Outer sub-path
           d.push(`M ${x + oBlr},${y + h}`);
           d.push(`h ${w - oBlr - oBrr}`);
-          d.push(arc(oBrr, oBrr, -oBrr));
+          d.push(arcCW(oBrr, oBrr, -oBrr));
           d.push(`v -${h - oBrr - oTrr}`);
-          d.push(arc(oTrr, -oTrr, -oTrr));
+          d.push(arcCW(oTrr, -oTrr, -oTrr));
           d.push(`h -${w - oTrr - oTlr}`);
-          d.push(arc(oTlr, -oTlr, oTlr));
+          d.push(arcCW(oTlr, -oTlr, oTlr));
           d.push(`v ${h - oTlr - oBlr}`);
-          d.push(arc(oBlr, oBlr, oBlr));
+          d.push(arcCW(oBlr, oBlr, oBlr));
           d.push("Z");
-          // Inner sub-path (same winding; evenodd fills the ring between them)
+          // Inner sub-path (same CW winding; evenodd fills the ring between them)
           d.push(`M ${x + b + iBlr},${y + h - b}`);
           d.push(`h ${iw - iBlr - iBrr}`);
-          d.push(arc(iBrr, iBrr, -iBrr));
+          d.push(arcCW(iBrr, iBrr, -iBrr));
           d.push(`v -${ih - iBrr - iTrr}`);
-          d.push(arc(iTrr, -iTrr, -iTrr));
+          d.push(arcCW(iTrr, -iTrr, -iTrr));
           d.push(`h -${iw - iTrr - iTlr}`);
-          d.push(arc(iTlr, -iTlr, iTlr));
+          d.push(arcCW(iTlr, -iTlr, iTlr));
           d.push(`v ${ih - iTlr - iBlr}`);
-          d.push(arc(iBlr, iBlr, iBlr));
+          d.push(arcCW(iBlr, iBlr, iBlr));
           d.push("Z");
         } else if (skipBottom && !skipRight && !skipTop && !skipLeft) {
           // ── Bottom side skipped: single connected open ring ───────────────────
           //
-          // We start at the open gap (outer BR), cut inward to the inner edge,
-          // trace the inner U-shape back, cut outward to the outer edge, trace the
-          // outer U-shape forward, then Z closes back to the gap start.
-          //
-          //  outer BR → (cap) → inner BR → up inner right → inner TR corner
-          //  → left inner top → inner TL corner → down inner left → inner BL
-          //  → (cap) → outer BL → up outer left → outer TL corner
-          //  → right outer top → outer TR corner → down outer right → Z
+          // Inner U-shape goes CW (up right, TR, left top, TL, down left) → arcCW.
+          // Outer U-shape goes CCW (up left, TL, right top, TR, down right) → arcCCW.
 
           d.push(`M ${x + w},${y + h}`); // outer BR (no corner arc, bottom skipped)
           d.push(`l -${b},0`); // cap inward → inner BR
           d.push(`v -${h - b - iTrr}`); // up inner right side
-          d.push(arc(iTrr, -iTrr, -iTrr)); // inner TR corner
+          d.push(arcCW(iTrr, -iTrr, -iTrr)); // inner TR corner (CW)
           d.push(`h -${iw - iTrr - iTlr}`); // left inner top
-          d.push(arc(iTlr, -iTlr, iTlr)); // inner TL corner
+          d.push(arcCW(iTlr, -iTlr, iTlr)); // inner TL corner (CW)
           d.push(`v ${h - b - iTlr}`); // down inner left side → inner BL
           d.push(`l -${b},0`); // cap outward → outer BL
           d.push(`v -${h - oTlr}`); // up outer left side
-          d.push(arc(oTlr, oTlr, -oTlr)); // outer TL corner
+          d.push(arcCCW(oTlr, oTlr, -oTlr)); // outer TL corner (CCW)
           d.push(`h ${w - oTlr - oTrr}`); // right outer top
-          d.push(arc(oTrr, oTrr, oTrr)); // outer TR corner
+          d.push(arcCCW(oTrr, oTrr, oTrr)); // outer TR corner (CCW)
           d.push(`v ${h - oTrr}`); // down outer right side → outer BR
           d.push("Z"); // closes back to outer BR
         }
