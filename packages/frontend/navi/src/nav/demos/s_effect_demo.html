@@ -548,11 +548,19 @@
                   onClick={() => setActive(tab.key)}
                   r={r}
                   b={b}
-                  borderColor={borderColor}
                 />
               ))}
             </div>
-            <div ref={panelRef} class="panel">
+            <div
+              ref={panelRef}
+              class="panel"
+              style={{
+                borderWidth: `${b}px`,
+                borderStyle: "solid",
+                borderColor: "transparent",
+                borderTop: "none",
+              }}
+            >
               {TABS.find((t) => t.key === active).content}
             </div>
           </div>
