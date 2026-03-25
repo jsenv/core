@@ -20,22 +20,22 @@
       }
       .controls {
         display: flex;
+        margin-bottom: 32px;
         align-items: center;
         gap: 12px;
-        margin-bottom: 32px;
         font-size: 0.9rem;
       }
       .controls label {
-        font-weight: 600;
         color: #555;
+        font-weight: 600;
       }
       .controls input[type="range"] {
         width: 160px;
       }
       .controls output {
         min-width: 32px;
-        font-variant-numeric: tabular-nums;
         color: #333;
+        font-variant-numeric: tabular-nums;
       }
 
       /* ── tab strip ───────────────────────────────────── */
@@ -66,24 +66,18 @@
         padding: 8px 24px 10px;
         align-items: center;
         justify-content: center;
+        color: #888;
         font-weight: 600;
         font-size: 0.9rem;
         cursor: pointer;
-        color: #888;
         user-select: none;
       }
       .svg-tab.active {
         z-index: 1;
         color: #222;
       }
-      .svg-tab:not(.active) {
-        margin-bottom: 4px;
-      }
       .svg-tab svg {
         position: absolute;
-        inset: 0;
-        width: 100%;
-        height: 100%;
         overflow: visible;
       }
       .svg-tab span {
@@ -128,7 +122,11 @@
         `M 0,${r} Q 0,0 ${r},0 L ${W - r},0 Q ${W},0 ${W},${r} L ${W},${H} L 0,${H} Z`;
 
       const ActiveTabSvg = ({ r, b, borderColor }) => (
-        <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none">
+        <svg
+          viewBox={`0 0 ${W} ${H}`}
+          preserveAspectRatio="none"
+          style={{ width: "100%", height: "100%" }}
+        >
           <path d={activeTabPath(r)} fill="white" stroke="none" />
           <path
             d={activeTabStrokePath(r)}
@@ -141,7 +139,11 @@
       );
 
       const InactiveTabSvg = ({ r, b, borderColor }) => (
-        <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none">
+        <svg
+          viewBox={`0 0 ${W} ${H}`}
+          preserveAspectRatio="none"
+          style={{ width: "100%", height: "100%" }}
+        >
           <path
             d={inactiveTabPath(r)}
             fill="#f0f0f0"
@@ -153,27 +155,58 @@
       );
 
       const SvgTab = ({ label, active, onClick, r, b, borderColor }) => {
-        // The active tab needs margin-bottom = -(b/2) to overlap the panel border
-        const style = active ? { marginBottom: `${-b / 2}px` } : {};
+        // Invisible CSS border reserves space matching the SVG stroke width.
+        // This ensures the tab content area aligns with the panel content area.
+        // The SVG is expanded via negative inset to cover the border area.
+        const halfB = b / 2;
+        const style = active
+          ? {
+              border: `${halfB}px solid transparent`,
+              borderBottom: "none",
+              marginBottom: `${-halfB}px`,
+            }
+          : {
+              border: `${halfB}px solid transparent`,
+            };
+        const svgStyle = {
+          inset: `${-halfB}px`,
+          width: `calc(100% + ${b}px)`,
+          height: `calc(100% + ${b}px)`,
+        };
         return (
           <div
             class={`svg-tab${active ? " active" : ""}`}
             style={style}
             onClick={onClick}
           >
-            {active
-              ? <ActiveTabSvg r={r} b={b} borderColor={borderColor} />
-              : <InactiveTabSvg r={r} b={b} borderColor={borderColor} />
-            }
+            <div style={{ position: "absolute", ...svgStyle }}>
+              {active ? (
+                <ActiveTabSvg r={r} b={b} borderColor={borderColor} />
+              ) : (
+                <InactiveTabSvg r={r} b={b} borderColor={borderColor} />
+              )}
+            </div>
             <span>{label}</span>
           </div>
         );
       };
 
       const TABS = [
-        { key: "approved", label: "Approved", content: "These 3 items have been reviewed and approved." },
-        { key: "pending",  label: "Pending",  content: "These 2 items are awaiting review." },
-        { key: "archived", label: "Archived", content: "No archived items yet." },
+        {
+          key: "approved",
+          label: "Approved",
+          content: "These 3 items have been reviewed and approved.",
+        },
+        {
+          key: "pending",
+          label: "Pending",
+          content: "These 2 items are awaiting review.",
+        },
+        {
+          key: "archived",
+          label: "Archived",
+          content: "No archived items yet.",
+        },
       ];
 
       const Binder = ({ initialActive, b, r, borderColor }) => {
@@ -224,9 +257,24 @@
               <output>{b}px</output>
             </div>
             <div class="binder-group">
-              <Binder initialActive="approved" b={b} r={r} borderColor={borderColor} />
-              <Binder initialActive="pending"  b={b} r={r} borderColor={borderColor} />
-              <Binder initialActive="archived" b={b} r={r} borderColor={borderColor} />
+              <Binder
+                initialActive="approved"
+                b={b}
+                r={r}
+                borderColor={borderColor}
+              />
+              <Binder
+                initialActive="pending"
+                b={b}
+                r={r}
+                borderColor={borderColor}
+              />
+              <Binder
+                initialActive="archived"
+                b={b}
+                r={r}
+                borderColor={borderColor}
+              />
             </div>
           </div>
         );
