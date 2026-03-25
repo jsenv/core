@@ -161,7 +161,9 @@
         d.push(`v -${panelHeight - cornerRadius - cornerRadius}`); // panel right side up
         d.push(arcConvex(cornerRadius, -cornerRadius, -cornerRadius)); // panel TR corner
         d.push(`h -${panelWidth - cornerRadius - tabX - tabWidth - rightJR}`); // panel top-right → stop before tab right
-        if (rightJR > 0) d.push(arcConcave(rightJR, -rightJR, -rightJR)); // right junction corner
+        if (rightJR > 0) {
+          d.push(arcConcave(rightJR, -rightJR, -rightJR)); // right junction corner
+        }
         d.push(`v -${tabRowHeight - cornerRadius - rightJR}`); // tab right side up
         d.push(arcConvex(cornerRadius, -cornerRadius, -cornerRadius)); // tab TR corner
         d.push(`h -${tabWidth - cornerRadius - cornerRadius}`); // tab top
@@ -256,7 +258,7 @@
             height={tabRowHeight + panelHeight}
           >
             <path d={outerPath} fill={borderColor} />
-            {<path d={bgPath} fill="rgba(0, 0, 0, 0.5)" />}
+            <path d={bgPath} fill="rgba(0, 0, 0, 0.5)" />
           </svg>
         );
       };
