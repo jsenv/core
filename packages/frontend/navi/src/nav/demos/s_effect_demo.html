@@ -359,50 +359,48 @@
         //   return `a ${radius},${radius} 0 0 1 ${dx},${dy}`;
         // };
 
-        const pr = r; // panel bottom corner radius
+        const pr = r; // panel corner radius
         const tr = r; // tab top corner radius
+        const ipr = Math.max(0, pr - b);
+        const itr = Math.max(0, tr - b);
 
-        // ── Outer boundary (clockwise) ─────────────────────────────────────────
-        // Start: panel BL, just right of corner arc
+        // ── Outer boundary (clockwise from panel BL) ───────────────────────────
         const d = [];
         d.push(`M ${pr},${TH + PH}`);
         d.push(`h ${PW - pr - pr}`); // panel bottom
         d.push(arcCCW(pr, pr, -pr)); // panel BR corner
-        d.push(`v -${PH - pr}`); // panel right side up to panel TR
-        d.push(`h -${PW - TW}`); // panel top: right → tab right edge
-        // Inverted (concave) notch at active tab's bottom-right
-        d.push(`v -${TH - r}`); // tab right side up (stop before TR arc)
-        d.push(arcCCW(tr, -tr, -tr)); // tab TR corner (convex)
+        d.push(`v -${PH - pr - pr}`); // panel right side up
+        d.push(arcCCW(pr, -pr, -pr)); // panel TR corner (convex)
+        d.push(`h -${PW - pr - TW}`); // panel top → tab right edge
+        d.push(`v -${TH - tr}`); // tab right side up
+        d.push(arcCCW(tr, -tr, -tr)); // tab TR corner
         d.push(`h -${TW - tr - tr}`); // tab top
-        d.push(arcCCW(tr, -tr, tr)); // tab TL corner (convex)
-        d.push(`v ${TH}`); // tab left = panel left, down to panel top
+        d.push(arcCCW(tr, -tr, tr)); // tab TL corner
+        d.push(`v ${TH - tr}`); // tab left down (arc moved us to y=tr)
         d.push(`v ${PH - pr}`); // panel left side down
         d.push(arcCCW(pr, pr, pr)); // panel BL corner
         d.push("Z");
 
-        // ── Inner boundary (inset by b, same clockwise winding for evenodd) ───
-        // Panel inner dims
+        // ── Inner boundary (inset by b, same winding → evenodd fills ring) ─────
+        // Inner panel: full 4-side inset
         const iPW = PW - 2 * b;
-        const iPH = PH - b; // only 3 sides (no top border on panel, tab fills it)
+        const iPH = PH - 2 * b;
+        // Inner tab: 3 sides (no bottom — open into panel)
         const iTW = TW - 2 * b;
-        const iTH = TH - b; // only top+left+right (no bottom, open into panel)
-        const ipr = Math.max(0, pr - b);
-        const itr = Math.max(0, tr - b);
 
-        // Inner panel bottom-right corner x
         // Start: inner panel BL
         d.push(`M ${b + ipr},${TH + PH - b}`);
         d.push(`h ${iPW - ipr - ipr}`); // inner panel bottom
         d.push(arcCCW(ipr, ipr, -ipr)); // inner panel BR
-        d.push(`v -${iPH - ipr}`); // inner panel right up to panel inner TR
-        d.push(`h -${iPW - iTW}`); // inner panel top: right → inner tab right
-        // Inner tab right side + top + left (no bottom, open)
-        d.push(`v -${iTH - itr}`); // inner tab right up
+        d.push(`v -${iPH - ipr - ipr}`); // inner panel right side up
+        d.push(arcCCW(ipr, -ipr, -ipr)); // inner panel TR corner
+        d.push(`h -${PW - TW - ipr}`); // inner panel top → inner tab right
+        d.push(`v -${TH - itr}`); // inner tab right up
         d.push(arcCCW(itr, -itr, -itr)); // inner tab TR
         d.push(`h -${iTW - itr - itr}`); // inner tab top
         d.push(arcCCW(itr, -itr, itr)); // inner tab TL
-        d.push(`v ${iTH}`); // inner tab left down (into panel region)
-        d.push(`v ${iPH - ipr}`); // inner panel left down
+        d.push(`v ${TH - itr}`); // inner tab left down → panel inner top
+        d.push(`v ${iPH - ipr}`); // inner panel left side down
         d.push(arcCCW(ipr, ipr, ipr)); // inner panel BL
         d.push("Z");
 
@@ -423,15 +421,16 @@
           const d = [];
           d.push(`M ${pr},${TH + PH}`);
           d.push(`h ${PW - pr - pr}`);
-          d.push(arcCCW(pr, pr, -pr));
-          d.push(`v -${PH - pr}`);
-          d.push(`h -${PW - TW}`);
+          d.push(arcCCW(pr, pr, -pr)); // panel BR
+          d.push(`v -${PH - pr - pr}`);
+          d.push(arcCCW(pr, -pr, -pr)); // panel TR
+          d.push(`h -${PW - pr - TW}`);
           d.push(`v -${TH - tr}`);
-          d.push(arcCCW(tr, -tr, -tr));
+          d.push(arcCCW(tr, -tr, -tr)); // tab TR
           d.push(`h -${TW - tr - tr}`);
-          d.push(arcCCW(tr, -tr, tr));
-          d.push(`v ${TH + PH - pr}`);
-          d.push(arcCCW(pr, pr, pr));
+          d.push(arcCCW(tr, -tr, tr)); // tab TL
+          d.push(`v ${TH - tr + PH - pr}`); // left side (tab + panel combined)
+          d.push(arcCCW(pr, pr, pr)); // panel BL
           d.push("Z");
           return d.join(" ");
         })();
@@ -456,62 +455,24 @@
         );
       };
 
-      // Inactive tabs still use self-contained SVG borders.
-      const InactiveTabSvg = ({ W, H, r, b, borderColor }) => {
-        const fillPath = buildRectFillPath({
-          x: 0,
-          y: 0,
-          w: W,
-          h: H,
-          tlr: r,
-          trr: r,
-        });
-
-        const borderPath = buildFilledBorderPath({
-          x: 0,
-          y: 0,
-          w: W,
-          h: H,
-          b,
-          corners: {
-            topLeft: { radius: r },
-            topRight: { radius: r },
-          },
-        });
-
-        return (
-          <svg
-            style={{
-              position: "absolute",
-              inset: 0,
-              overflow: "visible",
-              width: "100%",
-              height: "100%",
-            }}
-            viewBox={`0 0 ${W} ${H}`}
-            preserveAspectRatio="none"
-          >
-            <path d={fillPath} fill="#f0f0f0" />
-            <path d={borderPath} fill={borderColor} fill-rule="evenodd" />
-          </svg>
-        );
-      };
-
       const TAB_W = 120;
       const TAB_H = 36;
 
+      // Inactive tabs use plain CSS borders for now.
       const SvgTab = ({ label, active, onClick, r, b, borderColor }) => {
+        const inactiveStyle = !active
+          ? {
+              border: `${b}px solid ${borderColor}`,
+              borderRadius: `${r}px ${r}px 0 0`,
+              background: "#f0f0f0",
+            }
+          : {};
         return (
-          <div class={`svg-tab${active ? " active" : ""}`} onClick={onClick}>
-            {!active && (
-              <InactiveTabSvg
-                W={TAB_W}
-                H={TAB_H}
-                r={r}
-                b={b}
-                borderColor={borderColor}
-              />
-            )}
+          <div
+            class={`svg-tab${active ? " active" : ""}`}
+            style={inactiveStyle}
+            onClick={onClick}
+          >
             <span>{label}</span>
           </div>
         );
