@@ -262,6 +262,8 @@
         panelHeight,
         h,
         r,
+        rTR,
+        rTL,
       }) => {
         const hasRightJunction = tabX + tabWidth < panelWidth;
         const hasLeftJunction = tabX > 0;
@@ -274,20 +276,25 @@
         const tabRight = tabX + tabWidth - h;
         const junctionY = panelHeight - h;
 
-        // Vertical room on panel right side (between panel TR and panel BR arcs at junctionY)
+        // Vertical room on panel right/left sides (between panel corner at top and junction at junctionY)
         const rPanelVSpace = junctionY - top - r;
-        const rTotalHSpace = right - tabRight;
-        // rFits: room for panel BR arc (r) + concave junction arc (r)
-        const rFits =
-          hasRightJunction && rPanelVSpace >= r && rTotalHSpace >= 2 * r;
-        // rTight: only room for panel BR arc (r), skip concave — favor panel rounding
-        const rTight =
-          hasRightJunction && rPanelVSpace >= r && rTotalHSpace >= r;
 
-        const lTotalHSpace = tabLeft - left;
-        // lFits: room for concave junction arc (r). Panel BL is always square (symmetric
-        // to how panel TL is square in tabs-above: adjacent to the leftmost inactive tab).
+        // Right junction: panel BR corner uses rTR (gap right of last tab)
+        const rTotalHSpace = right - tabRight - rTR;
+        // rFits: room for panel BR arc (rTR) + concave junction arc (r)
+        const rFits =
+          hasRightJunction && rPanelVSpace >= r && rTotalHSpace >= r;
+        // rTight: only room for panel BR arc (rTR), skip concave — favor panel rounding
+        const rTight =
+          hasRightJunction && rPanelVSpace >= r && rTotalHSpace >= 0;
+
+        // Left junction: panel BL corner uses rTL (gap left of first tab)
+        const lTotalHSpace = tabLeft - left - rTL;
+        // lFits: room for concave junction arc (r) + panel BL arc (rTL)
         const lFits = hasLeftJunction && rPanelVSpace >= r && lTotalHSpace >= r;
+        // lTight: only room for panel BL arc (rTL), skip concave — favor panel rounding
+        const lTight =
+          hasLeftJunction && rPanelVSpace >= r && lTotalHSpace >= 0;
 
         const d = [];
 
@@ -302,25 +309,25 @@
           d.push(arcConvex(r, -r, r)); // tab BR = panel BR: down→left
         } else if (rFits) {
           d.push(arcConvex(r, r, r)); // panel TR: right→down
-          d.push(`v ${rPanelVSpace - r}`); // panel right ↓ to (right, junctionY-r)
-          d.push(arcConvex(r, -r, r)); // panel BR: down→left
-          d.push(`h -${rTotalHSpace - 2 * r}`); // panel bottom ← to (tabRight+r, junctionY)
+          d.push(`v ${rPanelVSpace - rTR}`); // panel right ↓ to (right, junctionY-rTR)
+          d.push(arcConvex(rTR, -rTR, rTR)); // panel BR: down→left
+          d.push(`h -${rTotalHSpace - r}`); // panel bottom ← to (tabRight+r, junctionY)
           d.push(arcConcave(r, -r, r)); // junction concave: left→down
           d.push(`v ${bottom - junctionY - 2 * r}`); // tab right ↓ to (tabRight, bottom-r)
           d.push(arcConvex(r, -r, r)); // tab BR: down→left
         } else if (rTight) {
-          // Panel BR rounded, but no concave junction arc — square tab corner
+          // Panel BR rounded, no concave — square tab corner
           d.push(arcConvex(r, r, r)); // panel TR: right→down
-          d.push(`v ${rPanelVSpace - r}`); // panel right ↓ to (right, junctionY-r)
-          d.push(arcConvex(r, -r, r)); // panel BR: down→left
-          d.push(`h -${rTotalHSpace - r}`); // panel bottom ← to (tabRight, junctionY)
+          d.push(`v ${rPanelVSpace - rTR}`); // panel right ↓ to (right, junctionY-rTR)
+          d.push(arcConvex(rTR, -rTR, rTR)); // panel BR: down→left
+          d.push(`h -${rTotalHSpace}`); // panel bottom ← to (tabRight, junctionY)
           d.push(`v ${bottom - junctionY - r}`); // tab right ↓ to (tabRight, bottom-r)
           d.push(arcConvex(r, -r, r)); // tab BR: down→left
         } else {
           // Very tight: all square corners
           d.push(arcConvex(r, r, r)); // panel TR: right→down
           d.push(`v ${rPanelVSpace}`); // panel right ↓ to junctionY
-          d.push(`h -${rTotalHSpace}`); // panel bottom ← to tabRight
+          d.push(`h -${right - tabRight}`); // panel bottom ← to tabRight
           d.push(`v ${bottom - junctionY - r}`); // tab right ↓ to (tabRight, bottom-r)
           d.push(arcConvex(r, -r, r)); // tab BR: down→left
         }
@@ -328,8 +335,7 @@
         // ── Tab bottom ← ──────────────────────────────────────────────────────────
         d.push(`h -${tabRight - r - (tabLeft + r)}`); // tab bottom ←
 
-        // ── Left side: tab left ↑ then (junction or direct) panel left ↑ → panel TL ──
-        // Panel BL corner is always square — symmetric to how panel TL is square in tabs-above.
+        // ── Left side: tab BL → tab left ↑ → (junction or direct) → panel left ↑ → panel TL ──
         if (!hasLeftJunction) {
           d.push(arcConvex(r, -r, -r)); // tab BL = panel BL: left→up
           d.push(`v -${bottom - top - 2 * r}`); // full left side ↑
@@ -338,14 +344,23 @@
           d.push(arcConvex(r, -r, -r)); // tab BL: left→up
           d.push(`v -${bottom - junctionY - 2 * r}`); // tab left ↑ to (tabLeft, junctionY+r)
           d.push(arcConcave(r, -r, -r)); // junction concave: up→left
-          d.push(`h -${lTotalHSpace - r}`); // panel bottom ← to (left, junctionY) — square corner
-          d.push(`v -${rPanelVSpace}`); // panel left ↑ to (left, top+r)
+          d.push(`h -${lTotalHSpace - r}`); // panel bottom ← to (left+rTL, junctionY)
+          d.push(arcConvex(rTL, -rTL, -rTL)); // panel BL: left→up
+          d.push(`v -${rPanelVSpace - rTL}`); // panel left ↑ to (left, top+r)
+          d.push(arcConvex(r, r, -r)); // panel TL: up→right → M
+        } else if (lTight) {
+          // Panel BL rounded, no concave — square tab corner
+          d.push(arcConvex(r, -r, -r)); // tab BL: left→up
+          d.push(`v -${bottom - junctionY - r}`); // tab left ↑ to (tabLeft, junctionY)
+          d.push(`h -${lTotalHSpace}`); // panel bottom ← to (left+rTL, junctionY)
+          d.push(arcConvex(rTL, -rTL, -rTL)); // panel BL: left→up
+          d.push(`v -${rPanelVSpace - rTL}`); // panel left ↑ to (left, top+r)
           d.push(arcConvex(r, r, -r)); // panel TL: up→right → M
         } else {
-          // Tight: square corners throughout
+          // Very tight: all square corners
           d.push(arcConvex(r, -r, -r)); // tab BL: left→up
           d.push(`v -${bottom - junctionY - r}`); // tab left ↑ to junctionY
-          d.push(`h -${lTotalHSpace}`); // panel bottom ← to left — square corner
+          d.push(`h -${tabLeft - left}`); // panel bottom ← to left
           d.push(`v -${rPanelVSpace}`); // panel left ↑ to (left, top+r)
           d.push(arcConvex(r, r, -r)); // panel TL: up→right → M
         }
@@ -384,6 +399,8 @@
             panelHeight,
             h,
             r,
+            rTR,
+            rTL,
           });
         }
         return buildBinderCenterlinePathAbove({
