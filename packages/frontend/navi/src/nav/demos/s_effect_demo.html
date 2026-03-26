@@ -443,6 +443,7 @@
         tabRef,
         lastTabRef,
         tabsBelow,
+        stretch,
       }) => {
         return (
           <div
@@ -455,6 +456,7 @@
               borderWidth: `${b}px`,
               borderStyle: "solid",
               borderColor: "violet",
+              flexGrow: stretch ? 1 : 0,
               borderRadius: tabsBelow
                 ? `0 0 ${r}px ${r}px`
                 : `${r}px ${r}px 0 0`,
@@ -506,6 +508,7 @@
         wideLabels,
         tallContent,
         tabsBelow,
+        tabAlign = "start",
       }) => {
         const [active, setActive] = useState(initialActive);
         const panelRef = useRef(null);
@@ -550,8 +553,20 @@
 
         // (tab changes handled above by re-running the effect)
 
+        const justifyContent =
+          tabAlign === "stretch"
+            ? "flex-start"
+            : tabAlign === "end"
+              ? "flex-end"
+              : tabAlign === "center"
+                ? "center"
+                : "flex-start";
+
         const tabstrip = (
-          <div class={`tabstrip${tabsBelow ? " tabs-below" : ""}`}>
+          <div
+            class={`tabstrip${tabsBelow ? " tabs-below" : ""}`}
+            style={{ justifyContent }}
+          >
             {TABS.map((tab) => (
               <SvgTab
                 key={tab.key}
@@ -567,6 +582,7 @@
                   tab.key === TABS[TABS.length - 1].key ? lastTabRef : null
                 }
                 tabsBelow={tabsBelow}
+                stretch={tabAlign === "stretch"}
               />
             ))}
           </div>
@@ -642,6 +658,7 @@
           fullStrokeWidth: get("fullStrokeWidth", "false") === "true",
           wideLabels: get("wideLabels", "false") === "true",
           tallContent: get("tallContent", "false") === "true",
+          tabAlign: get("tabAlign", "start"),
         };
       };
 
@@ -663,6 +680,7 @@
         );
         const [wideLabels, setWideLabels] = useState(init.wideLabels);
         const [tallContent, setTallContent] = useState(init.tallContent);
+        const [tabAlign, setTabAlign] = useState(init.tabAlign);
         const borderColor = "#bbb";
 
         const update = (key, value, setter) => {
@@ -673,6 +691,7 @@
             fullStrokeWidth,
             wideLabels,
             tallContent,
+            tabAlign,
             [key]: value,
           });
         };
@@ -736,6 +755,25 @@
                 </div>
 
                 <div style="display: flex; align-items: center; gap: 8px;">
+                  <label>Tab alignment</label>
+                  {["start", "center", "end", "stretch"].map((val) => (
+                    <label
+                      key={val}
+                      style="display:flex;align-items:center;gap:4px;"
+                    >
+                      <input
+                        type="radio"
+                        name="tabAlign"
+                        value={val}
+                        checked={tabAlign === val}
+                        onChange={() => update("tabAlign", val, setTabAlign)}
+                      />
+                      {val}
+                    </label>
+                  ))}
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 8px;">
                   <label for="radius-slider">Border radius</label>
                   <input
                     id="radius-slider"
@@ -758,6 +796,7 @@
                 fullStrokeWidth={fullStrokeWidth}
                 wideLabels={wideLabels}
                 tallContent={tallContent}
+                tabAlign={tabAlign}
               />
               <Binder
                 initialActive="pending"
@@ -767,6 +806,7 @@
                 fullStrokeWidth={fullStrokeWidth}
                 wideLabels={wideLabels}
                 tallContent={tallContent}
+                tabAlign={tabAlign}
               />
               <Binder
                 initialActive="archived"
@@ -776,6 +816,7 @@
                 fullStrokeWidth={fullStrokeWidth}
                 wideLabels={wideLabels}
                 tallContent={tallContent}
+                tabAlign={tabAlign}
               />
             </div>
             <h2
@@ -796,6 +837,7 @@
                 fullStrokeWidth={fullStrokeWidth}
                 wideLabels={wideLabels}
                 tallContent={tallContent}
+                tabAlign={tabAlign}
                 tabsBelow
               />
               <Binder
@@ -806,6 +848,7 @@
                 fullStrokeWidth={fullStrokeWidth}
                 wideLabels={wideLabels}
                 tallContent={tallContent}
+                tabAlign={tabAlign}
                 tabsBelow
               />
               <Binder
@@ -816,6 +859,7 @@
                 fullStrokeWidth={fullStrokeWidth}
                 wideLabels={wideLabels}
                 tallContent={tallContent}
+                tabAlign={tabAlign}
                 tabsBelow
               />
             </div>
