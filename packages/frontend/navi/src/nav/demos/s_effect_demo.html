@@ -517,6 +517,17 @@
         const wrapperRef = useRef(null);
         const [panelSize, setPanelSize] = useState(null);
 
+        // (tab changes handled above by re-running the effect)
+
+        const justifyContent =
+          tabAlign === "stretch"
+            ? "flex-start"
+            : tabAlign === "end"
+              ? "flex-end"
+              : tabAlign === "center"
+                ? "center"
+                : "flex-start";
+
         useLayoutEffect(() => {
           const panelEl = panelRef.current;
           const tabEl = activeTabRef.current;
@@ -549,18 +560,7 @@
           if (tabEl) obs.observe(tabEl);
           measure();
           return () => obs.disconnect();
-        }, [active]);
-
-        // (tab changes handled above by re-running the effect)
-
-        const justifyContent =
-          tabAlign === "stretch"
-            ? "flex-start"
-            : tabAlign === "end"
-              ? "flex-end"
-              : tabAlign === "center"
-                ? "center"
-                : "flex-start";
+        }, [active, tabAlign]);
 
         const tabstrip = (
           <div
