@@ -353,6 +353,8 @@
         r,
         borderColor,
         fullStrokeWidth,
+        wideLabels,
+        tallContent,
       }) => {
         const [active, setActive] = useState(initialActive);
         const panelRef = useRef(null);
@@ -413,7 +415,9 @@
               {TABS.map((tab) => (
                 <SvgTab
                   key={tab.key}
-                  label={tab.label}
+                  label={
+                    wideLabels ? `${tab.label} (extra long label)` : tab.label
+                  }
                   active={active === tab.key}
                   onClick={() => setActive(tab.key)}
                   r={r}
@@ -432,17 +436,72 @@
                 borderTop: "none",
               }}
             >
-              {TABS.find((t) => t.key === active).content}
+              {tallContent ? (
+                <div style={{ minHeight: "160px" }}>
+                  {TABS.find((t) => t.key === active).content}
+                </div>
+              ) : (
+                TABS.find((t) => t.key === active).content
+              )}
             </div>
           </div>
         );
       };
 
+      const readParams = () => {
+        const url = new URLSearchParams(window.location.search);
+        const ls = (() => {
+          try {
+            return JSON.parse(localStorage.getItem("demo_params") || "{}");
+          } catch {
+            return {};
+          }
+        })();
+        const get = (key, fallback) => {
+          if (url.has(key)) return url.get(key);
+          if (key in ls) return ls[key];
+          return fallback;
+        };
+        return {
+          b: Number(get("b", 20)),
+          r: Number(get("r", 30)),
+          fullStrokeWidth: get("fullStrokeWidth", "false") === "true",
+          wideLabels: get("wideLabels", "false") === "true",
+          tallContent: get("tallContent", "false") === "true",
+        };
+      };
+
+      const writeParams = (params) => {
+        const url = new URLSearchParams();
+        for (const [k, v] of Object.entries(params)) url.set(k, v);
+        window.history.replaceState(null, "", `?${url}`);
+        try {
+          localStorage.setItem("demo_params", JSON.stringify(params));
+        } catch {}
+      };
+
       const Demo = () => {
-        const [b, setB] = useState(20);
-        const [r, setR] = useState(30);
-        const [fullStrokeWidth, setFullStrokeWidth] = useState(false);
+        const init = readParams();
+        const [b, setB] = useState(init.b);
+        const [r, setR] = useState(init.r);
+        const [fullStrokeWidth, setFullStrokeWidth] = useState(
+          init.fullStrokeWidth,
+        );
+        const [wideLabels, setWideLabels] = useState(init.wideLabels);
+        const [tallContent, setTallContent] = useState(init.tallContent);
         const borderColor = "#bbb";
+
+        const update = (key, value, setter) => {
+          setter(value);
+          writeParams({
+            b,
+            r,
+            fullStrokeWidth,
+            wideLabels,
+            tallContent,
+            [key]: value,
+          });
+        };
 
         return (
           <div>
@@ -457,7 +516,7 @@
                     min="1"
                     max="20"
                     value={b}
-                    onInput={(e) => setB(Number(e.target.value))}
+                    onInput={(e) => update("b", Number(e.target.value), setB)}
                   />
                   <output>{b}px</output>
                 </div>
@@ -467,9 +526,39 @@
                     id="fullwidth-checkbox"
                     type="checkbox"
                     checked={fullStrokeWidth}
-                    onChange={(e) => setFullStrokeWidth(e.target.checked)}
+                    onChange={(e) =>
+                      update(
+                        "fullStrokeWidth",
+                        e.target.checked,
+                        setFullStrokeWidth,
+                      )
+                    }
                   />
                   <label for="fullwidth-checkbox">Full stroke width</label>
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <input
+                    id="widelabels-checkbox"
+                    type="checkbox"
+                    checked={wideLabels}
+                    onChange={(e) =>
+                      update("wideLabels", e.target.checked, setWideLabels)
+                    }
+                  />
+                  <label for="widelabels-checkbox">Wide tab labels</label>
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <input
+                    id="tallcontent-checkbox"
+                    type="checkbox"
+                    checked={tallContent}
+                    onChange={(e) =>
+                      update("tallContent", e.target.checked, setTallContent)
+                    }
+                  />
+                  <label for="tallcontent-checkbox">Tall content</label>
                 </div>
 
                 <div style="display: flex; align-items: center; gap: 8px;">
@@ -480,7 +569,7 @@
                     min="0"
                     max="30"
                     value={r}
-                    onInput={(e) => setR(Number(e.target.value))}
+                    onInput={(e) => update("r", Number(e.target.value), setR)}
                   />
                   <output>{r}px</output>
                 </div>
@@ -493,6 +582,8 @@
                 r={r}
                 borderColor={borderColor}
                 fullStrokeWidth={fullStrokeWidth}
+                wideLabels={wideLabels}
+                tallContent={tallContent}
               />
               <Binder
                 initialActive="pending"
@@ -500,6 +591,8 @@
                 r={r}
                 borderColor={borderColor}
                 fullStrokeWidth={fullStrokeWidth}
+                wideLabels={wideLabels}
+                tallContent={tallContent}
               />
               <Binder
                 initialActive="archived"
@@ -507,6 +600,8 @@
                 r={r}
                 borderColor={borderColor}
                 fullStrokeWidth={fullStrokeWidth}
+                wideLabels={wideLabels}
+                tallContent={tallContent}
               />
             </div>
           </div>
