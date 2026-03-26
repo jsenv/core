@@ -262,6 +262,7 @@
         borderWidth,
         cornerRadius,
         borderColor,
+        fullStrokeWidth,
       }) => {
         const centerlinePath = buildBinderCenterlinePath({
           tabX,
@@ -287,9 +288,9 @@
           >
             <path
               d={centerlinePath}
-              fill="none"
+              fill="white"
               stroke={borderColor}
-              stroke-width="1"
+              stroke-width={fullStrokeWidth ? borderWidth : 1}
             />
           </svg>
         );
@@ -345,7 +346,13 @@
         },
       ];
 
-      const Binder = ({ initialActive, b, r, borderColor }) => {
+      const Binder = ({
+        initialActive,
+        b,
+        r,
+        borderColor,
+        fullStrokeWidth,
+      }) => {
         const [active, setActive] = useState(initialActive);
         const panelRef = useRef(null);
         const activeTabRef = useRef(null);
@@ -398,6 +405,7 @@
                 borderWidth={b}
                 cornerRadius={r}
                 borderColor={borderColor}
+                fullStrokeWidth={fullStrokeWidth}
               />
             )}
             <div class="tabstrip">
@@ -432,6 +440,7 @@
       const Demo = () => {
         const [b, setB] = useState(20);
         const [r, setR] = useState(30);
+        const [fullStrokeWidth, setFullStrokeWidth] = useState(false);
         const borderColor = "#bbb";
 
         return (
@@ -450,6 +459,16 @@
                     onInput={(e) => setB(Number(e.target.value))}
                   />
                   <output>{b}px</output>
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <input
+                    id="fullwidth-checkbox"
+                    type="checkbox"
+                    checked={fullStrokeWidth}
+                    onChange={(e) => setFullStrokeWidth(e.target.checked)}
+                  />
+                  <label for="fullwidth-checkbox">Full stroke width</label>
                 </div>
 
                 <div style="display: flex; align-items: center; gap: 8px;">
@@ -472,18 +491,21 @@
                 b={b}
                 r={r}
                 borderColor={borderColor}
+                fullStrokeWidth={fullStrokeWidth}
               />
               <Binder
                 initialActive="pending"
                 b={b}
                 r={r}
                 borderColor={borderColor}
+                fullStrokeWidth={fullStrokeWidth}
               />
               <Binder
                 initialActive="archived"
                 b={b}
                 r={r}
                 borderColor={borderColor}
+                fullStrokeWidth={fullStrokeWidth}
               />
             </div>
           </div>
