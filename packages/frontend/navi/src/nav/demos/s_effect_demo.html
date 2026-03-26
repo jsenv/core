@@ -64,7 +64,7 @@
       .svg-tab {
         position: relative;
         display: inline-flex;
-        padding: 8px 24px;
+        padding: 20px 24px;
         align-items: center;
         justify-content: center;
         color: #888;
@@ -75,11 +75,9 @@
       }
       .svg-tab.tabs-above {
         margin-bottom: 0;
-        padding-bottom: 40px;
       }
       .svg-tab.tabs-below {
         margin-top: 0;
-        padding-top: 40px;
       }
       .tabstrip.tabs-below {
         align-items: flex-start;
@@ -268,14 +266,13 @@
         // Vertical room on panel right side (between panel TR and panel BR arcs at junctionY)
         const rPanelVSpace = junctionY - top - r;
         const rTotalHSpace = right - tabRight;
-        // rFits needs room for panel BR arc (r) + concave junction arc (r)
+        // rFits: enough horizontal room for the concave junction arc (r)
         const rFits =
-          hasRightJunction && rPanelVSpace >= r && rTotalHSpace >= 2 * r;
+          hasRightJunction && rPanelVSpace >= r && rTotalHSpace >= r;
 
         const lTotalHSpace = tabLeft - left;
-        // lFits needs room for concave junction arc (r) + panel BL arc (r)
-        const lFits =
-          hasLeftJunction && rPanelVSpace >= r && lTotalHSpace >= 2 * r;
+        // lFits: enough horizontal room for the concave junction arc (r)
+        const lFits = hasLeftJunction && rPanelVSpace >= r && lTotalHSpace >= r;
 
         const d = [];
 
@@ -290,19 +287,17 @@
           d.push(arcConvex(r, -r, r)); // tab BR: down→left
         } else if (rFits) {
           d.push(arcConvex(r, r, r)); // panel TR: right→down
-          d.push(`v ${rPanelVSpace - r}`); // panel right ↓ to (right, junctionY-r)
-          d.push(arcConvex(r, -r, r)); // panel BR: down→left
-          d.push(`h -${rTotalHSpace - 2 * r}`); // panel bottom ← to (tabRight+r, junctionY)
+          d.push(`v ${rPanelVSpace}`); // panel right ↓ to (right, junctionY) — square corner, panel side
+          d.push(`h -${rTotalHSpace - r}`); // panel bottom ← to (tabRight+r, junctionY)
           d.push(arcConcave(r, -r, r)); // junction concave: left→down
           d.push(`v ${bottom - junctionY - 2 * r}`); // tab right ↓ to (tabRight, bottom-r)
           d.push(arcConvex(r, -r, r)); // tab BR: down→left
         } else {
-          // Tight: straight panel right ↓ to junctionY, straight left to tabRight, straight tab right ↓
+          // Tight: square corners throughout
           d.push(arcConvex(r, r, r)); // panel TR: right→down
-          d.push(`v ${rPanelVSpace}`); // panel right ↓ to junctionY (square corner)
-          d.push(`h -${rTotalHSpace - rBR}`); // panel bottom ← (leaving room for rBR)
-          d.push(arcConvex(rBR, -rBR, r)); // panel BR (clamped): down→left
-          d.push(`v ${bottom - junctionY - rBR - r}`); // tab right ↓ to (tabRight, bottom-r)
+          d.push(`v ${rPanelVSpace}`); // panel right ↓ to junctionY
+          d.push(`h -${rTotalHSpace}`); // panel bottom ← to tabRight
+          d.push(`v ${bottom - junctionY - r}`); // tab right ↓ to (tabRight, bottom-r)
           d.push(arcConvex(r, -r, r)); // tab BR: down→left
         }
 
@@ -318,15 +313,14 @@
           d.push(arcConvex(r, -r, -r)); // tab BL: left→up
           d.push(`v -${bottom - junctionY - 2 * r}`); // tab left ↑ to (tabLeft, junctionY+r)
           d.push(arcConcave(r, -r, -r)); // junction concave: up→left
-          d.push(`h -${lTotalHSpace - 2 * r}`); // panel bottom ← to (left+r, junctionY)
-          d.push(arcConvex(r, -r, -r)); // panel BL: left→up
-          d.push(`v -${rPanelVSpace - r}`); // panel left ↑ to (left, top+r)
+          d.push(`h -${lTotalHSpace - r}`); // panel bottom ← to (left, junctionY) — square corner, panel side
+          d.push(`v -${rPanelVSpace}`); // panel left ↑ to (left, top+r)
           d.push(arcConvex(r, r, -r)); // panel TL: up→right → M
         } else {
-          // Tight: square corner at junction
+          // Tight: square corners throughout
           d.push(arcConvex(r, -r, -r)); // tab BL: left→up
-          d.push(`v -${bottom - junctionY - r}`); // tab left ↑ to junctionY (square corner)
-          d.push(`h -${lTotalHSpace}`); // panel bottom ← to tabLeft
+          d.push(`v -${bottom - junctionY - r}`); // tab left ↑ to junctionY
+          d.push(`h -${lTotalHSpace}`); // panel bottom ← to left
           d.push(`v -${rPanelVSpace}`); // panel left ↑ to (left, top+r)
           d.push(arcConvex(r, r, -r)); // panel TL: up→right → M
         }
