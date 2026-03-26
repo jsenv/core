@@ -144,12 +144,13 @@
       const arcConcave = arcSweep0;
 
       // Builds the centerline path of the border (inset by borderWidth/2 from the outer edge).
-      // Rendered as a stroked path with strokeWidth=1 so we can see exactly where the border
-      // center runs, without worrying about fill or inner/outer boundary math.
+      // Rendered as a stroked path with strokeWidth=1.
       //
-      // Centerline radii:
-      //   convex corners:  r - borderWidth/2  (center moves inward → smaller arc)
-      //   concave corners: r + borderWidth/2  (center moves outward from corner → larger arc)
+      // Path is clockwise: M(tabLeft+r, top) → tab top → tab TR → [right junction] → panel TR
+      //   → panel right ↓ → panel BR → panel bottom → panel BL → panel left ↑ → [left junction] → Z
+      //
+      // Each junction: arc(tab corner) + straight + arc(concave junction) + straight + arc(panel corner)
+      // If tight (not enough space for junction arc): arc(tab corner) + cubic-bezier → arc(panel corner)
       const buildBinderCenterlinePath = ({
         tabX,
         tabWidth,
@@ -159,52 +160,95 @@
         borderWidth,
         cornerRadius,
       }) => {
-        const h = borderWidth / 2; // half border width = inset amount
-        const convR = Math.max(0, cornerRadius - h); // centerline convex radius
-        const concR = convR; // concave junction uses same visual radius as convex corners
+        const h = borderWidth / 2;
+        const r = Math.max(0, cornerRadius - h);
 
         const hasRightJunction = tabX + tabWidth < panelWidth;
         const hasLeftJunction = tabX > 0;
-        const rightConcR = hasRightJunction ? concR : 0;
-        const leftConcR = hasLeftJunction ? concR : 0;
 
-        // Inset coords
         const left = h;
         const top = h;
         const right = panelWidth - h;
         const bottom = tabRowHeight + panelHeight - h;
         const tabLeft = tabX + h;
         const tabRight = tabX + tabWidth - h;
-        const junctionY = tabRowHeight - h; // y of the junction point (tab bottom / panel top)
+        const junctionY = tabRowHeight - h;
+
+        // vSpace: vertical room for junction arc (between tab corner arc and junctionY)
+        // hSpace: horizontal room for junction arc (between tab edge and panel corner arc)
+        const rVSpace = junctionY - top - r;
+        const rHSpace = right - tabRight - r;
+        const rFits = hasRightJunction && rVSpace >= r && rHSpace >= r;
+        const rSR =
+          hasRightJunction && !rFits
+            ? Math.max(0, Math.min(rVSpace, rHSpace))
+            : 0;
+
+        const lVSpace = junctionY - top - r;
+        const lHSpace = tabLeft - left - r;
+        const lFits = hasLeftJunction && lVSpace >= r && lHSpace >= r;
+        const lSR =
+          hasLeftJunction && !lFits
+            ? Math.max(0, Math.min(lVSpace, lHSpace))
+            : 0;
 
         const d = [];
-        // Start at tab TL, move right along tab top
-        d.push(`M ${tabLeft + convR},${top}`);
-        d.push(`h ${tabRight - tabLeft - 2 * convR}`); // tab top →
-        d.push(arcConvex(convR, convR, convR)); // tab TR: right→down
-        if (rightConcR > 0) {
-          d.push(`v ${junctionY - top - convR - rightConcR}`); // tab right ↓
-          d.push(arcConcave(rightConcR, rightConcR, rightConcR)); // right junction: down→right (concave)
-        } else {
-          d.push(`v ${junctionY - top - convR}`); // tab right ↓ (no junction arc)
-        }
-        d.push(`h ${right - tabRight - convR - rightConcR}`); // panel top-right →
-        d.push(arcConvex(convR, convR, convR)); // panel TR: right→down
-        d.push(`v ${bottom - junctionY - 2 * convR}`); // panel right ↓
-        d.push(arcConvex(convR, -convR, convR)); // panel BR: down→left
-        d.push(`h -${right - left - 2 * convR}`); // panel bottom ←
-        d.push(arcConvex(convR, -convR, -convR)); // panel BL: left→up
-        d.push(`v -${bottom - junctionY - convR}`); // panel left ↑ to junction y
-        if (leftConcR > 0) {
-          d.push(`h ${tabLeft - left - leftConcR}`); // panel top-left →
-          d.push(arcConcave(leftConcR, leftConcR, -leftConcR)); // left junction: right→up (concave)
-        } else {
-          d.push(`h ${tabLeft - left}`); // panel top-left → (no junction arc)
-        }
-        d.push(`v -${junctionY - top - convR - leftConcR}`); // tab left ↑
-        d.push(arcConvex(convR, convR, -convR)); // tab TL: up→right
-        d.push("Z");
 
+        // M: start after tab TL arc
+        d.push(`M ${tabLeft + r},${top}`);
+
+        // Tab top →
+        d.push(`h ${tabRight - r - (tabLeft + r)}`);
+
+        // Right side
+        if (!hasRightJunction) {
+          // Tab TR = panel TR: one arc, full right side
+          d.push(arcConvex(r, r, r));
+          d.push(`v ${bottom - top - 2 * r}`);
+        } else if (rFits) {
+          d.push(arcConvex(r, r, r)); // tab TR: right→down
+          d.push(`v ${rVSpace - r}`); // tab right ↓
+          d.push(arcConcave(r, r, r)); // junction: down→right (concave)
+          d.push(`h ${rHSpace - r}`); // panel top-right →
+          d.push(arcConvex(r, r, r)); // panel TR: right→down
+          d.push(`v ${bottom - junctionY - 2 * r}`); // panel right ↓
+        } else {
+          d.push(arcConvex(r, r, r)); // tab TR: right→down (always a regular arc)
+          // Bezier: (tabRight, top+r) → (tabRight+rSR, junctionY), ctrl=(tabRight, junctionY) twice
+          d.push(
+            `C ${tabRight},${junctionY} ${tabRight},${junctionY} ${tabRight + rSR},${junctionY}`,
+          );
+          d.push(`h ${rHSpace - rSR}`); // panel top-right →
+          d.push(arcConvex(r, r, r)); // panel TR: right→down
+          d.push(`v ${bottom - junctionY - 2 * r}`); // panel right ↓
+        }
+
+        // Panel BR → bottom → BL
+        d.push(arcConvex(r, -r, r));
+        d.push(`h -${right - left - 2 * r}`);
+        d.push(arcConvex(r, -r, -r));
+
+        // Panel left ↑ + left junction back to M
+        if (!hasLeftJunction) {
+          // Panel TL = tab TL: full left side, Z closes to M
+          d.push(`v -${bottom - top - 2 * r}`);
+        } else if (lFits) {
+          d.push(`v -${bottom - junctionY - r}`); // panel left ↑ to (left, junctionY)
+          d.push(`h ${tabLeft - left - r - r}`); // panel top → to (tabLeft-r, junctionY)
+          d.push(arcConcave(r, r, -r)); // junction: right→up (concave)
+          d.push(`v -${lVSpace - r}`); // tab left ↑ to (tabLeft, top+r)
+          // Z closes to M = (tabLeft+r, top) ✓
+        } else {
+          d.push(`v -${bottom - junctionY - r}`); // panel left ↑ to (left, junctionY)
+          d.push(`h ${tabLeft - left - lSR}`); // panel top → to (tabLeft-lSR, junctionY)
+          // Bezier: (tabLeft-lSR, junctionY) → (tabLeft, top+r), ctrl=(tabLeft, junctionY) twice
+          d.push(
+            `C ${tabLeft},${junctionY} ${tabLeft},${junctionY} ${tabLeft},${top + r}`,
+          );
+          d.push(arcConvex(r, r, -r)); // tab TL: up→right → (tabLeft+r, top) = M ✓
+        }
+
+        d.push("Z");
         return d.join(" ");
       };
 
