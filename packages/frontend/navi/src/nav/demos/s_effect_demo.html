@@ -64,7 +64,7 @@
       .svg-tab {
         position: relative;
         display: inline-flex;
-        padding: 8px 24px 40px;
+        padding: 8px 24px;
         align-items: center;
         justify-content: center;
         color: #888;
@@ -72,6 +72,17 @@
         font-size: 0.9rem;
         cursor: pointer;
         user-select: none;
+      }
+      .svg-tab.tabs-above {
+        margin-bottom: 0;
+        padding-bottom: 40px;
+      }
+      .svg-tab.tabs-below {
+        margin-top: 0;
+        padding-top: 40px;
+      }
+      .tabstrip.tabs-below {
+        align-items: flex-start;
       }
       .svg-tab.active {
         color: #222;
@@ -151,6 +162,93 @@
       //
       // Each junction: arc(tab corner) + straight + arc(concave junction) + straight + arc(panel corner)
       // If tight (not enough space for junction arc): arc(tab corner) + cubic-bezier → arc(panel corner)
+      // Tabs-below variant: mirror of tabs-above.
+      // Tabs-below variant: mirror of tabs-above.
+      // SVG origin = top-left of panel. Tab row is below the panel.
+      // junctionY = panelHeight - h (panel bottom inset edge, where tab meets panel).
+      // Path CW: M(tabLeft+r, bottom) → tab bottom → tab BR → [right junction] →
+      //   panel BR → panel right ↑ → panel TR → panel top ← → panel TL → panel left ↓ → [left junction] → tab BL → Z
+      const buildBinderCenterlinePathBelow = ({
+        tabX,
+        tabWidth,
+        tabRowHeight,
+        panelWidth,
+        panelHeight,
+        h,
+        r,
+        rTR: rBR,
+      }) => {
+        const hasRightJunction = tabX + tabWidth < panelWidth;
+        const hasLeftJunction = tabX > 0;
+
+        const left = h;
+        const top = h;
+        const right = panelWidth - h;
+        const bottom = panelHeight + tabRowHeight - h;
+        const tabLeft = tabX + h;
+        const tabRight = tabX + tabWidth - h;
+        const junctionY = panelHeight - h; // panel bottom inset edge
+
+        const rVSpace = bottom - junctionY - r; // vertical room from junctionY down to tab outer arc
+        const rTotalHSpace = right - tabRight;
+        const rFits =
+          hasRightJunction && rVSpace >= r && rTotalHSpace >= r + rBR;
+
+        const lVSpace = bottom - junctionY - r;
+        const lTotalHSpace = tabLeft - left;
+        const lFits = hasLeftJunction && lVSpace >= r && lTotalHSpace >= 2 * r;
+
+        const d = [];
+
+        // M: start after tab BL arc, going right along tab bottom
+        d.push(`M ${tabLeft + r},${bottom}`);
+        d.push(`h ${tabRight - r - (tabLeft + r)}`);
+
+        // ── Right side (right→up) ─────────────────────────────────────────────────
+        if (!hasRightJunction) {
+          d.push(arcConvex(r, r, -r)); // tab BR = panel BR: right→up
+          d.push(`v -${bottom - top - 2 * r}`); // full right side ↑
+        } else if (rFits) {
+          d.push(arcConvex(r, r, -r)); // tab BR: right→up
+          d.push(`v -${rVSpace - r}`); // tab right ↑ to junction start
+          d.push(arcConcave(r, r, -r)); // junction concave: up→right
+          d.push(`h ${rTotalHSpace - r - rBR}`); // panel bottom →
+          d.push(arcConvex(rBR, rBR, -rBR)); // panel BR: right→up
+          d.push(`v -${junctionY - rBR - r}`); // panel right ↑ to (right, top+r)
+        } else {
+          d.push(arcConvex(r, r, -r)); // tab BR: right→up
+          d.push(`v -${rVSpace}`); // up to junctionY
+          d.push(`h ${rTotalHSpace - rBR}`); // panel bottom →
+          d.push(arcConvex(rBR, rBR, -rBR)); // panel BR: right→up (clamped)
+          d.push(`v -${junctionY - rBR - r}`); // panel right ↑ to (right, top+r)
+        }
+
+        // ── Panel TR → top ← → TL ────────────────────────────────────────────────
+        d.push(arcConvex(r, -r, -r)); // panel TR: up→left
+        d.push(`h -${right - left - 2 * r}`); // panel top ←
+        d.push(arcConvex(r, -r, r)); // panel TL: left→down
+
+        // ── Panel left ↓ + left junction back to M ───────────────────────────────
+        if (!hasLeftJunction) {
+          d.push(`v ${bottom - top - 2 * r}`); // panel left ↓
+          d.push(arcConvex(r, r, r)); // panel BL = tab BL: down→right
+        } else if (lFits) {
+          d.push(`v ${junctionY - r}`); // panel left ↓ to (left, junctionY-r) junction start
+          d.push(arcConcave(r, r, r)); // junction concave: down→right
+          d.push(`h ${lTotalHSpace - r}`); // panel bottom → to (tabLeft, junctionY)
+          d.push(`v ${lVSpace - r}`); // tab left ↓ to (tabLeft, bottom-r)
+          d.push(arcConvex(r, r, r)); // tab BL: down→right
+        } else {
+          d.push(`v ${junctionY - r}`); // panel left ↓ to (left, junctionY)
+          d.push(`h ${lTotalHSpace}`); // panel bottom → to (tabLeft, junctionY)
+          d.push(`v ${lVSpace}`); // tab left ↓ to (tabLeft, bottom-r)
+          d.push(arcConvex(r, r, r)); // tab BL: down→right
+        }
+
+        d.push("Z");
+        return d.join(" ");
+      };
+
       const buildBinderCenterlinePath = ({
         tabX,
         tabWidth,
@@ -160,6 +258,7 @@
         borderWidth,
         cornerRadius,
         panelTRCornerR,
+        tabsBelow,
       }) => {
         const h = borderWidth / 2;
         const r = Math.max(0, cornerRadius - h);
@@ -169,6 +268,19 @@
           r,
           panelTRCornerR !== undefined ? Math.max(0, panelTRCornerR) : r,
         );
+
+        if (tabsBelow) {
+          return buildBinderCenterlinePathBelow({
+            tabX,
+            tabWidth,
+            tabRowHeight,
+            panelWidth,
+            panelHeight,
+            h,
+            r,
+            rTR,
+          });
+        }
 
         const hasRightJunction = tabX + tabWidth < panelWidth;
         const hasLeftJunction = tabX > 0;
@@ -273,6 +385,7 @@
         borderColor,
         fullStrokeWidth,
         panelTRCornerR,
+        tabsBelow,
       }) => {
         const centerlinePath = buildBinderCenterlinePath({
           tabX,
@@ -283,6 +396,7 @@
           borderWidth,
           cornerRadius,
           panelTRCornerR,
+          tabsBelow,
         });
 
         return (
@@ -308,22 +422,33 @@
       };
 
       // Inactive tabs use plain CSS borders for now.
-      const SvgTab = ({ label, active, onClick, r, b, tabRef, lastTabRef }) => {
+      const SvgTab = ({
+        label,
+        active,
+        onClick,
+        r,
+        b,
+        tabRef,
+        lastTabRef,
+        tabsBelow,
+      }) => {
         return (
           <div
             ref={(el) => {
               if (tabRef) tabRef.current = el;
               if (lastTabRef) lastTabRef.current = el;
             }}
-            class={`svg-tab${active ? " active" : ""}`}
+            class={`svg-tab ${tabsBelow ? "tabs-below" : "tabs-above"}${active ? " active" : ""}`}
             style={{
               borderWidth: `${b}px`,
               borderStyle: "solid",
               borderColor: "violet",
-              borderRadius: `${r}px ${r}px 0 0`,
+              borderRadius: tabsBelow
+                ? `0 0 ${r}px ${r}px`
+                : `${r}px ${r}px 0 0`,
               background: "#f0f0f0",
-              borderBottom: "none",
-              marginBottom: `${b}px`,
+              [tabsBelow ? "borderTop" : "borderBottom"]: "none",
+              [tabsBelow ? "marginTop" : "marginBottom"]: `${b}px`,
 
               ...(active
                 ? {
@@ -368,6 +493,7 @@
         fullStrokeWidth,
         wideLabels,
         tallContent,
+        tabsBelow,
       }) => {
         const [active, setActive] = useState(initialActive);
         const panelRef = useRef(null);
@@ -395,10 +521,11 @@
             setPanelSize({
               width: wrapperWidth,
               height: panelEl.offsetHeight,
-              top: panelEl.offsetTop,
+              top: tabsBelow ? 0 : panelEl.offsetTop,
+              tabRowHeight: t ? t.offsetHeight : 0,
               tabWidth: t ? t.offsetWidth : 0,
               tabLeft: t ? t.offsetLeft : 0,
-              panelTRCornerR: gapRightOfTabs, // space to the right of last tab = max radius for panel TR
+              panelTRCornerR: gapRightOfTabs,
             });
           };
           const obs = new ResizeObserver(measure);
@@ -411,6 +538,49 @@
 
         // (tab changes handled above by re-running the effect)
 
+        const tabstrip = (
+          <div class={`tabstrip${tabsBelow ? " tabs-below" : ""}`}>
+            {TABS.map((tab) => (
+              <SvgTab
+                key={tab.key}
+                label={
+                  wideLabels ? `${tab.label} (extra long label)` : tab.label
+                }
+                active={active === tab.key}
+                onClick={() => setActive(tab.key)}
+                r={r}
+                b={b}
+                tabRef={active === tab.key ? activeTabRef : null}
+                lastTabRef={
+                  tab.key === TABS[TABS.length - 1].key ? lastTabRef : null
+                }
+                tabsBelow={tabsBelow}
+              />
+            ))}
+          </div>
+        );
+
+        const panel = (
+          <div
+            ref={panelRef}
+            class="panel"
+            style={{
+              borderWidth: `${b}px`,
+              borderStyle: "solid",
+              borderColor: "transparent",
+              [tabsBelow ? "borderBottom" : "borderTop"]: "none",
+            }}
+          >
+            {tallContent ? (
+              <div style={{ minHeight: "160px" }}>
+                {TABS.find((t) => t.key === active).content}
+              </div>
+            ) : (
+              TABS.find((t) => t.key === active).content
+            )}
+          </div>
+        );
+
         return (
           <div
             ref={wrapperRef}
@@ -421,7 +591,9 @@
               <BinderSvg
                 tabX={panelSize.tabLeft}
                 tabWidth={panelSize.tabWidth}
-                tabRowHeight={panelSize.top - b}
+                tabRowHeight={
+                  tabsBelow ? panelSize.tabRowHeight : panelSize.top - b
+                }
                 panelWidth={panelSize.width}
                 panelHeight={panelSize.height + b}
                 borderWidth={b}
@@ -429,44 +601,11 @@
                 borderColor={borderColor}
                 fullStrokeWidth={fullStrokeWidth}
                 panelTRCornerR={panelSize.panelTRCornerR}
+                tabsBelow={tabsBelow}
               />
             )}
-            <div class="tabstrip">
-              {TABS.map((tab) => (
-                <SvgTab
-                  key={tab.key}
-                  label={
-                    wideLabels ? `${tab.label} (extra long label)` : tab.label
-                  }
-                  active={active === tab.key}
-                  onClick={() => setActive(tab.key)}
-                  r={r}
-                  b={b}
-                  tabRef={active === tab.key ? activeTabRef : null}
-                  lastTabRef={
-                    tab.key === TABS[TABS.length - 1].key ? lastTabRef : null
-                  }
-                />
-              ))}
-            </div>
-            <div
-              ref={panelRef}
-              class="panel"
-              style={{
-                borderWidth: `${b}px`,
-                borderStyle: "solid",
-                borderColor: "transparent",
-                borderTop: "none",
-              }}
-            >
-              {tallContent ? (
-                <div style={{ minHeight: "160px" }}>
-                  {TABS.find((t) => t.key === active).content}
-                </div>
-              ) : (
-                TABS.find((t) => t.key === active).content
-              )}
-            </div>
+            {tabsBelow ? panel : tabstrip}
+            {tabsBelow ? tabstrip : panel}
           </div>
         );
       };
@@ -625,6 +764,47 @@
                 fullStrokeWidth={fullStrokeWidth}
                 wideLabels={wideLabels}
                 tallContent={tallContent}
+              />
+            </div>
+            <h2
+              style={{
+                marginTop: "32px",
+                marginBottom: "16px",
+                fontSize: "1.1rem",
+              }}
+            >
+              Tabs below
+            </h2>
+            <div class="binder-group">
+              <Binder
+                initialActive="approved"
+                b={b}
+                r={r}
+                borderColor={borderColor}
+                fullStrokeWidth={fullStrokeWidth}
+                wideLabels={wideLabels}
+                tallContent={tallContent}
+                tabsBelow
+              />
+              <Binder
+                initialActive="pending"
+                b={b}
+                r={r}
+                borderColor={borderColor}
+                fullStrokeWidth={fullStrokeWidth}
+                wideLabels={wideLabels}
+                tallContent={tallContent}
+                tabsBelow
+              />
+              <Binder
+                initialActive="archived"
+                b={b}
+                r={r}
+                borderColor={borderColor}
+                fullStrokeWidth={fullStrokeWidth}
+                wideLabels={wideLabels}
+                tallContent={tallContent}
+                tabsBelow
               />
             </div>
           </div>
