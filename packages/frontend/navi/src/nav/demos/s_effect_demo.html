@@ -216,13 +216,15 @@
         } else {
           d.push(arcConvex(r, r, r)); // tab TR: right→down (always a regular arc)
           if (rSR > 0) {
-            // Straight down first, then S-curve just at the junction using rSR of vertical+horizontal space.
-            // Y2=(tabRight, junctionY-rSR), X2=(tabRight+rSR/2, junctionY-rSR/2), C=(tabRight+rSR, junctionY)
-            d.push(`v ${rVSpace - rSR}`); // straight down to Y2
+            // Straight down to Y2, then cubic bezier S-curve to C.
+            // Y2=(tabRight, junctionY-2*rSR), C=(tabRight+rSR, junctionY)
+            // ctrl1=(tabRight, junctionY-rSR): extends downward tangent at Y2
+            // ctrl2=(tabRight, junctionY):      extends rightward tangent at C (pulling from left)
+            // This creates a true S with inflection near the midpoint.
+            d.push(`v ${rVSpace - 2 * rSR}`); // straight down to Y2
             d.push(
-              `Q ${tabRight},${junctionY} ${tabRight + rSR / 2},${junctionY - rSR / 2}`,
+              `C ${tabRight},${junctionY - rSR} ${tabRight},${junctionY} ${tabRight + rSR},${junctionY}`,
             );
-            d.push(`Q ${tabRight},${junctionY} ${tabRight + rSR},${junctionY}`);
           } else {
             d.push(`v ${rVSpace}`); // straight down to junctionY (no room for junction curve)
           }
@@ -251,12 +253,14 @@
           d.push(`v -${bottom - junctionY - r}`); // panel left ↑ to (left, junctionY)
           if (lSR > 0) {
             d.push(`h ${tabLeft - left - lSR}`); // panel top → to C = (tabLeft-lSR, junctionY)
-            // S-curve just at the junction: C=(tabLeft-lSR, junctionY), X2=(tabLeft-lSR/2, junctionY-lSR/2), Y2=(tabLeft, junctionY-lSR)
+            // Cubic bezier S-curve then straight up to Y2.
+            // C=(tabLeft-lSR, junctionY), Y2=(tabLeft, junctionY-2*lSR)
+            // ctrl1=(tabLeft, junctionY):      extends rightward tangent at C (pulling from right)
+            // ctrl2=(tabLeft, junctionY-lSR):  extends upward tangent at Y2
             d.push(
-              `Q ${tabLeft},${junctionY} ${tabLeft - lSR / 2},${junctionY - lSR / 2}`,
+              `C ${tabLeft},${junctionY} ${tabLeft},${junctionY - lSR} ${tabLeft},${junctionY - 2 * lSR}`,
             );
-            d.push(`Q ${tabLeft},${junctionY} ${tabLeft},${junctionY - lSR}`);
-            d.push(`v -${lVSpace - lSR}`); // straight up from Y2 to (tabLeft, top+r)
+            d.push(`v -${lVSpace - 2 * lSR}`); // straight up from Y2 to (tabLeft, top+r)
           } else {
             d.push(`h ${tabLeft - left}`); // panel top → (no room for junction curve)
             d.push(`v -${lVSpace}`); // straight up to (tabLeft, top+r)
