@@ -174,23 +174,30 @@
         const tabRight = tabX + tabWidth - h;
         const junctionY = tabRowHeight - h;
 
-        // vSpace: vertical room for junction arc (below the tab TR/TL corner arc)
-        // hSpace: horizontal room for junction arc (between tab edge and panel corner arc)
+        // Right junction geometry:
+        //   rTotalHSpace = total horizontal room from tabRight to panel right edge
+        //   rPanelR = panel TR arc radius (clamped if tab is near right edge)
+        //   rHSpace = horizontal room for junction arc after reserving rPanelR
+        //   rVSpace = vertical room for junction arc (below tab TR arc)
+        //   rFits = both arcs fit at full radius r
+        //   rSR = S-curve spread when tight (vertical half = rSR, horizontal = rSR)
         const rVSpace = junctionY - top - r;
-        const rHSpace = right - tabRight - r;
+        const rTotalHSpace = right - tabRight;
+        const rPanelR = Math.min(r, Math.max(0, rTotalHSpace));
+        const rHSpace = rTotalHSpace - rPanelR;
         const rFits = hasRightJunction && rVSpace >= r && rHSpace >= r;
-        // S-curve spread = available space clamped to [0, r]
         const rSR =
           hasRightJunction && !rFits
-            ? Math.max(0, Math.min(rVSpace, rHSpace, r))
+            ? Math.max(0, Math.min(rVSpace / 2, rHSpace, r))
             : 0;
 
+        // Left junction geometry (symmetric, but no "panel TL arc" — just straight segments)
         const lVSpace = junctionY - top - r;
-        const lHSpace = tabLeft - left - r;
+        const lHSpace = tabLeft - left - r; // horizontal room for junction (r reserved for tab TL arc column)
         const lFits = hasLeftJunction && lVSpace >= r && lHSpace >= r;
         const lSR =
           hasLeftJunction && !lFits
-            ? Math.max(0, Math.min(lVSpace, lHSpace, r))
+            ? Math.max(0, Math.min(lVSpace / 2, lHSpace, r))
             : 0;
 
         const d = [];
@@ -201,71 +208,62 @@
         // Tab top →
         d.push(`h ${tabRight - r - (tabLeft + r)}`);
 
-        // Right side
+        // ── Right side ────────────────────────────────────────────────────────────
         if (!hasRightJunction) {
-          // Tab TR = panel TR: one arc, full right side
           d.push(arcConvex(r, r, r));
           d.push(`v ${bottom - top - 2 * r}`);
         } else if (rFits) {
           d.push(arcConvex(r, r, r)); // tab TR: right→down
           d.push(`v ${rVSpace - r}`); // tab right ↓
           d.push(arcConcave(r, r, r)); // junction: down→right (concave)
-          d.push(`h ${rHSpace - r}`); // panel top-right →
-          d.push(arcConvex(r, r, r)); // panel TR: right→down
-          d.push(`v ${bottom - junctionY - 2 * r}`); // panel right ↓
+          d.push(`h ${rHSpace - r}`); // panel top →
+          d.push(arcConvex(rPanelR, rPanelR, rPanelR)); // panel TR: right→down
+          d.push(`v ${bottom - junctionY - 2 * rPanelR}`);
         } else {
-          d.push(arcConvex(r, r, r)); // tab TR: right→down (always a regular arc)
+          d.push(arcConvex(r, r, r)); // tab TR: right→down (always full arc)
           if (rSR > 0) {
-            // Straight down to Y2, then cubic bezier S-curve to C.
-            // Y2=(tabRight, junctionY-2*rSR), C=(tabRight+rSR, junctionY)
-            // ctrl1=(tabRight, junctionY-rSR): extends downward tangent at Y2
-            // ctrl2=(tabRight, junctionY):      extends rightward tangent at C (pulling from left)
-            // This creates a true S with inflection near the midpoint.
-            d.push(`v ${rVSpace - 2 * rSR}`); // straight down to Y2
+            // S-curve: straight down to Y2=(tabRight, junctionY-2*rSR), then cubic bezier to C=(tabRight+rSR, junctionY)
+            d.push(`v ${rVSpace - 2 * rSR}`);
             d.push(
               `C ${tabRight},${junctionY - rSR} ${tabRight},${junctionY} ${tabRight + rSR},${junctionY}`,
             );
           } else {
-            d.push(`v ${rVSpace}`); // straight down to junctionY (no room for junction curve)
+            d.push(`v ${rVSpace}`);
           }
-          d.push(`h ${rHSpace - rSR}`); // panel top-right →
-          d.push(arcConvex(r, r, r)); // panel TR: right→down
-          d.push(`v ${bottom - junctionY - 2 * r}`); // panel right ↓
+          d.push(`h ${rHSpace - rSR}`);
+          d.push(arcConvex(rPanelR, rPanelR, rPanelR)); // panel TR: right→down (clamped)
+          d.push(`v ${bottom - junctionY - 2 * rPanelR}`);
         }
 
-        // Panel BR → bottom → BL
+        // ── Panel BR → bottom → BL ────────────────────────────────────────────────
         d.push(arcConvex(r, -r, r));
         d.push(`h -${right - left - 2 * r}`);
         d.push(arcConvex(r, -r, -r));
 
-        // Panel left ↑ + left junction back to M
+        // ── Panel left ↑ + left junction back to M ───────────────────────────────
         if (!hasLeftJunction) {
-          // tabLeft === left: panel left side goes all the way up, then tab TL arc to M
-          d.push(`v -${bottom - top - 2 * r}`); // panel left ↑ to (left, top+r)
-          d.push(arcConvex(r, r, -r)); // tab TL: up→right → (tabLeft+r, top) = M ✓
+          d.push(`v -${bottom - top - 2 * r}`);
+          d.push(arcConvex(r, r, -r)); // panel TL = tab TL
         } else if (lFits) {
           d.push(`v -${bottom - junctionY - r}`); // panel left ↑ to (left, junctionY)
-          d.push(`h ${tabLeft - left - r - r}`); // panel top → to (tabLeft-r, junctionY)
-          d.push(arcConcave(r, r, -r)); // junction: right→up (concave) → (tabLeft, junctionY-r)
-          d.push(`v -${lVSpace - r}`); // tab left ↑ to (tabLeft, top+r)
-          d.push(arcConvex(r, r, -r)); // tab TL: up→right → (tabLeft+r, top) = M ✓
+          d.push(`h ${lHSpace - r}`); // panel top → to (tabLeft-r, junctionY)
+          d.push(arcConcave(r, r, -r)); // junction: right→up (concave)
+          d.push(`v -${lVSpace - r}`); // tab left ↑
+          d.push(arcConvex(r, r, -r)); // tab TL: up→right
         } else {
           d.push(`v -${bottom - junctionY - r}`); // panel left ↑ to (left, junctionY)
           if (lSR > 0) {
-            d.push(`h ${tabLeft - left - lSR}`); // panel top → to C = (tabLeft-lSR, junctionY)
-            // Cubic bezier S-curve then straight up to Y2.
-            // C=(tabLeft-lSR, junctionY), Y2=(tabLeft, junctionY-2*lSR)
-            // ctrl1=(tabLeft, junctionY):      extends rightward tangent at C (pulling from right)
-            // ctrl2=(tabLeft, junctionY-lSR):  extends upward tangent at Y2
+            // panel top → to C=(tabLeft-lSR, junctionY), then S-curve to Y2=(tabLeft, junctionY-2*lSR), then straight up
+            d.push(`h ${lHSpace - lSR}`);
             d.push(
               `C ${tabLeft},${junctionY} ${tabLeft},${junctionY - lSR} ${tabLeft},${junctionY - 2 * lSR}`,
             );
-            d.push(`v -${lVSpace - 2 * lSR}`); // straight up from Y2 to (tabLeft, top+r)
+            d.push(`v -${lVSpace - 2 * lSR}`);
           } else {
-            d.push(`h ${tabLeft - left}`); // panel top → (no room for junction curve)
-            d.push(`v -${lVSpace}`); // straight up to (tabLeft, top+r)
+            d.push(`h ${lHSpace}`);
+            d.push(`v -${lVSpace}`);
           }
-          d.push(arcConvex(r, r, -r)); // tab TL: up→right → (tabLeft+r, top) = M ✓
+          d.push(arcConvex(r, r, -r)); // tab TL: up→right
         }
 
         d.push("Z");
@@ -452,7 +450,7 @@
 
       const Demo = () => {
         const [b, setB] = useState(20);
-        const [r, setR] = useState(20);
+        const [r, setR] = useState(30);
         const borderColor = "#bbb";
 
         return (
