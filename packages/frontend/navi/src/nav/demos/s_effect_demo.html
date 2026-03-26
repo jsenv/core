@@ -222,11 +222,13 @@
           d.push(arcConvex(rTR, rTR, rTR)); // panel TR: right→down (clamped)
           d.push(`v ${bottom - junctionY - rTR - r}`); // panel right ↓ to (right, bottom-r)
         } else {
-          // Tight: tab TR arc + straight down to junctionY + straight right to panel edge (square corner, no arc)
+          // Tight: tab TR arc + straight down + straight right + panel TR arc clamped to rTR
+          // (rTR=0 when last tab fills to edge → square; rTR>0 → small rounded corner)
           d.push(arcConvex(r, r, r)); // tab TR: right→down
           d.push(`v ${rVSpace}`); // straight down to junctionY
-          d.push(`h ${rTotalHSpace}`); // panel top → to (right, junctionY) — square corner
-          d.push(`v ${bottom - junctionY - r}`); // panel right ↓ to (right, bottom-r)
+          d.push(`h ${rTotalHSpace - rTR}`); // panel top →
+          d.push(arcConvex(rTR, rTR, rTR)); // panel TR: right→down (clamped)
+          d.push(`v ${bottom - junctionY - rTR - r}`); // panel right ↓
         }
 
         // ── Panel BR → bottom → BL ────────────────────────────────────────────────
