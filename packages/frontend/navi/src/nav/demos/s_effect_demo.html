@@ -174,30 +174,28 @@
         const tabRight = tabX + tabWidth - h;
         const junctionY = tabRowHeight - h;
 
-        // Right junction geometry:
-        //   rTotalHSpace = total horizontal room from tabRight to panel right edge
-        //   rPanelR = panel TR arc radius (clamped if tab is near right edge)
-        //   rHSpace = horizontal room for junction arc after reserving rPanelR
-        //   rVSpace = vertical room for junction arc (below tab TR arc)
-        //   rFits = both arcs fit at full radius r
-        //   rSR = S-curve spread when tight (vertical half = rSR, horizontal = rSR)
+        // Junction geometry (right and left are symmetric):
+        //   VSpace = vertical room from after tab TR/TL arc to junctionY
+        //   TotalHSpace = horizontal span of the junction
+        //   Fits = enough room for 3-piece junction: arc(tab) + straight + concave arc + straight + arc(panel)
+        //   SR = S-curve spread when tight: the S spans ±SR around junctionY, both vertically and horizontally
+        //        S-curve replaces all three pieces (tab corner + junction + panel corner) in one cubic bezier:
+        //          from (tabRight, junctionY-SR) going DOWN to (right, junctionY+SR) going DOWN
+        //          control points: C1=(tabRight, junctionY), C2=(right, junctionY) — proper S inflection at mid
         const rVSpace = junctionY - top - r;
         const rTotalHSpace = right - tabRight;
-        const rPanelR = Math.min(r, Math.max(0, rTotalHSpace));
-        const rHSpace = rTotalHSpace - rPanelR;
-        const rFits = hasRightJunction && rVSpace >= r && rHSpace >= r;
+        const rFits = hasRightJunction && rVSpace >= r && rTotalHSpace >= 2 * r;
         const rSR =
           hasRightJunction && !rFits
-            ? Math.max(0, Math.min(rVSpace / 2, rHSpace, r))
+            ? Math.min(r, rVSpace, rTotalHSpace / 2)
             : 0;
 
-        // Left junction geometry (symmetric, but no "panel TL arc" — just straight segments)
         const lVSpace = junctionY - top - r;
-        const lHSpace = tabLeft - left - r; // horizontal room for junction (r reserved for tab TL arc column)
-        const lFits = hasLeftJunction && lVSpace >= r && lHSpace >= r;
+        const lTotalHSpace = tabLeft - left;
+        const lFits = hasLeftJunction && lVSpace >= r && lTotalHSpace >= 2 * r;
         const lSR =
           hasLeftJunction && !lFits
-            ? Math.max(0, Math.min(lVSpace / 2, lHSpace, r))
+            ? Math.min(r, lVSpace, lTotalHSpace / 2)
             : 0;
 
         const d = [];
@@ -210,29 +208,26 @@
 
         // ── Right side ────────────────────────────────────────────────────────────
         if (!hasRightJunction) {
+          // Tab TR = panel TR: one arc, full right side down
           d.push(arcConvex(r, r, r));
           d.push(`v ${bottom - top - 2 * r}`);
         } else if (rFits) {
+          // 3-piece junction: tab TR arc + straight + concave arc + straight + panel TR arc
           d.push(arcConvex(r, r, r)); // tab TR: right→down
-          d.push(`v ${rVSpace - r}`); // tab right ↓
-          d.push(arcConcave(r, r, r)); // junction: down→right (concave)
-          d.push(`h ${rHSpace - r}`); // panel top →
-          d.push(arcConvex(rPanelR, rPanelR, rPanelR)); // panel TR: right→down
-          d.push(`v ${bottom - junctionY - 2 * rPanelR}`);
+          d.push(`v ${rVSpace - r}`); // tab right ↓ to concave arc start
+          d.push(arcConcave(r, r, r)); // junction concave: down→right
+          d.push(`h ${rTotalHSpace - 2 * r}`); // panel top →
+          d.push(arcConvex(r, r, r)); // panel TR: right→down
+          d.push(`v ${bottom - junctionY - 2 * r}`); // panel right ↓
         } else {
-          d.push(arcConvex(r, r, r)); // tab TR: right→down (always full arc)
-          if (rSR > 0) {
-            // S-curve: straight down to Y2=(tabRight, junctionY-2*rSR), then cubic bezier to C=(tabRight+rSR, junctionY)
-            d.push(`v ${rVSpace - 2 * rSR}`);
-            d.push(
-              `C ${tabRight},${junctionY - rSR} ${tabRight},${junctionY} ${tabRight + rSR},${junctionY}`,
-            );
-          } else {
-            d.push(`v ${rVSpace}`);
-          }
-          d.push(`h ${rHSpace - rSR}`);
-          d.push(arcConvex(rPanelR, rPanelR, rPanelR)); // panel TR: right→down (clamped)
-          d.push(`v ${bottom - junctionY - 2 * rPanelR}`);
+          // Tight: single S-curve replaces tab TR bottom + junction + panel TR top
+          // from (tabRight, junctionY-rSR) going DOWN to (right, junctionY+rSR) going DOWN
+          d.push(arcConvex(r, r, r)); // tab TR: right→down
+          d.push(`v ${rVSpace - rSR}`); // straight down to S-curve start
+          d.push(
+            `C ${tabRight},${junctionY} ${right},${junctionY} ${right},${junctionY + rSR}`,
+          );
+          d.push(`v ${bottom - junctionY - rSR - r}`); // panel right ↓
         }
 
         // ── Panel BR → bottom → BL ────────────────────────────────────────────────
@@ -242,27 +237,24 @@
 
         // ── Panel left ↑ + left junction back to M ───────────────────────────────
         if (!hasLeftJunction) {
+          // Panel left = tab left: no junction, full left side up
           d.push(`v -${bottom - top - 2 * r}`);
           d.push(arcConvex(r, r, -r)); // panel TL = tab TL
         } else if (lFits) {
+          // 3-piece junction: panel left ↑ + panel top → + concave arc + tab left ↑ + tab TL arc
           d.push(`v -${bottom - junctionY - r}`); // panel left ↑ to (left, junctionY)
-          d.push(`h ${lHSpace - r}`); // panel top → to (tabLeft-r, junctionY)
-          d.push(arcConcave(r, r, -r)); // junction: right→up (concave)
+          d.push(`h ${lTotalHSpace - 2 * r}`); // panel top → to (tabLeft-r, junctionY)
+          d.push(arcConcave(r, r, -r)); // junction concave: right→up
           d.push(`v -${lVSpace - r}`); // tab left ↑
           d.push(arcConvex(r, r, -r)); // tab TL: up→right
         } else {
-          d.push(`v -${bottom - junctionY - r}`); // panel left ↑ to (left, junctionY)
-          if (lSR > 0) {
-            // panel top → to C=(tabLeft-lSR, junctionY), then S-curve to Y2=(tabLeft, junctionY-2*lSR), then straight up
-            d.push(`h ${lHSpace - lSR}`);
-            d.push(
-              `C ${tabLeft},${junctionY} ${tabLeft},${junctionY - lSR} ${tabLeft},${junctionY - 2 * lSR}`,
-            );
-            d.push(`v -${lVSpace - 2 * lSR}`);
-          } else {
-            d.push(`h ${lHSpace}`);
-            d.push(`v -${lVSpace}`);
-          }
+          // Tight: single S-curve replaces panel TL + junction + tab TR (bottom) in one bezier
+          // from (left, junctionY+lSR) going UP to (tabLeft, junctionY-lSR) going UP
+          d.push(`v -${bottom - junctionY - lSR - r}`); // panel left ↑ to S-curve start
+          d.push(
+            `C ${left},${junctionY} ${tabLeft},${junctionY} ${tabLeft},${junctionY - lSR}`,
+          );
+          d.push(`v -${lVSpace - lSR}`); // tab left ↑ to (tabLeft, top+r)
           d.push(arcConvex(r, r, -r)); // tab TL: up→right
         }
 
