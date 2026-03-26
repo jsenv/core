@@ -359,44 +359,41 @@
         const [active, setActive] = useState(initialActive);
         const panelRef = useRef(null);
         const activeTabRef = useRef(null);
+        const wrapperRef = useRef(null);
         const [panelSize, setPanelSize] = useState(null);
 
         useLayoutEffect(() => {
-          const el = panelRef.current;
-          if (!el) return null;
+          const panelEl = panelRef.current;
+          const tabEl = activeTabRef.current;
+          const wrapperEl = wrapperRef.current;
+          if (!panelEl) return;
           const measure = () => {
-            const tabEl = activeTabRef.current;
+            const t = activeTabRef.current;
             setPanelSize({
-              width: el.offsetWidth,
-              height: el.offsetHeight,
-              top: el.offsetTop,
-              tabWidth: tabEl ? tabEl.offsetWidth : 0,
-              tabLeft: tabEl ? tabEl.offsetLeft : 0,
+              width: wrapperRef.current
+                ? wrapperRef.current.offsetWidth
+                : panelEl.offsetWidth,
+              height: panelEl.offsetHeight,
+              top: panelEl.offsetTop,
+              tabWidth: t ? t.offsetWidth : 0,
+              tabLeft: t ? t.offsetLeft : 0,
             });
           };
           const obs = new ResizeObserver(measure);
-          obs.observe(el);
+          obs.observe(panelEl);
+          if (wrapperEl) obs.observe(wrapperEl);
+          if (tabEl) obs.observe(tabEl);
           measure();
           return () => obs.disconnect();
-        }, []);
-
-        // Re-measure when the active tab changes (different tab may have different width/position)
-        useLayoutEffect(() => {
-          const tabEl = activeTabRef.current;
-          if (!tabEl) return;
-          setPanelSize((prev) =>
-            prev
-              ? {
-                  ...prev,
-                  tabWidth: tabEl.offsetWidth,
-                  tabLeft: tabEl.offsetLeft,
-                }
-              : prev,
-          );
         }, [active]);
 
+        // (tab changes handled above by re-running the effect)
+
         return (
-          <div style={{ position: "relative", display: "inline-block" }}>
+          <div
+            ref={wrapperRef}
+            style={{ position: "relative", display: "inline-block" }}
+          >
             {/* The unified SVG sits behind everything, covering tabstrip + panel */}
             {panelSize && (
               <BinderSvg
