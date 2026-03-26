@@ -159,9 +159,16 @@
         panelHeight,
         borderWidth,
         cornerRadius,
+        panelTRCornerR,
       }) => {
         const h = borderWidth / 2;
         const r = Math.max(0, cornerRadius - h);
+        // rTR: panel top-right corner radius — clamped to the gap to the right of the last tab.
+        // panelTRCornerR is the pixel gap; if 0, no room to round so square corner.
+        const rTR = Math.min(
+          r,
+          panelTRCornerR !== undefined ? Math.max(0, panelTRCornerR) : r,
+        );
 
         const hasRightJunction = tabX + tabWidth < panelWidth;
         const hasLeftJunction = tabX > 0;
@@ -186,7 +193,8 @@
         //   When tight: corner arcs at full r, straight lines connect them (no concave junction arc)
         const rVSpace = junctionY - top - r;
         const rTotalHSpace = right - tabRight;
-        const rFits = hasRightJunction && rVSpace >= r && rTotalHSpace >= 2 * r;
+        const rFits =
+          hasRightJunction && rVSpace >= r && rTotalHSpace >= r + rTR;
 
         const lVSpace = junctionY - top - r;
         const lTotalHSpace = tabLeft - left;
@@ -210,17 +218,15 @@
           d.push(arcConvex(r, r, r)); // tab TR: right→down
           d.push(`v ${rVSpace - r}`); // tab right ↓ to concave arc start
           d.push(arcConcave(r, r, r)); // junction concave: down→right
-          d.push(`h ${rTotalHSpace - 2 * r}`); // panel top →
-          d.push(arcConvex(r, r, r)); // panel TR: right→down
-          d.push(`v ${bottom - junctionY - 2 * r}`); // panel right ↓
+          d.push(`h ${rTotalHSpace - r - rTR}`); // panel top →
+          d.push(arcConvex(rTR, rTR, rTR)); // panel TR: right→down (clamped)
+          d.push(`v ${bottom - junctionY - rTR - r}`); // panel right ↓ to (right, bottom-r)
         } else {
-          // Tight: tab TR arc + straight down + (optional) straight right + clamped panel TR arc
-          const rPanelR = Math.min(r, rTotalHSpace);
+          // Tight: tab TR arc + straight down to junctionY + straight right to panel edge (square corner, no arc)
           d.push(arcConvex(r, r, r)); // tab TR: right→down
           d.push(`v ${rVSpace}`); // straight down to junctionY
-          d.push(`h ${rTotalHSpace - rPanelR}`); // panel top → (0 if very tight)
-          d.push(arcConvex(rPanelR, rPanelR, rPanelR)); // panel TR: right→down (clamped)
-          d.push(`v ${bottom - junctionY - rPanelR - r}`); // panel right ↓ to (right, bottom-r)
+          d.push(`h ${rTotalHSpace}`); // panel top → to (right, junctionY) — square corner
+          d.push(`v ${bottom - junctionY - r}`); // panel right ↓ to (right, bottom-r)
         }
 
         // ── Panel BR → bottom → BL ────────────────────────────────────────────────
@@ -264,6 +270,7 @@
         cornerRadius,
         borderColor,
         fullStrokeWidth,
+        panelTRCornerR,
       }) => {
         const centerlinePath = buildBinderCenterlinePath({
           tabX,
@@ -273,6 +280,7 @@
           panelHeight,
           borderWidth,
           cornerRadius,
+          panelTRCornerR,
         });
 
         return (
@@ -298,10 +306,13 @@
       };
 
       // Inactive tabs use plain CSS borders for now.
-      const SvgTab = ({ label, active, onClick, r, b, tabRef }) => {
+      const SvgTab = ({ label, active, onClick, r, b, tabRef, lastTabRef }) => {
         return (
           <div
-            ref={tabRef}
+            ref={(el) => {
+              if (tabRef) tabRef.current = el;
+              if (lastTabRef) lastTabRef.current = el;
+            }}
             class={`svg-tab${active ? " active" : ""}`}
             style={{
               borderWidth: `${b}px`,
@@ -359,6 +370,7 @@
         const [active, setActive] = useState(initialActive);
         const panelRef = useRef(null);
         const activeTabRef = useRef(null);
+        const lastTabRef = useRef(null);
         const wrapperRef = useRef(null);
         const [panelSize, setPanelSize] = useState(null);
 
@@ -366,17 +378,25 @@
           const panelEl = panelRef.current;
           const tabEl = activeTabRef.current;
           const wrapperEl = wrapperRef.current;
-          if (!panelEl) return;
+          if (!panelEl) return null;
           const measure = () => {
             const t = activeTabRef.current;
+            const wrapperEl = wrapperRef.current;
+            const lastTabEl = lastTabRef.current;
+            const wrapperWidth = wrapperEl
+              ? wrapperEl.offsetWidth
+              : panelEl.offsetWidth;
+            const lastTabRight = lastTabEl
+              ? lastTabEl.offsetLeft + lastTabEl.offsetWidth
+              : wrapperWidth;
+            const gapRightOfTabs = wrapperWidth - lastTabRight;
             setPanelSize({
-              width: wrapperRef.current
-                ? wrapperRef.current.offsetWidth
-                : panelEl.offsetWidth,
+              width: wrapperWidth,
               height: panelEl.offsetHeight,
               top: panelEl.offsetTop,
               tabWidth: t ? t.offsetWidth : 0,
               tabLeft: t ? t.offsetLeft : 0,
+              panelTRCornerR: gapRightOfTabs, // space to the right of last tab = max radius for panel TR
             });
           };
           const obs = new ResizeObserver(measure);
@@ -406,6 +426,7 @@
                 cornerRadius={r}
                 borderColor={borderColor}
                 fullStrokeWidth={fullStrokeWidth}
+                panelTRCornerR={panelSize.panelTRCornerR}
               />
             )}
             <div class="tabstrip">
@@ -420,6 +441,9 @@
                   r={r}
                   b={b}
                   tabRef={active === tab.key ? activeTabRef : null}
+                  lastTabRef={
+                    tab.key === TABS[TABS.length - 1].key ? lastTabRef : null
+                  }
                 />
               ))}
             </div>
