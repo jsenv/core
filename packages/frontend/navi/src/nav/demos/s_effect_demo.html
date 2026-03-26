@@ -164,6 +164,7 @@
         h,
         r,
         rTR,
+        rTL,
       }) => {
         const hasRightJunction = tabX + tabWidth < panelWidth;
         const hasLeftJunction = tabX > 0;
@@ -182,11 +183,11 @@
           hasRightJunction && rVSpace >= r && rTotalHSpace >= r + rTR;
 
         const lVSpace = junctionY - top - r;
-        const lTotalHSpace = tabLeft - left;
-        // lFits: room for panel TL arc (r) + concave junction arc (r)
-        const lFits = hasLeftJunction && lVSpace >= r && lTotalHSpace >= 2 * r;
-        // lTight: only room for panel TL arc (r) — favor panel rounding, skip concave
-        const lTight = hasLeftJunction && lVSpace >= r && lTotalHSpace >= r;
+        const lTotalHSpace = tabLeft - left - rTL; // capped by gap left of first tab
+        // lFits: room for panel TL arc (rTL) + concave junction arc (r)
+        const lFits = hasLeftJunction && lVSpace >= r && lTotalHSpace >= r;
+        // lTight: only room for panel TL arc, skip concave — favor panel rounding
+        const lTight = hasLeftJunction && lVSpace >= r && lTotalHSpace >= 0;
 
         const d = [];
         d.push(`M ${tabLeft + r},${top}`);
@@ -221,17 +222,17 @@
           d.push(`v -${bottom - top - 2 * r}`);
           d.push(arcConvex(r, r, -r)); // panel TL = tab TL: up→right
         } else if (lFits) {
-          d.push(`v -${bottom - junctionY - 2 * r}`); // panel left ↑ to (left, junctionY+r)
-          d.push(arcConvex(r, r, -r)); // panel TL: up→right
-          d.push(`h ${lTotalHSpace - 2 * r}`); // panel top → to (tabLeft-r, junctionY)
+          d.push(`v -${bottom - junctionY - r - rTL}`); // panel left ↑ to (left, junctionY+rTL)
+          d.push(arcConvex(rTL, rTL, -rTL)); // panel TL: up→right
+          d.push(`h ${lTotalHSpace - r}`); // panel top → to (tabLeft-r, junctionY)
           d.push(arcConcave(r, r, -r)); // junction concave: right→up
           d.push(`v -${lVSpace - r}`); // tab left ↑
           d.push(arcConvex(r, r, -r)); // tab TL: up→right
         } else if (lTight) {
           // Panel TL rounded, no concave — square tab corner
-          d.push(`v -${bottom - junctionY - 2 * r}`); // panel left ↑ to (left, junctionY+r)
-          d.push(arcConvex(r, r, -r)); // panel TL: up→right
-          d.push(`h ${lTotalHSpace - r}`); // panel top → to (tabLeft, junctionY)
+          d.push(`v -${bottom - junctionY - r - rTL}`); // panel left ↑ to (left, junctionY+rTL)
+          d.push(arcConvex(rTL, rTL, -rTL)); // panel TL: up→right
+          d.push(`h ${lTotalHSpace}`); // panel top → to (tabLeft, junctionY)
           d.push(`v -${lVSpace}`); // tab left ↑
           d.push(arcConvex(r, r, -r)); // tab TL: up→right
         } else {
@@ -362,15 +363,17 @@
         borderWidth,
         cornerRadius,
         panelTRCornerR,
+        panelTLCornerL,
         tabsBelow,
       }) => {
         const h = borderWidth / 2;
         const r = Math.max(0, cornerRadius - h);
-        // rTR: panel corner radius adjacent to the last tab.
-        // Only start rounding when the gap is at least r px — prevents a tiny ugly stub corner.
-        const gap =
+        const gapR =
           panelTRCornerR !== undefined ? Math.max(0, panelTRCornerR) : r;
-        const rTR = gap >= r ? Math.min(r, gap) : 0;
+        const rTR = gapR >= r ? Math.min(r, gapR) : 0;
+        const gapL =
+          panelTLCornerL !== undefined ? Math.max(0, panelTLCornerL) : r;
+        const rTL = gapL >= r ? Math.min(r, gapL) : 0;
 
         if (tabsBelow) {
           return buildBinderCenterlinePathBelow({
@@ -392,6 +395,7 @@
           h,
           r,
           rTR,
+          rTL,
         });
       };
 
@@ -408,6 +412,7 @@
         borderColor,
         fullStrokeWidth,
         panelTRCornerR,
+        panelTLCornerL,
         tabsBelow,
       }) => {
         const centerlinePath = buildBinderCenterlinePath({
@@ -419,6 +424,7 @@
           borderWidth,
           cornerRadius,
           panelTRCornerR,
+          panelTLCornerL,
           tabsBelow,
         });
 
@@ -453,6 +459,7 @@
         b,
         tabRef,
         lastTabRef,
+        firstTabRef,
         tabsBelow,
         stretch,
       }) => {
@@ -461,6 +468,7 @@
             ref={(el) => {
               if (tabRef) tabRef.current = el;
               if (lastTabRef) lastTabRef.current = el;
+              if (firstTabRef) firstTabRef.current = el;
             }}
             class={`svg-tab ${tabsBelow ? "tabs-below" : "tabs-above"}${active ? " active" : ""}`}
             style={{
@@ -524,6 +532,7 @@
         const [active, setActive] = useState(initialActive);
         const panelRef = useRef(null);
         const activeTabRef = useRef(null);
+        const firstTabRef = useRef(null);
         const lastTabRef = useRef(null);
         const wrapperRef = useRef(null);
         const [panelSize, setPanelSize] = useState(null);
@@ -548,6 +557,7 @@
             const t = activeTabRef.current;
             const wrapperEl = wrapperRef.current;
             const lastTabEl = lastTabRef.current;
+            const firstTabEl = firstTabRef.current;
             const wrapperWidth = wrapperEl
               ? wrapperEl.offsetWidth
               : panelEl.offsetWidth;
@@ -555,6 +565,7 @@
               ? lastTabEl.offsetLeft + lastTabEl.offsetWidth
               : wrapperWidth;
             const gapRightOfTabs = wrapperWidth - lastTabRight;
+            const gapLeftOfTabs = firstTabEl ? firstTabEl.offsetLeft : 0;
             setPanelSize({
               width: wrapperWidth,
               height: panelEl.offsetHeight,
@@ -563,6 +574,7 @@
               tabWidth: t ? t.offsetWidth : 0,
               tabLeft: t ? t.offsetLeft : 0,
               panelTRCornerR: gapRightOfTabs,
+              panelTLCornerL: gapLeftOfTabs,
             });
           };
           const obs = new ResizeObserver(measure);
@@ -592,6 +604,7 @@
                 lastTabRef={
                   tab.key === TABS[TABS.length - 1].key ? lastTabRef : null
                 }
+                firstTabRef={tab.key === TABS[0].key ? firstTabRef : null}
                 tabsBelow={tabsBelow}
                 stretch={tabAlign === "stretch"}
               />
@@ -640,6 +653,7 @@
                 borderColor={borderColor}
                 fullStrokeWidth={fullStrokeWidth}
                 panelTRCornerR={panelSize.panelTRCornerR}
+                panelTLCornerL={panelSize.panelTLCornerL}
                 tabsBelow={tabsBelow}
               />
             )}
