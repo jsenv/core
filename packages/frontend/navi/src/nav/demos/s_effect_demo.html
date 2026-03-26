@@ -214,12 +214,13 @@
           d.push(arcConvex(r, r, r)); // panel TR: right→down
           d.push(`v ${bottom - junctionY - 2 * r}`); // panel right ↓
         } else {
-          // Tight: tab TR arc + straight down + straight right + clamped panel TR arc
+          // Tight: tab TR arc + straight down + (optional) straight right + clamped panel TR arc
+          const rPanelR = Math.min(r, rTotalHSpace);
           d.push(arcConvex(r, r, r)); // tab TR: right→down
           d.push(`v ${rVSpace}`); // straight down to junctionY
-          d.push(`h ${Math.max(0, rTotalHSpace - r)}`); // panel top →
-          d.push(arcConvex(r, r, r)); // panel TR: right→down
-          d.push(`v ${bottom - junctionY - 2 * r}`); // panel right ↓
+          d.push(`h ${rTotalHSpace - rPanelR}`); // panel top → (0 if very tight)
+          d.push(arcConvex(rPanelR, rPanelR, rPanelR)); // panel TR: right→down (clamped)
+          d.push(`v ${bottom - junctionY - rPanelR - r}`); // panel right ↓ to (right, bottom-r)
         }
 
         // ── Panel BR → bottom → BL ────────────────────────────────────────────────
@@ -235,7 +236,7 @@
         } else if (lFits) {
           // 3-piece junction: panel left ↑ + panel top → + concave arc + tab left ↑ + tab TL arc
           d.push(`v -${bottom - junctionY - r}`); // panel left ↑ to (left, junctionY)
-          d.push(`h ${lTotalHSpace - 2 * r}`); // panel top → to (tabLeft-r, junctionY)
+          d.push(`h ${lTotalHSpace - r}`); // panel top → to (tabLeft-r, junctionY)
           d.push(arcConcave(r, r, -r)); // junction concave: right→up
           d.push(`v -${lVSpace - r}`); // tab left ↑
           d.push(arcConvex(r, r, -r)); // tab TL: up→right
