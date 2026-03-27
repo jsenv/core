@@ -162,7 +162,7 @@ import.meta.css = /* css */ `
 
     &[data-dark-background] {
       --contrasting-color: white;
-      --tab-color: white;
+      --link-color: white;
     }
 
     /* Interactive */
@@ -530,14 +530,12 @@ const LinkPlain = (props) => {
       spacing="pre"
       preventBoldLayoutShit={boldWhenCurrent}
     >
-      {currentIndicatorEl}
       {startIconEl}
       {innerChildren}
       {endIconEl && <Text overflowPinned>{endIconEl}</Text>}
     </Text>
   ) : (
     <Text preventBoldLayoutShit={boldWhenCurrent}>
-      {currentIndicatorEl}
       {startIconEl}
       {applySpacingOnTextChildren(innerChildren, spacing)}
       {endIconEl}
@@ -606,6 +604,7 @@ const LinkPlain = (props) => {
         inset={1}
         color="var(--link-loader-color)"
       />
+      {currentIndicatorEl}
       {visualChildren}
     </Box>
   );
