@@ -6,7 +6,7 @@
 import { toChildArray } from "preact";
 
 import { Box } from "../../box/box.jsx";
-import { NavContext, NavIndicatorPositionContext } from "./nav_context.js";
+import { NavContext } from "./nav_context.js";
 
 import.meta.css = /* css */ `
   @layer navi {
@@ -34,9 +34,6 @@ import.meta.css = /* css */ `
       --nav-padding-left,
       var(--nav-padding-x, var(--nav-padding, unset))
     );
-    align-items: center;
-    gap: 0.5rem;
-    line-height: 2;
     background: var(--nav-background);
     border: var(--nav-border);
     border-radius: var(--nav-border-radius);
@@ -44,9 +41,6 @@ import.meta.css = /* css */ `
     /* overflow-y: hidden; */
 
     .navi_link {
-      display: inline-flex;
-      line-height: inherit;
-
       &:first-child {
         border-top-left-radius: inherit;
         border-bottom-left-radius: inherit;
@@ -80,35 +74,15 @@ import.meta.css = /* css */ `
       /* overflow-y: auto; */
       align-items: start;
 
-      .navi_tab {
-        width: 100%;
-        flex-direction: row;
-        text-align: left;
-
-        .navi_tab_indicator {
-          width: var(--tab-indicator-size);
-          height: 100%;
-        }
-
-        > .navi_text,
-        .navi_link,
-        .navi_text_bold_foreground {
-          justify-content: start;
-        }
-
-        &[data-align-x="end"] {
-          > .navi_text,
-          .navi_link,
-          .navi_text_bold_foreground {
-            justify-content: end;
-          }
-        }
-      }
-
       &[data-expand] {
         .navi_tab {
           align-items: stretch;
         }
+      }
+      .navi_tab {
+        width: 100%;
+        flex-direction: row;
+        text-align: left;
       }
     }
 
@@ -152,8 +126,6 @@ export const Nav = ({
   expand,
   expandX,
   linkBorderRadius,
-  currentIndicator,
-  currentIndicatorPosition = row ? "right" : "bottom",
   panelPosition, // before or after
   panelBorderConnection,
   ...props
@@ -177,11 +149,7 @@ export const Nav = ({
       {...props}
       styleCSSVars={NavStyleCSSVars}
     >
-      <NavIndicatorPositionContext.Provider
-        value={currentIndicator ? currentIndicatorPosition : undefined}
-      >
-        <NavContext.Provider value={true}>{children}</NavContext.Provider>
-      </NavIndicatorPositionContext.Provider>
+      <NavContext.Provider value={true}>{children}</NavContext.Provider>
     </Box>
   );
 };

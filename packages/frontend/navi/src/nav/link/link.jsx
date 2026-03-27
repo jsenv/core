@@ -34,7 +34,6 @@ import { getHrefTargetInfo } from "../browser_integration/href_target_info.js";
 import { useIsVisited } from "../browser_integration/use_is_visited.js";
 
 import { GithubSvg, SmsSvg } from "./link_icons.jsx";
-import { NavIndicatorPositionContext } from "./nav_context.js";
 import { useDimColorWhen } from "./use_dim_color.js";
 
 /*
@@ -52,6 +51,7 @@ import.meta.css = /* css */ `
       --link-border-radius: 2px;
       --link-outline-color: var(--navi-focus-outline-color);
       --link-loader-color: var(--navi-loader-color);
+      --link-background: transparent;
       --link-background-selected: light-dark(#bbdefb, #2563eb);
       --link-color: rgb(0, 0, 238);
       --link-color-visited: color-mix(in srgb, var(--link-color), black 40%);
@@ -72,11 +72,6 @@ import.meta.css = /* css */ `
   .navi_link {
     --contrasting-color: black;
 
-    --link-background-hover: color-mix(
-      in srgb,
-      var(--tab-background),
-      var(--contrasting-color) 15%
-    );
     --x-link-background: var(--link-background-color, var(--link-background));
     --x-link-background-hover: var(
       --link-background-color-hover,
@@ -85,6 +80,10 @@ import.meta.css = /* css */ `
     --x-link-background-selected: var(
       --link-background-color-selected,
       var(--link-background-selected)
+    );
+    --x-link-background-current: var(
+      --link-background-color-current,
+      var(--link-background-current, var(--link-background))
     );
     --x-link-color: var(--link-color);
     --x-link-color-hover: var(--link-color-hover, var(--link-color));
@@ -276,6 +275,11 @@ import.meta.css = /* css */ `
       --link-text-decoration: none;
     }
     &[data-appearance="tab"] {
+      --link-background-hover: color-mix(
+        in srgb,
+        var(--link-background),
+        var(--contrasting-color) 15%
+      );
       --link-color: inherit;
       --link-text-decoration: none;
 
@@ -447,7 +451,7 @@ const LinkPlain = (props) => {
     hrefFallback = !anchor,
     matching,
     overflowEllipsis,
-    currentIndicator,
+    currentIndicator = appearance === "tab" ? "bottom" : undefined,
     boldWhenCurrent,
 
     children,
@@ -514,14 +518,11 @@ const LinkPlain = (props) => {
     <Icon marginLeft={innerChildren ? "xxs" : undefined}>{innerEndIcon}</Icon>
   );
 
-  const navIndicatorPosition = useContext(NavIndicatorPositionContext);
-  const innerCurrentIndicator =
-    currentIndicator === undefined ? navIndicatorPosition : currentIndicator;
   const currentIndicatorEl =
-    innerCurrentIndicator === "left" ||
-    innerCurrentIndicator === "right" ||
-    innerCurrentIndicator === "top" ||
-    innerCurrentIndicator === "bottom" ? (
+    currentIndicator === "left" ||
+    currentIndicator === "right" ||
+    currentIndicator === "top" ||
+    currentIndicator === "bottom" ? (
       <LinkCurrentIndicator />
     ) : null;
 
@@ -562,7 +563,7 @@ const LinkPlain = (props) => {
       spacing="pre"
       // Visual
       data-appearance={appearance}
-      data-current-indicator-position={innerCurrentIndicator}
+      data-current-indicator-position={currentIndicator}
       data-anchor={anchor ? "" : undefined}
       data-interactive={onClick ? "" : undefined}
       data-reveal-on-interaction={revealOnInteraction ? "" : undefined}

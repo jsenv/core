@@ -94,8 +94,8 @@
             <BasicNav />
             <UnderlineInteractive />
             {/*}
-          
-           
+
+
             <RoundedTabList />
             <VerticalTabs />
             <VerticalTabsWithIcons />
@@ -114,22 +114,22 @@
             <Title as="h2">Basic</Title>
 
             <Caption>Minimal list of links</Caption>
-            <Nav>
+            <Nav spacing="s">
               <Link pseudoState={{ ":-navi-href-current": true }}>Home</Link>
               <Link>Profile</Link>
               <Link>Settings</Link>
             </Nav>
 
-            <Caption>List of links with indicator</Caption>
-            <Nav currentIndicator>
+            <Caption>List of links as tab</Caption>
+            <Nav>
               <Link
-                appearance="text"
+                appearance="tab"
                 pseudoState={{ ":-navi-href-current": true }}
               >
                 Home
               </Link>
-              <Link appearance="text">Profile</Link>
-              <Link appearance="text">Settings</Link>
+              <Link appearance="tab">Profile</Link>
+              <Link appearance="tab">Settings</Link>
             </Nav>
           </Box>
         );
@@ -154,6 +154,7 @@
                 <Nav spacing="sm">
                   {tabs.map((name) => (
                     <Link
+                      appearance="tab"
                       key={name}
                       onClick={() => setActive(name)}
                       aria-controls={`panel-${name}`}
@@ -174,11 +175,12 @@
             <div className="example-block">
               <div className="caption">Indicator above</div>
               <Box border="1px dashed violet">
-                <Nav spacing="sm" currentIndicator="start">
+                <Nav spacing="sm">
                   {tabs.map((name) => (
                     <Link
                       key={name}
-                      selected={name === active}
+                      appearance="tab"
+                      currentIndicator="top"
                       onClick={() => setActive(name)}
                       aria-controls={`panel-${name}`}
                       paddingX="md"
@@ -200,44 +202,39 @@
                 TabList background + selected styling (no indicator)
               </div>
               <Box row align="center" border="1px dashed violet">
-                <TabList
+                <Nav
                   borderRadius="s"
-                  tabBorderRadius="inherit"
+                  linkBorderRadius="inherit"
                   expandX
                   spacing="0"
                   indicator="none"
                   padding="2"
                   style={{
-                    "--tablist-background": "rgb(233, 236, 240)",
-                    "--tab-background": "transparent",
-                    "--tab-color": "#373C45",
-                    "--tab-background-selected": "#373C45",
-                    "--tab-color-selected": "white",
+                    "--nav-background": "rgb(233, 236, 240)",
+                    "--link-background": "transparent",
+                    "--link-color": "#373C45",
+                    "--link-background-current": "#373C45",
+                    "--link-color-current": "white",
                   }}
                 >
                   {tabs.map((name) => (
-                    <Tab
+                    <Link
                       key={name}
-                      selected={name === active}
                       onClick={() => setActive(name)}
                       aria-controls={`panel-${name}`}
                       padding="0"
+                      paddingX="md"
                       pseudoState={{
                         ":hover": name === "activity" || undefined,
+                        ":focus-visible": name === "activity",
+                        ":-navi-href-current": name === active,
                       }}
+                      capitalize
                     >
-                      <Link
-                        paddingX="md"
-                        discrete
-                        pseudoState={{
-                          ":focus-visible": name === "activity",
-                        }}
-                      >
-                        {name.charAt(0).toUpperCase() + name.slice(1)}
-                      </Link>
-                    </Tab>
+                      {name}
+                    </Link>
                   ))}
-                </TabList>
+                </Nav>
               </Box>
             </div>
 
@@ -251,12 +248,11 @@
                 border="1px dashed violet"
                 width="fit-content"
               >
-                <TabList spacing="sm" indicator="none">
+                <Nav spacing="sm">
                   {tabs.map((name) => (
-                    <Tab
+                    <Link
                       key={name}
                       icon
-                      selected={name === active}
                       onClick={() => setActive(name)}
                       aria-controls={`panel-${name}`}
                       padding="0"
@@ -265,32 +261,27 @@
                       color="white"
                       scale="1"
                       style={{
-                        ":-navi-tab-selected": {
+                        ":-navi-href-current": {
                           scale: "1.3",
                           backgroundColor:
-                            "color-mix(in srgb, var(--tab-background-color) 80%, black)",
+                            "color-mix(in srgb, var(--link-background-color) 80%, black)",
                         },
                       }}
                       pseudoState={{
                         ":hover": name === "activity" || undefined,
+                        ":focus-visible": name === "activity",
+                        ":-navi-href-current": name === active,
                       }}
                       transition="all 0.3s ease-in-out"
+                      circle
+                      backgroundColor="var(--x-link-background)"
                     >
-                      <Link
-                        discrete
-                        circle
-                        backgroundColor="var(--x-tab-background)"
-                        pseudoState={{
-                          ":focus-visible": name === "activity",
-                        }}
-                      >
-                        <Icon box size="32" align="center" padding="6">
-                          <SettingsSvg />
-                        </Icon>
-                      </Link>
-                    </Tab>
+                      <Icon box size="32" align="center" padding="6">
+                        <SettingsSvg />
+                      </Icon>
+                    </Link>
                   ))}
-                </TabList>
+                </Nav>
               </Box>
             </div>
           </Box>
@@ -352,8 +343,10 @@
                 <Link
                   background="#7C3AED"
                   paddingX="m"
-                  selected={active === "6+"}
                   onClick={() => setActive("6+")}
+                  pseudoState={{
+                    ":-navi-href-current": active === "6+",
+                  }}
                 >
                   6+
                 </Link>
@@ -364,103 +357,112 @@
               <div className="caption">
                 Same design with first and last tab hovered
               </div>
-              <TabList
+              <Nav
                 background="#ede9f5"
                 border="10px solid blue"
                 borderRadius="100px"
                 spacing="0"
-                indicator="none"
               >
-                <Tab
+                <Link
                   background="#F3E8FF"
                   paddingX="m"
                   pseudoState={{ ":hover": true }}
                 >
                   0-0
-                </Tab>
-                <Tab background="#C4B5FD" paddingX="m">
+                </Link>
+                <Link background="#C4B5FD" paddingX="m">
                   1-3
-                </Tab>
-                <Tab background="#8B5CF6" paddingX="m">
+                </Link>
+                <Link background="#8B5CF6" paddingX="m">
                   3-6
-                </Tab>
-                <Tab
+                </Link>
+                <Link
                   background="#7C3AED"
                   paddingX="m"
                   pseudoState={{ ":hover": true }}
                 >
                   6+
-                </Tab>
-              </TabList>
+                </Link>
+              </Nav>
             </div>
 
             <div className="example-block">
               <div className="caption">Same design with last tab selected</div>
-              <TabList
+              <Nav
                 background="#ede9f5"
                 border="10px solid blue"
                 borderRadius="100px"
                 spacing="0"
-                indicator="none"
               >
-                <Tab background="#F3E8FF" paddingX="m">
+                <Link background="#F3E8FF" paddingX="m">
                   0-0
-                </Tab>
-                <Tab background="#C4B5FD" paddingX="m">
+                </Link>
+                <Link background="#C4B5FD" paddingX="m">
                   1-3
-                </Tab>
-                <Tab background="#8B5CF6" paddingX="m">
+                </Link>
+                <Link background="#8B5CF6" paddingX="m">
                   3-6
-                </Tab>
-                <Tab background="#7C3AED" paddingX="m" selected>
+                </Link>
+                <Link
+                  background="#7C3AED"
+                  paddingX="m"
+                  pseudoState={{ ":-navi-href-current": true }}
+                >
                   6+
-                </Tab>
-              </TabList>
+                </Link>
+              </Nav>
             </div>
 
             <div className="example-block">
               <div className="caption">Same design with padding on tablist</div>
-              <TabList
+              <Nav
                 background="#ede9f5"
                 border="10px solid blue"
                 borderRadius="100px"
                 spacing="0"
-                indicator="none"
                 padding="15"
               >
-                <Tab
+                <Link
                   background="#F3E8FF"
                   paddingX="m"
-                  selected={active === "0-0"}
                   onClick={() => setActive("0-0")}
+                  pseudoState={{
+                    ":-navi-href-current": active === "0-0",
+                  }}
                 >
                   0-0
-                </Tab>
-                <Tab
+                </Link>
+                <Link
                   background="#C4B5FD"
                   paddingX="m"
-                  selected={active === "1-3"}
                   onClick={() => setActive("1-3")}
+                  pseudoState={{
+                    ":-navi-href-current": active === "1-3",
+                  }}
                 >
                   1-3
-                </Tab>
-                <Tab
+                </Link>
+                <Link
                   background="#8B5CF6"
                   paddingX="m"
-                  selected={active === "3-6"}
                   onClick={() => setActive("3-6")}
+                  pseudoState={{
+                    ":-navi-href-current": active === "3-6",
+                  }}
                 >
                   3-6
-                </Tab>
-                <Tab
+                </Link>
+                <Link
                   background="#7C3AED"
                   paddingX="m"
-                  selected={active === "6+"}
                   onClick={() => setActive("6+")}
+                  pseudoState={{
+                    ":-navi-href-current": active === "6+",
+                  }}
                 >
                   6+
-                </Tab>
-              </TabList>
+                </Link>
+              </Nav>
             </div>
           </Box>
         );
