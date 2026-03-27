@@ -59,7 +59,8 @@ export { RouteLink } from "./src/nav/route_link.jsx";
 export { rawUrlPart, setBaseUrl } from "./src/nav/route_pattern.js";
 // Navigation/components
 export { Link } from "./src/nav/link.jsx";
-export { Tab, TabList } from "./src/nav/tablist/tablist.jsx";
+export { Tab } from "./src/nav/tab/tab.jsx";
+export { TabList } from "./src/nav/tab/tablist.jsx";
 // debug/tests
 export { enableDebugOnDocumentLoading } from "./src/nav/browser_integration/document_loading_signal.js";
 

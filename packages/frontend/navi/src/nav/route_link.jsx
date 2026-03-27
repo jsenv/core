@@ -2,7 +2,7 @@ import { useContext } from "preact/hooks";
 
 import { Link } from "./link.jsx";
 import { useRouteStatus } from "./route.js";
-import { ReportSelectedOnTabContext } from "./tablist/tab_context.js";
+import { ReportSelectedOnTabContext } from "./tab/tab_context.js";
 
 export const RouteLink = ({ route, routeParams, children, ...rest }) => {
   if (!route) {
