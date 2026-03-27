@@ -22,15 +22,19 @@ import {
 import { PhoneSvg } from "../../graphic/icons/phone_svg.jsx";
 import { LoaderBackground } from "../../graphic/loader/loader_background.jsx";
 import { useKeyboardShortcuts } from "../../keyboard/keyboard_shortcuts.js";
-import { applySpacingOnTextChildren, Text } from "../../text/text.jsx";
+import {
+  applySpacingOnTextChildren,
+  markAsOutsideTextFlow,
+  Text,
+} from "../../text/text.jsx";
 import { TitleLevelContext } from "../../text/title.jsx";
+import { useDarkBackgroundAttribute } from "../../text/use_dark_background_attribute.js";
 import { useDocumentUrl } from "../browser_integration/document_url_signal.js";
 import { getHrefTargetInfo } from "../browser_integration/href_target_info.js";
 import { useIsVisited } from "../browser_integration/use_is_visited.js";
-import { useRouteStatus } from "../route.js";
-import { ReportSelectedOnTabContext } from "../tab/tab_context.js";
 
 import { GithubSvg, SmsSvg } from "./link_icons.jsx";
+import { NavIndicatorPositionContext } from "./nav_context.js";
 import { useDimColorWhen } from "./use_dim_color.js";
 
 /*
@@ -48,6 +52,7 @@ import.meta.css = /* css */ `
       --link-border-radius: 2px;
       --link-outline-color: var(--navi-focus-outline-color);
       --link-loader-color: var(--navi-loader-color);
+      --link-background-selected: light-dark(#bbdefb, #2563eb);
       --link-color: rgb(0, 0, 238);
       --link-color-visited: color-mix(in srgb, var(--link-color), black 40%);
 
@@ -57,10 +62,30 @@ import.meta.css = /* css */ `
       --link-cursor: pointer;
       --link-loading-outline-size: 1px;
       --link-color-current: var(--link-color);
+
+      --current-indicator-size: 2px;
+      --current-indicator-spacing: 0;
+      --current-indicator-color: rgb(205, 52, 37);
     }
   }
 
   .navi_link {
+    --contrasting-color: black;
+
+    --link-background-hover: color-mix(
+      in srgb,
+      var(--tab-background),
+      var(--contrasting-color) 15%
+    );
+    --x-link-background: var(--link-background-color, var(--link-background));
+    --x-link-background-hover: var(
+      --link-background-color-hover,
+      var(--link-background-color, var(--link-background-hover))
+    );
+    --x-link-background-selected: var(
+      --link-background-color-selected,
+      var(--link-background-selected)
+    );
     --x-link-color: var(--link-color);
     --x-link-color-hover: var(--link-color-hover, var(--link-color));
     --x-link-color-visited: var(--link-color-visited);
@@ -76,12 +101,78 @@ import.meta.css = /* css */ `
     padding: var(--link-loading-outline-size);
     color: var(--x-link-color);
     text-decoration: var(--x-link-text-decoration);
+    background: var(--x-link-background);
     border-radius: var(--link-border-radius);
     outline-width: 0;
     outline-style: solid;
     outline-color: var(--link-outline-color);
     cursor: var(--x-link-cursor);
 
+    .navi_current_indicator {
+      position: absolute;
+      z-index: 1;
+      display: flex;
+      width: 100%;
+      height: var(--current-indicator-size);
+      background: transparent;
+      border-radius: 0.1px;
+    }
+    &[data-current-indicator-position="top"] {
+      margin-top: var(--current-indicator-spacing);
+
+      .navi_current_indicator {
+        top: 0;
+        left: 0;
+      }
+    }
+    &[data-current-indicator-position="bottom"] {
+      margin-bottom: var(--current-indicator-spacing);
+
+      .navi_current_indicator {
+        bottom: 0;
+        left: 0;
+      }
+    }
+    &[data-current-indicator-position="left"] {
+      margin-left: var(--current-indicator-spacing);
+
+      .navi_current_indicator {
+        top: 0;
+        left: 0;
+      }
+    }
+    &[data-current-indicator-position="right"] {
+      margin-right: var(--current-indicator-spacing);
+
+      .navi_current_indicator {
+        top: 0;
+        right: 0;
+        left: auto;
+      }
+    }
+
+    &[data-dark-background] {
+      --contrasting-color: white;
+      --tab-color: white;
+    }
+
+    > .navi_text:not(.navi_badge_count),
+    .navi_link,
+    .navi_button,
+    .navi_text_bold_wrapper,
+    .navi_text_bold_clone,
+    .navi_text_bold_foreground {
+      display: inline-flex;
+      flex-grow: 1;
+      justify-content: center;
+      text-align: center;
+      border-radius: inherit;
+    }
+
+    /* Interactive */
+    &[data-interactive] {
+      cursor: pointer;
+    }
     /* Visited */
     &[data-visited] {
       --x-link-color: var(--x-link-color-visited);
@@ -94,6 +185,7 @@ import.meta.css = /* css */ `
     }
     /* Hover */
     &[data-hover] {
+      --x-link-background: var(--x-link-background-hover);
       --x-link-color: var(--x-link-color-hover);
       --x-link-text-decoration: var(--x-link-text-decoration-hover);
     }
@@ -103,13 +195,15 @@ import.meta.css = /* css */ `
     /* Selected */
     &[aria-selected] {
       position: relative;
+
+      input[type="checkbox"] {
+        position: absolute;
+        opacity: 0;
+      }
     }
-    &[aria-selected="true"] {
-      background-color: light-dark(#bbdefb, #2563eb);
-    }
-    &[aria-selected] input[type="checkbox"] {
-      position: absolute;
-      opacity: 0;
+    &[data-selected] {
+      --x-link-background: var(--x-link-background-selected);
+      --x-link-color: var(--link-color-selected);
     }
     /* Active */
     &[data-active] {
@@ -120,10 +214,17 @@ import.meta.css = /* css */ `
     &[data-href-current] {
       --x-link-color: var(--link-color-current);
       --x-link-cursor: default;
+
       &[data-anchor] {
         /* For anchor links, we want to keep the pointer cursor to indicate interactivity */
         /* as anchor link will still scroll to the section even if it's the current page */
         --x-link-cursor: pointer;
+      }
+      &[data-bold-when-current] {
+        font-weight: bold;
+      }
+      .navi_current_indicator {
+        background: var(--current-indicator-color);
       }
     }
     /* Focus */
@@ -142,10 +243,6 @@ import.meta.css = /* css */ `
     }
     &[data-disabled] > * {
       opacity: 0.5;
-    }
-    &[data-discrete] {
-      --link-color: inherit;
-      --link-text-decoration: none;
     }
     /* Reveal on interaction */
     &[data-reveal-on-interaction] {
@@ -173,12 +270,24 @@ import.meta.css = /* css */ `
         vertical-align: top;
       }
     }
+
+    &[data-appearance="text"] {
+      --link-color: inherit;
+      --link-text-decoration: none;
+    }
+    &[data-appearance="tab"] {
+      --link-color: inherit;
+      --link-text-decoration: none;
+
+      display: flex;
+      white-space: nowrap;
+      user-select: none;
+    }
   }
 
   *:hover > .navi_link[data-reveal-on-interaction] {
     opacity: 1;
   }
-
   .navi_text .navi_link[data-reveal-on-interaction] {
     top: 0.1em;
   }
@@ -193,7 +302,11 @@ const LinkStyleCSSVars = {
   "color": "--link-color",
   "cursor": "--link-cursor",
   "textDecoration": "--link-text-decoration",
+  "background": "--link-background",
+  "backgroundColor": "--link-background-color",
   ":hover": {
+    background: "--link-background-hover",
+    backgroundColor: "--link-background-color-hover",
     color: "--link-color-hover",
     textDecoration: "--link-text-decoration-hover",
   },
@@ -201,7 +314,14 @@ const LinkStyleCSSVars = {
     color: "--link-color-active",
   },
   ":-navi-href-current": {
+    background: "--link-background-current",
+    backgroundColor: "--link-background-color-current",
     color: "--link-color-current",
+  },
+  ":-navi-selected": {
+    background: "--link-background-selected",
+    backgroundColor: "--link-background-color-selected",
+    color: "--link-color-selected",
   },
 };
 const LinkPseudoClasses = [
@@ -218,8 +338,9 @@ const LinkPseudoClasses = [
   ":-navi-href-anchor",
   ":-navi-href-current",
   ":-navi-href-match",
+  ":-navi-selected",
 ];
-const LinkPseudoElements = ["::-navi-loader"];
+const LinkPseudoElements = ["::-navi-loader", "::-navi-indicator"];
 
 Object.assign(PSEUDO_CLASSES, {
   ":-navi-href-internal": {
@@ -236,6 +357,9 @@ Object.assign(PSEUDO_CLASSES, {
   },
   ":-navi-href-match": {
     attribute: "data-href-match",
+  },
+  ":-navi-selected": {
+    attribute: "data-selected",
   },
 });
 
@@ -267,6 +391,7 @@ const LinkWithSelection = (props) => {
     <LinkOrRouteLink
       {...rest}
       ref={ref}
+      selected={selected}
       data-value={value}
       aria-selected={selected}
     >
@@ -282,15 +407,12 @@ const LinkOrRouteLink = (props) => {
 };
 const LinkWithRoute = ({ route, routeParams, children, ...rest }) => {
   const url = route.buildUrl(routeParams);
-  const reportSelectedOnTab = useContext(ReportSelectedOnTabContext);
-  const { matching } = useRouteStatus(route);
-  const paramsAreMatching = route.matchesParams(routeParams);
-  const linkMatching = matching && paramsAreMatching;
-
-  reportSelectedOnTab?.(linkMatching);
+  // const { matching } = useRouteStatus(route);
+  // const paramsAreMatching = route.matchesParams(routeParams);
+  // const linkMatching = matching && paramsAreMatching;
 
   return (
-    <LinkBasic matching={linkMatching} href={url} {...rest}>
+    <LinkBasic href={url} {...rest}>
       {children || route.buildRelativeUrl(routeParams)}
     </LinkBasic>
   );
@@ -302,6 +424,7 @@ const LinkPlain = (props) => {
     loading,
     readOnly,
     disabled,
+    selected,
     autoFocus,
     spaceToClick = true,
     onClick,
@@ -313,6 +436,7 @@ const LinkPlain = (props) => {
     anchor,
 
     // visual
+    appearance,
     discrete,
     blankTargetIcon,
     anchorIcon,
@@ -323,6 +447,8 @@ const LinkPlain = (props) => {
     hrefFallback = !anchor,
     matching,
     overflowEllipsis,
+    currentIndicator,
+    boldWhenCurrent,
 
     children,
 
@@ -339,6 +465,7 @@ const LinkPlain = (props) => {
   // subscribe to document url to re-render and re-compute getHrefTargetInfo
   useDocumentUrl();
   const { isSameSite, isAnchor, isCurrent } = getHrefTargetInfo(href);
+  useDarkBackgroundAttribute(ref, [selected], {});
 
   const innerTarget =
     target === undefined ? (isSameSite ? "_self" : "_blank") : target;
@@ -387,26 +514,37 @@ const LinkPlain = (props) => {
     <Icon marginLeft={innerChildren ? "xxs" : undefined}>{innerEndIcon}</Icon>
   );
 
-  // For now we don't do as for button.jsx where we always wrap button content inside <Text>
-  // because link can wrap images or other non-text content and we don't want to mess with it
-  // in theory this is the same for button so we'll see with time what makes more sense
+  const navIndicatorPosition = useContext(NavIndicatorPositionContext);
+  const innerCurrentIndicator =
+    currentIndicator === undefined ? navIndicatorPosition : currentIndicator;
+  const currentIndicatorEl =
+    innerCurrentIndicator === "left" ||
+    innerCurrentIndicator === "right" ||
+    innerCurrentIndicator === "top" ||
+    innerCurrentIndicator === "bottom" ? (
+      <LinkCurrentIndicator />
+    ) : null;
+
   const visualChildren = overflowEllipsis ? (
     <Text
       overflowEllipsis
       // Here we can't use spaces as they would be underlined
       // (Ce would use zero width space with paddings but that's just simpler to rely on margins here)
       spacing="pre"
+      preventBoldLayoutShit={boldWhenCurrent}
     >
+      {currentIndicatorEl}
       {startIconEl}
       {innerChildren}
       {endIconEl && <Text overflowPinned>{endIconEl}</Text>}
     </Text>
   ) : (
-    <>
+    <Text preventBoldLayoutShit={boldWhenCurrent}>
+      {currentIndicatorEl}
       {startIconEl}
       {applySpacingOnTextChildren(innerChildren, spacing)}
       {endIconEl}
-    </>
+    </Text>
   );
 
   return (
@@ -423,7 +561,10 @@ const LinkPlain = (props) => {
       inert={disabled}
       spacing="pre"
       // Visual
+      data-appearance={appearance}
+      data-current-indicator-position={innerCurrentIndicator}
       data-anchor={anchor ? "" : undefined}
+      data-interactive={onClick ? "" : undefined}
       data-reveal-on-interaction={revealOnInteraction ? "" : undefined}
       data-discrete={discrete ? "" : undefined}
       baseClassName="navi_link"
@@ -440,6 +581,7 @@ const LinkPlain = (props) => {
         ":-navi-href-anchor": isAnchor,
         ":-navi-href-current": isCurrent,
         ":-navi-href-match": matching,
+        ":-navi-selected": selected,
       }}
       onClick={(e) => {
         if (preventDefault) {
@@ -471,6 +613,11 @@ const LinkPlain = (props) => {
     </Box>
   );
 };
+
+const LinkCurrentIndicator = () => {
+  return <span className="navi_current_indicator" />;
+};
+markAsOutsideTextFlow(LinkCurrentIndicator);
 
 const LinkWithAction = (props) => {
   const {

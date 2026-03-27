@@ -2,7 +2,7 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>TabList Demo</title>
+    <title>Nav Demo</title>
     <style>
       body {
         max-width: 1000px;
@@ -72,9 +72,9 @@
         Box,
         Title,
         Text,
-        TabList,
-        Tab,
+        Nav,
         Link,
+        Caption,
         Icon,
         HomeSvg,
         UserSvg,
@@ -91,122 +91,51 @@
         return (
           <div style={{ padding: "10px" }}>
             <Title as="h1">TabList Component Demo</Title>
-            <BasicTabs />
-            <BinderTabs />
-            <UnderlineInteractiveTabs />
+            <BasicNav />
+            <UnderlineInteractive />
+            {/*}
+          
+           
             <RoundedTabList />
             <VerticalTabs />
             <VerticalTabsWithIcons />
             <SpacingVariants />
             <StylingVariables />
             <DynamicAddRemove />
+              <BinderTabs />
+            */}
           </div>
         );
       };
 
-      const BinderTabs = () => {
-        const [active, setActive] = useState("approved");
-        return (
-          <Box as="section" className="demo-section">
-            <Title as="h2">Binder / Folder Tabs</Title>
-            <Text className="note">
-              "Intercalaire / classeur" style — tabs with category badges. Uses{" "}
-              <code>indicator="none"</code>, a bottom border on the wrapper to
-              simulate the panel separator, and <code>BadgeCount</code>.{" "}
-              <em>
-                The "open bottom on selected tab" effect requires future TabList
-                support; this is the closest approximation with current options.
-              </em>
-            </Text>
-            <div className="example-block">
-              <Box padding="m" background="lightgrey">
-                <TabList
-                  spacing="0"
-                  indicator="none"
-                  style={{
-                    "--tablist-border-width": "10px",
-                    "--tab-background": "transparent",
-                    "--tab-color": "#9ca3af",
-                    "--tab-background-hover": "#f9fafb",
-                    "--tab-color-hover": "#374151",
-                    "--tab-background-selected": "#ffffff",
-                    "--tab-color-selected": "#111827",
-                  }}
-                  panelPosition="after"
-                  panelBorderConnection
-                >
-                  <Tab
-                    column
-                    spacing="xs"
-                    selected={active === "approved"}
-                    onClick={() => setActive("approved")}
-                    paddingX="m"
-                    bold
-                    uppercase
-                    boldWhenSelected={false}
-                  >
-                    Approved
-                    <BadgeCount background="#1976d2" color="white">
-                      3
-                    </BadgeCount>
-                  </Tab>
-                  <Tab
-                    column
-                    spacing="xs"
-                    selected={active === "pending"}
-                    onClick={() => setActive("pending")}
-                    paddingX="m"
-                    bold
-                    uppercase
-                    boldWhenSelected={false}
-                  >
-                    Pending
-                    <BadgeCount background="red" color="white">
-                      2
-                    </BadgeCount>
-                  </Tab>
-                </TabList>
-                <Box
-                  role="tabpanel"
-                  padding="m"
-                  border="10px solid grey"
-                  background="#ffffff"
-                  relative
-                  top="-1"
-                  style="border-bottom-left-radius: 5px; border-bottom-right-radius: 5px;"
-                >
-                  {active === "approved"
-                    ? "These 3 items have been reviewed and approved."
-                    : "These 2 items are awaiting review."}
-                </Box>
-              </Box>
-            </div>
-          </Box>
-        );
-      };
-
-      const BasicTabs = () => {
+      const BasicNav = () => {
         return (
           <Box as="section" className="demo-section">
             <Title as="h2">Basic</Title>
-            <Text className="note">
-              A minimal tab list. Selection is controlled via the{" "}
-              <code>selected</code> prop on each <code>Tab</code>.
-            </Text>
-            <div className="example-block">
-              <TabList>
-                <Tab key="home" selected>
-                  Home
-                </Tab>
-                <Tab key="profile">Profile</Tab>
-                <Tab key="settings">Settings</Tab>
-              </TabList>
-            </div>
+
+            <Caption>Minimal list of links</Caption>
+            <Nav>
+              <Link pseudoState={{ ":-navi-href-current": true }}>Home</Link>
+              <Link>Profile</Link>
+              <Link>Settings</Link>
+            </Nav>
+
+            <Caption>List of links with indicator</Caption>
+            <Nav currentIndicator>
+              <Link
+                appearance="text"
+                pseudoState={{ ":-navi-href-current": true }}
+              >
+                Home
+              </Link>
+              <Link appearance="text">Profile</Link>
+              <Link appearance="text">Settings</Link>
+            </Nav>
           </Box>
         );
       };
 
-      const UnderlineInteractiveTabs = () => {
+      const UnderlineInteractive = () => {
         const [active, setActive] = useState("overview");
         const tabs = ["overview", "activity", "reports", "billing"];
         return (
@@ -222,57 +151,48 @@
             <div className="example-block">
               <div className="caption">Indicator below (default)</div>
               <Box border="1px dashed violet">
-                <TabList spacing="sm" indicator="end">
+                <Nav spacing="sm">
                   {tabs.map((name) => (
-                    <Tab
+                    <Link
                       key={name}
-                      selected={name === active}
                       onClick={() => setActive(name)}
                       aria-controls={`panel-${name}`}
+                      paddingX="md"
                       pseudoState={{
+                        ":focus-visible": name === "activity",
                         ":hover": name === "activity" || undefined,
+                        ":-navi-href-current": name === active,
                       }}
+                      capitalize
                     >
-                      <Link
-                        paddingX="md"
-                        discrete
-                        pseudoState={{
-                          ":focus-visible": name === "activity",
-                        }}
-                      >
-                        {name.charAt(0).toUpperCase() + name.slice(1)}
-                      </Link>
-                    </Tab>
+                      {name}
+                    </Link>
                   ))}
-                </TabList>
+                </Nav>
               </Box>
             </div>
             <div className="example-block">
               <div className="caption">Indicator above</div>
               <Box border="1px dashed violet">
-                <TabList spacing="sm" indicator="start">
+                <Nav spacing="sm" currentIndicator="start">
                   {tabs.map((name) => (
-                    <Tab
+                    <Link
                       key={name}
                       selected={name === active}
                       onClick={() => setActive(name)}
                       aria-controls={`panel-${name}`}
+                      paddingX="md"
                       pseudoState={{
                         ":hover": name === "activity" || undefined,
+                        ":focus-visible": name === "activity",
+                        ":-navi-href-current": name === active,
                       }}
+                      capitalize
                     >
-                      <Link
-                        paddingX="md"
-                        discrete
-                        pseudoState={{
-                          ":focus-visible": name === "activity",
-                        }}
-                      >
-                        {name.charAt(0).toUpperCase() + name.slice(1)}
-                      </Link>
-                    </Tab>
+                      {name}
+                    </Link>
                   ))}
-                </TabList>
+                </Nav>
               </Box>
             </div>
             <div className="example-block">
@@ -393,46 +313,51 @@
 
             <div className="example-block">
               <div className="caption">Interactive — click to select</div>
-              <TabList
+              <Nav
                 background="#ede9f5"
                 border="10px solid blue"
                 borderRadius="100px"
                 spacing="0"
-                indicator="none"
               >
-                <Tab
+                <Link
                   background="#F3E8FF"
                   paddingX="m"
-                  selected={active === "0-0"}
                   onClick={() => setActive("0-0")}
+                  pseudoState={{
+                    ":-navi-href-current": active === "0-0",
+                  }}
                 >
                   0-0
-                </Tab>
-                <Tab
+                </Link>
+                <Link
                   background="#C4B5FD"
                   paddingX="m"
-                  selected={active === "1-3"}
                   onClick={() => setActive("1-3")}
+                  pseudoState={{
+                    ":-navi-href-current": active === "1-3",
+                  }}
                 >
                   1-3
-                </Tab>
-                <Tab
+                </Link>
+                <Link
                   background="#8B5CF6"
                   paddingX="m"
-                  selected={active === "3-6"}
                   onClick={() => setActive("3-6")}
+                  pseudoState={{
+                    ":-navi-href-current": active === "3-6",
+                  }}
                 >
                   3-6
-                </Tab>
-                <Tab
+                </Link>
+                <Link
                   background="#7C3AED"
                   paddingX="m"
                   selected={active === "6+"}
                   onClick={() => setActive("6+")}
                 >
                   6+
-                </Tab>
-              </TabList>
+                </Link>
+              </Nav>
             </div>
 
             <div className="example-block">
@@ -1155,6 +1080,87 @@
                 <Tab key="sent">Sent</Tab>
                 <Tab key="drafts">Drafts</Tab>
               </TabList>
+            </div>
+          </Box>
+        );
+      };
+
+      const BinderTabs = () => {
+        const [active, setActive] = useState("approved");
+        return (
+          <Box as="section" className="demo-section">
+            <Title as="h2">Binder / Folder Tabs</Title>
+            <Text className="note">
+              "Intercalaire / classeur" style — tabs with category badges. Uses{" "}
+              <code>indicator="none"</code>, a bottom border on the wrapper to
+              simulate the panel separator, and <code>BadgeCount</code>.{" "}
+              <em>
+                The "open bottom on selected tab" effect requires future TabList
+                support; this is the closest approximation with current options.
+              </em>
+            </Text>
+            <div className="example-block">
+              <Box padding="m" background="lightgrey">
+                <TabList
+                  spacing="0"
+                  indicator="none"
+                  style={{
+                    "--tablist-border-width": "10px",
+                    "--tab-background": "transparent",
+                    "--tab-color": "#9ca3af",
+                    "--tab-background-hover": "#f9fafb",
+                    "--tab-color-hover": "#374151",
+                    "--tab-background-selected": "#ffffff",
+                    "--tab-color-selected": "#111827",
+                  }}
+                  panelPosition="after"
+                  panelBorderConnection
+                >
+                  <Tab
+                    column
+                    spacing="xs"
+                    selected={active === "approved"}
+                    onClick={() => setActive("approved")}
+                    paddingX="m"
+                    bold
+                    uppercase
+                    boldWhenSelected={false}
+                  >
+                    Approved
+                    <BadgeCount background="#1976d2" color="white">
+                      3
+                    </BadgeCount>
+                  </Tab>
+                  <Tab
+                    column
+                    spacing="xs"
+                    selected={active === "pending"}
+                    onClick={() => setActive("pending")}
+                    paddingX="m"
+                    bold
+                    uppercase
+                    boldWhenSelected={false}
+                  >
+                    Pending
+                    <BadgeCount background="red" color="white">
+                      2
+                    </BadgeCount>
+                  </Tab>
+                </TabList>
+                <Box
+                  role="tabpanel"
+                  padding="m"
+                  border="10px solid grey"
+                  background="#ffffff"
+                  relative
+                  top="-1"
+                  style="border-bottom-left-radius: 5px; border-bottom-right-radius: 5px;"
+                >
+                  {active === "approved"
+                    ? "These 3 items have been reviewed and approved."
+                    : "These 2 items are awaiting review."}
+                </Box>
+              </Box>
             </div>
           </Box>
         );
