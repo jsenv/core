@@ -11,6 +11,7 @@ import { NavContext } from "./nav_context.js";
 import.meta.css = /* css */ `
   @layer navi {
     .navi_nav {
+      --nav-border: none;
       --nav-border-radius: 0px;
       --nav-background: transparent;
     }
@@ -39,23 +40,25 @@ import.meta.css = /* css */ `
     /* overflow-x: auto; */
     /* overflow-y: hidden; */
 
-    .navi_link {
-      &:first-child {
-        border-top-left-radius: inherit;
-        border-bottom-left-radius: inherit;
-      }
-      &:last-child {
-        border-top-right-radius: inherit;
-        border-bottom-right-radius: inherit;
-      }
-    }
     &[data-link-border-radius="inherit"] {
-      --link-border-radius: calc(var(--nav-border-radius) - var(--nav-padding));
       .navi_link {
+        --link-border-radius: calc(
+          var(--nav-border-radius) - var(--nav-padding)
+        );
+
         border-top-left-radius: var(--link-border-radius);
         border-top-right-radius: var(--link-border-radius);
         border-bottom-right-radius: var(--link-border-radius);
         border-bottom-left-radius: var(--link-border-radius);
+
+        &:first-child {
+          border-top-left-radius: inherit;
+          border-bottom-left-radius: inherit;
+        }
+        &:last-child {
+          border-top-right-radius: inherit;
+          border-bottom-right-radius: inherit;
+        }
       }
     }
 
@@ -86,16 +89,16 @@ import.meta.css = /* css */ `
     }
 
     &[data-panel-border-connection] {
-      --tablist-border-width: 10px;
+      --nav-border-width: 10px;
       position: relative;
       z-index: 1;
 
-      .navi_tab {
-        border: var(--tablist-border-width) solid transparent;
+      .navi_link {
+        border: var(--nav-border-width) solid transparent;
 
         &[data-tab-selected] {
           border-color: gray;
-          border-bottom-color: var(--tablist-background);
+          border-bottom-color: var(--nav-background);
 
           border-top-left-radius: 5px;
           border-top-right-radius: 5px;

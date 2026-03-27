@@ -52,6 +52,7 @@ import.meta.css = /* css */ `
       --link-outline-color: var(--navi-focus-outline-color);
       --link-loader-color: var(--navi-loader-color);
       --link-background: transparent;
+      --link-background-current: transparent;
       --link-background-selected: light-dark(#bbdefb, #2563eb);
       --link-color: rgb(0, 0, 238);
       --link-color-visited: color-mix(in srgb, var(--link-color), black 40%);
@@ -210,7 +211,7 @@ import.meta.css = /* css */ `
     &[data-href-current] {
       --x-link-color: var(--link-color-current);
       --x-link-cursor: default;
-      --x-link-background: var(--link-background-current);
+      --x-link-background: var(--x-link-background-current);
 
       &[data-anchor] {
         /* For anchor links, we want to keep the pointer cursor to indicate interactivity */
