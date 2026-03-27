@@ -7,10 +7,7 @@ import { toChildArray } from "preact";
 
 import { Box } from "../../box/box.jsx";
 import { PSEUDO_CLASSES } from "../../box/pseudo_styles.js";
-import {
-  TabListAlignXContext,
-  TabListIndicatorContext,
-} from "./tab_context.js";
+import { TabListIndicatorContext } from "./tab_context.js";
 
 import.meta.css = /* css */ `
   @layer navi {
@@ -83,6 +80,7 @@ import.meta.css = /* css */ `
         display: inline-flex;
 
         .navi_tab {
+          line-height: inherit;
         }
 
         &:first-child {
@@ -235,7 +233,6 @@ export const TabList = ({
   spacing,
   vertical,
   indicator = vertical ? "start" : "end",
-  alignX,
   expand,
   expandX,
   tabBorderRadius,
@@ -265,21 +262,19 @@ export const TabList = ({
     >
       <Box as="ul" column role="list" spacing={spacing}>
         <TabListIndicatorContext.Provider value={indicator}>
-          <TabListAlignXContext.Provider value={alignX}>
-            {children.map((child) => {
-              return (
-                <Box
-                  key={child.props.key}
-                  as="li"
-                  column
-                  expandX={expandX}
-                  expand={expand}
-                >
-                  {child}
-                </Box>
-              );
-            })}
-          </TabListAlignXContext.Provider>
+          {children.map((child) => {
+            return (
+              <Box
+                key={child.props.key}
+                as="li"
+                column
+                expandX={expandX}
+                expand={expand}
+              >
+                {child}
+              </Box>
+            );
+          })}
         </TabListIndicatorContext.Provider>
       </Box>
     </Box>

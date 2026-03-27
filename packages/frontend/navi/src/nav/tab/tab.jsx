@@ -6,7 +6,6 @@ import { useDarkBackgroundAttribute } from "../../text/use_dark_background_attri
 import { RouteLink } from "../route_link.jsx";
 import {
   ReportSelectedOnTabContext,
-  TabListAlignXContext,
   TabListIndicatorContext,
 } from "./tab_context.js";
 
@@ -41,8 +40,8 @@ import.meta.css = /* css */ `
     color: var(--x-tab-color);
     white-space: nowrap;
     background: var(--x-tab-background);
+    border: none;
     border-radius: var(--tab-border-radius);
-    /* transition: background 0.12s ease-out; */
     user-select: none;
 
     &[data-dark-background] {
@@ -139,10 +138,10 @@ const TabBasic = ({
   onClick,
   row,
   column = !row,
+  alignX,
   ...props
 }) => {
   const tabListIndicator = useContext(TabListIndicatorContext);
-  const tabListAlignX = useContext(TabListAlignXContext);
   const defaultRef = useRef();
   const ref = props.ref || defaultRef;
   const [selectedFromChild, setSelectedFromChild] = useState(false);
@@ -167,8 +166,8 @@ const TabBasic = ({
       basePseudoState={{
         ":-navi-tab-selected": innerSelected,
       }}
-      selfAlignX={tabListAlignX}
-      data-align-x={tabListAlignX}
+      selfAlignX={alignX}
+      data-align-x={alignX}
       row={row}
       column={column}
       {...props}

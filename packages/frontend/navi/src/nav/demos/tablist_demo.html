@@ -124,7 +124,7 @@
                   spacing="0"
                   indicator="none"
                   style={{
-                    '--tablist-border-width': '10px',
+                    "--tablist-border-width": "10px",
                     "--tab-background": "transparent",
                     "--tab-color": "#9ca3af",
                     "--tab-background-hover": "#f9fafb",
@@ -861,9 +861,9 @@
               </Box>
               <Box column spacing="md">
                 <Box expandX>
-                  <div className="caption">Aligned right</div>
+                  <div className="caption">Tab aligned right</div>
                   <Box border="1px dashed violet">
-                    <TabList vertical spacing="xs" alignX="end">
+                    <TabList vertical spacing="xs">
                       {verticalTabs.map((name) => (
                         <Tab
                           key={name}
@@ -873,6 +873,7 @@
                           pseudoState={{
                             ":hover": name === "analytics" || undefined,
                           }}
+                          alignX="end"
                         >
                           <Link
                             paddingX="md"
@@ -891,7 +892,7 @@
                 <Box expandX>
                   <div className="caption">Aligned right + indicator end</div>
                   <Box border="1px dashed violet">
-                    <TabList vertical spacing="xs" alignX="end" indicator="end">
+                    <TabList vertical spacing="xs" indicator="end">
                       {verticalTabs.map((name) => (
                         <Tab
                           key={name}
@@ -901,6 +902,7 @@
                           pseudoState={{
                             ":hover": name === "analytics" || undefined,
                           }}
+                          alignX="end"
                         >
                           <Link
                             paddingX="md"
