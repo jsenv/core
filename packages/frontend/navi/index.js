@@ -55,10 +55,9 @@ export { useUrlSearchParam } from "./src/nav/browser_integration/use_url_search_
 export { route, setupRoutes, useRouteStatus } from "./src/nav/route.js";
 export { Route, Routes, useMatchingRouteInfo } from "./src/nav/route.jsx";
 export { routeAction } from "./src/nav/route_action.js";
-export { RouteLink } from "./src/nav/route_link.jsx";
 export { rawUrlPart, setBaseUrl } from "./src/nav/route_pattern.js";
 // Navigation/components
-export { Link } from "./src/nav/link.jsx";
+export { Link } from "./src/nav/link/link.jsx";
 export { Tab } from "./src/nav/tab/tab.jsx";
 export { TabList } from "./src/nav/tab/tablist.jsx";
 // debug/tests

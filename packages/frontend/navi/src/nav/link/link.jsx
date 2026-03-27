@@ -1,30 +1,37 @@
-import { useContext, useLayoutEffect, useRef } from "preact/hooks";
+/* eslint-disable jsenv/no-unknown-params */
 
-import { renderActionableComponent } from "../action/render_actionable_component.jsx";
-import { Box } from "../box/box.jsx";
-import { PSEUDO_CLASSES } from "../box/pseudo_styles.js";
+import { useContext, useRef } from "preact/hooks";
+
+import { renderActionableComponent } from "../../action/render_actionable_component.jsx";
+import { Box } from "../../box/box.jsx";
+import { PSEUDO_CLASSES } from "../../box/pseudo_styles.js";
 import {
   SelectionContext,
   useSelectableElement,
-} from "../field/selection/selection.jsx";
-import { useRequestedActionStatus } from "../field/use_action_events.js";
-import { useAutoFocus } from "../field/use_auto_focus.js";
-import { closeValidationMessage } from "../field/validation/custom_constraint_validation.js";
-import { useConstraints } from "../field/validation/hooks/use_constraints.js";
-import { Icon } from "../graphic/icon.jsx";
-import { EmailSvg } from "../graphic/icons/email_svg.jsx";
+} from "../../field/selection/selection.jsx";
+import { useRequestedActionStatus } from "../../field/use_action_events.js";
+import { useAutoFocus } from "../../field/use_auto_focus.js";
+import { closeValidationMessage } from "../../field/validation/custom_constraint_validation.js";
+import { useConstraints } from "../../field/validation/hooks/use_constraints.js";
+import { Icon } from "../../graphic/icon.jsx";
+import { EmailSvg } from "../../graphic/icons/email_svg.jsx";
 import {
   LinkAnchorSvg,
   LinkBlankTargetSvg,
-} from "../graphic/icons/link_svgs.jsx";
-import { PhoneSvg } from "../graphic/icons/phone_svg.jsx";
-import { LoaderBackground } from "../graphic/loader/loader_background.jsx";
-import { useKeyboardShortcuts } from "../keyboard/keyboard_shortcuts.js";
-import { applySpacingOnTextChildren, Text } from "../text/text.jsx";
-import { TitleLevelContext } from "../text/title.jsx";
-import { useDocumentUrl } from "./browser_integration/document_url_signal.js";
-import { getHrefTargetInfo } from "./browser_integration/href_target_info.js";
-import { useIsVisited } from "./browser_integration/use_is_visited.js";
+} from "../../graphic/icons/link_svgs.jsx";
+import { PhoneSvg } from "../../graphic/icons/phone_svg.jsx";
+import { LoaderBackground } from "../../graphic/loader/loader_background.jsx";
+import { useKeyboardShortcuts } from "../../keyboard/keyboard_shortcuts.js";
+import { applySpacingOnTextChildren, Text } from "../../text/text.jsx";
+import { TitleLevelContext } from "../../text/title.jsx";
+import { useDocumentUrl } from "../browser_integration/document_url_signal.js";
+import { getHrefTargetInfo } from "../browser_integration/href_target_info.js";
+import { useIsVisited } from "../browser_integration/use_is_visited.js";
+import { useRouteStatus } from "../route.js";
+import { ReportSelectedOnTabContext } from "../tab/tab_context.js";
+
+import { GithubSvg, SmsSvg } from "./link_icons.jsx";
+import { useDimColorWhen } from "./use_dim_color.js";
 
 /*
  * Apply opacity to child content, not the link element itself.
@@ -244,7 +251,49 @@ const LinkBasic = (props) => {
   if (selectionContext) {
     return <LinkWithSelection {...props} />;
   }
+  return <LinkOrRouteLink {...props} />;
+};
+const LinkWithSelection = (props) => {
+  const { selection, selectionController } = useContext(SelectionContext);
+  const { value = props.href, children, ...rest } = props;
+  const defaultRef = useRef();
+  const ref = props.ref || defaultRef;
+  const { selected } = useSelectableElement(ref, {
+    selection,
+    selectionController,
+  });
+
+  return (
+    <LinkOrRouteLink
+      {...rest}
+      ref={ref}
+      data-value={value}
+      aria-selected={selected}
+    >
+      {children}
+    </LinkOrRouteLink>
+  );
+};
+const LinkOrRouteLink = (props) => {
+  if (props.route) {
+    return <LinkWithRoute {...props} />;
+  }
   return <LinkPlain {...props} />;
+};
+const LinkWithRoute = ({ route, routeParams, children, ...rest }) => {
+  const url = route.buildUrl(routeParams);
+  const reportSelectedOnTab = useContext(ReportSelectedOnTabContext);
+  const { matching } = useRouteStatus(route);
+  const paramsAreMatching = route.matchesParams(routeParams);
+  const linkMatching = matching && paramsAreMatching;
+
+  reportSelectedOnTab?.(linkMatching);
+
+  return (
+    <LinkBasic matching={linkMatching} href={url} {...rest}>
+      {children || route.buildRelativeUrl(routeParams)}
+    </LinkBasic>
+  );
 };
 
 const LinkPlain = (props) => {
@@ -421,93 +470,6 @@ const LinkPlain = (props) => {
       {visualChildren}
     </Box>
   );
-};
-
-const SmsSvg = () => {
-  return (
-    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-      <path
-        d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM18 14H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"
-        fill="currentColor"
-      />
-    </svg>
-  );
-};
-
-const GithubSvg = () => {
-  return (
-    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-      <path
-        d="M12 2C6.48 2 2 6.48 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.87 1.52 2.34 1.07 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.11.38-2 1.03-2.71-.1-.25-.45-1.29.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33.85 0 1.71.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.35.2 2.39.1 2.64.65.71 1.03 1.6 1.03 2.71 0 3.82-2.34 4.66-4.57 4.91.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0012 2z"
-        fill="currentColor"
-      />
-    </svg>
-  );
-};
-
-export const CurrentLinkSvg = () => {
-  return (
-    <svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
-      <path
-        d="m 8 0 c -3.3125 0 -6 2.6875 -6 6 c 0.007812 0.710938 0.136719 1.414062 0.386719 2.078125 l -0.015625 -0.003906 c 0.636718 1.988281 3.78125 5.082031 5.625 6.929687 h 0.003906 v -0.003906 c 1.507812 -1.507812 3.878906 -3.925781 5.046875 -5.753906 c 0.261719 -0.414063 0.46875 -0.808594 0.585937 -1.171875 l -0.019531 0.003906 c 0.25 -0.664063 0.382813 -1.367187 0.386719 -2.078125 c 0 -3.3125 -2.683594 -6 -6 -6 z m 0 3.691406 c 1.273438 0 2.308594 1.035156 2.308594 2.308594 s -1.035156 2.308594 -2.308594 2.308594 c -1.273438 -0.003906 -2.304688 -1.035156 -2.304688 -2.308594 c -0.003906 -1.273438 1.03125 -2.304688 2.304688 -2.308594 z m 0 0"
-        fill="currentColor"
-      />
-    </svg>
-  );
-};
-
-const LinkWithSelection = (props) => {
-  const { selection, selectionController } = useContext(SelectionContext);
-  const { value = props.href, children, ...rest } = props;
-  const defaultRef = useRef();
-  const ref = props.ref || defaultRef;
-  const { selected } = useSelectableElement(ref, {
-    selection,
-    selectionController,
-  });
-
-  return (
-    <LinkPlain {...rest} ref={ref} data-value={value} aria-selected={selected}>
-      {children}
-    </LinkPlain>
-  );
-};
-
-/*
- * Custom hook to apply semi-transparent color when an element should be dimmed.
- *
- * Why we do it this way:
- * 1. **Precise timing**: Captures the element's natural color exactly when transitioning
- *    from normal to dimmed state (not before, not after)
- * 2. **Avoids CSS inheritance issues**: CSS `currentColor` and `color-mix()` don't work
- *    reliably for creating true transparency that matches `opacity: 0.5`
- * 3. **Performance**: Only executes when the dimmed state actually changes, not on every render
- * 4. **Color accuracy**: Uses `color(from ... / 0.5)` syntax to preserve the exact visual
- *    appearance of `opacity: 0.5` but applied only to color
- * 5. **Works with any color**: Handles default blue, visited purple, inherited colors, etc.
- * 6. **Maintains focus outline**: Since we only dim the text color, focus outlines remain
- *    fully visible for accessibility
- */
-const useDimColorWhen = (elementRef, shouldDim) => {
-  const shouldDimPreviousRef = useRef();
-  useLayoutEffect(() => {
-    const element = elementRef.current;
-    const shouldDimPrevious = shouldDimPreviousRef.current;
-
-    if (shouldDim === shouldDimPrevious) {
-      return;
-    }
-    shouldDimPreviousRef.current = shouldDim;
-    if (shouldDim) {
-      // Capture color just before applying disabled state
-      const computedStyle = getComputedStyle(element);
-      const currentColor = computedStyle.color;
-      element.style.color = `color(from ${currentColor} srgb r g b / 0.5)`;
-    } else {
-      // Clear the inline style to let CSS take over
-      element.style.color = "";
-    }
-  });
 };
 
 const LinkWithAction = (props) => {
