@@ -17,7 +17,6 @@ import.meta.css = /* css */ `
   }
 
   .navi_nav {
-    margin: 0;
     padding-top: var(
       --nav-padding-top,
       var(--nav-padding-y, var(--nav-padding, unset))

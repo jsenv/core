@@ -121,7 +121,7 @@
             </Nav>
 
             <Caption>List of links as tab</Caption>
-            <Nav>
+            <Nav spacing="s">
               <Link
                 appearance="tab"
                 pseudoState={{ ":-navi-href-current": true }}
@@ -151,7 +151,7 @@
             <div className="example-block">
               <div className="caption">Indicator below (default)</div>
               <Box border="1px dashed violet">
-                <Nav spacing="sm">
+                <Nav spacing="s" lineHeight="2">
                   {tabs.map((name) => (
                     <Link
                       appearance="tab"
@@ -175,7 +175,7 @@
             <div className="example-block">
               <div className="caption">Indicator above</div>
               <Box border="1px dashed violet">
-                <Nav spacing="sm">
+                <Nav spacing="s" lineHeight="2">
                   {tabs.map((name) => (
                     <Link
                       key={name}
@@ -203,31 +203,34 @@
               </div>
               <Box row align="center" border="1px dashed violet">
                 <Nav
+                  lineHeight="2"
                   borderRadius="s"
                   linkBorderRadius="inherit"
                   expandX
-                  spacing="0"
-                  indicator="none"
                   padding="2"
                   style={{
                     "--nav-background": "rgb(233, 236, 240)",
-                    "--link-background": "transparent",
-                    "--link-color": "#373C45",
-                    "--link-background-current": "#373C45",
-                    "--link-color-current": "white",
                   }}
                 >
                   {tabs.map((name) => (
                     <Link
+                      appearance="tab"
+                      currentIndicator="none"
                       key={name}
                       onClick={() => setActive(name)}
                       aria-controls={`panel-${name}`}
-                      padding="0"
-                      paddingX="md"
+                      paddingX="m"
+                      expandX
+                      alignX="center"
                       pseudoState={{
                         ":hover": name === "activity" || undefined,
                         ":focus-visible": name === "activity",
                         ":-navi-href-current": name === active,
+                      }}
+                      style={{
+                        "--link-color": "#373C45",
+                        "--link-background-current": "#373C45",
+                        // "--link-color-current": "white",
                       }}
                       capitalize
                     >

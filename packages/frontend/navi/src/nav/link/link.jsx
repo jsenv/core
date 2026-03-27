@@ -83,7 +83,7 @@ import.meta.css = /* css */ `
     );
     --x-link-background-current: var(
       --link-background-color-current,
-      var(--link-background-current, var(--link-background))
+      var(--link-background-current, var(--link-background-current))
     );
     --x-link-color: var(--link-color);
     --x-link-color-hover: var(--link-color-hover, var(--link-color));
@@ -106,6 +106,16 @@ import.meta.css = /* css */ `
     outline-style: solid;
     outline-color: var(--link-outline-color);
     cursor: var(--x-link-cursor);
+
+    .navi_text_bold_wrapper,
+    .navi_text_bold_clone,
+    .navi_text_bold_foreground {
+      display: inline-flex;
+      flex-grow: 1;
+      justify-content: center;
+      text-align: center;
+      border-radius: inherit;
+    }
 
     .navi_current_indicator {
       position: absolute;
@@ -155,19 +165,6 @@ import.meta.css = /* css */ `
       --tab-color: white;
     }
 
-    > .navi_text:not(.navi_badge_count),
-    .navi_link,
-    .navi_button,
-    .navi_text_bold_wrapper,
-    .navi_text_bold_clone,
-    .navi_text_bold_foreground {
-      display: inline-flex;
-      flex-grow: 1;
-      justify-content: center;
-      text-align: center;
-      border-radius: inherit;
-    }
-
     /* Interactive */
     &[data-interactive] {
       cursor: pointer;
@@ -213,6 +210,7 @@ import.meta.css = /* css */ `
     &[data-href-current] {
       --x-link-color: var(--link-color-current);
       --x-link-cursor: default;
+      --x-link-background: var(--link-background-current);
 
       &[data-anchor] {
         /* For anchor links, we want to keep the pointer cursor to indicate interactivity */
@@ -282,8 +280,6 @@ import.meta.css = /* css */ `
       );
       --link-color: inherit;
       --link-text-decoration: none;
-
-      display: flex;
       white-space: nowrap;
       user-select: none;
     }
@@ -469,7 +465,7 @@ const LinkPlain = (props) => {
   // subscribe to document url to re-render and re-compute getHrefTargetInfo
   useDocumentUrl();
   const { isSameSite, isAnchor, isCurrent } = getHrefTargetInfo(href);
-  useDarkBackgroundAttribute(ref, [selected], {});
+  useDarkBackgroundAttribute(ref, [selected, isCurrent], {});
 
   const innerTarget =
     target === undefined ? (isSameSite ? "_self" : "_blank") : target;
