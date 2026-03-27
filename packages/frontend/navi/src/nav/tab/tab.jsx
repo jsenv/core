@@ -135,6 +135,7 @@ const TabBasic = ({
   icon,
   selected,
   boldWhenSelected = !icon,
+  indicator,
   onClick,
   row,
   column = !row,
@@ -142,6 +143,8 @@ const TabBasic = ({
   ...props
 }) => {
   const tabListIndicator = useContext(TabListIndicatorContext);
+  const innerIndicator =
+    indicator === undefined ? tabListIndicator || "end" : indicator;
   const defaultRef = useRef();
   const ref = props.ref || defaultRef;
   const [selectedFromChild, setSelectedFromChild] = useState(false);
@@ -172,8 +175,8 @@ const TabBasic = ({
       column={column}
       {...props}
     >
-      {(tabListIndicator === "start" || tabListIndicator === "end") && (
-        <span className="navi_tab_indicator" data-position={tabListIndicator} />
+      {(innerIndicator === "start" || innerIndicator === "end") && (
+        <span className="navi_tab_indicator" data-position={innerIndicator} />
       )}
       <ReportSelectedOnTabContext.Provider value={setSelectedFromChild}>
         {boldWhenSelected ? (
