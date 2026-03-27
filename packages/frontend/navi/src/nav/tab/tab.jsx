@@ -75,7 +75,6 @@ import.meta.css = /* css */ `
         top: 0;
         left: 0;
       }
-
       &[data-position="end"] {
         bottom: 0;
         left: 0;

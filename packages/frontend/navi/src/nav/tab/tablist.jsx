@@ -23,21 +23,61 @@ import.meta.css = /* css */ `
       --tab-indicator-size: 2px;
       --tab-indicator-spacing: 0;
       --tab-indicator-color: rgb(205, 52, 37);
-
-      &[data-tab-border-radius="inherit"] {
-        --tab-border-radius: calc(
-          var(--tablist-border-radius) - var(--tablist-padding)
-        );
-      }
     }
   }
 
   .navi_tablist {
-    display: flex;
+    margin: 0;
+    padding-top: var(
+      --tablist-padding-top,
+      var(--tablist-padding-y, var(--tablist-padding, unset))
+    );
+    padding-right: var(
+      --tablist-padding-right,
+      var(--tablist-padding-x, var(--tablist-padding, unset))
+    );
+    padding-bottom: var(
+      --tablist-padding-bottom,
+      var(--tablist-padding-y, var(--tablist-padding, unset))
+    );
+    padding-left: var(
+      --tablist-padding-left,
+      var(--tablist-padding-x, var(--tablist-padding, unset))
+    );
+    align-items: center;
+    gap: 0.5rem;
     line-height: 2;
+    background: var(--tablist-background);
+    border: var(--tablist-border);
+    border-radius: var(--tablist-border-radius);
     /* overflow-x: auto; */
     /* overflow-y: hidden; */
 
+    .navi_tab {
+      position: relative;
+      display: inline-flex;
+      line-height: inherit;
+
+      &:first-child {
+        border-top-left-radius: inherit;
+        border-bottom-left-radius: inherit;
+      }
+      &:last-child {
+        border-top-right-radius: inherit;
+        border-bottom-right-radius: inherit;
+      }
+    }
+    &[data-tab-border-radius="inherit"] {
+      --tab-border-radius: calc(
+        var(--tablist-border-radius) - var(--tablist-padding)
+      );
+      .navi_tab {
+        border-top-left-radius: var(--tab-border-radius);
+        border-top-right-radius: var(--tab-border-radius);
+        border-bottom-right-radius: var(--tab-border-radius);
+        border-bottom-left-radius: var(--tab-border-radius);
+      }
+    }
     &[data-tab-indicator-position="start"] {
       .navi_tab {
         margin-top: var(--tab-indicator-spacing);
@@ -49,102 +89,41 @@ import.meta.css = /* css */ `
       }
     }
 
-    > ul {
-      display: flex;
-      margin: 0;
-      padding-top: var(
-        --tablist-padding-top,
-        var(--tablist-padding-y, var(--tablist-padding, unset))
-      );
-      padding-right: var(
-        --tablist-padding-right,
-        var(--tablist-padding-x, var(--tablist-padding, unset))
-      );
-      padding-bottom: var(
-        --tablist-padding-bottom,
-        var(--tablist-padding-y, var(--tablist-padding, unset))
-      );
-      padding-left: var(
-        --tablist-padding-left,
-        var(--tablist-padding-x, var(--tablist-padding, unset))
-      );
-      align-items: center;
-      gap: 0.5rem;
-      list-style: none;
-      background: var(--tablist-background);
-      border: var(--tablist-border);
-      border-radius: var(--tablist-border-radius);
-
-      > li {
-        position: relative;
-        display: inline-flex;
-
-        .navi_tab {
-          line-height: inherit;
-        }
-
-        &:first-child {
-          border-top-left-radius: inherit;
-          border-bottom-left-radius: inherit;
-
-          .navi_tab {
-            border-top-left-radius: inherit;
-            border-bottom-left-radius: inherit;
-          }
-        }
-
-        &:last-child {
-          border-top-right-radius: inherit;
-          border-bottom-right-radius: inherit;
-
-          .navi_tab {
-            border-top-right-radius: inherit;
-            border-bottom-right-radius: inherit;
-          }
-        }
-      }
-    }
-
     &[data-expand] {
-      > ul {
-        flex-grow: 1;
+      flex-grow: 1;
+
+      .navi_tab {
+        flex: 1;
+        justify-content: start;
       }
     }
-
     /* Vertical layout */
     &[data-vertical] {
       /* overflow-x: hidden; */
       /* overflow-y: auto; */
+      align-items: start;
 
-      > ul {
-        flex-direction: column;
-        align-items: start;
+      .navi_tab {
+        width: 100%;
+        flex-direction: row;
+        text-align: left;
 
-        > li {
-          width: 100%;
+        .navi_tab_indicator {
+          width: var(--tab-indicator-size);
+          height: 100%;
+        }
 
-          .navi_tab {
-            flex-direction: row;
-            text-align: left;
+        > .navi_text,
+        .navi_link,
+        .navi_text_bold_foreground {
+          justify-content: start;
+        }
 
-            .navi_tab_indicator {
-              width: var(--tab-indicator-size);
-              height: 100%;
-            }
-
-            > .navi_text,
-            .navi_link,
-            .navi_text_bold_foreground {
-              justify-content: start;
-            }
-
-            &[data-align-x="end"] {
-              > .navi_text,
-              .navi_link,
-              .navi_text_bold_foreground {
-                justify-content: end;
-              }
-            }
+        &[data-align-x="end"] {
+          > .navi_text,
+          .navi_link,
+          .navi_text_bold_foreground {
+            justify-content: end;
           }
         }
       }
@@ -176,16 +155,6 @@ import.meta.css = /* css */ `
       &[data-expand] {
         .navi_tab {
           align-items: stretch;
-        }
-      }
-    }
-
-    &[data-expand] {
-      > ul {
-        .navi_tab {
-          width: 100%;
-          flex: 1;
-          justify-content: start;
         }
       }
     }
@@ -244,9 +213,11 @@ export const TabList = ({
 
   return (
     <Box
-      as="nav"
+      as="div"
       baseClassName="navi_tablist"
       role="tablist"
+      column={!vertical}
+      row={vertical}
       data-tab-indicator-position={
         indicator === "start" || indicator === "end" ? indicator : undefined
       }
@@ -257,26 +228,13 @@ export const TabList = ({
       data-panel-border-connection={panelBorderConnection ? "" : undefined}
       expand={expand}
       expandX={expandX}
+      spacing={spacing}
       {...props}
       styleCSSVars={TabListStyleCSSVars}
     >
-      <Box as="ul" column role="list" spacing={spacing}>
-        <TabListIndicatorContext.Provider value={indicator}>
-          {children.map((child) => {
-            return (
-              <Box
-                key={child.props.key}
-                as="li"
-                column
-                expandX={expandX}
-                expand={expand}
-              >
-                {child}
-              </Box>
-            );
-          })}
-        </TabListIndicatorContext.Provider>
-      </Box>
+      <TabListIndicatorContext.Provider value={indicator}>
+        {children}
+      </TabListIndicatorContext.Provider>
     </Box>
   );
 };
