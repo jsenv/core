@@ -24,6 +24,20 @@ import.meta.css = /* css */ `
     &[data-has-absolute-child] {
       display: inline-block;
     }
+
+    /* There is a chrome specific bug that prevents text-transform: capitalize to be applied in nested DOM structure */
+    /* The CSS below ensure capitalize is propagated to the bold clones */
+    &[data-capitalize] {
+      &::first-letter {
+        text-transform: uppercase;
+      }
+      .navi_text_bold_clone::first-letter {
+        text-transform: uppercase;
+      }
+      .navi_text_bold_foreground::first-letter {
+        text-transform: uppercase;
+      }
+    }
   }
 
   .navi_text_overflow {
@@ -261,12 +275,14 @@ const TextBasic = ({
   boldTransition,
   boldStable,
   preventBoldLayoutShift = boldTransition,
+  capitalize,
   children,
   ...rest
 }) => {
   const boxProps = {
     "as": "span",
     "data-bold-transition": boldTransition ? "" : undefined,
+    "data-capitalize": capitalize ? "" : undefined,
     ...rest,
     "baseClassName": withPropsClassName("navi_text", rest.baseClassName),
   };

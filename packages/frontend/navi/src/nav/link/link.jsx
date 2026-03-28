@@ -453,6 +453,7 @@ const LinkPlain = (props) => {
     revealOnInteraction = Boolean(titleLevel),
     hrefFallback = !anchor,
     overflowEllipsis,
+    capitalize,
 
     children,
 
@@ -542,13 +543,18 @@ const LinkPlain = (props) => {
       // (We could use zero width space with paddings but that's just simpler to rely on margins here)
       spacing="pre"
       preventBoldLayoutShift={currentEffectBold}
+      capitalize={capitalize}
     >
       {startIconEl}
       {innerChildren}
       {endIconEl && <Text overflowPinned>{endIconEl}</Text>}
     </Text>
   ) : (
-    <Text preventBoldLayoutShift={currentEffectBold} spacing="pre">
+    <Text
+      preventBoldLayoutShift={currentEffectBold}
+      spacing="pre"
+      capitalize={capitalize}
+    >
       {startIconEl}
       {applySpacingOnTextChildren(innerChildren, spacing)}
       {endIconEl}
