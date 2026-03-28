@@ -19,6 +19,7 @@ import.meta.css = /* css */ `
   }
 
   .navi_nav {
+    display: flex;
     width: fit-content;
     padding-top: var(
       --nav-padding-top,
@@ -133,7 +134,6 @@ export const Nav = ({
   children,
   spacing,
   vertical,
-  row = false,
   expand,
   expandX,
   linkBorderRadiusInherit,
@@ -146,9 +146,9 @@ export const Nav = ({
   return (
     <Box
       as="nav"
+      row={vertical}
+      column={!vertical}
       baseClassName="navi_nav"
-      column={!row}
-      row={row}
       data-link-border-radius-inherit={linkBorderRadiusInherit ? "" : undefined}
       data-expand={expand || expandX ? "" : undefined}
       data-vertical={vertical ? "" : undefined}

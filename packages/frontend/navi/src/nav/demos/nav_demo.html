@@ -495,6 +495,7 @@
                           key={name}
                           onClick={() => setActiveVertical(name)}
                           aria-controls={`vertical-panel-${name}`}
+                          appearance="tab"
                           currentIndicator="left"
                           pseudoState={{
                             ":hover": name === "analytics" || undefined,
@@ -518,6 +519,7 @@
                       {verticalTabs.map((name) => (
                         <Link
                           key={name}
+                          appearance="tab"
                           onClick={() => setActiveVertical(name)}
                           aria-controls={`vertical-panel-${name}`}
                           paddingX="m"
@@ -540,10 +542,12 @@
                 <Box expandX>
                   <div className="caption">Tab aligned right</div>
                   <Box border="1px dashed violet">
-                    <Nav vertical spacing="xs">
+                    <Nav vertical spacing="xs" alignX="end">
                       {verticalTabs.map((name) => (
                         <Link
                           key={name}
+                          appearance="tab"
+                          currentIndicator="left"
                           alignX="end"
                           onClick={() => setActiveVertical(name)}
                           aria-controls={`vertical-panel-${name}`}
@@ -564,10 +568,11 @@
                 <Box expandX>
                   <div className="caption">Aligned right + indicator end</div>
                   <Box border="1px dashed violet">
-                    <Nav vertical spacing="xs">
+                    <Nav vertical spacing="xs" alignX="end">
                       {verticalTabs.map((name) => (
                         <Link
                           key={name}
+                          appearance="tab"
                           onClick={() => setActiveVertical(name)}
                           aria-controls={`vertical-panel-${name}`}
                           paddingX="m"
@@ -594,7 +599,6 @@
                   <Box border="1px dashed violet">
                     <Nav
                       vertical
-                      spacing="0"
                       style={{
                         "--nav-background": "rgb(233, 236, 240)",
                       }}
@@ -602,6 +606,7 @@
                       {verticalTabs.map((name) => (
                         <Link
                           key={name}
+                          appearance="tab"
                           selected={name === activeVertical}
                           onClick={() => setActiveVertical(name)}
                           aria-controls={`vertical-panel-${name}`}
@@ -611,6 +616,7 @@
                             ":focus-visible": name === "analytics",
                             ":-navi-href-current": name === activeVertical,
                           }}
+                          currentIndicator="left"
                           style={{
                             "--link-current-indicator-spacing": "0",
                             "--link-background": "transparent",
@@ -618,6 +624,7 @@
                             "--link-background-current": "#373C45",
                             "--link-color-current": "white",
                           }}
+                          capitalize
                         >
                           {name}
                         </Link>
@@ -639,6 +646,7 @@
                       {verticalTabs.map((name) => (
                         <Link
                           key={name}
+                          appearance="tab"
                           onClick={() => setActiveVertical(name)}
                           aria-controls={`vertical-panel-${name}`}
                           paddingX="m"
@@ -647,6 +655,7 @@
                             ":focus-visible": name === "analytics",
                             ":-navi-href-current": name === activeVertical,
                           }}
+                          currentIndicator="left"
                           style={{
                             "--link-current-indicator-spacing": "0",
                             "--link-background": "transparent",
@@ -655,6 +664,7 @@
                             "--link-color-current": "white",
                           }}
                           capitalize
+                          expandX
                         >
                           {name}
                         </Link>

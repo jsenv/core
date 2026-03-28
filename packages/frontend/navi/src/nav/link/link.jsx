@@ -125,8 +125,6 @@ import.meta.css = /* css */ `
       position: absolute;
       z-index: 1;
       display: flex;
-      width: 100%;
-      height: var(--link-current-indicator-size);
       background: transparent;
       border-radius: 0.1px;
     }
@@ -136,6 +134,8 @@ import.meta.css = /* css */ `
       .navi_current_indicator {
         top: 0;
         left: 0;
+        width: 100%;
+        height: var(--link-current-indicator-size);
       }
     }
     &[data-current-indicator-position="bottom"] {
@@ -144,6 +144,8 @@ import.meta.css = /* css */ `
       .navi_current_indicator {
         bottom: 0;
         left: 0;
+        width: 100%;
+        height: var(--link-current-indicator-size);
       }
     }
     &[data-current-indicator-position="left"] {
@@ -152,6 +154,8 @@ import.meta.css = /* css */ `
       .navi_current_indicator {
         top: 0;
         left: 0;
+        width: var(--link-current-indicator-size);
+        height: 100%;
       }
     }
     &[data-current-indicator-position="right"] {
@@ -160,7 +164,8 @@ import.meta.css = /* css */ `
       .navi_current_indicator {
         top: 0;
         right: 0;
-        left: auto;
+        width: var(--link-current-indicator-size);
+        height: 100%;
       }
     }
 
