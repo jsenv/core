@@ -40,7 +40,7 @@ import.meta.css = /* css */ `
     /* overflow-x: auto; */
     /* overflow-y: hidden; */
 
-    &[data-link-border-radius="inherit"] {
+    &[data-link-border-radius-inherit] {
       .navi_link {
         --link-border-radius: calc(
           var(--nav-border-radius) - var(--nav-padding)
@@ -52,12 +52,12 @@ import.meta.css = /* css */ `
         border-bottom-left-radius: var(--link-border-radius);
 
         &:first-child {
-          border-top-left-radius: inherit;
-          border-bottom-left-radius: inherit;
+          border-top-left-radius: var(--link-border-radius, inherit);
+          border-bottom-left-radius: var(--link-border-radius, inherit);
         }
         &:last-child {
-          border-top-right-radius: inherit;
-          border-bottom-right-radius: inherit;
+          border-top-right-radius: var(--link-border-radius, inherit);
+          border-bottom-right-radius: var(--link-border-radius, inherit);
         }
       }
     }
@@ -127,7 +127,7 @@ export const Nav = ({
   row = false,
   expand,
   expandX,
-  linkBorderRadius,
+  linkBorderRadiusInherit = true,
   panelPosition, // before or after
   panelBorderConnection,
   ...props
@@ -140,7 +140,7 @@ export const Nav = ({
       baseClassName="navi_nav"
       column={!row}
       row={row}
-      data-link-border-radius={linkBorderRadius}
+      data-link-border-radius-inherit={linkBorderRadiusInherit ? "" : undefined}
       data-expand={expand || expandX ? "" : undefined}
       data-vertical={vertical ? "" : undefined}
       data-panel-position={panelPosition}
