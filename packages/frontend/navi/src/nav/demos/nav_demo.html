@@ -217,6 +217,7 @@
                   style={{
                     "--nav-background": "rgb(233, 236, 240)",
                   }}
+                  linkBorderRadiusInherit
                 >
                   {tabs.map((name) => (
                     <Link
@@ -310,11 +311,7 @@
 
             <div className="example-block">
               <div className="caption">Interactive — click to select</div>
-              <Nav
-                background="#ede9f5"
-                border="10px solid blue"
-                borderRadius="100px"
-              >
+              <Nav border="10px solid blue" borderRadius="100px">
                 <Link
                   appearance="tab"
                   background="#F3E8FF"
@@ -366,26 +363,23 @@
               <div className="caption">
                 Same design with first and last tab hovered
               </div>
-              <Nav
-                background="#ede9f5"
-                border="10px solid blue"
-                borderRadius="100px"
-                spacing="0"
-              >
+              <Nav border="10px solid blue" borderRadius="100px" spacing="0">
                 <Link
+                  appearance="tab"
                   background="#F3E8FF"
                   paddingX="m"
                   pseudoState={{ ":hover": true }}
                 >
                   0-0
                 </Link>
-                <Link background="#C4B5FD" paddingX="m">
+                <Link appearance="tab" background="#C4B5FD" paddingX="m">
                   1-3
                 </Link>
-                <Link background="#8B5CF6" paddingX="m">
+                <Link appearance="tab" background="#8B5CF6" paddingX="m">
                   3-6
                 </Link>
                 <Link
+                  appearance="tab"
                   background="#7C3AED"
                   paddingX="m"
                   pseudoState={{ ":hover": true }}
@@ -397,22 +391,18 @@
 
             <div className="example-block">
               <div className="caption">Same design with last tab selected</div>
-              <Nav
-                background="#ede9f5"
-                border="10px solid blue"
-                borderRadius="100px"
-                spacing="0"
-              >
-                <Link background="#F3E8FF" paddingX="m">
+              <Nav border="10px solid blue" borderRadius="100px">
+                <Link appearance="tab" background="#F3E8FF" paddingX="m">
                   0-0
                 </Link>
-                <Link background="#C4B5FD" paddingX="m">
+                <Link appearance="tab" background="#C4B5FD" paddingX="m">
                   1-3
                 </Link>
-                <Link background="#8B5CF6" paddingX="m">
+                <Link appearance="tab" background="#8B5CF6" paddingX="m">
                   3-6
                 </Link>
                 <Link
+                  appearance="tab"
                   background="#7C3AED"
                   paddingX="m"
                   pseudoState={{ ":-navi-href-current": true }}
@@ -425,13 +415,13 @@
             <div className="example-block">
               <div className="caption">Same design with padding on tablist</div>
               <Nav
-                background="#ede9f5"
+                background="yellow"
                 border="10px solid blue"
                 borderRadius="100px"
-                spacing="0"
                 padding="15"
               >
                 <Link
+                  appearance="tab"
                   background="#F3E8FF"
                   paddingX="m"
                   onClick={() => setActive("0-0")}
@@ -442,6 +432,7 @@
                   0-0
                 </Link>
                 <Link
+                  appearance="tab"
                   background="#C4B5FD"
                   paddingX="m"
                   onClick={() => setActive("1-3")}
@@ -452,6 +443,7 @@
                   1-3
                 </Link>
                 <Link
+                  appearance="tab"
                   background="#8B5CF6"
                   paddingX="m"
                   onClick={() => setActive("3-6")}
@@ -462,6 +454,7 @@
                   3-6
                 </Link>
                 <Link
+                  appearance="tab"
                   background="#7C3AED"
                   paddingX="m"
                   onClick={() => setActive("6+")}

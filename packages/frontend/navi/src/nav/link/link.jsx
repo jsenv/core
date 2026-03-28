@@ -48,7 +48,7 @@ import { useDimColorWhen } from "./use_dim_color.js";
 import.meta.css = /* css */ `
   @layer navi {
     .navi_link {
-      --link-border-radius: 2px;
+      --link-border-radius: unset;
       --link-outline-color: var(--navi-focus-outline-color);
       --link-loader-color: var(--navi-loader-color);
       --link-background: transparent;
@@ -71,7 +71,7 @@ import.meta.css = /* css */ `
   }
 
   .navi_link {
-    --contrasting-color: black;
+    --x-link-contrasting-color: black;
 
     --x-link-background: var(--link-background-color, var(--link-background));
     --x-link-background-hover: var(
@@ -162,8 +162,8 @@ import.meta.css = /* css */ `
     }
 
     &[data-dark-background] {
-      --contrasting-color: white;
-      --link-color: white;
+      --x-link-contrasting-color: white;
+      --x-link-color: white;
     }
 
     /* Interactive */
@@ -277,7 +277,7 @@ import.meta.css = /* css */ `
       --link-background-hover: color-mix(
         in srgb,
         var(--link-background),
-        var(--contrasting-color) 15%
+        var(--x-link-contrasting-color) 15%
       );
       --link-color: inherit;
       --link-text-decoration: none;

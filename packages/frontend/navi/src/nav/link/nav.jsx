@@ -12,12 +12,14 @@ import.meta.css = /* css */ `
   @layer navi {
     .navi_nav {
       --nav-border: none;
+      --nav-padding: 0px;
       --nav-border-radius: 0px;
       --nav-background: transparent;
     }
   }
 
   .navi_nav {
+    width: fit-content;
     padding-top: var(
       --nav-padding-top,
       var(--nav-padding-y, var(--nav-padding, unset))
@@ -40,25 +42,32 @@ import.meta.css = /* css */ `
     /* overflow-x: auto; */
     /* overflow-y: hidden; */
 
+    .navi_link {
+      --x-nav-child-border-radius: calc(
+        var(--nav-border-radius) - var(--nav-padding)
+      );
+      --x-nav-link-border-radius: var(
+        --link-border-radius,
+        var(--x-nav-child-border-radius)
+      );
+
+      &:first-child {
+        border-top-left-radius: var(--x-nav-link-border-radius);
+        border-bottom-left-radius: var(--x-nav-link-border-radius);
+      }
+      &:last-child {
+        border-top-right-radius: var(--x-nav-link-border-radius);
+        border-bottom-right-radius: var(--x-nav-link-border-radius);
+      }
+    }
+
     &[data-link-border-radius-inherit] {
       .navi_link {
-        --link-border-radius: calc(
-          var(--nav-border-radius) - var(--nav-padding)
-        );
-
+        --link-border-radius: var(--x-nav-child-border-radius);
         border-top-left-radius: var(--link-border-radius);
         border-top-right-radius: var(--link-border-radius);
         border-bottom-right-radius: var(--link-border-radius);
         border-bottom-left-radius: var(--link-border-radius);
-
-        &:first-child {
-          border-top-left-radius: var(--link-border-radius, inherit);
-          border-bottom-left-radius: var(--link-border-radius, inherit);
-        }
-        &:last-child {
-          border-top-right-radius: var(--link-border-radius, inherit);
-          border-bottom-right-radius: var(--link-border-radius, inherit);
-        }
       }
     }
 
@@ -127,7 +136,7 @@ export const Nav = ({
   row = false,
   expand,
   expandX,
-  linkBorderRadiusInherit = true,
+  linkBorderRadiusInherit,
   panelPosition, // before or after
   panelBorderConnection,
   ...props
@@ -138,7 +147,6 @@ export const Nav = ({
     <Box
       as="nav"
       baseClassName="navi_nav"
-      width="fit-content"
       column={!row}
       row={row}
       data-link-border-radius-inherit={linkBorderRadiusInherit ? "" : undefined}
