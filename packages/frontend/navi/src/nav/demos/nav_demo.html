@@ -698,24 +698,20 @@
                   <Box border="1px dashed violet" style={{ width: "200px" }}>
                     <Nav vertical spacing="xs" expandX>
                       <Link
-                        appearance="tab"
-                        currentIndicator="right"
-                        onClick={() => setActiveIconTab("home")}
-                        aria-controls="icon-panel-home"
-                        column
                         box
-                        preventDefault
-                        href="toto"
+                        appearance="tab"
                         paddingX="m"
                         alignY="center"
-                        pseudoState={{
-                          ":-navi-href-current": activeIconTab === "home",
-                        }}
+                        currentIndicator="right"
+                        current={activeIconTab === "home"}
+                        href="toto"
+                        preventDefault
+                        onClick={() => setActiveIconTab("home")}
                       >
                         <Icon>
                           <HomeSvg />
                         </Icon>
-                        Home
+                        <Text>Home</Text>
                         <BadgeCount
                           background="red"
                           selfAlignX="end"
@@ -725,17 +721,15 @@
                         </BadgeCount>
                       </Link>
                       <Link
-                        appearance="tab"
-                        currentIndicator="right"
-                        paddingX="m"
-                        onClick={() => setActiveIconTab("profile")}
-                        aria-controls="icon-panel-profile"
                         column
-                        route={TEST_ROUTE}
+                        appearance="tab"
+                        paddingX="m"
                         alignY="center"
-                        pseudoState={{
-                          ":-navi-href-current": activeIconTab === "profile",
-                        }}
+                        currentIndicator="right"
+                        current={activeIconTab === "profile"}
+                        route={TEST_ROUTE}
+                        preventDefault
+                        onClick={() => setActiveIconTab("profile")}
                       >
                         <Icon>
                           <UserSvg />
@@ -757,9 +751,7 @@
                         aria-controls="icon-panel-settings"
                         column
                         // boldWhenSelected={false}
-                        pseudoState={{
-                          ":-navi-href-current": activeIconTab === "settings",
-                        }}
+                        current={activeIconTab === "settings"}
                       >
                         <Icon>
                           <SettingsSvg />
@@ -775,9 +767,7 @@
                         aria-controls="icon-panel-settings"
                         column
                         lineHeight="normal"
-                        pseudoState={{
-                          ":-navi-href-current": activeIconTab === "settings_2",
-                        }}
+                        current={activeIconTab === "settings_2"}
                       >
                         <Icon>
                           <SettingsSvg />

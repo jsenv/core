@@ -112,13 +112,15 @@ import.meta.css = /* css */ `
     outline-color: var(--link-outline-color);
     cursor: var(--x-link-cursor);
 
+    .navi_text:not(.navi_badge_count),
     .navi_text_bold_wrapper,
     .navi_text_bold_clone,
     .navi_text_bold_foreground {
-      display: inline-flex;
-      flex-grow: 1;
-      justify-content: center;
-      text-align: center;
+      display: inherit;
+      flex-grow: inherit;
+      align-items: inherit;
+      justify-content: inherit;
+      text-align: inherit;
       border-radius: inherit;
     }
 
