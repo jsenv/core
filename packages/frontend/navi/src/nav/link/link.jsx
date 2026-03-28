@@ -228,7 +228,7 @@ import.meta.css = /* css */ `
         /* as anchor link will still scroll to the section even if it's the current page */
         --x-link-cursor: pointer;
       }
-      &[data-bold-when-current] {
+      &[data-current-effect-bold] {
         font-weight: bold;
       }
       .navi_current_indicator {
@@ -299,7 +299,7 @@ import.meta.css = /* css */ `
       white-space: nowrap;
       user-select: none;
 
-      &[data-current-effect][data-href-current] {
+      &[data-current-effect-shadow][data-href-current] {
         --x-link-box-shadow-size: 0.1em;
         --x-link-box-shadow-halo: 0.3em;
         --x-link-shadow-color: color-mix(
@@ -443,8 +443,8 @@ const LinkPlain = (props) => {
     appearance,
     current,
     currentIndicator,
-    boldWhenCurrent,
-    currentEffect = !currentIndicator,
+    currentEffectBold,
+    currentEffectShadow,
     blankTargetIcon,
     anchorIcon,
     startIcon,
@@ -541,14 +541,14 @@ const LinkPlain = (props) => {
       // Here we can't use spaces as they would be underlined
       // (We could use zero width space with paddings but that's just simpler to rely on margins here)
       spacing="pre"
-      preventBoldLayoutShit={boldWhenCurrent}
+      preventBoldLayoutShift={currentEffectBold}
     >
       {startIconEl}
       {innerChildren}
       {endIconEl && <Text overflowPinned>{endIconEl}</Text>}
     </Text>
   ) : (
-    <Text preventBoldLayoutShit={boldWhenCurrent} spacing="pre">
+    <Text preventBoldLayoutShift={currentEffectBold} spacing="pre">
       {startIconEl}
       {applySpacingOnTextChildren(innerChildren, spacing)}
       {endIconEl}
@@ -573,7 +573,8 @@ const LinkPlain = (props) => {
       data-value={value}
       // Visual
       data-appearance={appearance}
-      data-current-effect={currentEffect ? "" : undefined}
+      data-current-effect-bold={currentEffectBold ? "" : undefined}
+      data-current-effect-shadow={currentEffectShadow ? "" : undefined}
       data-current-indicator-position={currentIndicatorPosition}
       data-anchor={anchor ? "" : undefined}
       data-interactive={onClick ? "" : undefined}

@@ -51,14 +51,15 @@ import.meta.css = /* css */ `
   .navi_text_bold_wrapper {
     position: relative;
     display: inline-block;
-  }
-  .navi_text_bold_clone {
-    font-weight: bold;
-    opacity: 0;
-  }
-  .navi_text_bold_foreground {
-    position: absolute;
-    inset: 0;
+
+    .navi_text_bold_clone {
+      font-weight: bold;
+      opacity: 0;
+    }
+    .navi_text_bold_foreground {
+      position: absolute;
+      inset: 0;
+    }
   }
 
   .navi_text_bold_background {

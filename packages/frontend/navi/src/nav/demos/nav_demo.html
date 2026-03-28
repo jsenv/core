@@ -90,10 +90,10 @@
       const Demo = () => {
         return (
           <div style={{ padding: "10px" }}>
-            <Title as="h1">TabList Component Demo</Title>
+            <Title as="h1">Nav + Link Demo</Title>
             <BasicNav />
             <UnderlineInteractive />
-            <RoundedTabList />
+            <RoundedNav />
             <Vertical />
             <VerticalWithIcons />
             <SpacingVariants />
@@ -122,6 +122,7 @@
                 appearance="tab"
                 pseudoState={{ ":-navi-href-current": true }}
                 currentIndicator
+                currentEffectBold
               >
                 Home
               </Link>
@@ -158,6 +159,7 @@
                       key={name}
                       appearance="tab"
                       currentIndicator
+                      currentEffectBold
                       onClick={() => setActive(name)}
                       aria-controls={`panel-${name}`}
                       paddingX="md"
@@ -183,6 +185,7 @@
                       key={name}
                       appearance="tab"
                       currentIndicator="top"
+                      currentEffectBold
                       onClick={() => setActive(name)}
                       aria-controls={`panel-${name}`}
                       paddingX="md"
@@ -201,7 +204,7 @@
             </div>
             <div className="example-block">
               <div className="caption">
-                TabList background + selected styling (no indicator)
+                Nav background + selected link styling (no indicator)
               </div>
               <Box row align="center" border="1px dashed violet">
                 <Nav
@@ -234,6 +237,7 @@
                         "--link-color-current": "white",
                       }}
                       capitalize
+                      currentEffectBold
                     >
                       {name}
                     </Link>
@@ -244,7 +248,7 @@
 
             <div className="example-block">
               <div className="caption">
-                TabList as icons with scaling when selected
+                Nav as icons with scaling when selected
               </div>
               <Box
                 row
@@ -290,18 +294,17 @@
         );
       };
 
-      const RoundedTabList = () => {
+      const RoundedNav = () => {
         const [active, setActive] = useState(undefined);
 
         return (
           <Box as="section" className="demo-section">
             <Title as="h2">Rounded / Pill Style</Title>
             <Text className="note">
-              Setting <code>borderRadius="100px"</code> with{" "}
-              <code>indicator="none"</code> and a background color creates a
-              pill-shaped tablist. The tab border-radius is automatically kept 2
-              px smaller than the container so each tab pill also appears
-              rounded.
+              Setting <code>borderRadius="100px"</code> on a <code>Nav</code>{" "}
+              with a background color creates a pill-shaped nav bar. The{" "}
+              <code>Link</code> border-radius is automatically kept 2 px smaller
+              than the container so each link also appears rounded.
             </Text>
 
             <div className="example-block">
@@ -408,7 +411,7 @@
             </div>
 
             <div className="example-block">
-              <div className="caption">Same design with padding on tablist</div>
+              <div className="caption">Same design with padding on nav</div>
               <Nav
                 background="yellow"
                 border="10px solid blue"
@@ -466,16 +469,15 @@
       };
 
       const Vertical = () => {
-        const [activeVertical, setActiveVertical] = useState("dashboard");
-        const verticalTabs = ["dashboard", "analytics", "reports", "settings"];
+        const [activeLink, setActiveLink] = useState("dashboard");
+        const navLinks = ["dashboard", "analytics", "reports", "settings"];
         return (
           <Box as="section" className="demo-section">
             <Title as="h2">Vertical Layout</Title>
             <Text className="note">
-              The <code>vertical</code> prop changes the layout direction.
-              Default indicator position for vertical is <code>"start"</code>{" "}
-              (left side), but can be changed to <code>"end"</code> (right
-              side).
+              The <code>vertical</code> prop changes the layout direction of the{" "}
+              <code>Nav</code>. Indicator position can be <code>"left"</code> or{" "}
+              <code>"right"</code>.
             </Text>
 
             <Box row>
@@ -484,17 +486,17 @@
                   <div className="caption">Default</div>
                   <Box border="1px dashed violet">
                     <Nav vertical spacing="s">
-                      {verticalTabs.map((name) => (
+                      {navLinks.map((name) => (
                         <Link
                           key={name}
-                          onClick={() => setActiveVertical(name)}
+                          onClick={() => setActiveLink(name)}
                           aria-controls={`vertical-panel-${name}`}
                           appearance="tab"
                           currentIndicator="left"
                           pseudoState={{
                             ":hover": name === "analytics" || undefined,
                             ":focus-visible": name === "analytics",
-                            ":-navi-href-current": name === activeVertical,
+                            ":-navi-href-current": name === activeLink,
                           }}
                           paddingX="m"
                           capitalize
@@ -510,18 +512,18 @@
                   <div className="caption">Indicator end</div>
                   <Box border="1px dashed violet">
                     <Nav vertical spacing="xs">
-                      {verticalTabs.map((name) => (
+                      {navLinks.map((name) => (
                         <Link
                           key={name}
                           appearance="tab"
-                          onClick={() => setActiveVertical(name)}
+                          onClick={() => setActiveLink(name)}
                           aria-controls={`vertical-panel-${name}`}
                           paddingX="m"
                           currentIndicator="right"
                           pseudoState={{
                             ":hover": name === "analytics" || undefined,
                             ":focus-visible": name === "analytics",
-                            ":-navi-href-current": name === activeVertical,
+                            ":-navi-href-current": name === activeLink,
                           }}
                           capitalize
                         >
@@ -537,18 +539,18 @@
                   <div className="caption">Tab aligned right</div>
                   <Box border="1px dashed violet">
                     <Nav vertical spacing="xs">
-                      {verticalTabs.map((name) => (
+                      {navLinks.map((name) => (
                         <Link
                           key={name}
                           appearance="tab"
                           currentIndicator="left"
                           alignX="end"
-                          onClick={() => setActiveVertical(name)}
+                          onClick={() => setActiveLink(name)}
                           aria-controls={`vertical-panel-${name}`}
                           pseudoState={{
                             ":hover": name === "analytics" || undefined,
                             ":focus-visible": name === "analytics",
-                            ":-navi-href-current": name === activeVertical,
+                            ":-navi-href-current": name === activeLink,
                           }}
                           paddingX="m"
                           capitalize
@@ -563,11 +565,11 @@
                   <div className="caption">Aligned right + indicator end</div>
                   <Box border="1px dashed violet">
                     <Nav vertical spacing="xs">
-                      {verticalTabs.map((name) => (
+                      {navLinks.map((name) => (
                         <Link
                           key={name}
                           appearance="tab"
-                          onClick={() => setActiveVertical(name)}
+                          onClick={() => setActiveLink(name)}
                           aria-controls={`vertical-panel-${name}`}
                           paddingX="m"
                           alignX="end"
@@ -575,7 +577,7 @@
                           pseudoState={{
                             ":hover": name === "analytics" || undefined,
                             ":focus-visible": name === "analytics",
-                            ":-navi-href-current": name === activeVertical,
+                            ":-navi-href-current": name === activeLink,
                           }}
                           capitalize
                         >
@@ -597,18 +599,18 @@
                         "--nav-background": "rgb(233, 236, 240)",
                       }}
                     >
-                      {verticalTabs.map((name) => (
+                      {navLinks.map((name) => (
                         <Link
                           key={name}
                           appearance="tab"
-                          selected={name === activeVertical}
-                          onClick={() => setActiveVertical(name)}
+                          selected={name === activeLink}
+                          onClick={() => setActiveLink(name)}
                           aria-controls={`vertical-panel-${name}`}
                           paddingX="m"
                           pseudoState={{
                             ":hover": name === "analytics" || undefined,
                             ":focus-visible": name === "analytics",
-                            ":-navi-href-current": name === activeVertical,
+                            ":-navi-href-current": name === activeLink,
                           }}
                           currentIndicator="left"
                           style={{
@@ -637,17 +639,17 @@
                         "--nav-background": "rgb(233, 236, 240)",
                       }}
                     >
-                      {verticalTabs.map((name) => (
+                      {navLinks.map((name) => (
                         <Link
                           key={name}
                           appearance="tab"
-                          onClick={() => setActiveVertical(name)}
+                          onClick={() => setActiveLink(name)}
                           aria-controls={`vertical-panel-${name}`}
                           paddingX="m"
                           pseudoState={{
                             ":hover": name === "analytics" || undefined,
                             ":focus-visible": name === "analytics",
-                            ":-navi-href-current": name === activeVertical,
+                            ":-navi-href-current": name === activeLink,
                           }}
                           currentIndicator="left"
                           style={{
@@ -697,6 +699,7 @@
                         paddingX="m"
                         alignY="center"
                         currentIndicator="right"
+                        currentEffectBold
                         current={activeIconTab === "home"}
                         href="toto"
                         preventDefault
@@ -721,6 +724,7 @@
                         paddingX="m"
                         alignY="center"
                         currentIndicator="right"
+                        currentEffectBold
                         current={activeIconTab === "profile"}
                         route={TEST_ROUTE}
                         preventDefault
@@ -741,6 +745,7 @@
                       <Link
                         appearance="tab"
                         currentIndicator="right"
+                        currentEffectBold
                         paddingX="m"
                         onClick={() => setActiveIconTab("settings")}
                         aria-controls="icon-panel-settings"
@@ -756,6 +761,7 @@
                       <Link
                         appearance="tab"
                         currentIndicator="right"
+                        currentEffectBold
                         paddingX="m"
                         paddingY="s"
                         onClick={() => setActiveIconTab("settings_2")}
@@ -835,9 +841,8 @@
           <Box as="section" className="demo-section">
             <Title as="h2">Spacing Variants</Title>
             <Text className="note">
-              The <code>spacing</code> prop controls gap between tabs.
-              Demonstrated with values <code>xs</code>, <code>s</code>, and no
-              spacing prop (default).
+              The <code>spacing</code> prop controls the gap between{" "}
+              <code>Link</code> elements inside a <code>Nav</code>.
             </Text>
             <div className="example-block">
               <div className="caption">(default spacing)</div>
@@ -868,20 +873,20 @@
       };
 
       const DynamicAddRemove = () => {
-        const [tabs, setTabs] = useState([
+        const [links, setLinks] = useState([
           { key: "alpha", label: "Alpha" },
           { key: "beta", label: "Beta" },
           { key: "gamma", label: "Gamma" },
         ]);
         const [active, setActive] = useState("alpha");
-        const addTab = () => {
-          const id = `tab${tabs.length + 1}`;
-          setTabs([...tabs, { key: id, label: id }]);
+        const addLink = () => {
+          const id = `link${links.length + 1}`;
+          setLinks([...links, { key: id, label: id }]);
         };
         const removeLast = () => {
-          if (tabs.length === 0) return;
-          const clone = tabs.slice(0, -1);
-          setTabs(clone);
+          if (links.length === 0) return;
+          const clone = links.slice(0, -1);
+          setLinks(clone);
           if (!clone.find((t) => t.key === active) && clone.length) {
             setActive(clone[clone.length - 1].key);
           }
@@ -890,17 +895,17 @@
           <Box as="section" className="demo-section">
             <Title as="h2">Dynamic Add / Remove</Title>
             <Text className="note">
-              Tabs can be created or removed externally; the list simply renders
-              what it receives.
+              Links can be added or removed dynamically; the <code>Nav</code>{" "}
+              simply renders what it receives.
             </Text>
             <div style={{ marginBottom: "12px" }}>
-              <button onClick={addTab} style={{ marginRight: "8px" }}>
-                Add Tab
+              <button onClick={addLink} style={{ marginRight: "8px" }}>
+                Add Link
               </button>
               <button onClick={removeLast}>Remove Last</button>
             </div>
             <Nav spacing="s">
-              {tabs.map((t) => (
+              {links.map((t) => (
                 <Link
                   key={t.key}
                   current={t.key === active}
@@ -911,11 +916,7 @@
                 </Link>
               ))}
             </Nav>
-            <div
-              className="dynamic-panel"
-              id={`panel-${active}`}
-              role="tabpanel"
-            >
+            <div className="dynamic-panel" id={`panel-${active}`} role="region">
               <strong>{active}</strong> dynamic panel content
             </div>
           </Box>
@@ -927,11 +928,11 @@
           <Box as="section" className="demo-section">
             <Title as="h2">Styling with CSS Variables</Title>
             <Text className="note">
-              Use <code>--tab-*</code> variables on <code>TabList</code> to set
-              base, hover and selected appearance; override per <code>Tab</code>{" "}
-              when needed. Indicator controlled by{" "}
-              <code>--tab-indicator-color</code> and{" "}
-              <code>--tab-indicator-size</code>.
+              Use <code>--link-*</code> variables on <code>Link</code> or{" "}
+              <code>Nav</code> to set base, hover and current appearance.
+              Indicator controlled by{" "}
+              <code>--link-current-indicator-color</code> and{" "}
+              <code>--link-current-indicator-size</code>.
             </Text>
             <div className="example-block">
               <div className="caption">Global theme (light slate)</div>
@@ -1121,7 +1122,7 @@
               <code>indicator="none"</code>, a bottom border on the wrapper to
               simulate the panel separator, and <code>BadgeCount</code>.{" "}
               <em>
-                The "open bottom on selected tab" effect requires future TabList
+                The "open bottom on selected tab" effect requires future Nav
                 support; this is the closest approximation with current options.
               </em>
             </Text>
@@ -1150,7 +1151,6 @@
                     paddingX="m"
                     bold
                     uppercase
-                    currentEffect={false}
                   >
                     Approved
                     <BadgeCount background="#1976d2" color="white">
@@ -1167,7 +1167,6 @@
                     paddingX="m"
                     bold
                     uppercase
-                    currentEffect={false}
                   >
                     Pending
                     <BadgeCount background="red" color="white">
@@ -1184,7 +1183,6 @@
                     paddingX="m"
                     bold
                     uppercase
-                    currentEffect={false}
                   >
                     Rejected
                     <BadgeCount background="red" color="white">
@@ -1193,7 +1191,7 @@
                   </Link>
                 </Nav>
                 <Box
-                  role="tabpanel"
+                  role="region"
                   padding="m"
                   border="10px solid grey"
                   background="#ffffff"
