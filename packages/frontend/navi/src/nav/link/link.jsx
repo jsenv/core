@@ -64,9 +64,9 @@ import.meta.css = /* css */ `
       --link-loading-outline-size: 1px;
       --link-color-current: var(--link-color);
 
-      --current-indicator-size: 2px;
-      --current-indicator-spacing: 0;
-      --current-indicator-color: rgb(205, 52, 37);
+      --link-current-indicator-size: 2px;
+      --link-current-indicator-spacing: 0;
+      --link-current-indicator-color: rgb(205, 52, 37);
     }
   }
 
@@ -123,12 +123,12 @@ import.meta.css = /* css */ `
       z-index: 1;
       display: flex;
       width: 100%;
-      height: var(--current-indicator-size);
+      height: var(--link-current-indicator-size);
       background: transparent;
       border-radius: 0.1px;
     }
     &[data-current-indicator-position="top"] {
-      margin-top: var(--current-indicator-spacing);
+      margin-top: var(--link-current-indicator-spacing);
 
       .navi_current_indicator {
         top: 0;
@@ -136,7 +136,7 @@ import.meta.css = /* css */ `
       }
     }
     &[data-current-indicator-position="bottom"] {
-      margin-bottom: var(--current-indicator-spacing);
+      margin-bottom: var(--link-current-indicator-spacing);
 
       .navi_current_indicator {
         bottom: 0;
@@ -144,7 +144,7 @@ import.meta.css = /* css */ `
       }
     }
     &[data-current-indicator-position="left"] {
-      margin-left: var(--current-indicator-spacing);
+      margin-left: var(--link-current-indicator-spacing);
 
       .navi_current_indicator {
         top: 0;
@@ -152,7 +152,7 @@ import.meta.css = /* css */ `
       }
     }
     &[data-current-indicator-position="right"] {
-      margin-right: var(--current-indicator-spacing);
+      margin-right: var(--link-current-indicator-spacing);
 
       .navi_current_indicator {
         top: 0;
@@ -222,7 +222,7 @@ import.meta.css = /* css */ `
         font-weight: bold;
       }
       .navi_current_indicator {
-        background: var(--current-indicator-color);
+        background: var(--link-current-indicator-color);
       }
     }
     /* Focus */
@@ -279,11 +279,16 @@ import.meta.css = /* css */ `
         var(--link-background, transparent),
         var(--x-link-contrasting-color) 15%
       );
-      --link-background-current: red;
       --link-color: inherit;
       --link-text-decoration: none;
       white-space: nowrap;
       user-select: none;
+
+      &[data-current-effect] {
+        &[data-href-current] {
+          box-shadow: inset 0 0 0 black;
+        }
+      }
     }
   }
 
@@ -422,6 +427,7 @@ const LinkPlain = (props) => {
     overflowEllipsis,
     currentIndicator,
     boldWhenCurrent,
+    currentEffect = !currentIndicator,
 
     children,
 
@@ -536,11 +542,12 @@ const LinkPlain = (props) => {
       aria-busy={loading}
       inert={disabled}
       spacing="pre"
-      data-value={value}
-      aria-selected={selected}
       aria-current={isCurrent ? "page" : undefined}
+      aria-selected={selectionContext ? selected : undefined}
+      data-value={value}
       // Visual
       data-appearance={appearance}
+      data-current-effect={currentEffect ? "" : undefined}
       data-current-indicator-position={currentIndicatorPosition}
       data-anchor={anchor ? "" : undefined}
       data-interactive={onClick ? "" : undefined}

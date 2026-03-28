@@ -94,11 +94,12 @@
             <BasicNav />
             <UnderlineInteractive />
             <RoundedTabList />
+            <VerticalTabs />
             {/*}
 
 
-            
-            <VerticalTabs />
+
+
             <VerticalTabsWithIcons />
             <SpacingVariants />
             <StylingVariables />
@@ -470,6 +471,203 @@
         );
       };
 
+      const VerticalTabs = () => {
+        const [activeVertical, setActiveVertical] = useState("dashboard");
+        const verticalTabs = ["dashboard", "analytics", "reports", "settings"];
+        return (
+          <Box as="section" className="demo-section">
+            <Title as="h2">Vertical Layout</Title>
+            <Text className="note">
+              The <code>vertical</code> prop changes the layout direction.
+              Default indicator position for vertical is <code>"start"</code>{" "}
+              (left side), but can be changed to <code>"end"</code> (right
+              side).
+            </Text>
+
+            <Box row>
+              <Box column spacing="md">
+                <div className="example-block" style={{ flex: "1" }}>
+                  <div className="caption">Default</div>
+                  <Box border="1px dashed violet">
+                    <Nav vertical spacing="s">
+                      {verticalTabs.map((name) => (
+                        <Link
+                          key={name}
+                          onClick={() => setActiveVertical(name)}
+                          aria-controls={`vertical-panel-${name}`}
+                          currentIndicator="left"
+                          pseudoState={{
+                            ":hover": name === "analytics" || undefined,
+                            ":focus-visible": name === "analytics",
+                            ":-navi-href-current": name === activeVertical,
+                          }}
+                          paddingX="m"
+                          capitalize
+                        >
+                          {name}
+                        </Link>
+                      ))}
+                    </Nav>
+                  </Box>
+                </div>
+
+                <div className="example-block" style={{ flex: "1" }}>
+                  <div className="caption">Indicator end</div>
+                  <Box border="1px dashed violet">
+                    <Nav vertical spacing="xs">
+                      {verticalTabs.map((name) => (
+                        <Link
+                          key={name}
+                          onClick={() => setActiveVertical(name)}
+                          aria-controls={`vertical-panel-${name}`}
+                          paddingX="m"
+                          currentIndicator="right"
+                          pseudoState={{
+                            ":hover": name === "analytics" || undefined,
+                            ":focus-visible": name === "analytics",
+                            ":-navi-href-current": name === activeVertical,
+                          }}
+                          capitalize
+                        >
+                          {name}
+                        </Link>
+                      ))}
+                    </Nav>
+                  </Box>
+                </div>
+              </Box>
+              <Box column spacing="md">
+                <Box expandX>
+                  <div className="caption">Tab aligned right</div>
+                  <Box border="1px dashed violet">
+                    <Nav vertical spacing="xs">
+                      {verticalTabs.map((name) => (
+                        <Link
+                          key={name}
+                          alignX="end"
+                          onClick={() => setActiveVertical(name)}
+                          aria-controls={`vertical-panel-${name}`}
+                          pseudoState={{
+                            ":hover": name === "analytics" || undefined,
+                            ":focus-visible": name === "analytics",
+                            ":-navi-href-current": name === activeVertical,
+                          }}
+                          paddingX="m"
+                          capitalize
+                        >
+                          {name}
+                        </Link>
+                      ))}
+                    </Nav>
+                  </Box>
+                </Box>
+                <Box expandX>
+                  <div className="caption">Aligned right + indicator end</div>
+                  <Box border="1px dashed violet">
+                    <Nav vertical spacing="xs">
+                      {verticalTabs.map((name) => (
+                        <Link
+                          key={name}
+                          onClick={() => setActiveVertical(name)}
+                          aria-controls={`vertical-panel-${name}`}
+                          paddingX="m"
+                          alignX="end"
+                          currentIndicator="right"
+                          pseudoState={{
+                            ":hover": name === "analytics" || undefined,
+                            ":focus-visible": name === "analytics",
+                            ":-navi-href-current": name === activeVertical,
+                          }}
+                          capitalize
+                        >
+                          {name}
+                        </Link>
+                      ))}
+                    </Nav>
+                  </Box>
+                </Box>
+              </Box>
+
+              <Box column spacing="md">
+                <Box expandX>
+                  <div className="caption">Background</div>
+                  <Box border="1px dashed violet">
+                    <Nav
+                      vertical
+                      spacing="0"
+                      style={{
+                        "--nav-background": "rgb(233, 236, 240)",
+                      }}
+                    >
+                      {verticalTabs.map((name) => (
+                        <Link
+                          key={name}
+                          selected={name === activeVertical}
+                          onClick={() => setActiveVertical(name)}
+                          aria-controls={`vertical-panel-${name}`}
+                          paddingX="m"
+                          pseudoState={{
+                            ":hover": name === "analytics" || undefined,
+                            ":focus-visible": name === "analytics",
+                            ":-navi-href-current": name === activeVertical,
+                          }}
+                          style={{
+                            "--link-current-indicator-spacing": "0",
+                            "--link-background": "transparent",
+                            "--link-color": "#373C45",
+                            "--link-background-current": "#373C45",
+                            "--link-color-current": "white",
+                          }}
+                        >
+                          {name}
+                        </Link>
+                      ))}
+                    </Nav>
+                  </Box>
+                </Box>
+
+                <Box expandX>
+                  <div className="caption">Background + full width</div>
+                  <Box border="1px dashed violet">
+                    <Nav
+                      vertical
+                      expandX
+                      style={{
+                        "--nav-background": "rgb(233, 236, 240)",
+                      }}
+                    >
+                      {verticalTabs.map((name) => (
+                        <Link
+                          key={name}
+                          onClick={() => setActiveVertical(name)}
+                          aria-controls={`vertical-panel-${name}`}
+                          paddingX="m"
+                          pseudoState={{
+                            ":hover": name === "analytics" || undefined,
+                            ":focus-visible": name === "analytics",
+                            ":-navi-href-current": name === activeVertical,
+                          }}
+                          style={{
+                            "--link-current-indicator-spacing": "0",
+                            "--link-background": "transparent",
+                            "--link-color": "#373C45",
+                            "--link-background-current": "#373C45",
+                            "--link-color-current": "white",
+                          }}
+                          capitalize
+                        >
+                          {name}
+                        </Link>
+                      ))}
+                    </Nav>
+                  </Box>
+                </Box>
+              </Box>
+            </Box>
+          </Box>
+        );
+      };
+
       const VerticalTabsWithIcons = () => {
         const [activeIconTab, setActiveIconTab] = useState("home");
 
@@ -710,227 +908,6 @@
             >
               <strong>{active}</strong> dynamic panel content
             </div>
-          </Box>
-        );
-      };
-
-      const VerticalTabs = () => {
-        const [activeVertical, setActiveVertical] = useState("dashboard");
-        const verticalTabs = ["dashboard", "analytics", "reports", "settings"];
-        return (
-          <Box as="section" className="demo-section">
-            <Title as="h2">Vertical Layout</Title>
-            <Text className="note">
-              The <code>vertical</code> prop changes the layout direction.
-              Default indicator position for vertical is <code>"start"</code>{" "}
-              (left side), but can be changed to <code>"end"</code> (right
-              side).
-            </Text>
-
-            <Box row>
-              <Box column spacing="md">
-                <div className="example-block" style={{ flex: "1" }}>
-                  <div className="caption">Default</div>
-                  <Box border="1px dashed violet">
-                    <TabList vertical spacing="xs">
-                      {verticalTabs.map((name) => (
-                        <Tab
-                          key={name}
-                          selected={name === activeVertical}
-                          onClick={() => setActiveVertical(name)}
-                          aria-controls={`vertical-panel-${name}`}
-                          pseudoState={{
-                            ":hover": name === "analytics" || undefined,
-                          }}
-                        >
-                          <Link
-                            paddingX="md"
-                            discrete
-                            pseudoState={{
-                              ":focus-visible": name === "analytics",
-                            }}
-                          >
-                            {name.charAt(0).toUpperCase() + name.slice(1)}
-                          </Link>
-                        </Tab>
-                      ))}
-                    </TabList>
-                  </Box>
-                </div>
-
-                <div className="example-block" style={{ flex: "1" }}>
-                  <div className="caption">Indicator end</div>
-                  <Box border="1px dashed violet">
-                    <TabList vertical indicator="end" spacing="xs">
-                      {verticalTabs.map((name) => (
-                        <Tab
-                          key={name}
-                          selected={name === activeVertical}
-                          onClick={() => setActiveVertical(name)}
-                          aria-controls={`vertical-panel-${name}`}
-                          pseudoState={{
-                            ":hover": name === "analytics" || undefined,
-                          }}
-                        >
-                          <Link
-                            paddingX="md"
-                            discrete
-                            pseudoState={{
-                              ":focus-visible": name === "analytics",
-                            }}
-                          >
-                            {name.charAt(0).toUpperCase() + name.slice(1)}
-                          </Link>
-                        </Tab>
-                      ))}
-                    </TabList>
-                  </Box>
-                </div>
-              </Box>
-              <Box column spacing="md">
-                <Box expandX>
-                  <div className="caption">Tab aligned right</div>
-                  <Box border="1px dashed violet">
-                    <TabList vertical spacing="xs">
-                      {verticalTabs.map((name) => (
-                        <Tab
-                          key={name}
-                          selected={name === activeVertical}
-                          onClick={() => setActiveVertical(name)}
-                          aria-controls={`vertical-panel-${name}`}
-                          pseudoState={{
-                            ":hover": name === "analytics" || undefined,
-                          }}
-                          alignX="end"
-                        >
-                          <Link
-                            paddingX="md"
-                            discrete
-                            pseudoState={{
-                              ":focus-visible": name === "analytics",
-                            }}
-                          >
-                            {name.charAt(0).toUpperCase() + name.slice(1)}
-                          </Link>
-                        </Tab>
-                      ))}
-                    </TabList>
-                  </Box>
-                </Box>
-                <Box expandX>
-                  <div className="caption">Aligned right + indicator end</div>
-                  <Box border="1px dashed violet">
-                    <TabList vertical spacing="xs" indicator="end">
-                      {verticalTabs.map((name) => (
-                        <Tab
-                          key={name}
-                          selected={name === activeVertical}
-                          onClick={() => setActiveVertical(name)}
-                          aria-controls={`vertical-panel-${name}`}
-                          pseudoState={{
-                            ":hover": name === "analytics" || undefined,
-                          }}
-                          alignX="end"
-                        >
-                          <Link
-                            paddingX="md"
-                            discrete
-                            pseudoState={{
-                              ":focus-visible": name === "analytics",
-                            }}
-                          >
-                            {name.charAt(0).toUpperCase() + name.slice(1)}
-                          </Link>
-                        </Tab>
-                      ))}
-                    </TabList>
-                  </Box>
-                </Box>
-              </Box>
-
-              <Box column spacing="md">
-                <Box expandX>
-                  <div className="caption">Background</div>
-                  <Box border="1px dashed violet">
-                    <TabList
-                      vertical
-                      spacing="0"
-                      style={{
-                        "--tab-indicator-spacing": "0",
-                        "--tablist-background": "rgb(233, 236, 240)",
-                        "--tab-background": "transparent",
-                        "--tab-color": "#373C45",
-                        "--tab-background-selected": "#373C45",
-                        "--tab-color-selected": "white",
-                      }}
-                    >
-                      {verticalTabs.map((name) => (
-                        <Tab
-                          key={name}
-                          selected={name === activeVertical}
-                          onClick={() => setActiveVertical(name)}
-                          aria-controls={`vertical-panel-${name}`}
-                          pseudoState={{
-                            ":hover": name === "analytics" || undefined,
-                          }}
-                        >
-                          <Link
-                            paddingX="md"
-                            discrete
-                            pseudoState={{
-                              ":focus-visible": name === "analytics",
-                            }}
-                          >
-                            {name.charAt(0).toUpperCase() + name.slice(1)}
-                          </Link>
-                        </Tab>
-                      ))}
-                    </TabList>
-                  </Box>
-                </Box>
-
-                <Box expandX>
-                  <div className="caption">Background + full width</div>
-                  <Box border="1px dashed violet">
-                    <TabList
-                      vertical
-                      spacing="0"
-                      expandX
-                      style={{
-                        "--tab-indicator-spacing": "0",
-                        "--tablist-background": "rgb(233, 236, 240)",
-                        "--tab-background": "transparent",
-                        "--tab-color": "#373C45",
-                        "--tab-background-selected": "#373C45",
-                        "--tab-color-selected": "white",
-                      }}
-                    >
-                      {verticalTabs.map((name) => (
-                        <Tab
-                          key={name}
-                          selected={name === activeVertical}
-                          onClick={() => setActiveVertical(name)}
-                          aria-controls={`vertical-panel-${name}`}
-                          pseudoState={{
-                            ":hover": name === "analytics" || undefined,
-                          }}
-                        >
-                          <Link
-                            paddingX="md"
-                            discrete
-                            pseudoState={{
-                              ":focus-visible": name === "analytics",
-                            }}
-                          >
-                            {name.charAt(0).toUpperCase() + name.slice(1)}
-                          </Link>
-                        </Tab>
-                      ))}
-                    </TabList>
-                  </Box>
-                </Box>
-              </Box>
-            </Box>
           </Box>
         );
       };
