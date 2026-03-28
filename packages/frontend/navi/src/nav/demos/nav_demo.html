@@ -94,21 +94,12 @@
             <BasicNav />
             <UnderlineInteractive />
             <RoundedTabList />
-            <VerticalTabs />
-            <VerticalTabsWithIcons />
+            <Vertical />
+            <VerticalWithIcons />
             <SpacingVariants />
             <StylingVariables />
-            {/*}
-
-
-
-
-
-
-
             <DynamicAddRemove />
-              <BinderTabs />
-            */}
+            <Binder />
           </div>
         );
       };
@@ -474,7 +465,7 @@
         );
       };
 
-      const VerticalTabs = () => {
+      const Vertical = () => {
         const [activeVertical, setActiveVertical] = useState("dashboard");
         const verticalTabs = ["dashboard", "analytics", "reports", "settings"];
         return (
@@ -681,7 +672,7 @@
         );
       };
 
-      const VerticalTabsWithIcons = () => {
+      const VerticalWithIcons = () => {
         const [activeIconTab, setActiveIconTab] = useState("home");
 
         return (
@@ -908,18 +899,18 @@
               </button>
               <button onClick={removeLast}>Remove Last</button>
             </div>
-            <TabList spacing="sm">
+            <Nav spacing="s">
               {tabs.map((t) => (
-                <Tab
+                <Link
                   key={t.key}
-                  selected={t.key === active}
+                  current={t.key === active}
                   onClick={() => setActive(t.key)}
                   aria-controls={`panel-${t.key}`}
                 >
                   {t.label}
-                </Tab>
+                </Link>
               ))}
-            </TabList>
+            </Nav>
             <div
               className="dynamic-panel"
               id={`panel-${active}`}
@@ -1120,7 +1111,7 @@
         );
       };
 
-      const BinderTabs = () => {
+      const Binder = () => {
         const [active, setActive] = useState("approved");
         return (
           <Box as="section" className="demo-section">
@@ -1136,52 +1127,71 @@
             </Text>
             <div className="example-block">
               <Box padding="m" background="lightgrey">
-                <TabList
-                  spacing="0"
-                  indicator="none"
+                <Nav
                   style={{
-                    "--tablist-border-width": "10px",
-                    "--tab-background": "transparent",
-                    "--tab-color": "#9ca3af",
-                    "--tab-background-hover": "#f9fafb",
-                    "--tab-color-hover": "#374151",
-                    "--tab-background-selected": "#ffffff",
-                    "--tab-color-selected": "#111827",
+                    "--nav-border-width": "10px",
+                    "--link-background": "transparent",
+                    "--link-color": "#9ca3af",
+                    "--link-background-hover": "#f9fafb",
+                    "--link-color-hover": "#374151",
+                    "--link-background-current": "#ffffff",
+                    "--link-color-current": "#111827",
                   }}
                   panelPosition="after"
                   panelBorderConnection
                 >
-                  <Tab
+                  <Link
+                    appearance="tab"
                     column
+                    alignY="center"
                     spacing="xs"
-                    selected={active === "approved"}
+                    current={active === "approved"}
                     onClick={() => setActive("approved")}
                     paddingX="m"
                     bold
                     uppercase
-                    boldWhenSelected={false}
+                    currentEffect={false}
                   >
                     Approved
                     <BadgeCount background="#1976d2" color="white">
                       3
                     </BadgeCount>
-                  </Tab>
-                  <Tab
+                  </Link>
+                  <Link
+                    appearance="tab"
                     column
+                    alignY="center"
                     spacing="xs"
-                    selected={active === "pending"}
+                    current={active === "pending"}
                     onClick={() => setActive("pending")}
                     paddingX="m"
                     bold
                     uppercase
-                    boldWhenSelected={false}
+                    currentEffect={false}
                   >
                     Pending
                     <BadgeCount background="red" color="white">
                       2
                     </BadgeCount>
-                  </Tab>
-                </TabList>
+                  </Link>
+                  <Link
+                    appearance="tab"
+                    column
+                    alignY="center"
+                    spacing="xs"
+                    current={active === "rejected"}
+                    onClick={() => setActive("rejected")}
+                    paddingX="m"
+                    bold
+                    uppercase
+                    currentEffect={false}
+                  >
+                    Rejected
+                    <BadgeCount background="red" color="white">
+                      20
+                    </BadgeCount>
+                  </Link>
+                </Nav>
                 <Box
                   role="tabpanel"
                   padding="m"

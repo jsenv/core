@@ -49,8 +49,10 @@ import.meta.css = /* css */ `
       /* For ellipse + single char force the circle aspect as it's prettier */
       &[data-single-char] {
         aspect-ratio: 1/1;
-        width: 1.5em;
         height: 1.5em;
+        padding: 0;
+        text-align: center;
+        line-height: 1.5em;
       }
     }
 
