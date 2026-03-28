@@ -370,37 +370,7 @@ export const Link = (props) => {
     WithAction: LinkWithAction,
   });
 };
-
 const LinkBasic = (props) => {
-  const selectionContext = useContext(SelectionContext);
-  if (selectionContext) {
-    return <LinkWithSelection {...props} />;
-  }
-  return <LinkOrRouteLink {...props} />;
-};
-const LinkWithSelection = (props) => {
-  const { selection, selectionController } = useContext(SelectionContext);
-  const { value = props.href, children, ...rest } = props;
-  const defaultRef = useRef();
-  const ref = props.ref || defaultRef;
-  const { selected } = useSelectableElement(ref, {
-    selection,
-    selectionController,
-  });
-
-  return (
-    <LinkOrRouteLink
-      {...rest}
-      ref={ref}
-      selected={selected}
-      data-value={value}
-      aria-selected={selected}
-    >
-      {children}
-    </LinkOrRouteLink>
-  );
-};
-const LinkOrRouteLink = (props) => {
   if (props.route) {
     return <LinkWithRoute {...props} />;
   }
@@ -421,11 +391,11 @@ const LinkWithRoute = ({ route, routeParams, children, ...rest }) => {
 
 const LinkPlain = (props) => {
   const titleLevel = useContext(TitleLevelContext);
+  const selectionContext = useContext(SelectionContext);
   const {
     loading,
     readOnly,
     disabled,
-    selected,
     autoFocus,
     spaceToClick = true,
     onClick,
@@ -435,6 +405,7 @@ const LinkPlain = (props) => {
     rel,
     preventDefault,
     anchor,
+    value = href,
 
     // visual
     appearance,
@@ -448,7 +419,7 @@ const LinkPlain = (props) => {
     hrefFallback = !anchor,
     matching,
     overflowEllipsis,
-    currentIndicator = appearance === "tab" ? "bottom" : undefined,
+    currentIndicator,
     boldWhenCurrent,
 
     children,
@@ -458,6 +429,12 @@ const LinkPlain = (props) => {
   const defaultRef = useRef();
   const ref = props.ref || defaultRef;
   const visited = useIsVisited(href);
+
+  const { selection, selectionController } = selectionContext || {};
+  const { selected } = useSelectableElement(ref, {
+    selection,
+    selectionController,
+  });
 
   useAutoFocus(ref, autoFocus);
   const remainingProps = useConstraints(ref, rest);
@@ -515,11 +492,13 @@ const LinkPlain = (props) => {
     <Icon marginLeft={innerChildren ? "xxs" : undefined}>{innerEndIcon}</Icon>
   );
 
+  const currentIndicatorPosition =
+    currentIndicator === true ? "bottom" : currentIndicator;
   const currentIndicatorEl =
-    currentIndicator === "left" ||
-    currentIndicator === "right" ||
-    currentIndicator === "top" ||
-    currentIndicator === "bottom" ? (
+    currentIndicatorPosition === "left" ||
+    currentIndicatorPosition === "right" ||
+    currentIndicatorPosition === "top" ||
+    currentIndicatorPosition === "bottom" ? (
       <LinkCurrentIndicator />
     ) : null;
 
@@ -556,9 +535,12 @@ const LinkPlain = (props) => {
       aria-busy={loading}
       inert={disabled}
       spacing="pre"
+      data-value={value}
+      aria-selected={selected}
+      aria-current={isCurrent ? "page" : undefined}
       // Visual
       data-appearance={appearance}
-      data-current-indicator-position={currentIndicator}
+      data-current-indicator-position={currentIndicatorPosition}
       data-anchor={anchor ? "" : undefined}
       data-interactive={onClick ? "" : undefined}
       data-reveal-on-interaction={revealOnInteraction ? "" : undefined}

@@ -963,13 +963,12 @@ export const useSelectableElement = (
   elementRef,
   { selection, selectionController, selectionImpact },
 ) => {
-  if (!selectionController) {
-    throw new Error("useSelectableElement needs a selectionController");
-  }
-
   useLayoutEffect(() => {
     const element = elementRef.current;
     if (!element) {
+      return null;
+    }
+    if (!selectionController) {
       return null;
     }
     const value = getElementValue(element);
@@ -1004,6 +1003,9 @@ export const useSelectableElement = (
   // Update selected state when selection value changes
   useLayoutEffect(() => {
     const element = elementRef.current;
+    if (!selection) {
+      return;
+    }
     if (!element) {
       debug(
         "selection",
@@ -1029,6 +1031,9 @@ export const useSelectableElement = (
   useLayoutEffect(() => {
     const element = elementRef.current;
     if (!element) {
+      return null;
+    }
+    if (!selectionController) {
       return null;
     }
 
