@@ -590,7 +590,7 @@ const LinkPlain = (props) => {
         ":-navi-href-internal": isSameSite,
         ":-navi-href-external": !isSameSite,
         ":-navi-href-anchor": isAnchor,
-        ":-navi-href-current": isCurrent,
+        ":-navi-href-current": innerCurrent,
         ":-navi-selected": selected,
       }}
       onClick={(e) => {
