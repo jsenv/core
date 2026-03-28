@@ -29,6 +29,8 @@ import.meta.css = /* css */ `
     &[data-loading] {
       --x-background: transparent;
       --x-background-color: transparent;
+      /* Force constrasting color while loading */
+      --x-color: var(--x-color-contrasting);
     }
 
     .navi_count_badge_overflow {
@@ -120,11 +122,12 @@ export const BadgeCount = ({
   max = circle ? MAX_FOR_CIRCLE : Infinity,
   integer,
   lang,
+  loading,
   ...props
 }) => {
   const defaultRef = useRef();
   const ref = props.ref || defaultRef;
-  useDarkBackgroundAttribute(ref);
+  useDarkBackgroundAttribute(ref, [loading]);
 
   let valueRequested = (() => {
     if (typeof children !== "string") return children;
@@ -146,6 +149,7 @@ export const BadgeCount = ({
     return (
       <BadgeCountCircle
         {...props}
+        loading={loading}
         ref={ref}
         hasOverflow={hasOverflow}
         charCount={charCount}
@@ -162,6 +166,7 @@ export const BadgeCount = ({
   return (
     <BadgeCountEllipse
       {...props}
+      loading={loading}
       ref={ref}
       hasOverflow={hasOverflow}
       charCount={charCount}
