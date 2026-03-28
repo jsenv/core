@@ -129,10 +129,10 @@ const DIMENSION_PROPS = {
     if (!value) {
       return null;
     }
-    if (parentBoxFlow === "column" || parentBoxFlow === "inline-column") {
+    if (parentBoxFlow === "row" || parentBoxFlow === "inline-row") {
       return { flexGrow: 1, flexBasis: "0%" }; // Grow horizontally in row
     }
-    if (parentBoxFlow === "row") {
+    if (parentBoxFlow === "column") {
       return { minWidth: "100%", width: "auto" }; // Take full width in column
     }
     return { minWidth: "100%", width: "auto" }; // Take full width outside flex
@@ -141,11 +141,11 @@ const DIMENSION_PROPS = {
     if (!value) {
       return null;
     }
-    if (parentBoxFlow === "column") {
-      return { minHeight: "100%", height: "auto" }; // Make column full height
-    }
-    if (parentBoxFlow === "row" || parentBoxFlow === "inline-row") {
+    if (parentBoxFlow === "column" || parentBoxFlow === "inline-column") {
       return { flexGrow: 1, flexBasis: "0%" }; // Make row full height
+    }
+    if (parentBoxFlow === "row") {
+      return { minHeight: "100%", height: "auto" }; // Make column full height
     }
     return { minHeight: "100%", height: "auto" }; // Take full height outside flex
   },

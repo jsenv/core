@@ -539,7 +539,7 @@ const LinkPlain = (props) => {
     <Text
       overflowEllipsis
       // Here we can't use spaces as they would be underlined
-      // (Ce would use zero width space with paddings but that's just simpler to rely on margins here)
+      // (We could use zero width space with paddings but that's just simpler to rely on margins here)
       spacing="pre"
       preventBoldLayoutShit={boldWhenCurrent}
     >
@@ -548,7 +548,7 @@ const LinkPlain = (props) => {
       {endIconEl && <Text overflowPinned>{endIconEl}</Text>}
     </Text>
   ) : (
-    <Text preventBoldLayoutShit={boldWhenCurrent}>
+    <Text preventBoldLayoutShit={boldWhenCurrent} spacing="pre">
       {startIconEl}
       {applySpacingOnTextChildren(innerChildren, spacing)}
       {endIconEl}

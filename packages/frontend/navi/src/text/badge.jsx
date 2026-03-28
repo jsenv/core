@@ -45,6 +45,13 @@ import.meta.css = /* css */ `
       background: var(--x-background);
       background-color: var(--x-background-color);
       border-radius: 1em;
+
+      /* For ellipse + single char force the circle aspect as it's prettier */
+      &[data-single-char] {
+        aspect-ratio: 1/1;
+        width: 1.5em;
+        height: 1.5em;
+      }
     }
 
     /* Circle */
@@ -151,7 +158,12 @@ export const BadgeCount = ({
       ? formatNumber(valueDisplayed, { lang })
       : valueDisplayed;
   return (
-    <BadgeCountEllipse {...props} ref={ref} hasOverflow={hasOverflow}>
+    <BadgeCountEllipse
+      {...props}
+      ref={ref}
+      hasOverflow={hasOverflow}
+      charCount={charCount}
+    >
       {valueFormatted}
       {hasOverflow && maxElement}
     </BadgeCountEllipse>
@@ -186,6 +198,7 @@ const BadgeCountEllipse = ({
   loading,
   children,
   hasOverflow,
+  charCount,
   ...props
 }) => {
   return (
@@ -196,6 +209,7 @@ const BadgeCountEllipse = ({
       data-ellipse=""
       data-value-overflow={hasOverflow ? "" : undefined}
       data-loading={loading ? "" : undefined}
+      data-single-char={charCount === 1 ? "" : undefined}
       {...props}
       styleCSSVars={BadgeStyleCSSVars}
       spacing="pre"
