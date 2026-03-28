@@ -63,7 +63,6 @@ import.meta.css = /* css */ `
       --link-text-decoration-hover: var(--link-text-decoration);
       --link-cursor: pointer;
       --link-loading-outline-size: 1px;
-      --link-color-current: var(--link-color);
 
       --link-current-indicator-size: 2px;
       --link-current-indicator-spacing: 0;

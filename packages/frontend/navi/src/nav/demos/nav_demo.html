@@ -97,14 +97,15 @@
             <VerticalTabs />
             <VerticalTabsWithIcons />
             <SpacingVariants />
+            <StylingVariables />
             {/*}
 
 
 
 
-        
-           
-            <StylingVariables />
+
+
+
             <DynamicAddRemove />
               <BinderTabs />
             */}
@@ -943,142 +944,177 @@
             </Text>
             <div className="example-block">
               <div className="caption">Global theme (light slate)</div>
-              <TabList
+              <Nav
                 style={{
-                  "--tab-background": "#f2f5f8",
-                  "--tab-color": "#334155",
-                  "--tab-background-hover": "#e2e8f0",
-                  "--tab-color-hover": "#1e293b",
+                  "--link-background": "#f2f5f8",
+                  "--link-color": "#334155",
+                  "--link-background-hover": "#e2e8f0",
+                  "--link-color-hover": "#1e293b",
                 }}
               >
-                <Tab key="one" selected>
+                <Link appearance="tab" currentIndicator current>
                   One
-                </Tab>
-                <Tab key="two">Two</Tab>
-                <Tab key="three">Three</Tab>
-              </TabList>
+                </Link>
+                <Link appearance="tab" currentIndicator>
+                  Two
+                </Link>
+                <Link appearance="tab" currentIndicator>
+                  Three
+                </Link>
+              </Nav>
             </div>
             <div className="example-block">
               <div className="caption">Override third tab only</div>
-              <TabList
+              <Nav
                 style={{
-                  "--tab-background": "#202124",
-                  "--tab-color": "#e8eaed",
-                  "--tab-background-hover": "#2d2f31",
-                  "--tab-color-hover": "white",
+                  "--link-background": "#202124",
+                  "--link-color": "#e8eaed",
+                  "--link-background-hover": "#2d2f31",
+                  "--link-color-hover": "white",
                 }}
               >
-                <Tab key="alpha" selected>
+                <Link appearance="tab" currentIndicator current>
                   Alpha
-                </Tab>
-                <Tab key="beta">Beta</Tab>
-                <Tab
-                  key="gamma"
+                </Link>
+                <Link appearance="tab" currentIndicator>
+                  Beta
+                </Link>
+                <Link
+                  appearance="tab"
+                  currentIndicator
                   style={{
-                    "--tab-background": "#0d47a1",
-                    "--tab-color": "#fff",
-                    "--tab-background-hover": "#1565c0",
-                    "--tab-color-hover": "#fff",
+                    "--link-background": "#0d47a1",
+                    "--link-color": "#fff",
+                    "--link-background-hover": "#1565c0",
+                    "--link-color-hover": "#fff",
                   }}
                 >
                   Gamma (override)
-                </Tab>
-              </TabList>
+                </Link>
+              </Nav>
             </div>
             <div className="example-block">
               <div className="caption">Custom hover + indicator</div>
-              <TabList
-                indicator="end"
+              <Nav
                 style={{
-                  "--tab-background": "transparent",
-                  "--tab-color": "#374151",
-                  "--tab-background-hover": "#fde68a",
-                  "--tab-color-hover": "#92400e",
-                  "--tab-indicator-color": "#f59e0b",
+                  "--link-color": "#374151",
+                  "--link-background-hover": "#fde68a",
+                  "--link-color-hover": "#92400e",
+                  "--link-current-indicator-color": "#f59e0b",
                 }}
               >
-                <Tab key="day" selected>
+                <Link appearance="tab" currentIndicator="bottom" current>
                   Day
-                </Tab>
-                <Tab key="week">Week</Tab>
-                <Tab key="month">Month</Tab>
-              </TabList>
+                </Link>
+                <Link appearance="tab" currentIndicator="bottom">
+                  Week
+                </Link>
+                <Link appearance="tab" currentIndicator="bottom">
+                  Month
+                </Link>
+              </Nav>
             </div>
             <div className="example-block">
               <div className="caption">Custom selected background & color</div>
-              <TabList
-                indicator="end"
+              <Nav
                 style={{
-                  "--tab-background": "#1e1e1e",
-                  "--tab-color": "#c9d1d9",
-                  "--tab-background-hover": "#2a2a2a",
-                  "--tab-color-hover": "white",
-                  "--tab-indicator-color": "#ff6b6b",
-                  "--tab-indicator-size": "3px",
-                  "--tab-background-selected": "#0d1117",
-                  "--tab-color-selected": "#ffdd57",
+                  "--link-background": "#1e1e1e",
+                  "--link-color": "#c9d1d9",
+                  "--link-background-hover": "#2a2a2a",
+                  "--link-color-hover": "white",
+                  "--link-current-indicator-color": "#ff6b6b",
+                  "--link-current-indicator-size": "3px",
+                  "--link-background-current": "#0d1117",
+                  "--link-color-current": "#ffdd57",
                 }}
               >
-                <Tab key="code" selected>
+                <Link appearance="tab" current>
                   Code
-                </Tab>
-                <Tab key="design">Design</Tab>
-                <Tab key="docs">Docs</Tab>
-              </TabList>
+                </Link>
+                <Link appearance="tab">Design</Link>
+                <Link appearance="tab">Docs</Link>
+              </Nav>
             </div>
             <div className="example-block">
               <div className="caption">Override selected style for one tab</div>
-              <TabList
-                indicator="end"
+              <Nav
                 style={{
-                  "--tab-background": "#f1f5f9",
-                  "--tab-color": "#475569",
-                  "--tab-background-hover": "#e2e8f0",
-                  "--tab-color-hover": "#1e293b",
-                  "--tab-background-selected": "#cbd5e1",
-                  "--tab-color-selected": "#0f172a",
-                  "--tab-indicator-color": "#0ea5e9",
+                  "--link-background": "#f1f5f9",
+                  "--link-color": "#475569",
+                  "--link-background-hover": "#e2e8f0",
+                  "--link-color-hover": "#1e293b",
+                  "--link-background-current": "#cbd5e1",
+                  "--link-color-current": "#0f172a",
+                  "--link-current-indicator-color": "#0ea5e9",
                 }}
               >
-                <Tab key="general" selected>
+                <Link appearance="tab" currentIndicator current>
                   General
-                </Tab>
-                <Tab key="advanced">Advanced</Tab>
-                <Tab
-                  key="danger"
+                </Link>
+                <Link appearance="tab" currentIndicator>
+                  Advanced
+                </Link>
+                <Link
+                  appearance="tab"
+                  currentIndicator
                   style={{
-                    "--tab-background": "#fee2e2",
-                    "--tab-color": "#991b1b",
-                    "--tab-background-hover": "#fecaca",
-                    "--tab-color-hover": "#7f1d1d",
-                    "--tab-background-selected": "#fb7185",
-                    "--tab-color-selected": "white",
-                    "--tab-indicator-color": "#dc2626",
+                    "--link-background": "#fee2e2",
+                    "--link-color": "#991b1b",
+                    "--link-background-hover": "#fecaca",
+                    "--link-color-hover": "#7f1d1d",
+                    "--link-background-current": "#fb7185",
+                    "--link-color-current": "white",
+                    "--link-current-indicator-color": "#dc2626",
                   }}
                 >
                   Danger (override)
-                </Tab>
-              </TabList>
+                </Link>
+              </Nav>
             </div>
             <div className="example-block">
               <div className="caption">Indicator at start position</div>
-              <TabList
-                indicator="start"
-                style={{
-                  "--tab-background": "#f8fafc",
-                  "--tab-color": "#64748b",
-                  "--tab-background-hover": "#e2e8f0",
-                  "--tab-color-hover": "#334155",
-                  "--tab-indicator-color": "#22c55e",
-                  "--tab-indicator-size": "4px",
-                }}
-              >
-                <Tab key="inbox" selected>
+              <Nav>
+                <Link
+                  style={{
+                    "--link-background": "#f8fafc",
+                    "--link-color": "#64748b",
+                    "--link-background-hover": "#e2e8f0",
+                    "--link-color-hover": "#334155",
+                    "--link-current-indicator-color": "#22c55e",
+                    "--link-current-indicator-size": "4px",
+                  }}
+                  currentIndicator="top"
+                  current
+                >
                   Inbox
-                </Tab>
-                <Tab key="sent">Sent</Tab>
-                <Tab key="drafts">Drafts</Tab>
-              </TabList>
+                </Link>
+                <Link
+                  style={{
+                    "--link-background": "#f8fafc",
+                    "--link-color": "#64748b",
+                    "--link-background-hover": "#e2e8f0",
+                    "--link-color-hover": "#334155",
+                    "--link-current-indicator-color": "#22c55e",
+                    "--link-current-indicator-size": "4px",
+                  }}
+                  currentIndicator="top"
+                >
+                  Sent
+                </Link>
+                <Link
+                  style={{
+                    "--link-background": "#f8fafc",
+                    "--link-color": "#64748b",
+                    "--link-background-hover": "#e2e8f0",
+                    "--link-color-hover": "#334155",
+                    "--link-current-indicator-color": "#22c55e",
+                    "--link-current-indicator-size": "4px",
+                  }}
+                  currentIndicator="top"
+                >
+                  Drafts
+                </Link>
+              </Nav>
             </div>
           </Box>
         );
