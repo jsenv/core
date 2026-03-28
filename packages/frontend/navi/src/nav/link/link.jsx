@@ -51,8 +51,8 @@ import.meta.css = /* css */ `
       --link-border-radius: unset;
       --link-outline-color: var(--navi-focus-outline-color);
       --link-loader-color: var(--navi-loader-color);
-      --link-background: transparent;
-      --link-background-current: transparent;
+      --link-background: unset;
+      --link-background-current: unset;
       --link-background-selected: light-dark(#bbdefb, #2563eb);
       --link-color: rgb(0, 0, 238);
       --link-color-visited: color-mix(in srgb, var(--link-color), black 40%);
@@ -276,9 +276,10 @@ import.meta.css = /* css */ `
     &[data-appearance="tab"] {
       --link-background-hover: color-mix(
         in srgb,
-        var(--link-background),
+        var(--link-background, transparent),
         var(--x-link-contrasting-color) 15%
       );
+      --link-background-current: red;
       --link-color: inherit;
       --link-text-decoration: none;
       white-space: nowrap;
