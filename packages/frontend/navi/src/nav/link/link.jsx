@@ -111,7 +111,9 @@ import.meta.css = /* css */ `
     outline-color: var(--link-outline-color);
     cursor: var(--x-link-cursor);
 
-    .navi_text:not(.navi_badge_count),
+    .navi_text:not(.navi_badge_count):not(.navi_icon):not(
+        .navi_icon_foreground
+      ),
     .navi_text_bold_wrapper,
     .navi_text_bold_clone,
     .navi_text_bold_foreground {
@@ -257,6 +259,7 @@ import.meta.css = /* css */ `
       position: absolute !important;
       top: 0;
       left: -1em;
+      display: inline-flex;
       width: 1em;
       height: 1em;
       font-size: 1em;
