@@ -138,6 +138,7 @@ export const Nav = ({
     <Box
       as="nav"
       baseClassName="navi_nav"
+      width="fit-content"
       column={!row}
       row={row}
       data-link-border-radius-inherit={linkBorderRadiusInherit ? "" : undefined}
