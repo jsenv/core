@@ -166,7 +166,7 @@ import.meta.css = /* css */ `
 
     &[data-dark-background] {
       --x-link-contrasting-color: white;
-      --x-link-color: white;
+      --x-link-color: var(--link-color, white);
     }
 
     /* Interactive */
@@ -273,7 +273,7 @@ import.meta.css = /* css */ `
     }
 
     &[data-appearance="text"] {
-      --link-color: inherit;
+      --link-color: unset;
       --link-text-decoration: none;
     }
     &[data-appearance="tab"] {
@@ -282,12 +282,12 @@ import.meta.css = /* css */ `
         var(--link-background, transparent),
         var(--x-link-contrasting-color) 15%
       );
-      --link-color: inherit;
+      --link-color: unset;
       --link-text-decoration: none;
       white-space: nowrap;
       user-select: none;
 
-      &[data-href-current] {
+      &[data-current-effect][data-href-current] {
         --x-link-box-shadow-size: 0.1em;
         --x-link-box-shadow-halo: 0.3em;
         --x-link-shadow-color: color-mix(
