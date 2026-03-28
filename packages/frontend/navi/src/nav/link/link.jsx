@@ -281,6 +281,10 @@ import.meta.css = /* css */ `
       --link-color: unset;
       --link-text-decoration: none;
     }
+    &[data-appearance="icon"] {
+      --link-color: unset;
+      --link-text-decoration: none;
+    }
     &[data-appearance="tab"] {
       --link-background-hover: color-mix(
         in srgb,
