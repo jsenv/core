@@ -288,8 +288,23 @@ import.meta.css = /* css */ `
       user-select: none;
 
       &[data-href-current] {
-        box-shadow: inset 0.1em 0.1em 0.3em
-          color-mix(in srgb, var(--x-link-contrasting-color) 80%, transparent);
+        --x-link-box-shadow-size: 0.1em;
+        --x-link-box-shadow-halo: 0.3em;
+        --x-link-shadow-color: color-mix(
+          in srgb,
+          var(--x-link-contrasting-color) 40%,
+          transparent
+        );
+
+        box-shadow:
+          inset 0 var(--x-link-box-shadow-size) var(--x-link-box-shadow-halo)
+            var(--x-link-shadow-color),
+          inset 0 calc(-1 * var(--x-link-box-shadow-size))
+            var(--x-link-box-shadow-halo) var(--x-link-shadow-color),
+          inset var(--x-link-box-shadow-size) 0 var(--x-link-box-shadow-halo)
+            var(--x-link-shadow-color),
+          inset calc(-1 * var(--x-link-box-shadow-size)) 0
+            var(--x-link-box-shadow-halo) var(--x-link-shadow-color);
       }
     }
   }
