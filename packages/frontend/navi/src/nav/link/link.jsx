@@ -32,6 +32,7 @@ import { useDarkBackgroundAttribute } from "../../text/use_dark_background_attri
 import { useDocumentUrl } from "../browser_integration/document_url_signal.js";
 import { getHrefTargetInfo } from "../browser_integration/href_target_info.js";
 import { useIsVisited } from "../browser_integration/use_is_visited.js";
+import { useRouteStatus } from "../route.js";
 
 import { GithubSvg, SmsSvg } from "./link_icons.jsx";
 import { useDimColorWhen } from "./use_dim_color.js";
@@ -370,7 +371,6 @@ const LinkPseudoClasses = [
   ":-navi-href-external",
   ":-navi-href-anchor",
   ":-navi-href-current",
-  ":-navi-href-match",
   ":-navi-selected",
 ];
 const LinkPseudoElements = ["::-navi-loader", "::-navi-indicator"];
@@ -387,9 +387,6 @@ Object.assign(PSEUDO_CLASSES, {
   },
   ":-navi-href-current": {
     attribute: "data-href-current",
-  },
-  ":-navi-href-match": {
-    attribute: "data-href-match",
   },
   ":-navi-selected": {
     attribute: "data-selected",
@@ -408,14 +405,15 @@ const LinkBasic = (props) => {
   }
   return <LinkPlain {...props} />;
 };
-const LinkWithRoute = ({ route, routeParams, children, ...rest }) => {
+const LinkWithRoute = ({ route, routeParams, current, children, ...rest }) => {
   const url = route.buildUrl(routeParams);
-  // const { matching } = useRouteStatus(route);
-  // const paramsAreMatching = route.matchesParams(routeParams);
-  // const linkMatching = matching && paramsAreMatching;
+  const { matching } = useRouteStatus(route);
+  const paramsAreMatching = route.matchesParams(routeParams);
+  const linkMatching = matching && paramsAreMatching;
+  const innerCurrent = current || linkMatching;
 
   return (
-    <LinkBasic href={url} {...rest}>
+    <LinkBasic href={url} current={innerCurrent} {...rest}>
       {children || route.buildRelativeUrl(routeParams)}
     </LinkBasic>
   );
@@ -441,7 +439,10 @@ const LinkPlain = (props) => {
 
     // visual
     appearance,
-    discrete,
+    current,
+    currentIndicator,
+    boldWhenCurrent,
+    currentEffect = !currentIndicator,
     blankTargetIcon,
     anchorIcon,
     startIcon,
@@ -449,11 +450,7 @@ const LinkPlain = (props) => {
     spacing,
     revealOnInteraction = Boolean(titleLevel),
     hrefFallback = !anchor,
-    matching,
     overflowEllipsis,
-    currentIndicator,
-    boldWhenCurrent,
-    currentEffect = !currentIndicator,
 
     children,
 
@@ -476,7 +473,8 @@ const LinkPlain = (props) => {
   // subscribe to document url to re-render and re-compute getHrefTargetInfo
   useDocumentUrl();
   const { isSameSite, isAnchor, isCurrent } = getHrefTargetInfo(href);
-  useDarkBackgroundAttribute(ref, [selected, isCurrent], {});
+  const innerCurrent = current || isCurrent;
+  useDarkBackgroundAttribute(ref, [selected, innerCurrent], {});
 
   const innerTarget =
     target === undefined ? (isSameSite ? "_self" : "_blank") : target;
@@ -578,7 +576,6 @@ const LinkPlain = (props) => {
       data-anchor={anchor ? "" : undefined}
       data-interactive={onClick ? "" : undefined}
       data-reveal-on-interaction={revealOnInteraction ? "" : undefined}
-      data-discrete={discrete ? "" : undefined}
       baseClassName="navi_link"
       styleCSSVars={LinkStyleCSSVars}
       pseudoClasses={LinkPseudoClasses}
@@ -592,7 +589,6 @@ const LinkPlain = (props) => {
         ":-navi-href-external": !isSameSite,
         ":-navi-href-anchor": isAnchor,
         ":-navi-href-current": isCurrent,
-        ":-navi-href-match": matching,
         ":-navi-selected": selected,
       }}
       onClick={(e) => {
