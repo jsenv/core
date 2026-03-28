@@ -125,23 +125,45 @@ const DIMENSION_PROPS = {
   expand: applyOnTwoProps("expandX", "expandY"),
   shrink: applyOnTwoProps("shrinkX", "shrinkY"),
   // apply after width/height to override if both are set
-  expandX: (value, { parentBoxFlow }) => {
+  expandX: (value, { parentBoxFlow, boxFlow }) => {
     if (!value) {
       return null;
     }
-    if (parentBoxFlow === "row" || parentBoxFlow === "inline-row") {
+    const parentIsFlexColumn =
+      parentBoxFlow === "column" || parentBoxFlow === "inline-column";
+    const boxIsFlexColumn = boxFlow === "column" || boxFlow === "inline-column";
+    if (boxIsFlexColumn || parentIsFlexColumn) {
+      if (!parentIsFlexColumn) {
+        return {
+          flexGrow: 1,
+          flexBasis: "0%",
+          minWidth: "100%",
+          width: "auto",
+        };
+      }
       return { flexGrow: 1, flexBasis: "0%" }; // Grow horizontally in row
     }
-    if (parentBoxFlow === "column") {
+    if (parentBoxFlow === "row") {
       return { minWidth: "100%", width: "auto" }; // Take full width in column
     }
     return { minWidth: "100%", width: "auto" }; // Take full width outside flex
   },
-  expandY: (value, { parentBoxFlow }) => {
+  expandY: (value, { parentBoxFlow, boxFlow }) => {
     if (!value) {
       return null;
     }
-    if (parentBoxFlow === "column" || parentBoxFlow === "inline-column") {
+    const parentIsFlexRow =
+      parentBoxFlow === "row" || parentBoxFlow === "inline-row";
+    const boxIsFlexRow = boxFlow === "row" || boxFlow === "inline-row";
+    if (boxIsFlexRow || parentIsFlexRow) {
+      if (!parentIsFlexRow) {
+        return {
+          flexGrow: 1,
+          flexBasis: "0%",
+          minHeight: "100%",
+          height: "auto",
+        };
+      }
       return { flexGrow: 1, flexBasis: "0%" }; // Make row full height
     }
     if (parentBoxFlow === "row") {
