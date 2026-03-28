@@ -37,6 +37,7 @@ import.meta.css = /* css */ `
       --nav-padding-left,
       var(--nav-padding-x, var(--nav-padding, unset))
     );
+    justify-content: stretch;
     background: var(--nav-background);
     border: var(--nav-border);
     border-radius: var(--nav-border-radius);
@@ -84,7 +85,7 @@ import.meta.css = /* css */ `
     &[data-vertical] {
       /* overflow-x: hidden; */
       /* overflow-y: auto; */
-      align-items: start;
+      align-items: stretch;
 
       &[data-expand] {
         .navi_tab {
