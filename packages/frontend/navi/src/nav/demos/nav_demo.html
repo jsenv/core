@@ -96,13 +96,14 @@
             <RoundedTabList />
             <VerticalTabs />
             <VerticalTabsWithIcons />
+            <SpacingVariants />
             {/*}
 
 
 
 
         
-            <SpacingVariants />
+           
             <StylingVariables />
             <DynamicAddRemove />
               <BinderTabs />
@@ -843,38 +844,32 @@
             <Title as="h2">Spacing Variants</Title>
             <Text className="note">
               The <code>spacing</code> prop controls gap between tabs.
-              Demonstrated with values <code>xs</code>, <code>sm</code>, and no
+              Demonstrated with values <code>xs</code>, <code>s</code>, and no
               spacing prop (default).
             </Text>
             <div className="example-block">
-              <div className="caption">spacing="xs"</div>
-              <TabList spacing="xs">
-                <Tab key="a" selected>
-                  A
-                </Tab>
-                <Tab key="b">B</Tab>
-                <Tab key="c">C</Tab>
-              </TabList>
-            </div>
-            <div className="example-block">
-              <div className="caption">spacing="sm"</div>
-              <TabList spacing="sm">
-                <Tab key="a" selected>
-                  A
-                </Tab>
-                <Tab key="b">B</Tab>
-                <Tab key="c">C</Tab>
-              </TabList>
-            </div>
-            <div className="example-block">
               <div className="caption">(default spacing)</div>
-              <TabList>
-                <Tab key="a" selected>
-                  A
-                </Tab>
-                <Tab key="b">B</Tab>
-                <Tab key="c">C</Tab>
-              </TabList>
+              <Nav>
+                <Link current>A</Link>
+                <Link>B</Link>
+                <Link>C</Link>
+              </Nav>
+            </div>
+            <div className="example-block">
+              <div className="caption">spacing="xs"</div>
+              <Nav spacing="xs">
+                <Link current>A</Link>
+                <Link>B</Link>
+                <Link>C</Link>
+              </Nav>
+            </div>
+            <div className="example-block">
+              <div className="caption">spacing="s"</div>
+              <Nav spacing="s">
+                <Link current>A</Link>
+                <Link>B</Link>
+                <Link>C</Link>
+              </Nav>
             </div>
           </Box>
         );
