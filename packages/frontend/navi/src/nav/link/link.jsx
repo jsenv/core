@@ -84,7 +84,10 @@ import.meta.css = /* css */ `
     );
     --x-link-background-current: var(
       --link-background-color-current,
-      var(--link-background-current, var(--link-background-current))
+      var(
+        --link-background-current,
+        var(--link-background-color, var(--link-background))
+      )
     );
     --x-link-color: var(--link-color);
     --x-link-color-hover: var(--link-color-hover, var(--link-color));
@@ -284,10 +287,9 @@ import.meta.css = /* css */ `
       white-space: nowrap;
       user-select: none;
 
-      &[data-current-effect] {
-        &[data-href-current] {
-          box-shadow: inset 0 0 0 black;
-        }
+      &[data-href-current] {
+        box-shadow: inset 0.1em 0.1em 0.3em
+          color-mix(in srgb, var(--x-link-contrasting-color) 80%, transparent);
       }
     }
   }
