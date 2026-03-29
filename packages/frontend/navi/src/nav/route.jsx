@@ -26,7 +26,7 @@ import { ActionRenderer } from "../action/action_renderer.jsx";
 import { useUITransitionContentId } from "../ui_transition/ui_transition.jsx";
 import { useForceRender } from "./use_force_render.js";
 
-const DEBUG = false;
+const DEBUG = true;
 const debug = (...args) => {
   if (!DEBUG) return;
   console.debug(...args);
@@ -55,7 +55,8 @@ const isParentRouteExactMatch = (route) => {
 const RootElement = () => {
   return <Route.Slot />;
 };
-const SlotContext = createContext(null);
+const SLOT_NO_MATCH = () => null;
+const SlotContext = createContext(SLOT_NO_MATCH);
 const RouteInfoContext = createContext(null);
 const UpdateOnlyContext = createContext(false);
 const ElementSignalMapContext = createContext(null);
@@ -350,7 +351,7 @@ const initRouteObserver = ({
       };
 
   const matchingRouteInfoSignal = signal();
-  const SlotMatchingElementSignal = signal();
+  const SlotMatchingElementSignal = signal(SLOT_NO_MATCH);
   const MatchingElement = () => {
     // Read element from the signal (updated by update-only renders) when
     // available, falling back to the closure variable for routes without
@@ -402,7 +403,7 @@ const initRouteObserver = ({
     } else {
       compositeRoute.matching = false;
       matchingRouteInfoSignal.value = null;
-      SlotMatchingElementSignal.value = null;
+      SlotMatchingElementSignal.value = SLOT_NO_MATCH;
       onMatchingInfoChange(null);
     }
   };
@@ -443,9 +444,10 @@ const initRouteObserver = ({
 export const RouteSlot = () => {
   const SlotElement = useContext(SlotContext);
   if (SlotElement === undefined) {
+    // SlotContext has no provider — RouteSlot is used outside a <Route>
     return <p>RouteSlot must be used inside a Route</p>;
   }
-  if (SlotElement === null) {
+  if (SlotElement === SLOT_NO_MATCH) {
     return null;
   }
   return <SlotElement />;
