@@ -295,6 +295,42 @@ const initRouteObserver = ({
     elementFromProps: element,
   };
 
+  const matchingRouteInfoSignal = signal();
+  const SlotMatchingElementSignal = signal(SLOT_NO_MATCH);
+  const MatchingElement = () => {
+    // Read element from the signal (updated by update-only renders) when
+    // available, falling back to the closure variable for routes without
+    // a route prop (e.g. the Routes wrapper).
+    const elementSignal =
+      route && elementSignalMap ? elementSignalMap.get(route) : undefined;
+    const currentElement = elementSignal ? elementSignal.value : element;
+    const matchingRouteInfo = matchingRouteInfoSignal.value;
+    useUITransitionContentId(
+      matchingRouteInfo
+        ? matchingRouteInfo.route.urlPattern
+        : fallback
+          ? "fallback"
+          : undefined,
+    );
+    const SlotMatchingElement = SlotMatchingElementSignal.value;
+    const renderedElement = action ? (
+      <ActionRenderer action={action}>{currentElement}</ActionRenderer>
+    ) : (
+      currentElement
+    );
+    return (
+      <RouteInfoContext.Provider value={matchingRouteInfo}>
+        <SlotContext.Provider value={SlotMatchingElement}>
+          {renderedElement}
+        </SlotContext.Provider>
+      </RouteInfoContext.Provider>
+    );
+  };
+  MatchingElement.underlyingElementId =
+    candidateSet.size === 0
+      ? `${getElementSignature(element)} without slot`
+      : `[${getElementSignature(element)} with slot one of ${candidateElementIds}]`;
+
   const findMatchingChildInfo = () => {
     for (const candidate of candidateSet) {
       if (candidate.route?.matching) {
@@ -349,42 +385,6 @@ const initRouteObserver = ({
         }
         return null;
       };
-
-  const matchingRouteInfoSignal = signal();
-  const SlotMatchingElementSignal = signal(SLOT_NO_MATCH);
-  const MatchingElement = () => {
-    // Read element from the signal (updated by update-only renders) when
-    // available, falling back to the closure variable for routes without
-    // a route prop (e.g. the Routes wrapper).
-    const elementSignal =
-      route && elementSignalMap ? elementSignalMap.get(route) : undefined;
-    const currentElement = elementSignal ? elementSignal.value : element;
-    const matchingRouteInfo = matchingRouteInfoSignal.value;
-    useUITransitionContentId(
-      matchingRouteInfo
-        ? matchingRouteInfo.route.urlPattern
-        : fallback
-          ? "fallback"
-          : undefined,
-    );
-    const SlotMatchingElement = SlotMatchingElementSignal.value;
-    const renderedElement = action ? (
-      <ActionRenderer action={action}>{currentElement}</ActionRenderer>
-    ) : (
-      currentElement
-    );
-    return (
-      <RouteInfoContext.Provider value={matchingRouteInfo}>
-        <SlotContext.Provider value={SlotMatchingElement}>
-          {renderedElement}
-        </SlotContext.Provider>
-      </RouteInfoContext.Provider>
-    );
-  };
-  MatchingElement.underlyingElementId =
-    candidateSet.size === 0
-      ? `${getElementSignature(element)} without slot`
-      : `[${getElementSignature(element)} with slot one of ${candidateElementIds}]`;
 
   const updateMatchingInfo = () => {
     const newMatchingInfo = getMatchingInfo();
