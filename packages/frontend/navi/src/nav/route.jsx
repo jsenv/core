@@ -458,7 +458,7 @@ export const RouteSlot = () => {
   const SlotElement = useContext(SlotContext);
   if (SlotElement === undefined) {
     // SlotContext has no provider — RouteSlot is used outside a <Route>
-    console.debug(
+    console.trace(
       "RouteSlot: SlotElement is undefined (no SlotContext.Provider in tree)",
     );
     return <p>&lt;RouteSlot/&gt; must be used inside a &lt;Route&gt;</p>;
