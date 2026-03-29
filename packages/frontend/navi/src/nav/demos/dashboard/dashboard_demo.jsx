@@ -1,4 +1,5 @@
 import { render } from "preact";
+import { useState } from "preact/hooks";
 
 import {
   Link,
@@ -154,6 +155,8 @@ const DashboardPage = () => {
 };
 
 const SettingsPanel = () => {
+  const [count, setCount] = useState(0);
+
   return (
     <div>
       <h3>Settings</h3>
@@ -180,6 +183,14 @@ const SettingsPanel = () => {
         </Link>
       </Nav>
 
+      <button
+        onClick={() => {
+          setCount((c) => c + 1);
+        }}
+      >
+        Increment Count
+      </button>
+
       {/* Tab Content */}
       <div
         style={{
@@ -194,23 +205,23 @@ const SettingsPanel = () => {
           <Route
             route={ADMIN_SETTINGS_ROUTE}
             routeParams={{ tab: "general" }}
-            element={<GeneralSettingsTabContent />}
+            element={<GeneralSettingsTabContent count={count} />}
           />
           <Route
             route={ADMIN_SETTINGS_ROUTE}
             routeParams={{ tab: "advanced" }}
-            element={<AdvancedSettingsTagContent />}
+            element={<AdvancedSettingsTagContent count={count} />}
           />
         </Routes>
       </div>
     </div>
   );
 };
-const GeneralSettingsTabContent = () => {
+const GeneralSettingsTabContent = ({ count }) => {
   return (
     <div>
       <h4>General Settings</h4>
-      <p>Configure your basic application settings here.</p>
+      <p>Configure your basic application settings here count: {count}.</p>
       <div style={{ marginTop: "20px" }}>
         <div style={{ marginBottom: "15px" }}>
           <label
@@ -260,11 +271,11 @@ const GeneralSettingsTabContent = () => {
     </div>
   );
 };
-const AdvancedSettingsTagContent = () => {
+const AdvancedSettingsTagContent = ({ count }) => {
   return (
     <div>
       <h4>Advanced Settings</h4>
-      <p>Configure advanced options and integrations.</p>
+      <p>Configure advanced options and integrations. count: {count}</p>
       <div style={{ marginTop: "20px" }}>
         <div style={{ marginBottom: "15px" }}>
           <label
