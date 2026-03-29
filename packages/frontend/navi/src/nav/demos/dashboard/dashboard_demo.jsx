@@ -19,7 +19,7 @@ const settingsTabSignal = stateSignal("general", {
   id: "settings_tab",
   enum: ["general", "advanced"],
   persists: true,
-  debug: true,
+  // debug: true,
 });
 const analyticsTabSignal = stateSignal("overview", {
   id: "analytics_tab",
