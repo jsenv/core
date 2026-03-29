@@ -461,10 +461,16 @@ const initRouteObserver = ({
   };
 };
 
+// - "undefined" ->  means there is no Slot Provider in the tree
+// - SLOT_ROUTE_NO_MATCH -> means there is a provider but no route matches
+// - any other value means there is a provider and a route matches, the value is the element associated to the matching route.
+//
+// "undefined" should happen only when:
+// 1. RouteSlot is rendered for the first time by a <Routes> during the discovery phase
+// 2. Some code is incorrectly using <RouteSlot /> outside of a <Route>
 export const RouteSlot = () => {
   const SlotElement = useContext(SlotContext);
   if (SlotElement === undefined) {
-    // SlotContext has no provider — RouteSlot is used outside a <Route>
     console.trace(
       "RouteSlot: SlotElement is undefined (no SlotContext.Provider in tree)",
     );
