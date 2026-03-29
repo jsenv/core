@@ -286,12 +286,10 @@ const initRouteObserver = ({
   - ${candidateElementIds.join("\n  - ")}`,
     );
   }
-  const [publishCompositeStatus, subscribeCompositeStatus] = createPubSub();
   const compositeRoute = {
     urlPattern: `composite(${candidateElementIds})`,
     isComposite: true,
     matching: false,
-    subscribeStatus: subscribeCompositeStatus,
     toString: () => `composite(${candidateSet.size} candidates)`,
     routeFromProps: route,
     elementFromProps: element,
@@ -419,28 +417,30 @@ const initRouteObserver = ({
       `${elementId} onChange: route.matching=${route?.matching}, compositeRoute.matching=${compositeRoute.matching}`,
     );
     updateMatchingInfo();
-    publishCompositeStatus();
   };
 
-  if (route || candidateSet.size > 0) {
+  // Collect all real routes this observer cares about:
+  // 1. Our own route prop (if any)
+  // 2. The real routes behind each child candidate's composite
+  const relevantRouteSet = new Set();
+  if (route) {
+    relevantRouteSet.add(route);
+  }
+  for (const candidate of candidateSet) {
+    const realRoute = candidate.route.routeFromProps;
+    if (realRoute) {
+      relevantRouteSet.add(realRoute);
+    }
+  }
+  if (relevantRouteSet.size > 0) {
     addTeardown(
       observeRouteMutations((routeModifiedSet) => {
-        let firstRouteModifiedAffectingUs = false;
-
-        if (route && routeModifiedSet.has(route)) {
-          firstRouteModifiedAffectingUs = route;
-        } else if (candidateSet.size > 0) {
-          for (const routeModified of routeModifiedSet) {
-            if (candidateSet.has(routeModified)) {
-              firstRouteModifiedAffectingUs = routeModified;
-              break;
-            }
+        for (const routeModified of routeModifiedSet) {
+          if (relevantRouteSet.has(routeModified)) {
+            onChange();
+            return;
           }
         }
-        if (!firstRouteModifiedAffectingUs) {
-          return;
-        }
-        onChange();
       }),
     );
   }
