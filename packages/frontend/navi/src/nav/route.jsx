@@ -159,9 +159,10 @@ export const Route = ({
 
 const RegisterChildRouteContext = createContext(null);
 
-/* This component is rendered once
+/*
+ * This component is rendered once
  * So no need to cleanup things or whatever we know and ensure that
- * t's executed once for the entire app lifecycle
+ * it's executed once for the entire app lifecycle
  */
 const RouteMatchManager = ({
   element,
