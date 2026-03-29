@@ -1,13 +1,13 @@
 import { render } from "preact";
 
 import {
+  Link,
+  Nav,
   Route,
   route,
-  RouteLink,
   Routes,
   setupRoutes,
   stateSignal,
-  TabList,
 } from "@jsenv/navi";
 
 const sectionSignal = stateSignal("settings", {
@@ -51,10 +51,14 @@ const App = () => {
         padding: "20px",
       }}
     >
-      <TabList>
-        <TabList.Tab route={HOME_ROUTE}>Home</TabList.Tab>
-        <TabList.Tab route={ADMIN_ROUTE}>Admin</TabList.Tab>
-      </TabList>
+      <Nav spacing="s">
+        <Link appearance="tab" currentIndicator padding="s" route={HOME_ROUTE}>
+          Home
+        </Link>
+        <Link appearance="tab" currentIndicator padding="s" route={ADMIN_ROUTE}>
+          Admin
+        </Link>
+      </Nav>
 
       <div style={{ marginTop: "20px" }}>
         <Routes>
@@ -76,7 +80,7 @@ const HomePage = () => {
         during navigation and page refresh.
       </p>
       <div style={{ marginTop: "15px" }}>
-        <RouteLink
+        <Link
           route={ADMIN_ROUTE}
           style={{
             padding: "10px 20px",
@@ -88,7 +92,7 @@ const HomePage = () => {
           }}
         >
           Go to Dashboard
-        </RouteLink>
+        </Link>
       </div>
     </div>
   );
@@ -113,24 +117,28 @@ const DashboardPage = () => {
             Menu
           </h3>
 
-          <TabList vertical>
-            <TabList.Tab
+          <Nav vertical expandX spacing="s">
+            <Link
+              appearance="tab"
+              currentIndicator="right"
               route={ADMIN_SETTINGS_ROUTE}
               expandX
               borderRadius="s"
               paddingLeft="s"
             >
               ⚙️ Settings
-            </TabList.Tab>
-            <TabList.Tab
+            </Link>
+            <Link
+              appearance="tab"
+              currentIndicator="right"
               route={ADMIN_ANALYTICS_ROUTE}
               expandX
               borderRadius="s"
               paddingLeft="s"
             >
               📊 Analytics
-            </TabList.Tab>
-          </TabList>
+            </Link>
+          </Nav>
         </div>
 
         {/* Main Content Area */}
@@ -151,20 +159,26 @@ const SettingsPanel = () => {
       <h3>Settings</h3>
 
       {/* Horizontal Tabs */}
-      <TabList style={{ marginBottom: "20px" }}>
-        <TabList.Tab
+      <Nav marginBottom="20px" spacing="s">
+        <Link
+          appearance="tab"
+          currentIndicator
           route={ADMIN_SETTINGS_ROUTE}
           routeParams={{ tab: "general" }}
+          padding="s"
         >
           General
-        </TabList.Tab>
-        <TabList.Tab
+        </Link>
+        <Link
+          appearance="tab"
+          currentIndicator
           route={ADMIN_SETTINGS_ROUTE}
           routeParams={{ tab: "advanced" }}
+          padding="s"
         >
           Advanced
-        </TabList.Tab>
-      </TabList>
+        </Link>
+      </Nav>
 
       {/* Tab Content */}
       <div
@@ -309,20 +323,26 @@ const AnalyticsPanel = () => {
       <h3>Analytics</h3>
 
       {/* Horizontal Tabs */}
-      <TabList style={{ marginBottom: "20px" }}>
-        <TabList.Tab
+      <Nav marginBottom="20" spacing="s">
+        <Link
+          appearance="tab"
+          currentIndicator
+          padding="s"
           route={ADMIN_ANALYTICS_ROUTE}
           routeParams={{ tab: "overview" }}
         >
           Overview
-        </TabList.Tab>
-        <TabList.Tab
+        </Link>
+        <Link
+          appearance="tab"
+          currentIndicator
+          padding="s"
           route={ADMIN_ANALYTICS_ROUTE}
           routeParams={{ tab: "details" }}
         >
           Details
-        </TabList.Tab>
-      </TabList>
+        </Link>
+      </Nav>
 
       {/* Tab Content */}
       <div
