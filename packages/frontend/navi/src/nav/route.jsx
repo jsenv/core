@@ -313,6 +313,11 @@ const initRouteObserver = ({
           : undefined,
     );
     const SlotMatchingElement = SlotMatchingElementSignal.value;
+    if (SlotMatchingElement === undefined) {
+      console.warn(
+        `${elementId} MatchingElement render: SlotMatchingElement is undefined!`,
+      );
+    }
     const renderedElement = action ? (
       <ActionRenderer action={action}>{currentElement}</ActionRenderer>
     ) : (
@@ -391,9 +396,15 @@ const initRouteObserver = ({
     if (newMatchingInfo) {
       compositeRoute.matching = true;
       matchingRouteInfoSignal.value = newMatchingInfo;
-      SlotMatchingElementSignal.value = newMatchingInfo.MatchingElement;
+      const slotValue = newMatchingInfo.MatchingElement;
+      if (slotValue === undefined) {
+        console.warn(
+          `${elementId} updateMatchingInfo: MATCH but MatchingElement is undefined! matchingInfo keys: ${Object.keys(newMatchingInfo)}, route: ${newMatchingInfo.route?.urlPattern}`,
+        );
+      }
+      SlotMatchingElementSignal.value = slotValue;
       debug(
-        `${elementId} updateMatchingInfo: MATCH route=${newMatchingInfo.route?.urlPattern}, slot=${newMatchingInfo.MatchingElement?.underlyingElementId ?? "SLOT_ROUTE_NO_MATCH"}`,
+        `${elementId} updateMatchingInfo: MATCH route=${newMatchingInfo.route?.urlPattern}, slot=${slotValue?.underlyingElementId ?? "SLOT_ROUTE_NO_MATCH"}`,
       );
       onMatchingInfoChange({
         route: newMatchingInfo.route,
@@ -461,7 +472,7 @@ const initRouteObserver = ({
   };
 };
 
-// - "undefined" ->  means there is no Slot Provider in the tree
+// - "undefined" -> means there is no Slot Provider in the tree
 // - SLOT_ROUTE_NO_MATCH -> means there is a provider but no route matches
 // - any other value means there is a provider and a route matches, the value is the element associated to the matching route.
 //
