@@ -24,6 +24,7 @@ import { useContext, useLayoutEffect, useRef } from "preact/hooks";
 
 import { ActionRenderer } from "../action/action_renderer.jsx";
 import { useUITransitionContentId } from "../ui_transition/ui_transition.jsx";
+import { observeRouteMutations } from "./route.js";
 import { useForceRender } from "./use_force_render.js";
 
 const DEBUG = true;
@@ -372,11 +373,6 @@ const initRouteObserver = ({
         if (matchingChildInfo) {
           return matchingChildInfo;
         }
-        if (candidateSet.size > 0) {
-          // we have children but none match yet (transient state during batch update)
-          // return null to avoid an invalid intermediate state
-          return null;
-        }
         return {
           route,
           element: null,
@@ -417,6 +413,7 @@ const initRouteObserver = ({
       onMatchingInfoChange(null);
     }
   };
+
   const onChange = () => {
     debug(
       `${elementId} onChange: route.matching=${route?.matching}, compositeRoute.matching=${compositeRoute.matching}`,
@@ -424,20 +421,30 @@ const initRouteObserver = ({
     updateMatchingInfo();
     publishCompositeStatus();
   };
-  if (route) {
-    if (DEBUG) {
-      console.debug(`${elementId} subscribing to ${route}`);
-    }
-    addTeardown(route.subscribeStatus(onChange));
+
+  if (route || candidateSet.size > 0) {
+    addTeardown(
+      observeRouteMutations((routeModifiedSet) => {
+        let firstRouteModifiedAffectingUs = false;
+
+        if (route && routeModifiedSet.has(route)) {
+          firstRouteModifiedAffectingUs = route;
+        } else if (candidateSet.size > 0) {
+          for (const routeModified of routeModifiedSet) {
+            if (candidateSet.has(routeModified)) {
+              firstRouteModifiedAffectingUs = routeModified;
+              break;
+            }
+          }
+        }
+        if (!firstRouteModifiedAffectingUs) {
+          return;
+        }
+        onChange();
+      }),
+    );
   }
-  for (const candidate of candidateSet) {
-    if (DEBUG) {
-      console.debug(
-        `${elementId} subscribing to child candidate ${candidate.route}`,
-      );
-    }
-    addTeardown(candidate.route.subscribeStatus(onChange));
-  }
+
   if (parentRegisterChildRoute) {
     parentRegisterChildRoute({
       route: compositeRoute,
