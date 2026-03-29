@@ -96,16 +96,24 @@ export const Route = ({
   const isUpdateOnly = useContext(UpdateOnlyContext);
   const elementSignalMap = useContext(ElementSignalMapContext);
 
+  // Each Route needs a unique key in the elementSignalMap.
+  // Routes without routeParams use the route object directly.
+  // Routes with routeParams share the same route object, so they use
+  // a stable unique key per component instance.
+  const elementSignalKeyRef = useRef(null);
+  if (!elementSignalKeyRef.current && route && routeParams) {
+    elementSignalKeyRef.current = { route, routeParams };
+  }
+  const elementSignalKey = routeParams ? elementSignalKeyRef.current : route;
+
   // Update the element signal for this route.
   // In update-only mode this is the only purpose of rendering this Route.
-  // Skip for routes with routeParams: they share the same route object.
   if (
-    route &&
+    elementSignalKey &&
     elementSignalMap &&
-    !routeParams &&
-    elementSignalMap.has(route)
+    elementSignalMap.has(elementSignalKey)
   ) {
-    elementSignalMap.get(route).value = element;
+    elementSignalMap.get(elementSignalKey).value = element;
   }
 
   if (isUpdateOnly) {
@@ -121,15 +129,13 @@ export const Route = ({
 
   if (!hasDiscoveredRef.current) {
     // Create the element signal during discovery
-    // Skip for routes with routeParams: they share the same route object.
     if (
-      route &&
+      elementSignalKey &&
       elementSignalMap &&
-      !routeParams &&
-      !elementSignalMap.has(route)
+      !elementSignalMap.has(elementSignalKey)
     ) {
       // eslint-disable-next-line signals/no-signal-in-component-body
-      elementSignalMap.set(route, signal(element));
+      elementSignalMap.set(elementSignalKey, signal(element));
     }
     return (
       <RouteMatchManager
@@ -140,6 +146,7 @@ export const Route = ({
         fallback={fallback}
         meta={meta}
         routeParams={routeParams}
+        elementSignalKey={elementSignalKey}
         onMatchingInfoChange={(matchingInfo) => {
           hasDiscoveredRef.current = true;
           matchingInfoRef.current = matchingInfo;
@@ -185,6 +192,7 @@ const RouteMatchManager = ({
   fallback,
   meta,
   routeParams,
+  elementSignalKey,
   onMatchingInfoChange,
   children,
 }) => {
@@ -243,6 +251,7 @@ const RouteMatchManager = ({
       fallback,
       meta,
       routeParams,
+      elementSignalKey,
       indexCandidate,
       fallbackCandidate,
       candidateSet,
@@ -267,6 +276,7 @@ const initRouteObserver = ({
   fallback,
   meta,
   routeParams,
+  elementSignalKey,
   indexCandidate,
   fallbackCandidate,
   candidateSet,
@@ -313,11 +323,9 @@ const initRouteObserver = ({
     // Read element from the signal (updated by update-only renders) when
     // available, falling back to the closure variable for routes without
     // a route prop (e.g. the Routes wrapper).
-    // Skip signal for routes with routeParams: multiple Route components share
-    // the same route object and would collide on the same signal entry.
     const elementSignal =
-      route && elementSignalMap && !routeParams
-        ? elementSignalMap.get(route)
+      elementSignalKey && elementSignalMap
+        ? elementSignalMap.get(elementSignalKey)
         : undefined;
     const currentElement = elementSignal ? elementSignal.value : element;
     const matchingRouteInfo = matchingRouteInfoSignal.value;

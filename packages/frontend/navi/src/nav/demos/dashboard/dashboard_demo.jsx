@@ -159,7 +159,7 @@ const SettingsPanel = () => {
 
   return (
     <div>
-      <h3>Settings</h3>
+      <h3>Settings count: {count}</h3>
 
       {/* Horizontal Tabs */}
       <Nav marginBottom="20px" spacing="s">
@@ -220,8 +220,8 @@ const SettingsPanel = () => {
 const GeneralSettingsTabContent = ({ count }) => {
   return (
     <div>
-      <h4>General Settings</h4>
-      <p>Configure your basic application settings here count: {count}.</p>
+      <h4>General Settings. count: {count}</h4>
+      <p>Configure your basic application settings here.</p>
       <div style={{ marginTop: "20px" }}>
         <div style={{ marginBottom: "15px" }}>
           <label
@@ -274,8 +274,8 @@ const GeneralSettingsTabContent = ({ count }) => {
 const AdvancedSettingsTagContent = ({ count }) => {
   return (
     <div>
-      <h4>Advanced Settings</h4>
-      <p>Configure advanced options and integrations. count: {count}</p>
+      <h4>Advanced Settings. count: {count}</h4>
+      <p>Configure advanced options and integrations. </p>
       <div style={{ marginTop: "20px" }}>
         <div style={{ marginBottom: "15px" }}>
           <label
