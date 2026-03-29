@@ -371,6 +371,11 @@ const initRouteObserver = ({
         if (matchingChildInfo) {
           return matchingChildInfo;
         }
+        if (candidateSet.size > 0) {
+          // we have children but none match yet (transient state during batch update)
+          // return null to avoid an invalid intermediate state
+          return null;
+        }
         return {
           route,
           element: null,
