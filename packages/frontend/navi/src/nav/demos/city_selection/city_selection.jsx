@@ -3,14 +3,14 @@ import { render } from "preact";
 import {
   Box,
   Button,
+  Link,
   MessageBox,
+  Nav,
   Route,
   route,
-  RouteLink,
   Routes,
   setupRoutes,
   stateSignal,
-  TabList,
 } from "@jsenv/navi";
 
 const cities = ["Paris", "London", "Tokyo", "New York", "Sydney"];
@@ -34,11 +34,11 @@ const App = () => {
         padding: "20px",
       }}
     >
-      <TabList>
-        <TabList.Tab route={HOME_ROUTE}>Home</TabList.Tab>
-        <TabList.Tab route={SELECT_CITY_ROUTE}>Select City</TabList.Tab>
-        <TabList.Tab route={MAP_ROUTE}>Map</TabList.Tab>
-      </TabList>
+      <Nav>
+        <Link route={HOME_ROUTE}>Home</Link>
+        <Link route={SELECT_CITY_ROUTE}>Select City</Link>
+        <Link route={MAP_ROUTE}>Map</Link>
+      </Nav>
 
       <div style={{ marginTop: "20px" }}>
         <Routes>
@@ -57,7 +57,7 @@ const HomePage = () => {
       <h2>Welcome to the City Demo</h2>
       <p>Navigate to select a city or view your selected city.</p>
       <div style={{ marginTop: "15px" }}>
-        <RouteLink
+        <Link
           route={SELECT_CITY_ROUTE}
           style={{
             padding: "10px 20px",
@@ -69,7 +69,7 @@ const HomePage = () => {
           }}
         >
           Go to City Selection
-        </RouteLink>
+        </Link>
       </div>
     </div>
   );
@@ -95,7 +95,7 @@ const SelectCityPage = () => {
         <div>
           {cities.map((city) => (
             <div key={city} style={{ marginBottom: "10px" }}>
-              <RouteLink
+              <Link
                 route={MAP_ROUTE}
                 routeParams={{ city }}
                 style={{
@@ -110,13 +110,13 @@ const SelectCityPage = () => {
                 }}
               >
                 {city}
-              </RouteLink>
+              </Link>
             </div>
           ))}
         </div>
 
         <div>
-          <RouteLink
+          <Link
             route={MAP_ROUTE}
             routeParams={{ city: "toto" }}
             style={{
@@ -131,7 +131,7 @@ const SelectCityPage = () => {
             }}
           >
             Toto
-          </RouteLink>
+          </Link>
         </div>
       </Box>
     </div>
@@ -165,7 +165,7 @@ const MapPage = () => {
       </div>
 
       <div style={{ marginTop: "20px" }}>
-        <RouteLink
+        <Link
           route={SELECT_CITY_ROUTE}
           style={{
             padding: "8px 16px",
@@ -177,7 +177,7 @@ const MapPage = () => {
           }}
         >
           Select Different City
-        </RouteLink>
+        </Link>
 
         <Button
           action={() => {
@@ -187,7 +187,7 @@ const MapPage = () => {
           Set City to London
         </Button>
 
-        <RouteLink
+        <Link
           route={HOME_ROUTE}
           style={{
             padding: "8px 16px",
@@ -198,7 +198,7 @@ const MapPage = () => {
           }}
         >
           Back to Home
-        </RouteLink>
+        </Link>
       </div>
     </div>
   );
