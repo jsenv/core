@@ -392,6 +392,9 @@ const initRouteObserver = ({
       compositeRoute.matching = true;
       matchingRouteInfoSignal.value = newMatchingInfo;
       SlotMatchingElementSignal.value = newMatchingInfo.MatchingElement;
+      debug(
+        `${elementId} updateMatchingInfo: MATCH route=${newMatchingInfo.route?.urlPattern}, slot=${newMatchingInfo.MatchingElement?.underlyingElementId ?? "SLOT_NO_MATCH"}`,
+      );
       onMatchingInfoChange({
         route: newMatchingInfo.route,
         MatchingElement,
@@ -404,10 +407,14 @@ const initRouteObserver = ({
       compositeRoute.matching = false;
       matchingRouteInfoSignal.value = null;
       SlotMatchingElementSignal.value = SLOT_NO_MATCH;
+      debug(`${elementId} updateMatchingInfo: NO MATCH`);
       onMatchingInfoChange(null);
     }
   };
   const onChange = () => {
+    debug(
+      `${elementId} onChange: route.matching=${route?.matching}, compositeRoute.matching=${compositeRoute.matching}`,
+    );
     updateMatchingInfo();
     publishCompositeStatus();
   };
@@ -445,6 +452,9 @@ export const RouteSlot = () => {
   const SlotElement = useContext(SlotContext);
   if (SlotElement === undefined) {
     // SlotContext has no provider — RouteSlot is used outside a <Route>
+    console.debug(
+      "RouteSlot: SlotElement is undefined (no SlotContext.Provider in tree)",
+    );
     return <p>RouteSlot must be used inside a Route</p>;
   }
   if (SlotElement === SLOT_NO_MATCH) {
