@@ -100,20 +100,22 @@ export const route = (pattern, { searchParams } = {}) => {
         route.params = mergedParams;
         someChange = true;
       }
-      if (someChange) {
-        if (DEBUG) {
-          console.debug(`${route} status changed:`, {
-            matching,
-            params: mergedParams,
-            visited,
-          });
-        }
-        publishStatus({
+      if (!someChange) {
+        return false;
+      }
+      if (DEBUG) {
+        console.debug(`${route} status changed:`, {
           matching,
           params: mergedParams,
           visited,
         });
       }
+      publishStatus({
+        matching,
+        params: mergedParams,
+        visited,
+      });
+      return true;
     };
     // (for now data contains only { routeSet })
     routePrivateProperties.setup = (data) => {
@@ -398,6 +400,9 @@ export const route = (pattern, { searchParams } = {}) => {
   return route;
 };
 
+const [publishRouteMutations, observeRouteMutations] = createPubSub();
+export { observeRouteMutations };
+
 let setupRoutesCalled = false;
 export const setupRoutes = (routes) => {
   if (setupRoutesCalled) {
@@ -486,6 +491,7 @@ This prevents cross-test pollution and ensures clean state.`,
       isUpdatingRoutesFromUrl = true;
       // Apply all signal updates in a batch
       const matchingRouteSet = new Set();
+      const routeUpdateSet = new Set();
       batch(() => {
         for (const {
           route,
@@ -495,11 +501,14 @@ This prevents cross-test pollution and ensures clean state.`,
         } of routeMatchInfoSet) {
           const { updateStatus } = routePrivateProperties;
           const visited = isVisited(route.url);
-          updateStatus({
+          const updated = updateStatus({
             matching: newMatching,
             params: newParams,
             visited,
           });
+          if (updated) {
+            routeUpdateSet.add(route);
+          }
           if (newMatching) {
             matchingRouteSet.add(route);
           }
@@ -666,6 +675,9 @@ This prevents cross-test pollution and ensures clean state.`,
           }
         }
       });
+      if (routeUpdateSet.size > 0) {
+        publishRouteMutations(routeUpdateSet);
+      }
       // Reset flag after URL -> Signal synchronization is complete
       isUpdatingRoutesFromUrl = false;
       Object.assign(returnValue, { matchingRouteSet });
