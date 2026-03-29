@@ -55,8 +55,8 @@ const isParentRouteExactMatch = (route) => {
 const RootElement = () => {
   return <Route.Slot />;
 };
-const SLOT_NO_MATCH = () => null;
-const SlotContext = createContext(SLOT_NO_MATCH);
+const SLOT_ROUTE_NO_MATCH = () => null;
+const SlotContext = createContext(SLOT_ROUTE_NO_MATCH);
 const RouteInfoContext = createContext(null);
 const UpdateOnlyContext = createContext(false);
 const ElementSignalMapContext = createContext(null);
@@ -296,7 +296,7 @@ const initRouteObserver = ({
   };
 
   const matchingRouteInfoSignal = signal();
-  const SlotMatchingElementSignal = signal(SLOT_NO_MATCH);
+  const SlotMatchingElementSignal = signal(SLOT_ROUTE_NO_MATCH);
   const MatchingElement = () => {
     // Read element from the signal (updated by update-only renders) when
     // available, falling back to the closure variable for routes without
@@ -398,7 +398,7 @@ const initRouteObserver = ({
       matchingRouteInfoSignal.value = newMatchingInfo;
       SlotMatchingElementSignal.value = newMatchingInfo.MatchingElement;
       debug(
-        `${elementId} updateMatchingInfo: MATCH route=${newMatchingInfo.route?.urlPattern}, slot=${newMatchingInfo.MatchingElement?.underlyingElementId ?? "SLOT_NO_MATCH"}`,
+        `${elementId} updateMatchingInfo: MATCH route=${newMatchingInfo.route?.urlPattern}, slot=${newMatchingInfo.MatchingElement?.underlyingElementId ?? "SLOT_ROUTE_NO_MATCH"}`,
       );
       onMatchingInfoChange({
         route: newMatchingInfo.route,
@@ -411,8 +411,8 @@ const initRouteObserver = ({
     } else {
       compositeRoute.matching = false;
       matchingRouteInfoSignal.value = null;
-      SlotMatchingElementSignal.value = SLOT_NO_MATCH;
-      debug(`${elementId} updateMatchingInfo: NO MATCH`);
+      SlotMatchingElementSignal.value = SLOT_ROUTE_NO_MATCH;
+      debug(`${elementId} updateMatchingInfo: ROUTE NO MATCH`);
       onMatchingInfoChange(null);
     }
   };
@@ -462,7 +462,7 @@ export const RouteSlot = () => {
     );
     return <p>RouteSlot must be used inside a Route</p>;
   }
-  if (SlotElement === SLOT_NO_MATCH) {
+  if (SlotElement === SLOT_ROUTE_NO_MATCH) {
     return null;
   }
   return <SlotElement />;
