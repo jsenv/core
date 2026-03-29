@@ -98,7 +98,13 @@ export const Route = ({
 
   // Update the element signal for this route.
   // In update-only mode this is the only purpose of rendering this Route.
-  if (route && elementSignalMap && elementSignalMap.has(route)) {
+  // Skip for routes with routeParams: they share the same route object.
+  if (
+    route &&
+    elementSignalMap &&
+    !routeParams &&
+    elementSignalMap.has(route)
+  ) {
     elementSignalMap.get(route).value = element;
   }
 
@@ -115,7 +121,13 @@ export const Route = ({
 
   if (!hasDiscoveredRef.current) {
     // Create the element signal during discovery
-    if (route && elementSignalMap && !elementSignalMap.has(route)) {
+    // Skip for routes with routeParams: they share the same route object.
+    if (
+      route &&
+      elementSignalMap &&
+      !routeParams &&
+      !elementSignalMap.has(route)
+    ) {
       // eslint-disable-next-line signals/no-signal-in-component-body
       elementSignalMap.set(route, signal(element));
     }
@@ -301,8 +313,12 @@ const initRouteObserver = ({
     // Read element from the signal (updated by update-only renders) when
     // available, falling back to the closure variable for routes without
     // a route prop (e.g. the Routes wrapper).
+    // Skip signal for routes with routeParams: multiple Route components share
+    // the same route object and would collide on the same signal entry.
     const elementSignal =
-      route && elementSignalMap ? elementSignalMap.get(route) : undefined;
+      route && elementSignalMap && !routeParams
+        ? elementSignalMap.get(route)
+        : undefined;
     const currentElement = elementSignal ? elementSignal.value : element;
     const matchingRouteInfo = matchingRouteInfoSignal.value;
     useUITransitionContentId(
@@ -313,11 +329,6 @@ const initRouteObserver = ({
           : undefined,
     );
     const SlotMatchingElement = SlotMatchingElementSignal.value;
-    if (SlotMatchingElement === undefined) {
-      console.warn(
-        `${elementId} MatchingElement render: SlotMatchingElement is undefined!`,
-      );
-    }
     const renderedElement = action ? (
       <ActionRenderer action={action}>{currentElement}</ActionRenderer>
     ) : (
@@ -376,9 +387,11 @@ const initRouteObserver = ({
         if (matchingChildInfo) {
           return matchingChildInfo;
         }
+        // route matches but no child to put in the slot
         return {
           route,
           element: null,
+          MatchingElement: SLOT_ROUTE_NO_MATCH,
           meta,
         };
       }
@@ -396,15 +409,9 @@ const initRouteObserver = ({
     if (newMatchingInfo) {
       compositeRoute.matching = true;
       matchingRouteInfoSignal.value = newMatchingInfo;
-      const slotValue = newMatchingInfo.MatchingElement;
-      if (slotValue === undefined) {
-        console.warn(
-          `${elementId} updateMatchingInfo: MATCH but MatchingElement is undefined! matchingInfo keys: ${Object.keys(newMatchingInfo)}, route: ${newMatchingInfo.route?.urlPattern}`,
-        );
-      }
-      SlotMatchingElementSignal.value = slotValue;
+      SlotMatchingElementSignal.value = newMatchingInfo.MatchingElement;
       debug(
-        `${elementId} updateMatchingInfo: MATCH route=${newMatchingInfo.route?.urlPattern}, slot=${slotValue?.underlyingElementId ?? "SLOT_ROUTE_NO_MATCH"}`,
+        `${elementId} updateMatchingInfo: MATCH route=${newMatchingInfo.route?.urlPattern}, slot=${newMatchingInfo.MatchingElement?.underlyingElementId ?? "SLOT_ROUTE_NO_MATCH"}`,
       );
       onMatchingInfoChange({
         route: newMatchingInfo.route,
@@ -481,6 +488,9 @@ const initRouteObserver = ({
 // 2. Some code is incorrectly using <RouteSlot /> outside of a <Route>
 export const RouteSlot = () => {
   const SlotElement = useContext(SlotContext);
+  debug(
+    `RouteSlot render: SlotElement=${SlotElement === SLOT_ROUTE_NO_MATCH ? "SLOT_ROUTE_NO_MATCH" : SlotElement === undefined ? "undefined" : (SlotElement?.underlyingElementId ?? "unknown function")}`,
+  );
   if (SlotElement === undefined) {
     console.trace(
       "RouteSlot: SlotElement is undefined (no SlotContext.Provider in tree)",
