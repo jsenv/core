@@ -132,8 +132,8 @@
         Caption,
         Route,
         Routes,
-        Tab,
-        TabList,
+        Nav,
+        Link,
         route,
         setupRoutes,
       } from "@jsenv/navi";
@@ -182,10 +182,10 @@
 
         return (
           <Box row spacing="m">
-            <TabList>
-              <Tab route={ALPHA_ROUTE}>Tasks</Tab>
-              <Tab route={BETA_ROUTE}>Zones</Tab>
-            </TabList>
+            <Nav>
+              <Link route={ALPHA_ROUTE}>Tasks</Link>
+              <Link route={BETA_ROUTE}>Zones</Link>
+            </Nav>
 
             <Box row spacing="m" alignY="start">
               {/*
