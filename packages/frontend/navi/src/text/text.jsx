@@ -14,7 +14,7 @@ import { useInitialTextSelection } from "./use_initial_text_selection.jsx";
 import.meta.css = /* css */ `
   *[data-navi-space] {
     /* user-select: none; */
-    min-width: 0.2em;
+    padding-left: 0.25em;
   }
 
   .navi_text {
@@ -122,7 +122,10 @@ import.meta.css = /* css */ `
   }
 `;
 
-const REGULAR_SPACE = <span data-navi-space=""> </span>;
+// We could use <span data-navi-space=""> </span>
+// but we prefer to use zero width space as it has the nice side effects of
+// not being underlined by the browser (very cool because we typically don't want spaces to be underlined in links)
+const REGULAR_SPACE = <span data-navi-space="">&#8203;</span>;
 const CustomWidthSpace = ({ value }) => {
   return (
     <span className="navi_custom_space" style={`padding-left: ${value}`}>
