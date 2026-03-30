@@ -59,27 +59,21 @@ const RootElement = () => {
 const SLOT_ROUTE_NO_MATCH = () => null;
 const SlotContext = createContext(SLOT_ROUTE_NO_MATCH);
 const RouteInfoContext = createContext(null);
-const UpdateOnlyContext = createContext(false);
-const ElementSignalMapContext = createContext(null);
+const RegisterChildRouteContext = createContext(null);
 
 export const Routes = ({ element = <RootElement />, children }) => {
   const routeInfo = useMatchingRouteInfo();
   const route = routeInfo?.route;
-  const elementSignalMapRef = useRef(null);
-  if (!elementSignalMapRef.current) {
-    elementSignalMapRef.current = new Map();
-  }
 
   return (
-    <ElementSignalMapContext.Provider value={elementSignalMapRef.current}>
-      <Route route={route} element={element}>
-        {children}
-      </Route>
-    </ElementSignalMapContext.Provider>
+    <Route route={route} element={element}>
+      {children}
+    </Route>
   );
 };
 
 export const useMatchingRouteInfo = () => useContext(RouteInfoContext);
+
 export const Route = ({
   route,
   element,
@@ -91,70 +85,39 @@ export const Route = ({
   routeParams,
 }) => {
   const forceRender = useForceRender();
-  const hasDiscoveredRef = useRef(false);
   const matchingInfoRef = useRef(null);
-  const isUpdateOnly = useContext(UpdateOnlyContext);
-  const elementSignalMap = useContext(ElementSignalMapContext);
+  const initRef = useRef(null);
 
-  // Each Route needs a unique key in the elementSignalMap.
-  // Routes without routeParams use the route object directly.
-  // Routes with routeParams share the same route object, so they use
-  // a stable unique key per component instance.
-  const elementSignalKeyRef = useRef(null);
-  if (!elementSignalKeyRef.current && route && routeParams) {
-    elementSignalKeyRef.current = { route, routeParams };
-  }
-  const elementSignalKey = routeParams ? elementSignalKeyRef.current : route;
-
-  // Update the element signal for this route.
-  // In update-only mode this is the only purpose of rendering this Route.
-  if (
-    elementSignalKey &&
-    elementSignalMap &&
-    elementSignalMap.has(elementSignalKey)
-  ) {
-    elementSignalMap.get(elementSignalKey).value = element;
+  // On every render, update the element in case parent re-rendered with new props
+  if (initRef.current) {
+    initRef.current.elementSignal.value = element;
   }
 
-  if (isUpdateOnly) {
-    if (children) {
-      return (
-        <UpdateOnlyContext.Provider value={true}>
-          {children}
-        </UpdateOnlyContext.Provider>
-      );
-    }
-    return null;
-  }
-
-  if (!hasDiscoveredRef.current) {
-    // Create the element signal during discovery
-    if (
-      elementSignalKey &&
-      elementSignalMap &&
-      !elementSignalMap.has(elementSignalKey)
-    ) {
-      // eslint-disable-next-line signals/no-signal-in-component-body
-      elementSignalMap.set(elementSignalKey, signal(element));
-    }
+  // During the first render we enter the "registration" phase:
+  // render RouteRegistrar which renders children so they can register,
+  // then useLayoutEffect fires initRouteObserver which calls onMatchingInfoChange
+  // synchronously, which sets matchingInfoRef and calls forceRender.
+  // On the second render (and all subsequent) we have matchingInfo and render output.
+  if (!initRef.current) {
+    // eslint-disable-next-line signals/no-signal-in-component-body
+    const elementSignal = signal(element);
+    initRef.current = { elementSignal };
     return (
-      <RouteMatchManager
-        element={element}
+      <RouteRegistrar
+        elementSignal={elementSignal}
         action={action}
         route={route}
         index={index}
         fallback={fallback}
         meta={meta}
         routeParams={routeParams}
-        elementSignalKey={elementSignalKey}
         onMatchingInfoChange={(matchingInfo) => {
-          hasDiscoveredRef.current = true;
           matchingInfoRef.current = matchingInfo;
           forceRender();
         }}
       >
         {children}
-      </RouteMatchManager>
+      </RouteRegistrar>
     );
   }
 
@@ -163,36 +126,21 @@ export const Route = ({
     return null;
   }
   const { MatchingElement } = matchingInfo;
-  // After discovery: render MatchingElement for visible output, and keep
-  // children alive in update-only mode so their element signals stay current.
-  return (
-    <>
-      <MatchingElement />
-      {children ? (
-        <UpdateOnlyContext.Provider value={true}>
-          {children}
-        </UpdateOnlyContext.Provider>
-      ) : null}
-    </>
-  );
+  return <MatchingElement />;
 };
 
-const RegisterChildRouteContext = createContext(null);
-
 /*
- * This component is rendered once
- * So no need to cleanup things or whatever we know and ensure that
- * it's executed once for the entire app lifecycle
+ * RouteRegistrar renders once to let children register via context,
+ * then useLayoutEffect fires initRouteObserver.
  */
-const RouteMatchManager = ({
-  element,
+const RouteRegistrar = ({
+  elementSignal,
   action,
   route,
   index,
   fallback,
   meta,
   routeParams,
-  elementSignalKey,
   onMatchingInfoChange,
   children,
 }) => {
@@ -200,21 +148,22 @@ const RouteMatchManager = ({
     throw new Error("Route cannot have both route and fallback props");
   }
   const parentRegisterChildRoute = useContext(RegisterChildRouteContext);
-  const elementSignalMap = useContext(ElementSignalMapContext);
 
-  const elementId = getElementSignature(element);
+  const elementId = getElementSignature(elementSignal.peek());
   const candidateSet = new Set();
   let indexCandidate = null;
   let fallbackCandidate = null;
   const registerChildRoute = (childRouteInfo) => {
-    const childElementId = getElementSignature(childRouteInfo.MatchingElement);
+    const childElementId = getElementSignature(
+      childRouteInfo.elementSignal.peek(),
+    );
     debug(`${elementId}.registerChildRoute(${childElementId})`);
     candidateSet.add(childRouteInfo);
 
     if (childRouteInfo.index) {
       if (indexCandidate) {
         throw new Error(`Multiple index routes registered under the same parent route (${elementId}):
-- ${getElementSignature(indexCandidate.MatchingElement)}
+- ${getElementSignature(indexCandidate.elementSignal.peek())}
 - ${childElementId}`);
       }
       indexCandidate = childRouteInfo;
@@ -222,7 +171,7 @@ const RouteMatchManager = ({
     if (childRouteInfo.fallback) {
       if (fallbackCandidate) {
         throw new Error(`Multiple fallback routes registered under the same parent route (${elementId}):
-- ${getElementSignature(fallbackCandidate.MatchingElement)}
+- ${getElementSignature(fallbackCandidate.elementSignal.peek())}
 - ${childElementId}`);
       }
       if (childRouteInfo.route.routeFromProps) {
@@ -235,23 +184,21 @@ const RouteMatchManager = ({
   };
 
   if (DEBUG) {
-    console.group(`👶 Discovery of ${elementId}`);
+    console.group(`👶 Registration of ${elementId}`);
   }
 
   useLayoutEffect(() => {
     if (DEBUG) {
       console.groupEnd();
     }
-    initRouteObserver({
-      element,
-      elementSignalMap,
+    return initRouteObserver({
+      elementSignal,
       action,
       route,
       index,
       fallback,
       meta,
       routeParams,
-      elementSignalKey,
       indexCandidate,
       fallbackCandidate,
       candidateSet,
@@ -268,15 +215,13 @@ const RouteMatchManager = ({
 };
 
 const initRouteObserver = ({
-  element,
-  elementSignalMap,
+  elementSignal,
   action,
   route,
   index,
   fallback,
   meta,
   routeParams,
-  elementSignalKey,
   indexCandidate,
   fallbackCandidate,
   candidateSet,
@@ -288,17 +233,14 @@ const initRouteObserver = ({
     indexCandidate &&
     indexCandidate.fallback !== false
   ) {
-    // no fallback + an index -> index behaves as a fallback (handle urls under a parent when no sibling matches)
-    // to disable this behavior set fallback={false} on the index route
-    // (in that case no route will be rendered when no child matches meaning only parent route element will be shown)
     fallbackCandidate = indexCandidate;
   }
 
   const [teardown, addTeardown] = createPubSub();
 
-  const elementId = getElementSignature(element);
+  const elementId = getElementSignature(elementSignal.peek());
   const candidateElementIds = Array.from(candidateSet, (c) =>
-    getElementSignature(c.element),
+    getElementSignature(c.elementSignal.peek()),
   );
   if (candidateElementIds.length === 0) {
     debug(`initRouteObserver ${elementId}, no children`);
@@ -314,20 +256,13 @@ const initRouteObserver = ({
     matching: false,
     toString: () => `composite(${candidateSet.size} candidates)`,
     routeFromProps: route,
-    elementFromProps: element,
   };
 
-  const matchingRouteInfoSignal = signal();
+  const matchingRouteInfoSignal = signal(null);
   const SlotMatchingElementSignal = signal(SLOT_ROUTE_NO_MATCH);
+
   const MatchingElement = () => {
-    // Read element from the signal (updated by update-only renders) when
-    // available, falling back to the closure variable for routes without
-    // a route prop (e.g. the Routes wrapper).
-    const elementSignal =
-      elementSignalKey && elementSignalMap
-        ? elementSignalMap.get(elementSignalKey)
-        : undefined;
-    const currentElement = elementSignal ? elementSignal.value : element;
+    const currentElement = elementSignal.value;
     const matchingRouteInfo = matchingRouteInfoSignal.value;
     useUITransitionContentId(
       matchingRouteInfo
@@ -352,8 +287,8 @@ const initRouteObserver = ({
   };
   MatchingElement.underlyingElementId =
     candidateSet.size === 0
-      ? `${getElementSignature(element)} without slot`
-      : `[${getElementSignature(element)} with slot one of ${candidateElementIds}]`;
+      ? `${elementId} without slot`
+      : `[${elementId} with slot one of ${candidateElementIds}]`;
 
   const findMatchingChildInfo = () => {
     for (const candidate of candidateSet) {
@@ -363,11 +298,8 @@ const initRouteObserver = ({
     }
     if (indexCandidate) {
       if (indexCandidate === fallbackCandidate) {
-        // the index is also used as fallback (catch all routes under a parent)
         return indexCandidate;
       }
-      // Only return the index candidate if the current URL matches exactly the parent route
-      // This allows fallback routes to handle non-defined URLs under this parent route
       if (route && isParentRouteExactMatch(route)) {
         return indexCandidate;
       }
@@ -377,34 +309,26 @@ const initRouteObserver = ({
     }
     return null;
   };
+
   const getMatchingInfo = route
     ? () => {
         if (!route.matching) {
-          // we have a route and it does not match no need to go further
           return null;
         }
-
-        // Check if routeParams match current route parameters
         if (routeParams && !route.matchesParams(routeParams)) {
-          return null; // routeParams don't match, don't render
+          return null;
         }
-
-        // we have a route and it is matching
-        // we search the first matching child to put it in the slot
         const matchingChildInfo = findMatchingChildInfo();
         if (matchingChildInfo) {
           return matchingChildInfo;
         }
-        // route matches but no child to put in the slot
         return {
           route,
-          element: null,
           MatchingElement: SLOT_ROUTE_NO_MATCH,
           meta,
         };
       }
     : () => {
-        // we don't have a route, do we have a matching child?
         const matchingChildInfo = findMatchingChildInfo();
         if (matchingChildInfo) {
           return matchingChildInfo;
@@ -417,14 +341,14 @@ const initRouteObserver = ({
     if (newMatchingInfo) {
       compositeRoute.matching = true;
       matchingRouteInfoSignal.value = newMatchingInfo;
-      SlotMatchingElementSignal.value = newMatchingInfo.MatchingElement;
+      SlotMatchingElementSignal.value =
+        newMatchingInfo.MatchingElement || SLOT_ROUTE_NO_MATCH;
       debug(
         `${elementId} updateMatchingInfo: MATCH route=${newMatchingInfo.route?.urlPattern}, slot=${newMatchingInfo.MatchingElement?.underlyingElementId ?? "SLOT_ROUTE_NO_MATCH"}`,
       );
       onMatchingInfoChange({
         route: newMatchingInfo.route,
         MatchingElement,
-        SlotMatchingElement: newMatchingInfo.MatchingElement,
         index: newMatchingInfo.index,
         fallback: newMatchingInfo.fallback,
         meta: newMatchingInfo.meta,
@@ -445,9 +369,7 @@ const initRouteObserver = ({
     updateMatchingInfo();
   };
 
-  // Collect all real routes this observer cares about:
-  // 1. Our own route prop (if any)
-  // 2. The real routes behind each child candidate's composite
+  // Collect all real routes this observer cares about
   const relevantRouteSet = new Set();
   if (route) {
     relevantRouteSet.add(route);
@@ -474,6 +396,7 @@ const initRouteObserver = ({
   if (parentRegisterChildRoute) {
     parentRegisterChildRoute({
       route: compositeRoute,
+      elementSignal,
       MatchingElement,
       index,
       fallback,
@@ -487,13 +410,9 @@ const initRouteObserver = ({
   };
 };
 
-// - "undefined" -> means there is no Slot Provider in the tree
-// - SLOT_ROUTE_NO_MATCH -> means there is a provider but no route matches
-// - any other value means there is a provider and a route matches, the value is the element associated to the matching route.
-//
-// "undefined" should happen only when:
-// 1. RouteSlot is rendered for the first time by a <Routes> during the discovery phase
-// 2. Some code is incorrectly using <RouteSlot /> outside of a <Route>
+// - "undefined" -> no SlotContext.Provider in the tree
+// - SLOT_ROUTE_NO_MATCH -> provider exists but no route matches
+// - any other value -> the matching route's MatchingElement component
 export const RouteSlot = () => {
   const SlotElement = useContext(SlotContext);
   debug(
