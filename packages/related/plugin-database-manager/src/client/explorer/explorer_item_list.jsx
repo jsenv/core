@@ -1,6 +1,5 @@
 import {
   createSelectionKeyboardShortcuts,
-  Link,
   Nav,
   useKeyboardShortcuts,
   useSelectionController,
@@ -75,52 +74,54 @@ export const ExplorerItemList = (props) => {
       spacing="0"
       lineHeight="normal"
     >
-      {itemArray.map((item) => {
-        return (
-          <Link key={item[idKey]} className="explorer_item">
-            <ExplorerItem
+      <ul style="display: contents; list-style-type: none;">
+        {itemArray.map((item) => {
+          return (
+            <li key={item[idKey]} className="explorer_item">
+              <ExplorerItem
+                nameKey={nameKey}
+                item={item}
+                deletedItems={deletedItems}
+                renderItem={renderItem}
+                selectionController={selectionController}
+                useItemArrayInStore={useItemArrayInStore}
+                renameItemAction={renameItemAction}
+                deleteItemAction={
+                  deleteManyItemAction ? () => null : deleteItemAction
+                }
+              />
+            </li>
+          );
+        })}
+        {isCreatingNew && (
+          <li key="new_item" className="explorer_item" style="display: block">
+            <ExplorerNewItem
               nameKey={nameKey}
-              item={item}
-              deletedItems={deletedItems}
-              renderItem={renderItem}
-              selectionController={selectionController}
               useItemArrayInStore={useItemArrayInStore}
-              renameItemAction={renameItemAction}
-              deleteItemAction={
-                deleteManyItemAction ? () => null : deleteItemAction
-              }
+              createItemAction={createItemAction}
+              cancelOnBlurInvalid
+              onCancel={(e, reason) => {
+                stopCreatingNew({
+                  shouldRestoreFocus: reason === "escape_key",
+                });
+              }}
+              onActionEnd={(e) => {
+                const input = e.target;
+                const eventCausingAction = e.detail.event;
+                const actionRequestedByKeyboard =
+                  eventCausingAction &&
+                  eventCausingAction.type === "keydown" &&
+                  eventCausingAction.key === "Enter";
+                const shouldRestoreFocus =
+                  actionRequestedByKeyboard &&
+                  // If user focuses something else while action is running, respect it
+                  document.activeElement === input;
+                stopCreatingNew({ shouldRestoreFocus });
+              }}
             />
-          </Link>
-        );
-      })}
-      {isCreatingNew && (
-        <Link key="new_item" className="explorer_item">
-          <ExplorerNewItem
-            nameKey={nameKey}
-            useItemArrayInStore={useItemArrayInStore}
-            createItemAction={createItemAction}
-            cancelOnBlurInvalid
-            onCancel={(e, reason) => {
-              stopCreatingNew({
-                shouldRestoreFocus: reason === "escape_key",
-              });
-            }}
-            onActionEnd={(e) => {
-              const input = e.target;
-              const eventCausingAction = e.detail.event;
-              const actionRequestedByKeyboard =
-                eventCausingAction &&
-                eventCausingAction.type === "keydown" &&
-                eventCausingAction.key === "Enter";
-              const shouldRestoreFocus =
-                actionRequestedByKeyboard &&
-                // If user focuses something else while action is running, respect it
-                document.activeElement === input;
-              stopCreatingNew({ shouldRestoreFocus });
-            }}
-          />
-        </Link>
-      )}
+          </li>
+        )}
+      </ul>
     </Nav>
   );
 };

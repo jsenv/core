@@ -103,6 +103,10 @@
   overflow-y: hidden;
 }
 
+.explorer_item {
+  position: relative;
+}
+
 .explorer_item_content {
   padding-left: 16px;
   flex: 1;

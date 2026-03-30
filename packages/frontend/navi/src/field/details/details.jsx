@@ -50,7 +50,6 @@ import.meta.css = /* css */ `
 
         .navi_summary_label {
           display: flex;
-          padding-right: 10px;
           flex: 1;
           align-items: center;
           gap: 0.2em;

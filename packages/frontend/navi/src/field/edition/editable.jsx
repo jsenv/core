@@ -26,10 +26,12 @@ import.meta.css = /* css */ `
     right: var(--inset-right);
     bottom: var(--inset-bottom);
     left: var(--inset-left);
-
     opacity: 0;
+    pointer-events: none;
+
     &[data-editing] {
       opacity: 1;
+      pointer-events: auto;
     }
   }
 `;

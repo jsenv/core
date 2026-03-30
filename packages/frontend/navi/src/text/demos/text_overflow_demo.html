@@ -25,7 +25,7 @@
 
             <section>
               <h2>Two-column flex layout</h2>
-              <Box column spacing="12" width="300">
+              <Box column spacing="0" width="300">
                 <Text overflowEllipsis border="1px solid #ccc">
                   This is a long text in the first column that should be
                   truncated with an ellipsis when there is not enough space.
@@ -126,6 +126,24 @@
                     <Text overflowPinned color="#666">
                       (live)
                     </Text>
+                  </Text>
+                </Box>
+                <Box width="300" border="1px solid #ccc" padding="sm">
+                  <Text overflowEllipsis spacing="l">
+                    <>
+                      <Icon color="orange">
+                        <StarSvg />
+                      </Icon>
+                      <Text textBold>Important</Text> notification about a
+                      process currently running with status
+                      <Icon>
+                        <StarSvg />
+                      </Icon>
+                      <Text textItalic>active</Text>
+                      <Text overflowPinned color="#666">
+                        (live)
+                      </Text>
+                    </>
                   </Text>
                 </Box>
                 <Box width="180" border="1px solid #ccc" padding="sm">

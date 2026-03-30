@@ -15,6 +15,7 @@ export const RoleLink = ({ role, children, ...rest }) => {
       route={ROLE_ROUTE}
       routeParams={{ rolname }}
       startIcon={<RoleIcon color="#333" />}
+      spacing="m"
       {...rest}
     >
       {isCurrent && <span>(current)</span>}

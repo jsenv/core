@@ -21,11 +21,7 @@ import {
 import { PhoneSvg } from "../../graphic/icons/phone_svg.jsx";
 import { LoaderBackground } from "../../graphic/loader/loader_background.jsx";
 import { useKeyboardShortcuts } from "../../keyboard/keyboard_shortcuts.js";
-import {
-  applySpacingOnTextChildren,
-  markAsOutsideTextFlow,
-  Text,
-} from "../../text/text.jsx";
+import { markAsOutsideTextFlow, Text } from "../../text/text.jsx";
 import { TitleLevelContext } from "../../text/title.jsx";
 import { useDarkBackgroundAttribute } from "../../text/use_dark_background_attribute.js";
 import { useDocumentUrl } from "../browser_integration/document_url_signal.js";
@@ -439,7 +435,6 @@ const LinkPlain = (props) => {
     anchorIcon,
     startIcon,
     endIcon,
-    spacing,
     revealOnInteraction = Boolean(titleLevel),
     hrefFallback = !anchor,
     overflowEllipsis,
@@ -508,11 +503,20 @@ const LinkPlain = (props) => {
   }
 
   const innerChildren = children || (hrefFallback ? href : children);
-  const startIconEl = startIcon && (
-    <Icon marginRight={innerChildren ? "xxs" : undefined}>{startIcon}</Icon>
-  );
-  const endIconEl = innerEndIcon && (
-    <Icon marginLeft={innerChildren ? "xxs" : undefined}>{innerEndIcon}</Icon>
+  const startIconEl = startIcon && <Icon>{startIcon}</Icon>;
+  const endIconEl = innerEndIcon && <Icon>{innerEndIcon}</Icon>;
+  const visualChildren = (
+    <>
+      {startIconEl}
+      {innerChildren}
+      {endIconEl ? (
+        overflowEllipsis ? (
+          <Text overflowPinned>{endIconEl}</Text>
+        ) : (
+          endIconEl
+        )
+      ) : null}
+    </>
   );
 
   const currentIndicatorPosition =
@@ -537,7 +541,6 @@ const LinkPlain = (props) => {
       target={innerTarget === "_self" ? undefined : target}
       aria-busy={loading}
       inert={disabled}
-      spacing="pre"
       aria-current={isCurrent ? "page" : undefined}
       aria-selected={selectionContext ? selected : undefined}
       data-value={value}
@@ -586,22 +589,18 @@ const LinkPlain = (props) => {
         }
         onKeyDown?.(e);
       }}
-      childrenOutsideFlow={currentIndicatorEl}
+      childrenOutsideFlow={
+        <>
+          <LoaderBackground
+            loading={loading}
+            inset={1}
+            color="var(--link-loader-color)"
+          />
+          {currentIndicatorEl}
+        </>
+      }
     >
-      <LoaderBackground
-        loading={loading}
-        inset={1}
-        color="var(--link-loader-color)"
-      />
-      {startIconEl}
-      {applySpacingOnTextChildren(innerChildren, spacing)}
-      {endIconEl ? (
-        overflowEllipsis ? (
-          <Text overflowPinned>{endIconEl}</Text>
-        ) : (
-          endIconEl
-        )
-      ) : null}
+      {visualChildren}
     </Text>
   );
 };
