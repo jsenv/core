@@ -1,15 +1,7 @@
 import { render } from "preact";
 import { useState } from "preact/hooks";
 
-import {
-  Link,
-  Nav,
-  Route,
-  route,
-  Routes,
-  setupRoutes,
-  stateSignal,
-} from "@jsenv/navi";
+import { Link, Nav, Route, route, setupRoutes, stateSignal } from "@jsenv/navi";
 
 const sectionSignal = stateSignal("settings", {
   id: "section",
@@ -62,10 +54,10 @@ const App = () => {
       </Nav>
 
       <div style={{ marginTop: "20px" }}>
-        <Routes>
+        <Route>
           <Route route={HOME_ROUTE} element={<HomePage />} />
           <Route route={ADMIN_ROUTE} element={<DashboardPage />} />
-        </Routes>
+        </Route>
       </div>
     </div>
   );
@@ -144,10 +136,10 @@ const DashboardPage = () => {
 
         {/* Main Content Area */}
         <div style={{ flex: 1 }}>
-          <Routes>
+          <Route>
             <Route route={ADMIN_SETTINGS_ROUTE} element={<SettingsPanel />} />
             <Route route={ADMIN_ANALYTICS_ROUTE} element={<AnalyticsPanel />} />
-          </Routes>
+          </Route>
         </div>
       </div>
     </div>
@@ -201,7 +193,7 @@ const SettingsPanel = () => {
           minHeight: "300px",
         }}
       >
-        <Routes>
+        <Route>
           <Route
             route={ADMIN_SETTINGS_ROUTE}
             routeParams={{ tab: "general" }}
@@ -212,7 +204,7 @@ const SettingsPanel = () => {
             routeParams={{ tab: "advanced" }}
             element={<AdvancedSettingsTagContent count={count} />}
           />
-        </Routes>
+        </Route>
       </div>
     </div>
   );
@@ -365,7 +357,7 @@ const AnalyticsPanel = () => {
           minHeight: "300px",
         }}
       >
-        <Routes>
+        <Route>
           <Route
             route={ADMIN_ANALYTICS_ROUTE}
             routeParams={{ tab: "overview" }}
@@ -376,7 +368,7 @@ const AnalyticsPanel = () => {
             routeParams={{ tab: "details" }}
             element={<AnalyticsTabDetails />}
           />
-        </Routes>
+        </Route>
       </div>
     </div>
   );
