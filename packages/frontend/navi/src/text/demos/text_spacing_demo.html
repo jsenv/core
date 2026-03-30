@@ -255,10 +255,11 @@
 
             <Section title="Underline with icons">
               <p style={{ color: "#666", marginBottom: "12px" }}>
-                When underline is on the container, the space between icon and
-                text gets underlined too. Move underline to the text instead.
+                Auto-spacing uses zero-width spaces so underlines don't bleed
+                into gaps. Still, putting underline directly on the text is
+                cleaner.
               </p>
-              <Example label="Underline on container — space is underlined">
+              <Example label="Underline on container — works but less clean">
                 <Text noWrap underline>
                   <Icon>
                     <StarSvg />
@@ -266,7 +267,7 @@
                   star
                 </Text>
               </Example>
-              <Example label="Underline on text only — clean">
+              <Example label="Recommended: underline on text only">
                 <Text noWrap>
                   <Icon>
                     <StarSvg />
@@ -274,7 +275,7 @@
                   <Text underline>star</Text>
                 </Text>
               </Example>
-              <Example label="Link with icons — underline on everything">
+              <Example label="Link with icons — works but less clean">
                 <Link href="./user-profile">
                   <Icon>
                     <StarSvg />
@@ -291,7 +292,7 @@
                   </Icon>
                 </Link>
               </Example>
-              <Example label="Link with underline={false} + Text underline — clean">
+              <Example label="Recommended: underline={false} on Link, underline on Text">
                 <Link href="./user-profile" underline={false}>
                   <Icon>
                     <StarSvg />
