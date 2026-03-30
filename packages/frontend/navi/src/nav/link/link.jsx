@@ -3,7 +3,6 @@
 import { useContext, useRef } from "preact/hooks";
 
 import { renderActionableComponent } from "../../action/render_actionable_component.jsx";
-import { Box } from "../../box/box.jsx";
 import { PSEUDO_CLASSES } from "../../box/pseudo_styles.js";
 import {
   SelectionContext,
@@ -110,18 +109,6 @@ import.meta.css = /* css */ `
     outline-style: solid;
     outline-color: var(--link-outline-color);
     cursor: var(--x-link-cursor);
-
-    > .navi_text,
-    .navi_text_bold_wrapper,
-    .navi_text_bold_clone,
-    .navi_text_bold_foreground {
-      display: inherit;
-      flex-grow: inherit;
-      align-items: inherit;
-      justify-content: inherit;
-      text-align: inherit;
-      border-radius: inherit;
-    }
 
     .navi_current_indicator {
       position: absolute;
@@ -456,7 +443,6 @@ const LinkPlain = (props) => {
     revealOnInteraction = Boolean(titleLevel),
     hrefFallback = !anchor,
     overflowEllipsis,
-    capitalize,
 
     children,
 
@@ -539,33 +525,8 @@ const LinkPlain = (props) => {
       <LinkCurrentIndicator />
     ) : null;
 
-  const visualChildren = overflowEllipsis ? (
-    <Text
-      overflowEllipsis
-      // Here we can't use spaces as they would be underlined
-      // (We could use zero width space with paddings but that's just simpler to rely on margins here)
-      spacing="pre"
-      preventBoldLayoutShift={currentEffectBold}
-      capitalize={capitalize}
-    >
-      {startIconEl}
-      {innerChildren}
-      {endIconEl && <Text overflowPinned>{endIconEl}</Text>}
-    </Text>
-  ) : (
-    <Text
-      preventBoldLayoutShift={currentEffectBold}
-      spacing="pre"
-      capitalize={capitalize}
-    >
-      {startIconEl}
-      {applySpacingOnTextChildren(innerChildren, spacing)}
-      {endIconEl}
-    </Text>
-  );
-
   return (
-    <Box
+    <Text
       as="a"
       color={anchor && !innerChildren ? "inherit" : undefined}
       id={anchor ? href.slice(1) : undefined}
@@ -580,6 +541,8 @@ const LinkPlain = (props) => {
       aria-current={isCurrent ? "page" : undefined}
       aria-selected={selectionContext ? selected : undefined}
       data-value={value}
+      preventBoldLayoutShift={currentEffectBold}
+      overflowEllipsis={overflowEllipsis}
       // Visual
       data-appearance={appearance}
       data-current-effect-bold={currentEffectBold ? "" : undefined}
@@ -623,15 +586,23 @@ const LinkPlain = (props) => {
         }
         onKeyDown?.(e);
       }}
+      childrenOutsideFlow={currentIndicatorEl}
     >
       <LoaderBackground
         loading={loading}
         inset={1}
         color="var(--link-loader-color)"
       />
-      {currentIndicatorEl}
-      {visualChildren}
-    </Box>
+      {startIconEl}
+      {applySpacingOnTextChildren(innerChildren, spacing)}
+      {endIconEl ? (
+        overflowEllipsis ? (
+          <Text overflowPinned>{endIconEl}</Text>
+        ) : (
+          endIconEl
+        )
+      ) : null}
+    </Text>
   );
 };
 

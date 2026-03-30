@@ -38,6 +38,17 @@ import.meta.css = /* css */ `
         text-transform: uppercase;
       }
     }
+
+    .navi_text_bold_wrapper,
+    .navi_text_bold_clone,
+    .navi_text_bold_foreground {
+      display: inherit;
+      flex-grow: inherit;
+      align-items: inherit;
+      justify-content: inherit;
+      text-align: inherit;
+      border-radius: inherit;
+    }
   }
 
   .navi_text_overflow {
@@ -277,6 +288,7 @@ const TextBasic = ({
   preventBoldLayoutShift = boldTransition,
   capitalize,
   children,
+  childrenOutsideFlow,
   ...rest
 }) => {
   const boxProps = {
@@ -308,6 +320,7 @@ const TextBasic = ({
           {children}
         </span>
         {children}
+        {childrenOutsideFlow}
       </Box>
     );
   }
@@ -329,11 +342,17 @@ const TextBasic = ({
             {children}
           </span>
         </span>
+        {childrenOutsideFlow}
       </Box>
     );
   }
 
-  return <Box {...boxProps}>{children}</Box>;
+  return (
+    <Box {...boxProps}>
+      {children}
+      {childrenOutsideFlow}
+    </Box>
+  );
 };
 
 /* https://jsfiddle.net/v5xzJ/4/ */
