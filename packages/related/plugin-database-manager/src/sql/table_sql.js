@@ -119,6 +119,17 @@ export const alterTableQuery = async (sql, tablename, columnName, value) => {
   throw new Error(`Altering column "${columnName}" is not yet implemented`);
 };
 
+export const selectRow = async (sql, tablename, id) => {
+  const row = await sql`
+    SELECT
+      *
+    FROM
+      ${sql(tablename)}
+    WHERE
+      id = ${id}
+  `;
+  return row[0];
+};
 export const insertRow = async (sql, tablename, values) => {
   const columnNames = Object.keys(values);
   // Determine table schema to query precise column metadata (always fetch before inserting)
@@ -243,4 +254,28 @@ const generateValueForColumn = (col) => {
     return base.slice(0, maxLen);
   }
   return base;
+};
+export const deleteRow = async (sql, tablename, id) => {
+  await sql`
+    DELETE FROM ${sql(tablename)}
+    WHERE
+      id = ${id}
+  `;
+};
+export const updateRow = async (sql, tablename, id, values) => {
+  const setClauses = [];
+  for (const [column, value] of Object.entries(values)) {
+    setClauses.push(sql`${sql(column)} = ${value}`);
+  }
+  if (setClauses.length === 0) {
+    return selectRow(sql, tablename, id); // nothing to update but return current row state
+  }
+  await sql`
+    UPDATE ${sql(tablename)}
+    SET
+      ${sql(setClauses, ", ")}
+    WHERE
+      id = ${id}
+  `;
+  return selectRow(sql, tablename, id);
 };

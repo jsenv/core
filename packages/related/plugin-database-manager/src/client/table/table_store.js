@@ -150,4 +150,26 @@ export const TABLE_ROW = resource("table_row", {
     const { data } = await response.json();
     return data;
   },
+  PATCH: async ({ tablename, rowId, properties }, { signal }) => {
+    const response = await fetch(
+      `${window.DB_MANAGER_CONFIG.apiUrl}/tables/${tablename}/rows/${rowId}`,
+      {
+        signal,
+        method: "PATCH",
+        headers: {
+          "accept": "application/json",
+          "content-type": "application/json",
+        },
+        body: JSON.stringify(properties),
+      },
+    );
+    if (!response.ok) {
+      throw await errorFromResponse(
+        response,
+        `Failed to update row in "${tablename}" table`,
+      );
+    }
+    const { data } = await response.json();
+    return data;
+  },
 });

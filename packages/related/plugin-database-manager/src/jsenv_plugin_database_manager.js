@@ -25,6 +25,7 @@ import {
   insertRow,
   selectTable,
   selectTables,
+  updateRow,
 } from "./sql/table_sql.js";
 
 const databaseManagerHtmlFileUrl = import.meta
@@ -215,6 +216,14 @@ export const jsenvPluginDatabaseManager = ({
           const insertedRow = await insertRow(sql, tablename, rowData);
           return {
             data: insertedRow,
+          };
+        },
+        "PATCH /:tablename/rows/:rowId": async (request) => {
+          const { tablename, rowId } = request.params;
+          const properties = await request.json();
+          const updatedRow = await updateRow(sql, tablename, rowId, properties);
+          return {
+            data: updatedRow,
           };
         },
       }),
@@ -921,6 +930,19 @@ const createRESTRoutes = (resource, endpoints) => {
         },
       };
       routes.push(postRoute);
+      return;
+    }
+    if (method === "PATCH") {
+      const patchRoute = {
+        endpoint: `PATCH ${endpointResource}`,
+        declarationSource: import.meta.url,
+        acceptedMediaTypes: ["application/json"],
+        fetch: async (request) => {
+          const body = await handler(request);
+          return Response.json(body);
+        },
+      };
+      routes.push(patchRoute);
       return;
     }
     if (method === "PUT") {

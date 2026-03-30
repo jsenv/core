@@ -69,7 +69,7 @@ export const TableData = ({ table, rows }) => {
         <Colgroup>
           <RowNumberCol />
           {columns.map((column) => (
-            <Col key={column.id} id={column.id} />
+            <Col key={column.column_name} id={column.column_name} />
           ))}
         </Colgroup>
         <Thead>
@@ -77,7 +77,7 @@ export const TableData = ({ table, rows }) => {
             <RowNumberTableCell />
             {columns.map((column) => (
               <TableCell
-                key={column.id}
+                key={column.column_name}
                 action={(value) => {
                   console.log("column action", value);
                 }}
@@ -95,11 +95,18 @@ export const TableData = ({ table, rows }) => {
               <Tr key={object.id} id={object.id}>
                 <RowNumberTableCell />
                 {rowCells.map((cellValue, columnIndex) => {
-                  const columnId = columns[columnIndex].id;
+                  const columnId = columns[columnIndex].column_name;
                   return (
                     <TableCell
                       key={columnId}
-                      action={(v) => {
+                      action={async (v) => {
+                        await TABLE_ROW.PATCH({
+                          tablename: tableName,
+                          rowId: object.id,
+                          properties: {
+                            [columnId]: v,
+                          },
+                        });
                         setCellValue({ rowIndex, columnIndex }, v);
                       }}
                     >
