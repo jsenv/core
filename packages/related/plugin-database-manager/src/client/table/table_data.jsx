@@ -47,8 +47,8 @@ import.meta.css = /* css */ `
 
 export const TableData = ({ table, rows }) => {
   const tableRef = useRef(null);
-  const tableName = table.tablename;
-  const createRow = TABLE_ROW.POST.bindParams({ tablename: tableName });
+  const { tablename } = table;
+  const createRow = TABLE_ROW.POST.bindParams({ tablename });
   const { schemaColumns } = table.meta;
   schemaColumns.sort((a, b) => a.ordinal_position - b.ordinal_position);
 
@@ -117,7 +117,7 @@ export const TableData = ({ table, rows }) => {
                           key={columnId}
                           action={async (v) => {
                             await TABLE_ROW.PATCH({
-                              tablename: tableName,
+                              tablename,
                               rowId: object.id,
                               properties: {
                                 [columnId]: v,
@@ -164,7 +164,11 @@ export const TableData = ({ table, rows }) => {
                   : `${selectedRowCount} selected`}
               </Text>
             </Label>
-            <SelectedRowActions selectedRows={selectedRows} rows={rows} />
+            <SelectedRowActions
+              tablename={tablename}
+              selectedRows={selectedRows}
+              rows={rows}
+            />
           </Box>
         </>
       )}
@@ -175,7 +179,7 @@ export const TableData = ({ table, rows }) => {
   );
 };
 
-const SelectedRowActions = ({ selectedRows, rows }) => {
+const SelectedRowActions = ({ tablename, selectedRows, rows }) => {
   const selectedRowCount = selectedRows.length;
   if (selectedRowCount === 0) {
     return null;
@@ -197,7 +201,7 @@ const SelectedRowActions = ({ selectedRows, rows }) => {
       <Button
         data-confirm-message={message}
         action={async () => {
-          await TABLE_ROW.DELETE(rowIdSelected);
+          await TABLE_ROW.DELETE({ tablename, rowId: rowIdSelected });
         }}
       >
         Delete
@@ -210,6 +214,7 @@ const SelectedRowActions = ({ selectedRows, rows }) => {
       data-confirm-message={`Are you sure you want to delete the ${selectedRowCount} selected rows?`}
       action={async () => {
         await TABLE_ROW.DELETE_MANY({
+          tablename,
           rowIds: selectedRows.map((r) => r.rowId),
         });
       }}
