@@ -228,6 +228,24 @@ export const Table = forwardRef((props, ref) => {
         return true;
       },
     },
+    {
+      key: "0-9",
+      description: "Start editing table cell content",
+      enabled: () => dragContextValue.grabTarget === null,
+      handler: (e) => {
+        const activeCell = document.activeElement.closest("td");
+        if (!activeCell) {
+          return false;
+        }
+        activeCell.dispatchEvent(
+          new CustomEvent("editrequested", {
+            bubbles: false,
+            detail: { initialValue: e.key },
+          }),
+        );
+        return true;
+      },
+    },
   ]);
 
   // resizing

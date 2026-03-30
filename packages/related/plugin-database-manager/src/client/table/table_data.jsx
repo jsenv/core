@@ -100,10 +100,7 @@ export const TableData = ({ table, rows }) => {
                     <TableCell
                       key={columnId}
                       action={(v) => {
-                        setCellValue(
-                          { rowIndex: rowIndex + 1, columnIndex },
-                          v,
-                        );
+                        setCellValue({ rowIndex, columnIndex }, v);
                       }}
                     >
                       {cellValue}
