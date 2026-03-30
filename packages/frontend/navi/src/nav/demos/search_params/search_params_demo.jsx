@@ -1,19 +1,18 @@
 import { render } from "preact";
 
 import {
+  Link,
+  Nav,
+  route,
   Route,
-  Routes,
   setupRoutes,
-  TabList,
   useRouteStatus,
   useUrlSearchParam,
 } from "@jsenv/navi";
 
-// Setup routes with search params handling
-const { HOME_ROUTE, COLOR_ROUTE } = setupRoutes({
-  HOME_ROUTE: "/",
-  COLOR_ROUTE: "/colors",
-});
+const HOME_ROUTE = route("");
+const COLOR_ROUTE = route("/colors");
+setupRoutes([HOME_ROUTE, COLOR_ROUTE]);
 
 const App = () => {
   const { params } = useRouteStatus(COLOR_ROUTE);
@@ -46,19 +45,47 @@ const App = () => {
       </div>
 
       <h3>Navigation</h3>
-      <TabList>
-        <TabList.Tab route={HOME_ROUTE}>Home</TabList.Tab>
-        <TabList.Tab route={COLOR_ROUTE}>Colors (default)</TabList.Tab>
-        <TabList.Tab route={COLOR_ROUTE} routeParams={{ color: "red" }}>
+      <Nav>
+        <Link route={HOME_ROUTE} appearance="tab" padding="s" currentIndicator>
+          Home
+        </Link>
+        <Link
+          route={COLOR_ROUTE}
+          routeParams={{ color: undefined }}
+          appearance="tab"
+          padding="s"
+          currentIndicator
+        >
+          Colors (default)
+        </Link>
+        <Link
+          route={COLOR_ROUTE}
+          routeParams={{ color: "red" }}
+          appearance="tab"
+          padding="s"
+          currentIndicator
+        >
           Colors (red)
-        </TabList.Tab>
-        <TabList.Tab route={COLOR_ROUTE} routeParams={{ color: "green" }}>
+        </Link>
+        <Link
+          route={COLOR_ROUTE}
+          routeParams={{ color: "green" }}
+          appearance="tab"
+          padding="s"
+          currentIndicator
+        >
           Colors (green)
-        </TabList.Tab>
-        <TabList.Tab route={COLOR_ROUTE} routeParams={{ color: "purple" }}>
+        </Link>
+        <Link
+          route={COLOR_ROUTE}
+          routeParams={{ color: "purple" }}
+          appearance="tab"
+          padding="s"
+          currentIndicator
+        >
           Colors (purple)
-        </TabList.Tab>
-      </TabList>
+        </Link>
+      </Nav>
 
       <div
         style={{
@@ -68,10 +95,10 @@ const App = () => {
           marginTop: "20px",
         }}
       >
-        <Routes>
+        <Route>
           <Route route={HOME_ROUTE} element={<HomePage />} />
           <Route route={COLOR_ROUTE} element={<ColorsPage />} />
-        </Routes>
+        </Route>
       </div>
     </div>
   );
