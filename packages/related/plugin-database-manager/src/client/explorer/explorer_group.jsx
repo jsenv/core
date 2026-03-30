@@ -72,7 +72,7 @@ export const ExplorerGroup = (props) => {
         uiAction={detailsUIAction}
         label={
           <>
-            <Text overflowEllipsis>
+            <Text overflowEllipsis expandX>
               {label}
 
               <Text overflowPinned expandX box alignY="center">

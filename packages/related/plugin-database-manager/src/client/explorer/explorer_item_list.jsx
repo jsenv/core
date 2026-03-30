@@ -1,6 +1,7 @@
 import {
   createSelectionKeyboardShortcuts,
-  TabList,
+  Link,
+  Nav,
   useKeyboardShortcuts,
   useSelectionController,
 } from "@jsenv/navi";
@@ -65,7 +66,7 @@ export const ExplorerItemList = (props) => {
   ]);
 
   return (
-    <TabList
+    <Nav
       ref={ref}
       vertical
       className="explorer_item_list"
@@ -76,7 +77,7 @@ export const ExplorerItemList = (props) => {
     >
       {itemArray.map((item) => {
         return (
-          <TabList.Tab className="explorer_item" key={item[idKey]}>
+          <Link key={item[idKey]} className="explorer_item">
             <ExplorerItem
               nameKey={nameKey}
               item={item}
@@ -89,11 +90,11 @@ export const ExplorerItemList = (props) => {
                 deleteManyItemAction ? () => null : deleteItemAction
               }
             />
-          </TabList.Tab>
+          </Link>
         );
       })}
       {isCreatingNew && (
-        <TabList.Tab className="explorer_item" key="new_item">
+        <Link key="new_item" className="explorer_item">
           <ExplorerNewItem
             nameKey={nameKey}
             useItemArrayInStore={useItemArrayInStore}
@@ -118,8 +119,8 @@ export const ExplorerItemList = (props) => {
               stopCreatingNew({ shouldRestoreFocus });
             }}
           />
-        </TabList.Tab>
+        </Link>
       )}
-    </TabList>
+    </Nav>
   );
 };

@@ -1,4 +1,4 @@
-import { RouteLink } from "@jsenv/navi";
+import { Link } from "@jsenv/navi";
 
 import { DATABASE_ROUTE } from "../routes.js";
 import { DatabaseSvg } from "./database_icons.jsx";
@@ -10,7 +10,7 @@ export const DatabaseLink = ({ database, children, ...rest }) => {
   const isCurrent = currentDatabase && datname === currentDatabase.datname;
 
   return (
-    <RouteLink
+    <Link
       route={DATABASE_ROUTE}
       routeParams={{ datname }}
       startIcon={<DatabaseSvg />}
@@ -18,6 +18,6 @@ export const DatabaseLink = ({ database, children, ...rest }) => {
     >
       {isCurrent && <span>(current)</span>}
       {children}
-    </RouteLink>
+    </Link>
   );
 };

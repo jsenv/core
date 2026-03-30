@@ -18,7 +18,7 @@
  *
  */
 
-import { Icon, Route, Routes, Tab, TabList } from "@jsenv/navi";
+import { Icon, Link, Nav, Route } from "@jsenv/navi";
 
 import { Page, PageBody, PageHead } from "../layout/page.jsx";
 import {
@@ -41,23 +41,23 @@ export const TablePage = ({ table }) => {
         <PageHead.Label icon={<TableSvg />} label="Table:">
           {tablename}
         </PageHead.Label>
-        <TabList>
-          <Tab route={TABLE_INDEX_ROUTE} routeParams={{ tablename }}>
+        <Nav>
+          <Link route={TABLE_INDEX_ROUTE} routeParams={{ tablename }}>
             <Icon>
               <DataSvg />
             </Icon>
             Data
-          </Tab>
-          <Tab route={TABLE_SETTINGS_ROUTE} routeParams={{ tablename }}>
+          </Link>
+          <Link route={TABLE_SETTINGS_ROUTE} routeParams={{ tablename }}>
             <Icon>
               <SettingsSvg />
             </Icon>
             Settings
-          </Tab>
-        </TabList>
+          </Link>
+        </Nav>
       </PageHead>
       <PageBody>
-        <Routes>
+        <Route>
           <Route
             route={TABLE_INDEX_ROUTE}
             action={TABLE_ROW_GET_MANY_ACTION}
@@ -67,7 +67,7 @@ export const TablePage = ({ table }) => {
             route={TABLE_SETTINGS_ROUTE}
             element={<TableSettings table={table} />}
           />
-        </Routes>
+        </Route>
       </PageBody>
     </Page>
   );

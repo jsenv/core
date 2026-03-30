@@ -1,3 +1,5 @@
+import { Route } from "@jsenv/navi";
+
 import { DatabaseRoutes } from "./database/database_routes.jsx";
 import "./database_manager.css" with { type: "css" };
 import "./layout/layout.css" with { type: "css" };
@@ -7,10 +9,10 @@ import { TableRoutes } from "./table/table_routes.jsx";
 
 export const MainRoutes = () => {
   return (
-    <>
+    <Route>
       <RoleRoutes />
       <DatabaseRoutes />
       <TableRoutes />
-    </>
+    </Route>
   );
 };

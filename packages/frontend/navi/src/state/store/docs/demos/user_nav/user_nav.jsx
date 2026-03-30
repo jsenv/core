@@ -1,9 +1,9 @@
 import {
+  Link,
+  Nav,
   resource,
   Route,
-  Routes,
   setupRoutes,
-  TabList,
   useDocumentState,
   useDocumentUrl,
 } from "@jsenv/navi";
@@ -145,13 +145,13 @@ const App = () => {
     <div>
       <h1>User Navigation Test</h1>
       <Navigation />
-      <Routes>
+      <Route>
         <Route
           route={USER_ROUTE}
           element={(user) => <UserPage user={user} />}
         />
         <Route fallback element={"404"} />
-      </Routes>
+      </Route>
 
       <DocumentInfo />
     </div>
@@ -162,19 +162,19 @@ const Navigation = () => {
   const users = USER.useArray();
 
   return (
-    <TabList>
+    <Nav>
       {users.map((user) => {
         return (
-          <TabList.Tab
+          <Link
+            key={user.id}
             route={USER_ROUTE}
             routeParams={{ name: user.name }}
-            key={user.id}
           >
             {user.name}
-          </TabList.Tab>
+          </Link>
         );
       })}
-    </TabList>
+    </Nav>
   );
 };
 
