@@ -113,7 +113,8 @@ const RowIndexContext = createContext();
 const TableSectionContext = createContext();
 const useIsInTableHead = () => useContext(TableSectionContext) === "head";
 
-export const Table = forwardRef((props, ref) => {
+export const Table = (props) => {
+  const tableDefaultRef = useRef();
   const tableDefaultId = `table-${useId()}`;
   const {
     id = tableDefaultId,
@@ -133,9 +134,7 @@ export const Table = forwardRef((props, ref) => {
     overflow,
     children,
   } = props;
-
-  const innerRef = useRef();
-  useImperativeHandle(ref, () => innerRef.current);
+  const ref = props.ref || tableDefaultRef;
   const tableContainerRef = useRef();
   const tableUIRef = useRef();
 
@@ -146,7 +145,7 @@ export const Table = forwardRef((props, ref) => {
 
   // selection
   const selectionController = useTableSelectionController({
-    tableRef: innerRef,
+    tableRef: ref,
     selection,
     onSelectionChange,
     selectionColor,
@@ -156,7 +155,7 @@ export const Table = forwardRef((props, ref) => {
     selectionController,
   );
 
-  useFocusGroup(innerRef);
+  useFocusGroup(ref);
 
   // sticky
   useStickyGroup(tableContainerRef, {
@@ -189,7 +188,7 @@ export const Table = forwardRef((props, ref) => {
     canChangeColumnOrder: Boolean(onColumnOrderChange),
   });
 
-  useKeyboardShortcuts(innerRef, [
+  useKeyboardShortcuts(ref, [
     ...createSelectionKeyboardShortcuts(selectionController, {
       toggleEnabled: true,
       enabled: () => dragContextValue.grabTarget === null,
@@ -272,7 +271,7 @@ export const Table = forwardRef((props, ref) => {
     >
       <div ref={tableContainerRef} className="navi_table_container">
         <table
-          ref={innerRef}
+          ref={ref}
           id={id}
           className="navi_table"
           aria-multiselectable="true"
@@ -298,9 +297,9 @@ export const Table = forwardRef((props, ref) => {
             </TableSelectionContext.Provider>
           </TableSizeContext.Provider>
         </table>
-        <TableUI ref={tableUIRef} tableRef={innerRef} tableId={id}>
+        <TableUI ref={tableUIRef} tableRef={ref} tableId={id}>
           <TableStickyContext.Provider value={stickyContextValue}>
-            <TableStickyFrontier tableRef={innerRef} />
+            <TableStickyFrontier tableRef={ref} />
           </TableStickyContext.Provider>
           <TableColumnResizer ref={columnResizerRef} />
           <TableRowResizer ref={rowResizerRef} />
@@ -313,7 +312,7 @@ export const Table = forwardRef((props, ref) => {
       </div>
     </div>
   );
-});
+};
 export const Colgroup = ({ children }) => {
   const ColumnProducerProvider = useContext(ColumnProducerProviderContext);
   return (
