@@ -43,19 +43,28 @@ export const Route = (props) => {
   return <RouteAsContainer {...props} />;
 };
 
-const ChildMatchingCountSignalContext = createContext(null);
+const MatchingCountSignalContext = createContext(null);
+const useMatchingCountSignalContext = import.meta.dev
+  ? () => {
+      const matchingCountSignal = useContext(MatchingCountSignalContext);
+      if (!matchingCountSignal) {
+        throw new Error("Missing a parent <Route>");
+      }
+      return matchingCountSignal;
+    }
+  : () => useContext(MatchingCountSignalContext);
 const RouteAsContainer = (props) => {
   const childMatchingCountSignal = useSignal(0);
 
   return (
-    <ChildMatchingCountSignalContext.Provider value={childMatchingCountSignal}>
+    <MatchingCountSignalContext.Provider value={childMatchingCountSignal}>
       <RouteMatching {...props} />
-    </ChildMatchingCountSignalContext.Provider>
+    </MatchingCountSignalContext.Provider>
   );
 };
 
 const RouteOnly = (props) => {
-  const parentMatchingCountSignal = useContext(ChildMatchingCountSignalContext);
+  const matchingCountSignal = useMatchingCountSignalContext();
   const { route, routeParams } = props;
   const { matching } = useRouteStatus(route);
   const childMatchingCountSignal = useSignal(0);
@@ -64,12 +73,12 @@ const RouteOnly = (props) => {
     matching && (!routeParams || route.matchesParams(routeParams));
 
   useLayoutEffect(() => {
-    if (!parentMatchingCountSignal || !isMatching) {
+    if (!isMatching) {
       return undefined;
     }
-    parentMatchingCountSignal.value++;
+    matchingCountSignal.value++;
     return () => {
-      parentMatchingCountSignal.value--;
+      matchingCountSignal.value--;
     };
   }, [isMatching]);
 
@@ -79,15 +88,15 @@ const RouteOnly = (props) => {
     return null;
   }
   return (
-    <ChildMatchingCountSignalContext.Provider value={childMatchingCountSignal}>
+    <MatchingCountSignalContext.Provider value={childMatchingCountSignal}>
       <RouteMatching {...props} />
-    </ChildMatchingCountSignalContext.Provider>
+    </MatchingCountSignalContext.Provider>
   );
 };
 
 const RouteWithFallback = (props) => {
-  const parentMatchingCountSignal = useContext(ChildMatchingCountSignalContext);
-  const parentMatchingCount = parentMatchingCountSignal.value;
+  const matchingCountSignal = useMatchingCountSignalContext();
+  const matchingCount = matchingCountSignal.value;
   const { route, routeParams } = props;
   const { matching } = useRouteStatus(route);
   const childMatchingCountSignal = useSignal(0);
@@ -100,28 +109,28 @@ const RouteWithFallback = (props) => {
   if (!isMatching) {
     return null;
   }
-  if (parentMatchingCount > 0) {
+  if (matchingCount > 0) {
     return null;
   }
   return (
-    <ChildMatchingCountSignalContext.Provider value={childMatchingCountSignal}>
+    <MatchingCountSignalContext.Provider value={childMatchingCountSignal}>
       <RouteMatching {...props} />
-    </ChildMatchingCountSignalContext.Provider>
+    </MatchingCountSignalContext.Provider>
   );
 };
 
 const FallbackOnly = (props) => {
-  const parentMatchingCountSignal = useContext(ChildMatchingCountSignalContext);
-  const parentMatchingCount = parentMatchingCountSignal.value;
+  const matchingCountSignal = useMatchingCountSignalContext();
+  const matchingCount = matchingCountSignal.value;
   const childMatchingCountSignal = useSignal(0);
 
-  if (parentMatchingCount > 0) {
+  if (matchingCount > 0) {
     return null;
   }
   return (
-    <ChildMatchingCountSignalContext.Provider value={childMatchingCountSignal}>
+    <MatchingCountSignalContext.Provider value={childMatchingCountSignal}>
       <RouteMatching {...props} />
-    </ChildMatchingCountSignalContext.Provider>
+    </MatchingCountSignalContext.Provider>
   );
 };
 
