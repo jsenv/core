@@ -53,7 +53,7 @@ export {
 } from "./src/nav/browser_integration/document_url_signal.js";
 export { useUrlSearchParam } from "./src/nav/browser_integration/use_url_search_param.js";
 export { route, setupRoutes, useRouteStatus } from "./src/nav/route.js";
-export { Route, Routes, useMatchingRouteInfo } from "./src/nav/route.jsx";
+export { Route, useMatchingRouteInfo } from "./src/nav/route.jsx";
 export { routeAction } from "./src/nav/route_action.js";
 export { rawUrlPart, setBaseUrl } from "./src/nav/route_pattern.js";
 // Navigation/components
