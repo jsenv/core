@@ -14,12 +14,17 @@
  * Each section demonstrates different technical patterns under the hood.
  */
 
-import { Link, Nav, Route, route, setupRoutes } from "@jsenv/navi";
+import { Link, Nav, Route, route, setupRoutes, stateSignal } from "@jsenv/navi";
 import { render } from "preact";
 
+const dashboardSectionSignal = stateSignal("users", {});
+const userSectionSignal = stateSignal("list", {});
+
 const HOME_ROUTE = route("home");
-const DASHBOARD_ROUTE = route("dashboard/*");
-const USERS_SECTION_ROUTE = route("dashboard/users/*");
+const DASHBOARD_ROUTE = route(`dashboard/:section=${dashboardSectionSignal}`);
+const USERS_SECTION_ROUTE = route(
+  `dashboard/users/:user_section=${userSectionSignal}`,
+);
 const SETTINGS_SECTION_ROUTE = route("dashboard/settings/*");
 const ANALYTICS_SECTION_ROUTE = route("dashboard/analytics/*");
 const REPORTS_SECTION_ROUTE = route("dashboard/monitoring/*");
@@ -490,7 +495,6 @@ const Dashboard = () => {
               - USERS_LIST_ROUTE has index prop, so /dashboard/users redirects to /dashboard/users/list
               - Tests URL redirection with index props ensuring proper URLs are used */}
           <Route
-            index
             route={USERS_SECTION_ROUTE}
             element={
               <div>
@@ -527,20 +531,17 @@ const Dashboard = () => {
                     <Link route={USERS_NOTHING_ROUTE}>❌ Nothing</Link>
                   </Nav>
                 </div>
-
-                {/* Content Area using Route.Slot */}
-                <div style={{ padding: "0 2rem" }}>
-                  <Route.Slot />
-                </div>
               </div>
             }
           >
-            <Route index route={USERS_LIST_ROUTE} element={<UserListPage />} />
-            <Route
-              route={USERS_ACTIVITY_ROUTE}
-              element={<UserActivityPage />}
-            />
-            <Route fallback element={"This url does not exists."} />
+            <div style={{ padding: "0 2rem" }}>
+              <Route route={USERS_LIST_ROUTE} element={<UserListPage />} />
+              <Route
+                route={USERS_ACTIVITY_ROUTE}
+                element={<UserActivityPage />}
+              />
+              <Route fallback element={"This url does not exists."} />
+            </div>
           </Route>
 
           {/* Non-index route with manual navigation using <Routes>
@@ -603,7 +604,6 @@ const SettingsSection = () => (
     <div style={{ padding: "0 2rem" }}>
       <Route>
         <Route
-          index
           route={SETTINGS_GENERAL_ROUTE}
           element={<GeneralSettingsPage />}
         />
@@ -647,7 +647,6 @@ const AnalyticsSection = () => (
     <div style={{ padding: "0 2rem" }}>
       <Route>
         <Route
-          index
           route={ANALYTICS_OVERVIEW_ROUTE}
           element={<AnalyticsOverviewPage />}
         />
