@@ -320,5 +320,6 @@ export const updateRow = async (sql, tablename, id, values) => {
     WHERE
       id = ${id}
   `;
-  return selectRow(sql, tablename, id);
+  const idAfterUpdate = values.id || id;
+  return selectRow(sql, tablename, idAfterUpdate);
 };

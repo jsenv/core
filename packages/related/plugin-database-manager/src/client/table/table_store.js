@@ -190,7 +190,7 @@ export const TABLE_ROW = resource("table_row", {
         `Failed to delete rows in "${tablename}" table`,
       );
     }
-    return [{ tablename }, { rowId }];
+    return rowId;
   },
   DELETE_MANY: async ({ tablename, rowIds }, { signal }) => {
     const response = await fetch(
@@ -211,8 +211,6 @@ export const TABLE_ROW = resource("table_row", {
         `Failed to delete rows in "${tablename}" table`,
       );
     }
-    return rowIds.map((rowId) => {
-      return [{ tablename }, { rowId }];
-    });
+    return rowIds;
   },
 });
