@@ -1,4 +1,4 @@
-import { Link } from "@jsenv/navi";
+import { Icon, Link, LinkCurrentSvg } from "@jsenv/navi";
 
 import { ROLE_ROUTE } from "../routes.js";
 import { pickRoleIcon } from "./role_icons.jsx";
@@ -15,10 +15,16 @@ export const RoleLink = ({ role, children, ...rest }) => {
       route={ROLE_ROUTE}
       routeParams={{ rolname }}
       startIcon={<RoleIcon color="#333" />}
-      spacing="m"
+      endIcon={
+        isCurrent && (
+          <Icon color="#333">
+            <LinkCurrentSvg />
+          </Icon>
+        )
+      }
+      spacing="xs"
       {...rest}
     >
-      {isCurrent && <span>(current)</span>}
       {children}
     </Link>
   );

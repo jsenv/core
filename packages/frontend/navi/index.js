@@ -173,6 +173,7 @@ export { HomeSvg } from "./src/graphic/icons/home_svg.jsx";
 export {
   LinkAnchorSvg,
   LinkBlankTargetSvg,
+  LinkCurrentSvg,
 } from "./src/graphic/icons/link_svgs.jsx";
 export { SearchSvg } from "./src/graphic/icons/search_svg.jsx";
 export { SettingsSvg } from "./src/graphic/icons/settings_svg.jsx";

@@ -17,6 +17,8 @@ import { EmailSvg } from "../../graphic/icons/email_svg.jsx";
 import {
   LinkAnchorSvg,
   LinkBlankTargetSvg,
+  LinkGithubSvg,
+  LinkSmsSvg,
 } from "../../graphic/icons/link_svgs.jsx";
 import { PhoneSvg } from "../../graphic/icons/phone_svg.jsx";
 import { LoaderBackground } from "../../graphic/loader/loader_background.jsx";
@@ -29,7 +31,6 @@ import { getHrefTargetInfo } from "../browser_integration/href_target_info.js";
 import { useIsVisited } from "../browser_integration/use_is_visited.js";
 import { assertRoute, useRouteStatus } from "../route.js";
 
-import { GithubSvg, SmsSvg } from "./link_icons.jsx";
 import { useDimColorWhen } from "./use_dim_color.js";
 
 /*
@@ -474,11 +475,11 @@ const LinkPlain = (props) => {
     if (href?.startsWith("tel:")) {
       innerEndIcon = <PhoneSvg />;
     } else if (href?.startsWith("sms:")) {
-      innerEndIcon = <SmsSvg />;
+      innerEndIcon = <LinkSmsSvg />;
     } else if (href?.startsWith("mailto:")) {
       innerEndIcon = <EmailSvg />;
     } else if (href?.includes("github.com")) {
-      innerEndIcon = <GithubSvg />;
+      innerEndIcon = <LinkGithubSvg />;
     } else {
       // Fall back to default icon logic
       const innerBlankTargetIcon =
@@ -505,19 +506,6 @@ const LinkPlain = (props) => {
   const innerChildren = children || (hrefFallback ? href : children);
   const startIconEl = startIcon && <Icon>{startIcon}</Icon>;
   const endIconEl = innerEndIcon && <Icon>{innerEndIcon}</Icon>;
-  const visualChildren = (
-    <>
-      {startIconEl}
-      {innerChildren}
-      {endIconEl ? (
-        overflowEllipsis ? (
-          <Text overflowPinned>{endIconEl}</Text>
-        ) : (
-          endIconEl
-        )
-      ) : null}
-    </>
-  );
 
   const currentIndicatorPosition =
     currentIndicator === true ? "bottom" : currentIndicator;
@@ -600,7 +588,15 @@ const LinkPlain = (props) => {
         </>
       }
     >
-      {visualChildren}
+      {startIconEl}
+      {innerChildren}
+      {endIconEl ? (
+        overflowEllipsis ? (
+          <Text overflowPinned>{endIconEl}</Text>
+        ) : (
+          endIconEl
+        )
+      ) : null}
     </Text>
   );
 };

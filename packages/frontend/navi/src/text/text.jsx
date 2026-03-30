@@ -218,6 +218,9 @@ const shouldInjectSpacingBefore = (jsxChild) => {
     // we can mark jsx element as "outsideFlow" to avoid spacing injection between it and surrounding text
     return false;
   }
+  if (jsxChild && jsxChild.props && jsxChild.props.overflowPinned) {
+    return false;
+  }
   return true;
 };
 
@@ -264,7 +267,7 @@ const TextOverflow = ({ noWrap, spacing, children, ...rest }) => {
 };
 const TextOverflowPinned = ({ overflowPinned, ...props }) => {
   const setOverflowPinnedElement = useContext(OverflowPinnedElementContext);
-  const text = <Text {...props}></Text>;
+  const text = <Text {...props} data-overflow-pinned=""></Text>;
   if (!setOverflowPinnedElement) {
     console.warn(
       "<Text overflowPinned> declared outside a <Text overflowEllipsis>",
