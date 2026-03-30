@@ -17,10 +17,14 @@
 
 import {
   Button,
+  Checkbox,
   Col,
   Colgroup,
+  countSelectedRows,
+  Label,
   RowNumberCol,
   RowNumberTableCell,
+  stringifyTableSelectionValue,
   Table,
   TableCell,
   Tbody,
@@ -57,69 +61,105 @@ export const TableData = ({ table, rows }) => {
     { columnIdKey: "column_name" },
   );
 
+  const selectedRowCount = countSelectedRows(selection);
+
   return (
     <div>
-      <Table
-        ref={tableRef}
-        className="database_table"
-        selection={selection}
-        onSelectionChange={setSelection}
-        borderCollapse
-      >
-        <Colgroup>
-          <RowNumberCol />
-          {columns.map((column) => (
-            <Col key={column.column_name} id={column.column_name} />
-          ))}
-        </Colgroup>
-        <Thead>
-          <Tr id="head">
-            <RowNumberTableCell />
-            {columns.map((column) => (
-              <TableCell
-                key={column.column_name}
-                action={(value) => {
-                  console.log("column action", value);
-                }}
-              >
-                {column.column_name}
-              </TableCell>
-            ))}
-          </Tr>
-        </Thead>
-        <Tbody>
-          {cells.map((rowCells, rowIndex) => {
-            const object = rows[rowIndex];
-
-            return (
-              <Tr key={object.id} id={object.id}>
+      {rows.length === 0 ? (
+        <div>No data</div>
+      ) : (
+        <>
+          <Table
+            ref={tableRef}
+            className="database_table"
+            selection={selection}
+            onSelectionChange={setSelection}
+            borderCollapse
+          >
+            <Colgroup>
+              <RowNumberCol />
+              {columns.map((column) => (
+                <Col key={column.column_name} id={column.column_name} />
+              ))}
+            </Colgroup>
+            <Thead>
+              <Tr id="head">
                 <RowNumberTableCell />
-                {rowCells.map((cellValue, columnIndex) => {
-                  const columnId = columns[columnIndex].column_name;
-                  return (
-                    <TableCell
-                      key={columnId}
-                      action={async (v) => {
-                        await TABLE_ROW.PATCH({
-                          tablename: tableName,
-                          rowId: object.id,
-                          properties: {
-                            [columnId]: v,
-                          },
-                        });
-                        setCellValue({ rowIndex, columnIndex }, v);
-                      }}
-                    >
-                      {cellValue}
-                    </TableCell>
-                  );
-                })}
+                {columns.map((column) => (
+                  <TableCell
+                    key={column.column_name}
+                    action={(value) => {
+                      console.log("column action", value);
+                    }}
+                  >
+                    {column.column_name}
+                  </TableCell>
+                ))}
               </Tr>
-            );
-          })}
-        </Tbody>
-      </Table>
-      {rows.length === 0 ? <div>No data</div> : null}
+            </Thead>
+            <Tbody>
+              {cells.map((rowCells, rowIndex) => {
+                const object = rows[rowIndex];
+
+                return (
+                  <Tr key={object.id} id={object.id}>
+                    <RowNumberTableCell />
+                    {rowCells.map((cellValue, columnIndex) => {
+                      const columnId = columns[columnIndex].column_name;
+                      return (
+                        <TableCell
+                          key={columnId}
+                          action={async (v) => {
+                            await TABLE_ROW.PATCH({
+                              tablename: tableName,
+                              rowId: object.id,
+                              properties: {
+                                [columnId]: v,
+                              },
+                            });
+                            setCellValue({ rowIndex, columnIndex }, v);
+                          }}
+                        >
+                          {cellValue}
+                        </TableCell>
+                      );
+                    })}
+                  </Tr>
+                );
+              })}
+            </Tbody>
+          </Table>
+          <div>
+            <Label>
+              <Checkbox
+                action={() => {
+                  if (selectedRowCount === 0) {
+                    const rowSelection = [];
+                    let rowCount = rows.length;
+                    let y = 0;
+                    while (y < rowCount) {
+                      const firstCellValue = stringifyTableSelectionValue(
+                        "row",
+                        y,
+                      );
+                      rowSelection.push(firstCellValue);
+                      y++;
+                    }
+
+                    setSelection(rowSelection);
+                  } else {
+                    setSelection([]);
+                  }
+                }}
+              />
+              {selectedRowCount === 0
+                ? "Select all"
+                : `${selectedRowCount} selected`}
+            </Label>
+            <Button action={() => {}}>Delete</Button>
+          </div>
+        </>
+      )}
       <div className="table_data_actions">
         <Button action={createRow}>Add row</Button>
       </div>

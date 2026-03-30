@@ -104,3 +104,14 @@ export const isColumnSelected = (selection, columnId) => {
   const columnSelectionValue = stringifyTableSelectionValue("column", columnId);
   return selection.has(columnSelectionValue);
 };
+
+export const countSelectedRows = (selection) => {
+  let count = 0;
+  for (const item of selection) {
+    const selectionValueInfo = parseTableSelectionValue(item);
+    if (selectionValueInfo.type === "row") {
+      count++;
+    }
+  }
+  return count;
+};

@@ -22,7 +22,9 @@ import { alterRoleQuery, selectRoleByName } from "./sql/role_sql.js";
 import {
   alterTableQuery,
   createTable,
+  deleteRow,
   insertRow,
+  selectManyRows,
   selectTable,
   selectTables,
   updateRow,
@@ -187,25 +189,7 @@ export const jsenvPluginDatabaseManager = ({
         },
         "GET /:tablename/rows": async (request) => {
           const { tablename } = request.params;
-          const rows = await sql`
-            SELECT
-              *
-            FROM
-              (
-                SELECT
-                  t.*,
-                  row_number() OVER (
-                    ORDER BY
-                      t.ctid
-                  ) AS "index"
-                FROM
-                  ${sql(tablename)} AS t
-              ) AS sub
-            ORDER BY
-              sub."index"
-            LIMIT
-              1000
-          `;
+          const rows = await selectManyRows(sql, tablename);
           return {
             data: rows,
           };
@@ -224,6 +208,13 @@ export const jsenvPluginDatabaseManager = ({
           const updatedRow = await updateRow(sql, tablename, rowId, properties);
           return {
             data: updatedRow,
+          };
+        },
+        "DELETE /:tablename/rows/:rowId": async (request) => {
+          const { tablename, rowId } = request.params;
+          await deleteRow(sql, tablename, rowId);
+          return {
+            data: null,
           };
         },
       }),

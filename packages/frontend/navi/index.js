@@ -105,6 +105,7 @@ export { Radio, RadioList } from "./src/field/radio_list.jsx";
 export { Select } from "./src/field/select.jsx";
 // Table start
 export {
+  countSelectedRows,
   isCellSelected,
   isColumnSelected,
   isRowSelected,

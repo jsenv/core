@@ -1,7 +1,12 @@
 import { getTableColumns } from "./manage_sql.js";
 
 export const createTable = async (sql, tablename) => {
-  await sql`CREATE TABLE ${sql(tablename)} (id SERIAL PRIMARY KEY)`;
+  await sql`
+    CREATE TABLE ${sql(tablename)} (
+      id SERIAL PRIMARY KEY,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `;
 };
 
 export const selectTable = async (sql, tablename) => {
@@ -119,6 +124,48 @@ export const alterTableQuery = async (sql, tablename, columnName, value) => {
   throw new Error(`Altering column "${columnName}" is not yet implemented`);
 };
 
+export const selectManyRows = async (sql, tablename) => {
+  const columnsMeta = await getTableColumns(sql, tablename);
+  const orderBy = resolveOrderBy(columnsMeta);
+  const rows = await sql`
+    SELECT
+      *
+    FROM
+      ${sql(tablename)}
+    ORDER BY
+      ${sql.unsafe(orderBy)}
+    LIMIT
+      1000
+  `;
+  return rows;
+};
+
+// Determine the best column(s) to order rows by creation time.
+// The goal is stable ordering that reflects when each row was first inserted,
+// so that updating a row does not move it to the end of the table.
+//
+// Priority:
+// 1. "created_at" column — explicit, reliable, type-agnostic
+// 2. "id" that is a serial (integer + nextval default) — assigned at insert, never changes
+// 3. xmin + ctid fallback — xmin is the transaction ID of the insert and survives updates
+//    (unlike ctid which changes on every UPDATE due to PostgreSQL's MVCC). ctid breaks
+//    ties between rows inserted in the same transaction.
+const resolveOrderBy = (columnsMeta) => {
+  const hasCreatedAt = columnsMeta.some((c) => c.column_name === "created_at");
+  if (hasCreatedAt) {
+    return "created_at";
+  }
+  const idCol = columnsMeta.find((c) => c.column_name === "id");
+  const idIsSerial =
+    idCol &&
+    ["integer", "bigint", "smallint"].includes(idCol.data_type) &&
+    idCol.column_default &&
+    idCol.column_default.startsWith("nextval(");
+  if (idIsSerial) {
+    return "id";
+  }
+  return "xmin::text::bigint, ctid";
+};
 export const selectRow = async (sql, tablename, id) => {
   const row = await sql`
     SELECT
