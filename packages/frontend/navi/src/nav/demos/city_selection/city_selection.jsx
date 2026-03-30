@@ -8,7 +8,6 @@ import {
   Nav,
   Route,
   route,
-  Routes,
   setupRoutes,
   stateSignal,
 } from "@jsenv/navi";
@@ -41,11 +40,11 @@ const App = () => {
       </Nav>
 
       <div style={{ marginTop: "20px" }}>
-        <Routes>
+        <Route>
           <Route route={HOME_ROUTE} element={<HomePage />} />
           <Route route={SELECT_CITY_ROUTE} element={<SelectCityPage />} />
           <Route route={MAP_ROUTE} element={<MapPage />} />
-        </Routes>
+        </Route>
       </div>
     </div>
   );
