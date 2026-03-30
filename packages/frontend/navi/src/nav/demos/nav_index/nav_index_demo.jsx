@@ -19,13 +19,16 @@ import { render } from "preact";
 
 const dashboardSectionSignal = stateSignal("users", {});
 const userSectionSignal = stateSignal("list", {});
+const settingsSectionSignal = stateSignal("general", {});
 
 const HOME_ROUTE = route("home");
 const DASHBOARD_ROUTE = route(`dashboard/:section=${dashboardSectionSignal}`);
 const USERS_SECTION_ROUTE = route(
   `dashboard/users/:user_section=${userSectionSignal}`,
 );
-const SETTINGS_SECTION_ROUTE = route("dashboard/settings/*");
+const SETTINGS_SECTION_ROUTE = route(
+  `dashboard/settings/:settings_section=${settingsSectionSignal}`,
+);
 const ANALYTICS_SECTION_ROUTE = route("dashboard/analytics/*");
 const REPORTS_SECTION_ROUTE = route("dashboard/monitoring/*");
 const USERS_LIST_ROUTE = route("dashboard/users/list");
@@ -425,15 +428,44 @@ const Dashboard = () => {
         <Nav
           vertical
           expandX
+          spacing="s"
           style={{
-            "--tab-color": "#d1d5db",
-            "--tab-active-color": "#60a5fa",
+            "--link-color": "#d1d5db",
+            "--link-color-current": "#60a5fa",
           }}
         >
-          <Link route={USERS_SECTION_ROUTE}>👥 Users Management</Link>
-          <Link route={SETTINGS_SECTION_ROUTE}>⚙️ Settings</Link>
-          <Link route={ANALYTICS_SECTION_ROUTE}>📈 Analytics</Link>
-          <Link route={REPORTS_SECTION_ROUTE}>🖥️ Monitoring</Link>
+          <Link
+            route={USERS_SECTION_ROUTE}
+            appearance="tab"
+            currentIndicator="left"
+            padding="s"
+          >
+            👥 Users Management
+          </Link>
+          <Link
+            route={SETTINGS_SECTION_ROUTE}
+            appearance="tab"
+            currentIndicator="left"
+            padding="s"
+          >
+            ⚙️ Settings
+          </Link>
+          <Link
+            route={ANALYTICS_SECTION_ROUTE}
+            appearance="tab"
+            currentIndicator="left"
+            padding="s"
+          >
+            📈 Analytics
+          </Link>
+          <Link
+            route={REPORTS_SECTION_ROUTE}
+            appearance="tab"
+            currentIndicator="left"
+            padding="s"
+          >
+            🖥️ Monitoring
+          </Link>
         </Nav>
 
         {/* Navigation Behavior Indicators */}
