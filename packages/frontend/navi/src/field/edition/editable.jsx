@@ -104,20 +104,18 @@ export const Editable = (props) => {
       return;
     }
     const editingEvent = editing.event;
-    if (!editingEvent) {
-      return;
+    if (editingEvent) {
+      const editingEventInitialValue = editingEvent.detail?.initialValue;
+      if (editingEventInitialValue !== undefined) {
+        const input = ref.current;
+        input.value = editingEventInitialValue;
+        input.dispatchEvent(
+          new CustomEvent("input", {
+            bubbles: false,
+          }),
+        );
+      }
     }
-    const editingEventInitialValue = editingEvent.detail?.initialValue;
-    if (editingEventInitialValue === undefined) {
-      return;
-    }
-    const input = ref.current;
-    input.value = editingEventInitialValue;
-    input.dispatchEvent(
-      new CustomEvent("input", {
-        bubbles: false,
-      }),
-    );
   }, [editing]);
 
   const input = (
@@ -154,10 +152,19 @@ export const Editable = (props) => {
         });
       }}
       onBlur={(e) => {
-        const value =
-          type === "number" ? e.target.valueAsNumber : e.target.value;
+        let inputValue;
         const valueWhenEditStart = valueWhenEditStartRef.current;
-        if (value === valueWhenEditStart) {
+        let inputValueWhenEditStart;
+        if (type === "number") {
+          inputValue = e.target.valueAsNumber;
+          inputValueWhenEditStart = valueWhenEditStart;
+        } else {
+          inputValue = e.target.value;
+          inputValueWhenEditStart = Number.isNaN(valueWhenEditStart)
+            ? valueWhenEditStart
+            : String(valueWhenEditStart);
+        }
+        if (inputValue === inputValueWhenEditStart) {
           onEditEnd({
             cancelled: true,
             event: e,
