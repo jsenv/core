@@ -263,17 +263,13 @@ export const deleteRow = async (sql, tablename, id) => {
   `;
 };
 export const updateRow = async (sql, tablename, id, values) => {
-  const setClauses = [];
-  for (const [column, value] of Object.entries(values)) {
-    setClauses.push(sql`${sql(column)} = ${value}`);
-  }
-  if (setClauses.length === 0) {
-    return selectRow(sql, tablename, id); // nothing to update but return current row state
+  if (Object.keys(values).length === 0) {
+    return selectRow(sql, tablename, id);
   }
   await sql`
     UPDATE ${sql(tablename)}
     SET
-      ${sql(setClauses, ", ")}
+      ${sql(values)}
     WHERE
       id = ${id}
   `;
