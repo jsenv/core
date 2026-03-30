@@ -10,6 +10,8 @@ export const setupConstraintFeedbackLine = () => {
     const { grabEvent, dragEvent } = gestureInfo;
     if (
       grabEvent.type === "programmatic" ||
+      // dragEvent can be null when only mousedown without yet any mousemove
+      !dragEvent ||
       dragEvent.type === "programmatic"
     ) {
       // programmatic drag

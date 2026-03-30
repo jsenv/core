@@ -121,7 +121,10 @@ export {
   Thead,
   Tr,
 } from "./src/field/table/table.jsx";
-export { useCellsAndColumns } from "./src/field/table/use_cells_and_columns.js";
+export {
+  useCellsAndColumns,
+  useGrid,
+} from "./src/field/table/use_cells_and_columns.js";
 // Table end
 
 // Components

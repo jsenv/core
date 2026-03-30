@@ -15,122 +15,47 @@
  *
  */
 
-import { Button, Table } from "@jsenv/navi";
-import { useMemo, useRef, useState } from "preact/hooks";
+import {
+  Button,
+  Col,
+  Colgroup,
+  RowNumberCol,
+  RowNumberTableCell,
+  Table,
+  TableCell,
+  Tbody,
+  Thead,
+  Tr,
+  useCellsAndColumns,
+  useGrid,
+} from "@jsenv/navi";
+import { useRef, useState } from "preact/hooks";
+
 import { TABLE_ROW } from "./table_store.js";
 
 import.meta.css = /* css */ `
   .table_data_actions {
     margin-bottom: 15px;
   }
-
-  .database_table_cell {
-    padding: 0;
-  }
-
-  .database_table[data-multi-selection] .database_table_cell[data-selected] {
-    background-color: light-dark(
-      rgba(0, 120, 212, 0.08),
-      rgba(59, 130, 246, 0.15)
-    );
-  }
-
-  .database_table_cell:focus {
-    /* Table cell border size impacts the visual appeareance of the outline */
-    /* (It's kinda melted into the table border, as if it was 1.5 px instead of 2) */
-    /* To avoid this we display outline on .database_table_cell_content  */
-    outline: none;
-  }
-
-  .database_table_cell:focus .database_table_cell_content {
-    outline: 2px solid #0078d4;
-    outline-color: light-dark(#355fcc, #3b82f6);
-    outline-offset: -2px;
-  }
-
-  .database_table_cell[data-editing] .database_table_cell_content {
-    outline: 2px solid #a8c7fa;
-    outline-offset: 0px;
-  }
-
-  .database_table_cell_content {
-    display: inline-flex;
-    width: 100%;
-    height: 100%;
-    flex-grow: 1;
-  }
-
-  .database_table_cell_value {
-    display: inline-flex;
-    padding: 8px;
-    flex-grow: 1;
-    user-select: none;
-  }
-
-  .database_table_cell_content input {
-    display: inline-flex;
-    width: 100%;
-    height: 100%;
-    padding-left: 8px;
-    flex-grow: 1;
-    border-radius: 0; /* match table cell border-radius */
-  }
-
-  .database_table_cell_content input[type="number"]::-webkit-inner-spin-button {
-    width: 14px;
-    height: 30px;
-  }
-
-  .database_table *[data-focus-within] {
-    background-color: light-dark(
-      rgba(0, 120, 212, 0.08),
-      rgba(59, 130, 246, 0.15)
-    );
-  }
 `;
-
-const DatabaseTableHeaderCell = (props) => props;
-const DatabaseTableCell = (props) => props;
 
 export const TableData = ({ table, rows }) => {
   const tableRef = useRef(null);
   const tableName = table.tablename;
   const createRow = TABLE_ROW.POST.bindParams({ tablename: tableName });
-
   const { schemaColumns } = table.meta;
+  schemaColumns.sort((a, b) => a.ordinal_position - b.ordinal_position);
 
-  // Stable column definitions - only recreate when schema changes
-  const columns = useMemo(() => {
-    return schemaColumns.map((column, index) => {
-      const columnName = column.column_name;
-      const columnIndex = index + 1; // +1 because number column is first
-
-      return {
-        enableResizing: true,
-        accessorKey: columnName,
-        header: ({ header }) => (
-          <DatabaseTableHeaderCell
-            header={header}
-            columnName={columnName}
-            columnIndex={columnIndex}
-          />
-        ),
-        cell: (info) => (
-          <DatabaseTableCell
-            columnName={columnName}
-            column={column}
-            value={info.getValue()}
-            row={info.row}
-          />
-        ),
-        footer: (info) => info.column.id,
-      };
-    });
-  }, [schemaColumns]); // Only depend on schema, not dynamic state
-
-  const data = rows;
-
+  const grid = useGrid(
+    rows,
+    schemaColumns.map((c) => c.column_name),
+  );
   const [selection, setSelection] = useState([]);
+  const { cells, setCellValue, columns } = useCellsAndColumns(
+    grid,
+    schemaColumns,
+    { columnIdKey: "column_name" },
+  );
 
   return (
     <div>
@@ -139,12 +64,58 @@ export const TableData = ({ table, rows }) => {
         className="database_table"
         selection={selection}
         onSelectionChange={setSelection}
-        idKey="id"
-        columns={columns}
-        data={data}
-        style={{ height: "fit-content" }}
-      />
-      {data.length === 0 ? <div>No data</div> : null}
+        borderCollapse
+      >
+        <Colgroup>
+          <RowNumberCol />
+          {columns.map((column) => (
+            <Col key={column.id} id={column.id} />
+          ))}
+        </Colgroup>
+        <Thead>
+          <Tr id="head">
+            <RowNumberTableCell />
+            {columns.map((column) => (
+              <TableCell
+                key={column.id}
+                action={(value) => {
+                  console.log("column action", value);
+                }}
+              >
+                {column.column_name}
+              </TableCell>
+            ))}
+          </Tr>
+        </Thead>
+        <Tbody>
+          {cells.map((rowCells, rowIndex) => {
+            const object = rows[rowIndex];
+
+            return (
+              <Tr key={object.id} id={object.id}>
+                <RowNumberTableCell />
+                {rowCells.map((cellValue, columnIndex) => {
+                  const columnId = columns[columnIndex].id;
+                  return (
+                    <TableCell
+                      key={columnId}
+                      action={(v) => {
+                        setCellValue(
+                          { rowIndex: rowIndex + 1, columnIndex },
+                          v,
+                        );
+                      }}
+                    >
+                      {cellValue}
+                    </TableCell>
+                  );
+                })}
+              </Tr>
+            );
+          })}
+        </Tbody>
+      </Table>
+      {rows.length === 0 ? <div>No data</div> : null}
       <div className="table_data_actions">
         <Button action={createRow}>Add row</Button>
       </div>

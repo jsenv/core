@@ -1,11 +1,27 @@
 import { useMemo, useState } from "preact/hooks";
 
-export const useCellsAndColumns = (cells, columns) => {
+export const useGrid = (rows, properties) => {
+  const grid = [];
+  for (const object of rows) {
+    const row = [];
+    for (const prop of properties) {
+      row.push(object[prop]);
+    }
+    grid.push(row);
+  }
+  return grid;
+};
+
+export const useCellsAndColumns = (
+  grid,
+  columns,
+  { columnIdKey = "id" } = {},
+) => {
   const [columnIds, idToColumnMap] = useMemo(() => {
     const columnIds = [];
     const idToColumnMap = new Map();
     for (const column of columns) {
-      const columnId = column.id;
+      const columnId = column[columnIdKey];
       columnIds.push(columnId);
       idToColumnMap.set(columnId, column);
     }
@@ -27,7 +43,7 @@ export const useCellsAndColumns = (cells, columns) => {
   }
 
   // Base cell values in original column order (2D array: rows x columns)
-  const [baseCells, setBaseCells] = useState(cells);
+  const [baseCells, setBaseCells] = useState(grid);
 
   // Memoized index mapping for performance - maps display index to original index
   const columnOrderedIndexMap = useMemo(() => {
