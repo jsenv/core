@@ -20,17 +20,20 @@ import { render } from "preact";
 const dashboardSectionSignal = stateSignal("users", {});
 const userSectionSignal = stateSignal("list", {});
 const settingsSectionSignal = stateSignal("general", {});
+const monitoringSectionSignal = stateSignal();
 
 const HOME_ROUTE = route("home");
-const DASHBOARD_ROUTE = route(`dashboard/:section=${dashboardSectionSignal}`);
+const DASHBOARD_ROUTE = route(`dashboard/:section=${dashboardSectionSignal}/`);
 const USERS_SECTION_ROUTE = route(
-  `dashboard/users/:user_section=${userSectionSignal}`,
+  `dashboard/users/:user_section=${userSectionSignal}/`,
 );
 const SETTINGS_SECTION_ROUTE = route(
   `dashboard/settings/:settings_section=${settingsSectionSignal}`,
 );
 const ANALYTICS_SECTION_ROUTE = route("dashboard/analytics/*");
-const REPORTS_SECTION_ROUTE = route("dashboard/monitoring/*");
+const REPORTS_SECTION_ROUTE = route(
+  `dashboard/monitoring/:monitoring_section=${monitoringSectionSignal}`,
+);
 const USERS_LIST_ROUTE = route("dashboard/users/list");
 const USERS_ACTIVITY_ROUTE = route("dashboard/users/activity");
 const USERS_NOTHING_ROUTE = route("dashboard/users/nothing");
