@@ -48,7 +48,9 @@ const useMatchingCountSignalContext = import.meta.dev
   ? () => {
       const matchingCountSignal = useContext(MatchingCountSignalContext);
       if (!matchingCountSignal) {
-        throw new Error("Missing a parent <Route>");
+        throw new Error(
+          "<Route> with route or fallback prop must be a child of a <Route> without route prop",
+        );
       }
       return matchingCountSignal;
     }
