@@ -1,25 +1,22 @@
 import { render } from "preact";
 
 import {
+  Link,
+  Nav,
   Route,
-  RouteLink,
-  Routes,
+  route,
   setupRoutes,
-  TabList,
+  stateSignal,
   useRouteStatus,
 } from "@jsenv/navi";
 
-// Setup routes to test parameter inheritance
-const { HOME_ROUTE, COLOR_ROUTE } = setupRoutes({
-  HOME_ROUTE: "/",
-  COLOR_ROUTE: "/colors{/:color}?",
-});
-
-COLOR_ROUTE.describeParam("color", {
-  default: "red",
+const colorSignal = stateSignal("red", {
   enum: ["red", "blue"],
   invalidEffect: "redirect",
 });
+const HOME_ROUTE = route("");
+const COLOR_ROUTE = route(`/colors/:color=${colorSignal}`);
+setupRoutes([HOME_ROUTE, COLOR_ROUTE]);
 
 const App = () => {
   return (
@@ -31,16 +28,20 @@ const App = () => {
         padding: "20px",
       }}
     >
-      <TabList>
-        <TabList.Tab route={HOME_ROUTE}>Home</TabList.Tab>
-        <TabList.Tab route={COLOR_ROUTE}>Colors</TabList.Tab>
-      </TabList>
+      <Nav>
+        <Link route={HOME_ROUTE} appearance="tab" padding="s" currentIndicator>
+          Home
+        </Link>
+        <Link route={COLOR_ROUTE} appearance="tab" padding="s" currentIndicator>
+          Colors
+        </Link>
+      </Nav>
 
       <div style={{ marginTop: "20px" }}>
-        <Routes>
+        <Route>
           <Route route={HOME_ROUTE} element={<HomePage />} />
           <Route route={COLOR_ROUTE} element={<ColorPage />} />
-        </Routes>
+        </Route>
       </div>
     </div>
   );
@@ -57,22 +58,31 @@ const ColorPage = () => {
     <div>
       <div>Color page</div>
 
-      <RouteLink
-        route={COLOR_ROUTE}
-        routeParams={{ color: "black" }}
-      ></RouteLink>
+      <Link route={COLOR_ROUTE} routeParams={{ color: "black" }}></Link>
 
-      {params.color && <div>Selected: {params.color}</div>}
+      <div>Current color: {params.color}</div>
 
       <div style={{ marginTop: "15px" }}>
-        <TabList>
-          <TabList.Tab route={COLOR_ROUTE} routeParams={{ color: "red" }}>
+        <Nav>
+          <Link
+            route={COLOR_ROUTE}
+            routeParams={{ color: "red" }}
+            appearance="tab"
+            padding="s"
+            currentIndicator
+          >
             Red
-          </TabList.Tab>
-          <TabList.Tab route={COLOR_ROUTE} routeParams={{ color: "blue" }}>
+          </Link>
+          <Link
+            route={COLOR_ROUTE}
+            routeParams={{ color: "blue" }}
+            appearance="tab"
+            padding="s"
+            currentIndicator
+          >
             Blue
-          </TabList.Tab>
-        </TabList>
+          </Link>
+        </Nav>
       </div>
     </div>
   );
