@@ -37,8 +37,8 @@ import.meta.css = /* css */ `
       --button-outline-width: 1px;
       --button-border-width: 1px;
       --button-border-radius: 2px;
-      --button-padding-x: 6px;
-      --button-padding-y: 1px;
+      --button-padding-x: var(--button-padding, 6px);
+      --button-padding-y: var(--button-padding, 1px);
       /* default */
       --button-outline-color: var(--navi-focus-outline-color);
       --button-loader-color: var(--navi-loader-color);
