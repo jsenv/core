@@ -18,7 +18,7 @@
  *
  */
 
-import { Icon, Link, Nav, Route } from "@jsenv/navi";
+import { Button, Icon, Link, Nav, Route } from "@jsenv/navi";
 
 import { Page, PageBody, PageHead } from "../layout/page.jsx";
 import {
@@ -31,6 +31,7 @@ import { SettingsSvg } from "../svg/settings_svg.jsx";
 import { TableData } from "./table_data.jsx";
 import { TableSvg } from "./table_icons.jsx";
 import { TableSettings } from "./table_settings.jsx";
+import { TABLE } from "./table_store.js";
 
 export const TablePage = ({ table }) => {
   const tablename = table.tablename;
@@ -38,17 +39,48 @@ export const TablePage = ({ table }) => {
   return (
     <Page data-ui-name="<TablePage />">
       <PageHead spacingBottom={0}>
-        <PageHead.Label icon={<TableSvg />} label="Table:">
+        <PageHead.Label
+          icon={<TableSvg />}
+          label="Table:"
+          actions={[
+            {
+              component: (
+                <Button
+                  data-confirm-message={`Are you sure you want to delete the table "${tablename}"?`}
+                  action={() => {
+                    return TABLE.DELETE({ tablename });
+                  }}
+                >
+                  Delete
+                </Button>
+              ),
+            },
+          ]}
+        >
           {tablename}
         </PageHead.Label>
-        <Nav>
-          <Link route={TABLE_INDEX_ROUTE} routeParams={{ tablename }}>
+        <Nav spacing="s">
+          <Link
+            route={TABLE_INDEX_ROUTE}
+            routeParams={{ tablename }}
+            appearance="tab"
+            paddingX="s"
+            paddingY="xs"
+            currentIndicator
+          >
             <Icon>
               <DataSvg />
             </Icon>
             Data
           </Link>
-          <Link route={TABLE_SETTINGS_ROUTE} routeParams={{ tablename }}>
+          <Link
+            route={TABLE_SETTINGS_ROUTE}
+            routeParams={{ tablename }}
+            appearance="tab"
+            paddingX="s"
+            paddingY="xs"
+            currentIndicator
+          >
             <Icon>
               <SettingsSvg />
             </Icon>
