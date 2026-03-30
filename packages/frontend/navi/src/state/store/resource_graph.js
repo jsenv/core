@@ -1,7 +1,6 @@
 import { createIterableWeakSet } from "@jsenv/dom";
 import { computed, signal } from "@preact/signals";
 
-import { getActionPrivateProperties } from "../../action/action_private_properties.js";
 import { createAction, getActionDispatcher } from "../../action/actions.js";
 import { SYMBOL_OBJECT_SIGNAL } from "../../action/symbol_object_signal.js";
 import {
@@ -585,7 +584,7 @@ const createResourceLifecycleManager = () => {
               continue;
             }
             // Get the ID(s) that were deleted
-            const { dataSignal } = getActionPrivateProperties(triggeringAction);
+            const { dataSignal } = triggeringAction;
             const deleteIdSet = triggeringAction.meta.httpMany
               ? new Set(dataSignal.peek())
               : new Set([dataSignal.peek()]);
@@ -613,9 +612,8 @@ const createResourceLifecycleManager = () => {
               !candidateIsPlural &&
               isSameResource
             ) {
-              const { computedDataSignal } =
-                getActionPrivateProperties(triggeringAction);
-              const modifiedData = computedDataSignal.peek();
+              const { dataSignal } = triggeringAction;
+              const modifiedData = dataSignal.peek();
 
               if (modifiedData && typeof modifiedData === "object") {
                 for (const mutableIdKey of config.mutableIdKeys) {

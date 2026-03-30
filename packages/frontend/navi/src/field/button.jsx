@@ -1,6 +1,5 @@
 import { useCallback, useContext, useRef } from "preact/hooks";
 
-import { getActionPrivateProperties } from "../action/action_private_properties.js";
 import { renderActionableComponent } from "../action/render_actionable_component.jsx";
 import { useAction } from "../action/use_action.js";
 import { useActionStatus } from "../action/use_action_status.js";
@@ -467,7 +466,7 @@ const ButtonWithActionInsideForm = (props) => {
       `<Button type="${type}" /> should not have their own action`,
     );
   }
-  const formParamsSignal = getActionPrivateProperties(formAction).paramsSignal;
+  const formParamsSignal = formAction.paramsSignal;
   const actionBoundToFormParams = useAction(action, formParamsSignal);
   const { loading: actionLoading } = useActionStatus(actionBoundToFormParams);
 
