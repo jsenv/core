@@ -52,12 +52,12 @@
 
 import { useActiveElement } from "@jsenv/dom";
 import { createContext, toChildArray } from "preact";
-import { forwardRef } from "preact/compat";
-import { useContext, useId, useImperativeHandle, useRef } from "preact/hooks";
+import { useContext, useId, useRef } from "preact/hooks";
 
 import { useKeyboardShortcuts } from "../../keyboard/keyboard_shortcuts.js";
 import { createIsolatedItemTracker } from "../../utils/item_tracker/use_isolated_item_tracker.jsx";
 import { createItemTracker } from "../../utils/item_tracker/use_item_tracker.jsx";
+import { withPropsClassName } from "../../utils/with_props_class_name.js";
 import { Editable, useEditionController } from "../edition/editable.jsx";
 import {
   createSelectionKeyboardShortcuts,
@@ -425,11 +425,12 @@ const TableRowCells = ({ children, rowIndex, row }) => {
   });
 };
 
-export const TableCell = forwardRef((props, ref) => {
+export const TableCell = (props) => {
   const column = useContext(ColumnContext);
   const row = useContext(RowContext);
   const columnIndex = useContext(ColumnIndexContext);
   const rowIndex = useContext(RowIndexContext);
+  const cellDefaultRef = useRef();
   const {
     className = "",
     canSelectAll,
@@ -450,18 +451,13 @@ export const TableCell = forwardRef((props, ref) => {
     backgroundColor = column.backgroundColor || row.backgroundColor,
     children,
   } = props;
-  const cellRef = useRef();
+  const ref = props.ref || cellDefaultRef;
   const isFirstRow = rowIndex === 0;
   const isFirstColumn = columnIndex === 0;
 
   // editing
   const editable = Boolean(action);
   const { editing, startEditing, stopEditing } = useEditionController();
-  useImperativeHandle(ref, () => ({
-    startEditing,
-    stopEditing,
-    element: cellRef.current,
-  }));
 
   // stickyness
   const { stickyLeftFrontierColumnIndex, stickyTopFrontierRowIndex } =
@@ -521,7 +517,7 @@ export const TableCell = forwardRef((props, ref) => {
             : undefined
       : selectionImpact;
 
-  const { selected } = useSelectableElement(cellRef, {
+  const { selected } = useSelectableElement(ref, {
     selection,
     selectionController,
     selectionImpact: innerSelectionImpact,
@@ -599,14 +595,14 @@ export const TableCell = forwardRef((props, ref) => {
 
   return (
     <TagName
-      className={["navi_table_cell", ...className.split(" ")].join(" ")}
-      ref={cellRef}
+      className={withPropsClassName("navi_table_cell", className)}
+      ref={ref}
       style={innerStyle}
       data-align-x={innerAlignX}
       data-align-y={innerAlignY}
       // we use [data-focus] so that the attribute can be copied
       // to the dragged cell copies
-      data-focus={activeElement === cellRef.current ? "" : undefined}
+      data-focus={activeElement === ref.current ? "" : undefined}
       data-first-row={isFirstRow ? "" : undefined}
       data-first-column={isFirstColumn ? "" : undefined}
       data-sticky-left={stickyLeft ? "" : undefined}
@@ -705,7 +701,7 @@ export const TableCell = forwardRef((props, ref) => {
       ></div>
     </TagName>
   );
-});
+};
 
 export const RowNumberCol = ({
   width = 50,
