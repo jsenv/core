@@ -32,7 +32,7 @@ import { useDarkBackgroundAttribute } from "../../text/use_dark_background_attri
 import { useDocumentUrl } from "../browser_integration/document_url_signal.js";
 import { getHrefTargetInfo } from "../browser_integration/href_target_info.js";
 import { useIsVisited } from "../browser_integration/use_is_visited.js";
-import { useRouteStatus } from "../route.js";
+import { assertRoute, useRouteStatus } from "../route.js";
 
 import { GithubSvg, SmsSvg } from "./link_icons.jsx";
 import { useDimColorWhen } from "./use_dim_color.js";
@@ -408,6 +408,9 @@ const LinkBasic = (props) => {
   return <LinkPlain {...props} />;
 };
 const LinkWithRoute = ({ route, routeParams, current, children, ...rest }) => {
+  if (import.meta.dev) {
+    assertRoute(route);
+  }
   const url = route.buildUrl(routeParams);
   const { matching } = useRouteStatus(route);
   const paramsAreMatching = route.matchesParams(routeParams);

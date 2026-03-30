@@ -35,6 +35,7 @@ export const route = (pattern, { searchParams } = {}) => {
     urlPattern: cleanPattern,
     pattern: cleanPattern,
     isRoute: true,
+    setupCalled: false,
     matching: false,
     params: ROUTE_NOT_MATCHING_PARAMS,
     buildUrl: null,
@@ -129,6 +130,9 @@ export const route = (pattern, { searchParams } = {}) => {
     };
   }
 
+  registerSetup(() => {
+    route.setupCalled = true;
+  });
   // methods
   registerSetup(({ routeSet }) => {
     route.buildRelativeUrl = (params) => {
@@ -412,6 +416,7 @@ Some code called setupRoutes before and did not properly cleanup routes with cle
 This prevents cross-test pollution and ensures clean state.`,
     );
   }
+  setupRoutesCalled = true;
 
   const routeSet = new Set();
   // PHASE 1: Setup patterns with unified objects (includes all relationships and signal connections)
@@ -723,6 +728,20 @@ export const useRouteStatus = (route) => {
     params,
     visited,
   };
+};
+
+export const assertRoute = (route) => {
+  if (!route.isRoute) {
+    throw new Error(
+      "The route prop must be a route object created with createRoute",
+    );
+  }
+  if (!setupRoutesCalled) {
+    throw new Error("setupRoutes() was not called");
+  }
+  if (!route.setupCalled) {
+    throw new Error("The route was not passed to setupRoutes()");
+  }
 };
 
 let integration;

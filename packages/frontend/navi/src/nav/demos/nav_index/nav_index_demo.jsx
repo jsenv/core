@@ -14,10 +14,26 @@
  * Each section demonstrates different technical patterns under the hood.
  */
 
-import { Route, Routes, setupRoutes, Tab, TabList } from "@jsenv/navi";
+import { Link, Nav, Route, route, setupRoutes } from "@jsenv/navi";
 import { render } from "preact";
 
-const {
+const HOME_ROUTE = route("home");
+const DASHBOARD_ROUTE = route("dashboard/*");
+const USERS_SECTION_ROUTE = route("dashboard/users/*");
+const SETTINGS_SECTION_ROUTE = route("dashboard/settings/*");
+const ANALYTICS_SECTION_ROUTE = route("dashboard/analytics/*");
+const REPORTS_SECTION_ROUTE = route("dashboard/monitoring/*");
+const USERS_LIST_ROUTE = route("dashboard/users/list");
+const USERS_ACTIVITY_ROUTE = route("dashboard/users/activity");
+const USERS_NOTHING_ROUTE = route("dashboard/users/nothing");
+const SETTINGS_GENERAL_ROUTE = route("dashboard/settings/general");
+const SETTINGS_SECURITY_ROUTE = route("dashboard/settings/security");
+const ANALYTICS_OVERVIEW_ROUTE = route("dashboard/analytics/overview");
+const ANALYTICS_REPORTS_ROUTE = route("dashboard/analytics/reports");
+const MONITORING_EXPORT_ROUTE = route("dashboard/monitoring/export");
+const MONITORING_ARCHIVE_ROUTE = route("dashboard/monitoring/archive");
+const TEST_404_ROUTE = route("test-404");
+setupRoutes([
   HOME_ROUTE,
   DASHBOARD_ROUTE,
   USERS_SECTION_ROUTE,
@@ -34,24 +50,66 @@ const {
   MONITORING_EXPORT_ROUTE,
   MONITORING_ARCHIVE_ROUTE,
   TEST_404_ROUTE,
-} = setupRoutes({
-  HOME_ROUTE: "home",
-  DASHBOARD_ROUTE: "dashboard/*",
-  USERS_SECTION_ROUTE: "dashboard/users/*",
-  SETTINGS_SECTION_ROUTE: "dashboard/settings/*",
-  ANALYTICS_SECTION_ROUTE: "dashboard/analytics/*",
-  REPORTS_SECTION_ROUTE: "dashboard/monitoring/*",
-  USERS_LIST_ROUTE: "dashboard/users/list",
-  USERS_ACTIVITY_ROUTE: "dashboard/users/activity",
-  USERS_NOTHING_ROUTE: "dashboard/users/nothing",
-  SETTINGS_GENERAL_ROUTE: "dashboard/settings/general",
-  SETTINGS_SECURITY_ROUTE: "dashboard/settings/security",
-  ANALYTICS_OVERVIEW_ROUTE: "dashboard/analytics/overview",
-  ANALYTICS_REPORTS_ROUTE: "dashboard/analytics/reports",
-  MONITORING_EXPORT_ROUTE: "dashboard/monitoring/export",
-  MONITORING_ARCHIVE_ROUTE: "dashboard/monitoring/archive",
-  TEST_404_ROUTE: "test-404",
-});
+]);
+
+const App = () => {
+  return (
+    <div style={{ fontFamily: "system-ui, sans-serif" }}>
+      {/* Main Application Header */}
+      <header
+        style={{
+          backgroundColor: "#1f2937",
+          color: "white",
+          padding: "1rem 2rem",
+          boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+        }}
+      >
+        <h1 style={{ margin: 0, fontSize: "1.5rem" }}>Admin Portal</h1>
+
+        {/* Test Case 1: Primary Navigation */}
+        <nav style={{ marginTop: "1rem" }}>
+          <Nav
+            spacing="s"
+            style={{ "--tab-color": "#fff", "--tab-active-color": "#60a5fa" }}
+          >
+            <Link
+              appearance="tab"
+              padding="s"
+              currentIndicator
+              route={HOME_ROUTE}
+            >
+              🏠 Home
+            </Link>
+            <Link
+              appearance="tab"
+              padding="s"
+              currentIndicator
+              route={DASHBOARD_ROUTE}
+            >
+              📊 Dashboard
+            </Link>
+            <Link
+              appearance="tab"
+              padding="s"
+              currentIndicator
+              route={TEST_404_ROUTE}
+            >
+              ❌ Test 404
+            </Link>
+          </Nav>
+        </nav>
+      </header>
+
+      <main style={{ minHeight: "80vh", backgroundColor: "#f9fafb" }}>
+        <Route>
+          <Route route={HOME_ROUTE} element={<Home />} />
+          <Route route={DASHBOARD_ROUTE} element={<Dashboard />} />
+          <Route fallback element={"404 - Page Not Found"} />
+        </Route>
+      </main>
+    </div>
+  );
+};
 
 // User List Component - Shows actual user data first
 const UserListPage = () => (
@@ -304,44 +362,6 @@ const TechnicalExplanation = ({
   </details>
 );
 
-const App = () => {
-  return (
-    <div style={{ fontFamily: "system-ui, sans-serif" }}>
-      {/* Main Application Header */}
-      <header
-        style={{
-          backgroundColor: "#1f2937",
-          color: "white",
-          padding: "1rem 2rem",
-          boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
-        }}
-      >
-        <h1 style={{ margin: 0, fontSize: "1.5rem" }}>Admin Portal</h1>
-
-        {/* Test Case 1: Primary Navigation */}
-        <nav style={{ marginTop: "1rem" }}>
-          <TabList
-            underline
-            style={{ "--tab-color": "#fff", "--tab-active-color": "#60a5fa" }}
-          >
-            <Tab route={HOME_ROUTE}>🏠 Home</Tab>
-            <Tab route={DASHBOARD_ROUTE}>📊 Dashboard</Tab>
-            <Tab route={TEST_404_ROUTE}>❌ Test 404</Tab>
-          </TabList>
-        </nav>
-      </header>
-
-      <main style={{ minHeight: "80vh", backgroundColor: "#f9fafb" }}>
-        <Routes>
-          <Route route={HOME_ROUTE} element={<Home />} />
-          <Route route={DASHBOARD_ROUTE} element={<Dashboard />} />
-          <Route fallback element={"404 - Page Not Found"} />
-        </Routes>
-      </main>
-    </div>
-  );
-};
-
 const Home = () => {
   return (
     <div style={{ padding: "3rem", textAlign: "center" }}>
@@ -397,21 +417,19 @@ const Dashboard = () => {
           Dashboard Sections
         </h3>
 
-        <nav>
-          <TabList
-            vertical
-            expandX
-            style={{
-              "--tab-color": "#d1d5db",
-              "--tab-active-color": "#60a5fa",
-            }}
-          >
-            <Tab route={USERS_SECTION_ROUTE}>👥 Users Management</Tab>
-            <Tab route={SETTINGS_SECTION_ROUTE}>⚙️ Settings</Tab>
-            <Tab route={ANALYTICS_SECTION_ROUTE}>📈 Analytics</Tab>
-            <Tab route={REPORTS_SECTION_ROUTE}>🖥️ Monitoring</Tab>
-          </TabList>
-        </nav>
+        <Nav
+          vertical
+          expandX
+          style={{
+            "--tab-color": "#d1d5db",
+            "--tab-active-color": "#60a5fa",
+          }}
+        >
+          <Link route={USERS_SECTION_ROUTE}>👥 Users Management</Link>
+          <Link route={SETTINGS_SECTION_ROUTE}>⚙️ Settings</Link>
+          <Link route={ANALYTICS_SECTION_ROUTE}>📈 Analytics</Link>
+          <Link route={REPORTS_SECTION_ROUTE}>🖥️ Monitoring</Link>
+        </Nav>
 
         {/* Navigation Behavior Indicators */}
         <div style={{ marginTop: "2rem", padding: "0 1.5rem" }}>
@@ -466,7 +484,7 @@ const Dashboard = () => {
 
       {/* Main Content Area */}
       <main style={{ flex: 1, backgroundColor: "white" }}>
-        <Routes>
+        <Route>
           {/* Index route with nested index using <Route.Slot />
               - USERS_SECTION_ROUTE has index prop, so /dashboard redirects to /dashboard/users
               - USERS_LIST_ROUTE has index prop, so /dashboard/users redirects to /dashboard/users/list
@@ -497,17 +515,17 @@ const Dashboard = () => {
                     padding: "0 2rem",
                   }}
                 >
-                  <TabList
+                  <Nav
                     underline
                     style={{
                       "--tab-color": "#64748b",
                       "--tab-active-color": "#3b82f6",
                     }}
                   >
-                    <Tab route={USERS_LIST_ROUTE}>📋 User List</Tab>
-                    <Tab route={USERS_ACTIVITY_ROUTE}>📊 Activity</Tab>
-                    <Tab route={USERS_NOTHING_ROUTE}>❌ Nothing</Tab>
-                  </TabList>
+                    <Link route={USERS_LIST_ROUTE}>📋 User List</Link>
+                    <Link route={USERS_ACTIVITY_ROUTE}>📊 Activity</Link>
+                    <Link route={USERS_NOTHING_ROUTE}>❌ Nothing</Link>
+                  </Nav>
                 </div>
 
                 {/* Content Area using Route.Slot */}
@@ -548,7 +566,7 @@ const Dashboard = () => {
             route={REPORTS_SECTION_ROUTE}
             element={<MonitoringSection />}
           />
-        </Routes>
+        </Route>
       </main>
     </div>
   );
@@ -571,19 +589,19 @@ const SettingsSection = () => (
         padding: "0 2rem",
       }}
     >
-      <TabList
+      <Nav
         underline
         style={{
           "--tab-color": "#64748b",
           "--tab-active-color": "#dc2626",
         }}
       >
-        <Tab route={SETTINGS_GENERAL_ROUTE}>🔧 General</Tab>
-        <Tab route={SETTINGS_SECURITY_ROUTE}>🔒 Security</Tab>
-      </TabList>
+        <Link route={SETTINGS_GENERAL_ROUTE}>🔧 General</Link>
+        <Link route={SETTINGS_SECURITY_ROUTE}>🔒 Security</Link>
+      </Nav>
     </div>
     <div style={{ padding: "0 2rem" }}>
-      <Routes>
+      <Route>
         <Route
           index
           route={SETTINGS_GENERAL_ROUTE}
@@ -593,7 +611,7 @@ const SettingsSection = () => (
           route={SETTINGS_SECURITY_ROUTE}
           element={<SecuritySettingsPage />}
         />
-      </Routes>
+      </Route>
     </div>
   </div>
 );
@@ -615,19 +633,19 @@ const AnalyticsSection = () => (
         padding: "0 2rem",
       }}
     >
-      <TabList
+      <Nav
         underline
         style={{
           "--tab-color": "#64748b",
           "--tab-active-color": "#7c3aed",
         }}
       >
-        <Tab route={ANALYTICS_OVERVIEW_ROUTE}>📈 Overview</Tab>
-        <Tab route={ANALYTICS_REPORTS_ROUTE}>📊 Reports</Tab>
-      </TabList>
+        <Link route={ANALYTICS_OVERVIEW_ROUTE}>📈 Overview</Link>
+        <Link route={ANALYTICS_REPORTS_ROUTE}>📊 Reports</Link>
+      </Nav>
     </div>
     <div style={{ padding: "0 2rem" }}>
-      <Routes>
+      <Route>
         <Route
           index
           route={ANALYTICS_OVERVIEW_ROUTE}
@@ -637,7 +655,7 @@ const AnalyticsSection = () => (
           route={ANALYTICS_REPORTS_ROUTE}
           element={<AnalyticsReportsPage />}
         />
-      </Routes>
+      </Route>
     </div>
   </div>
 );
@@ -745,17 +763,17 @@ const MonitoringOverviewPage = () => (
       <h4 style={{ color: "#0891b2", marginBottom: "1rem" }}>
         Additional Tools
       </h4>
-      <TabList
+      <Nav
         style={{
           "--tab-color": "#64748b",
           "--tab-active-color": "#0891b2",
           "fontSize": "0.9rem",
         }}
       >
-        <Tab route={MONITORING_EXPORT_ROUTE}>🚨 Alerts</Tab>
-        <Tab route={MONITORING_ARCHIVE_ROUTE}>📋 Logs</Tab>
-      </TabList>
-      <Routes>
+        <Link route={MONITORING_EXPORT_ROUTE}>🚨 Alerts</Link>
+        <Link route={MONITORING_ARCHIVE_ROUTE}>📋 Logs</Link>
+      </Nav>
+      <Route>
         <Route
           route={MONITORING_EXPORT_ROUTE}
           element={<MonitoringAlertsPage />}
@@ -764,7 +782,7 @@ const MonitoringOverviewPage = () => (
           route={MONITORING_ARCHIVE_ROUTE}
           element={<MonitoringLogsPage />}
         />
-      </Routes>
+      </Route>
     </div>
     <TechnicalExplanation
       color="#0891b2"
