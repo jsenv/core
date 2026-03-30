@@ -33,53 +33,27 @@ const debug = (...args) => {
   console.debug(...args);
 };
 
-// Check if a route is a "parent" route (catches multiple routes) and if current URL matches exactly
-const isParentRouteExactMatch = (route) => {
-  if (!route) {
-    return false;
-  }
-  const currentUrl = window.location.href;
-  const parentUrl = route.buildUrl();
-  if (currentUrl === parentUrl) {
-    return true;
-  }
-  const currentUrlObject = new URL(currentUrl);
-  if (!currentUrlObject.pathname.endsWith("/")) {
-    return false;
-  }
-  const pathnameWithoutSlash = currentUrlObject.pathname.slice(0, -1);
-  currentUrlObject.pathname = pathnameWithoutSlash;
-  const currentUrlWithoutTrailingSlash = currentUrlObject.href;
-  return currentUrlWithoutTrailingSlash === parentUrl;
-};
-
-const RootElement = () => {
-  return <Route.Slot />;
-};
-const SLOT_ROUTE_NO_MATCH = () => null;
-const SlotContext = createContext(SLOT_ROUTE_NO_MATCH);
 const RouteInfoContext = createContext(null);
 const RegisterChildRouteContext = createContext(null);
 
-export const Routes = ({ element = <RootElement />, children }) => {
+export const useMatchingRouteInfo = () => useContext(RouteInfoContext);
+
+// <Routes> renders whichever child <Route> matches the current URL.
+// It gets its own route from the parent RouteInfoContext (set by the parent Route's MatchingElement).
+export const Routes = ({ children }) => {
   const routeInfo = useMatchingRouteInfo();
   const route = routeInfo?.route;
 
-  return (
-    <Route route={route} element={element}>
-      {children}
-    </Route>
-  );
+  return <Route route={route}>{children}</Route>;
 };
 
-export const useMatchingRouteInfo = () => useContext(RouteInfoContext);
-
+// <Route> — if route matches (and routeParams match), render element.
+// Children are nested <Route> components that register with this Route.
+// When children exist, the matching child's element is rendered inside this Route's element.
 export const Route = ({
   route,
   element,
   action,
-  index,
-  fallback,
   meta,
   children,
   routeParams,
@@ -88,16 +62,15 @@ export const Route = ({
   const matchingInfoRef = useRef(null);
   const initRef = useRef(null);
 
-  // On every render, update the element in case parent re-rendered with new props
+  // On every render, update the element signal so the MatchingElement closure sees fresh props
   if (initRef.current) {
     initRef.current.elementSignal.value = element;
   }
 
-  // During the first render we enter the "registration" phase:
-  // render RouteRegistrar which renders children so they can register,
-  // then useLayoutEffect fires initRouteObserver which calls onMatchingInfoChange
-  // synchronously, which sets matchingInfoRef and calls forceRender.
-  // On the second render (and all subsequent) we have matchingInfo and render output.
+  // First render: registration phase.
+  // RouteRegistrar renders children so they register via context,
+  // then useLayoutEffect fires initRouteObserver which calls onMatchingInfoChange,
+  // setting matchingInfoRef and triggering forceRender.
   if (!initRef.current) {
     // eslint-disable-next-line signals/no-signal-in-component-body
     const elementSignal = signal(element);
@@ -107,8 +80,6 @@ export const Route = ({
         elementSignal={elementSignal}
         action={action}
         route={route}
-        index={index}
-        fallback={fallback}
         meta={meta}
         routeParams={routeParams}
         onMatchingInfoChange={(matchingInfo) => {
@@ -129,58 +100,25 @@ export const Route = ({
   return <MatchingElement />;
 };
 
-/*
- * RouteRegistrar renders once to let children register via context,
- * then useLayoutEffect fires initRouteObserver.
- */
 const RouteRegistrar = ({
   elementSignal,
   action,
   route,
-  index,
-  fallback,
   meta,
   routeParams,
   onMatchingInfoChange,
   children,
 }) => {
-  if (route && fallback) {
-    throw new Error("Route cannot have both route and fallback props");
-  }
   const parentRegisterChildRoute = useContext(RegisterChildRouteContext);
 
   const elementId = getElementSignature(elementSignal.peek());
   const candidateSet = new Set();
-  let indexCandidate = null;
-  let fallbackCandidate = null;
   const registerChildRoute = (childRouteInfo) => {
     const childElementId = getElementSignature(
       childRouteInfo.elementSignal.peek(),
     );
     debug(`${elementId}.registerChildRoute(${childElementId})`);
     candidateSet.add(childRouteInfo);
-
-    if (childRouteInfo.index) {
-      if (indexCandidate) {
-        throw new Error(`Multiple index routes registered under the same parent route (${elementId}):
-- ${getElementSignature(indexCandidate.elementSignal.peek())}
-- ${childElementId}`);
-      }
-      indexCandidate = childRouteInfo;
-    }
-    if (childRouteInfo.fallback) {
-      if (fallbackCandidate) {
-        throw new Error(`Multiple fallback routes registered under the same parent route (${elementId}):
-- ${getElementSignature(fallbackCandidate.elementSignal.peek())}
-- ${childElementId}`);
-      }
-      if (childRouteInfo.route.routeFromProps) {
-        throw new Error(
-          `Fallback route cannot have a route prop (${childElementId})`,
-        );
-      }
-      fallbackCandidate = childRouteInfo;
-    }
   };
 
   if (DEBUG) {
@@ -195,12 +133,8 @@ const RouteRegistrar = ({
       elementSignal,
       action,
       route,
-      index,
-      fallback,
       meta,
       routeParams,
-      indexCandidate,
-      fallbackCandidate,
       candidateSet,
       onMatchingInfoChange,
       parentRegisterChildRoute,
@@ -218,24 +152,12 @@ const initRouteObserver = ({
   elementSignal,
   action,
   route,
-  index,
-  fallback,
   meta,
   routeParams,
-  indexCandidate,
-  fallbackCandidate,
   candidateSet,
   onMatchingInfoChange,
   parentRegisterChildRoute,
 }) => {
-  if (
-    !fallbackCandidate &&
-    indexCandidate &&
-    indexCandidate.fallback !== false
-  ) {
-    fallbackCandidate = indexCandidate;
-  }
-
   const [teardown, addTeardown] = createPubSub();
 
   const elementId = getElementSignature(elementSignal.peek());
@@ -250,6 +172,7 @@ const initRouteObserver = ({
   - ${candidateElementIds.join("\n  - ")}`,
     );
   }
+
   const compositeRoute = {
     urlPattern: `composite(${candidateElementIds})`,
     isComposite: true,
@@ -259,19 +182,18 @@ const initRouteObserver = ({
   };
 
   const matchingRouteInfoSignal = signal(null);
-  const SlotMatchingElementSignal = signal(SLOT_ROUTE_NO_MATCH);
+  const matchingChildElementSignal = signal(null);
 
+  // MatchingElement renders:
+  // 1. This route's own element (read from elementSignal)
+  // 2. The matching child's element (read from matchingChildElementSignal) inside it
   const MatchingElement = () => {
     const currentElement = elementSignal.value;
     const matchingRouteInfo = matchingRouteInfoSignal.value;
     useUITransitionContentId(
-      matchingRouteInfo
-        ? matchingRouteInfo.route.urlPattern
-        : fallback
-          ? "fallback"
-          : undefined,
+      matchingRouteInfo ? matchingRouteInfo.route.urlPattern : undefined,
     );
-    const SlotMatchingElement = SlotMatchingElementSignal.value;
+    const matchingChildElement = matchingChildElementSignal.value;
     const renderedElement = action ? (
       <ActionRenderer action={action}>{currentElement}</ActionRenderer>
     ) : (
@@ -279,33 +201,21 @@ const initRouteObserver = ({
     );
     return (
       <RouteInfoContext.Provider value={matchingRouteInfo}>
-        <SlotContext.Provider value={SlotMatchingElement}>
-          {renderedElement}
-        </SlotContext.Provider>
+        {renderedElement}
+        {matchingChildElement}
       </RouteInfoContext.Provider>
     );
   };
   MatchingElement.underlyingElementId =
     candidateSet.size === 0
-      ? `${elementId} without slot`
-      : `[${elementId} with slot one of ${candidateElementIds}]`;
+      ? `${elementId} (leaf)`
+      : `${elementId} (parent of ${candidateElementIds.join(", ")})`;
 
-  const findMatchingChildInfo = () => {
+  const findMatchingChild = () => {
     for (const candidate of candidateSet) {
       if (candidate.route?.matching) {
         return candidate;
       }
-    }
-    if (indexCandidate) {
-      if (indexCandidate === fallbackCandidate) {
-        return indexCandidate;
-      }
-      if (route && isParentRouteExactMatch(route)) {
-        return indexCandidate;
-      }
-    }
-    if (fallbackCandidate) {
-      return fallbackCandidate;
     }
     return null;
   };
@@ -318,20 +228,13 @@ const initRouteObserver = ({
         if (routeParams && !route.matchesParams(routeParams)) {
           return null;
         }
-        const matchingChildInfo = findMatchingChildInfo();
-        if (matchingChildInfo) {
-          return matchingChildInfo;
-        }
-        return {
-          route,
-          MatchingElement: SLOT_ROUTE_NO_MATCH,
-          meta,
-        };
+        return { route, meta };
       }
     : () => {
-        const matchingChildInfo = findMatchingChildInfo();
-        if (matchingChildInfo) {
-          return matchingChildInfo;
+        // No route prop (Routes wrapper) — match if any child matches
+        const matchingChild = findMatchingChild();
+        if (matchingChild) {
+          return { route: matchingChild.route, meta };
         }
         return null;
       };
@@ -341,22 +244,27 @@ const initRouteObserver = ({
     if (newMatchingInfo) {
       compositeRoute.matching = true;
       matchingRouteInfoSignal.value = newMatchingInfo;
-      SlotMatchingElementSignal.value =
-        newMatchingInfo.MatchingElement || SLOT_ROUTE_NO_MATCH;
+
+      // Find matching child and render its MatchingElement
+      const matchingChild = findMatchingChild();
+      if (matchingChild) {
+        matchingChildElementSignal.value = <matchingChild.MatchingElement />;
+      } else {
+        matchingChildElementSignal.value = null;
+      }
+
       debug(
-        `${elementId} updateMatchingInfo: MATCH route=${newMatchingInfo.route?.urlPattern}, slot=${newMatchingInfo.MatchingElement?.underlyingElementId ?? "SLOT_ROUTE_NO_MATCH"}`,
+        `${elementId} updateMatchingInfo: MATCH route=${newMatchingInfo.route?.urlPattern}`,
       );
       onMatchingInfoChange({
         route: newMatchingInfo.route,
         MatchingElement,
-        index: newMatchingInfo.index,
-        fallback: newMatchingInfo.fallback,
         meta: newMatchingInfo.meta,
       });
     } else {
       compositeRoute.matching = false;
       matchingRouteInfoSignal.value = null;
-      SlotMatchingElementSignal.value = SLOT_ROUTE_NO_MATCH;
+      matchingChildElementSignal.value = null;
       debug(`${elementId} updateMatchingInfo: ROUTE NO MATCH`);
       onMatchingInfoChange(null);
     }
@@ -398,8 +306,6 @@ const initRouteObserver = ({
       route: compositeRoute,
       elementSignal,
       MatchingElement,
-      index,
-      fallback,
       meta,
     });
   }
@@ -409,24 +315,3 @@ const initRouteObserver = ({
     teardown();
   };
 };
-
-// - "undefined" -> no SlotContext.Provider in the tree
-// - SLOT_ROUTE_NO_MATCH -> provider exists but no route matches
-// - any other value -> the matching route's MatchingElement component
-export const RouteSlot = () => {
-  const SlotElement = useContext(SlotContext);
-  debug(
-    `RouteSlot render: SlotElement=${SlotElement === SLOT_ROUTE_NO_MATCH ? "SLOT_ROUTE_NO_MATCH" : SlotElement === undefined ? "undefined" : (SlotElement?.underlyingElementId ?? "unknown function")}`,
-  );
-  if (SlotElement === undefined) {
-    console.trace(
-      "RouteSlot: SlotElement is undefined (no SlotContext.Provider in tree)",
-    );
-    return <p>&lt;RouteSlot/&gt; must be used inside a &lt;Route&gt;</p>;
-  }
-  if (SlotElement === SLOT_ROUTE_NO_MATCH) {
-    return null;
-  }
-  return <SlotElement />;
-};
-Route.Slot = RouteSlot;
