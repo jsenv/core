@@ -49,25 +49,25 @@ import.meta.css = /* css */ `
       text-align: inherit;
       border-radius: inherit;
     }
-  }
 
-  .navi_text_overflow {
-    flex-wrap: wrap;
-    text-overflow: ellipsis;
-    overflow: hidden;
-  }
+    &[data-text-overflow] {
+      flex-wrap: wrap;
+      text-overflow: ellipsis;
+      overflow: hidden;
 
-  .navi_text_overflow_wrapper {
-    display: flex;
-    width: 100%;
-    flex-grow: 1;
-    gap: 0.3em;
-  }
+      .navi_text_overflow_wrapper {
+        display: flex;
+        width: 100%;
+        flex-grow: 1;
+        gap: 0.3em;
 
-  .navi_text_overflow_text {
-    max-width: 100%;
-    text-overflow: ellipsis;
-    overflow: hidden;
+        .navi_text_overflow_text {
+          max-width: 100%;
+          text-overflow: ellipsis;
+          overflow: hidden;
+        }
+      }
+    }
   }
 
   .navi_custom_space {
@@ -251,7 +251,7 @@ const TextOverflow = ({ noWrap, spacing, children, ...rest }) => {
       // For paragraph we prefer to keep lines and only hide unbreakable long sections
       preLine={rest.as === "p"}
       {...rest}
-      className="navi_text_overflow"
+      data-text-overflow
       spacing="pre"
     >
       <span className="navi_text_overflow_wrapper">
