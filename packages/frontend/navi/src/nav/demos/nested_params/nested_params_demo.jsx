@@ -1,21 +1,19 @@
 import { render } from "preact";
 
 import {
+  Link,
+  Nav,
   Route,
-  Routes,
+  route,
   setupRoutes,
-  Tab,
-  TabList,
   useUrlSearchParam,
 } from "@jsenv/navi";
 
-// Setup nested routes
-const { HOME_ROUTE, GALLERY_ROUTE, PHOTOS_ROUTE, ALBUMS_ROUTE } = setupRoutes({
-  HOME_ROUTE: "/",
-  GALLERY_ROUTE: "/gallery/*",
-  PHOTOS_ROUTE: "/gallery/photos",
-  ALBUMS_ROUTE: "/gallery/albums",
-});
+const HOME_ROUTE = route("");
+const GALLERY_ROUTE = route("/gallery/*");
+const PHOTOS_ROUTE = route("/gallery/photos");
+const ALBUMS_ROUTE = route("/gallery/albums");
+setupRoutes([HOME_ROUTE, GALLERY_ROUTE, PHOTOS_ROUTE, ALBUMS_ROUTE]);
 
 const HomePage = () => {
   return (
@@ -39,15 +37,15 @@ const GalleryPage = () => {
 
       <h3>Gallery Sections</h3>
       <p>Photos and albums will inherit the current color theme:</p>
-      <TabList spacing="sm">
-        <Tab route={PHOTOS_ROUTE} routeParams={{ color }} />
-        <Tab route={ALBUMS_ROUTE} routeParams={{ color }} />
-      </TabList>
+      <Nav spacing="s">
+        <Link route={PHOTOS_ROUTE} routeParams={{ color }} />
+        <Link route={ALBUMS_ROUTE} routeParams={{ color }} />
+      </Nav>
 
-      <Routes>
+      <Route>
         <Route route={PHOTOS_ROUTE} element={<PhotosPage />} />
         <Route route={ALBUMS_ROUTE} element={<AlbumsPage />} />
-      </Routes>
+      </Route>
     </div>
   );
 };
@@ -97,11 +95,11 @@ const App = () => {
 
       {/* Top level navigation - always available */}
       <div style={{ marginBottom: "20px" }}>
-        <TabList spacing="sm">
-          <Tab route={HOME_ROUTE}>Home</Tab>
-          <Tab route={GALLERY_ROUTE} routeParams={{ color: "red" }} />
-          <Tab route={GALLERY_ROUTE} routeParams={{ color: "green" }} />
-        </TabList>
+        <Nav spacing="s">
+          <Link route={HOME_ROUTE}>Home</Link>
+          <Link route={GALLERY_ROUTE} routeParams={{ color: "red" }} />
+          <Link route={GALLERY_ROUTE} routeParams={{ color: "green" }} />
+        </Nav>
       </div>
 
       <div
@@ -112,10 +110,10 @@ const App = () => {
           backgroundColor: "#fafafa",
         }}
       >
-        <Routes>
+        <Route>
           <Route route={HOME_ROUTE} element={<HomePage />} />
           <Route route={GALLERY_ROUTE} element={<GalleryPage />} />
-        </Routes>
+        </Route>
       </div>
     </div>
   );
