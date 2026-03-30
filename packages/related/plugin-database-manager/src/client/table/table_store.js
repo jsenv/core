@@ -172,4 +172,47 @@ export const TABLE_ROW = resource("table_row", {
     const { data } = await response.json();
     return data;
   },
+  DELETE: async ({ tablename, rowId }, { signal }) => {
+    const response = await fetch(
+      `${window.DB_MANAGER_CONFIG.apiUrl}/tables/${tablename}/rows/${rowId}`,
+      {
+        signal,
+        method: "DELETE",
+        headers: {
+          "accept": "application/json",
+          "content-type": "application/json",
+        },
+      },
+    );
+    if (!response.ok) {
+      throw await errorFromResponse(
+        response,
+        `Failed to delete rows in "${tablename}" table`,
+      );
+    }
+    return [{ tablename }, { rowId }];
+  },
+  DELETE_MANY: async ({ tablename, rowIds }, { signal }) => {
+    const response = await fetch(
+      `${window.DB_MANAGER_CONFIG.apiUrl}/tables/${tablename}/rows`,
+      {
+        signal,
+        method: "DELETE",
+        headers: {
+          "accept": "application/json",
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({ rowIds }),
+      },
+    );
+    if (!response.ok) {
+      throw await errorFromResponse(
+        response,
+        `Failed to delete rows in "${tablename}" table`,
+      );
+    }
+    return rowIds.map((rowId) => {
+      return [{ tablename }, { rowId }];
+    });
+  },
 });

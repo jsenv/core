@@ -16,11 +16,12 @@
  */
 
 import {
+  Box,
   Button,
   Checkbox,
   Col,
   Colgroup,
-  countSelectedRows,
+  filterTableSelection,
   Label,
   RowNumberCol,
   RowNumberTableCell,
@@ -28,6 +29,7 @@ import {
   Table,
   TableCell,
   Tbody,
+  Text,
   Thead,
   Tr,
   useCellsAndColumns,
@@ -61,7 +63,11 @@ export const TableData = ({ table, rows }) => {
     { columnIdKey: "column_name" },
   );
 
-  const selectedRowCount = countSelectedRows(selection);
+  const selectedRows = filterTableSelection(
+    selection,
+    ({ columnId }) => columnId === "row_number",
+  );
+  const selectedRowCount = selectedRows.length;
 
   return (
     <div>
@@ -129,9 +135,10 @@ export const TableData = ({ table, rows }) => {
               })}
             </Tbody>
           </Table>
-          <div>
+          <Box column spacing="s" alignY="center" paddingY="s">
             <Label>
               <Checkbox
+                checked={selectedRowCount > 0}
                 action={() => {
                   if (selectedRowCount === 0) {
                     const rowSelection = [];
@@ -139,30 +146,75 @@ export const TableData = ({ table, rows }) => {
                     let y = 0;
                     while (y < rowCount) {
                       const firstCellValue = stringifyTableSelectionValue(
-                        "row",
-                        y,
+                        "cell",
+                        { columnId: "row_number", rowId: rows[y].id },
                       );
                       rowSelection.push(firstCellValue);
                       y++;
                     }
-
                     setSelection(rowSelection);
                   } else {
                     setSelection([]);
                   }
                 }}
               />
-              {selectedRowCount === 0
-                ? "Select all"
-                : `${selectedRowCount} selected`}
+              <Text size="xs" bold>
+                {selectedRowCount === 0
+                  ? "Select all"
+                  : `${selectedRowCount} selected`}
+              </Text>
             </Label>
-            <Button action={() => {}}>Delete</Button>
-          </div>
+            <SelectedRowActions selectedRows={selectedRows} rows={rows} />
+          </Box>
         </>
       )}
       <div className="table_data_actions">
         <Button action={createRow}>Add row</Button>
       </div>
     </div>
+  );
+};
+
+const SelectedRowActions = ({ selectedRows, rows }) => {
+  const selectedRowCount = selectedRows.length;
+  if (selectedRowCount === 0) {
+    return null;
+  }
+
+  let message;
+  if (selectedRowCount === 1) {
+    const rowIdSelected = selectedRows[0].rowId;
+    const rowToDelete = rows.find((r) => String(r.id) === rowIdSelected);
+    let rowName;
+    if (rowToDelete.name) {
+      rowName = `row named "${rowToDelete.name}"`;
+    } else {
+      rowName = `row #${rowToDelete.id}`;
+    }
+    message = `Are you sur you want to delete ${rowName}?`;
+
+    return (
+      <Button
+        data-confirm-message={message}
+        action={async () => {
+          await TABLE_ROW.DELETE(rowIdSelected);
+        }}
+      >
+        Delete
+      </Button>
+    );
+  }
+
+  return (
+    <Button
+      data-confirm-message={`Are you sure you want to delete the ${selectedRowCount} selected rows?`}
+      action={async () => {
+        await TABLE_ROW.DELETE_MANY({
+          rowIds: selectedRows.map((r) => r.rowId),
+        });
+      }}
+    >
+      Delete
+    </Button>
   );
 };

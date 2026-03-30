@@ -105,13 +105,13 @@ export const isColumnSelected = (selection, columnId) => {
   return selection.has(columnSelectionValue);
 };
 
-export const countSelectedRows = (selection) => {
-  let count = 0;
+export const filterTableSelection = (selection, predicate) => {
+  let matching = [];
   for (const item of selection) {
     const selectionValueInfo = parseTableSelectionValue(item);
-    if (selectionValueInfo.type === "row") {
-      count++;
+    if (predicate(selectionValueInfo)) {
+      matching.push(selectionValueInfo);
     }
   }
-  return count;
+  return matching;
 };
