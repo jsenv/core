@@ -4,6 +4,14 @@
     <meta charset="utf-8" />
     <title>Route Layout Demo</title>
     <style>
+      @keyframes render-flash {
+        0% {
+          background-color: var(--flash-color, rgba(255, 255, 255, 0.25));
+        }
+        100% {
+          background-color: transparent;
+        }
+      }
       * {
         box-sizing: border-box;
       }
@@ -262,16 +270,16 @@
         };
         const lines = [
           s("App"),
-          "  ├─ " + s("HomePage"),
-          "  ├─ " + s("AuthLayout"),
-          "  │   ├─ " + s("ProfilePage"),
-          "  │   └─ " + s("SettingsPage"),
-          "  ├─ " + s("DashboardLayout"),
-          "  │   ├─ " + s("DashboardHomePage"),
-          "  │   ├─ " + s("DashboardProjectsPage"),
-          "  │   ├─ " + s("DashboardAnalyticsPage"),
-          "  │   └─ " + s("DashboardNotFound"),
-          "  └─ " + s("NotFoundPage"),
+          `  ├─ ${s("HomePage")}`,
+          `  ├─ ${s("AuthLayout")}`,
+          `  │   ├─ ${s("ProfilePage")}`,
+          `  │   └─ ${s("SettingsPage")}`,
+          `  ├─ ${s("DashboardLayout")}`,
+          `  │   ├─ ${s("DashboardHomePage")}`,
+          `  │   ├─ ${s("DashboardProjectsPage")}`,
+          `  │   ├─ ${s("DashboardAnalyticsPage")}`,
+          `  │   └─ ${s("DashboardNotFound")}`,
+          `  └─ ${s("NotFoundPage")}`,
         ];
         counts.innerHTML = `<div style="font-family:monospace;font-size:12px;line-height:1.7;white-space:pre">${lines.join("\n")}</div>`;
       };
