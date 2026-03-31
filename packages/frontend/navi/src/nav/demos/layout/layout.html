@@ -222,7 +222,6 @@
       const PROFILE_ROUTE = route("/profile");
       const SETTINGS_ROUTE = route("/settings");
       const DASHBOARD_HOME_ROUTE = route("/dashboard");
-      const DASHBOARD_OVERVIEW_ROUTE = route("/dashboard/overview");
       const DASHBOARD_PROJECTS_ROUTE = route("/dashboard/projects");
       const DASHBOARD_ANALYTICS_ROUTE = route("/dashboard/analytics");
       const DASHBOARD_UNKNOWN_ROUTE = route("/dashboard/unknown");
@@ -232,15 +231,11 @@
         PROFILE_ROUTE,
         SETTINGS_ROUTE,
         DASHBOARD_HOME_ROUTE,
-        DASHBOARD_OVERVIEW_ROUTE,
         DASHBOARD_PROJECTS_ROUTE,
         DASHBOARD_ANALYTICS_ROUTE,
         DASHBOARD_UNKNOWN_ROUTE,
         UNKNOWN_ROUTE,
       ]);
-
-      debugger;
-      console.log(DASHBOARD_OVERVIEW_ROUTE.buildUrl());
 
       // Plain-DOM render tracking — never causes re-renders
       const renderCounts = {
@@ -630,7 +625,6 @@
           >
             <Nav>
               <Link route={DASHBOARD_HOME_ROUTE}>Dashboard home</Link>
-              <Link route={DASHBOARD_OVERVIEW_ROUTE}>Overview</Link>
               <Link route={DASHBOARD_PROJECTS_ROUTE}>Projects</Link>
               <Link route={DASHBOARD_ANALYTICS_ROUTE}>Analytics</Link>
               <Link
