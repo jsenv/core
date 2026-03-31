@@ -33,27 +33,15 @@ const debug = (...args) => {
   console.debug(...args);
 };
 
-// <Route> splits first on children presence, then on route/fallback:
-// RouteWithChildren (has children):
-//   - route only: renders when URL matches, provides context for nested routes
-//   - neither: container — manages child matching, optionally wraps in a layout element
-// RouteLeaf (no children):
-//   - route only: renders when URL matches
-//   - fallback only: renders when no sibling route is active
-//   - route + fallback: renders when URL matches AND no sibling route is active
+// <Route> splits on children presence first:
+// - children → RouteContainer (manages child matching, optional layout wrapper)
+// - route    → RouteLeafRoute (renders when URL matches)
+// - fallback → RouteLeafFallback (renders when no sibling is active)
 export const Route = (props) => {
-  if (props.children) {
-    return <RouteWithChildren {...props} />;
-  }
-  return <RouteLeaf {...props} />;
-};
-
-// RouteWithChildren: has JSX children — dispatches based on route/fallback props.
-const RouteWithChildren = (props) => {
-  if (props.route) {
-    return <RouteContainerWithRoute {...props} />;
-  }
-  return <RouteContainer {...props} />;
+  if (props.children) return <RouteContainer {...props} />;
+  if (props.route) return <RouteLeafRoute {...props} />;
+  if (props.fallback) return <RouteLeafFallback {...props} />;
+  return null;
 };
 // Note: no ProbingContext needed. Since useLayoutEffect fires bottom-up,
 // children have reported to their parent tracker before the parent's effect runs.
@@ -73,87 +61,39 @@ const useMatchingChildren = () => {
 let matchingChildrenIdCounter = 0;
 const createMatchingChildren = () => {
   const trackerId = matchingChildrenIdCounter++;
-  // routeCount: only URL-matching routes. Used by fallbacks to decide whether to activate.
-  let routeCount = 0;
-  const hasActiveRouteSignal = signal(false);
-  // totalCount: routes + fallbacks. Used by RouteContainer to decide layout visibility.
-  let totalCount = 0;
+  // Single counter for all active children (routes + fallbacks).
+  // Fallback activates only when activeCount === 0.
+  let activeCount = 0;
   const hasActiveChildSignal = signal(false);
 
-  const reportRouteMatch = () => {
-    routeCount++;
-    totalCount++;
-    debug(
-      `[tracker ${trackerId}] reportRouteMatch, routeCount=${routeCount}, totalCount=${totalCount}`,
-    );
-    if (routeCount === 1) {
-      hasActiveRouteSignal.value = true;
-    }
-    if (totalCount === 1) {
-      hasActiveChildSignal.value = true;
-    }
+  const reportMatch = () => {
+    activeCount++;
+    debug(`[tracker ${trackerId}] reportMatch, activeCount=${activeCount}`);
+    if (activeCount === 1) hasActiveChildSignal.value = true;
   };
-  const reportRouteUnmatch = () => {
-    routeCount--;
-    totalCount--;
-    debug(
-      `[tracker ${trackerId}] reportRouteUnmatch, routeCount=${routeCount}, totalCount=${totalCount}`,
-    );
-    if (routeCount === 0) {
-      hasActiveRouteSignal.value = false;
-    }
-    if (totalCount === 0) {
-      hasActiveChildSignal.value = false;
-    }
-  };
-  const reportFallbackActive = () => {
-    totalCount++;
-    debug(
-      `[tracker ${trackerId}] reportFallbackActive, totalCount=${totalCount}`,
-    );
-    if (totalCount === 1) {
-      hasActiveChildSignal.value = true;
-    }
-  };
-  const reportFallbackInactive = () => {
-    totalCount--;
-    debug(
-      `[tracker ${trackerId}] reportFallbackInactive, totalCount=${totalCount}`,
-    );
-    if (totalCount === 0) {
-      hasActiveChildSignal.value = false;
-    }
+  const reportUnmatch = () => {
+    activeCount--;
+    debug(`[tracker ${trackerId}] reportUnmatch, activeCount=${activeCount}`);
+    if (activeCount === 0) hasActiveChildSignal.value = false;
   };
 
   return {
     trackerId,
-    // For leaf fallbacks: "did any sibling URL-route match?"
-    useHasActiveRoute: () => hasActiveRouteSignal.value,
-    // For RouteContainer: "is any child active (route or fallback)?"
+    // For RouteContainer: is any child active?
+    // For RouteLeafFallback: are any siblings active? (same question)
     useHasActiveChild: () => hasActiveChildSignal.value,
-    reportRouteMatch,
-    reportRouteUnmatch,
+    reportMatch,
+    reportUnmatch,
     useReportMatch: (isMatching, id) => {
       useLayoutEffect(() => {
-        if (!isMatching) {
-          return undefined;
-        }
-        debug(`[route "${id}"] reporting route match`);
-        reportRouteMatch();
+        if (!isMatching) return undefined;
+        debug(`["${id}"] reporting match`);
+        reportMatch();
         return () => {
-          debug(`[route "${id}"] reporting route unmatch`);
-          reportRouteUnmatch();
+          debug(`["${id}"] reporting unmatch`);
+          reportUnmatch();
         };
       }, [isMatching]);
-    },
-    useReportFallbackActive: (isActive) => {
-      useLayoutEffect(() => {
-        if (!isActive) {
-          return undefined;
-        }
-        reportFallbackActive();
-        return () => reportFallbackInactive();
-      }, [isActive]);
     },
   };
 };
@@ -168,33 +108,6 @@ const useMatchingSiblingsContext = import.meta.dev
       return matchingSiblings;
     }
   : () => useContext(MatchingChildrenContext);
-// RouteContainerWithRoute: route with JSX children — renders when URL matches,
-// provides MatchingChildrenContext so nested routes can report to this route's tracker.
-const RouteContainerWithRoute = (props) => {
-  const matchingSiblings = useMatchingSiblingsContext();
-  const { route, routeParams } = props;
-  const { matching } = useRouteStatus(route);
-  const isMatching =
-    matching && (!routeParams || route.matchesParams(routeParams));
-  const matchingChildren = useMatchingChildren();
-
-  debug(
-    `[route "${route.urlPattern}"] RENDER (with-children), isMatching=${isMatching}`,
-  );
-
-  useUITransitionContentId(route.urlPattern);
-  matchingSiblings.useReportMatch(isMatching, route.urlPattern);
-
-  if (!isMatching) {
-    return null;
-  }
-  debug(`[route "${route.urlPattern}"] rendering content with children`);
-  return (
-    <MatchingChildrenContext.Provider value={matchingChildren}>
-      <RouteActive {...props} />
-    </MatchingChildrenContext.Provider>
-  );
-};
 // RouteContainer: manages child route matching, optionally wraps active children in a layout element.
 // Children are always rendered (never unmounted) so they can reactively respond to URL changes.
 const RouteContainer = ({ id, element, elementProps, children }) => {
@@ -204,8 +117,6 @@ const RouteContainer = ({ id, element, elementProps, children }) => {
   const isMatching = matchingSiblings && hasActiveChild;
   debug(`[container "${id}"] RENDER, hasActiveChild=${hasActiveChild}`);
 
-  // On initial mount hasActiveChild=false (signals start false), so nothing is reported yet.
-  // Once a child reports a match the signal flips, we re-render, and this effect fires to report up.
   if (matchingSiblings) {
     matchingSiblings.useReportMatch(isMatching, id);
   }
@@ -223,39 +134,8 @@ const RouteContainer = ({ id, element, elementProps, children }) => {
   return inner;
 };
 
-// RouteLeaf: no JSX children — dispatches based on route/fallback props.
-const RouteLeaf = (props) => {
-  if (props.route && props.fallback) {
-    return <RouteLeafWithFallbackAndRoute {...props} />;
-  }
-  if (props.route) {
-    return <RouteLeafRouteOnly {...props} />;
-  }
-  if (props.fallback) {
-    return <RouteLeafFallbackOnly {...props} />;
-  }
-  return null;
-};
-
-const RouteLeafWithFallbackAndRoute = (props) => {
-  const matchingSiblings = useMatchingSiblingsContext();
-  const hasActiveSiblingRoute = matchingSiblings.useHasActiveRoute();
-  const { route, routeParams } = props;
-  const { matching } = useRouteStatus(route);
-  const isMatching =
-    matching && (!routeParams || route.matchesParams(routeParams));
-  const isActive = !hasActiveSiblingRoute && isMatching;
-
-  useUITransitionContentId(route.urlPattern);
-  matchingSiblings.useReportFallbackActive(isActive);
-
-  if (!isActive) {
-    return null;
-  }
-  return <RouteActive {...props} />;
-};
-// RouteLeafRouteOnly: route without children — renders when URL matches.
-const RouteLeafRouteOnly = (props) => {
+// RouteLeafRoute: route without children — renders when URL matches.
+const RouteLeafRoute = (props) => {
   const matchingSiblings = useMatchingSiblingsContext();
   const { route, routeParams } = props;
   const { matching } = useRouteStatus(route);
@@ -268,22 +148,23 @@ const RouteLeafRouteOnly = (props) => {
   useUITransitionContentId(route.urlPattern);
   matchingSiblings.useReportMatch(isMatching, route.urlPattern);
 
-  if (!isMatching) {
-    return null;
-  }
+  if (!isMatching) return null;
   debug(`[route "${route.urlPattern}"] rendering content`);
   return <RouteActive {...props} />;
 };
-const RouteLeafFallbackOnly = (props) => {
+
+// RouteLeafFallback: renders when no sibling route is active.
+// On first render activeCount may still be 0 even if a route will match —
+// the sibling route's useLayoutEffect fires first (tree order), flips the signal,
+// and this component re-renders to null before the browser paints.
+const RouteLeafFallback = (props) => {
   const matchingSiblings = useMatchingSiblingsContext();
-  const hasActiveSiblingRoute = matchingSiblings.useHasActiveRoute();
-  const isActive = !hasActiveSiblingRoute;
+  const hasActiveSibling = matchingSiblings.useHasActiveChild();
+  const isActive = !hasActiveSibling;
 
-  matchingSiblings.useReportFallbackActive(isActive);
+  matchingSiblings.useReportMatch(isActive, "fallback");
 
-  if (!isActive) {
-    return null;
-  }
+  if (!isActive) return null;
   return <RouteActive {...props} />;
 };
 
