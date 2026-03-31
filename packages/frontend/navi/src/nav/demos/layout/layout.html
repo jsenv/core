@@ -35,13 +35,6 @@
         font-weight: 700;
         font-size: 14px;
       }
-      .render-badge {
-        padding: 2px 6px;
-        font-size: 11px;
-        font-family: monospace;
-        background: rgba(0, 0, 0, 0.08);
-        border-radius: 4px;
-      }
       .component-body {
         padding: 10px 14px;
       }
@@ -134,9 +127,28 @@
   </head>
   <body>
     <div id="app"></div>
+    <div
+      id="render-log"
+      style="
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: #1e1e2e;
+        color: #cdd6f4;
+        font-family: monospace;
+        font-size: 12px;
+        padding: 8px 16px;
+        border-top: 2px solid #45475a;
+        display: flex;
+        gap: 24px;
+        flex-wrap: wrap;
+        align-items: center;
+      "
+    ></div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { useRef, useState } from "preact/hooks";
+      import { useLayoutEffect } from "preact/hooks";
       import { Link, Route, route, setupRoutes } from "@jsenv/navi";
 
       const HOME_ROUTE = route("");
@@ -144,28 +156,37 @@
       const SETTINGS_ROUTE = route("/settings");
       setupRoutes([HOME_ROUTE, PROFILE_ROUTE, SETTINGS_ROUTE]);
 
-      let globalSeq = 0;
-      const useRenderInfo = () => {
-        const localRef = useRef(0);
-        localRef.current++;
-        globalSeq++;
-        return { local: localRef.current, global: globalSeq };
+      // Plain-DOM render tracking — never causes re-renders
+      const renderCounts = {};
+      const trackRender = (name) => {
+        renderCounts[name] = (renderCounts[name] || 0) + 1;
+      };
+      const flushRenderLog = () => {
+        const panel = document.getElementById("render-log");
+        if (!panel) return;
+        const COLORS = {
+          App: "#a5b4fc",
+          AuthLayout: "#7dd3fc",
+          HomePage: "#6ee7b7",
+          ProfilePage: "#fcd34d",
+          SettingsPage: "#fca5a5",
+        };
+        panel.innerHTML = Object.entries(renderCounts)
+          .map(
+            ([name, count]) =>
+              `<span style="color:${COLORS[name] ?? "#cdd6f4"}">${name}: <b>${count}</b></span>`,
+          )
+          .join("&ensp;·&ensp;");
+      };
+      const useTrackRender = (name) => {
+        trackRender(name);
+        useLayoutEffect(flushRenderLog);
       };
 
-      const ComponentBox = ({
-        colorClass,
-        name,
-        renderInfo,
-        headerExtras,
-        children,
-      }) => (
+      const ComponentBox = ({ colorClass, name, headerExtras, children }) => (
         <div class={`component-box ${colorClass}`}>
           <div class="component-header">
             <span class="component-name">{name}</span>
-            <span class="render-badge">
-              render #{renderInfo.local} &nbsp;·&nbsp; global #
-              {renderInfo.global}
-            </span>
             {headerExtras}
           </div>
           <div class="component-body">{children}</div>
@@ -185,7 +206,7 @@
 
       /* ── App (root) ─────────────────────────────────────────────── */
       const App = () => {
-        const renderInfo = useRenderInfo();
+        useTrackRender("App");
         const [appCount, incApp] = useCounter();
 
         return (
@@ -193,7 +214,6 @@
             <ComponentBox
               colorClass="box-app"
               name="App"
-              renderInfo={renderInfo}
               headerExtras={
                 <CounterBtn
                   colorClass="btn-app"
@@ -238,14 +258,13 @@
 
       /* ── AuthLayout ─────────────────────────────────────────────── */
       const AuthLayout = ({ appCount, incApp, children }) => {
-        const renderInfo = useRenderInfo();
+        useTrackRender("AuthLayout");
         const [authCount, incAuth] = useCounter();
 
         return (
           <ComponentBox
             colorClass="box-auth"
             name="AuthLayout"
-            renderInfo={renderInfo}
             headerExtras={
               <>
                 <CounterBtn
@@ -270,14 +289,13 @@
 
       /* ── Pages ──────────────────────────────────────────────────── */
       const HomePage = ({ appCount, incApp }) => {
-        const renderInfo = useRenderInfo();
+        useTrackRender("HomePage");
         const [homeCount, incHome] = useCounter();
 
         return (
           <ComponentBox
             colorClass="box-home"
             name="HomePage"
-            renderInfo={renderInfo}
             headerExtras={
               <>
                 <CounterBtn
@@ -303,14 +321,13 @@
       };
 
       const ProfilePage = ({ appCount, incApp }) => {
-        const renderInfo = useRenderInfo();
+        useTrackRender("ProfilePage");
         const [profileCount, incProfile] = useCounter();
 
         return (
           <ComponentBox
             colorClass="box-profile"
             name="ProfilePage"
-            renderInfo={renderInfo}
             headerExtras={
               <>
                 <CounterBtn
@@ -336,7 +353,7 @@
       };
 
       const SettingsPage = ({ appCount, incApp }) => {
-        const renderInfo = useRenderInfo();
+        useTrackRender("SettingsPage");
         const [settingsCount, incSettings] = useCounter();
 
         return (
