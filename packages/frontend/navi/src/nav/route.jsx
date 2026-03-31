@@ -34,13 +34,11 @@ const debug = (...args) => {
 };
 
 // <Route> splits on children presence first:
-// - children → RouteContainer (manages child matching, optional layout wrapper)
+// - children → RouteContainer (manages child matching, optional layout + fallback)
 // - route    → RouteLeafRoute (renders when URL matches)
-// - fallback → RouteLeafFallback (renders when no sibling is active)
 export const Route = (props) => {
   if (props.children) return <RouteContainer {...props} />;
   if (props.route) return <RouteLeafRoute {...props} />;
-  if (props.fallback) return <RouteLeafFallback {...props} />;
   return null;
 };
 // Note: no ProbingContext needed. Since useLayoutEffect fires bottom-up,
@@ -61,8 +59,6 @@ const useMatchingChildren = () => {
 let matchingChildrenIdCounter = 0;
 const createMatchingChildren = () => {
   const trackerId = matchingChildrenIdCounter++;
-  // Single counter for all active children (routes + fallbacks).
-  // Fallback activates only when activeCount === 0.
   let activeCount = 0;
   const hasActiveChildSignal = signal(false);
 
@@ -79,8 +75,6 @@ const createMatchingChildren = () => {
 
   return {
     trackerId,
-    // For RouteContainer: is any child active?
-    // For RouteLeafFallback: are any siblings active? (same question)
     useHasActiveChild: () => hasActiveChildSignal.value,
     reportMatch,
     reportUnmatch,
@@ -110,7 +104,14 @@ const useMatchingSiblingsContext = import.meta.dev
   : () => useContext(MatchingChildrenContext);
 // RouteContainer: manages child route matching, optionally wraps active children in a layout element.
 // Children are always rendered (never unmounted) so they can reactively respond to URL changes.
-const RouteContainer = ({ id, element, elementProps, children }) => {
+const RouteContainer = ({
+  id,
+  element,
+  elementProps,
+  fallback,
+  fallbackProps,
+  children,
+}) => {
   const matchingSiblings = useContext(MatchingChildrenContext); // null if top-level container
   const matchingChildren = useMatchingChildren();
   const hasActiveChild = matchingChildren.useHasActiveChild(); // reactive, re-renders only when boolean flips
@@ -126,10 +127,22 @@ const RouteContainer = ({ id, element, elementProps, children }) => {
       {children}
     </MatchingChildrenContext.Provider>
   );
-  if (element && hasActiveChild) {
+  if (hasActiveChild) {
     debug(`[container "${id}"] rendering children with layout element`);
-    const Element = element;
-    return <Element {...elementProps}>{inner}</Element>;
+    if (element) {
+      const Element = element;
+      return <Element {...elementProps}>{inner}</Element>;
+    }
+    return inner;
+  }
+  if (fallback) {
+    const Fallback = fallback;
+    const fallbackEl = <Fallback {...fallbackProps} />;
+    if (element) {
+      const Element = element;
+      return <Element {...elementProps}>{fallbackEl}</Element>;
+    }
+    return fallbackEl;
   }
   return inner;
 };
@@ -150,21 +163,6 @@ const RouteLeafRoute = (props) => {
 
   if (!isMatching) return null;
   debug(`[route "${route.urlPattern}"] rendering content`);
-  return <RouteActive {...props} />;
-};
-
-// RouteLeafFallback: renders when no sibling route is active.
-// On first render activeCount may still be 0 even if a route will match —
-// the sibling route's useLayoutEffect fires first (tree order), flips the signal,
-// and this component re-renders to null before the browser paints.
-const RouteLeafFallback = (props) => {
-  const matchingSiblings = useMatchingSiblingsContext();
-  const hasActiveSibling = matchingSiblings.useHasActiveChild();
-  const isActive = !hasActiveSibling;
-
-  matchingSiblings.useReportMatch(isActive, "fallback");
-
-  if (!isActive) return null;
   return <RouteActive {...props} />;
 };
 

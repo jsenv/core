@@ -255,7 +255,11 @@
                   Unknown (fallback)
                 </a>
               </nav>
-              <Route id="app_layout">
+              <Route
+                id="app_layout"
+                fallback={NotFoundPage}
+                fallbackProps={{ appCount, incApp }}
+              >
                 <Route
                   route={HOME_ROUTE}
                   element={HomePage}
@@ -277,11 +281,6 @@
                     elementProps={{ appCount, incApp }}
                   />
                 </Route>
-                <Route
-                  fallback
-                  element={NotFoundPage}
-                  elementProps={{ appCount, incApp }}
-                />
               </Route>
             </ComponentBox>
           </div>
