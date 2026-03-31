@@ -19,11 +19,19 @@
 
 import { signal } from "@preact/signals";
 import { createContext } from "preact";
-import { useContext, useLayoutEffect, useRef } from "preact/hooks";
+import { useContext, useLayoutEffect, useReducer, useRef } from "preact/hooks";
 
 import { ActionRenderer } from "../action/action_renderer.jsx";
 import { useUITransitionContentId } from "../ui_transition/ui_transition.jsx";
 import { useRouteStatus } from "./route.js";
+
+const DEBUG = true;
+const debug = (...args) => {
+  if (!DEBUG) {
+    return;
+  }
+  console.debug(...args);
+};
 
 // <Route> has 4 modes based on props:
 // 1. route (no fallback): renders when route matches, reports to parent
@@ -64,6 +72,7 @@ const createMatchingChildren = () => {
   const countSignal = signal(0);
 
   return {
+    countSignal,
     useCount: () => countSignal.value,
     reportMatch: () => {
       countSignal.value++;
@@ -85,13 +94,18 @@ const useMatchingSiblingsContext = import.meta.dev
     }
   : () => useContext(MatchingChildrenContext);
 
-const RouteAsContainer = ({ children }) => {
+const RouteAsContainer = ({ id, children }) => {
   const matchingChildren = useMatchingChildren();
   const matchingChildCount = matchingChildren.useCount(); // Reactive read: re-renders when any child reports a match
   const hasProbedRef = useRef(false);
+  const [, forceRender] = useReducer((n) => n + 1, 0);
 
   useLayoutEffect(() => {
     hasProbedRef.current = true;
+    debug(
+      `Route "${id}" probed with ${matchingChildren.countSignal.peek()} matching children`,
+    );
+    forceRender();
   }, []);
 
   const isProbing = !hasProbedRef.current;
@@ -117,6 +131,10 @@ const RouteOnly = (props) => {
   const isMatching =
     matching && (!routeParams || route.matchesParams(routeParams));
   const matchingChildren = useMatchingChildren();
+
+  debug(
+    `Route "${route.urlPattern}" isMatching: ${isMatching}, isProbing: ${isProbing}`,
+  );
 
   useLayoutEffect(() => {
     if (!isMatching) {

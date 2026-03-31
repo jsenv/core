@@ -65,7 +65,7 @@
 
       const App = () => (
         <AppLayout>
-          <Route>
+          <Route id="app_layout">
             {/* Home has no layout wrapper — standalone page */}
             <Route route={HOME_ROUTE} element={<HomePage />} />
 
@@ -77,7 +77,7 @@
              * <Route> (container) always renders its element+children.
              * Fix will come: only render layout when ≥1 child matches.
              */}
-            <Route>
+            <Route id="auth_layout">
               <AuthenticatedLayout>
                 <Route route={PROFILE_ROUTE} element={<ProfilePage />} />
                 <Route route={SETTINGS_ROUTE} element={<SettingsPage />} />
