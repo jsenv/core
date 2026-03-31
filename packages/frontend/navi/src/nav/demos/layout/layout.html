@@ -87,7 +87,7 @@
 
       // Layout shell rendered when either /profile or /settings matches.
       // The child routes render the actual page content inside it.
-      const AuthenticatedLayout = ({ children }) => {
+      const AuthenticatedLayout = ({ appCounter, children }) => {
         const renderCount = useRenderCount("AuthLayout");
         const localCounter = useLocalCounter("AuthLayout state");
         return (
@@ -106,7 +106,9 @@
                 marginBottom: "12px",
               }}
             >
-              Authenticated area {renderCount} {localCounter}
+              Authenticated area {renderCount}
+              <br />
+              App counter: {appCounter} | Self counter: {localCounter}
             </div>
             {children}
           </div>
@@ -120,15 +122,21 @@
           <AppLayout appCounter={appCounter}>
             <Route id="app_layout">
               {/* Home has no layout wrapper — standalone page */}
-              <Route route={HOME_ROUTE} element={HomePage} />
+              <Route
+                route={HOME_ROUTE}
+                element={() => <HomePage appCounter={appCounter} />}
+              />
 
               <Route id="auth_layout">
-                <AuthenticatedLayout>
+                <AuthenticatedLayout appCounter={appCounter}>
                   <Route
                     route={PROFILE_ROUTE}
                     element={() => <ProfilePage appCounter={appCounter} />}
                   />
-                  <Route route={SETTINGS_ROUTE} element={SettingsPage} />
+                  <Route
+                    route={SETTINGS_ROUTE}
+                    element={() => <SettingsPage appCounter={appCounter} />}
+                  />
                 </AuthenticatedLayout>
               </Route>
             </Route>
@@ -136,14 +144,16 @@
         );
       };
 
-      const HomePage = () => {
+      const HomePage = ({ appCounter }) => {
         const renderCount = useRenderCount("HomePage");
         const localCounter = useLocalCounter("Home state");
         return (
           <div>
             <h2>Home {renderCount}</h2>
             <p>No layout wrapper on this page.</p>
-            {localCounter}
+            App counter: {appCounter}
+            <br />
+            Self counter: {localCounter}
           </div>
         );
       };
@@ -160,14 +170,16 @@
           </div>
         );
       };
-      const SettingsPage = () => {
+      const SettingsPage = ({ appCounter }) => {
         const renderCount = useRenderCount("SettingsPage");
         const localCounter = useLocalCounter("Settings state");
         return (
           <div>
             <h2>Settings {renderCount}</h2>
             <p>This page is also wrapped inside the authenticated layout.</p>
-            {localCounter}
+            App counter: {appCounter}
+            <br />
+            Self counter: {localCounter}
           </div>
         );
       };
