@@ -510,7 +510,7 @@
         );
       };
 
-      const ProfilePage = ({ appCount, incApp }) => {
+      const ProfilePage = ({ appCount, incApp, authCount, incAuth }) => {
         useTrackRender("ProfilePage");
         const [profileCount, incProfile] = useCounter();
 
@@ -525,6 +525,12 @@
                   label="App state"
                   count={appCount}
                   onClick={incApp}
+                />
+                <CounterBtn
+                  colorClass="btn-auth"
+                  label="Auth state"
+                  count={authCount}
+                  onClick={incAuth}
                 />
                 <CounterBtn
                   colorClass="btn-profile"
