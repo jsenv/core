@@ -85,6 +85,52 @@ const createMatchingChildren = () => {
   const hasActiveChildSignal = signal(false);
   let probing = true;
 
+  const reportRouteMatch = () => {
+    routeCount++;
+    totalCount++;
+    debug(
+      `[tracker ${trackerId}] reportRouteMatch, routeCount=${routeCount}, totalCount=${totalCount}`,
+    );
+    if (!probing) {
+      if (routeCount === 1) hasActiveRouteSignal.value = true;
+      if (totalCount === 1) hasActiveChildSignal.value = true;
+    }
+  };
+  const reportRouteUnmatch = () => {
+    routeCount--;
+    totalCount--;
+    debug(
+      `[tracker ${trackerId}] reportRouteUnmatch, routeCount=${routeCount}, totalCount=${totalCount}`,
+    );
+    if (!probing) {
+      if (routeCount === 0) {
+        hasActiveRouteSignal.value = false;
+      }
+      if (totalCount === 0) {
+        hasActiveChildSignal.value = false;
+      }
+    }
+  };
+
+  const reportFallbackActive = () => {
+    totalCount++;
+    debug(
+      `[tracker ${trackerId}] reportFallbackActive, totalCount=${totalCount}`,
+    );
+    if (!probing && totalCount === 1) {
+      hasActiveChildSignal.value = true;
+    }
+  };
+  const reportFallbackInactive = () => {
+    totalCount--;
+    debug(
+      `[tracker ${trackerId}] reportFallbackInactive, totalCount=${totalCount}`,
+    );
+    if (!probing && totalCount === 0) {
+      hasActiveChildSignal.value = false;
+    }
+  };
+
   return {
     trackerId,
     endProbe: () => {
@@ -100,41 +146,28 @@ const createMatchingChildren = () => {
     // For RouteAsContainer: "is any child active (route or fallback)?"
     useHasActiveChild: () => hasActiveChildSignal.value,
     getCount: () => totalCount,
-    reportRouteMatch: () => {
-      routeCount++;
-      totalCount++;
-      debug(
-        `[tracker ${trackerId}] reportRouteMatch, routeCount=${routeCount}, totalCount=${totalCount}`,
-      );
-      if (!probing) {
-        if (routeCount === 1) hasActiveRouteSignal.value = true;
-        if (totalCount === 1) hasActiveChildSignal.value = true;
-      }
+
+    useReportMatch: (isMatching, route) => {
+      useLayoutEffect(() => {
+        if (!isMatching) {
+          return undefined;
+        }
+        debug(`[route "${route.urlPattern}"] reporting route match`);
+        reportRouteMatch();
+        return () => {
+          debug(`[route "${route.urlPattern}"] reporting route unmatch`);
+          reportRouteUnmatch();
+        };
+      }, [isMatching]);
     },
-    reportRouteUnmatch: () => {
-      routeCount--;
-      totalCount--;
-      debug(
-        `[tracker ${trackerId}] reportRouteUnmatch, routeCount=${routeCount}, totalCount=${totalCount}`,
-      );
-      if (!probing) {
-        if (routeCount === 0) hasActiveRouteSignal.value = false;
-        if (totalCount === 0) hasActiveChildSignal.value = false;
-      }
-    },
-    reportFallbackActive: () => {
-      totalCount++;
-      debug(
-        `[tracker ${trackerId}] reportFallbackActive, totalCount=${totalCount}`,
-      );
-      if (!probing && totalCount === 1) hasActiveChildSignal.value = true;
-    },
-    reportFallbackInactive: () => {
-      totalCount--;
-      debug(
-        `[tracker ${trackerId}] reportFallbackInactive, totalCount=${totalCount}`,
-      );
-      if (!probing && totalCount === 0) hasActiveChildSignal.value = false;
+    useReportFallbackActive: (isActive) => {
+      useLayoutEffect(() => {
+        if (!isActive) {
+          return undefined;
+        }
+        reportFallbackActive();
+        return () => reportFallbackInactive();
+      }, [isActive]);
     },
   };
 };
@@ -165,17 +198,7 @@ const RouteContainerWithRoute = (props) => {
   );
 
   useUITransitionContentId(route.urlPattern);
-  useLayoutEffect(() => {
-    if (!isMatching) {
-      return undefined;
-    }
-    debug(`[route "${route.urlPattern}"] reporting route match`);
-    matchingSiblings.reportRouteMatch();
-    return () => {
-      debug(`[route "${route.urlPattern}"] reporting route unmatch`);
-      matchingSiblings.reportRouteUnmatch();
-    };
-  }, [isMatching]);
+  matchingSiblings.useReportMatch(isMatching, route);
 
   if (!isMatching || isProbing) {
     return null;
@@ -324,13 +347,7 @@ const RouteLeafWithFallbackAndRoute = (props) => {
   const isActive = !isProbing && !hasActiveSiblingRoute && isMatching;
 
   useUITransitionContentId(route.urlPattern);
-  useLayoutEffect(() => {
-    if (!isActive) {
-      return undefined;
-    }
-    matchingSiblings.reportFallbackActive();
-    return () => matchingSiblings.reportFallbackInactive();
-  }, [isActive]);
+  matchingSiblings.useReportFallbackActive(isActive);
 
   if (!isActive) {
     return null;
@@ -350,19 +367,8 @@ const RouteLeafRouteOnly = (props) => {
   debug(
     `[route "${route.urlPattern}"] RENDER (leaf), isMatching=${isMatching}, isProbing=${isProbing}`,
   );
-
   useUITransitionContentId(route.urlPattern);
-  useLayoutEffect(() => {
-    if (!isMatching) {
-      return undefined;
-    }
-    debug(`[route "${route.urlPattern}"] reporting route match`);
-    matchingSiblings.reportRouteMatch();
-    return () => {
-      debug(`[route "${route.urlPattern}"] reporting route unmatch`);
-      matchingSiblings.reportRouteUnmatch();
-    };
-  }, [isMatching]);
+  matchingSiblings.useReportMatch(isMatching, route);
 
   if (!isMatching || isProbing) {
     return null;
@@ -376,13 +382,7 @@ const RouteLeafFallbackOnly = (props) => {
   const hasActiveSiblingRoute = matchingSiblings.useHasActiveRoute();
   const isActive = !isProbing && !hasActiveSiblingRoute;
 
-  useLayoutEffect(() => {
-    if (!isActive) {
-      return undefined;
-    }
-    matchingSiblings.reportFallbackActive();
-    return () => matchingSiblings.reportFallbackInactive();
-  }, [isActive]);
+  matchingSiblings.useReportFallbackActive(isActive);
 
   if (!isActive) {
     return null;
