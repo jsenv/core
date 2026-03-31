@@ -33,28 +33,28 @@ const debug = (...args) => {
   console.debug(...args);
 };
 
-// <Route> has 4 modes based on props:
-// 1. route only (no children, no fallback): RouteLeaf — renders when URL matches
-// 2. route + children (no fallback): RouteWithChildren — renders when URL matches, provides context for nested routes
-// 3. route + fallback: RouteWithFallback — renders when URL matches AND no sibling route is active
-// 4. fallback only: FallbackOnly — renders when no sibling route is active
-// 5. neither (container): RouteAsContainer — manages child matching, optionally wraps in a layout element
+// <Route> splits first on children presence, then on route/fallback:
+// RouteLeaf (no children):
+//   - route only: renders when URL matches
+//   - fallback only: renders when no sibling route is active
+//   - route + fallback: renders when URL matches AND no sibling route is active
+// RouteWithChildren (has children):
+//   - route only: renders when URL matches, provides context for nested routes
+//   - neither: container — manages child matching, optionally wraps in a layout element
 export const Route = (props) => {
-  if (props.route) {
-    if (props.fallback) {
-      return <RouteWithFallback {...props} />;
-    }
-    if (props.children) {
-      return <RouteWithChildren {...props} />;
-    }
-    return <RouteLeaf {...props} />;
+  if (props.children) {
+    return <RouteWithChildren {...props} />;
   }
-  if (props.fallback) {
-    return <FallbackOnly {...props} />;
+  return <RouteLeaf {...props} />;
+};
+
+// RouteWithChildren: has JSX children — dispatches based on route/fallback props.
+const RouteWithChildren = (props) => {
+  if (props.route) {
+    return <RouteWithChildrenAndRoute {...props} />;
   }
   return <RouteAsContainer {...props} />;
 };
-
 // ProbingContext: true during the first render cycle where children run their
 // route checks and update the parent's matchingSiblingsCount, but return null.
 // The parent re-renders once the signal changes and switches probing to false.
@@ -149,7 +149,44 @@ const useMatchingSiblingsContext = import.meta.dev
       return matchingSiblings;
     }
   : () => useContext(MatchingChildrenContext);
+// ChildrenRoute: route with JSX children (nested routes).
+// Provides MatchingChildrenContext so nested routes can report to this route's tracker.
+const RouteWithChildrenAndRoute = (props) => {
+  const isProbing = useContext(ProbingContext);
+  const matchingSiblings = useMatchingSiblingsContext();
+  const { route, routeParams } = props;
+  const { matching } = useRouteStatus(route);
+  const isMatching =
+    matching && (!routeParams || route.matchesParams(routeParams));
+  const matchingChildren = useMatchingChildren();
 
+  debug(
+    `[route "${route.urlPattern}"] RENDER (with-children), isMatching=${isMatching}, isProbing=${isProbing}`,
+  );
+
+  useUITransitionContentId(route.urlPattern);
+  useLayoutEffect(() => {
+    if (!isMatching) {
+      return undefined;
+    }
+    debug(`[route "${route.urlPattern}"] reporting route match`);
+    matchingSiblings.reportRouteMatch();
+    return () => {
+      debug(`[route "${route.urlPattern}"] reporting route unmatch`);
+      matchingSiblings.reportRouteUnmatch();
+    };
+  }, [isMatching]);
+
+  if (!isMatching || isProbing) {
+    return null;
+  }
+  debug(`[route "${route.urlPattern}"] rendering content with children`);
+  return (
+    <MatchingChildrenContext.Provider value={matchingChildren}>
+      <RouteActive {...props} />
+    </MatchingChildrenContext.Provider>
+  );
+};
 const RouteAsContainer = ({ id, element, elementProps, children }) => {
   const matchingSiblings = useContext(MatchingChildrenContext); // null if no ancestor Route
   const matchingChildren = useMatchingChildren();
@@ -262,9 +299,47 @@ const RouteAsContainer = ({ id, element, elementProps, children }) => {
   );
 };
 
-// RouteLeaf: route without JSX children — the common case for page routes.
-// No matchingChildren tracker needed since there are no nested Route components.
+// RouteLeaf: no JSX children — dispatches based on route/fallback props.
 const RouteLeaf = (props) => {
+  if (props.route && props.fallback) {
+    return <RouteLeafWithFallbackAndRoute {...props} />;
+  }
+  if (props.route) {
+    return <RouteLeafRouteOnly {...props} />;
+  }
+  if (props.fallback) {
+    return <RouteLeafFallbackOnly {...props} />;
+  }
+  return null;
+};
+
+const RouteLeafWithFallbackAndRoute = (props) => {
+  const isProbing = useContext(ProbingContext);
+  const matchingSiblings = useMatchingSiblingsContext();
+  const hasActiveSiblingRoute = matchingSiblings.useHasActiveRoute();
+  const { route, routeParams } = props;
+  const { matching } = useRouteStatus(route);
+  const isMatching =
+    matching && (!routeParams || route.matchesParams(routeParams));
+  const isActive = !isProbing && !hasActiveSiblingRoute && isMatching;
+
+  useUITransitionContentId(route.urlPattern);
+  useLayoutEffect(() => {
+    if (!isActive) {
+      return undefined;
+    }
+    matchingSiblings.reportFallbackActive();
+    return () => matchingSiblings.reportFallbackInactive();
+  }, [isActive]);
+
+  if (!isActive) {
+    return null;
+  }
+  return <RouteActive {...props} />;
+};
+// LeafRoute: route without children — renders when URL matches.
+// No matchingChildren tracker needed since there are no nested Route components.
+const RouteLeafRouteOnly = (props) => {
   const isProbing = useContext(ProbingContext);
   const matchingSiblings = useMatchingSiblingsContext();
   const { route, routeParams } = props;
@@ -295,72 +370,7 @@ const RouteLeaf = (props) => {
   debug(`[route "${route.urlPattern}"] rendering content`);
   return <RouteActive {...props} />;
 };
-
-// RouteWithChildren: route with JSX children (nested routes).
-// Provides MatchingChildrenContext so nested routes can report to this route's tracker.
-const RouteWithChildren = (props) => {
-  const isProbing = useContext(ProbingContext);
-  const matchingSiblings = useMatchingSiblingsContext();
-  const { route, routeParams } = props;
-  const { matching } = useRouteStatus(route);
-  const isMatching =
-    matching && (!routeParams || route.matchesParams(routeParams));
-  const matchingChildren = useMatchingChildren();
-
-  debug(
-    `[route "${route.urlPattern}"] RENDER (with-children), isMatching=${isMatching}, isProbing=${isProbing}`,
-  );
-
-  useUITransitionContentId(route.urlPattern);
-  useLayoutEffect(() => {
-    if (!isMatching) {
-      return undefined;
-    }
-    debug(`[route "${route.urlPattern}"] reporting route match`);
-    matchingSiblings.reportRouteMatch();
-    return () => {
-      debug(`[route "${route.urlPattern}"] reporting route unmatch`);
-      matchingSiblings.reportRouteUnmatch();
-    };
-  }, [isMatching]);
-
-  if (!isMatching || isProbing) {
-    return null;
-  }
-  debug(`[route "${route.urlPattern}"] rendering content with children`);
-  return (
-    <MatchingChildrenContext.Provider value={matchingChildren}>
-      <RouteActive {...props} />
-    </MatchingChildrenContext.Provider>
-  );
-};
-
-const RouteWithFallback = (props) => {
-  const isProbing = useContext(ProbingContext);
-  const matchingSiblings = useMatchingSiblingsContext();
-  const hasActiveSiblingRoute = matchingSiblings.useHasActiveRoute();
-  const { route, routeParams } = props;
-  const { matching } = useRouteStatus(route);
-  const isMatching =
-    matching && (!routeParams || route.matchesParams(routeParams));
-  const isActive = !isProbing && !hasActiveSiblingRoute && isMatching;
-
-  useUITransitionContentId(route.urlPattern);
-  useLayoutEffect(() => {
-    if (!isActive) {
-      return undefined;
-    }
-    matchingSiblings.reportFallbackActive();
-    return () => matchingSiblings.reportFallbackInactive();
-  }, [isActive]);
-
-  if (!isActive) {
-    return null;
-  }
-  return <RouteActive {...props} />;
-};
-
-const FallbackOnly = (props) => {
+const RouteLeafFallbackOnly = (props) => {
   const isProbing = useContext(ProbingContext);
   const matchingSiblings = useMatchingSiblingsContext();
   const hasActiveSiblingRoute = matchingSiblings.useHasActiveRoute();
