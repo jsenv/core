@@ -19,7 +19,7 @@
 
 import { signal } from "@preact/signals";
 import { createContext } from "preact";
-import { useContext, useLayoutEffect, useReducer, useRef } from "preact/hooks";
+import { useContext, useLayoutEffect, useRef } from "preact/hooks";
 
 import { ActionRenderer } from "../action/action_renderer.jsx";
 import { useUITransitionContentId } from "../ui_transition/ui_transition.jsx";
@@ -34,13 +34,13 @@ const debug = (...args) => {
 };
 
 // <Route> splits first on children presence, then on route/fallback:
+// RouteWithChildren (has children):
+//   - route only: renders when URL matches, provides context for nested routes
+//   - neither: container — manages child matching, optionally wraps in a layout element
 // RouteLeaf (no children):
 //   - route only: renders when URL matches
 //   - fallback only: renders when no sibling route is active
 //   - route + fallback: renders when URL matches AND no sibling route is active
-// RouteWithChildren (has children):
-//   - route only: renders when URL matches, provides context for nested routes
-//   - neither: container — manages child matching, optionally wraps in a layout element
 export const Route = (props) => {
   if (props.children) {
     return <RouteWithChildren {...props} />;
@@ -55,12 +55,10 @@ const RouteWithChildren = (props) => {
   }
   return <RouteContainer {...props} />;
 };
-// ProbingContext: true during the first render cycle where children run their
-// route checks and update the parent's matchingSiblingsCount, but return null.
-// The parent re-renders once the signal changes and switches probing to false.
-// This ensures the layout element is never put in the DOM before we know
-// whether any child route actually matches.
-const ProbingContext = createContext(false);
+// Note: no ProbingContext needed. Since useLayoutEffect fires bottom-up,
+// children have reported to their parent tracker before the parent's effect runs.
+// Signals start as false, so layout elements only appear once a child is active.
+// All DOM updates happen before the browser paints (within the useLayoutEffect pass).
 const MatchingChildrenContext = createContext(null);
 const useMatchingChildren = () => {
   const ref = useRef();
@@ -75,15 +73,12 @@ const useMatchingChildren = () => {
 let matchingChildrenIdCounter = 0;
 const createMatchingChildren = () => {
   const trackerId = matchingChildrenIdCounter++;
-  // routeCount: incremented by RouteLeaf/RouteWithChildren/RouteAsContainer only.
-  // Used by FallbackOnly/RouteWithFallback to decide whether to activate.
+  // routeCount: only URL-matching routes. Used by fallbacks to decide whether to activate.
   let routeCount = 0;
   const hasActiveRouteSignal = signal(false);
-  // totalCount: routeCount + fallback activations.
-  // Used by RouteAsContainer to decide its own visibility / whether to show its element.
+  // totalCount: routes + fallbacks. Used by RouteContainer to decide layout visibility.
   let totalCount = 0;
   const hasActiveChildSignal = signal(false);
-  let probing = true;
 
   const reportRouteMatch = () => {
     routeCount++;
@@ -91,9 +86,11 @@ const createMatchingChildren = () => {
     debug(
       `[tracker ${trackerId}] reportRouteMatch, routeCount=${routeCount}, totalCount=${totalCount}`,
     );
-    if (!probing) {
-      if (routeCount === 1) hasActiveRouteSignal.value = true;
-      if (totalCount === 1) hasActiveChildSignal.value = true;
+    if (routeCount === 1) {
+      hasActiveRouteSignal.value = true;
+    }
+    if (totalCount === 1) {
+      hasActiveChildSignal.value = true;
     }
   };
   const reportRouteUnmatch = () => {
@@ -102,22 +99,19 @@ const createMatchingChildren = () => {
     debug(
       `[tracker ${trackerId}] reportRouteUnmatch, routeCount=${routeCount}, totalCount=${totalCount}`,
     );
-    if (!probing) {
-      if (routeCount === 0) {
-        hasActiveRouteSignal.value = false;
-      }
-      if (totalCount === 0) {
-        hasActiveChildSignal.value = false;
-      }
+    if (routeCount === 0) {
+      hasActiveRouteSignal.value = false;
+    }
+    if (totalCount === 0) {
+      hasActiveChildSignal.value = false;
     }
   };
-
   const reportFallbackActive = () => {
     totalCount++;
     debug(
       `[tracker ${trackerId}] reportFallbackActive, totalCount=${totalCount}`,
     );
-    if (!probing && totalCount === 1) {
+    if (totalCount === 1) {
       hasActiveChildSignal.value = true;
     }
   };
@@ -126,27 +120,19 @@ const createMatchingChildren = () => {
     debug(
       `[tracker ${trackerId}] reportFallbackInactive, totalCount=${totalCount}`,
     );
-    if (!probing && totalCount === 0) {
+    if (totalCount === 0) {
       hasActiveChildSignal.value = false;
     }
   };
 
   return {
     trackerId,
-    endProbe: () => {
-      debug(
-        `[tracker ${trackerId}] endProbe, routeCount=${routeCount}, totalCount=${totalCount}`,
-      );
-      probing = false;
-      hasActiveRouteSignal.value = routeCount > 0;
-      hasActiveChildSignal.value = totalCount > 0;
-    },
-    // For FallbackOnly/RouteWithFallback: "did any sibling RouteLeaf/RouteWithChildren match?"
+    // For leaf fallbacks: "did any sibling URL-route match?"
     useHasActiveRoute: () => hasActiveRouteSignal.value,
-    // For RouteAsContainer: "is any child active (route or fallback)?"
+    // For RouteContainer: "is any child active (route or fallback)?"
     useHasActiveChild: () => hasActiveChildSignal.value,
-    getCount: () => totalCount,
-
+    reportRouteMatch,
+    reportRouteUnmatch,
     useReportMatch: (isMatching, route) => {
       useLayoutEffect(() => {
         if (!isMatching) {
@@ -182,10 +168,9 @@ const useMatchingSiblingsContext = import.meta.dev
       return matchingSiblings;
     }
   : () => useContext(MatchingChildrenContext);
-// ChildrenRoute: route with JSX children (nested routes).
-// Provides MatchingChildrenContext so nested routes can report to this route's tracker.
+// RouteContainerWithRoute: route with JSX children — renders when URL matches,
+// provides MatchingChildrenContext so nested routes can report to this route's tracker.
 const RouteContainerWithRoute = (props) => {
-  const isProbing = useContext(ProbingContext);
   const matchingSiblings = useMatchingSiblingsContext();
   const { route, routeParams } = props;
   const { matching } = useRouteStatus(route);
@@ -194,13 +179,13 @@ const RouteContainerWithRoute = (props) => {
   const matchingChildren = useMatchingChildren();
 
   debug(
-    `[route "${route.urlPattern}"] RENDER (with-children), isMatching=${isMatching}, isProbing=${isProbing}`,
+    `[route "${route.urlPattern}"] RENDER (with-children), isMatching=${isMatching}`,
   );
 
   useUITransitionContentId(route.urlPattern);
   matchingSiblings.useReportMatch(isMatching, route);
 
-  if (!isMatching || isProbing) {
+  if (!isMatching) {
     return null;
   }
   debug(`[route "${route.urlPattern}"] rendering content with children`);
@@ -210,116 +195,30 @@ const RouteContainerWithRoute = (props) => {
     </MatchingChildrenContext.Provider>
   );
 };
+// RouteContainer: manages child route matching, optionally wraps active children in a layout element.
+// Children are always rendered (never unmounted) so they can reactively respond to URL changes.
 const RouteContainer = ({ id, element, elementProps, children }) => {
-  const matchingSiblings = useContext(MatchingChildrenContext); // null if no ancestor Route
+  const matchingSiblings = useContext(MatchingChildrenContext); // null if top-level container
   const matchingChildren = useMatchingChildren();
   const hasActiveChild = matchingChildren.useHasActiveChild(); // reactive, re-renders only when boolean flips
-  const hasProbedRef = useRef(false);
-  const isProbing = !hasProbedRef.current;
-  const prevReportedRef = useRef(false);
-  const [renderCount, forceRender] = useReducer((n) => n + 1, 0);
+  const isMatching = matchingSiblings && hasActiveChild;
+  debug(`[container "${id}"] RENDER, hasActiveChild=${hasActiveChild}`);
 
-  debug(
-    `[container "${id}"] RENDER #${renderCount}, isProbing=${isProbing}, hasActiveChild=${hasActiveChild}, ` +
-      `ownTracker=${matchingChildren.trackerId}, parentTracker=${matchingSiblings ? matchingSiblings.trackerId : "none"}, ` +
-      `childCount=${matchingChildren.getCount()}`,
-  );
+  // On initial mount hasActiveChild=false (signals start false), so nothing is reported yet.
+  // Once a child reports a match the signal flips, we re-render, and this effect fires to report up.
+  matchingSiblings.useReportMatch(isMatching);
 
-  // Probe effect: fires once on mount, bottom-up after children have reported.
-  // endProbe() finalizes the signals and enables reactive updates for dynamic changes.
-  useLayoutEffect(() => {
-    hasProbedRef.current = true;
-    const childCount = matchingChildren.getCount();
-    debug(
-      `[container "${id}"] PROBE EFFECT, childCount=${childCount}, parentTracker=${matchingSiblings ? matchingSiblings.trackerId : "none"}`,
-    );
-    if (matchingSiblings && childCount > 0) {
-      debug(
-        `[container "${id}"] reporting route match to parent tracker ${matchingSiblings.trackerId}`,
-      );
-      prevReportedRef.current = true;
-      matchingSiblings.reportRouteMatch();
-    }
-    matchingChildren.endProbe();
-    debug(`[container "${id}"] calling forceRender`);
-    forceRender();
-    return () => {
-      debug(`[container "${id}"] PROBE CLEANUP`);
-      if (prevReportedRef.current) {
-        prevReportedRef.current = false;
-        matchingSiblings.reportRouteUnmatch();
-      }
-    };
-  }, []);
-
-  // Post-probe: sync report to parent when hasActiveChild changes.
-  // Skip the first run — the probe effect above already handled the initial report.
-  const didMountRef = useRef(false);
-  useLayoutEffect(() => {
-    if (!didMountRef.current) {
-      debug(
-        `[container "${id}"] HASACTIVECHILD EFFECT (mount), skipping — probe handled it`,
-      );
-      didMountRef.current = true;
-      return;
-    }
-    debug(
-      `[container "${id}"] HASACTIVECHILD EFFECT, hasActiveChild=${hasActiveChild}, prevReported=${prevReportedRef.current}, ` +
-        `parentTracker=${matchingSiblings ? matchingSiblings.trackerId : "none"}`,
-    );
-    if (!matchingSiblings) {
-      debug(`[container "${id}"] no parent, skipping report`);
-      return;
-    }
-    if (hasActiveChild === prevReportedRef.current) {
-      return;
-    }
-    if (hasActiveChild) {
-      debug(`[container "${id}"] post-probe reporting route match to parent`);
-      prevReportedRef.current = true;
-      matchingSiblings.reportRouteMatch();
-    } else {
-      debug(`[container "${id}"] post-probe reporting route unmatch to parent`);
-      prevReportedRef.current = false;
-      matchingSiblings.reportRouteUnmatch();
-    }
-  }, [hasActiveChild]);
-
-  // During probe: render children with ProbingContext=true (routes return null, report via effects).
-  // After probe: always render children to keep routes mounted for reactive reporting.
-  if (isProbing) {
-    debug(`[container "${id}"] rendering children, isProbing=true`);
-    return (
-      <MatchingChildrenContext.Provider value={matchingChildren}>
-        <ProbingContext.Provider value={true}>
-          {children}
-        </ProbingContext.Provider>
-      </MatchingChildrenContext.Provider>
-    );
-  }
-  if (hasActiveChild) {
-    debug(`[container "${id}"] rendering children, hasActiveChild=true`);
-    const inner = (
-      <MatchingChildrenContext.Provider value={matchingChildren}>
-        <ProbingContext.Provider value={false}>
-          {children}
-        </ProbingContext.Provider>
-      </MatchingChildrenContext.Provider>
-    );
-    if (element) {
-      const Element = element;
-      return <Element {...elementProps}>{inner}</Element>;
-    }
-    return inner;
-  }
-  debug(`[container "${id}"] rendering children bare (no active child)`);
-  return (
+  const inner = (
     <MatchingChildrenContext.Provider value={matchingChildren}>
-      <ProbingContext.Provider value={false}>
-        {children}
-      </ProbingContext.Provider>
+      {children}
     </MatchingChildrenContext.Provider>
   );
+  if (element && hasActiveChild) {
+    debug(`[container "${id}"] rendering children with layout element`);
+    const Element = element;
+    return <Element {...elementProps}>{inner}</Element>;
+  }
+  return inner;
 };
 
 // RouteLeaf: no JSX children — dispatches based on route/fallback props.
@@ -337,14 +236,13 @@ const RouteLeaf = (props) => {
 };
 
 const RouteLeafWithFallbackAndRoute = (props) => {
-  const isProbing = useContext(ProbingContext);
   const matchingSiblings = useMatchingSiblingsContext();
   const hasActiveSiblingRoute = matchingSiblings.useHasActiveRoute();
   const { route, routeParams } = props;
   const { matching } = useRouteStatus(route);
   const isMatching =
     matching && (!routeParams || route.matchesParams(routeParams));
-  const isActive = !isProbing && !hasActiveSiblingRoute && isMatching;
+  const isActive = !hasActiveSiblingRoute && isMatching;
 
   useUITransitionContentId(route.urlPattern);
   matchingSiblings.useReportFallbackActive(isActive);
@@ -354,10 +252,8 @@ const RouteLeafWithFallbackAndRoute = (props) => {
   }
   return <RouteActive {...props} />;
 };
-// LeafRoute: route without children — renders when URL matches.
-// No matchingChildren tracker needed since there are no nested Route components.
+// RouteLeafRouteOnly: route without children — renders when URL matches.
 const RouteLeafRouteOnly = (props) => {
-  const isProbing = useContext(ProbingContext);
   const matchingSiblings = useMatchingSiblingsContext();
   const { route, routeParams } = props;
   const { matching } = useRouteStatus(route);
@@ -365,22 +261,21 @@ const RouteLeafRouteOnly = (props) => {
     matching && (!routeParams || route.matchesParams(routeParams));
 
   debug(
-    `[route "${route.urlPattern}"] RENDER (leaf), isMatching=${isMatching}, isProbing=${isProbing}`,
+    `[route "${route.urlPattern}"] RENDER (leaf), isMatching=${isMatching}`,
   );
   useUITransitionContentId(route.urlPattern);
   matchingSiblings.useReportMatch(isMatching, route);
 
-  if (!isMatching || isProbing) {
+  if (!isMatching) {
     return null;
   }
   debug(`[route "${route.urlPattern}"] rendering content`);
   return <RouteActive {...props} />;
 };
 const RouteLeafFallbackOnly = (props) => {
-  const isProbing = useContext(ProbingContext);
   const matchingSiblings = useMatchingSiblingsContext();
   const hasActiveSiblingRoute = matchingSiblings.useHasActiveRoute();
-  const isActive = !isProbing && !hasActiveSiblingRoute;
+  const isActive = !hasActiveSiblingRoute;
 
   matchingSiblings.useReportFallbackActive(isActive);
 
