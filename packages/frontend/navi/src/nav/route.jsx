@@ -34,9 +34,7 @@ const debug = (...args) => {
 // - fallback → RouteActive (rendered by parent container when no sibling matches)
 export const Route = (props) => {
   if (props.children) return <RouteContainer {...props} />;
-  if (props.route) return <RouteLeafRoute {...props} />;
-  if (props.fallback) return <RouteActive {...props} />;
-  return null;
+  return <RouteLeaf {...props} />;
 };
 
 // Walk JSX children vnodes (without rendering) to build a descriptor list and
@@ -48,12 +46,16 @@ const collectDescriptors = (children) => {
   let activeDescriptor = null;
 
   const visit = (child) => {
-    if (!child || child === true || child === false) return;
-    if (Array.isArray(child)) {
-      for (const item of child) visit(item);
+    if (!child || child === true || child === false) {
       return;
     }
-    if (import.meta.dev && child.type !== Route) {
+    if (Array.isArray(child)) {
+      for (const item of child) {
+        visit(item);
+      }
+      return;
+    }
+    if (child.type !== Route) {
       throw new Error(
         `All <Route> children must be <Route> components, got: ${String(child.type)}`,
       );
@@ -69,7 +71,9 @@ const collectDescriptors = (children) => {
         collectDescriptors(nodeChildren);
       const descriptor = { type: "container", node: child };
       descriptors.push(descriptor);
-      if (!activeDescriptor && activeChild) activeDescriptor = descriptor;
+      if (!activeDescriptor && activeChild) {
+        activeDescriptor = descriptor;
+      }
     } else if (fallback) {
       descriptors.push({ type: "fallback", node: child });
     } else {
@@ -106,8 +110,9 @@ const RouteContainer = ({ id, element, elementProps, children }) => {
     content = fallbackDescriptor ? fallbackDescriptor.node : null;
   }
 
-  if (!content) return null;
-
+  if (!content) {
+    return null;
+  }
   if (element) {
     const Element = element;
     return <Element {...elementProps}>{content}</Element>;
@@ -115,12 +120,19 @@ const RouteContainer = ({ id, element, elementProps, children }) => {
   return content;
 };
 
-// RouteLeafRoute: rendered by parent RouteContainer when this route is active.
+const RouteLeaf = (props) => {
+  if (props.route) return <RouteLeafRoute {...props} />;
+  if (props.fallback) return <RouteLeafFallback {...props} />;
+  // not supposed to happen?
+  return <RouteActive {...props} />;
+};
 const RouteLeafRoute = (props) => {
   useUITransitionContentId(props.route?.urlPattern);
   return <RouteActive {...props} />;
 };
-
+const RouteLeafFallback = (props) => {
+  return <RouteActive {...props} />;
+};
 const RouteActive = ({ element, elementProps, action }) => {
   const Element = element;
   const renderedElement = action ? (
