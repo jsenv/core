@@ -8,7 +8,7 @@
     <div id="app"></div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { useRef } from "preact/hooks";
+      import { useRef, useState } from "preact/hooks";
       import { Link, Route, route, setupRoutes } from "@jsenv/navi";
 
       /*
@@ -28,12 +28,31 @@
         fontFamily: "monospace",
         marginLeft: "8px",
       };
+      const COUNTER_BUTTON_STYLE = {
+        fontSize: "11px",
+        padding: "2px 8px",
+        cursor: "pointer",
+        marginLeft: "4px",
+      };
       const useRenderCount = (label) => {
         const countRef = useRef(0);
         countRef.current++;
         return (
           <span style={RENDER_COUNT_STYLE}>
             [{label} renders: {countRef.current}]
+          </span>
+        );
+      };
+      const useLocalCounter = (label) => {
+        const [count, setCount] = useState(0);
+        return (
+          <span>
+            <button
+              style={COUNTER_BUTTON_STYLE}
+              onClick={() => setCount(count + 1)}
+            >
+              {label}: {count} (click to re-render)
+            </button>
           </span>
         );
       };
@@ -44,7 +63,8 @@
       setupRoutes([HOME_ROUTE, PROFILE_ROUTE, SETTINGS_ROUTE]);
 
       const AppLayout = ({ children }) => {
-        const counter = useRenderCount("AppLayout");
+        const renderCount = useRenderCount("AppLayout");
+        const localCounter = useLocalCounter("AppLayout state");
         return (
           <div
             style={{
@@ -57,7 +77,8 @@
               <Link route={HOME_ROUTE}>Home</Link>
               <Link route={PROFILE_ROUTE}>Profile</Link>
               <Link route={SETTINGS_ROUTE}>Settings</Link>
-              {counter}
+              {renderCount}
+              {localCounter}
             </nav>
             {children}
           </div>
@@ -67,7 +88,8 @@
       // Layout shell rendered when either /profile or /settings matches.
       // The child routes render the actual page content inside it.
       const AuthenticatedLayout = ({ children }) => {
-        const counter = useRenderCount("AuthLayout");
+        const renderCount = useRenderCount("AuthLayout");
+        const localCounter = useLocalCounter("AuthLayout state");
         return (
           <div
             style={{
@@ -84,7 +106,7 @@
                 marginBottom: "12px",
               }}
             >
-              Authenticated area {counter}
+              Authenticated area {renderCount} {localCounter}
             </div>
             {children}
           </div>
@@ -108,29 +130,35 @@
       );
 
       const HomePage = () => {
-        const counter = useRenderCount("HomePage");
+        const renderCount = useRenderCount("HomePage");
+        const localCounter = useLocalCounter("Home state");
         return (
           <div>
-            <h2>Home {counter}</h2>
+            <h2>Home {renderCount}</h2>
             <p>No layout wrapper on this page.</p>
+            {localCounter}
           </div>
         );
       };
       const ProfilePage = () => {
-        const counter = useRenderCount("ProfilePage");
+        const renderCount = useRenderCount("ProfilePage");
+        const localCounter = useLocalCounter("Profile state");
         return (
           <div>
-            <h2>Profile {counter}</h2>
+            <h2>Profile {renderCount}</h2>
             <p>This page is wrapped inside the authenticated layout.</p>
+            {localCounter}
           </div>
         );
       };
       const SettingsPage = () => {
-        const counter = useRenderCount("SettingsPage");
+        const renderCount = useRenderCount("SettingsPage");
+        const localCounter = useLocalCounter("Settings state");
         return (
           <div>
-            <h2>Settings {counter}</h2>
+            <h2>Settings {renderCount}</h2>
             <p>This page is also wrapped inside the authenticated layout.</p>
+            {localCounter}
           </div>
         );
       };
