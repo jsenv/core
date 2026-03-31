@@ -67,10 +67,17 @@ const collectBranches = (children) => {
       routeParams,
     } = child.props;
     if (nodeChildren) {
-      const { activeBranch: activeChild } = collectBranches(nodeChildren);
+      const { matchingBranch: matchingChild } = collectBranches(nodeChildren);
       const branch = { type: "container", node: child };
-      if (!matchingBranch && activeChild) {
-        matchingBranch = branch;
+      if (!matchingBranch) {
+        if (matchingChild) {
+          // Real leaf match inside — always select this container
+          matchingBranch = branch;
+        } else if (route && route.matchingSignal.value) {
+          // No leaf match but an explicit route guard matches — select this
+          // container so it can render its own fallback inside its layout
+          matchingBranch = branch;
+        }
       }
     } else if (fallback) {
       if (!fallbackBranch) {

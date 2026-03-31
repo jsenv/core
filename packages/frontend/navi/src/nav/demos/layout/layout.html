@@ -225,6 +225,7 @@
       const DASHBOARD_PROJECTS_ROUTE = route("/dashboard/projects");
       const DASHBOARD_ANALYTICS_ROUTE = route("/dashboard/analytics");
       const DASHBOARD_UNKNOWN_ROUTE = route("/dashboard/unknown");
+      const DASHBOARD_SECTION_ROUTE = route("/dashboard/");
       const UNKNOWN_ROUTE = route("/unknown");
       setupRoutes([
         HOME_ROUTE,
@@ -234,6 +235,7 @@
         DASHBOARD_PROJECTS_ROUTE,
         DASHBOARD_ANALYTICS_ROUTE,
         DASHBOARD_UNKNOWN_ROUTE,
+        DASHBOARD_SECTION_ROUTE,
         UNKNOWN_ROUTE,
       ]);
 
@@ -402,6 +404,7 @@
                 </Route>
                 <Route
                   id="dashboard_layout"
+                  route={DASHBOARD_SECTION_ROUTE}
                   element={DashboardLayout}
                   elementProps={{ appCount, incApp }}
                 >
