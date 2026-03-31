@@ -1,0 +1,112 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Route Layout Demo</title>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { Link, Route, route, setupRoutes } from "@jsenv/navi";
+
+      /*
+       * Demonstrate that <Route> children act as a layout:
+       * the parent <Route> renders its element (the shell/layout) and the
+       * child <Route> renders the matching page inside it.
+       *
+       * Current limitation: when NO child route matches, the layout is still
+       * rendered because <Route> (container mode) always renders its children.
+       * Navigate to "/" to see the issue — the gray shell appears even though
+       * no sub-route matches.
+       */
+
+      const HOME_ROUTE = route("/");
+      const PROFILE_ROUTE = route("/profile");
+      const SETTINGS_ROUTE = route("/settings");
+      setupRoutes([HOME_ROUTE, PROFILE_ROUTE, SETTINGS_ROUTE]);
+
+      const AppLayout = ({ children }) => (
+        <div
+          style={{
+            fontFamily: "system-ui, sans-serif",
+            maxWidth: "600px",
+            padding: "20px",
+          }}
+        >
+          <nav style={{ display: "flex", gap: "12px", marginBottom: "20px" }}>
+            <Link route={HOME_ROUTE}>Home</Link>
+            <Link route={PROFILE_ROUTE}>Profile</Link>
+            <Link route={SETTINGS_ROUTE}>Settings</Link>
+          </nav>
+          {children}
+        </div>
+      );
+
+      // Layout shell rendered when either /profile or /settings matches.
+      // The child routes render the actual page content inside it.
+      const AuthenticatedLayout = ({ children }) => (
+        <div
+          style={{
+            padding: "16px",
+            background: "#f0f4ff",
+            border: "1px solid #c0d0ff",
+            borderRadius: "6px",
+          }}
+        >
+          <div
+            style={{ fontSize: "12px", color: "#555", marginBottom: "12px" }}
+          >
+            Authenticated area (sidebar, user menu, etc. would go here)
+          </div>
+          {children}
+        </div>
+      );
+
+      const App = () => (
+        <AppLayout>
+          <Route>
+            {/* Home has no layout wrapper — standalone page */}
+            <Route route={HOME_ROUTE} element={<HomePage />} />
+
+            {/*
+             * AuthenticatedLayout wraps Profile and Settings.
+             * It is always rendered when any child matches.
+             *
+             * ISSUE: navigate to "/" — the blue shell still appears because
+             * <Route> (container) always renders its element+children.
+             * Fix will come: only render layout when ≥1 child matches.
+             */}
+            <Route>
+              <AuthenticatedLayout>
+                <Route route={PROFILE_ROUTE} element={<ProfilePage />} />
+                <Route route={SETTINGS_ROUTE} element={<SettingsPage />} />
+              </AuthenticatedLayout>
+            </Route>
+          </Route>
+        </AppLayout>
+      );
+
+      const HomePage = () => (
+        <div>
+          <h2>Home</h2>
+          <p>No layout wrapper on this page.</p>
+        </div>
+      );
+      const ProfilePage = () => (
+        <div>
+          <h2>Profile</h2>
+          <p>This page is wrapped inside the authenticated layout.</p>
+        </div>
+      );
+      const SettingsPage = () => (
+        <div>
+          <h2>Settings</h2>
+          <p>This page is also wrapped inside the authenticated layout.</p>
+        </div>
+      );
+
+      render(<App />, document.getElementById("app"));
+    </script>
+  </body>
+</html>
