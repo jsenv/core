@@ -113,6 +113,18 @@
       .box-notfound .component-header {
         background: #f3e8ff;
       }
+      .box-dashboard {
+        border-color: #f97316;
+      }
+      .box-dashboard .component-header {
+        background: #ffedd5;
+      }
+      .box-dashboard-notfound {
+        border-color: #64748b;
+      }
+      .box-dashboard-notfound .component-header {
+        background: #f1f5f9;
+      }
 
       .btn-app {
         color: #6366f1;
@@ -131,6 +143,12 @@
       }
       .btn-notfound {
         color: #a855f7;
+      }
+      .btn-dashboard {
+        color: #f97316;
+      }
+      .btn-dashboard-notfound {
+        color: #64748b;
       }
     </style>
   </head>
@@ -169,16 +187,20 @@
       const HOME_ROUTE = route("");
       const PROFILE_ROUTE = route("/profile");
       const SETTINGS_ROUTE = route("/settings");
-      setupRoutes([HOME_ROUTE, PROFILE_ROUTE, SETTINGS_ROUTE]);
+      const DASHBOARD_ROUTE = route("/dashboard");
+      setupRoutes([HOME_ROUTE, PROFILE_ROUTE, SETTINGS_ROUTE, DASHBOARD_ROUTE]);
 
       // Plain-DOM render tracking — never causes re-renders
       const renderCounts = {
         App: 0,
         AuthLayout: 0,
+        DashboardLayout: 0,
         HomePage: 0,
         ProfilePage: 0,
         SettingsPage: 0,
+        DashboardPage: 0,
         NotFoundPage: 0,
+        DashboardNotFound: 0,
       };
       const trackRender = (name) => {
         renderCounts[name] = (renderCounts[name] || 0) + 1;
@@ -189,10 +211,13 @@
         const COLORS = {
           App: "#a5b4fc",
           AuthLayout: "#7dd3fc",
+          DashboardLayout: "#fdba74",
           HomePage: "#6ee7b7",
           ProfilePage: "#fcd34d",
           SettingsPage: "#fca5a5",
+          DashboardPage: "#fb923c",
           NotFoundPage: "#c084fc",
+          DashboardNotFound: "#94a3b8",
         };
         counts.innerHTML = Object.entries(renderCounts)
           .map(
@@ -251,15 +276,18 @@
                 <Link route={HOME_ROUTE}>Home</Link>
                 <Link route={PROFILE_ROUTE}>Profile</Link>
                 <Link route={SETTINGS_ROUTE}>Settings</Link>
+                <Link route={DASHBOARD_ROUTE}>Dashboard</Link>
+                <a
+                  href="/dashboard/unknown"
+                  style="color:#64748b;background:#f1f5f9;"
+                >
+                  Dashboard unknown
+                </a>
                 <a href="/unknown" style="color:#a855f7;background:#f3e8ff;">
                   Unknown (fallback)
                 </a>
               </nav>
-              <Route
-                id="app_layout"
-                fallback={NotFoundPage}
-                fallbackProps={{ appCount, incApp }}
-              >
+              <Route id="app_layout">
                 <Route
                   route={HOME_ROUTE}
                   element={HomePage}
@@ -281,6 +309,27 @@
                     elementProps={{ appCount, incApp }}
                   />
                 </Route>
+                <Route
+                  id="dashboard_layout"
+                  element={DashboardLayout}
+                  elementProps={{ appCount, incApp }}
+                >
+                  <Route
+                    route={DASHBOARD_ROUTE}
+                    element={DashboardPage}
+                    elementProps={{ appCount, incApp }}
+                  />
+                  <Route
+                    fallback
+                    element={DashboardNotFound}
+                    elementProps={{ appCount, incApp }}
+                  />
+                </Route>
+                <Route
+                  fallback
+                  element={NotFoundPage}
+                  elementProps={{ appCount, incApp }}
+                />
               </Route>
             </ComponentBox>
           </div>
@@ -442,6 +491,102 @@
           >
             <p style="margin:0;color:#555;font-size:13px;">
               No route matched — shown via <code>fallback</code> prop.
+            </p>
+          </ComponentBox>
+        );
+      };
+
+      /* ── Dashboard ──────────────────────────────────────────────── */
+      const DashboardLayout = ({ appCount, incApp, children }) => {
+        useTrackRender("DashboardLayout");
+        const [dashCount, incDash] = useCounter();
+
+        return (
+          <ComponentBox
+            colorClass="box-dashboard"
+            name="DashboardLayout"
+            headerExtras={
+              <>
+                <CounterBtn
+                  colorClass="btn-app"
+                  label="App state"
+                  count={appCount}
+                  onClick={incApp}
+                />
+                <CounterBtn
+                  colorClass="btn-dashboard"
+                  label="Dashboard state"
+                  count={dashCount}
+                  onClick={incDash}
+                />
+              </>
+            }
+          >
+            {children}
+          </ComponentBox>
+        );
+      };
+
+      const DashboardPage = ({ appCount, incApp }) => {
+        useTrackRender("DashboardPage");
+        const [pageCount, incPage] = useCounter();
+
+        return (
+          <ComponentBox
+            colorClass="box-dashboard"
+            name="DashboardPage"
+            headerExtras={
+              <>
+                <CounterBtn
+                  colorClass="btn-app"
+                  label="App state"
+                  count={appCount}
+                  onClick={incApp}
+                />
+                <CounterBtn
+                  colorClass="btn-dashboard"
+                  label="Page state"
+                  count={pageCount}
+                  onClick={incPage}
+                />
+              </>
+            }
+          >
+            <p style="margin:0;color:#555;font-size:13px;">
+              Wrapped inside DashboardLayout.
+            </p>
+          </ComponentBox>
+        );
+      };
+
+      const DashboardNotFound = ({ appCount, incApp }) => {
+        useTrackRender("DashboardNotFound");
+        const [nfCount, incNf] = useCounter();
+
+        return (
+          <ComponentBox
+            colorClass="box-dashboard-notfound"
+            name="DashboardNotFound (fallback inside layout)"
+            headerExtras={
+              <>
+                <CounterBtn
+                  colorClass="btn-app"
+                  label="App state"
+                  count={appCount}
+                  onClick={incApp}
+                />
+                <CounterBtn
+                  colorClass="btn-dashboard-notfound"
+                  label="DashNotFound state"
+                  count={nfCount}
+                  onClick={incNf}
+                />
+              </>
+            }
+          >
+            <p style="margin:0;color:#555;font-size:13px;">
+              No dashboard route matched — fallback rendered inside{" "}
+              <code>DashboardLayout</code>.
             </p>
           </ComponentBox>
         );
