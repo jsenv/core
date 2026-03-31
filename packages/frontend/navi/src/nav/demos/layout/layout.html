@@ -352,6 +352,7 @@
       const App = () => {
         useTrackRender("App");
         const [appCount, incApp] = useCounter();
+        const [authCount, incAuth] = useCounter();
 
         return (
           <div class="app">
@@ -389,12 +390,12 @@
                 <Route
                   id="auth_layout"
                   element={AuthLayout}
-                  elementProps={{ appCount, incApp }}
+                  elementProps={{ appCount, incApp, authCount, incAuth }}
                 >
                   <Route
                     route={PROFILE_ROUTE}
                     element={ProfilePage}
-                    elementProps={{ appCount, incApp }}
+                    elementProps={{ appCount, incApp, authCount, incAuth }}
                   />
                   <Route
                     route={SETTINGS_ROUTE}
@@ -441,9 +442,14 @@
       };
 
       /* ── AuthLayout ─────────────────────────────────────────────── */
-      const AuthLayout = ({ appCount, incApp, children }) => {
+      const AuthLayout = ({
+        appCount,
+        incApp,
+        authCount,
+        incAuth,
+        children,
+      }) => {
         useTrackRender("AuthLayout");
-        const [authCount, incAuth] = useCounter();
 
         return (
           <ComponentBox

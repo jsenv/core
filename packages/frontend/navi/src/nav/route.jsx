@@ -57,7 +57,7 @@ const collectBranches = (children) => {
     }
     if (child.type !== Route) {
       throw new Error(
-        `All <Route> children must be <Route> components, got: ${String(child.type)}`,
+        `All <Route> children must be <Route> nodes, got: ${String(child.type?.name ?? child.type)}`,
       );
     }
     const {
