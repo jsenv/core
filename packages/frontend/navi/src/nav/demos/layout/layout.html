@@ -150,6 +150,24 @@
       .btn-dashboard-notfound {
         color: #64748b;
       }
+      .box-dashboard-projects {
+        border-color: #14b8a6;
+      }
+      .box-dashboard-projects .component-header {
+        background: #ccfbf1;
+      }
+      .box-dashboard-analytics {
+        border-color: #f43f5e;
+      }
+      .box-dashboard-analytics .component-header {
+        background: #ffe4e6;
+      }
+      .btn-dashboard-projects {
+        color: #14b8a6;
+      }
+      .btn-dashboard-analytics {
+        color: #f43f5e;
+      }
     </style>
   </head>
   <body>
@@ -187,16 +205,20 @@
       const HOME_ROUTE = route("");
       const PROFILE_ROUTE = route("/profile");
       const SETTINGS_ROUTE = route("/settings");
-      const DASHBOARD_ROUTE = route("/dashboard");
-      const UNKNOWN_ROUTE = route("/unknown");
+      const DASHBOARD_HOME_ROUTE = route("/dashboard");
+      const DASHBOARD_PROJECTS_ROUTE = route("/dashboard/projects");
+      const DASHBOARD_ANALYTICS_ROUTE = route("/dashboard/analytics");
       const DASHBOARD_UNKNOWN_ROUTE = route("/dashboard/unknown");
+      const UNKNOWN_ROUTE = route("/unknown");
       setupRoutes([
         HOME_ROUTE,
         PROFILE_ROUTE,
         SETTINGS_ROUTE,
-        DASHBOARD_ROUTE,
-        UNKNOWN_ROUTE,
+        DASHBOARD_HOME_ROUTE,
+        DASHBOARD_PROJECTS_ROUTE,
+        DASHBOARD_ANALYTICS_ROUTE,
         DASHBOARD_UNKNOWN_ROUTE,
+        UNKNOWN_ROUTE,
       ]);
 
       // Plain-DOM render tracking — never causes re-renders
@@ -207,7 +229,9 @@
         HomePage: 0,
         ProfilePage: 0,
         SettingsPage: 0,
-        DashboardPage: 0,
+        DashboardHomePage: 0,
+        DashboardProjectsPage: 0,
+        DashboardAnalyticsPage: 0,
         NotFoundPage: 0,
         DashboardNotFound: 0,
       };
@@ -224,16 +248,32 @@
           HomePage: "#6ee7b7",
           ProfilePage: "#fcd34d",
           SettingsPage: "#fca5a5",
-          DashboardPage: "#fb923c",
+          DashboardHomePage: "#fb923c",
+          DashboardProjectsPage: "#2dd4bf",
+          DashboardAnalyticsPage: "#fb7185",
           NotFoundPage: "#c084fc",
           DashboardNotFound: "#94a3b8",
         };
-        counts.innerHTML = Object.entries(renderCounts)
-          .map(
-            ([name, count]) =>
-              `<span style="color:${COLORS[name] ?? "#cdd6f4"};opacity:${count === 0 ? "0.35" : "1"}">${name}: <b>${count}</b></span>`,
-          )
-          .join("&ensp;·&ensp;");
+        const s = (name) => {
+          const count = renderCounts[name] ?? 0;
+          const color = COLORS[name] ?? "#cdd6f4";
+          const opacity = count === 0 ? "0.35" : "1";
+          return `<span style="color:${color};opacity:${opacity}">${name}&thinsp;<b>${count}</b></span>`;
+        };
+        const lines = [
+          s("App"),
+          "  ├─ " + s("HomePage"),
+          "  ├─ " + s("AuthLayout"),
+          "  │   ├─ " + s("ProfilePage"),
+          "  │   └─ " + s("SettingsPage"),
+          "  ├─ " + s("DashboardLayout"),
+          "  │   ├─ " + s("DashboardHomePage"),
+          "  │   ├─ " + s("DashboardProjectsPage"),
+          "  │   ├─ " + s("DashboardAnalyticsPage"),
+          "  │   └─ " + s("DashboardNotFound"),
+          "  └─ " + s("NotFoundPage"),
+        ];
+        counts.innerHTML = `<div style="font-family:monospace;font-size:12px;line-height:1.7;white-space:pre">${lines.join("\n")}</div>`;
       };
       const useTrackRender = (name) => {
         trackRender(name);
@@ -286,18 +326,12 @@
                 <Link route={PROFILE_ROUTE}>Profile</Link>
                 <Link route={SETTINGS_ROUTE}>Settings</Link>
 
-                <Link route={DASHBOARD_ROUTE}>Dashboard</Link>
+                <Link route={DASHBOARD_HOME_ROUTE}>Dashboard</Link>
                 <Link
                   route={UNKNOWN_ROUTE}
                   style="color:#a855f7;background:#f3e8ff;"
                 >
                   Unknown (fallback)
-                </Link>
-                <Link
-                  route={DASHBOARD_UNKNOWN_ROUTE}
-                  style="color:#64748b;background:#f1f5f9;"
-                >
-                  Dashboard unknown
                 </Link>
               </nav>
               <Route id="app_layout">
@@ -328,8 +362,18 @@
                   elementProps={{ appCount, incApp }}
                 >
                   <Route
-                    route={DASHBOARD_ROUTE}
-                    element={DashboardPage}
+                    route={DASHBOARD_HOME_ROUTE}
+                    element={DashboardHomePage}
+                    elementProps={{ appCount, incApp }}
+                  />
+                  <Route
+                    route={DASHBOARD_PROJECTS_ROUTE}
+                    element={DashboardProjectsPage}
+                    elementProps={{ appCount, incApp }}
+                  />
+                  <Route
+                    route={DASHBOARD_ANALYTICS_ROUTE}
+                    element={DashboardAnalyticsPage}
                     elementProps={{ appCount, incApp }}
                   />
                   <Route
@@ -535,19 +579,30 @@
               </>
             }
           >
+            <nav>
+              <Link route={DASHBOARD_HOME_ROUTE}>Overview</Link>
+              <Link route={DASHBOARD_PROJECTS_ROUTE}>Projects</Link>
+              <Link route={DASHBOARD_ANALYTICS_ROUTE}>Analytics</Link>
+              <Link
+                route={DASHBOARD_UNKNOWN_ROUTE}
+                style="color:#64748b;background:#f1f5f9;"
+              >
+                Unknown (fallback)
+              </Link>
+            </nav>
             {children}
           </ComponentBox>
         );
       };
 
-      const DashboardPage = ({ appCount, incApp }) => {
-        useTrackRender("DashboardPage");
+      const DashboardHomePage = ({ appCount, incApp }) => {
+        useTrackRender("DashboardHomePage");
         const [pageCount, incPage] = useCounter();
 
         return (
           <ComponentBox
             colorClass="box-dashboard"
-            name="DashboardPage"
+            name="DashboardHomePage"
             headerExtras={
               <>
                 <CounterBtn
@@ -566,7 +621,71 @@
             }
           >
             <p style="margin:0;color:#555;font-size:13px;">
-              Wrapped inside DashboardLayout.
+              Dashboard overview — wrapped inside DashboardLayout.
+            </p>
+          </ComponentBox>
+        );
+      };
+
+      const DashboardProjectsPage = ({ appCount, incApp }) => {
+        useTrackRender("DashboardProjectsPage");
+        const [pageCount, incPage] = useCounter();
+
+        return (
+          <ComponentBox
+            colorClass="box-dashboard-projects"
+            name="DashboardProjectsPage"
+            headerExtras={
+              <>
+                <CounterBtn
+                  colorClass="btn-app"
+                  label="App state"
+                  count={appCount}
+                  onClick={incApp}
+                />
+                <CounterBtn
+                  colorClass="btn-dashboard-projects"
+                  label="Page state"
+                  count={pageCount}
+                  onClick={incPage}
+                />
+              </>
+            }
+          >
+            <p style="margin:0;color:#555;font-size:13px;">
+              Dashboard projects — wrapped inside DashboardLayout.
+            </p>
+          </ComponentBox>
+        );
+      };
+
+      const DashboardAnalyticsPage = ({ appCount, incApp }) => {
+        useTrackRender("DashboardAnalyticsPage");
+        const [pageCount, incPage] = useCounter();
+
+        return (
+          <ComponentBox
+            colorClass="box-dashboard-analytics"
+            name="DashboardAnalyticsPage"
+            headerExtras={
+              <>
+                <CounterBtn
+                  colorClass="btn-app"
+                  label="App state"
+                  count={appCount}
+                  onClick={incApp}
+                />
+                <CounterBtn
+                  colorClass="btn-dashboard-analytics"
+                  label="Page state"
+                  count={pageCount}
+                  onClick={incPage}
+                />
+              </>
+            }
+          >
+            <p style="margin:0;color:#555;font-size:13px;">
+              Dashboard analytics — wrapped inside DashboardLayout.
             </p>
           </ComponentBox>
         );
