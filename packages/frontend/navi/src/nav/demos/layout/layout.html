@@ -62,9 +62,9 @@
       const SETTINGS_ROUTE = route("/settings");
       setupRoutes([HOME_ROUTE, PROFILE_ROUTE, SETTINGS_ROUTE]);
 
-      const AppLayout = ({ children }) => {
+      const AppLayout = ({ appCounter, children }) => {
         const renderCount = useRenderCount("AppLayout");
-        const localCounter = useLocalCounter("AppLayout state");
+
         return (
           <div
             style={{
@@ -78,7 +78,7 @@
               <Link route={PROFILE_ROUTE}>Profile</Link>
               <Link route={SETTINGS_ROUTE}>Settings</Link>
               {renderCount}
-              {localCounter}
+              {appCounter}
             </nav>
             {children}
           </div>
@@ -113,21 +113,28 @@
         );
       };
 
-      const App = () => (
-        <AppLayout>
-          <Route id="app_layout">
-            {/* Home has no layout wrapper — standalone page */}
-            <Route route={HOME_ROUTE} element={HomePage} />
+      const App = () => {
+        const appCounter = useLocalCounter("App");
 
-            <Route id="auth_layout">
-              <AuthenticatedLayout>
-                <Route route={PROFILE_ROUTE} element={ProfilePage} />
-                <Route route={SETTINGS_ROUTE} element={SettingsPage} />
-              </AuthenticatedLayout>
+        return (
+          <AppLayout appCounter={appCounter}>
+            <Route id="app_layout">
+              {/* Home has no layout wrapper — standalone page */}
+              <Route route={HOME_ROUTE} element={HomePage} />
+
+              <Route id="auth_layout">
+                <AuthenticatedLayout>
+                  <Route
+                    route={PROFILE_ROUTE}
+                    element={() => <ProfilePage appCounter={appCounter} />}
+                  />
+                  <Route route={SETTINGS_ROUTE} element={SettingsPage} />
+                </AuthenticatedLayout>
+              </Route>
             </Route>
-          </Route>
-        </AppLayout>
-      );
+          </AppLayout>
+        );
+      };
 
       const HomePage = () => {
         const renderCount = useRenderCount("HomePage");
@@ -140,14 +147,16 @@
           </div>
         );
       };
-      const ProfilePage = () => {
+      const ProfilePage = ({ appCounter }) => {
         const renderCount = useRenderCount("ProfilePage");
         const localCounter = useLocalCounter("Profile state");
         return (
           <div>
             <h2>Profile {renderCount}</h2>
             <p>This page is wrapped inside the authenticated layout.</p>
-            {localCounter}
+            App counter: {appCounter}
+            <br />
+            Self counter: {localCounter}
           </div>
         );
       };
