@@ -135,30 +135,32 @@
     </style>
   </head>
   <body>
-    <div id="app"></div>
     <div
       id="render-log"
       style="
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        right: 0;
         background: #1e1e2e;
         color: #cdd6f4;
         font-family: monospace;
         font-size: 12px;
         padding: 8px 16px;
-        border-top: 2px solid #45475a;
+        border-bottom: 2px solid #45475a;
         display: flex;
         gap: 16px;
         flex-wrap: wrap;
+        flex-direction: column;
         align-items: center;
       "
     >
       <span style="color: #6c7086; font-size: 11px"
-        >render counts per component:</span
+        >Render tracker (increments each time a component function is called by
+        Preact):</span
       >
+      <div
+        id="render-log-counts"
+        style="display: flex; gap: 16px; flex-wrap: wrap; align-items: center"
+      ></div>
     </div>
+    <div id="app"></div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useLayoutEffect, useState } from "preact/hooks";
@@ -175,8 +177,8 @@
         renderCounts[name] = (renderCounts[name] || 0) + 1;
       };
       const flushRenderLog = () => {
-        const panel = document.getElementById("render-log");
-        if (!panel) return;
+        const counts = document.getElementById("render-log-counts");
+        if (!counts) return;
         const COLORS = {
           App: "#a5b4fc",
           AuthLayout: "#7dd3fc",
@@ -185,7 +187,7 @@
           SettingsPage: "#fca5a5",
           NotFoundPage: "#c084fc",
         };
-        panel.innerHTML = Object.entries(renderCounts)
+        counts.innerHTML = Object.entries(renderCounts)
           .map(
             ([name, count]) =>
               `<span style="color:${COLORS[name] ?? "#cdd6f4"}">${name}: <b>${count}</b></span>`,
