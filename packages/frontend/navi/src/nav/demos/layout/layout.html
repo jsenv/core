@@ -178,19 +178,21 @@
                   elementProps={{ appCounter }}
                 />
 
-                <Route id="auth_layout">
-                  <AuthenticatedLayout appCounter={appCounter}>
-                    <Route
-                      route={PROFILE_ROUTE}
-                      element={ProfilePage}
-                      elementProps={{ appCounter }}
-                    />
-                    <Route
-                      route={SETTINGS_ROUTE}
-                      element={SettingsPage}
-                      elementProps={{ appCounter }}
-                    />
-                  </AuthenticatedLayout>
+                <Route
+                  id="auth_layout"
+                  element={AuthenticatedLayout}
+                  elementProps={{ appCounter }}
+                >
+                  <Route
+                    route={PROFILE_ROUTE}
+                    element={ProfilePage}
+                    elementProps={{ appCounter }}
+                  />
+                  <Route
+                    route={SETTINGS_ROUTE}
+                    element={SettingsPage}
+                    elementProps={{ appCounter }}
+                  />
                 </Route>
               </Route>
             </AppLayout>

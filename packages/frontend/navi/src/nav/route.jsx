@@ -114,9 +114,7 @@ const useMatchingSiblingsContext = import.meta.dev
     }
   : () => useContext(MatchingChildrenContext);
 
-const HIDDEN_STYLE = { display: "none" };
-
-const RouteAsContainer = ({ id, children }) => {
+const RouteAsContainer = ({ id, element, elementProps, children }) => {
   const matchingSiblings = useContext(MatchingChildrenContext); // null if no ancestor Route
   const matchingChildren = useMatchingChildren();
   const isMatching = matchingChildren.useIsMatching(); // reactive, re-renders only when boolean flips
@@ -209,23 +207,28 @@ const RouteAsContainer = ({ id, children }) => {
   }
   if (isMatching) {
     debug(`[container "${id}"] rendering children, isMatching=true`);
-    return (
+    const inner = (
       <MatchingChildrenContext.Provider value={matchingChildren}>
         <ProbingContext.Provider value={false}>
           {children}
         </ProbingContext.Provider>
       </MatchingChildrenContext.Provider>
     );
+    if (element) {
+      const Element = element;
+      return <Element {...elementProps}>{inner}</Element>;
+    }
+    return inner;
   }
-  debug(`[container "${id}"] rendering children hidden (not matching)`);
+  debug(
+    `[container "${id}"] rendering children bare (not matching, no layout)`,
+  );
   return (
-    <div style={HIDDEN_STYLE}>
-      <MatchingChildrenContext.Provider value={matchingChildren}>
-        <ProbingContext.Provider value={false}>
-          {children}
-        </ProbingContext.Provider>
-      </MatchingChildrenContext.Provider>
-    </div>
+    <MatchingChildrenContext.Provider value={matchingChildren}>
+      <ProbingContext.Provider value={false}>
+        {children}
+      </ProbingContext.Provider>
+    </MatchingChildrenContext.Provider>
   );
 };
 
