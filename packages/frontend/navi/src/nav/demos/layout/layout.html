@@ -6,14 +6,19 @@
     <style>
       @keyframes render-flash {
         0% {
-          background-color: var(--flash-color, rgba(255, 255, 255, 0.25));
+          background-color: var(--flash-color);
+          transform: scale(1.08);
+        }
+        60% {
+          transform: scale(1);
         }
         100% {
           background-color: transparent;
         }
       }
       .render-flash {
-        animation: render-flash 800ms ease-out;
+        animation: render-flash 700ms ease-out;
+        display: inline-block;
       }
       * {
         box-sizing: border-box;
@@ -284,7 +289,7 @@
         logInitialized = true;
         const lines = TREE.map(({ name, indent }) => {
           const color = COLORS[name] ?? "#cdd6f4";
-          return `<span style="white-space:pre;color:#6c7086">${indent}</span><span id="rc-${name}" style="color:${color};opacity:0.35;padding:0 3px;border-radius:3px;--flash-color:${color}40">${name}&thinsp;<b>0</b></span>`;
+          return `<span style="white-space:pre;color:#6c7086">${indent}</span><span id="rc-${name}" style="color:${color};opacity:0.35;padding:0 3px;border-radius:3px;--flash-color:${color}cc">${name}&thinsp;<b>0</b></span>`;
         });
         counts.innerHTML = `<div style="font-family:monospace;font-size:12px;line-height:1.7">${lines.join("<br>")}</div>`;
       };
