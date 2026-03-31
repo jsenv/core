@@ -126,7 +126,7 @@ const RouteAsContainer = ({ id, children }) => {
     return () => {
       matchingSiblings.reportUnmatch();
     };
-  }, [isMatching]);
+  }, [isProbing, isMatching]);
 
   if (!isProbing && !isMatching) {
     return null;
