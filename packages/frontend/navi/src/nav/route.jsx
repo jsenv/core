@@ -69,16 +69,19 @@ const useMatchingChildren = () => {
   return matchingChildren;
 };
 const createMatchingChildren = () => {
-  const countSignal = signal(0);
+  let count = 0;
+  const isMatchingSignal = signal(false);
 
   return {
-    countSignal,
-    useCount: () => countSignal.value,
+    useIsMatching: () => isMatchingSignal.value,
+    getCount: () => count,
     reportMatch: () => {
-      countSignal.value++;
+      count++;
+      if (count === 1) isMatchingSignal.value = true;
     },
     reportUnmatch: () => {
-      countSignal.value--;
+      count--;
+      if (count === 0) isMatchingSignal.value = false;
     },
   };
 };
@@ -97,36 +100,45 @@ const useMatchingSiblingsContext = import.meta.dev
 const RouteAsContainer = ({ id, children }) => {
   const matchingSiblings = useContext(MatchingChildrenContext); // null if no ancestor Route
   const matchingChildren = useMatchingChildren();
-  const matchingChildCount = matchingChildren.useCount(); // Reactive read: re-renders when any child reports a match
+  const isMatching = matchingChildren.useIsMatching(); // reactive, re-renders only when boolean flips
   const hasProbedRef = useRef(false);
   const isProbing = !hasProbedRef.current;
+  const prevReportedRef = useRef(false);
   const [, forceRender] = useReducer((n) => n + 1, 0);
-  const isMatching = matchingChildCount > 0;
 
+  // Probe effect: fires bottom-up, so child containers report to us before we run.
+  // We immediately report to our parent so parent's probe effect sees an up-to-date count.
   useLayoutEffect(() => {
     hasProbedRef.current = true;
     debug(
-      `Route "${id}" probed with ${matchingChildren.countSignal.peek()} matching children`,
+      `Route "${id}" probed with ${matchingChildren.getCount()} matching children`,
     );
+    if (matchingSiblings && matchingChildren.getCount() > 0) {
+      prevReportedRef.current = true;
+      matchingSiblings.reportMatch();
+    }
     forceRender();
+    return () => {
+      if (prevReportedRef.current) {
+        prevReportedRef.current = false;
+        matchingSiblings.reportUnmatch();
+      }
+    };
   }, []);
 
+  // Post-probe: sync report when isMatching changes.
   useLayoutEffect(() => {
-    if (!matchingSiblings) {
-      return undefined;
-    }
-    if (isProbing) {
-      // we don't know yet
-      return undefined;
-    }
-    if (!isMatching) {
-      return undefined;
-    }
-    matchingSiblings.reportMatch();
-    return () => {
+    if (!matchingSiblings) return;
+    if (!hasProbedRef.current) return; // still in probe phase, handled above
+    if (isMatching === prevReportedRef.current) return;
+    if (isMatching) {
+      prevReportedRef.current = true;
+      matchingSiblings.reportMatch();
+    } else {
+      prevReportedRef.current = false;
       matchingSiblings.reportUnmatch();
-    };
-  }, [isProbing, isMatching]);
+    }
+  }, [isMatching]);
 
   if (!isProbing && !isMatching) {
     return null;
@@ -182,7 +194,7 @@ const RouteOnly = (props) => {
 const RouteWithFallback = (props) => {
   const isProbing = useContext(ProbingContext);
   const matchingSiblings = useMatchingSiblingsContext();
-  const matchingSiblingCount = matchingSiblings.useCount();
+  const siblingIsMatching = matchingSiblings.useIsMatching();
   const { route, routeParams } = props;
   const { matching } = useRouteStatus(route);
   const isMatching =
@@ -194,7 +206,7 @@ const RouteWithFallback = (props) => {
   if (isProbing) {
     return null;
   }
-  if (matchingSiblingCount > 0) {
+  if (siblingIsMatching) {
     return null;
   }
   if (!isMatching) {
@@ -210,13 +222,13 @@ const RouteWithFallback = (props) => {
 const FallbackOnly = (props) => {
   const isProbing = useContext(ProbingContext);
   const matchingSiblings = useMatchingSiblingsContext();
-  const matchingSiblingCount = matchingSiblings.useCount();
+  const siblingIsMatching = matchingSiblings.useIsMatching();
   const matchingChildren = useMatchingChildren();
 
   if (isProbing) {
     return null;
   }
-  if (matchingSiblingCount > 0) {
+  if (siblingIsMatching) {
     return null;
   }
   return (
