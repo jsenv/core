@@ -466,30 +466,9 @@
             <Route
               id="dashboard_layout"
               route={DASHBOARD_SECTION_ROUTE}
-              element={DashboardLayout}
+              element={DashboardSection}
               elementProps={{ appCount, incApp }}
-            >
-              <Route
-                route={DASHBOARD_HOME_ROUTE}
-                element={DashboardHomePage}
-                elementProps={{ appCount, incApp }}
-              />
-              <Route
-                route={DASHBOARD_PROJECTS_ROUTE}
-                element={DashboardProjectsPage}
-                elementProps={{ appCount, incApp }}
-              />
-              <Route
-                route={DASHBOARD_ANALYTICS_ROUTE}
-                element={DashboardAnalyticsPage}
-                elementProps={{ appCount, incApp }}
-              />
-              <Route
-                fallback
-                element={DashboardNotFound}
-                elementProps={{ appCount, incApp }}
-              />
-            </Route>
+            />
             <Route
               route={BLOG_SECTION_ROUTE}
               element={BlogSection}
@@ -674,10 +653,9 @@
       };
 
       /* ── Dashboard ──────────────────────────────────────────────── */
-      const DashboardLayout = ({ appCount, incApp, children }) => {
+      const DashboardSection = ({ appCount, incApp }) => {
         useTrackRender("DashboardLayout");
         const [dashCount, incDash] = useCounter();
-
         return (
           <ComponentBox
             colorClass="box-dashboard"
@@ -710,7 +688,28 @@
                 Unknown (fallback)
               </Link>
             </Nav>
-            {children}
+            <Route>
+              <Route
+                route={DASHBOARD_HOME_ROUTE}
+                element={DashboardHomePage}
+                elementProps={{ appCount, incApp }}
+              />
+              <Route
+                route={DASHBOARD_PROJECTS_ROUTE}
+                element={DashboardProjectsPage}
+                elementProps={{ appCount, incApp }}
+              />
+              <Route
+                route={DASHBOARD_ANALYTICS_ROUTE}
+                element={DashboardAnalyticsPage}
+                elementProps={{ appCount, incApp }}
+              />
+              <Route
+                fallback
+                element={DashboardNotFound}
+                elementProps={{ appCount, incApp }}
+              />
+            </Route>
           </ComponentBox>
         );
       };
