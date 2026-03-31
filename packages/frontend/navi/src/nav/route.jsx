@@ -17,6 +17,51 @@
  *
  */
 
+/**
+ * Route is the single primitive for URL-based rendering.
+ *
+ * ## Layout pattern
+ * A container Route (with children) wraps leaf routes and optionally a fallback.
+ * The active child's element is passed as `children` to the container's element,
+ * allowing a shared layout to render around swappable page content.
+ *
+ * ```jsx
+ * const PROFILE_ROUTE = route("/profile");
+ * const SETTINGS_ROUTE = route("/settings");
+ *
+ * <Route element={AuthLayout}>
+ *   <Route route={PROFILE_ROUTE} element={ProfilePage} />
+ *   <Route route={SETTINGS_ROUTE} element={SettingsPage} />
+ *   <Route fallback element={AuthNotFoundPage} />
+ * </Route>
+ * ```
+ *
+ * ## Self-contained section pattern
+ * A leaf Route renders a component that owns its own sub-router internally.
+ * Routes for the section are defined alongside the component, not in the top-level router.
+ * This keeps everything about the section — routes, structure, sub-pages — co-located
+ * in one place. Unlike the layout pattern, the component is not reusable across sections;
+ * it is the section.
+ *
+ * ```jsx
+ * const BLOG_SECTION_ROUTE = route("/blog/");
+ * const BLOG_HOME_ROUTE = route("/blog");
+ * const BLOG_POST_ROUTE = route("/blog/posts");
+ *
+ * // top-level router — only knows about the prefix
+ * <Route route={BLOG_SECTION_ROUTE} element={BlogSection} />
+ *
+ * // BlogSection owns the rest
+ * const BlogSection = () => (
+ *   <Route>
+ *     <Route route={BLOG_HOME_ROUTE} element={BlogHomePage} />
+ *     <Route route={BLOG_POSTS_ROUTE} element={BlogPostsPage} />
+ *     <Route fallback element={BlogNotFound} />
+ *   </Route>
+ * );
+ * ```
+ */
+
 import { ActionRenderer } from "../action/action_renderer.jsx";
 import { useUITransitionContentId } from "../ui_transition/ui_transition.jsx";
 

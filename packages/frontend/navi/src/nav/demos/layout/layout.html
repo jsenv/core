@@ -290,7 +290,7 @@
         DashboardAnalyticsPage: 0,
         NotFoundPage: 0,
         DashboardNotFound: 0,
-        BlogLayout: 0,
+        BlogSection: 0,
         BlogHomePage: 0,
         BlogPostsPage: 0,
         BlogNotFound: 0,
@@ -312,7 +312,7 @@
         DashboardAnalyticsPage: "#fb7185",
         NotFoundPage: "#c084fc",
         DashboardNotFound: "#94a3b8",
-        BlogLayout: "#c4b5fd",
+        BlogSection: "#c4b5fd",
         BlogHomePage: "#a78bfa",
         BlogPostsPage: "#f9a8d4",
         BlogNotFound: "#a8a29e",
@@ -328,7 +328,7 @@
         { name: "DashboardProjectsPage", indent: "  \u2502   \u251c\u2500 " },
         { name: "DashboardAnalyticsPage", indent: "  \u2502   \u251c\u2500 " },
         { name: "DashboardNotFound", indent: "  \u2502   \u2514\u2500 " },
-        { name: "BlogLayout", indent: "  \u251c\u2500 " },
+        { name: "BlogSection", indent: "  \u251c\u2500 " },
         { name: "BlogHomePage", indent: "  \u2502   \u251c\u2500 " },
         { name: "BlogPostsPage", indent: "  \u2502   \u251c\u2500 " },
         { name: "BlogNotFound", indent: "  \u2502   \u2514\u2500 " },
@@ -492,7 +492,7 @@
             </Route>
             <Route
               route={BLOG_SECTION_ROUTE}
-              element={BlogLayout}
+              element={BlogSection}
               elementProps={{ appCount, incApp }}
             />
             <Route
@@ -846,16 +846,16 @@
 
       /* ── Blog ───────────────────────────────────────────────────
        * Routes are defined above near this component, not in Router.
-       * BlogLayout owns its own sub-router internally.
+       * BlogSection owns its own sub-router internally.
        * ─────────────────────────────────────────────────────────── */
-      const BlogLayout = ({ appCount, incApp }) => {
-        useTrackRender("BlogLayout");
+      const BlogSection = ({ appCount, incApp }) => {
+        useTrackRender("BlogSection");
         const [blogCount, incBlog] = useCounter();
 
         return (
           <ComponentBox
             colorClass="box-blog"
-            name="BlogLayout"
+            name="BlogSection"
             headerExtras={
               <>
                 <CounterBtn
