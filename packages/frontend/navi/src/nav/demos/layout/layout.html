@@ -107,6 +107,12 @@
       .box-settings .component-header {
         background: #fee2e2;
       }
+      .box-notfound {
+        border-color: #a855f7;
+      }
+      .box-notfound .component-header {
+        background: #f3e8ff;
+      }
 
       .btn-app {
         color: #6366f1;
@@ -122,6 +128,9 @@
       }
       .btn-settings {
         color: #ef4444;
+      }
+      .btn-notfound {
+        color: #a855f7;
       }
     </style>
   </head>
@@ -141,11 +150,15 @@
         padding: 8px 16px;
         border-top: 2px solid #45475a;
         display: flex;
-        gap: 24px;
+        gap: 16px;
         flex-wrap: wrap;
         align-items: center;
       "
-    ></div>
+    >
+      <span style="color: #6c7086; font-size: 11px"
+        >render counts per component:</span
+      >
+    </div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useLayoutEffect, useState } from "preact/hooks";
@@ -170,6 +183,7 @@
           HomePage: "#6ee7b7",
           ProfilePage: "#fcd34d",
           SettingsPage: "#fca5a5",
+          NotFoundPage: "#c084fc",
         };
         panel.innerHTML = Object.entries(renderCounts)
           .map(
@@ -227,6 +241,9 @@
                 <Link route={HOME_ROUTE}>Home</Link>
                 <Link route={PROFILE_ROUTE}>Profile</Link>
                 <Link route={SETTINGS_ROUTE}>Settings</Link>
+                <a href="/unknown" style="color:#a855f7;background:#f3e8ff;">
+                  Unknown (fallback)
+                </a>
               </nav>
               <Route id="app_layout">
                 <Route
@@ -250,6 +267,11 @@
                     elementProps={{ appCount, incApp }}
                   />
                 </Route>
+                <Route
+                  fallback
+                  element={NotFoundPage}
+                  elementProps={{ appCount, incApp }}
+                />
               </Route>
             </ComponentBox>
           </div>
@@ -379,6 +401,38 @@
           >
             <p style="margin:0;color:#555;font-size:13px;">
               Wrapped inside AuthLayout.
+            </p>
+          </ComponentBox>
+        );
+      };
+
+      const NotFoundPage = ({ appCount, incApp }) => {
+        useTrackRender("NotFoundPage");
+        const [nfCount, incNf] = useCounter();
+
+        return (
+          <ComponentBox
+            colorClass="box-notfound"
+            name="NotFoundPage (fallback)"
+            headerExtras={
+              <>
+                <CounterBtn
+                  colorClass="btn-app"
+                  label="App state"
+                  count={appCount}
+                  onClick={incApp}
+                />
+                <CounterBtn
+                  colorClass="btn-notfound"
+                  label="NotFound state"
+                  count={nfCount}
+                  onClick={incNf}
+                />
+              </>
+            }
+          >
+            <p style="margin:0;color:#555;font-size:13px;">
+              No route matched — shown via <code>fallback</code> prop.
             </p>
           </ComponentBox>
         );
