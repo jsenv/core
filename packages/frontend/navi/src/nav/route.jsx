@@ -95,10 +95,13 @@ const useMatchingSiblingsContext = import.meta.dev
   : () => useContext(MatchingChildrenContext);
 
 const RouteAsContainer = ({ id, children }) => {
+  const matchingSiblings = useContext(MatchingChildrenContext); // null if no ancestor Route
   const matchingChildren = useMatchingChildren();
   const matchingChildCount = matchingChildren.useCount(); // Reactive read: re-renders when any child reports a match
   const hasProbedRef = useRef(false);
+  const isProbing = !hasProbedRef.current;
   const [, forceRender] = useReducer((n) => n + 1, 0);
+  const isMatching = matchingChildCount > 0;
 
   useLayoutEffect(() => {
     hasProbedRef.current = true;
@@ -108,12 +111,26 @@ const RouteAsContainer = ({ id, children }) => {
     forceRender();
   }, []);
 
-  const isProbing = !hasProbedRef.current;
+  useLayoutEffect(() => {
+    if (!matchingSiblings) {
+      return undefined;
+    }
+    if (isProbing) {
+      // we don't know yet
+      return undefined;
+    }
+    if (!isMatching) {
+      return undefined;
+    }
+    matchingSiblings.reportMatch();
+    return () => {
+      matchingSiblings.reportUnmatch();
+    };
+  }, [isMatching]);
 
-  if (!isProbing && matchingChildCount === 0) {
+  if (!isProbing && !isMatching) {
     return null;
   }
-
   return (
     <MatchingChildrenContext.Provider value={matchingChildren}>
       <ProbingContext.Provider value={isProbing}>
