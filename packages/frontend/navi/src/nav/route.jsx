@@ -21,9 +21,11 @@
  * Route is the single primitive for URL-based rendering.
  *
  * ## Layout pattern
- * A container Route (with children) wraps leaf routes and optionally a fallback.
- * The active child's element is passed as `children` to the container's element,
- * allowing a shared layout to render around swappable page content.
+ * Use this when multiple routes share a common layout but have no shared URL prefix,
+ * making it impossible to set a guard route on the parent container.
+ * For example, `/profile` and `/settings` both live inside `AuthLayout` but there
+ * is no `/auth/` prefix to match on. A container Route wraps them: the active
+ * child's element is injected as `children` into the layout element.
  *
  * ```jsx
  * const PROFILE_ROUTE = route("/profile");
@@ -37,28 +39,30 @@
  * ```
  *
  * ## Self-contained section pattern
- * A leaf Route renders a component that owns its own sub-router internally.
- * Routes for the section are defined alongside the component, not in the top-level router.
- * This keeps everything about the section — routes, structure, sub-pages — co-located
- * in one place. Unlike the layout pattern, the component is not reusable across sections;
- * it is the section.
+ * Use this when routes share a common URL prefix (e.g. `/dashboard/`).
+ * A single leaf Route in the top-level router matches the prefix; the component
+ * it renders owns its sub-router and all related routes internally.
+ * Everything about the section — routes, structure, sub-pages — is co-located.
+ * The component is not a reusable layout; it is the section.
  *
  * ```jsx
- * const BLOG_SECTION_ROUTE = route("/blog/");
- * const BLOG_HOME_ROUTE = route("/blog");
- * const BLOG_POST_ROUTE = route("/blog/posts");
+ * const DASHBOARD_SECTION_ROUTE = route("/dashboard/");
+ * const DASHBOARD_HOME_ROUTE = route("/dashboard");
+ * const DASHBOARD_POSTS_ROUTE = route("/dashboard/posts");
  *
  * // top-level router — only knows about the prefix
- * <Route route={BLOG_SECTION_ROUTE} element={BlogSection} />
+ * <Route route={DASHBOARD_SECTION_ROUTE} element={DashboardSection} />
  *
- * // BlogSection owns the rest
- * const BlogSection = () => (
- *   <Route>
- *     <Route route={BLOG_HOME_ROUTE} element={BlogHomePage} />
- *     <Route route={BLOG_POSTS_ROUTE} element={BlogPostsPage} />
- *     <Route fallback element={BlogNotFound} />
- *   </Route>
- * );
+ * // DashboardSection owns the rest
+ * const DashboardSection = () => {
+ *   return <div style="background: lightblue; padding: 10px;">
+ *     <Route>
+ *       <Route route={DASHBOARD_HOME_ROUTE} element={DashboardHomePage} />
+ *       <Route route={DASHBOARD_POSTS_ROUTE} element={DashboardPostsPage} />
+ *       <Route fallback element={DashboardNotFound} />
+ *     </Route>
+ *   </div>;
+ * }
  * ```
  */
 

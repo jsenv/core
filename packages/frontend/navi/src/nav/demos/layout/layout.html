@@ -248,12 +248,14 @@
       const HOME_ROUTE = route("");
       const PROFILE_ROUTE = route("/profile");
       const SETTINGS_ROUTE = route("/settings");
+      const UNKNOWN_ROUTE = route("/unknown");
+
+      // Dashboard routes — defined here, near the component that uses them
+      const DASHBOARD_SECTION_ROUTE = route("/dashboard/");
       const DASHBOARD_HOME_ROUTE = route("/dashboard");
       const DASHBOARD_PROJECTS_ROUTE = route("/dashboard/projects");
       const DASHBOARD_ANALYTICS_ROUTE = route("/dashboard/analytics");
       const DASHBOARD_UNKNOWN_ROUTE = route("/dashboard/unknown");
-      const DASHBOARD_SECTION_ROUTE = route("/dashboard/");
-      const UNKNOWN_ROUTE = route("/unknown");
 
       // Blog routes — defined here, near the component that uses them
       const BLOG_SECTION_ROUTE = route("/blog/");
@@ -281,7 +283,7 @@
       const renderCounts = {
         App: 0,
         AuthLayout: 0,
-        DashboardLayout: 0,
+        DashboardSection: 0,
         HomePage: 0,
         ProfilePage: 0,
         SettingsPage: 0,
@@ -303,7 +305,7 @@
       const COLORS = {
         App: "#a5b4fc",
         AuthLayout: "#7dd3fc",
-        DashboardLayout: "#fdba74",
+        DashboardSection: "#fdba74",
         HomePage: "#6ee7b7",
         ProfilePage: "#fcd34d",
         SettingsPage: "#fca5a5",
@@ -323,7 +325,7 @@
         { name: "AuthLayout", indent: "  \u251c\u2500 " },
         { name: "ProfilePage", indent: "  \u2502   \u251c\u2500 " },
         { name: "SettingsPage", indent: "  \u2502   \u2514\u2500 " },
-        { name: "DashboardLayout", indent: "  \u251c\u2500 " },
+        { name: "DashboardSection", indent: "  \u251c\u2500 " },
         { name: "DashboardHomePage", indent: "  \u2502   \u251c\u2500 " },
         { name: "DashboardProjectsPage", indent: "  \u2502   \u251c\u2500 " },
         { name: "DashboardAnalyticsPage", indent: "  \u2502   \u251c\u2500 " },
@@ -654,12 +656,12 @@
 
       /* ── Dashboard ──────────────────────────────────────────────── */
       const DashboardSection = ({ appCount, incApp }) => {
-        useTrackRender("DashboardLayout");
+        useTrackRender("DashboardSection");
         const [dashCount, incDash] = useCounter();
         return (
           <ComponentBox
             colorClass="box-dashboard"
-            name="DashboardLayout"
+            name="DashboardSection"
             headerExtras={
               <>
                 <CounterBtn
@@ -740,7 +742,7 @@
             }
           >
             <p style="margin:0;color:#555;font-size:13px;">
-              Dashboard overview — wrapped inside DashboardLayout.
+              Dashboard overview — wrapped inside DashboardSection.
             </p>
           </ComponentBox>
         );
@@ -772,7 +774,7 @@
             }
           >
             <p style="margin:0;color:#555;font-size:13px;">
-              Dashboard projects — wrapped inside DashboardLayout.
+              Dashboard projects — wrapped inside DashboardSection.
             </p>
           </ComponentBox>
         );
@@ -804,7 +806,7 @@
             }
           >
             <p style="margin:0;color:#555;font-size:13px;">
-              Dashboard analytics — wrapped inside DashboardLayout.
+              Dashboard analytics — wrapped inside DashboardSection.
             </p>
           </ComponentBox>
         );
@@ -817,7 +819,7 @@
         return (
           <ComponentBox
             colorClass="box-dashboard-notfound"
-            name="DashboardNotFound (fallback inside layout)"
+            name="DashboardNotFound (fallback inside section)"
             headerExtras={
               <>
                 <CounterBtn
@@ -837,7 +839,7 @@
           >
             <p style="margin:0;color:#555;font-size:13px;">
               No dashboard route matched — fallback rendered inside{" "}
-              <code>DashboardLayout</code>.
+              <code>DashboardSection</code>.
             </p>
           </ComponentBox>
         );
