@@ -52,11 +52,13 @@ const ProbingContext = createContext(false);
 const MatchingChildrenContext = createContext(null);
 const useMatchingChildren = () => {
   const ref = useRef();
-  const refValue = ref.current;
-  if (refValue) {
-    return refValue;
+  const matchingChildrenFromRef = ref.current;
+  if (matchingChildrenFromRef) {
+    return matchingChildrenFromRef;
   }
-  return createMatchingChildren();
+  const matchingChildren = createMatchingChildren();
+  ref.current = matchingChildren;
+  return matchingChildren;
 };
 const createMatchingChildren = () => {
   const countSignal = signal(0);
