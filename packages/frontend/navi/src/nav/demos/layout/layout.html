@@ -3,250 +3,368 @@
   <head>
     <meta charset="utf-8" />
     <title>Route Layout Demo</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: system-ui, sans-serif;
+        background: #f5f5f5;
+      }
+      .app {
+        max-width: 700px;
+        margin: 24px auto;
+        padding: 0 16px;
+      }
+      .component-box {
+        margin: 8px 0;
+        border: 2px solid;
+        border-radius: 8px;
+        overflow: hidden;
+      }
+      .component-header {
+        display: flex;
+        padding: 8px 12px;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px;
+        font-size: 13px;
+      }
+      .component-name {
+        font-weight: 700;
+        font-size: 14px;
+      }
+      .render-badge {
+        padding: 2px 6px;
+        font-size: 11px;
+        font-family: monospace;
+        background: rgba(0, 0, 0, 0.08);
+        border-radius: 4px;
+      }
+      .component-body {
+        padding: 10px 14px;
+      }
+      .counters {
+        display: flex;
+        margin-bottom: 8px;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+        color: #555;
+        font-size: 12px;
+      }
+      .counter-btn {
+        padding: 3px 10px;
+        font-size: 12px;
+        font-family: monospace;
+        background: white;
+        border: 1px solid currentColor;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      .counter-btn:hover {
+        opacity: 0.8;
+      }
+      nav {
+        display: flex;
+        margin-bottom: 12px;
+        gap: 8px;
+      }
+      nav a {
+        padding: 5px 14px;
+        color: #333;
+        font-size: 14px;
+        text-decoration: none;
+        background: #e0e0e0;
+        border-radius: 6px;
+      }
+      nav a[aria-current] {
+        color: white;
+        background: #333;
+      }
+      /* color palette per component */
+      .box-app {
+        border-color: #6366f1;
+      }
+      .box-app .component-header {
+        background: #eef2ff;
+      }
+      .box-auth {
+        border-color: #0ea5e9;
+      }
+      .box-auth .component-header {
+        background: #e0f2fe;
+      }
+      .box-home {
+        border-color: #10b981;
+      }
+      .box-home .component-header {
+        background: #d1fae5;
+      }
+      .box-profile {
+        border-color: #f59e0b;
+      }
+      .box-profile .component-header {
+        background: #fef3c7;
+      }
+      .box-settings {
+        border-color: #ef4444;
+      }
+      .box-settings .component-header {
+        background: #fee2e2;
+      }
+
+      .btn-app {
+        color: #6366f1;
+      }
+      .btn-auth {
+        color: #0ea5e9;
+      }
+      .btn-home {
+        color: #10b981;
+      }
+      .btn-profile {
+        color: #f59e0b;
+      }
+      .btn-settings {
+        color: #ef4444;
+      }
+    </style>
   </head>
   <body>
     <div id="app"></div>
-    <style>
-      ul {
-        margin: 0;
-        padding: 0;
-        padding-left: 20px;
-      }
-    </style>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useRef, useState } from "preact/hooks";
       import { Link, Route, route, setupRoutes } from "@jsenv/navi";
-
-      /*
-       * Demonstrate that <Route> children act as a layout:
-       * the parent <Route> renders its element (the shell/layout) and the
-       * child <Route> renders the matching page inside it.
-       *
-       * Current limitation: when NO child route matches, the layout is still
-       * rendered because <Route> (container mode) always renders its children.
-       * Navigate to "/" to see the issue — the gray shell appears even though
-       * no sub-route matches.
-       */
-
-      const RENDER_COUNT_STYLE = {
-        fontSize: "11px",
-        color: "#999",
-        fontFamily: "monospace",
-        marginLeft: "8px",
-      };
-      const COUNTER_BUTTON_STYLE = {
-        fontSize: "11px",
-        padding: "2px 8px",
-        cursor: "pointer",
-        marginLeft: "4px",
-      };
-      let globalRenderSeq = 0;
-      const useRenderCount = () => {
-        const seqRef = useRef([]);
-        const countRef = useRef(0);
-        countRef.current++;
-        globalRenderSeq++;
-        seqRef.current.push(globalRenderSeq);
-        const seq = globalRenderSeq;
-        const count = countRef.current;
-        return (
-          <span style={RENDER_COUNT_STYLE}>
-            local #{count}, global #{seq}]
-          </span>
-        );
-      };
-      const useLocalCounter = (label) => {
-        const [count, setCount] = useState(0);
-        return (
-          <span>
-            <button
-              style={COUNTER_BUTTON_STYLE}
-              onClick={() => setCount(count + 1)}
-            >
-              {label}: {count} (click to re-render)
-            </button>
-          </span>
-        );
-      };
 
       const HOME_ROUTE = route("");
       const PROFILE_ROUTE = route("/profile");
       const SETTINGS_ROUTE = route("/settings");
       setupRoutes([HOME_ROUTE, PROFILE_ROUTE, SETTINGS_ROUTE]);
 
-      const ComponentInfo = ({ name, renderCount, counters, children }) => {
-        return (
-          <fieldset>
-            <legend>{name}</legend>
-            Render:
-            {renderCount}
-            <br />
-            {counters}
-            <div className="component_content" style="margin: 10px;">
-              {children}
-            </div>
-          </fieldset>
-        );
+      let globalSeq = 0;
+      const useRenderInfo = () => {
+        const localRef = useRef(0);
+        localRef.current++;
+        globalSeq++;
+        return { local: localRef.current, global: globalSeq };
       };
 
-      const AppLayout = ({ appCounter, children }) => {
-        const renderCount = useRenderCount();
+      const ComponentBox = ({
+        colorClass,
+        name,
+        renderInfo,
+        headerExtras,
+        children,
+      }) => (
+        <div class={`component-box ${colorClass}`}>
+          <div class="component-header">
+            <span class="component-name">{name}</span>
+            <span class="render-badge">
+              render #{renderInfo.local} &nbsp;·&nbsp; global #
+              {renderInfo.global}
+            </span>
+            {headerExtras}
+          </div>
+          <div class="component-body">{children}</div>
+        </div>
+      );
 
-        return (
-          <ComponentInfo
-            name="AppLayout"
-            renderCount={renderCount}
-            counters={
-              <ul>
-                <li>App counter: {appCounter}</li>
-              </ul>
-            }
-          >
-            <nav
-              style={{
-                display: "flex",
-                gap: "12px",
-                marginBottom: "20px",
-              }}
-            >
-              <Link route={HOME_ROUTE}>Home</Link>
-              <Link route={PROFILE_ROUTE}>Profile</Link>
-              <Link route={SETTINGS_ROUTE}>Settings</Link>
-            </nav>
-            {children}
-          </ComponentInfo>
-        );
+      const CounterBtn = ({ colorClass, label, count, onClick }) => (
+        <button class={`counter-btn ${colorClass}`} onClick={onClick}>
+          {label}: {count}
+        </button>
+      );
+
+      const useCounter = () => {
+        const [count, setCount] = useState(0);
+        return [count, () => setCount((c) => c + 1)];
       };
 
-      // Layout shell rendered when either /profile or /settings matches.
-      // The child routes render the actual page content inside it.
-      const AuthenticatedLayout = ({ appCounter, children }) => {
-        const renderCount = useRenderCount();
-        const localCounter = useLocalCounter("AuthLayout state");
-        return (
-          <ComponentInfo
-            name="AuthenticatedLayout"
-            renderCount={renderCount}
-            counters={
-              <ul>
-                <li>App counter: {appCounter}</li>
-                <li>AuthenticatedLayout counter: {localCounter}</li>
-              </ul>
-            }
-          >
-            <div
-              style={{
-                padding: "16px",
-                background: "#f0f4ff",
-                border: "1px solid #c0d0ff",
-                borderRadius: "6px",
-              }}
-            >
-              <div
-                style={{
-                  fontSize: "12px",
-                  color: "#555",
-                  marginBottom: "12px",
-                }}
-              >
-                Authenticated area
-              </div>
-              {children}
-            </div>
-          </ComponentInfo>
-        );
-      };
-
+      /* ── App (root) ─────────────────────────────────────────────── */
       const App = () => {
-        const appCounter = useLocalCounter("App");
+        const renderInfo = useRenderInfo();
+        const [appCount, incApp] = useCounter();
 
         return (
-          <div
-            style={{
-              fontFamily: "system-ui, sans-serif",
-              maxWidth: "600px",
-              padding: "20px",
-            }}
-          >
-            <AppLayout appCounter={appCounter}>
+          <div class="app">
+            <ComponentBox
+              colorClass="box-app"
+              name="App"
+              renderInfo={renderInfo}
+              headerExtras={
+                <CounterBtn
+                  colorClass="btn-app"
+                  label="App state"
+                  count={appCount}
+                  onClick={incApp}
+                />
+              }
+            >
+              <nav>
+                <Link route={HOME_ROUTE}>Home</Link>
+                <Link route={PROFILE_ROUTE}>Profile</Link>
+                <Link route={SETTINGS_ROUTE}>Settings</Link>
+              </nav>
               <Route id="app_layout">
-                {/* Home has no layout wrapper — standalone page */}
                 <Route
                   route={HOME_ROUTE}
                   element={HomePage}
-                  elementProps={{ appCounter }}
+                  elementProps={{ appCount, incApp }}
                 />
-
                 <Route
                   id="auth_layout"
-                  element={AuthenticatedLayout}
-                  elementProps={{ appCounter }}
+                  element={AuthLayout}
+                  elementProps={{ appCount, incApp }}
                 >
                   <Route
                     route={PROFILE_ROUTE}
                     element={ProfilePage}
-                    elementProps={{ appCounter }}
+                    elementProps={{ appCount, incApp }}
                   />
                   <Route
                     route={SETTINGS_ROUTE}
                     element={SettingsPage}
-                    elementProps={{ appCounter }}
+                    elementProps={{ appCount, incApp }}
                   />
                 </Route>
               </Route>
-            </AppLayout>
+            </ComponentBox>
           </div>
         );
       };
 
-      const HomePage = ({ appCounter }) => {
-        const renderCount = useRenderCount();
-        const localCounter = useLocalCounter("Home state");
+      /* ── AuthLayout ─────────────────────────────────────────────── */
+      const AuthLayout = ({ appCount, incApp, children }) => {
+        const renderInfo = useRenderInfo();
+        const [authCount, incAuth] = useCounter();
+
         return (
-          <ComponentInfo
+          <ComponentBox
+            colorClass="box-auth"
+            name="AuthLayout"
+            renderInfo={renderInfo}
+            headerExtras={
+              <>
+                <CounterBtn
+                  colorClass="btn-app"
+                  label="App state"
+                  count={appCount}
+                  onClick={incApp}
+                />
+                <CounterBtn
+                  colorClass="btn-auth"
+                  label="Auth state"
+                  count={authCount}
+                  onClick={incAuth}
+                />
+              </>
+            }
+          >
+            {children}
+          </ComponentBox>
+        );
+      };
+
+      /* ── Pages ──────────────────────────────────────────────────── */
+      const HomePage = ({ appCount, incApp }) => {
+        const renderInfo = useRenderInfo();
+        const [homeCount, incHome] = useCounter();
+
+        return (
+          <ComponentBox
+            colorClass="box-home"
             name="HomePage"
-            renderCount={renderCount}
-            counters={
-              <ul>
-                <li>App counter: {appCounter}</li>
-                <li>HomePage counter: {localCounter}</li>
-              </ul>
+            renderInfo={renderInfo}
+            headerExtras={
+              <>
+                <CounterBtn
+                  colorClass="btn-app"
+                  label="App state"
+                  count={appCount}
+                  onClick={incApp}
+                />
+                <CounterBtn
+                  colorClass="btn-home"
+                  label="Home state"
+                  count={homeCount}
+                  onClick={incHome}
+                />
+              </>
             }
           >
-            Home page
-          </ComponentInfo>
+            <p style="margin:0;color:#555;font-size:13px;">
+              No layout wrapper on this page.
+            </p>
+          </ComponentBox>
         );
       };
-      const ProfilePage = ({ appCounter }) => {
-        const renderCount = useRenderCount();
-        const localCounter = useLocalCounter("Profile state");
+
+      const ProfilePage = ({ appCount, incApp }) => {
+        const renderInfo = useRenderInfo();
+        const [profileCount, incProfile] = useCounter();
+
         return (
-          <ComponentInfo
+          <ComponentBox
+            colorClass="box-profile"
             name="ProfilePage"
-            renderCount={renderCount}
-            counters={
-              <ul>
-                <li>App counter: {appCounter}</li>
-                <li>ProfilePage counter: {localCounter}</li>
-              </ul>
+            renderInfo={renderInfo}
+            headerExtras={
+              <>
+                <CounterBtn
+                  colorClass="btn-app"
+                  label="App state"
+                  count={appCount}
+                  onClick={incApp}
+                />
+                <CounterBtn
+                  colorClass="btn-profile"
+                  label="Profile state"
+                  count={profileCount}
+                  onClick={incProfile}
+                />
+              </>
             }
           >
-            Profile
-          </ComponentInfo>
+            <p style="margin:0;color:#555;font-size:13px;">
+              Wrapped inside AuthLayout.
+            </p>
+          </ComponentBox>
         );
       };
-      const SettingsPage = ({ appCounter }) => {
-        const renderCount = useRenderCount("SettingsPage");
-        const localCounter = useLocalCounter("Settings state");
+
+      const SettingsPage = ({ appCount, incApp }) => {
+        const renderInfo = useRenderInfo();
+        const [settingsCount, incSettings] = useCounter();
+
         return (
-          <div>
-            <h2>Settings {renderCount}</h2>
-            <p>This page is also wrapped inside the authenticated layout.</p>
-            App counter: {appCounter}
-            <br />
-            Self counter: {localCounter}
-          </div>
+          <ComponentBox
+            colorClass="box-settings"
+            name="SettingsPage"
+            renderInfo={renderInfo}
+            headerExtras={
+              <>
+                <CounterBtn
+                  colorClass="btn-app"
+                  label="App state"
+                  count={appCount}
+                  onClick={incApp}
+                />
+                <CounterBtn
+                  colorClass="btn-settings"
+                  label="Settings state"
+                  count={settingsCount}
+                  onClick={incSettings}
+                />
+              </>
+            }
+          >
+            <p style="margin:0;color:#555;font-size:13px;">
+              Wrapped inside AuthLayout.
+            </p>
+          </ComponentBox>
         );
       };
 
