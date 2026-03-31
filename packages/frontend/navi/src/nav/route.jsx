@@ -17,9 +17,6 @@
  *
  */
 
-import { createContext } from "preact";
-import { useContext } from "preact/hooks";
-
 import { ActionRenderer } from "../action/action_renderer.jsx";
 import { useUITransitionContentId } from "../ui_transition/ui_transition.jsx";
 
@@ -42,80 +39,60 @@ export const Route = (props) => {
   return null;
 };
 
-// Flatten JSX children to a plain array, filtering nulls/booleans.
-const flattenChildren = (children) => {
-  if (!children) return [];
-  const arr = Array.isArray(children) ? children : [children];
-  return arr.flat(Infinity).filter(Boolean);
-};
-
-// Walk JSX children vnodes (without rendering) to categorize them.
+// Walk JSX children vnodes (without rendering) to build a descriptor list and
+// find the active one in the same pass.
 // All children must be <Route> — throws in dev otherwise.
+// Returns { descriptors, activeDescriptor }.
 const collectDescriptors = (children) => {
-  const nodes = flattenChildren(children);
-  return nodes.map((node) => {
-    if (import.meta.dev && node.type !== Route) {
+  const descriptors = [];
+  let activeDescriptor = null;
+
+  const visit = (child) => {
+    if (!child || child === true || child === false) return;
+    if (Array.isArray(child)) {
+      for (const item of child) visit(item);
+      return;
+    }
+    if (import.meta.dev && child.type !== Route) {
       throw new Error(
-        `All <Route> children must be <Route> components, got: ${String(node.type)}`,
+        `All <Route> children must be <Route> components, got: ${String(child.type)}`,
       );
     }
-    const { children: nodeChildren, fallback } = node.props;
-    if (nodeChildren) return { type: "container", node };
-    if (fallback) return { type: "fallback", node };
-    return { type: "leaf", node };
-  });
-};
-
-// Check whether any leaf route inside a container's subtree is currently matching.
-// Reads matchingSignal.value directly — auto-subscribes via @preact/signals reactivity.
-const isContainerActive = (children) => {
-  for (const descriptor of collectDescriptors(children)) {
-    if (descriptor.type === "leaf") {
-      const { route, routeParams } = descriptor.node.props;
+    const {
+      children: nodeChildren,
+      fallback,
+      route,
+      routeParams,
+    } = child.props;
+    if (nodeChildren) {
+      const { activeDescriptor: activeChild } =
+        collectDescriptors(nodeChildren);
+      const descriptor = { type: "container", node: child };
+      descriptors.push(descriptor);
+      if (!activeDescriptor && activeChild) activeDescriptor = descriptor;
+    } else if (fallback) {
+      descriptors.push({ type: "fallback", node: child });
+    } else {
+      const descriptor = { type: "leaf", node: child };
+      descriptors.push(descriptor);
       if (
+        !activeDescriptor &&
         route.matchingSignal.value &&
         (!routeParams || route.matchesParams(routeParams))
       ) {
-        return true;
+        activeDescriptor = descriptor;
       }
     }
-    if (
-      descriptor.type === "container" &&
-      isContainerActive(descriptor.node.props.children)
-    ) {
-      return true;
-    }
-  }
-  return false;
-};
+  };
 
-// Find the first active descriptor among direct children.
-const findActiveDescriptor = (descriptors) => {
-  for (const descriptor of descriptors) {
-    if (descriptor.type === "leaf") {
-      const { route, routeParams } = descriptor.node.props;
-      if (
-        route.matchingSignal.value &&
-        (!routeParams || route.matchesParams(routeParams))
-      ) {
-        return descriptor;
-      }
-    }
-    if (
-      descriptor.type === "container" &&
-      isContainerActive(descriptor.node.props.children)
-    ) {
-      return descriptor;
-    }
-  }
-  return null;
+  visit(children);
+  return { descriptors, activeDescriptor };
 };
 // RouteContainer: traverses children statically per render, finds the active branch,
 // and renders only that branch — or the fallback if nothing matches.
 // No effects, no signals, no contexts needed: reads route signals directly.
 const RouteContainer = ({ id, element, elementProps, children }) => {
-  const descriptors = collectDescriptors(children);
-  const activeDescriptor = findActiveDescriptor(descriptors);
+  const { descriptors, activeDescriptor } = collectDescriptors(children);
 
   debug(
     `[container "${id}"] RENDER, active=${activeDescriptor ? activeDescriptor.type : "none"}`,
@@ -144,8 +121,7 @@ const RouteLeafRoute = (props) => {
   return <RouteActive {...props} />;
 };
 
-const RouteInfoContext = createContext(null);
-const RouteActive = ({ route, element, elementProps, action, meta }) => {
+const RouteActive = ({ element, elementProps, action }) => {
   const Element = element;
   const renderedElement = action ? (
     <ActionRenderer action={action}>{element}</ActionRenderer>
@@ -154,13 +130,5 @@ const RouteActive = ({ route, element, elementProps, action, meta }) => {
   ) : (
     element
   );
-  return (
-    <RouteInfoContext.Provider value={{ route, meta }}>
-      {renderedElement}
-    </RouteInfoContext.Provider>
-  );
-};
-
-export const useMatchingRouteInfo = () => {
-  return useContext(RouteInfoContext);
+  return renderedElement;
 };
