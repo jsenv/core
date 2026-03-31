@@ -382,63 +382,69 @@
                   Unknown (fallback)
                 </Link>
               </Nav>
-              <Route id="app_layout">
-                <Route
-                  route={HOME_ROUTE}
-                  element={HomePage}
-                  elementProps={{ appCount, incApp }}
-                />
-                <Route
-                  id="auth_layout"
-                  element={AuthLayout}
-                  elementProps={{ appCount, incApp }}
-                >
-                  <Route
-                    route={PROFILE_ROUTE}
-                    element={ProfilePage}
-                    elementProps={{ appCount, incApp }}
-                  />
-                  <Route
-                    route={SETTINGS_ROUTE}
-                    element={SettingsPage}
-                    elementProps={{ appCount, incApp }}
-                  />
-                </Route>
-                <Route
-                  id="dashboard_layout"
-                  route={DASHBOARD_SECTION_ROUTE}
-                  element={DashboardLayout}
-                  elementProps={{ appCount, incApp }}
-                >
-                  <Route
-                    route={DASHBOARD_HOME_ROUTE}
-                    element={DashboardHomePage}
-                    elementProps={{ appCount, incApp }}
-                  />
-                  <Route
-                    route={DASHBOARD_PROJECTS_ROUTE}
-                    element={DashboardProjectsPage}
-                    elementProps={{ appCount, incApp }}
-                  />
-                  <Route
-                    route={DASHBOARD_ANALYTICS_ROUTE}
-                    element={DashboardAnalyticsPage}
-                    elementProps={{ appCount, incApp }}
-                  />
-                  <Route
-                    fallback
-                    element={DashboardNotFound}
-                    elementProps={{ appCount, incApp }}
-                  />
-                </Route>
-                <Route
-                  fallback
-                  element={NotFoundPage}
-                  elementProps={{ appCount, incApp }}
-                />
-              </Route>
+              <Router appCount={appCount} incApp={incApp} />
             </ComponentBox>
           </div>
+        );
+      };
+
+      const Router = ({ appCount, incApp }) => {
+        return (
+          <Route id="app_layout">
+            <Route
+              route={HOME_ROUTE}
+              element={HomePage}
+              elementProps={{ appCount, incApp }}
+            />
+            <Route
+              id="auth_layout"
+              element={AuthLayout}
+              elementProps={{ appCount, incApp }}
+            >
+              <Route
+                route={PROFILE_ROUTE}
+                element={ProfilePage}
+                elementProps={{ appCount, incApp }}
+              />
+              <Route
+                route={SETTINGS_ROUTE}
+                element={SettingsPage}
+                elementProps={{ appCount, incApp }}
+              />
+            </Route>
+            <Route
+              id="dashboard_layout"
+              route={DASHBOARD_SECTION_ROUTE}
+              element={DashboardLayout}
+              elementProps={{ appCount, incApp }}
+            >
+              <Route
+                route={DASHBOARD_HOME_ROUTE}
+                element={DashboardHomePage}
+                elementProps={{ appCount, incApp }}
+              />
+              <Route
+                route={DASHBOARD_PROJECTS_ROUTE}
+                element={DashboardProjectsPage}
+                elementProps={{ appCount, incApp }}
+              />
+              <Route
+                route={DASHBOARD_ANALYTICS_ROUTE}
+                element={DashboardAnalyticsPage}
+                elementProps={{ appCount, incApp }}
+              />
+              <Route
+                fallback
+                element={DashboardNotFound}
+                elementProps={{ appCount, incApp }}
+              />
+            </Route>
+            <Route
+              fallback
+              element={NotFoundPage}
+              elementProps={{ appCount, incApp }}
+            />
+          </Route>
         );
       };
 
