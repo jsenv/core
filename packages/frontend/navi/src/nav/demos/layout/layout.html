@@ -172,7 +172,14 @@
       setupRoutes([HOME_ROUTE, PROFILE_ROUTE, SETTINGS_ROUTE]);
 
       // Plain-DOM render tracking — never causes re-renders
-      const renderCounts = {};
+      const renderCounts = {
+        App: 0,
+        AuthLayout: 0,
+        HomePage: 0,
+        ProfilePage: 0,
+        SettingsPage: 0,
+        NotFoundPage: 0,
+      };
       const trackRender = (name) => {
         renderCounts[name] = (renderCounts[name] || 0) + 1;
       };
@@ -190,7 +197,7 @@
         counts.innerHTML = Object.entries(renderCounts)
           .map(
             ([name, count]) =>
-              `<span style="color:${COLORS[name] ?? "#cdd6f4"}">${name}: <b>${count}</b></span>`,
+              `<span style="color:${COLORS[name] ?? "#cdd6f4"};opacity:${count === 0 ? "0.35" : "1"}">${name}: <b>${count}</b></span>`,
           )
           .join("&ensp;·&ensp;");
       };
@@ -198,6 +205,7 @@
         trackRender(name);
         useLayoutEffect(flushRenderLog);
       };
+      flushRenderLog();
 
       const ComponentBox = ({ colorClass, name, headerExtras, children }) => (
         <div class={`component-box ${colorClass}`}>
