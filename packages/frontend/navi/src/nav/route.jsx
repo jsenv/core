@@ -68,20 +68,37 @@ const useMatchingChildren = () => {
   ref.current = matchingChildren;
   return matchingChildren;
 };
+let matchingChildrenIdCounter = 0;
 const createMatchingChildren = () => {
+  const trackerId = matchingChildrenIdCounter++;
   let count = 0;
   const isMatchingSignal = signal(false);
+  let probing = true;
 
   return {
+    trackerId,
+    endProbe: () => {
+      debug(
+        `[tracker ${trackerId}] endProbe, count=${count}, setting signal to ${count > 0}`,
+      );
+      probing = false;
+      isMatchingSignal.value = count > 0;
+    },
     useIsMatching: () => isMatchingSignal.value,
     getCount: () => count,
     reportMatch: () => {
       count++;
-      if (count === 1) isMatchingSignal.value = true;
+      debug(
+        `[tracker ${trackerId}] reportMatch, count now ${count}, probing=${probing}`,
+      );
+      if (!probing && count === 1) isMatchingSignal.value = true;
     },
     reportUnmatch: () => {
       count--;
-      if (count === 0) isMatchingSignal.value = false;
+      debug(
+        `[tracker ${trackerId}] reportUnmatch, count now ${count}, probing=${probing}`,
+      );
+      if (!probing && count === 0) isMatchingSignal.value = false;
     },
   };
 };
@@ -104,21 +121,35 @@ const RouteAsContainer = ({ id, children }) => {
   const hasProbedRef = useRef(false);
   const isProbing = !hasProbedRef.current;
   const prevReportedRef = useRef(false);
-  const [, forceRender] = useReducer((n) => n + 1, 0);
+  const [renderCount, forceRender] = useReducer((n) => n + 1, 0);
+
+  debug(
+    `[container "${id}"] RENDER #${renderCount}, isProbing=${isProbing}, isMatching=${isMatching}, ` +
+      `ownTracker=${matchingChildren.trackerId}, parentTracker=${matchingSiblings ? matchingSiblings.trackerId : "none"}, ` +
+      `childCount=${matchingChildren.getCount()}`,
+  );
 
   // Probe effect: fires bottom-up, so child containers report to us before we run.
   // We immediately report to our parent so parent's probe effect sees an up-to-date count.
+  // Then endProbe() enables signal updates for subsequent dynamic route changes.
   useLayoutEffect(() => {
     hasProbedRef.current = true;
+    const childCount = matchingChildren.getCount();
     debug(
-      `Route "${id}" probed with ${matchingChildren.getCount()} matching children`,
+      `[container "${id}"] PROBE EFFECT, childCount=${childCount}, parentTracker=${matchingSiblings ? matchingSiblings.trackerId : "none"}`,
     );
-    if (matchingSiblings && matchingChildren.getCount() > 0) {
+    if (matchingSiblings && childCount > 0) {
+      debug(
+        `[container "${id}"] reporting match to parent tracker ${matchingSiblings.trackerId}`,
+      );
       prevReportedRef.current = true;
       matchingSiblings.reportMatch();
     }
+    matchingChildren.endProbe();
+    debug(`[container "${id}"] calling forceRender`);
     forceRender();
     return () => {
+      debug(`[container "${id}"] PROBE CLEANUP`);
       if (prevReportedRef.current) {
         prevReportedRef.current = false;
         matchingSiblings.reportUnmatch();
@@ -128,21 +159,40 @@ const RouteAsContainer = ({ id, children }) => {
 
   // Post-probe: sync report when isMatching changes.
   useLayoutEffect(() => {
-    if (!matchingSiblings) return;
-    if (!hasProbedRef.current) return; // still in probe phase, handled above
-    if (isMatching === prevReportedRef.current) return;
+    debug(
+      `[container "${id}"] ISMATCHING EFFECT, isMatching=${isMatching}, prevReported=${prevReportedRef.current}, ` +
+        `hasProbedRef=${hasProbedRef.current}, parentTracker=${matchingSiblings ? matchingSiblings.trackerId : "none"}`,
+    );
+    if (!matchingSiblings) {
+      debug(`[container "${id}"] no parent, skipping report`);
+      return;
+    }
+    if (!hasProbedRef.current) {
+      debug(`[container "${id}"] still probing, skipping report`);
+      return;
+    }
+    if (isMatching === prevReportedRef.current) {
+      debug(
+        `[container "${id}"] isMatching unchanged (${isMatching}), skipping report`,
+      );
+      return;
+    }
     if (isMatching) {
+      debug(`[container "${id}"] post-probe reporting match to parent`);
       prevReportedRef.current = true;
       matchingSiblings.reportMatch();
     } else {
+      debug(`[container "${id}"] post-probe reporting unmatch to parent`);
       prevReportedRef.current = false;
       matchingSiblings.reportUnmatch();
     }
   }, [isMatching]);
 
   if (!isProbing && !isMatching) {
+    debug(`[container "${id}"] returning null (not probing, not matching)`);
     return null;
   }
+  debug(`[container "${id}"] rendering children, isProbing=${isProbing}`);
   return (
     <MatchingChildrenContext.Provider value={matchingChildren}>
       <ProbingContext.Provider value={isProbing}>
@@ -162,15 +212,26 @@ const RouteOnly = (props) => {
   const matchingChildren = useMatchingChildren();
 
   debug(
-    `Route "${route.urlPattern}" isMatching: ${isMatching}, isProbing: ${isProbing}`,
+    `[route "${route.urlPattern}"] RENDER, isMatching=${isMatching}, isProbing=${isProbing}, ` +
+      `parentTracker=${matchingSiblings.trackerId}`,
   );
 
   useLayoutEffect(() => {
+    debug(
+      `[route "${route.urlPattern}"] EFFECT, isMatching=${isMatching}, parentTracker=${matchingSiblings.trackerId}`,
+    );
     if (!isMatching) {
+      debug(`[route "${route.urlPattern}"] not matching, no report`);
       return null;
     }
+    debug(
+      `[route "${route.urlPattern}"] calling reportMatch on tracker ${matchingSiblings.trackerId}`,
+    );
     matchingSiblings.reportMatch();
     return () => {
+      debug(
+        `[route "${route.urlPattern}"] CLEANUP, calling reportUnmatch on tracker ${matchingSiblings.trackerId}`,
+      );
       matchingSiblings.reportUnmatch();
     };
   }, [isMatching]);
@@ -178,12 +239,14 @@ const RouteOnly = (props) => {
   useUITransitionContentId(route.urlPattern);
 
   if (!isMatching) {
+    debug(`[route "${route.urlPattern}"] returning null (not matching)`);
     return null;
   }
-  // During probe: already reported the match, don't put content in DOM yet.
   if (isProbing) {
+    debug(`[route "${route.urlPattern}"] returning null (probing)`);
     return null;
   }
+  debug(`[route "${route.urlPattern}"] rendering content`);
   return (
     <MatchingChildrenContext.Provider value={matchingChildren}>
       <RouteMatching {...props} />
