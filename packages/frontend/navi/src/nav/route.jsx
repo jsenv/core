@@ -19,7 +19,7 @@
 
 import { signal } from "@preact/signals";
 import { createContext } from "preact";
-import { useContext, useLayoutEffect, useRef } from "preact/hooks";
+import { useContext, useLayoutEffect, useReducer, useRef } from "preact/hooks";
 
 import { ActionRenderer } from "../action/action_renderer.jsx";
 import { useUITransitionContentId } from "../ui_transition/ui_transition.jsx";
@@ -116,7 +116,18 @@ const RouteContainer = ({
   const matchingChildren = useMatchingChildren();
   const hasActiveChild = matchingChildren.useHasActiveChild(); // reactive, re-renders only when boolean flips
   const isMatching = matchingSiblings && hasActiveChild;
-  debug(`[container "${id}"] RENDER, hasActiveChild=${hasActiveChild}`);
+  const settledRef = useRef(false);
+  const [, forceRender] = useReducer((n) => n + 1, 0);
+  debug(
+    `[container "${id}"] RENDER, hasActiveChild=${hasActiveChild}, settled=${settledRef.current}`,
+  );
+
+  // Fires once on mount, after all children's useLayoutEffects (bottom-up).
+  // At this point all matching routes have reported, so we know the true active count.
+  useLayoutEffect(() => {
+    settledRef.current = true;
+    forceRender();
+  }, []);
 
   if (matchingSiblings) {
     matchingSiblings.useReportMatch(isMatching, id);
@@ -135,7 +146,7 @@ const RouteContainer = ({
     }
     return inner;
   }
-  if (fallback) {
+  if (fallback && settledRef.current) {
     const Fallback = fallback;
     const fallbackEl = <Fallback {...fallbackProps} />;
     if (element) {
