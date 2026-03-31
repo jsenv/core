@@ -8,6 +8,7 @@
     <div id="app"></div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
+      import { useRef } from "preact/hooks";
       import { Link, Route, route, setupRoutes } from "@jsenv/navi";
 
       /*
@@ -21,90 +22,118 @@
        * no sub-route matches.
        */
 
+      const RENDER_COUNT_STYLE = {
+        fontSize: "11px",
+        color: "#999",
+        fontFamily: "monospace",
+        marginLeft: "8px",
+      };
+      const useRenderCount = (label) => {
+        const countRef = useRef(0);
+        countRef.current++;
+        return (
+          <span style={RENDER_COUNT_STYLE}>
+            [{label} renders: {countRef.current}]
+          </span>
+        );
+      };
+
       const HOME_ROUTE = route("");
       const PROFILE_ROUTE = route("/profile");
       const SETTINGS_ROUTE = route("/settings");
       setupRoutes([HOME_ROUTE, PROFILE_ROUTE, SETTINGS_ROUTE]);
 
-      const AppLayout = ({ children }) => (
-        <div
-          style={{
-            fontFamily: "system-ui, sans-serif",
-            maxWidth: "600px",
-            padding: "20px",
-          }}
-        >
-          <nav style={{ display: "flex", gap: "12px", marginBottom: "20px" }}>
-            <Link route={HOME_ROUTE}>Home</Link>
-            <Link route={PROFILE_ROUTE}>Profile</Link>
-            <Link route={SETTINGS_ROUTE}>Settings</Link>
-          </nav>
-          {children}
-        </div>
-      );
+      const AppLayout = ({ children }) => {
+        const counter = useRenderCount("AppLayout");
+        return (
+          <div
+            style={{
+              fontFamily: "system-ui, sans-serif",
+              maxWidth: "600px",
+              padding: "20px",
+            }}
+          >
+            <nav style={{ display: "flex", gap: "12px", marginBottom: "20px" }}>
+              <Link route={HOME_ROUTE}>Home</Link>
+              <Link route={PROFILE_ROUTE}>Profile</Link>
+              <Link route={SETTINGS_ROUTE}>Settings</Link>
+              {counter}
+            </nav>
+            {children}
+          </div>
+        );
+      };
 
       // Layout shell rendered when either /profile or /settings matches.
       // The child routes render the actual page content inside it.
-      const AuthenticatedLayout = ({ children }) => (
-        <div
-          style={{
-            padding: "16px",
-            background: "#f0f4ff",
-            border: "1px solid #c0d0ff",
-            borderRadius: "6px",
-          }}
-        >
+      const AuthenticatedLayout = ({ children }) => {
+        const counter = useRenderCount("AuthLayout");
+        return (
           <div
-            style={{ fontSize: "12px", color: "#555", marginBottom: "12px" }}
+            style={{
+              padding: "16px",
+              background: "#f0f4ff",
+              border: "1px solid #c0d0ff",
+              borderRadius: "6px",
+            }}
           >
-            Authenticated area (sidebar, user menu, etc. would go here)
+            <div
+              style={{
+                fontSize: "12px",
+                color: "#555",
+                marginBottom: "12px",
+              }}
+            >
+              Authenticated area {counter}
+            </div>
+            {children}
           </div>
-          {children}
-        </div>
-      );
+        );
+      };
 
       const App = () => (
         <AppLayout>
           <Route id="app_layout">
             {/* Home has no layout wrapper — standalone page */}
-            <Route route={HOME_ROUTE} element={<HomePage />} />
+            <Route route={HOME_ROUTE} element={HomePage} />
 
-            {/*
-             * AuthenticatedLayout wraps Profile and Settings.
-             * It is always rendered when any child matches.
-             *
-             * ISSUE: navigate to "/" — the blue shell still appears because
-             * <Route> (container) always renders its element+children.
-             * Fix will come: only render layout when ≥1 child matches.
-             */}
             <Route id="auth_layout">
               <AuthenticatedLayout>
-                <Route route={PROFILE_ROUTE} element={<ProfilePage />} />
-                <Route route={SETTINGS_ROUTE} element={<SettingsPage />} />
+                <Route route={PROFILE_ROUTE} element={ProfilePage} />
+                <Route route={SETTINGS_ROUTE} element={SettingsPage} />
               </AuthenticatedLayout>
             </Route>
           </Route>
         </AppLayout>
       );
 
-      const HomePage = () => (
-        <div>
-          <h2>Home</h2>
-          <p>No layout wrapper on this page.</p>
-        </div>
-      );
-      const ProfilePage = () => (
-        <div>
-          <h2>Profile</h2>
-          <p>This page is wrapped inside the authenticated layout.</p>
-        </div>
-      );
-      const SettingsPage = () => (
-        <div>
-          <h2>Settings</h2>
-          <p>This page is also wrapped inside the authenticated layout.</p>
-        </div>
-      );
+      const HomePage = () => {
+        const counter = useRenderCount("HomePage");
+        return (
+          <div>
+            <h2>Home {counter}</h2>
+            <p>No layout wrapper on this page.</p>
+          </div>
+        );
+      };
+      const ProfilePage = () => {
+        const counter = useRenderCount("ProfilePage");
+        return (
+          <div>
+            <h2>Profile {counter}</h2>
+            <p>This page is wrapped inside the authenticated layout.</p>
+          </div>
+        );
+      };
+      const SettingsPage = () => {
+        const counter = useRenderCount("SettingsPage");
+        return (
+          <div>
+            <h2>Settings {counter}</h2>
+            <p>This page is also wrapped inside the authenticated layout.</p>
+          </div>
+        );
+      };
 
       render(<App />, document.getElementById("app"));
     </script>

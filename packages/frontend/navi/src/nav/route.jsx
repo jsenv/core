@@ -330,8 +330,11 @@ const FallbackOnly = (props) => {
 
 const RouteInfoContext = createContext(null);
 const RouteMatching = ({ route, element, action, meta, children }) => {
+  const Element = element;
   const renderedElement = action ? (
     <ActionRenderer action={action}>{element}</ActionRenderer>
+  ) : typeof element === "function" ? (
+    <Element />
   ) : (
     element
   );
