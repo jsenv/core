@@ -17,7 +17,7 @@
  *
  */
 
-import { useSignal } from "@preact/signals";
+import { signal } from "@preact/signals";
 import { createContext } from "preact";
 import { useContext, useLayoutEffect, useRef } from "preact/hooks";
 
@@ -43,62 +43,105 @@ export const Route = (props) => {
   return <RouteAsContainer {...props} />;
 };
 
+// ProbingContext: true during the first render cycle where children run their
+// route checks and update the parent's matchingSiblingsCount, but return null.
+// The parent re-renders once the signal changes and switches probing to false.
+// This ensures the layout element is never put in the DOM before we know
+// whether any child route actually matches.
+const ProbingContext = createContext(false);
 const MatchingChildrenContext = createContext(null);
 const useMatchingChildren = () => {
-  const mountRef = useRef(false);
-  if (!mountRef.current) {
-    const countSignal = useSignal(0);
-    const notifyMatch = () => {
-      countSignal.value = countSignal.peek() + 1;
-    };
-    const notifyUnmatch = () => {
-      countSignal.value = countSignal.peek() - 1;
-    };
-    mountRef.current = {
-      countSignal,
-      notifyMatch,
-      notifyUnmatch,
-    };
+  const ref = useRef();
+  const refValue = ref.current;
+  if (refValue) {
+    return refValue;
   }
-  return mountRef.current;
+  return createMatchingChildren();
 };
-const useMatchingSiblingContext = import.meta.dev
+const createMatchingChildren = () => {
+  const countSignal = signal(0);
+
+  return {
+    useCount: () => countSignal.value,
+    reportMatch: () => {
+      countSignal.value++;
+    },
+    reportUnmatch: () => {
+      countSignal.value--;
+    },
+  };
+};
+const useMatchingSiblingsContext = import.meta.dev
   ? () => {
-      const matchingChildren = useContext(MatchingChildrenContext);
-      if (!matchingChildren) {
+      const matchingSiblings = useContext(MatchingChildrenContext);
+      if (!matchingSiblings) {
         throw new Error(
           "<Route> with route or fallback prop must be a child of a <Route> without route prop",
         );
       }
-      return matchingChildren;
+      return matchingSiblings;
     }
   : () => useContext(MatchingChildrenContext);
-const RouteAsContainer = (props) => {
-  const matchingChildren = useMatchingChildren();
 
-  const el = (
+const RouteAsContainer = ({ element, action, meta, children }) => {
+  const matchingChildren = useMatchingChildren();
+  const matchingChildCount = matchingChildren.useCount(); // Reactive read: re-renders when any child reports a match
+  const isProbing = matchingChildCount === 0;
+
+  return (
     <MatchingChildrenContext.Provider value={matchingChildren}>
-      <RouteMatching {...props} />
+      <ProbingContext.Provider value={isProbing}>
+        {isProbing ? (
+          // Probe cycle: children run but return null — no DOM output.
+          // If a child matches it increments the signal, triggering a re-render.
+          // If nothing matches the signal stays 0 and nothing is ever shown.
+          children
+        ) : (
+          <RouteMatching element={element} action={action} meta={meta}>
+            {children}
+          </RouteMatching>
+        )}
+      </ProbingContext.Provider>
     </MatchingChildrenContext.Provider>
   );
-  const hasMatchingChild = matchingChildren.countSignal.peek() > 0;
-  if (!hasMatchingChild) {
-    return null;
-  }
-  return el;
 };
 
 const RouteOnly = (props) => {
+  const isProbing = useContext(ProbingContext);
+  const matchingSiblings = useMatchingSiblingsContext();
   const { route, routeParams } = props;
   const { matching } = useRouteStatus(route);
-  const matchingChildren = useMatchingChildren();
-
   const isMatching =
     matching && (!routeParams || route.matchesParams(routeParams));
+  const didCountRef = useRef(false);
+  const matchingChildren = useMatchingChildren();
+
+  // Increment synchronously during render so the parent container sees the
+  // updated count when it re-renders. Guard with a ref to avoid double-counting.
+  if (isMatching && !didCountRef.current) {
+    didCountRef.current = true;
+    matchingSiblings.reportMatch();
+  } else if (!isMatching && didCountRef.current) {
+    didCountRef.current = false;
+    matchingSiblings.reportUnmatch();
+  }
+
+  useLayoutEffect(() => {
+    return () => {
+      if (didCountRef.current) {
+        didCountRef.current = false;
+        matchingSiblings.reportUnmatch();
+      }
+    };
+  }, []);
 
   useUITransitionContentId(route.urlPattern);
 
   if (!isMatching) {
+    return null;
+  }
+  // During probe: already reported the match, don't put content in DOM yet.
+  if (isProbing) {
     return null;
   }
   return (
@@ -109,21 +152,24 @@ const RouteOnly = (props) => {
 };
 
 const RouteWithFallback = (props) => {
-  const matchingSibling = useMatchingSiblingContext();
-  const matchingSiblingCount = matchingSibling.countSignal.value;
+  const isProbing = useContext(ProbingContext);
+  const matchingSiblings = useMatchingSiblingsContext();
+  const matchingSiblingCount = matchingSiblings.useCount();
   const { route, routeParams } = props;
   const { matching } = useRouteStatus(route);
-  const matchingChildren = useSignal(0);
-
   const isMatching =
     matching && (!routeParams || route.matchesParams(routeParams));
+  const matchingChildren = useMatchingChildren();
 
   useUITransitionContentId(route.urlPattern);
 
-  if (!isMatching) {
+  if (isProbing) {
     return null;
   }
   if (matchingSiblingCount > 0) {
+    return null;
+  }
+  if (!isMatching) {
     return null;
   }
   return (
@@ -134,10 +180,14 @@ const RouteWithFallback = (props) => {
 };
 
 const FallbackOnly = (props) => {
-  const matchingSibling = useMatchingSiblingContext();
-  const matchingSiblingCount = matchingSibling.countSignal.value;
-  const matchingChildren = useSignal(0);
+  const isProbing = useContext(ProbingContext);
+  const matchingSiblings = useMatchingSiblingsContext();
+  const matchingSiblingCount = matchingSiblings.useCount();
+  const matchingChildren = useMatchingChildren();
 
+  if (isProbing) {
+    return null;
+  }
   if (matchingSiblingCount > 0) {
     return null;
   }
@@ -150,15 +200,6 @@ const FallbackOnly = (props) => {
 
 const RouteInfoContext = createContext(null);
 const RouteMatching = ({ route, element, action, meta, children }) => {
-  const matchingSibling = useMatchingSiblingContext();
-  useLayoutEffect(() => {
-    matchingSibling.notifyMatch();
-    return () => {
-      // Decrement on unmount
-      matchingSibling.notifyUnmatch();
-    };
-  }, []);
-
   const renderedElement = action ? (
     <ActionRenderer action={action}>{element}</ActionRenderer>
   ) : (
@@ -171,6 +212,7 @@ const RouteMatching = ({ route, element, action, meta, children }) => {
     </RouteInfoContext.Provider>
   );
 };
+
 export const useMatchingRouteInfo = () => {
   const routeInfo = useContext(RouteInfoContext);
   return routeInfo;
