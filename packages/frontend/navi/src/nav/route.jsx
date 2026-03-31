@@ -133,15 +133,15 @@ const createMatchingChildren = () => {
     useHasActiveChild: () => hasActiveChildSignal.value,
     reportRouteMatch,
     reportRouteUnmatch,
-    useReportMatch: (isMatching, route) => {
+    useReportMatch: (isMatching, id) => {
       useLayoutEffect(() => {
         if (!isMatching) {
           return undefined;
         }
-        debug(`[route "${route.urlPattern}"] reporting route match`);
+        debug(`[route "${id}"] reporting route match`);
         reportRouteMatch();
         return () => {
-          debug(`[route "${route.urlPattern}"] reporting route unmatch`);
+          debug(`[route "${id}"] reporting route unmatch`);
           reportRouteUnmatch();
         };
       }, [isMatching]);
@@ -183,7 +183,7 @@ const RouteContainerWithRoute = (props) => {
   );
 
   useUITransitionContentId(route.urlPattern);
-  matchingSiblings.useReportMatch(isMatching, route);
+  matchingSiblings.useReportMatch(isMatching, route.urlPattern);
 
   if (!isMatching) {
     return null;
@@ -206,7 +206,9 @@ const RouteContainer = ({ id, element, elementProps, children }) => {
 
   // On initial mount hasActiveChild=false (signals start false), so nothing is reported yet.
   // Once a child reports a match the signal flips, we re-render, and this effect fires to report up.
-  matchingSiblings.useReportMatch(isMatching);
+  if (matchingSiblings) {
+    matchingSiblings.useReportMatch(isMatching, id);
+  }
 
   const inner = (
     <MatchingChildrenContext.Provider value={matchingChildren}>
@@ -264,7 +266,7 @@ const RouteLeafRouteOnly = (props) => {
     `[route "${route.urlPattern}"] RENDER (leaf), isMatching=${isMatching}`,
   );
   useUITransitionContentId(route.urlPattern);
-  matchingSiblings.useReportMatch(isMatching, route);
+  matchingSiblings.useReportMatch(isMatching, route.urlPattern);
 
   if (!isMatching) {
     return null;
