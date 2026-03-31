@@ -40,10 +40,10 @@ export const Route = (props) => {
 // Walk JSX children vnodes (without rendering) to build a branch list and
 // find the active one in the same pass.
 // All children must be <Route> — throws in dev otherwise.
-// Returns { branches, activeBranch }.
+// Returns { matchingBranch, fallbackBranch, activeBranch }.
 const collectBranches = (children) => {
-  const branches = [];
-  let activeBranch = null;
+  let matchingBranch = null;
+  let fallbackBranch = null;
 
   const visit = (child) => {
     if (!child || child === true || child === false) {
@@ -69,45 +69,40 @@ const collectBranches = (children) => {
     if (nodeChildren) {
       const { activeBranch: activeChild } = collectBranches(nodeChildren);
       const branch = { type: "container", node: child };
-      branches.push(branch);
-      if (!activeBranch && activeChild) {
-        activeBranch = branch;
+      if (!matchingBranch && activeChild) {
+        matchingBranch = branch;
       }
     } else if (fallback) {
-      branches.push({ type: "fallback", node: child });
+      if (!fallbackBranch) {
+        fallbackBranch = { type: "fallback", node: child };
+      }
     } else {
       const branch = { type: "leaf", node: child };
-      branches.push(branch);
       if (
-        !activeBranch &&
+        !matchingBranch &&
         route.matchingSignal.value &&
         (!routeParams || route.matchesParams(routeParams))
       ) {
-        activeBranch = branch;
+        matchingBranch = branch;
       }
     }
   };
 
   visit(children);
-  return { branches, activeBranch };
+  const activeBranch = matchingBranch || fallbackBranch || null;
+  return { matchingBranch, fallbackBranch, activeBranch };
 };
 // RouteContainer: traverses children statically per render, finds the active branch,
 // and renders only that branch — or the fallback if nothing matches.
 // No effects, no signals, no contexts needed: reads route signals directly.
 const RouteContainer = ({ id, element, elementProps, children }) => {
-  const { branches, activeBranch } = collectBranches(children);
+  const { activeBranch } = collectBranches(children);
 
   debug(
     `[container "${id}"] RENDER, active=${activeBranch ? activeBranch.type : "none"}`,
   );
 
-  let content;
-  if (activeBranch) {
-    content = activeBranch.node;
-  } else {
-    const fallbackBranch = branches.find((b) => b.type === "fallback");
-    content = fallbackBranch ? fallbackBranch.node : null;
-  }
+  const content = activeBranch ? activeBranch.node : null;
 
   if (!content) {
     return null;
