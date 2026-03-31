@@ -85,24 +85,25 @@ const useMatchingSiblingsContext = import.meta.dev
     }
   : () => useContext(MatchingChildrenContext);
 
-const RouteAsContainer = ({ element, action, meta, children }) => {
+const RouteAsContainer = ({ children }) => {
   const matchingChildren = useMatchingChildren();
   const matchingChildCount = matchingChildren.useCount(); // Reactive read: re-renders when any child reports a match
-  const isProbing = matchingChildCount === 0;
+  const hasProbedRef = useRef(false);
+
+  useLayoutEffect(() => {
+    hasProbedRef.current = true;
+  }, []);
+
+  const isProbing = !hasProbedRef.current;
+
+  if (!isProbing && matchingChildCount === 0) {
+    return null;
+  }
 
   return (
     <MatchingChildrenContext.Provider value={matchingChildren}>
       <ProbingContext.Provider value={isProbing}>
-        {isProbing ? (
-          // Probe cycle: children run but return null — no DOM output.
-          // If a child matches it increments the signal, triggering a re-render.
-          // If nothing matches the signal stays 0 and nothing is ever shown.
-          children
-        ) : (
-          <RouteMatching element={element} action={action} meta={meta}>
-            {children}
-          </RouteMatching>
-        )}
+        {children}
       </ProbingContext.Provider>
     </MatchingChildrenContext.Provider>
   );
@@ -115,27 +116,17 @@ const RouteOnly = (props) => {
   const { matching } = useRouteStatus(route);
   const isMatching =
     matching && (!routeParams || route.matchesParams(routeParams));
-  const didCountRef = useRef(false);
   const matchingChildren = useMatchingChildren();
 
-  // Increment synchronously during render so the parent container sees the
-  // updated count when it re-renders. Guard with a ref to avoid double-counting.
-  if (isMatching && !didCountRef.current) {
-    didCountRef.current = true;
-    matchingSiblings.reportMatch();
-  } else if (!isMatching && didCountRef.current) {
-    didCountRef.current = false;
-    matchingSiblings.reportUnmatch();
-  }
-
   useLayoutEffect(() => {
+    if (!isMatching) {
+      return null;
+    }
+    matchingSiblings.reportMatch();
     return () => {
-      if (didCountRef.current) {
-        didCountRef.current = false;
-        matchingSiblings.reportUnmatch();
-      }
+      matchingSiblings.reportUnmatch();
     };
-  }, []);
+  }, [isMatching]);
 
   useUITransitionContentId(route.urlPattern);
 
