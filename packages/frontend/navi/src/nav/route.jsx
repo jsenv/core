@@ -84,13 +84,6 @@ const createMatchingChildren = () => {
       probing = false;
       isMatchingSignal.value = count > 0;
     },
-    startReprobe: () => {
-      debug(
-        `[tracker ${trackerId}] startReprobe, resetting count from ${count} to 0`,
-      );
-      count = 0;
-      probing = true;
-    },
     useIsMatching: () => isMatchingSignal.value,
     getCount: () => count,
     reportMatch: () => {
@@ -121,40 +114,16 @@ const useMatchingSiblingsContext = import.meta.dev
     }
   : () => useContext(MatchingChildrenContext);
 
+const HIDDEN_STYLE = { display: "none" };
+
 const RouteAsContainer = ({ id, children }) => {
   const matchingSiblings = useContext(MatchingChildrenContext); // null if no ancestor Route
   const matchingChildren = useMatchingChildren();
   const isMatching = matchingChildren.useIsMatching(); // reactive, re-renders only when boolean flips
   const hasProbedRef = useRef(false);
-  const wasMatchingRef = useRef(false);
+  const isProbing = !hasProbedRef.current;
   const prevReportedRef = useRef(false);
-  const probeGenRef = useRef(0);
   const [renderCount, forceRender] = useReducer((n) => n + 1, 0);
-
-  // When isMatching transitions from true to false, we must re-probe:
-  // the URL changed, previous children unmatched but new children
-  // (currently unmounted) might match. Re-probing renders children
-  // so they can detect the new URL and report.
-  // Also re-probe when a parent container is re-probing (ProbingContext=true)
-  // while we've already probed — our children need to re-evaluate too.
-  const parentIsProbing = useContext(ProbingContext);
-  let isProbing;
-  if (!hasProbedRef.current) {
-    isProbing = true;
-  } else if (wasMatchingRef.current && !isMatching) {
-    debug(`[container "${id}"] isMatching went false, re-probing`);
-    matchingChildren.startReprobe();
-    probeGenRef.current++;
-    isProbing = true;
-  } else if (parentIsProbing) {
-    debug(`[container "${id}"] parent is probing, re-probing`);
-    matchingChildren.startReprobe();
-    probeGenRef.current++;
-    isProbing = true;
-  } else {
-    isProbing = false;
-  }
-  wasMatchingRef.current = isMatching;
 
   debug(
     `[container "${id}"] RENDER #${renderCount}, isProbing=${isProbing}, isMatching=${isMatching}, ` +
@@ -162,44 +131,26 @@ const RouteAsContainer = ({ id, children }) => {
       `childCount=${matchingChildren.getCount()}`,
   );
 
-  // Probe/reprobe effect: fires bottom-up after children have reported.
-  // endProbe() finalizes the count and enables signal updates.
-  const currentProbeGen = probeGenRef.current;
+  // Probe effect: fires once on mount, bottom-up after children have reported.
+  // endProbe() finalizes the count and enables signal updates for dynamic changes.
   useLayoutEffect(() => {
-    if (!isProbing) {
-      return;
-    }
     hasProbedRef.current = true;
     const childCount = matchingChildren.getCount();
     debug(
-      `[container "${id}"] PROBE EFFECT (gen=${currentProbeGen}), childCount=${childCount}, parentTracker=${matchingSiblings ? matchingSiblings.trackerId : "none"}`,
+      `[container "${id}"] PROBE EFFECT, childCount=${childCount}, parentTracker=${matchingSiblings ? matchingSiblings.trackerId : "none"}`,
     );
-    // On reprobe: sync parent report — we may now match or not match
-    if (matchingSiblings) {
-      const shouldReport = childCount > 0;
-      if (shouldReport && !prevReportedRef.current) {
-        debug(
-          `[container "${id}"] reporting match to parent tracker ${matchingSiblings.trackerId}`,
-        );
-        prevReportedRef.current = true;
-        matchingSiblings.reportMatch();
-      } else if (!shouldReport && prevReportedRef.current) {
-        debug(
-          `[container "${id}"] reporting unmatch to parent tracker ${matchingSiblings.trackerId}`,
-        );
-        prevReportedRef.current = false;
-        matchingSiblings.reportUnmatch();
-      }
+    if (matchingSiblings && childCount > 0) {
+      debug(
+        `[container "${id}"] reporting match to parent tracker ${matchingSiblings.trackerId}`,
+      );
+      prevReportedRef.current = true;
+      matchingSiblings.reportMatch();
     }
     matchingChildren.endProbe();
     debug(`[container "${id}"] calling forceRender`);
     forceRender();
-  }, [currentProbeGen]);
-
-  // Cleanup: unmount report to parent
-  useLayoutEffect(() => {
     return () => {
-      debug(`[container "${id}"] UNMOUNT CLEANUP`);
+      debug(`[container "${id}"] PROBE CLEANUP`);
       if (prevReportedRef.current) {
         prevReportedRef.current = false;
         matchingSiblings.reportUnmatch();
@@ -207,7 +158,7 @@ const RouteAsContainer = ({ id, children }) => {
     };
   }, []);
 
-  // Post-probe: sync report when isMatching changes.
+  // Post-probe: sync report to parent when isMatching changes.
   // Skip the first run — the probe effect above already handled the initial report.
   const didMountRef = useRef(false);
   useLayoutEffect(() => {
@@ -243,17 +194,38 @@ const RouteAsContainer = ({ id, children }) => {
     }
   }, [isMatching]);
 
-  if (!isProbing && !isMatching) {
-    debug(`[container "${id}"] returning null (not probing, not matching)`);
-    return null;
+  // During probe: render children with ProbingContext=true (routes return null, report via effects).
+  // After probe: always render children to keep routes mounted for reactive reporting.
+  // When not matching, wrap in display:none so layout shells stay hidden.
+  if (isProbing) {
+    debug(`[container "${id}"] rendering children, isProbing=true`);
+    return (
+      <MatchingChildrenContext.Provider value={matchingChildren}>
+        <ProbingContext.Provider value={true}>
+          {children}
+        </ProbingContext.Provider>
+      </MatchingChildrenContext.Provider>
+    );
   }
-  debug(`[container "${id}"] rendering children, isProbing=${isProbing}`);
+  if (isMatching) {
+    debug(`[container "${id}"] rendering children, isMatching=true`);
+    return (
+      <MatchingChildrenContext.Provider value={matchingChildren}>
+        <ProbingContext.Provider value={false}>
+          {children}
+        </ProbingContext.Provider>
+      </MatchingChildrenContext.Provider>
+    );
+  }
+  debug(`[container "${id}"] rendering children hidden (not matching)`);
   return (
-    <MatchingChildrenContext.Provider value={matchingChildren}>
-      <ProbingContext.Provider value={isProbing}>
-        {children}
-      </ProbingContext.Provider>
-    </MatchingChildrenContext.Provider>
+    <div style={HIDDEN_STYLE}>
+      <MatchingChildrenContext.Provider value={matchingChildren}>
+        <ProbingContext.Provider value={false}>
+          {children}
+        </ProbingContext.Provider>
+      </MatchingChildrenContext.Provider>
+    </div>
   );
 };
 
