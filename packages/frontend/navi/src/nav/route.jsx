@@ -26,6 +26,7 @@
  * For example, `/profile` and `/settings` both live inside `AuthLayout` but there
  * is no `/auth/` prefix to match on. A container Route wraps them: the active
  * child's element is injected as `children` into the layout element.
+ * If a page needs state owned by the layout, the layout must expose it via context.
  *
  * ```jsx
  * const PROFILE_ROUTE = route("/profile");
@@ -45,6 +46,15 @@
  * Everything about the section — routes, structure, sub-pages — is co-located.
  * The component is not a reusable layout; it is the section.
  *
+ * Compared to the layout pattern, a dedicated section component is more powerful:
+ * - Wrapper elements (chrome, nav, containers) are part of the component's render,
+ *   not injected via `children`, so a layout is not needed.
+ * - Local state can be passed directly via `elementProps` to sub-pages. With the
+ *   layout pattern, sub-pages receive state only through `children` or context.
+ *
+ * The layout pattern remains necessary when a shared prefix does not exist
+ * (see "Layout pattern" above).
+ *
  * ```jsx
  * const DASHBOARD_SECTION_ROUTE = route("/dashboard/");
  * const DASHBOARD_HOME_ROUTE = route("/dashboard");
@@ -53,12 +63,17 @@
  * // top-level router — only knows about the prefix
  * <Route route={DASHBOARD_SECTION_ROUTE} element={DashboardSection} />
  *
- * // DashboardSection owns the rest
+ * // Dashboard owns the rest
  * const DashboardSection = () => {
- *   return <div style="background: lightblue; padding: 10px;">
+ *  const [sidebarOpen, setSidebarOpen] = useState(false);
+ *
+ *   return <div
+ *     style="background: lightblue; padding: 10px;"
+ *     onClick={() => setSidebarOpen(o => !o)}
+ *   >
  *     <Route>
- *       <Route route={DASHBOARD_HOME_ROUTE} element={DashboardHomePage} />
- *       <Route route={DASHBOARD_POSTS_ROUTE} element={DashboardPostsPage} />
+ *       <Route route={DASHBOARD_HOME_ROUTE} element={DashboardHomePage} elementProps={{ sidebarOpen}} />
+ *       <Route route={DASHBOARD_POSTS_ROUTE} element={DashboardPostsPage} elementProps={{ sidebarOpen }} />
  *       <Route fallback element={DashboardNotFound} />
  *     </Route>
  *   </div>;
