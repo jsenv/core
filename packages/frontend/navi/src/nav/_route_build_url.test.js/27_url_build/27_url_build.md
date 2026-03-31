@@ -21,7 +21,7 @@ try {
 ```js
 {
   "dashboard_url": "http://127.0.0.1/dashboard",
-  "dashboard_section_Url": "http://127.0.0.1/dashboard"
+  "dashboard_section_Url": "http://127.0.0.1/dashboard/section"
 }
 ```
 

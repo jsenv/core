@@ -1650,36 +1650,14 @@ export const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
       targetAncestor.connections.length === 0;
 
     if (sourceHasOnlyLiterals && targetHasOnlyLiterals) {
-      // Check if user provided any parameters that would be lost in optimization
-      const hasUserProvidedParams = Object.keys(resolvedParams).some(
-        (paramName) => {
-          // Check if this parameter was explicitly provided by the user
-          // (not just inherited from signal values with default values)
-          const userProvided = resolvedParams[paramName] !== undefined;
-          return userProvided;
-        },
-      );
-
-      if (hasUserProvidedParams) {
-        if (DEBUG) {
-          console.debug(
-            `[${pattern}] tryDirectOptimization: Cannot optimize literal-only routes - would lose user-provided parameters`,
-            Object.keys(resolvedParams),
-          );
-        }
-        return null;
-      }
-
+      // Two pure literal routes have no parametric relationship — nothing to optimize.
+      // /dashboard/section must never collapse to /dashboard.
       if (DEBUG) {
         console.debug(
-          `[${pattern}] tryDirectOptimization: Both are pure literal-only routes, allowing optimization`,
+          `[${pattern}] tryDirectOptimization: Both are pure literal-only routes, no optimization possible`,
         );
       }
-      return buildUrlFromPattern(
-        targetAncestor.pattern,
-        {},
-        targetAncestor.originalPattern,
-      );
+      return null;
     }
 
     // For parametric optimization: remaining segments must match target's parameter defaults
