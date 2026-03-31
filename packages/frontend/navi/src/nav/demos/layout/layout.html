@@ -184,6 +184,33 @@
       .btn-dashboard-analytics {
         color: #f43f5e;
       }
+      .box-blog {
+        border-color: #8b5cf6;
+      }
+      .box-blog .component-header {
+        background: #ede9fe;
+      }
+      .box-blog-posts {
+        border-color: #ec4899;
+      }
+      .box-blog-posts .component-header {
+        background: #fce7f3;
+      }
+      .box-blog-notfound {
+        border-color: #78716c;
+      }
+      .box-blog-notfound .component-header {
+        background: #f5f5f4;
+      }
+      .btn-blog {
+        color: #8b5cf6;
+      }
+      .btn-blog-posts {
+        color: #ec4899;
+      }
+      .btn-blog-notfound {
+        color: #78716c;
+      }
     </style>
   </head>
   <body>
@@ -227,6 +254,13 @@
       const DASHBOARD_UNKNOWN_ROUTE = route("/dashboard/unknown");
       const DASHBOARD_SECTION_ROUTE = route("/dashboard/");
       const UNKNOWN_ROUTE = route("/unknown");
+
+      // Blog routes — defined here, near the component that uses them
+      const BLOG_SECTION_ROUTE = route("/blog/");
+      const BLOG_HOME_ROUTE = route("/blog");
+      const BLOG_POSTS_ROUTE = route("/blog/posts");
+      const BLOG_NOT_FOUND_ROUTE = route("/blog/unknown");
+
       setupRoutes([
         HOME_ROUTE,
         PROFILE_ROUTE,
@@ -237,6 +271,10 @@
         DASHBOARD_UNKNOWN_ROUTE,
         DASHBOARD_SECTION_ROUTE,
         UNKNOWN_ROUTE,
+        BLOG_SECTION_ROUTE,
+        BLOG_HOME_ROUTE,
+        BLOG_POSTS_ROUTE,
+        BLOG_NOT_FOUND_ROUTE,
       ]);
 
       // Plain-DOM render tracking — never causes re-renders
@@ -252,6 +290,10 @@
         DashboardAnalyticsPage: 0,
         NotFoundPage: 0,
         DashboardNotFound: 0,
+        BlogLayout: 0,
+        BlogHomePage: 0,
+        BlogPostsPage: 0,
+        BlogNotFound: 0,
       };
       const trackRender = (name) => {
         renderCounts[name] = (renderCounts[name] || 0) + 1;
@@ -270,6 +312,10 @@
         DashboardAnalyticsPage: "#fb7185",
         NotFoundPage: "#c084fc",
         DashboardNotFound: "#94a3b8",
+        BlogLayout: "#c4b5fd",
+        BlogHomePage: "#a78bfa",
+        BlogPostsPage: "#f9a8d4",
+        BlogNotFound: "#a8a29e",
       };
       const TREE = [
         { name: "App", indent: "" },
@@ -282,6 +328,10 @@
         { name: "DashboardProjectsPage", indent: "  \u2502   \u251c\u2500 " },
         { name: "DashboardAnalyticsPage", indent: "  \u2502   \u251c\u2500 " },
         { name: "DashboardNotFound", indent: "  \u2502   \u2514\u2500 " },
+        { name: "BlogLayout", indent: "  \u251c\u2500 " },
+        { name: "BlogHomePage", indent: "  \u2502   \u251c\u2500 " },
+        { name: "BlogPostsPage", indent: "  \u2502   \u251c\u2500 " },
+        { name: "BlogNotFound", indent: "  \u2502   \u2514\u2500 " },
         { name: "NotFoundPage", indent: "  \u2514\u2500 " },
       ];
       let logInitialized = false;
@@ -375,6 +425,7 @@
                 <Link route={SETTINGS_ROUTE}>Settings</Link>
 
                 <Link route={DASHBOARD_HOME_ROUTE}>Dashboard</Link>
+                <Link route={BLOG_HOME_ROUTE}>Blog</Link>
                 <Link
                   route={UNKNOWN_ROUTE}
                   style="color:#a855f7;background:#f3e8ff;"
@@ -439,6 +490,11 @@
                 elementProps={{ appCount, incApp }}
               />
             </Route>
+            <Route
+              route={BLOG_SECTION_ROUTE}
+              element={BlogLayout}
+              elementProps={{ appCount, incApp }}
+            />
             <Route
               fallback
               element={NotFoundPage}
@@ -783,6 +839,158 @@
             <p style="margin:0;color:#555;font-size:13px;">
               No dashboard route matched — fallback rendered inside{" "}
               <code>DashboardLayout</code>.
+            </p>
+          </ComponentBox>
+        );
+      };
+
+      /* ── Blog ───────────────────────────────────────────────────
+       * Routes are defined above near this component, not in Router.
+       * BlogLayout owns its own sub-router internally.
+       * ─────────────────────────────────────────────────────────── */
+      const BlogLayout = ({ appCount, incApp }) => {
+        useTrackRender("BlogLayout");
+        const [blogCount, incBlog] = useCounter();
+
+        return (
+          <ComponentBox
+            colorClass="box-blog"
+            name="BlogLayout"
+            headerExtras={
+              <>
+                <CounterBtn
+                  colorClass="btn-app"
+                  label="App state"
+                  count={appCount}
+                  onClick={incApp}
+                />
+                <CounterBtn
+                  colorClass="btn-blog"
+                  label="Blog state"
+                  count={blogCount}
+                  onClick={incBlog}
+                />
+              </>
+            }
+          >
+            <Nav>
+              <Link route={BLOG_HOME_ROUTE}>Blog home</Link>
+              <Link route={BLOG_POSTS_ROUTE}>Posts</Link>
+              <Link route={BLOG_NOT_FOUND_ROUTE}>Blog unknown</Link>
+            </Nav>
+            <Route id="blog_router">
+              <Route
+                route={BLOG_HOME_ROUTE}
+                element={BlogHomePage}
+                elementProps={{ appCount, incApp }}
+              />
+              <Route
+                route={BLOG_POSTS_ROUTE}
+                element={BlogPostsPage}
+                elementProps={{ appCount, incApp }}
+              />
+              <Route
+                fallback
+                element={BlogNotFound}
+                elementProps={{ appCount, incApp }}
+              />
+            </Route>
+          </ComponentBox>
+        );
+      };
+
+      const BlogHomePage = ({ appCount, incApp }) => {
+        useTrackRender("BlogHomePage");
+        const [pageCount, incPage] = useCounter();
+
+        return (
+          <ComponentBox
+            colorClass="box-blog"
+            name="BlogHomePage"
+            headerExtras={
+              <>
+                <CounterBtn
+                  colorClass="btn-app"
+                  label="App state"
+                  count={appCount}
+                  onClick={incApp}
+                />
+                <CounterBtn
+                  colorClass="btn-blog"
+                  label="Page state"
+                  count={pageCount}
+                  onClick={incPage}
+                />
+              </>
+            }
+          >
+            <p style="margin:0;color:#555;font-size:13px;">
+              Blog overview — wrapped inside BlogLayout.
+            </p>
+          </ComponentBox>
+        );
+      };
+
+      const BlogPostsPage = ({ appCount, incApp }) => {
+        useTrackRender("BlogPostsPage");
+        const [pageCount, incPage] = useCounter();
+
+        return (
+          <ComponentBox
+            colorClass="box-blog-posts"
+            name="BlogPostsPage"
+            headerExtras={
+              <>
+                <CounterBtn
+                  colorClass="btn-app"
+                  label="App state"
+                  count={appCount}
+                  onClick={incApp}
+                />
+                <CounterBtn
+                  colorClass="btn-blog-posts"
+                  label="Page state"
+                  count={pageCount}
+                  onClick={incPage}
+                />
+              </>
+            }
+          >
+            <p style="margin:0;color:#555;font-size:13px;">
+              Blog posts list — wrapped inside BlogLayout.
+            </p>
+          </ComponentBox>
+        );
+      };
+
+      const BlogNotFound = ({ appCount, incApp }) => {
+        useTrackRender("BlogNotFound");
+        const [nfCount, incNf] = useCounter();
+
+        return (
+          <ComponentBox
+            colorClass="box-blog-notfound"
+            name="BlogNotFound (fallback inside layout)"
+            headerExtras={
+              <>
+                <CounterBtn
+                  colorClass="btn-app"
+                  label="App state"
+                  count={appCount}
+                  onClick={incApp}
+                />
+                <CounterBtn
+                  colorClass="btn-blog-notfound"
+                  label="BlogNotFound state"
+                  count={nfCount}
+                  onClick={incNf}
+                />
+              </>
+            }
+          >
+            <p style="margin:0;color:#555;font-size:13px;">
+              No blog route matched — fallback rendered inside{" "}
+              <code>BlogLayout</code>.
             </p>
           </ComponentBox>
         );
