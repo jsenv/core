@@ -148,7 +148,7 @@
     ></div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { useLayoutEffect } from "preact/hooks";
+      import { useLayoutEffect, useState } from "preact/hooks";
       import { Link, Route, route, setupRoutes } from "@jsenv/navi";
 
       const HOME_ROUTE = route("");
@@ -360,7 +360,6 @@
           <ComponentBox
             colorClass="box-settings"
             name="SettingsPage"
-            renderInfo={renderInfo}
             headerExtras={
               <>
                 <CounterBtn
