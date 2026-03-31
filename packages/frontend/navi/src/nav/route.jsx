@@ -158,17 +158,22 @@ const RouteAsContainer = ({ id, children }) => {
   }, []);
 
   // Post-probe: sync report when isMatching changes.
+  // Skip the first run — the probe effect above already handled the initial report.
+  const didMountRef = useRef(false);
   useLayoutEffect(() => {
+    if (!didMountRef.current) {
+      debug(
+        `[container "${id}"] ISMATCHING EFFECT (mount), skipping — probe handled it`,
+      );
+      didMountRef.current = true;
+      return;
+    }
     debug(
       `[container "${id}"] ISMATCHING EFFECT, isMatching=${isMatching}, prevReported=${prevReportedRef.current}, ` +
-        `hasProbedRef=${hasProbedRef.current}, parentTracker=${matchingSiblings ? matchingSiblings.trackerId : "none"}`,
+        `parentTracker=${matchingSiblings ? matchingSiblings.trackerId : "none"}`,
     );
     if (!matchingSiblings) {
       debug(`[container "${id}"] no parent, skipping report`);
-      return;
-    }
-    if (!hasProbedRef.current) {
-      debug(`[container "${id}"] still probing, skipping report`);
       return;
     }
     if (isMatching === prevReportedRef.current) {
