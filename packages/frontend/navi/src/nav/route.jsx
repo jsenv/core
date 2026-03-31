@@ -51,9 +51,9 @@ export const Route = (props) => {
 // RouteWithChildren: has JSX children — dispatches based on route/fallback props.
 const RouteWithChildren = (props) => {
   if (props.route) {
-    return <RouteWithChildrenAndRoute {...props} />;
+    return <RouteContainerWithRoute {...props} />;
   }
-  return <RouteAsContainer {...props} />;
+  return <RouteContainer {...props} />;
 };
 // ProbingContext: true during the first render cycle where children run their
 // route checks and update the parent's matchingSiblingsCount, but return null.
@@ -151,7 +151,7 @@ const useMatchingSiblingsContext = import.meta.dev
   : () => useContext(MatchingChildrenContext);
 // ChildrenRoute: route with JSX children (nested routes).
 // Provides MatchingChildrenContext so nested routes can report to this route's tracker.
-const RouteWithChildrenAndRoute = (props) => {
+const RouteContainerWithRoute = (props) => {
   const isProbing = useContext(ProbingContext);
   const matchingSiblings = useMatchingSiblingsContext();
   const { route, routeParams } = props;
@@ -187,7 +187,7 @@ const RouteWithChildrenAndRoute = (props) => {
     </MatchingChildrenContext.Provider>
   );
 };
-const RouteAsContainer = ({ id, element, elementProps, children }) => {
+const RouteContainer = ({ id, element, elementProps, children }) => {
   const matchingSiblings = useContext(MatchingChildrenContext); // null if no ancestor Route
   const matchingChildren = useMatchingChildren();
   const hasActiveChild = matchingChildren.useHasActiveChild(); // reactive, re-renders only when boolean flips
