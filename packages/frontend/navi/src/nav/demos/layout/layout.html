@@ -214,8 +214,8 @@
     </div>
     <div id="app"></div>
     <script type="module" jsenv-type="module/jsx">
-      import { render } from "preact";
-      import { useLayoutEffect, useState } from "preact/hooks";
+      import { render, createContext } from "preact";
+      import { useContext, useLayoutEffect, useState } from "preact/hooks";
       import { Nav, Link, Route, route, setupRoutes } from "@jsenv/navi";
 
       const HOME_ROUTE = route("");
@@ -348,11 +348,12 @@
         return [count, () => setCount((c) => c + 1)];
       };
 
+      const AuthContext = createContext(null);
+
       /* ── App (root) ─────────────────────────────────────────────── */
       const App = () => {
         useTrackRender("App");
         const [appCount, incApp] = useCounter();
-        const [authCount, incAuth] = useCounter();
 
         return (
           <div class="app">
@@ -390,12 +391,12 @@
                 <Route
                   id="auth_layout"
                   element={AuthLayout}
-                  elementProps={{ appCount, incApp, authCount, incAuth }}
+                  elementProps={{ appCount, incApp }}
                 >
                   <Route
                     route={PROFILE_ROUTE}
                     element={ProfilePage}
-                    elementProps={{ appCount, incApp, authCount, incAuth }}
+                    elementProps={{ appCount, incApp }}
                   />
                   <Route
                     route={SETTINGS_ROUTE}
@@ -442,38 +443,35 @@
       };
 
       /* ── AuthLayout ─────────────────────────────────────────────── */
-      const AuthLayout = ({
-        appCount,
-        incApp,
-        authCount,
-        incAuth,
-        children,
-      }) => {
+      const AuthLayout = ({ appCount, incApp, children }) => {
         useTrackRender("AuthLayout");
+        const [authCount, incAuth] = useCounter();
 
         return (
-          <ComponentBox
-            colorClass="box-auth"
-            name="AuthLayout"
-            headerExtras={
-              <>
-                <CounterBtn
-                  colorClass="btn-app"
-                  label="App state"
-                  count={appCount}
-                  onClick={incApp}
-                />
-                <CounterBtn
-                  colorClass="btn-auth"
-                  label="Auth state"
-                  count={authCount}
-                  onClick={incAuth}
-                />
-              </>
-            }
-          >
-            {children}
-          </ComponentBox>
+          <AuthContext.Provider value={{ authCount, incAuth }}>
+            <ComponentBox
+              colorClass="box-auth"
+              name="AuthLayout"
+              headerExtras={
+                <>
+                  <CounterBtn
+                    colorClass="btn-app"
+                    label="App state"
+                    count={appCount}
+                    onClick={incApp}
+                  />
+                  <CounterBtn
+                    colorClass="btn-auth"
+                    label="Auth state"
+                    count={authCount}
+                    onClick={incAuth}
+                  />
+                </>
+              }
+            >
+              {children}
+            </ComponentBox>
+          </AuthContext.Provider>
         );
       };
 
@@ -510,8 +508,9 @@
         );
       };
 
-      const ProfilePage = ({ appCount, incApp, authCount, incAuth }) => {
+      const ProfilePage = ({ appCount, incApp }) => {
         useTrackRender("ProfilePage");
+        const { authCount, incAuth } = useContext(AuthContext);
         const [profileCount, incProfile] = useCounter();
 
         return (
