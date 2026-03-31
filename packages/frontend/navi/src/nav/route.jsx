@@ -84,6 +84,13 @@ const createMatchingChildren = () => {
       probing = false;
       isMatchingSignal.value = count > 0;
     },
+    startReprobe: () => {
+      debug(
+        `[tracker ${trackerId}] startReprobe, resetting count from ${count} to 0`,
+      );
+      count = 0;
+      probing = true;
+    },
     useIsMatching: () => isMatchingSignal.value,
     getCount: () => count,
     reportMatch: () => {
@@ -119,9 +126,35 @@ const RouteAsContainer = ({ id, children }) => {
   const matchingChildren = useMatchingChildren();
   const isMatching = matchingChildren.useIsMatching(); // reactive, re-renders only when boolean flips
   const hasProbedRef = useRef(false);
-  const isProbing = !hasProbedRef.current;
+  const wasMatchingRef = useRef(false);
   const prevReportedRef = useRef(false);
+  const probeGenRef = useRef(0);
   const [renderCount, forceRender] = useReducer((n) => n + 1, 0);
+
+  // When isMatching transitions from true to false, we must re-probe:
+  // the URL changed, previous children unmatched but new children
+  // (currently unmounted) might match. Re-probing renders children
+  // so they can detect the new URL and report.
+  // Also re-probe when a parent container is re-probing (ProbingContext=true)
+  // while we've already probed — our children need to re-evaluate too.
+  const parentIsProbing = useContext(ProbingContext);
+  let isProbing;
+  if (!hasProbedRef.current) {
+    isProbing = true;
+  } else if (wasMatchingRef.current && !isMatching) {
+    debug(`[container "${id}"] isMatching went false, re-probing`);
+    matchingChildren.startReprobe();
+    probeGenRef.current++;
+    isProbing = true;
+  } else if (parentIsProbing) {
+    debug(`[container "${id}"] parent is probing, re-probing`);
+    matchingChildren.startReprobe();
+    probeGenRef.current++;
+    isProbing = true;
+  } else {
+    isProbing = false;
+  }
+  wasMatchingRef.current = isMatching;
 
   debug(
     `[container "${id}"] RENDER #${renderCount}, isProbing=${isProbing}, isMatching=${isMatching}, ` +
@@ -129,27 +162,44 @@ const RouteAsContainer = ({ id, children }) => {
       `childCount=${matchingChildren.getCount()}`,
   );
 
-  // Probe effect: fires bottom-up, so child containers report to us before we run.
-  // We immediately report to our parent so parent's probe effect sees an up-to-date count.
-  // Then endProbe() enables signal updates for subsequent dynamic route changes.
+  // Probe/reprobe effect: fires bottom-up after children have reported.
+  // endProbe() finalizes the count and enables signal updates.
+  const currentProbeGen = probeGenRef.current;
   useLayoutEffect(() => {
+    if (!isProbing) {
+      return;
+    }
     hasProbedRef.current = true;
     const childCount = matchingChildren.getCount();
     debug(
-      `[container "${id}"] PROBE EFFECT, childCount=${childCount}, parentTracker=${matchingSiblings ? matchingSiblings.trackerId : "none"}`,
+      `[container "${id}"] PROBE EFFECT (gen=${currentProbeGen}), childCount=${childCount}, parentTracker=${matchingSiblings ? matchingSiblings.trackerId : "none"}`,
     );
-    if (matchingSiblings && childCount > 0) {
-      debug(
-        `[container "${id}"] reporting match to parent tracker ${matchingSiblings.trackerId}`,
-      );
-      prevReportedRef.current = true;
-      matchingSiblings.reportMatch();
+    // On reprobe: sync parent report — we may now match or not match
+    if (matchingSiblings) {
+      const shouldReport = childCount > 0;
+      if (shouldReport && !prevReportedRef.current) {
+        debug(
+          `[container "${id}"] reporting match to parent tracker ${matchingSiblings.trackerId}`,
+        );
+        prevReportedRef.current = true;
+        matchingSiblings.reportMatch();
+      } else if (!shouldReport && prevReportedRef.current) {
+        debug(
+          `[container "${id}"] reporting unmatch to parent tracker ${matchingSiblings.trackerId}`,
+        );
+        prevReportedRef.current = false;
+        matchingSiblings.reportUnmatch();
+      }
     }
     matchingChildren.endProbe();
     debug(`[container "${id}"] calling forceRender`);
     forceRender();
+  }, [currentProbeGen]);
+
+  // Cleanup: unmount report to parent
+  useLayoutEffect(() => {
     return () => {
-      debug(`[container "${id}"] PROBE CLEANUP`);
+      debug(`[container "${id}"] UNMOUNT CLEANUP`);
       if (prevReportedRef.current) {
         prevReportedRef.current = false;
         matchingSiblings.reportUnmatch();
