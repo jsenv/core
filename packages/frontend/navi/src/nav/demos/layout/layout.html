@@ -12,6 +12,9 @@
           background-color: transparent;
         }
       }
+      .render-flash {
+        animation: render-flash 800ms ease-out;
+      }
       * {
         box-sizing: border-box;
       }
@@ -208,7 +211,7 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useLayoutEffect, useState } from "preact/hooks";
-      import { Link, Route, route, setupRoutes } from "@jsenv/navi";
+      import { Nav, Link, Route, route, setupRoutes } from "@jsenv/navi";
 
       const HOME_ROUTE = route("");
       const PROFILE_ROUTE = route("/profile");
@@ -246,48 +249,76 @@
       const trackRender = (name) => {
         renderCounts[name] = (renderCounts[name] || 0) + 1;
       };
-      const flushRenderLog = () => {
+      // Names that rendered during the current Preact batch
+      const pendingFlash = new Set();
+      const COLORS = {
+        App: "#a5b4fc",
+        AuthLayout: "#7dd3fc",
+        DashboardLayout: "#fdba74",
+        HomePage: "#6ee7b7",
+        ProfilePage: "#fcd34d",
+        SettingsPage: "#fca5a5",
+        DashboardHomePage: "#fb923c",
+        DashboardProjectsPage: "#2dd4bf",
+        DashboardAnalyticsPage: "#fb7185",
+        NotFoundPage: "#c084fc",
+        DashboardNotFound: "#94a3b8",
+      };
+      const TREE = [
+        { name: "App", indent: "" },
+        { name: "HomePage", indent: "  \u251c\u2500 " },
+        { name: "AuthLayout", indent: "  \u251c\u2500 " },
+        { name: "ProfilePage", indent: "  \u2502   \u251c\u2500 " },
+        { name: "SettingsPage", indent: "  \u2502   \u2514\u2500 " },
+        { name: "DashboardLayout", indent: "  \u251c\u2500 " },
+        { name: "DashboardHomePage", indent: "  \u2502   \u251c\u2500 " },
+        { name: "DashboardProjectsPage", indent: "  \u2502   \u251c\u2500 " },
+        { name: "DashboardAnalyticsPage", indent: "  \u2502   \u251c\u2500 " },
+        { name: "DashboardNotFound", indent: "  \u2502   \u2514\u2500 " },
+        { name: "NotFoundPage", indent: "  \u2514\u2500 " },
+      ];
+      let logInitialized = false;
+      const initRenderLog = () => {
         const counts = document.getElementById("render-log-counts");
-        if (!counts) return;
-        const COLORS = {
-          App: "#a5b4fc",
-          AuthLayout: "#7dd3fc",
-          DashboardLayout: "#fdba74",
-          HomePage: "#6ee7b7",
-          ProfilePage: "#fcd34d",
-          SettingsPage: "#fca5a5",
-          DashboardHomePage: "#fb923c",
-          DashboardProjectsPage: "#2dd4bf",
-          DashboardAnalyticsPage: "#fb7185",
-          NotFoundPage: "#c084fc",
-          DashboardNotFound: "#94a3b8",
-        };
-        const s = (name) => {
-          const count = renderCounts[name] ?? 0;
+        if (!counts || logInitialized) return;
+        logInitialized = true;
+        const lines = TREE.map(({ name, indent }) => {
           const color = COLORS[name] ?? "#cdd6f4";
-          const opacity = count === 0 ? "0.35" : "1";
-          return `<span style="color:${color};opacity:${opacity}">${name}&thinsp;<b>${count}</b></span>`;
-        };
-        const lines = [
-          s("App"),
-          `  ├─ ${s("HomePage")}`,
-          `  ├─ ${s("AuthLayout")}`,
-          `  │   ├─ ${s("ProfilePage")}`,
-          `  │   └─ ${s("SettingsPage")}`,
-          `  ├─ ${s("DashboardLayout")}`,
-          `  │   ├─ ${s("DashboardHomePage")}`,
-          `  │   ├─ ${s("DashboardProjectsPage")}`,
-          `  │   ├─ ${s("DashboardAnalyticsPage")}`,
-          `  │   └─ ${s("DashboardNotFound")}`,
-          `  └─ ${s("NotFoundPage")}`,
-        ];
-        counts.innerHTML = `<div style="font-family:monospace;font-size:12px;line-height:1.7;white-space:pre">${lines.join("\n")}</div>`;
+          return `<span style="white-space:pre;color:#6c7086">${indent}</span><span id="rc-${name}" style="color:${color};opacity:0.35;padding:0 3px;border-radius:3px;--flash-color:${color}40">${name}&thinsp;<b>0</b></span>`;
+        });
+        counts.innerHTML = `<div style="font-family:monospace;font-size:12px;line-height:1.7">${lines.join("<br>")}</div>`;
+      };
+      const flushRenderLog = () => {
+        initRenderLog();
+        const flashing = new Set(pendingFlash);
+        pendingFlash.clear();
+        for (const { name } of TREE) {
+          const span = document.getElementById(`rc-${name}`);
+          if (!span) continue;
+          const count = renderCounts[name] ?? 0;
+          span.style.opacity = count === 0 ? "0.35" : "1";
+          span.querySelector("b").textContent = count;
+          if (flashing.has(name)) {
+            // Force reflow to restart animation if already running
+            span.classList.remove("render-flash");
+            // eslint-disable-next-line no-void
+            void span.offsetWidth;
+            span.classList.add("render-flash");
+            span.addEventListener(
+              "animationend",
+              () => span.classList.remove("render-flash"),
+              { once: true },
+            );
+          }
+        }
       };
       const useTrackRender = (name) => {
         trackRender(name);
+        pendingFlash.add(name);
         useLayoutEffect(flushRenderLog);
       };
       flushRenderLog();
+      initRenderLog();
 
       const ComponentBox = ({ colorClass, name, headerExtras, children }) => (
         <div class={`component-box ${colorClass}`}>
@@ -329,7 +360,7 @@
                 />
               }
             >
-              <nav>
+              <Nav>
                 <Link route={HOME_ROUTE}>Home</Link>
                 <Link route={PROFILE_ROUTE}>Profile</Link>
                 <Link route={SETTINGS_ROUTE}>Settings</Link>
@@ -341,7 +372,7 @@
                 >
                   Unknown (fallback)
                 </Link>
-              </nav>
+              </Nav>
               <Route id="app_layout">
                 <Route
                   route={HOME_ROUTE}
@@ -587,7 +618,7 @@
               </>
             }
           >
-            <nav>
+            <Nav>
               <Link route={DASHBOARD_HOME_ROUTE}>Overview</Link>
               <Link route={DASHBOARD_PROJECTS_ROUTE}>Projects</Link>
               <Link route={DASHBOARD_ANALYTICS_ROUTE}>Analytics</Link>
@@ -597,7 +628,7 @@
               >
                 Unknown (fallback)
               </Link>
-            </nav>
+            </Nav>
             {children}
           </ComponentBox>
         );
