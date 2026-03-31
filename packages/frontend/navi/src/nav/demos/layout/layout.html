@@ -188,7 +188,16 @@
       const PROFILE_ROUTE = route("/profile");
       const SETTINGS_ROUTE = route("/settings");
       const DASHBOARD_ROUTE = route("/dashboard");
-      setupRoutes([HOME_ROUTE, PROFILE_ROUTE, SETTINGS_ROUTE, DASHBOARD_ROUTE]);
+      const UNKNOWN_ROUTE = route("/unknown");
+      const DASHBOARD_UNKNOWN_ROUTE = route("/dashboard/unknown");
+      setupRoutes([
+        HOME_ROUTE,
+        PROFILE_ROUTE,
+        SETTINGS_ROUTE,
+        DASHBOARD_ROUTE,
+        UNKNOWN_ROUTE,
+        DASHBOARD_UNKNOWN_ROUTE,
+      ]);
 
       // Plain-DOM render tracking — never causes re-renders
       const renderCounts = {
@@ -276,16 +285,20 @@
                 <Link route={HOME_ROUTE}>Home</Link>
                 <Link route={PROFILE_ROUTE}>Profile</Link>
                 <Link route={SETTINGS_ROUTE}>Settings</Link>
+
                 <Link route={DASHBOARD_ROUTE}>Dashboard</Link>
-                <a
-                  href="/dashboard/unknown"
+                <Link
+                  route={UNKNOWN_ROUTE}
+                  style="color:#a855f7;background:#f3e8ff;"
+                >
+                  Unknown (fallback)
+                </Link>
+                <Link
+                  route={DASHBOARD_UNKNOWN_ROUTE}
                   style="color:#64748b;background:#f1f5f9;"
                 >
                   Dashboard unknown
-                </a>
-                <a href="/unknown" style="color:#a855f7;background:#f3e8ff;">
-                  Unknown (fallback)
-                </a>
+                </Link>
               </nav>
               <Route id="app_layout">
                 <Route

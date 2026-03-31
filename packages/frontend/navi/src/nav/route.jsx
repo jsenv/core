@@ -37,13 +37,13 @@ export const Route = (props) => {
   return <RouteLeaf {...props} />;
 };
 
-// Walk JSX children vnodes (without rendering) to build a descriptor list and
+// Walk JSX children vnodes (without rendering) to build a branch list and
 // find the active one in the same pass.
 // All children must be <Route> — throws in dev otherwise.
-// Returns { descriptors, activeDescriptor }.
-const collectDescriptors = (children) => {
-  const descriptors = [];
-  let activeDescriptor = null;
+// Returns { branches, activeBranch }.
+const collectBranches = (children) => {
+  const branches = [];
+  let activeBranch = null;
 
   const visit = (child) => {
     if (!child || child === true || child === false) {
@@ -67,47 +67,46 @@ const collectDescriptors = (children) => {
       routeParams,
     } = child.props;
     if (nodeChildren) {
-      const { activeDescriptor: activeChild } =
-        collectDescriptors(nodeChildren);
-      const descriptor = { type: "container", node: child };
-      descriptors.push(descriptor);
-      if (!activeDescriptor && activeChild) {
-        activeDescriptor = descriptor;
+      const { activeBranch: activeChild } = collectBranches(nodeChildren);
+      const branch = { type: "container", node: child };
+      branches.push(branch);
+      if (!activeBranch && activeChild) {
+        activeBranch = branch;
       }
     } else if (fallback) {
-      descriptors.push({ type: "fallback", node: child });
+      branches.push({ type: "fallback", node: child });
     } else {
-      const descriptor = { type: "leaf", node: child };
-      descriptors.push(descriptor);
+      const branch = { type: "leaf", node: child };
+      branches.push(branch);
       if (
-        !activeDescriptor &&
+        !activeBranch &&
         route.matchingSignal.value &&
         (!routeParams || route.matchesParams(routeParams))
       ) {
-        activeDescriptor = descriptor;
+        activeBranch = branch;
       }
     }
   };
 
   visit(children);
-  return { descriptors, activeDescriptor };
+  return { branches, activeBranch };
 };
 // RouteContainer: traverses children statically per render, finds the active branch,
 // and renders only that branch — or the fallback if nothing matches.
 // No effects, no signals, no contexts needed: reads route signals directly.
 const RouteContainer = ({ id, element, elementProps, children }) => {
-  const { descriptors, activeDescriptor } = collectDescriptors(children);
+  const { branches, activeBranch } = collectBranches(children);
 
   debug(
-    `[container "${id}"] RENDER, active=${activeDescriptor ? activeDescriptor.type : "none"}`,
+    `[container "${id}"] RENDER, active=${activeBranch ? activeBranch.type : "none"}`,
   );
 
   let content;
-  if (activeDescriptor) {
-    content = activeDescriptor.node;
+  if (activeBranch) {
+    content = activeBranch.node;
   } else {
-    const fallbackDescriptor = descriptors.find((d) => d.type === "fallback");
-    content = fallbackDescriptor ? fallbackDescriptor.node : null;
+    const fallbackBranch = branches.find((b) => b.type === "fallback");
+    content = fallbackBranch ? fallbackBranch.node : null;
   }
 
   if (!content) {
