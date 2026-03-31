@@ -293,7 +293,7 @@ const RouteLeaf = (props) => {
     return null;
   }
   debug(`[route "${route.urlPattern}"] rendering content`);
-  return <RouteMatching {...props} />;
+  return <RouteActive {...props} />;
 };
 
 // RouteWithChildren: route with JSX children (nested routes).
@@ -330,7 +330,7 @@ const RouteWithChildren = (props) => {
   debug(`[route "${route.urlPattern}"] rendering content with children`);
   return (
     <MatchingChildrenContext.Provider value={matchingChildren}>
-      <RouteMatching {...props} />
+      <RouteActive {...props} />
     </MatchingChildrenContext.Provider>
   );
 };
@@ -357,7 +357,7 @@ const RouteWithFallback = (props) => {
   if (!isActive) {
     return null;
   }
-  return <RouteMatching {...props} />;
+  return <RouteActive {...props} />;
 };
 
 const FallbackOnly = (props) => {
@@ -377,11 +377,11 @@ const FallbackOnly = (props) => {
   if (!isActive) {
     return null;
   }
-  return <RouteMatching {...props} />;
+  return <RouteActive {...props} />;
 };
 
 const RouteInfoContext = createContext(null);
-const RouteMatching = ({
+const RouteActive = ({
   route,
   element,
   elementProps,
