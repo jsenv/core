@@ -257,25 +257,32 @@ export const resource = (
         }
       };
       updateChildItemIdArray(item[propertyName]);
-      childResource.store.observeIdChanges((currentIdSet, previousIdSet) => {
+      childResource.store.observeProperties((mutations) => {
         const idArray = childItemIdArraySignal.peek();
         if (idArray.length === 0) {
           return;
         }
-        let modified = false;
-        const updatedArray = idArray.map((id) => {
-          if (currentIdSet.has(id) || !previousIdSet.has(id)) return id;
-          for (const newId of currentIdSet) {
-            if (!previousIdSet.has(newId)) {
-              modified = true;
-              return newId;
-            }
+        const idSet = new Set(idArray);
+        const idMutationMap = new Map();
+        for (const mutation of mutations) {
+          const idKeyMutation = mutation[childIdKey];
+          if (!idKeyMutation) {
+            continue;
           }
-          return id;
-        });
-        if (modified) {
-          childItemIdArraySignal.value = updatedArray;
+          const { oldValue, newValue } = idKeyMutation;
+          if (!idSet.has(oldValue)) {
+            continue;
+          }
+          idMutationMap.set(oldValue, newValue);
         }
+        if (idMutationMap.size === 0) {
+          return;
+        }
+        const idUpdatedArray = [];
+        for (const id of idArray) {
+          idUpdatedArray.push(idMutationMap.get(id) ?? id);
+        }
+        childItemIdArraySignal.value = idUpdatedArray;
       });
 
       const childItemArraySignal = computed(() => {
@@ -927,7 +934,10 @@ ${originalActionName} source location: ${locationInfo}`,
         ) {
           return null;
         }
-
+        // When an id is renamed (PUT/PATCH changes the idKey), the store fires observeProperties
+        // with a mutation containing oldValue/newValue for that key. We patch this action's
+        // valueSignal (the id array) so that selectAll keeps returning the right items.
+        // The returned unsubscribe function is called by completeSideEffectCleanup on reset.
         return store.observeProperties((mutations) => {
           const idArray = actionCompleted.valueSignal.peek();
           if (idArray.length === 0) {
@@ -951,8 +961,11 @@ ${originalActionName} source location: ${locationInfo}`,
           }
           const idUpdatedArray = [];
           for (const id of idArray) {
-            const newId = idMutationMap.get(id) || id;
-            idUpdatedArray.push(newId);
+            if (idMutationMap.has(id)) {
+              idUpdatedArray.push(idMutationMap.get(id));
+            } else {
+              idUpdatedArray.push(id);
+            }
           }
           actionCompleted.valueSignal.value = idUpdatedArray;
         });
