@@ -1154,7 +1154,9 @@ const createHttpHandlerRelationshipToManyResource = (
             return childItemId;
           }
         : (childData) => {
-            const childItem = childStore.upsert(childData); // if the child item was used it will reload thanks to signals
+            const childItem = Array.isArray(childData)
+              ? childStore.upsert(...childData)
+              : childStore.upsert(childData);
             const childItemId = childItem[childIdKey];
             return childItemId;
           };
