@@ -55,23 +55,33 @@
         { id: "email", header: "Email" },
       ];
 
-      const Demo = () => {
+      const TableRowManager = () => {
         const [rows, setRows] = useState(initialRows);
-        const cellGrid = useCellGrid(
-          rows,
-          columnsConfig.map((col) => col.id),
-        );
-        const { cells, columns } = useCellsAndColumns(cellGrid, columnsConfig);
 
-        const deleteRow = (rowId) => {
-          setRows((prev) => prev.filter((r) => r.id !== rowId));
-        };
+        return (
+          <Demo
+            rows={rows}
+            onDeleteRow={(rowId) => {
+              setRows((prev) => prev.filter((r) => r.id !== rowId));
+            }}
+          />
+        );
+      };
+
+      const Demo = ({ rows, onDeleteRow }) => {
+        const [cellGrid, setCellGrid] = useCellGrid(rows, ["name", "email"]);
+        const { cells, columns } = useCellsAndColumns(
+          cellGrid,
+          setCellGrid,
+          columnsConfig,
+        );
 
         return (
           <div class="demo-container">
             <h1>Table — Delete Row</h1>
             <p style={{ color: "#6c757d", marginBottom: "16px" }}>
-              {rows.length} row(s) — click <strong>×</strong> to delete a row.
+              {cellGrid.length} row(s) — click <strong>×</strong> to delete a
+              row.
             </p>
 
             <Table borderCollapse>
@@ -95,7 +105,7 @@
 
               <Tbody>
                 {cells.map((rowCells, dataRowIndex) => {
-                  const row = rows[dataRowIndex];
+                  const row = cellGrid[dataRowIndex];
                   return (
                     <Tr id={row.id} key={row.id}>
                       <RowNumberTableCell />
@@ -114,7 +124,7 @@
                             borderRadius: "3px",
                             cursor: "pointer",
                           }}
-                          onClick={() => deleteRow(row.id)}
+                          onClick={() => onDeleteRow(row.id)}
                         >
                           ×
                         </button>
