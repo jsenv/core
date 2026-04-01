@@ -1,5 +1,9 @@
-import { ActionRenderer, resource } from "@jsenv/navi";
+import { Link, Nav, resource, Route, route, setupRoutes } from "@jsenv/navi";
 import { render } from "preact";
+
+const HOME_ROUTE = route("");
+const LIST_ROUTE = route("/list");
+setupRoutes([HOME_ROUTE, LIST_ROUTE]);
 
 let nextId = 1;
 const itemStore = new Map();
@@ -45,96 +49,121 @@ const deleteItem = (id) => {
   ITEM.DELETE({ id });
 };
 
-const ItemPage = () => {
-  return (
-    <ActionRenderer action={ITEM.GET_MANY}>
-      {(items) => {
-        return <ItemList items={items} />;
-      }}
-    </ActionRenderer>
-  );
-};
-
-const ItemList = ({ items }) => {
-  return (
-    <div
+const App = () => (
+  <div>
+    <Nav
       style={{
-        maxWidth: "400px",
-        margin: "40px auto",
-        fontFamily: "system-ui, sans-serif",
+        display: "flex",
+        gap: "8px",
+        padding: "12px 16px",
+        borderBottom: "1px solid #dee2e6",
       }}
     >
-      <h2 style={{ marginBottom: "16px" }}>Items</h2>
+      <Link route={HOME_ROUTE}>Home</Link>
+      <Link route={LIST_ROUTE}>List</Link>
+    </Nav>
+    <Route id="app">
+      <Route route={HOME_ROUTE} element={HomePage} />
+      <Route
+        route={LIST_ROUTE}
+        action={ITEM.GET_MANY}
+        element={(items) => <ItemList items={items} />}
+      />
+    </Route>
+  </div>
+);
 
-      <ul
-        style={{
-          listStyle: "none",
-          padding: 0,
-          margin: "0 0 12px",
-          border: "1px solid #dee2e6",
-          borderRadius: "8px",
-          overflow: "hidden",
-        }}
-      >
-        {items.length === 0 ? (
+const HomePage = () => (
+  <div
+    style={{
+      maxWidth: "400px",
+      margin: "40px auto",
+      fontFamily: "system-ui, sans-serif",
+    }}
+  >
+    <h2>Home</h2>
+    <p style={{ color: "#6c757d" }}>Navigate to the list to see items.</p>
+  </div>
+);
+
+const ItemList = ({ items }) => (
+  <div
+    style={{
+      maxWidth: "400px",
+      margin: "40px auto",
+      fontFamily: "system-ui, sans-serif",
+    }}
+  >
+    <h2 style={{ marginBottom: "16px" }}>Items</h2>
+
+    <ul
+      style={{
+        listStyle: "none",
+        padding: 0,
+        margin: "0 0 12px",
+        border: "1px solid #dee2e6",
+        borderRadius: "8px",
+        overflow: "hidden",
+      }}
+    >
+      {items.length === 0 ? (
+        <li
+          style={{
+            padding: "12px 16px",
+            color: "#6c757d",
+            fontStyle: "italic",
+          }}
+        >
+          No items
+        </li>
+      ) : (
+        items.map((item, index) => (
           <li
+            key={item.id}
             style={{
-              padding: "12px 16px",
-              color: "#6c757d",
-              fontStyle: "italic",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              padding: "8px 12px",
+              borderTop: index === 0 ? "none" : "1px solid #dee2e6",
+              backgroundColor: "white",
             }}
           >
-            No items
-          </li>
-        ) : (
-          items.map((item, index) => (
-            <li
-              key={item.id}
+            <span style={{ fontFamily: "monospace" }}>#{item.id}</span>
+            <button
+              onClick={() => deleteItem(item.id)}
               style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                padding: "8px 12px",
-                borderTop: index === 0 ? "none" : "1px solid #dee2e6",
-                backgroundColor: "white",
+                padding: "2px 8px",
+                backgroundColor: "#dc3545",
+                color: "white",
+                border: "none",
+                borderRadius: "4px",
+                cursor: "pointer",
+                fontSize: "0.8em",
               }}
             >
-              <span style={{ fontFamily: "monospace" }}>#{item.id}</span>
-              <button
-                onClick={() => deleteItem(item.id)}
-                style={{
-                  padding: "2px 8px",
-                  backgroundColor: "#dc3545",
-                  color: "white",
-                  border: "none",
-                  borderRadius: "4px",
-                  cursor: "pointer",
-                  fontSize: "0.8em",
-                }}
-              >
-                🗑️
-              </button>
-            </li>
-          ))
-        )}
-      </ul>
+              🗑️
+            </button>
+          </li>
+        ))
+      )}
+    </ul>
 
-      <button
-        onClick={addItem}
-        style={{
-          padding: "6px 16px",
-          backgroundColor: "#28a745",
-          color: "white",
-          border: "none",
-          borderRadius: "6px",
-          cursor: "pointer",
-          fontSize: "0.9em",
-        }}
-      >
-        + Add item
-      </button>
-    </div>
-  );
-};
+    <button
+      onClick={addItem}
+      style={{
+        padding: "6px 16px",
+        backgroundColor: "#28a745",
+        color: "white",
+        border: "none",
+        borderRadius: "6px",
+        cursor: "pointer",
+        fontSize: "0.9em",
+      }}
+    >
+      + Add item
+    </button>
+  </div>
+);
 
-render(<ItemPage />, document.querySelector("#root"));
+render(<App />, document.querySelector("#root"));
