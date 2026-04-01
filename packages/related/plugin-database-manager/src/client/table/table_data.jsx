@@ -47,10 +47,8 @@ import.meta.css = /* css */ `
 
 export const TableData = ({ table, rows }) => {
   const tableRef = useRef(null);
-  const { tablename } = table;
+  const { tablename, columns } = table;
   const createRow = TABLE_ROW.POST.bindParams({ tablename });
-  const { columns } = table.meta;
-  columns.sort((a, b) => a.ordinal_position - b.ordinal_position);
 
   const cellGrid = useCellGridFromRows(
     rows,

@@ -26,11 +26,13 @@ export const TABLE = resource("table", {
     const { data, meta } = await response.json();
     const table = data;
     const { ownerRole, columns, pgTableColumns } = meta;
+    columns.sort((a, b) => a.ordinal_position - b.ordinal_position);
+    table.columns = columns;
+
     return {
       ...table,
       ownerRole,
       meta: {
-        columns,
         pgTableColumns,
       },
     };
@@ -114,8 +116,25 @@ export const TABLE = resource("table", {
 
 export const useTableArrayInStore = TABLE.useArray;
 
-const COLUMN = resource("table_column");
+const COLUMN = resource("table_column", {
+  idKey: "column_name",
+});
 export const TABLE_COLUMN = TABLE.many("columns", COLUMN, {
+  GET_MANY: async ({ tablename }, { signal }) => {
+    const response = await fetch(
+      `${window.DB_MANAGER_CONFIG.apiUrl}/tables/${tablename}/columns`,
+      { signal },
+    );
+    if (!response.ok) {
+      throw await errorFromResponse(
+        response,
+        `Failed to get columns for ${tablename}`,
+      );
+    }
+    const { data } = await response.json();
+    const columns = data;
+    return { tablename, columns };
+  },
   POST: async ({ tablename, columnName }) => {
     const response = await fetch(
       `${window.DB_MANAGER_CONFIG.apiUrl}/tables/${tablename}/columns`,
@@ -136,6 +155,22 @@ export const TABLE_COLUMN = TABLE.many("columns", COLUMN, {
     }
     const { data: column } = await response.json();
     return [{ tablename }, column];
+  },
+  DELETE: async ({ tablename, columnName }, { signal }) => {
+    const response = await fetch(
+      `${window.DB_MANAGER_CONFIG.apiUrl}/tables/${tablename}/columns/${columnName}`,
+      {
+        signal,
+        method: "DELETE",
+      },
+    );
+    if (!response.ok) {
+      throw await errorFromResponse(
+        response,
+        `Failed to remove ${columnName} from ${tablename}`,
+      );
+    }
+    return [{ tablename }, { column_name: columnName }];
   },
 });
 

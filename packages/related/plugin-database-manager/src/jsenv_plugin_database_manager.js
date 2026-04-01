@@ -23,6 +23,7 @@ import {
   addColumn,
   alterTableQuery,
   createTable,
+  deleteColumn,
   deleteRow,
   insertRow,
   selectManyRows,
@@ -188,6 +189,13 @@ export const jsenvPluginDatabaseManager = ({
           await alterTableQuery(sql, tablename, colname, value);
           return { [colname]: value };
         },
+        "GET /:tablename/columns": async (request) => {
+          const { tablename } = request.params;
+          const columns = await getTableColumns(sql, tablename);
+          return {
+            data: columns,
+          };
+        },
         "POST /:tablename/columns": async (request) => {
           const { tablename } = request.params;
           const data = await request.json();
@@ -195,6 +203,11 @@ export const jsenvPluginDatabaseManager = ({
           return {
             data: column,
           };
+        },
+        "DELETE /:tablename/columns/:columnName": async (request) => {
+          const { tablename, columnName } = request.params;
+          await deleteColumn(sql, tablename, columnName);
+          return null;
         },
         "GET /:tablename/rows": async (request) => {
           const { tablename } = request.params;

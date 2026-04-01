@@ -343,6 +343,12 @@ const getTableColumn = async (sql, tablename, columnName) => {
   `;
   return column;
 };
+export const deleteColumn = async (sql, tablename, columnName) => {
+  await sql`
+    ALTER TABLE ${sql(tablename)}
+    DROP COLUMN ${sql(columnName)}
+  `;
+};
 export const deleteRow = async (sql, tablename, id) => {
   await sql`
     DELETE FROM ${sql(tablename)}
