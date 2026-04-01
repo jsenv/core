@@ -621,7 +621,9 @@ const LinkWithAction = (props) => {
   } = props;
   const defaultRef = useRef();
   const ref = props.ref || defaultRef;
-  const { actionPending } = useRequestedActionStatus(ref);
+  const { actionPending } = useRequestedActionStatus(ref, {
+    actionOrigin: "keyboard_shortcut",
+  });
   const innerLoading = Boolean(loading || actionPending);
 
   useKeyboardShortcuts(ref, shortcuts, {

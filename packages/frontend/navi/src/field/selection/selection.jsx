@@ -82,7 +82,7 @@ export const useSelectionController = ({
     selectionController.enabled = Boolean(onChange);
   }, [selectionController, onChange]);
 
-  // Smart sync: only update selection when value changes externally
+  // update selection when value changes externally
   useEffect(() => {
     // Check if this is an external change (not from our internal onChange)
     const isExternalChange = !compareTwoJsValues(

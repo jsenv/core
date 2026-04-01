@@ -95,13 +95,14 @@ export const useActionEvents = (
   ]);
 };
 
-export const useRequestedActionStatus = (elementRef) => {
+export const useRequestedActionStatus = (elementRef, { actionOrigin } = {}) => {
   const [actionRequester, setActionRequester] = useState(null);
   const [actionPending, setActionPending] = useState(false);
   const [actionAborted, setActionAborted] = useState(false);
   const [actionError, setActionError] = useState(null);
 
   useActionEvents(elementRef, {
+    actionOrigin,
     onAction: (actionEvent) => {
       setActionRequester(actionEvent.detail.requester);
     },

@@ -7,9 +7,7 @@ const HOME_ROUTE = route("");
 const LIST_ROUTE = route("/list");
 setupRoutes([HOME_ROUTE, LIST_ROUTE]);
 
-const ITEM_GET_MANY_ACTION = routeAction(LIST_ROUTE, ITEM.GET_MANY, () => {
-  return true;
-});
+const ITEM_GET_MANY_ACTION = routeAction(LIST_ROUTE, ITEM.GET_MANY);
 
 const App = () => (
   <div>
