@@ -514,20 +514,19 @@ const UserCard = ({ name, action }) => {
   );
 };
 
-const UsersList = () => {
-  const [users, setUsers] = useState([]); // Initialiser avec un tableau vide au lieu de []
+const UsersListStatic = () => {
+  const [users, setUsers] = useState([]);
   const [status, setStatus] = useState("idle");
 
   const loadAllUsers = async () => {
     try {
       setStatus("loading");
-      // Utiliser la nouvelle syntaxe fonction directement
       const result = await allUsersAction();
-      setUsers(result || []); // S'assurer qu'on a toujours un tableau
+      setUsers(result || []);
       setStatus("success");
     } catch (err) {
       console.error("Erreur lors du chargement des utilisateurs:", err);
-      setUsers([]); // Réinitialiser avec un tableau vide en cas d'erreur
+      setUsers([]);
       setStatus("error");
     }
   };
@@ -536,17 +535,12 @@ const UsersList = () => {
     loadAllUsers();
   }, []);
 
-  const deleteAliceAndBob = () => {
-    USER.DELETE_MANY({ names: ["Alice", "Bob"] });
-  };
-
   return (
     <div
       style={{
         border: "1px solid #dee2e6",
         borderRadius: "8px",
-        padding: "16px",
-        margin: "16px 0",
+        padding: "10px 14px",
         backgroundColor: "#f8f9fa",
       }}
     >
@@ -555,59 +549,88 @@ const UsersList = () => {
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          marginBottom: "12px",
+          marginBottom: "8px",
         }}
       >
-        <h3 style={{ margin: 0 }}>📋 Liste de tous les utilisateurs</h3>
+        <h3 style={{ margin: 0, fontSize: "0.9em" }}>
+          📋 Liste statique{" "}
+          <span
+            style={{
+              fontWeight: "normal",
+              color: "#dc3545",
+              fontSize: "0.85em",
+            }}
+          >
+            (useState — non réactive, devient désynchronisée)
+          </span>
+        </h3>
         <button
           onClick={loadAllUsers}
           disabled={status === "loading"}
           style={{
-            padding: "6px 12px",
+            padding: "3px 10px",
             backgroundColor: "#007bff",
             color: "white",
             border: "none",
             borderRadius: "4px",
+            fontSize: "0.8em",
             cursor: status === "loading" ? "not-allowed" : "pointer",
             opacity: status === "loading" ? 0.6 : 1,
           }}
         >
-          🔄 Recharger la liste
-        </button>
-        <button
-          onClick={deleteAliceAndBob}
-          disabled={status === "loading"}
-          style={{
-            padding: "6px 12px",
-            backgroundColor: "#007bff",
-            color: "white",
-            border: "none",
-            borderRadius: "4px",
-            cursor: status === "loading" ? "not-allowed" : "pointer",
-            opacity: status === "loading" ? 0.6 : 1,
-          }}
-        >
-          Supprimer Alice et Bob
+          🔄
         </button>
       </div>
-
-      {status === "loading" && <div>Chargement de la liste...</div>}
-      {status === "error" && (
-        <div style={{ color: "#dc3545" }}>Erreur lors du chargement</div>
+      {status === "loading" && (
+        <div style={{ fontSize: "0.85em", color: "#6c757d" }}>Chargement…</div>
       )}
-
-      {users && users.length > 0 && (
-        <div
-          style={{
-            backgroundColor: "white",
-            padding: "12px",
-            borderRadius: "4px",
-            fontFamily: "monospace",
-          }}
-        >
+      {status === "error" && (
+        <div style={{ color: "#dc3545", fontSize: "0.85em" }}>
+          Erreur lors du chargement
+        </div>
+      )}
+      {users.length > 0 && (
+        <div style={{ fontFamily: "monospace", fontSize: "0.8em" }}>
           {users.map((user) => (
-            <div key={user.id} style={{ marginBottom: "4px" }}>
-              {user.name} (ID: {user.id}, Âge: {user.age})
+            <div key={user.id}>
+              #{user.id} · {user.name} · {user.age} ans
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const UsersListReactive = () => {
+  const users = USER.useArray();
+
+  return (
+    <div
+      style={{
+        border: "1px solid #dee2e6",
+        borderRadius: "8px",
+        padding: "10px 14px",
+        backgroundColor: "#f8f9fa",
+      }}
+    >
+      <h3 style={{ margin: "0 0 8px", fontSize: "0.9em" }}>
+        📋 Liste réactive{" "}
+        <span
+          style={{ fontWeight: "normal", color: "#28a745", fontSize: "0.85em" }}
+        >
+          (useArray — se met à jour automatiquement via signaux)
+        </span>
+      </h3>
+      {users.length === 0 ? (
+        <div style={{ fontSize: "0.85em", color: "#6c757d" }}>
+          Aucun utilisateur dans le store
+        </div>
+      ) : (
+        <div style={{ fontFamily: "monospace", fontSize: "0.8em" }}>
+          {users.map((user) => (
+            <div key={user.id}>
+              #{user.id} · {user.name} · {user.age} ans
             </div>
           ))}
         </div>
@@ -790,8 +813,18 @@ const App = () => {
         </button>
       </div>
 
-      {/* Liste des utilisateurs */}
-      <UsersList />
+      {/* Listes utilisateurs */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gap: "12px",
+          margin: "12px 0",
+        }}
+      >
+        <UsersListStatic />
+        <UsersListReactive />
+      </div>
 
       {/* Actions GET individuelles */}
       <div
