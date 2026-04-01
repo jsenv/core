@@ -523,7 +523,14 @@ const UsersListStatic = () => {
   );
 };
 const UsersListReactive = () => {
-  const users = USER.useArray();
+  // Here we can use USER.useArray but we would display ANY user in the store
+  // while we want to display exactly what allUsersAction has fetched.
+  // Because other parts of the code might load users
+  // unrelated to what server returned
+  // - imagine a GET with filter returning filtered users)
+  // - and an other part of the app loading your user for instance
+  // which would not match the filters
+  const users = allUsersAction.dataSignal.value;
 
   return (
     <div
