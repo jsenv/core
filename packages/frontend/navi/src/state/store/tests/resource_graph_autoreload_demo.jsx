@@ -204,9 +204,9 @@ const UserCard = ({ name, action }) => {
     <div
       style={{
         border: "1px solid #dee2e6",
-        borderRadius: "8px",
-        padding: "16px",
-        margin: "8px 0",
+        borderRadius: "6px",
+        padding: "6px 10px",
+        margin: "4px 0",
         backgroundColor: "#f8f9fa",
       }}
     >
@@ -215,28 +215,32 @@ const UserCard = ({ name, action }) => {
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          marginBottom: "12px",
+          marginBottom: "6px",
         }}
       >
-        <h4 style={{ margin: 0, color: "#007bff" }}>{displayName}</h4>
-        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+        <span
+          style={{ fontWeight: "bold", color: "#007bff", fontSize: "0.9em" }}
+        >
+          {displayName}
+        </span>
+        <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
           <span
             style={{
-              padding: "2px 6px",
-              borderRadius: "4px",
-              fontSize: "0.7em",
+              padding: "1px 5px",
+              borderRadius: "3px",
+              fontSize: "0.65em",
               fontWeight: "bold",
               backgroundColor: "#6c757d",
               color: "white",
             }}
           >
-            📊 {loadCount}x
+            {loadCount}x
           </span>
           <span
             style={{
-              padding: "4px 8px",
-              borderRadius: "4px",
-              fontSize: "0.8em",
+              padding: "1px 6px",
+              borderRadius: "3px",
+              fontSize: "0.7em",
               fontWeight: "bold",
               backgroundColor: statusColor,
               color: "white",
@@ -325,17 +329,12 @@ const UserCard = ({ name, action }) => {
                 <div
                   style={{
                     fontFamily: "monospace",
-                    backgroundColor: "white",
-                    padding: "8px",
-                    borderRadius: "4px",
-                    marginBottom: "8px",
+                    fontSize: "0.8em",
+                    color: "#495057",
+                    marginBottom: "6px",
                   }}
                 >
-                  ID: {data.id}
-                  <br />
-                  Nom: {data.name}
-                  <br />
-                  Âge: {data.age} ans
+                  #{data.id} · {data.name} · {data.age} ans
                 </div>
               )}
 
@@ -343,55 +342,41 @@ const UserCard = ({ name, action }) => {
                 <div
                   style={{
                     backgroundColor: "white",
-                    padding: "12px",
+                    padding: "6px 8px",
                     borderRadius: "4px",
-                    marginBottom: "8px",
+                    marginBottom: "6px",
+                    display: "flex",
+                    gap: "6px",
+                    alignItems: "center",
+                    flexWrap: "wrap",
                   }}
                 >
-                  <div style={{ marginBottom: "8px" }}>
-                    <label
-                      style={{
-                        display: "block",
-                        marginBottom: "4px",
-                        fontWeight: "bold",
-                      }}
-                    >
-                      Nom:
-                    </label>
-                    <input
-                      type="text"
-                      value={editName}
-                      onChange={(e) => setEditName(e.target.value)}
-                      style={{
-                        width: "100%",
-                        padding: "6px",
-                        border: "1px solid #ced4da",
-                        borderRadius: "4px",
-                      }}
-                    />
-                  </div>
-                  <div style={{ marginBottom: "8px" }}>
-                    <label
-                      style={{
-                        display: "block",
-                        marginBottom: "4px",
-                        fontWeight: "bold",
-                      }}
-                    >
-                      Âge:
-                    </label>
-                    <input
-                      type="number"
-                      value={editAge}
-                      onChange={(e) => setEditAge(e.target.value)}
-                      style={{
-                        width: "100%",
-                        padding: "6px",
-                        border: "1px solid #ced4da",
-                        borderRadius: "4px",
-                      }}
-                    />
-                  </div>
+                  <input
+                    type="text"
+                    placeholder="Nom"
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    style={{
+                      width: "90px",
+                      padding: "3px 6px",
+                      border: "1px solid #ced4da",
+                      borderRadius: "4px",
+                      fontSize: "0.85em",
+                    }}
+                  />
+                  <input
+                    type="number"
+                    placeholder="Âge"
+                    value={editAge}
+                    onChange={(e) => setEditAge(e.target.value)}
+                    style={{
+                      width: "60px",
+                      padding: "3px 6px",
+                      border: "1px solid #ced4da",
+                      borderRadius: "4px",
+                      fontSize: "0.85em",
+                    }}
+                  />
                   <div
                     style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}
                   >
@@ -734,14 +719,6 @@ const App = () => {
     console.log("Étape 1: Bob renommé en TestUser avec PATCH");
   };
 
-  const inputStyle = {
-    padding: "6px 10px",
-    border: "1px solid #ced4da",
-    borderRadius: "4px",
-    marginRight: "8px",
-    marginBottom: "8px",
-  };
-
   return (
     <div
       style={{
@@ -761,83 +738,120 @@ const App = () => {
         🧪 Test MutableId Autoreload System
       </h1>
 
-      <p
+      <details
         style={{
           backgroundColor: "#e7f3ff",
-          padding: "15px",
+          padding: "10px 15px",
           borderRadius: "8px",
           border: "1px solid #b3d9ff",
+          marginBottom: "16px",
         }}
       >
-        Cette interface teste le système d&apos;autoreload pour les ressources
-        avec mutableId. Observez comment les actions GET se rechargent
-        automatiquement après les modifications.
-        <br />
-        <strong>Astuce:</strong> Ouvrez la console pour voir les logs détaillés.
-      </p>
+        <summary
+          style={{ cursor: "pointer", fontWeight: "bold", color: "#0056b3" }}
+        >
+          À propos &amp; instructions
+        </summary>
+        <p style={{ margin: "10px 0 0" }}>
+          Cette interface teste le système d&apos;autoreload pour les ressources
+          avec mutableId. Observez comment les actions GET se rechargent
+          automatiquement après les modifications.
+          <br />
+          <strong>Astuce:</strong> Ouvrez la console pour voir les logs
+          détaillés.
+        </p>
+        <ol style={{ marginBottom: 0 }}>
+          <li>
+            <strong>Chargez d&apos;abord les utilisateurs</strong> avec les
+            boutons &quot;Recharger&quot;
+          </li>
+          <li>
+            <strong>Observez les statuts</strong> : Vert = chargé, Jaune =
+            chargement, Rouge avec 404 = utilisateur inexistant
+          </li>
+          <li>
+            <strong>Testez l&apos;autoreload</strong> :
+            <ul>
+              <li>
+                Créez &quot;TestUser&quot; → l&apos;action GET
+                &quot;TestUser&quot; devrait passer de 404 à vert
+                automatiquement
+              </li>
+              <li>
+                Supprimez puis recréez Alice → l&apos;action GET
+                &quot;Alice&quot; devrait se recharger
+              </li>
+              <li>
+                Modifiez un utilisateur depuis sa carte → l&apos;affichage
+                devrait se mettre à jour automatiquement
+              </li>
+            </ul>
+          </li>
+          <li>
+            <strong>Vérifiez les logs</strong> dans la console pour voir les
+            détails des autoreloads
+          </li>
+        </ol>
+      </details>
 
       {/* Scénarios automatiques */}
       <div
         style={{
           backgroundColor: "#f8f9fa",
-          padding: "16px",
+          padding: "10px 14px",
           borderRadius: "8px",
-          margin: "16px 0",
+          margin: "12px 0",
+          display: "flex",
+          alignItems: "center",
+          gap: "8px",
+          flexWrap: "wrap",
         }}
       >
-        <h2>🎯 Scénarios de test automatiques</h2>
-        <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-          <ActionForm
-            title=""
-            onSubmit={runDeleteRecreateScenario}
-            buttonText="🔄 Supprimer puis recréer Alice"
-            buttonColor="#6f42c1"
-          >
-            <p
-              style={{
-                margin: "0 0 8px 0",
-                fontSize: "0.9em",
-                color: "#6c757d",
-              }}
-            >
-              Teste l&apos;autoreload POST avec mutableId
-            </p>
-          </ActionForm>
-
-          <ActionForm
-            title=""
-            onSubmit={runRenameScenario}
-            buttonText="✏️ PUT: Bob ↔ TestUser"
-            buttonColor="#6f42c1"
-          >
-            <p
-              style={{
-                margin: "0 0 8px 0",
-                fontSize: "0.9em",
-                color: "#6c757d",
-              }}
-            >
-              Teste l&apos;autoreload PUT avec changement de mutableId
-            </p>
-          </ActionForm>
-
-          <ActionForm
-            title=""
-            onSubmit={runPatchRenameScenario}
-            buttonText="📝 PATCH: Bob ↔ TestUser"
-            buttonColor="#6f42c1"
-          >
-            <p
-              style={{
-                margin: "0 0 8px 0",
-                fontSize: "0.9em",
-                color: "#6c757d",
-              }}
-            >
-              Teste l&apos;autoreload PATCH avec changement de mutableId
-            </p>
-          </ActionForm>
-        </div>
+        <strong style={{ fontSize: "0.85em", color: "#495057" }}>
+          🎯 Scénarios :
+        </strong>
+        <button
+          onClick={runDeleteRecreateScenario}
+          style={{
+            padding: "4px 10px",
+            backgroundColor: "#6f42c1",
+            color: "white",
+            border: "none",
+            borderRadius: "4px",
+            cursor: "pointer",
+            fontSize: "0.85em",
+          }}
+        >
+          🔄 Supprimer puis recréer Alice
+        </button>
+        <button
+          onClick={runRenameScenario}
+          style={{
+            padding: "4px 10px",
+            backgroundColor: "#6f42c1",
+            color: "white",
+            border: "none",
+            borderRadius: "4px",
+            cursor: "pointer",
+            fontSize: "0.85em",
+          }}
+        >
+          ✏️ PUT: Bob ↔ TestUser
+        </button>
+        <button
+          onClick={runPatchRenameScenario}
+          style={{
+            padding: "4px 10px",
+            backgroundColor: "#6f42c1",
+            color: "white",
+            border: "none",
+            borderRadius: "4px",
+            cursor: "pointer",
+            fontSize: "0.85em",
+          }}
+        >
+          📝 PATCH: Bob ↔ TestUser
+        </button>
       </div>
 
       {/* Liste des utilisateurs */}
@@ -885,77 +899,64 @@ const App = () => {
         <h2>➕ Créer un nouvel utilisateur</h2>
 
         <ActionForm
-          title="Créer un utilisateur"
+          title=""
           onSubmit={createUser}
           buttonText="Créer"
           buttonColor="#28a745"
         >
-          <div>
-            <input
-              type="text"
-              placeholder="Nom"
-              value={newUserName}
-              onChange={(e) => setNewUserName(e.target.value)}
-              style={inputStyle}
-            />
-            <input
-              type="number"
-              placeholder="Âge"
-              value={newUserAge}
-              onChange={(e) => setNewUserAge(e.target.value)}
-              style={inputStyle}
-            />
+          <div
+            style={{
+              display: "flex",
+              gap: "12px",
+              alignItems: "center",
+              flexWrap: "wrap",
+              marginBottom: "4px",
+            }}
+          >
+            <label
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+                fontSize: "0.9em",
+              }}
+            >
+              Nom
+              <input
+                type="text"
+                value={newUserName}
+                onChange={(e) => setNewUserName(e.target.value)}
+                style={{
+                  padding: "4px 8px",
+                  border: "1px solid #ced4da",
+                  borderRadius: "4px",
+                  width: "120px",
+                }}
+              />
+            </label>
+            <label
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+                fontSize: "0.9em",
+              }}
+            >
+              Âge
+              <input
+                type="number"
+                value={newUserAge}
+                onChange={(e) => setNewUserAge(e.target.value)}
+                style={{
+                  padding: "4px 8px",
+                  border: "1px solid #ced4da",
+                  borderRadius: "4px",
+                  width: "70px",
+                }}
+              />
+            </label>
           </div>
         </ActionForm>
-      </div>
-
-      <div
-        style={{
-          backgroundColor: "#fff3cd",
-          border: "1px solid #ffeaa7",
-          borderRadius: "8px",
-          padding: "16px",
-          margin: "16px 0",
-        }}
-      >
-        <h3 style={{ marginTop: 0 }}>💡 Instructions de test</h3>
-        <ol style={{ marginBottom: 0 }}>
-          <li>
-            <strong>Chargez d&apos;abord les utilisateurs</strong> avec les
-            boutons &quot;Recharger&quot;
-          </li>
-          <li>
-            <strong>Observez les statuts</strong> : Vert = chargé, Jaune =
-            chargement, Rouge avec 404 = utilisateur inexistant
-          </li>
-          <li>
-            <strong>Testez l&apos;autoreload</strong> :
-            <ul>
-              <li>
-                Créez &quot;TestUser&quot; → l&apos;action GET
-                &quot;TestUser&quot; devrait passer de 404 à vert
-                automatiquement
-              </li>
-              <li>
-                Supprimez puis recréez Alice → l&apos;action GET
-                &quot;Alice&quot; devrait se recharger
-              </li>
-              <li>
-                Modifiez un utilisateur directement depuis sa carte →
-                l&apos;affichage devrait se mettre à jour automatiquement
-              </li>
-            </ul>
-          </li>
-          <li>
-            <strong>Actions dans les cartes</strong> : Chaque utilisateur a des
-            boutons Modifier et Supprimer. Le mode édition permet de changer le
-            nom, l&apos;âge, ou les deux.
-          </li>
-          <li>
-            <strong>Vérifiez les logs</strong> dans la console pour voir les
-            détails des autoreloads
-          </li>
-        </ol>
       </div>
     </div>
   );

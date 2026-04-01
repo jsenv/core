@@ -584,10 +584,10 @@ const createResourceLifecycleManager = () => {
               continue;
             }
             // Get the ID(s) that were deleted
-            const { dataSignal } = triggeringAction;
+            const { valueSignal } = triggeringAction;
             const deleteIdSet = triggeringAction.meta.httpMany
-              ? new Set(dataSignal.peek())
-              : new Set([dataSignal.peek()]);
+              ? new Set(valueSignal.peek())
+              : new Set([valueSignal.peek()]);
 
             const candidateId = actionCandidate.data;
             const isAffected = deleteIdSet.has(candidateId);
@@ -612,12 +612,12 @@ const createResourceLifecycleManager = () => {
               !candidateIsPlural &&
               isSameResource
             ) {
-              const { dataSignal } = triggeringAction;
-              const modifiedData = dataSignal.peek();
+              const { valueSignal } = triggeringAction;
+              const modifiedValue = valueSignal.peek();
 
-              if (modifiedData && typeof modifiedData === "object") {
+              if (modifiedValue && typeof modifiedValue === "object") {
                 for (const mutableIdKey of config.mutableIdKeys) {
-                  const modifiedMutableId = modifiedData[mutableIdKey];
+                  const modifiedMutableId = modifiedValue[mutableIdKey];
                   const candidateParams = actionCandidate.params;
 
                   if (
