@@ -1,19 +1,19 @@
 import { useMemo, useState } from "preact/hooks";
 
-export const useGrid = (rows, properties) => {
-  const grid = [];
+export const useCellGrid = (rows, properties) => {
+  const cellGrid = [];
   for (const object of rows) {
     const row = [];
     for (const prop of properties) {
       row.push(object[prop]);
     }
-    grid.push(row);
+    cellGrid.push(row);
   }
-  return grid;
+  return cellGrid;
 };
 
 export const useCellsAndColumns = (
-  grid,
+  cellGrid,
   columns,
   { columnIdKey = "id" } = {},
 ) => {
@@ -43,7 +43,7 @@ export const useCellsAndColumns = (
   }
 
   // Base cell values in original column order (2D array: rows x columns)
-  const [baseCells, setBaseCells] = useState(grid);
+  const [baseCellGrid, setBaseCellGrid] = useState(cellGrid);
 
   // Memoized index mapping for performance - maps display index to original index
   const columnOrderedIndexMap = useMemo(() => {
@@ -59,8 +59,8 @@ export const useCellsAndColumns = (
   // Derived state: reorder cell values according to column display order
   const orderedCells = useMemo(() => {
     const reorderedCells = [];
-    for (let y = 0; y < baseCells.length; y++) {
-      const originalRow = baseCells[y];
+    for (let y = 0; y < baseCellGrid.length; y++) {
+      const originalRow = baseCellGrid[y];
       const reorderedRow = [];
       for (let x = 0; x < orderedColumnIds.length; x++) {
         const columnOrderedIndex = columnOrderedIndexMap.get(x);
@@ -70,7 +70,7 @@ export const useCellsAndColumns = (
       reorderedCells.push(reorderedRow);
     }
     return reorderedCells;
-  }, [baseCells, columnOrderedIndexMap, orderedColumnIds.length]);
+  }, [baseCellGrid, columnOrderedIndexMap, orderedColumnIds.length]);
 
   const setCellValue = ({ columnIndex, rowIndex }, value) => {
     const originalColumnIndex = columnOrderedIndexMap.get(columnIndex);
@@ -78,7 +78,7 @@ export const useCellsAndColumns = (
       console.warn(`Invalid column index: ${columnIndex}`);
       return;
     }
-    setBaseCells((previousCells) => {
+    setBaseCellGrid((previousCells) => {
       const newCells = [];
       for (let y = 0; y < previousCells.length; y++) {
         const currentRow = previousCells[y];

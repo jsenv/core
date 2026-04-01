@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Table - Delete Row Demo</title>
+    <style>
+      body {
+        margin: 20px;
+        font-family:
+          system-ui,
+          -apple-system,
+          sans-serif;
+        background: #f5f5f5;
+      }
+      .demo-container {
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useState } from "preact/hooks";
+      import {
+        Table,
+        TableCell,
+        Colgroup,
+        Col,
+        Thead,
+        Tbody,
+        Tr,
+        RowNumberCol,
+        RowNumberTableCell,
+        useCellGrid,
+        useCellsAndColumns,
+      } from "@jsenv/navi";
+
+      const initialRows = [
+        { id: 1, name: "Alice", email: "alice@example.com" },
+        { id: 2, name: "Bob", email: "bob@example.com" },
+        { id: 3, name: "Charlie", email: "charlie@example.com" },
+        { id: 4, name: "Diana", email: "diana@example.com" },
+      ];
+
+      const columnsConfig = [
+        { id: "name", header: "Name" },
+        { id: "email", header: "Email" },
+      ];
+
+      const Demo = () => {
+        const [rows, setRows] = useState(initialRows);
+        const cellGrid = useCellGrid(
+          rows,
+          columnsConfig.map((col) => col.id),
+        );
+        const { cells, columns } = useCellsAndColumns(cellGrid, columnsConfig);
+
+        const deleteRow = (rowId) => {
+          setRows((prev) => prev.filter((r) => r.id !== rowId));
+        };
+
+        return (
+          <div class="demo-container">
+            <h1>Table — Delete Row</h1>
+            <p style={{ color: "#6c757d", marginBottom: "16px" }}>
+              {rows.length} row(s) — click <strong>×</strong> to delete a row.
+            </p>
+
+            <Table borderCollapse>
+              <Colgroup>
+                <RowNumberCol />
+                {columns.map((col) => (
+                  <Col key={col.id} id={col.id} />
+                ))}
+                <Col id="__delete__" width={40} />
+              </Colgroup>
+
+              <Thead>
+                <Tr id="head">
+                  <RowNumberTableCell />
+                  {columns.map((col) => (
+                    <TableCell key={col.id}>{col.header}</TableCell>
+                  ))}
+                  <TableCell />
+                </Tr>
+              </Thead>
+
+              <Tbody>
+                {cells.map((rowCells, dataRowIndex) => {
+                  const row = rows[dataRowIndex];
+                  return (
+                    <Tr id={row.id} key={row.id}>
+                      <RowNumberTableCell />
+                      {rowCells.map((cellValue, columnIndex) => (
+                        <TableCell key={columns[columnIndex].id}>
+                          {cellValue}
+                        </TableCell>
+                      ))}
+                      <TableCell>
+                        <button
+                          style={{
+                            padding: "1px 6px",
+                            background: "#dc3545",
+                            color: "white",
+                            border: "none",
+                            borderRadius: "3px",
+                            cursor: "pointer",
+                          }}
+                          onClick={() => deleteRow(row.id)}
+                        >
+                          ×
+                        </button>
+                      </TableCell>
+                    </Tr>
+                  );
+                })}
+              </Tbody>
+            </Table>
+          </div>
+        );
+      };
+
+      render(<Demo />, document.getElementById("root"));
+    </script>
+  </body>
+</html>
