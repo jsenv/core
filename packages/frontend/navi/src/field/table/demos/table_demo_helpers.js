@@ -12,15 +12,6 @@ import { useRef, useState } from "preact/hooks";
 
 export const useRowsState = (initialRows, properties) => {
   const [rows, setRows] = useState(initialRows);
-  const cellGrid = [];
-  for (const object of rows) {
-    const cellRow = [];
-    for (const prop of properties) {
-      const cell = object[prop];
-      cellRow.push(cell);
-    }
-    cellGrid.push(cellRow);
-  }
 
   const methodsRef = useRef(null);
   const propertiesRef = useRef(properties);
@@ -88,6 +79,5 @@ export const useRowsState = (initialRows, properties) => {
       deleteRow,
     };
   }
-  const { setCell, addRow, deleteRow } = methods;
-  return [cellGrid, { setCell, addRow, deleteRow }];
+  return [rows, methods];
 };
