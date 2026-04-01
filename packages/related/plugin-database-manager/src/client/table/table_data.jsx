@@ -32,8 +32,8 @@ import {
   Text,
   Thead,
   Tr,
-  useCellsAndColumns,
-  useRowsAsGrid,
+  useCellGridFromRows,
+  useOrderedCellGridAndColumns,
 } from "@jsenv/navi";
 import { useRef, useState } from "preact/hooks";
 
@@ -49,17 +49,21 @@ export const TableData = ({ table, rows }) => {
   const tableRef = useRef(null);
   const { tablename } = table;
   const createRow = TABLE_ROW.POST.bindParams({ tablename });
-  const { schemaColumns } = table.meta;
-  schemaColumns.sort((a, b) => a.ordinal_position - b.ordinal_position);
+  const { columns } = table.meta;
+  columns.sort((a, b) => a.ordinal_position - b.ordinal_position);
 
-  const grid = useRowsAsGrid(
+  const cellGrid = useCellGridFromRows(
     rows,
-    schemaColumns.map((c) => c.column_name),
+    columns.map((c) => c.column_name),
   );
   const [selection, setSelection] = useState([]);
-  const { cells, columns } = useCellsAndColumns(grid, schemaColumns, {
-    columnIdKey: "column_name",
-  });
+  const [orderedCellGrid, orderedColumns] = useOrderedCellGridAndColumns(
+    cellGrid,
+    columns,
+    {
+      columnIdKey: "column_name",
+    },
+  );
 
   const selectedRowIds = filterTableSelection(
     selection,
@@ -84,14 +88,14 @@ export const TableData = ({ table, rows }) => {
           >
             <Colgroup>
               <RowNumberCol />
-              {columns.map((column) => (
+              {orderedColumns.map((column) => (
                 <Col key={column.column_name} id={column.column_name} />
               ))}
             </Colgroup>
             <Thead>
               <Tr id="head">
                 <RowNumberTableCell />
-                {columns.map((column) => (
+                {orderedColumns.map((column) => (
                   <TableCell
                     key={column.column_name}
                     action={(value) => {
@@ -104,14 +108,14 @@ export const TableData = ({ table, rows }) => {
               </Tr>
             </Thead>
             <Tbody>
-              {cells.map((rowCells, rowIndex) => {
+              {orderedCellGrid.map((rowCells, rowIndex) => {
                 const object = rows[rowIndex];
 
                 return (
                   <Tr key={object.id} id={object.id}>
                     <RowNumberTableCell />
                     {rowCells.map((cellValue, columnIndex) => {
-                      const columnId = columns[columnIndex].column_name;
+                      const columnId = orderedColumns[columnIndex].column_name;
                       return (
                         <TableCell
                           key={columnId}

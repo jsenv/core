@@ -1,18 +1,6 @@
 import { useMemo, useState } from "preact/hooks";
 
-export const useRowsAsGrid = (rows, properties) => {
-  const cellGrid = [];
-  for (const object of rows) {
-    const cellRow = [];
-    for (const prop of properties) {
-      cellRow.push(object[prop]);
-    }
-    cellGrid.push(cellRow);
-  }
-  return cellGrid;
-};
-
-export const useCellsAndColumns = (
+export const useOrderedCellGridAndColumns = (
   cellGrid,
   columns,
   { columnIdKey = "id" } = {},
@@ -54,7 +42,7 @@ export const useCellsAndColumns = (
   }, [columnIds, orderedColumnIds]);
 
   // Derived state: reorder cell values according to column display order
-  const orderedCells = useMemo(() => {
+  const orderedCellGrid = useMemo(() => {
     const reorderedCells = [];
     for (let y = 0; y < cellGrid.length; y++) {
       const originalRow = cellGrid[y];
@@ -94,9 +82,5 @@ export const useCellsAndColumns = (
   //   });
   // };
 
-  return {
-    cells: orderedCells,
-    columns: orderedColumns,
-    setColumnOrder: setOrderedAllColumnIds,
-  };
+  return [orderedCellGrid, orderedColumns, setOrderedAllColumnIds];
 };

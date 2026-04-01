@@ -25,13 +25,13 @@ export const TABLE = resource("table", {
     }
     const { data, meta } = await response.json();
     const table = data;
-    const { ownerRole, columns, schemaColumns } = meta;
+    const { ownerRole, columns, pgTableColumns } = meta;
     return {
       ...table,
       ownerRole,
       meta: {
         columns,
-        schemaColumns,
+        pgTableColumns,
       },
     };
   },
@@ -114,7 +114,8 @@ export const TABLE = resource("table", {
 
 export const useTableArrayInStore = TABLE.useArray;
 
-export const TABLE_COLUMN = {
+const COLUMN = resource("table_column");
+export const TABLE_COLUMN = TABLE.many("columns", COLUMN, {
   POST: async ({ tablename, columnName }) => {
     const response = await fetch(
       `${window.DB_MANAGER_CONFIG.apiUrl}/tables/${tablename}/columns`,
@@ -133,10 +134,10 @@ export const TABLE_COLUMN = {
         `Failed to add column to "${tablename}" table`,
       );
     }
-    const column = await response.json();
-    return column;
+    const { data: column } = await response.json();
+    return [{ tablename }, column];
   },
-};
+});
 
 export const TABLE_ROW = resource("table_row", {
   GET_MANY: async ({ tablename }, { signal }) => {

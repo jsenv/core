@@ -35,7 +35,7 @@ export const selectTable = async (sql, tablename) => {
     return [null, {}];
   }
 
-  const columns = await getTableColumns(sql, "pg_tables");
+  const pgTableColumns = await getTableColumns(sql, "pg_tables");
   const ownerRole = table.owner_oid
     ? {
         oid: table.owner_oid,
@@ -57,7 +57,7 @@ export const selectTable = async (sql, tablename) => {
     LIMIT
       1
   `;
-  const schemaColumns = await getTableColumns(
+  const columns = await getTableColumns(
     sql,
     tablename,
     tableInfo && tableInfo.schemaname
@@ -69,8 +69,8 @@ export const selectTable = async (sql, tablename) => {
     table,
     {
       columns,
-      schemaColumns,
       ownerRole,
+      pgTableColumns,
     },
   ];
 };
