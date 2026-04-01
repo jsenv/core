@@ -84,7 +84,7 @@
 import { ActionRenderer } from "../action/action_renderer.jsx";
 import { useUITransitionContentId } from "../ui_transition/ui_transition.jsx";
 
-const DEBUG = true;
+const DEBUG = false;
 const debug = (...args) => {
   if (!DEBUG) {
     return;

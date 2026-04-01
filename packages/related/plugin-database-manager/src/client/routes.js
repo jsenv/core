@@ -107,13 +107,13 @@ export const ROLE_WITH_OWNERSHIP_GET_MANY_ACTION = routeAction(
   },
 );
 
-export const ROLE_ROUTE = route(`/roles/:rolname=${rolnameSignal}`);
+export const ROLE_ROUTE = route(`/roles/:rolname=${rolnameSignal}/`);
 export const ROLE_GET_ACTION = routeAction(ROLE_ROUTE, ROLE.GET, () => {
   const rolname = rolnameSignal.value;
   return { rolname };
 });
 
-export const DATABASE_ROUTE = route(`/databases/:datname=${datnameSignal}`);
+export const DATABASE_ROUTE = route(`/databases/:datname=${datnameSignal}/`);
 export const DATABASE_GET_ACTION = routeAction(
   DATABASE_ROUTE,
   DATABASE.GET,
@@ -128,7 +128,6 @@ export const TABLE_GET_ACTION = routeAction(TABLE_ROUTE, TABLE.GET, () => {
   const tablename = tablenameSignal.value;
   return { tablename };
 });
-
 export const TABLE_INDEX_ROUTE = route(`/tables/:tablename=${tablenameSignal}`);
 export const TABLE_ROW_GET_MANY_ACTION = routeAction(
   TABLE_INDEX_ROUTE,
@@ -138,7 +137,6 @@ export const TABLE_ROW_GET_MANY_ACTION = routeAction(
     return { tablename };
   },
 );
-
 export const TABLE_SETTINGS_ROUTE = route(
   `/tables/:tablename=${tablenameSignal}/settings`,
 );
