@@ -9,11 +9,10 @@ export const useTableSelectionContextValue = (
   const selectionContextValue = useMemo(() => {
     const selectedColumnIds = [];
     const selectedRowIds = [];
-    const selectedCellIds = [];
     const columnIdWithSomeSelectedCellSet = new Set();
     const rowIdWithSomeSelectedCellSet = new Set();
-    for (const item of selection) {
-      const selectionValueInfo = parseTableSelectionValue(item);
+    for (const selectedValue of selection) {
+      const selectionValueInfo = parseTableSelectionValue(selectedValue);
       if (selectionValueInfo.type === "row") {
         const { rowId } = selectionValueInfo;
         selectedRowIds.push(rowId);
@@ -25,8 +24,7 @@ export const useTableSelectionContextValue = (
         continue;
       }
       if (selectionValueInfo.type === "cell") {
-        const { cellId, columnId, rowId } = selectionValueInfo;
-        selectedCellIds.push(cellId);
+        const { columnId, rowId } = selectionValueInfo;
         columnIdWithSomeSelectedCellSet.add(columnId);
         rowIdWithSomeSelectedCellSet.add(rowId);
         continue;
@@ -78,8 +76,11 @@ export const stringifyTableSelectionValue = (type, value) => {
  * @param {{rowIndex: number, columnIndex: number}} cellPosition - Cell coordinates
  * @returns {boolean} True if the cell is selected
  */
-export const isCellSelected = (selection, cellId) => {
-  const cellSelectionValue = stringifyTableSelectionValue("cell", cellId);
+export const isCellSelected = (selection, { columnId, rowId }) => {
+  const cellSelectionValue = stringifyTableSelectionValue("cell", {
+    columnId,
+    rowId,
+  });
   return selection.includes(cellSelectionValue);
 };
 
@@ -102,13 +103,13 @@ export const isRowSelected = (selection, rowId) => {
  */
 export const isColumnSelected = (selection, columnId) => {
   const columnSelectionValue = stringifyTableSelectionValue("column", columnId);
-  return selection.has(columnSelectionValue);
+  return selection.includes(columnSelectionValue);
 };
 
 export const filterTableSelection = (selection, predicate) => {
   let matching = [];
-  for (const item of selection) {
-    const selectionValueInfo = parseTableSelectionValue(item);
+  for (const selectedValue of selection) {
+    const selectionValueInfo = parseTableSelectionValue(selectedValue);
     if (predicate(selectionValueInfo)) {
       matching.push(selectionValueInfo);
     }

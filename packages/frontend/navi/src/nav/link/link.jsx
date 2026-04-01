@@ -531,7 +531,10 @@ const LinkPlain = (props) => {
       inert={disabled}
       aria-current={isCurrent ? "page" : undefined}
       aria-selected={selectionContext ? selected : undefined}
-      data-value={value}
+      data-value-event="navi_value"
+      onnavi_value={(e) => {
+        e.detail.setValue(value);
+      }}
       preventBoldLayoutShift={currentEffectBold}
       overflowEllipsis={overflowEllipsis}
       // Visual

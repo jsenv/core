@@ -161,26 +161,29 @@
                   style="display: flex; flex-direction: column; gap: 8px;"
                   ref={linkContainerRef}
                 >
-                  <Link href="#doc_report" name="doc" value="doc-1">
+                  <Link href="#doc_report" name="doc" value={1}>
                     📋 Annual Report 2024
                   </Link>
 
-                  <Link href="#doc_budget" name="doc" value="doc-2">
+                  <Link href="#doc_budget" name="doc" value="2">
                     💰 Budget Proposal
                   </Link>
 
-                  <Link href="#doc_presentation" name="doc" value="doc-3">
+                  <Link href="#doc_presentation" name="doc" value={3}>
                     🎯 Marketing Presentation
                   </Link>
 
-                  <Link href="#doc_manual" name="doc" value="doc-4">
+                  <Link href="#doc_manual" name="doc" value="4">
                     📖 User Manual v2.0
                   </Link>
                 </div>
 
                 {selection.length > 0 && (
                   <div style="margin-top: 16px; padding: 12px; background: #e3f2fd; border-radius: 6px; border-left: 4px solid #1976d2;">
-                    <strong>Selected items:</strong> {selection.join(", ")}
+                    <strong>Selected items:</strong>{" "}
+                    {selection
+                      .map((s) => (typeof s === "string" ? `"${s}"` : s))
+                      .join(",")}
                     <br />
                     <button
                       onClick={() => setSelection([])}

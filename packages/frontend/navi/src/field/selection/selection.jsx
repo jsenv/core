@@ -117,7 +117,7 @@ const createBaseSelectionController = ({
 
   const getElementByValue = (valueToFind) => {
     for (const element of registry) {
-      if (getElementValue(element) === valueToFind) {
+      if (compareTwoJsValues(getElementValue(element), valueToFind)) {
         return element;
       }
     }
@@ -243,12 +243,25 @@ const createBaseSelectionController = ({
   };
   const isElementSelected = (element) => {
     const elementValue = getElementValue(element);
-    const isSelected = baseSelection.value.includes(elementValue);
-    return isSelected;
+    const valueIsSelected = isValueSelected(elementValue);
+    return valueIsSelected;
   };
   const isValueSelected = (value) => {
-    const isSelected = baseSelection.value.includes(value);
-    return isSelected;
+    const selectedValueIndex = getValueIndex(value);
+    const valueIsSelected = selectedValueIndex !== -1;
+    return valueIsSelected;
+  };
+  const getValueIndex = (value) => {
+    let index = 0;
+    const selectedValues = getCurrentValue();
+    while (index < selectedValues.length) {
+      const selectedValue = selectedValues[index];
+      if (compareTwoJsValues(selectedValue, value)) {
+        return index;
+      }
+      index++;
+    }
+    return -1;
   };
   // Selection manipulation methods
   const setSelection = (newSelection, event = null) => {
@@ -259,59 +272,65 @@ const createBaseSelectionController = ({
       "current selection:",
       baseSelection.value,
     );
-    if (
-      newSelection.length === baseSelection.value.length &&
-      newSelection.every((value, index) => value === baseSelection.value[index])
-    ) {
+    if (compareTwoJsValues(newSelection, baseSelection.value)) {
       debug("selection", `${type} setSelection: no change, returning early`);
       return;
     }
     update(newSelection, event);
   };
   const addToSelection = (arrayOfValuesToAdd, event = null) => {
+    const selectedValues = baseSelection.value;
     debug(
       "selection",
       `${type} addToSelection called with:`,
       arrayOfValuesToAdd,
       "current selection:",
-      baseSelection.value,
+      selectedValues,
     );
-    const selectionWithValues = [...baseSelection.value];
-    let modified = false;
-
+    const newValues = [];
     for (const valueToAdd of arrayOfValuesToAdd) {
-      if (!selectionWithValues.includes(valueToAdd)) {
-        modified = true;
-        selectionWithValues.push(valueToAdd);
-        debug("selection", `${type} addToSelection: adding value:`, valueToAdd);
+      if (isValueSelected(valueToAdd)) {
+        continue;
       }
+      newValues.push(valueToAdd);
+      debug("selection", `${type} addToSelection: adding value:`, valueToAdd);
     }
-
-    if (modified) {
-      update(selectionWithValues, event);
-    } else {
+    if (newValues.length === 0) {
       debug("selection", `${type} addToSelection: no changes made`);
+      return;
     }
+    const selectionWithValues = [...selectedValues, ...newValues];
+    update(selectionWithValues, event);
   };
   const removeFromSelection = (arrayOfValuesToRemove, event = null) => {
-    let modified = false;
-    const selectionWithoutValues = [];
-
-    for (const elementValue of baseSelection.value) {
-      if (arrayOfValuesToRemove.includes(elementValue)) {
-        modified = true;
-      } else {
-        selectionWithoutValues.push(elementValue);
+    const toRemoveSet = new Set();
+    for (const valueToRemove of arrayOfValuesToRemove) {
+      const index = getValueIndex(valueToRemove);
+      if (index === -1) {
+        continue;
       }
+      toRemoveSet.add(index);
     }
 
-    if (modified) {
-      update(selectionWithoutValues, event);
+    if (toRemoveSet.size === 0) {
+      return;
     }
+
+    const selectionWithoutValues = [];
+    const selectedValues = baseSelection.value;
+    let index = 0;
+    while (index < selectedValues.length) {
+      const selectedValue = selectedValues[index];
+      if (!toRemoveSet.has(index)) {
+        selectionWithoutValues.push(selectedValue);
+      }
+      index++;
+    }
+    update(selectionWithoutValues, event);
   };
   const toggleElement = (element, event = null) => {
     const elementValue = getElementValue(element);
-    if (baseSelection.value.includes(elementValue)) {
+    if (isValueSelected(elementValue)) {
       baseSelection.removeFromSelection([elementValue], event);
     } else {
       baseSelection.addToSelection([elementValue], event);
@@ -730,16 +749,58 @@ const createLinearSelectionController = ({
 };
 // Helper function to extract value from an element
 const getElementValue = (element) => {
-  let value;
-  if (element.value !== undefined) {
-    value = element.value;
-  } else if (element.hasAttribute("data-value")) {
-    value = element.getAttribute("data-value");
-  } else {
-    value = undefined;
+  const eventAttribute = element.getAttribute("data-value-event");
+  if (eventAttribute) {
+    let setValueCalled = false;
+    let valueSetByEvent;
+    element.dispatchEvent(
+      new CustomEvent(eventAttribute, {
+        detail: {
+          setValue: (v) => {
+            setValueCalled = true;
+            valueSetByEvent = v;
+          },
+        },
+      }),
+    );
+    if (setValueCalled) {
+      if (!isPrimitive(valueSetByEvent)) {
+        throw new Error(
+          `Value provided by event "${eventAttribute}" must be a primitive (string, number, boolean, null, or undefined). Received: ${valueSetByEvent}`,
+        );
+      }
+      debug(
+        element,
+        `value retrieved using "${eventAttribute}" event -> `,
+        valueSetByEvent,
+      );
+      return valueSetByEvent;
+    }
+    console.warn(
+      `Element has data-value-event="${eventAttribute}" but the event did not set a value. Falling back to other methods of value retrieval.`,
+      element,
+    );
   }
-  debug("valueExtraction", "getElementValue:", element, "->", value);
-  return value;
+  if (element.hasAttribute("data-value")) {
+    const valueFromAttribute = element.getAttribute("data-value");
+    debug(
+      element,
+      `value retrieved by attribute [${eventAttribute}] -> `,
+      valueFromAttribute,
+    );
+    return valueFromAttribute;
+  }
+  if (element.value !== undefined) {
+    const valueFromProperty = element.value;
+    debug(
+      element,
+      `value retrieved from .value property -> `,
+      valueFromProperty,
+    );
+    return valueFromProperty;
+  }
+  debug(element, "value could not be determined, returning undefined");
+  return undefined;
 };
 const getElementSelectionName = (element) => {
   return element.getAttribute("data-selection-name");
@@ -1014,9 +1075,7 @@ export const useSelectableElement = (
       setSelected(false);
       return;
     }
-    // Use selection values directly for better performance
-    const elementValue = getElementValue(element);
-    const isSelected = selection.includes(elementValue);
+    const isSelected = selectionController.isElementSelected(element);
     debug(
       "selection",
       "useSelectableElement: updating selected state",
@@ -1571,9 +1630,8 @@ export const createSelectionKeyboardShortcuts = (
       handler: (keyboardEvent) => {
         const element = getSelectableElement(keyboardEvent);
         const elementValue = getElementValue(element);
-        const isCurrentlySelected =
-          selectionController.isElementSelected(element);
-        if (isCurrentlySelected) {
+        const isSelected = selectionController.isValueSelected(elementValue);
+        if (isSelected) {
           selectionController.removeFromSelection(
             [elementValue],
             keyboardEvent,
@@ -1586,3 +1644,11 @@ export const createSelectionKeyboardShortcuts = (
     },
   ];
 };
+
+const isComposite = (value) => {
+  if (value === null) return false;
+  if (typeof value === "object") return true;
+  if (typeof value === "function") return true;
+  return false;
+};
+const isPrimitive = (value) => !isComposite(value);

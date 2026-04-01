@@ -69,4 +69,5 @@ main {
   display: flex;
   min-width: 100%; /* Ensure padding applies when content overflows */
   flex: 1;
+  flex-direction: column;
 }

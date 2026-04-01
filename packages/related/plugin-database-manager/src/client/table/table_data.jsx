@@ -63,10 +63,14 @@ export const TableData = ({ table, rows }) => {
     { columnIdKey: "column_name" },
   );
 
-  const selectedRows = filterTableSelection(
+  const selectedRowIds = filterTableSelection(
     selection,
     ({ columnId }) => columnId === "row_number",
-  );
+  ).map(({ rowId }) => rowId);
+  // selectedRowIds is an array of rowId as string (selection values are strings to be primitive AND hold both columnId and rowId infos)
+  const selectedRows = rows.filter((r) => {
+    return selectedRowIds.includes(String(r.id));
+  });
   const selectedRowCount = selectedRows.length;
 
   return (
@@ -167,7 +171,6 @@ export const TableData = ({ table, rows }) => {
             <SelectedRowActions
               tablename={tablename}
               selectedRows={selectedRows}
-              rows={rows}
             />
           </Box>
         </>
@@ -179,7 +182,7 @@ export const TableData = ({ table, rows }) => {
   );
 };
 
-const SelectedRowActions = ({ tablename, selectedRows, rows }) => {
+const SelectedRowActions = ({ tablename, selectedRows }) => {
   const selectedRowCount = selectedRows.length;
   if (selectedRowCount === 0) {
     return null;
@@ -187,13 +190,12 @@ const SelectedRowActions = ({ tablename, selectedRows, rows }) => {
 
   let message;
   if (selectedRowCount === 1) {
-    const rowIdSelected = selectedRows[0].rowId;
-    const rowToDelete = rows.find((r) => String(r.id) === rowIdSelected);
+    const rowSelected = selectedRows[0];
     let rowName;
-    if (rowToDelete.name) {
-      rowName = `row named "${rowToDelete.name}"`;
+    if (rowSelected.name) {
+      rowName = `row named "${rowSelected.name}"`;
     } else {
-      rowName = `row #${rowToDelete.id}`;
+      rowName = `row #${rowSelected.id}`;
     }
     message = `Are you sur you want to delete ${rowName}?`;
 
@@ -201,7 +203,7 @@ const SelectedRowActions = ({ tablename, selectedRows, rows }) => {
       <Button
         data-confirm-message={message}
         action={async () => {
-          await TABLE_ROW.DELETE({ tablename, rowId: rowIdSelected });
+          await TABLE_ROW.DELETE({ tablename, rowId: rowSelected.id });
         }}
       >
         Delete
@@ -215,7 +217,7 @@ const SelectedRowActions = ({ tablename, selectedRows, rows }) => {
       action={async () => {
         await TABLE_ROW.DELETE_MANY({
           tablename,
-          rowIds: selectedRows.map((r) => r.rowId),
+          rowIds: selectedRows.map((r) => r.id),
         });
       }}
     >
