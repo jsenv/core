@@ -51,16 +51,13 @@ const deleteItem = (id) => {
 
 const App = () => (
   <div>
-    <Nav
-      style={{
-        display: "flex",
-        gap: "8px",
-        padding: "12px 16px",
-        borderBottom: "1px solid #dee2e6",
-      }}
-    >
-      <Link route={HOME_ROUTE}>Home</Link>
-      <Link route={LIST_ROUTE}>List</Link>
+    <Nav spacing="m">
+      <Link route={HOME_ROUTE} appearance="tab" currentIndicator padding="s">
+        Home
+      </Link>
+      <Link route={LIST_ROUTE} appearance="tab" currentIndicator padding="s">
+        List
+      </Link>
     </Nav>
     <Route id="app">
       <Route route={HOME_ROUTE} element={HomePage} />
