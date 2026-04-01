@@ -1,6 +1,7 @@
-import { useMemo, useState } from "preact/hooks";
+import { useMemo, useRef, useState } from "preact/hooks";
 
-export const useCellGrid = (rows, properties) => {
+export const useRowsAsGrid = (initialRows, properties) => {
+  const [rows, setRows] = useState(initialRows);
   const cellGrid = [];
   for (const object of rows) {
     const cellRow = [];
@@ -10,7 +11,68 @@ export const useCellGrid = (rows, properties) => {
     }
     cellGrid.push(cellRow);
   }
-  return cellGrid;
+
+  const methodsRef = useRef(null);
+  const propertiesRef = useRef(properties);
+  propertiesRef.current = properties;
+  let methods = methodsRef.current;
+  if (!methods) {
+    const setCell = ({ rowIndex, columnIndex }, value) => {
+      const properties = propertiesRef.current;
+      const prop = properties[columnIndex];
+      setRows((prev) => {
+        const rowWithUpdatedCell = [];
+        let i = 0;
+        while (i < prev.length) {
+          if (i !== rowIndex) {
+            rowWithUpdatedCell.push(prev[i]);
+          } else {
+            const row = prev[i];
+            const updatedRow = { ...row, [prop]: value };
+            rowWithUpdatedCell.push(updatedRow);
+          }
+          i++;
+        }
+        return rowWithUpdatedCell;
+      });
+    };
+    const addRow = (newRow, rowIndex = rows.length) => {
+      setRows((prev) => {
+        const rowWithNewRow = [];
+        let i = 0;
+        while (i < prev.length) {
+          const row = prev[i];
+          rowWithNewRow.push(row);
+          if (i === rowIndex) {
+            rowWithNewRow.push(newRow);
+          }
+          i++;
+        }
+        return rowWithNewRow;
+      });
+    };
+    const deleteRow = (rowIndex) => {
+      setRows((prev) => {
+        const rowWithoutThisOne = [];
+        let i = 0;
+        while (i < prev.length) {
+          const row = prev[i];
+          if (i !== rowIndex) {
+            rowWithoutThisOne.push(row);
+          }
+          i++;
+        }
+        return rowWithoutThisOne;
+      });
+    };
+    methods = methodsRef.current = {
+      setCell,
+      addRow,
+      deleteRow,
+    };
+  }
+  const { setCell, addRow, deleteRow } = methods;
+  return { cellGrid, setCell, addRow, deleteRow };
 };
 
 export const useCellsAndColumns = (

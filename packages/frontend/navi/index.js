@@ -123,8 +123,8 @@ export {
   Tr,
 } from "./src/field/table/table.jsx";
 export {
-  useCellGrid,
   useCellsAndColumns,
+  useRowsAsGrid,
 } from "./src/field/table/use_cells_and_columns.js";
 // Table end
 
