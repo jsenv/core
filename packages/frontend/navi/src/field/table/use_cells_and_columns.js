@@ -1,85 +1,15 @@
-import { useMemo, useRef, useState } from "preact/hooks";
+import { useMemo, useState } from "preact/hooks";
 
-export const useRowsAsGrid = (initialRows, properties) => {
-  const [rows, setRows] = useState(initialRows);
+export const useRowsAsGrid = (rows, properties) => {
   const cellGrid = [];
   for (const object of rows) {
     const cellRow = [];
     for (const prop of properties) {
-      const cell = object[prop];
-      cellRow.push(cell);
+      cellRow.push(object[prop]);
     }
     cellGrid.push(cellRow);
   }
-
-  const methodsRef = useRef(null);
-  const propertiesRef = useRef(properties);
-  propertiesRef.current = properties;
-  let methods = methodsRef.current;
-  if (!methods) {
-    const setCell = ({ rowIndex, columnIndex }, value) => {
-      const properties = propertiesRef.current;
-      const prop = properties[columnIndex];
-      setRows((prev) => {
-        const resolved = rowIndex < 0 ? prev.length + rowIndex : rowIndex;
-        if (resolved < 0 || resolved >= prev.length) return prev;
-        const result = [];
-        let i = 0;
-        while (i < prev.length) {
-          if (i === resolved) {
-            result.push({ ...prev[i], [prop]: value });
-          } else {
-            result.push(prev[i]);
-          }
-          i++;
-        }
-        return result;
-      });
-    };
-    const addRow = (newRow, rowIndex = rows.length) => {
-      setRows((prev) => {
-        // negative counts from end, beyond length appends — like splice
-        let insertAt = rowIndex < 0 ? prev.length + rowIndex : rowIndex;
-        if (insertAt < 0) insertAt = 0;
-        if (insertAt > prev.length) insertAt = prev.length;
-        const result = [];
-        let i = 0;
-        while (i < prev.length) {
-          if (i === insertAt) {
-            result.push(newRow);
-          }
-          result.push(prev[i]);
-          i++;
-        }
-        if (insertAt === prev.length) {
-          result.push(newRow);
-        }
-        return result;
-      });
-    };
-    const deleteRow = (rowIndex) => {
-      setRows((prev) => {
-        const resolved = rowIndex < 0 ? prev.length + rowIndex : rowIndex;
-        if (resolved < 0 || resolved >= prev.length) return prev;
-        const result = [];
-        let i = 0;
-        while (i < prev.length) {
-          if (i !== resolved) {
-            result.push(prev[i]);
-          }
-          i++;
-        }
-        return result;
-      });
-    };
-    methods = methodsRef.current = {
-      setCell,
-      addRow,
-      deleteRow,
-    };
-  }
-  const { setCell, addRow, deleteRow } = methods;
-  return { cellGrid, setCell, addRow, deleteRow };
+  return cellGrid;
 };
 
 export const useCellsAndColumns = (

@@ -28,6 +28,7 @@
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
+      import { useState } from "preact/hooks";
       import {
         Table,
         TableCell,
@@ -41,6 +42,7 @@
         useRowsAsGrid,
         useCellsAndColumns,
       } from "@jsenv/navi";
+      import { useRowsState } from "./table_demo_helpers.js";
 
       const initialRows = [
         { id: 1, name: "Alice", email: "alice@example.com" },
@@ -55,31 +57,105 @@
         { id: "email", header: "Email" },
       ];
 
-      const TableRowManager = () => {
-        const { cellGrid, deleteRow } = useRowsAsGrid(
-          initialRows,
-          columnsConfig.map((col) => col.id),
-        );
+      const columnIds = columnsConfig.map((col) => col.id);
 
-        return (
-          <Demo
-            cellGrid={cellGrid}
-            onDeleteRow={(rowIndex) => {
-              deleteRow(rowIndex);
-            }}
-          />
-        );
-      };
-
-      const Demo = ({ cellGrid, onDeleteRow }) => {
+      // Example 1: rows are an external source of truth.
+      // The table is display-only; mutations come from outside (here: a list with delete buttons).
+      // useCellGrid is a pure transform — it just converts rows to grid format.
+      const ExternalStateExample = () => {
+        const [rows, setRows] = useState(initialRows);
+        const cellGrid = useRowsAsGrid(rows, columnIds);
         const { cells, columns } = useCellsAndColumns(cellGrid, columnsConfig);
 
         return (
           <div class="demo-container">
-            <h1>Table — Delete Row</h1>
+            <h1>External state — table is display-only</h1>
             <p style={{ color: "#6c757d", marginBottom: "16px" }}>
-              {cellGrid.length} row(s) — click <strong>×</strong> to delete a
-              row.
+              Rows live outside the table. Delete from the list; the table just
+              displays what it receives.
+            </p>
+
+            <div style={{ marginTop: "16px" }}>
+              <strong>External row list</strong>
+              <ul style={{ listStyle: "none", padding: 0, margin: "8px 0 0" }}>
+                {rows.map((row) => (
+                  <li
+                    key={row.id}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      marginBottom: "4px",
+                    }}
+                  >
+                    <span>
+                      #{row.id} {row.name} — {row.email}
+                    </span>
+                    <button
+                      style={{
+                        padding: "1px 6px",
+                        background: "#dc3545",
+                        color: "white",
+                        border: "none",
+                        borderRadius: "3px",
+                        cursor: "pointer",
+                      }}
+                      onClick={() =>
+                        setRows((prev) => prev.filter((r) => r.id !== row.id))
+                      }
+                    >
+                      ×
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <Table borderCollapse>
+              <Colgroup>
+                <RowNumberCol />
+                {columns.map((col) => (
+                  <Col key={col.id} id={col.id} />
+                ))}
+              </Colgroup>
+              <Thead>
+                <Tr id="head">
+                  <RowNumberTableCell />
+                  {columns.map((col) => (
+                    <TableCell key={col.id}>{col.header}</TableCell>
+                  ))}
+                </Tr>
+              </Thead>
+              <Tbody>
+                {cells.map((rowCells, rowIndex) => (
+                  <Tr key={rows[rowIndex].id} id={rows[rowIndex].id}>
+                    <RowNumberTableCell />
+                    {rowCells.map((cellValue, columnIndex) => (
+                      <TableCell key={columns[columnIndex].id}>
+                        {cellValue}
+                      </TableCell>
+                    ))}
+                  </Tr>
+                ))}
+              </Tbody>
+            </Table>
+          </div>
+        );
+      };
+
+      // Example 2: no external state — useRowsState manages everything in the UI.
+      // For demo purposes only. In a real app this would not exist;
+      // the UI would receive rows from an external source and only call back mutations.
+      const DemoStateExample = () => {
+        const [cellGrid, { deleteRow }] = useRowsState(initialRows, columnIds);
+        const { cells, columns } = useCellsAndColumns(cellGrid, columnsConfig);
+
+        return (
+          <div class="demo-container" style={{ marginTop: "40px" }}>
+            <h1>Demo-only state — delete button inside the table</h1>
+            <p style={{ color: "#6c757d", marginBottom: "16px" }}>
+              State lives in the UI via <code>useRowsState</code> (demo helper).
+              Not for production use.
             </p>
 
             <Table borderCollapse>
@@ -90,7 +166,6 @@
                 ))}
                 <Col id="__delete__" width={40} />
               </Colgroup>
-
               <Thead>
                 <Tr id="head">
                   <RowNumberTableCell />
@@ -100,42 +175,46 @@
                   <TableCell />
                 </Tr>
               </Thead>
-
               <Tbody>
-                {cells.map((rowCells, rowIndex) => {
-                  return (
-                    <Tr key={rowIndex}>
-                      <RowNumberTableCell />
-                      {rowCells.map((cellValue, columnIndex) => (
-                        <TableCell key={columns[columnIndex].id}>
-                          {cellValue}
-                        </TableCell>
-                      ))}
-                      <TableCell>
-                        <button
-                          style={{
-                            padding: "1px 6px",
-                            background: "#dc3545",
-                            color: "white",
-                            border: "none",
-                            borderRadius: "3px",
-                            cursor: "pointer",
-                          }}
-                          onClick={() => onDeleteRow(rowIndex)}
-                        >
-                          ×
-                        </button>
+                {cells.map((rowCells, rowIndex) => (
+                  <Tr key={rowIndex}>
+                    <RowNumberTableCell />
+                    {rowCells.map((cellValue, columnIndex) => (
+                      <TableCell key={columns[columnIndex].id}>
+                        {cellValue}
                       </TableCell>
-                    </Tr>
-                  );
-                })}
+                    ))}
+                    <TableCell>
+                      <button
+                        style={{
+                          padding: "1px 6px",
+                          background: "#dc3545",
+                          color: "white",
+                          border: "none",
+                          borderRadius: "3px",
+                          cursor: "pointer",
+                        }}
+                        onClick={() => deleteRow(rowIndex)}
+                      >
+                        ×
+                      </button>
+                    </TableCell>
+                  </Tr>
+                ))}
               </Tbody>
             </Table>
           </div>
         );
       };
 
-      render(<TableRowManager />, document.getElementById("root"));
+      const App = () => (
+        <>
+          <ExternalStateExample />
+          <DemoStateExample />
+        </>
+      );
+
+      render(<App />, document.getElementById("root"));
     </script>
   </body>
 </html>
