@@ -27,12 +27,14 @@ export const performArrowNavigation = (
   }
 
   const onTargetToFocus = (targetToFocus) => {
-    console.debug(
-      `Arrow navigation: ${event.key} from`,
-      activeElement,
-      "to",
-      targetToFocus,
-    );
+    if (DEBUG) {
+      console.debug(
+        `Arrow navigation: ${event.key} from`,
+        activeElement,
+        "to",
+        targetToFocus,
+      );
+    }
     event.preventDefault();
     markFocusNav(event);
     targetToFocus.focus();

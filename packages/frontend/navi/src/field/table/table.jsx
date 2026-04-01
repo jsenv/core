@@ -368,10 +368,6 @@ export const Tr = ({ id, height, children }) => {
     TableSelectionContext,
   );
   const { stickyTopFrontierRowIndex } = useContext(TableStickyContext);
-  const rowIndex = useRegisterRow({ id, height });
-  const row = useRowByIndex(rowIndex);
-  const ColumnConsumerProvider = useContext(ColumnConsumerProviderContext);
-
   if (selectionController.enabled) {
     if (!id) {
       console.warn("<Tr /> must have an id prop to enable selection");
@@ -379,6 +375,9 @@ export const Tr = ({ id, height, children }) => {
     // we need strings as this value is going to be used in data attributes and when generating cell ids
     id = String(id);
   }
+  const rowIndex = useRegisterRow({ id, height });
+  const row = useRowByIndex(rowIndex);
+  const ColumnConsumerProvider = useContext(ColumnConsumerProviderContext);
 
   const isStickyTop = rowIndex <= stickyTopFrontierRowIndex;
   const isStickyTopFrontier = rowIndex === stickyTopFrontierRowIndex;
