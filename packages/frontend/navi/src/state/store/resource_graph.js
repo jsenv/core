@@ -724,7 +724,7 @@ const createHttpHandlerForRootResource = (
   name,
   {
     idKey,
-    store,
+    store, // see array_signal_store.js
     /*
     Default autorerun behavior explanation:
 
@@ -895,7 +895,10 @@ ${originalActionName} source location: ${locationInfo}`,
       name: `${name}.${httpVerb}_MANY`,
       dataDefault: [],
       resultToValue: applyResultToValue,
-      valueToData: (idArray) => store.selectAll(idArray),
+      valueToData: (idArray) => {
+        const items = store.selectAll(idArray);
+        return items;
+      },
       completeSideEffect: (actionCompleted) =>
         resourceLifecycleManager.onActionComplete(actionCompleted),
       ...options,
