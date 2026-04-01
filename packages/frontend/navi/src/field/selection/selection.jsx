@@ -89,7 +89,7 @@ export const useSelectionController = ({
       value,
       lastInternalValueRef.current,
     );
-    if (isExternalChange) {
+    if (isExternalChange && selectionController.enabled) {
       selectionController.update(value);
     }
   }, [value, selectionController]);

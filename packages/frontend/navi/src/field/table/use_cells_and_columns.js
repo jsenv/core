@@ -6,15 +6,15 @@ export const useCellGrid = (initialRows, properties) => {
   });
   return [cellGrid, setCellGrid];
 };
-
 const buildCellGrid = (rows, properties) => {
   const cellGrid = [];
   for (const object of rows) {
-    const row = [];
+    const cellRow = [];
     for (const prop of properties) {
-      row.push(object[prop]);
+      const cell = object[prop];
+      cellRow.push(cell);
     }
-    cellGrid.push(row);
+    cellGrid.push(cellRow);
   }
   return cellGrid;
 };
