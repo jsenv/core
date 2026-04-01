@@ -38,6 +38,7 @@
         Tr,
         RowNumberCol,
         RowNumberTableCell,
+        Button,
         useRowsAsGrid,
         useCellsAndColumns,
       } from "@jsenv/navi";
@@ -58,62 +59,90 @@
 
       const columnIds = columnsConfig.map((col) => col.id);
 
-      // Example 1: rows are an external source of truth.
-      // Backend owns state + mutation logic. Frontend only renders what it receives.
+      // This demo illustrates the typical pattern in a real frontend app:
+      //
+      // - The BACKEND is the source of truth. It holds the data and exposes
+      //   methods to mutate it (e.g. HTTP endpoints backed by a database).
+      //   Here it is simulated by a component using useRowsState.
+      //
+      // - The FRONTEND receives the current state as props (rows) and can
+      //   REQUEST mutations via callbacks (onDeleteRow). It never modifies
+      //   state directly — it only reflects what the backend sends.
+      //
+      // The 1s delay on the frontend delete button simulates a real HTTP
+      // round-trip: the request goes out, the backend processes it, and the
+      // updated rows eventually come back down to the frontend.
 
       const Backend = () => {
         const [rows, { deleteRow }] = useRowsState(initialRows, columnIds);
         return (
-          <div
-            style={{
-              border: "2px dashed #6c757d",
-              borderRadius: "8px",
-              padding: "12px",
-              marginBottom: "16px",
-            }}
-          >
+          <div style={{ display: "flex", flexDirection: "column", gap: "0" }}>
             <div
               style={{
-                color: "#6c757d",
-                fontSize: "0.8em",
-                marginBottom: "8px",
+                border: "2px solid #6c757d",
+                borderRadius: "8px",
+                padding: "12px",
               }}
             >
-              ⚙️ Backend (source of truth)
-            </div>
-            <ul style={{ listStyle: "none", padding: 0, margin: "0 0 12px" }}>
-              {rows.map((row, rowIndex) => (
-                <li
-                  key={row.id}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "8px",
-                    marginBottom: "4px",
-                    fontSize: "0.85em",
-                    color: "#495057",
-                  }}
-                >
-                  <span>
-                    #{row.id} {row.name} — {row.email}
-                  </span>
-                  <button
+              <div
+                style={{
+                  color: "#6c757d",
+                  fontSize: "0.8em",
+                  fontWeight: "bold",
+                  marginBottom: "8px",
+                }}
+              >
+                ⚙️ Backend (source of truth)
+              </div>
+              <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+                {rows.map((row, rowIndex) => (
+                  <li
+                    key={row.id}
                     style={{
-                      padding: "1px 6px",
-                      background: "#6c757d",
-                      color: "white",
-                      border: "none",
-                      borderRadius: "3px",
-                      cursor: "pointer",
-                      fontSize: "0.9em",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      marginBottom: "4px",
+                      fontSize: "0.85em",
+                      color: "#495057",
                     }}
-                    onClick={() => deleteRow(rowIndex)}
                   >
-                    ×
-                  </button>
-                </li>
-              ))}
-            </ul>
+                    <span>
+                      #{row.id} {row.name} — {row.email}
+                    </span>
+                    <button
+                      style={{
+                        padding: "1px 6px",
+                        background: "#6c757d",
+                        color: "white",
+                        border: "none",
+                        borderRadius: "3px",
+                        cursor: "pointer",
+                        fontSize: "0.9em",
+                      }}
+                      onClick={() => deleteRow(rowIndex)}
+                    >
+                      ×
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                padding: "6px 0",
+                fontSize: "0.75em",
+                color: "#868e96",
+                lineHeight: "1.4",
+              }}
+            >
+              <span style={{ fontSize: "1.4em", lineHeight: "1" }}>⇅</span>
+            </div>
+
             <Frontend rows={rows} onDeleteRow={deleteRow} />
           </div>
         );
@@ -146,7 +175,7 @@
                 {columns.map((col) => (
                   <Col key={col.id} id={col.id} />
                 ))}
-                <Col id="__delete__" width={40} />
+                <Col id="__delete__" />
               </Colgroup>
               <Thead>
                 <Tr id="head">
@@ -167,19 +196,16 @@
                       </TableCell>
                     ))}
                     <TableCell>
-                      <button
-                        style={{
-                          padding: "1px 6px",
-                          background: "#dc3545",
-                          color: "white",
-                          border: "none",
-                          borderRadius: "3px",
-                          cursor: "pointer",
+                      <Button
+                        action={async () => {
+                          await new Promise((resolve) =>
+                            setTimeout(resolve, 1000),
+                          );
+                          onDeleteRow(rowIndex);
                         }}
-                        onClick={() => onDeleteRow(rows[rowIndex].id)}
                       >
-                        ×
-                      </button>
+                        Delete
+                      </Button>
                     </TableCell>
                   </Tr>
                 ))}
@@ -191,11 +217,14 @@
 
       const ExternalStateExample = () => (
         <div class="demo-container">
-          <h1>External state — table is display-only</h1>
+          <h1>Table — delete row</h1>
           <p style={{ color: "#6c757d", marginBottom: "16px" }}>
-            The backend owns rows and knows how to delete them. The frontend
-            receives rows as props and calls <code>onDeleteRow</code> — it does
-            not manage state directly.
+            The <strong>backend</strong> (dashed box) is the source of truth: it
+            holds rows and can delete them instantly from its own list.
+            <br />
+            The <strong>frontend</strong> (blue box) only displays what it
+            receives and must call back to request deletion — the 1s delay on
+            the × button simulates an HTTP round-trip.
           </p>
           <Backend />
         </div>
