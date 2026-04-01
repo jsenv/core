@@ -115,6 +115,31 @@ const createBaseSelectionController = ({
 }) => {
   const [publishChange, subscribeChange] = createPubSub();
 
+  // When elements unmount (e.g. a row or column is deleted), their cleanup
+  // calls unregisterElement which should remove them from the selection.
+  // If many elements unmount at once (deleting 100 rows), we don't want to
+  // call onSelectionChange 100 times. Instead we accumulate the values to
+  // remove and flush them in a single removeFromSelection call.
+  // queueMicrotask runs after Preact finishes its current flush, so all
+  // unmount cleanups accumulate before we fire the single onSelectionChange.
+  const pendingRemovalSet = new Set();
+  let flushScheduled = false;
+  const scheduleFlushRemovals = () => {
+    if (flushScheduled) {
+      return;
+    }
+    flushScheduled = true;
+    queueMicrotask(() => {
+      flushScheduled = false;
+      if (pendingRemovalSet.size === 0) {
+        return;
+      }
+      const valuesToRemove = Array.from(pendingRemovalSet);
+      pendingRemovalSet.clear();
+      removeFromSelection(valuesToRemove);
+    });
+  };
+
   const getElementByValue = (valueToFind) => {
     for (const element of registry) {
       if (compareTwoJsValues(getElementValue(element), valueToFind)) {
@@ -226,6 +251,10 @@ const createBaseSelectionController = ({
       `${type} unregisterElement: registry size after:`,
       registry.size,
     );
+    if (isElementSelected(element)) {
+      pendingRemovalSet.add(elementValue);
+      scheduleFlushRemovals();
+    }
   };
   const setActiveElement = (element) => {
     activeElement = element;
