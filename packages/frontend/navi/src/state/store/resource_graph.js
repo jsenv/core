@@ -257,13 +257,26 @@ export const resource = (
         }
       };
       updateChildItemIdArray(item[propertyName]);
-      watchIdRenames(
-        childResource.store,
-        () => childItemIdArraySignal.peek(),
-        (updated) => {
-          childItemIdArraySignal.value = updated;
-        },
-      );
+      childResource.store.observeIdChanges((currentIdSet, previousIdSet) => {
+        const idArray = childItemIdArraySignal.peek();
+        if (idArray.length === 0) {
+          return;
+        }
+        let modified = false;
+        const updatedArray = idArray.map((id) => {
+          if (currentIdSet.has(id) || !previousIdSet.has(id)) return id;
+          for (const newId of currentIdSet) {
+            if (!previousIdSet.has(newId)) {
+              modified = true;
+              return newId;
+            }
+          }
+          return id;
+        });
+        if (modified) {
+          childItemIdArraySignal.value = updatedArray;
+        }
+      });
 
       const childItemArraySignal = computed(() => {
         const childItemIdArray = childItemIdArraySignal.value;
@@ -709,32 +722,6 @@ const createResourceLifecycleManager = () => {
 // Global resource lifecycle manager instance
 const resourceLifecycleManager = createResourceLifecycleManager();
 
-// Watches a store for id renames (PUT/PATCH that changes the idKey) and keeps an
-// id-array in sync by replacing old ids with their new equivalents.
-// - store: arraySignalStore with observeIdChanges support
-// - getIdArray: () => string[] — returns the current array of ids to update
-// - setIdArray: (updated: string[]) => void — called when a rename was applied
-const watchIdRenames = (store, getIdArray, setIdArray) => {
-  store.observeIdChanges((currentIdSet, previousIdSet) => {
-    const idArray = getIdArray();
-    if (idArray.length === 0) return;
-    let modified = false;
-    const updatedArray = idArray.map((id) => {
-      if (currentIdSet.has(id) || !previousIdSet.has(id)) return id;
-      for (const newId of currentIdSet) {
-        if (!previousIdSet.has(newId)) {
-          modified = true;
-          return newId;
-        }
-      }
-      return id;
-    });
-    if (modified) {
-      setIdArray(updatedArray);
-    }
-  });
-};
-
 // Cache for parameter scope identifiers
 const paramScopeWeakSet = createIterableWeakSet();
 let paramScopeIdCounter = 0;
@@ -932,43 +919,47 @@ ${originalActionName} source location: ${locationInfo}`,
         const items = store.selectAll(idArray);
         return items;
       },
-      completeSideEffect: (actionCompleted) =>
-        resourceLifecycleManager.onActionComplete(actionCompleted),
+      completeSideEffect: (actionCompleted) => {
+        resourceLifecycleManager.onActionComplete(actionCompleted);
+        if (
+          httpVerb === "DELETE" ||
+          actionCompleted.valueSignal.peek().length === 0
+        ) {
+          return null;
+        }
+
+        return store.observeIdChanges((currentIdSet, previousIdSet) => {
+          const idArray = actionCompleted.valueSignal.peek();
+          let modified = false;
+          const idUpdatedArray = [];
+          for (const id of idArray) {
+            if (currentIdSet.has(id)) {
+              // this id still exists (no change)
+              idUpdatedArray.push(id);
+              continue;
+            }
+            if (!previousIdSet.has(id)) {
+              // this id did not exists (strange but ok)
+              idUpdatedArray.push(id);
+              continue;
+            }
+            // this id does not exists anymore but existed before, it was renamed
+            // how can i find the new id?
+            modified = true;
+            idUpdatedArray.push(id);
+          }
+
+          if (modified) {
+            actionCompleted.valueSignal.value = idUpdatedArray;
+          }
+        });
+      },
       ...options,
     });
     resourceLifecycleManager.registerAction(
       resourceInstance,
       httpActionAffectingManyItems,
     );
-    if (httpVerb !== "DELETE") {
-      watchIdRenames(
-        store,
-        () => {
-          const instances =
-            httpActionAffectingManyItems.matchAllSelfOrDescendant?.(
-              (action) => action.completed,
-            ) ?? [];
-          // Return ids from first completed instance (they share the same store)
-          for (const instance of instances) {
-            const idArray = instance.valueSignal?.peek();
-            if (idArray && idArray.length > 0) return idArray;
-          }
-          return [];
-        },
-        (updatedArray) => {
-          const instances =
-            httpActionAffectingManyItems.matchAllSelfOrDescendant?.(
-              (action) => action.completed,
-            ) ?? [];
-          for (const instance of instances) {
-            const idArray = instance.valueSignal?.peek();
-            if (idArray && idArray.length > 0) {
-              instance.valueSignal.value = updatedArray;
-            }
-          }
-        },
-      );
-    }
     return httpActionAffectingManyItems;
   };
   const GET_MANY = (callback, options) =>
