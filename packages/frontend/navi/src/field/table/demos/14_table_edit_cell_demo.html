@@ -64,8 +64,8 @@
         return (
           <Demo
             cellGrid={cellGrid}
-            onCellChange={(rowId, columnId, value) => {
-              setCell({ rowIndex: rowId, columnIndex: columnId }, value);
+            onCellChange={({ columnIndex, rowIndex }, value) => {
+              setCell({ columnIndex, rowIndex }, value);
             }}
           />
         );

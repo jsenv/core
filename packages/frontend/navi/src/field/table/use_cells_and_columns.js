@@ -21,48 +21,55 @@ export const useRowsAsGrid = (initialRows, properties) => {
       const properties = propertiesRef.current;
       const prop = properties[columnIndex];
       setRows((prev) => {
-        const rowWithUpdatedCell = [];
+        const resolved = rowIndex < 0 ? prev.length + rowIndex : rowIndex;
+        if (resolved < 0 || resolved >= prev.length) return prev;
+        const result = [];
         let i = 0;
         while (i < prev.length) {
-          if (i !== rowIndex) {
-            rowWithUpdatedCell.push(prev[i]);
+          if (i === resolved) {
+            result.push({ ...prev[i], [prop]: value });
           } else {
-            const row = prev[i];
-            const updatedRow = { ...row, [prop]: value };
-            rowWithUpdatedCell.push(updatedRow);
+            result.push(prev[i]);
           }
           i++;
         }
-        return rowWithUpdatedCell;
+        return result;
       });
     };
     const addRow = (newRow, rowIndex = rows.length) => {
       setRows((prev) => {
-        const rowWithNewRow = [];
+        // negative counts from end, beyond length appends — like splice
+        let insertAt = rowIndex < 0 ? prev.length + rowIndex : rowIndex;
+        if (insertAt < 0) insertAt = 0;
+        if (insertAt > prev.length) insertAt = prev.length;
+        const result = [];
         let i = 0;
         while (i < prev.length) {
-          const row = prev[i];
-          rowWithNewRow.push(row);
-          if (i === rowIndex) {
-            rowWithNewRow.push(newRow);
+          if (i === insertAt) {
+            result.push(newRow);
           }
+          result.push(prev[i]);
           i++;
         }
-        return rowWithNewRow;
+        if (insertAt === prev.length) {
+          result.push(newRow);
+        }
+        return result;
       });
     };
     const deleteRow = (rowIndex) => {
       setRows((prev) => {
-        const rowWithoutThisOne = [];
+        const resolved = rowIndex < 0 ? prev.length + rowIndex : rowIndex;
+        if (resolved < 0 || resolved >= prev.length) return prev;
+        const result = [];
         let i = 0;
         while (i < prev.length) {
-          const row = prev[i];
-          if (i !== rowIndex) {
-            rowWithoutThisOne.push(row);
+          if (i !== resolved) {
+            result.push(prev[i]);
           }
           i++;
         }
-        return rowWithoutThisOne;
+        return result;
       });
     };
     methods = methodsRef.current = {
