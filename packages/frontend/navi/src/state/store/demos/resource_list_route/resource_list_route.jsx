@@ -1,53 +1,15 @@
-import { Link, Nav, resource, Route, route, setupRoutes } from "@jsenv/navi";
+import { Link, Nav, Route, route, routeAction, setupRoutes } from "@jsenv/navi";
 import { render } from "preact";
+
+import { ITEM, addItem, deleteItem } from "./item_store.js";
 
 const HOME_ROUTE = route("");
 const LIST_ROUTE = route("/list");
 setupRoutes([HOME_ROUTE, LIST_ROUTE]);
 
-let nextId = 1;
-const itemStore = new Map();
-
-// Pre-populate with a few items
-for (let i = 0; i < 3; i++) {
-  const id = String(nextId++);
-  itemStore.set(id, { id });
-}
-
-const ITEM = resource("item", {
-  idKey: "id",
-
-  GET_MANY: () => {
-    return Array.from(itemStore.values());
-  },
-
-  POST: ({ id }) => {
-    const item = { id };
-    itemStore.set(id, item);
-    return item;
-  },
-
-  DELETE: ({ id }) => {
-    const item = itemStore.get(id);
-    if (!item) {
-      throw new Error(`Item ${id} not found`);
-    }
-    itemStore.delete(id);
-    return item;
-  },
+const ITEM_GET_MANY_ACTION = routeAction(LIST_ROUTE, ITEM.GET_MANY, () => {
+  return true;
 });
-
-// Load the list immediately so dataSignal is populated
-ITEM.GET_MANY.run();
-
-const addItem = () => {
-  const id = String(nextId++);
-  ITEM.POST({ id });
-};
-
-const deleteItem = (id) => {
-  ITEM.DELETE({ id });
-};
 
 const App = () => (
   <div>
@@ -63,7 +25,7 @@ const App = () => (
       <Route route={HOME_ROUTE} element={HomePage} />
       <Route
         route={LIST_ROUTE}
-        action={ITEM.GET_MANY}
+        action={ITEM_GET_MANY_ACTION}
         element={(items) => <ItemList items={items} />}
       />
     </Route>
