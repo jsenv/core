@@ -40,16 +40,7 @@ const TABLE = resource("table", {
     columns: [...columnsStore],
   }),
 });
-const TABLE_COLUMNS = TABLE.many("columns", COLUMN, {
-  PUT: ({ column_name, property, value }) => {
-    const column = columnsStore.find((c) => c.column_name === column_name);
-    if (!column) {
-      throw new Error(`Column "${column_name}" not found`);
-    }
-    column[property] = value;
-    return ["column_name", column_name, { [property]: value }];
-  },
-});
+TABLE.many("columns", COLUMN);
 
 const tableAction = TABLE.GET.bindParams({ id: "users" });
 
@@ -59,7 +50,7 @@ const ColumnRow = ({ column }) => {
       <code>{column.column_name}</code>
       <Button
         action={() => {
-          TABLE_COLUMNS.PUT({
+          COLUMN.PUT({
             column_name: column.column_name,
             property: `column_name`,
             value: `${column.column_name}_2`,

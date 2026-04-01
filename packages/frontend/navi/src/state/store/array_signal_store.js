@@ -58,6 +58,9 @@ export const arraySignalStore = (
       }
       setCopy.add(id);
     }
+    console.debug(
+      `[${name}] id change effect — modified: ${modified}, currentIds: [${[...idSet].join(", ")}], previousIds: [${[...previousIdSet].join(", ")}], callbacks registered: ${idChangeCallbackSet.size}`,
+    );
     if (modified) {
       previousIdSetSignal.value = setCopy;
       for (const idChangeCallback of idChangeCallbackSet) {
@@ -529,6 +532,13 @@ ${[idKey, ...mutableIdKeys].join(", ")}`,
     });
   };
 
+  const observeIdChanges = (callback) => {
+    idChangeCallbackSet.add(callback);
+    return () => {
+      idChangeCallbackSet.delete(callback);
+    };
+  };
+
   Object.assign(store, {
     mutableIdKeys,
     arraySignal,
@@ -540,6 +550,7 @@ ${[idKey, ...mutableIdKeys].join(", ")}`,
     observeItemProperties,
     observeProperties,
     observeRemovals,
+    observeIdChanges,
     registerItemMatchLifecycle,
     signalForMutableIdKey,
   });
