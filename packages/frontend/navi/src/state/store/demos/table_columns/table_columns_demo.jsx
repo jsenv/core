@@ -20,7 +20,7 @@ const COLUMN = resource("column", {
     if (!column) {
       throw new Error(`Column "${column_name}" not found`);
     }
-    return column;
+    return { ...column };
   },
 
   PUT: ({ column_name, property, value }) => {
@@ -37,10 +37,19 @@ const TABLE = resource("table", {
 
   GET: ({ id }) => ({
     id,
-    columns: columnsStore,
+    columns: [...columnsStore],
   }),
 });
-TABLE.many("columns", COLUMN);
+const TABLE_COLUMNS = TABLE.many("columns", COLUMN, {
+  PUT: ({ column_name, property, value }) => {
+    const column = columnsStore.find((c) => c.column_name === column_name);
+    if (!column) {
+      throw new Error(`Column "${column_name}" not found`);
+    }
+    column[property] = value;
+    return ["column_name", column_name, { [property]: value }];
+  },
+});
 
 const tableAction = TABLE.GET.bindParams({ id: "users" });
 
@@ -50,7 +59,7 @@ const ColumnRow = ({ column }) => {
       <code>{column.column_name}</code>
       <Button
         action={() => {
-          COLUMN.PUT({
+          TABLE_COLUMNS.PUT({
             column_name: column.column_name,
             property: `column_name`,
             value: `${column.column_name}_2`,
@@ -65,21 +74,25 @@ const ColumnRow = ({ column }) => {
 
 tableAction.prerun();
 
+const TableDisplay = ({ table }) => {
+  return (
+    <ul>
+      {table.columns.map((col) => (
+        <ColumnRow key={col.id} column={col} />
+      ))}
+    </ul>
+  );
+};
+
 const App = () => {
   return (
     <div>
-      <button onClick={() => tableAction.run()}>load users table</button>
+      <button onClick={() => tableAction.rerun()}>load users table</button>
       <ActionRenderer action={tableAction}>
         {{
           idle: () => null,
           loading: () => <p>loading…</p>,
-          completed: (table) => (
-            <ul>
-              {table.columns.map((col) => (
-                <ColumnRow key={col.id} column={col} />
-              ))}
-            </ul>
-          ),
+          completed: (table) => <TableDisplay table={table} />,
         }}
       </ActionRenderer>
     </div>
