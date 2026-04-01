@@ -155,11 +155,11 @@ import.meta.css = /* css */ `
       }
     }
 
+    /* Dark background */
     &[data-dark-background] {
       --x-link-contrasting-color: white;
       --x-link-color: var(--link-color, white);
     }
-
     /* Interactive */
     &[data-interactive] {
       cursor: pointer;
@@ -183,19 +183,6 @@ import.meta.css = /* css */ `
     &[data-focus-visible] {
       outline-width: 2px;
     }
-    /* Selected */
-    &[aria-selected] {
-      position: relative;
-
-      input[type="checkbox"] {
-        position: absolute;
-        opacity: 0;
-      }
-    }
-    &[data-selected] {
-      --x-link-background: var(--x-link-background-selected);
-      --x-link-color: var(--link-color-selected);
-    }
     /* Active */
     &[data-active] {
       /* Redefine it otherwise [data-visited] prevails */
@@ -218,6 +205,19 @@ import.meta.css = /* css */ `
       .navi_current_indicator {
         background: var(--link-current-indicator-color);
       }
+    }
+    /* Selected */
+    &[aria-selected] {
+      position: relative;
+
+      input[type="checkbox"] {
+        position: absolute;
+        opacity: 0;
+      }
+    }
+    &[data-selected] {
+      --x-link-background: var(--x-link-background-selected);
+      --x-link-color: var(--link-color-selected);
     }
     /* Focus */
     &[data-focus],
