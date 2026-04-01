@@ -135,8 +135,8 @@ const createBaseSelectionController = ({
         return;
       }
       const valuesToRemove = Array.from(pendingRemovalSet);
-      pendingRemovalSet.clear();
       removeFromSelection(valuesToRemove);
+      pendingRemovalSet.clear();
     });
   };
 
@@ -185,6 +185,11 @@ const createBaseSelectionController = ({
       }
     }
     for (const willBeUnselected of willBeUnselectedSet) {
+      if (pendingRemovalSet.has(willBeUnselected)) {
+        // This value is already pending removal due to an unmounted element
+        // getElementByValue would return undefined
+        continue;
+      }
       const element = getElementByValue(willBeUnselected);
       if (element._selectionImpact) {
         const impactedValues = element._selectionImpact(allValues);
@@ -212,7 +217,7 @@ const createBaseSelectionController = ({
   let anchorElement = null;
   let activeElement = null;
 
-  const registerElement = (element, options = {}) => {
+  const registerElement = (element) => {
     const elementValue = getElementValue(element);
     debug(
       "registration",
@@ -224,10 +229,6 @@ const createBaseSelectionController = ({
       registry.size,
     );
     registry.add(element);
-    // Store the selectionImpact callback if provided
-    if (options.selectionImpact) {
-      element._selectionImpact = options.selectionImpact;
-    }
     debug(
       "registration",
       `${type} registerElement: registry size after:`,
@@ -236,21 +237,8 @@ const createBaseSelectionController = ({
   };
   const unregisterElement = (element) => {
     const elementValue = getElementValue(element);
-    debug(
-      "registration",
-      `${type} unregisterElement:`,
-      element,
-      "value:",
-      elementValue,
-      "registry size before:",
-      registry.size,
-    );
+    debug("registration", `${type} unregisterElement:`);
     registry.delete(element);
-    debug(
-      "registration",
-      `${type} unregisterElement: registry size after:`,
-      registry.size,
-    );
     if (isElementSelected(element)) {
       pendingRemovalSet.add(elementValue);
       scheduleFlushRemovals();
@@ -1056,6 +1044,14 @@ export const useSelectableElement = (
   useLayoutEffect(() => {
     const element = elementRef.current;
     if (!element) {
+      return;
+    }
+    element._selectionImpact = selectionImpact;
+  }, [selectionImpact]);
+
+  useLayoutEffect(() => {
+    const element = elementRef.current;
+    if (!element) {
       return null;
     }
     if (!selectionController) {
@@ -1086,7 +1082,7 @@ export const useSelectableElement = (
       selectionController.unregisterElement(element);
       element.removeAttribute("data-selectable");
     };
-  }, [selectionController, selectionImpact]);
+  }, [selectionController]);
 
   const [selected, setSelected] = useState(false);
   debug("selection", "useSelectableElement: initial selected state:", selected);
