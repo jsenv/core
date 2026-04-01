@@ -257,55 +257,13 @@ export const resource = (
         }
       };
       updateChildItemIdArray(item[propertyName]);
-
-      if (childResource.store.observeIdChanges) {
-        console.debug(`[${childName}] registering observeIdChanges on ${item}`);
-        childResource.store.observeIdChanges((currentIdSet, previousIdSet) => {
-          const currentIdArray = childItemIdArraySignal.peek();
-          console.debug(
-            `[${childName}] observeIdChanges fired for ${item} — currentIdArray: [${currentIdArray.join(", ")}], currentIdSet: [${[...currentIdSet].join(", ")}], previousIdSet: [${[...previousIdSet].join(", ")}]`,
-          );
-          if (currentIdArray.length === 0) {
-            console.debug(`[${childName}] skipping — currentIdArray is empty`);
-            return;
-          }
-          let modified = false;
-          const updatedIdArray = currentIdArray.map((id) => {
-            if (!currentIdSet.has(id) && previousIdSet.has(id)) {
-              console.debug(
-                `[${childName}] id "${id}" was removed, searching for replacement`,
-              );
-              // This id was removed — find the new id that replaced it
-              for (const newId of currentIdSet) {
-                if (
-                  !previousIdSet.has(newId) &&
-                  !currentIdArray.includes(newId)
-                ) {
-                  console.debug(
-                    `[${childName}] replacing "${id}" with "${newId}"`,
-                  );
-                  modified = true;
-                  return newId;
-                }
-              }
-              console.debug(`[${childName}] no replacement found for "${id}"`);
-            }
-            return id;
-          });
-          if (modified) {
-            console.debug(
-              `[${childName}] updating childItemIdArraySignal to [${updatedIdArray.join(", ")}]`,
-            );
-            childItemIdArraySignal.value = updatedIdArray;
-          } else {
-            console.debug(`[${childName}] no modification needed`);
-          }
-        });
-      } else {
-        console.debug(
-          `[${childName}] childResource.store has no observeIdChanges method`,
-        );
-      }
+      watchIdRenames(
+        childResource.store,
+        () => childItemIdArraySignal.peek(),
+        (updated) => {
+          childItemIdArraySignal.value = updated;
+        },
+      );
 
       const childItemArraySignal = computed(() => {
         const childItemIdArray = childItemIdArraySignal.value;
@@ -751,6 +709,32 @@ const createResourceLifecycleManager = () => {
 // Global resource lifecycle manager instance
 const resourceLifecycleManager = createResourceLifecycleManager();
 
+// Watches a store for id renames (PUT/PATCH that changes the idKey) and keeps an
+// id-array in sync by replacing old ids with their new equivalents.
+// - store: arraySignalStore with observeIdChanges support
+// - getIdArray: () => string[] — returns the current array of ids to update
+// - setIdArray: (updated: string[]) => void — called when a rename was applied
+const watchIdRenames = (store, getIdArray, setIdArray) => {
+  store.observeIdChanges((currentIdSet, previousIdSet) => {
+    const idArray = getIdArray();
+    if (idArray.length === 0) return;
+    let modified = false;
+    const updatedArray = idArray.map((id) => {
+      if (currentIdSet.has(id) || !previousIdSet.has(id)) return id;
+      for (const newId of currentIdSet) {
+        if (!previousIdSet.has(newId)) {
+          modified = true;
+          return newId;
+        }
+      }
+      return id;
+    });
+    if (modified) {
+      setIdArray(updatedArray);
+    }
+  });
+};
+
 // Cache for parameter scope identifiers
 const paramScopeWeakSet = createIterableWeakSet();
 let paramScopeIdCounter = 0;
@@ -956,52 +940,34 @@ ${originalActionName} source location: ${locationInfo}`,
       resourceInstance,
       httpActionAffectingManyItems,
     );
-    if (store.observeIdChanges && httpVerb !== "DELETE") {
-      store.observeIdChanges((currentIdSet, previousIdSet) => {
-        // Build old→new rename map
-        const renames = [];
-        for (const oldId of previousIdSet) {
-          if (!currentIdSet.has(oldId)) {
-            for (const newId of currentIdSet) {
-              if (!previousIdSet.has(newId)) {
-                renames.push([oldId, newId]);
-                break;
-              }
+    if (httpVerb !== "DELETE") {
+      watchIdRenames(
+        store,
+        () => {
+          const instances =
+            httpActionAffectingManyItems.matchAllSelfOrDescendant?.(
+              (action) => action.completed,
+            ) ?? [];
+          // Return ids from first completed instance (they share the same store)
+          for (const instance of instances) {
+            const idArray = instance.valueSignal?.peek();
+            if (idArray && idArray.length > 0) return idArray;
+          }
+          return [];
+        },
+        (updatedArray) => {
+          const instances =
+            httpActionAffectingManyItems.matchAllSelfOrDescendant?.(
+              (action) => action.completed,
+            ) ?? [];
+          for (const instance of instances) {
+            const idArray = instance.valueSignal?.peek();
+            if (idArray && idArray.length > 0) {
+              instance.valueSignal.value = updatedArray;
             }
           }
-        }
-        if (renames.length === 0) return;
-        console.debug(
-          `[${name}.${httpVerb}_MANY] id renames detected: ${renames.map(([o, n]) => `${o}→${n}`).join(", ")}`,
-        );
-        const instances =
-          httpActionAffectingManyItems.matchAllSelfOrDescendant?.(
-            (action) => action.completed,
-          ) ?? [];
-        console.debug(
-          `[${name}.${httpVerb}_MANY] found ${instances.length} completed action instance(s)`,
-        );
-        for (const instance of instances) {
-          const idArray = instance.valueSignal?.peek();
-          if (!idArray || idArray.length === 0) continue;
-          let modified = false;
-          const updatedArray = idArray.map((id) => {
-            for (const [oldId, newId] of renames) {
-              if (id === oldId) {
-                modified = true;
-                return newId;
-              }
-            }
-            return id;
-          });
-          if (modified) {
-            console.debug(
-              `[${name}.${httpVerb}_MANY] updating valueSignal from [${idArray.join(", ")}] to [${updatedArray.join(", ")}]`,
-            );
-            instance.valueSignal.value = updatedArray;
-          }
-        }
-      });
+        },
+      );
     }
     return httpActionAffectingManyItems;
   };

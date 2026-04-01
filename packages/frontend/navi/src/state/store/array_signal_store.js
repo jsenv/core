@@ -58,9 +58,6 @@ export const arraySignalStore = (
       }
       setCopy.add(id);
     }
-    console.debug(
-      `[${name}] id change effect — modified: ${modified}, currentIds: [${[...idSet].join(", ")}], previousIds: [${[...previousIdSet].join(", ")}], callbacks registered: ${idChangeCallbackSet.size}`,
-    );
     if (modified) {
       previousIdSetSignal.value = setCopy;
       for (const idChangeCallback of idChangeCallbackSet) {
