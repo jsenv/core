@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Table - Delete Row Demo</title>
+    <title>Table - Delete Column Demo</title>
     <style>
       body {
         margin: 20px;
@@ -43,36 +43,34 @@
         useCellsAndColumns,
       } from "@jsenv/navi";
 
-      const initialRows = [
-        { id: 1, name: "Alice", email: "alice@example.com" },
-        { id: 2, name: "Bob", email: "bob@example.com" },
-        { id: 3, name: "Charlie", email: "charlie@example.com" },
-        { id: 4, name: "Diana", email: "diana@example.com" },
+      const rows = [
+        { id: 1, name: "Alice", age: 30, email: "alice@example.com" },
+        { id: 2, name: "Bob", age: 25, email: "bob@example.com" },
+        { id: 3, name: "Charlie", age: 35, email: "charlie@example.com" },
+        { id: 4, name: "Diana", age: 28, email: "diana@example.com" },
       ];
 
-      const columnsConfig = [
-        { id: "id", header: "ID" },
+      const initialColumnsConfig = [
         { id: "name", header: "Name" },
+        { id: "age", header: "Age" },
         { id: "email", header: "Email" },
       ];
 
-      const TableRowManager = () => {
-        const [rows, setRows] = useState(initialRows);
+      const TableColumnManager = () => {
+        const [columnsConfig, setColumnsConfig] =
+          useState(initialColumnsConfig);
 
         return (
           <Demo
-            rows={rows}
-            onDeleteRow={(rowId) => {
-              setRows((prev) => {
-                const rowsWithoutThisOne = prev.filter((r) => r.id !== rowId);
-                return rowsWithoutThisOne;
-              });
+            columnsConfig={columnsConfig}
+            onDeleteColumn={(columnId) => {
+              setColumnsConfig((prev) => prev.filter((c) => c.id !== columnId));
             }}
           />
         );
       };
 
-      const Demo = ({ rows, onDeleteRow }) => {
+      const Demo = ({ columnsConfig, onDeleteColumn }) => {
         const cellGrid = useCellGrid(
           rows,
           columnsConfig.map((c) => c.id),
@@ -81,10 +79,10 @@
 
         return (
           <div class="demo-container">
-            <h1>Table — Delete Row</h1>
+            <h1>Table — Delete Column</h1>
             <p style={{ color: "#6c757d", marginBottom: "16px" }}>
-              {cellGrid.length} row(s) — click <strong>×</strong> to delete a
-              row.
+              {columns.length} column(s) — click <strong>×</strong> in a header
+              to delete that column.
             </p>
 
             <Table borderCollapse>
@@ -93,16 +91,29 @@
                 {columns.map((col) => (
                   <Col key={col.id} id={col.id} />
                 ))}
-                <Col id="__delete__" width={40} />
               </Colgroup>
 
               <Thead>
                 <Tr id="head">
                   <RowNumberTableCell />
                   {columns.map((col) => (
-                    <TableCell key={col.id}>{col.header}</TableCell>
+                    <TableCell key={col.id}>
+                      <span style={{ marginRight: "6px" }}>{col.header}</span>
+                      <button
+                        style={{
+                          padding: "1px 6px",
+                          background: "#dc3545",
+                          color: "white",
+                          border: "none",
+                          borderRadius: "3px",
+                          cursor: "pointer",
+                        }}
+                        onClick={() => onDeleteColumn(col.id)}
+                      >
+                        ×
+                      </button>
+                    </TableCell>
                   ))}
-                  <TableCell />
                 </Tr>
               </Thead>
 
@@ -117,21 +128,6 @@
                           {cellValue}
                         </TableCell>
                       ))}
-                      <TableCell>
-                        <button
-                          style={{
-                            padding: "1px 6px",
-                            background: "#dc3545",
-                            color: "white",
-                            border: "none",
-                            borderRadius: "3px",
-                            cursor: "pointer",
-                          }}
-                          onClick={() => onDeleteRow(row.id)}
-                        >
-                          ×
-                        </button>
-                      </TableCell>
                     </Tr>
                   );
                 })}
@@ -141,7 +137,7 @@
         );
       };
 
-      render(<TableRowManager />, document.getElementById("root"));
+      render(<TableColumnManager />, document.getElementById("root"));
     </script>
   </body>
 </html>

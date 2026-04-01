@@ -1,12 +1,6 @@
 import { useMemo, useState } from "preact/hooks";
 
-export const useCellGrid = (initialRows, properties) => {
-  const [cellGrid, setCellGrid] = useState(() => {
-    return buildCellGrid(initialRows, properties);
-  });
-  return [cellGrid, setCellGrid];
-};
-const buildCellGrid = (rows, properties) => {
+export const useCellGrid = (rows, properties) => {
   const cellGrid = [];
   for (const object of rows) {
     const cellRow = [];
@@ -21,7 +15,6 @@ const buildCellGrid = (rows, properties) => {
 
 export const useCellsAndColumns = (
   cellGrid,
-  setCellGrid,
   columns,
   { columnIdKey = "id" } = {},
 ) => {
@@ -77,34 +70,33 @@ export const useCellsAndColumns = (
     return reorderedCells;
   }, [cellGrid, columnOrderedIndexMap, orderedColumnIds.length]);
 
-  const setCellValue = ({ columnIndex, rowIndex }, value) => {
-    const originalColumnIndex = columnOrderedIndexMap.get(columnIndex);
-    if (originalColumnIndex === undefined) {
-      console.warn(`Invalid column index: ${columnIndex}`);
-      return;
-    }
-    setCellGrid((previousCells) => {
-      const newCells = [];
-      for (let y = 0; y < previousCells.length; y++) {
-        const currentRow = previousCells[y];
-        if (y !== rowIndex) {
-          newCells.push(currentRow);
-          continue;
-        }
-        const newRow = [];
-        for (let x = 0; x < currentRow.length; x++) {
-          const cellValue = x === originalColumnIndex ? value : currentRow[x];
-          newRow.push(cellValue);
-        }
-        newCells.push(newRow);
-      }
-      return newCells;
-    });
-  };
+  // const setCellValue = ({ columnIndex, rowIndex }, value) => {
+  //   const originalColumnIndex = columnOrderedIndexMap.get(columnIndex);
+  //   if (originalColumnIndex === undefined) {
+  //     console.warn(`Invalid column index: ${columnIndex}`);
+  //     return;
+  //   }
+  //   setCellGrid((previousCells) => {
+  //     const newCells = [];
+  //     for (let y = 0; y < previousCells.length; y++) {
+  //       const currentRow = previousCells[y];
+  //       if (y !== rowIndex) {
+  //         newCells.push(currentRow);
+  //         continue;
+  //       }
+  //       const newRow = [];
+  //       for (let x = 0; x < currentRow.length; x++) {
+  //         const cellValue = x === originalColumnIndex ? value : currentRow[x];
+  //         newRow.push(cellValue);
+  //       }
+  //       newCells.push(newRow);
+  //     }
+  //     return newCells;
+  //   });
+  // };
 
   return {
     cells: orderedCells,
-    setCellValue,
     columns: orderedColumns,
     setColumnOrder: setOrderedAllColumnIds,
   };
