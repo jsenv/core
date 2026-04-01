@@ -302,6 +302,47 @@ const generateValueForColumn = (col) => {
   }
   return base;
 };
+export const addColumn = async (sql, tablename, columnProperties = {}) => {
+  let {
+    columnName,
+    dataType = "TEXT",
+    nullable = true,
+    defaultValue,
+  } = columnProperties;
+  if (!columnName) {
+    const existingColumns = await getTableColumns(sql, tablename);
+    const existingNames = new Set(existingColumns.map((c) => c.column_name));
+    let index = 1;
+    columnName = `new_column_${index}`;
+    while (existingNames.has(columnName)) {
+      index++;
+      columnName = `new_column_${index}`;
+    }
+  }
+  const nullableClause = nullable ? sql`` : sql`NOT NULL`;
+  const defaultClause =
+    defaultValue !== undefined ? sql`DEFAULT ${defaultValue}` : sql``;
+  await sql`
+    ALTER TABLE ${sql(tablename)}
+    ADD COLUMN ${sql(columnName)} ${sql.unsafe(
+      dataType,
+    )} ${nullableClause} ${defaultClause}
+  `;
+  const column = await getTableColumn(sql, tablename, columnName);
+  return column;
+};
+const getTableColumn = async (sql, tablename, columnName) => {
+  const [column] = await sql`
+    SELECT
+      *
+    FROM
+      information_schema.columns
+    WHERE
+      table_name = ${tablename}
+      AND column_name = ${columnName}
+  `;
+  return column;
+};
 export const deleteRow = async (sql, tablename, id) => {
   await sql`
     DELETE FROM ${sql(tablename)}

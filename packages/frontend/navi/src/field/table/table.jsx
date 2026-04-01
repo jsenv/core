@@ -412,6 +412,12 @@ export const Tr = ({ id, height, children }) => {
 const TableRowCells = ({ children, rowIndex, row }) => {
   return children.map((child, columnIndex) => {
     const column = useColumnByIndex(columnIndex);
+    if (!column) {
+      throw new Error(
+        `No column for cell ${columnIndex}:${rowIndex}.
+Make sure the number of <Col> in the <Colgroup> matches the number of cells in each row.`,
+      );
+    }
     const columnId = column.id;
 
     return (

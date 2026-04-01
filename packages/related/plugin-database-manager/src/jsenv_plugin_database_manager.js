@@ -20,6 +20,7 @@ import {
 } from "./sql/manage_sql.js";
 import { alterRoleQuery, selectRoleByName } from "./sql/role_sql.js";
 import {
+  addColumn,
   alterTableQuery,
   createTable,
   deleteRow,
@@ -186,6 +187,14 @@ export const jsenvPluginDatabaseManager = ({
           const value = await request.json();
           await alterTableQuery(sql, tablename, colname, value);
           return { [colname]: value };
+        },
+        "POST /:tablename/columns": async (request) => {
+          const { tablename } = request.params;
+          const data = await request.json();
+          const column = await addColumn(sql, tablename, data);
+          return {
+            data: column,
+          };
         },
         "GET /:tablename/rows": async (request) => {
           const { tablename } = request.params;

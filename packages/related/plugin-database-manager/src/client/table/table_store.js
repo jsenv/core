@@ -114,6 +114,30 @@ export const TABLE = resource("table", {
 
 export const useTableArrayInStore = TABLE.useArray;
 
+export const TABLE_COLUMN = {
+  POST: async ({ tablename, columnName }) => {
+    const response = await fetch(
+      `${window.DB_MANAGER_CONFIG.apiUrl}/tables/${tablename}/columns`,
+      {
+        method: "POST",
+        headers: {
+          "accept": "application/json",
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({ columnName }),
+      },
+    );
+    if (!response.ok) {
+      throw await errorFromResponse(
+        response,
+        `Failed to add column to "${tablename}" table`,
+      );
+    }
+    const column = await response.json();
+    return column;
+  },
+};
+
 export const TABLE_ROW = resource("table_row", {
   GET_MANY: async ({ tablename }, { signal }) => {
     const response = await fetch(

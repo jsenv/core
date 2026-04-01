@@ -37,7 +37,7 @@ import {
 } from "@jsenv/navi";
 import { useRef, useState } from "preact/hooks";
 
-import { TABLE_ROW } from "./table_store.js";
+import { TABLE_COLUMN, TABLE_ROW } from "./table_store.js";
 
 import.meta.css = /* css */ `
   .table_data_actions {
@@ -73,10 +73,8 @@ export const TableData = ({ table, rows }) => {
 
   return (
     <div>
-      {rows.length === 0 ? (
-        <div>No data</div>
-      ) : (
-        <>
+      <Box>
+        <Box column spacing="m">
           <Table
             ref={tableRef}
             className="database_table"
@@ -136,42 +134,51 @@ export const TableData = ({ table, rows }) => {
               })}
             </Tbody>
           </Table>
-          <Box column spacing="s" alignY="center" paddingY="s">
-            <Label>
-              <Checkbox
-                checked={selectedRowCount > 0}
-                action={() => {
-                  if (selectedRowCount === 0) {
-                    const rowSelection = [];
-                    let rowCount = rows.length;
-                    let y = 0;
-                    while (y < rowCount) {
-                      const firstCellValue = stringifyTableSelectionValue(
-                        "cell",
-                        { columnId: "row_number", rowId: rows[y].id },
-                      );
-                      rowSelection.push(firstCellValue);
-                      y++;
-                    }
-                    setSelection(rowSelection);
-                  } else {
-                    setSelection([]);
-                  }
-                }}
-              />
-              <Text size="xs" bold>
-                {selectedRowCount === 0
-                  ? "Select all"
-                  : `${selectedRowCount} selected`}
-              </Text>
-            </Label>
-            <SelectedRowActions
-              tablename={tablename}
-              selectedRows={selectedRows}
-            />
+          <Box>
+            <Button
+              action={async () => {
+                await TABLE_COLUMN.POST({ tablename });
+              }}
+            >
+              +
+            </Button>
           </Box>
-        </>
-      )}
+        </Box>
+        <Box column spacing="s" alignY="center" paddingY="s">
+          <Label column alignY="center" spacing="xs">
+            <Checkbox
+              checked={selectedRowCount > 0}
+              action={() => {
+                if (selectedRowCount === 0) {
+                  const rowSelection = [];
+                  let rowCount = rows.length;
+                  let y = 0;
+                  while (y < rowCount) {
+                    const firstCellValue = stringifyTableSelectionValue(
+                      "cell",
+                      { columnId: "row_number", rowId: rows[y].id },
+                    );
+                    rowSelection.push(firstCellValue);
+                    y++;
+                  }
+                  setSelection(rowSelection);
+                } else {
+                  setSelection([]);
+                }
+              }}
+            />
+            <Text size="xs" bold>
+              {selectedRowCount === 0
+                ? "Select all"
+                : `${selectedRowCount} selected`}
+            </Text>
+          </Label>
+          <SelectedRowActions
+            tablename={tablename}
+            selectedRows={selectedRows}
+          />
+        </Box>
+      </Box>
       <div className="table_data_actions">
         <Button action={createRow}>Add row</Button>
       </div>
