@@ -28,7 +28,6 @@
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { useState } from "preact/hooks";
       import {
         Table,
         TableCell,
@@ -39,7 +38,7 @@
         Tr,
         RowNumberCol,
         RowNumberTableCell,
-        useCellGrid,
+        useRowsAsGrid,
         useCellsAndColumns,
       } from "@jsenv/navi";
 
@@ -57,26 +56,22 @@
       ];
 
       const TableRowManager = () => {
-        const [rows, setRows] = useState(initialRows);
+        const { cellGrid, deleteRow } = useRowsAsGrid(
+          initialRows,
+          columnsConfig.map((col) => col.id),
+        );
 
         return (
           <Demo
-            rows={rows}
-            onDeleteRow={(rowId) => {
-              setRows((prev) => {
-                const rowsWithoutThisOne = prev.filter((r) => r.id !== rowId);
-                return rowsWithoutThisOne;
-              });
+            cellGrid={cellGrid}
+            onDeleteRow={(rowIndex) => {
+              deleteRow(rowIndex);
             }}
           />
         );
       };
 
-      const Demo = ({ rows, onDeleteRow }) => {
-        const cellGrid = useCellGrid(
-          rows,
-          columnsConfig.map((c) => c.id),
-        );
+      const Demo = ({ cellGrid, onDeleteRow }) => {
         const { cells, columns } = useCellsAndColumns(cellGrid, columnsConfig);
 
         return (
@@ -107,10 +102,9 @@
               </Thead>
 
               <Tbody>
-                {cells.map((rowCells, dataRowIndex) => {
-                  const row = rows[dataRowIndex];
+                {cells.map((rowCells, rowIndex) => {
                   return (
-                    <Tr id={row.id} key={row.id}>
+                    <Tr key={rowIndex}>
                       <RowNumberTableCell />
                       {rowCells.map((cellValue, columnIndex) => (
                         <TableCell key={columns[columnIndex].id}>
@@ -127,7 +121,7 @@
                             borderRadius: "3px",
                             cursor: "pointer",
                           }}
-                          onClick={() => onDeleteRow(row.id)}
+                          onClick={() => onDeleteRow(rowIndex)}
                         >
                           ×
                         </button>

@@ -39,7 +39,7 @@
         Tr,
         RowNumberCol,
         RowNumberTableCell,
-        useCellGrid,
+        useRowsAsGrid,
         useCellsAndColumns,
       } from "@jsenv/navi";
 
@@ -59,9 +59,14 @@
       const TableColumnManager = () => {
         const [columnsConfig, setColumnsConfig] =
           useState(initialColumnsConfig);
+        const { cellGrid } = useRowsAsGrid(
+          rows,
+          columnsConfig.map((c) => c.id),
+        );
 
         return (
           <Demo
+            cellGrid={cellGrid}
             columnsConfig={columnsConfig}
             onDeleteColumn={(columnId) => {
               setColumnsConfig((prev) => prev.filter((c) => c.id !== columnId));
@@ -70,11 +75,7 @@
         );
       };
 
-      const Demo = ({ columnsConfig, onDeleteColumn }) => {
-        const cellGrid = useCellGrid(
-          rows,
-          columnsConfig.map((c) => c.id),
-        );
+      const Demo = ({ cellGrid, columnsConfig, onDeleteColumn }) => {
         const { cells, columns } = useCellsAndColumns(cellGrid, columnsConfig);
 
         return (
