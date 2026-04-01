@@ -41,6 +41,19 @@
         useRowsAsGrid,
         useCellsAndColumns,
       } from "@jsenv/navi";
+      import { useRowsState } from "./table_demo_helpers.js";
+
+      // This demo illustrates the typical pattern in a real frontend app:
+      //
+      // - The BACKEND is the source of truth. It holds the data and exposes
+      //   methods to mutate it (e.g. HTTP endpoints backed by a database).
+      //   Here it is simulated by a component using useRowsState.
+      //
+      // - The FRONTEND receives the current state as props (rows) and can
+      //   REQUEST mutations via callbacks (onCellChange). It never modifies
+      //   state directly — it only reflects what the backend sends.
+      //
+      // The 1s delay on cell save simulates a real HTTP round-trip.
 
       const initialRows = [
         { id: 1, name: "Alice", age: 30, email: "alice@example.com" },
@@ -55,31 +68,88 @@
         { id: "email", header: "Email" },
       ];
 
-      const TableCellManager = () => {
-        const { cellGrid, setCell } = useRowsAsGrid(
-          initialRows,
-          columnsConfig.map((c) => c.id),
-        );
+      const columnIds = columnsConfig.map((c) => c.id);
 
+      const Backend = () => {
+        const [rows, { setCell }] = useRowsState(initialRows, columnIds);
         return (
-          <Demo
-            cellGrid={cellGrid}
-            onCellChange={({ columnIndex, rowIndex }, value) => {
-              setCell({ columnIndex, rowIndex }, value);
-            }}
-          />
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            <div
+              style={{
+                border: "2px solid #6c757d",
+                borderRadius: "8px",
+                padding: "12px",
+              }}
+            >
+              <div
+                style={{
+                  color: "#6c757d",
+                  fontSize: "0.8em",
+                  fontWeight: "bold",
+                  marginBottom: "8px",
+                }}
+              >
+                ⚙️ Backend (source of truth)
+              </div>
+              <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+                {rows.map((row) => (
+                  <li
+                    key={row.id}
+                    style={{
+                      fontSize: "0.85em",
+                      color: "#495057",
+                      marginBottom: "4px",
+                    }}
+                  >
+                    #{row.id} {row.name} — age: {row.age} — {row.email}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                padding: "6px 0",
+                fontSize: "0.75em",
+                color: "#868e96",
+                lineHeight: "1.4",
+              }}
+            >
+              <span>rows ↓</span>
+              <span style={{ fontSize: "1.4em", lineHeight: "1" }}>⇅</span>
+              <span>onCellChange ↑</span>
+            </div>
+
+            <Frontend rows={rows} onCellChange={setCell} />
+          </div>
         );
       };
 
-      const Demo = ({ cellGrid, onCellChange }) => {
+      const Frontend = ({ rows, onCellChange }) => {
+        const cellGrid = useRowsAsGrid(rows, columnIds);
         const { cells, columns } = useCellsAndColumns(cellGrid, columnsConfig);
 
         return (
-          <div class="demo-container">
-            <h1>Table — Edit Cell</h1>
-            <p style={{ color: "#6c757d", marginBottom: "16px" }}>
-              Double-click a cell to edit its value.
-            </p>
+          <div
+            style={{
+              border: "2px solid #0078d4",
+              borderRadius: "8px",
+              padding: "12px",
+            }}
+          >
+            <div
+              style={{
+                color: "#0078d4",
+                fontSize: "0.8em",
+                fontWeight: "bold",
+                marginBottom: "8px",
+              }}
+            >
+              🖥️ Frontend (display + calls backend to update cells)
+            </div>
 
             <Table borderCollapse>
               <Colgroup>
@@ -88,7 +158,6 @@
                   <Col key={col.id} id={col.id} />
                 ))}
               </Colgroup>
-
               <Thead>
                 <Tr id="head">
                   <RowNumberTableCell />
@@ -97,35 +166,46 @@
                   ))}
                 </Tr>
               </Thead>
-
               <Tbody>
-                {cells.map((rowCells, rowIndex) => {
-                  return (
-                    <Tr key={rowIndex}>
-                      <RowNumberTableCell />
-                      {rowCells.map((cellValue, columnIndex) => {
-                        const col = columns[columnIndex];
-                        return (
-                          <TableCell
-                            key={col.id}
-                            action={(value) => {
-                              onCellChange({ columnIndex, rowIndex }, value);
-                            }}
-                          >
-                            {cellValue}
-                          </TableCell>
-                        );
-                      })}
-                    </Tr>
-                  );
-                })}
+                {cells.map((rowCells, rowIndex) => (
+                  <Tr key={rows[rowIndex].id} id={rows[rowIndex].id}>
+                    <RowNumberTableCell />
+                    {rowCells.map((cellValue, columnIndex) => (
+                      <TableCell
+                        key={columns[columnIndex].id}
+                        action={async (value) => {
+                          await new Promise((resolve) =>
+                            setTimeout(resolve, 1000),
+                          );
+                          onCellChange({ rowIndex, columnIndex }, value);
+                        }}
+                      >
+                        {cellValue}
+                      </TableCell>
+                    ))}
+                  </Tr>
+                ))}
               </Tbody>
             </Table>
           </div>
         );
       };
 
-      render(<TableCellManager />, document.getElementById("root"));
+      const App = () => (
+        <div class="demo-container">
+          <h1>Table — Edit Cell</h1>
+          <p style={{ color: "#6c757d", marginBottom: "16px" }}>
+            The <strong>backend</strong> (grey box) is the source of truth and
+            reflects every saved value.
+            <br />
+            The <strong>frontend</strong> (blue box) lets you double-click a
+            cell to edit it — the 1s delay on save simulates an HTTP round-trip.
+          </p>
+          <Backend />
+        </div>
+      );
+
+      render(<App />, document.getElementById("root"));
     </script>
   </body>
 </html>
