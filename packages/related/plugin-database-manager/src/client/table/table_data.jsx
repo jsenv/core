@@ -33,7 +33,7 @@ import {
   Thead,
   Tr,
   useCellsAndColumns,
-  useGrid,
+  useRowsAsGrid,
 } from "@jsenv/navi";
 import { useRef, useState } from "preact/hooks";
 
@@ -52,16 +52,14 @@ export const TableData = ({ table, rows }) => {
   const { schemaColumns } = table.meta;
   schemaColumns.sort((a, b) => a.ordinal_position - b.ordinal_position);
 
-  const grid = useGrid(
+  const grid = useRowsAsGrid(
     rows,
     schemaColumns.map((c) => c.column_name),
   );
   const [selection, setSelection] = useState([]);
-  const { cells, setCellValue, columns } = useCellsAndColumns(
-    grid,
-    schemaColumns,
-    { columnIdKey: "column_name" },
-  );
+  const { cells, columns } = useCellsAndColumns(grid, schemaColumns, {
+    columnIdKey: "column_name",
+  });
 
   const selectedRowIds = filterTableSelection(
     selection,
@@ -127,7 +125,6 @@ export const TableData = ({ table, rows }) => {
                                 [columnId]: v,
                               },
                             });
-                            setCellValue({ rowIndex, columnIndex }, v);
                           }}
                         >
                           {cellValue}

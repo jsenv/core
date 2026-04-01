@@ -18,7 +18,7 @@
  *
  */
 
-import { Button, Icon, Link, Nav, Route } from "@jsenv/navi";
+import { Button, Head, Icon, Link, Nav, Route } from "@jsenv/navi";
 
 import { Page, PageBody, PageHead } from "../layout/page.jsx";
 import {
@@ -37,70 +37,75 @@ export const TablePage = ({ table }) => {
   const tablename = table.tablename;
 
   return (
-    <Page data-ui-name="<TablePage />">
-      <PageHead spacingBottom={0}>
-        <PageHead.Label
-          icon={<TableSvg />}
-          label="Table:"
-          actions={[
-            {
-              component: (
-                <Button
-                  data-confirm-message={`Are you sure you want to delete the table "${tablename}"?`}
-                  action={() => {
-                    return TABLE.DELETE({ tablename });
-                  }}
-                >
-                  Delete
-                </Button>
-              ),
-            },
-          ]}
-        >
-          {tablename}
-        </PageHead.Label>
-        <Nav spacing="s">
-          <Link
-            route={TABLE_INDEX_ROUTE}
-            routeParams={{ tablename }}
-            appearance="tab"
-            paddingX="s"
-            paddingY="xs"
-            currentIndicator
+    <>
+      <Head>
+        <title>Table: {tablename}</title>
+      </Head>
+      <Page data-ui-name="<TablePage />">
+        <PageHead spacingBottom={0}>
+          <PageHead.Label
+            icon={<TableSvg />}
+            label="Table:"
+            actions={[
+              {
+                component: (
+                  <Button
+                    data-confirm-message={`Are you sure you want to delete the table "${tablename}"?`}
+                    action={() => {
+                      return TABLE.DELETE({ tablename });
+                    }}
+                  >
+                    Delete
+                  </Button>
+                ),
+              },
+            ]}
           >
-            <Icon>
-              <DataSvg />
-            </Icon>
-            Data
-          </Link>
-          <Link
-            route={TABLE_SETTINGS_ROUTE}
-            routeParams={{ tablename }}
-            appearance="tab"
-            paddingX="s"
-            paddingY="xs"
-            currentIndicator
-          >
-            <Icon>
-              <SettingsSvg />
-            </Icon>
-            Settings
-          </Link>
-        </Nav>
-      </PageHead>
-      <PageBody>
-        <Route>
-          <Route
-            route={TABLE_INDEX_ROUTE}
-            action={TABLE_ROW_GET_MANY_ACTION}
-            element={(rows) => <TableData table={table} rows={rows} />}
-          />
-          <Route
-            route={TABLE_SETTINGS_ROUTE}
-            element={<TableSettings table={table} />}
-          />
-        </Route>
-      </PageBody>
-    </Page>
+            {tablename}
+          </PageHead.Label>
+          <Nav spacing="s">
+            <Link
+              route={TABLE_INDEX_ROUTE}
+              routeParams={{ tablename }}
+              appearance="tab"
+              paddingX="s"
+              paddingY="xs"
+              currentIndicator
+            >
+              <Icon>
+                <DataSvg />
+              </Icon>
+              Data
+            </Link>
+            <Link
+              route={TABLE_SETTINGS_ROUTE}
+              routeParams={{ tablename }}
+              appearance="tab"
+              paddingX="s"
+              paddingY="xs"
+              currentIndicator
+            >
+              <Icon>
+                <SettingsSvg />
+              </Icon>
+              Settings
+            </Link>
+          </Nav>
+        </PageHead>
+        <PageBody>
+          <Route>
+            <Route
+              route={TABLE_INDEX_ROUTE}
+              action={TABLE_ROW_GET_MANY_ACTION}
+              element={(rows) => <TableData table={table} rows={rows} />}
+            />
+            <Route
+              route={TABLE_SETTINGS_ROUTE}
+              element={<TableSettings table={table} />}
+            />
+          </Route>
+        </PageBody>
+      </Page>
+    </>
   );
 };
