@@ -1,4 +1,4 @@
-import { resource } from "@jsenv/navi";
+import { ActionRenderer, resource } from "@jsenv/navi";
 import { render } from "preact";
 
 let nextId = 1;
@@ -45,9 +45,17 @@ const deleteItem = (id) => {
   ITEM.DELETE({ id });
 };
 
-const ItemList = () => {
-  const items = ITEM.GET_MANY.dataSignal.value;
+const ItemPage = () => {
+  return (
+    <ActionRenderer action={ITEM.GET_MANY}>
+      {(items) => {
+        return <ItemList items={items} />;
+      }}
+    </ActionRenderer>
+  );
+};
 
+const ItemList = ({ items }) => {
   return (
     <div
       style={{
@@ -129,4 +137,4 @@ const ItemList = () => {
   );
 };
 
-render(<ItemList />, document.querySelector("#root"));
+render(<ItemPage />, document.querySelector("#root"));
