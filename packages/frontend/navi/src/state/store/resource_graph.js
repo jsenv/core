@@ -786,7 +786,7 @@ const createHttpHandlerForRootResource = (
               // the callback is returning something like [property, value, props]
               // this is to support a case like:
               // store.upsert("name", "currentName", { name: "newName" })
-              // where we want to update the name property of an existing item
+              // where we want to update the idKey of an item
               item = store.upsert(...result);
             } else {
               item = store.upsert(result);

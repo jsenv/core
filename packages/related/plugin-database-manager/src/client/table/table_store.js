@@ -179,7 +179,8 @@ export const TABLE_COLUMN = TABLE.many("columns", COLUMN, {
       );
     }
     const { data: column } = await response.json();
-    return [{ column_name: columnName }, column];
+    // we return an array to say: we update this column with these props
+    return ["column_name", columnName, column];
   },
   DELETE: async ({ tablename, columnName }, { signal }) => {
     const response = await fetch(
