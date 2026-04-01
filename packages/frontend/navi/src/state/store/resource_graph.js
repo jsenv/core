@@ -460,18 +460,26 @@ const createResourceLifecycleManager = () => {
   };
 
   const shouldRerunAfter = (rerunConfig, httpVerb) => {
-    if (rerunConfig === false) return false;
-    if (rerunConfig === "*") return true;
+    if (rerunConfig === false) {
+      return false;
+    }
+    if (rerunConfig === "*") {
+      return true;
+    }
     if (Array.isArray(rerunConfig)) {
       const verbSet = new Set(rerunConfig.map((v) => v.toUpperCase()));
-      if (verbSet.has("*")) return true;
+      if (verbSet.has("*")) {
+        return true;
+      }
       return verbSet.has(httpVerb.toUpperCase());
     }
     return false;
   };
 
   const isParamSubset = (parentParams, childParams) => {
-    if (!parentParams || !childParams) return false;
+    if (!parentParams || !childParams) {
+      return false;
+    }
     for (const [key, value] of Object.entries(parentParams)) {
       if (
         !(key in childParams) ||
@@ -589,7 +597,7 @@ const createResourceLifecycleManager = () => {
               ? new Set(valueSignal.peek())
               : new Set([valueSignal.peek()]);
 
-            const candidateId = actionCandidate.data;
+            const candidateId = actionCandidate.value;
             const isAffected = deleteIdSet.has(candidateId);
             if (!isAffected) {
               break delete_effect;
@@ -804,7 +812,7 @@ const createHttpHandlerForRootResource = (
           if (!isProps(result) && !primitiveCanBeId(result)) {
             throw new TypeError(
               `${actionLabel} must return an object (that will be used to drop "${name}" resource), received ${result}.
-           ${originalActionName} source location: ${locationInfo}`,
+${originalActionName} source location: ${locationInfo}`,
             );
           }
           return applyResultToValue(result);
@@ -812,7 +820,7 @@ const createHttpHandlerForRootResource = (
         if (!isProps(result)) {
           throw new TypeError(
             `${actionLabel} must return an object (that will be used to upsert "${name}" resource), received ${result}.
-           ${originalActionName} source location: ${locationInfo}`,
+${originalActionName} source location: ${locationInfo}`,
           );
         }
         return applyResultToValue(result);
