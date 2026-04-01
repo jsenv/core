@@ -125,520 +125,6 @@ const bobAction = USER.GET.bindParams({ name: "Bob" });
 const charlieAction = USER.GET.bindParams({ name: "Charlie" });
 const testUserAction = USER.GET.bindParams({ name: "TestUser" }); // Utilisateur qui n'existe pas encore
 
-const UserCard = ({ name, action }) => {
-  const [isEditing, setIsEditing] = useState(false);
-  const [editName, setEditName] = useState("");
-  const [editAge, setEditAge] = useState("");
-  const [loadCount, setLoadCount] = useState(0);
-
-  // Get common data from action status
-  const { data } = useActionStatus(action);
-  const displayName = data ? `${data.name} (${data.age} ans)` : name;
-
-  // Charger automatiquement au démarrage pour Alice, Bob et Charlie
-  useEffect(() => {
-    if (
-      name === "Alice" ||
-      name === "Bob" ||
-      name === "Charlie" ||
-      name === "TestUser"
-    ) {
-      console.log(`🚀 Auto-run ${name} on mount`);
-      action.run();
-    }
-  }, [name, action]);
-
-  // Mettre à jour le compteur périodiquement pour refléter les changements
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setLoadCount(getLoadCount(name));
-    }, 100);
-    return () => clearInterval(interval);
-  }, [name]);
-
-  const deleteUser = async (data) => {
-    if (!data) return;
-    try {
-      await USER.DELETE({ name: data.name });
-    } catch (err) {
-      console.error("Erreur lors de la suppression:", err);
-    }
-  };
-
-  const renameUser = async (data) => {
-    if (!data || !editName.trim()) return;
-    try {
-      await USER.PUT({ name: data.name, newName: editName.trim() });
-      setIsEditing(false);
-    } catch (err) {
-      console.error("Erreur lors du renommage:", err);
-    }
-  };
-
-  const updateAge = async (data) => {
-    if (!data || !editAge.trim()) return;
-    try {
-      await USER.PATCH({ name: data.name, age: parseInt(editAge) });
-      setIsEditing(false);
-    } catch (err) {
-      console.error("Erreur lors de la mise à jour de l'âge:", err);
-    }
-  };
-
-  const updateNameAndAge = async (data) => {
-    if (!data || !editName.trim() || !editAge.trim()) return;
-    try {
-      await USER.PUT({
-        name: data.name,
-        newName: editName.trim(),
-        age: parseInt(editAge),
-      });
-      setIsEditing(false);
-    } catch (err) {
-      console.error("Erreur lors de la mise à jour complète:", err);
-    }
-  };
-
-  // Common UI wrapper component
-  const CardWrapper = ({ children, statusColor, statusText }) => (
-    <div
-      style={{
-        border: "1px solid #dee2e6",
-        borderRadius: "6px",
-        padding: "6px 10px",
-        margin: "4px 0",
-        backgroundColor: "#f8f9fa",
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: "6px",
-        }}
-      >
-        <span
-          style={{ fontWeight: "bold", color: "#007bff", fontSize: "0.9em" }}
-        >
-          {displayName}
-        </span>
-        <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-          <span
-            style={{
-              padding: "1px 5px",
-              borderRadius: "3px",
-              fontSize: "0.65em",
-              fontWeight: "bold",
-              backgroundColor: "#6c757d",
-              color: "white",
-            }}
-          >
-            {loadCount}x
-          </span>
-          <span
-            style={{
-              padding: "1px 6px",
-              borderRadius: "3px",
-              fontSize: "0.7em",
-              fontWeight: "bold",
-              backgroundColor: statusColor,
-              color: "white",
-            }}
-          >
-            {statusText}
-          </span>
-        </div>
-      </div>
-      {children}
-    </div>
-  );
-
-  return (
-    <ActionRenderer action={action}>
-      {{
-        loading: () => (
-          <CardWrapper statusColor="#ffc107" statusText="Chargement...">
-            <div style={{ display: "flex", gap: "4px", flexWrap: "wrap" }}>
-              <button
-                onClick={() => action.rerun()}
-                disabled={true}
-                style={{
-                  padding: "2px 7px",
-                  backgroundColor: "#17a2b8",
-                  color: "white",
-                  border: "none",
-                  borderRadius: "4px",
-                  cursor: "not-allowed",
-                  opacity: 0.6,
-                  fontSize: "0.8em",
-                }}
-              >
-                🔄
-              </button>
-            </div>
-          </CardWrapper>
-        ),
-
-        error: (error) => (
-          <CardWrapper
-            statusColor="#dc3545"
-            statusText={
-              error.message && error.message.includes("not found")
-                ? "404 - Non trouvé"
-                : "Erreur"
-            }
-          >
-            <div
-              style={{
-                color: "#dc3545",
-                backgroundColor: "#f8d7da",
-                padding: "8px",
-                borderRadius: "4px",
-                marginBottom: "8px",
-              }}
-            >
-              {error.message || error}
-            </div>
-            <div style={{ display: "flex", gap: "4px", flexWrap: "wrap" }}>
-              <button
-                onClick={() => action.rerun()}
-                style={{
-                  padding: "2px 7px",
-                  backgroundColor: "#17a2b8",
-                  color: "white",
-                  border: "none",
-                  borderRadius: "4px",
-                  fontSize: "0.8em",
-                }}
-              >
-                🔄
-              </button>
-            </div>
-          </CardWrapper>
-        ),
-
-        completed: (data) => {
-          // Initialiser les champs d'édition quand les données arrivent
-          if (data && !isEditing && (!editName || !editAge)) {
-            setEditName(data.name);
-            setEditAge(data.age.toString());
-          }
-
-          return (
-            <CardWrapper statusColor="#28a745" statusText="Chargé">
-              {!isEditing && (
-                <div
-                  style={{
-                    fontFamily: "monospace",
-                    fontSize: "0.8em",
-                    color: "#495057",
-                    marginBottom: "6px",
-                  }}
-                >
-                  #{data.id} · {data.name} · {data.age} ans
-                </div>
-              )}
-
-              {isEditing && (
-                <div
-                  style={{
-                    backgroundColor: "white",
-                    padding: "6px 8px",
-                    borderRadius: "4px",
-                    marginBottom: "6px",
-                    display: "flex",
-                    gap: "6px",
-                    alignItems: "center",
-                    flexWrap: "wrap",
-                  }}
-                >
-                  <input
-                    type="text"
-                    placeholder="Nom"
-                    value={editName}
-                    onChange={(e) => setEditName(e.target.value)}
-                    style={{
-                      width: "90px",
-                      padding: "3px 6px",
-                      border: "1px solid #ced4da",
-                      borderRadius: "4px",
-                      fontSize: "0.85em",
-                    }}
-                  />
-                  <input
-                    type="number"
-                    placeholder="Âge"
-                    value={editAge}
-                    onChange={(e) => setEditAge(e.target.value)}
-                    style={{
-                      width: "60px",
-                      padding: "3px 6px",
-                      border: "1px solid #ced4da",
-                      borderRadius: "4px",
-                      fontSize: "0.85em",
-                    }}
-                  />
-                  <div
-                    style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}
-                  >
-                    <button
-                      onClick={() => renameUser(data)}
-                      style={{
-                        padding: "4px 8px",
-                        backgroundColor: "#ffc107",
-                        color: "white",
-                        border: "none",
-                        borderRadius: "4px",
-                        fontSize: "0.8em",
-                      }}
-                    >
-                      Renommer
-                    </button>
-                    <button
-                      onClick={() => updateAge(data)}
-                      style={{
-                        padding: "4px 8px",
-                        backgroundColor: "#17a2b8",
-                        color: "white",
-                        border: "none",
-                        borderRadius: "4px",
-                        fontSize: "0.8em",
-                      }}
-                    >
-                      Changer âge
-                    </button>
-                    <button
-                      onClick={() => updateNameAndAge(data)}
-                      style={{
-                        padding: "4px 8px",
-                        backgroundColor: "#6f42c1",
-                        color: "white",
-                        border: "none",
-                        borderRadius: "4px",
-                        fontSize: "0.8em",
-                      }}
-                    >
-                      Tout modifier
-                    </button>
-                    <button
-                      onClick={() => setIsEditing(false)}
-                      style={{
-                        padding: "4px 8px",
-                        backgroundColor: "#6c757d",
-                        color: "white",
-                        border: "none",
-                        borderRadius: "4px",
-                        fontSize: "0.8em",
-                      }}
-                    >
-                      Annuler
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              <div
-                style={{
-                  display: "flex",
-                  gap: "4px",
-                  flexWrap: "wrap",
-                  marginTop: "4px",
-                }}
-              >
-                <button
-                  onClick={() => action.rerun()}
-                  style={{
-                    padding: "2px 7px",
-                    backgroundColor: "#17a2b8",
-                    color: "white",
-                    border: "none",
-                    borderRadius: "4px",
-                    fontSize: "0.8em",
-                  }}
-                >
-                  🔄
-                </button>
-                <button
-                  onClick={() => setIsEditing(!isEditing)}
-                  style={{
-                    padding: "2px 7px",
-                    backgroundColor: "#007bff",
-                    color: "white",
-                    border: "none",
-                    borderRadius: "4px",
-                    fontSize: "0.8em",
-                  }}
-                >
-                  ✏️
-                </button>
-                <button
-                  onClick={() => deleteUser(data)}
-                  style={{
-                    padding: "2px 7px",
-                    backgroundColor: "#dc3545",
-                    color: "white",
-                    border: "none",
-                    borderRadius: "4px",
-                    fontSize: "0.8em",
-                  }}
-                >
-                  🗑️
-                </button>
-              </div>
-            </CardWrapper>
-          );
-        },
-
-        idle: () => (
-          <CardWrapper statusColor="#6c757d" statusText="Non chargé">
-            <div style={{ display: "flex", gap: "4px" }}>
-              <button
-                onClick={() => action.rerun()}
-                style={{
-                  padding: "2px 7px",
-                  backgroundColor: "#17a2b8",
-                  color: "white",
-                  border: "none",
-                  borderRadius: "4px",
-                  fontSize: "0.8em",
-                }}
-              >
-                🔄
-              </button>
-            </div>
-          </CardWrapper>
-        ),
-      }}
-    </ActionRenderer>
-  );
-};
-
-const UsersListStatic = () => {
-  const [users, setUsers] = useState([]);
-  const [status, setStatus] = useState("idle");
-
-  const loadAllUsers = async () => {
-    try {
-      setStatus("loading");
-      const result = await allUsersAction();
-      setUsers(result || []);
-      setStatus("success");
-    } catch (err) {
-      console.error("Erreur lors du chargement des utilisateurs:", err);
-      setUsers([]);
-      setStatus("error");
-    }
-  };
-
-  useEffect(() => {
-    loadAllUsers();
-  }, []);
-
-  return (
-    <div
-      style={{
-        border: "1px solid #dee2e6",
-        borderRadius: "8px",
-        padding: "10px 14px",
-        backgroundColor: "#f8f9fa",
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: "8px",
-        }}
-      >
-        <h3 style={{ margin: 0, fontSize: "0.9em" }}>
-          📋 Liste statique{" "}
-          <span
-            style={{
-              fontWeight: "normal",
-              color: "#dc3545",
-              fontSize: "0.85em",
-            }}
-          >
-            (useState — non réactive, devient désynchronisée)
-          </span>
-        </h3>
-        <button
-          onClick={loadAllUsers}
-          disabled={status === "loading"}
-          style={{
-            padding: "3px 10px",
-            backgroundColor: "#007bff",
-            color: "white",
-            border: "none",
-            borderRadius: "4px",
-            fontSize: "0.8em",
-            cursor: status === "loading" ? "not-allowed" : "pointer",
-            opacity: status === "loading" ? 0.6 : 1,
-          }}
-        >
-          🔄
-        </button>
-      </div>
-      {status === "loading" && (
-        <div style={{ fontSize: "0.85em", color: "#6c757d" }}>Chargement…</div>
-      )}
-      {status === "error" && (
-        <div style={{ color: "#dc3545", fontSize: "0.85em" }}>
-          Erreur lors du chargement
-        </div>
-      )}
-      {users.length > 0 && (
-        <div style={{ fontFamily: "monospace", fontSize: "0.8em" }}>
-          {users.map((user) => (
-            <div key={user.id}>
-              #{user.id} · {user.name} · {user.age} ans
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-};
-
-const UsersListReactive = () => {
-  const users = USER.useArray();
-
-  return (
-    <div
-      style={{
-        border: "1px solid #dee2e6",
-        borderRadius: "8px",
-        padding: "10px 14px",
-        backgroundColor: "#f8f9fa",
-      }}
-    >
-      <h3 style={{ margin: "0 0 8px", fontSize: "0.9em" }}>
-        📋 Liste réactive{" "}
-        <span
-          style={{ fontWeight: "normal", color: "#28a745", fontSize: "0.85em" }}
-        >
-          (useArray — se met à jour automatiquement via signaux)
-        </span>
-      </h3>
-      {users.length === 0 ? (
-        <div style={{ fontSize: "0.85em", color: "#6c757d" }}>
-          Aucun utilisateur dans le store
-        </div>
-      ) : (
-        <div style={{ fontFamily: "monospace", fontSize: "0.8em" }}>
-          {users.map((user) => (
-            <div key={user.id}>
-              #{user.id} · {user.name} · {user.age} ans
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-};
-
 const App = () => {
   const [newUserName, setNewUserName] = useState("TestUser");
   const [newUserAge, setNewUserAge] = useState("28");
@@ -946,6 +432,519 @@ const App = () => {
         </button>
       </div>
     </div>
+  );
+};
+
+const UsersListStatic = () => {
+  const [users, setUsers] = useState([]);
+  const [status, setStatus] = useState("idle");
+
+  const loadAllUsers = async () => {
+    try {
+      setStatus("loading");
+      const result = await allUsersAction();
+      setUsers(result || []);
+      setStatus("success");
+    } catch (err) {
+      console.error("Erreur lors du chargement des utilisateurs:", err);
+      setUsers([]);
+      setStatus("error");
+    }
+  };
+
+  useEffect(() => {
+    loadAllUsers();
+  }, []);
+
+  return (
+    <div
+      style={{
+        border: "1px solid #dee2e6",
+        borderRadius: "8px",
+        padding: "10px 14px",
+        backgroundColor: "#f8f9fa",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: "8px",
+        }}
+      >
+        <h3 style={{ margin: 0, fontSize: "0.9em" }}>
+          📋 Liste statique{" "}
+          <span
+            style={{
+              fontWeight: "normal",
+              color: "#dc3545",
+              fontSize: "0.85em",
+            }}
+          >
+            (useState — non réactive, devient désynchronisée)
+          </span>
+        </h3>
+        <button
+          onClick={loadAllUsers}
+          disabled={status === "loading"}
+          style={{
+            padding: "3px 10px",
+            backgroundColor: "#007bff",
+            color: "white",
+            border: "none",
+            borderRadius: "4px",
+            fontSize: "0.8em",
+            cursor: status === "loading" ? "not-allowed" : "pointer",
+            opacity: status === "loading" ? 0.6 : 1,
+          }}
+        >
+          🔄
+        </button>
+      </div>
+      {status === "loading" && (
+        <div style={{ fontSize: "0.85em", color: "#6c757d" }}>Chargement…</div>
+      )}
+      {status === "error" && (
+        <div style={{ color: "#dc3545", fontSize: "0.85em" }}>
+          Erreur lors du chargement
+        </div>
+      )}
+      {users.length > 0 && (
+        <div style={{ fontFamily: "monospace", fontSize: "0.8em" }}>
+          {users.map((user) => (
+            <div key={user.id}>
+              #{user.id} · {user.name} · {user.age} ans
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+const UsersListReactive = () => {
+  const users = USER.useArray();
+
+  return (
+    <div
+      style={{
+        border: "1px solid #dee2e6",
+        borderRadius: "8px",
+        padding: "10px 14px",
+        backgroundColor: "#f8f9fa",
+      }}
+    >
+      <h3 style={{ margin: "0 0 8px", fontSize: "0.9em" }}>
+        📋 Liste réactive{" "}
+        <span
+          style={{ fontWeight: "normal", color: "#28a745", fontSize: "0.85em" }}
+        >
+          (useArray — se met à jour automatiquement via signaux)
+        </span>
+      </h3>
+      {users.length === 0 ? (
+        <div style={{ fontSize: "0.85em", color: "#6c757d" }}>
+          Aucun utilisateur dans le store
+        </div>
+      ) : (
+        <div style={{ fontFamily: "monospace", fontSize: "0.8em" }}>
+          {users.map((user) => (
+            <div key={user.id}>
+              #{user.id} · {user.name} · {user.age} ans
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+const UserCard = ({ name, action }) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editAge, setEditAge] = useState("");
+  const [loadCount, setLoadCount] = useState(0);
+
+  // Get common data from action status
+  const { data } = useActionStatus(action);
+  const displayName = data ? `${data.name} (${data.age} ans)` : name;
+
+  // Charger automatiquement au démarrage pour Alice, Bob et Charlie
+  useEffect(() => {
+    if (
+      name === "Alice" ||
+      name === "Bob" ||
+      name === "Charlie" ||
+      name === "TestUser"
+    ) {
+      console.log(`🚀 Auto-run ${name} on mount`);
+      action.run();
+    }
+  }, [name, action]);
+
+  // Mettre à jour le compteur périodiquement pour refléter les changements
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setLoadCount(getLoadCount(name));
+    }, 100);
+    return () => clearInterval(interval);
+  }, [name]);
+
+  const deleteUser = async (data) => {
+    if (!data) return;
+    try {
+      await USER.DELETE({ name: data.name });
+    } catch (err) {
+      console.error("Erreur lors de la suppression:", err);
+    }
+  };
+
+  const renameUser = async (data) => {
+    if (!data || !editName.trim()) return;
+    try {
+      await USER.PUT({ name: data.name, newName: editName.trim() });
+      setIsEditing(false);
+    } catch (err) {
+      console.error("Erreur lors du renommage:", err);
+    }
+  };
+
+  const updateAge = async (data) => {
+    if (!data || !editAge.trim()) return;
+    try {
+      await USER.PATCH({ name: data.name, age: parseInt(editAge) });
+      setIsEditing(false);
+    } catch (err) {
+      console.error("Erreur lors de la mise à jour de l'âge:", err);
+    }
+  };
+
+  const updateNameAndAge = async (data) => {
+    if (!data || !editName.trim() || !editAge.trim()) return;
+    try {
+      await USER.PUT({
+        name: data.name,
+        newName: editName.trim(),
+        age: parseInt(editAge),
+      });
+      setIsEditing(false);
+    } catch (err) {
+      console.error("Erreur lors de la mise à jour complète:", err);
+    }
+  };
+
+  // Common UI wrapper component
+  const CardWrapper = ({ children, statusColor, statusText }) => (
+    <div
+      style={{
+        border: "1px solid #dee2e6",
+        borderRadius: "6px",
+        padding: "6px 10px",
+        margin: "4px 0",
+        backgroundColor: "#f8f9fa",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: "6px",
+        }}
+      >
+        <span
+          style={{ fontWeight: "bold", color: "#007bff", fontSize: "0.9em" }}
+        >
+          {displayName}
+        </span>
+        <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+          <span
+            style={{
+              padding: "1px 5px",
+              borderRadius: "3px",
+              fontSize: "0.65em",
+              fontWeight: "bold",
+              backgroundColor: "#6c757d",
+              color: "white",
+            }}
+          >
+            {loadCount}x
+          </span>
+          <span
+            style={{
+              padding: "1px 6px",
+              borderRadius: "3px",
+              fontSize: "0.7em",
+              fontWeight: "bold",
+              backgroundColor: statusColor,
+              color: "white",
+            }}
+          >
+            {statusText}
+          </span>
+        </div>
+      </div>
+      {children}
+    </div>
+  );
+
+  return (
+    <ActionRenderer action={action}>
+      {{
+        loading: () => (
+          <CardWrapper statusColor="#ffc107" statusText="Chargement...">
+            <div style={{ display: "flex", gap: "4px", flexWrap: "wrap" }}>
+              <button
+                onClick={() => action.rerun()}
+                disabled={true}
+                style={{
+                  padding: "2px 7px",
+                  backgroundColor: "#17a2b8",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "4px",
+                  cursor: "not-allowed",
+                  opacity: 0.6,
+                  fontSize: "0.8em",
+                }}
+              >
+                🔄
+              </button>
+            </div>
+          </CardWrapper>
+        ),
+        error: (error) => (
+          <CardWrapper
+            statusColor="#dc3545"
+            statusText={
+              error.message && error.message.includes("not found")
+                ? "404 - Non trouvé"
+                : "Erreur"
+            }
+          >
+            <div
+              style={{
+                color: "#dc3545",
+                backgroundColor: "#f8d7da",
+                padding: "8px",
+                borderRadius: "4px",
+                marginBottom: "8px",
+              }}
+            >
+              {error.message || error}
+            </div>
+            <div style={{ display: "flex", gap: "4px", flexWrap: "wrap" }}>
+              <button
+                onClick={() => action.rerun()}
+                style={{
+                  padding: "2px 7px",
+                  backgroundColor: "#17a2b8",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "4px",
+                  fontSize: "0.8em",
+                }}
+              >
+                🔄
+              </button>
+            </div>
+          </CardWrapper>
+        ),
+        completed: (data) => {
+          if (!data) {
+            return null;
+          }
+
+          // Initialiser les champs d'édition quand les données arrivent
+          if (data && !isEditing && (!editName || !editAge)) {
+            setEditName(data.name);
+            setEditAge(data.age.toString());
+          }
+
+          return (
+            <CardWrapper statusColor="#28a745" statusText="Chargé">
+              {!isEditing && (
+                <div
+                  style={{
+                    fontFamily: "monospace",
+                    fontSize: "0.8em",
+                    color: "#495057",
+                    marginBottom: "6px",
+                  }}
+                >
+                  #{data.id} · {data.name} · {data.age} ans
+                </div>
+              )}
+
+              {isEditing && (
+                <div
+                  style={{
+                    backgroundColor: "white",
+                    padding: "6px 8px",
+                    borderRadius: "4px",
+                    marginBottom: "6px",
+                    display: "flex",
+                    gap: "6px",
+                    alignItems: "center",
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <input
+                    type="text"
+                    placeholder="Nom"
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    style={{
+                      width: "90px",
+                      padding: "3px 6px",
+                      border: "1px solid #ced4da",
+                      borderRadius: "4px",
+                      fontSize: "0.85em",
+                    }}
+                  />
+                  <input
+                    type="number"
+                    placeholder="Âge"
+                    value={editAge}
+                    onChange={(e) => setEditAge(e.target.value)}
+                    style={{
+                      width: "60px",
+                      padding: "3px 6px",
+                      border: "1px solid #ced4da",
+                      borderRadius: "4px",
+                      fontSize: "0.85em",
+                    }}
+                  />
+                  <div
+                    style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}
+                  >
+                    <button
+                      onClick={() => renameUser(data)}
+                      style={{
+                        padding: "4px 8px",
+                        backgroundColor: "#ffc107",
+                        color: "white",
+                        border: "none",
+                        borderRadius: "4px",
+                        fontSize: "0.8em",
+                      }}
+                    >
+                      Renommer
+                    </button>
+                    <button
+                      onClick={() => updateAge(data)}
+                      style={{
+                        padding: "4px 8px",
+                        backgroundColor: "#17a2b8",
+                        color: "white",
+                        border: "none",
+                        borderRadius: "4px",
+                        fontSize: "0.8em",
+                      }}
+                    >
+                      Changer âge
+                    </button>
+                    <button
+                      onClick={() => updateNameAndAge(data)}
+                      style={{
+                        padding: "4px 8px",
+                        backgroundColor: "#6f42c1",
+                        color: "white",
+                        border: "none",
+                        borderRadius: "4px",
+                        fontSize: "0.8em",
+                      }}
+                    >
+                      Tout modifier
+                    </button>
+                    <button
+                      onClick={() => setIsEditing(false)}
+                      style={{
+                        padding: "4px 8px",
+                        backgroundColor: "#6c757d",
+                        color: "white",
+                        border: "none",
+                        borderRadius: "4px",
+                        fontSize: "0.8em",
+                      }}
+                    >
+                      Annuler
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <div
+                style={{
+                  display: "flex",
+                  gap: "4px",
+                  flexWrap: "wrap",
+                  marginTop: "4px",
+                }}
+              >
+                <button
+                  onClick={() => action.rerun()}
+                  style={{
+                    padding: "2px 7px",
+                    backgroundColor: "#17a2b8",
+                    color: "white",
+                    border: "none",
+                    borderRadius: "4px",
+                    fontSize: "0.8em",
+                  }}
+                >
+                  🔄
+                </button>
+                <button
+                  onClick={() => setIsEditing(!isEditing)}
+                  style={{
+                    padding: "2px 7px",
+                    backgroundColor: "#007bff",
+                    color: "white",
+                    border: "none",
+                    borderRadius: "4px",
+                    fontSize: "0.8em",
+                  }}
+                >
+                  ✏️
+                </button>
+                <button
+                  onClick={() => deleteUser(data)}
+                  style={{
+                    padding: "2px 7px",
+                    backgroundColor: "#dc3545",
+                    color: "white",
+                    border: "none",
+                    borderRadius: "4px",
+                    fontSize: "0.8em",
+                  }}
+                >
+                  🗑️
+                </button>
+              </div>
+            </CardWrapper>
+          );
+        },
+        idle: () => (
+          <CardWrapper statusColor="#6c757d" statusText="Non chargé">
+            <div style={{ display: "flex", gap: "4px" }}>
+              <button
+                onClick={() => action.rerun()}
+                style={{
+                  padding: "2px 7px",
+                  backgroundColor: "#17a2b8",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "4px",
+                  fontSize: "0.8em",
+                }}
+              >
+                🔄
+              </button>
+            </div>
+          </CardWrapper>
+        ),
+      }}
+    </ActionRenderer>
   );
 };
 
