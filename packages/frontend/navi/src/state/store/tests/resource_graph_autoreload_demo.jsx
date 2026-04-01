@@ -259,21 +259,22 @@ const UserCard = ({ name, action }) => {
       {{
         loading: () => (
           <CardWrapper statusColor="#ffc107" statusText="Chargement...">
-            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+            <div style={{ display: "flex", gap: "4px", flexWrap: "wrap" }}>
               <button
                 onClick={() => action.rerun()}
                 disabled={true}
                 style={{
-                  padding: "6px 12px",
+                  padding: "2px 7px",
                   backgroundColor: "#17a2b8",
                   color: "white",
                   border: "none",
                   borderRadius: "4px",
                   cursor: "not-allowed",
                   opacity: 0.6,
+                  fontSize: "0.8em",
                 }}
               >
-                🔄 Recharger
+                🔄
               </button>
             </div>
           </CardWrapper>
@@ -299,18 +300,19 @@ const UserCard = ({ name, action }) => {
             >
               {error.message || error}
             </div>
-            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+            <div style={{ display: "flex", gap: "4px", flexWrap: "wrap" }}>
               <button
                 onClick={() => action.rerun()}
                 style={{
-                  padding: "6px 12px",
+                  padding: "2px 7px",
                   backgroundColor: "#17a2b8",
                   color: "white",
                   border: "none",
                   borderRadius: "4px",
+                  fontSize: "0.8em",
                 }}
               >
-                🔄 Recharger
+                🔄
               </button>
             </div>
           </CardWrapper>
@@ -436,42 +438,52 @@ const UserCard = ({ name, action }) => {
                 </div>
               )}
 
-              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+              <div
+                style={{
+                  display: "flex",
+                  gap: "4px",
+                  flexWrap: "wrap",
+                  marginTop: "4px",
+                }}
+              >
                 <button
                   onClick={() => action.rerun()}
                   style={{
-                    padding: "6px 12px",
+                    padding: "2px 7px",
                     backgroundColor: "#17a2b8",
                     color: "white",
                     border: "none",
                     borderRadius: "4px",
+                    fontSize: "0.8em",
                   }}
                 >
-                  🔄 Recharger
+                  🔄
                 </button>
                 <button
                   onClick={() => setIsEditing(!isEditing)}
                   style={{
-                    padding: "6px 12px",
+                    padding: "2px 7px",
                     backgroundColor: "#007bff",
                     color: "white",
                     border: "none",
                     borderRadius: "4px",
+                    fontSize: "0.8em",
                   }}
                 >
-                  ✏️ Modifier
+                  ✏️
                 </button>
                 <button
                   onClick={() => deleteUser(data)}
                   style={{
-                    padding: "6px 12px",
+                    padding: "2px 7px",
                     backgroundColor: "#dc3545",
                     color: "white",
                     border: "none",
                     borderRadius: "4px",
+                    fontSize: "0.8em",
                   }}
                 >
-                  🗑️ Supprimer
+                  🗑️
                 </button>
               </div>
             </CardWrapper>
@@ -480,18 +492,19 @@ const UserCard = ({ name, action }) => {
 
         idle: () => (
           <CardWrapper statusColor="#6c757d" statusText="Non chargé">
-            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+            <div style={{ display: "flex", gap: "4px" }}>
               <button
                 onClick={() => action.rerun()}
                 style={{
-                  padding: "6px 12px",
+                  padding: "2px 7px",
                   backgroundColor: "#17a2b8",
                   color: "white",
                   border: "none",
                   borderRadius: "4px",
+                  fontSize: "0.8em",
                 }}
               >
-                � Charger
+                🔄
               </button>
             </div>
           </CardWrapper>
@@ -600,87 +613,6 @@ const UsersList = () => {
         </div>
       )}
     </div>
-  );
-};
-
-const ActionForm = ({
-  title,
-  children,
-  onSubmit,
-  buttonText,
-  buttonColor = "#28a745",
-}) => {
-  const [status, setStatus] = useState("idle");
-  const [message, setMessage] = useState("");
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setStatus("loading");
-    setMessage("");
-
-    try {
-      await onSubmit();
-      setStatus("success");
-      setMessage("✅ Action réussie !");
-      setTimeout(() => {
-        setStatus("idle");
-        setMessage("");
-      }, 3000);
-    } catch (error) {
-      setStatus("error");
-      setMessage(`❌ Erreur: ${error.message}`);
-      setTimeout(() => {
-        setStatus("idle");
-        setMessage("");
-      }, 5000);
-    }
-  };
-
-  return (
-    <form
-      onSubmit={handleSubmit}
-      style={{
-        border: "1px solid #dee2e6",
-        borderRadius: "8px",
-        padding: "16px",
-        margin: "8px 0",
-        backgroundColor: "white",
-      }}
-    >
-      <h4 style={{ marginTop: 0, color: "#495057" }}>{title}</h4>
-      {children}
-
-      {message && (
-        <div
-          style={{
-            margin: "8px 0",
-            padding: "8px",
-            borderRadius: "4px",
-            backgroundColor: status === "success" ? "#d4edda" : "#f8d7da",
-            color: status === "success" ? "#155724" : "#721c24",
-          }}
-        >
-          {message}
-        </div>
-      )}
-
-      <button
-        type="submit"
-        disabled={status === "loading"}
-        style={{
-          padding: "8px 16px",
-          backgroundColor: buttonColor,
-          color: "white",
-          border: "none",
-          borderRadius: "4px",
-          cursor: status === "loading" ? "not-allowed" : "pointer",
-          opacity: status === "loading" ? 0.6 : 1,
-          marginTop: "8px",
-        }}
-      >
-        {status === "loading" ? "⏳ En cours..." : buttonText}
-      </button>
-    </form>
   );
 };
 
@@ -865,23 +797,19 @@ const App = () => {
       <div
         style={{
           backgroundColor: "#f8f9fa",
-          padding: "16px",
+          padding: "10px 14px",
           borderRadius: "8px",
-          margin: "16px 0",
+          margin: "12px 0",
         }}
       >
-        <h2>👥 Actions GET individuelles avec CRUD</h2>
-        <p style={{ color: "#6c757d", fontSize: "0.9em" }}>
-          Ces actions GET devraient se recharger automatiquement quand les
-          ressources correspondantes sont modifiées. Chaque carte permet aussi
-          de modifier ou supprimer l&apos;utilisateur.
-        </p>
-
+        <h3 style={{ margin: "0 0 8px", fontSize: "0.95em" }}>
+          👥 Actions GET individuelles avec CRUD
+        </h3>
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
-            gap: "16px",
+            gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))",
+            gap: "8px",
           }}
         >
           <UserCard name="Alice" action={aliceAction} />
@@ -895,72 +823,76 @@ const App = () => {
       <div
         style={{
           backgroundColor: "#f8f9fa",
-          padding: "16px",
+          padding: "10px 14px",
           borderRadius: "8px",
-          margin: "16px 0",
+          margin: "12px 0",
+          display: "flex",
+          alignItems: "center",
+          gap: "10px",
+          flexWrap: "wrap",
         }}
       >
-        <h2>➕ Créer un nouvel utilisateur</h2>
-
-        <ActionForm
-          title=""
-          onSubmit={createUser}
-          buttonText="Créer"
-          buttonColor="#28a745"
+        <strong style={{ fontSize: "0.85em", color: "#495057" }}>
+          ➕ Créer :
+        </strong>
+        <label
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "5px",
+            fontSize: "0.85em",
+          }}
         >
-          <div
+          Nom
+          <input
+            type="text"
+            value={newUserName}
+            onChange={(e) => setNewUserName(e.target.value)}
             style={{
-              display: "flex",
-              gap: "12px",
-              alignItems: "center",
-              flexWrap: "wrap",
-              marginBottom: "4px",
+              padding: "3px 7px",
+              border: "1px solid #ced4da",
+              borderRadius: "4px",
+              width: "110px",
+              fontSize: "0.9em",
             }}
-          >
-            <label
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "6px",
-                fontSize: "0.9em",
-              }}
-            >
-              Nom
-              <input
-                type="text"
-                value={newUserName}
-                onChange={(e) => setNewUserName(e.target.value)}
-                style={{
-                  padding: "4px 8px",
-                  border: "1px solid #ced4da",
-                  borderRadius: "4px",
-                  width: "120px",
-                }}
-              />
-            </label>
-            <label
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "6px",
-                fontSize: "0.9em",
-              }}
-            >
-              Âge
-              <input
-                type="number"
-                value={newUserAge}
-                onChange={(e) => setNewUserAge(e.target.value)}
-                style={{
-                  padding: "4px 8px",
-                  border: "1px solid #ced4da",
-                  borderRadius: "4px",
-                  width: "70px",
-                }}
-              />
-            </label>
-          </div>
-        </ActionForm>
+          />
+        </label>
+        <label
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "5px",
+            fontSize: "0.85em",
+          }}
+        >
+          Âge
+          <input
+            type="number"
+            value={newUserAge}
+            onChange={(e) => setNewUserAge(e.target.value)}
+            style={{
+              padding: "3px 7px",
+              border: "1px solid #ced4da",
+              borderRadius: "4px",
+              width: "60px",
+              fontSize: "0.9em",
+            }}
+          />
+        </label>
+        <button
+          onClick={createUser}
+          style={{
+            padding: "3px 12px",
+            backgroundColor: "#28a745",
+            color: "white",
+            border: "none",
+            borderRadius: "4px",
+            cursor: "pointer",
+            fontSize: "0.85em",
+          }}
+        >
+          Créer
+        </button>
       </div>
     </div>
   );
