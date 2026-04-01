@@ -928,30 +928,33 @@ ${originalActionName} source location: ${locationInfo}`,
           return null;
         }
 
-        return store.observeIdChanges((currentIdSet, previousIdSet) => {
+        return store.observeProperties((mutations) => {
           const idArray = actionCompleted.valueSignal.peek();
-          let modified = false;
+          if (idArray.length === 0) {
+            return;
+          }
+          const idSet = new Set(idArray);
+          const idMutationMap = new Map();
+          for (const mutation of mutations) {
+            const idKeyMutation = mutation[idKey];
+            if (!idKeyMutation) {
+              continue;
+            }
+            const { oldValue, newValue } = idKeyMutation;
+            if (!idSet.has(oldValue)) {
+              continue;
+            }
+            idMutationMap.set(oldValue, newValue);
+          }
+          if (idMutationMap.size === 0) {
+            return;
+          }
           const idUpdatedArray = [];
           for (const id of idArray) {
-            if (currentIdSet.has(id)) {
-              // this id still exists (no change)
-              idUpdatedArray.push(id);
-              continue;
-            }
-            if (!previousIdSet.has(id)) {
-              // this id did not exists (strange but ok)
-              idUpdatedArray.push(id);
-              continue;
-            }
-            // this id does not exists anymore but existed before, it was renamed
-            // how can i find the new id?
-            modified = true;
-            idUpdatedArray.push(id);
+            const newId = idMutationMap.get(id) || id;
+            idUpdatedArray.push(newId);
           }
-
-          if (modified) {
-            actionCompleted.valueSignal.value = idUpdatedArray;
-          }
+          actionCompleted.valueSignal.value = idUpdatedArray;
         });
       },
       ...options,
