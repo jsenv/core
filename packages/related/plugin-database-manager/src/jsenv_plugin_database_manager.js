@@ -21,7 +21,6 @@ import {
 import { alterRoleQuery, selectRoleByName } from "./sql/role_sql.js";
 import {
   addColumn,
-  alterTableQuery,
   createTable,
   deleteColumn,
   deleteRow,
@@ -29,6 +28,7 @@ import {
   selectManyRows,
   selectTable,
   selectTables,
+  updateColumn,
   updateRow,
 } from "./sql/table_sql.js";
 
@@ -183,12 +183,6 @@ export const jsenvPluginDatabaseManager = ({
             },
           };
         },
-        "PUT /:tablename/:colname": async (request) => {
-          const { tablename, colname } = request.params;
-          const value = await request.json();
-          await alterTableQuery(sql, tablename, colname, value);
-          return { [colname]: value };
-        },
         "GET /:tablename/columns": async (request) => {
           const { tablename } = request.params;
           const columns = await getTableColumns(sql, tablename);
@@ -208,6 +202,29 @@ export const jsenvPluginDatabaseManager = ({
           const { tablename, columnName } = request.params;
           await deleteColumn(sql, tablename, columnName);
           return null;
+        },
+        "PATCH /:tablename/columns/:columnName": async (request) => {
+          const { tablename, columnName } = request.params;
+          const columnProperties = await request.json();
+          const column = await updateColumn(
+            sql,
+            tablename,
+            columnName,
+            columnProperties,
+          );
+          return {
+            data: column,
+          };
+        },
+        "PUT /:tablename/columns/:columnName/column_name": async (request) => {
+          const { tablename, columnName } = request.params;
+          const newColumnName = await request.json();
+          const column = await updateColumn(sql, tablename, columnName, {
+            columnName: newColumnName,
+          });
+          return {
+            data: column,
+          };
         },
         "GET /:tablename/rows": async (request) => {
           const { tablename } = request.params;

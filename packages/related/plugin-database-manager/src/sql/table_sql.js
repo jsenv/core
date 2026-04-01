@@ -111,19 +111,6 @@ export const selectTables = async (sql, { publicFilter, rolname }) => {
   return data;
 };
 
-export const alterTableQuery = async (sql, tablename, columnName, value) => {
-  if (columnName === "tablename") {
-    await sql`
-      ALTER TABLE ${sql(tablename)}
-      RENAME TO ${sql(value)}
-    `;
-    return;
-  }
-
-  // TODO: Handle other column alterations
-  throw new Error(`Altering column "${columnName}" is not yet implemented`);
-};
-
 export const selectManyRows = async (sql, tablename) => {
   const columnsMeta = await getTableColumns(sql, tablename);
   const orderBy = resolveOrderBy(columnsMeta);
@@ -342,6 +329,63 @@ const getTableColumn = async (sql, tablename, columnName) => {
       AND column_name = ${columnName}
   `;
   return column;
+};
+export const updateColumn = async (
+  sql,
+  tablename,
+  columnName,
+  columnProperties,
+) => {
+  const {
+    columnName: newColumnName,
+    dataType,
+    nullable,
+    defaultValue,
+  } = columnProperties;
+  const alterClauses = [];
+  if (dataType !== undefined) {
+    alterClauses.push(sql`
+      ALTER COLUMN ${sql(columnName)} TYPE ${sql.unsafe(dataType)}
+    `);
+  }
+  if (nullable === true) {
+    alterClauses.push(sql`
+      ALTER COLUMN ${sql(columnName)}
+      DROP NOT NULL
+    `);
+  } else if (nullable === false) {
+    alterClauses.push(sql`
+      ALTER COLUMN ${sql(columnName)}
+      SET NOT NULL
+    `);
+  }
+  if (defaultValue === null) {
+    alterClauses.push(sql`
+      ALTER COLUMN ${sql(columnName)}
+      DROP DEFAULT
+    `);
+  } else if (defaultValue !== undefined) {
+    alterClauses.push(sql`
+      ALTER COLUMN ${sql(columnName)}
+      SET DEFAULT ${defaultValue}
+    `);
+  }
+  if (alterClauses.length > 0) {
+    await sql`
+      ALTER TABLE ${sql(tablename)} ${alterClauses.flatMap((clause, i) =>
+        i ? [sql`,`, clause] : clause,
+      )}
+    `;
+  }
+  const resolvedColumnName = newColumnName ?? columnName;
+  if (newColumnName !== undefined && newColumnName !== columnName) {
+    // RENAME COLUMN cannot be combined with other ALTER COLUMN clauses
+    await sql`
+      ALTER TABLE ${sql(tablename)}
+      RENAME COLUMN ${sql(columnName)} TO ${sql(newColumnName)}
+    `;
+  }
+  return getTableColumn(sql, tablename, resolvedColumnName);
 };
 export const deleteColumn = async (sql, tablename, columnName) => {
   await sql`
