@@ -156,6 +156,31 @@ export const TABLE_COLUMN = TABLE.many("columns", COLUMN, {
     const { data: column } = await response.json();
     return [{ tablename }, column];
   },
+  PUT: async (
+    { tablename, columnName, propertyName, propertyValue },
+    { signal },
+  ) => {
+    const response = await fetch(
+      `${window.DB_MANAGER_CONFIG.apiUrl}/tables/${tablename}/columns/${columnName}/${propertyName}`,
+      {
+        signal,
+        method: "PUT",
+        headers: {
+          "accept": "application/json",
+          "content-type": "application/json",
+        },
+        body: JSON.stringify(propertyValue),
+      },
+    );
+    if (!response.ok) {
+      throw await errorFromResponse(
+        response,
+        `Failed to PUT ${tablename}.${columnName}.${propertyName} = ${propertyValue}`,
+      );
+    }
+    const { data: column } = await response.json();
+    return [{ column_name: columnName }, column];
+  },
   DELETE: async ({ tablename, columnName }, { signal }) => {
     const response = await fetch(
       `${window.DB_MANAGER_CONFIG.apiUrl}/tables/${tablename}/columns/${columnName}`,

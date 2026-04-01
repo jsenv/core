@@ -96,8 +96,13 @@ export const TableData = ({ table, rows }) => {
                 {orderedColumns.map((column) => (
                   <TableCell
                     key={column.column_name}
-                    action={(value) => {
-                      console.log("column action", value);
+                    action={async (value) => {
+                      await TABLE_COLUMN.PUT({
+                        tablename,
+                        columnName: column.column_name,
+                        propertyName: "column_name",
+                        propertyValue: value,
+                      });
                     }}
                   >
                     {column.column_name}
