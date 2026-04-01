@@ -678,6 +678,10 @@ const App = () => {
     console.log("Étape 1: Bob renommé en TestUser avec PATCH");
   };
 
+  const deleteAliceAndBob = () => {
+    USER.DELETE_MANY({ names: ["Alice", "Bob"] });
+  };
+
   return (
     <div
       style={{
@@ -781,7 +785,7 @@ const App = () => {
             fontSize: "0.85em",
           }}
         >
-          🔄 Supprimer puis recréer Alice
+          🔄 Supprimer Alice puis la recréer
         </button>
         <button
           onClick={runRenameScenario}
@@ -795,7 +799,7 @@ const App = () => {
             fontSize: "0.85em",
           }}
         >
-          ✏️ PUT: Bob ↔ TestUser
+          ✏️ Renommer Bob → TestUser (PUT)
         </button>
         <button
           onClick={runPatchRenameScenario}
@@ -809,7 +813,21 @@ const App = () => {
             fontSize: "0.85em",
           }}
         >
-          📝 PATCH: Bob ↔ TestUser
+          📝 Renommer Bob → TestUser (PATCH)
+        </button>
+        <button
+          onClick={deleteAliceAndBob}
+          style={{
+            padding: "4px 10px",
+            backgroundColor: "#dc3545",
+            color: "white",
+            border: "none",
+            borderRadius: "4px",
+            cursor: "pointer",
+            fontSize: "0.85em",
+          }}
+        >
+          🗑️ Supprimer Alice &amp; Bob
         </button>
       </div>
 
