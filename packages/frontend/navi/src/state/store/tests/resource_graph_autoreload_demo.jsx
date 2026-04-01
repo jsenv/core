@@ -519,6 +519,10 @@ const UsersList = () => {
     }
   };
 
+  useEffect(() => {
+    loadAllUsers();
+  }, []);
+
   const deleteAliceAndBob = () => {
     USER.DELETE_MANY({ names: ["Alice", "Bob"] });
   };
