@@ -51,6 +51,7 @@
       ];
 
       const columnsConfig = [
+        { id: "id", header: "ID" },
         { id: "name", header: "Name" },
         { id: "email", header: "Email" },
       ];
@@ -62,14 +63,20 @@
           <Demo
             rows={rows}
             onDeleteRow={(rowId) => {
-              setRows((prev) => prev.filter((r) => r.id !== rowId));
+              setRows((prev) => {
+                const rowsWithoutThisOne = prev.filter((r) => r.id !== rowId);
+                return rowsWithoutThisOne;
+              });
             }}
           />
         );
       };
 
       const Demo = ({ rows, onDeleteRow }) => {
-        const [cellGrid, setCellGrid] = useCellGrid(rows, ["name", "email"]);
+        const [cellGrid, setCellGrid] = useCellGrid(
+          rows,
+          columnsConfig.map((c) => c.id),
+        );
         const { cells, columns } = useCellsAndColumns(
           cellGrid,
           setCellGrid,
@@ -105,7 +112,7 @@
 
               <Tbody>
                 {cells.map((rowCells, dataRowIndex) => {
-                  const row = cellGrid[dataRowIndex];
+                  const row = rows[dataRowIndex];
                   return (
                     <Tr id={row.id} key={row.id}>
                       <RowNumberTableCell />
