@@ -310,11 +310,64 @@ const createResource = (
   ) => {
     const childName = `${name}.${propertyName}`;
     addItemSetup((item) => {
-      const { childItemSignal } = setupToOneRelationship(
-        item,
-        propertyName,
-        childResource,
+      const childIdKeyForSetup = childResource.idKey;
+      const childItemIdSignal = signal();
+      const updateChildItemId = (value) => {
+        const currentChildItemId = childItemIdSignal.peek();
+        if (isProps(value)) {
+          const childItem = childResource.store.upsert(value);
+          const childItemId = childItem[childIdKeyForSetup];
+          if (currentChildItemId === childItemId) {
+            return false;
+          }
+          childItemIdSignal.value = childItemId;
+          return true;
+        }
+        if (primitiveCanBeId(value)) {
+          const childItemProps = { [childIdKeyForSetup]: value };
+          const childItem = childResource.store.upsert(childItemProps);
+          const childItemId = childItem[childIdKeyForSetup];
+          if (currentChildItemId === childItemId) {
+            return false;
+          }
+          childItemIdSignal.value = childItemId;
+          return true;
+        }
+        if (currentChildItemId === undefined) {
+          return false;
+        }
+        childItemIdSignal.value = undefined;
+        return true;
+      };
+      updateChildItemId(item[propertyName]);
+      const childItemSignal = computed(() =>
+        childResource.store.select(childItemIdSignal.value),
       );
+      const childItemFacadeSignal = computed(() => {
+        const childItem = childItemSignal.value;
+        if (childItem) {
+          const childItemCopy = Object.create(
+            Object.getPrototypeOf(childItem),
+            Object.getOwnPropertyDescriptors(childItem),
+          );
+          Object.defineProperty(childItemCopy, SYMBOL_OBJECT_SIGNAL, {
+            value: childItemSignal,
+            writable: false,
+            enumerable: false,
+            configurable: false,
+          });
+          return childItemCopy;
+        }
+        return {
+          [SYMBOL_OBJECT_SIGNAL]: childItemSignal,
+          valueOf: () => null,
+        };
+      });
+      Object.defineProperty(item, propertyName, {
+        get: () => childItemFacadeSignal.value,
+        set: updateChildItemId,
+        configurable: true,
+      });
       debug(
         `setup ${item}.${propertyName} is one "${childResource.name}" (current value: ${childItemSignal.peek()})`,
       );
@@ -410,7 +463,6 @@ ${originalActionName} source location: ${locationInfo}`,
       params,
     });
   };
-
   stateFacade.many = (
     propertyName,
     childResource,
@@ -431,8 +483,58 @@ ${originalActionName} source location: ${locationInfo}`,
     const childIdKey = childResource.idKey;
     const childName = `${name}.${propertyName}`;
     addItemSetup((item) => {
-      const { childItemIdArraySignal, childItemArraySignal } =
-        setupToManyRelationship(item, propertyName, childResource);
+      const childItemIdArraySignal = signal([]);
+      const updateChildItemIdArray = (valueArray) => {
+        const currentIdArray = childItemIdArraySignal.peek();
+        if (!Array.isArray(valueArray)) {
+          if (currentIdArray.length === 0) return;
+          childItemIdArraySignal.value = [];
+          return;
+        }
+        let i = 0;
+        const idArray = [];
+        let modified = false;
+        while (i < valueArray.length) {
+          const value = valueArray[i];
+          const currentIdAtIndex = currentIdArray[idArray.length];
+          i++;
+          if (isProps(value)) {
+            const childItem = childResource.store.upsert(value);
+            const childItemId = childItem[childIdKey];
+            if (currentIdAtIndex !== childItemId) modified = true;
+            idArray.push(childItemId);
+            continue;
+          }
+          if (primitiveCanBeId(value)) {
+            const childItemProps = { [childIdKey]: value };
+            const childItem = childResource.store.upsert(childItemProps);
+            const childItemId = childItem[childIdKey];
+            if (currentIdAtIndex !== childItemId) modified = true;
+            idArray.push(childItemId);
+            continue;
+          }
+        }
+        if (modified || currentIdArray.length !== idArray.length) {
+          childItemIdArraySignal.value = idArray;
+        }
+      };
+      updateChildItemIdArray(item[propertyName]);
+      const childItemArraySignal = computed(() => {
+        const idArray = childItemIdArraySignal.value;
+        const arr = childResource.store.selectAll(idArray);
+        Object.defineProperty(arr, SYMBOL_OBJECT_SIGNAL, {
+          value: childItemArraySignal,
+          writable: false,
+          enumerable: false,
+          configurable: false,
+        });
+        return arr;
+      });
+      Object.defineProperty(item, propertyName, {
+        get: () => childItemArraySignal.value,
+        set: updateChildItemIdArray,
+        configurable: true,
+      });
       childResource.store.observeProperties((mutations) => {
         const idArray = childItemIdArraySignal.peek();
         if (idArray.length === 0) {
@@ -686,7 +788,15 @@ ${originalActionName} source location: ${locationInfo}`,
 
   stateFacade.scopedOne = (
     propertyName,
-    { idKey: childIdKey = "id", GET, POST, PUT, PATCH, DELETE } = {},
+    {
+      idKey: childIdKey = "id",
+
+      GET,
+      POST,
+      PUT,
+      PATCH,
+      DELETE,
+    } = {},
   ) => {
     const childName = `${name}.${propertyName}`;
 
@@ -782,7 +892,6 @@ ${originalActionName} source location: ${locationInfo}`,
     });
     return childResource;
   };
-
   stateFacade.scopedMany = (
     propertyName,
     {
@@ -1130,137 +1239,6 @@ ${originalActionName} source location: ${locationInfo}`,
   };
 
   return createActionForRoot;
-};
-
-// Installs a reactive getter/setter on `item[propertyName]` that tracks one item
-// from `childResource.store`. The property value is a facade of the child item
-// (or a null-like object if the child is not found).
-// Used by both resourceInstance.one() and scopedOneInstance.one().
-const setupToOneRelationship = (item, propertyName, childResource) => {
-  const childIdKey = childResource.idKey;
-  const childItemIdSignal = signal();
-  const updateChildItemId = (value) => {
-    const currentChildItemId = childItemIdSignal.peek();
-    if (isProps(value)) {
-      const childItem = childResource.store.upsert(value);
-      const childItemId = childItem[childIdKey];
-      if (currentChildItemId === childItemId) {
-        return false;
-      }
-      childItemIdSignal.value = childItemId;
-      return true;
-    }
-    if (primitiveCanBeId(value)) {
-      const childItemProps = { [childIdKey]: value };
-      const childItem = childResource.store.upsert(childItemProps);
-      const childItemId = childItem[childIdKey];
-      if (currentChildItemId === childItemId) {
-        return false;
-      }
-      childItemIdSignal.value = childItemId;
-      return true;
-    }
-    if (currentChildItemId === undefined) {
-      return false;
-    }
-    childItemIdSignal.value = undefined;
-    return true;
-  };
-  updateChildItemId(item[propertyName]);
-  const childItemSignal = computed(() =>
-    childResource.store.select(childItemIdSignal.value),
-  );
-  const childItemFacadeSignal = computed(() => {
-    const childItem = childItemSignal.value;
-    if (childItem) {
-      const childItemCopy = Object.create(
-        Object.getPrototypeOf(childItem),
-        Object.getOwnPropertyDescriptors(childItem),
-      );
-      Object.defineProperty(childItemCopy, SYMBOL_OBJECT_SIGNAL, {
-        value: childItemSignal,
-        writable: false,
-        enumerable: false,
-        configurable: false,
-      });
-      return childItemCopy;
-    }
-    return {
-      [SYMBOL_OBJECT_SIGNAL]: childItemSignal,
-      valueOf: () => null,
-    };
-  });
-  Object.defineProperty(item, propertyName, {
-    get: () => childItemFacadeSignal.value,
-    set: updateChildItemId,
-    configurable: true,
-  });
-  return { updateChildItemId, childItemSignal };
-};
-
-// Installs a reactive getter/setter on `item[propertyName]` that tracks an array of items
-// from `childResource.store`. The property value is the live array (possibly empty).
-// Used by resourceInstance.many(), scopedOneInstance.many(), and scopedManyInstance.many().
-// resourceInstance.many() additionally layers observeProperties (for id renames) and DEBUG logs.
-const setupToManyRelationship = (item, propertyName, childResource) => {
-  const childIdKey = childResource.idKey;
-  const childItemIdArraySignal = signal([]);
-  const updateChildItemIdArray = (valueArray) => {
-    const currentIdArray = childItemIdArraySignal.peek();
-    if (!Array.isArray(valueArray)) {
-      if (currentIdArray.length === 0) return;
-      childItemIdArraySignal.value = [];
-      return;
-    }
-    let i = 0;
-    const idArray = [];
-    let modified = false;
-    while (i < valueArray.length) {
-      const value = valueArray[i];
-      const currentIdAtIndex = currentIdArray[idArray.length];
-      i++;
-      if (isProps(value)) {
-        const childItem = childResource.store.upsert(value);
-        const childItemId = childItem[childIdKey];
-        if (currentIdAtIndex !== childItemId) modified = true;
-        idArray.push(childItemId);
-        continue;
-      }
-      if (primitiveCanBeId(value)) {
-        const childItemProps = { [childIdKey]: value };
-        const childItem = childResource.store.upsert(childItemProps);
-        const childItemId = childItem[childIdKey];
-        if (currentIdAtIndex !== childItemId) modified = true;
-        idArray.push(childItemId);
-        continue;
-      }
-    }
-    if (modified || currentIdArray.length !== idArray.length) {
-      childItemIdArraySignal.value = idArray;
-    }
-  };
-  updateChildItemIdArray(item[propertyName]);
-  const childItemArraySignal = computed(() => {
-    const idArray = childItemIdArraySignal.value;
-    const arr = childResource.store.selectAll(idArray);
-    Object.defineProperty(arr, SYMBOL_OBJECT_SIGNAL, {
-      value: childItemArraySignal,
-      writable: false,
-      enumerable: false,
-      configurable: false,
-    });
-    return arr;
-  });
-  Object.defineProperty(item, propertyName, {
-    get: () => childItemArraySignal.value,
-    set: updateChildItemIdArray,
-    configurable: true,
-  });
-  return {
-    updateChildItemIdArray,
-    childItemIdArraySignal,
-    childItemArraySignal,
-  };
 };
 
 const isProps = (value) => {
