@@ -366,7 +366,6 @@ const createResource = (
       Object.defineProperty(item, propertyName, {
         get: () => childItemFacadeSignal.value,
         set: updateChildItemId,
-        configurable: true,
       });
       debug(
         `setup ${item}.${propertyName} is one "${childResource.name}" (current value: ${childItemSignal.peek()})`,
@@ -533,7 +532,6 @@ ${originalActionName} source location: ${locationInfo}`,
       Object.defineProperty(item, propertyName, {
         get: () => childItemArraySignal.value,
         set: updateChildItemIdArray,
-        configurable: true,
       });
       childResource.store.observeProperties((mutations) => {
         const idArray = childItemIdArraySignal.peek();
