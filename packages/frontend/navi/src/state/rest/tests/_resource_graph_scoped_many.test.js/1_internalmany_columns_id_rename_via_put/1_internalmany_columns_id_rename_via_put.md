@@ -1,4 +1,4 @@
-# [internalMany columns id rename via PUT](../../resource_graph_own_many.test.js)
+# [internalMany columns id rename via PUT](../../resource_graph_scoped_many.test.js)
 
 ```js
 const TABLE = resource("table", {

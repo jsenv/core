@@ -1,4 +1,4 @@
-# [resource_graph_own_many.test.js](../resource_graph_own_many.test.js)
+# [resource_graph_scoped_many.test.js](../resource_graph_scoped_many.test.js)
 
 
 - [internalMany columns GET_MANY, POST and PATCH](0_internalmany_columns_get_many__post_and_patch/0_internalmany_columns_get_many__post_and_patch.md)

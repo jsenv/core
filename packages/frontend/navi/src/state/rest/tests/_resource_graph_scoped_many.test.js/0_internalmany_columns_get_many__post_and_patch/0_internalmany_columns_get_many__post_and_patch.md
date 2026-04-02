@@ -1,4 +1,4 @@
-# [internalMany columns GET_MANY, POST and PATCH](../../resource_graph_own_many.test.js)
+# [internalMany columns GET_MANY, POST and PATCH](../../resource_graph_scoped_many.test.js)
 
 ```js
 const TABLE = resource("table", {

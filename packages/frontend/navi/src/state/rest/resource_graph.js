@@ -691,12 +691,12 @@ ${originalActionName} source location: ${locationInfo}`,
     const childName = `${name}.${propertyName}`;
 
     // setupCallbackSet: callbacks added by chained .one()/.many()
-    // Applied to each per-owner child item object when it is first created.
+    // Applied to each per-scope child item object when it is first created.
     const childItemSetupCallbackSet = new Set();
     const childAddItemSetup = (callback) =>
       childItemSetupCallbackSet.add(callback);
-    const ownerChildItemMap = new Map(); // ownerId → stable child item object
-    const ownerChildSignalMap = new Map(); // ownerId → signal<childItem | null>
+    const scopedItemMap = new Map(); // ownerId → stable child item object
+    const scopedSignalMap = new Map(); // ownerId → signal<childItem | null>
     addItemSetup((ownerItem) => {
       const ownerId = ownerItem[idKey];
       // Create a stable child item — mutated in place via applyProps.
@@ -706,9 +706,9 @@ ${originalActionName} source location: ${locationInfo}`,
       for (const childSetup of childItemSetupCallbackSet) {
         childSetup(childItem);
       }
-      ownerChildItemMap.set(ownerId, childItem);
+      scopedItemMap.set(ownerId, childItem);
       const childSignal = signal(null);
-      ownerChildSignalMap.set(ownerId, childSignal);
+      scopedSignalMap.set(ownerId, childSignal);
 
       const applyProps = (props) => {
         if (!props) {
@@ -731,7 +731,7 @@ ${originalActionName} source location: ${locationInfo}`,
         set: applyProps,
       });
     });
-    const createRestActionForOwnOne = (verb, callback) => {
+    const createRestActionForScopedOne = (verb, callback) => {
       const childActionName = `${childName}.${verb}`;
       const restAction = createAction(callback, {
         name: childActionName,
@@ -743,13 +743,13 @@ ${originalActionName} source location: ${locationInfo}`,
             );
           }
           const [ownerId, props] = result;
-          const childItem = ownerChildItemMap.get(ownerId);
+          const childItem = scopedItemMap.get(ownerId);
           if (!childItem) {
             throw new Error(
-              `${childActionName}: no item found for owner id "${ownerId}"`,
+              `${childActionName}: no item found for scope id "${ownerId}"`,
             );
           }
-          const childSignal = ownerChildSignalMap.get(ownerId);
+          const childSignal = scopedSignalMap.get(ownerId);
           if (props) {
             for (const [key, value] of Object.entries(props)) {
               childItem[key] = value;
@@ -777,7 +777,7 @@ ${originalActionName} source location: ${locationInfo}`,
       },
       store,
       addItemSetup: childAddItemSetup,
-      createRestAction: createRestActionForOwnOne,
+      createRestAction: createRestActionForScopedOne,
       params,
     });
     return childResource;
@@ -803,11 +803,11 @@ ${originalActionName} source location: ${locationInfo}`,
     const childName = `${name}.${propertyName}`;
 
     // setupCallbackSet: callbacks added by chained .one()/.many()
-    // Applied to each child item when it is created in a per-owner store.
+    // Applied to each child item when it is created in a per-scope store.
     const childSetupCallbackSet = new Set();
     const childAddItemSetup = (callback) => childSetupCallbackSet.add(callback);
-    const ownerStoreMap = new Map(); // ownerId → childStore
-    const ownerIdArraySignalMap = new Map(); // ownerId → childItemIdArraySignal
+    const scopedStoreMap = new Map(); // ownerId → childStore
+    const scopedIdArraySignalMap = new Map(); // ownerId → childItemIdArraySignal
     addItemSetup((item) => {
       const ownerId = item[idKey];
       const childStore = arraySignalStore([], childIdKey, {
@@ -821,10 +821,10 @@ ${originalActionName} source location: ${locationInfo}`,
           return childItem;
         },
       });
-      ownerStoreMap.set(ownerId, childStore);
+      scopedStoreMap.set(ownerId, childStore);
 
       const childItemIdArraySignal = signal([]);
-      ownerIdArraySignalMap.set(ownerId, childItemIdArraySignal);
+      scopedIdArraySignalMap.set(ownerId, childItemIdArraySignal);
 
       const updateChildItemIdArray = (valueArray) => {
         const currentIdArray = childItemIdArraySignal.peek();
@@ -901,7 +901,7 @@ ${originalActionName} source location: ${locationInfo}`,
         set: updateChildItemIdArray,
       });
     });
-    const createRestActionForOwnMany = (verb, callback, { isMany }) => {
+    const createRestActionForScopedMany = (verb, callback, { isMany }) => {
       if (!callback) {
         return undefined;
       }
@@ -916,13 +916,13 @@ ${originalActionName} source location: ${locationInfo}`,
             );
           }
           const [ownerId, ...rest] = result;
-          const childStore = ownerStoreMap.get(ownerId);
+          const childStore = scopedStoreMap.get(ownerId);
           if (!childStore) {
             throw new Error(
-              `${childActionName}: no store found for owner id "${ownerId}"`,
+              `${childActionName}: no store found for scope id "${ownerId}"`,
             );
           }
-          const childItemIdArraySignal = ownerIdArraySignalMap.get(ownerId);
+          const childItemIdArraySignal = scopedIdArraySignalMap.get(ownerId);
 
           if (verb === "DELETE") {
             if (isMany) {
@@ -975,12 +975,12 @@ ${originalActionName} source location: ${locationInfo}`,
       },
       store,
       addItemSetup: childAddItemSetup,
-      createRestAction: createRestActionForOwnMany,
+      createRestAction: createRestActionForScopedMany,
       params,
     });
-    // .one()/.many() on owned child items cannot use the default implementations
+    // .one()/.many() on scoped child items cannot use the default implementations
     // (those target the parent shared store). Override them to register setup
-    // callbacks on the per-owner child items instead.
+    // callbacks on the per-scope child items instead.
     childResource.one = (nestedPropertyName, nestedChildResource) => {
       childAddItemSetup((childItem) => {
         setupToOneRelationship(

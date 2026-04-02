@@ -1,4 +1,4 @@
-# [ownOne profile GET and PATCH](../../resource_graph_own_one.test.js)
+# [ownOne profile GET and PATCH](../../resource_graph_scoped_one.test.js)
 
 ```js
 const USER = resource("user", {
