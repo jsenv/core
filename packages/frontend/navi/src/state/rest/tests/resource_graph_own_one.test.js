@@ -6,7 +6,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
     const USER = resource("user", {
       POST: async ({ name }) => ({ id: 1, name }),
     });
-    const USER_PROFILE = USER.ownOne("profile", {
+    const USER_PROFILE = USER.scopedOne("profile", {
       GET: async ({ id }) => [id, { bio: "Hello world", avatar: "alice.png" }],
       PATCH: async ({ id, bio }) => [id, { bio, avatar: "alice.png" }],
     });

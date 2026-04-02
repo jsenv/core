@@ -1,8 +1,8 @@
 # [resource_graph_own_many.test.js](../resource_graph_own_many.test.js)
 
 
-- [ownMany columns GET_MANY, POST and PATCH](0_ownmany_columns_get_many__post_and_patch/0_ownmany_columns_get_many__post_and_patch.md)
-- [ownMany columns id rename via PUT](1_ownmany_columns_id_rename_via_put/1_ownmany_columns_id_rename_via_put.md)
+- [internalMany columns GET_MANY, POST and PATCH](0_internalmany_columns_get_many__post_and_patch/0_internalmany_columns_get_many__post_and_patch.md)
+- [internalMany columns id rename via PUT](1_internalmany_columns_id_rename_via_put/1_internalmany_columns_id_rename_via_put.md)
 
 ---
 

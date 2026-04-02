@@ -2,11 +2,11 @@ import { snapshotTests } from "@jsenv/snapshot";
 import { resource } from "../resource_graph.js";
 
 await snapshotTests(import.meta.url, ({ test }) => {
-  test("ownMany columns GET_MANY, POST and PATCH", async () => {
+  test("internalMany columns GET_MANY, POST and PATCH", async () => {
     const TABLE = resource("table", {
       POST: async ({ name }) => ({ id: 1, name }),
     });
-    const TABLE_COLUMNS = TABLE.ownMany("columns", {
+    const TABLE_COLUMNS = TABLE.scopedMany("columns", {
       idKey: "name",
       GET_MANY: async ({ id }) => [
         id,
@@ -40,11 +40,11 @@ await snapshotTests(import.meta.url, ({ test }) => {
     };
   });
 
-  test("ownMany columns id rename via PUT", async () => {
+  test("internalMany columns id rename via PUT", async () => {
     const TABLE = resource("table", {
       POST: async ({ name }) => ({ id: 1, name }),
     });
-    const TABLE_COLUMNS = TABLE.ownMany("columns", {
+    const TABLE_COLUMNS = TABLE.scopedMany("columns", {
       idKey: "name",
       GET_MANY: async ({ id }) => [
         id,

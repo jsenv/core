@@ -1,10 +1,10 @@
-# [ownMany columns id rename via PUT](../../resource_graph_own_many.test.js)
+# [internalMany columns id rename via PUT](../../resource_graph_own_many.test.js)
 
 ```js
 const TABLE = resource("table", {
   POST: async ({ name }) => ({ id: 1, name }),
 });
-const TABLE_COLUMNS = TABLE.ownMany("columns", {
+const TABLE_COLUMNS = TABLE.scopedMany("columns", {
   idKey: "name",
   GET_MANY: async ({ id }) => [
     id,

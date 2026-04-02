@@ -65,7 +65,7 @@ import { arraySignalStore, primitiveCanBeId } from "./array_signal_store.js";
  * DELETE callback: return [parentId, childId] to remove the relationship.
  * DELETE_MANY callback: return [parentId, [childId, childId, ...]] to remove multiple.
  *
- * # .ownOne(propertyName, { idKey, GET, POST, PUT, PATCH, DELETE })
+ * # .scopedOne(propertyName, { idKey, GET, POST, PUT, PATCH, DELETE })
  *
  * Attaches a single private sub-object to each item. Unlike .one(), the child has
  * no identity outside its owner and is not shared across items. Each owner gets its
@@ -79,7 +79,7 @@ import { arraySignalStore, primitiveCanBeId } from "./array_signal_store.js";
  * The property is `null` until a callback provides data. Setting it to `null` clears it.
  * Chainable: USER_PROFILE.one("theme", THEME) adds a reactive .theme property on each profile.
  *
- * # .ownMany(propertyName, { idKey, GET, GET_MANY, POST, PUT, PATCH, DELETE, ... })
+ * # .scopedMany(propertyName, { idKey, GET, GET_MANY, POST, PUT, PATCH, DELETE, ... })
  *
  * Attaches a private ordered collection of sub-objects to each item. The child objects
  * have no identity outside their owner — two owners can have items with the same id
@@ -217,10 +217,10 @@ const createResource = (
     useById: (id) => store.select(idKey, id),
 
     withParams: undefined,
-    one: undefined,
-    many: undefined,
-    ownOne: undefined,
-    ownMany: undefined,
+    external: undefined,
+    externalMany: undefined,
+    internal: undefined,
+    internalMany: undefined,
 
     // private but exposed for convenience
     store,
@@ -684,7 +684,7 @@ ${originalActionName} source location: ${locationInfo}`,
     });
   };
 
-  stateFacade.ownOne = (
+  stateFacade.scopedOne = (
     propertyName,
     { idKey: childIdKey = "id", GET, POST, PUT, PATCH, DELETE } = {},
   ) => {
@@ -783,7 +783,7 @@ ${originalActionName} source location: ${locationInfo}`,
     return childResource;
   };
 
-  stateFacade.ownMany = (
+  stateFacade.scopedMany = (
     propertyName,
     {
       idKey: childIdKey = "id",
@@ -1158,7 +1158,7 @@ ${originalActionName} source location: ${locationInfo}`,
 // Installs a reactive getter/setter on `item[propertyName]` that tracks one item
 // from `childResource.store`. The property value is a facade of the child item
 // (or a null-like object if the child is not found).
-// Used by both resourceInstance.one() and ownOneInstance.one().
+// Used by both resourceInstance.one() and scopedOneInstance.one().
 const setupToOneRelationship = (item, propertyName, childResource) => {
   const childIdKey = childResource.idKey;
   const childItemIdSignal = signal();
@@ -1223,7 +1223,7 @@ const setupToOneRelationship = (item, propertyName, childResource) => {
 
 // Installs a reactive getter/setter on `item[propertyName]` that tracks an array of items
 // from `childResource.store`. The property value is the live array (possibly empty).
-// Used by resourceInstance.many(), ownOneInstance.many(), and ownManyInstance.many().
+// Used by resourceInstance.many(), scopedOneInstance.many(), and scopedManyInstance.many().
 // resourceInstance.many() additionally layers observeProperties (for id renames) and DEBUG logs.
 const setupToManyRelationship = (item, propertyName, childResource) => {
   const childIdKey = childResource.idKey;

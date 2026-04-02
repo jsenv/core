@@ -32,7 +32,7 @@ const PRODUCT = resource("product", {
 
 PRODUCT.one("category", CATEGORY);
 
-const PRODUCT_SETTINGS = PRODUCT.ownOne("settings", {
+const PRODUCT_SETTINGS = PRODUCT.scopedOne("settings", {
   GET: async ({ id }) => [id, { featured: false, tags: [] }],
   PATCH: async ({ id, featured, tags }) => [id, { featured, tags }],
 });
