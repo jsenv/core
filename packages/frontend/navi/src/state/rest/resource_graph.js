@@ -150,6 +150,23 @@ export const resource = (
     resourceInstance[restCallbackKey] = action;
   }
 
+  // .one() links a property on this resource's items to an independent resource.
+  // The property holds a reference (id or nested props) to an item in the child store.
+  // When that item is updated anywhere, all signals reading the property update reactively.
+  // The child resource exists independently — deleting the parent does not delete the child.
+  //
+  // @example — A user has one active session
+  //   const SESSION = resource("session", { GET: fetchSession, DELETE: logoutSession });
+  //   const USER = resource("user", { GET: fetchUser });
+  //   const USER_SESSION = USER.one("session", SESSION, { GET: fetchUserSession });
+  //   // user.session → reactive Session object from SESSION store
+  //   // USER_SESSION.GET fetches session through user endpoint: GET /users/:id/session
+  //   // USER_SESSION.DELETE logs out:            DELETE /users/:id/session
+  //
+  //   // Further chain: the session itself has a device (independent)
+  //   const DEVICE = resource("device", { GET: fetchDevice });
+  //   USER_SESSION.one("device", DEVICE);
+  //   // user.session.device → reactive Device object from DEVICE store
   resourceInstance.one = (propertyName, childResource, options) => {
     const childIdKey = childResource.idKey;
     const childName = `${name}.${propertyName}`;
@@ -250,6 +267,19 @@ export const resource = (
       ...options,
     });
   };
+  // .many() links a property on this resource's items to an array of independent resource items.
+  // Each entry in the array is a full item in the child store, shared globally.
+  // The child resource exists independently — items can be referenced by multiple parents.
+  //
+  // @example — A user has many friends (other users)
+  //   const USER = resource("user", { GET: fetchUser });
+  //   const USER_FRIENDS = USER.many("friends", USER, { GET_MANY: fetchUserFriends });
+  //   // user.friends → reactive array of User objects from the shared USER store
+  //   // USER_FRIENDS.GET_MANY fetches friends: GET /users/:id/friends
+  //   // USER_FRIENDS.POST adds a friend:       POST /users/:id/friends
+  //
+  //   // Each friend being a full USER, if USER has .ownOne("settings") defined,
+  //   // user.friends[0].settings is also reactive with no extra setup.
   resourceInstance.many = (propertyName, childResource, options) => {
     const childIdKey = childResource.idKey;
     const childName = `${name}.${propertyName}`;
@@ -382,17 +412,269 @@ export const resource = (
     });
   };
 
-  // .ownMany() is for resources that own a list of sub-objects which can be mutated
-  // directly via dedicated endpoints, without re-sending the whole parent.
+  // .ownOne() is for a resource that owns a single sub-object exclusively.
+  // Unlike .one(), the child has no identity outside its owner and is not shared across items.
+  // Each owner item gets its own private signal. Callbacks must return [ownerId, props|null].
   //
-  // Example: a TABLE has COLUMNS. You receive them when you GET the table, and you
-  // have dedicated endpoints to rename, reorder, or delete individual columns.
-  // The columns have no identity outside of their table — two tables can have a
-  // column named "id" and they are completely independent objects.
+  // Chainable: the returned instance supports .one(), .many(), .ownOne(), .ownMany()
+  // to describe nested relationships on the owned object.
+  //
+  // @example — A user has one profile (owned, not a shared resource)
+  //   const USER = resource("user", { GET: fetchUser });
+  //   const USER_PROFILE = USER.ownOne("profile", {
+  //     GET:   async ({ id })       => [id, await fetchUserProfile(id)],
+  //     PATCH: async ({ id, data }) => [id, await patchUserProfile(id, data)],
+  //   });
+  //   // user.profile → reactive profile object (null until loaded)
+  //   // USER_PROFILE.GET fetches:  GET /users/:id/profile
+  //   // USER_PROFILE.PATCH updates: PATCH /users/:id/profile
+  //
+  //   // Chain: profile references an independent Theme resource
+  //   const THEME = resource("theme", { GET: fetchTheme });
+  //   USER_PROFILE.one("theme", THEME);
+  //   // user.profile.theme → reactive Theme object from THEME store
+  //   // When user.profile = { theme_id: 5, bio: "..." }, user.profile.theme resolves to Theme#5
+  resourceInstance.ownOne = (
+    propertyName,
+    { GET, POST, PUT, PATCH, DELETE } = {},
+  ) => {
+    const restCallbacks = { GET, POST, PUT, PATCH, DELETE };
+    const childName = `${name}.${propertyName}`;
+    // setupCallbackSet: callbacks added by chained .one()/.many()/.ownOne()/.ownMany()
+    // They are applied to each per-owner child item object when it is first created.
+    const setupCallbackSet = new Set();
+    const addItemSetup = (callback) => setupCallbackSet.add(callback);
+    const ownerChildItemMap = new Map(); // ownerId → stable child item object
+    const ownerChildSignalMap = new Map(); // ownerId → signal<childItem | null>
+
+    resourceInstance.addItemSetup((ownerItem) => {
+      const ownerId = ownerItem[idKey];
+      // Create a stable child item — it will be mutated in place via applyProps.
+      // Reactive getters/setters from chained .one() etc. are defined on this object now
+      // so they survive across multiple prop updates.
+      const childItem = {};
+      for (const setup of setupCallbackSet) {
+        setup(childItem);
+      }
+      ownerChildItemMap.set(ownerId, childItem);
+      const childSignal = signal(null);
+      ownerChildSignalMap.set(ownerId, childSignal);
+
+      const applyProps = (props) => {
+        if (!props) {
+          childSignal.value = null;
+          return;
+        }
+        // Assign each prop in place. Reactive setters (from chained .one() etc.) will fire.
+        for (const [key, value] of Object.entries(props)) {
+          childItem[key] = value;
+        }
+        if (childSignal.peek() !== childItem) {
+          childSignal.value = childItem; // first activation: null → childItem
+        }
+      };
+
+      applyProps(ownerItem[propertyName]);
+
+      Object.defineProperty(ownerItem, propertyName, {
+        get: () => childSignal.value,
+        set: applyProps,
+      });
+    });
+
+    const ownOneInstance = { name: childName, addItemSetup };
+
+    // .one() adds a reactive getter/setter on the owned child item pointing into an independent store.
+    // Returns the independent resource for further chaining if needed.
+    ownOneInstance.one = (nestedPropertyName, childResource) => {
+      const childIdKey = childResource.idKey;
+      addItemSetup((childItem) => {
+        const childItemIdSignal = signal();
+        const updateChildItemId = (value) => {
+          const currentId = childItemIdSignal.peek();
+          if (isProps(value)) {
+            const item = childResource.store.upsert(value);
+            const itemId = item[childIdKey];
+            if (currentId === itemId) return false;
+            childItemIdSignal.value = itemId;
+            return true;
+          }
+          if (primitiveCanBeId(value)) {
+            childResource.store.upsert({ [childIdKey]: value });
+            if (currentId === value) return false;
+            childItemIdSignal.value = value;
+            return true;
+          }
+          if (currentId === undefined) return false;
+          childItemIdSignal.value = undefined;
+          return true;
+        };
+        updateChildItemId(childItem[nestedPropertyName]);
+        const nestedItemSignal = computed(() =>
+          childResource.store.select(childItemIdSignal.value),
+        );
+        const nestedItemFacadeSignal = computed(() => {
+          const nestedItem = nestedItemSignal.value;
+          if (nestedItem) {
+            const copy = Object.create(
+              Object.getPrototypeOf(nestedItem),
+              Object.getOwnPropertyDescriptors(nestedItem),
+            );
+            Object.defineProperty(copy, SYMBOL_OBJECT_SIGNAL, {
+              value: nestedItemSignal,
+              writable: false,
+              enumerable: false,
+              configurable: false,
+            });
+            return copy;
+          }
+          return {
+            [SYMBOL_OBJECT_SIGNAL]: nestedItemSignal,
+            valueOf: () => null,
+          };
+        });
+        Object.defineProperty(childItem, nestedPropertyName, {
+          get: () => nestedItemFacadeSignal.value,
+          set: updateChildItemId,
+        });
+      });
+      return childResource;
+    };
+
+    // .many() adds a reactive array getter on the owned child item backed by an independent store.
+    // Returns the independent resource for further chaining if needed.
+    ownOneInstance.many = (nestedPropertyName, childResource) => {
+      const childIdKey = childResource.idKey;
+      addItemSetup((childItem) => {
+        const childItemIdArraySignal = signal([]);
+        const updateChildItemIdArray = (valueArray) => {
+          const currentIdArray = childItemIdArraySignal.peek();
+          if (!Array.isArray(valueArray)) {
+            if (currentIdArray.length === 0) return;
+            childItemIdArraySignal.value = [];
+            return;
+          }
+          let i = 0;
+          const idArray = [];
+          let modified = false;
+          while (i < valueArray.length) {
+            const value = valueArray[i];
+            const currentIdAtIndex = currentIdArray[idArray.length];
+            i++;
+            if (isProps(value)) {
+              const item = childResource.store.upsert(value);
+              const itemId = item[childIdKey];
+              if (currentIdAtIndex !== itemId) modified = true;
+              idArray.push(itemId);
+              continue;
+            }
+            if (primitiveCanBeId(value)) {
+              childResource.store.upsert({ [childIdKey]: value });
+              if (currentIdAtIndex !== value) modified = true;
+              idArray.push(value);
+              continue;
+            }
+          }
+          if (modified || currentIdArray.length !== idArray.length) {
+            childItemIdArraySignal.value = idArray;
+          }
+        };
+        updateChildItemIdArray(childItem[nestedPropertyName]);
+        const nestedItemArraySignal = computed(() => {
+          const idArray = childItemIdArraySignal.value;
+          const arr = childResource.store.selectAll(idArray);
+          Object.defineProperty(arr, SYMBOL_OBJECT_SIGNAL, {
+            value: nestedItemArraySignal,
+            writable: false,
+            enumerable: false,
+            configurable: false,
+          });
+          return arr;
+        });
+        Object.defineProperty(childItem, nestedPropertyName, {
+          get: () => nestedItemArraySignal.value,
+          set: updateChildItemIdArray,
+        });
+      });
+      return childResource;
+    };
+
+    // TODO: ownOneInstance.ownOne() and ownOneInstance.ownMany() for triple nesting
+    // (e.g. user.profile.pinnedColumns). Requires propagating per-owner identity down
+    // to create per-(owner, child) stores. Not yet implemented.
+
+    for (const [restCallbackKey, restCallback] of Object.entries(
+      restCallbacks,
+    )) {
+      if (!restCallback) continue;
+      const verb = restCallbackKey;
+      const childActionName = `${childName}.${verb}`;
+      const action = createAction(restCallback, {
+        name: childActionName,
+        meta: { verb, isMany: false },
+        resultToValue: (result) => {
+          if (!Array.isArray(result) || result.length !== 2) {
+            throw new TypeError(
+              `${childActionName} callback must return [ownerId, props], received ${result}`,
+            );
+          }
+          const [ownerId, props] = result;
+          const childItem = ownerChildItemMap.get(ownerId);
+          if (!childItem) {
+            throw new Error(
+              `${childActionName}: no item found for owner id "${ownerId}"`,
+            );
+          }
+          const childSignal = ownerChildSignalMap.get(ownerId);
+          if (props) {
+            for (const [key, value] of Object.entries(props)) {
+              childItem[key] = value;
+            }
+            if (childSignal.peek() !== childItem) {
+              childSignal.value = childItem;
+            }
+          } else {
+            childSignal.value = null;
+          }
+          return [ownerId, props];
+        },
+      });
+      ownOneInstance[restCallbackKey] = action;
+    }
+
+    return ownOneInstance;
+  };
+
+  // .ownMany() is for resources that own a collection of sub-objects which can be mutated
+  // directly via dedicated endpoints, without re-sending the whole parent.
+  // The child objects have no identity outside their owner — two owners can have items
+  // with the same id that are completely independent.
   //
   // Each owner item gets its own private arraySignalStore (no shared global store,
   // no id clashes across owners). All callbacks must return [ownerId, ...rest] so
   // the right per-owner store is updated.
+  //
+  // Chainable: the returned instance supports .one() and .many() to describe
+  // relationships on the owned child items.
+  //
+  // @example — A table has columns (owned, no identity outside the table)
+  //   const DATA_TYPE = resource("dataType", { GET: fetchDataType });
+  //   const TABLE = resource("table", { GET: fetchTable });
+  //   const TABLE_COLUMNS = TABLE.ownMany("columns", {
+  //     idKey: "name",
+  //     POST:   async ({ id, name, type }) => [id, await addColumn(id, { name, type })],
+  //     PATCH:  async ({ id, name, data }) => [id, name, await patchColumn(id, name, data)],
+  //     DELETE: async ({ id, name })       => [id, name],
+  //   });
+  //   // table.columns → reactive array of column objects (private to each table)
+  //   // TABLE_COLUMNS.POST adds a column:    POST /tables/:id/columns
+  //   // TABLE_COLUMNS.PATCH renames/updates: PATCH /tables/:id/columns/:name
+  //   // TABLE_COLUMNS.DELETE removes:        DELETE /tables/:id/columns/:name
+  //
+  //   // Chain: each column references an independent DataType
+  //   TABLE_COLUMNS.one("dataType", DATA_TYPE);
+  //   // column.dataType → reactive DataType object from DATA_TYPE store
+  //   // When table.columns = [{ name: "id", data_type_id: 4 }], column.dataType resolves to DataType#4
   resourceInstance.ownMany = (
     propertyName,
     {
@@ -423,6 +705,10 @@ export const resource = (
       DELETE,
       DELETE_MANY,
     };
+    // setupCallbackSet: callbacks added by chained .one()/.many() etc.
+    // Applied to each child item when it is created in a per-owner store.
+    const setupCallbackSet = new Set();
+    const addItemSetup = (callback) => setupCallbackSet.add(callback);
     const ownerStoreMap = new Map(); // ownerId → childStore
     const ownerIdArraySignalMap = new Map(); // ownerId → childItemIdArraySignal
 
@@ -430,6 +716,14 @@ export const resource = (
       const ownerId = item[idKey];
       const childStore = arraySignalStore([], childIdKey, {
         name: `${name}#${ownerId}.${propertyName} store`,
+        createItem: (props) => {
+          const childItem = {};
+          Object.assign(childItem, props);
+          for (const setup of setupCallbackSet) {
+            setup(childItem);
+          }
+          return childItem;
+        },
       });
       ownerStoreMap.set(ownerId, childStore);
 
@@ -514,10 +808,135 @@ export const resource = (
       });
     });
 
-    const collectionInstance = { name: childName, idKey: childIdKey };
+    const ownManyInstance = {
+      name: childName,
+      idKey: childIdKey,
+      addItemSetup,
+    };
+
+    // .one() adds a reactive getter/setter on each owned child item pointing into an independent store.
+    // Returns the independent resource for further chaining if needed.
+    ownManyInstance.one = (nestedPropertyName, childResource) => {
+      const nestedIdKey = childResource.idKey;
+      addItemSetup((childItem) => {
+        const childItemIdSignal = signal();
+        const updateChildItemId = (value) => {
+          const currentId = childItemIdSignal.peek();
+          if (isProps(value)) {
+            const item = childResource.store.upsert(value);
+            const itemId = item[nestedIdKey];
+            if (currentId === itemId) return false;
+            childItemIdSignal.value = itemId;
+            return true;
+          }
+          if (primitiveCanBeId(value)) {
+            childResource.store.upsert({ [nestedIdKey]: value });
+            if (currentId === value) return false;
+            childItemIdSignal.value = value;
+            return true;
+          }
+          if (currentId === undefined) return false;
+          childItemIdSignal.value = undefined;
+          return true;
+        };
+        updateChildItemId(childItem[nestedPropertyName]);
+        const nestedItemSignal = computed(() =>
+          childResource.store.select(childItemIdSignal.value),
+        );
+        const nestedItemFacadeSignal = computed(() => {
+          const nestedItem = nestedItemSignal.value;
+          if (nestedItem) {
+            const copy = Object.create(
+              Object.getPrototypeOf(nestedItem),
+              Object.getOwnPropertyDescriptors(nestedItem),
+            );
+            Object.defineProperty(copy, SYMBOL_OBJECT_SIGNAL, {
+              value: nestedItemSignal,
+              writable: false,
+              enumerable: false,
+              configurable: false,
+            });
+            return copy;
+          }
+          return {
+            [SYMBOL_OBJECT_SIGNAL]: nestedItemSignal,
+            valueOf: () => null,
+          };
+        });
+        Object.defineProperty(childItem, nestedPropertyName, {
+          get: () => nestedItemFacadeSignal.value,
+          set: updateChildItemId,
+        });
+      });
+      return childResource;
+    };
+
+    // .many() adds a reactive array getter on owned child items backed by an independent store.
+    // Returns the independent resource for further chaining if needed.
+    ownManyInstance.many = (nestedPropertyName, childResource) => {
+      const nestedIdKey = childResource.idKey;
+      addItemSetup((childItem) => {
+        const childItemIdArraySignal = signal([]);
+        const updateChildItemIdArray = (valueArray) => {
+          const currentIdArray = childItemIdArraySignal.peek();
+          if (!Array.isArray(valueArray)) {
+            if (currentIdArray.length === 0) return;
+            childItemIdArraySignal.value = [];
+            return;
+          }
+          let i = 0;
+          const idArray = [];
+          let modified = false;
+          while (i < valueArray.length) {
+            const value = valueArray[i];
+            const currentIdAtIndex = currentIdArray[idArray.length];
+            i++;
+            if (isProps(value)) {
+              const item = childResource.store.upsert(value);
+              const itemId = item[nestedIdKey];
+              if (currentIdAtIndex !== itemId) modified = true;
+              idArray.push(itemId);
+              continue;
+            }
+            if (primitiveCanBeId(value)) {
+              childResource.store.upsert({ [nestedIdKey]: value });
+              if (currentIdAtIndex !== value) modified = true;
+              idArray.push(value);
+              continue;
+            }
+          }
+          if (modified || currentIdArray.length !== idArray.length) {
+            childItemIdArraySignal.value = idArray;
+          }
+        };
+        updateChildItemIdArray(childItem[nestedPropertyName]);
+        const nestedItemArraySignal = computed(() => {
+          const idArray = childItemIdArraySignal.value;
+          const arr = childResource.store.selectAll(idArray);
+          Object.defineProperty(arr, SYMBOL_OBJECT_SIGNAL, {
+            value: nestedItemArraySignal,
+            writable: false,
+            enumerable: false,
+            configurable: false,
+          });
+          return arr;
+        });
+        Object.defineProperty(childItem, nestedPropertyName, {
+          get: () => nestedItemArraySignal.value,
+          set: updateChildItemIdArray,
+        });
+      });
+      return childResource;
+    };
+
+    // TODO: ownManyInstance.ownOne() and ownManyInstance.ownMany() for triple nesting
+    // (e.g. table.columns[n].constraints). Requires propagating per-(owner, child) identity
+    // down to create nested stores. Not yet implemented.
+
     for (const [restCallbackKey, restCallback] of Object.entries(
       restCallbacks,
     )) {
+      if (!restCallback) continue;
       const verb = restCallbackKey.replace("_MANY", "");
       const isMany = restCallbackKey.endsWith("_MANY");
       const childActionName = `${childName}.${restCallbackKey}`;
@@ -572,72 +991,10 @@ export const resource = (
         },
       });
 
-      collectionInstance[restCallbackKey] = action;
+      ownManyInstance[restCallbackKey] = action;
     }
 
-    return collectionInstance;
-  };
-
-  // .ownOne() is for a single sub-object owned exclusively by the parent resource.
-  // Unlike .collection(), there is no array — each owner has exactly one child object.
-  //
-  // Example: a TABLE has a single SETTINGS object (theme, page size, etc.).
-  // You can PUT/PATCH it directly without re-sending the whole table.
-  // The settings have no identity outside their table.
-  //
-  // Each owner item gets its own private signal. Callbacks must return [ownerId, props]
-  // so the right per-owner signal is updated.
-  resourceInstance.ownOne = (
-    propertyName,
-    { GET, POST, PUT, PATCH, DELETE } = {},
-  ) => {
-    const restCallbacks = { GET, POST, PUT, PATCH, DELETE };
-    const childName = `${name}.${propertyName}`;
-    const ownerSignalMap = new Map(); // ownerId → signal(childProps)
-
-    resourceInstance.addItemSetup((item) => {
-      const ownerId = item[idKey];
-      const childSignal = signal(item[propertyName] ?? null);
-      ownerSignalMap.set(ownerId, childSignal);
-
-      Object.defineProperty(item, propertyName, {
-        get: () => childSignal.value,
-        set: (value) => {
-          childSignal.value = value ?? null;
-        },
-      });
-    });
-
-    const itemInstance = { name: childName };
-    for (const [restCallbackKey, restCallback] of Object.entries(
-      restCallbacks,
-    )) {
-      const verb = restCallbackKey;
-      const childActionName = `${childName}.${verb}`;
-      const action = createAction(restCallback, {
-        name: childActionName,
-        meta: { verb, isMany: false },
-        resultToValue: (result) => {
-          if (!Array.isArray(result) || result.length !== 2) {
-            throw new TypeError(
-              `${childActionName} callback must return [ownerId, props], received ${result}`,
-            );
-          }
-          const [ownerId, props] = result;
-          const childSignal = ownerSignalMap.get(ownerId);
-          if (!childSignal) {
-            throw new Error(
-              `${childActionName}: no signal found for owner id "${ownerId}"`,
-            );
-          }
-          childSignal.value = props;
-          return [ownerId, props];
-        },
-      });
-      itemInstance[restCallbackKey] = action;
-    }
-
-    return itemInstance;
+    return ownManyInstance;
   };
 
   /**
