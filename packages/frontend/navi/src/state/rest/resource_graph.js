@@ -196,6 +196,9 @@ const createResource = (
   stateFacade.withParams = withParams;
 
   for (const [restCallbackKey, restCallback] of Object.entries(restCallbacks)) {
+    if (restCallback === undefined) {
+      continue;
+    }
     const restCallbackHandler = restHandler[restCallbackKey];
     if (!restCallbackHandler) {
       continue;
