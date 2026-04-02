@@ -30,7 +30,9 @@ await snapshotTests(import.meta.url, ({ test }) => {
   });
 
   test(".one() session populated from user GET response", async () => {
-    const SESSION = resource("session");
+    const SESSION = resource("session", {
+      PATCH: async ({ id, token }) => ({ id, token }),
+    });
     const USER = resource("user", {
       GET: async ({ id }) => ({
         id,
@@ -45,8 +47,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
     const sessionStore = SESSION.store.arraySignal.value;
     const userSession = user.session;
 
-    // Update the session in SESSION store and check it reflects on user.session
-    SESSION.store.upsert({ id: 10, token: "xyz789" });
+    await SESSION.PATCH({ id: 10, token: "xyz789" });
     const userSessionAfterUpdate = user.session;
 
     return {

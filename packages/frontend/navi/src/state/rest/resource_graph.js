@@ -13,7 +13,7 @@ import { arraySignalStore, primitiveCanBeId } from "./array_signal_store.js";
 // - restCallbacks:    object mapping { [restCallbackKey]: restCallback }
 // - isMany:           true when the action operates on a collection (restCallbackKey ends with _MANY)
 
-let DEBUG = true;
+let DEBUG = false;
 
 export const resource = (
   name,

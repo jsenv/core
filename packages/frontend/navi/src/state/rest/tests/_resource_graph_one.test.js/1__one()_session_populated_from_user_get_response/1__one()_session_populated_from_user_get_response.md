@@ -1,7 +1,9 @@
 # [.one() session populated from user GET response](../../resource_graph_one.test.js)
 
 ```js
-const SESSION = resource("session");
+const SESSION = resource("session", {
+  PATCH: async ({ id, token }) => ({ id, token }),
+});
 const USER = resource("user", {
   GET: async ({ id }) => ({
     id,
@@ -16,8 +18,7 @@ const user = USER.store.arraySignal.value[0];
 const sessionStore = SESSION.store.arraySignal.value;
 const userSession = user.session;
 
-// Update the session in SESSION store and check it reflects on user.session
-SESSION.store.upsert({ id: 10, token: "xyz789" });
+await SESSION.PATCH({ id: 10, token: "xyz789" });
 const userSessionAfterUpdate = user.session;
 
 return {
@@ -27,15 +28,6 @@ return {
   userSessionAfterUpdate,
 };
 ```
-
-# 1/2 process.stdout
-
-```console
-setup user.session is one "session" (current value: session)
-
-```
-
-# 2/2 resolve
 
 ```js
 {

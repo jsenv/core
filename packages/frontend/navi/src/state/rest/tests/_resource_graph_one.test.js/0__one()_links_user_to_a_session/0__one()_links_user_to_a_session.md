@@ -27,16 +27,6 @@ return {
 };
 ```
 
-# 1/2 logs
-
-```console
-setup user.session is one "session" (current value: undefined)
-user.session updated to session
-
-```
-
-# 2/2 resolve
-
 ```js
 {
   "userBeforeSessionLoad": {
