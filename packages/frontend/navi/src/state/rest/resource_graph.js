@@ -533,33 +533,7 @@ ${originalActionName} source location: ${locationInfo}`,
         get: () => childItemArraySignal.value,
         set: updateChildItemIdArray,
       });
-      childResource.store.observeProperties((mutations) => {
-        const idArray = childItemIdArraySignal.peek();
-        if (idArray.length === 0) {
-          return;
-        }
-        const idSet = new Set(idArray);
-        const idMutationMap = new Map();
-        for (const mutation of mutations) {
-          const idKeyMutation = mutation[childIdKey];
-          if (!idKeyMutation) {
-            continue;
-          }
-          const { oldValue, newValue } = idKeyMutation;
-          if (!idSet.has(oldValue)) {
-            continue;
-          }
-          idMutationMap.set(oldValue, newValue);
-        }
-        if (idMutationMap.size === 0) {
-          return;
-        }
-        const idUpdatedArray = [];
-        for (const id of idArray) {
-          idUpdatedArray.push(idMutationMap.get(id) ?? id);
-        }
-        childItemIdArraySignal.value = idUpdatedArray;
-      });
+      syncIdArrayOnRename(childResource.store, childIdKey, childItemIdArraySignal);
       if (DEBUG) {
         const childItemArray = childItemArraySignal.peek();
         debug(
@@ -971,25 +945,7 @@ ${originalActionName} source location: ${locationInfo}`,
       updateChildItemIdArray(item[propertyName]);
 
       // When an id is renamed (PUT/PATCH changes the idKey), patch the id array.
-      childStore.observeProperties((mutations) => {
-        const idArray = childItemIdArraySignal.peek();
-        if (idArray.length === 0) return;
-        const idSet = new Set(idArray);
-        const idMutationMap = new Map();
-        for (const mutation of mutations) {
-          const idKeyMutation = mutation[childIdKey];
-          if (!idKeyMutation) continue;
-          const { oldValue, newValue } = idKeyMutation;
-          if (!idSet.has(oldValue)) continue;
-          idMutationMap.set(oldValue, newValue);
-        }
-        if (idMutationMap.size === 0) return;
-        const idUpdatedArray = [];
-        for (const id of idArray) {
-          idUpdatedArray.push(idMutationMap.get(id) ?? id);
-        }
-        childItemIdArraySignal.value = idUpdatedArray;
-      });
+      syncIdArrayOnRename(childStore, childIdKey, childItemIdArraySignal);
 
       const childItemArraySignal = computed(() => {
         const childItemIdArray = childItemIdArraySignal.value;
@@ -1196,37 +1152,7 @@ ${originalActionName} source location: ${locationInfo}`,
         // with a mutation containing oldValue/newValue for that key. We patch this action's
         // valueSignal (the id array) so that selectAll keeps returning the right items.
         // The returned unsubscribe function is called by completeSideEffectCleanup on reset.
-        return store.observeProperties((mutations) => {
-          const idArray = actionCompleted.valueSignal.peek();
-          if (idArray.length === 0) {
-            return;
-          }
-          const idSet = new Set(idArray);
-          const idMutationMap = new Map();
-          for (const mutation of mutations) {
-            const idKeyMutation = mutation[idKey];
-            if (!idKeyMutation) {
-              continue;
-            }
-            const { oldValue, newValue } = idKeyMutation;
-            if (!idSet.has(oldValue)) {
-              continue;
-            }
-            idMutationMap.set(oldValue, newValue);
-          }
-          if (idMutationMap.size === 0) {
-            return;
-          }
-          const idUpdatedArray = [];
-          for (const id of idArray) {
-            if (idMutationMap.has(id)) {
-              idUpdatedArray.push(idMutationMap.get(id));
-            } else {
-              idUpdatedArray.push(id);
-            }
-          }
-          actionCompleted.valueSignal.value = idUpdatedArray;
-        });
+        return syncIdArrayOnRename(store, idKey, actionCompleted.valueSignal);
       },
     });
     // resourceLifecycleManager.registerAction(
@@ -1237,6 +1163,36 @@ ${originalActionName} source location: ${locationInfo}`,
   };
 
   return createActionForRoot;
+};
+
+const syncIdArrayOnRename = (store, idKey, idArraySignal) => {
+  return store.observeProperties((mutations) => {
+    const idArray = idArraySignal.peek();
+    if (idArray.length === 0) {
+      return;
+    }
+    const idSet = new Set(idArray);
+    const idMutationMap = new Map();
+    for (const mutation of mutations) {
+      const idKeyMutation = mutation[idKey];
+      if (!idKeyMutation) {
+        continue;
+      }
+      const { oldValue, newValue } = idKeyMutation;
+      if (!idSet.has(oldValue)) {
+        continue;
+      }
+      idMutationMap.set(oldValue, newValue);
+    }
+    if (idMutationMap.size === 0) {
+      return;
+    }
+    const idUpdatedArray = [];
+    for (const id of idArray) {
+      idUpdatedArray.push(idMutationMap.get(id) ?? id);
+    }
+    idArraySignal.value = idUpdatedArray;
+  });
 };
 
 const isProps = (value) => {
