@@ -597,8 +597,6 @@ const createResource = (
       });
       return nestedChildResource;
     };
-    // TODO: childResource.ownOne() and childResource.ownMany() for triple nesting
-    // (e.g. table.columns[n].constraints). Not yet implemented.
     return childResource;
   };
 
