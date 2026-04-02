@@ -165,12 +165,15 @@ const createResource = (
   const stateFacade = {
     name,
     idKey,
-    restCallbacks, // Store the action callback definitions for withParams to use later
-    restHandler,
-    addItemSetup,
     store,
     useArray,
     useById,
+
+    withParams: undefined,
+    one: undefined,
+    many: undefined,
+    ownOne: undefined,
+    ownMany: undefined,
   };
 
   /**
@@ -280,7 +283,7 @@ const createResource = (
   stateFacade.one = (propertyName, childResource, options) => {
     const childIdKey = childResource.idKey;
     const childName = `${name}.${propertyName}`;
-    stateFacade.addItemSetup((item) => {
+    addItemSetup((item) => {
       const { updateChildItemId, childItemSignal } = setupToOneRelationship(
         item,
         propertyName,
@@ -309,7 +312,7 @@ const createResource = (
     const restHandlerForRelationshipToOne =
       createRestHandlerForRelationshipToOne(childName, {
         idKey,
-        store: stateFacade.store,
+        store,
         propertyName,
         childIdKey,
         childStore: childResource.store,
@@ -348,7 +351,7 @@ const createResource = (
   stateFacade.many = (propertyName, childResource, options) => {
     const childIdKey = childResource.idKey;
     const childName = `${name}.${propertyName}`;
-    stateFacade.addItemSetup((item) => {
+    addItemSetup((item) => {
       const {
         updateChildItemIdArray,
         childItemIdArraySignal,
@@ -409,7 +412,7 @@ const createResource = (
     const restHandlerForRelationshipToMany =
       createRestHandlerForRelationshipToMany(childName, {
         idKey,
-        store: stateFacade.store,
+        store,
         propertyName,
         childIdKey,
         childStore: childResource.store,
@@ -573,7 +576,7 @@ const createResource = (
     const ownerStoreMap = new Map(); // ownerId → childStore
     const ownerIdArraySignalMap = new Map(); // ownerId → childItemIdArraySignal
 
-    stateFacade.addItemSetup((item) => {
+    addItemSetup((item) => {
       const ownerId = item[idKey];
       const childStore = arraySignalStore([], childIdKey, {
         name: `${name}#${ownerId}.${propertyName} store`,
