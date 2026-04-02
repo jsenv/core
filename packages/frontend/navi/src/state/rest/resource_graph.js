@@ -34,6 +34,9 @@ export const resource = (
     DELETE_MANY,
   } = {},
 ) => {
+  if (idKey === undefined) {
+    idKey = mutableIdKeys.length === 0 ? "id" : mutableIdKeys[0];
+  }
   const setupCallbackSet = new Set();
   const addItemSetup = (callback) => {
     setupCallbackSet.add(callback);
