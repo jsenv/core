@@ -250,50 +250,12 @@ export const resource = (
     const childIdKey = childResource.idKey;
     const childName = `${name}.${propertyName}`;
     resourceInstance.addItemSetup((item) => {
-      const childItemIdArraySignal = signal([]);
-      const updateChildItemIdArray = (valueArray) => {
-        const currentIdArray = childItemIdArraySignal.peek();
+      const {
+        updateChildItemIdArray,
+        childItemIdArraySignal,
+        childItemArraySignal,
+      } = setupToManyRelationship(item, propertyName, childResource);
 
-        if (!Array.isArray(valueArray)) {
-          if (currentIdArray.length === 0) {
-            return;
-          }
-          childItemIdArraySignal.value = [];
-          return;
-        }
-
-        let i = 0;
-        const idArray = [];
-        let modified = false;
-        while (i < valueArray.length) {
-          const value = valueArray[i];
-          const currentIdAtIndex = currentIdArray[idArray.length];
-          i++;
-          if (isProps(value)) {
-            const childItem = childResource.store.upsert(value);
-            const childItemId = childItem[childIdKey];
-            if (currentIdAtIndex !== childItemId) {
-              modified = true;
-            }
-            idArray.push(childItemId);
-            continue;
-          }
-          if (primitiveCanBeId(value)) {
-            const childItemProps = { [childIdKey]: value };
-            const childItem = childResource.store.upsert(childItemProps);
-            const childItemId = childItem[childIdKey];
-            if (currentIdAtIndex !== childItemId) {
-              modified = true;
-            }
-            idArray.push(childItemId);
-            continue;
-          }
-        }
-        if (modified || currentIdArray.length !== idArray.length) {
-          childItemIdArraySignal.value = idArray;
-        }
-      };
-      updateChildItemIdArray(item[propertyName]);
       childResource.store.observeProperties((mutations) => {
         const idArray = childItemIdArraySignal.peek();
         if (idArray.length === 0) {
@@ -322,44 +284,28 @@ export const resource = (
         childItemIdArraySignal.value = idUpdatedArray;
       });
 
-      const childItemArraySignal = computed(() => {
-        const childItemIdArray = childItemIdArraySignal.value;
-        const childItemArray = childResource.store.selectAll(childItemIdArray);
-        Object.defineProperty(childItemArray, SYMBOL_OBJECT_SIGNAL, {
-          value: childItemArraySignal,
-          writable: false,
-          enumerable: false,
-          configurable: false,
-        });
-        return childItemArray;
-      });
-
       if (DEBUG) {
         const childItemArray = childItemArraySignal.peek();
         console.debug(
           `setup ${item}.${propertyName} is many "${childResource.name}" (current value: ${childItemArray.length ? childItemArray.join(",") : "[]"})`,
         );
-      }
-
-      Object.defineProperty(item, propertyName, {
-        get: () => {
-          const childItemArray = childItemArraySignal.value;
-          if (DEBUG) {
+        Object.defineProperty(item, propertyName, {
+          get: () => {
+            const childItemArray = childItemArraySignal.value;
             console.debug(
               `return ${childItemArray.length ? childItemArray.join(",") : "[]"} for ${item}.${propertyName}`,
             );
-          }
-          return childItemArray;
-        },
-        set: (value) => {
-          updateChildItemIdArray(value);
-          if (DEBUG) {
+            return childItemArray;
+          },
+          set: (value) => {
+            updateChildItemIdArray(value);
             console.debug(
               `${item}.${propertyName} updated to ${childItemIdArraySignal.peek()}`,
             );
-          }
-        },
-      });
+          },
+          configurable: true,
+        });
+      }
     });
     const restHandlerForRelationshipToMany =
       createRestHandlerForRelationshipToMany(childName, {
@@ -469,57 +415,8 @@ export const resource = (
     // .many() adds a reactive array getter on the owned child item backed by an independent store.
     // Returns the independent resource for further chaining if needed.
     ownOneInstance.many = (nestedPropertyName, childResource) => {
-      const childIdKey = childResource.idKey;
       addItemSetup((childItem) => {
-        const childItemIdArraySignal = signal([]);
-        const updateChildItemIdArray = (valueArray) => {
-          const currentIdArray = childItemIdArraySignal.peek();
-          if (!Array.isArray(valueArray)) {
-            if (currentIdArray.length === 0) return;
-            childItemIdArraySignal.value = [];
-            return;
-          }
-          let i = 0;
-          const idArray = [];
-          let modified = false;
-          while (i < valueArray.length) {
-            const value = valueArray[i];
-            const currentIdAtIndex = currentIdArray[idArray.length];
-            i++;
-            if (isProps(value)) {
-              const item = childResource.store.upsert(value);
-              const itemId = item[childIdKey];
-              if (currentIdAtIndex !== itemId) modified = true;
-              idArray.push(itemId);
-              continue;
-            }
-            if (primitiveCanBeId(value)) {
-              childResource.store.upsert({ [childIdKey]: value });
-              if (currentIdAtIndex !== value) modified = true;
-              idArray.push(value);
-              continue;
-            }
-          }
-          if (modified || currentIdArray.length !== idArray.length) {
-            childItemIdArraySignal.value = idArray;
-          }
-        };
-        updateChildItemIdArray(childItem[nestedPropertyName]);
-        const nestedItemArraySignal = computed(() => {
-          const idArray = childItemIdArraySignal.value;
-          const arr = childResource.store.selectAll(idArray);
-          Object.defineProperty(arr, SYMBOL_OBJECT_SIGNAL, {
-            value: nestedItemArraySignal,
-            writable: false,
-            enumerable: false,
-            configurable: false,
-          });
-          return arr;
-        });
-        Object.defineProperty(childItem, nestedPropertyName, {
-          get: () => nestedItemArraySignal.value,
-          set: updateChildItemIdArray,
-        });
+        setupToManyRelationship(childItem, nestedPropertyName, childResource);
       });
       return childResource;
     };
@@ -807,57 +704,8 @@ export const resource = (
     // .many() adds a reactive array getter on owned child items backed by an independent store.
     // Returns the independent resource for further chaining if needed.
     ownManyInstance.many = (nestedPropertyName, childResource) => {
-      const nestedIdKey = childResource.idKey;
       addItemSetup((childItem) => {
-        const childItemIdArraySignal = signal([]);
-        const updateChildItemIdArray = (valueArray) => {
-          const currentIdArray = childItemIdArraySignal.peek();
-          if (!Array.isArray(valueArray)) {
-            if (currentIdArray.length === 0) return;
-            childItemIdArraySignal.value = [];
-            return;
-          }
-          let i = 0;
-          const idArray = [];
-          let modified = false;
-          while (i < valueArray.length) {
-            const value = valueArray[i];
-            const currentIdAtIndex = currentIdArray[idArray.length];
-            i++;
-            if (isProps(value)) {
-              const item = childResource.store.upsert(value);
-              const itemId = item[nestedIdKey];
-              if (currentIdAtIndex !== itemId) modified = true;
-              idArray.push(itemId);
-              continue;
-            }
-            if (primitiveCanBeId(value)) {
-              childResource.store.upsert({ [nestedIdKey]: value });
-              if (currentIdAtIndex !== value) modified = true;
-              idArray.push(value);
-              continue;
-            }
-          }
-          if (modified || currentIdArray.length !== idArray.length) {
-            childItemIdArraySignal.value = idArray;
-          }
-        };
-        updateChildItemIdArray(childItem[nestedPropertyName]);
-        const nestedItemArraySignal = computed(() => {
-          const idArray = childItemIdArraySignal.value;
-          const arr = childResource.store.selectAll(idArray);
-          Object.defineProperty(arr, SYMBOL_OBJECT_SIGNAL, {
-            value: nestedItemArraySignal,
-            writable: false,
-            enumerable: false,
-            configurable: false,
-          });
-          return arr;
-        });
-        Object.defineProperty(childItem, nestedPropertyName, {
-          get: () => nestedItemArraySignal.value,
-          set: updateChildItemIdArray,
-        });
+        setupToManyRelationship(childItem, nestedPropertyName, childResource);
       });
       return childResource;
     };
@@ -2064,4 +1912,69 @@ const setupToOneRelationship = (item, propertyName, childResource) => {
     configurable: true,
   });
   return { updateChildItemId, childItemSignal };
+};
+
+// Installs a reactive getter/setter on `item[propertyName]` that tracks an array of items
+// from `childResource.store`. The property value is the live array (possibly empty).
+// Used by resourceInstance.many(), ownOneInstance.many(), and ownManyInstance.many().
+// resourceInstance.many() additionally layers observeProperties (for id renames) and DEBUG logs.
+const setupToManyRelationship = (item, propertyName, childResource) => {
+  const childIdKey = childResource.idKey;
+  const childItemIdArraySignal = signal([]);
+  const updateChildItemIdArray = (valueArray) => {
+    const currentIdArray = childItemIdArraySignal.peek();
+    if (!Array.isArray(valueArray)) {
+      if (currentIdArray.length === 0) return;
+      childItemIdArraySignal.value = [];
+      return;
+    }
+    let i = 0;
+    const idArray = [];
+    let modified = false;
+    while (i < valueArray.length) {
+      const value = valueArray[i];
+      const currentIdAtIndex = currentIdArray[idArray.length];
+      i++;
+      if (isProps(value)) {
+        const childItem = childResource.store.upsert(value);
+        const childItemId = childItem[childIdKey];
+        if (currentIdAtIndex !== childItemId) modified = true;
+        idArray.push(childItemId);
+        continue;
+      }
+      if (primitiveCanBeId(value)) {
+        const childItemProps = { [childIdKey]: value };
+        const childItem = childResource.store.upsert(childItemProps);
+        const childItemId = childItem[childIdKey];
+        if (currentIdAtIndex !== childItemId) modified = true;
+        idArray.push(childItemId);
+        continue;
+      }
+    }
+    if (modified || currentIdArray.length !== idArray.length) {
+      childItemIdArraySignal.value = idArray;
+    }
+  };
+  updateChildItemIdArray(item[propertyName]);
+  const childItemArraySignal = computed(() => {
+    const idArray = childItemIdArraySignal.value;
+    const arr = childResource.store.selectAll(idArray);
+    Object.defineProperty(arr, SYMBOL_OBJECT_SIGNAL, {
+      value: childItemArraySignal,
+      writable: false,
+      enumerable: false,
+      configurable: false,
+    });
+    return arr;
+  });
+  Object.defineProperty(item, propertyName, {
+    get: () => childItemArraySignal.value,
+    set: updateChildItemIdArray,
+    configurable: true,
+  });
+  return {
+    updateChildItemIdArray,
+    childItemIdArraySignal,
+    childItemArraySignal,
+  };
 };
