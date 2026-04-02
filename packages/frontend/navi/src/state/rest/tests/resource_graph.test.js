@@ -54,7 +54,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
     return { storeBeforePatch, storeAfterPatch };
   });
 
-  test.ONLY("DELETE removes a resource", async () => {
+  test("DELETE removes a resource", async () => {
     const USER = resource("user", { GET, POST, PUT, PATCH, DELETE });
     const captureState = () => USER.store.arraySignal.value;
 

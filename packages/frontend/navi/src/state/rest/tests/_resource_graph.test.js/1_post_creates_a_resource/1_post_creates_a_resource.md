@@ -2,10 +2,11 @@
 
 ```js
 const USER = resource("user", { GET, POST, PUT, PATCH, DELETE });
+const captureState = () => USER.store.arraySignal.value;
 
-const storeBefore = USER.store.arraySignal.value;
-await USER.POST.run({ name: "Alice" });
-const storeAfter = USER.store.arraySignal.value;
+const storeBefore = captureState();
+await USER.POST({ name: "Alice" });
+const storeAfter = captureState();
 
 return { storeBefore, storeAfter };
 ```

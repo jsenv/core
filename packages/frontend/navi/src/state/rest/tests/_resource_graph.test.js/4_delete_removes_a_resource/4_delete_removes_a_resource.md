@@ -2,22 +2,21 @@
 
 ```js
 const USER = resource("user", { GET, POST, PUT, PATCH, DELETE });
+const captureState = () => USER.store.arraySignal.value;
 
-await USER.POST.run({ name: "Alice" });
-const storeBeforeDelete = USER.store.arraySignal.value;
-await USER.DELETE.run({ id: 1 });
-const storeAfterDelete = USER.store.arraySignal.value;
+await USER.POST({ name: "Alice" });
+const storeBeforeDelete = captureState();
+await USER.DELETE({ id: 1 });
+const storeAfterDelete = captureState();
 
 return { storeBeforeDelete, storeAfterDelete };
 ```
 
-```console
-TypeError: user.DELETE must return an object (that will be used to drop "user" resource), received undefined.
-user.DELETE source location: @jsenv/core/packages/frontend/navi/src/state/rest/resource_graph.js:83:10
-  at resultToValue (@jsenv/core/packages/frontend/navi/src/state/rest/resource_graph.js:656:19)
-  at @jsenv/core/packages/frontend/navi/src/action/actions.js:1012:17
-  at onRunEnd (@jsenv/core/packages/frontend/navi/src/action/actions.js:1010:11)
-  at @jsenv/core/packages/frontend/navi/src/action/actions.js:1111:20
+```js
+{
+  "storeBeforeDelete": [],
+  "storeAfterDelete": []
+}
 ```
 
 ---

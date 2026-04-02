@@ -652,6 +652,7 @@ const createRestHandlerForRoot = (
         const actionLabel = action.name;
 
         if (verb === "DELETE") {
+          debugger;
           if (!isProps(result) && !primitiveCanBeId(result)) {
             throw new TypeError(
               `${actionLabel} must return an object (that will be used to drop "${name}" resource), received ${result}.
