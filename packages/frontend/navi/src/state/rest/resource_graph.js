@@ -357,114 +357,48 @@ export const resource = (
     propertyName,
     { GET, POST, PUT, PATCH, DELETE } = {},
   ) => {
-    const restCallbacks = { GET, POST, PUT, PATCH, DELETE };
     const childName = `${name}.${propertyName}`;
-    // setupCallbackSet: callbacks added by chained .one()/.many()/.ownOne()/.ownMany()
-    // They are applied to each per-owner child item object when it is first created.
-    const setupCallbackSet = new Set();
-    const addItemSetup = (callback) => setupCallbackSet.add(callback);
-    const ownerChildItemMap = new Map(); // ownerId → stable child item object
-    const ownerChildSignalMap = new Map(); // ownerId → signal<childItem | null>
-
-    resourceInstance.addItemSetup((ownerItem) => {
-      const ownerId = ownerItem[idKey];
-      // Create a stable child item — it will be mutated in place via applyProps.
-      // Reactive getters/setters from chained .one() etc. are defined on this object now
-      // so they survive across multiple prop updates.
-      const childItem = {};
-      for (const setup of setupCallbackSet) {
-        setup(childItem);
-      }
-      ownerChildItemMap.set(ownerId, childItem);
-      const childSignal = signal(null);
-      ownerChildSignalMap.set(ownerId, childSignal);
-
-      const applyProps = (props) => {
-        if (!props) {
-          childSignal.value = null;
-          return;
-        }
-        // Assign each prop in place. Reactive setters (from chained .one() etc.) will fire.
-        for (const [key, value] of Object.entries(props)) {
-          childItem[key] = value;
-        }
-        if (childSignal.peek() !== childItem) {
-          childSignal.value = childItem; // first activation: null → childItem
-        }
-      };
-
-      applyProps(ownerItem[propertyName]);
-
-      Object.defineProperty(ownerItem, propertyName, {
-        get: () => childSignal.value,
-        set: applyProps,
-      });
+    const ownOneRestHandler = createRestHandlerForOwnOne(childName, {
+      idKey,
+      parentResourceInstance: resourceInstance,
+      propertyName,
     });
-
-    const ownOneInstance = { name: childName, addItemSetup };
-
-    // .one() adds a reactive getter/setter on the owned child item pointing into an independent store.
-    // Returns the independent resource for further chaining if needed.
-    ownOneInstance.one = (nestedPropertyName, childResource) => {
-      addItemSetup((childItem) => {
-        setupToOneRelationship(childItem, nestedPropertyName, childResource);
+    const childResource = resource(childName, {
+      GET,
+      POST,
+      PUT,
+      PATCH,
+      DELETE,
+      restHandler: ownOneRestHandler,
+    });
+    childResource.addItemSetup = ownOneRestHandler.addItemSetup;
+    // .one()/.many() on the owned child cannot use the default implementations
+    // (those rely on a shared store which ownOne doesn't have).
+    // Override them to add setup callbacks on the per-owner child items instead.
+    childResource.one = (nestedPropertyName, nestedChildResource) => {
+      ownOneRestHandler.addItemSetup((childItem) => {
+        setupToOneRelationship(
+          childItem,
+          nestedPropertyName,
+          nestedChildResource,
+        );
       });
-      return childResource;
+      return nestedChildResource;
     };
-
-    // .many() adds a reactive array getter on the owned child item backed by an independent store.
-    // Returns the independent resource for further chaining if needed.
-    ownOneInstance.many = (nestedPropertyName, childResource) => {
-      addItemSetup((childItem) => {
-        setupToManyRelationship(childItem, nestedPropertyName, childResource);
+    childResource.many = (nestedPropertyName, nestedChildResource) => {
+      ownOneRestHandler.addItemSetup((childItem) => {
+        setupToManyRelationship(
+          childItem,
+          nestedPropertyName,
+          nestedChildResource,
+        );
       });
-      return childResource;
+      return nestedChildResource;
     };
-
-    // TODO: ownOneInstance.ownOne() and ownOneInstance.ownMany() for triple nesting
+    // TODO: childResource.ownOne() and childResource.ownMany() for triple nesting
     // (e.g. user.profile.pinnedColumns). Requires propagating per-owner identity down
     // to create per-(owner, child) stores. Not yet implemented.
-
-    for (const [restCallbackKey, restCallback] of Object.entries(
-      restCallbacks,
-    )) {
-      if (!restCallback) continue;
-      const verb = restCallbackKey;
-      const childActionName = `${childName}.${verb}`;
-      const action = createAction(restCallback, {
-        name: childActionName,
-        meta: { verb, isMany: false },
-        resultToValue: (result) => {
-          if (!Array.isArray(result) || result.length !== 2) {
-            throw new TypeError(
-              `${childActionName} callback must return [ownerId, props], received ${result}`,
-            );
-          }
-          const [ownerId, props] = result;
-          const childItem = ownerChildItemMap.get(ownerId);
-          if (!childItem) {
-            throw new Error(
-              `${childActionName}: no item found for owner id "${ownerId}"`,
-            );
-          }
-          const childSignal = ownerChildSignalMap.get(ownerId);
-          if (props) {
-            for (const [key, value] of Object.entries(props)) {
-              childItem[key] = value;
-            }
-            if (childSignal.peek() !== childItem) {
-              childSignal.value = childItem;
-            }
-          } else {
-            childSignal.value = null;
-          }
-          return [ownerId, props];
-        },
-      });
-      ownOneInstance[restCallbackKey] = action;
-    }
-
-    return ownOneInstance;
+    return childResource;
   };
 
   // .ownMany() is for resources that own a collection of sub-objects which can be mutated
@@ -1977,4 +1911,94 @@ const setupToManyRelationship = (item, propertyName, childResource) => {
     childItemIdArraySignal,
     childItemArraySignal,
   };
+};
+
+const createRestHandlerForOwnOne = (
+  childName,
+  { idKey, parentResourceInstance, propertyName },
+) => {
+  // setupCallbackSet: callbacks added by chained .one()/.many()
+  // Applied to each per-owner child item object when it is first created.
+  const setupCallbackSet = new Set();
+  const addItemSetup = (callback) => setupCallbackSet.add(callback);
+  const ownerChildItemMap = new Map(); // ownerId → stable child item object
+  const ownerChildSignalMap = new Map(); // ownerId → signal<childItem | null>
+
+  parentResourceInstance.addItemSetup((ownerItem) => {
+    const ownerId = ownerItem[idKey];
+    // Create a stable child item — mutated in place via applyProps.
+    // Reactive getters/setters from chained .one() etc. are defined on this object now
+    // so they survive across multiple prop updates.
+    const childItem = {};
+    for (const setup of setupCallbackSet) {
+      setup(childItem);
+    }
+    ownerChildItemMap.set(ownerId, childItem);
+    const childSignal = signal(null);
+    ownerChildSignalMap.set(ownerId, childSignal);
+
+    const applyProps = (props) => {
+      if (!props) {
+        childSignal.value = null;
+        return;
+      }
+      // Assign each prop in place. Reactive setters (from chained .one() etc.) will fire.
+      for (const [key, value] of Object.entries(props)) {
+        childItem[key] = value;
+      }
+      if (childSignal.peek() !== childItem) {
+        childSignal.value = childItem; // first activation: null → childItem
+      }
+    };
+
+    applyProps(ownerItem[propertyName]);
+
+    Object.defineProperty(ownerItem, propertyName, {
+      get: () => childSignal.value,
+      set: applyProps,
+    });
+  });
+
+  const createOwnOneAction = (verb, callback) => {
+    if (!callback) return undefined;
+    const childActionName = `${childName}.${verb}`;
+    return createAction(callback, {
+      name: childActionName,
+      meta: { verb, isMany: false },
+      resultToValue: (result) => {
+        if (!Array.isArray(result) || result.length !== 2) {
+          throw new TypeError(
+            `${childActionName} callback must return [ownerId, props], received ${result}`,
+          );
+        }
+        const [ownerId, props] = result;
+        const childItem = ownerChildItemMap.get(ownerId);
+        if (!childItem) {
+          throw new Error(
+            `${childActionName}: no item found for owner id "${ownerId}"`,
+          );
+        }
+        const childSignal = ownerChildSignalMap.get(ownerId);
+        if (props) {
+          for (const [key, value] of Object.entries(props)) {
+            childItem[key] = value;
+          }
+          if (childSignal.peek() !== childItem) {
+            childSignal.value = childItem;
+          }
+        } else {
+          childSignal.value = null;
+        }
+        return [ownerId, props];
+      },
+    });
+  };
+
+  const GET = (callback) => createOwnOneAction("GET", callback);
+  const POST = (callback) => createOwnOneAction("POST", callback);
+  const PUT = (callback) => createOwnOneAction("PUT", callback);
+  const PATCH = (callback) => createOwnOneAction("PATCH", callback);
+  const DELETE = (callback) => createOwnOneAction("DELETE", callback);
+
+  return { GET, POST, PUT, PATCH, DELETE, addItemSetup };
 };
