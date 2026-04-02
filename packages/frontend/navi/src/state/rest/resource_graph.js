@@ -180,85 +180,30 @@ export const resource = (
     const childIdKey = childResource.idKey;
     const childName = `${name}.${propertyName}`;
     resourceInstance.addItemSetup((item) => {
-      const childItemIdSignal = signal();
-      const updateChildItemId = (value) => {
-        const currentChildItemId = childItemIdSignal.peek();
-        if (isProps(value)) {
-          const childItem = childResource.store.upsert(value);
-          const childItemId = childItem[childIdKey];
-          if (currentChildItemId === childItemId) {
-            return false;
-          }
-          childItemIdSignal.value = childItemId;
-          return true;
-        }
-        if (primitiveCanBeId(value)) {
-          const childItemProps = { [childIdKey]: value };
-          const childItem = childResource.store.upsert(childItemProps);
-          const childItemId = childItem[childIdKey];
-          if (currentChildItemId === childItemId) {
-            return false;
-          }
-          childItemIdSignal.value = childItemId;
-          return true;
-        }
-        if (currentChildItemId === undefined) {
-          return false;
-        }
-        childItemIdSignal.value = undefined;
-        return true;
-      };
-      updateChildItemId(item[propertyName]);
-
-      const childItemSignal = computed(() => {
-        const childItemId = childItemIdSignal.value;
-        const childItem = childResource.store.select(childItemId);
-        return childItem;
-      });
-      const childItemFacadeSignal = computed(() => {
-        const childItem = childItemSignal.value;
-        if (childItem) {
-          const childItemCopy = Object.create(
-            Object.getPrototypeOf(childItem),
-            Object.getOwnPropertyDescriptors(childItem),
-          );
-          Object.defineProperty(childItemCopy, SYMBOL_OBJECT_SIGNAL, {
-            value: childItemSignal,
-            writable: false,
-            enumerable: false,
-            configurable: false,
-          });
-          return childItemCopy;
-        }
-        const nullItem = {
-          [SYMBOL_OBJECT_SIGNAL]: childItemSignal,
-          valueOf: () => null,
-        };
-        return nullItem;
-      });
+      const { updateChildItemId, childItemSignal } = setupToOneRelationship(
+        item,
+        propertyName,
+        childResource,
+      );
 
       if (DEBUG) {
         console.debug(
           `setup ${item}.${propertyName} is one "${childResource.name}" (current value: ${childItemSignal.peek()})`,
         );
-      }
-
-      Object.defineProperty(item, propertyName, {
-        get: () => {
-          const childItemFacade = childItemFacadeSignal.value;
-          return childItemFacade;
-        },
-        set: (value) => {
-          if (!updateChildItemId(value)) {
-            return;
-          }
-          if (DEBUG) {
+        const desc = Object.getOwnPropertyDescriptor(item, propertyName);
+        Object.defineProperty(item, propertyName, {
+          get: desc.get,
+          set: (value) => {
+            if (!updateChildItemId(value)) {
+              return;
+            }
             console.debug(
               `${item}.${propertyName} updated to ${childItemSignal.peek()}`,
             );
-          }
-        },
-      });
+          },
+          configurable: true,
+        });
+      }
     });
     const restHandlerForRelationshipToOne =
       createRestHandlerForRelationshipToOne(childName, {
@@ -515,56 +460,8 @@ export const resource = (
     // .one() adds a reactive getter/setter on the owned child item pointing into an independent store.
     // Returns the independent resource for further chaining if needed.
     ownOneInstance.one = (nestedPropertyName, childResource) => {
-      const childIdKey = childResource.idKey;
       addItemSetup((childItem) => {
-        const childItemIdSignal = signal();
-        const updateChildItemId = (value) => {
-          const currentId = childItemIdSignal.peek();
-          if (isProps(value)) {
-            const item = childResource.store.upsert(value);
-            const itemId = item[childIdKey];
-            if (currentId === itemId) return false;
-            childItemIdSignal.value = itemId;
-            return true;
-          }
-          if (primitiveCanBeId(value)) {
-            childResource.store.upsert({ [childIdKey]: value });
-            if (currentId === value) return false;
-            childItemIdSignal.value = value;
-            return true;
-          }
-          if (currentId === undefined) return false;
-          childItemIdSignal.value = undefined;
-          return true;
-        };
-        updateChildItemId(childItem[nestedPropertyName]);
-        const nestedItemSignal = computed(() =>
-          childResource.store.select(childItemIdSignal.value),
-        );
-        const nestedItemFacadeSignal = computed(() => {
-          const nestedItem = nestedItemSignal.value;
-          if (nestedItem) {
-            const copy = Object.create(
-              Object.getPrototypeOf(nestedItem),
-              Object.getOwnPropertyDescriptors(nestedItem),
-            );
-            Object.defineProperty(copy, SYMBOL_OBJECT_SIGNAL, {
-              value: nestedItemSignal,
-              writable: false,
-              enumerable: false,
-              configurable: false,
-            });
-            return copy;
-          }
-          return {
-            [SYMBOL_OBJECT_SIGNAL]: nestedItemSignal,
-            valueOf: () => null,
-          };
-        });
-        Object.defineProperty(childItem, nestedPropertyName, {
-          get: () => nestedItemFacadeSignal.value,
-          set: updateChildItemId,
-        });
+        setupToOneRelationship(childItem, nestedPropertyName, childResource);
       });
       return childResource;
     };
@@ -2101,4 +1998,70 @@ ${originalActionName} source location: ${locationInfo}`,
 
 const isProps = (value) => {
   return value !== null && typeof value === "object";
+};
+
+// Installs a reactive getter/setter on `item[propertyName]` that tracks one item
+// from `childResource.store`. The property value is a facade of the child item
+// (or a null-like object if the child is not found).
+// Used by both resourceInstance.one() and ownOneInstance.one().
+const setupToOneRelationship = (item, propertyName, childResource) => {
+  const childIdKey = childResource.idKey;
+  const childItemIdSignal = signal();
+  const updateChildItemId = (value) => {
+    const currentChildItemId = childItemIdSignal.peek();
+    if (isProps(value)) {
+      const childItem = childResource.store.upsert(value);
+      const childItemId = childItem[childIdKey];
+      if (currentChildItemId === childItemId) {
+        return false;
+      }
+      childItemIdSignal.value = childItemId;
+      return true;
+    }
+    if (primitiveCanBeId(value)) {
+      const childItemProps = { [childIdKey]: value };
+      const childItem = childResource.store.upsert(childItemProps);
+      const childItemId = childItem[childIdKey];
+      if (currentChildItemId === childItemId) {
+        return false;
+      }
+      childItemIdSignal.value = childItemId;
+      return true;
+    }
+    if (currentChildItemId === undefined) {
+      return false;
+    }
+    childItemIdSignal.value = undefined;
+    return true;
+  };
+  updateChildItemId(item[propertyName]);
+  const childItemSignal = computed(() =>
+    childResource.store.select(childItemIdSignal.value),
+  );
+  const childItemFacadeSignal = computed(() => {
+    const childItem = childItemSignal.value;
+    if (childItem) {
+      const childItemCopy = Object.create(
+        Object.getPrototypeOf(childItem),
+        Object.getOwnPropertyDescriptors(childItem),
+      );
+      Object.defineProperty(childItemCopy, SYMBOL_OBJECT_SIGNAL, {
+        value: childItemSignal,
+        writable: false,
+        enumerable: false,
+        configurable: false,
+      });
+      return childItemCopy;
+    }
+    return {
+      [SYMBOL_OBJECT_SIGNAL]: childItemSignal,
+      valueOf: () => null,
+    };
+  });
+  Object.defineProperty(item, propertyName, {
+    get: () => childItemFacadeSignal.value,
+    set: updateChildItemId,
+    configurable: true,
+  });
+  return { updateChildItemId, childItemSignal };
 };
