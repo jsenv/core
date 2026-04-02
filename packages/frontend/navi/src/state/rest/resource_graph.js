@@ -460,7 +460,7 @@ const createResource = (
     const childName = `${name}.${propertyName}`;
     const ownOneRestHandler = createRestHandlerForOwnOne(childName, {
       idKey,
-      parentStateFacade: stateFacade,
+      parentAddItemSetup: addItemSetup,
       propertyName,
     });
     const childResource = resource(childName, {
@@ -1519,7 +1519,7 @@ const setupToManyRelationship = (item, propertyName, childResource) => {
 
 const createRestHandlerForOwnOne = (
   childName,
-  { idKey, parentStateFacade, propertyName },
+  { idKey, parentAddItemSetup, propertyName },
 ) => {
   // setupCallbackSet: callbacks added by chained .one()/.many()
   // Applied to each per-owner child item object when it is first created.
@@ -1528,7 +1528,7 @@ const createRestHandlerForOwnOne = (
   const ownerChildItemMap = new Map(); // ownerId → stable child item object
   const ownerChildSignalMap = new Map(); // ownerId → signal<childItem | null>
 
-  parentStateFacade.addItemSetup((ownerItem) => {
+  parentAddItemSetup((ownerItem) => {
     const ownerId = ownerItem[idKey];
     // Create a stable child item — mutated in place via applyProps.
     // Reactive getters/setters from chained .one() etc. are defined on this object now
