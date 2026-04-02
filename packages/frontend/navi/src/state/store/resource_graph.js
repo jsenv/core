@@ -341,6 +341,233 @@ export const resource = (
     });
   };
 
+  // .collection() is for resources that own a list of sub-objects which can be mutated
+  // directly via dedicated endpoints, without re-sending the whole parent.
+  //
+  // Example: a TABLE has COLUMNS. You receive them when you GET the table, and you
+  // have dedicated endpoints to rename, reorder, or delete individual columns.
+  // The columns have no identity outside of their table — two tables can have a
+  // column named "id" and they are completely independent objects.
+  //
+  // Each owner item gets its own private arraySignalStore (no shared global store,
+  // no id clashes across owners). All callbacks must return [ownerId, ...rest] so
+  // the right per-owner store is updated.
+  resourceInstance.collection = (
+    propertyName,
+    { idKey: childIdKey = "id", ...httpMethods } = {},
+  ) => {
+    const childName = `${name}.${propertyName}`;
+    const ownerStoreMap = new Map(); // ownerId → childStore
+    const ownerIdArraySignalMap = new Map(); // ownerId → childItemIdArraySignal
+
+    resourceInstance.addItemSetup((item) => {
+      const ownerId = item[idKey];
+      const childStore = arraySignalStore([], childIdKey, {
+        name: `${childName}[${ownerId}] store`,
+      });
+      ownerStoreMap.set(ownerId, childStore);
+
+      const childItemIdArraySignal = signal([]);
+      ownerIdArraySignalMap.set(ownerId, childItemIdArraySignal);
+
+      const updateChildItemIdArray = (valueArray) => {
+        const currentIdArray = childItemIdArraySignal.peek();
+        if (!Array.isArray(valueArray)) {
+          if (currentIdArray.length === 0) return;
+          childItemIdArraySignal.value = [];
+          return;
+        }
+        let i = 0;
+        const idArray = [];
+        let modified = false;
+        while (i < valueArray.length) {
+          const value = valueArray[i];
+          const currentIdAtIndex = currentIdArray[idArray.length];
+          i++;
+          if (isProps(value)) {
+            const childItem = childStore.upsert(value);
+            const childItemId = childItem[childIdKey];
+            if (currentIdAtIndex !== childItemId) modified = true;
+            idArray.push(childItemId);
+            continue;
+          }
+          if (primitiveCanBeId(value)) {
+            const childItemProps = { [childIdKey]: value };
+            const childItem = childStore.upsert(childItemProps);
+            const childItemId = childItem[childIdKey];
+            if (currentIdAtIndex !== childItemId) modified = true;
+            idArray.push(childItemId);
+            continue;
+          }
+        }
+        if (modified || currentIdArray.length !== idArray.length) {
+          childItemIdArraySignal.value = idArray;
+        }
+      };
+
+      updateChildItemIdArray(item[propertyName]);
+
+      // When an id is renamed (PUT/PATCH changes the idKey), patch the id array.
+      childStore.observeProperties((mutations) => {
+        const idArray = childItemIdArraySignal.peek();
+        if (idArray.length === 0) return;
+        const idSet = new Set(idArray);
+        const idMutationMap = new Map();
+        for (const mutation of mutations) {
+          const idKeyMutation = mutation[childIdKey];
+          if (!idKeyMutation) continue;
+          const { oldValue, newValue } = idKeyMutation;
+          if (!idSet.has(oldValue)) continue;
+          idMutationMap.set(oldValue, newValue);
+        }
+        if (idMutationMap.size === 0) return;
+        const idUpdatedArray = [];
+        for (const id of idArray) {
+          idUpdatedArray.push(idMutationMap.get(id) ?? id);
+        }
+        childItemIdArraySignal.value = idUpdatedArray;
+      });
+
+      const childItemArraySignal = computed(() => {
+        const childItemIdArray = childItemIdArraySignal.value;
+        const childItemArray = childStore.selectAll(childItemIdArray);
+        Object.defineProperty(childItemArray, SYMBOL_OBJECT_SIGNAL, {
+          value: childItemArraySignal,
+          writable: false,
+          enumerable: false,
+          configurable: false,
+        });
+        return childItemArray;
+      });
+
+      Object.defineProperty(item, propertyName, {
+        get: () => childItemArraySignal.value,
+        set: (value) => {
+          updateChildItemIdArray(value);
+        },
+      });
+    });
+
+    const collectionInstance = { name: childName, idKey: childIdKey };
+
+    for (const [verb, callback] of Object.entries(httpMethods)) {
+      const httpVerb = verb.replace("_MANY", "");
+      const isMany = verb.endsWith("_MANY");
+
+      const action = createAction(callback, {
+        name: `${childName}.${verb}`,
+        meta: { httpVerb, httpMany: isMany },
+        resultToValue: (result) => {
+          if (!Array.isArray(result) || result.length < 2) {
+            throw new TypeError(
+              `${childName}.${verb} callback must return [ownerId, ...] array, received ${result}`,
+            );
+          }
+          const [ownerId, ...rest] = result;
+          const childStore = ownerStoreMap.get(ownerId);
+          if (!childStore) {
+            throw new Error(
+              `${childName}.${verb}: no store found for owner id "${ownerId}"`,
+            );
+          }
+          const childItemIdArraySignal = ownerIdArraySignalMap.get(ownerId);
+
+          if (httpVerb === "DELETE") {
+            if (isMany) {
+              const idArray = childStore.drop(rest[0]);
+              const toRemoveSet = new Set(idArray);
+              childItemIdArraySignal.value = childItemIdArraySignal
+                .peek()
+                .filter((id) => !toRemoveSet.has(id));
+              return [ownerId, idArray];
+            }
+            const childId = childStore.drop(rest[0]);
+            childItemIdArraySignal.value = childItemIdArraySignal
+              .peek()
+              .filter((id) => id !== childId);
+            return [ownerId, childId];
+          }
+
+          if (isMany) {
+            // GET_MANY, POST_MANY, PUT_MANY etc: rest[0] is the array of items
+            const itemArray = childStore.upsert(rest[0]);
+            const idArray = itemArray.map((i) => i[childIdKey]);
+            childItemIdArraySignal.value = idArray;
+            return [ownerId, idArray];
+          }
+
+          // PUT, PATCH, POST: rest may be [props] or ["idKey", oldId, props] for renames
+          const childItem =
+            rest.length > 1
+              ? childStore.upsert(...rest)
+              : childStore.upsert(rest[0]);
+          return [ownerId, childItem[childIdKey]];
+        },
+      });
+
+      collectionInstance[verb] = action;
+    }
+
+    return collectionInstance;
+  };
+
+  // .item() is for a single sub-object owned exclusively by the parent resource.
+  // Unlike .collection(), there is no array — each owner has exactly one child object.
+  //
+  // Example: a TABLE has a single SETTINGS object (theme, page size, etc.).
+  // You can PUT/PATCH it directly without re-sending the whole table.
+  // The settings have no identity outside their table.
+  //
+  // Each owner item gets its own private signal. Callbacks must return [ownerId, props]
+  // so the right per-owner signal is updated.
+  resourceInstance.item = (propertyName, { ...httpMethods } = {}) => {
+    const childName = `${name}.${propertyName}`;
+    const ownerSignalMap = new Map(); // ownerId → signal(childProps)
+
+    resourceInstance.addItemSetup((item) => {
+      const ownerId = item[idKey];
+      const childSignal = signal(item[propertyName] ?? null);
+      ownerSignalMap.set(ownerId, childSignal);
+
+      Object.defineProperty(item, propertyName, {
+        get: () => childSignal.value,
+        set: (value) => {
+          childSignal.value = value ?? null;
+        },
+      });
+    });
+
+    const itemInstance = { name: childName };
+
+    for (const [verb, callback] of Object.entries(httpMethods)) {
+      const httpVerb = verb;
+      const action = createAction(callback, {
+        name: `${childName}.${verb}`,
+        meta: { httpVerb, httpMany: false },
+        resultToValue: (result) => {
+          if (!Array.isArray(result) || result.length !== 2) {
+            throw new TypeError(
+              `${childName}.${verb} callback must return [ownerId, props], received ${result}`,
+            );
+          }
+          const [ownerId, props] = result;
+          const childSignal = ownerSignalMap.get(ownerId);
+          if (!childSignal) {
+            throw new Error(
+              `${childName}.${verb}: no signal found for owner id "${ownerId}"`,
+            );
+          }
+          childSignal.value = props;
+          return [ownerId, props];
+        },
+      });
+
+      itemInstance[verb] = action;
+    }
+
+    return itemInstance;
+  };
+
   /**
    * Creates a parameterized version of the resource with isolated resource lifecycle behavior.
    *

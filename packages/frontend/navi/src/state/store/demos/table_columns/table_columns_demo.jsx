@@ -1,83 +1,53 @@
 import { ActionRenderer, Button, resource } from "@jsenv/navi";
 import { render } from "preact";
 
-const columnsStore = [
-  {
-    column_name: "id",
-  },
-  {
-    column_name: "email",
-  },
-  {
-    column_name: "name",
-  },
-];
-const COLUMN = resource("column", {
-  idKey: "column_name",
+const tablesStore = {
+  users: [
+    { column_name: "id" },
+    { column_name: "email" },
+    { column_name: "name" },
+  ],
+};
 
-  GET: ({ column_name }) => {
-    const column = columnsStore.find((c) => c.column_name === column_name);
-    if (!column) {
-      throw new Error(`Column "${column_name}" not found`);
-    }
-    return { ...column };
-  },
-
-  PUT: ({ column_name, property, value }) => {
-    const column = columnsStore.find((c) => c.column_name === column_name);
-    if (!column) {
-      throw new Error(`Column "${column_name}" not found`);
-    }
-    column[property] = value;
-    return ["column_name", column_name, { [property]: value }];
-  },
-});
 const TABLE = resource("table", {
   idKey: "id",
 
   GET: ({ id }) => ({
     id,
-    columns: [...columnsStore],
+    columns: [...tablesStore[id]],
   }),
 });
-const TABLE_COLUMNS = TABLE.many("columns", COLUMN, {
-  PUT: ({ column_name, property, value }) => {
-    const column = columnsStore.find((c) => c.column_name === column_name);
+
+const TABLE_COLUMNS = TABLE.collection("columns", {
+  idKey: "column_name",
+
+  PUT: ({ id, column_name, property, value }) => {
+    const column = tablesStore[id].find((c) => c.column_name === column_name);
     if (!column) {
-      throw new Error(`Column "${column_name}" not found`);
+      throw new Error(`Column "${column_name}" not found in table "${id}"`);
     }
     column[property] = value;
-    return ["column_name", column_name, { [property]: value }];
+    return [id, "column_name", column_name, { [property]: value }];
   },
 });
 
 const tableAction = TABLE.GET.bindParams({ id: "users" });
 
-const ColumnRow = ({ column }) => {
+const ColumnRow = ({ table, column }) => {
   return (
     <li>
       <code>{column.column_name}</code>
       <Button
         action={() => {
-          COLUMN.PUT({
-            column_name: column.column_name,
-            property: `column_name`,
-            value: `${column.column_name}_2`,
-          });
-        }}
-      >
-        rename via COLUMN.PUT
-      </Button>
-      <Button
-        action={() => {
           TABLE_COLUMNS.PUT({
+            id: table.id,
             column_name: column.column_name,
-            property: `column_name`,
+            property: "column_name",
             value: `${column.column_name}_2`,
           });
         }}
       >
-        rename via TABLE_COLUMNS.PUT
+        rename
       </Button>
     </li>
   );
@@ -89,7 +59,7 @@ const TableDisplay = ({ table }) => {
   return (
     <ul>
       {table.columns.map((col) => (
-        <ColumnRow key={col.id} column={col} />
+        <ColumnRow key={col.column_name} table={table} column={col} />
       ))}
     </ul>
   );
@@ -111,3 +81,4 @@ const App = () => {
 };
 
 render(<App />, document.getElementById("root"));
+
