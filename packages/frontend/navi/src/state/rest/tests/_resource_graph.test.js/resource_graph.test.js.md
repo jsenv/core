@@ -6,6 +6,7 @@
 - [PUT updates a resource](2_put_updates_a_resource/2_put_updates_a_resource.md)
 - [PATCH updates a resource](3_patch_updates_a_resource/3_patch_updates_a_resource.md)
 - [DELETE removes a resource](4_delete_removes_a_resource/4_delete_removes_a_resource.md)
+- [.one() links user to a session](5__one()_links_user_to_a_session/5__one()_links_user_to_a_session.md)
 
 ---
 
