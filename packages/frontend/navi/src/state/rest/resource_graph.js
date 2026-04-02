@@ -280,7 +280,16 @@ const createResource = (
   //     const DEVICE = resource("device", { GET: fetchDevice });
   //     USER_SESSION.one("device", DEVICE);
   //     // user.session.device → reactive Device object; resolves via session.device_id automatically
-  stateFacade.one = (propertyName, childResource, options) => {
+  stateFacade.one = (
+    propertyName,
+    childResource,
+    // il n'y a pas de many puisque on cible une seule resource
+    // genre table.owner -> c'est un seul owner qu'on peut
+    // GET -> recup les infos de l'objet
+    // PUT -> mettre a jour l'owner de la table
+    // DELETE -> supprimer l'owner de la table
+    { GET, PUT, DELETE } = {},
+  ) => {
     const childIdKey = childResource.idKey;
     const childName = `${name}.${propertyName}`;
     addItemSetup((item) => {
@@ -317,10 +326,17 @@ const createResource = (
         childIdKey,
         childStore: childResource.store,
       });
-    return resource(childName, {
+    return createResource(childName, {
       idKey: childIdKey,
+      restCallbacks: {
+        GET,
+        PUT,
+        DELETE,
+      },
       restHandler: restHandlerForRelationshipToOne,
-      ...options,
+      params,
+      store,
+      addItemSetup,
     });
   };
 
@@ -348,7 +364,22 @@ const createResource = (
   //     HTTP: PATCH /users/:id/settings
   //     USER.ownOne("settings", { PATCH: async ({ id, data }) => patchSettings(id, data) });
   //     // user.friends[0].settings.theme is reactive automatically
-  stateFacade.many = (propertyName, childResource, options) => {
+  stateFacade.many = (
+    propertyName,
+    childResource,
+    {
+      GET,
+      GET_MANY,
+      POST,
+      POST_MANY,
+      PUT,
+      PUT_MANY,
+      PATCH,
+      PATCH_MANY,
+      DELETE,
+      DELETE_MANY,
+    } = {},
+  ) => {
     const childIdKey = childResource.idKey;
     const childName = `${name}.${propertyName}`;
     addItemSetup((item) => {
@@ -417,10 +448,24 @@ const createResource = (
         childIdKey,
         childStore: childResource.store,
       });
-    return resource(childName, {
+    return createResource(childName, {
       idKey: childIdKey,
+      restCallbacks: {
+        GET,
+        GET_MANY,
+        POST,
+        POST_MANY,
+        PUT,
+        PUT_MANY,
+        PATCH,
+        PATCH_MANY,
+        DELETE,
+        DELETE_MANY,
+      },
       restHandler: restHandlerForRelationshipToMany,
-      ...options,
+      params,
+      store,
+      addItemSetup,
     });
   };
 
@@ -455,7 +500,7 @@ const createResource = (
   //     // When profile arrives with { theme_id: 5, bio: "..." }, user.profile.theme resolves to Theme#5
   stateFacade.ownOne = (
     propertyName,
-    { GET, POST, PUT, PATCH, DELETE } = {},
+    { idKey: childIdKey = "id", GET, POST, PUT, PATCH, DELETE } = {},
   ) => {
     const childName = `${name}.${propertyName}`;
     const ownOneRestHandler = createRestHandlerForOwnOne(childName, {
@@ -463,41 +508,20 @@ const createResource = (
       parentAddItemSetup: addItemSetup,
       propertyName,
     });
-    const childResource = resource(childName, {
-      GET,
-      POST,
-      PUT,
-      PATCH,
-      DELETE,
+    const childResource = createResource(childName, {
+      idKey: childIdKey,
+      restCallbacks: {
+        GET,
+        POST,
+        PUT,
+        PATCH,
+        DELETE,
+      },
       restHandler: ownOneRestHandler,
+      params,
+      store,
+      addItemSetup: ownOneRestHandler.addItemSetup,
     });
-    childResource.addItemSetup = ownOneRestHandler.addItemSetup;
-    // .one()/.many() on the owned child cannot use the default implementations
-    // (those rely on a shared store which ownOne doesn't have).
-    // Override them to add setup callbacks on the per-owner child items instead.
-    childResource.one = (nestedPropertyName, nestedChildResource) => {
-      ownOneRestHandler.addItemSetup((childItem) => {
-        setupToOneRelationship(
-          childItem,
-          nestedPropertyName,
-          nestedChildResource,
-        );
-      });
-      return nestedChildResource;
-    };
-    childResource.many = (nestedPropertyName, nestedChildResource) => {
-      ownOneRestHandler.addItemSetup((childItem) => {
-        setupToManyRelationship(
-          childItem,
-          nestedPropertyName,
-          nestedChildResource,
-        );
-      });
-      return nestedChildResource;
-    };
-    // TODO: childResource.ownOne() and childResource.ownMany() for triple nesting
-    // (e.g. user.profile.pinnedColumns). Requires propagating per-owner identity down
-    // to create per-(owner, child) stores. Not yet implemented.
     return childResource;
   };
 
@@ -542,6 +566,8 @@ const createResource = (
   stateFacade.ownMany = (
     propertyName,
     {
+      idKey: childIdKey = "id",
+
       GET,
       GET_MANY,
       POST,
@@ -552,8 +578,6 @@ const createResource = (
       PATCH_MANY,
       DELETE,
       DELETE_MANY,
-
-      idKey: childIdKey = "id",
     } = {},
   ) => {
     const childName = `${name}.${propertyName}`;
@@ -1103,11 +1127,6 @@ ${originalActionName} source location: ${locationInfo}`,
     return actionAffectingOneItem;
   };
 
-  // il n'y a pas de many puisque on cible une seule resource
-  // genre table.owner -> c'est un seul owner qu'on peut
-  // GET -> recup les infos de l'objet
-  // PUT -> mettre a jour l'owner de la table
-  // DELETE -> supprimer l'owner de la table
   const GET = (callback, options) =>
     createActionAffectingOneItem("GET", {
       callback,
