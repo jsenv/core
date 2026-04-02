@@ -6,12 +6,94 @@ import { SYMBOL_IDENTITY } from "../../utils/compare_two_js_values.js";
 import { getCallerInfo } from "../../utils/get_caller_info.js";
 import { arraySignalStore, primitiveCanBeId } from "./array_signal_store.js";
 
-// Naming conventions used throughout this file:
-// - verb:             one of GET / POST / PUT / PATCH / DELETE
-// - restCallbackKey:  one of GET / GET_MANY / POST / POST_MANY / PUT / PUT_MANY / PATCH / PATCH_MANY / DELETE / DELETE_MANY
-// - restCallback:     the user-provided callback function associated with a restCallbackKey
-// - restCallbacks:    object mapping { [restCallbackKey]: restCallback }
-// - isMany:           true when the action operates on a collection (restCallbackKey ends with _MANY)
+/**
+ * Naming conventions used throughout this file:
+ * - verb:            one of GET / POST / PUT / PATCH / DELETE
+ * - restCallbackKey: one of GET / GET_MANY / POST / POST_MANY / PUT / PUT_MANY / PATCH / PATCH_MANY / DELETE / DELETE_MANY
+ * - restCallback:    the user-provided callback function associated with a restCallbackKey
+ * - restCallbacks:   object mapping { [restCallbackKey]: restCallback }
+ * - isMany:          true when the action operates on a collection (restCallbackKey ends with _MANY)
+ *
+ * # resource(name, restCallbacks)
+ *
+ * Creates a reactive REST resource backed by a shared signal store.
+ * Returns a `stateFacade` with REST actions and relationship methods.
+ *
+ * Each REST callback receives the params passed to the action call and must return
+ * the data that will be upserted into the store:
+ *   - GET / POST / PUT / PATCH → return the full item object  e.g. { id, name }
+ *   - DELETE                   → return the id or { id } of the removed item
+ *   - GET_MANY / POST_MANY … → return an array of item objects
+ *
+ * mutableIdKeys allows the store to find an item by an alternate key (e.g. "username"),
+ * and the callback can return a different `id` to rename the item's primary key.
+ *
+ * # .withParams(params)
+ *
+ * Returns a new resource instance where every action automatically merges `params`
+ * into its call params. All `withParams` instances share the same underlying store,
+ * so items loaded by one instance are visible to all others.
+ *
+ *   const ADMIN_USER = USER.withParams({ role: "admin" });
+ *   await ADMIN_USER.GET_MANY.run();   // callback receives { role: "admin" }
+ *   await ADMIN_USER.POST({ name: "Charlie" }); // callback receives { role: "admin", name: "Charlie" }
+ *
+ * # .one(propertyName, childResource, { GET, PUT, DELETE })
+ *
+ * Links a property on each item to a single item in an independent child store.
+ * The property is reactive: updating the child item anywhere propagates immediately.
+ * The child resource exists independently — it is not owned by or deleted with the parent.
+ *
+ * Callback format: return the parent object with the relationship nested inside:
+ *   GET: async ({ id }) => ({ id, session: { id: 10, token: "abc" } })
+ *
+ * The backend may also embed the child inline in a parent GET/POST response —
+ * the setter on the property will upsert the nested object into the child store.
+ *
+ * Chainable: USER_SESSION.one("device", DEVICE) adds a reactive .device property
+ * to each session object.
+ *
+ * # .many(propertyName, childResource, restCallbacks)
+ *
+ * Links a property on each item to an array of items in an independent child store.
+ * Items in the array are full entries in the shared child store — if the same item
+ * is referenced by multiple parents, a single update propagates to all of them.
+ *
+ * GET_MANY callback format: return the parent object with the array nested inside:
+ *   GET_MANY: async ({ id }) => ({ id, friends: [{ id: 2 }, { id: 3 }] })
+ *
+ * DELETE callback: return [parentId, childId] to remove the relationship.
+ * DELETE_MANY callback: return [parentId, [childId, childId, ...]] to remove multiple.
+ *
+ * # .ownOne(propertyName, { idKey, GET, POST, PUT, PATCH, DELETE })
+ *
+ * Attaches a single private sub-object to each item. Unlike .one(), the child has
+ * no identity outside its owner and is not shared across items. Each owner gets its
+ * own private signal.
+ *
+ * All callbacks must return [ownerId, props | null]:
+ *   GET:   async ({ id }) => [id, { bio: "Hello", avatar: "alice.png" }]
+ *   PATCH: async ({ id, bio }) => [id, { bio, avatar: "alice.png" }]
+ *   DELETE: async ({ id }) => [id, null]
+ *
+ * The property is `null` until a callback provides data. Setting it to `null` clears it.
+ * Chainable: USER_PROFILE.one("theme", THEME) adds a reactive .theme property on each profile.
+ *
+ * # .ownMany(propertyName, { idKey, GET, GET_MANY, POST, PUT, PATCH, DELETE, ... })
+ *
+ * Attaches a private ordered collection of sub-objects to each item. The child objects
+ * have no identity outside their owner — two owners can have items with the same id
+ * that are completely independent. Each owner gets its own private arraySignalStore.
+ *
+ * All callbacks must return [ownerId, ...rest]:
+ *   GET_MANY: async ({ id }) => [id, [{ name: "id", type: "int" }, ...]]
+ *   POST:     async ({ id, name, type }) => [id, { name, type }]
+ *   PUT:      async ({ id, oldName, name, type }) => [id, oldName, { name, type }]  ← id rename
+ *   DELETE:   async ({ id, name }) => [id, name]
+ *
+ * Chainable: TABLE_COLUMNS.one("dataType", DATA_TYPE) adds a reactive .dataType
+ * property on each column item.
+ */
 
 let DEBUG = false;
 const debug = (args) => {
@@ -221,40 +303,6 @@ const createResource = (
   };
   stateFacade.withParams = withParams;
 
-  // .one() links a property on this resource's items to an independent resource.
-  // The property holds a reference (id or nested props) to an item in the child store.
-  // When that item is updated anywhere, all signals reading the property update reactively.
-  // The child resource exists independently — deleting the parent does not delete the child.
-  //
-  // @example — A user has one active session
-  //
-  //   HTTP endpoints involved:
-  //     GET    /users/:id/session   → returns { id, token, ... }
-  //     DELETE /users/:id/session   → logs out
-  //
-  //   Frontend:
-  //     const SESSION = resource("session");
-  //     const USER = resource("user", { GET: fetchUser });
-  //     const USER_SESSION = USER.one("session", SESSION, {
-  //       GET: async ({ id }) => {
-  //         const session = await fetch(`/users/${id}/session`).json();
-  //         return session;
-  //       },
-  //       DELETE: async ({ id }) => {
-  //         await fetch(`/users/${id}/session`, { method: "DELETE" })
-  //       },
-  //     });
-  //     // user.session → reactive Session object from SESSION store
-  //     // USER_SESSION.GET({ id: 1 }) loads the session reactively
-  //
-  //   Chaining — session itself has a device (an independent resource):
-  //     HTTP: GET /devices/:deviceId
-  //     const DEVICE = resource("device", { GET: fetchDevice });
-  //     USER_SESSION.one("device", DEVICE);
-  //     // user.session.device → reactive Device object;
-  //
-  // The only methods available here are GET/PUT/DELETE
-  // (there is no many as we deal with a single object)
   stateFacade.one = (
     propertyName,
     childResource,
@@ -363,36 +411,6 @@ ${originalActionName} source location: ${locationInfo}`,
     });
   };
 
-  // .many() links a property on this resource's items to an array of independent resource items.
-  // Each entry in the array is a full item in the child store, shared globally.
-  // The child resource exists independently — items can be referenced by multiple parents.
-  //
-  // @example — A user has many friends (other users)
-  //
-  //   HTTP endpoints involved:
-  //     GET  /users/:id/friends → returns [{ id, name, ... }, ...]
-  //     POST /users/:id/friends → { friendId } → adds a friendship
-  //
-  //   Frontend:
-  //     const USER = resource("user", { GET: fetchUser });
-  //     const USER_FRIENDS = USER.many("friends", USER, {
-  //       GET_MANY: async ({ id }) => {
-  //         const friends = await fetch(`/users/${id}/friends`).json();
-  //         return friends;
-  //       },
-  //       POST: async ({ id, friendId }) => {
-  //          await fetch(`/users/${id}/friends/${friendId}`, { method: 'POST' });
-  //          return [id, friendId];
-  //       }
-  //     });
-  //     // user.friends → reactive array of User objects from the shared USER store
-  //     // USER_FRIENDS.GET_MANY({ id: 1 }) loads the friend list reactively
-  //
-  //   Chaining — each friend (being a full USER) already has all USER relationships;
-  //   if USER.ownOne("settings") is defined, user.friends[0].settings works with no extra setup:
-  //     HTTP: PATCH /users/:id/settings
-  //     USER.ownOne("settings", { PATCH: async ({ id, data }) => patchSettings(id, data) });
-  //     // user.friends[0].settings.theme is reactive automatically
   stateFacade.many = (
     propertyName,
     childResource,
@@ -666,35 +684,6 @@ ${originalActionName} source location: ${locationInfo}`,
     });
   };
 
-  // .ownOne() is for a resource that owns a single sub-object exclusively.
-  // Unlike .one(), the child has no identity outside its owner and is not shared across items.
-  // Each owner item gets its own private signal. Callbacks must return [ownerId, props|null].
-  //
-  // Chainable: the returned instance supports .one() and .many()
-  // to describe relationships on the owned object pointing to independent resources.
-  //
-  // @example — A user has one profile (owned, not shared across users)
-  //
-  //   HTTP endpoints involved:
-  //     GET   /users/:id/profile → returns { bio, avatar_url, theme_id }
-  //     PATCH /users/:id/profile → { bio?, avatar_url? } → returns updated profile
-  //
-  //   Frontend:
-  //     const USER = resource("user", { GET: fetchUser });
-  //     USER.ownOne("profile", {
-  //       GET:   async ({ id })       => [id, await fetchUserProfile(id)],
-  //       PATCH: async ({ id, data }) => [id, await patchUserProfile(id, data)],
-  //     });
-  //     // user.profile → reactive profile object (null until loaded)
-  //     // USER_PROFILE.GET({ id: 1 })
-  //     // USER_PROFILE.PATCH({ id: 1, data: { bio: "hi" } })
-  //
-  //   Chaining — profile references an independent Theme resource:
-  //     HTTP: GET /themes/:themeId
-  //     const THEME = resource("theme", { GET: fetchTheme });
-  //     USER_PROFILE.one("theme", THEME);
-  //     // user.profile.theme → reactive Theme object from THEME store
-  //     // When profile arrives with { theme_id: 5, bio: "..." }, user.profile.theme resolves to Theme#5
   stateFacade.ownOne = (
     propertyName,
     { idKey: childIdKey = "id", GET, POST, PUT, PATCH, DELETE } = {},
@@ -794,44 +783,6 @@ ${originalActionName} source location: ${locationInfo}`,
     return childResource;
   };
 
-  // .ownMany() is for resources that own a collection of sub-objects which can be mutated
-  // directly via dedicated endpoints, without re-sending the whole parent.
-  // The child objects have no identity outside their owner — two owners can have items
-  // with the same id that are completely independent.
-  //
-  // Each owner item gets its own private arraySignalStore (no shared global store,
-  // no id clashes across owners). All callbacks must return [ownerId, ...rest] so
-  // the right per-owner store is updated.
-  //
-  // Chainable: the returned instance supports .one() and .many() to describe
-  // relationships on the owned child items pointing to independent resources.
-  //
-  // @example — A table has columns (owned, no identity outside the table)
-  //
-  //   HTTP endpoints involved:
-  //     GET    /tables/:id                      → returns { id, name, columns: [{ name, type_id }, ...] }
-  //     POST   /tables/:id/columns              → { name, type_id } → returns added column
-  //     PATCH  /tables/:id/columns/:name        → { name?, type_id? } → returns updated column
-  //     DELETE /tables/:id/columns/:name        → removes column
-  //
-  //   Frontend:
-  //     const TABLE = resource("table", { GET: fetchTable });
-  //     const TABLE_COLUMNS = TABLE.ownMany("columns", {
-  //       idKey: "name",
-  //       POST:   async ({ id, name, typeId }) => [id, await addColumn(id, { name, typeId })],
-  //       PATCH:  async ({ id, name, data })   => [id, name, await patchColumn(id, name, data)],
-  //       DELETE: async ({ id, name })         => [id, name],
-  //     });
-  //     // table.columns → reactive array of column objects (private to each table)
-  //     // TABLE_COLUMNS.POST({ id: 1, name: "email", typeId: 3 }) sends POST
-  //     // TABLE_COLUMNS.DELETE({ id: 1, name: "email" }) sends DELETE
-  //
-  //   Chaining — each column references an independent DataType resource:
-  //     HTTP: GET /data-types/:typeId
-  //     const DATA_TYPE = resource("dataType", { GET: fetchDataType });
-  //     TABLE_COLUMNS.one("dataType", DATA_TYPE);
-  //     // column.dataType → reactive DataType object from DATA_TYPE store
-  //     // When table.columns = [{ name: "email", type_id: 3 }], column.dataType resolves to DataType#3
   stateFacade.ownMany = (
     propertyName,
     {

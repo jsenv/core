@@ -30,7 +30,12 @@ const columnsAfterPost = [...table.columns];
 await TABLE_COLUMNS.PATCH({ id: 1, name: "email", type: "text" });
 const columnsAfterPatch = [...table.columns];
 
-return { columnsBeforeLoad, columnsAfterLoad, columnsAfterPost, columnsAfterPatch };
+return {
+  columnsBeforeLoad,
+  columnsAfterLoad,
+  columnsAfterPost,
+  columnsAfterPatch,
+};
 ```
 
 ```js
