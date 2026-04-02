@@ -98,8 +98,8 @@ export const resource = (
       DELETE,
       DELETE_MANY,
     },
-
     restHandler,
+
     params: undefined,
     store,
     addItemSetup,
@@ -122,24 +122,23 @@ const createResource = (
   if (idKey === undefined) {
     idKey = mutableIdKeys.length === 0 ? "id" : mutableIdKeys[0];
   }
-  const useArray = () => {
-    return store.arraySignal.value;
-  };
-  const useById = (id) => {
-    return store.select(idKey, id);
-  };
   const stateFacade = {
+    // public
     name,
     idKey,
-    store,
-    useArray,
-    useById,
+
+    useArray: () => store.arraySignal.value,
+    useById: (id) => store.select(idKey, id),
 
     withParams: undefined,
     one: undefined,
     many: undefined,
     ownOne: undefined,
     ownMany: undefined,
+
+    // private but exposed for convenience
+    store,
+    addItemSetup,
   };
 
   /**
@@ -181,7 +180,7 @@ const createResource = (
     } else {
       resolvedParams = paramsToInject;
     }
-    const restHandler = createRestHandlerForRoot(name, {
+    const paramsRestHandler = createRestHandlerForRoot(name, {
       idKey,
       store,
     });
@@ -189,7 +188,7 @@ const createResource = (
       idKey,
       mutableIdKeys,
       restCallbacks,
-      restHandler,
+      restHandler: paramsRestHandler,
 
       params: resolvedParams,
       store,
@@ -202,11 +201,11 @@ const createResource = (
     if (restCallback === undefined) {
       continue;
     }
-    const restCallbackHandler = restHandler[restCallbackKey];
-    if (!restCallbackHandler) {
-      continue;
-    }
-    const action = restCallbackHandler(restCallback);
+    const isMany = restCallbackKey.endsWith("_MANY");
+    const verb = isMany
+      ? restCallbackKey.replace("_MANY", "")
+      : restCallbackKey;
+    const action = restHandler(verb, restCallback, { isMany });
     if (!action) {
       console.error("no action returned (here to see when it happens)");
       continue;
@@ -258,44 +257,17 @@ const createResource = (
     childResource,
     { GET, PUT, DELETE } = {},
   ) => {
-    const childIdKey = childResource.idKey;
     const childName = `${name}.${propertyName}`;
-    addItemSetup((item) => {
-      const { updateChildItemId, childItemSignal } = setupToOneRelationship(
-        item,
-        propertyName,
-        childResource,
-      );
-
-      if (DEBUG) {
-        console.debug(
-          `setup ${item}.${propertyName} is one "${childResource.name}" (current value: ${childItemSignal.peek()})`,
-        );
-        const desc = Object.getOwnPropertyDescriptor(item, propertyName);
-        Object.defineProperty(item, propertyName, {
-          get: desc.get,
-          set: (value) => {
-            if (!updateChildItemId(value)) {
-              return;
-            }
-            console.debug(
-              `${item}.${propertyName} updated to ${childItemSignal.peek()}`,
-            );
-          },
-          configurable: true,
-        });
-      }
-    });
     const restHandlerForRelationshipToOne =
       createRestHandlerForRelationshipToOne(childName, {
         idKey,
         store,
+        addItemSetup,
         propertyName,
-        childIdKey,
-        childStore: childResource.store,
+        childResource,
       });
     return createResource(childName, {
-      idKey: childIdKey,
+      idKey: childResource.idKey,
       restCallbacks: {
         GET,
         PUT,
@@ -356,71 +328,14 @@ const createResource = (
   ) => {
     const childIdKey = childResource.idKey;
     const childName = `${name}.${propertyName}`;
-    addItemSetup((item) => {
-      const {
-        updateChildItemIdArray,
-        childItemIdArraySignal,
-        childItemArraySignal,
-      } = setupToManyRelationship(item, propertyName, childResource);
 
-      childResource.store.observeProperties((mutations) => {
-        const idArray = childItemIdArraySignal.peek();
-        if (idArray.length === 0) {
-          return;
-        }
-        const idSet = new Set(idArray);
-        const idMutationMap = new Map();
-        for (const mutation of mutations) {
-          const idKeyMutation = mutation[childIdKey];
-          if (!idKeyMutation) {
-            continue;
-          }
-          const { oldValue, newValue } = idKeyMutation;
-          if (!idSet.has(oldValue)) {
-            continue;
-          }
-          idMutationMap.set(oldValue, newValue);
-        }
-        if (idMutationMap.size === 0) {
-          return;
-        }
-        const idUpdatedArray = [];
-        for (const id of idArray) {
-          idUpdatedArray.push(idMutationMap.get(id) ?? id);
-        }
-        childItemIdArraySignal.value = idUpdatedArray;
-      });
-
-      if (DEBUG) {
-        const childItemArray = childItemArraySignal.peek();
-        console.debug(
-          `setup ${item}.${propertyName} is many "${childResource.name}" (current value: ${childItemArray.length ? childItemArray.join(",") : "[]"})`,
-        );
-        Object.defineProperty(item, propertyName, {
-          get: () => {
-            const childItemArray = childItemArraySignal.value;
-            console.debug(
-              `return ${childItemArray.length ? childItemArray.join(",") : "[]"} for ${item}.${propertyName}`,
-            );
-            return childItemArray;
-          },
-          set: (value) => {
-            updateChildItemIdArray(value);
-            console.debug(
-              `${item}.${propertyName} updated to ${childItemIdArraySignal.peek()}`,
-            );
-          },
-          configurable: true,
-        });
-      }
-    });
     const restHandlerForRelationshipToMany =
       createRestHandlerForRelationshipToMany(childName, {
         idKey,
         store,
+        addItemSetup,
         propertyName,
-        childIdKey,
-        childStore: childResource.store,
+        childResource,
       });
     return createResource(childName, {
       idKey: childIdKey,
@@ -479,8 +394,8 @@ const createResource = (
     const childName = `${name}.${propertyName}`;
     const ownOneRestHandler = createRestHandlerForOwnOne(childName, {
       idKey,
-      parentAddItemSetup: addItemSetup,
       propertyName,
+      addItemSetup,
     });
     const childResource = createResource(childName, {
       idKey: childIdKey,
@@ -557,9 +472,9 @@ const createResource = (
     const childName = `${name}.${propertyName}`;
     const ownManyRestHandler = createRestHandlerForOwnMany(childName, {
       idKey,
-      childIdKey,
-      parentAddItemSetup: addItemSetup,
+      addItemSetup,
       propertyName,
+      childIdKey,
     });
     const childResource = createResource(childName, {
       idKey: childIdKey,
@@ -616,7 +531,14 @@ const createRestHandlerForRoot = (
     store, // see array_signal_store.js
   },
 ) => {
-  const createActionAffectingOneItem = (verb, { callback, ...options }) => {
+  const createActionForRoot = (verb, restCallback, { isMany }) => {
+    if (!isMany) {
+      return createActionAffectingOneItem(verb, restCallback);
+    }
+    return createActionAffectingManyItems(verb, restCallback);
+  };
+
+  const createActionAffectingOneItem = (verb, callback) => {
     const applyResultToValue =
       verb === "DELETE"
         ? (itemIdOrItemProps) => {
@@ -647,15 +569,11 @@ const createRestHandlerForRoot = (
     const originalActionName = `${name}.${verb}`;
     const actionAffectingOneItem = createAction(callback, {
       name: `${name}.${verb}`,
-      meta: {
-        verb,
-        isMany: false,
-      },
+      meta: { verb, isMany: false },
       resultToValue: (result, action) => {
         const actionLabel = action.name;
 
         if (verb === "DELETE") {
-          debugger;
           if (!isProps(result) && !primitiveCanBeId(result)) {
             throw new TypeError(
               `${actionLabel} must return an object (that will be used to drop "${name}" resource), received ${result}.
@@ -675,49 +593,10 @@ ${originalActionName} source location: ${locationInfo}`,
       valueToData: (itemId) => store.select(itemId),
       // todo: restore completeSideEffect to notify lifecycle manager
       // completeSideEffect: (actionCompleted) => {},
-      ...options,
     });
     return actionAffectingOneItem;
   };
-  const GET = (callback, options) =>
-    createActionAffectingOneItem("GET", {
-      callback,
-      resultToValue: (result) => {
-        const item = store.upsert(result);
-        const itemId = item[idKey];
-        return itemId;
-      },
-      valueToData: (itemId) => store.select(itemId),
-      ...options,
-    });
-  const POST = (callback, options) =>
-    createActionAffectingOneItem("POST", {
-      callback,
-      resultToValue: (result) => {
-        const item = store.upsert(result);
-        const itemId = item[idKey];
-        return itemId;
-      },
-      valueToData: (itemId) => store.select(itemId),
-      ...options,
-    });
-  const PUT = (callback, options) =>
-    createActionAffectingOneItem("PUT", {
-      callback,
-      ...options,
-    });
-  const PATCH = (callback, options) =>
-    createActionAffectingOneItem("PATCH", {
-      callback,
-      ...options,
-    });
-  const DELETE = (callback, options) =>
-    createActionAffectingOneItem("DELETE", {
-      callback,
-      ...options,
-    });
-
-  const createActionAffectingManyItems = (verb, { callback, ...options }) => {
+  const createActionAffectingManyItems = (verb, callback) => {
     const applyResultToValue =
       verb === "DELETE"
         ? (idOrMutableIdArray) => {
@@ -731,10 +610,7 @@ ${originalActionName} source location: ${locationInfo}`,
           };
 
     const actionAffectingManyItems = createAction(callback, {
-      meta: {
-        verb,
-        isMany: true,
-      },
+      meta: { verb, isMany: true },
       name: `${name}.${verb}_MANY`,
       dataDefault: [],
       resultToValue: applyResultToValue,
@@ -786,7 +662,6 @@ ${originalActionName} source location: ${locationInfo}`,
           actionCompleted.valueSignal.value = idUpdatedArray;
         });
       },
-      ...options,
     });
     // resourceLifecycleManager.registerAction(
     //   resourceInstance,
@@ -794,35 +669,45 @@ ${originalActionName} source location: ${locationInfo}`,
     // );
     return actionAffectingManyItems;
   };
-  const GET_MANY = (callback, options) =>
-    createActionAffectingManyItems("GET", { callback, ...options });
-  const POST_MANY = (callback, options) =>
-    createActionAffectingManyItems("POST", { callback, ...options });
-  const PUT_MANY = (callback, options) =>
-    createActionAffectingManyItems("PUT", { callback, ...options });
-  const PATCH_MANY = (callback, options) =>
-    createActionAffectingManyItems("PATCH", { callback, ...options });
-  const DELETE_MANY = (callback, options) =>
-    createActionAffectingManyItems("DELETE", { callback, ...options });
 
   return {
-    GET,
-    POST,
-    PUT,
-    PATCH,
-    DELETE,
-    GET_MANY,
-    POST_MANY,
-    PUT_MANY,
-    PATCH_MANY,
-    DELETE_MANY,
+    createAction: createActionForRoot,
   };
 };
 const createRestHandlerForRelationshipToOne = (
   name,
-  { idKey, store, propertyName, childIdKey, childStore },
+  { idKey, store, addItemSetup, propertyName, childResource },
 ) => {
-  const createActionAffectingOneItem = (verb, { callback, ...options }) => {
+  const childIdKey = childResource.idKey;
+  addItemSetup((item) => {
+    const { updateChildItemId, childItemSignal } = setupToOneRelationship(
+      item,
+      propertyName,
+      childResource,
+    );
+
+    if (DEBUG) {
+      console.debug(
+        `setup ${item}.${propertyName} is one "${childResource.name}" (current value: ${childItemSignal.peek()})`,
+      );
+      const desc = Object.getOwnPropertyDescriptor(item, propertyName);
+      Object.defineProperty(item, propertyName, {
+        get: desc.get,
+        set: (value) => {
+          if (!updateChildItemId(value)) {
+            return;
+          }
+          console.debug(
+            `${item}.${propertyName} updated to ${childItemSignal.peek()}`,
+          );
+        },
+        configurable: true,
+      });
+    }
+  });
+
+  const childStore = childResource.store;
+  const createRelationshipToOneRestAction = (verb, callback) => {
     const applyResultToValue =
       verb === "DELETE"
         ? (itemId) => {
@@ -889,7 +774,6 @@ ${originalActionName} source location: ${locationInfo}`,
       },
       valueToData: (childItemId) => childStore.select(childItemId),
       // completeSideEffect: (actionCompleted) => resourceLifecycleManager.onActionComplete(actionCompleted),
-      ...options,
     });
     // resourceLifecycleManager.registerAction(
     //   resourceInstance,
@@ -898,34 +782,93 @@ ${originalActionName} source location: ${locationInfo}`,
     return actionAffectingOneItem;
   };
 
-  const GET = (callback, options) =>
-    createActionAffectingOneItem("GET", {
-      callback,
-      ...options,
-    });
-  const PUT = (callback, options) =>
-    createActionAffectingOneItem("PUT", {
-      callback,
-      ...options,
-    });
-  const DELETE = (callback, options) =>
-    createActionAffectingOneItem("DELETE", {
-      callback,
-      ...options,
-    });
-
-  return { GET, PUT, DELETE };
+  return {
+    createRestAction: createRelationshipToOneRestAction,
+  };
 };
 const createRestHandlerForRelationshipToMany = (
   name,
-  { idKey, store, propertyName, childIdKey, childStore } = {},
+  { idKey, store, addItemSetup, propertyName, childResource } = {},
 ) => {
-  // idéalement s'il y a un GET sur le store originel on voudrait ptet le reload
-  // parce que le store originel peut retourner cette liste ou etre impacté
-  // pour l'instant on ignore
+  const childIdKey = childResource.idKey;
+  const childStore = childResource.store;
+  addItemSetup((item) => {
+    const {
+      updateChildItemIdArray,
+      childItemIdArraySignal,
+      childItemArraySignal,
+    } = setupToManyRelationship(item, propertyName, childResource);
 
-  // one item AND many child items
-  const createActionAffectingOneItem = (verb, { callback, ...options }) => {
+    childResource.store.observeProperties((mutations) => {
+      const idArray = childItemIdArraySignal.peek();
+      if (idArray.length === 0) {
+        return;
+      }
+      const idSet = new Set(idArray);
+      const idMutationMap = new Map();
+      for (const mutation of mutations) {
+        const idKeyMutation = mutation[childIdKey];
+        if (!idKeyMutation) {
+          continue;
+        }
+        const { oldValue, newValue } = idKeyMutation;
+        if (!idSet.has(oldValue)) {
+          continue;
+        }
+        idMutationMap.set(oldValue, newValue);
+      }
+      if (idMutationMap.size === 0) {
+        return;
+      }
+      const idUpdatedArray = [];
+      for (const id of idArray) {
+        idUpdatedArray.push(idMutationMap.get(id) ?? id);
+      }
+      childItemIdArraySignal.value = idUpdatedArray;
+    });
+
+    if (DEBUG) {
+      const childItemArray = childItemArraySignal.peek();
+      console.debug(
+        `setup ${item}.${propertyName} is many "${childResource.name}" (current value: ${childItemArray.length ? childItemArray.join(",") : "[]"})`,
+      );
+      Object.defineProperty(item, propertyName, {
+        get: () => {
+          const childItemArray = childItemArraySignal.value;
+          console.debug(
+            `return ${childItemArray.length ? childItemArray.join(",") : "[]"} for ${item}.${propertyName}`,
+          );
+          return childItemArray;
+        },
+        set: (value) => {
+          updateChildItemIdArray(value);
+          console.debug(
+            `${item}.${propertyName} updated to ${childItemIdArraySignal.peek()}`,
+          );
+        },
+        configurable: true,
+      });
+    }
+  });
+
+  const createRelationshipToManyRestAction = (
+    restCallbackKey,
+    restCallback,
+  ) => {
+    if (!restCallback) {
+      return undefined;
+    }
+    const isMany = restCallbackKey.endsWith("_MANY");
+    if (!isMany) {
+      return createManyRestActionAffectingOneItem(
+        restCallbackKey,
+        restCallback,
+      );
+    }
+    const verb = restCallbackKey.replace("_MANY", "");
+    return createManyRestActionAffectingManyItems(verb, restCallback);
+  };
+  const createManyRestActionAffectingOneItem = (verb, callback) => {
     const applyResultToValue =
       verb === "DELETE"
         ? ([itemId, childItemId]) => {
@@ -966,10 +909,7 @@ const createRestHandlerForRelationshipToMany = (
     const originalActionName = `${name}.${verb}`;
 
     const actionAffectingOneItem = createAction(callback, {
-      meta: {
-        verb,
-        isMany: false,
-      },
+      meta: { verb, isMany: false },
       name: `${name}.${verb}`,
       resultToValue: (result, action) => {
         const actionLabel = action.name;
@@ -994,7 +934,6 @@ ${originalActionName} source location: ${locationInfo}`,
       },
       valueToData: (childItemId) => childStore.select(childItemId),
       // completeSideEffect: (actionCompleted) => resourceLifecycleManager.onActionComplete(actionCompleted),
-      ...options,
     });
     // resourceLifecycleManager.registerAction(
     //   resourceInstance,
@@ -1002,38 +941,7 @@ ${originalActionName} source location: ${locationInfo}`,
     // );
     return actionAffectingOneItem;
   };
-  const GET = (callback, options) =>
-    createActionAffectingOneItem("GET", {
-      callback,
-      ...options,
-    });
-  // le souci que je vois ici c'est que je n'ai pas la moindre idée d'ou
-  // inserer le childItem (ni meme s'il doit etre visible)
-  // je pense que la bonne chose a faire est de reload
-  // l'objet user.tables s'il en existe un
-  // TODO: find any GET action on "user" and reload it
-  const POST = (callback, options) =>
-    createActionAffectingOneItem("POST", {
-      callback,
-      ...options,
-    });
-  const PUT = (callback, options) =>
-    createActionAffectingOneItem("PUT", {
-      callback,
-      ...options,
-    });
-  const PATCH = (callback, options) =>
-    createActionAffectingOneItem("PATCH", {
-      callback,
-      ...options,
-    });
-  const DELETE = (callback, options) =>
-    createActionAffectingOneItem("DELETE", {
-      callback,
-      ...options,
-    });
-
-  const createActionAffectingManyItems = (verb, { callback, ...options }) => {
+  const createManyRestActionAffectingManyItems = (verb, callback) => {
     const applyResultToValue =
       verb === "GET"
         ? (result) => {
@@ -1099,10 +1007,7 @@ ${originalActionName} source location: ${locationInfo}`,
     const originalActionName = `${name}.${verb}[many]`;
 
     const actionAffectingManyItem = createAction(callback, {
-      meta: {
-        verb,
-        isMany: true,
-      },
+      meta: { verb, isMany: true },
       name: `${name}.${verb}[many]`,
       dataDefault: [],
       resultToValue: (result, action) => {
@@ -1142,7 +1047,6 @@ ${originalActionName} source location: ${locationInfo}`,
       },
       valueToData: (childItemIdArray) => childStore.selectAll(childItemIdArray),
       // completeSideEffect: (actionCompleted) => resourceLifecycleManager.onActionComplete(actionCompleted),
-      ...options,
     });
     // resourceLifecycleManager.registerAction(
     //   resourceInstance,
@@ -1151,28 +1055,261 @@ ${originalActionName} source location: ${locationInfo}`,
     return actionAffectingManyItem;
   };
 
-  const GET_MANY = (callback, options) =>
-    createActionAffectingManyItems("GET", { callback, ...options });
-  const POST_MANY = (callback, options) =>
-    createActionAffectingManyItems("POST", { callback, ...options });
-  const PUT_MANY = (callback, options) =>
-    createActionAffectingManyItems("PUT", { callback, ...options });
-  const PATCH_MANY = (callback, options) =>
-    createActionAffectingManyItems("PATCH", { callback, ...options });
-  const DELETE_MANY = (callback, options) =>
-    createActionAffectingManyItems("DELETE", { callback, ...options });
+  return {
+    createRestAction: createRelationshipToManyRestAction,
+  };
+};
+const createRestHandlerForOwnOne = (
+  childName,
+  { idKey, addItemSetup, propertyName },
+) => {
+  // setupCallbackSet: callbacks added by chained .one()/.many()
+  // Applied to each per-owner child item object when it is first created.
+  const childItemSetupCallbackSet = new Set();
+  const childAddItemSetup = (callback) =>
+    childItemSetupCallbackSet.add(callback);
+  const ownerChildItemMap = new Map(); // ownerId → stable child item object
+  const ownerChildSignalMap = new Map(); // ownerId → signal<childItem | null>
+  addItemSetup((ownerItem) => {
+    const ownerId = ownerItem[idKey];
+    // Create a stable child item — mutated in place via applyProps.
+    // Reactive getters/setters from chained .one() etc. are defined on this object now
+    // so they survive across multiple prop updates.
+    const childItem = {};
+    for (const childSetup of childItemSetupCallbackSet) {
+      childSetup(childItem);
+    }
+    ownerChildItemMap.set(ownerId, childItem);
+    const childSignal = signal(null);
+    ownerChildSignalMap.set(ownerId, childSignal);
+
+    const applyProps = (props) => {
+      if (!props) {
+        childSignal.value = null;
+        return;
+      }
+      // Assign each prop in place. Reactive setters (from chained .one() etc.) will fire.
+      for (const [key, value] of Object.entries(props)) {
+        childItem[key] = value;
+      }
+      if (childSignal.peek() !== childItem) {
+        childSignal.value = childItem; // first activation: null → childItem
+      }
+    };
+
+    applyProps(ownerItem[propertyName]);
+
+    Object.defineProperty(ownerItem, propertyName, {
+      get: () => childSignal.value,
+      set: applyProps,
+    });
+  });
+
+  const createOwnOneRestAction = (verb, callback) => {
+    const childActionName = `${childName}.${verb}`;
+    return createAction(callback, {
+      name: childActionName,
+      meta: { verb, isMany: false },
+      resultToValue: (result) => {
+        if (!Array.isArray(result) || result.length !== 2) {
+          throw new TypeError(
+            `${childActionName} callback must return [ownerId, props], received ${result}`,
+          );
+        }
+        const [ownerId, props] = result;
+        const childItem = ownerChildItemMap.get(ownerId);
+        if (!childItem) {
+          throw new Error(
+            `${childActionName}: no item found for owner id "${ownerId}"`,
+          );
+        }
+        const childSignal = ownerChildSignalMap.get(ownerId);
+        if (props) {
+          for (const [key, value] of Object.entries(props)) {
+            childItem[key] = value;
+          }
+          if (childSignal.peek() !== childItem) {
+            childSignal.value = childItem;
+          }
+        } else {
+          childSignal.value = null;
+        }
+        return [ownerId, props];
+      },
+    });
+  };
 
   return {
-    GET,
-    POST,
-    PUT,
-    PATCH,
-    DELETE,
-    GET_MANY,
-    POST_MANY,
-    PUT_MANY,
-    PATCH_MANY,
-    DELETE_MANY,
+    createOwnOneRestAction,
+    addItemSetup: childAddItemSetup,
+  };
+};
+const createRestHandlerForOwnMany = (
+  childName,
+  { idKey, addItemSetup, propertyName, childIdKey },
+) => {
+  // setupCallbackSet: callbacks added by chained .one()/.many()
+  // Applied to each child item when it is created in a per-owner store.
+  const childSetupCallbackSet = new Set();
+  const childAddItemSetup = (callback) => childSetupCallbackSet.add(callback);
+  const ownerStoreMap = new Map(); // ownerId → childStore
+  const ownerIdArraySignalMap = new Map(); // ownerId → childItemIdArraySignal
+  addItemSetup((item) => {
+    const ownerId = item[idKey];
+    const childStore = arraySignalStore([], childIdKey, {
+      name: `${childName}#${ownerId} store`,
+      createItem: (props) => {
+        const childItem = {};
+        Object.assign(childItem, props);
+        for (const childSetup of childSetupCallbackSet) {
+          childSetup(childItem);
+        }
+        return childItem;
+      },
+    });
+    ownerStoreMap.set(ownerId, childStore);
+
+    const childItemIdArraySignal = signal([]);
+    ownerIdArraySignalMap.set(ownerId, childItemIdArraySignal);
+
+    const updateChildItemIdArray = (valueArray) => {
+      const currentIdArray = childItemIdArraySignal.peek();
+      if (!Array.isArray(valueArray)) {
+        if (currentIdArray.length === 0) return;
+        childItemIdArraySignal.value = [];
+        return;
+      }
+      let i = 0;
+      const idArray = [];
+      let modified = false;
+      while (i < valueArray.length) {
+        const value = valueArray[i];
+        const currentIdAtIndex = currentIdArray[idArray.length];
+        i++;
+        if (isProps(value)) {
+          const childItem = childStore.upsert(value);
+          const childItemId = childItem[childIdKey];
+          if (currentIdAtIndex !== childItemId) modified = true;
+          idArray.push(childItemId);
+          continue;
+        }
+        if (primitiveCanBeId(value)) {
+          const childItemProps = { [childIdKey]: value };
+          const childItem = childStore.upsert(childItemProps);
+          const childItemId = childItem[childIdKey];
+          if (currentIdAtIndex !== childItemId) modified = true;
+          idArray.push(childItemId);
+          continue;
+        }
+      }
+      if (modified || currentIdArray.length !== idArray.length) {
+        childItemIdArraySignal.value = idArray;
+      }
+    };
+
+    updateChildItemIdArray(item[propertyName]);
+
+    // When an id is renamed (PUT/PATCH changes the idKey), patch the id array.
+    childStore.observeProperties((mutations) => {
+      const idArray = childItemIdArraySignal.peek();
+      if (idArray.length === 0) return;
+      const idSet = new Set(idArray);
+      const idMutationMap = new Map();
+      for (const mutation of mutations) {
+        const idKeyMutation = mutation[childIdKey];
+        if (!idKeyMutation) continue;
+        const { oldValue, newValue } = idKeyMutation;
+        if (!idSet.has(oldValue)) continue;
+        idMutationMap.set(oldValue, newValue);
+      }
+      if (idMutationMap.size === 0) return;
+      const idUpdatedArray = [];
+      for (const id of idArray) {
+        idUpdatedArray.push(idMutationMap.get(id) ?? id);
+      }
+      childItemIdArraySignal.value = idUpdatedArray;
+    });
+
+    const childItemArraySignal = computed(() => {
+      const childItemIdArray = childItemIdArraySignal.value;
+      const childItemArray = childStore.selectAll(childItemIdArray);
+      Object.defineProperty(childItemArray, SYMBOL_OBJECT_SIGNAL, {
+        value: childItemArraySignal,
+        writable: false,
+        enumerable: false,
+        configurable: false,
+      });
+      return childItemArray;
+    });
+
+    Object.defineProperty(item, propertyName, {
+      get: () => childItemArraySignal.value,
+      set: updateChildItemIdArray,
+    });
+  });
+
+  const createOwnManyRestAction = (restCallbackKey, restCallback) => {
+    if (!restCallback) {
+      return undefined;
+    }
+    const verb = restCallbackKey.replace("_MANY", "");
+    const isMany = restCallbackKey.endsWith("_MANY");
+    const childActionName = `${childName}.${restCallbackKey}`;
+    return createAction(restCallback, {
+      name: childActionName,
+      meta: { verb, isMany },
+      resultToValue: (result) => {
+        if (!Array.isArray(result) || result.length < 2) {
+          throw new TypeError(
+            `${childActionName} callback must return [ownerId, ...] array, received ${result}`,
+          );
+        }
+        const [ownerId, ...rest] = result;
+        const childStore = ownerStoreMap.get(ownerId);
+        if (!childStore) {
+          throw new Error(
+            `${childActionName}: no store found for owner id "${ownerId}"`,
+          );
+        }
+        const childItemIdArraySignal = ownerIdArraySignalMap.get(ownerId);
+
+        if (verb === "DELETE") {
+          if (isMany) {
+            const idArray = childStore.drop(rest[0]);
+            const toRemoveSet = new Set(idArray);
+            childItemIdArraySignal.value = childItemIdArraySignal
+              .peek()
+              .filter((id) => !toRemoveSet.has(id));
+            return [ownerId, idArray];
+          }
+          const childId = childStore.drop(rest[0]);
+          childItemIdArraySignal.value = childItemIdArraySignal
+            .peek()
+            .filter((id) => id !== childId);
+          return [ownerId, childId];
+        }
+
+        if (isMany) {
+          // GET_MANY, POST_MANY, PUT_MANY etc: rest[0] is the array of items
+          const itemArray = childStore.upsert(rest[0]);
+          const idArray = itemArray.map((i) => i[childIdKey]);
+          childItemIdArraySignal.value = idArray;
+          return [ownerId, idArray];
+        }
+
+        // GET, POST, PUT, PATCH: rest may be [props] or [oldId, props] for renames
+        const childItem =
+          rest.length > 1
+            ? childStore.upsert(...rest)
+            : childStore.upsert(rest[0]);
+        return [ownerId, childItem[childIdKey]];
+      },
+    });
+  };
+
+  return {
+    createOwnManyRestAction,
+    addItemSetup: childAddItemSetup,
   };
 };
 
@@ -1304,285 +1441,6 @@ const setupToManyRelationship = (item, propertyName, childResource) => {
     updateChildItemIdArray,
     childItemIdArraySignal,
     childItemArraySignal,
-  };
-};
-
-const createRestHandlerForOwnOne = (
-  childName,
-  { idKey, parentAddItemSetup, propertyName },
-) => {
-  // setupCallbackSet: callbacks added by chained .one()/.many()
-  // Applied to each per-owner child item object when it is first created.
-  const setupCallbackSet = new Set();
-  const addItemSetup = (callback) => setupCallbackSet.add(callback);
-  const ownerChildItemMap = new Map(); // ownerId → stable child item object
-  const ownerChildSignalMap = new Map(); // ownerId → signal<childItem | null>
-
-  parentAddItemSetup((ownerItem) => {
-    const ownerId = ownerItem[idKey];
-    // Create a stable child item — mutated in place via applyProps.
-    // Reactive getters/setters from chained .one() etc. are defined on this object now
-    // so they survive across multiple prop updates.
-    const childItem = {};
-    for (const setup of setupCallbackSet) {
-      setup(childItem);
-    }
-    ownerChildItemMap.set(ownerId, childItem);
-    const childSignal = signal(null);
-    ownerChildSignalMap.set(ownerId, childSignal);
-
-    const applyProps = (props) => {
-      if (!props) {
-        childSignal.value = null;
-        return;
-      }
-      // Assign each prop in place. Reactive setters (from chained .one() etc.) will fire.
-      for (const [key, value] of Object.entries(props)) {
-        childItem[key] = value;
-      }
-      if (childSignal.peek() !== childItem) {
-        childSignal.value = childItem; // first activation: null → childItem
-      }
-    };
-
-    applyProps(ownerItem[propertyName]);
-
-    Object.defineProperty(ownerItem, propertyName, {
-      get: () => childSignal.value,
-      set: applyProps,
-    });
-  });
-
-  const createOwnOneAction = (verb, callback) => {
-    const childActionName = `${childName}.${verb}`;
-    return createAction(callback, {
-      name: childActionName,
-      meta: { verb, isMany: false },
-      resultToValue: (result) => {
-        if (!Array.isArray(result) || result.length !== 2) {
-          throw new TypeError(
-            `${childActionName} callback must return [ownerId, props], received ${result}`,
-          );
-        }
-        const [ownerId, props] = result;
-        const childItem = ownerChildItemMap.get(ownerId);
-        if (!childItem) {
-          throw new Error(
-            `${childActionName}: no item found for owner id "${ownerId}"`,
-          );
-        }
-        const childSignal = ownerChildSignalMap.get(ownerId);
-        if (props) {
-          for (const [key, value] of Object.entries(props)) {
-            childItem[key] = value;
-          }
-          if (childSignal.peek() !== childItem) {
-            childSignal.value = childItem;
-          }
-        } else {
-          childSignal.value = null;
-        }
-        return [ownerId, props];
-      },
-    });
-  };
-
-  const GET = (callback) => createOwnOneAction("GET", callback);
-  const POST = (callback) => createOwnOneAction("POST", callback);
-  const PUT = (callback) => createOwnOneAction("PUT", callback);
-  const PATCH = (callback) => createOwnOneAction("PATCH", callback);
-  const DELETE = (callback) => createOwnOneAction("DELETE", callback);
-
-  return { GET, POST, PUT, PATCH, DELETE, addItemSetup };
-};
-
-const createRestHandlerForOwnMany = (
-  childName,
-  { idKey, childIdKey, parentAddItemSetup, propertyName },
-) => {
-  // setupCallbackSet: callbacks added by chained .one()/.many()
-  // Applied to each child item when it is created in a per-owner store.
-  const setupCallbackSet = new Set();
-  const addItemSetup = (callback) => setupCallbackSet.add(callback);
-  const ownerStoreMap = new Map(); // ownerId → childStore
-  const ownerIdArraySignalMap = new Map(); // ownerId → childItemIdArraySignal
-
-  parentAddItemSetup((item) => {
-    const ownerId = item[idKey];
-    const childStore = arraySignalStore([], childIdKey, {
-      name: `${childName}#${ownerId} store`,
-      createItem: (props) => {
-        const childItem = {};
-        Object.assign(childItem, props);
-        for (const setup of setupCallbackSet) {
-          setup(childItem);
-        }
-        return childItem;
-      },
-    });
-    ownerStoreMap.set(ownerId, childStore);
-
-    const childItemIdArraySignal = signal([]);
-    ownerIdArraySignalMap.set(ownerId, childItemIdArraySignal);
-
-    const updateChildItemIdArray = (valueArray) => {
-      const currentIdArray = childItemIdArraySignal.peek();
-      if (!Array.isArray(valueArray)) {
-        if (currentIdArray.length === 0) return;
-        childItemIdArraySignal.value = [];
-        return;
-      }
-      let i = 0;
-      const idArray = [];
-      let modified = false;
-      while (i < valueArray.length) {
-        const value = valueArray[i];
-        const currentIdAtIndex = currentIdArray[idArray.length];
-        i++;
-        if (isProps(value)) {
-          const childItem = childStore.upsert(value);
-          const childItemId = childItem[childIdKey];
-          if (currentIdAtIndex !== childItemId) modified = true;
-          idArray.push(childItemId);
-          continue;
-        }
-        if (primitiveCanBeId(value)) {
-          const childItemProps = { [childIdKey]: value };
-          const childItem = childStore.upsert(childItemProps);
-          const childItemId = childItem[childIdKey];
-          if (currentIdAtIndex !== childItemId) modified = true;
-          idArray.push(childItemId);
-          continue;
-        }
-      }
-      if (modified || currentIdArray.length !== idArray.length) {
-        childItemIdArraySignal.value = idArray;
-      }
-    };
-
-    updateChildItemIdArray(item[propertyName]);
-
-    // When an id is renamed (PUT/PATCH changes the idKey), patch the id array.
-    childStore.observeProperties((mutations) => {
-      const idArray = childItemIdArraySignal.peek();
-      if (idArray.length === 0) return;
-      const idSet = new Set(idArray);
-      const idMutationMap = new Map();
-      for (const mutation of mutations) {
-        const idKeyMutation = mutation[childIdKey];
-        if (!idKeyMutation) continue;
-        const { oldValue, newValue } = idKeyMutation;
-        if (!idSet.has(oldValue)) continue;
-        idMutationMap.set(oldValue, newValue);
-      }
-      if (idMutationMap.size === 0) return;
-      const idUpdatedArray = [];
-      for (const id of idArray) {
-        idUpdatedArray.push(idMutationMap.get(id) ?? id);
-      }
-      childItemIdArraySignal.value = idUpdatedArray;
-    });
-
-    const childItemArraySignal = computed(() => {
-      const childItemIdArray = childItemIdArraySignal.value;
-      const childItemArray = childStore.selectAll(childItemIdArray);
-      Object.defineProperty(childItemArray, SYMBOL_OBJECT_SIGNAL, {
-        value: childItemArraySignal,
-        writable: false,
-        enumerable: false,
-        configurable: false,
-      });
-      return childItemArray;
-    });
-
-    Object.defineProperty(item, propertyName, {
-      get: () => childItemArraySignal.value,
-      set: updateChildItemIdArray,
-    });
-  });
-
-  const createOwnManyAction = (restCallbackKey, restCallback) => {
-    if (!restCallback) {
-      return undefined;
-    }
-    const verb = restCallbackKey.replace("_MANY", "");
-    const isMany = restCallbackKey.endsWith("_MANY");
-    const childActionName = `${childName}.${restCallbackKey}`;
-    return createAction(restCallback, {
-      name: childActionName,
-      meta: { verb, isMany },
-      resultToValue: (result) => {
-        if (!Array.isArray(result) || result.length < 2) {
-          throw new TypeError(
-            `${childActionName} callback must return [ownerId, ...] array, received ${result}`,
-          );
-        }
-        const [ownerId, ...rest] = result;
-        const childStore = ownerStoreMap.get(ownerId);
-        if (!childStore) {
-          throw new Error(
-            `${childActionName}: no store found for owner id "${ownerId}"`,
-          );
-        }
-        const childItemIdArraySignal = ownerIdArraySignalMap.get(ownerId);
-
-        if (verb === "DELETE") {
-          if (isMany) {
-            const idArray = childStore.drop(rest[0]);
-            const toRemoveSet = new Set(idArray);
-            childItemIdArraySignal.value = childItemIdArraySignal
-              .peek()
-              .filter((id) => !toRemoveSet.has(id));
-            return [ownerId, idArray];
-          }
-          const childId = childStore.drop(rest[0]);
-          childItemIdArraySignal.value = childItemIdArraySignal
-            .peek()
-            .filter((id) => id !== childId);
-          return [ownerId, childId];
-        }
-
-        if (isMany) {
-          // GET_MANY, POST_MANY, PUT_MANY etc: rest[0] is the array of items
-          const itemArray = childStore.upsert(rest[0]);
-          const idArray = itemArray.map((i) => i[childIdKey]);
-          childItemIdArraySignal.value = idArray;
-          return [ownerId, idArray];
-        }
-
-        // GET, POST, PUT, PATCH: rest may be [props] or [oldId, props] for renames
-        const childItem =
-          rest.length > 1
-            ? childStore.upsert(...rest)
-            : childStore.upsert(rest[0]);
-        return [ownerId, childItem[childIdKey]];
-      },
-    });
-  };
-
-  const GET = (cb) => createOwnManyAction("GET", cb);
-  const GET_MANY = (cb) => createOwnManyAction("GET_MANY", cb);
-  const POST = (cb) => createOwnManyAction("POST", cb);
-  const POST_MANY = (cb) => createOwnManyAction("POST_MANY", cb);
-  const PUT = (cb) => createOwnManyAction("PUT", cb);
-  const PUT_MANY = (cb) => createOwnManyAction("PUT_MANY", cb);
-  const PATCH = (cb) => createOwnManyAction("PATCH", cb);
-  const PATCH_MANY = (cb) => createOwnManyAction("PATCH_MANY", cb);
-  const DELETE = (cb) => createOwnManyAction("DELETE", cb);
-  const DELETE_MANY = (cb) => createOwnManyAction("DELETE_MANY", cb);
-
-  return {
-    GET,
-    GET_MANY,
-    POST,
-    POST_MANY,
-    PUT,
-    PUT_MANY,
-    PATCH,
-    PATCH_MANY,
-    DELETE,
-    DELETE_MANY,
-    addItemSetup,
   };
 };
 
