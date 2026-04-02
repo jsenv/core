@@ -21,40 +21,6 @@ export const resource = (
     // configuration options
     idKey,
     mutableIdKeys = [],
-    /*
-    Default autorerun behavior explanation:
-
-    GET: false (RECOMMENDED)
-    What happens:
-    - GET actions are reset by DELETE operations (not rerun)
-    - DELETE operation on the displayed item would display nothing in the UI (action is in IDLE state)
-    - PUT/PATCH operations update UI via signals, no rerun needed
-    - This approach minimizes unnecessary API calls
-
-    How to handle:
-    - Applications can provide custom UI for deleted items (e.g., "Item not found")
-    - Or redirect users to appropriate pages (e.g., back to list view)
-
-    Alternative (NOT RECOMMENDED):
-    - Use GET: ["DELETE"] to rerun and display 404 error received from backend
-    - Poor UX: users expect immediate feedback, not loading + error state
-
-    GET_MANY: ["POST"]
-    - POST: New items may or may not appear in lists (depends on filters, pagination, etc.)
-      Backend determines visibility better than client-side logic
-    - DELETE: Excluded by default because:
-      • UI handles deletions via store signals (selectAll filters out deleted items)
-      • DELETE operations rarely change list content beyond item removal
-      • Avoids unnecessary API calls (can be overridden if needed)
-    */
-    rerunOn = {
-      GET: false,
-      GET_MANY: [
-        "POST",
-        // "DELETE"
-      ],
-    },
-    // dependencies = [],
 
     GET,
     GET_MANY,
@@ -117,7 +83,6 @@ export const resource = (
   return createResource(name, {
     idKey,
     mutableIdKeys,
-    rerunOn,
     restCallbacks: {
       GET,
       GET_MANY,
@@ -143,8 +108,6 @@ const createResource = (
   {
     idKey,
     mutableIdKeys = [],
-    rerunOn,
-    dependencies = [],
     restCallbacks,
     restHandler,
 
@@ -184,10 +147,6 @@ const createResource = (
    *
    * @param {Object} params - Parameters to bind to all actions of this resource (required)
    * @param {Object} options - Additional options for the parameterized resource
-   * @param {Array} options.dependencies - Array of resources that should trigger autorerun when modified
-   * @param {Object} options.rerunOn - Configuration for when to rerun GET/GET_MANY actions
-   * @param {false|Array|string} options.rerunOn.GET - REST verbs that trigger GET rerun (false = reset on DELETE)
-   * @param {false|Array|string} options.rerunOn.GET_MANY - REST verbs that trigger GET_MANY rerun (false = reset on DELETE)
    * @returns {Object} A new resource instance with parameter-bound actions and isolated lifecycle
    * @see {@link ./docs/resource_with_params.md} for detailed documentation and examples
    *
@@ -207,7 +166,7 @@ const createResource = (
    * });
    * // ROLE_WITH_OWNERSHIP.GET_MANY will autorerun when any table/database/role is POST/DELETE
    */
-  const withParams = (paramsToInject, options = {}) => {
+  const withParams = (paramsToInject) => {
     if (!paramsToInject || Object.keys(paramsToInject).length === 0) {
       throw new Error(
         `resource(${paramsToInject}).withParams() requires parameters`,
@@ -219,8 +178,6 @@ const createResource = (
     } else {
       resolvedParams = paramsToInject;
     }
-    const resolvedRerunOn = options.rerunOn || rerunOn;
-    const resolvedDependencies = options.dependencies || dependencies;
     const restHandler = createRestHandlerForRoot(name, {
       idKey,
       store,
@@ -228,8 +185,6 @@ const createResource = (
     return createResource(name, {
       idKey,
       mutableIdKeys,
-      rerunOn: resolvedRerunOn,
-      dependencies: resolvedDependencies,
       restCallbacks,
       restHandler,
 
@@ -581,259 +536,57 @@ const createResource = (
     } = {},
   ) => {
     const childName = `${name}.${propertyName}`;
-    const restCallbacks = {
-      GET,
-      GET_MANY,
-      POST,
-      POST_MANY,
-      PUT,
-      PUT_MANY,
-      PATCH,
-      PATCH_MANY,
-      DELETE,
-      DELETE_MANY,
-    };
-    // setupCallbackSet: callbacks added by chained .one()/.many() etc.
-    // Applied to each child item when it is created in a per-owner store.
-    const setupCallbackSet = new Set();
-    const addItemSetup = (callback) => setupCallbackSet.add(callback);
-    const ownerStoreMap = new Map(); // ownerId → childStore
-    const ownerIdArraySignalMap = new Map(); // ownerId → childItemIdArraySignal
-
-    addItemSetup((item) => {
-      const ownerId = item[idKey];
-      const childStore = arraySignalStore([], childIdKey, {
-        name: `${name}#${ownerId}.${propertyName} store`,
-        createItem: (props) => {
-          const childItem = {};
-          Object.assign(childItem, props);
-          for (const setup of setupCallbackSet) {
-            setup(childItem);
-          }
-          return childItem;
-        },
-      });
-      ownerStoreMap.set(ownerId, childStore);
-
-      const childItemIdArraySignal = signal([]);
-      ownerIdArraySignalMap.set(ownerId, childItemIdArraySignal);
-
-      const updateChildItemIdArray = (valueArray) => {
-        const currentIdArray = childItemIdArraySignal.peek();
-        if (!Array.isArray(valueArray)) {
-          if (currentIdArray.length === 0) return;
-          childItemIdArraySignal.value = [];
-          return;
-        }
-        let i = 0;
-        const idArray = [];
-        let modified = false;
-        while (i < valueArray.length) {
-          const value = valueArray[i];
-          const currentIdAtIndex = currentIdArray[idArray.length];
-          i++;
-          if (isProps(value)) {
-            const childItem = childStore.upsert(value);
-            const childItemId = childItem[childIdKey];
-            if (currentIdAtIndex !== childItemId) modified = true;
-            idArray.push(childItemId);
-            continue;
-          }
-          if (primitiveCanBeId(value)) {
-            const childItemProps = { [childIdKey]: value };
-            const childItem = childStore.upsert(childItemProps);
-            const childItemId = childItem[childIdKey];
-            if (currentIdAtIndex !== childItemId) modified = true;
-            idArray.push(childItemId);
-            continue;
-          }
-        }
-        if (modified || currentIdArray.length !== idArray.length) {
-          childItemIdArraySignal.value = idArray;
-        }
-      };
-
-      updateChildItemIdArray(item[propertyName]);
-
-      // When an id is renamed (PUT/PATCH changes the idKey), patch the id array.
-      childStore.observeProperties((mutations) => {
-        const idArray = childItemIdArraySignal.peek();
-        if (idArray.length === 0) return;
-        const idSet = new Set(idArray);
-        const idMutationMap = new Map();
-        for (const mutation of mutations) {
-          const idKeyMutation = mutation[childIdKey];
-          if (!idKeyMutation) continue;
-          const { oldValue, newValue } = idKeyMutation;
-          if (!idSet.has(oldValue)) continue;
-          idMutationMap.set(oldValue, newValue);
-        }
-        if (idMutationMap.size === 0) return;
-        const idUpdatedArray = [];
-        for (const id of idArray) {
-          idUpdatedArray.push(idMutationMap.get(id) ?? id);
-        }
-        childItemIdArraySignal.value = idUpdatedArray;
-      });
-
-      const childItemArraySignal = computed(() => {
-        const childItemIdArray = childItemIdArraySignal.value;
-        const childItemArray = childStore.selectAll(childItemIdArray);
-        Object.defineProperty(childItemArray, SYMBOL_OBJECT_SIGNAL, {
-          value: childItemArraySignal,
-          writable: false,
-          enumerable: false,
-          configurable: false,
-        });
-        return childItemArray;
-      });
-
-      Object.defineProperty(item, propertyName, {
-        get: () => childItemArraySignal.value,
-        set: (value) => {
-          updateChildItemIdArray(value);
-        },
-      });
+    const ownManyRestHandler = createRestHandlerForOwnMany(childName, {
+      idKey,
+      childIdKey,
+      parentAddItemSetup: addItemSetup,
+      propertyName,
     });
-
-    const ownManyInstance = {
-      name: childName,
+    const childResource = createResource(childName, {
       idKey: childIdKey,
-      addItemSetup,
-    };
-
-    // .one() adds a reactive getter/setter on each owned child item pointing into an independent store.
-    // Returns the independent resource for further chaining if needed.
-    ownManyInstance.one = (nestedPropertyName, childResource) => {
-      const nestedIdKey = childResource.idKey;
-      addItemSetup((childItem) => {
-        const childItemIdSignal = signal();
-        const updateChildItemId = (value) => {
-          const currentId = childItemIdSignal.peek();
-          if (isProps(value)) {
-            const item = childResource.store.upsert(value);
-            const itemId = item[nestedIdKey];
-            if (currentId === itemId) return false;
-            childItemIdSignal.value = itemId;
-            return true;
-          }
-          if (primitiveCanBeId(value)) {
-            childResource.store.upsert({ [nestedIdKey]: value });
-            if (currentId === value) return false;
-            childItemIdSignal.value = value;
-            return true;
-          }
-          if (currentId === undefined) return false;
-          childItemIdSignal.value = undefined;
-          return true;
-        };
-        updateChildItemId(childItem[nestedPropertyName]);
-        const nestedItemSignal = computed(() =>
-          childResource.store.select(childItemIdSignal.value),
+      restCallbacks: {
+        GET,
+        GET_MANY,
+        POST,
+        POST_MANY,
+        PUT,
+        PUT_MANY,
+        PATCH,
+        PATCH_MANY,
+        DELETE,
+        DELETE_MANY,
+      },
+      restHandler: ownManyRestHandler,
+      params,
+      store,
+      addItemSetup: ownManyRestHandler.addItemSetup,
+    });
+    // .one()/.many() on owned child items cannot use the default implementations
+    // (those target the parent shared store). Override them to register setup
+    // callbacks on the per-owner child items instead.
+    childResource.one = (nestedPropertyName, nestedChildResource) => {
+      ownManyRestHandler.addItemSetup((childItem) => {
+        setupToOneRelationship(
+          childItem,
+          nestedPropertyName,
+          nestedChildResource,
         );
-        const nestedItemFacadeSignal = computed(() => {
-          const nestedItem = nestedItemSignal.value;
-          if (nestedItem) {
-            const copy = Object.create(
-              Object.getPrototypeOf(nestedItem),
-              Object.getOwnPropertyDescriptors(nestedItem),
-            );
-            Object.defineProperty(copy, SYMBOL_OBJECT_SIGNAL, {
-              value: nestedItemSignal,
-              writable: false,
-              enumerable: false,
-              configurable: false,
-            });
-            return copy;
-          }
-          return {
-            [SYMBOL_OBJECT_SIGNAL]: nestedItemSignal,
-            valueOf: () => null,
-          };
-        });
-        Object.defineProperty(childItem, nestedPropertyName, {
-          get: () => nestedItemFacadeSignal.value,
-          set: updateChildItemId,
-        });
       });
-      return childResource;
+      return nestedChildResource;
     };
-
-    // .many() adds a reactive array getter on owned child items backed by an independent store.
-    // Returns the independent resource for further chaining if needed.
-    ownManyInstance.many = (nestedPropertyName, childResource) => {
-      addItemSetup((childItem) => {
-        setupToManyRelationship(childItem, nestedPropertyName, childResource);
+    childResource.many = (nestedPropertyName, nestedChildResource) => {
+      ownManyRestHandler.addItemSetup((childItem) => {
+        setupToManyRelationship(
+          childItem,
+          nestedPropertyName,
+          nestedChildResource,
+        );
       });
-      return childResource;
+      return nestedChildResource;
     };
-
-    // TODO: ownManyInstance.ownOne() and ownManyInstance.ownMany() for triple nesting
-    // (e.g. table.columns[n].constraints). Requires propagating per-(owner, child) identity
-    // down to create nested stores. Not yet implemented.
-
-    for (const [restCallbackKey, restCallback] of Object.entries(
-      restCallbacks,
-    )) {
-      if (!restCallback) continue;
-      const verb = restCallbackKey.replace("_MANY", "");
-      const isMany = restCallbackKey.endsWith("_MANY");
-      const childActionName = `${childName}.${restCallbackKey}`;
-      const action = createAction(restCallback, {
-        name: childActionName,
-        meta: { verb, isMany },
-        resultToValue: (result) => {
-          if (!Array.isArray(result) || result.length < 2) {
-            throw new TypeError(
-              `${childActionName} callback must return [ownerId, ...] array, received ${result}`,
-            );
-          }
-          const [ownerId, ...rest] = result;
-          const childStore = ownerStoreMap.get(ownerId);
-          if (!childStore) {
-            throw new Error(
-              `${childActionName}: no store found for owner id "${ownerId}"`,
-            );
-          }
-          const childItemIdArraySignal = ownerIdArraySignalMap.get(ownerId);
-
-          if (verb === "DELETE") {
-            if (isMany) {
-              const idArray = childStore.drop(rest[0]);
-              const toRemoveSet = new Set(idArray);
-              childItemIdArraySignal.value = childItemIdArraySignal
-                .peek()
-                .filter((id) => !toRemoveSet.has(id));
-              return [ownerId, idArray];
-            }
-            const childId = childStore.drop(rest[0]);
-            childItemIdArraySignal.value = childItemIdArraySignal
-              .peek()
-              .filter((id) => id !== childId);
-            return [ownerId, childId];
-          }
-
-          if (isMany) {
-            // GET_MANY, POST_MANY, PUT_MANY etc: rest[0] is the array of items
-            const itemArray = childStore.upsert(rest[0]);
-            const idArray = itemArray.map((i) => i[childIdKey]);
-            childItemIdArraySignal.value = idArray;
-            return [ownerId, idArray];
-          }
-
-          // PUT, PATCH, POST: rest may be [props] or ["idKey", oldId, props] for renames
-          const childItem =
-            rest.length > 1
-              ? childStore.upsert(...rest)
-              : childStore.upsert(rest[0]);
-          return [ownerId, childItem[childIdKey]];
-        },
-      });
-
-      ownManyInstance[restCallbackKey] = action;
-    }
-
-    return ownManyInstance;
+    // TODO: childResource.ownOne() and childResource.ownMany() for triple nesting
+    // (e.g. table.columns[n].constraints). Not yet implemented.
+    return childResource;
   };
 
   return stateFacade;
@@ -1583,7 +1336,6 @@ const createRestHandlerForOwnOne = (
   });
 
   const createOwnOneAction = (verb, callback) => {
-    if (!callback) return undefined;
     const childActionName = `${childName}.${verb}`;
     return createAction(callback, {
       name: childActionName,
@@ -1624,6 +1376,193 @@ const createRestHandlerForOwnOne = (
   const DELETE = (callback) => createOwnOneAction("DELETE", callback);
 
   return { GET, POST, PUT, PATCH, DELETE, addItemSetup };
+};
+
+const createRestHandlerForOwnMany = (
+  childName,
+  { idKey, childIdKey, parentAddItemSetup, propertyName },
+) => {
+  // setupCallbackSet: callbacks added by chained .one()/.many()
+  // Applied to each child item when it is created in a per-owner store.
+  const setupCallbackSet = new Set();
+  const addItemSetup = (callback) => setupCallbackSet.add(callback);
+  const ownerStoreMap = new Map(); // ownerId → childStore
+  const ownerIdArraySignalMap = new Map(); // ownerId → childItemIdArraySignal
+
+  parentAddItemSetup((item) => {
+    const ownerId = item[idKey];
+    const childStore = arraySignalStore([], childIdKey, {
+      name: `${childName}#${ownerId} store`,
+      createItem: (props) => {
+        const childItem = {};
+        Object.assign(childItem, props);
+        for (const setup of setupCallbackSet) {
+          setup(childItem);
+        }
+        return childItem;
+      },
+    });
+    ownerStoreMap.set(ownerId, childStore);
+
+    const childItemIdArraySignal = signal([]);
+    ownerIdArraySignalMap.set(ownerId, childItemIdArraySignal);
+
+    const updateChildItemIdArray = (valueArray) => {
+      const currentIdArray = childItemIdArraySignal.peek();
+      if (!Array.isArray(valueArray)) {
+        if (currentIdArray.length === 0) return;
+        childItemIdArraySignal.value = [];
+        return;
+      }
+      let i = 0;
+      const idArray = [];
+      let modified = false;
+      while (i < valueArray.length) {
+        const value = valueArray[i];
+        const currentIdAtIndex = currentIdArray[idArray.length];
+        i++;
+        if (isProps(value)) {
+          const childItem = childStore.upsert(value);
+          const childItemId = childItem[childIdKey];
+          if (currentIdAtIndex !== childItemId) modified = true;
+          idArray.push(childItemId);
+          continue;
+        }
+        if (primitiveCanBeId(value)) {
+          const childItemProps = { [childIdKey]: value };
+          const childItem = childStore.upsert(childItemProps);
+          const childItemId = childItem[childIdKey];
+          if (currentIdAtIndex !== childItemId) modified = true;
+          idArray.push(childItemId);
+          continue;
+        }
+      }
+      if (modified || currentIdArray.length !== idArray.length) {
+        childItemIdArraySignal.value = idArray;
+      }
+    };
+
+    updateChildItemIdArray(item[propertyName]);
+
+    // When an id is renamed (PUT/PATCH changes the idKey), patch the id array.
+    childStore.observeProperties((mutations) => {
+      const idArray = childItemIdArraySignal.peek();
+      if (idArray.length === 0) return;
+      const idSet = new Set(idArray);
+      const idMutationMap = new Map();
+      for (const mutation of mutations) {
+        const idKeyMutation = mutation[childIdKey];
+        if (!idKeyMutation) continue;
+        const { oldValue, newValue } = idKeyMutation;
+        if (!idSet.has(oldValue)) continue;
+        idMutationMap.set(oldValue, newValue);
+      }
+      if (idMutationMap.size === 0) return;
+      const idUpdatedArray = [];
+      for (const id of idArray) {
+        idUpdatedArray.push(idMutationMap.get(id) ?? id);
+      }
+      childItemIdArraySignal.value = idUpdatedArray;
+    });
+
+    const childItemArraySignal = computed(() => {
+      const childItemIdArray = childItemIdArraySignal.value;
+      const childItemArray = childStore.selectAll(childItemIdArray);
+      Object.defineProperty(childItemArray, SYMBOL_OBJECT_SIGNAL, {
+        value: childItemArraySignal,
+        writable: false,
+        enumerable: false,
+        configurable: false,
+      });
+      return childItemArray;
+    });
+
+    Object.defineProperty(item, propertyName, {
+      get: () => childItemArraySignal.value,
+      set: updateChildItemIdArray,
+    });
+  });
+
+  const createOwnManyAction = (restCallbackKey, restCallback) => {
+    const verb = restCallbackKey.replace("_MANY", "");
+    const isMany = restCallbackKey.endsWith("_MANY");
+    const childActionName = `${childName}.${restCallbackKey}`;
+    return createAction(restCallback, {
+      name: childActionName,
+      meta: { verb, isMany },
+      resultToValue: (result) => {
+        if (!Array.isArray(result) || result.length < 2) {
+          throw new TypeError(
+            `${childActionName} callback must return [ownerId, ...] array, received ${result}`,
+          );
+        }
+        const [ownerId, ...rest] = result;
+        const childStore = ownerStoreMap.get(ownerId);
+        if (!childStore) {
+          throw new Error(
+            `${childActionName}: no store found for owner id "${ownerId}"`,
+          );
+        }
+        const childItemIdArraySignal = ownerIdArraySignalMap.get(ownerId);
+
+        if (verb === "DELETE") {
+          if (isMany) {
+            const idArray = childStore.drop(rest[0]);
+            const toRemoveSet = new Set(idArray);
+            childItemIdArraySignal.value = childItemIdArraySignal
+              .peek()
+              .filter((id) => !toRemoveSet.has(id));
+            return [ownerId, idArray];
+          }
+          const childId = childStore.drop(rest[0]);
+          childItemIdArraySignal.value = childItemIdArraySignal
+            .peek()
+            .filter((id) => id !== childId);
+          return [ownerId, childId];
+        }
+
+        if (isMany) {
+          // GET_MANY, POST_MANY, PUT_MANY etc: rest[0] is the array of items
+          const itemArray = childStore.upsert(rest[0]);
+          const idArray = itemArray.map((i) => i[childIdKey]);
+          childItemIdArraySignal.value = idArray;
+          return [ownerId, idArray];
+        }
+
+        // GET, POST, PUT, PATCH: rest may be [props] or [oldId, props] for renames
+        const childItem =
+          rest.length > 1
+            ? childStore.upsert(...rest)
+            : childStore.upsert(rest[0]);
+        return [ownerId, childItem[childIdKey]];
+      },
+    });
+  };
+
+  const GET = (cb) => createOwnManyAction("GET", cb);
+  const GET_MANY = (cb) => createOwnManyAction("GET_MANY", cb);
+  const POST = (cb) => createOwnManyAction("POST", cb);
+  const POST_MANY = (cb) => createOwnManyAction("POST_MANY", cb);
+  const PUT = (cb) => createOwnManyAction("PUT", cb);
+  const PUT_MANY = (cb) => createOwnManyAction("PUT_MANY", cb);
+  const PATCH = (cb) => createOwnManyAction("PATCH", cb);
+  const PATCH_MANY = (cb) => createOwnManyAction("PATCH_MANY", cb);
+  const DELETE = (cb) => createOwnManyAction("DELETE", cb);
+  const DELETE_MANY = (cb) => createOwnManyAction("DELETE_MANY", cb);
+
+  return {
+    GET,
+    GET_MANY,
+    POST,
+    POST_MANY,
+    PUT,
+    PUT_MANY,
+    PATCH,
+    PATCH_MANY,
+    DELETE,
+    DELETE_MANY,
+    addItemSetup,
+  };
 };
 
 const isProps = (value) => {
