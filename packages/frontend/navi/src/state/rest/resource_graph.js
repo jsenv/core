@@ -14,20 +14,57 @@ let DEBUG = true;
 
 export const resource = (
   name,
-  { idKey, mutableIdKeys = [], rerunOn, httpHandler, ...rest } = {},
+  {
+    GET,
+    GET_MANY,
+    POST,
+    POST_MANY,
+    PUT,
+    PUT_MANY,
+    PATCH,
+    PATCH_MANY,
+    DELETE,
+    DELETE_MANY,
+
+    // configuration options
+    idKey,
+    mutableIdKeys = [],
+    rerunOn,
+
+    // used internally when creating
+    // - resource with relationship to other resources (.one/.many)
+    // - parameterized resource (.withParams)
+    restHandler,
+  } = {},
 ) => {
   if (idKey === undefined) {
     idKey = mutableIdKeys.length === 0 ? "id" : mutableIdKeys[0];
   }
+  const restCallbacks = {
+    GET,
+    GET_MANY,
+    POST,
+    POST_MANY,
+    PUT,
+    PUT_MANY,
+    PATCH,
+    PATCH_MANY,
+    DELETE,
+    DELETE_MANY,
+  };
   const resourceInstance = {
     isResource: true,
     name,
     idKey,
-    httpActions: {},
+    restCallbacks, // Store the action callback definitions for withParams to use later
+    restHandler,
     addItemSetup: undefined,
-    httpHandler,
+    store: undefined,
+    useArray: undefined,
+    useById: undefined,
   };
-  if (!httpHandler) {
+
+  if (!restHandler) {
     const setupCallbackSet = new Set();
     const addItemSetup = (callback) => {
       setupCallbackSet.add(callback);
@@ -86,7 +123,7 @@ export const resource = (
       store,
     });
 
-    httpHandler = createHttpHandlerForRootResource(name, {
+    restHandler = createRestHandlerForRoot(name, {
       idKey,
       store,
       rerunOn,
@@ -94,19 +131,16 @@ export const resource = (
       mutableIdKeys,
     });
   }
-  resourceInstance.httpHandler = httpHandler;
+  resourceInstance.restHandler = restHandler;
 
-  // Store the action callback definitions for withParams to use later
-  resourceInstance.httpActions = rest;
-
-  // Create HTTP actions
-  for (const key of Object.keys(rest)) {
-    const method = httpHandler[key];
-    if (!method) {
+  // Create rest actions
+  for (const [restCallbackKey, restCallback] of Object.entries(restCallbacks)) {
+    const restCallbackHandler = restHandler[restCallbackKey];
+    if (!restCallbackHandler) {
       continue;
     }
-    const action = method(rest[key]);
-    resourceInstance[key] = action;
+    const action = restCallbackHandler(restCallback);
+    resourceInstance[restCallbackKey] = action;
   }
 
   resourceInstance.one = (propertyName, childResource, options) => {
@@ -193,8 +227,8 @@ export const resource = (
         },
       });
     });
-    const httpHandlerForRelationshipToOneChild =
-      createHttpHandlerForRelationshipToOneResource(childName, {
+    const restHandlerForRelationshipToOne =
+      createRestHandlerForRelationshipToOne(childName, {
         idKey,
         store: resourceInstance.store,
         propertyName,
@@ -205,7 +239,7 @@ export const resource = (
       });
     return resource(childName, {
       idKey: childIdKey,
-      httpHandler: httpHandlerForRelationshipToOneChild,
+      restHandler: restHandlerForRelationshipToOne,
       ...options,
     });
   };
@@ -324,8 +358,8 @@ export const resource = (
         },
       });
     });
-    const httpHandleForChildManyResource =
-      createHttpHandlerRelationshipToManyResource(childName, {
+    const restHandlerForRelationshipToMany =
+      createRestHandlerForRelationshipToMany(childName, {
         idKey,
         store: resourceInstance.store,
         propertyName,
@@ -336,12 +370,12 @@ export const resource = (
       });
     return resource(childName, {
       idKey: childIdKey,
-      httpHandler: httpHandleForChildManyResource,
+      restHandler: restHandlerForRelationshipToMany,
       ...options,
     });
   };
 
-  // .collection() is for resources that own a list of sub-objects which can be mutated
+  // .ownMany() is for resources that own a list of sub-objects which can be mutated
   // directly via dedicated endpoints, without re-sending the whole parent.
   //
   // Example: a TABLE has COLUMNS. You receive them when you GET the table, and you
@@ -352,18 +386,43 @@ export const resource = (
   // Each owner item gets its own private arraySignalStore (no shared global store,
   // no id clashes across owners). All callbacks must return [ownerId, ...rest] so
   // the right per-owner store is updated.
-  resourceInstance.collection = (
+  resourceInstance.ownMany = (
     propertyName,
-    { idKey: childIdKey = "id", ...httpMethods } = {},
+    {
+      GET,
+      GET_MANY,
+      POST,
+      POST_MANY,
+      PUT,
+      PUT_MANY,
+      PATCH,
+      PATCH_MANY,
+      DELETE,
+      DELETE_MANY,
+
+      idKey: childIdKey = "id",
+    } = {},
   ) => {
     const childName = `${name}.${propertyName}`;
+    const restCallbacks = {
+      GET,
+      GET_MANY,
+      POST,
+      POST_MANY,
+      PUT,
+      PUT_MANY,
+      PATCH,
+      PATCH_MANY,
+      DELETE,
+      DELETE_MANY,
+    };
     const ownerStoreMap = new Map(); // ownerId → childStore
     const ownerIdArraySignalMap = new Map(); // ownerId → childItemIdArraySignal
 
     resourceInstance.addItemSetup((item) => {
       const ownerId = item[idKey];
       const childStore = arraySignalStore([], childIdKey, {
-        name: `${childName}[${ownerId}] store`,
+        name: `${name}#${ownerId}.${propertyName} store`,
       });
       ownerStoreMap.set(ownerId, childStore);
 
@@ -449,31 +508,32 @@ export const resource = (
     });
 
     const collectionInstance = { name: childName, idKey: childIdKey };
-
-    for (const [verb, callback] of Object.entries(httpMethods)) {
-      const httpVerb = verb.replace("_MANY", "");
-      const isMany = verb.endsWith("_MANY");
-
-      const action = createAction(callback, {
-        name: `${childName}.${verb}`,
-        meta: { httpVerb, httpMany: isMany },
+    for (const [restCallbackKey, restCallback] of Object.entries(
+      restCallbacks,
+    )) {
+      const restMethod = restCallbackKey.replace("_MANY", "");
+      const restIsMany = restCallbackKey.endsWith("_MANY");
+      const childActionName = `${childName}.${restCallbackKey}`;
+      const action = createAction(restCallback, {
+        name: childActionName,
+        meta: { restMethod, restIsMany },
         resultToValue: (result) => {
           if (!Array.isArray(result) || result.length < 2) {
             throw new TypeError(
-              `${childName}.${verb} callback must return [ownerId, ...] array, received ${result}`,
+              `${childActionName} callback must return [ownerId, ...] array, received ${result}`,
             );
           }
           const [ownerId, ...rest] = result;
           const childStore = ownerStoreMap.get(ownerId);
           if (!childStore) {
             throw new Error(
-              `${childName}.${verb}: no store found for owner id "${ownerId}"`,
+              `${childActionName}: no store found for owner id "${ownerId}"`,
             );
           }
           const childItemIdArraySignal = ownerIdArraySignalMap.get(ownerId);
 
-          if (httpVerb === "DELETE") {
-            if (isMany) {
+          if (restMethod === "DELETE") {
+            if (restIsMany) {
               const idArray = childStore.drop(rest[0]);
               const toRemoveSet = new Set(idArray);
               childItemIdArraySignal.value = childItemIdArraySignal
@@ -488,7 +548,7 @@ export const resource = (
             return [ownerId, childId];
           }
 
-          if (isMany) {
+          if (restIsMany) {
             // GET_MANY, POST_MANY, PUT_MANY etc: rest[0] is the array of items
             const itemArray = childStore.upsert(rest[0]);
             const idArray = itemArray.map((i) => i[childIdKey]);
@@ -505,13 +565,13 @@ export const resource = (
         },
       });
 
-      collectionInstance[verb] = action;
+      collectionInstance[restCallbackKey] = action;
     }
 
     return collectionInstance;
   };
 
-  // .item() is for a single sub-object owned exclusively by the parent resource.
+  // .ownOne() is for a single sub-object owned exclusively by the parent resource.
   // Unlike .collection(), there is no array — each owner has exactly one child object.
   //
   // Example: a TABLE has a single SETTINGS object (theme, page size, etc.).
@@ -520,7 +580,11 @@ export const resource = (
   //
   // Each owner item gets its own private signal. Callbacks must return [ownerId, props]
   // so the right per-owner signal is updated.
-  resourceInstance.item = (propertyName, { ...httpMethods } = {}) => {
+  resourceInstance.ownOne = (
+    propertyName,
+    { GET, POST, PUT, PATCH, DELETE } = {},
+  ) => {
+    const restCallbacks = { GET, POST, PUT, PATCH, DELETE };
     const childName = `${name}.${propertyName}`;
     const ownerSignalMap = new Map(); // ownerId → signal(childProps)
 
@@ -538,31 +602,32 @@ export const resource = (
     });
 
     const itemInstance = { name: childName };
-
-    for (const [verb, callback] of Object.entries(httpMethods)) {
-      const httpVerb = verb;
-      const action = createAction(callback, {
-        name: `${childName}.${verb}`,
-        meta: { httpVerb, httpMany: false },
+    for (const [restCallbackKey, restCallback] of Object.entries(
+      restCallbacks,
+    )) {
+      const restMethod = restCallbackKey;
+      const childActionName = `${childName}.${restMethod}`;
+      const action = createAction(restCallback, {
+        name: childActionName,
+        meta: { restMethod, restIsMany: false },
         resultToValue: (result) => {
           if (!Array.isArray(result) || result.length !== 2) {
             throw new TypeError(
-              `${childName}.${verb} callback must return [ownerId, props], received ${result}`,
+              `${childActionName} callback must return [ownerId, props], received ${result}`,
             );
           }
           const [ownerId, props] = result;
           const childSignal = ownerSignalMap.get(ownerId);
           if (!childSignal) {
             throw new Error(
-              `${childName}.${verb}: no signal found for owner id "${ownerId}"`,
+              `${childActionName}: no signal found for owner id "${ownerId}"`,
             );
           }
           childSignal.value = props;
           return [ownerId, props];
         },
       });
-
-      itemInstance[verb] = action;
+      itemInstance[restCallbackKey] = action;
     }
 
     return itemInstance;
@@ -604,17 +669,15 @@ export const resource = (
     if (!params || Object.keys(params).length === 0) {
       throw new Error(`resource(${name}).withParams() requires parameters`);
     }
-
     const { dependencies = [], rerunOn: customRerunOn } = options;
 
     // Generate unique param scope for these parameters
     const paramScopeObject = getParamScope(params);
-
     // Use custom rerunOn settings if provided, otherwise use resource defaults
     const finalRerunOn = customRerunOn || rerunOn;
 
-    // Create a new httpHandler with the param scope for isolated autorerun
-    const parameterizedHttpHandler = createHttpHandlerForRootResource(name, {
+    // Create a new handler with the param scope for isolated autorerun
+    const parameterizedRestHandler = createRestHandlerForRoot(name, {
       idKey,
       store: resourceInstance.store,
       rerunOn: finalRerunOn,
@@ -633,21 +696,27 @@ export const resource = (
       useById: resourceInstance.useById,
       store: resourceInstance.store,
       addItemSetup: resourceInstance.addItemSetup,
-      httpHandler: parameterizedHttpHandler,
       one: resourceInstance.one,
       many: resourceInstance.many,
+
+      restHandler: parameterizedRestHandler,
+      restCallbacks: resourceInstance.restCallbacks,
+
       dependencies, // Store dependencies for debugging/inspection
-      httpActions: resourceInstance.httpActions,
     };
 
-    // Create HTTP actions from the parameterized handler and bind parameters
-    for (const key of Object.keys(resourceInstance.httpActions)) {
-      const method = parameterizedHttpHandler[key];
-      if (method) {
-        const action = method(resourceInstance.httpActions[key]);
-        // Bind the parameters to get a parameterized action instance
-        parameterizedResource[key] = action.bindParams(params);
+    // Create actions from the parameterized handler and bind parameters
+    for (const [restCallbackKey, restCallback] of Object.entries(
+      resourceInstance.restCallbacks,
+    )) {
+      const restCallbackHandler = parameterizedRestHandler[restCallbackKey];
+      if (!restCallbackHandler) {
+        continue;
       }
+      const action = restCallbackHandler(restCallback);
+      // Bind the parameters to get a parameterized action instance
+      const actionWithParams = action.bindParams(params);
+      parameterizedResource[restCallbackKey] = actionWithParams;
     }
 
     // Add withParams method to the parameterized resource for chaining
@@ -668,7 +737,6 @@ export const resource = (
 
     return parameterizedResource;
   };
-
   resourceInstance.withParams = withParams;
 
   return resourceInstance;
@@ -692,7 +760,7 @@ const createResourceLifecycleManager = () => {
       rerunOn,
       paramScope,
       mutableIdKeys,
-      httpActions: new Set(),
+      restActionSet: new Set(),
     });
 
     // Register dependencies
@@ -706,14 +774,14 @@ const createResourceLifecycleManager = () => {
     }
   };
 
-  const registerAction = (resourceInstance, httpAction) => {
+  const registerAction = (resourceInstance, restAction) => {
     const config = registeredResources.get(resourceInstance);
     if (config) {
-      config.httpActions.add(httpAction);
+      config.restActionSet.add(restAction);
     }
   };
 
-  const shouldRerunAfter = (rerunConfig, httpVerb) => {
+  const shouldRerunAfter = (rerunConfig, restMethod) => {
     if (rerunConfig === false) {
       return false;
     }
@@ -721,11 +789,11 @@ const createResourceLifecycleManager = () => {
       return true;
     }
     if (Array.isArray(rerunConfig)) {
-      const verbSet = new Set(rerunConfig.map((v) => v.toUpperCase()));
-      if (verbSet.has("*")) {
+      const methodSet = new Set(rerunConfig.map((v) => v.toUpperCase()));
+      if (methodSet.has("*")) {
         return true;
       }
-      return verbSet.has(httpVerb.toUpperCase());
+      return methodSet.has(restMethod.toUpperCase());
     }
     return false;
   };
@@ -755,24 +823,24 @@ const createResourceLifecycleManager = () => {
     for (const [resourceInstance, config] of registeredResources) {
       const shouldRerunGetMany = shouldRerunAfter(
         config.rerunOn.GET_MANY,
-        triggeringAction.meta.httpVerb,
+        triggeringAction.meta.restMethod,
       );
       const shouldRerunGet = shouldRerunAfter(
         config.rerunOn.GET,
-        triggeringAction.meta.httpVerb,
+        triggeringAction.meta.restMethod,
       );
 
       // Skip if no rerun or reset rules apply
       const hasMutableIdAutorerun =
-        (triggeringAction.meta.httpVerb === "POST" ||
-          triggeringAction.meta.httpVerb === "PUT" ||
-          triggeringAction.meta.httpVerb === "PATCH") &&
+        (triggeringAction.meta.restMethod === "POST" ||
+          triggeringAction.meta.restMethod === "PUT" ||
+          triggeringAction.meta.restMethod === "PATCH") &&
         config.mutableIdKeys.length > 0;
 
       if (
         !shouldRerunGetMany &&
         !shouldRerunGet &&
-        triggeringAction.meta.httpVerb !== "DELETE" &&
+        triggeringAction.meta.restMethod !== "DELETE" &&
         !hasMutableIdAutorerun
       ) {
         continue;
@@ -782,30 +850,34 @@ const createResourceLifecycleManager = () => {
       // Same scope ID or no scope = compatible, subset check for different scopes
       const paramScopePredicate = config.paramScope
         ? (candidateAction) => {
-            if (candidateAction.meta.paramScope?.id === config.paramScope.id)
+            if (candidateAction.meta.paramScope?.id === config.paramScope.id) {
               return true;
-            if (!candidateAction.meta.paramScope) return true;
+            }
+            if (!candidateAction.meta.paramScope) {
+              return true;
+            }
             const candidateParams = candidateAction.meta.paramScope.params;
             const currentParams = config.paramScope.params;
             return isParamSubset(candidateParams, currentParams);
           }
         : (candidateAction) => !candidateAction.meta.paramScope;
 
-      for (const httpAction of config.httpActions) {
+      for (const restAction of config.restActionSet) {
         // Find all instances of this action
-        const actionCandidateArray = httpAction.matchAllSelfOrDescendant(
+        const actionCandidateArray = restAction.matchAllSelfOrDescendant(
           (action) =>
             !action.isPrerun && action.completed && action !== triggeringAction,
         );
 
         for (const actionCandidate of actionCandidateArray) {
-          const triggerVerb = triggeringAction.meta.httpVerb;
-          const candidateVerb = actionCandidate.meta.httpVerb;
-          const candidateIsPlural = actionCandidate.meta.httpMany;
-          if (triggerVerb === candidateVerb) {
+          const triggerRestMethod = triggeringAction.meta.restMethod;
+          const candidateRestMethod = actionCandidate.meta.restMethod;
+
+          if (triggerRestMethod === candidateRestMethod) {
             continue;
           }
 
+          const candidateIsPlural = actionCandidate.meta.restIsMany;
           const triggeringResource = getResourceForAction(triggeringAction);
           const isSameResource = triggeringResource === resourceInstance;
 
@@ -813,8 +885,8 @@ const createResourceLifecycleManager = () => {
           config_effect: {
             if (
               !isSameResource ||
-              triggerVerb === "GET" ||
-              candidateVerb !== "GET"
+              triggerRestMethod === "GET" ||
+              candidateRestMethod !== "GET"
             ) {
               break config_effect;
             }
@@ -834,7 +906,7 @@ const createResourceLifecycleManager = () => {
 
           // DELETE effects on same resource (ignores param scope)
           delete_effect: {
-            if (!isSameResource || triggerVerb !== "DELETE") {
+            if (!isSameResource || triggerRestMethod !== "DELETE") {
               break delete_effect;
             }
             if (candidateIsPlural) {
@@ -847,7 +919,7 @@ const createResourceLifecycleManager = () => {
             }
             // Get the ID(s) that were deleted
             const { valueSignal } = triggeringAction;
-            const deleteIdSet = triggeringAction.meta.httpMany
+            const deleteIdSet = triggeringAction.meta.restIsMany
               ? new Set(valueSignal.peek())
               : new Set([valueSignal.peek()]);
 
@@ -856,7 +928,7 @@ const createResourceLifecycleManager = () => {
             if (!isAffected) {
               break delete_effect;
             }
-            if (candidateVerb === "GET" && shouldRerunGet) {
+            if (candidateRestMethod === "GET" && shouldRerunGet) {
               actionsToRerun.add(actionCandidate);
               reasonSet.add("same-resource DELETE rerun GET");
               continue;
@@ -870,7 +942,7 @@ const createResourceLifecycleManager = () => {
           mutable_id_effect: {
             if (
               hasMutableIdAutorerun &&
-              candidateVerb === "GET" &&
+              candidateRestMethod === "GET" &&
               !candidateIsPlural &&
               isSameResource
             ) {
@@ -890,7 +962,7 @@ const createResourceLifecycleManager = () => {
                   ) {
                     actionsToRerun.add(actionCandidate);
                     reasonSet.add(
-                      `${triggeringAction.meta.httpVerb}-mutableId autorerun`,
+                      `${triggeringAction.meta.restMethod}-mutableId autorerun`,
                     );
                     break;
                   }
@@ -906,8 +978,8 @@ const createResourceLifecycleManager = () => {
               resourceDependencies
                 .get(triggeringResource)
                 ?.has(resourceInstance) &&
-              triggerVerb !== "GET" &&
-              candidateVerb === "GET" &&
+              triggerRestMethod !== "GET" &&
+              candidateRestMethod === "GET" &&
               candidateIsPlural
             ) {
               actionsToRerun.add(actionCandidate);
@@ -926,12 +998,12 @@ const createResourceLifecycleManager = () => {
     };
   };
 
-  const onActionComplete = (httpAction) => {
+  const onActionComplete = (restAction) => {
     const { actionsToRerun, actionsToReset, reasons } =
-      findEffectOnActions(httpAction);
+      findEffectOnActions(restAction);
 
     if (actionsToRerun.size > 0 || actionsToReset.size > 0) {
-      const reason = `${httpAction} triggered ${reasons.join(" and ")}`;
+      const reason = `${restAction} triggered ${reasons.join(" and ")}`;
       const dispatchActions = getActionDispatcher();
       dispatchActions({
         rerunSet: actionsToRerun,
@@ -974,7 +1046,7 @@ const getParamScope = (params) => {
   return newParamScope;
 };
 
-const createHttpHandlerForRootResource = (
+const createRestHandlerForRoot = (
   name,
   {
     idKey,
@@ -1027,9 +1099,12 @@ const createHttpHandlerForRootResource = (
     mutableIdKeys,
   });
 
-  const createActionAffectingOneItem = (httpVerb, { callback, ...options }) => {
+  const createActionAffectingOneItem = (
+    restMethod,
+    { callback, ...options },
+  ) => {
     const applyResultToValue =
-      httpVerb === "DELETE"
+      restMethod === "DELETE"
         ? (itemIdOrItemProps) => {
             const itemId = store.drop(itemIdOrItemProps);
             return itemId;
@@ -1055,14 +1130,20 @@ const createHttpHandlerForRootResource = (
       callerInfo.file && callerInfo.line && callerInfo.column
         ? `${callerInfo.file}:${callerInfo.line}:${callerInfo.column}`
         : callerInfo.raw || "unknown location";
-    const originalActionName = `${name}.${httpVerb}`;
-    const httpActionAffectingOneItem = createAction(callback, {
-      meta: { httpVerb, httpMany: false, paramScope, resourceInstance, store },
-      name: `${name}.${httpVerb}`,
+    const originalActionName = `${name}.${restMethod}`;
+    const actionAffectingOneItem = createAction(callback, {
+      name: `${name}.${restMethod}`,
+      meta: {
+        restMethod,
+        restIsMany: false,
+        paramScope,
+        resourceInstance,
+        store,
+      },
       resultToValue: (result, action) => {
         const actionLabel = action.name;
 
-        if (httpVerb === "DELETE") {
+        if (restMethod === "DELETE") {
           if (!isProps(result) && !primitiveCanBeId(result)) {
             throw new TypeError(
               `${actionLabel} must return an object (that will be used to drop "${name}" resource), received ${result}.
@@ -1086,9 +1167,9 @@ ${originalActionName} source location: ${locationInfo}`,
     });
     resourceLifecycleManager.registerAction(
       resourceInstance,
-      httpActionAffectingOneItem,
+      actionAffectingOneItem,
     );
-    return httpActionAffectingOneItem;
+    return actionAffectingOneItem;
   };
   const GET = (callback, options) =>
     createActionAffectingOneItem("GET", {
@@ -1129,11 +1210,11 @@ ${originalActionName} source location: ${locationInfo}`,
     });
 
   const createActionAffectingManyItems = (
-    httpVerb,
+    restMethod,
     { callback, ...options },
   ) => {
     const applyResultToValue =
-      httpVerb === "DELETE"
+      restMethod === "DELETE"
         ? (idOrMutableIdArray) => {
             const idArray = store.drop(idOrMutableIdArray);
             return idArray;
@@ -1144,9 +1225,15 @@ ${originalActionName} source location: ${locationInfo}`,
             return idArray;
           };
 
-    const httpActionAffectingManyItems = createAction(callback, {
-      meta: { httpVerb, httpMany: true, paramScope, resourceInstance, store },
-      name: `${name}.${httpVerb}_MANY`,
+    const actionAffectingManyItems = createAction(callback, {
+      meta: {
+        restMethod,
+        restIsMany: true,
+        paramScope,
+        resourceInstance,
+        store,
+      },
+      name: `${name}.${restMethod}_MANY`,
       dataDefault: [],
       resultToValue: applyResultToValue,
       valueToData: (idArray) => {
@@ -1156,7 +1243,7 @@ ${originalActionName} source location: ${locationInfo}`,
       completeSideEffect: (actionCompleted) => {
         resourceLifecycleManager.onActionComplete(actionCompleted);
         if (
-          httpVerb === "DELETE" ||
+          restMethod === "DELETE" ||
           actionCompleted.valueSignal.peek().length === 0
         ) {
           return null;
@@ -1201,9 +1288,9 @@ ${originalActionName} source location: ${locationInfo}`,
     });
     resourceLifecycleManager.registerAction(
       resourceInstance,
-      httpActionAffectingManyItems,
+      actionAffectingManyItems,
     );
-    return httpActionAffectingManyItems;
+    return actionAffectingManyItems;
   };
   const GET_MANY = (callback, options) =>
     createActionAffectingManyItems("GET", { callback, ...options });
@@ -1229,7 +1316,7 @@ ${originalActionName} source location: ${locationInfo}`,
     DELETE_MANY,
   };
 };
-const createHttpHandlerForRelationshipToOneResource = (
+const createRestHandlerForRelationshipToOne = (
   name,
   {
     idKey,
@@ -1241,9 +1328,12 @@ const createHttpHandlerForRelationshipToOneResource = (
     resourceLifecycleManager,
   },
 ) => {
-  const createActionAffectingOneItem = (httpVerb, { callback, ...options }) => {
+  const createActionAffectingOneItem = (
+    restMethod,
+    { callback, ...options },
+  ) => {
     const applyResultToValue =
-      httpVerb === "DELETE"
+      restMethod === "DELETE"
         ? (itemId) => {
             const item = store.select(itemId);
             const childItemId = item[propertyName][childIdKey];
@@ -1278,19 +1368,24 @@ const createHttpHandlerForRelationshipToOneResource = (
       callerInfo.file && callerInfo.line && callerInfo.column
         ? `${callerInfo.file}:${callerInfo.line}:${callerInfo.column}`
         : callerInfo.raw || "unknown location";
-    const originalActionName = `${name}.${httpVerb}`;
+    const originalActionName = `${name}.${restMethod}`;
 
-    const httpActionAffectingOneItem = createAction(callback, {
-      meta: { httpVerb, httpMany: false, resourceInstance, store },
-      name: `${name}.${httpVerb}`,
+    const actionAffectingOneItem = createAction(callback, {
+      meta: {
+        restMethod,
+        restIsMany: false,
+        resourceInstance,
+        store,
+      },
+      name: `${name}.${restMethod}`,
       resultToValue: (result, action) => {
         const actionLabel = action.name;
 
-        if (httpVerb === "DELETE") {
+        if (restMethod === "DELETE") {
           if (!isProps(result) && !primitiveCanBeId(result)) {
             throw new TypeError(
               `${actionLabel} must return an object (that will be used to drop "${name}" resource), received ${result}.
-           ${originalActionName} source location: ${locationInfo}`,
+${originalActionName} source location: ${locationInfo}`,
             );
           }
           return applyResultToValue(result);
@@ -1298,7 +1393,7 @@ const createHttpHandlerForRelationshipToOneResource = (
         if (!isProps(result)) {
           throw new TypeError(
             `${actionLabel} must return an object (that will be used to upsert "${name}" resource), received ${result}.
-           ${originalActionName} source location: ${locationInfo}`,
+   ${originalActionName} source location: ${locationInfo}`,
           );
         }
         return applyResultToValue(result);
@@ -1310,9 +1405,9 @@ const createHttpHandlerForRelationshipToOneResource = (
     });
     resourceLifecycleManager.registerAction(
       resourceInstance,
-      httpActionAffectingOneItem,
+      actionAffectingOneItem,
     );
-    return httpActionAffectingOneItem;
+    return actionAffectingOneItem;
   };
 
   const GET = (callback, options) =>
@@ -1339,7 +1434,7 @@ const createHttpHandlerForRelationshipToOneResource = (
 
   return { GET, PUT, DELETE };
 };
-const createHttpHandlerRelationshipToManyResource = (
+const createRestHandlerForRelationshipToMany = (
   name,
   {
     idKey,
@@ -1356,9 +1451,12 @@ const createHttpHandlerRelationshipToManyResource = (
   // pour l'instant on ignore
 
   // one item AND many child items
-  const createActionAffectingOneItem = (httpVerb, { callback, ...options }) => {
+  const createActionAffectingOneItem = (
+    restMethod,
+    { callback, ...options },
+  ) => {
     const applyResultToValue =
-      httpVerb === "DELETE"
+      restMethod === "DELETE"
         ? ([itemId, childItemId]) => {
             const item = store.select(itemId);
             const childItemArray = item[propertyName];
@@ -1394,20 +1492,25 @@ const createHttpHandlerRelationshipToManyResource = (
       callerInfo.file && callerInfo.line && callerInfo.column
         ? `${callerInfo.file}:${callerInfo.line}:${callerInfo.column}`
         : callerInfo.raw || "unknown location";
-    const originalActionName = `${name}.${httpVerb}`;
+    const originalActionName = `${name}.${restMethod}`;
 
-    const httpActionAffectingOneItem = createAction(callback, {
-      meta: { httpVerb, httpMany: false, resourceInstance, store: childStore },
-      name: `${name}.${httpVerb}`,
+    const actionAffectingOneItem = createAction(callback, {
+      meta: {
+        restMethod,
+        restIsMany: false,
+        resourceInstance,
+        store: childStore,
+      },
+      name: `${name}.${restMethod}`,
       resultToValue: (result, action) => {
         const actionLabel = action.name;
 
-        if (httpVerb === "DELETE") {
+        if (restMethod === "DELETE") {
           // For DELETE in many relationship, we expect [itemId, childItemId] array
           if (!Array.isArray(result) || result.length !== 2) {
             throw new TypeError(
               `${actionLabel} must return an array [itemId, childItemId] (that will be used to remove relationship), received ${result}.
-           ${originalActionName} source location: ${locationInfo}`,
+${originalActionName} source location: ${locationInfo}`,
             );
           }
           return applyResultToValue(result);
@@ -1415,7 +1518,7 @@ const createHttpHandlerRelationshipToManyResource = (
         if (!isProps(result)) {
           throw new TypeError(
             `${actionLabel} must return an object (that will be used to upsert child item), received ${result}.
-           ${originalActionName} source location: ${locationInfo}`,
+${originalActionName} source location: ${locationInfo}`,
           );
         }
         return applyResultToValue(result);
@@ -1427,9 +1530,9 @@ const createHttpHandlerRelationshipToManyResource = (
     });
     resourceLifecycleManager.registerAction(
       resourceInstance,
-      httpActionAffectingOneItem,
+      actionAffectingOneItem,
     );
-    return httpActionAffectingOneItem;
+    return actionAffectingOneItem;
   };
   const GET = (callback, options) =>
     createActionAffectingOneItem("GET", {
@@ -1463,11 +1566,11 @@ const createHttpHandlerRelationshipToManyResource = (
     });
 
   const createActionAffectingManyItems = (
-    httpVerb,
+    restMethod,
     { callback, ...options },
   ) => {
     const applyResultToValue =
-      httpVerb === "GET"
+      restMethod === "GET"
         ? (result) => {
             // callback must return object with the following format:
             // {
@@ -1486,7 +1589,7 @@ const createHttpHandlerRelationshipToManyResource = (
             );
             return childItemIdArray;
           }
-        : httpVerb === "DELETE"
+        : restMethod === "DELETE"
           ? ([itemIdOrMutableId, childItemIdOrMutableIdArray]) => {
               const item = store.select(itemIdOrMutableId);
               const childItemArray = item[propertyName];
@@ -1528,25 +1631,30 @@ const createHttpHandlerRelationshipToManyResource = (
       callerInfo.file && callerInfo.line && callerInfo.column
         ? `${callerInfo.file}:${callerInfo.line}:${callerInfo.column}`
         : callerInfo.raw || "unknown location";
-    const originalActionName = `${name}.${httpVerb}[many]`;
+    const originalActionName = `${name}.${restMethod}[many]`;
 
-    const httpActionAffectingManyItem = createAction(callback, {
-      meta: { httpVerb, httpMany: true, resourceInstance, store: childStore },
-      name: `${name}.${httpVerb}[many]`,
+    const actionAffectingManyItem = createAction(callback, {
+      meta: {
+        restMethod,
+        restIsMany: true,
+        resourceInstance,
+        store: childStore,
+      },
+      name: `${name}.${restMethod}[many]`,
       dataDefault: [],
       resultToValue: (result, action) => {
         const actionLabel = action.name;
 
-        if (httpVerb === "GET") {
+        if (restMethod === "GET") {
           if (!isProps(result)) {
             throw new TypeError(
               `${actionLabel} must return an object (that will be used to upsert "${name}" resource with many relationships), received ${result}.
-           ${originalActionName} source location: ${locationInfo}`,
+${originalActionName} source location: ${locationInfo}`,
             );
           }
           return applyResultToValue(result);
         }
-        if (httpVerb === "DELETE") {
+        if (restMethod === "DELETE") {
           // For DELETE_MANY in many relationship, we expect [itemId, childItemIdArray] array
           if (
             !Array.isArray(result) ||
@@ -1555,7 +1663,7 @@ const createHttpHandlerRelationshipToManyResource = (
           ) {
             throw new TypeError(
               `${actionLabel} must return an array [itemId, childItemIdArray] (that will be used to remove relationships), received ${result}.
-           ${originalActionName} source location: ${locationInfo}`,
+${originalActionName} source location: ${locationInfo}`,
             );
           }
           return applyResultToValue(result);
@@ -1564,7 +1672,7 @@ const createHttpHandlerRelationshipToManyResource = (
         if (!Array.isArray(result)) {
           throw new TypeError(
             `${actionLabel} must return an array of objects (that will be used to upsert child items), received ${result}.
-           ${originalActionName} source location: ${locationInfo}`,
+${originalActionName} source location: ${locationInfo}`,
           );
         }
         return applyResultToValue(result);
@@ -1576,9 +1684,9 @@ const createHttpHandlerRelationshipToManyResource = (
     });
     resourceLifecycleManager.registerAction(
       resourceInstance,
-      httpActionAffectingManyItem,
+      actionAffectingManyItem,
     );
-    return httpActionAffectingManyItem;
+    return actionAffectingManyItem;
   };
 
   const GET_MANY = (callback, options) =>
