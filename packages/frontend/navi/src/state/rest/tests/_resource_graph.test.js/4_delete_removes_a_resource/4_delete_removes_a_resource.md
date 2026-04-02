@@ -1,7 +1,7 @@
 # [DELETE removes a resource](../../resource_graph.test.js)
 
 ```js
-const USER = resource("user", { GET, POST, PUT, PATCH, DELETE });
+const USER = setupUser();
 const captureState = () => USER.store.arraySignal.value;
 
 await USER.POST({ name: "Alice" });
@@ -14,7 +14,12 @@ return { storeBeforeDelete, storeAfterDelete };
 
 ```js
 {
-  "storeBeforeDelete": [],
+  "storeBeforeDelete": [
+    {
+      "id": 1,
+      "name": "Alice"
+    }
+  ],
   "storeAfterDelete": []
 }
 ```

@@ -1,7 +1,7 @@
 # [GET single resource](../../resource_graph.test.js)
 
 ```js
-const USER = resource("user", { GET, POST, PUT, PATCH, DELETE });
+const USER = setupUser();
 const captureState = () => USER.store.arraySignal.value;
 
 const storeBefore = captureState();

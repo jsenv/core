@@ -1,7 +1,7 @@
 # [PUT updates a resource](../../resource_graph.test.js)
 
 ```js
-const USER = resource("user", { GET, POST, PUT, PATCH, DELETE });
+const USER = setupUser();
 const captureState = () => USER.store.arraySignal.value;
 
 await USER.POST({ name: "Alice" });
@@ -14,8 +14,18 @@ return { storeBeforePut, storeAfterPut };
 
 ```js
 {
-  "storeBeforePut": [],
-  "storeAfterPut": []
+  "storeBeforePut": [
+    {
+      "id": 1,
+      "name": "Alice"
+    }
+  ],
+  "storeAfterPut": [
+    {
+      "id": 1,
+      "name": "Bob"
+    }
+  ]
 }
 ```
 

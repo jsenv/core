@@ -1,15 +1,19 @@
 import { snapshotTests } from "@jsenv/snapshot";
 import { resource } from "../resource_graph.js";
 
-const GET = async ({ id }) => ({ id, name: "Alice" });
-const POST = async ({ name }) => ({ id: 1, name });
-const PUT = async ({ id, name }) => ({ id, name });
-const PATCH = async ({ id, name }) => ({ id, name });
-const DELETE = async ({ id }) => id;
-
 await snapshotTests(import.meta.url, ({ test }) => {
-  test("GET single resource", async () => {
+  const setupUser = () => {
+    const GET = async ({ id }) => ({ id, name: "Alice" });
+    const POST = async ({ name }) => ({ id: 1, name });
+    const PUT = async ({ id, name }) => ({ id, name });
+    const PATCH = async ({ id, name }) => ({ id, name });
+    const DELETE = async ({ id }) => id;
     const USER = resource("user", { GET, POST, PUT, PATCH, DELETE });
+    return USER;
+  };
+
+  test("GET single resource", async () => {
+    const USER = setupUser();
     const captureState = () => USER.store.arraySignal.value;
 
     const storeBefore = captureState();
@@ -20,7 +24,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
   });
 
   test("POST creates a resource", async () => {
-    const USER = resource("user", { GET, POST, PUT, PATCH, DELETE });
+    const USER = setupUser();
     const captureState = () => USER.store.arraySignal.value;
 
     const storeBefore = captureState();
@@ -31,7 +35,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
   });
 
   test("PUT updates a resource", async () => {
-    const USER = resource("user", { GET, POST, PUT, PATCH, DELETE });
+    const USER = setupUser();
     const captureState = () => USER.store.arraySignal.value;
 
     await USER.POST({ name: "Alice" });
@@ -43,7 +47,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
   });
 
   test("PATCH updates a resource", async () => {
-    const USER = resource("user", { GET, POST, PUT, PATCH, DELETE });
+    const USER = setupUser();
     const captureState = () => USER.store.arraySignal.value;
 
     await USER.POST({ name: "Alice" });
@@ -55,7 +59,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
   });
 
   test("DELETE removes a resource", async () => {
-    const USER = resource("user", { GET, POST, PUT, PATCH, DELETE });
+    const USER = setupUser();
     const captureState = () => USER.store.arraySignal.value;
 
     await USER.POST({ name: "Alice" });
