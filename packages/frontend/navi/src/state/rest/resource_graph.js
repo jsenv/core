@@ -201,6 +201,10 @@ const createResource = (
       continue;
     }
     const action = restCallbackHandler(restCallback);
+    if (!action) {
+      console.error("no action returned (here to see when it happens)");
+      continue;
+    }
     if (params) {
       const actionBound = action.bindParams(params);
       stateFacade[restCallbackKey] = actionBound;
@@ -224,8 +228,13 @@ const createResource = (
   //     const SESSION = resource("session");
   //     const USER = resource("user", { GET: fetchUser });
   //     const USER_SESSION = USER.one("session", SESSION, {
-  //       GET:    async ({ id }) => fetchUserSession(id),   // GET /users/:id/session
-  //       DELETE: async ({ id }) => deleteUserSession(id),  // DELETE /users/:id/session
+  //       GET: async ({ id }) => {
+  //         const session = await fetch(`/users/${id}/session`).json();
+  //         return session;
+  //       },
+  //       DELETE: async ({ id }) => {
+  //         await fetch(`/users/${id}/session`, { method: "DELETE" })
+  //       },
   //     });
   //     // user.session → reactive Session object from SESSION store
   //     // USER_SESSION.GET({ id: 1 }) loads the session reactively
@@ -234,15 +243,13 @@ const createResource = (
   //     HTTP: GET /devices/:deviceId
   //     const DEVICE = resource("device", { GET: fetchDevice });
   //     USER_SESSION.one("device", DEVICE);
-  //     // user.session.device → reactive Device object; resolves via session.device_id automatically
+  //     // user.session.device → reactive Device object;
+  //
+  // The only methods available here are GET/PUT/DELETE
+  // (there is no many as we deal with a single object)
   stateFacade.one = (
     propertyName,
     childResource,
-    // il n'y a pas de many puisque on cible une seule resource
-    // genre table.owner -> c'est un seul owner qu'on peut
-    // GET -> recup les infos de l'objet
-    // PUT -> mettre a jour l'owner de la table
-    // DELETE -> supprimer l'owner de la table
     { GET, PUT, DELETE } = {},
   ) => {
     const childIdKey = childResource.idKey;
@@ -302,14 +309,20 @@ const createResource = (
   // @example — A user has many friends (other users)
   //
   //   HTTP endpoints involved:
-  //     GET  /users/:id/friends          → returns [{ id, name, ... }, ...]
-  //     POST /users/:id/friends          → { friendId } → adds a friendship
+  //     GET  /users/:id/friends → returns [{ id, name, ... }, ...]
+  //     POST /users/:id/friends → { friendId } → adds a friendship
   //
   //   Frontend:
   //     const USER = resource("user", { GET: fetchUser });
   //     const USER_FRIENDS = USER.many("friends", USER, {
-  //       GET_MANY: async ({ id }) => fetchUserFriends(id),  // GET /users/:id/friends
-  //       POST:     async ({ id, friendId }) => addFriend(id, friendId), // POST /users/:id/friends
+  //       GET_MANY: async ({ id }) => {
+  //         const friends = await fetch(`/users/${id}/friends`).json();
+  //         return friends;
+  //       },
+  //       POST: async ({ id, friendId }) => {
+  //          await fetch(`/users/${id}/friends/${friendId}`, { method: 'POST' });
+  //          return [id, friendId];
+  //       }
   //     });
   //     // user.friends → reactive array of User objects from the shared USER store
   //     // USER_FRIENDS.GET_MANY({ id: 1 }) loads the friend list reactively
@@ -434,8 +447,8 @@ const createResource = (
   // @example — A user has one profile (owned, not shared across users)
   //
   //   HTTP endpoints involved:
-  //     GET   /users/:id/profile              → returns { bio, avatar_url, theme_id }
-  //     PATCH /users/:id/profile              → { bio?, avatar_url? } → returns updated profile
+  //     GET   /users/:id/profile → returns { bio, avatar_url, theme_id }
+  //     PATCH /users/:id/profile → { bio?, avatar_url? } → returns updated profile
   //
   //   Frontend:
   //     const USER = resource("user", { GET: fetchUser });
@@ -444,8 +457,8 @@ const createResource = (
   //       PATCH: async ({ id, data }) => [id, await patchUserProfile(id, data)],
   //     });
   //     // user.profile → reactive profile object (null until loaded)
-  //     // USER_PROFILE.GET({ id: 1 }) fetches GET /users/1/profile
-  //     // USER_PROFILE.PATCH({ id: 1, data: { bio: "hi" } }) sends PATCH
+  //     // USER_PROFILE.GET({ id: 1 })
+  //     // USER_PROFILE.PATCH({ id: 1, data: { bio: "hi" } })
   //
   //   Chaining — profile references an independent Theme resource:
   //     HTTP: GET /themes/:themeId
@@ -1484,6 +1497,9 @@ const createRestHandlerForOwnMany = (
   });
 
   const createOwnManyAction = (restCallbackKey, restCallback) => {
+    if (!restCallback) {
+      return undefined;
+    }
     const verb = restCallbackKey.replace("_MANY", "");
     const isMany = restCallbackKey.endsWith("_MANY");
     const childActionName = `${childName}.${restCallbackKey}`;
