@@ -978,29 +978,6 @@ ${originalActionName} source location: ${locationInfo}`,
       createRestAction: createRestActionForScopedMany,
       params,
     });
-    // .one()/.many() on scoped child items cannot use the default implementations
-    // (those target the parent shared store). Override them to register setup
-    // callbacks on the per-scope child items instead.
-    childResource.one = (nestedPropertyName, nestedChildResource) => {
-      childAddItemSetup((childItem) => {
-        setupToOneRelationship(
-          childItem,
-          nestedPropertyName,
-          nestedChildResource,
-        );
-      });
-      return nestedChildResource;
-    };
-    childResource.many = (nestedPropertyName, nestedChildResource) => {
-      childAddItemSetup((childItem) => {
-        setupToManyRelationship(
-          childItem,
-          nestedPropertyName,
-          nestedChildResource,
-        );
-      });
-      return nestedChildResource;
-    };
     return childResource;
   };
 
