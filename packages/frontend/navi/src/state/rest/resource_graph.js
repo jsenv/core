@@ -1,12 +1,8 @@
-import { createIterableWeakSet } from "@jsenv/dom";
 import { computed, signal } from "@preact/signals";
 
-import { createAction, getActionDispatcher } from "../../action/actions.js";
+import { createAction } from "../../action/actions.js";
 import { SYMBOL_OBJECT_SIGNAL } from "../../action/symbol_object_signal.js";
-import {
-  SYMBOL_IDENTITY,
-  compareTwoJsValues,
-} from "../../utils/compare_two_js_values.js";
+import { SYMBOL_IDENTITY } from "../../utils/compare_two_js_values.js";
 import { getCallerInfo } from "../../utils/get_caller_info.js";
 import { arraySignalStore, primitiveCanBeId } from "./array_signal_store.js";
 
@@ -22,6 +18,44 @@ let DEBUG = true;
 export const resource = (
   name,
   {
+    // configuration options
+    idKey,
+    mutableIdKeys = [],
+    /*
+    Default autorerun behavior explanation:
+
+    GET: false (RECOMMENDED)
+    What happens:
+    - GET actions are reset by DELETE operations (not rerun)
+    - DELETE operation on the displayed item would display nothing in the UI (action is in IDLE state)
+    - PUT/PATCH operations update UI via signals, no rerun needed
+    - This approach minimizes unnecessary API calls
+
+    How to handle:
+    - Applications can provide custom UI for deleted items (e.g., "Item not found")
+    - Or redirect users to appropriate pages (e.g., back to list view)
+
+    Alternative (NOT RECOMMENDED):
+    - Use GET: ["DELETE"] to rerun and display 404 error received from backend
+    - Poor UX: users expect immediate feedback, not loading + error state
+
+    GET_MANY: ["POST"]
+    - POST: New items may or may not appear in lists (depends on filters, pagination, etc.)
+      Backend determines visibility better than client-side logic
+    - DELETE: Excluded by default because:
+      • UI handles deletions via store signals (selectAll filters out deleted items)
+      • DELETE operations rarely change list content beyond item removal
+      • Avoids unnecessary API calls (can be overridden if needed)
+    */
+    rerunOn = {
+      GET: false,
+      GET_MANY: [
+        "POST",
+        // "DELETE"
+      ],
+    },
+    // dependencies = [],
+
     GET,
     GET_MANY,
     POST,
@@ -32,122 +66,189 @@ export const resource = (
     PATCH_MANY,
     DELETE,
     DELETE_MANY,
+  } = {},
+) => {
+  const setupCallbackSet = new Set();
+  const addItemSetup = (callback) => {
+    setupCallbackSet.add(callback);
+  };
+  const itemPrototype = {
+    [Symbol.toStringTag]: name,
+    toString() {
+      let string = `${name}`;
+      if (mutableIdKeys.length) {
+        for (const mutableIdKey of mutableIdKeys) {
+          const mutableId = this[mutableIdKey];
+          if (mutableId !== undefined) {
+            string += `[${mutableIdKey}=${mutableId}]`;
+            return string;
+          }
+        }
+      }
+      const id = this[idKey];
+      if (id) {
+        string += `[${idKey}=${id}]`;
+      }
+      return string;
+    },
+  };
+  const store = arraySignalStore([], idKey, {
+    mutableIdKeys,
+    name: `${name} store`,
+    createItem: (props) => {
+      const item = Object.create(itemPrototype);
+      Object.assign(item, props);
+      Object.defineProperty(item, SYMBOL_IDENTITY, {
+        value: item[idKey],
+        writable: false,
+        enumerable: false,
+        configurable: false,
+      });
+      for (const setupCallback of setupCallbackSet) {
+        setupCallback(item);
+      }
+      return item;
+    },
+  });
+  const restHandler = createRestHandlerForRoot(name, {
+    idKey,
+    store,
+  });
+  return createResource(name, {
+    idKey,
+    mutableIdKeys,
+    rerunOn,
+    restCallbacks: {
+      GET,
+      GET_MANY,
+      POST,
+      POST_MANY,
+      PUT,
+      PUT_MANY,
+      PATCH,
+      PATCH_MANY,
+      DELETE,
+      DELETE_MANY,
+    },
 
-    // configuration options
+    restHandler,
+    params: undefined,
+    store,
+    addItemSetup,
+  });
+};
+
+const createResource = (
+  name,
+  {
     idKey,
     mutableIdKeys = [],
     rerunOn,
-
-    // used internally when creating
-    // - resource with relationship to other resources (.one/.many)
-    // - parameterized resource (.withParams)
+    dependencies = [],
+    restCallbacks,
     restHandler,
+
+    params,
+    store,
+    addItemSetup,
   } = {},
 ) => {
   if (idKey === undefined) {
     idKey = mutableIdKeys.length === 0 ? "id" : mutableIdKeys[0];
   }
-  const restCallbacks = {
-    GET,
-    GET_MANY,
-    POST,
-    POST_MANY,
-    PUT,
-    PUT_MANY,
-    PATCH,
-    PATCH_MANY,
-    DELETE,
-    DELETE_MANY,
+  const useArray = () => {
+    return store.arraySignal.value;
   };
-  const resourceInstance = {
-    isResource: true,
+  const useById = (id) => {
+    return store.select(idKey, id);
+  };
+  const stateFacade = {
     name,
     idKey,
     restCallbacks, // Store the action callback definitions for withParams to use later
     restHandler,
-    addItemSetup: undefined,
-    store: undefined,
-    useArray: undefined,
-    useById: undefined,
+    addItemSetup,
+    store,
+    useArray,
+    useById,
   };
 
-  if (!restHandler) {
-    const setupCallbackSet = new Set();
-    const addItemSetup = (callback) => {
-      setupCallbackSet.add(callback);
-    };
-    resourceInstance.addItemSetup = addItemSetup;
-
-    const itemPrototype = {
-      [Symbol.toStringTag]: name,
-      toString() {
-        let string = `${name}`;
-        if (mutableIdKeys.length) {
-          for (const mutableIdKey of mutableIdKeys) {
-            const mutableId = this[mutableIdKey];
-            if (mutableId !== undefined) {
-              string += `[${mutableIdKey}=${mutableId}]`;
-              return string;
-            }
-          }
-        }
-        const id = this[idKey];
-        if (id) {
-          string += `[${idKey}=${id}]`;
-        }
-        return string;
-      },
-    };
-
-    const store = arraySignalStore([], idKey, {
-      mutableIdKeys,
-      name: `${name} store`,
-      createItem: (props) => {
-        const item = Object.create(itemPrototype);
-        Object.assign(item, props);
-        Object.defineProperty(item, SYMBOL_IDENTITY, {
-          value: item[idKey],
-          writable: false,
-          enumerable: false,
-          configurable: false,
-        });
-        for (const setupCallback of setupCallbackSet) {
-          setupCallback(item);
-        }
-        return item;
-      },
-    });
-    const useArray = () => {
-      return store.arraySignal.value;
-    };
-    const useById = (id) => {
-      return store.select(idKey, id);
-    };
-
-    Object.assign(resourceInstance, {
-      useArray,
-      useById,
-      store,
-    });
-
-    restHandler = createRestHandlerForRoot(name, {
+  /**
+   * Creates a parameterized version of the resource with isolated resource lifecycle behavior.
+   *
+   * Actions from parameterized resources only trigger rerun/reset for other actions with
+   * identical parameters, preventing cross-contamination between different parameter sets.
+   *
+   * @param {Object} params - Parameters to bind to all actions of this resource (required)
+   * @param {Object} options - Additional options for the parameterized resource
+   * @param {Array} options.dependencies - Array of resources that should trigger autorerun when modified
+   * @param {Object} options.rerunOn - Configuration for when to rerun GET/GET_MANY actions
+   * @param {false|Array|string} options.rerunOn.GET - REST verbs that trigger GET rerun (false = reset on DELETE)
+   * @param {false|Array|string} options.rerunOn.GET_MANY - REST verbs that trigger GET_MANY rerun (false = reset on DELETE)
+   * @returns {Object} A new resource instance with parameter-bound actions and isolated lifecycle
+   * @see {@link ./docs/resource_with_params.md} for detailed documentation and examples
+   *
+   * @example
+   * const ROLE = resource("role", { GET: (params) => fetchRole(params) });
+   * const adminRoles = ROLE.withParams({ canlogin: true });
+   * const guestRoles = ROLE.withParams({ canlogin: false });
+   * // adminRoles and guestRoles have isolated autorerun behavior
+   *
+   * @example
+   * // Cross-resource dependencies
+   * const role = resource("role");
+   * const database = resource("database");
+   * const tables = resource("tables");
+   * const ROLE_WITH_OWNERSHIP = role.withParams({ owners: true }, {
+   *   dependencies: [role, database, tables],
+   * });
+   * // ROLE_WITH_OWNERSHIP.GET_MANY will autorerun when any table/database/role is POST/DELETE
+   */
+  const withParams = (paramsToInject, options = {}) => {
+    if (!paramsToInject || Object.keys(paramsToInject).length === 0) {
+      throw new Error(
+        `resource(${paramsToInject}).withParams() requires parameters`,
+      );
+    }
+    let resolvedParams;
+    if (params) {
+      resolvedParams = { ...params, ...paramsToInject };
+    } else {
+      resolvedParams = paramsToInject;
+    }
+    const resolvedRerunOn = options.rerunOn || rerunOn;
+    const resolvedDependencies = options.dependencies || dependencies;
+    const restHandler = createRestHandlerForRoot(name, {
       idKey,
       store,
-      rerunOn,
-      resourceInstance,
-      mutableIdKeys,
     });
-  }
-  resourceInstance.restHandler = restHandler;
+    return createResource(name, {
+      idKey,
+      mutableIdKeys,
+      rerunOn: resolvedRerunOn,
+      dependencies: resolvedDependencies,
+      restCallbacks,
+      restHandler,
 
-  // Create rest actions
+      params: resolvedParams,
+      store,
+      addItemSetup,
+    });
+  };
+  stateFacade.withParams = withParams;
+
   for (const [restCallbackKey, restCallback] of Object.entries(restCallbacks)) {
     const restCallbackHandler = restHandler[restCallbackKey];
     if (!restCallbackHandler) {
       continue;
     }
     const action = restCallbackHandler(restCallback);
-    resourceInstance[restCallbackKey] = action;
+    if (params) {
+      const actionBound = action.bindParams(params);
+      stateFacade[restCallbackKey] = actionBound;
+    } else {
+      stateFacade[restCallbackKey] = action;
+    }
   }
 
   // .one() links a property on this resource's items to an independent resource.
@@ -176,10 +277,10 @@ export const resource = (
   //     const DEVICE = resource("device", { GET: fetchDevice });
   //     USER_SESSION.one("device", DEVICE);
   //     // user.session.device → reactive Device object; resolves via session.device_id automatically
-  resourceInstance.one = (propertyName, childResource, options) => {
+  stateFacade.one = (propertyName, childResource, options) => {
     const childIdKey = childResource.idKey;
     const childName = `${name}.${propertyName}`;
-    resourceInstance.addItemSetup((item) => {
+    stateFacade.addItemSetup((item) => {
       const { updateChildItemId, childItemSignal } = setupToOneRelationship(
         item,
         propertyName,
@@ -208,12 +309,10 @@ export const resource = (
     const restHandlerForRelationshipToOne =
       createRestHandlerForRelationshipToOne(childName, {
         idKey,
-        store: resourceInstance.store,
+        store: stateFacade.store,
         propertyName,
         childIdKey,
         childStore: childResource.store,
-        resourceInstance,
-        resourceLifecycleManager,
       });
     return resource(childName, {
       idKey: childIdKey,
@@ -246,10 +345,10 @@ export const resource = (
   //     HTTP: PATCH /users/:id/settings
   //     USER.ownOne("settings", { PATCH: async ({ id, data }) => patchSettings(id, data) });
   //     // user.friends[0].settings.theme is reactive automatically
-  resourceInstance.many = (propertyName, childResource, options) => {
+  stateFacade.many = (propertyName, childResource, options) => {
     const childIdKey = childResource.idKey;
     const childName = `${name}.${propertyName}`;
-    resourceInstance.addItemSetup((item) => {
+    stateFacade.addItemSetup((item) => {
       const {
         updateChildItemIdArray,
         childItemIdArraySignal,
@@ -310,12 +409,10 @@ export const resource = (
     const restHandlerForRelationshipToMany =
       createRestHandlerForRelationshipToMany(childName, {
         idKey,
-        store: resourceInstance.store,
+        store: stateFacade.store,
         propertyName,
         childIdKey,
         childStore: childResource.store,
-        resourceInstance,
-        resourceLifecycleManager,
       });
     return resource(childName, {
       idKey: childIdKey,
@@ -353,14 +450,14 @@ export const resource = (
   //     USER_PROFILE.one("theme", THEME);
   //     // user.profile.theme → reactive Theme object from THEME store
   //     // When profile arrives with { theme_id: 5, bio: "..." }, user.profile.theme resolves to Theme#5
-  resourceInstance.ownOne = (
+  stateFacade.ownOne = (
     propertyName,
     { GET, POST, PUT, PATCH, DELETE } = {},
   ) => {
     const childName = `${name}.${propertyName}`;
     const ownOneRestHandler = createRestHandlerForOwnOne(childName, {
       idKey,
-      parentResourceInstance: resourceInstance,
+      parentStateFacade: stateFacade,
       propertyName,
     });
     const childResource = resource(childName, {
@@ -439,7 +536,7 @@ export const resource = (
   //     TABLE_COLUMNS.one("dataType", DATA_TYPE);
   //     // column.dataType → reactive DataType object from DATA_TYPE store
   //     // When table.columns = [{ name: "email", type_id: 3 }], column.dataType resolves to DataType#3
-  resourceInstance.ownMany = (
+  stateFacade.ownMany = (
     propertyName,
     {
       GET,
@@ -476,7 +573,7 @@ export const resource = (
     const ownerStoreMap = new Map(); // ownerId → childStore
     const ownerIdArraySignalMap = new Map(); // ownerId → childItemIdArraySignal
 
-    resourceInstance.addItemSetup((item) => {
+    stateFacade.addItemSetup((item) => {
       const ownerId = item[idKey];
       const childStore = arraySignalStore([], childIdKey, {
         name: `${name}#${ownerId}.${propertyName} store`,
@@ -712,417 +809,7 @@ export const resource = (
     return ownManyInstance;
   };
 
-  /**
-   * Creates a parameterized version of the resource with isolated resource lifecycle behavior.
-   *
-   * Actions from parameterized resources only trigger rerun/reset for other actions with
-   * identical parameters, preventing cross-contamination between different parameter sets.
-   *
-   * @param {Object} params - Parameters to bind to all actions of this resource (required)
-   * @param {Object} options - Additional options for the parameterized resource
-   * @param {Array} options.dependencies - Array of resources that should trigger autorerun when modified
-   * @param {Object} options.rerunOn - Configuration for when to rerun GET/GET_MANY actions
-   * @param {false|Array|string} options.rerunOn.GET - REST verbs that trigger GET rerun (false = reset on DELETE)
-   * @param {false|Array|string} options.rerunOn.GET_MANY - REST verbs that trigger GET_MANY rerun (false = reset on DELETE)
-   * @returns {Object} A new resource instance with parameter-bound actions and isolated lifecycle
-   * @see {@link ./docs/resource_with_params.md} for detailed documentation and examples
-   *
-   * @example
-   * const ROLE = resource("role", { GET: (params) => fetchRole(params) });
-   * const adminRoles = ROLE.withParams({ canlogin: true });
-   * const guestRoles = ROLE.withParams({ canlogin: false });
-   * // adminRoles and guestRoles have isolated autorerun behavior
-   *
-   * @example
-   * // Cross-resource dependencies
-   * const role = resource("role");
-   * const database = resource("database");
-   * const tables = resource("tables");
-   * const ROLE_WITH_OWNERSHIP = role.withParams({ owners: true }, {
-   *   dependencies: [role, database, tables],
-   * });
-   * // ROLE_WITH_OWNERSHIP.GET_MANY will autorerun when any table/database/role is POST/DELETE
-   */
-  const withParams = (params, options = {}) => {
-    // Require parameters
-    if (!params || Object.keys(params).length === 0) {
-      throw new Error(`resource(${name}).withParams() requires parameters`);
-    }
-    const { dependencies = [], rerunOn: customRerunOn } = options;
-
-    // Generate unique param scope for these parameters
-    const paramScopeObject = getParamScope(params);
-    // Use custom rerunOn settings if provided, otherwise use resource defaults
-    const finalRerunOn = customRerunOn || rerunOn;
-
-    // Create a new handler with the param scope for isolated autorerun
-    const parameterizedRestHandler = createRestHandlerForRoot(name, {
-      idKey,
-      store: resourceInstance.store,
-      rerunOn: finalRerunOn,
-      paramScope: paramScopeObject,
-      dependencies,
-      resourceInstance,
-      mutableIdKeys,
-    });
-
-    // Create parameterized resource
-    const parameterizedResource = {
-      isResource: true,
-      name,
-      idKey,
-      useArray: resourceInstance.useArray,
-      useById: resourceInstance.useById,
-      store: resourceInstance.store,
-      addItemSetup: resourceInstance.addItemSetup,
-      one: resourceInstance.one,
-      many: resourceInstance.many,
-
-      restHandler: parameterizedRestHandler,
-      restCallbacks: resourceInstance.restCallbacks,
-
-      dependencies, // Store dependencies for debugging/inspection
-    };
-
-    // Create actions from the parameterized handler and bind parameters
-    for (const [restCallbackKey, restCallback] of Object.entries(
-      resourceInstance.restCallbacks,
-    )) {
-      const restCallbackHandler = parameterizedRestHandler[restCallbackKey];
-      if (!restCallbackHandler) {
-        continue;
-      }
-      const action = restCallbackHandler(restCallback);
-      // Bind the parameters to get a parameterized action instance
-      const actionWithParams = action.bindParams(params);
-      parameterizedResource[restCallbackKey] = actionWithParams;
-    }
-
-    // Add withParams method to the parameterized resource for chaining
-    parameterizedResource.withParams = (newParams, newOptions = {}) => {
-      if (!newParams || Object.keys(newParams).length === 0) {
-        throw new Error(`resource(${name}).withParams() requires parameters`);
-      }
-      // Merge current params with new ones for chaining
-      const mergedParams = { ...params, ...newParams };
-      // Merge options, with new options taking precedence
-      const mergedOptions = {
-        dependencies,
-        rerunOn: finalRerunOn,
-        ...newOptions,
-      };
-      return withParams(mergedParams, mergedOptions);
-    };
-
-    return parameterizedResource;
-  };
-  resourceInstance.withParams = withParams;
-
-  return resourceInstance;
-};
-
-// Resource Lifecycle Manager
-// This handles ALL resource lifecycle logic (rerun/reset) across all resources
-const createResourceLifecycleManager = () => {
-  const registeredResources = new Map(); // Map<resourceInstance, lifecycleConfig>
-  const resourceDependencies = new Map(); // Map<resourceInstance, Set<dependentResources>>
-
-  const registerResource = (resourceInstance, config) => {
-    const {
-      rerunOn,
-      paramScope = null,
-      dependencies = [],
-      mutableIdKeys = [],
-    } = config;
-
-    registeredResources.set(resourceInstance, {
-      rerunOn,
-      paramScope,
-      mutableIdKeys,
-      restActionSet: new Set(),
-    });
-
-    // Register dependencies
-    if (dependencies.length > 0) {
-      for (const dependency of dependencies) {
-        if (!resourceDependencies.has(dependency)) {
-          resourceDependencies.set(dependency, new Set());
-        }
-        resourceDependencies.get(dependency).add(resourceInstance);
-      }
-    }
-  };
-
-  const registerAction = (resourceInstance, restAction) => {
-    const config = registeredResources.get(resourceInstance);
-    if (config) {
-      config.restActionSet.add(restAction);
-    }
-  };
-
-  const shouldRerunAfter = (rerunConfig, verb) => {
-    if (rerunConfig === false) {
-      return false;
-    }
-    if (rerunConfig === "*") {
-      return true;
-    }
-    if (Array.isArray(rerunConfig)) {
-      const methodSet = new Set(rerunConfig.map((v) => v.toUpperCase()));
-      if (methodSet.has("*")) {
-        return true;
-      }
-      return methodSet.has(verb.toUpperCase());
-    }
-    return false;
-  };
-
-  const isParamSubset = (parentParams, childParams) => {
-    if (!parentParams || !childParams) {
-      return false;
-    }
-    for (const [key, value] of Object.entries(parentParams)) {
-      if (
-        !(key in childParams) ||
-        !compareTwoJsValues(childParams[key], value)
-      ) {
-        return false;
-      }
-    }
-    return true;
-  };
-
-  const findEffectOnActions = (triggeringAction) => {
-    // Determines which actions to rerun/reset when an action completes.
-
-    const actionsToRerun = new Set();
-    const actionsToReset = new Set();
-    const reasonSet = new Set();
-
-    for (const [resourceInstance, config] of registeredResources) {
-      const shouldRerunGetMany = shouldRerunAfter(
-        config.rerunOn.GET_MANY,
-        triggeringAction.meta.verb,
-      );
-      const shouldRerunGet = shouldRerunAfter(
-        config.rerunOn.GET,
-        triggeringAction.meta.verb,
-      );
-
-      // Skip if no rerun or reset rules apply
-      const hasMutableIdAutorerun =
-        (triggeringAction.meta.verb === "POST" ||
-          triggeringAction.meta.verb === "PUT" ||
-          triggeringAction.meta.verb === "PATCH") &&
-        config.mutableIdKeys.length > 0;
-
-      if (
-        !shouldRerunGetMany &&
-        !shouldRerunGet &&
-        triggeringAction.meta.verb !== "DELETE" &&
-        !hasMutableIdAutorerun
-      ) {
-        continue;
-      }
-
-      // Parameter scope predicate for config-driven rules
-      // Same scope ID or no scope = compatible, subset check for different scopes
-      const paramScopePredicate = config.paramScope
-        ? (candidateAction) => {
-            if (candidateAction.meta.paramScope?.id === config.paramScope.id) {
-              return true;
-            }
-            if (!candidateAction.meta.paramScope) {
-              return true;
-            }
-            const candidateParams = candidateAction.meta.paramScope.params;
-            const currentParams = config.paramScope.params;
-            return isParamSubset(candidateParams, currentParams);
-          }
-        : (candidateAction) => !candidateAction.meta.paramScope;
-
-      for (const restAction of config.restActionSet) {
-        // Find all instances of this action
-        const actionCandidateArray = restAction.matchAllSelfOrDescendant(
-          (action) =>
-            !action.isPrerun && action.completed && action !== triggeringAction,
-        );
-
-        for (const actionCandidate of actionCandidateArray) {
-          const triggerVerb = triggeringAction.meta.verb;
-          const candidateVerb = actionCandidate.meta.verb;
-
-          if (triggerVerb === candidateVerb) {
-            continue;
-          }
-
-          const candidateIsPlural = actionCandidate.meta.isMany;
-          const triggeringResource = getResourceForAction(triggeringAction);
-          const isSameResource = triggeringResource === resourceInstance;
-
-          // Config-driven same-resource effects (respects param scope)
-          config_effect: {
-            if (
-              !isSameResource ||
-              triggerVerb === "GET" ||
-              candidateVerb !== "GET"
-            ) {
-              break config_effect;
-            }
-            const shouldRerun = candidateIsPlural
-              ? shouldRerunGetMany
-              : shouldRerunGet;
-            if (!shouldRerun) {
-              break config_effect;
-            }
-            if (!paramScopePredicate(actionCandidate)) {
-              break config_effect;
-            }
-            actionsToRerun.add(actionCandidate);
-            reasonSet.add("same-resource autorerun");
-            continue;
-          }
-
-          // DELETE effects on same resource (ignores param scope)
-          delete_effect: {
-            if (!isSameResource || triggerVerb !== "DELETE") {
-              break delete_effect;
-            }
-            if (candidateIsPlural) {
-              if (!shouldRerunGetMany) {
-                break delete_effect;
-              }
-              actionsToRerun.add(actionCandidate);
-              reasonSet.add("same-resource DELETE rerun GET_MANY");
-              continue;
-            }
-            // Get the ID(s) that were deleted
-            const { valueSignal } = triggeringAction;
-            const deleteIdSet = triggeringAction.meta.isMany
-              ? new Set(valueSignal.peek())
-              : new Set([valueSignal.peek()]);
-
-            const candidateId = actionCandidate.value;
-            const isAffected = deleteIdSet.has(candidateId);
-            if (!isAffected) {
-              break delete_effect;
-            }
-            if (candidateVerb === "GET" && shouldRerunGet) {
-              actionsToRerun.add(actionCandidate);
-              reasonSet.add("same-resource DELETE rerun GET");
-              continue;
-            }
-            actionsToReset.add(actionCandidate);
-            reasonSet.add("same-resource DELETE reset");
-            continue;
-          }
-
-          // MutableId effects: rerun GET when matching resource created/updated
-          mutable_id_effect: {
-            if (
-              hasMutableIdAutorerun &&
-              candidateVerb === "GET" &&
-              !candidateIsPlural &&
-              isSameResource
-            ) {
-              const { valueSignal } = triggeringAction;
-              const modifiedValue = valueSignal.peek();
-
-              if (modifiedValue && typeof modifiedValue === "object") {
-                for (const mutableIdKey of config.mutableIdKeys) {
-                  const modifiedMutableId = modifiedValue[mutableIdKey];
-                  const candidateParams = actionCandidate.params;
-
-                  if (
-                    modifiedMutableId !== undefined &&
-                    candidateParams &&
-                    typeof candidateParams === "object" &&
-                    candidateParams[mutableIdKey] === modifiedMutableId
-                  ) {
-                    actionsToRerun.add(actionCandidate);
-                    reasonSet.add(
-                      `${triggeringAction.meta.verb}-mutableId autorerun`,
-                    );
-                    break;
-                  }
-                }
-              }
-            }
-          }
-
-          // Cross-resource dependency effects: rerun dependent GET_MANY
-          dependency_effect: {
-            if (
-              triggeringResource &&
-              resourceDependencies
-                .get(triggeringResource)
-                ?.has(resourceInstance) &&
-              triggerVerb !== "GET" &&
-              candidateVerb === "GET" &&
-              candidateIsPlural
-            ) {
-              actionsToRerun.add(actionCandidate);
-              reasonSet.add("dependency autorerun");
-              continue;
-            }
-          }
-        }
-      }
-    }
-
-    return {
-      actionsToRerun,
-      actionsToReset,
-      reasons: Array.from(reasonSet),
-    };
-  };
-
-  const onActionComplete = (restAction) => {
-    const { actionsToRerun, actionsToReset, reasons } =
-      findEffectOnActions(restAction);
-
-    if (actionsToRerun.size > 0 || actionsToReset.size > 0) {
-      const reason = `${restAction} triggered ${reasons.join(" and ")}`;
-      const dispatchActions = getActionDispatcher();
-      dispatchActions({
-        rerunSet: actionsToRerun,
-        resetSet: actionsToReset,
-        reason,
-      });
-    }
-  };
-
-  // Helper to find which resource an action belongs to
-  const getResourceForAction = (action) => {
-    return action.meta.resourceInstance;
-  };
-
-  return {
-    registerResource,
-    registerAction,
-    onActionComplete,
-  };
-};
-
-// Global resource lifecycle manager instance
-const resourceLifecycleManager = createResourceLifecycleManager();
-
-// Cache for parameter scope identifiers
-const paramScopeWeakSet = createIterableWeakSet();
-let paramScopeIdCounter = 0;
-const getParamScope = (params) => {
-  for (const existingParamScope of paramScopeWeakSet) {
-    if (compareTwoJsValues(existingParamScope.params, params)) {
-      return existingParamScope;
-    }
-  }
-  const id = Symbol(`paramScope-${++paramScopeIdCounter}`);
-  const newParamScope = {
-    params,
-    id,
-  };
-  paramScopeWeakSet.add(newParamScope);
-  return newParamScope;
+  return stateFacade;
 };
 
 const createRestHandlerForRoot = (
@@ -1130,54 +817,8 @@ const createRestHandlerForRoot = (
   {
     idKey,
     store, // see array_signal_store.js
-    /*
-    Default autorerun behavior explanation:
-
-    GET: false (RECOMMENDED)
-    What happens:
-    - GET actions are reset by DELETE operations (not rerun)
-    - DELETE operation on the displayed item would display nothing in the UI (action is in IDLE state)
-    - PUT/PATCH operations update UI via signals, no rerun needed
-    - This approach minimizes unnecessary API calls
-
-    How to handle:
-    - Applications can provide custom UI for deleted items (e.g., "Item not found")
-    - Or redirect users to appropriate pages (e.g., back to list view)
-
-    Alternative (NOT RECOMMENDED):
-    - Use GET: ["DELETE"] to rerun and display 404 error received from backend
-    - Poor UX: users expect immediate feedback, not loading + error state
-
-    GET_MANY: ["POST"]
-    - POST: New items may or may not appear in lists (depends on filters, pagination, etc.)
-      Backend determines visibility better than client-side logic
-    - DELETE: Excluded by default because:
-      • UI handles deletions via store signals (selectAll filters out deleted items)
-      • DELETE operations rarely change list content beyond item removal
-      • Avoids unnecessary API calls (can be overridden if needed)
-    */
-    rerunOn = {
-      GET: false,
-      GET_MANY: [
-        "POST",
-        // "DELETE"
-      ],
-    },
-    paramScope,
-    dependencies = [],
-    resourceInstance,
-    mutableIdKeys = [],
   },
 ) => {
-  // Register this resource with the resource lifecycle manager
-  resourceLifecycleManager.registerResource(resourceInstance, {
-    rerunOn,
-    paramScope,
-    dependencies,
-    idKey,
-    mutableIdKeys,
-  });
-
   const createActionAffectingOneItem = (verb, { callback, ...options }) => {
     const applyResultToValue =
       verb === "DELETE"
@@ -1212,9 +853,6 @@ const createRestHandlerForRoot = (
       meta: {
         verb,
         isMany: false,
-        paramScope,
-        resourceInstance,
-        store,
       },
       resultToValue: (result, action) => {
         const actionLabel = action.name;
@@ -1237,14 +875,10 @@ ${originalActionName} source location: ${locationInfo}`,
         return applyResultToValue(result);
       },
       valueToData: (itemId) => store.select(itemId),
-      completeSideEffect: (actionCompleted) =>
-        resourceLifecycleManager.onActionComplete(actionCompleted),
+      // todo: restore completeSideEffect to notify lifecycle manager
+      // completeSideEffect: (actionCompleted) => {},
       ...options,
     });
-    resourceLifecycleManager.registerAction(
-      resourceInstance,
-      actionAffectingOneItem,
-    );
     return actionAffectingOneItem;
   };
   const GET = (callback, options) =>
@@ -1302,9 +936,6 @@ ${originalActionName} source location: ${locationInfo}`,
       meta: {
         verb,
         isMany: true,
-        paramScope,
-        resourceInstance,
-        store,
       },
       name: `${name}.${verb}_MANY`,
       dataDefault: [],
@@ -1314,7 +945,7 @@ ${originalActionName} source location: ${locationInfo}`,
         return items;
       },
       completeSideEffect: (actionCompleted) => {
-        resourceLifecycleManager.onActionComplete(actionCompleted);
+        // resourceLifecycleManager.onActionComplete(actionCompleted);
         if (
           verb === "DELETE" ||
           actionCompleted.valueSignal.peek().length === 0
@@ -1359,10 +990,10 @@ ${originalActionName} source location: ${locationInfo}`,
       },
       ...options,
     });
-    resourceLifecycleManager.registerAction(
-      resourceInstance,
-      actionAffectingManyItems,
-    );
+    // resourceLifecycleManager.registerAction(
+    //   resourceInstance,
+    //   actionAffectingManyItems,
+    // );
     return actionAffectingManyItems;
   };
   const GET_MANY = (callback, options) =>
@@ -1391,15 +1022,7 @@ ${originalActionName} source location: ${locationInfo}`,
 };
 const createRestHandlerForRelationshipToOne = (
   name,
-  {
-    idKey,
-    store,
-    propertyName,
-    childIdKey,
-    childStore,
-    resourceInstance,
-    resourceLifecycleManager,
-  },
+  { idKey, store, propertyName, childIdKey, childStore },
 ) => {
   const createActionAffectingOneItem = (verb, { callback, ...options }) => {
     const applyResultToValue =
@@ -1444,8 +1067,6 @@ const createRestHandlerForRelationshipToOne = (
       meta: {
         verb,
         isMany: false,
-        resourceInstance,
-        store,
       },
       name: `${name}.${verb}`,
       resultToValue: (result, action) => {
@@ -1469,17 +1090,21 @@ ${originalActionName} source location: ${locationInfo}`,
         return applyResultToValue(result);
       },
       valueToData: (childItemId) => childStore.select(childItemId),
-      completeSideEffect: (actionCompleted) =>
-        resourceLifecycleManager.onActionComplete(actionCompleted),
+      // completeSideEffect: (actionCompleted) => resourceLifecycleManager.onActionComplete(actionCompleted),
       ...options,
     });
-    resourceLifecycleManager.registerAction(
-      resourceInstance,
-      actionAffectingOneItem,
-    );
+    // resourceLifecycleManager.registerAction(
+    //   resourceInstance,
+    //   actionAffectingOneItem,
+    // );
     return actionAffectingOneItem;
   };
 
+  // il n'y a pas de many puisque on cible une seule resource
+  // genre table.owner -> c'est un seul owner qu'on peut
+  // GET -> recup les infos de l'objet
+  // PUT -> mettre a jour l'owner de la table
+  // DELETE -> supprimer l'owner de la table
   const GET = (callback, options) =>
     createActionAffectingOneItem("GET", {
       callback,
@@ -1496,25 +1121,11 @@ ${originalActionName} source location: ${locationInfo}`,
       ...options,
     });
 
-  // il n'y a pas de many puisque on cible une seule resource
-  // genre table.owner -> c'est un seul owner qu'on peut
-  // GET -> recup les infos de l'objet
-  // PUT -> mettre a jour l'owner de la table
-  // DELETE -> supprimer l'owner de la table
-
   return { GET, PUT, DELETE };
 };
 const createRestHandlerForRelationshipToMany = (
   name,
-  {
-    idKey,
-    store,
-    propertyName,
-    childIdKey,
-    childStore,
-    resourceInstance,
-    resourceLifecycleManager,
-  } = {},
+  { idKey, store, propertyName, childIdKey, childStore } = {},
 ) => {
   // idéalement s'il y a un GET sur le store originel on voudrait ptet le reload
   // parce que le store originel peut retourner cette liste ou etre impacté
@@ -1565,8 +1176,6 @@ const createRestHandlerForRelationshipToMany = (
       meta: {
         verb,
         isMany: false,
-        resourceInstance,
-        store: childStore,
       },
       name: `${name}.${verb}`,
       resultToValue: (result, action) => {
@@ -1591,14 +1200,13 @@ ${originalActionName} source location: ${locationInfo}`,
         return applyResultToValue(result);
       },
       valueToData: (childItemId) => childStore.select(childItemId),
-      completeSideEffect: (actionCompleted) =>
-        resourceLifecycleManager.onActionComplete(actionCompleted),
+      // completeSideEffect: (actionCompleted) => resourceLifecycleManager.onActionComplete(actionCompleted),
       ...options,
     });
-    resourceLifecycleManager.registerAction(
-      resourceInstance,
-      actionAffectingOneItem,
-    );
+    // resourceLifecycleManager.registerAction(
+    //   resourceInstance,
+    //   actionAffectingOneItem,
+    // );
     return actionAffectingOneItem;
   };
   const GET = (callback, options) =>
@@ -1701,8 +1309,6 @@ ${originalActionName} source location: ${locationInfo}`,
       meta: {
         verb,
         isMany: true,
-        resourceInstance,
-        store: childStore,
       },
       name: `${name}.${verb}[many]`,
       dataDefault: [],
@@ -1742,14 +1348,13 @@ ${originalActionName} source location: ${locationInfo}`,
         return applyResultToValue(result);
       },
       valueToData: (childItemIdArray) => childStore.selectAll(childItemIdArray),
-      completeSideEffect: (actionCompleted) =>
-        resourceLifecycleManager.onActionComplete(actionCompleted),
+      // completeSideEffect: (actionCompleted) => resourceLifecycleManager.onActionComplete(actionCompleted),
       ...options,
     });
-    resourceLifecycleManager.registerAction(
-      resourceInstance,
-      actionAffectingManyItem,
-    );
+    // resourceLifecycleManager.registerAction(
+    //   resourceInstance,
+    //   actionAffectingManyItem,
+    // );
     return actionAffectingManyItem;
   };
 
@@ -1776,10 +1381,6 @@ ${originalActionName} source location: ${locationInfo}`,
     PATCH_MANY,
     DELETE_MANY,
   };
-};
-
-const isProps = (value) => {
-  return value !== null && typeof value === "object";
 };
 
 // Installs a reactive getter/setter on `item[propertyName]` that tracks one item
@@ -1915,7 +1516,7 @@ const setupToManyRelationship = (item, propertyName, childResource) => {
 
 const createRestHandlerForOwnOne = (
   childName,
-  { idKey, parentResourceInstance, propertyName },
+  { idKey, parentStateFacade, propertyName },
 ) => {
   // setupCallbackSet: callbacks added by chained .one()/.many()
   // Applied to each per-owner child item object when it is first created.
@@ -1924,7 +1525,7 @@ const createRestHandlerForOwnOne = (
   const ownerChildItemMap = new Map(); // ownerId → stable child item object
   const ownerChildSignalMap = new Map(); // ownerId → signal<childItem | null>
 
-  parentResourceInstance.addItemSetup((ownerItem) => {
+  parentStateFacade.addItemSetup((ownerItem) => {
     const ownerId = ownerItem[idKey];
     // Create a stable child item — mutated in place via applyProps.
     // Reactive getters/setters from chained .one() etc. are defined on this object now
@@ -2001,4 +1602,8 @@ const createRestHandlerForOwnOne = (
   const DELETE = (callback) => createOwnOneAction("DELETE", callback);
 
   return { GET, POST, PUT, PATCH, DELETE, addItemSetup };
+};
+
+const isProps = (value) => {
+  return value !== null && typeof value === "object";
 };
