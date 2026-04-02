@@ -18,7 +18,7 @@ const TABLE = resource("table", {
   }),
 });
 
-const TABLE_COLUMNS = TABLE.collection("columns", {
+const TABLE_COLUMNS = TABLE.ownMany("columns", {
   idKey: "column_name",
 
   PUT: ({ id, column_name, property, value }) => {
@@ -81,4 +81,3 @@ const App = () => {
 };
 
 render(<App />, document.getElementById("root"));
-

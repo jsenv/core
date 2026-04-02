@@ -25,7 +25,7 @@ const TABLE = resource("table", {
 });
 
 // .collection() — TABLE has many COLUMNS, each column owned by its table
-const TABLE_COLUMNS = TABLE.collection("columns", {
+const TABLE_COLUMNS = TABLE.ownMany("columns", {
   idKey: "column_name",
 
   PUT: ({ id, column_name, property, value }) => {
@@ -47,7 +47,7 @@ const TABLE_COLUMNS = TABLE.collection("columns", {
 });
 
 // .item() — TABLE has a single SETTINGS object owned by it
-const TABLE_SETTINGS = TABLE.item("settings", {
+const TABLE_SETTINGS = TABLE.ownOne("settings", {
   PUT: ({ id, theme, page_size }) => {
     tablesStore[id].settings = { theme, page_size };
     return [id, { theme, page_size }];
