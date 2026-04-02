@@ -11,12 +11,13 @@ const USER_SESSION = USER.one("session", SESSION, {
     session: { id: 10, userId: id, token: "abc123" },
   }),
 });
+const captureFirstUser = () => ({ ...USER.store.arraySignal.value[0] });
 
 await USER.POST({ name: "Alice" });
-const userBeforeSessionLoad = USER.store.arraySignal.value[0];
+const userBeforeSessionLoad = captureFirstUser();
 
 await USER_SESSION.GET({ id: 1 });
-const userAfterSessionLoad = USER.store.arraySignal.value[0];
+const userAfterSessionLoad = captureFirstUser();
 const sessionStore = SESSION.store.arraySignal.value;
 
 return {
