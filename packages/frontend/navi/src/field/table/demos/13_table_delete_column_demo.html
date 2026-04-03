@@ -39,11 +39,12 @@
         Tr,
         RowNumberCol,
         RowNumberTableCell,
-        useRowsAsGrid,
-        useCellsAndColumns,
+        useCellGridFromRows,
+        useOrderedCellGridAndColumns,
       } from "@jsenv/navi";
+      import { useRowsState } from "./table_demo_helpers.js";
 
-      const rows = [
+      const initialRows = [
         { id: 1, name: "Alice", age: 30, email: "alice@example.com" },
         { id: 2, name: "Bob", age: 25, email: "bob@example.com" },
         { id: 3, name: "Charlie", age: 35, email: "charlie@example.com" },
@@ -59,14 +60,11 @@
       const TableColumnManager = () => {
         const [columnsConfig, setColumnsConfig] =
           useState(initialColumnsConfig);
-        const { cellGrid } = useRowsAsGrid(
-          rows,
-          columnsConfig.map((c) => c.id),
-        );
-
+        const columnIds = columnsConfig.map((col) => col.id);
+        const [rows] = useRowsState(initialRows, columnIds);
         return (
           <Demo
-            cellGrid={cellGrid}
+            rows={rows}
             columnsConfig={columnsConfig}
             onDeleteColumn={(columnId) => {
               setColumnsConfig((prev) => prev.filter((c) => c.id !== columnId));
@@ -75,21 +73,26 @@
         );
       };
 
-      const Demo = ({ cellGrid, columnsConfig, onDeleteColumn }) => {
-        const { cells, columns } = useCellsAndColumns(cellGrid, columnsConfig);
+      const Demo = ({ rows, columnsConfig, onDeleteColumn }) => {
+        const columnIds = columnsConfig.map((col) => col.id);
+        const cellGrid = useCellGridFromRows(rows, columnIds);
+        const [orderedCellGrid, orderedColumns] = useOrderedCellGridAndColumns(
+          cellGrid,
+          columnsConfig,
+        );
 
         return (
           <div class="demo-container">
             <h1>Table — Delete Column</h1>
             <p style={{ color: "#6c757d", marginBottom: "16px" }}>
-              {columns.length} column(s) — click <strong>×</strong> in a header
-              to delete that column.
+              {columnIds.length} column(s) — click <strong>×</strong> in a
+              header to delete that column.
             </p>
 
             <Table borderCollapse>
               <Colgroup>
                 <RowNumberCol />
-                {columns.map((col) => (
+                {orderedColumns.map((col) => (
                   <Col key={col.id} id={col.id} />
                 ))}
               </Colgroup>
@@ -97,7 +100,7 @@
               <Thead>
                 <Tr id="head">
                   <RowNumberTableCell />
-                  {columns.map((col) => (
+                  {orderedColumns.map((col) => (
                     <TableCell key={col.id}>
                       <span style={{ marginRight: "6px" }}>{col.header}</span>
                       <button
@@ -119,13 +122,13 @@
               </Thead>
 
               <Tbody>
-                {cells.map((rowCells, dataRowIndex) => {
+                {orderedCellGrid.map((rowCells, dataRowIndex) => {
                   const row = rows[dataRowIndex];
                   return (
                     <Tr id={row.id} key={row.id}>
                       <RowNumberTableCell />
                       {rowCells.map((cellValue, columnIndex) => (
-                        <TableCell key={columns[columnIndex].id}>
+                        <TableCell key={orderedColumns[columnIndex].id}>
                           {cellValue}
                         </TableCell>
                       ))}

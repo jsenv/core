@@ -39,8 +39,8 @@
         RowNumberCol,
         RowNumberTableCell,
         Button,
-        useRowsAsGrid,
-        useCellsAndColumns,
+        useCellGridFromRows,
+        useOrderedCellGridAndColumns,
       } from "@jsenv/navi";
       import { useRowsState } from "./table_demo_helpers.js";
 
@@ -149,8 +149,11 @@
       };
 
       const Frontend = ({ rows, onDeleteRow }) => {
-        const cellGrid = useRowsAsGrid(rows, columnIds);
-        const { cells, columns } = useCellsAndColumns(cellGrid, columnsConfig);
+        const cellGrid = useCellGridFromRows(rows, columnIds);
+        const [orderedCellGrid, orderedColumns] = useOrderedCellGridAndColumns(
+          cellGrid,
+          columnsConfig,
+        );
 
         return (
           <div
@@ -172,7 +175,7 @@
             <Table borderCollapse>
               <Colgroup>
                 <RowNumberCol />
-                {columns.map((col) => (
+                {orderedColumns.map((col) => (
                   <Col key={col.id} id={col.id} />
                 ))}
                 <Col id="__delete__" />
@@ -180,18 +183,18 @@
               <Thead>
                 <Tr id="head">
                   <RowNumberTableCell />
-                  {columns.map((col) => (
+                  {orderedColumns.map((col) => (
                     <TableCell key={col.id}>{col.header}</TableCell>
                   ))}
                   <TableCell />
                 </Tr>
               </Thead>
               <Tbody>
-                {cells.map((rowCells, rowIndex) => (
+                {orderedCellGrid.map((rowCells, rowIndex) => (
                   <Tr key={rows[rowIndex].id} id={rows[rowIndex].id}>
                     <RowNumberTableCell />
                     {rowCells.map((cellValue, columnIndex) => (
-                      <TableCell key={columns[columnIndex].id}>
+                      <TableCell key={orderedColumns[columnIndex].id}>
                         {cellValue}
                       </TableCell>
                     ))}
