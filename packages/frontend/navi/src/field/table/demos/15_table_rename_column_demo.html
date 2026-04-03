@@ -52,9 +52,9 @@
       ];
 
       const initialColumnsConfig = [
-        { id: "name", header: "Name" },
-        { id: "age", header: "Age" },
-        { id: "email", header: "Email" },
+        { name: "name" },
+        { name: "age" },
+        { name: "email" },
       ];
 
       // This demo illustrates the typical pattern in a real frontend app:
@@ -74,13 +74,13 @@
       const Backend = () => {
         const [columnsConfig, setColumnsConfig] =
           useState(initialColumnsConfig);
-        const columnIds = columnsConfig.map((col) => col.id);
+        const columnIds = columnsConfig.map((col) => col.name);
         const [rows] = useRowsState(initialRows, columnIds);
 
-        const renameColumn = (columnId, newHeader) => {
+        const renameColumn = (columnName, newName) => {
           setColumnsConfig((prev) =>
             prev.map((col) =>
-              col.id === columnId ? { ...col, header: newHeader } : col,
+              col.name === columnName ? { name: newName } : col,
             ),
           );
         };
@@ -107,14 +107,14 @@
               <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
                 {columnsConfig.map((col) => (
                   <li
-                    key={col.id}
+                    key={col.name}
                     style={{
                       fontSize: "0.85em",
                       color: "#495057",
                       marginBottom: "4px",
                     }}
                   >
-                    {col.id} — header: "{col.header}"
+                    {`{ name: "${col.name}" }`}
                   </li>
                 ))}
               </ul>
@@ -133,7 +133,7 @@
             >
               <span>columnsConfig ↓</span>
               <span style={{ fontSize: "1.4em", lineHeight: "1" }}>⇅</span>
-              <span>onRenameColumn ↑</span>
+              <span>onRenameColumn ↑</span>{" "}
             </div>
 
             <Frontend
@@ -146,11 +146,12 @@
       };
 
       const Frontend = ({ rows, columnsConfig, onRenameColumn }) => {
-        const columnIds = columnsConfig.map((col) => col.id);
+        const columnIds = columnsConfig.map((col) => col.name);
         const cellGrid = useCellGridFromRows(rows, columnIds);
         const [orderedCellGrid, orderedColumns] = useOrderedCellGridAndColumns(
           cellGrid,
           columnsConfig,
+          { columnIdKey: "name" },
         );
 
         return (
@@ -175,7 +176,7 @@
               <Colgroup>
                 <RowNumberCol />
                 {orderedColumns.map((col) => (
-                  <Col key={col.id} id={col.id} />
+                  <Col key={col.name} id={col.name} />
                 ))}
               </Colgroup>
               <Thead>
@@ -183,15 +184,15 @@
                   <RowNumberTableCell />
                   {orderedColumns.map((col) => (
                     <TableCell
-                      key={col.id}
-                      action={async (newHeader) => {
+                      key={col.name}
+                      action={async (newName) => {
                         await new Promise((resolve) =>
                           setTimeout(resolve, 1000),
                         );
-                        onRenameColumn(col.id, newHeader);
+                        onRenameColumn(col.name, newName);
                       }}
                     >
-                      {col.header}
+                      {col.name}
                     </TableCell>
                   ))}
                 </Tr>
@@ -203,7 +204,7 @@
                     <Tr id={row.id} key={row.id}>
                       <RowNumberTableCell />
                       {rowCells.map((cellValue, columnIndex) => (
-                        <TableCell key={orderedColumns[columnIndex].id}>
+                        <TableCell key={orderedColumns[columnIndex].name}>
                           {cellValue}
                         </TableCell>
                       ))}
