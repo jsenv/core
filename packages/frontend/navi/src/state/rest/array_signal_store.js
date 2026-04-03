@@ -12,7 +12,7 @@ export const arraySignalStore = (
   initialArray = [],
   idKey = "id",
   {
-    mutableIdKeys = [],
+    uniqueKeys = [],
     name,
     createItem = (props) => {
       return { ...props };
@@ -109,34 +109,34 @@ export const arraySignalStore = (
       id = props[idKey];
       return id;
     }
-    if (mutableIdKeys.length === 0) {
+    if (uniqueKeys.length === 0) {
       return undefined;
     }
 
-    let mutableIdKey;
-    for (const mutableIdKeyCandidate of mutableIdKeys) {
-      if (Object.hasOwn(props, mutableIdKeyCandidate)) {
-        mutableIdKey = mutableIdKeyCandidate;
+    let uniqueKey;
+    for (const uniqueKeyCandidate of uniqueKeys) {
+      if (Object.hasOwn(props, uniqueKeyCandidate)) {
+        uniqueKey = uniqueKeyCandidate;
         break;
       }
     }
-    if (!mutableIdKey) {
+    if (!uniqueKey) {
       throw new Error(
         `item properties must have one of the following keys:
-${[idKey, ...mutableIdKeys].join(", ")}`,
+${[idKey, ...uniqueKeys].join(", ")}`,
       );
     }
-    const mutableIdValue = props[mutableIdKey];
+    const uniqueKeyValue = props[uniqueKey];
     for (const itemCandidate of array) {
-      const mutableIdCandidate = itemCandidate[mutableIdKey];
-      if (mutableIdCandidate === mutableIdValue) {
+      const uniqueKeyCandidate = itemCandidate[uniqueKey];
+      if (uniqueKeyCandidate === uniqueKeyValue) {
         id = itemCandidate[idKey];
         break;
       }
     }
     if (!id) {
       throw new Error(
-        `None of the existing item uses ${mutableIdKey}: ${mutableIdValue}, so item properties must specify the "${idKey}" key.`,
+        `None of the existing item uses ${uniqueKey}: ${uniqueKeyValue}, so item properties must specify the "${idKey}" key.`,
       );
     }
     return id;
@@ -505,10 +505,10 @@ ${[idKey, ...mutableIdKeys].join(", ")}`,
     return null;
   };
 
-  const signalForMutableIdKey = (mutableIdKey, mutableIdValueSignal) => {
+  const signalForUniqueKey = (uniqueKey, uniqueKeyValueSignal) => {
     const itemIdSignal = signal(null);
     const check = (value) => {
-      const item = select(mutableIdKey, value);
+      const item = select(uniqueKey, value);
       if (!item) {
         return false;
       }
@@ -517,8 +517,8 @@ ${[idKey, ...mutableIdKeys].join(", ")}`,
     };
     if (!check()) {
       effect(function () {
-        const mutableIdValue = mutableIdValueSignal.value;
-        if (check(mutableIdValue)) {
+        const uniqueKeyValue = uniqueKeyValueSignal.value;
+        if (check(uniqueKeyValue)) {
           this.dispose();
         }
       });
@@ -537,7 +537,7 @@ ${[idKey, ...mutableIdKeys].join(", ")}`,
   };
 
   Object.assign(store, {
-    mutableIdKeys,
+    uniqueKeys,
     arraySignal,
     select,
     selectAll,
@@ -549,7 +549,7 @@ ${[idKey, ...mutableIdKeys].join(", ")}`,
     observeRemovals,
     observeIdChanges,
     registerItemMatchLifecycle,
-    signalForMutableIdKey,
+    signalForUniqueKey,
   });
   return store;
 };

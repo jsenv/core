@@ -36,9 +36,9 @@ return { dataAfterGetMany, dataAfterPut };
   ],
   "dataAfterPut": [
     {
-      "id": 99,
+      "id": 1,
       "username": "alice",
-      "name": "Alice Renamed"
+      "name": "Alice"
     },
     {
       "id": 2,

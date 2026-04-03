@@ -44,13 +44,13 @@ export const createResourceLifecycleManager = () => {
       rerunOn = defaultRerunOn,
       paramScope = null,
       dependencies = [],
-      mutableIdKeys = [],
+      uniqueKeys = [],
     } = config;
 
     registeredResources.set(resourceScope, {
       rerunOn,
       paramScope,
-      mutableIdKeys,
+      uniqueKeys,
       restActionSet: new Set(),
       restActionContextMap: new Map(), // Map<restAction, { resourceInstance, paramScope }>
     });
@@ -124,17 +124,17 @@ export const createResourceLifecycleManager = () => {
       const shouldRerunGet = shouldRerunAfter(config.rerunOn.GET, triggerVerb);
 
       // Skip if no rerun or reset rules apply
-      const hasMutableIdAutorerun =
+      const hasUniqueKeyAutorerun =
         (triggerVerb === "POST" ||
           triggerVerb === "PUT" ||
           triggerVerb === "PATCH") &&
-        config.mutableIdKeys.length > 0;
+        config.uniqueKeys.length > 0;
 
       if (
         !shouldRerunGetMany &&
         !shouldRerunGet &&
         triggerVerb !== "DELETE" &&
-        !hasMutableIdAutorerun
+        !hasUniqueKeyAutorerun
       ) {
         continue;
       }
@@ -234,10 +234,10 @@ export const createResourceLifecycleManager = () => {
             continue;
           }
 
-          // MutableId effects: rerun GET when matching resource created/updated
-          mutable_id_effect: {
+          // Unique key effects: rerun GET when matching resource created/updated
+          unique_key_effect: {
             if (
-              hasMutableIdAutorerun &&
+              hasUniqueKeyAutorerun &&
               candidateVerb === "GET" &&
               !candidateIsPlural &&
               isSameResource
@@ -246,19 +246,19 @@ export const createResourceLifecycleManager = () => {
               const modifiedValue = valueSignal.peek();
 
               if (modifiedValue && typeof modifiedValue === "object") {
-                for (const mutableIdKey of config.mutableIdKeys) {
-                  const modifiedMutableId = modifiedValue[mutableIdKey];
+                for (const uniqueKey of config.uniqueKeys) {
+                  const modifiedUniqueId = modifiedValue[uniqueKey];
                   const candidateParams = actionCandidate.params;
 
                   if (
-                    modifiedMutableId !== undefined &&
+                    modifiedUniqueId !== undefined &&
                     candidateParams &&
                     typeof candidateParams === "object" &&
-                    candidateParams[mutableIdKey] === modifiedMutableId
+                    candidateParams[uniqueKey] === modifiedUniqueId
                   ) {
                     actionsToRerun.add(actionCandidate);
                     reasonSet.add(
-                      `${triggeringAction.meta.verb}-mutableId autorerun`,
+                      `${triggeringAction.meta.verb}-uniqueKey autorerun`,
                     );
                     break;
                   }

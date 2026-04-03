@@ -29,7 +29,7 @@ const resourceLifecycleManager = createResourceLifecycleManager();
  *   - DELETE                   → return the id or { id } of the removed item
  *   - GET_MANY / POST_MANY … → return an array of item objects
  *
- * mutableIdKeys allows the store to find an item by an alternate key (e.g. "username"),
+ * uniqueKeys allows the store to find an item by an alternate key (e.g. "username"),
  * and the callback can return a different `id` to rename the item's primary key.
  *
  * # .withParams(params)
@@ -112,7 +112,7 @@ export const resource = (
   {
     // configuration options
     idKey,
-    mutableIdKeys = [],
+    uniqueKeys = [],
     rerunOn,
     dependencies,
 
@@ -129,7 +129,7 @@ export const resource = (
   } = {},
 ) => {
   if (idKey === undefined) {
-    idKey = mutableIdKeys.length === 0 ? "id" : mutableIdKeys[0];
+    idKey = uniqueKeys.length === 0 ? "id" : uniqueKeys[0];
   }
   const setupCallbackSet = new Set();
   const addItemSetup = (callback) => {
@@ -139,11 +139,11 @@ export const resource = (
     [Symbol.toStringTag]: name,
     toString() {
       let string = `${name}`;
-      if (mutableIdKeys.length) {
-        for (const mutableIdKey of mutableIdKeys) {
-          const mutableId = this[mutableIdKey];
-          if (mutableId !== undefined) {
-            string += `[${mutableIdKey}=${mutableId}]`;
+      if (uniqueKeys.length) {
+        for (const uniqueKey of uniqueKeys) {
+          const uniqueId = this[uniqueKey];
+          if (uniqueId !== undefined) {
+            string += `[${uniqueKey}=${uniqueId}]`;
             return string;
           }
         }
@@ -156,7 +156,7 @@ export const resource = (
     },
   };
   const store = arraySignalStore([], idKey, {
-    mutableIdKeys,
+    uniqueKeys,
     name: `${name} store`,
     createItem: (props) => {
       const item = Object.create(itemPrototype);
@@ -179,7 +179,7 @@ export const resource = (
   });
   return createResource(name, {
     idKey,
-    mutableIdKeys,
+    uniqueKeys,
     restCallbacks: {
       GET,
       GET_MANY,
@@ -205,7 +205,7 @@ const createResource = (
   name,
   {
     idKey,
-    mutableIdKeys = [],
+    uniqueKeys = [],
     restCallbacks,
     store,
     addItemSetup,
@@ -216,13 +216,14 @@ const createResource = (
   } = {},
 ) => {
   if (idKey === undefined) {
-    idKey = mutableIdKeys.length === 0 ? "id" : mutableIdKeys[0];
+    idKey = uniqueKeys.length === 0 ? "id" : uniqueKeys[0];
   }
   const params = paramScope.params;
   const stateFacade = {
     // public
     name,
     idKey,
+    uniqueKeys,
 
     useArray: () => store.arraySignal.value,
     useById: (id) => store.select(idKey, id),
@@ -243,7 +244,7 @@ const createResource = (
     rerunOn,
     paramScope,
     dependencies,
-    mutableIdKeys,
+    uniqueKeys,
   });
   lifecycleCtx.onComplete = (actionCompleted) => {
     resourceLifecycleManager.onActionComplete(actionCompleted, {
@@ -295,7 +296,7 @@ const createResource = (
     });
     return createResource(name, {
       idKey,
-      mutableIdKeys,
+      uniqueKeys,
       restCallbacks,
       store,
       addItemSetup,
