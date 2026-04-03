@@ -82,10 +82,13 @@ import.meta.css = /* css */ `
 
   /* padding */
   .navi_table_cell {
+    --cell-padding-left: 12px;
+    --cell-padding-right: 12px;
+
     padding-top: 8px;
-    padding-right: 12px;
+    padding-right: var(--cell-padding-right);
     padding-bottom: 8px;
-    padding-left: 12px;
+    padding-left: var(--cell-padding-left);
   }
   .navi_table_cell[data-width-xxs] {
     padding-right: 0;
@@ -96,8 +99,8 @@ import.meta.css = /* css */ `
     padding-bottom: 0;
   }
   .navi_table_cell[data-editing] input {
-    padding: 0;
-    padding-left: 12px;
+    padding-right: var(--cell-padding-right);
+    padding-left: var(--cell-padding-left);
   }
   .navi_table [data-sticky-left-frontier] {
     /* padding-left: 12px; */
