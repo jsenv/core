@@ -52,29 +52,39 @@ const createColumnOrdering = (columnIdKey, setOrderedColumnIds) => {
   const stableIdByExternalIdMap = new Map();
   const externalIdByStableIdMap = new Map();
   let nextStableId = 0;
-  let prevExternalIds = null;
+  let prevExternalIdSet;
   const columnByExternalIdMap = new Map();
 
   // Reconcile maps as external ids change (add/remove/rename columns).
   // Returns the ordered column objects for the current render.
   const sync = (columns, orderedColumnIds) => {
-    const externalIds = [];
+    const externalIdSet = new Set();
     columnByExternalIdMap.clear();
     for (const col of columns) {
       const externalId = col[columnIdKey];
-      externalIds.push(externalId);
+      externalIdSet.add(externalId);
       columnByExternalIdMap.set(externalId, col);
     }
     let currentOrderedColumnIds = orderedColumnIds;
-    if (prevExternalIds === null) {
-      for (const externalId of externalIds) {
+    if (prevExternalIdSet === undefined) {
+      for (const externalId of externalIdSet) {
         const stableId = nextStableId++;
         stableIdByExternalIdMap.set(externalId, stableId);
         externalIdByStableIdMap.set(stableId, externalId);
       }
     } else {
-      const removed = prevExternalIds.filter((id) => !externalIds.includes(id));
-      const added = externalIds.filter((id) => !prevExternalIds.includes(id));
+      const removed = [];
+      const added = [];
+      for (const id of prevExternalIdSet) {
+        if (!externalIdSet.has(id)) {
+          removed.push(id);
+        }
+      }
+      for (const id of externalIdSet) {
+        if (!prevExternalIdSet.has(id)) {
+          added.push(id);
+        }
+      }
       // Pair removed → added as renames so the same stable id is preserved
       const renameCount =
         removed.length < added.length ? removed.length : added.length;
@@ -123,7 +133,7 @@ const createColumnOrdering = (columnIdKey, setOrderedColumnIds) => {
         setOrderedColumnIds(currentOrderedColumnIds);
       }
     }
-    prevExternalIds = externalIds;
+    prevExternalIdSet = externalIdSet;
     return toOrderedColumns(currentOrderedColumnIds);
   };
 
