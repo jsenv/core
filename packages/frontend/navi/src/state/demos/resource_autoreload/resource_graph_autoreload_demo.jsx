@@ -17,7 +17,7 @@ const loadCounters = new Map();
 
 const USER = resource("user", {
   idKey: "id",
-  mutableIdKeys: ["name"],
+  uniqueKeys: ["name"],
 
   GET_MANY: () => {
     console.log("🔍 GET_MANY users");
