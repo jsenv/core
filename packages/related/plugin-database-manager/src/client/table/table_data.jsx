@@ -50,7 +50,7 @@ export const TableData = ({ table, rows }) => {
   const { tablename, columns } = table;
   const createRow = TABLE_ROW.POST.bindParams({ tablename });
 
-  const [orderedColumns] = useOrderedColumns(columns, {
+  const [orderedColumns] = useOrderedColumns(columns, undefined, {
     columnIdKey: "column_name",
   });
   const orderedColumnIds = orderedColumns.map((c) => c.column_name);
