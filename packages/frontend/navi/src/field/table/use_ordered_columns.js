@@ -49,27 +49,27 @@ export const useOrderedColumns = (
 // Tracks a stable internal id for each column that persists across external id changes (e.g. renames).
 // Stable ids are integers assigned once and kept in sync with the current external ids.
 const createColumnOrdering = (columnIdKey, setOrderedColumnIds) => {
-  const stableIdByExternalId = new Map();
-  const externalIdByStableId = new Map();
+  const stableIdByExternalIdMap = new Map();
+  const externalIdByStableIdMap = new Map();
   let nextStableId = 0;
   let prevExternalIds = null;
-  const columnByExternalId = new Map();
+  const columnByExternalIdMap = new Map();
 
   // Reconcile maps as external ids change (add/remove/rename columns).
   // Returns the ordered column objects for the current render.
   const sync = (columns, orderedColumnIds) => {
-    columnByExternalId.clear();
+    columnByExternalIdMap.clear();
     for (const col of columns) {
-      columnByExternalId.set(col[columnIdKey], col);
+      columnByExternalIdMap.set(col[columnIdKey], col);
     }
 
-    const externalIds = [...columnByExternalId.keys()];
+    const externalIds = [...columnByExternalIdMap.keys()];
     let currentOrderedColumnIds = orderedColumnIds;
     if (prevExternalIds === null) {
       for (const externalId of externalIds) {
         const stableId = nextStableId++;
-        stableIdByExternalId.set(externalId, stableId);
-        externalIdByStableId.set(stableId, externalId);
+        stableIdByExternalIdMap.set(externalId, stableId);
+        externalIdByStableIdMap.set(stableId, externalId);
       }
     } else {
       const removed = prevExternalIds.filter((id) => !externalIds.includes(id));
@@ -78,10 +78,10 @@ const createColumnOrdering = (columnIdKey, setOrderedColumnIds) => {
       const renameCount =
         removed.length < added.length ? removed.length : added.length;
       for (let i = 0; i < renameCount; i++) {
-        const stableId = stableIdByExternalId.get(removed[i]);
-        stableIdByExternalId.delete(removed[i]);
-        stableIdByExternalId.set(added[i], stableId);
-        externalIdByStableId.set(stableId, added[i]);
+        const stableId = stableIdByExternalIdMap.get(removed[i]);
+        stableIdByExternalIdMap.delete(removed[i]);
+        stableIdByExternalIdMap.set(added[i], stableId);
+        externalIdByStableIdMap.set(stableId, added[i]);
         // Apply rename to the stored order immediately so toOrderedColumns
         // below sees the updated id and keeps the column in its current position
         currentOrderedColumnIds = currentOrderedColumnIds.map((id) =>
@@ -89,14 +89,14 @@ const createColumnOrdering = (columnIdKey, setOrderedColumnIds) => {
         );
       }
       for (const id of removed.slice(renameCount)) {
-        const stableId = stableIdByExternalId.get(id);
-        stableIdByExternalId.delete(id);
-        externalIdByStableId.delete(stableId);
+        const stableId = stableIdByExternalIdMap.get(id);
+        stableIdByExternalIdMap.delete(id);
+        externalIdByStableIdMap.delete(stableId);
       }
       for (const id of added.slice(renameCount)) {
         const stableId = nextStableId++;
-        stableIdByExternalId.set(id, stableId);
-        externalIdByStableId.set(stableId, id);
+        stableIdByExternalIdMap.set(id, stableId);
+        externalIdByStableIdMap.set(stableId, id);
         // Insert at the position implied by the external order: find the closest
         // left neighbor (in external order) that already exists in our stored order
         const idxInExternal = externalIds.indexOf(id);
@@ -130,7 +130,7 @@ const createColumnOrdering = (columnIdKey, setOrderedColumnIds) => {
   const toOrderedColumns = (orderedColumnIds) => {
     const ordered = [];
     for (const id of orderedColumnIds) {
-      const col = columnByExternalId.get(id);
+      const col = columnByExternalIdMap.get(id);
       if (col !== undefined) {
         ordered.push(col);
       }
