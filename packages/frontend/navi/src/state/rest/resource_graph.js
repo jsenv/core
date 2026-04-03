@@ -195,10 +195,9 @@ export const resource = (
     store,
     addItemSetup,
     createRestAction: createRestActionForRoot,
-    params: undefined,
+    paramScope: getParamScope(undefined),
     rerunOn,
     dependencies,
-    paramScope: null,
   });
 };
 
@@ -211,15 +210,15 @@ const createResource = (
     store,
     addItemSetup,
     createRestAction,
-    params,
+    paramScope,
     rerunOn,
     dependencies,
-    paramScope,
   } = {},
 ) => {
   if (idKey === undefined) {
     idKey = mutableIdKeys.length === 0 ? "id" : mutableIdKeys[0];
   }
+  const params = paramScope.params;
   const stateFacade = {
     // public
     name,
@@ -239,33 +238,18 @@ const createResource = (
     addItemSetup,
   };
   const lifecycleCtx = { onComplete: null };
-  const actionRegistrations = [];
-  // expose rest actions on the stateFacade
-  for (const [restCallbackKey, restCallback] of Object.entries(restCallbacks)) {
-    if (restCallback === undefined) {
-      continue;
-    }
-    const isMany = restCallbackKey.endsWith("_MANY");
-    const verb = isMany
-      ? restCallbackKey.replace("_MANY", "")
-      : restCallbackKey;
-    const restAction = createRestAction(verb, restCallback, {
-      isMany,
-      lifecycleCtx,
+
+  resourceLifecycleManager.registerResource(stateFacade, {
+    rerunOn,
+    paramScope,
+    dependencies,
+    mutableIdKeys,
+  });
+  lifecycleCtx.onComplete = (actionCompleted) => {
+    resourceLifecycleManager.onActionComplete(actionCompleted, {
+      resourceScope: stateFacade,
     });
-    if (!restAction) {
-      console.error("no action returned (here to see when it happens)");
-      continue;
-    }
-    if (params) {
-      const restActionBound = restAction.bindParams(params);
-      stateFacade[restCallbackKey] = restActionBound;
-      actionRegistrations.push(restActionBound);
-    } else {
-      stateFacade[restCallbackKey] = restAction;
-      actionRegistrations.push(restAction);
-    }
-  }
+  };
 
   /**
    * Creates a parameterized version of the resource with isolated resource lifecycle behavior.
@@ -296,19 +280,14 @@ const createResource = (
    */
   const withParams = (
     paramsToInject,
-    { dependencies: withParamsDeps = [], rerunOn: withParamsRerunOn } = {},
+    { dependencies: withParamsDeps, rerunOn: withParamsRerunOn } = {},
   ) => {
     if (!paramsToInject || Object.keys(paramsToInject).length === 0) {
-      throw new Error(
-        `resource(${paramsToInject}).withParams() requires parameters`,
-      );
+      throw new Error(`resource(${name}).withParams() requires parameters`);
     }
-    let resolvedParams;
-    if (params) {
-      resolvedParams = { ...params, ...paramsToInject };
-    } else {
-      resolvedParams = paramsToInject;
-    }
+    const resolvedParams = params
+      ? { ...params, ...paramsToInject }
+      : paramsToInject;
     const resolvedParamScope = getParamScope(resolvedParams);
     const createRestActionWithParams = createRestActionFactoryForRoot(name, {
       idKey,
@@ -321,10 +300,9 @@ const createResource = (
       store,
       addItemSetup,
       createRestAction: createRestActionWithParams,
-      params: resolvedParams,
       paramScope: resolvedParamScope,
-      rerunOn: withParamsRerunOn,
-      dependencies: withParamsDeps,
+      rerunOn: withParamsRerunOn ?? rerunOn,
+      dependencies: withParamsDeps ?? dependencies,
     });
   };
   stateFacade.withParams = withParams;
@@ -407,7 +385,7 @@ const createResource = (
 
     const childIdKey = childResource.idKey;
     const childStore = childResource.store;
-    const createRestActionForOne = (verb, callback, { lifecycleCtx } = {}) => {
+    const createRestActionForOne = (verb, callback, { lifecycleCtx }) => {
       const applyResultToValue =
         verb === "DELETE"
           ? (itemId) => {
@@ -439,7 +417,6 @@ const createResource = (
             };
 
       const callerInfo = getCallerInfo(null, 2);
-      // Provide more fallback options for better debugging
       const locationInfo =
         callerInfo.file && callerInfo.line && callerInfo.column
           ? `${callerInfo.file}:${callerInfo.line}:${callerInfo.column}`
@@ -474,7 +451,7 @@ ${originalActionName} source location: ${locationInfo}`,
         },
         valueToData: (childItemId) => childStore.select(childItemId),
         completeSideEffect: (actionCompleted) => {
-          lifecycleCtx?.onComplete?.(actionCompleted);
+          lifecycleCtx.onComplete(actionCompleted);
         },
       });
       return actionAffectingOneItem;
@@ -490,12 +467,12 @@ ${originalActionName} source location: ${locationInfo}`,
       store,
       addItemSetup,
       createRestAction: createRestActionForOne,
-      params,
       paramScope,
-      rerunOn: oneRerunOn,
-      dependencies: oneDependencies,
+      rerunOn: oneRerunOn ?? rerunOn,
+      dependencies: oneDependencies ?? dependencies,
     });
   };
+
   stateFacade.many = (
     propertyName,
     childResource,
@@ -625,7 +602,6 @@ ${originalActionName} source location: ${locationInfo}`,
             };
 
       const callerInfo = getCallerInfo(null, 2);
-      // Provide more fallback options for better debugging
       const locationInfo =
         callerInfo.file && callerInfo.line && callerInfo.column
           ? `${callerInfo.file}:${callerInfo.line}:${callerInfo.column}`
@@ -639,7 +615,6 @@ ${originalActionName} source location: ${locationInfo}`,
           const actionLabel = action.name;
 
           if (verb === "DELETE") {
-            // For DELETE in many relationship, we expect [itemId, childItemId] array
             if (!Array.isArray(result) || result.length !== 2) {
               throw new TypeError(
                 `${actionLabel} must return an array [itemId, childItemId] (that will be used to remove relationship), received ${result}.
@@ -658,7 +633,7 @@ ${originalActionName} source location: ${locationInfo}`,
         },
         valueToData: (childItemId) => childStore.select(childItemId),
         completeSideEffect: (actionCompleted) => {
-          lifecycleCtx?.onComplete?.(actionCompleted);
+          lifecycleCtx.onComplete(actionCompleted);
         },
       });
       return actionAffectingOneItem;
@@ -717,8 +692,6 @@ ${originalActionName} source location: ${locationInfo}`,
                 return deletedChildItemIdArray;
               }
             : (childDataArray) => {
-                // hum ici aussi on voudra reload "user" pour POST
-                // les autres les signals se charge de reload si visible
                 const childItemArray = childStore.upsert(childDataArray);
                 const childItemIdArray = childItemArray.map(
                   (childItem) => childItem[childIdKey],
@@ -727,7 +700,6 @@ ${originalActionName} source location: ${locationInfo}`,
               };
 
       const callerInfo = getCallerInfo(null, 2);
-      // Provide more fallback options for better debugging
       const locationInfo =
         callerInfo.file && callerInfo.line && callerInfo.column
           ? `${callerInfo.file}:${callerInfo.line}:${callerInfo.column}`
@@ -751,7 +723,6 @@ ${originalActionName} source location: ${locationInfo}`,
             return applyResultToValue(result);
           }
           if (verb === "DELETE") {
-            // For DELETE_MANY in many relationship, we expect [itemId, childItemIdArray] array
             if (
               !Array.isArray(result) ||
               result.length !== 2 ||
@@ -764,7 +735,6 @@ ${originalActionName} source location: ${locationInfo}`,
             }
             return applyResultToValue(result);
           }
-          // For POST, PUT, PATCH - expect array of objects
           if (!Array.isArray(result)) {
             throw new TypeError(
               `${actionLabel} must return an array of objects (that will be used to upsert child items), received ${result}.
@@ -776,7 +746,7 @@ ${originalActionName} source location: ${locationInfo}`,
         valueToData: (childItemIdArray) =>
           childStore.selectAll(childItemIdArray),
         completeSideEffect: (actionCompleted) => {
-          lifecycleCtx?.onComplete?.(actionCompleted);
+          lifecycleCtx.onComplete(actionCompleted);
         },
       });
       return actionAffectingManyItem;
@@ -799,10 +769,9 @@ ${originalActionName} source location: ${locationInfo}`,
       store,
       addItemSetup,
       createRestAction: createRestActionForMany,
-      params,
       paramScope,
-      rerunOn: manyRerunOn,
-      dependencies: manyDependencies,
+      rerunOn: manyRerunOn ?? rerunOn,
+      dependencies: manyDependencies ?? dependencies,
     });
   };
 
@@ -821,6 +790,9 @@ ${originalActionName} source location: ${locationInfo}`,
     } = {},
   ) => {
     const childName = `${name}.${propertyName}`;
+
+    // setupCallbackSet: callbacks added by chained .one()/.many()
+    // Applied to each per-scope child item object when it is first created.
     const childItemSetupCallbackSet = new Set();
     const childAddItemSetup = (callback) =>
       childItemSetupCallbackSet.add(callback);
@@ -860,11 +832,7 @@ ${originalActionName} source location: ${locationInfo}`,
         set: applyProps,
       });
     });
-    const createRestActionForScopedOne = (
-      verb,
-      callback,
-      { lifecycleCtx } = {},
-    ) => {
+    const createRestActionForScopedOne = (verb, callback, { lifecycleCtx }) => {
       const childActionName = `${childName}.${verb}`;
       const restAction = createAction(callback, {
         name: childActionName,
@@ -896,7 +864,7 @@ ${originalActionName} source location: ${locationInfo}`,
           return [ownerId, props];
         },
         completeSideEffect: (actionCompleted) => {
-          lifecycleCtx?.onComplete?.(actionCompleted);
+          lifecycleCtx.onComplete(actionCompleted);
         },
       });
       return restAction;
@@ -914,13 +882,13 @@ ${originalActionName} source location: ${locationInfo}`,
       store,
       addItemSetup: childAddItemSetup,
       createRestAction: createRestActionForScopedOne,
-      params,
       paramScope,
-      rerunOn: scopedOneRerunOn,
-      dependencies: scopedOneDependencies,
+      rerunOn: scopedOneRerunOn ?? rerunOn,
+      dependencies: scopedOneDependencies ?? dependencies,
     });
     return childResource;
   };
+
   stateFacade.scopedMany = (
     propertyName,
     {
@@ -1082,7 +1050,7 @@ ${originalActionName} source location: ${locationInfo}`,
           return [ownerId, childItem[childIdKey]];
         },
         completeSideEffect: (actionCompleted) => {
-          lifecycleCtx?.onComplete?.(actionCompleted);
+          lifecycleCtx.onComplete(actionCompleted);
         },
       });
       return childAction;
@@ -1105,31 +1073,45 @@ ${originalActionName} source location: ${locationInfo}`,
       store,
       addItemSetup: childAddItemSetup,
       createRestAction: createRestActionForScopedMany,
-      params,
       paramScope,
-      rerunOn: scopedManyRerunOn,
-      dependencies: scopedManyDependencies,
+      rerunOn: scopedManyRerunOn ?? rerunOn,
+      dependencies: scopedManyDependencies ?? dependencies,
     });
     return childResource;
   };
 
-  resourceLifecycleManager.registerResource(stateFacade, {
-    rerunOn,
-    paramScope,
-    dependencies: dependencies || [],
-    mutableIdKeys,
-  });
-  lifecycleCtx.onComplete = (actionCompleted) => {
-    resourceLifecycleManager.onActionComplete(actionCompleted, {
-      resourceScope: stateFacade,
+  // expose rest actions on the stateFacade
+  for (const [restCallbackKey, restCallback] of Object.entries(restCallbacks)) {
+    if (restCallback === undefined) {
+      continue;
+    }
+    const isMany = restCallbackKey.endsWith("_MANY");
+    const verb = isMany
+      ? restCallbackKey.replace("_MANY", "")
+      : restCallbackKey;
+    const restAction = createRestAction(verb, restCallback, {
+      isMany,
+      lifecycleCtx,
     });
-  };
-  for (const actionToRegister of actionRegistrations) {
+    if (!restAction) {
+      console.error("no action returned (here to see when it happens)");
+      continue;
+    }
+    let actionToRegister;
+    if (params) {
+      const restActionBound = restAction.bindParams(params);
+      stateFacade[restCallbackKey] = restActionBound;
+      actionToRegister = restActionBound;
+    } else {
+      stateFacade[restCallbackKey] = restAction;
+      actionToRegister = restAction;
+    }
     resourceLifecycleManager.registerAction(stateFacade, actionToRegister, {
       resourceScope: stateFacade,
       paramScope,
     });
   }
+
   return stateFacade;
 };
 
@@ -1204,7 +1186,7 @@ ${originalActionName} source location: ${locationInfo}`,
       },
       valueToData: (itemId) => store.select(itemId),
       completeSideEffect: (actionCompleted) => {
-        lifecycleCtx?.onComplete?.(actionCompleted);
+        lifecycleCtx.onComplete(actionCompleted);
       },
     });
     return actionAffectingOneItem;
@@ -1232,7 +1214,7 @@ ${originalActionName} source location: ${locationInfo}`,
         return items;
       },
       completeSideEffect: (actionCompleted) => {
-        lifecycleCtx?.onComplete?.(actionCompleted);
+        lifecycleCtx.onComplete(actionCompleted);
         if (
           verb === "DELETE" ||
           actionCompleted.valueSignal.peek().length === 0

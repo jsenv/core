@@ -36,9 +36,6 @@ return { receivedParams, storeAfterGetMany, storeAfterPost };
     {
       "role": "admin",
       "name": "Charlie"
-    },
-    {
-      "role": "admin"
     }
   ],
   "storeAfterGetMany": [
