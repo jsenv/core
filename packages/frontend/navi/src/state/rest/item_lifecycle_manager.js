@@ -52,7 +52,6 @@ export const createResourceLifecycleManager = () => {
       paramScope,
       uniqueKeys,
       restActionSet: new Set(),
-      restActionContextMap: new Map(), // Map<restAction, { resourceInstance, paramScope }>
     });
 
     // Register dependencies
@@ -65,11 +64,10 @@ export const createResourceLifecycleManager = () => {
       }
     }
   };
-  const registerAction = (resourceScope, restAction, restActionContext) => {
+  const registerAction = (resourceScope, restAction) => {
     const config = registeredResources.get(resourceScope);
     if (config) {
       config.restActionSet.add(restAction);
-      config.restActionContextMap.set(restAction, restActionContext);
     }
   };
 
@@ -89,6 +87,7 @@ export const createResourceLifecycleManager = () => {
         triggerVerb,
       );
       const shouldRerunGet = shouldRerunAfter(config.rerunOn.GET, triggerVerb);
+      const paramScope = config.paramScope;
 
       // Skip if no rerun or reset rules apply
       const hasUniqueKeyAutorerun =
@@ -109,20 +108,7 @@ export const createResourceLifecycleManager = () => {
       // Parameter scope predicate for config-driven rules
       // Same scope ID or no scope = compatible, subset check for different scopes
       const paramScopePredicate = (candidateAction) => {
-        const paramScope = config.paramScope;
-        if (!paramScope) {
-          // root resource with no paramScope — matches all candidates
-          return true;
-        }
-        const candidateContext =
-          config.restActionContextMap.get(candidateAction);
-        if (!candidateContext) {
-          return false;
-        }
-        const candidateParamScope = candidateContext.paramScope;
-        if (!candidateParamScope) {
-          return true;
-        }
+        const candidateParamScope = candidateAction.meta.paramScope;
         if (candidateParamScope.id === paramScope.id) {
           return true;
         }

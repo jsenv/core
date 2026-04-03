@@ -32,6 +32,8 @@ return { callLogAfterInitialLoad, callLogAfterPost: [...callLog] };
   ],
   "callLogAfterPost": [
     "GET_MANY role=admin",
+    "GET_MANY role=guest",
+    "GET_MANY role=admin",
     "GET_MANY role=guest"
   ]
 }

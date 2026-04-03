@@ -428,6 +428,7 @@ const createResource = (
         meta: {
           verb,
           isMany: false,
+          paramScope,
         },
         name: `${name}.${verb}`,
         resultToValue: (result, action) => {
@@ -610,7 +611,7 @@ ${originalActionName} source location: ${locationInfo}`,
       const originalActionName = `${name}.${verb}`;
 
       const actionAffectingOneItem = createAction(callback, {
-        meta: { verb, isMany: false },
+        meta: { verb, isMany: false, paramScope },
         name: `${name}.${verb}`,
         resultToValue: (result, action) => {
           const actionLabel = action.name;
@@ -708,7 +709,7 @@ ${originalActionName} source location: ${locationInfo}`,
       const originalActionName = `${name}.${verb}[many]`;
 
       const actionAffectingManyItem = createAction(callback, {
-        meta: { verb, isMany: true },
+        meta: { verb, isMany: true, paramScope },
         name: `${name}.${verb}[many]`,
         dataDefault: [],
         resultToValue: (result, action) => {
@@ -837,7 +838,7 @@ ${originalActionName} source location: ${locationInfo}`,
       const childActionName = `${childName}.${verb}`;
       const restAction = createAction(callback, {
         name: childActionName,
-        meta: { verb, isMany: false },
+        meta: { verb, isMany: false, paramScope },
         resultToValue: (result) => {
           if (!Array.isArray(result) || result.length !== 2) {
             throw new TypeError(
@@ -1003,7 +1004,7 @@ ${originalActionName} source location: ${locationInfo}`,
       const childActionName = `${childName}.${verb}`;
       const childAction = createAction(callback, {
         name: childActionName,
-        meta: { verb, isMany },
+        meta: { verb, isMany, paramScope },
         resultToValue: (result) => {
           if (!Array.isArray(result) || result.length < 2) {
             throw new TypeError(
@@ -1093,6 +1094,7 @@ ${originalActionName} source location: ${locationInfo}`,
     const restAction = createRestAction(verb, restCallback, {
       isMany,
       lifecycleCtx,
+      paramScope,
     });
     if (!restAction) {
       console.error("no action returned (here to see when it happens)");
@@ -1107,10 +1109,7 @@ ${originalActionName} source location: ${locationInfo}`,
       stateFacade[restCallbackKey] = restAction;
       actionToRegister = restAction;
     }
-    resourceLifecycleManager.registerAction(stateFacade, actionToRegister, {
-      resourceScope: stateFacade,
-      paramScope,
-    });
+    resourceLifecycleManager.registerAction(stateFacade, actionToRegister);
   }
 
   return stateFacade;
@@ -1126,14 +1125,24 @@ const createRestActionFactoryForRoot = (
   const createActionForRoot = (
     verb,
     restCallback,
-    { isMany, lifecycleCtx },
+    { isMany, lifecycleCtx, paramScope },
   ) => {
     if (!isMany) {
-      return createActionAffectingOneItem(verb, restCallback, lifecycleCtx);
+      return createActionAffectingOneItem(verb, restCallback, {
+        lifecycleCtx,
+        paramScope,
+      });
     }
-    return createActionAffectingManyItems(verb, restCallback, lifecycleCtx);
+    return createActionAffectingManyItems(verb, restCallback, {
+      lifecycleCtx,
+      paramScope,
+    });
   };
-  const createActionAffectingOneItem = (verb, callback, lifecycleCtx) => {
+  const createActionAffectingOneItem = (
+    verb,
+    callback,
+    { lifecycleCtx, paramScope },
+  ) => {
     const applyResultToValue =
       verb === "DELETE"
         ? (itemIdOrItemProps) => {
@@ -1164,7 +1173,7 @@ const createRestActionFactoryForRoot = (
     const originalActionName = `${name}.${verb}`;
     const actionAffectingOneItem = createAction(callback, {
       name: `${name}.${verb}`,
-      meta: { verb, isMany: false },
+      meta: { verb, isMany: false, paramScope },
       resultToValue: (result, action) => {
         const actionLabel = action.name;
 
@@ -1192,7 +1201,11 @@ ${originalActionName} source location: ${locationInfo}`,
     });
     return actionAffectingOneItem;
   };
-  const createActionAffectingManyItems = (verb, callback, lifecycleCtx) => {
+  const createActionAffectingManyItems = (
+    verb,
+    callback,
+    { lifecycleCtx, paramScope },
+  ) => {
     const applyResultToValue =
       verb === "DELETE"
         ? (idOrMutableIdArray) => {
@@ -1206,7 +1219,7 @@ ${originalActionName} source location: ${locationInfo}`,
           };
 
     const actionAffectingManyItems = createAction(callback, {
-      meta: { verb, isMany: true },
+      meta: { verb, isMany: true, paramScope },
       name: `${name}.${verb}_MANY`,
       dataDefault: [],
       resultToValue: applyResultToValue,
