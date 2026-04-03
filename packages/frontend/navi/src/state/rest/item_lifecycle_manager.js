@@ -65,45 +65,12 @@ export const createResourceLifecycleManager = () => {
       }
     }
   };
-
   const registerAction = (resourceScope, restAction, restActionContext) => {
     const config = registeredResources.get(resourceScope);
     if (config) {
       config.restActionSet.add(restAction);
       config.restActionContextMap.set(restAction, restActionContext);
     }
-  };
-
-  const shouldRerunAfter = (rerunConfig, verb) => {
-    if (rerunConfig === false) {
-      return false;
-    }
-    if (rerunConfig === "*") {
-      return true;
-    }
-    if (Array.isArray(rerunConfig)) {
-      const methodSet = new Set(rerunConfig.map((v) => v.toUpperCase()));
-      if (methodSet.has("*")) {
-        return true;
-      }
-      return methodSet.has(verb.toUpperCase());
-    }
-    return false;
-  };
-
-  const isParamSubset = (parentParams, childParams) => {
-    if (!parentParams || !childParams) {
-      return false;
-    }
-    for (const [key, value] of Object.entries(parentParams)) {
-      if (
-        !(key in childParams) ||
-        !compareTwoJsValues(childParams[key], value)
-      ) {
-        return false;
-      }
-    }
-    return true;
   };
 
   // Determines which actions to rerun/reset when an action completes.
@@ -315,4 +282,32 @@ export const createResourceLifecycleManager = () => {
     registerAction,
     onActionComplete,
   };
+};
+
+const shouldRerunAfter = (rerunConfig, verb) => {
+  if (rerunConfig === false) {
+    return false;
+  }
+  if (rerunConfig === "*") {
+    return true;
+  }
+  if (Array.isArray(rerunConfig)) {
+    const methodSet = new Set(rerunConfig.map((v) => v.toUpperCase()));
+    if (methodSet.has("*")) {
+      return true;
+    }
+    return methodSet.has(verb.toUpperCase());
+  }
+  return false;
+};
+const isParamSubset = (parentParams, childParams) => {
+  if (!parentParams || !childParams) {
+    return false;
+  }
+  for (const [key, value] of Object.entries(parentParams)) {
+    if (!(key in childParams) || !compareTwoJsValues(childParams[key], value)) {
+      return false;
+    }
+  }
+  return true;
 };
