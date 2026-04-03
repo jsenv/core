@@ -1,10 +1,25 @@
 import { useRef, useState } from "preact/hooks";
 
-// Maintains a user-defined column order independently of the external source
-// that provides the column list. The source (e.g. a database schema) may not
-// preserve order and may change column ids without reordering (e.g. a rename).
-// This hook handles all three cases: columns being added (appended at the end),
-// removed (dropped from the order), and renamed (position preserved).
+/**
+ * Maintains a user-defined column order that overrides the order provided by
+ * an external source. Useful when the source (e.g. a database schema) does not
+ * support ordering — the user can drag columns into any arrangement and this
+ * hook preserves it across re-renders regardless of the order the source returns.
+ *
+ * The hook also handles changes to column ids from the external source:
+ * - **Added** columns are appended at the end of the current order.
+ * - **Removed** columns are dropped from the order.
+ * - **Renamed** columns keep their current position (e.g. "name" → "username"
+ *   stays in the same slot without any visible jump).
+ *
+ * @param {Array} columns - Column objects from the external source.
+ * @param {Array} [initialOrder] - Optional initial order as an array of column ids.
+ *   Defaults to the order in which `columns` is first received.
+ * @param {object} [options]
+ * @param {string} [options.columnIdKey="id"] - Property name used as the column id.
+ * @returns {[Array, Function]} Tuple of ordered column objects and a setter that
+ *   accepts an array of column ids to update the order.
+ */
 export const useOrderedColumns = (
   columns,
   initialOrder,
@@ -39,6 +54,7 @@ const createColumnOrdering = (columnIdKey, setOrderedColumnIds) => {
   // Returns the ordered column objects for the current render.
   const sync = (columns, orderedColumnIds) => {
     const externalIds = columns.map((col) => col[columnIdKey]);
+    let currentOrderedColumnIds = orderedColumnIds;
     if (prevExternalIds === null) {
       for (const externalId of externalIds) {
         const stableId = nextStableId++;
@@ -56,9 +72,15 @@ const createColumnOrdering = (columnIdKey, setOrderedColumnIds) => {
         stableIdByExternalId.delete(removed[i]);
         stableIdByExternalId.set(added[i], stableId);
         externalIdByStableId.set(stableId, added[i]);
-        setOrderedColumnIds((prev) =>
-          prev.map((id) => (id === removed[i] ? added[i] : id)),
+        // Apply rename to the stored order immediately so toOrderedColumns
+        // below sees the updated id and keeps the column in its current position
+        currentOrderedColumnIds = currentOrderedColumnIds.map((id) =>
+          id === removed[i] ? added[i] : id,
         );
+      }
+      if (currentOrderedColumnIds !== orderedColumnIds) {
+        // Persist the renamed ids so future renders start with the correct order
+        setOrderedColumnIds(currentOrderedColumnIds);
       }
       for (const id of removed.slice(renameCount)) {
         const stableId = stableIdByExternalId.get(id);
@@ -72,7 +94,7 @@ const createColumnOrdering = (columnIdKey, setOrderedColumnIds) => {
       }
     }
     prevExternalIds = externalIds;
-    return toOrderedColumns(orderedColumnIds, columns);
+    return toOrderedColumns(currentOrderedColumnIds, columns);
   };
 
   // Given stored external ids, compute the final ordered column list:
