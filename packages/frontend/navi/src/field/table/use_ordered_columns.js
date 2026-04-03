@@ -2,12 +2,16 @@ import { useRef, useState } from "preact/hooks";
 
 /**
  * Maintains a user-defined column order that overrides the order provided by
- * an external source. Useful when the source (e.g. a database schema) does not
- * support ordering — the user can drag columns into any arrangement and this
- * hook preserves it across re-renders regardless of the order the source returns.
+ * an external source. Useful when the source does not support ordering — the
+ * user can arrange columns as they want and this hook ensures that arrangement
+ * is preserved even though the source always returns columns in its own order.
  *
- * The hook also handles changes to column ids from the external source:
- * - **Added** columns are appended at the end of the current order.
+ * The hook also reacts to structural changes in the column list:
+ * - **Added** columns are inserted at the position implied by the external order:
+ *   the new column is placed right after its closest left neighbor (in external
+ *   order) that already exists in the user-defined order. This mirrors where the
+ *   source put the column, so the result feels natural (e.g. if the source inserts
+ *   a column between B and C, it will appear between B and C in the user order too).
  * - **Removed** columns are dropped from the order.
  * - **Renamed** columns keep their current position (e.g. "name" → "username"
  *   stays in the same slot without any visible jump).
@@ -78,10 +82,6 @@ const createColumnOrdering = (columnIdKey, setOrderedColumnIds) => {
           id === removed[i] ? added[i] : id,
         );
       }
-      if (currentOrderedColumnIds !== orderedColumnIds) {
-        // Persist the renamed ids so future renders start with the correct order
-        setOrderedColumnIds(currentOrderedColumnIds);
-      }
       for (const id of removed.slice(renameCount)) {
         const stableId = stableIdByExternalId.get(id);
         stableIdByExternalId.delete(id);
@@ -91,30 +91,43 @@ const createColumnOrdering = (columnIdKey, setOrderedColumnIds) => {
         const stableId = nextStableId++;
         stableIdByExternalId.set(id, stableId);
         externalIdByStableId.set(stableId, id);
+        // Insert at the position implied by the external order: find the closest
+        // left neighbor (in external order) that already exists in our stored order
+        const idxInExternal = externalIds.indexOf(id);
+        let insertAfterIdx = -1;
+        for (let j = idxInExternal - 1; j >= 0; j--) {
+          const neighborIdx = currentOrderedColumnIds.indexOf(externalIds[j]);
+          if (neighborIdx !== -1) {
+            insertAfterIdx = neighborIdx;
+            break;
+          }
+        }
+        if (insertAfterIdx === -1) {
+          currentOrderedColumnIds = [id, ...currentOrderedColumnIds];
+        } else {
+          currentOrderedColumnIds = [
+            ...currentOrderedColumnIds.slice(0, insertAfterIdx + 1),
+            id,
+            ...currentOrderedColumnIds.slice(insertAfterIdx + 1),
+          ];
+        }
+      }
+      if (currentOrderedColumnIds !== orderedColumnIds) {
+        setOrderedColumnIds(currentOrderedColumnIds);
       }
     }
     prevExternalIds = externalIds;
     return toOrderedColumns(currentOrderedColumnIds, columns);
   };
 
-  // Given stored external ids, compute the final ordered column list:
-  // drop removed columns, append new ones, then map to column objects.
+  // Map stored column ids to column objects, dropping any ids no longer present.
   const toOrderedColumns = (orderedColumnIds, columns) => {
-    const currentStableIds = new Set(stableIdByExternalId.values());
-    // Convert stored external ids → stable ids (unknown ids are dropped)
-    const orderedStableIds = orderedColumnIds
-      .map((id) => stableIdByExternalId.get(id))
-      .filter((id) => id !== undefined);
-    // Append stable ids for columns not yet in the stored order
-    for (const stableId of currentStableIds) {
-      if (!orderedStableIds.includes(stableId)) orderedStableIds.push(stableId);
-    }
     const idToColumnMap = new Map(
       columns.map((col) => [col[columnIdKey], col]),
     );
-    return orderedStableIds.map((stableId) =>
-      idToColumnMap.get(externalIdByStableId.get(stableId)),
-    );
+    return orderedColumnIds
+      .filter((id) => idToColumnMap.has(id))
+      .map((id) => idToColumnMap.get(id));
   };
 
   return { sync };
