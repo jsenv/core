@@ -2,19 +2,26 @@
 
 ```js
 const USER = resource("user", {
-  mutableIdKeys: ["username"],
+  uniqueKeys: ["username"],
   GET_MANY: async () => [
     { id: 1, username: "alice", name: "Alice" },
     { id: 2, username: "bob", name: "Bob" },
   ],
-  PUT: async ({ username, name }) => ({ id: 99, username, name }),
+  PUT: async ({ username, prop, value }) => [
+    { username },
+    { [prop]: value },
+  ],
 });
 
 await USER.GET_MANY.run();
 const dataAfterGetMany = USER.GET_MANY.dataSignal.value;
 
 // Change alice's id from 1 to 99 — GET_MANY dataSignal should still include her with the new id
-await USER.PUT({ username: "alice", name: "Alice Renamed" });
+await USER.PUT({
+  username: "alice",
+  prop: "username",
+  value: "Alice Renamed",
+});
 const dataAfterPut = USER.GET_MANY.dataSignal.value;
 
 return { dataAfterGetMany, dataAfterPut };
@@ -37,7 +44,7 @@ return { dataAfterGetMany, dataAfterPut };
   "dataAfterPut": [
     {
       "id": 1,
-      "username": "alice",
+      "username": "Alice Renamed",
       "name": "Alice"
     },
     {
