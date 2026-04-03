@@ -41,7 +41,7 @@
         RowNumberTableCell,
         Button,
         useCellGridFromRows,
-        useOrderedCellGridAndColumns,
+        useOrderedColumns,
       } from "@jsenv/navi";
       import { useRowsState } from "./table_demo_helpers.js";
 
@@ -160,12 +160,9 @@
       };
 
       const Frontend = ({ rows, columnsConfig, onDeleteColumn }) => {
-        const columnIds = columnsConfig.map((col) => col.id);
-        const cellGrid = useCellGridFromRows(rows, columnIds);
-        const [orderedCellGrid, orderedColumns] = useOrderedCellGridAndColumns(
-          cellGrid,
-          columnsConfig,
-        );
+        const [orderedColumns] = useOrderedColumns(columnsConfig);
+        const orderedColumnIds = orderedColumns.map((col) => col.id);
+        const cellGrid = useCellGridFromRows(rows, orderedColumnIds);
 
         return (
           <div
@@ -212,7 +209,7 @@
                 </Tr>
               </Thead>
               <Tbody>
-                {orderedCellGrid.map((rowCells, dataRowIndex) => {
+                {cellGrid.map((rowCells, dataRowIndex) => {
                   const row = rows[dataRowIndex];
                   return (
                     <Tr id={row.id} key={row.id}>

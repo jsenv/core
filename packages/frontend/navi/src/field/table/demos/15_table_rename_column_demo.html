@@ -40,7 +40,7 @@
         RowNumberCol,
         RowNumberTableCell,
         useCellGridFromRows,
-        useOrderedCellGridAndColumns,
+        useOrderedColumns,
       } from "@jsenv/navi";
       import { useRowsState } from "./table_demo_helpers.js";
 
@@ -146,13 +146,11 @@
       };
 
       const Frontend = ({ rows, columnsConfig, onRenameColumn }) => {
-        const columnIds = columnsConfig.map((col) => col.name);
-        const cellGrid = useCellGridFromRows(rows, columnIds);
-        const [orderedCellGrid, orderedColumns] = useOrderedCellGridAndColumns(
-          cellGrid,
-          columnsConfig,
-          { columnIdKey: "name" },
-        );
+        const [orderedColumns] = useOrderedColumns(columnsConfig, {
+          columnIdKey: "name",
+        });
+        const orderedColumnIds = orderedColumns.map((col) => col.name);
+        const cellGrid = useCellGridFromRows(rows, orderedColumnIds);
 
         return (
           <div
@@ -198,7 +196,7 @@
                 </Tr>
               </Thead>
               <Tbody>
-                {orderedCellGrid.map((rowCells, dataRowIndex) => {
+                {cellGrid.map((rowCells, dataRowIndex) => {
                   const row = rows[dataRowIndex];
                   return (
                     <Tr id={row.id} key={row.id}>

@@ -40,7 +40,7 @@
         RowNumberTableCell,
         Button,
         useCellGridFromRows,
-        useOrderedCellGridAndColumns,
+        useOrderedColumns,
       } from "@jsenv/navi";
       import { useRowsState } from "./table_demo_helpers.js";
 
@@ -59,7 +59,7 @@
 
       const columnIds = columnsConfig.map((col) => col.id);
 
-      // This demo illustrates the typical pattern in a real frontend app:
+      const Backend illustrates the typical pattern in a real frontend app:
       //
       // - The BACKEND is the source of truth. It holds the data and exposes
       //   methods to mutate it (e.g. HTTP endpoints backed by a database).
@@ -149,11 +149,9 @@
       };
 
       const Frontend = ({ rows, onDeleteRow }) => {
-        const cellGrid = useCellGridFromRows(rows, columnIds);
-        const [orderedCellGrid, orderedColumns] = useOrderedCellGridAndColumns(
-          cellGrid,
-          columnsConfig,
-        );
+        const [orderedColumns] = useOrderedColumns(columnsConfig);
+        const orderedColumnIds = orderedColumns.map((col) => col.id);
+        const cellGrid = useCellGridFromRows(rows, orderedColumnIds);
 
         return (
           <div
@@ -190,7 +188,7 @@
                 </Tr>
               </Thead>
               <Tbody>
-                {orderedCellGrid.map((rowCells, rowIndex) => (
+                {cellGrid.map((rowCells, rowIndex) => (
                   <Tr key={rows[rowIndex].id} id={rows[rowIndex].id}>
                     <RowNumberTableCell />
                     {rowCells.map((cellValue, columnIndex) => (

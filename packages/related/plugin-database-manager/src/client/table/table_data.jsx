@@ -33,7 +33,7 @@ import {
   Thead,
   Tr,
   useCellGridFromRows,
-  useOrderedCellGridAndColumns,
+  useOrderedColumns,
 } from "@jsenv/navi";
 import { useRef, useState } from "preact/hooks";
 
@@ -50,18 +50,12 @@ export const TableData = ({ table, rows }) => {
   const { tablename, columns } = table;
   const createRow = TABLE_ROW.POST.bindParams({ tablename });
 
-  const cellGrid = useCellGridFromRows(
-    rows,
-    columns.map((c) => c.column_name),
-  );
+  const [orderedColumns] = useOrderedColumns(columns, {
+    columnIdKey: "column_name",
+  });
+  const orderedColumnIds = orderedColumns.map((c) => c.column_name);
+  const cellGrid = useCellGridFromRows(rows, orderedColumnIds);
   const [selection, setSelection] = useState([]);
-  const [orderedCellGrid, orderedColumns] = useOrderedCellGridAndColumns(
-    cellGrid,
-    columns,
-    {
-      columnIdKey: "column_name",
-    },
-  );
 
   const selectedRowIds = filterTableSelection(
     selection,
@@ -111,7 +105,7 @@ export const TableData = ({ table, rows }) => {
               </Tr>
             </Thead>
             <Tbody>
-              {orderedCellGrid.map((rowCells, rowIndex) => {
+              {cellGrid.map((rowCells, rowIndex) => {
                 const object = rows[rowIndex];
 
                 return (
