@@ -25,6 +25,27 @@ await snapshotTests(import.meta.url, ({ test }) => {
     return { callCountAfterFirstLoad, getManyCallCount };
   });
 
+  test("GET_MANY derived via bindParams autoruns after POST", async () => {
+    let getManyCallCount = 0;
+    const USER = resource("user", {
+      GET_MANY: async () => {
+        getManyCallCount++;
+        return [{ id: 1, name: "Alice" }];
+      },
+      POST: async ({ name }) => ({ id: 2, name }),
+    });
+
+    // Simulate what routeAction does: run GET_MANY through a bound derived instance
+    const derivedGetMany = USER.GET_MANY.bindParams({});
+    await derivedGetMany.run();
+    const callCountAfterFirstLoad = getManyCallCount;
+
+    await USER.POST({ name: "Bob" });
+    await waitForRerun();
+
+    return { callCountAfterFirstLoad, getManyCallCount };
+  });
+
   test("GET_MANY does NOT rerun when PUT is called (default rerunOn)", async () => {
     let getManyCallCount = 0;
     const USER = resource("user", {
