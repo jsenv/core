@@ -53,11 +53,13 @@ const createColumnOrdering = (columnIdKey, setOrderedColumnIds) => {
   const externalIdByStableId = new Map();
   let nextStableId = 0;
   let prevExternalIds = null;
+  let columnByExternalId = new Map();
 
   // Reconcile maps as external ids change (add/remove/rename columns).
   // Returns the ordered column objects for the current render.
   const sync = (columns, orderedColumnIds) => {
-    const externalIds = columns.map((col) => col[columnIdKey]);
+    columnByExternalId = new Map(columns.map((col) => [col[columnIdKey], col]));
+    const externalIds = [...columnByExternalId.keys()];
     let currentOrderedColumnIds = orderedColumnIds;
     if (prevExternalIds === null) {
       for (const externalId of externalIds) {
@@ -117,17 +119,19 @@ const createColumnOrdering = (columnIdKey, setOrderedColumnIds) => {
       }
     }
     prevExternalIds = externalIds;
-    return toOrderedColumns(currentOrderedColumnIds, columns);
+    return toOrderedColumns(currentOrderedColumnIds);
   };
 
   // Map stored column ids to column objects, dropping any ids no longer present.
-  const toOrderedColumns = (orderedColumnIds, columns) => {
-    const idToColumnMap = new Map(
-      columns.map((col) => [col[columnIdKey], col]),
-    );
-    return orderedColumnIds
-      .filter((id) => idToColumnMap.has(id))
-      .map((id) => idToColumnMap.get(id));
+  const toOrderedColumns = (orderedColumnIds) => {
+    const ordered = [];
+    for (const id of orderedColumnIds) {
+      const col = columnByExternalId.get(id);
+      if (col !== undefined) {
+        ordered.push(col);
+      }
+    }
+    return ordered;
   };
 
   return { sync };
