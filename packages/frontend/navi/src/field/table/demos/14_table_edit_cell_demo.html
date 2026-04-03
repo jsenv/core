@@ -38,8 +38,8 @@
         Tr,
         RowNumberCol,
         RowNumberTableCell,
-        useRowsAsGrid,
-        useCellsAndColumns,
+        useCellGridFromRows,
+        useOrderedCellGridAndColumns,
       } from "@jsenv/navi";
       import { useRowsState } from "./table_demo_helpers.js";
 
@@ -129,8 +129,11 @@
       };
 
       const Frontend = ({ rows, onCellChange }) => {
-        const cellGrid = useRowsAsGrid(rows, columnIds);
-        const { cells, columns } = useCellsAndColumns(cellGrid, columnsConfig);
+        const cellGrid = useCellGridFromRows(rows, columnIds);
+        const [orderedCellGrid, orderedColumns] = useOrderedCellGridAndColumns(
+          cellGrid,
+          columnsConfig,
+        );
 
         return (
           <div
@@ -154,25 +157,25 @@
             <Table borderCollapse>
               <Colgroup>
                 <RowNumberCol />
-                {columns.map((col) => (
+                {orderedColumns.map((col) => (
                   <Col key={col.id} id={col.id} />
                 ))}
               </Colgroup>
               <Thead>
                 <Tr id="head">
                   <RowNumberTableCell />
-                  {columns.map((col) => (
+                  {orderedColumns.map((col) => (
                     <TableCell key={col.id}>{col.header}</TableCell>
                   ))}
                 </Tr>
               </Thead>
               <Tbody>
-                {cells.map((rowCells, rowIndex) => (
+                {orderedCellGrid.map((rowCells, rowIndex) => (
                   <Tr key={rows[rowIndex].id} id={rows[rowIndex].id}>
                     <RowNumberTableCell />
                     {rowCells.map((cellValue, columnIndex) => (
                       <TableCell
-                        key={columns[columnIndex].id}
+                        key={orderedColumns[columnIndex].id}
                         action={async (value) => {
                           await new Promise((resolve) =>
                             setTimeout(resolve, 1000),
