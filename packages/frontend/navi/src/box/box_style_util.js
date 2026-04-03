@@ -62,12 +62,13 @@ const applyOnTwoProps = (propA, propB) => {
 };
 
 const FLOW_PROPS = {
-  // all are handled by data-attributes
+  // all are handled by navi-attributes
   inline: () => {},
-  box: () => {},
+  block: () => {},
+  flex: () => {},
+  grid: () => {},
   row: () => {},
   column: () => {},
-  grid: () => {},
 };
 const OUTER_SPACING_PROPS = {
   margin: PASS_THROUGH,
@@ -129,11 +130,12 @@ const DIMENSION_PROPS = {
     if (!value) {
       return null;
     }
-    const parentIsFlexColumn =
-      parentBoxFlow === "column" || parentBoxFlow === "inline-column";
-    const boxIsFlexColumn = boxFlow === "column" || boxFlow === "inline-column";
-    if (boxIsFlexColumn || parentIsFlexColumn) {
-      if (!parentIsFlexColumn) {
+    const inHorizontalFlexFlow =
+      parentBoxFlow === "flex-x" || parentBoxFlow === "inline-flex-x";
+    const selfHorizontalFlexFlow =
+      boxFlow === "flex-x" || boxFlow === "inline-flex-x";
+    if (selfHorizontalFlexFlow || inHorizontalFlexFlow) {
+      if (!inHorizontalFlexFlow) {
         return {
           flexGrow: 1,
           flexBasis: "0%",
@@ -141,10 +143,10 @@ const DIMENSION_PROPS = {
           width: "auto",
         };
       }
-      return { flexGrow: 1, flexBasis: "0%" }; // Grow horizontally in row
+      return { flexGrow: 1, flexBasis: "0%" }; // Grow horizontally in column
     }
-    if (parentBoxFlow === "row") {
-      return { minWidth: "100%", width: "auto" }; // Take full width in column
+    if (parentBoxFlow === "flex-y") {
+      return { minWidth: "100%", width: "auto" }; // Take full width in row
     }
     return { minWidth: "100%", width: "auto" }; // Take full width outside flex
   },
@@ -152,11 +154,12 @@ const DIMENSION_PROPS = {
     if (!value) {
       return null;
     }
-    const parentIsFlexRow =
-      parentBoxFlow === "row" || parentBoxFlow === "inline-row";
-    const boxIsFlexRow = boxFlow === "row" || boxFlow === "inline-row";
-    if (boxIsFlexRow || parentIsFlexRow) {
-      if (!parentIsFlexRow) {
+    const inVerticalFlexFlow =
+      parentBoxFlow === "flex-y" || parentBoxFlow === "inline-flex-y";
+    const selfVerticalFlexFlow =
+      boxFlow === "flex-y" || boxFlow === "inline-flex-y";
+    if (selfVerticalFlexFlow || inVerticalFlexFlow) {
+      if (!inVerticalFlexFlow) {
         return {
           flexGrow: 1,
           flexBasis: "0%",
@@ -164,10 +167,10 @@ const DIMENSION_PROPS = {
           height: "auto",
         };
       }
-      return { flexGrow: 1, flexBasis: "0%" }; // Make row full height
+      return { flexGrow: 1, flexBasis: "0%" }; // Grow vertically in row
     }
-    if (parentBoxFlow === "row") {
-      return { minHeight: "100%", height: "auto" }; // Make column full height
+    if (parentBoxFlow === "flex-x") {
+      return { minHeight: "100%", height: "auto" }; // Take full height in column
     }
     return { minHeight: "100%", height: "auto" }; // Take full height outside flex
   },
@@ -208,59 +211,60 @@ const POSITION_PROPS = {
   // only the first item will be positioned as expected because subsequent items
   // will be positioned relative to the previous item's margins, not the container edge.
   selfAlignX: (value, { parentBoxFlow }) => {
-    const inGridFlow = parentBoxFlow === "grid";
+    const inGridFlow =
+      parentBoxFlow === "grid" || parentBoxFlow === "inline-grid";
     if (inGridFlow) {
       return { justifySelf: value };
     }
 
-    const inRowFlow = parentBoxFlow === "row" || parentBoxFlow === "inline-row";
-
+    const inVerticalFlexFlow =
+      parentBoxFlow === "flex-y" || parentBoxFlow === "inline-flex-y";
     if (value === "start") {
-      if (inRowFlow) {
+      if (inVerticalFlexFlow) {
         return { alignSelf: "start" };
       }
       return { marginRight: "auto" };
     }
     if (value === "end") {
-      if (inRowFlow) {
+      if (inVerticalFlexFlow) {
         return { alignSelf: "end" };
       }
       return { marginLeft: "auto" };
     }
     if (value === "center") {
-      if (inRowFlow) {
+      if (inVerticalFlexFlow) {
         return { alignSelf: "center" };
       }
       return { marginLeft: "auto", marginRight: "auto" };
     }
-    if (inRowFlow && value !== "stretch") {
+    if (inVerticalFlexFlow && value !== "stretch") {
       return { alignSelf: value };
     }
     return undefined;
   },
   selfAlignY: (value, { parentBoxFlow }) => {
-    const inGridFlow = parentBoxFlow === "grid";
+    const inGridFlow =
+      parentBoxFlow === "grid" || parentBoxFlow === "inline-grid";
     if (inGridFlow) {
       return { alignSelf: value };
     }
 
-    const inColumnFlow =
-      parentBoxFlow === "column" || parentBoxFlow === "inline-column";
-
+    const inHorizontalFlexFlow =
+      parentBoxFlow === "flex-x" || parentBoxFlow === "inline-flex-x";
     if (value === "start") {
-      if (inColumnFlow) {
+      if (inHorizontalFlexFlow) {
         return { alignSelf: "start" };
       }
       return { marginBottom: "auto" };
     }
     if (value === "center") {
-      if (inColumnFlow) {
+      if (inHorizontalFlexFlow) {
         return { alignSelf: "center" };
       }
       return { marginTop: "auto", marginBottom: "auto" };
     }
     if (value === "end") {
-      if (inColumnFlow) {
+      if (inHorizontalFlexFlow) {
         return { alignSelf: "end" };
       }
       return { marginTop: "auto" };
@@ -382,13 +386,13 @@ const VISUAL_PROPS = {
 const CONTENT_PROPS = {
   align: applyOnTwoProps("alignX", "alignY"),
   alignX: (value, { boxFlow }) => {
-    if (boxFlow === "row" || boxFlow === "inline-row") {
+    if (boxFlow === "flex-y" || boxFlow === "inline-flex-y") {
       if (value === "stretch") {
         return undefined; // this is the default
       }
       return { alignItems: value };
     }
-    if (boxFlow === "column" || boxFlow === "inline-column") {
+    if (boxFlow === "flex-x" || boxFlow === "inline-flex-x") {
       if (value === "start") {
         return undefined; // this is the default
       }
@@ -397,32 +401,35 @@ const CONTENT_PROPS = {
     return { textAlign: value };
   },
   alignY: (value, { boxFlow }) => {
-    if (boxFlow === "row" || boxFlow === "inline-row") {
+    if (boxFlow === "flex-y" || boxFlow === "inline-flex-y") {
       if (value === "start") {
         return undefined;
       }
-      return {
-        justifyContent: value,
-      };
+      return { justifyContent: value };
     }
-    if (boxFlow === "column" || boxFlow === "inline-column") {
+    if (boxFlow === "flex-x" || boxFlow === "inline-flex-x") {
       if (value === "stretch") {
         return undefined;
       }
       return { alignItems: value };
     }
-
+    const verticalAlignMap = {
+      center: "middle",
+      start: "top",
+      end: "bottom",
+    };
     return {
-      verticalAlign:
-        { center: "middle", start: "top", end: "bottom" }[value] || value,
+      verticalAlign: verticalAlignMap[value] || value,
     };
   },
   spacing: (value, { boxFlow }) => {
     if (
-      boxFlow === "row" ||
-      boxFlow === "column" ||
-      boxFlow === "inline-row" ||
-      boxFlow === "inline-column"
+      boxFlow === "flex-x" ||
+      boxFlow === "flex-y" ||
+      boxFlow === "inline-flex-x" ||
+      boxFlow === "inline-flex-y" ||
+      boxFlow === "grid" ||
+      boxFlow === "inline-grid"
     ) {
       return {
         gap: resolveSpacingSize(value, "gap"),
@@ -431,7 +438,12 @@ const CONTENT_PROPS = {
     return undefined;
   },
   spacingX: (value, { boxFlow }) => {
-    if (boxFlow === "grid") {
+    if (boxFlow === "flex-x" || boxFlow === "inline-flex-x") {
+      return {
+        gap: resolveSpacingSize(value, "gap"),
+      };
+    }
+    if (boxFlow === "grid" || boxFlow === "inline-grid") {
       return {
         columnGap: resolveSpacingSize(value, "columnGap"),
       };
@@ -439,7 +451,12 @@ const CONTENT_PROPS = {
     return undefined;
   },
   spacingY: (value, { boxFlow }) => {
-    if (boxFlow === "grid") {
+    if (boxFlow === "flex-y" || boxFlow === "inline-flex-y") {
+      return {
+        gap: resolveSpacingSize(value, "gap"),
+      };
+    }
+    if (boxFlow === "grid" || boxFlow === "inline-grid") {
       return {
         rowGap: resolveSpacingSize(value, "rowGap"),
       };

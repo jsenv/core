@@ -32,7 +32,7 @@
       const TableOfContents = () => (
         <Box as="section" marginBottom="xl">
           <Title as="h2">Table des matières</Title>
-          <Box row spacing="xs" marginTop="md">
+          <Box flex="y">
             <Link href="#icon-positioning">1. Icon positioning</Link>
             <Link href="#emoji-icons">2. Emoji icons</Link>
             <Link href="#different-font-sizes">3. Font size and color</Link>
@@ -63,7 +63,7 @@
             <Link anchor href="#icon-positioning" />
             Icon Positioning
           </Title>
-          <Box row spacing="sm" borderRadius="md">
+          <Box flex="y" spacing="s" borderRadius="m">
             <Text size="xs" color="rgb(102, 102, 102)">
               Icon Before Text
             </Text>
@@ -118,10 +118,10 @@
             visual elements.
           </Paragraph>
 
-          <Box row spacing="md" marginTop="md">
-            <Box row>
+          <Box flex="y" spacing="m" marginTop="m">
+            <Box flex="y">
               <Caption>Basic emoji icons:</Caption>
-              <Box row spacing="md">
+              <Box flex="y" spacing="m">
                 <Text>
                   <Icon>📍</Icon> Location
                 </Text>
@@ -137,9 +137,9 @@
               </Box>
             </Box>
 
-            <Box row>
+            <Box flex="y">
               <Caption>Emoji sizes:</Caption>
-              <Box row spacing="md" alignY="center">
+              <Box flex="y" spacing="m" alignY="center">
                 <Text>
                   <Icon size="xxs">🔥</Icon>Fire
                 </Text>
@@ -158,9 +158,9 @@
               </Box>
             </Box>
 
-            <Box row>
+            <Box flex="y">
               <Caption>Emoji in different contexts:</Caption>
-              <Box row spacing="sm">
+              <Box flex="y" spacing="s">
                 <Text>
                   Navigate to <Icon>🏠</Icon> Home or check <Icon>📨</Icon>
                   Messages
@@ -222,8 +222,8 @@
             Icon in Row
           </Title>
           <Box
-            column
-            spacing="md"
+            flex
+            spacing="m"
             style={{
               padding: "16px",
               border: "2px solid #e0e0e0",
@@ -232,7 +232,7 @@
             }}
           >
             <Box
-              row
+              flex="y"
               alignX="start"
               style={{
                 padding: "8px",
@@ -248,7 +248,7 @@
             </Box>
 
             <Box
-              row
+              flex="y"
               style={{
                 padding: "8px",
                 border: "1px solid #ccc",
@@ -263,7 +263,7 @@
             </Box>
 
             <Box
-              row
+              flex="y"
               style={{
                 padding: "8px",
                 border: "1px solid #ccc",
@@ -288,8 +288,8 @@
             Icon in Column
           </Title>
           <Box
-            row
-            spacing="lg"
+            flex="y"
+            spacing="l"
             style={{
               padding: "16px",
               border: "2px solid #e0e0e0",
@@ -298,7 +298,7 @@
             }}
           >
             <Box
-              column
+              flex
               spacing="xs"
               height="70"
               style={{
@@ -315,7 +315,7 @@
             </Box>
 
             <Box
-              column
+              flex
               spacing="xs"
               height="70"
               style={{
@@ -332,7 +332,7 @@
             </Box>
 
             <Box
-              column
+              flex
               spacing="xs"
               height="70"
               style={{
@@ -448,7 +448,7 @@
             <Link anchor href="#icon-text-link" />
             Icon + Text + Link Combinations
           </Title>
-          <Box row spacing="lg">
+          <Box flex="y" spacing="l">
             <div>
               <Text
                 style={{
@@ -524,7 +524,7 @@
             <Link anchor href="#line-height-variations" />
             Line Height
           </Title>
-          <Box row spacing="lg">
+          <Box flex="y" spacing="l">
             <div>
               <Text
                 style={{
@@ -593,7 +593,7 @@
             <Link anchor href="#icon-placement" />
             Icon Placement
           </Title>
-          <Box column spacing="md">
+          <Box flex spacing="m">
             <div>
               <Text
                 style={{
@@ -605,7 +605,7 @@
               >
                 Icons before text
               </Text>
-              <Box row spacing="md">
+              <Box flex="y" spacing="m">
                 <Text>
                   <Icon color="green">
                     <CheckSvg />
@@ -632,7 +632,7 @@
               >
                 Icons after text
               </Text>
-              <Box row spacing="md">
+              <Box flex="y" spacing="m">
                 <Text>
                   External link
                   <Icon>
@@ -685,10 +685,9 @@
 
           <Box column spacing="md">
             <Box
-              row
-              spacing="lg"
-              alignItems="center"
-              justifyContent="center"
+              flex="y"
+              spacing="l"
+              align="center"
               style={{
                 padding: "15px",
                 backgroundColor: "#f8f9fa",
@@ -743,7 +742,7 @@
       const IconTransformSection = () => (
         <Box as="section" marginBottom="xl">
           <Title as="h2">Icon Transformation</Title>
-          <Box column spacing="md">
+          <Box flex spacing="m">
             <div>
               <Text
                 style={{
@@ -755,7 +754,7 @@
               >
                 Rotation + Translation
               </Text>
-              <Box row spacing="md" alignItems="center">
+              <Box flex="y" spacing="m" alignItems="center">
                 <Text>
                   Normal ghost:
                   <Icon color="white">
@@ -793,7 +792,7 @@
             increase/decrease size proportionally while maintaining the square
             aspect ratio.
           </Text>
-          <Box column spacing="lg" marginTop="md">
+          <Box flex spacing="l" marginTop="m">
             <div>
               <Text
                 style={{
@@ -806,7 +805,7 @@
               >
                 Size attribute (proportional scaling)
               </Text>
-              <Box row spacing="lg" alignItems="center">
+              <Box flex="y" spacing="l">
                 <div>
                   <Text
                     style={{
@@ -1099,8 +1098,8 @@
             <Link anchor href="#different-font-sizes" />
             Font Size and Color
           </Title>
-          <Box row spacing="sm">
-            <Text size="sm" color="blue">
+          <Box flex="y" spacing="s">
+            <Text size="s" color="blue">
               <Icon>
                 <HomeSvg />
               </Icon>
@@ -1114,7 +1113,7 @@
               Normal green text
             </Text>
 
-            <Text size="lg" color="red">
+            <Text size="l" color="red">
               <Icon>
                 <SettingsSvg />
               </Icon>
@@ -1128,7 +1127,7 @@
               Extra large purple text
             </Text>
 
-            <Text style={{ fontSize: "50px" }} color="orange">
+            <Text size="50" color="orange">
               <Icon>
                 <HeartSvg />
               </Icon>
@@ -1243,7 +1242,7 @@
             <Link anchor href="#multiple-icons" />
             Multiple Icons
           </Title>
-          <Box row spacing="sm">
+          <Box flex="y" spacing="s">
             <Text>
               <Icon>
                 <HomeSvg />
@@ -1305,11 +1304,11 @@
             spacing and hover effects:
           </Paragraph>
           <Box
-            row
-            spacing="md"
-            padding="md"
+            flex="y"
+            spacing="m"
+            padding="m"
             style={{ backgroundColor: "#f8f9fa" }}
-            borderRadius="sm"
+            borderRadius="s"
             alignX="start"
           >
             <Link href="#home">Go to Homepage</Link>
@@ -1388,16 +1387,15 @@
           </Paragraph>
 
           <Box
-            row
-            spacing="md"
-            padding="md"
+            flex="y"
+            spacing="m"
+            padding="m"
             style={{ backgroundColor: "#f8f9fa" }}
-            borderRadius="sm"
-            alignX="start"
+            borderRadius="s"
           >
             <Button
-              paddingX="lg"
-              paddingY="md"
+              paddingX="l"
+              paddingY="m"
               backgroundColor="#007bff"
               borderColor="#007bff"
               textColor="white"
@@ -1564,7 +1562,7 @@
             <Link anchor href="#integration" />
             Integration with Components
           </Title>
-          <Box column spacing="lg">
+          <Box flex spacing="l">
             <div>
               <Text
                 style={{

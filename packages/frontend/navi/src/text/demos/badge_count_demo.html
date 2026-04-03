@@ -666,10 +666,10 @@
               components. Use the buttons to test loading transitions.
             </Paragraph>
 
-            <Box column spacing="m">
-              <Box row spacing="md" alignX="start">
+            <Box flex spacing="m">
+              <Box flex="y" spacing="m" alignX="start">
                 <Caption>Loading state with default badge</Caption>
-                <Box row spacing="sm" alignY="center">
+                <Box flex="y" alignX="start" spacing="s">
                   <Button action={() => setLoading(true)} disabled={loading}>
                     Start Loading
                   </Button>
@@ -679,8 +679,9 @@
                 </Box>
 
                 <Box
-                  row
-                  spacing="md"
+                  flex="y"
+                  alignX="start"
+                  spacing="m"
                   alignY="center"
                   background="lightyellow"
                   border="1px dotted red"
@@ -698,9 +699,9 @@
                 </Box>
               </Box>
 
-              <Box row spacing="md" alignX="start">
+              <Box flex="y" spacing="m" alignX="start">
                 <Caption>Loading state with ellipse</Caption>
-                <Box row spacing="sm" alignY="center">
+                <Box flex="y" spacing="s" alignY="center">
                   <Button
                     action={() => setEllipseLoading(true)}
                     disabled={ellipseLoading}
@@ -716,8 +717,8 @@
                 </Box>
 
                 <Box
-                  row
-                  spacing="md"
+                  flex
+                  spacing="m"
                   alignY="center"
                   background="lightyellow"
                   border="1px dotted red"
@@ -950,7 +951,7 @@
               <div>
                 <Caption>Vertically aligned</Caption>
                 <br />
-                <Button box alignY="center" spacing="xxs">
+                <Button flex alignY="center" spacing="xxs">
                   <span>Tâches</span>
                   <BadgeCount background="#2196f3" color="white">
                     5
@@ -961,7 +962,7 @@
               <div>
                 <Caption>Vertically aligned + "m" spacing</Caption>
                 <br />
-                <Button box alignY="center" spacing="m">
+                <Button flex alignY="center" spacing="m">
                   <span>Tâches</span>
                   <BadgeCount background="#2196f3" color="white">
                     5
