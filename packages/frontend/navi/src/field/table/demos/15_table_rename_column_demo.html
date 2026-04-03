@@ -147,7 +147,8 @@
       };
 
       const Frontend = ({ rows, columnsConfig, onRenameColumn }) => {
-        const [orderedColumns] = useOrderedColumns(columnsConfig, {
+        // const columnOrder = columnsConfig.map((col) => col.name);
+        const [orderedColumns] = useOrderedColumns(columnsConfig, undefined, {
           columnIdKey: "name",
         });
         const orderedColumnIds = orderedColumns.map((col) => col.name);

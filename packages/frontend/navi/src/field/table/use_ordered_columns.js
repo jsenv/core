@@ -7,7 +7,8 @@ import { useMemo, useState } from "preact/hooks";
 // so the user's arrangement survives re-renders without a round-trip.
 export const useOrderedColumns = (
   columns,
-  { columnIdKey = "id", initialOrder } = {},
+  initialOrder,
+  { columnIdKey = "id" } = {},
 ) => {
   const [columnIds, idToColumnMap] = useMemo(() => {
     const columnIds = [];
