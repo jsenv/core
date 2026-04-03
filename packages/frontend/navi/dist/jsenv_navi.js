@@ -3,17 +3,11 @@ import { isValidElement, createContext, toChildArray, render, createRef, cloneEl
 import { useErrorBoundary, useLayoutEffect, useEffect, useMemo, useRef, useState, useCallback, useContext, useImperativeHandle, useId } from "preact/hooks";
 import { jsxs, jsx, Fragment } from "preact/jsx-runtime";
 import { signal, effect, computed, batch, useSignal } from "@preact/signals";
-import { createIterableWeakSet, mergeOneStyle, stringifyStyle, createPubSub, mergeTwoStyles, normalizeStyles, createGroupTransitionController, getElementSignature, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, findBefore, findAfter, createValueEffect, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, allowWheelThrough, resolveCSSColor, createStyleController, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, hasCSSSizeUnit, resolveCSSSize, activeElementSignal, canInterceptKeys, initFocusGroup, elementIsFocusable, contrastColor, resolveColorLuminance, dragAfterThreshold, getScrollContainer, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
+import { createIterableWeakSet, mergeOneStyle, stringifyStyle, createPubSub, mergeTwoStyles, normalizeStyles, createGroupTransitionController, getElementSignature, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, findBefore, findAfter, createValueEffect, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, allowWheelThrough, resolveCSSColor, createStyleController, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, hasCSSSizeUnit, resolveCSSSize, activeElementSignal, canInterceptKeys, contrastColor, initFocusGroup, elementIsFocusable, resolveColorLuminance, dragAfterThreshold, getScrollContainer, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
 export { contrastColor } from "@jsenv/dom";
 import { prefixFirstAndIndentRemainingLines } from "@jsenv/humanize";
 import { createValidity } from "@jsenv/validity";
 import { createPortal, forwardRef } from "preact/compat";
-
-const IDLE = { id: "idle" };
-const RUNNING = { id: "running" };
-const ABORTED = { id: "aborted" };
-const FAILED = { id: "failed" };
-const COMPLETED = { id: "completed" };
 
 const actionPrivatePropertiesWeakMap = new WeakMap();
 const getActionPrivateProperties = (action) => {
@@ -26,6 +20,12 @@ const getActionPrivateProperties = (action) => {
 const setActionPrivateProperties = (action, properties) => {
   actionPrivatePropertiesWeakMap.set(action, properties);
 };
+
+const IDLE = { id: "idle" };
+const RUNNING = { id: "running" };
+const ABORTED = { id: "aborted" };
+const FAILED = { id: "failed" };
+const COMPLETED = { id: "completed" };
 
 const useActionStatus = (action) => {
   if (!action) {
@@ -328,7 +328,7 @@ const SYMBOL_IDENTITY = Symbol.for("navi_object_identity");
 const compareTwoJsValues = (
   rootA,
   rootB,
-  { keyComparator, ignoreArrayOrder = false } = {},
+  { keyComparator, ignoreArrayOrder = false, lightKeySet } = {},
 ) => {
   const seenSet = new Set();
   const compare = (a, b) => {
@@ -388,17 +388,16 @@ const compareTwoJsValues = (
           let foundMatch = false;
 
           for (let j = 0; j < b.length; j++) {
-            if (usedIndices.has(j)) continue; // Already matched with another element
-
+            if (usedIndices.has(j)) {
+              continue; // Already matched with another element
+            }
             const bValue = b[j];
-            const comparator = keyComparator || compare;
-            if (comparator(aValue, bValue, i, compare)) {
+            if (compareAt(aValue, bValue, i)) {
               foundMatch = true;
               usedIndices.add(j);
               break;
             }
           }
-
           if (!foundMatch) {
             return false;
           }
@@ -410,8 +409,7 @@ const compareTwoJsValues = (
       while (i < a.length) {
         const aValue = a[i];
         const bValue = b[i];
-        const comparator = keyComparator || compare;
-        if (!comparator(aValue, bValue, i, compare)) {
+        if (!compareAt(aValue, bValue, i)) {
           return false;
         }
         i++;
@@ -433,16 +431,40 @@ const compareTwoJsValues = (
     if (aKeys.length !== bKeys.length) {
       return false;
     }
-    for (const key of aKeys) {
-      const aValue = a[key];
-      const bValue = b[key];
-      const comparator = keyComparator || compare;
-      if (!comparator(aValue, bValue, key, compare)) {
-        return false;
+    if (lightKeySet) {
+      // compare light keys first, then remaining keys
+      // (optimization for cases where some keys are more likely to differ and/or faster to compare)
+      const keySet = new Set(aKeys);
+      for (const lightKey of lightKeySet) {
+        const aValue = a[lightKey];
+        const bValue = b[lightKey];
+        if (!compareAt(aValue, bValue, lightKey)) {
+          return false;
+        }
+        keySet.delete(lightKey);
+      }
+      for (const key of keySet) {
+        const aValue = a[key];
+        const bValue = b[key];
+        if (!compareAt(aValue, bValue, key)) {
+          return false;
+        }
+      }
+    } else {
+      for (const key of aKeys) {
+        const aValue = a[key];
+        const bValue = b[key];
+        if (!compareAt(aValue, bValue, key)) {
+          return false;
+        }
       }
     }
     return true;
   };
+  const compareAt = keyComparator
+    ? (a, b, keyOrArrayIndex) => keyComparator(a, b, keyOrArrayIndex, compare)
+    : compare;
+
   return compare(rootA, rootB);
 };
 
@@ -1703,6 +1725,7 @@ const createAction = (callback, rootOptions = {}) => {
         hasRenderers: false, // Flag to track if action is bound to UI components
       };
       let sideEffectCleanup;
+      let completeSideEffectCleanup;
 
       const performRun = (runParams) => {
         const {
@@ -1792,6 +1815,7 @@ const createAction = (callback, rootOptions = {}) => {
            * AND put the action that loaded that resource back into loading state
            * before the UI attempts to render the now-missing resource.
            */
+
           batch(() => {
             const value = resultToValue
               ? resultToValue(runResult, action)
@@ -1804,7 +1828,7 @@ const createAction = (callback, rootOptions = {}) => {
               outputSignal.value = data;
             }
             onComplete?.(data, action);
-            completeSideEffect?.(action);
+            completeSideEffectCleanup = completeSideEffect?.(action);
           });
           if (DEBUG$3) {
             console.log(`"${action}": completed`);
@@ -1911,6 +1935,10 @@ const createAction = (callback, rootOptions = {}) => {
         if (sideEffectCleanup) {
           sideEffectCleanup(reason);
           sideEffectCleanup = undefined;
+        }
+        if (completeSideEffectCleanup) {
+          completeSideEffectCleanup(reason);
+          completeSideEffectCleanup = undefined;
         }
 
         actionPromiseMap.delete(action);
@@ -2411,8 +2439,7 @@ const useActionData = (action) => {
   if (!action) {
     return undefined;
   }
-  const { computedDataSignal } = getActionPrivateProperties(action);
-  const data = computedDataSignal.value;
+  const data = action.dataSignal.value;
   return data;
 };
 
@@ -2543,6 +2570,2136 @@ const localStorageSignal = (key) => {
   });
 
   return valueSignal;
+};
+
+const getCallerInfo = (targetFunction = null, additionalOffset = 0) => {
+  const originalPrepareStackTrace = Error.prepareStackTrace;
+  try {
+    Error.prepareStackTrace = (_, stack) => stack;
+
+    const error = new Error();
+    const stack = error.stack;
+
+    if (!stack || stack.length === 0 || !Array.isArray(stack)) {
+      return { raw: "unknown" };
+    }
+
+    let targetIndex = -1;
+
+    if (targetFunction) {
+      // ✅ Chercher la fonction cible par référence directe
+      for (let i = 0; i < stack.length; i++) {
+        const frame = stack[i];
+        const frameFunction = frame.getFunction();
+
+        // ✅ Comparaison directe par référence
+        if (frameFunction === targetFunction) {
+          targetIndex = i;
+          break;
+        }
+      }
+
+      if (targetIndex === -1) {
+        return {
+          raw: `target function not found in stack`,
+          targetFunction: targetFunction.name,
+        };
+      }
+
+      // ✅ Prendre la fonction qui appelle targetFunction + offset
+      const callerIndex = targetIndex + 1 + additionalOffset;
+
+      if (callerIndex >= stack.length) {
+        return {
+          raw: `caller at offset ${additionalOffset} not found`,
+          targetFunction: targetFunction.name,
+          requestedIndex: callerIndex,
+          stackLength: stack.length,
+        };
+      }
+
+      const callerFrame = stack[callerIndex];
+      return {
+        file: callerFrame.getFileName(),
+        line: callerFrame.getLineNumber(),
+        column: callerFrame.getColumnNumber(),
+        function: callerFrame.getFunctionName() || "<anonymous>",
+        raw: callerFrame.toString(),
+        targetFunction: targetFunction.name,
+        offset: additionalOffset,
+      };
+    }
+
+    // ✅ Comportement original si pas de targetFunction
+    if (stack.length > 2) {
+      const callerFrame = stack[2 + additionalOffset];
+
+      if (!callerFrame) {
+        return {
+          raw: `caller at offset ${additionalOffset} not found`,
+          requestedIndex: 2 + additionalOffset,
+          stackLength: stack.length,
+        };
+      }
+
+      return {
+        file: callerFrame.getFileName(),
+        line: callerFrame.getLineNumber(),
+        column: callerFrame.getColumnNumber(),
+        function: callerFrame.getFunctionName() || "<anonymous>",
+        raw: callerFrame.toString(),
+        offset: additionalOffset,
+      };
+    }
+
+    return { raw: "unknown" };
+  } finally {
+    Error.prepareStackTrace = originalPrepareStackTrace;
+  }
+};
+
+const primitiveCanBeId = (value) => {
+  const type = typeof value;
+  if (type === "string" || type === "number" || type === "symbol") {
+    return true;
+  }
+  return false;
+};
+
+const arraySignalStore = (
+  initialArray = [],
+  idKey = "id",
+  {
+    uniqueKeys = [],
+    name,
+    createItem = (props) => {
+      return { ...props };
+    },
+  },
+) => {
+  const store = {
+    name,
+  };
+
+  const createItemFromProps = (props) => {
+    if (props === null || typeof props !== "object") {
+      return props;
+    }
+    const item = createItem(props);
+    return item;
+  };
+
+  const arraySignal = signal(initialArray);
+  const derivedSignal = computed(() => {
+    const array = arraySignal.value;
+    const idSet = new Set(); // will be used to detect id changes (deletion, addition)
+    const idMap = new Map(); // used to speep up finding item by id
+    for (const item of array) {
+      const id = item[idKey];
+      idSet.add(id);
+      idMap.set(id, item);
+    }
+    return [idSet, idMap];
+  });
+  const idSetSignal = computed(() => derivedSignal.value[0]);
+  const idMapSignal = computed(() => derivedSignal.value[1]);
+  const previousIdSetSignal = signal(new Set(idSetSignal.peek()));
+  const idChangeCallbackSet = new Set();
+  effect(() => {
+    const idSet = idSetSignal.value;
+    const previousIdSet = previousIdSetSignal.peek();
+    const setCopy = new Set();
+    let modified = false;
+    for (const id of idSet) {
+      if (!previousIdSet.has(id)) {
+        modified = true;
+      }
+      setCopy.add(id);
+    }
+    if (modified) {
+      previousIdSetSignal.value = setCopy;
+      for (const idChangeCallback of idChangeCallbackSet) {
+        idChangeCallback(idSet, previousIdSet);
+      }
+    }
+  });
+
+  const itemPropertiesObserverSet = new Set();
+  const observeItemProperties = (itemSignal, callback) => {
+    const observer = { itemSignal, callback };
+    itemPropertiesObserverSet.add(observer);
+    return () => {
+      itemPropertiesObserverSet.delete(observer);
+    };
+  };
+
+  const propertiesObserverSet = new Set();
+  const observeProperties = (callback) => {
+    propertiesObserverSet.add(callback);
+    return () => {
+      propertiesObserverSet.delete(callback);
+    };
+  };
+
+  const removalsCallbackSet = new Set();
+  const observeRemovals = (callback) => {
+    removalsCallbackSet.add(callback);
+  };
+
+  const itemMatchLifecycleSet = new Set();
+  const registerItemMatchLifecycle = (matchPredicate, { match, nomatch }) => {
+    const matchState = {
+      hasMatched: false,
+      hadMatchedBefore: false,
+    };
+    const itemMatchLifecycle = {
+      matchPredicate,
+      match,
+      nomatch,
+      matchState,
+    };
+    itemMatchLifecycleSet.add(itemMatchLifecycle);
+  };
+
+  const readIdFromItemProps = (props, array) => {
+    let id;
+    if (Object.hasOwn(props, idKey)) {
+      id = props[idKey];
+      return id;
+    }
+    if (uniqueKeys.length === 0) {
+      return undefined;
+    }
+
+    let uniqueKey;
+    for (const uniqueKeyCandidate of uniqueKeys) {
+      if (Object.hasOwn(props, uniqueKeyCandidate)) {
+        uniqueKey = uniqueKeyCandidate;
+        break;
+      }
+    }
+    if (!uniqueKey) {
+      throw new Error(
+        `item properties must have one of the following keys:
+${[idKey, ...uniqueKeys].join(", ")}`,
+      );
+    }
+    const uniqueKeyValue = props[uniqueKey];
+    for (const itemCandidate of array) {
+      const uniqueKeyCandidate = itemCandidate[uniqueKey];
+      if (uniqueKeyCandidate === uniqueKeyValue) {
+        id = itemCandidate[idKey];
+        break;
+      }
+    }
+    if (!id) {
+      throw new Error(
+        `None of the existing item uses ${uniqueKey}: ${uniqueKeyValue}, so item properties must specify the "${idKey}" key.`,
+      );
+    }
+    return id;
+  };
+
+  effect(() => {
+    const array = arraySignal.value;
+
+    for (const {
+      matchPredicate,
+      match,
+      nomatch,
+      matchState,
+    } of itemMatchLifecycleSet) {
+      let currentlyHasMatch = false;
+
+      // Check if any item currently matches
+      for (const item of array) {
+        if (matchPredicate(item)) {
+          currentlyHasMatch = true;
+          break;
+        }
+      }
+
+      // Handle state transitions
+      if (currentlyHasMatch && !matchState.hasMatched) {
+        // New match found
+        matchState.hasMatched = true;
+        const isRematch = matchState.hadMatchedBefore;
+        if (match) {
+          match(isRematch);
+        }
+      } else if (!currentlyHasMatch && matchState.hasMatched) {
+        // No longer has match
+        matchState.hasMatched = false;
+        matchState.hadMatchedBefore = true;
+        if (nomatch) {
+          nomatch();
+        }
+      }
+    }
+  });
+
+  const select = (...args) => {
+    const array = arraySignal.value;
+    const idMap = idMapSignal.value;
+
+    let property;
+    let value;
+    if (args.length === 1) {
+      property = idKey;
+      value = args[0];
+      if (value !== null && typeof value === "object") {
+        value = readIdFromItemProps(value, array);
+      }
+    } else if (args.length === 2) {
+      property = args[0];
+      value = args[1];
+    }
+    if (property === idKey) {
+      return idMap.get(value);
+    }
+    for (const itemCandidate of array) {
+      const valueCandidate =
+        typeof property === "function"
+          ? property(itemCandidate)
+          : itemCandidate[property];
+      if (valueCandidate === value) {
+        return itemCandidate;
+      }
+    }
+    return null;
+  };
+  const selectAll = (toMatchArray) => {
+    const array = arraySignal.value;
+    const result = [];
+    const idMap = idMapSignal.value;
+    for (const toMatch of toMatchArray) {
+      const id =
+        toMatch !== null && typeof toMatch === "object"
+          ? readIdFromItemProps(toMatch, array)
+          : toMatch;
+      const item = idMap.get(id);
+      if (item) {
+        result.push(item);
+      }
+    }
+    return result;
+  };
+  const upsert = (...args) => {
+    const mutationsMap = new Map(); // Map<itemId, propertyMutations>
+    const triggerPropertyMutations = () => {
+      // we call at the end so that itemWithProps and arraySignal.value was set too
+      for (const itemPropertiesObserver of itemPropertiesObserverSet) {
+        const { itemSignal, callback } = itemPropertiesObserver;
+        const watchedItem = itemSignal.peek();
+        if (!watchedItem) {
+          continue;
+        }
+
+        // Check if this item has mutations
+        const itemMutations = mutationsMap.get(watchedItem[idKey]);
+        if (itemMutations) {
+          callback(itemMutations);
+        }
+      }
+      if (propertiesObserverSet.size) {
+        const mutations = Array.from(mutationsMap.values());
+        for (const propertiesObserver of propertiesObserverSet) {
+          propertiesObserver(mutations);
+        }
+      }
+    };
+    const assign = (item, props) => {
+      const itemOwnPropertyDescriptors = Object.getOwnPropertyDescriptors(item);
+      const itemOwnKeys = Object.keys(itemOwnPropertyDescriptors);
+      const itemWithProps = Object.create(
+        Object.getPrototypeOf(item),
+        itemOwnPropertyDescriptors,
+      );
+      let hasChanges = false;
+      const propertyMutations = {};
+
+      for (const key of Object.keys(props)) {
+        const newValue = props[key];
+        if (itemOwnKeys.includes(key)) {
+          const oldValue = item[key];
+          if (newValue !== oldValue) {
+            hasChanges = true;
+            itemWithProps[key] = newValue;
+            propertyMutations[key] = {
+              oldValue,
+              newValue,
+              target: item,
+              newTarget: itemWithProps,
+            };
+          }
+        } else {
+          hasChanges = true;
+          itemWithProps[key] = newValue;
+          propertyMutations[key] = {
+            added: true,
+            newValue,
+            target: item,
+            newTarget: itemWithProps,
+          };
+        }
+      }
+
+      if (!hasChanges) {
+        return item;
+      }
+
+      // Store mutations for this specific item
+      mutationsMap.set(item[idKey], propertyMutations);
+      return itemWithProps;
+    };
+
+    const array = arraySignal.peek();
+    if (args.length === 1 && Array.isArray(args[0])) {
+      const propsArray = args[0];
+      if (array.length === 0) {
+        const arrayAllCreated = [];
+        for (const props of propsArray) {
+          const item = createItemFromProps(props);
+          arrayAllCreated.push(item);
+        }
+        arraySignal.value = arrayAllCreated;
+        return arrayAllCreated;
+      }
+      let hasNew = false;
+      let hasUpdate = false;
+      const arraySomeUpdated = [];
+      const arrayWithOnlyAffectedItems = [];
+      const existingEntryMap = new Map();
+      let index = 0;
+      while (index < array.length) {
+        const existingItem = array[index];
+        const id = existingItem[idKey];
+        existingEntryMap.set(id, {
+          existingItem,
+          existingItemIndex: index,
+          processed: false,
+        });
+        index++;
+      }
+
+      for (const props of propsArray) {
+        const id = readIdFromItemProps(props, array);
+        const existingEntry = existingEntryMap.get(id);
+        if (existingEntry) {
+          const { existingItem } = existingEntry;
+          const itemWithPropsOrItem = assign(existingItem, props);
+          if (itemWithPropsOrItem !== existingItem) {
+            hasUpdate = true;
+          }
+          arraySomeUpdated.push(itemWithPropsOrItem);
+          existingEntry.processed = true;
+          arrayWithOnlyAffectedItems.push(itemWithPropsOrItem);
+        } else {
+          hasNew = true;
+          const item = createItemFromProps(props);
+          arraySomeUpdated.push(item);
+          arrayWithOnlyAffectedItems.push(item);
+        }
+      }
+
+      for (const [, existingEntry] of existingEntryMap) {
+        if (!existingEntry.processed) {
+          arraySomeUpdated.push(existingEntry.existingItem);
+        }
+      }
+
+      if (hasNew || hasUpdate) {
+        arraySignal.value = arraySomeUpdated;
+        triggerPropertyMutations();
+        return arrayWithOnlyAffectedItems;
+      }
+      return arrayWithOnlyAffectedItems;
+    }
+    let existingItem = null;
+    let updatedItem = null;
+    const arraySomeUpdated = [];
+    let propertyToMatch;
+    let valueToMatch;
+    let props;
+    if (args.length === 1) {
+      const firstArg = args[0];
+      propertyToMatch = idKey;
+      if (!firstArg || typeof firstArg !== "object") {
+        throw new TypeError(
+          `Expected an object as first argument, got ${firstArg}`,
+        );
+      }
+      valueToMatch = readIdFromItemProps(firstArg, array);
+      props = firstArg;
+    } else if (args.length === 2) {
+      propertyToMatch = idKey;
+      valueToMatch = args[0];
+      if (typeof valueToMatch === "object") {
+        valueToMatch = valueToMatch[idKey];
+      }
+      props = args[1];
+    } else if (args.length === 3) {
+      propertyToMatch = args[0];
+      valueToMatch = args[1];
+      props = args[2];
+    }
+    for (const itemCandidate of array) {
+      const itemCandidateValue =
+        typeof propertyToMatch === "function"
+          ? propertyToMatch(itemCandidate)
+          : itemCandidate[propertyToMatch];
+      if (itemCandidateValue === valueToMatch) {
+        const itemWithPropsOrItem = assign(itemCandidate, props);
+        if (itemWithPropsOrItem === itemCandidate) {
+          existingItem = itemCandidate;
+        } else {
+          updatedItem = itemWithPropsOrItem;
+        }
+        arraySomeUpdated.push(itemWithPropsOrItem);
+      } else {
+        arraySomeUpdated.push(itemCandidate);
+      }
+    }
+    if (existingItem) {
+      return existingItem;
+    }
+    if (updatedItem) {
+      arraySignal.value = arraySomeUpdated;
+      triggerPropertyMutations();
+      return updatedItem;
+    }
+    const item = createItemFromProps(props);
+    arraySomeUpdated.push(item);
+    arraySignal.value = arraySomeUpdated;
+    triggerPropertyMutations();
+    return item;
+  };
+  const drop = (...args) => {
+    const removedItemArray = [];
+    const triggerRemovedMutations = () => {
+      if (removedItemArray.length === 0) {
+        return;
+      }
+      // we call at the end so that itemWithProps and arraySignal.value was set too
+      for (const removalsCallback of removalsCallbackSet) {
+        removalsCallback(removedItemArray);
+      }
+    };
+
+    const array = arraySignal.peek();
+    if (args.length === 1 && Array.isArray(args[0])) {
+      const firstArg = args[0];
+      const arrayWithoutDroppedItems = [];
+      let hasFound = false;
+      const idToRemoveSet = new Set();
+      const idRemovedArray = [];
+
+      for (const value of firstArg) {
+        if (typeof value === "object" && value !== null) {
+          const id = readIdFromItemProps(value, array);
+          idToRemoveSet.add(id);
+        } else if (!primitiveCanBeId(value)) {
+          throw new TypeError(`id to drop must be an id, got ${value}`);
+        }
+        idToRemoveSet.add(value);
+      }
+      for (const existingItem of array) {
+        const existingItemId = existingItem[idKey];
+        if (idToRemoveSet.has(existingItemId)) {
+          hasFound = true;
+          idToRemoveSet.delete(existingItemId);
+          idRemovedArray.push(existingItemId);
+        } else {
+          arrayWithoutDroppedItems.push(existingItem);
+        }
+      }
+      if (idToRemoveSet.size > 0) {
+        console.warn(
+          `arraySignalStore.drop: Some ids were not found in the array: ${Array.from(idToRemoveSet).join(", ")}`,
+        );
+      }
+      if (hasFound) {
+        arraySignal.value = arrayWithoutDroppedItems;
+        triggerRemovedMutations();
+        return idRemovedArray;
+      }
+      return [];
+    }
+    let propertyToMatch;
+    let valueToMatch;
+    if (args.length === 1) {
+      propertyToMatch = idKey;
+      valueToMatch = args[0];
+      if (valueToMatch !== null && typeof valueToMatch === "object") {
+        valueToMatch = readIdFromItemProps(valueToMatch, array);
+      } else if (!primitiveCanBeId(valueToMatch)) {
+        throw new TypeError(`id to drop must be an id, got ${valueToMatch}`);
+      }
+    } else {
+      propertyToMatch = args[0];
+      valueToMatch = args[1];
+    }
+    const arrayWithoutItemToDrop = [];
+    let found = false;
+    let itemDropped = null;
+    for (const itemCandidate of array) {
+      const itemCandidateValue =
+        typeof propertyToMatch === "function"
+          ? propertyToMatch(itemCandidate)
+          : itemCandidate[propertyToMatch];
+      if (itemCandidateValue === valueToMatch) {
+        itemDropped = itemCandidate;
+        found = true;
+      } else {
+        arrayWithoutItemToDrop.push(itemCandidate);
+      }
+    }
+    if (found) {
+      arraySignal.value = arrayWithoutItemToDrop;
+      removedItemArray.push(itemDropped);
+      triggerRemovedMutations();
+      return itemDropped[idKey];
+    }
+    return null;
+  };
+
+  const signalForUniqueKey = (uniqueKey, uniqueKeyValueSignal) => {
+    const itemIdSignal = signal(null);
+    const check = (value) => {
+      const item = select(uniqueKey, value);
+      if (!item) {
+        return false;
+      }
+      itemIdSignal.value = item[idKey];
+      return true;
+    };
+    if (!check()) {
+      effect(function () {
+        const uniqueKeyValue = uniqueKeyValueSignal.value;
+        if (check(uniqueKeyValue)) {
+          this.dispose();
+        }
+      });
+    }
+
+    return computed(() => {
+      return select(itemIdSignal.value);
+    });
+  };
+
+  const observeIdChanges = (callback) => {
+    idChangeCallbackSet.add(callback);
+    return () => {
+      idChangeCallbackSet.delete(callback);
+    };
+  };
+
+  Object.assign(store, {
+    uniqueKeys,
+    arraySignal,
+    select,
+    selectAll,
+    upsert,
+    drop,
+
+    observeItemProperties,
+    observeProperties,
+    observeRemovals,
+    observeIdChanges,
+    registerItemMatchLifecycle,
+    signalForUniqueKey,
+  });
+  return store;
+};
+
+/*
+ * Default autorerun behavior explanation:
+ *  GET: false (RECOMMENDED)
+ *  What happens:
+ *  - GET actions are reset by DELETE operations (not rerun)
+ *  - DELETE operation on the displayed item would display nothing in the UI (action is in IDLE state)
+ *  - PUT/PATCH operations update UI via signals, no rerun needed
+ *  - This approach minimizes unnecessary API calls
+ *
+ *  How to handle:
+ *  - Applications can provide custom UI for deleted items (e.g., "Item not found")
+ *  - Or redirect users to appropriate pages (e.g., back to list view)
+ *
+ *  Alternative (NOT RECOMMENDED):
+ *  - Use GET: ["DELETE"] to rerun and display 404 error received from backend
+ *  - Poor UX: users expect immediate feedback, not loading + error state
+ *
+ *  GET_MANY: ["POST"]
+ *  - POST: New items may or may not appear in lists (depends on filters, pagination, etc.)
+ *    Backend determines visibility better than client-side logic
+ *  - DELETE: Excluded by default because:
+ *    • UI handles deletions via store signals (selectAll filters out deleted items)
+ *    • DELETE operations rarely change list content beyond item removal
+ *    • Avoids unnecessary API calls (can be overridden if needed)
+ */
+const defaultRerunOn = {
+  GET: false,
+  GET_MANY: [
+    "POST",
+    // "DELETE"
+  ],
+};
+
+// This handles ALL resource lifecycle logic (rerun/reset) across all resources
+const createResourceLifecycleManager = () => {
+  const registeredResources = new Map(); // Map<resourceInstance, lifecycleConfig>
+  const resourceDependencies = new Map(); // Map<resourceInstance, Set<dependentResources>>
+
+  const registerResource = (resourceScope, config) => {
+    const {
+      rerunOn = defaultRerunOn,
+      paramScope = null,
+      dependencies = [],
+      uniqueKeys = [],
+    } = config;
+
+    registeredResources.set(resourceScope, {
+      rerunOn,
+      paramScope,
+      uniqueKeys,
+      restActionSet: new Set(),
+    });
+
+    // Register dependencies
+    if (dependencies.length > 0) {
+      for (const dependency of dependencies) {
+        if (!resourceDependencies.has(dependency)) {
+          resourceDependencies.set(dependency, new Set());
+        }
+        resourceDependencies.get(dependency).add(resourceScope);
+      }
+    }
+  };
+  const registerAction = (resourceScope, restAction) => {
+    const config = registeredResources.get(resourceScope);
+    if (config) {
+      config.restActionSet.add(restAction);
+    }
+  };
+
+  // Determines which actions to rerun/reset when an action completes.
+  const findEffectOnActions = (triggeringAction, triggeringActionContext) => {
+    const actionsToRerun = new Set();
+    const actionsToReset = new Set();
+    const reasonSet = new Set();
+
+    const triggerVerb = triggeringAction.meta.verb;
+    const triggerIsMany = triggeringAction.meta.isMany;
+    const triggerResourceScope = triggeringActionContext.resourceScope;
+
+    for (const [resourceScope, config] of registeredResources) {
+      const shouldRerunGetMany = shouldRerunAfter(
+        config.rerunOn.GET_MANY,
+        triggerVerb,
+      );
+      const shouldRerunGet = shouldRerunAfter(config.rerunOn.GET, triggerVerb);
+      const paramScope = config.paramScope;
+
+      // Skip if no rerun or reset rules apply
+      const hasUniqueKeyAutorerun =
+        (triggerVerb === "POST" ||
+          triggerVerb === "PUT" ||
+          triggerVerb === "PATCH") &&
+        config.uniqueKeys.length > 0;
+
+      if (
+        !shouldRerunGetMany &&
+        !shouldRerunGet &&
+        triggerVerb !== "DELETE" &&
+        !hasUniqueKeyAutorerun
+      ) {
+        continue;
+      }
+
+      // Parameter scope predicate for config-driven rules
+      // Same scope ID or no scope = compatible, subset check for different scopes
+      const paramScopePredicate = (candidateAction) => {
+        const candidateParamScope = candidateAction.meta.paramScope;
+        if (candidateParamScope.id === paramScope.id) {
+          return true;
+        }
+        return isParamSubset(candidateParamScope.params, paramScope.params);
+      };
+
+      for (const restAction of config.restActionSet) {
+        // Find all instances of this action
+        const actionCandidateArray = restAction.matchAllSelfOrDescendant(
+          (action) =>
+            !action.isPrerun && action.completed && action !== triggeringAction,
+        );
+
+        for (const actionCandidate of actionCandidateArray) {
+          const candidateVerb = actionCandidate.meta.verb;
+          if (triggerVerb === candidateVerb) {
+            continue;
+          }
+          const candidateIsPlural = actionCandidate.meta.isMany;
+          const isSameResource = triggerResourceScope === resourceScope;
+
+          // Config-driven same-resource effects (respects param scope)
+          config_effect: {
+            if (
+              !isSameResource ||
+              triggerVerb === "GET" ||
+              candidateVerb !== "GET"
+            ) {
+              break config_effect;
+            }
+            const shouldRerun = candidateIsPlural
+              ? shouldRerunGetMany
+              : shouldRerunGet;
+            if (!shouldRerun) {
+              break config_effect;
+            }
+            if (!paramScopePredicate(actionCandidate)) {
+              break config_effect;
+            }
+            actionsToRerun.add(actionCandidate);
+            reasonSet.add("same-resource autorerun");
+            continue;
+          }
+
+          // DELETE effects on same resource (ignores param scope)
+          delete_effect: {
+            if (!isSameResource || triggerVerb !== "DELETE") {
+              break delete_effect;
+            }
+            if (candidateIsPlural) {
+              if (!shouldRerunGetMany) {
+                break delete_effect;
+              }
+              actionsToRerun.add(actionCandidate);
+              reasonSet.add("same-resource DELETE rerun GET_MANY");
+              continue;
+            }
+            // Get the ID(s) that were deleted
+            const { valueSignal } = triggeringAction;
+            const deleteIdSet = triggerIsMany
+              ? new Set(valueSignal.peek())
+              : new Set([valueSignal.peek()]);
+
+            const candidateId = actionCandidate.value;
+            const isAffected = deleteIdSet.has(candidateId);
+            if (!isAffected) {
+              break delete_effect;
+            }
+            if (candidateVerb === "GET" && shouldRerunGet) {
+              actionsToRerun.add(actionCandidate);
+              reasonSet.add("same-resource DELETE rerun GET");
+              continue;
+            }
+            actionsToReset.add(actionCandidate);
+            reasonSet.add("same-resource DELETE reset");
+            continue;
+          }
+
+          // Unique key effects: rerun GET when matching resource created/updated
+          {
+            if (
+              hasUniqueKeyAutorerun &&
+              candidateVerb === "GET" &&
+              !candidateIsPlural &&
+              isSameResource
+            ) {
+              const { valueSignal } = triggeringAction;
+              const modifiedValue = valueSignal.peek();
+
+              if (modifiedValue && typeof modifiedValue === "object") {
+                for (const uniqueKey of config.uniqueKeys) {
+                  const modifiedUniqueId = modifiedValue[uniqueKey];
+                  const candidateParams = actionCandidate.params;
+
+                  if (
+                    modifiedUniqueId !== undefined &&
+                    candidateParams &&
+                    typeof candidateParams === "object" &&
+                    candidateParams[uniqueKey] === modifiedUniqueId
+                  ) {
+                    actionsToRerun.add(actionCandidate);
+                    reasonSet.add(
+                      `${triggeringAction.meta.verb}-uniqueKey autorerun`,
+                    );
+                    break;
+                  }
+                }
+              }
+            }
+          }
+
+          // Cross-resource dependency effects: rerun dependent GET_MANY
+          {
+            if (
+              triggerResourceScope &&
+              resourceDependencies
+                .get(triggerResourceScope)
+                ?.has(resourceScope) &&
+              triggerVerb !== "GET" &&
+              candidateVerb === "GET" &&
+              candidateIsPlural
+            ) {
+              actionsToRerun.add(actionCandidate);
+              reasonSet.add("dependency autorerun");
+              continue;
+            }
+          }
+        }
+      }
+    }
+
+    return {
+      actionsToRerun,
+      actionsToReset,
+      reasons: Array.from(reasonSet),
+    };
+  };
+
+  const onActionComplete = (restActionWhoJustCompleted, restActionContext) => {
+    const { actionsToRerun, actionsToReset, reasons } = findEffectOnActions(
+      restActionWhoJustCompleted,
+      restActionContext,
+    );
+    if (actionsToRerun.size > 0 || actionsToReset.size > 0) {
+      const reason = `${restActionWhoJustCompleted} triggered ${reasons.join(" and ")}`;
+      const dispatchActions = getActionDispatcher();
+      dispatchActions({
+        rerunSet: actionsToRerun,
+        resetSet: actionsToReset,
+        reason,
+      });
+    }
+  };
+
+  return {
+    registerResource,
+    registerAction,
+    onActionComplete,
+  };
+};
+
+const shouldRerunAfter = (rerunConfig, verb) => {
+  if (rerunConfig === false) {
+    return false;
+  }
+  if (rerunConfig === "*") {
+    return true;
+  }
+  if (Array.isArray(rerunConfig)) {
+    const methodSet = new Set(rerunConfig.map((v) => v.toUpperCase()));
+    if (methodSet.has("*")) {
+      return true;
+    }
+    return methodSet.has(verb.toUpperCase());
+  }
+  return false;
+};
+const isParamSubset = (parentParams, childParams) => {
+  if (!parentParams || !childParams) {
+    return false;
+  }
+  for (const [key, value] of Object.entries(parentParams)) {
+    if (!(key in childParams) || !compareTwoJsValues(childParams[key], value)) {
+      return false;
+    }
+  }
+  return true;
+};
+
+const paramScopeWeakSet = createIterableWeakSet();
+let paramScopeIdCounter = 0;
+const getParamScope = (params) => {
+  for (const existingParamScope of paramScopeWeakSet) {
+    if (compareTwoJsValues(existingParamScope.params, params)) {
+      return existingParamScope;
+    }
+  }
+  const id = Symbol(`paramScope-${++paramScopeIdCounter}`);
+  const newParamScope = {
+    params,
+    id,
+  };
+  paramScopeWeakSet.add(newParamScope);
+  return newParamScope;
+};
+
+const resourceLifecycleManager = createResourceLifecycleManager();
+const debug$2 = (args) => {
+  {
+    return;
+  }
+};
+
+const resource = (
+  name,
+  {
+    // configuration options
+    idKey,
+    uniqueKeys = [],
+    rerunOn,
+    dependencies,
+
+    GET,
+    GET_MANY,
+    POST,
+    POST_MANY,
+    PUT,
+    PUT_MANY,
+    PATCH,
+    PATCH_MANY,
+    DELETE,
+    DELETE_MANY,
+  } = {},
+) => {
+  if (idKey === undefined) {
+    idKey = uniqueKeys.length === 0 ? "id" : uniqueKeys[0];
+  }
+  const setupCallbackSet = new Set();
+  const addItemSetup = (callback) => {
+    setupCallbackSet.add(callback);
+  };
+  const itemPrototype = {
+    [Symbol.toStringTag]: name,
+    toString() {
+      let string = `${name}`;
+      if (uniqueKeys.length) {
+        for (const uniqueKey of uniqueKeys) {
+          const uniqueId = this[uniqueKey];
+          if (uniqueId !== undefined) {
+            string += `[${uniqueKey}=${uniqueId}]`;
+            return string;
+          }
+        }
+      }
+      const id = this[idKey];
+      if (id) {
+        string += `[${idKey}=${id}]`;
+      }
+      return string;
+    },
+  };
+  const store = arraySignalStore([], idKey, {
+    uniqueKeys,
+    name: `${name} store`,
+    createItem: (props) => {
+      const item = Object.create(itemPrototype);
+      Object.assign(item, props);
+      Object.defineProperty(item, SYMBOL_IDENTITY, {
+        value: item[idKey],
+        writable: false,
+        enumerable: false,
+        configurable: false,
+      });
+      for (const setupCallback of setupCallbackSet) {
+        setupCallback(item);
+      }
+      return item;
+    },
+  });
+  const createRestActionForRoot = createRestActionFactoryForRoot(name, {
+    idKey,
+    store,
+  });
+  return createResource(name, {
+    idKey,
+    uniqueKeys,
+    restCallbacks: {
+      GET,
+      GET_MANY,
+      POST,
+      POST_MANY,
+      PUT,
+      PUT_MANY,
+      PATCH,
+      PATCH_MANY,
+      DELETE,
+      DELETE_MANY,
+    },
+    store,
+    addItemSetup,
+    createRestAction: createRestActionForRoot,
+    paramScope: getParamScope(undefined),
+    rerunOn,
+    dependencies,
+  });
+};
+
+const createResource = (
+  name,
+  {
+    idKey,
+    uniqueKeys = [],
+    restCallbacks,
+    store,
+    addItemSetup,
+    createRestAction,
+    paramScope,
+    rerunOn,
+    dependencies,
+  } = {},
+) => {
+  if (idKey === undefined) {
+    idKey = uniqueKeys.length === 0 ? "id" : uniqueKeys[0];
+  }
+  const params = paramScope.params;
+  const stateFacade = {
+    // public
+    name,
+    idKey,
+    uniqueKeys,
+
+    useArray: () => store.arraySignal.value,
+    useById: (id) => store.select(idKey, id),
+
+    withParams: undefined,
+    one: undefined,
+    many: undefined,
+    scopedOne: undefined,
+    scopedMany: undefined,
+
+    // private but exposed for convenience
+    store,
+    addItemSetup,
+  };
+  const lifecycleCtx = { onComplete: null };
+
+  resourceLifecycleManager.registerResource(stateFacade, {
+    rerunOn,
+    paramScope,
+    dependencies,
+    uniqueKeys,
+  });
+  lifecycleCtx.onComplete = (actionCompleted) => {
+    resourceLifecycleManager.onActionComplete(actionCompleted, {
+      resourceScope: stateFacade,
+    });
+  };
+
+  /**
+   * Creates a parameterized version of the resource with isolated resource lifecycle behavior.
+   *
+   * Actions from parameterized resources only trigger rerun/reset for other actions with
+   * identical parameters, preventing cross-contamination between different parameter sets.
+   *
+   * @param {Object} params - Parameters to bind to all actions of this resource (required)
+   * @param {Object} options - Additional options for the parameterized resource
+   * @returns {Object} A new resource instance with parameter-bound actions and isolated lifecycle
+   * @see {@link ./docs/resource_with_params.md} for detailed documentation and examples
+   *
+   * @example
+   * const ROLE = resource("role", { GET: (params) => fetchRole(params) });
+   * const adminRoles = ROLE.withParams({ canlogin: true });
+   * const guestRoles = ROLE.withParams({ canlogin: false });
+   * // adminRoles and guestRoles have isolated autorerun behavior
+   *
+   * @example
+   * // Cross-resource dependencies
+   * const role = resource("role");
+   * const database = resource("database");
+   * const tables = resource("tables");
+   * const ROLE_WITH_OWNERSHIP = role.withParams({ owners: true }, {
+   *   dependencies: [role, database, tables],
+   * });
+   * // ROLE_WITH_OWNERSHIP.GET_MANY will autorerun when any table/database/role is POST/DELETE
+   */
+  const withParams = (
+    paramsToInject,
+    { dependencies: withParamsDeps, rerunOn: withParamsRerunOn } = {},
+  ) => {
+    if (!paramsToInject || Object.keys(paramsToInject).length === 0) {
+      throw new Error(`resource(${name}).withParams() requires parameters`);
+    }
+    const resolvedParams = params
+      ? { ...params, ...paramsToInject }
+      : paramsToInject;
+    const resolvedParamScope = getParamScope(resolvedParams);
+    const createRestActionWithParams = createRestActionFactoryForRoot(name, {
+      idKey,
+      store,
+    });
+    return createResource(name, {
+      idKey,
+      uniqueKeys,
+      restCallbacks,
+      store,
+      addItemSetup,
+      createRestAction: createRestActionWithParams,
+      paramScope: resolvedParamScope,
+      rerunOn: withParamsRerunOn ?? rerunOn,
+      dependencies: withParamsDeps ?? dependencies,
+    });
+  };
+  stateFacade.withParams = withParams;
+
+  stateFacade.one = (
+    propertyName,
+    childResource,
+    {
+      rerunOn: oneRerunOn,
+      dependencies: oneDependencies,
+
+      GET,
+      PUT,
+      DELETE,
+    } = {},
+  ) => {
+    const childName = `${name}.${propertyName}`;
+    addItemSetup((item) => {
+      const childIdKeyForSetup = childResource.idKey;
+      const childItemIdSignal = signal();
+      const updateChildItemId = (value) => {
+        const currentChildItemId = childItemIdSignal.peek();
+        if (isProps(value)) {
+          const childItem = childResource.store.upsert(value);
+          const childItemId = childItem[childIdKeyForSetup];
+          if (currentChildItemId === childItemId) {
+            return false;
+          }
+          childItemIdSignal.value = childItemId;
+          return true;
+        }
+        if (primitiveCanBeId(value)) {
+          const childItemProps = { [childIdKeyForSetup]: value };
+          const childItem = childResource.store.upsert(childItemProps);
+          const childItemId = childItem[childIdKeyForSetup];
+          if (currentChildItemId === childItemId) {
+            return false;
+          }
+          childItemIdSignal.value = childItemId;
+          return true;
+        }
+        if (currentChildItemId === undefined) {
+          return false;
+        }
+        childItemIdSignal.value = undefined;
+        return true;
+      };
+      updateChildItemId(item[propertyName]);
+      const childItemSignal = computed(() =>
+        childResource.store.select(childItemIdSignal.value),
+      );
+      const childItemFacadeSignal = computed(() => {
+        const childItem = childItemSignal.value;
+        if (childItem) {
+          const childItemCopy = Object.create(
+            Object.getPrototypeOf(childItem),
+            Object.getOwnPropertyDescriptors(childItem),
+          );
+          Object.defineProperty(childItemCopy, SYMBOL_OBJECT_SIGNAL, {
+            value: childItemSignal,
+            writable: false,
+            enumerable: false,
+            configurable: false,
+          });
+          return childItemCopy;
+        }
+        return {
+          [SYMBOL_OBJECT_SIGNAL]: childItemSignal,
+          valueOf: () => null,
+        };
+      });
+      Object.defineProperty(item, propertyName, {
+        get: () => childItemFacadeSignal.value,
+        set: updateChildItemId,
+      });
+      debug$2(
+        `setup ${item}.${propertyName} is one "${childResource.name}" (current value: ${childItemSignal.peek()})`,
+      );
+    });
+
+    const childIdKey = childResource.idKey;
+    const childStore = childResource.store;
+    const createRestActionForOne = (verb, callback, { lifecycleCtx }) => {
+      const applyResultToValue =
+        verb === "DELETE"
+          ? (itemId) => {
+              const item = store.select(itemId);
+              const childItemId = item[propertyName][childIdKey];
+              store.upsert({
+                [idKey]: itemId,
+                [propertyName]: null,
+              });
+              return childItemId;
+            }
+          : // callback must return object with the following format:
+            // {
+            //   [idKey]: 123,
+            //   [propertyName]: {
+            //     [childIdKey]: 456, ...childProps
+            //   }
+            // }
+            // the following could happen too if there is no relationship
+            // {
+            //   [idKey]: 123,
+            //   [propertyName]: null
+            // }
+            (result) => {
+              const item = store.upsert(result);
+              const childItem = item[propertyName];
+              const childItemId = childItem ? childItem[childIdKey] : undefined;
+              return childItemId;
+            };
+
+      const callerInfo = getCallerInfo(null, 2);
+      const locationInfo =
+        callerInfo.file && callerInfo.line && callerInfo.column
+          ? `${callerInfo.file}:${callerInfo.line}:${callerInfo.column}`
+          : callerInfo.raw || "unknown location";
+      const originalActionName = `${name}.${verb}`;
+
+      const actionAffectingOneItem = createAction(callback, {
+        meta: {
+          verb,
+          isMany: false,
+          paramScope,
+        },
+        name: `${name}.${verb}`,
+        resultToValue: (result, action) => {
+          const actionLabel = action.name;
+
+          if (verb === "DELETE") {
+            if (!isProps(result) && !primitiveCanBeId(result)) {
+              throw new TypeError(
+                `${actionLabel} must return an object (that will be used to drop "${name}" resource), received ${result}.
+${originalActionName} source location: ${locationInfo}`,
+              );
+            }
+            return applyResultToValue(result);
+          }
+          if (!isProps(result)) {
+            throw new TypeError(
+              `${actionLabel} must return an object (that will be used to upsert "${name}" resource), received ${result}.
+   ${originalActionName} source location: ${locationInfo}`,
+            );
+          }
+          return applyResultToValue(result);
+        },
+        valueToData: (childItemId) => childStore.select(childItemId),
+        completeSideEffect: (actionCompleted) => {
+          lifecycleCtx.onComplete(actionCompleted);
+        },
+      });
+      return actionAffectingOneItem;
+    };
+
+    return createResource(childName, {
+      idKey: childResource.idKey,
+      restCallbacks: {
+        GET,
+        PUT,
+        DELETE,
+      },
+      store,
+      addItemSetup,
+      createRestAction: createRestActionForOne,
+      paramScope,
+      rerunOn: oneRerunOn ?? rerunOn,
+      dependencies: oneDependencies ?? dependencies,
+    });
+  };
+
+  stateFacade.many = (
+    propertyName,
+    childResource,
+    {
+      rerunOn: manyRerunOn,
+      dependencies: manyDependencies,
+
+      GET,
+      GET_MANY,
+      POST,
+      POST_MANY,
+      PUT,
+      PUT_MANY,
+      PATCH,
+      PATCH_MANY,
+      DELETE,
+      DELETE_MANY,
+    } = {},
+  ) => {
+    const childStore = childResource.store;
+    const childIdKey = childResource.idKey;
+    const childName = `${name}.${propertyName}`;
+    addItemSetup((item) => {
+      const childItemIdArraySignal = signal([]);
+      const updateChildItemIdArray = (valueArray) => {
+        const currentIdArray = childItemIdArraySignal.peek();
+        if (!Array.isArray(valueArray)) {
+          if (currentIdArray.length === 0) return;
+          childItemIdArraySignal.value = [];
+          return;
+        }
+        let i = 0;
+        const idArray = [];
+        let modified = false;
+        while (i < valueArray.length) {
+          const value = valueArray[i];
+          const currentIdAtIndex = currentIdArray[idArray.length];
+          i++;
+          if (isProps(value)) {
+            const childItem = childResource.store.upsert(value);
+            const childItemId = childItem[childIdKey];
+            if (currentIdAtIndex !== childItemId) modified = true;
+            idArray.push(childItemId);
+            continue;
+          }
+          if (primitiveCanBeId(value)) {
+            const childItemProps = { [childIdKey]: value };
+            const childItem = childResource.store.upsert(childItemProps);
+            const childItemId = childItem[childIdKey];
+            if (currentIdAtIndex !== childItemId) modified = true;
+            idArray.push(childItemId);
+            continue;
+          }
+        }
+        if (modified || currentIdArray.length !== idArray.length) {
+          childItemIdArraySignal.value = idArray;
+        }
+      };
+      updateChildItemIdArray(item[propertyName]);
+      const childItemArraySignal = computed(() => {
+        const idArray = childItemIdArraySignal.value;
+        const arr = childResource.store.selectAll(idArray);
+        Object.defineProperty(arr, SYMBOL_OBJECT_SIGNAL, {
+          value: childItemArraySignal,
+          writable: false,
+          enumerable: false,
+          configurable: false,
+        });
+        return arr;
+      });
+      Object.defineProperty(item, propertyName, {
+        get: () => childItemArraySignal.value,
+        set: updateChildItemIdArray,
+      });
+      syncIdArrayOnRename(
+        childResource.store,
+        childIdKey,
+        childItemIdArraySignal,
+      );
+    });
+    const createRestActionForMany = (
+      verb,
+      callback,
+      { isMany, lifecycleCtx },
+    ) => {
+      if (!isMany) {
+        return createRestActionAffectingOneItem(verb, callback, lifecycleCtx);
+      }
+      return createRestActionAffectingManyItems(verb, callback, lifecycleCtx);
+    };
+    const createRestActionAffectingOneItem = (verb, callback, lifecycleCtx) => {
+      const applyResultToValue =
+        verb === "DELETE"
+          ? ([itemId, childItemId]) => {
+              const item = store.select(itemId);
+              const childItemArray = item[propertyName];
+              const childItemArrayWithoutThisOne = [];
+              let found = false;
+              for (const childItemCandidate of childItemArray) {
+                const childItemCandidateId = childItemCandidate[childIdKey];
+                if (childItemCandidateId === childItemId) {
+                  found = true;
+                } else {
+                  childItemArrayWithoutThisOne.push(childItemCandidate);
+                }
+              }
+              if (found) {
+                store.upsert({
+                  [idKey]: itemId,
+                  [propertyName]: childItemArrayWithoutThisOne,
+                });
+              }
+              return childItemId;
+            }
+          : (childData) => {
+              const childItem = Array.isArray(childData)
+                ? childStore.upsert(...childData)
+                : childStore.upsert(childData);
+              const childItemId = childItem[childIdKey];
+              return childItemId;
+            };
+
+      const callerInfo = getCallerInfo(null, 2);
+      const locationInfo =
+        callerInfo.file && callerInfo.line && callerInfo.column
+          ? `${callerInfo.file}:${callerInfo.line}:${callerInfo.column}`
+          : callerInfo.raw || "unknown location";
+      const originalActionName = `${name}.${verb}`;
+
+      const actionAffectingOneItem = createAction(callback, {
+        meta: { verb, isMany: false, paramScope },
+        name: `${name}.${verb}`,
+        resultToValue: (result, action) => {
+          const actionLabel = action.name;
+
+          if (verb === "DELETE") {
+            if (!Array.isArray(result) || result.length !== 2) {
+              throw new TypeError(
+                `${actionLabel} must return an array [itemId, childItemId] (that will be used to remove relationship), received ${result}.
+${originalActionName} source location: ${locationInfo}`,
+              );
+            }
+            return applyResultToValue(result);
+          }
+          if (!isProps(result)) {
+            throw new TypeError(
+              `${actionLabel} must return an object (that will be used to upsert child item), received ${result}.
+${originalActionName} source location: ${locationInfo}`,
+            );
+          }
+          return applyResultToValue(result);
+        },
+        valueToData: (childItemId) => childStore.select(childItemId),
+        completeSideEffect: (actionCompleted) => {
+          lifecycleCtx.onComplete(actionCompleted);
+        },
+      });
+      return actionAffectingOneItem;
+    };
+    const createRestActionAffectingManyItems = (
+      verb,
+      callback,
+      lifecycleCtx,
+    ) => {
+      const applyResultToValue =
+        verb === "GET"
+          ? (result) => {
+              // callback must return object with the following format:
+              // {
+              //   [idKey]: 123,
+              //   [propertyName]: [
+              //      { [childIdKey]: 456, ...childProps },
+              //      { [childIdKey]: 789, ...childProps },
+              //      ...
+              //   ]
+              // }
+              // the array can be empty
+              const item = store.upsert(result);
+              const childItemArray = item[propertyName];
+              const childItemIdArray = childItemArray.map(
+                (childItem) => childItem[childIdKey],
+              );
+              return childItemIdArray;
+            }
+          : verb === "DELETE"
+            ? ([itemIdOrMutableId, childItemIdOrMutableIdArray]) => {
+                const item = store.select(itemIdOrMutableId);
+                const childItemArray = item[propertyName];
+                const deletedChildItemIdArray = [];
+                const childItemArrayWithoutThoose = [];
+                let someFound = false;
+                const deletedChildItemArray = childStore.select(
+                  childItemIdOrMutableIdArray,
+                );
+                for (const childItemCandidate of childItemArray) {
+                  if (deletedChildItemArray.includes(childItemCandidate)) {
+                    someFound = true;
+                    deletedChildItemIdArray.push(
+                      childItemCandidate[childIdKey],
+                    );
+                  } else {
+                    childItemArrayWithoutThoose.push(childItemCandidate);
+                  }
+                }
+                if (someFound) {
+                  store.upsert({
+                    [idKey]: item[idKey],
+                    [propertyName]: childItemArrayWithoutThoose,
+                  });
+                }
+                return deletedChildItemIdArray;
+              }
+            : (childDataArray) => {
+                const childItemArray = childStore.upsert(childDataArray);
+                const childItemIdArray = childItemArray.map(
+                  (childItem) => childItem[childIdKey],
+                );
+                return childItemIdArray;
+              };
+
+      const callerInfo = getCallerInfo(null, 2);
+      const locationInfo =
+        callerInfo.file && callerInfo.line && callerInfo.column
+          ? `${callerInfo.file}:${callerInfo.line}:${callerInfo.column}`
+          : callerInfo.raw || "unknown location";
+      const originalActionName = `${name}.${verb}[many]`;
+
+      const actionAffectingManyItem = createAction(callback, {
+        meta: { verb, isMany: true, paramScope },
+        name: `${name}.${verb}[many]`,
+        dataDefault: [],
+        resultToValue: (result, action) => {
+          const actionLabel = action.name;
+
+          if (verb === "GET") {
+            if (!isProps(result)) {
+              throw new TypeError(
+                `${actionLabel} must return an object (that will be used to upsert "${name}" resource with many relationships), received ${result}.
+${originalActionName} source location: ${locationInfo}`,
+              );
+            }
+            return applyResultToValue(result);
+          }
+          if (verb === "DELETE") {
+            if (
+              !Array.isArray(result) ||
+              result.length !== 2 ||
+              !Array.isArray(result[1])
+            ) {
+              throw new TypeError(
+                `${actionLabel} must return an array [itemId, childItemIdArray] (that will be used to remove relationships), received ${result}.
+${originalActionName} source location: ${locationInfo}`,
+              );
+            }
+            return applyResultToValue(result);
+          }
+          if (!Array.isArray(result)) {
+            throw new TypeError(
+              `${actionLabel} must return an array of objects (that will be used to upsert child items), received ${result}.
+${originalActionName} source location: ${locationInfo}`,
+            );
+          }
+          return applyResultToValue(result);
+        },
+        valueToData: (childItemIdArray) =>
+          childStore.selectAll(childItemIdArray),
+        completeSideEffect: (actionCompleted) => {
+          lifecycleCtx.onComplete(actionCompleted);
+        },
+      });
+      return actionAffectingManyItem;
+    };
+
+    return createResource(childName, {
+      idKey: childIdKey,
+      restCallbacks: {
+        GET,
+        GET_MANY,
+        POST,
+        POST_MANY,
+        PUT,
+        PUT_MANY,
+        PATCH,
+        PATCH_MANY,
+        DELETE,
+        DELETE_MANY,
+      },
+      store,
+      addItemSetup,
+      createRestAction: createRestActionForMany,
+      paramScope,
+      rerunOn: manyRerunOn ?? rerunOn,
+      dependencies: manyDependencies ?? dependencies,
+    });
+  };
+
+  stateFacade.scopedOne = (
+    propertyName,
+    {
+      idKey: childIdKey = "id",
+      rerunOn: scopedOneRerunOn,
+      dependencies: scopedOneDependencies,
+
+      GET,
+      POST,
+      PUT,
+      PATCH,
+      DELETE,
+    } = {},
+  ) => {
+    const childName = `${name}.${propertyName}`;
+
+    // setupCallbackSet: callbacks added by chained .one()/.many()
+    // Applied to each per-scope child item object when it is first created.
+    const childItemSetupCallbackSet = new Set();
+    const childAddItemSetup = (callback) =>
+      childItemSetupCallbackSet.add(callback);
+    const scopedItemMap = new Map(); // ownerId → stable child item object
+    const scopedSignalMap = new Map(); // ownerId → signal<childItem | null>
+    addItemSetup((ownerItem) => {
+      const ownerId = ownerItem[idKey];
+      // Create a stable child item — mutated in place via applyProps.
+      // Reactive getters/setters from chained .one() etc. are defined on this object now
+      // so they survive across multiple prop updates.
+      const childItem = {};
+      for (const childSetup of childItemSetupCallbackSet) {
+        childSetup(childItem);
+      }
+      scopedItemMap.set(ownerId, childItem);
+      const childSignal = signal(null);
+      scopedSignalMap.set(ownerId, childSignal);
+
+      const applyProps = (props) => {
+        if (!props) {
+          childSignal.value = null;
+          return;
+        }
+        // Assign each prop in place. Reactive setters (from chained .one() etc.) will fire.
+        for (const [key, value] of Object.entries(props)) {
+          childItem[key] = value;
+        }
+        if (childSignal.peek() !== childItem) {
+          childSignal.value = childItem; // first activation: null → childItem
+        }
+      };
+
+      applyProps(ownerItem[propertyName]);
+
+      Object.defineProperty(ownerItem, propertyName, {
+        get: () => childSignal.value,
+        set: applyProps,
+      });
+    });
+    const createRestActionForScopedOne = (verb, callback, { lifecycleCtx }) => {
+      const childActionName = `${childName}.${verb}`;
+      const restAction = createAction(callback, {
+        name: childActionName,
+        meta: { verb, isMany: false, paramScope },
+        resultToValue: (result) => {
+          if (!Array.isArray(result) || result.length !== 2) {
+            throw new TypeError(
+              `${childActionName} callback must return [ownerId, props], received ${result}`,
+            );
+          }
+          const [ownerId, props] = result;
+          const childItem = scopedItemMap.get(ownerId);
+          if (!childItem) {
+            throw new Error(
+              `${childActionName}: no item found for scope id "${ownerId}"`,
+            );
+          }
+          const childSignal = scopedSignalMap.get(ownerId);
+          if (props) {
+            for (const [key, value] of Object.entries(props)) {
+              childItem[key] = value;
+            }
+            if (childSignal.peek() !== childItem) {
+              childSignal.value = childItem;
+            }
+          } else {
+            childSignal.value = null;
+          }
+          return [ownerId, props];
+        },
+        completeSideEffect: (actionCompleted) => {
+          lifecycleCtx.onComplete(actionCompleted);
+        },
+      });
+      return restAction;
+    };
+
+    const childResource = createResource(childName, {
+      idKey: childIdKey,
+      restCallbacks: {
+        GET,
+        POST,
+        PUT,
+        PATCH,
+        DELETE,
+      },
+      store,
+      addItemSetup: childAddItemSetup,
+      createRestAction: createRestActionForScopedOne,
+      paramScope,
+      rerunOn: scopedOneRerunOn ?? rerunOn,
+      dependencies: scopedOneDependencies ?? dependencies,
+    });
+    return childResource;
+  };
+
+  stateFacade.scopedMany = (
+    propertyName,
+    {
+      idKey: childIdKey = "id",
+      rerunOn: scopedManyRerunOn,
+      dependencies: scopedManyDependencies,
+
+      GET,
+      GET_MANY,
+      POST,
+      POST_MANY,
+      PUT,
+      PUT_MANY,
+      PATCH,
+      PATCH_MANY,
+      DELETE,
+      DELETE_MANY,
+    } = {},
+  ) => {
+    const childName = `${name}.${propertyName}`;
+
+    // setupCallbackSet: callbacks added by chained .one()/.many()
+    // Applied to each child item when it is created in a per-scope store.
+    const childSetupCallbackSet = new Set();
+    const childAddItemSetup = (callback) => childSetupCallbackSet.add(callback);
+    const scopedStoreMap = new Map(); // ownerId → childStore
+    const scopedIdArraySignalMap = new Map(); // ownerId → childItemIdArraySignal
+    addItemSetup((item) => {
+      const ownerId = item[idKey];
+      const childStore = arraySignalStore([], childIdKey, {
+        name: `${childName}#${ownerId} store`,
+        createItem: (props) => {
+          const childItem = {};
+          Object.assign(childItem, props);
+          for (const childSetup of childSetupCallbackSet) {
+            childSetup(childItem);
+          }
+          return childItem;
+        },
+      });
+      scopedStoreMap.set(ownerId, childStore);
+
+      const childItemIdArraySignal = signal([]);
+      scopedIdArraySignalMap.set(ownerId, childItemIdArraySignal);
+
+      const updateChildItemIdArray = (valueArray) => {
+        const currentIdArray = childItemIdArraySignal.peek();
+        if (!Array.isArray(valueArray)) {
+          if (currentIdArray.length === 0) return;
+          childItemIdArraySignal.value = [];
+          return;
+        }
+        let i = 0;
+        const idArray = [];
+        let modified = false;
+        while (i < valueArray.length) {
+          const value = valueArray[i];
+          const currentIdAtIndex = currentIdArray[idArray.length];
+          i++;
+          if (isProps(value)) {
+            const childItem = childStore.upsert(value);
+            const childItemId = childItem[childIdKey];
+            if (currentIdAtIndex !== childItemId) modified = true;
+            idArray.push(childItemId);
+            continue;
+          }
+          if (primitiveCanBeId(value)) {
+            const childItemProps = { [childIdKey]: value };
+            const childItem = childStore.upsert(childItemProps);
+            const childItemId = childItem[childIdKey];
+            if (currentIdAtIndex !== childItemId) modified = true;
+            idArray.push(childItemId);
+            continue;
+          }
+        }
+        if (modified || currentIdArray.length !== idArray.length) {
+          childItemIdArraySignal.value = idArray;
+        }
+      };
+
+      updateChildItemIdArray(item[propertyName]);
+
+      // When an id is renamed (PUT/PATCH changes the idKey), patch the id array.
+      syncIdArrayOnRename(childStore, childIdKey, childItemIdArraySignal);
+
+      const childItemArraySignal = computed(() => {
+        const childItemIdArray = childItemIdArraySignal.value;
+        const childItemArray = childStore.selectAll(childItemIdArray);
+        Object.defineProperty(childItemArray, SYMBOL_OBJECT_SIGNAL, {
+          value: childItemArraySignal,
+          writable: false,
+          enumerable: false,
+          configurable: false,
+        });
+        return childItemArray;
+      });
+
+      Object.defineProperty(item, propertyName, {
+        get: () => childItemArraySignal.value,
+        set: updateChildItemIdArray,
+      });
+    });
+    const createRestActionForScopedMany = (
+      verb,
+      callback,
+      { isMany, lifecycleCtx },
+    ) => {
+      if (!callback) {
+        return undefined;
+      }
+      const childActionName = `${childName}.${verb}`;
+      const childAction = createAction(callback, {
+        name: childActionName,
+        meta: { verb, isMany, paramScope },
+        resultToValue: (result) => {
+          if (!Array.isArray(result) || result.length < 2) {
+            throw new TypeError(
+              `${childActionName} callback must return [ownerId, ...] array, received ${result}`,
+            );
+          }
+          const [ownerId, ...rest] = result;
+          const childStore = scopedStoreMap.get(ownerId);
+          if (!childStore) {
+            throw new Error(
+              `${childActionName}: no store found for scope id "${ownerId}"`,
+            );
+          }
+          const childItemIdArraySignal = scopedIdArraySignalMap.get(ownerId);
+
+          if (verb === "DELETE") {
+            if (isMany) {
+              const idArray = childStore.drop(rest[0]);
+              const toRemoveSet = new Set(idArray);
+              childItemIdArraySignal.value = childItemIdArraySignal
+                .peek()
+                .filter((id) => !toRemoveSet.has(id));
+              return [ownerId, idArray];
+            }
+            const childId = childStore.drop(rest[0]);
+            childItemIdArraySignal.value = childItemIdArraySignal
+              .peek()
+              .filter((id) => id !== childId);
+            return [ownerId, childId];
+          }
+
+          if (isMany) {
+            // GET_MANY, POST_MANY, PUT_MANY etc: rest[0] is the array of items
+            const itemArray = childStore.upsert(rest[0]);
+            const idArray = itemArray.map((i) => i[childIdKey]);
+            childItemIdArraySignal.value = idArray;
+            return [ownerId, idArray];
+          }
+
+          // GET, POST, PUT, PATCH: rest may be [props] or [oldId, props] for renames
+          const childItem =
+            rest.length > 1
+              ? childStore.upsert(...rest)
+              : childStore.upsert(rest[0]);
+          return [ownerId, childItem[childIdKey]];
+        },
+        completeSideEffect: (actionCompleted) => {
+          lifecycleCtx.onComplete(actionCompleted);
+        },
+      });
+      return childAction;
+    };
+
+    const childResource = createResource(childName, {
+      idKey: childIdKey,
+      restCallbacks: {
+        GET,
+        GET_MANY,
+        POST,
+        POST_MANY,
+        PUT,
+        PUT_MANY,
+        PATCH,
+        PATCH_MANY,
+        DELETE,
+        DELETE_MANY,
+      },
+      store,
+      addItemSetup: childAddItemSetup,
+      createRestAction: createRestActionForScopedMany,
+      paramScope,
+      rerunOn: scopedManyRerunOn ?? rerunOn,
+      dependencies: scopedManyDependencies ?? dependencies,
+    });
+    return childResource;
+  };
+
+  // expose rest actions on the stateFacade
+  for (const [restCallbackKey, restCallback] of Object.entries(restCallbacks)) {
+    if (restCallback === undefined) {
+      continue;
+    }
+    const isMany = restCallbackKey.endsWith("_MANY");
+    const verb = isMany
+      ? restCallbackKey.replace("_MANY", "")
+      : restCallbackKey;
+    const restAction = createRestAction(verb, restCallback, {
+      isMany,
+      lifecycleCtx,
+      paramScope,
+    });
+    if (!restAction) {
+      console.error("no action returned (here to see when it happens)");
+      continue;
+    }
+    let actionToRegister;
+    if (params) {
+      const restActionBound = restAction.bindParams(params);
+      stateFacade[restCallbackKey] = restActionBound;
+      actionToRegister = restActionBound;
+    } else {
+      stateFacade[restCallbackKey] = restAction;
+      actionToRegister = restAction;
+    }
+    resourceLifecycleManager.registerAction(stateFacade, actionToRegister);
+  }
+
+  return stateFacade;
+};
+
+const createRestActionFactoryForRoot = (
+  name,
+  {
+    idKey,
+    store, // see array_signal_store.js
+  },
+) => {
+  const createActionForRoot = (
+    verb,
+    restCallback,
+    { isMany, lifecycleCtx, paramScope },
+  ) => {
+    if (!isMany) {
+      return createActionAffectingOneItem(verb, restCallback, {
+        lifecycleCtx,
+        paramScope,
+      });
+    }
+    return createActionAffectingManyItems(verb, restCallback, {
+      lifecycleCtx,
+      paramScope,
+    });
+  };
+  const createActionAffectingOneItem = (
+    verb,
+    callback,
+    { lifecycleCtx, paramScope },
+  ) => {
+    const applyResultToValue =
+      verb === "DELETE"
+        ? (itemIdOrItemProps) => {
+            const itemId = store.drop(itemIdOrItemProps);
+            return itemId;
+          }
+        : (result) => {
+            let item;
+            if (Array.isArray(result)) {
+              // the callback is returning something like [property, value, props]
+              // this is to support a case like:
+              // store.upsert("name", "currentName", { name: "newName" })
+              // where we want to update the idKey of an item
+              item = store.upsert(...result);
+            } else {
+              item = store.upsert(result);
+            }
+            const itemId = item[idKey];
+            return itemId;
+          };
+
+    const callerInfo = getCallerInfo(null, 2);
+    // Provide more fallback options for better debugging
+    const locationInfo =
+      callerInfo.file && callerInfo.line && callerInfo.column
+        ? `${callerInfo.file}:${callerInfo.line}:${callerInfo.column}`
+        : callerInfo.raw || "unknown location";
+    const originalActionName = `${name}.${verb}`;
+    const actionAffectingOneItem = createAction(callback, {
+      name: `${name}.${verb}`,
+      meta: { verb, isMany: false, paramScope },
+      resultToValue: (result, action) => {
+        const actionLabel = action.name;
+
+        if (verb === "DELETE") {
+          if (!isProps(result) && !primitiveCanBeId(result)) {
+            throw new TypeError(
+              `${actionLabel} must return an object (that will be used to drop "${name}" resource), received ${result}.
+${originalActionName} source location: ${locationInfo}`,
+            );
+          }
+          return applyResultToValue(result);
+        }
+        if (!isProps(result)) {
+          throw new TypeError(
+            `${actionLabel} must return an object (that will be used to upsert "${name}" resource), received ${result}.
+${originalActionName} source location: ${locationInfo}`,
+          );
+        }
+        return applyResultToValue(result);
+      },
+      valueToData: (itemId) => store.select(itemId),
+      completeSideEffect: (actionCompleted) => {
+        lifecycleCtx.onComplete(actionCompleted);
+      },
+    });
+    return actionAffectingOneItem;
+  };
+  const createActionAffectingManyItems = (
+    verb,
+    callback,
+    { lifecycleCtx, paramScope },
+  ) => {
+    const applyResultToValue =
+      verb === "DELETE"
+        ? (idOrMutableIdArray) => {
+            const idArray = store.drop(idOrMutableIdArray);
+            return idArray;
+          }
+        : (dataArray) => {
+            const itemArray = store.upsert(dataArray);
+            const idArray = itemArray.map((item) => item[idKey]);
+            return idArray;
+          };
+
+    const actionAffectingManyItems = createAction(callback, {
+      meta: { verb, isMany: true, paramScope },
+      name: `${name}.${verb}_MANY`,
+      dataDefault: [],
+      resultToValue: applyResultToValue,
+      valueToData: (idArray) => {
+        const items = store.selectAll(idArray);
+        return items;
+      },
+      completeSideEffect: (actionCompleted) => {
+        lifecycleCtx.onComplete(actionCompleted);
+        if (
+          verb === "DELETE" ||
+          actionCompleted.valueSignal.peek().length === 0
+        ) {
+          return null;
+        }
+        // When an id is renamed (PUT/PATCH changes the idKey), the store fires observeProperties
+        // with a mutation containing oldValue/newValue for that key. We patch this action's
+        // valueSignal (the id array) so that selectAll keeps returning the right items.
+        // The returned unsubscribe function is called by completeSideEffectCleanup on reset.
+        return syncIdArrayOnRename(store, idKey, actionCompleted.valueSignal);
+      },
+    });
+    return actionAffectingManyItems;
+  };
+
+  return createActionForRoot;
+};
+
+const syncIdArrayOnRename = (store, idKey, idArraySignal) => {
+  return store.observeProperties((mutations) => {
+    const idArray = idArraySignal.peek();
+    if (idArray.length === 0) {
+      return;
+    }
+    const idSet = new Set(idArray);
+    const idMutationMap = new Map();
+    for (const mutation of mutations) {
+      const idKeyMutation = mutation[idKey];
+      if (!idKeyMutation) {
+        continue;
+      }
+      const { oldValue, newValue } = idKeyMutation;
+      if (!idSet.has(oldValue)) {
+        continue;
+      }
+      idMutationMap.set(oldValue, newValue);
+    }
+    if (idMutationMap.size === 0) {
+      return;
+    }
+    const idUpdatedArray = [];
+    for (const id of idArray) {
+      idUpdatedArray.push(idMutationMap.get(id) ?? id);
+    }
+    idArraySignal.value = idUpdatedArray;
+  });
+};
+
+const isProps = (value) => {
+  return value !== null && typeof value === "object";
 };
 
 const valueInLocalStorage = (key, { type = "any" } = {}) => {
@@ -3085,1900 +5242,6 @@ const localStorageTypeMap = {
   array: "object",
 };
 
-const getCallerInfo = (targetFunction = null, additionalOffset = 0) => {
-  const originalPrepareStackTrace = Error.prepareStackTrace;
-  try {
-    Error.prepareStackTrace = (_, stack) => stack;
-
-    const error = new Error();
-    const stack = error.stack;
-
-    if (!stack || stack.length === 0 || !Array.isArray(stack)) {
-      return { raw: "unknown" };
-    }
-
-    let targetIndex = -1;
-
-    if (targetFunction) {
-      // ✅ Chercher la fonction cible par référence directe
-      for (let i = 0; i < stack.length; i++) {
-        const frame = stack[i];
-        const frameFunction = frame.getFunction();
-
-        // ✅ Comparaison directe par référence
-        if (frameFunction === targetFunction) {
-          targetIndex = i;
-          break;
-        }
-      }
-
-      if (targetIndex === -1) {
-        return {
-          raw: `target function not found in stack`,
-          targetFunction: targetFunction.name,
-        };
-      }
-
-      // ✅ Prendre la fonction qui appelle targetFunction + offset
-      const callerIndex = targetIndex + 1 + additionalOffset;
-
-      if (callerIndex >= stack.length) {
-        return {
-          raw: `caller at offset ${additionalOffset} not found`,
-          targetFunction: targetFunction.name,
-          requestedIndex: callerIndex,
-          stackLength: stack.length,
-        };
-      }
-
-      const callerFrame = stack[callerIndex];
-      return {
-        file: callerFrame.getFileName(),
-        line: callerFrame.getLineNumber(),
-        column: callerFrame.getColumnNumber(),
-        function: callerFrame.getFunctionName() || "<anonymous>",
-        raw: callerFrame.toString(),
-        targetFunction: targetFunction.name,
-        offset: additionalOffset,
-      };
-    }
-
-    // ✅ Comportement original si pas de targetFunction
-    if (stack.length > 2) {
-      const callerFrame = stack[2 + additionalOffset];
-
-      if (!callerFrame) {
-        return {
-          raw: `caller at offset ${additionalOffset} not found`,
-          requestedIndex: 2 + additionalOffset,
-          stackLength: stack.length,
-        };
-      }
-
-      return {
-        file: callerFrame.getFileName(),
-        line: callerFrame.getLineNumber(),
-        column: callerFrame.getColumnNumber(),
-        function: callerFrame.getFunctionName() || "<anonymous>",
-        raw: callerFrame.toString(),
-        offset: additionalOffset,
-      };
-    }
-
-    return { raw: "unknown" };
-  } finally {
-    Error.prepareStackTrace = originalPrepareStackTrace;
-  }
-};
-
-const primitiveCanBeId = (value) => {
-  const type = typeof value;
-  if (type === "string" || type === "number" || type === "symbol") {
-    return true;
-  }
-  return false;
-};
-
-const arraySignalStore = (
-  initialArray = [],
-  idKey = "id",
-  {
-    mutableIdKeys = [],
-    name,
-    createItem = (props) => {
-      return { ...props };
-    },
-  },
-) => {
-  const store = {
-    name,
-  };
-
-  const createItemFromProps = (props) => {
-    if (props === null || typeof props !== "object") {
-      return props;
-    }
-    const item = createItem(props);
-    return item;
-  };
-
-  const arraySignal = signal(initialArray);
-  const derivedSignal = computed(() => {
-    const array = arraySignal.value;
-    const idSet = new Set(); // will be used to detect id changes (deletion, addition)
-    const idMap = new Map(); // used to speep up finding item by id
-    for (const item of array) {
-      const id = item[idKey];
-      idSet.add(id);
-      idMap.set(id, item);
-    }
-    return [idSet, idMap];
-  });
-  const idSetSignal = computed(() => derivedSignal.value[0]);
-  const idMapSignal = computed(() => derivedSignal.value[1]);
-  const previousIdSetSignal = signal(new Set(idSetSignal.peek()));
-  const idChangeCallbackSet = new Set();
-  effect(() => {
-    const idSet = idSetSignal.value;
-    const previousIdSet = previousIdSetSignal.peek();
-    const setCopy = new Set();
-    let modified = false;
-    for (const id of idSet) {
-      if (!previousIdSet.has(id)) {
-        modified = true;
-      }
-      setCopy.add(id);
-    }
-    if (modified) {
-      previousIdSetSignal.value = setCopy;
-      for (const idChangeCallback of idChangeCallbackSet) {
-        idChangeCallback(idSet, previousIdSet);
-      }
-    }
-  });
-
-  const itemPropertiesObserverSet = new Set();
-  const observeItemProperties = (itemSignal, callback) => {
-    const observer = { itemSignal, callback };
-    itemPropertiesObserverSet.add(observer);
-    return () => {
-      itemPropertiesObserverSet.delete(observer);
-    };
-  };
-
-  const propertiesObserverSet = new Set();
-  const observeProperties = (callback) => {
-    propertiesObserverSet.add(callback);
-    return () => {
-      propertiesObserverSet.delete(callback);
-    };
-  };
-
-  const removalsCallbackSet = new Set();
-  const observeRemovals = (callback) => {
-    removalsCallbackSet.add(callback);
-  };
-
-  const itemMatchLifecycleSet = new Set();
-  const registerItemMatchLifecycle = (matchPredicate, { match, nomatch }) => {
-    const matchState = {
-      hasMatched: false,
-      hadMatchedBefore: false,
-    };
-    const itemMatchLifecycle = {
-      matchPredicate,
-      match,
-      nomatch,
-      matchState,
-    };
-    itemMatchLifecycleSet.add(itemMatchLifecycle);
-  };
-
-  const readIdFromItemProps = (props, array) => {
-    let id;
-    if (Object.hasOwn(props, idKey)) {
-      id = props[idKey];
-      return id;
-    }
-    if (mutableIdKeys.length === 0) {
-      return undefined;
-    }
-
-    let mutableIdKey;
-    for (const mutableIdKeyCandidate of mutableIdKeys) {
-      if (Object.hasOwn(props, mutableIdKeyCandidate)) {
-        mutableIdKey = mutableIdKeyCandidate;
-        break;
-      }
-    }
-    if (!mutableIdKey) {
-      throw new Error(
-        `item properties must have one of the following keys:
-${[idKey, ...mutableIdKeys].join(", ")}`,
-      );
-    }
-    const mutableIdValue = props[mutableIdKey];
-    for (const itemCandidate of array) {
-      const mutableIdCandidate = itemCandidate[mutableIdKey];
-      if (mutableIdCandidate === mutableIdValue) {
-        id = itemCandidate[idKey];
-        break;
-      }
-    }
-    if (!id) {
-      throw new Error(
-        `None of the existing item uses ${mutableIdKey}: ${mutableIdValue}, so item properties must specify the "${idKey}" key.`,
-      );
-    }
-    return id;
-  };
-
-  effect(() => {
-    const array = arraySignal.value;
-
-    for (const {
-      matchPredicate,
-      match,
-      nomatch,
-      matchState,
-    } of itemMatchLifecycleSet) {
-      let currentlyHasMatch = false;
-
-      // Check if any item currently matches
-      for (const item of array) {
-        if (matchPredicate(item)) {
-          currentlyHasMatch = true;
-          break;
-        }
-      }
-
-      // Handle state transitions
-      if (currentlyHasMatch && !matchState.hasMatched) {
-        // New match found
-        matchState.hasMatched = true;
-        const isRematch = matchState.hadMatchedBefore;
-        if (match) {
-          match(isRematch);
-        }
-      } else if (!currentlyHasMatch && matchState.hasMatched) {
-        // No longer has match
-        matchState.hasMatched = false;
-        matchState.hadMatchedBefore = true;
-        if (nomatch) {
-          nomatch();
-        }
-      }
-    }
-  });
-
-  const select = (...args) => {
-    const array = arraySignal.value;
-    const idMap = idMapSignal.value;
-
-    let property;
-    let value;
-    if (args.length === 1) {
-      property = idKey;
-      value = args[0];
-      if (value !== null && typeof value === "object") {
-        value = readIdFromItemProps(value, array);
-      }
-    } else if (args.length === 2) {
-      property = args[0];
-      value = args[1];
-    }
-    if (property === idKey) {
-      return idMap.get(value);
-    }
-    for (const itemCandidate of array) {
-      const valueCandidate =
-        typeof property === "function"
-          ? property(itemCandidate)
-          : itemCandidate[property];
-      if (valueCandidate === value) {
-        return itemCandidate;
-      }
-    }
-    return null;
-  };
-  const selectAll = (toMatchArray) => {
-    const array = arraySignal.value;
-    const result = [];
-    const idMap = idMapSignal.value;
-    for (const toMatch of toMatchArray) {
-      const id =
-        toMatch !== null && typeof toMatch === "object"
-          ? readIdFromItemProps(toMatch, array)
-          : toMatch;
-      const item = idMap.get(id);
-      if (item) {
-        result.push(item);
-      }
-    }
-    return result;
-  };
-  const upsert = (...args) => {
-    const mutationsMap = new Map(); // Map<itemId, propertyMutations>
-    const triggerPropertyMutations = () => {
-      // we call at the end so that itemWithProps and arraySignal.value was set too
-      for (const itemPropertiesObserver of itemPropertiesObserverSet) {
-        const { itemSignal, callback } = itemPropertiesObserver;
-        const watchedItem = itemSignal.peek();
-        if (!watchedItem) {
-          continue;
-        }
-
-        // Check if this item has mutations
-        const itemMutations = mutationsMap.get(watchedItem[idKey]);
-        if (itemMutations) {
-          callback(itemMutations);
-        }
-      }
-      if (propertiesObserverSet.size) {
-        const mutations = Array.from(mutationsMap.values());
-        for (const propertiesObserver of propertiesObserverSet) {
-          propertiesObserver(mutations);
-        }
-      }
-    };
-    const assign = (item, props) => {
-      const itemOwnPropertyDescriptors = Object.getOwnPropertyDescriptors(item);
-      const itemOwnKeys = Object.keys(itemOwnPropertyDescriptors);
-      const itemWithProps = Object.create(
-        Object.getPrototypeOf(item),
-        itemOwnPropertyDescriptors,
-      );
-      let hasChanges = false;
-      const propertyMutations = {};
-
-      for (const key of Object.keys(props)) {
-        const newValue = props[key];
-        if (itemOwnKeys.includes(key)) {
-          const oldValue = item[key];
-          if (newValue !== oldValue) {
-            hasChanges = true;
-            itemWithProps[key] = newValue;
-            propertyMutations[key] = {
-              oldValue,
-              newValue,
-              target: item,
-              newTarget: itemWithProps,
-            };
-          }
-        } else {
-          hasChanges = true;
-          itemWithProps[key] = newValue;
-          propertyMutations[key] = {
-            added: true,
-            newValue,
-            target: item,
-            newTarget: itemWithProps,
-          };
-        }
-      }
-
-      if (!hasChanges) {
-        return item;
-      }
-
-      // Store mutations for this specific item
-      mutationsMap.set(item[idKey], propertyMutations);
-      return itemWithProps;
-    };
-
-    const array = arraySignal.peek();
-    if (args.length === 1 && Array.isArray(args[0])) {
-      const propsArray = args[0];
-      if (array.length === 0) {
-        const arrayAllCreated = [];
-        for (const props of propsArray) {
-          const item = createItemFromProps(props);
-          arrayAllCreated.push(item);
-        }
-        arraySignal.value = arrayAllCreated;
-        return arrayAllCreated;
-      }
-      let hasNew = false;
-      let hasUpdate = false;
-      const arraySomeUpdated = [];
-      const arrayWithOnlyAffectedItems = [];
-      const existingEntryMap = new Map();
-      let index = 0;
-      while (index < array.length) {
-        const existingItem = array[index];
-        const id = existingItem[idKey];
-        existingEntryMap.set(id, {
-          existingItem,
-          existingItemIndex: index,
-          processed: false,
-        });
-        index++;
-      }
-
-      for (const props of propsArray) {
-        const id = readIdFromItemProps(props, array);
-        const existingEntry = existingEntryMap.get(id);
-        if (existingEntry) {
-          const { existingItem } = existingEntry;
-          const itemWithPropsOrItem = assign(existingItem, props);
-          if (itemWithPropsOrItem !== existingItem) {
-            hasUpdate = true;
-          }
-          arraySomeUpdated.push(itemWithPropsOrItem);
-          existingEntry.processed = true;
-          arrayWithOnlyAffectedItems.push(itemWithPropsOrItem);
-        } else {
-          hasNew = true;
-          const item = createItemFromProps(props);
-          arraySomeUpdated.push(item);
-          arrayWithOnlyAffectedItems.push(item);
-        }
-      }
-
-      for (const [, existingEntry] of existingEntryMap) {
-        if (!existingEntry.processed) {
-          arraySomeUpdated.push(existingEntry.existingItem);
-        }
-      }
-
-      if (hasNew || hasUpdate) {
-        arraySignal.value = arraySomeUpdated;
-        triggerPropertyMutations();
-        return arrayWithOnlyAffectedItems;
-      }
-      return arrayWithOnlyAffectedItems;
-    }
-    let existingItem = null;
-    let updatedItem = null;
-    const arraySomeUpdated = [];
-    let propertyToMatch;
-    let valueToMatch;
-    let props;
-    if (args.length === 1) {
-      const firstArg = args[0];
-      propertyToMatch = idKey;
-      if (!firstArg || typeof firstArg !== "object") {
-        throw new TypeError(
-          `Expected an object as first argument, got ${firstArg}`,
-        );
-      }
-      valueToMatch = readIdFromItemProps(firstArg, array);
-      props = firstArg;
-    } else if (args.length === 2) {
-      propertyToMatch = idKey;
-      valueToMatch = args[0];
-      if (typeof valueToMatch === "object") {
-        valueToMatch = valueToMatch[idKey];
-      }
-      props = args[1];
-    } else if (args.length === 3) {
-      propertyToMatch = args[0];
-      valueToMatch = args[1];
-      props = args[2];
-    }
-    for (const itemCandidate of array) {
-      const itemCandidateValue =
-        typeof propertyToMatch === "function"
-          ? propertyToMatch(itemCandidate)
-          : itemCandidate[propertyToMatch];
-      if (itemCandidateValue === valueToMatch) {
-        const itemWithPropsOrItem = assign(itemCandidate, props);
-        if (itemWithPropsOrItem === itemCandidate) {
-          existingItem = itemCandidate;
-        } else {
-          updatedItem = itemWithPropsOrItem;
-        }
-        arraySomeUpdated.push(itemWithPropsOrItem);
-      } else {
-        arraySomeUpdated.push(itemCandidate);
-      }
-    }
-    if (existingItem) {
-      return existingItem;
-    }
-    if (updatedItem) {
-      arraySignal.value = arraySomeUpdated;
-      triggerPropertyMutations();
-      return updatedItem;
-    }
-    const item = createItemFromProps(props);
-    arraySomeUpdated.push(item);
-    arraySignal.value = arraySomeUpdated;
-    triggerPropertyMutations();
-    return item;
-  };
-  const drop = (...args) => {
-    const removedItemArray = [];
-    const triggerRemovedMutations = () => {
-      if (removedItemArray.length === 0) {
-        return;
-      }
-      // we call at the end so that itemWithProps and arraySignal.value was set too
-      for (const removalsCallback of removalsCallbackSet) {
-        removalsCallback(removedItemArray);
-      }
-    };
-
-    const array = arraySignal.peek();
-    if (args.length === 1 && Array.isArray(args[0])) {
-      const firstArg = args[0];
-      const arrayWithoutDroppedItems = [];
-      let hasFound = false;
-      const idToRemoveSet = new Set();
-      const idRemovedArray = [];
-
-      for (const value of firstArg) {
-        if (typeof value === "object" && value !== null) {
-          const id = readIdFromItemProps(value, array);
-          idToRemoveSet.add(id);
-        } else if (!primitiveCanBeId(value)) {
-          throw new TypeError(`id to drop must be an id, got ${value}`);
-        }
-        idToRemoveSet.add(value);
-      }
-      for (const existingItem of array) {
-        const existingItemId = existingItem[idKey];
-        if (idToRemoveSet.has(existingItemId)) {
-          hasFound = true;
-          idToRemoveSet.delete(existingItemId);
-          idRemovedArray.push(existingItemId);
-        } else {
-          arrayWithoutDroppedItems.push(existingItem);
-        }
-      }
-      if (idToRemoveSet.size > 0) {
-        console.warn(
-          `arraySignalStore.drop: Some ids were not found in the array: ${Array.from(idToRemoveSet).join(", ")}`,
-        );
-      }
-      if (hasFound) {
-        arraySignal.value = arrayWithoutDroppedItems;
-        triggerRemovedMutations();
-        return idRemovedArray;
-      }
-      return [];
-    }
-    let propertyToMatch;
-    let valueToMatch;
-    if (args.length === 1) {
-      propertyToMatch = idKey;
-      valueToMatch = args[0];
-      if (valueToMatch !== null && typeof valueToMatch === "object") {
-        valueToMatch = readIdFromItemProps(valueToMatch, array);
-      } else if (!primitiveCanBeId(valueToMatch)) {
-        throw new TypeError(`id to drop must be an id, got ${valueToMatch}`);
-      }
-    } else {
-      propertyToMatch = args[0];
-      valueToMatch = args[1];
-    }
-    const arrayWithoutItemToDrop = [];
-    let found = false;
-    let itemDropped = null;
-    for (const itemCandidate of array) {
-      const itemCandidateValue =
-        typeof propertyToMatch === "function"
-          ? propertyToMatch(itemCandidate)
-          : itemCandidate[propertyToMatch];
-      if (itemCandidateValue === valueToMatch) {
-        itemDropped = itemCandidate;
-        found = true;
-      } else {
-        arrayWithoutItemToDrop.push(itemCandidate);
-      }
-    }
-    if (found) {
-      arraySignal.value = arrayWithoutItemToDrop;
-      removedItemArray.push(itemDropped);
-      triggerRemovedMutations();
-      return itemDropped[idKey];
-    }
-    return null;
-  };
-
-  const signalForMutableIdKey = (mutableIdKey, mutableIdValueSignal) => {
-    const itemIdSignal = signal(null);
-    const check = (value) => {
-      const item = select(mutableIdKey, value);
-      if (!item) {
-        return false;
-      }
-      itemIdSignal.value = item[idKey];
-      return true;
-    };
-    if (!check()) {
-      effect(function () {
-        const mutableIdValue = mutableIdValueSignal.value;
-        if (check(mutableIdValue)) {
-          this.dispose();
-        }
-      });
-    }
-
-    return computed(() => {
-      return select(itemIdSignal.value);
-    });
-  };
-
-  Object.assign(store, {
-    mutableIdKeys,
-    arraySignal,
-    select,
-    selectAll,
-    upsert,
-    drop,
-
-    observeItemProperties,
-    observeProperties,
-    observeRemovals,
-    registerItemMatchLifecycle,
-    signalForMutableIdKey,
-  });
-  return store;
-};
-
-const resource = (
-  name,
-  { idKey, mutableIdKeys = [], rerunOn, httpHandler, ...rest } = {},
-) => {
-  if (idKey === undefined) {
-    idKey = mutableIdKeys.length === 0 ? "id" : mutableIdKeys[0];
-  }
-  const resourceInstance = {
-    isResource: true,
-    name,
-    idKey,
-    httpActions: {},
-    addItemSetup: undefined,
-    httpHandler,
-  };
-  if (!httpHandler) {
-    const setupCallbackSet = new Set();
-    const addItemSetup = (callback) => {
-      setupCallbackSet.add(callback);
-    };
-    resourceInstance.addItemSetup = addItemSetup;
-
-    const itemPrototype = {
-      [Symbol.toStringTag]: name,
-      toString() {
-        let string = `${name}`;
-        if (mutableIdKeys.length) {
-          for (const mutableIdKey of mutableIdKeys) {
-            const mutableId = this[mutableIdKey];
-            if (mutableId !== undefined) {
-              string += `[${mutableIdKey}=${mutableId}]`;
-              return string;
-            }
-          }
-        }
-        const id = this[idKey];
-        if (id) {
-          string += `[${idKey}=${id}]`;
-        }
-        return string;
-      },
-    };
-
-    const store = arraySignalStore([], idKey, {
-      mutableIdKeys,
-      name: `${name} store`,
-      createItem: (props) => {
-        const item = Object.create(itemPrototype);
-        Object.assign(item, props);
-        Object.defineProperty(item, SYMBOL_IDENTITY, {
-          value: item[idKey],
-          writable: false,
-          enumerable: false,
-          configurable: false,
-        });
-        for (const setupCallback of setupCallbackSet) {
-          setupCallback(item);
-        }
-        return item;
-      },
-    });
-    const useArray = () => {
-      return store.arraySignal.value;
-    };
-    const useById = (id) => {
-      return store.select(idKey, id);
-    };
-
-    Object.assign(resourceInstance, {
-      useArray,
-      useById,
-      store,
-    });
-
-    httpHandler = createHttpHandlerForRootResource(name, {
-      idKey,
-      store,
-      rerunOn,
-      resourceInstance,
-      mutableIdKeys,
-    });
-  }
-  resourceInstance.httpHandler = httpHandler;
-
-  // Store the action callback definitions for withParams to use later
-  resourceInstance.httpActions = rest;
-
-  // Create HTTP actions
-  for (const key of Object.keys(rest)) {
-    const method = httpHandler[key];
-    if (!method) {
-      continue;
-    }
-    const action = method(rest[key]);
-    resourceInstance[key] = action;
-  }
-
-  resourceInstance.one = (propertyName, childResource, options) => {
-    const childIdKey = childResource.idKey;
-    const childName = `${name}.${propertyName}`;
-    resourceInstance.addItemSetup((item) => {
-      const childItemIdSignal = signal();
-      const updateChildItemId = (value) => {
-        const currentChildItemId = childItemIdSignal.peek();
-        if (isProps(value)) {
-          const childItem = childResource.store.upsert(value);
-          const childItemId = childItem[childIdKey];
-          if (currentChildItemId === childItemId) {
-            return false;
-          }
-          childItemIdSignal.value = childItemId;
-          return true;
-        }
-        if (primitiveCanBeId(value)) {
-          const childItemProps = { [childIdKey]: value };
-          const childItem = childResource.store.upsert(childItemProps);
-          const childItemId = childItem[childIdKey];
-          if (currentChildItemId === childItemId) {
-            return false;
-          }
-          childItemIdSignal.value = childItemId;
-          return true;
-        }
-        if (currentChildItemId === undefined) {
-          return false;
-        }
-        childItemIdSignal.value = undefined;
-        return true;
-      };
-      updateChildItemId(item[propertyName]);
-
-      const childItemSignal = computed(() => {
-        const childItemId = childItemIdSignal.value;
-        const childItem = childResource.store.select(childItemId);
-        return childItem;
-      });
-      const childItemFacadeSignal = computed(() => {
-        const childItem = childItemSignal.value;
-        if (childItem) {
-          const childItemCopy = Object.create(
-            Object.getPrototypeOf(childItem),
-            Object.getOwnPropertyDescriptors(childItem),
-          );
-          Object.defineProperty(childItemCopy, SYMBOL_OBJECT_SIGNAL, {
-            value: childItemSignal,
-            writable: false,
-            enumerable: false,
-            configurable: false,
-          });
-          return childItemCopy;
-        }
-        const nullItem = {
-          [SYMBOL_OBJECT_SIGNAL]: childItemSignal,
-          valueOf: () => null,
-        };
-        return nullItem;
-      });
-
-      Object.defineProperty(item, propertyName, {
-        get: () => {
-          const childItemFacade = childItemFacadeSignal.value;
-          return childItemFacade;
-        },
-        set: (value) => {
-          if (!updateChildItemId(value)) {
-            return;
-          }
-        },
-      });
-    });
-    const httpHandlerForRelationshipToOneChild =
-      createHttpHandlerForRelationshipToOneResource(childName, {
-        idKey,
-        store: resourceInstance.store,
-        propertyName,
-        childIdKey,
-        childStore: childResource.store,
-        resourceInstance,
-        resourceLifecycleManager,
-      });
-    return resource(childName, {
-      idKey: childIdKey,
-      httpHandler: httpHandlerForRelationshipToOneChild,
-      ...options,
-    });
-  };
-  resourceInstance.many = (propertyName, childResource, options) => {
-    const childIdKey = childResource.idKey;
-    const childName = `${name}.${propertyName}`;
-    resourceInstance.addItemSetup((item) => {
-      const childItemIdArraySignal = signal([]);
-      const updateChildItemIdArray = (valueArray) => {
-        const currentIdArray = childItemIdArraySignal.peek();
-
-        if (!Array.isArray(valueArray)) {
-          if (currentIdArray.length === 0) {
-            return;
-          }
-          childItemIdArraySignal.value = [];
-          return;
-        }
-
-        let i = 0;
-        const idArray = [];
-        let modified = false;
-        while (i < valueArray.length) {
-          const value = valueArray[i];
-          const currentIdAtIndex = currentIdArray[idArray.length];
-          i++;
-          if (isProps(value)) {
-            const childItem = childResource.store.upsert(value);
-            const childItemId = childItem[childIdKey];
-            if (currentIdAtIndex !== childItemId) {
-              modified = true;
-            }
-            idArray.push(childItemId);
-            continue;
-          }
-          if (primitiveCanBeId(value)) {
-            const childItemProps = { [childIdKey]: value };
-            const childItem = childResource.store.upsert(childItemProps);
-            const childItemId = childItem[childIdKey];
-            if (currentIdAtIndex !== childItemId) {
-              modified = true;
-            }
-            idArray.push(childItemId);
-            continue;
-          }
-        }
-        if (modified || currentIdArray.length !== idArray.length) {
-          childItemIdArraySignal.value = idArray;
-        }
-      };
-      updateChildItemIdArray(item[propertyName]);
-
-      const childItemArraySignal = computed(() => {
-        const childItemIdArray = childItemIdArraySignal.value;
-        const childItemArray = childResource.store.selectAll(childItemIdArray);
-        Object.defineProperty(childItemArray, SYMBOL_OBJECT_SIGNAL, {
-          value: childItemArraySignal,
-          writable: false,
-          enumerable: false,
-          configurable: false,
-        });
-        return childItemArray;
-      });
-
-      Object.defineProperty(item, propertyName, {
-        get: () => {
-          const childItemArray = childItemArraySignal.value;
-          return childItemArray;
-        },
-        set: (value) => {
-          updateChildItemIdArray(value);
-        },
-      });
-    });
-    const httpHandleForChildManyResource =
-      createHttpHandlerRelationshipToManyResource(childName, {
-        idKey,
-        store: resourceInstance.store,
-        propertyName,
-        childIdKey,
-        childStore: childResource.store,
-        resourceInstance,
-        resourceLifecycleManager,
-      });
-    return resource(childName, {
-      idKey: childIdKey,
-      httpHandler: httpHandleForChildManyResource,
-      ...options,
-    });
-  };
-
-  /**
-   * Creates a parameterized version of the resource with isolated resource lifecycle behavior.
-   *
-   * Actions from parameterized resources only trigger rerun/reset for other actions with
-   * identical parameters, preventing cross-contamination between different parameter sets.
-   *
-   * @param {Object} params - Parameters to bind to all actions of this resource (required)
-   * @param {Object} options - Additional options for the parameterized resource
-   * @param {Array} options.dependencies - Array of resources that should trigger autorerun when modified
-   * @param {Object} options.rerunOn - Configuration for when to rerun GET/GET_MANY actions
-   * @param {false|Array|string} options.rerunOn.GET - HTTP verbs that trigger GET rerun (false = reset on DELETE)
-   * @param {false|Array|string} options.rerunOn.GET_MANY - HTTP verbs that trigger GET_MANY rerun (false = reset on DELETE)
-   * @returns {Object} A new resource instance with parameter-bound actions and isolated lifecycle
-   * @see {@link ./docs/resource_with_params.md} for detailed documentation and examples
-   *
-   * @example
-   * const ROLE = resource("role", { GET: (params) => fetchRole(params) });
-   * const adminRoles = ROLE.withParams({ canlogin: true });
-   * const guestRoles = ROLE.withParams({ canlogin: false });
-   * // adminRoles and guestRoles have isolated autorerun behavior
-   *
-   * @example
-   * // Cross-resource dependencies
-   * const role = resource("role");
-   * const database = resource("database");
-   * const tables = resource("tables");
-   * const ROLE_WITH_OWNERSHIP = role.withParams({ owners: true }, {
-   *   dependencies: [role, database, tables],
-   * });
-   * // ROLE_WITH_OWNERSHIP.GET_MANY will autorerun when any table/database/role is POST/DELETE
-   */
-  const withParams = (params, options = {}) => {
-    // Require parameters
-    if (!params || Object.keys(params).length === 0) {
-      throw new Error(`resource(${name}).withParams() requires parameters`);
-    }
-
-    const { dependencies = [], rerunOn: customRerunOn } = options;
-
-    // Generate unique param scope for these parameters
-    const paramScopeObject = getParamScope(params);
-
-    // Use custom rerunOn settings if provided, otherwise use resource defaults
-    const finalRerunOn = customRerunOn || rerunOn;
-
-    // Create a new httpHandler with the param scope for isolated autorerun
-    const parameterizedHttpHandler = createHttpHandlerForRootResource(name, {
-      idKey,
-      store: resourceInstance.store,
-      rerunOn: finalRerunOn,
-      paramScope: paramScopeObject,
-      dependencies,
-      resourceInstance,
-      mutableIdKeys,
-    });
-
-    // Create parameterized resource
-    const parameterizedResource = {
-      isResource: true,
-      name,
-      idKey,
-      useArray: resourceInstance.useArray,
-      useById: resourceInstance.useById,
-      store: resourceInstance.store,
-      addItemSetup: resourceInstance.addItemSetup,
-      httpHandler: parameterizedHttpHandler,
-      one: resourceInstance.one,
-      many: resourceInstance.many,
-      dependencies, // Store dependencies for debugging/inspection
-      httpActions: resourceInstance.httpActions,
-    };
-
-    // Create HTTP actions from the parameterized handler and bind parameters
-    for (const key of Object.keys(resourceInstance.httpActions)) {
-      const method = parameterizedHttpHandler[key];
-      if (method) {
-        const action = method(resourceInstance.httpActions[key]);
-        // Bind the parameters to get a parameterized action instance
-        parameterizedResource[key] = action.bindParams(params);
-      }
-    }
-
-    // Add withParams method to the parameterized resource for chaining
-    parameterizedResource.withParams = (newParams, newOptions = {}) => {
-      if (!newParams || Object.keys(newParams).length === 0) {
-        throw new Error(`resource(${name}).withParams() requires parameters`);
-      }
-      // Merge current params with new ones for chaining
-      const mergedParams = { ...params, ...newParams };
-      // Merge options, with new options taking precedence
-      const mergedOptions = {
-        dependencies,
-        rerunOn: finalRerunOn,
-        ...newOptions,
-      };
-      return withParams(mergedParams, mergedOptions);
-    };
-
-    return parameterizedResource;
-  };
-
-  resourceInstance.withParams = withParams;
-
-  return resourceInstance;
-};
-
-// Resource Lifecycle Manager
-// This handles ALL resource lifecycle logic (rerun/reset) across all resources
-const createResourceLifecycleManager = () => {
-  const registeredResources = new Map(); // Map<resourceInstance, lifecycleConfig>
-  const resourceDependencies = new Map(); // Map<resourceInstance, Set<dependentResources>>
-
-  const registerResource = (resourceInstance, config) => {
-    const {
-      rerunOn,
-      paramScope = null,
-      dependencies = [],
-      mutableIdKeys = [],
-    } = config;
-
-    registeredResources.set(resourceInstance, {
-      rerunOn,
-      paramScope,
-      mutableIdKeys,
-      httpActions: new Set(),
-    });
-
-    // Register dependencies
-    if (dependencies.length > 0) {
-      for (const dependency of dependencies) {
-        if (!resourceDependencies.has(dependency)) {
-          resourceDependencies.set(dependency, new Set());
-        }
-        resourceDependencies.get(dependency).add(resourceInstance);
-      }
-    }
-  };
-
-  const registerAction = (resourceInstance, httpAction) => {
-    const config = registeredResources.get(resourceInstance);
-    if (config) {
-      config.httpActions.add(httpAction);
-    }
-  };
-
-  const shouldRerunAfter = (rerunConfig, httpVerb) => {
-    if (rerunConfig === false) return false;
-    if (rerunConfig === "*") return true;
-    if (Array.isArray(rerunConfig)) {
-      const verbSet = new Set(rerunConfig.map((v) => v.toUpperCase()));
-      if (verbSet.has("*")) return true;
-      return verbSet.has(httpVerb.toUpperCase());
-    }
-    return false;
-  };
-
-  const isParamSubset = (parentParams, childParams) => {
-    if (!parentParams || !childParams) return false;
-    for (const [key, value] of Object.entries(parentParams)) {
-      if (
-        !(key in childParams) ||
-        !compareTwoJsValues(childParams[key], value)
-      ) {
-        return false;
-      }
-    }
-    return true;
-  };
-
-  const findEffectOnActions = (triggeringAction) => {
-    // Determines which actions to rerun/reset when an action completes.
-
-    const actionsToRerun = new Set();
-    const actionsToReset = new Set();
-    const reasonSet = new Set();
-
-    for (const [resourceInstance, config] of registeredResources) {
-      const shouldRerunGetMany = shouldRerunAfter(
-        config.rerunOn.GET_MANY,
-        triggeringAction.meta.httpVerb,
-      );
-      const shouldRerunGet = shouldRerunAfter(
-        config.rerunOn.GET,
-        triggeringAction.meta.httpVerb,
-      );
-
-      // Skip if no rerun or reset rules apply
-      const hasMutableIdAutorerun =
-        (triggeringAction.meta.httpVerb === "POST" ||
-          triggeringAction.meta.httpVerb === "PUT" ||
-          triggeringAction.meta.httpVerb === "PATCH") &&
-        config.mutableIdKeys.length > 0;
-
-      if (
-        !shouldRerunGetMany &&
-        !shouldRerunGet &&
-        triggeringAction.meta.httpVerb !== "DELETE" &&
-        !hasMutableIdAutorerun
-      ) {
-        continue;
-      }
-
-      // Parameter scope predicate for config-driven rules
-      // Same scope ID or no scope = compatible, subset check for different scopes
-      const paramScopePredicate = config.paramScope
-        ? (candidateAction) => {
-            if (candidateAction.meta.paramScope?.id === config.paramScope.id)
-              return true;
-            if (!candidateAction.meta.paramScope) return true;
-            const candidateParams = candidateAction.meta.paramScope.params;
-            const currentParams = config.paramScope.params;
-            return isParamSubset(candidateParams, currentParams);
-          }
-        : (candidateAction) => !candidateAction.meta.paramScope;
-
-      for (const httpAction of config.httpActions) {
-        // Find all instances of this action
-        const actionCandidateArray = httpAction.matchAllSelfOrDescendant(
-          (action) =>
-            !action.isPrerun && action.completed && action !== triggeringAction,
-        );
-
-        for (const actionCandidate of actionCandidateArray) {
-          const triggerVerb = triggeringAction.meta.httpVerb;
-          const candidateVerb = actionCandidate.meta.httpVerb;
-          const candidateIsPlural = actionCandidate.meta.httpMany;
-          if (triggerVerb === candidateVerb) {
-            continue;
-          }
-
-          const triggeringResource = getResourceForAction(triggeringAction);
-          const isSameResource = triggeringResource === resourceInstance;
-
-          // Config-driven same-resource effects (respects param scope)
-          config_effect: {
-            if (
-              !isSameResource ||
-              triggerVerb === "GET" ||
-              candidateVerb !== "GET"
-            ) {
-              break config_effect;
-            }
-            const shouldRerun = candidateIsPlural
-              ? shouldRerunGetMany
-              : shouldRerunGet;
-            if (!shouldRerun) {
-              break config_effect;
-            }
-            if (!paramScopePredicate(actionCandidate)) {
-              break config_effect;
-            }
-            actionsToRerun.add(actionCandidate);
-            reasonSet.add("same-resource autorerun");
-            continue;
-          }
-
-          // DELETE effects on same resource (ignores param scope)
-          delete_effect: {
-            if (!isSameResource || triggerVerb !== "DELETE") {
-              break delete_effect;
-            }
-            if (candidateIsPlural) {
-              if (!shouldRerunGetMany) {
-                break delete_effect;
-              }
-              actionsToRerun.add(actionCandidate);
-              reasonSet.add("same-resource DELETE rerun GET_MANY");
-              continue;
-            }
-            // Get the ID(s) that were deleted
-            const { dataSignal } = getActionPrivateProperties(triggeringAction);
-            const deleteIdSet = triggeringAction.meta.httpMany
-              ? new Set(dataSignal.peek())
-              : new Set([dataSignal.peek()]);
-
-            const candidateId = actionCandidate.data;
-            const isAffected = deleteIdSet.has(candidateId);
-            if (!isAffected) {
-              break delete_effect;
-            }
-            if (candidateVerb === "GET" && shouldRerunGet) {
-              actionsToRerun.add(actionCandidate);
-              reasonSet.add("same-resource DELETE rerun GET");
-              continue;
-            }
-            actionsToReset.add(actionCandidate);
-            reasonSet.add("same-resource DELETE reset");
-            continue;
-          }
-
-          // MutableId effects: rerun GET when matching resource created/updated
-          {
-            if (
-              hasMutableIdAutorerun &&
-              candidateVerb === "GET" &&
-              !candidateIsPlural &&
-              isSameResource
-            ) {
-              const { computedDataSignal } =
-                getActionPrivateProperties(triggeringAction);
-              const modifiedData = computedDataSignal.peek();
-
-              if (modifiedData && typeof modifiedData === "object") {
-                for (const mutableIdKey of config.mutableIdKeys) {
-                  const modifiedMutableId = modifiedData[mutableIdKey];
-                  const candidateParams = actionCandidate.params;
-
-                  if (
-                    modifiedMutableId !== undefined &&
-                    candidateParams &&
-                    typeof candidateParams === "object" &&
-                    candidateParams[mutableIdKey] === modifiedMutableId
-                  ) {
-                    actionsToRerun.add(actionCandidate);
-                    reasonSet.add(
-                      `${triggeringAction.meta.httpVerb}-mutableId autorerun`,
-                    );
-                    break;
-                  }
-                }
-              }
-            }
-          }
-
-          // Cross-resource dependency effects: rerun dependent GET_MANY
-          {
-            if (
-              triggeringResource &&
-              resourceDependencies
-                .get(triggeringResource)
-                ?.has(resourceInstance) &&
-              triggerVerb !== "GET" &&
-              candidateVerb === "GET" &&
-              candidateIsPlural
-            ) {
-              actionsToRerun.add(actionCandidate);
-              reasonSet.add("dependency autorerun");
-              continue;
-            }
-          }
-        }
-      }
-    }
-
-    return {
-      actionsToRerun,
-      actionsToReset,
-      reasons: Array.from(reasonSet),
-    };
-  };
-
-  const onActionComplete = (httpAction) => {
-    const { actionsToRerun, actionsToReset, reasons } =
-      findEffectOnActions(httpAction);
-
-    if (actionsToRerun.size > 0 || actionsToReset.size > 0) {
-      const reason = `${httpAction} triggered ${reasons.join(" and ")}`;
-      const dispatchActions = getActionDispatcher();
-      dispatchActions({
-        rerunSet: actionsToRerun,
-        resetSet: actionsToReset,
-        reason,
-      });
-    }
-  };
-
-  // Helper to find which resource an action belongs to
-  const getResourceForAction = (action) => {
-    return action.meta.resourceInstance;
-  };
-
-  return {
-    registerResource,
-    registerAction,
-    onActionComplete,
-  };
-};
-
-// Global resource lifecycle manager instance
-const resourceLifecycleManager = createResourceLifecycleManager();
-
-// Cache for parameter scope identifiers
-const paramScopeWeakSet = createIterableWeakSet();
-let paramScopeIdCounter = 0;
-const getParamScope = (params) => {
-  for (const existingParamScope of paramScopeWeakSet) {
-    if (compareTwoJsValues(existingParamScope.params, params)) {
-      return existingParamScope;
-    }
-  }
-  const id = Symbol(`paramScope-${++paramScopeIdCounter}`);
-  const newParamScope = {
-    params,
-    id,
-  };
-  paramScopeWeakSet.add(newParamScope);
-  return newParamScope;
-};
-
-const createHttpHandlerForRootResource = (
-  name,
-  {
-    idKey,
-    store,
-    /*
-    Default autorerun behavior explanation:
-
-    GET: false (RECOMMENDED)
-    What happens:
-    - GET actions are reset by DELETE operations (not rerun)
-    - DELETE operation on the displayed item would display nothing in the UI (action is in IDLE state)
-    - PUT/PATCH operations update UI via signals, no rerun needed
-    - This approach minimizes unnecessary API calls
-
-    How to handle:
-    - Applications can provide custom UI for deleted items (e.g., "Item not found")
-    - Or redirect users to appropriate pages (e.g., back to list view)
-
-    Alternative (NOT RECOMMENDED):
-    - Use GET: ["DELETE"] to rerun and display 404 error received from backend
-    - Poor UX: users expect immediate feedback, not loading + error state
-
-    GET_MANY: ["POST"]
-    - POST: New items may or may not appear in lists (depends on filters, pagination, etc.)
-      Backend determines visibility better than client-side logic
-    - DELETE: Excluded by default because:
-      • UI handles deletions via store signals (selectAll filters out deleted items)
-      • DELETE operations rarely change list content beyond item removal
-      • Avoids unnecessary API calls (can be overridden if needed)
-    */
-    rerunOn = {
-      GET: false,
-      GET_MANY: [
-        "POST",
-        // "DELETE"
-      ],
-    },
-    paramScope,
-    dependencies = [],
-    resourceInstance,
-    mutableIdKeys = [],
-  },
-) => {
-  // Register this resource with the resource lifecycle manager
-  resourceLifecycleManager.registerResource(resourceInstance, {
-    rerunOn,
-    paramScope,
-    dependencies,
-    idKey,
-    mutableIdKeys,
-  });
-
-  const createActionAffectingOneItem = (httpVerb, { callback, ...options }) => {
-    const applyResultToValue =
-      httpVerb === "DELETE"
-        ? (itemIdOrItemProps) => {
-            const itemId = store.drop(itemIdOrItemProps);
-            return itemId;
-          }
-        : (result) => {
-            let item;
-            if (Array.isArray(result)) {
-              // the callback is returning something like [property, value, props]
-              // this is to support a case like:
-              // store.upsert("name", "currentName", { name: "newName" })
-              // where we want to update the name property of an existing item
-              item = store.upsert(...result);
-            } else {
-              item = store.upsert(result);
-            }
-            const itemId = item[idKey];
-            return itemId;
-          };
-
-    const callerInfo = getCallerInfo(null, 2);
-    // Provide more fallback options for better debugging
-    const locationInfo =
-      callerInfo.file && callerInfo.line && callerInfo.column
-        ? `${callerInfo.file}:${callerInfo.line}:${callerInfo.column}`
-        : callerInfo.raw || "unknown location";
-    const originalActionName = `${name}.${httpVerb}`;
-    const httpActionAffectingOneItem = createAction(callback, {
-      meta: { httpVerb, httpMany: false, paramScope, resourceInstance, store },
-      name: `${name}.${httpVerb}`,
-      resultToValue: (result, action) => {
-        const actionLabel = action.name;
-
-        if (httpVerb === "DELETE") {
-          if (!isProps(result) && !primitiveCanBeId(result)) {
-            throw new TypeError(
-              `${actionLabel} must return an object (that will be used to drop "${name}" resource), received ${result}.
-           ${originalActionName} source location: ${locationInfo}`,
-            );
-          }
-          return applyResultToValue(result);
-        }
-        if (!isProps(result)) {
-          throw new TypeError(
-            `${actionLabel} must return an object (that will be used to upsert "${name}" resource), received ${result}.
-           ${originalActionName} source location: ${locationInfo}`,
-          );
-        }
-        return applyResultToValue(result);
-      },
-      valueToData: (itemId) => store.select(itemId),
-      completeSideEffect: (actionCompleted) =>
-        resourceLifecycleManager.onActionComplete(actionCompleted),
-      ...options,
-    });
-    resourceLifecycleManager.registerAction(
-      resourceInstance,
-      httpActionAffectingOneItem,
-    );
-    return httpActionAffectingOneItem;
-  };
-  const GET = (callback, options) =>
-    createActionAffectingOneItem("GET", {
-      callback,
-      resultToValue: (result) => {
-        const item = store.upsert(result);
-        const itemId = item[idKey];
-        return itemId;
-      },
-      valueToData: (itemId) => store.select(itemId),
-      ...options,
-    });
-  const POST = (callback, options) =>
-    createActionAffectingOneItem("POST", {
-      callback,
-      resultToValue: (result) => {
-        const item = store.upsert(result);
-        const itemId = item[idKey];
-        return itemId;
-      },
-      valueToData: (itemId) => store.select(itemId),
-      ...options,
-    });
-  const PUT = (callback, options) =>
-    createActionAffectingOneItem("PUT", {
-      callback,
-      ...options,
-    });
-  const PATCH = (callback, options) =>
-    createActionAffectingOneItem("PATCH", {
-      callback,
-      ...options,
-    });
-  const DELETE = (callback, options) =>
-    createActionAffectingOneItem("DELETE", {
-      callback,
-      ...options,
-    });
-
-  const createActionAffectingManyItems = (
-    httpVerb,
-    { callback, ...options },
-  ) => {
-    const applyResultToValue =
-      httpVerb === "DELETE"
-        ? (idOrMutableIdArray) => {
-            const idArray = store.drop(idOrMutableIdArray);
-            return idArray;
-          }
-        : (dataArray) => {
-            const itemArray = store.upsert(dataArray);
-            const idArray = itemArray.map((item) => item[idKey]);
-            return idArray;
-          };
-
-    const httpActionAffectingManyItems = createAction(callback, {
-      meta: { httpVerb, httpMany: true, paramScope, resourceInstance, store },
-      name: `${name}.${httpVerb}_MANY`,
-      dataDefault: [],
-      resultToValue: applyResultToValue,
-      valueToData: (idArray) => store.selectAll(idArray),
-      completeSideEffect: (actionCompleted) =>
-        resourceLifecycleManager.onActionComplete(actionCompleted),
-      ...options,
-    });
-    resourceLifecycleManager.registerAction(
-      resourceInstance,
-      httpActionAffectingManyItems,
-    );
-    return httpActionAffectingManyItems;
-  };
-  const GET_MANY = (callback, options) =>
-    createActionAffectingManyItems("GET", { callback, ...options });
-  const POST_MANY = (callback, options) =>
-    createActionAffectingManyItems("POST", { callback, ...options });
-  const PUT_MANY = (callback, options) =>
-    createActionAffectingManyItems("PUT", { callback, ...options });
-  const PATCH_MANY = (callback, options) =>
-    createActionAffectingManyItems("PATCH", { callback, ...options });
-  const DELETE_MANY = (callback, options) =>
-    createActionAffectingManyItems("DELETE", { callback, ...options });
-
-  return {
-    GET,
-    POST,
-    PUT,
-    PATCH,
-    DELETE,
-    GET_MANY,
-    POST_MANY,
-    PUT_MANY,
-    PATCH_MANY,
-    DELETE_MANY,
-  };
-};
-const createHttpHandlerForRelationshipToOneResource = (
-  name,
-  {
-    idKey,
-    store,
-    propertyName,
-    childIdKey,
-    childStore,
-    resourceInstance,
-    resourceLifecycleManager,
-  },
-) => {
-  const createActionAffectingOneItem = (httpVerb, { callback, ...options }) => {
-    const applyResultToValue =
-      httpVerb === "DELETE"
-        ? (itemId) => {
-            const item = store.select(itemId);
-            const childItemId = item[propertyName][childIdKey];
-            store.upsert({
-              [idKey]: itemId,
-              [propertyName]: null,
-            });
-            return childItemId;
-          }
-        : // callback must return object with the following format:
-          // {
-          //   [idKey]: 123,
-          //   [propertyName]: {
-          //     [childIdKey]: 456, ...childProps
-          //   }
-          // }
-          // the following could happen too if there is no relationship
-          // {
-          //   [idKey]: 123,
-          //   [propertyName]: null
-          // }
-          (result) => {
-            const item = store.upsert(result);
-            const childItem = item[propertyName];
-            const childItemId = childItem ? childItem[childIdKey] : undefined;
-            return childItemId;
-          };
-
-    const callerInfo = getCallerInfo(null, 2);
-    // Provide more fallback options for better debugging
-    const locationInfo =
-      callerInfo.file && callerInfo.line && callerInfo.column
-        ? `${callerInfo.file}:${callerInfo.line}:${callerInfo.column}`
-        : callerInfo.raw || "unknown location";
-    const originalActionName = `${name}.${httpVerb}`;
-
-    const httpActionAffectingOneItem = createAction(callback, {
-      meta: { httpVerb, httpMany: false, resourceInstance, store },
-      name: `${name}.${httpVerb}`,
-      resultToValue: (result, action) => {
-        const actionLabel = action.name;
-
-        if (httpVerb === "DELETE") {
-          if (!isProps(result) && !primitiveCanBeId(result)) {
-            throw new TypeError(
-              `${actionLabel} must return an object (that will be used to drop "${name}" resource), received ${result}.
-           ${originalActionName} source location: ${locationInfo}`,
-            );
-          }
-          return applyResultToValue(result);
-        }
-        if (!isProps(result)) {
-          throw new TypeError(
-            `${actionLabel} must return an object (that will be used to upsert "${name}" resource), received ${result}.
-           ${originalActionName} source location: ${locationInfo}`,
-          );
-        }
-        return applyResultToValue(result);
-      },
-      valueToData: (childItemId) => childStore.select(childItemId),
-      completeSideEffect: (actionCompleted) =>
-        resourceLifecycleManager.onActionComplete(actionCompleted),
-      ...options,
-    });
-    resourceLifecycleManager.registerAction(
-      resourceInstance,
-      httpActionAffectingOneItem,
-    );
-    return httpActionAffectingOneItem;
-  };
-
-  const GET = (callback, options) =>
-    createActionAffectingOneItem("GET", {
-      callback,
-      ...options,
-    });
-  const PUT = (callback, options) =>
-    createActionAffectingOneItem("PUT", {
-      callback,
-      ...options,
-    });
-  const DELETE = (callback, options) =>
-    createActionAffectingOneItem("DELETE", {
-      callback,
-      ...options,
-    });
-
-  // il n'y a pas de many puisque on cible une seule resource
-  // genre table.owner -> c'est un seul owner qu'on peut
-  // GET -> recup les infos de l'objet
-  // PUT -> mettre a jour l'owner de la table
-  // DELETE -> supprimer l'owner de la table
-
-  return { GET, PUT, DELETE };
-};
-const createHttpHandlerRelationshipToManyResource = (
-  name,
-  {
-    idKey,
-    store,
-    propertyName,
-    childIdKey,
-    childStore,
-    resourceInstance,
-    resourceLifecycleManager,
-  } = {},
-) => {
-  // idéalement s'il y a un GET sur le store originel on voudrait ptet le reload
-  // parce que le store originel peut retourner cette liste ou etre impacté
-  // pour l'instant on ignore
-
-  // one item AND many child items
-  const createActionAffectingOneItem = (httpVerb, { callback, ...options }) => {
-    const applyResultToValue =
-      httpVerb === "DELETE"
-        ? ([itemId, childItemId]) => {
-            const item = store.select(itemId);
-            const childItemArray = item[propertyName];
-            const childItemArrayWithoutThisOne = [];
-            let found = false;
-            for (const childItemCandidate of childItemArray) {
-              const childItemCandidateId = childItemCandidate[childIdKey];
-              if (childItemCandidateId === childItemId) {
-                found = true;
-              } else {
-                childItemArrayWithoutThisOne.push(childItemCandidate);
-              }
-            }
-            if (found) {
-              store.upsert({
-                [idKey]: itemId,
-                [propertyName]: childItemArrayWithoutThisOne,
-              });
-            }
-            return childItemId;
-          }
-        : (childData) => {
-            const childItem = childStore.upsert(childData); // if the child item was used it will reload thanks to signals
-            const childItemId = childItem[childIdKey];
-            return childItemId;
-          };
-
-    const callerInfo = getCallerInfo(null, 2);
-    // Provide more fallback options for better debugging
-    const locationInfo =
-      callerInfo.file && callerInfo.line && callerInfo.column
-        ? `${callerInfo.file}:${callerInfo.line}:${callerInfo.column}`
-        : callerInfo.raw || "unknown location";
-    const originalActionName = `${name}.${httpVerb}`;
-
-    const httpActionAffectingOneItem = createAction(callback, {
-      meta: { httpVerb, httpMany: false, resourceInstance, store: childStore },
-      name: `${name}.${httpVerb}`,
-      resultToValue: (result, action) => {
-        const actionLabel = action.name;
-
-        if (httpVerb === "DELETE") {
-          // For DELETE in many relationship, we expect [itemId, childItemId] array
-          if (!Array.isArray(result) || result.length !== 2) {
-            throw new TypeError(
-              `${actionLabel} must return an array [itemId, childItemId] (that will be used to remove relationship), received ${result}.
-           ${originalActionName} source location: ${locationInfo}`,
-            );
-          }
-          return applyResultToValue(result);
-        }
-        if (!isProps(result)) {
-          throw new TypeError(
-            `${actionLabel} must return an object (that will be used to upsert child item), received ${result}.
-           ${originalActionName} source location: ${locationInfo}`,
-          );
-        }
-        return applyResultToValue(result);
-      },
-      valueToData: (childItemId) => childStore.select(childItemId),
-      completeSideEffect: (actionCompleted) =>
-        resourceLifecycleManager.onActionComplete(actionCompleted),
-      ...options,
-    });
-    resourceLifecycleManager.registerAction(
-      resourceInstance,
-      httpActionAffectingOneItem,
-    );
-    return httpActionAffectingOneItem;
-  };
-  const GET = (callback, options) =>
-    createActionAffectingOneItem("GET", {
-      callback,
-      ...options,
-    });
-  // le souci que je vois ici c'est que je n'ai pas la moindre idée d'ou
-  // inserer le childItem (ni meme s'il doit etre visible)
-  // je pense que la bonne chose a faire est de reload
-  // l'objet user.tables s'il en existe un
-  // TODO: find any GET action on "user" and reload it
-  const POST = (callback, options) =>
-    createActionAffectingOneItem("POST", {
-      callback,
-      ...options,
-    });
-  const PUT = (callback, options) =>
-    createActionAffectingOneItem("PUT", {
-      callback,
-      ...options,
-    });
-  const PATCH = (callback, options) =>
-    createActionAffectingOneItem("PATCH", {
-      callback,
-      ...options,
-    });
-  const DELETE = (callback, options) =>
-    createActionAffectingOneItem("DELETE", {
-      callback,
-      ...options,
-    });
-
-  const createActionAffectingManyItems = (
-    httpVerb,
-    { callback, ...options },
-  ) => {
-    const applyResultToValue =
-      httpVerb === "GET"
-        ? (result) => {
-            // callback must return object with the following format:
-            // {
-            //   [idKey]: 123,
-            //   [propertyName]: [
-            //      { [childIdKey]: 456, ...childProps },
-            //      { [childIdKey]: 789, ...childProps },
-            //      ...
-            //   ]
-            // }
-            // the array can be empty
-            const item = store.upsert(result);
-            const childItemArray = item[propertyName];
-            const childItemIdArray = childItemArray.map(
-              (childItem) => childItem[childIdKey],
-            );
-            return childItemIdArray;
-          }
-        : httpVerb === "DELETE"
-          ? ([itemIdOrMutableId, childItemIdOrMutableIdArray]) => {
-              const item = store.select(itemIdOrMutableId);
-              const childItemArray = item[propertyName];
-              const deletedChildItemIdArray = [];
-              const childItemArrayWithoutThoose = [];
-              let someFound = false;
-              const deletedChildItemArray = childStore.select(
-                childItemIdOrMutableIdArray,
-              );
-              for (const childItemCandidate of childItemArray) {
-                if (deletedChildItemArray.includes(childItemCandidate)) {
-                  someFound = true;
-                  deletedChildItemIdArray.push(childItemCandidate[childIdKey]);
-                } else {
-                  childItemArrayWithoutThoose.push(childItemCandidate);
-                }
-              }
-              if (someFound) {
-                store.upsert({
-                  [idKey]: item[idKey],
-                  [propertyName]: childItemArrayWithoutThoose,
-                });
-              }
-              return deletedChildItemIdArray;
-            }
-          : (childDataArray) => {
-              // hum ici aussi on voudra reload "user" pour POST
-              // les autres les signals se charge de reload si visible
-              const childItemArray = childStore.upsert(childDataArray);
-              const childItemIdArray = childItemArray.map(
-                (childItem) => childItem[childIdKey],
-              );
-              return childItemIdArray;
-            };
-
-    const callerInfo = getCallerInfo(null, 2);
-    // Provide more fallback options for better debugging
-    const locationInfo =
-      callerInfo.file && callerInfo.line && callerInfo.column
-        ? `${callerInfo.file}:${callerInfo.line}:${callerInfo.column}`
-        : callerInfo.raw || "unknown location";
-    const originalActionName = `${name}.${httpVerb}[many]`;
-
-    const httpActionAffectingManyItem = createAction(callback, {
-      meta: { httpVerb, httpMany: true, resourceInstance, store: childStore },
-      name: `${name}.${httpVerb}[many]`,
-      dataDefault: [],
-      resultToValue: (result, action) => {
-        const actionLabel = action.name;
-
-        if (httpVerb === "GET") {
-          if (!isProps(result)) {
-            throw new TypeError(
-              `${actionLabel} must return an object (that will be used to upsert "${name}" resource with many relationships), received ${result}.
-           ${originalActionName} source location: ${locationInfo}`,
-            );
-          }
-          return applyResultToValue(result);
-        }
-        if (httpVerb === "DELETE") {
-          // For DELETE_MANY in many relationship, we expect [itemId, childItemIdArray] array
-          if (
-            !Array.isArray(result) ||
-            result.length !== 2 ||
-            !Array.isArray(result[1])
-          ) {
-            throw new TypeError(
-              `${actionLabel} must return an array [itemId, childItemIdArray] (that will be used to remove relationships), received ${result}.
-           ${originalActionName} source location: ${locationInfo}`,
-            );
-          }
-          return applyResultToValue(result);
-        }
-        // For POST, PUT, PATCH - expect array of objects
-        if (!Array.isArray(result)) {
-          throw new TypeError(
-            `${actionLabel} must return an array of objects (that will be used to upsert child items), received ${result}.
-           ${originalActionName} source location: ${locationInfo}`,
-          );
-        }
-        return applyResultToValue(result);
-      },
-      valueToData: (childItemIdArray) => childStore.selectAll(childItemIdArray),
-      completeSideEffect: (actionCompleted) =>
-        resourceLifecycleManager.onActionComplete(actionCompleted),
-      ...options,
-    });
-    resourceLifecycleManager.registerAction(
-      resourceInstance,
-      httpActionAffectingManyItem,
-    );
-    return httpActionAffectingManyItem;
-  };
-
-  const GET_MANY = (callback, options) =>
-    createActionAffectingManyItems("GET", { callback, ...options });
-  const POST_MANY = (callback, options) =>
-    createActionAffectingManyItems("POST", { callback, ...options });
-  const PUT_MANY = (callback, options) =>
-    createActionAffectingManyItems("PUT", { callback, ...options });
-  const PATCH_MANY = (callback, options) =>
-    createActionAffectingManyItems("PATCH", { callback, ...options });
-  const DELETE_MANY = (callback, options) =>
-    createActionAffectingManyItems("DELETE", { callback, ...options });
-
-  return {
-    GET,
-    POST,
-    PUT,
-    PATCH,
-    DELETE,
-    GET_MANY,
-    POST_MANY,
-    PUT_MANY,
-    PATCH_MANY,
-    DELETE_MANY,
-  };
-};
-
-const isProps = (value) => {
-  return value !== null && typeof value === "object";
-};
-
 /**
  * Creates a signal that stays synchronized with an external value,
  * only updating the signal when the value actually changes.
@@ -5296,12 +5559,13 @@ const applyOnTwoProps = (propA, propB) => {
 };
 
 const FLOW_PROPS = {
-  // all are handled by data-attributes
+  // all are handled by navi-attributes
   inline: () => {},
-  box: () => {},
+  block: () => {},
+  flex: () => {},
+  grid: () => {},
   row: () => {},
   column: () => {},
-  grid: () => {},
 };
 const OUTER_SPACING_PROPS = {
   margin: PASS_THROUGH,
@@ -5359,27 +5623,51 @@ const DIMENSION_PROPS = {
   expand: applyOnTwoProps("expandX", "expandY"),
   shrink: applyOnTwoProps("shrinkX", "shrinkY"),
   // apply after width/height to override if both are set
-  expandX: (value, { parentBoxFlow }) => {
+  expandX: (value, { parentBoxFlow, boxFlow }) => {
     if (!value) {
       return null;
     }
-    if (parentBoxFlow === "column" || parentBoxFlow === "inline-column") {
-      return { flexGrow: 1, flexBasis: "0%" }; // Grow horizontally in row
+    const inHorizontalFlexFlow =
+      parentBoxFlow === "flex-x" || parentBoxFlow === "inline-flex-x";
+    const selfHorizontalFlexFlow =
+      boxFlow === "flex-x" || boxFlow === "inline-flex-x";
+    if (selfHorizontalFlexFlow || inHorizontalFlexFlow) {
+      if (!inHorizontalFlexFlow) {
+        return {
+          flexGrow: 1,
+          flexBasis: "0%",
+          minWidth: "100%",
+          width: "auto",
+        };
+      }
+      return { flexGrow: 1, flexBasis: "0%" }; // Grow horizontally in column
     }
-    if (parentBoxFlow === "row") {
-      return { minWidth: "100%", width: "auto" }; // Take full width in column
+    if (parentBoxFlow === "flex-y") {
+      return { minWidth: "100%", width: "auto" }; // Take full width in row
     }
     return { minWidth: "100%", width: "auto" }; // Take full width outside flex
   },
-  expandY: (value, { parentBoxFlow }) => {
+  expandY: (value, { parentBoxFlow, boxFlow }) => {
     if (!value) {
       return null;
     }
-    if (parentBoxFlow === "column") {
-      return { minHeight: "100%", height: "auto" }; // Make column full height
+    const inVerticalFlexFlow =
+      parentBoxFlow === "flex-y" || parentBoxFlow === "inline-flex-y";
+    const selfVerticalFlexFlow =
+      boxFlow === "flex-y" || boxFlow === "inline-flex-y";
+    if (selfVerticalFlexFlow || inVerticalFlexFlow) {
+      if (!inVerticalFlexFlow) {
+        return {
+          flexGrow: 1,
+          flexBasis: "0%",
+          minHeight: "100%",
+          height: "auto",
+        };
+      }
+      return { flexGrow: 1, flexBasis: "0%" }; // Grow vertically in row
     }
-    if (parentBoxFlow === "row" || parentBoxFlow === "inline-row") {
-      return { flexGrow: 1, flexBasis: "0%" }; // Make row full height
+    if (parentBoxFlow === "flex-x") {
+      return { minHeight: "100%", height: "auto" }; // Take full height in column
     }
     return { minHeight: "100%", height: "auto" }; // Take full height outside flex
   },
@@ -5420,59 +5708,60 @@ const POSITION_PROPS = {
   // only the first item will be positioned as expected because subsequent items
   // will be positioned relative to the previous item's margins, not the container edge.
   selfAlignX: (value, { parentBoxFlow }) => {
-    const inGridFlow = parentBoxFlow === "grid";
+    const inGridFlow =
+      parentBoxFlow === "grid" || parentBoxFlow === "inline-grid";
     if (inGridFlow) {
       return { justifySelf: value };
     }
 
-    const inRowFlow = parentBoxFlow === "row" || parentBoxFlow === "inline-row";
-
+    const inVerticalFlexFlow =
+      parentBoxFlow === "flex-y" || parentBoxFlow === "inline-flex-y";
     if (value === "start") {
-      if (inRowFlow) {
+      if (inVerticalFlexFlow) {
         return { alignSelf: "start" };
       }
       return { marginRight: "auto" };
     }
     if (value === "end") {
-      if (inRowFlow) {
+      if (inVerticalFlexFlow) {
         return { alignSelf: "end" };
       }
       return { marginLeft: "auto" };
     }
     if (value === "center") {
-      if (inRowFlow) {
+      if (inVerticalFlexFlow) {
         return { alignSelf: "center" };
       }
       return { marginLeft: "auto", marginRight: "auto" };
     }
-    if (inRowFlow && value !== "stretch") {
+    if (inVerticalFlexFlow && value !== "stretch") {
       return { alignSelf: value };
     }
     return undefined;
   },
   selfAlignY: (value, { parentBoxFlow }) => {
-    const inGridFlow = parentBoxFlow === "grid";
+    const inGridFlow =
+      parentBoxFlow === "grid" || parentBoxFlow === "inline-grid";
     if (inGridFlow) {
       return { alignSelf: value };
     }
 
-    const inColumnFlow =
-      parentBoxFlow === "column" || parentBoxFlow === "inline-column";
-
+    const inHorizontalFlexFlow =
+      parentBoxFlow === "flex-x" || parentBoxFlow === "inline-flex-x";
     if (value === "start") {
-      if (inColumnFlow) {
+      if (inHorizontalFlexFlow) {
         return { alignSelf: "start" };
       }
       return { marginBottom: "auto" };
     }
     if (value === "center") {
-      if (inColumnFlow) {
+      if (inHorizontalFlexFlow) {
         return { alignSelf: "center" };
       }
       return { marginTop: "auto", marginBottom: "auto" };
     }
     if (value === "end") {
-      if (inColumnFlow) {
+      if (inHorizontalFlexFlow) {
         return { alignSelf: "end" };
       }
       return { marginTop: "auto" };
@@ -5558,6 +5847,9 @@ const TYPO_PROPS = {
   preWrap: applyToCssPropWhenTruthy("whiteSpace", "pre-wrap", "normal"),
   preLine: applyToCssPropWhenTruthy("whiteSpace", "pre-line", "normal"),
   userSelect: PASS_THROUGH,
+  capitalize: applyToCssPropWhenTruthy("textTransform", "capitalize", "none"),
+  uppercase: applyToCssPropWhenTruthy("textTransform", "uppercase", "none"),
+  lowercase: applyToCssPropWhenTruthy("textTransform", "lowercase", "none"),
 };
 const VISUAL_PROPS = {
   outline: PASS_THROUGH,
@@ -5591,13 +5883,13 @@ const VISUAL_PROPS = {
 const CONTENT_PROPS = {
   align: applyOnTwoProps("alignX", "alignY"),
   alignX: (value, { boxFlow }) => {
-    if (boxFlow === "row" || boxFlow === "inline-row") {
+    if (boxFlow === "flex-y" || boxFlow === "inline-flex-y") {
       if (value === "stretch") {
         return undefined; // this is the default
       }
       return { alignItems: value };
     }
-    if (boxFlow === "column" || boxFlow === "inline-column") {
+    if (boxFlow === "flex-x" || boxFlow === "inline-flex-x") {
       if (value === "start") {
         return undefined; // this is the default
       }
@@ -5606,32 +5898,35 @@ const CONTENT_PROPS = {
     return { textAlign: value };
   },
   alignY: (value, { boxFlow }) => {
-    if (boxFlow === "row" || boxFlow === "inline-row") {
+    if (boxFlow === "flex-y" || boxFlow === "inline-flex-y") {
       if (value === "start") {
         return undefined;
       }
-      return {
-        justifyContent: value,
-      };
+      return { justifyContent: value };
     }
-    if (boxFlow === "column" || boxFlow === "inline-column") {
+    if (boxFlow === "flex-x" || boxFlow === "inline-flex-x") {
       if (value === "stretch") {
         return undefined;
       }
       return { alignItems: value };
     }
-
+    const verticalAlignMap = {
+      center: "middle",
+      start: "top",
+      end: "bottom",
+    };
     return {
-      verticalAlign:
-        { center: "middle", start: "top", end: "bottom" }[value] || value,
+      verticalAlign: verticalAlignMap[value] || value,
     };
   },
   spacing: (value, { boxFlow }) => {
     if (
-      boxFlow === "row" ||
-      boxFlow === "column" ||
-      boxFlow === "inline-row" ||
-      boxFlow === "inline-column"
+      boxFlow === "flex-x" ||
+      boxFlow === "flex-y" ||
+      boxFlow === "inline-flex-x" ||
+      boxFlow === "inline-flex-y" ||
+      boxFlow === "grid" ||
+      boxFlow === "inline-grid"
     ) {
       return {
         gap: resolveSpacingSize(value, "gap"),
@@ -5640,7 +5935,12 @@ const CONTENT_PROPS = {
     return undefined;
   },
   spacingX: (value, { boxFlow }) => {
-    if (boxFlow === "grid") {
+    if (boxFlow === "flex-x" || boxFlow === "inline-flex-x") {
+      return {
+        gap: resolveSpacingSize(value, "gap"),
+      };
+    }
+    if (boxFlow === "grid" || boxFlow === "inline-grid") {
       return {
         columnGap: resolveSpacingSize(value, "columnGap"),
       };
@@ -5648,7 +5948,12 @@ const CONTENT_PROPS = {
     return undefined;
   },
   spacingY: (value, { boxFlow }) => {
-    if (boxFlow === "grid") {
+    if (boxFlow === "flex-y" || boxFlow === "inline-flex-y") {
+      return {
+        gap: resolveSpacingSize(value, "gap"),
+      };
+    }
+    if (boxFlow === "grid" || boxFlow === "inline-grid") {
       return {
         rowGap: resolveSpacingSize(value, "rowGap"),
       };
@@ -6472,23 +6777,52 @@ const updateStyle = (element, style, preventInitialTransition) => {
 };
 
 installImportMetaCss(import.meta);import.meta.css = /* css */`
-  [data-flow-inline] {
+  [navi-box-flow="inline"] {
     display: inline;
   }
-  [data-flow-row] {
+  [navi-box-flow="block"] {
+    display: block;
+  }
+  [navi-box-flow="inline-block"] {
+    display: inline-block;
+  }
+  [navi-box-flow="flex-x"] {
+    display: flex;
+  }
+  [navi-box-flow="flex-y"] {
     display: flex;
     flex-direction: column;
   }
-  [data-flow-column] {
-    display: flex;
-    flex-direction: row;
-  }
-  [data-flow-inline][data-flow-row],
-  [data-flow-inline][data-flow-column] {
+  [navi-box-flow="inline-flex-x"] {
     display: inline-flex;
   }
-  [data-flow-grid] {
+  [navi-box-flow="inline-flex-y"] {
+    display: inline-flex;
+    flex-direction: column;
+  }
+  [navi-box-flow="grid"] {
     display: grid;
+    &[navi-box-flow-column] {
+      grid-auto-flow: column;
+    }
+    &[navi-box-flow-row] {
+      grid-auto-flow: row;
+    }
+    &[navi-box-flow-column][navi-box-flow-row] {
+      grid-auto-flow: unset;
+    }
+  }
+  [navi-box-flow="inline-grid"] {
+    display: inline-grid;
+    &[navi-box-flow-column] {
+      grid-auto-flow: column;
+    }
+    &[navi-box-flow-row] {
+      grid-auto-flow: row;
+    }
+    &[navi-box-flow-column][navi-box-flow-row] {
+      grid-auto-flow: unset;
+    }
   }
 `;
 const PSEUDO_CLASSES_DEFAULT = [];
@@ -6536,43 +6870,73 @@ const Box = props => {
   const TagName = as;
   const defaultDisplay = getDefaultDisplay(TagName);
   let {
-    box,
     inline,
+    block,
+    flex,
+    grid,
     row,
-    column,
-    grid
+    column
   } = rest;
-  if (box === "auto" || inline || defaultDisplay === "inline") {
-    if (rest.width !== undefined || rest.height !== undefined) {
-      box = true;
+  // To obtain flex direction we have the following deprecated props:
+  // - [deprecated] <Box column> -> <Box flex> or <Box flex="x">
+  // - [deprecated] <Box row> -> <Box flex="y">
+  // - [deprecated] <Box flex column> -> <Box flex="x">
+  // - [deprecated] <Box flex row> -> <Box flex="y">
+
+  if (flex === true) {
+    flex = row ? "y" : "x";
+  }
+  if (flex === undefined && grid === undefined) {
+    if (column) {
+      flex = "x";
+    } else if (row) {
+      flex = "y";
     }
   }
-  if (box) {
+  if (defaultDisplay === "inline") {
     if (inline === undefined) {
       inline = true;
     }
-    if (column === undefined && !row && !grid) {
-      column = true;
+  } else if (defaultDisplay === "block") {
+    if (block === undefined && !flex && !grid) {
+      block = true;
     }
+  } else if (defaultDisplay === "inline-block") {
+    if (inline === undefined) {
+      inline = true;
+    }
+    if (block === undefined && !flex && !grid) {
+      block = true;
+    }
+  }
+  if (inline && (rest.width !== undefined || rest.height !== undefined) && flex === undefined) {
+    flex = "x";
   }
   let boxFlow;
   if (inline) {
-    if (row) {
-      boxFlow = "inline-row";
-    } else if (column) {
-      boxFlow = "inline-column";
+    if (block) {
+      boxFlow = "inline-block";
+    } else if (flex === "x") {
+      boxFlow = "inline-flex-x";
+    } else if (flex === "y") {
+      boxFlow = "inline-flex-y";
+    } else if (grid) {
+      boxFlow = "inline-grid";
     } else {
       boxFlow = "inline";
     }
-  } else if (row) {
-    boxFlow = "row";
-  } else if (column) {
-    boxFlow = "column";
+  } else if (block) {
+    boxFlow = "block";
+  } else if (flex === "x") {
+    boxFlow = "flex-x";
+  } else if (flex === "y") {
+    boxFlow = "flex-y";
   } else if (grid) {
     boxFlow = "grid";
   } else {
     boxFlow = defaultDisplay;
   }
+  const boxFlowIsDefault = boxFlow === defaultDisplay;
   const remainingPropKeySet = new Set(Object.keys(rest));
   // some props not destructured but that are neither
   // style props, nor should be forwarded to the child
@@ -6879,10 +7243,9 @@ const Box = props => {
   return jsx(TagName, {
     ref: ref,
     className: innerClassName,
-    "data-flow-inline": inline ? "" : undefined,
-    "data-flow-row": row ? "" : undefined,
-    "data-flow-column": column ? "" : undefined,
-    "data-flow-grid": boxFlow === "grid" ? "" : undefined,
+    "navi-box-flow": boxFlowIsDefault ? undefined : boxFlow,
+    "navi-box-flow-row": row ? "" : undefined,
+    "navi-box-flow-column": column ? "" : undefined,
     "data-visual-selector": visualSelector,
     ...selfForwardedProps,
     children: jsx(BoxFlowContext.Provider, {
@@ -9636,36 +9999,14 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
       targetAncestor.connections.length === 0;
 
     if (sourceHasOnlyLiterals && targetHasOnlyLiterals) {
-      // Check if user provided any parameters that would be lost in optimization
-      const hasUserProvidedParams = Object.keys(resolvedParams).some(
-        (paramName) => {
-          // Check if this parameter was explicitly provided by the user
-          // (not just inherited from signal values with default values)
-          const userProvided = resolvedParams[paramName] !== undefined;
-          return userProvided;
-        },
-      );
-
-      if (hasUserProvidedParams) {
-        if (DEBUG$2) {
-          console.debug(
-            `[${pattern}] tryDirectOptimization: Cannot optimize literal-only routes - would lose user-provided parameters`,
-            Object.keys(resolvedParams),
-          );
-        }
-        return null;
-      }
-
+      // Two pure literal routes have no parametric relationship — nothing to optimize.
+      // /dashboard/section must never collapse to /dashboard.
       if (DEBUG$2) {
         console.debug(
-          `[${pattern}] tryDirectOptimization: Both are pure literal-only routes, allowing optimization`,
+          `[${pattern}] tryDirectOptimization: Both are pure literal-only routes, no optimization possible`,
         );
       }
-      return buildUrlFromPattern(
-        targetAncestor.pattern,
-        {},
-        targetAncestor.originalPattern,
-      );
+      return null;
     }
 
     // For parametric optimization: remaining segments must match target's parameter defaults
@@ -11158,6 +11499,7 @@ const route = (pattern, { searchParams } = {}) => {
     urlPattern: cleanPattern,
     pattern: cleanPattern,
     isRoute: true,
+    setupCalled: false,
     matching: false,
     params: ROUTE_NOT_MATCHING_PARAMS,
     buildUrl: null,
@@ -11223,13 +11565,15 @@ const route = (pattern, { searchParams } = {}) => {
         route.params = mergedParams;
         someChange = true;
       }
-      if (someChange) {
-        publishStatus({
-          matching,
-          params: mergedParams,
-          visited,
-        });
+      if (!someChange) {
+        return false;
       }
+      publishStatus({
+        matching,
+        params: mergedParams,
+        visited,
+      });
+      return true;
     };
     // (for now data contains only { routeSet })
     routePrivateProperties.setup = (data) => {
@@ -11243,6 +11587,9 @@ const route = (pattern, { searchParams } = {}) => {
     };
   }
 
+  registerSetup(() => {
+    route.setupCalled = true;
+  });
   // methods
   registerSetup(({ routeSet }) => {
     route.buildRelativeUrl = (params) => {
@@ -11474,6 +11821,8 @@ const route = (pattern, { searchParams } = {}) => {
   return route;
 };
 
+const [publishRouteMutations, observeRouteMutations] = createPubSub();
+
 let setupRoutesCalled = false;
 const setupRoutes = (routes) => {
   if (setupRoutesCalled) {
@@ -11483,6 +11832,7 @@ Some code called setupRoutes before and did not properly cleanup routes with cle
 This prevents cross-test pollution and ensures clean state.`,
     );
   }
+  setupRoutesCalled = true;
 
   const routeSet = new Set();
   // PHASE 1: Setup patterns with unified objects (includes all relationships and signal connections)
@@ -11562,6 +11912,7 @@ This prevents cross-test pollution and ensures clean state.`,
       isUpdatingRoutesFromUrl = true;
       // Apply all signal updates in a batch
       const matchingRouteSet = new Set();
+      const routeUpdateSet = new Set();
       batch(() => {
         for (const {
           route,
@@ -11571,11 +11922,14 @@ This prevents cross-test pollution and ensures clean state.`,
         } of routeMatchInfoSet) {
           const { updateStatus } = routePrivateProperties;
           const visited = isVisited(route.url);
-          updateStatus({
+          const updated = updateStatus({
             matching: newMatching,
             params: newParams,
             visited,
           });
+          if (updated) {
+            routeUpdateSet.add(route);
+          }
           if (newMatching) {
             matchingRouteSet.add(route);
           }
@@ -11742,6 +12096,9 @@ This prevents cross-test pollution and ensures clean state.`,
           }
         }
       });
+      if (routeUpdateSet.size > 0) {
+        publishRouteMutations(routeUpdateSet);
+      }
       // Reset flag after URL -> Signal synchronization is complete
       isUpdatingRoutesFromUrl = false;
       Object.assign(returnValue, { matchingRouteSet });
@@ -12455,14 +12812,41 @@ const useUrlSearchParam = (paramName, defaultValue) => {
   return [value, setSearchParamValue];
 };
 
-// import { signal } from "@preact/signals";
-
-
-const useForceRender = () => {
-  const [, setState] = useState(null);
-  return () => {
-    setState({});
-  };
+const Head = ({
+  children
+}) => {
+  useLayoutEffect(() => {
+    if (!children) {
+      return undefined;
+    }
+    const childArray = Array.isArray(children) ? children : [children];
+    const previousTitle = document.title;
+    const appendedElements = [];
+    for (const child of childArray) {
+      if (!child) {
+        continue;
+      }
+      if (child.type === "title") {
+        const titleChildren = child.props.children;
+        document.title = Array.isArray(titleChildren) ? titleChildren.join("") : titleChildren ?? "";
+        continue;
+      }
+      const el = document.createElement(child.type);
+      const props = child.props || {};
+      for (const [key, value] of Object.entries(props)) {
+        el.setAttribute(key, value);
+      }
+      document.head.appendChild(el);
+      appendedElements.push(el);
+    }
+    return () => {
+      document.title = previousTitle;
+      for (const el of appendedElements) {
+        el.remove();
+      }
+    };
+  }, [children]);
+  return null;
 };
 
 /**
@@ -12485,366 +12869,156 @@ const useForceRender = () => {
  */
 
 const debug$1 = (...args) => {
-  return;
+  {
+    return;
+  }
 };
 
-// Check if a route is a "parent" route (catches multiple routes) and if current URL matches exactly
-const isParentRouteExactMatch = route => {
-  if (!route) {
-    return false;
-  }
-  const currentUrl = window.location.href;
-  const parentUrl = route.buildUrl();
-  if (currentUrl === parentUrl) {
-    return true;
-  }
-  const currentUrlObject = new URL(currentUrl);
-  if (!currentUrlObject.pathname.endsWith("/")) {
-    return false;
-  }
-  const pathnameWithoutSlash = currentUrlObject.pathname.slice(0, -1);
-  currentUrlObject.pathname = pathnameWithoutSlash;
-  const currentUrlWithoutTrailingSlash = currentUrlObject.href;
-  return currentUrlWithoutTrailingSlash === parentUrl;
-};
-const RootElement = () => {
-  return jsx(Route.Slot, {});
-};
-const SlotContext = createContext(null);
-const RouteInfoContext = createContext(null);
-const UpdateOnlyContext = createContext(false);
-const ElementSignalMapContext = createContext(null);
-const Routes = ({
-  element = jsx(RootElement, {}),
-  children
-}) => {
-  const routeInfo = useMatchingRouteInfo();
-  const route = routeInfo?.route;
-  const elementSignalMapRef = useRef(null);
-  if (!elementSignalMapRef.current) {
-    elementSignalMapRef.current = new Map();
-  }
-  return jsx(ElementSignalMapContext.Provider, {
-    value: elementSignalMapRef.current,
-    children: jsx(Route, {
-      route: route,
-      element: element,
-      children: children
-    })
+// <Route> dispatches based on props:
+// - children → RouteContainer (traverses children statically, renders active branch)
+// - route    → RouteLeafRoute (rendered by parent container when URL matches)
+// - fallback → RouteActive (rendered by parent container when no sibling matches)
+const Route = props => {
+  if (props.children) return jsx(RouteContainer, {
+    ...props
+  });
+  return jsx(RouteLeaf, {
+    ...props
   });
 };
-const useMatchingRouteInfo = () => useContext(RouteInfoContext);
-const Route = ({
-  route,
-  element,
-  action,
-  index,
-  fallback,
-  meta,
-  children,
-  routeParams
-}) => {
-  const forceRender = useForceRender();
-  const hasDiscoveredRef = useRef(false);
-  const matchingInfoRef = useRef(null);
-  const isUpdateOnly = useContext(UpdateOnlyContext);
-  const elementSignalMap = useContext(ElementSignalMapContext);
 
-  // Update the element signal for this route.
-  // In update-only mode this is the only purpose of rendering this Route.
-  if (route && elementSignalMap && elementSignalMap.has(route)) {
-    elementSignalMap.get(route).value = element;
-  }
-  if (isUpdateOnly) {
-    if (children) {
-      return jsx(UpdateOnlyContext.Provider, {
-        value: true,
-        children: children
-      });
+// Walk JSX children vnodes (without rendering) to build a branch list and
+// find the active one in the same pass.
+// All children must be <Route> — throws in dev otherwise.
+// Returns { matchingBranch, fallbackBranch, activeBranch }.
+const collectBranches = children => {
+  let matchingBranch = null;
+  let fallbackBranch = null;
+  const visit = child => {
+    if (!child || child === true || child === false) {
+      return;
     }
-    return null;
-  }
-  if (!hasDiscoveredRef.current) {
-    // Create the element signal during discovery
-    if (route && elementSignalMap && !elementSignalMap.has(route)) {
-      // eslint-disable-next-line signals/no-signal-in-component-body
-      elementSignalMap.set(route, signal(element));
-    }
-    return jsx(RouteMatchManager, {
-      element: element,
-      action: action,
-      route: route,
-      index: index,
-      fallback: fallback,
-      meta: meta,
-      routeParams: routeParams,
-      onMatchingInfoChange: matchingInfo => {
-        hasDiscoveredRef.current = true;
-        matchingInfoRef.current = matchingInfo;
-        forceRender();
-      },
-      children: children
-    });
-  }
-  const matchingInfo = matchingInfoRef.current;
-  if (!matchingInfo) {
-    return null;
-  }
-  const {
-    MatchingElement
-  } = matchingInfo;
-  // After discovery: render MatchingElement for visible output, and keep
-  // children alive in update-only mode so their element signals stay current.
-  return jsxs(Fragment, {
-    children: [jsx(MatchingElement, {}), children ? jsx(UpdateOnlyContext.Provider, {
-      value: true,
-      children: children
-    }) : null]
-  });
-};
-const RegisterChildRouteContext = createContext(null);
-
-/* This component is rendered once
- * So no need to cleanup things or whatever we know and ensure that
- * t's executed once for the entire app lifecycle
- */
-const RouteMatchManager = ({
-  element,
-  action,
-  route,
-  index,
-  fallback,
-  meta,
-  routeParams,
-  onMatchingInfoChange,
-  children
-}) => {
-  if (route && fallback) {
-    throw new Error("Route cannot have both route and fallback props");
-  }
-  const parentRegisterChildRoute = useContext(RegisterChildRouteContext);
-  const elementSignalMap = useContext(ElementSignalMapContext);
-  const elementId = getElementSignature(element);
-  const candidateSet = new Set();
-  let indexCandidate = null;
-  let fallbackCandidate = null;
-  const registerChildRoute = childRouteInfo => {
-    const childElementId = getElementSignature(childRouteInfo.MatchingElement);
-    candidateSet.add(childRouteInfo);
-    if (childRouteInfo.index) {
-      if (indexCandidate) {
-        throw new Error(`Multiple index routes registered under the same parent route (${elementId}):
-- ${getElementSignature(indexCandidate.MatchingElement)}
-- ${childElementId}`);
+    if (Array.isArray(child)) {
+      for (const item of child) {
+        visit(item);
       }
-      indexCandidate = childRouteInfo;
+      return;
     }
-    if (childRouteInfo.fallback) {
-      if (fallbackCandidate) {
-        throw new Error(`Multiple fallback routes registered under the same parent route (${elementId}):
-- ${getElementSignature(fallbackCandidate.MatchingElement)}
-- ${childElementId}`);
-      }
-      if (childRouteInfo.route.routeFromProps) {
-        throw new Error(`Fallback route cannot have a route prop (${childElementId})`);
-      }
-      fallbackCandidate = childRouteInfo;
+    if (child.type !== Route) {
+      throw new Error(`All <Route> children must be <Route> nodes, got: ${String(child.type?.name ?? child.type)}`);
     }
-  };
-  useLayoutEffect(() => {
-    initRouteObserver({
-      element,
-      elementSignalMap,
-      action,
-      route,
-      index,
+    const {
+      children: nodeChildren,
       fallback,
-      meta,
-      routeParams,
-      indexCandidate,
-      fallbackCandidate,
-      candidateSet,
-      onMatchingInfoChange,
-      parentRegisterChildRoute
-    });
-  }, []);
-  return jsx(RegisterChildRouteContext.Provider, {
-    value: registerChildRoute,
-    children: children
-  });
-};
-const initRouteObserver = ({
-  element,
-  elementSignalMap,
-  action,
-  route,
-  index,
-  fallback,
-  meta,
-  routeParams,
-  indexCandidate,
-  fallbackCandidate,
-  candidateSet,
-  onMatchingInfoChange,
-  parentRegisterChildRoute
-}) => {
-  if (!fallbackCandidate && indexCandidate && indexCandidate.fallback !== false) {
-    // no fallback + an index -> index behaves as a fallback (handle urls under a parent when no sibling matches)
-    // to disable this behavior set fallback={false} on the index route
-    // (in that case no route will be rendered when no child matches meaning only parent route element will be shown)
-    fallbackCandidate = indexCandidate;
-  }
-  const [teardown, addTeardown] = createPubSub();
-  const elementId = getElementSignature(element);
-  const candidateElementIds = Array.from(candidateSet, c => getElementSignature(c.element));
-  if (candidateElementIds.length === 0) ; else {
-    debug$1(`initRouteObserver ${elementId}, child candidates:
-  - ${candidateElementIds.join("\n  - ")}`);
-  }
-  const [publishCompositeStatus, subscribeCompositeStatus] = createPubSub();
-  const compositeRoute = {
-    urlPattern: `composite(${candidateElementIds})`,
-    isComposite: true,
-    matching: false,
-    subscribeStatus: subscribeCompositeStatus,
-    toString: () => `composite(${candidateSet.size} candidates)`,
-    routeFromProps: route,
-    elementFromProps: element
-  };
-  const findMatchingChildInfo = () => {
-    for (const candidate of candidateSet) {
-      if (candidate.route?.matching) {
-        return candidate;
-      }
-    }
-    if (indexCandidate) {
-      if (indexCandidate === fallbackCandidate) {
-        // the index is also used as fallback (catch all routes under a parent)
-        return indexCandidate;
-      }
-      // Only return the index candidate if the current URL matches exactly the parent route
-      // This allows fallback routes to handle non-defined URLs under this parent route
-      if (route && isParentRouteExactMatch(route)) {
-        return indexCandidate;
-      }
-    }
-    if (fallbackCandidate) {
-      return fallbackCandidate;
-    }
-    return null;
-  };
-  const getMatchingInfo = route ? () => {
-    if (!route.matching) {
-      // we have a route and it does not match no need to go further
-      return null;
-    }
-
-    // Check if routeParams match current route parameters
-    if (routeParams && !route.matchesParams(routeParams)) {
-      return null; // routeParams don't match, don't render
-    }
-
-    // we have a route and it is matching
-    // we search the first matching child to put it in the slot
-    const matchingChildInfo = findMatchingChildInfo();
-    if (matchingChildInfo) {
-      return matchingChildInfo;
-    }
-    return {
       route,
-      element: null,
-      meta
-    };
-  } : () => {
-    // we don't have a route, do we have a matching child?
-    const matchingChildInfo = findMatchingChildInfo();
-    if (matchingChildInfo) {
-      return matchingChildInfo;
-    }
-    return null;
-  };
-  const matchingRouteInfoSignal = signal();
-  const SlotMatchingElementSignal = signal();
-  const MatchingElement = () => {
-    // Read element from the signal (updated by update-only renders) when
-    // available, falling back to the closure variable for routes without
-    // a route prop (e.g. the Routes wrapper).
-    const elementSignal = route && elementSignalMap ? elementSignalMap.get(route) : undefined;
-    const currentElement = elementSignal ? elementSignal.value : element;
-    const matchingRouteInfo = matchingRouteInfoSignal.value;
-    useUITransitionContentId(matchingRouteInfo ? matchingRouteInfo.route.urlPattern : fallback ? "fallback" : undefined);
-    const SlotMatchingElement = SlotMatchingElementSignal.value;
-    const renderedElement = action ? jsx(ActionRenderer, {
-      action: action,
-      children: currentElement
-    }) : currentElement;
-    return jsx(RouteInfoContext.Provider, {
-      value: matchingRouteInfo,
-      children: jsx(SlotContext.Provider, {
-        value: SlotMatchingElement,
-        children: renderedElement
-      })
-    });
-  };
-  MatchingElement.underlyingElementId = candidateSet.size === 0 ? `${getElementSignature(element)} without slot` : `[${getElementSignature(element)} with slot one of ${candidateElementIds}]`;
-  const updateMatchingInfo = () => {
-    const newMatchingInfo = getMatchingInfo();
-    if (newMatchingInfo) {
-      compositeRoute.matching = true;
-      matchingRouteInfoSignal.value = newMatchingInfo;
-      SlotMatchingElementSignal.value = newMatchingInfo.MatchingElement;
-      onMatchingInfoChange({
-        route: newMatchingInfo.route,
-        MatchingElement,
-        SlotMatchingElement: newMatchingInfo.MatchingElement,
-        index: newMatchingInfo.index,
-        fallback: newMatchingInfo.fallback,
-        meta: newMatchingInfo.meta
-      });
+      routeParams
+    } = child.props;
+    if (nodeChildren) {
+      const {
+        matchingBranch: matchingChild
+      } = collectBranches(nodeChildren);
+      const branch = {
+        type: "container",
+        node: child
+      };
+      if (!matchingBranch) {
+        if (matchingChild) {
+          // Real leaf match inside — always select this container
+          matchingBranch = branch;
+        } else if (route && route.matchingSignal.value) {
+          // No leaf match but an explicit route guard matches — select this
+          // container so it can render its own fallback inside its layout
+          matchingBranch = branch;
+        }
+      }
+    } else if (fallback) {
+      if (!fallbackBranch) {
+        fallbackBranch = {
+          type: "fallback",
+          node: child
+        };
+      }
     } else {
-      compositeRoute.matching = false;
-      matchingRouteInfoSignal.value = null;
-      SlotMatchingElementSignal.value = null;
-      onMatchingInfoChange(null);
+      const branch = {
+        type: "leaf",
+        node: child
+      };
+      if (!matchingBranch && route.matchingSignal.value && (!routeParams || route.matchesParams(routeParams))) {
+        matchingBranch = branch;
+      }
     }
   };
-  const onChange = () => {
-    updateMatchingInfo();
-    publishCompositeStatus();
-  };
-  if (route) {
-    addTeardown(route.subscribeStatus(onChange));
-  }
-  for (const candidate of candidateSet) {
-    addTeardown(candidate.route.subscribeStatus(onChange));
-  }
-  if (parentRegisterChildRoute) {
-    parentRegisterChildRoute({
-      route: compositeRoute,
-      MatchingElement,
-      index,
-      fallback,
-      meta
-    });
-  }
-  updateMatchingInfo();
-  return () => {
-    teardown();
+  visit(children);
+  const activeBranch = matchingBranch || fallbackBranch || null;
+  return {
+    matchingBranch,
+    fallbackBranch,
+    activeBranch
   };
 };
-const RouteSlot = () => {
-  const SlotElement = useContext(SlotContext);
-  if (SlotElement === undefined) {
-    return jsx("p", {
-      children: "RouteSlot must be used inside a Route"
-    });
-  }
-  if (SlotElement === null) {
+// RouteContainer: traverses children statically per render, finds the active branch,
+// and renders only that branch — or the fallback if nothing matches.
+// No effects, no signals, no contexts needed: reads route signals directly.
+const RouteContainer = ({
+  id,
+  element,
+  elementProps,
+  children
+}) => {
+  const {
+    activeBranch
+  } = collectBranches(children);
+  debug$1(`[container "${id}"] RENDER, active=${activeBranch ? activeBranch.type : "none"}`);
+  const content = activeBranch ? activeBranch.node : null;
+  if (!content) {
     return null;
   }
-  return jsx(SlotElement, {});
+  if (element) {
+    const Element = element;
+    return jsx(Element, {
+      ...elementProps,
+      children: content
+    });
+  }
+  return content;
 };
-Route.Slot = RouteSlot;
+const RouteLeaf = props => {
+  if (props.route) return jsx(RouteLeafRoute, {
+    ...props
+  });
+  if (props.fallback) return jsx(RouteLeafFallback, {
+    ...props
+  });
+  // not supposed to happen?
+  return jsx(RouteActive, {
+    ...props
+  });
+};
+const RouteLeafRoute = props => {
+  useUITransitionContentId(props.route?.urlPattern);
+  return jsx(RouteActive, {
+    ...props
+  });
+};
+const RouteLeafFallback = props => {
+  return jsx(RouteActive, {
+    ...props
+  });
+};
+const RouteActive = ({
+  element,
+  elementProps,
+  action
+}) => {
+  const Element = element;
+  const renderedElement = action ? jsx(ActionRenderer, {
+    action: action,
+    children: element
+  }) : typeof element === "function" ? jsx(Element, {
+    ...elementProps
+  }) : element;
+  return renderedElement;
+};
 
 const routeAction = (
   route,
@@ -12877,31 +13051,31 @@ const routeAction = (
     if (!store) {
       break sync_url_and_item_id;
     }
-    const { mutableIdKeys } = store;
-    const [firstMutableIdKey] = mutableIdKeys;
-    if (!firstMutableIdKey) {
+    const { uniqueKeys } = store;
+    const [firstUniqueKey] = uniqueKeys;
+    if (!firstUniqueKey) {
       break sync_url_and_item_id;
     }
-    const mutableIdValueSignal = computed(() => {
+    const uniqueValueSignal = computed(() => {
       const params = route.paramsSignal.value;
-      const mutableIdValue = params[firstMutableIdKey];
-      return mutableIdValue;
+      const uniqueKeyValue = params[firstUniqueKey];
+      return uniqueKeyValue;
     });
-    const routeItemSignal = store.signalForMutableIdKey(
-      firstMutableIdKey,
-      mutableIdValueSignal,
+    const routeItemSignal = store.signalForUniqueKey(
+      firstUniqueKey,
+      uniqueValueSignal,
     );
     store.observeItemProperties(routeItemSignal, (propertyMutations) => {
-      const mutableIdPropertyMutation = propertyMutations[firstMutableIdKey];
-      if (!mutableIdPropertyMutation) {
+      const uniquePropertyMutation = propertyMutations[firstUniqueKey];
+      if (!uniquePropertyMutation) {
         return;
       }
       route.replaceParams(
         {
-          [firstMutableIdKey]: mutableIdPropertyMutation.newValue,
+          [firstUniqueKey]: uniquePropertyMutation.newValue,
         },
         {
-          callReason: `store item ${firstMutableIdKey} change on ${route}`,
+          callReason: `store item ${firstUniqueKey} change on ${route}`,
         },
       );
     });
@@ -13077,11 +13251,11 @@ const useSelectionController = ({
     selectionController.enabled = Boolean(onChange);
   }, [selectionController, onChange]);
 
-  // Smart sync: only update selection when value changes externally
+  // update selection when value changes externally
   useEffect(() => {
     // Check if this is an external change (not from our internal onChange)
     const isExternalChange = !compareTwoJsValues(value, lastInternalValueRef.current);
-    if (isExternalChange) {
+    if (isExternalChange && selectionController.enabled) {
       selectionController.update(value);
     }
   }, [value, selectionController]);
@@ -13105,9 +13279,34 @@ const createBaseSelectionController = ({
   }
 }) => {
   const [publishChange, subscribeChange] = createPubSub();
+
+  // When elements unmount (e.g. a row or column is deleted), their cleanup
+  // calls unregisterElement which should remove them from the selection.
+  // If many elements unmount at once (deleting 100 rows), we don't want to
+  // call onSelectionChange 100 times. Instead we accumulate the values to
+  // remove and flush them in a single removeFromSelection call.
+  // queueMicrotask runs after Preact finishes its current flush, so all
+  // unmount cleanups accumulate before we fire the single onSelectionChange.
+  const pendingRemovalSet = new Set();
+  let flushScheduled = false;
+  const scheduleFlushRemovals = () => {
+    if (flushScheduled) {
+      return;
+    }
+    flushScheduled = true;
+    queueMicrotask(() => {
+      flushScheduled = false;
+      if (pendingRemovalSet.size === 0) {
+        return;
+      }
+      const valuesToRemove = Array.from(pendingRemovalSet);
+      removeFromSelection(valuesToRemove);
+      pendingRemovalSet.clear();
+    });
+  };
   const getElementByValue = valueToFind => {
     for (const element of registry) {
-      if (getElementValue(element) === valueToFind) {
+      if (compareTwoJsValues(getElementValue(element), valueToFind)) {
         return element;
       }
     }
@@ -13146,6 +13345,11 @@ const createBaseSelectionController = ({
       }
     }
     for (const willBeUnselected of willBeUnselectedSet) {
+      if (pendingRemovalSet.has(willBeUnselected)) {
+        // This value is already pending removal due to an unmounted element
+        // getElementByValue would return undefined
+        continue;
+      }
       const element = getElementByValue(willBeUnselected);
       if (element._selectionImpact) {
         const impactedValues = element._selectionImpact(allValues);
@@ -13167,21 +13371,20 @@ const createBaseSelectionController = ({
   };
   let anchorElement = null;
   let activeElement = null;
-  const registerElement = (element, options = {}) => {
+  const registerElement = element => {
     const elementValue = getElementValue(element);
     debug("registration", `${type} registerElement:`, element, "value:", elementValue, "registry size before:", registry.size);
     registry.add(element);
-    // Store the selectionImpact callback if provided
-    if (options.selectionImpact) {
-      element._selectionImpact = options.selectionImpact;
-    }
     debug("registration", `${type} registerElement: registry size after:`, registry.size);
   };
   const unregisterElement = element => {
     const elementValue = getElementValue(element);
-    debug("registration", `${type} unregisterElement:`, element, "value:", elementValue, "registry size before:", registry.size);
+    debug("registration", `${type} unregisterElement:`);
     registry.delete(element);
-    debug("registration", `${type} unregisterElement: registry size after:`, registry.size);
+    if (isElementSelected(element)) {
+      pendingRemovalSet.add(elementValue);
+      scheduleFlushRemovals();
+    }
   };
   const setActiveElement = element => {
     activeElement = element;
@@ -13193,56 +13396,80 @@ const createBaseSelectionController = ({
   };
   const isElementSelected = element => {
     const elementValue = getElementValue(element);
-    const isSelected = baseSelection.value.includes(elementValue);
-    return isSelected;
+    const valueIsSelected = isValueSelected(elementValue);
+    return valueIsSelected;
   };
   const isValueSelected = value => {
-    const isSelected = baseSelection.value.includes(value);
-    return isSelected;
+    const selectedValueIndex = getValueIndex(value);
+    const valueIsSelected = selectedValueIndex !== -1;
+    return valueIsSelected;
+  };
+  const getValueIndex = value => {
+    let index = 0;
+    const selectedValues = getCurrentValue();
+    while (index < selectedValues.length) {
+      const selectedValue = selectedValues[index];
+      if (compareTwoJsValues(selectedValue, value)) {
+        return index;
+      }
+      index++;
+    }
+    return -1;
   };
   // Selection manipulation methods
   const setSelection = (newSelection, event = null) => {
     debug("selection", `${type} setSelection called with:`, newSelection, "current selection:", baseSelection.value);
-    if (newSelection.length === baseSelection.value.length && newSelection.every((value, index) => value === baseSelection.value[index])) {
+    if (compareTwoJsValues(newSelection, baseSelection.value)) {
       debug("selection", `${type} setSelection: no change, returning early`);
       return;
     }
     update(newSelection, event);
   };
   const addToSelection = (arrayOfValuesToAdd, event = null) => {
-    debug("selection", `${type} addToSelection called with:`, arrayOfValuesToAdd, "current selection:", baseSelection.value);
-    const selectionWithValues = [...baseSelection.value];
-    let modified = false;
+    const selectedValues = baseSelection.value;
+    debug("selection", `${type} addToSelection called with:`, arrayOfValuesToAdd, "current selection:", selectedValues);
+    const newValues = [];
     for (const valueToAdd of arrayOfValuesToAdd) {
-      if (!selectionWithValues.includes(valueToAdd)) {
-        modified = true;
-        selectionWithValues.push(valueToAdd);
-        debug("selection", `${type} addToSelection: adding value:`, valueToAdd);
+      if (isValueSelected(valueToAdd)) {
+        continue;
       }
+      newValues.push(valueToAdd);
+      debug("selection", `${type} addToSelection: adding value:`, valueToAdd);
     }
-    if (modified) {
-      update(selectionWithValues, event);
-    } else {
+    if (newValues.length === 0) {
       debug("selection", `${type} addToSelection: no changes made`);
+      return;
     }
+    const selectionWithValues = [...selectedValues, ...newValues];
+    update(selectionWithValues, event);
   };
   const removeFromSelection = (arrayOfValuesToRemove, event = null) => {
-    let modified = false;
-    const selectionWithoutValues = [];
-    for (const elementValue of baseSelection.value) {
-      if (arrayOfValuesToRemove.includes(elementValue)) {
-        modified = true;
-      } else {
-        selectionWithoutValues.push(elementValue);
+    const toRemoveSet = new Set();
+    for (const valueToRemove of arrayOfValuesToRemove) {
+      const index = getValueIndex(valueToRemove);
+      if (index === -1) {
+        continue;
       }
+      toRemoveSet.add(index);
     }
-    if (modified) {
-      update(selectionWithoutValues, event);
+    if (toRemoveSet.size === 0) {
+      return;
     }
+    const selectionWithoutValues = [];
+    const selectedValues = baseSelection.value;
+    let index = 0;
+    while (index < selectedValues.length) {
+      const selectedValue = selectedValues[index];
+      if (!toRemoveSet.has(index)) {
+        selectionWithoutValues.push(selectedValue);
+      }
+      index++;
+    }
+    update(selectionWithoutValues, event);
   };
   const toggleElement = (element, event = null) => {
     const elementValue = getElementValue(element);
-    if (baseSelection.value.includes(elementValue)) {
+    if (isValueSelected(elementValue)) {
       baseSelection.removeFromSelection([elementValue], event);
     } else {
       baseSelection.addToSelection([elementValue], event);
@@ -13616,16 +13843,39 @@ const createLinearSelectionController = ({
 };
 // Helper function to extract value from an element
 const getElementValue = element => {
-  let value;
-  if (element.value !== undefined) {
-    value = element.value;
-  } else if (element.hasAttribute("data-value")) {
-    value = element.getAttribute("data-value");
-  } else {
-    value = undefined;
+  const eventAttribute = element.getAttribute("data-value-event");
+  if (eventAttribute) {
+    let setValueCalled = false;
+    let valueSetByEvent;
+    element.dispatchEvent(new CustomEvent(eventAttribute, {
+      detail: {
+        setValue: v => {
+          setValueCalled = true;
+          valueSetByEvent = v;
+        }
+      }
+    }));
+    if (setValueCalled) {
+      if (!isPrimitive(valueSetByEvent)) {
+        throw new Error(`Value provided by event "${eventAttribute}" must be a primitive (string, number, boolean, null, or undefined). Received: ${valueSetByEvent}`);
+      }
+      debug(element, `value retrieved using "${eventAttribute}" event -> `, valueSetByEvent);
+      return valueSetByEvent;
+    }
+    console.warn(`Element has data-value-event="${eventAttribute}" but the event did not set a value. Falling back to other methods of value retrieval.`, element);
   }
-  debug("valueExtraction", "getElementValue:", element, "->", value);
-  return value;
+  if (element.hasAttribute("data-value")) {
+    const valueFromAttribute = element.getAttribute("data-value");
+    debug(element, `value retrieved by attribute [${eventAttribute}] -> `, valueFromAttribute);
+    return valueFromAttribute;
+  }
+  if (element.value !== undefined) {
+    const valueFromProperty = element.value;
+    debug(element, `value retrieved from .value property -> `, valueFromProperty);
+    return valueFromProperty;
+  }
+  debug(element, "value could not be determined, returning undefined");
+  return undefined;
 };
 const getElementSelectionName = element => {
   return element.getAttribute("data-selection-name");
@@ -13801,12 +14051,19 @@ const useSelectableElement = (elementRef, {
   selectionController,
   selectionImpact
 }) => {
-  if (!selectionController) {
-    throw new Error("useSelectableElement needs a selectionController");
-  }
   useLayoutEffect(() => {
     const element = elementRef.current;
     if (!element) {
+      return;
+    }
+    element._selectionImpact = selectionImpact;
+  }, [selectionImpact]);
+  useLayoutEffect(() => {
+    const element = elementRef.current;
+    if (!element) {
+      return null;
+    }
+    if (!selectionController) {
       return null;
     }
     const value = getElementValue(element);
@@ -13821,20 +14078,21 @@ const useSelectableElement = (elementRef, {
       selectionController.unregisterElement(element);
       element.removeAttribute("data-selectable");
     };
-  }, [selectionController, selectionImpact]);
+  }, [selectionController]);
   const [selected, setSelected] = useState(false);
   debug("selection", "useSelectableElement: initial selected state:", selected);
   // Update selected state when selection value changes
   useLayoutEffect(() => {
     const element = elementRef.current;
+    if (!selection) {
+      return;
+    }
     if (!element) {
       debug("selection", "useSelectableElement: no element, setting selected to false");
       setSelected(false);
       return;
     }
-    // Use selection values directly for better performance
-    const elementValue = getElementValue(element);
-    const isSelected = selection.includes(elementValue);
+    const isSelected = selectionController.isElementSelected(element);
     debug("selection", "useSelectableElement: updating selected state", element, "isSelected:", isSelected);
     setSelected(isSelected);
   }, [selection]);
@@ -13843,6 +14101,9 @@ const useSelectableElement = (elementRef, {
   useLayoutEffect(() => {
     const element = elementRef.current;
     if (!element) {
+      return null;
+    }
+    if (!selectionController) {
       return null;
     }
     let isDragging = false;
@@ -14288,8 +14549,8 @@ const createSelectionKeyboardShortcuts = (selectionController, {
     handler: keyboardEvent => {
       const element = getSelectableElement(keyboardEvent);
       const elementValue = getElementValue(element);
-      const isCurrentlySelected = selectionController.isElementSelected(element);
-      if (isCurrentlySelected) {
+      const isSelected = selectionController.isValueSelected(elementValue);
+      if (isSelected) {
         selectionController.removeFromSelection([elementValue], keyboardEvent);
         return true;
       }
@@ -14298,6 +14559,13 @@ const createSelectionKeyboardShortcuts = (selectionController, {
     }
   }];
 };
+const isComposite = value => {
+  if (value === null) return false;
+  if (typeof value === "object") return true;
+  if (typeof value === "function") return true;
+  return false;
+};
+const isPrimitive = value => !isComposite(value);
 
 const addManyEventListeners = (element, events) => {
   const cleanupCallbackSet = new Set();
@@ -14407,13 +14675,14 @@ const useActionEvents = (
   ]);
 };
 
-const useRequestedActionStatus = (elementRef) => {
+const useRequestedActionStatus = (elementRef, { actionOrigin } = {}) => {
   const [actionRequester, setActionRequester] = useState(null);
   const [actionPending, setActionPending] = useState(false);
   const [actionAborted, setActionAborted] = useState(false);
   const [actionError, setActionError] = useState(null);
 
   useActionEvents(elementRef, {
+    actionOrigin,
     onAction: (actionEvent) => {
       setActionRequester(actionEvent.detail.requester);
     },
@@ -17880,7 +18149,7 @@ const selectByTextStrings = (element, range, startText, endText) => {
 installImportMetaCss(import.meta);import.meta.css = /* css */`
   *[data-navi-space] {
     /* user-select: none; */
-    min-width: 0.2em;
+    padding-left: 0.25em;
   }
 
   .navi_text {
@@ -17890,25 +18159,50 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
     &[data-has-absolute-child] {
       display: inline-block;
     }
-  }
 
-  .navi_text_overflow {
-    flex-wrap: wrap;
-    text-overflow: ellipsis;
-    overflow: hidden;
-  }
+    /* There is a chrome specific bug that prevents text-transform: capitalize to be applied in nested DOM structure */
+    /* The CSS below ensure capitalize is propagated to the bold clones */
+    &[data-capitalize] {
+      &::first-letter {
+        text-transform: uppercase;
+      }
+      .navi_text_bold_clone::first-letter {
+        text-transform: uppercase;
+      }
+      .navi_text_bold_foreground::first-letter {
+        text-transform: uppercase;
+      }
+    }
 
-  .navi_text_overflow_wrapper {
-    display: flex;
-    width: 100%;
-    flex-grow: 1;
-    gap: 0.3em;
-  }
+    .navi_text_bold_wrapper,
+    .navi_text_bold_clone,
+    .navi_text_bold_foreground {
+      display: inherit;
+      flex-grow: inherit;
+      align-items: inherit;
+      justify-content: inherit;
+      text-align: inherit;
+      border-radius: inherit;
+    }
 
-  .navi_text_overflow_text {
-    max-width: 100%;
-    text-overflow: ellipsis;
-    overflow: hidden;
+    &[data-text-overflow] {
+      flex-wrap: wrap;
+      text-overflow: ellipsis;
+      overflow: hidden;
+
+      .navi_text_overflow_wrapper {
+        display: flex;
+        width: 100%;
+        flex-grow: 1;
+        gap: 0.3em;
+
+        .navi_text_overflow_text {
+          max-width: 100%;
+          text-overflow: ellipsis;
+          overflow: hidden;
+        }
+      }
+    }
   }
 
   .navi_custom_space {
@@ -17917,14 +18211,15 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
   .navi_text_bold_wrapper {
     position: relative;
     display: inline-block;
-  }
-  .navi_text_bold_clone {
-    font-weight: bold;
-    opacity: 0;
-  }
-  .navi_text_bold_foreground {
-    position: absolute;
-    inset: 0;
+
+    .navi_text_bold_clone {
+      font-weight: bold;
+      opacity: 0;
+    }
+    .navi_text_bold_foreground {
+      position: absolute;
+      inset: 0;
+    }
   }
 
   .navi_text_bold_background {
@@ -17961,9 +18256,13 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
     }
   }
 `;
+
+// We could use <span data-navi-space=""> </span>
+// but we prefer to use zero width space as it has the nice side effects of
+// not being underlined by the browser (very cool because we typically don't want spaces to be underlined in links)
 const REGULAR_SPACE = jsx("span", {
   "data-navi-space": "",
-  children: " "
+  children: "\u200B"
 });
 const CustomWidthSpace = ({
   value
@@ -18029,12 +18328,12 @@ const applySpacingOnTextChildren = (children, spacing = REGULAR_SPACE) => {
   }
   return childrenWithGap;
 };
-const outsideFlowSet = new Set();
-const markAsOutsideFlow = jsxElement => {
-  outsideFlowSet.add(jsxElement);
+const outsideTextFlowSet = new Set();
+const markAsOutsideTextFlow = jsxElement => {
+  outsideTextFlowSet.add(jsxElement);
 };
-const isMarkedAsOutsideFlow = jsxElement => {
-  return outsideFlowSet.has(jsxElement.type);
+const isMarkedAsOutsideTextFlow = jsxElement => {
+  return outsideTextFlowSet.has(jsxElement.type);
 };
 const shouldInjectSpacingAfter = jsxChild => {
   if (typeof jsxChild === "string") {
@@ -18042,7 +18341,7 @@ const shouldInjectSpacingAfter = jsxChild => {
       return false;
     }
   }
-  if (isMarkedAsOutsideFlow(jsxChild)) {
+  if (isMarkedAsOutsideTextFlow(jsxChild)) {
     // we can mark jsx element as "outsideFlow" to avoid spacing injection between it and surrounding text
     return false;
   }
@@ -18054,8 +18353,11 @@ const shouldInjectSpacingBefore = jsxChild => {
       return false;
     }
   }
-  if (isMarkedAsOutsideFlow(jsxChild)) {
+  if (isMarkedAsOutsideTextFlow(jsxChild)) {
     // we can mark jsx element as "outsideFlow" to avoid spacing injection between it and surrounding text
+    return false;
+  }
+  if (jsxChild && jsxChild.props && jsxChild.props.overflowPinned) {
     return false;
   }
   return true;
@@ -18101,7 +18403,7 @@ const TextOverflow = ({
     ,
     preLine: rest.as === "p",
     ...rest,
-    className: "navi_text_overflow",
+    "data-text-overflow": true,
     spacing: "pre",
     children: jsxs("span", {
       className: "navi_text_overflow_wrapper",
@@ -18122,7 +18424,8 @@ const TextOverflowPinned = ({
 }) => {
   const setOverflowPinnedElement = useContext(OverflowPinnedElementContext);
   const text = jsx(Text, {
-    ...props
+    ...props,
+    "data-overflow-pinned": ""
   });
   if (!setOverflowPinnedElement) {
     console.warn("<Text overflowPinned> declared outside a <Text overflowEllipsis>");
@@ -18152,12 +18455,15 @@ const TextBasic = ({
   boldTransition,
   boldStable,
   preventBoldLayoutShift = boldTransition,
+  capitalize,
   children,
+  childrenOutsideFlow,
   ...rest
 }) => {
   const boxProps = {
     "as": "span",
     "data-bold-transition": boldTransition ? "" : undefined,
+    "data-capitalize": capitalize ? "" : undefined,
     ...rest,
     "baseClassName": withPropsClassName("navi_text", rest.baseClassName)
   };
@@ -18180,7 +18486,7 @@ const TextBasic = ({
         className: "navi_text_bold_background",
         "aria-hidden": "true",
         children: children
-      }), children]
+      }), children, childrenOutsideFlow]
     });
   }
   if (preventBoldLayoutShift) {
@@ -18191,9 +18497,9 @@ const TextBasic = ({
     // on la centre aussi pour donner l'impression que le gras s'applique depuis le centre
     // ne fonctionne que sur une seul ligne de texte (donc lorsque noWrap est actif)
     // on pourrait auto-active cela sur une prop genre boldCanChange
-    return jsx(Box, {
+    return jsxs(Box, {
       ...boxProps,
-      children: jsxs("span", {
+      children: [jsxs("span", {
         className: "navi_text_bold_wrapper",
         children: [jsx("span", {
           className: "navi_text_bold_clone",
@@ -18204,12 +18510,12 @@ const TextBasic = ({
           "data-align": alignX,
           children: children
         })]
-      })
+      }), childrenOutsideFlow]
     });
   }
-  return jsx(Box, {
+  return jsxs(Box, {
     ...boxProps,
-    children: children
+    children: [children, childrenOutsideFlow]
   });
 };
 
@@ -18413,6 +18719,36 @@ const LinkAnchorSvg = () => {
         d: "M6.85787 9.6863C8.90184 7.64233 12.2261 7.60094 14.3494 9.42268C14.7319 9.75083 14.7008 10.3287 14.3444 10.685C13.9253 11.1041 13.2317 11.0404 12.7416 10.707C11.398 9.79292 9.48593 9.88667 8.27209 11.1005L4.73655 14.636C3.36972 16.0029 3.36972 18.219 4.73655 19.5858C6.10339 20.9526 8.31947 20.9526 9.6863 19.5858L10.747 18.5251C11.1375 18.1346 11.7706 18.1346 12.1612 18.5251C12.5517 18.9157 12.5517 19.5488 12.1612 19.9394L11.1005 21C8.95263 23.1479 5.47022 23.1479 3.32234 21C1.17445 18.8521 1.17445 15.3697 3.32234 13.2218L6.85787 9.6863Z",
         fill: "currentColor"
       })]
+    })
+  });
+};
+const LinkSmsSvg = () => {
+  return jsx("svg", {
+    viewBox: "0 0 24 24",
+    xmlns: "http://www.w3.org/2000/svg",
+    children: jsx("path", {
+      d: "M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM18 14H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z",
+      fill: "currentColor"
+    })
+  });
+};
+const LinkGithubSvg = () => {
+  return jsx("svg", {
+    viewBox: "0 0 24 24",
+    xmlns: "http://www.w3.org/2000/svg",
+    children: jsx("path", {
+      d: "M12 2C6.48 2 2 6.48 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.87 1.52 2.34 1.07 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.11.38-2 1.03-2.71-.1-.25-.45-1.29.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33.85 0 1.71.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.35.2 2.39.1 2.64.65.71 1.03 1.6 1.03 2.71 0 3.82-2.34 4.66-4.57 4.91.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0012 2z",
+      fill: "currentColor"
+    })
+  });
+};
+const LinkCurrentSvg = () => {
+  return jsx("svg", {
+    viewBox: "0 0 16 16",
+    xmlns: "http://www.w3.org/2000/svg",
+    children: jsx("path", {
+      d: "m 8 0 c -3.3125 0 -6 2.6875 -6 6 c 0.007812 0.710938 0.136719 1.414062 0.386719 2.078125 l -0.015625 -0.003906 c 0.636718 1.988281 3.78125 5.082031 5.625 6.929687 h 0.003906 v -0.003906 c 1.507812 -1.507812 3.878906 -3.925781 5.046875 -5.753906 c 0.261719 -0.414063 0.46875 -0.808594 0.585937 -1.171875 l -0.019531 0.003906 c 0.25 -0.664063 0.382813 -1.367187 0.386719 -2.078125 c 0 -3.3125 -2.683594 -6 -6 -6 z m 0 3.691406 c 1.273438 0 2.308594 1.035156 2.308594 2.308594 s -1.035156 2.308594 -2.308594 2.308594 c -1.273438 -0.003906 -2.304688 -1.035156 -2.304688 -2.308594 c -0.003906 -1.273438 1.03125 -2.304688 2.304688 -2.308594 z m 0 0",
+      fill: "currentColor"
     })
   });
 };
@@ -20190,8 +20526,8 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
       --button-outline-width: 1px;
       --button-border-width: 1px;
       --button-border-radius: 2px;
-      --button-padding-x: 6px;
-      --button-padding-y: 1px;
+      --button-padding-x: var(--button-padding, 6px);
+      --button-padding-y: var(--button-padding, 1px);
       /* default */
       --button-outline-color: var(--navi-focus-outline-color);
       --button-loader-color: var(--navi-loader-color);
@@ -20530,7 +20866,7 @@ const ButtonShadow = () => {
     className: "navi_button_shadow"
   });
 };
-markAsOutsideFlow(ButtonShadow);
+markAsOutsideTextFlow(ButtonShadow);
 const ButtonWithAction = props => {
   const {
     action,
@@ -20587,7 +20923,7 @@ const ButtonWithActionInsideForm = props => {
   } = props;
   const defaultRef = useRef();
   const ref = props.ref || defaultRef;
-  const formParamsSignal = getActionPrivateProperties(formAction).paramsSignal;
+  const formParamsSignal = formAction.paramsSignal;
   const actionBoundToFormParams = useAction(action, formParamsSignal);
   const {
     loading: actionLoading
@@ -20829,6 +21165,104 @@ const Title = props => {
 };
 
 /**
+ * Toggles a `data-dark-background` attribute on the referenced element based on its
+ * computed background color. Pair it with a CSS variable to get automatic
+ * light/dark text without hard-coding colors:
+ *
+ * ```css
+ * .my-element {
+ *   --color-contrasting: black;
+ *   &[data-dark-background] {
+ *     --color-contrasting: white;
+ *   }
+ *   color: var(--color-contrasting);
+ * }
+ * ```
+ *
+ * - `data-dark-background` is **set** when the background is dark enough that white text
+ *   provides better (or equal) contrast.
+ * - `data-dark-background` is **absent** when black text is the better choice.
+ *
+ * @param {import("preact").RefObject} ref - Ref to the element that receives
+ *   the `data-dark-background` attribute and is also passed to `contrastColor` for
+ *   resolving CSS variables.
+ * @param {object} [options]
+ * @param {string} [options.backgroundElementSelector] - CSS selector relative
+ *   to `ref.current` pointing to a child element whose `background-color`
+ *   should be tested instead of the element itself. Useful when the element
+ *   has a transparent background but contains a coloured child (e.g. a fill
+ *   bar inside a track).
+ */
+
+const useDarkBackgroundAttribute = (
+  ref,
+  deps = [],
+  {
+    backgroundElementSelector,
+    attributeName = "data-dark-background",
+    hardcoded = {},
+  } = {},
+) => {
+  const innerDeps = [
+    ...deps,
+    // ref can change is the component pass a different ref on different render based on some logic
+    // (can be used to control which element backgroundColor is being checked by switching the ref to another element)
+    ref,
+    // backgroundElementSelector can change if the component pass a different selector on different render based on some logic
+    // (can be used to control which element backgroundColor is being checked by switching the selector to point to another element)
+    backgroundElementSelector,
+  ];
+
+  const hardcodedMap = new Map();
+  for (const key of Object.keys(hardcoded)) {
+    const value = hardcoded[key];
+    innerDeps.push(key, value);
+    const colorString = normalizeColorString(key);
+    hardcodedMap.set(colorString, value);
+  }
+
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) {
+      return null;
+    }
+    let elementToCheck = el;
+    if (backgroundElementSelector) {
+      elementToCheck = el.querySelector(backgroundElementSelector);
+      if (!elementToCheck) {
+        return null;
+      }
+    }
+    const computedStyle = getComputedStyle(elementToCheck);
+    const backgroundColor = computedStyle.backgroundColor;
+    if (!backgroundColor) {
+      el.removeAttribute(attributeName);
+      return null;
+    }
+    const backgroundColorString = normalizeColorString(backgroundColor, el);
+    const hardcodedContrast = hardcodedMap.get(backgroundColorString);
+    const contrastingColor =
+      hardcodedContrast || contrastColor(backgroundColor, el);
+    if (contrastingColor === "white") {
+      el.setAttribute(attributeName, "");
+      return () => {
+        el.removeAttribute(attributeName);
+      };
+    }
+    el.removeAttribute(attributeName);
+    return null;
+  }, innerDeps);
+};
+
+const normalizeColorString = (color, el) => {
+  const colorRgba = resolveCSSColor(color, el);
+  if (!colorRgba) {
+    return "";
+  }
+  return String(colorRgba);
+};
+
+/**
  * Hook that reactively checks if a URL is visited.
  * Re-renders when the visited URL set changes.
  *
@@ -20843,404 +21277,6 @@ const useIsVisited = (url) => {
 
     return isVisited(url);
   }, [url, visitedUrlsSignal.value]);
-};
-
-installImportMetaCss(import.meta);import.meta.css = /* css */`
-  @layer navi {
-    .navi_link {
-      --link-border-radius: 2px;
-      --link-outline-color: var(--navi-focus-outline-color);
-      --link-loader-color: var(--navi-loader-color);
-      --link-color: rgb(0, 0, 238);
-      --link-color-visited: color-mix(in srgb, var(--link-color), black 40%);
-
-      --link-color-active: red;
-      --link-text-decoration: underline;
-      --link-text-decoration-hover: var(--link-text-decoration);
-      --link-cursor: pointer;
-      --link-loading-outline-size: 1px;
-      --link-color-current: var(--link-color);
-    }
-  }
-
-  .navi_link {
-    --x-link-color: var(--link-color);
-    --x-link-color-hover: var(--link-color-hover, var(--link-color));
-    --x-link-color-visited: var(--link-color-visited);
-    --x-link-color-current: var(--link-color-current);
-    --x-link-color-active: var(--link-color-active);
-    --x-link-text-decoration: var(--link-text-decoration);
-    --x-link-text-decoration-hover: var(--link-text-decoration-hover);
-    --x-link-cursor: var(--link-cursor);
-
-    position: relative;
-    aspect-ratio: inherit;
-    /* Ensure the spacing for the loading outline is part of the <a> so that it does not create an overflow */
-    padding: var(--link-loading-outline-size);
-    color: var(--x-link-color);
-    text-decoration: var(--x-link-text-decoration);
-    border-radius: var(--link-border-radius);
-    outline-width: 0;
-    outline-style: solid;
-    outline-color: var(--link-outline-color);
-    cursor: var(--x-link-cursor);
-
-    /* Visited */
-    &[data-visited] {
-      --x-link-color: var(--x-link-color-visited);
-      &[data-anchor] {
-        /* Visited is meant to help user see what links he already seen / what remains to discover */
-        /* But anchor links are already in the area user is currently seeing */
-        /* No need for a special color for visited anchors */
-        --x-link-color: var(--link-color);
-      }
-    }
-    /* Hover */
-    &[data-hover] {
-      --x-link-color: var(--x-link-color-hover);
-      --x-link-text-decoration: var(--x-link-text-decoration-hover);
-    }
-    &[data-focus-visible] {
-      outline-width: 2px;
-    }
-    /* Selected */
-    &[aria-selected] {
-      position: relative;
-    }
-    &[aria-selected="true"] {
-      background-color: light-dark(#bbdefb, #2563eb);
-    }
-    &[aria-selected] input[type="checkbox"] {
-      position: absolute;
-      opacity: 0;
-    }
-    /* Active */
-    &[data-active] {
-      /* Redefine it otherwise [data-visited] prevails */
-      --x-link-color: var(--x-link-color-active);
-    }
-    /* Current */
-    &[data-href-current] {
-      --x-link-color: var(--link-color-current);
-      --x-link-cursor: default;
-      &[data-anchor] {
-        /* For anchor links, we want to keep the pointer cursor to indicate interactivity */
-        /* as anchor link will still scroll to the section even if it's the current page */
-        --x-link-cursor: pointer;
-      }
-    }
-    /* Focus */
-    &[data-focus],
-    &[data-focus-visible] {
-      position: relative;
-      z-index: 1; /* Ensure focus outline is above other elements */
-    }
-    /* Readonly */
-    &[data-readonly] > * {
-      opacity: 0.5;
-    }
-    /* Disabled */
-    &[data-disabled] {
-      pointer-events: none;
-    }
-    &[data-disabled] > * {
-      opacity: 0.5;
-    }
-    &[data-discrete] {
-      --link-color: inherit;
-      --link-text-decoration: none;
-    }
-    /* Reveal on interaction */
-    &[data-reveal-on-interaction] {
-      position: absolute !important;
-      top: 0;
-      left: -1em;
-      width: 1em;
-      height: 1em;
-      font-size: 1em;
-      opacity: 0;
-      /* The anchor link is displayed only on :hover */
-      /* So we "need" a visual indicator when it's shown by focus */
-      /* (even if it's focused by mouse aka not :focus-visible) */
-      /* otherwise we might wonder why we see this UI element */
-      &[data-focus] {
-        outline-width: 2px;
-      }
-      &[data-hover],
-      &[data-focus],
-      &[data-focus-visible] {
-        opacity: 1;
-      }
-
-      .navi_icon {
-        vertical-align: top;
-      }
-    }
-  }
-
-  *:hover > .navi_link[data-reveal-on-interaction] {
-    opacity: 1;
-  }
-
-  .navi_text .navi_link[data-reveal-on-interaction] {
-    top: 0.1em;
-  }
-  .navi_title .navi_link[data-reveal-on-interaction] {
-    top: 0.25em;
-  }
-`;
-const LinkStyleCSSVars = {
-  "outlineColor": "--link-outline-color",
-  "borderRadius": "--link-border-radius",
-  "color": "--link-color",
-  "cursor": "--link-cursor",
-  "textDecoration": "--link-text-decoration",
-  ":hover": {
-    color: "--link-color-hover",
-    textDecoration: "--link-text-decoration-hover"
-  },
-  ":active": {
-    color: "--link-color-active"
-  },
-  ":-navi-href-current": {
-    color: "--link-color-current"
-  }
-};
-const LinkPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":visited", ":-navi-loading", ":-navi-href-internal", ":-navi-href-external", ":-navi-href-anchor", ":-navi-href-current", ":-navi-href-match"];
-const LinkPseudoElements = ["::-navi-loader"];
-Object.assign(PSEUDO_CLASSES, {
-  ":-navi-href-internal": {
-    attribute: "data-href-internal"
-  },
-  ":-navi-href-external": {
-    attribute: "data-href-external"
-  },
-  ":-navi-href-anchor": {
-    attribute: "data-href-anchor"
-  },
-  ":-navi-href-current": {
-    attribute: "data-href-current"
-  },
-  ":-navi-href-match": {
-    attribute: "data-href-match"
-  }
-});
-const Link = props => {
-  return renderActionableComponent(props, {
-    Basic: LinkBasic,
-    WithAction: LinkWithAction
-  });
-};
-const LinkBasic = props => {
-  const selectionContext = useContext(SelectionContext);
-  if (selectionContext) {
-    return jsx(LinkWithSelection, {
-      ...props
-    });
-  }
-  return jsx(LinkPlain, {
-    ...props
-  });
-};
-const LinkPlain = props => {
-  const titleLevel = useContext(TitleLevelContext);
-  const {
-    loading,
-    readOnly,
-    disabled,
-    autoFocus,
-    spaceToClick = true,
-    onClick,
-    onKeyDown,
-    href,
-    target,
-    rel,
-    preventDefault,
-    anchor,
-    // visual
-    discrete,
-    blankTargetIcon,
-    anchorIcon,
-    startIcon,
-    endIcon,
-    spacing,
-    revealOnInteraction = Boolean(titleLevel),
-    hrefFallback = !anchor,
-    matching,
-    overflowEllipsis,
-    children,
-    ...rest
-  } = props;
-  const defaultRef = useRef();
-  const ref = props.ref || defaultRef;
-  const visited = useIsVisited(href);
-  useAutoFocus(ref, autoFocus);
-  const remainingProps = useConstraints(ref, rest);
-  const shouldDimColor = readOnly || disabled;
-  useDimColorWhen(ref, shouldDimColor);
-  // subscribe to document url to re-render and re-compute getHrefTargetInfo
-  useDocumentUrl();
-  const {
-    isSameSite,
-    isAnchor,
-    isCurrent
-  } = getHrefTargetInfo(href);
-  const innerTarget = target === undefined ? isSameSite ? "_self" : "_blank" : target;
-  const innerRel = rel === undefined ? isSameSite ? undefined : "noopener noreferrer" : rel;
-  let innerEndIcon;
-  if (endIcon === undefined) {
-    // Check for special protocol or domain-specific icons first
-    if (href?.startsWith("tel:")) {
-      innerEndIcon = jsx(PhoneSvg, {});
-    } else if (href?.startsWith("sms:")) {
-      innerEndIcon = jsx(SmsSvg, {});
-    } else if (href?.startsWith("mailto:")) {
-      innerEndIcon = jsx(EmailSvg, {});
-    } else if (href?.includes("github.com")) {
-      innerEndIcon = jsx(GithubSvg, {});
-    } else {
-      // Fall back to default icon logic
-      const innerBlankTargetIcon = blankTargetIcon === undefined ? innerTarget === "_blank" : blankTargetIcon;
-      const innerAnchorIcon = anchorIcon === undefined ? isAnchor : anchorIcon;
-      if (innerBlankTargetIcon) {
-        innerEndIcon = innerBlankTargetIcon === true ? jsx(LinkBlankTargetSvg, {}) : innerBlankTargetIcon;
-      } else if (innerAnchorIcon) {
-        innerEndIcon = innerAnchorIcon === true ? jsx(LinkAnchorSvg, {}) : anchorIcon;
-      }
-    }
-  } else {
-    innerEndIcon = endIcon;
-  }
-  const innerChildren = children || (hrefFallback ? href : children);
-  const startIconEl = startIcon && jsx(Icon, {
-    marginRight: innerChildren ? "xxs" : undefined,
-    children: startIcon
-  });
-  const endIconEl = innerEndIcon && jsx(Icon, {
-    marginLeft: innerChildren ? "xxs" : undefined,
-    children: innerEndIcon
-  });
-
-  // For now we don't do as for button.jsx where we always wrap button content inside <Text>
-  // because link can wrap images or other non-text content and we don't want to mess with it
-  // in theory this is the same for button so we'll see with time what makes more sense
-  const visualChildren = overflowEllipsis ? jsxs(Text, {
-    overflowEllipsis: true
-    // Here we can't use spaces as they would be underlined
-    // (Ce would use zero width space with paddings but that's just simpler to rely on margins here)
-    ,
-    spacing: "pre",
-    children: [startIconEl, innerChildren, endIconEl && jsx(Text, {
-      overflowPinned: true,
-      children: endIconEl
-    })]
-  }) : jsxs(Fragment, {
-    children: [startIconEl, applySpacingOnTextChildren(innerChildren, spacing), endIconEl]
-  });
-  return jsxs(Box, {
-    as: "a",
-    color: anchor && !innerChildren ? "inherit" : undefined,
-    id: anchor ? href.slice(1) : undefined,
-    ...remainingProps,
-    ref: ref,
-    href: href,
-    rel: innerRel,
-    target: innerTarget === "_self" ? undefined : target,
-    "aria-busy": loading,
-    inert: disabled,
-    spacing: "pre"
-    // Visual
-    ,
-    "data-anchor": anchor ? "" : undefined,
-    "data-reveal-on-interaction": revealOnInteraction ? "" : undefined,
-    "data-discrete": discrete ? "" : undefined,
-    baseClassName: "navi_link",
-    styleCSSVars: LinkStyleCSSVars,
-    pseudoClasses: LinkPseudoClasses,
-    pseudoElements: LinkPseudoElements,
-    basePseudoState: {
-      ":read-only": readOnly,
-      ":disabled": disabled,
-      ":visited": visited,
-      ":-navi-loading": loading,
-      ":-navi-href-internal": isSameSite,
-      ":-navi-href-external": !isSameSite,
-      ":-navi-href-anchor": isAnchor,
-      ":-navi-href-current": isCurrent,
-      ":-navi-href-match": matching
-    },
-    onClick: e => {
-      if (preventDefault) {
-        e.preventDefault();
-      }
-      closeValidationMessage(e.target, "click");
-      if (readOnly) {
-        e.preventDefault();
-        return;
-      }
-      onClick?.(e);
-    },
-    onKeyDown: e => {
-      if (spaceToClick && e.key === " ") {
-        e.preventDefault(); // Prevent page scroll
-        if (!readOnly && !disabled) {
-          e.target.click();
-        }
-      }
-      onKeyDown?.(e);
-    },
-    children: [jsx(LoaderBackground, {
-      loading: loading,
-      inset: 1,
-      color: "var(--link-loader-color)"
-    }), visualChildren]
-  });
-};
-const SmsSvg = () => {
-  return jsx("svg", {
-    viewBox: "0 0 24 24",
-    xmlns: "http://www.w3.org/2000/svg",
-    children: jsx("path", {
-      d: "M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM18 14H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z",
-      fill: "currentColor"
-    })
-  });
-};
-const GithubSvg = () => {
-  return jsx("svg", {
-    viewBox: "0 0 24 24",
-    xmlns: "http://www.w3.org/2000/svg",
-    children: jsx("path", {
-      d: "M12 2C6.48 2 2 6.48 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.87 1.52 2.34 1.07 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.11.38-2 1.03-2.71-.1-.25-.45-1.29.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33.85 0 1.71.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.35.2 2.39.1 2.64.65.71 1.03 1.6 1.03 2.71 0 3.82-2.34 4.66-4.57 4.91.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0012 2z",
-      fill: "currentColor"
-    })
-  });
-};
-const LinkWithSelection = props => {
-  const {
-    selection,
-    selectionController
-  } = useContext(SelectionContext);
-  const {
-    value = props.href,
-    children,
-    ...rest
-  } = props;
-  const defaultRef = useRef();
-  const ref = props.ref || defaultRef;
-  const {
-    selected
-  } = useSelectableElement(ref, {
-    selection,
-    selectionController
-  });
-  return jsx(LinkPlain, {
-    ...rest,
-    ref: ref,
-    "data-value": value,
-    "aria-selected": selected,
-    children: children
-  });
 };
 
 /*
@@ -21263,6 +21299,7 @@ const useDimColorWhen = (elementRef, shouldDim) => {
   useLayoutEffect(() => {
     const element = elementRef.current;
     const shouldDimPrevious = shouldDimPreviousRef.current;
+
     if (shouldDim === shouldDimPrevious) {
       return;
     }
@@ -21278,6 +21315,540 @@ const useDimColorWhen = (elementRef, shouldDim) => {
     }
   });
 };
+
+installImportMetaCss(import.meta);import.meta.css = /* css */`
+  @layer navi {
+    .navi_link {
+      --link-border-radius: unset;
+      --link-outline-color: var(--navi-focus-outline-color);
+      --link-loader-color: var(--navi-loader-color);
+      --link-background: unset;
+      --link-background-current: unset;
+      --link-background-selected: light-dark(#bbdefb, #2563eb);
+      --link-color: rgb(0, 0, 238);
+      --link-color-visited: color-mix(in srgb, var(--link-color), black 40%);
+
+      --link-color-active: red;
+      --link-text-decoration: underline;
+      --link-text-decoration-hover: var(--link-text-decoration);
+      --link-cursor: pointer;
+      --link-loading-outline-size: 1px;
+
+      --link-current-indicator-size: 2px;
+      --link-current-indicator-spacing: 0;
+      --link-current-indicator-color: rgb(205, 52, 37);
+    }
+  }
+
+  .navi_link {
+    --x-link-contrasting-color: black;
+
+    --x-link-background: var(--link-background-color, var(--link-background));
+    --x-link-background-hover: var(
+      --link-background-color-hover,
+      var(--link-background-color, var(--link-background-hover))
+    );
+    --x-link-background-selected: var(
+      --link-background-color-selected,
+      var(--link-background-selected)
+    );
+    --x-link-background-current: var(
+      --link-background-color-current,
+      var(
+        --link-background-current,
+        var(--link-background-color, var(--link-background))
+      )
+    );
+    --x-link-color: var(--link-color);
+    --x-link-color-hover: var(--link-color-hover, var(--link-color));
+    --x-link-color-visited: var(--link-color-visited);
+    --x-link-color-current: var(--link-color-current);
+    --x-link-color-active: var(--link-color-active);
+    --x-link-text-decoration: var(--link-text-decoration);
+    --x-link-text-decoration-hover: var(--link-text-decoration-hover);
+    --x-link-cursor: var(--link-cursor);
+
+    position: relative;
+    aspect-ratio: inherit;
+    /* Ensure the spacing for the loading outline is part of the <a> so that it does not create an overflow */
+    padding: var(--link-loading-outline-size);
+    color: var(--x-link-color);
+    text-decoration: var(--x-link-text-decoration);
+    background: var(--x-link-background);
+    border-radius: var(--link-border-radius);
+    outline-width: 0;
+    outline-style: solid;
+    outline-color: var(--link-outline-color);
+    cursor: var(--x-link-cursor);
+
+    .navi_current_indicator {
+      position: absolute;
+      z-index: 1;
+      display: flex;
+      background: transparent;
+      border-radius: 0.1px;
+    }
+    &[data-current-indicator-position="top"] {
+      margin-top: var(--link-current-indicator-spacing);
+
+      .navi_current_indicator {
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: var(--link-current-indicator-size);
+      }
+    }
+    &[data-current-indicator-position="bottom"] {
+      margin-bottom: var(--link-current-indicator-spacing);
+
+      .navi_current_indicator {
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: var(--link-current-indicator-size);
+      }
+    }
+    &[data-current-indicator-position="left"] {
+      margin-left: var(--link-current-indicator-spacing);
+
+      .navi_current_indicator {
+        top: 0;
+        left: 0;
+        width: var(--link-current-indicator-size);
+        height: 100%;
+      }
+    }
+    &[data-current-indicator-position="right"] {
+      margin-right: var(--link-current-indicator-spacing);
+
+      .navi_current_indicator {
+        top: 0;
+        right: 0;
+        width: var(--link-current-indicator-size);
+        height: 100%;
+      }
+    }
+
+    /* Dark background */
+    &[data-dark-background] {
+      --x-link-contrasting-color: white;
+      --x-link-color: var(--link-color, white);
+    }
+    /* Interactive */
+    &[data-interactive] {
+      cursor: pointer;
+    }
+    /* Visited */
+    &[data-visited] {
+      --x-link-color: var(--x-link-color-visited);
+      &[data-anchor] {
+        /* Visited is meant to help user see what links he already seen / what remains to discover */
+        /* But anchor links are already in the area user is currently seeing */
+        /* No need for a special color for visited anchors */
+        --x-link-color: var(--link-color);
+      }
+    }
+    /* Hover */
+    &[data-hover] {
+      --x-link-background: var(--x-link-background-hover);
+      --x-link-color: var(--x-link-color-hover);
+      --x-link-text-decoration: var(--x-link-text-decoration-hover);
+    }
+    &[data-focus-visible] {
+      outline-width: 2px;
+    }
+    /* Active */
+    &[data-active] {
+      /* Redefine it otherwise [data-visited] prevails */
+      --x-link-color: var(--x-link-color-active);
+    }
+    /* Current */
+    &[data-href-current] {
+      --x-link-color: var(--link-color-current);
+      --x-link-cursor: default;
+      --x-link-background: var(--x-link-background-current);
+
+      &[data-anchor] {
+        /* For anchor links, we want to keep the pointer cursor to indicate interactivity */
+        /* as anchor link will still scroll to the section even if it's the current page */
+        --x-link-cursor: pointer;
+      }
+      &[data-current-effect-bold] {
+        font-weight: bold;
+      }
+      .navi_current_indicator {
+        background: var(--link-current-indicator-color);
+      }
+    }
+    /* Selected */
+    &[aria-selected] {
+      position: relative;
+
+      input[type="checkbox"] {
+        position: absolute;
+        opacity: 0;
+      }
+    }
+    &[data-selected] {
+      --x-link-background: var(--x-link-background-selected);
+      --x-link-color: var(--link-color-selected);
+    }
+    /* Focus */
+    &[data-focus],
+    &[data-focus-visible] {
+      position: relative;
+      z-index: 1; /* Ensure focus outline is above other elements */
+    }
+    /* Readonly */
+    &[data-readonly] > * {
+      opacity: 0.5;
+    }
+    /* Disabled */
+    &[data-disabled] {
+      pointer-events: none;
+    }
+    &[data-disabled] > * {
+      opacity: 0.5;
+    }
+    /* Reveal on interaction */
+    &[data-reveal-on-interaction] {
+      position: absolute !important;
+      top: 0;
+      left: -1em;
+      display: inline-flex;
+      width: 1em;
+      height: 1em;
+      font-size: 1em;
+      opacity: 0;
+      /* The anchor link is displayed only on :hover */
+      /* So we "need" a visual indicator when it's shown by focus */
+      /* (even if it's focused by mouse aka not :focus-visible) */
+      /* otherwise we might wonder why we see this UI element */
+      &[data-focus] {
+        outline-width: 2px;
+      }
+      &[data-hover],
+      &[data-focus],
+      &[data-focus-visible] {
+        opacity: 1;
+      }
+
+      .navi_icon {
+        vertical-align: top;
+      }
+    }
+
+    &[data-appearance="text"] {
+      --link-color: unset;
+      --link-text-decoration: none;
+    }
+    &[data-appearance="icon"] {
+      --link-color: unset;
+      --link-text-decoration: none;
+    }
+    &[data-appearance="tab"] {
+      --link-background-hover: color-mix(
+        in srgb,
+        var(--link-background, transparent),
+        var(--x-link-contrasting-color) 15%
+      );
+      --link-color: unset;
+      --link-text-decoration: none;
+      white-space: nowrap;
+      user-select: none;
+
+      &[data-current-effect-shadow][data-href-current] {
+        --x-link-box-shadow-size: 0.1em;
+        --x-link-box-shadow-halo: 0.3em;
+        --x-link-shadow-color: color-mix(
+          in srgb,
+          var(--x-link-contrasting-color) 40%,
+          transparent
+        );
+
+        box-shadow:
+          inset 0 var(--x-link-box-shadow-size) var(--x-link-box-shadow-halo)
+            var(--x-link-shadow-color),
+          inset 0 calc(-1 * var(--x-link-box-shadow-size))
+            var(--x-link-box-shadow-halo) var(--x-link-shadow-color),
+          inset var(--x-link-box-shadow-size) 0 var(--x-link-box-shadow-halo)
+            var(--x-link-shadow-color),
+          inset calc(-1 * var(--x-link-box-shadow-size)) 0
+            var(--x-link-box-shadow-halo) var(--x-link-shadow-color);
+      }
+    }
+  }
+
+  *:hover > .navi_link[data-reveal-on-interaction] {
+    opacity: 1;
+  }
+  .navi_text .navi_link[data-reveal-on-interaction] {
+    top: 0.1em;
+  }
+  .navi_title .navi_link[data-reveal-on-interaction] {
+    top: 0.25em;
+  }
+`;
+const LinkStyleCSSVars = {
+  "outlineColor": "--link-outline-color",
+  "borderRadius": "--link-border-radius",
+  "color": "--link-color",
+  "cursor": "--link-cursor",
+  "textDecoration": "--link-text-decoration",
+  "background": "--link-background",
+  "backgroundColor": "--link-background-color",
+  ":hover": {
+    background: "--link-background-hover",
+    backgroundColor: "--link-background-color-hover",
+    color: "--link-color-hover",
+    textDecoration: "--link-text-decoration-hover"
+  },
+  ":active": {
+    color: "--link-color-active"
+  },
+  ":-navi-href-current": {
+    background: "--link-background-current",
+    backgroundColor: "--link-background-color-current",
+    color: "--link-color-current"
+  },
+  ":-navi-selected": {
+    background: "--link-background-selected",
+    backgroundColor: "--link-background-color-selected",
+    color: "--link-color-selected"
+  }
+};
+const LinkPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":visited", ":-navi-loading", ":-navi-href-internal", ":-navi-href-external", ":-navi-href-anchor", ":-navi-href-current", ":-navi-selected"];
+const LinkPseudoElements = ["::-navi-loader", "::-navi-indicator"];
+Object.assign(PSEUDO_CLASSES, {
+  ":-navi-href-internal": {
+    attribute: "data-href-internal"
+  },
+  ":-navi-href-external": {
+    attribute: "data-href-external"
+  },
+  ":-navi-href-anchor": {
+    attribute: "data-href-anchor"
+  },
+  ":-navi-href-current": {
+    attribute: "data-href-current"
+  },
+  ":-navi-selected": {
+    attribute: "data-selected"
+  }
+});
+const Link = props => {
+  return renderActionableComponent(props, {
+    Basic: LinkBasic,
+    WithAction: LinkWithAction
+  });
+};
+const LinkBasic = props => {
+  if (props.route) {
+    return jsx(LinkWithRoute, {
+      ...props
+    });
+  }
+  return jsx(LinkPlain, {
+    ...props
+  });
+};
+const LinkWithRoute = ({
+  route,
+  routeParams,
+  current,
+  children,
+  ...rest
+}) => {
+  const url = route.buildUrl(routeParams);
+  const {
+    matching
+  } = useRouteStatus(route);
+  const paramsAreMatching = route.matchesParams(routeParams);
+  const linkMatching = matching && paramsAreMatching;
+  const innerCurrent = current || linkMatching;
+  return jsx(LinkBasic, {
+    href: url,
+    current: innerCurrent,
+    ...rest,
+    children: children || route.buildRelativeUrl(routeParams)
+  });
+};
+const LinkPlain = props => {
+  const titleLevel = useContext(TitleLevelContext);
+  const selectionContext = useContext(SelectionContext);
+  const {
+    loading,
+    readOnly,
+    disabled,
+    autoFocus,
+    spaceToClick = true,
+    onClick,
+    onKeyDown,
+    href,
+    target,
+    rel,
+    preventDefault,
+    anchor,
+    value = href,
+    // visual
+    appearance,
+    current,
+    currentIndicator,
+    currentEffectBold,
+    currentEffectShadow,
+    blankTargetIcon,
+    anchorIcon,
+    startIcon,
+    endIcon,
+    revealOnInteraction = Boolean(titleLevel),
+    hrefFallback = !anchor,
+    overflowEllipsis,
+    children,
+    ...rest
+  } = props;
+  const defaultRef = useRef();
+  const ref = props.ref || defaultRef;
+  const visited = useIsVisited(href);
+  const {
+    selection,
+    selectionController
+  } = selectionContext || {};
+  const {
+    selected
+  } = useSelectableElement(ref, {
+    selection,
+    selectionController
+  });
+  useAutoFocus(ref, autoFocus);
+  const remainingProps = useConstraints(ref, rest);
+  const shouldDimColor = readOnly || disabled;
+  useDimColorWhen(ref, shouldDimColor);
+  // subscribe to document url to re-render and re-compute getHrefTargetInfo
+  useDocumentUrl();
+  const {
+    isSameSite,
+    isAnchor,
+    isCurrent
+  } = getHrefTargetInfo(href);
+  const innerCurrent = current || isCurrent;
+  useDarkBackgroundAttribute(ref, [selected, innerCurrent], {});
+  const innerTarget = target === undefined ? isSameSite ? "_self" : "_blank" : target;
+  const innerRel = rel === undefined ? isSameSite ? undefined : "noopener noreferrer" : rel;
+  let innerEndIcon;
+  if (endIcon === undefined) {
+    // Check for special protocol or domain-specific icons first
+    if (href?.startsWith("tel:")) {
+      innerEndIcon = jsx(PhoneSvg, {});
+    } else if (href?.startsWith("sms:")) {
+      innerEndIcon = jsx(LinkSmsSvg, {});
+    } else if (href?.startsWith("mailto:")) {
+      innerEndIcon = jsx(EmailSvg, {});
+    } else if (href?.includes("github.com")) {
+      innerEndIcon = jsx(LinkGithubSvg, {});
+    } else {
+      // Fall back to default icon logic
+      const innerBlankTargetIcon = blankTargetIcon === undefined ? innerTarget === "_blank" : blankTargetIcon;
+      const innerAnchorIcon = anchorIcon === undefined ? isAnchor : anchorIcon;
+      if (innerBlankTargetIcon) {
+        innerEndIcon = innerBlankTargetIcon === true ? jsx(LinkBlankTargetSvg, {}) : innerBlankTargetIcon;
+      } else if (innerAnchorIcon) {
+        innerEndIcon = innerAnchorIcon === true ? jsx(LinkAnchorSvg, {}) : anchorIcon;
+      }
+    }
+  } else {
+    innerEndIcon = endIcon;
+  }
+  const innerChildren = children || (hrefFallback ? href : children);
+  const startIconEl = startIcon && jsx(Icon, {
+    children: startIcon
+  });
+  const endIconEl = innerEndIcon && jsx(Icon, {
+    children: innerEndIcon
+  });
+  const currentIndicatorPosition = currentIndicator === true ? "bottom" : currentIndicator;
+  const currentIndicatorEl = currentIndicatorPosition === "left" || currentIndicatorPosition === "right" || currentIndicatorPosition === "top" || currentIndicatorPosition === "bottom" ? jsx(LinkCurrentIndicator, {}) : null;
+  return jsxs(Text, {
+    as: "a",
+    color: anchor && !innerChildren ? "inherit" : undefined,
+    id: anchor ? href.slice(1) : undefined,
+    ...remainingProps,
+    ref: ref,
+    href: href,
+    rel: innerRel,
+    target: innerTarget === "_self" ? undefined : target,
+    "aria-busy": loading,
+    inert: disabled,
+    "aria-current": isCurrent ? "page" : undefined,
+    "aria-selected": selectionContext ? selected : undefined,
+    "data-value-event": "navi_value",
+    onnavi_value: e => {
+      e.detail.setValue(value);
+    },
+    preventBoldLayoutShift: currentEffectBold,
+    overflowEllipsis: overflowEllipsis
+    // Visual
+    ,
+    "data-appearance": appearance,
+    "data-current-effect-bold": currentEffectBold ? "" : undefined,
+    "data-current-effect-shadow": currentEffectShadow ? "" : undefined,
+    "data-current-indicator-position": currentIndicatorPosition,
+    "data-anchor": anchor ? "" : undefined,
+    "data-interactive": onClick ? "" : undefined,
+    "data-reveal-on-interaction": revealOnInteraction ? "" : undefined,
+    baseClassName: "navi_link",
+    styleCSSVars: LinkStyleCSSVars,
+    pseudoClasses: LinkPseudoClasses,
+    pseudoElements: LinkPseudoElements,
+    basePseudoState: {
+      ":read-only": readOnly,
+      ":disabled": disabled,
+      ":visited": visited,
+      ":-navi-loading": loading,
+      ":-navi-href-internal": isSameSite,
+      ":-navi-href-external": !isSameSite,
+      ":-navi-href-anchor": isAnchor,
+      ":-navi-href-current": innerCurrent,
+      ":-navi-selected": selected
+    },
+    onClick: e => {
+      if (preventDefault) {
+        e.preventDefault();
+      }
+      closeValidationMessage(e.target, "click");
+      if (readOnly) {
+        e.preventDefault();
+        return;
+      }
+      onClick?.(e);
+    },
+    onKeyDown: e => {
+      if (spaceToClick && e.key === " ") {
+        e.preventDefault(); // Prevent page scroll
+        if (!readOnly && !disabled) {
+          e.target.click();
+        }
+      }
+      onKeyDown?.(e);
+    },
+    childrenOutsideFlow: jsxs(Fragment, {
+      children: [jsx(LoaderBackground, {
+        loading: loading,
+        inset: 1,
+        color: "var(--link-loader-color)"
+      }), currentIndicatorEl]
+    }),
+    children: [startIconEl, innerChildren, endIconEl ? overflowEllipsis ? jsx(Text, {
+      overflowPinned: true,
+      children: endIconEl
+    }) : endIconEl : null]
+  });
+};
+const LinkCurrentIndicator = () => {
+  return jsx("span", {
+    className: "navi_current_indicator"
+  });
+};
+markAsOutsideTextFlow(LinkCurrentIndicator);
 const LinkWithAction = props => {
   const {
     shortcuts = [],
@@ -21295,7 +21866,9 @@ const LinkWithAction = props => {
   const ref = props.ref || defaultRef;
   const {
     actionPending
-  } = useRequestedActionStatus(ref);
+  } = useRequestedActionStatus(ref, {
+    actionOrigin: "keyboard_shortcut"
+  });
   const innerLoading = Boolean(loading || actionPending);
   useKeyboardShortcuts(ref, shortcuts, {
     onActionPrevented,
@@ -21316,414 +21889,161 @@ const LinkWithAction = props => {
   });
 };
 
-const ReportSelectedOnTabContext = createContext();
+const NavContext = createContext();
+createContext();
 
-const RouteLink = ({
-  route,
-  routeParams,
-  children,
-  ...rest
-}) => {
-  if (!route) {
-    throw new Error("route prop is required");
-  }
-  const url = route.buildUrl(routeParams);
-  const reportSelectedOnTab = useContext(ReportSelectedOnTabContext);
-  const {
-    matching
-  } = useRouteStatus(route);
-  const paramsAreMatching = route.matchesParams(routeParams);
-  const linkMatching = matching && paramsAreMatching;
-  reportSelectedOnTab?.(linkMatching);
-  return jsx(Link, {
-    matching: linkMatching,
-    href: url,
-    ...rest,
-    children: children || route.buildRelativeUrl(routeParams)
-  });
-};
-
-installImportMetaCss(import.meta);Object.assign(PSEUDO_CLASSES, {
-  ":-navi-tab-selected": {
-    attribute: "data-tab-selected"
-  }
-});
-import.meta.css = /* css */`
+installImportMetaCss(import.meta);import.meta.css = /* css */`
   @layer navi {
-    .navi_tablist {
-      --tablist-border-radius: 0px;
-      --tablist-background: transparent;
-      --tab-border-radius: calc(var(--tablist-border-radius) - 2px);
-
-      --tab-background: transparent;
-      --tab-background-hover: #dae0e7;
-      --tab-background-selected: transparent;
-      --tab-color: inherit;
-      --tab-color-hover: #010409;
-      --tab-color-selected: inherit;
-      --tab-indicator-size: 2px;
-      --tab-indicator-spacing: 0;
-      --tab-indicator-color: rgb(205, 52, 37);
+    .navi_nav {
+      --nav-border: none;
+      --nav-padding: 0px;
+      --nav-border-radius: 0px;
+      --nav-background: transparent;
     }
   }
 
-  .navi_tablist {
+  .navi_nav {
     display: flex;
-    line-height: 2;
+    width: fit-content;
+    padding-top: var(
+      --nav-padding-top,
+      var(--nav-padding-y, var(--nav-padding, unset))
+    );
+    padding-right: var(
+      --nav-padding-right,
+      var(--nav-padding-x, var(--nav-padding, unset))
+    );
+    padding-bottom: var(
+      --nav-padding-bottom,
+      var(--nav-padding-y, var(--nav-padding, unset))
+    );
+    padding-left: var(
+      --nav-padding-left,
+      var(--nav-padding-x, var(--nav-padding, unset))
+    );
+    justify-content: stretch;
+    background: var(--nav-background);
+    border: var(--nav-border);
+    border-radius: var(--nav-border-radius);
     /* overflow-x: auto; */
     /* overflow-y: hidden; */
 
-    &[data-tab-indicator-position="start"] {
-      .navi_tab {
-        margin-top: var(--tab-indicator-spacing);
+    .navi_link {
+      --x-nav-child-border-radius: calc(
+        var(--nav-border-radius) - var(--nav-padding)
+      );
+      --x-nav-link-border-radius: var(
+        --link-border-radius,
+        var(--x-nav-child-border-radius)
+      );
+
+      &:first-child {
+        border-top-left-radius: var(--x-nav-link-border-radius);
+        border-bottom-left-radius: var(--x-nav-link-border-radius);
       }
-    }
-    &[data-tab-indicator-position="end"] {
-      .navi_tab {
-        margin-bottom: var(--tab-indicator-spacing);
-      }
-    }
-
-    > ul {
-      display: flex;
-      width: 100%;
-      margin: 0;
-      padding: 0;
-      align-items: center;
-      gap: 0.5rem;
-      list-style: none;
-      background: var(--tablist-background);
-      border-radius: var(--tablist-border-radius);
-
-      > li {
-        position: relative;
-        display: inline-flex;
-
-        .navi_tab {
-          --x-tab-background: var(
-            --tab-background-color,
-            var(--tab-background)
-          );
-          --x-tab-background-hover: var(
-            --tab-background-color-hover,
-            var(--tab-background-color, var(--tab-background-hover))
-          );
-          --x-tab-background-selected: var(
-            --tab-background-color-selected,
-            var(--tab-background-selected)
-          );
-          --x-tab-color: var(--tab-color);
-
-          display: flex;
-          padding: 2px; /* Space for eventual outline inside the tab (link) */
-          flex-direction: column;
-          color: var(--x-tab-color);
-          white-space: nowrap;
-          background: var(--x-tab-background);
-          border-radius: var(--tab-border-radius);
-          transition: background 0.12s ease-out;
-          user-select: none;
-
-          > .navi_text,
-          .navi_link,
-          .navi_button,
-          .navi_text_bold_wrapper,
-          .navi_text_bold_clone,
-          .navi_text_bold_foreground {
-            display: inline-flex;
-            flex-grow: 1;
-            justify-content: center;
-            text-align: center;
-            border-radius: inherit;
-          }
-
-          .navi_tab_indicator {
-            position: absolute;
-            z-index: 1;
-            display: flex;
-            width: 100%;
-            height: var(--tab-indicator-size);
-            background: transparent;
-            border-radius: 0.1px;
-
-            &[data-position="start"] {
-              top: 0;
-              left: 0;
-            }
-
-            &[data-position="end"] {
-              bottom: 0;
-              left: 0;
-            }
-          }
-
-          /* Interactive */
-          &[data-interactive] {
-            cursor: pointer;
-          }
-          /* Hover */
-          &[data-hover] {
-            --x-tab-background: var(--x-tab-background-hover);
-            --x-tab-color: var(--tab-color-hover);
-          }
-          /* Selected */
-          &[data-tab-selected] {
-            --x-tab-background: var(--x-tab-background-selected);
-            --x-tab-color: var(--tab-color-selected);
-            &[data-bold-when-selected] {
-              font-weight: bold;
-            }
-
-            .navi_tab_indicator {
-              background: var(--tab-indicator-color);
-            }
-          }
-        }
+      &:last-child {
+        border-top-right-radius: var(--x-nav-link-border-radius);
+        border-bottom-right-radius: var(--x-nav-link-border-radius);
       }
     }
 
-    /* Vertical layout */
-    &[data-vertical] {
-      /* overflow-x: hidden; */
-      /* overflow-y: auto; */
-
-      > ul {
-        flex-direction: column;
-        align-items: start;
-
-        > li {
-          width: 100%;
-
-          .navi_tab {
-            flex-direction: row;
-            text-align: left;
-
-            .navi_tab_indicator {
-              width: var(--tab-indicator-size);
-              height: 100%;
-            }
-
-            > .navi_text,
-            .navi_link,
-            .navi_text_bold_foreground {
-              justify-content: start;
-            }
-
-            &[data-align-x="end"] {
-              > .navi_text,
-              .navi_link,
-              .navi_text_bold_foreground {
-                justify-content: end;
-              }
-            }
-          }
-        }
-      }
-
-      &[data-tab-indicator-position="start"] {
-        .navi_tab {
-          margin-top: 0;
-          margin-left: var(--tab-indicator-spacing);
-
-          .navi_tab_indicator {
-            top: 0;
-            left: 0;
-          }
-        }
-      }
-      &[data-tab-indicator-position="end"] {
-        .navi_tab {
-          margin-right: var(--tab-indicator-spacing);
-          margin-bottom: 0;
-
-          .navi_tab_indicator {
-            top: 0;
-            right: 0;
-            left: auto;
-          }
-        }
+    &[data-link-border-radius-inherit] {
+      .navi_link {
+        --link-border-radius: var(--x-nav-child-border-radius);
+        border-top-left-radius: var(--link-border-radius);
+        border-top-right-radius: var(--link-border-radius);
+        border-bottom-right-radius: var(--link-border-radius);
+        border-bottom-left-radius: var(--link-border-radius);
       }
     }
 
     &[data-expand] {
-      > ul {
+      flex-grow: 1;
+
+      .navi_tab {
+        flex: 1;
+        justify-content: start;
+      }
+    }
+    /* Vertical layout */
+    &[data-vertical] {
+      /* overflow-x: hidden; */
+      /* overflow-y: auto; */
+      align-items: stretch;
+
+      &[data-expand] {
         .navi_tab {
-          width: 100%;
-          flex: 1;
           align-items: stretch;
-          justify-content: start;
+        }
+      }
+      .navi_tab {
+        width: 100%;
+        flex-direction: row;
+        text-align: left;
+      }
+    }
+
+    &[data-panel-border-connection] {
+      --nav-border-width: 10px;
+      position: relative;
+      z-index: 1;
+
+      .navi_link {
+        border: var(--nav-border-width) solid transparent;
+
+        &[data-tab-selected] {
+          border-color: gray;
+          border-bottom-color: var(--nav-background);
+
+          border-top-left-radius: 5px;
+          border-top-right-radius: 5px;
         }
       }
     }
   }
 `;
-const TabListIndicatorContext = createContext();
-const TabListAlignXContext = createContext();
-const TabListStyleCSSVars = {
-  borderRadius: "--tablist-border-radius",
-  background: "--tablist-background"
+const NavStyleCSSVars = {
+  border: "--nav-border",
+  borderRadius: "--nav-border-radius",
+  padding: "--nav-padding",
+  paddingX: "--nav-padding-x",
+  paddingY: "--nav-padding-y",
+  paddingTop: "--nav-padding-top",
+  paddingRight: "--nav-padding-right",
+  paddingBottom: "--nav-padding-bottom",
+  paddingLeft: "--nav-padding-left",
+  background: "--nav-background"
 };
-const TabList = ({
+const Nav = ({
   children,
   spacing,
   vertical,
-  indicator = vertical ? "start" : "end",
-  alignX,
   expand,
   expandX,
-  paddingX,
-  paddingY,
-  padding,
+  linkBorderRadiusInherit,
+  panelPosition,
+  // before or after
+  panelBorderConnection,
   ...props
 }) => {
   children = toChildArray(children);
   return jsx(Box, {
     as: "nav",
-    baseClassName: "navi_tablist",
-    role: "tablist",
-    "data-tab-indicator-position": indicator === "start" || indicator === "end" ? indicator : undefined,
+    row: vertical,
+    column: !vertical,
+    baseClassName: "navi_nav",
+    "data-link-border-radius-inherit": linkBorderRadiusInherit ? "" : undefined,
     "data-expand": expand || expandX ? "" : undefined,
     "data-vertical": vertical ? "" : undefined,
+    "data-panel-position": panelPosition,
+    "data-panel-border-connection": panelBorderConnection ? "" : undefined,
     expand: expand,
     expandX: expandX,
+    spacing: spacing,
     ...props,
-    styleCSSVars: TabListStyleCSSVars,
-    children: jsx(Box, {
-      as: "ul",
-      column: true,
-      role: "list",
-      paddingX: paddingX,
-      paddingY: paddingY,
-      padding: padding,
-      spacing: spacing,
-      children: jsx(TabListIndicatorContext.Provider, {
-        value: indicator,
-        children: jsx(TabListAlignXContext.Provider, {
-          value: alignX,
-          children: children.map(child => {
-            return jsx(Box, {
-              as: "li",
-              column: true,
-              expandX: expandX,
-              expand: expand,
-              children: child
-            }, child.props.key);
-          })
-        })
-      })
-    })
-  });
-};
-const TAB_STYLE_CSS_VARS = {
-  "background": "--tab-background",
-  "backgroundColor": "--tab-background-color",
-  "color": "--tab-color",
-  ":hover": {
-    background: "--tab-background-hover",
-    backgroundColor: "--tab-background-color-hover",
-    color: "--tab-color-hover"
-  },
-  ":-navi-tab-selected": {
-    background: "--tab-background-selected",
-    backgroundColor: "--tab-background-color-selected",
-    color: "--tab-color-selected"
-  }
-};
-const TAB_PSEUDO_CLASSES = [":hover", ":-navi-tab-selected"];
-const TAB_PSEUDO_ELEMENTS = ["::-navi-indicator"];
-const Tab = props => {
-  if (props.route) {
-    return jsx(TabRoute, {
-      ...props
-    });
-  }
-  return jsx(TabBasic, {
-    ...props
-  });
-};
-TabList.Tab = Tab;
-const TabBasic = ({
-  children,
-  icon,
-  selected,
-  boldWhenSelected = !icon,
-  onClick,
-  ...props
-}) => {
-  const tabListIndicator = useContext(TabListIndicatorContext);
-  const tabListAlignX = useContext(TabListAlignXContext);
-  const [selectedFromChild, setSelectedFromChild] = useState(false);
-  const innerSelected = selected || selectedFromChild;
-  return jsxs(Box, {
-    role: "tab",
-    "aria-selected": innerSelected ? "true" : "false",
-    "data-interactive": onClick ? "" : undefined,
-    "data-bold-when-selected": boldWhenSelected ? "" : undefined,
-    onClick: onClick
-    // Style system
-    ,
-    baseClassName: "navi_tab",
-    styleCSSVars: TAB_STYLE_CSS_VARS,
-    pseudoClasses: TAB_PSEUDO_CLASSES,
-    pseudoElements: TAB_PSEUDO_ELEMENTS,
-    basePseudoState: {
-      ":-navi-tab-selected": innerSelected
-    },
-    selfAlignX: tabListAlignX,
-    "data-align-x": tabListAlignX,
-    ...props,
-    children: [(tabListIndicator === "start" || tabListIndicator === "end") && jsx("span", {
-      className: "navi_tab_indicator",
-      "data-position": tabListIndicator
-    }), jsx(ReportSelectedOnTabContext.Provider, {
-      value: setSelectedFromChild,
-      children: boldWhenSelected ? jsx(Text, {
-        preventBoldLayoutShift: true
-        // boldTransition
-        ,
-        children: children
-      }) : children
-    })]
-  });
-};
-const TabRoute = ({
-  circle,
-  route,
-  routeParams,
-  children,
-  padding = 2,
-  paddingX = padding,
-  paddingY = padding,
-  paddingLeft = paddingX,
-  paddingRight = paddingX,
-  paddingTop = paddingY,
-  paddingBottom = paddingY,
-  alignX,
-  alignY,
-  ...props
-}) => {
-  return jsx(TabBasic, {
-    ...props,
-    circle: circle,
-    padding: "0",
-    alignX: alignX,
-    alignY: alignY,
-    children: jsx(RouteLink, {
-      box: true,
-      circle: circle,
-      route: route,
-      routeParams: routeParams,
-      expand: true,
-      discrete: true,
-      padding: padding,
-      paddingX: paddingX,
-      paddingY: paddingY,
-      paddingLeft: paddingLeft,
-      paddingRight: paddingRight,
-      paddingTop: paddingTop,
-      paddingBottom: paddingBottom,
-      alignX: alignX,
-      alignY: alignY,
+    styleCSSVars: NavStyleCSSVars,
+    children: jsx(NavContext.Provider, {
+      value: true,
       children: children
     })
   });
@@ -21919,7 +22239,6 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
 
         .navi_summary_label {
           display: flex;
-          padding-right: 10px;
           flex: 1;
           align-items: center;
           gap: 0.2em;
@@ -22236,103 +22555,6 @@ const useConstraintValidityState = (ref) => {
   }, []);
 
   return constraintValidityState;
-};
-
-/**
- * Toggles a `data-dark-background` attribute on the referenced element based on its
- * computed background color. Pair it with a CSS variable to get automatic
- * light/dark text without hard-coding colors:
- *
- * ```css
- * .my-element {
- *   --color-contrasting: black;
- *   &[data-dark-background] {
- *     --color-contrasting: white;
- *   }
- *   color: var(--color-contrasting);
- * }
- * ```
- *
- * - `data-dark-background` is **set** when the background is dark enough that white text
- *   provides better (or equal) contrast.
- * - `data-dark-background` is **absent** when black text is the better choice.
- *
- * @param {import("preact").RefObject} ref - Ref to the element that receives
- *   the `data-dark-background` attribute and is also passed to `contrastColor` for
- *   resolving CSS variables.
- * @param {object} [options]
- * @param {string} [options.backgroundElementSelector] - CSS selector relative
- *   to `ref.current` pointing to a child element whose `background-color`
- *   should be tested instead of the element itself. Useful when the element
- *   has a transparent background but contains a coloured child (e.g. a fill
- *   bar inside a track).
- */
-
-const useDarkBackgroundAttribute = (
-  ref,
-  deps = [],
-  {
-    backgroundElementSelector,
-    attributeName = "data-dark-background",
-    hardcoded = {},
-  } = {},
-) => {
-  const innerDeps = [
-    ...deps,
-    // ref can change is the component pass a different ref on different render based on some logic
-    // (can be used to control which element backgroundColor is being checked by switching the ref to another element)
-    ref,
-    // backgroundElementSelector can change if the component pass a different selector on different render based on some logic
-    // (can be used to control which element backgroundColor is being checked by switching the selector to point to another element)
-    backgroundElementSelector,
-  ];
-
-  const hardcodedMap = new Map();
-  for (const key of Object.keys(hardcoded)) {
-    const value = hardcoded[key];
-    innerDeps.push(key, value);
-    const colorString = normalizeColorString(key);
-    hardcodedMap.set(colorString, value);
-  }
-
-  useLayoutEffect(() => {
-    const el = ref.current;
-    if (!el) {
-      return null;
-    }
-    let elementToCheck = el;
-    if (backgroundElementSelector) {
-      elementToCheck = el.querySelector(backgroundElementSelector);
-      if (!elementToCheck) {
-        return null;
-      }
-    }
-    const backgroundColor = getComputedStyle(elementToCheck).backgroundColor;
-    if (!backgroundColor) {
-      el.removeAttribute(attributeName);
-      return null;
-    }
-    const backgroundColorString = normalizeColorString(backgroundColor, el);
-    const hardcodedContrast = hardcodedMap.get(backgroundColorString);
-    const contrastingColor =
-      hardcodedContrast || contrastColor(backgroundColor, el);
-    if (contrastingColor === "white") {
-      el.setAttribute(attributeName, "");
-      return () => {
-        el.removeAttribute(attributeName);
-      };
-    }
-    el.removeAttribute(attributeName);
-    return null;
-  }, innerDeps);
-};
-
-const normalizeColorString = (color, el) => {
-  const colorRgba = resolveCSSColor(color, el);
-  if (!colorRgba) {
-    return "";
-  }
-  return String(colorRgba);
 };
 
 const fieldPropSet = new Set([
@@ -24054,7 +24276,7 @@ const InputRangeBasic = props => {
   const renderInputMemoized = useCallback(renderInput, [uiState, innerValue, innerOnInput, innerDisabled, innerReadOnly]);
   return jsxs(Box, {
     as: "span",
-    box: true,
+    flex: true,
     baseClassName: "navi_input_range",
     styleCSSVars: RangeStyleCSSVars,
     pseudoStateSelector: ".navi_native_input",
@@ -24537,7 +24759,7 @@ const InputTextualBasic = props => {
   }
   return jsxs(Box, {
     as: "span",
-    box: true,
+    flex: true,
     baseClassName: "navi_input",
     styleCSSVars: InputStyleCSSVars,
     pseudoStateSelector: ".navi_native_input",
@@ -24564,7 +24786,7 @@ const InputTextualBasic = props => {
       disabled: innerDisabled,
       readOnly: innerReadOnly,
       className: "navi_input_start_icon",
-      box: true,
+      flex: true,
       alignY: "center",
       children: jsx(Icon, {
         color: "rgba(28, 43, 52, 0.5)",
@@ -24748,10 +24970,17 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
     right: var(--inset-right);
     bottom: var(--inset-bottom);
     left: var(--inset-left);
-
     opacity: 0;
+    pointer-events: none;
+
+    input {
+      font-weight: inherit;
+      text-align: inherit;
+    }
+
     &[data-editing] {
       opacity: 1;
+      pointer-events: auto;
     }
   }
 `;
@@ -24822,18 +25051,16 @@ const Editable = props => {
       return;
     }
     const editingEvent = editing.event;
-    if (!editingEvent) {
-      return;
+    if (editingEvent) {
+      const editingEventInitialValue = editingEvent.detail?.initialValue;
+      if (editingEventInitialValue !== undefined) {
+        const input = ref.current;
+        input.value = editingEventInitialValue;
+        input.dispatchEvent(new CustomEvent("input", {
+          bubbles: false
+        }));
+      }
     }
-    const editingEventInitialValue = editingEvent.detail?.initialValue;
-    if (editingEventInitialValue === undefined) {
-      return;
-    }
-    const input = ref.current;
-    input.value = editingEventInitialValue;
-    input.dispatchEvent(new CustomEvent("input", {
-      bubbles: false
-    }));
   }, [editing]);
   const input = jsx(Input, {
     ref: ref,
@@ -24868,9 +25095,17 @@ const Editable = props => {
       });
     },
     onBlur: e => {
-      const value = type === "number" ? e.target.valueAsNumber : e.target.value;
+      let inputValue;
       const valueWhenEditStart = valueWhenEditStartRef.current;
-      if (value === valueWhenEditStart) {
+      let inputValueWhenEditStart;
+      if (type === "number") {
+        inputValue = e.target.valueAsNumber;
+        inputValueWhenEditStart = valueWhenEditStart;
+      } else {
+        inputValue = e.target.value;
+        inputValueWhenEditStart = Number.isNaN(valueWhenEditStart) ? valueWhenEditStart : String(valueWhenEditStart);
+      }
+      if (inputValue === inputValueWhenEditStart) {
         onEditEnd({
           cancelled: true,
           event: e
@@ -25660,8 +25895,8 @@ const useTableSelectionContextValue = (
     const selectedRowIds = [];
     const columnIdWithSomeSelectedCellSet = new Set();
     const rowIdWithSomeSelectedCellSet = new Set();
-    for (const item of selection) {
-      const selectionValueInfo = parseTableSelectionValue(item);
+    for (const selectedValue of selection) {
+      const selectionValueInfo = parseTableSelectionValue(selectedValue);
       if (selectionValueInfo.type === "row") {
         const { rowId } = selectionValueInfo;
         selectedRowIds.push(rowId);
@@ -25673,7 +25908,7 @@ const useTableSelectionContextValue = (
         continue;
       }
       if (selectionValueInfo.type === "cell") {
-        const { cellId, columnId, rowId } = selectionValueInfo;
+        const { columnId, rowId } = selectionValueInfo;
         columnIdWithSomeSelectedCellSet.add(columnId);
         rowIdWithSomeSelectedCellSet.add(rowId);
         continue;
@@ -25725,8 +25960,11 @@ const stringifyTableSelectionValue = (type, value) => {
  * @param {{rowIndex: number, columnIndex: number}} cellPosition - Cell coordinates
  * @returns {boolean} True if the cell is selected
  */
-const isCellSelected = (selection, cellId) => {
-  const cellSelectionValue = stringifyTableSelectionValue("cell", cellId);
+const isCellSelected = (selection, { columnId, rowId }) => {
+  const cellSelectionValue = stringifyTableSelectionValue("cell", {
+    columnId,
+    rowId,
+  });
   return selection.includes(cellSelectionValue);
 };
 
@@ -25749,7 +25987,18 @@ const isRowSelected = (selection, rowId) => {
  */
 const isColumnSelected = (selection, columnId) => {
   const columnSelectionValue = stringifyTableSelectionValue("column", columnId);
-  return selection.has(columnSelectionValue);
+  return selection.includes(columnSelectionValue);
+};
+
+const filterTableSelection = (selection, predicate) => {
+  let matching = [];
+  for (const selectedValue of selection) {
+    const selectionValueInfo = parseTableSelectionValue(selectedValue);
+    if (predicate(selectionValueInfo)) {
+      matching.push(selectionValueInfo);
+    }
+  }
+  return matching;
 };
 
 // https://github.com/reach/reach-ui/tree/b3d94d22811db6b5c0f272b9a7e2e3c1bb4699ae/packages/descendants
@@ -28225,7 +28474,8 @@ const ColumnIndexContext = createContext();
 const RowIndexContext = createContext();
 const TableSectionContext = createContext();
 const useIsInTableHead = () => useContext(TableSectionContext) === "head";
-const Table = forwardRef((props, ref) => {
+const Table = props => {
+  const tableDefaultRef = useRef();
   const tableDefaultId = `table-${useId()}`;
   const {
     id = tableDefaultId,
@@ -28245,8 +28495,7 @@ const Table = forwardRef((props, ref) => {
     overflow,
     children
   } = props;
-  const innerRef = useRef();
-  useImperativeHandle(ref, () => innerRef.current);
+  const ref = props.ref || tableDefaultRef;
   const tableContainerRef = useRef();
   const tableUIRef = useRef();
   const [ColumnProducerProvider, ColumnConsumerProvider, columns] = useColumnTrackerProviders();
@@ -28255,13 +28504,13 @@ const Table = forwardRef((props, ref) => {
 
   // selection
   const selectionController = useTableSelectionController({
-    tableRef: innerRef,
+    tableRef: ref,
     selection,
     onSelectionChange,
     selectionColor
   });
   const selectionContextValue = useTableSelectionContextValue(selection, selectionController);
-  useFocusGroup(innerRef);
+  useFocusGroup(ref);
 
   // sticky
   useStickyGroup(tableContainerRef, {
@@ -28293,7 +28542,7 @@ const Table = forwardRef((props, ref) => {
     columns,
     canChangeColumnOrder: Boolean(onColumnOrderChange)
   });
-  useKeyboardShortcuts(innerRef, [...createSelectionKeyboardShortcuts(selectionController, {
+  useKeyboardShortcuts(ref, [...createSelectionKeyboardShortcuts(selectionController, {
     toggleEnabled: true,
     enabled: () => dragContextValue.grabTarget === null
   }), {
@@ -28313,6 +28562,23 @@ const Table = forwardRef((props, ref) => {
     }
   }, {
     key: "a-z",
+    description: "Start editing table cell content",
+    enabled: () => dragContextValue.grabTarget === null,
+    handler: e => {
+      const activeCell = document.activeElement.closest("td");
+      if (!activeCell) {
+        return false;
+      }
+      activeCell.dispatchEvent(new CustomEvent("editrequested", {
+        bubbles: false,
+        detail: {
+          initialValue: e.key
+        }
+      }));
+      return true;
+    }
+  }, {
+    key: "0-9",
     description: "Start editing table cell content",
     enabled: () => dragContextValue.grabTarget === null,
     handler: e => {
@@ -28353,7 +28619,7 @@ const Table = forwardRef((props, ref) => {
       ref: tableContainerRef,
       className: "navi_table_container",
       children: [jsx("table", {
-        ref: innerRef,
+        ref: ref,
         id: id,
         className: "navi_table",
         "aria-multiselectable": "true",
@@ -28383,12 +28649,12 @@ const Table = forwardRef((props, ref) => {
         })
       }), jsxs(TableUI, {
         ref: tableUIRef,
-        tableRef: innerRef,
+        tableRef: ref,
         tableId: id,
         children: [jsx(TableStickyContext.Provider, {
           value: stickyContextValue,
           children: jsx(TableStickyFrontier, {
-            tableRef: innerRef
+            tableRef: ref
           })
         }), jsx(TableColumnResizer, {
           ref: columnResizerRef
@@ -28403,7 +28669,7 @@ const Table = forwardRef((props, ref) => {
       })]
     })
   });
-});
+};
 const Colgroup = ({
   children
 }) => {
@@ -28468,18 +28734,20 @@ const Tr = ({
   height,
   children
 }) => {
-  if (!id) {
-    console.warn("<Tr /> must have an id prop to enable selection");
-  }
-  id = String(id); // we need strings as this value is going to be used in data attributes
-  // and when generating cell ids
-
   const {
-    selectedRowIds
+    selectedRowIds,
+    selectionController
   } = useContext(TableSelectionContext);
   const {
     stickyTopFrontierRowIndex
   } = useContext(TableStickyContext);
+  if (selectionController.enabled) {
+    if (!id) {
+      console.warn("<Tr /> must have an id prop to enable selection");
+    }
+    // we need strings as this value is going to be used in data attributes and when generating cell ids
+    id = String(id);
+  }
   const rowIndex = useRegisterRow({
     id,
     height
@@ -28520,6 +28788,10 @@ const TableRowCells = ({
 }) => {
   return children.map((child, columnIndex) => {
     const column = useColumnByIndex(columnIndex);
+    if (!column) {
+      throw new Error(`No column for cell ${columnIndex}:${rowIndex}.
+Make sure the number of <Col> in the <Colgroup> matches the number of cells in each row.`);
+    }
     const columnId = column.id;
     return jsx(RowContext.Provider, {
       value: row,
@@ -28536,11 +28808,12 @@ const TableRowCells = ({
     }, columnId);
   });
 };
-const TableCell = forwardRef((props, ref) => {
+const TableCell = props => {
   const column = useContext(ColumnContext);
   const row = useContext(RowContext);
   const columnIndex = useContext(ColumnIndexContext);
   const rowIndex = useContext(RowIndexContext);
+  const cellDefaultRef = useRef();
   const {
     className = "",
     canSelectAll,
@@ -28561,7 +28834,7 @@ const TableCell = forwardRef((props, ref) => {
     backgroundColor = column.backgroundColor || row.backgroundColor,
     children
   } = props;
-  const cellRef = useRef();
+  const ref = props.ref || cellDefaultRef;
   const isFirstRow = rowIndex === 0;
   const isFirstColumn = columnIndex === 0;
 
@@ -28572,11 +28845,6 @@ const TableCell = forwardRef((props, ref) => {
     startEditing,
     stopEditing
   } = useEditionController();
-  useImperativeHandle(ref, () => ({
-    startEditing,
-    stopEditing,
-    element: cellRef.current
-  }));
 
   // stickyness
   const {
@@ -28621,7 +28889,7 @@ const TableCell = forwardRef((props, ref) => {
   } : undefined : selectionImpact;
   const {
     selected
-  } = useSelectableElement(cellRef, {
+  } = useSelectableElement(ref, {
     selection,
     selectionController,
     selectionImpact: innerSelectionImpact
@@ -28680,15 +28948,15 @@ const TableCell = forwardRef((props, ref) => {
   const activeElement = useActiveElement();
   const TagName = isInTableHead ? "th" : "td";
   return jsxs(TagName, {
-    className: ["navi_table_cell", ...className.split(" ")].join(" "),
-    ref: cellRef,
+    className: withPropsClassName("navi_table_cell", className),
+    ref: ref,
     style: innerStyle,
     "data-align-x": innerAlignX,
     "data-align-y": innerAlignY
     // we use [data-focus] so that the attribute can be copied
     // to the dragged cell copies
     ,
-    "data-focus": activeElement === cellRef.current ? "" : undefined,
+    "data-focus": activeElement === ref.current ? "" : undefined,
     "data-first-row": isFirstRow ? "" : undefined,
     "data-first-column": isFirstColumn ? "" : undefined,
     "data-sticky-left": stickyLeft ? "" : undefined,
@@ -28761,7 +29029,7 @@ const TableCell = forwardRef((props, ref) => {
       "data-visible": columnGrabbed ? "" : undefined
     })]
   });
-});
+};
 const RowNumberCol = ({
   width = 50,
   // minWidth = 30,
@@ -28791,93 +29059,172 @@ const RowNumberTableCell = props => {
   });
 };
 
-const useCellsAndColumns = (cells, columns) => {
-  const [columnIds, idToColumnMap] = useMemo(() => {
-    const columnIds = [];
-    const idToColumnMap = new Map();
-    for (const column of columns) {
-      const columnId = column.id;
-      columnIds.push(columnId);
-      idToColumnMap.set(columnId, column);
+const useCellGridFromRows = (rows, properties) => {
+  const cellGrid = [];
+  for (const object of rows) {
+    const cellRow = [];
+    for (const prop of properties) {
+      cellRow.push(object[prop]);
     }
-    return [columnIds, idToColumnMap];
-  }, [columns]);
-  const [orderedAllColumnIds, setOrderedAllColumnIds] = useState(columnIds);
-  const orderedColumnIds = [];
-  for (const columnId of orderedAllColumnIds) {
-    if (!columnIds.includes(columnId)) {
-      // generated column (like the row column)
-      continue;
-    }
-    orderedColumnIds.push(columnId);
+    cellGrid.push(cellRow);
   }
-  const orderedColumns = [];
-  for (const columnId of orderedColumnIds) {
-    const column = idToColumnMap.get(columnId);
-    orderedColumns.push(column);
+  return cellGrid;
+};
+
+/**
+ * Maintains a user-defined column order that overrides the order provided by
+ * an external source. Useful when the source does not support ordering — the
+ * user can arrange columns as they want and this hook ensures that arrangement
+ * is preserved even though the source always returns columns in its own order.
+ *
+ * The hook also reacts to structural changes in the column list:
+ * - **Added** columns are inserted at the position implied by the external order:
+ *   the new column is placed right after its closest left neighbor (in external
+ *   order) that already exists in the user-defined order. This mirrors where the
+ *   source put the column, so the result feels natural (e.g. if the source inserts
+ *   a column between B and C, it will appear between B and C in the user order too).
+ * - **Removed** columns are dropped from the order.
+ * - **Renamed** columns keep their current position (e.g. "name" → "username"
+ *   stays in the same slot without any visible jump).
+ *
+ * @param {Array} columns - Column objects from the external source.
+ * @param {Array} [initialOrder] - Optional initial order as an array of column ids.
+ *   Defaults to the order in which `columns` is first received.
+ * @param {object} [options]
+ * @param {string} [options.columnIdKey="id"] - Property name used as the column id.
+ * @returns {[Array, Function]} Tuple of ordered column objects and a setter that
+ *   accepts an array of column ids to update the order.
+ */
+const useOrderedColumns = (
+  columns,
+  initialOrder,
+  { columnIdKey = "id" } = {},
+) => {
+  const initialColumnIds =
+    initialOrder ?? columns.map((col) => col[columnIdKey]);
+  const [orderedColumnIds, setOrderedColumnIds] = useState(initialColumnIds);
+
+  const orderingRef = useRef(null);
+  if (!orderingRef.current) {
+    orderingRef.current = createColumnOrdering(
+      columnIdKey,
+      setOrderedColumnIds,
+    );
   }
+  const ordering = orderingRef.current;
+  const orderedColumns = ordering.sync(columns, orderedColumnIds);
 
-  // Base cell values in original column order (2D array: rows x columns)
-  const [baseCells, setBaseCells] = useState(cells);
+  return [orderedColumns, setOrderedColumnIds];
+};
 
-  // Memoized index mapping for performance - maps display index to original index
-  const columnOrderedIndexMap = useMemo(() => {
-    const indexMap = new Map();
-    for (let columnIndex = 0; columnIndex < columnIds.length; columnIndex++) {
-      const columnIdAtThisIndex = orderedColumnIds[columnIndex];
-      const originalIndex = columnIds.indexOf(columnIdAtThisIndex);
-      indexMap.set(columnIndex, originalIndex);
+// Tracks a stable internal id for each column that persists across external id changes (e.g. renames).
+// Stable ids are integers assigned once and kept in sync with the current external ids.
+const createColumnOrdering = (columnIdKey, setOrderedColumnIds) => {
+  const stableIdByExternalIdMap = new Map();
+  const externalIdByStableIdMap = new Map();
+  let nextStableId = 0;
+  let prevExternalIdSet;
+  const columnByExternalIdMap = new Map();
+
+  // Reconcile maps as external ids change (add/remove/rename columns).
+  // Returns the ordered column objects for the current render.
+  const sync = (columns, orderedColumnIds) => {
+    const externalIds = [];
+    const externalIdSet = new Set();
+    columnByExternalIdMap.clear();
+    for (const col of columns) {
+      const externalId = col[columnIdKey];
+      externalIds.push(externalId);
+      externalIdSet.add(externalId);
+      columnByExternalIdMap.set(externalId, col);
     }
-    return indexMap;
-  }, [columnIds, orderedColumnIds]);
-
-  // Derived state: reorder cell values according to column display order
-  const orderedCells = useMemo(() => {
-    const reorderedCells = [];
-    for (let y = 0; y < baseCells.length; y++) {
-      const originalRow = baseCells[y];
-      const reorderedRow = [];
-      for (let x = 0; x < orderedColumnIds.length; x++) {
-        const columnOrderedIndex = columnOrderedIndexMap.get(x);
-        const cellValue = originalRow[columnOrderedIndex];
-        reorderedRow.push(cellValue);
+    let currentOrderedColumnIds = orderedColumnIds;
+    if (prevExternalIdSet === undefined) {
+      for (const externalId of externalIds) {
+        const stableId = nextStableId++;
+        stableIdByExternalIdMap.set(externalId, stableId);
+        externalIdByStableIdMap.set(stableId, externalId);
       }
-      reorderedCells.push(reorderedRow);
-    }
-    return reorderedCells;
-  }, [baseCells, columnOrderedIndexMap, orderedColumnIds.length]);
-
-  const setCellValue = ({ columnIndex, rowIndex }, value) => {
-    const originalColumnIndex = columnOrderedIndexMap.get(columnIndex);
-    if (originalColumnIndex === undefined) {
-      console.warn(`Invalid column index: ${columnIndex}`);
-      return;
-    }
-    setBaseCells((previousCells) => {
-      const newCells = [];
-      for (let y = 0; y < previousCells.length; y++) {
-        const currentRow = previousCells[y];
-        if (y !== rowIndex) {
-          newCells.push(currentRow);
-          continue;
+    } else {
+      const removed = [];
+      const added = [];
+      for (const id of prevExternalIdSet) {
+        if (!externalIdSet.has(id)) {
+          removed.push(id);
         }
-        const newRow = [];
-        for (let x = 0; x < currentRow.length; x++) {
-          const cellValue = x === originalColumnIndex ? value : currentRow[x];
-          newRow.push(cellValue);
-        }
-        newCells.push(newRow);
       }
-      return newCells;
-    });
+      for (const id of externalIdSet) {
+        if (!prevExternalIdSet.has(id)) {
+          added.push(id);
+        }
+      }
+      // Pair removed → added as renames so the same stable id is preserved
+      const renameCount =
+        removed.length < added.length ? removed.length : added.length;
+      const purelyRemoved = removed.slice(renameCount);
+      const purelyAdded = added.slice(renameCount);
+      for (let i = 0; i < renameCount; i++) {
+        const stableId = stableIdByExternalIdMap.get(removed[i]);
+        stableIdByExternalIdMap.delete(removed[i]);
+        stableIdByExternalIdMap.set(added[i], stableId);
+        externalIdByStableIdMap.set(stableId, added[i]);
+        // Apply rename to the stored order immediately so toOrderedColumns
+        // below sees the updated id and keeps the column in its current position
+        currentOrderedColumnIds = currentOrderedColumnIds.map((id) =>
+          id === removed[i] ? added[i] : id,
+        );
+      }
+      for (const id of purelyRemoved) {
+        const stableId = stableIdByExternalIdMap.get(id);
+        stableIdByExternalIdMap.delete(id);
+        externalIdByStableIdMap.delete(stableId);
+      }
+      for (const id of purelyAdded) {
+        const stableId = nextStableId++;
+        stableIdByExternalIdMap.set(id, stableId);
+        externalIdByStableIdMap.set(stableId, id);
+        // Insert at the position implied by the external order: find the closest
+        // left neighbor (in external order) that already exists in our stored order
+        const idxInExternal = externalIds.indexOf(id);
+        let insertAfterIdx = -1;
+        for (let j = idxInExternal - 1; j >= 0; j--) {
+          const neighborIdx = currentOrderedColumnIds.indexOf(externalIds[j]);
+          if (neighborIdx !== -1) {
+            insertAfterIdx = neighborIdx;
+            break;
+          }
+        }
+        if (insertAfterIdx === -1) {
+          currentOrderedColumnIds = [id, ...currentOrderedColumnIds];
+        } else {
+          currentOrderedColumnIds = [
+            ...currentOrderedColumnIds.slice(0, insertAfterIdx + 1),
+            id,
+            ...currentOrderedColumnIds.slice(insertAfterIdx + 1),
+          ];
+        }
+      }
+      if (currentOrderedColumnIds !== orderedColumnIds) {
+        setOrderedColumnIds(currentOrderedColumnIds);
+      }
+    }
+    prevExternalIdSet = externalIdSet;
+    return toOrderedColumns(currentOrderedColumnIds);
   };
 
-  return {
-    cells: orderedCells,
-    setCellValue,
-    columns: orderedColumns,
-    setColumnOrder: setOrderedAllColumnIds,
+  // Map stored column ids to column objects, dropping any ids no longer present.
+  const toOrderedColumns = (orderedColumnIds) => {
+    const ordered = [];
+    for (const id of orderedColumnIds) {
+      const col = columnByExternalIdMap.get(id);
+      if (col !== undefined) {
+        ordered.push(col);
+      }
+    }
+    return ordered;
   };
+
+  return { sync };
 };
 
 // http://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference/Attributes/aria-keyshortcuts
@@ -29215,6 +29562,8 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
     &[data-loading] {
       --x-background: transparent;
       --x-background-color: transparent;
+      /* Force constrasting color while loading */
+      --x-color: var(--x-color-contrasting);
     }
 
     .navi_count_badge_overflow {
@@ -29231,6 +29580,15 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
       background: var(--x-background);
       background-color: var(--x-background-color);
       border-radius: 1em;
+
+      /* For ellipse + single char force the circle aspect as it's prettier */
+      &[data-single-char] {
+        aspect-ratio: 1/1;
+        height: 1.5em;
+        padding: 0;
+        text-align: center;
+        line-height: 1.5em;
+      }
     }
 
     /* Circle */
@@ -29297,11 +29655,12 @@ const BadgeCount = ({
   max = circle ? MAX_FOR_CIRCLE : Infinity,
   integer,
   lang,
+  loading,
   ...props
 }) => {
   const defaultRef = useRef();
   const ref = props.ref || defaultRef;
-  useDarkBackgroundAttribute(ref);
+  useDarkBackgroundAttribute(ref, [loading]);
   let valueRequested = (() => {
     if (typeof children !== "string") return children;
     const parsed = Number(children);
@@ -29320,6 +29679,7 @@ const BadgeCount = ({
   if (circle) {
     return jsxs(BadgeCountCircle, {
       ...props,
+      loading: loading,
       ref: ref,
       hasOverflow: hasOverflow,
       charCount: charCount,
@@ -29331,8 +29691,10 @@ const BadgeCount = ({
   }) : valueDisplayed;
   return jsxs(BadgeCountEllipse, {
     ...props,
+    loading: loading,
     ref: ref,
     hasOverflow: hasOverflow,
+    charCount: charCount,
     children: [valueFormatted, hasOverflow && maxElement]
   });
 };
@@ -29357,6 +29719,7 @@ const BadgeCountEllipse = ({
   loading,
   children,
   hasOverflow,
+  charCount,
   ...props
 }) => {
   return jsx(Text, {
@@ -29366,6 +29729,7 @@ const BadgeCountEllipse = ({
     "data-ellipse": "",
     "data-value-overflow": hasOverflow ? "" : undefined,
     "data-loading": loading ? "" : undefined,
+    "data-single-char": charCount === 1 ? "" : undefined,
     ...props,
     styleCSSVars: BadgeStyleCSSVars,
     spacing: "pre",
@@ -30692,5 +31056,5 @@ const UserSvg = () => jsx("svg", {
   })
 });
 
-export { ActionRenderer, ActiveKeyboardShortcuts, Address, BadgeCount, Box, Button, ButtonCopyToClipboard, Caption, CheckSvg, Checkbox, CheckboxList, Code, Col, Colgroup, ConstructionSvg, Details, DialogLayout, Editable, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Form, Group, HeartSvg, HomeSvg, Icon, Image, Input, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, MessageBox, Meter, Paragraph, Quantity, QuantityIntl, Radio, RadioList, Route, RouteLink, Routes, RowNumberCol, RowNumberTableCell, SINGLE_SPACE_CONSTRAINT, SVGMaskOverlay, SearchSvg, Select, SelectionContext, Separator, SettingsSvg, StarSvg, SummaryMarker, Svg, Tab, TabList, Table, TableCell, Tbody, Text, Thead, Title, Tr, UITransition, UserSvg, ViewportLayout, actionIntegratedVia, actionRunEffect, addCustomMessage, arraySignalMembership, compareTwoJsValues, createAction, createAvailableConstraint, createIntl, createRequestCanceller, createSelectionKeyboardShortcuts, enableDebugActions, enableDebugOnDocumentLoading, forwardActionRequested, installCustomConstraintValidation, isCellSelected, isColumnSelected, isRowSelected, localStorageSignal, navBack, navForward, navTo, openCallout, rawUrlPart, reload, removeCustomMessage, requestAction, rerunActions, resource, route, routeAction, setBaseUrl, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, updateActions, useActionData, useActionStatus, useArraySignalMembership, useCalloutClose, useCancelPrevious, useCellsAndColumns, useConstraintValidityState, useDarkBackgroundAttribute, useDependenciesDiff, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useMatchingRouteInfo, useNavState$1 as useNavState, useRouteStatus, useRunOnMount, useSelectableElement, useSelectionController, useSignalSync, useStateArray, useTitleLevel, useUrlSearchParam, valueInLocalStorage };
+export { ActionRenderer, ActiveKeyboardShortcuts, Address, BadgeCount, Box, Button, ButtonCopyToClipboard, Caption, CheckSvg, Checkbox, CheckboxList, Code, Col, Colgroup, ConstructionSvg, Details, DialogLayout, Editable, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, Input, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, MessageBox, Meter, Nav, Paragraph, Quantity, QuantityIntl, Radio, RadioList, Route, RowNumberCol, RowNumberTableCell, SINGLE_SPACE_CONSTRAINT, SVGMaskOverlay, SearchSvg, Select, SelectionContext, Separator, SettingsSvg, StarSvg, SummaryMarker, Svg, Table, TableCell, Tbody, Text, Thead, Title, Tr, UITransition, UserSvg, ViewportLayout, actionIntegratedVia, actionRunEffect, addCustomMessage, arraySignalMembership, compareTwoJsValues, createAction, createAvailableConstraint, createIntl, createRequestCanceller, createSelectionKeyboardShortcuts, enableDebugActions, enableDebugOnDocumentLoading, filterTableSelection, forwardActionRequested, installCustomConstraintValidation, isCellSelected, isColumnSelected, isRowSelected, localStorageSignal, navBack, navForward, navTo, openCallout, rawUrlPart, reload, removeCustomMessage, requestAction, rerunActions, resource, route, routeAction, setBaseUrl, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, updateActions, useActionData, useActionStatus, useArraySignalMembership, useCalloutClose, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDarkBackgroundAttribute, useDependenciesDiff, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState$1 as useNavState, useOrderedColumns, useRouteStatus, useRunOnMount, useSelectableElement, useSelectionController, useSignalSync, useStateArray, useTitleLevel, useUrlSearchParam, valueInLocalStorage };
 //# sourceMappingURL=jsenv_navi.js.map

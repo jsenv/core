@@ -37,6 +37,7 @@ export const rolnameSignal = stateSignal(null);
 export const datnameSignal = stateSignal(null);
 export const tablenameSignal = stateSignal(null);
 
+export const INDEX_ROUTE = route("");
 export const HOME_ROUTE = route(`/`, {
   searchParams: {
     role_login_open: roleCanLoginOpenSignal,
@@ -142,6 +143,7 @@ export const TABLE_SETTINGS_ROUTE = route(
 );
 
 setupRoutes([
+  INDEX_ROUTE,
   HOME_ROUTE,
   ROLE_ROUTE,
   DATABASE_ROUTE,

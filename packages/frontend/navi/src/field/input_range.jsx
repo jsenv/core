@@ -424,7 +424,7 @@ const InputRangeBasic = (props) => {
   return (
     <Box
       as="span"
-      box
+      flex
       baseClassName="navi_input_range"
       styleCSSVars={RangeStyleCSSVars}
       pseudoStateSelector=".navi_native_input"

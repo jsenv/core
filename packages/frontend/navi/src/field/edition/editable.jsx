@@ -29,6 +29,11 @@ import.meta.css = /* css */ `
     opacity: 0;
     pointer-events: none;
 
+    input {
+      font-weight: inherit;
+      text-align: inherit;
+    }
+
     &[data-editing] {
       opacity: 1;
       pointer-events: auto;

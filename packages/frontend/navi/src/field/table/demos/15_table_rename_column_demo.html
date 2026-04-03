@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Table - Rename Column Demo</title>
+    <style>
+      body {
+        margin: 20px;
+        font-family:
+          system-ui,
+          -apple-system,
+          sans-serif;
+        background: #f5f5f5;
+      }
+      .demo-container {
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useState } from "preact/hooks";
+      import {
+        Table,
+        TableCell,
+        Colgroup,
+        Col,
+        Thead,
+        Tbody,
+        Tr,
+        RowNumberCol,
+        RowNumberTableCell,
+        useCellGridFromRows,
+        useOrderedColumns,
+      } from "@jsenv/navi";
+      import { useRowsState } from "./table_demo_helpers.js";
+
+      const initialRows = [
+        { id: 1, name: "Alice", age: 30, email: "alice@example.com" },
+        { id: 2, name: "Bob", age: 25, email: "bob@example.com" },
+        { id: 3, name: "Charlie", age: 35, email: "charlie@example.com" },
+        { id: 4, name: "Diana", age: 28, email: "diana@example.com" },
+      ];
+
+      const initialColumnsConfig = [
+        { name: "name" },
+        { name: "age" },
+        { name: "email" },
+      ];
+
+      // This demo illustrates the typical pattern in a real frontend app:
+      //
+      // - The BACKEND is the source of truth. It holds the columns config and
+      //   exposes methods to mutate it (e.g. HTTP endpoints backed by a database).
+      //   Here it is simulated by a component using useState.
+      //
+      // - The FRONTEND receives the current state as props (columnsConfig) and can
+      //   REQUEST mutations via callbacks (onRenameColumn). It never modifies
+      //   state directly — it only reflects what the backend sends.
+      //
+      // The 1s delay on the header save simulates a real HTTP round-trip:
+      // the request goes out, the backend processes it, and the updated
+      // columns eventually come back down to the frontend.
+
+      const Backend = () => {
+        const [columnsConfig, setColumnsConfig] =
+          useState(initialColumnsConfig);
+        const columnIds = columnsConfig.map((col) => col.name);
+        const [rows, { renameProperty }] = useRowsState(initialRows, columnIds);
+
+        const renameColumn = (columnName, newName) => {
+          renameProperty(columnName, newName);
+          setColumnsConfig((prev) =>
+            prev.map((col) =>
+              col.name === columnName ? { name: newName } : col,
+            ),
+          );
+        };
+
+        return (
+          <div style={{ display: "flex", flexDirection: "column", gap: "0" }}>
+            <div
+              style={{
+                border: "2px solid #6c757d",
+                borderRadius: "8px",
+                padding: "12px",
+              }}
+            >
+              <div
+                style={{
+                  color: "#6c757d",
+                  fontSize: "0.8em",
+                  fontWeight: "bold",
+                  marginBottom: "8px",
+                }}
+              >
+                ⚙️ Backend (source of truth)
+              </div>
+              <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+                {columnsConfig.map((col) => (
+                  <li
+                    key={col.name}
+                    style={{
+                      fontSize: "0.85em",
+                      color: "#495057",
+                      marginBottom: "4px",
+                    }}
+                  >
+                    {`{ name: "${col.name}" }`}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                padding: "6px 0",
+                fontSize: "0.75em",
+                color: "#868e96",
+                lineHeight: "1.4",
+              }}
+            >
+              <span>columnsConfig ↓</span>
+              <span style={{ fontSize: "1.4em", lineHeight: "1" }}>⇅</span>
+              <span>onRenameColumn ↑</span>{" "}
+            </div>
+
+            <Frontend
+              rows={rows}
+              columnsConfig={columnsConfig}
+              onRenameColumn={renameColumn}
+            />
+          </div>
+        );
+      };
+
+      const Frontend = ({ rows, columnsConfig, onRenameColumn }) => {
+        // const columnOrder = columnsConfig.map((col) => col.name);
+        const [orderedColumns] = useOrderedColumns(columnsConfig, undefined, {
+          columnIdKey: "name",
+        });
+        const orderedColumnIds = orderedColumns.map((col) => col.name);
+        const cellGrid = useCellGridFromRows(rows, orderedColumnIds);
+
+        return (
+          <div
+            style={{
+              border: "2px solid #0078d4",
+              borderRadius: "8px",
+              padding: "12px",
+            }}
+          >
+            <div
+              style={{
+                color: "#0078d4",
+                fontSize: "0.8em",
+                fontWeight: "bold",
+                marginBottom: "8px",
+              }}
+            >
+              🖥️ Frontend (display + calls backend to rename column)
+            </div>
+            <Table borderCollapse>
+              <Colgroup>
+                <RowNumberCol />
+                {orderedColumns.map((col) => (
+                  <Col key={col.name} id={col.name} />
+                ))}
+              </Colgroup>
+              <Thead>
+                <Tr id="head">
+                  <RowNumberTableCell />
+                  {orderedColumns.map((col) => (
+                    <TableCell
+                      key={col.name}
+                      action={async (newName) => {
+                        await new Promise((resolve) =>
+                          setTimeout(resolve, 1000),
+                        );
+                        onRenameColumn(col.name, newName);
+                      }}
+                    >
+                      {col.name}
+                    </TableCell>
+                  ))}
+                </Tr>
+              </Thead>
+              <Tbody>
+                {cellGrid.map((rowCells, dataRowIndex) => {
+                  const row = rows[dataRowIndex];
+                  return (
+                    <Tr id={row.id} key={row.id}>
+                      <RowNumberTableCell />
+                      {rowCells.map((cellValue, columnIndex) => (
+                        <TableCell key={orderedColumns[columnIndex].name}>
+                          {cellValue}
+                        </TableCell>
+                      ))}
+                    </Tr>
+                  );
+                })}
+              </Tbody>
+            </Table>
+          </div>
+        );
+      };
+
+      const App = () => (
+        <div class="demo-container">
+          <h1>Table — Rename Column</h1>
+          <p style={{ color: "#6c757d", marginBottom: "16px" }}>
+            The <strong>backend</strong> (grey box) is the source of truth and
+            reflects every saved column name.
+            <br />
+            The <strong>frontend</strong> (blue box) lets you double-click a
+            header cell to rename it — the 1s delay on save simulates an HTTP
+            round-trip.
+          </p>
+          <Backend />
+        </div>
+      );
+
+      render(<App />, document.getElementById("root"));
+    </script>
+  </body>
+</html>

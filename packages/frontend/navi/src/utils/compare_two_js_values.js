@@ -95,7 +95,7 @@ export const SYMBOL_IDENTITY = Symbol.for("navi_object_identity");
 export const compareTwoJsValues = (
   rootA,
   rootB,
-  { keyComparator, ignoreArrayOrder = false } = {},
+  { keyComparator, ignoreArrayOrder = false, lightKeySet } = {},
 ) => {
   const seenSet = new Set();
   const compare = (a, b) => {
@@ -155,17 +155,16 @@ export const compareTwoJsValues = (
           let foundMatch = false;
 
           for (let j = 0; j < b.length; j++) {
-            if (usedIndices.has(j)) continue; // Already matched with another element
-
+            if (usedIndices.has(j)) {
+              continue; // Already matched with another element
+            }
             const bValue = b[j];
-            const comparator = keyComparator || compare;
-            if (comparator(aValue, bValue, i, compare)) {
+            if (compareAt(aValue, bValue, i)) {
               foundMatch = true;
               usedIndices.add(j);
               break;
             }
           }
-
           if (!foundMatch) {
             return false;
           }
@@ -177,8 +176,7 @@ export const compareTwoJsValues = (
       while (i < a.length) {
         const aValue = a[i];
         const bValue = b[i];
-        const comparator = keyComparator || compare;
-        if (!comparator(aValue, bValue, i, compare)) {
+        if (!compareAt(aValue, bValue, i)) {
           return false;
         }
         i++;
@@ -200,15 +198,39 @@ export const compareTwoJsValues = (
     if (aKeys.length !== bKeys.length) {
       return false;
     }
-    for (const key of aKeys) {
-      const aValue = a[key];
-      const bValue = b[key];
-      const comparator = keyComparator || compare;
-      if (!comparator(aValue, bValue, key, compare)) {
-        return false;
+    if (lightKeySet) {
+      // compare light keys first, then remaining keys
+      // (optimization for cases where some keys are more likely to differ and/or faster to compare)
+      const keySet = new Set(aKeys);
+      for (const lightKey of lightKeySet) {
+        const aValue = a[lightKey];
+        const bValue = b[lightKey];
+        if (!compareAt(aValue, bValue, lightKey)) {
+          return false;
+        }
+        keySet.delete(lightKey);
+      }
+      for (const key of keySet) {
+        const aValue = a[key];
+        const bValue = b[key];
+        if (!compareAt(aValue, bValue, key)) {
+          return false;
+        }
+      }
+    } else {
+      for (const key of aKeys) {
+        const aValue = a[key];
+        const bValue = b[key];
+        if (!compareAt(aValue, bValue, key)) {
+          return false;
+        }
       }
     }
     return true;
   };
+  const compareAt = keyComparator
+    ? (a, b, keyOrArrayIndex) => keyComparator(a, b, keyOrArrayIndex, compare)
+    : compare;
+
   return compare(rootA, rootB);
 };

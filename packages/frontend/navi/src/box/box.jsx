@@ -66,23 +66,52 @@ import {
 } from "./pseudo_styles.js";
 
 import.meta.css = /* css */ `
-  [data-flow-inline] {
+  [navi-box-flow="inline"] {
     display: inline;
   }
-  [data-flow-row] {
+  [navi-box-flow="block"] {
+    display: block;
+  }
+  [navi-box-flow="inline-block"] {
+    display: inline-block;
+  }
+  [navi-box-flow="flex-x"] {
+    display: flex;
+  }
+  [navi-box-flow="flex-y"] {
     display: flex;
     flex-direction: column;
   }
-  [data-flow-column] {
-    display: flex;
-    flex-direction: row;
-  }
-  [data-flow-inline][data-flow-row],
-  [data-flow-inline][data-flow-column] {
+  [navi-box-flow="inline-flex-x"] {
     display: inline-flex;
   }
-  [data-flow-grid] {
+  [navi-box-flow="inline-flex-y"] {
+    display: inline-flex;
+    flex-direction: column;
+  }
+  [navi-box-flow="grid"] {
     display: grid;
+    &[navi-box-flow-column] {
+      grid-auto-flow: column;
+    }
+    &[navi-box-flow-row] {
+      grid-auto-flow: row;
+    }
+    &[navi-box-flow-column][navi-box-flow-row] {
+      grid-auto-flow: unset;
+    }
+  }
+  [navi-box-flow="inline-grid"] {
+    display: inline-grid;
+    &[navi-box-flow-column] {
+      grid-auto-flow: column;
+    }
+    &[navi-box-flow-row] {
+      grid-auto-flow: row;
+    }
+    &[navi-box-flow-column][navi-box-flow-row] {
+      grid-auto-flow: unset;
+    }
   }
 `;
 
@@ -133,39 +162,71 @@ export const Box = (props) => {
   const TagName = as;
 
   const defaultDisplay = getDefaultDisplay(TagName);
-  let { box, inline, row, column, grid } = rest;
-  if (box === "auto" || inline || defaultDisplay === "inline") {
-    if (rest.width !== undefined || rest.height !== undefined) {
-      box = true;
+  let { inline, block, flex, grid, row, column } = rest;
+  // To obtain flex direction we have the following deprecated props:
+  // - [deprecated] <Box column> -> <Box flex> or <Box flex="x">
+  // - [deprecated] <Box row> -> <Box flex="y">
+  // - [deprecated] <Box flex column> -> <Box flex="x">
+  // - [deprecated] <Box flex row> -> <Box flex="y">
+
+  if (flex === true) {
+    flex = row ? "y" : "x";
+  }
+  if (flex === undefined && grid === undefined) {
+    if (column) {
+      flex = "x";
+    } else if (row) {
+      flex = "y";
     }
   }
-  if (box) {
+  if (defaultDisplay === "inline") {
     if (inline === undefined) {
       inline = true;
     }
-    if (column === undefined && !row && !grid) {
-      column = true;
+  } else if (defaultDisplay === "block") {
+    if (block === undefined && !flex && !grid) {
+      block = true;
+    }
+  } else if (defaultDisplay === "inline-block") {
+    if (inline === undefined) {
+      inline = true;
+    }
+    if (block === undefined && !flex && !grid) {
+      block = true;
     }
   }
-
+  if (
+    inline &&
+    (rest.width !== undefined || rest.height !== undefined) &&
+    flex === undefined
+  ) {
+    flex = "x";
+  }
   let boxFlow;
   if (inline) {
-    if (row) {
-      boxFlow = "inline-row";
-    } else if (column) {
-      boxFlow = "inline-column";
+    if (block) {
+      boxFlow = "inline-block";
+    } else if (flex === "x") {
+      boxFlow = "inline-flex-x";
+    } else if (flex === "y") {
+      boxFlow = "inline-flex-y";
+    } else if (grid) {
+      boxFlow = "inline-grid";
     } else {
       boxFlow = "inline";
     }
-  } else if (row) {
-    boxFlow = "row";
-  } else if (column) {
-    boxFlow = "column";
+  } else if (block) {
+    boxFlow = "block";
+  } else if (flex === "x") {
+    boxFlow = "flex-x";
+  } else if (flex === "y") {
+    boxFlow = "flex-y";
   } else if (grid) {
     boxFlow = "grid";
   } else {
     boxFlow = defaultDisplay;
   }
+  const boxFlowIsDefault = boxFlow === defaultDisplay;
 
   const remainingPropKeySet = new Set(Object.keys(rest));
   // some props not destructured but that are neither
@@ -558,10 +619,9 @@ export const Box = (props) => {
     <TagName
       ref={ref}
       className={innerClassName}
-      data-flow-inline={inline ? "" : undefined}
-      data-flow-row={row ? "" : undefined}
-      data-flow-column={column ? "" : undefined}
-      data-flow-grid={boxFlow === "grid" ? "" : undefined}
+      navi-box-flow={boxFlowIsDefault ? undefined : boxFlow}
+      navi-box-flow-row={row ? "" : undefined}
+      navi-box-flow-column={column ? "" : undefined}
       data-visual-selector={visualSelector}
       {...selfForwardedProps}
     >

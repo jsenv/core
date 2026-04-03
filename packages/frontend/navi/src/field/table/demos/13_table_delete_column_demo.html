@@ -39,11 +39,13 @@
         Tr,
         RowNumberCol,
         RowNumberTableCell,
-        useRowsAsGrid,
-        useCellsAndColumns,
+        Button,
+        useCellGridFromRows,
+        useOrderedColumns,
       } from "@jsenv/navi";
+      import { useRowsState } from "./table_demo_helpers.js";
 
-      const rows = [
+      const initialRows = [
         { id: 1, name: "Alice", age: 30, email: "alice@example.com" },
         { id: 2, name: "Bob", age: 25, email: "bob@example.com" },
         { id: 3, name: "Charlie", age: 35, email: "charlie@example.com" },
@@ -56,76 +58,164 @@
         { id: "email", header: "Email" },
       ];
 
-      const TableColumnManager = () => {
+      // This demo illustrates the typical pattern in a real frontend app:
+      //
+      // - The BACKEND is the source of truth. It holds the columns config and
+      //   exposes methods to mutate it (e.g. HTTP endpoints backed by a database).
+      //   Here it is simulated by a component using useState.
+      //
+      // - The FRONTEND receives the current state as props (columnsConfig) and can
+      //   REQUEST mutations via callbacks (onDeleteColumn). It never modifies
+      //   state directly — it only reflects what the backend sends.
+      //
+      // The 1s delay on the frontend delete button simulates a real HTTP
+      // round-trip: the request goes out, the backend processes it, and the
+      // updated columns eventually come back down to the frontend.
+
+      const Backend = () => {
         const [columnsConfig, setColumnsConfig] =
           useState(initialColumnsConfig);
-        const { cellGrid } = useRowsAsGrid(
-          rows,
-          columnsConfig.map((c) => c.id),
-        );
+        const columnIds = columnsConfig.map((col) => col.id);
+        const [rows] = useRowsState(initialRows, columnIds);
+
+        const deleteColumn = (columnId) => {
+          setColumnsConfig((prev) => prev.filter((c) => c.id !== columnId));
+        };
 
         return (
-          <Demo
-            cellGrid={cellGrid}
-            columnsConfig={columnsConfig}
-            onDeleteColumn={(columnId) => {
-              setColumnsConfig((prev) => prev.filter((c) => c.id !== columnId));
-            }}
-          />
+          <div style={{ display: "flex", flexDirection: "column", gap: "0" }}>
+            <div
+              style={{
+                border: "2px solid #6c757d",
+                borderRadius: "8px",
+                padding: "12px",
+              }}
+            >
+              <div
+                style={{
+                  color: "#6c757d",
+                  fontSize: "0.8em",
+                  fontWeight: "bold",
+                  marginBottom: "8px",
+                }}
+              >
+                ⚙️ Backend (source of truth)
+              </div>
+              <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+                {columnsConfig.map((col) => (
+                  <li
+                    key={col.id}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      marginBottom: "4px",
+                      fontSize: "0.85em",
+                      color: "#495057",
+                    }}
+                  >
+                    <span>
+                      {col.id} — {col.header}
+                    </span>
+                    <button
+                      style={{
+                        padding: "1px 6px",
+                        background: "#6c757d",
+                        color: "white",
+                        border: "none",
+                        borderRadius: "3px",
+                        cursor: "pointer",
+                        fontSize: "0.9em",
+                      }}
+                      onClick={() => deleteColumn(col.id)}
+                    >
+                      ×
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                padding: "6px 0",
+                fontSize: "0.75em",
+                color: "#868e96",
+                lineHeight: "1.4",
+              }}
+            >
+              <span style={{ fontSize: "1.4em", lineHeight: "1" }}>⇅</span>
+            </div>
+
+            <Frontend
+              rows={rows}
+              columnsConfig={columnsConfig}
+              onDeleteColumn={deleteColumn}
+            />
+          </div>
         );
       };
 
-      const Demo = ({ cellGrid, columnsConfig, onDeleteColumn }) => {
-        const { cells, columns } = useCellsAndColumns(cellGrid, columnsConfig);
+      const Frontend = ({ rows, columnsConfig, onDeleteColumn }) => {
+        const [orderedColumns] = useOrderedColumns(columnsConfig);
+        const orderedColumnIds = orderedColumns.map((col) => col.id);
+        const cellGrid = useCellGridFromRows(rows, orderedColumnIds);
 
         return (
-          <div class="demo-container">
-            <h1>Table — Delete Column</h1>
-            <p style={{ color: "#6c757d", marginBottom: "16px" }}>
-              {columns.length} column(s) — click <strong>×</strong> in a header
-              to delete that column.
-            </p>
-
+          <div
+            style={{
+              border: "2px solid #0078d4",
+              borderRadius: "8px",
+              padding: "12px",
+            }}
+          >
+            <div
+              style={{
+                color: "#0078d4",
+                fontSize: "0.8em",
+                marginBottom: "8px",
+              }}
+            >
+              🖥️ Frontend (display + calls backend to delete)
+            </div>
             <Table borderCollapse>
               <Colgroup>
                 <RowNumberCol />
-                {columns.map((col) => (
+                {orderedColumns.map((col) => (
                   <Col key={col.id} id={col.id} />
                 ))}
               </Colgroup>
-
               <Thead>
                 <Tr id="head">
                   <RowNumberTableCell />
-                  {columns.map((col) => (
+                  {orderedColumns.map((col) => (
                     <TableCell key={col.id}>
                       <span style={{ marginRight: "6px" }}>{col.header}</span>
-                      <button
-                        style={{
-                          padding: "1px 6px",
-                          background: "#dc3545",
-                          color: "white",
-                          border: "none",
-                          borderRadius: "3px",
-                          cursor: "pointer",
+                      <Button
+                        action={async () => {
+                          await new Promise((resolve) =>
+                            setTimeout(resolve, 1000),
+                          );
+                          onDeleteColumn(col.id);
                         }}
-                        onClick={() => onDeleteColumn(col.id)}
                       >
                         ×
-                      </button>
+                      </Button>
                     </TableCell>
                   ))}
                 </Tr>
               </Thead>
-
               <Tbody>
-                {cells.map((rowCells, dataRowIndex) => {
+                {cellGrid.map((rowCells, dataRowIndex) => {
                   const row = rows[dataRowIndex];
                   return (
                     <Tr id={row.id} key={row.id}>
                       <RowNumberTableCell />
                       {rowCells.map((cellValue, columnIndex) => (
-                        <TableCell key={columns[columnIndex].id}>
+                        <TableCell key={orderedColumns[columnIndex].id}>
                           {cellValue}
                         </TableCell>
                       ))}
@@ -138,7 +228,22 @@
         );
       };
 
-      render(<TableColumnManager />, document.getElementById("root"));
+      const App = () => (
+        <div class="demo-container">
+          <h1>Table — delete column</h1>
+          <p style={{ color: "#6c757d", marginBottom: "16px" }}>
+            The <strong>backend</strong> (dashed box) is the source of truth: it
+            holds columns and can delete them instantly from its own list.
+            <br />
+            The <strong>frontend</strong> (blue box) only displays what it
+            receives and must call back to request deletion — the 1s delay on
+            the × button simulates an HTTP round-trip.
+          </p>
+          <Backend />
+        </div>
+      );
+
+      render(<App />, document.getElementById("root"));
     </script>
   </body>
 </html>

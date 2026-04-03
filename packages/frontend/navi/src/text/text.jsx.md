@@ -10,11 +10,11 @@ import { Text } from "@jsenv/navi";
 // Simple text
 <Text>Hello world</Text>
 
-// With layout features
-<Text box>Text with layout capabilities</Text>
+// With grid layout features
+<Text grid>Text with layout capabilities</Text>
 
 // With styling (when used with Box props)
-<Text box bold color="blue">Important message</Text>
+<Text grid bold color="blue">Important message</Text>
 ```
 
 ## Text with Icons
@@ -34,8 +34,8 @@ import { Text, Icon } from "@jsenv/navi";
   Go to Home
 </Text>
 
-// Using box layout for more control
-<Text box>
+// Using grid layout for more control
+<Text grid>
   <Icon>
     <CheckSvg />
   </Icon>
@@ -73,8 +73,8 @@ Icons support the `href` prop for referencing SVG sprites:
   </Icon>
 </Text>
 
-// Multiple icons with box layout
-<Text box>
+// Multiple icons with grid layout
+<Text grid alignY="center">
   <Icon>
     <HomeSvg />
   </Icon>
@@ -87,12 +87,12 @@ Icons support the `href` prop for referencing SVG sprites:
 
 ### Icon Layout Control
 
-Icons can use the `box` prop for advanced layout control:
+Icons can use the `grid` prop for advanced layout control:
 
 ```jsx
-// Icon with box layout for custom styling
+// Icon with grid layout for custom styling
 <Text>
-  <Icon box padding="xs" backgroundColor="blue">
+  <Icon grid padding="xs" backgroundColor="blue">
     <StarSvg />
   </Icon>
   Featured item
@@ -206,7 +206,7 @@ Add foreground elements or colors over text content:
 ### Navigation Links with Icons
 
 ```jsx
-<Text as="a" href="/profile" box>
+<Text as="a" href="/profile" grid>
   <Icon>
     <UserSvg />
   </Icon>
@@ -244,7 +244,7 @@ Add foreground elements or colors over text content:
 ### Interactive Elements
 
 ```jsx
-<Text as="button" box onClick={handleClick}>
+<Text as="button" onClick={handleClick}>
   <Icon>
     <PlusSvg />
   </Icon>
@@ -295,29 +295,29 @@ import { Paragraph } from "@jsenv/navi";
 
 ## Typography with Box Props
 
-When using `box={true}`, the Text component supports Box layout and styling props:
+When using `grid={true}`, the Text component supports Box layout and styling props:
 
 ```jsx
 // Layout properties
-<Text box expandX selfAlignX="center" gap="sm">
+<Text grid expandX selfAlignX="center" gap="s">
   <Icon><StarSvg /></Icon>
   Centered expanding text
 </Text>
 
 // Spacing and borders
-<Text box margin="md" padding="sm" border="1px solid #ccc">
+<Text grid margin="m" padding="sm" border="1px solid #ccc">
   Text with spacing and border
 </Text>
 
 // Background and styling
-<Text box backgroundColor="blue" color="white" borderRadius="md">
+<Text grid backgroundColor="blue" color="white" borderRadius="m">
   Styled text container
 </Text>
 ```
 
 ## Best Practices
 
-### When to Use `box={true}`
+### When to Use `grid={true}`
 
 - When you need layout control (spacing, alignment, expansion, flex behavior)
 - For interactive text elements (buttons, links with complex styling)
@@ -327,7 +327,7 @@ When using `box={true}`, the Text component supports Box layout and styling prop
 
 - Icons automatically size to match text and align properly
 - Use `href` prop for SVG sprite icons to improve performance
-- Icons inherit text color by default but can be styled independently with Box props when using `box={true}`
+- Icons inherit text color by default but can be styled independently with Box props when using `grid={true}`
 - Use `CharSlot` for precise icon sizing and accessibility
 
 ### Overflow Handling
@@ -358,7 +358,7 @@ When using `box={true}`, the Text component supports Box layout and styling prop
 | Prop                | Type      | Default  | Description                                          |
 | ------------------- | --------- | -------- | ---------------------------------------------------- |
 | `as`                | `string`  | `"span"` | HTML element to render                               |
-| `box`               | `boolean` | `false`  | Enable Box layout features and props                 |
+| `grid`              | `boolean` | `false`  | Enable Box layout features and props                 |
 | `overflowEllipsis`  | `boolean` | `false`  | Enable text truncation with ellipsis                 |
 | `overflowPinned`    | `boolean` | `false`  | Keep this content visible when parent text overflows |
 | `contentSpacing`    | `string`  | `" "`    | Character(s) inserted between child elements         |
@@ -367,23 +367,21 @@ When using `box={true}`, the Text component supports Box layout and styling prop
 | `noWrap`            | `boolean` | `false`  | Prevent text wrapping (used with overflow)           |
 | `pre`               | `boolean` | -        | Preserve whitespace formatting                       |
 
-When `box={true}`, all Box component props are also available (layout, spacing, styling, etc.).
-
 ### Icon Props
 
 | Prop   | Type      | Default | Description                          |
 | ------ | --------- | ------- | ------------------------------------ |
 | `href` | `string`  | -       | SVG sprite reference (e.g., "#icon") |
-| `box`  | `boolean` | `false` | Enable Box layout features           |
+| `grid` | `boolean` | `false` | Enable Box layout features           |
 
-When `box={false}` (default), Icon uses CharSlot and supports:
+When `grid={false}` (default), Icon uses CharSlot and supports:
 
 - `charWidth`: Width in characters (default: 1)
 - `baseChar`: Character used for sizing (default: "W")
 - `decorative`: Mark as decorative for accessibility
 - `aria-label`, `role`: Accessibility attributes
 
-When `box={true}`, all Box component props are available.
+When `grid={true}`, all Box component props are available.
 
 ### CharSlot Props
 

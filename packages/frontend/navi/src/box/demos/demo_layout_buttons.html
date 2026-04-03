@@ -65,9 +65,9 @@
               <h3>0. Button Vertical Centering in Column Layout</h3>
               <div className="visual-container">
                 <h4>Default behavior (no alignY specified)</h4>
-                <Box column spacing="md">
+                <Box flex spacing="m">
                   <Box
-                    row
+                    flex="y"
                     width="100"
                     height="40"
                     background="#e3f2fd"
@@ -82,9 +82,9 @@
                 </Box>
 
                 <h4>With alignY="center" on button</h4>
-                <Box column spacing="md">
+                <Box flex spacing="m">
                   <Box
-                    row
+                    flex="y"
                     width="100"
                     height="40"
                     background="#e3f2fd"
@@ -95,7 +95,7 @@
                     Rectangle
                   </Box>
 
-                  <Button box alignY="center">
+                  <Button flex alignY="center">
                     Centered
                   </Button>
                 </Box>
@@ -106,12 +106,12 @@
               <h3>1. Button ExpandX - Horizontal Expansion Only</h3>
               <div className="visual-container">
                 <h4>Buttons in rows (takes full width)</h4>
-                <Box row spacing="sm">
+                <Box flex="y" spacing="s">
                   <Button>Default</Button>
-                  <Button box alignX="start">
+                  <Button flex alignX="start">
                     Text start
                   </Button>
-                  <Button box alignX="end">
+                  <Button flex alignX="end">
                     Text end
                   </Button>
                   <Button selfAlignX="start">Start</Button>
@@ -120,17 +120,17 @@
                 </Box>
 
                 <h4>Buttons in columns (grows horizontally)</h4>
-                <Box row spacing="sm">
-                  <Box column spacing="sm">
+                <Box flex="y" spacing="s">
+                  <Box flex spacing="s">
                     <Button>Fixed</Button>
-                    <Button box expandX>
+                    <Button flex expandX>
                       ExpandX Button
                     </Button>
                     <Button>Fixed</Button>
                   </Box>
-                  <Box column spacing="sm">
+                  <Box flex spacing="s">
                     <Button>Fixed</Button>
-                    <Button box expandX alignX="center">
+                    <Button flex expandX alignX="center">
                       ExpandX text centered
                     </Button>
                     <Button>Fixed</Button>
@@ -143,12 +143,12 @@
               <h3>2. Button ExpandY - Vertical Expansion Only</h3>
               <div className="visual-container">
                 <h4>Buttons in columns (takes full height)</h4>
-                <Box column spacing="10px" height="100px">
+                <Box flex spacing="10px" height="100px">
                   <Button>Default</Button>
-                  <Button box alignY="center">
+                  <Button flex alignY="center">
                     Text centered
                   </Button>
-                  <Button box alignY="end">
+                  <Button flex alignY="end">
                     Text end
                   </Button>
                   <Button selfAlignY="start">Start</Button>
@@ -157,15 +157,15 @@
                 </Box>
 
                 <h4>Buttons in rows (grows vertically)</h4>
-                <Box column spacing="sm">
-                  <Box row spacing="sm" height="200px">
+                <Box flex spacing="s">
+                  <Box flex="y" spacing="s" height="200px">
                     <Button>Fixed</Button>
                     <Button expandY>ExpandY</Button>
                     <Button>Fixed</Button>
                   </Box>
-                  <Box row spacing="sm" height="200px">
+                  <Box flex="y" spacing="s" height="200px">
                     <Button>Fixed</Button>
-                    <Button box expandY alignY="center">
+                    <Button flex expandY alignY="center">
                       ExpandY text centered
                     </Button>
                     <Button>Fixed</Button>
@@ -178,7 +178,7 @@
               <h3>3. Button ExpandX + ExpandY - Both Axes</h3>
               <div className="visual-container">
                 <h4>Buttons in columns (grows horizontally, full height)</h4>
-                <Box column spacing="10px" height="80px">
+                <Box flex spacing="10px" height="80px">
                   <Button>Fixed</Button>
                   <Button expandX expandY alignX="center" alignY="center">
                     Both Axes
@@ -187,7 +187,7 @@
                 </Box>
 
                 <h4>Buttons in rows (full width, grows vertically)</h4>
-                <Box row spacing="10px" height="150px">
+                <Box flex="y" spacing="10px" height="150px">
                   <Button>Fixed</Button>
                   <Button expandX expandY alignX="center" alignY="center">
                     Both Axes
@@ -200,11 +200,11 @@
             <div className="demo-container">
               <h3>4. Precise Control Comparison</h3>
               <div className="visual-container">
-                <Box layoutRow spacing="15px">
+                <Box flex="y" spacing="15px">
                   <div>
                     <h4>Buttons in columns with different expansions</h4>
                     <Box
-                      column
+                      flex
                       spacing="10px"
                       height="60px"
                       style={{
@@ -224,7 +224,7 @@
                   <div>
                     <h4>Buttons in rows with different expansions</h4>
                     <Box
-                      row
+                      flex="y"
                       spacing="10px"
                       height="200px"
                       style={{
@@ -274,7 +274,7 @@
             <div className="demo-container">
               <h3>6. Multiple Expand Buttons</h3>
               <div className="visual-container">
-                <Box column spacing="10px">
+                <Box flex spacing="10px">
                   <Button expandX>ExpandX 1</Button>
                   <Button expandX>ExpandX 2</Button>
                   <Button expandX>ExpandX 3</Button>
@@ -285,7 +285,7 @@
             <div className="demo-container">
               <h3>7. Button Spacing - Margins</h3>
               <div className="visual-container">
-                <Box row spacing="5px">
+                <Box flex="y" spacing="5px">
                   <Button margin="10px">Margin All Sides</Button>
                   <Button marginX="20px">MarginX Only</Button>
                   <Button marginY="15px">MarginY Only</Button>
@@ -298,7 +298,7 @@
             <div className="demo-container">
               <h3>8. Button Spacing - Padding</h3>
               <div className="visual-container">
-                <Box row spacing="5px">
+                <Box flex="y" spacing="5px">
                   <Button>Default Padding</Button>
                   <Button padding="20px">Extra Padding</Button>
                   <Button paddingX="30px">PaddingX Only</Button>
@@ -312,7 +312,7 @@
               <h3>9. Button SelfAlignX Test: row + selfAlignX="end"</h3>
               <div className="visual-container">
                 <div className="bounded">
-                  <Box column spacing="10px" style={{ height: "100%" }}>
+                  <Box flex spacing="10px" style={{ height: "100%" }}>
                     <Button>Default</Button>
                     <Button selfAlignX="end">Pushed to End</Button>
                   </Box>
@@ -323,7 +323,7 @@
             <div className="demo-container">
               <h3>10. Combined Spacing and ExpandX</h3>
               <div className="visual-container">
-                <Box column spacing="10px">
+                <Box flex spacing="10px">
                   <Button>Label</Button>
                   <Button expandX marginY="5px" paddingX="20px">
                     Margin + Padding + ExpandX
@@ -336,7 +336,7 @@
             <div className="demo-container">
               <h3>11. Button Toolbar Layout</h3>
               <div className="visual-container">
-                <Box column spacing="10px">
+                <Box flex spacing="10px">
                   <Button>New</Button>
                   <Button>Open</Button>
                   <Button>Save</Button>
@@ -349,19 +349,19 @@
             <div className="demo-container">
               <h3>12. Button Group with Various Alignments</h3>
               <div className="visual-container">
-                <Box row spacing="10px">
-                  <Box column spacing="10px">
+                <Box flex="y" spacing="10px">
+                  <Box flex spacing="10px">
                     <Button>Start</Button>
                     <Button selfAlignX="center">Center</Button>
                     <Button>End</Button>
                   </Box>
 
-                  <Box column spacing="10px">
+                  <Box flex spacing="10px">
                     <Button expandX>Primary Action</Button>
                     <Button>Cancel</Button>
                   </Box>
 
-                  <Box column spacing="10px" selfAlignX="end">
+                  <Box flex spacing="10px" selfAlignX="end">
                     <Button>Back</Button>
                     <Button>Next</Button>
                   </Box>
@@ -387,7 +387,7 @@
                       action.
                     </p>
 
-                    <Box column spacing="10px">
+                    <Box flex spacing="10px">
                       <Button expandX>Primary Action</Button>
                       <Button selfAlignX="end">More</Button>
                     </Box>
@@ -398,20 +398,20 @@
               <div className="demo-container">
                 <h3>14. Navigation Button Layout</h3>
                 <div className="visual-container">
-                  <Box row spacing="15px">
-                    <Box column spacing="10px">
+                  <Box flex="y" spacing="15px">
+                    <Box flex spacing="10px">
                       <Button>Home</Button>
                       <Button expandX>Current Page Title</Button>
                       <Button selfAlignX="end">Profile</Button>
                     </Box>
 
-                    <Box column spacing="10px" selfAlignX="center">
+                    <Box flex spacing="10px" selfAlignX="center">
                       <Button marginX="5px">Tab 1</Button>
                       <Button marginX="5px">Tab 2</Button>
                       <Button marginX="5px">Tab 3</Button>
                     </Box>
 
-                    <Box column spacing="10px" selfAlignX="space-between">
+                    <Box flex spacing="10px" selfAlignX="space-between">
                       <Button>Previous</Button>
                       <Button>Next</Button>
                     </Box>

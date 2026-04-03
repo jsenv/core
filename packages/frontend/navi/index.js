@@ -15,14 +15,14 @@ export { useRunOnMount } from "./src/action/use_run_on_mount.js";
 // for debug/testing purposes
 export { enableDebugActions } from "./src/action/actions.js";
 
-// state management (store)
+// state management
 export {
   arraySignalMembership,
   useArraySignalMembership,
 } from "./src/state/array_signal_membership.js";
 export { localStorageSignal } from "./src/state/local_storage_signal.js";
+export { resource } from "./src/state/rest/resource_graph.js";
 export { stateSignal } from "./src/state/state_signal.js";
-export { resource } from "./src/state/store/resource_graph.js";
 export { useSignalSync } from "./src/state/use_signal_sync.js";
 export { useStateArray } from "./src/state/use_state_array.js";
 export { valueInLocalStorage } from "./src/state/value_in_local_storage.js";
@@ -124,7 +124,7 @@ export {
   Tr,
 } from "./src/field/table/table.jsx";
 export { useCellGridFromRows } from "./src/field/table/use_cell_grid_from_rows.js";
-export { useOrderedCellGridAndColumns } from "./src/field/table/use_ordered_cell_grid_and_columns.js";
+export { useOrderedColumns } from "./src/field/table/use_ordered_columns.js";
 // Table end
 
 // Components

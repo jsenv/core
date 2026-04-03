@@ -101,7 +101,8 @@ export const TablePage = ({ table }) => {
             />
             <Route
               route={TABLE_SETTINGS_ROUTE}
-              element={<TableSettings table={table} />}
+              element={TableSettings}
+              elementProps={{ table }}
             />
           </Route>
         </PageBody>

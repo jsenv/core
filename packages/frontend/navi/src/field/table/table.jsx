@@ -707,7 +707,7 @@ export const TableCell = (props) => {
       <div
         className="navi_table_cell_foreground"
         data-visible={columnGrabbed ? "" : undefined}
-      ></div>
+      />
     </TagName>
   );
 };

@@ -454,7 +454,7 @@ const InputTextualBasic = (props) => {
   return (
     <Box
       as="span"
-      box
+      flex
       baseClassName="navi_input"
       styleCSSVars={InputStyleCSSVars}
       pseudoStateSelector=".navi_native_input"
@@ -484,7 +484,7 @@ const InputTextualBasic = (props) => {
           disabled={innerDisabled}
           readOnly={innerReadOnly}
           className="navi_input_start_icon"
-          box
+          flex
           alignY="center"
         >
           <Icon color="rgba(28, 43, 52, 0.5)">{innerIcon}</Icon>

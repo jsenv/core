@@ -916,6 +916,7 @@ export const createAction = (callback, rootOptions = {}) => {
         hasRenderers: false, // Flag to track if action is bound to UI components
       };
       let sideEffectCleanup;
+      let completeSideEffectCleanup;
 
       const performRun = (runParams) => {
         const {
@@ -1005,6 +1006,7 @@ export const createAction = (callback, rootOptions = {}) => {
            * AND put the action that loaded that resource back into loading state
            * before the UI attempts to render the now-missing resource.
            */
+
           batch(() => {
             const value = resultToValue
               ? resultToValue(runResult, action)
@@ -1017,7 +1019,7 @@ export const createAction = (callback, rootOptions = {}) => {
               outputSignal.value = data;
             }
             onComplete?.(data, action);
-            completeSideEffect?.(action);
+            completeSideEffectCleanup = completeSideEffect?.(action);
           });
           if (DEBUG) {
             console.log(`"${action}": completed`);
@@ -1124,6 +1126,10 @@ export const createAction = (callback, rootOptions = {}) => {
         if (sideEffectCleanup) {
           sideEffectCleanup(reason);
           sideEffectCleanup = undefined;
+        }
+        if (completeSideEffectCleanup) {
+          completeSideEffectCleanup(reason);
+          completeSideEffectCleanup = undefined;
         }
 
         actionPromiseMap.delete(action);

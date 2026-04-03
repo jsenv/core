@@ -33,31 +33,31 @@ export const routeAction = (
     if (!store) {
       break sync_url_and_item_id;
     }
-    const { mutableIdKeys } = store;
-    const [firstMutableIdKey] = mutableIdKeys;
-    if (!firstMutableIdKey) {
+    const { uniqueKeys } = store;
+    const [firstUniqueKey] = uniqueKeys;
+    if (!firstUniqueKey) {
       break sync_url_and_item_id;
     }
-    const mutableIdValueSignal = computed(() => {
+    const uniqueValueSignal = computed(() => {
       const params = route.paramsSignal.value;
-      const mutableIdValue = params[firstMutableIdKey];
-      return mutableIdValue;
+      const uniqueKeyValue = params[firstUniqueKey];
+      return uniqueKeyValue;
     });
-    const routeItemSignal = store.signalForMutableIdKey(
-      firstMutableIdKey,
-      mutableIdValueSignal,
+    const routeItemSignal = store.signalForUniqueKey(
+      firstUniqueKey,
+      uniqueValueSignal,
     );
     store.observeItemProperties(routeItemSignal, (propertyMutations) => {
-      const mutableIdPropertyMutation = propertyMutations[firstMutableIdKey];
-      if (!mutableIdPropertyMutation) {
+      const uniquePropertyMutation = propertyMutations[firstUniqueKey];
+      if (!uniquePropertyMutation) {
         return;
       }
       route.replaceParams(
         {
-          [firstMutableIdKey]: mutableIdPropertyMutation.newValue,
+          [firstUniqueKey]: uniquePropertyMutation.newValue,
         },
         {
-          callReason: `store item ${firstMutableIdKey} change on ${route}`,
+          callReason: `store item ${firstUniqueKey} change on ${route}`,
         },
       );
     });
