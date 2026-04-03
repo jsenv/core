@@ -75,9 +75,10 @@
         const [columnsConfig, setColumnsConfig] =
           useState(initialColumnsConfig);
         const columnIds = columnsConfig.map((col) => col.name);
-        const [rows] = useRowsState(initialRows, columnIds);
+        const [rows, { renameProperty }] = useRowsState(initialRows, columnIds);
 
         const renameColumn = (columnName, newName) => {
+          renameProperty(columnName, newName);
           setColumnsConfig((prev) =>
             prev.map((col) =>
               col.name === columnName ? { name: newName } : col,

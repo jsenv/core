@@ -73,10 +73,24 @@ export const useRowsState = (initialRows, properties) => {
         return result;
       });
     };
+    const renameProperty = (oldProp, newProp) => {
+      setRows((prev) =>
+        prev.map((row) => {
+          if (!Object.hasOwn(row, oldProp)) {
+            return row;
+          }
+          const value = row[oldProp];
+          delete row[oldProp];
+          row[newProp] = value;
+          return row;
+        }),
+      );
+    };
     methods = methodsRef.current = {
       setCell,
       addRow,
       deleteRow,
+      renameProperty,
     };
   }
   return [rows, methods];
