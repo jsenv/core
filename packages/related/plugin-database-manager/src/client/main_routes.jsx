@@ -7,6 +7,7 @@ import { RolePage } from "./role/role_page.jsx";
 import {
   DATABASE_GET_ACTION,
   DATABASE_ROUTE,
+  INDEX_ROUTE,
   ROLE_GET_ACTION,
   ROLE_ROUTE,
   TABLE_GET_ACTION,
@@ -18,6 +19,7 @@ import { TablePage } from "./table/table_page.jsx";
 export const MainRoutes = () => {
   return (
     <Route>
+      <Route route={INDEX_ROUTE} element={"Bienvenue"} />
       <Route
         route={ROLE_ROUTE}
         action={ROLE_GET_ACTION}

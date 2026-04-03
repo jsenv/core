@@ -75,7 +75,7 @@ export const ExplorerGroup = (props) => {
             <Text overflowEllipsis expandX>
               {label}
 
-              <Text overflowPinned expandX box alignY="center">
+              <Text overflowPinned flex expandX alignY="center">
                 <BadgeCount
                   size="xxs"
                   circle

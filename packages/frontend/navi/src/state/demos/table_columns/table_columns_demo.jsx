@@ -18,7 +18,7 @@ const TABLE = resource("table", {
   }),
 });
 
-const TABLE_COLUMNS = TABLE.ownMany("columns", {
+const TABLE_COLUMNS = TABLE.scopedMany("columns", {
   idKey: "column_name",
 
   PUT: ({ id, column_name, property, value }) => {
