@@ -58,12 +58,13 @@ const createColumnOrdering = (columnIdKey, setOrderedColumnIds) => {
   // Reconcile maps as external ids change (add/remove/rename columns).
   // Returns the ordered column objects for the current render.
   const sync = (columns, orderedColumnIds) => {
+    const externalIds = [];
     columnByExternalIdMap.clear();
     for (const col of columns) {
-      columnByExternalIdMap.set(col[columnIdKey], col);
+      const externalId = col[columnIdKey];
+      externalIds.push(externalId);
+      columnByExternalIdMap.set(externalId, col);
     }
-
-    const externalIds = [...columnByExternalIdMap.keys()];
     let currentOrderedColumnIds = orderedColumnIds;
     if (prevExternalIds === null) {
       for (const externalId of externalIds) {
