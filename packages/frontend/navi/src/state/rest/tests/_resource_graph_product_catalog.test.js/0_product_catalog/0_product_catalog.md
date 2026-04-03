@@ -88,7 +88,7 @@ return {
       "price": 9.99,
       "category": {
         "id": 10,
-        "label": "Premium Widgets"
+        "label": "Widgets"
       }
     },
     {
@@ -126,7 +126,7 @@ return {
       "price": 9.99,
       "category": {
         "id": 10,
-        "label": "Premium Widgets"
+        "label": "Widgets"
       }
     },
     {
@@ -144,7 +144,7 @@ return {
       "price": 14.99,
       "category": {
         "id": 10,
-        "label": "Premium Widgets"
+        "label": "Widgets"
       }
     }
   ],
@@ -154,7 +154,7 @@ return {
     "price": 12.99,
     "category": {
       "id": 10,
-      "label": "Premium Widgets"
+      "label": "Widgets"
     }
   },
   "widgetASettingsAfterGet": {
@@ -174,7 +174,7 @@ return {
       "price": 12.99,
       "category": {
         "id": 10,
-        "label": "Premium Widgets"
+        "label": "Widgets"
       }
     },
     {
@@ -183,7 +183,7 @@ return {
       "price": 14.99,
       "category": {
         "id": 10,
-        "label": "Premium Widgets"
+        "label": "Widgets"
       }
     }
   ]

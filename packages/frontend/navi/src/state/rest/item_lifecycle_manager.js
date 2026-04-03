@@ -142,19 +142,24 @@ export const createResourceLifecycleManager = () => {
       // Parameter scope predicate for config-driven rules
       // Same scope ID or no scope = compatible, subset check for different scopes
       const paramScopePredicate = (candidateAction) => {
+        const paramScope = config.paramScope;
+        if (!paramScope) {
+          // root resource with no paramScope — matches all candidates
+          return true;
+        }
         const candidateContext =
           config.restActionContextMap.get(candidateAction);
         if (!candidateContext) {
           return false;
         }
-        const paramScope = config.paramScope;
         const candidateParamScope = candidateContext.paramScope;
+        if (!candidateParamScope) {
+          return true;
+        }
         if (candidateParamScope.id === paramScope.id) {
           return true;
         }
-        const params = paramScope.params;
-        const candidateParams = candidateParamScope.params;
-        return isParamSubset(candidateParams, params);
+        return isParamSubset(candidateParamScope.params, paramScope.params);
       };
 
       for (const restAction of config.restActionSet) {

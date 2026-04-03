@@ -5,6 +5,10 @@ import { SYMBOL_OBJECT_SIGNAL } from "../../action/symbol_object_signal.js";
 import { SYMBOL_IDENTITY } from "../../utils/compare_two_js_values.js";
 import { getCallerInfo } from "../../utils/get_caller_info.js";
 import { arraySignalStore, primitiveCanBeId } from "./array_signal_store.js";
+import { createResourceLifecycleManager } from "./item_lifecycle_manager.js";
+import { getParamScope } from "./param_scope.js";
+
+const resourceLifecycleManager = createResourceLifecycleManager();
 
 /**
  * Naming conventions used throughout this file:
@@ -109,6 +113,8 @@ export const resource = (
     // configuration options
     idKey,
     mutableIdKeys = [],
+    rerunOn,
+    dependencies,
 
     GET,
     GET_MANY,
@@ -190,6 +196,9 @@ export const resource = (
     addItemSetup,
     createRestAction: createRestActionForRoot,
     params: undefined,
+    rerunOn,
+    dependencies,
+    paramScope: null,
   });
 };
 
@@ -203,6 +212,9 @@ const createResource = (
     addItemSetup,
     createRestAction,
     params,
+    rerunOn,
+    dependencies,
+    paramScope,
   } = {},
 ) => {
   if (idKey === undefined) {
@@ -217,15 +229,17 @@ const createResource = (
     useById: (id) => store.select(idKey, id),
 
     withParams: undefined,
-    external: undefined,
-    externalMany: undefined,
-    internal: undefined,
-    internalMany: undefined,
+    one: undefined,
+    many: undefined,
+    scopedOne: undefined,
+    scopedMany: undefined,
 
     // private but exposed for convenience
     store,
     addItemSetup,
   };
+  const lifecycleCtx = { onComplete: null };
+  const actionRegistrations = [];
   // expose rest actions on the stateFacade
   for (const [restCallbackKey, restCallback] of Object.entries(restCallbacks)) {
     if (restCallback === undefined) {
@@ -235,7 +249,10 @@ const createResource = (
     const verb = isMany
       ? restCallbackKey.replace("_MANY", "")
       : restCallbackKey;
-    const restAction = createRestAction(verb, restCallback, { isMany });
+    const restAction = createRestAction(verb, restCallback, {
+      isMany,
+      lifecycleCtx,
+    });
     if (!restAction) {
       console.error("no action returned (here to see when it happens)");
       continue;
@@ -243,8 +260,10 @@ const createResource = (
     if (params) {
       const restActionBound = restAction.bindParams(params);
       stateFacade[restCallbackKey] = restActionBound;
+      actionRegistrations.push(restActionBound);
     } else {
       stateFacade[restCallbackKey] = restAction;
+      actionRegistrations.push(restAction);
     }
   }
 
@@ -275,7 +294,10 @@ const createResource = (
    * });
    * // ROLE_WITH_OWNERSHIP.GET_MANY will autorerun when any table/database/role is POST/DELETE
    */
-  const withParams = (paramsToInject) => {
+  const withParams = (
+    paramsToInject,
+    { dependencies: withParamsDeps = [], rerunOn: withParamsRerunOn } = {},
+  ) => {
     if (!paramsToInject || Object.keys(paramsToInject).length === 0) {
       throw new Error(
         `resource(${paramsToInject}).withParams() requires parameters`,
@@ -287,6 +309,7 @@ const createResource = (
     } else {
       resolvedParams = paramsToInject;
     }
+    const resolvedParamScope = getParamScope(resolvedParams);
     const createRestActionWithParams = createRestActionFactoryForRoot(name, {
       idKey,
       store,
@@ -299,6 +322,9 @@ const createResource = (
       addItemSetup,
       createRestAction: createRestActionWithParams,
       params: resolvedParams,
+      paramScope: resolvedParamScope,
+      rerunOn: withParamsRerunOn,
+      dependencies: withParamsDeps,
     });
   };
   stateFacade.withParams = withParams;
@@ -306,7 +332,14 @@ const createResource = (
   stateFacade.one = (
     propertyName,
     childResource,
-    { GET, PUT, DELETE } = {},
+    {
+      rerunOn: oneRerunOn,
+      dependencies: oneDependencies,
+
+      GET,
+      PUT,
+      DELETE,
+    } = {},
   ) => {
     const childName = `${name}.${propertyName}`;
     addItemSetup((item) => {
@@ -374,7 +407,7 @@ const createResource = (
 
     const childIdKey = childResource.idKey;
     const childStore = childResource.store;
-    const createRestActionForOne = (verb, callback) => {
+    const createRestActionForOne = (verb, callback, { lifecycleCtx } = {}) => {
       const applyResultToValue =
         verb === "DELETE"
           ? (itemId) => {
@@ -440,12 +473,10 @@ ${originalActionName} source location: ${locationInfo}`,
           return applyResultToValue(result);
         },
         valueToData: (childItemId) => childStore.select(childItemId),
-        // completeSideEffect: (actionCompleted) => resourceLifecycleManager.onActionComplete(actionCompleted),
+        completeSideEffect: (actionCompleted) => {
+          lifecycleCtx?.onComplete?.(actionCompleted);
+        },
       });
-      // resourceLifecycleManager.registerAction(
-      //   resourceInstance,
-      //   actionAffectingOneItem,
-      // );
       return actionAffectingOneItem;
     };
 
@@ -460,12 +491,18 @@ ${originalActionName} source location: ${locationInfo}`,
       addItemSetup,
       createRestAction: createRestActionForOne,
       params,
+      paramScope,
+      rerunOn: oneRerunOn,
+      dependencies: oneDependencies,
     });
   };
   stateFacade.many = (
     propertyName,
     childResource,
     {
+      rerunOn: manyRerunOn,
+      dependencies: manyDependencies,
+
       GET,
       GET_MANY,
       POST,
@@ -533,7 +570,11 @@ ${originalActionName} source location: ${locationInfo}`,
         get: () => childItemArraySignal.value,
         set: updateChildItemIdArray,
       });
-      syncIdArrayOnRename(childResource.store, childIdKey, childItemIdArraySignal);
+      syncIdArrayOnRename(
+        childResource.store,
+        childIdKey,
+        childItemIdArraySignal,
+      );
       if (DEBUG) {
         const childItemArray = childItemArraySignal.peek();
         debug(
@@ -541,13 +582,17 @@ ${originalActionName} source location: ${locationInfo}`,
         );
       }
     });
-    const createRestActionForMany = (verb, callback, { isMany }) => {
+    const createRestActionForMany = (
+      verb,
+      callback,
+      { isMany, lifecycleCtx },
+    ) => {
       if (!isMany) {
-        return createRestActionAffectingOneItem(verb, callback);
+        return createRestActionAffectingOneItem(verb, callback, lifecycleCtx);
       }
-      return createRestActionAffectingManyItems(verb, callback);
+      return createRestActionAffectingManyItems(verb, callback, lifecycleCtx);
     };
-    const createRestActionAffectingOneItem = (verb, callback) => {
+    const createRestActionAffectingOneItem = (verb, callback, lifecycleCtx) => {
       const applyResultToValue =
         verb === "DELETE"
           ? ([itemId, childItemId]) => {
@@ -612,15 +657,17 @@ ${originalActionName} source location: ${locationInfo}`,
           return applyResultToValue(result);
         },
         valueToData: (childItemId) => childStore.select(childItemId),
-        // completeSideEffect: (actionCompleted) => resourceLifecycleManager.onActionComplete(actionCompleted),
+        completeSideEffect: (actionCompleted) => {
+          lifecycleCtx?.onComplete?.(actionCompleted);
+        },
       });
-      // resourceLifecycleManager.registerAction(
-      //   resourceInstance,
-      //   actionAffectingOneItem,
-      // );
       return actionAffectingOneItem;
     };
-    const createRestActionAffectingManyItems = (verb, callback) => {
+    const createRestActionAffectingManyItems = (
+      verb,
+      callback,
+      lifecycleCtx,
+    ) => {
       const applyResultToValue =
         verb === "GET"
           ? (result) => {
@@ -728,12 +775,10 @@ ${originalActionName} source location: ${locationInfo}`,
         },
         valueToData: (childItemIdArray) =>
           childStore.selectAll(childItemIdArray),
-        // completeSideEffect: (actionCompleted) => resourceLifecycleManager.onActionComplete(actionCompleted),
+        completeSideEffect: (actionCompleted) => {
+          lifecycleCtx?.onComplete?.(actionCompleted);
+        },
       });
-      // resourceLifecycleManager.registerAction(
-      //   resourceInstance,
-      //   actionAffectingManyItem,
-      // );
       return actionAffectingManyItem;
     };
 
@@ -755,6 +800,9 @@ ${originalActionName} source location: ${locationInfo}`,
       addItemSetup,
       createRestAction: createRestActionForMany,
       params,
+      paramScope,
+      rerunOn: manyRerunOn,
+      dependencies: manyDependencies,
     });
   };
 
@@ -762,6 +810,8 @@ ${originalActionName} source location: ${locationInfo}`,
     propertyName,
     {
       idKey: childIdKey = "id",
+      rerunOn: scopedOneRerunOn,
+      dependencies: scopedOneDependencies,
 
       GET,
       POST,
@@ -771,9 +821,6 @@ ${originalActionName} source location: ${locationInfo}`,
     } = {},
   ) => {
     const childName = `${name}.${propertyName}`;
-
-    // setupCallbackSet: callbacks added by chained .one()/.many()
-    // Applied to each per-scope child item object when it is first created.
     const childItemSetupCallbackSet = new Set();
     const childAddItemSetup = (callback) =>
       childItemSetupCallbackSet.add(callback);
@@ -813,7 +860,11 @@ ${originalActionName} source location: ${locationInfo}`,
         set: applyProps,
       });
     });
-    const createRestActionForScopedOne = (verb, callback) => {
+    const createRestActionForScopedOne = (
+      verb,
+      callback,
+      { lifecycleCtx } = {},
+    ) => {
       const childActionName = `${childName}.${verb}`;
       const restAction = createAction(callback, {
         name: childActionName,
@@ -844,6 +895,9 @@ ${originalActionName} source location: ${locationInfo}`,
           }
           return [ownerId, props];
         },
+        completeSideEffect: (actionCompleted) => {
+          lifecycleCtx?.onComplete?.(actionCompleted);
+        },
       });
       return restAction;
     };
@@ -861,6 +915,9 @@ ${originalActionName} source location: ${locationInfo}`,
       addItemSetup: childAddItemSetup,
       createRestAction: createRestActionForScopedOne,
       params,
+      paramScope,
+      rerunOn: scopedOneRerunOn,
+      dependencies: scopedOneDependencies,
     });
     return childResource;
   };
@@ -868,6 +925,8 @@ ${originalActionName} source location: ${locationInfo}`,
     propertyName,
     {
       idKey: childIdKey = "id",
+      rerunOn: scopedManyRerunOn,
+      dependencies: scopedManyDependencies,
 
       GET,
       GET_MANY,
@@ -964,7 +1023,11 @@ ${originalActionName} source location: ${locationInfo}`,
         set: updateChildItemIdArray,
       });
     });
-    const createRestActionForScopedMany = (verb, callback, { isMany }) => {
+    const createRestActionForScopedMany = (
+      verb,
+      callback,
+      { isMany, lifecycleCtx },
+    ) => {
       if (!callback) {
         return undefined;
       }
@@ -1018,6 +1081,9 @@ ${originalActionName} source location: ${locationInfo}`,
               : childStore.upsert(rest[0]);
           return [ownerId, childItem[childIdKey]];
         },
+        completeSideEffect: (actionCompleted) => {
+          lifecycleCtx?.onComplete?.(actionCompleted);
+        },
       });
       return childAction;
     };
@@ -1040,10 +1106,30 @@ ${originalActionName} source location: ${locationInfo}`,
       addItemSetup: childAddItemSetup,
       createRestAction: createRestActionForScopedMany,
       params,
+      paramScope,
+      rerunOn: scopedManyRerunOn,
+      dependencies: scopedManyDependencies,
     });
     return childResource;
   };
 
+  resourceLifecycleManager.registerResource(stateFacade, {
+    rerunOn,
+    paramScope,
+    dependencies: dependencies || [],
+    mutableIdKeys,
+  });
+  lifecycleCtx.onComplete = (actionCompleted) => {
+    resourceLifecycleManager.onActionComplete(actionCompleted, {
+      resourceScope: stateFacade,
+    });
+  };
+  for (const actionToRegister of actionRegistrations) {
+    resourceLifecycleManager.registerAction(stateFacade, actionToRegister, {
+      resourceScope: stateFacade,
+      paramScope,
+    });
+  }
   return stateFacade;
 };
 
@@ -1054,13 +1140,17 @@ const createRestActionFactoryForRoot = (
     store, // see array_signal_store.js
   },
 ) => {
-  const createActionForRoot = (verb, restCallback, { isMany }) => {
+  const createActionForRoot = (
+    verb,
+    restCallback,
+    { isMany, lifecycleCtx },
+  ) => {
     if (!isMany) {
-      return createActionAffectingOneItem(verb, restCallback);
+      return createActionAffectingOneItem(verb, restCallback, lifecycleCtx);
     }
-    return createActionAffectingManyItems(verb, restCallback);
+    return createActionAffectingManyItems(verb, restCallback, lifecycleCtx);
   };
-  const createActionAffectingOneItem = (verb, callback) => {
+  const createActionAffectingOneItem = (verb, callback, lifecycleCtx) => {
     const applyResultToValue =
       verb === "DELETE"
         ? (itemIdOrItemProps) => {
@@ -1113,12 +1203,13 @@ ${originalActionName} source location: ${locationInfo}`,
         return applyResultToValue(result);
       },
       valueToData: (itemId) => store.select(itemId),
-      // todo: restore completeSideEffect to notify lifecycle manager
-      // completeSideEffect: (actionCompleted) => {},
+      completeSideEffect: (actionCompleted) => {
+        lifecycleCtx?.onComplete?.(actionCompleted);
+      },
     });
     return actionAffectingOneItem;
   };
-  const createActionAffectingManyItems = (verb, callback) => {
+  const createActionAffectingManyItems = (verb, callback, lifecycleCtx) => {
     const applyResultToValue =
       verb === "DELETE"
         ? (idOrMutableIdArray) => {
@@ -1141,7 +1232,7 @@ ${originalActionName} source location: ${locationInfo}`,
         return items;
       },
       completeSideEffect: (actionCompleted) => {
-        // resourceLifecycleManager.onActionComplete(actionCompleted);
+        lifecycleCtx?.onComplete?.(actionCompleted);
         if (
           verb === "DELETE" ||
           actionCompleted.valueSignal.peek().length === 0
@@ -1155,10 +1246,6 @@ ${originalActionName} source location: ${locationInfo}`,
         return syncIdArrayOnRename(store, idKey, actionCompleted.valueSignal);
       },
     });
-    // resourceLifecycleManager.registerAction(
-    //   resourceInstance,
-    //   actionAffectingManyItems,
-    // );
     return actionAffectingManyItems;
   };
 
