@@ -48,7 +48,7 @@ export const useOrderedColumns = (
 
 // Tracks a stable internal id for each column that persists across external id changes (e.g. renames).
 // Stable ids are integers assigned once and kept in sync with the current external ids.
-const createColumnOrdering = (columnIdKey, setOrderedColumnIds) => {
+export const createColumnOrdering = (columnIdKey, setOrderedColumnIds) => {
   const stableIdByExternalIdMap = new Map();
   const externalIdByStableIdMap = new Map();
   let nextStableId = 0;
@@ -58,16 +58,18 @@ const createColumnOrdering = (columnIdKey, setOrderedColumnIds) => {
   // Reconcile maps as external ids change (add/remove/rename columns).
   // Returns the ordered column objects for the current render.
   const sync = (columns, orderedColumnIds) => {
+    const externalIds = [];
     const externalIdSet = new Set();
     columnByExternalIdMap.clear();
     for (const col of columns) {
       const externalId = col[columnIdKey];
+      externalIds.push(externalId);
       externalIdSet.add(externalId);
       columnByExternalIdMap.set(externalId, col);
     }
     let currentOrderedColumnIds = orderedColumnIds;
     if (prevExternalIdSet === undefined) {
-      for (const externalId of externalIdSet) {
+      for (const externalId of externalIds) {
         const stableId = nextStableId++;
         stableIdByExternalIdMap.set(externalId, stableId);
         externalIdByStableIdMap.set(stableId, externalId);
@@ -88,6 +90,8 @@ const createColumnOrdering = (columnIdKey, setOrderedColumnIds) => {
       // Pair removed → added as renames so the same stable id is preserved
       const renameCount =
         removed.length < added.length ? removed.length : added.length;
+      const purelyRemoved = removed.slice(renameCount);
+      const purelyAdded = added.slice(renameCount);
       for (let i = 0; i < renameCount; i++) {
         const stableId = stableIdByExternalIdMap.get(removed[i]);
         stableIdByExternalIdMap.delete(removed[i]);
@@ -99,12 +103,12 @@ const createColumnOrdering = (columnIdKey, setOrderedColumnIds) => {
           id === removed[i] ? added[i] : id,
         );
       }
-      for (const id of removed.slice(renameCount)) {
+      for (const id of purelyRemoved) {
         const stableId = stableIdByExternalIdMap.get(id);
         stableIdByExternalIdMap.delete(id);
         externalIdByStableIdMap.delete(stableId);
       }
-      for (const id of added.slice(renameCount)) {
+      for (const id of purelyAdded) {
         const stableId = nextStableId++;
         stableIdByExternalIdMap.set(id, stableId);
         externalIdByStableIdMap.set(stableId, id);
