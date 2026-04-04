@@ -164,28 +164,12 @@ export const ColumnSidePanelContent = ({ tablename, column_name, columns }) => {
           </Box>
         )}
 
-        {/* Nullable */}
-        <Box flex="y" spacing="xs">
-          <Box flex spacing="s" alignY="center">
-            <Text bold uppercase size="xxs" color="#6c757d">
-              Nullable
-            </Text>
-            <Checkbox
-              appearance="toggle"
-              size="xxs"
-              checked={isNullable}
-              readOnly={isIdentity}
-              data-readonly-message="Identity columns are always NOT NULL"
-              action={async (v) => {
-                await putColumn("nullable", v ? "YES" : "NO");
-              }}
-            />
-          </Box>
-          <Text italic size="xxs" color="#868e96">
-            When on, this column accepts NULL values. When off, every row must
-            provide a value.
-          </Text>
-        </Box>
+        {/* Value required */}
+        <ValueRequiredField
+          isNullable={isNullable}
+          isIdentity={isIdentity}
+          putColumn={putColumn}
+        />
 
         {/* Datetime precision */}
         {column.datetime_precision !== null &&
@@ -274,6 +258,32 @@ export const ColumnSidePanelContent = ({ tablename, column_name, columns }) => {
           Delete column
         </Button>
       </Box>
+    </Box>
+  );
+};
+
+const ValueRequiredField = ({ isNullable, isIdentity, putColumn }) => {
+  const isRequired = !isNullable;
+
+  return (
+    <Box flex="y" spacing="xs">
+      <Box flex spacing="s" alignY="center">
+        <FieldLabel>Value required</FieldLabel>
+        <Checkbox
+          appearance="toggle"
+          size="xxs"
+          checked={isRequired}
+          readOnly={isIdentity}
+          data-readonly-message="Identity columns always require a value (NOT NULL)"
+          action={async (v) => {
+            await putColumn("nullable", v ? "NO" : "YES");
+          }}
+        />
+      </Box>
+      <FieldDescription>
+        When on, every row must provide a value for this column. Existing NULL
+        rows will be filled with a sensible default automatically.
+      </FieldDescription>
     </Box>
   );
 };

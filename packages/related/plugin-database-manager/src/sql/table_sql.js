@@ -385,6 +385,18 @@ export const updateColumn = async (
       DROP NOT NULL
     `);
   } else if (isNullableFalse) {
+    // Before enforcing NOT NULL, fill any existing NULLs with a sensible value
+    const currentColumn = await getTableColumn(sql, tablename, column_name);
+    if (currentColumn) {
+      const fillValue = generateValueForColumn(currentColumn);
+      await sql`
+        UPDATE ${sql(tablename)}
+        SET
+          ${sql(column_name)} = ${fillValue}
+        WHERE
+          ${sql(column_name)} IS NULL
+      `;
+    }
     alterClauses.push(sql`
       ALTER COLUMN ${sql(column_name)}
       SET NOT NULL
