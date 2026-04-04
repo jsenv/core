@@ -74,8 +74,8 @@ export const useRowsState = (initialRows, properties) => {
       });
     };
     const renameProperty = (oldProp, newProp) => {
-      setRows((prev) =>
-        prev.map((row) => {
+      setRows((prev) => {
+        const rowsWithNewName = prev.map((row) => {
           if (!Object.hasOwn(row, oldProp)) {
             return row;
           }
@@ -83,14 +83,28 @@ export const useRowsState = (initialRows, properties) => {
           delete row[oldProp];
           row[newProp] = value;
           return row;
-        }),
-      );
+        });
+        return rowsWithNewName;
+      });
+    };
+    const addProperty = (prop, defaultValue = "") => {
+      setRows((prev) => {
+        const rowsWithNewProp = prev.map((row) => {
+          if (Object.hasOwn(row, prop)) {
+            return row;
+          }
+          row[prop] = defaultValue;
+          return row;
+        });
+        return rowsWithNewProp;
+      });
     };
     methods = methodsRef.current = {
       setCell,
       addRow,
       deleteRow,
       renameProperty,
+      addProperty,
     };
   }
   return [rows, methods];
