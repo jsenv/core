@@ -766,7 +766,9 @@ const GeneratedField = ({ column, isGenerated, putColumn }) => {
 
   return (
     <Box flex="y" spacing="xs">
-      <Button action={() => setShowForm(true)}>Make generated column</Button>
+      <Button action={() => setShowForm(true)}>
+        Turn into generated column
+      </Button>
       <FieldDescription>
         Turn this column into a computed column driven by a SQL expression.
       </FieldDescription>
