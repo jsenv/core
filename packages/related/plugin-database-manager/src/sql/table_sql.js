@@ -375,12 +375,16 @@ export const updateColumn = async (
       ALTER COLUMN ${sql(column_name)} TYPE ${sql.unsafe(resolvedDataType)}
     `);
   }
-  if (nullable === true) {
+  const isNullableTrue =
+    nullable === true || String(nullable).toUpperCase() === "YES";
+  const isNullableFalse =
+    nullable === false || String(nullable).toUpperCase() === "NO";
+  if (isNullableTrue) {
     alterClauses.push(sql`
       ALTER COLUMN ${sql(column_name)}
       DROP NOT NULL
     `);
-  } else if (nullable === false) {
+  } else if (isNullableFalse) {
     alterClauses.push(sql`
       ALTER COLUMN ${sql(column_name)}
       SET NOT NULL

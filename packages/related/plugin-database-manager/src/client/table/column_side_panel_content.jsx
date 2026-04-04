@@ -177,7 +177,7 @@ export const ColumnSidePanelContent = ({ tablename, column_name, columns }) => {
               readOnly={isIdentity}
               data-readonly-message="Identity columns are always NOT NULL"
               action={async (v) => {
-                await putColumn("is_nullable", v);
+                await putColumn("nullable", v ? "YES" : "NO");
               }}
             />
           </Box>
