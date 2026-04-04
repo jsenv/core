@@ -13,9 +13,15 @@ import {
 
 import { TABLE_COLUMN } from "./table_store.js";
 
-export const ColumnSidePanelContent = ({ tablename, column }) => {
+export const ColumnSidePanelContent = ({ tablename, column_name, columns }) => {
+  const column = columns.find((c) => c.column_name === column_name);
+
   if (!column) {
-    return <Text>This column does not exists in the table</Text>;
+    return (
+      <Text>
+        {column_name} not found in table {tablename}
+      </Text>
+    );
   }
 
   const isNullable = String(column.is_nullable).toUpperCase() === "YES";

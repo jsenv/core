@@ -204,7 +204,9 @@ export const TableData = ({ table, rows }) => {
         {activeColumnName ? (
           <ColumnSidePanelContent
             tablename={tablename}
-            column={columns.find((c) => c.column_name === activeColumnName)}
+            column_name={activeColumnName}
+            columns={columns}
+
             // onClose={() => setSelectedColumn(null)}
           />
         ) : null}
