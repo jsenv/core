@@ -198,31 +198,31 @@ export const jsenvPluginDatabaseManager = ({
             data: column,
           };
         },
-        "DELETE /:tablename/columns/:columnName": async (request) => {
-          const { tablename, columnName } = request.params;
-          await deleteColumn(sql, tablename, columnName);
+        "DELETE /:tablename/columns/:column_name": async (request) => {
+          const { tablename, column_name } = request.params;
+          await deleteColumn(sql, tablename, column_name);
           return null;
         },
-        "PATCH /:tablename/columns/:columnName": async (request) => {
-          const { tablename, columnName } = request.params;
+        "PATCH /:tablename/columns/:column_name": async (request) => {
+          const { tablename, column_name } = request.params;
           const columnProperties = await request.json();
           const column = await updateColumn(
             sql,
             tablename,
-            columnName,
+            column_name,
             columnProperties,
           );
           return {
             data: column,
           };
         },
-        "PUT /:tablename/columns/:columnName/:columnProperty": async (
+        "PUT /:tablename/columns/:column_name/:column_property": async (
           request,
         ) => {
-          const { tablename, columnName, columnProperty } = request.params;
+          const { tablename, column_name, column_property } = request.params;
           const value = await request.json();
-          const column = await updateColumn(sql, tablename, columnName, {
-            [columnProperty]: value,
+          const column = await updateColumn(sql, tablename, column_name, {
+            [column_property]: value,
           });
           return {
             data: column,

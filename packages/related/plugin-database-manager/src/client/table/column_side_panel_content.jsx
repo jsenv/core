@@ -14,6 +14,10 @@ import {
 import { TABLE_COLUMN } from "./table_store.js";
 
 export const ColumnSidePanelContent = ({ tablename, column }) => {
+  if (!column) {
+    return <Text>This column does not exists in the table</Text>;
+  }
+
   const isNullable = String(column.is_nullable).toUpperCase() === "YES";
   const isIdentity = String(column.is_identity).toUpperCase() === "YES";
   const isGenerated = String(column.is_generated).toUpperCase() === "ALWAYS";
@@ -22,7 +26,7 @@ export const ColumnSidePanelContent = ({ tablename, column }) => {
   const putColumn = (propertyName, propertyValue) => {
     return TABLE_COLUMN.PUT({
       tablename,
-      columnName: column.column_name,
+      column_name: column.column_name,
       propertyName,
       propertyValue,
     });
@@ -53,6 +57,7 @@ export const ColumnSidePanelContent = ({ tablename, column }) => {
           </Text>
           <Input
             value={column.column_name}
+            actionAfterChange
             action={async (newName) => {
               await putColumn("column_name", newName);
             }}
@@ -88,8 +93,10 @@ export const ColumnSidePanelContent = ({ tablename, column }) => {
             <Checkbox
               appearance="toggle"
               size="xxs"
-              readOnly
               checked={isNullable}
+              action={async (v) => {
+                await putColumn("is_nullable", v);
+              }}
             />
           </Box>
           <Text italic size="xxs" color="#868e96">
@@ -144,8 +151,10 @@ export const ColumnSidePanelContent = ({ tablename, column }) => {
             <Checkbox
               appearance="toggle"
               size="xxs"
-              readOnly
               checked={isIdentity}
+              action={async (v) => {
+                await putColumn("is_identity", v);
+              }}
             />
           </Box>
           <Text italic size="xxs" color="#868e96">
@@ -177,8 +186,10 @@ export const ColumnSidePanelContent = ({ tablename, column }) => {
             <Checkbox
               appearance="toggle"
               size="xxs"
-              readOnly
               checked={isGenerated}
+              action={async (v) => {
+                await putColumn("is_generated", v);
+              }}
             />
           </Box>
           <Text italic size="xxs" color="#868e96">
@@ -205,8 +216,10 @@ export const ColumnSidePanelContent = ({ tablename, column }) => {
             <Checkbox
               appearance="toggle"
               size="xxs"
-              readOnly
               checked={isUpdatable}
+              action={async (v) => {
+                await putColumn("is_updatable", v);
+              }}
             />
           </Box>
           <Text italic size="xxs" color="#868e96">

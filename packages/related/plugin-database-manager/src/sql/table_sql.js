@@ -340,7 +340,7 @@ const SERIAL_TYPE_MAP = {
 export const updateColumn = async (
   sql,
   tablename,
-  columnName,
+  column_name,
   columnProperties,
 ) => {
   const {
@@ -353,28 +353,28 @@ export const updateColumn = async (
   if (data_type !== undefined) {
     const resolvedDataType = SERIAL_TYPE_MAP[data_type] ?? data_type;
     alterClauses.push(sql`
-      ALTER COLUMN ${sql(columnName)} TYPE ${sql.unsafe(resolvedDataType)}
+      ALTER COLUMN ${sql(column_name)} TYPE ${sql.unsafe(resolvedDataType)}
     `);
   }
   if (nullable === true) {
     alterClauses.push(sql`
-      ALTER COLUMN ${sql(columnName)}
+      ALTER COLUMN ${sql(column_name)}
       DROP NOT NULL
     `);
   } else if (nullable === false) {
     alterClauses.push(sql`
-      ALTER COLUMN ${sql(columnName)}
+      ALTER COLUMN ${sql(column_name)}
       SET NOT NULL
     `);
   }
   if (default_value === null) {
     alterClauses.push(sql`
-      ALTER COLUMN ${sql(columnName)}
+      ALTER COLUMN ${sql(column_name)}
       DROP DEFAULT
     `);
   } else if (default_value !== undefined) {
     alterClauses.push(sql`
-      ALTER COLUMN ${sql(columnName)}
+      ALTER COLUMN ${sql(column_name)}
       SET DEFAULT ${default_value}
     `);
   }
@@ -385,12 +385,12 @@ export const updateColumn = async (
       )}
     `;
   }
-  const resolvedColumnName = newColumnName ?? columnName;
-  if (newColumnName !== undefined && newColumnName !== columnName) {
+  const resolvedColumnName = newColumnName ?? column_name;
+  if (newColumnName !== undefined && newColumnName !== column_name) {
     // RENAME COLUMN cannot be combined with other ALTER COLUMN clauses
     await sql`
       ALTER TABLE ${sql(tablename)}
-      RENAME COLUMN ${sql(columnName)} TO ${sql(newColumnName)}
+      RENAME COLUMN ${sql(column_name)} TO ${sql(newColumnName)}
     `;
   }
   return getTableColumn(sql, tablename, resolvedColumnName);

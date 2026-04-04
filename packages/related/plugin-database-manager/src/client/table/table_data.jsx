@@ -101,7 +101,7 @@ export const TableData = ({ table, rows }) => {
                     action={async (value) => {
                       await TABLE_COLUMN.PUT({
                         tablename,
-                        columnName: column.column_name,
+                        column_name: column.column_name,
                         propertyName: "column_name",
                         propertyValue: value,
                       });
