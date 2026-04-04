@@ -201,7 +201,7 @@ export const TableData = ({ table, rows }) => {
           <ColumnSidePanelContent
             tablename={tablename}
             column={selectedColumn}
-            onClose={() => setSelectedColumn(null)}
+            // onClose={() => setSelectedColumn(null)}
           />
         ) : null}
       </SidePanel>

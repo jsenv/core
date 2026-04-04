@@ -1,3 +1,5 @@
+import { useState } from "preact/hooks";
+
 import { Box, Button, Checkbox, Input, Text } from "@jsenv/navi";
 
 import { TABLE_COLUMN } from "./table_store.js";
@@ -25,7 +27,10 @@ export const ColumnSidePanelContent = ({ tablename, column }) => {
       </Box>
 
       <Box flex="y" spacing="m">
-        <ColumnField label="Name">
+        <Box flex="y" spacing="xs">
+          <Text bold uppercase size="xxs" color="#6c757d">
+            Name
+          </Text>
           <Input
             defaultValue={column.column_name}
             action={async (newName) => {
@@ -39,186 +44,200 @@ export const ColumnSidePanelContent = ({ tablename, column }) => {
               }
             }}
           />
-        </ColumnField>
+        </Box>
 
-        <ColumnField label="Data type">
-          <select
-            value={column.data_type}
-            onChange={async (e) => {
-              await TABLE_COLUMN.PUT({
-                tablename,
-                columnName: column.column_name,
-                propertyName: "data_type",
-                propertyValue: e.currentTarget.value,
-              });
-            }}
-          >
-            <optgroup label="Numeric">
-              <option value="smallint">smallint</option>
-              <option value="integer">integer</option>
-              <option value="bigint">bigint</option>
-              <option value="decimal">decimal</option>
-              <option value="numeric">numeric</option>
-              <option value="real">real</option>
-              <option value="double precision">double precision</option>
-              <option value="serial">serial</option>
-              <option value="bigserial">bigserial</option>
-              <option value="money">money</option>
-            </optgroup>
-            <optgroup label="Text">
-              <option value="char">char</option>
-              <option value="varchar">varchar</option>
-              <option value="text">text</option>
-            </optgroup>
-            <optgroup label="Boolean">
-              <option value="boolean">boolean</option>
-            </optgroup>
-            <optgroup label="Date &amp; Time">
-              <option value="date">date</option>
-              <option value="time">time</option>
-              <option value="time with time zone">time with time zone</option>
-              <option value="timestamp">timestamp</option>
-              <option value="timestamp with time zone">
-                timestamp with time zone
-              </option>
-              <option value="interval">interval</option>
-            </optgroup>
-            <optgroup label="JSON">
-              <option value="json">json</option>
-              <option value="jsonb">jsonb</option>
-            </optgroup>
-            <optgroup label="Binary">
-              <option value="bytea">bytea</option>
-              <option value="bit">bit</option>
-              <option value="bit varying">bit varying</option>
-            </optgroup>
-            <optgroup label="Network">
-              <option value="cidr">cidr</option>
-              <option value="inet">inet</option>
-              <option value="macaddr">macaddr</option>
-            </optgroup>
-            <optgroup label="Other">
-              <option value="uuid">uuid</option>
-              <option value="xml">xml</option>
-              <option value="ARRAY">ARRAY</option>
-            </optgroup>
-            {!ALL_POSTGRES_DATA_TYPES.includes(column.data_type) && (
-              <optgroup label="Current">
-                <option value={column.data_type}>{column.data_type}</option>
-              </optgroup>
-            )}
-          </select>
-        </ColumnField>
+        <DataTypeField
+          // tablename={tablename}
+          column={column}
+        />
 
         {column.udt_name && column.udt_name !== column.data_type && (
-          <ColumnField
-            label="UDT name"
-            description="The underlying PostgreSQL type name (e.g. int4, varchar). Reflects the actual storage type."
-          >
+          <Box flex="y" spacing="xs">
+            <Text bold uppercase size="xxs" color="#6c757d">
+              UDT name
+            </Text>
             <Input readOnly value={column.udt_name} />
-          </ColumnField>
+          </Box>
         )}
 
-        <ColumnField
-          label="Nullable"
-          description="When checked, this column accepts NULL values. When unchecked, every row must provide a value."
-        >
-          <Checkbox
-            appearance="toggle"
-            size="s"
-            readOnly
-            checked={isNullable}
-          />
-        </ColumnField>
+        {/* Nullable */}
+        <Box flex="y" spacing="xxs">
+          <Box flex spacing="s" alignY="center">
+            <Text bold uppercase size="xxs" color="#6c757d">
+              Nullable
+            </Text>
+            <Checkbox
+              appearance="toggle"
+              size="xxs"
+              readOnly
+              checked={isNullable}
+            />
+          </Box>
+          <Text italic size="xxs" color="#868e96">
+            When on, this column accepts NULL values. When off, every row must
+            provide a value.
+          </Text>
+        </Box>
 
+        {/* Default */}
         {column.column_default !== null &&
           column.column_default !== undefined && (
-            <ColumnField
-              label="Default"
-              description="The value PostgreSQL inserts when no value is provided for this column."
-            >
+            <Box flex="y" spacing="xs">
+              <Text bold uppercase size="xxs" color="#6c757d">
+                Default
+              </Text>
               <Input readOnly value={column.column_default} />
-            </ColumnField>
+              <Text italic size="xxs" color="#868e96">
+                The value PostgreSQL inserts when no value is provided for this
+                column.
+              </Text>
+            </Box>
           )}
 
+        {/* Max length */}
         {column.character_maximum_length !== null &&
           column.character_maximum_length !== undefined && (
-            <ColumnField label="Max length">
+            <Box flex="y" spacing="xs">
+              <Text bold uppercase size="xxs" color="#6c757d">
+                Max length
+              </Text>
               <Input
                 type="number"
                 readOnly
                 value={column.character_maximum_length}
               />
-            </ColumnField>
+            </Box>
           )}
 
+        {/* Precision / Scale */}
         {column.numeric_precision !== null &&
           column.numeric_precision !== undefined &&
           column.numeric_precision_radix === 10 && (
-            <ColumnField label="Precision">
+            <Box flex="y" spacing="xs">
+              <Text bold uppercase size="xxs" color="#6c757d">
+                Precision
+              </Text>
               <Input type="number" readOnly value={column.numeric_precision} />
-            </ColumnField>
+            </Box>
           )}
 
         {column.numeric_scale !== null &&
           column.numeric_scale !== undefined &&
           column.numeric_precision_radix === 10 && (
-            <ColumnField label="Scale">
+            <Box flex="y" spacing="xs">
+              <Text bold uppercase size="xxs" color="#6c757d">
+                Scale
+              </Text>
               <Input type="number" readOnly value={column.numeric_scale} />
-            </ColumnField>
+            </Box>
           )}
 
+        {/* Datetime precision */}
         {column.datetime_precision !== null &&
           column.datetime_precision !== undefined && (
-            <ColumnField label="Datetime precision">
+            <Box flex="y" spacing="xs">
+              <Text bold uppercase size="xxs" color="#6c757d">
+                Datetime precision
+              </Text>
               <Input type="number" readOnly value={column.datetime_precision} />
-            </ColumnField>
+            </Box>
           )}
 
+        {/* Interval type */}
         {column.interval_type !== null &&
           column.interval_type !== undefined && (
-            <ColumnField label="Interval type">
+            <Box flex="y" spacing="xs">
+              <Text bold uppercase size="xxs" color="#6c757d">
+                Interval type
+              </Text>
               <Input readOnly value={column.interval_type} />
-            </ColumnField>
+            </Box>
           )}
 
-        <ColumnField
-          label="Identity"
-          description="An identity column is auto-incremented by PostgreSQL. The database generates its value — you cannot insert one manually (like SERIAL but SQL-standard)."
-        >
-          <Checkbox appearance="toggle" readOnly checked={isIdentity} />
-        </ColumnField>
+        {/* Identity */}
+        <Box flex="y" spacing="xxs">
+          <Box flex spacing="s" alignY="center">
+            <Text bold uppercase size="xxs" color="#6c757d">
+              Identity
+            </Text>
+            <Checkbox
+              appearance="toggle"
+              size="xxs"
+              readOnly
+              checked={isIdentity}
+            />
+          </Box>
+          <Text italic size="xxs" color="#868e96">
+            When on, the database auto-increments this column. You cannot insert
+            a value manually (like SERIAL but SQL-standard).
+          </Text>
+        </Box>
 
         {isIdentity && column.identity_generation && (
-          <ColumnField
-            label="Identity generation"
-            description="ALWAYS: the database always generates the value, manual inserts are rejected. BY DEFAULT: the database generates it but you can still provide an explicit value."
-          >
+          <Box flex="y" spacing="xs">
+            <Text bold uppercase size="xxs" color="#6c757d">
+              Identity generation
+            </Text>
             <Input readOnly value={column.identity_generation} />
-          </ColumnField>
+            <Text italic size="xxs" color="#868e96">
+              ALWAYS: the database always generates the value, manual inserts
+              are rejected. BY DEFAULT: it generates it but you can still
+              provide an explicit value.
+            </Text>
+          </Box>
         )}
 
-        <ColumnField
-          label="Generated"
-          description="A generated column is computed from other columns via an expression. Its value is calculated automatically and cannot be set manually."
-        >
-          <Checkbox appearance="toggle" readOnly checked={isGenerated} />
-        </ColumnField>
+        {/* Generated */}
+        <Box flex="y" spacing="xxs">
+          <Box flex spacing="s" alignY="center">
+            <Text bold uppercase size="xxs" color="#6c757d">
+              Generated
+            </Text>
+            <Checkbox
+              appearance="toggle"
+              size="xxs"
+              readOnly
+              checked={isGenerated}
+              action={() => {}}
+            />
+          </Box>
+          <Text italic size="xxs" color="#868e96">
+            When on, the column value is computed from other columns via an
+            expression and cannot be set manually.
+          </Text>
+        </Box>
 
         {isGenerated && column.generation_expression && (
-          <ColumnField label="Generation expression">
+          <Box flex="y" spacing="xs">
+            <Text bold uppercase size="xxs" color="#6c757d">
+              Generation expression
+            </Text>
             <Input readOnly value={column.generation_expression} />
-          </ColumnField>
+          </Box>
         )}
 
-        <ColumnField
-          label="Updatable"
-          description="When unchecked, this column cannot be modified after the row is created (e.g. columns in non-updatable views, or ALWAYS identity columns)."
-        >
-          <Checkbox appearance="toggle" readOnly checked={isUpdatable} />
-        </ColumnField>
+        {/* Updatable */}
+        <Box flex="y" spacing="xs">
+          <Box flex spacing="s" alignY="center">
+            <Text bold uppercase size="xxs" color="#6c757d">
+              Updatable
+            </Text>
+            <Checkbox
+              appearance="toggle"
+              size="xxs"
+              readOnly
+              checked={isUpdatable}
+              action={() => {}}
+            />
+          </Box>
+          <Text italic size="xxs" color="#868e96">
+            When off, this column cannot be modified after the row is created
+            (e.g. in non-updatable views, or ALWAYS identity columns).
+          </Text>
+        </Box>
       </Box>
 
+      {/* Delete */}
       <Box paddingTop="m" style={{ borderTop: "1px solid #e9ecef" }}>
         <Button
           data-confirm-message={`Are you sure you want to delete the column "${column.column_name}"? This will permanently remove the column and all its data.`}
@@ -236,50 +255,135 @@ export const ColumnSidePanelContent = ({ tablename, column }) => {
   );
 };
 
-const ColumnField = ({ label, description, children }) => (
-  <Box flex="y" spacing="xs">
-    <Text bold uppercase size="xxs" color="#6c757d">
-      {label}
-    </Text>
-    {children}
-    {description && (
-      <Text italic size="xxs" color="#868e96">
-        {description}
-      </Text>
-    )}
-  </Box>
-);
+const DataTypeField = ({
+  // tablename,
+  column,
+}) => {
+  const currentMaster = getMasterType(column.data_type) || "Other";
+  const [
+    selectedMaster,
+    // setSelectedMaster
+  ] = useState(currentMaster);
+  const preciseTypes = DATA_TYPE_GROUPS[selectedMaster];
 
-const ALL_POSTGRES_DATA_TYPES = [
-  "smallint",
-  "integer",
-  "bigint",
-  "decimal",
-  "numeric",
-  "real",
-  "double precision",
-  "serial",
-  "bigserial",
-  "money",
-  "char",
-  "varchar",
-  "text",
-  "boolean",
-  "date",
-  "time",
-  "time with time zone",
-  "timestamp",
-  "timestamp with time zone",
-  "interval",
-  "json",
-  "jsonb",
-  "bytea",
-  "bit",
-  "bit varying",
-  "cidr",
-  "inet",
-  "macaddr",
-  "uuid",
-  "xml",
-  "ARRAY",
-];
+  const handleMasterChange = async () => {
+    // const newMaster = e.currentTarget.value;
+    // setSelectedMaster(newMaster);
+    // const defaultType = DATA_TYPE_DEFAULTS[newMaster];
+    // await TABLE_COLUMN.PUT({
+    //   tablename,
+    //   columnName: column.column_name,
+    //   propertyName: "data_type",
+    //   propertyValue: defaultType,
+    // });
+  };
+
+  const handlePreciseChange = async () => {
+    // await TABLE_COLUMN.PUT({
+    //   tablename,
+    //   columnName: column.column_name,
+    //   propertyName: "data_type",
+    //   propertyValue: e.currentTarget.value,
+    // });
+  };
+
+  const currentPrecise = preciseTypes.includes(column.data_type)
+    ? column.data_type
+    : DATA_TYPE_DEFAULTS[selectedMaster];
+
+  return (
+    <Box flex="y" spacing="xs">
+      <Text bold uppercase size="xxs" color="#6c757d">
+        Data type
+      </Text>
+      <Box spacing="xs">
+        <select value={selectedMaster} onChange={handleMasterChange}>
+          {Object.keys(DATA_TYPE_GROUPS).map((master) => (
+            <option key={master} value={master}>
+              {master}
+            </option>
+          ))}
+          {!getMasterType(column.data_type) && (
+            <option value="Other">Other</option>
+          )}
+        </select>
+        {preciseTypes.length > 1 && (
+          <select value={currentPrecise} onChange={handlePreciseChange}>
+            {preciseTypes.map((type) => (
+              <option key={type} value={type}>
+                {type}
+              </option>
+            ))}
+          </select>
+        )}
+      </Box>
+      <Text italic size="xxs" color="#868e96">
+        {DATA_TYPE_DESCRIPTIONS[selectedMaster]}
+      </Text>
+    </Box>
+  );
+};
+
+const DATA_TYPE_GROUPS = {
+  "Number": [
+    "smallint",
+    "integer",
+    "bigint",
+    "decimal",
+    "numeric",
+    "real",
+    "double precision",
+    "serial",
+    "bigserial",
+    "money",
+  ],
+  "Text": ["char", "varchar", "text"],
+  "Boolean": ["boolean"],
+  "Date & Time": [
+    "date",
+    "time",
+    "time with time zone",
+    "timestamp",
+    "timestamp with time zone",
+    "interval",
+  ],
+  "JSON": ["json", "jsonb"],
+  "Binary": ["bytea", "bit", "bit varying"],
+  "Network": ["cidr", "inet", "macaddr"],
+  "Other": ["uuid", "xml", "ARRAY"],
+};
+
+const DATA_TYPE_DEFAULTS = {
+  "Number": "integer",
+  "Text": "text",
+  "Boolean": "boolean",
+  "Date & Time": "timestamp",
+  "JSON": "jsonb",
+  "Binary": "bytea",
+  "Network": "inet",
+  "Other": "uuid",
+};
+
+const DATA_TYPE_DESCRIPTIONS = {
+  "Number":
+    "Whole numbers (integer, bigint) or decimals (numeric, decimal). Use serial/bigserial for auto-incrementing IDs.",
+  "Text":
+    "text for unlimited length, varchar(n) for a max length limit, char(n) for fixed-length.",
+  "Boolean": "Stores true/false values.",
+  "Date & Time":
+    "timestamp for date+time, date for date only, time for time only. Add 'with time zone' to store timezone info.",
+  "JSON":
+    "jsonb (recommended) stores parsed binary JSON with indexing support. json stores raw text.",
+  "Binary":
+    "bytea for arbitrary binary data. bit/bit varying for fixed or variable-length bit strings.",
+  "Network":
+    "inet for IPv4/IPv6 addresses, cidr for network ranges, macaddr for MAC addresses.",
+  "Other": "uuid for unique identifiers, xml for XML data, ARRAY for arrays.",
+};
+
+const getMasterType = (dataType) => {
+  for (const [master, types] of Object.entries(DATA_TYPE_GROUPS)) {
+    if (types.includes(dataType)) return master;
+  }
+  return null;
+};
