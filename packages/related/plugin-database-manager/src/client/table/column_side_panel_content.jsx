@@ -1,6 +1,6 @@
 import { useState } from "preact/hooks";
 
-import { Box, Button, Checkbox, Input, Text } from "@jsenv/navi";
+import { Box, Button, Checkbox, Input, Label, Text } from "@jsenv/navi";
 
 import { TABLE_COLUMN } from "./table_store.js";
 
@@ -10,8 +10,18 @@ export const ColumnSidePanelContent = ({ tablename, column }) => {
   const isGenerated = String(column.is_generated).toUpperCase() === "ALWAYS";
   const isUpdatable = String(column.is_updatable).toUpperCase() === "YES";
 
+  const putColumn = (propertyName, propertyValue) => {
+    // TABLE_COLUMN.PUT({
+    //   tablename,
+    //   columnName: column.column_name,
+    //   propertyName,
+    //   propertyValue,
+    // });
+  };
+
   return (
     <Box flex="y" spacing="l" padding="l">
+      {/* Header */}
       <Box
         flex="y"
         spacing="xs"
@@ -27,6 +37,7 @@ export const ColumnSidePanelContent = ({ tablename, column }) => {
       </Box>
 
       <Box flex="y" spacing="m">
+        {/* Name */}
         <Box flex="y" spacing="xs">
           <Text bold uppercase size="xxs" color="#6c757d">
             Name
@@ -35,43 +46,39 @@ export const ColumnSidePanelContent = ({ tablename, column }) => {
             defaultValue={column.column_name}
             action={async (newName) => {
               if (newName && newName !== column.column_name) {
-                await TABLE_COLUMN.PUT({
-                  tablename,
-                  columnName: column.column_name,
-                  propertyName: "column_name",
-                  propertyValue: newName,
-                });
+                await putColumn("column_name", newName);
               }
             }}
           />
+          <Text italic size="xxs" color="#868e96">
+            The identifier used to reference this column in queries.
+          </Text>
         </Box>
 
-        <DataTypeField
-          // tablename={tablename}
-          column={column}
-        />
+        {/* Data type */}
+        <DataTypeField column={column} putColumn={putColumn} />
 
+        {/* UDT name */}
         {column.udt_name && column.udt_name !== column.data_type && (
           <Box flex="y" spacing="xs">
             <Text bold uppercase size="xxs" color="#6c757d">
               UDT name
             </Text>
             <Input readOnly value={column.udt_name} />
+            <Text italic size="xxs" color="#868e96">
+              The underlying PostgreSQL type name (e.g. int4, varchar). Reflects
+              the actual storage type.
+            </Text>
           </Box>
         )}
 
         {/* Nullable */}
-        <Box flex="y" spacing="xxs">
-          <Box flex spacing="s" alignY="center">
+        <Box flex="y" spacing="xs">
+          <Box spacing="s" alignY="center">
             <Text bold uppercase size="xxs" color="#6c757d">
               Nullable
             </Text>
-            <Checkbox
-              appearance="toggle"
-              size="xxs"
-              checked={isNullable}
-              action={() => {}}
-            />
+            <Checkbox appearance="toggle" readOnly checked={isNullable} />
           </Box>
           <Text italic size="xxs" color="#868e96">
             When on, this column accepts NULL values. When off, every row must
@@ -91,44 +98,6 @@ export const ColumnSidePanelContent = ({ tablename, column }) => {
                 The value PostgreSQL inserts when no value is provided for this
                 column.
               </Text>
-            </Box>
-          )}
-
-        {/* Max length */}
-        {column.character_maximum_length !== null &&
-          column.character_maximum_length !== undefined && (
-            <Box flex="y" spacing="xs">
-              <Text bold uppercase size="xxs" color="#6c757d">
-                Max length
-              </Text>
-              <Input
-                type="number"
-                readOnly
-                value={column.character_maximum_length}
-              />
-            </Box>
-          )}
-
-        {/* Precision / Scale */}
-        {column.numeric_precision !== null &&
-          column.numeric_precision !== undefined &&
-          column.numeric_precision_radix === 10 && (
-            <Box flex="y" spacing="xs">
-              <Text bold uppercase size="xxs" color="#6c757d">
-                Precision
-              </Text>
-              <Input type="number" readOnly value={column.numeric_precision} />
-            </Box>
-          )}
-
-        {column.numeric_scale !== null &&
-          column.numeric_scale !== undefined &&
-          column.numeric_precision_radix === 10 && (
-            <Box flex="y" spacing="xs">
-              <Text bold uppercase size="xxs" color="#6c757d">
-                Scale
-              </Text>
-              <Input type="number" readOnly value={column.numeric_scale} />
             </Box>
           )}
 
@@ -155,17 +124,12 @@ export const ColumnSidePanelContent = ({ tablename, column }) => {
           )}
 
         {/* Identity */}
-        <Box flex="y" spacing="xxs">
-          <Box flex spacing="s" alignY="center">
+        <Box flex="y" spacing="xs">
+          <Box spacing="s" alignY="center">
             <Text bold uppercase size="xxs" color="#6c757d">
               Identity
             </Text>
-            <Checkbox
-              appearance="toggle"
-              size="xxs"
-              checked={isIdentity}
-              action={() => {}}
-            />
+            <Checkbox appearance="toggle" readOnly checked={isIdentity} />
           </Box>
           <Text italic size="xxs" color="#868e96">
             When on, the database auto-increments this column. You cannot insert
@@ -188,17 +152,12 @@ export const ColumnSidePanelContent = ({ tablename, column }) => {
         )}
 
         {/* Generated */}
-        <Box flex="y" spacing="xxs">
-          <Box flex spacing="s" alignY="center">
+        <Box flex="y" spacing="xs">
+          <Box spacing="s" alignY="center">
             <Text bold uppercase size="xxs" color="#6c757d">
               Generated
             </Text>
-            <Checkbox
-              appearance="toggle"
-              size="xxs"
-              checked={isGenerated}
-              action={() => {}}
-            />
+            <Checkbox appearance="toggle" readOnly checked={isGenerated} />
           </Box>
           <Text italic size="xxs" color="#868e96">
             When on, the column value is computed from other columns via an
@@ -217,16 +176,11 @@ export const ColumnSidePanelContent = ({ tablename, column }) => {
 
         {/* Updatable */}
         <Box flex="y" spacing="xs">
-          <Box flex spacing="s" alignY="center">
+          <Box spacing="s" alignY="center">
             <Text bold uppercase size="xxs" color="#6c757d">
               Updatable
             </Text>
-            <Checkbox
-              appearance="toggle"
-              size="xxs"
-              checked={isUpdatable}
-              action={() => {}}
-            />
+            <Checkbox appearance="toggle" readOnly checked={isUpdatable} />
           </Box>
           <Text italic size="xxs" color="#868e96">
             When off, this column cannot be modified after the row is created
@@ -253,86 +207,400 @@ export const ColumnSidePanelContent = ({ tablename, column }) => {
   );
 };
 
-const DataTypeField = ({
-  // tablename,
-  column,
-}) => {
+const FieldLabel = ({ children }) => (
+  <Text bold uppercase size="xxs" color="#6c757d">
+    {children}
+  </Text>
+);
+const FieldDescription = ({ children }) => (
+  <Text italic size="xxs" color="#868e96">
+    {children}
+  </Text>
+);
+
+// ─── Data type field ──────────────────────────────────────────────────────────
+
+const DataTypeField = ({ column, putColumn }) => {
   const currentMaster = getMasterType(column.data_type) || "Other";
   const [selectedMaster, setSelectedMaster] = useState(currentMaster);
-  const preciseTypes = DATA_TYPE_GROUPS[selectedMaster];
 
   const handleMasterChange = async (e) => {
     const newMaster = e.currentTarget.value;
     setSelectedMaster(newMaster);
-    // const defaultType = DATA_TYPE_DEFAULTS[newMaster];
-    // await TABLE_COLUMN.PUT({
-    //   tablename,
-    //   columnName: column.column_name,
-    //   propertyName: "data_type",
-    //   propertyValue: defaultType,
-    // });
+    await putColumn("data_type", DATA_TYPE_DEFAULTS[newMaster]);
   };
-
-  const handlePreciseChange = async () => {
-    // await TABLE_COLUMN.PUT({
-    //   tablename,
-    //   columnName: column.column_name,
-    //   propertyName: "data_type",
-    //   propertyValue: e.currentTarget.value,
-    // });
-  };
-
-  const currentPrecise = preciseTypes.includes(column.data_type)
-    ? column.data_type
-    : DATA_TYPE_DEFAULTS[selectedMaster];
 
   return (
     <Box flex="y" spacing="xs">
-      <Text bold uppercase size="xxs" color="#6c757d">
-        Data type
-      </Text>
-      <Box spacing="xs">
-        <select value={selectedMaster} onChange={handleMasterChange}>
-          {Object.keys(DATA_TYPE_GROUPS).map((master) => (
-            <option key={master} value={master}>
-              {master}
-            </option>
-          ))}
-          {!getMasterType(column.data_type) && (
-            <option value="Other">Other</option>
-          )}
-        </select>
-        {preciseTypes.length > 1 && (
-          <select value={currentPrecise} onChange={handlePreciseChange}>
-            {preciseTypes.map((type) => (
-              <option key={type} value={type}>
-                {type}
-              </option>
-            ))}
-          </select>
+      <FieldLabel>Data type</FieldLabel>
+      <select value={selectedMaster} onChange={handleMasterChange}>
+        {Object.keys(DATA_TYPE_GROUPS).map((master) => (
+          <option key={master} value={master}>
+            {master}
+          </option>
+        ))}
+        {!getMasterType(column.data_type) && (
+          <option value="Other">Other</option>
         )}
-      </Box>
-      <Text italic size="xxs" color="#868e96">
-        {DATA_TYPE_DESCRIPTIONS[selectedMaster]}
-      </Text>
+      </select>
+      <DataTypeOptions
+        master={selectedMaster}
+        column={column}
+        putColumn={putColumn}
+      />
     </Box>
   );
 };
 
-const DATA_TYPE_GROUPS = {
-  "Number": [
-    "smallint",
-    "integer",
-    "bigint",
+const DataTypeOptions = ({ master, column, putColumn }) => {
+  if (master === "Text") {
+    return <TextTypeOptions column={column} putColumn={putColumn} />;
+  }
+  if (master === "Number") {
+    return <NumberTypeOptions column={column} putColumn={putColumn} />;
+  }
+  if (master === "Date & Time") {
+    return <DateTimeTypeOptions column={column} putColumn={putColumn} />;
+  }
+  if (master === "Binary") {
+    return <BinaryTypeOptions column={column} putColumn={putColumn} />;
+  }
+  const description = DATA_TYPE_DESCRIPTIONS[master];
+  if (description) {
+    return <FieldDescription>{description}</FieldDescription>;
+  }
+  return null;
+};
+
+// Text: text (unlimited) | varchar(n) (variable length) | char(n) (fixed length)
+const TextTypeOptions = ({ column, putColumn }) => {
+  const currentLength = column.character_maximum_length ?? null;
+  const isVariable = column.data_type !== "char";
+  const [length, setLength] = useState(
+    currentLength ? String(currentLength) : "",
+  );
+  const [variable, setVariable] = useState(isVariable);
+
+  const applyType = async (newLength, newVariable) => {
+    let type;
+    if (!newLength) {
+      type = "text";
+    } else if (newVariable) {
+      type = `varchar(${newLength})`;
+    } else {
+      type = `char(${newLength})`;
+    }
+    await putColumn("data_type", type);
+  };
+
+  return (
+    <Box flex="y" spacing="s">
+      <Box flex="y" spacing="xs">
+        <FieldLabel>Max length</FieldLabel>
+        <Input
+          type="number"
+          placeholder="Unlimited"
+          value={length}
+          action={async (newValue) => {
+            const newLength = newValue
+              ? String(Math.floor(Number(newValue)))
+              : "";
+            setLength(newLength);
+            await applyType(newLength, variable);
+          }}
+        />
+        <FieldDescription>
+          Leave empty for unlimited text. Set a value to enforce a max length.
+        </FieldDescription>
+      </Box>
+      {length && (
+        <Box flex="y" spacing="xs">
+          <Box spacing="s" alignY="center">
+            <FieldLabel>Variable length</FieldLabel>
+            <Checkbox
+              appearance="toggle"
+              checked={variable}
+              action={async (newChecked) => {
+                setVariable(newChecked);
+                await applyType(length, newChecked);
+              }}
+            />
+          </Box>
+          <FieldDescription>
+            On: varchar — stores up to max length (saves space). Off: char —
+            always pads to exact length.
+          </FieldDescription>
+        </Box>
+      )}
+    </Box>
+  );
+};
+
+// Number: integer types (no extra config) vs decimal/numeric (precision + scale)
+const NumberTypeOptions = ({ column, putColumn }) => {
+  const isDecimal =
+    column.data_type === "decimal" || column.data_type === "numeric";
+  const integerTypes = ["smallint", "integer", "bigint", "serial", "bigserial"];
+  const decimalTypes = [
     "decimal",
     "numeric",
     "real",
     "double precision",
+    "money",
+  ];
+  const currentGroup = decimalTypes.includes(column.data_type)
+    ? "decimal"
+    : "integer";
+  const [group, setGroup] = useState(currentGroup);
+
+  const handleGroupChange = async (e) => {
+    const newGroup = e.currentTarget.value;
+    setGroup(newGroup);
+    await putColumn(
+      "data_type",
+      newGroup === "integer" ? "integer" : "numeric",
+    );
+  };
+
+  return (
+    <Box flex="y" spacing="s">
+      <select value={group} onChange={handleGroupChange}>
+        <option value="integer">Integer (whole numbers)</option>
+        <option value="decimal">Decimal (fractional numbers)</option>
+      </select>
+
+      {group === "integer" && (
+        <Box flex="y" spacing="xs">
+          <FieldLabel>Size</FieldLabel>
+          <select
+            value={
+              integerTypes.includes(column.data_type)
+                ? column.data_type
+                : "integer"
+            }
+            onChange={async (e) => {
+              await putColumn("data_type", e.currentTarget.value);
+            }}
+          >
+            <option value="smallint">smallint — 2 bytes, up to 32 767</option>
+            <option value="integer">integer — 4 bytes, up to 2 billion</option>
+            <option value="bigint">bigint — 8 bytes, very large numbers</option>
+            <option value="serial">serial — auto-increment integer</option>
+            <option value="bigserial">bigserial — auto-increment bigint</option>
+          </select>
+        </Box>
+      )}
+
+      {group === "decimal" && (
+        <Box flex="y" spacing="xs">
+          <FieldLabel>Type</FieldLabel>
+          <select
+            value={
+              decimalTypes.includes(column.data_type)
+                ? column.data_type
+                : "numeric"
+            }
+            onChange={async (e) => {
+              await putColumn("data_type", e.currentTarget.value);
+            }}
+          >
+            <option value="numeric">
+              numeric — exact precision (configurable)
+            </option>
+            <option value="decimal">decimal — alias for numeric</option>
+            <option value="real">real — 4-byte floating point</option>
+            <option value="double precision">
+              double precision — 8-byte floating point
+            </option>
+            <option value="money">
+              money — currency with fixed 2 decimal places
+            </option>
+          </select>
+          {(isDecimal || column.data_type === "numeric") && (
+            <Box flex="y" spacing="xs">
+              <FieldDescription>
+                Optional precision (total digits) and scale (decimal digits) for
+                numeric/decimal.
+              </FieldDescription>
+              <Box spacing="s">
+                <Box flex="y" spacing="xs">
+                  <FieldLabel>Precision</FieldLabel>
+                  <Input
+                    type="number"
+                    placeholder="Any"
+                    readOnly
+                    value={column.numeric_precision ?? ""}
+                  />
+                </Box>
+                <Box flex="y" spacing="xs">
+                  <FieldLabel>Scale</FieldLabel>
+                  <Input
+                    type="number"
+                    placeholder="0"
+                    readOnly
+                    value={column.numeric_scale ?? ""}
+                  />
+                </Box>
+              </Box>
+            </Box>
+          )}
+        </Box>
+      )}
+    </Box>
+  );
+};
+
+// Date & Time: base type select + optional timezone toggle
+const DateTimeTypeOptions = ({ column, putColumn }) => {
+  const baseType = getDateTimeBase(column.data_type);
+  const hasTimezone = column.data_type.includes("with time zone");
+
+  const applyType = async (newBase, newTimezone) => {
+    let type = newBase;
+    if (newTimezone && (newBase === "time" || newBase === "timestamp")) {
+      type = `${newBase} with time zone`;
+    }
+    await putColumn("data_type", type);
+  };
+
+  return (
+    <Box flex="y" spacing="s">
+      <select
+        value={baseType}
+        onChange={async (e) => {
+          await applyType(e.currentTarget.value, hasTimezone);
+        }}
+      >
+        <option value="date">date — calendar date (no time)</option>
+        <option value="time">time — time of day (no date)</option>
+        <option value="timestamp">timestamp — date and time</option>
+        <option value="interval">interval — duration / time span</option>
+      </select>
+      {(baseType === "time" || baseType === "timestamp") && (
+        <Box flex="y" spacing="xs">
+          <Box spacing="s" alignY="center">
+            <FieldLabel>With timezone</FieldLabel>
+            <Checkbox
+              appearance="toggle"
+              checked={hasTimezone}
+              action={async (newChecked) => {
+                await applyType(baseType, newChecked);
+              }}
+            />
+          </Box>
+          <FieldDescription>
+            When on, stores the timezone offset alongside the value. Recommended
+            for user-facing timestamps.
+          </FieldDescription>
+        </Box>
+      )}
+    </Box>
+  );
+};
+
+const getDateTimeBase = (dataType) => {
+  if (dataType.startsWith("timestamp")) return "timestamp";
+  if (dataType.startsWith("time")) return "time";
+  return dataType; // date, interval
+};
+
+// Binary: bytea (raw bytes) or bit/bit varying (bit strings with length)
+const BinaryTypeOptions = ({ column, putColumn }) => {
+  const isBit =
+    column.data_type === "bit" || column.data_type === "bit varying";
+  const currentLength = column.character_maximum_length ?? null;
+  const isVariable = column.data_type === "bit varying";
+  const [useBit, setUseBit] = useState(isBit);
+  const [length, setLength] = useState(
+    currentLength ? String(currentLength) : "1",
+  );
+  const [variable, setVariable] = useState(isVariable);
+
+  const applyBitType = async (newLength, newVariable) => {
+    const type = newVariable
+      ? `bit varying(${newLength})`
+      : `bit(${newLength})`;
+    await putColumn("data_type", type);
+  };
+
+  return (
+    <Box flex="y" spacing="s">
+      <Box flex="y" spacing="xs">
+        <Box spacing="s" alignY="center">
+          <FieldLabel>Bit string</FieldLabel>
+          <Checkbox
+            appearance="toggle"
+            checked={useBit}
+            action={async (newChecked) => {
+              setUseBit(newChecked);
+              if (!newChecked) {
+                await putColumn("data_type", "bytea");
+              } else {
+                await applyBitType(length, variable);
+              }
+            }}
+          />
+        </Box>
+        <FieldDescription>
+          Off: bytea stores arbitrary binary data. On: bit string stores a
+          sequence of 0s and 1s.
+        </FieldDescription>
+      </Box>
+      {useBit && (
+        <>
+          <Box flex="y" spacing="xs">
+            <FieldLabel>Length</FieldLabel>
+            <Input
+              type="number"
+              value={length}
+              action={async (newValue) => {
+                const newLength = newValue
+                  ? String(Math.floor(Number(newValue)))
+                  : "1";
+                setLength(newLength);
+                await applyBitType(newLength, variable);
+              }}
+            />
+          </Box>
+          <Box flex="y" spacing="xs">
+            <Box spacing="s" alignY="center">
+              <FieldLabel>Variable length</FieldLabel>
+              <Checkbox
+                appearance="toggle"
+                checked={variable}
+                action={async (newChecked) => {
+                  setVariable(newChecked);
+                  await applyBitType(length, newChecked);
+                }}
+              />
+            </Box>
+            <FieldDescription>
+              On: bit varying — up to max length. Off: bit — exactly that many
+              bits.
+            </FieldDescription>
+          </Box>
+        </>
+      )}
+    </Box>
+  );
+};
+
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const DATA_TYPE_GROUPS = {
+  "Text": ["text", "varchar", "char"],
+  "Number": [
+    "smallint",
+    "integer",
+    "bigint",
     "serial",
     "bigserial",
+    "decimal",
+    "numeric",
+    "real",
+    "double precision",
     "money",
   ],
-  "Text": ["char", "varchar", "text"],
   "Boolean": ["boolean"],
   "Date & Time": [
     "date",
@@ -349,8 +617,8 @@ const DATA_TYPE_GROUPS = {
 };
 
 const DATA_TYPE_DEFAULTS = {
-  "Number": "integer",
   "Text": "text",
+  "Number": "integer",
   "Boolean": "boolean",
   "Date & Time": "timestamp",
   "JSON": "jsonb",
@@ -360,25 +628,18 @@ const DATA_TYPE_DEFAULTS = {
 };
 
 const DATA_TYPE_DESCRIPTIONS = {
-  "Number":
-    "Whole numbers (integer, bigint) or decimals (numeric, decimal). Use serial/bigserial for auto-incrementing IDs.",
-  "Text":
-    "text for unlimited length, varchar(n) for a max length limit, char(n) for fixed-length.",
-  "Boolean": "Stores true/false values.",
-  "Date & Time":
-    "timestamp for date+time, date for date only, time for time only. Add 'with time zone' to store timezone info.",
-  "JSON":
-    "jsonb (recommended) stores parsed binary JSON with indexing support. json stores raw text.",
-  "Binary":
-    "bytea for arbitrary binary data. bit/bit varying for fixed or variable-length bit strings.",
-  "Network":
-    "inet for IPv4/IPv6 addresses, cidr for network ranges, macaddr for MAC addresses.",
-  "Other": "uuid for unique identifiers, xml for XML data, ARRAY for arrays.",
+  Boolean: "Stores true/false values.",
+  JSON: "jsonb (recommended) stores binary JSON with index support. json stores raw text.",
+  Network:
+    "inet for IP addresses, cidr for network ranges, macaddr for MAC addresses.",
+  Other:
+    "uuid for unique identifiers, xml for XML data, ARRAY for typed arrays.",
 };
 
 const getMasterType = (dataType) => {
+  const base = dataType.split("(")[0].trim(); // strip char(n) → char
   for (const [master, types] of Object.entries(DATA_TYPE_GROUPS)) {
-    if (types.includes(dataType)) return master;
+    if (types.includes(dataType) || types.includes(base)) return master;
   }
   return null;
 };
