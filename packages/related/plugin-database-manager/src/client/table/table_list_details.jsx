@@ -9,7 +9,7 @@ import {
   tableListHeightSignal,
   tableListOpenSignal,
 } from "./table_list_state.js";
-import { TABLE, useTableArrayInStore } from "./table_store.js";
+import { TABLE, useTableArrayInStore } from "./table_state.js";
 
 export const TableListDetails = () => {
   const [resizable, setResizable] = useState(false);

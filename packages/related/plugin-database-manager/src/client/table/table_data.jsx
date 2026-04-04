@@ -43,7 +43,7 @@ import {
   TABLE_COLUMN,
   TABLE_ROW,
   tableColumnNameSignal,
-} from "./table_store.js";
+} from "./table_state.js";
 
 import.meta.css = /* css */ `
   .table_data_actions {

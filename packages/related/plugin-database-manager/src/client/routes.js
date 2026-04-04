@@ -33,7 +33,7 @@ import {
   TABLE,
   TABLE_ROW,
   tableColumnNameSignal,
-} from "./table/table_store.js";
+} from "./table/table_state.js";
 
 setBaseUrl(window.DB_MANAGER_CONFIG.pathname);
 

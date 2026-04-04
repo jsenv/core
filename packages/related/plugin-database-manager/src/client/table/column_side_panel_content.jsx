@@ -13,7 +13,7 @@ import {
 } from "@jsenv/navi";
 
 import { TABLE_INDEX_ROUTE } from "../routes.js";
-import { TABLE_COLUMN } from "./table_store.js";
+import { TABLE_COLUMN } from "./table_state.js";
 
 export const ColumnSidePanelContent = ({ tablename, column_name, columns }) => {
   const column = columns.find((c) => c.column_name === column_name);

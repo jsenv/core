@@ -31,7 +31,7 @@ import { SettingsSvg } from "../svg/settings_svg.jsx";
 import { TableData } from "./table_data.jsx";
 import { TableSvg } from "./table_icons.jsx";
 import { TableSettings } from "./table_settings.jsx";
-import { TABLE } from "./table_store.js";
+import { TABLE } from "./table_state.js";
 
 export const TablePage = ({ table }) => {
   const tablename = table.tablename;
