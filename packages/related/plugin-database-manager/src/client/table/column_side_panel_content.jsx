@@ -1,4 +1,4 @@
-import { Box, Button, Checkbox, Input, Label, Text } from "@jsenv/navi";
+import { Box, Button, Checkbox, Input, Text } from "@jsenv/navi";
 
 import { TABLE_COLUMN } from "./table_store.js";
 
@@ -123,10 +123,12 @@ export const ColumnSidePanelContent = ({ tablename, column }) => {
           label="Nullable"
           description="When checked, this column accepts NULL values. When unchecked, every row must provide a value."
         >
-          <Label spacing="s">
-            <Checkbox readOnly checked={isNullable} />
-            {isNullable ? "Accepts NULL" : "Required (NOT NULL)"}
-          </Label>
+          <Checkbox
+            appearance="toggle"
+            size="s"
+            readOnly
+            checked={isNullable}
+          />
         </ColumnField>
 
         {column.column_default !== null &&
@@ -184,12 +186,7 @@ export const ColumnSidePanelContent = ({ tablename, column }) => {
           label="Identity"
           description="An identity column is auto-incremented by PostgreSQL. The database generates its value — you cannot insert one manually (like SERIAL but SQL-standard)."
         >
-          <Label spacing="s">
-            <Checkbox readOnly checked={isIdentity} />
-            {isIdentity
-              ? "Auto-incremented by the database"
-              : "Not an identity column"}
-          </Label>
+          <Checkbox appearance="toggle" readOnly checked={isIdentity} />
         </ColumnField>
 
         {isIdentity && column.identity_generation && (
@@ -205,10 +202,7 @@ export const ColumnSidePanelContent = ({ tablename, column }) => {
           label="Generated"
           description="A generated column is computed from other columns via an expression. Its value is calculated automatically and cannot be set manually."
         >
-          <Label spacing="s">
-            <Checkbox readOnly checked={isGenerated} />
-            {isGenerated ? "Computed from an expression" : "Stored directly"}
-          </Label>
+          <Checkbox appearance="toggle" readOnly checked={isGenerated} />
         </ColumnField>
 
         {isGenerated && column.generation_expression && (
@@ -221,10 +215,7 @@ export const ColumnSidePanelContent = ({ tablename, column }) => {
           label="Updatable"
           description="When unchecked, this column cannot be modified after the row is created (e.g. columns in non-updatable views, or ALWAYS identity columns)."
         >
-          <Label spacing="s">
-            <Checkbox readOnly checked={isUpdatable} />
-            {isUpdatable ? "Can be updated" : "Read-only after insert"}
-          </Label>
+          <Checkbox appearance="toggle" readOnly checked={isUpdatable} />
         </ColumnField>
       </Box>
 
