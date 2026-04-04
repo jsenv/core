@@ -67,8 +67,9 @@ export const arraySignalStore = (
   });
 
   const itemPropertiesObserverSet = new Set();
-  const observeItemProperties = (itemSignal, callback) => {
-    const observer = { itemSignal, callback };
+  const observeItemProperties = (itemSignal, callback, { properties } = {}) => {
+    const propertiesSet = properties ? new Set(properties) : null;
+    const observer = { itemSignal, callback, propertiesSet };
     itemPropertiesObserverSet.add(observer);
     return () => {
       itemPropertiesObserverSet.delete(observer);
@@ -76,10 +77,12 @@ export const arraySignalStore = (
   };
 
   const propertiesObserverSet = new Set();
-  const observeProperties = (callback) => {
-    propertiesObserverSet.add(callback);
+  const observeProperties = (callback, { properties } = {}) => {
+    const propertiesSet = properties ? new Set(properties) : null;
+    const observer = { callback, propertiesSet };
+    propertiesObserverSet.add(observer);
     return () => {
-      propertiesObserverSet.delete(callback);
+      propertiesObserverSet.delete(observer);
     };
   };
 
@@ -230,20 +233,49 @@ ${[idKey, ...uniqueKeys].join(", ")}`,
     const mutationsMap = new Map(); // Map<itemId, propertyMutations>
     const triggerPropertyMutations = () => {
       for (const itemPropertiesObserver of itemPropertiesObserverSet) {
-        const { itemSignal, callback } = itemPropertiesObserver;
+        const { itemSignal, callback, propertiesSet } = itemPropertiesObserver;
         const watchedItem = itemSignal.peek();
         if (!watchedItem) {
           continue;
         }
         const itemMutations = mutationsMap.get(watchedItem[idKey]);
         if (itemMutations) {
-          callback(itemMutations);
+          if (propertiesSet) {
+            let hasRelevantMutation = false;
+            for (const p of propertiesSet) {
+              if (Object.hasOwn(itemMutations, p)) {
+                hasRelevantMutation = true;
+                break;
+              }
+            }
+            if (hasRelevantMutation) {
+              callback(itemMutations);
+            }
+          } else {
+            callback(itemMutations);
+          }
         }
       }
       if (propertiesObserverSet.size) {
-        const mutations = Array.from(mutationsMap.values());
+        const allMutations = Array.from(mutationsMap.values());
         for (const propertiesObserver of propertiesObserverSet) {
-          propertiesObserver(mutations);
+          const { callback, propertiesSet } = propertiesObserver;
+          if (propertiesSet) {
+            const filteredMutations = [];
+            for (const propertyMutations of allMutations) {
+              for (const p of propertiesSet) {
+                if (Object.hasOwn(propertyMutations, p)) {
+                  filteredMutations.push(propertyMutations);
+                  break;
+                }
+              }
+            }
+            if (filteredMutations.length > 0) {
+              callback(filteredMutations);
+            }
+          } else {
+            callback(allMutations);
+          }
         }
       }
     };
@@ -555,17 +587,20 @@ ${[idKey, ...uniqueKeys].join(", ")}`,
       });
     }
     // When the id itself is renamed, keep itemIdSignal in sync.
-    observeProperties((mutationsArray) => {
-      const currentId = itemIdSignal.peek();
-      if (currentId === null) return;
-      for (const mutations of mutationsArray) {
-        const mutation = mutations[idKey];
-        if (mutation && mutation.oldValue === currentId) {
-          itemIdSignal.value = mutation.newValue;
-          break;
+    observeProperties(
+      (mutationsArray) => {
+        const currentId = itemIdSignal.peek();
+        if (currentId === null) return;
+        for (const mutations of mutationsArray) {
+          const mutation = mutations[idKey];
+          if (mutation.oldValue === currentId) {
+            itemIdSignal.value = mutation.newValue;
+            break;
+          }
         }
-      }
-    });
+      },
+      { properties: [idKey] },
+    );
     return computed(() => {
       return select(itemIdSignal.value);
     });
@@ -603,24 +638,28 @@ export const syncStoreToSignals = (store, propertyToSignalMap) => {
     propertyToSignalMap,
   )) {
     if (propertyName === idKey) {
-      store.observeProperties((mutationsArray) => {
-        for (const mutations of mutationsArray) {
-          const mutation = mutations[idKey];
-          if (mutation && mutation.oldValue === targetSignal.peek()) {
-            targetSignal.value = mutation.newValue;
-            break;
+      store.observeProperties(
+        (mutationsArray) => {
+          for (const mutations of mutationsArray) {
+            const mutation = mutations[idKey];
+            if (mutation.oldValue === targetSignal.peek()) {
+              targetSignal.value = mutation.newValue;
+              break;
+            }
           }
-        }
-      });
+        },
+        { properties: [idKey] },
+      );
       continue;
     }
     const itemSignal = store.signalForKey(propertyName, targetSignal);
-    store.observeItemProperties(itemSignal, (propertyMutations) => {
-      const mutation = propertyMutations[propertyName];
-      if (!mutation) {
-        return;
-      }
-      targetSignal.value = mutation.newValue;
-    });
+    store.observeItemProperties(
+      itemSignal,
+      (propertyMutations) => {
+        const mutation = propertyMutations[propertyName];
+        targetSignal.value = mutation.newValue;
+      },
+      { properties: [propertyName] },
+    );
   }
 };
