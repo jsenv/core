@@ -107,6 +107,7 @@ export const SidePanel = ({
 }) => {
   const panelDialogRef = useRef(null);
   const [phase, setPhase] = useState(isOpen ? "open" : "closed");
+  const previousFocusRef = useRef(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -118,6 +119,7 @@ export const SidePanel = ({
 
   useEffect(() => {
     if (phase === "opening" && panelDialogRef.current) {
+      previousFocusRef.current = document.activeElement;
       panelDialogRef.current.focus();
     }
   }, [phase]);
@@ -138,7 +140,16 @@ export const SidePanel = ({
 
   const onAnimationEnd = () => {
     if (phase === "opening") setPhase("open");
-    if (phase === "closing") setPhase("closed");
+    if (phase === "closing") {
+      setPhase("closed");
+      const prev = previousFocusRef.current;
+      if (prev && document.contains(prev)) {
+        prev.focus({
+          preventScroll: true,
+        });
+      }
+      previousFocusRef.current = null;
+    }
   };
 
   return createPortal(
