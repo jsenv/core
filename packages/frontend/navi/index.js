@@ -21,7 +21,10 @@ export {
   useArraySignalMembership,
 } from "./src/state/array_signal_membership.js";
 export { localStorageSignal } from "./src/state/local_storage_signal.js";
-export { resource } from "./src/state/rest/resource_graph.js";
+export {
+  resource,
+  syncResourceToSignals,
+} from "./src/state/rest/resource_graph.js";
 export { stateSignal } from "./src/state/state_signal.js";
 export { useSignalSync } from "./src/state/use_signal_sync.js";
 export { useStateArray } from "./src/state/use_state_array.js";

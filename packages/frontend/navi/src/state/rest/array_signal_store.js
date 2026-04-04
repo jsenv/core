@@ -229,15 +229,12 @@ ${[idKey, ...uniqueKeys].join(", ")}`,
   const upsert = (...args) => {
     const mutationsMap = new Map(); // Map<itemId, propertyMutations>
     const triggerPropertyMutations = () => {
-      // we call at the end so that itemWithProps and arraySignal.value was set too
       for (const itemPropertiesObserver of itemPropertiesObserverSet) {
         const { itemSignal, callback } = itemPropertiesObserver;
         const watchedItem = itemSignal.peek();
         if (!watchedItem) {
           continue;
         }
-
-        // Check if this item has mutations
         const itemMutations = mutationsMap.get(watchedItem[idKey]);
         if (itemMutations) {
           callback(itemMutations);
@@ -290,7 +287,7 @@ ${[idKey, ...uniqueKeys].join(", ")}`,
         return item;
       }
 
-      // Store mutations for this specific item
+      // Store mutations keyed by old id
       mutationsMap.set(item[idKey], propertyMutations);
       return itemWithProps;
     };
@@ -505,7 +502,18 @@ ${[idKey, ...uniqueKeys].join(", ")}`,
     return null;
   };
 
-  const signalForUniqueKey = (uniqueKey, uniqueKeyValueSignal) => {
+  const signalForKey = (key, keyValueSignal) => {
+    if (key === idKey) {
+      return _signalForIdKey(keyValueSignal);
+    }
+    if (uniqueKeys.includes(key)) {
+      return _signalForUniqueKey(key, keyValueSignal);
+    }
+    throw new Error(
+      `signalForKey: "${key}" is not the idKey or a uniqueKey of this store (idKey: ${idKey}, uniqueKeys: ${uniqueKeys.join(", ")})`,
+    );
+  };
+  const _signalForUniqueKey = (uniqueKey, uniqueKeyValueSignal) => {
     const itemIdSignal = signal(null);
     const check = (value) => {
       const item = select(uniqueKey, value);
@@ -515,7 +523,7 @@ ${[idKey, ...uniqueKeys].join(", ")}`,
       itemIdSignal.value = item[idKey];
       return true;
     };
-    if (!check()) {
+    if (!check(uniqueKeyValueSignal.peek())) {
       effect(function () {
         const uniqueKeyValue = uniqueKeyValueSignal.value;
         if (check(uniqueKeyValue)) {
@@ -523,7 +531,41 @@ ${[idKey, ...uniqueKeys].join(", ")}`,
         }
       });
     }
+    return computed(() => {
+      return select(itemIdSignal.value);
+    });
+  };
 
+  const _signalForIdKey = (idValueSignal) => {
+    const itemIdSignal = signal(null);
+    const check = (value) => {
+      const item = select(idKey, value);
+      if (!item) {
+        return false;
+      }
+      itemIdSignal.value = item[idKey];
+      return true;
+    };
+    if (!check(idValueSignal.peek())) {
+      effect(function () {
+        const idValue = idValueSignal.value;
+        if (check(idValue)) {
+          this.dispose();
+        }
+      });
+    }
+    // When the id itself is renamed, keep itemIdSignal in sync.
+    observeProperties((mutationsArray) => {
+      const currentId = itemIdSignal.peek();
+      if (currentId === null) return;
+      for (const mutations of mutationsArray) {
+        const mutation = mutations[idKey];
+        if (mutation && mutation.oldValue === currentId) {
+          itemIdSignal.value = mutation.newValue;
+          break;
+        }
+      }
+    });
     return computed(() => {
       return select(itemIdSignal.value);
     });
@@ -537,6 +579,7 @@ ${[idKey, ...uniqueKeys].join(", ")}`,
   };
 
   Object.assign(store, {
+    idKey,
     uniqueKeys,
     arraySignal,
     select,
@@ -549,7 +592,35 @@ ${[idKey, ...uniqueKeys].join(", ")}`,
     observeRemovals,
     observeIdChanges,
     registerItemMatchLifecycle,
-    signalForUniqueKey,
+    signalForKey,
   });
   return store;
+};
+
+export const syncStoreToSignals = (store, propertyToSignalMap) => {
+  const { idKey } = store;
+  for (const [propertyName, targetSignal] of Object.entries(
+    propertyToSignalMap,
+  )) {
+    if (propertyName === idKey) {
+      store.observeProperties((mutationsArray) => {
+        for (const mutations of mutationsArray) {
+          const mutation = mutations[idKey];
+          if (mutation && mutation.oldValue === targetSignal.peek()) {
+            targetSignal.value = mutation.newValue;
+            break;
+          }
+        }
+      });
+      continue;
+    }
+    const itemSignal = store.signalForKey(propertyName, targetSignal);
+    store.observeItemProperties(itemSignal, (propertyMutations) => {
+      const mutation = propertyMutations[propertyName];
+      if (!mutation) {
+        return;
+      }
+      targetSignal.value = mutation.newValue;
+    });
+  }
 };

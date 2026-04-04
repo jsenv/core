@@ -4,7 +4,11 @@ import { createAction } from "../../action/actions.js";
 import { SYMBOL_OBJECT_SIGNAL } from "../../action/symbol_object_signal.js";
 import { SYMBOL_IDENTITY } from "../../utils/compare_two_js_values.js";
 import { getCallerInfo } from "../../utils/get_caller_info.js";
-import { arraySignalStore, primitiveCanBeId } from "./array_signal_store.js";
+import {
+  arraySignalStore,
+  primitiveCanBeId,
+  syncStoreToSignals,
+} from "./array_signal_store.js";
 import { createResourceLifecycleManager } from "./item_lifecycle_manager.js";
 import { getParamScope } from "./param_scope.js";
 
@@ -1403,4 +1407,29 @@ Only "${idKey}" is needed. Consider returning a primitive id or { ${idKey}: valu
     `${actionName}: the first element of the returned array must be a primitive id or a single-property object equal to { [idKey]: value } or { [uniqueKey]: value }.
 Received an object with keys: ${keys.join(", ")}.`,
   );
+};
+
+/** so that when a tracked property changes
+ * on an item the corresponding signal is updated automatically.
+ *
+ * Since signals are typically connected to route parameters via the route template
+ * syntax, this keeps the URL in sync when a store item's mutable key is renamed.
+ *
+ * @example
+ * const usernameSignal = stateSignal();
+ * const USER_ROUTE = route(`/users/:username=${usernameSignal}/`);
+ *
+ * const USER = resource("user", {
+ *   idKey: "id",
+ *   uniqueKeys: ["username"],
+ *   PUT: async ({ id, username }) => ({ id, username }),
+ * });
+ *
+ * syncResourceToSignals(USER, { username: usernameSignal });
+ * // Now when a user item's username is updated via USER.PUT,
+ * // usernameSignal.value is set to the new username,
+ * // which in turn triggers the route Signal->URL sync and updates the browser URL.
+ */
+export const syncResourceToSignals = (resource, propertyToSignalMap) => {
+  syncStoreToSignals(resource.store, propertyToSignalMap);
 };
