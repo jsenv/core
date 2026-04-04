@@ -1113,6 +1113,14 @@ ${originalActionName} source location: ${locationInfo}`,
               : childStore.upsert(rest[0]);
           return [ownerId, childItem[childIdKey]];
         },
+        valueToData: (value) => {
+          if (!value) return isMany ? [] : undefined;
+          const [ownerId, idOrIdArray] = value;
+          const childStore = scopedStoreMap.get(ownerId);
+          if (!childStore) return isMany ? [] : undefined;
+          if (isMany) return childStore.selectAll(idOrIdArray);
+          return childStore.select(idOrIdArray);
+        },
         completeSideEffect: (actionCompleted) => {
           lifecycleCtx.onComplete(actionCompleted);
         },

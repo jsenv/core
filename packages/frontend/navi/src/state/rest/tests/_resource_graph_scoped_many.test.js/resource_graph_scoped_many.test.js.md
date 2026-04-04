@@ -2,7 +2,8 @@
 
 
 - [internalMany columns GET_MANY, POST and PATCH](0_internalmany_columns_get_many__post_and_patch/0_internalmany_columns_get_many__post_and_patch.md)
-- [internalMany columns id rename via PUT](1_internalmany_columns_id_rename_via_put/1_internalmany_columns_id_rename_via_put.md)
+- [GET_MANY data contains row objects not [ownerId, idArray]](1_get_many_data_contains_row_objects_not_[ownerid__idarray]/1_get_many_data_contains_row_objects_not_[ownerid__idarray].md)
+- [internalMany columns id rename via PUT](2_internalmany_columns_id_rename_via_put/2_internalmany_columns_id_rename_via_put.md)
 
 ---
 

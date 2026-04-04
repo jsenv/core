@@ -40,6 +40,30 @@ await snapshotTests(import.meta.url, ({ test }) => {
     };
   });
 
+  test("GET_MANY data contains row objects not [ownerId, idArray]", async () => {
+    const TABLE = resource("table", {
+      idKey: "tableoid",
+      uniqueKeys: ["tablename"],
+      POST: async ({ tablename }) => ({ tableoid: 1, tablename }),
+    });
+    const TABLE_ROW = TABLE.scopedMany("rows", {
+      idKey: "row_id",
+      GET_MANY: async ({ tablename }) => [
+        { tablename },
+        [
+          { row_id: 10, name: "Alice" },
+          { row_id: 11, name: "Bob" },
+        ],
+      ],
+    });
+
+    await TABLE.POST({ tablename: "users" });
+
+    const getManyResult = await TABLE_ROW.GET_MANY({ tablename: "users" });
+
+    return { getManyResult };
+  });
+
   test("internalMany columns id rename via PUT", async () => {
     const TABLE = resource("table", {
       POST: async ({ name }) => ({ id: 1, name }),
