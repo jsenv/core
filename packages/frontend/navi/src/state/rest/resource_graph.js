@@ -1058,6 +1058,11 @@ ${originalActionName} source location: ${locationInfo}`,
       return childAction;
     };
 
+    // When a child (scopedMany) item is mutated via POST, the parent GET must
+    // re-fetch because the parent embeds the child array and we cannot know the
+    // new ordering without asking the backend again.
+    // (scopedOne does NOT need this: the mutation result contains the updated
+    // item directly, so no parent re-fetch is necessary.)
     const childResource = createResource(childName, {
       idKey: childIdKey,
       restCallbacks: {
@@ -1079,6 +1084,8 @@ ${originalActionName} source location: ${locationInfo}`,
       rerunOn: scopedManyRerunOn ?? rerunOn,
       dependencies: scopedManyDependencies ?? dependencies,
     });
+    // Register: when childResource fires, rerun parent (stateFacade) GETs.
+    resourceLifecycleManager.addDependency(childResource, stateFacade);
     return childResource;
   };
 

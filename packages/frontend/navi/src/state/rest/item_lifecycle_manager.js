@@ -37,7 +37,8 @@ const defaultRerunOn = {
 // This handles ALL resource lifecycle logic (rerun/reset) across all resources
 export const createResourceLifecycleManager = () => {
   const registeredResources = new Map(); // Map<resourceInstance, lifecycleConfig>
-  const resourceDependencies = new Map(); // Map<resourceInstance, Set<dependentResources>>
+  const resourceDependencies = new Map(); // Map<resourceInstance, Set<dependentResources>> — user-configured
+  const scopedManyParents = new Map(); // Map<childResource, Set<parentResource>> — auto from scopedMany
 
   const registerResource = (resourceScope, config) => {
     const {
@@ -220,19 +221,36 @@ export const createResourceLifecycleManager = () => {
             }
           }
 
-          // Cross-resource dependency effects: rerun dependent GET_MANY
+          // Cross-resource dependency effects: rerun dependent GET / GET_MANY
+          // Only on POST — same rationale as defaultRerunOn.GET_MANY: ["POST"]
           dependency_effect: {
             if (
               triggerResourceScope &&
               resourceDependencies
                 .get(triggerResourceScope)
                 ?.has(resourceScope) &&
-              triggerVerb !== "GET" &&
-              candidateVerb === "GET" &&
-              candidateIsPlural
+              triggerVerb === "POST" &&
+              candidateVerb === "GET"
             ) {
               actionsToRerun.add(actionCandidate);
               reasonSet.add("dependency autorerun");
+              continue;
+            }
+          }
+
+          // scopedMany auto-dependency: only rerun parent singular GET on child POST.
+          // GET_MANY is excluded — a list of parents is not stale just because one
+          // child item was added to one of them.
+          scoped_many_effect: {
+            if (
+              triggerResourceScope &&
+              scopedManyParents.get(triggerResourceScope)?.has(resourceScope) &&
+              triggerVerb === "POST" &&
+              candidateVerb === "GET" &&
+              !candidateIsPlural
+            ) {
+              actionsToRerun.add(actionCandidate);
+              reasonSet.add("scopedMany parent autorerun");
               continue;
             }
           }
@@ -267,6 +285,14 @@ export const createResourceLifecycleManager = () => {
     registerResource,
     registerAction,
     onActionComplete,
+    // Registers: when `triggerResource` fires, rerun `dependentResource`'s actions.
+    // Used by scopedMany to make the parent GET rerun when a child mutation completes.
+    addDependency: (triggerResource, dependentResource) => {
+      if (!scopedManyParents.has(triggerResource)) {
+        scopedManyParents.set(triggerResource, new Set());
+      }
+      scopedManyParents.get(triggerResource).add(dependentResource);
+    },
   };
 };
 
