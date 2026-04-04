@@ -10,7 +10,7 @@ export const tableColumnNameSignal = stateSignal(undefined, {
 
 export const TABLE = resource("table", {
   idKey: "tableoid",
-  mutableIdKeys: ["tablename"],
+  uniqueKeys: ["tablename"],
   GET_MANY: async (_, { signal }) => {
     const response = await fetch(`${window.DB_MANAGER_CONFIG.apiUrl}/tables`, {
       signal,

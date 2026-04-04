@@ -59,6 +59,8 @@ import.meta.css = /* css */ `
     position: absolute;
     top: 12px;
     right: 12px;
+
+    z-index: 1; /* For some reason required to interact properly with the button */
     display: flex;
     width: 28px;
     height: 28px;
