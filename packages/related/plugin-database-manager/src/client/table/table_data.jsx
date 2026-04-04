@@ -25,6 +25,7 @@ import {
   Label,
   RowNumberCol,
   RowNumberTableCell,
+  SidePanel,
   stringifyTableSelectionValue,
   Table,
   TableCell,
@@ -67,6 +68,8 @@ export const TableData = ({ table, rows }) => {
   });
   const selectedRowCount = selectedRows.length;
 
+  const [selectedColumn, setSelectedColumn] = useState(null);
+
   return (
     <div>
       <Box>
@@ -97,6 +100,9 @@ export const TableData = ({ table, rows }) => {
                         propertyName: "column_name",
                         propertyValue: value,
                       });
+                    }}
+                    onClick={() => {
+                      setSelectedColumn(column);
                     }}
                   >
                     {column.column_name}
@@ -183,8 +189,23 @@ export const TableData = ({ table, rows }) => {
       <div className="table_data_actions">
         <Button action={createRow}>Add row</Button>
       </div>
+
+      <SidePanel
+        isOpen={Boolean(selectedColumn)}
+        onClose={() => {
+          setSelectedColumn(null);
+        }}
+      >
+        {selectedColumn ? (
+          <SelectedColumnSidePanelContent column={selectedColumn} />
+        ) : null}
+      </SidePanel>
     </div>
   );
+};
+
+const SelectedColumnSidePanelContent = ({ column }) => {
+  return column.column_name;
 };
 
 const SelectedRowActions = ({ tablename, selectedRows }) => {

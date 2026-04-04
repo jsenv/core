@@ -17,9 +17,18 @@ import.meta.css = /* css */ `
 
   .navi_side_panel {
     position: fixed;
-    inset: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
     z-index: 1000;
-    background: rgba(0, 0, 0, 0.3);
+    pointer-events: none;
+
+    .navi_side_panel_overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.3);
+      pointer-events: auto;
+    }
 
     .navi_side_panel_dialog {
       position: absolute;
@@ -33,6 +42,7 @@ import.meta.css = /* css */ `
       animation-duration: var(--side-panel-animation-duration);
       animation-timing-function: ease-out;
       animation-fill-mode: both;
+      pointer-events: auto;
       overflow-y: auto;
     }
 
@@ -102,7 +112,6 @@ export const SidePanel = ({
   closeOnClickOutside = false,
   hideCloseButton = false,
   width,
-  onClick,
   ...rest
 }) => {
   const panelDialogRef = useRef(null);
@@ -160,20 +169,22 @@ export const SidePanel = ({
         width={width}
         data-opening={phase === "opening" ? "" : undefined}
         data-closing={phase === "closing" ? "" : undefined}
-        onClick={(e) => {
-          if (closeOnClickOutside && e.target === e.currentTarget) {
-            onClose(e);
-          }
-          onClick?.(e);
-        }}
         {...rest}
       >
+        {closeOnClickOutside && (
+          <div
+            className="navi_side_panel_overlay"
+            onClick={(e) => {
+              onClose(e);
+            }}
+          />
+        )}
         <Box
           ref={panelDialogRef}
           baseClassName="navi_side_panel_dialog"
           tabIndex={-1}
-          role="dialog"
-          aria-modal="true"
+          role={closeOnClickOutside ? "dialog" : "complementary"}
+          aria-modal={closeOnClickOutside ? "true" : undefined}
           onAnimationEnd={onAnimationEnd}
         >
           {!hideCloseButton && <NaviSidePanelCloseButton />}

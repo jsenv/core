@@ -418,7 +418,9 @@ export const Box = (props) => {
       }
       const propCssVar = propsCSSVars[name];
       if (propCssVar) {
-        addCSSVar(value, propCssVar, boxStylesTarget);
+        if (value !== undefined) {
+          addCSSVar(value, propCssVar, boxStylesTarget);
+        }
         return;
       }
       const isPseudoStyle = styleOrigin === "pseudo_style";
