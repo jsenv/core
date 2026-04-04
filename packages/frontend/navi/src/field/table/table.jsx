@@ -450,7 +450,8 @@ export const TableCell = (props) => {
     onClick,
     action,
     name,
-    value,
+    children,
+    value = children,
     valueSignal,
     // appeareance
     style,
@@ -459,7 +460,6 @@ export const TableCell = (props) => {
     selfAlignX = column.selfAlignX,
     selfAlignY = column.selfAlignY,
     backgroundColor = column.backgroundColor || row.backgroundColor,
-    children,
   } = props;
   const ref = props.ref || cellDefaultRef;
   const isFirstRow = rowIndex === 0;
@@ -674,7 +674,6 @@ export const TableCell = (props) => {
         <Editable
           editing={editing}
           onEditEnd={stopEditing}
-          value={children}
           action={action}
           name={name}
           value={value}
