@@ -68,7 +68,50 @@ export const ColumnSidePanelContent = ({ tablename, column }) => {
         </Box>
 
         {/* Data type */}
-        <DataTypeField column={column} putColumn={putColumn} />
+        {isIdentity ? (
+          <Box flex="y" spacing="xs">
+            <FieldLabel>Data type</FieldLabel>
+            <Input readOnly value={column.data_type} />
+            <FieldDescription>
+              Identity columns are locked to integer types (smallint, integer,
+              bigint).
+            </FieldDescription>
+          </Box>
+        ) : (
+          <DataTypeField column={column} putColumn={putColumn} />
+        )}
+
+        {/* Default */}
+        {isIdentity ? (
+          column.column_default !== null &&
+          column.column_default !== undefined && (
+            <Box flex="y" spacing="xs">
+              <FieldLabel>Default</FieldLabel>
+              <Input readOnly value={column.column_default} />
+              <FieldDescription>
+                Managed by the identity sequence. Cannot be changed manually.
+              </FieldDescription>
+            </Box>
+          )
+        ) : (
+          <Box flex="y" spacing="xs">
+            <FieldLabel>Default</FieldLabel>
+            <Input
+              defaultValue={column.column_default ?? ""}
+              placeholder="None"
+              action={async (newValue) => {
+                await putColumn(
+                  "default_value",
+                  newValue.trim() === "" ? null : newValue.trim(),
+                );
+              }}
+            />
+            <FieldDescription>
+              Value PostgreSQL inserts when no value is provided. Leave empty to
+              remove the default.
+            </FieldDescription>
+          </Box>
+        )}
 
         {/* UDT name */}
         {column.udt_name && column.udt_name !== column.data_type && (
@@ -84,45 +127,28 @@ export const ColumnSidePanelContent = ({ tablename, column }) => {
           </Box>
         )}
 
-        {/* Nullable */}
-        <Box flex="y" spacing="xs">
-          <Box flex spacing="s" alignY="center">
-            <Text bold uppercase size="xxs" color="#6c757d">
-              Nullable
+        {/* Nullable — hidden for identity (always NOT NULL) */}
+        {!isIdentity && (
+          <Box flex="y" spacing="xs">
+            <Box flex spacing="s" alignY="center">
+              <Text bold uppercase size="xxs" color="#6c757d">
+                Nullable
+              </Text>
+              <Checkbox
+                appearance="toggle"
+                size="xxs"
+                checked={isNullable}
+                action={async (v) => {
+                  await putColumn("is_nullable", v);
+                }}
+              />
+            </Box>
+            <Text italic size="xxs" color="#868e96">
+              When on, this column accepts NULL values. When off, every row must
+              provide a value.
             </Text>
-            <Checkbox
-              appearance="toggle"
-              size="xxs"
-              checked={isNullable}
-              action={async (v) => {
-                await putColumn("is_nullable", v);
-              }}
-            />
           </Box>
-          <Text italic size="xxs" color="#868e96">
-            When on, this column accepts NULL values. When off, every row must
-            provide a value.
-          </Text>
-        </Box>
-
-        {/* Default */}
-        <Box flex="y" spacing="xs">
-          <FieldLabel>Default</FieldLabel>
-          <Input
-            defaultValue={column.column_default ?? ""}
-            placeholder="None"
-            action={async (newValue) => {
-              await putColumn(
-                "default_value",
-                newValue.trim() === "" ? null : newValue.trim(),
-              );
-            }}
-          />
-          <FieldDescription>
-            Value PostgreSQL inserts when no value is provided. Leave empty to
-            remove the default.
-          </FieldDescription>
-        </Box>
+        )}
 
         {/* Datetime precision */}
         {column.datetime_precision !== null &&
@@ -181,12 +207,14 @@ export const ColumnSidePanelContent = ({ tablename, column }) => {
           </Box>
         )}
 
-        {/* Generated */}
-        <GeneratedField
-          column={column}
-          isGenerated={isGenerated}
-          putColumn={putColumn}
-        />
+        {/* Generated — hidden for identity (mutually exclusive) */}
+        {!isIdentity && (
+          <GeneratedField
+            column={column}
+            isGenerated={isGenerated}
+            putColumn={putColumn}
+          />
+        )}
 
         {/* Updatable */}
         {!isUpdatable && (
