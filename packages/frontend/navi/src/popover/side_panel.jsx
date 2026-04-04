@@ -47,6 +47,7 @@ export const SidePanel = ({
   children,
   closeOnClickOutside = false,
   width,
+  onClick,
   ...rest
 }) => {
   const panelDialogRef = useRef(null);
@@ -77,13 +78,14 @@ export const SidePanel = ({
         baseClassName="navi_side_panel"
         propsCSSVars={SidePanelStyleCSSVars}
         width={width}
-        onClick={
-          closeOnClickOutside
-            ? (e) => {
-                if (e.target === e.currentTarget) onClose();
-              }
-            : undefined
-        }
+        onClick={(e) => {
+          if (closeOnClickOutside) {
+            if (e.target === e.currentTarget) {
+              onClose(e);
+            }
+          }
+          onClick?.(e);
+        }}
         {...rest}
       >
         <Box
