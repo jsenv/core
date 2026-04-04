@@ -121,10 +121,8 @@ export const TABLE = resource("table", {
 
 export const useTableArrayInStore = TABLE.useArray;
 
-const COLUMN = resource("table_column", {
+export const TABLE_COLUMN = TABLE.scopedMany("columns", {
   idKey: "column_name",
-});
-export const TABLE_COLUMN = TABLE.many("columns", COLUMN, {
   GET_MANY: async ({ tablename }, { signal }) => {
     const response = await fetch(
       `${window.DB_MANAGER_CONFIG.apiUrl}/tables/${tablename}/columns`,
