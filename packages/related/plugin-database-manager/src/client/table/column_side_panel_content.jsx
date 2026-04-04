@@ -69,8 +69,8 @@ export const ColumnSidePanelContent = ({ tablename, column }) => {
             <Checkbox
               appearance="toggle"
               size="xxs"
-              readOnly
               checked={isNullable}
+              action={() => {}}
             />
           </Box>
           <Text italic size="xxs" color="#868e96">
@@ -163,8 +163,8 @@ export const ColumnSidePanelContent = ({ tablename, column }) => {
             <Checkbox
               appearance="toggle"
               size="xxs"
-              readOnly
               checked={isIdentity}
+              action={() => {}}
             />
           </Box>
           <Text italic size="xxs" color="#868e96">
@@ -196,7 +196,6 @@ export const ColumnSidePanelContent = ({ tablename, column }) => {
             <Checkbox
               appearance="toggle"
               size="xxs"
-              readOnly
               checked={isGenerated}
               action={() => {}}
             />
@@ -225,7 +224,6 @@ export const ColumnSidePanelContent = ({ tablename, column }) => {
             <Checkbox
               appearance="toggle"
               size="xxs"
-              readOnly
               checked={isUpdatable}
               action={() => {}}
             />
