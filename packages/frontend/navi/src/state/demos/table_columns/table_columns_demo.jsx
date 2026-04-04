@@ -1,5 +1,6 @@
 import { ActionRenderer, Button, resource } from "@jsenv/navi";
 import { render } from "preact";
+import { useState } from "preact/hooks";
 
 const tablesStore = {
   users: [
@@ -20,6 +21,17 @@ const TABLE = resource("table", {
 
 const TABLE_COLUMNS = TABLE.scopedMany("columns", {
   idKey: "column_name",
+
+  POST: ({ id, column_name }) => {
+    if (tablesStore[id].some((c) => c.column_name === column_name)) {
+      throw new Error(
+        `Column "${column_name}" already exists in table "${id}"`,
+      );
+    }
+    const newColumn = { column_name };
+    tablesStore[id].push(newColumn);
+    return [id, newColumn];
+  },
 
   PUT: ({ id, column_name, property, value }) => {
     const column = tablesStore[id].find((c) => c.column_name === column_name);
@@ -56,19 +68,40 @@ const ColumnRow = ({ table, column }) => {
 tableAction.prerun();
 
 const TableDisplay = ({ table }) => {
+  const [newColName, setNewColName] = useState("");
   return (
-    <ul>
-      {table.columns.map((col) => (
-        <ColumnRow key={col.column_name} table={table} column={col} />
-      ))}
-    </ul>
+    <div>
+      <ul>
+        {table.columns.map((col) => (
+          <ColumnRow key={col.column_name} table={table} column={col} />
+        ))}
+      </ul>
+      <div>
+        <input
+          type="text"
+          placeholder="new column name"
+          value={newColName}
+          onInput={(e) => setNewColName(e.target.value)}
+        />
+        <Button
+          action={() => {
+            const name = newColName.trim();
+            if (!name) return;
+            TABLE_COLUMNS.POST({ id: table.id, column_name: name });
+            setNewColName("");
+          }}
+        >
+          + add column
+        </Button>
+      </div>
+    </div>
   );
 };
 
 const App = () => {
   return (
     <div>
-      <button onClick={() => tableAction.rerun()}>load users table</button>
+      <button onClick={() => tableAction.rerun()}>reload table columns</button>
       <ActionRenderer action={tableAction}>
         {{
           idle: () => null,
@@ -80,4 +113,4 @@ const App = () => {
   );
 };
 
-render(<App />, document.getElementById("root"));
+render(<App />, document.querySelector("#root"));
