@@ -178,34 +178,11 @@ export const ColumnSidePanelContent = ({ tablename, column }) => {
         )}
 
         {/* Generated */}
-        <Box flex="y" spacing="xxs">
-          <Box flex spacing="s" alignY="center">
-            <Text bold uppercase size="xxs" color="#6c757d">
-              Generated
-            </Text>
-            <Checkbox
-              appearance="toggle"
-              size="xxs"
-              checked={isGenerated}
-              action={async (v) => {
-                await putColumn("is_generated", v);
-              }}
-            />
-          </Box>
-          <Text italic size="xxs" color="#868e96">
-            When on, the column value is computed from other columns via an
-            expression and cannot be set manually.
-          </Text>
-        </Box>
-
-        {isGenerated && column.generation_expression && (
-          <Box flex="y" spacing="xs">
-            <Text bold uppercase size="xxs" color="#6c757d">
-              Generation expression
-            </Text>
-            <Input readOnly value={column.generation_expression} />
-          </Box>
-        )}
+        <GeneratedField
+          column={column}
+          isGenerated={isGenerated}
+          putColumn={putColumn}
+        />
 
         {/* Updatable */}
         <Box flex="y" spacing="xxs">
@@ -706,6 +683,93 @@ const BinaryTypeOptions = ({ column, putColumn }) => {
           </Box>
         </>
       )}
+    </Box>
+  );
+};
+
+// ─── Generated field ──────────────────────────────────────────────────────────
+
+const GeneratedField = ({ column, isGenerated, putColumn }) => {
+  const [showForm, setShowForm] = useState(false);
+  const [expression, setExpression] = useState(
+    column.generation_expression ?? "",
+  );
+
+  if (isGenerated) {
+    return (
+      <Box flex="y" spacing="xs">
+        <FieldLabel>Generated expression</FieldLabel>
+        <textarea
+          rows={3}
+          value={expression}
+          style={{ resize: "vertical", fontFamily: "monospace" }}
+          onInput={(e) => setExpression(e.currentTarget.value)}
+        />
+        <Button
+          data-confirm-message={`Changing the generation expression will drop and re-create the column "${column.column_name}", permanently deleting its data. Continue?`}
+          action={async () => {
+            const expr = expression.trim();
+            if (expr && expr !== column.generation_expression) {
+              await putColumn("generation_expression", expr);
+            }
+          }}
+        >
+          Update expression
+        </Button>
+        <FieldDescription>
+          This column's value is computed by PostgreSQL. Updating the expression
+          will drop and re-create the column.
+        </FieldDescription>
+      </Box>
+    );
+  }
+
+  if (showForm) {
+    return (
+      <Box flex="y" spacing="xs">
+        <FieldLabel>Generated expression</FieldLabel>
+        <textarea
+          rows={3}
+          placeholder="e.g. first_name || ' ' || last_name"
+          value={expression}
+          style={{ resize: "vertical", fontFamily: "monospace" }}
+          onInput={(e) => setExpression(e.currentTarget.value)}
+        />
+        <Box spacing="s">
+          <Button
+            data-confirm-message={`Making "${column.column_name}" a generated column will drop and re-create it, permanently deleting its data. Continue?`}
+            action={async () => {
+              const expr = expression.trim();
+              if (expr) {
+                await putColumn("generation_expression", expr);
+              }
+            }}
+          >
+            Make generated column
+          </Button>
+          <Button
+            action={() => {
+              setShowForm(false);
+              setExpression("");
+            }}
+          >
+            Cancel
+          </Button>
+        </Box>
+        <FieldDescription>
+          The column value will be computed from this expression. This is
+          destructive — existing data will be lost.
+        </FieldDescription>
+      </Box>
+    );
+  }
+
+  return (
+    <Box flex="y" spacing="xs">
+      <Button action={() => setShowForm(true)}>Make generated column</Button>
+      <FieldDescription>
+        Turn this column into a computed column driven by a SQL expression.
+      </FieldDescription>
     </Box>
   );
 };

@@ -348,7 +348,26 @@ export const updateColumn = async (
     data_type,
     nullable,
     default_value,
+    generation_expression,
   } = columnProperties;
+
+  if (generation_expression !== undefined) {
+    // Changing the generation expression requires DROP + ADD COLUMN
+    const currentColumn = await getTableColumn(sql, tablename, column_name);
+    const columnType = currentColumn.data_type;
+    await sql`
+      ALTER TABLE ${sql(tablename)}
+      DROP COLUMN ${sql(column_name)}
+    `;
+    await sql`
+      ALTER TABLE ${sql(tablename)}
+      ADD COLUMN ${sql(column_name)} ${sql.unsafe(
+        columnType,
+      )} GENERATED ALWAYS AS (${sql.unsafe(generation_expression)}) STORED
+    `;
+    return getTableColumn(sql, tablename, column_name);
+  }
+
   const alterClauses = [];
   if (data_type !== undefined) {
     const resolvedDataType = SERIAL_TYPE_MAP[data_type] ?? data_type;
