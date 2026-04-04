@@ -216,11 +216,13 @@ export const jsenvPluginDatabaseManager = ({
             data: column,
           };
         },
-        "PUT /:tablename/columns/:columnName/column_name": async (request) => {
-          const { tablename, columnName } = request.params;
-          const newColumnName = await request.json();
+        "PUT /:tablename/columns/:columnName/:columnProperty": async (
+          request,
+        ) => {
+          const { tablename, columnName, columnProperty } = request.params;
+          const value = await request.json();
           const column = await updateColumn(sql, tablename, columnName, {
-            columnName: newColumnName,
+            [columnProperty]: value,
           });
           return {
             data: column,

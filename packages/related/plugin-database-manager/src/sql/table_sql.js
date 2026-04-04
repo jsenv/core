@@ -330,6 +330,13 @@ const getTableColumn = async (sql, tablename, columnName) => {
   `;
   return column;
 };
+// serial/bigserial are pseudo-types; ALTER COLUMN TYPE rejects them.
+// Map them to their real underlying type.
+const SERIAL_TYPE_MAP = {
+  serial: "integer",
+  bigserial: "bigint",
+};
+
 export const updateColumn = async (
   sql,
   tablename,
@@ -337,15 +344,16 @@ export const updateColumn = async (
   columnProperties,
 ) => {
   const {
-    columnName: newColumnName,
-    dataType,
+    column_name: newColumnName,
+    data_type,
     nullable,
-    defaultValue,
+    default_value,
   } = columnProperties;
   const alterClauses = [];
-  if (dataType !== undefined) {
+  if (data_type !== undefined) {
+    const resolvedDataType = SERIAL_TYPE_MAP[data_type] ?? data_type;
     alterClauses.push(sql`
-      ALTER COLUMN ${sql(columnName)} TYPE ${sql.unsafe(dataType)}
+      ALTER COLUMN ${sql(columnName)} TYPE ${sql.unsafe(resolvedDataType)}
     `);
   }
   if (nullable === true) {
@@ -359,15 +367,15 @@ export const updateColumn = async (
       SET NOT NULL
     `);
   }
-  if (defaultValue === null) {
+  if (default_value === null) {
     alterClauses.push(sql`
       ALTER COLUMN ${sql(columnName)}
       DROP DEFAULT
     `);
-  } else if (defaultValue !== undefined) {
+  } else if (default_value !== undefined) {
     alterClauses.push(sql`
       ALTER COLUMN ${sql(columnName)}
-      SET DEFAULT ${defaultValue}
+      SET DEFAULT ${default_value}
     `);
   }
   if (alterClauses.length > 0) {
