@@ -69,6 +69,8 @@ export { SummaryMarker } from "./src/field/details/summary_marker.jsx";
 
 // Form
 // Validation
+export { openCallout } from "./src/field/validation/callout/callout.js";
+export { useCalloutClose } from "./src/field/validation/callout/callout.jsx";
 export { createAvailableConstraint } from "./src/field/validation/constraints/create_available_constraint.js";
 export { SINGLE_SPACE_CONSTRAINT } from "./src/field/validation/constraints/single_space_constraint.js";
 export {
@@ -81,9 +83,6 @@ export {
   removeCustomMessage,
 } from "./src/field/validation/custom_message.js";
 export { useConstraintValidityState } from "./src/field/validation/hooks/use_constraint_validity_state.js";
-// Popover (callout, dialogs, ...)
-export { openCallout } from "./src/field/validation/callout/callout.js";
-export { useCalloutClose } from "./src/field/validation/callout/callout.jsx";
 // Selection
 export {
   SelectionContext,
@@ -157,6 +156,9 @@ export { SVGMaskOverlay } from "./src/graphic/svg_mask_overlay.jsx";
 export { DialogLayout } from "./src/layout/dialog_layout.jsx";
 export { Separator } from "./src/layout/separator.jsx";
 export { ViewportLayout } from "./src/layout/viewport_layout.jsx";
+
+// Popover (callout, dialogs, ...)
+export { SidePanel, useSidePanelClose } from "./src/popover/side_panel.jsx";
 
 // Other
 export { useFocusGroup } from "./src/field/use_focus_group.js";

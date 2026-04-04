@@ -1,5 +1,6 @@
+import { createContext } from "preact";
 import { createPortal } from "preact/compat";
-import { useEffect, useRef } from "preact/hooks";
+import { useContext, useEffect, useRef } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
 import { useKeyboardShortcuts } from "../keyboard/keyboard_shortcuts.js";
@@ -33,7 +34,21 @@ import.meta.css = /* css */ `
   }
 `;
 
-export const SidePanel = ({ isOpen, onClose, children, ...rest }) => {
+const SidePanelCloseContext = createContext(null);
+export const useSidePanelClose = () => useContext(SidePanelCloseContext);
+
+const SidePanelStyleCSSVars = {
+  width: "--side-panel-width",
+};
+
+export const SidePanel = ({
+  isOpen,
+  onClose,
+  children,
+  closeOnClickOutside = false,
+  width,
+  ...rest
+}) => {
   const panelDialogRef = useRef(null);
 
   useEffect(() => {
@@ -56,27 +71,32 @@ export const SidePanel = ({ isOpen, onClose, children, ...rest }) => {
     return null;
   }
 
-  const naviSidePanel = (
-    <Box
-      baseClassName="navi_side_panel"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) {
-          onClose();
-        }
-      }}
-      {...rest}
-    >
+  return createPortal(
+    <SidePanelCloseContext.Provider value={onClose}>
       <Box
-        ref={panelDialogRef}
-        baseClassName="navi_side_panel_dialog"
-        tabIndex={-1}
-        role="dialog"
-        aria-modal="true"
+        baseClassName="navi_side_panel"
+        propsCSSVars={SidePanelStyleCSSVars}
+        width={width}
+        onClick={
+          closeOnClickOutside
+            ? (e) => {
+                if (e.target === e.currentTarget) onClose();
+              }
+            : undefined
+        }
+        {...rest}
       >
-        {children}
+        <Box
+          ref={panelDialogRef}
+          baseClassName="navi_side_panel_dialog"
+          tabIndex={-1}
+          role="dialog"
+          aria-modal="true"
+        >
+          {children}
+        </Box>
       </Box>
-    </Box>
+    </SidePanelCloseContext.Provider>,
+    document.body,
   );
-
-  return createPortal(naviSidePanel, document.body);
 };

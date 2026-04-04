@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SidePanel Demo</title>
+    <style>
+      body {
+        margin: 20px;
+        font-family:
+          system-ui,
+          -apple-system,
+          sans-serif;
+      }
+      .demo-section {
+        margin-bottom: 24px;
+      }
+      label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+        user-select: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useState } from "preact/hooks";
+      import { SidePanel, useSidePanelClose } from "@jsenv/navi";
+
+      const PanelContent = () => {
+        const closeSidePanel = useSidePanelClose();
+        return (
+          <div style={{ padding: "24px" }}>
+            <h2 style={{ marginTop: 0 }}>Side Panel</h2>
+            <p>
+              This content is inside the side panel. Press <kbd>Escape</kbd> or
+              click the button below to close.
+            </p>
+            <p style={{ color: "#6c757d", fontSize: "0.9em" }}>
+              The panel auto-focuses on open so keyboard navigation works
+              immediately.
+            </p>
+            <button onClick={closeSidePanel}>Close panel</button>
+          </div>
+        );
+      };
+
+      const App = () => {
+        const [isOpen, setIsOpen] = useState(false);
+        const [isOpenWide, setIsOpenWide] = useState(false);
+        const [isOpenClickOutside, setIsOpenClickOutside] = useState(false);
+
+        return (
+          <div>
+            <h1>SidePanel demos</h1>
+
+            <div class="demo-section">
+              <h3>Default (400px, close on Escape only)</h3>
+              <button onClick={() => setIsOpen(true)}>Open side panel</button>
+              <SidePanel isOpen={isOpen} onClose={() => setIsOpen(false)}>
+                <PanelContent />
+              </SidePanel>
+            </div>
+
+            <div class="demo-section">
+              <h3>Custom width (600px)</h3>
+              <button onClick={() => setIsOpenWide(true)}>
+                Open wide panel
+              </button>
+              <SidePanel
+                isOpen={isOpenWide}
+                onClose={() => setIsOpenWide(false)}
+                width={600}
+              >
+                <PanelContent />
+              </SidePanel>
+            </div>
+
+            <div class="demo-section">
+              <h3>Close on click outside</h3>
+              <button onClick={() => setIsOpenClickOutside(true)}>
+                Open panel (click outside to close)
+              </button>
+              <SidePanel
+                isOpen={isOpenClickOutside}
+                onClose={() => setIsOpenClickOutside(false)}
+                closeOnClickOutside
+              >
+                <PanelContent />
+              </SidePanel>
+            </div>
+          </div>
+        );
+      };
+
+      render(<App />, document.querySelector("#root"));
+    </script>
+  </body>
+</html>
