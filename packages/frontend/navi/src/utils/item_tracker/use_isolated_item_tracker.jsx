@@ -129,8 +129,15 @@ export const createIsolatedItemTracker = () => {
           flushToConsumers();
         });
 
+        // Producer registers items synchronously during render (before consumers render).
+        // If the producer added items this render, the consumer state is already stale.
+        // Use the live items ref directly to avoid a one-render lag that would
+        // cause "No column for cell N" errors when columns are added.
+        const effectiveItems =
+          items.length !== consumerItems.length ? items : consumerItems;
+
         return (
-          <ConsumerItemsContext.Provider value={consumerItems}>
+          <ConsumerItemsContext.Provider value={effectiveItems}>
             {children}
           </ConsumerItemsContext.Provider>
         );
