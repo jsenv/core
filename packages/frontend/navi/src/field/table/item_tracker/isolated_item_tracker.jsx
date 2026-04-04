@@ -29,13 +29,7 @@
  */
 
 import { createContext } from "preact";
-import {
-  useContext,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "preact/hooks";
+import { useContext, useMemo, useRef } from "preact/hooks";
 
 import { compareTwoJsValues } from "../../../utils/compare_two_js_values.js";
 
@@ -52,10 +46,12 @@ export const createIsolatedItemTracker = () => {
     const itemsRef = useRef([]);
     const items = itemsRef.current;
     const itemCountRef = useRef();
-    const pendingFlushRef = useRef(false);
-    const producerIsRenderingRef = useRef(false);
 
     const itemTracker = useMemo(() => {
+      // Snapshot taken by FlushSentinel after all producer children rendered.
+      // Consumers read from this — always up-to-date within the same render pass.
+      const itemsSnapshotRef = { current: items };
+
       const registerItem = (index, value) => {
         const hasValue = index in items;
         if (hasValue) {
@@ -66,13 +62,6 @@ export const createIsolatedItemTracker = () => {
         }
 
         items[index] = value;
-
-        if (producerIsRenderingRef.current) {
-          // Consumer will sync after producer render completes
-          return;
-        }
-
-        pendingFlushRef.current = true;
       };
 
       const getProducerItem = (itemIndex) => {
@@ -82,69 +71,40 @@ export const createIsolatedItemTracker = () => {
       const ItemProducerProvider = ({ children }) => {
         items.length = 0;
         itemCountRef.current = 0;
-        pendingFlushRef.current = false;
-        producerIsRenderingRef.current = true;
         const listRenderId = {};
-
-        useLayoutEffect(() => {
-          producerIsRenderingRef.current = false;
-        });
-
-        // CRITICAL: Sync consumer state on subsequent renders
-        const renderedOnce = useRef(false);
-        useLayoutEffect(() => {
-          if (!renderedOnce.current) {
-            renderedOnce.current = true;
-            return;
-          }
-          pendingFlushRef.current = true;
-          itemTracker.flushToConsumers();
-        }, [listRenderId]);
 
         return (
           <ProducerItemCountRefContext.Provider value={itemCountRef}>
             <ProducerListRenderIdContext.Provider value={listRenderId}>
               <ProducerTrackerContext.Provider value={itemTracker}>
                 {children}
+                <FlushSentinel />
               </ProducerTrackerContext.Provider>
             </ProducerListRenderIdContext.Provider>
           </ProducerItemCountRefContext.Provider>
         );
       };
 
+      // Renders after all producer children (e.g. <Col>) have registered their
+      // items. Taking a snapshot here guarantees the consumer sees the correct
+      // item list within the same render pass, without any heuristic.
+      const FlushSentinel = () => {
+        itemsSnapshotRef.current = items;
+        return null;
+      };
+
       const ItemConsumerProvider = ({ children }) => {
-        const [consumerItems, setConsumerItems] = useState(items);
-
-        const flushToConsumers = () => {
-          if (!pendingFlushRef.current) {
-            return;
-          }
-          const itemsCopy = [...items];
-          pendingFlushRef.current = false;
-          setConsumerItems(itemsCopy);
-        };
-        itemTracker.flushToConsumers = flushToConsumers;
-
-        useLayoutEffect(() => {
-          flushToConsumers();
-        });
-
-        // Producer registers items synchronously during render (before consumers render).
-        // If the producer added items this render, the consumer state is already stale.
-        // Use the live items ref directly to avoid a one-render lag that would
-        // cause "No column for cell N" errors when columns are added.
-        const effectiveItems =
-          items.length !== consumerItems.length ? items : consumerItems;
-
+        // FlushSentinel (last child of ItemProducerProvider) already set
+        // itemsSnapshotRef.current to the up-to-date items array before any
+        // consumer rendered. Reading from the snapshot is always correct.
         return (
-          <ConsumerItemsContext.Provider value={effectiveItems}>
+          <ConsumerItemsContext.Provider value={itemsSnapshotRef.current}>
             {children}
           </ConsumerItemsContext.Provider>
         );
       };
 
       return {
-        pendingFlushRef,
         registerItem,
         getProducerItem,
         ItemProducerProvider,
@@ -166,12 +126,6 @@ export const createIsolatedItemTracker = () => {
     const itemIndexRef = useRef();
     const dataRef = useRef();
     const prevListRenderId = listRenderIdRef.current;
-
-    useLayoutEffect(() => {
-      if (itemTracker.pendingFlushRef.current) {
-        itemTracker.flushToConsumers();
-      }
-    });
 
     if (prevListRenderId === listRenderId) {
       const itemIndex = itemIndexRef.current;
