@@ -1,62 +1,31 @@
-import { Box, Button, Checkbox, Input, Label } from "@jsenv/navi";
+import { Box, Button, Checkbox, Input, Label, Text } from "@jsenv/navi";
 
 import { TABLE_COLUMN } from "./table_store.js";
 
-import.meta.css = /* css */ `
-  .column_side_panel_title {
-    color: #212529;
-    font-weight: 600;
-    font-size: 16px;
-  }
-
-  .column_side_panel_subtitle {
-    color: #6c757d;
-    font-size: 12px;
-  }
-
-  .column_field_label_text {
-    color: #6c757d;
-    font-weight: 600;
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-
-  .column_field_description {
-    color: #868e96;
-    font-style: italic;
-    font-size: 11px;
-    line-height: 1.4;
-  }
-`;
-
-export const ColumnSidePanelContent = ({ tablename, column, onClose }) => {
-  const deleteColumn = TABLE_COLUMN.DELETE.bindParams({
-    tablename,
-    columnName: column.column_name,
-  });
+export const ColumnSidePanelContent = ({ tablename, column }) => {
   const isNullable = String(column.is_nullable).toUpperCase() === "YES";
   const isIdentity = String(column.is_identity).toUpperCase() === "YES";
   const isGenerated = String(column.is_generated).toUpperCase() === "ALWAYS";
   const isUpdatable = String(column.is_updatable).toUpperCase() === "YES";
 
   return (
-    <Box column spacing="l" padding="l">
+    <Box flex="y" spacing="l" padding="l">
       <Box
-        column
+        flex="y"
         spacing="xs"
         paddingBottom="m"
         style={{ borderBottom: "1px solid #e9ecef" }}
       >
-        <span className="column_side_panel_title">Column details</span>
-        <span className="column_side_panel_subtitle">{column.column_name}</span>
+        <Text bold size="m">
+          Column details
+        </Text>
+        <Text size="xs" color="#6c757d">
+          {column.column_name}
+        </Text>
       </Box>
 
-      <Box column spacing="m">
-        <ColumnField
-          label="Name"
-          description="The identifier used to reference this column in queries."
-        >
+      <Box flex="y" spacing="m">
+        <ColumnField label="Name">
           <Input
             defaultValue={column.column_name}
             action={async (newName) => {
@@ -72,10 +41,7 @@ export const ColumnSidePanelContent = ({ tablename, column, onClose }) => {
           />
         </ColumnField>
 
-        <ColumnField
-          label="Data type"
-          description="The PostgreSQL data type stored in this column."
-        >
+        <ColumnField label="Data type">
           <select
             value={column.data_type}
             onChange={async (e) => {
@@ -87,13 +53,59 @@ export const ColumnSidePanelContent = ({ tablename, column, onClose }) => {
               });
             }}
           >
-            {POSTGRES_DATA_TYPES.map((type) => (
-              <option key={type} value={type}>
-                {type}
+            <optgroup label="Numeric">
+              <option value="smallint">smallint</option>
+              <option value="integer">integer</option>
+              <option value="bigint">bigint</option>
+              <option value="decimal">decimal</option>
+              <option value="numeric">numeric</option>
+              <option value="real">real</option>
+              <option value="double precision">double precision</option>
+              <option value="serial">serial</option>
+              <option value="bigserial">bigserial</option>
+              <option value="money">money</option>
+            </optgroup>
+            <optgroup label="Text">
+              <option value="char">char</option>
+              <option value="varchar">varchar</option>
+              <option value="text">text</option>
+            </optgroup>
+            <optgroup label="Boolean">
+              <option value="boolean">boolean</option>
+            </optgroup>
+            <optgroup label="Date &amp; Time">
+              <option value="date">date</option>
+              <option value="time">time</option>
+              <option value="time with time zone">time with time zone</option>
+              <option value="timestamp">timestamp</option>
+              <option value="timestamp with time zone">
+                timestamp with time zone
               </option>
-            ))}
-            {!POSTGRES_DATA_TYPES.includes(column.data_type) && (
-              <option value={column.data_type}>{column.data_type}</option>
+              <option value="interval">interval</option>
+            </optgroup>
+            <optgroup label="JSON">
+              <option value="json">json</option>
+              <option value="jsonb">jsonb</option>
+            </optgroup>
+            <optgroup label="Binary">
+              <option value="bytea">bytea</option>
+              <option value="bit">bit</option>
+              <option value="bit varying">bit varying</option>
+            </optgroup>
+            <optgroup label="Network">
+              <option value="cidr">cidr</option>
+              <option value="inet">inet</option>
+              <option value="macaddr">macaddr</option>
+            </optgroup>
+            <optgroup label="Other">
+              <option value="uuid">uuid</option>
+              <option value="xml">xml</option>
+              <option value="ARRAY">ARRAY</option>
+            </optgroup>
+            {!ALL_POSTGRES_DATA_TYPES.includes(column.data_type) && (
+              <optgroup label="Current">
+                <option value={column.data_type}>{column.data_type}</option>
+              </optgroup>
             )}
           </select>
         </ColumnField>
@@ -220,8 +232,10 @@ export const ColumnSidePanelContent = ({ tablename, column, onClose }) => {
         <Button
           data-confirm-message={`Are you sure you want to delete the column "${column.column_name}"? This will permanently remove the column and all its data.`}
           action={async () => {
-            await deleteColumn();
-            onClose();
+            await TABLE_COLUMN.DELETE({
+              tablename,
+              columnName: column.column_name,
+            });
           }}
         >
           Delete column
@@ -232,16 +246,20 @@ export const ColumnSidePanelContent = ({ tablename, column, onClose }) => {
 };
 
 const ColumnField = ({ label, description, children }) => (
-  <Box column spacing="xs">
-    <span className="column_field_label_text">{label}</span>
+  <Box flex="y" spacing="xs">
+    <Text bold uppercase size="xxs" color="#6c757d">
+      {label}
+    </Text>
     {children}
     {description && (
-      <span className="column_field_description">{description}</span>
+      <Text italic size="xxs" color="#868e96">
+        {description}
+      </Text>
     )}
   </Box>
 );
 
-const POSTGRES_DATA_TYPES = [
+const ALL_POSTGRES_DATA_TYPES = [
   "smallint",
   "integer",
   "bigint",
@@ -251,26 +269,26 @@ const POSTGRES_DATA_TYPES = [
   "double precision",
   "serial",
   "bigserial",
-  "boolean",
+  "money",
   "char",
   "varchar",
   "text",
-  "bytea",
+  "boolean",
   "date",
   "time",
   "time with time zone",
   "timestamp",
   "timestamp with time zone",
   "interval",
-  "uuid",
   "json",
   "jsonb",
-  "xml",
+  "bytea",
+  "bit",
+  "bit varying",
   "cidr",
   "inet",
   "macaddr",
-  "bit",
-  "bit varying",
-  "money",
+  "uuid",
+  "xml",
   "ARRAY",
 ];
