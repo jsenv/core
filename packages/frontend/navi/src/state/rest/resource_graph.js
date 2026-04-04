@@ -845,7 +845,14 @@ ${originalActionName} source location: ${locationInfo}`,
               `${childActionName} callback must return [ownerId, props], received ${result}`,
             );
           }
-          const [ownerId, props] = result;
+          const [rawOwnerId, props] = result;
+          const ownerId = resolveOwnerId(
+            rawOwnerId,
+            store,
+            idKey,
+            uniqueKeys,
+            childActionName,
+          );
           const childItem = scopedItemMap.get(ownerId);
           if (!childItem) {
             throw new Error(
@@ -1011,7 +1018,14 @@ ${originalActionName} source location: ${locationInfo}`,
               `${childActionName} callback must return [ownerId, ...] array, received ${result}`,
             );
           }
-          const [ownerId, ...rest] = result;
+          const [rawOwnerId, ...rest] = result;
+          const ownerId = resolveOwnerId(
+            rawOwnerId,
+            store,
+            idKey,
+            uniqueKeys,
+            childActionName,
+          );
           const childStore = scopedStoreMap.get(ownerId);
           if (!childStore) {
             throw new Error(
@@ -1287,4 +1301,51 @@ const syncIdArrayOnRename = (store, idKey, idArraySignal) => {
 
 const isProps = (value) => {
   return value !== null && typeof value === "object";
+};
+
+const resolveOwnerId = (rawOwnerId, store, idKey, uniqueKeys, actionName) => {
+  if (!isProps(rawOwnerId)) {
+    // Already a primitive — use as-is.
+    return rawOwnerId;
+  }
+
+  const keys = Object.keys(rawOwnerId);
+
+  if (keys.length === 1) {
+    const [propName] = keys;
+    const propValue = rawOwnerId[propName];
+
+    if (propName === idKey) {
+      return propValue;
+    }
+    if (uniqueKeys.includes(propName)) {
+      const item = store.select(propName, propValue);
+      if (!item) {
+        throw new Error(
+          `${actionName}: no owner found for { ${propName}: "${propValue}" }.
+Make sure the parent item has been loaded before calling this action.`,
+        );
+      }
+      return item[idKey];
+    }
+    throw new TypeError(
+      `${actionName}: the first element of the returned array is { ${propName}: "${propValue}" } but "${propName}" is neither the idKey ("${idKey}") nor a declared uniqueKey (${uniqueKeys.length ? uniqueKeys.join(", ") : "none"}). 
+Return a primitive id or a single-property object whose key is the idKey or a uniqueKey.`,
+    );
+  }
+
+  // More than one property — try to recover via idKey, warn if successful.
+  if (idKey in rawOwnerId) {
+    const resolvedId = rawOwnerId[idKey];
+    console.warn(
+      `${actionName}: the first element of the returned array is an object with multiple properties. 
+Only "${idKey}" is needed. Consider returning a primitive id or { ${idKey}: value } instead.`,
+    );
+    return resolvedId;
+  }
+
+  throw new TypeError(
+    `${actionName}: the first element of the returned array must be a primitive id or a single-property object equal to { [idKey]: value } or { [uniqueKey]: value }.
+Received an object with keys: ${keys.join(", ")}.`,
+  );
 };
