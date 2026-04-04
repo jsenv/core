@@ -33,16 +33,16 @@ import.meta.css = /* css */ `
   }
 `;
 
-export const SidePanel = ({ isOpen, onClose, children }) => {
-  const panelRef = useRef(null);
+export const SidePanel = ({ isOpen, onClose, children, ...rest }) => {
+  const panelDialogRef = useRef(null);
 
   useEffect(() => {
-    if (isOpen && panelRef.current) {
-      panelRef.current.focus();
+    if (isOpen && panelDialogRef.current) {
+      panelDialogRef.current.focus();
     }
   }, [isOpen]);
 
-  useKeyboardShortcuts(panelRef, [
+  useKeyboardShortcuts(panelDialogRef, [
     {
       key: "escape",
       handler: () => {
@@ -57,16 +57,17 @@ export const SidePanel = ({ isOpen, onClose, children }) => {
   }
 
   const naviSidePanel = (
-    <div
-      className="navi_side_panel"
+    <Box
+      baseClassName="navi_side_panel"
       onClick={(e) => {
         if (e.target === e.currentTarget) {
           onClose();
         }
       }}
+      {...rest}
     >
       <Box
-        ref={panelRef}
+        ref={panelDialogRef}
         baseClassName="navi_side_panel_dialog"
         tabIndex={-1}
         role="dialog"
@@ -74,7 +75,7 @@ export const SidePanel = ({ isOpen, onClose, children }) => {
       >
         {children}
       </Box>
-    </div>
+    </Box>
   );
 
   return createPortal(naviSidePanel, document.body);
