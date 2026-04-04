@@ -1,5 +1,5 @@
 import { useRef, useState } from "preact/hooks";
-import { createIsolatedItemTracker } from "./use_isolated_item_tracker.jsx";
+import { createIsolatedItemTracker } from "./isolated_item_tracker.jsx";
 
 // Initial state for table columns
 const initialState = {

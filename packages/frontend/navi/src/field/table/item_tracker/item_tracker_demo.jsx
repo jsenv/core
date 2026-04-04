@@ -1,6 +1,6 @@
 import { createContext } from "preact";
 import { useContext, useState } from "preact/hooks";
-import { createItemTracker } from "./use_item_tracker.jsx";
+import { createItemTracker } from "./item_tracker.jsx";
 
 const [useRowTrackerProvider, useRegisterRow, useRow, useRows] =
   createItemTracker();

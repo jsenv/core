@@ -55,8 +55,6 @@ import { createContext, toChildArray } from "preact";
 import { useContext, useId, useRef } from "preact/hooks";
 
 import { useKeyboardShortcuts } from "../../keyboard/keyboard_shortcuts.js";
-import { createIsolatedItemTracker } from "../../utils/item_tracker/use_isolated_item_tracker.jsx";
-import { createItemTracker } from "../../utils/item_tracker/use_item_tracker.jsx";
 import { withPropsClassName } from "../../utils/with_props_class_name.js";
 import { Editable, useEditionController } from "../edition/editable.jsx";
 import {
@@ -71,6 +69,8 @@ import {
   TableDragContext,
   useTableDragContextValue,
 } from "./drag/table_drag.jsx";
+import { createIsolatedItemTracker } from "./item_tracker/isolated_item_tracker.jsx";
+import { createItemTracker } from "./item_tracker/item_tracker.jsx";
 import {
   TableCellColumnResizeHandles,
   TableCellRowResizeHandles,
