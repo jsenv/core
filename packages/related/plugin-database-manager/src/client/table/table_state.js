@@ -203,19 +203,18 @@ export const TABLE_COLUMN = TABLE.scopedMany("columns", {
   },
 });
 
-export const TABLE_ROW = resource("table_row", {
+export const TABLE_ROW = TABLE.scopedMany("rows", {
+  dependencies: [TABLE_COLUMN],
   GET_MANY: async ({ tablename }, { signal }) => {
     const response = await fetch(
       `${window.DB_MANAGER_CONFIG.apiUrl}/tables/${tablename}/rows`,
-      {
-        signal,
-      },
+      { signal },
     );
     if (!response.ok) {
       throw await errorFromResponse(response, "Failed to get table rows");
     }
     const { data } = await response.json();
-    return data;
+    return [{ tablename }, data];
   },
   POST: async ({ tablename }, { signal }) => {
     const response = await fetch(
@@ -237,7 +236,7 @@ export const TABLE_ROW = resource("table_row", {
       );
     }
     const { data } = await response.json();
-    return data;
+    return [{ tablename }, data];
   },
   PATCH: async ({ tablename, rowId, properties }, { signal }) => {
     const response = await fetch(
@@ -259,7 +258,7 @@ export const TABLE_ROW = resource("table_row", {
       );
     }
     const { data } = await response.json();
-    return data;
+    return [{ tablename }, data];
   },
   DELETE: async ({ tablename, rowId }, { signal }) => {
     const response = await fetch(
@@ -279,7 +278,7 @@ export const TABLE_ROW = resource("table_row", {
         `Failed to delete rows in "${tablename}" table`,
       );
     }
-    return rowId;
+    return [{ tablename }, rowId];
   },
   DELETE_MANY: async ({ tablename, rowIds }, { signal }) => {
     const response = await fetch(
@@ -300,6 +299,6 @@ export const TABLE_ROW = resource("table_row", {
         `Failed to delete rows in "${tablename}" table`,
       );
     }
-    return rowIds;
+    return [{ tablename }, rowIds];
   },
 });

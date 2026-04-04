@@ -927,21 +927,56 @@ ${originalActionName} source location: ${locationInfo}`,
     const scopedIdArraySignalMap = new Map(); // ownerId → childItemIdArraySignal
     addItemSetup((item) => {
       const ownerId = item[idKey];
-      const childStore = arraySignalStore([], childIdKey, {
-        name: `${childName}#${ownerId} store`,
-        createItem: (props) => {
-          const childItem = {};
-          Object.assign(childItem, props);
-          for (const childSetup of childSetupCallbackSet) {
-            childSetup(childItem);
-          }
-          return childItem;
-        },
-      });
-      scopedStoreMap.set(ownerId, childStore);
 
-      const childItemIdArraySignal = signal([]);
+      // Reuse an existing scoped store if one was already created via a uniqueKey
+      // (e.g. rows were fetched by tablename before the full table was loaded).
+      let childStore = scopedStoreMap.get(ownerId);
+      let childItemIdArraySignal = scopedIdArraySignalMap.get(ownerId);
+      if (!childStore) {
+        for (const uniqueKey of uniqueKeys) {
+          const uniqueKeyValue = item[uniqueKey];
+          if (uniqueKeyValue !== undefined) {
+            const existing = scopedStoreMap.get(uniqueKeyValue);
+            if (existing) {
+              childStore = existing;
+              childItemIdArraySignal =
+                scopedIdArraySignalMap.get(uniqueKeyValue);
+              break;
+            }
+          }
+        }
+      }
+      if (!childStore) {
+        childStore = arraySignalStore([], childIdKey, {
+          name: `${childName}#${ownerId} store`,
+          createItem: (props) => {
+            const childItem = {};
+            Object.assign(childItem, props);
+            for (const childSetup of childSetupCallbackSet) {
+              childSetup(childItem);
+            }
+            return childItem;
+          },
+        });
+        childItemIdArraySignal = signal([]);
+      }
+      scopedStoreMap.set(ownerId, childStore);
+      // Also register by each uniqueKey value so that resolveOwnerId works
+      // when a callback returns { [uniqueKey]: value } before the full item is loaded.
+      for (const uniqueKey of uniqueKeys) {
+        const uniqueKeyValue = item[uniqueKey];
+        if (uniqueKeyValue !== undefined) {
+          scopedStoreMap.set(uniqueKeyValue, childStore);
+        }
+      }
+
       scopedIdArraySignalMap.set(ownerId, childItemIdArraySignal);
+      for (const uniqueKey of uniqueKeys) {
+        const uniqueKeyValue = item[uniqueKey];
+        if (uniqueKeyValue !== undefined) {
+          scopedIdArraySignalMap.set(uniqueKeyValue, childItemIdArraySignal);
+        }
+      }
 
       const updateChildItemIdArray = (valueArray) => {
         const currentIdArray = childItemIdArraySignal.peek();
@@ -1026,11 +1061,24 @@ ${originalActionName} source location: ${locationInfo}`,
             uniqueKeys,
             childActionName,
           );
-          const childStore = scopedStoreMap.get(ownerId);
+          let childStore = scopedStoreMap.get(ownerId);
           if (!childStore) {
-            throw new Error(
-              `${childActionName}: no store found for scope id "${ownerId}"`,
-            );
+            // Owner not yet in store — lazily create scoped store so actions can run
+            // before the parent item has been fully loaded (e.g. rows fetched before table).
+            childStore = arraySignalStore([], childIdKey, {
+              name: `${childName}#${ownerId} store`,
+              createItem: (props) => {
+                const childItem = {};
+                Object.assign(childItem, props);
+                for (const childSetup of childSetupCallbackSet) {
+                  childSetup(childItem);
+                }
+                return childItem;
+              },
+            });
+            scopedStoreMap.set(ownerId, childStore);
+            const newIdArraySignal = signal([]);
+            scopedIdArraySignalMap.set(ownerId, newIdArraySignal);
           }
           const childItemIdArraySignal = scopedIdArraySignalMap.get(ownerId);
 
@@ -1321,10 +1369,9 @@ const resolveOwnerId = (rawOwnerId, store, idKey, uniqueKeys, actionName) => {
     if (uniqueKeys.includes(propName)) {
       const item = store.select(propName, propValue);
       if (!item) {
-        throw new Error(
-          `${actionName}: no owner found for { ${propName}: "${propValue}" }.
-Make sure the parent item has been loaded before calling this action.`,
-        );
+        // Owner not yet in store — the scoped maps may still be keyed by uniqueKey value
+        // (registered during addItemSetup). Return the propValue as the owner key directly.
+        return propValue;
       }
       return item[idKey];
     }
