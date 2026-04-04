@@ -258,15 +258,12 @@ const DataTypeField = ({
   column,
 }) => {
   const currentMaster = getMasterType(column.data_type) || "Other";
-  const [
-    selectedMaster,
-    // setSelectedMaster
-  ] = useState(currentMaster);
+  const [selectedMaster, setSelectedMaster] = useState(currentMaster);
   const preciseTypes = DATA_TYPE_GROUPS[selectedMaster];
 
-  const handleMasterChange = async () => {
-    // const newMaster = e.currentTarget.value;
-    // setSelectedMaster(newMaster);
+  const handleMasterChange = async (e) => {
+    const newMaster = e.currentTarget.value;
+    setSelectedMaster(newMaster);
     // const defaultType = DATA_TYPE_DEFAULTS[newMaster];
     // await TABLE_COLUMN.PUT({
     //   tablename,
