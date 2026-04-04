@@ -38,7 +38,7 @@ export const datnameSignal = stateSignal(null);
 export const tablenameSignal = stateSignal(null);
 
 export const INDEX_ROUTE = route("");
-export const HOME_ROUTE = route(`/`, {
+const ANY_ROUTE = route(`/`, {
   searchParams: {
     role_login_open: roleCanLoginOpenSignal,
     role_login_height: roleCanLoginHeightSignal,
@@ -53,7 +53,7 @@ export const HOME_ROUTE = route(`/`, {
   },
 });
 export const ROLE_CAN_LOGIN_GET_MANY_ACTION = routeAction(
-  HOME_ROUTE,
+  ANY_ROUTE,
   ROLE_CAN_LOGIN.GET_MANY,
   () => {
     const open = roleCanLoginOpenSignal.value;
@@ -64,7 +64,7 @@ export const ROLE_CAN_LOGIN_GET_MANY_ACTION = routeAction(
   },
 );
 export const ROLE_GROUP_GET_MANY_ACTION = routeAction(
-  HOME_ROUTE,
+  ANY_ROUTE,
   ROLE_CANNOT_LOGIN.GET_MANY,
   () => {
     const open = roleGroupOpenSignal.value;
@@ -75,7 +75,7 @@ export const ROLE_GROUP_GET_MANY_ACTION = routeAction(
   },
 );
 export const DATABASE_GET_MANY_ACTION = routeAction(
-  HOME_ROUTE,
+  ANY_ROUTE,
   DATABASE.GET_MANY,
   () => {
     const open = databaseOpenSignal.value;
@@ -86,7 +86,7 @@ export const DATABASE_GET_MANY_ACTION = routeAction(
   },
 );
 export const TABLE_GET_MANY_ACTION = routeAction(
-  HOME_ROUTE,
+  ANY_ROUTE,
   TABLE.GET_MANY,
   () => {
     const open = tableListOpenSignal.value;
@@ -97,7 +97,7 @@ export const TABLE_GET_MANY_ACTION = routeAction(
   },
 );
 export const ROLE_WITH_OWNERSHIP_GET_MANY_ACTION = routeAction(
-  HOME_ROUTE,
+  ANY_ROUTE,
   ROLE_WITH_OWNERSHIP.GET_MANY,
   () => {
     const open = roleOwnershipOpenSignal.value;
@@ -144,7 +144,7 @@ export const TABLE_SETTINGS_ROUTE = route(
 
 setupRoutes([
   INDEX_ROUTE,
-  HOME_ROUTE,
+  ANY_ROUTE,
   ROLE_ROUTE,
   DATABASE_ROUTE,
   TABLE_ROUTE,

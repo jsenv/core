@@ -38,6 +38,7 @@ import {
 } from "@jsenv/navi";
 import { useRef, useState } from "preact/hooks";
 
+import { ColumnSidePanelContent } from "./column_side_panel_content.jsx";
 import { TABLE_COLUMN, TABLE_ROW } from "./table_store.js";
 
 import.meta.css = /* css */ `
@@ -197,15 +198,15 @@ export const TableData = ({ table, rows }) => {
         }}
       >
         {selectedColumn ? (
-          <SelectedColumnSidePanelContent column={selectedColumn} />
+          <ColumnSidePanelContent
+            tablename={tablename}
+            column={selectedColumn}
+            onClose={() => setSelectedColumn(null)}
+          />
         ) : null}
       </SidePanel>
     </div>
   );
-};
-
-const SelectedColumnSidePanelContent = ({ column }) => {
-  return column.column_name;
 };
 
 const SelectedRowActions = ({ tablename, selectedRows }) => {
