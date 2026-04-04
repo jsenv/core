@@ -305,27 +305,21 @@ const TextTypeOptions = ({ column, putColumn }) => {
 
   return (
     <Box flex="y" spacing="s">
-      <RadioList name="text_mode" flex="y" spacing="xs">
+      <RadioList
+        name="text_mode"
+        flex="y"
+        spacing="xs"
+        action={(mode) => {
+          setMode(mode);
+          return applyType(mode, length);
+        }}
+      >
         <Label spacing="s" alignY="center">
-          <Radio
-            value="free"
-            checked={mode === "free"}
-            action={() => {
-              setMode("free");
-              return applyType("free", length);
-            }}
-          />
+          <Radio value="free" checked={mode === "free"} />
           Free text
         </Label>
         <Label spacing="s" alignY="center">
-          <Radio
-            value="max"
-            checked={mode === "max"}
-            action={() => {
-              setMode("max");
-              return applyType("max", length);
-            }}
-          />
+          <Radio value="max" checked={mode === "max"} />
           Max length
           {mode === "max" && (
             <Input
@@ -343,14 +337,7 @@ const TextTypeOptions = ({ column, putColumn }) => {
           )}
         </Label>
         <Label spacing="s" alignY="center">
-          <Radio
-            value="fixed"
-            checked={mode === "fixed"}
-            action={() => {
-              setMode("fixed");
-              return applyType("fixed", length);
-            }}
-          />
+          <Radio value="fixed" checked={mode === "fixed"} />
           Fixed length
           {mode === "fixed" && (
             <Input
