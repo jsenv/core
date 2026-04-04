@@ -138,9 +138,9 @@ export const TABLE_COLUMN = TABLE.many("columns", COLUMN, {
     }
     const { data } = await response.json();
     const columns = data;
-    return { tablename, columns };
+    return [{ tablename }, columns];
   },
-  POST: async ({ tablename, columnName }) => {
+  POST: async ({ tablename, column_name }) => {
     const response = await fetch(
       `${window.DB_MANAGER_CONFIG.apiUrl}/tables/${tablename}/columns`,
       {
@@ -149,7 +149,7 @@ export const TABLE_COLUMN = TABLE.many("columns", COLUMN, {
           "accept": "application/json",
           "content-type": "application/json",
         },
-        body: JSON.stringify({ columnName }),
+        body: JSON.stringify({ column_name }),
       },
     );
     if (!response.ok) {
@@ -162,11 +162,11 @@ export const TABLE_COLUMN = TABLE.many("columns", COLUMN, {
     return [{ tablename }, column];
   },
   PUT: async (
-    { tablename, columnName, propertyName, propertyValue },
+    { tablename, column_name, propertyName, propertyValue },
     { signal },
   ) => {
     const response = await fetch(
-      `${window.DB_MANAGER_CONFIG.apiUrl}/tables/${tablename}/columns/${columnName}/${propertyName}`,
+      `${window.DB_MANAGER_CONFIG.apiUrl}/tables/${tablename}/columns/${column_name}/${propertyName}`,
       {
         signal,
         method: "PUT",
@@ -180,16 +180,16 @@ export const TABLE_COLUMN = TABLE.many("columns", COLUMN, {
     if (!response.ok) {
       throw await errorFromResponse(
         response,
-        `Failed to PUT ${tablename}.${columnName}.${propertyName} = ${propertyValue}`,
+        `Failed to PUT ${tablename}.${column_name}.${propertyName} = ${propertyValue}`,
       );
     }
     const { data: column } = await response.json();
     // we return an array to say: we update this column with these props
-    return ["column_name", columnName, column];
+    return [{ tablename }, { column_name }, column];
   },
-  DELETE: async ({ tablename, columnName }, { signal }) => {
+  DELETE: async ({ tablename, column_name }, { signal }) => {
     const response = await fetch(
-      `${window.DB_MANAGER_CONFIG.apiUrl}/tables/${tablename}/columns/${columnName}`,
+      `${window.DB_MANAGER_CONFIG.apiUrl}/tables/${tablename}/columns/${column_name}`,
       {
         signal,
         method: "DELETE",
@@ -198,10 +198,10 @@ export const TABLE_COLUMN = TABLE.many("columns", COLUMN, {
     if (!response.ok) {
       throw await errorFromResponse(
         response,
-        `Failed to remove ${columnName} from ${tablename}`,
+        `Failed to remove ${column_name} from ${tablename}`,
       );
     }
-    return [{ tablename }, { column_name: columnName }];
+    return [{ tablename }, { column_name }];
   },
 });
 

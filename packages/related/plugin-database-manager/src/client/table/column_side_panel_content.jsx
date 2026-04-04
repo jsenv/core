@@ -20,12 +20,12 @@ export const ColumnSidePanelContent = ({ tablename, column }) => {
   const isUpdatable = String(column.is_updatable).toUpperCase() === "YES";
 
   const putColumn = (propertyName, propertyValue) => {
-    // TABLE_COLUMN.PUT({
-    //   tablename,
-    //   columnName: column.column_name,
-    //   propertyName,
-    //   propertyValue,
-    // });
+    return TABLE_COLUMN.PUT({
+      tablename,
+      columnName: column.column_name,
+      propertyName,
+      propertyValue,
+    });
   };
 
   return (
@@ -52,11 +52,9 @@ export const ColumnSidePanelContent = ({ tablename, column }) => {
             Name
           </Text>
           <Input
-            defaultValue={column.column_name}
+            value={column.column_name}
             action={async (newName) => {
-              if (newName && newName !== column.column_name) {
-                await putColumn("column_name", newName);
-              }
+              await putColumn("column_name", newName);
             }}
           />
           <Text italic size="xxs" color="#868e96">
