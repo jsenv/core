@@ -1,6 +1,6 @@
 import { createContext } from "preact";
 import { createPortal } from "preact/compat";
-import { useContext, useEffect, useRef } from "preact/hooks";
+import { useContext, useEffect, useRef, useState } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
 import { useKeyboardShortcuts } from "../keyboard/keyboard_shortcuts.js";
@@ -11,6 +11,7 @@ import.meta.css = /* css */ `
       --side-panel-width: 400px;
       --side-panel-background: white;
       --side-panel-shadow: -4px 0 24px rgba(0, 0, 0, 0.18);
+      --side-panel-animation-duration: 250ms;
     }
   }
 
@@ -29,7 +30,60 @@ import.meta.css = /* css */ `
       background: var(--side-panel-background);
       outline: none;
       box-shadow: var(--side-panel-shadow);
+      animation-duration: var(--side-panel-animation-duration);
+      animation-timing-function: ease-out;
+      animation-fill-mode: both;
       overflow-y: auto;
+    }
+
+    &[data-opening] .navi_side_panel_dialog {
+      animation-name: navi_side_panel_slide_in;
+    }
+
+    &[data-closing] .navi_side_panel_dialog {
+      animation-name: navi_side_panel_slide_out;
+    }
+  }
+
+  .navi_side_panel_close_button {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    display: flex;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    align-items: center;
+    justify-content: center;
+    color: #6c757d;
+    font-size: 18px;
+    line-height: 1;
+    background: transparent;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+
+    &:hover {
+      color: #212529;
+      background: #f0f0f0;
+    }
+  }
+
+  @keyframes navi_side_panel_slide_in {
+    from {
+      transform: translateX(100%);
+    }
+    to {
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes navi_side_panel_slide_out {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(100%);
     }
   }
 `;
@@ -46,17 +100,27 @@ export const SidePanel = ({
   onClose,
   children,
   closeOnClickOutside = false,
+  hideCloseButton = false,
   width,
   onClick,
   ...rest
 }) => {
   const panelDialogRef = useRef(null);
+  const [phase, setPhase] = useState(isOpen ? "open" : "closed");
 
   useEffect(() => {
-    if (isOpen && panelDialogRef.current) {
-      panelDialogRef.current.focus();
+    if (isOpen) {
+      setPhase("opening");
+    } else if (phase !== "closed") {
+      setPhase("closing");
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    if (phase === "opening" && panelDialogRef.current) {
+      panelDialogRef.current.focus();
+    }
+  }, [phase]);
 
   useKeyboardShortcuts(panelDialogRef, [
     {
@@ -68,9 +132,14 @@ export const SidePanel = ({
     },
   ]);
 
-  if (!isOpen) {
+  if (phase === "closed") {
     return null;
   }
+
+  const onAnimationEnd = () => {
+    if (phase === "opening") setPhase("open");
+    if (phase === "closing") setPhase("closed");
+  };
 
   return createPortal(
     <SidePanelCloseContext.Provider value={onClose}>
@@ -78,11 +147,11 @@ export const SidePanel = ({
         baseClassName="navi_side_panel"
         propsCSSVars={SidePanelStyleCSSVars}
         width={width}
+        data-opening={phase === "opening" ? "" : undefined}
+        data-closing={phase === "closing" ? "" : undefined}
         onClick={(e) => {
-          if (closeOnClickOutside) {
-            if (e.target === e.currentTarget) {
-              onClose(e);
-            }
+          if (closeOnClickOutside && e.target === e.currentTarget) {
+            onClose(e);
           }
           onClick?.(e);
         }}
@@ -94,11 +163,26 @@ export const SidePanel = ({
           tabIndex={-1}
           role="dialog"
           aria-modal="true"
+          onAnimationEnd={onAnimationEnd}
         >
+          {!hideCloseButton && <NaviSidePanelCloseButton />}
           {children}
         </Box>
       </Box>
     </SidePanelCloseContext.Provider>,
     document.body,
+  );
+};
+
+const NaviSidePanelCloseButton = () => {
+  const sidePanelClose = useSidePanelClose();
+  return (
+    <button
+      className="navi_side_panel_close_button"
+      aria-label="Close panel"
+      onClick={sidePanelClose}
+    >
+      ×
+    </button>
   );
 };
