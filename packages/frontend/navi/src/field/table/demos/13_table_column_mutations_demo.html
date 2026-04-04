@@ -198,6 +198,7 @@
             <Frontend
               rows={rows}
               columnsConfig={columnsConfig}
+              onAddColumn={addColumn}
               onRenameColumn={renameColumn}
               onDeleteColumn={deleteColumn}
             />
@@ -208,9 +209,11 @@
       const Frontend = ({
         rows,
         columnsConfig,
+        onAddColumn,
         onRenameColumn,
         onDeleteColumn,
       }) => {
+        const [newColName, setNewColName] = useState("");
         const [orderedColumns] = useOrderedColumns(columnsConfig, undefined, {
           columnIdKey: "name",
         });
@@ -290,6 +293,40 @@
                 })}
               </Tbody>
             </Table>
+            <div
+              style={{
+                display: "flex",
+                gap: "6px",
+                alignItems: "center",
+                marginTop: "8px",
+              }}
+            >
+              <input
+                type="text"
+                placeholder="new column name"
+                value={newColName}
+                onInput={(e) => setNewColName(e.target.value)}
+                style={{
+                  padding: "2px 6px",
+                  fontSize: "0.85em",
+                  border: "1px solid #adb5bd",
+                  borderRadius: "3px",
+                }}
+              />
+              <Button
+                action={async () => {
+                  const name = newColName
+                    .trim()
+                    .toLowerCase()
+                    .replace(/\s+/g, "_");
+                  await new Promise((resolve) => setTimeout(resolve, 1000));
+                  onAddColumn(name);
+                  setNewColName("");
+                }}
+              >
+                + add column
+              </Button>
+            </div>
           </div>
         );
       };
