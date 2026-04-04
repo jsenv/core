@@ -39,7 +39,11 @@ import {
 import { useRef, useState } from "preact/hooks";
 
 import { ColumnSidePanelContent } from "./column_side_panel_content.jsx";
-import { TABLE_COLUMN, TABLE_ROW } from "./table_store.js";
+import {
+  TABLE_COLUMN,
+  TABLE_ROW,
+  tableColumnNameSignal,
+} from "./table_store.js";
 
 import.meta.css = /* css */ `
   .table_data_actions {
@@ -69,7 +73,7 @@ export const TableData = ({ table, rows }) => {
   });
   const selectedRowCount = selectedRows.length;
 
-  const [selectedColumn, setSelectedColumn] = useState(null);
+  const activeColumnName = tableColumnNameSignal.value;
 
   return (
     <div>
@@ -103,7 +107,7 @@ export const TableData = ({ table, rows }) => {
                       });
                     }}
                     onClick={() => {
-                      setSelectedColumn(column);
+                      tableColumnNameSignal.value = column.column_name;
                     }}
                   >
                     {column.column_name}
@@ -192,15 +196,15 @@ export const TableData = ({ table, rows }) => {
       </div>
 
       <SidePanel
-        isOpen={Boolean(selectedColumn)}
+        isOpen={Boolean(activeColumnName)}
         onClose={() => {
-          setSelectedColumn(null);
+          tableColumnNameSignal.value = undefined;
         }}
       >
-        {selectedColumn ? (
+        {activeColumnName ? (
           <ColumnSidePanelContent
             tablename={tablename}
-            column={selectedColumn}
+            column={columns.find((c) => c.column_name === activeColumnName)}
             // onClose={() => setSelectedColumn(null)}
           />
         ) : null}

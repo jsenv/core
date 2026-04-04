@@ -1,7 +1,12 @@
-import { resource } from "@jsenv/navi";
+import { resource, stateSignal } from "@jsenv/navi";
 
 import { setTableCount } from "../database_manager_signals.js";
 import { errorFromResponse } from "../error_from_response.js";
+
+export const tableColumnNameSignal = stateSignal(undefined, {
+  type: "string",
+  persists: true,
+});
 
 export const TABLE = resource("table", {
   idKey: "tableoid",

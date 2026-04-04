@@ -29,7 +29,11 @@ import {
   tableListHeightSignal,
   tableListOpenSignal,
 } from "./table/table_list_state.js";
-import { TABLE, TABLE_ROW } from "./table/table_store.js";
+import {
+  TABLE,
+  TABLE_ROW,
+  tableColumnNameSignal,
+} from "./table/table_store.js";
 
 setBaseUrl(window.DB_MANAGER_CONFIG.pathname);
 
@@ -129,7 +133,14 @@ export const TABLE_GET_ACTION = routeAction(TABLE_ROUTE, TABLE.GET, () => {
   const tablename = tablenameSignal.value;
   return { tablename };
 });
-export const TABLE_INDEX_ROUTE = route(`/tables/:tablename=${tablenameSignal}`);
+export const TABLE_INDEX_ROUTE = route(
+  `/tables/:tablename=${tablenameSignal}`,
+  {
+    searchParams: {
+      column_name: tableColumnNameSignal,
+    },
+  },
+);
 export const TABLE_ROW_GET_MANY_ACTION = routeAction(
   TABLE_INDEX_ROUTE,
   TABLE_ROW.GET_MANY,

@@ -1,6 +1,15 @@
 import { useState } from "preact/hooks";
 
-import { Box, Button, Checkbox, Input, Label, Text } from "@jsenv/navi";
+import {
+  Box,
+  Button,
+  Checkbox,
+  Input,
+  Label,
+  Radio,
+  RadioList,
+  Text,
+} from "@jsenv/navi";
 
 import { TABLE_COLUMN } from "./table_store.js";
 
@@ -272,66 +281,97 @@ const DataTypeOptions = ({ master, column, putColumn }) => {
   return null;
 };
 
-// Text: text (unlimited) | varchar(n) (variable length) | char(n) (fixed length)
+// Text: free text (text) | max length (varchar(n)) | fixed length (char(n))
 const TextTypeOptions = ({ column, putColumn }) => {
   const currentLength = column.character_maximum_length ?? null;
-  const isVariable = column.data_type !== "char";
+  const initialMode =
+    column.data_type === "char" ? "fixed" : currentLength ? "max" : "free";
+  const [mode, setMode] = useState(initialMode);
   const [length, setLength] = useState(
     currentLength ? String(currentLength) : "",
   );
-  const [variable, setVariable] = useState(isVariable);
 
-  const applyType = async (newLength, newVariable) => {
+  const applyType = async (newMode, newLength) => {
     let type;
-    if (!newLength) {
+    if (newMode === "free") {
       type = "text";
-    } else if (newVariable) {
-      type = `varchar(${newLength})`;
+    } else if (newMode === "max") {
+      type = newLength ? `varchar(${newLength})` : "varchar";
     } else {
-      type = `char(${newLength})`;
+      type = newLength ? `char(${newLength})` : "char";
     }
     await putColumn("data_type", type);
   };
 
   return (
     <Box flex="y" spacing="s">
-      <Box flex="y" spacing="xs">
-        <FieldLabel>Max length</FieldLabel>
-        <Input
-          type="number"
-          placeholder="Unlimited"
-          value={length}
-          action={async (newValue) => {
-            const newLength = newValue
-              ? String(Math.floor(Number(newValue)))
-              : "";
-            setLength(newLength);
-            await applyType(newLength, variable);
-          }}
-        />
-        <FieldDescription>
-          Leave empty for unlimited text. Set a value to enforce a max length.
-        </FieldDescription>
-      </Box>
-      {length && (
-        <Box flex="y" spacing="xs">
-          <Box spacing="s" alignY="center">
-            <FieldLabel>Variable length</FieldLabel>
-            <Checkbox
-              appearance="toggle"
-              checked={variable}
-              action={async (newChecked) => {
-                setVariable(newChecked);
-                await applyType(length, newChecked);
+      <RadioList name="text_mode" flex="y" spacing="xs">
+        <Label spacing="s" alignY="center">
+          <Radio
+            value="free"
+            checked={mode === "free"}
+            action={() => {
+              setMode("free");
+              return applyType("free", length);
+            }}
+          />
+          Free text
+        </Label>
+        <Label spacing="s" alignY="center">
+          <Radio
+            value="max"
+            checked={mode === "max"}
+            action={() => {
+              setMode("max");
+              return applyType("max", length);
+            }}
+          />
+          Max length
+          {mode === "max" && (
+            <Input
+              type="number"
+              placeholder="e.g. 255"
+              value={length}
+              action={async (newValue) => {
+                const newLength = newValue
+                  ? String(Math.floor(Number(newValue)))
+                  : "";
+                setLength(newLength);
+                await applyType("max", newLength);
               }}
             />
-          </Box>
-          <FieldDescription>
-            On: varchar — stores up to max length (saves space). Off: char —
-            always pads to exact length.
-          </FieldDescription>
-        </Box>
-      )}
+          )}
+        </Label>
+        <Label spacing="s" alignY="center">
+          <Radio
+            value="fixed"
+            checked={mode === "fixed"}
+            action={() => {
+              setMode("fixed");
+              return applyType("fixed", length);
+            }}
+          />
+          Fixed length
+          {mode === "fixed" && (
+            <Input
+              type="number"
+              placeholder="e.g. 10"
+              value={length}
+              action={async (newValue) => {
+                const newLength = newValue
+                  ? String(Math.floor(Number(newValue)))
+                  : "";
+                setLength(newLength);
+                await applyType("fixed", newLength);
+              }}
+            />
+          )}
+        </Label>
+      </RadioList>
+      <FieldDescription>
+        Free text: unlimited. Max length: varchar(n), saves space up to limit.
+        Fixed length: char(n), always pads to exact length.
+      </FieldDescription>
     </Box>
   );
 };
