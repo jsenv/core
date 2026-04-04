@@ -450,6 +450,7 @@ export const TableCell = (props) => {
     onClick,
     action,
     name,
+    value,
     valueSignal,
     // appeareance
     style,
@@ -676,6 +677,7 @@ export const TableCell = (props) => {
           value={children}
           action={action}
           name={name}
+          value={value}
           valueSignal={valueSignal}
           height="100%"
           width="100%"

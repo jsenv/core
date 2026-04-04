@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Table - Rename Column Demo</title>
+    <title>Table - Column Mutations Demo</title>
     <style>
       body {
         margin: 20px;
@@ -14,7 +14,7 @@
         background: #f5f5f5;
       }
       .demo-container {
-        max-width: 600px;
+        max-width: 700px;
         margin: 0 auto;
         padding: 20px;
         background: white;
@@ -39,6 +39,7 @@
         Tr,
         RowNumberCol,
         RowNumberTableCell,
+        Button,
         useCellGridFromRows,
         useOrderedColumns,
       } from "@jsenv/navi";
@@ -51,6 +52,7 @@
         { id: 4, name: "Diana", age: 28, email: "diana@example.com" },
       ];
 
+      // Columns are identified by name only — no separate id or header.
       const initialColumnsConfig = [
         { name: "name" },
         { name: "age" },
@@ -60,30 +62,36 @@
       // This demo illustrates the typical pattern in a real frontend app:
       //
       // - The BACKEND is the source of truth. It holds the columns config and
-      //   exposes methods to mutate it (e.g. HTTP endpoints backed by a database).
+      //   exposes methods to mutate it (add, rename, delete).
       //   Here it is simulated by a component using useState.
       //
       // - The FRONTEND receives the current state as props (columnsConfig) and can
-      //   REQUEST mutations via callbacks (onRenameColumn). It never modifies
-      //   state directly — it only reflects what the backend sends.
+      //   REQUEST mutations via callbacks. It never modifies state directly.
       //
-      // The 1s delay on the header save simulates a real HTTP round-trip:
-      // the request goes out, the backend processes it, and the updated
-      // columns eventually come back down to the frontend.
+      // The 1s delay on frontend actions simulates a real HTTP round-trip.
 
       const Backend = () => {
         const [columnsConfig, setColumnsConfig] =
           useState(initialColumnsConfig);
         const columnIds = columnsConfig.map((col) => col.name);
         const [rows, { renameProperty }] = useRowsState(initialRows, columnIds);
+        const [newColName, setNewColName] = useState("");
 
-        const renameColumn = (columnName, newName) => {
-          renameProperty(columnName, newName);
+        const addColumn = (name) => {
+          if (!name || columnsConfig.some((c) => c.name === name)) return;
+          setColumnsConfig((prev) => [...prev, { name }]);
+        };
+
+        const renameColumn = (oldName, newName) => {
+          if (!newName || oldName === newName) return;
+          renameProperty(oldName, newName);
           setColumnsConfig((prev) =>
-            prev.map((col) =>
-              col.name === columnName ? { name: newName } : col,
-            ),
+            prev.map((col) => (col.name === oldName ? { name: newName } : col)),
           );
+        };
+
+        const deleteColumn = (name) => {
+          setColumnsConfig((prev) => prev.filter((c) => c.name !== name));
         };
 
         return (
@@ -105,20 +113,70 @@
               >
                 ⚙️ Backend (source of truth)
               </div>
-              <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+              <ul style={{ listStyle: "none", padding: 0, margin: "0 0 8px" }}>
                 {columnsConfig.map((col) => (
                   <li
                     key={col.name}
                     style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      marginBottom: "4px",
                       fontSize: "0.85em",
                       color: "#495057",
-                      marginBottom: "4px",
                     }}
                   >
-                    {`{ name: "${col.name}" }`}
+                    <span>{`{ name: "${col.name}" }`}</span>
+                    <button
+                      style={{
+                        padding: "1px 6px",
+                        background: "#6c757d",
+                        color: "white",
+                        border: "none",
+                        borderRadius: "3px",
+                        cursor: "pointer",
+                        fontSize: "0.9em",
+                      }}
+                      onClick={() => deleteColumn(col.name)}
+                    >
+                      ×
+                    </button>
                   </li>
                 ))}
               </ul>
+              <div
+                style={{ display: "flex", gap: "6px", alignItems: "center" }}
+              >
+                <input
+                  type="text"
+                  placeholder="new column name"
+                  value={newColName}
+                  onInput={(e) => setNewColName(e.target.value)}
+                  style={{
+                    padding: "2px 6px",
+                    fontSize: "0.85em",
+                    border: "1px solid #adb5bd",
+                    borderRadius: "3px",
+                  }}
+                />
+                <button
+                  style={{
+                    padding: "2px 8px",
+                    background: "#6c757d",
+                    color: "white",
+                    border: "none",
+                    borderRadius: "3px",
+                    cursor: "pointer",
+                    fontSize: "0.85em",
+                  }}
+                  onClick={() => {
+                    addColumn(newColName.trim());
+                    setNewColName("");
+                  }}
+                >
+                  + add column
+                </button>
+              </div>
             </div>
 
             <div
@@ -134,20 +192,25 @@
             >
               <span>columnsConfig ↓</span>
               <span style={{ fontSize: "1.4em", lineHeight: "1" }}>⇅</span>
-              <span>onRenameColumn ↑</span>{" "}
+              <span>onAddColumn / onRenameColumn / onDeleteColumn ↑</span>
             </div>
 
             <Frontend
               rows={rows}
               columnsConfig={columnsConfig}
               onRenameColumn={renameColumn}
+              onDeleteColumn={deleteColumn}
             />
           </div>
         );
       };
 
-      const Frontend = ({ rows, columnsConfig, onRenameColumn }) => {
-        // const columnOrder = columnsConfig.map((col) => col.name);
+      const Frontend = ({
+        rows,
+        columnsConfig,
+        onRenameColumn,
+        onDeleteColumn,
+      }) => {
         const [orderedColumns] = useOrderedColumns(columnsConfig, undefined, {
           columnIdKey: "name",
         });
@@ -170,7 +233,7 @@
                 marginBottom: "8px",
               }}
             >
-              🖥️ Frontend (display + calls backend to rename column)
+              🖥️ Frontend (display + calls backend to mutate columns)
             </div>
             <Table borderCollapse>
               <Colgroup>
@@ -189,10 +252,24 @@
                         await new Promise((resolve) =>
                           setTimeout(resolve, 1000),
                         );
-                        onRenameColumn(col.name, newName);
+                        onRenameColumn(
+                          col.name,
+                          newName.trim().toLowerCase().replace(/\s+/g, "_"),
+                        );
                       }}
+                      value={col.name}
                     >
                       {col.name}
+                      <Button
+                        action={async () => {
+                          await new Promise((resolve) =>
+                            setTimeout(resolve, 1000),
+                          );
+                          onDeleteColumn(col.name);
+                        }}
+                      >
+                        ×
+                      </Button>
                     </TableCell>
                   ))}
                 </Tr>
@@ -219,14 +296,14 @@
 
       const App = () => (
         <div class="demo-container">
-          <h1>Table — Rename Column</h1>
+          <h1>Table — column mutations</h1>
           <p style={{ color: "#6c757d", marginBottom: "16px" }}>
-            The <strong>backend</strong> (grey box) is the source of truth and
-            reflects every saved column name.
-            <br />
-            The <strong>frontend</strong> (blue box) lets you double-click a
-            header cell to rename it — the 1s delay on save simulates an HTTP
-            round-trip.
+            The <strong>backend</strong> (grey box) is the source of truth.
+            Columns can be added, deleted instantly, or renamed. The{" "}
+            <strong>frontend</strong> (blue box) reflects what it receives —
+            double-click a header to rename it, click × to delete it. The 1s
+            delay on frontend actions simulates an HTTP round-trip. Column order
+            is preserved across all mutations.
           </p>
           <Backend />
         </div>
