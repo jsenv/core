@@ -6,11 +6,13 @@ import {
   Checkbox,
   Input,
   Label,
+  Link,
   Radio,
   RadioList,
   Text,
 } from "@jsenv/navi";
 
+import { TABLE_INDEX_ROUTE } from "../routes.js";
 import { TABLE_COLUMN } from "./table_store.js";
 
 export const ColumnSidePanelContent = ({ tablename, column_name, columns }) => {
@@ -18,9 +20,38 @@ export const ColumnSidePanelContent = ({ tablename, column_name, columns }) => {
 
   if (!column) {
     return (
-      <Text>
-        {column_name} not found in table {tablename}
-      </Text>
+      <Box flex="y" spacing="m" padding="l">
+        <Text bold size="m" color="#dc3545">
+          Column not found
+        </Text>
+        <Text size="s" color="#6c757d">
+          No column named <Text bold>{column_name}</Text> in table{" "}
+          <Text bold>{tablename}</Text>.
+        </Text>
+        {columns.length > 0 && (
+          <Box flex="y" spacing="xs">
+            <Text bold uppercase size="xxs" color="#6c757d">
+              Available columns
+            </Text>
+            <Box flex="y" spacing="xxs">
+              {columns.map((c) => (
+                <Text key={c.column_name}>
+                  <Link
+                    route={TABLE_INDEX_ROUTE}
+                    routeParams={{ tablename, column_name: c.column_name }}
+                    size="s"
+                  >
+                    {c.column_name}
+                  </Link>
+                  <Text italic size="xxs" color="#868e96">
+                    ({c.data_type})
+                  </Text>
+                </Text>
+              ))}
+            </Box>
+          </Box>
+        )}
+      </Box>
     );
   }
 
@@ -133,28 +164,28 @@ export const ColumnSidePanelContent = ({ tablename, column_name, columns }) => {
           </Box>
         )}
 
-        {/* Nullable — hidden for identity (always NOT NULL) */}
-        {!isIdentity && (
-          <Box flex="y" spacing="xs">
-            <Box flex spacing="s" alignY="center">
-              <Text bold uppercase size="xxs" color="#6c757d">
-                Nullable
-              </Text>
-              <Checkbox
-                appearance="toggle"
-                size="xxs"
-                checked={isNullable}
-                action={async (v) => {
-                  await putColumn("is_nullable", v);
-                }}
-              />
-            </Box>
-            <Text italic size="xxs" color="#868e96">
-              When on, this column accepts NULL values. When off, every row must
-              provide a value.
+        {/* Nullable */}
+        <Box flex="y" spacing="xs">
+          <Box flex spacing="s" alignY="center">
+            <Text bold uppercase size="xxs" color="#6c757d">
+              Nullable
             </Text>
+            <Checkbox
+              appearance="toggle"
+              size="xxs"
+              checked={isNullable}
+              readOnly={isIdentity}
+              data-readonly-message="Identity columns are always NOT NULL"
+              action={async (v) => {
+                await putColumn("is_nullable", v);
+              }}
+            />
           </Box>
-        )}
+          <Text italic size="xxs" color="#868e96">
+            When on, this column accepts NULL values. When off, every row must
+            provide a value.
+          </Text>
+        </Box>
 
         {/* Datetime precision */}
         {column.datetime_precision !== null &&
@@ -213,14 +244,12 @@ export const ColumnSidePanelContent = ({ tablename, column_name, columns }) => {
           </Box>
         )}
 
-        {/* Generated — hidden for identity (mutually exclusive) */}
-        {!isIdentity && (
-          <GeneratedField
-            column={column}
-            isGenerated={isGenerated}
-            putColumn={putColumn}
-          />
-        )}
+        {/* Generated */}
+        <GeneratedField
+          column={column}
+          isGenerated={isGenerated}
+          putColumn={putColumn}
+        />
 
         {/* Updatable */}
         {!isUpdatable && (
