@@ -106,19 +106,23 @@ export const ColumnSidePanelContent = ({ tablename, column }) => {
         </Box>
 
         {/* Default */}
-        {column.column_default !== null &&
-          column.column_default !== undefined && (
-            <Box flex="y" spacing="xs">
-              <Text bold uppercase size="xxs" color="#6c757d">
-                Default
-              </Text>
-              <Input readOnly value={column.column_default} />
-              <Text italic size="xxs" color="#868e96">
-                The value PostgreSQL inserts when no value is provided for this
-                column.
-              </Text>
-            </Box>
-          )}
+        <Box flex="y" spacing="xs">
+          <FieldLabel>Default</FieldLabel>
+          <Input
+            defaultValue={column.column_default ?? ""}
+            placeholder="None"
+            action={async (newValue) => {
+              await putColumn(
+                "default_value",
+                newValue.trim() === "" ? null : newValue.trim(),
+              );
+            }}
+          />
+          <FieldDescription>
+            Value PostgreSQL inserts when no value is provided. Leave empty to
+            remove the default.
+          </FieldDescription>
+        </Box>
 
         {/* Datetime precision */}
         {column.datetime_precision !== null &&
@@ -185,25 +189,12 @@ export const ColumnSidePanelContent = ({ tablename, column }) => {
         />
 
         {/* Updatable */}
-        <Box flex="y" spacing="xxs">
-          <Box flex spacing="s" alignY="center">
-            <Text bold uppercase size="xxs" color="#6c757d">
-              Updatable
-            </Text>
-            <Checkbox
-              appearance="toggle"
-              size="xxs"
-              checked={isUpdatable}
-              action={async (v) => {
-                await putColumn("is_updatable", v);
-              }}
-            />
-          </Box>
+        {!isUpdatable && (
           <Text italic size="xxs" color="#868e96">
-            When off, this column cannot be modified after the row is created
-            (e.g. in non-updatable views, or ALWAYS identity columns).
+            This column is not updatable (e.g. in a non-updatable view or an
+            ALWAYS identity column).
           </Text>
-        </Box>
+        )}
       </Box>
 
       {/* Delete */}
