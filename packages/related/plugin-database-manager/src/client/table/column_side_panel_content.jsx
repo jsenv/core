@@ -83,11 +83,16 @@ export const ColumnSidePanelContent = ({ tablename, column }) => {
 
         {/* Nullable */}
         <Box flex="y" spacing="xs">
-          <Box spacing="s" alignY="center">
+          <Box flex spacing="s" alignY="center">
             <Text bold uppercase size="xxs" color="#6c757d">
               Nullable
             </Text>
-            <Checkbox appearance="toggle" readOnly checked={isNullable} />
+            <Checkbox
+              appearance="toggle"
+              size="xxs"
+              readOnly
+              checked={isNullable}
+            />
           </Box>
           <Text italic size="xxs" color="#868e96">
             When on, this column accepts NULL values. When off, every row must
@@ -133,12 +138,17 @@ export const ColumnSidePanelContent = ({ tablename, column }) => {
           )}
 
         {/* Identity */}
-        <Box flex="y" spacing="xs">
-          <Box spacing="s" alignY="center">
+        <Box flex="y" spacing="xxs">
+          <Box flex spacing="s" alignY="center">
             <Text bold uppercase size="xxs" color="#6c757d">
               Identity
             </Text>
-            <Checkbox appearance="toggle" readOnly checked={isIdentity} />
+            <Checkbox
+              appearance="toggle"
+              size="xxs"
+              readOnly
+              checked={isIdentity}
+            />
           </Box>
           <Text italic size="xxs" color="#868e96">
             When on, the database auto-increments this column. You cannot insert
@@ -161,12 +171,17 @@ export const ColumnSidePanelContent = ({ tablename, column }) => {
         )}
 
         {/* Generated */}
-        <Box flex="y" spacing="xs">
-          <Box spacing="s" alignY="center">
+        <Box flex="y" spacing="xxs">
+          <Box flex spacing="s" alignY="center">
             <Text bold uppercase size="xxs" color="#6c757d">
               Generated
             </Text>
-            <Checkbox appearance="toggle" readOnly checked={isGenerated} />
+            <Checkbox
+              appearance="toggle"
+              size="xxs"
+              readOnly
+              checked={isGenerated}
+            />
           </Box>
           <Text italic size="xxs" color="#868e96">
             When on, the column value is computed from other columns via an
@@ -184,12 +199,17 @@ export const ColumnSidePanelContent = ({ tablename, column }) => {
         )}
 
         {/* Updatable */}
-        <Box flex="y" spacing="xs">
-          <Box spacing="s" alignY="center">
+        <Box flex="y" spacing="xxs">
+          <Box flex spacing="s" alignY="center">
             <Text bold uppercase size="xxs" color="#6c757d">
               Updatable
             </Text>
-            <Checkbox appearance="toggle" readOnly checked={isUpdatable} />
+            <Checkbox
+              appearance="toggle"
+              size="xxs"
+              readOnly
+              checked={isUpdatable}
+            />
           </Box>
           <Text italic size="xxs" color="#868e96">
             When off, this column cannot be modified after the row is created
@@ -273,6 +293,12 @@ const DataTypeOptions = ({ master, column, putColumn }) => {
   }
   if (master === "Binary") {
     return <BinaryTypeOptions column={column} putColumn={putColumn} />;
+  }
+  if (master === "Network") {
+    return <NetworkTypeOptions column={column} putColumn={putColumn} />;
+  }
+  if (master === "Other") {
+    return <OtherTypeOptions column={column} putColumn={putColumn} />;
   }
   const description = DATA_TYPE_DESCRIPTIONS[master];
   if (description) {
@@ -363,124 +389,109 @@ const TextTypeOptions = ({ column, putColumn }) => {
   );
 };
 
-// Number: integer types (no extra config) vs decimal/numeric (precision + scale)
-const NumberTypeOptions = ({ column, putColumn }) => {
-  const isDecimal =
-    column.data_type === "decimal" || column.data_type === "numeric";
-  const integerTypes = ["smallint", "integer", "bigint", "serial", "bigserial"];
-  const decimalTypes = [
-    "decimal",
-    "numeric",
-    "real",
-    "double precision",
-    "money",
-  ];
-  const currentGroup = decimalTypes.includes(column.data_type)
-    ? "decimal"
-    : "integer";
-  const [group, setGroup] = useState(currentGroup);
+const NUMBER_TYPES = [
+  "smallint",
+  "integer",
+  "bigint",
+  "serial",
+  "bigserial",
+  "numeric",
+  "real",
+  "double precision",
+  "money",
+];
 
-  const handleGroupChange = async (e) => {
-    const newGroup = e.currentTarget.value;
-    setGroup(newGroup);
-    await putColumn(
-      "data_type",
-      newGroup === "integer" ? "integer" : "numeric",
-    );
-  };
+const NumberTypeOptions = ({ column, putColumn }) => {
+  const currentType = NUMBER_TYPES.includes(column.data_type)
+    ? column.data_type
+    : "integer";
+  const isExact = currentType === "numeric" || currentType === "decimal";
 
   return (
     <Box flex="y" spacing="s">
-      <select value={group} onChange={handleGroupChange}>
-        <option value="integer">Integer (whole numbers)</option>
-        <option value="decimal">Decimal (fractional numbers)</option>
-      </select>
-
-      {group === "integer" && (
-        <Box flex="y" spacing="xs">
-          <FieldLabel>Size</FieldLabel>
-          <select
-            value={
-              integerTypes.includes(column.data_type)
-                ? column.data_type
-                : "integer"
-            }
-            onChange={async (e) => {
-              await putColumn("data_type", e.currentTarget.value);
-            }}
-          >
-            <option value="smallint">smallint — 2 bytes, up to 32 767</option>
-            <option value="integer">integer — 4 bytes, up to 2 billion</option>
-            <option value="bigint">bigint — 8 bytes, very large numbers</option>
-            <option value="serial">serial — auto-increment integer</option>
-            <option value="bigserial">bigserial — auto-increment bigint</option>
-          </select>
-        </Box>
-      )}
-
-      {group === "decimal" && (
-        <Box flex="y" spacing="xs">
-          <FieldLabel>Type</FieldLabel>
-          <select
-            value={
-              decimalTypes.includes(column.data_type)
-                ? column.data_type
-                : "numeric"
-            }
-            onChange={async (e) => {
-              await putColumn("data_type", e.currentTarget.value);
-            }}
-          >
-            <option value="numeric">
-              numeric — exact precision (configurable)
-            </option>
-            <option value="decimal">decimal — alias for numeric</option>
-            <option value="real">real — 4-byte floating point</option>
-            <option value="double precision">
-              double precision — 8-byte floating point
-            </option>
-            <option value="money">
-              money — currency with fixed 2 decimal places
-            </option>
-          </select>
-          {(isDecimal || column.data_type === "numeric") && (
-            <Box flex="y" spacing="xs">
-              <FieldDescription>
-                Optional precision (total digits) and scale (decimal digits) for
-                numeric/decimal.
-              </FieldDescription>
-              <Box spacing="s">
-                <Box flex="y" spacing="xs">
-                  <FieldLabel>Precision</FieldLabel>
-                  <Input
-                    type="number"
-                    placeholder="Any"
-                    readOnly
-                    value={column.numeric_precision ?? ""}
-                  />
-                </Box>
-                <Box flex="y" spacing="xs">
-                  <FieldLabel>Scale</FieldLabel>
-                  <Input
-                    type="number"
-                    placeholder="0"
-                    readOnly
-                    value={column.numeric_scale ?? ""}
-                  />
-                </Box>
-              </Box>
-            </Box>
-          )}
+      <RadioList
+        name="number_type"
+        flex="y"
+        spacing="xs"
+        action={(type) => putColumn("data_type", type)}
+      >
+        <Label spacing="s" alignY="center">
+          <Radio value="smallint" checked={currentType === "smallint"} />
+          smallint — 2 bytes (up to 32,767)
+        </Label>
+        <Label spacing="s" alignY="center">
+          <Radio value="integer" checked={currentType === "integer"} />
+          integer — 4 bytes (up to 2 billion)
+        </Label>
+        <Label spacing="s" alignY="center">
+          <Radio value="bigint" checked={currentType === "bigint"} />
+          bigint — 8 bytes (very large numbers)
+        </Label>
+        <Label spacing="s" alignY="center">
+          <Radio value="serial" checked={currentType === "serial"} />
+          serial — auto-increment integer
+        </Label>
+        <Label spacing="s" alignY="center">
+          <Radio value="bigserial" checked={currentType === "bigserial"} />
+          bigserial — auto-increment bigint
+        </Label>
+        <Label spacing="s" alignY="center">
+          <Radio value="numeric" checked={currentType === "numeric"} />
+          numeric — exact decimal (configurable precision)
+        </Label>
+        <Label spacing="s" alignY="center">
+          <Radio value="real" checked={currentType === "real"} />
+          real — 4-byte floating point
+        </Label>
+        <Label spacing="s" alignY="center">
+          <Radio
+            value="double precision"
+            checked={currentType === "double precision"}
+          />
+          double precision — 8-byte floating point
+        </Label>
+        <Label spacing="s" alignY="center">
+          <Radio value="money" checked={currentType === "money"} />
+          money — currency (2 decimal places)
+        </Label>
+      </RadioList>
+      {isExact && (
+        <Box spacing="s">
+          <Box flex="y" spacing="xs">
+            <FieldLabel>Precision</FieldLabel>
+            <Input
+              type="number"
+              placeholder="Any"
+              readOnly
+              value={column.numeric_precision ?? ""}
+            />
+          </Box>
+          <Box flex="y" spacing="xs">
+            <FieldLabel>Scale</FieldLabel>
+            <Input
+              type="number"
+              placeholder="0"
+              readOnly
+              value={column.numeric_scale ?? ""}
+            />
+          </Box>
         </Box>
       )}
     </Box>
   );
 };
 
-// Date & Time: base type select + optional timezone toggle
+const DATETIME_BASES = ["date", "time", "timestamp", "interval"];
+
+// Date & Time: radio list for base type + timezone toggle
 const DateTimeTypeOptions = ({ column, putColumn }) => {
-  const baseType = getDateTimeBase(column.data_type);
-  const hasTimezone = column.data_type.includes("with time zone");
+  const currentBase = getDateTimeBase(column.data_type);
+  const [base, setBase] = useState(
+    DATETIME_BASES.includes(currentBase) ? currentBase : "timestamp",
+  );
+  const [timezone, setTimezone] = useState(
+    column.data_type.includes("with time zone"),
+  );
 
   const applyType = async (newBase, newTimezone) => {
     let type = newBase;
@@ -492,32 +503,48 @@ const DateTimeTypeOptions = ({ column, putColumn }) => {
 
   return (
     <Box flex="y" spacing="s">
-      <select
-        value={baseType}
-        onChange={async (e) => {
-          await applyType(e.currentTarget.value, hasTimezone);
+      <RadioList
+        name="datetime_type"
+        flex="y"
+        spacing="xs"
+        action={async (newBase) => {
+          setBase(newBase);
+          await applyType(newBase, timezone);
         }}
       >
-        <option value="date">date — calendar date (no time)</option>
-        <option value="time">time — time of day (no date)</option>
-        <option value="timestamp">timestamp — date and time</option>
-        <option value="interval">interval — duration / time span</option>
-      </select>
-      {(baseType === "time" || baseType === "timestamp") && (
+        <Label spacing="s" alignY="center">
+          <Radio value="date" checked={base === "date"} />
+          date — calendar date (no time)
+        </Label>
+        <Label spacing="s" alignY="center">
+          <Radio value="time" checked={base === "time"} />
+          time — time of day (no date)
+        </Label>
+        <Label spacing="s" alignY="center">
+          <Radio value="timestamp" checked={base === "timestamp"} />
+          timestamp — date and time
+        </Label>
+        <Label spacing="s" alignY="center">
+          <Radio value="interval" checked={base === "interval"} />
+          interval — duration / time span
+        </Label>
+      </RadioList>
+      {(base === "time" || base === "timestamp") && (
         <Box flex="y" spacing="xs">
           <Box spacing="s" alignY="center">
             <FieldLabel>With timezone</FieldLabel>
             <Checkbox
               appearance="toggle"
-              checked={hasTimezone}
+              checked={timezone}
               action={async (newChecked) => {
-                await applyType(baseType, newChecked);
+                setTimezone(newChecked);
+                await applyType(base, newChecked);
               }}
             />
           </Box>
           <FieldDescription>
-            When on, stores the timezone offset alongside the value. Recommended
-            for user-facing timestamps.
+            When on, stores the timezone offset. Recommended for user-facing
+            timestamps.
           </FieldDescription>
         </Box>
       )}
@@ -529,6 +556,66 @@ const getDateTimeBase = (dataType) => {
   if (dataType.startsWith("timestamp")) return "timestamp";
   if (dataType.startsWith("time")) return "time";
   return dataType; // date, interval
+};
+
+// Network: inet | cidr | macaddr
+const NetworkTypeOptions = ({ column, putColumn }) => {
+  const networkTypes = ["inet", "cidr", "macaddr"];
+  const currentType = networkTypes.includes(column.data_type)
+    ? column.data_type
+    : "inet";
+
+  return (
+    <RadioList
+      name="network_type"
+      flex="y"
+      spacing="xs"
+      action={(type) => putColumn("data_type", type)}
+    >
+      <Label spacing="s" alignY="center">
+        <Radio value="inet" checked={currentType === "inet"} />
+        inet — IPv4 or IPv6 address
+      </Label>
+      <Label spacing="s" alignY="center">
+        <Radio value="cidr" checked={currentType === "cidr"} />
+        cidr — network address range
+      </Label>
+      <Label spacing="s" alignY="center">
+        <Radio value="macaddr" checked={currentType === "macaddr"} />
+        macaddr — MAC address
+      </Label>
+    </RadioList>
+  );
+};
+
+// Other: uuid | xml | ARRAY
+const OtherTypeOptions = ({ column, putColumn }) => {
+  const otherTypes = ["uuid", "xml", "ARRAY"];
+  const currentType = otherTypes.includes(column.data_type)
+    ? column.data_type
+    : "uuid";
+
+  return (
+    <RadioList
+      name="other_type"
+      flex="y"
+      spacing="xs"
+      action={(type) => putColumn("data_type", type)}
+    >
+      <Label spacing="s" alignY="center">
+        <Radio value="uuid" checked={currentType === "uuid"} />
+        uuid — universally unique identifier
+      </Label>
+      <Label spacing="s" alignY="center">
+        <Radio value="xml" checked={currentType === "xml"} />
+        xml — XML document
+      </Label>
+      <Label spacing="s" alignY="center">
+        <Radio value="ARRAY" checked={currentType === "ARRAY"} />
+        ARRAY — typed array
+      </Label>
+    </RadioList>
+  );
 };
 
 // Binary: bytea (raw bytes) or bit/bit varying (bit strings with length)
