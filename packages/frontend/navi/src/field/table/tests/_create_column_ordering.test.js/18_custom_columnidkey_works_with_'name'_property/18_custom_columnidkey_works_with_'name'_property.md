@@ -4,8 +4,7 @@
 const ordering = createColumnOrdering("name", () => {});
 const columns = [{ name: "first" }, { name: "second" }, { name: "third" }];
 const order = ["third", "second", "first"];
-const sync = (cols, ids) =>
-  ordering.sync(cols, ids).map((col) => col.name);
+const sync = (cols, ids) => ordering.sync(cols, ids).map((col) => col.name);
 sync(columns, order);
 // rename "second" → "middle"
 const newColumns = [

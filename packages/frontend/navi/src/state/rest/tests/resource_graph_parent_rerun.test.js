@@ -151,4 +151,65 @@ await snapshotTests(import.meta.url, ({ test }) => {
 
     return { callCountAfterGet, getCallCount };
   });
+
+  // --- Never-run actions are not triggered ----------------------------------
+
+  test("GET_MANY that never ran is not called after POST", async () => {
+    let getManyCallCount = 0;
+    const USER = resource("user", {
+      GET_MANY: async () => {
+        getManyCallCount++;
+        return [{ id: 1, name: "Alice" }];
+      },
+      POST: async ({ name }) => ({ id: 2, name }),
+    });
+
+    // Intentionally do NOT run GET_MANY
+    await USER.POST({ name: "Bob" });
+    await waitForRerun();
+
+    return { getManyCallCount };
+  });
+
+  test("GET that never ran is not called after scopedMany child POST", async () => {
+    let getCallCount = 0;
+    const TABLE = resource("table", {
+      GET: async ({ id }) => {
+        getCallCount++;
+        return { id, columns: [] };
+      },
+      POST: async ({ name }) => ({ id: 1, name }),
+    });
+    const TABLE_COLUMNS = TABLE.scopedMany("columns", {
+      idKey: "name",
+      POST: async ({ id, name }) => [id, { name }],
+    });
+
+    // Create the parent item so the child store exists, but do NOT run TABLE.GET
+    await TABLE.POST({ name: "users" });
+    await TABLE_COLUMNS.POST({ id: 1, name: "email" });
+    await waitForRerun();
+
+    return { getCallCount };
+  });
+
+  test("GET_MANY that never ran is not called after dependency POST", async () => {
+    let getManyCallCount = 0;
+    const OWNER = resource("owner", {
+      POST: async ({ name }) => ({ id: 1, name }),
+    });
+    resource("dependent", {
+      GET_MANY: async () => {
+        getManyCallCount++;
+        return [];
+      },
+      dependencies: [OWNER],
+    });
+
+    // Intentionally do NOT run DEPENDENT.GET_MANY
+    await OWNER.POST({ name: "test" });
+    await waitForRerun();
+
+    return { getManyCallCount };
+  });
 });

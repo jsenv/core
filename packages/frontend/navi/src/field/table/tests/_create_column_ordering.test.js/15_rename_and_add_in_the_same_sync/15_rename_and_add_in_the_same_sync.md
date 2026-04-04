@@ -5,11 +5,11 @@ const ordering = createColumnOrdering("id", () => {});
 syncIds(ordering, cols(["a", "b", "c"]), ["a", "b", "c"]);
 // rename "a" → "alpha", add "d" at end
 return {
-  result: syncIds(
-    ordering,
-    cols(["alpha", "b", "c", "d"]),
-    ["a", "b", "c"],
-  ),
+  result: syncIds(ordering, cols(["alpha", "b", "c", "d"]), [
+    "a",
+    "b",
+    "c",
+  ]),
 };
 ```
 

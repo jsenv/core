@@ -4,11 +4,11 @@
 const setCalls = [];
 const ordering = createColumnOrdering("id", (ids) => setCalls.push(ids));
 syncIds(ordering, cols(["a", "b", "c"]), ["c", "b", "a"]);
-const result = syncIds(
-  ordering,
-  cols(["alpha", "b", "c"]),
-  ["c", "b", "a"],
-);
+const result = syncIds(ordering, cols(["alpha", "b", "c"]), [
+  "c",
+  "b",
+  "a",
+]);
 return { result, setCalledWith: setCalls };
 ```
 

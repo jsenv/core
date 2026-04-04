@@ -7,6 +7,9 @@
 - [scopedMany: parent GET is not reset after child DELETE](3_scopedmany_parent_get_is_not_reset_after_child_delete/3_scopedmany_parent_get_is_not_reset_after_child_delete.md)
 - [scopedMany: parent GET_MANY does not rerun after child POST](4_scopedmany_parent_get_many_does_not_rerun_after_child_post/4_scopedmany_parent_get_many_does_not_rerun_after_child_post.md)
 - [scopedOne: parent GET does NOT rerun after child POST](5_scopedone_parent_get_does_not_rerun_after_child_post/5_scopedone_parent_get_does_not_rerun_after_child_post.md)
+- [GET_MANY that never ran is not called after POST](6_get_many_that_never_ran_is_not_called_after_post/6_get_many_that_never_ran_is_not_called_after_post.md)
+- [GET that never ran is not called after scopedMany child POST](7_get_that_never_ran_is_not_called_after_scopedmany_child_post/7_get_that_never_ran_is_not_called_after_scopedmany_child_post.md)
+- [GET_MANY that never ran is not called after dependency POST](8_get_many_that_never_ran_is_not_called_after_dependency_post/8_get_many_that_never_ran_is_not_called_after_dependency_post.md)
 
 ---
 
