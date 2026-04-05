@@ -216,7 +216,16 @@ await snapshotTests(import.meta.url, ({ test }) => {
   // --- scopedMany with dependencies: sibling rerun on column rename ---------
 
   test("scopedMany with dependencies reruns GET_MANY after sibling column PUT", async () => {
-    let rowGetManyCallCount = 0;
+    const db = {
+      tables: {
+        users: {
+          tableoid: 1,
+          columns: [{ column_name: "email" }],
+          rows: [{ row_id: 1, columns: ["email"] }],
+        },
+      },
+    };
+
     let nextTableoid = 1;
     const TABLE = resource("table", {
       idKey: "tableoid",
@@ -224,30 +233,39 @@ await snapshotTests(import.meta.url, ({ test }) => {
       GET: ({ tablename }) => ({
         tableoid: nextTableoid++,
         tablename,
-        columns: [{ column_name: "email" }],
+        columns: db.tables[tablename].columns,
       }),
     });
     const TABLE_COLUMN = TABLE.scopedMany("columns", {
       idKey: "column_name",
-      PUT: ({ tablename, column_name, property, value }) => [
-        { tablename },
-        { column_name },
-        { [property]: value },
-      ],
+      PUT: ({ tablename, column_name, property, value }) => {
+        const table = db.tables[tablename];
+        const column = table.columns.find((c) => c.column_name === column_name);
+        const oldValue = column[property];
+        column[property] = value;
+        // also update rows if renaming column_name
+        if (property === "column_name") {
+          for (const row of table.rows) {
+            row.columns = row.columns.map((c) => (c === oldValue ? value : c));
+          }
+        }
+        return [{ tablename }, { column_name }, { [property]: value }];
+      },
     });
     const TABLE_ROW = TABLE.scopedMany("rows", {
+      idKey: "row_id",
       dependencies: [TABLE_COLUMN],
       GET_MANY: ({ tablename }) => {
-        rowGetManyCallCount++;
-        return [{ tablename }, []];
+        return [{ tablename }, db.tables[tablename].rows];
       },
     });
 
     const rowsAction = TABLE_ROW.GET_MANY.bindParams({ tablename: "users" });
 
     TABLE.GET({ tablename: "users" });
-    rowsAction.run();
-    const callCountAfterGetMany = rowGetManyCallCount;
+    await rowsAction.run();
+    const table = TABLE.store.arraySignal.value[0];
+    const rowsBeforeRename = table.rows.map((r) => ({ ...r }));
 
     TABLE_COLUMN.PUT({
       tablename: "users",
@@ -256,8 +274,8 @@ await snapshotTests(import.meta.url, ({ test }) => {
       value: "email_address",
     });
     await waitForRerun();
-    const callCountAfterColumnRename = rowGetManyCallCount;
+    const rowsAfterRename = table.rows.map((r) => ({ ...r }));
 
-    return { callCountAfterGetMany, callCountAfterColumnRename };
+    return { rowsBeforeRename, rowsAfterRename };
   });
 });
