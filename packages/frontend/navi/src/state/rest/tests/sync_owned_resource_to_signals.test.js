@@ -68,6 +68,34 @@ await snapshotTests(import.meta.url, ({ test }) => {
     return { signalBeforeRename, signalAfterRename };
   });
 
+  test("syncOwnedResourceToSignals called before owner exists still works after GET", () => {
+    const { TABLE, TABLE_COLUMN } = createTableResources({
+      users: ["email"],
+    });
+
+    // syncOwnedResourceToSignals is called while the child store does not exist yet
+    // (TABLE.GET has not been called, so no owner item in the store)
+    const tablenameSignal = signal("users");
+    const columnNameSignal = signal("email");
+    syncOwnedResourceToSignals(TABLE_COLUMN, tablenameSignal, {
+      column_name: columnNameSignal,
+    });
+
+    // Now load the table — this creates the child store
+    TABLE.GET({ tablename: "users" });
+
+    // Rename the column — signal should update, but due to the bug it won't
+    TABLE_COLUMN.PUT({
+      tablename: "users",
+      column_name: "email",
+      property: "column_name",
+      value: "email_address",
+    });
+    const signalAfterRename = columnNameSignal.value;
+
+    return { signalAfterRename };
+  });
+
   test("updates signal when child idKey property changes", () => {
     const { TABLE, TABLE_COLUMN } = createTableResources();
 
