@@ -212,4 +212,52 @@ await snapshotTests(import.meta.url, ({ test }) => {
 
     return { getManyCallCount };
   });
+
+  // --- scopedMany with dependencies: sibling rerun on column rename ---------
+
+  test("scopedMany with dependencies reruns GET_MANY after sibling column PUT", async () => {
+    let rowGetManyCallCount = 0;
+    let nextTableoid = 1;
+    const TABLE = resource("table", {
+      idKey: "tableoid",
+      uniqueKeys: ["tablename"],
+      GET: ({ tablename }) => ({
+        tableoid: nextTableoid++,
+        tablename,
+        columns: [{ column_name: "email" }],
+      }),
+    });
+    const TABLE_COLUMN = TABLE.scopedMany("columns", {
+      idKey: "column_name",
+      PUT: ({ tablename, column_name, property, value }) => [
+        { tablename },
+        { column_name },
+        { [property]: value },
+      ],
+    });
+    const TABLE_ROW = TABLE.scopedMany("rows", {
+      dependencies: [TABLE_COLUMN],
+      GET_MANY: ({ tablename }) => {
+        rowGetManyCallCount++;
+        return [{ tablename }, []];
+      },
+    });
+
+    const rowsAction = TABLE_ROW.GET_MANY.bindParams({ tablename: "users" });
+
+    TABLE.GET({ tablename: "users" });
+    rowsAction.run();
+    const callCountAfterGetMany = rowGetManyCallCount;
+
+    TABLE_COLUMN.PUT({
+      tablename: "users",
+      column_name: "email",
+      property: "column_name",
+      value: "email_address",
+    });
+    await waitForRerun();
+    const callCountAfterColumnRename = rowGetManyCallCount;
+
+    return { callCountAfterGetMany, callCountAfterColumnRename };
+  });
 });

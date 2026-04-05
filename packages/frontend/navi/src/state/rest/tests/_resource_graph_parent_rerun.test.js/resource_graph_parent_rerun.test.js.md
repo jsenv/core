@@ -10,6 +10,7 @@
 - [GET_MANY that never ran is not called after POST](6_get_many_that_never_ran_is_not_called_after_post/6_get_many_that_never_ran_is_not_called_after_post.md)
 - [GET that never ran is not called after scopedMany child POST](7_get_that_never_ran_is_not_called_after_scopedmany_child_post/7_get_that_never_ran_is_not_called_after_scopedmany_child_post.md)
 - [GET_MANY that never ran is not called after dependency POST](8_get_many_that_never_ran_is_not_called_after_dependency_post/8_get_many_that_never_ran_is_not_called_after_dependency_post.md)
+- [scopedMany with dependencies reruns GET_MANY after sibling column PUT](9_scopedmany_with_dependencies_reruns_get_many_after_sibling_column_put/9_scopedmany_with_dependencies_reruns_get_many_after_sibling_column_put.md)
 
 ---
 
