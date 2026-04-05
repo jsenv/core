@@ -23,6 +23,7 @@ export {
 export { localStorageSignal } from "./src/state/local_storage_signal.js";
 export {
   resource,
+  syncOwnedResourceToSignals,
   syncResourceToSignals,
 } from "./src/state/rest/resource_graph.js";
 export { stateSignal } from "./src/state/state_signal.js";

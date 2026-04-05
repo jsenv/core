@@ -33,13 +33,13 @@ import {
   TABLE,
   TABLE_ROW,
   tableColumnNameSignal,
+  tablenameSignal,
 } from "./table/table_state.js";
 
 setBaseUrl(window.DB_MANAGER_CONFIG.pathname);
 
 export const rolnameSignal = stateSignal(null);
 export const datnameSignal = stateSignal(null);
-export const tablenameSignal = stateSignal(null);
 
 export const INDEX_ROUTE = route("");
 const ANY_ROUTE = route(`/`, {

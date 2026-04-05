@@ -634,11 +634,12 @@ ${[idKey, ...uniqueKeys].join(", ")}`,
 
 export const syncStoreToSignals = (store, propertyToSignalMap) => {
   const { idKey } = store;
+  const cleanupCallbackSet = new Set();
   for (const [propertyName, targetSignal] of Object.entries(
     propertyToSignalMap,
   )) {
     if (propertyName === idKey) {
-      store.observeProperties(
+      const unsubscribe = store.observeProperties(
         (mutationsArray) => {
           for (const mutations of mutationsArray) {
             const mutation = mutations[idKey];
@@ -650,10 +651,11 @@ export const syncStoreToSignals = (store, propertyToSignalMap) => {
         },
         { properties: [idKey] },
       );
+      cleanupCallbackSet.add(unsubscribe);
       continue;
     }
     const itemSignal = store.signalForKey(propertyName, targetSignal);
-    store.observeItemProperties(
+    const unsubscribe = store.observeItemProperties(
       itemSignal,
       (propertyMutations) => {
         const mutation = propertyMutations[propertyName];
@@ -661,5 +663,12 @@ export const syncStoreToSignals = (store, propertyToSignalMap) => {
       },
       { properties: [propertyName] },
     );
+    cleanupCallbackSet.add(unsubscribe);
   }
+  return () => {
+    for (const cleanup of cleanupCallbackSet) {
+      cleanup();
+    }
+    cleanupCallbackSet.clear();
+  };
 };

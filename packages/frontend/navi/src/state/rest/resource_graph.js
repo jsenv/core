@@ -1,4 +1,4 @@
-import { computed, signal } from "@preact/signals";
+import { computed, effect, signal } from "@preact/signals";
 
 import { createAction } from "../../action/actions.js";
 import { SYMBOL_OBJECT_SIGNAL } from "../../action/symbol_object_signal.js";
@@ -1160,6 +1160,7 @@ ${originalActionName} source location: ${locationInfo}`,
     });
     // Register: when childResource fires, rerun parent (stateFacade) GETs.
     resourceLifecycleManager.addDependency(childResource, stateFacade);
+    childResource.getChildStore = (ownerKey) => scopedStoreMap.get(ownerKey);
     return childResource;
   };
 
@@ -1431,5 +1432,34 @@ Received an object with keys: ${keys.join(", ")}.`,
  * // which in turn triggers the route Signal->URL sync and updates the browser URL.
  */
 export const syncResourceToSignals = (resource, propertyToSignalMap) => {
+  if (resource.getChildStore) {
+    throw new Error(
+      `syncResourceToSignals: "${resource.name}" is a scoped resource (scopedMany/scopedOne). Use syncOwnedResourceToSignals instead.`,
+    );
+  }
   syncStoreToSignals(resource.store, propertyToSignalMap);
+};
+
+export const syncOwnedResourceToSignals = (
+  resource,
+  ownerSignal,
+  propertyToSignalMap,
+) => {
+  if (!resource.getChildStore) {
+    throw new Error(
+      `syncOwnedResourceToSignals: "${resource.name}" is not a scoped resource (scopedMany/scopedOne). Use syncResourceToSignals instead.`,
+    );
+  }
+  effect(() => {
+    const ownerKey = ownerSignal.value;
+    if (ownerKey === null || ownerKey === undefined) {
+      return null;
+    }
+    const childStore = resource.getChildStore(ownerKey);
+    if (!childStore) {
+      return null;
+    }
+    const cleanup = syncStoreToSignals(childStore, propertyToSignalMap);
+    return cleanup;
+  });
 };

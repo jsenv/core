@@ -1,13 +1,9 @@
-import { resource, stateSignal } from "@jsenv/navi";
+import { resource, stateSignal, syncOwnedResourceToSignals } from "@jsenv/navi";
 
 import { setTableCount } from "../database_manager_signals.js";
 import { errorFromResponse } from "../error_from_response.js";
 
-export const tableColumnNameSignal = stateSignal(undefined, {
-  type: "string",
-  persists: true,
-});
-
+export const tablenameSignal = stateSignal(null);
 export const TABLE = resource("table", {
   idKey: "tableoid",
   uniqueKeys: ["tablename"],
@@ -201,6 +197,13 @@ export const TABLE_COLUMN = TABLE.scopedMany("columns", {
     }
     return [{ tablename }, { column_name }];
   },
+});
+export const tableColumnNameSignal = stateSignal(undefined, {
+  type: "string",
+  persists: true,
+});
+syncOwnedResourceToSignals(TABLE_COLUMN, tablenameSignal, {
+  column_name: tableColumnNameSignal,
 });
 
 export const TABLE_ROW = TABLE.scopedMany("rows", {
