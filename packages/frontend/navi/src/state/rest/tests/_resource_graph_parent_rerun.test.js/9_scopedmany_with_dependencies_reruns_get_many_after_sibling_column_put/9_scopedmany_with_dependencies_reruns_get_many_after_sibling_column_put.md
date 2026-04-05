@@ -6,7 +6,7 @@ const db = {
     users: {
       tableoid: 1,
       columns: [{ column_name: "email" }],
-      rows: [{ row_id: 1, columns: ["email"] }],
+      rows: [{ row_id: 1, email: "email_value" }],
     },
   },
 };
@@ -28,10 +28,10 @@ const TABLE_COLUMN = TABLE.scopedMany("columns", {
     const column = table.columns.find((c) => c.column_name === column_name);
     const oldValue = column[property];
     column[property] = value;
-    // also update rows if renaming column_name
     if (property === "column_name") {
       for (const row of table.rows) {
-        row.columns = row.columns.map((c) => (c === oldValue ? value : c));
+        row[value] = row[oldValue];
+        delete row[oldValue];
       }
     }
     return [{ tablename }, { column_name }, { [property]: value }];
@@ -49,8 +49,7 @@ const rowsAction = TABLE_ROW.GET_MANY.bindParams({ tablename: "users" });
 
 TABLE.GET({ tablename: "users" });
 await rowsAction.run();
-const table = TABLE.store.arraySignal.value[0];
-const rowsBeforeRename = table.rows.map((r) => ({ ...r }));
+const rowsBeforeRename = rowsAction.data.map((r) => ({ ...r }));
 
 TABLE_COLUMN.PUT({
   tablename: "users",
@@ -59,7 +58,7 @@ TABLE_COLUMN.PUT({
   value: "email_address",
 });
 await waitForRerun();
-const rowsAfterRename = table.rows.map((r) => ({ ...r }));
+const rowsAfterRename = rowsAction.data.map((r) => ({ ...r }));
 
 return { rowsBeforeRename, rowsAfterRename };
 ```
@@ -69,17 +68,14 @@ return { rowsBeforeRename, rowsAfterRename };
   "rowsBeforeRename": [
     {
       "row_id": 1,
-      "columns": [
-        "email"
-      ]
+      "email": "email_value"
     }
   ],
   "rowsAfterRename": [
     {
       "row_id": 1,
-      "columns": [
-        "email_address"
-      ]
+      "email": "email_value",
+      "email_address": "email_value"
     }
   ]
 }
