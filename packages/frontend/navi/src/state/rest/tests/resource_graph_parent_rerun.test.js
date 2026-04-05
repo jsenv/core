@@ -221,7 +221,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
         users: {
           tableoid: 1,
           columns: [{ column_name: "email" }],
-          rows: [{ row_id: 1, email: "email_value" }],
+          rows: [{ row_id: 1, data: { email: "email_value" } }],
         },
       },
     };
@@ -241,14 +241,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
       PUT: ({ tablename, column_name, property, value }) => {
         const table = db.tables[tablename];
         const column = table.columns.find((c) => c.column_name === column_name);
-        const oldValue = column[property];
         column[property] = value;
-        if (property === "column_name") {
-          for (const row of table.rows) {
-            row[value] = row[oldValue];
-            delete row[oldValue];
-          }
-        }
         return [{ tablename }, { column_name }, { [property]: value }];
       },
     });
@@ -256,7 +249,17 @@ await snapshotTests(import.meta.url, ({ test }) => {
       idKey: "row_id",
       dependencies: [TABLE_COLUMN],
       GET_MANY: ({ tablename }) => {
-        return [{ tablename }, db.tables[tablename].rows];
+        const table = db.tables[tablename];
+        const rows = table.rows.map((row) => {
+          const data = {};
+          for (const col of table.columns) {
+            const colName = col.column_name;
+            data[colName] =
+              row.data[colName] ?? row.data[Object.keys(row.data)[0]];
+          }
+          return { row_id: row.row_id, data };
+        });
+        return [{ tablename }, rows];
       },
     });
 
