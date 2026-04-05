@@ -30,7 +30,7 @@ return { signalAfterRename };
 
 ```js
 {
-  "signalAfterRename": "email"
+  "signalAfterRename": "email_address"
 }
 ```
 

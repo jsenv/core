@@ -1451,6 +1451,10 @@ export const syncOwnedResourceToSignals = (
     );
   }
   effect(() => {
+    // Always subscribe to the parent store so the effect re-runs when a new
+    // owner item is added (which creates the child store).
+    // eslint-disable-next-line no-unused-expressions
+    resource.store.arraySignal.value;
     const ownerKey = ownerSignal.value;
     if (ownerKey === null || ownerKey === undefined) {
       return null;
