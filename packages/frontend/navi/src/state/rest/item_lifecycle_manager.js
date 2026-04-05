@@ -97,11 +97,17 @@ export const createResourceLifecycleManager = () => {
           triggerVerb === "PATCH") &&
         config.uniqueKeys.length > 0;
 
+      const isKnownDependency =
+        triggerResourceScope !== null &&
+        triggerResourceScope !== undefined &&
+        resourceDependencies.get(triggerResourceScope)?.has(resourceScope);
+
       if (
         !shouldRerunGetMany &&
         !shouldRerunGet &&
         triggerVerb !== "DELETE" &&
-        !hasUniqueKeyAutorerun
+        !hasUniqueKeyAutorerun &&
+        !isKnownDependency
       ) {
         continue;
       }
@@ -222,14 +228,19 @@ export const createResourceLifecycleManager = () => {
           }
 
           // Cross-resource dependency effects: rerun dependent GET / GET_MANY
-          // Only on POST — same rationale as defaultRerunOn.GET_MANY: ["POST"]
+          // Fires on any mutating verb — user-configured dependencies express
+          // "this resource depends on another resource's data", so any mutation
+          // (POST, PUT, PATCH, DELETE) on the dependency should trigger a rerun.
           dependency_effect: {
             if (
               triggerResourceScope &&
               resourceDependencies
                 .get(triggerResourceScope)
                 ?.has(resourceScope) &&
-              triggerVerb === "POST" &&
+              (triggerVerb === "POST" ||
+                triggerVerb === "PUT" ||
+                triggerVerb === "PATCH" ||
+                triggerVerb === "DELETE") &&
               candidateVerb === "GET"
             ) {
               actionsToRerun.add(actionCandidate);

@@ -31,7 +31,7 @@ const TABLE_ROW = TABLE.scopedMany("rows", {
 const rowsAction = TABLE_ROW.GET_MANY.bindParams({ tablename: "users" });
 
 TABLE.GET({ tablename: "users" });
-await rowsAction.run();
+rowsAction.run();
 const callCountAfterGetMany = rowGetManyCallCount;
 
 TABLE_COLUMN.PUT({
@@ -49,7 +49,7 @@ return { callCountAfterGetMany, callCountAfterColumnRename };
 ```js
 {
   "callCountAfterGetMany": 1,
-  "callCountAfterColumnRename": 1
+  "callCountAfterColumnRename": 2
 }
 ```
 
