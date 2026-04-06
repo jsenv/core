@@ -219,16 +219,16 @@
         </div>
       );
 
-      // ─── Example 1: Component handles loading itself ──────────────────────────
+      // ─── Component-managed loading ──────────────────────────────────────────
 
       const ex1 = makeActions("ex1");
-      const Example1 = () => {
+      const ExampleComponentManagedLoading = () => {
         const [action, setAction] = useFunction();
         return (
           <DemoSection
-            title="1. Component handles loading (no <Loading>)"
+            title="Component-managed loading"
             description="useAsyncData() returns { data, loading } when there is no <Loading fallback> above.
-The component decides how to render each state. No Suspense boundary is involved."
+The component renders skeleton placeholders itself while waiting. No Suspense boundary involved."
           >
             <ActionButtons
               onSuccess={() => {
@@ -245,47 +245,16 @@ The component decides how to render each state. No Suspense boundary is involved
         );
       };
 
-      // ─── Example 2: <Loading> without fallback ────────────────────────────────
-
-      const ex2 = makeActions("ex2");
-      const Example2 = () => {
-        const [action, setAction] = useFunction();
-        return (
-          <DemoSection
-            title="2. <Loading> without fallback"
-            description="<Loading> with no fallback prop is equivalent to not using <Loading> at all —
-it provides LoadingContext but does not wrap with Suspense, so useAsyncData() still returns { data, loading }."
-          >
-            <ActionButtons
-              onSuccess={() => {
-                setAction(ex2.success);
-                return ex2.success.rerun();
-              }}
-              onFail={() => {
-                setAction(ex2.fail);
-                return ex2.fail.rerun();
-              }}
-            />
-            {action && (
-              <Loading>
-                <UserCardWithSkeleton action={action} />
-              </Loading>
-            )}
-          </DemoSection>
-        );
-      };
-
-      // ─── Example 3: <Loading fallback> — Suspense with loading skeleton ───────
+      // ─── Suspense-managed loading ───────────────────────────────────────────
 
       const ex3 = makeActions("ex3");
-      const Example3 = () => {
+      const ExampleSuspenseManagedLoading = () => {
         const [action, setAction] = useFunction();
         return (
           <DemoSection
-            title="3. <Loading fallback> — Suspense loading skeleton"
-            description="When fallback is provided, <Loading> wraps children in <Suspense>.
-useAsyncData() throws a promise while loading, causing the fallback to show.
-The component only renders once data is ready — it never sees loading state."
+            title="Suspense-managed loading"
+            description="When a fallback is provided, <Loading> wraps children in <Suspense>.
+useAsyncData() throws a promise while loading — the component never sees loading state and only renders once data is ready."
           >
             <ActionButtons
               onSuccess={() => {
@@ -306,17 +275,17 @@ The component only renders once data is ready — it never sees loading state."
         );
       };
 
-      // ─── Example 4: <Loading fallback> + <ErrorBoundary> ─────────────────────
+      // ─── Error boundary + Suspense ──────────────────────────────────────────
 
       const ex4 = makeActions("ex4");
-      const Example4 = () => {
+      const ExampleErrorBoundaryWithSuspense = () => {
         const [action, setAction] = useFunction();
         return (
           <DemoSection
-            title="4. <ErrorBoundary> + <Loading fallback>"
+            title="Error boundary + Suspense"
             description="ErrorBoundary catches errors thrown by useAsyncData().
-Dismiss hides the error and silences the loading fallback until the action settles again.
-Re-fetching auto-dismisses the error and shows nothing until data arrives."
+Dismiss hides the error boundary and renders nothing until the action settles.
+Re-fetching auto-dismisses the error boundary."
           >
             <div class="buttons">
               <Button
@@ -349,7 +318,7 @@ Re-fetching auto-dismisses the error and shows nothing until data arrives."
         );
       };
 
-      // ─── Example 5: Stale-while-revalidate ───────────────────────────────────
+      // ─── Stale-while-revalidate ──────────────────────────────────────────────
 
       // Keeps showing the last known data while a re-fetch is in progress.
       // On first load (no previous data): shows skeleton.
@@ -395,13 +364,13 @@ Re-fetching auto-dismisses the error and shows nothing until data arrives."
       };
 
       const ex5 = makeActions("ex5");
-      const Example5 = () => {
+      const ExampleStaleWhileRevalidate = () => {
         const [action, setAction] = useFunction();
         return (
           <DemoSection
-            title="5. Stale-while-revalidate"
+            title="Stale-while-revalidate"
             description="The component keeps showing the last known data while a re-fetch is in progress.
-On initial load it shows skeleton placeholders. On re-fetch it shows the current data with a refreshing indicator."
+On first load it shows skeleton placeholders. On re-fetch it shows the current data with a refreshing indicator."
           >
             <ActionButtons
               onSuccess={() => {
@@ -421,11 +390,10 @@ On initial load it shows skeleton placeholders. On re-fetch it shows the current
       const App = () => (
         <div>
           <h1>Loading + ErrorBoundary Demo</h1>
-          <Example1 />
-          <Example2 />
-          <Example3 />
-          <Example4 />
-          <Example5 />
+          <ExampleComponentManagedLoading />
+          <ExampleSuspenseManagedLoading />
+          <ExampleErrorBoundaryWithSuspense />
+          <ExampleStaleWhileRevalidate />
         </div>
       );
 
