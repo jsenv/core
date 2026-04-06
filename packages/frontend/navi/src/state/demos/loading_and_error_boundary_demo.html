@@ -94,7 +94,7 @@
     <div id="root"></div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { useState } from "preact/hooks";
+      import { useEffect, useState } from "preact/hooks";
       import {
         createAction,
         useAsyncData,
@@ -253,8 +253,8 @@ The component decides how to render each state. No Suspense boundary is involved
         return (
           <DemoSection
             title="2. <Loading> without fallback"
-            description="<Loading> with no fallback prop still provides the LoadingContext but does not wrap with Suspense.
-useAsyncData() returns { data, loading } — same as example 1. The component handles the state."
+            description="<Loading> with no fallback prop is equivalent to not using <Loading> at all —
+it provides LoadingContext but does not wrap with Suspense, so useAsyncData() still returns { data, loading }."
           >
             <ActionButtons
               onSuccess={() => {
@@ -349,16 +349,59 @@ Re-fetching auto-dismisses the error and shows nothing until data arrives."
         );
       };
 
-      // ─── Example 5: <ErrorBoundary> without <Loading> ────────────────────────
+      // ─── Example 5: Stale-while-revalidate ───────────────────────────────────
+
+      // Keeps showing the last known data while a re-fetch is in progress.
+      // On first load (no previous data): shows skeleton.
+      // On re-fetch: shows current data with a "Refreshing…" badge.
+      const UserCardStaleWhileRevalidate = ({ action }) => {
+        const { data: freshUser, loading } = useAsyncData(action);
+        const [lastUser, setLastUser] = useState(null);
+
+        useEffect(() => {
+          if (freshUser) {
+            setLastUser(freshUser);
+          }
+        }, [freshUser]);
+
+        const displayUser = freshUser || lastUser;
+
+        if (!displayUser) {
+          // Initial load — show skeleton at card size
+          return (
+            <UserCardFields
+              name={<span class="skeleton" style={{ width: "80px" }} />}
+              email={<span class="skeleton" style={{ width: "140px" }} />}
+            />
+          );
+        }
+        return (
+          <div>
+            <UserCardFields name={displayUser.name} email={displayUser.email} />
+            {loading && (
+              <div
+                style={{
+                  marginTop: "8px",
+                  fontSize: "0.85em",
+                  color: "#888",
+                  fontStyle: "italic",
+                }}
+              >
+                Refreshing…
+              </div>
+            )}
+          </div>
+        );
+      };
 
       const ex5 = makeActions("ex5");
       const Example5 = () => {
         const [action, setAction] = useFunction();
         return (
           <DemoSection
-            title="5. <ErrorBoundary> with component-handled loading"
-            description="ErrorBoundary catches errors. The component renders its own loading state.
-Dismiss works — action resets to idle. No Suspense involved."
+            title="5. Stale-while-revalidate"
+            description="The component keeps showing the last known data while a re-fetch is in progress.
+On initial load it shows skeleton placeholders. On re-fetch it shows the current data with a refreshing indicator."
           >
             <ActionButtons
               onSuccess={() => {
@@ -370,11 +413,7 @@ Dismiss works — action resets to idle. No Suspense involved."
                 return ex5.fail.rerun();
               }}
             />
-            {action && (
-              <ErrorBoundary fallback={ErrorCard}>
-                <UserCardWithSkeleton action={action} />
-              </ErrorBoundary>
-            )}
+            {action && <UserCardStaleWhileRevalidate action={action} />}
           </DemoSection>
         );
       };
