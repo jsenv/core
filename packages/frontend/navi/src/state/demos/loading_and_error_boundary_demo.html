@@ -278,19 +278,19 @@ Re-fetching auto-dismisses the error and shows nothing until data arrives."
           >
             <div class="buttons">
               <Button
-                action={() => {
+                onActionStart={() => {
                   setAction(ex4.success);
-                  return ex4.success.rerun();
                 }}
+                action={ex4.success}
               >
                 Fetch user (success)
               </Button>
               <Button
                 actionErrorEffect="ignore"
-                action={() => {
+                onActionStart={() => {
                   setAction(ex4.fail);
-                  return ex4.fail.rerun();
                 }}
+                action={ex4.fail}
               >
                 Fetch user (fail)
               </Button>

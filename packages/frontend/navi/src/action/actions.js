@@ -1059,7 +1059,10 @@ export const createAction = (callback, rootOptions = {}) => {
           });
 
           if (ui.hasRenderers || onError) {
+            // When inside suspense this console.error is redundant with the error thrown by preact debug at
+            // https://github.com/preactjs/preact/blob/21dd6d04c1a9a43e5b60976bb5eb7d856253195b/debug/src/debug.js#L109
             console.error(e);
+
             // For UI-bound actions: error is properly handled by logging + UI display
             // Return error instead of throwing to signal it's handled and prevent:
             // - jsenv error overlay from appearing
