@@ -1,10 +1,7 @@
-import { createContext } from "preact";
-import { useContext } from "preact/hooks";
 import { COMPLETED, FAILED, RUNNING } from "../action/action_run_states.js";
 import { useHasErrorBoundary, useSilencedAction } from "./error_boundary.jsx";
+import { useLoadingHasFallback } from "./loading.jsx";
 import { useForceRender } from "./use_force_render.js";
-
-export const LoadingContext = createContext({ hasFallback: false });
 
 const dismissedActionsWeakSet = new WeakSet();
 const dismissSubscriptions = new WeakMap();
@@ -29,7 +26,7 @@ export const useAsyncData = (promiseOrAction) => {
 };
 const actionPendingPromiseWeakMap = new WeakMap();
 const useAction = (action) => {
-  const { hasFallback } = useContext(LoadingContext);
+  const loadingFallback = useLoadingHasFallback();
   const hasErrorBoundary = useHasErrorBoundary();
   const silencedAction = useSilencedAction();
   const forceRender = useForceRender();
@@ -55,7 +52,7 @@ const useAction = (action) => {
     throw error;
   }
   // IDLE or RUNNING
-  if (!hasFallback) {
+  if (!loadingFallback) {
     // <Loading> has no fallback — return state, let component handle it
     return { data: undefined, loading: runningState === RUNNING };
   }
