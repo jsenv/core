@@ -4,6 +4,7 @@ import { useContext, useEffect, useRef, useState } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
 import { useKeyboardShortcuts } from "../keyboard/keyboard_shortcuts.js";
+import { useStableCallback } from "../utils/use_stable_callback.js";
 
 import.meta.css = /* css */ `
   @layer navi {
@@ -120,6 +121,7 @@ export const SidePanel = ({
   width,
   ...rest
 }) => {
+  onClose = useStableCallback(onClose);
   const panelDialogRef = useRef(null);
   const [phase, setPhase] = useState(isOpen ? "open" : "closed");
   const previousFocusRef = useRef(null);
