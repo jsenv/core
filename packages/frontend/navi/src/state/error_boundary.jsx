@@ -17,13 +17,15 @@ export const useErrorSilenced = () => {
 
 export const ErrorBoundary = ({ children, fallback, onReset }) => {
   const [error, resetErrorInternal] = useErrorBoundary();
-  const [silenced, setSilenced] = useState(false);
+  // Track the action separately so we can still reference it after resetErrorInternal() nulls error
+  const [silencedAction, setSilencedAction] = useState(null);
+  const silenced = silencedAction !== null;
 
   const resetError = () => {
     const action = error?.action;
     if (action) {
       dismissActionError(action);
-      setSilenced(true);
+      setSilencedAction(action);
     }
     onReset?.();
     resetErrorInternal();
@@ -41,30 +43,26 @@ export const ErrorBoundary = ({ children, fallback, onReset }) => {
     const unsubscribe = action.runningStateSignal.subscribe((state) => {
       if (state === RUNNING) {
         unsubscribe();
-        setSilenced(true);
+        setSilencedAction(action);
         resetErrorInternal();
       }
     });
     return unsubscribe;
   }, [error]);
 
-  // Clear silenced once the action settles so the real fallback can show again on next run
+  // Clear silencedAction once the action settles so the real fallback shows again on next run
   useEffect(() => {
-    if (!silenced) {
+    if (!silencedAction) {
       return undefined;
     }
-    const action = error?.action;
-    if (!action) {
-      return undefined;
-    }
-    const unsubscribe = action.runningStateSignal.subscribe((state) => {
+    const unsubscribe = silencedAction.runningStateSignal.subscribe((state) => {
       if (state === COMPLETED || state === FAILED) {
         unsubscribe();
-        setSilenced(false);
+        setSilencedAction(null);
       }
     });
     return unsubscribe;
-  }, [silenced]);
+  }, [silencedAction]);
 
   if (error) {
     if (!fallback) {
