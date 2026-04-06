@@ -33,6 +33,7 @@
 
       const PanelContent = () => {
         const closeSidePanel = useSidePanelClose();
+        const [innerCount, setInnerCount] = useState(0);
         return (
           <div style={{ padding: "24px" }}>
             <h2 style={{ marginTop: 0 }}>Side Panel</h2>
@@ -44,12 +45,24 @@
               The panel auto-focuses on open so keyboard navigation works
               immediately.
             </p>
-            <button onClick={closeSidePanel}>Close panel</button>
+            <div>
+              <span>Panel content counter: {innerCount}</span>
+              <button
+                onClick={() => setInnerCount((c) => c + 1)}
+                style={{ marginLeft: "8px" }}
+              >
+                Increment panel counter
+              </button>
+            </div>
+            <button onClick={closeSidePanel} style={{ marginTop: "12px" }}>
+              Close panel
+            </button>
           </div>
         );
       };
 
       const App = () => {
+        const [parentCount, setParentCount] = useState(0);
         const [isOpen, setIsOpen] = useState(false);
         const [isOpenWide, setIsOpenWide] = useState(false);
         const [isOpenClickOutside, setIsOpenClickOutside] = useState(false);
@@ -57,6 +70,16 @@
         return (
           <div>
             <h1>SidePanel demos</h1>
+
+            <div class="demo-section">
+              <span>Parent render counter: {parentCount}</span>
+              <button
+                onClick={() => setParentCount((c) => c + 1)}
+                style={{ marginLeft: "8px" }}
+              >
+                Re-render parent
+              </button>
+            </div>
 
             <div class="demo-section">
               <h3>Default (400px, close on Escape only)</h3>
