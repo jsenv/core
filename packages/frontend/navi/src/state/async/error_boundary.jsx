@@ -1,3 +1,6 @@
+// Error boundary is also capable to catch sync errors but still
+// it's mostly useful to catch async errors
+
 import { createContext, h } from "preact";
 import {
   useContext,
@@ -7,7 +10,7 @@ import {
   useState,
 } from "preact/hooks";
 
-import { RUNNING } from "../action/action_run_states.js";
+import { RUNNING } from "../../action/action_run_states.js";
 
 const ErrorBoundaryContext = createContext({
   hasBoundary: false,

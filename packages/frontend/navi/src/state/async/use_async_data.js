@@ -1,7 +1,7 @@
-import { COMPLETED, FAILED, RUNNING } from "../action/action_run_states.js";
+import { COMPLETED, FAILED, RUNNING } from "../../action/action_run_states.js";
 import { useHasErrorBoundary, useSilencedAction } from "./error_boundary.jsx";
 import { useLoadingHasFallback } from "./loading.jsx";
-import { useForceRender } from "./use_force_render.js";
+import { usePromise } from "./use_promise.js";
 
 export const useAsyncData = (promiseOrAction) => {
   const isAction = Boolean(promiseOrAction && promiseOrAction.isAction);
@@ -17,6 +17,9 @@ const useAction = (action) => {
   const hasErrorBoundary = useHasErrorBoundary();
   const silencedAction = useSilencedAction();
   const runningState = action.runningStateSignal.value;
+  console.debug(
+    `useAction(${action.name}): render runningState=${runningState}, loadingFallback=${loadingFallback}, silencedAction=${silencedAction?.name ?? null}`,
+  );
   if (runningState === COMPLETED) {
     const data = action.dataSignal.peek();
     return { data, loading: false, error: undefined };
@@ -45,12 +48,16 @@ const useAction = (action) => {
   // <Loading> has a fallback — suspend so Suspense shows the fallback
   let pendingPromise = actionPendingPromiseWeakMap.get(action);
   if (!pendingPromise) {
+    console.debug(`useAction(${action.name}): creating new pendingPromise`);
     let resolve;
     pendingPromise = new Promise((res) => {
       resolve = res;
     });
     actionPendingPromiseWeakMap.set(action, pendingPromise);
     const unsubscribe = action.runningStateSignal.subscribe((state) => {
+      console.debug(
+        `useAction(${action.name}): pendingPromise subscription fired, state=${state}`,
+      );
       if (state === COMPLETED) {
         actionPendingPromiseWeakMap.delete(action);
         unsubscribe();
@@ -62,39 +69,9 @@ const useAction = (action) => {
         // (showing stale DOM before the error throw reaches ErrorBoundary).
       }
     });
+  } else {
+    console.debug(`useAction(${action.name}): reusing existing pendingPromise`);
   }
+  console.debug(`useAction(${action.name}): throwing pendingPromise`);
   throw pendingPromise;
-};
-const promiseStateWeakMap = new WeakMap();
-const usePromise = (promise) => {
-  const forceRender = useForceRender();
-
-  let promiseState = promiseStateWeakMap.get(promise);
-  if (!promiseState) {
-    promiseState = {
-      data: null,
-      error: null,
-      settled: false,
-    };
-    promiseStateWeakMap.set(promise, promiseState);
-    promise.then(
-      (data) => {
-        promiseState.data = data;
-        promiseState.settled = true;
-        forceRender();
-      },
-      (error) => {
-        promiseState.error = error;
-        promiseState.settled = true;
-      },
-    );
-    throw promise;
-  }
-  if (!promiseState.settled) {
-    throw promise;
-  }
-  if (promiseState.error) {
-    throw promiseState.error;
-  }
-  return promiseState.data;
 };
