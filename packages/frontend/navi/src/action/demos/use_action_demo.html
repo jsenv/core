@@ -62,17 +62,9 @@
       import { render, Component } from "preact";
       import { Suspense } from "preact/compat";
       import { useState } from "preact/hooks";
-      import { createAction, use, ErrorBoundary } from "@jsenv/navi";
+      import { createAction, use, ErrorBoundary, Button } from "@jsenv/navi";
 
       const delay = (ms) => new Promise((res) => setTimeout(res, ms));
-      const fetchUserSuccess = createAction(async () => {
-        await delay(800);
-        return { name: "Alice", email: "alice@example.com" };
-      });
-      const fetchUserFail = createAction(async () => {
-        await delay(800);
-        throw new Error("Network error: failed to fetch user");
-      });
 
       const UserCard = ({ action }) => {
         const user = use(action);
@@ -89,13 +81,6 @@
           <h2>{title}</h2>
           <p class="demo-description">{description}</p>
           {children}
-        </div>
-      );
-
-      const ActionButtons = ({ onSuccess, onFail }) => (
-        <div class="buttons">
-          <button onClick={onSuccess}>Fetch user (success)</button>
-          <button onClick={onFail}>Fetch user (throw)</button>
         </div>
       );
 
@@ -143,16 +128,24 @@
             title="1. No Suspense"
             description="use() throws a promise but nothing catches it — expect an error/blank render while loading."
           >
-            <ActionButtons
-              onSuccess={() => {
-                example1Success.run();
-                setAction(example1Success);
-              }}
-              onFail={() => {
-                example1Fail.run();
-                setAction(example1Fail);
-              }}
-            />
+            <div class="buttons">
+              <Button
+                action={() => {
+                  setAction(example1Success);
+                  return example1Success.rerun();
+                }}
+              >
+                Fetch user (success)
+              </Button>
+              <Button
+                action={() => {
+                  setAction(example1Fail);
+                  return example1Fail.rerun();
+                }}
+              >
+                Fetch user (throw)
+              </Button>
+            </div>
             {action && <UserCard action={action} />}
           </DemoSection>
         );
@@ -165,16 +158,24 @@
             title="2. Wrapped with Suspense (no fallback)"
             description="Suspense catches the thrown promise. Without a fallback, nothing renders while loading."
           >
-            <ActionButtons
-              onSuccess={() => {
-                example2Success.run();
-                setAction(example2Success);
-              }}
-              onFail={() => {
-                example2Fail.run();
-                setAction(example2Fail);
-              }}
-            />
+            <div class="buttons">
+              <Button
+                action={() => {
+                  setAction(example2Success);
+                  return example2Success.rerun();
+                }}
+              >
+                Fetch user (success)
+              </Button>
+              <Button
+                action={() => {
+                  setAction(example2Fail);
+                  return example2Fail.rerun();
+                }}
+              >
+                Fetch user (throw)
+              </Button>
+            </div>
             {action && (
               <Suspense>
                 <UserCard action={action} />
@@ -191,16 +192,24 @@
             title="3. Suspense with fallback"
             description="Shows a loading state while the action is running."
           >
-            <ActionButtons
-              onSuccess={() => {
-                example3Success.run();
-                setAction(example3Success);
-              }}
-              onFail={() => {
-                example3Fail.run();
-                setAction(example3Fail);
-              }}
-            />
+            <div class="buttons">
+              <Button
+                action={() => {
+                  setAction(example3Success);
+                  return example3Success.rerun();
+                }}
+              >
+                Fetch user (success)
+              </Button>
+              <Button
+                action={() => {
+                  setAction(example3Fail);
+                  return example3Fail.rerun();
+                }}
+              >
+                Fetch user (throw)
+              </Button>
+            </div>
             {action && (
               <Suspense fallback={<div class="card-loading">Loading…</div>}>
                 <UserCard action={action} />
@@ -217,23 +226,31 @@
             title="4. Suspense + ErrorBoundary"
             description="Errors thrown by use() bubble up and are caught by the ErrorBoundary."
           >
-            <ActionButtons
-              onSuccess={() => {
-                example4Success.run();
-                setAction(example4Success);
-              }}
-              onFail={() => {
-                example4Fail.run();
-                setAction(example4Fail);
-              }}
-            />
-            {action && (
-              <ErrorBoundary fallback={"Error loading user data"}>
+            <ErrorBoundary fallback={"Error loading user data"}>
+              <div class="buttons">
+                <Button
+                  action={() => {
+                    setAction(example4Success);
+                    return example4Success.rerun();
+                  }}
+                >
+                  Fetch user (success)
+                </Button>
+                <Button
+                  action={() => {
+                    setAction(example4Fail);
+                    return example4Fail.rerun();
+                  }}
+                >
+                  Fetch user (throw)
+                </Button>
+              </div>
+              {action && (
                 <Suspense fallback={<div class="card-loading">Loading…</div>}>
                   <UserCard action={action} />
                 </Suspense>
-              </ErrorBoundary>
-            )}
+              )}
+            </ErrorBoundary>
           </DemoSection>
         );
       };
