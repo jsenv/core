@@ -1,5 +1,23 @@
-import { COMPLETED, FAILED } from "../action/action_run_states.js";
+import { createContext } from "preact";
+import { useContext } from "preact/hooks";
+import { COMPLETED, FAILED, RUNNING } from "../action/action_run_states.js";
 import { useForceRender } from "./use_force_render.js";
+
+export const LoadingContext = createContext({ hasFallback: false });
+
+const dismissedActionsWeakSet = new WeakSet();
+const dismissSubscriptions = new WeakMap();
+
+export const dismissActionError = (action) => {
+  dismissedActionsWeakSet.add(action);
+  const unsubscribe = action.runningStateSignal.subscribe((state) => {
+    if (state === RUNNING) {
+      dismissedActionsWeakSet.delete(action);
+      unsubscribe();
+    }
+  });
+  dismissSubscriptions.set(action, unsubscribe);
+};
 
 export const useAsyncData = (promiseOrAction) => {
   const isAction = Boolean(promiseOrAction && promiseOrAction.isAction);
@@ -10,18 +28,24 @@ export const useAsyncData = (promiseOrAction) => {
 };
 const actionPendingPromiseWeakMap = new WeakMap();
 const useAction = (action) => {
+  const { hasFallback } = useContext(LoadingContext);
   const forceRender = useForceRender();
   const runningState = action.runningStateSignal.value;
   if (runningState === COMPLETED) {
     const data = action.dataSignal.peek();
-    return { data };
+    return { data, loading: false };
   }
   if (runningState === FAILED) {
     const error = action.errorSignal.peek();
     error.action = action;
     throw error;
   }
-  // IDLE or RUNNING — suspend
+  // IDLE or RUNNING
+  if (!hasFallback) {
+    // <Loading> has no fallback — return state, let component handle it
+    return { data: undefined, loading: runningState === RUNNING };
+  }
+  // <Loading> has a fallback — suspend so Suspense shows the fallback
   let pendingPromise = actionPendingPromiseWeakMap.get(action);
   if (!pendingPromise) {
     let resolve;
