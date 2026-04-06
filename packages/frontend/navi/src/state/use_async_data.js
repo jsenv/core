@@ -3,20 +3,6 @@ import { useHasErrorBoundary, useSilencedAction } from "./error_boundary.jsx";
 import { useLoadingHasFallback } from "./loading.jsx";
 import { useForceRender } from "./use_force_render.js";
 
-const dismissedActionsWeakSet = new WeakSet();
-const dismissSubscriptions = new WeakMap();
-
-export const dismissActionError = (action) => {
-  dismissedActionsWeakSet.add(action);
-  const unsubscribe = action.runningStateSignal.subscribe((state) => {
-    if (state === RUNNING) {
-      dismissedActionsWeakSet.delete(action);
-      unsubscribe();
-    }
-  });
-  dismissSubscriptions.set(action, unsubscribe);
-};
-
 export const useAsyncData = (promiseOrAction) => {
   const isAction = Boolean(promiseOrAction && promiseOrAction.isAction);
   if (isAction) {
@@ -25,6 +11,7 @@ export const useAsyncData = (promiseOrAction) => {
   return usePromise(promiseOrAction);
 };
 const actionPendingPromiseWeakMap = new WeakMap();
+const FALLBACK_LATEST_DATA = false;
 const useAction = (action) => {
   const loadingFallback = useLoadingHasFallback();
   const hasErrorBoundary = useHasErrorBoundary();
@@ -36,8 +23,7 @@ const useAction = (action) => {
     return { data, loading: false, error: undefined };
   }
   if (runningState === FAILED) {
-    const error = action.errorSignal.peek();
-    if (silencedAction === action) {
+    if (FALLBACK_LATEST_DATA && silencedAction === action) {
       // Error was dismissed — show last known data only if action completed once before
       const lastData = action.dataSignal.peek();
       if (lastData !== undefined) {
@@ -45,6 +31,7 @@ const useAction = (action) => {
       }
       // No previous data — fall through to throw so ErrorBoundary renders null
     }
+    const error = action.errorSignal.peek();
     if (!hasErrorBoundary) {
       return { data: undefined, loading: false, error };
     }
