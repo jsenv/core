@@ -182,9 +182,6 @@
       // skeleton placeholders while waiting. Same layout as UserCard.
       const UserCardWithSkeleton = ({ action }) => {
         const { data: user, loading } = useAsyncData(action);
-        if (!user && !loading) {
-          return null;
-        }
         return (
           <UserCardFields
             name={
@@ -401,9 +398,6 @@ Errors are caught by ErrorBoundary."
               <span style={{ fontSize: "1.2em" }}>⚠️</span> {error.message}
             </div>
           );
-        }
-        if (!user && !loading) {
-          return null;
         }
         return (
           <UserCardFields
