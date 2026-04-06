@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>use(action) Demo</title>
+    <style>
+      body {
+        margin: 20px;
+        font-family:
+          system-ui,
+          -apple-system,
+          sans-serif;
+      }
+      .demo-section {
+        margin-bottom: 32px;
+      }
+      .card {
+        margin-top: 12px;
+        padding: 16px;
+        background: #f9f9f9;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { Suspense } from "preact/compat";
+      import { useState } from "preact/hooks";
+      import { createAction, use } from "@jsenv/navi";
+
+      const fetchUser = createAction(async ({ id }) => {
+        await new Promise((resolve) => setTimeout(resolve, 800));
+        return { id, name: `User #${id}`, email: `user${id}@example.com` };
+      });
+
+      // UserCard receives the action and uses use() to suspend until data is ready.
+      // No ActionRenderer needed — props forwarding is straightforward.
+      const UserCard = ({ action, highlight }) => {
+        const user = use(action);
+        return (
+          <div
+            class="card"
+            style={{ borderColor: highlight ? "#4476ff" : "#ddd" }}
+          >
+            <strong>{user.name}</strong>
+            <div style={{ color: "#555", fontSize: "0.9em" }}>{user.email}</div>
+            {highlight && (
+              <div style={{ marginTop: "8px", color: "#4476ff" }}>
+                ★ highlighted
+              </div>
+            )}
+          </div>
+        );
+      };
+
+      const App = () => {
+        const [ran, setRan] = useState(false);
+        const [highlight, setHighlight] = useState(false);
+
+        const fetchUserBound = fetchUser.bindParams({ id: 1 });
+        const runAction = () => {
+          fetchUserBound.run();
+          setRan(true);
+        };
+
+        return (
+          <div>
+            <h1>use(action) Demo</h1>
+
+            <div class="demo-section">
+              <p>
+                <code>use(action)</code> suspends the component until the action
+                completes, then returns the data. Props are forwarded normally.
+              </p>
+              <button onClick={runAction} disabled={ran}>
+                Fetch user
+              </button>
+              <label style={{ marginLeft: "12px" }}>
+                <input
+                  type="checkbox"
+                  checked={highlight}
+                  onInput={(e) => setHighlight(e.target.checked)}
+                />
+                {" Highlight card (re-renders parent without re-fetching)"}
+              </label>
+
+              {ran && (
+                <Suspense fallback={<div class="card">Loading…</div>}>
+                  <UserCard action={fetchUserBound} highlight={highlight} />
+                </Suspense>
+              )}
+            </div>
+          </div>
+        );
+      };
+
+      render(<App />, document.querySelector("#root"));
+    </script>
+  </body>
+</html>

@@ -1,7 +1,47 @@
+import { COMPLETED, FAILED } from "./action_run_states.js";
 import { useForceRender } from "./use_force_render.js";
 
 const promiseStateWeakMap = new WeakMap();
-export const use = (promise) => {
+const actionPendingPromiseWeakMap = new WeakMap();
+
+export const use = (promiseOrAction) => {
+  const isAction = Boolean(promiseOrAction && promiseOrAction.dataSignal);
+  if (isAction) {
+    return useAction(promiseOrAction);
+  }
+  return usePromise(promiseOrAction);
+};
+
+const useAction = (action) => {
+  const forceRender = useForceRender();
+  const runningState = action.runningStateSignal.value;
+  if (runningState === COMPLETED) {
+    return action.dataSignal.value;
+  }
+  if (runningState === FAILED) {
+    throw action.errorSignal.value;
+  }
+  // IDLE or RUNNING — suspend
+  let pendingPromise = actionPendingPromiseWeakMap.get(action);
+  if (!pendingPromise) {
+    let resolve;
+    pendingPromise = new Promise((res) => {
+      resolve = res;
+    });
+    actionPendingPromiseWeakMap.set(action, pendingPromise);
+    const unsubscribe = action.runningStateSignal.subscribe((state) => {
+      if (state === COMPLETED || state === FAILED) {
+        actionPendingPromiseWeakMap.delete(action);
+        unsubscribe();
+        resolve();
+        forceRender();
+      }
+    });
+  }
+  throw pendingPromise;
+};
+
+const usePromise = (promise) => {
   const forceRender = useForceRender();
 
   let promiseState = promiseStateWeakMap.get(promise);
