@@ -44,9 +44,9 @@
   <body>
     <div id="root"></div>
     <script type="module" jsenv-type="module/jsx">
-      import { h, render } from "preact";
+      import { render } from "preact";
       import { Suspense } from "preact/compat";
-      import { useState, useErrorBoundary } from "preact/hooks";
+      import { useState, useRef, useErrorBoundary } from "preact/hooks";
 
       // ─── Minimal suspense promise machinery ──────────────────────────────────
       // A "task" is { promise, resolve, reject, state, result, error }
@@ -72,8 +72,7 @@
       const pendingMap = new WeakMap();
 
       // useTask: throws a promise while pending, throws error if rejected, returns result if resolved
-      const useTask = (taskRef) => {
-        const task = taskRef.current;
+      const useTask = (task) => {
         if (!task) return null;
         if (task.state === "resolved") return task.result;
         if (task.state === "rejected") throw task.error;
@@ -94,83 +93,74 @@
       };
 
       // ─── ErrorBoundary ────────────────────────────────────────────────────────
-      const ErrorBoundary = ({ children, fallback }) => {
+      const ErrorBoundary = ({ children }) => {
         const [error, resetError] = useErrorBoundary();
         if (error) {
-          return h(
-            "div",
-            { class: "error" },
-            h("strong", null, "⚠️ Error caught by ErrorBoundary"),
-            h(
-              "div",
-              { style: "margin: 6px 0; font-family: monospace;" },
-              error.message,
-            ),
-            h("button", { onClick: resetError }, "Dismiss"),
+          return (
+            <div class="error">
+              <strong>⚠️ Error caught by ErrorBoundary</strong>
+              <div style="margin: 6px 0; font-family: monospace;">
+                {error.message}
+              </div>
+              <button onClick={resetError}>Dismiss</button>
+            </div>
           );
         }
         return children;
       };
 
       // ─── Child component that suspends ────────────────────────────────────────
-      const Child = ({ taskRef }) => {
-        const data = useTask(taskRef);
-        if (data === null) return h("div", { class: "card" }, "(no data yet)");
-        return h(
-          "div",
-          { class: "card" },
-          "✅ Result: ",
-          h("strong", null, data),
+      const Child = ({ task }) => {
+        const data = useTask(task);
+        if (data === null) return <div class="card">(no data yet)</div>;
+        return (
+          <div class="card">
+            ✅ Result: <strong>{data}</strong>
+          </div>
         );
       };
 
       // ─── App ──────────────────────────────────────────────────────────────────
       const App = () => {
-        const [taskRef] = useState({ current: null });
-        const [, forceRender] = useState(0);
+        const taskRef = useRef(null);
+        const [task, setTask] = useState(null);
 
         const run = (shouldFail) => {
-          const task = makeTask();
-          taskRef.current = task;
-          forceRender((n) => n + 1);
+          const t = makeTask();
+          taskRef.current = t;
+          setTask(t);
 
           setTimeout(() => {
             if (shouldFail) {
-              task.state = "rejected";
-              task.error = new Error("Server error: something went wrong");
-              task.reject(task.error);
+              t.state = "rejected";
+              t.error = new Error("Server error: something went wrong");
+              t.reject(t.error);
             } else {
-              task.state = "resolved";
-              task.result = "Hello, world!";
-              task.resolve();
+              t.state = "resolved";
+              t.result = "Hello, world!";
+              t.resolve();
             }
-            forceRender((n) => n + 1);
+            setTask({ ...t }); // new object reference to force re-render
           }, 800);
         };
 
-        return h(
-          "div",
-          null,
-          h("h1", null, "Suspense + ErrorBoundary repro"),
-
-          h("h2", null, "Controls"),
-          h("button", { onClick: () => run(false) }, "✅ Fetch (success)"),
-          h("button", { onClick: () => run(true) }, "❌ Fetch (fail)"),
-
-          h("h2", null, "Output"),
-          h(
-            ErrorBoundary,
-            null,
-            h(
-              Suspense,
-              { fallback: h("div", { class: "loading" }, "Loading…") },
-              h(Child, { taskRef }),
-            ),
-          ),
+        return (
+          <div>
+            <h1>Suspense + ErrorBoundary repro</h1>
+            <h2>Controls</h2>
+            <button onClick={() => run(false)}>✅ Fetch (success)</button>
+            <button onClick={() => run(true)}>❌ Fetch (fail)</button>
+            <h2>Output</h2>
+            <ErrorBoundary>
+              <Suspense fallback={<div class="loading">Loading…</div>}>
+                {task && <Child task={taskRef.current} />}
+              </Suspense>
+            </ErrorBoundary>
+          </div>
         );
       };
 
-      render(h(App, null), document.getElementById("root"));
+      render(<App />, document.getElementById("root"));
     </script>
   </body>
 </html>
