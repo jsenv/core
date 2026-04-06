@@ -8,14 +8,7 @@ import {
 
 import { RUNNING } from "../action/action_run_states.js";
 
-const ErrorBoundaryContext = createContext({
-  silenced: false,
-  hasBoundary: false,
-});
-export const useErrorSilenced = () => {
-  const { silenced } = useContext(ErrorBoundaryContext);
-  return silenced;
-};
+const ErrorBoundaryContext = createContext({ hasBoundary: false });
 export const useHasErrorBoundary = () => {
   const { hasBoundary } = useContext(ErrorBoundaryContext);
   return hasBoundary;
@@ -26,7 +19,6 @@ export const ErrorBoundary = ({ children, fallback, onReset }) => {
   // Track the action separately so we can still reference it after resetErrorInternal() nulls error
   const [silencedAction, _setSilencedAction] = useState(null);
   const setSilencedAction = (v) => _setSilencedAction(() => v);
-  const silenced = silencedAction !== null;
 
   const resetError = () => {
     const action = error?.action;
@@ -76,7 +68,7 @@ export const ErrorBoundary = ({ children, fallback, onReset }) => {
     return fallback;
   }
   return (
-    <ErrorBoundaryContext.Provider value={{ silenced, hasBoundary: true }}>
+    <ErrorBoundaryContext.Provider value={{ hasBoundary: true }}>
       {children}
     </ErrorBoundaryContext.Provider>
   );
