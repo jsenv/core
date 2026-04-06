@@ -1,5 +1,3 @@
-import { useActionData } from "@jsenv/navi";
-
 import { DATABASE } from "./database/database_store.js";
 import { errorFromResponse } from "./error_from_response.js";
 import { ROLE } from "./role/role_store.js";
@@ -12,7 +10,7 @@ export const ROLE_WITH_OWNERSHIP = ROLE.withParams(
   },
 );
 export const useRoleWithOwnershipArray = () => {
-  const roleWithOwnershipArray = useActionData(ROLE_WITH_OWNERSHIP.GET_MANY);
+  const roleWithOwnershipArray = ROLE_WITH_OWNERSHIP.GET_MANY.dataSignal.value;
   return roleWithOwnershipArray;
 };
 

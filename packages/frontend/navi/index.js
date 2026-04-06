@@ -8,7 +8,6 @@ export {
   rerunActions,
   updateActions,
 } from "./src/action/actions.js";
-export { useActionData } from "./src/action/use_action_data.js";
 export { useActionStatus } from "./src/action/use_action_status.js";
 export { useRunOnMount } from "./src/action/use_run_on_mount.js";
 
