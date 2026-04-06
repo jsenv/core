@@ -59,9 +59,7 @@ const useAction = (action) => {
         actionPendingPromiseWeakMap.delete(action);
         unsubscribe();
         // Do NOT resolve the promise on FAILED: resolving would cause Suspense to commit children
-        // (showing stale DOM briefly before the error throw reaches ErrorBoundary).
-        // Instead, let signals re-render the component (it reads runningStateSignal.value, so it's
-        // subscribed). That re-render throws the error directly to ErrorBoundary.
+        // (showing stale DOM before the error throw reaches ErrorBoundary).
       }
     });
   }

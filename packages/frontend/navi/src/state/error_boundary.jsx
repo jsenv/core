@@ -3,6 +3,7 @@ import {
   useContext,
   useEffect,
   useErrorBoundary,
+  useRef,
   useState,
 } from "preact/hooks";
 
@@ -24,61 +25,40 @@ export const useSilencedAction = () => {
 export const ErrorBoundary = ({ children, fallback, onReset }) => {
   const [error, resetErrorInternal] = useErrorBoundary();
   // Track the action separately so we can still reference it after resetErrorInternal() nulls error
-  const [silencedAction, _setSilencedAction] = useState(null);
-  const setSilencedAction = (v) => _setSilencedAction(() => v);
+  const [silenced, setSilenced] = useState(false);
+  const actionRef = useRef(null);
 
+  const unsubscribeRef = useRef(null);
+  useEffect(() => {
+    return () => {
+      unsubscribeRef.current?.();
+      unsubscribeRef.current = null;
+    };
+  }, []);
   const resetError = () => {
-    const action = error?.action;
-    if (action) {
-      setSilencedAction(action);
-    }
+    setSilenced(true);
     onReset?.();
     resetErrorInternal();
   };
 
-  // When the failed action re-runs, auto-dismiss the boundary
-  useEffect(() => {
-    if (!error) {
-      return undefined;
-    }
-    const action = error.action;
-    if (!action) {
-      return undefined;
-    }
-    const currentState = action.runningStateSignal.peek();
-    if (currentState === RUNNING) {
-      setSilencedAction(null);
-      resetErrorInternal();
-      return undefined;
-    }
-    const unsubscribe = action.runningStateSignal.subscribe((state) => {
-      if (state === RUNNING) {
-        unsubscribe();
-        setSilencedAction(null);
-        resetErrorInternal();
-      }
-    });
-    return unsubscribe;
-  }, [error]);
-
-  // When a silenced action re-runs, clear the silence so the next failure shows the boundary
-  useEffect(() => {
-    if (!silencedAction) {
-      return undefined;
-    }
-    const unsubscribe = silencedAction.runningStateSignal.subscribe((state) => {
-      if (state === RUNNING) {
-        unsubscribe();
-        setSilencedAction(null);
-      }
-    });
-    return unsubscribe;
-  }, [silencedAction]);
-
   if (error) {
     error.__handled_by__ = "<ErrorBoundary>"; // prevent jsenv from displaying it
-    if (silencedAction && error.action === silencedAction) {
-      return null;
+    const action = error.action;
+    actionRef.current = action;
+    unsubscribeRef.current?.();
+    if (action) {
+      // when action runs, auto reset error
+      const unsubscribe = action.runningStateSignal.subscribe((state) => {
+        if (state === RUNNING) {
+          unsubscribe();
+          unsubscribeRef.current = null;
+          setSilenced(false);
+          resetErrorInternal();
+        }
+      });
+      if (silenced && actionRef.current === action) {
+        return null;
+      }
     }
     if (!fallback) {
       return null;
@@ -90,7 +70,10 @@ export const ErrorBoundary = ({ children, fallback, onReset }) => {
   }
   return (
     <ErrorBoundaryContext.Provider
-      value={{ hasBoundary: true, silencedAction }}
+      value={{
+        hasBoundary: true,
+        silencedAction: silenced ? actionRef.current : null,
+      }}
     >
       {children}
     </ErrorBoundaryContext.Provider>
