@@ -240,7 +240,7 @@
           <DemoSection
             title="Component-managed loading"
             description="useAsyncData() returns { data, loading } when there is no <Loading fallback> above.
-The component renders skeleton placeholders itself while waiting. No Suspense boundary involved."
+The component renders skeleton placeholders itself while waiting. Errors are caught by ErrorBoundary."
           >
             <FetchControls
               action={() => {
@@ -249,7 +249,11 @@ The component renders skeleton placeholders itself while waiting. No Suspense bo
               }}
               shouldFail={ex1.shouldFail}
             />
-            {started && <UserCardWithSkeleton action={ex1.action} />}
+            {started && (
+              <ErrorBoundary fallback={ErrorCard}>
+                <UserCardWithSkeleton action={ex1.action} />
+              </ErrorBoundary>
+            )}
           </DemoSection>
         );
       };
@@ -263,7 +267,8 @@ The component renders skeleton placeholders itself while waiting. No Suspense bo
           <DemoSection
             title="Suspense-managed loading"
             description="When a fallback is provided, <Loading> wraps children in <Suspense>.
-useAsyncData() throws a promise while loading — the component never sees loading state and only renders once data is ready."
+useAsyncData() throws a promise while loading — the component never sees loading state and only renders once data is ready.
+Errors are caught by ErrorBoundary."
           >
             <FetchControls
               action={() => {
@@ -273,9 +278,11 @@ useAsyncData() throws a promise while loading — the component never sees loadi
               shouldFail={ex3.shouldFail}
             />
             {started && (
-              <Loading fallback={<div class="card-loading">Loading…</div>}>
-                <UserCard action={ex3.action} />
-              </Loading>
+              <ErrorBoundary fallback={ErrorCard}>
+                <Loading fallback={<div class="card-loading">Loading…</div>}>
+                  <UserCard action={ex3.action} />
+                </Loading>
+              </ErrorBoundary>
             )}
           </DemoSection>
         );
@@ -363,7 +370,8 @@ Re-fetching auto-dismisses the error boundary."
           <DemoSection
             title="Stale-while-revalidate"
             description="The component keeps showing the last known data while a re-fetch is in progress.
-On first load it shows skeleton placeholders. On re-fetch it shows the current data with a refreshing indicator."
+On first load it shows skeleton placeholders. On re-fetch it shows the current data with a refreshing indicator.
+Errors are caught by ErrorBoundary."
           >
             <FetchControls
               action={() => {
@@ -372,7 +380,34 @@ On first load it shows skeleton placeholders. On re-fetch it shows the current d
               }}
               shouldFail={ex5.shouldFail}
             />
-            {started && <UserCardStaleWhileRevalidate action={ex5.action} />}
+            {started && (
+              <ErrorBoundary fallback={ErrorCard}>
+                <UserCardStaleWhileRevalidate action={ex5.action} />
+              </ErrorBoundary>
+            )}
+          </DemoSection>
+        );
+      };
+
+      // ─── No error boundary ───────────────────────────────────────────────────
+
+      const ex6 = makeExample("fetchUser6");
+      const ExampleNoErrorBoundary = () => {
+        const [started, setStarted] = useState(false);
+        return (
+          <DemoSection
+            title="No error boundary"
+            description="Without an ErrorBoundary, errors thrown by useAsyncData() propagate up and crash the component tree.
+This is what happens when you forget to add an ErrorBoundary — shown here for contrast."
+          >
+            <FetchControls
+              action={() => {
+                setStarted(true);
+                return ex6.action.rerun();
+              }}
+              shouldFail={ex6.shouldFail}
+            />
+            {started && <UserCardWithSkeleton action={ex6.action} />}
           </DemoSection>
         );
       };
@@ -384,6 +419,7 @@ On first load it shows skeleton placeholders. On re-fetch it shows the current d
           <ExampleSuspenseManagedLoading />
           <ExampleErrorBoundaryWithSuspense />
           <ExampleStaleWhileRevalidate />
+          <ExampleNoErrorBoundary />
         </div>
       );
 
