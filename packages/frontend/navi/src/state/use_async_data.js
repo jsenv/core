@@ -16,7 +16,6 @@ const useAction = (action) => {
   const loadingFallback = useLoadingHasFallback();
   const hasErrorBoundary = useHasErrorBoundary();
   const silencedAction = useSilencedAction();
-  const forceRender = useForceRender();
   const runningState = action.runningStateSignal.value;
   if (runningState === COMPLETED) {
     const data = action.dataSignal.peek();
@@ -52,11 +51,17 @@ const useAction = (action) => {
     });
     actionPendingPromiseWeakMap.set(action, pendingPromise);
     const unsubscribe = action.runningStateSignal.subscribe((state) => {
-      if (state === COMPLETED || state === FAILED) {
+      if (state === COMPLETED) {
         actionPendingPromiseWeakMap.delete(action);
         unsubscribe();
         resolve();
-        forceRender();
+      } else if (state === FAILED) {
+        actionPendingPromiseWeakMap.delete(action);
+        unsubscribe();
+        // Do NOT resolve the promise on FAILED: resolving would cause Suspense to commit children
+        // (showing stale DOM briefly before the error throw reaches ErrorBoundary).
+        // Instead, let signals re-render the component (it reads runningStateSignal.value, so it's
+        // subscribed). That re-render throws the error directly to ErrorBoundary.
       }
     });
   }
