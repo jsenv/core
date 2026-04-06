@@ -8,10 +8,17 @@ import {
 
 import { RUNNING } from "../action/action_run_states.js";
 
-const ErrorBoundaryContext = createContext({ silenced: false });
+const ErrorBoundaryContext = createContext({
+  silenced: false,
+  hasBoundary: false,
+});
 export const useErrorSilenced = () => {
   const { silenced } = useContext(ErrorBoundaryContext);
   return silenced;
+};
+export const useHasErrorBoundary = () => {
+  const { hasBoundary } = useContext(ErrorBoundaryContext);
+  return hasBoundary;
 };
 
 export const ErrorBoundary = ({ children, fallback, onReset }) => {
@@ -69,7 +76,7 @@ export const ErrorBoundary = ({ children, fallback, onReset }) => {
     return fallback;
   }
   return (
-    <ErrorBoundaryContext.Provider value={{ silenced }}>
+    <ErrorBoundaryContext.Provider value={{ silenced, hasBoundary: true }}>
       {children}
     </ErrorBoundaryContext.Provider>
   );

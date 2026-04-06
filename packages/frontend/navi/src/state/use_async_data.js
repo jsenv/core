@@ -1,6 +1,7 @@
 import { createContext } from "preact";
 import { useContext } from "preact/hooks";
 import { COMPLETED, FAILED, RUNNING } from "../action/action_run_states.js";
+import { useHasErrorBoundary } from "./error_boundary.jsx";
 import { useForceRender } from "./use_force_render.js";
 
 export const LoadingContext = createContext({ hasFallback: false });
@@ -29,14 +30,18 @@ export const useAsyncData = (promiseOrAction) => {
 const actionPendingPromiseWeakMap = new WeakMap();
 const useAction = (action) => {
   const { hasFallback } = useContext(LoadingContext);
+  const hasErrorBoundary = useHasErrorBoundary();
   const forceRender = useForceRender();
   const runningState = action.runningStateSignal.value;
   if (runningState === COMPLETED) {
     const data = action.dataSignal.peek();
-    return { data, loading: false };
+    return { data, loading: false, error: undefined };
   }
   if (runningState === FAILED) {
     const error = action.errorSignal.peek();
+    if (!hasErrorBoundary) {
+      return { data: undefined, loading: false, error };
+    }
     error.action = action;
     throw error;
   }

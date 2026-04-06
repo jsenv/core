@@ -391,14 +391,49 @@ Errors are caught by ErrorBoundary."
 
       // ─── No error boundary ───────────────────────────────────────────────────
 
+      // When no ErrorBoundary is above, useAsyncData() returns { error } instead
+      // of throwing — the component is responsible for rendering the error state.
+      const UserCardWithErrorHandling = ({ action }) => {
+        const { data: user, loading, error } = useAsyncData(action);
+        if (error) {
+          return (
+            <div class="card-error">
+              <span style={{ fontSize: "1.2em" }}>⚠️</span> {error.message}
+            </div>
+          );
+        }
+        if (!user && !loading) {
+          return null;
+        }
+        return (
+          <UserCardFields
+            name={
+              loading ? (
+                <span class="skeleton" style={{ width: "80px" }} />
+              ) : (
+                user.name
+              )
+            }
+            email={
+              loading ? (
+                <span class="skeleton" style={{ width: "140px" }} />
+              ) : (
+                user.email
+              )
+            }
+          />
+        );
+      };
+
       const ex6 = makeExample("fetchUser6");
       const ExampleNoErrorBoundary = () => {
         const [started, setStarted] = useState(false);
         return (
           <DemoSection
             title="No error boundary"
-            description="Without an ErrorBoundary, errors thrown by useAsyncData() propagate up and crash the component tree.
-This is what happens when you forget to add an ErrorBoundary — shown here for contrast."
+            description="Without an ErrorBoundary above, useAsyncData() returns { error } instead of throwing.
+The component handles all three states: loading, data, and error.
+This mirrors how { loading } works when there is no <Loading fallback>."
           >
             <FetchControls
               action={() => {
@@ -407,7 +442,7 @@ This is what happens when you forget to add an ErrorBoundary — shown here for 
               }}
               shouldFail={ex6.shouldFail}
             />
-            {started && <UserCardWithSkeleton action={ex6.action} />}
+            {started && <UserCardWithErrorHandling action={ex6.action} />}
           </DemoSection>
         );
       };
