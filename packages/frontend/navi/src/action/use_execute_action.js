@@ -23,7 +23,6 @@ export const useExecuteAction = (
   const resetErrorBoundary = useResetErrorBoundary();
   useLayoutEffect(() => {
     if (error) {
-      error.__handled__ = true; // prevent jsenv from displaying it
       throw error;
     }
   }, [error]);

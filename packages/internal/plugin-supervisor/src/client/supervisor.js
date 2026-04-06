@@ -1312,9 +1312,9 @@ window.__supervisor__ = (() => {
         console.log('window "error" event received', errorEvent);
       }
       const { error, message, filename, lineno, colno } = errorEvent;
-      if (error && error.__handled__) {
+      if (error && error.__handled_by__) {
         if (logs) {
-          console.log("ignore error event because __handled__ is set");
+          console.log("ignore error event because __handled_by__ is set");
         }
         return;
       }

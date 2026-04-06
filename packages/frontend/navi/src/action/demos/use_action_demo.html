@@ -221,6 +221,7 @@
 
       const Example4 = () => {
         const [action, setAction] = useState(null);
+
         return (
           <DemoSection
             title="4. Suspense + ErrorBoundary"
@@ -236,6 +237,8 @@
                 Fetch user (success)
               </Button>
               <Button
+                // "ignore" -> already handled by error boundary
+                actionErrorEffect="ignore"
                 action={() => {
                   setAction(example4Fail);
                   return example4Fail.rerun();
@@ -245,45 +248,47 @@
               </Button>
             </div>
             {action && (
-              <ErrorBoundary
-                fallback={({ error, resetError }) => (
-                  <div class="card-error">
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "8px",
-                        marginBottom: "8px",
-                      }}
-                    >
-                      <span style={{ fontSize: "1.2em" }}>⚠️</span>
-                      <strong>Error caught by ErrorBoundary</strong>
-                    </div>
-                    <div
-                      style={{
-                        fontFamily: "monospace",
-                        fontSize: "0.9em",
-                        marginBottom: "12px",
-                      }}
-                    >
-                      {error.message}
-                    </div>
-                    <Button
-                      onClick={() => {
-                        resetError();
-                      }}
-                    >
-                      Dismiss
-                    </Button>
-                  </div>
-                )}
-              >
+              <ErrorBoundary fallback={ErrorCard}>
                 <Suspense fallback={<div class="card-loading">Loading…</div>}>
                   <UserCard action={action} />
                 </Suspense>
               </ErrorBoundary>
             )}
           </DemoSection>
+        );
+      };
+
+      const ErrorCard = ({ error, resetError }) => {
+        return (
+          <div class="card-error">
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                marginBottom: "8px",
+              }}
+            >
+              <span style={{ fontSize: "1.2em" }}>⚠️</span>
+              <strong>Error caught by ErrorBoundary</strong>
+            </div>
+            <div
+              style={{
+                fontFamily: "monospace",
+                fontSize: "0.9em",
+                marginBottom: "12px",
+              }}
+            >
+              {error.message}
+            </div>
+            <Button
+              onClick={() => {
+                resetError();
+              }}
+            >
+              Dismiss
+            </Button>
+          </div>
         );
       };
 
