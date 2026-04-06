@@ -61,6 +61,20 @@ export const ErrorBoundary = ({ children, fallback, onReset }) => {
     return unsubscribe;
   }, [error]);
 
+  // When a silenced action re-runs, clear the silence so the next failure shows the boundary
+  useEffect(() => {
+    if (!silencedAction) {
+      return undefined;
+    }
+    const unsubscribe = silencedAction.runningStateSignal.subscribe((state) => {
+      if (state === RUNNING) {
+        unsubscribe();
+        setSilencedAction(null);
+      }
+    });
+    return unsubscribe;
+  }, [silencedAction]);
+
   if (error) {
     error.__handled_by__ = "<ErrorBoundary>"; // prevent jsenv from displaying it
     if (silencedAction && error.action === silencedAction) {
