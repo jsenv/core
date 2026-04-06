@@ -1,3 +1,5 @@
+// https://github.com/preactjs/preact/issues/4756
+
 import { COMPLETED, FAILED, RUNNING } from "../../action/action_run_states.js";
 import { useHasErrorBoundary, useSilencedAction } from "./error_boundary.jsx";
 import { useLoadingHasFallback } from "./loading.jsx";
@@ -65,8 +67,10 @@ const useAction = (action) => {
       } else if (state === FAILED) {
         actionPendingPromiseWeakMap.delete(action);
         unsubscribe();
-        // Do NOT resolve the promise on FAILED: resolving would cause Suspense to commit children
-        // (showing stale DOM before the error throw reaches ErrorBoundary).
+        // Resolve the promise so Suspense unblocks and lets the component re-render.
+        // On that re-render useAction sees FAILED and throws the error to ErrorBoundary.
+        // (Without resolving, Suspense stays in suspended state and swallows the error throw.)
+        resolve();
       }
     });
   } else {
