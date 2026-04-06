@@ -94,6 +94,7 @@
 
       // ─── ErrorBoundary ────────────────────────────────────────────────────────
       const ErrorBoundary = ({ children }) => {
+        const [, rerender] = useState();
         const [error, resetError] = useErrorBoundary();
         if (error) {
           return (
@@ -102,7 +103,14 @@
               <div style="margin: 6px 0; font-family: monospace;">
                 {error.message}
               </div>
-              <button onClick={resetError}>Dismiss</button>
+              <button
+                onClick={() => {
+                  resetError();
+                  rerender({});
+                }}
+              >
+                Dismiss
+              </button>
             </div>
           );
         }
