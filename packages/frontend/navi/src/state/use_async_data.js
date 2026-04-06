@@ -11,7 +11,7 @@ export const useAsyncData = (promiseOrAction) => {
   return usePromise(promiseOrAction);
 };
 const actionPendingPromiseWeakMap = new WeakMap();
-const FALLBACK_LATEST_DATA = false;
+const FALLBACK_LATEST_DATA = true;
 const useAction = (action) => {
   const loadingFallback = useLoadingHasFallback();
   const hasErrorBoundary = useHasErrorBoundary();
