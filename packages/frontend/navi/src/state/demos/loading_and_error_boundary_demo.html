@@ -39,9 +39,38 @@
         border: 1px solid #ddd;
         border-radius: 6px;
       }
-      .card[data-loading] {
-        color: #999;
-        font-style: italic;
+      .card-field {
+        display: flex;
+        margin-top: 6px;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.95em;
+      }
+      .card-label {
+        min-width: 48px;
+        color: #888;
+        font-size: 0.85em;
+      }
+      .skeleton {
+        display: inline-block;
+        height: 1em;
+        background: linear-gradient(
+          90deg,
+          #e0e0e0 25%,
+          #f0f0f0 50%,
+          #e0e0e0 75%
+        );
+        background-size: 200% 100%;
+        border-radius: 4px;
+        animation: shimmer 1.2s infinite;
+      }
+      @keyframes shimmer {
+        0% {
+          background-position: 200% 0;
+        }
+        100% {
+          background-position: -200% 0;
+        }
       }
       .card-loading {
         margin-top: 12px;
@@ -117,37 +146,50 @@
 
       // ─── UserCard variants ────────────────────────────────────────────────────
 
-      // Used with <Loading fallback>: suspends until data is ready
-      // The component itself never sees loading state
-      const UserCardSuspending = ({ action }) => {
-        const { data: user } = useAsyncData(action);
-        return (
-          <div class="card">
-            <strong>{user.name}</strong>
-            <div style={{ color: "#555", fontSize: "0.9em" }}>{user.email}</div>
+      const UserCardFields = ({ name, email }) => (
+        <div class="card">
+          <div class="card-field">
+            <span class="card-label">Name</span>
+            <strong>{name}</strong>
           </div>
-        );
+          <div class="card-field">
+            <span class="card-label">Email</span>
+            <span style={{ color: "#555" }}>{email}</span>
+          </div>
+        </div>
+      );
+
+      // Used with <Loading fallback>: suspends until data is ready.
+      // The component itself never sees loading state.
+      const UserCard = ({ action }) => {
+        const { data: user } = useAsyncData(action);
+        return <UserCardFields name={user.name} email={user.email} />;
       };
 
-      // Used without <Loading fallback>: receives loading state and renders inline
-      // No Suspense boundary needed — the component handles the intermediate state
-      const UserCardWithLoadingState = ({ action }) => {
+      // Used without <Loading fallback>: receives loading state and renders
+      // skeleton placeholders while waiting. Same layout as UserCard.
+      const UserCardWithSkeleton = ({ action }) => {
         const { data: user, loading } = useAsyncData(action);
-        if (loading) {
-          return (
-            <div class="card" data-loading>
-              Loading user…
-            </div>
-          );
-        }
-        if (!user) {
+        if (!user && !loading) {
           return null;
         }
         return (
-          <div class="card">
-            <strong>{user.name}</strong>
-            <div style={{ color: "#555", fontSize: "0.9em" }}>{user.email}</div>
-          </div>
+          <UserCardFields
+            name={
+              loading ? (
+                <span class="skeleton" style={{ width: "80px" }} />
+              ) : (
+                user.name
+              )
+            }
+            email={
+              loading ? (
+                <span class="skeleton" style={{ width: "140px" }} />
+              ) : (
+                user.email
+              )
+            }
+          />
         );
       };
 
@@ -198,7 +240,7 @@ The component decides how to render each state. No Suspense boundary is involved
                 return ex1.fail.rerun();
               }}
             />
-            {action && <UserCardWithLoadingState action={action} />}
+            {action && <UserCardWithSkeleton action={action} />}
           </DemoSection>
         );
       };
@@ -226,7 +268,7 @@ useAsyncData() returns { data, loading } — same as example 1. The component ha
             />
             {action && (
               <Loading>
-                <UserCardWithLoadingState action={action} />
+                <UserCardWithSkeleton action={action} />
               </Loading>
             )}
           </DemoSection>
@@ -257,7 +299,7 @@ The component only renders once data is ready — it never sees loading state."
             />
             {action && (
               <Loading fallback={<div class="card-loading">Loading…</div>}>
-                <UserCardSuspending action={action} />
+                <UserCard action={action} />
               </Loading>
             )}
           </DemoSection>
@@ -299,7 +341,7 @@ Re-fetching auto-dismisses the error and shows nothing until data arrives."
             {action && (
               <ErrorBoundary fallback={ErrorCard}>
                 <Loading fallback={<div class="card-loading">Loading…</div>}>
-                  <UserCardSuspending action={action} />
+                  <UserCard action={action} />
                 </Loading>
               </ErrorBoundary>
             )}
@@ -330,7 +372,7 @@ Dismiss works — action resets to idle. No Suspense involved."
             />
             {action && (
               <ErrorBoundary fallback={ErrorCard}>
-                <UserCardWithLoadingState action={action} />
+                <UserCardWithSkeleton action={action} />
               </ErrorBoundary>
             )}
           </DemoSection>
