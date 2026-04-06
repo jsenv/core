@@ -53,9 +53,11 @@ await startDevServer({
   http2: false,
   port: 3456,
   // supervisor: { logs: true },
+  supervisor: false,
   plugins: [
     jsenvPluginControlledResource(),
     jsenvPluginPreact({
+      preactDevtools: false,
       refreshInstrumentation: true,
     }),
     jsenvPluginExplorer({
