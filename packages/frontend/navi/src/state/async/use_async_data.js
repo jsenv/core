@@ -67,9 +67,6 @@ const useAction = (action) => {
       } else if (state === FAILED) {
         actionPendingPromiseWeakMap.delete(action);
         unsubscribe();
-        // Resolve the promise so Suspense unblocks and lets the component re-render.
-        // On that re-render useAction sees FAILED and throws the error to ErrorBoundary.
-        // (Without resolving, Suspense stays in suspended state and swallows the error throw.)
         resolve();
       }
     });
