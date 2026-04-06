@@ -12,8 +12,24 @@
           -apple-system,
           sans-serif;
       }
+      h2 {
+        margin-bottom: 6px;
+      }
       .demo-section {
-        margin-bottom: 32px;
+        margin-bottom: 40px;
+        padding: 16px;
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+      }
+      .demo-description {
+        margin: 0 0 12px;
+        color: #555;
+        font-size: 0.9em;
+      }
+      .buttons {
+        display: flex;
+        margin-bottom: 12px;
+        gap: 8px;
       }
       .card {
         margin-top: 12px;
@@ -22,81 +38,215 @@
         border: 1px solid #ddd;
         border-radius: 6px;
       }
+      .card-loading {
+        margin-top: 12px;
+        padding: 16px;
+        color: #856404;
+        background: #fff8e1;
+        border: 1px solid #ffc107;
+        border-radius: 6px;
+      }
+      .card-error {
+        margin-top: 12px;
+        padding: 16px;
+        color: #900;
+        background: #fdd;
+        border: 1px solid #f44;
+        border-radius: 6px;
+      }
     </style>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" jsenv-type="module/jsx">
-      import { render } from "preact";
+      import { render, Component } from "preact";
       import { Suspense } from "preact/compat";
       import { useState } from "preact/hooks";
-      import { createAction, use } from "@jsenv/navi";
+      import { createAction, use, ErrorBoundary } from "@jsenv/navi";
 
-      const fetchUser = createAction(async ({ id }) => {
-        await new Promise((resolve) => setTimeout(resolve, 800));
-        return { id, name: `User #${id}`, email: `user${id}@example.com` };
+      const delay = (ms) => new Promise((res) => setTimeout(res, ms));
+      const fetchUserSuccess = createAction(async () => {
+        await delay(800);
+        return { name: "Alice", email: "alice@example.com" };
+      });
+      const fetchUserFail = createAction(async () => {
+        await delay(800);
+        throw new Error("Network error: failed to fetch user");
       });
 
-      // UserCard receives the action and uses use() to suspend until data is ready.
-      // No ActionRenderer needed — props forwarding is straightforward.
-      const UserCard = ({ action, highlight }) => {
+      const UserCard = ({ action }) => {
         const user = use(action);
         return (
-          <div
-            class="card"
-            style={{ borderColor: highlight ? "#4476ff" : "#ddd" }}
-          >
+          <div class="card">
             <strong>{user.name}</strong>
             <div style={{ color: "#555", fontSize: "0.9em" }}>{user.email}</div>
-            {highlight && (
-              <div style={{ marginTop: "8px", color: "#4476ff" }}>
-                ★ highlighted
-              </div>
-            )}
           </div>
         );
       };
 
-      const App = () => {
-        const [ran, setRan] = useState(false);
-        const [highlight, setHighlight] = useState(false);
+      const DemoSection = ({ title, description, children }) => (
+        <div class="demo-section">
+          <h2>{title}</h2>
+          <p class="demo-description">{description}</p>
+          {children}
+        </div>
+      );
 
-        const fetchUserBound = fetchUser.bindParams({ id: 1 });
-        const runAction = () => {
-          fetchUserBound.run();
-          setRan(true);
-        };
+      const ActionButtons = ({ onSuccess, onFail }) => (
+        <div class="buttons">
+          <button onClick={onSuccess}>Fetch user (success)</button>
+          <button onClick={onFail}>Fetch user (throw)</button>
+        </div>
+      );
 
+      // Each example owns its action instances so they don't interfere
+      const example1Success = createAction(async () => {
+        await delay(800);
+        return { name: "Alice", email: "alice@example.com" };
+      });
+      const example1Fail = createAction(async () => {
+        await delay(800);
+        throw new Error("Network error");
+      });
+
+      const example2Success = createAction(async () => {
+        await delay(800);
+        return { name: "Bob", email: "bob@example.com" };
+      });
+      const example2Fail = createAction(async () => {
+        await delay(800);
+        throw new Error("Network error");
+      });
+
+      const example3Success = createAction(async () => {
+        await delay(800);
+        return { name: "Carol", email: "carol@example.com" };
+      });
+      const example3Fail = createAction(async () => {
+        await delay(800);
+        throw new Error("Network error");
+      });
+
+      const example4Success = createAction(async () => {
+        await delay(800);
+        return { name: "Dave", email: "dave@example.com" };
+      });
+      const example4Fail = createAction(async () => {
+        await delay(800);
+        throw new Error("Network error");
+      });
+
+      const Example1 = () => {
+        const [action, setAction] = useState(null);
         return (
-          <div>
-            <h1>use(action) Demo</h1>
-
-            <div class="demo-section">
-              <p>
-                <code>use(action)</code> suspends the component until the action
-                completes, then returns the data. Props are forwarded normally.
-              </p>
-              <button onClick={runAction} disabled={ran}>
-                Fetch user
-              </button>
-              <label style={{ marginLeft: "12px" }}>
-                <input
-                  type="checkbox"
-                  checked={highlight}
-                  onInput={(e) => setHighlight(e.target.checked)}
-                />
-                {" Highlight card (re-renders parent without re-fetching)"}
-              </label>
-
-              {ran && (
-                <Suspense fallback={<div class="card">Loading…</div>}>
-                  <UserCard action={fetchUserBound} highlight={highlight} />
-                </Suspense>
-              )}
-            </div>
-          </div>
+          <DemoSection
+            title="1. No Suspense"
+            description="use() throws a promise but nothing catches it — expect an error/blank render while loading."
+          >
+            <ActionButtons
+              onSuccess={() => {
+                example1Success.run();
+                setAction(example1Success);
+              }}
+              onFail={() => {
+                example1Fail.run();
+                setAction(example1Fail);
+              }}
+            />
+            {action && <UserCard action={action} />}
+          </DemoSection>
         );
       };
+
+      const Example2 = () => {
+        const [action, setAction] = useState(null);
+        return (
+          <DemoSection
+            title="2. Wrapped with Suspense (no fallback)"
+            description="Suspense catches the thrown promise. Without a fallback, nothing renders while loading."
+          >
+            <ActionButtons
+              onSuccess={() => {
+                example2Success.run();
+                setAction(example2Success);
+              }}
+              onFail={() => {
+                example2Fail.run();
+                setAction(example2Fail);
+              }}
+            />
+            {action && (
+              <Suspense>
+                <UserCard action={action} />
+              </Suspense>
+            )}
+          </DemoSection>
+        );
+      };
+
+      const Example3 = () => {
+        const [action, setAction] = useState(null);
+        return (
+          <DemoSection
+            title="3. Suspense with fallback"
+            description="Shows a loading state while the action is running."
+          >
+            <ActionButtons
+              onSuccess={() => {
+                example3Success.run();
+                setAction(example3Success);
+              }}
+              onFail={() => {
+                example3Fail.run();
+                setAction(example3Fail);
+              }}
+            />
+            {action && (
+              <Suspense fallback={<div class="card-loading">Loading…</div>}>
+                <UserCard action={action} />
+              </Suspense>
+            )}
+          </DemoSection>
+        );
+      };
+
+      const Example4 = () => {
+        const [action, setAction] = useState(null);
+        return (
+          <DemoSection
+            title="4. Suspense + ErrorBoundary"
+            description="Errors thrown by use() bubble up and are caught by the ErrorBoundary."
+          >
+            <ActionButtons
+              onSuccess={() => {
+                example4Success.run();
+                setAction(example4Success);
+              }}
+              onFail={() => {
+                example4Fail.run();
+                setAction(example4Fail);
+              }}
+            />
+            {action && (
+              <ErrorBoundary fallback={"Error loading user data"}>
+                <Suspense fallback={<div class="card-loading">Loading…</div>}>
+                  <UserCard action={action} />
+                </Suspense>
+              </ErrorBoundary>
+            )}
+          </DemoSection>
+        );
+      };
+
+      const App = () => (
+        <div>
+          <h1>use(action) Demo</h1>
+          <Example1 />
+          <Example2 />
+          <Example3 />
+          <Example4 />
+        </div>
+      );
 
       render(<App />, document.querySelector("#root"));
     </script>
