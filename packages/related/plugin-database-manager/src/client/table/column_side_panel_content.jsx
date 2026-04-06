@@ -251,7 +251,7 @@ export const ColumnSidePanelContent = ({ tablename, column_name, columns }) => {
           action={async () => {
             await TABLE_COLUMN.DELETE({
               tablename,
-              columnName: column.column_name,
+              column_name: column.column_name,
             });
           }}
         >

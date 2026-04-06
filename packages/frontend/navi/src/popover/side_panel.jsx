@@ -46,12 +46,16 @@ import.meta.css = /* css */ `
       overflow-y: auto;
     }
 
-    &[data-opening] .navi_side_panel_dialog {
-      animation-name: navi_side_panel_slide_in;
+    &[data-opening] {
+      .navi_side_panel_dialog {
+        animation-name: navi_side_panel_slide_in;
+      }
     }
 
-    &[data-closing] .navi_side_panel_dialog {
-      animation-name: navi_side_panel_slide_out;
+    &[data-closing] {
+      .navi_side_panel_dialog {
+        animation-name: navi_side_panel_slide_out;
+      }
     }
   }
 
@@ -150,8 +154,9 @@ export const SidePanel = ({
   }
 
   const onAnimationEnd = () => {
-    if (phase === "opening") setPhase("open");
-    if (phase === "closing") {
+    if (phase === "opening") {
+      setPhase("open");
+    } else if (phase === "closing") {
       setPhase("closed");
       const prev = previousFocusRef.current;
       if (prev && document.contains(prev)) {
