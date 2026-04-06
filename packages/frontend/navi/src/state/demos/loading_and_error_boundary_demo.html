@@ -60,7 +60,6 @@
     <div id="root"></div>
     <script type="module" jsenv-type="module/jsx">
       import { render, Component } from "preact";
-      import { Suspense } from "preact/compat";
       import { useState } from "preact/hooks";
       import {
         createAction,
@@ -178,9 +177,9 @@
               </Button>
             </div>
             {action && (
-              <Suspense>
+              <Loading>
                 <UserCard action={action} />
-              </Suspense>
+              </Loading>
             )}
           </DemoSection>
         );
@@ -212,9 +211,9 @@
               </Button>
             </div>
             {action && (
-              <Suspense fallback={<div class="card-loading">Loading…</div>}>
+              <Loading fallback={<div class="card-loading">Loading…</div>}>
                 <UserCard action={action} />
-              </Suspense>
+              </Loading>
             )}
           </DemoSection>
         );
