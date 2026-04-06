@@ -246,7 +246,7 @@
             </div>
             {action && (
               <ErrorBoundary
-                fallback={(error, { resetError }) => (
+                fallback={({ error, resetError }) => (
                   <div class="card-error">
                     <div
                       style={{
@@ -268,7 +268,13 @@
                     >
                       {error.message}
                     </div>
-                    <Button onClick={resetError}>Dismiss</Button>
+                    <Button
+                      onClick={() => {
+                        resetError();
+                      }}
+                    >
+                      Dismiss
+                    </Button>
                   </div>
                 )}
               >

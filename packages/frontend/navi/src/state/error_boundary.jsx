@@ -1,3 +1,4 @@
+import { h } from "preact";
 import { useErrorBoundary } from "preact/hooks";
 
 export const ErrorBoundary = ({ children, fallback }) => {
@@ -8,9 +9,9 @@ export const ErrorBoundary = ({ children, fallback }) => {
     }
     error.__handled__ = true; // prevent jsenv from displaying it
     if (typeof fallback === "function") {
-      return fallback(error, { resetError });
+      return h(fallback, { error, resetError });
     }
     return fallback;
   }
-  return <>{children}</>;
+  return children;
 };
