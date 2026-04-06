@@ -8,10 +8,17 @@ import {
 
 import { RUNNING } from "../action/action_run_states.js";
 
-const ErrorBoundaryContext = createContext({ hasBoundary: false });
+const ErrorBoundaryContext = createContext({
+  hasBoundary: false,
+  silencedAction: null,
+});
 export const useHasErrorBoundary = () => {
   const { hasBoundary } = useContext(ErrorBoundaryContext);
   return hasBoundary;
+};
+export const useSilencedAction = () => {
+  const { silencedAction } = useContext(ErrorBoundaryContext);
+  return silencedAction;
 };
 
 export const ErrorBoundary = ({ children, fallback, onReset }) => {
@@ -56,9 +63,6 @@ export const ErrorBoundary = ({ children, fallback, onReset }) => {
 
   if (error) {
     error.__handled_by__ = "<ErrorBoundary>"; // prevent jsenv from displaying it
-    if (silencedAction && error.action === silencedAction) {
-      return null;
-    }
     if (!fallback) {
       return null;
     }
@@ -68,7 +72,9 @@ export const ErrorBoundary = ({ children, fallback, onReset }) => {
     return fallback;
   }
   return (
-    <ErrorBoundaryContext.Provider value={{ hasBoundary: true }}>
+    <ErrorBoundaryContext.Provider
+      value={{ hasBoundary: true, silencedAction }}
+    >
       {children}
     </ErrorBoundaryContext.Provider>
   );
