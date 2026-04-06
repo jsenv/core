@@ -62,12 +62,22 @@
       import { render, Component } from "preact";
       import { Suspense } from "preact/compat";
       import { useState } from "preact/hooks";
-      import { createAction, use, ErrorBoundary, Button } from "@jsenv/navi";
+      import {
+        createAction,
+        useAsyncData,
+        Loading,
+        ErrorBoundary,
+        Button,
+      } from "@jsenv/navi";
 
       const delay = (ms) => new Promise((res) => setTimeout(res, ms));
+      const useFunction = (v) => {
+        const [fn, setFunction] = useState(v);
+        return [fn, (v) => setFunction(() => v)];
+      };
 
       const UserCard = ({ action }) => {
-        const user = use(action);
+        const { data: user } = useAsyncData(action);
         return (
           <div class="card">
             <strong>{user.name}</strong>
@@ -112,17 +122,8 @@
         throw new Error("Network error");
       });
 
-      const example4Success = createAction(async () => {
-        await delay(800);
-        return { name: "Dave", email: "dave@example.com" };
-      });
-      const example4Fail = createAction(async () => {
-        await delay(800);
-        throw new Error("Network error");
-      });
-
       const Example1 = () => {
-        const [action, setAction] = useState(null);
+        const [action, setAction] = useFunction();
         return (
           <DemoSection
             title="1. No Suspense"
@@ -152,7 +153,7 @@
       };
 
       const Example2 = () => {
-        const [action, setAction] = useState(null);
+        const [action, setAction] = useFunction();
         return (
           <DemoSection
             title="2. Wrapped with Suspense (no fallback)"
@@ -186,7 +187,7 @@
       };
 
       const Example3 = () => {
-        const [action, setAction] = useState(null);
+        const [action, setAction] = useFunction();
         return (
           <DemoSection
             title="3. Suspense with fallback"
@@ -219,8 +220,24 @@
         );
       };
 
+      const example4Success = createAction(
+        async () => {
+          await delay(800);
+          return { name: "Dave", email: "dave@example.com" };
+        },
+        {
+          name: "Example4Success",
+        },
+      );
+      const example4Fail = createAction(
+        async () => {
+          await delay(800);
+          throw new Error("Network error");
+        },
+        { name: "Example4Fail" },
+      );
       const Example4 = () => {
-        const [action, setAction] = useState(null);
+        const [action, setAction] = useFunction();
 
         return (
           <DemoSection
@@ -241,7 +258,7 @@
                 actionErrorEffect="ignore"
                 action={() => {
                   setAction(example4Fail);
-                  return example4Fail.rerun();
+                  return example4Fail.rerun({ reason: "toto" });
                 }}
               >
                 Fetch user (throw)
@@ -249,9 +266,9 @@
             </div>
             {action && (
               <ErrorBoundary fallback={ErrorCard}>
-                <Suspense fallback={<div class="card-loading">Loading…</div>}>
+                <Loading fallback={<div class="card-loading">Loading…</div>}>
                   <UserCard action={action} />
-                </Suspense>
+                </Loading>
               </ErrorBoundary>
             )}
           </DemoSection>

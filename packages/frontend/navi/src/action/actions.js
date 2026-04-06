@@ -1066,6 +1066,7 @@ export const createAction = (callback, rootOptions = {}) => {
             // - error being treated as unhandled by runtime
             return e;
           }
+          e.action = action;
           throw e;
         };
 

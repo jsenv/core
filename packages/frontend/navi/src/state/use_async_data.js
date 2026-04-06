@@ -1,25 +1,25 @@
-import { COMPLETED, FAILED } from "./action_run_states.js";
+import { COMPLETED, FAILED } from "../action/action_run_states.js";
 import { useForceRender } from "./use_force_render.js";
 
-const promiseStateWeakMap = new WeakMap();
-const actionPendingPromiseWeakMap = new WeakMap();
-
-export const use = (promiseOrAction) => {
-  const isAction = Boolean(promiseOrAction && promiseOrAction.dataSignal);
+export const useAsyncData = (promiseOrAction) => {
+  const isAction = Boolean(promiseOrAction && promiseOrAction.isAction);
   if (isAction) {
     return useAction(promiseOrAction);
   }
   return usePromise(promiseOrAction);
 };
-
+const actionPendingPromiseWeakMap = new WeakMap();
 const useAction = (action) => {
   const forceRender = useForceRender();
   const runningState = action.runningStateSignal.value;
   if (runningState === COMPLETED) {
-    return action.dataSignal.value;
+    const data = action.dataSignal.peek();
+    return { data };
   }
   if (runningState === FAILED) {
-    throw action.errorSignal.value;
+    const error = action.errorSignal.peek();
+    error.action = action;
+    throw error;
   }
   // IDLE or RUNNING — suspend
   let pendingPromise = actionPendingPromiseWeakMap.get(action);
@@ -40,7 +40,7 @@ const useAction = (action) => {
   }
   throw pendingPromise;
 };
-
+const promiseStateWeakMap = new WeakMap();
 const usePromise = (promise) => {
   const forceRender = useForceRender();
 
