@@ -6,8 +6,7 @@ import {
   useState,
 } from "preact/hooks";
 
-import { COMPLETED, FAILED, RUNNING } from "../action/action_run_states.js";
-import { dismissActionError } from "./use_async_data.js";
+import { RUNNING } from "../action/action_run_states.js";
 
 const ErrorBoundaryContext = createContext({ silenced: false });
 export const useErrorSilenced = () => {
@@ -25,7 +24,6 @@ export const ErrorBoundary = ({ children, fallback, onReset }) => {
   const resetError = () => {
     const action = error?.action;
     if (action) {
-      dismissActionError(action);
       setSilencedAction(action);
     }
     onReset?.();
@@ -43,40 +41,24 @@ export const ErrorBoundary = ({ children, fallback, onReset }) => {
     }
     const currentState = action.runningStateSignal.peek();
     if (currentState === RUNNING) {
-      setSilencedAction(action);
+      setSilencedAction(null);
       resetErrorInternal();
       return undefined;
     }
     const unsubscribe = action.runningStateSignal.subscribe((state) => {
       if (state === RUNNING) {
         unsubscribe();
-        setSilencedAction(action);
+        setSilencedAction(null);
         resetErrorInternal();
       }
     });
     return unsubscribe;
   }, [error]);
 
-  // Clear silencedAction once the action settles so the real fallback shows again on next run
-  useEffect(() => {
-    if (!silencedAction) {
-      return undefined;
-    }
-    const currentState = silencedAction.runningStateSignal.peek();
-    if (currentState === COMPLETED || currentState === FAILED) {
-      setSilencedAction(null);
-      return undefined;
-    }
-    const unsubscribe = silencedAction.runningStateSignal.subscribe((state) => {
-      if (state === COMPLETED || state === FAILED) {
-        unsubscribe();
-        setSilencedAction(null);
-      }
-    });
-    return unsubscribe;
-  }, [silencedAction]);
-
   if (error) {
+    if (silencedAction && error.action === silencedAction) {
+      return null;
+    }
     if (!fallback) {
       return null;
     }

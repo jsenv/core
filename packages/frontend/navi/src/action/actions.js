@@ -20,7 +20,7 @@ import {
 } from "./action_run_states.js";
 import { SYMBOL_OBJECT_SIGNAL } from "./symbol_object_signal.js";
 
-let DEBUG = false;
+let DEBUG = true;
 export const enableDebugActions = () => {
   DEBUG = true;
 };
@@ -289,7 +289,7 @@ export const updateActions = ({
   }
 
   if (DEBUG) {
-    let argSource = `reason: \`${reason}\``;
+    let argSource = `reason: ${JSON.stringify(reason)}`;
     if (isReplace) {
       argSource += `, isReplace: true`;
     }

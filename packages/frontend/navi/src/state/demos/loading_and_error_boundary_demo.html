@@ -107,6 +107,7 @@
         ),
         fail: createAction(
           async () => {
+            console.log("start running fail action");
             await delay(800);
             throw new Error("Network error: failed to fetch user");
           },
