@@ -116,7 +116,9 @@
 
       const FetchControls = ({ action, shouldFail }) => (
         <div class="buttons">
-          <Button action={action}>Fetch user</Button>
+          <Button actionErrorEffect="ignore" action={action}>
+            Fetch user
+          </Button>
           <label
             style={{
               display: "flex",
