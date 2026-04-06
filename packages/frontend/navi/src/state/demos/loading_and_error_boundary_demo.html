@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>use(action) Demo</title>
+    <title>Loading + ErrorBoundary Demo</title>
     <style>
       body {
         margin: 20px;
@@ -13,7 +13,7 @@
           sans-serif;
       }
       h2 {
-        margin-bottom: 6px;
+        margin-bottom: 4px;
       }
       .demo-section {
         margin-bottom: 40px;
@@ -25,6 +25,7 @@
         margin: 0 0 12px;
         color: #555;
         font-size: 0.9em;
+        line-height: 1.5;
       }
       .buttons {
         display: flex;
@@ -37,6 +38,10 @@
         background: #f9f9f9;
         border: 1px solid #ddd;
         border-radius: 6px;
+      }
+      .card[data-loading] {
+        color: #999;
+        font-style: italic;
       }
       .card-loading {
         margin-top: 12px;
@@ -59,7 +64,7 @@
   <body>
     <div id="root"></div>
     <script type="module" jsenv-type="module/jsx">
-      import { render, Component } from "preact";
+      import { render } from "preact";
       import { useState } from "preact/hooks";
       import {
         createAction,
@@ -75,7 +80,39 @@
         return [fn, (v) => setFunction(() => v)];
       };
 
-      const UserCard = ({ action }) => {
+      const DemoSection = ({ title, description, children }) => (
+        <div class="demo-section">
+          <h2>{title}</h2>
+          <p class="demo-description">{description}</p>
+          {children}
+        </div>
+      );
+
+      const ActionButtons = ({ onSuccess, onFail }) => (
+        <div class="buttons">
+          <Button action={onSuccess}>Fetch user (success)</Button>
+          <Button action={onFail}>Fetch user (fail)</Button>
+        </div>
+      );
+
+      // ─── Shared actions per example ───────────────────────────────────────────
+
+      const makeActions = (name) => ({
+        success: createAction(async () => {
+          await delay(800);
+          return { name: "Alice", email: "alice@example.com" };
+        }, { name: `${name}Success` }),
+        fail: createAction(async () => {
+          await delay(800);
+          throw new Error("Network error: failed to fetch user");
+        }, { name: `${name}Fail` }),
+      });
+
+      // ─── UserCard variants ────────────────────────────────────────────────────
+
+      // Used with <Loading fallback>: suspends until data is ready
+      // The component itself never sees loading state
+      const UserCardSuspending = ({ action }) => {
         const { data: user } = useAsyncData(action);
         return (
           <div class="card">
@@ -85,188 +122,133 @@
         );
       };
 
-      const DemoSection = ({ title, description, children }) => (
-        <div class="demo-section">
-          <h2>{title}</h2>
-          <p class="demo-description">{description}</p>
-          {children}
+      // Used without <Loading fallback>: receives loading state and renders inline
+      // No Suspense boundary needed — the component handles the intermediate state
+      const UserCardWithLoadingState = ({ action }) => {
+        const { data: user, loading } = useAsyncData(action);
+        if (loading) {
+          return (
+            <div class="card" data-loading>
+              Loading user…
+            </div>
+          );
+        }
+        if (!user) {
+          return null;
+        }
+        return (
+          <div class="card">
+            <strong>{user.name}</strong>
+            <div style={{ color: "#555", fontSize: "0.9em" }}>{user.email}</div>
+          </div>
+        );
+      };
+
+      const ErrorCard = ({ error, resetError }) => (
+        <div class="card-error">
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
+            <span style={{ fontSize: "1.2em" }}>⚠️</span>
+            <strong>Error caught by ErrorBoundary</strong>
+          </div>
+          <div style={{ fontFamily: "monospace", fontSize: "0.9em", marginBottom: "12px" }}>
+            {error.message}
+          </div>
+          <Button onClick={resetError}>Dismiss</Button>
         </div>
       );
 
-      // Each example owns its action instances so they don't interfere
-      const example1Success = createAction(async () => {
-        await delay(800);
-        return { name: "Alice", email: "alice@example.com" };
-      });
-      const example1Fail = createAction(async () => {
-        await delay(800);
-        throw new Error("Network error");
-      });
+      // ─── Example 1: Component handles loading itself ──────────────────────────
 
-      const example2Success = createAction(async () => {
-        await delay(800);
-        return { name: "Bob", email: "bob@example.com" };
-      });
-      const example2Fail = createAction(async () => {
-        await delay(800);
-        throw new Error("Network error");
-      });
-
-      const example3Success = createAction(async () => {
-        await delay(800);
-        return { name: "Carol", email: "carol@example.com" };
-      });
-      const example3Fail = createAction(async () => {
-        await delay(800);
-        throw new Error("Network error");
-      });
-
+      const ex1 = makeActions("ex1");
       const Example1 = () => {
         const [action, setAction] = useFunction();
         return (
           <DemoSection
-            title="1. No Suspense"
-            description="use() throws a promise but nothing catches it — expect an error/blank render while loading."
+            title="1. Component handles loading (no <Loading>)"
+            description="useAsyncData() returns { data, loading } when there is no <Loading fallback> above.
+The component decides how to render each state. No Suspense boundary is involved."
           >
-            <div class="buttons">
-              <Button
-                action={() => {
-                  setAction(example1Success);
-                  return example1Success.rerun();
-                }}
-              >
-                Fetch user (success)
-              </Button>
-              <Button
-                action={() => {
-                  setAction(example1Fail);
-                  return example1Fail.rerun();
-                }}
-              >
-                Fetch user (throw)
-              </Button>
-            </div>
-            {action && <UserCard action={action} />}
+            <ActionButtons
+              onSuccess={() => { setAction(ex1.success); return ex1.success.rerun(); }}
+              onFail={() => { setAction(ex1.fail); return ex1.fail.rerun(); }}
+            />
+            {action && <UserCardWithLoadingState action={action} />}
           </DemoSection>
         );
       };
 
+      // ─── Example 2: <Loading> without fallback ────────────────────────────────
+
+      const ex2 = makeActions("ex2");
       const Example2 = () => {
         const [action, setAction] = useFunction();
         return (
           <DemoSection
-            title="2. Wrapped with Suspense (no fallback)"
-            description="Suspense catches the thrown promise. Without a fallback, nothing renders while loading."
+            title="2. <Loading> without fallback"
+            description="<Loading> with no fallback prop still provides the LoadingContext but does not wrap with Suspense.
+useAsyncData() returns { data, loading } — same as example 1. The component handles the state."
           >
-            <div class="buttons">
-              <Button
-                action={() => {
-                  setAction(example2Success);
-                  return example2Success.rerun();
-                }}
-              >
-                Fetch user (success)
-              </Button>
-              <Button
-                action={() => {
-                  setAction(example2Fail);
-                  return example2Fail.rerun();
-                }}
-              >
-                Fetch user (throw)
-              </Button>
-            </div>
+            <ActionButtons
+              onSuccess={() => { setAction(ex2.success); return ex2.success.rerun(); }}
+              onFail={() => { setAction(ex2.fail); return ex2.fail.rerun(); }}
+            />
             {action && (
               <Loading>
-                <UserCard action={action} />
+                <UserCardWithLoadingState action={action} />
               </Loading>
             )}
           </DemoSection>
         );
       };
 
+      // ─── Example 3: <Loading fallback> — Suspense with loading skeleton ───────
+
+      const ex3 = makeActions("ex3");
       const Example3 = () => {
         const [action, setAction] = useFunction();
         return (
           <DemoSection
-            title="3. Suspense with fallback"
-            description="Shows a loading state while the action is running."
+            title="3. <Loading fallback> — Suspense loading skeleton"
+            description="When fallback is provided, <Loading> wraps children in <Suspense>.
+useAsyncData() throws a promise while loading, causing the fallback to show.
+The component only renders once data is ready — it never sees loading state."
           >
-            <div class="buttons">
-              <Button
-                action={() => {
-                  setAction(example3Success);
-                  return example3Success.rerun();
-                }}
-              >
-                Fetch user (success)
-              </Button>
-              <Button
-                action={() => {
-                  setAction(example3Fail);
-                  return example3Fail.rerun();
-                }}
-              >
-                Fetch user (throw)
-              </Button>
-            </div>
+            <ActionButtons
+              onSuccess={() => { setAction(ex3.success); return ex3.success.rerun(); }}
+              onFail={() => { setAction(ex3.fail); return ex3.fail.rerun(); }}
+            />
             {action && (
               <Loading fallback={<div class="card-loading">Loading…</div>}>
-                <UserCard action={action} />
+                <UserCardSuspending action={action} />
               </Loading>
             )}
           </DemoSection>
         );
       };
 
-      const example4Success = createAction(
-        async () => {
-          await delay(800);
-          return { name: "Dave", email: "dave@example.com" };
-        },
-        {
-          name: "Example4Success",
-        },
-      );
-      const example4Fail = createAction(
-        async () => {
-          await delay(800);
-          throw new Error("Network error");
-        },
-        { name: "Example4Fail" },
-      );
+      // ─── Example 4: <Loading fallback> + <ErrorBoundary> ─────────────────────
+
+      const ex4 = makeActions("ex4");
       const Example4 = () => {
         const [action, setAction] = useFunction();
-
         return (
           <DemoSection
-            title="4. Suspense + ErrorBoundary"
-            description="Errors thrown by use() bubble up and are caught by the ErrorBoundary."
+            title="4. <ErrorBoundary> + <Loading fallback>"
+            description="ErrorBoundary catches errors thrown by useAsyncData().
+Dismiss hides the error and silences the loading fallback until the action settles again.
+Re-fetching auto-dismisses the error and shows nothing until data arrives."
           >
-            <div class="buttons">
-              <Button
-                action={() => {
-                  setAction(example4Success);
-                  return example4Success.rerun();
-                }}
-              >
-                Fetch user (success)
-              </Button>
-              <Button
-                // "ignore" -> already handled by error boundary
-                actionErrorEffect="ignore"
-                action={() => {
-                  setAction(example4Fail);
-                  return example4Fail.rerun({ reason: "toto" });
-                }}
-              >
-                Fetch user (throw)
-              </Button>
-            </div>
+            <ActionButtons
+              onSuccess={() => { setAction(ex4.success); return ex4.success.rerun(); }}
+              onFail={() => {
+                setAction(ex4.fail);
+                return ex4.fail.rerun();
+              }}
+            />
             {action && (
               <ErrorBoundary fallback={ErrorCard}>
                 <Loading fallback={<div class="card-loading">Loading…</div>}>
-                  <UserCard action={action} />
+                  <UserCardSuspending action={action} />
                 </Loading>
               </ErrorBoundary>
             )}
@@ -274,47 +256,38 @@
         );
       };
 
-      const ErrorCard = ({ error, resetError }) => {
+      // ─── Example 5: <ErrorBoundary> without <Loading> ────────────────────────
+
+      const ex5 = makeActions("ex5");
+      const Example5 = () => {
+        const [action, setAction] = useFunction();
         return (
-          <div class="card-error">
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                marginBottom: "8px",
-              }}
-            >
-              <span style={{ fontSize: "1.2em" }}>⚠️</span>
-              <strong>Error caught by ErrorBoundary</strong>
-            </div>
-            <div
-              style={{
-                fontFamily: "monospace",
-                fontSize: "0.9em",
-                marginBottom: "12px",
-              }}
-            >
-              {error.message}
-            </div>
-            <Button
-              onClick={() => {
-                resetError();
-              }}
-            >
-              Dismiss
-            </Button>
-          </div>
+          <DemoSection
+            title="5. <ErrorBoundary> with component-handled loading"
+            description="ErrorBoundary catches errors. The component renders its own loading state.
+Dismiss works — action resets to idle. No Suspense involved."
+          >
+            <ActionButtons
+              onSuccess={() => { setAction(ex5.success); return ex5.success.rerun(); }}
+              onFail={() => { setAction(ex5.fail); return ex5.fail.rerun(); }}
+            />
+            {action && (
+              <ErrorBoundary fallback={ErrorCard}>
+                <UserCardWithLoadingState action={action} />
+              </ErrorBoundary>
+            )}
+          </DemoSection>
         );
       };
 
       const App = () => (
         <div>
-          <h1>use(action) Demo</h1>
+          <h1>Loading + ErrorBoundary Demo</h1>
           <Example1 />
           <Example2 />
           <Example3 />
           <Example4 />
+          <Example5 />
         </div>
       );
 
