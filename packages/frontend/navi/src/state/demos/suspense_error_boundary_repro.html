@@ -124,10 +124,12 @@
       const App = () => {
         const taskRef = useRef(null);
         const [task, setTask] = useState(null);
+        const [boundaryKey, setBoundaryKey] = useState(0);
 
         const run = (shouldFail) => {
           const t = makeTask();
           taskRef.current = t;
+          setBoundaryKey((k) => k + 1);
           setTask(t);
 
           setTimeout(() => {
@@ -151,7 +153,7 @@
             <button onClick={() => run(false)}>✅ Fetch (success)</button>
             <button onClick={() => run(true)}>❌ Fetch (fail)</button>
             <h2>Output</h2>
-            <ErrorBoundary>
+            <ErrorBoundary key={boundaryKey}>
               <Suspense fallback={<div class="loading">Loading…</div>}>
                 {task && <Child task={taskRef.current} />}
               </Suspense>
