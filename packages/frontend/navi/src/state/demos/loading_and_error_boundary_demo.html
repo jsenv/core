@@ -237,9 +237,8 @@
         const [started, setStarted] = useState(false);
         return (
           <DemoSection
-            title="Component-managed loading"
-            description="useAsyncData() returns { data, loading } when there is no <Loading fallback> above.
-The component renders skeleton placeholders itself while waiting. Errors are caught by ErrorBoundary."
+            title="Component-managed loading, delegated error"
+            description="The component manages its own loading state — rendering skeletons or placeholders while waiting. Errors are delegated to the nearest ErrorBoundary."
           >
             <FetchControls
               action={() => {
@@ -257,17 +256,15 @@ The component renders skeleton placeholders itself while waiting. Errors are cau
         );
       };
 
-      // ─── Suspense-managed loading ───────────────────────────────────────────
+      // ─── Delegated loading ────────────────────────────────────────────────────
 
       const ex3 = makeExample("fetchUser3");
-      const ExampleSuspenseManagedLoading = () => {
+      const ExampleDelegatedLoading = () => {
         const [started, setStarted] = useState(false);
         return (
           <DemoSection
-            title="Suspense-managed loading"
-            description="When a fallback is provided, <Loading> wraps children in <Suspense>.
-useAsyncData() throws a promise while loading — the component never sees loading state and only renders once data is ready.
-Errors are caught by ErrorBoundary."
+            title="Delegated loading, delegated error"
+            description="Both loading and errors are delegated. Wrap with <Loading fallback> to show a fallback while loading. The component only renders once data is ready."
           >
             <FetchControls
               action={() => {
@@ -280,36 +277,6 @@ Errors are caught by ErrorBoundary."
               <ErrorBoundary fallback={ErrorCard}>
                 <Loading fallback={<div class="card-loading">Loading…</div>}>
                   <UserCard action={ex3.action} />
-                </Loading>
-              </ErrorBoundary>
-            )}
-          </DemoSection>
-        );
-      };
-
-      // ─── Error boundary + Suspense ──────────────────────────────────────────
-
-      const ex4 = makeExample("fetchUser4");
-      const ExampleErrorBoundaryWithSuspense = () => {
-        const [started, setStarted] = useState(false);
-        return (
-          <DemoSection
-            title="Error boundary + Suspense"
-            description="ErrorBoundary catches errors thrown by useAsyncData().
-Dismiss hides the error boundary and renders nothing until the action settles.
-Re-fetching auto-dismisses the error boundary."
-          >
-            <FetchControls
-              action={() => {
-                setStarted(true);
-                return ex4.action.rerun();
-              }}
-              shouldFail={ex4.shouldFail}
-            />
-            {started && (
-              <ErrorBoundary fallback={ErrorCard}>
-                <Loading fallback={<div class="card-loading">Loading…</div>}>
-                  <UserCard action={ex4.action} />
                 </Loading>
               </ErrorBoundary>
             )}
@@ -367,10 +334,8 @@ Re-fetching auto-dismisses the error boundary."
         const [started, setStarted] = useState(false);
         return (
           <DemoSection
-            title="Stale-while-revalidate"
-            description="The component keeps showing the last known data while a re-fetch is in progress.
-On first load it shows skeleton placeholders. On re-fetch it shows the current data with a refreshing indicator.
-Errors are caught by ErrorBoundary."
+            title="Stale-while-revalidate (component-managed loading, delegated error)"
+            description="The component keeps showing the last known data while re-fetching. On first load it shows skeletons. On re-fetch it shows current data with a refreshing indicator. Errors are delegated to the nearest ErrorBoundary."
           >
             <FetchControls
               action={() => {
@@ -426,10 +391,8 @@ Errors are caught by ErrorBoundary."
         const [started, setStarted] = useState(false);
         return (
           <DemoSection
-            title="No error boundary"
-            description="Without an ErrorBoundary above, useAsyncData() returns { error } instead of throwing.
-The component handles all three states: loading, data, and error.
-This mirrors how { loading } works when there is no <Loading fallback>."
+            title="Component-managed loading, component-managed error"
+            description="The component manages both loading and error state itself. No ErrorBoundary or Loading fallback needed above."
           >
             <FetchControls
               action={() => {
@@ -447,8 +410,7 @@ This mirrors how { loading } works when there is no <Loading fallback>."
         <div>
           <h1>Loading + ErrorBoundary Demo</h1>
           <ExampleComponentManagedLoading />
-          <ExampleSuspenseManagedLoading />
-          <ExampleErrorBoundaryWithSuspense />
+          <ExampleDelegatedLoading />
           <ExampleStaleWhileRevalidate />
           <ExampleNoErrorBoundary />
         </div>
