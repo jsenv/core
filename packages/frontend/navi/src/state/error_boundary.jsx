@@ -56,13 +56,13 @@ export const ErrorBoundary = ({ children, fallback, onReset }) => {
   }, [error]);
 
   if (error) {
+    error.__handled_by__ = "<ErrorBoundary>"; // prevent jsenv from displaying it
     if (silencedAction && error.action === silencedAction) {
       return null;
     }
     if (!fallback) {
       return null;
     }
-    error.__handled_by__ = "<ErrorBoundary>"; // prevent jsenv from displaying it
     if (typeof fallback === "function") {
       return h(fallback, { error, resetError });
     }

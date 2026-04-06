@@ -1333,6 +1333,14 @@ window.__supervisor__ = (() => {
       if (event.defaultPrevented) {
         return;
       }
+      if (event.reason && event.reason.__handled_by__) {
+        if (logs) {
+          console.log(
+            "ignore unhandledrejection event because __handled_by__ is set",
+          );
+        }
+        return;
+      }
       const exception = supervisor.createException(event.reason, {
         reportedBy: "window_unhandledrejection_event",
       });
