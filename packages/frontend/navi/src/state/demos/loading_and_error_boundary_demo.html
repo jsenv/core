@@ -98,14 +98,20 @@
       // ─── Shared actions per example ───────────────────────────────────────────
 
       const makeActions = (name) => ({
-        success: createAction(async () => {
-          await delay(800);
-          return { name: "Alice", email: "alice@example.com" };
-        }, { name: `${name}Success` }),
-        fail: createAction(async () => {
-          await delay(800);
-          throw new Error("Network error: failed to fetch user");
-        }, { name: `${name}Fail` }),
+        success: createAction(
+          async () => {
+            await delay(800);
+            return { name: "Alice", email: "alice@example.com" };
+          },
+          { name: `${name}Success` },
+        ),
+        fail: createAction(
+          async () => {
+            await delay(800);
+            throw new Error("Network error: failed to fetch user");
+          },
+          { name: `${name}Fail` },
+        ),
       });
 
       // ─── UserCard variants ────────────────────────────────────────────────────
@@ -146,11 +152,24 @@
 
       const ErrorCard = ({ error, resetError }) => (
         <div class="card-error">
-          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              marginBottom: "8px",
+            }}
+          >
             <span style={{ fontSize: "1.2em" }}>⚠️</span>
             <strong>Error caught by ErrorBoundary</strong>
           </div>
-          <div style={{ fontFamily: "monospace", fontSize: "0.9em", marginBottom: "12px" }}>
+          <div
+            style={{
+              fontFamily: "monospace",
+              fontSize: "0.9em",
+              marginBottom: "12px",
+            }}
+          >
             {error.message}
           </div>
           <Button onClick={resetError}>Dismiss</Button>
@@ -169,8 +188,14 @@
 The component decides how to render each state. No Suspense boundary is involved."
           >
             <ActionButtons
-              onSuccess={() => { setAction(ex1.success); return ex1.success.rerun(); }}
-              onFail={() => { setAction(ex1.fail); return ex1.fail.rerun(); }}
+              onSuccess={() => {
+                setAction(ex1.success);
+                return ex1.success.rerun();
+              }}
+              onFail={() => {
+                setAction(ex1.fail);
+                return ex1.fail.rerun();
+              }}
             />
             {action && <UserCardWithLoadingState action={action} />}
           </DemoSection>
@@ -189,8 +214,14 @@ The component decides how to render each state. No Suspense boundary is involved
 useAsyncData() returns { data, loading } — same as example 1. The component handles the state."
           >
             <ActionButtons
-              onSuccess={() => { setAction(ex2.success); return ex2.success.rerun(); }}
-              onFail={() => { setAction(ex2.fail); return ex2.fail.rerun(); }}
+              onSuccess={() => {
+                setAction(ex2.success);
+                return ex2.success.rerun();
+              }}
+              onFail={() => {
+                setAction(ex2.fail);
+                return ex2.fail.rerun();
+              }}
             />
             {action && (
               <Loading>
@@ -214,8 +245,14 @@ useAsyncData() throws a promise while loading, causing the fallback to show.
 The component only renders once data is ready — it never sees loading state."
           >
             <ActionButtons
-              onSuccess={() => { setAction(ex3.success); return ex3.success.rerun(); }}
-              onFail={() => { setAction(ex3.fail); return ex3.fail.rerun(); }}
+              onSuccess={() => {
+                setAction(ex3.success);
+                return ex3.success.rerun();
+              }}
+              onFail={() => {
+                setAction(ex3.fail);
+                return ex3.fail.rerun();
+              }}
             />
             {action && (
               <Loading fallback={<div class="card-loading">Loading…</div>}>
@@ -238,13 +275,26 @@ The component only renders once data is ready — it never sees loading state."
 Dismiss hides the error and silences the loading fallback until the action settles again.
 Re-fetching auto-dismisses the error and shows nothing until data arrives."
           >
-            <ActionButtons
-              onSuccess={() => { setAction(ex4.success); return ex4.success.rerun(); }}
-              onFail={() => {
-                setAction(ex4.fail);
-                return ex4.fail.rerun();
-              }}
-            />
+            <div class="buttons">
+              <Button
+                action={() => {
+                  setAction(ex4.success);
+                  return ex4.success.rerun();
+                }}
+              >
+                Fetch user (success)
+              </Button>
+              <Button
+                actionErrorEffect="ignore"
+                action={() => {
+                  setAction(ex4.fail);
+                  return ex4.fail.rerun();
+                }}
+              >
+                Fetch user (fail)
+              </Button>
+            </div>
+
             {action && (
               <ErrorBoundary fallback={ErrorCard}>
                 <Loading fallback={<div class="card-loading">Loading…</div>}>
@@ -268,8 +318,14 @@ Re-fetching auto-dismisses the error and shows nothing until data arrives."
 Dismiss works — action resets to idle. No Suspense involved."
           >
             <ActionButtons
-              onSuccess={() => { setAction(ex5.success); return ex5.success.rerun(); }}
-              onFail={() => { setAction(ex5.fail); return ex5.fail.rerun(); }}
+              onSuccess={() => {
+                setAction(ex5.success);
+                return ex5.success.rerun();
+              }}
+              onFail={() => {
+                setAction(ex5.fail);
+                return ex5.fail.rerun();
+              }}
             />
             {action && (
               <ErrorBoundary fallback={ErrorCard}>
