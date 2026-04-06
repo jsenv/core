@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Suspense + ErrorBoundary repro</title>
+    <style>
+      body {
+        margin: 20px;
+        font-family: system-ui, sans-serif;
+      }
+      button {
+        margin-right: 8px;
+        padding: 6px 14px;
+        cursor: pointer;
+      }
+      .error {
+        margin-top: 12px;
+        padding: 12px;
+        color: #900;
+        background: #fdd;
+        border: 1px solid #f44;
+        border-radius: 6px;
+      }
+      .card {
+        margin-top: 12px;
+        padding: 12px;
+        background: #f9f9f9;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+      }
+      .loading {
+        margin-top: 12px;
+        padding: 12px;
+        color: #856404;
+        background: #fff8e1;
+        border: 1px solid #ffc107;
+        border-radius: 6px;
+      }
+      h2 {
+        margin-top: 32px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { h, render } from "preact";
+      import { Suspense } from "preact/compat";
+      import { useState, useErrorBoundary } from "preact/hooks";
+
+      // ─── Minimal suspense promise machinery ──────────────────────────────────
+      // A "task" is { promise, resolve, reject, state, result, error }
+
+      const makeTask = () => {
+        let resolve;
+        let reject;
+        const promise = new Promise((res, rej) => {
+          resolve = res;
+          reject = rej;
+        });
+        return {
+          promise,
+          resolve,
+          reject,
+          state: "pending",
+          result: null,
+          error: null,
+        };
+      };
+
+      // pendingPromise WeakMap: tracks the currently-thrown promise per task slot
+      const pendingMap = new WeakMap();
+
+      // useTask: throws a promise while pending, throws error if rejected, returns result if resolved
+      const useTask = (taskRef) => {
+        const task = taskRef.current;
+        if (!task) return null;
+        if (task.state === "resolved") return task.result;
+        if (task.state === "rejected") throw task.error;
+        // pending — throw the promise
+        let p = pendingMap.get(task);
+        if (!p) {
+          p = task.promise.then(
+            () => {
+              pendingMap.delete(task);
+            },
+            () => {
+              pendingMap.delete(task);
+            },
+          );
+          pendingMap.set(task, p);
+        }
+        throw p;
+      };
+
+      // ─── ErrorBoundary ────────────────────────────────────────────────────────
+      const ErrorBoundary = ({ children, fallback }) => {
+        const [error, resetError] = useErrorBoundary();
+        if (error) {
+          return h(
+            "div",
+            { class: "error" },
+            h("strong", null, "⚠️ Error caught by ErrorBoundary"),
+            h(
+              "div",
+              { style: "margin: 6px 0; font-family: monospace;" },
+              error.message,
+            ),
+            h("button", { onClick: resetError }, "Dismiss"),
+          );
+        }
+        return children;
+      };
+
+      // ─── Child component that suspends ────────────────────────────────────────
+      const Child = ({ taskRef }) => {
+        const data = useTask(taskRef);
+        if (data === null) return h("div", { class: "card" }, "(no data yet)");
+        return h(
+          "div",
+          { class: "card" },
+          "✅ Result: ",
+          h("strong", null, data),
+        );
+      };
+
+      // ─── App ──────────────────────────────────────────────────────────────────
+      const App = () => {
+        const [taskRef] = useState({ current: null });
+        const [, forceRender] = useState(0);
+
+        const run = (shouldFail) => {
+          const task = makeTask();
+          taskRef.current = task;
+          forceRender((n) => n + 1);
+
+          setTimeout(() => {
+            if (shouldFail) {
+              task.state = "rejected";
+              task.error = new Error("Server error: something went wrong");
+              task.reject(task.error);
+            } else {
+              task.state = "resolved";
+              task.result = "Hello, world!";
+              task.resolve();
+            }
+            forceRender((n) => n + 1);
+          }, 800);
+        };
+
+        return h(
+          "div",
+          null,
+          h("h1", null, "Suspense + ErrorBoundary repro"),
+
+          h("h2", null, "Controls"),
+          h("button", { onClick: () => run(false) }, "✅ Fetch (success)"),
+          h("button", { onClick: () => run(true) }, "❌ Fetch (fail)"),
+
+          h("h2", null, "Output"),
+          h(
+            ErrorBoundary,
+            null,
+            h(
+              Suspense,
+              { fallback: h("div", { class: "loading" }, "Loading…") },
+              h(Child, { taskRef }),
+            ),
+          ),
+        );
+      };
+
+      render(h(App, null), document.getElementById("root"));
+    </script>
+  </body>
+</html>
