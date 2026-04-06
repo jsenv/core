@@ -94,9 +94,10 @@
 
       // ─── ErrorBoundary ────────────────────────────────────────────────────────
       const ErrorBoundary = ({ children }) => {
-        const [, rerender] = useState();
         const [error, resetError] = useErrorBoundary();
-        if (error) {
+        const [dismissed, setDismissed] = useState(false);
+
+        if (error && !dismissed) {
           return (
             <div class="error">
               <strong>⚠️ Error caught by ErrorBoundary</strong>
@@ -105,14 +106,17 @@
               </div>
               <button
                 onClick={() => {
+                  setDismissed(true);
                   resetError();
-                  rerender({});
                 }}
               >
                 Dismiss
               </button>
             </div>
           );
+        }
+        if (dismissed) {
+          return null;
         }
         return children;
       };
