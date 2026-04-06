@@ -245,7 +245,33 @@
               </Button>
             </div>
             {action && (
-              <ErrorBoundary fallback={"Error loading user data"}>
+              <ErrorBoundary
+                fallback={(error, { resetError }) => (
+                  <div class="card-error">
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        marginBottom: "8px",
+                      }}
+                    >
+                      <span style={{ fontSize: "1.2em" }}>⚠️</span>
+                      <strong>Error caught by ErrorBoundary</strong>
+                    </div>
+                    <div
+                      style={{
+                        fontFamily: "monospace",
+                        fontSize: "0.9em",
+                        marginBottom: "12px",
+                      }}
+                    >
+                      {error.message}
+                    </div>
+                    <Button onClick={resetError}>Dismiss</Button>
+                  </div>
+                )}
+              >
                 <Suspense fallback={<div class="card-loading">Loading…</div>}>
                   <UserCard action={action} />
                 </Suspense>
