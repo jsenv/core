@@ -226,31 +226,31 @@
             title="4. Suspense + ErrorBoundary"
             description="Errors thrown by use() bubble up and are caught by the ErrorBoundary."
           >
-            <ErrorBoundary fallback={"Error loading user data"}>
-              <div class="buttons">
-                <Button
-                  action={() => {
-                    setAction(example4Success);
-                    return example4Success.rerun();
-                  }}
-                >
-                  Fetch user (success)
-                </Button>
-                <Button
-                  action={() => {
-                    setAction(example4Fail);
-                    return example4Fail.rerun();
-                  }}
-                >
-                  Fetch user (throw)
-                </Button>
-              </div>
-              {action && (
+            <div class="buttons">
+              <Button
+                action={() => {
+                  setAction(example4Success);
+                  return example4Success.rerun();
+                }}
+              >
+                Fetch user (success)
+              </Button>
+              <Button
+                action={() => {
+                  setAction(example4Fail);
+                  return example4Fail.rerun();
+                }}
+              >
+                Fetch user (throw)
+              </Button>
+            </div>
+            {action && (
+              <ErrorBoundary fallback={"Error loading user data"}>
                 <Suspense fallback={<div class="card-loading">Loading…</div>}>
                   <UserCard action={action} />
                 </Suspense>
-              )}
-            </ErrorBoundary>
+              </ErrorBoundary>
+            )}
           </DemoSection>
         );
       };
