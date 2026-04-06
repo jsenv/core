@@ -94,6 +94,7 @@
     <div id="root"></div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
+      import { signal } from "@preact/signals";
       import { useEffect, useState } from "preact/hooks";
       import {
         createAction,
@@ -104,10 +105,6 @@
       } from "@jsenv/navi";
 
       const delay = (ms) => new Promise((res) => setTimeout(res, ms));
-      const useFunction = (v) => {
-        const [fn, setFunction] = useState(v);
-        return [fn, (v) => setFunction(() => v)];
-      };
 
       const DemoSection = ({ title, description, children }) => (
         <div class="demo-section">
@@ -117,32 +114,47 @@
         </div>
       );
 
-      const ActionButtons = ({ onSuccess, onFail }) => (
+      const FetchControls = ({ action, shouldFail }) => (
         <div class="buttons">
-          <Button action={onSuccess}>Fetch user (success)</Button>
-          <Button action={onFail}>Fetch user (fail)</Button>
+          <Button action={action}>Fetch user</Button>
+          <label
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              fontSize: "0.9em",
+              color: "#555",
+              cursor: "pointer",
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={shouldFail.value}
+              onChange={(e) => {
+                shouldFail.value = e.target.checked;
+              }}
+            />
+            Simulate server error
+          </label>
         </div>
       );
 
-      // ─── Shared actions per example ───────────────────────────────────────────
+      // ─── Action factory ───────────────────────────────────────────────────────
 
-      const makeActions = (name) => ({
-        success: createAction(
+      const makeExample = (name) => {
+        const shouldFail = signal(false);
+        const action = createAction(
           async () => {
             await delay(800);
+            if (shouldFail.peek()) {
+              throw new Error("Network error: failed to fetch user");
+            }
             return { name: "Alice", email: "alice@example.com" };
           },
-          { name: `${name}Success` },
-        ),
-        fail: createAction(
-          async () => {
-            console.log("start running fail action");
-            await delay(800);
-            throw new Error("Network error: failed to fetch user");
-          },
-          { name: `${name}Fail` },
-        ),
-      });
+          { name },
+        );
+        return { action, shouldFail };
+      };
 
       // ─── UserCard variants ────────────────────────────────────────────────────
 
@@ -221,54 +233,48 @@
 
       // ─── Component-managed loading ──────────────────────────────────────────
 
-      const ex1 = makeActions("ex1");
+      const ex1 = makeExample("fetchUser1");
       const ExampleComponentManagedLoading = () => {
-        const [action, setAction] = useFunction();
+        const [started, setStarted] = useState(false);
         return (
           <DemoSection
             title="Component-managed loading"
             description="useAsyncData() returns { data, loading } when there is no <Loading fallback> above.
 The component renders skeleton placeholders itself while waiting. No Suspense boundary involved."
           >
-            <ActionButtons
-              onSuccess={() => {
-                setAction(ex1.success);
-                return ex1.success.rerun();
+            <FetchControls
+              action={() => {
+                setStarted(true);
+                return ex1.action.rerun();
               }}
-              onFail={() => {
-                setAction(ex1.fail);
-                return ex1.fail.rerun();
-              }}
+              shouldFail={ex1.shouldFail}
             />
-            {action && <UserCardWithSkeleton action={action} />}
+            {started && <UserCardWithSkeleton action={ex1.action} />}
           </DemoSection>
         );
       };
 
       // ─── Suspense-managed loading ───────────────────────────────────────────
 
-      const ex3 = makeActions("ex3");
+      const ex3 = makeExample("fetchUser3");
       const ExampleSuspenseManagedLoading = () => {
-        const [action, setAction] = useFunction();
+        const [started, setStarted] = useState(false);
         return (
           <DemoSection
             title="Suspense-managed loading"
             description="When a fallback is provided, <Loading> wraps children in <Suspense>.
 useAsyncData() throws a promise while loading — the component never sees loading state and only renders once data is ready."
           >
-            <ActionButtons
-              onSuccess={() => {
-                setAction(ex3.success);
-                return ex3.success.rerun();
+            <FetchControls
+              action={() => {
+                setStarted(true);
+                return ex3.action.rerun();
               }}
-              onFail={() => {
-                setAction(ex3.fail);
-                return ex3.fail.rerun();
-              }}
+              shouldFail={ex3.shouldFail}
             />
-            {action && (
+            {started && (
               <Loading fallback={<div class="card-loading">Loading…</div>}>
-                <UserCard action={action} />
+                <UserCard action={ex3.action} />
               </Loading>
             )}
           </DemoSection>
@@ -277,9 +283,9 @@ useAsyncData() throws a promise while loading — the component never sees loadi
 
       // ─── Error boundary + Suspense ──────────────────────────────────────────
 
-      const ex4 = makeActions("ex4");
+      const ex4 = makeExample("fetchUser4");
       const ExampleErrorBoundaryWithSuspense = () => {
-        const [action, setAction] = useFunction();
+        const [started, setStarted] = useState(false);
         return (
           <DemoSection
             title="Error boundary + Suspense"
@@ -287,30 +293,17 @@ useAsyncData() throws a promise while loading — the component never sees loadi
 Dismiss hides the error boundary and renders nothing until the action settles.
 Re-fetching auto-dismisses the error boundary."
           >
-            <div class="buttons">
-              <Button
-                onActionStart={() => {
-                  setAction(ex4.success);
-                }}
-                action={ex4.success}
-              >
-                Fetch user (success)
-              </Button>
-              <Button
-                actionErrorEffect="ignore"
-                onActionStart={() => {
-                  setAction(ex4.fail);
-                }}
-                action={ex4.fail}
-              >
-                Fetch user (fail)
-              </Button>
-            </div>
-
-            {action && (
+            <FetchControls
+              action={() => {
+                setStarted(true);
+                return ex4.action.rerun();
+              }}
+              shouldFail={ex4.shouldFail}
+            />
+            {started && (
               <ErrorBoundary fallback={ErrorCard}>
                 <Loading fallback={<div class="card-loading">Loading…</div>}>
-                  <UserCard action={action} />
+                  <UserCard action={ex4.action} />
                 </Loading>
               </ErrorBoundary>
             )}
@@ -363,26 +356,23 @@ Re-fetching auto-dismisses the error boundary."
         );
       };
 
-      const ex5 = makeActions("ex5");
+      const ex5 = makeExample("fetchUser5");
       const ExampleStaleWhileRevalidate = () => {
-        const [action, setAction] = useFunction();
+        const [started, setStarted] = useState(false);
         return (
           <DemoSection
             title="Stale-while-revalidate"
             description="The component keeps showing the last known data while a re-fetch is in progress.
 On first load it shows skeleton placeholders. On re-fetch it shows the current data with a refreshing indicator."
           >
-            <ActionButtons
-              onSuccess={() => {
-                setAction(ex5.success);
-                return ex5.success.rerun();
+            <FetchControls
+              action={() => {
+                setStarted(true);
+                return ex5.action.rerun();
               }}
-              onFail={() => {
-                setAction(ex5.fail);
-                return ex5.fail.rerun();
-              }}
+              shouldFail={ex5.shouldFail}
             />
-            {action && <UserCardStaleWhileRevalidate action={action} />}
+            {started && <UserCardStaleWhileRevalidate action={ex5.action} />}
           </DemoSection>
         );
       };
