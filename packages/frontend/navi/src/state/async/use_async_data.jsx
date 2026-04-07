@@ -13,10 +13,16 @@ import {
 import { COMPLETED, FAILED, RUNNING } from "../../action/action_run_states.js";
 import { usePromise } from "./use_promise.js";
 
-export const useAsyncData = (promiseOrAction, options) => {
+export const useAsyncData = (
+  promiseOrAction,
+  { loading = "delegate", error = "delegate" } = {},
+) => {
   const isAction = Boolean(promiseOrAction && promiseOrAction.isAction);
   if (isAction) {
-    return useAction(promiseOrAction, options);
+    return useAction(promiseOrAction, {
+      loadingEffect: loading,
+      errorEffect: error,
+    });
   }
   return usePromise(promiseOrAction);
 };
@@ -29,8 +35,7 @@ const dismissedActionWeakSet = new WeakSet();
 
 const neverResolvingPromise = new Promise(() => {});
 
-const useAction = (action, options) => {
-  const allowStale = options && options.allowStale;
+const useAction = (action, { loadingEffect, errorEffect }) => {
   const loadingRef = useContext(LoadingContext);
   // Use peek() instead of .value to avoid subscribing this component to the signal.
   // Reading .value would make Preact re-render the component reactively when the state
@@ -50,43 +55,64 @@ const useAction = (action, options) => {
   }, []);
 
   if (runningState === COMPLETED) {
-    const data = action.dataSignal.peek();
-    if (allowStale) {
-      return { data, loading: false };
-    }
-    return data;
+    return {
+      loading: false,
+      error: null,
+      data: action.dataSignal.peek(),
+    };
   }
   if (runningState === FAILED) {
     if (dismissedActionWeakSet.has(action)) {
       const staleData = action.dataSignal.peek();
       if (staleData !== undefined) {
         // Dismissed with stale data — return it so children render normally
-        if (allowStale) {
-          return { data: staleData, loading: false };
-        }
-        return staleData;
+        return {
+          loading: false,
+          error: null,
+          data: staleData,
+        };
       }
       // Dismissed with no data — suspend indefinitely.
       // We can't return data, we can't throw the error again.
       // Using a never-resolving promise keeps the component suspended
       // without re-rendering, avoiding an infinite loop.
       throw neverResolvingPromise;
-    } else {
-      const error = action.errorSignal.peek();
-      error.action = action;
-      throw error;
+    }
+    const actionError = action.errorSignal.peek();
+    if (errorEffect === "internal") {
+      return {
+        loading: false,
+        error: actionError,
+        data: undefined,
+      };
+    }
+    actionError.action = action;
+    throw actionError;
+  }
+
+  // RUNNING with previous data and loading: "preserve"
+  if (runningState === RUNNING) {
+    if (loadingEffect === "preserve") {
+      const staleData = action.dataSignal.peek();
+      if (staleData !== undefined) {
+        return {
+          loading: true,
+          error: null,
+          data: staleData,
+        };
+      }
+    }
+    // RUNNING with loading: "internal" — return loading flag without suspending
+    if (loadingEffect === "internal") {
+      return {
+        loading: true,
+        error: null,
+        data: undefined,
+      };
     }
   }
 
-  // IDLE (no data) or RUNNING — suspend
-  // Exception: if allowStale is true and we have previous data, return it with loading:true
-  if (runningState === RUNNING && allowStale) {
-    const staleData = action.dataSignal.peek();
-    if (staleData !== undefined) {
-      return { data: staleData, loading: true };
-    }
-  }
-
+  // IDLE or RUNNING with loadingEffect: "delegate" — suspend
   const reason = runningState === RUNNING ? "loading" : "idle";
   loadingRef.current = { reason, action };
 

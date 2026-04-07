@@ -297,7 +297,7 @@
 
       // Suspends until data is ready — never sees loading or error state.
       const UserCard = ({ action, outerCount }) => {
-        const user = useAsyncData(action);
+        const { data: user } = useAsyncData(action);
         const [count, setCount] = useState(0);
         return (
           <UserCardFields
@@ -553,7 +553,7 @@
       // Shows previous data while re-fetching — suspends only on first load.
       const UserCardAllowStale = ({ action, outerCount }) => {
         const { data: user, loading } = useAsyncData(action, {
-          allowStale: true,
+          loading: "preserve",
         });
         const [count, setCount] = useState(0);
         return (
