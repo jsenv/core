@@ -3,6 +3,7 @@ import { Route } from "@jsenv/navi";
 import { DatabasePage } from "./database/database_page.jsx";
 import "./database_manager.css" with { type: "css" };
 import "./layout/layout.css" with { type: "css" };
+import { NotFoundPage } from "./not_found_page.jsx";
 import { RolePage } from "./role/role_page.jsx";
 import {
   DATABASE_ROUTE,
@@ -20,7 +21,7 @@ export const MainRoutes = () => {
       <Route route={ROLE_ROUTE} element={RolePage} />
       <Route route={DATABASE_ROUTE} element={DatabasePage} />
       <Route route={TABLE_ROUTE} element={TablePage} />
-      <Route fallback element={"Page not found"} />
+      <Route fallback element={NotFoundPage} />
     </Route>
   );
 };
