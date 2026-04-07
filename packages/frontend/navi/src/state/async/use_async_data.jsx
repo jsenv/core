@@ -28,6 +28,14 @@ const actionPendingPromiseWeakMap = new WeakMap();
 
 const useAction = (action) => {
   const loadingRef = useContext(LoadingContext);
+  // Use peek() instead of .value to avoid subscribing this component to the signal.
+  // Reading .value would make Preact re-render the component reactively when the state
+  // changes. When the action fails while Suspense is still holding the detached stale
+  // DOM, this reactive re-render causes Suspense to move that stale DOM permanently
+  // back into the document — the stale content then coexists with the error fallback
+  // and never goes away. Manual subscription via useEffect + useState ensures
+  // re-renders only happen after the pending promise resolves, at which point Suspense
+  // has already processed the settlement and the detached DOM is discarded.
   const runningState = action.runningStateSignal.peek();
 
   const [, setTick] = useState(0);
