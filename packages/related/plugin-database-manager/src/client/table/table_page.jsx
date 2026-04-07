@@ -39,11 +39,13 @@ import { SettingsSvg } from "../svg/settings_svg.jsx";
 import { TableData } from "./table_data.jsx";
 import { TableSvg } from "./table_icons.jsx";
 import { TableSettings } from "./table_settings.jsx";
-import { TABLE } from "./table_state.js";
+import { TABLE, tablenameSignal } from "./table_state.js";
 
 export const TablePage = () => {
-  const { data: table } = useAsyncData(TABLE_GET_ACTION);
-  const tablename = table.tablename;
+  const tablename = tablenameSignal.value;
+  const { data: table, loading } = useAsyncData(TABLE_GET_ACTION, {
+    loading: "preserve",
+  });
 
   return (
     <>
@@ -102,18 +104,20 @@ export const TablePage = () => {
           </Nav>
         </PageHead>
         <PageBody>
-          <Route>
-            <Route
-              route={TABLE_INDEX_ROUTE}
-              element={TableData}
-              elementProps={{ table }}
-            />
-            <Route
-              route={TABLE_SETTINGS_ROUTE}
-              element={TableSettings}
-              elementProps={{ table }}
-            />
-          </Route>
+          {loading ? null : (
+            <Route>
+              <Route
+                route={TABLE_INDEX_ROUTE}
+                element={TableData}
+                elementProps={{ table }}
+              />
+              <Route
+                route={TABLE_SETTINGS_ROUTE}
+                element={TableSettings}
+                elementProps={{ table }}
+              />
+            </Route>
+          )}
         </PageBody>
       </Page>
     </>
