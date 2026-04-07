@@ -65,12 +65,20 @@ export const selectTable = async (sql, tablename) => {
       : undefined,
   );
 
+  const [{ count: rowCount }] = await sql`
+    SELECT
+      COUNT(*) AS count
+    FROM
+      ${sql(tablename)}
+  `;
+
   return [
     table,
     {
       columns,
       ownerRole,
       pgTableColumns,
+      rowCount: Number(rowCount),
     },
   ];
 };

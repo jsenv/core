@@ -31,6 +31,7 @@ import {
   TableCell,
   Tbody,
   Text,
+  TextPlaceholder,
   Thead,
   Tr,
   useAsyncData,
@@ -54,10 +55,26 @@ import.meta.css = /* css */ `
 `;
 
 export const TableData = ({ table }) => {
-  const { data: rows } = useAsyncData(TABLE_ROW_GET_MANY_ACTION);
+  const { tablename, columns } = table;
+  const { data, loading } = useAsyncData(TABLE_ROW_GET_MANY_ACTION, {
+    loading: "preserve",
+  });
+  const initialLoad = data === undefined && loading;
+  let rows = data;
+  if (initialLoad) {
+    const { rowCount } = table.meta;
+    rows = Array.from({ length: rowCount }, (_, i) => {
+      const row = { id: i };
+      for (const column of columns) {
+        row[column.column_name] = <TextPlaceholder loading />;
+      }
+      return row;
+    });
+  } else {
+    rows = data;
+  }
 
   const tableRef = useRef(null);
-  const { tablename, columns } = table;
   const createRow = TABLE_ROW.POST.bindParams({ tablename });
 
   const [orderedColumns] = useOrderedColumns(columns, undefined, {
@@ -85,6 +102,7 @@ export const TableData = ({ table }) => {
         <Box column spacing="m">
           <Table
             ref={tableRef}
+            loading={loading}
             className="database_table"
             selection={selection}
             onSelectionChange={setSelection}

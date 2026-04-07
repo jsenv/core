@@ -151,6 +151,7 @@ export { Meter } from "./src/text/meter.jsx";
 export { Paragraph } from "./src/text/paragraph.jsx";
 export { Quantity, QuantityIntl } from "./src/text/quantity.jsx";
 export { Text } from "./src/text/text.jsx";
+export { TextPlaceholder } from "./src/text/text_placeholder.jsx";
 export { Title, useTitleLevel } from "./src/text/title.jsx";
 export { useDarkBackgroundAttribute } from "./src/text/use_dark_background_attribute.js";
 

@@ -26,7 +26,7 @@ export const TABLE = resource("table", {
     }
     const { data, meta } = await response.json();
     const table = data;
-    const { ownerRole, columns, pgTableColumns } = meta;
+    const { ownerRole, columns, rowCount, pgTableColumns } = meta;
     columns.sort((a, b) => a.ordinal_position - b.ordinal_position);
     table.columns = columns;
 
@@ -34,6 +34,7 @@ export const TABLE = resource("table", {
       ...table,
       ownerRole,
       meta: {
+        rowCount,
         pgTableColumns,
       },
     };
