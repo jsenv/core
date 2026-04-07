@@ -27,6 +27,8 @@ const LoadingContext = createContext(null);
 const actionPendingPromiseWeakMap = new WeakMap();
 const dismissedActionWeakSet = new WeakSet();
 
+const neverResolvingPromise = new Promise(() => {});
+
 const useAction = (action, options) => {
   const allowStale = options && options.allowStale;
   const loadingRef = useContext(LoadingContext);
@@ -64,7 +66,11 @@ const useAction = (action, options) => {
         }
         return staleData;
       }
-      // Dismissed with no data — fall through to suspend (LoadingFallback returns null)
+      // Dismissed with no data — suspend indefinitely.
+      // We can't return data, we can't throw the error again.
+      // Using a never-resolving promise keeps the component suspended
+      // without re-rendering, avoiding an infinite loop.
+      throw neverResolvingPromise;
     } else {
       const error = action.errorSignal.peek();
       error.action = action;
