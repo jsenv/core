@@ -487,7 +487,7 @@
           </DemoSection>
         );
       };
-      const UserCardError = ({ error }) => {
+      const UserCardError = ({ error, resetError }) => {
         return (
           <div class="card-error">
             <div
@@ -501,9 +501,16 @@
               <span style={{ fontSize: "1.2em" }}>⚠️</span>
               <strong>Something went wrong</strong>
             </div>
-            <div style={{ fontFamily: "monospace", fontSize: "0.9em" }}>
+            <div
+              style={{
+                fontFamily: "monospace",
+                fontSize: "0.9em",
+                marginBottom: "12px",
+              }}
+            >
               {error.message}
             </div>
+            <Button onClick={resetError}>Dismiss</Button>
           </div>
         );
       };
@@ -512,7 +519,6 @@
 
       const exStaleWhileRevalidate = makeExample("fetchUser4");
       const StaleWhileRevalidateDemo = () => {
-        const [started, setStarted] = useState(false);
         return (
           <DemoSection
             title="Manages loading (stale-while-revalidate variant)"
@@ -520,43 +526,26 @@
           >
             <FetchControls
               action={() => {
-                setStarted(true);
                 return exStaleWhileRevalidate.action.rerun();
               }}
               shouldFail={exStaleWhileRevalidate.shouldFail}
             />
-            {started && (
-              <ErrorBoundary fallback={ErrorCard}>
+
+            <ErrorBoundary fallback={ErrorCard}>
+              <Loading fallback={UserCardSkeleton}>
                 <UserCardStaleWhileRevalidate
                   action={exStaleWhileRevalidate.action}
                 />
-              </ErrorBoundary>
-            )}
+              </Loading>
+            </ErrorBoundary>
           </DemoSection>
         );
       };
       // Shows previous data while re-fetching instead of going back to skeletons.
       const UserCardStaleWhileRevalidate = ({ action }) => {
-        const { data: freshUser, loading } = useAsyncData(action);
+        const user = useAsyncData(action, { latest: true });
         const [count, setCount] = useState(0);
-        const [lastUser, setLastUser] = useState(null);
 
-        useEffect(() => {
-          if (freshUser) {
-            setLastUser(freshUser);
-          }
-        }, [freshUser]);
-
-        const displayUser = freshUser || lastUser;
-
-        if (!displayUser) {
-          return (
-            <UserCardFields
-              name={<span class="skeleton" style={{ width: "80px" }} />}
-              email={<span class="skeleton" style={{ width: "140px" }} />}
-            />
-          );
-        }
         return (
           <div>
             <UserCardFields
