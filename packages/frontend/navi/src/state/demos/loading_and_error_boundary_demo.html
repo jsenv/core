@@ -169,6 +169,71 @@
         </div>
       );
 
+      const ArchitectureSection = () => (
+        <div class="demo-section">
+          <h2>Architecture</h2>
+          <p class="demo-description">
+            <code>useAsyncData</code> is designed around one invariant:{" "}
+            <strong>
+              a component using it only ever renders when data is available
+            </strong>
+            . While waiting, the component suspends and never executes. On
+            error, it throws and never renders.
+          </p>
+          <p class="demo-description">This pairs with two wrappers:</p>
+          <ul
+            style={{
+              margin: "0 0 12px",
+              paddingLeft: "20px",
+              color: "#555",
+              fontSize: "0.9em",
+              lineHeight: "1.7",
+            }}
+          >
+            <li>
+              <strong>
+                <code>&lt;Loading fallback=...&gt;</code>
+              </strong>{" "}
+              — catches the suspension and renders the fallback while waiting
+            </li>
+            <li>
+              <strong>
+                <code>&lt;ErrorBoundary fallback=...&gt;</code>
+              </strong>{" "}
+              — catches the thrown error and renders the fallback
+            </li>
+          </ul>
+          <p class="demo-description">
+            Both wrappers can be placed anywhere in the ancestor tree — close to
+            the component for a precise UX, or high in the hierarchy for less
+            code. There are three approaches:
+          </p>
+          <ul
+            style={{
+              margin: "0 0 12px",
+              paddingLeft: "20px",
+              color: "#555",
+              fontSize: "0.9em",
+              lineHeight: "1.7",
+            }}
+          >
+            <li>
+              <strong>Delegates both</strong> — loading and error are handled by
+              outer wrappers. Least code.
+            </li>
+            <li>
+              <strong>Manages loading</strong> — the component's own skeleton is
+              provided in <code>&lt;Loading fallback&gt;</code>. Better loading
+              UX.
+            </li>
+            <li>
+              <strong>Manages error</strong> — the component handles its error
+              state directly. Better error UX.
+            </li>
+          </ul>
+        </div>
+      );
+
       const FetchControls = ({ action, shouldFail }) => (
         <div class="buttons">
           <Button actionErrorEffect="ignore" action={action}>
@@ -279,7 +344,7 @@
         </div>
       );
 
-      // ─── Manages nothing ──────────────────────────────────────────────────────
+      // ─── Delegates both ───────────────────────────────────────────────────────
 
       // Suspends until data is ready — never sees loading or error state.
       const UserCard = ({ action, outerCount }) => {
@@ -296,13 +361,13 @@
         );
       };
 
-      const exManagesNothing = makeExample("fetchUser1");
-      const ManagesNothingDemo = () => {
+      const exDelegatesBoth = makeExample("fetchUser1");
+      const DelegatesBothDemo = () => {
         const [started, setStarted] = useState(false);
         const [outerCount, setOuterCount] = useState(0);
         return (
           <DemoSection
-            title="Manages nothing"
+            title="Delegates both"
             titleExtra={
               <button
                 style={{ fontSize: "0.6em", fontWeight: "normal" }}
@@ -311,20 +376,20 @@
                 Outer count: {outerCount}
               </button>
             }
-            description="Neither loading nor errors reach the component: it only ever renders with ready data. Loading bubbles up to nearest <Loading>, error bubbles up to nearest <ErrorBoundary>."
+            description="The component only ever renders with ready data — it never sees loading or error states. Both are delegated upward to the nearest <Loading> and <ErrorBoundary>. Tradeoff: least code, but the loading fallback is generic (a spinner or message) rather than a shape-matched skeleton."
           >
             <FetchControls
               action={() => {
                 setStarted(true);
-                return exManagesNothing.action.rerun();
+                return exDelegatesBoth.action.rerun();
               }}
-              shouldFail={exManagesNothing.shouldFail}
+              shouldFail={exDelegatesBoth.shouldFail}
             />
             {started && (
               <ErrorBoundary fallback={ErrorCard}>
                 <Loading fallback={<div class="card-loading">Loading…</div>}>
                   <UserCard
-                    action={exManagesNothing.action}
+                    action={exDelegatesBoth.action}
                     outerCount={outerCount}
                   />
                 </Loading>
@@ -353,7 +418,7 @@
                 Outer count: {outerCount}
               </button>
             }
-            description="The skeleton lives in <Loading fallback> alongside the component, not inside it. This keeps UserCard always pure, at the cost of co-locating the skeleton with the usage site rather than the component definition. Loading/error bubble up to their respective parents — tradeoff: more dev work per usage, better UX (skeleton matches the card shape)."
+            description="The component is always pure — it only renders with data — while the skeleton is defined alongside it in <Loading fallback>. Each concern has a single, predictable place to live. Tradeoff: more dev work per usage site, but better UX (skeleton matches the exact card shape) and the component stays simple to reuse."
           >
             <FetchControls
               action={() => {
@@ -384,60 +449,61 @@
         );
       };
 
-      // ─── Manages loading and error ────────────────────────────────────────────
+      // ─── Manages error ────────────────────────────────────────────────────────
 
-      // Handles loading and error entirely — no ErrorBoundary or Loading needed.
-      const UserCardWithErrorHandling = ({ action }) => {
-        const { data: user, loading, error } = useAsyncData(action);
+      // Handles error directly — loading is delegated to <Loading fallback>.
+      const UserCardWithCustomError = ({ action }) => {
+        const { data: user, error } = useAsyncData(action);
         const [count, setCount] = useState(0);
         if (error) {
           return (
             <div class="card-error">
-              <span style={{ fontSize: "1.2em" }}>⚠️</span> {error.message}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  marginBottom: "8px",
+                }}
+              >
+                <span style={{ fontSize: "1.2em" }}>⚠️</span>
+                <strong>Something went wrong</strong>
+              </div>
+              <div style={{ fontFamily: "monospace", fontSize: "0.9em" }}>
+                {error.message}
+              </div>
             </div>
           );
         }
         return (
           <UserCardFields
-            name={
-              loading ? (
-                <span class="skeleton" style={{ width: "80px" }} />
-              ) : (
-                user.name
-              )
-            }
-            email={
-              loading ? (
-                <span class="skeleton" style={{ width: "140px" }} />
-              ) : (
-                user.email
-              )
-            }
+            name={user.name}
+            email={user.email}
             count={count}
             onIncrement={() => setCount((n) => n + 1)}
           />
         );
       };
 
-      const exManagesLoadingAndError = makeExample("fetchUser3");
-      const ManagesLoadingAndErrorDemo = () => {
+      const exManagesError = makeExample("fetchUser3");
+      const ManagesErrorDemo = () => {
         const [started, setStarted] = useState(false);
         return (
           <DemoSection
-            title="Manages loading and error"
-            description="The component handles everything itself. No ErrorBoundary or Loading needed."
+            title="Manages error"
+            description="The component renders its own error UI when the action fails, while loading is still delegated to <Loading fallback>. In practice, a custom error UI usually comes paired with a custom skeleton. Tradeoff: more code, but a richer, context-aware error experience."
           >
             <FetchControls
               action={() => {
                 setStarted(true);
-                return exManagesLoadingAndError.action.rerun();
+                return exManagesError.action.rerun();
               }}
-              shouldFail={exManagesLoadingAndError.shouldFail}
+              shouldFail={exManagesError.shouldFail}
             />
             {started && (
-              <UserCardWithErrorHandling
-                action={exManagesLoadingAndError.action}
-              />
+              <Loading fallback={<UserCardSkeleton />}>
+                <UserCardWithCustomError action={exManagesError.action} />
+              </Loading>
             )}
           </DemoSection>
         );
@@ -497,7 +563,7 @@
         return (
           <DemoSection
             title="Manages loading (stale-while-revalidate variant)"
-            description="Shows the previous data while re-fetching instead of going back to skeletons. Errors bubble up to the nearest <ErrorBoundary>."
+            description="While re-fetching, the component keeps showing the previous data instead of replacing it with a skeleton. The stale value is preserved in local state and displayed until fresh data arrives. Tradeoff: smoother revalidation UX, but the component owns more state and the logic is harder to follow."
           >
             <FetchControls
               action={() => {
@@ -520,9 +586,10 @@
       const App = () => (
         <div>
           <h1>Loading + ErrorBoundary Demo</h1>
-          <ManagesNothingDemo />
+          <ArchitectureSection />
+          <DelegatesBothDemo />
           <ManagesLoadingDemo />
-          <ManagesLoadingAndErrorDemo />
+          <ManagesErrorDemo />
           <StaleWhileRevalidateDemo />
         </div>
       );
