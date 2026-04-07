@@ -203,4 +203,19 @@ await snapshotTests(import.meta.url, ({ test }) => {
       result: syncIds(ordering, cols(["a", "b"]), ["a", "ghost", "b"]),
     };
   });
+
+  test("remove then re-add column with same name produces no duplicate", () => {
+    // Regression: delete "email" then add a new "email" column — must not produce ["name", "age", "email", "email"]
+    const ordering = createColumnOrdering("id", () => {});
+    syncIds(ordering, cols(["name", "age", "email"]), ["name", "age", "email"]);
+    // delete "email"
+    syncIds(ordering, cols(["name", "age"]), ["name", "age", "email"]);
+    // add new "email"
+    return {
+      result: syncIds(ordering, cols(["name", "age", "email"]), [
+        "name",
+        "age",
+      ]),
+    };
+  });
 });

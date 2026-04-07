@@ -107,6 +107,9 @@ export const createColumnOrdering = (columnIdKey, setOrderedColumnIds) => {
         const stableId = stableIdByExternalIdMap.get(id);
         stableIdByExternalIdMap.delete(id);
         externalIdByStableIdMap.delete(stableId);
+        currentOrderedColumnIds = currentOrderedColumnIds.filter(
+          (orderedId) => orderedId !== id,
+        );
       }
       for (const id of purelyAdded) {
         const stableId = nextStableId++;

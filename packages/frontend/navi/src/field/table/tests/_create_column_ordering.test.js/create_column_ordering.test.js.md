@@ -23,6 +23,7 @@
 - [single column: rename works](19_single_column_rename_works/19_single_column_rename_works.md)
 - [add then remove the same column across two syncs](20_add_then_remove_the_same_column_across_two_syncs/20_add_then_remove_the_same_column_across_two_syncs.md)
 - [user order with unknown id is dropped](21_user_order_with_unknown_id_is_dropped/21_user_order_with_unknown_id_is_dropped.md)
+- [remove then re-add column with same name produces no duplicate](22_remove_then_re-add_column_with_same_name_produces_no_duplicate/22_remove_then_re-add_column_with_same_name_produces_no_duplicate.md)
 
 ---
 
