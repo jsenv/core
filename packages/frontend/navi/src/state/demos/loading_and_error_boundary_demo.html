@@ -158,37 +158,9 @@
 
       const delay = (ms) => new Promise((res) => setTimeout(res, ms));
 
-      const StateBadges = ({ loading, error }) => (
-        <div class="state-badges">
-          <div class="state-badge">
-            <span class="state-badge-label">Loading</span>
-            <span
-              class={`badge ${loading === "component" ? "badge-component" : "badge-delegated"}`}
-            >
-              {loading === "component" ? "component" : "delegated"}
-            </span>
-          </div>
-          <div class="state-badge">
-            <span class="state-badge-label">Error</span>
-            <span
-              class={`badge ${error === "component" ? "badge-component" : "badge-delegated"}`}
-            >
-              {error === "component" ? "component" : "delegated"}
-            </span>
-          </div>
-        </div>
-      );
-
-      const DemoSection = ({
-        title,
-        description,
-        loading,
-        error,
-        children,
-      }) => (
+      const DemoSection = ({ title, description, children }) => (
         <div class="demo-section">
           <h2>{title}</h2>
-          <StateBadges loading={loading} error={error} />
           {description && <p class="demo-description">{description}</p>}
           {children}
         </div>
@@ -353,15 +325,11 @@
       };
 
       const ex1 = makeExample("fetchUser1");
-      const ex5 = makeExample("fetchUser5");
       const ExampleComponentManagedLoading = () => {
         const [started1, setStarted1] = useState(false);
-        const [started5, setStarted5] = useState(false);
         return (
           <DemoSection
             title="Manages loading"
-            loading="component"
-            error="delegated"
             description="The component receives { loading } and renders its own placeholders while waiting. Errors bubble up to the nearest ErrorBoundary."
           >
             <FetchControls
@@ -376,26 +344,6 @@
                 <UserCardWithSkeleton action={ex1.action} />
               </ErrorBoundary>
             )}
-
-            <div class="demo-variant">
-              <p class="demo-variant-title">Variant: stale-while-revalidate</p>
-              <p class="demo-variant-description">
-                Show the previous data while re-fetching instead of going back
-                to skeletons.
-              </p>
-              <FetchControls
-                action={() => {
-                  setStarted5(true);
-                  return ex5.action.rerun();
-                }}
-                shouldFail={ex5.shouldFail}
-              />
-              {started5 && (
-                <ErrorBoundary fallback={ErrorCard}>
-                  <UserCardStaleWhileRevalidate action={ex5.action} />
-                </ErrorBoundary>
-              )}
-            </div>
           </DemoSection>
         );
       };
@@ -408,8 +356,6 @@
         return (
           <DemoSection
             title="Manages nothing"
-            loading="delegated"
-            error="delegated"
             description="Neither loading nor errors reach the component. Wrap with <Loading fallback> and <ErrorBoundary> — the component only ever renders with ready data."
           >
             <FetchControls
@@ -469,8 +415,6 @@
         return (
           <DemoSection
             title="Manages loading and error"
-            loading="component"
-            error="component"
             description="The component handles everything itself. No ErrorBoundary or Loading fallback needed."
           >
             <FetchControls
@@ -485,12 +429,39 @@
         );
       };
 
+      // ─── Stale-while-revalidate variant ───────────────────────────────────────
+
+      const ex5 = makeExample("fetchUser5");
+      const ExampleStaleWhileRevalidate = () => {
+        const [started5, setStarted5] = useState(false);
+        return (
+          <DemoSection
+            title="Manages loading (stale-while-revalidate variant)"
+            description="Shows the previous data while re-fetching instead of going back to skeletons. Errors bubble up to the nearest ErrorBoundary."
+          >
+            <FetchControls
+              action={() => {
+                setStarted5(true);
+                return ex5.action.rerun();
+              }}
+              shouldFail={ex5.shouldFail}
+            />
+            {started5 && (
+              <ErrorBoundary fallback={ErrorCard}>
+                <UserCardStaleWhileRevalidate action={ex5.action} />
+              </ErrorBoundary>
+            )}
+          </DemoSection>
+        );
+      };
+
       const App = () => (
         <div>
           <h1>Loading + ErrorBoundary Demo</h1>
-          <ExampleComponentManagedLoading />
           <ExampleDelegatedLoading />
+          <ExampleComponentManagedLoading />
           <ExampleNoErrorBoundary />
+          <ExampleStaleWhileRevalidate />
         </div>
       );
 
