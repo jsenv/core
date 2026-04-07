@@ -28,7 +28,14 @@ const actionPendingPromiseWeakMap = new WeakMap();
 
 const useAction = (action) => {
   const loadingRef = useContext(LoadingContext);
-  const runningState = action.runningStateSignal.value;
+  const runningState = action.runningStateSignal.peek();
+
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    return action.runningStateSignal.subscribe(() => {
+      setTick((n) => n + 1);
+    });
+  }, []);
 
   if (runningState === COMPLETED) {
     return action.dataSignal.peek();
