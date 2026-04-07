@@ -158,9 +158,12 @@
 
       const delay = (ms) => new Promise((res) => setTimeout(res, ms));
 
-      const DemoSection = ({ title, description, children }) => (
+      const DemoSection = ({ title, titleExtra, description, children }) => (
         <div class="demo-section">
-          <h2>{title}</h2>
+          <h2 style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            {title}
+            {titleExtra}
+          </h2>
           {description && <p class="demo-description">{description}</p>}
           {children}
         </div>
@@ -212,7 +215,13 @@
 
       // ─── UserCard variants ────────────────────────────────────────────────────
 
-      const UserCardFields = ({ name, email, count, onIncrement }) => (
+      const UserCardFields = ({
+        name,
+        email,
+        count,
+        onIncrement,
+        outerCount,
+      }) => (
         <div class="card">
           <div class="card-field">
             <span class="card-label">Name</span>
@@ -221,6 +230,10 @@
           <div class="card-field">
             <span class="card-label">Email</span>
             <span style={{ color: "#555" }}>{email}</span>
+          </div>
+          <div class="card-field">
+            <span class="card-label">Outer</span>
+            <span>{outerCount}</span>
           </div>
           {onIncrement && (
             <div class="card-field" style={{ marginTop: "10px" }}>
@@ -259,7 +272,7 @@
       // ─── Manages nothing ──────────────────────────────────────────────────────
 
       // Suspends until data is ready — never sees loading or error state.
-      const UserCard = ({ action }) => {
+      const UserCard = ({ action, outerCount }) => {
         const user = useAsyncData(action);
         const [count, setCount] = useState(0);
         return (
@@ -268,6 +281,7 @@
             email={user.email}
             count={count}
             onIncrement={() => setCount((n) => n + 1)}
+            outerCount={outerCount}
           />
         );
       };
@@ -275,9 +289,18 @@
       const exManagesNothing = makeExample("fetchUser1");
       const ManagesNothingDemo = () => {
         const [started, setStarted] = useState(false);
+        const [outerCount, setOuterCount] = useState(0);
         return (
           <DemoSection
             title="Manages nothing"
+            titleExtra={
+              <button
+                style={{ fontSize: "0.6em", fontWeight: "normal" }}
+                onClick={() => setOuterCount((n) => n + 1)}
+              >
+                Outer count: {outerCount}
+              </button>
+            }
             description="Neither loading nor errors reach the component: it only ever renders with ready data. Loading bubbles up to nearest <Loading>, error bubbles up to nearest <ErrorBoundary>."
           >
             <FetchControls
@@ -290,7 +313,10 @@
             {started && (
               <ErrorBoundary fallback={ErrorCard}>
                 <Loading fallback={<div class="card-loading">Loading…</div>}>
-                  <UserCard action={exManagesNothing.action} />
+                  <UserCard
+                    action={exManagesNothing.action}
+                    outerCount={outerCount}
+                  />
                 </Loading>
               </ErrorBoundary>
             )}
