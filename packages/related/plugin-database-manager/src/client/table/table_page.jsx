@@ -43,7 +43,7 @@ import { TABLE, tablenameSignal } from "./table_state.js";
 
 export const TablePage = () => {
   const tablename = tablenameSignal.value;
-  const { data: table, loading } = useAsyncData(TABLE_GET_ACTION, {
+  const { data: table } = useAsyncData(TABLE_GET_ACTION, {
     loading: "preserve",
   });
 
@@ -104,7 +104,7 @@ export const TablePage = () => {
           </Nav>
         </PageHead>
         <PageBody>
-          {loading ? null : (
+          {table ? (
             <Route>
               <Route
                 route={TABLE_INDEX_ROUTE}
@@ -117,7 +117,7 @@ export const TablePage = () => {
                 elementProps={{ table }}
               />
             </Route>
-          )}
+          ) : null}
         </PageBody>
       </Page>
     </>

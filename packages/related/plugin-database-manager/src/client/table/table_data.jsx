@@ -76,7 +76,6 @@ export const TableData = ({ table }) => {
 
   const tableRef = useRef(null);
   const createRow = TABLE_ROW.POST.bindParams({ tablename });
-
   const [orderedColumns] = useOrderedColumns(columns, undefined, {
     columnIdKey: "column_name",
   });
