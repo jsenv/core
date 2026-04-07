@@ -145,6 +145,8 @@
           if (!error) {
             return undefined;
           }
+          // New error arrived — ensure dismissed is cleared so the fallback shows
+          setDismissed(false);
           const task = error.task;
           if (!task) {
             return undefined;
