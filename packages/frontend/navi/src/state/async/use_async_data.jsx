@@ -72,6 +72,10 @@ const useAction = (action) => {
   if (!pendingPromise) {
     pendingPromise = new Promise((resolve) => {
       const unsubscribe = action.runningStateSignal.subscribe((state) => {
+        if (state === RUNNING) {
+          // Action re-ran — clear dismissed state regardless of path
+          dismissedActionWeakSet.delete(action);
+        }
         if (state === COMPLETED || state === FAILED) {
           actionPendingPromiseWeakMap.delete(action);
           unsubscribe();
