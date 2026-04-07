@@ -109,10 +109,13 @@ const LoadingFallback = ({ loadingRef, fallback }) => {
       setTick((n) => n + 1);
     });
   }, [action]);
-  if (loadingRef.current.reason === "loading") {
-    return fallback;
+  if (loadingRef.current.reason !== "loading") {
+    return null;
   }
-  return null;
+  if (typeof fallback === "function") {
+    return h(fallback);
+  }
+  return fallback;
 };
 
 export const Loading = ({ children, fallback }) => {
