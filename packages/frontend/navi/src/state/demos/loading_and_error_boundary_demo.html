@@ -327,30 +327,6 @@
       // ─── Manages loading ──────────────────────────────────────────────────────
 
       // Receives { loading } and renders skeleton placeholders while waiting.
-      const UserCardWithSkeleton = ({ action }) => {
-        const { data: user, loading } = useAsyncData(action);
-        const [count, setCount] = useState(0);
-        return (
-          <UserCardFields
-            name={
-              loading ? (
-                <span class="skeleton" style={{ width: "80px" }} />
-              ) : (
-                user.name
-              )
-            }
-            email={
-              loading ? (
-                <span class="skeleton" style={{ width: "140px" }} />
-              ) : (
-                user.email
-              )
-            }
-            count={count}
-            onIncrement={() => setCount((n) => n + 1)}
-          />
-        );
-      };
 
       const exManagesLoading = makeExample("fetchUser2");
       const ManagesLoadingDemo = () => {
@@ -369,10 +345,21 @@
             />
             {started && (
               <ErrorBoundary fallback={ErrorCard}>
-                <UserCardWithSkeleton action={exManagesLoading.action} />
+                <Loading fallback={<UserCardSkeleton />}>
+                  <UserCard action={exManagesLoading.action} />
+                </Loading>
               </ErrorBoundary>
             )}
           </DemoSection>
+        );
+      };
+      const UserCardSkeleton = () => {
+        return (
+          <UserCardFields
+            name={<span class="skeleton" style={{ width: "80px" }} />}
+            email={<span class="skeleton" style={{ width: "140px" }} />}
+            count={null}
+          />
         );
       };
 
