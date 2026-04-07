@@ -64,6 +64,12 @@
               listeners.delete(fn);
             };
           },
+          reset: () => {
+            task.state = "idle";
+            task.result = null;
+            task.error = null;
+            task._notify();
+          },
           _notify: () => {
             for (const fn of listeners) {
               fn(task);
@@ -160,6 +166,7 @@
               </div>
               <button
                 onClick={() => {
+                  error.task?.reset();
                   setDismissed(true);
                   resetError();
                 }}
@@ -170,7 +177,7 @@
           );
         }
         if (dismissed) {
-          return null;
+          return children;
         }
         return children;
       };
@@ -178,7 +185,9 @@
       // ─── Child component that suspends ────────────────────────────────────────
       const Child = ({ task }) => {
         const data = useTask(task);
-        if (data === null) return <div class="card">(no data yet)</div>;
+        if (data === null) {
+          return <div class="card">(no data yet)</div>;
+        }
         return (
           <div class="card">
             ✅ Result: <strong>{data}</strong>
