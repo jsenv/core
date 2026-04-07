@@ -101,7 +101,6 @@
       // throws error (with error.task = task) if rejected, returns result if resolved.
 
       const pendingMap = new WeakMap();
-      const neverResolvingPromise = new Promise(() => {});
 
       const useTask = (task) => {
         const [, setTick] = useState(0);
@@ -111,10 +110,6 @@
           });
         }, [task]);
 
-        if (task.state === "idle" && task.result === null) {
-          // No data yet — keep suspended so Child never renders without data
-          throw neverResolvingPromise;
-        }
         if (task.state === "idle") return task.result;
         if (task.state === "resolved") return task.result;
         if (task.state === "rejected") {
@@ -141,8 +136,7 @@
 
       // ─── ErrorBoundary ────────────────────────────────────────────────────────
       // Reads error.task and subscribes to it — resets when the task re-runs.
-      // onDismiss: called when dismissing with no stale data, so App can un-mount Child.
-      const ErrorBoundary = ({ children, onDismiss }) => {
+      const ErrorBoundary = ({ children }) => {
         const [error, resetError] = useErrorBoundary();
         const [dismissed, setDismissed] = useState(false);
 
@@ -177,11 +171,7 @@
                   const hasStaleData = task && task.result !== null;
                   task?.reset();
                   if (hasStaleData) {
-                    // Keep children mounted to show stale data
                     setDismissed(true);
-                  } else {
-                    // No stale data — tell App to un-mount Child entirely
-                    onDismiss?.();
                   }
                   resetError();
                 }}
@@ -212,7 +202,14 @@
 
       // ─── App ──────────────────────────────────────────────────────────────────
       const App = () => {
-        const [started, setStarted] = useState(false);
+        const [, setTick] = useState(0);
+        useEffect(() => {
+          return myTask.subscribe(() => {
+            setTick((n) => n + 1);
+          });
+        }, []);
+
+        const showChild = myTask.state !== "idle" || myTask.result !== null;
 
         return (
           <div>
@@ -220,7 +217,6 @@
             <h2>Controls</h2>
             <button
               onClick={() => {
-                setStarted(true);
                 runTask(myTask, false);
               }}
             >
@@ -228,16 +224,15 @@
             </button>
             <button
               onClick={() => {
-                setStarted(true);
                 runTask(myTask, true);
               }}
             >
               ❌ Fetch (fail)
             </button>
             <h2>Output</h2>
-            <ErrorBoundary onDismiss={() => setStarted(false)}>
+            <ErrorBoundary>
               <Suspense fallback={<div class="loading">Loading…</div>}>
-                {started && <Child task={myTask} />}
+                {showChild && <Child task={myTask} />}
               </Suspense>
             </ErrorBoundary>
           </div>
