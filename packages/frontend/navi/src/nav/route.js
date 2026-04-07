@@ -134,7 +134,7 @@ export const route = (pattern, { searchParams } = {}) => {
     route.setupCalled = true;
   });
   // methods
-  registerSetup(({ routeSet }) => {
+  registerSetup(({ routeSet, getUrl }) => {
     route.buildRelativeUrl = (params) => {
       // buildMostPreciseUrl now handles parameter resolution internally
       return routePattern.buildMostPreciseUrl(params);
@@ -234,14 +234,43 @@ export const route = (pattern, { searchParams } = {}) => {
       }
 
       // This route is the most specific, handle the redirect ourselves
-      if (DEBUG) {
+      // Check if the built URL pathname matches the current URL pathname.
+      // When a catch-all route (e.g. "/") is the only match for a path like "/404",
+      // buildUrl would produce "/?param=value" losing the current path.
+      // In that case, preserve the current pathname and only update search params.
+      // However, when buildMostPreciseUrl returns an ancestor URL (intentional shortening
+      // because params are at defaults), we should trust that.
+      // Distinguish the two cases by checking if builtPathname equals the route's own
+      // literal base path (derived from cleanPattern). If yes → catch-all, preserve.
+      // If no → ancestor optimization, let it through.
+      const currentUrl = getUrl();
+      if (currentUrl) {
         const builtUrl = route.buildUrl(newParams);
-        console.debug(
-          `[${route}] Built URL:`,
-          builtUrl,
-          `with params:`,
-          newParams,
-        );
+        const builtPathname = new URL(builtUrl).pathname;
+        const currentPathname = new URL(currentUrl).pathname;
+        if (builtPathname !== currentPathname) {
+          const literalPatternPrefix = cleanPattern.split(":")[0];
+          const ownBaseUrl = resolveRouteUrl(literalPatternPrefix);
+          const ownBasePathname = new URL(ownBaseUrl).pathname;
+          if (builtPathname === ownBasePathname) {
+            if (DEBUG) {
+              console.debug(
+                `[${route}] Built URL pathname "${builtPathname}" is route's own base, current is "${currentPathname}", preserving current path`,
+              );
+            }
+            const correctedUrl = new URL(currentUrl);
+            correctedUrl.search = new URL(builtUrl).search;
+            return integration.navTo(correctedUrl.href, {
+              replace: true,
+              callReason,
+            });
+          }
+          if (DEBUG) {
+            console.debug(
+              `[${route}] Built URL pathname "${builtPathname}" differs from own base "${ownBasePathname}", ancestor optimization — letting through`,
+            );
+          }
+        }
       }
       return route.redirectTo(newParams, {
         callReason,
@@ -419,6 +448,8 @@ This prevents cross-test pollution and ensures clean state.`,
   setupRoutesCalled = true;
 
   const routeSet = new Set();
+  let currentUrl = null;
+  const getUrl = () => currentUrl;
   // PHASE 1: Setup patterns with unified objects (includes all relationships and signal connections)
   const routePatterns = [];
   for (const route of routes) {
@@ -431,7 +462,7 @@ This prevents cross-test pollution and ensures clean state.`,
   // Setup routes now that patterns are correctly initialized
   for (const route of routeSet) {
     const { setup } = getRoutePrivateProperties(route);
-    setup({ routeSet });
+    setup({ routeSet, getUrl });
   }
 
   // Store previous route states to detect changes
@@ -443,6 +474,7 @@ This prevents cross-test pollution and ensures clean state.`,
       // state
     } = {},
   ) => {
+    currentUrl = url;
     const returnValue = {};
     const routeMatchInfoSet = new Set();
     for (const route of routeSet) {

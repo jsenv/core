@@ -34,6 +34,8 @@
 - [dynamic array default - user arrives with URL before backend loads](30_dynamic_array_default_-_user_arrives_with_url_before_backend_loads/30_dynamic_array_default_-_user_arrives_with_url_before_backend_loads.md)
 - [search param on root with trailing slash](31_search_param_on_root_with_trailing_slash/31_search_param_on_root_with_trailing_slash.md)
 - [search param on parent with trailing slash](32_search_param_on_parent_with_trailing_slash/32_search_param_on_parent_with_trailing_slash.md)
+- [catch-all root route should preserve current path when updating search param on /404](33_catch-all_root_route_should_preserve_current_path_when_updating_search_param_on_404/33_catch-all_root_route_should_preserve_current_path_when_updating_search_param_on_404.md)
+- [catch-all section route should preserve current path when updating search param on /profile/404](34_catch-all_section_route_should_preserve_current_path_when_updating_search_param_on_profile404/34_catch-all_section_route_should_preserve_current_path_when_updating_search_param_on_profile404.md)
 
 ---
 

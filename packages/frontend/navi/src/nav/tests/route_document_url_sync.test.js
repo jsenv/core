@@ -2110,4 +2110,63 @@ await snapshotTests(import.meta.url, ({ test }) => {
       setRouteIntegration(null);
     }
   });
+
+  test("catch-all root route should preserve current path when updating search param on /404", () => {
+    const filterSignal = stateSignal(undefined, { id: "rootFilter" });
+    const ROOT_ROUTE = route("/", { searchParams: { filter: filterSignal } });
+    const navToCalls = [];
+    setRouteIntegration({
+      navTo: (url) => {
+        navToCalls.push(url);
+        updateRoutes(url);
+        return Promise.resolve();
+      },
+    });
+    const { updateRoutes, clearRoutes } = setupRoutes([ROOT_ROUTE]);
+    try {
+      updateRoutes(`${baseUrl}/404`);
+      ROOT_ROUTE.replaceParams({ filter: "active" });
+      return {
+        nav_calls: navToCalls,
+        stays_on_404_path:
+          navToCalls.length > 0 &&
+          new URL(navToCalls[navToCalls.length - 1]).pathname === "/404",
+      };
+    } finally {
+      clearRoutes();
+      globalSignalRegistry.clear();
+      setRouteIntegration(null);
+    }
+  });
+
+  test("catch-all section route should preserve current path when updating search param on /profile/404", () => {
+    const filterSignal = stateSignal(undefined, { id: "profileFilter" });
+    const PROFILE_ROUTE = route("/profile/", {
+      searchParams: { filter: filterSignal },
+    });
+    const navToCalls = [];
+    setRouteIntegration({
+      navTo: (url) => {
+        navToCalls.push(url);
+        updateRoutes(url);
+        return Promise.resolve();
+      },
+    });
+    const { updateRoutes, clearRoutes } = setupRoutes([PROFILE_ROUTE]);
+    try {
+      updateRoutes(`${baseUrl}/profile/404`);
+      PROFILE_ROUTE.replaceParams({ filter: "active" });
+      return {
+        nav_calls: navToCalls,
+        stays_on_profile_404_path:
+          navToCalls.length > 0 &&
+          new URL(navToCalls[navToCalls.length - 1]).pathname ===
+            "/profile/404",
+      };
+    } finally {
+      clearRoutes();
+      globalSignalRegistry.clear();
+      setRouteIntegration(null);
+    }
+  });
 });

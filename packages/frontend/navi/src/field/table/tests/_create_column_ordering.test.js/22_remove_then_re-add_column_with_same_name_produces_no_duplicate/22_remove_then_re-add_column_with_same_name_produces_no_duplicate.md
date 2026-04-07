@@ -8,7 +8,10 @@ syncIds(ordering, cols(["name", "age", "email"]), ["name", "age", "email"]);
 syncIds(ordering, cols(["name", "age"]), ["name", "age", "email"]);
 // add new "email"
 return {
-  result: syncIds(ordering, cols(["name", "age", "email"]), ["name", "age"]),
+  result: syncIds(ordering, cols(["name", "age", "email"]), [
+    "name",
+    "age",
+  ]),
 };
 ```
 
