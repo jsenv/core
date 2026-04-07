@@ -66,8 +66,8 @@
           },
           reset: () => {
             task.state = "idle";
-            task.result = null;
             task.error = null;
+            // keep task.result so previous data is visible after dismiss
             task._notify();
           },
           _notify: () => {
@@ -81,8 +81,8 @@
 
       const runTask = (task, shouldFail) => {
         task.state = "running";
-        task.result = null;
         task.error = null;
+        // keep task.result so previous data is available during re-run
         task._notify();
         setTimeout(() => {
           if (shouldFail) {
@@ -110,7 +110,7 @@
           });
         }, [task]);
 
-        if (task.state === "idle") return null;
+        if (task.state === "idle") return task.result;
         if (task.state === "resolved") return task.result;
         if (task.state === "rejected") {
           const error = task.error;
