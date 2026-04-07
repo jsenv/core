@@ -5,7 +5,7 @@ import { h } from "preact";
 import { useEffect, useErrorBoundary, useRef } from "preact/hooks";
 
 import { RUNNING } from "../../action/action_run_states.js";
-import { dismissAction } from "./use_async_data.js";
+import { dismissAction, undismissAction } from "./use_async_data.js";
 
 export const ErrorBoundary = ({ children, fallback, onReset }) => {
   const [error, resetErrorInternal] = useErrorBoundary();
@@ -28,6 +28,7 @@ export const ErrorBoundary = ({ children, fallback, onReset }) => {
       if (state === RUNNING) {
         unsubscribe();
         unsubscribeRef.current = null;
+        undismissAction(action);
         resetErrorInternal();
       }
     });

@@ -16,10 +16,14 @@ export const useAsyncData = (promiseOrAction) => {
 const actionPendingPromiseWeakMap = new WeakMap();
 const dismissedActionWeakSet = new WeakSet();
 
-// Called by ErrorBoundary when user dismisses an error that has stale data.
-// Keeps action in FAILED state but tells useAction to return the stale data instead of throwing.
+// Called by ErrorBoundary when user dismisses an error.
+// Keeps action in FAILED state but tells useAction to return stale data (or suspend quietly).
 export const dismissAction = (action) => {
   dismissedActionWeakSet.add(action);
+};
+// Called by ErrorBoundary when the dismissed action starts running again.
+export const undismissAction = (action) => {
+  dismissedActionWeakSet.delete(action);
 };
 
 const useAction = (action) => {
@@ -54,20 +58,9 @@ const useAction = (action) => {
 
   let pendingPromise = actionPendingPromiseWeakMap.get(action);
   if (!pendingPromise) {
-    const isIdle = runningState !== RUNNING;
     pendingPromise = new Promise((resolve) => {
       const unsubscribe = action.runningStateSignal.subscribe((state) => {
-        if (isIdle) {
-          // Waiting for action to start running so LoadingFallback can show the spinner
-          if (state === RUNNING) {
-            actionPendingPromiseWeakMap.delete(action);
-            unsubscribe();
-            resolve();
-          }
-        }
-        // Running — waiting for it to settle
-        else if (state === COMPLETED || state === FAILED) {
-          dismissedActionWeakSet.delete(action);
+        if (state === COMPLETED || state === FAILED) {
           actionPendingPromiseWeakMap.delete(action);
           unsubscribe();
           resolve();
