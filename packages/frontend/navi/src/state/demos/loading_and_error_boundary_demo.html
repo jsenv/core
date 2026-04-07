@@ -171,66 +171,70 @@
 
       const ArchitectureSection = () => (
         <div class="demo-section">
-          <h2>Architecture</h2>
-          <p class="demo-description">
-            <code>useAsyncData</code> is designed around one invariant:{" "}
-            <strong>
-              a component using it only ever renders when data is available
-            </strong>
-            . While waiting, the component suspends and never executes. On
-            error, it throws and never renders.
-          </p>
-          <p class="demo-description">This pairs with two wrappers:</p>
-          <ul
-            style={{
-              margin: "0 0 12px",
-              paddingLeft: "20px",
-              color: "#555",
-              fontSize: "0.9em",
-              lineHeight: "1.7",
-            }}
-          >
-            <li>
+          <details>
+            <summary style={{ cursor: "pointer" }}>
+              <h2 style={{ display: "inline" }}>Architecture</h2>
+            </summary>
+            <p class="demo-description">
+              <code>useAsyncData</code> is designed around one invariant:{" "}
               <strong>
-                <code>&lt;Loading fallback=...&gt;</code>
-              </strong>{" "}
-              — catches the suspension and renders the fallback while waiting
-            </li>
-            <li>
-              <strong>
-                <code>&lt;ErrorBoundary fallback=...&gt;</code>
-              </strong>{" "}
-              — catches the thrown error and renders the fallback
-            </li>
-          </ul>
-          <p class="demo-description">
-            Both wrappers can be placed anywhere in the ancestor tree — close to
-            the component for a precise UX, or high in the hierarchy for less
-            code. There are three approaches:
-          </p>
-          <ul
-            style={{
-              margin: "0 0 12px",
-              paddingLeft: "20px",
-              color: "#555",
-              fontSize: "0.9em",
-              lineHeight: "1.7",
-            }}
-          >
-            <li>
-              <strong>Delegates both</strong> — loading and error are handled by
-              outer wrappers. Least code.
-            </li>
-            <li>
-              <strong>Manages loading</strong> — the component's own skeleton is
-              provided in <code>&lt;Loading fallback&gt;</code>. Better loading
-              UX.
-            </li>
-            <li>
-              <strong>Manages error</strong> — the component handles its error
-              state directly. Better error UX.
-            </li>
-          </ul>
+                a component using it only ever renders when data is available
+              </strong>
+              . While waiting, the component suspends and never executes. On
+              error, it throws and never renders.
+            </p>
+            <p class="demo-description">This pairs with two wrappers:</p>
+            <ul
+              style={{
+                margin: "0 0 12px",
+                paddingLeft: "20px",
+                color: "#555",
+                fontSize: "0.9em",
+                lineHeight: "1.7",
+              }}
+            >
+              <li>
+                <strong>
+                  <code>&lt;Loading fallback=...&gt;</code>
+                </strong>{" "}
+                — catches the suspension and renders the fallback while waiting
+              </li>
+              <li>
+                <strong>
+                  <code>&lt;ErrorBoundary fallback=...&gt;</code>
+                </strong>{" "}
+                — catches the thrown error and renders the fallback
+              </li>
+            </ul>
+            <p class="demo-description">
+              Both wrappers can be placed anywhere in the ancestor tree — close
+              to the component for a precise UX, or high in the hierarchy for
+              less code. There are three approaches:
+            </p>
+            <ul
+              style={{
+                margin: "0 0 12px",
+                paddingLeft: "20px",
+                color: "#555",
+                fontSize: "0.9em",
+                lineHeight: "1.7",
+              }}
+            >
+              <li>
+                <strong>Delegates both</strong> — loading and error are handled
+                by outer wrappers. Least code.
+              </li>
+              <li>
+                <strong>Manages loading</strong> — the component's own skeleton
+                is provided in <code>&lt;Loading fallback&gt;</code>. Better
+                loading UX.
+              </li>
+              <li>
+                <strong>Manages error</strong> — the component handles its error
+                state directly. Better error UX.
+              </li>
+            </ul>
+          </details>
         </div>
       );
 
@@ -452,7 +456,7 @@
       // ─── Manages error ────────────────────────────────────────────────────────
 
       // Handles error directly — loading is delegated to <Loading fallback>.
-      const UserCardWithCustomError = ({ action }) => {
+      const UserCardWithCustomError = ({ action, outerCount }) => {
         const { data: user, error } = useAsyncData(action);
         const [count, setCount] = useState(0);
         if (error) {
@@ -481,6 +485,7 @@
             email={user.email}
             count={count}
             onIncrement={() => setCount((n) => n + 1)}
+            outerCount={outerCount}
           />
         );
       };
@@ -488,9 +493,18 @@
       const exManagesError = makeExample("fetchUser3");
       const ManagesErrorDemo = () => {
         const [started, setStarted] = useState(false);
+        const [outerCount, setOuterCount] = useState(0);
         return (
           <DemoSection
             title="Manages error"
+            titleExtra={
+              <button
+                style={{ fontSize: "0.6em", fontWeight: "normal" }}
+                onClick={() => setOuterCount((n) => n + 1)}
+              >
+                Outer count: {outerCount}
+              </button>
+            }
             description="The component renders its own error UI when the action fails, while loading is still delegated to <Loading fallback>. In practice, a custom error UI usually comes paired with a custom skeleton. Tradeoff: more code, but a richer, context-aware error experience."
           >
             <FetchControls
@@ -502,7 +516,10 @@
             />
             {started && (
               <Loading fallback={<UserCardSkeleton />}>
-                <UserCardWithCustomError action={exManagesError.action} />
+                <UserCardWithCustomError
+                  action={exManagesError.action}
+                  outerCount={outerCount}
+                />
               </Loading>
             )}
           </DemoSection>
