@@ -231,15 +231,25 @@
             <span class="card-label">Email</span>
             <span style={{ color: "#555" }}>{email}</span>
           </div>
-          <div class="card-field">
-            <span class="card-label">Outer</span>
-            <span>{outerCount}</span>
-          </div>
-          {onIncrement && (
-            <div class="card-field" style={{ marginTop: "10px" }}>
-              <button onClick={onIncrement}>Count: {count}</button>
+          {outerCount !== undefined && (
+            <div class="card-field">
+              <span class="card-label">Outer</span>
+              <span>{outerCount}</span>
             </div>
           )}
+          <div class="card-field" style={{ marginTop: "10px" }}>
+            <button onClick={onIncrement} disabled={!onIncrement}>
+              Count:{" "}
+              {count !== null && count !== undefined ? (
+                count
+              ) : (
+                <span
+                  class="skeleton"
+                  style={{ width: "20px", verticalAlign: "middle" }}
+                />
+              )}
+            </button>
+          </div>
         </div>
       );
 
@@ -358,7 +368,6 @@
           <UserCardFields
             name={<span class="skeleton" style={{ width: "80px" }} />}
             email={<span class="skeleton" style={{ width: "140px" }} />}
-            count={null}
           />
         );
       };
