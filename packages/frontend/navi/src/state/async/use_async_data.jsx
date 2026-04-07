@@ -25,6 +25,7 @@ export const useAsyncData = (promiseOrAction) => {
 
 const LoadingContext = createContext(null);
 const actionPendingPromiseWeakMap = new WeakMap();
+const dismissedActionWeakSet = new WeakSet();
 
 const useAction = (action) => {
   const loadingRef = useContext(LoadingContext);
@@ -49,9 +50,18 @@ const useAction = (action) => {
     return action.dataSignal.peek();
   }
   if (runningState === FAILED) {
-    const error = action.errorSignal.peek();
-    error.action = action;
-    throw error;
+    if (dismissedActionWeakSet.has(action)) {
+      const staleData = action.dataSignal.peek();
+      if (staleData !== undefined) {
+        // Dismissed with stale data — return it so children render normally
+        return staleData;
+      }
+      // Dismissed with no data — fall through to suspend (LoadingFallback returns null)
+    } else {
+      const error = action.errorSignal.peek();
+      error.action = action;
+      throw error;
+    }
   }
 
   // IDLE (no data) or RUNNING — suspend
@@ -126,37 +136,56 @@ export const Loading = ({ children, fallback }) => {
 
 export const ErrorBoundary = ({ children, fallback, onReset }) => {
   const [error, resetError] = useErrorBoundary();
+  const [dismissed, setDismissed] = useState(false);
+  const dismissedActionRef = useRef(null);
 
   useEffect(() => {
     if (!error) {
       return undefined;
     }
+    setDismissed(false); // new error — show fallback
     const action = error.action;
     if (!action) {
       return undefined;
     }
     return action.runningStateSignal.subscribe((state) => {
       if (state === RUNNING) {
+        dismissedActionWeakSet.delete(action);
+        dismissedActionRef.current = null;
+        setDismissed(false);
         resetError();
       }
     });
   }, [error]);
 
-  if (error) {
+  if (error && !dismissed) {
     error.__handled_by__ = "<ErrorBoundary>"; // prevent jsenv from displaying it
+    const action = error.action;
+    const dismiss = () => {
+      if (action) {
+        dismissedActionWeakSet.add(action);
+        dismissedActionRef.current = action;
+      }
+      onReset?.();
+      setDismissed(true);
+      resetError();
+    };
     if (!fallback) {
       return null;
     }
     if (typeof fallback === "function") {
-      return h(fallback, {
-        error,
-        resetError: () => {
-          onReset?.();
-          resetError();
-        },
-      });
+      return h(fallback, { error, resetError: dismiss });
     }
     return fallback;
+  }
+  if (dismissed) {
+    const action = dismissedActionRef.current;
+    const hasStaleData = action && action.dataSignal.peek() !== undefined;
+    if (!hasStaleData) {
+      // No stale data — render nothing until action runs again
+      return null;
+    }
+    // Has stale data — children will render via useAction returning stale value
   }
   return children;
 };
