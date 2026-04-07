@@ -44,12 +44,12 @@
   <body>
     <div id="root"></div>
     <script type="module" jsenv-type="module/jsx">
-      import { render } from "preact";
+      import { render, createContext } from "preact";
       import { Suspense } from "preact/compat";
       import {
         useState,
         useRef,
-        useEffect,
+        useContext,
         useErrorBoundary,
       } from "preact/hooks";
 
@@ -75,13 +75,20 @@
 
       // pendingPromise WeakMap: tracks the currently-thrown promise per task slot
       const pendingMap = new WeakMap();
+      const ErrorBoundaryResetContext = createContext(null);
 
-      // useTask: throws a promise while pending, throws error if rejected, returns result if resolved
+      // useTask: throws a promise while pending, throws error if rejected, returns result if resolved.
+      // When a new pending task starts, calls reset() from ErrorBoundaryResetContext so the boundary
+      // auto-dismisses — no props needed on ErrorBoundary.
       const useTask = (task) => {
+        const resetRef = useContext(ErrorBoundaryResetContext);
         if (!task) return null;
         if (task.state === "resolved") return task.result;
         if (task.state === "rejected") throw task.error;
-        // pending — throw the promise
+        // pending — new task starting: reset the error boundary before suspending
+        if (resetRef && resetRef.current) {
+          resetRef.current();
+        }
         let p = pendingMap.get(task);
         if (!p) {
           p = task.promise.then(
@@ -98,43 +105,55 @@
       };
 
       // ─── ErrorBoundary ────────────────────────────────────────────────────────
-      // task: ErrorBoundary watches this — when it changes (new fetch), it auto-resets.
-      // This mirrors how the real ErrorBoundary subscribes to action.runningStateSignal.
-      // The boundary itself cannot know a new task started unless something tells it:
-      // children stop rendering when error is caught, so useTask cannot signal via context.
-      const ErrorBoundary = ({ children, task }) => {
+      // Provides reset via context so useTask can auto-dismiss when a new task starts.
+      // Children are always rendered (inside <Suspense fallback={null}> during error state)
+      // so useTask keeps running and can call reset() even while error is showing.
+      const ErrorBoundary = ({ children }) => {
         const [error, resetError] = useErrorBoundary();
         const [dismissed, setDismissed] = useState(false);
+        const resetRef = useRef(null);
 
-        useEffect(() => {
-          if (error) {
-            setDismissed(false);
-            resetError();
-          }
-        }, [task]);
+        const reset = () => {
+          setDismissed(false);
+          resetError();
+        };
+        resetRef.current = reset;
 
         if (error && !dismissed) {
           return (
-            <div class="error">
-              <strong>⚠️ Error caught by ErrorBoundary</strong>
-              <div style="margin: 6px 0; font-family: monospace;">
-                {error.message}
+            <>
+              <div class="error">
+                <strong>⚠️ Error caught by ErrorBoundary</strong>
+                <div style="margin: 6px 0; font-family: monospace;">
+                  {error.message}
+                </div>
+                <button
+                  onClick={() => {
+                    setDismissed(true);
+                    resetError();
+                  }}
+                >
+                  Dismiss
+                </button>
               </div>
-              <button
-                onClick={() => {
-                  setDismissed(true);
-                  resetError();
-                }}
-              >
-                Dismiss
-              </button>
-            </div>
+              <ErrorBoundaryResetContext.Provider value={resetRef}>
+                <Suspense fallback={null}>{children}</Suspense>
+              </ErrorBoundaryResetContext.Provider>
+            </>
           );
         }
         if (dismissed) {
-          return null;
+          return (
+            <ErrorBoundaryResetContext.Provider value={resetRef}>
+              <Suspense fallback={null}>{children}</Suspense>
+            </ErrorBoundaryResetContext.Provider>
+          );
         }
-        return children;
+        return (
+          <ErrorBoundaryResetContext.Provider value={resetRef}>
+            {children}
+          </ErrorBoundaryResetContext.Provider>
+        );
       };
 
       // ─── Child component that suspends ────────────────────────────────────────
@@ -179,7 +198,7 @@
             <button onClick={() => run(false)}>✅ Fetch (success)</button>
             <button onClick={() => run(true)}>❌ Fetch (fail)</button>
             <h2>Output</h2>
-            <ErrorBoundary task={task}>
+            <ErrorBoundary>
               <Suspense fallback={<div class="loading">Loading…</div>}>
                 {task && <Child task={taskRef.current} />}
               </Suspense>
