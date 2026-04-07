@@ -95,6 +95,7 @@ export const TableData = ({ table }) => {
   const selectedRowCount = selectedRows.length;
 
   const activeColumnName = tableColumnNameSignal.value;
+  const columnSidePanelOpened = Boolean(activeColumnName);
 
   return (
     <div>
@@ -218,7 +219,7 @@ export const TableData = ({ table }) => {
       </div>
 
       <SidePanel
-        isOpen={Boolean(activeColumnName)}
+        isOpen={columnSidePanelOpened}
         onClose={() => {
           tableColumnNameSignal.value = undefined;
         }}
@@ -228,8 +229,6 @@ export const TableData = ({ table }) => {
             tablename={tablename}
             column_name={activeColumnName}
             columns={columns}
-
-            // onClose={() => setSelectedColumn(null)}
           />
         ) : null}
       </SidePanel>
