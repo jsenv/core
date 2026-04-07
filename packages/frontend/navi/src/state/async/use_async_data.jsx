@@ -13,10 +13,10 @@ import {
 import { COMPLETED, FAILED, RUNNING } from "../../action/action_run_states.js";
 import { usePromise } from "./use_promise.js";
 
-export const useAsyncData = (promiseOrAction) => {
+export const useAsyncData = (promiseOrAction, options) => {
   const isAction = Boolean(promiseOrAction && promiseOrAction.isAction);
   if (isAction) {
-    return useAction(promiseOrAction);
+    return useAction(promiseOrAction, options);
   }
   return usePromise(promiseOrAction);
 };
@@ -27,7 +27,8 @@ const LoadingContext = createContext(null);
 const actionPendingPromiseWeakMap = new WeakMap();
 const dismissedActionWeakSet = new WeakSet();
 
-const useAction = (action) => {
+const useAction = (action, options) => {
+  const allowStale = options && options.allowStale;
   const loadingRef = useContext(LoadingContext);
   // Use peek() instead of .value to avoid subscribing this component to the signal.
   // Reading .value would make Preact re-render the component reactively when the state
@@ -47,13 +48,20 @@ const useAction = (action) => {
   }, []);
 
   if (runningState === COMPLETED) {
-    return action.dataSignal.peek();
+    const data = action.dataSignal.peek();
+    if (allowStale) {
+      return { data, loading: false };
+    }
+    return data;
   }
   if (runningState === FAILED) {
     if (dismissedActionWeakSet.has(action)) {
       const staleData = action.dataSignal.peek();
       if (staleData !== undefined) {
         // Dismissed with stale data — return it so children render normally
+        if (allowStale) {
+          return { data: staleData, loading: false };
+        }
         return staleData;
       }
       // Dismissed with no data — fall through to suspend (LoadingFallback returns null)
@@ -65,6 +73,14 @@ const useAction = (action) => {
   }
 
   // IDLE (no data) or RUNNING — suspend
+  // Exception: if allowStale is true and we have previous data, return it with loading:true
+  if (runningState === RUNNING && allowStale) {
+    const staleData = action.dataSignal.peek();
+    if (staleData !== undefined) {
+      return { data: staleData, loading: true };
+    }
+  }
+
   const reason = runningState === RUNNING ? "loading" : "idle";
   loadingRef.current = { reason, action };
 

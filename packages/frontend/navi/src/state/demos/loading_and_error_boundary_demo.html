@@ -147,7 +147,7 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { signal } from "@preact/signals";
-      import { useEffect, useState } from "preact/hooks";
+      import { useState } from "preact/hooks";
       import {
         createAction,
         useAsyncData,
@@ -165,7 +165,7 @@
           <DelegatesBothDemo />
           <ManagesLoadingDemo />
           <ManagesErrorDemo />
-          <StaleWhileRevalidateDemo />
+          <AllowStaleDemo />
         </div>
       );
 
@@ -515,44 +515,55 @@
         );
       };
 
-      // ─── Manages loading (stale-while-revalidate variant) ─────────────────────
+      // ─── Preserves data while loading ─────────────────────────────────────────
 
-      const exStaleWhileRevalidate = makeExample("fetchUser4");
-      const StaleWhileRevalidateDemo = () => {
+      const exAllowStale = makeExample("fetchUser4");
+      const AllowStaleDemo = () => {
+        const [outerCount, setOuterCount] = useState(0);
         return (
           <DemoSection
-            title="Manages loading (stale-while-revalidate variant)"
-            description="While re-fetching, the component keeps showing the previous data instead of replacing it with a skeleton. The stale value is preserved in local state and displayed until fresh data arrives. Tradeoff: smoother revalidation UX, but the component owns more state and the logic is harder to follow."
+            title="Preserves data while loading"
+            titleExtra={
+              <button
+                style={{ fontSize: "0.6em", fontWeight: "normal" }}
+                onClick={() => setOuterCount((n) => n + 1)}
+              >
+                Outer count: {outerCount}
+              </button>
+            }
+            description="While re-fetching, the component keeps showing the previous data instead of suspending again. On first load it still suspends normally. Tradeoff: smoother revalidation UX with minimal extra code — the component just handles a loading flag."
           >
             <FetchControls
               action={() => {
-                return exStaleWhileRevalidate.action.rerun();
+                return exAllowStale.action.rerun();
               }}
-              shouldFail={exStaleWhileRevalidate.shouldFail}
+              shouldFail={exAllowStale.shouldFail}
             />
-
             <ErrorBoundary fallback={ErrorCard}>
               <Loading fallback={UserCardSkeleton}>
-                <UserCardStaleWhileRevalidate
-                  action={exStaleWhileRevalidate.action}
+                <UserCardAllowStale
+                  action={exAllowStale.action}
+                  outerCount={outerCount}
                 />
               </Loading>
             </ErrorBoundary>
           </DemoSection>
         );
       };
-      // Shows previous data while re-fetching instead of going back to skeletons.
-      const UserCardStaleWhileRevalidate = ({ action }) => {
-        const user = useAsyncData(action, { latest: true });
+      // Shows previous data while re-fetching — suspends only on first load.
+      const UserCardAllowStale = ({ action, outerCount }) => {
+        const { data: user, loading } = useAsyncData(action, {
+          allowStale: true,
+        });
         const [count, setCount] = useState(0);
-
         return (
           <div>
             <UserCardFields
-              name={displayUser.name}
-              email={displayUser.email}
+              name={user.name}
+              email={user.email}
               count={count}
               onIncrement={() => setCount((n) => n + 1)}
+              outerCount={outerCount}
             />
             {loading && (
               <div
