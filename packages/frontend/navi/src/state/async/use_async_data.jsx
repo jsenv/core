@@ -183,10 +183,6 @@ const LoadingFallback = ({ loadingRef, fallback }) => {
 
 export const Loading = ({ children, fallback }) => {
   const loadingRef = useRef({ reason: "idle", action: null });
-  if (!fallback) {
-    // No fallback — children handle loading state via { loading } from useAsyncData
-    return children;
-  }
   return (
     <LoadingContext.Provider value={loadingRef}>
       <Suspense

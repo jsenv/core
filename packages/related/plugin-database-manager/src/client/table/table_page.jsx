@@ -32,7 +32,6 @@ import { Page, PageBody, PageHead } from "../layout/page.jsx";
 import {
   TABLE_GET_ACTION,
   TABLE_INDEX_ROUTE,
-  TABLE_ROW_GET_MANY_ACTION,
   TABLE_SETTINGS_ROUTE,
 } from "../routes.js";
 import { DataSvg } from "../svg/data_svg.jsx";
@@ -106,8 +105,8 @@ export const TablePage = () => {
           <Route>
             <Route
               route={TABLE_INDEX_ROUTE}
-              action={TABLE_ROW_GET_MANY_ACTION}
-              element={(rows) => <TableData table={table} rows={rows} />}
+              element={TableData}
+              elementProps={{ table }}
             />
             <Route
               route={TABLE_SETTINGS_ROUTE}

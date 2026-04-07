@@ -33,11 +33,13 @@ import {
   Text,
   Thead,
   Tr,
+  useAsyncData,
   useCellGridFromRows,
   useOrderedColumns,
 } from "@jsenv/navi";
 import { useRef, useState } from "preact/hooks";
 
+import { TABLE_ROW_GET_MANY_ACTION } from "../routes.js";
 import { ColumnSidePanelContent } from "./column_side_panel_content.jsx";
 import {
   TABLE_COLUMN,
@@ -51,7 +53,9 @@ import.meta.css = /* css */ `
   }
 `;
 
-export const TableData = ({ table, rows }) => {
+export const TableData = ({ table }) => {
+  const { data: rows } = useAsyncData(TABLE_ROW_GET_MANY_ACTION);
+
   const tableRef = useRef(null);
   const { tablename, columns } = table;
   const createRow = TABLE_ROW.POST.bindParams({ tablename });
