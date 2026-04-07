@@ -141,34 +141,42 @@ export const Loading = ({ children, fallback }) => {
 export const ErrorBoundary = ({ children, fallback, onReset }) => {
   const [error, resetError] = useErrorBoundary();
   const [dismissed, setDismissed] = useState(false);
-  const dismissedActionRef = useRef(null);
+  const cleanupRef = useRef();
 
   useEffect(() => {
-    if (!error) {
-      return undefined;
-    }
-    setDismissed(false); // new error — show fallback
-    const action = error.action;
-    if (!action) {
-      return undefined;
-    }
-    return action.runningStateSignal.subscribe((state) => {
-      if (state === RUNNING) {
-        dismissedActionWeakSet.delete(action);
-        dismissedActionRef.current = null;
-        setDismissed(false);
-        resetError();
-      }
-    });
-  }, [error]);
+    return () => {
+      cleanupRef.current?.();
+    };
+  }, []);
 
-  if (error && !dismissed) {
+  if (error) {
     error.__handled_by__ = "<ErrorBoundary>"; // prevent jsenv from displaying it
+
     const action = error.action;
+    if (action) {
+      cleanupRef.current?.();
+      cleanupRef.current = action.runningStateSignal.subscribe((state) => {
+        if (state === RUNNING) {
+          dismissedActionWeakSet.delete(action);
+          setDismissed(false);
+          resetError();
+        }
+      });
+
+      const hasStaleData = action && action.dataSignal.peek() !== undefined;
+      if (dismissed) {
+        if (hasStaleData) {
+          // Has stale data — children will render (useAction returns stale value)
+          return children;
+        }
+      }
+    } else if (dismissed) {
+      // stop rendering the error
+      return null;
+    }
     const dismiss = () => {
       if (action) {
         dismissedActionWeakSet.add(action);
-        dismissedActionRef.current = action;
       }
       onReset?.();
       setDismissed(true);
@@ -181,15 +189,6 @@ export const ErrorBoundary = ({ children, fallback, onReset }) => {
       return h(fallback, { error, resetError: dismiss });
     }
     return fallback;
-  }
-  if (dismissed) {
-    const action = dismissedActionRef.current;
-    const hasStaleData = action && action.dataSignal.peek() !== undefined;
-    if (!hasStaleData) {
-      // No stale data — render nothing until action runs again
-      return null;
-    }
-    // Has stale data — children will render via useAction returning stale value
   }
   return children;
 };
