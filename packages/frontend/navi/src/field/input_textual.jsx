@@ -251,6 +251,7 @@ import.meta.css = /* css */ `
     /* Callout (info, warning, error) */
     &[data-callout] {
       --x-border-color: var(--callout-color);
+      --x-outline-color: var(--callout-color);
     }
   }
 

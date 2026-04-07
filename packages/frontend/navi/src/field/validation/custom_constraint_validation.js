@@ -501,8 +501,15 @@ export const installCustomConstraintValidation = (
       closeElementValidationMessage("cleanup");
     });
 
-    const anchorElement =
-      failedConstraintInfo.target || elementReceivingValidationMessage;
+    const anchorElement = (() => {
+      const base =
+        failedConstraintInfo.target || elementReceivingValidationMessage;
+      const renderedBy = base.getAttribute("data-rendered-by");
+      if (renderedBy) {
+        return base.closest(renderedBy) || base;
+      }
+      return base;
+    })();
     validationInterface.validationMessage = openCallout(
       failedConstraintInfo.message,
       {

@@ -166,6 +166,10 @@ import.meta.css = /* css */ `
         border-radius: inherit;
         pointer-events: none;
       }
+
+      & > img {
+        border-radius: inherit;
+      }
     }
 
     &[data-reveal-on-interaction] {
@@ -256,13 +260,10 @@ import.meta.css = /* css */ `
         --x-button-border-color: transparent;
       }
     }
-  }
-  /* Callout (info, warning, error) */
-  .navi_button[data-callout] {
-    --x-button-border-color: var(--callout-color);
-  }
-  .navi_button > img {
-    border-radius: inherit;
+    /* Callout (info, warning, error) */
+    &[data-callout] {
+      --x-button-border-color: var(--callout-color);
+    }
   }
 `;
 

@@ -1,6 +1,6 @@
 import { createContext } from "preact";
 import { createPortal } from "preact/compat";
-import { useContext, useEffect, useRef, useState } from "preact/hooks";
+import { useContext, useLayoutEffect, useRef, useState } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
 import { useKeyboardShortcuts } from "../keyboard/keyboard_shortcuts.js";
@@ -125,8 +125,13 @@ export const SidePanel = ({
   const panelDialogRef = useRef(null);
   const [phase, setPhase] = useState(isOpen ? "open" : "closed");
   const previousFocusRef = useRef(null);
+  const isMountedRef = useRef(false);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
+    if (!isMountedRef.current) {
+      isMountedRef.current = true;
+      return;
+    }
     if (isOpen) {
       setPhase("opening");
     } else if (phase !== "closed") {
@@ -134,7 +139,7 @@ export const SidePanel = ({
     }
   }, [isOpen]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (phase === "opening" && panelDialogRef.current) {
       previousFocusRef.current = document.activeElement;
       panelDialogRef.current.focus();
