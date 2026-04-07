@@ -359,7 +359,7 @@
         const [started5, setStarted5] = useState(false);
         return (
           <DemoSection
-            title="Component-managed loading"
+            title="Manages loading"
             loading="component"
             error="delegated"
             description="The component receives { loading } and renders its own placeholders while waiting. Errors bubble up to the nearest ErrorBoundary."
@@ -407,7 +407,7 @@
         const [started, setStarted] = useState(false);
         return (
           <DemoSection
-            title="Delegated loading"
+            title="Manages nothing"
             loading="delegated"
             error="delegated"
             description="Neither loading nor errors reach the component. Wrap with <Loading fallback> and <ErrorBoundary> — the component only ever renders with ready data."
@@ -468,7 +468,7 @@
         const [started, setStarted] = useState(false);
         return (
           <DemoSection
-            title="Component-managed loading and error"
+            title="Manages loading and error"
             loading="component"
             error="component"
             description="The component handles everything itself. No ErrorBoundary or Loading fallback needed."
