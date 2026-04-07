@@ -367,7 +367,6 @@
 
       const exDelegatesBoth = makeExample("fetchUser1");
       const DelegatesBothDemo = () => {
-        const [started, setStarted] = useState(false);
         const [outerCount, setOuterCount] = useState(0);
         return (
           <DemoSection
@@ -384,21 +383,18 @@
           >
             <FetchControls
               action={() => {
-                setStarted(true);
                 return exDelegatesBoth.action.rerun();
               }}
               shouldFail={exDelegatesBoth.shouldFail}
             />
-            {started && (
-              <ErrorBoundary fallback={ErrorCard}>
-                <Loading fallback={<div class="card-loading">Loading…</div>}>
-                  <UserCard
-                    action={exDelegatesBoth.action}
-                    outerCount={outerCount}
-                  />
-                </Loading>
-              </ErrorBoundary>
-            )}
+            <ErrorBoundary fallback={ErrorCard}>
+              <Loading fallback={<div class="card-loading">Loading…</div>}>
+                <UserCard
+                  action={exDelegatesBoth.action}
+                  outerCount={outerCount}
+                />
+              </Loading>
+            </ErrorBoundary>
           </DemoSection>
         );
       };
@@ -409,7 +405,6 @@
 
       const exManagesLoading = makeExample("fetchUser2");
       const ManagesLoadingDemo = () => {
-        const [started, setStarted] = useState(false);
         const [outerCount, setOuterCount] = useState(0);
         return (
           <DemoSection
@@ -426,21 +421,19 @@
           >
             <FetchControls
               action={() => {
-                setStarted(true);
                 return exManagesLoading.action.rerun();
               }}
               shouldFail={exManagesLoading.shouldFail}
             />
-            {started && (
-              <ErrorBoundary fallback={ErrorCard}>
-                <Loading fallback={<UserCardSkeleton />}>
-                  <UserCard
-                    action={exManagesLoading.action}
-                    outerCount={outerCount}
-                  />
-                </Loading>
-              </ErrorBoundary>
-            )}
+
+            <ErrorBoundary fallback={ErrorCard}>
+              <Loading fallback={<UserCardSkeleton />}>
+                <UserCard
+                  action={exManagesLoading.action}
+                  outerCount={outerCount}
+                />
+              </Loading>
+            </ErrorBoundary>
           </DemoSection>
         );
       };
@@ -455,44 +448,8 @@
 
       // ─── Manages error ────────────────────────────────────────────────────────
 
-      // Handles error directly — loading is delegated to <Loading fallback>.
-      const UserCardWithCustomError = ({ action, outerCount }) => {
-        const { data: user, error } = useAsyncData(action);
-        const [count, setCount] = useState(0);
-        if (error) {
-          return (
-            <div class="card-error">
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "8px",
-                  marginBottom: "8px",
-                }}
-              >
-                <span style={{ fontSize: "1.2em" }}>⚠️</span>
-                <strong>Something went wrong</strong>
-              </div>
-              <div style={{ fontFamily: "monospace", fontSize: "0.9em" }}>
-                {error.message}
-              </div>
-            </div>
-          );
-        }
-        return (
-          <UserCardFields
-            name={user.name}
-            email={user.email}
-            count={count}
-            onIncrement={() => setCount((n) => n + 1)}
-            outerCount={outerCount}
-          />
-        );
-      };
-
       const exManagesError = makeExample("fetchUser3");
       const ManagesErrorDemo = () => {
-        const [started, setStarted] = useState(false);
         const [outerCount, setOuterCount] = useState(0);
         return (
           <DemoSection
@@ -509,20 +466,40 @@
           >
             <FetchControls
               action={() => {
-                setStarted(true);
                 return exManagesError.action.rerun();
               }}
               shouldFail={exManagesError.shouldFail}
             />
-            {started && (
+            <ErrorBoundary fallback={UserCardError}>
               <Loading fallback={<UserCardSkeleton />}>
-                <UserCardWithCustomError
+                <UserCard
                   action={exManagesError.action}
                   outerCount={outerCount}
                 />
               </Loading>
-            )}
+            </ErrorBoundary>
           </DemoSection>
+        );
+      };
+
+      const UserCardError = ({ error }) => {
+        return (
+          <div class="card-error">
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                marginBottom: "8px",
+              }}
+            >
+              <span style={{ fontSize: "1.2em" }}>⚠️</span>
+              <strong>Something went wrong</strong>
+            </div>
+            <div style={{ fontFamily: "monospace", fontSize: "0.9em" }}>
+              {error.message}
+            </div>
+          </div>
         );
       };
 
