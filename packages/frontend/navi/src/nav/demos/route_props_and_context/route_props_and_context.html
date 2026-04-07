@@ -3,329 +3,153 @@
   <head>
     <meta charset="utf-8" />
     <title>Route props and context demo</title>
-    <style>
-      body {
-        max-width: 760px;
-        margin: 0 auto;
-        padding: 20px;
-        font-family: system-ui, sans-serif;
-        background: #f5f5f5;
-      }
-
-      /* ContentView — the main renderable area */
-      .content-view {
-        padding: 16px;
-        background: white;
-        border: 2px solid #ccc;
-        border-radius: 6px;
-      }
-      .content-view-header {
-        display: flex;
-        margin-bottom: 12px;
-        align-items: center;
-        gap: 8px;
-      }
-      .content-item {
-        display: flex;
-        padding: 10px 12px;
-        align-items: center;
-        gap: 10px;
-        border: 2px solid transparent;
-        border-left-width: 4px;
-        border-radius: 6px;
-        transition:
-          opacity 0.15s,
-          background 0.15s;
-        cursor: pointer;
-        user-select: none;
-      }
-      .content-item:hover {
-        background: #f5f5f5;
-      }
-      .content-item.selected {
-        background: #f0f7ff;
-        border-color: inherit;
-      }
-      .content-item.dimmed {
-        opacity: 0.35;
-      }
-      .content-item-dot {
-        width: 12px;
-        height: 12px;
-        flex-shrink: 0;
-        border-radius: 50%;
-      }
-      .content-item-label {
-        flex: 1;
-        font-weight: 500;
-      }
-
-      /* Legend — the companion panel */
-      .legend {
-        padding: 16px;
-        background: #f0f7ff;
-        border: 2px solid #90caf9;
-        border-radius: 6px;
-      }
-      .legend-header {
-        display: flex;
-        margin-bottom: 12px;
-        align-items: center;
-        gap: 8px;
-      }
-      .legend-entry {
-        display: flex;
-        padding: 6px 10px;
-        align-items: center;
-        gap: 8px;
-        border: 2px solid transparent;
-        border-radius: 4px;
-        cursor: pointer;
-        user-select: none;
-      }
-      .legend-entry:hover {
-        background: #dceeff;
-      }
-      .legend-entry.selected {
-        font-weight: 600;
-        background: #dceeff;
-        border-color: #1976d2;
-      }
-      .legend-dot {
-        width: 14px;
-        height: 14px;
-        flex-shrink: 0;
-        border-radius: 50%;
-      }
-      .legend-none {
-        padding: 6px 10px;
-        color: #aaa;
-        font-style: italic;
-        font-size: 0.9rem;
-      }
-
-      /* shared */
-      .render-count {
-        display: inline-block;
-        padding: 2px 8px;
-        color: #fff;
-        font-size: 0.75rem;
-        background: #888;
-        border-radius: 10px;
-      }
-      .component-label {
-        color: #555;
-        font-weight: 700;
-        font-size: 0.75rem;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-      }
-    </style>
   </head>
   <body>
     <div id="app"></div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useRef, useState } from "preact/hooks";
-      import {
-        Box,
-        Caption,
-        Route,
-        Nav,
-        Link,
-        route,
-        setupRoutes,
-      } from "@jsenv/navi";
+      import { Box, Route, Nav, Link, route, setupRoutes } from "@jsenv/navi";
 
       const ALPHA_ROUTE = route("/alpha");
       const BETA_ROUTE = route("/beta");
       setupRoutes([ALPHA_ROUTE, BETA_ROUTE]);
 
       /*
-       * CATEGORIES — shared by both ContentViews and the Legend.
-       * The Legend lists these. Each ContentView has its own objects,
-       * but every object belongs to one of these categories.
-       * "selectedCategory" is the shared state: it belongs to neither
-       * ContentView nor the Legend — it flows between them.
+       * RouteContent — the element rendered inside the route.
+       * It receives props from its wrapper (wrapperCount) to show
+       * that route elements have access to whatever the wrapper passes.
        */
-      const CATEGORIES = [
-        { id: "low", label: "Low", color: "#43a047" },
-        { id: "medium", label: "Medium", color: "#fb8c00" },
-        { id: "high", label: "High", color: "#e53935" },
-      ];
-
-      // Alpha tab: tasks. Each task belongs to a category.
-      const ALPHA_ITEMS = [
-        { id: "task-a", label: "Task A", category: "low" },
-        { id: "task-b", label: "Task B", category: "high" },
-        { id: "task-c", label: "Task C", category: "medium" },
-      ];
-
-      // Beta tab: zones. Same categories, different objects.
-      const BETA_ITEMS = [
-        { id: "zone-1", label: "Zone 1", category: "medium" },
-        { id: "zone-2", label: "Zone 2", category: "low" },
-        { id: "zone-3", label: "Zone 3", category: "high" },
-      ];
-
-      const categoryById = Object.fromEntries(CATEGORIES.map((c) => [c.id, c]));
-
-      const App = () => {
-        /*
-         * selectedCategory is the shared state.
-         * It is not "which item is selected in the ContentView" —
-         * it is "which category is currently active".
-         * Both ContentView and Legend read + write it.
-         */
-        const [selectedCategory, setSelectedCategory] = useState(undefined);
-
+      const RouteContent = ({ label, wrapperCount }) => {
+        const renderCount = useRef(0);
+        renderCount.current++;
         return (
-          <Box row spacing="m">
-            <Nav>
-              <Link route={ALPHA_ROUTE}>Tasks</Link>
-              <Link route={BETA_ROUTE}>Zones</Link>
-            </Nav>
-
-            <Box row spacing="m" alignY="start">
-              {/*
-               * The active ContentView renders its own objects but
-               * highlights those whose category matches selectedCategory.
-               * Clicking an object selects its category.
-               */}
-              <Route>
-                <Route
-                  route={ALPHA_ROUTE}
-                  element={
-                    <ContentView
-                      items={ALPHA_ITEMS}
-                      selectedCategory={selectedCategory}
-                      onSelectedCategoryChange={setSelectedCategory}
-                    />
-                  }
-                />
-                <Route
-                  route={BETA_ROUTE}
-                  element={
-                    <ContentView
-                      items={BETA_ITEMS}
-                      selectedCategory={selectedCategory}
-                      onSelectedCategoryChange={setSelectedCategory}
-                    />
-                  }
-                />
-              </Route>
-
-              {/*
-               * Legend is always visible, independent of the active tab.
-               * It lists the shared categories. Selecting a category here
-               * drives the highlight in the active ContentView.
-               * When ContentView changes selectedCategory, Legend reflects it.
-               */}
-              <Legend
-                categories={CATEGORIES}
-                selectedCategory={selectedCategory}
-                onSelectedCategoryChange={setSelectedCategory}
-              />
-            </Box>
+          <Box
+            flex="y"
+            spacing="s"
+            style={{
+              border: "1px solid #aaa",
+              padding: "8px",
+              borderRadius: "4px",
+            }}
+          >
+            <strong>{label} (RouteContent)</strong>
+            <span>
+              wrapperCount from props: <strong>{wrapperCount}</strong>
+            </span>
+            <span style={{ color: "#888", fontSize: "0.85em" }}>
+              RouteContent render #{renderCount.current}
+            </span>
           </Box>
         );
       };
 
       /*
-       * ContentView — renders its own objects.
-       * Each object is tagged with a category. When selectedCategory is set,
-       * objects matching that category are highlighted; others are dimmed.
-       * Clicking an object selects its category (or clears if already selected).
+       * AlphaWrapper — wraps the Alpha route.
+       * Owns a counter and passes it to RouteContent via elementProps.
+       *
+       * Recommended: elementProps — the component is only instantiated
+       * when the route matches.
        */
-      const ContentView = ({
-        items,
-        selectedCategory,
-        onSelectedCategoryChange,
-      }) => {
+      const AlphaWrapper = () => {
         const renderCount = useRef(0);
         renderCount.current++;
-
+        const [count, setCount] = useState(0);
         return (
-          <div className="content-view" style={{ flex: 1 }}>
-            <div className="content-view-header">
-              <span className="component-label">ContentView</span>
-              <span className="render-count">
-                render #{renderCount.current}
-              </span>
-            </div>
-            <Box column spacing="s">
-              {items.map(({ id, label, category }) => {
-                const cat = categoryById[category];
-                const isSelected = selectedCategory === category;
-                const isDimmed = selectedCategory !== undefined && !isSelected;
-                return (
-                  <div
-                    key={id}
-                    className={`content-item${isSelected ? " selected" : ""}${isDimmed ? " dimmed" : ""}`}
-                    style={{ borderLeftColor: cat.color }}
-                    onClick={() =>
-                      onSelectedCategoryChange(
-                        isSelected ? undefined : category,
-                      )
-                    }
-                  >
-                    <span
-                      className="content-item-dot"
-                      style={{ background: cat.color }}
-                    />
-                    <span className="content-item-label">{label}</span>
-                  </div>
-                );
-              })}
-            </Box>
-            <Caption marginTop="s">
-              Click an item to select its category.
-            </Caption>
-          </div>
+          <Box
+            flex="y"
+            spacing="s"
+            style={{
+              border: "2px solid #1976d2",
+              padding: "12px",
+              borderRadius: "6px",
+            }}
+          >
+            <strong>AlphaWrapper</strong>
+            <span style={{ color: "#888", fontSize: "0.85em" }}>
+              AlphaWrapper render #{renderCount.current}
+            </span>
+            <span>
+              count: <strong>{count}</strong>
+            </span>
+            <button
+              onClick={() => {
+                setCount(count + 1);
+              }}
+            >
+              Increment
+            </button>
+            <Route
+              route={ALPHA_ROUTE}
+              element={RouteContent}
+              elementProps={{ label: "Alpha", wrapperCount: count }}
+            />
+          </Box>
         );
       };
 
       /*
-       * Legend — lists the shared categories.
-       * Completely unaware of what objects the ContentView is rendering.
-       * Selecting a category here is reflected in the active ContentView.
+       * BetaWrapper — wraps the Beta route.
+       * Owns a counter and passes it to RouteContent via element={<>}.
+       *
+       * Not recommended: element={<RouteContent />} calls the component
+       * unconditionally, even when the route does not match.
        */
-      const Legend = ({
-        categories,
-        selectedCategory,
-        onSelectedCategoryChange,
-      }) => {
+      const BetaWrapper = () => {
         const renderCount = useRef(0);
         renderCount.current++;
-
+        const [count, setCount] = useState(0);
         return (
-          <div className="legend">
-            <div className="legend-header">
-              <span className="component-label">Legend</span>
-              <span className="render-count">
-                render #{renderCount.current}
-              </span>
-            </div>
-            <Box column spacing="xs">
-              {categories.map(({ id, label, color }) => (
-                <div
-                  key={id}
-                  className={`legend-entry${selectedCategory === id ? " selected" : ""}`}
-                  onClick={() =>
-                    onSelectedCategoryChange(
-                      selectedCategory === id ? undefined : id,
-                    )
-                  }
-                >
-                  <span className="legend-dot" style={{ background: color }} />
-                  {label}
-                </div>
-              ))}
-              {selectedCategory === undefined && (
-                <div className="legend-none">Nothing selected</div>
-              )}
-            </Box>
-          </div>
+          <Box
+            flex="y"
+            spacing="s"
+            style={{
+              border: "2px solid #e53935",
+              padding: "12px",
+              borderRadius: "6px",
+            }}
+          >
+            <strong>BetaWrapper</strong>
+            <span style={{ color: "#888", fontSize: "0.85em" }}>
+              BetaWrapper render #{renderCount.current}
+            </span>
+            <span>
+              count: <strong>{count}</strong>
+            </span>
+            <button
+              onClick={() => {
+                setCount(count + 1);
+              }}
+            >
+              Increment
+            </button>
+            <Route
+              route={BETA_ROUTE}
+              element={<RouteContent label="Beta" wrapperCount={count} />}
+            />
+          </Box>
+        );
+      };
+
+      const App = () => {
+        return (
+          <Box flex="y" spacing="m">
+            <Nav spacing="s">
+              <Link route={ALPHA_ROUTE} appearance="tab" currentIndicator>
+                Alpha
+              </Link>
+              <Link route={BETA_ROUTE} appearance="tab" currentIndicator>
+                Beta
+              </Link>
+            </Nav>
+            <p>
+              Each wrapper owns a counter. When it increments, the wrapper
+              re-renders and passes the updated count as a prop to its route
+              element.
+            </p>
+            <AlphaWrapper />
+            <BetaWrapper />
+          </Box>
         );
       };
 
