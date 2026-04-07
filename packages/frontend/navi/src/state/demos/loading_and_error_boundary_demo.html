@@ -341,10 +341,19 @@
       const exManagesLoading = makeExample("fetchUser2");
       const ManagesLoadingDemo = () => {
         const [started, setStarted] = useState(false);
+        const [outerCount, setOuterCount] = useState(0);
         return (
           <DemoSection
             title="Manages loading"
-            description="The component receives { loading } and renders its own placeholders while waiting. Errors bubble up to the nearest <ErrorBoundary>."
+            titleExtra={
+              <button
+                style={{ fontSize: "0.6em", fontWeight: "normal" }}
+                onClick={() => setOuterCount((n) => n + 1)}
+              >
+                Outer count: {outerCount}
+              </button>
+            }
+            description="The skeleton lives in <Loading fallback> alongside the component, not inside it. This keeps UserCard always pure, at the cost of co-locating the skeleton with the usage site rather than the component definition. Loading/error bubble up to their respective parents — tradeoff: more dev work per usage, better UX (skeleton matches the card shape)."
           >
             <FetchControls
               action={() => {
@@ -356,7 +365,10 @@
             {started && (
               <ErrorBoundary fallback={ErrorCard}>
                 <Loading fallback={<UserCardSkeleton />}>
-                  <UserCard action={exManagesLoading.action} />
+                  <UserCard
+                    action={exManagesLoading.action}
+                    outerCount={outerCount}
+                  />
                 </Loading>
               </ErrorBoundary>
             )}
