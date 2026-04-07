@@ -32,8 +32,7 @@ export const useAsyncData = (
 const LoadingContext = createContext(null);
 const actionPendingPromiseWeakMap = new WeakMap();
 const dismissedActionWeakSet = new WeakSet();
-
-const neverResolvingPromise = new Promise(() => {});
+const dismissedActionPendingPromiseWeakMap = new WeakMap();
 
 const useAction = (action, { loadingEffect, errorEffect }) => {
   const loadingRef = useContext(LoadingContext);
@@ -72,11 +71,24 @@ const useAction = (action, { loadingEffect, errorEffect }) => {
           data: staleData,
         };
       }
-      // Dismissed with no data — suspend indefinitely.
-      // We can't return data, we can't throw the error again.
-      // Using a never-resolving promise keeps the component suspended
-      // without re-rendering, avoiding an infinite loop.
-      throw neverResolvingPromise;
+      // Dismissed with no data — suspend until the action re-runs.
+      // A never-resolving promise would leave the component stuck forever,
+      // so we use an action-specific promise that resolves on RUNNING,
+      // which lets the component re-render and go through the normal loading path.
+      let dismissedPromise = dismissedActionPendingPromiseWeakMap.get(action);
+      if (!dismissedPromise) {
+        dismissedPromise = new Promise((resolve) => {
+          const unsubscribe = action.runningStateSignal.subscribe((state) => {
+            if (state === RUNNING) {
+              dismissedActionPendingPromiseWeakMap.delete(action);
+              unsubscribe();
+              resolve();
+            }
+          });
+        });
+        dismissedActionPendingPromiseWeakMap.set(action, dismissedPromise);
+      }
+      throw dismissedPromise;
     }
     const actionError = action.errorSignal.peek();
     if (errorEffect === "internal") {
