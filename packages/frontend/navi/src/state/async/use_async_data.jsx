@@ -22,60 +22,43 @@ export const useAsyncData = (promiseOrAction) => {
 };
 const useAction = (action) => {
   const loadingRef = useContext(LoadingContext);
-  const runningState = action.runningStateSignal.value;
+  const runningState = action.runningStateSignal.peek();
   console.debug(`useAction(${action.name}): render state=${runningState.id}`);
 
-  if (runningState === COMPLETED) {
-    console.debug(`useAction(${action.name}): -> return data`);
-    return { data: action.dataSignal.peek(), loading: false };
-  }
   if (runningState === FAILED) {
-    if (!dismissedActionWeakSet.has(action)) {
-      console.debug(`useAction(${action.name}): -> throw error`);
-      const error = action.errorSignal.peek();
-      error.action = action;
-      throw error;
-    }
     const staleData = action.dataSignal.peek();
     if (staleData !== undefined) {
       console.debug(
         `useAction(${action.name}): -> return stale data (dismissed)`,
       );
-      return { data: staleData, loading: false };
+      return staleData;
     }
     console.debug(
       `useAction(${action.name}): -> FAILED+dismissed, no stale data, fall through to suspend`,
     );
-    // Dismissed with no stale data — fall through to suspend as idle
+    const error = action.errorSignal.peek();
+    error.action = action;
+    throw error;
   }
-
-  // RUNNING, IDLE (no data), or FAILED-dismissed (no stale data)
-  if (!loadingRef) {
-    // No <Loading fallback> — component handles loading state
-    return { data: undefined, loading: runningState === RUNNING };
+  if (runningState === COMPLETED) {
+    console.debug(`useAction(${action.name}): -> return data`);
+    return action.dataSignal.peek();
   }
 
   // <Loading fallback> present — tell it which action is suspending, then throw
   loadingRef.current = { action };
   let pendingPromise = actionPendingPromiseWeakMap.get(action);
   if (!pendingPromise) {
-    pendingPromise = new Promise((resolve, reject) => {
+    pendingPromise = new Promise((resolve) => {
       const unsubscribe = action.runningStateSignal.subscribe((state) => {
         console.debug(
           `useAction(${action.name}): pendingPromise subscription fired state=${state.id}`,
         );
-        if (state === COMPLETED) {
+        if (state === COMPLETED || state === FAILED) {
           actionPendingPromiseWeakMap.delete(action);
           unsubscribe();
           resolve();
-        } else if (state === FAILED) {
-          // Reject so Suspense forwards the error directly to ErrorBoundary
-          // without transitioning to children (which would flash stale DOM)
-          actionPendingPromiseWeakMap.delete(action);
-          unsubscribe();
-          const error = action.errorSignal.peek();
-          error.action = action;
-          reject(error);
+          // here if the action re-runs, we should re-subscribe
         }
       });
     });
@@ -130,17 +113,11 @@ const LoadingFallback = ({ loadingRef, fallback }) => {
 };
 
 const actionPendingPromiseWeakMap = new WeakMap();
-const dismissedActionWeakSet = new WeakSet();
-const dismissAction = (action) => {
-  dismissedActionWeakSet.add(action);
-};
-const undismissAction = (action) => {
-  dismissedActionWeakSet.delete(action);
-};
 
-export const ErrorBoundary = ({ children, fallback, onReset }) => {
+export const ErrorBoundary = ({ children, fallback }) => {
   const [error, resetErrorInternal] = useErrorBoundary();
   const unsubscribeRef = useRef(null);
+  const [key, setKey] = useState(0);
 
   useEffect(() => {
     if (unsubscribeRef.current) {
@@ -159,8 +136,8 @@ export const ErrorBoundary = ({ children, fallback, onReset }) => {
       if (state === RUNNING) {
         unsubscribe();
         unsubscribeRef.current = null;
-        undismissAction(action);
         resetErrorInternal();
+        setKey((k) => k + 1);
       }
     });
     unsubscribeRef.current = unsubscribe;
@@ -173,22 +150,20 @@ export const ErrorBoundary = ({ children, fallback, onReset }) => {
   if (error) {
     console.debug(`ErrorBoundary render: has error "${error.message}"`);
     error.__handled_by__ = "<ErrorBoundary>"; // prevent jsenv from displaying it
-    const action = error.action;
-    const resetError = () => {
-      if (action) {
-        dismissAction(action);
-      }
-      onReset?.();
-      resetErrorInternal();
-    };
-    if (!fallback) {
-      return null;
-    }
+  }
+  return (
+    <ErrorRenderer key={key} error={error} fallback={fallback}>
+      {children}
+    </ErrorRenderer>
+  );
+};
+
+const ErrorRenderer = ({ error, children, fallback }) => {
+  if (error) {
     if (typeof fallback === "function") {
-      return h(fallback, { error, resetError });
+      return h(fallback, { error });
     }
     return fallback;
   }
-  console.debug(`ErrorBoundary render: no error, rendering children`);
   return children;
 };

@@ -255,7 +255,7 @@
 
       // Suspends until data is ready — never sees loading or error state.
       const UserCard = ({ action }) => {
-        const { data: user } = useAsyncData(action);
+        const user = useAsyncData(action);
         return <UserCardFields name={user.name} email={user.email} />;
       };
 
