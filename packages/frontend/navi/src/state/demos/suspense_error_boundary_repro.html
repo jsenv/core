@@ -115,6 +115,7 @@
       // throws error (with error.task = task) if rejected, returns result if resolved.
 
       const pendingMap = new WeakMap();
+      const neverResolvingPromise = new Promise(() => {});
 
       const useTask = (task) => {
         const [, setTick] = useState(0);
@@ -124,6 +125,10 @@
           });
         }, [task]);
 
+        if (task.state === "idle" && task.result === null) {
+          // No data yet — keep suspended; Child must never run without data (spec #2)
+          throw neverResolvingPromise;
+        }
         if (task.state === "idle") return task.result;
         if (task.state === "resolved") return task.result;
         if (task.state === "rejected") {
@@ -216,12 +221,14 @@
         return children;
       };
 
+      const Loading = ({ fallback, children }) => {
+        return <Suspense fallback={fallback}>{children}</Suspense>;
+      };
+
       // ─── Child component that suspends ────────────────────────────────────────
+      // Data is always non-null here — useTask() enforces this via spec #2.
       const Child = ({ task }) => {
         const data = useTask(task);
-        if (data === null) {
-          return null; // idle with no result yet — nothing to show
-        }
         return (
           <div class="card">
             ✅ Result: <strong>{data}</strong>
@@ -254,9 +261,9 @@
             </button>
             <h2>Output</h2>
             <ErrorBoundary>
-              <Suspense fallback={<div class="loading">Loading…</div>}>
+              <Loading fallback={<div class="loading">Loading…</div>}>
                 <Child task={myTask} />
-              </Suspense>
+              </Loading>
             </ErrorBoundary>
           </div>
         );
