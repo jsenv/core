@@ -1981,6 +1981,60 @@ export const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
     );
   };
 
+  // Returns the pathname that this route's own literal prefix resolves to.
+  // For route "/": "/"
+  // For route "/profile/": "/profile/"
+  // For route "/map/isochrone/compare": "/map/isochrone/compare"
+  // For route "/map/isochrone/:tab=/": "/map/isochrone/" (literal prefix before first param)
+  const getOwnBasePathname = () => {
+    const segments = parsedPattern.segments;
+    if (segments.length === 0) {
+      return new URL(resolveRouteUrl("/")).pathname;
+    }
+    const literalSegments = [];
+    for (const seg of segments) {
+      if (seg.type !== "literal") {
+        break;
+      }
+      literalSegments.push(seg.value);
+    }
+    if (literalSegments.length === 0) {
+      return new URL(resolveRouteUrl("/")).pathname;
+    }
+    const prefix = `/${literalSegments.join("/")}/`;
+    return new URL(resolveRouteUrl(prefix)).pathname;
+  };
+
+  // Like buildMostPreciseUrl but takes the actual current browser URL into account.
+  // When buildMostPreciseUrl returns the route's own base URL (catch-all matching an
+  // unrepresentable path like "/404") the current pathname is preserved and only
+  // search params are updated. When buildMostPreciseUrl performs an ancestor
+  // optimisation (e.g. "/map/isochrone/compare" → "/map/isochrone") it is trusted
+  // as-is because the built pathname will differ from the route's own base pathname.
+  const buildUrlPreservingPath = (currentUrl, params = {}) => {
+    const relativeBuiltUrl = buildMostPreciseUrl(params);
+    if (!currentUrl) {
+      return resolveRouteUrl(relativeBuiltUrl);
+    }
+    const absoluteBuiltUrl = resolveRouteUrl(relativeBuiltUrl);
+    const builtPathname = new URL(absoluteBuiltUrl).pathname;
+    const currentPathname = new URL(currentUrl).pathname;
+    if (builtPathname === currentPathname) {
+      return absoluteBuiltUrl;
+    }
+    const ownBasePathname = getOwnBasePathname();
+    if (builtPathname === ownBasePathname) {
+      // Catch-all: the route resolved to its own base pathname but the current URL
+      // sits on a different path that this trailing-slash route caught.  Keep the
+      // current pathname and only update the search string.
+      const correctedUrl = new URL(currentUrl);
+      correctedUrl.search = new URL(absoluteBuiltUrl).search;
+      return correctedUrl.href;
+    }
+    // Ancestor optimisation or descendant selection — trust buildMostPreciseUrl.
+    return absoluteBuiltUrl;
+  };
+
   // Pattern object with unified data and methods
   const patternObject = {
     // Pattern data properties (formerly patternData)
@@ -2000,6 +2054,7 @@ export const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
     pattern: parsedPattern,
     applyOn,
     buildMostPreciseUrl,
+    buildUrlPreservingPath,
     resolveParams,
   };
 

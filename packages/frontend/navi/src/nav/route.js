@@ -233,46 +233,29 @@ export const route = (pattern, { searchParams } = {}) => {
         });
       }
 
-      // This route is the most specific, handle the redirect ourselves
-      // Check if the built URL pathname matches the current URL pathname.
-      // When a catch-all route (e.g. "/") is the only match for a path like "/404",
-      // buildUrl would produce "/?param=value" losing the current path.
-      // In that case, preserve the current pathname and only update search params.
-      // However, when buildMostPreciseUrl returns an ancestor URL (intentional shortening
-      // because params are at defaults), we should trust that.
-      // Distinguish the two cases by checking if builtPathname equals the route's own
-      // literal base path (derived from cleanPattern). If yes → catch-all, preserve.
-      // If no → ancestor optimization, let it through.
-      const currentUrl = getUrl();
-      if (currentUrl) {
-        const builtUrl = route.buildUrl(newParams);
-        const builtPathname = new URL(builtUrl).pathname;
-        const currentPathname = new URL(currentUrl).pathname;
-        if (builtPathname !== currentPathname) {
-          const literalPatternPrefix = cleanPattern.split(":")[0];
-          const ownBaseUrl = resolveRouteUrl(literalPatternPrefix);
-          const ownBasePathname = new URL(ownBaseUrl).pathname;
-          if (builtPathname === ownBasePathname) {
-            if (DEBUG) {
-              console.debug(
-                `[${route}] Built URL pathname "${builtPathname}" is route's own base, current is "${currentPathname}", preserving current path`,
-              );
-            }
-            const correctedUrl = new URL(currentUrl);
-            correctedUrl.search = new URL(builtUrl).search;
-            return integration.navTo(correctedUrl.href, {
-              replace: true,
-              callReason,
-            });
-          }
-          if (DEBUG) {
-            console.debug(
-              `[${route}] Built URL pathname "${builtPathname}" differs from own base "${ownBasePathname}", ancestor optimization — letting through`,
-            );
-          }
+      // This route is the most specific — compute the target URL.
+      // buildUrlPreservingPath handles the catch-all case where this trailing-slash
+      // route matched a path it cannot represent (e.g. "/" on "/404") without
+      // corrupting the current URL.  Ancestor optimisation is trusted as-is.
+      if (!integration) {
+        if (import.meta.dev) {
+          console.warn(
+            `redirectTo called on "${route}" but integration not set`,
+          );
         }
+        return Promise.resolve();
       }
-      return route.redirectTo(newParams, {
+      const targetUrl = routePattern.buildUrlPreservingPath(
+        getUrl(),
+        newParams,
+      );
+      if (DEBUG) {
+        console.debug(
+          `[${route}] navigating to ${targetUrl} (reason: ${callReason})`,
+        );
+      }
+      return integration.navTo(targetUrl, {
+        replace: true,
         callReason,
       });
     };
