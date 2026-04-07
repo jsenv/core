@@ -158,6 +158,17 @@
 
       const delay = (ms) => new Promise((res) => setTimeout(res, ms));
 
+      const App = () => (
+        <div>
+          <h1>Loading + ErrorBoundary Demo</h1>
+          <ArchitectureSection />
+          <DelegatesBothDemo />
+          <ManagesLoadingDemo />
+          <ManagesErrorDemo />
+          <StaleWhileRevalidateDemo />
+        </div>
+      );
+
       const DemoSection = ({ title, titleExtra, description, children }) => (
         <div class="demo-section">
           <h2 style={{ display: "flex", alignItems: "center", gap: "12px" }}>
@@ -284,6 +295,21 @@
 
       // ─── UserCard variants ────────────────────────────────────────────────────
 
+      // Suspends until data is ready — never sees loading or error state.
+      const UserCard = ({ action, outerCount }) => {
+        const user = useAsyncData(action);
+        const [count, setCount] = useState(0);
+        return (
+          <UserCardFields
+            name={user.name}
+            email={user.email}
+            count={count}
+            onIncrement={() => setCount((n) => n + 1)}
+            outerCount={outerCount}
+          />
+        );
+      };
+
       const UserCardFields = ({
         name,
         email,
@@ -349,22 +375,6 @@
       );
 
       // ─── Delegates both ───────────────────────────────────────────────────────
-
-      // Suspends until data is ready — never sees loading or error state.
-      const UserCard = ({ action, outerCount }) => {
-        const user = useAsyncData(action);
-        const [count, setCount] = useState(0);
-        return (
-          <UserCardFields
-            name={user.name}
-            email={user.email}
-            count={count}
-            onIncrement={() => setCount((n) => n + 1)}
-            outerCount={outerCount}
-          />
-        );
-      };
-
       const exDelegatesBoth = makeExample("fetchUser1");
       const DelegatesBothDemo = () => {
         const [outerCount, setOuterCount] = useState(0);
@@ -400,9 +410,6 @@
       };
 
       // ─── Manages loading ──────────────────────────────────────────────────────
-
-      // Receives { loading } and renders skeleton placeholders while waiting.
-
       const exManagesLoading = makeExample("fetchUser2");
       const ManagesLoadingDemo = () => {
         const [outerCount, setOuterCount] = useState(0);
@@ -447,7 +454,6 @@
       };
 
       // ─── Manages error ────────────────────────────────────────────────────────
-
       const exManagesError = makeExample("fetchUser3");
       const ManagesErrorDemo = () => {
         const [outerCount, setOuterCount] = useState(0);
@@ -481,7 +487,6 @@
           </DemoSection>
         );
       };
-
       const UserCardError = ({ error }) => {
         return (
           <div class="card-error">
@@ -505,6 +510,31 @@
 
       // ─── Manages loading (stale-while-revalidate variant) ─────────────────────
 
+      const exStaleWhileRevalidate = makeExample("fetchUser4");
+      const StaleWhileRevalidateDemo = () => {
+        const [started, setStarted] = useState(false);
+        return (
+          <DemoSection
+            title="Manages loading (stale-while-revalidate variant)"
+            description="While re-fetching, the component keeps showing the previous data instead of replacing it with a skeleton. The stale value is preserved in local state and displayed until fresh data arrives. Tradeoff: smoother revalidation UX, but the component owns more state and the logic is harder to follow."
+          >
+            <FetchControls
+              action={() => {
+                setStarted(true);
+                return exStaleWhileRevalidate.action.rerun();
+              }}
+              shouldFail={exStaleWhileRevalidate.shouldFail}
+            />
+            {started && (
+              <ErrorBoundary fallback={ErrorCard}>
+                <UserCardStaleWhileRevalidate
+                  action={exStaleWhileRevalidate.action}
+                />
+              </ErrorBoundary>
+            )}
+          </DemoSection>
+        );
+      };
       // Shows previous data while re-fetching instead of going back to skeletons.
       const UserCardStaleWhileRevalidate = ({ action }) => {
         const { data: freshUser, loading } = useAsyncData(action);
@@ -550,43 +580,6 @@
           </div>
         );
       };
-
-      const exStaleWhileRevalidate = makeExample("fetchUser4");
-      const StaleWhileRevalidateDemo = () => {
-        const [started, setStarted] = useState(false);
-        return (
-          <DemoSection
-            title="Manages loading (stale-while-revalidate variant)"
-            description="While re-fetching, the component keeps showing the previous data instead of replacing it with a skeleton. The stale value is preserved in local state and displayed until fresh data arrives. Tradeoff: smoother revalidation UX, but the component owns more state and the logic is harder to follow."
-          >
-            <FetchControls
-              action={() => {
-                setStarted(true);
-                return exStaleWhileRevalidate.action.rerun();
-              }}
-              shouldFail={exStaleWhileRevalidate.shouldFail}
-            />
-            {started && (
-              <ErrorBoundary fallback={ErrorCard}>
-                <UserCardStaleWhileRevalidate
-                  action={exStaleWhileRevalidate.action}
-                />
-              </ErrorBoundary>
-            )}
-          </DemoSection>
-        );
-      };
-
-      const App = () => (
-        <div>
-          <h1>Loading + ErrorBoundary Demo</h1>
-          <ArchitectureSection />
-          <DelegatesBothDemo />
-          <ManagesLoadingDemo />
-          <ManagesErrorDemo />
-          <StaleWhileRevalidateDemo />
-        </div>
-      );
 
       render(<App />, document.querySelector("#root"));
     </script>
