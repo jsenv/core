@@ -98,7 +98,9 @@ const LoadingFallback = ({ loadingRef, fallback }) => {
     });
   }, [action]);
   const currentAction = loadingRef.current.action;
-  if (currentAction && currentAction.runningStateSignal.peek() === RUNNING) {
+  const shouldDisplayFallback =
+    !currentAction || currentAction.runningStateSignal.peek() === RUNNING;
+  if (shouldDisplayFallback) {
     return fallback;
   }
   return null;
