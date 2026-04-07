@@ -1,68 +1,58 @@
 // Error boundary is also capable to catch sync errors but still
 // it's mostly useful to catch async errors
 
-import { createContext, h } from "preact";
-import {
-  useContext,
-  useEffect,
-  useErrorBoundary,
-  useRef,
-  useState,
-} from "preact/hooks";
+import { h } from "preact";
+import { useEffect, useErrorBoundary, useRef } from "preact/hooks";
 
 import { RUNNING } from "../../action/action_run_states.js";
-
-const ErrorBoundaryContext = createContext({
-  hasBoundary: false,
-  silencedAction: null,
-});
-export const useHasErrorBoundary = () => {
-  const { hasBoundary } = useContext(ErrorBoundaryContext);
-  return hasBoundary;
-};
-export const useSilencedAction = () => {
-  const { silencedAction } = useContext(ErrorBoundaryContext);
-  return silencedAction;
-};
+import { dismissAction } from "./use_async_data.js";
 
 export const ErrorBoundary = ({ children, fallback, onReset }) => {
   const [error, resetErrorInternal] = useErrorBoundary();
-  // Track the action separately so we can still reference it after resetErrorInternal() nulls error
-  const [silenced, setSilenced] = useState(false);
-  const actionRef = useRef(null);
-
   const unsubscribeRef = useRef(null);
+
   useEffect(() => {
+    if (unsubscribeRef.current) {
+      unsubscribeRef.current();
+      unsubscribeRef.current = null;
+    }
+    if (!error) {
+      return undefined;
+    }
+    const action = error.action;
+    if (!action) {
+      return undefined;
+    }
+    // When action runs again, auto-reset the error boundary
+    const unsubscribe = action.runningStateSignal.subscribe((state) => {
+      if (state === RUNNING) {
+        unsubscribe();
+        unsubscribeRef.current = null;
+        resetErrorInternal();
+      }
+    });
+    unsubscribeRef.current = unsubscribe;
     return () => {
-      unsubscribeRef.current?.();
+      unsubscribe();
       unsubscribeRef.current = null;
     };
-  }, []);
-  const resetError = () => {
-    setSilenced(true);
-    onReset?.();
-    resetErrorInternal();
-  };
+  }, [error]);
 
   if (error) {
     error.__handled_by__ = "<ErrorBoundary>"; // prevent jsenv from displaying it
     const action = error.action;
-    actionRef.current = action;
-    unsubscribeRef.current?.();
-    if (action) {
-      // when action runs, auto reset error
-      const unsubscribe = action.runningStateSignal.subscribe((state) => {
-        if (state === RUNNING) {
-          unsubscribe();
-          unsubscribeRef.current = null;
-          setSilenced(false);
-          resetErrorInternal();
-        }
-      });
-      if (silenced && actionRef.current === action) {
-        return null;
+    const resetError = () => {
+      const hasStaleData = action && action.dataSignal.peek() !== undefined;
+      if (hasStaleData) {
+        // Keep action in FAILED state but tell useAction to return stale data
+        dismissAction(action);
+      } else {
+        // No stale data — reset action to IDLE so Loading shows nothing
+        action?.reset();
       }
-    }
+      onReset?.();
+      resetErrorInternal();
+    };
     if (!fallback) {
       return null;
     }
@@ -71,14 +61,5 @@ export const ErrorBoundary = ({ children, fallback, onReset }) => {
     }
     return fallback;
   }
-  return (
-    <ErrorBoundaryContext.Provider
-      value={{
-        hasBoundary: true,
-        silencedAction: silenced ? actionRef.current : null,
-      }}
-    >
-      {children}
-    </ErrorBoundaryContext.Provider>
-  );
+  return children;
 };

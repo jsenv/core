@@ -1,8 +1,8 @@
 // https://github.com/preactjs/preact/issues/4756
 
+import { useContext } from "preact/hooks";
 import { COMPLETED, FAILED, RUNNING } from "../../action/action_run_states.js";
-import { useHasErrorBoundary, useSilencedAction } from "./error_boundary.jsx";
-import { useLoadingHasFallback } from "./loading.jsx";
+import { LoadingContext } from "./loading.jsx";
 import { usePromise } from "./use_promise.js";
 
 export const useAsyncData = (promiseOrAction) => {
@@ -12,67 +12,69 @@ export const useAsyncData = (promiseOrAction) => {
   }
   return usePromise(promiseOrAction);
 };
+
 const actionPendingPromiseWeakMap = new WeakMap();
-const FALLBACK_LATEST_DATA = true;
+const dismissedActionWeakSet = new WeakSet();
+
+// Called by ErrorBoundary when user dismisses an error that has stale data.
+// Keeps action in FAILED state but tells useAction to return the stale data instead of throwing.
+export const dismissAction = (action) => {
+  dismissedActionWeakSet.add(action);
+};
+
 const useAction = (action) => {
-  const loadingFallback = useLoadingHasFallback();
-  const hasErrorBoundary = useHasErrorBoundary();
-  const silencedAction = useSilencedAction();
+  const loadingRef = useContext(LoadingContext);
   const runningState = action.runningStateSignal.value;
-  console.debug(
-    `useAction(${action.name}): render runningState=${runningState}, loadingFallback=${loadingFallback}, silencedAction=${silencedAction?.name ?? null}`,
-  );
+
   if (runningState === COMPLETED) {
-    const data = action.dataSignal.peek();
-    return { data, loading: false, error: undefined };
+    return { data: action.dataSignal.peek(), loading: false };
   }
   if (runningState === FAILED) {
-    if (FALLBACK_LATEST_DATA && silencedAction === action) {
-      // Error was dismissed — show last known data only if action completed once before
-      const lastData = action.dataSignal.peek();
-      if (lastData !== undefined) {
-        return { data: lastData, loading: false, error: undefined };
-      }
-      // No previous data — fall through to throw so ErrorBoundary renders null
+    if (!dismissedActionWeakSet.has(action)) {
+      const error = action.errorSignal.peek();
+      error.action = action;
+      throw error;
     }
-    const error = action.errorSignal.peek();
-    if (!hasErrorBoundary) {
-      return { data: undefined, loading: false, error };
+    const staleData = action.dataSignal.peek();
+    if (staleData !== undefined) {
+      // Error was dismissed with stale data — show last known data
+      return { data: staleData, loading: false };
     }
-    error.action = action;
-    throw error;
+    // Dismissed with no stale data — fall through to suspend as idle
   }
-  // IDLE or RUNNING
-  if (!loadingFallback) {
-    // <Loading> has no fallback — return state, let component handle it
+
+  // RUNNING, IDLE (no data), or FAILED-dismissed (no stale data)
+  if (!loadingRef) {
+    // No <Loading fallback> — component handles loading state
     return { data: undefined, loading: runningState === RUNNING };
   }
-  // <Loading> has a fallback — suspend so Suspense shows the fallback
+
+  // <Loading fallback> present — tell it which action is suspending, then throw
+  loadingRef.current = { action };
+
   let pendingPromise = actionPendingPromiseWeakMap.get(action);
   if (!pendingPromise) {
-    console.debug(`useAction(${action.name}): creating new pendingPromise`);
-    let resolve;
-    pendingPromise = new Promise((res) => {
-      resolve = res;
+    const isIdle = runningState !== RUNNING;
+    pendingPromise = new Promise((resolve) => {
+      const unsubscribe = action.runningStateSignal.subscribe((state) => {
+        if (isIdle) {
+          // Waiting for action to start running so LoadingFallback can show the spinner
+          if (state === RUNNING) {
+            actionPendingPromiseWeakMap.delete(action);
+            unsubscribe();
+            resolve();
+          }
+        }
+        // Running — waiting for it to settle
+        else if (state === COMPLETED || state === FAILED) {
+          dismissedActionWeakSet.delete(action);
+          actionPendingPromiseWeakMap.delete(action);
+          unsubscribe();
+          resolve();
+        }
+      });
     });
     actionPendingPromiseWeakMap.set(action, pendingPromise);
-    const unsubscribe = action.runningStateSignal.subscribe((state) => {
-      console.debug(
-        `useAction(${action.name}): pendingPromise subscription fired, state=${state}`,
-      );
-      if (state === COMPLETED) {
-        actionPendingPromiseWeakMap.delete(action);
-        unsubscribe();
-        resolve();
-      } else if (state === FAILED) {
-        actionPendingPromiseWeakMap.delete(action);
-        unsubscribe();
-        resolve();
-      }
-    });
-  } else {
-    console.debug(`useAction(${action.name}): reusing existing pendingPromise`);
   }
-  console.debug(`useAction(${action.name}): throwing pendingPromise`);
   throw pendingPromise;
 };
