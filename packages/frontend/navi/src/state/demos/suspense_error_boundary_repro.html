@@ -44,9 +44,15 @@
   <body>
     <div id="root"></div>
     <script type="module" jsenv-type="module/jsx">
-      import { render } from "preact";
+      import { render, createContext } from "preact";
       import { Suspense } from "preact/compat";
-      import { useState, useEffect, useErrorBoundary } from "preact/hooks";
+      import {
+        useState,
+        useEffect,
+        useRef,
+        useContext,
+        useErrorBoundary,
+      } from "preact/hooks";
 
       // ─── Design specs ─────────────────────────────────────────────────────────
       //
@@ -111,13 +117,17 @@
       };
 
       // ─── useTask ──────────────────────────────────────────────────────────────
-      // Subscribes to task for re-renders. Throws a promise while running,
-      // throws error (with error.task = task) if rejected, returns result if resolved.
+      // Subscribes to task for re-renders. Throws a promise while running or idle
+      // with no data (spec #2). Writes the suspension reason into LoadingContext
+      // so that <Loading> fallback knows whether to show a spinner or nothing.
+
+      const LoadingContext = createContext(null);
+      // LoadingContext value type: React.MutableRefObject<{ reason: "idle"|"loading", task }>
 
       const pendingMap = new WeakMap();
-      const neverResolvingPromise = new Promise(() => {});
 
       const useTask = (task) => {
+        const loadingRef = useContext(LoadingContext);
         const [, setTick] = useState(0);
         useEffect(() => {
           return task.subscribe(() => {
@@ -125,23 +135,31 @@
           });
         }, [task]);
 
-        if (task.state === "idle" && task.result === null) {
-          // No data yet — keep suspended; Child must never run without data (spec #2)
-          throw neverResolvingPromise;
-        }
-        if (task.state === "idle") return task.result;
         if (task.state === "resolved") return task.result;
         if (task.state === "rejected") {
           const error = task.error;
           error.task = task;
           throw error;
         }
-        // running — suspend
+        // idle (with stale data after dismiss) — return stale result immediately
+        if (task.state === "idle" && task.result !== null) return task.result;
+
+        // idle (no data) or running — suspend
+        const reason = task.state === "running" ? "loading" : "idle";
+        if (loadingRef) {
+          loadingRef.current = { reason, task };
+        }
         let p = pendingMap.get(task);
         if (!p) {
           p = new Promise((resolve) => {
             const unsub = task.subscribe((t) => {
-              if (t.state !== "running") {
+              if (t.state !== "idle" && t.state !== "running") {
+                // resolved or rejected — unblock Suspense
+                pendingMap.delete(task);
+                unsub();
+                resolve();
+              } else if (reason === "idle" && t.state === "running") {
+                // idle→running transition: unblock so reason can be updated
                 pendingMap.delete(task);
                 unsub();
                 resolve();
@@ -151,6 +169,42 @@
           pendingMap.set(task, p);
         }
         throw p;
+      };
+
+      // ─── Loading ──────────────────────────────────────────────────────────────
+      // Wraps Suspense. Provides LoadingContext so useTask can communicate the
+      // reason for suspension. The fallback component reads that reason and
+      // subscribes to the task to re-render when state changes.
+      const LoadingFallback = ({ loadingRef, fallback }) => {
+        const [, setTick] = useState(0);
+        const { task } = loadingRef.current;
+        useEffect(() => {
+          if (!task) {
+            return undefined;
+          }
+          return task.subscribe(() => {
+            setTick((n) => n + 1);
+          });
+        }, [task]);
+        if (loadingRef.current.reason === "loading") {
+          return fallback;
+        }
+        return null;
+      };
+
+      const Loading = ({ fallback, children }) => {
+        const loadingRef = useRef({ reason: "idle", task: null });
+        return (
+          <LoadingContext.Provider value={loadingRef}>
+            <Suspense
+              fallback={
+                <LoadingFallback loadingRef={loadingRef} fallback={fallback} />
+              }
+            >
+              {children}
+            </Suspense>
+          </LoadingContext.Provider>
+        );
       };
 
       // ─── ErrorBoundary ────────────────────────────────────────────────────────
@@ -219,10 +273,6 @@
           return null;
         }
         return children;
-      };
-
-      const Loading = ({ fallback, children }) => {
-        return <Suspense fallback={fallback}>{children}</Suspense>;
       };
 
       // ─── Child component that suspends ────────────────────────────────────────
