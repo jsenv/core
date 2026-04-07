@@ -11,6 +11,7 @@ import {
   databaseOpenSignal,
 } from "./database/database_state.js";
 import { DATABASE } from "./database/database_store.js";
+import { asideWidthSignal } from "./layout/aside.jsx";
 import {
   roleCanLoginHeightSignal,
   roleCanLoginOpenSignal,
@@ -44,6 +45,7 @@ export const datnameSignal = stateSignal(null);
 export const INDEX_ROUTE = route("");
 const ANY_ROUTE = route(`/`, {
   searchParams: {
+    aside_width: asideWidthSignal,
     role_login_open: roleCanLoginOpenSignal,
     role_login_height: roleCanLoginHeightSignal,
     role_group_open: roleGroupOpenSignal,

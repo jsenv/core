@@ -2,22 +2,25 @@
  * Layout Structure Overview:
  * 
  * This layout uses a two-column structure:
- * - <aside>: Fixed-width sidebar that can be resized
+ * - <aside>: Sticky sidebar, stays visible when scrolling (top:0, left:0)
  * - <main>: Main content area that fills remaining space
  * 
- * Overflow Handling:
- * - body: Hidden horizontal overflow prevents double scrollbars at page level
- * - <aside>: Has fixed width, own scrollbars, and resizable right edge
- * - <main>: Has horizontal scrolling for content wider than available space
- * 
  * Scroll Behavior:
- * - <aside>: Fixed height (100vh) with its own vertical scrollbar if needed
- * - <main>: Vertical scrolling happens at the document level
+ * - The document is the scroll container for both axes (no overflow on body or main)
+ * - <aside> sticks at top-left of viewport within #app's bounds
+ * - <main>'s page header also uses position:sticky relative to the document
  * - scrollbar-gutter: stable ensures layout doesn't shift when scrollbars appear
+ *
+ * Note: position:sticky on aside only works correctly when no ancestor has
+ * overflow:hidden/auto set (which would make that ancestor its containing block).
  */
 
 body {
   scrollbar-gutter: stable;
+}
+
+#root {
+  --aside-width: 250px;
 }
 
 #app {
@@ -26,15 +29,15 @@ body {
 }
 
 aside {
-  position: sticky;
-  top: 0; /* Keeps sidebar visible when scrolling */
+  position: fixed;
+  top: 0;
   left: 0;
-  z-index: 1; /* Ensures sidebar is above main content */
-  width: 250px; /* Default width that can be overridden by resize */
-  min-width: 100px; /* Prevents sidebar from becoming too narrow */
-  height: 100vh; /* Full viewport height */
-  min-height: 300px; /* Ideally should 150px * explorer_items + explorer_head height */
-  flex-shrink: 0; /* Prevents sidebar from shrinking when window is narrow */
+  z-index: 1;
+  width: var(--aside-width);
+  min-width: 100px;
+  height: 100vh;
+  min-height: 300px;
+  flex-shrink: 0;
   border-right: 1px solid #e0e0e0;
 }
 
@@ -58,7 +61,8 @@ main {
   z-index: 0; /* Ensures main content is below the sidebar */
   box-sizing: border-box;
   min-width: 200px; /* Prevents content area from becoming too narrow */
-  min-height: 100vh; /* Ensures content area is at least viewport height */
+  min-height: 100vh;
+  margin-left: var(--aside-width); /* Reserve space for the fixed aside */
   padding-bottom: 0;
   flex: 1;
   /* Reserves space for scrollbar to prevent layout shifts */

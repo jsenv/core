@@ -7,9 +7,10 @@ import.meta.css = /* css */ `
   }
 
   .page_head {
-    position: sticky;
+    position: fixed;
     top: 0;
-    left: 0;
+    right: 0;
+    left: var(--aside-width, 0);
     z-index: 1;
     display: flex;
 
@@ -37,6 +38,7 @@ import.meta.css = /* css */ `
   }
 
   .page_body {
+    margin-top: 95px;
     padding-top: 20px;
     padding-right: 20px;
     padding-bottom: 20px;
