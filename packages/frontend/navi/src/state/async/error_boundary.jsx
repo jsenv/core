@@ -42,13 +42,8 @@ export const ErrorBoundary = ({ children, fallback, onReset }) => {
     error.__handled_by__ = "<ErrorBoundary>"; // prevent jsenv from displaying it
     const action = error.action;
     const resetError = () => {
-      const hasStaleData = action && action.dataSignal.peek() !== undefined;
-      if (hasStaleData) {
-        // Keep action in FAILED state but tell useAction to return stale data
+      if (action) {
         dismissAction(action);
-      } else {
-        // No stale data — reset action to IDLE so Loading shows nothing
-        action?.reset();
       }
       onReset?.();
       resetErrorInternal();
