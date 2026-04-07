@@ -1,17 +1,16 @@
-import { initPositionSticky } from "@jsenv/dom";
 import { Box, ErrorBoundaryContext, Icon, Text } from "@jsenv/navi";
-import { useErrorBoundary, useLayoutEffect, useRef } from "preact/hooks";
+import { useErrorBoundary } from "preact/hooks";
 
 import.meta.css = /* css */ `
   .page {
-    display: flex;
-    flex: 1;
-    flex-direction: column;
+    min-width: max-content;
   }
 
   .page_head {
     position: sticky;
     top: 0;
+    left: 0;
+    z-index: 1;
     display: flex;
 
     padding: 20px;
@@ -81,15 +80,8 @@ const PageError = ({ error }) => {
 };
 
 export const PageHead = ({ children, spacingBottom, ...rest }) => {
-  const headerRef = useRef(null);
-
-  useLayoutEffect(() => {
-    return initPositionSticky(headerRef.current);
-  }, []);
-
   return (
     <header
-      ref={headerRef}
       className="page_head"
       style={{
         ...(spacingBottom === undefined

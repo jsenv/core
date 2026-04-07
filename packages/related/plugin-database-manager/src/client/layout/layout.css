@@ -17,7 +17,6 @@
  */
 
 body {
-  overflow-x: hidden;
   scrollbar-gutter: stable;
 }
 
@@ -29,6 +28,7 @@ body {
 aside {
   position: sticky;
   top: 0; /* Keeps sidebar visible when scrolling */
+  left: 0;
   z-index: 1; /* Ensures sidebar is above main content */
   width: 250px; /* Default width that can be overridden by resize */
   min-width: 100px; /* Prevents sidebar from becoming too narrow */
@@ -63,7 +63,6 @@ main {
   flex: 1;
   /* Reserves space for scrollbar to prevent layout shifts */
   /* Horizontal scrollbar appears when content is wider than available space */
-  overflow-x: auto;
 }
 .main_body {
   display: flex;

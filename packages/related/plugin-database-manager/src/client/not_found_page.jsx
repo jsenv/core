@@ -9,7 +9,9 @@ export const NotFoundPage = () => {
         <PageHead.Label label={"Page not found"}></PageHead.Label>
       </PageHead>
       <PageBody>
-        Page <Code>{window.location.pathname}</Code> does not exists
+        <div style="height: 800px; background: yellow; width: 2000px">
+          Page <Code>{window.location.pathname}</Code> does not exists
+        </div>
       </PageBody>
     </Page>
   );
