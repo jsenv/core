@@ -324,30 +324,6 @@
         );
       };
 
-      const ex1 = makeExample("fetchUser1");
-      const ExampleComponentManagedLoading = () => {
-        const [started1, setStarted1] = useState(false);
-        return (
-          <DemoSection
-            title="Manages loading"
-            description="The component receives { loading } and renders its own placeholders while waiting. Errors bubble up to the nearest ErrorBoundary."
-          >
-            <FetchControls
-              action={() => {
-                setStarted1(true);
-                return ex1.action.rerun();
-              }}
-              shouldFail={ex1.shouldFail}
-            />
-            {started1 && (
-              <ErrorBoundary fallback={ErrorCard}>
-                <UserCardWithSkeleton action={ex1.action} />
-              </ErrorBoundary>
-            )}
-          </DemoSection>
-        );
-      };
-
       // ─── Delegated loading ────────────────────────────────────────────────────
 
       const ex3 = makeExample("fetchUser3");
@@ -356,7 +332,7 @@
         return (
           <DemoSection
             title="Manages nothing"
-            description="Neither loading nor errors reach the component. Wrap with <Loading fallback> and <ErrorBoundary> — the component only ever renders with ready data."
+            description="Neither loading nor errors reach the component: the component only ever renders with ready data. Loading bubbles up to nearest <Loading>, error bubbles up to nearest <ErrorBoundary>."
           >
             <FetchControls
               action={() => {
@@ -370,6 +346,30 @@
                 <Loading fallback={<div class="card-loading">Loading…</div>}>
                   <UserCard action={ex3.action} />
                 </Loading>
+              </ErrorBoundary>
+            )}
+          </DemoSection>
+        );
+      };
+
+      const ex1 = makeExample("fetchUser1");
+      const ExampleComponentManagedLoading = () => {
+        const [started1, setStarted1] = useState(false);
+        return (
+          <DemoSection
+            title="Manages loading"
+            description="The component receives { loading } and renders its own placeholders while waiting. Errors bubble up to the nearest <ErrorBoundary>."
+          >
+            <FetchControls
+              action={() => {
+                setStarted1(true);
+                return ex1.action.rerun();
+              }}
+              shouldFail={ex1.shouldFail}
+            />
+            {started1 && (
+              <ErrorBoundary fallback={ErrorCard}>
+                <UserCardWithSkeleton action={ex1.action} />
               </ErrorBoundary>
             )}
           </DemoSection>
@@ -415,7 +415,7 @@
         return (
           <DemoSection
             title="Manages loading and error"
-            description="The component handles everything itself. No ErrorBoundary or Loading fallback needed."
+            description="The component handles everything itself. No ErrorBoundary or Loading needed."
           >
             <FetchControls
               action={() => {
@@ -437,7 +437,7 @@
         return (
           <DemoSection
             title="Manages loading (stale-while-revalidate variant)"
-            description="Shows the previous data while re-fetching instead of going back to skeletons. Errors bubble up to the nearest ErrorBoundary."
+            description="Shows the previous data while re-fetching instead of going back to skeletons."
           >
             <FetchControls
               action={() => {
