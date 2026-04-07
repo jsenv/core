@@ -1,10 +1,13 @@
-import { Button } from "@jsenv/navi";
+import { Button, useAsyncData } from "@jsenv/navi";
+
 import { DatabaseFieldset, RoleField } from "../components/database_field.jsx";
 import { Page, PageBody, PageHead } from "../layout/page.jsx";
+import { DATABASE_GET_ACTION } from "../routes.js";
 import { DatabaseSvg } from "./database_icons.jsx";
 import { DATABASE } from "./database_store.js";
 
-export const DatabasePage = ({ database }) => {
+export const DatabasePage = () => {
+  const { data: database } = useAsyncData(DATABASE_GET_ACTION);
   const datname = database.datname;
   const deleteDatabaseAction = DATABASE.DELETE.bindParams({ datname });
 

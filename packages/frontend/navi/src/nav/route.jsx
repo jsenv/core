@@ -1,23 +1,4 @@
 /**
- *
- * . Refactor les actions pour qu'elles utilisent use. Ce qui va ouvrir la voie pour
- * Suspense et ErrorBoundary sur tous les composants utilisant des actions
- *
- * . Tester le code splitting avec .lazy + import dynamique
- * pour les elements des routes
- *
- * 3. Ajouter la possibilite d'avoir des
- *  sur les routes
- * Tester juste les data pour commencer
- * On aura ptet besoin d'un useRouteData au lieu de passer par un element qui est une fonction
- * pour que react ne re-render pas tout
- *
- * 4. Utiliser use() pour compar Suspense et ErrorBoundary lorsque route action se produit.
- *
- *
- */
-
-/**
  * Route is the single primitive for URL-based rendering.
  *
  * ## Layout pattern
@@ -81,7 +62,8 @@
  * ```
  */
 
-import { ActionRenderer } from "../action/action_renderer.jsx";
+import { h } from "preact";
+
 import { useUITransitionContentId } from "../ui_transition/ui_transition.jsx";
 
 const DEBUG = false;
@@ -174,13 +156,11 @@ const RouteContainer = ({ id, element, elementProps, children }) => {
   );
 
   const content = activeBranch ? activeBranch.node : null;
-
   if (!content) {
     return null;
   }
   if (element) {
-    const Element = element;
-    return <Element {...elementProps}>{content}</Element>;
+    return h(element, elementProps, content);
   }
   return content;
 };
@@ -198,14 +178,9 @@ const RouteLeafRoute = (props) => {
 const RouteLeafFallback = (props) => {
   return <RouteActive {...props} />;
 };
-const RouteActive = ({ element, elementProps, action }) => {
-  const Element = element;
-  const renderedElement = action ? (
-    <ActionRenderer action={action}>{element}</ActionRenderer>
-  ) : typeof element === "function" ? (
-    <Element {...elementProps} />
-  ) : (
-    element
-  );
-  return renderedElement;
+const RouteActive = ({ element, elementProps }) => {
+  if (typeof element === "function") {
+    return h(element, elementProps);
+  }
+  return element;
 };

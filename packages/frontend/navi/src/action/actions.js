@@ -1349,6 +1349,7 @@ const createActionProxyFromSignal = (
   };
 
   Object.assign(actionProxy, {
+    isAction: true,
     isProxy: true,
     callback: undefined,
     params: undefined,

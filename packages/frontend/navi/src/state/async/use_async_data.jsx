@@ -36,6 +36,9 @@ const dismissedActionPendingPromiseWeakMap = new WeakMap();
 
 const useAction = (action, { loadingEffect, errorEffect }) => {
   const loadingRef = useContext(LoadingContext);
+  if (!loadingRef) {
+    throw new Error("Missing <Loading>");
+  }
   // Use peek() instead of .value to avoid subscribing this component to the signal.
   // Reading .value would make Preact re-render the component reactively when the state
   // changes. When the action fails while Suspense is still holding the detached stale

@@ -1,4 +1,6 @@
+import { Loading } from "@jsenv/navi";
 import { render } from "preact";
+
 import "./database_manager.css" with { type: "css" };
 import { Explorer } from "./explorer/explorer.jsx";
 import { Aside } from "./layout/aside.jsx";
@@ -14,7 +16,9 @@ const App = () => {
       </Aside>
       <main>
         <div className="main_body">
-          <MainRoutes />
+          <Loading>
+            <MainRoutes />
+          </Loading>
         </div>
       </main>
     </div>

@@ -18,10 +18,19 @@
  *
  */
 
-import { Button, Head, Icon, Link, Nav, Route } from "@jsenv/navi";
+import {
+  Button,
+  Head,
+  Icon,
+  Link,
+  Nav,
+  Route,
+  useAsyncData,
+} from "@jsenv/navi";
 
 import { Page, PageBody, PageHead } from "../layout/page.jsx";
 import {
+  TABLE_GET_ACTION,
   TABLE_INDEX_ROUTE,
   TABLE_ROW_GET_MANY_ACTION,
   TABLE_SETTINGS_ROUTE,
@@ -33,7 +42,8 @@ import { TableSvg } from "./table_icons.jsx";
 import { TableSettings } from "./table_settings.jsx";
 import { TABLE } from "./table_state.js";
 
-export const TablePage = ({ table }) => {
+export const TablePage = () => {
+  const { data: table } = useAsyncData(TABLE_GET_ACTION);
   const tablename = table.tablename;
 
   return (
