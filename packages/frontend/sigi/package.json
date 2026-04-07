@@ -25,7 +25,7 @@
     "/src/"
   ],
   "dependencies": {
-    "@preact/signals": "2.8.2"
+    "@preact/signals": "2.9.0"
   },
   "devDependencies": {
     "@jsenv/assert": "../../tooling/assert",
