@@ -79,11 +79,13 @@
             >
               Increment
             </button>
-            <Route
-              route={ALPHA_ROUTE}
-              element={RouteContent}
-              elementProps={{ label: "Alpha", wrapperCount: count }}
-            />
+            <Route>
+              <Route
+                route={ALPHA_ROUTE}
+                element={RouteContent}
+                elementProps={{ label: "Alpha", wrapperCount: count }}
+              />
+            </Route>
           </Box>
         );
       };
@@ -123,10 +125,12 @@
             >
               Increment
             </button>
-            <Route
-              route={BETA_ROUTE}
-              element={<RouteContent label="Beta" wrapperCount={count} />}
-            />
+            <Route>
+              <Route
+                route={BETA_ROUTE}
+                element={<RouteContent label="Beta" wrapperCount={count} />}
+              />
+            </Route>
           </Box>
         );
       };
