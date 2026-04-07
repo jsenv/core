@@ -1,8 +1,9 @@
 import { snapshotTests } from "@jsenv/snapshot";
 import { batch } from "@preact/signals";
-import { globalSignalRegistry, stateSignal } from "../state/state_signal.js";
-import { route, setRouteIntegration, setupRoutes } from "./route.js";
-import { setBaseUrl } from "./route_pattern.js";
+
+import { globalSignalRegistry, stateSignal } from "../../state/state_signal.js";
+import { route, setRouteIntegration, setupRoutes } from "../route.js";
+import { setBaseUrl } from "../route_pattern.js";
 
 const baseUrl = "http://localhost:3000";
 setBaseUrl(baseUrl);

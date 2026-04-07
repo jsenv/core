@@ -14,9 +14,9 @@
  */
 
 import { snapshotTests } from "@jsenv/snapshot";
-import { globalSignalRegistry, stateSignal } from "../state/state_signal.js";
-import { route, setupRoutes } from "./route.js";
-import { setBaseUrl } from "./route_pattern.js";
+import { globalSignalRegistry, stateSignal } from "../../state/state_signal.js";
+import { route, setupRoutes } from "../route.js";
+import { setBaseUrl } from "../route_pattern.js";
 
 setBaseUrl("http://127.0.0.1");
 

@@ -1,7 +1,7 @@
 import { snapshotTests } from "@jsenv/snapshot";
 
-import { globalSignalRegistry, stateSignal } from "../state/state_signal.js";
-import { route, setupRoutes } from "./route.js";
+import { globalSignalRegistry, stateSignal } from "../../state/state_signal.js";
+import { route, setupRoutes } from "../route.js";
 
 await snapshotTests(import.meta.url, ({ test }) => {
   test("route.params with static defaults", () => {
