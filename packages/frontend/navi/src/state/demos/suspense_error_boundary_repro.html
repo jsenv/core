@@ -48,6 +48,20 @@
       import { Suspense } from "preact/compat";
       import { useState, useEffect, useErrorBoundary } from "preact/hooks";
 
+      // ─── Design specs ─────────────────────────────────────────────────────────
+      //
+      // 1. ErrorBoundary takes only `children` — no props, no context.
+      //    All information it needs (e.g. which task failed) comes from the
+      //    thrown error itself (error.task).
+      //
+      // 2. Child components must never be called with null/undefined data.
+      //    They should not have to handle the "no data yet" case.
+      //    This is enforced by useTask(): as long as there is no data available,
+      //    useTask() throws (a promise or an error), keeping Suspense or
+      //    ErrorBoundary in control. Child code only runs when real data exists.
+      //
+      // ─────────────────────────────────────────────────────────────────────────
+
       // ─── Task ─────────────────────────────────────────────────────────────────
       // Tasks live outside JSX so they survive component lifecycle.
       // They have a subscribe() so ErrorBoundary can react when the task re-runs.
@@ -136,29 +150,45 @@
 
       // ─── ErrorBoundary ────────────────────────────────────────────────────────
       // Reads error.task and subscribes to it — resets when the task re-runs.
+      // Also hides children after dismissing with no stale data, until task re-runs.
       const ErrorBoundary = ({ children }) => {
         const [error, resetError] = useErrorBoundary();
-        const [dismissed, setDismissed] = useState(false);
+        // null = not dismissed; "stale" = dismissed with data; "hidden" = dismissed without data
+        const [dismissedTask, setDismissedTask] = useState(null);
+        const [dismissMode, setDismissMode] = useState(null);
 
         useEffect(() => {
           if (!error) {
             return undefined;
           }
-          // New error arrived — ensure dismissed is cleared so the fallback shows
-          setDismissed(false);
+          // New error arrived — clear any previous dismiss state
+          setDismissMode(null);
+          setDismissedTask(null);
           const task = error.task;
           if (!task) {
             return undefined;
           }
           return task.subscribe((t) => {
             if (t.state === "running") {
-              setDismissed(false);
+              setDismissMode(null);
               resetError();
             }
           });
         }, [error]);
 
-        if (error && !dismissed) {
+        useEffect(() => {
+          if (!dismissedTask || dismissMode !== "hidden") {
+            return undefined;
+          }
+          return dismissedTask.subscribe((t) => {
+            if (t.state === "running") {
+              setDismissMode(null);
+              setDismissedTask(null);
+            }
+          });
+        }, [dismissedTask, dismissMode]);
+
+        if (error) {
           return (
             <div class="error">
               <strong>⚠️ Error caught by ErrorBoundary</strong>
@@ -170,9 +200,8 @@
                   const task = error.task;
                   const hasStaleData = task && task.result !== null;
                   task?.reset();
-                  if (hasStaleData) {
-                    setDismissed(true);
-                  }
+                  setDismissedTask(task || null);
+                  setDismissMode(hasStaleData ? "stale" : "hidden");
                   resetError();
                 }}
               >
@@ -181,8 +210,8 @@
             </div>
           );
         }
-        if (dismissed) {
-          return children;
+        if (dismissMode === "hidden") {
+          return null;
         }
         return children;
       };
@@ -190,6 +219,9 @@
       // ─── Child component that suspends ────────────────────────────────────────
       const Child = ({ task }) => {
         const data = useTask(task);
+        if (data === null) {
+          return null; // idle with no result yet — nothing to show
+        }
         return (
           <div class="card">
             ✅ Result: <strong>{data}</strong>
@@ -202,15 +234,6 @@
 
       // ─── App ──────────────────────────────────────────────────────────────────
       const App = () => {
-        const [, setTick] = useState(0);
-        useEffect(() => {
-          return myTask.subscribe(() => {
-            setTick((n) => n + 1);
-          });
-        }, []);
-
-        const showChild = myTask.state !== "idle" || myTask.result !== null;
-
         return (
           <div>
             <h1>Suspense + ErrorBoundary repro</h1>
@@ -232,7 +255,7 @@
             <h2>Output</h2>
             <ErrorBoundary>
               <Suspense fallback={<div class="loading">Loading…</div>}>
-                {showChild && <Child task={myTask} />}
+                <Child task={myTask} />
               </Suspense>
             </ErrorBoundary>
           </div>
