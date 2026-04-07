@@ -141,8 +141,8 @@
 
       // ─── ErrorBoundary ────────────────────────────────────────────────────────
       // Reads error.task and subscribes to it — resets when the task re-runs.
-      // No need to keep rendering children while in error state.
-      const ErrorBoundary = ({ children }) => {
+      // onDismiss: called when dismissing with no stale data, so App can un-mount Child.
+      const ErrorBoundary = ({ children, onDismiss }) => {
         const [error, resetError] = useErrorBoundary();
         const [dismissed, setDismissed] = useState(false);
 
@@ -173,8 +173,16 @@
               </div>
               <button
                 onClick={() => {
-                  error.task?.reset();
-                  setDismissed(true);
+                  const task = error.task;
+                  const hasStaleData = task && task.result !== null;
+                  task?.reset();
+                  if (hasStaleData) {
+                    // Keep children mounted to show stale data
+                    setDismissed(true);
+                  } else {
+                    // No stale data — tell App to un-mount Child entirely
+                    onDismiss?.();
+                  }
                   resetError();
                 }}
               >
@@ -227,7 +235,7 @@
               ❌ Fetch (fail)
             </button>
             <h2>Output</h2>
-            <ErrorBoundary>
+            <ErrorBoundary onDismiss={() => setStarted(false)}>
               <Suspense fallback={<div class="loading">Loading…</div>}>
                 {started && <Child task={myTask} />}
               </Suspense>
