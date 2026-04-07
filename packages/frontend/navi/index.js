@@ -31,9 +31,11 @@ export { useStateArray } from "./src/state/use_state_array.js";
 export { valueInLocalStorage } from "./src/state/value_in_local_storage.js";
 export { compareTwoJsValues } from "./src/utils/compare_two_js_values.js";
 // state fetching
-export { ErrorBoundary } from "./src/state/async/error_boundary.jsx";
-export { Loading } from "./src/state/async/loading.jsx";
-export { useAsyncData } from "./src/state/async/use_async_data.js";
+export {
+  ErrorBoundary,
+  Loading,
+  useAsyncData,
+} from "./src/state/async/use_async_data.jsx";
 export { createRequestCanceller } from "./src/state/request_canceller.js";
 export { useCancelPrevious } from "./src/state/use_cancel_previous.js";
 
