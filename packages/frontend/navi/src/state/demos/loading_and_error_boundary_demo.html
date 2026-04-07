@@ -225,37 +225,6 @@
         </div>
       );
 
-      // Used with <Loading fallback>: suspends until data is ready.
-      // The component itself never sees loading state.
-      const UserCard = ({ action }) => {
-        const { data: user } = useAsyncData(action);
-        return <UserCardFields name={user.name} email={user.email} />;
-      };
-
-      // Used without <Loading fallback>: receives loading state and renders
-      // skeleton placeholders while waiting. Same layout as UserCard.
-      const UserCardWithSkeleton = ({ action }) => {
-        const { data: user, loading } = useAsyncData(action);
-        return (
-          <UserCardFields
-            name={
-              loading ? (
-                <span class="skeleton" style={{ width: "80px" }} />
-              ) : (
-                user.name
-              )
-            }
-            email={
-              loading ? (
-                <span class="skeleton" style={{ width: "140px" }} />
-              ) : (
-                user.email
-              )
-            }
-          />
-        );
-      };
-
       const ErrorCard = ({ error, resetError }) => (
         <div class="card-error">
           <div
@@ -282,9 +251,148 @@
         </div>
       );
 
-      // ─── Component-managed loading, delegated error ────────────────────────
+      // ─── Manages nothing ──────────────────────────────────────────────────────
 
-      // Keeps showing the last known data while a re-fetch is in progress.
+      // Suspends until data is ready — never sees loading or error state.
+      const UserCard = ({ action }) => {
+        const { data: user } = useAsyncData(action);
+        return <UserCardFields name={user.name} email={user.email} />;
+      };
+
+      const exManagesNothing = makeExample("fetchUser1");
+      const ManagesNothingDemo = () => {
+        const [started, setStarted] = useState(false);
+        return (
+          <DemoSection
+            title="Manages nothing"
+            description="Neither loading nor errors reach the component: it only ever renders with ready data. Loading bubbles up to nearest <Loading>, error bubbles up to nearest <ErrorBoundary>."
+          >
+            <FetchControls
+              action={() => {
+                setStarted(true);
+                return exManagesNothing.action.rerun();
+              }}
+              shouldFail={exManagesNothing.shouldFail}
+            />
+            {started && (
+              <ErrorBoundary fallback={ErrorCard}>
+                <Loading fallback={<div class="card-loading">Loading…</div>}>
+                  <UserCard action={exManagesNothing.action} />
+                </Loading>
+              </ErrorBoundary>
+            )}
+          </DemoSection>
+        );
+      };
+
+      // ─── Manages loading ──────────────────────────────────────────────────────
+
+      // Receives { loading } and renders skeleton placeholders while waiting.
+      const UserCardWithSkeleton = ({ action }) => {
+        const { data: user, loading } = useAsyncData(action);
+        return (
+          <UserCardFields
+            name={
+              loading ? (
+                <span class="skeleton" style={{ width: "80px" }} />
+              ) : (
+                user.name
+              )
+            }
+            email={
+              loading ? (
+                <span class="skeleton" style={{ width: "140px" }} />
+              ) : (
+                user.email
+              )
+            }
+          />
+        );
+      };
+
+      const exManagesLoading = makeExample("fetchUser2");
+      const ManagesLoadingDemo = () => {
+        const [started, setStarted] = useState(false);
+        return (
+          <DemoSection
+            title="Manages loading"
+            description="The component receives { loading } and renders its own placeholders while waiting. Errors bubble up to the nearest <ErrorBoundary>."
+          >
+            <FetchControls
+              action={() => {
+                setStarted(true);
+                return exManagesLoading.action.rerun();
+              }}
+              shouldFail={exManagesLoading.shouldFail}
+            />
+            {started && (
+              <ErrorBoundary fallback={ErrorCard}>
+                <UserCardWithSkeleton action={exManagesLoading.action} />
+              </ErrorBoundary>
+            )}
+          </DemoSection>
+        );
+      };
+
+      // ─── Manages loading and error ────────────────────────────────────────────
+
+      // Handles loading and error entirely — no ErrorBoundary or Loading needed.
+      const UserCardWithErrorHandling = ({ action }) => {
+        const { data: user, loading, error } = useAsyncData(action);
+        if (error) {
+          return (
+            <div class="card-error">
+              <span style={{ fontSize: "1.2em" }}>⚠️</span> {error.message}
+            </div>
+          );
+        }
+        return (
+          <UserCardFields
+            name={
+              loading ? (
+                <span class="skeleton" style={{ width: "80px" }} />
+              ) : (
+                user.name
+              )
+            }
+            email={
+              loading ? (
+                <span class="skeleton" style={{ width: "140px" }} />
+              ) : (
+                user.email
+              )
+            }
+          />
+        );
+      };
+
+      const exManagesLoadingAndError = makeExample("fetchUser3");
+      const ManagesLoadingAndErrorDemo = () => {
+        const [started, setStarted] = useState(false);
+        return (
+          <DemoSection
+            title="Manages loading and error"
+            description="The component handles everything itself. No ErrorBoundary or Loading needed."
+          >
+            <FetchControls
+              action={() => {
+                setStarted(true);
+                return exManagesLoadingAndError.action.rerun();
+              }}
+              shouldFail={exManagesLoadingAndError.shouldFail}
+            />
+            {started && (
+              <UserCardWithErrorHandling
+                action={exManagesLoadingAndError.action}
+              />
+            )}
+          </DemoSection>
+        );
+      };
+
+      // ─── Manages loading (stale-while-revalidate variant) ─────────────────────
+
+      // Shows previous data while re-fetching instead of going back to skeletons.
       const UserCardStaleWhileRevalidate = ({ action }) => {
         const { data: freshUser, loading } = useAsyncData(action);
         const [lastUser, setLastUser] = useState(null);
@@ -324,131 +432,26 @@
         );
       };
 
-      // ─── Delegated loading ────────────────────────────────────────────────────
-
-      const ex3 = makeExample("fetchUser3");
-      const ExampleDelegatedLoading = () => {
+      const exStaleWhileRevalidate = makeExample("fetchUser4");
+      const StaleWhileRevalidateDemo = () => {
         const [started, setStarted] = useState(false);
-        return (
-          <DemoSection
-            title="Manages nothing"
-            description="Neither loading nor errors reach the component: the component only ever renders with ready data. Loading bubbles up to nearest <Loading>, error bubbles up to nearest <ErrorBoundary>."
-          >
-            <FetchControls
-              action={() => {
-                setStarted(true);
-                return ex3.action.rerun();
-              }}
-              shouldFail={ex3.shouldFail}
-            />
-            {started && (
-              <ErrorBoundary fallback={ErrorCard}>
-                <Loading fallback={<div class="card-loading">Loading…</div>}>
-                  <UserCard action={ex3.action} />
-                </Loading>
-              </ErrorBoundary>
-            )}
-          </DemoSection>
-        );
-      };
-
-      const ex1 = makeExample("fetchUser1");
-      const ExampleComponentManagedLoading = () => {
-        const [started1, setStarted1] = useState(false);
-        return (
-          <DemoSection
-            title="Manages loading"
-            description="The component receives { loading } and renders its own placeholders while waiting. Errors bubble up to the nearest <ErrorBoundary>."
-          >
-            <FetchControls
-              action={() => {
-                setStarted1(true);
-                return ex1.action.rerun();
-              }}
-              shouldFail={ex1.shouldFail}
-            />
-            {started1 && (
-              <ErrorBoundary fallback={ErrorCard}>
-                <UserCardWithSkeleton action={ex1.action} />
-              </ErrorBoundary>
-            )}
-          </DemoSection>
-        );
-      };
-
-      // ─── No error boundary ───────────────────────────────────────────────────
-
-      // When no ErrorBoundary is above, useAsyncData() returns { error } instead
-      // of throwing — the component is responsible for rendering the error state.
-      const UserCardWithErrorHandling = ({ action }) => {
-        const { data: user, loading, error } = useAsyncData(action);
-        if (error) {
-          return (
-            <div class="card-error">
-              <span style={{ fontSize: "1.2em" }}>⚠️</span> {error.message}
-            </div>
-          );
-        }
-        return (
-          <UserCardFields
-            name={
-              loading ? (
-                <span class="skeleton" style={{ width: "80px" }} />
-              ) : (
-                user.name
-              )
-            }
-            email={
-              loading ? (
-                <span class="skeleton" style={{ width: "140px" }} />
-              ) : (
-                user.email
-              )
-            }
-          />
-        );
-      };
-
-      const ex6 = makeExample("fetchUser6");
-      const ExampleNoErrorBoundary = () => {
-        const [started, setStarted] = useState(false);
-        return (
-          <DemoSection
-            title="Manages loading and error"
-            description="The component handles everything itself. No ErrorBoundary or Loading needed."
-          >
-            <FetchControls
-              action={() => {
-                setStarted(true);
-                return ex6.action.rerun();
-              }}
-              shouldFail={ex6.shouldFail}
-            />
-            {started && <UserCardWithErrorHandling action={ex6.action} />}
-          </DemoSection>
-        );
-      };
-
-      // ─── Stale-while-revalidate variant ───────────────────────────────────────
-
-      const ex5 = makeExample("fetchUser5");
-      const ExampleStaleWhileRevalidate = () => {
-        const [started5, setStarted5] = useState(false);
         return (
           <DemoSection
             title="Manages loading (stale-while-revalidate variant)"
-            description="Shows the previous data while re-fetching instead of going back to skeletons."
+            description="Shows the previous data while re-fetching instead of going back to skeletons. Errors bubble up to the nearest <ErrorBoundary>."
           >
             <FetchControls
               action={() => {
-                setStarted5(true);
-                return ex5.action.rerun();
+                setStarted(true);
+                return exStaleWhileRevalidate.action.rerun();
               }}
-              shouldFail={ex5.shouldFail}
+              shouldFail={exStaleWhileRevalidate.shouldFail}
             />
-            {started5 && (
+            {started && (
               <ErrorBoundary fallback={ErrorCard}>
-                <UserCardStaleWhileRevalidate action={ex5.action} />
+                <UserCardStaleWhileRevalidate
+                  action={exStaleWhileRevalidate.action}
+                />
               </ErrorBoundary>
             )}
           </DemoSection>
@@ -458,10 +461,10 @@
       const App = () => (
         <div>
           <h1>Loading + ErrorBoundary Demo</h1>
-          <ExampleDelegatedLoading />
-          <ExampleComponentManagedLoading />
-          <ExampleNoErrorBoundary />
-          <ExampleStaleWhileRevalidate />
+          <ManagesNothingDemo />
+          <ManagesLoadingDemo />
+          <ManagesLoadingAndErrorDemo />
+          <StaleWhileRevalidateDemo />
         </div>
       );
 
