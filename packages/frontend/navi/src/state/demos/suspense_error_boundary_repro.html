@@ -44,116 +44,135 @@
   <body>
     <div id="root"></div>
     <script type="module" jsenv-type="module/jsx">
-      import { render, createContext } from "preact";
+      import { render } from "preact";
       import { Suspense } from "preact/compat";
-      import {
-        useState,
-        useRef,
-        useContext,
-        useErrorBoundary,
-      } from "preact/hooks";
+      import { useState, useEffect, useErrorBoundary } from "preact/hooks";
 
-      // ─── Minimal suspense promise machinery ──────────────────────────────────
-      // A "task" is { promise, resolve, reject, state, result, error }
+      // ─── Task ─────────────────────────────────────────────────────────────────
+      // Tasks live outside JSX so they survive component lifecycle.
+      // They have a subscribe() so ErrorBoundary can react when the task re-runs.
 
       const makeTask = () => {
-        let resolve;
-        let reject;
-        const promise = new Promise((res, rej) => {
-          resolve = res;
-          reject = rej;
-        });
-        return {
-          promise,
-          resolve,
-          reject,
-          state: "pending",
+        const listeners = new Set();
+        const task = {
+          state: "idle",
           result: null,
           error: null,
+          subscribe: (fn) => {
+            listeners.add(fn);
+            return () => {
+              listeners.delete(fn);
+            };
+          },
+          _notify: () => {
+            for (const fn of listeners) {
+              fn(task);
+            }
+          },
         };
+        return task;
       };
 
-      // pendingPromise WeakMap: tracks the currently-thrown promise per task slot
-      const pendingMap = new WeakMap();
-      const ErrorBoundaryResetContext = createContext(null);
+      const runTask = (task, shouldFail) => {
+        task.state = "running";
+        task.result = null;
+        task.error = null;
+        task._notify();
+        setTimeout(() => {
+          if (shouldFail) {
+            task.state = "rejected";
+            task.error = new Error("Server error: something went wrong");
+          } else {
+            task.state = "resolved";
+            task.result = "Hello, world!";
+          }
+          task._notify();
+        }, 800);
+      };
 
-      // useTask: throws a promise while pending, throws error if rejected, returns result if resolved.
-      // When a new pending task starts, calls reset() from ErrorBoundaryResetContext so the boundary
-      // auto-dismisses — no props needed on ErrorBoundary.
+      // ─── useTask ──────────────────────────────────────────────────────────────
+      // Subscribes to task for re-renders. Throws a promise while running,
+      // throws error (with error.task = task) if rejected, returns result if resolved.
+
+      const pendingMap = new WeakMap();
+
       const useTask = (task) => {
-        const resetRef = useContext(ErrorBoundaryResetContext);
-        if (!task) return null;
+        const [, setTick] = useState(0);
+        useEffect(() => {
+          return task.subscribe(() => {
+            setTick((n) => n + 1);
+          });
+        }, [task]);
+
+        if (task.state === "idle") return null;
         if (task.state === "resolved") return task.result;
-        if (task.state === "rejected") throw task.error;
-        // pending — new task starting: reset the error boundary before suspending
-        if (resetRef && resetRef.current) {
-          resetRef.current();
+        if (task.state === "rejected") {
+          const error = task.error;
+          error.task = task;
+          throw error;
         }
+        // running — suspend
         let p = pendingMap.get(task);
         if (!p) {
-          p = task.promise.then(
-            () => {
-              pendingMap.delete(task);
-            },
-            () => {
-              pendingMap.delete(task);
-            },
-          );
+          p = new Promise((resolve) => {
+            const unsub = task.subscribe((t) => {
+              if (t.state !== "running") {
+                pendingMap.delete(task);
+                unsub();
+                resolve();
+              }
+            });
+          });
           pendingMap.set(task, p);
         }
         throw p;
       };
 
       // ─── ErrorBoundary ────────────────────────────────────────────────────────
-      // Provides reset via context so useTask can auto-dismiss when a new task starts.
-      // Children are always rendered (inside <Suspense fallback={null}> during error state)
-      // so useTask keeps running and can call reset() even while error is showing.
+      // Reads error.task and subscribes to it — resets when the task re-runs.
+      // No need to keep rendering children while in error state.
       const ErrorBoundary = ({ children }) => {
         const [error, resetError] = useErrorBoundary();
         const [dismissed, setDismissed] = useState(false);
-        const resetRef = useRef(null);
 
-        const reset = () => {
-          setDismissed(false);
-          resetError();
-        };
-        resetRef.current = reset;
+        useEffect(() => {
+          if (!error) {
+            return undefined;
+          }
+          const task = error.task;
+          if (!task) {
+            return undefined;
+          }
+          return task.subscribe((t) => {
+            if (t.state === "running") {
+              setDismissed(false);
+              resetError();
+            }
+          });
+        }, [error]);
 
         if (error && !dismissed) {
           return (
-            <>
-              <div class="error">
-                <strong>⚠️ Error caught by ErrorBoundary</strong>
-                <div style="margin: 6px 0; font-family: monospace;">
-                  {error.message}
-                </div>
-                <button
-                  onClick={() => {
-                    setDismissed(true);
-                    resetError();
-                  }}
-                >
-                  Dismiss
-                </button>
+            <div class="error">
+              <strong>⚠️ Error caught by ErrorBoundary</strong>
+              <div style="margin: 6px 0; font-family: monospace;">
+                {error.message}
               </div>
-              <ErrorBoundaryResetContext.Provider value={resetRef}>
-                <Suspense fallback={null}>{children}</Suspense>
-              </ErrorBoundaryResetContext.Provider>
-            </>
+              <button
+                onClick={() => {
+                  setDismissed(true);
+                  resetError();
+                }}
+              >
+                Dismiss
+              </button>
+            </div>
           );
         }
         if (dismissed) {
-          return (
-            <ErrorBoundaryResetContext.Provider value={resetRef}>
-              <Suspense fallback={null}>{children}</Suspense>
-            </ErrorBoundaryResetContext.Provider>
-          );
+          return null;
         }
-        return (
-          <ErrorBoundaryResetContext.Provider value={resetRef}>
-            {children}
-          </ErrorBoundaryResetContext.Provider>
-        );
+        return children;
       };
 
       // ─── Child component that suspends ────────────────────────────────────────
@@ -167,40 +186,37 @@
         );
       };
 
+      // ─── Tasks live outside JSX ───────────────────────────────────────────────
+      const myTask = makeTask();
+
       // ─── App ──────────────────────────────────────────────────────────────────
       const App = () => {
-        const taskRef = useRef(null);
-        const [task, setTask] = useState(null);
-
-        const run = (shouldFail) => {
-          const t = makeTask();
-          taskRef.current = t;
-          setTask(t);
-
-          setTimeout(() => {
-            if (shouldFail) {
-              t.state = "rejected";
-              t.error = new Error("Server error: something went wrong");
-              t.reject(t.error);
-            } else {
-              t.state = "resolved";
-              t.result = "Hello, world!";
-              t.resolve();
-            }
-            setTask({ ...t }); // new object reference to force re-render
-          }, 800);
-        };
+        const [started, setStarted] = useState(false);
 
         return (
           <div>
             <h1>Suspense + ErrorBoundary repro</h1>
             <h2>Controls</h2>
-            <button onClick={() => run(false)}>✅ Fetch (success)</button>
-            <button onClick={() => run(true)}>❌ Fetch (fail)</button>
+            <button
+              onClick={() => {
+                setStarted(true);
+                runTask(myTask, false);
+              }}
+            >
+              ✅ Fetch (success)
+            </button>
+            <button
+              onClick={() => {
+                setStarted(true);
+                runTask(myTask, true);
+              }}
+            >
+              ❌ Fetch (fail)
+            </button>
             <h2>Output</h2>
             <ErrorBoundary>
               <Suspense fallback={<div class="loading">Loading…</div>}>
-                {task && <Child task={taskRef.current} />}
+                {started && <Child task={myTask} />}
               </Suspense>
             </ErrorBoundary>
           </div>
