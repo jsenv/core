@@ -1,0 +1,71 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Route context demo</title>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render, createContext } from "preact";
+      import { useContext, useState } from "preact/hooks";
+      import { Box, Route, Nav, Link, route, setupRoutes } from "@jsenv/navi";
+
+      const ALPHA_ROUTE = route("/alpha");
+      const BETA_ROUTE = route("/beta");
+      setupRoutes([ALPHA_ROUTE, BETA_ROUTE]);
+
+      const CountContext = createContext(null);
+
+      /*
+       * RouteContent reads the count from context.
+       * The context provider lives above the <Route>, so this verifies
+       * that context is properly accessible inside route elements.
+       */
+      const RouteContent = ({ label }) => {
+        const count = useContext(CountContext);
+        return (
+          <Box flex="y" spacing="s">
+            <strong>{label} (RouteContent)</strong>
+            <span>
+              count from context: <strong>{count}</strong>
+            </span>
+          </Box>
+        );
+      };
+
+      const App = () => {
+        const [count, setCount] = useState(0);
+        return (
+          <CountContext.Provider value={count}>
+            <Box flex="y" spacing="m">
+              <Nav spacing="m">
+                <Link route={ALPHA_ROUTE}>Alpha</Link>
+                <Link route={BETA_ROUTE}>Beta</Link>
+              </Nav>
+              <Box flex="y" spacing="s">
+                <strong>App (context provider)</strong>
+                <span>
+                  count: <strong>{count}</strong>
+                </span>
+                <button
+                  onClick={() => {
+                    setCount(count + 1);
+                  }}
+                >
+                  Increment
+                </button>
+              </Box>
+              <Route>
+                <Route route={ALPHA_ROUTE} element={RouteContent} elementProps={{ label: "Alpha" }} />
+                <Route route={BETA_ROUTE} element={RouteContent} elementProps={{ label: "Beta" }} />
+              </Route>
+            </Box>
+          </CountContext.Provider>
+        );
+      };
+
+      render(<App />, document.getElementById("app"));
+    </script>
+  </body>
+</html>
