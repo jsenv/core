@@ -212,7 +212,7 @@
 
       // ─── UserCard variants ────────────────────────────────────────────────────
 
-      const UserCardFields = ({ name, email }) => (
+      const UserCardFields = ({ name, email, count, onIncrement }) => (
         <div class="card">
           <div class="card-field">
             <span class="card-label">Name</span>
@@ -222,6 +222,11 @@
             <span class="card-label">Email</span>
             <span style={{ color: "#555" }}>{email}</span>
           </div>
+          {onIncrement && (
+            <div class="card-field" style={{ marginTop: "10px" }}>
+              <button onClick={onIncrement}>Count: {count}</button>
+            </div>
+          )}
         </div>
       );
 
@@ -256,7 +261,15 @@
       // Suspends until data is ready — never sees loading or error state.
       const UserCard = ({ action }) => {
         const user = useAsyncData(action);
-        return <UserCardFields name={user.name} email={user.email} />;
+        const [count, setCount] = useState(0);
+        return (
+          <UserCardFields
+            name={user.name}
+            email={user.email}
+            count={count}
+            onIncrement={() => setCount((n) => n + 1)}
+          />
+        );
       };
 
       const exManagesNothing = makeExample("fetchUser1");
@@ -290,6 +303,7 @@
       // Receives { loading } and renders skeleton placeholders while waiting.
       const UserCardWithSkeleton = ({ action }) => {
         const { data: user, loading } = useAsyncData(action);
+        const [count, setCount] = useState(0);
         return (
           <UserCardFields
             name={
@@ -306,6 +320,8 @@
                 user.email
               )
             }
+            count={count}
+            onIncrement={() => setCount((n) => n + 1)}
           />
         );
       };
@@ -339,6 +355,7 @@
       // Handles loading and error entirely — no ErrorBoundary or Loading needed.
       const UserCardWithErrorHandling = ({ action }) => {
         const { data: user, loading, error } = useAsyncData(action);
+        const [count, setCount] = useState(0);
         if (error) {
           return (
             <div class="card-error">
@@ -362,6 +379,8 @@
                 user.email
               )
             }
+            count={count}
+            onIncrement={() => setCount((n) => n + 1)}
           />
         );
       };
@@ -395,6 +414,7 @@
       // Shows previous data while re-fetching instead of going back to skeletons.
       const UserCardStaleWhileRevalidate = ({ action }) => {
         const { data: freshUser, loading } = useAsyncData(action);
+        const [count, setCount] = useState(0);
         const [lastUser, setLastUser] = useState(null);
 
         useEffect(() => {
@@ -415,7 +435,12 @@
         }
         return (
           <div>
-            <UserCardFields name={displayUser.name} email={displayUser.email} />
+            <UserCardFields
+              name={displayUser.name}
+              email={displayUser.email}
+              count={count}
+              onIncrement={() => setCount((n) => n + 1)}
+            />
             {loading && (
               <div
                 style={{
