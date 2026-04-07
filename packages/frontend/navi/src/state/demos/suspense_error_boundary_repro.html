@@ -46,7 +46,12 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { Suspense } from "preact/compat";
-      import { useState, useRef, useErrorBoundary } from "preact/hooks";
+      import {
+        useState,
+        useRef,
+        useEffect,
+        useErrorBoundary,
+      } from "preact/hooks";
 
       // ─── Minimal suspense promise machinery ──────────────────────────────────
       // A "task" is { promise, resolve, reject, state, result, error }
@@ -93,9 +98,20 @@
       };
 
       // ─── ErrorBoundary ────────────────────────────────────────────────────────
-      const ErrorBoundary = ({ children }) => {
+      // task: ErrorBoundary watches this — when it changes (new fetch), it auto-resets.
+      // This mirrors how the real ErrorBoundary subscribes to action.runningStateSignal.
+      // The boundary itself cannot know a new task started unless something tells it:
+      // children stop rendering when error is caught, so useTask cannot signal via context.
+      const ErrorBoundary = ({ children, task }) => {
         const [error, resetError] = useErrorBoundary();
         const [dismissed, setDismissed] = useState(false);
+
+        useEffect(() => {
+          if (error) {
+            setDismissed(false);
+            resetError();
+          }
+        }, [task]);
 
         if (error && !dismissed) {
           return (
@@ -136,12 +152,10 @@
       const App = () => {
         const taskRef = useRef(null);
         const [task, setTask] = useState(null);
-        const [boundaryKey, setBoundaryKey] = useState(0);
 
         const run = (shouldFail) => {
           const t = makeTask();
           taskRef.current = t;
-          setBoundaryKey((k) => k + 1);
           setTask(t);
 
           setTimeout(() => {
@@ -165,7 +179,7 @@
             <button onClick={() => run(false)}>✅ Fetch (success)</button>
             <button onClick={() => run(true)}>❌ Fetch (fail)</button>
             <h2>Output</h2>
-            <ErrorBoundary key={boundaryKey}>
+            <ErrorBoundary task={task}>
               <Suspense fallback={<div class="loading">Loading…</div>}>
                 {task && <Child task={taskRef.current} />}
               </Suspense>
