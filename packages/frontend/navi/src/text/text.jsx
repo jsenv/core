@@ -245,6 +245,7 @@ const TextOverflow = ({ noWrap, spacing, children, ...rest }) => {
   return (
     <Text
       flex
+      block
       as="div"
       nowWrap={noWrap}
       pre={!noWrap}

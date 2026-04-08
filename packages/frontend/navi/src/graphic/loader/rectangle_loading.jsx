@@ -15,6 +15,7 @@
  * @param {number} [props.radius=0] - Corner radius of the rectangle (px)
  */
 
+import { resolveCSSSize } from "@jsenv/dom";
 import { useLayoutEffect, useRef, useState } from "preact/hooks";
 
 import { useNetworkSpeed } from "./network_speed.js";
@@ -112,6 +113,9 @@ const RectangleLoadingSvg = ({
 
   // ✅ Check if this should be a circle - only if width and height are nearly equal
   const maxPossibleRadius = Math.min(drawableWidth, drawableHeight) / 2;
+  radius = resolveCSSSize(radius, {
+    availableSize: Math.min(width, height),
+  });
   const actualRadius = Math.min(
     radius || Math.min(drawableWidth, drawableHeight) * 0.05,
     maxPossibleRadius, // ✅ Limité au radius maximum possible

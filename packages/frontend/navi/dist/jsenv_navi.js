@@ -19143,6 +19143,7 @@ const TextOverflow = ({
   const [OverflowPinnedElement, setOverflowPinnedElement] = useState(null);
   return jsx(Text, {
     flex: true,
+    block: true,
     as: "div",
     nowWrap: noWrap,
     pre: !noWrap
@@ -19722,6 +19723,9 @@ const RectangleLoadingSvg = ({
 
   // ✅ Check if this should be a circle - only if width and height are nearly equal
   const maxPossibleRadius = Math.min(drawableWidth, drawableHeight) / 2;
+  radius = resolveCSSSize(radius, {
+    availableSize: Math.min(width, height)
+  });
   const actualRadius = Math.min(radius || Math.min(drawableWidth, drawableHeight) * 0.05, maxPossibleRadius // ✅ Limité au radius maximum possible
   );
   const aspectRatio = Math.max(drawableWidth, drawableHeight) / Math.min(drawableWidth, drawableHeight);
@@ -19841,9 +19845,10 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
     z-index: 1;
     opacity: 0;
     pointer-events: none;
-  }
-  .navi_loading_rectangle_wrapper[data-visible] {
-    opacity: 1;
+
+    &[data-visible] {
+      opacity: 1;
+    }
   }
 `;
 const LoaderBackground = ({
@@ -19852,6 +19857,7 @@ const LoaderBackground = ({
   targetSelector,
   color,
   inset = 0,
+  borderRadius = 0,
   spacingTop = 0,
   spacingLeft = 0,
   spacingBottom = 0,
@@ -19880,6 +19886,7 @@ const LoaderBackground = ({
     loading: loading,
     color: color,
     inset: inset,
+    borderRadius: borderRadius,
     spacingTop: spacingTop,
     spacingLeft: spacingLeft,
     spacingBottom: spacingBottom,
@@ -19892,6 +19899,7 @@ const LoaderBackgroundWithPortal = ({
   loading,
   color,
   inset,
+  borderRadius,
   spacingTop,
   spacingLeft,
   spacingBottom,
@@ -19917,7 +19925,8 @@ const LoaderBackgroundWithPortal = ({
         right: `${inset + spacingRight}px`
       },
       children: shouldShowSpinner && jsx(RectangleLoading, {
-        color: color
+        color: color,
+        radius: borderRadius
       })
     }), children]
   });
@@ -19926,100 +19935,25 @@ const LoaderBackgroundBasic = ({
   loading,
   targetSelector,
   color,
+  borderWidth = 0,
+  borderRadius = 0,
   spacingTop,
   spacingLeft,
   spacingBottom,
   spacingRight,
+  marginTop = 0,
+  marginLeft = 0,
+  marginBottom = 0,
+  marginRight = 0,
+  paddingTop = 0,
+  paddingLeft = 0,
+  paddingBottom = 0,
+  paddingRight = 0,
   inset,
   children
 }) => {
   const shouldShowSpinner = useDebounceTrue(loading, 300);
   const rectangleRef = useRef(null);
-  const [, setOutlineOffset] = useState(0);
-  const [borderRadius, setBorderRadius] = useState(0);
-  const [borderTopWidth, setBorderTopWidth] = useState(0);
-  const [borderLeftWidth, setBorderLeftWidth] = useState(0);
-  const [borderRightWidth, setBorderRightWidth] = useState(0);
-  const [borderBottomWidth, setBorderBottomWidth] = useState(0);
-  const [marginTop, setMarginTop] = useState(0);
-  const [marginBottom, setMarginBottom] = useState(0);
-  const [marginLeft, setMarginLeft] = useState(0);
-  const [marginRight, setMarginRight] = useState(0);
-  const [paddingTop, setPaddingTop] = useState(0);
-  const [paddingLeft, setPaddingLeft] = useState(0);
-  const [paddingRight, setPaddingRight] = useState(0);
-  const [paddingBottom, setPaddingBottom] = useState(0);
-  const [currentColor, setCurrentColor] = useState(color);
-  useLayoutEffect(() => {
-    let animationFrame;
-    const updateStyles = () => {
-      const rectangle = rectangleRef.current;
-      if (!rectangle) {
-        return;
-      }
-      const container = rectangle.parentElement;
-      const containedElement = rectangle.nextElementSibling;
-      const target = targetSelector ? container.querySelector(targetSelector) : containedElement;
-      if (target) {
-        const {
-          width,
-          height
-        } = target.getBoundingClientRect();
-        const containedComputedStyle = window.getComputedStyle(containedElement);
-        const targetComputedStyle = window.getComputedStyle(target);
-        const newBorderTopWidth = resolveCSSSize(targetComputedStyle.borderTopWidth);
-        const newBorderLeftWidth = resolveCSSSize(targetComputedStyle.borderLeftWidth);
-        const newBorderRightWidth = resolveCSSSize(targetComputedStyle.borderRightWidth);
-        const newBorderBottomWidth = resolveCSSSize(targetComputedStyle.borderBottomWidth);
-        const newBorderRadius = resolveCSSSize(targetComputedStyle.borderRadius, {
-          availableSize: Math.min(width, height)
-        });
-        const newOutlineColor = targetComputedStyle.outlineColor;
-        const newBorderColor = targetComputedStyle.borderColor;
-        const newDetectedColor = targetComputedStyle.color;
-        const newOutlineOffset = resolveCSSSize(targetComputedStyle.outlineOffset);
-        const newMarginTop = resolveCSSSize(targetComputedStyle.marginTop);
-        const newMarginBottom = resolveCSSSize(targetComputedStyle.marginBottom);
-        const newMarginLeft = resolveCSSSize(targetComputedStyle.marginLeft);
-        const newMarginRight = resolveCSSSize(targetComputedStyle.marginRight);
-        const paddingTop = resolveCSSSize(containedComputedStyle.paddingTop);
-        const paddingLeft = resolveCSSSize(containedComputedStyle.paddingLeft);
-        const paddingRight = resolveCSSSize(containedComputedStyle.paddingRight);
-        const paddingBottom = resolveCSSSize(containedComputedStyle.paddingBottom);
-        setBorderTopWidth(newBorderTopWidth);
-        setBorderLeftWidth(newBorderLeftWidth);
-        setBorderRightWidth(newBorderRightWidth);
-        setBorderBottomWidth(newBorderBottomWidth);
-        setBorderRadius(newBorderRadius);
-        setOutlineOffset(newOutlineOffset);
-        setMarginTop(newMarginTop);
-        setMarginBottom(newMarginBottom);
-        setMarginLeft(newMarginLeft);
-        setMarginRight(newMarginRight);
-        setPaddingTop(paddingTop);
-        setPaddingLeft(paddingLeft);
-        setPaddingRight(paddingRight);
-        setPaddingBottom(paddingBottom);
-        if (color) {
-          // const resolvedColor = resolveCSSColor(color, rectangle, "css");
-          //  console.log(resolvedColor);
-          setCurrentColor(color);
-        } else if (newOutlineColor && newOutlineColor !== "rgba(0, 0, 0, 0)" && (document.activeElement === containedElement || newBorderColor === "rgba(0, 0, 0, 0)")) {
-          setCurrentColor(newOutlineColor);
-        } else if (newBorderColor && newBorderColor !== "rgba(0, 0, 0, 0)") {
-          setCurrentColor(newBorderColor);
-        } else {
-          setCurrentColor(newDetectedColor);
-        }
-      }
-      // updateStyles is very cheap so we run it every frame
-      animationFrame = requestAnimationFrame(updateStyles);
-    };
-    updateStyles();
-    return () => {
-      cancelAnimationFrame(animationFrame);
-    };
-  }, [color, targetSelector]);
   spacingTop += inset;
   // spacingTop += outlineOffset;
   // spacingTop -= borderTopWidth;
@@ -20044,7 +19978,7 @@ const LoaderBackgroundBasic = ({
     spacingRight += paddingRight;
     spacingBottom += paddingBottom;
   }
-  const maxBorderWidth = Math.max(borderTopWidth, borderLeftWidth, borderRightWidth, borderBottomWidth);
+  const maxBorderWidth = Math.max(borderWidth);
   const halfMaxBorderSize = maxBorderWidth / 2;
   const size = halfMaxBorderSize < 2 ? 2 : halfMaxBorderSize;
   const lineHalfSize = size / 2;
@@ -20065,7 +19999,7 @@ const LoaderBackgroundBasic = ({
       },
       children: loading && jsx(RectangleLoading, {
         shouldShowSpinner: shouldShowSpinner,
-        color: currentColor,
+        color: color,
         radius: borderRadius,
         size: size
       })
@@ -24635,7 +24569,8 @@ const InputRadioBasic = props => {
       loading: innerLoading,
       inset: -1,
       targetSelector: ".navi_radio_field",
-      color: "var(--loader-color)"
+      color: "var(--loader-color)",
+      borderRadius: "50%"
     }), renderRadioMemoized, jsx("span", {
       className: "navi_radio_field",
       children: appearance === "radio" ? jsxs("svg", {
