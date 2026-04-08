@@ -13,6 +13,49 @@ import {
 import { COMPLETED, FAILED, RUNNING } from "../../action/action_run_states.js";
 import { usePromiseAsyncData } from "./use_promise_async_data.js";
 
+/**
+ * Reads the current state of an action and returns `[data, loading, error]`.
+ *
+ * By default (`loading` and `error` not set) the component suspends on load
+ * and throws on failure, delegating both states to the nearest `<Loading>` and
+ * `<ErrorBoundary>` ancestors. Pass `loading: true` or `error: true` to handle
+ * either state directly inside the component instead.
+ *
+ * Return value: `[data, loading, error]`
+ * - `data`    — the action's last successful data, or `undefined` if it has never completed
+ * - `loading` — `true` while the action is running (only when `loading: true` is passed)
+ * - `error`   — the Error thrown by the action (only when `error: true` is passed)
+ *
+ * Stale data is always returned: when an action re-runs, the previous `data`
+ * remains available so the component can keep showing stale content while the
+ * refresh is in progress. Whether to show `data` or a loading indicator when
+ * `loading` is `true` is entirely up to the component.
+ *
+ * When `loading` is not set (default), the component suspends until data is
+ * ready, so `data` is always defined when the component renders and `loading`
+ * is always `false`.
+ *
+ * When `error` is not set (default), any action failure causes the component
+ * to throw, so `error` is always `undefined` when the component renders.
+ *
+ * @param {import("../../action/actions.js").Action} action
+ * @param {{ loading?: true, error?: true }} [options]
+ * @returns {[data: unknown, loading: boolean, error: Error | undefined]}
+ *
+ * @example <caption>Default — delegate both states (least code)</caption>
+ * const [user] = useAsyncData(userAction);
+ * // user is always defined here — never loading, never error
+ *
+ * @example <caption>Handle loading inline while keeping stale data</caption>
+ * const [user, loading] = useAsyncData(userAction, { loading: true });
+ * // First load:   user === undefined, loading === true  → show skeleton
+ * // While refreshing: user === <stale>, loading === true → show stale + spinner
+ * // Done:         user === <fresh>,   loading === false
+ *
+ * @example <caption>Handle error inline</caption>
+ * const [user, , error] = useAsyncData(userAction, { error: true });
+ * if (error) return <ErrorCard message={error.message} />;
+ */
 export const useAsyncData = (
   promiseOrAction,
   { loading = "delegate", error = "delegate" } = {},

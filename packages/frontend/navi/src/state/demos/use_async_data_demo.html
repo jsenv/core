@@ -187,14 +187,10 @@
               <h2 style={{ display: "inline" }}>Architecture</h2>
             </summary>
             <p class="demo-description">
-              <code>useAsyncData</code> is designed around one invariant:{" "}
-              <strong>
-                a component using it only ever renders when data is available
-              </strong>
-              . While waiting, the component suspends and never executes. On
-              error, it throws and never renders.
+              <code>useAsyncData(action)</code> returns{" "}
+              <code>[data, loading, error]</code>. Each value is present or not
+              depending on whether you opt in to handle it:
             </p>
-            <p class="demo-description">This pairs with two wrappers:</p>
             <ul
               style={{
                 margin: "0 0 12px",
@@ -205,46 +201,33 @@
               }}
             >
               <li>
-                <strong>
-                  <code>&lt;Loading fallback=...&gt;</code>
-                </strong>{" "}
-                — catches the suspension and renders the fallback while waiting
+                By default, loading suspends (via <code>&lt;Loading&gt;</code>)
+                and errors throw (via <code>&lt;ErrorBoundary&gt;</code>). If no
+                ancestor handles them, the default browser behaviour applies
+                (uncaught error, eternal suspension).
               </li>
               <li>
-                <strong>
-                  <code>&lt;ErrorBoundary fallback=...&gt;</code>
-                </strong>{" "}
-                — catches the thrown error and renders the fallback
+                Pass <code>loading: true</code> to receive the{" "}
+                <code>loading</code> flag and handle it inline. The component
+                never suspends — on first load <code>data</code> is{" "}
+                <code>undefined</code> and <code>loading</code> is{" "}
+                <code>true</code>. While re-fetching, <code>data</code> holds
+                the previous value so the component can decide whether to show
+                stale content alongside a spinner, or display a skeleton until
+                fresh data arrives.
+              </li>
+              <li>
+                Pass <code>error: true</code> to receive the <code>error</code>{" "}
+                object and handle it inline instead of throwing.
               </li>
             </ul>
             <p class="demo-description">
-              Both wrappers can be placed anywhere in the ancestor tree — close
-              to the component for a precise UX, or high in the hierarchy for
-              less code. There are three approaches:
+              The moment a component has a specific UX for loading or error, it
+              handles it directly rather than relying on bubble-up. Wrappers
+              like <code>&lt;Loading&gt;</code> and{" "}
+              <code>&lt;ErrorBoundary&gt;</code> act as a safety net for
+              unhandled cases, not as the primary design.
             </p>
-            <ul
-              style={{
-                margin: "0 0 12px",
-                paddingLeft: "20px",
-                color: "#555",
-                fontSize: "0.9em",
-                lineHeight: "1.7",
-              }}
-            >
-              <li>
-                <strong>Delegates both</strong> — loading and error are handled
-                by outer wrappers. Least code.
-              </li>
-              <li>
-                <strong>Manages loading</strong> — the component's own skeleton
-                is provided in <code>&lt;Loading fallback&gt;</code>. Better
-                loading UX.
-              </li>
-              <li>
-                <strong>Manages error</strong> — the component handles its error
-                state directly. Better error UX.
-              </li>
-            </ul>
           </details>
         </div>
       );
@@ -297,7 +280,7 @@
 
       // Suspends until data is ready — never sees loading or error state.
       const UserCard = ({ action, outerCount }) => {
-        const { data: user } = useAsyncData(action);
+        const [user] = useAsyncData(action);
         const [count, setCount] = useState(0);
         return (
           <UserCardFields
@@ -380,7 +363,7 @@
         const [outerCount, setOuterCount] = useState(0);
         return (
           <DemoSection
-            title="Delegates both"
+            title="Unhandled — bubbles up"
             titleExtra={
               <button
                 style={{ fontSize: "0.6em", fontWeight: "normal" }}
@@ -389,7 +372,7 @@
                 Outer count: {outerCount}
               </button>
             }
-            description="The component only ever renders with ready data — it never sees loading or error states. Both are delegated upward to the nearest <Loading> and <ErrorBoundary>. Tradeoff: least code, but the loading fallback is generic (a spinner or message) rather than a shape-matched skeleton."
+            description="Neither loading nor error is handled inline. Both bubble up to the nearest <Loading> and <ErrorBoundary> ancestors. This is the fallback behaviour when no custom UX is needed — not a pattern to aim for."
           >
             <FetchControls
               action={() => {
@@ -415,7 +398,7 @@
         const [outerCount, setOuterCount] = useState(0);
         return (
           <DemoSection
-            title="Manages loading"
+            title="Handles loading — skeleton in <Loading fallback>"
             titleExtra={
               <button
                 style={{ fontSize: "0.6em", fontWeight: "normal" }}
@@ -424,7 +407,7 @@
                 Outer count: {outerCount}
               </button>
             }
-            description="The component is always pure — it only renders with data — while the skeleton is defined alongside it in <Loading fallback>. Each concern has a single, predictable place to live. Tradeoff: more dev work per usage site, but better UX (skeleton matches the exact card shape) and the component stays simple to reuse."
+            description="The component itself stays simple (only renders with data), while its dedicated skeleton is declared in <Loading fallback> right next to it. This is the standard pattern when loading needs a specific UX."
           >
             <FetchControls
               action={() => {
@@ -459,7 +442,7 @@
         const [outerCount, setOuterCount] = useState(0);
         return (
           <DemoSection
-            title="Manages error"
+            title="Handles error inline"
             titleExtra={
               <button
                 style={{ fontSize: "0.6em", fontWeight: "normal" }}
@@ -468,7 +451,7 @@
                 Outer count: {outerCount}
               </button>
             }
-            description="The component renders its own error UI when the action fails, while loading is still delegated to <Loading fallback>. In practice, a custom error UI usually comes paired with a custom skeleton. Tradeoff: more code, but a richer, context-aware error experience."
+            description="Pass error: true to receive the error object and render a custom error UI directly inside the component. Loading still bubbles to <Loading fallback> here; combining both options is also valid."
           >
             <FetchControls
               action={() => {
@@ -476,53 +459,55 @@
               }}
               shouldFail={exManagesError.shouldFail}
             />
-            <ErrorBoundary fallback={UserCardError}>
-              <Loading fallback={UserCardSkeleton}>
-                <UserCard
-                  action={exManagesError.action}
-                  outerCount={outerCount}
-                />
-              </Loading>
-            </ErrorBoundary>
+            <Loading fallback={UserCardSkeleton}>
+              <UserCardHandlesError
+                action={exManagesError.action}
+                outerCount={outerCount}
+              />
+            </Loading>
           </DemoSection>
         );
       };
-      const UserCardError = ({ error, resetError }) => {
-        return (
-          <div class="card-error">
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                marginBottom: "8px",
-              }}
-            >
-              <span style={{ fontSize: "1.2em" }}>⚠️</span>
+      const UserCardHandlesError = ({ action, outerCount }) => {
+        const [user, , error] = useAsyncData(action, { error: true });
+        const [count, setCount] = useState(0);
+        if (error) {
+          return (
+            <div class="card-error">
+              <span style={{ fontSize: "1.2em" }}>⚠️</span>{" "}
               <strong>Something went wrong</strong>
+              <div
+                style={{
+                  fontFamily: "monospace",
+                  fontSize: "0.9em",
+                  margin: "8px 0",
+                }}
+              >
+                {error.message}
+              </div>
+              <Button onClick={() => action.rerun()}>Retry</Button>
             </div>
-            <div
-              style={{
-                fontFamily: "monospace",
-                fontSize: "0.9em",
-                marginBottom: "12px",
-              }}
-            >
-              {error.message}
-            </div>
-            <Button onClick={resetError}>Dismiss</Button>
-          </div>
+          );
+        }
+        return (
+          <UserCardFields
+            name={user.name}
+            email={user.email}
+            count={count}
+            onIncrement={() => setCount((n) => n + 1)}
+            outerCount={outerCount}
+          />
         );
       };
 
-      // ─── Preserves data while loading ─────────────────────────────────────────
+      // ─── Handles loading with stale data ──────────────────────────────────────
 
       const exAllowStale = makeExample("fetchUser4");
       const AllowStaleDemo = () => {
         const [outerCount, setOuterCount] = useState(0);
         return (
           <DemoSection
-            title="Preserves data while loading"
+            title="Handles loading inline — keeps stale data while refreshing"
             titleExtra={
               <button
                 style={{ fontSize: "0.6em", fontWeight: "normal" }}
@@ -531,7 +516,7 @@
                 Outer count: {outerCount}
               </button>
             }
-            description="While re-fetching, the component keeps showing the previous data instead of suspending again. On first load it still suspends normally. Tradeoff: smoother revalidation UX with minimal extra code — the component just handles a loading flag."
+            description="Pass loading: true to receive the loading flag and handle it inside the component. The component never suspends. On first load data is undefined and loading is true — the component is responsible for showing a skeleton. While re-fetching, data holds the previous value so the component can keep showing stale content alongside a spinner."
           >
             <FetchControls
               action={() => {
@@ -552,9 +537,7 @@
       };
       // Shows previous data while re-fetching — suspends only on first load.
       const UserCardAllowStale = ({ action, outerCount }) => {
-        const { data: user, loading } = useAsyncData(action, {
-          loading: "preserve",
-        });
+        const [user, loading] = useAsyncData(action, { loading: true });
         const [count, setCount] = useState(0);
         return (
           <div>
