@@ -123,6 +123,7 @@ const DIMENSION_PROPS = {
       borderRadius: "100%",
     };
   },
+  aspectRatio: PASS_THROUGH,
   expand: applyOnTwoProps("expandX", "expandY"),
   shrink: applyOnTwoProps("shrinkX", "shrinkY"),
   // apply after width/height to override if both are set

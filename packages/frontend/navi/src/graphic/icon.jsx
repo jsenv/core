@@ -57,18 +57,18 @@ import.meta.css = /* css */ `
     height: 100%;
     backface-visibility: hidden;
   }
-  .navi_icon[data-has-width] > svg,
-  .navi_icon[data-has-width] > img {
+  .navi_icon[data-width-fixed] > svg,
+  .navi_icon[data-width-fixed] > img {
     width: 100%;
     height: auto;
   }
-  .navi_icon[data-has-height] > svg,
-  .navi_icon[data-has-height] > img {
+  .navi_icon[data-height-fixed] > svg,
+  .navi_icon[data-height-fixed] > img {
     width: auto;
     height: 100%;
   }
-  .navi_icon[data-has-width][data-has-height] > svg,
-  .navi_icon[data-has-width][data-has-height] > img {
+  .navi_icon[data-width-fixed][data-height-fixed] > svg,
+  .navi_icon[data-width-fixed][data-height-fixed] > img {
     width: 100%;
     height: 100%;
   }
@@ -103,7 +103,13 @@ export const Icon = ({
   }
   const hasExplicitWidth = width !== undefined;
   const hasExplicitHeight = height !== undefined;
-  if (hasExplicitWidth || hasExplicitHeight) {
+  const widthFixed =
+    hasExplicitWidth ||
+    (hasExplicitHeight && (props.square || props.circle || props.aspectRatio));
+  const heightFixed =
+    hasExplicitHeight ||
+    (hasExplicitWidth && (props.square || props.circle || props.aspectRatio));
+  if (widthFixed || heightFixed) {
     if (flex === undefined) {
       flex = "x";
     }
@@ -128,8 +134,8 @@ export const Icon = ({
         {...ariaProps}
         flex={flex}
         baseClassName="navi_icon"
-        data-has-width={hasExplicitWidth ? "" : undefined}
-        data-has-height={hasExplicitHeight ? "" : undefined}
+        data-width-fixed={widthFixed ? "" : undefined}
+        data-height-fixed={heightFixed ? "" : undefined}
         data-interactive={onClick ? "" : undefined}
         onClick={onClick}
       >
@@ -146,8 +152,8 @@ export const Icon = ({
       className={withPropsClassName("navi_icon", props.className)}
       spacing="pre"
       data-icon-char=""
-      data-has-width={hasExplicitWidth ? "" : undefined}
-      data-has-height={hasExplicitHeight ? "" : undefined}
+      data-width-fixed={widthFixed ? "" : undefined}
+      data-height-fixed={heightFixed ? "" : undefined}
       data-interactive={onClick ? "" : undefined}
       onClick={onClick}
     >

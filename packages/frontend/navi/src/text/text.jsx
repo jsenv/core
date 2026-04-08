@@ -244,7 +244,7 @@ const TextOverflow = ({ noWrap, spacing, children, ...rest }) => {
 
   return (
     <Text
-      column
+      flex
       as="div"
       nowWrap={noWrap}
       pre={!noWrap}
@@ -304,9 +304,7 @@ const TextBasic = ({
     ...rest,
     "baseClassName": withPropsClassName("navi_text", rest.baseClassName),
   };
-
-  const shouldPreserveSpacing =
-    rest.as === "pre" || rest.box || rest.column || rest.row;
+  const shouldPreserveSpacing = rest.as === "pre" || rest.flex || rest.grid;
   if (shouldPreserveSpacing) {
     boxProps.spacing = spacing;
   } else {
