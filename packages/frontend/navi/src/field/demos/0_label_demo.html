@@ -19,6 +19,17 @@
         padding: "12px",
       };
 
+      const BasicDemo = () => {
+        return (
+          <>
+            <ToTheLeftDemo />
+            <AboveDemo />
+            <DisabledDemo />
+            <ReadOnlyDemo />
+          </>
+        );
+      };
+
       const ToTheLeftDemo = () => {
         return (
           <Box flex="y" spacing="xs" style={sectionStyle}>
@@ -126,10 +137,7 @@
             style={{ padding: "20px", maxWidth: "600px" }}
           >
             <h1>Label</h1>
-            <ToTheLeftDemo />
-            <AboveDemo />
-            <DisabledDemo />
-            <ReadOnlyDemo />
+            <BasicDemo />
             <SizingDemo />
           </Box>
         );
