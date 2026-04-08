@@ -11,7 +11,7 @@
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { Label, Input, Box } from "@jsenv/navi";
+      import { Label, Input, Box, Text } from "@jsenv/navi";
 
       const sectionStyle = {
         border: "1px solid #ccc",
@@ -89,7 +89,7 @@
             <h2>Sizing</h2>
             <Box flex="y" spacing="s">
               <Box flex="y" spacing="xs">
-                <span>block (default)</span>
+                <span>flex + block</span>
                 <div
                   style={{
                     width: "200px",
@@ -97,16 +97,16 @@
                     padding: "8px",
                   }}
                 >
-                  <Label style={{ border: "1px dotted #999" }} spacing="xs">
-                    <span>Short</span>
-                    <span>
-                      This text is much much longer than the container width
-                    </span>
-                  </Label>
+                  <LabelWithToggle block>Short text</LabelWithToggle>
+                  <LabelWithToggle block>A longer text</LabelWithToggle>
+                  <LabelWithToggle block>
+                    This text is much much longer than the container width
+                  </LabelWithToggle>
                 </div>
               </Box>
+
               <Box flex="y" spacing="xs">
-                <span>flex (shrinks to content)</span>
+                <span>flex + width 100%</span>
                 <div
                   style={{
                     width: "200px",
@@ -114,20 +114,68 @@
                     padding: "8px",
                   }}
                 >
-                  <Label
-                    flex
-                    style={{ border: "1px dotted #999" }}
-                    spacing="xs"
-                  >
-                    <span>Short</span>
-                    <span>
-                      This text is much much longer than the container width
-                    </span>
-                  </Label>
+                  <LabelWithToggle width="100%">Short text</LabelWithToggle>
+                  <LabelWithToggle width="100%">A longer text</LabelWithToggle>
+                  <LabelWithToggle width="100%">
+                    This text is much much longer than the container width
+                  </LabelWithToggle>
+                </div>
+              </Box>
+
+              <Box flex="y" spacing="xs">
+                <span>flex only</span>
+                <div
+                  style={{
+                    width: "200px",
+                    background: "rgba(255,200,0,0.3)",
+                    padding: "8px",
+                  }}
+                >
+                  <LabelWithToggle>Short text</LabelWithToggle>
+                  <LabelWithToggle>A longer text</LabelWithToggle>
+                  <LabelWithToggle>
+                    This text is much much longer than the container width
+                  </LabelWithToggle>
+                </div>
+              </Box>
+
+              <Box flex="y" spacing="xs">
+                <span>flex + expandX</span>
+                <div
+                  style={{
+                    width: "200px",
+                    background: "rgba(255,200,0,0.3)",
+                    padding: "8px",
+                  }}
+                >
+                  <LabelWithToggle expandX>Short text</LabelWithToggle>
+                  <LabelWithToggle expandX>A longer text</LabelWithToggle>
+                  <LabelWithToggle expandX>
+                    This text is much much longer than the container width
+                  </LabelWithToggle>
                 </div>
               </Box>
             </Box>
           </Box>
+        );
+      };
+      const LabelWithToggle = ({ children, ...props }) => {
+        return (
+          <Label
+            flex
+            alignY="center"
+            border="1px dotted #999"
+            spacing="xs"
+            {...props}
+          >
+            <Text overflowEllipsis>{children}</Text>
+            <Input
+              type="checkbox"
+              appearance="toggle"
+              selfAlignX="end"
+              size="xs"
+            />
+          </Label>
         );
       };
 
