@@ -40,7 +40,7 @@ import { usePromiseAsyncData } from "./use_promise_async_data.js";
  *
  * @param {import("../../action/actions.js").Action} action
  * @param {{ loading?: true, error?: true }} [options]
- * @returns {[data: unknown, loading: boolean, error: Error | undefined]}
+ * @returns {[data: unknown, loading: boolean, error: Error | undefined, dismissError: (() => void) | undefined]}
  *
  * @example <caption>Default — delegate both states (least code)</caption>
  * const [user] = useAsyncData(userAction);
@@ -103,7 +103,10 @@ const useActionAsyncData = (action, { loadingEffect, errorEffect }) => {
   const runningState = action.runningStateSignal.peek();
   const [, setTick] = useState(0);
   useEffect(() => {
-    return action.runningStateSignal.subscribe(() => {
+    return action.runningStateSignal.subscribe((state) => {
+      if (state === RUNNING) {
+        dismissedActionWeakSet.delete(action);
+      }
       setTick((n) => n + 1);
     });
   }, []);
@@ -139,7 +142,11 @@ const useActionAsyncData = (action, { loadingEffect, errorEffect }) => {
     }
     const actionError = action.errorSignal.peek();
     if (errorEffect === "use") {
-      return [undefined, false, actionError];
+      const dismissError = () => {
+        dismissedActionWeakSet.add(action);
+        setTick((n) => n + 1);
+      };
+      return [undefined, false, actionError, dismissError];
     }
     actionError.action = action;
     throw actionError;
@@ -158,10 +165,6 @@ const useActionAsyncData = (action, { loadingEffect, errorEffect }) => {
   if (!pendingPromise) {
     pendingPromise = new Promise((resolve) => {
       const unsubscribe = action.runningStateSignal.subscribe((state) => {
-        if (state === RUNNING) {
-          // Action re-ran — clear dismissed state regardless of path
-          dismissedActionWeakSet.delete(action);
-        }
         if (state === COMPLETED || state === FAILED) {
           actionPendingPromiseWeakMap.delete(action);
           unsubscribe();

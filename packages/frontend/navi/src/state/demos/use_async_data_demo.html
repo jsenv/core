@@ -552,7 +552,7 @@
         );
       };
       const UserCardHandlesError = ({ action, outerCount }) => {
-        const [user, loading, error] = useAsyncData(action, {
+        const [user, loading, error, dismissError] = useAsyncData(action, {
           loading: true,
           error: true,
         });
@@ -571,7 +571,8 @@
               >
                 {error.message}
               </div>
-              <Button onClick={() => action.rerun()}>Retry</Button>
+              <Button onClick={dismissError}>Dismiss</Button>
+              <Button action={action}>Retry</Button>
             </div>
           );
         }
@@ -615,13 +616,14 @@
               }}
               shouldFail={exManagesLoading.shouldFail}
             />
-
-            <Loading fallback={UserCardSkeleton}>
-              <UserCard
-                action={exManagesLoading.action}
-                outerCount={outerCount}
-              />
-            </Loading>
+            <ErrorBoundary fallback={ErrorCard}>
+              <Loading fallback={UserCardSkeleton}>
+                <UserCard
+                  action={exManagesLoading.action}
+                  outerCount={outerCount}
+                />
+              </Loading>
+            </ErrorBoundary>
           </DemoSection>
         );
       };
