@@ -162,10 +162,15 @@
         <div>
           <h1>Loading + ErrorBoundary Demo</h1>
           <ArchitectureSection />
-          <DelegatesBothDemo />
-          <ManagesLoadingDemo />
-          <ManagesErrorDemo />
-          <AllowStaleDemo />
+          <ErrorBoundary fallback={ErrorCard}>
+            <DelegatesBothDemo />
+
+            <AllowStaleDemo />
+
+            <ManagesErrorDemo />
+
+            <ManagesLoadingDemo />
+          </ErrorBoundary>
         </div>
       );
 
@@ -228,6 +233,15 @@
               <code>&lt;ErrorBoundary&gt;</code> act as a safety net for
               unhandled cases, not as the primary design.
             </p>
+            <p class="demo-description">
+              Handling inline also keeps the component mounted throughout the
+              fetch lifecycle, preserving local state (counters, form input,
+              scroll position). Using <code>&lt;Loading fallback&gt;</code>{" "}
+              suspends the component: it unmounts and its state resets. That
+              approach is still supported and works well for simple cases, but
+              is shown last here as an alternative rather than the recommended
+              default.
+            </p>
           </details>
         </div>
       );
@@ -256,6 +270,32 @@
             />
             Simulate server error
           </label>
+        </div>
+      );
+
+      const ErrorCard = ({ error, resetError }) => (
+        <div class="card-error">
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              marginBottom: "8px",
+            }}
+          >
+            <span style={{ fontSize: "1.2em" }}>⚠️</span>
+            <strong>Error caught by ErrorBoundary</strong>
+          </div>
+          <div
+            style={{
+              fontFamily: "monospace",
+              fontSize: "0.9em",
+              marginBottom: "12px",
+            }}
+          >
+            {error.message}
+          </div>
+          <Button onClick={resetError}>Dismiss</Button>
         </div>
       );
 
@@ -331,32 +371,6 @@
         </div>
       );
 
-      const ErrorCard = ({ error, resetError }) => (
-        <div class="card-error">
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-              marginBottom: "8px",
-            }}
-          >
-            <span style={{ fontSize: "1.2em" }}>⚠️</span>
-            <strong>Error caught by ErrorBoundary</strong>
-          </div>
-          <div
-            style={{
-              fontFamily: "monospace",
-              fontSize: "0.9em",
-              marginBottom: "12px",
-            }}
-          >
-            {error.message}
-          </div>
-          <Button onClick={resetError}>Dismiss</Button>
-        </div>
-      );
-
       // ─── Delegates both ───────────────────────────────────────────────────────
       const exDelegatesBoth = makeExample("fetchUser1");
       const DelegatesBothDemo = () => {
@@ -392,116 +406,7 @@
         );
       };
 
-      // ─── Manages loading ──────────────────────────────────────────────────────
-      const exManagesLoading = makeExample("fetchUser2");
-      const ManagesLoadingDemo = () => {
-        const [outerCount, setOuterCount] = useState(0);
-        return (
-          <DemoSection
-            title="Handles loading — skeleton in <Loading fallback>"
-            titleExtra={
-              <button
-                style={{ fontSize: "0.6em", fontWeight: "normal" }}
-                onClick={() => setOuterCount((n) => n + 1)}
-              >
-                Outer count: {outerCount}
-              </button>
-            }
-            description="The component itself stays simple (only renders with data), while its dedicated skeleton is declared in <Loading fallback> right next to it. This is the standard pattern when loading needs a specific UX."
-          >
-            <FetchControls
-              action={() => {
-                return exManagesLoading.action.rerun();
-              }}
-              shouldFail={exManagesLoading.shouldFail}
-            />
-
-            <ErrorBoundary fallback={ErrorCard}>
-              <Loading fallback={<UserCardSkeleton />}>
-                <UserCard
-                  action={exManagesLoading.action}
-                  outerCount={outerCount}
-                />
-              </Loading>
-            </ErrorBoundary>
-          </DemoSection>
-        );
-      };
-      const UserCardSkeleton = () => {
-        return (
-          <UserCardFields
-            name={<span class="skeleton" style={{ width: "80px" }} />}
-            email={<span class="skeleton" style={{ width: "140px" }} />}
-          />
-        );
-      };
-
-      // ─── Manages error ────────────────────────────────────────────────────────
-      const exManagesError = makeExample("fetchUser3");
-      const ManagesErrorDemo = () => {
-        const [outerCount, setOuterCount] = useState(0);
-        return (
-          <DemoSection
-            title="Handles error inline"
-            titleExtra={
-              <button
-                style={{ fontSize: "0.6em", fontWeight: "normal" }}
-                onClick={() => setOuterCount((n) => n + 1)}
-              >
-                Outer count: {outerCount}
-              </button>
-            }
-            description="Pass error: true to receive the error object and render a custom error UI directly inside the component. Loading still bubbles to <Loading fallback> here; combining both options is also valid."
-          >
-            <FetchControls
-              action={() => {
-                return exManagesError.action.rerun();
-              }}
-              shouldFail={exManagesError.shouldFail}
-            />
-            <Loading fallback={UserCardSkeleton}>
-              <UserCardHandlesError
-                action={exManagesError.action}
-                outerCount={outerCount}
-              />
-            </Loading>
-          </DemoSection>
-        );
-      };
-      const UserCardHandlesError = ({ action, outerCount }) => {
-        const [user, , error] = useAsyncData(action, { error: true });
-        const [count, setCount] = useState(0);
-        if (error) {
-          return (
-            <div class="card-error">
-              <span style={{ fontSize: "1.2em" }}>⚠️</span>{" "}
-              <strong>Something went wrong</strong>
-              <div
-                style={{
-                  fontFamily: "monospace",
-                  fontSize: "0.9em",
-                  margin: "8px 0",
-                }}
-              >
-                {error.message}
-              </div>
-              <Button onClick={() => action.rerun()}>Retry</Button>
-            </div>
-          );
-        }
-        return (
-          <UserCardFields
-            name={user.name}
-            email={user.email}
-            count={count}
-            onIncrement={() => setCount((n) => n + 1)}
-            outerCount={outerCount}
-          />
-        );
-      };
-
       // ─── Handles loading with stale data ──────────────────────────────────────
-
       const exAllowStale = makeExample("fetchUser4");
       const AllowStaleDemo = () => {
         const [outerCount, setOuterCount] = useState(0);
@@ -525,7 +430,7 @@
               shouldFail={exAllowStale.shouldFail}
             />
             <ErrorBoundary fallback={ErrorCard}>
-              <Loading fallback={UserCardSkeleton}>
+              <Loading>
                 <UserCardAllowStale
                   action={exAllowStale.action}
                   outerCount={outerCount}
@@ -535,20 +440,24 @@
           </DemoSection>
         );
       };
-      // Shows previous data while re-fetching — suspends only on first load.
+      // Stays mounted throughout — never suspends. Handles loading and stale data inline.
       const UserCardAllowStale = ({ action, outerCount }) => {
         const [user, loading] = useAsyncData(action, { loading: true });
         const [count, setCount] = useState(0);
         return (
           <div>
-            <UserCardFields
-              name={user.name}
-              email={user.email}
-              count={count}
-              onIncrement={() => setCount((n) => n + 1)}
-              outerCount={outerCount}
-            />
-            {loading && (
+            {user ? (
+              <UserCardFields
+                name={user.name}
+                email={user.email}
+                count={count}
+                onIncrement={() => setCount((n) => n + 1)}
+                outerCount={outerCount}
+              />
+            ) : (
+              <UserCardSkeleton />
+            )}
+            {user && loading && (
               <div
                 style={{
                   marginTop: "8px",
@@ -561,6 +470,118 @@
               </div>
             )}
           </div>
+        );
+      };
+
+      // ─── Manages error ────────────────────────────────────────────────────────
+      const exManagesError = makeExample("fetchUser3");
+      const ManagesErrorDemo = () => {
+        const [outerCount, setOuterCount] = useState(0);
+        return (
+          <DemoSection
+            title="Handles loading and error inline"
+            titleExtra={
+              <button
+                style={{ fontSize: "0.6em", fontWeight: "normal" }}
+                onClick={() => setOuterCount((n) => n + 1)}
+              >
+                Outer count: {outerCount}
+              </button>
+            }
+            description="Pass both loading: true and error: true to handle everything inline. The component stays mounted throughout — local state is preserved across fetches. On first load, data is undefined and the component renders a skeleton itself."
+          >
+            <FetchControls
+              action={() => {
+                return exManagesError.action.rerun();
+              }}
+              shouldFail={exManagesError.shouldFail}
+            />
+            <Loading>
+              <UserCardHandlesError
+                action={exManagesError.action}
+                outerCount={outerCount}
+              />
+            </Loading>
+          </DemoSection>
+        );
+      };
+      const UserCardHandlesError = ({ action, outerCount }) => {
+        const [user, loading, error] = useAsyncData(action, {
+          loading: true,
+          error: true,
+        });
+        const [count, setCount] = useState(0);
+        if (error) {
+          return (
+            <div class="card-error">
+              <span style={{ fontSize: "1.2em" }}>⚠️</span>{" "}
+              <strong>Something went wrong</strong>
+              <div
+                style={{
+                  fontFamily: "monospace",
+                  fontSize: "0.9em",
+                  margin: "8px 0",
+                }}
+              >
+                {error.message}
+              </div>
+              <Button onClick={() => action.rerun()}>Retry</Button>
+            </div>
+          );
+        }
+        if (loading && !user) {
+          return <UserCardSkeleton />;
+        }
+        return (
+          <UserCardFields
+            name={user.name}
+            email={user.email}
+            count={count}
+            onIncrement={() => setCount((n) => n + 1)}
+            outerCount={outerCount}
+          />
+        );
+      };
+
+      // ─── External skeleton via <Loading fallback> ──────────────────────────────
+      const exManagesLoading = makeExample("fetchUser2");
+      const ManagesLoadingDemo = () => {
+        const [outerCount, setOuterCount] = useState(0);
+        return (
+          <DemoSection
+            title="Alternative: skeleton outside the component via <Loading fallback>"
+            titleExtra={
+              <button
+                style={{ fontSize: "0.6em", fontWeight: "normal" }}
+                onClick={() => setOuterCount((n) => n + 1)}
+              >
+                Outer count: {outerCount}
+              </button>
+            }
+            description="The skeleton is declared in <Loading fallback> outside the component. This works and keeps the component simple. The trade-off: the component suspends and unmounts while loading, so local state like the count resets on every fetch. Click Fetch and watch the counter reset."
+          >
+            <FetchControls
+              action={() => {
+                return exManagesLoading.action.rerun();
+              }}
+              shouldFail={exManagesLoading.shouldFail}
+            />
+
+            <Loading fallback={UserCardSkeleton}>
+              <UserCard
+                action={exManagesLoading.action}
+                outerCount={outerCount}
+              />
+            </Loading>
+          </DemoSection>
+        );
+      };
+      const UserCardSkeleton = () => {
+        return (
+          <UserCardFields
+            name={<span class="skeleton" style={{ width: "80px" }} />}
+            email={<span class="skeleton" style={{ width: "140px" }} />}
+          />
         );
       };
 

@@ -91,6 +91,7 @@ const useActionAsyncData = (action, { loadingEffect, errorEffect }) => {
   if (!loadingRef) {
     throw new Error("Missing <Loading>");
   }
+
   // Use peek() instead of .value to avoid subscribing this component to the signal.
   // Reading .value would make Preact re-render the component reactively when the state
   // changes. When the action fails while Suspense is still holding the detached stale
@@ -100,7 +101,6 @@ const useActionAsyncData = (action, { loadingEffect, errorEffect }) => {
   // re-renders only happen after the pending promise resolves, at which point Suspense
   // has already processed the settlement and the detached DOM is discarded.
   const runningState = action.runningStateSignal.peek();
-
   const [, setTick] = useState(0);
   useEffect(() => {
     return action.runningStateSignal.subscribe(() => {
@@ -145,7 +145,7 @@ const useActionAsyncData = (action, { loadingEffect, errorEffect }) => {
     throw actionError;
   }
 
-  // RUNNING with previous data and loading: "use"
+  // RUNNING with loadingEffect: "use" — return stale data + loading flag, no suspend
   if (loadingEffect === "use" && runningState === RUNNING) {
     const staleData = action.dataSignal.peek();
     return [staleData, true, undefined];
@@ -154,7 +154,6 @@ const useActionAsyncData = (action, { loadingEffect, errorEffect }) => {
   // IDLE or RUNNING with loadingEffect: "delegate" — suspend
   const reason = runningState === RUNNING ? "loading" : "idle";
   loadingRef.current = { reason, action };
-
   let pendingPromise = actionPendingPromiseWeakMap.get(action);
   if (!pendingPromise) {
     pendingPromise = new Promise((resolve) => {
@@ -184,7 +183,20 @@ const useActionAsyncData = (action, { loadingEffect, errorEffect }) => {
 // Wraps Suspense. Provides LoadingContext so useAction can write the suspension
 // reason. LoadingFallback reads that reason and subscribes to the action so it
 // only shows the spinner when actually loading (not in the initial idle state).
-
+export const Loading = ({ children, fallback }) => {
+  const loadingRef = useRef({ reason: "idle", action: null });
+  return (
+    <LoadingContext.Provider value={loadingRef}>
+      <Suspense
+        fallback={
+          <LoadingFallback loadingRef={loadingRef} fallback={fallback} />
+        }
+      >
+        {children}
+      </Suspense>
+    </LoadingContext.Provider>
+  );
+};
 const LoadingFallback = ({ loadingRef, fallback }) => {
   const [, setTick] = useState(0);
   const { action } = loadingRef.current;
@@ -205,25 +217,9 @@ const LoadingFallback = ({ loadingRef, fallback }) => {
   return fallback;
 };
 
-export const Loading = ({ children, fallback }) => {
-  const loadingRef = useRef({ reason: "idle", action: null });
-  return (
-    <LoadingContext.Provider value={loadingRef}>
-      <Suspense
-        fallback={
-          <LoadingFallback loadingRef={loadingRef} fallback={fallback} />
-        }
-      >
-        {children}
-      </Suspense>
-    </LoadingContext.Provider>
-  );
-};
-
 // ─── ErrorBoundary ────────────────────────────────────────────────────────────
 // Catches errors thrown by useAction. Subscribes to error.action so it
 // auto-resets when the action runs again.
-
 export const ErrorBoundary = ({ children, fallback, onReset }) => {
   const [error, resetError] = useErrorBoundary();
   const [dismissed, setDismissed] = useState(false);
