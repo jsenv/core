@@ -103,27 +103,6 @@
         color: #888;
         font-size: 0.85em;
       }
-      .skeleton {
-        display: inline-block;
-        height: 1em;
-        background: linear-gradient(
-          90deg,
-          #e0e0e0 25%,
-          #f0f0f0 50%,
-          #e0e0e0 75%
-        );
-        background-size: 200% 100%;
-        border-radius: 4px;
-        animation: shimmer 1.2s infinite;
-      }
-      @keyframes shimmer {
-        0% {
-          background-position: 200% 0;
-        }
-        100% {
-          background-position: -200% 0;
-        }
-      }
       .card-loading {
         margin-top: 12px;
         padding: 16px;
@@ -154,6 +133,7 @@
         Loading,
         ErrorBoundary,
         Button,
+        TextPlaceholder,
       } from "@jsenv/navi";
 
       const delay = (ms) => new Promise((res) => setTimeout(res, ms));
@@ -361,10 +341,7 @@
               {count !== null && count !== undefined ? (
                 count
               ) : (
-                <span
-                  class="skeleton"
-                  style={{ width: "20px", verticalAlign: "middle" }}
-                />
+                <TextPlaceholder loading width="20" alignY="center" />
               )}
             </button>
           </div>
@@ -630,8 +607,8 @@
       const UserCardSkeleton = () => {
         return (
           <UserCardFields
-            name={<span class="skeleton" style={{ width: "80px" }} />}
-            email={<span class="skeleton" style={{ width: "140px" }} />}
+            name={<TextPlaceholder loading width="80" />}
+            email={<TextPlaceholder loading width="140" />}
           />
         );
       };
