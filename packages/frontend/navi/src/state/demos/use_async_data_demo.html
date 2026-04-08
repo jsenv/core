@@ -410,9 +410,10 @@
       const exAllowStale = makeExample("fetchUser4");
       const AllowStaleDemo = () => {
         const [outerCount, setOuterCount] = useState(0);
+        const [hideWhileLoading, setHideWhileLoading] = useState(false);
         return (
           <DemoSection
-            title="Handles loading inline — keeps stale data while refreshing"
+            title="Handles loading"
             titleExtra={
               <button
                 style={{ fontSize: "0.6em", fontWeight: "normal" }}
@@ -429,11 +430,32 @@
               }}
               shouldFail={exAllowStale.shouldFail}
             />
+            <label
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+                marginBottom: "12px",
+                fontSize: "0.9em",
+                color: "#555",
+                cursor: "pointer",
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={hideWhileLoading}
+                onChange={(e) => {
+                  setHideWhileLoading(e.target.checked);
+                }}
+              />
+              Hide current user while loading new one (show skeleton instead)
+            </label>
             <ErrorBoundary fallback={ErrorCard}>
               <Loading>
                 <UserCardAllowStale
                   action={exAllowStale.action}
                   outerCount={outerCount}
+                  hideWhileLoading={hideWhileLoading}
                 />
               </Loading>
             </ErrorBoundary>
@@ -441,37 +463,37 @@
         );
       };
       // Stays mounted throughout — never suspends. Handles loading and stale data inline.
-      const UserCardAllowStale = ({ action, outerCount }) => {
+      const UserCardAllowStale = ({ action, outerCount, hideWhileLoading }) => {
         const [user, loading] = useAsyncData(action, { loading: true });
         const [count, setCount] = useState(0);
+        if (loading && (!user || hideWhileLoading.value)) {
+          return <UserCardSkeleton />;
+        }
         return (
           <div>
-            {user ? (
-              <UserCardFields
-                name={user.name}
-                email={user.email}
-                count={count}
-                onIncrement={() => setCount((n) => n + 1)}
-                outerCount={outerCount}
-              />
-            ) : (
-              <UserCardSkeleton />
-            )}
-            {user && loading && (
-              <div
-                style={{
-                  marginTop: "8px",
-                  fontSize: "0.85em",
-                  color: "#888",
-                  fontStyle: "italic",
-                }}
-              >
-                Refreshing…
-              </div>
-            )}
+            <UserCardFields
+              name={user.name}
+              email={user.email}
+              count={count}
+              onIncrement={() => setCount((n) => n + 1)}
+              outerCount={outerCount}
+            />
+            {loading && <RefreshingIndicator />}
           </div>
         );
       };
+      const RefreshingIndicator = () => (
+        <div
+          style={{
+            marginTop: "8px",
+            fontSize: "0.85em",
+            color: "#888",
+            fontStyle: "italic",
+          }}
+        >
+          Refreshing…
+        </div>
+      );
 
       // ─── Manages error ────────────────────────────────────────────────────────
       const exManagesError = makeExample("fetchUser3");
@@ -533,13 +555,16 @@
           return <UserCardSkeleton />;
         }
         return (
-          <UserCardFields
-            name={user.name}
-            email={user.email}
-            count={count}
-            onIncrement={() => setCount((n) => n + 1)}
-            outerCount={outerCount}
-          />
+          <>
+            <UserCardFields
+              name={user.name}
+              email={user.email}
+              count={count}
+              onIncrement={() => setCount((n) => n + 1)}
+              outerCount={outerCount}
+            />
+            {user && loading && <RefreshingIndicator />}
+          </>
         );
       };
 
