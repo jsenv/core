@@ -11,20 +11,29 @@ import {
 } from "preact/hooks";
 
 import { COMPLETED, FAILED, RUNNING } from "../../action/action_run_states.js";
-import { usePromise } from "./use_promise.js";
+import { usePromiseAsyncData } from "./use_promise_async_data.js";
 
 export const useAsyncData = (
   promiseOrAction,
   { loading = "delegate", error = "delegate" } = {},
 ) => {
   const isAction = Boolean(promiseOrAction && promiseOrAction.isAction);
+  if (loading === true) {
+    loading = "use";
+  }
+  if (error === true) {
+    error = "use";
+  }
   if (isAction) {
-    return useAction(promiseOrAction, {
+    return useActionAsyncData(promiseOrAction, {
       loadingEffect: loading,
       errorEffect: error,
     });
   }
-  return usePromise(promiseOrAction);
+  return usePromiseAsyncData(promiseOrAction, {
+    loadingEffect: loading,
+    errorEffect: error,
+  });
 };
 
 // ─── useAction ────────────────────────────────────────────────────────────────
@@ -34,7 +43,7 @@ const actionPendingPromiseWeakMap = new WeakMap();
 const dismissedActionWeakSet = new WeakSet();
 const dismissedActionPendingPromiseWeakMap = new WeakMap();
 
-const useAction = (action, { loadingEffect, errorEffect }) => {
+const useActionAsyncData = (action, { loadingEffect, errorEffect }) => {
   const loadingRef = useContext(LoadingContext);
   if (!loadingRef) {
     throw new Error("Missing <Loading>");
@@ -57,22 +66,14 @@ const useAction = (action, { loadingEffect, errorEffect }) => {
   }, []);
 
   if (runningState === COMPLETED) {
-    return {
-      loading: false,
-      error: null,
-      data: action.dataSignal.peek(),
-    };
+    return [action.dataSignal.peek(), false, undefined];
   }
   if (runningState === FAILED) {
     if (dismissedActionWeakSet.has(action)) {
       const staleData = action.dataSignal.peek();
       if (staleData !== undefined) {
         // Dismissed with stale data — return it so children render normally
-        return {
-          loading: false,
-          error: null,
-          data: staleData,
-        };
+        return [staleData, false, undefined];
       }
       // Dismissed with no data — suspend until the action re-runs.
       // A never-resolving promise would leave the component stuck forever,
@@ -94,37 +95,17 @@ const useAction = (action, { loadingEffect, errorEffect }) => {
       throw dismissedPromise;
     }
     const actionError = action.errorSignal.peek();
-    if (errorEffect === "internal") {
-      return {
-        loading: false,
-        error: actionError,
-        data: undefined,
-      };
+    if (errorEffect === "use") {
+      return [undefined, false, actionError];
     }
     actionError.action = action;
     throw actionError;
   }
 
-  // RUNNING with previous data and loading: "preserve"
-  if (runningState === RUNNING) {
-    if (loadingEffect === "preserve") {
-      const staleData = action.dataSignal.peek();
-      if (staleData !== undefined) {
-        return {
-          loading: true,
-          error: null,
-          data: staleData,
-        };
-      }
-    }
-    // RUNNING with loading: "internal" — return loading flag without suspending
-    if (loadingEffect === "internal") {
-      return {
-        loading: true,
-        error: null,
-        data: undefined,
-      };
-    }
+  // RUNNING with previous data and loading: "use"
+  if (loadingEffect === "use" && runningState === RUNNING) {
+    const staleData = action.dataSignal.peek();
+    return [staleData, true, undefined];
   }
 
   // IDLE or RUNNING with loadingEffect: "delegate" — suspend

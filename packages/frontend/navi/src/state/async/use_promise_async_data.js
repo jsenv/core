@@ -1,14 +1,17 @@
 import { useState } from "preact/hooks";
 
 const promiseStateWeakMap = new WeakMap();
-export const usePromise = (promise) => {
+export const usePromiseAsyncData = (
+  promise,
+  { loadingEffect, errorEffect },
+) => {
   const forceRender = useForceRender();
 
   let promiseState = promiseStateWeakMap.get(promise);
   if (!promiseState) {
     promiseState = {
-      data: null,
-      error: null,
+      data: undefined,
+      error: undefined,
       settled: false,
     };
     promiseStateWeakMap.set(promise, promiseState);
@@ -21,17 +24,23 @@ export const usePromise = (promise) => {
       (error) => {
         promiseState.error = error;
         promiseState.settled = true;
+        forceRender();
       },
     );
-    throw promise;
   }
   if (!promiseState.settled) {
+    if (loadingEffect === "use") {
+      return [promiseState.data, true, undefined];
+    }
     throw promise;
   }
   if (promiseState.error) {
+    if (errorEffect === "use") {
+      return [promiseState.data, false, promiseState.error];
+    }
     throw promiseState.error;
   }
-  return promiseState.data;
+  return [promiseState.data, false, undefined];
 };
 
 const useForceRender = () => {
