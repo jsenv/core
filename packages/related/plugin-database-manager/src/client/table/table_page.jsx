@@ -43,8 +43,8 @@ import { TABLE, tablenameSignal } from "./table_state.js";
 
 export const TablePage = () => {
   const tablename = tablenameSignal.value;
-  const { data: table } = useAsyncData(TABLE_GET_ACTION, {
-    loading: "preserve",
+  const [table] = useAsyncData(TABLE_GET_ACTION, {
+    loading: true,
   });
 
   return (

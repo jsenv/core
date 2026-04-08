@@ -56,8 +56,8 @@ import.meta.css = /* css */ `
 
 export const TableData = ({ table }) => {
   const { tablename, columns } = table;
-  const { data, loading } = useAsyncData(TABLE_ROW_GET_MANY_ACTION, {
-    loading: "preserve",
+  const [data, loading] = useAsyncData(TABLE_ROW_GET_MANY_ACTION, {
+    loading: true,
   });
   const initialLoad = data === undefined && loading;
   let rows = data;

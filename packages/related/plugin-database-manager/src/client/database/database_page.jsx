@@ -7,7 +7,7 @@ import { DatabaseSvg } from "./database_icons.jsx";
 import { DATABASE } from "./database_store.js";
 
 export const DatabasePage = () => {
-  const { data: database } = useAsyncData(DATABASE_GET_ACTION);
+  const [database] = useAsyncData(DATABASE_GET_ACTION);
   const datname = database.datname;
   const deleteDatabaseAction = DATABASE.DELETE.bindParams({ datname });
 
