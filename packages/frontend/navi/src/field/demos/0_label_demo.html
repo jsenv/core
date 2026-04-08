@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Label Demo</title>
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { Label, Input, Box } from "@jsenv/navi";
+
+      const App = () => {
+        return (
+          <Box
+            flex="y"
+            spacing="l"
+            style={{ padding: "20px", maxWidth: "600px" }}
+          >
+            <h1>Label</h1>
+
+            {/* Basic inline layout: label text + input side by side */}
+            <Box flex="y" spacing="s">
+              <h2>To the left</h2>
+              <Label flex spacing="s" alignY="center">
+                <span>Username</span>
+                <Input placeholder="Enter username" />
+              </Label>
+            </Box>
+
+            {/* Stacked layout: label text above input */}
+            <Box flex="y" spacing="s">
+              <h2>Above</h2>
+              <Label flex="y" spacing="xs">
+                <span>Email</span>
+                <Input type="email" placeholder="Enter email" />
+              </Label>
+            </Box>
+
+            {/* Disabled: label and input both reflect disabled state */}
+            <Box flex="y" spacing="s">
+              <h2>Above field is disabled</h2>
+              <Label flex="y" spacing="xs">
+                <span>Disabled field</span>
+                <Input placeholder="Not editable" disabled />
+              </Label>
+            </Box>
+
+            {/* Read-only: label and input both reflect read-only state */}
+            <Box flex="y" spacing="s">
+              <h2>Above field is readOnly</h2>
+              <Label flex="y" spacing="xs">
+                <span>Read-only field</span>
+                <Input value="Fixed value" readOnly />
+              </Label>
+            </Box>
+          </Box>
+        );
+      };
+
+      render(<App />, document.querySelector("#root"));
+    </script>
+  </body>
+</html>
