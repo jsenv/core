@@ -1,5 +1,5 @@
 import { installImportMetaCss } from "./jsenv_navi_side_effects.js";
-import { isValidElement, createContext, toChildArray, render, createRef, cloneElement } from "preact";
+import { isValidElement, h, createContext, toChildArray, render, createRef, cloneElement } from "preact";
 import { useErrorBoundary, useLayoutEffect, useEffect, useMemo, useRef, useState, useCallback, useContext, useImperativeHandle, useId } from "preact/hooks";
 import { jsxs, jsx, Fragment } from "preact/jsx-runtime";
 import { signal, effect, computed, batch, useSignal } from "@preact/signals";
@@ -7,7 +7,7 @@ import { createIterableWeakSet, mergeOneStyle, stringifyStyle, createPubSub, mer
 export { contrastColor } from "@jsenv/dom";
 import { prefixFirstAndIndentRemainingLines } from "@jsenv/humanize";
 import { createValidity } from "@jsenv/validity";
-import { createPortal, forwardRef } from "preact/compat";
+import { Suspense, createPortal, forwardRef } from "preact/compat";
 
 const actionPrivatePropertiesWeakMap = new WeakMap();
 const getActionPrivateProperties = (action) => {
@@ -1113,7 +1113,7 @@ const updateActions = ({
   const { runningSet, settledSet } = getActivationInfo();
 
   if (DEBUG$3) {
-    let argSource = `reason: \`${reason}\``;
+    let argSource = `reason: ${JSON.stringify(reason)}`;
     if (isReplace) {
       argSource += `, isReplace: true`;
     }
@@ -1868,13 +1868,17 @@ const createAction = (callback, rootOptions = {}) => {
           });
 
           if (ui.hasRenderers || onError) {
+            // When inside suspense this console.error is redundant with the error thrown by preact debug at
+            // https://github.com/preactjs/preact/blob/21dd6d04c1a9a43e5b60976bb5eb7d856253195b/debug/src/debug.js#L109
             console.error(e);
+
             // For UI-bound actions: error is properly handled by logging + UI display
             // Return error instead of throwing to signal it's handled and prevent:
             // - jsenv error overlay from appearing
             // - error being treated as unhandled by runtime
             return e;
           }
+          e.action = action;
           throw e;
         };
 
@@ -2143,6 +2147,7 @@ const createActionProxyFromSignal = (
   };
 
   Object.assign(actionProxy, {
+    isAction: true,
     isProxy: true,
     callback: undefined,
     params: undefined,
@@ -2435,14 +2440,6 @@ const actionRunEffect = (
   return actionRunnedByThisEffect;
 };
 
-const useActionData = (action) => {
-  if (!action) {
-    return undefined;
-  }
-  const data = action.dataSignal.value;
-  return data;
-};
-
 const useRunOnMount = (action, Component) => {
   useEffect(() => {
     action.run({
@@ -2725,8 +2722,9 @@ const arraySignalStore = (
   });
 
   const itemPropertiesObserverSet = new Set();
-  const observeItemProperties = (itemSignal, callback) => {
-    const observer = { itemSignal, callback };
+  const observeItemProperties = (itemSignal, callback, { properties } = {}) => {
+    const propertiesSet = properties ? new Set(properties) : null;
+    const observer = { itemSignal, callback, propertiesSet };
     itemPropertiesObserverSet.add(observer);
     return () => {
       itemPropertiesObserverSet.delete(observer);
@@ -2734,10 +2732,12 @@ const arraySignalStore = (
   };
 
   const propertiesObserverSet = new Set();
-  const observeProperties = (callback) => {
-    propertiesObserverSet.add(callback);
+  const observeProperties = (callback, { properties } = {}) => {
+    const propertiesSet = properties ? new Set(properties) : null;
+    const observer = { callback, propertiesSet };
+    propertiesObserverSet.add(observer);
     return () => {
-      propertiesObserverSet.delete(callback);
+      propertiesObserverSet.delete(observer);
     };
   };
 
@@ -2887,24 +2887,50 @@ ${[idKey, ...uniqueKeys].join(", ")}`,
   const upsert = (...args) => {
     const mutationsMap = new Map(); // Map<itemId, propertyMutations>
     const triggerPropertyMutations = () => {
-      // we call at the end so that itemWithProps and arraySignal.value was set too
       for (const itemPropertiesObserver of itemPropertiesObserverSet) {
-        const { itemSignal, callback } = itemPropertiesObserver;
+        const { itemSignal, callback, propertiesSet } = itemPropertiesObserver;
         const watchedItem = itemSignal.peek();
         if (!watchedItem) {
           continue;
         }
-
-        // Check if this item has mutations
         const itemMutations = mutationsMap.get(watchedItem[idKey]);
         if (itemMutations) {
-          callback(itemMutations);
+          if (propertiesSet) {
+            let hasRelevantMutation = false;
+            for (const p of propertiesSet) {
+              if (Object.hasOwn(itemMutations, p)) {
+                hasRelevantMutation = true;
+                break;
+              }
+            }
+            if (hasRelevantMutation) {
+              callback(itemMutations);
+            }
+          } else {
+            callback(itemMutations);
+          }
         }
       }
       if (propertiesObserverSet.size) {
-        const mutations = Array.from(mutationsMap.values());
+        const allMutations = Array.from(mutationsMap.values());
         for (const propertiesObserver of propertiesObserverSet) {
-          propertiesObserver(mutations);
+          const { callback, propertiesSet } = propertiesObserver;
+          if (propertiesSet) {
+            const filteredMutations = [];
+            for (const propertyMutations of allMutations) {
+              for (const p of propertiesSet) {
+                if (Object.hasOwn(propertyMutations, p)) {
+                  filteredMutations.push(propertyMutations);
+                  break;
+                }
+              }
+            }
+            if (filteredMutations.length > 0) {
+              callback(filteredMutations);
+            }
+          } else {
+            callback(allMutations);
+          }
         }
       }
     };
@@ -2948,7 +2974,7 @@ ${[idKey, ...uniqueKeys].join(", ")}`,
         return item;
       }
 
-      // Store mutations for this specific item
+      // Store mutations keyed by old id
       mutationsMap.set(item[idKey], propertyMutations);
       return itemWithProps;
     };
@@ -3163,7 +3189,18 @@ ${[idKey, ...uniqueKeys].join(", ")}`,
     return null;
   };
 
-  const signalForUniqueKey = (uniqueKey, uniqueKeyValueSignal) => {
+  const signalForKey = (key, keyValueSignal) => {
+    if (key === idKey) {
+      return _signalForIdKey(keyValueSignal);
+    }
+    if (uniqueKeys.includes(key)) {
+      return _signalForUniqueKey(key, keyValueSignal);
+    }
+    throw new Error(
+      `signalForKey: "${key}" is not the idKey or a uniqueKey of this store (idKey: ${idKey}, uniqueKeys: ${uniqueKeys.join(", ")})`,
+    );
+  };
+  const _signalForUniqueKey = (uniqueKey, uniqueKeyValueSignal) => {
     const itemIdSignal = signal(null);
     const check = (value) => {
       const item = select(uniqueKey, value);
@@ -3173,7 +3210,7 @@ ${[idKey, ...uniqueKeys].join(", ")}`,
       itemIdSignal.value = item[idKey];
       return true;
     };
-    if (!check()) {
+    if (!check(uniqueKeyValueSignal.peek())) {
       effect(function () {
         const uniqueKeyValue = uniqueKeyValueSignal.value;
         if (check(uniqueKeyValue)) {
@@ -3181,7 +3218,44 @@ ${[idKey, ...uniqueKeys].join(", ")}`,
         }
       });
     }
+    return computed(() => {
+      return select(itemIdSignal.value);
+    });
+  };
 
+  const _signalForIdKey = (idValueSignal) => {
+    const itemIdSignal = signal(null);
+    const check = (value) => {
+      const item = select(idKey, value);
+      if (!item) {
+        return false;
+      }
+      itemIdSignal.value = item[idKey];
+      return true;
+    };
+    if (!check(idValueSignal.peek())) {
+      effect(function () {
+        const idValue = idValueSignal.value;
+        if (check(idValue)) {
+          this.dispose();
+        }
+      });
+    }
+    // When the id itself is renamed, keep itemIdSignal in sync.
+    observeProperties(
+      (mutationsArray) => {
+        const currentId = itemIdSignal.peek();
+        if (currentId === null) return;
+        for (const mutations of mutationsArray) {
+          const mutation = mutations[idKey];
+          if (mutation.oldValue === currentId) {
+            itemIdSignal.value = mutation.newValue;
+            break;
+          }
+        }
+      },
+      { properties: [idKey] },
+    );
     return computed(() => {
       return select(itemIdSignal.value);
     });
@@ -3195,6 +3269,7 @@ ${[idKey, ...uniqueKeys].join(", ")}`,
   };
 
   Object.assign(store, {
+    idKey,
     uniqueKeys,
     arraySignal,
     select,
@@ -3207,9 +3282,61 @@ ${[idKey, ...uniqueKeys].join(", ")}`,
     observeRemovals,
     observeIdChanges,
     registerItemMatchLifecycle,
-    signalForUniqueKey,
+    signalForKey,
   });
   return store;
+};
+
+const syncStoreToSignals = (store, propertyToSignalMap) => {
+  const { idKey } = store;
+  const cleanupCallbackSet = new Set();
+  for (const [propertyName, targetSignal] of Object.entries(
+    propertyToSignalMap,
+  )) {
+    if (propertyName === idKey) {
+      const unsubscribe = store.observeProperties(
+        (mutationsArray) => {
+          for (const mutations of mutationsArray) {
+            const mutation = mutations[idKey];
+            if (mutation.oldValue === targetSignal.peek()) {
+              targetSignal.value = mutation.newValue;
+              break;
+            }
+          }
+        },
+        { properties: [idKey] },
+      );
+      cleanupCallbackSet.add(unsubscribe);
+      continue;
+    }
+    const itemSignal = store.signalForKey(propertyName, targetSignal);
+    const unsubscribe = store.observeItemProperties(
+      itemSignal,
+      (propertyMutations) => {
+        const mutation = propertyMutations[propertyName];
+        targetSignal.value = mutation.newValue;
+      },
+      { properties: [propertyName] },
+    );
+    cleanupCallbackSet.add(unsubscribe);
+  }
+  return () => {
+    for (const cleanup of cleanupCallbackSet) {
+      cleanup();
+    }
+    cleanupCallbackSet.clear();
+  };
+};
+
+// WeakMap<action, Set<string>> — tracks which top-level properties were present in
+// the GET response for a given action instance. Used by scoped_many_effect to check
+// whether the parent GET embedded the child sub-resource.
+const actionResultPropertiesMap = new WeakMap();
+const recordGetResultProperties = (action, resultKeys) => {
+  actionResultPropertiesMap.set(action, new Set(resultKeys));
+};
+const getActionResultProperties = (action) => {
+  return actionResultPropertiesMap.get(action);
 };
 
 /*
@@ -3248,7 +3375,8 @@ const defaultRerunOn = {
 // This handles ALL resource lifecycle logic (rerun/reset) across all resources
 const createResourceLifecycleManager = () => {
   const registeredResources = new Map(); // Map<resourceInstance, lifecycleConfig>
-  const resourceDependencies = new Map(); // Map<resourceInstance, Set<dependentResources>>
+  const resourceDependencies = new Map(); // Map<resourceInstance, Set<dependentResources>> — user-configured
+  const scopedManyParents = new Map(); // Map<childResource, Set<{resource, propertyName}>> — auto from scopedMany
 
   const registerResource = (resourceScope, config) => {
     const {
@@ -3307,11 +3435,17 @@ const createResourceLifecycleManager = () => {
           triggerVerb === "PATCH") &&
         config.uniqueKeys.length > 0;
 
+      const isKnownDependency =
+        triggerResourceScope !== null &&
+        triggerResourceScope !== undefined &&
+        resourceDependencies.get(triggerResourceScope)?.has(resourceScope);
+
       if (
         !shouldRerunGetMany &&
         !shouldRerunGet &&
         triggerVerb !== "DELETE" &&
-        !hasUniqueKeyAutorerun
+        !hasUniqueKeyAutorerun &&
+        !isKnownDependency
       ) {
         continue;
       }
@@ -3431,20 +3565,61 @@ const createResourceLifecycleManager = () => {
             }
           }
 
-          // Cross-resource dependency effects: rerun dependent GET_MANY
+          // Cross-resource dependency effects: rerun dependent GET / GET_MANY
+          // Fires on any mutating verb — user-configured dependencies express
+          // "this resource depends on another resource's data", so any mutation
+          // (POST, PUT, PATCH, DELETE) on the dependency should trigger a rerun.
           {
             if (
               triggerResourceScope &&
               resourceDependencies
                 .get(triggerResourceScope)
                 ?.has(resourceScope) &&
-              triggerVerb !== "GET" &&
-              candidateVerb === "GET" &&
-              candidateIsPlural
+              (triggerVerb === "POST" ||
+                triggerVerb === "PUT" ||
+                triggerVerb === "PATCH" ||
+                triggerVerb === "DELETE") &&
+              candidateVerb === "GET"
             ) {
               actionsToRerun.add(actionCandidate);
               reasonSet.add("dependency autorerun");
               continue;
+            }
+          }
+
+          // scopedMany auto-dependency: only rerun parent singular GET on child POST,
+          // and only when the parent GET previously returned the sub-resource embedded
+          // inside its response (detected via action._resultProperties).
+          // GET_MANY is excluded — a list of parents is not stale just because one
+          // child item was added to one of them.
+          scoped_many_effect: {
+            if (
+              triggerResourceScope &&
+              triggerVerb === "POST" &&
+              candidateVerb === "GET" &&
+              !candidateIsPlural
+            ) {
+              const parentEntries = scopedManyParents.get(triggerResourceScope);
+              if (!parentEntries) {
+                break scoped_many_effect;
+              }
+              for (const {
+                resource: parentResource,
+                propertyName,
+              } of parentEntries) {
+                if (parentResource !== resourceScope) {
+                  continue;
+                }
+                // Only rerun if the last GET response included the embedded sub-resource.
+                if (
+                  !getActionResultProperties(actionCandidate)?.has(propertyName)
+                ) {
+                  break scoped_many_effect;
+                }
+                actionsToRerun.add(actionCandidate);
+                reasonSet.add("scopedMany parent autorerun");
+                continue;
+              }
             }
           }
         }
@@ -3478,6 +3653,16 @@ const createResourceLifecycleManager = () => {
     registerResource,
     registerAction,
     onActionComplete,
+    // Registers: when `triggerResource` fires, rerun `dependentResource`'s actions.
+    // Used by scopedMany to make the parent GET rerun when a child mutation completes.
+    addDependency: (triggerResource, dependentResource, propertyName) => {
+      if (!scopedManyParents.has(triggerResource)) {
+        scopedManyParents.set(triggerResource, new Set());
+      }
+      scopedManyParents
+        .get(triggerResource)
+        .add({ resource: dependentResource, propertyName });
+    },
   };
 };
 
@@ -4265,7 +4450,14 @@ ${originalActionName} source location: ${locationInfo}`,
               `${childActionName} callback must return [ownerId, props], received ${result}`,
             );
           }
-          const [ownerId, props] = result;
+          const [rawOwnerId, props] = result;
+          const ownerId = resolveOwnerId(
+            rawOwnerId,
+            store,
+            idKey,
+            uniqueKeys,
+            childActionName,
+          );
           const childItem = scopedItemMap.get(ownerId);
           if (!childItem) {
             throw new Error(
@@ -4340,21 +4532,56 @@ ${originalActionName} source location: ${locationInfo}`,
     const scopedIdArraySignalMap = new Map(); // ownerId → childItemIdArraySignal
     addItemSetup((item) => {
       const ownerId = item[idKey];
-      const childStore = arraySignalStore([], childIdKey, {
-        name: `${childName}#${ownerId} store`,
-        createItem: (props) => {
-          const childItem = {};
-          Object.assign(childItem, props);
-          for (const childSetup of childSetupCallbackSet) {
-            childSetup(childItem);
-          }
-          return childItem;
-        },
-      });
-      scopedStoreMap.set(ownerId, childStore);
 
-      const childItemIdArraySignal = signal([]);
+      // Reuse an existing scoped store if one was already created via a uniqueKey
+      // (e.g. rows were fetched by tablename before the full table was loaded).
+      let childStore = scopedStoreMap.get(ownerId);
+      let childItemIdArraySignal = scopedIdArraySignalMap.get(ownerId);
+      if (!childStore) {
+        for (const uniqueKey of uniqueKeys) {
+          const uniqueKeyValue = item[uniqueKey];
+          if (uniqueKeyValue !== undefined) {
+            const existing = scopedStoreMap.get(uniqueKeyValue);
+            if (existing) {
+              childStore = existing;
+              childItemIdArraySignal =
+                scopedIdArraySignalMap.get(uniqueKeyValue);
+              break;
+            }
+          }
+        }
+      }
+      if (!childStore) {
+        childStore = arraySignalStore([], childIdKey, {
+          name: `${childName}#${ownerId} store`,
+          createItem: (props) => {
+            const childItem = {};
+            Object.assign(childItem, props);
+            for (const childSetup of childSetupCallbackSet) {
+              childSetup(childItem);
+            }
+            return childItem;
+          },
+        });
+        childItemIdArraySignal = signal([]);
+      }
+      scopedStoreMap.set(ownerId, childStore);
+      // Also register by each uniqueKey value so that resolveOwnerId works
+      // when a callback returns { [uniqueKey]: value } before the full item is loaded.
+      for (const uniqueKey of uniqueKeys) {
+        const uniqueKeyValue = item[uniqueKey];
+        if (uniqueKeyValue !== undefined) {
+          scopedStoreMap.set(uniqueKeyValue, childStore);
+        }
+      }
+
       scopedIdArraySignalMap.set(ownerId, childItemIdArraySignal);
+      for (const uniqueKey of uniqueKeys) {
+        const uniqueKeyValue = item[uniqueKey];
+        if (uniqueKeyValue !== undefined) {
+          scopedIdArraySignalMap.set(uniqueKeyValue, childItemIdArraySignal);
+        }
+      }
 
       const updateChildItemIdArray = (valueArray) => {
         const currentIdArray = childItemIdArraySignal.peek();
@@ -4431,12 +4658,32 @@ ${originalActionName} source location: ${locationInfo}`,
               `${childActionName} callback must return [ownerId, ...] array, received ${result}`,
             );
           }
-          const [ownerId, ...rest] = result;
-          const childStore = scopedStoreMap.get(ownerId);
+          const [rawOwnerId, ...rest] = result;
+          const ownerId = resolveOwnerId(
+            rawOwnerId,
+            store,
+            idKey,
+            uniqueKeys,
+            childActionName,
+          );
+          let childStore = scopedStoreMap.get(ownerId);
           if (!childStore) {
-            throw new Error(
-              `${childActionName}: no store found for scope id "${ownerId}"`,
-            );
+            // Owner not yet in store — lazily create scoped store so actions can run
+            // before the parent item has been fully loaded (e.g. rows fetched before table).
+            childStore = arraySignalStore([], childIdKey, {
+              name: `${childName}#${ownerId} store`,
+              createItem: (props) => {
+                const childItem = {};
+                Object.assign(childItem, props);
+                for (const childSetup of childSetupCallbackSet) {
+                  childSetup(childItem);
+                }
+                return childItem;
+              },
+            });
+            scopedStoreMap.set(ownerId, childStore);
+            const newIdArraySignal = signal([]);
+            scopedIdArraySignalMap.set(ownerId, newIdArraySignal);
           }
           const childItemIdArraySignal = scopedIdArraySignalMap.get(ownerId);
 
@@ -4471,6 +4718,14 @@ ${originalActionName} source location: ${locationInfo}`,
               : childStore.upsert(rest[0]);
           return [ownerId, childItem[childIdKey]];
         },
+        valueToData: (value) => {
+          if (!value) return isMany ? [] : undefined;
+          const [ownerId, idOrIdArray] = value;
+          const childStore = scopedStoreMap.get(ownerId);
+          if (!childStore) return isMany ? [] : undefined;
+          if (isMany) return childStore.selectAll(idOrIdArray);
+          return childStore.select(idOrIdArray);
+        },
         completeSideEffect: (actionCompleted) => {
           lifecycleCtx.onComplete(actionCompleted);
         },
@@ -4478,6 +4733,11 @@ ${originalActionName} source location: ${locationInfo}`,
       return childAction;
     };
 
+    // When a child (scopedMany) item is mutated via POST, the parent GET must
+    // re-fetch because the parent embeds the child array and we cannot know the
+    // new ordering without asking the backend again.
+    // (scopedOne does NOT need this: the mutation result contains the updated
+    // item directly, so no parent re-fetch is necessary.)
     const childResource = createResource(childName, {
       idKey: childIdKey,
       restCallbacks: {
@@ -4499,6 +4759,13 @@ ${originalActionName} source location: ${locationInfo}`,
       rerunOn: scopedManyRerunOn ?? rerunOn,
       dependencies: scopedManyDependencies ?? dependencies,
     });
+    // Register: when childResource fires, rerun parent (stateFacade) GETs.
+    resourceLifecycleManager.addDependency(
+      childResource,
+      stateFacade,
+      propertyName,
+    );
+    childResource.getChildStore = (ownerKey) => scopedStoreMap.get(ownerKey);
     return childResource;
   };
 
@@ -4612,6 +4879,11 @@ ${originalActionName} source location: ${locationInfo}`,
 ${originalActionName} source location: ${locationInfo}`,
           );
         }
+        // Track which top-level properties the GET response contained so that
+        // lifecycle rules can detect whether sub-resources were embedded.
+        if (verb === "GET") {
+          recordGetResultProperties(action, Object.keys(result));
+        }
         return applyResultToValue(result);
       },
       valueToData: (itemId) => store.select(itemId),
@@ -4700,6 +4972,110 @@ const syncIdArrayOnRename = (store, idKey, idArraySignal) => {
 
 const isProps = (value) => {
   return value !== null && typeof value === "object";
+};
+
+const resolveOwnerId = (rawOwnerId, store, idKey, uniqueKeys, actionName) => {
+  if (!isProps(rawOwnerId)) {
+    // Already a primitive — use as-is.
+    return rawOwnerId;
+  }
+
+  const keys = Object.keys(rawOwnerId);
+
+  if (keys.length === 1) {
+    const [propName] = keys;
+    const propValue = rawOwnerId[propName];
+
+    if (propName === idKey) {
+      return propValue;
+    }
+    if (uniqueKeys.includes(propName)) {
+      const item = store.select(propName, propValue);
+      if (!item) {
+        // Owner not yet in store — the scoped maps may still be keyed by uniqueKey value
+        // (registered during addItemSetup). Return the propValue as the owner key directly.
+        return propValue;
+      }
+      return item[idKey];
+    }
+    throw new TypeError(
+      `${actionName}: the first element of the returned array is { ${propName}: "${propValue}" } but "${propName}" is neither the idKey ("${idKey}") nor a declared uniqueKey (${uniqueKeys.length ? uniqueKeys.join(", ") : "none"}). 
+Return a primitive id or a single-property object whose key is the idKey or a uniqueKey.`,
+    );
+  }
+
+  // More than one property — try to recover via idKey, warn if successful.
+  if (idKey in rawOwnerId) {
+    const resolvedId = rawOwnerId[idKey];
+    console.warn(
+      `${actionName}: the first element of the returned array is an object with multiple properties. 
+Only "${idKey}" is needed. Consider returning a primitive id or { ${idKey}: value } instead.`,
+    );
+    return resolvedId;
+  }
+
+  throw new TypeError(
+    `${actionName}: the first element of the returned array must be a primitive id or a single-property object equal to { [idKey]: value } or { [uniqueKey]: value }.
+Received an object with keys: ${keys.join(", ")}.`,
+  );
+};
+
+/** so that when a tracked property changes
+ * on an item the corresponding signal is updated automatically.
+ *
+ * Since signals are typically connected to route parameters via the route template
+ * syntax, this keeps the URL in sync when a store item's mutable key is renamed.
+ *
+ * @example
+ * const usernameSignal = stateSignal();
+ * const USER_ROUTE = route(`/users/:username=${usernameSignal}/`);
+ *
+ * const USER = resource("user", {
+ *   idKey: "id",
+ *   uniqueKeys: ["username"],
+ *   PUT: async ({ id, username }) => ({ id, username }),
+ * });
+ *
+ * syncResourceToSignals(USER, { username: usernameSignal });
+ * // Now when a user item's username is updated via USER.PUT,
+ * // usernameSignal.value is set to the new username,
+ * // which in turn triggers the route Signal->URL sync and updates the browser URL.
+ */
+const syncResourceToSignals = (resource, propertyToSignalMap) => {
+  if (resource.getChildStore) {
+    throw new Error(
+      `syncResourceToSignals: "${resource.name}" is a scoped resource (scopedMany/scopedOne). Use syncOwnedResourceToSignals instead.`,
+    );
+  }
+  syncStoreToSignals(resource.store, propertyToSignalMap);
+};
+
+const syncOwnedResourceToSignals = (
+  resource,
+  ownerSignal,
+  propertyToSignalMap,
+) => {
+  if (!resource.getChildStore) {
+    throw new Error(
+      `syncOwnedResourceToSignals: "${resource.name}" is not a scoped resource (scopedMany/scopedOne). Use syncResourceToSignals instead.`,
+    );
+  }
+  effect(() => {
+    // Always subscribe to the parent store so the effect re-runs when a new
+    // owner item is added (which creates the child store).
+    // eslint-disable-next-line no-unused-expressions
+    resource.store.arraySignal.value;
+    const ownerKey = ownerSignal.value;
+    if (ownerKey === null || ownerKey === undefined) {
+      return null;
+    }
+    const childStore = resource.getChildStore(ownerKey);
+    if (!childStore) {
+      return null;
+    }
+    const cleanup = syncStoreToSignals(childStore, propertyToSignalMap);
+    return cleanup;
+  });
 };
 
 const valueInLocalStorage = (key, { type = "any" } = {}) => {
@@ -5399,6 +5775,298 @@ const useStateArray = (
   }, [initialValue]);
 
   return [array, add, remove, reset];
+};
+
+const promiseStateWeakMap = new WeakMap();
+const usePromiseAsyncData = (
+  promise,
+  { loadingEffect, errorEffect },
+) => {
+  const forceRender = useForceRender();
+
+  let promiseState = promiseStateWeakMap.get(promise);
+  if (!promiseState) {
+    promiseState = {
+      data: undefined,
+      error: undefined,
+      settled: false,
+    };
+    promiseStateWeakMap.set(promise, promiseState);
+    promise.then(
+      (data) => {
+        promiseState.data = data;
+        promiseState.settled = true;
+        forceRender();
+      },
+      (error) => {
+        promiseState.error = error;
+        promiseState.settled = true;
+        forceRender();
+      },
+    );
+  }
+  if (!promiseState.settled) {
+    if (loadingEffect === "use") {
+      return [promiseState.data, true, undefined];
+    }
+    throw promise;
+  }
+  if (promiseState.error) {
+    if (errorEffect === "use") {
+      return [promiseState.data, false, promiseState.error];
+    }
+    throw promiseState.error;
+  }
+  return [promiseState.data, false, undefined];
+};
+
+const useForceRender = () => {
+  const [, setState] = useState(null);
+  return () => {
+    setState({});
+  };
+};
+
+// https://github.com/preactjs/preact/issues/4756
+
+const useAsyncData = (promiseOrAction, {
+  loading = "delegate",
+  error = "delegate"
+} = {}) => {
+  const isAction = Boolean(promiseOrAction && promiseOrAction.isAction);
+  if (loading === true) {
+    loading = "use";
+  }
+  if (error === true) {
+    error = "use";
+  }
+  if (isAction) {
+    return useActionAsyncData(promiseOrAction, {
+      loadingEffect: loading,
+      errorEffect: error
+    });
+  }
+  return usePromiseAsyncData(promiseOrAction, {
+    loadingEffect: loading,
+    errorEffect: error
+  });
+};
+
+// ─── useAction ────────────────────────────────────────────────────────────────
+
+const LoadingContext$1 = createContext(null);
+const actionPendingPromiseWeakMap = new WeakMap();
+const dismissedActionWeakSet = new WeakSet();
+const dismissedActionPendingPromiseWeakMap = new WeakMap();
+const useActionAsyncData = (action, {
+  loadingEffect,
+  errorEffect
+}) => {
+  const loadingRef = useContext(LoadingContext$1);
+  if (!loadingRef) {
+    throw new Error("Missing <Loading>");
+  }
+
+  // Use peek() instead of .value to avoid subscribing this component to the signal.
+  // Reading .value would make Preact re-render the component reactively when the state
+  // changes. When the action fails while Suspense is still holding the detached stale
+  // DOM, this reactive re-render causes Suspense to move that stale DOM permanently
+  // back into the document — the stale content then coexists with the error fallback
+  // and never goes away. Manual subscription via useEffect + useState ensures
+  // re-renders only happen after the pending promise resolves, at which point Suspense
+  // has already processed the settlement and the detached DOM is discarded.
+  const runningState = action.runningStateSignal.peek();
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    return action.runningStateSignal.subscribe(state => {
+      if (state === RUNNING) {
+        dismissedActionWeakSet.delete(action);
+      }
+      setTick(n => n + 1);
+    });
+  }, []);
+  if (runningState === COMPLETED) {
+    return [action.dataSignal.peek(), false, undefined];
+  }
+  if (runningState === FAILED) {
+    if (dismissedActionWeakSet.has(action)) {
+      const staleData = action.dataSignal.peek();
+      if (staleData !== undefined) {
+        // Dismissed with stale data — return it so children render normally
+        return [staleData, false, undefined];
+      }
+      // Dismissed with no data — suspend until the action re-runs.
+      // A never-resolving promise would leave the component stuck forever,
+      // so we use an action-specific promise that resolves on RUNNING,
+      // which lets the component re-render and go through the normal loading path.
+      let dismissedPromise = dismissedActionPendingPromiseWeakMap.get(action);
+      if (!dismissedPromise) {
+        dismissedPromise = new Promise(resolve => {
+          const unsubscribe = action.runningStateSignal.subscribe(state => {
+            if (state === RUNNING) {
+              dismissedActionPendingPromiseWeakMap.delete(action);
+              unsubscribe();
+              resolve();
+            }
+          });
+        });
+        dismissedActionPendingPromiseWeakMap.set(action, dismissedPromise);
+      }
+      throw dismissedPromise;
+    }
+    const actionError = action.errorSignal.peek();
+    if (errorEffect === "use") {
+      const dismissError = () => {
+        dismissedActionWeakSet.add(action);
+        setTick(n => n + 1);
+      };
+      return [undefined, false, actionError, dismissError];
+    }
+    actionError.action = action;
+    throw actionError;
+  }
+
+  // RUNNING with loadingEffect: "use" — return stale data + loading flag, no suspend
+  if (loadingEffect === "use" && runningState === RUNNING) {
+    const staleData = action.dataSignal.peek();
+    return [staleData, true, undefined];
+  }
+
+  // IDLE or RUNNING with loadingEffect: "delegate" — suspend
+  const reason = runningState === RUNNING ? "loading" : "idle";
+  loadingRef.current = {
+    reason,
+    action
+  };
+  let pendingPromise = actionPendingPromiseWeakMap.get(action);
+  if (!pendingPromise) {
+    pendingPromise = new Promise(resolve => {
+      const unsubscribe = action.runningStateSignal.subscribe(state => {
+        if (state === COMPLETED || state === FAILED) {
+          actionPendingPromiseWeakMap.delete(action);
+          unsubscribe();
+          resolve();
+        } else if (reason === "idle" && state === RUNNING) {
+          // idle→running: unblock so loadingRef reason updates to "loading"
+          actionPendingPromiseWeakMap.delete(action);
+          unsubscribe();
+          resolve();
+        }
+      });
+    });
+    actionPendingPromiseWeakMap.set(action, pendingPromise);
+  }
+  throw pendingPromise;
+};
+
+// ─── Loading ──────────────────────────────────────────────────────────────────
+// Wraps Suspense. Provides LoadingContext so useAction can write the suspension
+// reason. LoadingFallback reads that reason and subscribes to the action so it
+// only shows the spinner when actually loading (not in the initial idle state).
+const Loading = ({
+  children,
+  fallback
+}) => {
+  const loadingRef = useRef({
+    reason: "idle",
+    action: null
+  });
+  return jsx(LoadingContext$1.Provider, {
+    value: loadingRef,
+    children: jsx(Suspense, {
+      fallback: jsx(LoadingFallback, {
+        loadingRef: loadingRef,
+        fallback: fallback
+      }),
+      children: children
+    })
+  });
+};
+const LoadingFallback = ({
+  loadingRef,
+  fallback
+}) => {
+  const [, setTick] = useState(0);
+  const {
+    action
+  } = loadingRef.current;
+  useEffect(() => {
+    if (!action) {
+      return undefined;
+    }
+    return action.runningStateSignal.subscribe(() => {
+      setTick(n => n + 1);
+    });
+  }, [action]);
+  if (loadingRef.current.reason !== "loading") {
+    return null;
+  }
+  if (typeof fallback === "function") {
+    return h(fallback);
+  }
+  return fallback;
+};
+
+// ─── ErrorBoundary ────────────────────────────────────────────────────────────
+// Catches errors thrown by useAction. Subscribes to error.action so it
+// auto-resets when the action runs again.
+const ErrorBoundary = ({
+  children,
+  fallback,
+  onReset
+}) => {
+  const [error, resetError] = useErrorBoundary();
+  const [dismissed, setDismissed] = useState(false);
+  const cleanupRef = useRef();
+  useEffect(() => {
+    return () => {
+      cleanupRef.current?.();
+    };
+  }, []);
+  if (error) {
+    error.__handled_by__ = "<ErrorBoundary>"; // prevent jsenv from displaying it
+
+    const action = error.action;
+    if (action) {
+      cleanupRef.current?.();
+      cleanupRef.current = action.runningStateSignal.subscribe(state => {
+        if (state === RUNNING) {
+          dismissedActionWeakSet.delete(action);
+          setDismissed(false);
+          resetError();
+        }
+      });
+      const hasStaleData = action && action.dataSignal.peek() !== undefined;
+      if (dismissed) {
+        if (hasStaleData) {
+          // Has stale data — children will render (useAction returns stale value)
+          return children;
+        }
+      }
+    } else if (dismissed) {
+      // stop rendering the error
+      return null;
+    }
+    const dismiss = () => {
+      if (action) {
+        dismissedActionWeakSet.add(action);
+      }
+      onReset?.();
+      setDismissed(true);
+      resetError();
+    };
+    if (!fallback) {
+      return null;
+    }
+    if (typeof fallback === "function") {
+      return h(fallback, {
+        error,
+        resetError: dismiss
+      });
+    }
+    return fallback;
+  }
+  return children;
 };
 
 /**
@@ -7084,7 +7752,9 @@ const Box = props => {
       }
       const propCssVar = propsCSSVars[name];
       if (propCssVar) {
-        addCSSVar(value, propCssVar, boxStylesTarget);
+        if (value !== undefined) {
+          addCSSVar(value, propCssVar, boxStylesTarget);
+        }
         return;
       }
       const isPseudoStyle = styleOrigin === "pseudo_style";
@@ -10326,6 +10996,60 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
     );
   };
 
+  // Returns the pathname that this route's own literal prefix resolves to.
+  // For route "/": "/"
+  // For route "/profile/": "/profile/"
+  // For route "/map/isochrone/compare": "/map/isochrone/compare"
+  // For route "/map/isochrone/:tab=/": "/map/isochrone/" (literal prefix before first param)
+  const getOwnBasePathname = () => {
+    const segments = parsedPattern.segments;
+    if (segments.length === 0) {
+      return new URL(resolveRouteUrl("/")).pathname;
+    }
+    const literalSegments = [];
+    for (const seg of segments) {
+      if (seg.type !== "literal") {
+        break;
+      }
+      literalSegments.push(seg.value);
+    }
+    if (literalSegments.length === 0) {
+      return new URL(resolveRouteUrl("/")).pathname;
+    }
+    const prefix = `/${literalSegments.join("/")}/`;
+    return new URL(resolveRouteUrl(prefix)).pathname;
+  };
+
+  // Like buildMostPreciseUrl but takes the actual current browser URL into account.
+  // When buildMostPreciseUrl returns the route's own base URL (catch-all matching an
+  // unrepresentable path like "/404") the current pathname is preserved and only
+  // search params are updated. When buildMostPreciseUrl performs an ancestor
+  // optimisation (e.g. "/map/isochrone/compare" → "/map/isochrone") it is trusted
+  // as-is because the built pathname will differ from the route's own base pathname.
+  const buildUrlPreservingPath = (currentUrl, params = {}) => {
+    const relativeBuiltUrl = buildMostPreciseUrl(params);
+    if (!currentUrl) {
+      return resolveRouteUrl(relativeBuiltUrl);
+    }
+    const absoluteBuiltUrl = resolveRouteUrl(relativeBuiltUrl);
+    const builtPathname = new URL(absoluteBuiltUrl).pathname;
+    const currentPathname = new URL(currentUrl).pathname;
+    if (builtPathname === currentPathname) {
+      return absoluteBuiltUrl;
+    }
+    const ownBasePathname = getOwnBasePathname();
+    if (builtPathname === ownBasePathname) {
+      // Catch-all: the route resolved to its own base pathname but the current URL
+      // sits on a different path that this trailing-slash route caught.  Keep the
+      // current pathname and only update the search string.
+      const correctedUrl = new URL(currentUrl);
+      correctedUrl.search = new URL(absoluteBuiltUrl).search;
+      return correctedUrl.href;
+    }
+    // Ancestor optimisation or descendant selection — trust buildMostPreciseUrl.
+    return absoluteBuiltUrl;
+  };
+
   // Pattern object with unified data and methods
   const patternObject = {
     // Pattern data properties (formerly patternData)
@@ -10345,6 +11069,7 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
     pattern: parsedPattern,
     applyOn,
     buildMostPreciseUrl,
+    buildUrlPreservingPath,
     resolveParams,
   };
 
@@ -11591,7 +12316,7 @@ const route = (pattern, { searchParams } = {}) => {
     route.setupCalled = true;
   });
   // methods
-  registerSetup(({ routeSet }) => {
+  registerSetup(({ routeSet, getUrl }) => {
     route.buildRelativeUrl = (params) => {
       // buildMostPreciseUrl now handles parameter resolution internally
       return routePattern.buildMostPreciseUrl(params);
@@ -11660,7 +12385,20 @@ const route = (pattern, { searchParams } = {}) => {
           callReason: `replaceParams delegation from ${route} to ${mostSpecificRoute} (original reason: ${callReason})`,
         });
       }
-      return route.redirectTo(newParams, {
+
+      // This route is the most specific — compute the target URL.
+      // buildUrlPreservingPath handles the catch-all case where this trailing-slash
+      // route matched a path it cannot represent (e.g. "/" on "/404") without
+      // corrupting the current URL.  Ancestor optimisation is trusted as-is.
+      if (!integration) {
+        return Promise.resolve();
+      }
+      const targetUrl = routePattern.buildUrlPreservingPath(
+        getUrl(),
+        newParams,
+      );
+      return integration.navTo(targetUrl, {
+        replace: true,
         callReason,
       });
     };
@@ -11835,6 +12573,8 @@ This prevents cross-test pollution and ensures clean state.`,
   setupRoutesCalled = true;
 
   const routeSet = new Set();
+  let currentUrl = null;
+  const getUrl = () => currentUrl;
   // PHASE 1: Setup patterns with unified objects (includes all relationships and signal connections)
   const routePatterns = [];
   for (const route of routes) {
@@ -11847,7 +12587,7 @@ This prevents cross-test pollution and ensures clean state.`,
   // Setup routes now that patterns are correctly initialized
   for (const route of routeSet) {
     const { setup } = getRoutePrivateProperties(route);
-    setup({ routeSet });
+    setup({ routeSet, getUrl });
   }
 
   // Store previous route states to detect changes
@@ -11859,6 +12599,7 @@ This prevents cross-test pollution and ensures clean state.`,
       // state
     } = {},
   ) => {
+    currentUrl = url;
     const returnValue = {};
     const routeMatchInfoSet = new Set();
     for (const route of routeSet) {
@@ -12850,22 +13591,67 @@ const Head = ({
 };
 
 /**
+ * Route is the single primitive for URL-based rendering.
  *
- * . Refactor les actions pour qu'elles utilisent use. Ce qui va ouvrir la voie pour
- * Suspense et ErrorBoundary sur tous les composants utilisant des actions
+ * ## Layout pattern
+ * Use this when multiple routes share a common layout but have no shared URL prefix,
+ * making it impossible to set a guard route on the parent container.
+ * For example, `/profile` and `/settings` both live inside `AuthLayout` but there
+ * is no `/auth/` prefix to match on. A container Route wraps them: the active
+ * child's element is injected as `children` into the layout element.
+ * If a page needs state owned by the layout, the layout must expose it via context.
  *
- * . Tester le code splitting avec .lazy + import dynamique
- * pour les elements des routes
+ * ```jsx
+ * const PROFILE_ROUTE = route("/profile");
+ * const SETTINGS_ROUTE = route("/settings");
  *
- * 3. Ajouter la possibilite d'avoir des
- *  sur les routes
- * Tester juste les data pour commencer
- * On aura ptet besoin d'un useRouteData au lieu de passer par un element qui est une fonction
- * pour que react ne re-render pas tout
+ * <Route element={AuthLayout}>
+ *   <Route route={PROFILE_ROUTE} element={ProfilePage} />
+ *   <Route route={SETTINGS_ROUTE} element={SettingsPage} />
+ *   <Route fallback element={AuthNotFoundPage} />
+ * </Route>
+ * ```
  *
- * 4. Utiliser use() pour compar Suspense et ErrorBoundary lorsque route action se produit.
+ * ## Self-contained section pattern
+ * Use this when routes share a common URL prefix (e.g. `/dashboard/`).
+ * A single leaf Route in the top-level router matches the prefix; the component
+ * it renders owns its sub-router and all related routes internally.
+ * Everything about the section — routes, structure, sub-pages — is co-located.
+ * The component is not a reusable layout; it is the section.
  *
+ * Compared to the layout pattern, a dedicated section component is more powerful:
+ * - Wrapper elements (chrome, nav, containers) are part of the component's render,
+ *   not injected via `children`, so a layout is not needed.
+ * - Local state can be passed directly via `elementProps` to sub-pages. With the
+ *   layout pattern, sub-pages receive state only through `children` or context.
  *
+ * The layout pattern remains necessary when a shared prefix does not exist
+ * (see "Layout pattern" above).
+ *
+ * ```jsx
+ * const DASHBOARD_SECTION_ROUTE = route("/dashboard/");
+ * const DASHBOARD_HOME_ROUTE = route("/dashboard");
+ * const DASHBOARD_POSTS_ROUTE = route("/dashboard/posts");
+ *
+ * // top-level router — only knows about the prefix
+ * <Route route={DASHBOARD_SECTION_ROUTE} element={DashboardSection} />
+ *
+ * // Dashboard owns the rest
+ * const DashboardSection = () => {
+ *  const [sidebarOpen, setSidebarOpen] = useState(false);
+ *
+ *   return <div
+ *     style="background: lightblue; padding: 10px;"
+ *     onClick={() => setSidebarOpen(o => !o)}
+ *   >
+ *     <Route>
+ *       <Route route={DASHBOARD_HOME_ROUTE} element={DashboardHomePage} elementProps={{ sidebarOpen}} />
+ *       <Route route={DASHBOARD_POSTS_ROUTE} element={DashboardPostsPage} elementProps={{ sidebarOpen }} />
+ *       <Route fallback element={DashboardNotFound} />
+ *     </Route>
+ *   </div>;
+ * }
+ * ```
  */
 
 const debug$1 = (...args) => {
@@ -12974,11 +13760,7 @@ const RouteContainer = ({
     return null;
   }
   if (element) {
-    const Element = element;
-    return jsx(Element, {
-      ...elementProps,
-      children: content
-    });
+    return h(element, elementProps, content);
   }
   return content;
 };
@@ -13007,17 +13789,12 @@ const RouteLeafFallback = props => {
 };
 const RouteActive = ({
   element,
-  elementProps,
-  action
+  elementProps
 }) => {
-  const Element = element;
-  const renderedElement = action ? jsx(ActionRenderer, {
-    action: action,
-    children: element
-  }) : typeof element === "function" ? jsx(Element, {
-    ...elementProps
-  }) : element;
-  return renderedElement;
+  if (typeof element === "function") {
+    return h(element, elementProps);
+  }
+  return element;
 };
 
 const routeAction = (
@@ -13038,48 +13815,6 @@ const routeAction = (
     },
     options,
   );
-
-  // If the action is related to a store of items
-  // we want to keep the url in sync with the item id of the store when it changes
-  // This way whenever an item with a mutable id is updated, the url is also updated
-  // (renaming a user while being on the user page)
-  // In case the route does not use this param, then this code won't have an effect
-  // To work the route params MUST use the same name (case sensitive) as the mutable id key
-  // so "/users/:id/" with mutableIdKey "id" will work but "/users/:userId/" with mutableIdKey "id" won't work
-  sync_url_and_item_id: {
-    const { store } = actionBoundToRoute.meta;
-    if (!store) {
-      break sync_url_and_item_id;
-    }
-    const { uniqueKeys } = store;
-    const [firstUniqueKey] = uniqueKeys;
-    if (!firstUniqueKey) {
-      break sync_url_and_item_id;
-    }
-    const uniqueValueSignal = computed(() => {
-      const params = route.paramsSignal.value;
-      const uniqueKeyValue = params[firstUniqueKey];
-      return uniqueKeyValue;
-    });
-    const routeItemSignal = store.signalForUniqueKey(
-      firstUniqueKey,
-      uniqueValueSignal,
-    );
-    store.observeItemProperties(routeItemSignal, (propertyMutations) => {
-      const uniquePropertyMutation = propertyMutations[firstUniqueKey];
-      if (!uniquePropertyMutation) {
-        return;
-      }
-      route.replaceParams(
-        {
-          [firstUniqueKey]: uniquePropertyMutation.newValue,
-        },
-        {
-          callReason: `store item ${firstUniqueKey} change on ${route}`,
-        },
-      );
-    });
-  }
 
   return actionBoundToRoute;
 };
@@ -15184,6 +15919,10 @@ const openCallout = (
         `anchor element is not visually visible (${anchorVisuallyVisibleInfo.reason}) -> will be anchored to first visually visible ancestor`,
       );
       anchorElement = getFirstVisuallyVisibleAncestor(anchorElement);
+      if (!anchorElement) {
+        // anchorElement is not in the DOM anymore, fallback to body
+        anchorElement = document.body;
+      }
     }
 
     allowWheelThrough(calloutElement, anchorElement);
@@ -17377,8 +18116,15 @@ const installCustomConstraintValidation = (
       closeElementValidationMessage("cleanup");
     });
 
-    const anchorElement =
-      failedConstraintInfo.target || elementReceivingValidationMessage;
+    const anchorElement = (() => {
+      const base =
+        failedConstraintInfo.target || elementReceivingValidationMessage;
+      const renderedBy = base.getAttribute("data-rendered-by");
+      if (renderedBy) {
+        return base.closest(renderedBy) || base;
+      }
+      return base;
+    })();
     validationInterface.validationMessage = openCallout(
       failedConstraintInfo.message,
       {
@@ -19442,7 +20188,6 @@ const useExecuteAction = (
   const resetErrorBoundary = useResetErrorBoundary();
   useLayoutEffect(() => {
     if (error) {
-      error.__handled__ = true; // prevent jsenv from displaying it
       throw error;
     }
   }, [error]);
@@ -20656,6 +21401,10 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
         border-radius: inherit;
         pointer-events: none;
       }
+
+      & > img {
+        border-radius: inherit;
+      }
     }
 
     &[data-reveal-on-interaction] {
@@ -20746,13 +21495,10 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
         --x-button-border-color: transparent;
       }
     }
-  }
-  /* Callout (info, warning, error) */
-  .navi_button[data-callout] {
-    --x-button-border-color: var(--callout-color);
-  }
-  .navi_button > img {
-    border-radius: inherit;
+    /* Callout (info, warning, error) */
+    &[data-callout] {
+      --x-button-border-color: var(--callout-color);
+    }
   }
 `;
 const Button = props => {
@@ -24585,6 +25331,7 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
     /* Callout (info, warning, error) */
     &[data-callout] {
       --x-border-color: var(--callout-color);
+      --x-outline-color: var(--callout-color);
     }
   }
 
@@ -26001,219 +26748,6 @@ const filterTableSelection = (selection, predicate) => {
   return matching;
 };
 
-// https://github.com/reach/reach-ui/tree/b3d94d22811db6b5c0f272b9a7e2e3c1bb4699ae/packages/descendants
-// https://github.com/pacocoursey/use-descendants/tree/master
-
-const createIsolatedItemTracker = () => {
-  // Producer contexts (ref-based, no re-renders)
-  const ProducerTrackerContext = createContext();
-  const ProducerItemCountRefContext = createContext();
-  const ProducerListRenderIdContext = createContext();
-
-  // Consumer contexts (state-based, re-renders)
-  const ConsumerItemsContext = createContext();
-  const useIsolatedItemTrackerProvider = () => {
-    const itemsRef = useRef([]);
-    const items = itemsRef.current;
-    const itemCountRef = useRef();
-    const pendingFlushRef = useRef(false);
-    const producerIsRenderingRef = useRef(false);
-    const itemTracker = useMemo(() => {
-      const registerItem = (index, value) => {
-        const hasValue = index in items;
-        if (hasValue) {
-          const currentValue = items[index];
-          if (compareTwoJsValues(currentValue, value)) {
-            return;
-          }
-        }
-        items[index] = value;
-        if (producerIsRenderingRef.current) {
-          // Consumer will sync after producer render completes
-          return;
-        }
-        pendingFlushRef.current = true;
-      };
-      const getProducerItem = itemIndex => {
-        return items[itemIndex];
-      };
-      const ItemProducerProvider = ({
-        children
-      }) => {
-        items.length = 0;
-        itemCountRef.current = 0;
-        pendingFlushRef.current = false;
-        producerIsRenderingRef.current = true;
-        const listRenderId = {};
-        useLayoutEffect(() => {
-          producerIsRenderingRef.current = false;
-        });
-
-        // CRITICAL: Sync consumer state on subsequent renders
-        const renderedOnce = useRef(false);
-        useLayoutEffect(() => {
-          if (!renderedOnce.current) {
-            renderedOnce.current = true;
-            return;
-          }
-          pendingFlushRef.current = true;
-          itemTracker.flushToConsumers();
-        }, [listRenderId]);
-        return jsx(ProducerItemCountRefContext.Provider, {
-          value: itemCountRef,
-          children: jsx(ProducerListRenderIdContext.Provider, {
-            value: listRenderId,
-            children: jsx(ProducerTrackerContext.Provider, {
-              value: itemTracker,
-              children: children
-            })
-          })
-        });
-      };
-      const ItemConsumerProvider = ({
-        children
-      }) => {
-        const [consumerItems, setConsumerItems] = useState(items);
-        const flushToConsumers = () => {
-          if (!pendingFlushRef.current) {
-            return;
-          }
-          const itemsCopy = [...items];
-          pendingFlushRef.current = false;
-          setConsumerItems(itemsCopy);
-        };
-        itemTracker.flushToConsumers = flushToConsumers;
-        useLayoutEffect(() => {
-          flushToConsumers();
-        });
-        return jsx(ConsumerItemsContext.Provider, {
-          value: consumerItems,
-          children: children
-        });
-      };
-      return {
-        pendingFlushRef,
-        registerItem,
-        getProducerItem,
-        ItemProducerProvider,
-        ItemConsumerProvider
-      };
-    }, []);
-    const {
-      ItemProducerProvider,
-      ItemConsumerProvider
-    } = itemTracker;
-    return [ItemProducerProvider, ItemConsumerProvider, items];
-  };
-
-  // Hook for producers to register items (ref-based, no re-renders)
-  const useTrackIsolatedItem = data => {
-    const listRenderId = useContext(ProducerListRenderIdContext);
-    const itemCountRef = useContext(ProducerItemCountRefContext);
-    const itemTracker = useContext(ProducerTrackerContext);
-    const listRenderIdRef = useRef();
-    const itemIndexRef = useRef();
-    const dataRef = useRef();
-    const prevListRenderId = listRenderIdRef.current;
-    useLayoutEffect(() => {
-      if (itemTracker.pendingFlushRef.current) {
-        itemTracker.flushToConsumers();
-      }
-    });
-    if (prevListRenderId === listRenderId) {
-      const itemIndex = itemIndexRef.current;
-      itemTracker.registerItem(itemIndex, data);
-      dataRef.current = data;
-      return itemIndex;
-    }
-    listRenderIdRef.current = listRenderId;
-    const itemCount = itemCountRef.current;
-    const itemIndex = itemCount;
-    itemCountRef.current = itemIndex + 1;
-    itemIndexRef.current = itemIndex;
-    dataRef.current = data;
-    itemTracker.registerItem(itemIndex, data);
-    return itemIndex;
-  };
-  const useTrackedIsolatedItem = itemIndex => {
-    const items = useTrackedIsolatedItems();
-    const item = items[itemIndex];
-    return item;
-  };
-
-  // Hooks for consumers to read items (state-based, re-renders)
-  const useTrackedIsolatedItems = () => {
-    const consumerItems = useContext(ConsumerItemsContext);
-    if (!consumerItems) {
-      throw new Error("useTrackedIsolatedItems must be used within <ItemConsumerProvider />");
-    }
-    return consumerItems;
-  };
-  return [useIsolatedItemTrackerProvider, useTrackIsolatedItem, useTrackedIsolatedItem, useTrackedIsolatedItems];
-};
-
-const createItemTracker = () => {
-  const ItemTrackerContext = createContext();
-  const useItemTrackerProvider = () => {
-    const itemsRef = useRef([]);
-    const items = itemsRef.current;
-    const itemCountRef = useRef(0);
-    const tracker = useMemo(() => {
-      const ItemTrackerProvider = ({
-        children
-      }) => {
-        // Reset on each render to start fresh
-        tracker.reset();
-        return jsx(ItemTrackerContext.Provider, {
-          value: tracker,
-          children: children
-        });
-      };
-      ItemTrackerProvider.items = items;
-      return {
-        ItemTrackerProvider,
-        items,
-        registerItem: data => {
-          const index = itemCountRef.current++;
-          items[index] = data;
-          return index;
-        },
-        getItem: index => {
-          return items[index];
-        },
-        getAllItems: () => {
-          return items;
-        },
-        reset: () => {
-          items.length = 0;
-          itemCountRef.current = 0;
-        }
-      };
-    }, []);
-    return tracker.ItemTrackerProvider;
-  };
-  const useTrackItem = data => {
-    const tracker = useContext(ItemTrackerContext);
-    if (!tracker) {
-      throw new Error("useTrackItem must be used within SimpleItemTrackerProvider");
-    }
-    return tracker.registerItem(data);
-  };
-  const useTrackedItem = index => {
-    const trackedItems = useTrackedItems();
-    const item = trackedItems[index];
-    return item;
-  };
-  const useTrackedItems = () => {
-    const tracker = useContext(ItemTrackerContext);
-    if (!tracker) {
-      throw new Error("useTrackedItems must be used within SimpleItemTrackerProvider");
-    }
-    return tracker.items;
-  };
-  return [useItemTrackerProvider, useTrackItem, useTrackedItem, useTrackedItems];
-};
-
 const Z_INDEX_EDITING = 1; /* To go above neighbours, but should not be too big to stay under the sticky cells */
 
 /* needed because cell uses position:relative, sticky must win even if before in DOM order */
@@ -26667,6 +27201,193 @@ const createTableAttributeSync = (table, tableClone) => {
     });
   });
   return observer;
+};
+
+// https://github.com/reach/reach-ui/tree/b3d94d22811db6b5c0f272b9a7e2e3c1bb4699ae/packages/descendants
+// https://github.com/pacocoursey/use-descendants/tree/master
+
+const createIsolatedItemTracker = () => {
+  // Producer contexts (ref-based, no re-renders)
+  const ProducerTrackerContext = createContext();
+  const ProducerItemCountRefContext = createContext();
+  const ProducerListRenderIdContext = createContext();
+
+  // Consumer contexts (state-based, re-renders)
+  const ConsumerItemsContext = createContext();
+  const useIsolatedItemTrackerProvider = () => {
+    const itemsRef = useRef([]);
+    const items = itemsRef.current;
+    const itemCountRef = useRef();
+    const itemTracker = useMemo(() => {
+      // Snapshot taken by FlushSentinel after all producer children rendered.
+      // Consumers read from this — always up-to-date within the same render pass.
+      const itemsSnapshotRef = {
+        current: items
+      };
+      const registerItem = (index, value) => {
+        const hasValue = index in items;
+        if (hasValue) {
+          const currentValue = items[index];
+          if (compareTwoJsValues(currentValue, value)) {
+            return;
+          }
+        }
+        items[index] = value;
+      };
+      const getProducerItem = itemIndex => {
+        return items[itemIndex];
+      };
+      const ItemProducerProvider = ({
+        children
+      }) => {
+        items.length = 0;
+        itemCountRef.current = 0;
+        const listRenderId = {};
+        return jsx(ProducerItemCountRefContext.Provider, {
+          value: itemCountRef,
+          children: jsx(ProducerListRenderIdContext.Provider, {
+            value: listRenderId,
+            children: jsxs(ProducerTrackerContext.Provider, {
+              value: itemTracker,
+              children: [children, jsx(FlushSentinel, {})]
+            })
+          })
+        });
+      };
+
+      // Renders after all producer children (e.g. <Col>) have registered their
+      // items. Taking a snapshot here guarantees the consumer sees the correct
+      // item list within the same render pass, without any heuristic.
+      const FlushSentinel = () => {
+        itemsSnapshotRef.current = items;
+        return null;
+      };
+      const ItemConsumerProvider = ({
+        children
+      }) => {
+        // FlushSentinel (last child of ItemProducerProvider) already set
+        // itemsSnapshotRef.current to the up-to-date items array before any
+        // consumer rendered. Reading from the snapshot is always correct.
+        return jsx(ConsumerItemsContext.Provider, {
+          value: itemsSnapshotRef.current,
+          children: children
+        });
+      };
+      return {
+        registerItem,
+        getProducerItem,
+        ItemProducerProvider,
+        ItemConsumerProvider
+      };
+    }, []);
+    const {
+      ItemProducerProvider,
+      ItemConsumerProvider
+    } = itemTracker;
+    return [ItemProducerProvider, ItemConsumerProvider, items];
+  };
+
+  // Hook for producers to register items (ref-based, no re-renders)
+  const useTrackIsolatedItem = data => {
+    const listRenderId = useContext(ProducerListRenderIdContext);
+    const itemCountRef = useContext(ProducerItemCountRefContext);
+    const itemTracker = useContext(ProducerTrackerContext);
+    const listRenderIdRef = useRef();
+    const itemIndexRef = useRef();
+    const dataRef = useRef();
+    const prevListRenderId = listRenderIdRef.current;
+    if (prevListRenderId === listRenderId) {
+      const itemIndex = itemIndexRef.current;
+      itemTracker.registerItem(itemIndex, data);
+      dataRef.current = data;
+      return itemIndex;
+    }
+    listRenderIdRef.current = listRenderId;
+    const itemCount = itemCountRef.current;
+    const itemIndex = itemCount;
+    itemCountRef.current = itemIndex + 1;
+    itemIndexRef.current = itemIndex;
+    dataRef.current = data;
+    itemTracker.registerItem(itemIndex, data);
+    return itemIndex;
+  };
+  const useTrackedIsolatedItem = itemIndex => {
+    const items = useTrackedIsolatedItems();
+    const item = items[itemIndex];
+    return item;
+  };
+
+  // Hooks for consumers to read items (state-based, re-renders)
+  const useTrackedIsolatedItems = () => {
+    const consumerItems = useContext(ConsumerItemsContext);
+    if (!consumerItems) {
+      throw new Error("useTrackedIsolatedItems must be used within <ItemConsumerProvider />");
+    }
+    return consumerItems;
+  };
+  return [useIsolatedItemTrackerProvider, useTrackIsolatedItem, useTrackedIsolatedItem, useTrackedIsolatedItems];
+};
+
+const createItemTracker = () => {
+  const ItemTrackerContext = createContext();
+  const useItemTrackerProvider = () => {
+    const itemsRef = useRef([]);
+    const items = itemsRef.current;
+    const itemCountRef = useRef(0);
+    const tracker = useMemo(() => {
+      const ItemTrackerProvider = ({
+        children
+      }) => {
+        // Reset on each render to start fresh
+        tracker.reset();
+        return jsx(ItemTrackerContext.Provider, {
+          value: tracker,
+          children: children
+        });
+      };
+      ItemTrackerProvider.items = items;
+      return {
+        ItemTrackerProvider,
+        items,
+        registerItem: data => {
+          const index = itemCountRef.current++;
+          items[index] = data;
+          return index;
+        },
+        getItem: index => {
+          return items[index];
+        },
+        getAllItems: () => {
+          return items;
+        },
+        reset: () => {
+          items.length = 0;
+          itemCountRef.current = 0;
+        }
+      };
+    }, []);
+    return tracker.ItemTrackerProvider;
+  };
+  const useTrackItem = data => {
+    const tracker = useContext(ItemTrackerContext);
+    if (!tracker) {
+      throw new Error("useTrackItem must be used within SimpleItemTrackerProvider");
+    }
+    return tracker.registerItem(data);
+  };
+  const useTrackedItem = index => {
+    const trackedItems = useTrackedItems();
+    const item = trackedItems[index];
+    return item;
+  };
+  const useTrackedItems = () => {
+    const tracker = useContext(ItemTrackerContext);
+    if (!tracker) {
+      throw new Error("useTrackedItems must be used within SimpleItemTrackerProvider");
+    }
+    return tracker.items;
+  };
+  return [useItemTrackerProvider, useTrackItem, useTrackedItem, useTrackedItems];
 };
 
 const TableSizeContext = createContext();
@@ -28824,6 +29545,8 @@ const TableCell = props => {
     onClick,
     action,
     name,
+    children,
+    value = children,
     valueSignal,
     // appeareance
     style,
@@ -28831,8 +29554,7 @@ const TableCell = props => {
     bold,
     selfAlignX = column.selfAlignX,
     selfAlignY = column.selfAlignY,
-    backgroundColor = column.backgroundColor || row.backgroundColor,
-    children
+    backgroundColor = column.backgroundColor || row.backgroundColor
   } = props;
   const ref = props.ref || cellDefaultRef;
   const isFirstRow = rowIndex === 0;
@@ -29005,9 +29727,9 @@ const TableCell = props => {
     children: [editable ? jsx(Editable, {
       editing: editing,
       onEditEnd: stopEditing,
-      value: children,
       action: action,
       name: name,
+      value: value,
       valueSignal: valueSignal,
       height: "100%",
       width: "100%",
@@ -29178,6 +29900,9 @@ const createColumnOrdering = (columnIdKey, setOrderedColumnIds) => {
         const stableId = stableIdByExternalIdMap.get(id);
         stableIdByExternalIdMap.delete(id);
         externalIdByStableIdMap.delete(stableId);
+        currentOrderedColumnIds = currentOrderedColumnIds.filter(
+          (orderedId) => orderedId !== id,
+        );
       }
       for (const id of purelyAdded) {
         const stableId = nextStableId++;
@@ -30642,6 +31367,39 @@ const Paragraph = props => {
   });
 };
 
+installImportMetaCss(import.meta);import.meta.css = /* css */`
+  .navi_text_placeholder {
+    display: inline-block;
+    width: 100%;
+    height: 1em;
+    background: linear-gradient(90deg, #e0e0e0 25%, #f0f0f0 50%, #e0e0e0 75%);
+    background-size: 200% 100%;
+    border-radius: 4px;
+
+    &[data-loading] {
+      animation: shimmer 1.2s infinite;
+    }
+  }
+  @keyframes shimmer {
+    0% {
+      background-position: 200% 0;
+    }
+    100% {
+      background-position: -200% 0;
+    }
+  }
+`;
+const TextPlaceholder = ({
+  loading,
+  ...props
+}) => {
+  return jsx(Box, {
+    ...props,
+    baseClassName: "navi_text_placeholder",
+    "data-loading": loading ? "" : undefined
+  });
+};
+
 const Image = props => {
   return jsx(Box, {
     ...props,
@@ -30917,6 +31675,200 @@ const ViewportLayout = props => {
   });
 };
 
+installImportMetaCss(import.meta);import.meta.css = /* css */`
+  @layer navi {
+    .navi_side_panel {
+      --side-panel-width: 400px;
+      --side-panel-background: white;
+      --side-panel-shadow: -4px 0 24px rgba(0, 0, 0, 0.18);
+      --side-panel-animation-duration: 250ms;
+    }
+  }
+
+  .navi_side_panel {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1000;
+    pointer-events: none;
+
+    .navi_side_panel_overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.3);
+      pointer-events: auto;
+    }
+
+    .navi_side_panel_dialog {
+      position: absolute;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      width: var(--side-panel-width);
+      background: var(--side-panel-background);
+      outline: none;
+      box-shadow: var(--side-panel-shadow);
+      animation-duration: var(--side-panel-animation-duration);
+      animation-timing-function: ease-out;
+      animation-fill-mode: both;
+      pointer-events: auto;
+      overflow-y: auto;
+    }
+
+    &[data-opening] {
+      .navi_side_panel_dialog {
+        animation-name: navi_side_panel_slide_in;
+      }
+    }
+
+    &[data-closing] {
+      .navi_side_panel_dialog {
+        animation-name: navi_side_panel_slide_out;
+      }
+    }
+  }
+
+  .navi_side_panel_close_button {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+
+    z-index: 1; /* For some reason required to interact properly with the button */
+    display: flex;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    align-items: center;
+    justify-content: center;
+    color: #6c757d;
+    font-size: 18px;
+    line-height: 1;
+    background: transparent;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+
+    &:hover {
+      color: #212529;
+      background: #f0f0f0;
+    }
+  }
+
+  @keyframes navi_side_panel_slide_in {
+    from {
+      transform: translateX(100%);
+    }
+    to {
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes navi_side_panel_slide_out {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(100%);
+    }
+  }
+`;
+const SidePanelCloseContext = createContext(null);
+const useSidePanelClose = () => useContext(SidePanelCloseContext);
+const SidePanelStyleCSSVars = {
+  width: "--side-panel-width"
+};
+const SidePanel = ({
+  isOpen,
+  onClose,
+  children,
+  closeOnClickOutside = false,
+  hideCloseButton = false,
+  width,
+  ...rest
+}) => {
+  onClose = useStableCallback(onClose);
+  const panelDialogRef = useRef(null);
+  const [phase, setPhase] = useState(isOpen ? "open" : "closed");
+  const previousFocusRef = useRef(null);
+  const isMountedRef = useRef(false);
+  useLayoutEffect(() => {
+    if (!isMountedRef.current) {
+      isMountedRef.current = true;
+      return;
+    }
+    if (isOpen) {
+      setPhase("opening");
+    } else if (phase !== "closed") {
+      setPhase("closing");
+    }
+  }, [isOpen]);
+  useLayoutEffect(() => {
+    if (phase === "opening" && panelDialogRef.current) {
+      previousFocusRef.current = document.activeElement;
+      panelDialogRef.current.focus();
+    }
+  }, [phase]);
+  useKeyboardShortcuts(panelDialogRef, [{
+    key: "escape",
+    handler: () => {
+      onClose();
+      return true;
+    }
+  }]);
+  if (phase === "closed") {
+    return null;
+  }
+  const onAnimationEnd = () => {
+    if (phase === "opening") {
+      setPhase("open");
+    } else if (phase === "closing") {
+      setPhase("closed");
+      const prev = previousFocusRef.current;
+      if (prev && document.contains(prev)) {
+        prev.focus({
+          preventScroll: true
+        });
+      }
+      previousFocusRef.current = null;
+    }
+  };
+  return createPortal(jsx(SidePanelCloseContext.Provider, {
+    value: onClose,
+    children: jsxs(Box, {
+      baseClassName: "navi_side_panel",
+      propsCSSVars: SidePanelStyleCSSVars,
+      width: width,
+      "data-opening": phase === "opening" ? "" : undefined,
+      "data-closing": phase === "closing" ? "" : undefined,
+      ...rest,
+      children: [closeOnClickOutside && jsx("div", {
+        className: "navi_side_panel_overlay",
+        onClick: e => {
+          onClose(e);
+        }
+      }), jsxs(Box, {
+        ref: panelDialogRef,
+        baseClassName: "navi_side_panel_dialog",
+        tabIndex: -1,
+        role: closeOnClickOutside ? "dialog" : "complementary",
+        "aria-modal": closeOnClickOutside ? "true" : undefined,
+        onAnimationEnd: onAnimationEnd,
+        children: [!hideCloseButton && jsx(NaviSidePanelCloseButton, {}), children]
+      })]
+    })
+  }), document.body);
+};
+const NaviSidePanelCloseButton = () => {
+  const sidePanelClose = useSidePanelClose();
+  return jsx("button", {
+    className: "navi_side_panel_close_button",
+    "aria-label": "Close panel",
+    onClick: sidePanelClose,
+    children: "\xD7"
+  });
+};
+
 /*
  * - Usage
  * useEffect(() => {
@@ -31056,5 +32008,5 @@ const UserSvg = () => jsx("svg", {
   })
 });
 
-export { ActionRenderer, ActiveKeyboardShortcuts, Address, BadgeCount, Box, Button, ButtonCopyToClipboard, Caption, CheckSvg, Checkbox, CheckboxList, Code, Col, Colgroup, ConstructionSvg, Details, DialogLayout, Editable, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, Input, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, MessageBox, Meter, Nav, Paragraph, Quantity, QuantityIntl, Radio, RadioList, Route, RowNumberCol, RowNumberTableCell, SINGLE_SPACE_CONSTRAINT, SVGMaskOverlay, SearchSvg, Select, SelectionContext, Separator, SettingsSvg, StarSvg, SummaryMarker, Svg, Table, TableCell, Tbody, Text, Thead, Title, Tr, UITransition, UserSvg, ViewportLayout, actionIntegratedVia, actionRunEffect, addCustomMessage, arraySignalMembership, compareTwoJsValues, createAction, createAvailableConstraint, createIntl, createRequestCanceller, createSelectionKeyboardShortcuts, enableDebugActions, enableDebugOnDocumentLoading, filterTableSelection, forwardActionRequested, installCustomConstraintValidation, isCellSelected, isColumnSelected, isRowSelected, localStorageSignal, navBack, navForward, navTo, openCallout, rawUrlPart, reload, removeCustomMessage, requestAction, rerunActions, resource, route, routeAction, setBaseUrl, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, updateActions, useActionData, useActionStatus, useArraySignalMembership, useCalloutClose, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDarkBackgroundAttribute, useDependenciesDiff, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState$1 as useNavState, useOrderedColumns, useRouteStatus, useRunOnMount, useSelectableElement, useSelectionController, useSignalSync, useStateArray, useTitleLevel, useUrlSearchParam, valueInLocalStorage };
+export { ActionRenderer, ActiveKeyboardShortcuts, Address, BadgeCount, Box, Button, ButtonCopyToClipboard, Caption, CheckSvg, Checkbox, CheckboxList, Code, Col, Colgroup, ConstructionSvg, Details, DialogLayout, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, Input, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, Loading, MessageBox, Meter, Nav, Paragraph, Quantity, QuantityIntl, Radio, RadioList, Route, RowNumberCol, RowNumberTableCell, SINGLE_SPACE_CONSTRAINT, SVGMaskOverlay, SearchSvg, Select, SelectionContext, Separator, SettingsSvg, SidePanel, StarSvg, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextPlaceholder, Thead, Title, Tr, UITransition, UserSvg, ViewportLayout, actionIntegratedVia, actionRunEffect, addCustomMessage, arraySignalMembership, compareTwoJsValues, createAction, createAvailableConstraint, createIntl, createRequestCanceller, createSelectionKeyboardShortcuts, enableDebugActions, enableDebugOnDocumentLoading, filterTableSelection, forwardActionRequested, installCustomConstraintValidation, isCellSelected, isColumnSelected, isRowSelected, localStorageSignal, navBack, navForward, navTo, openCallout, rawUrlPart, reload, removeCustomMessage, requestAction, rerunActions, resource, route, routeAction, setBaseUrl, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, syncOwnedResourceToSignals, syncResourceToSignals, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutClose, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDarkBackgroundAttribute, useDependenciesDiff, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState$1 as useNavState, useOrderedColumns, useRouteStatus, useRunOnMount, useSelectableElement, useSelectionController, useSidePanelClose, useSignalSync, useStateArray, useTitleLevel, useUrlSearchParam, valueInLocalStorage };
 //# sourceMappingURL=jsenv_navi.js.map

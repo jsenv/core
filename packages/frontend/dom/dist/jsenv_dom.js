@@ -385,7 +385,8 @@ const areSameRGBA = (first, second) => {
 };
 const resolveCSSColor = (color, element) => {
   const rgba = parseCSSColor(color, element);
-  return stringifyCSSColor(rgba);
+  const colorString = stringifyCSSColor(rgba);
+  return colorString;
 };
 
 /**
@@ -440,12 +441,27 @@ const parseCSSColor = (color, element) => {
     return color;
   }
 
+  // oklab(L a b) and oklab(L a b / alpha)
+  if (color.startsWith("oklab(")) {
+    const oklabMatch = color.match(
+      /^oklab\(\s*([\d.]+)\s+(-?[\d.]+)\s+(-?[\d.]+)(?:\s*\/\s*([\d.]+))?\s*\)$/,
+    );
+    if (oklabMatch) {
+      const L = parseFloat(oklabMatch[1]);
+      const a = parseFloat(oklabMatch[2]);
+      const b = parseFloat(oklabMatch[3]);
+      const alpha = oklabMatch[4] !== undefined ? parseFloat(oklabMatch[4]) : 1;
+      const [r, g, bChannel] = oklabToRgb(L, a, b);
+      return [r, g, bChannel, alpha];
+    }
+    return color;
+  }
+
   // Pass through CSS color functions we don't handle
   if (
     color.startsWith("lch(") ||
     color.startsWith("oklch(") ||
     color.startsWith("lab(") ||
-    color.startsWith("oklab(") ||
     color.startsWith("hwb(") ||
     color.includes("color-contrast(")
   ) {
@@ -505,6 +521,27 @@ const parseCSSColor = (color, element) => {
   const rgba = convertColorToRgba(resolvedColor);
   return rgba;
 };
+const oklabToRgb = (L, a, b) => {
+  const l_ = L + 0.3963377774 * a + 0.2158037573 * b;
+  const m_ = L - 0.1055613458 * a - 0.0638541728 * b;
+  const s_ = L - 0.0894841775 * a - 1.291485548 * b;
+  const l = l_ * l_ * l_;
+  const m = m_ * m_ * m_;
+  const s = s_ * s_ * s_;
+  const rLinear = 4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s;
+  const gLinear = -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s;
+  const bLinear = -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s;
+  const toSrgb = (linear) => {
+    const clamped = linear < 0 ? 0 : linear > 1 ? 1 : linear;
+    const srgb =
+      clamped <= 0.0031308
+        ? 12.92 * clamped
+        : 1.055 * Math.pow(clamped, 1 / 2.4) - 0.055;
+    return Math.round(srgb * 255);
+  };
+  return [toSrgb(rLinear), toSrgb(gLinear), toSrgb(bLinear)];
+};
+
 /**
  * Converts HSL color to RGB
  * @param {number} h - Hue (0-360)
@@ -637,12 +674,10 @@ const stringifyCSSColor = (value) => {
   }
   const rgba = value;
   const [r, g, b, a = 1] = rgba;
-
   // Validate RGB values
   if (r < 0 || r > 255 || g < 0 || g > 255 || b < 0 || b > 255) {
     return null;
   }
-
   // Validate alpha value
   if (a < 0 || a > 1) {
     return null;
@@ -660,10 +695,7 @@ const stringifyCSSColor = (value) => {
         return name;
       }
     }
-  }
-
-  // Use rgb() for opaque colors, rgba() for transparent
-  if (a === 1) {
+    // Use rgb() for opaque colors, rgba() for transparent
     return `rgb(${rInt}, ${gInt}, ${bInt})`;
   }
   if (a === 0 && rInt === 0 && gInt === 0 && bInt === 0) {
@@ -4034,12 +4066,6 @@ const performArrowNavigation = (
   }
 
   const onTargetToFocus = (targetToFocus) => {
-    console.debug(
-      `Arrow navigation: ${event.key} from`,
-      activeElement,
-      "to",
-      targetToFocus,
-    );
     event.preventDefault();
     markFocusNav(event);
     targetToFocus.focus();
@@ -7041,6 +7067,8 @@ installImportMetaCss(import.meta);const setupConstraintFeedbackLine = () => {
     const { grabEvent, dragEvent } = gestureInfo;
     if (
       grabEvent.type === "programmatic" ||
+      // dragEvent can be null when only mousedown without yet any mousemove
+      !dragEvent ||
       dragEvent.type === "programmatic"
     ) {
       // programmatic drag
@@ -8913,30 +8941,47 @@ const initPositionSticky = (element) => {
   const computedStyle = getComputedStyle(element);
   const topCssValue = computedStyle.top;
   const top = parseFloat(topCssValue);
-  if (isNaN(top)) {
-    return () => {}; // Early return if no valid top value
+  const leftCssValue = computedStyle.left;
+  const left = parseFloat(leftCssValue);
+  const hasTop = !isNaN(top);
+  const hasLeft = !isNaN(left);
+  if (!hasTop && !hasLeft) {
+    return () => {}; // Early return if no valid top or left value
   }
 
   // Skip polyfill if native position:sticky would work (no overflow:auto/hidden parents)
   const scrollContainerSet = getScrollContainerSet(element);
-  {
-    let hasOverflowHiddenOrAuto = false;
-    for (const scrollContainer of scrollContainerSet) {
-      const scrollContainerComputedStyle = getComputedStyle(scrollContainer);
-      const overflowX = scrollContainerComputedStyle.overflowX;
-      if (overflowX === "auto" || overflowX === "hidden") {
-        hasOverflowHiddenOrAuto = true;
-        break;
-      }
-      const overflowY = scrollContainerComputedStyle.overflowY;
-      if (overflowY === "auto" || overflowY === "hidden") {
-        hasOverflowHiddenOrAuto = true;
-        break;
-      }
+  // Determine per-axis whether an intermediate container blocks native sticky.
+  // Native sticky fails only when there is a scroll container between the element
+  // and the document with overflow set on that axis.
+  let xScrollContainer = null; // first intermediate container blocking horizontal sticky
+  let yScrollContainer = null; // first intermediate container blocking vertical sticky
+  for (const scrollContainer of scrollContainerSet) {
+    if (scrollContainer === document.documentElement) {
+      break;
     }
-    if (!hasOverflowHiddenOrAuto) {
-      return () => {}; // Native sticky will work fine
+    const style = getComputedStyle(scrollContainer);
+    if (
+      xScrollContainer === null &&
+      (style.overflowX === "auto" ||
+        style.overflowX === "hidden" ||
+        style.overflowX === "scroll")
+    ) {
+      xScrollContainer = scrollContainer;
     }
+    if (
+      yScrollContainer === null &&
+      (style.overflowY === "auto" ||
+        style.overflowY === "hidden" ||
+        style.overflowY === "scroll")
+    ) {
+      yScrollContainer = scrollContainer;
+    }
+  }
+  const needsPolyfillX = hasLeft && xScrollContainer !== null;
+  const needsPolyfillY = hasTop && yScrollContainer !== null;
+  if (!needsPolyfillX && !needsPolyfillY) {
+    return () => {}; // Native sticky will work fine on both axes
   }
 
   const cleanupCallbackSet = new Set();
@@ -8983,39 +9028,72 @@ const initPositionSticky = (element) => {
     const placeholderRect = placeholder.getBoundingClientRect();
     const parentRect = parentElement.getBoundingClientRect();
 
-    // Calculate left position in viewport coordinates (fixed positioning)
-    const leftPosition = placeholderRect.left;
-    element.style.left = `${Math.round(leftPosition)}px`;
+    // The CSS `top`/`left` values are offsets from the scroll container's edge.
+    // getBoundingClientRect() always returns viewport coordinates (already accounting
+    // for scroll position of all ancestors), so to convert the CSS offset to a
+    // viewport threshold we add the scroll container's own viewport position.
+    //
+    // Example: main starts at viewport x=250, left=0 → leftThreshold=250.
+    // After scrolling main 670px: placeholderRect.left = 250-670 = -420.
+    // -420 <= 250 → stuck → element.style.left = 250px (main's left edge). ✓
+    //
+    // If no intermediate scroll container exists, use 0 (document/viewport edge).
+    const yContainerRect = yScrollContainer
+      ? yScrollContainer.getBoundingClientRect()
+      : { top: 0 };
+    const xContainerRect = xScrollContainer
+      ? xScrollContainer.getBoundingClientRect()
+      : { left: 0 };
+    const topThreshold = yContainerRect.top + top;
+    const leftThreshold = xContainerRect.left + left;
 
-    // Determine if element should be sticky or at its natural position
+    // ── Vertical (top) ──────────────────────────────────────────────────────
     let topPosition;
-    let isStuck = false;
-
-    // Check if we need to stick the element
-    if (placeholderRect.top <= top) {
-      // Element should be stuck at "top" position in the viewport
-      topPosition = top;
-      isStuck = true;
-
-      // But make sure it doesn't go beyond parent's bottom boundary
-      const parentBottom = parentRect.bottom;
-      const elementBottom = top + height;
-
-      if (elementBottom > parentBottom) {
-        // Adjust to stay within parent
-        topPosition = parentBottom - height;
+    let isStuckVertically = false;
+    if (hasTop) {
+      if (placeholderRect.top <= topThreshold) {
+        topPosition = topThreshold;
+        isStuckVertically = true;
+        // Don't go beyond parent's bottom boundary
+        const parentBottom = parentRect.bottom;
+        const elementBottom = topThreshold + height;
+        if (elementBottom > parentBottom) {
+          topPosition = parentBottom - height;
+        }
+      } else {
+        topPosition = placeholderRect.top;
       }
     } else {
-      // Element should be at its natural position in the flow
       topPosition = placeholderRect.top;
     }
 
+    // ── Horizontal (left) ───────────────────────────────────────────────────
+    let leftPosition;
+    let isStuckHorizontally = false;
+    if (hasLeft) {
+      if (placeholderRect.left <= leftThreshold) {
+        leftPosition = leftThreshold;
+        isStuckHorizontally = true;
+        // Don't go beyond parent's right boundary
+        const parentRight = parentRect.right;
+        const elementRight = leftThreshold + width;
+        if (elementRight > parentRight) {
+          leftPosition = parentRight - width;
+        }
+      } else {
+        leftPosition = placeholderRect.left;
+      }
+    } else {
+      leftPosition = placeholderRect.left;
+    }
+
     element.style.top = `${topPosition}px`;
+    element.style.left = `${Math.round(leftPosition)}px`;
     element.style.width = `${width}px`;
     element.style.height = `${height}px`;
 
     // Set attribute for potential styling
-    if (isStuck) {
+    if (isStuckVertically || isStuckHorizontally) {
       element.setAttribute("data-sticky", "");
     } else {
       element.removeAttribute("data-sticky");
@@ -9038,12 +9116,14 @@ const initPositionSticky = (element) => {
       updatePosition();
     };
 
-    for (const scrollContainer of scrollContainerSet) {
-      scrollContainer.addEventListener("scroll", handleScroll, {
-        passive: true,
-      });
+    // Listen on all scroll containers (including document) since the element
+    // uses position:fixed and any ancestor scroll changes its apparent position.
+    const listenTargets = new Set(scrollContainerSet);
+    listenTargets.add(document.documentElement);
+    for (const scrollTarget of listenTargets) {
+      scrollTarget.addEventListener("scroll", handleScroll, { passive: true });
       cleanupCallbackSet.add(() => {
-        scrollContainer.removeEventListener("scroll", handleScroll, {
+        scrollTarget.removeEventListener("scroll", handleScroll, {
           passive: true,
         });
       });
