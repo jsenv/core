@@ -1,6 +1,17 @@
 import { getActionDispatcher } from "../../action/actions.js";
 import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
 
+// WeakMap<action, Set<string>> — tracks which top-level properties were present in
+// the GET response for a given action instance. Used by scoped_many_effect to check
+// whether the parent GET embedded the child sub-resource.
+const actionResultPropertiesMap = new WeakMap();
+export const recordGetResultProperties = (action, resultKeys) => {
+  actionResultPropertiesMap.set(action, new Set(resultKeys));
+};
+const getActionResultProperties = (action) => {
+  return actionResultPropertiesMap.get(action);
+};
+
 /*
  * Default autorerun behavior explanation:
  *  GET: false (RECOMMENDED)
@@ -38,7 +49,7 @@ const defaultRerunOn = {
 export const createResourceLifecycleManager = () => {
   const registeredResources = new Map(); // Map<resourceInstance, lifecycleConfig>
   const resourceDependencies = new Map(); // Map<resourceInstance, Set<dependentResources>> — user-configured
-  const scopedManyParents = new Map(); // Map<childResource, Set<parentResource>> — auto from scopedMany
+  const scopedManyParents = new Map(); // Map<childResource, Set<{resource, propertyName}>> — auto from scopedMany
 
   const registerResource = (resourceScope, config) => {
     const {
@@ -249,20 +260,39 @@ export const createResourceLifecycleManager = () => {
             }
           }
 
-          // scopedMany auto-dependency: only rerun parent singular GET on child POST.
+          // scopedMany auto-dependency: only rerun parent singular GET on child POST,
+          // and only when the parent GET previously returned the sub-resource embedded
+          // inside its response (detected via action._resultProperties).
           // GET_MANY is excluded — a list of parents is not stale just because one
           // child item was added to one of them.
           scoped_many_effect: {
             if (
               triggerResourceScope &&
-              scopedManyParents.get(triggerResourceScope)?.has(resourceScope) &&
               triggerVerb === "POST" &&
               candidateVerb === "GET" &&
               !candidateIsPlural
             ) {
-              actionsToRerun.add(actionCandidate);
-              reasonSet.add("scopedMany parent autorerun");
-              continue;
+              const parentEntries = scopedManyParents.get(triggerResourceScope);
+              if (!parentEntries) {
+                break scoped_many_effect;
+              }
+              for (const {
+                resource: parentResource,
+                propertyName,
+              } of parentEntries) {
+                if (parentResource !== resourceScope) {
+                  continue;
+                }
+                // Only rerun if the last GET response included the embedded sub-resource.
+                if (
+                  !getActionResultProperties(actionCandidate)?.has(propertyName)
+                ) {
+                  break scoped_many_effect;
+                }
+                actionsToRerun.add(actionCandidate);
+                reasonSet.add("scopedMany parent autorerun");
+                continue;
+              }
             }
           }
         }
@@ -298,11 +328,13 @@ export const createResourceLifecycleManager = () => {
     onActionComplete,
     // Registers: when `triggerResource` fires, rerun `dependentResource`'s actions.
     // Used by scopedMany to make the parent GET rerun when a child mutation completes.
-    addDependency: (triggerResource, dependentResource) => {
+    addDependency: (triggerResource, dependentResource, propertyName) => {
       if (!scopedManyParents.has(triggerResource)) {
         scopedManyParents.set(triggerResource, new Set());
       }
-      scopedManyParents.get(triggerResource).add(dependentResource);
+      scopedManyParents
+        .get(triggerResource)
+        .add({ resource: dependentResource, propertyName });
     },
   };
 };

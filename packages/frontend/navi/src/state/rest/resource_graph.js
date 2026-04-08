@@ -9,7 +9,10 @@ import {
   primitiveCanBeId,
   syncStoreToSignals,
 } from "./array_signal_store.js";
-import { createResourceLifecycleManager } from "./item_lifecycle_manager.js";
+import {
+  createResourceLifecycleManager,
+  recordGetResultProperties,
+} from "./item_lifecycle_manager.js";
 import { getParamScope } from "./param_scope.js";
 
 const resourceLifecycleManager = createResourceLifecycleManager();
@@ -1159,7 +1162,11 @@ ${originalActionName} source location: ${locationInfo}`,
       dependencies: scopedManyDependencies ?? dependencies,
     });
     // Register: when childResource fires, rerun parent (stateFacade) GETs.
-    resourceLifecycleManager.addDependency(childResource, stateFacade);
+    resourceLifecycleManager.addDependency(
+      childResource,
+      stateFacade,
+      propertyName,
+    );
     childResource.getChildStore = (ownerKey) => scopedStoreMap.get(ownerKey);
     return childResource;
   };
@@ -1273,6 +1280,11 @@ ${originalActionName} source location: ${locationInfo}`,
             `${actionLabel} must return an object (that will be used to upsert "${name}" resource), received ${result}.
 ${originalActionName} source location: ${locationInfo}`,
           );
+        }
+        // Track which top-level properties the GET response contained so that
+        // lifecycle rules can detect whether sub-resources were embedded.
+        if (verb === "GET") {
+          recordGetResultProperties(action, Object.keys(result));
         }
         return applyResultToValue(result);
       },

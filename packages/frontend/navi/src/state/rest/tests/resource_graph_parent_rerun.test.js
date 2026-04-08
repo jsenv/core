@@ -280,4 +280,81 @@ await snapshotTests(import.meta.url, ({ test }) => {
 
     return { rowsBeforeRename, rowsAfterRename };
   });
+
+  // --- GET embeds columns vs GET_MANY -----------------------------------------
+
+  test("scopedMany: parent GET reruns after child POST when GET embeds the property", async () => {
+    let getCallCount = 0;
+    const TABLE = resource("table", {
+      GET: async ({ id }) => {
+        getCallCount++;
+        // Backend embeds columns in the table response
+        return { id, columns: [{ name: "id" }] };
+      },
+    });
+    const TABLE_COLUMN = TABLE.scopedMany("columns", {
+      idKey: "name",
+      POST: async ({ id, name }) => [id, { name }],
+    });
+
+    const tableAction = TABLE.GET.bindParams({ id: 1 });
+    await tableAction.run();
+    const callCountAfterGet = getCallCount;
+
+    await TABLE_COLUMN.POST({ id: 1, name: "email" });
+    await waitForRerun();
+
+    return { callCountAfterGet, getCallCount };
+  });
+
+  test("scopedMany: parent GET does NOT rerun after child POST when GET does not embed the property", async () => {
+    let getCallCount = 0;
+    const TABLE = resource("table", {
+      GET: async ({ id }) => {
+        getCallCount++;
+        // Backend does NOT embed columns — they come from TABLE_COLUMN.GET_MANY
+        return { id, name: "users" };
+      },
+    });
+    const TABLE_COLUMN = TABLE.scopedMany("columns", {
+      idKey: "name",
+      POST: async ({ id, name }) => [id, { name }],
+    });
+
+    const tableAction = TABLE.GET.bindParams({ id: 1 });
+    await tableAction.run();
+    const callCountAfterGet = getCallCount;
+
+    await TABLE_COLUMN.POST({ id: 1, name: "email" });
+    await waitForRerun();
+
+    return { callCountAfterGet, getCallCount };
+  });
+
+  test("scopedMany: GET_MANY reruns after child POST regardless of whether parent GET embeds the property", async () => {
+    let getManyCallCount = 0;
+    const TABLE = resource("table", {
+      GET: async ({ id }) => ({ id, name: "users" }), // no embedded columns
+    });
+    const TABLE_COLUMN = TABLE.scopedMany("columns", {
+      idKey: "name",
+      GET_MANY: async ({ id }) => {
+        getManyCallCount++;
+        return [id, [{ name: "id" }, { name: "email" }]];
+      },
+      POST: async ({ id, name }) => [id, { name }],
+    });
+
+    const tableAction = TABLE.GET.bindParams({ id: 1 });
+    await tableAction.run();
+
+    const columnsManyAction = TABLE_COLUMN.GET_MANY.bindParams({ id: 1 });
+    await columnsManyAction.run();
+    const callCountAfterGetMany = getManyCallCount;
+
+    await TABLE_COLUMN.POST({ id: 1, name: "created_at" });
+    await waitForRerun();
+
+    return { callCountAfterGetMany, getManyCallCount };
+  });
 });
