@@ -424,12 +424,6 @@
             }
             description="Pass loading: true to receive the loading flag and handle it inside the component. The component never suspends. On first load data is undefined and loading is true — the component is responsible for showing a skeleton. While re-fetching, data holds the previous value so the component can keep showing stale content alongside a spinner."
           >
-            <FetchControls
-              action={() => {
-                return exAllowStale.action.rerun();
-              }}
-              shouldFail={exAllowStale.shouldFail}
-            />
             <label
               style={{
                 display: "flex",
@@ -450,23 +444,36 @@
               />
               Hide current user while loading new one (show skeleton instead)
             </label>
+            <FetchControls
+              action={() => {
+                return exAllowStale.action.rerun();
+              }}
+              shouldFail={exAllowStale.shouldFail}
+            />
+
             <ErrorBoundary fallback={ErrorCard}>
               <Loading>
-                <UserCardAllowStale
-                  action={exAllowStale.action}
-                  outerCount={outerCount}
-                  hideWhileLoading={hideWhileLoading}
-                />
+                {hideWhileLoading ? (
+                  <UserCardSkeletonWhileLoading
+                    action={exAllowStale.action}
+                    outerCount={outerCount}
+                  />
+                ) : (
+                  <UserCardSkeletonFirstLoadOnly
+                    action={exAllowStale.action}
+                    outerCount={outerCount}
+                  />
+                )}
               </Loading>
             </ErrorBoundary>
           </DemoSection>
         );
       };
-      // Stays mounted throughout — never suspends. Handles loading and stale data inline.
-      const UserCardAllowStale = ({ action, outerCount, hideWhileLoading }) => {
+      // Shows skeleton on first load only — keeps stale data visible while re-fetching.
+      const UserCardSkeletonFirstLoadOnly = ({ action, outerCount }) => {
         const [user, loading] = useAsyncData(action, { loading: true });
         const [count, setCount] = useState(0);
-        if (loading && (!user || hideWhileLoading.value)) {
+        if (!user) {
           return <UserCardSkeleton />;
         }
         return (
@@ -480,6 +487,23 @@
             />
             {loading && <RefreshingIndicator />}
           </div>
+        );
+      };
+      // Always shows skeleton while loading — hides stale data during re-fetch.
+      const UserCardSkeletonWhileLoading = ({ action, outerCount }) => {
+        const [user, loading] = useAsyncData(action, { loading: true });
+        const [count, setCount] = useState(0);
+        if (loading) {
+          return <UserCardSkeleton />;
+        }
+        return (
+          <UserCardFields
+            name={user.name}
+            email={user.email}
+            count={count}
+            onIncrement={() => setCount((n) => n + 1)}
+            outerCount={outerCount}
+          />
         );
       };
       const RefreshingIndicator = () => (
@@ -501,7 +525,7 @@
         const [outerCount, setOuterCount] = useState(0);
         return (
           <DemoSection
-            title="Handles loading and error inline"
+            title="Handles loading and error"
             titleExtra={
               <button
                 style={{ fontSize: "0.6em", fontWeight: "normal" }}
@@ -574,7 +598,7 @@
         const [outerCount, setOuterCount] = useState(0);
         return (
           <DemoSection
-            title="Alternative: skeleton outside the component via <Loading fallback>"
+            title="Alternative: loading UI outside the component via <Loading fallback>"
             titleExtra={
               <button
                 style={{ fontSize: "0.6em", fontWeight: "normal" }}
