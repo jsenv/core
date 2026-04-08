@@ -19267,12 +19267,17 @@ const TextBasic = ({
 };
 
 installImportMetaCss(import.meta);import.meta.css = /* css */`
-  .navi_icon {
-    display: inline-block;
-    box-sizing: border-box;
-    max-width: 100%;
-    max-height: 100%;
+  @layer navi {
+    /* Ensure data attributes from box.jsx can win to update display */
+    .navi_icon {
+      display: inline-block;
+      box-sizing: border-box;
+      max-width: 100%;
+      max-height: 100%;
+    }
+  }
 
+  .navi_icon {
     &[data-flow-inline] {
       width: 1em;
       height: 1em;
