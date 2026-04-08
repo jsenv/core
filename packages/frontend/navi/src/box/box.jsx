@@ -180,7 +180,7 @@ export const Box = (props) => {
     }
   }
   if (defaultDisplay === "inline") {
-    if (inline === undefined) {
+    if (inline === undefined && !block) {
       inline = true;
     }
   } else if (defaultDisplay === "block") {
@@ -188,7 +188,7 @@ export const Box = (props) => {
       block = true;
     }
   } else if (defaultDisplay === "inline-block") {
-    if (inline === undefined) {
+    if (inline === undefined && !block) {
       inline = true;
     }
     if (block === undefined && !flex && !grid) {
@@ -204,25 +204,25 @@ export const Box = (props) => {
   }
   let boxFlow;
   if (inline) {
-    if (block) {
-      boxFlow = "inline-block";
-    } else if (flex === "x") {
+    if (flex === "x") {
       boxFlow = "inline-flex-x";
     } else if (flex === "y") {
       boxFlow = "inline-flex-y";
     } else if (grid) {
       boxFlow = "inline-grid";
+    } else if (block) {
+      boxFlow = "inline-block";
     } else {
       boxFlow = "inline";
     }
-  } else if (block) {
-    boxFlow = "block";
   } else if (flex === "x") {
     boxFlow = "flex-x";
   } else if (flex === "y") {
     boxFlow = "flex-y";
   } else if (grid) {
     boxFlow = "grid";
+  } else if (block) {
+    boxFlow = "block";
   } else {
     boxFlow = defaultDisplay;
   }
