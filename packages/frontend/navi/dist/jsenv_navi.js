@@ -19278,11 +19278,19 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
     }
     &[data-icon-char] {
       flex-grow: 0 !important;
-    }
-  }
 
-  .navi_icon[data-interactive] {
-    cursor: pointer;
+      svg,
+      img {
+        width: 100%;
+        height: 100%;
+      }
+      svg {
+        overflow: visible;
+      }
+    }
+    &[data-interactive] {
+      cursor: pointer;
+    }
   }
 
   .navi_icon_char_slot {
@@ -19294,15 +19302,16 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
     position: absolute;
     inset: 0;
     display: inline-flex;
-  }
-  .navi_icon_foreground > .navi_text {
-    display: flex;
-    aspect-ratio: 1 / 1;
-    min-width: 0;
-    height: 100%;
-    max-height: 1em;
-    align-items: center;
-    justify-content: center;
+
+    & > .navi_text {
+      display: flex;
+      aspect-ratio: 1 / 1;
+      min-width: 0;
+      height: 100%;
+      max-height: 1em;
+      align-items: center;
+      justify-content: center;
+    }
   }
 
   .navi_icon > svg,
@@ -19326,15 +19335,6 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
     width: 100%;
     height: 100%;
   }
-
-  .navi_icon[data-icon-char] svg,
-  .navi_icon[data-icon-char] img {
-    width: 100%;
-    height: 100%;
-  }
-  .navi_icon[data-icon-char] svg {
-    overflow: visible;
-  }
 `;
 const Icon = ({
   href,
@@ -19356,20 +19356,25 @@ const Icon = ({
     })
   }) : children;
   let {
-    box,
+    flex,
+    grid,
     width,
     height
   } = props;
-  if (width === "auto") width = undefined;
-  if (height === "auto") height = undefined;
+  if (width === "auto") {
+    width = undefined;
+  }
+  if (height === "auto") {
+    height = undefined;
+  }
   const hasExplicitWidth = width !== undefined;
   const hasExplicitHeight = height !== undefined;
-  if (!hasExplicitWidth && !hasExplicitHeight) {
-    if (decorative === undefined && !onClick) {
-      decorative = true;
+  if (hasExplicitWidth || hasExplicitHeight) {
+    if (flex === undefined) {
+      flex = "x";
     }
-  } else {
-    box = true;
+  } else if (decorative === undefined && !onClick) {
+    decorative = true;
   }
   const ariaProps = decorative ? {
     "aria-hidden": "true"
@@ -19382,12 +19387,12 @@ const Icon = ({
       children: children
     });
   }
-  if (box) {
+  if (flex || grid) {
     return jsx(Box, {
       square: true,
       ...props,
       ...ariaProps,
-      box: box,
+      flex: flex,
       baseClassName: "navi_icon",
       "data-has-width": hasExplicitWidth ? "" : undefined,
       "data-has-height": hasExplicitHeight ? "" : undefined,
@@ -31570,7 +31575,7 @@ const DialogLayout = ({
     visualSelector: ".navi_dialog_content",
     ...props,
     children: jsx(Box, {
-      row: true,
+      flex: "y",
       className: "navi_dialog_content",
       alignX: alignX,
       alignY: alignY,

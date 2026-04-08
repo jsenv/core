@@ -95,7 +95,12 @@ export const DialogLayout = ({
       visualSelector=".navi_dialog_content"
       {...props}
     >
-      <Box row className="navi_dialog_content" alignX={alignX} alignY={alignY}>
+      <Box
+        flex="y"
+        className="navi_dialog_content"
+        alignX={alignX}
+        alignY={alignY}
+      >
         {children}
       </Box>
     </Box>
