@@ -7424,8 +7424,12 @@ const updateStyle = (element, style, preventInitialTransition) => {
   // Apply all styles normally (excluding transition during anti-flicker)
   const keysToDelete = new Set(oldStyleKeySet);
   for (const key of styleKeySetToApply) {
-    keysToDelete.delete(key);
     const value = style[key];
+    if (value === undefined || value === null) {
+      // Treat undefined/null as "remove" — leave key in keysToDelete
+      continue;
+    }
+    keysToDelete.delete(key);
     if (key.startsWith("--")) {
       element.style.setProperty(key, value);
     } else {
@@ -30186,25 +30190,19 @@ const BadgeStyleCSSVars$1 = {
 };
 const Badge = ({
   children,
+  className,
   ...props
 }) => {
   const defaultRef = useRef();
   const ref = props.ref || defaultRef;
   useDarkBackgroundAttribute(ref);
-  return jsxs(Text, {
+  return jsx(Text, {
     ref: ref,
-    className: "navi_badge",
+    className: withPropsClassName("navi_badge", className),
     bold: true,
     ...props,
     styleCSSVars: BadgeStyleCSSVars$1,
-    spacing: "pre",
-    children: [jsx("span", {
-      style: "user-select: none",
-      children: "\u200B"
-    }), children, jsx("span", {
-      style: "user-select: none",
-      children: "\u200B"
-    })]
+    children: children
   });
 };
 
@@ -30451,14 +30449,15 @@ const applyMaxToValue = (max, value) => {
 const BadgeCountEllipse = ({
   ref,
   loading,
-  children,
   hasOverflow,
   charCount,
+  className,
+  children,
   ...props
 }) => {
   return jsx(Text, {
     ref: ref,
-    className: "navi_badge_count",
+    className: withPropsClassName("navi_badge_count", className),
     bold: true,
     "data-ellipse": "",
     "data-value-overflow": hasOverflow ? "" : undefined,
@@ -30485,12 +30484,13 @@ const BadgeCountCircle = ({
   charCount,
   hasOverflow,
   loading,
+  className,
   children,
   ...props
 }) => {
   return jsx(Text, {
     ref: ref,
-    className: "navi_badge_count",
+    className: withPropsClassName("navi_badge_count", className),
     "data-circle": "",
     bold: true,
     "data-loading": loading ? "" : undefined,
