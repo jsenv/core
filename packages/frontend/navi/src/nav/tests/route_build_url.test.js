@@ -1096,28 +1096,10 @@ await snapshotTests(import.meta.url, ({ test }) => {
   });
 
   test("an other", () => {
-    const zoneIdSignal = stateSignal(undefined, {
-      type: "string",
-      oneOf: [
-        undefined,
-        "flow",
-        "traffic",
-        "isochrone",
-        "population",
-        "job",
-        "facilities",
-        "overview",
-      ],
-    });
+    const zoneIdSignal = stateSignal(undefined);
     const mapPanelSignal = stateSignal(undefined);
-    const isochroneLonSignal = stateSignal(undefined);
-    const isochroneTabSignal = stateSignal("compare", {
-      oneOf: ["compare", "time"],
-    });
-    const isochroneTimeModeSignal = stateSignal("walk", {
-      type: "string",
-      oneOf: [undefined, "walk", "transit"],
-    });
+    const isochroneTabSignal = stateSignal("compare");
+    const isochroneTimeModeSignal = stateSignal("walk");
     const HOME_ROUTE = route("/");
     const MAP_ROUTE = route("/map/", {
       searchParams: {
@@ -1128,11 +1110,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
     const MAP_TRANSIT_ROUTE = route(`/map/transit`);
     const MAP_ISOCHRONE_ROUTE = route(
       `/map/isochrone/:tab=${isochroneTabSignal}/`,
-      {
-        searchParams: {
-          iso_lon: isochroneLonSignal,
-        },
-      },
+      {},
     );
     const MAP_ISOCHRONE_COMPARE_ROUTE = route(`/map/isochrone/compare`, {});
     const MAP_ISOCHRONE_TIME_ROUTE = route(

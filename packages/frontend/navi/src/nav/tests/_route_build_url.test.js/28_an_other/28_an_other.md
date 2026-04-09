@@ -1,28 +1,10 @@
 # [an other](../../route_build_url.test.js)
 
 ```js
-const zoneIdSignal = stateSignal(undefined, {
-  type: "string",
-  oneOf: [
-    undefined,
-    "flow",
-    "traffic",
-    "isochrone",
-    "population",
-    "job",
-    "facilities",
-    "overview",
-  ],
-});
+const zoneIdSignal = stateSignal(undefined);
 const mapPanelSignal = stateSignal(undefined);
-const isochroneLonSignal = stateSignal(undefined);
-const isochroneTabSignal = stateSignal("compare", {
-  oneOf: ["compare", "time"],
-});
-const isochroneTimeModeSignal = stateSignal("walk", {
-  type: "string",
-  oneOf: [undefined, "walk", "transit"],
-});
+const isochroneTabSignal = stateSignal("compare");
+const isochroneTimeModeSignal = stateSignal("walk");
 const HOME_ROUTE = route("/");
 const MAP_ROUTE = route("/map/", {
   searchParams: {
@@ -33,11 +15,7 @@ const MAP_PANEL_ROUTE = route(`/map/:panel=${mapPanelSignal}/`);
 const MAP_TRANSIT_ROUTE = route(`/map/transit`);
 const MAP_ISOCHRONE_ROUTE = route(
   `/map/isochrone/:tab=${isochroneTabSignal}/`,
-  {
-    searchParams: {
-      iso_lon: isochroneLonSignal,
-    },
-  },
+  {},
 );
 const MAP_ISOCHRONE_COMPARE_ROUTE = route(`/map/isochrone/compare`, {});
 const MAP_ISOCHRONE_TIME_ROUTE = route(
@@ -52,9 +30,7 @@ const { updateRoutes, clearRoutes } = setupRoutes([
   HOME_ROUTE,
   MAP_ROUTE,
   MAP_PANEL_ROUTE,
-
   MAP_TRANSIT_ROUTE,
-
   MAP_ISOCHRONE_ROUTE,
   MAP_ISOCHRONE_COMPARE_ROUTE,
   MAP_ISOCHRONE_TIME_ROUTE,
