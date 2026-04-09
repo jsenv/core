@@ -49,7 +49,7 @@ try {
 ```js
 {
   "map_root_url": "http://127.0.0.1/map/transit?zone=london",
-  "map_isochrone_url": "http://127.0.0.1/map/isochrone/time/transit?zone=london"
+  "map_isochrone_url": "http://127.0.0.1/map/isochrone/time?zone=london"
 }
 ```
 

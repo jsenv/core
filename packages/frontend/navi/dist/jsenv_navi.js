@@ -9347,18 +9347,9 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
       ([, value]) => value === literalValue,
     );
 
-    // Check if any signal in the current pattern tree can provide this literal
-    // We traverse ancestors and descendants to find signals that could provide the literal
-    const getAncestorSignals = (pattern) => {
-      const signals = [];
-      let current = pattern;
-      while (current) {
-        signals.push(...current.connections);
-        current = current.parent;
-      }
-      return signals;
-    };
-
+    // Check if any descendant signal can provide this literal
+    // (ancestor signals are excluded since they operate on different path positions
+    // that the current pattern has already "passed")
     const getDescendantSignals = (pattern) => {
       const signals = [...pattern.connections];
       for (const child of pattern.children) {
@@ -9367,12 +9358,9 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
       return signals;
     };
 
-    const allRelevantSignals = [
-      ...getAncestorSignals(patternObject),
-      ...getDescendantSignals(patternObject),
-    ];
+    const descendantSignals = getDescendantSignals(patternObject);
 
-    const systemCanProvide = allRelevantSignals.some((conn) => {
+    const systemCanProvide = descendantSignals.some((conn) => {
       const signalValue = conn.signal.value;
       return signalValue === literalValue && conn.isCustomValue(signalValue);
     });
@@ -9956,8 +9944,12 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
 
       const parentPatternObj = currentPatternObj.parent;
 
-      // Add parent's signal parameters
+      // Add parent's signal parameters (query params only, not path params)
+      // Path params from ancestors are structural path segments, not inheritable
       for (const connection of parentPatternObj.connections) {
+        if (connection.paramType === "path") {
+          continue;
+        }
         const { paramName } = connection;
 
         // Skip if child route already handles this parameter
@@ -10934,7 +10926,12 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
     // Traverse up the parent chain to inherit parameters
     while (currentParent) {
       // Check parent's signal connections for non-default values to inherit
+      // Only inherit query (search) parameters, not path parameters
+      // Path parameters are structural and correspond to specific path segments
       for (const parentConnection of currentParent.connections) {
+        if (parentConnection.paramType === "path") {
+          continue;
+        }
         const { paramName } = parentConnection;
         if (paramName in finalParams) {
           continue; // Already have this parameter
