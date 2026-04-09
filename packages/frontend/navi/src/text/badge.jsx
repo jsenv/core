@@ -1,5 +1,6 @@
 import { useRef } from "preact/hooks";
 
+import { withPropsClassName } from "../utils/with_props_class_name.js";
 import { Text } from "./text.jsx";
 import { useDarkBackgroundAttribute } from "./use_dark_background_attribute.js";
 
@@ -45,7 +46,7 @@ const BadgeStyleCSSVars = {
   fontSize: "--font-size",
 };
 
-export const Badge = ({ children, ...props }) => {
+export const Badge = ({ children, className, ...props }) => {
   const defaultRef = useRef();
   const ref = props.ref || defaultRef;
   useDarkBackgroundAttribute(ref);
@@ -53,15 +54,12 @@ export const Badge = ({ children, ...props }) => {
   return (
     <Text
       ref={ref}
-      className="navi_badge"
+      className={withPropsClassName("navi_badge", className)}
       bold
       {...props}
       styleCSSVars={BadgeStyleCSSVars}
-      spacing="pre"
     >
-      <span style="user-select: none">&#8203;</span>
       {children}
-      <span style="user-select: none">&#8203;</span>
     </Text>
   );
 };

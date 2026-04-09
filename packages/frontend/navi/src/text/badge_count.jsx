@@ -2,6 +2,7 @@ import { useRef } from "preact/hooks";
 
 import { Icon } from "../graphic/icon.jsx";
 import { LoadingDots } from "../graphic/loader/loading_dots.jsx";
+import { withPropsClassName } from "../utils/with_props_class_name.js";
 import { formatNumber } from "./format_number.js";
 import { Text } from "./text.jsx";
 import { useDarkBackgroundAttribute } from "./use_dark_background_attribute.js";
@@ -203,15 +204,16 @@ const applyMaxToValue = (max, value) => {
 const BadgeCountEllipse = ({
   ref,
   loading,
-  children,
   hasOverflow,
   charCount,
+  className,
+  children,
   ...props
 }) => {
   return (
     <Text
       ref={ref}
-      className="navi_badge_count"
+      className={withPropsClassName("navi_badge_count", className)}
       bold
       data-ellipse=""
       data-value-overflow={hasOverflow ? "" : undefined}
@@ -242,13 +244,14 @@ const BadgeCountCircle = ({
   charCount,
   hasOverflow,
   loading,
+  className,
   children,
   ...props
 }) => {
   return (
     <Text
       ref={ref}
-      className="navi_badge_count"
+      className={withPropsClassName("navi_badge_count", className)}
       data-circle=""
       bold
       data-loading={loading ? "" : undefined}
