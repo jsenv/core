@@ -1,0 +1,136 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Box Style Demo</title>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useState } from "preact/hooks";
+      import { Box } from "@jsenv/navi";
+
+      const sectionStyle = { marginBottom: "30px" };
+      const rowStyle = {
+        display: "flex",
+        gap: "10px",
+        flexWrap: "wrap",
+        alignItems: "center",
+      };
+      const boxBase = { padding: "12px 20px", borderRadius: "6px" };
+
+      // --- 1. Style as prop ---
+      const StyleAsPropSection = () => (
+        <section style={sectionStyle}>
+          <h2>1. Style props directly on Box</h2>
+          <p>
+            Box accepts common CSS properties as props (e.g.{" "}
+            <code>backgroundColor</code>, <code>color</code>,{" "}
+            <code>borderColor</code>).
+          </p>
+          <div style={rowStyle}>
+            <Box
+              {...boxBase}
+              backgroundColor="#4caf50"
+              color="white"
+              borderColor="#388e3c"
+              border="2px solid"
+            >
+              Props
+            </Box>
+          </div>
+        </section>
+      );
+
+      // --- 2. Style as object ---
+      const StyleAsObjectSection = () => (
+        <section style={sectionStyle}>
+          <h2>2. style as an object</h2>
+          <p>
+            Standard JSX style object — same as React. Property names are
+            camelCase.
+          </p>
+          <div style={rowStyle}>
+            <Box
+              style={{
+                ...boxBase,
+                backgroundColor: "#2196f3",
+                color: "white",
+                border: "2px solid #1565c0",
+              }}
+            >
+              Object style
+            </Box>
+          </div>
+        </section>
+      );
+
+      // --- 3. Style as string ---
+      const StyleAsStringSection = () => (
+        <section style={sectionStyle}>
+          <h2>3. style as a string</h2>
+          <p>
+            Box also accepts a plain CSS string (kebab-case), useful when
+            copy-pasting CSS snippets.
+          </p>
+          <div style={rowStyle}>
+            <Box style="padding: 12px 20px; border-radius: 6px; background-color: #ff9800; color: white; border: 2px solid #e65100;">
+              String style
+            </Box>
+          </div>
+        </section>
+      );
+
+      // --- 4. Dynamic style with undefined (bug reproduction) ---
+      const DynamicUndefinedSection = () => {
+        const [active, setActive] = useState(true);
+        return (
+          <section style={sectionStyle}>
+            <h2>4. Dynamic style becoming undefined</h2>
+            <p>
+              When a style property becomes <code>undefined</code> on re-render,
+              Box should remove it from the DOM element. Toggle below to
+              reproduce the case where{" "}
+              <code>{"borderColor: active ? 'red' : undefined"}</code> does (or
+              does not) clean up correctly.
+            </p>
+            <div style={rowStyle}>
+              <button onClick={() => setActive((v) => !v)}>
+                Toggle (active = {String(active)})
+              </button>
+              <Box
+                style={{
+                  ...boxBase,
+                  backgroundColor: "#f5f5f5",
+                  border: "2px solid transparent",
+                  borderColor: active ? "red" : undefined,
+                }}
+              >
+                borderColor should {active ? "be red" : "be gone"}
+              </Box>
+            </div>
+          </section>
+        );
+      };
+
+      const Demo = () => (
+        <div
+          style={{
+            padding: "20px",
+            fontFamily: "system-ui, sans-serif",
+            maxWidth: "700px",
+          }}
+        >
+          <h1>Box — Style input ways</h1>
+          <StyleAsPropSection />
+          <StyleAsObjectSection />
+          <StyleAsStringSection />
+          <DynamicUndefinedSection />
+        </div>
+      );
+
+      render(<Demo />, document.getElementById("app"));
+    </script>
+  </body>
+</html>
