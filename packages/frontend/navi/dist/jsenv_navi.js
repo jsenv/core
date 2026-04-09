@@ -30144,6 +30144,70 @@ const Address = ({
   });
 };
 
+installImportMetaCss(import.meta);import.meta.css = /* css */`
+  @layer navi {
+  }
+  .navi_badge {
+    --font-size: 0.7em;
+    --x-background: var(--background);
+    --x-background-color: var(--background-color, var(--x-background));
+    --x-color-contrasting: var(--navi-color-black);
+    --x-color: var(--color, var(--x-color-contrasting));
+    --padding-x: 0.8em;
+    --padding-y: 0.4em;
+    position: relative;
+    display: inline-block;
+    padding-top: var(--padding-y);
+    padding-right: var(--padding-x);
+    padding-bottom: var(--padding-y);
+    padding-left: var(--padding-x);
+    color: var(--x-color);
+    font-size: var(--font-size);
+    line-height: normal;
+    background: var(--x-background);
+    background-color: var(--x-background-color);
+    border-radius: 1em;
+
+    &[data-dark-background] {
+      --x-color-contrasting: var(--navi-color-white);
+    }
+  }
+`;
+const BadgeStyleCSSVars$1 = {
+  borderWidth: "--border-width",
+  borderRadius: "--border-radius",
+  paddingRight: "--padding-right",
+  paddingLeft: "--padding-left",
+  backgroundColor: "--background-color",
+  background: "--background",
+  borderColor: "--border-color",
+  color: "--color",
+  fontSize: "--font-size"
+};
+const Badge = ({
+  children,
+  ...props
+}) => {
+  const defaultRef = useRef();
+  const ref = props.ref || defaultRef;
+  useDarkBackgroundAttribute(ref);
+  return jsxs(Text, {
+    ref: ref,
+    className: "navi_badge",
+    bold: true,
+    ...props,
+    styleCSSVars: BadgeStyleCSSVars$1,
+    spacing: "pre",
+    children: [jsx("span", {
+      style: "user-select: none",
+      children: "\u200B"
+    }), children, jsx("span", {
+      style: "user-select: none",
+      children: "\u200B"
+    })]
+  });
+};
+
 const LoadingDots = () => {
   return jsxs("svg", {
     viewBox: "0 0 200 200",
@@ -31953,5 +32017,5 @@ const UserSvg = () => jsx("svg", {
   })
 });
 
-export { ActionRenderer, ActiveKeyboardShortcuts, Address, BadgeCount, Box, Button, ButtonCopyToClipboard, Caption, CheckSvg, Checkbox, CheckboxList, Code, Col, Colgroup, ConstructionSvg, Details, DialogLayout, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, Input, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, Loading, MessageBox, Meter, Nav, Paragraph, Quantity, QuantityIntl, Radio, RadioList, Route, RowNumberCol, RowNumberTableCell, SINGLE_SPACE_CONSTRAINT, SVGMaskOverlay, SearchSvg, Select, SelectionContext, Separator, SettingsSvg, SidePanel, StarSvg, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextPlaceholder, Thead, Title, Tr, UITransition, UserSvg, ViewportLayout, actionIntegratedVia, actionRunEffect, addCustomMessage, arraySignalMembership, compareTwoJsValues, createAction, createAvailableConstraint, createIntl, createRequestCanceller, createSelectionKeyboardShortcuts, enableDebugActions, enableDebugOnDocumentLoading, filterTableSelection, forwardActionRequested, installCustomConstraintValidation, isCellSelected, isColumnSelected, isRowSelected, localStorageSignal, navBack, navForward, navTo, openCallout, rawUrlPart, reload, removeCustomMessage, requestAction, rerunActions, resource, route, routeAction, setBaseUrl, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, syncOwnedResourceToSignals, syncResourceToSignals, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutClose, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDarkBackgroundAttribute, useDependenciesDiff, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState$1 as useNavState, useOrderedColumns, useRouteStatus, useRunOnMount, useSelectableElement, useSelectionController, useSidePanelClose, useSignalSync, useStateArray, useTitleLevel, useUrlSearchParam, valueInLocalStorage };
+export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, Box, Button, ButtonCopyToClipboard, Caption, CheckSvg, Checkbox, CheckboxList, Code, Col, Colgroup, ConstructionSvg, Details, DialogLayout, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, Input, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, Loading, MessageBox, Meter, Nav, Paragraph, Quantity, QuantityIntl, Radio, RadioList, Route, RowNumberCol, RowNumberTableCell, SINGLE_SPACE_CONSTRAINT, SVGMaskOverlay, SearchSvg, Select, SelectionContext, Separator, SettingsSvg, SidePanel, StarSvg, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextPlaceholder, Thead, Title, Tr, UITransition, UserSvg, ViewportLayout, actionIntegratedVia, actionRunEffect, addCustomMessage, arraySignalMembership, compareTwoJsValues, createAction, createAvailableConstraint, createIntl, createRequestCanceller, createSelectionKeyboardShortcuts, enableDebugActions, enableDebugOnDocumentLoading, filterTableSelection, forwardActionRequested, installCustomConstraintValidation, isCellSelected, isColumnSelected, isRowSelected, localStorageSignal, navBack, navForward, navTo, openCallout, rawUrlPart, reload, removeCustomMessage, requestAction, rerunActions, resource, route, routeAction, setBaseUrl, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, syncOwnedResourceToSignals, syncResourceToSignals, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutClose, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDarkBackgroundAttribute, useDependenciesDiff, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState$1 as useNavState, useOrderedColumns, useRouteStatus, useRunOnMount, useSelectableElement, useSelectionController, useSidePanelClose, useSignalSync, useStateArray, useTitleLevel, useUrlSearchParam, valueInLocalStorage };
 //# sourceMappingURL=jsenv_navi.js.map

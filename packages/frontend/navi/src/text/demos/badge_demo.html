@@ -1,0 +1,125 @@
+<!doctype html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Badge Demo</title>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { Badge, Box, Text, Title, Paragraph, Link } from "@jsenv/navi";
+
+      const Demo = () => {
+        return (
+          <div
+            style={{
+              padding: "20px",
+              fontFamily: "system-ui, sans-serif",
+              maxWidth: "800px",
+              lineHeight: "1.6",
+            }}
+          >
+            <Title as="h1">Badge Demo</Title>
+
+            <Box as="section" marginBottom="xl">
+              <Title as="h2">
+                <Link anchor href="#basic" />
+                Basic usage
+              </Title>
+              <Paragraph>
+                Badge displays text in a pill-shaped badge, useful for labels,
+                statuses, tags, and categories.
+              </Paragraph>
+              <Box row spacing="s" alignX="start">
+                <Badge background="#4caf50">New</Badge>
+                <Badge background="#2196f3">Beta</Badge>
+                <Badge background="darkred">Deprecated</Badge>
+                <Badge background="#ff9800">Draft</Badge>
+                <Badge background="#9c27b0">Pro</Badge>
+              </Box>
+            </Box>
+
+            <Box as="section" marginBottom="xl">
+              <Title as="h2">
+                <Link anchor href="#statuses" />
+                Status badges
+              </Title>
+              <Box row spacing="s" alignX="start">
+                <Badge background="#4caf50">Active</Badge>
+                <Badge background="#f44336">Inactive</Badge>
+                <Badge background="#ff9800">Pending</Badge>
+                <Badge background="#9e9e9e">Archived</Badge>
+              </Box>
+            </Box>
+
+            <Box as="section" marginBottom="xl">
+              <Title as="h2">
+                <Link anchor href="#inline" />
+                Inline with text
+              </Title>
+              <Paragraph>
+                <Text>Product name</Text>
+                <Badge background="#2196f3">New</Badge>
+              </Paragraph>
+              <Paragraph>
+                <Text>Experimental feature</Text>
+                <Badge background="#ff9800">Beta</Badge>
+              </Paragraph>
+              <Paragraph>
+                <Text>Old API</Text>
+                <Badge background="#9e9e9e">Deprecated</Badge>
+              </Paragraph>
+            </Box>
+
+            <Box as="section" marginBottom="xl">
+              <Title as="h2">
+                <Link anchor href="#dark-bg" />
+                On dark backgrounds
+              </Title>
+              <Paragraph>
+                The badge detects dark backgrounds and adjusts text color
+                automatically.
+              </Paragraph>
+              <Box
+                row
+                spacing="s"
+                alignX="start"
+                padding="md"
+                style={{ background: "#1e1e1e", borderRadius: "8px" }}
+              >
+                <Badge background="#4caf50">Active</Badge>
+                <Badge background="#2196f3">Beta</Badge>
+                <Badge background="#9c27b0">Pro</Badge>
+              </Box>
+            </Box>
+
+            <Box as="section" marginBottom="xl">
+              <Title as="h2">
+                <Link anchor href="#font-sizes" />
+                Font sizes
+              </Title>
+              <Box row spacing="s" alignX="center">
+                <Text style={{ fontSize: "0.8em" }}>
+                  Small text
+                  <Badge background="#2196f3">Tag</Badge>
+                </Text>
+                <Text>
+                  Normal text
+                  <Badge background="#2196f3">Tag</Badge>
+                </Text>
+                <Text style={{ fontSize: "1.5em" }}>
+                  Large text
+                  <Badge background="#2196f3">Tag</Badge>
+                </Text>
+              </Box>
+            </Box>
+          </div>
+        );
+      };
+
+      render(<Demo />, document.getElementById("app"));
+    </script>
+  </body>
+</html>

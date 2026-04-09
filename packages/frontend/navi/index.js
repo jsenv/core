@@ -142,7 +142,8 @@ export { ActiveKeyboardShortcuts } from "./src/keyboard/active_keyboard_shortcut
 export { contrastColor } from "@jsenv/dom";
 export { ButtonCopyToClipboard } from "./src/field/button_copy_to_clipboard.jsx";
 export { Address } from "./src/text/address.jsx";
-export { BadgeCount } from "./src/text/badge.jsx";
+export { Badge } from "./src/text/badge.jsx";
+export { BadgeCount } from "./src/text/badge_count.jsx";
 export { Caption } from "./src/text/caption.jsx";
 export { Code } from "./src/text/code.jsx";
 export { createIntl } from "./src/text/intl.js";
