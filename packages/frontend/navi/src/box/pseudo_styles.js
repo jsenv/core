@@ -497,8 +497,12 @@ const updateStyle = (element, style, preventInitialTransition) => {
   // Apply all styles normally (excluding transition during anti-flicker)
   const keysToDelete = new Set(oldStyleKeySet);
   for (const key of styleKeySetToApply) {
-    keysToDelete.delete(key);
     const value = style[key];
+    if (value === undefined || value === null) {
+      // Treat undefined/null as "remove" — leave key in keysToDelete
+      continue;
+    }
+    keysToDelete.delete(key);
     if (key.startsWith("--")) {
       element.style.setProperty(key, value);
     } else {
