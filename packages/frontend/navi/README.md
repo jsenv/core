@@ -1,110 +1,41 @@
 # @jsenv/navi
 
-> ⚠️ **Work in Progress** - This framework is being actively developed and APIs may change.
+A frontend framework for building modern web applications, focused on routing, async data, and UI components.
 
-> Helps to build modern web application
+## Routing
 
-**@jsenv/navi** is a comprehensive frontend framework designed to simplify navigation, state management, and UI development. Named after Navi, the fairy guide from Zelda, it helps you navigate through the complexities of building modern web applications.
+Routing is signal-based, which means URL state — including search params — can be bound to signals with two-way synchronization. Change a signal, the URL updates. Navigate to a URL, the signals update. Search params can also be validated and typed, so you always work with the right shape of data.
 
-## What it provides
+Routes are flexible: you can create route groups to share logic, state, or UI across multiple routes. Nested routing is supported, and the structure naturally maps to how your application is organized.
 
-### 🧭 Navigation & Routing
+## Actions
 
-- **Client-side routing** with URL synchronization and code splitting
-- **Link components** that enhance standard anchor tags
-- **Route components** with nested routing support
-- **History management** and navigation state hooks
-- **Keyboard navigation** with keyboard shortcuts
+Actions are async operations with lifecycle management — pending, success, error. You can declare actions that run when navigating to a route, and any component can subscribe to them via `useAsyncData` to reflect what is happening: loading states, results, errors. No manual wiring.
 
-### 🔄 State Management & Actions
+## Layout & Typography
 
-- **Signal-based reactive state** with local storage integration
-- **Action system** for async operations with lifecycle management
-- **Resource management** with caching and request deduplication
-- **Form validation** with custom constraints and real-time feedback
-- **State synchronization** utilities and debugging tools
+**`Box`** is the main layout primitive. It wraps CSS Flexbox with a friendlier API: `flex` for horizontal layout, `flex="y"` for vertical (no more guessing what `flex-direction: column` does visually). Supports `grid`, `inline`, alignment via `alignX`/`alignY`, and spacing props.
 
-### 🎨 UI Components
+**`Text`** and related components (`Title`, `Paragraph`, `Code`, `Caption`) handle typography consistently across the app.
 
-#### Form & Input Controls
+## Icons
 
-- **Input, Button, Label** - Enhanced form elements with validation
-- **Radio/RadioList, Checkbox/CheckboxList** - Selection controls with icons and custom appearances
-- **Select, Form** - Complete form building blocks
-- **Field validation** with constraint validation API integration
-- **Editable components** with inline editing capabilities
+Icons are a piece that is often missing or painful in web projects. The `Icon` component makes icons behave like text — they scale with font size, inherit color, and align naturally in any layout. No sizing hacks, no SVG wrangling.
 
-#### Data Visualization
+## Fields & Forms
 
-- **Table** - Complete table system with selection, sorting, and column management
-- **Selection system** - Multi-selection with keyboard shortcuts
-- **Error boundaries** - Graceful error handling components
+UI field components (`Input`, `Select`, `Checkbox`, `Radio`, etc.) accept an `action` prop — the standard way to respond to user interaction. Composing fields into forms is natural, and form submission flows through the same action system.
 
-#### Layout & Structure
+Validation goes beyond native browser constraints: custom rules, better error positioning, real-time feedback, and a UX that doesn't punish users before they've finished typing.
 
-- **Box** - Flexible layout container with spacing and alignment
-- **Details** - Collapsible content with navigation state persistence
-- **Dialog, Viewport layouts** - Modal and full-screen layouts
-- **Separator** - Visual content dividers
-- **UI Transitions** - Smooth component transitions
+## Table
 
-#### Typography & Graphics
+A capable `Table` component that handles what you'd expect from a spreadsheet-like interface: column management, sorting, multi-selection with keyboard shortcuts, and more.
 
-- **Text, Title, Paragraph** - Typography components with theming
-- **Code, Caption** - Specialized text displays
-- **Icon, Image, Svg** - Graphics with built-in icon library
-- **Badge, MessageBox** - Status and notification displays
-- **Address** - Semantic contact information component
+## Other
 
-#### Interactive Features
+Dialogs, badges, details/collapsible, separators, keyboard shortcuts, popovers, copy-to-clipboard, and other utilities.
 
-- **Keyboard shortcuts** - Global and component-level hotkeys
-- **Focus management** - Accessibility-focused navigation
-- **Callouts & popovers** - Contextual overlays and tooltips
-- **Copy to clipboard** - One-click content copying
+---
 
-## Quick Example
-
-```jsx
-import { render } from "preact";
-import { Link, Button, Box } from "@jsenv/navi";
-
-const userSignal = signal();
-const requestUser = async ({ id }) => {
-  const response = await fetch(`/api/users/${id}`);
-  const user = response.json();
-  userSignal.value = user;
-};
-
-const App = () => {
-  const user = userSignal.value;
-
-  return (
-    <Box row spacing="lg">
-      <Link href="/profile">Go to Profile</Link>
-
-      <Button
-        action={async () => {
-          await requestUser();
-        }}
-      >
-        Load User Data
-      </Button>
-
-      {user && <div>Welcome, {user.name}!</div>}
-    </Box>
-  );
-};
-
-render(<App />, document.querySelector("#root"));
-```
-
-## Architecture
-
-The framework is built around three core concepts:
-
-1. **Signals** - Reactive state primitives that automatically update the UI
-2. **Actions** - Async operations with built-in lifecycle management
-3. **Components** - Composable UI building blocks with consistent APIs
-
-This combination provides a powerful yet simple foundation for building interactive web applications that scale from simple pages to complex SPAs.
+Named after Navi, the fairy guide from Zelda — it helps you navigate through the complexities of building modern web applications.

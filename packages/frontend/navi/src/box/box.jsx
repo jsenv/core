@@ -1,47 +1,27 @@
 /**
  * Box - A Swiss Army Knife for Layout
  *
- * The Box component provides an intuitive, human-friendly API for layout that
- * addresses the cognitive complexity of CSS Flexbox. By default, it's a regular
- * div that can be controlled via styling props (mostly spacing).
+ * A regular div by default, enhanced with styling props for spacing, sizing,
+ * and layout. The main value is a friendlier API over raw CSS Flexbox.
  *
- * ## Layout Direction (Intuitive Layout)
+ * ## Display & Layout
  *
- * - `layoutRow` makes all children visually appear as ROWS (stacked vertically)
- * - `layoutColumn` makes all children visually appear as COLUMNS (arranged horizontally)
- * - `layoutInline` creates an inline-flex container
+ * - `flex` — horizontal flex container (items side by side)
+ * - `flex="y"` — vertical flex container (items stacked). The prop name makes
+ *   the axis explicit, avoiding the classic CSS trap where `flex-direction: column`
+ *   actually stacks items vertically despite "column" feeling horizontal.
+ * - `grid` — grid container
+ * - `inline` — switches to inline display (works with flex and grid too)
  *
- * This is the opposite of CSS flex-direction, which forces our brain to think in
- * reverse of what we want to obtain. CSS flex-direction is technically correct but
- * cognitively challenging - especially when coming back from days off or for beginners.
+ * ## Alignment
  *
- * CSS Flexbox mental model:
- * - flex-direction: row → children flow horizontally
- * - flex-direction: column → children flow vertically
+ * Instead of CSS's justify-content/align-items which swap meaning based on flex-direction:
+ * - `alignX` — horizontal alignment, always
+ * - `alignY` — vertical alignment, always
  *
- * Box component mental model (more intuitive):
- * - layoutRow → children become visual rows (vertical stacking)
- * - layoutColumn → children become visual columns (horizontal arrangement)
- * - layoutInline → inline flex container for inline layout contexts
+ * ## Spacing & Sizing
  *
- * ## Human-Friendly Alignment
- *
- * Instead of CSS's justify-content/align-items which depend on flex-direction context:
- * - `alignX` controls horizontal alignment regardless of layout direction
- * - `alignY` controls vertical alignment regardless of layout direction
- *
- * This eliminates the mental overhead of remembering which axis is "main" vs "cross"
- * depending on the flex direction.
- *
- * ## Spacing & Layout Props
- *
- * The Box also serves as a styling foundation with props for:
- * - Spacing: margin, padding, gap
- * - Sizing: width, height, expand, shrink
- * - Positioning: All standard layout and spacing properties
- *
- * This creates a consistent, declarative API for the most common layout needs
- * without requiring separate CSS classes or inline styles.
+ * Props for margin, padding, gap, width, height, expand, shrink, and more.
  */
 
 import { normalizeStyles } from "@jsenv/dom";
