@@ -1100,7 +1100,6 @@ await snapshotTests(import.meta.url, ({ test }) => {
     const mapPanelSignal = stateSignal(undefined);
     const isochroneTabSignal = stateSignal("compare");
     const isochroneTimeModeSignal = stateSignal("walk");
-    const HOME_ROUTE = route("/");
     const MAP_ROUTE = route("/map/", {
       searchParams: {
         zone: zoneIdSignal,
@@ -1110,9 +1109,8 @@ await snapshotTests(import.meta.url, ({ test }) => {
     const MAP_TRANSIT_ROUTE = route(`/map/transit`);
     const MAP_ISOCHRONE_ROUTE = route(
       `/map/isochrone/:tab=${isochroneTabSignal}/`,
-      {},
     );
-    const MAP_ISOCHRONE_COMPARE_ROUTE = route(`/map/isochrone/compare`, {});
+    const MAP_ISOCHRONE_COMPARE_ROUTE = route(`/map/isochrone/compare`);
     const MAP_ISOCHRONE_TIME_ROUTE = route(
       `/map/isochrone/time/:mode=${isochroneTimeModeSignal}/`,
     );
@@ -1120,9 +1118,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
     const MAP_ISOCHRONE_TIME_TRANSIT_ROUTE = route(
       "/map/isochrone/time/transit",
     );
-
     const { updateRoutes, clearRoutes } = setupRoutes([
-      HOME_ROUTE,
       MAP_ROUTE,
       MAP_PANEL_ROUTE,
       MAP_TRANSIT_ROUTE,
