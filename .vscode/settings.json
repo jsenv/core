@@ -24,10 +24,10 @@
     "*.env.prod": "env"
   },
   "workbench.colorCustomizations": {
-    "activityBar.background": "#f9a825",
-    "activityBar.foreground": "#513304",
-    "activityBarBadge.foreground": "#513304",
-    "activityBar.activeBorder": "#513304",
-    "activityBar.inactiveForeground": "#bb7b15"
+    "activityBar.background": "#834702",
+    "activityBar.foreground": "#c2b38e",
+    "activityBar.activeBorder": "#c2b38e",
+    "activityBar.inactiveForeground": "#bc7708",
+    "activityBarBadge.foreground": "#3f2802"
   }
 }
