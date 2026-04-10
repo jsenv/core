@@ -22,5 +22,10 @@
     "*.env.dev": "env",
     "*.env.production": "env",
     "*.env.prod": "env"
+  },
+  "workbench.colorCustomizations": {
+    "statusBar.background": "#f9a825",
+    "statusBar.foreground": "#1a1a1a",
+    "statusBar.noFolderBackground": "#f57f17"
   }
 }
