@@ -1,4 +1,4 @@
-import { installImportMetaCss } from "./jsenv_navi_side_effects.js";
+import { installImportMetaCssBuild } from "./jsenv_navi_side_effects.js";
 import { isValidElement, h, createContext, toChildArray, render, createRef, cloneElement } from "preact";
 import { useErrorBoundary, useLayoutEffect, useEffect, useMemo, useRef, useState, useCallback, useContext, useImperativeHandle, useId } from "preact/hooks";
 import { jsxs, jsx, Fragment } from "preact/jsx-runtime";
@@ -71,7 +71,7 @@ const useActionStatus = (action) => {
   };
 };
 
-installImportMetaCss(import.meta);import.meta.css = /* css */`
+installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
   .action_error {
     margin-top: 0;
     margin-bottom: 20px;
@@ -7449,7 +7449,7 @@ const updateStyle = (element, style, preventInitialTransition) => {
   styleKeySetWeakMap.set(element, styleKeySet);
 };
 
-installImportMetaCss(import.meta);import.meta.css = /* css */`
+installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
   [navi-box-flow="inline"] {
     display: inline;
   }
@@ -8041,7 +8041,7 @@ const monitorItemsOverflow = (container) => {
   return destroy;
 };
 
-installImportMetaCss(import.meta);
+installImportMetaCssBuild(import.meta);
 import.meta.css = /* css */ `
   * {
     box-sizing: border-box;
@@ -15563,7 +15563,7 @@ const renderIntoCallout = (jsx$1, calloutMessageElement, {
   render(calloutJsx, calloutMessageElement);
 };
 
-installImportMetaCss(import.meta);
+installImportMetaCssBuild(import.meta);
 /**
  * A callout component that mimics native browser validation messages.
  * Features:
@@ -18894,7 +18894,7 @@ const selectByTextStrings = (element, range, startText, endText) => {
   }
 };
 
-installImportMetaCss(import.meta);import.meta.css = /* css */`
+installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
   *[data-navi-space] {
     /* user-select: none; */
     padding-left: 0.25em;
@@ -19268,7 +19268,7 @@ const TextBasic = ({
   });
 };
 
-installImportMetaCss(import.meta);import.meta.css = /* css */`
+installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
   @layer navi {
     /* Ensure data attributes from box.jsx can win to update display */
     .navi_icon {
@@ -19637,7 +19637,7 @@ const setupNetworkMonitoring = () => {
 };
 setupNetworkMonitoring();
 
-installImportMetaCss(import.meta);import.meta.css = /* css */`
+installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
   .navi_rectangle_loading {
     position: relative;
     display: flex;
@@ -19836,7 +19836,7 @@ const RectangleLoadingSvg = ({
   });
 };
 
-installImportMetaCss(import.meta);import.meta.css = /* css */`
+installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
   .navi_loading_rectangle_wrapper {
     position: absolute;
     top: var(--rectangle-top, 0);
@@ -21213,7 +21213,7 @@ const useUIState = (uiStateController) => {
   return trackedUIState;
 };
 
-installImportMetaCss(import.meta);import.meta.css = /* css */`
+installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
   @layer navi {
     .navi_button {
       --button-outline-width: 1px;
@@ -21714,7 +21714,7 @@ const WarningSvg = () => {
   });
 };
 
-installImportMetaCss(import.meta);import.meta.css = /* css */`
+installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
   @layer navi {
     .navi_message_box {
       --background-color-info: var(--navi-info-color-light);
@@ -21825,7 +21825,7 @@ const MessageBox = ({
   });
 };
 
-installImportMetaCss(import.meta);import.meta.css = /* css */`
+installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
   .navi_message_box {
     .navi_title {
       margin-top: 0;
@@ -22010,7 +22010,7 @@ const useDimColorWhen = (elementRef, shouldDim) => {
   });
 };
 
-installImportMetaCss(import.meta);import.meta.css = /* css */`
+installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
   @layer navi {
     .navi_link {
       --link-border-radius: unset;
@@ -22586,7 +22586,7 @@ const LinkWithAction = props => {
 const NavContext = createContext();
 createContext();
 
-installImportMetaCss(import.meta);import.meta.css = /* css */`
+installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
   @layer navi {
     .navi_nav {
       --nav-border: none;
@@ -22765,7 +22765,7 @@ const useFocusGroup = (
   }, [direction, skipTab, loop, name]);
 };
 
-installImportMetaCss(import.meta);const rightArrowPath = "M680-480L360-160l-80-80 240-240-240-240 80-80 320 320z";
+installImportMetaCssBuild(import.meta);const rightArrowPath = "M680-480L360-160l-80-80 240-240-240-240 80-80 320 320z";
 const downArrowPath = "M480-280L160-600l80-80 240 240 240-240 80 80-320 320z";
 import.meta.css = /* css */`
   .navi_summary_marker {
@@ -22905,7 +22905,7 @@ const SummaryMarker = ({
   });
 };
 
-installImportMetaCss(import.meta);import.meta.css = /* css */`
+installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
   .navi_details {
     position: relative;
     z-index: 1;
@@ -23256,7 +23256,7 @@ const fieldPropSet = new Set([
   "data-testid",
 ]);
 
-installImportMetaCss(import.meta);import.meta.css = /* css */`
+installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
   @layer navi {
     label {
       &[data-interactive] {
@@ -23321,7 +23321,7 @@ const Label = props => {
   });
 };
 
-installImportMetaCss(import.meta);import.meta.css = /* css */`
+installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
   @layer navi {
     .navi_checkbox {
       --margin: 3px 3px 3px 4px;
@@ -23916,7 +23916,7 @@ const InputCheckboxWithAction = props => {
   });
 };
 
-installImportMetaCss(import.meta);import.meta.css = /* css */`
+installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
   @layer navi {
     .navi_checkbox_list {
       display: flex;
@@ -24068,7 +24068,7 @@ forwardRef((props, ref) => {
   });
 });
 
-installImportMetaCss(import.meta);import.meta.css = /* css */`
+installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
   @layer navi {
     .navi_radio {
       --margin: 3px 3px 0 5px;
@@ -24606,7 +24606,7 @@ const InputRadioWithAction = () => {
   throw new Error(`<Input type="radio" /> with an action make no sense. Use <RadioList action={something} /> instead`);
 };
 
-installImportMetaCss(import.meta);import.meta.css = /* css */`
+installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
   @layer navi {
     .navi_input_range {
       --border-radius: 6px;
@@ -25083,7 +25083,7 @@ const SearchSvg = () => jsx("svg", {
   })
 });
 
-installImportMetaCss(import.meta);import.meta.css = /* css */`
+installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
   @layer navi {
     .navi_input {
       --border-radius: 2px;
@@ -25654,7 +25654,7 @@ const Input = props => {
   });
 };
 
-installImportMetaCss(import.meta);import.meta.css = /* css */`
+installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
   .navi_editable_wrapper {
     --inset-top: 0px;
     --inset-right: 0px;
@@ -26113,7 +26113,7 @@ const FormWithAction = props => {
 //   form.dispatchEvent(customEvent);
 // };
 
-installImportMetaCss(import.meta);import.meta.css = /* css */`
+installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
   .navi_group {
     --border-width: 1px;
 
@@ -26227,7 +26227,7 @@ const Group = ({
   });
 };
 
-installImportMetaCss(import.meta);import.meta.css = /* css */``;
+installImportMetaCssBuild(import.meta);import.meta.css = /* css */``;
 const RadioList = props => {
   const uiStateController = useUIGroupStateController(props, "radio_list", {
     childComponentType: "radio",
@@ -26408,7 +26408,7 @@ const useRefArray = (items, keyFromItem) => {
   }, [items]);
 };
 
-installImportMetaCss(import.meta);const useNavState = () => {};
+installImportMetaCssBuild(import.meta);const useNavState = () => {};
 import.meta.css = /* css */`
   .navi_select[data-readonly] {
     pointer-events: none;
@@ -26718,7 +26718,7 @@ const Z_INDEX_DROP_PREVIEW = Z_INDEX_STICKY_CORNER + 1;
 
 const Z_INDEX_TABLE_UI = Z_INDEX_STICKY_CORNER + 1;
 
-installImportMetaCss(import.meta);import.meta.css = /* css */`
+installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
   .navi_table_drag_clone_container {
     position: absolute;
     top: var(--table-visual-top);
@@ -27378,7 +27378,7 @@ const useTableSizeContextValue = ({
   return tableSizeContextValue;
 };
 
-installImportMetaCss(import.meta);const ROW_MIN_HEIGHT = 30;
+installImportMetaCssBuild(import.meta);const ROW_MIN_HEIGHT = 30;
 const ROW_MAX_HEIGHT = 100;
 const COLUMN_MIN_WIDTH = 50;
 const COLUMN_MAX_WIDTH = 500;
@@ -28004,7 +28004,7 @@ const findPreviousTableRow = currentRow => {
   return currentIndex > 0 ? allRows[currentIndex - 1] : null;
 };
 
-installImportMetaCss(import.meta);import.meta.css = /* css */`
+installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
   @layer navi {
     .navi_table {
       --selection-border-color: var(--navi-selection-border-color, #0078d4);
@@ -28575,7 +28575,7 @@ const useTableStickyContextValue = ({
   }, [stickyLeftFrontierColumnIndex, stickyTopFrontierRowIndex]);
 };
 
-installImportMetaCss(import.meta);import.meta.css = /* css */`
+installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
   @layer navi {
     .navi_table {
       --sticky-frontier-color: #c0c0c0;
@@ -29036,7 +29036,7 @@ const initMoveStickyFrontierViaPointer = (pointerdownEvent, {
   });
 };
 
-installImportMetaCss(import.meta);import.meta.css = /* css */`
+installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
   .navi_table_ui {
     position: fixed;
     inset: 0;
@@ -29960,7 +29960,7 @@ const normalizeKey = (key) => {
   return key;
 };
 
-installImportMetaCss(import.meta);import.meta.css = /* css */`
+installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
   .navi_shortcut_container[data-visually-hidden] {
     /* Visually hidden container - doesn't affect layout */
     position: absolute;
@@ -30036,7 +30036,7 @@ const KeyboardShortcutAriaElement = ({
   });
 };
 
-installImportMetaCss(import.meta);import.meta.css = /* css */`
+installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
   @layer navi {
     .navi_clipboard_container {
       --height: 1.5em;
@@ -30148,7 +30148,7 @@ const Address = ({
   });
 };
 
-installImportMetaCss(import.meta);import.meta.css = /* css */`
+installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
   @layer navi {
   }
   .navi_badge {
@@ -30271,7 +30271,7 @@ const formatNumber = (value, { lang } = {}) => {
   return new Intl.NumberFormat(lang).format(value);
 };
 
-installImportMetaCss(import.meta);import.meta.css = /* css */`
+installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
   @layer navi {
   }
   .navi_badge_count {
@@ -30519,7 +30519,7 @@ const BadgeCountCircle = ({
   });
 };
 
-installImportMetaCss(import.meta);import.meta.css = /* css */`
+installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
   @layer navi {
     .navi_caption {
       --color: #6b7280;
@@ -30919,7 +30919,7 @@ const interpolate = (template, values) => {
   });
 };
 
-installImportMetaCss(import.meta);import.meta.css = /* css */`
+installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
   @layer navi {
     .navi_quantity {
       --unit-color: color-mix(in srgb, currentColor 50%, white);
@@ -31112,7 +31112,7 @@ const parseQuantityValue = children => {
   return Number.isNaN(parsed) ? children : parsed;
 };
 
-installImportMetaCss(import.meta);import.meta.css = /* css */`
+installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
   @layer navi {
     .navi_meter {
       --loader-color: var(--navi-loader-color);
@@ -31376,7 +31376,7 @@ const Paragraph = props => {
   });
 };
 
-installImportMetaCss(import.meta);import.meta.css = /* css */`
+installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
   .navi_text_placeholder {
     display: inline-block;
     width: 100%;
@@ -31423,7 +31423,7 @@ const Svg = props => {
   });
 };
 
-installImportMetaCss(import.meta);import.meta.css = /* css */`
+installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
   .svg_mask_content * {
     color: black !important;
     opacity: 1 !important;
@@ -31489,7 +31489,7 @@ const SVGMaskOverlay = ({
   });
 };
 
-installImportMetaCss(import.meta);import.meta.css = /* css */`
+installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
   @layer navi {
     .navi_dialog_layout {
       --layout-margin: 30px;
@@ -31588,7 +31588,7 @@ const DialogLayout = ({
   });
 };
 
-installImportMetaCss(import.meta);import.meta.css = /* css */`
+installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
   @layer navi {
     .navi_separator {
       --size: 1px;
@@ -31637,7 +31637,7 @@ const Separator = ({
   });
 };
 
-installImportMetaCss(import.meta);import.meta.css = /* css */`
+installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
   @layer navi {
     .navi_viewport_layout {
       --layout-padding: 40px;
@@ -31684,7 +31684,7 @@ const ViewportLayout = props => {
   });
 };
 
-installImportMetaCss(import.meta);import.meta.css = /* css */`
+installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
   @layer navi {
     .navi_side_panel {
       --side-panel-width: 400px;

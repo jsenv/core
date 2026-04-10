@@ -1,4 +1,4 @@
-export const installImportMetaCss = (importMeta) => {
+const installImportMetaCssDev = (importMeta) => {
   let cssText = "";
   let stylesheet = new CSSStyleSheet({ baseUrl: importMeta.url });
   let adopted = false;
@@ -43,3 +43,5 @@ export const installImportMetaCss = (importMeta) => {
 
   return css.remove;
 };
+
+export { installImportMetaCssDev };

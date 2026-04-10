@@ -26,9 +26,9 @@
 import { applyBabelPlugins } from "@jsenv/ast";
 
 export const jsenvPluginImportMetaCss = () => {
-  const importMetaCssClientFileUrl = import.meta
-    .resolve("./client/import_meta_css.js");
-  const importMetaCssBuildFileUrl = import.meta
+  const importMetaCssDevClientFileUrl = import.meta
+    .resolve("./client/import_meta_css_dev.js");
+  const importMetaCssBuildClientFileUrl = import.meta
     .resolve("./client/import_meta_css_build.js");
 
   return {
@@ -50,12 +50,17 @@ export const jsenvPluginImportMetaCss = () => {
         if (!usesImportMetaCss) {
           return null;
         }
-        return injectImportMetaCss(
-          urlInfo,
-          urlInfo.context.build
-            ? importMetaCssBuildFileUrl
-            : importMetaCssClientFileUrl,
-        );
+        return injectImportMetaCss(urlInfo, {
+          importFrom: urlInfo.context.build
+            ? importMetaCssBuildClientFileUrl
+            : importMetaCssDevClientFileUrl,
+          importName: urlInfo.context.build
+            ? "installImportMetaCssBuild"
+            : "installImportMetaCssDev",
+          importAs: urlInfo.context.build
+            ? "__installImportMetaCssBuild__"
+            : "__installImportMetaCssDev__",
+        });
       },
     },
   };
@@ -92,17 +97,25 @@ const babelPluginMetadataUsesImportMetaCss = () => {
   };
 };
 
-const injectImportMetaCss = (urlInfo, importMetaCssClientFileUrl) => {
+const injectImportMetaCss = (urlInfo, { importFrom, importName, importAs }) => {
   const importMetaCssClientFileReference = urlInfo.dependencies.inject({
     parentUrl: urlInfo.url,
     type: "js_import",
     expectedType: "js_module",
-    specifier: importMetaCssClientFileUrl,
+    specifier: importFrom,
   });
-  let content = urlInfo.content;
-  let prelude = `import { installImportMetaCss } from ${importMetaCssClientFileReference.generatedSpecifier};
+  let importVariableName;
+  let importBeforeFrom;
+  if (importAs && importAs !== importName) {
+    importBeforeFrom = `{ ${importName} as ${importAs} }`;
+    importVariableName = importAs;
+  } else {
+    importBeforeFrom = `{ ${importName} } }`;
+    importVariableName = importName;
+  }
+  let prelude = `import ${importBeforeFrom} from ${importMetaCssClientFileReference.generatedSpecifier};
 
-const remove = installImportMetaCss(import.meta);
+const remove = ${importVariableName}(import.meta);
 if (import.meta.hot) {
   import.meta.hot.dispose(() => {
     remove();
@@ -110,6 +123,8 @@ if (import.meta.hot) {
 }
 
 `;
+
+  let content = urlInfo.content;
   return {
     content: `${prelude.replace(/\n/g, "")}${content}`,
   };

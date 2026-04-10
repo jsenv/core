@@ -57,8 +57,8 @@ await build({
       buildRelativeUrl: "./client/drop_to_open/drop_to_open.js",
       runtimeCompat: clientRuntimeCompat,
     },
-    "./src/plugins/import_meta_css/client/import_meta_css.js": {
-      buildRelativeUrl: "./client/import_meta_css/import_meta_css.js",
+    "./src/plugins/import_meta_css/client/import_meta_css_dev.js": {
+      buildRelativeUrl: "./client/import_meta_css/import_meta_css_dev.js",
       runtimeCompat: clientRuntimeCompat,
     },
     "./src/plugins/import_meta_css/client/import_meta_css_build.js": {

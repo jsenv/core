@@ -1,4 +1,4 @@
-export const installImportMetaCss = (importMeta) => {
+export const installImportMetaCssBuild = (importMeta) => {
   const stylesheet = new CSSStyleSheet({ baseUrl: importMeta.url });
 
   let called = false;

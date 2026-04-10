@@ -1,4 +1,4 @@
-const installImportMetaCss = (importMeta) => {
+const installImportMetaCssBuild = (importMeta) => {
   const stylesheet = new CSSStyleSheet({ baseUrl: importMeta.url });
 
   let called = false;
@@ -19,7 +19,7 @@ const installImportMetaCss = (importMeta) => {
   });
 };
 
-installImportMetaCss(import.meta);
+installImportMetaCssBuild(import.meta);
 import.meta.css = /* css */ `
   @layer navi {
     :root {
@@ -50,5 +50,5 @@ import.meta.css = /* css */ `
   }
 `;
 
-export { installImportMetaCss };
+export { installImportMetaCssBuild };
 //# sourceMappingURL=jsenv_navi_side_effects.js.map
