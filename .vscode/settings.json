@@ -24,10 +24,12 @@
     "*.env.prod": "env"
   },
   "workbench.colorCustomizations": {
-    "activityBar.background": "#834702",
-    "activityBar.foreground": "#c2b38e",
-    "activityBar.activeBorder": "#c2b38e",
-    "activityBar.inactiveForeground": "#bc7708",
-    "activityBarBadge.foreground": "#3f2802"
+    "activityBar.background": "#7a3800",
+    "activityBar.foreground": "#ffcf9e",
+    "activityBar.activeBorder": "#ff8c00",
+    "activityBar.activeBackground": "#a04a00",
+    "activityBar.inactiveForeground": "#c27040",
+    "activityBarBadge.background": "#ff8c00",
+    "activityBarBadge.foreground": "#1a0a00"
   }
 }
