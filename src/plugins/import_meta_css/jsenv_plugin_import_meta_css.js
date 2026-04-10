@@ -36,7 +36,11 @@ export const jsenvPluginImportMetaCss = () => {
     appliesDuring: "*",
     transformUrlContent: {
       js_module: async (urlInfo) => {
-        if (!urlInfo.content.includes("import.meta.css")) {
+        if (
+          !urlInfo.content.includes("import.meta.css") ||
+          // there is already our installImportMetaCssBuild in the file
+          urlInfo.content.includes("installImportMetaCssBuild")
+        ) {
           return null;
         }
         const { metadata } = await applyBabelPlugins({

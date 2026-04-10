@@ -32,6 +32,7 @@ export const installImportMetaCssDev = (importMeta) => {
   };
 
   Object.defineProperty(importMeta, "css", {
+    configurable: true,
     get() {
       return css;
     },
