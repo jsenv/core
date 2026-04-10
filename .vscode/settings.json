@@ -24,8 +24,10 @@
     "*.env.prod": "env"
   },
   "workbench.colorCustomizations": {
-    "statusBar.background": "#f9a825",
-    "statusBar.foreground": "#1a1a1a",
-    "statusBar.noFolderBackground": "#f57f17"
+    "activityBar.background": "#f9a825",
+    "activityBar.foreground": "#513304",
+    "activityBarBadge.foreground": "#513304",
+    "activityBar.activeBorder": "#513304",
+    "activityBar.inactiveForeground": "#bb7b15"
   }
 }
