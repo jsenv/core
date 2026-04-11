@@ -4,14 +4,19 @@
 run({ browserLauncher: chromium })
 ```
 
-# 1/2 write 2 files into "./.jsenv/chrome@145.00/"
+# 1/2 write 5 files into "./.jsenv/chrome@145.00/"
 
 see [./.jsenv/chrome@145.00/](./.jsenv/chrome@145.00/)
 
 # 2/2 resolve
 
 ```js
-rgb(255, 0, 0)
+{
+  "bodyBackgroundColorAfterInit": "rgb(255, 0, 0)",
+  "bodyColorAfterInit": "rgb(0, 0, 255)",
+  "bodyBackgroundColorAfterUpdate": "rgb(0, 128, 0)",
+  "bodyColorAfterUpdate": "rgb(0, 0, 255)"
+}
 ```
 
 ---
