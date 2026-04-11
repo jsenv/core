@@ -79,41 +79,35 @@ installImportMetaCssBuild(import.meta);const setBodyFontSize = size => {
 };
 
 
-setBodyFontSize("42px");
+setBodyFontSize("16px");
+
+const getBodyFontSize = () => window.getComputedStyle(document.body).fontSize;
+const getBodyBackgroundColor = () =>
+  window.getComputedStyle(document.body).backgroundColor;
+const getBodyColor = () => window.getComputedStyle(document.body).color;
+const captureStyles = () => {
+  return {
+    bodyFontSize: getBodyFontSize(),
+    bodyBackgroundColor: getBodyBackgroundColor(),
+    bodyColor: getBodyColor(),
+  };
+};
+
+const at_start = captureStyles();
 
 
 
 setBodyFontSize("42px");
 setBodyBackgroundColor("red");
 setBodyColor("blue");
-
-const bodyBackgroundColorAfterInit = window.getComputedStyle(
-  document.body,
-).backgroundColor;
-const bodyColorAfterInit = window.getComputedStyle(document.body).color;
-
-const bodyFontSizeAfterInit = window.getComputedStyle(document.body).fontSize;
+const after_first_call = captureStyles();
 
 
 setBodyBackgroundColor("green");
-
-const bodyBackgroundColorAfterUpdate = window.getComputedStyle(
-  document.body,
-).backgroundColor;
-const bodyColorAfterUpdate = window.getComputedStyle(document.body).color;
-const bodyFontSizeAfterUpdate = window.getComputedStyle(document.body).fontSize;
+const after_second_call = captureStyles();
 
 window.resolveResultPromise({
-
-  bodyBackgroundColorAfterInit,
-
-  bodyColorAfterInit,
-
-  bodyFontSizeAfterInit,
-
-  bodyBackgroundColorAfterUpdate,
-
-  bodyColorAfterUpdate,
-
-  bodyFontSizeAfterUpdate,
+  at_start,
+  after_first_call,
+  after_second_call,
 });

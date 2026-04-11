@@ -14,12 +14,21 @@ see [./build/](./build/)
 
 ```js
 {
-  "bodyBackgroundColorAfterInit": "rgb(255, 0, 0)",
-  "bodyColorAfterInit": "rgb(0, 0, 255)",
-  "bodyFontSizeAfterInit": "42px",
-  "bodyBackgroundColorAfterUpdate": "rgb(0, 128, 0)",
-  "bodyColorAfterUpdate": "rgb(0, 0, 255)",
-  "bodyFontSizeAfterUpdate": "42px"
+  "at_start": {
+    "bodyFontSize": "16px",
+    "bodyBackgroundColor": "rgba(0, 0, 0, 0)",
+    "bodyColor": "rgb(0, 0, 0)"
+  },
+  "after_first_call": {
+    "bodyFontSize": "42px",
+    "bodyBackgroundColor": "rgb(255, 0, 0)",
+    "bodyColor": "rgb(0, 0, 255)"
+  },
+  "after_second_call": {
+    "bodyFontSize": "42px",
+    "bodyBackgroundColor": "rgb(0, 128, 0)",
+    "bodyColor": "rgb(0, 0, 255)"
+  }
 }
 ```
 

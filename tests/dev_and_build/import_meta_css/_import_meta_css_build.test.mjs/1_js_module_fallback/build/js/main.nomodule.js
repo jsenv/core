@@ -1,7 +1,7 @@
 System.register([__v__("/jsenv_core_packages.js")], function (_export, _context) {
   "use strict";
 
-  var IMPORT_META_CSS_BUILD, installImportMetaCssBuild, setBodyBackgroundColor, setBodyColor, setBodyFontSize, bodyBackgroundColorAfterInit, bodyColorAfterInit, bodyFontSizeAfterInit, bodyBackgroundColorAfterUpdate, bodyColorAfterUpdate, bodyFontSizeAfterUpdate;
+  var IMPORT_META_CSS_BUILD, installImportMetaCssBuild, setBodyBackgroundColor, setBodyColor, setBodyFontSize, getBodyFontSize, getBodyBackgroundColor, getBodyColor, captureStyles, at_start, after_first_call, after_second_call;
   return {
     setters: [function (_buildJsenv_core_packagesJs) {}],
     execute: function () {
@@ -83,24 +83,28 @@ System.register([__v__("/jsenv_core_packages.js")], function (_export, _context)
           url: "/c.js"
         }];
       };
-      setBodyFontSize("42px");
+      setBodyFontSize("16px");
+      getBodyFontSize = () => window.getComputedStyle(document.body).fontSize;
+      getBodyBackgroundColor = () => window.getComputedStyle(document.body).backgroundColor;
+      getBodyColor = () => window.getComputedStyle(document.body).color;
+      captureStyles = () => {
+        return {
+          bodyFontSize: getBodyFontSize(),
+          bodyBackgroundColor: getBodyBackgroundColor(),
+          bodyColor: getBodyColor()
+        };
+      };
+      at_start = captureStyles();
       setBodyFontSize("42px");
       setBodyBackgroundColor("red");
       setBodyColor("blue");
-      bodyBackgroundColorAfterInit = window.getComputedStyle(document.body).backgroundColor;
-      bodyColorAfterInit = window.getComputedStyle(document.body).color;
-      bodyFontSizeAfterInit = window.getComputedStyle(document.body).fontSize;
+      after_first_call = captureStyles();
       setBodyBackgroundColor("green");
-      bodyBackgroundColorAfterUpdate = window.getComputedStyle(document.body).backgroundColor;
-      bodyColorAfterUpdate = window.getComputedStyle(document.body).color;
-      bodyFontSizeAfterUpdate = window.getComputedStyle(document.body).fontSize;
+      after_second_call = captureStyles();
       window.resolveResultPromise({
-        bodyBackgroundColorAfterInit,
-        bodyColorAfterInit,
-        bodyFontSizeAfterInit,
-        bodyBackgroundColorAfterUpdate,
-        bodyColorAfterUpdate,
-        bodyFontSizeAfterUpdate
+        at_start,
+        after_first_call,
+        after_second_call
       });
     }
   };

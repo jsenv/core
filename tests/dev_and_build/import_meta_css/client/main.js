@@ -14,16 +14,19 @@ const captureStyles = () => {
   };
 };
 
+// Before any CSS is set, all properties should be at their defaults
 const at_start = captureStyles();
 
-// c.js is first: its installImportMetaCssBuild runs first
-// a.js and b.js calls must be idempotent (not reset the state)
+// Each file manages its own stylesheet independently.
+// When bundled, all files share one import.meta, so installImportMetaCssBuild
+// is called multiple times. The idempotency check (sentinel symbol) ensures
+// subsequent calls don't reset the already-installed state.
 setBodyFontSize("42px");
 setBodyBackgroundColor("red");
 setBodyColor("blue");
 const after_first_call = captureStyles();
 
-// update a.js CSS — b.js CSS (blue color) and c.js CSS (42px) should remain
+// Updating a.js CSS must not affect b.js (color) or c.js (font-size) stylesheets
 setBodyBackgroundColor("green");
 const after_second_call = captureStyles();
 
