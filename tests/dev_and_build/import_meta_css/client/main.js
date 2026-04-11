@@ -2,39 +2,37 @@ import { setBodyBackgroundColor } from "./a.js";
 import { setBodyColor } from "./b.js";
 import { setBodyFontSize } from "./c.js";
 
+const getBodyFontSize = () => window.getComputedStyle(document.body).fontSize;
+const getBodyBackgroundColor = () =>
+  window.getComputedStyle(document.body).backgroundColor;
+const getBodyColor = () => window.getComputedStyle(document.body).color;
+
+const captureStyles = () => {
+  return {
+    bodyFontSize: getBodyFontSize(),
+    bodyBackgroundColor: getBodyBackgroundColor(),
+    bodyColor: getBodyColor(),
+  };
+};
+
+const at_start = captureStyles();
+
 // c.js is first: its installImportMetaCssBuild runs first
 // a.js and b.js calls must be idempotent (not reset the state)
 setBodyFontSize("42px");
 setBodyBackgroundColor("red");
 setBodyColor("blue");
 
-const bodyBackgroundColorAfterInit = window.getComputedStyle(
-  document.body,
-).backgroundColor;
-const bodyColorAfterInit = window.getComputedStyle(document.body).color;
-// 42px: c.js CSS must survive subsequent installImportMetaCssBuild calls from a.js and b.js
-const bodyFontSizeAfterInit = window.getComputedStyle(document.body).fontSize;
+const after_first_call = captureStyles();
 
 // update a.js CSS — b.js CSS (blue color) and c.js CSS (42px) should remain
 setBodyBackgroundColor("green");
 
-const bodyBackgroundColorAfterUpdate = window.getComputedStyle(
-  document.body,
-).backgroundColor;
-const bodyColorAfterUpdate = window.getComputedStyle(document.body).color;
-const bodyFontSizeAfterUpdate = window.getComputedStyle(document.body).fontSize;
+const after_second_call = captureStyles();
 
 window.resolveResultPromise({
-  // red: a.js initial CSS applied
-  bodyBackgroundColorAfterInit,
-  // blue: b.js CSS applied
-  bodyColorAfterInit,
-  // 42px: c.js top-level CSS survived subsequent installImportMetaCssBuild calls
-  bodyFontSizeAfterInit,
-  // green: a.js CSS updated
-  bodyBackgroundColorAfterUpdate,
-  // blue: b.js CSS still active after a.js update
-  bodyColorAfterUpdate,
-  // 42px: c.js CSS still active after a.js update
-  bodyFontSizeAfterUpdate,
+  at_start,
+  after_first_call,
+
+  after_second_call,
 });
