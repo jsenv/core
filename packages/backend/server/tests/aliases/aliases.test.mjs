@@ -1,7 +1,7 @@
 import { assert } from "@jsenv/assert";
 import {
   createFileSystemFetch,
-  jsenvServiceRequestAliases,
+  serverPluginRequestAliases,
   startServer,
 } from "@jsenv/server";
 
@@ -10,8 +10,8 @@ let resource;
 const server = await startServer({
   logLevel: "error",
   keepProcessAlive: false,
-  services: [
-    jsenvServiceRequestAliases({
+  plugins: [
+    serverPluginRequestAliases({
       "/alias.json": "/data.json",
       "/*.js": "/file.js",
       "/dir/*": "/dir/a.txt",

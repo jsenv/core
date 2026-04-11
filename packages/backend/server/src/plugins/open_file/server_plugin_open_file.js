@@ -1,7 +1,7 @@
 import { urlToFileSystemPath } from "@jsenv/urls";
 import { createRequire } from "node:module";
 
-export const jsenvServiceOpenFile = () => {
+export const serverPluginOpenFile = () => {
   return {
     name: "jsenv:open_file",
     routes: [

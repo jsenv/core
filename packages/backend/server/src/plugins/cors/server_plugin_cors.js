@@ -13,7 +13,7 @@ export const jsenvAccessControlAllowedMethods = [
   "OPTIONS",
 ];
 
-export const jsenvServiceCORS = ({
+export const serverPluginCORS = ({
   accessControlAllowedOrigins = [],
   accessControlAllowedMethods = jsenvAccessControlAllowedMethods,
   accessControlAllowedHeaders = jsenvAccessControlAllowedHeaders,

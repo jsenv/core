@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 const routeInspectorHtmlFileUrl = import.meta
   .resolve("./client/route_inspector.html");
 
-export const jsenvServiceRouteInspector = () => {
+export const serverPluginRouteInspector = () => {
   return {
     name: "jsenv:route_inspector",
     routes: [

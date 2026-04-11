@@ -1,6 +1,6 @@
 import { URL_META } from "@jsenv/url-meta";
 
-export const jsenvServiceRequestAliases = (resourceAliases) => {
+export const serverPluginRequestAliases = (resourceAliases) => {
   const aliases = {};
   Object.keys(resourceAliases).forEach((key) => {
     aliases[asFileUrl(key)] = asFileUrl(resourceAliases[key]);

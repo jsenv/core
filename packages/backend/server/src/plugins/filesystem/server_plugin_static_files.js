@@ -2,9 +2,9 @@ import { urlToExtension, urlToPathname } from "@jsenv/urls";
 
 import { createFileSystemFetch } from "./fetch_filesystem.js";
 
-export const jsenvServiceStaticFiles = ({ directoryUrl, mainFilePath }) => {
+export const serverPluginStaticFiles = ({ directoryUrl, mainFilePath }) => {
   return {
-    name: "jsenv:file_service",
+    name: "jsenv:static_files",
     routes: [
       {
         endpoint: "GET *",

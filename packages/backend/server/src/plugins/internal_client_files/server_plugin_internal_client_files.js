@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 
 const jsenvServerRootDirectoryUrl = import.meta.resolve("../../../");
 
-export const jsenvServiceInternalClientFiles = () => {
+export const serverPluginInternalClientFiles = () => {
   return {
     name: "jsenv:internal_client_files",
 

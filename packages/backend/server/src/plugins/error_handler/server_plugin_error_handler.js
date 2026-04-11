@@ -5,7 +5,7 @@ import { replacePlaceholdersInHtml } from "../../replace_placeholder_in_html.js"
 
 const internalErrorHtmlFileUrl = import.meta.resolve("./client/500.html");
 
-export const jsenvServiceErrorHandler = ({ sendErrorDetails = false } = {}) => {
+export const serverPluginErrorHandler = ({ sendErrorDetails = false } = {}) => {
   return {
     name: "jsenv:error_handler",
     handleError: (serverInternalError, { request }) => {

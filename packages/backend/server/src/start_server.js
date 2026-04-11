@@ -23,14 +23,14 @@ import { composeTwoResponses } from "./internal/response_composition.js";
 import { createPolyglotServer } from "./internal/server-polyglot.js";
 import { trackServerPendingConnections } from "./internal/trackServerPendingConnections.js";
 import { trackServerPendingRequests } from "./internal/trackServerPendingRequests.js";
+import { serverPluginAutoreloadOnRestart } from "./plugins/autoreload_on_server_restart/server_plugin_autoreload_on_server_restart.js";
+import { serverPluginDefaultBody4xx5xx } from "./plugins/default_body_4xx_5xx/server_plugin_default_body_4xx_5xx.js";
+import { serverPluginInternalClientFiles } from "./plugins/internal_client_files/server_plugin_internal_client_files.js";
+import { serverPluginOpenFile } from "./plugins/open_file/server_plugin_open_file.js";
+import { serverPluginRouteInspector } from "./plugins/route_inspector/server_plugin_route_inspector.js";
+import { createServerPluginsController } from "./plugins/server_plugins_controller.js";
 import { createRouter } from "./router/router.js";
 import { timingToServerTimingResponseHeaders } from "./server_timing/timing_header.js";
-import { jsenvServiceAutoreloadOnRestart } from "./services/autoreload_on_server_restart/jsenv_service_autoreload_on_server_restart.js";
-import { jsenvServiceDefaultBody4xx5xx } from "./services/default_body_4xx_5xx/jsenv_service_default_body_4xx_5xx.js";
-import { jsenvServiceInternalClientFiles } from "./services/internal_client_files/jsenv_service_internal_client_files.js";
-import { jsenvServiceOpenFile } from "./services/open_file/jsenv_service_open_file.js";
-import { jsenvServiceRouteInspector } from "./services/route_inspector/jsenv_service_route_inspector.js";
-import { createServerPluginsController } from "./services/server_plugins_controller.js";
 import {
   STOP_REASON_INTERNAL_ERROR,
   STOP_REASON_NOT_SPECIFIED,
@@ -153,11 +153,11 @@ export const startServer = async ({
   }
 
   plugins = [
-    jsenvServiceOpenFile(),
-    jsenvServiceDefaultBody4xx5xx(),
-    jsenvServiceRouteInspector(),
-    jsenvServiceInternalClientFiles(),
-    jsenvServiceAutoreloadOnRestart(),
+    serverPluginOpenFile(),
+    serverPluginDefaultBody4xx5xx(),
+    serverPluginRouteInspector(),
+    serverPluginInternalClientFiles(),
+    serverPluginAutoreloadOnRestart(),
     ...plugins,
   ];
 

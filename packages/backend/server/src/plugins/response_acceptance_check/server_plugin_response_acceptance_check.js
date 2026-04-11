@@ -2,7 +2,7 @@ import { pickContentEncoding } from "@jsenv/server/src/content_negotiation/pick_
 import { pickContentLanguage } from "@jsenv/server/src/content_negotiation/pick_content_language.js";
 import { pickContentType } from "@jsenv/server/src/content_negotiation/pick_content_type.js";
 
-export const jsenvServiceResponseAcceptanceCheck = () => {
+export const serverPluginResponseAcceptanceCheck = () => {
   return {
     name: "jsenv:response_acceptance_check",
     inspectResponse: (request, { response, warn }) => {

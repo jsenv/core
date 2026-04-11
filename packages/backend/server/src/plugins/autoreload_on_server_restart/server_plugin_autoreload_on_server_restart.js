@@ -1,6 +1,6 @@
 import { LazyServerEvents } from "../../server_events.js";
 
-export const jsenvServiceAutoreloadOnRestart = () => {
+export const serverPluginAutoreloadOnRestart = () => {
   const aliveServerEvents = new LazyServerEvents(() => {});
 
   return {

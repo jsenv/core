@@ -1,10 +1,11 @@
 import { readFileSync } from "node:fs";
+
 import { pickContentType } from "../../content_negotiation/pick_content_type.js";
 import { replacePlaceholdersInHtml } from "../../replace_placeholder_in_html.js";
 
 const clientErrorHtmlTemplateFileUrl = import.meta.resolve("./client/4xx.html");
 
-export const jsenvServiceDefaultBody4xx5xx = () => {
+export const serverPluginDefaultBody4xx5xx = () => {
   return {
     name: "jsenv:default_body_4xx_5xx",
 
