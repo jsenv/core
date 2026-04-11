@@ -1209,9 +1209,9 @@ window.__supervisor__ = (() => {
         lineno,
         colno
       } = errorEvent;
-      if (error && error.__handled__) {
+      if (error && error.__handled_by__) {
         if (logs) {
-          console.log("ignore error event because __handled__ is set");
+          console.log("ignore error event because __handled_by__ is set");
         }
         return;
       }
@@ -1228,6 +1228,12 @@ window.__supervisor__ = (() => {
     });
     addEventListenerCalledLast(window, "unhandledrejection", event => {
       if (event.defaultPrevented) {
+        return;
+      }
+      if (event.reason && event.reason.__handled_by__) {
+        if (logs) {
+          console.log("ignore unhandledrejection event because __handled_by__ is set");
+        }
         return;
       }
       const exception = supervisor.createException(event.reason, {

@@ -1,6 +1,6 @@
-import { a, u, F, useSignal, h, A, b, k, C, O, q, F$1 } from "../jsenv_plugin_database_manager_node_modules.js";
-import { initFlexDetailsSet, startDragToResizeGesture, getInnerWidth, getWidth, initPositionSticky } from "@jsenv/dom";
-import { useEditionController, createAvailableConstraint, Icon, Input, SINGLE_SPACE_CONSTRAINT, Editable, useSelectionController, useKeyboardShortcuts, createSelectionKeyboardShortcuts, TabList, Details, Text, BadgeCount, Button, stateSignal, resource, setBaseUrl, route, routeAction, setupRoutes, SVGMaskOverlay, RouteLink, useRunOnMount, valueInLocalStorage, Form, Select, Label, useSignalSync, ErrorBoundaryContext, Box, Route, useNavState, Table, Tab, Routes } from "@jsenv/navi";
+import { useEditionController, createAvailableConstraint, Icon, Input, SINGLE_SPACE_CONSTRAINT, Editable, useSelectionController, useKeyboardShortcuts, createSelectionKeyboardShortcuts, Nav, Details, Text, BadgeCount, Button, stateSignal, resource, syncOwnedResourceToSignals, setBaseUrl, route, routeAction, setupRoutes, SVGMaskOverlay, Link, LinkCurrentSvg, useRunOnMount, Form, Select, Label, useSignalSync, ErrorBoundaryContext, Box, useAsyncData, Code, useNavState, Checkbox, RadioList, Radio, TextPlaceholder, useOrderedColumns, useCellGridFromRows, filterTableSelection, Table, Colgroup, RowNumberCol, Col, Thead, Tr, RowNumberTableCell, TableCell, Tbody, stringifyTableSelectionValue, SidePanel, Head, Route, Loading } from "@jsenv/navi";
+import { a, u, F, useSignal, h, A, b, k, j, O, F$1 } from "../jsenv_plugin_database_manager_node_modules.js";
+import { startDragToResizeGesture, getInnerWidth, getWidth, initFlexDetailsSet } from "@jsenv/dom";
 
 /* eslint-disable */
 // construct-style-sheets-polyfill@3.1.0
@@ -565,7 +565,7 @@ const ExplorerItemList = props => {
       setDeletedItems([]);
     }
   }]);
-  return u(TabList, {
+  return u(Nav, {
     ref: ref,
     vertical: true,
     className: "explorer_item_list",
@@ -573,45 +573,49 @@ const ExplorerItemList = props => {
     expandX: true,
     spacing: "0",
     lineHeight: "normal",
-    children: [itemArray.map(item => {
-      return u(TabList.Tab, {
+    children: u("ul", {
+      style: "display: contents; list-style-type: none;",
+      children: [itemArray.map(item => {
+        return u("li", {
+          className: "explorer_item",
+          children: u(ExplorerItem, {
+            nameKey: nameKey,
+            item: item,
+            deletedItems: deletedItems,
+            renderItem: renderItem,
+            selectionController: selectionController,
+            useItemArrayInStore: useItemArrayInStore,
+            renameItemAction: renameItemAction,
+            deleteItemAction: deleteManyItemAction ? () => null : deleteItemAction
+          })
+        }, item[idKey]);
+      }), isCreatingNew && u("li", {
         className: "explorer_item",
-        children: u(ExplorerItem, {
+        style: "display: block",
+        children: u(ExplorerNewItem, {
           nameKey: nameKey,
-          item: item,
-          deletedItems: deletedItems,
-          renderItem: renderItem,
-          selectionController: selectionController,
           useItemArrayInStore: useItemArrayInStore,
-          renameItemAction: renameItemAction,
-          deleteItemAction: deleteManyItemAction ? () => null : deleteItemAction
+          createItemAction: createItemAction,
+          cancelOnBlurInvalid: true,
+          onCancel: (e, reason) => {
+            stopCreatingNew({
+              shouldRestoreFocus: reason === "escape_key"
+            });
+          },
+          onActionEnd: e => {
+            const input = e.target;
+            const eventCausingAction = e.detail.event;
+            const actionRequestedByKeyboard = eventCausingAction && eventCausingAction.type === "keydown" && eventCausingAction.key === "Enter";
+            const shouldRestoreFocus = actionRequestedByKeyboard &&
+            // If user focuses something else while action is running, respect it
+            document.activeElement === input;
+            stopCreatingNew({
+              shouldRestoreFocus
+            });
+          }
         })
-      }, item[idKey]);
-    }), isCreatingNew && u(TabList.Tab, {
-      className: "explorer_item",
-      children: u(ExplorerNewItem, {
-        nameKey: nameKey,
-        useItemArrayInStore: useItemArrayInStore,
-        createItemAction: createItemAction,
-        cancelOnBlurInvalid: true,
-        onCancel: (e, reason) => {
-          stopCreatingNew({
-            shouldRestoreFocus: reason === "escape_key"
-          });
-        },
-        onActionEnd: e => {
-          const input = e.target;
-          const eventCausingAction = e.detail.event;
-          const actionRequestedByKeyboard = eventCausingAction && eventCausingAction.type === "keydown" && eventCausingAction.key === "Enter";
-          const shouldRestoreFocus = actionRequestedByKeyboard &&
-          // If user focuses something else while action is running, respect it
-          document.activeElement === input;
-          stopCreatingNew({
-            shouldRestoreFocus
-          });
-        }
-      })
-    }, "new_item")]
+      }, "new_item")]
+    })
   });
 };
 
@@ -680,10 +684,11 @@ const ExplorerGroup = props => {
       label: u(k, {
         children: u(Text, {
           overflowEllipsis: true,
+          expandX: true,
           children: [label, u(Text, {
             overflowPinned: true,
+            flex: true,
             expandX: true,
-            box: true,
             alignY: "center",
             children: [u(BadgeCount, {
               size: "xxs",
@@ -917,6 +922,79 @@ const useCurrentDatabase = () => {
   return currentDatabase;
 };
 
+/*
+
+ */
+
+const asideWidthSignal = stateSignal(250, {
+  type: "positive_number"
+});
+const asideResizeWidthSignal = a(asideWidthSignal.value);
+j(() => {
+  const asideWidth = asideWidthSignal.value;
+  const asideResizeWidth = asideResizeWidthSignal.value;
+  const width = asideResizeWidth || asideWidth;
+  document.querySelector("#root").style.setProperty("--aside-width", "".concat(width, "px"));
+});
+const Aside = ({
+  children
+}) => {
+  const asideRef = F(null);
+  const [resizing, setResizing] = h(false);
+  return u("aside", {
+    ref: asideRef,
+    "data-resize": "horizontal",
+    style: {
+      // Disable transition during resize to make it immediate
+      transition: resizing ? "none" : undefined
+    },
+    onMouseDown: e => {
+      let elementToResize;
+      let widthAtStart;
+      startDragToResizeGesture(e, {
+        onDragStart: gesture => {
+          elementToResize = gesture.element;
+          widthAtStart = getWidth(elementToResize);
+        },
+        onDrag: gesture => {
+          if (!gesture.started) {
+            return;
+          }
+          const xDelta = gesture.layout.xDelta;
+          const newWidth = widthAtStart + xDelta;
+          const minWidth =
+          // <aside> min-width
+          100;
+          setResizing(true);
+          if (newWidth < minWidth) {
+            asideResizeWidthSignal.value = minWidth;
+            return;
+          }
+          const availableWidth = getInnerWidth(elementToResize.parentElement);
+          const maxWidth = availableWidth -
+          // <main> min-width
+          200;
+          if (newWidth > maxWidth) {
+            asideResizeWidthSignal.value = maxWidth;
+            return;
+          }
+          asideResizeWidthSignal.value = newWidth;
+        },
+        onRelease: () => {
+          const resizeWidth = asideResizeWidthSignal.value;
+          if (resizeWidth) {
+            asideWidthSignal.value = resizeWidth;
+          }
+          setResizing(false);
+        }
+      });
+    },
+    children: [children, u("div", {
+      "data-resize-handle": true
+    })]
+  });
+};
+
 const roleCanLoginOpenSignal = stateSignal(false, {
   type: "boolean",
   id: "jsenv_db_role_can_login_open",
@@ -1104,9 +1182,10 @@ const roleOwnershipHeightSignal = stateSignal(undefined, {
   persist: true
 });
 
+const tablenameSignal = stateSignal(null, {});
 const TABLE = resource("table", {
   idKey: "tableoid",
-  mutableIdKeys: ["tablename"],
+  uniqueKeys: ["tablename"],
   GET_MANY: async (_, {
     signal
   }) => {
@@ -1137,14 +1216,17 @@ const TABLE = resource("table", {
     const {
       ownerRole,
       columns,
-      schemaColumns
+      rowCount,
+      pgTableColumns
     } = meta;
+    columns.sort((a, b) => a.ordinal_position - b.ordinal_position);
+    table.columns = columns;
     return {
       ...table,
       ownerRole,
       meta: {
-        columns,
-        schemaColumns
+        rowCount,
+        pgTableColumns
       }
     };
   },
@@ -1256,7 +1338,109 @@ const TABLE = resource("table", {
   }
 });
 const useTableArrayInStore = TABLE.useArray;
-const TABLE_ROW = resource("table_row", {
+const TABLE_COLUMN = TABLE.scopedMany("columns", {
+  idKey: "column_name",
+  GET_MANY: async ({
+    tablename
+  }, {
+    signal
+  }) => {
+    const response = await fetch("".concat(window.DB_MANAGER_CONFIG.apiUrl, "/tables/").concat(tablename, "/columns"), {
+      signal
+    });
+    if (!response.ok) {
+      throw await errorFromResponse(response, "Failed to get columns for ".concat(tablename));
+    }
+    const {
+      data
+    } = await response.json();
+    const columns = data;
+    return [{
+      tablename
+    }, columns];
+  },
+  POST: async ({
+    tablename,
+    column_name
+  }) => {
+    const response = await fetch("".concat(window.DB_MANAGER_CONFIG.apiUrl, "/tables/").concat(tablename, "/columns"), {
+      method: "POST",
+      headers: {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({
+        column_name
+      })
+    });
+    if (!response.ok) {
+      throw await errorFromResponse(response, "Failed to add column to \"".concat(tablename, "\" table"));
+    }
+    const {
+      data: column
+    } = await response.json();
+    return [{
+      tablename
+    }, column];
+  },
+  PUT: async ({
+    tablename,
+    column_name,
+    propertyName,
+    propertyValue
+  }, {
+    signal
+  }) => {
+    const response = await fetch("".concat(window.DB_MANAGER_CONFIG.apiUrl, "/tables/").concat(tablename, "/columns/").concat(column_name, "/").concat(propertyName), {
+      signal,
+      method: "PUT",
+      headers: {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      body: JSON.stringify(propertyValue)
+    });
+    if (!response.ok) {
+      throw await errorFromResponse(response, "Failed to PUT ".concat(tablename, ".").concat(column_name, ".").concat(propertyName, " = ").concat(propertyValue));
+    }
+    const {
+      data: column
+    } = await response.json();
+    // we return an array to say: we update this column with these props
+    return [{
+      tablename
+    }, {
+      column_name
+    }, column];
+  },
+  DELETE: async ({
+    tablename,
+    column_name
+  }, {
+    signal
+  }) => {
+    const response = await fetch("".concat(window.DB_MANAGER_CONFIG.apiUrl, "/tables/").concat(tablename, "/columns/").concat(column_name), {
+      signal,
+      method: "DELETE"
+    });
+    if (!response.ok) {
+      throw await errorFromResponse(response, "Failed to remove ".concat(column_name, " from ").concat(tablename));
+    }
+    return [{
+      tablename
+    }, {
+      column_name
+    }];
+  }
+});
+const tableColumnNameSignal = stateSignal(undefined, {
+  type: "string"
+});
+syncOwnedResourceToSignals(TABLE_COLUMN, tablenameSignal, {
+  column_name: tableColumnNameSignal
+});
+const TABLE_ROW = TABLE.scopedMany("rows", {
+  dependencies: [TABLE_COLUMN],
   GET_MANY: async ({
     tablename
   }, {
@@ -1271,7 +1455,9 @@ const TABLE_ROW = resource("table_row", {
     const {
       data
     } = await response.json();
-    return data;
+    return [{
+      tablename
+    }, data];
   },
   POST: async ({
     tablename
@@ -1293,7 +1479,80 @@ const TABLE_ROW = resource("table_row", {
     const {
       data
     } = await response.json();
-    return data;
+    return [{
+      tablename
+    }, data];
+  },
+  PATCH: async ({
+    tablename,
+    rowId,
+    properties
+  }, {
+    signal
+  }) => {
+    const response = await fetch("".concat(window.DB_MANAGER_CONFIG.apiUrl, "/tables/").concat(tablename, "/rows/").concat(rowId), {
+      signal,
+      method: "PATCH",
+      headers: {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      body: JSON.stringify(properties)
+    });
+    if (!response.ok) {
+      throw await errorFromResponse(response, "Failed to update row in \"".concat(tablename, "\" table"));
+    }
+    const {
+      data
+    } = await response.json();
+    return [{
+      tablename
+    }, data];
+  },
+  DELETE: async ({
+    tablename,
+    rowId
+  }, {
+    signal
+  }) => {
+    const response = await fetch("".concat(window.DB_MANAGER_CONFIG.apiUrl, "/tables/").concat(tablename, "/rows/").concat(rowId), {
+      signal,
+      method: "DELETE",
+      headers: {
+        "accept": "application/json",
+        "content-type": "application/json"
+      }
+    });
+    if (!response.ok) {
+      throw await errorFromResponse(response, "Failed to delete rows in \"".concat(tablename, "\" table"));
+    }
+    return [{
+      tablename
+    }, rowId];
+  },
+  DELETE_MANY: async ({
+    tablename,
+    rowIds
+  }, {
+    signal
+  }) => {
+    const response = await fetch("".concat(window.DB_MANAGER_CONFIG.apiUrl, "/tables/").concat(tablename, "/rows"), {
+      signal,
+      method: "DELETE",
+      headers: {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({
+        rowIds
+      })
+    });
+    if (!response.ok) {
+      throw await errorFromResponse(response, "Failed to delete rows in \"".concat(tablename, "\" table"));
+    }
+    return [{
+      tablename
+    }, rowIds];
   }
 });
 
@@ -1449,9 +1708,10 @@ const tableListHeightSignal = stateSignal(undefined, {
 setBaseUrl(window.DB_MANAGER_CONFIG.pathname);
 const rolnameSignal = stateSignal(null);
 const datnameSignal = stateSignal(null);
-const tablenameSignal = stateSignal(null);
-const HOME_ROUTE = route("/", {
+const INDEX_ROUTE = route("");
+const ANY_ROUTE = route("/", {
   searchParams: {
+    aside_width: asideWidthSignal,
     role_login_open: roleCanLoginOpenSignal,
     role_login_height: roleCanLoginHeightSignal,
     role_group_open: roleGroupOpenSignal,
@@ -1464,50 +1724,50 @@ const HOME_ROUTE = route("/", {
     role_ownership_height: roleOwnershipHeightSignal
   }
 });
-const ROLE_CAN_LOGIN_GET_MANY_ACTION = routeAction(HOME_ROUTE, ROLE_CAN_LOGIN.GET_MANY, () => {
+const ROLE_CAN_LOGIN_GET_MANY_ACTION = routeAction(ANY_ROUTE, ROLE_CAN_LOGIN.GET_MANY, () => {
   const open = roleCanLoginOpenSignal.value;
   if (!open) {
     return null;
   }
   return {};
 });
-const ROLE_GROUP_GET_MANY_ACTION = routeAction(HOME_ROUTE, ROLE_CANNOT_LOGIN.GET_MANY, () => {
+const ROLE_GROUP_GET_MANY_ACTION = routeAction(ANY_ROUTE, ROLE_CANNOT_LOGIN.GET_MANY, () => {
   const open = roleGroupOpenSignal.value;
   if (!open) {
     return null;
   }
   return {};
 });
-const DATABASE_GET_MANY_ACTION = routeAction(HOME_ROUTE, DATABASE.GET_MANY, () => {
+const DATABASE_GET_MANY_ACTION = routeAction(ANY_ROUTE, DATABASE.GET_MANY, () => {
   const open = databaseOpenSignal.value;
   if (!open) {
     return null;
   }
   return {};
 });
-const TABLE_GET_MANY_ACTION = routeAction(HOME_ROUTE, TABLE.GET_MANY, () => {
+const TABLE_GET_MANY_ACTION = routeAction(ANY_ROUTE, TABLE.GET_MANY, () => {
   const open = tableListOpenSignal.value;
   if (!open) {
     return null;
   }
   return {};
 });
-const ROLE_WITH_OWNERSHIP_GET_MANY_ACTION = routeAction(HOME_ROUTE, ROLE_WITH_OWNERSHIP.GET_MANY, () => {
+const ROLE_WITH_OWNERSHIP_GET_MANY_ACTION = routeAction(ANY_ROUTE, ROLE_WITH_OWNERSHIP.GET_MANY, () => {
   const open = roleOwnershipOpenSignal.value;
   if (!open) {
     return null;
   }
   return {};
 });
-const ROLE_ROUTE = route("/roles/:rolname=".concat(rolnameSignal));
-routeAction(ROLE_ROUTE, ROLE.GET, () => {
+const ROLE_ROUTE = route("/roles/:rolname=".concat(rolnameSignal, "/"));
+const ROLE_GET_ACTION = routeAction(ROLE_ROUTE, ROLE.GET, () => {
   const rolname = rolnameSignal.value;
   return {
     rolname
   };
 });
-const DATABASE_ROUTE = route("/databases/:datname=".concat(datnameSignal));
-routeAction(DATABASE_ROUTE, DATABASE.GET, () => {
+const DATABASE_ROUTE = route("/databases/:datname=".concat(datnameSignal, "/"));
+const DATABASE_GET_ACTION = routeAction(DATABASE_ROUTE, DATABASE.GET, () => {
   const datname = datnameSignal.value;
   return {
     datname
@@ -1520,7 +1780,11 @@ const TABLE_GET_ACTION = routeAction(TABLE_ROUTE, TABLE.GET, () => {
     tablename
   };
 });
-const TABLE_INDEX_ROUTE = route("/tables/:tablename=".concat(tablenameSignal));
+const TABLE_INDEX_ROUTE = route("/tables/:tablename=".concat(tablenameSignal), {
+  searchParams: {
+    column_name: tableColumnNameSignal
+  }
+});
 const TABLE_ROW_GET_MANY_ACTION = routeAction(TABLE_INDEX_ROUTE, TABLE_ROW.GET_MANY, () => {
   const tablename = tablenameSignal.value;
   return {
@@ -1528,7 +1792,7 @@ const TABLE_ROW_GET_MANY_ACTION = routeAction(TABLE_INDEX_ROUTE, TABLE_ROW.GET_M
   };
 });
 const TABLE_SETTINGS_ROUTE = route("/tables/:tablename=".concat(tablenameSignal, "/settings"));
-setupRoutes([HOME_ROUTE, ROLE_ROUTE, DATABASE_ROUTE, TABLE_ROUTE, TABLE_INDEX_ROUTE, TABLE_SETTINGS_ROUTE]);
+setupRoutes([INDEX_ROUTE, ANY_ROUTE, ROLE_ROUTE, DATABASE_ROUTE, TABLE_ROUTE, TABLE_INDEX_ROUTE, TABLE_SETTINGS_ROUTE]);
 
 // https://www.svgrepo.com/svg/437987/plus-circle
 const PlusSvg = ({
@@ -1655,7 +1919,7 @@ const DatabaseLink = ({
   const datname = database.datname;
   const currentDatabase = useCurrentDatabase();
   const isCurrent = currentDatabase && datname === currentDatabase.datname;
-  return u(RouteLink, {
+  return u(Link, {
     route: DATABASE_ROUTE,
     routeParams: {
       datname
@@ -1827,7 +2091,7 @@ const RoleLink = ({
   const currentRole = useCurrentRole();
   const isCurrent = currentRole && rolname === currentRole.rolname;
   const RoleIcon = pickRoleIcon(role);
-  return u(RouteLink, {
+  return u(Link, {
     route: ROLE_ROUTE,
     routeParams: {
       rolname
@@ -1835,10 +2099,13 @@ const RoleLink = ({
     startIcon: u(RoleIcon, {
       color: "#333"
     }),
+    endIcon: isCurrent && u(Icon, {
+      color: "#333",
+      children: u(LinkCurrentSvg, {})
+    }),
+    spacing: "xs",
     ...rest,
-    children: [isCurrent && u("span", {
-      children: "(current)"
-    }), children]
+    children: children
   });
 };
 
@@ -1934,7 +2201,7 @@ const RoleGroupListDetails = () => {
   });
 };
 
-const installImportMetaCss = importMeta => {
+const installImportMetaCssBuild = importMeta => {
   const stylesheet = new CSSStyleSheet({
     baseUrl: importMeta.url
   });
@@ -2009,7 +2276,7 @@ const TableLink = ({
   ...rest
 }) => {
   const tablename = table.tablename;
-  return u(RouteLink, {
+  return u(Link, {
     route: TABLE_ROUTE,
     routeParams: {
       tablename
@@ -2022,7 +2289,7 @@ const TableLink = ({
   });
 };
 
-installImportMetaCss(import.meta);import.meta.css = /* css */"\n  .explorer_details {\n    flex: 1;\n  }\n\n  .explorer_details summary {\n    padding-left: calc(16px + var(--details-depth, 0) * 16px);\n  }\n\n  .explorer_details .explorer_item_content {\n    padding-left: calc(32px + var(--details-depth, 0) * 16px);\n  }\n";
+installImportMetaCssBuild(import.meta);import.meta.css = /* css */"\n  .explorer_details {\n    flex: 1;\n  }\n\n  .explorer_details summary {\n    padding-left: calc(16px + var(--details-depth, 0) * 16px);\n  }\n\n  .explorer_details .explorer_item_content {\n    padding-left: calc(32px + var(--details-depth, 0) * 16px);\n  }\n";
 const RoleWithOwnershipListDetails = () => {
   const [resizable, setResizable] = h(false);
   const roleWithOwnershipCount = useRoleWithOwnershipCount();
@@ -2188,7 +2455,7 @@ const TableListDetails = () => {
   });
 };
 
-const inlineContent$1 = new __InlineContent__(".explorer {\n  background: #f5f5f5;\n  flex-direction: column;\n  flex: 1;\n  width: 100%;\n  height: 100%;\n  margin-bottom: 20px;\n  display: flex;\n  overflow: auto;\n}\n\n.explorer_head {\n  flex-direction: row;\n  align-items: center;\n  padding-left: 6px;\n  display: flex;\n}\n\n.explorer_head h2 {\n  -webkit-user-select: none;\n  -moz-user-select: none;\n  user-select: none;\n  margin-top: .5em;\n  margin-bottom: .5em;\n  margin-left: 24px;\n  font-size: 16px;\n}\n\n.explorer_body {\n  flex-direction: column;\n  flex: 1;\n  min-height: 0;\n  display: flex;\n  overflow: hidden;\n}\n\n.explorer_group > summary {\n  cursor: pointer;\n  -webkit-user-select: none;\n  -moz-user-select: none;\n  user-select: none;\n  border: 1px solid #0000;\n  border-top-color: #e0e0e0;\n  flex-shrink: 0;\n  font-size: 14px;\n}\n\n.explorer_group:first-of-type > summary {\n  border-top-color: #0000;\n}\n\n.explorer_group > summary:focus {\n  border-color: #00f;\n}\n\n.summary_action_icon {\n  visibility: hidden;\n  pointer-events: none;\n  padding: 0;\n}\n\n.explorer_group[open] .summary_action_icon {\n  visibility: visible;\n  pointer-events: auto;\n}\n\n.summary_label {\n  flex: 1;\n  align-items: center;\n  gap: .2em;\n  padding-right: 10px;\n  display: flex;\n}\n\n.explorer_group > summary .summary_label {\n  font-weight: 500;\n}\n\n.explorer_body > [data-resize-handle] {\n  z-index: 2;\n  opacity: 0;\n  cursor: ns-resize;\n  background-color: #0000;\n  flex-shrink: 0;\n  justify-content: center;\n  align-items: center;\n  width: 100%;\n  height: 5px;\n  margin-top: -2.5px;\n  margin-bottom: -2.5px;\n  transition: background-color .15s, opacity .15s;\n  display: flex;\n  position: relative;\n}\n\n.explorer_body > [data-resize-handle]:hover, .explorer_body > [data-resize-handle][data-active] {\n  opacity: .5;\n  background-color: #00f;\n  transition-delay: .3s;\n}\n\n.explorer_group_content {\n  overscroll-behavior: contain;\n  scrollbar-width: thin;\n  flex: 1;\n  height: 100%;\n  min-height: 0;\n  overflow-y: auto;\n}\n\n.explorer_group[data-size-animated] .explorer_group_content {\n  overflow-y: hidden;\n}\n\n.explorer_item_content {\n  flex: 1;\n  padding-left: 16px;\n}\n\n.explorer_item input {\n  flex: 1;\n  margin-left: -3.5px;\n  padding-top: .1em;\n  padding-bottom: 0;\n  font-size: 16px;\n}\n\n.explorer_item_content {\n  white-space: nowrap;\n  align-items: center;\n  gap: .3em;\n  min-width: 0;\n  display: flex;\n}\n\n.explorer_foot {\n  height: 50px;\n}\n", {
+const inlineContent$1 = new __InlineContent__(".explorer {\n  background: #f5f5f5;\n  flex-direction: column;\n  flex: 1;\n  width: 100%;\n  height: 100%;\n  margin-bottom: 20px;\n  display: flex;\n  overflow: auto;\n}\n\n.explorer_head {\n  flex-direction: row;\n  align-items: center;\n  padding-left: 6px;\n  display: flex;\n}\n\n.explorer_head h2 {\n  -webkit-user-select: none;\n  -moz-user-select: none;\n  user-select: none;\n  margin-top: .5em;\n  margin-bottom: .5em;\n  margin-left: 24px;\n  font-size: 16px;\n}\n\n.explorer_body {\n  flex-direction: column;\n  flex: 1;\n  min-height: 0;\n  display: flex;\n  overflow: hidden;\n}\n\n.explorer_group > summary {\n  cursor: pointer;\n  -webkit-user-select: none;\n  -moz-user-select: none;\n  user-select: none;\n  border: 1px solid #0000;\n  border-top-color: #e0e0e0;\n  flex-shrink: 0;\n  font-size: 14px;\n}\n\n.explorer_group:first-of-type > summary {\n  border-top-color: #0000;\n}\n\n.explorer_group > summary:focus {\n  border-color: #00f;\n}\n\n.summary_action_icon {\n  visibility: hidden;\n  pointer-events: none;\n  padding: 0;\n}\n\n.explorer_group[open] .summary_action_icon {\n  visibility: visible;\n  pointer-events: auto;\n}\n\n.summary_label {\n  flex: 1;\n  align-items: center;\n  gap: .2em;\n  padding-right: 10px;\n  display: flex;\n}\n\n.explorer_group > summary .summary_label {\n  font-weight: 500;\n}\n\n.explorer_body > [data-resize-handle] {\n  z-index: 2;\n  opacity: 0;\n  cursor: ns-resize;\n  background-color: #0000;\n  flex-shrink: 0;\n  justify-content: center;\n  align-items: center;\n  width: 100%;\n  height: 5px;\n  margin-top: -2.5px;\n  margin-bottom: -2.5px;\n  transition: background-color .15s, opacity .15s;\n  display: flex;\n  position: relative;\n}\n\n.explorer_body > [data-resize-handle]:hover, .explorer_body > [data-resize-handle][data-active] {\n  opacity: .5;\n  background-color: #00f;\n  transition-delay: .3s;\n}\n\n.explorer_group_content {\n  overscroll-behavior: contain;\n  scrollbar-width: thin;\n  flex: 1;\n  height: 100%;\n  min-height: 0;\n  overflow-y: auto;\n}\n\n.explorer_group[data-size-animated] .explorer_group_content {\n  overflow-y: hidden;\n}\n\n.explorer_item {\n  position: relative;\n}\n\n.explorer_item_content {\n  flex: 1;\n  padding-left: 16px;\n}\n\n.explorer_item input {\n  flex: 1;\n  margin-left: -3.5px;\n  padding-top: .1em;\n  padding-bottom: 0;\n  font-size: 16px;\n}\n\n.explorer_item_content {\n  white-space: nowrap;\n  align-items: center;\n  gap: .3em;\n  min-width: 0;\n  display: flex;\n}\n\n.explorer_foot {\n  height: 50px;\n}\n", {
   type: "text/css"
 });
 const stylesheet$1 = new CSSStyleSheet({
@@ -2266,87 +2533,7 @@ const ExplorerBody = () => {
   });
 };
 
-/*
-
- */
-
-const [restoreAsideWidth, storeAsideWidth] = valueInLocalStorage("aside_width", {
-  type: "positive_number"
-});
-const asideWidthSignal = a(restoreAsideWidth());
-C(() => {
-  const asideWidth = asideWidthSignal.value;
-  storeAsideWidth(asideWidth);
-});
-const useAsideWidth = () => {
-  return asideWidthSignal.value;
-};
-const setAsideWidth = width => {
-  asideWidthSignal.value = width;
-};
-const Aside = ({
-  children
-}) => {
-  const asideRef = F(null);
-  const widthSetting = useAsideWidth();
-  const [resizeWidth, resizeWidthSetter] = h(null);
-  const resizeWidthRef = F(resizeWidth);
-  resizeWidthRef.current = resizeWidth;
-  const resizing = resizeWidth !== null;
-  return u("aside", {
-    ref: asideRef,
-    "data-resize": "horizontal",
-    style: {
-      width: resizing ? resizeWidth : widthSetting,
-      // Disable transition during resize to make it immediate
-      transition: resizing ? "none" : undefined
-    },
-    onMouseDown: e => {
-      let elementToResize;
-      let widthAtStart;
-      startDragToResizeGesture(e, {
-        onDragStart: gesture => {
-          elementToResize = gesture.element;
-          widthAtStart = getWidth(elementToResize);
-        },
-        onDrag: gesture => {
-          if (!gesture.started) {
-            return;
-          }
-          const xDelta = gesture.layout.xDelta;
-          const newWidth = widthAtStart + xDelta;
-          const minWidth =
-          // <aside> min-width
-          100;
-          if (newWidth < minWidth) {
-            resizeWidthSetter(minWidth);
-            return;
-          }
-          const availableWidth = getInnerWidth(elementToResize.parentElement);
-          const maxWidth = availableWidth -
-          // <main> min-width
-          200;
-          if (newWidth > maxWidth) {
-            resizeWidthSetter(maxWidth);
-            return;
-          }
-          resizeWidthSetter(newWidth);
-        },
-        onRelease: () => {
-          const resizeWidth = resizeWidthRef.current;
-          if (resizeWidth) {
-            setAsideWidth(resizeWidth);
-          }
-        }
-      });
-    },
-    children: [children, u("div", {
-      "data-resize-handle": true
-    })]
-  });
-};
-
-const inlineContent = new __InlineContent__("body {\n  scrollbar-gutter: stable;\n  overflow-x: hidden;\n}\n\n#app {\n  flex-direction: row;\n  display: flex;\n}\n\naside {\n  z-index: 1;\n  border-right: 1px solid #e0e0e0;\n  flex-shrink: 0;\n  width: 250px;\n  min-width: 100px;\n  height: 100vh;\n  min-height: 300px;\n  position: -webkit-sticky;\n  position: sticky;\n  top: 0;\n}\n\naside > [data-resize-handle] {\n  z-index: 1;\n  cursor: ew-resize;\n  width: 5px;\n  position: absolute;\n  top: 0;\n  bottom: 0;\n  right: -2.5px;\n}\n\naside > [data-resize-handle]:hover, aside[data-resizing] > [data-resize-handle] {\n  opacity: .5;\n  background-color: #00f;\n}\n\nmain {\n  z-index: 0;\n  box-sizing: border-box;\n  flex: 1;\n  min-width: 200px;\n  min-height: 100vh;\n  padding-bottom: 0;\n  position: relative;\n  overflow-x: auto;\n}\n\n.main_body {\n  flex: 1;\n  min-width: 100%;\n  display: flex;\n}\n", {
+const inlineContent = new __InlineContent__("body {\n  scrollbar-gutter: stable;\n}\n\n#root {\n  --aside-width: 250px;\n}\n\n#app {\n  flex-direction: row;\n  display: flex;\n}\n\naside {\n  z-index: 1;\n  width: var(--aside-width);\n  border-right: 1px solid #e0e0e0;\n  flex-shrink: 0;\n  min-width: 100px;\n  height: 100vh;\n  min-height: 300px;\n  position: fixed;\n  top: 0;\n  left: 0;\n}\n\naside > [data-resize-handle] {\n  z-index: 1;\n  cursor: ew-resize;\n  width: 5px;\n  position: absolute;\n  top: 0;\n  bottom: 0;\n  right: -2.5px;\n}\n\naside > [data-resize-handle]:hover, aside[data-resizing] > [data-resize-handle] {\n  opacity: .5;\n  background-color: #00f;\n}\n\nmain {\n  z-index: 0;\n  box-sizing: border-box;\n  min-width: 200px;\n  min-height: 100vh;\n  margin-left: var(--aside-width);\n  flex: 1;\n  padding-bottom: 0;\n  position: relative;\n}\n\n.main_body {\n  flex-direction: column;\n  flex: 1;\n  min-width: 100%;\n  display: flex;\n}\n", {
   type: "text/css"
 });
 const stylesheet = new CSSStyleSheet({
@@ -2577,7 +2764,7 @@ const DatabaseField = ({
   });
 };
 
-installImportMetaCss(import.meta);import.meta.css = /* css */"\n  .page {\n    display: flex;\n    flex: 1;\n    flex-direction: column;\n  }\n\n  .page_head {\n    position: sticky;\n    top: 0;\n    display: flex;\n\n    padding: 20px;\n    flex-direction: column;\n    justify-content: space-between;\n    gap: 10px;\n    background: white;\n\n    background-color: rgb(239, 242, 245);\n    border-bottom: 1px solid rgb(69, 76, 84);\n  }\n\n  .page_head h1 {\n    margin: 0;\n    line-height: 1em;\n  }\n\n  .page_head_with_actions {\n    display: flex;\n    flex-direction: row;\n  }\n\n  .page_head > .actions {\n  }\n\n  .page_body {\n    padding-top: 20px;\n    padding-right: 20px;\n    padding-bottom: 20px;\n    padding-left: 20px;\n  }\n\n  .page_error {\n    margin-top: 0;\n    margin-bottom: 20px;\n    padding: 20px;\n    background: #fdd;\n    border: 1px solid red;\n  }\n";
+installImportMetaCssBuild(import.meta);import.meta.css = /* css */"\n  .page {\n    min-width: max-content;\n  }\n\n  .page_head {\n    position: fixed;\n    top: 0;\n    right: 0;\n    left: var(--aside-width, 0);\n    z-index: 1;\n    display: flex;\n\n    padding: 20px;\n    flex-direction: column;\n    justify-content: space-between;\n    gap: 10px;\n    background: white;\n\n    background-color: rgb(239, 242, 245);\n    border-bottom: 1px solid rgb(69, 76, 84);\n  }\n\n  .page_head h1 {\n    margin: 0;\n    line-height: 1em;\n  }\n\n  .page_head_with_actions {\n    display: flex;\n    flex-direction: row;\n  }\n\n  .page_head > .actions {\n  }\n\n  .page_body {\n    margin-top: 95px;\n    padding-top: 20px;\n    padding-right: 20px;\n    padding-bottom: 20px;\n    padding-left: 20px;\n  }\n\n  .page_error {\n    margin-top: 0;\n    margin-bottom: 20px;\n    padding: 20px;\n    background: #fdd;\n    border: 1px solid red;\n  }\n";
 const Page = ({
   children,
   ...props
@@ -2615,12 +2802,7 @@ const PageHead = ({
   spacingBottom,
   ...rest
 }) => {
-  const headerRef = F(null);
-  A(() => {
-    return initPositionSticky(headerRef.current);
-  }, []);
   return u("header", {
-    ref: headerRef,
     className: "page_head",
     style: {
       ...(spacingBottom === undefined ? {} : {
@@ -2674,9 +2856,8 @@ const PageBody = ({
   });
 };
 
-const DatabasePage = ({
-  database
-}) => {
+const DatabasePage = () => {
+  const [database] = useAsyncData(DATABASE_GET_ACTION);
   const datname = database.datname;
   const deleteDatabaseAction = DATABASE.DELETE.bindParams({
     datname
@@ -2722,12 +2903,37 @@ const DatabasePage = ({
   });
 };
 
-const DatabaseRoutes = () => {
-  return u(Route, {
-    route: DATABASE_ROUTE,
-    element: database => u(DatabasePage, {
-      database: database
-    })
+const IndexPage = () => {
+  return u(Page, {
+    "data-ui-name": "<NotFoundPage />",
+    children: [u(PageHead, {
+      children: u(PageHead.Label, {
+        label: "Welcome"
+      })
+    }), u(PageBody, {
+      children: u("div", {
+        style: "height: 800px; background: yellow; width: 2000px",
+        children: "Welcome"
+      })
+    })]
+  });
+};
+
+const NotFoundPage = () => {
+  return u(Page, {
+    "data-ui-name": "<NotFoundPage />",
+    children: [u(PageHead, {
+      children: u(PageHead.Label, {
+        label: "Page not found"
+      })
+    }), u(PageBody, {
+      children: u("div", {
+        style: "height: 800px; background: yellow; width: 2000px",
+        children: ["Page ", u(Code, {
+          children: window.location.pathname
+        }), " does not exists"]
+      })
+    })]
   });
 };
 
@@ -2923,9 +3129,8 @@ const RoleGroupPage = ({
   });
 };
 
-const RolePage = ({
-  role
-}) => {
+const RolePage = () => {
+  const [role] = useAsyncData(ROLE_GET_ACTION);
   if (role.rolcanlogin) {
     return u(RoleCanLoginPage, {
       role: role
@@ -2933,15 +3138,6 @@ const RolePage = ({
   }
   return u(RoleGroupPage, {
     role: role
-  });
-};
-
-const RoleRoutes = () => {
-  return u(Route, {
-    route: ROLE_ROUTE,
-    element: role => u(RolePage, {
-      role: role
-    })
   });
 };
 
@@ -2993,72 +3189,1177 @@ const SettingsSvg = () => {
   });
 };
 
-installImportMetaCss(import.meta);import.meta.css = /* css */"\n  .table_data_actions {\n    margin-bottom: 15px;\n  }\n\n  .database_table_cell {\n    padding: 0;\n  }\n\n  .database_table[data-multi-selection] .database_table_cell[data-selected] {\n    background-color: light-dark(\n      rgba(0, 120, 212, 0.08),\n      rgba(59, 130, 246, 0.15)\n    );\n  }\n\n  .database_table_cell:focus {\n    /* Table cell border size impacts the visual appeareance of the outline */\n    /* (It's kinda melted into the table border, as if it was 1.5 px instead of 2) */\n    /* To avoid this we display outline on .database_table_cell_content  */\n    outline: none;\n  }\n\n  .database_table_cell:focus .database_table_cell_content {\n    outline: 2px solid #0078d4;\n    outline-color: light-dark(#355fcc, #3b82f6);\n    outline-offset: -2px;\n  }\n\n  .database_table_cell[data-editing] .database_table_cell_content {\n    outline: 2px solid #a8c7fa;\n    outline-offset: 0px;\n  }\n\n  .database_table_cell_content {\n    display: inline-flex;\n    width: 100%;\n    height: 100%;\n    flex-grow: 1;\n  }\n\n  .database_table_cell_value {\n    display: inline-flex;\n    padding: 8px;\n    flex-grow: 1;\n    user-select: none;\n  }\n\n  .database_table_cell_content input {\n    display: inline-flex;\n    width: 100%;\n    height: 100%;\n    padding-left: 8px;\n    flex-grow: 1;\n    border-radius: 0; /* match table cell border-radius */\n  }\n\n  .database_table_cell_content input[type=\"number\"]::-webkit-inner-spin-button {\n    width: 14px;\n    height: 30px;\n  }\n\n  .database_table *[data-focus-within] {\n    background-color: light-dark(\n      rgba(0, 120, 212, 0.08),\n      rgba(59, 130, 246, 0.15)\n    );\n  }\n";
-const DatabaseTableHeaderCell = props => props;
-const DatabaseTableCell = props => props;
-const TableData = ({
-  table,
-  rows
+const ColumnSidePanelContent = ({
+  tablename,
+  column_name,
+  columns
 }) => {
-  const tableRef = F(null);
-  const tableName = table.tablename;
-  const createRow = TABLE_ROW.POST.bindParams({
-    tablename: tableName
-  });
-  const {
-    schemaColumns
-  } = table.meta;
-
-  // Stable column definitions - only recreate when schema changes
-  const columns = q(() => {
-    return schemaColumns.map((column, index) => {
-      const columnName = column.column_name;
-      const columnIndex = index + 1; // +1 because number column is first
-
-      return {
-        enableResizing: true,
-        accessorKey: columnName,
-        header: ({
-          header
-        }) => u(DatabaseTableHeaderCell, {
-          header: header,
-          columnName: columnName,
-          columnIndex: columnIndex
-        }),
-        cell: info => u(DatabaseTableCell, {
-          columnName: columnName,
-          column: column,
-          value: info.getValue(),
-          row: info.row
-        }),
-        footer: info => info.column.id
-      };
+  const column = columns.find(c => c.column_name === column_name);
+  if (!column) {
+    return u(Box, {
+      flex: "y",
+      spacing: "m",
+      padding: "l",
+      children: [u(Text, {
+        bold: true,
+        size: "m",
+        color: "#dc3545",
+        children: "Column not found"
+      }), u(Text, {
+        size: "s",
+        color: "#6c757d",
+        children: ["No column named ", u(Text, {
+          bold: true,
+          children: column_name
+        }), " in table", " ", u(Text, {
+          bold: true,
+          children: tablename
+        }), "."]
+      }), columns.length > 0 && u(Box, {
+        flex: "y",
+        spacing: "xs",
+        children: [u(Text, {
+          bold: true,
+          uppercase: true,
+          size: "xxs",
+          color: "#6c757d",
+          children: "Available columns"
+        }), u(Box, {
+          flex: "y",
+          spacing: "xxs",
+          children: columns.map(c => u(Text, {
+            children: [u(Link, {
+              route: TABLE_INDEX_ROUTE,
+              routeParams: {
+                tablename,
+                column_name: c.column_name
+              },
+              size: "s",
+              children: c.column_name
+            }), u(Text, {
+              italic: true,
+              size: "xxs",
+              color: "#868e96",
+              children: ["(", c.data_type, ")"]
+            })]
+          }, c.column_name))
+        })]
+      })]
     });
-  }, [schemaColumns]); // Only depend on schema, not dynamic state
-
-  const data = rows;
-  const [selection, setSelection] = h([]);
-  return u("div", {
-    children: [u(Table, {
-      ref: tableRef,
-      className: "database_table",
-      selection: selection,
-      onSelectionChange: setSelection,
-      idKey: "id",
-      columns: columns,
-      data: data,
+  }
+  const isNullable = String(column.is_nullable).toUpperCase() === "YES";
+  const isIdentity = String(column.is_identity).toUpperCase() === "YES";
+  const isGenerated = String(column.is_generated).toUpperCase() === "ALWAYS";
+  const isUpdatable = String(column.is_updatable).toUpperCase() === "YES";
+  const putColumn = (propertyName, propertyValue) => {
+    return TABLE_COLUMN.PUT({
+      tablename,
+      column_name: column.column_name,
+      propertyName,
+      propertyValue
+    });
+  };
+  return u(Box, {
+    flex: "y",
+    spacing: "l",
+    padding: "l",
+    children: [u(Box, {
+      flex: "y",
+      spacing: "xs",
+      paddingBottom: "m",
       style: {
-        height: "fit-content"
+        borderBottom: "1px solid #e9ecef"
+      },
+      children: [u(Text, {
+        bold: true,
+        size: "m",
+        children: "Column details"
+      }), u(Text, {
+        size: "xs",
+        color: "#6c757d",
+        children: column.column_name
+      })]
+    }), u(Box, {
+      flex: "y",
+      spacing: "m",
+      children: [u(Box, {
+        flex: "y",
+        spacing: "xs",
+        children: [u(Text, {
+          bold: true,
+          uppercase: true,
+          size: "xxs",
+          color: "#6c757d",
+          children: "Name"
+        }), u(Input, {
+          value: column.column_name,
+          actionAfterChange: true,
+          action: async newName => {
+            await putColumn("column_name", newName);
+          }
+        }), u(Text, {
+          italic: true,
+          size: "xxs",
+          color: "#868e96",
+          children: "The identifier used to reference this column in queries."
+        })]
+      }), isIdentity ? u(Box, {
+        flex: "y",
+        spacing: "xs",
+        children: [u(FieldLabel, {
+          children: "Data type"
+        }), u(Input, {
+          readOnly: true,
+          value: column.data_type
+        }), u(FieldDescription, {
+          children: "Identity columns are locked to integer types (smallint, integer, bigint)."
+        })]
+      }) : u(DataTypeField, {
+        column: column,
+        putColumn: putColumn
+      }), isIdentity ? column.column_default !== null && column.column_default !== undefined && u(Box, {
+        flex: "y",
+        spacing: "xs",
+        children: [u(FieldLabel, {
+          children: "Default"
+        }), u(Input, {
+          readOnly: true,
+          value: column.column_default
+        }), u(FieldDescription, {
+          children: "Managed by the identity sequence. Cannot be changed manually."
+        })]
+      }) : u(Box, {
+        flex: "y",
+        spacing: "xs",
+        children: [u(FieldLabel, {
+          children: "Default"
+        }), u(Input, {
+          defaultValue: column.column_default ?? "",
+          placeholder: "None",
+          action: async newValue => {
+            await putColumn("default_value", newValue.trim() === "" ? null : newValue.trim());
+          }
+        }), u(FieldDescription, {
+          children: "Value PostgreSQL inserts when no value is provided. Leave empty to remove the default."
+        })]
+      }), column.udt_name && column.udt_name !== column.data_type && u(Box, {
+        flex: "y",
+        spacing: "xs",
+        children: [u(Text, {
+          bold: true,
+          uppercase: true,
+          size: "xxs",
+          color: "#6c757d",
+          children: "UDT name"
+        }), u(Input, {
+          readOnly: true,
+          value: column.udt_name
+        }), u(Text, {
+          italic: true,
+          size: "xxs",
+          color: "#868e96",
+          children: "The underlying PostgreSQL type name (e.g. int4, varchar). Reflects the actual storage type."
+        })]
+      }), u(ValueRequiredField, {
+        isNullable: isNullable,
+        isIdentity: isIdentity,
+        putColumn: putColumn
+      }), column.datetime_precision !== null && column.datetime_precision !== undefined && u(Box, {
+        flex: "y",
+        spacing: "xs",
+        children: [u(Text, {
+          bold: true,
+          uppercase: true,
+          size: "xxs",
+          color: "#6c757d",
+          children: "Datetime precision"
+        }), u(Input, {
+          type: "number",
+          readOnly: true,
+          value: column.datetime_precision
+        })]
+      }), column.interval_type !== null && column.interval_type !== undefined && u(Box, {
+        flex: "y",
+        spacing: "xs",
+        children: [u(Text, {
+          bold: true,
+          uppercase: true,
+          size: "xxs",
+          color: "#6c757d",
+          children: "Interval type"
+        }), u(Input, {
+          readOnly: true,
+          value: column.interval_type
+        })]
+      }), u(Box, {
+        flex: "y",
+        spacing: "xxs",
+        children: [u(Box, {
+          flex: true,
+          spacing: "s",
+          alignY: "center",
+          children: [u(Text, {
+            bold: true,
+            uppercase: true,
+            size: "xxs",
+            color: "#6c757d",
+            children: "Identity"
+          }), u(Checkbox, {
+            appearance: "toggle",
+            size: "xxs",
+            checked: isIdentity,
+            action: async v => {
+              await putColumn("is_identity", v);
+            }
+          })]
+        }), u(Text, {
+          italic: true,
+          size: "xxs",
+          color: "#868e96",
+          children: "When on, the database auto-increments this column. You cannot insert a value manually (like SERIAL but SQL-standard)."
+        })]
+      }), isIdentity && column.identity_generation && u(Box, {
+        flex: "y",
+        spacing: "xs",
+        children: [u(Text, {
+          bold: true,
+          uppercase: true,
+          size: "xxs",
+          color: "#6c757d",
+          children: "Identity generation"
+        }), u(Input, {
+          readOnly: true,
+          value: column.identity_generation
+        }), u(Text, {
+          italic: true,
+          size: "xxs",
+          color: "#868e96",
+          children: "ALWAYS: the database always generates the value, manual inserts are rejected. BY DEFAULT: it generates it but you can still provide an explicit value."
+        })]
+      }), u(GeneratedField, {
+        column: column,
+        isGenerated: isGenerated,
+        putColumn: putColumn
+      }), !isUpdatable && u(Text, {
+        italic: true,
+        size: "xxs",
+        color: "#868e96",
+        children: "This column is not updatable (e.g. in a non-updatable view or an ALWAYS identity column)."
+      })]
+    }), u(Box, {
+      paddingTop: "m",
+      style: {
+        borderTop: "1px solid #e9ecef"
+      },
+      children: u(Button, {
+        "data-confirm-message": "Are you sure you want to delete the column \"".concat(column.column_name, "\"? This will permanently remove the column and all its data."),
+        action: async () => {
+          await TABLE_COLUMN.DELETE({
+            tablename,
+            column_name: column.column_name
+          });
+        },
+        children: "Delete column"
+      })
+    })]
+  });
+};
+const ValueRequiredField = ({
+  isNullable,
+  isIdentity,
+  putColumn
+}) => {
+  const isRequired = !isNullable;
+  return u(Box, {
+    flex: "y",
+    spacing: "xs",
+    children: [u(Box, {
+      flex: true,
+      spacing: "s",
+      alignY: "center",
+      children: [u(FieldLabel, {
+        children: "Value required"
+      }), u(Checkbox, {
+        appearance: "toggle",
+        size: "xxs",
+        checked: isRequired,
+        readOnly: isIdentity,
+        "data-readonly-message": "Identity columns always require a value (NOT NULL)",
+        action: async v => {
+          await putColumn("nullable", v ? "NO" : "YES");
+        }
+      })]
+    }), u(FieldDescription, {
+      children: "When on, every row must provide a value for this column. Existing NULL rows will be filled with a sensible default automatically."
+    })]
+  });
+};
+const FieldLabel = ({
+  children
+}) => u(Text, {
+  bold: true,
+  uppercase: true,
+  size: "xxs",
+  color: "#6c757d",
+  children: children
+});
+const FieldDescription = ({
+  children
+}) => u(Text, {
+  italic: true,
+  size: "xxs",
+  color: "#868e96",
+  children: children
+});
+
+// ─── Data type field ──────────────────────────────────────────────────────────
+
+const DataTypeField = ({
+  column,
+  putColumn
+}) => {
+  const currentMaster = getMasterType(column.data_type) || "Other";
+  const [selectedMaster, setSelectedMaster] = h(currentMaster);
+  const handleMasterChange = async e => {
+    const newMaster = e.currentTarget.value;
+    setSelectedMaster(newMaster);
+    await putColumn("data_type", DATA_TYPE_DEFAULTS[newMaster]);
+  };
+  return u(Box, {
+    flex: "y",
+    spacing: "xs",
+    children: [u(FieldLabel, {
+      children: "Data type"
+    }), u("select", {
+      value: selectedMaster,
+      onChange: handleMasterChange,
+      children: [Object.keys(DATA_TYPE_GROUPS).map(master => u("option", {
+        value: master,
+        children: master
+      }, master)), !getMasterType(column.data_type) && u("option", {
+        value: "Other",
+        children: "Other"
+      })]
+    }), u(DataTypeOptions, {
+      master: selectedMaster,
+      column: column,
+      putColumn: putColumn
+    })]
+  });
+};
+const DataTypeOptions = ({
+  master,
+  column,
+  putColumn
+}) => {
+  if (master === "Text") {
+    return u(TextTypeOptions, {
+      column: column,
+      putColumn: putColumn
+    });
+  }
+  if (master === "Number") {
+    return u(NumberTypeOptions, {
+      column: column,
+      putColumn: putColumn
+    });
+  }
+  if (master === "Date & Time") {
+    return u(DateTimeTypeOptions, {
+      column: column,
+      putColumn: putColumn
+    });
+  }
+  if (master === "Binary") {
+    return u(BinaryTypeOptions, {
+      column: column,
+      putColumn: putColumn
+    });
+  }
+  if (master === "Network") {
+    return u(NetworkTypeOptions, {
+      column: column,
+      putColumn: putColumn
+    });
+  }
+  if (master === "Other") {
+    return u(OtherTypeOptions, {
+      column: column,
+      putColumn: putColumn
+    });
+  }
+  const description = DATA_TYPE_DESCRIPTIONS[master];
+  if (description) {
+    return u(FieldDescription, {
+      children: description
+    });
+  }
+  return null;
+};
+
+// Text: free text (text) | max length (varchar(n)) | fixed length (char(n))
+const TextTypeOptions = ({
+  column,
+  putColumn
+}) => {
+  const currentLength = column.character_maximum_length ?? null;
+  const initialMode = column.data_type === "char" ? "fixed" : currentLength ? "max" : "free";
+  const [mode, setMode] = h(initialMode);
+  const [length, setLength] = h(currentLength ? String(currentLength) : "");
+  const applyType = async (newMode, newLength) => {
+    let type;
+    if (newMode === "free") {
+      type = "text";
+    } else if (newMode === "max") {
+      type = newLength ? "varchar(".concat(newLength, ")") : "varchar";
+    } else {
+      type = newLength ? "char(".concat(newLength, ")") : "char";
+    }
+    await putColumn("data_type", type);
+  };
+  return u(Box, {
+    flex: "y",
+    spacing: "s",
+    children: [u(RadioList, {
+      name: "text_mode",
+      flex: "y",
+      spacing: "xs",
+      action: mode => {
+        setMode(mode);
+        return applyType(mode, length);
+      },
+      children: [u(Label, {
+        spacing: "s",
+        alignY: "center",
+        children: [u(Radio, {
+          value: "free",
+          checked: mode === "free"
+        }), "Free text"]
+      }), u(Label, {
+        spacing: "s",
+        alignY: "center",
+        children: [u(Radio, {
+          value: "max",
+          checked: mode === "max"
+        }), "Max length", mode === "max" && u(Input, {
+          type: "number",
+          placeholder: "e.g. 255",
+          value: length,
+          action: async newValue => {
+            const newLength = newValue ? String(Math.floor(Number(newValue))) : "";
+            setLength(newLength);
+            await applyType("max", newLength);
+          }
+        })]
+      }), u(Label, {
+        spacing: "s",
+        alignY: "center",
+        children: [u(Radio, {
+          value: "fixed",
+          checked: mode === "fixed"
+        }), "Fixed length", mode === "fixed" && u(Input, {
+          type: "number",
+          placeholder: "e.g. 10",
+          value: length,
+          action: async newValue => {
+            const newLength = newValue ? String(Math.floor(Number(newValue))) : "";
+            setLength(newLength);
+            await applyType("fixed", newLength);
+          }
+        })]
+      })]
+    }), u(FieldDescription, {
+      children: "Free text: unlimited. Max length: varchar(n), saves space up to limit. Fixed length: char(n), always pads to exact length."
+    })]
+  });
+};
+const NUMBER_TYPES = ["smallint", "integer", "bigint", "serial", "bigserial", "numeric", "real", "double precision", "money"];
+const NumberTypeOptions = ({
+  column,
+  putColumn
+}) => {
+  const currentType = NUMBER_TYPES.includes(column.data_type) ? column.data_type : "integer";
+  const isExact = currentType === "numeric" || currentType === "decimal";
+  return u(Box, {
+    flex: "y",
+    spacing: "s",
+    children: [u(RadioList, {
+      name: "number_type",
+      flex: "y",
+      spacing: "xs",
+      action: type => putColumn("data_type", type),
+      children: [u(Label, {
+        spacing: "s",
+        alignY: "center",
+        children: [u(Radio, {
+          value: "smallint",
+          checked: currentType === "smallint"
+        }), "smallint \u2014 2 bytes (up to 32,767)"]
+      }), u(Label, {
+        spacing: "s",
+        alignY: "center",
+        children: [u(Radio, {
+          value: "integer",
+          checked: currentType === "integer"
+        }), "integer \u2014 4 bytes (up to 2 billion)"]
+      }), u(Label, {
+        spacing: "s",
+        alignY: "center",
+        children: [u(Radio, {
+          value: "bigint",
+          checked: currentType === "bigint"
+        }), "bigint \u2014 8 bytes (very large numbers)"]
+      }), u(Label, {
+        spacing: "s",
+        alignY: "center",
+        children: [u(Radio, {
+          value: "serial",
+          checked: currentType === "serial"
+        }), "serial \u2014 auto-increment integer"]
+      }), u(Label, {
+        spacing: "s",
+        alignY: "center",
+        children: [u(Radio, {
+          value: "bigserial",
+          checked: currentType === "bigserial"
+        }), "bigserial \u2014 auto-increment bigint"]
+      }), u(Label, {
+        spacing: "s",
+        alignY: "center",
+        children: [u(Radio, {
+          value: "numeric",
+          checked: currentType === "numeric"
+        }), "numeric \u2014 exact decimal (configurable precision)"]
+      }), u(Label, {
+        spacing: "s",
+        alignY: "center",
+        children: [u(Radio, {
+          value: "real",
+          checked: currentType === "real"
+        }), "real \u2014 4-byte floating point"]
+      }), u(Label, {
+        spacing: "s",
+        alignY: "center",
+        children: [u(Radio, {
+          value: "double precision",
+          checked: currentType === "double precision"
+        }), "double precision \u2014 8-byte floating point"]
+      }), u(Label, {
+        spacing: "s",
+        alignY: "center",
+        children: [u(Radio, {
+          value: "money",
+          checked: currentType === "money"
+        }), "money \u2014 currency (2 decimal places)"]
+      })]
+    }), isExact && u(Box, {
+      spacing: "s",
+      children: [u(Box, {
+        flex: "y",
+        spacing: "xs",
+        children: [u(FieldLabel, {
+          children: "Precision"
+        }), u(Input, {
+          type: "number",
+          placeholder: "Any",
+          readOnly: true,
+          value: column.numeric_precision ?? ""
+        })]
+      }), u(Box, {
+        flex: "y",
+        spacing: "xs",
+        children: [u(FieldLabel, {
+          children: "Scale"
+        }), u(Input, {
+          type: "number",
+          placeholder: "0",
+          readOnly: true,
+          value: column.numeric_scale ?? ""
+        })]
+      })]
+    })]
+  });
+};
+const DATETIME_BASES = ["date", "time", "timestamp", "interval"];
+
+// Date & Time: radio list for base type + timezone toggle
+const DateTimeTypeOptions = ({
+  column,
+  putColumn
+}) => {
+  const currentBase = getDateTimeBase(column.data_type);
+  const [base, setBase] = h(DATETIME_BASES.includes(currentBase) ? currentBase : "timestamp");
+  const [timezone, setTimezone] = h(column.data_type.includes("with time zone"));
+  const applyType = async (newBase, newTimezone) => {
+    let type = newBase;
+    if (newTimezone && (newBase === "time" || newBase === "timestamp")) {
+      type = "".concat(newBase, " with time zone");
+    }
+    await putColumn("data_type", type);
+  };
+  return u(Box, {
+    flex: "y",
+    spacing: "s",
+    children: [u(RadioList, {
+      name: "datetime_type",
+      flex: "y",
+      spacing: "xs",
+      action: async newBase => {
+        setBase(newBase);
+        await applyType(newBase, timezone);
+      },
+      children: [u(Label, {
+        spacing: "s",
+        alignY: "center",
+        children: [u(Radio, {
+          value: "date",
+          checked: base === "date"
+        }), "date \u2014 calendar date (no time)"]
+      }), u(Label, {
+        spacing: "s",
+        alignY: "center",
+        children: [u(Radio, {
+          value: "time",
+          checked: base === "time"
+        }), "time \u2014 time of day (no date)"]
+      }), u(Label, {
+        spacing: "s",
+        alignY: "center",
+        children: [u(Radio, {
+          value: "timestamp",
+          checked: base === "timestamp"
+        }), "timestamp \u2014 date and time"]
+      }), u(Label, {
+        spacing: "s",
+        alignY: "center",
+        children: [u(Radio, {
+          value: "interval",
+          checked: base === "interval"
+        }), "interval \u2014 duration / time span"]
+      })]
+    }), (base === "time" || base === "timestamp") && u(Box, {
+      flex: "y",
+      spacing: "xs",
+      children: [u(Box, {
+        spacing: "s",
+        alignY: "center",
+        children: [u(FieldLabel, {
+          children: "With timezone"
+        }), u(Checkbox, {
+          appearance: "toggle",
+          checked: timezone,
+          action: async newChecked => {
+            setTimezone(newChecked);
+            await applyType(base, newChecked);
+          }
+        })]
+      }), u(FieldDescription, {
+        children: "When on, stores the timezone offset. Recommended for user-facing timestamps."
+      })]
+    })]
+  });
+};
+const getDateTimeBase = dataType => {
+  if (dataType.startsWith("timestamp")) return "timestamp";
+  if (dataType.startsWith("time")) return "time";
+  return dataType; // date, interval
+};
+
+// Network: inet | cidr | macaddr
+const NetworkTypeOptions = ({
+  column,
+  putColumn
+}) => {
+  const networkTypes = ["inet", "cidr", "macaddr"];
+  const currentType = networkTypes.includes(column.data_type) ? column.data_type : "inet";
+  return u(RadioList, {
+    name: "network_type",
+    flex: "y",
+    spacing: "xs",
+    action: type => putColumn("data_type", type),
+    children: [u(Label, {
+      spacing: "s",
+      alignY: "center",
+      children: [u(Radio, {
+        value: "inet",
+        checked: currentType === "inet"
+      }), "inet \u2014 IPv4 or IPv6 address"]
+    }), u(Label, {
+      spacing: "s",
+      alignY: "center",
+      children: [u(Radio, {
+        value: "cidr",
+        checked: currentType === "cidr"
+      }), "cidr \u2014 network address range"]
+    }), u(Label, {
+      spacing: "s",
+      alignY: "center",
+      children: [u(Radio, {
+        value: "macaddr",
+        checked: currentType === "macaddr"
+      }), "macaddr \u2014 MAC address"]
+    })]
+  });
+};
+
+// Other: uuid | xml | ARRAY
+const OtherTypeOptions = ({
+  column,
+  putColumn
+}) => {
+  const otherTypes = ["uuid", "xml", "ARRAY"];
+  const currentType = otherTypes.includes(column.data_type) ? column.data_type : "uuid";
+  return u(RadioList, {
+    name: "other_type",
+    flex: "y",
+    spacing: "xs",
+    action: type => putColumn("data_type", type),
+    children: [u(Label, {
+      spacing: "s",
+      alignY: "center",
+      children: [u(Radio, {
+        value: "uuid",
+        checked: currentType === "uuid"
+      }), "uuid \u2014 universally unique identifier"]
+    }), u(Label, {
+      spacing: "s",
+      alignY: "center",
+      children: [u(Radio, {
+        value: "xml",
+        checked: currentType === "xml"
+      }), "xml \u2014 XML document"]
+    }), u(Label, {
+      spacing: "s",
+      alignY: "center",
+      children: [u(Radio, {
+        value: "ARRAY",
+        checked: currentType === "ARRAY"
+      }), "ARRAY \u2014 typed array"]
+    })]
+  });
+};
+
+// Binary: bytea (raw bytes) or bit/bit varying (bit strings with length)
+const BinaryTypeOptions = ({
+  column,
+  putColumn
+}) => {
+  const isBit = column.data_type === "bit" || column.data_type === "bit varying";
+  const currentLength = column.character_maximum_length ?? null;
+  const isVariable = column.data_type === "bit varying";
+  const [useBit, setUseBit] = h(isBit);
+  const [length, setLength] = h(currentLength ? String(currentLength) : "1");
+  const [variable, setVariable] = h(isVariable);
+  const applyBitType = async (newLength, newVariable) => {
+    const type = newVariable ? "bit varying(".concat(newLength, ")") : "bit(".concat(newLength, ")");
+    await putColumn("data_type", type);
+  };
+  return u(Box, {
+    flex: "y",
+    spacing: "s",
+    children: [u(Box, {
+      flex: "y",
+      spacing: "xs",
+      children: [u(Box, {
+        spacing: "s",
+        alignY: "center",
+        children: [u(FieldLabel, {
+          children: "Bit string"
+        }), u(Checkbox, {
+          appearance: "toggle",
+          checked: useBit,
+          action: async newChecked => {
+            setUseBit(newChecked);
+            if (!newChecked) {
+              await putColumn("data_type", "bytea");
+            } else {
+              await applyBitType(length, variable);
+            }
+          }
+        })]
+      }), u(FieldDescription, {
+        children: "Off: bytea stores arbitrary binary data. On: bit string stores a sequence of 0s and 1s."
+      })]
+    }), useBit && u(k, {
+      children: [u(Box, {
+        flex: "y",
+        spacing: "xs",
+        children: [u(FieldLabel, {
+          children: "Length"
+        }), u(Input, {
+          type: "number",
+          value: length,
+          action: async newValue => {
+            const newLength = newValue ? String(Math.floor(Number(newValue))) : "1";
+            setLength(newLength);
+            await applyBitType(newLength, variable);
+          }
+        })]
+      }), u(Box, {
+        flex: "y",
+        spacing: "xs",
+        children: [u(Box, {
+          spacing: "s",
+          alignY: "center",
+          children: [u(FieldLabel, {
+            children: "Variable length"
+          }), u(Checkbox, {
+            appearance: "toggle",
+            checked: variable,
+            action: async newChecked => {
+              setVariable(newChecked);
+              await applyBitType(length, newChecked);
+            }
+          })]
+        }), u(FieldDescription, {
+          children: "On: bit varying \u2014 up to max length. Off: bit \u2014 exactly that many bits."
+        })]
+      })]
+    })]
+  });
+};
+
+// ─── Generated field ──────────────────────────────────────────────────────────
+
+const GeneratedField = ({
+  column,
+  isGenerated,
+  putColumn
+}) => {
+  const [showForm, setShowForm] = h(false);
+  const [expression, setExpression] = h(column.generation_expression ?? "");
+  if (isGenerated) {
+    return u(Box, {
+      flex: "y",
+      spacing: "xs",
+      children: [u(FieldLabel, {
+        children: "Generated expression"
+      }), u("textarea", {
+        rows: 3,
+        value: expression,
+        style: {
+          resize: "vertical",
+          fontFamily: "monospace"
+        },
+        onInput: e => setExpression(e.currentTarget.value)
+      }), u(Button, {
+        "data-confirm-message": "Changing the generation expression will drop and re-create the column \"".concat(column.column_name, "\", permanently deleting its data. Continue?"),
+        action: async () => {
+          const expr = expression.trim();
+          if (expr && expr !== column.generation_expression) {
+            await putColumn("generation_expression", expr);
+          }
+        },
+        children: "Update expression"
+      }), u(FieldDescription, {
+        children: "This column's value is computed by PostgreSQL. Updating the expression will drop and re-create the column."
+      })]
+    });
+  }
+  if (showForm) {
+    return u(Box, {
+      flex: "y",
+      spacing: "xs",
+      children: [u(FieldLabel, {
+        children: "Generated expression"
+      }), u("textarea", {
+        rows: 3,
+        placeholder: "e.g. first_name || ' ' || last_name",
+        value: expression,
+        style: {
+          resize: "vertical",
+          fontFamily: "monospace"
+        },
+        onInput: e => setExpression(e.currentTarget.value)
+      }), u(Box, {
+        spacing: "s",
+        children: [u(Button, {
+          "data-confirm-message": "Making \"".concat(column.column_name, "\" a generated column will drop and re-create it, permanently deleting its data. Continue?"),
+          action: async () => {
+            const expr = expression.trim();
+            if (expr) {
+              await putColumn("generation_expression", expr);
+            }
+          },
+          children: "Make generated column"
+        }), u(Button, {
+          action: () => {
+            setShowForm(false);
+            setExpression("");
+          },
+          children: "Cancel"
+        })]
+      }), u(FieldDescription, {
+        children: "The column value will be computed from this expression. This is destructive \u2014 existing data will be lost."
+      })]
+    });
+  }
+  return u(Box, {
+    flex: "y",
+    spacing: "xs",
+    children: [u(Button, {
+      action: () => setShowForm(true),
+      children: "Turn into generated column"
+    }), u(FieldDescription, {
+      children: "Turn this column into a computed column driven by a SQL expression."
+    })]
+  });
+};
+
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const DATA_TYPE_GROUPS = {
+  "Text": ["text", "varchar", "char"],
+  "Number": ["smallint", "integer", "bigint", "serial", "bigserial", "decimal", "numeric", "real", "double precision", "money"],
+  "Boolean": ["boolean"],
+  "Date & Time": ["date", "time", "time with time zone", "timestamp", "timestamp with time zone", "interval"],
+  "JSON": ["json", "jsonb"],
+  "Binary": ["bytea", "bit", "bit varying"],
+  "Network": ["cidr", "inet", "macaddr"],
+  "Other": ["uuid", "xml", "ARRAY"]
+};
+const DATA_TYPE_DEFAULTS = {
+  "Text": "text",
+  "Number": "integer",
+  "Boolean": "boolean",
+  "Date & Time": "timestamp",
+  "JSON": "jsonb",
+  "Binary": "bytea",
+  "Network": "inet",
+  "Other": "uuid"
+};
+const DATA_TYPE_DESCRIPTIONS = {
+  Boolean: "Stores true/false values.",
+  JSON: "jsonb (recommended) stores binary JSON with index support. json stores raw text.",
+  Network: "inet for IP addresses, cidr for network ranges, macaddr for MAC addresses.",
+  Other: "uuid for unique identifiers, xml for XML data, ARRAY for typed arrays."
+};
+const getMasterType = dataType => {
+  const base = dataType.split("(")[0].trim(); // strip char(n) → char
+  for (const [master, types] of Object.entries(DATA_TYPE_GROUPS)) {
+    if (types.includes(dataType) || types.includes(base)) return master;
+  }
+  return null;
+};
+
+installImportMetaCssBuild(import.meta);import.meta.css = /* css */"\n  .table_data_actions {\n    margin-bottom: 15px;\n  }\n";
+const TableData = ({
+  table
+}) => {
+  const {
+    tablename,
+    columns
+  } = table;
+  const [data, loading] = useAsyncData(TABLE_ROW_GET_MANY_ACTION, {
+    loading: true
+  });
+  const initialLoad = data === undefined && loading;
+  let rows = data;
+  if (initialLoad) {
+    const {
+      rowCount
+    } = table.meta;
+    rows = Array.from({
+      length: rowCount
+    }, (_, i) => {
+      const row = {
+        id: i
+      };
+      for (const column of columns) {
+        row[column.column_name] = u(TextPlaceholder, {
+          loading: true
+        });
       }
-    }), data.length === 0 ? u("div", {
-      children: "No data"
-    }) : null, u("div", {
+      return row;
+    });
+  } else {
+    rows = data;
+  }
+  const tableRef = F(null);
+  const createRow = TABLE_ROW.POST.bindParams({
+    tablename
+  });
+  const [orderedColumns] = useOrderedColumns(columns, undefined, {
+    columnIdKey: "column_name"
+  });
+  const orderedColumnIds = orderedColumns.map(c => c.column_name);
+  const cellGrid = useCellGridFromRows(rows, orderedColumnIds);
+  const [selection, setSelection] = h([]);
+  const selectedRowIds = filterTableSelection(selection, ({
+    columnId
+  }) => columnId === "row_number").map(({
+    rowId
+  }) => rowId);
+  // selectedRowIds is an array of rowId as string (selection values are strings to be primitive AND hold both columnId and rowId infos)
+  const selectedRows = rows.filter(r => {
+    return selectedRowIds.includes(String(r.id));
+  });
+  const selectedRowCount = selectedRows.length;
+  const activeColumnName = tableColumnNameSignal.value;
+  const columnSidePanelOpened = Boolean(activeColumnName);
+  return u("div", {
+    children: [u(Box, {
+      children: [u(Box, {
+        column: true,
+        spacing: "m",
+        children: [u(Table, {
+          ref: tableRef,
+          loading: loading,
+          className: "database_table",
+          selection: selection,
+          onSelectionChange: setSelection,
+          borderCollapse: true,
+          children: [u(Colgroup, {
+            children: [u(RowNumberCol, {}), orderedColumns.map(column => u(Col, {
+              id: column.column_name
+            }, column.column_name))]
+          }), u(Thead, {
+            children: u(Tr, {
+              id: "head",
+              children: [u(RowNumberTableCell, {}), orderedColumns.map(column => u(TableCell, {
+                action: async value => {
+                  await TABLE_COLUMN.PUT({
+                    tablename,
+                    column_name: column.column_name,
+                    propertyName: "column_name",
+                    propertyValue: value
+                  });
+                },
+                onClick: () => {
+                  tableColumnNameSignal.value = column.column_name;
+                },
+                children: column.column_name
+              }, column.column_name))]
+            })
+          }), u(Tbody, {
+            children: cellGrid.map((rowCells, rowIndex) => {
+              const object = rows[rowIndex];
+              return u(Tr, {
+                id: object.id,
+                children: [u(RowNumberTableCell, {}), rowCells.map((cellValue, columnIndex) => {
+                  const columnId = orderedColumns[columnIndex].column_name;
+                  return u(TableCell, {
+                    action: async v => {
+                      await TABLE_ROW.PATCH({
+                        tablename,
+                        rowId: object.id,
+                        properties: {
+                          [columnId]: v
+                        }
+                      });
+                    },
+                    children: cellValue
+                  }, columnId);
+                })]
+              }, object.id);
+            })
+          })]
+        }), u(Box, {
+          children: u(Button, {
+            action: async () => {
+              await TABLE_COLUMN.POST({
+                tablename
+              });
+            },
+            children: "+"
+          })
+        })]
+      }), u(Box, {
+        column: true,
+        spacing: "s",
+        alignY: "center",
+        paddingY: "s",
+        children: [u(Label, {
+          column: true,
+          alignY: "center",
+          spacing: "xs",
+          children: [u(Checkbox, {
+            checked: selectedRowCount > 0,
+            action: () => {
+              if (selectedRowCount === 0) {
+                const rowSelection = [];
+                let rowCount = rows.length;
+                let y = 0;
+                while (y < rowCount) {
+                  const firstCellValue = stringifyTableSelectionValue("cell", {
+                    columnId: "row_number",
+                    rowId: rows[y].id
+                  });
+                  rowSelection.push(firstCellValue);
+                  y++;
+                }
+                setSelection(rowSelection);
+              } else {
+                setSelection([]);
+              }
+            }
+          }), u(Text, {
+            size: "xs",
+            bold: true,
+            children: selectedRowCount === 0 ? "Select all" : "".concat(selectedRowCount, " selected")
+          })]
+        }), u(SelectedRowActions, {
+          tablename: tablename,
+          selectedRows: selectedRows
+        })]
+      })]
+    }), u("div", {
       className: "table_data_actions",
       children: u(Button, {
         action: createRow,
         children: "Add row"
       })
+    }), u(SidePanel, {
+      isOpen: columnSidePanelOpened,
+      onClose: () => {
+        tableColumnNameSignal.value = undefined;
+      },
+      children: activeColumnName ? u(ColumnSidePanelContent, {
+        tablename: tablename,
+        column_name: activeColumnName,
+        columns: columns
+      }) : null
     })]
+  });
+};
+const SelectedRowActions = ({
+  tablename,
+  selectedRows
+}) => {
+  const selectedRowCount = selectedRows.length;
+  if (selectedRowCount === 0) {
+    return null;
+  }
+  let message;
+  if (selectedRowCount === 1) {
+    const rowSelected = selectedRows[0];
+    let rowName;
+    if (rowSelected.name) {
+      rowName = "row named \"".concat(rowSelected.name, "\"");
+    } else {
+      rowName = "row #".concat(rowSelected.id);
+    }
+    message = "Are you sur you want to delete ".concat(rowName, "?");
+    return u(Button, {
+      "data-confirm-message": message,
+      action: async () => {
+        await TABLE_ROW.DELETE({
+          tablename,
+          rowId: rowSelected.id
+        });
+      },
+      children: "Delete"
+    });
+  }
+  return u(Button, {
+    "data-confirm-message": "Are you sure you want to delete the ".concat(selectedRowCount, " selected rows?"),
+    action: async () => {
+      await TABLE_ROW.DELETE_MANY({
+        tablename,
+        rowIds: selectedRows.map(r => r.id)
+      });
+    },
+    children: "Delete"
   });
 };
 
@@ -3122,70 +4423,102 @@ const TableSettings = ({
  *
  */
 
-const TablePage = ({
-  table
-}) => {
-  const tablename = table.tablename;
-  return u(Page, {
-    "data-ui-name": "<TablePage />",
-    children: [u(PageHead, {
-      spacingBottom: 0,
-      children: [u(PageHead.Label, {
-        icon: u(TableSvg, {}),
-        label: "Table:",
-        children: tablename
-      }), u(TabList, {
-        children: [u(Tab, {
-          route: TABLE_INDEX_ROUTE,
-          routeParams: {
-            tablename
-          },
-          children: [u(Icon, {
-            children: u(DataSvg, {})
-          }), "Data"]
-        }), u(Tab, {
-          route: TABLE_SETTINGS_ROUTE,
-          routeParams: {
-            tablename
-          },
-          children: [u(Icon, {
-            children: u(SettingsSvg, {})
-          }), "Settings"]
-        })]
-      })]
-    }), u(PageBody, {
-      children: u(Routes, {
-        children: [u(Route, {
-          route: TABLE_INDEX_ROUTE,
-          action: TABLE_ROW_GET_MANY_ACTION,
-          element: rows => u(TableData, {
-            table: table,
-            rows: rows
-          })
-        }), u(Route, {
-          route: TABLE_SETTINGS_ROUTE,
-          element: u(TableSettings, {
-            table: table
-          })
-        })]
+const TablePage = () => {
+  const tablename = tablenameSignal.value;
+  const [table] = useAsyncData(TABLE_GET_ACTION, {
+    loading: true
+  });
+  return u(k, {
+    children: [u(Head, {
+      children: u("title", {
+        children: ["Table: ", tablename]
       })
+    }), u(Page, {
+      "data-ui-name": "<TablePage />",
+      children: [u(PageHead, {
+        spacingBottom: 0,
+        children: [u(PageHead.Label, {
+          icon: u(TableSvg, {}),
+          label: "Table:",
+          actions: [{
+            component: u(Button, {
+              "data-confirm-message": "Are you sure you want to delete the table \"".concat(tablename, "\"?"),
+              action: () => {
+                return TABLE.DELETE({
+                  tablename
+                });
+              },
+              children: "Delete"
+            })
+          }],
+          children: tablename
+        }), u(Nav, {
+          spacing: "s",
+          children: [u(Link, {
+            route: TABLE_INDEX_ROUTE,
+            routeParams: {
+              tablename
+            },
+            appearance: "tab",
+            paddingX: "s",
+            paddingY: "xs",
+            currentIndicator: true,
+            children: [u(Icon, {
+              children: u(DataSvg, {})
+            }), "Data"]
+          }), u(Link, {
+            route: TABLE_SETTINGS_ROUTE,
+            routeParams: {
+              tablename
+            },
+            appearance: "tab",
+            paddingX: "s",
+            paddingY: "xs",
+            currentIndicator: true,
+            children: [u(Icon, {
+              children: u(SettingsSvg, {})
+            }), "Settings"]
+          })]
+        })]
+      }), u(PageBody, {
+        children: table ? u(Route, {
+          children: [u(Route, {
+            route: TABLE_INDEX_ROUTE,
+            element: TableData,
+            elementProps: {
+              table
+            }
+          }), u(Route, {
+            route: TABLE_SETTINGS_ROUTE,
+            element: TableSettings,
+            elementProps: {
+              table
+            }
+          })]
+        }) : null
+      })]
     })]
   });
 };
 
-const TableRoutes = () => {
-  return u(Route, {
-    route: TABLE_ROUTE,
-    action: TABLE_GET_ACTION,
-    element: table => u(TablePage, {
-      table: table
-    })
-  });
-};
-
 const MainRoutes = () => {
-  return u(k, {
-    children: [u(RoleRoutes, {}), u(DatabaseRoutes, {}), u(TableRoutes, {})]
+  return u(Route, {
+    children: [u(Route, {
+      route: INDEX_ROUTE,
+      element: IndexPage
+    }), u(Route, {
+      route: ROLE_ROUTE,
+      element: RolePage
+    }), u(Route, {
+      route: DATABASE_ROUTE,
+      element: DatabasePage
+    }), u(Route, {
+      route: TABLE_ROUTE,
+      element: TablePage
+    }), u(Route, {
+      fallback: true,
+      element: NotFoundPage
+    })]
   });
 };
 
@@ -3197,7 +4530,9 @@ const App = () => {
     }), u("main", {
       children: u("div", {
         className: "main_body",
-        children: u(MainRoutes, {})
+        children: u(Loading, {
+          children: u(MainRoutes, {})
+        })
       })
     })]
   });

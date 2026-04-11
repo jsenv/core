@@ -6325,7 +6325,7 @@ const getDragCoordinates = (
   return [leftRelativeToScrollContainer, topRelativeToScrollContainer];
 };
 
-const installImportMetaCss = (importMeta) => {
+const installImportMetaCssBuild = (importMeta) => {
   const stylesheet = new CSSStyleSheet({ baseUrl: importMeta.url });
 
   let called = false;
@@ -6505,7 +6505,7 @@ const isolateInteractions = (elements) => {
   };
 };
 
-installImportMetaCss(import.meta);
+installImportMetaCssBuild(import.meta);
 const createDragGestureController = (options = {}) => {
   const {
     name,
@@ -7055,7 +7055,7 @@ import.meta.css = /* css */ `
   }
 `;
 
-installImportMetaCss(import.meta);const setupConstraintFeedbackLine = () => {
+installImportMetaCssBuild(import.meta);const setupConstraintFeedbackLine = () => {
   const constraintFeedbackLine = createConstraintFeedbackLine();
 
   // Track last known mouse position for constraint feedback line during scroll
@@ -7150,7 +7150,7 @@ import.meta.css = /* css */ `
   }
 `;
 
-installImportMetaCss(import.meta);const MARKER_SIZE = 12;
+installImportMetaCssBuild(import.meta);const MARKER_SIZE = 12;
 
 let currentDebugMarkers = [];
 let currentConstraintMarkers = [];
@@ -8927,7 +8927,7 @@ const getWidth = (element) => {
   return width;
 };
 
-installImportMetaCss(import.meta);
+installImportMetaCssBuild(import.meta);
 import.meta.css = /* css */ `
   [data-position-sticky-placeholder] {
     position: static !important;
