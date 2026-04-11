@@ -8,7 +8,7 @@
   },
   "license": "MIT",
   "sideEffects": [
-    "./src/cient/s.js"
+    "./src/client/s.js"
   ],
   "type": "module",
   "exports": {
