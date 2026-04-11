@@ -9633,12 +9633,7 @@ const injectImportmapMappings = (urlInfo, getMappings) => {
     url: urlInfo.url,
     storeOriginalPositions: false,
   });
-  // jsenv_plugin_importmap.js is removing importmap during build
-  // it means at this point we know HTML has no importmap in it
-  // we can safely inject one
-  const importmapMinification = Boolean(
-    urlInfo.context.getPluginMeta("willMinifyJson"),
-  );
+  // Boolean(urlInfo.context.getPluginMeta("willMinifyJson"));
   const importmapNode = findHtmlNode(htmlAst, (node) => {
     return (
       node.tagName === "script" &&
@@ -9646,9 +9641,6 @@ const injectImportmapMappings = (urlInfo, getMappings) => {
     );
   });
   const generateMappingText = (mappings) => {
-    if (importmapMinification) {
-      return JSON.stringify({ imports: mappings });
-    }
     return JSON.stringify({ imports: mappings }, null, "  ");
   };
 
