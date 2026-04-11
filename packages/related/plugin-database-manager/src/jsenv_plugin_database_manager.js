@@ -858,7 +858,7 @@ export const jsenvPluginDatabaseManager = ({
         },
       },
     ],
-    devServerServices: [
+    devServerPlugins: [
       {
         name: "postgres_sql_error_handler",
         handleError: (e) => {

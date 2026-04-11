@@ -69,7 +69,7 @@ export const startDevServer = async ({
   logLevel = EXECUTED_BY_TEST_PLAN ? "warn" : "info",
   serverLogLevel = "warn",
   serverRouterLogLevel = "warn",
-  services = [],
+  serverPlugins = [],
 
   signal = new AbortController().signal,
   handleSIGINT = true,
@@ -176,10 +176,10 @@ export const startDevServer = async ({
   const serverStopAbortSignal = serverStopAbortController.signal;
   const kitchenCache = new Map();
 
-  const finalServices = [];
+  const finalServerPlugins = [];
   // x-server-inspect service
   {
-    finalServices.push({
+    finalServerPlugins.push({
       name: "jsenv:server_header",
       routes: [
         {
@@ -205,7 +205,7 @@ export const startDevServer = async ({
   }
   // cors service
   {
-    finalServices.push(
+    finalServerPlugins.push(
       serverPluginCORS({
         accessControlAllowRequestOrigin: true,
         accessControlAllowRequestMethod: true,
@@ -221,7 +221,7 @@ export const startDevServer = async ({
   }
   // custom services
   {
-    finalServices.push(...services);
+    finalServerPlugins.push(...serverPlugins);
   }
   // file_service
   {
@@ -425,7 +425,7 @@ export const startDevServer = async ({
       return kitchen;
     };
 
-    finalServices.push({
+    finalServerPlugins.push({
       name: "jsenv:dev_server_routes",
       augmentRouteFetchSecondArg: async (request) => {
         const kitchen = await getOrCreateKitchen(request);
@@ -632,11 +632,11 @@ export const startDevServer = async ({
         },
       ],
     });
-    finalServices.push(...devServerPluginStore.allDevServerServices);
+    finalServerPlugins.push(...devServerPluginStore.allDevServerPlugins);
   }
   // jsenv error handler service
   {
-    finalServices.push({
+    finalServerPlugins.push({
       name: "jsenv:omega_error_handler",
       handleError: (error) => {
         const getResponseForError = () => {
@@ -673,7 +673,7 @@ export const startDevServer = async ({
   }
   // default error handler
   {
-    finalServices.push(
+    finalServerPlugins.push(
       serverPluginErrorHandler({
         sendErrorDetails: true,
       }),
@@ -696,7 +696,7 @@ export const startDevServer = async ({
     hostname,
     port,
     requestWaitingMs: 60_000,
-    services: finalServices,
+    plugins: finalServerPlugins,
   });
   server.stoppedPromise.then((reason) => {
     onStop();

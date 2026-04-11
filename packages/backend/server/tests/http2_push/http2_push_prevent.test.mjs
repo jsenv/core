@@ -15,7 +15,7 @@ const run = async () => {
     https: { certificate, privateKey },
     http2: true,
     keepProcessAlive: false,
-    services: [
+    plugins: [
       {
         onResponsePush: ({ path }, { prevent }) => {
           if (path === "/preventme") {

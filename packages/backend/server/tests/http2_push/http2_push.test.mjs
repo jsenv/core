@@ -4,7 +4,7 @@ import { connect } from "node:http2";
 
 import {
   createFileSystemFetch,
-  jsenvServiceErrorHandler,
+  serverPluginErrorHandler,
   startServer,
 } from "@jsenv/server";
 import { snapshotServerTests } from "@jsenv/server/tests/test_helpers.mjs";
@@ -20,8 +20,8 @@ const run = async () => {
     http2: true,
     https: { certificate, privateKey },
     keepProcessAlive: false,
-    services: [
-      jsenvServiceErrorHandler({
+    plugins: [
+      serverPluginErrorHandler({
         sendErrorDetails: true,
       }),
     ],

@@ -3,7 +3,7 @@ import { jsenvPluginHtmlSyntaxErrorFallback } from "./html_syntax_error_fallback
 
 export const createPluginStore = async (plugins) => {
   const allDevServerRoutes = [];
-  const allDevServerServices = [];
+  const allDevServerPlugins = [];
   const pluginArray = [];
 
   const pluginPromises = [];
@@ -32,10 +32,10 @@ export const createPluginStore = async (plugins) => {
         allDevServerRoutes.push(devServerRoute);
       }
     }
-    if (plugin.devServerServices) {
-      const devServerServices = plugin.devServerServices;
-      for (const devServerService of devServerServices) {
-        allDevServerServices.push(devServerService);
+    if (plugin.devServerPlugins) {
+      const devServerPlugins = plugin.devServerPlugins;
+      for (const devServerPlugin of devServerPlugins) {
+        allDevServerPlugins.push(devServerPlugin);
       }
     }
     pluginArray.push(plugin);
@@ -49,7 +49,7 @@ export const createPluginStore = async (plugins) => {
   return {
     pluginArray,
     allDevServerRoutes,
-    allDevServerServices,
+    allDevServerPlugins,
   };
 };
 
@@ -123,7 +123,7 @@ const JSENV_PLUGIN_DESCRIPTION = {
     serverEvents: nonHook,
     mustStayFirst: nonHook,
     devServerRoutes: nonHook,
-    devServerServices: nonHook,
+    devServerPlugins: nonHook,
     // hooks
     init: hook,
     resolveReference: { type: "hook", assertReturnValue: assertUrlReturnValue },
@@ -157,7 +157,7 @@ const JSENV_PLUGIN_DESCRIPTION = {
     effect: hook,
     refineBuildUrlContent: hook,
     refineBuild: hook,
-    // devServerRoutes and devServerServices are nonHook above
+    // devServerRoutes and devServerPlugins are nonHook above
   },
 };
 

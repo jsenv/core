@@ -4,7 +4,7 @@ import { startServer } from "@jsenv/server";
 const server = await startServer({
   logLevel: "warn",
   keepProcessAlive: false,
-  services: [
+  plugins: [
     {
       name: "redirect",
       redirectRequest: () => {

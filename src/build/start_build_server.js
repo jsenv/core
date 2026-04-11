@@ -18,9 +18,9 @@ import { assertAndNormalizeDirectoryUrl } from "@jsenv/filesystem";
 import { createLogger, createTaskLog } from "@jsenv/humanize";
 import {
   jsenvAccessControlAllowedHeaders,
-  jsenvServiceCORS,
-  jsenvServiceErrorHandler,
-  jsenvServiceStaticFiles,
+  serverPluginCORS,
+  serverPluginErrorHandler,
+  serverPluginStaticFiles,
   startServer,
 } from "@jsenv/server";
 import { existsSync } from "node:fs";
@@ -36,7 +36,7 @@ export const startBuildServer = async ({
   buildMainFilePath = "index.html",
   port = 9779,
   routes,
-  services = [],
+  serverPlugins = [],
   acceptAnyIp,
   hostname,
   https,
@@ -121,8 +121,8 @@ export const startBuildServer = async ({
     serverTiming: true,
     requestWaitingMs: 60_000,
     routes,
-    services: [
-      jsenvServiceCORS({
+    plugins: [
+      serverPluginCORS({
         accessControlAllowRequestOrigin: true,
         accessControlAllowRequestMethod: true,
         accessControlAllowRequestHeaders: true,
@@ -130,12 +130,12 @@ export const startBuildServer = async ({
         accessControlAllowCredentials: true,
         timingAllowOrigin: true,
       }),
-      ...services,
-      jsenvServiceStaticFiles({
+      ...serverPlugins,
+      serverPluginStaticFiles({
         directoryUrl: buildDirectoryUrl,
         mainFilePath: buildMainFilePath,
       }),
-      jsenvServiceErrorHandler({
+      serverPluginErrorHandler({
         sendErrorDetails: false,
       }),
     ],

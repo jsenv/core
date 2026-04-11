@@ -1,6 +1,6 @@
 import {
   createFileSystemFetch,
-  jsenvServiceCORS,
+  serverPluginCORS,
   startServer,
 } from "@jsenv/server";
 
@@ -11,8 +11,8 @@ export const localServer = await startServer({
   hostname: "127.0.0.1",
   port: 9999,
   keepProcessAlive: false,
-  services: [
-    jsenvServiceCORS({
+  plugins: [
+    serverPluginCORS({
       accessControlAllowRequestOrigin: true,
       accessControlAllowRequestMethod: true,
       accessControlAllowRequestHeaders: true,

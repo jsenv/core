@@ -7,7 +7,7 @@ await startServer({
   https: { certificate, privateKey },
   http2: true,
   port: 3679,
-  services: [
+  plugins: [
     {
       handleRequest: (request, helpers) => {
         if (request.pathname === "/main.html") {

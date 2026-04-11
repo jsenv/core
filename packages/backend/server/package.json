@@ -20,7 +20,7 @@
     ".": {
       "import": {
         "dev:jsenv": "./index.js",
-        "default": "./dist/jsenv_server.js"
+        "default": "./index.js"
       }
     },
     "./*": "./*"

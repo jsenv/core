@@ -1,5 +1,5 @@
 import { ensureEmptyDirectory, writeFile } from "@jsenv/filesystem";
-import { jsenvServiceErrorHandler, startServer } from "@jsenv/server";
+import { serverPluginErrorHandler, startServer } from "@jsenv/server";
 
 const htmlFilesDirectoryUrl = new URL("./snapshots/", import.meta.url).href;
 
@@ -36,7 +36,7 @@ const generateInternalErrorHtmlFile = async (htmlFilename, serverParams) => {
 await ensureEmptyDirectory(htmlFilesDirectoryUrl);
 
 await generateInternalErrorHtmlFile("basic.html", {
-  services: [jsenvServiceErrorHandler()],
+  plugins: [serverPluginErrorHandler()],
   routes: [
     {
       endpoint: "GET *",
@@ -49,8 +49,8 @@ await generateInternalErrorHtmlFile("basic.html", {
 });
 
 await generateInternalErrorHtmlFile("basic_with_details.html", {
-  services: [
-    jsenvServiceErrorHandler({
+  plugins: [
+    serverPluginErrorHandler({
       sendErrorDetails: true,
     }),
   ],
@@ -71,8 +71,8 @@ await generateInternalErrorHtmlFile("basic_with_details.html", {
 // maybe we want to have extra properties as well ?
 // I let the test below to keep this in mind
 await generateInternalErrorHtmlFile("basic_with_code_and_details.html", {
-  services: [
-    jsenvServiceErrorHandler({
+  plugins: [
+    serverPluginErrorHandler({
       sendErrorDetails: true,
     }),
   ],
@@ -90,7 +90,7 @@ await generateInternalErrorHtmlFile("basic_with_code_and_details.html", {
 });
 
 await generateInternalErrorHtmlFile("literal.html", {
-  services: [jsenvServiceErrorHandler()],
+  plugins: [serverPluginErrorHandler()],
   routes: [
     {
       endpoint: "GET *",
@@ -103,7 +103,7 @@ await generateInternalErrorHtmlFile("literal.html", {
 });
 
 await generateInternalErrorHtmlFile("literal_with_details.html", {
-  services: [jsenvServiceErrorHandler({ sendErrorDetails: true })],
+  plugins: [serverPluginErrorHandler({ sendErrorDetails: true })],
   routes: [
     {
       endpoint: "GET *",

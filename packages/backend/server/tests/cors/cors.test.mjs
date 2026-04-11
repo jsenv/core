@@ -1,6 +1,6 @@
 import {
-  jsenvServiceCORS,
-  jsenvServiceErrorHandler,
+  serverPluginCORS,
+  serverPluginErrorHandler,
   startServer,
 } from "@jsenv/server";
 import { snapshotServerTests } from "@jsenv/server/tests/test_helpers.mjs";
@@ -9,10 +9,10 @@ const run = async ({ cors, triggerInternalError }) => {
   const server = await startServer({
     logLevel: "warn",
     keepProcessAlive: false,
-    services: [
+    plugins: [
       ...(cors
         ? [
-            jsenvServiceCORS({
+            serverPluginCORS({
               accessControlAllowRequestOrigin: true,
               accessControlAllowRequestMethod: true,
               accessControlAllowRequestHeaders: true,
@@ -21,7 +21,7 @@ const run = async ({ cors, triggerInternalError }) => {
             }),
           ]
         : []),
-      jsenvServiceErrorHandler(),
+      serverPluginErrorHandler(),
       {
         redirectRequest: () => {
           if (triggerInternalError) {
