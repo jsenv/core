@@ -7690,19 +7690,19 @@ const jsenvPluginImportMetaCss = () => {
             inputUrl: urlInfo.originalUrl,
             outputUrl: urlInfo.generatedUrl,
           });
-          return injectImportMetaCss(
-            { ...urlInfo, content: code },
-            {
-              importFrom: importMetaCssBuildClientFileUrl,
-              importName: "installImportMetaCssBuild",
-              importAs: "__installImportMetaCssBuild__",
-            },
-          );
+          return injectImportMetaCss(urlInfo, {
+            content: code,
+            importFrom: importMetaCssBuildClientFileUrl,
+            importName: "installImportMetaCssBuild",
+            importAs: "__installImportMetaCssBuild__",
+          });
         }
         return injectImportMetaCss(urlInfo, {
+          content: urlInfo.content,
           importFrom: importMetaCssDevClientFileUrl,
           importName: "installImportMetaCssDev",
           importAs: "__installImportMetaCssDev__",
+          hot: true,
         });
       },
     },
@@ -7733,9 +7733,7 @@ const babelPluginRewriteImportMetaCssAssignment = (
         }
         path.node.right = t.arrayExpression([
           right,
-          t.objectExpression([
-            t.objectProperty(t.identifier("url"), t.stringLiteral(relativeUrl)),
-          ]),
+          t.stringLiteral(relativeUrl),
         ]);
       },
     },
@@ -7773,7 +7771,10 @@ const babelPluginMetadataUsesImportMetaCss = () => {
   };
 };
 
-const injectImportMetaCss = (urlInfo, { importFrom, importName, importAs }) => {
+const injectImportMetaCss = (
+  urlInfo,
+  { content, importFrom, importName, importAs, hot },
+) => {
   const importMetaCssClientFileReference = urlInfo.dependencies.inject({
     parentUrl: urlInfo.url,
     type: "js_import",
@@ -7789,7 +7790,9 @@ const injectImportMetaCss = (urlInfo, { importFrom, importName, importAs }) => {
     importBeforeFrom = `{ ${importName} } }`;
     importVariableName = importName;
   }
-  let prelude = `import ${importBeforeFrom} from ${importMetaCssClientFileReference.generatedSpecifier};
+
+  const prelude = hot
+    ? `import ${importBeforeFrom} from ${importMetaCssClientFileReference.generatedSpecifier};
 
 const remove = ${importVariableName}(import.meta);
 if (import.meta.hot) {
@@ -7798,9 +7801,13 @@ if (import.meta.hot) {
   });
 }
 
+`
+    : `import ${importBeforeFrom} from ${importMetaCssClientFileReference.generatedSpecifier};
+
+${importVariableName}(import.meta);
+
 `;
 
-  let content = urlInfo.content;
   return {
     content: `${prelude.replace(/\n/g, "")}${content}`,
   };

@@ -1,6 +1,6 @@
-const IMPORT_META_CSS_BUILD = "jsenv_import_meta_css_build";
-
 const installImportMetaCssBuild = (importMeta) => {
+  const IMPORT_META_CSS_BUILD = "jsenv_import_meta_css_build";
+
   if (importMeta.css === IMPORT_META_CSS_BUILD) {
     return;
   }
@@ -29,7 +29,7 @@ const installImportMetaCssBuild = (importMeta) => {
     get() {
       return IMPORT_META_CSS_BUILD;
     },
-    set([value, { url }]) {
+    set([value, url]) {
       if (value === undefined) {
         if (stylesheetMap.has(url)) {
           remove(url);
