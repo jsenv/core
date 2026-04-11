@@ -121,12 +121,15 @@ export const createPluginsController = async ({
     if (!propDef || !propDef.assertAndNormalizeReturnValue) {
       return valueReturned;
     }
-    const valueNormalized = propDef.assertAndNormalizeReturnValue(
+    const assertResult = propDef.assertAndNormalizeReturnValue(
       valueReturned,
       info,
       { hook },
     );
-    return valueNormalized;
+    if (assertResult !== undefined) {
+      return assertResult;
+    }
+    return valueReturned;
   };
 
   let lastPluginUsed = null;
