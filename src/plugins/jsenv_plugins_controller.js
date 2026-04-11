@@ -1,7 +1,7 @@
 import { createPluginsController } from "@jsenv/server/src/plugins_controller.js";
 import { jsenvPluginHtmlSyntaxErrorFallback } from "./html_syntax_error_fallback/jsenv_plugin_html_syntax_error_fallback.js";
 
-export const createPluginStore = async (plugins) => {
+export const createJsenvPluginStore = async (plugins) => {
   const allDevServerRoutes = [];
   const allDevServerPlugins = [];
   const pluginArray = [];
@@ -53,15 +53,12 @@ export const createPluginStore = async (plugins) => {
   };
 };
 
-export const createPluginController = async (
+export const createJsenvPluginsController = async (
   pluginStore,
   kitchen,
-  { initialPuginsMeta = {} } = {},
+  { meta } = {},
 ) => {
-  kitchen.context.getPluginMeta = (id) => {
-    return pluginsController.meta[id];
-  };
-
+  kitchen.context.getPluginMeta = (id) => pluginsController.getPluginMeta(id);
   const pluginsController = await createPluginsController({
     plugins: pluginStore.pluginArray,
     pluginDescription: JSENV_PLUGIN_DESCRIPTION,
@@ -70,10 +67,8 @@ export const createPluginController = async (
     getEffectArgs: ({ otherPlugins }) => [
       { kitchenContext: kitchen.context, otherPlugins },
     ],
+    meta,
   });
-
-  Object.assign(pluginsController.meta, initialPuginsMeta);
-
   return pluginsController;
 };
 

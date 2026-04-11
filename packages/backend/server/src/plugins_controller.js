@@ -11,11 +11,11 @@ export const createPluginsController = async ({
   getHookFunction = defaultGetHookFunction,
   getTimingKey = defaultGetTimingKey,
   getEffectArgs = defaultGetEffectArgs,
+  meta = {},
 }) => {
   const { name: pluginName = "plugin", properties = {} } = pluginDescription;
 
   const hookSetMap = new Map();
-  const meta = {};
 
   const addHook = (hook) => {
     let hookSet = hookSetMap.get(hook.name);
@@ -62,12 +62,12 @@ export const createPluginsController = async ({
 
   const activatePlugin = (plugin) => {
     if (plugin.meta) {
-      const value = plugin.meta;
-      if (typeof value !== "object" || value === null) {
-        console.warn(`${pluginName}.meta must be an object, got ${value}`);
+      const pluginMeta = plugin.meta;
+      if (typeof pluginMeta !== "object" || pluginMeta === null) {
+        console.warn(`${pluginName}.meta must be an object, got ${pluginMeta}`);
       } else {
-        Object.assign(meta, value);
-        Object.freeze(value);
+        Object.assign(meta, pluginMeta);
+        Object.freeze(pluginMeta);
       }
     }
     addPluginToHookSetMap(plugin);
@@ -290,8 +290,6 @@ export const createPluginsController = async ({
 
   return {
     activePlugins,
-    meta,
-    hookSetMap,
 
     callHook,
     callAsyncHook,
@@ -300,6 +298,8 @@ export const createPluginsController = async ({
     callAsyncHooks,
     callAsyncHooksUntil,
 
+    getPluginMeta: (pluginName) => meta[pluginName],
+    getMeta: () => meta,
     getLastPluginUsed: () => lastPluginUsed,
     getCurrentPlugin: () => currentPlugin,
     getCurrentHookName: () => currentHookName,

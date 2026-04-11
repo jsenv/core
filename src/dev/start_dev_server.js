@@ -24,9 +24,9 @@ import { jsenvCoreDirectoryUrl } from "../jsenv_core_directory_url.js";
 import { createKitchen } from "../kitchen/kitchen.js";
 import { createPackageDirectory } from "../kitchen/package_directory.js";
 import {
-  createPluginController,
-  createPluginStore,
-} from "../plugins/plugin_controller.js";
+  createJsenvPluginsController,
+  createJsenvPluginStore,
+} from "../plugins/jsenv_plugins_controller.js";
 import { getCorePlugins } from "../plugins/plugins.js";
 import { jsenvPluginServerEvents } from "../plugins/server_events/jsenv_plugin_server_events.js";
 import { parseUserAgentHeader } from "./user_agent.js";
@@ -251,7 +251,7 @@ export const startDevServer = async ({
       sourceDirectoryUrl,
     });
 
-    const devServerPluginStore = await createPluginStore([
+    const devServerJsenvPluginStore = await createJsenvPluginStore([
       jsenvPluginServerEvents({ clientAutoreload }),
       ...plugins,
       ...getCorePlugins({
@@ -411,14 +411,14 @@ export const startDevServer = async ({
           );
         },
       );
-      const devServerPluginController = await createPluginController(
-        devServerPluginStore,
+      const devServerJsenvPluginController = await createJsenvPluginsController(
+        devServerJsenvPluginStore,
         kitchen,
       );
-      kitchen.setPluginController(devServerPluginController);
+      kitchen.setJsenvPluginsController(devServerJsenvPluginController);
 
       serverStopCallbackSet.add(() => {
-        devServerPluginController.callHooks("destroy", kitchen.context);
+        devServerJsenvPluginController.callHooks("destroy", kitchen.context);
       });
       kitchenCache.set(runtimeId, kitchen);
       onKitchenCreated(kitchen);
@@ -432,7 +432,7 @@ export const startDevServer = async ({
         return { kitchen };
       },
       routes: [
-        ...devServerPluginStore.allDevServerRoutes,
+        ...devServerJsenvPluginStore.allDevServerRoutes,
         {
           endpoint: "GET *",
           description: "Serve project files.",
@@ -545,7 +545,7 @@ export const startDevServer = async ({
                 reference,
                 urlInfo,
               };
-              kitchen.pluginController.callHooks(
+              kitchen.jsenvPluginsController.callHooks(
                 "augmentResponse",
                 augmentResponseInfo,
                 (returnValue) => {
@@ -632,7 +632,7 @@ export const startDevServer = async ({
         },
       ],
     });
-    finalServerPlugins.push(...devServerPluginStore.allDevServerPlugins);
+    finalServerPlugins.push(...devServerJsenvPluginStore.allDevServerPlugins);
   }
   // jsenv error handler service
   {

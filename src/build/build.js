@@ -66,9 +66,9 @@ import { GRAPH_VISITOR } from "../kitchen/url_graph/url_graph_visitor.js";
 import { jsenvPluginDirectoryReferenceEffect } from "../plugins/directory_reference_effect/jsenv_plugin_directory_reference_effect.js";
 import { jsenvPluginInlining } from "../plugins/inlining/jsenv_plugin_inlining.js";
 import {
-  createPluginController,
-  createPluginStore,
-} from "../plugins/plugin_controller.js";
+  createJsenvPluginsController,
+  createJsenvPluginStore,
+} from "../plugins/jsenv_plugins_controller.js";
 import { getCorePlugins } from "../plugins/plugins.js";
 import { jsenvPluginReferenceAnalysis } from "../plugins/reference_analysis/jsenv_plugin_reference_analysis.js";
 import { renderBuildDoneLog } from "./build_content_report.js";
@@ -1109,7 +1109,7 @@ const prepareEntryPointBuild = async (
   });
 
   let _getOtherEntryBuildInfo;
-  const rawPluginStore = await createPluginStore([
+  const rawJsenvPluginStore = await createJsenvPluginStore([
     ...(mappings ? [jsenvPluginMappings(mappings)] : []),
     {
       name: "jsenv:other_entry_point_build_during_craft",
@@ -1155,11 +1155,11 @@ const prepareEntryPointBuild = async (
       packageSideEffects,
     }),
   ]);
-  const rawPluginController = await createPluginController(
-    rawPluginStore,
+  const rawJsenvPluginsController = await createJsenvPluginsController(
+    rawJsenvPluginStore,
     rawKitchen,
   );
-  rawKitchen.setPluginController(rawPluginController);
+  rawKitchen.setJsenvPluginsController(rawJsenvPluginsController);
 
   const rawRootUrlInfo = rawKitchen.graph.rootUrlInfo;
   let entryReference;
@@ -1227,7 +1227,7 @@ const prepareEntryPointBuild = async (
           rawKitchen.graph.getUrlInfo(entryReference.url).type === "html" &&
           rawKitchen.context.isSupportedOnCurrentClients("importmap"),
       });
-      const finalPluginStore = await createPluginStore([
+      const finalJsenvPluginStore = await createJsenvPluginStore([
         jsenvPluginReferenceAnalysis({
           ...referenceAnalysis,
           fetchInlineUrls: false,
@@ -1249,7 +1249,7 @@ const prepareEntryPointBuild = async (
           name: "jsenv:optimize",
           appliesDuring: "build",
           transformUrlContent: async (urlInfo) => {
-            await rawKitchen.pluginController.callAsyncHooks(
+            await rawKitchen.jsenvPluginsController.callAsyncHooks(
               "optimizeBuildUrlContent",
               urlInfo,
               (optimizeReturnValue) => {
@@ -1260,18 +1260,18 @@ const prepareEntryPointBuild = async (
         },
         buildSpecifierManager.jsenvPluginMoveToBuildDirectory,
       ]);
-      const finalPluginController = await createPluginController(
-        finalPluginStore,
+      const finalJsenvPluginsController = await createJsenvPluginsController(
+        finalJsenvPluginStore,
         finalKitchen,
         {
-          initialPuginsMeta: rawKitchen.pluginController.pluginsMeta,
+          meta: rawKitchen.jsenvPluginsController.getMeta(),
         },
       );
-      finalKitchen.setPluginController(finalPluginController);
+      finalKitchen.setJsenvPluginsController(finalJsenvPluginsController);
 
       bundle: {
         const bundlerMap = new Map();
-        for (const plugin of rawKitchen.pluginController.activePlugins) {
+        for (const plugin of rawKitchen.jsenvPluginsController.activePlugins) {
           const bundle = plugin.bundle;
           if (!bundle) {
             continue;
@@ -1483,7 +1483,8 @@ const prepareEntryPointBuild = async (
         refine_hook: {
           const refineBuildUrlContentCallbackSet = new Set();
           const refineBuildCallbackSet = new Set();
-          for (const plugin of rawKitchen.pluginController.activePlugins) {
+          for (const plugin of rawKitchen.jsenvPluginsController
+            .activePlugins) {
             const refineBuildUrlContent = plugin.refineBuildUrlContent;
             if (refineBuildUrlContent) {
               refineBuildUrlContentCallbackSet.add(refineBuildUrlContent);

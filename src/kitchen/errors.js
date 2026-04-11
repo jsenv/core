@@ -3,7 +3,7 @@ import { stringifyUrlSite } from "@jsenv/urls";
 import { pathToFileURL } from "node:url";
 
 export const createResolveUrlError = ({
-  pluginController,
+  jsenvPluginsController,
   reference,
   error,
 }) => {
@@ -21,7 +21,7 @@ ${reason}`,
         {
           ...detailsFromFirstReference(reference),
           ...details,
-          ...detailsFromPluginController(pluginController),
+          ...detailsFromPluginController(jsenvPluginsController),
         },
       ),
     );
@@ -66,7 +66,7 @@ ${reason}`,
 };
 
 export const createFetchUrlContentError = ({
-  pluginController,
+  jsenvPluginsController,
   urlInfo,
   error,
 }) => {
@@ -85,7 +85,7 @@ ${reason}`,
         {
           ...detailsFromFirstReference(reference),
           ...details,
-          ...detailsFromPluginController(pluginController),
+          ...detailsFromPluginController(jsenvPluginsController),
         },
       ),
     );
@@ -141,7 +141,7 @@ ${reason}`,
 };
 
 export const createTransformUrlContentError = ({
-  pluginController,
+  jsenvPluginsController,
   urlInfo,
   error,
 }) => {
@@ -170,7 +170,7 @@ ${error.message}`,
             ? `${reference.trace.url}:${reference.trace.line}:${reference.trace.column}`
             : reference.trace.message,
           ...detailsFromFirstReference(reference),
-          ...detailsFromPluginController(pluginController),
+          ...detailsFromPluginController(jsenvPluginsController),
         },
       ),
     );
@@ -202,7 +202,7 @@ ${reason}`,
         {
           ...detailsFromFirstReference(reference),
           ...details,
-          ...detailsFromPluginController(pluginController),
+          ...detailsFromPluginController(jsenvPluginsController),
         },
       ),
     );
@@ -226,7 +226,7 @@ ${reason}`,
 };
 
 export const createFinalizeUrlContentError = ({
-  pluginController,
+  jsenvPluginsController,
   urlInfo,
   error,
 }) => {
@@ -238,7 +238,7 @@ ${reference.trace.message}`,
       {
         ...detailsFromFirstReference(reference),
         ...detailsFromValueThrown(error),
-        ...detailsFromPluginController(pluginController),
+        ...detailsFromPluginController(jsenvPluginsController),
       },
     ),
   );
@@ -328,8 +328,8 @@ const getFirstReferenceInProject = (reference) => {
   return getFirstReferenceInProject(firstReference);
 };
 
-const detailsFromPluginController = (pluginController) => {
-  const currentPlugin = pluginController.getCurrentPlugin();
+const detailsFromPluginController = (jsenvPluginsController) => {
+  const currentPlugin = jsenvPluginsController.getCurrentPlugin();
   if (!currentPlugin) {
     return null;
   }

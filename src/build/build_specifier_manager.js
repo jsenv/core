@@ -117,14 +117,15 @@ export const createBuildSpecifierManager = ({
   const bundleInfoMap = new Map();
 
   const applyBundling = async ({ bundler, urlInfosToBundle }) => {
-    const urlInfosBundled = await rawKitchen.pluginController.callAsyncHook(
-      {
-        plugin: bundler.plugin,
-        hookName: "bundle",
-        value: bundler.bundleFunction,
-      },
-      urlInfosToBundle,
-    );
+    const urlInfosBundled =
+      await rawKitchen.jsenvPluginsController.callAsyncHook(
+        {
+          plugin: bundler.plugin,
+          hookName: "bundle",
+          value: bundler.bundleFunction,
+        },
+        urlInfosToBundle,
+      );
     for (const url of Object.keys(urlInfosBundled)) {
       const urlInfoBundled = urlInfosBundled[url];
       const contentSideEffects = [];
