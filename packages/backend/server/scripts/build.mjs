@@ -45,17 +45,17 @@ await build({
         }),
       ],
     },
-    "./src/services/default_body_4xx_5xx/client/4xx.html": {
+    "./src/plugins/default_body_4xx_5xx/client/4xx.html": {
       buildRelativeUrl: "./client/default_body_4xx_5xx/4xx.html",
       runtimeCompat: { chrome: "89" },
       plugins: [jsenvPluginServerInternalClientFilesResolver()],
     },
-    "./src/services/error_handler/client/500.html": {
+    "./src/plugins/error_handler/client/500.html": {
       buildRelativeUrl: "./client/error_handler/500.html",
       runtimeCompat: { chrome: "89" },
       plugins: [jsenvPluginServerInternalClientFilesResolver()],
     },
-    "./src/services/route_inspector/client/route_inspector.html": {
+    "./src/plugins/route_inspector/client/route_inspector.html": {
       buildRelativeUrl: "./client/route_inspector/route_inspector.html",
       runtimeCompat: { chrome: "89" },
       plugins: [jsenvPluginServerInternalClientFilesResolver()],

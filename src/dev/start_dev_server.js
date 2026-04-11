@@ -7,12 +7,12 @@ import { createLogger, createTaskLog, formatError } from "@jsenv/humanize";
 import {
   composeTwoResponses,
   jsenvAccessControlAllowedHeaders,
-  jsenvServiceCORS,
-  jsenvServiceErrorHandler,
   serveDirectory,
+  serverPluginCORS,
+  serverPluginErrorHandler,
   startServer,
 } from "@jsenv/server";
-import { convertFileSystemErrorToResponseProperties } from "@jsenv/server/src/services/filesystem/filesystem_error_to_response.js";
+import { convertFileSystemErrorToResponseProperties } from "@jsenv/server/src/plugins/filesystem/filesystem_error_to_response.js";
 import { URL_META } from "@jsenv/url-meta";
 import { urlIsOrIsInsideOf, urlToRelativeUrl } from "@jsenv/urls";
 import { existsSync, readFileSync } from "node:fs";
@@ -206,7 +206,7 @@ export const startDevServer = async ({
   // cors service
   {
     finalServices.push(
-      jsenvServiceCORS({
+      serverPluginCORS({
         accessControlAllowRequestOrigin: true,
         accessControlAllowRequestMethod: true,
         accessControlAllowRequestHeaders: true,
@@ -674,7 +674,7 @@ export const startDevServer = async ({
   // default error handler
   {
     finalServices.push(
-      jsenvServiceErrorHandler({
+      serverPluginErrorHandler({
         sendErrorDetails: true,
       }),
     );
