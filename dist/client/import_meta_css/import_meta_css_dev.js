@@ -1,48 +1,57 @@
-const installImportMetaCssDev = (importMeta) => {
-  let cssText = "";
-  let stylesheet = new CSSStyleSheet({ baseUrl: importMeta.url });
-  let adopted = false;
+const IMPORT_META_CSS_DEV = Symbol.for("import_meta_css_dev");
 
-  const css = {
-    toString: () => cssText,
-    update: (value) => {
-      cssText = value;
-      cssText += `
+const installImportMetaCssDev = (importMeta) => {
+  if (importMeta.css === IMPORT_META_CSS_DEV) {
+    return;
+  }
+  // useless today but browser might catch up to display it in devtools
+  const addUrlInfo = (cssText) => {
+    let cssTextWithUrlInfo = cssText;
+    cssTextWithUrlInfo += `
 /* sourceURL=${importMeta.url} */
 /* inlined from ${importMeta.url} */`;
-      stylesheet.replaceSync(cssText);
-    },
-    inject: () => {
-      if (!adopted) {
-        document.adoptedStyleSheets = [
-          ...document.adoptedStyleSheets,
-          stylesheet,
-        ];
-        adopted = true;
-      }
-    },
-    remove: () => {
-      if (adopted) {
-        document.adoptedStyleSheets = document.adoptedStyleSheets.filter(
-          (s) => s !== stylesheet,
-        );
-        adopted = false;
-      }
-    },
+    return cssTextWithUrlInfo;
   };
 
+  let stylesheet;
+  const adopt = (value) => {
+    stylesheet = new CSSStyleSheet({ baseUrl: importMeta.url });
+    stylesheet.replaceSync(addUrlInfo(value));
+    document.adoptedStyleSheets = [...document.adoptedStyleSheets, stylesheet];
+  };
+  const update = (value) => {
+    stylesheet.replaceSync(addUrlInfo(value));
+  };
+  const remove = () => {
+    document.adoptedStyleSheets = document.adoptedStyleSheets.filter(
+      (s) => s !== stylesheet,
+    );
+  };
+
+  let currentCssSource;
   Object.defineProperty(importMeta, "css", {
     configurable: true,
     get() {
-      return css;
+      return IMPORT_META_CSS_DEV;
     },
     set(value) {
-      css.update(value);
-      css.inject();
+      if (value === undefined) {
+        if (stylesheet) {
+          remove();
+          stylesheet = undefined;
+          currentCssSource = undefined;
+        }
+        return;
+      }
+      if (!stylesheet) {
+        adopt(value);
+        currentCssSource = value;
+      } else if (currentCssSource !== value) {
+        update(value);
+        currentCssSource = value;
+      }
     },
   });
-
-  return css.remove;
 };
 
 export { installImportMetaCssDev };

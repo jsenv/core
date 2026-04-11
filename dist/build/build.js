@@ -4232,8 +4232,8 @@ const replacePlaceholders = (html, replacers) => {
 };
 
 const createJsenvPluginStore = async (plugins) => {
-  const allDevServerRoutes = [];
-  const allDevServerPlugins = [];
+  const allServerRoutes = [];
+  const allServerPlugins = [];
   const pluginArray = [];
 
   const pluginPromises = [];
@@ -4256,16 +4256,17 @@ const createJsenvPluginStore = async (plugins) => {
     if (!plugin.name) {
       plugin.name = "anonymous";
     }
-    if (plugin.devServerRoutes) {
-      const devServerRoutes = plugin.devServerRoutes;
-      for (const devServerRoute of devServerRoutes) {
-        allDevServerRoutes.push(devServerRoute);
+    const { serverRoutes } = plugin;
+    if (serverRoutes) {
+      for (const serverRoute of serverRoutes) {
+        allServerRoutes.push(serverRoute);
       }
     }
-    if (plugin.devServerPlugins) {
-      const devServerPlugins = plugin.devServerPlugins;
-      for (const devServerPlugin of devServerPlugins) {
-        allDevServerPlugins.push(devServerPlugin);
+    const { serverPlugins } = plugin;
+    if (serverPlugins) {
+      const serverPlugins = plugin.serverPlugins;
+      for (const serverPlugin of serverPlugins) {
+        allServerPlugins.push(serverPlugin);
       }
     }
     pluginArray.push(plugin);
@@ -4278,8 +4279,8 @@ const createJsenvPluginStore = async (plugins) => {
 
   return {
     pluginArray,
-    allDevServerRoutes,
-    allDevServerPlugins,
+    allServerRoutes,
+    allServerPlugins,
   };
 };
 
@@ -4347,8 +4348,8 @@ const JSENV_PLUGIN_DESCRIPTION = {
     appliesDuring: nonHook,
     serverEvents: nonHook,
     mustStayFirst: nonHook,
-    devServerRoutes: nonHook,
-    devServerPlugins: nonHook,
+    serverRoutes: nonHook,
+    serverPlugins: nonHook,
     // hooks
     init: hook,
     resolveReference: {
@@ -4385,7 +4386,7 @@ const JSENV_PLUGIN_DESCRIPTION = {
     effect: hook,
     refineBuildUrlContent: hook,
     refineBuild: hook,
-    // devServerRoutes and devServerPlugins are nonHook above
+    // serverRoutes and serverPlugins are nonHook above
   },
 };
 
@@ -6477,7 +6478,7 @@ const jsenvPluginDirectoryListing = ({
         };
       },
     },
-    devServerRoutes: [
+    serverRoutes: [
       {
         endpoint:
           "GET /.internal/directory_content.websocket?directory=:directory",
@@ -7661,11 +7662,7 @@ const jsenvPluginImportMetaCss = () => {
     appliesDuring: "*",
     transformUrlContent: {
       js_module: async (urlInfo) => {
-        if (
-          !urlInfo.content.includes("import.meta.css") ||
-          // there is already our installImportMetaCssBuild in the file
-          urlInfo.content.includes("installImportMetaCssBuild")
-        ) {
+        if (!urlInfo.content.includes("import.meta.css")) {
           return null;
         }
         const { metadata } = await applyBabelPlugins({
@@ -7679,17 +7676,67 @@ const jsenvPluginImportMetaCss = () => {
         if (!usesImportMetaCss) {
           return null;
         }
+        if (urlInfo.context.build) {
+          const rootDirectoryUrl = urlInfo.context.rootDirectoryUrl;
+          const relativeUrl = urlInfo.originalUrl.slice(
+            rootDirectoryUrl.length - 1,
+          );
+          const { code } = await applyBabelPlugins({
+            babelPlugins: [
+              [babelPluginRewriteImportMetaCssAssignment, { relativeUrl }],
+            ],
+            input: urlInfo.content,
+            inputIsJsModule: true,
+            inputUrl: urlInfo.originalUrl,
+            outputUrl: urlInfo.generatedUrl,
+          });
+          return injectImportMetaCss(
+            { ...urlInfo, content: code },
+            {
+              importFrom: importMetaCssBuildClientFileUrl,
+              importName: "installImportMetaCssBuild",
+              importAs: "__installImportMetaCssBuild__",
+            },
+          );
+        }
         return injectImportMetaCss(urlInfo, {
-          importFrom: urlInfo.context.build
-            ? importMetaCssBuildClientFileUrl
-            : importMetaCssDevClientFileUrl,
-          importName: urlInfo.context.build
-            ? "installImportMetaCssBuild"
-            : "installImportMetaCssDev",
-          importAs: urlInfo.context.build
-            ? "__installImportMetaCssBuild__"
-            : "__installImportMetaCssDev__",
+          importFrom: importMetaCssDevClientFileUrl,
+          importName: "installImportMetaCssDev",
+          importAs: "__installImportMetaCssDev__",
         });
+      },
+    },
+  };
+};
+
+const babelPluginRewriteImportMetaCssAssignment = (
+  { types: t },
+  { relativeUrl },
+) => {
+  return {
+    name: "rewrite-import-meta-css-assignment",
+    visitor: {
+      AssignmentExpression(path) {
+        const { left, right } = path.node;
+        if (left.type !== "MemberExpression") {
+          return;
+        }
+        const { object, property } = left;
+        if (object.type !== "MetaProperty") {
+          return;
+        }
+        if (object.meta.name !== "import" || object.property.name !== "meta") {
+          return;
+        }
+        if (property.name !== "css") {
+          return;
+        }
+        path.node.right = t.arrayExpression([
+          right,
+          t.objectExpression([
+            t.objectProperty(t.identifier("url"), t.stringLiteral(relativeUrl)),
+          ]),
+        ]);
       },
     },
   };
@@ -7735,7 +7782,7 @@ const injectImportMetaCss = (urlInfo, { importFrom, importName, importAs }) => {
   });
   let importVariableName;
   let importBeforeFrom;
-  if (importAs !== importName) {
+  if (importAs && importAs !== importName) {
     importBeforeFrom = `{ ${importName} as ${importAs} }`;
     importVariableName = importAs;
   } else {
@@ -8487,7 +8534,7 @@ const jsenvPluginAutoreloadServer = ({
         );
       },
     },
-    devServerRoutes: [
+    serverRoutes: [
       {
         endpoint: "GET /.internal/graph.json",
         description:
@@ -8779,7 +8826,7 @@ const jsenvPluginChromeDevtoolsJson = () => {
   return {
     name: "jsenv_plugin_chrome_devtools_json",
     appliesDuring: "dev",
-    devServerRoutes: [
+    serverRoutes: [
       {
         endpoint: "GET /.well-known/appspecific/com.chrome.devtools.json",
         declarationSource: import.meta.url,
@@ -8799,7 +8846,7 @@ const jsenvPluginChromeDevtoolsJson = () => {
 
 const jsenvPluginAutoreloadOnServerRestart = () => {
   const autoreloadOnRestartClientFileUrl = import.meta
-    .resolve("@jsenv/server/src/services/autoreload_on_server_restart/client/autoreload_on_server_restart.js");
+    .resolve("@jsenv/server/src/plugins/autoreload_on_server_restart/client/autoreload_on_server_restart.js");
 
   return {
     name: "jsenv:autoreload_on_server_restart",
@@ -9532,25 +9579,27 @@ const logsDefault = {
 // https://bundlers.tooling.report/hashing/avoid-cascade/
 
 
+// we nevery minify those because they are already very small
+// and would hurt the readability of something that can be critical to debug
 const injectGlobalMappings = async (urlInfo, mappings) => {
   if (urlInfo.type === "html") {
-    const minification = Boolean(
-      urlInfo.context.getPluginMeta("willMinifyJsClassic"),
-    );
+    // const minification = Boolean(
+    //   urlInfo.context.getPluginMeta("willMinifyJsClassic"),
+    // );
     const content = generateClientCodeForMappings(mappings, {
       globalName: "window",
-      minification,
+      minification: false,
     });
     await prependContent(urlInfo, { type: "js_classic", content });
     return;
   }
   if (urlInfo.type === "js_classic" || urlInfo.type === "js_module") {
-    const minification = Boolean(
-      urlInfo.context.getPluginMeta("willMinifyJsClassic"),
-    );
+    // const minification = Boolean(
+    //   urlInfo.context.getPluginMeta("willMinifyJsClassic"),
+    // );
     const content = generateClientCodeForMappings(mappings, {
       globalName: isWebWorkerUrlInfo(urlInfo) ? "self" : "window",
-      minification,
+      minification: false,
     });
     await prependContent(urlInfo, { type: "js_classic", content });
     return;
@@ -9561,11 +9610,6 @@ const generateClientCodeForMappings = (
   versionMappings,
   { globalName, minification },
 ) => {
-  if (minification) {
-    return `;(function(){var m = ${JSON.stringify(
-      versionMappings,
-    )}; ${globalName}.__v__ = function (s) { return m[s] || s }; })();`;
-  }
   return `;(function() {
   var __versionMappings__ = {
     ${stringifyParams(versionMappings, "    ")}

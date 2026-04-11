@@ -3938,8 +3938,8 @@ const replacePlaceholders = (html, replacers) => {
 };
 
 const createJsenvPluginStore = async (plugins) => {
-  const allDevServerRoutes = [];
-  const allDevServerPlugins = [];
+  const allServerRoutes = [];
+  const allServerPlugins = [];
   const pluginArray = [];
 
   const pluginPromises = [];
@@ -3962,16 +3962,17 @@ const createJsenvPluginStore = async (plugins) => {
     if (!plugin.name) {
       plugin.name = "anonymous";
     }
-    if (plugin.devServerRoutes) {
-      const devServerRoutes = plugin.devServerRoutes;
-      for (const devServerRoute of devServerRoutes) {
-        allDevServerRoutes.push(devServerRoute);
+    const { serverRoutes } = plugin;
+    if (serverRoutes) {
+      for (const serverRoute of serverRoutes) {
+        allServerRoutes.push(serverRoute);
       }
     }
-    if (plugin.devServerPlugins) {
-      const devServerPlugins = plugin.devServerPlugins;
-      for (const devServerPlugin of devServerPlugins) {
-        allDevServerPlugins.push(devServerPlugin);
+    const { serverPlugins } = plugin;
+    if (serverPlugins) {
+      const serverPlugins = plugin.serverPlugins;
+      for (const serverPlugin of serverPlugins) {
+        allServerPlugins.push(serverPlugin);
       }
     }
     pluginArray.push(plugin);
@@ -3984,8 +3985,8 @@ const createJsenvPluginStore = async (plugins) => {
 
   return {
     pluginArray,
-    allDevServerRoutes,
-    allDevServerPlugins,
+    allServerRoutes,
+    allServerPlugins,
   };
 };
 
@@ -4053,8 +4054,8 @@ const JSENV_PLUGIN_DESCRIPTION = {
     appliesDuring: nonHook,
     serverEvents: nonHook,
     mustStayFirst: nonHook,
-    devServerRoutes: nonHook,
-    devServerPlugins: nonHook,
+    serverRoutes: nonHook,
+    serverPlugins: nonHook,
     // hooks
     init: hook,
     resolveReference: {
@@ -4091,7 +4092,7 @@ const JSENV_PLUGIN_DESCRIPTION = {
     effect: hook,
     refineBuildUrlContent: hook,
     refineBuild: hook,
-    // devServerRoutes and devServerPlugins are nonHook above
+    // serverRoutes and serverPlugins are nonHook above
   },
 };
 
@@ -6183,7 +6184,7 @@ const jsenvPluginDirectoryListing = ({
         };
       },
     },
-    devServerRoutes: [
+    serverRoutes: [
       {
         endpoint:
           "GET /.internal/directory_content.websocket?directory=:directory",
@@ -7702,11 +7703,7 @@ const jsenvPluginImportMetaCss = () => {
     appliesDuring: "*",
     transformUrlContent: {
       js_module: async (urlInfo) => {
-        if (
-          !urlInfo.content.includes("import.meta.css") ||
-          // there is already our installImportMetaCssBuild in the file
-          urlInfo.content.includes("installImportMetaCssBuild")
-        ) {
+        if (!urlInfo.content.includes("import.meta.css")) {
           return null;
         }
         const { metadata } = await applyBabelPlugins({
@@ -7720,17 +7717,67 @@ const jsenvPluginImportMetaCss = () => {
         if (!usesImportMetaCss) {
           return null;
         }
+        if (urlInfo.context.build) {
+          const rootDirectoryUrl = urlInfo.context.rootDirectoryUrl;
+          const relativeUrl = urlInfo.originalUrl.slice(
+            rootDirectoryUrl.length - 1,
+          );
+          const { code } = await applyBabelPlugins({
+            babelPlugins: [
+              [babelPluginRewriteImportMetaCssAssignment, { relativeUrl }],
+            ],
+            input: urlInfo.content,
+            inputIsJsModule: true,
+            inputUrl: urlInfo.originalUrl,
+            outputUrl: urlInfo.generatedUrl,
+          });
+          return injectImportMetaCss(
+            { ...urlInfo, content: code },
+            {
+              importFrom: importMetaCssBuildClientFileUrl,
+              importName: "installImportMetaCssBuild",
+              importAs: "__installImportMetaCssBuild__",
+            },
+          );
+        }
         return injectImportMetaCss(urlInfo, {
-          importFrom: urlInfo.context.build
-            ? importMetaCssBuildClientFileUrl
-            : importMetaCssDevClientFileUrl,
-          importName: urlInfo.context.build
-            ? "installImportMetaCssBuild"
-            : "installImportMetaCssDev",
-          importAs: urlInfo.context.build
-            ? "__installImportMetaCssBuild__"
-            : "__installImportMetaCssDev__",
+          importFrom: importMetaCssDevClientFileUrl,
+          importName: "installImportMetaCssDev",
+          importAs: "__installImportMetaCssDev__",
         });
+      },
+    },
+  };
+};
+
+const babelPluginRewriteImportMetaCssAssignment = (
+  { types: t },
+  { relativeUrl },
+) => {
+  return {
+    name: "rewrite-import-meta-css-assignment",
+    visitor: {
+      AssignmentExpression(path) {
+        const { left, right } = path.node;
+        if (left.type !== "MemberExpression") {
+          return;
+        }
+        const { object, property } = left;
+        if (object.type !== "MetaProperty") {
+          return;
+        }
+        if (object.meta.name !== "import" || object.property.name !== "meta") {
+          return;
+        }
+        if (property.name !== "css") {
+          return;
+        }
+        path.node.right = t.arrayExpression([
+          right,
+          t.objectExpression([
+            t.objectProperty(t.identifier("url"), t.stringLiteral(relativeUrl)),
+          ]),
+        ]);
       },
     },
   };
@@ -7776,7 +7823,7 @@ const injectImportMetaCss = (urlInfo, { importFrom, importName, importAs }) => {
   });
   let importVariableName;
   let importBeforeFrom;
-  if (importAs !== importName) {
+  if (importAs && importAs !== importName) {
     importBeforeFrom = `{ ${importName} as ${importAs} }`;
     importVariableName = importAs;
   } else {
@@ -8528,7 +8575,7 @@ const jsenvPluginAutoreloadServer = ({
         );
       },
     },
-    devServerRoutes: [
+    serverRoutes: [
       {
         endpoint: "GET /.internal/graph.json",
         description:
@@ -8820,7 +8867,7 @@ const jsenvPluginChromeDevtoolsJson = () => {
   return {
     name: "jsenv_plugin_chrome_devtools_json",
     appliesDuring: "dev",
-    devServerRoutes: [
+    serverRoutes: [
       {
         endpoint: "GET /.well-known/appspecific/com.chrome.devtools.json",
         declarationSource: import.meta.url,
@@ -8840,7 +8887,7 @@ const jsenvPluginChromeDevtoolsJson = () => {
 
 const jsenvPluginAutoreloadOnServerRestart = () => {
   const autoreloadOnRestartClientFileUrl = import.meta
-    .resolve("@jsenv/server/src/services/autoreload_on_server_restart/client/autoreload_on_server_restart.js");
+    .resolve("@jsenv/server/src/plugins/autoreload_on_server_restart/client/autoreload_on_server_restart.js");
 
   return {
     name: "jsenv:autoreload_on_server_restart",
@@ -9379,7 +9426,7 @@ const jsenvPluginServerEvents = ({ clientAutoreload }) => {
         return stringifyHtmlAst(htmlAst);
       },
     },
-    devServerRoutes: [
+    serverRoutes: [
       {
         endpoint: "GET /.internal/events.websocket",
         description: `Jsenv dev server emit server events on this endpoint. When a file is saved the "reload" event is sent here.`,
@@ -9598,7 +9645,7 @@ const startDevServer = async ({
       }),
     );
   }
-  // custom services
+  // custom server plugins
   {
     finalServerPlugins.push(...serverPlugins);
   }
@@ -9811,7 +9858,7 @@ const startDevServer = async ({
         return { kitchen };
       },
       routes: [
-        ...devServerJsenvPluginStore.allDevServerRoutes,
+        ...devServerJsenvPluginStore.allServerRoutes,
         {
           endpoint: "GET *",
           description: "Serve project files.",
@@ -10011,7 +10058,7 @@ const startDevServer = async ({
         },
       ],
     });
-    finalServerPlugins.push(...devServerJsenvPluginStore.allDevServerPlugins);
+    finalServerPlugins.push(...devServerJsenvPluginStore.allServerPlugins);
   }
   // jsenv error handler service
   {
