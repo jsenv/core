@@ -10,8 +10,8 @@
         <text x="10" y="62.55">--- error stack ---</text>
         <text x="10" y="81.55">Error: here</text>
         <text x="10" y="100.55" style="white-space:pre">    at redirectRequest (base/cors.test.mjs:28:19)</text>
-        <text x="10" y="119.55" style="white-space:pre">    at callHook (@jsenv/core/packages/backend/server/src/plugins_controller.js:131:25)</text>
-        <text x="10" y="138.55" style="white-space:pre">    at Object.callHooks (@jsenv/core/packages/backend/server/src/plugins_controller.js:185:27)</text>
+        <text x="10" y="119.55" style="white-space:pre">    at callHook (@jsenv/core/packages/backend/server/src/plugins_controller.js:151:25)</text>
+        <text x="10" y="138.55" style="white-space:pre">    at Object.callHooks (@jsenv/core/packages/backend/server/src/plugins_controller.js:203:27)</text>
         <text x="10" y="157.55" style="white-space:pre">    at applyRequestInternalRedirection (@jsenv/core/packages/backend/server/src/start_server.js:395:29)</text>
         <text x="10" y="176.55" style="white-space:pre">    at getResponseProperties (@jsenv/core/packages/backend/server/src/start_server.js:528:17)</text>
         <text x="10" y="195.55" style="white-space:pre">    at Server.requestEventHandler (@jsenv/core/packages/backend/server/src/start_server.js:694:42)</text>

@@ -17,8 +17,8 @@ internal error while handling request
 --- error stack ---
 Error: here
     at redirectRequest (base/cors.test.mjs:28:19)
-    at callHook (@jsenv/core/packages/backend/server/src/plugins_controller.js:131:25)
-    at Object.callHooks (@jsenv/core/packages/backend/server/src/plugins_controller.js:185:27)
+    at callHook (@jsenv/core/packages/backend/server/src/plugins_controller.js:151:25)
+    at Object.callHooks (@jsenv/core/packages/backend/server/src/plugins_controller.js:203:27)
     at applyRequestInternalRedirection (@jsenv/core/packages/backend/server/src/start_server.js:395:29)
     at getResponseProperties (@jsenv/core/packages/backend/server/src/start_server.js:528:17)
     at Server.requestEventHandler (@jsenv/core/packages/backend/server/src/start_server.js:694:42)
