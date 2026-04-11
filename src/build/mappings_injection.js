@@ -70,9 +70,8 @@ export const injectImportmapMappings = (urlInfo, getMappings) => {
   // jsenv_plugin_importmap.js is removing importmap during build
   // it means at this point we know HTML has no importmap in it
   // we can safely inject one
-  const importmapMinification = Boolean(
-    urlInfo.context.getPluginMeta("willMinifyJson"),
-  );
+  const importmapMinification = false;
+  // Boolean(urlInfo.context.getPluginMeta("willMinifyJson"));
   const importmapNode = findHtmlNode(htmlAst, (node) => {
     return (
       node.tagName === "script" &&

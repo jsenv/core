@@ -3,7 +3,7 @@
   <testcase file="error_jsenv_assert_in_script_module.spec.html" name="chromium" time="[time]" timestamp="[timestamp]" tests="1" failures="1">
     <properties>
       <property name="runtimeName" value="chromium"></property>
-      <property name="runtimeVersion" value="145.0.7632.6"></property>
+      <property name="runtimeVersion" value="147.0.7727.15"></property>
     </properties>
   </testcase>
   <failure type="AssertionError">11 |       import { assert } from "@jsenv/assert";
@@ -18,7 +18,7 @@ expect: "1"
   <testcase file="error_jsenv_assert_in_script_module.spec.html" name="firefox" time="[time]" timestamp="[timestamp]" tests="1" failures="1">
     <properties>
       <property name="runtimeName" value="firefox"></property>
-      <property name="runtimeVersion" value="146.0.1"></property>
+      <property name="runtimeVersion" value="148.0.2"></property>
     </properties>
   </testcase>
   <failure type="AssertionError">AssertionError: actual and expect are different
@@ -28,7 +28,7 @@ expect: "1"</failure>
   <testcase file="error_jsenv_assert_in_script_module.spec.html" name="webkit" time="[time]" timestamp="[timestamp]" tests="1" failures="1">
     <properties>
       <property name="runtimeName" value="webkit"></property>
-      <property name="runtimeVersion" value="26.0"></property>
+      <property name="runtimeVersion" value="26.4"></property>
     </properties>
   </testcase>
   <failure type="AssertionError">11 |       import { assert } from "@jsenv/assert";
