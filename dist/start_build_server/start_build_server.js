@@ -1,4 +1,4 @@
-import { startServer, jsenvServiceCORS, jsenvAccessControlAllowedHeaders, jsenvServiceStaticFiles, jsenvServiceErrorHandler } from "@jsenv/server";
+import { startServer, serverPluginCORS, jsenvAccessControlAllowedHeaders, serverPluginStaticFiles, serverPluginErrorHandler } from "@jsenv/server";
 import { existsSync } from "node:fs";
 import { assertAndNormalizeDirectoryUrl, createLogger, Abort, raceProcessTeardownEvents, createTaskLog } from "./jsenv_core_packages.js";
 import "./jsenv_core_node_modules.js";
@@ -35,7 +35,7 @@ const startBuildServer = async ({
   buildMainFilePath = "index.html",
   port = 9779,
   routes,
-  services = [],
+  serverPlugins = [],
   acceptAnyIp,
   hostname,
   https,
@@ -119,8 +119,8 @@ const startBuildServer = async ({
     serverTiming: true,
     requestWaitingMs: 60_000,
     routes,
-    services: [
-      jsenvServiceCORS({
+    plugins: [
+      serverPluginCORS({
         accessControlAllowRequestOrigin: true,
         accessControlAllowRequestMethod: true,
         accessControlAllowRequestHeaders: true,
@@ -128,12 +128,12 @@ const startBuildServer = async ({
         accessControlAllowCredentials: true,
         timingAllowOrigin: true,
       }),
-      ...services,
-      jsenvServiceStaticFiles({
+      ...serverPlugins,
+      serverPluginStaticFiles({
         directoryUrl: buildDirectoryUrl,
         mainFilePath: buildMainFilePath,
       }),
-      jsenvServiceErrorHandler({
+      serverPluginErrorHandler({
         sendErrorDetails: false,
       }),
     ],

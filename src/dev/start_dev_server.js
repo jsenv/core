@@ -219,7 +219,7 @@ export const startDevServer = async ({
       }),
     );
   }
-  // custom services
+  // custom server plugins
   {
     finalServerPlugins.push(...serverPlugins);
   }

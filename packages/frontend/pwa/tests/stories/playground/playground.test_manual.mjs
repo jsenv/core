@@ -23,7 +23,7 @@ await startTestServer({
       },
     }),
   ],
-  services: [
+  serverPlugins: [
     {
       name: "test",
       handleRequest: (request) => {

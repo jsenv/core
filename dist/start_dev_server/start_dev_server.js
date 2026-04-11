@@ -1,11 +1,11 @@
-import { WebSocketResponse, pickContentType, ServerEvents, jsenvServiceCORS, jsenvAccessControlAllowedHeaders, composeTwoResponses, serveDirectory, jsenvServiceErrorHandler, startServer } from "@jsenv/server";
-import { convertFileSystemErrorToResponseProperties } from "@jsenv/server/src/services/filesystem/filesystem_error_to_response.js";
+import { WebSocketResponse, pickContentType, ServerEvents, serverPluginCORS, jsenvAccessControlAllowedHeaders, composeTwoResponses, serveDirectory, serverPluginErrorHandler, startServer } from "@jsenv/server";
+import { convertFileSystemErrorToResponseProperties } from "@jsenv/server/src/plugins/filesystem/filesystem_error_to_response.js";
 import { lookupPackageDirectory, registerDirectoryLifecycle, urlToRelativeUrl, moveUrl, urlIsOrIsInsideOf, ensureWindowsDriveLetter, createDetailedMessage, stringifyUrlSite, generateContentFrame, validateResponseIntegrity, setUrlFilename, getCallerPosition, urlToBasename, urlToExtension, asSpecifierWithoutSearch, asUrlWithoutSearch, injectQueryParamsIntoSpecifier, bufferToEtag, isFileSystemPath, urlToPathname, setUrlBasename, urlToFileSystemPath, writeFileSync, createLogger, URL_META, applyNodeEsmResolution, normalizeUrl, ANSI, RUNTIME_COMPAT, CONTENT_TYPE, readPackageAtOrNull, errorToHTML, DATA_URL, normalizeImportMap, composeTwoImportMaps, resolveImport, JS_QUOTES, readCustomConditionsFromProcessArgs, readEntryStatSync, ensurePathnameTrailingSlash, compareFileUrls, urlToFilename, applyFileSystemMagicResolution, getExtensionsToTry, setUrlExtension, isSpecifierForNodeBuiltin, injectQueryParams, memoizeByFirstArgument, assertAndNormalizeDirectoryUrl, createTaskLog, formatError } from "./jsenv_core_packages.js";
 import { readFileSync, existsSync, readdirSync, lstatSync, realpathSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import { generateSourcemapFileUrl, createMagicSource, composeTwoSourcemaps, generateSourcemapDataUrl, SOURCEMAP } from "@jsenv/sourcemap";
 import { parseHtml, injectHtmlNodeAsEarlyAsPossible, createHtmlNode, stringifyHtmlAst, applyBabelPlugins, generateUrlForInlineContent, injectJsenvScript, parseJsWithAcorn, parseCssUrls, getHtmlNodeAttribute, getHtmlNodePosition, getHtmlNodeAttributePosition, setHtmlNodeAttributes, parseSrcSet, getUrlForContentInsideHtml, removeHtmlNodeText, setHtmlNodeText, getHtmlNodeText, analyzeScriptNode, visitHtmlNodes, parseJsUrls, getUrlForContentInsideJs, analyzeLinkNode } from "@jsenv/ast";
-import { performance } from "node:perf_hooks";
+import { createPluginsController } from "@jsenv/server/src/plugins_controller.js";
 import { jsenvPluginSupervisor } from "@jsenv/plugin-supervisor";
 import { jsenvPluginTranspilation } from "@jsenv/plugin-transpilation";
 import { randomUUID } from "node:crypto";
@@ -193,7 +193,7 @@ const WEB_URL_CONVERTER = {
 const jsenvCoreDirectoryUrl = new URL("../", import.meta.url);
 
 const createResolveUrlError = ({
-  pluginController,
+  jsenvPluginsController,
   reference,
   error,
 }) => {
@@ -211,7 +211,7 @@ ${reason}`,
         {
           ...detailsFromFirstReference(reference),
           ...details,
-          ...detailsFromPluginController(pluginController),
+          ...detailsFromPluginController(jsenvPluginsController),
         },
       ),
     );
@@ -256,7 +256,7 @@ ${reason}`,
 };
 
 const createFetchUrlContentError = ({
-  pluginController,
+  jsenvPluginsController,
   urlInfo,
   error,
 }) => {
@@ -275,7 +275,7 @@ ${reason}`,
         {
           ...detailsFromFirstReference(reference),
           ...details,
-          ...detailsFromPluginController(pluginController),
+          ...detailsFromPluginController(jsenvPluginsController),
         },
       ),
     );
@@ -331,7 +331,7 @@ ${reason}`,
 };
 
 const createTransformUrlContentError = ({
-  pluginController,
+  jsenvPluginsController,
   urlInfo,
   error,
 }) => {
@@ -360,7 +360,7 @@ ${error.message}`,
             ? `${reference.trace.url}:${reference.trace.line}:${reference.trace.column}`
             : reference.trace.message,
           ...detailsFromFirstReference(reference),
-          ...detailsFromPluginController(pluginController),
+          ...detailsFromPluginController(jsenvPluginsController),
         },
       ),
     );
@@ -392,7 +392,7 @@ ${reason}`,
         {
           ...detailsFromFirstReference(reference),
           ...details,
-          ...detailsFromPluginController(pluginController),
+          ...detailsFromPluginController(jsenvPluginsController),
         },
       ),
     );
@@ -416,7 +416,7 @@ ${reason}`,
 };
 
 const createFinalizeUrlContentError = ({
-  pluginController,
+  jsenvPluginsController,
   urlInfo,
   error,
 }) => {
@@ -428,7 +428,7 @@ ${reference.trace.message}`,
       {
         ...detailsFromFirstReference(reference),
         ...detailsFromValueThrown(error),
-        ...detailsFromPluginController(pluginController),
+        ...detailsFromPluginController(jsenvPluginsController),
       },
     ),
   );
@@ -518,8 +518,8 @@ const getFirstReferenceInProject = (reference) => {
   return getFirstReferenceInProject(firstReference);
 };
 
-const detailsFromPluginController = (pluginController) => {
-  const currentPlugin = pluginController.getCurrentPlugin();
+const detailsFromPluginController = (jsenvPluginsController) => {
+  const currentPlugin = jsenvPluginsController.getCurrentPlugin();
   if (!currentPlugin) {
     return null;
   }
@@ -3072,14 +3072,14 @@ const createKitchen = ({
     },
     graph: null,
     urlInfoTransformer: null,
-    pluginController: null,
+    jsenvPluginsController: null,
   };
   const kitchenContext = kitchen.context;
   kitchenContext.kitchen = kitchen;
 
-  let pluginController;
-  kitchen.setPluginController = (value) => {
-    pluginController = kitchen.pluginController = value;
+  let jsenvPluginsController;
+  kitchen.setJsenvPluginsController = (value) => {
+    jsenvPluginsController = kitchen.jsenvPluginsController = value;
   };
 
   const graph = createUrlGraph({
@@ -3088,7 +3088,11 @@ const createKitchen = ({
     kitchen,
   });
   graph.urlInfoCreatedEventEmitter.on((urlInfoCreated) => {
-    pluginController.callHooks("urlInfoCreated", urlInfoCreated, () => {});
+    jsenvPluginsController.callHooks(
+      "urlInfoCreated",
+      urlInfoCreated,
+      () => {},
+    );
   });
   kitchen.graph = graph;
 
@@ -3262,7 +3266,7 @@ const createKitchen = ({
           setReferenceUrl(reference.url);
           break resolve;
         }
-        const resolvedUrl = pluginController.callHooksUntil(
+        const resolvedUrl = jsenvPluginsController.callHooksUntil(
           "resolveReference",
           reference,
         );
@@ -3276,7 +3280,7 @@ const createKitchen = ({
         setReferenceUrl(normalizedUrl);
         if (reference.debug) {
           logger.debug(`url resolved by "${
-            pluginController.getLastPluginUsed().name
+            jsenvPluginsController.getLastPluginUsed().name
           }"
 ${ANSI.color(reference.specifier, ANSI.GREY)} ->
 ${ANSI.color(reference.url, ANSI.YELLOW)}
@@ -3290,7 +3294,7 @@ ${ANSI.color(reference.url, ANSI.YELLOW)}
           // - side_effect_file references injected in entry points or at the top of files
           break redirect;
         }
-        pluginController.callHooks(
+        jsenvPluginsController.callHooks(
           "redirectReference",
           reference,
           (returnValue, plugin, setReference) => {
@@ -3335,7 +3339,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       return reference;
     } catch (error) {
       throw createResolveUrlError({
-        pluginController,
+        jsenvPluginsController,
         reference,
         error,
       });
@@ -3362,7 +3366,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       // But do not represent an other resource, it is considered as
       // the same resource under the hood
       const searchParamTransformationMap = new Map();
-      pluginController.callHooks(
+      jsenvPluginsController.callHooks(
         "transformReferenceSearchParams",
         reference,
         (returnValue) => {
@@ -3390,7 +3394,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       }
     }
     {
-      const returnValue = pluginController.callHooksUntil(
+      const returnValue = jsenvPluginsController.callHooksUntil(
         "formatReference",
         reference,
       );
@@ -3411,7 +3415,10 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
   const fetchUrlContent = async (urlInfo) => {
     try {
       const fetchUrlContentReturnValue =
-        await pluginController.callAsyncHooksUntil("fetchUrlContent", urlInfo);
+        await jsenvPluginsController.callAsyncHooksUntil(
+          "fetchUrlContent",
+          urlInfo,
+        );
       if (!fetchUrlContentReturnValue) {
         logger.warn(
           createDetailedMessage(
@@ -3510,7 +3517,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       });
     } catch (error) {
       throw createFetchUrlContentError({
-        pluginController,
+        jsenvPluginsController,
         urlInfo,
         error,
       });
@@ -3520,7 +3527,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
 
   const transformUrlContent = async (urlInfo) => {
     try {
-      await pluginController.callAsyncHooks(
+      await jsenvPluginsController.callAsyncHooks(
         "transformUrlContent",
         urlInfo,
         (transformReturnValue) => {
@@ -3532,7 +3539,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       );
     } catch (error) {
       const transformError = createTransformUrlContentError({
-        pluginController,
+        jsenvPluginsController,
         urlInfo,
         error,
       });
@@ -3544,14 +3551,15 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
   const finalizeUrlContent = async (urlInfo) => {
     try {
       await urlInfo.applyContentTransformationCallbacks();
-      const finalizeReturnValue = await pluginController.callAsyncHooksUntil(
-        "finalizeUrlContent",
-        urlInfo,
-      );
+      const finalizeReturnValue =
+        await jsenvPluginsController.callAsyncHooksUntil(
+          "finalizeUrlContent",
+          urlInfo,
+        );
       urlInfoTransformer.endTransformations(urlInfo, finalizeReturnValue);
     } catch (error) {
       throw createFinalizeUrlContentError({
-        pluginController,
+        jsenvPluginsController,
         urlInfo,
         error,
       });
@@ -3632,7 +3640,7 @@ ${urlInfo.firstReference.trace.message}`;
     }
 
     // "cooked" hook
-    pluginController.callHooks("cooked", urlInfo, (cookedReturnValue) => {
+    jsenvPluginsController.callHooks("cooked", urlInfo, (cookedReturnValue) => {
       if (typeof cookedReturnValue === "function") {
         const removeCallback = urlInfo.graph.urlInfoDereferencedEventEmitter.on(
           (urlInfoDereferenced, lastReferenceFromOther) => {
@@ -3929,9 +3937,9 @@ const replacePlaceholders = (html, replacers) => {
   });
 };
 
-const createPluginStore = async (plugins) => {
+const createJsenvPluginStore = async (plugins) => {
   const allDevServerRoutes = [];
-  const allDevServerServices = [];
+  const allDevServerPlugins = [];
   const pluginArray = [];
 
   const pluginPromises = [];
@@ -3960,10 +3968,10 @@ const createPluginStore = async (plugins) => {
         allDevServerRoutes.push(devServerRoute);
       }
     }
-    if (plugin.devServerServices) {
-      const devServerServices = plugin.devServerServices;
-      for (const devServerService of devServerServices) {
-        allDevServerServices.push(devServerService);
+    if (plugin.devServerPlugins) {
+      const devServerPlugins = plugin.devServerPlugins;
+      for (const devServerPlugin of devServerPlugins) {
+        allDevServerPlugins.push(devServerPlugin);
       }
     }
     pluginArray.push(plugin);
@@ -3977,282 +3985,119 @@ const createPluginStore = async (plugins) => {
   return {
     pluginArray,
     allDevServerRoutes,
-    allDevServerServices,
+    allDevServerPlugins,
   };
 };
 
-const createPluginController = async (
+const createJsenvPluginsController = async (
   pluginStore,
   kitchen,
-  { initialPuginsMeta = {} } = {},
+  { meta } = {},
 ) => {
-  const pluginsMeta = initialPuginsMeta;
-  kitchen.context.getPluginMeta = (id) => {
-    const value = pluginsMeta[id];
-    return value;
-  };
-
-  // precompute a list of hooks per hookName because:
-  // 1. [MAJOR REASON] when debugging, there is less iteration (so much better)
-  // 2. [MINOR REASON] it should increase perf as there is less work to do
-  const hookSetMap = new Map();
-  const pluginCandidates = pluginStore.pluginArray;
-  const activePluginArray = [];
-  const pluginWithEffectCandidateForActivationArray = [];
-  for (const pluginCandidate of pluginCandidates) {
-    if (!testAppliesDuring(pluginCandidate, kitchen)) {
-      pluginCandidate.destroy?.();
-      continue;
-    }
-    const initPluginResult = await initPlugin(pluginCandidate, kitchen);
-    if (!initPluginResult) {
-      pluginCandidate.destroy?.();
-      continue;
-    }
-    if (pluginCandidate.effect) {
-      pluginWithEffectCandidateForActivationArray.push(pluginCandidate);
-    } else {
-      activePluginArray.push(pluginCandidate);
-    }
-  }
-
-  const activeEffectSet = new Set();
-  for (const pluginWithEffectCandidateForActivation of pluginWithEffectCandidateForActivationArray) {
-    const returnValue = pluginWithEffectCandidateForActivation.effect({
-      kitchenContext: kitchen.context,
-      otherPlugins: activePluginArray,
-    });
-    if (!returnValue) {
-      continue;
-    }
-    activePluginArray.push(pluginWithEffectCandidateForActivation);
-    activeEffectSet.add({
-      plugin: pluginWithEffectCandidateForActivation,
-      cleanup: typeof returnValue === "function" ? returnValue : () => {},
-    });
-  }
-  activePluginArray.sort((a, b) => {
-    return pluginCandidates.indexOf(a) - pluginCandidates.indexOf(b);
+  kitchen.context.getPluginMeta = (id) => pluginsController.getPluginMeta(id);
+  const pluginsController = await createPluginsController({
+    plugins: pluginStore.pluginArray,
+    pluginDescription: JSENV_PLUGIN_DESCRIPTION,
+    filterPlugin: (plugin) => testAppliesDuring(plugin, kitchen),
+    getInitPluginArgs: (plugin) => [kitchen.context, { plugin }],
+    getEffectArgs: ({ otherPlugins }) => [
+      { kitchenContext: kitchen.context, otherPlugins },
+    ],
+    meta,
   });
-  for (const activePlugin of activePluginArray) {
-    for (const key of Object.keys(activePlugin)) {
-      if (key === "meta") {
-        const value = activePlugin[key];
-        if (typeof value !== "object" || value === null) {
-          console.warn(`plugin.meta must be an object, got ${value}`);
-          continue;
-        }
-        Object.assign(pluginsMeta, value);
-        // any extension/modification on plugin.meta
-        // won't be taken into account so we freeze object
-        // to throw in case it happen
-        Object.freeze(value);
-        continue;
-      }
-      if (
-        key === "name" ||
-        key === "appliesDuring" ||
-        key === "init" ||
-        key === "serverEvents" ||
-        key === "mustStayFirst" ||
-        key === "devServerRoutes" ||
-        key === "devServerServices" ||
-        key === "effect"
-      ) {
-        continue;
-      }
-      const isHook = HOOK_NAMES.includes(key);
-      if (!isHook) {
-        console.warn(
-          `Unexpected "${key}" property on "${activePlugin.name}" plugin`,
-        );
-        continue;
-      }
-      const hookName = key;
-      const hookValue = activePlugin[hookName];
-      if (hookValue) {
-        let hookSet = hookSetMap.get(hookName);
-        if (!hookSet) {
-          hookSet = new Set();
-          hookSetMap.set(hookName, hookSet);
-        }
-        const hook = {
-          plugin: activePlugin,
-          name: hookName,
-          value: hookValue,
-        };
-        // if (position === "start") {
-        //   let i = 0;
-        //   while (i < group.length) {
-        //     const before = group[i];
-        //     if (!before.plugin.mustStayFirst) {
-        //       break;
-        //     }
-        //     i++;
-        //   }
-        //   group.splice(i, 0, hook);
-        // } else {
-        hookSet.add(hook);
-      }
-    }
-  }
-
-  let lastPluginUsed = null;
-  let currentPlugin = null;
-  let currentHookName = null;
-  const callHook = (hook, info) => {
-    const hookFn = getHookFunction(hook, info);
-    if (!hookFn) {
-      return null;
-    }
-    let startTimestamp;
-    if (info.timing) {
-      startTimestamp = performance.now();
-    }
-    lastPluginUsed = hook.plugin;
-    currentPlugin = hook.plugin;
-    currentHookName = hook.name;
-    let valueReturned = hookFn(info);
-    if (info.timing) {
-      info.timing[`${hook.name}-${hook.plugin.name.replace("jsenv:", "")}`] =
-        performance.now() - startTimestamp;
-    }
-    valueReturned = assertAndNormalizeReturnValue(hook, valueReturned, info);
-    currentPlugin = null;
-    currentHookName = null;
-    return valueReturned;
-  };
-  const callAsyncHook = async (hook, info) => {
-    const hookFn = getHookFunction(hook, info);
-    if (!hookFn) {
-      return null;
-    }
-
-    let startTimestamp;
-    if (info.timing) {
-      startTimestamp = performance.now();
-    }
-    lastPluginUsed = hook.plugin;
-    currentPlugin = hook.plugin;
-    currentHookName = hook.name;
-    let valueReturned = await hookFn(info);
-    if (info.timing) {
-      info.timing[`${hook.name}-${hook.plugin.name.replace("jsenv:", "")}`] =
-        performance.now() - startTimestamp;
-    }
-    valueReturned = assertAndNormalizeReturnValue(hook, valueReturned, info);
-    currentPlugin = null;
-    currentHookName = null;
-    return valueReturned;
-  };
-  const callHooks = (hookName, info, callback) => {
-    const hookSet = hookSetMap.get(hookName);
-    if (!hookSet) {
-      return;
-    }
-    const setHookParams = (firstArg = info) => {
-      info = firstArg;
-    };
-    for (const hook of hookSet) {
-      const returnValue = callHook(hook, info);
-      if (returnValue && callback) {
-        callback(returnValue, hook.plugin, setHookParams);
-      }
-    }
-  };
-  const callAsyncHooks = async (hookName, info, callback, options) => {
-    const hookSet = hookSetMap.get(hookName);
-    if (!hookSet) {
-      return;
-    }
-    for (const hook of hookSet) {
-      const returnValue = await callAsyncHook(hook, info);
-      if (returnValue && callback) {
-        await callback(returnValue, hook.plugin);
-      }
-    }
-  };
-  const callHooksUntil = (hookName, info) => {
-    const hookSet = hookSetMap.get(hookName);
-    if (!hookSet) {
-      return null;
-    }
-    for (const hook of hookSet) {
-      const returnValue = callHook(hook, info);
-      if (returnValue) {
-        return returnValue;
-      }
-    }
-    return null;
-  };
-  const callAsyncHooksUntil = async (hookName, info, options) => {
-    const hookSet = hookSetMap.get(hookName);
-    if (!hookSet) {
-      return null;
-    }
-    if (hookSet.size === 0) {
-      return null;
-    }
-    const iterator = hookSet.values()[Symbol.iterator]();
-    let result;
-    const visit = async () => {
-      const { done, value: hook } = iterator.next();
-      if (done) {
-        return;
-      }
-      const returnValue = await callAsyncHook(hook, info);
-      if (returnValue) {
-        result = returnValue;
-        return;
-      }
-      await visit();
-    };
-    await visit();
-    return result;
-  };
-
-  return {
-    activePlugins: activePluginArray,
-
-    callHook,
-    callAsyncHook,
-    callHooks,
-    callHooksUntil,
-    callAsyncHooks,
-    callAsyncHooksUntil,
-
-    getLastPluginUsed: () => lastPluginUsed,
-    getCurrentPlugin: () => currentPlugin,
-    getCurrentHookName: () => currentHookName,
-  };
+  return pluginsController;
 };
 
-const HOOK_NAMES = [
-  "init",
-  "devServerRoutes", // is called only during dev/tests
-  "devServerServices", // is called only during dev/tests
-  "resolveReference",
-  "redirectReference",
-  "transformReferenceSearchParams",
-  "formatReference",
-  "urlInfoCreated",
-  "fetchUrlContent",
-  "transformUrlContent",
-  "finalizeUrlContent",
-  "bundle", // is called only during build
-  "optimizeBuildUrlContent", // is called only during build
-  "cooked",
-  "augmentResponse", // is called only during dev/tests
-  "destroy",
-  "effect",
-  "refineBuildUrlContent", // called only during build
-  "refineBuild", // called only during build
-];
+const hook = { type: "hook" };
+const nonHook = {};
+
+const assertUrlReturnValue = (valueReturned, urlInfo, { hook }) => {
+  if (valueReturned instanceof URL) {
+    return valueReturned.href;
+  }
+  if (typeof valueReturned === "string") {
+    return valueReturned;
+  }
+  throw new Error(
+    `Unexpected value returned by hook "${hook.plugin.name}.${hook.name}()": it must be a string; got ${valueReturned}`,
+  );
+};
+const assertContentReturnValue = (valueReturned, urlInfo, { hook }) => {
+  if (typeof valueReturned === "string" || Buffer.isBuffer(valueReturned)) {
+    return { content: valueReturned };
+  }
+  if (typeof valueReturned === "object") {
+    const { content, body } = valueReturned;
+    if (urlInfo.url.startsWith("ignore:")) {
+      return valueReturned;
+    }
+    if (typeof content !== "string" && !Buffer.isBuffer(content) && !body) {
+      if (Object.hasOwn(valueReturned, "contentInjections")) {
+        return valueReturned;
+      }
+      throw new Error(
+        `Unexpected "content" returned by hook "${hook.plugin.name}.${hook.name}()": it must be a string or a buffer; got ${content}`,
+      );
+    }
+    return valueReturned;
+  }
+  throw new Error(
+    `Unexpected value returned by hook "${hook.plugin.name}.${hook.name}()": it must be a string, a buffer or an object; got ${valueReturned}`,
+  );
+};
+
+const JSENV_PLUGIN_DESCRIPTION = {
+  name: "jsenv plugin",
+  properties: {
+    // non-hook properties (silently skipped)
+    appliesDuring: nonHook,
+    serverEvents: nonHook,
+    mustStayFirst: nonHook,
+    devServerRoutes: nonHook,
+    devServerPlugins: nonHook,
+    // hooks
+    init: hook,
+    resolveReference: {
+      type: "hook",
+      assertAndNormalize: assertUrlReturnValue,
+    },
+    redirectReference: {
+      type: "hook",
+      assertAndNormalize: assertUrlReturnValue,
+    },
+    transformReferenceSearchParams: hook,
+    formatReference: hook,
+    urlInfoCreated: hook,
+    fetchUrlContent: {
+      type: "hook",
+      assertAndNormalize: assertContentReturnValue,
+    },
+    transformUrlContent: {
+      type: "hook",
+      assertAndNormalize: assertContentReturnValue,
+    },
+    finalizeUrlContent: {
+      type: "hook",
+      assertAndNormalize: assertContentReturnValue,
+    },
+    bundle: hook,
+    optimizeBuildUrlContent: {
+      type: "hook",
+      assertAndNormalize: assertContentReturnValue,
+    },
+    cooked: hook,
+    augmentResponse: hook,
+    destroy: hook,
+    effect: hook,
+    refineBuildUrlContent: hook,
+    refineBuild: hook,
+    // devServerRoutes and devServerPlugins are nonHook above
+  },
+};
 
 const testAppliesDuring = (plugin, kitchen) => {
   const { appliesDuring } = plugin;
   if (appliesDuring === undefined) {
-    // console.debug(`"appliesDuring" is undefined on ${pluginEntry.name}`)
     return true;
   }
   if (appliesDuring === "*") {
@@ -4278,112 +4123,12 @@ const testAppliesDuring = (plugin, kitchen) => {
         return true;
       }
     }
-    // throw new Error(`"appliesDuring" is empty`)
     return false;
   }
   throw new TypeError(
     `"appliesDuring" must be an object or a string, got ${appliesDuring}`,
   );
 };
-const initPlugin = async (plugin, kitchen) => {
-  const { init } = plugin;
-  if (!init) {
-    return true;
-  }
-  const initReturnValue = await init(kitchen.context, { plugin });
-  if (initReturnValue === false) {
-    return false;
-  }
-  if (typeof initReturnValue === "function" && !plugin.destroy) {
-    plugin.destroy = initReturnValue;
-  }
-  return true;
-};
-const getHookFunction = (
-  hook,
-  // can be undefined, reference, or urlInfo
-  info = {},
-) => {
-  const hookValue = hook.value;
-  if (typeof hookValue === "object") {
-    const hookForType = hookValue[info.type] || hookValue["*"];
-    if (!hookForType) {
-      return null;
-    }
-    return hookForType;
-  }
-  return hookValue;
-};
-
-const assertAndNormalizeReturnValue = (hook, returnValue, info) => {
-  // all hooks are allowed to return null/undefined as a signal of "I don't do anything"
-  if (returnValue === null || returnValue === undefined) {
-    return returnValue;
-  }
-  for (const returnValueAssertion of returnValueAssertions) {
-    if (!returnValueAssertion.appliesTo.includes(hook.name)) {
-      continue;
-    }
-    const assertionResult = returnValueAssertion.assertion(returnValue, info, {
-      hook,
-    });
-    if (assertionResult !== undefined) {
-      // normalization
-      returnValue = assertionResult;
-      break;
-    }
-  }
-  return returnValue;
-};
-const returnValueAssertions = [
-  {
-    name: "url_assertion",
-    appliesTo: ["resolveReference", "redirectReference"],
-    assertion: (valueReturned, urlInfo, { hook }) => {
-      if (valueReturned instanceof URL) {
-        return valueReturned.href;
-      }
-      if (typeof valueReturned === "string") {
-        return undefined;
-      }
-      throw new Error(
-        `Unexpected value returned by "${hook.plugin.name}" plugin: it must be a string; got ${valueReturned}`,
-      );
-    },
-  },
-  {
-    name: "content_assertion",
-    appliesTo: [
-      "fetchUrlContent",
-      "transformUrlContent",
-      "finalizeUrlContent",
-      "optimizeBuildUrlContent",
-    ],
-    assertion: (valueReturned, urlInfo, { hook }) => {
-      if (typeof valueReturned === "string" || Buffer.isBuffer(valueReturned)) {
-        return { content: valueReturned };
-      }
-      if (typeof valueReturned === "object") {
-        const { content, body } = valueReturned;
-        if (urlInfo.url.startsWith("ignore:")) {
-          return undefined;
-        }
-        if (typeof content !== "string" && !Buffer.isBuffer(content) && !body) {
-          if (Object.hasOwn(valueReturned, "contentInjections")) {
-            return undefined;
-          }
-          throw new Error(
-            `Unexpected "content" returned by "${hook.plugin.name}" ${hook.name} hook: it must be a string or a buffer; got ${content}`,
-          );
-        }
-        return undefined;
-      }
-      throw new Error(
-        `Unexpected value returned by "${hook.plugin.name}" ${hook.name} hook: it must be a string, a buffer or an object; got ${valueReturned}`,
-      );
-    },
-  },
-];
 
 /*
  * https://github.com/parcel-bundler/parcel/blob/v2/packages/transformers/css/src/CSSTransformer.js
@@ -9704,7 +9449,7 @@ const startDevServer = async ({
   logLevel = EXECUTED_BY_TEST_PLAN ? "warn" : "info",
   serverLogLevel = "warn",
   serverRouterLogLevel = "warn",
-  services = [],
+  serverPlugins = [],
 
   signal = new AbortController().signal,
   handleSIGINT = true,
@@ -9810,10 +9555,10 @@ const startDevServer = async ({
   const serverStopAbortSignal = serverStopAbortController.signal;
   const kitchenCache = new Map();
 
-  const finalServices = [];
+  const finalServerPlugins = [];
   // x-server-inspect service
   {
-    finalServices.push({
+    finalServerPlugins.push({
       name: "jsenv:server_header",
       routes: [
         {
@@ -9839,8 +9584,8 @@ const startDevServer = async ({
   }
   // cors service
   {
-    finalServices.push(
-      jsenvServiceCORS({
+    finalServerPlugins.push(
+      serverPluginCORS({
         accessControlAllowRequestOrigin: true,
         accessControlAllowRequestMethod: true,
         accessControlAllowRequestHeaders: true,
@@ -9855,7 +9600,7 @@ const startDevServer = async ({
   }
   // custom services
   {
-    finalServices.push(...services);
+    finalServerPlugins.push(...serverPlugins);
   }
   // file_service
   {
@@ -9885,7 +9630,7 @@ const startDevServer = async ({
       sourceDirectoryUrl,
     });
 
-    const devServerPluginStore = await createPluginStore([
+    const devServerJsenvPluginStore = await createJsenvPluginStore([
       jsenvPluginServerEvents({ clientAutoreload }),
       ...plugins,
       ...getCorePlugins({
@@ -10045,28 +9790,28 @@ const startDevServer = async ({
           );
         },
       );
-      const devServerPluginController = await createPluginController(
-        devServerPluginStore,
+      const devServerJsenvPluginController = await createJsenvPluginsController(
+        devServerJsenvPluginStore,
         kitchen,
       );
-      kitchen.setPluginController(devServerPluginController);
+      kitchen.setJsenvPluginsController(devServerJsenvPluginController);
 
       serverStopCallbackSet.add(() => {
-        devServerPluginController.callHooks("destroy", kitchen.context);
+        devServerJsenvPluginController.callHooks("destroy", kitchen.context);
       });
       kitchenCache.set(runtimeId, kitchen);
       onKitchenCreated(kitchen);
       return kitchen;
     };
 
-    finalServices.push({
+    finalServerPlugins.push({
       name: "jsenv:dev_server_routes",
       augmentRouteFetchSecondArg: async (request) => {
         const kitchen = await getOrCreateKitchen(request);
         return { kitchen };
       },
       routes: [
-        ...devServerPluginStore.allDevServerRoutes,
+        ...devServerJsenvPluginStore.allDevServerRoutes,
         {
           endpoint: "GET *",
           description: "Serve project files.",
@@ -10179,7 +9924,7 @@ const startDevServer = async ({
                 reference,
                 urlInfo,
               };
-              kitchen.pluginController.callHooks(
+              kitchen.jsenvPluginsController.callHooks(
                 "augmentResponse",
                 augmentResponseInfo,
                 (returnValue) => {
@@ -10266,11 +10011,11 @@ const startDevServer = async ({
         },
       ],
     });
-    finalServices.push(...devServerPluginStore.allDevServerServices);
+    finalServerPlugins.push(...devServerJsenvPluginStore.allDevServerPlugins);
   }
   // jsenv error handler service
   {
-    finalServices.push({
+    finalServerPlugins.push({
       name: "jsenv:omega_error_handler",
       handleError: (error) => {
         const getResponseForError = () => {
@@ -10307,8 +10052,8 @@ const startDevServer = async ({
   }
   // default error handler
   {
-    finalServices.push(
-      jsenvServiceErrorHandler({
+    finalServerPlugins.push(
+      serverPluginErrorHandler({
         sendErrorDetails: true,
       }),
     );
@@ -10330,7 +10075,7 @@ const startDevServer = async ({
     hostname,
     port,
     requestWaitingMs: 60_000,
-    services: finalServices,
+    plugins: finalServerPlugins,
   });
   server.stoppedPromise.then((reason) => {
     onStop();
