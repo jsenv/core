@@ -16,7 +16,7 @@ export {
   STOP_REASON_PROCESS_BEFORE_EXIT,
   STOP_REASON_PROCESS_EXIT,
   STOP_REASON_NOT_SPECIFIED,
-} from "./src/stopReasons.js";
+} from "./src/stop_reasons.js";
 export { jsenvServiceErrorHandler } from "./src/services/error_handler/jsenv_service_error_handler.js";
 
 // webSocket

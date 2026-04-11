@@ -25,15 +25,15 @@ import { trackServerPendingConnections } from "./internal/trackServerPendingConn
 import { trackServerPendingRequests } from "./internal/trackServerPendingRequests.js";
 import { createRouter } from "./router/router.js";
 import { timingToServerTimingResponseHeaders } from "./server_timing/timing_header.js";
-import {
-  createServiceController,
-  flattenAndFilterServices,
-} from "./service_controller.js";
 import { jsenvServiceAutoreloadOnRestart } from "./services/autoreload_on_server_restart/jsenv_service_autoreload_on_server_restart.js";
 import { jsenvServiceDefaultBody4xx5xx } from "./services/default_body_4xx_5xx/jsenv_service_default_body_4xx_5xx.js";
 import { jsenvServiceInternalClientFiles } from "./services/internal_client_files/jsenv_service_internal_client_files.js";
 import { jsenvServiceOpenFile } from "./services/open_file/jsenv_service_open_file.js";
 import { jsenvServiceRouteInspector } from "./services/route_inspector/jsenv_service_route_inspector.js";
+import {
+  createServiceController,
+  flattenAndFilterServices,
+} from "./services/service_controller.js";
 import {
   STOP_REASON_INTERNAL_ERROR,
   STOP_REASON_NOT_SPECIFIED,
@@ -42,7 +42,7 @@ import {
   STOP_REASON_PROCESS_SIGHUP,
   STOP_REASON_PROCESS_SIGINT,
   STOP_REASON_PROCESS_SIGTERM,
-} from "./stopReasons.js";
+} from "./stop_reasons.js";
 import { getWebSocketHandler } from "./web_socket_response.js";
 
 import { applyDnsResolution } from "./internal/dns_resolution.js";
@@ -185,7 +185,7 @@ export const startServer = async ({
 
   const server = {};
 
-  const serviceController = createServiceController(services);
+  const serviceController = await createServiceController(services);
   const processTeardownEvents = {
     SIGHUP: stopOnExit,
     SIGTERM: stopOnExit,
