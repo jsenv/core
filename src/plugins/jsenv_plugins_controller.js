@@ -1,4 +1,5 @@
 import { createPluginsController } from "@jsenv/server/src/plugins_controller.js";
+
 import { jsenvPluginHtmlSyntaxErrorFallback } from "./html_syntax_error_fallback/jsenv_plugin_html_syntax_error_fallback.js";
 
 export const createJsenvPluginStore = async (plugins) => {

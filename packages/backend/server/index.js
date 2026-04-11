@@ -51,3 +51,6 @@ export { serverPluginResponseAcceptanceCheck } from "./src/plugins/response_acce
 export { composeTwoResponses } from "./src/internal/response_composition.js";
 export { serverPluginRequestAliases } from "./src/plugins/request_aliases/server_plugin_request_aliases.js";
 export { findFreePort } from "./src/internal/listen.js";
+
+// internal (used by @jsenv/core)
+export { createPluginsController } from "./src/plugins_controller.js";
