@@ -90,7 +90,7 @@ export const jsenvPluginServerEvents = ({ clientAutoreload }) => {
         return stringifyHtmlAst(htmlAst);
       },
     },
-    devServerRoutes: [
+    serverRoutes: [
       {
         endpoint: "GET /.internal/events.websocket",
         description: `Jsenv dev server emit server events on this endpoint. When a file is saved the "reload" event is sent here.`,

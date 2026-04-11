@@ -70,7 +70,7 @@ export const jsenvPluginSupervisor = ({
   return {
     name: "jsenv:supervisor",
     appliesDuring: "dev",
-    devServerRoutes: [
+    serverRoutes: [
       {
         endpoint: "GET /.internal/get_cause_trace/*",
         description: "Return source code around the place an error was thrown.",

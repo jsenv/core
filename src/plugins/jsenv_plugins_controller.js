@@ -3,8 +3,8 @@ import { createPluginsController } from "@jsenv/server/src/plugins_controller.js
 import { jsenvPluginHtmlSyntaxErrorFallback } from "./html_syntax_error_fallback/jsenv_plugin_html_syntax_error_fallback.js";
 
 export const createJsenvPluginStore = async (plugins) => {
-  const allDevServerRoutes = [];
-  const allDevServerPlugins = [];
+  const allServerRoutes = [];
+  const allServerPlugins = [];
   const pluginArray = [];
 
   const pluginPromises = [];
@@ -27,16 +27,17 @@ export const createJsenvPluginStore = async (plugins) => {
     if (!plugin.name) {
       plugin.name = "anonymous";
     }
-    if (plugin.devServerRoutes) {
-      const devServerRoutes = plugin.devServerRoutes;
-      for (const devServerRoute of devServerRoutes) {
-        allDevServerRoutes.push(devServerRoute);
+    const { serverRoutes } = plugin;
+    if (serverRoutes) {
+      for (const serverRoute of serverRoutes) {
+        allServerRoutes.push(serverRoute);
       }
     }
-    if (plugin.devServerPlugins) {
-      const devServerPlugins = plugin.devServerPlugins;
-      for (const devServerPlugin of devServerPlugins) {
-        allDevServerPlugins.push(devServerPlugin);
+    const { serverPlugins } = plugin;
+    if (serverPlugins) {
+      const serverPlugins = plugin.serverPlugins;
+      for (const serverPlugin of serverPlugins) {
+        allServerPlugins.push(serverPlugin);
       }
     }
     pluginArray.push(plugin);
@@ -49,8 +50,8 @@ export const createJsenvPluginStore = async (plugins) => {
 
   return {
     pluginArray,
-    allDevServerRoutes,
-    allDevServerPlugins,
+    allServerRoutes,
+    allServerPlugins,
   };
 };
 
@@ -118,8 +119,8 @@ const JSENV_PLUGIN_DESCRIPTION = {
     appliesDuring: nonHook,
     serverEvents: nonHook,
     mustStayFirst: nonHook,
-    devServerRoutes: nonHook,
-    devServerPlugins: nonHook,
+    serverRoutes: nonHook,
+    serverPlugins: nonHook,
     // hooks
     init: hook,
     resolveReference: {
@@ -156,7 +157,7 @@ const JSENV_PLUGIN_DESCRIPTION = {
     effect: hook,
     refineBuildUrlContent: hook,
     refineBuild: hook,
-    // devServerRoutes and devServerPlugins are nonHook above
+    // serverRoutes and serverPlugins are nonHook above
   },
 };
 

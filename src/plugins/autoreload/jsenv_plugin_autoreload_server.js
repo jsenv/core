@@ -333,7 +333,7 @@ export const jsenvPluginAutoreloadServer = ({
         );
       },
     },
-    devServerRoutes: [
+    serverRoutes: [
       {
         endpoint: "GET /.internal/graph.json",
         description:

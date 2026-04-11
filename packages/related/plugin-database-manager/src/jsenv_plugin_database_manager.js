@@ -77,7 +77,6 @@ export const jsenvPluginDatabaseManager = ({
         };
       },
     },
-
     redirectReference: (reference) => {
       if (!reference.url.startsWith("file:")) {
         return null;
@@ -92,7 +91,7 @@ export const jsenvPluginDatabaseManager = ({
       return null;
     },
 
-    devServerRoutes: [
+    serverRoutes: [
       {
         endpoint: `GET ${pathname}`,
         description: "Manage database using a Web interface",
@@ -858,7 +857,7 @@ export const jsenvPluginDatabaseManager = ({
         },
       },
     ],
-    devServerPlugins: [
+    serverPlugins: [
       {
         name: "postgres_sql_error_handler",
         handleError: (e) => {

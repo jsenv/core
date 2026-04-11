@@ -432,7 +432,7 @@ export const startDevServer = async ({
         return { kitchen };
       },
       routes: [
-        ...devServerJsenvPluginStore.allDevServerRoutes,
+        ...devServerJsenvPluginStore.allServerRoutes,
         {
           endpoint: "GET *",
           description: "Serve project files.",
@@ -632,7 +632,7 @@ export const startDevServer = async ({
         },
       ],
     });
-    finalServerPlugins.push(...devServerJsenvPluginStore.allDevServerPlugins);
+    finalServerPlugins.push(...devServerJsenvPluginStore.allServerPlugins);
   }
   // jsenv error handler service
   {
