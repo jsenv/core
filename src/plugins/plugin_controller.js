@@ -85,7 +85,7 @@ const assertUrlReturnValue = (valueReturned, urlInfo, { hook }) => {
     return valueReturned.href;
   }
   if (typeof valueReturned === "string") {
-    return undefined;
+    return valueReturned;
   }
   throw new Error(
     `Unexpected value returned by hook "${hook.plugin.name}.${hook.name}()": it must be a string; got ${valueReturned}`,
@@ -98,17 +98,17 @@ const assertContentReturnValue = (valueReturned, urlInfo, { hook }) => {
   if (typeof valueReturned === "object") {
     const { content, body } = valueReturned;
     if (urlInfo.url.startsWith("ignore:")) {
-      return undefined;
+      return valueReturned;
     }
     if (typeof content !== "string" && !Buffer.isBuffer(content) && !body) {
       if (Object.hasOwn(valueReturned, "contentInjections")) {
-        return undefined;
+        return valueReturned;
       }
       throw new Error(
         `Unexpected "content" returned by hook "${hook.plugin.name}.${hook.name}()": it must be a string or a buffer; got ${content}`,
       );
     }
-    return undefined;
+    return valueReturned;
   }
   throw new Error(
     `Unexpected value returned by hook "${hook.plugin.name}.${hook.name}()": it must be a string, a buffer or an object; got ${valueReturned}`,
@@ -128,31 +128,31 @@ const JSENV_PLUGIN_DESCRIPTION = {
     init: hook,
     resolveReference: {
       type: "hook",
-      assertAndNormalizeReturnValue: assertUrlReturnValue,
+      assertAndNormalize: assertUrlReturnValue,
     },
     redirectReference: {
       type: "hook",
-      assertAndNormalizeReturnValue: assertUrlReturnValue,
+      assertAndNormalize: assertUrlReturnValue,
     },
     transformReferenceSearchParams: hook,
     formatReference: hook,
     urlInfoCreated: hook,
     fetchUrlContent: {
       type: "hook",
-      assertAndNormalizeReturnValue: assertContentReturnValue,
+      assertAndNormalize: assertContentReturnValue,
     },
     transformUrlContent: {
       type: "hook",
-      assertAndNormalizeReturnValue: assertContentReturnValue,
+      assertAndNormalize: assertContentReturnValue,
     },
     finalizeUrlContent: {
       type: "hook",
-      assertAndNormalizeReturnValue: assertContentReturnValue,
+      assertAndNormalize: assertContentReturnValue,
     },
     bundle: hook,
     optimizeBuildUrlContent: {
       type: "hook",
-      assertAndNormalizeReturnValue: assertContentReturnValue,
+      assertAndNormalize: assertContentReturnValue,
     },
     cooked: hook,
     augmentResponse: hook,

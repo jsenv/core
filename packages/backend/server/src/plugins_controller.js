@@ -101,6 +101,9 @@ export const createPluginsController = async ({
       continue;
     }
     activePlugins.push(pluginWithEffect);
+    if (typeof returnValue === "function" && !pluginWithEffect.destroy) {
+      pluginWithEffect.destroy = returnValue;
+    }
   }
 
   // Preserve original declaration order
@@ -118,18 +121,15 @@ export const createPluginsController = async ({
       return valueReturned;
     }
     const propDef = properties[hook.name];
-    if (!propDef || !propDef.assertAndNormalizeReturnValue) {
+    if (!propDef || !propDef.assertAndNormalize) {
       return valueReturned;
     }
-    const assertResult = propDef.assertAndNormalizeReturnValue(
+    const assertAndNormalizeResult = propDef.assertAndNormalize(
       valueReturned,
       info,
       { hook },
     );
-    if (assertResult !== undefined) {
-      return assertResult;
-    }
-    return valueReturned;
+    return assertAndNormalizeResult;
   };
 
   let lastPluginUsed = null;
@@ -152,7 +152,9 @@ export const createPluginsController = async ({
     if (startTimestamp !== undefined) {
       info.timing[getTimingKey(hook)] = performance.now() - startTimestamp;
     }
-    assertAndNormalizeReturnValue(valueReturned, info, { hook });
+    valueReturned = assertAndNormalizeReturnValue(valueReturned, info, {
+      hook,
+    });
     currentPlugin = null;
     currentHookName = null;
     return valueReturned;
@@ -320,7 +322,8 @@ const callInitOnPlugin = async (plugin, getInitPluginArgs) => {
   return true;
 };
 
-const defaultGetTimingKey = (hook) => `${hook.name}-${hook.plugin.name}`;
+const defaultGetTimingKey = (hook) =>
+  `${hook.name}-${hook.plugin.name.replace("jsenv:", "")}`;
 const defaultGetEffectArgs = ({ otherPlugins }) => [{ otherPlugins }];
 
 // By default, hook values can be a function or an object keyed by info.type.
