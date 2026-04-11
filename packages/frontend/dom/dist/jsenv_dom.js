@@ -6356,7 +6356,7 @@ const installImportMetaCssBuild = (importMeta) => {
     get() {
       return IMPORT_META_CSS_BUILD;
     },
-    set([value, { url }]) {
+    set([value, url]) {
       if (value === undefined) {
         if (stylesheetMap.has(url)) {
           remove(url);
@@ -6534,7 +6534,17 @@ const isolateInteractions = (elements) => {
   };
 };
 
-installImportMetaCssBuild(import.meta);const createDragGestureController = (options = {}) => {
+installImportMetaCssBuild(import.meta);/**
+ * Drag Gesture System
+ *
+ * TODO: rename moveX/moveY en juste x/y
+ * puisque move c'est perturbant sachant que c'est drag + scroll
+ * et que drag c'est juste la partie mouvement de la souris
+ *
+ * donc juste x/y ca seras surement mieux
+ *
+ */
+const createDragGestureController = (options = {}) => {
   const {
     name,
     onGrab,
@@ -7042,9 +7052,7 @@ import.meta.css = [/* css */`
     inset: 0;
     user-select: none;
   }
-`, {
-  url: "/src/interaction/drag/drag_gesture.js"
-}];
+`, "/src/interaction/drag/drag_gesture.js"];
 
 installImportMetaCssBuild(import.meta);const setupConstraintFeedbackLine = () => {
   const constraintFeedbackLine = createConstraintFeedbackLine();
@@ -7133,11 +7141,10 @@ import.meta.css = [/* css */`
   .navi_constraint_feedback_line[data-visible] {
     visibility: visible;
   }
-`, {
-  url: "/src/interaction/drag/constraint_feedback_line.js"
-}];
+`, "/src/interaction/drag/constraint_feedback_line.js"];
 
-installImportMetaCssBuild(import.meta);const MARKER_SIZE = 12;
+installImportMetaCssBuild(import.meta);// Keep visual markers (debug markers, obstacle markers, constraint feedback line) in DOM after drag ends
+const MARKER_SIZE = 12;
 let currentDebugMarkers = [];
 let currentConstraintMarkers = [];
 let currentReferenceElementMarker = null;
@@ -7716,9 +7723,7 @@ import.meta.css = [/* css */`
     border-radius: 3px;
     pointer-events: none;
   }
-`, {
-  url: "/src/interaction/drag/drag_debug_markers.js"
-}];
+`, "/src/interaction/drag/drag_debug_markers.js"];
 
 const initDragConstraints = (
   dragGesture,
@@ -8882,16 +8887,36 @@ const getWidth = (element) => {
   return width;
 };
 
-installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
+installImportMetaCssBuild(import.meta);/**
+ * Position Sticky Polyfill
+ *
+ * This module provides a workaround for position:sticky limitations when used with
+ * overflow:auto/hidden parent elements (see https://github.com/w3c/csswg-drafts/issues/865).
+ *
+ * How it works:
+ * 1. Creates a placeholder clone of the sticky element to maintain document flow
+ * 2. Positions the real element using fixed positioning relative to viewport
+ * 3. Adjusts position on scroll to emulate position:sticky behavior
+ * 4. Handles parent boundary detection to keep element within its container
+ * 5. Updates dimensions on resize and DOM changes
+ *
+ * Usage:
+ * ```
+ * const cleanup = initPositionSticky(element);
+ * // Later when no longer needed
+ * cleanup();
+ * ```
+ *
+ * The element should have a CSS "top" value specified (e.g., top: 10px).
+ */
+import.meta.css = [/* css */`
   [data-position-sticky-placeholder] {
     position: static !important;
     width: auto !important;
     height: auto !important;
     opacity: 0 !important;
   }
-`, {
-  url: "/src/position/position_sticky.js"
-}];
+`, "/src/position/position_sticky.js"];
 const initPositionSticky = element => {
   const computedStyle = getComputedStyle(element);
   const topCssValue = computedStyle.top;

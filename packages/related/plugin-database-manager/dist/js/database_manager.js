@@ -2202,20 +2202,48 @@ const RoleGroupListDetails = () => {
 };
 
 const installImportMetaCssBuild = importMeta => {
-  const stylesheet = new CSSStyleSheet({
-    baseUrl: importMeta.url
-  });
-  let called = false;
-  // eslint-disable-next-line accessor-pairs
+  const IMPORT_META_CSS_BUILD = "jsenv_import_meta_css_build";
+  if (importMeta.css === IMPORT_META_CSS_BUILD) {
+    return;
+  }
+  const stylesheetMap = new Map();
+  const adopt = (url, value) => {
+    const stylesheet = new CSSStyleSheet({
+      baseUrl: importMeta.url
+    });
+    stylesheet.replaceSync(value);
+    stylesheetMap.set(url, stylesheet);
+    document.adoptedStyleSheets = [...document.adoptedStyleSheets, stylesheet];
+  };
+  const update = (url, value) => {
+    stylesheetMap.get(url).replaceSync(value);
+  };
+  const remove = url => {
+    const stylesheet = stylesheetMap.get(url);
+    document.adoptedStyleSheets = document.adoptedStyleSheets.filter(s => s !== stylesheet);
+    stylesheetMap.delete(url);
+  };
+  const currentCssSourceMap = new Map();
   Object.defineProperty(importMeta, "css", {
     configurable: true,
-    set(value) {
-      if (called) {
-        throw new Error("import.meta.css setter can only be called once");
+    get() {
+      return IMPORT_META_CSS_BUILD;
+    },
+    set([value, url]) {
+      if (value === undefined) {
+        if (stylesheetMap.has(url)) {
+          remove(url);
+          currentCssSourceMap.delete(url);
+        }
+        return;
       }
-      called = true;
-      stylesheet.replaceSync(value);
-      document.adoptedStyleSheets = [...document.adoptedStyleSheets, stylesheet];
+      if (!stylesheetMap.has(url)) {
+        adopt(url, value);
+        currentCssSourceMap.set(url, value);
+      } else if (currentCssSourceMap.get(url) !== value) {
+        update(url, value);
+        currentCssSourceMap.set(url, value);
+      }
     }
   });
 };
@@ -2289,7 +2317,7 @@ const TableLink = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);import.meta.css = /* css */"\n  .explorer_details {\n    flex: 1;\n  }\n\n  .explorer_details summary {\n    padding-left: calc(16px + var(--details-depth, 0) * 16px);\n  }\n\n  .explorer_details .explorer_item_content {\n    padding-left: calc(32px + var(--details-depth, 0) * 16px);\n  }\n";
+installImportMetaCssBuild(import.meta);import.meta.css = [/* css */"\n  .explorer_details {\n    flex: 1;\n  }\n\n  .explorer_details summary {\n    padding-left: calc(16px + var(--details-depth, 0) * 16px);\n  }\n\n  .explorer_details .explorer_item_content {\n    padding-left: calc(32px + var(--details-depth, 0) * 16px);\n  }\n", "/client/role/role_with_ownership/role_with_ownership_list_details.jsx"];
 const RoleWithOwnershipListDetails = () => {
   const [resizable, setResizable] = h(false);
   const roleWithOwnershipCount = useRoleWithOwnershipCount();
@@ -2764,7 +2792,7 @@ const DatabaseField = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);import.meta.css = /* css */"\n  .page {\n    min-width: max-content;\n  }\n\n  .page_head {\n    position: fixed;\n    top: 0;\n    right: 0;\n    left: var(--aside-width, 0);\n    z-index: 1;\n    display: flex;\n\n    padding: 20px;\n    flex-direction: column;\n    justify-content: space-between;\n    gap: 10px;\n    background: white;\n\n    background-color: rgb(239, 242, 245);\n    border-bottom: 1px solid rgb(69, 76, 84);\n  }\n\n  .page_head h1 {\n    margin: 0;\n    line-height: 1em;\n  }\n\n  .page_head_with_actions {\n    display: flex;\n    flex-direction: row;\n  }\n\n  .page_head > .actions {\n  }\n\n  .page_body {\n    margin-top: 95px;\n    padding-top: 20px;\n    padding-right: 20px;\n    padding-bottom: 20px;\n    padding-left: 20px;\n  }\n\n  .page_error {\n    margin-top: 0;\n    margin-bottom: 20px;\n    padding: 20px;\n    background: #fdd;\n    border: 1px solid red;\n  }\n";
+installImportMetaCssBuild(import.meta);import.meta.css = [/* css */"\n  .page {\n    min-width: max-content;\n  }\n\n  .page_head {\n    position: fixed;\n    top: 0;\n    right: 0;\n    left: var(--aside-width, 0);\n    z-index: 1;\n    display: flex;\n\n    padding: 20px;\n    flex-direction: column;\n    justify-content: space-between;\n    gap: 10px;\n    background: white;\n\n    background-color: rgb(239, 242, 245);\n    border-bottom: 1px solid rgb(69, 76, 84);\n  }\n\n  .page_head h1 {\n    margin: 0;\n    line-height: 1em;\n  }\n\n  .page_head_with_actions {\n    display: flex;\n    flex-direction: row;\n  }\n\n  .page_head > .actions {\n  }\n\n  .page_body {\n    margin-top: 95px;\n    padding-top: 20px;\n    padding-right: 20px;\n    padding-bottom: 20px;\n    padding-left: 20px;\n  }\n\n  .page_error {\n    margin-top: 0;\n    margin-bottom: 20px;\n    padding: 20px;\n    background: #fdd;\n    border: 1px solid red;\n  }\n", "/client/layout/page.jsx"];
 const Page = ({
   children,
   ...props
@@ -4142,7 +4170,23 @@ const getMasterType = dataType => {
   return null;
 };
 
-installImportMetaCssBuild(import.meta);import.meta.css = /* css */"\n  .table_data_actions {\n    margin-bottom: 15px;\n  }\n";
+installImportMetaCssBuild(import.meta);/**
+ * https://tanstack.com/table/latest/docs/framework/react/examples/basic?panel=code
+ *
+ * https://supabase.com/docs/guides/database/overview
+ *
+ *
+ * Next step:
+ * 3. A last row with buttons like a delete button with a delete icon
+ * 4. Ability to delete a row (button + a shortcut key cmd + delete) with a confirmation message
+ * 5. Ability to update a cell (double click to edit, enter to validate, esc to cancel)
+ * 6. Pagination
+ * 7. Can add a column
+ * 8. Can remove a column
+ * 9. Can edit a column (name, type, etc.)
+ *
+ */
+import.meta.css = [/* css */"\n  .table_data_actions {\n    margin-bottom: 15px;\n  }\n", "/client/table/table_data.jsx"];
 const TableData = ({
   table
 }) => {
