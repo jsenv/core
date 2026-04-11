@@ -13,7 +13,12 @@ see [./@jsenv/core/](./@jsenv/core/)
 # 2/2 resolve
 
 ```js
-rgb(255, 0, 0)
+{
+  "colorAfterFirst": "rgb(255, 0, 0)",
+  "fontColorAfterFirst": "rgb(0, 0, 255)",
+  "colorAfterSecond": "rgb(0, 128, 0)",
+  "fontColorAfterSecond": "rgb(0, 0, 0)"
+}
 ```
 
 ---

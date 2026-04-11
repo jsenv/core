@@ -45,8 +45,27 @@ const installImportMetaCssBuild = (importMeta) => {
 installImportMetaCssBuild(import.meta);import.meta.css = [         `
   body {
     background-color: red;
+    color: blue;
   }
 `, {
   url: "/main.js"
 }];
-window.resolveResultPromise(window.getComputedStyle(document.body).backgroundColor);
+const colorAfterFirst = window.getComputedStyle(document.body).backgroundColor;
+const fontColorAfterFirst = window.getComputedStyle(document.body).color;
+import.meta.css = [         `
+  body {
+    background-color: green;
+  }
+`, {
+  url: "/main.js"
+}];
+const colorAfterSecond = window.getComputedStyle(document.body).backgroundColor;
+const fontColorAfterSecond = window.getComputedStyle(document.body).color;
+window.resolveResultPromise({
+  colorAfterFirst,
+  fontColorAfterFirst,
+  colorAfterSecond,
+
+
+  fontColorAfterSecond
+});
