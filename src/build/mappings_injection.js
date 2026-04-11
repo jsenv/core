@@ -15,25 +15,27 @@ import {
 import { isWebWorkerUrlInfo } from "@jsenv/core/src/kitchen/web_workers.js";
 import { prependContent } from "../kitchen/prepend_content.js";
 
+// we nevery minify those because they are already very small
+// and would hurt the readability of something that can be critical to debug
 export const injectGlobalMappings = async (urlInfo, mappings) => {
   if (urlInfo.type === "html") {
-    const minification = Boolean(
-      urlInfo.context.getPluginMeta("willMinifyJsClassic"),
-    );
+    // const minification = Boolean(
+    //   urlInfo.context.getPluginMeta("willMinifyJsClassic"),
+    // );
     const content = generateClientCodeForMappings(mappings, {
       globalName: "window",
-      minification,
+      minification: false,
     });
     await prependContent(urlInfo, { type: "js_classic", content });
     return;
   }
   if (urlInfo.type === "js_classic" || urlInfo.type === "js_module") {
-    const minification = Boolean(
-      urlInfo.context.getPluginMeta("willMinifyJsClassic"),
-    );
+    // const minification = Boolean(
+    //   urlInfo.context.getPluginMeta("willMinifyJsClassic"),
+    // );
     const content = generateClientCodeForMappings(mappings, {
       globalName: isWebWorkerUrlInfo(urlInfo) ? "self" : "window",
-      minification,
+      minification: false,
     });
     await prependContent(urlInfo, { type: "js_classic", content });
     return;
