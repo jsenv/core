@@ -1,6 +1,6 @@
-const IMPORT_META_CSS_BUILD = "jsenv_import_meta_css_build";
-
 export const installImportMetaCssBuild = (importMeta) => {
+  const IMPORT_META_CSS_BUILD = "jsenv_import_meta_css_build";
+
   if (importMeta.css === IMPORT_META_CSS_BUILD) {
     return;
   }

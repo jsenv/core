@@ -1,6 +1,6 @@
-const IMPORT_META_CSS_DEV = Symbol.for("import_meta_css_dev");
-
 export const installImportMetaCssDev = (importMeta) => {
+  const IMPORT_META_CSS_DEV = "jsenv_import_meta_css_dev";
+
   if (importMeta.css === IMPORT_META_CSS_DEV) {
     return;
   }
