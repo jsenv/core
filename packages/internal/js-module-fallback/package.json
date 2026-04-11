@@ -8,7 +8,7 @@
   },
   "license": "MIT",
   "sideEffects": [
-    "./src/client/s.js"
+    "./src/clent/s.js"
   ],
   "type": "module",
   "exports": {
