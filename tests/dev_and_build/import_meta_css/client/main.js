@@ -1,26 +1,30 @@
-import { setCssA } from "./a.js";
-import { setCssB } from "./b.js";
+import { setBodyBackgroundColor } from "./a.js";
+import { setBodyColor } from "./b.js";
 
 // set CSS from both files
-setCssA("red");
-setCssB("blue");
+setBodyBackgroundColor("red");
+setBodyColor("blue");
 
-const colorAfterInit = window.getComputedStyle(document.body).backgroundColor;
-const fontColorAfterInit = window.getComputedStyle(document.body).color;
+const bodyBackgroundColorAfterInit = window.getComputedStyle(
+  document.body,
+).backgroundColor;
+const bodyColorAfterInit = window.getComputedStyle(document.body).color;
 
 // update a.js CSS — b.js CSS (blue color) should remain
-setCssA("green");
+setBodyBackgroundColor("green");
 
-const colorAfterUpdate = window.getComputedStyle(document.body).backgroundColor;
-const fontColorAfterUpdate = window.getComputedStyle(document.body).color;
+const bodyBackgroundColorAfterUpdate = window.getComputedStyle(
+  document.body,
+).backgroundColor;
+const bodyColorAfterUpdate = window.getComputedStyle(document.body).color;
 
 window.resolveResultPromise({
   // red: a.js initial CSS applied
-  colorAfterInit,
+  bodyBackgroundColorAfterInit,
   // blue: b.js CSS applied
-  fontColorAfterInit,
+  bodyColorAfterInit,
   // green: a.js CSS updated
-  colorAfterUpdate,
+  bodyBackgroundColorAfterUpdate,
   // blue: b.js CSS still active after a.js update
-  fontColorAfterUpdate,
+  bodyColorAfterUpdate,
 });

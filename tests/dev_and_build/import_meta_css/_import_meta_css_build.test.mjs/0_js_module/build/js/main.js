@@ -42,7 +42,7 @@ const installImportMetaCssBuild = (importMeta) => {
   });
 };
 
-installImportMetaCssBuild(import.meta);const setCssA = color => {
+installImportMetaCssBuild(import.meta);const setBodyBackgroundColor = color => {
   import.meta.css = [         `
     body {
       background-color: ${color};
@@ -52,7 +52,7 @@ installImportMetaCssBuild(import.meta);const setCssA = color => {
   }];
 };
 
-installImportMetaCssBuild(import.meta);const setCssB = color => {
+installImportMetaCssBuild(import.meta);const setBodyColor = color => {
   import.meta.css = [         `
     body {
       color: ${color};
@@ -63,25 +63,29 @@ installImportMetaCssBuild(import.meta);const setCssB = color => {
 };
 
 
-setCssA("red");
-setCssB("blue");
+setBodyBackgroundColor("red");
+setBodyColor("blue");
 
-const colorAfterInit = window.getComputedStyle(document.body).backgroundColor;
-const fontColorAfterInit = window.getComputedStyle(document.body).color;
+const bodyBackgroundColorAfterInit = window.getComputedStyle(
+  document.body,
+).backgroundColor;
+const bodyColorAfterInit = window.getComputedStyle(document.body).color;
 
 
-setCssA("green");
+setBodyBackgroundColor("green");
 
-const colorAfterUpdate = window.getComputedStyle(document.body).backgroundColor;
-const fontColorAfterUpdate = window.getComputedStyle(document.body).color;
+const bodyBackgroundColorAfterUpdate = window.getComputedStyle(
+  document.body,
+).backgroundColor;
+const bodyColorAfterUpdate = window.getComputedStyle(document.body).color;
 
 window.resolveResultPromise({
 
-  colorAfterInit,
+  bodyBackgroundColorAfterInit,
 
-  fontColorAfterInit,
+  bodyColorAfterInit,
 
-  colorAfterUpdate,
+  bodyBackgroundColorAfterUpdate,
 
-  fontColorAfterUpdate,
+  bodyColorAfterUpdate,
 });

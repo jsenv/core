@@ -14,10 +14,10 @@ see [./@jsenv/core/](./@jsenv/core/)
 
 ```js
 {
-  "colorAfterInit": "rgb(255, 0, 0)",
-  "fontColorAfterInit": "rgb(0, 0, 255)",
-  "colorAfterUpdate": "rgb(0, 128, 0)",
-  "fontColorAfterUpdate": "rgb(0, 0, 255)"
+  "bodyBackgroundColorAfterInit": "rgb(255, 0, 0)",
+  "bodyColorAfterInit": "rgb(0, 0, 255)",
+  "bodyBackgroundColorAfterUpdate": "rgb(0, 128, 0)",
+  "bodyColorAfterUpdate": "rgb(0, 0, 255)"
 }
 ```
 

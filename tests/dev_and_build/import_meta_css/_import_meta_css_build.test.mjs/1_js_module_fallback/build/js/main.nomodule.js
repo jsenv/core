@@ -1,7 +1,7 @@
 System.register([__v__("/jsenv_core_packages.js")], function (_export, _context) {
   "use strict";
 
-  var installImportMetaCssBuild, setCssA, setCssB, colorAfterInit, fontColorAfterInit, colorAfterUpdate, fontColorAfterUpdate;
+  var installImportMetaCssBuild, setBodyBackgroundColor, setBodyColor, bodyBackgroundColorAfterInit, bodyColorAfterInit, bodyBackgroundColorAfterUpdate, bodyColorAfterUpdate;
   return {
     setters: [function (_buildJsenv_core_packagesJs) {}],
     execute: function () {
@@ -50,7 +50,7 @@ System.register([__v__("/jsenv_core_packages.js")], function (_export, _context)
         });
       };
       installImportMetaCssBuild(_context.meta);
-      setCssA = color => {
+      setBodyBackgroundColor = color => {
         _context.meta.css = [`
     body {
       background-color: ${color};
@@ -60,7 +60,7 @@ System.register([__v__("/jsenv_core_packages.js")], function (_export, _context)
         }];
       };
       installImportMetaCssBuild(_context.meta);
-      setCssB = color => {
+      setBodyColor = color => {
         _context.meta.css = [`
     body {
       color: ${color};
@@ -69,18 +69,18 @@ System.register([__v__("/jsenv_core_packages.js")], function (_export, _context)
           url: "/b.js"
         }];
       };
-      setCssA("red");
-      setCssB("blue");
-      colorAfterInit = window.getComputedStyle(document.body).backgroundColor;
-      fontColorAfterInit = window.getComputedStyle(document.body).color;
-      setCssA("green");
-      colorAfterUpdate = window.getComputedStyle(document.body).backgroundColor;
-      fontColorAfterUpdate = window.getComputedStyle(document.body).color;
+      setBodyBackgroundColor("red");
+      setBodyColor("blue");
+      bodyBackgroundColorAfterInit = window.getComputedStyle(document.body).backgroundColor;
+      bodyColorAfterInit = window.getComputedStyle(document.body).color;
+      setBodyBackgroundColor("green");
+      bodyBackgroundColorAfterUpdate = window.getComputedStyle(document.body).backgroundColor;
+      bodyColorAfterUpdate = window.getComputedStyle(document.body).color;
       window.resolveResultPromise({
-        colorAfterInit,
-        fontColorAfterInit,
-        colorAfterUpdate,
-        fontColorAfterUpdate
+        bodyBackgroundColorAfterInit,
+        bodyColorAfterInit,
+        bodyBackgroundColorAfterUpdate,
+        bodyColorAfterUpdate
       });
     }
   };
