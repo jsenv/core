@@ -2,7 +2,7 @@ import { performance } from "node:perf_hooks";
 
 // createPluginsController manages an ordered list of plugins.
 // "plugins" is a generic term: it can refer to jsenv core plugins,
-// server services, or any extensibility mechanism using the same pattern.
+// server plugins, or any extensibility mechanism using the same pattern.
 export const createPluginsController = async ({
   plugins,
   pluginDescription = {},
