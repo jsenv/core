@@ -6,7 +6,6 @@ const getBodyFontSize = () => window.getComputedStyle(document.body).fontSize;
 const getBodyBackgroundColor = () =>
   window.getComputedStyle(document.body).backgroundColor;
 const getBodyColor = () => window.getComputedStyle(document.body).color;
-
 const captureStyles = () => {
   return {
     bodyFontSize: getBodyFontSize(),
@@ -22,17 +21,14 @@ const at_start = captureStyles();
 setBodyFontSize("42px");
 setBodyBackgroundColor("red");
 setBodyColor("blue");
-
 const after_first_call = captureStyles();
 
 // update a.js CSS — b.js CSS (blue color) and c.js CSS (42px) should remain
 setBodyBackgroundColor("green");
-
 const after_second_call = captureStyles();
 
 window.resolveResultPromise({
   at_start,
   after_first_call,
-
   after_second_call,
 });
