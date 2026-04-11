@@ -1,6 +1,6 @@
-import { startServer, jsenvServiceCORS, jsenvAccessControlAllowedHeaders, jsenvServiceErrorHandler, createFileSystemFetch } from "@jsenv/server";
+import { startServer, jsenvServiceCORS, jsenvAccessControlAllowedHeaders, jsenvServiceStaticFiles, jsenvServiceErrorHandler } from "@jsenv/server";
 import { existsSync } from "node:fs";
-import { assertAndNormalizeDirectoryUrl, createLogger, Abort, raceProcessTeardownEvents, createTaskLog, urlToExtension, urlToPathname } from "./jsenv_core_packages.js";
+import { assertAndNormalizeDirectoryUrl, createLogger, Abort, raceProcessTeardownEvents, createTaskLog } from "./jsenv_core_packages.js";
 import "./jsenv_core_node_modules.js";
 import "node:process";
 import "node:os";
@@ -129,12 +129,12 @@ const startBuildServer = async ({
         timingAllowOrigin: true,
       }),
       ...services,
-      jsenvBuildFileService({
-        buildDirectoryUrl,
-        buildMainFilePath,
+      jsenvServiceStaticFiles({
+        directoryUrl: buildDirectoryUrl,
+        mainFilePath: buildMainFilePath,
       }),
       jsenvServiceErrorHandler({
-        sendErrorDetails: true,
+        sendErrorDetails: false,
       }),
     ],
   });
@@ -155,50 +155,5 @@ const startBuildServer = async ({
     },
   };
 };
-
-const jsenvBuildFileService = ({ buildDirectoryUrl, buildMainFilePath }) => {
-  return {
-    name: "jsenv:build_files",
-    routes: [
-      {
-        endpoint: "GET *",
-        description: "Serve static files.",
-        fetch: (request, helpers) => {
-          const urlIsVersioned = new URL(request.url).searchParams.has("v");
-          if (buildMainFilePath && request.resource === "/") {
-            request = {
-              ...request,
-              resource: `/${buildMainFilePath}`,
-            };
-          }
-          const urlObject = new URL(
-            request.resource.slice(1),
-            buildDirectoryUrl,
-          );
-          return createFileSystemFetch(buildDirectoryUrl, {
-            cacheControl: urlIsVersioned
-              ? `private,max-age=${SECONDS_IN_30_DAYS},immutable`
-              : "private,max-age=0,must-revalidate",
-            etagEnabled: true,
-            compressionEnabled: true,
-            rootDirectoryUrl: buildDirectoryUrl,
-            canReadDirectory: true,
-            ENOENTFallback: () => {
-              if (
-                !urlToExtension(urlObject) &&
-                !urlToPathname(urlObject).endsWith("/")
-              ) {
-                return new URL(buildMainFilePath, buildDirectoryUrl);
-              }
-              return null;
-            },
-          })(request, helpers);
-        },
-      },
-    ],
-  };
-};
-
-const SECONDS_IN_30_DAYS = 60 * 60 * 24 * 30;
 
 export { startBuildServer };
