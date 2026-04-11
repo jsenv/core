@@ -112,6 +112,23 @@ export const createPluginsController = async ({
     activatePlugin(activePlugin);
   }
 
+  const assertAndNormalizeReturnValue = (valueReturned, info, { hook }) => {
+    if (valueReturned === null || valueReturned === undefined) {
+      // all hooks are allowed to return null/undefined as a signal of "I don't do anything"
+      return valueReturned;
+    }
+    const propDef = properties[hook.name];
+    if (!propDef || !propDef.assertAndNormalizeReturnValue) {
+      return valueReturned;
+    }
+    const valueNormalized = propDef.assertAndNormalizeReturnValue(
+      valueReturned,
+      info,
+      { hook },
+    );
+    return valueNormalized;
+  };
+
   let lastPluginUsed = null;
   let currentPlugin = null;
   let currentHookName = null;
@@ -132,10 +149,7 @@ export const createPluginsController = async ({
     if (startTimestamp !== undefined) {
       info.timing[getTimingKey(hook)] = performance.now() - startTimestamp;
     }
-    const propDef = properties[hook.name];
-    if (propDef && propDef.assertReturnValue) {
-      valueReturned = propDef.assertReturnValue(valueReturned, info, { hook });
-    }
+    assertAndNormalizeReturnValue(valueReturned, info, { hook });
     currentPlugin = null;
     currentHookName = null;
     return valueReturned;
@@ -156,10 +170,9 @@ export const createPluginsController = async ({
     if (startTimestamp !== undefined) {
       info.timing[getTimingKey(hook)] = performance.now() - startTimestamp;
     }
-    const propDef = properties[hook.name];
-    if (propDef && propDef.assertReturnValue) {
-      valueReturned = propDef.assertReturnValue(valueReturned, info, { hook });
-    }
+    valueReturned = assertAndNormalizeReturnValue(valueReturned, info, {
+      hook,
+    });
     currentPlugin = null;
     currentHookName = null;
     return valueReturned;
