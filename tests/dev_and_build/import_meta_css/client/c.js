@@ -7,4 +7,4 @@ export const setBodyFontSize = (size) => {
 };
 
 // set top-level so installImportMetaCssBuild runs before a.js and b.js
-setBodyFontSize("42px");
+setBodyFontSize("16px");
