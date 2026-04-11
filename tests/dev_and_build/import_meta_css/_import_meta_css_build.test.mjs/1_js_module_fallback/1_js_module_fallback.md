@@ -16,8 +16,10 @@ see [./@jsenv/core/](./@jsenv/core/)
 {
   "bodyBackgroundColorAfterInit": "rgb(255, 0, 0)",
   "bodyColorAfterInit": "rgb(0, 0, 255)",
+  "bodyFontSizeAfterInit": "42px",
   "bodyBackgroundColorAfterUpdate": "rgb(0, 128, 0)",
-  "bodyColorAfterUpdate": "rgb(0, 0, 255)"
+  "bodyColorAfterUpdate": "rgb(0, 0, 255)",
+  "bodyFontSizeAfterUpdate": "42px"
 }
 ```
 

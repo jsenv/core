@@ -1,11 +1,15 @@
 System.register([__v__("/jsenv_core_packages.js")], function (_export, _context) {
   "use strict";
 
-  var installImportMetaCssBuild, setBodyBackgroundColor, setBodyColor, bodyBackgroundColorAfterInit, bodyColorAfterInit, bodyBackgroundColorAfterUpdate, bodyColorAfterUpdate;
+  var IMPORT_META_CSS_BUILD, installImportMetaCssBuild, setBodyBackgroundColor, setBodyColor, setBodyFontSize, bodyBackgroundColorAfterInit, bodyColorAfterInit, bodyFontSizeAfterInit, bodyBackgroundColorAfterUpdate, bodyColorAfterUpdate, bodyFontSizeAfterUpdate;
   return {
     setters: [function (_buildJsenv_core_packagesJs) {}],
     execute: function () {
+      IMPORT_META_CSS_BUILD = "jsenv_import_meta_css_build";
       installImportMetaCssBuild = importMeta => {
+        if (importMeta.css === IMPORT_META_CSS_BUILD) {
+          return;
+        }
         const stylesheetMap = new Map();
         const adopt = (url, value) => {
           const stylesheet = new CSSStyleSheet({
@@ -27,7 +31,7 @@ System.register([__v__("/jsenv_core_packages.js")], function (_export, _context)
         Object.defineProperty(importMeta, "css", {
           configurable: true,
           get() {
-            return undefined;
+            return IMPORT_META_CSS_BUILD;
           },
           set([value, {
             url
@@ -69,18 +73,34 @@ System.register([__v__("/jsenv_core_packages.js")], function (_export, _context)
           url: "/b.js"
         }];
       };
+      installImportMetaCssBuild(_context.meta);
+      setBodyFontSize = size => {
+        _context.meta.css = [`
+    body {
+      font-size: ${size};
+    }
+  `, {
+          url: "/c.js"
+        }];
+      };
+      setBodyFontSize("42px");
+      setBodyFontSize("42px");
       setBodyBackgroundColor("red");
       setBodyColor("blue");
       bodyBackgroundColorAfterInit = window.getComputedStyle(document.body).backgroundColor;
       bodyColorAfterInit = window.getComputedStyle(document.body).color;
+      bodyFontSizeAfterInit = window.getComputedStyle(document.body).fontSize;
       setBodyBackgroundColor("green");
       bodyBackgroundColorAfterUpdate = window.getComputedStyle(document.body).backgroundColor;
       bodyColorAfterUpdate = window.getComputedStyle(document.body).color;
+      bodyFontSizeAfterUpdate = window.getComputedStyle(document.body).fontSize;
       window.resolveResultPromise({
         bodyBackgroundColorAfterInit,
         bodyColorAfterInit,
+        bodyFontSizeAfterInit,
         bodyBackgroundColorAfterUpdate,
-        bodyColorAfterUpdate
+        bodyColorAfterUpdate,
+        bodyFontSizeAfterUpdate
       });
     }
   };

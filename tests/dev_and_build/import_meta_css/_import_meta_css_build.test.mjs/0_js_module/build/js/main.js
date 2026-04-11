@@ -1,4 +1,10 @@
+const IMPORT_META_CSS_BUILD = "jsenv_import_meta_css_build";
+
 const installImportMetaCssBuild = (importMeta) => {
+  if (importMeta.css === IMPORT_META_CSS_BUILD) {
+    return;
+  }
+
   const stylesheetMap = new Map();
   const adopt = (url, value) => {
     const stylesheet = new CSSStyleSheet({ baseUrl: importMeta.url });
@@ -21,7 +27,7 @@ const installImportMetaCssBuild = (importMeta) => {
   Object.defineProperty(importMeta, "css", {
     configurable: true,
     get() {
-      return undefined;
+      return IMPORT_META_CSS_BUILD;
     },
     set([value, { url }]) {
       if (value === undefined) {
@@ -62,7 +68,22 @@ installImportMetaCssBuild(import.meta);const setBodyColor = color => {
   }];
 };
 
+installImportMetaCssBuild(import.meta);const setBodyFontSize = size => {
+  import.meta.css = [         `
+    body {
+      font-size: ${size};
+    }
+  `, {
+    url: "/c.js"
+  }];
+};
 
+
+setBodyFontSize("42px");
+
+
+
+setBodyFontSize("42px");
 setBodyBackgroundColor("red");
 setBodyColor("blue");
 
@@ -71,6 +92,8 @@ const bodyBackgroundColorAfterInit = window.getComputedStyle(
 ).backgroundColor;
 const bodyColorAfterInit = window.getComputedStyle(document.body).color;
 
+const bodyFontSizeAfterInit = window.getComputedStyle(document.body).fontSize;
+
 
 setBodyBackgroundColor("green");
 
@@ -78,6 +101,7 @@ const bodyBackgroundColorAfterUpdate = window.getComputedStyle(
   document.body,
 ).backgroundColor;
 const bodyColorAfterUpdate = window.getComputedStyle(document.body).color;
+const bodyFontSizeAfterUpdate = window.getComputedStyle(document.body).fontSize;
 
 window.resolveResultPromise({
 
@@ -85,7 +109,11 @@ window.resolveResultPromise({
 
   bodyColorAfterInit,
 
+  bodyFontSizeAfterInit,
+
   bodyBackgroundColorAfterUpdate,
 
   bodyColorAfterUpdate,
+
+  bodyFontSizeAfterUpdate,
 });
