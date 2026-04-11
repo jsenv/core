@@ -6,7 +6,7 @@ import {
   writeFileSync,
 } from "@jsenv/filesystem";
 import { fetchFileSystem } from "@jsenv/server";
-import { bufferToEtag } from "@jsenv/server/src/services/filesystem/etag.js";
+import { bufferToEtag } from "@jsenv/server/src/plugins/filesystem/etag.js";
 import { urlToFileSystemPath } from "@jsenv/urls";
 
 if (process.platform === "win32") {
