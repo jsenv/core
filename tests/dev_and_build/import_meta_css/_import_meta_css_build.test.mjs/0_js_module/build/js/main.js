@@ -1,4 +1,4 @@
-const installImportMetaCss = (importMeta) => {
+const installImportMetaCssBuild = (importMeta) => {
   const stylesheet = new CSSStyleSheet({ baseUrl: importMeta.url });
 
   let called = false;
@@ -19,7 +19,7 @@ const installImportMetaCss = (importMeta) => {
   });
 };
 
-installImportMetaCss(import.meta);import.meta.css =           `
+installImportMetaCssBuild(import.meta);import.meta.css =           `
   body {
     background-color: red;
   }

@@ -1,11 +1,11 @@
 System.register([__v__("/jsenv_core_packages.js")], function (_export, _context) {
   "use strict";
 
-  var installImportMetaCss;
+  var installImportMetaCssBuild;
   return {
     setters: [function (_buildJsenv_core_packagesJs) {}],
     execute: function () {
-      installImportMetaCss = importMeta => {
+      installImportMetaCssBuild = importMeta => {
         const stylesheet = new CSSStyleSheet({
           baseUrl: importMeta.url
         });
@@ -22,7 +22,7 @@ System.register([__v__("/jsenv_core_packages.js")], function (_export, _context)
           }
         });
       };
-      installImportMetaCss(_context.meta);
+      installImportMetaCssBuild(_context.meta);
       _context.meta.css = `
   body {
     background-color: red;
