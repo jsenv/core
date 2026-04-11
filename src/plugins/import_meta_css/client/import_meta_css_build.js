@@ -1,4 +1,10 @@
+const IMPORT_META_CSS_BUILD = "jsenv_import_meta_css_build";
+
 export const installImportMetaCssBuild = (importMeta) => {
+  if (importMeta.css === IMPORT_META_CSS_BUILD) {
+    return;
+  }
+
   const stylesheetMap = new Map();
   const adopt = (url, value) => {
     const stylesheet = new CSSStyleSheet({ baseUrl: importMeta.url });
@@ -21,7 +27,7 @@ export const installImportMetaCssBuild = (importMeta) => {
   Object.defineProperty(importMeta, "css", {
     configurable: true,
     get() {
-      return undefined;
+      return IMPORT_META_CSS_BUILD;
     },
     set([value, { url }]) {
       if (value === undefined) {

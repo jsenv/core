@@ -1,4 +1,9 @@
+const IMPORT_META_CSS_DEV = Symbol.for("import_meta_css_dev");
+
 export const installImportMetaCssDev = (importMeta) => {
+  if (importMeta.css === IMPORT_META_CSS_DEV) {
+    return;
+  }
   // useless today but browser might catch up to display it in devtools
   const addUrlInfo = (cssText) => {
     let cssTextWithUrlInfo = cssText;
@@ -27,7 +32,7 @@ export const installImportMetaCssDev = (importMeta) => {
   Object.defineProperty(importMeta, "css", {
     configurable: true,
     get() {
-      return undefined;
+      return IMPORT_META_CSS_DEV;
     },
     set(value) {
       if (value === undefined) {
