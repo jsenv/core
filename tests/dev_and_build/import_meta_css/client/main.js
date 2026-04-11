@@ -1,27 +1,26 @@
-import.meta.css = /* css */ `
-  body {
-    color: blue;
-    background-color: red;
-  }
-`;
+import { setCssA } from "./a.js";
+import { setCssB } from "./b.js";
 
-const colorAfterFirst = window.getComputedStyle(document.body).backgroundColor;
-const fontColorAfterFirst = window.getComputedStyle(document.body).color;
+// set CSS from both files
+setCssA("red");
+setCssB("blue");
 
-import.meta.css = /* css */ `
-  body {
-    background-color: green;
-  }
-`;
+const colorAfterInit = window.getComputedStyle(document.body).backgroundColor;
+const fontColorAfterInit = window.getComputedStyle(document.body).color;
 
-const colorAfterSecond = window.getComputedStyle(document.body).backgroundColor;
-const fontColorAfterSecond = window.getComputedStyle(document.body).color;
+// update a.js CSS — b.js CSS (blue color) should remain
+setCssA("green");
+
+const colorAfterUpdate = window.getComputedStyle(document.body).backgroundColor;
+const fontColorAfterUpdate = window.getComputedStyle(document.body).color;
 
 window.resolveResultPromise({
-  colorAfterFirst,
-  fontColorAfterFirst,
-  colorAfterSecond,
-  // green means background-color was updated
-  // and blue means color: blue was removed (not inhereted/overridden)
-  fontColorAfterSecond,
+  // red: a.js initial CSS applied
+  colorAfterInit,
+  // blue: b.js CSS applied
+  fontColorAfterInit,
+  // green: a.js CSS updated
+  colorAfterUpdate,
+  // blue: b.js CSS still active after a.js update
+  fontColorAfterUpdate,
 });

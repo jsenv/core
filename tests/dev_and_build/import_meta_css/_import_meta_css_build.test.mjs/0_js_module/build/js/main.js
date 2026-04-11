@@ -42,30 +42,46 @@ const installImportMetaCssBuild = (importMeta) => {
   });
 };
 
-installImportMetaCssBuild(import.meta);import.meta.css = [         `
-  body {
-    background-color: red;
-    color: blue;
-  }
-`, {
-  url: "/main.js"
-}];
-const colorAfterFirst = window.getComputedStyle(document.body).backgroundColor;
-const fontColorAfterFirst = window.getComputedStyle(document.body).color;
-import.meta.css = [         `
-  body {
-    background-color: green;
-  }
-`, {
-  url: "/main.js"
-}];
-const colorAfterSecond = window.getComputedStyle(document.body).backgroundColor;
-const fontColorAfterSecond = window.getComputedStyle(document.body).color;
+installImportMetaCssBuild(import.meta);const setCssA = color => {
+  import.meta.css = [         `
+    body {
+      background-color: ${color};
+    }
+  `, {
+    url: "/a.js"
+  }];
+};
+
+installImportMetaCssBuild(import.meta);const setCssB = color => {
+  import.meta.css = [         `
+    body {
+      color: ${color};
+    }
+  `, {
+    url: "/b.js"
+  }];
+};
+
+
+setCssA("red");
+setCssB("blue");
+
+const colorAfterInit = window.getComputedStyle(document.body).backgroundColor;
+const fontColorAfterInit = window.getComputedStyle(document.body).color;
+
+
+setCssA("green");
+
+const colorAfterUpdate = window.getComputedStyle(document.body).backgroundColor;
+const fontColorAfterUpdate = window.getComputedStyle(document.body).color;
+
 window.resolveResultPromise({
-  colorAfterFirst,
-  fontColorAfterFirst,
-  colorAfterSecond,
 
+  colorAfterInit,
 
-  fontColorAfterSecond
+  fontColorAfterInit,
+
+  colorAfterUpdate,
+
+  fontColorAfterUpdate,
 });
