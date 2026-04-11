@@ -1,3 +1,5 @@
+import { u } from "/jsenv_plugin_preact_node_modules.js?v=14ab0ba6";
+
 const installImportMetaCssBuild = (importMeta) => {
   const IMPORT_META_CSS_BUILD = "jsenv_import_meta_css_build";
 
@@ -48,66 +50,15 @@ const installImportMetaCssBuild = (importMeta) => {
   });
 };
 
-installImportMetaCssBuild(import.meta);const setBodyBackgroundColor = color => {
-  import.meta.css = [         `
-    body {
-      background-color: ${color};
-    }
-  `, "/a.js"];
+installImportMetaCssBuild(import.meta);import.meta.css = [         `
+  body {
+    background-color: red;
+  }
+`, "/foo.jsx"];
+const Foo = () => {
+  return u("div", {
+    children: "foo"
+  });
 };
 
-installImportMetaCssBuild(import.meta);const setBodyColor = color => {
-  import.meta.css = [         `
-    body {
-      color: ${color};
-    }
-  `, "/b.js"];
-};
-
-installImportMetaCssBuild(import.meta);const setBodyFontSize = size => {
-  import.meta.css = [         `
-    body {
-      font-size: ${size};
-    }
-  `, "/c.js"];
-};
-
-
-
-
-
-setBodyFontSize("16px");
-
-const getBodyFontSize = () => window.getComputedStyle(document.body).fontSize;
-const getBodyBackgroundColor = () =>
-  window.getComputedStyle(document.body).backgroundColor;
-const getBodyColor = () => window.getComputedStyle(document.body).color;
-const captureStyles = () => {
-  return {
-    bodyFontSize: getBodyFontSize(),
-    bodyBackgroundColor: getBodyBackgroundColor(),
-    bodyColor: getBodyColor(),
-  };
-};
-
-
-const at_start = captureStyles();
-
-
-
-
-
-setBodyFontSize("42px");
-setBodyBackgroundColor("red");
-setBodyColor("blue");
-const after_first_call = captureStyles();
-
-
-setBodyBackgroundColor("green");
-const after_second_call = captureStyles();
-
-window.resolveResultPromise({
-  at_start,
-  after_first_call,
-  after_second_call,
-});
+export { Foo };

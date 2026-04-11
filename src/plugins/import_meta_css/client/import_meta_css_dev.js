@@ -1,9 +1,6 @@
 export const installImportMetaCssDev = (importMeta) => {
   const IMPORT_META_CSS_DEV = "jsenv_import_meta_css_dev";
 
-  if (importMeta.css === IMPORT_META_CSS_DEV) {
-    return;
-  }
   // useless today but browser might catch up to display it in devtools
   const addUrlInfo = (cssText) => {
     let cssTextWithUrlInfo = cssText;
@@ -52,4 +49,10 @@ export const installImportMetaCssDev = (importMeta) => {
       }
     },
   });
+
+  return () => {
+    remove();
+    stylesheet = undefined;
+    currentCssSource = undefined;
+  };
 };

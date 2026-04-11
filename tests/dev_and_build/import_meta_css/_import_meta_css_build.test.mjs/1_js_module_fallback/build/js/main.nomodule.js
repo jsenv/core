@@ -1,12 +1,12 @@
 System.register([__v__("/jsenv_core_packages.js")], function (_export, _context) {
   "use strict";
 
-  var IMPORT_META_CSS_BUILD, installImportMetaCssBuild, setBodyBackgroundColor, setBodyColor, setBodyFontSize, getBodyFontSize, getBodyBackgroundColor, getBodyColor, captureStyles, at_start, after_first_call, after_second_call;
+  var installImportMetaCssBuild, setBodyBackgroundColor, setBodyColor, setBodyFontSize, getBodyFontSize, getBodyBackgroundColor, getBodyColor, captureStyles, at_start, after_first_call, after_second_call;
   return {
     setters: [function (_buildJsenv_core_packagesJs) {}],
     execute: function () {
-      IMPORT_META_CSS_BUILD = "jsenv_import_meta_css_build";
       installImportMetaCssBuild = importMeta => {
+        const IMPORT_META_CSS_BUILD = "jsenv_import_meta_css_build";
         if (importMeta.css === IMPORT_META_CSS_BUILD) {
           return;
         }
@@ -33,9 +33,7 @@ System.register([__v__("/jsenv_core_packages.js")], function (_export, _context)
           get() {
             return IMPORT_META_CSS_BUILD;
           },
-          set([value, {
-            url
-          }]) {
+          set([value, url]) {
             if (value === undefined) {
               if (stylesheetMap.has(url)) {
                 remove(url);
@@ -59,9 +57,7 @@ System.register([__v__("/jsenv_core_packages.js")], function (_export, _context)
     body {
       background-color: ${color};
     }
-  `, {
-          url: "/a.js"
-        }];
+  `, "/a.js"];
       };
       installImportMetaCssBuild(_context.meta);
       setBodyColor = color => {
@@ -69,9 +65,7 @@ System.register([__v__("/jsenv_core_packages.js")], function (_export, _context)
     body {
       color: ${color};
     }
-  `, {
-          url: "/b.js"
-        }];
+  `, "/b.js"];
       };
       installImportMetaCssBuild(_context.meta);
       setBodyFontSize = size => {
@@ -79,9 +73,7 @@ System.register([__v__("/jsenv_core_packages.js")], function (_export, _context)
     body {
       font-size: ${size};
     }
-  `, {
-          url: "/c.js"
-        }];
+  `, "/c.js"];
       };
       setBodyFontSize("16px");
       getBodyFontSize = () => window.getComputedStyle(document.body).fontSize;

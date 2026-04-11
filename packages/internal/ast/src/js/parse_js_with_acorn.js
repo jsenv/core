@@ -1,5 +1,6 @@
 import { Parser, getLineInfo } from "acorn";
 import { importAttributes } from "acorn-import-attributes";
+
 import { createParseError } from "../parse_error.js";
 
 export const parseJsWithAcorn = ({ js, url, isJsModule }) => {
