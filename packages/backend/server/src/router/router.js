@@ -191,16 +191,17 @@ export const createRouter = (
     let currentServerPlugin;
     let currentRoutingTiming;
     const onRouteMatchStart = (route) => {
-      if (route.serverPlugin === currentServerPlugin) {
+      const { serverPlugin } = route;
+      if (serverPlugin === currentServerPlugin) {
         return;
       }
       onRouteGroupEnd(route);
       currentRoutingTiming = fetchSecondArg.timing(
-        route.serverPlugin
-          ? `${route.serverPlugin.name.replace("jsenv:", "")}.routing`
+        serverPlugin && serverPlugin.name
+          ? `${serverPlugin.name.replace("jsenv:", "")}.routing`
           : "routing",
       );
-      currentServerPlugin = route.serverPlugin;
+      currentServerPlugin = serverPlugin;
     };
     const onRouteGroupEnd = () => {
       if (currentRoutingTiming) {
