@@ -26,7 +26,7 @@ await build({
   buildDirectoryUrl: import.meta.resolve("../dist/"),
   outDirectoryUrl: import.meta.resolve("./.jsenv/"), // for debug
   entryPoints: {
-    "./src/main.js": {
+    "./index.js": {
       buildRelativeUrl: "./jsenv_server.js",
       runtimeCompat: { node: "22.13.1" },
       directoryReferenceEffect: {

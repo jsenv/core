@@ -12,7 +12,7 @@ import {
   serveDirectory,
   startServer,
 } from "@jsenv/server";
-import { convertFileSystemErrorToResponseProperties } from "@jsenv/server/src/internal/convertFileSystemErrorToResponseProperties.js";
+import { convertFileSystemErrorToResponseProperties } from "@jsenv/server/src/services/filesystem/filesystem_error_to_response.js";
 import { URL_META } from "@jsenv/url-meta";
 import { urlIsOrIsInsideOf, urlToRelativeUrl } from "@jsenv/urls";
 import { existsSync, readFileSync } from "node:fs";

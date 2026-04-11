@@ -3051,6 +3051,48 @@ const resourceToExtension = (resource) => {
   return pathnameToExtension(pathname);
 };
 
+const urlToScheme = (url) => {
+  const urlString = String(url);
+  const colonIndex = urlString.indexOf(":");
+  if (colonIndex === -1) {
+    return "";
+  }
+
+  const scheme = urlString.slice(0, colonIndex);
+  return scheme;
+};
+
+const urlToResource = (url) => {
+  const scheme = urlToScheme(url);
+
+  if (scheme === "file") {
+    const urlAsStringWithoutFileProtocol = String(url).slice("file://".length);
+    return urlAsStringWithoutFileProtocol;
+  }
+
+  if (scheme === "https" || scheme === "http") {
+    // remove origin
+    const afterProtocol = String(url).slice(scheme.length + "://".length);
+    const pathnameSlashIndex = afterProtocol.indexOf("/", "://".length);
+    const urlAsStringWithoutOrigin = afterProtocol.slice(pathnameSlashIndex);
+    return urlAsStringWithoutOrigin;
+  }
+
+  const urlAsStringWithoutProtocol = String(url).slice(scheme.length + 1);
+  return urlAsStringWithoutProtocol;
+};
+
+const urlToPathname = (url) => {
+  const resource = urlToResource(url);
+  const pathname = resourceToPathname(resource);
+  return pathname;
+};
+
+const urlToExtension = (url) => {
+  const pathname = urlToPathname(url);
+  return pathnameToExtension(pathname);
+};
+
 const getCommonPathname = (pathname, otherPathname) => {
   if (pathname === otherPathname) {
     return pathname;
@@ -7610,6 +7652,198 @@ const jsenvServiceErrorHandler = ({ sendErrorDetails = false } = {}) => {
   };
 };
 
+class ProgressiveResponse {
+  constructor(responseBodyHandler, { status = 200, statusText, headers } = {}) {
+    const contentType = headers ? headers["content-type"] : "text/plain";
+    const progressiveResponse = {
+      status,
+      statusText,
+      headers,
+      body: createObservable(({ next, complete, addTeardown }) => {
+        // we must write something for fetch promise to resolve
+        // this is conform to HTTP spec where client expect body to starts writing
+        // before resolving response promise client side
+        if (CONTENT_TYPE.isTextual(contentType)) {
+          next("");
+        } else {
+          next(new Uint8Array());
+        }
+        const returnValue = responseBodyHandler({
+          write: (data) => {
+            next(data);
+          },
+          end: () => {
+            complete();
+          },
+        });
+        if (typeof returnValue === "function") {
+          addTeardown(() => {
+            returnValue();
+          });
+        }
+      }),
+    };
+    // eslint-disable-next-line no-constructor-return
+    return progressiveResponse;
+  }
+}
+
+/**
+ * @jsenv/server is already registering a route to handle OPTIONS request
+ * so here we just need to add the CORS headers to the response
+ */
+
+const jsenvAccessControlAllowedHeaders = ["x-requested-with"];
+
+const jsenvAccessControlAllowedMethods = [
+  "GET",
+  "POST",
+  "PUT",
+  "DELETE",
+  "OPTIONS",
+];
+
+const jsenvServiceCORS = ({
+  accessControlAllowedOrigins = [],
+  accessControlAllowedMethods = jsenvAccessControlAllowedMethods,
+  accessControlAllowedHeaders = jsenvAccessControlAllowedHeaders,
+  accessControlAllowRequestOrigin = false,
+  accessControlAllowRequestMethod = false,
+  accessControlAllowRequestHeaders = false,
+  accessControlAllowCredentials = false,
+  // by default OPTIONS request can be cache for a long time, it's not going to change soon ?
+  // we could put a lot here, see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Max-Age
+  accessControlMaxAge = 600,
+  timingAllowOrigin = false,
+} = {}) => {
+  // TODO: we should check access control params and throw/warn if we find strange values
+
+  const corsEnabled =
+    accessControlAllowRequestOrigin || accessControlAllowedOrigins.length;
+
+  if (!corsEnabled) {
+    return [];
+  }
+
+  return {
+    name: "jsenv:cors",
+    injectResponseProperties: (request) => {
+      const accessControlHeaders = generateAccessControlHeaders({
+        request,
+        accessControlAllowedOrigins,
+        accessControlAllowRequestOrigin,
+        accessControlAllowedMethods,
+        accessControlAllowRequestMethod,
+        accessControlAllowedHeaders,
+        accessControlAllowRequestHeaders,
+        accessControlAllowCredentials,
+        accessControlMaxAge,
+        timingAllowOrigin,
+      });
+      return {
+        headers: accessControlHeaders,
+      };
+    },
+  };
+};
+
+// https://www.w3.org/TR/cors/
+// https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS
+const generateAccessControlHeaders = ({
+  request: { headers },
+  accessControlAllowedOrigins,
+  accessControlAllowRequestOrigin,
+  accessControlAllowedMethods,
+  accessControlAllowRequestMethod,
+  accessControlAllowedHeaders,
+  accessControlAllowRequestHeaders,
+  accessControlAllowCredentials,
+  // by default OPTIONS request can be cache for a long time, it's not going to change soon ?
+  // we could put a lot here, see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Max-Age
+  accessControlMaxAge = 600,
+  timingAllowOrigin,
+} = {}) => {
+  const vary = [];
+
+  const allowedOriginArray = [...accessControlAllowedOrigins];
+  if (accessControlAllowRequestOrigin) {
+    if ("origin" in headers && headers.origin !== "null") {
+      allowedOriginArray.push(headers.origin);
+      vary.push("origin");
+    } else if ("referer" in headers) {
+      allowedOriginArray.push(new URL(headers.referer).origin);
+      vary.push("referer");
+    } else {
+      allowedOriginArray.push("*");
+    }
+  }
+
+  const allowedMethodArray = [...accessControlAllowedMethods];
+  if (
+    accessControlAllowRequestMethod &&
+    "access-control-request-method" in headers
+  ) {
+    const requestMethodName = headers["access-control-request-method"];
+    if (!allowedMethodArray.includes(requestMethodName)) {
+      allowedMethodArray.push(requestMethodName);
+      vary.push("access-control-request-method");
+    }
+  }
+
+  const allowedHeaderArray = [...accessControlAllowedHeaders];
+  if (
+    accessControlAllowRequestHeaders &&
+    "access-control-request-headers" in headers
+  ) {
+    const requestHeaderNameArray =
+      headers["access-control-request-headers"].split(", ");
+    requestHeaderNameArray.forEach((headerName) => {
+      const headerNameLowerCase = headerName.toLowerCase();
+      if (!allowedHeaderArray.includes(headerNameLowerCase)) {
+        allowedHeaderArray.push(headerNameLowerCase);
+        if (!vary.includes("access-control-request-headers")) {
+          vary.push("access-control-request-headers");
+        }
+      }
+    });
+  }
+
+  return {
+    "access-control-allow-origin": allowedOriginArray.join(", "),
+    "access-control-allow-methods": allowedMethodArray.join(", "),
+    "access-control-allow-headers": allowedHeaderArray.join(", "),
+    ...(accessControlAllowCredentials
+      ? { "access-control-allow-credentials": true }
+      : {}),
+    "access-control-max-age": accessControlMaxAge,
+    ...(timingAllowOrigin
+      ? { "timing-allow-origin": allowedOriginArray.join(", ") }
+      : {}),
+    ...(vary.length ? { vary: vary.join(", ") } : {}),
+  };
+};
+
+const ETAG_FOR_EMPTY_CONTENT = '"0-2jmj7l5rSw0yVb/vlWAYkK/YBwk"';
+
+const bufferToEtag = (buffer) => {
+  if (!Buffer.isBuffer(buffer)) {
+    throw new TypeError(`buffer expect,got ${buffer}`);
+  }
+
+  if (buffer.length === 0) {
+    return ETAG_FOR_EMPTY_CONTENT;
+  }
+
+  const hash = createHash("sha1");
+  hash.update(buffer, "utf8");
+
+  const hashBase64String = hash.digest("base64");
+  const hashBase64StringSubset = hashBase64String.slice(0, 27);
+  const length = buffer.length;
+
+  return `"${length.toString(16)}-${hashBase64StringSubset}"`;
+};
+
 const convertFileSystemErrorToResponseProperties = (error) => {
   // https://iojs.org/api/errors.html#errors_eacces_permission_denied
   if (isErrorWithCode(error, "EACCES")) {
@@ -7662,27 +7896,6 @@ const convertFileSystemErrorToResponseProperties = (error) => {
 
 const isErrorWithCode = (error, code) => {
   return typeof error === "object" && error.code === code;
-};
-
-const ETAG_FOR_EMPTY_CONTENT = '"0-2jmj7l5rSw0yVb/vlWAYkK/YBwk"';
-
-const bufferToEtag = (buffer) => {
-  if (!Buffer.isBuffer(buffer)) {
-    throw new TypeError(`buffer expect,got ${buffer}`);
-  }
-
-  if (buffer.length === 0) {
-    return ETAG_FOR_EMPTY_CONTENT;
-  }
-
-  const hash = createHash("sha1");
-  hash.update(buffer, "utf8");
-
-  const hashBase64String = hash.digest("base64");
-  const hashBase64StringSubset = hashBase64String.slice(0, 27);
-  const length = buffer.length;
-
-  return `"${length.toString(16)}-${hashBase64StringSubset}"`;
 };
 
 const isFileSystemPath = (value) => {
@@ -8223,176 +8436,45 @@ const asUrlString = (value) => {
   return null;
 };
 
-class ProgressiveResponse {
-  constructor(responseBodyHandler, { status = 200, statusText, headers } = {}) {
-    const contentType = headers ? headers["content-type"] : "text/plain";
-    const progressiveResponse = {
-      status,
-      statusText,
-      headers,
-      body: createObservable(({ next, complete, addTeardown }) => {
-        // we must write something for fetch promise to resolve
-        // this is conform to HTTP spec where client expect body to starts writing
-        // before resolving response promise client side
-        if (CONTENT_TYPE.isTextual(contentType)) {
-          next("");
-        } else {
-          next(new Uint8Array());
-        }
-        const returnValue = responseBodyHandler({
-          write: (data) => {
-            next(data);
-          },
-          end: () => {
-            complete();
-          },
-        });
-        if (typeof returnValue === "function") {
-          addTeardown(() => {
-            returnValue();
-          });
-        }
-      }),
-    };
-    // eslint-disable-next-line no-constructor-return
-    return progressiveResponse;
-  }
-}
-
-/**
- * @jsenv/server is already registering a route to handle OPTIONS request
- * so here we just need to add the CORS headers to the response
- */
-
-const jsenvAccessControlAllowedHeaders = ["x-requested-with"];
-
-const jsenvAccessControlAllowedMethods = [
-  "GET",
-  "POST",
-  "PUT",
-  "DELETE",
-  "OPTIONS",
-];
-
-const jsenvServiceCORS = ({
-  accessControlAllowedOrigins = [],
-  accessControlAllowedMethods = jsenvAccessControlAllowedMethods,
-  accessControlAllowedHeaders = jsenvAccessControlAllowedHeaders,
-  accessControlAllowRequestOrigin = false,
-  accessControlAllowRequestMethod = false,
-  accessControlAllowRequestHeaders = false,
-  accessControlAllowCredentials = false,
-  // by default OPTIONS request can be cache for a long time, it's not going to change soon ?
-  // we could put a lot here, see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Max-Age
-  accessControlMaxAge = 600,
-  timingAllowOrigin = false,
-} = {}) => {
-  // TODO: we should check access control params and throw/warn if we find strange values
-
-  const corsEnabled =
-    accessControlAllowRequestOrigin || accessControlAllowedOrigins.length;
-
-  if (!corsEnabled) {
-    return [];
-  }
-
+const jsenvServiceStaticFiles = ({ directoryUrl, mainFilePath }) => {
   return {
-    name: "jsenv:cors",
-    injectResponseProperties: (request) => {
-      const accessControlHeaders = generateAccessControlHeaders({
-        request,
-        accessControlAllowedOrigins,
-        accessControlAllowRequestOrigin,
-        accessControlAllowedMethods,
-        accessControlAllowRequestMethod,
-        accessControlAllowedHeaders,
-        accessControlAllowRequestHeaders,
-        accessControlAllowCredentials,
-        accessControlMaxAge,
-        timingAllowOrigin,
-      });
-      return {
-        headers: accessControlHeaders,
-      };
-    },
+    name: "jsenv:file_service",
+    routes: [
+      {
+        endpoint: "GET *",
+        description: "Serve static files.",
+        fetch: (request, helpers) => {
+          const urlIsVersioned = new URL(request.url).searchParams.has("v");
+          if (mainFilePath && request.resource === "/") {
+            request = {
+              ...request,
+              resource: `/${mainFilePath}`,
+            };
+          }
+          const urlObject = new URL(request.resource.slice(1), directoryUrl);
+          return createFileSystemFetch(directoryUrl, {
+            cacheControl: urlIsVersioned
+              ? `private,max-age=${SECONDS_IN_30_DAYS},immutable`
+              : "private,max-age=0,must-revalidate",
+            etagEnabled: true,
+            compressionEnabled: true,
+            canReadDirectory: true,
+            ENOENTFallback: () => {
+              if (
+                !urlToExtension(urlObject) &&
+                !urlToPathname(urlObject).endsWith("/")
+              ) {
+                return new URL(mainFilePath, directoryUrl);
+              }
+              return null;
+            },
+          })(request, helpers);
+        },
+      },
+    ],
   };
 };
-
-// https://www.w3.org/TR/cors/
-// https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS
-const generateAccessControlHeaders = ({
-  request: { headers },
-  accessControlAllowedOrigins,
-  accessControlAllowRequestOrigin,
-  accessControlAllowedMethods,
-  accessControlAllowRequestMethod,
-  accessControlAllowedHeaders,
-  accessControlAllowRequestHeaders,
-  accessControlAllowCredentials,
-  // by default OPTIONS request can be cache for a long time, it's not going to change soon ?
-  // we could put a lot here, see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Max-Age
-  accessControlMaxAge = 600,
-  timingAllowOrigin,
-} = {}) => {
-  const vary = [];
-
-  const allowedOriginArray = [...accessControlAllowedOrigins];
-  if (accessControlAllowRequestOrigin) {
-    if ("origin" in headers && headers.origin !== "null") {
-      allowedOriginArray.push(headers.origin);
-      vary.push("origin");
-    } else if ("referer" in headers) {
-      allowedOriginArray.push(new URL(headers.referer).origin);
-      vary.push("referer");
-    } else {
-      allowedOriginArray.push("*");
-    }
-  }
-
-  const allowedMethodArray = [...accessControlAllowedMethods];
-  if (
-    accessControlAllowRequestMethod &&
-    "access-control-request-method" in headers
-  ) {
-    const requestMethodName = headers["access-control-request-method"];
-    if (!allowedMethodArray.includes(requestMethodName)) {
-      allowedMethodArray.push(requestMethodName);
-      vary.push("access-control-request-method");
-    }
-  }
-
-  const allowedHeaderArray = [...accessControlAllowedHeaders];
-  if (
-    accessControlAllowRequestHeaders &&
-    "access-control-request-headers" in headers
-  ) {
-    const requestHeaderNameArray =
-      headers["access-control-request-headers"].split(", ");
-    requestHeaderNameArray.forEach((headerName) => {
-      const headerNameLowerCase = headerName.toLowerCase();
-      if (!allowedHeaderArray.includes(headerNameLowerCase)) {
-        allowedHeaderArray.push(headerNameLowerCase);
-        if (!vary.includes("access-control-request-headers")) {
-          vary.push("access-control-request-headers");
-        }
-      }
-    });
-  }
-
-  return {
-    "access-control-allow-origin": allowedOriginArray.join(", "),
-    "access-control-allow-methods": allowedMethodArray.join(", "),
-    "access-control-allow-headers": allowedHeaderArray.join(", "),
-    ...(accessControlAllowCredentials
-      ? { "access-control-allow-credentials": true }
-      : {}),
-    "access-control-max-age": accessControlMaxAge,
-    ...(timingAllowOrigin
-      ? { "timing-allow-origin": allowedOriginArray.join(", ") }
-      : {}),
-    ...(vary.length ? { vary: vary.join(", ") } : {}),
-  };
-};
+const SECONDS_IN_30_DAYS = 60 * 60 * 24 * 30;
 
 const jsenvServiceResponseAcceptanceCheck = () => {
   return {
@@ -8483,4 +8565,4 @@ const replaceResource = (resourceBeforeAlias, newValue) => {
   return resource;
 };
 
-export { LazyServerEvents, ProgressiveResponse, STOP_REASON_INTERNAL_ERROR, STOP_REASON_NOT_SPECIFIED, STOP_REASON_PROCESS_BEFORE_EXIT, STOP_REASON_PROCESS_EXIT, STOP_REASON_PROCESS_SIGHUP, STOP_REASON_PROCESS_SIGINT, STOP_REASON_PROCESS_SIGTERM, ServerEvents, WebSocketResponse, composeTwoResponses, createFileSystemFetch, fetchFileSystem, findFreePort, jsenvAccessControlAllowedHeaders, jsenvAccessControlAllowedMethods, jsenvServiceCORS, jsenvServiceErrorHandler, jsenvServiceRequestAliases, jsenvServiceResponseAcceptanceCheck, pickContentEncoding, pickContentLanguage, pickContentType, serveDirectory, startServer };
+export { LazyServerEvents, ProgressiveResponse, STOP_REASON_INTERNAL_ERROR, STOP_REASON_NOT_SPECIFIED, STOP_REASON_PROCESS_BEFORE_EXIT, STOP_REASON_PROCESS_EXIT, STOP_REASON_PROCESS_SIGHUP, STOP_REASON_PROCESS_SIGINT, STOP_REASON_PROCESS_SIGTERM, ServerEvents, WebSocketResponse, composeTwoResponses, createFileSystemFetch, fetchFileSystem, findFreePort, jsenvAccessControlAllowedHeaders, jsenvAccessControlAllowedMethods, jsenvServiceCORS, jsenvServiceErrorHandler, jsenvServiceRequestAliases, jsenvServiceResponseAcceptanceCheck, jsenvServiceStaticFiles, pickContentEncoding, pickContentLanguage, pickContentType, serveDirectory, startServer };

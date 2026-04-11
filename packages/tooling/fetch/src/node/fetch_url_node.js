@@ -1,10 +1,10 @@
 // https://github.com/node-fetch/node-fetch/blob/8c197f8982a238b3c345c64b17bfa92e16b4f7c4/src/response.js#L1
 
-import { createFileSystemFetch } from "@jsenv/server/src/filesystem/fetch_filesystem.js";
 import {
   fileHandleToReadableStream,
   isFileHandle,
 } from "@jsenv/server/src/interfacing_with_node/observable_from_file_handle.js";
+import { createFileSystemFetch } from "@jsenv/server/src/services/filesystem/fetch_filesystem.js";
 import { DATA_URL } from "@jsenv/urls";
 import nodeFetch, { Response } from "node-fetch";
 import { Agent } from "node:https";

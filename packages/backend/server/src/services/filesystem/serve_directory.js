@@ -1,5 +1,6 @@
 import { lstatSync, readdirSync } from "node:fs";
-import { pickContentType } from "../content_negotiation/pick_content_type.js";
+
+import { pickContentType } from "../../content_negotiation/pick_content_type.js";
 
 export const serveDirectory = (
   url,

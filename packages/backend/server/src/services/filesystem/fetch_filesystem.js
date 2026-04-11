@@ -6,14 +6,15 @@
 
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
 import { createReadStream, readFile, statSync } from "node:fs";
-import { pickContentEncoding } from "../content_negotiation/pick_content_encoding.js";
-import { convertFileSystemErrorToResponseProperties } from "../internal/convertFileSystemErrorToResponseProperties.js";
-import { bufferToEtag } from "../internal/etag.js";
+
+import { pickContentEncoding } from "../../content_negotiation/pick_content_encoding.js";
+import { composeTwoResponses } from "../../internal/response_composition.js";
+import { bufferToEtag } from "./etag.js";
+import { convertFileSystemErrorToResponseProperties } from "./filesystem_error_to_response.js";
 import {
   fileSystemPathToUrl,
   isFileSystemPath,
-} from "../internal/filesystem.js";
-import { composeTwoResponses } from "../internal/response_composition.js";
+} from "./filesystem_path_and_url.js";
 import { serveDirectory } from "./serve_directory.js";
 
 export const createFileSystemFetch = (directoryUrl, options) => {
