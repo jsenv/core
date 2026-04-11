@@ -24,7 +24,6 @@ export const installImportMetaCssDev = (importMeta) => {
   };
 
   let currentCssSource;
-  let adopted = false;
   Object.defineProperty(importMeta, "css", {
     configurable: true,
     get() {
@@ -32,14 +31,14 @@ export const installImportMetaCssDev = (importMeta) => {
     },
     set(value) {
       if (value === undefined) {
-        if (adopted) {
+        if (stylesheet) {
           remove();
-          adopted = false;
+          stylesheet = undefined;
           currentCssSource = undefined;
         }
         return;
       }
-      if (!adopted) {
+      if (!stylesheet) {
         adopt(value);
         currentCssSource = value;
       } else if (currentCssSource !== value) {
