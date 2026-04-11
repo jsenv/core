@@ -16,7 +16,7 @@
   "devDependencies": {
     "@babel/plugin-syntax-import-attributes": "7.28.6",
     "@jsenv/assert": "4.5.5",
-    "@jsenv/core": "40.12.13",
+    "@jsenv/core": "40.12.14",
     "@jsenv/eslint-config-relax": "1.8.1",
     "@jsenv/plugin-bundling": "2.10.9",
     "@jsenv/plugin-minification": "1.7.3",
