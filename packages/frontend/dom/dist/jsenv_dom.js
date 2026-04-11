@@ -6325,23 +6325,52 @@ const getDragCoordinates = (
   return [leftRelativeToScrollContainer, topRelativeToScrollContainer];
 };
 
-const installImportMetaCssBuild = (importMeta) => {
-  const stylesheet = new CSSStyleSheet({ baseUrl: importMeta.url });
+const IMPORT_META_CSS_BUILD = "jsenv_import_meta_css_build";
 
-  let called = false;
-  // eslint-disable-next-line accessor-pairs
+const installImportMetaCssBuild = (importMeta) => {
+  if (importMeta.css === IMPORT_META_CSS_BUILD) {
+    return;
+  }
+
+  const stylesheetMap = new Map();
+  const adopt = (url, value) => {
+    const stylesheet = new CSSStyleSheet({ baseUrl: importMeta.url });
+    stylesheet.replaceSync(value);
+    stylesheetMap.set(url, stylesheet);
+    document.adoptedStyleSheets = [...document.adoptedStyleSheets, stylesheet];
+  };
+  const update = (url, value) => {
+    stylesheetMap.get(url).replaceSync(value);
+  };
+  const remove = (url) => {
+    const stylesheet = stylesheetMap.get(url);
+    document.adoptedStyleSheets = document.adoptedStyleSheets.filter(
+      (s) => s !== stylesheet,
+    );
+    stylesheetMap.delete(url);
+  };
+
+  const currentCssSourceMap = new Map();
   Object.defineProperty(importMeta, "css", {
     configurable: true,
-    set(value) {
-      if (called) {
-        throw new Error("import.meta.css setter can only be called once");
+    get() {
+      return IMPORT_META_CSS_BUILD;
+    },
+    set([value, { url }]) {
+      if (value === undefined) {
+        if (stylesheetMap.has(url)) {
+          remove(url);
+          currentCssSourceMap.delete(url);
+        }
+        return;
       }
-      called = true;
-      stylesheet.replaceSync(value);
-      document.adoptedStyleSheets = [
-        ...document.adoptedStyleSheets,
-        stylesheet,
-      ];
+      if (!stylesheetMap.has(url)) {
+        adopt(url, value);
+        currentCssSourceMap.set(url, value);
+      } else if (currentCssSourceMap.get(url) !== value) {
+        update(url, value);
+        currentCssSourceMap.set(url, value);
+      }
     },
   });
 };
@@ -6505,8 +6534,7 @@ const isolateInteractions = (elements) => {
   };
 };
 
-installImportMetaCssBuild(import.meta);
-const createDragGestureController = (options = {}) => {
+installImportMetaCssBuild(import.meta);const createDragGestureController = (options = {}) => {
   const {
     name,
     onGrab,
@@ -6514,17 +6542,18 @@ const createDragGestureController = (options = {}) => {
     onDrag,
     onRelease,
     threshold = 5,
-    direction: defaultDirection = { x: true, y: true },
+    direction: defaultDirection = {
+      x: true,
+      y: true
+    },
     documentInteractions = "auto",
     backdrop = true,
-    backdropZIndex = 999999,
+    backdropZIndex = 999999
   } = options;
-
   const dragGestureController = {
     grab: null,
-    gravViaPointer: null,
+    gravViaPointer: null
   };
-
   const grab = ({
     element,
     direction = defaultDirection,
@@ -6534,7 +6563,7 @@ const createDragGestureController = (options = {}) => {
     cursor = "grabbing",
     scrollContainer = document.documentElement,
     layoutScrollableLeft: scrollableLeftAtGrab = 0,
-    layoutScrollableTop: scrollableTopAtGrab = 0,
+    layoutScrollableTop: scrollableTopAtGrab = 0
   } = {}) => {
     if (!element) {
       throw new Error("element is required");
@@ -6542,7 +6571,6 @@ const createDragGestureController = (options = {}) => {
     if (!direction.x && !direction.y) {
       return null;
     }
-
     const [publishBeforeDrag, addBeforeDragCallback] = createPubSub();
     const [publishDrag, addDragCallback] = createPubSub();
     const [publishRelease, addReleaseCallback] = createPubSub();
@@ -6552,13 +6580,15 @@ const createDragGestureController = (options = {}) => {
     if (onRelease) {
       addReleaseCallback(onRelease);
     }
-
     const scrollLeftAtGrab = scrollContainer.scrollLeft;
     const scrollTopAtGrab = scrollContainer.scrollTop;
     const leftAtGrab = scrollLeftAtGrab + scrollableLeftAtGrab;
     const topAtGrab = scrollTopAtGrab + scrollableTopAtGrab;
     const createLayout = (x, y) => {
-      const { scrollLeft, scrollTop } = scrollContainer;
+      const {
+        scrollLeft,
+        scrollTop
+      } = scrollContainer;
       const left = scrollableLeftAtGrab + x;
       const top = scrollableTopAtGrab + y;
       const scrollableLeft = left - scrollLeft;
@@ -6578,42 +6608,38 @@ const createDragGestureController = (options = {}) => {
         top,
         // Delta since grab (number representing how much we dragged)
         xDelta: left - leftAtGrab,
-        yDelta: top - topAtGrab,
+        yDelta: top - topAtGrab
       };
       return layoutProps;
     };
-
-    const grabLayout = createLayout(
-      grabX + scrollContainer.scrollLeft,
-      grabY + scrollContainer.scrollTop,
-    );
+    const grabLayout = createLayout(grabX + scrollContainer.scrollLeft, grabY + scrollContainer.scrollTop);
     const gestureInfo = {
       name,
       direction,
       started: !threshold,
       status: "grabbed",
-
       element,
       scrollContainer,
-      grabX, // x grab coordinate (excluding scroll)
-      grabY, // y grab coordinate (excluding scroll)
+      grabX,
+      // x grab coordinate (excluding scroll)
+      grabY,
+      // y grab coordinate (excluding scroll)
       grabLayout,
       leftAtGrab,
       topAtGrab,
-
-      dragX: grabX, // coordinate of the last drag (excluding scroll of the scrollContainer)
-      dragY: grabY, // coordinate of the last drag (excluding scroll of the scrollContainer)
+      dragX: grabX,
+      // coordinate of the last drag (excluding scroll of the scrollContainer)
+      dragY: grabY,
+      // coordinate of the last drag (excluding scroll of the scrollContainer)
       layout: grabLayout,
-
       isGoingUp: undefined,
       isGoingDown: undefined,
       isGoingLeft: undefined,
       isGoingRight: undefined,
-
       // metadata about interaction sources
       grabEvent: event,
       dragEvent: null,
-      releaseEvent: null,
+      releaseEvent: null
     };
     definePropertyAsReadOnly(gestureInfo, "name");
     definePropertyAsReadOnly(gestureInfo, "direction");
@@ -6624,7 +6650,6 @@ const createDragGestureController = (options = {}) => {
     definePropertyAsReadOnly(gestureInfo, "leftAtGrab");
     definePropertyAsReadOnly(gestureInfo, "topAtGrab");
     definePropertyAsReadOnly(gestureInfo, "grabEvent");
-
     document_interactions: {
       if (documentInteractions === "manual") {
         break document_interactions;
@@ -6637,23 +6662,18 @@ const createDragGestureController = (options = {}) => {
       2. Break the visual feedback (inconsistent cursors, hover states)
       3. Cause unwanted scrolling (keyboard shortcuts, wheel events in restricted directions)
       4. Create accessibility issues (focus jumping, screen reader confusion)
-
-      STRATEGY: Create a controlled interaction environment by:
+       STRATEGY: Create a controlled interaction environment by:
       1. VISUAL CONTROL: Use a backdrop to unify cursor appearance and block pointer events
       2. INTERACTION ISOLATION: Make non-dragged elements inert to prevent interference
       3. FOCUS MANAGEMENT: Control focus location and prevent focus changes during drag
       4. SELECTIVE SCROLLING: Allow scrolling only in directions supported by the drag gesture
-
-      IMPLEMENTATION:
+       IMPLEMENTATION:
       */
 
       // 1. INTERACTION ISOLATION: Make everything except the dragged element inert
       // This prevents keyboard events, pointer interactions, and screen reader navigation
       // on non-relevant elements during the drag operation
-      const cleanupInert = isolateInteractions([
-        element,
-        ...Array.from(document.querySelectorAll("[data-droppable]")),
-      ]);
+      const cleanupInert = isolateInteractions([element, ...Array.from(document.querySelectorAll("[data-droppable]"))]);
       addReleaseCallback(() => {
         cleanupInert();
       });
@@ -6670,14 +6690,14 @@ const createDragGestureController = (options = {}) => {
         // Handle wheel events on backdrop for directionally-constrained drag gestures
         // (e.g., table column resize should only allow horizontal scrolling)
         if (!direction.x || !direction.y) {
-          backdropElement.onwheel = (e) => {
+          backdropElement.onwheel = e => {
             e.preventDefault();
             const scrollX = direction.x ? e.deltaX : 0;
             const scrollY = direction.y ? e.deltaY : 0;
             scrollContainer.scrollBy({
               left: scrollX,
               top: scrollY,
-              behavior: "auto",
+              behavior: "auto"
             });
           };
         }
@@ -6688,23 +6708,25 @@ const createDragGestureController = (options = {}) => {
       }
 
       // 3. FOCUS MANAGEMENT: Control and stabilize focus during drag
-      const { activeElement } = document;
+      const {
+        activeElement
+      } = document;
       const focusableElement = findFocusable(element);
       // Focus the dragged element (or document.body as fallback) to establish clear focus context
       // This also ensure any keydown event listened by the currently focused element
       // won't be available during drag
       const elementToFocus = focusableElement || document.body;
       elementToFocus.focus({
-        preventScroll: true,
+        preventScroll: true
       });
       addReleaseCallback(() => {
         // Restore original focus on release
         activeElement.focus({
-          preventScroll: true,
+          preventScroll: true
         });
       });
       // Prevent Tab navigation entirely (focus should stay stable)
-      const onkeydown = (e) => {
+      const onkeydown = e => {
         if (e.key === "Tab") {
           e.preventDefault();
           return;
@@ -6717,27 +6739,16 @@ const createDragGestureController = (options = {}) => {
 
       // 4. SELECTIVE SCROLLING: Allow keyboard scrolling only in supported directions
       {
-        const onDocumentKeydown = (keyboardEvent) => {
+        const onDocumentKeydown = keyboardEvent => {
           // Vertical scrolling keys - prevent if vertical movement not supported
-          if (
-            keyboardEvent.key === "ArrowUp" ||
-            keyboardEvent.key === "ArrowDown" ||
-            keyboardEvent.key === " " ||
-            keyboardEvent.key === "PageUp" ||
-            keyboardEvent.key === "PageDown" ||
-            keyboardEvent.key === "Home" ||
-            keyboardEvent.key === "End"
-          ) {
+          if (keyboardEvent.key === "ArrowUp" || keyboardEvent.key === "ArrowDown" || keyboardEvent.key === " " || keyboardEvent.key === "PageUp" || keyboardEvent.key === "PageDown" || keyboardEvent.key === "Home" || keyboardEvent.key === "End") {
             if (!direction.y) {
               keyboardEvent.preventDefault();
             }
             return;
           }
           // Horizontal scrolling keys - prevent if horizontal movement not supported
-          if (
-            keyboardEvent.key === "ArrowLeft" ||
-            keyboardEvent.key === "ArrowRight"
-          ) {
+          if (keyboardEvent.key === "ArrowLeft" || keyboardEvent.key === "ArrowRight") {
             if (!direction.x) {
               keyboardEvent.preventDefault();
             }
@@ -6754,36 +6765,38 @@ const createDragGestureController = (options = {}) => {
     // Set up scroll event handling to adjust drag position when scrolling occurs
     {
       let isHandlingScroll = false;
-      const handleScroll = (scrollEvent) => {
+      const handleScroll = scrollEvent => {
         if (isHandlingScroll) {
           return;
         }
         isHandlingScroll = true;
-        drag(gestureInfo.dragX, gestureInfo.dragY, { event: scrollEvent });
+        drag(gestureInfo.dragX, gestureInfo.dragY, {
+          event: scrollEvent
+        });
         isHandlingScroll = false;
       };
-      const scrollEventReceiver =
-        scrollContainer === document.documentElement
-          ? document
-          : scrollContainer;
+      const scrollEventReceiver = scrollContainer === document.documentElement ? document : scrollContainer;
       scrollEventReceiver.addEventListener("scroll", handleScroll, {
-        passive: true,
+        passive: true
       });
       addReleaseCallback(() => {
         scrollEventReceiver.removeEventListener("scroll", handleScroll, {
-          passive: true,
+          passive: true
         });
       });
     }
-
     const determineDragData = ({
       dragX,
       dragY,
       dragEvent,
-      isRelease = false,
+      isRelease = false
     }) => {
       // === ÉTAT INITIAL (au moment du grab) ===
-      const { grabX, grabY, grabLayout } = gestureInfo;
+      const {
+        grabX,
+        grabY,
+        grabLayout
+      } = gestureInfo;
       // === CE QUI EST DEMANDÉ (où on veut aller) ===
       // Calcul de la direction basé sur le mouvement précédent
       // (ne tient pas compte du mouvement final une fois les contraintes appliquées)
@@ -6795,56 +6808,38 @@ const createDragGestureController = (options = {}) => {
       const isGoingRight = dragX > currentDragX;
       const isGoingUp = dragY < currentDragY;
       const isGoingDown = dragY > currentDragY;
-
-      const layoutXRequested = direction.x
-        ? scrollContainer.scrollLeft + (dragX - grabX)
-        : grabLayout.scrollLeft;
-      const layoutYRequested = direction.y
-        ? scrollContainer.scrollTop + (dragY - grabY)
-        : grabLayout.scrollTop;
+      const layoutXRequested = direction.x ? scrollContainer.scrollLeft + (dragX - grabX) : grabLayout.scrollLeft;
+      const layoutYRequested = direction.y ? scrollContainer.scrollTop + (dragY - grabY) : grabLayout.scrollTop;
       const layoutRequested = createLayout(layoutXRequested, layoutYRequested);
       const currentLayout = gestureInfo.layout;
       let layout;
-      if (
-        layoutRequested.x === currentLayout.x &&
-        layoutRequested.y === currentLayout.y
-      ) {
+      if (layoutRequested.x === currentLayout.x && layoutRequested.y === currentLayout.y) {
         layout = currentLayout;
       } else {
         // === APPLICATION DES CONTRAINTES ===
         let layoutConstrained = layoutRequested;
         const limitLayout = (left, top) => {
-          layoutConstrained = createLayout(
-            left === undefined
-              ? layoutConstrained.x
-              : left - scrollableLeftAtGrab,
-            top === undefined ? layoutConstrained.y : top - scrollableTopAtGrab,
-          );
+          layoutConstrained = createLayout(left === undefined ? layoutConstrained.x : left - scrollableLeftAtGrab, top === undefined ? layoutConstrained.y : top - scrollableTopAtGrab);
         };
-
         publishBeforeDrag(layoutRequested, currentLayout, limitLayout, {
           dragEvent,
-          isRelease,
+          isRelease
         });
         // === ÉTAT FINAL ===
         layout = layoutConstrained;
       }
-
       const dragData = {
         dragX,
         dragY,
         layout,
-
         isGoingLeft,
         isGoingRight,
         isGoingUp,
         isGoingDown,
-
         status: isRelease ? "released" : "dragging",
         dragEvent: isRelease ? gestureInfo.dragEvent : dragEvent,
-        releaseEvent: isRelease ? dragEvent : null,
+        releaseEvent: isRelease ? dragEvent : null
       };
-
       if (isRelease) {
         return dragData;
       }
@@ -6869,18 +6864,19 @@ const createDragGestureController = (options = {}) => {
       }
       return dragData;
     };
-
-    const drag = (
-      dragX = gestureInfo.dragX, // Scroll container relative X coordinate
-      dragY = gestureInfo.dragY, // Scroll container relative Y coordinate
-      { event = new CustomEvent("programmatic"), isRelease = false } = {},
-    ) => {
-
+    const drag = (dragX = gestureInfo.dragX,
+    // Scroll container relative X coordinate
+    dragY = gestureInfo.dragY,
+    // Scroll container relative Y coordinate
+    {
+      event = new CustomEvent("programmatic"),
+      isRelease = false
+    } = {}) => {
       const dragData = determineDragData({
         dragX,
         dragY,
         dragEvent: event,
-        isRelease,
+        isRelease
       });
       const startedPrevious = gestureInfo.started;
       const layoutPrevious = gestureInfo.layout;
@@ -6890,25 +6886,24 @@ const createDragGestureController = (options = {}) => {
         onDragStart?.(gestureInfo);
       }
       const someLayoutChange = gestureInfo.layout !== layoutPrevious;
-      publishDrag(
-        gestureInfo,
-        // we still publish drag event even when unchanged
-        // because UI might need to adjust when document scrolls
-        // even if nothing truly changes visually the element
-        // can decide to stick to the scroll for example
-        someLayoutChange,
-      );
+      publishDrag(gestureInfo,
+      // we still publish drag event even when unchanged
+      // because UI might need to adjust when document scrolls
+      // even if nothing truly changes visually the element
+      // can decide to stick to the scroll for example
+      someLayoutChange);
     };
-
     const release = ({
       event = new CustomEvent("programmatic"),
       releaseX = gestureInfo.dragX,
-      releaseY = gestureInfo.dragY,
+      releaseY = gestureInfo.dragY
     } = {}) => {
-      drag(releaseX, releaseY, { event, isRelease: true });
+      drag(releaseX, releaseY, {
+        event,
+        isRelease: true
+      });
       publishRelease(gestureInfo);
     };
-
     onGrab?.(gestureInfo);
     const dragGesture = {
       gestureInfo,
@@ -6916,12 +6911,11 @@ const createDragGestureController = (options = {}) => {
       addDragCallback,
       addReleaseCallback,
       drag,
-      release,
+      release
     };
     return dragGesture;
   };
   dragGestureController.grab = grab;
-
   const initDragByPointer = (grabEvent, dragOptions, initializer) => {
     if (grabEvent.button !== undefined && grabEvent.button !== 0) {
       return null;
@@ -6931,8 +6925,11 @@ const createDragGestureController = (options = {}) => {
       // target is a text node
       return null;
     }
-    const mouseEventCoords = (mouseEvent) => {
-      const { clientX, clientY } = mouseEvent;
+    const mouseEventCoords = mouseEvent => {
+      const {
+        clientX,
+        clientY
+      } = mouseEvent;
       return [clientX, clientY];
     };
     const [grabX, grabY] = mouseEventCoords(grabEvent);
@@ -6940,37 +6937,39 @@ const createDragGestureController = (options = {}) => {
       grabX,
       grabY,
       event: grabEvent,
-      ...dragOptions,
+      ...dragOptions
     });
-    const dragViaPointer = (dragEvent) => {
+    const dragViaPointer = dragEvent => {
       const [mouseDragX, mouseDragY] = mouseEventCoords(dragEvent);
       dragGesture.drag(mouseDragX, mouseDragY, {
-        event: dragEvent,
+        event: dragEvent
       });
     };
-    const releaseViaPointer = (mouseupEvent) => {
+    const releaseViaPointer = mouseupEvent => {
       const [mouseReleaseX, mouseReleaseY] = mouseEventCoords(mouseupEvent);
       dragGesture.release({
         event: mouseupEvent,
         releaseX: mouseReleaseX,
-        releaseY: mouseReleaseY,
+        releaseY: mouseReleaseY
       });
     };
     dragGesture.dragViaPointer = dragViaPointer;
     dragGesture.releaseViaPointer = releaseViaPointer;
     const cleanup = initializer({
       onMove: dragViaPointer,
-      onRelease: releaseViaPointer,
+      onRelease: releaseViaPointer
     });
     dragGesture.addReleaseCallback(() => {
       cleanup();
     });
     return dragGesture;
   };
-
   const grabViaPointer = (grabEvent, options) => {
     if (grabEvent.type === "pointerdown") {
-      return initDragByPointer(grabEvent, options, ({ onMove, onRelease }) => {
+      return initDragByPointer(grabEvent, options, ({
+        onMove,
+        onRelease
+      }) => {
         const target = grabEvent.target;
         target.setPointerCapture(grabEvent.pointerId);
         target.addEventListener("lostpointercapture", onRelease);
@@ -6987,11 +6986,12 @@ const createDragGestureController = (options = {}) => {
       });
     }
     if (grabEvent.type === "mousedown") {
-      console.warn(
-        `Received "mousedown" event, "pointerdown" events are recommended to perform drag gestures.`,
-      );
-      return initDragByPointer(grabEvent, options, ({ onMove, onRelease }) => {
-        const onPointerUp = (pointerEvent) => {
+      console.warn(`Received "mousedown" event, "pointerdown" events are recommended to perform drag gestures.`);
+      return initDragByPointer(grabEvent, options, ({
+        onMove,
+        onRelease
+      }) => {
+        const onPointerUp = pointerEvent => {
           // <button disabled> for example does not emit mouseup if we release mouse over it
           // -> we add "pointerup" to catch mouseup occuring on disabled element
           if (pointerEvent.pointerType === "mouse") {
@@ -7008,52 +7008,43 @@ const createDragGestureController = (options = {}) => {
         };
       });
     }
-    throw new Error(
-      `Unsupported "${grabEvent.type}" evenet passed to grabViaPointer. "pointerdown" was expected.`,
-    );
+    throw new Error(`Unsupported "${grabEvent.type}" evenet passed to grabViaPointer. "pointerdown" was expected.`);
   };
   dragGestureController.grabViaPointer = grabViaPointer;
-
   return dragGestureController;
 };
-
-const dragAfterThreshold = (
-  grabEvent,
-  dragGestureInitializer,
-  threshold,
-) => {
+const dragAfterThreshold = (grabEvent, dragGestureInitializer, threshold) => {
   const significantDragGestureController = createDragGestureController({
     threshold,
     // allow interaction for this intermediate gesture:
     // user should still be able to scroll or interact with the document
     // only once the gesture is significant we take control
     documentInteractions: "manual",
-    onDragStart: (gestureInfo) => {
+    onDragStart: gestureInfo => {
       significantDragGesture.release(); // kill that gesture
       const dragGesture = dragGestureInitializer();
       dragGesture.dragViaPointer(gestureInfo.dragEvent);
-    },
+    }
   });
-  const significantDragGesture =
-    significantDragGestureController.grabViaPointer(grabEvent, {
-      element: grabEvent.target,
-    });
+  const significantDragGesture = significantDragGestureController.grabViaPointer(grabEvent, {
+    element: grabEvent.target
+  });
 };
-
 const definePropertyAsReadOnly = (object, propertyName) => {
   Object.defineProperty(object, propertyName, {
     writable: false,
-    value: object[propertyName],
+    value: object[propertyName]
   });
 };
-
-import.meta.css = /* css */ `
+import.meta.css = [/* css */`
   .navi_drag_gesture_backdrop {
     position: fixed;
     inset: 0;
     user-select: none;
   }
-`;
+`, {
+  url: "/src/interaction/drag/drag_gesture.js"
+}];
 
 installImportMetaCssBuild(import.meta);const setupConstraintFeedbackLine = () => {
   const constraintFeedbackLine = createConstraintFeedbackLine();
@@ -7063,18 +7054,17 @@ installImportMetaCssBuild(import.meta);const setupConstraintFeedbackLine = () =>
   let lastMouseY = null;
 
   // Internal function to update constraint feedback line
-  const onDrag = (gestureInfo) => {
-    const { grabEvent, dragEvent } = gestureInfo;
-    if (
-      grabEvent.type === "programmatic" ||
-      // dragEvent can be null when only mousedown without yet any mousemove
-      !dragEvent ||
-      dragEvent.type === "programmatic"
-    ) {
+  const onDrag = gestureInfo => {
+    const {
+      grabEvent,
+      dragEvent
+    } = gestureInfo;
+    if (grabEvent.type === "programmatic" ||
+    // dragEvent can be null when only mousedown without yet any mousemove
+    !dragEvent || dragEvent.type === "programmatic") {
       // programmatic drag
       return;
     }
-
     const mouseX = dragEvent.clientX;
     const mouseY = dragEvent.clientY;
     // Use last known position if current position not available (e.g., during scroll)
@@ -7087,7 +7077,6 @@ installImportMetaCssBuild(import.meta);const setupConstraintFeedbackLine = () =>
     // Store current mouse position for potential use during scroll
     lastMouseX = mouseX;
     lastMouseY = mouseY;
-
     const grabClientX = grabEvent.clientX;
     const grabClientY = grabEvent.clientY;
 
@@ -7116,25 +7105,21 @@ installImportMetaCssBuild(import.meta);const setupConstraintFeedbackLine = () =>
     constraintFeedbackLine.style.opacity = `${maxOpacity * opacityFactor}`;
     constraintFeedbackLine.setAttribute("data-visible", "");
   };
-
   return {
     onDrag,
     onRelease: () => {
       constraintFeedbackLine.remove();
-    },
+    }
   };
 };
-
 const createConstraintFeedbackLine = () => {
   const line = document.createElement("div");
   line.className = "navi_constraint_feedback_line";
-  line.title =
-    "Constraint feedback - shows distance between mouse and moving grab point";
+  line.title = "Constraint feedback - shows distance between mouse and moving grab point";
   document.body.appendChild(line);
   return line;
 };
-
-import.meta.css = /* css */ `
+import.meta.css = [/* css */`
   .navi_constraint_feedback_line {
     position: fixed;
     z-index: 9998;
@@ -7148,16 +7133,18 @@ import.meta.css = /* css */ `
   .navi_constraint_feedback_line[data-visible] {
     visibility: visible;
   }
-`;
+`, {
+  url: "/src/interaction/drag/constraint_feedback_line.js"
+}];
 
 installImportMetaCssBuild(import.meta);const MARKER_SIZE = 12;
-
 let currentDebugMarkers = [];
 let currentConstraintMarkers = [];
 let currentReferenceElementMarker = null;
 let currentElementMarker = null;
-
-const setupDragDebugMarkers = (dragGesture, { referenceElement }) => {
+const setupDragDebugMarkers = (dragGesture, {
+  referenceElement
+}) => {
   // Clean up any existing persistent markers from previous drag gestures
   {
     // Remove any existing markers from previous gestures
@@ -7166,29 +7153,27 @@ const setupDragDebugMarkers = (dragGesture, { referenceElement }) => {
       container.innerHTML = ""; // Clear all markers efficiently
     }
   }
-
-  const { direction, scrollContainer } = dragGesture.gestureInfo;
-
+  const {
+    direction,
+    scrollContainer
+  } = dragGesture.gestureInfo;
   return {
-    onConstraints: (
-      constraints,
-      { left, top, right, bottom, autoScrollArea },
-    ) => {
+    onConstraints: (constraints, {
+      left,
+      top,
+      right,
+      bottom,
+      autoScrollArea
+    }) => {
       // Schedule removal of previous markers if they exist
       const previousDebugMarkers = [...currentDebugMarkers];
       const previousConstraintMarkers = [...currentConstraintMarkers];
       const previousReferenceElementMarker = currentReferenceElementMarker;
       const previousElementMarker = currentElementMarker;
-
-      if (
-        previousDebugMarkers.length > 0 ||
-        previousConstraintMarkers.length > 0 ||
-        previousReferenceElementMarker ||
-        previousElementMarker
-      ) {
+      if (previousDebugMarkers.length > 0 || previousConstraintMarkers.length > 0 || previousReferenceElementMarker || previousElementMarker) {
         setTimeout(() => {
-          previousDebugMarkers.forEach((marker) => marker.remove());
-          previousConstraintMarkers.forEach((marker) => marker.remove());
+          previousDebugMarkers.forEach(marker => marker.remove());
+          previousConstraintMarkers.forEach(marker => marker.remove());
           if (previousReferenceElementMarker) {
             previousReferenceElementMarker.remove();
           }
@@ -7217,7 +7202,7 @@ const setupDragDebugMarkers = (dragGesture, { referenceElement }) => {
         bottom,
         scrollContainer,
         label: elementLabel,
-        color: elementColor,
+        color: elementColor
       });
 
       // Create reference element marker if reference element exists
@@ -7227,52 +7212,47 @@ const setupDragDebugMarkers = (dragGesture, { referenceElement }) => {
           top,
           right,
           bottom,
-          scrollContainer,
+          scrollContainer
         });
       }
 
       // Collect all markers to be created, then merge duplicates
       const markersToCreate = [];
-
       {
         if (direction.x) {
           markersToCreate.push({
-            name: autoScrollArea.paddingLeft
-              ? `autoscroll.left + padding(${autoScrollArea.paddingLeft})`
-              : "autoscroll.left",
+            name: autoScrollArea.paddingLeft ? `autoscroll.left + padding(${autoScrollArea.paddingLeft})` : "autoscroll.left",
             x: autoScrollArea.left,
             y: 0,
-            color: "0 128 0", // green
-            side: "left",
+            color: "0 128 0",
+            // green
+            side: "left"
           });
           markersToCreate.push({
-            name: autoScrollArea.paddingRight
-              ? `autoscroll.right + padding(${autoScrollArea.paddingRight})`
-              : "autoscroll.right",
+            name: autoScrollArea.paddingRight ? `autoscroll.right + padding(${autoScrollArea.paddingRight})` : "autoscroll.right",
             x: autoScrollArea.right,
             y: 0,
-            color: "0 128 0", // green
-            side: "right",
+            color: "0 128 0",
+            // green
+            side: "right"
           });
         }
         if (direction.y) {
           markersToCreate.push({
-            name: autoScrollArea.paddingTop
-              ? `autoscroll.top + padding(${autoScrollArea.paddingTop})`
-              : "autoscroll.top",
+            name: autoScrollArea.paddingTop ? `autoscroll.top + padding(${autoScrollArea.paddingTop})` : "autoscroll.top",
             x: 0,
             y: autoScrollArea.top,
-            color: "255 0 0", // red
-            side: "top",
+            color: "255 0 0",
+            // red
+            side: "top"
           });
           markersToCreate.push({
-            name: autoScrollArea.paddingBottom
-              ? `autoscroll.bottom + padding(${autoScrollArea.paddingBottom})`
-              : "autoscroll.bottom",
+            name: autoScrollArea.paddingBottom ? `autoscroll.bottom + padding(${autoScrollArea.paddingBottom})` : "autoscroll.bottom",
             x: 0,
             y: autoScrollArea.bottom,
-            color: "255 165 0", // orange
-            side: "bottom",
+            color: "255 165 0",
+            // orange
+            side: "bottom"
           });
         }
       }
@@ -7280,7 +7260,9 @@ const setupDragDebugMarkers = (dragGesture, { referenceElement }) => {
       // Process each constraint individually to preserve names
       for (const constraint of constraints) {
         if (constraint.type === "bounds") {
-          const { bounds } = constraint;
+          const {
+            bounds
+          } = constraint;
 
           // Create individual markers for each bound with constraint name
           if (direction.x) {
@@ -7289,8 +7271,9 @@ const setupDragDebugMarkers = (dragGesture, { referenceElement }) => {
                 name: `${constraint.name}.left`,
                 x: bounds.left,
                 y: 0,
-                color: "128 0 128", // purple
-                side: "left",
+                color: "128 0 128",
+                // purple
+                side: "left"
               });
             }
             if (bounds.right !== undefined) {
@@ -7300,8 +7283,9 @@ const setupDragDebugMarkers = (dragGesture, { referenceElement }) => {
                 name: `${constraint.name}.right`,
                 x: bounds.right,
                 y: 0,
-                color: "128 0 128", // purple
-                side: "right",
+                color: "128 0 128",
+                // purple
+                side: "right"
               });
             }
           }
@@ -7311,8 +7295,9 @@ const setupDragDebugMarkers = (dragGesture, { referenceElement }) => {
                 name: `${constraint.name}.top`,
                 x: 0,
                 y: bounds.top,
-                color: "128 0 128", // purple
-                side: "top",
+                color: "128 0 128",
+                // purple
+                side: "top"
               });
             }
             if (bounds.bottom !== undefined) {
@@ -7322,37 +7307,28 @@ const setupDragDebugMarkers = (dragGesture, { referenceElement }) => {
                 name: `${constraint.name}.bottom`,
                 x: 0,
                 y: bounds.bottom,
-                color: "128 0 128", // purple
-                side: "bottom",
+                color: "128 0 128",
+                // purple
+                side: "bottom"
               });
             }
           }
         } else if (constraint.type === "obstacle") {
-          const obstacleMarker = createObstacleMarker(
-            constraint,
-            scrollContainer,
-          );
+          const obstacleMarker = createObstacleMarker(constraint, scrollContainer);
           currentConstraintMarkers.push(obstacleMarker);
         }
       }
 
       // Create markers with merging for overlapping positions
-      const createdMarkers = createMergedMarkers(
-        markersToCreate,
-        scrollContainer,
-      );
-      currentDebugMarkers.push(
-        ...createdMarkers.filter((m) => m.type !== "constraint"),
-      );
-      currentConstraintMarkers.push(
-        ...createdMarkers.filter((m) => m.type === "constraint"),
-      );
+      const createdMarkers = createMergedMarkers(markersToCreate, scrollContainer);
+      currentDebugMarkers.push(...createdMarkers.filter(m => m.type !== "constraint"));
+      currentConstraintMarkers.push(...createdMarkers.filter(m => m.type === "constraint"));
     },
     onRelease: () => {
       {
         return;
       }
-    },
+    }
   };
 };
 
@@ -7371,8 +7347,9 @@ const getMarkersContainer = () => {
 // Convert document-relative coordinates to viewport coordinates for marker positioning
 // Takes the scroll container into account for proper positioning relative to the container
 const getDebugMarkerPos = (x, y, scrollContainer, side = null) => {
-  const { documentElement } = document;
-
+  const {
+    documentElement
+  } = document;
   const leftWithoutScroll = x - scrollContainer.scrollLeft;
   const topWithoutScroll = y - scrollContainer.scrollTop;
   let baseX;
@@ -7404,7 +7381,6 @@ const getDebugMarkerPos = (x, y, scrollContainer, side = null) => {
   // For obstacles and other markers: use converted coordinates directly
   return [baseX, baseY];
 };
-
 const createMergedMarkers = (markersToCreate, scrollContainer) => {
   const mergedMarkers = [];
   const positionMap = new Map();
@@ -7412,7 +7388,6 @@ const createMergedMarkers = (markersToCreate, scrollContainer) => {
   // Group markers by position and side
   for (const marker of markersToCreate) {
     const key = `${marker.x},${marker.y},${marker.side}`;
-
     if (!positionMap.has(key)) {
       positionMap.set(key, []);
     }
@@ -7430,43 +7405,36 @@ const createMergedMarkers = (markersToCreate, scrollContainer) => {
     } else {
       // Multiple markers at same position - merge labels
       const firstMarker = markers[0];
-      const combinedName = markers.map((m) => m.name).join(" + ");
+      const combinedName = markers.map(m => m.name).join(" + ");
 
       // Use the first marker's color, or mix colors if needed
-      const domMarker = createDebugMarker(
-        {
-          ...firstMarker,
-          name: combinedName,
-        },
-        scrollContainer,
-      );
-      domMarker.type = markers.some((m) => m.name.includes("Bound"))
-        ? "constraint"
-        : "visible";
+      const domMarker = createDebugMarker({
+        ...firstMarker,
+        name: combinedName
+      }, scrollContainer);
+      domMarker.type = markers.some(m => m.name.includes("Bound")) ? "constraint" : "visible";
       mergedMarkers.push(domMarker);
     }
   }
-
   return mergedMarkers;
 };
-
-const createDebugMarker = (
-  { name, x, y, color = "255 0 0", side },
-  scrollContainer,
-) => {
+const createDebugMarker = ({
+  name,
+  x,
+  y,
+  color = "255 0 0",
+  side
+}, scrollContainer) => {
   // Convert coordinates from document-relative to viewport
   const [viewportX, viewportY] = getDebugMarkerPos(x, y, scrollContainer, side);
-
   const marker = document.createElement("div");
   marker.className = `navi_debug_marker`;
   marker.setAttribute(`data-${side}`, "");
   // Set the color as a CSS custom property
   marker.style.setProperty("--marker-color", `rgb(${color})`);
   // Position markers exactly at the boundary coordinates
-  marker.style.left =
-    side === "right" ? `${viewportX - MARKER_SIZE}px` : `${viewportX}px`;
-  marker.style.top =
-    side === "bottom" ? `${viewportY - MARKER_SIZE}px` : `${viewportY}px`;
+  marker.style.left = side === "right" ? `${viewportX - MARKER_SIZE}px` : `${viewportX}px`;
+  marker.style.top = side === "bottom" ? `${viewportY - MARKER_SIZE}px` : `${viewportY}px`;
   marker.title = name;
 
   // Add label
@@ -7474,7 +7442,6 @@ const createDebugMarker = (
   label.className = `navi_debug_marker_label`;
   label.textContent = name;
   marker.appendChild(label);
-
   const container = getMarkersContainer();
   container.appendChild(marker);
   return marker;
@@ -7484,13 +7451,7 @@ const createObstacleMarker = (obstacleObj, scrollContainer) => {
   const height = obstacleObj.bounds.bottom - obstacleObj.bounds.top;
 
   // Convert document-relative coordinates to viewport coordinates
-  const [x, y] = getDebugMarkerPos(
-    obstacleObj.bounds.left,
-    obstacleObj.bounds.top,
-    scrollContainer,
-    "obstacle",
-  );
-
+  const [x, y] = getDebugMarkerPos(obstacleObj.bounds.left, obstacleObj.bounds.top, scrollContainer, "obstacle");
   const marker = document.createElement("div");
   marker.className = "navi_obstacle_marker";
   marker.style.left = `${x}px`;
@@ -7504,12 +7465,10 @@ const createObstacleMarker = (obstacleObj, scrollContainer) => {
   label.className = "navi_obstacle_marker_label";
   label.textContent = obstacleObj.name;
   marker.appendChild(label);
-
   const container = getMarkersContainer();
   container.appendChild(marker);
   return marker;
 };
-
 const createElementMarker = ({
   left,
   top,
@@ -7517,13 +7476,12 @@ const createElementMarker = ({
   bottom,
   scrollContainer,
   label = "Element",
-  color = "0, 200, 0", // Default green color
+  color = "0, 200, 0" // Default green color
 }) => {
   const width = right - left;
   const height = bottom - top;
   // Convert document-relative coordinates to viewport coordinates
   const [x, y] = getDebugMarkerPos(left, top, scrollContainer, "element");
-
   const marker = document.createElement("div");
   marker.className = "navi_element_marker";
   marker.style.left = `${x}px`;
@@ -7541,24 +7499,21 @@ const createElementMarker = ({
   labelEl.className = "navi_element_marker_label";
   labelEl.textContent = label;
   marker.appendChild(labelEl);
-
   const container = getMarkersContainer();
   container.appendChild(marker);
   return marker;
 };
-
 const createReferenceElementMarker = ({
   left,
   top,
   right,
   bottom,
-  scrollContainer,
+  scrollContainer
 }) => {
   const width = right - left;
   const height = bottom - top;
   // Convert document-relative coordinates to viewport coordinates
   const [x, y] = getDebugMarkerPos(left, top, scrollContainer, "reference");
-
   const marker = document.createElement("div");
   marker.className = "navi_reference_element_marker";
   marker.style.left = `${x}px`;
@@ -7572,13 +7527,11 @@ const createReferenceElementMarker = ({
   label.className = "navi_reference_element_marker_label";
   label.textContent = "Reference Element";
   marker.appendChild(label);
-
   const container = getMarkersContainer();
   container.appendChild(marker);
   return marker;
 };
-
-import.meta.css = /* css */ `
+import.meta.css = [/* css */`
   .navi_debug_markers_container {
     position: fixed;
     top: 0;
@@ -7763,7 +7716,9 @@ import.meta.css = /* css */ `
     border-radius: 3px;
     pointer-events: none;
   }
-`;
+`, {
+  url: "/src/interaction/drag/drag_debug_markers.js"
+}];
 
 const initDragConstraints = (
   dragGesture,
@@ -8927,17 +8882,17 @@ const getWidth = (element) => {
   return width;
 };
 
-installImportMetaCssBuild(import.meta);
-import.meta.css = /* css */ `
+installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
   [data-position-sticky-placeholder] {
     position: static !important;
     width: auto !important;
     height: auto !important;
     opacity: 0 !important;
   }
-`;
-
-const initPositionSticky = (element) => {
+`, {
+  url: "/src/position/position_sticky.js"
+}];
+const initPositionSticky = element => {
   const computedStyle = getComputedStyle(element);
   const topCssValue = computedStyle.top;
   const top = parseFloat(topCssValue);
@@ -8961,20 +8916,10 @@ const initPositionSticky = (element) => {
       break;
     }
     const style = getComputedStyle(scrollContainer);
-    if (
-      xScrollContainer === null &&
-      (style.overflowX === "auto" ||
-        style.overflowX === "hidden" ||
-        style.overflowX === "scroll")
-    ) {
+    if (xScrollContainer === null && (style.overflowX === "auto" || style.overflowX === "hidden" || style.overflowX === "scroll")) {
       xScrollContainer = scrollContainer;
     }
-    if (
-      yScrollContainer === null &&
-      (style.overflowY === "auto" ||
-        style.overflowY === "hidden" ||
-        style.overflowY === "scroll")
-    ) {
+    if (yScrollContainer === null && (style.overflowY === "auto" || style.overflowY === "hidden" || style.overflowY === "scroll")) {
       yScrollContainer = scrollContainer;
     }
   }
@@ -8983,7 +8928,6 @@ const initPositionSticky = (element) => {
   if (!needsPolyfillX && !needsPolyfillY) {
     return () => {}; // Native sticky will work fine on both axes
   }
-
   const cleanupCallbackSet = new Set();
   const cleanup = () => {
     for (const cleanupCallback of cleanupCallbackSet) {
@@ -8991,7 +8935,6 @@ const initPositionSticky = (element) => {
     }
     cleanupCallbackSet.clear();
   };
-
   const parentElement = element.parentElement;
   const createPlaceholderClone = () => {
     const clone = element.cloneNode(true);
@@ -8999,16 +8942,13 @@ const initPositionSticky = (element) => {
     clone.removeAttribute("data-sticky");
     return clone;
   };
-
   let placeholder = createPlaceholderClone();
   parentElement.insertBefore(placeholder, element);
   cleanupCallbackSet.add(() => {
     placeholder.remove();
   });
-
   let width = getWidth(element);
   let height = getHeight(element);
-
   const updateSize = () => {
     const newPlaceholder = createPlaceholderClone();
     parentElement.replaceChild(newPlaceholder, placeholder);
@@ -9017,14 +8957,12 @@ const initPositionSticky = (element) => {
     height = getHeight(placeholder);
     updatePosition();
   };
-
   const updatePosition = () => {
     // Ensure placeholder dimensions match element
     setStyles(placeholder, {
       width: `${width}px`,
-      height: `${height}px`,
+      height: `${height}px`
     });
-
     const placeholderRect = placeholder.getBoundingClientRect();
     const parentRect = parentElement.getBoundingClientRect();
 
@@ -9038,12 +8976,12 @@ const initPositionSticky = (element) => {
     // -420 <= 250 → stuck → element.style.left = 250px (main's left edge). ✓
     //
     // If no intermediate scroll container exists, use 0 (document/viewport edge).
-    const yContainerRect = yScrollContainer
-      ? yScrollContainer.getBoundingClientRect()
-      : { top: 0 };
-    const xContainerRect = xScrollContainer
-      ? xScrollContainer.getBoundingClientRect()
-      : { left: 0 };
+    const yContainerRect = yScrollContainer ? yScrollContainer.getBoundingClientRect() : {
+      top: 0
+    };
+    const xContainerRect = xScrollContainer ? xScrollContainer.getBoundingClientRect() : {
+      left: 0
+    };
     const topThreshold = yContainerRect.top + top;
     const leftThreshold = xContainerRect.left + left;
 
@@ -9086,7 +9024,6 @@ const initPositionSticky = (element) => {
     } else {
       leftPosition = placeholderRect.left;
     }
-
     element.style.top = `${topPosition}px`;
     element.style.left = `${Math.round(leftPosition)}px`;
     element.style.width = `${width}px`;
@@ -9099,18 +9036,15 @@ const initPositionSticky = (element) => {
       element.removeAttribute("data-sticky");
     }
   };
-
   {
     const restorePositionStyle = forceStyles(element, {
       "position": "fixed",
       "z-index": 1,
-      "will-change": "transform", // Hint for hardware acceleration
+      "will-change": "transform" // Hint for hardware acceleration
     });
     cleanupCallbackSet.add(restorePositionStyle);
   }
-
   updatePosition();
-
   {
     const handleScroll = () => {
       updatePosition();
@@ -9121,15 +9055,16 @@ const initPositionSticky = (element) => {
     const listenTargets = new Set(scrollContainerSet);
     listenTargets.add(document.documentElement);
     for (const scrollTarget of listenTargets) {
-      scrollTarget.addEventListener("scroll", handleScroll, { passive: true });
+      scrollTarget.addEventListener("scroll", handleScroll, {
+        passive: true
+      });
       cleanupCallbackSet.add(() => {
         scrollTarget.removeEventListener("scroll", handleScroll, {
-          passive: true,
+          passive: true
         });
       });
     }
   }
-
   {
     let animationFrame = null;
     const resizeObserver = new ResizeObserver(() => {
@@ -9148,7 +9083,6 @@ const initPositionSticky = (element) => {
       animationFrame = null;
     });
   }
-
   {
     const mutationObserver = new MutationObserver(() => {
       updateSize();
@@ -9156,13 +9090,12 @@ const initPositionSticky = (element) => {
     mutationObserver.observe(element, {
       childList: true,
       subtree: true,
-      characterData: true,
+      characterData: true
     });
     cleanupCallbackSet.add(() => {
       mutationObserver.disconnect();
     });
   }
-
   return cleanup;
 };
 
