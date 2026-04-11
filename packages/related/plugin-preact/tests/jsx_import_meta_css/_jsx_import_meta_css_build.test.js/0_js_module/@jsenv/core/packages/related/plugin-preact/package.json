@@ -1,0 +1,51 @@
+{
+  "name": "@jsenv/plugin-preact",
+  "version": "1.7.32",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jsenv/core",
+    "directory": "packages/related/plugin-preact"
+  },
+  "license": "MIT",
+  "sideEffects": [
+    "./tests/jsx_import_meta_css/build/jsenv_plugin_preact_node_modules.js"
+  ],
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./src/main.js"
+    },
+    "./*": "./*"
+  },
+  "files": [
+    "/src/"
+  ],
+  "dependencies": {
+    "@babel/plugin-transform-react-jsx": "7.28.6",
+    "@babel/plugin-transform-react-jsx-development": "7.27.1",
+    "@babel/plugin-transform-react-jsx-source": "7.27.1",
+    "@jsenv/ast": "6.7.21",
+    "@jsenv/sourcemap": "1.3.17",
+    "@jsenv/url-meta": "8.5.7",
+    "@prefresh/babel-plugin": "0.5.3",
+    "@prefresh/core": "1.5.9",
+    "@prefresh/utils": "1.2.1",
+    "babel-plugin-transform-hook-names": "1.0.2"
+  },
+  "devDependencies": {
+    "@jsenv/filesystem": "../../tooling/filesystem",
+    "@jsenv/plugin-commonjs": "../plugin-commonjs",
+    "@jsenv/plugin-explorer": "../plugin-explorer",
+    "@jsenv/plugin-preact": "./",
+    "playwright": "1.58.1",
+    "preact": "11.0.0-beta.0",
+    "react-redux": "9.2.0",
+    "redux": "5.0.1"
+  },
+  "peerDependencies": {
+    "@jsenv/core": "*"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

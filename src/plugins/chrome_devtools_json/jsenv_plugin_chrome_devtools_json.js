@@ -25,7 +25,7 @@ export const jsenvPluginChromeDevtoolsJson = () => {
   return {
     name: "jsenv_plugin_chrome_devtools_json",
     appliesDuring: "dev",
-    devServerRoutes: [
+    serverRoutes: [
       {
         endpoint: "GET /.well-known/appspecific/com.chrome.devtools.json",
         declarationSource: import.meta.url,

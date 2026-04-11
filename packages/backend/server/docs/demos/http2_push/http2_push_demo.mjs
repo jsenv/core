@@ -2,8 +2,8 @@ import { requestCertificate } from "@jsenv/https-local";
 import {
   createFileSystemFetch,
   jsenvAccessControlAllowedHeaders,
-  jsenvServiceCORS,
-  jsenvServiceErrorHandler,
+  serverPluginCORS,
+  serverPluginErrorHandler,
   startServer,
 } from "@jsenv/server";
 
@@ -14,8 +14,8 @@ await startServer({
   https: { certificate, privateKey },
   http2: true,
   serverTiming: true,
-  services: [
-    jsenvServiceCORS({
+  plugins: [
+    serverPluginCORS({
       accessControlAllowRequestOrigin: true,
       accessControlAllowRequestMethod: true,
       accessControlAllowRequestHeaders: true,
@@ -25,7 +25,7 @@ await startServer({
       ],
       accessControlAllowCredentials: true,
     }),
-    jsenvServiceErrorHandler({
+    serverPluginErrorHandler({
       sendErrorDetails: true,
     }),
   ],

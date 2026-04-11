@@ -68,7 +68,7 @@ const test = async ({ name, runtimeCompat }) => {
   const server = await startFileServer({
     rootDirectoryUrl: import.meta.resolve("./dist/"),
     canUseLongTermCache: (request) => !request.url.endsWith(".html"),
-    services: [
+    plugins: [
       {
         name: "spy_request",
         routes: [

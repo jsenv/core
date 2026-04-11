@@ -13,7 +13,7 @@
   },
   "devDependencies": {
     "@jsenv/assert": "4.5.5",
-    "@jsenv/core": "40.12.10",
+    "@jsenv/core": "40.12.14",
     "@jsenv/eslint-config-relax": "1.8.1",
     "@jsenv/test": "3.7.19",
     "eslint": "9.39.2",

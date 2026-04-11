@@ -16,14 +16,14 @@ base/client/main.js:1:7
 "jsenv:node_esm_resolution"
   at createFailedToResolveUrlError (@jsenv/core/src/kitchen/errors.js:16:26)
   at createResolveUrlError (@jsenv/core/src/kitchen/errors.js:44:32)
-  at Object.resolveReference (@jsenv/core/src/kitchen/kitchen.js:397:13)
+  at Object.resolveReference (@jsenv/core/src/kitchen/kitchen.js:401:13)
   at reference.resolve (@jsenv/core/src/kitchen/url_graph/references.js:385:38)
   at createResolveAndFinalize (@jsenv/core/src/kitchen/url_graph/references.js:41:41)
   at Object.found (@jsenv/core/src/kitchen/url_graph/references.js:63:23)
   at onExternalReference (@jsenv/core/src/plugins/reference_analysis/js/jsenv_plugin_js_reference_analysis.js:130:44)
   at parseAndTransformJsReferences (@jsenv/core/src/plugins/reference_analysis/js/jsenv_plugin_js_reference_analysis.js:183:7)
   at js_module (@jsenv/core/src/plugins/reference_analysis/js/jsenv_plugin_js_reference_analysis.js:24:18)
-  at callAsyncHook (@jsenv/core/src/plugins/plugin_controller.js:210:31)
+  at callAsyncHook (@jsenv/core/packages/backend/server/src/plugins_controller.js:174:31)
 ```
 
 ---

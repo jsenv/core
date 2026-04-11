@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/server",
-  "version": "16.3.6",
+  "version": "17.0.0",
   "description": "A modern Node.js HTTP server with declarative routing, content negotiation, and WebSocket support",
   "repository": {
     "type": "git",
@@ -19,23 +19,24 @@
   "exports": {
     ".": {
       "import": {
-        "dev:jsenv": "./src/main.js",
+        "dev:jsenv": "./index.js",
         "default": "./dist/jsenv_server.js"
       }
     },
     "./*": "./*"
   },
-  "main": "./src/main.js",
+  "main": "./index.js",
   "files": [
     "/dist/",
-    "/src/"
+    "/src/",
+    "/index.js"
   ],
   "scripts": {
     "build": "node --experimental-import-meta-resolve ./scripts/build.mjs",
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "launch-editor": "2.13.1"
+    "launch-editor": "2.13.2"
   },
   "devDependencies": {
     "@jsenv/abort": "../../tooling/abort",
@@ -57,7 +58,7 @@
     "formidable": "3.5.4",
     "playwright": "1.58.1",
     "undici": "7.24.2",
-    "ws": "8.19.0"
+    "ws": "8.20.0"
   },
   "engines": {
     "node": ">=22.13.1"

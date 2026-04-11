@@ -14,7 +14,7 @@ process.exit(0); // TOFIX
 const htmlFileUrl = new URL("./index.html", import.meta.url);
 const server = await startServer({
   logLevel: "warn",
-  services: [
+  plugins: [
     {
       handleRequest: async () => {
         const htmlFileContent = await readFile(htmlFileUrl, { as: "string" });

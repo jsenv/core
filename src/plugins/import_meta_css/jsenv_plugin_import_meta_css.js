@@ -36,11 +36,7 @@ export const jsenvPluginImportMetaCss = () => {
     appliesDuring: "*",
     transformUrlContent: {
       js_module: async (urlInfo) => {
-        if (
-          !urlInfo.content.includes("import.meta.css") ||
-          // there is already our installImportMetaCssBuild in the file
-          urlInfo.content.includes("installImportMetaCssBuild")
-        ) {
+        if (!urlInfo.content.includes("import.meta.css")) {
           return null;
         }
         const { metadata } = await applyBabelPlugins({
@@ -54,17 +50,65 @@ export const jsenvPluginImportMetaCss = () => {
         if (!usesImportMetaCss) {
           return null;
         }
+        if (urlInfo.context.build) {
+          const rootDirectoryUrl = urlInfo.context.rootDirectoryUrl;
+          const relativeUrl = urlInfo.originalUrl.slice(
+            rootDirectoryUrl.length - 1,
+          );
+          const { code } = await applyBabelPlugins({
+            babelPlugins: [
+              [babelPluginRewriteImportMetaCssAssignment, { relativeUrl }],
+            ],
+            input: urlInfo.content,
+            inputIsJsModule: true,
+            inputUrl: urlInfo.originalUrl,
+            outputUrl: urlInfo.generatedUrl,
+          });
+          return injectImportMetaCss(urlInfo, {
+            content: code,
+            importFrom: importMetaCssBuildClientFileUrl,
+            importName: "installImportMetaCssBuild",
+            importAs: "__installImportMetaCssBuild__",
+          });
+        }
         return injectImportMetaCss(urlInfo, {
-          importFrom: urlInfo.context.build
-            ? importMetaCssBuildClientFileUrl
-            : importMetaCssDevClientFileUrl,
-          importName: urlInfo.context.build
-            ? "installImportMetaCssBuild"
-            : "installImportMetaCssDev",
-          importAs: urlInfo.context.build
-            ? "__installImportMetaCssBuild__"
-            : "__installImportMetaCssDev__",
+          content: urlInfo.content,
+          importFrom: importMetaCssDevClientFileUrl,
+          importName: "installImportMetaCssDev",
+          importAs: "__installImportMetaCssDev__",
+          hot: true,
         });
+      },
+    },
+  };
+};
+
+const babelPluginRewriteImportMetaCssAssignment = (
+  { types: t },
+  { relativeUrl },
+) => {
+  return {
+    name: "rewrite-import-meta-css-assignment",
+    visitor: {
+      AssignmentExpression(path) {
+        const { left, right } = path.node;
+        if (left.type !== "MemberExpression") {
+          return;
+        }
+        const { object, property } = left;
+        if (object.type !== "MetaProperty") {
+          return;
+        }
+        if (object.meta.name !== "import" || object.property.name !== "meta") {
+          return;
+        }
+        if (property.name !== "css") {
+          return;
+        }
+        path.node.right = t.arrayExpression([
+          right,
+          t.stringLiteral(relativeUrl),
+        ]);
       },
     },
   };
@@ -101,7 +145,10 @@ const babelPluginMetadataUsesImportMetaCss = () => {
   };
 };
 
-const injectImportMetaCss = (urlInfo, { importFrom, importName, importAs }) => {
+const injectImportMetaCss = (
+  urlInfo,
+  { content, importFrom, importName, importAs, hot },
+) => {
   const importMetaCssClientFileReference = urlInfo.dependencies.inject({
     parentUrl: urlInfo.url,
     type: "js_import",
@@ -117,7 +164,9 @@ const injectImportMetaCss = (urlInfo, { importFrom, importName, importAs }) => {
     importBeforeFrom = `{ ${importName} } }`;
     importVariableName = importName;
   }
-  let prelude = `import ${importBeforeFrom} from ${importMetaCssClientFileReference.generatedSpecifier};
+
+  const prelude = hot
+    ? `import ${importBeforeFrom} from ${importMetaCssClientFileReference.generatedSpecifier};
 
 const remove = ${importVariableName}(import.meta);
 if (import.meta.hot) {
@@ -126,9 +175,13 @@ if (import.meta.hot) {
   });
 }
 
+`
+    : `import ${importBeforeFrom} from ${importMetaCssClientFileReference.generatedSpecifier};
+
+${importVariableName}(import.meta);
+
 `;
 
-  let content = urlInfo.content;
   return {
     content: `${prelude.replace(/\n/g, "")}${content}`,
   };

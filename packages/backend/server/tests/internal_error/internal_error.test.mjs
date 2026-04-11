@@ -1,10 +1,10 @@
-import { jsenvServiceErrorHandler, startServer } from "@jsenv/server";
+import { serverPluginErrorHandler, startServer } from "@jsenv/server";
 import { snapshotServerTests } from "@jsenv/server/tests/test_helpers.mjs";
 
 const run = async (errorToThrow) => {
   const server = await startServer({
     keepProcessAlive: false,
-    services: [jsenvServiceErrorHandler()],
+    plugins: [serverPluginErrorHandler()],
     routes: [
       {
         endpoint: "GET *",

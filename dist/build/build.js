@@ -7,7 +7,7 @@ import { readFileSync, existsSync, readdirSync, lstatSync, realpathSync } from "
 import { lookupPackageDirectory, registerDirectoryLifecycle, urlToRelativeUrl, createDetailedMessage, stringifyUrlSite, generateContentFrame, validateResponseIntegrity, urlIsOrIsInsideOf, ensureWindowsDriveLetter, setUrlFilename, moveUrl, getCallerPosition, urlToBasename, urlToExtension, asSpecifierWithoutSearch, asUrlWithoutSearch, injectQueryParamsIntoSpecifier, bufferToEtag, isFileSystemPath, urlToPathname, setUrlBasename, urlToFileSystemPath, writeFileSync, createLogger, URL_META, applyNodeEsmResolution, normalizeUrl, ANSI, RUNTIME_COMPAT, CONTENT_TYPE, readPackageAtOrNull, urlToFilename, DATA_URL, errorToHTML, normalizeImportMap, composeTwoImportMaps, resolveImport, JS_QUOTES, readCustomConditionsFromProcessArgs, readEntryStatSync, ensurePathnameTrailingSlash, compareFileUrls, applyFileSystemMagicResolution, getExtensionsToTry, setUrlExtension, isSpecifierForNodeBuiltin, injectQueryParams, renderDetails, humanizeDuration, humanizeFileSize, renderTable, renderBigSection, distributePercentages, humanizeMemory, comparePathnames, UNICODE, escapeRegexpSpecialChars, injectQueryParamIntoSpecifierWithoutEncoding, renderUrlOrRelativeUrlFilename, assertAndNormalizeDirectoryUrl, Abort, raceProcessTeardownEvents, startMonitoringCpuUsage, startMonitoringMemoryUsage, inferRuntimeCompatFromClosestPackage, browserDefaultRuntimeCompat, nodeDefaultRuntimeCompat, clearDirectorySync, createTaskLog, createLookupPackageDirectory, ensureEmptyDirectory, updateJsonFileSync, createDynamicLog } from "./jsenv_core_packages.js";
 import { pathToFileURL } from "node:url";
 import { generateSourcemapFileUrl, createMagicSource, composeTwoSourcemaps, generateSourcemapDataUrl, SOURCEMAP } from "@jsenv/sourcemap";
-import { performance } from "node:perf_hooks";
+import { createPluginsController } from "@jsenv/server/src/plugins_controller.js";
 import { jsenvPluginSupervisor } from "@jsenv/plugin-supervisor";
 import { WebSocketResponse, pickContentType } from "@jsenv/server";
 import { randomUUID, createHash } from "node:crypto";
@@ -133,7 +133,7 @@ const watchSourceFiles = (
 const jsenvCoreDirectoryUrl = new URL("../", import.meta.url);
 
 const createResolveUrlError = ({
-  pluginController,
+  jsenvPluginsController,
   reference,
   error,
 }) => {
@@ -151,7 +151,7 @@ ${reason}`,
         {
           ...detailsFromFirstReference(reference),
           ...details,
-          ...detailsFromPluginController(pluginController),
+          ...detailsFromPluginController(jsenvPluginsController),
         },
       ),
     );
@@ -196,7 +196,7 @@ ${reason}`,
 };
 
 const createFetchUrlContentError = ({
-  pluginController,
+  jsenvPluginsController,
   urlInfo,
   error,
 }) => {
@@ -215,7 +215,7 @@ ${reason}`,
         {
           ...detailsFromFirstReference(reference),
           ...details,
-          ...detailsFromPluginController(pluginController),
+          ...detailsFromPluginController(jsenvPluginsController),
         },
       ),
     );
@@ -271,7 +271,7 @@ ${reason}`,
 };
 
 const createTransformUrlContentError = ({
-  pluginController,
+  jsenvPluginsController,
   urlInfo,
   error,
 }) => {
@@ -300,7 +300,7 @@ ${error.message}`,
             ? `${reference.trace.url}:${reference.trace.line}:${reference.trace.column}`
             : reference.trace.message,
           ...detailsFromFirstReference(reference),
-          ...detailsFromPluginController(pluginController),
+          ...detailsFromPluginController(jsenvPluginsController),
         },
       ),
     );
@@ -332,7 +332,7 @@ ${reason}`,
         {
           ...detailsFromFirstReference(reference),
           ...details,
-          ...detailsFromPluginController(pluginController),
+          ...detailsFromPluginController(jsenvPluginsController),
         },
       ),
     );
@@ -356,7 +356,7 @@ ${reason}`,
 };
 
 const createFinalizeUrlContentError = ({
-  pluginController,
+  jsenvPluginsController,
   urlInfo,
   error,
 }) => {
@@ -368,7 +368,7 @@ ${reference.trace.message}`,
       {
         ...detailsFromFirstReference(reference),
         ...detailsFromValueThrown(error),
-        ...detailsFromPluginController(pluginController),
+        ...detailsFromPluginController(jsenvPluginsController),
       },
     ),
   );
@@ -458,8 +458,8 @@ const getFirstReferenceInProject = (reference) => {
   return getFirstReferenceInProject(firstReference);
 };
 
-const detailsFromPluginController = (pluginController) => {
-  const currentPlugin = pluginController.getCurrentPlugin();
+const detailsFromPluginController = (jsenvPluginsController) => {
+  const currentPlugin = jsenvPluginsController.getCurrentPlugin();
   if (!currentPlugin) {
     return null;
   }
@@ -3031,14 +3031,14 @@ const createKitchen = ({
     },
     graph: null,
     urlInfoTransformer: null,
-    pluginController: null,
+    jsenvPluginsController: null,
   };
   const kitchenContext = kitchen.context;
   kitchenContext.kitchen = kitchen;
 
-  let pluginController;
-  kitchen.setPluginController = (value) => {
-    pluginController = kitchen.pluginController = value;
+  let jsenvPluginsController;
+  kitchen.setJsenvPluginsController = (value) => {
+    jsenvPluginsController = kitchen.jsenvPluginsController = value;
   };
 
   const graph = createUrlGraph({
@@ -3047,7 +3047,11 @@ const createKitchen = ({
     kitchen,
   });
   graph.urlInfoCreatedEventEmitter.on((urlInfoCreated) => {
-    pluginController.callHooks("urlInfoCreated", urlInfoCreated, () => {});
+    jsenvPluginsController.callHooks(
+      "urlInfoCreated",
+      urlInfoCreated,
+      () => {},
+    );
   });
   kitchen.graph = graph;
 
@@ -3221,7 +3225,7 @@ const createKitchen = ({
           setReferenceUrl(reference.url);
           break resolve;
         }
-        const resolvedUrl = pluginController.callHooksUntil(
+        const resolvedUrl = jsenvPluginsController.callHooksUntil(
           "resolveReference",
           reference,
         );
@@ -3235,7 +3239,7 @@ const createKitchen = ({
         setReferenceUrl(normalizedUrl);
         if (reference.debug) {
           logger.debug(`url resolved by "${
-            pluginController.getLastPluginUsed().name
+            jsenvPluginsController.getLastPluginUsed().name
           }"
 ${ANSI.color(reference.specifier, ANSI.GREY)} ->
 ${ANSI.color(reference.url, ANSI.YELLOW)}
@@ -3249,7 +3253,7 @@ ${ANSI.color(reference.url, ANSI.YELLOW)}
           // - side_effect_file references injected in entry points or at the top of files
           break redirect;
         }
-        pluginController.callHooks(
+        jsenvPluginsController.callHooks(
           "redirectReference",
           reference,
           (returnValue, plugin, setReference) => {
@@ -3294,7 +3298,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       return reference;
     } catch (error) {
       throw createResolveUrlError({
-        pluginController,
+        jsenvPluginsController,
         reference,
         error,
       });
@@ -3321,7 +3325,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       // But do not represent an other resource, it is considered as
       // the same resource under the hood
       const searchParamTransformationMap = new Map();
-      pluginController.callHooks(
+      jsenvPluginsController.callHooks(
         "transformReferenceSearchParams",
         reference,
         (returnValue) => {
@@ -3349,7 +3353,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       }
     }
     {
-      const returnValue = pluginController.callHooksUntil(
+      const returnValue = jsenvPluginsController.callHooksUntil(
         "formatReference",
         reference,
       );
@@ -3370,7 +3374,10 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
   const fetchUrlContent = async (urlInfo) => {
     try {
       const fetchUrlContentReturnValue =
-        await pluginController.callAsyncHooksUntil("fetchUrlContent", urlInfo);
+        await jsenvPluginsController.callAsyncHooksUntil(
+          "fetchUrlContent",
+          urlInfo,
+        );
       if (!fetchUrlContentReturnValue) {
         logger.warn(
           createDetailedMessage(
@@ -3469,7 +3476,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       });
     } catch (error) {
       throw createFetchUrlContentError({
-        pluginController,
+        jsenvPluginsController,
         urlInfo,
         error,
       });
@@ -3479,7 +3486,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
 
   const transformUrlContent = async (urlInfo) => {
     try {
-      await pluginController.callAsyncHooks(
+      await jsenvPluginsController.callAsyncHooks(
         "transformUrlContent",
         urlInfo,
         (transformReturnValue) => {
@@ -3491,7 +3498,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       );
     } catch (error) {
       const transformError = createTransformUrlContentError({
-        pluginController,
+        jsenvPluginsController,
         urlInfo,
         error,
       });
@@ -3503,14 +3510,15 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
   const finalizeUrlContent = async (urlInfo) => {
     try {
       await urlInfo.applyContentTransformationCallbacks();
-      const finalizeReturnValue = await pluginController.callAsyncHooksUntil(
-        "finalizeUrlContent",
-        urlInfo,
-      );
+      const finalizeReturnValue =
+        await jsenvPluginsController.callAsyncHooksUntil(
+          "finalizeUrlContent",
+          urlInfo,
+        );
       urlInfoTransformer.endTransformations(urlInfo, finalizeReturnValue);
     } catch (error) {
       throw createFinalizeUrlContentError({
-        pluginController,
+        jsenvPluginsController,
         urlInfo,
         error,
       });
@@ -3591,7 +3599,7 @@ ${urlInfo.firstReference.trace.message}`;
     }
 
     // "cooked" hook
-    pluginController.callHooks("cooked", urlInfo, (cookedReturnValue) => {
+    jsenvPluginsController.callHooks("cooked", urlInfo, (cookedReturnValue) => {
       if (typeof cookedReturnValue === "function") {
         const removeCallback = urlInfo.graph.urlInfoDereferencedEventEmitter.on(
           (urlInfoDereferenced, lastReferenceFromOther) => {
@@ -4223,9 +4231,9 @@ const replacePlaceholders = (html, replacers) => {
   });
 };
 
-const createPluginStore = async (plugins) => {
-  const allDevServerRoutes = [];
-  const allDevServerServices = [];
+const createJsenvPluginStore = async (plugins) => {
+  const allServerRoutes = [];
+  const allServerPlugins = [];
   const pluginArray = [];
 
   const pluginPromises = [];
@@ -4248,16 +4256,17 @@ const createPluginStore = async (plugins) => {
     if (!plugin.name) {
       plugin.name = "anonymous";
     }
-    if (plugin.devServerRoutes) {
-      const devServerRoutes = plugin.devServerRoutes;
-      for (const devServerRoute of devServerRoutes) {
-        allDevServerRoutes.push(devServerRoute);
+    const { serverRoutes } = plugin;
+    if (serverRoutes) {
+      for (const serverRoute of serverRoutes) {
+        allServerRoutes.push(serverRoute);
       }
     }
-    if (plugin.devServerServices) {
-      const devServerServices = plugin.devServerServices;
-      for (const devServerService of devServerServices) {
-        allDevServerServices.push(devServerService);
+    const { serverPlugins } = plugin;
+    if (serverPlugins) {
+      const serverPlugins = plugin.serverPlugins;
+      for (const serverPlugin of serverPlugins) {
+        allServerPlugins.push(serverPlugin);
       }
     }
     pluginArray.push(plugin);
@@ -4270,283 +4279,120 @@ const createPluginStore = async (plugins) => {
 
   return {
     pluginArray,
-    allDevServerRoutes,
-    allDevServerServices,
+    allServerRoutes,
+    allServerPlugins,
   };
 };
 
-const createPluginController = async (
+const createJsenvPluginsController = async (
   pluginStore,
   kitchen,
-  { initialPuginsMeta = {} } = {},
+  { meta } = {},
 ) => {
-  const pluginsMeta = initialPuginsMeta;
-  kitchen.context.getPluginMeta = (id) => {
-    const value = pluginsMeta[id];
-    return value;
-  };
-
-  // precompute a list of hooks per hookName because:
-  // 1. [MAJOR REASON] when debugging, there is less iteration (so much better)
-  // 2. [MINOR REASON] it should increase perf as there is less work to do
-  const hookSetMap = new Map();
-  const pluginCandidates = pluginStore.pluginArray;
-  const activePluginArray = [];
-  const pluginWithEffectCandidateForActivationArray = [];
-  for (const pluginCandidate of pluginCandidates) {
-    if (!testAppliesDuring(pluginCandidate, kitchen)) {
-      pluginCandidate.destroy?.();
-      continue;
-    }
-    const initPluginResult = await initPlugin(pluginCandidate, kitchen);
-    if (!initPluginResult) {
-      pluginCandidate.destroy?.();
-      continue;
-    }
-    if (pluginCandidate.effect) {
-      pluginWithEffectCandidateForActivationArray.push(pluginCandidate);
-    } else {
-      activePluginArray.push(pluginCandidate);
-    }
-  }
-
-  const activeEffectSet = new Set();
-  for (const pluginWithEffectCandidateForActivation of pluginWithEffectCandidateForActivationArray) {
-    const returnValue = pluginWithEffectCandidateForActivation.effect({
-      kitchenContext: kitchen.context,
-      otherPlugins: activePluginArray,
-    });
-    if (!returnValue) {
-      continue;
-    }
-    activePluginArray.push(pluginWithEffectCandidateForActivation);
-    activeEffectSet.add({
-      plugin: pluginWithEffectCandidateForActivation,
-      cleanup: typeof returnValue === "function" ? returnValue : () => {},
-    });
-  }
-  activePluginArray.sort((a, b) => {
-    return pluginCandidates.indexOf(a) - pluginCandidates.indexOf(b);
+  kitchen.context.getPluginMeta = (id) => pluginsController.getPluginMeta(id);
+  const pluginsController = await createPluginsController({
+    plugins: pluginStore.pluginArray,
+    pluginDescription: JSENV_PLUGIN_DESCRIPTION,
+    filterPlugin: (plugin) => testAppliesDuring(plugin, kitchen),
+    getInitPluginArgs: (plugin) => [kitchen.context, { plugin }],
+    getEffectArgs: ({ otherPlugins }) => [
+      { kitchenContext: kitchen.context, otherPlugins },
+    ],
+    meta,
   });
-  for (const activePlugin of activePluginArray) {
-    for (const key of Object.keys(activePlugin)) {
-      if (key === "meta") {
-        const value = activePlugin[key];
-        if (typeof value !== "object" || value === null) {
-          console.warn(`plugin.meta must be an object, got ${value}`);
-          continue;
-        }
-        Object.assign(pluginsMeta, value);
-        // any extension/modification on plugin.meta
-        // won't be taken into account so we freeze object
-        // to throw in case it happen
-        Object.freeze(value);
-        continue;
-      }
-      if (
-        key === "name" ||
-        key === "appliesDuring" ||
-        key === "init" ||
-        key === "serverEvents" ||
-        key === "mustStayFirst" ||
-        key === "devServerRoutes" ||
-        key === "devServerServices" ||
-        key === "effect"
-      ) {
-        continue;
-      }
-      const isHook = HOOK_NAMES.includes(key);
-      if (!isHook) {
-        console.warn(
-          `Unexpected "${key}" property on "${activePlugin.name}" plugin`,
-        );
-        continue;
-      }
-      const hookName = key;
-      const hookValue = activePlugin[hookName];
-      if (hookValue) {
-        let hookSet = hookSetMap.get(hookName);
-        if (!hookSet) {
-          hookSet = new Set();
-          hookSetMap.set(hookName, hookSet);
-        }
-        const hook = {
-          plugin: activePlugin,
-          name: hookName,
-          value: hookValue,
-        };
-        // if (position === "start") {
-        //   let i = 0;
-        //   while (i < group.length) {
-        //     const before = group[i];
-        //     if (!before.plugin.mustStayFirst) {
-        //       break;
-        //     }
-        //     i++;
-        //   }
-        //   group.splice(i, 0, hook);
-        // } else {
-        hookSet.add(hook);
-      }
-    }
-  }
-
-  let lastPluginUsed = null;
-  let currentPlugin = null;
-  let currentHookName = null;
-  const callHook = (hook, info) => {
-    const hookFn = getHookFunction(hook, info);
-    if (!hookFn) {
-      return null;
-    }
-    let startTimestamp;
-    if (info.timing) {
-      startTimestamp = performance.now();
-    }
-    lastPluginUsed = hook.plugin;
-    currentPlugin = hook.plugin;
-    currentHookName = hook.name;
-    let valueReturned = hookFn(info);
-    if (info.timing) {
-      info.timing[`${hook.name}-${hook.plugin.name.replace("jsenv:", "")}`] =
-        performance.now() - startTimestamp;
-    }
-    valueReturned = assertAndNormalizeReturnValue(hook, valueReturned, info);
-    currentPlugin = null;
-    currentHookName = null;
-    return valueReturned;
-  };
-  const callAsyncHook = async (hook, info) => {
-    const hookFn = getHookFunction(hook, info);
-    if (!hookFn) {
-      return null;
-    }
-
-    let startTimestamp;
-    if (info.timing) {
-      startTimestamp = performance.now();
-    }
-    lastPluginUsed = hook.plugin;
-    currentPlugin = hook.plugin;
-    currentHookName = hook.name;
-    let valueReturned = await hookFn(info);
-    if (info.timing) {
-      info.timing[`${hook.name}-${hook.plugin.name.replace("jsenv:", "")}`] =
-        performance.now() - startTimestamp;
-    }
-    valueReturned = assertAndNormalizeReturnValue(hook, valueReturned, info);
-    currentPlugin = null;
-    currentHookName = null;
-    return valueReturned;
-  };
-  const callHooks = (hookName, info, callback) => {
-    const hookSet = hookSetMap.get(hookName);
-    if (!hookSet) {
-      return;
-    }
-    const setHookParams = (firstArg = info) => {
-      info = firstArg;
-    };
-    for (const hook of hookSet) {
-      const returnValue = callHook(hook, info);
-      if (returnValue && callback) {
-        callback(returnValue, hook.plugin, setHookParams);
-      }
-    }
-  };
-  const callAsyncHooks = async (hookName, info, callback, options) => {
-    const hookSet = hookSetMap.get(hookName);
-    if (!hookSet) {
-      return;
-    }
-    for (const hook of hookSet) {
-      const returnValue = await callAsyncHook(hook, info);
-      if (returnValue && callback) {
-        await callback(returnValue, hook.plugin);
-      }
-    }
-  };
-  const callHooksUntil = (hookName, info) => {
-    const hookSet = hookSetMap.get(hookName);
-    if (!hookSet) {
-      return null;
-    }
-    for (const hook of hookSet) {
-      const returnValue = callHook(hook, info);
-      if (returnValue) {
-        return returnValue;
-      }
-    }
-    return null;
-  };
-  const callAsyncHooksUntil = async (hookName, info, options) => {
-    const hookSet = hookSetMap.get(hookName);
-    if (!hookSet) {
-      return null;
-    }
-    if (hookSet.size === 0) {
-      return null;
-    }
-    const iterator = hookSet.values()[Symbol.iterator]();
-    let result;
-    const visit = async () => {
-      const { done, value: hook } = iterator.next();
-      if (done) {
-        return;
-      }
-      const returnValue = await callAsyncHook(hook, info);
-      if (returnValue) {
-        result = returnValue;
-        return;
-      }
-      await visit();
-    };
-    await visit();
-    return result;
-  };
-
-  return {
-    activePlugins: activePluginArray,
-
-    callHook,
-    callAsyncHook,
-    callHooks,
-    callHooksUntil,
-    callAsyncHooks,
-    callAsyncHooksUntil,
-
-    getLastPluginUsed: () => lastPluginUsed,
-    getCurrentPlugin: () => currentPlugin,
-    getCurrentHookName: () => currentHookName,
-  };
+  return pluginsController;
 };
 
-const HOOK_NAMES = [
-  "init",
-  "devServerRoutes", // is called only during dev/tests
-  "devServerServices", // is called only during dev/tests
-  "resolveReference",
-  "redirectReference",
-  "transformReferenceSearchParams",
-  "formatReference",
-  "urlInfoCreated",
-  "fetchUrlContent",
-  "transformUrlContent",
-  "finalizeUrlContent",
-  "bundle", // is called only during build
-  "optimizeBuildUrlContent", // is called only during build
-  "cooked",
-  "augmentResponse", // is called only during dev/tests
-  "destroy",
-  "effect",
-  "refineBuildUrlContent", // called only during build
-  "refineBuild", // called only during build
-];
+const hook = { type: "hook" };
+const nonHook = {};
+
+const assertUrlReturnValue = (valueReturned, urlInfo, { hook }) => {
+  if (valueReturned instanceof URL) {
+    return valueReturned.href;
+  }
+  if (typeof valueReturned === "string") {
+    return valueReturned;
+  }
+  throw new Error(
+    `Unexpected value returned by hook "${hook.plugin.name}.${hook.name}()": it must be a string; got ${valueReturned}`,
+  );
+};
+const assertContentReturnValue = (valueReturned, urlInfo, { hook }) => {
+  if (typeof valueReturned === "string" || Buffer.isBuffer(valueReturned)) {
+    return { content: valueReturned };
+  }
+  if (typeof valueReturned === "object") {
+    const { content, body } = valueReturned;
+    if (urlInfo.url.startsWith("ignore:")) {
+      return valueReturned;
+    }
+    if (typeof content !== "string" && !Buffer.isBuffer(content) && !body) {
+      if (Object.hasOwn(valueReturned, "contentInjections")) {
+        return valueReturned;
+      }
+      throw new Error(
+        `Unexpected "content" returned by hook "${hook.plugin.name}.${hook.name}()": it must be a string or a buffer; got ${content}`,
+      );
+    }
+    return valueReturned;
+  }
+  throw new Error(
+    `Unexpected value returned by hook "${hook.plugin.name}.${hook.name}()": it must be a string, a buffer or an object; got ${valueReturned}`,
+  );
+};
+
+const JSENV_PLUGIN_DESCRIPTION = {
+  name: "jsenv plugin",
+  properties: {
+    // non-hook properties (silently skipped)
+    appliesDuring: nonHook,
+    serverEvents: nonHook,
+    mustStayFirst: nonHook,
+    serverRoutes: nonHook,
+    serverPlugins: nonHook,
+    // hooks
+    init: hook,
+    resolveReference: {
+      type: "hook",
+      assertAndNormalize: assertUrlReturnValue,
+    },
+    redirectReference: {
+      type: "hook",
+      assertAndNormalize: assertUrlReturnValue,
+    },
+    transformReferenceSearchParams: hook,
+    formatReference: hook,
+    urlInfoCreated: hook,
+    fetchUrlContent: {
+      type: "hook",
+      assertAndNormalize: assertContentReturnValue,
+    },
+    transformUrlContent: {
+      type: "hook",
+      assertAndNormalize: assertContentReturnValue,
+    },
+    finalizeUrlContent: {
+      type: "hook",
+      assertAndNormalize: assertContentReturnValue,
+    },
+    bundle: hook,
+    optimizeBuildUrlContent: {
+      type: "hook",
+      assertAndNormalize: assertContentReturnValue,
+    },
+    cooked: hook,
+    augmentResponse: hook,
+    destroy: hook,
+    effect: hook,
+    refineBuildUrlContent: hook,
+    refineBuild: hook,
+    // serverRoutes and serverPlugins are nonHook above
+  },
+};
 
 const testAppliesDuring = (plugin, kitchen) => {
   const { appliesDuring } = plugin;
   if (appliesDuring === undefined) {
-    // console.debug(`"appliesDuring" is undefined on ${pluginEntry.name}`)
     return true;
   }
   if (appliesDuring === "*") {
@@ -4572,112 +4418,12 @@ const testAppliesDuring = (plugin, kitchen) => {
         return true;
       }
     }
-    // throw new Error(`"appliesDuring" is empty`)
     return false;
   }
   throw new TypeError(
     `"appliesDuring" must be an object or a string, got ${appliesDuring}`,
   );
 };
-const initPlugin = async (plugin, kitchen) => {
-  const { init } = plugin;
-  if (!init) {
-    return true;
-  }
-  const initReturnValue = await init(kitchen.context, { plugin });
-  if (initReturnValue === false) {
-    return false;
-  }
-  if (typeof initReturnValue === "function" && !plugin.destroy) {
-    plugin.destroy = initReturnValue;
-  }
-  return true;
-};
-const getHookFunction = (
-  hook,
-  // can be undefined, reference, or urlInfo
-  info = {},
-) => {
-  const hookValue = hook.value;
-  if (typeof hookValue === "object") {
-    const hookForType = hookValue[info.type] || hookValue["*"];
-    if (!hookForType) {
-      return null;
-    }
-    return hookForType;
-  }
-  return hookValue;
-};
-
-const assertAndNormalizeReturnValue = (hook, returnValue, info) => {
-  // all hooks are allowed to return null/undefined as a signal of "I don't do anything"
-  if (returnValue === null || returnValue === undefined) {
-    return returnValue;
-  }
-  for (const returnValueAssertion of returnValueAssertions) {
-    if (!returnValueAssertion.appliesTo.includes(hook.name)) {
-      continue;
-    }
-    const assertionResult = returnValueAssertion.assertion(returnValue, info, {
-      hook,
-    });
-    if (assertionResult !== undefined) {
-      // normalization
-      returnValue = assertionResult;
-      break;
-    }
-  }
-  return returnValue;
-};
-const returnValueAssertions = [
-  {
-    name: "url_assertion",
-    appliesTo: ["resolveReference", "redirectReference"],
-    assertion: (valueReturned, urlInfo, { hook }) => {
-      if (valueReturned instanceof URL) {
-        return valueReturned.href;
-      }
-      if (typeof valueReturned === "string") {
-        return undefined;
-      }
-      throw new Error(
-        `Unexpected value returned by "${hook.plugin.name}" plugin: it must be a string; got ${valueReturned}`,
-      );
-    },
-  },
-  {
-    name: "content_assertion",
-    appliesTo: [
-      "fetchUrlContent",
-      "transformUrlContent",
-      "finalizeUrlContent",
-      "optimizeBuildUrlContent",
-    ],
-    assertion: (valueReturned, urlInfo, { hook }) => {
-      if (typeof valueReturned === "string" || Buffer.isBuffer(valueReturned)) {
-        return { content: valueReturned };
-      }
-      if (typeof valueReturned === "object") {
-        const { content, body } = valueReturned;
-        if (urlInfo.url.startsWith("ignore:")) {
-          return undefined;
-        }
-        if (typeof content !== "string" && !Buffer.isBuffer(content) && !body) {
-          if (Object.hasOwn(valueReturned, "contentInjections")) {
-            return undefined;
-          }
-          throw new Error(
-            `Unexpected "content" returned by "${hook.plugin.name}" ${hook.name} hook: it must be a string or a buffer; got ${content}`,
-          );
-        }
-        return undefined;
-      }
-      throw new Error(
-        `Unexpected value returned by "${hook.plugin.name}" ${hook.name} hook: it must be a string, a buffer or an object; got ${valueReturned}`,
-      );
-    },
-  },
-];
 
 /*
  * https://github.com/parcel-bundler/parcel/blob/v2/packages/transformers/css/src/CSSTransformer.js
@@ -6732,7 +6478,7 @@ const jsenvPluginDirectoryListing = ({
         };
       },
     },
-    devServerRoutes: [
+    serverRoutes: [
       {
         endpoint:
           "GET /.internal/directory_content.websocket?directory=:directory",
@@ -7916,11 +7662,7 @@ const jsenvPluginImportMetaCss = () => {
     appliesDuring: "*",
     transformUrlContent: {
       js_module: async (urlInfo) => {
-        if (
-          !urlInfo.content.includes("import.meta.css") ||
-          // there is already our installImportMetaCssBuild in the file
-          urlInfo.content.includes("installImportMetaCssBuild")
-        ) {
+        if (!urlInfo.content.includes("import.meta.css")) {
           return null;
         }
         const { metadata } = await applyBabelPlugins({
@@ -7934,17 +7676,65 @@ const jsenvPluginImportMetaCss = () => {
         if (!usesImportMetaCss) {
           return null;
         }
+        if (urlInfo.context.build) {
+          const rootDirectoryUrl = urlInfo.context.rootDirectoryUrl;
+          const relativeUrl = urlInfo.originalUrl.slice(
+            rootDirectoryUrl.length - 1,
+          );
+          const { code } = await applyBabelPlugins({
+            babelPlugins: [
+              [babelPluginRewriteImportMetaCssAssignment, { relativeUrl }],
+            ],
+            input: urlInfo.content,
+            inputIsJsModule: true,
+            inputUrl: urlInfo.originalUrl,
+            outputUrl: urlInfo.generatedUrl,
+          });
+          return injectImportMetaCss(urlInfo, {
+            content: code,
+            importFrom: importMetaCssBuildClientFileUrl,
+            importName: "installImportMetaCssBuild",
+            importAs: "__installImportMetaCssBuild__",
+          });
+        }
         return injectImportMetaCss(urlInfo, {
-          importFrom: urlInfo.context.build
-            ? importMetaCssBuildClientFileUrl
-            : importMetaCssDevClientFileUrl,
-          importName: urlInfo.context.build
-            ? "installImportMetaCssBuild"
-            : "installImportMetaCssDev",
-          importAs: urlInfo.context.build
-            ? "__installImportMetaCssBuild__"
-            : "__installImportMetaCssDev__",
+          content: urlInfo.content,
+          importFrom: importMetaCssDevClientFileUrl,
+          importName: "installImportMetaCssDev",
+          importAs: "__installImportMetaCssDev__",
+          hot: true,
         });
+      },
+    },
+  };
+};
+
+const babelPluginRewriteImportMetaCssAssignment = (
+  { types: t },
+  { relativeUrl },
+) => {
+  return {
+    name: "rewrite-import-meta-css-assignment",
+    visitor: {
+      AssignmentExpression(path) {
+        const { left, right } = path.node;
+        if (left.type !== "MemberExpression") {
+          return;
+        }
+        const { object, property } = left;
+        if (object.type !== "MetaProperty") {
+          return;
+        }
+        if (object.meta.name !== "import" || object.property.name !== "meta") {
+          return;
+        }
+        if (property.name !== "css") {
+          return;
+        }
+        path.node.right = t.arrayExpression([
+          right,
+          t.stringLiteral(relativeUrl),
+        ]);
       },
     },
   };
@@ -7981,7 +7771,10 @@ const babelPluginMetadataUsesImportMetaCss = () => {
   };
 };
 
-const injectImportMetaCss = (urlInfo, { importFrom, importName, importAs }) => {
+const injectImportMetaCss = (
+  urlInfo,
+  { content, importFrom, importName, importAs, hot },
+) => {
   const importMetaCssClientFileReference = urlInfo.dependencies.inject({
     parentUrl: urlInfo.url,
     type: "js_import",
@@ -7990,14 +7783,16 @@ const injectImportMetaCss = (urlInfo, { importFrom, importName, importAs }) => {
   });
   let importVariableName;
   let importBeforeFrom;
-  if (importAs !== importName) {
+  if (importAs && importAs !== importName) {
     importBeforeFrom = `{ ${importName} as ${importAs} }`;
     importVariableName = importAs;
   } else {
     importBeforeFrom = `{ ${importName} } }`;
     importVariableName = importName;
   }
-  let prelude = `import ${importBeforeFrom} from ${importMetaCssClientFileReference.generatedSpecifier};
+
+  const prelude = hot
+    ? `import ${importBeforeFrom} from ${importMetaCssClientFileReference.generatedSpecifier};
 
 const remove = ${importVariableName}(import.meta);
 if (import.meta.hot) {
@@ -8006,9 +7801,13 @@ if (import.meta.hot) {
   });
 }
 
+`
+    : `import ${importBeforeFrom} from ${importMetaCssClientFileReference.generatedSpecifier};
+
+${importVariableName}(import.meta);
+
 `;
 
-  let content = urlInfo.content;
   return {
     content: `${prelude.replace(/\n/g, "")}${content}`,
   };
@@ -8742,7 +8541,7 @@ const jsenvPluginAutoreloadServer = ({
         );
       },
     },
-    devServerRoutes: [
+    serverRoutes: [
       {
         endpoint: "GET /.internal/graph.json",
         description:
@@ -9034,7 +8833,7 @@ const jsenvPluginChromeDevtoolsJson = () => {
   return {
     name: "jsenv_plugin_chrome_devtools_json",
     appliesDuring: "dev",
-    devServerRoutes: [
+    serverRoutes: [
       {
         endpoint: "GET /.well-known/appspecific/com.chrome.devtools.json",
         declarationSource: import.meta.url,
@@ -9054,7 +8853,7 @@ const jsenvPluginChromeDevtoolsJson = () => {
 
 const jsenvPluginAutoreloadOnServerRestart = () => {
   const autoreloadOnRestartClientFileUrl = import.meta
-    .resolve("@jsenv/server/src/services/autoreload_on_server_restart/client/autoreload_on_server_restart.js");
+    .resolve("@jsenv/server/src/plugins/autoreload_on_server_restart/client/autoreload_on_server_restart.js");
 
   return {
     name: "jsenv:autoreload_on_server_restart",
@@ -9787,25 +9586,27 @@ const logsDefault = {
 // https://bundlers.tooling.report/hashing/avoid-cascade/
 
 
+// we nevery minify those because they are already very small
+// and would hurt the readability of something that can be critical to debug
 const injectGlobalMappings = async (urlInfo, mappings) => {
   if (urlInfo.type === "html") {
-    const minification = Boolean(
-      urlInfo.context.getPluginMeta("willMinifyJsClassic"),
-    );
+    // const minification = Boolean(
+    //   urlInfo.context.getPluginMeta("willMinifyJsClassic"),
+    // );
     const content = generateClientCodeForMappings(mappings, {
       globalName: "window",
-      minification,
+      minification: false,
     });
     await prependContent(urlInfo, { type: "js_classic", content });
     return;
   }
   if (urlInfo.type === "js_classic" || urlInfo.type === "js_module") {
-    const minification = Boolean(
-      urlInfo.context.getPluginMeta("willMinifyJsClassic"),
-    );
+    // const minification = Boolean(
+    //   urlInfo.context.getPluginMeta("willMinifyJsClassic"),
+    // );
     const content = generateClientCodeForMappings(mappings, {
       globalName: isWebWorkerUrlInfo(urlInfo) ? "self" : "window",
-      minification,
+      minification: false,
     });
     await prependContent(urlInfo, { type: "js_classic", content });
     return;
@@ -9816,11 +9617,6 @@ const generateClientCodeForMappings = (
   versionMappings,
   { globalName, minification },
 ) => {
-  if (minification) {
-    return `;(function(){var m = ${JSON.stringify(
-      versionMappings,
-    )}; ${globalName}.__v__ = function (s) { return m[s] || s }; })();`;
-  }
   return `;(function() {
   var __versionMappings__ = {
     ${stringifyParams(versionMappings, "    ")}
@@ -9837,12 +9633,7 @@ const injectImportmapMappings = (urlInfo, getMappings) => {
     url: urlInfo.url,
     storeOriginalPositions: false,
   });
-  // jsenv_plugin_importmap.js is removing importmap during build
-  // it means at this point we know HTML has no importmap in it
-  // we can safely inject one
-  const importmapMinification = Boolean(
-    urlInfo.context.getPluginMeta("willMinifyJson"),
-  );
+  // Boolean(urlInfo.context.getPluginMeta("willMinifyJson"));
   const importmapNode = findHtmlNode(htmlAst, (node) => {
     return (
       node.tagName === "script" &&
@@ -9850,9 +9641,6 @@ const injectImportmapMappings = (urlInfo, getMappings) => {
     );
   });
   const generateMappingText = (mappings) => {
-    if (importmapMinification) {
-      return JSON.stringify({ imports: mappings });
-    }
     return JSON.stringify({ imports: mappings }, null, "  ");
   };
 
@@ -9998,14 +9786,15 @@ const createBuildSpecifierManager = ({
   const bundleInfoMap = new Map();
 
   const applyBundling = async ({ bundler, urlInfosToBundle }) => {
-    const urlInfosBundled = await rawKitchen.pluginController.callAsyncHook(
-      {
-        plugin: bundler.plugin,
-        hookName: "bundle",
-        value: bundler.bundleFunction,
-      },
-      urlInfosToBundle,
-    );
+    const urlInfosBundled =
+      await rawKitchen.jsenvPluginsController.callAsyncHook(
+        {
+          plugin: bundler.plugin,
+          hookName: "bundle",
+          value: bundler.bundleFunction,
+        },
+        urlInfosToBundle,
+      );
     for (const url of Object.keys(urlInfosBundled)) {
       const urlInfoBundled = urlInfosBundled[url];
       const contentSideEffects = [];
@@ -11196,9 +10985,9 @@ const isWrappedByQuote = (content, start, end) => {
 // https://github.com/rollup/rollup/blob/5a5391971d695c808eed0c5d7d2c6ccb594fc689/src/Chunk.ts#L870
 const generateVersion = (parts, length) => {
   const hash = createHash("sha256");
-  parts.forEach((part) => {
+  for (const part of parts) {
     hash.update(part);
-  });
+  }
   return hash.digest("hex").slice(0, length);
 };
 
@@ -12585,7 +12374,7 @@ const prepareEntryPointBuild = async (
   });
 
   let _getOtherEntryBuildInfo;
-  const rawPluginStore = await createPluginStore([
+  const rawJsenvPluginStore = await createJsenvPluginStore([
     ...(mappings ? [jsenvPluginMappings(mappings)] : []),
     {
       name: "jsenv:other_entry_point_build_during_craft",
@@ -12631,11 +12420,11 @@ const prepareEntryPointBuild = async (
       packageSideEffects,
     }),
   ]);
-  const rawPluginController = await createPluginController(
-    rawPluginStore,
+  const rawJsenvPluginsController = await createJsenvPluginsController(
+    rawJsenvPluginStore,
     rawKitchen,
   );
-  rawKitchen.setPluginController(rawPluginController);
+  rawKitchen.setJsenvPluginsController(rawJsenvPluginsController);
 
   const rawRootUrlInfo = rawKitchen.graph.rootUrlInfo;
   let entryReference;
@@ -12703,7 +12492,7 @@ const prepareEntryPointBuild = async (
           rawKitchen.graph.getUrlInfo(entryReference.url).type === "html" &&
           rawKitchen.context.isSupportedOnCurrentClients("importmap"),
       });
-      const finalPluginStore = await createPluginStore([
+      const finalJsenvPluginStore = await createJsenvPluginStore([
         jsenvPluginReferenceAnalysis({
           ...referenceAnalysis,
           fetchInlineUrls: false,
@@ -12725,7 +12514,7 @@ const prepareEntryPointBuild = async (
           name: "jsenv:optimize",
           appliesDuring: "build",
           transformUrlContent: async (urlInfo) => {
-            await rawKitchen.pluginController.callAsyncHooks(
+            await rawKitchen.jsenvPluginsController.callAsyncHooks(
               "optimizeBuildUrlContent",
               urlInfo,
               (optimizeReturnValue) => {
@@ -12736,18 +12525,18 @@ const prepareEntryPointBuild = async (
         },
         buildSpecifierManager.jsenvPluginMoveToBuildDirectory,
       ]);
-      const finalPluginController = await createPluginController(
-        finalPluginStore,
+      const finalJsenvPluginsController = await createJsenvPluginsController(
+        finalJsenvPluginStore,
         finalKitchen,
         {
-          initialPuginsMeta: rawKitchen.pluginController.pluginsMeta,
+          meta: rawKitchen.jsenvPluginsController.getMeta(),
         },
       );
-      finalKitchen.setPluginController(finalPluginController);
+      finalKitchen.setJsenvPluginsController(finalJsenvPluginsController);
 
       bundle: {
         const bundlerMap = new Map();
-        for (const plugin of rawKitchen.pluginController.activePlugins) {
+        for (const plugin of rawKitchen.jsenvPluginsController.activePlugins) {
           const bundle = plugin.bundle;
           if (!bundle) {
             continue;
@@ -12957,7 +12746,8 @@ const prepareEntryPointBuild = async (
         {
           const refineBuildUrlContentCallbackSet = new Set();
           const refineBuildCallbackSet = new Set();
-          for (const plugin of rawKitchen.pluginController.activePlugins) {
+          for (const plugin of rawKitchen.jsenvPluginsController
+            .activePlugins) {
             const refineBuildUrlContent = plugin.refineBuildUrlContent;
             if (refineBuildUrlContent) {
               refineBuildUrlContentCallbackSet.add(refineBuildUrlContent);

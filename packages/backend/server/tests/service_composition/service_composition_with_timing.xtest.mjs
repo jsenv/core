@@ -6,7 +6,7 @@ const server = await startServer({
   keepProcessAlive: false,
   logLevel: "warn",
   serverTiming: true,
-  services: [
+  plugins: [
     {
       name: "service:no content",
       routes: [

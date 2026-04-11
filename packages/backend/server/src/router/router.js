@@ -188,19 +188,20 @@ export const createRouter = (
       upgrade: false,
     };
 
-    let currentService;
+    let currentServerPlugin;
     let currentRoutingTiming;
     const onRouteMatchStart = (route) => {
-      if (route.service === currentService) {
+      const { serverPlugin } = route;
+      if (serverPlugin === currentServerPlugin) {
         return;
       }
       onRouteGroupEnd(route);
       currentRoutingTiming = fetchSecondArg.timing(
-        route.service
-          ? `${route.service.name.replace("jsenv:", "")}.routing`
+        serverPlugin && serverPlugin.name
+          ? `${serverPlugin.name.replace("jsenv:", "")}.routing`
           : "routing",
       );
-      currentService = route.service;
+      currentServerPlugin = serverPlugin;
     };
     const onRouteGroupEnd = () => {
       if (currentRoutingTiming) {
@@ -540,6 +541,7 @@ const createRoute = ({
   description,
   headers,
   service,
+  serverPlugin,
   availableMediaTypes = [],
   availableLanguages = [],
   availableVersions = [],
@@ -589,6 +591,7 @@ const createRoute = ({
     resource,
     description,
     service,
+    serverPlugin,
     availableMediaTypes,
     availableLanguages,
     availableVersions,

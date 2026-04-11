@@ -9,7 +9,7 @@ const test = async (params) => {
     sourceDirectoryUrl: import.meta.resolve("./client/"),
     keepProcessAlive: false,
     port: 0,
-    services: [
+    serverPlugins: [
       {
         injectResponseProperties: () => {
           return {

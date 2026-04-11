@@ -1,4 +1,4 @@
-import { a, C, g } from "../jsenv_plugin_toolbar_node_modules.js";
+import { a, j, g } from "../jsenv_plugin_toolbar_node_modules.js";
 
 const paramsFromParentWindow = {};
 const searchParams = new URLSearchParams(window.location.search);
@@ -11,7 +11,7 @@ const stateFromLocalStorage = localStorage.hasOwnProperty("jsenv_toolbar") ? JSO
 
 const animationsEnabledSignal = a(typeof stateFromLocalStorage.animationsEnabled === "boolean" ? stateFromLocalStorage.animationsEnabled : typeof paramsFromParentWindow.animationsEnabled === "boolean" ? paramsFromParentWindow.animationsEnabled : false);
 
-C(() => {
+j(() => {
   const animationsEnabled = animationsEnabledSignal.value;
   if (animationsEnabled) {
     document.documentElement.removeAttribute("data-animation-disabled");
@@ -146,13 +146,13 @@ const getFaviconHref = () => {
   return link ? link.href : undefined;
 };
 
-C(() => {
+j(() => {
   const execution = executionSignal.value;
   if (execution) {
     sessionStorage.setItem(window.location.href, JSON.stringify(execution));
   }
 });
-C(() => {
+j(() => {
   const execution = executionSignal.value;
   const previousExecution = previousExecutionSignal.value;
   if (execution) {
@@ -160,7 +160,7 @@ C(() => {
   }
 });
 
-C(() => {
+j(() => {
   const notificationsEnabled = notificationsEnabledSignal.value;
   if (!notificationsEnabled) {
     closeAllNotifications();
@@ -252,7 +252,7 @@ const renameAttribute = (node, name, newName) => {
 
 const changesIndicator = document.querySelector("#changes_indicator");
 const renderChangesIndicator = () => {
-  C(() => {
+  j(() => {
     const autoreloadEnabled = autoreloadEnabledSignal.value;
     const changes = changesSignal.value;
     const changeCount = changes.length;
@@ -274,7 +274,7 @@ const renderChangesIndicator = () => {
   changesIndicator.querySelector(".tooltip_action").onclick = () => {
     parentWindowReloader.reload();
   };
-  C(() => {
+  j(() => {
     const changesTooltipOpened = changesTooltipOpenedSignal.value;
     if (changesTooltipOpened) {
       changesIndicator.setAttribute("data-tooltip-visible", "");
@@ -345,11 +345,11 @@ const deactivateToolbarSection = element => {
 const executionIndicator = document.querySelector("#document_execution_indicator");
 const renderDocumentExecutionIndicator = async () => {
   removeForceHideElement(document.querySelector("#document_execution_indicator"));
-  C(() => {
+  j(() => {
     const execution = executionSignal.value;
     updateExecutionIndicator(execution);
   });
-  C(() => {
+  j(() => {
     const executionTooltipOpened = executionTooltipOpenedSignal.value;
     if (executionTooltipOpened) {
       executionIndicator.setAttribute("data-tooltip-visible", "");
@@ -437,11 +437,11 @@ const serverEvents = window.__server_events__;
 const serverIndicator = document.querySelector("#server_indicator");
 const renderServerIndicator = () => {
   removeForceHideElement(document.querySelector("#server_indicator"));
-  C(() => {
+  j(() => {
     const serverConnection = serverConnectionSignal.value;
     updateServerIndicator(serverConnection);
   });
-  C(() => {
+  j(() => {
     const serverTooltipOpened = serverTooltipOpenedSignal.value;
     if (serverTooltipOpened) {
       serverIndicator.setAttribute("data-tooltip-visible", "");
@@ -745,7 +745,7 @@ const startJavaScriptAnimation = ({
 };
 
 const initToolbarOpening = () => {
-  C(() => {
+  j(() => {
     const opened = openedSignal.value;
     if (opened) {
       showToolbar();
@@ -818,7 +818,7 @@ const renderToolbarOverlay = () => {
     closeAllTooltips();
     closeSettings();
   };
-  C(() => {
+  j(() => {
     const opened = openedSignal.value;
     const settingsOpened = settingsOpenedSignal.value;
     const executionTooltipOpened = executionTooltipOpenedSignal.value;
@@ -882,7 +882,7 @@ const disableAnimations = () => {
 
 const renderToolbarAnimationSetting = () => {
   const animCheckbox = document.querySelector("#toggle_anims");
-  C(() => {
+  j(() => {
     const animationsEnabled = animationsEnabledSignal.value;
     animCheckbox.checked = animationsEnabled;
   });
@@ -945,7 +945,7 @@ const renderToolbarAutoreloadSetting = () => {
     return;
   }
   const autoreloadCheckbox = document.querySelector("#toggle_autoreload");
-  C(() => {
+  j(() => {
     const autoreloadEnabled = autoreloadEnabledSignal.value;
     if (autoreloadEnabled) {
       autoreloadCheckbox.checked = true;
@@ -1005,11 +1005,11 @@ const disableAutoreloadSetting = () => {
 
 const notifCheckbox = document.querySelector("#toggle_notifs");
 const renderToolbarNotificationSetting = () => {
-  C(() => {
+  j(() => {
     const notificationsEnabled = notificationsEnabledSignal.value;
     notifCheckbox.checked = notificationsEnabled;
   });
-  C(() => {
+  j(() => {
     const notificationPermission = notificationPermissionSignal.value;
     if (!notificationAPIDetected) {
       applyNotificationNotAvailableEffects();
@@ -1079,7 +1079,7 @@ const renderToolbarRibbonSetting = () => {
   const ribbonContainer = window.parent.document.querySelector("#jsenv_ribbon_container");
   if (ribbonContainer) {
     ribbonBox.style.display = "block";
-    C(() => {
+    j(() => {
       const ribbonDisplayed = ribbonDisplayedSignal.value;
       ribbonCheckbox.checked = ribbonDisplayed;
       if (ribbonDisplayed) {
@@ -1128,7 +1128,7 @@ const renderToolbarSettings = () => {
   renderToolbarNotificationSetting();
   renderToolbarThemeSetting();
   renderToolbarRibbonSetting();
-  C(() => {
+  j(() => {
     const settingsOpened = settingsOpenedSignal.value;
     if (settingsOpened) {
       activateToolbarSection(document.querySelector("#settings"));
@@ -1176,14 +1176,14 @@ addExternalCommandCallback("initToolbar", () => {
 });
 sendEventToParent("toolbar_ready");
 
-C(() => {
+j(() => {
   const serverConnection = serverConnectionSignal.value;
   if (serverConnection === "connecting" || serverConnection === "closed") {
     openServerTooltip();
   }
 });
 
-C(() => {
+j(() => {
   const theme = themeSignal.value;
   document.querySelector("html").setAttribute("data-theme", theme);
 });
@@ -1206,7 +1206,7 @@ const toolbarStateSignal = g(() => {
   };
 });
 
-C(() => {
+j(() => {
   const toolbarState = toolbarStateSignal.value;
   localStorage.setItem("jsenv_toolbar", JSON.stringify(toolbarState));
   sendEventToParent("toolbar_state_change", toolbarState);

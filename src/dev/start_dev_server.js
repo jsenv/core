@@ -7,12 +7,12 @@ import { createLogger, createTaskLog, formatError } from "@jsenv/humanize";
 import {
   composeTwoResponses,
   jsenvAccessControlAllowedHeaders,
-  jsenvServiceCORS,
-  jsenvServiceErrorHandler,
   serveDirectory,
+  serverPluginCORS,
+  serverPluginErrorHandler,
   startServer,
 } from "@jsenv/server";
-import { convertFileSystemErrorToResponseProperties } from "@jsenv/server/src/internal/convertFileSystemErrorToResponseProperties.js";
+import { convertFileSystemErrorToResponseProperties } from "@jsenv/server/src/plugins/filesystem/filesystem_error_to_response.js";
 import { URL_META } from "@jsenv/url-meta";
 import { urlIsOrIsInsideOf, urlToRelativeUrl } from "@jsenv/urls";
 import { existsSync, readFileSync } from "node:fs";
@@ -24,9 +24,9 @@ import { jsenvCoreDirectoryUrl } from "../jsenv_core_directory_url.js";
 import { createKitchen } from "../kitchen/kitchen.js";
 import { createPackageDirectory } from "../kitchen/package_directory.js";
 import {
-  createPluginController,
-  createPluginStore,
-} from "../plugins/plugin_controller.js";
+  createJsenvPluginsController,
+  createJsenvPluginStore,
+} from "../plugins/jsenv_plugins_controller.js";
 import { getCorePlugins } from "../plugins/plugins.js";
 import { jsenvPluginServerEvents } from "../plugins/server_events/jsenv_plugin_server_events.js";
 import { parseUserAgentHeader } from "./user_agent.js";
@@ -69,7 +69,7 @@ export const startDevServer = async ({
   logLevel = EXECUTED_BY_TEST_PLAN ? "warn" : "info",
   serverLogLevel = "warn",
   serverRouterLogLevel = "warn",
-  services = [],
+  serverPlugins = [],
 
   signal = new AbortController().signal,
   handleSIGINT = true,
@@ -176,10 +176,10 @@ export const startDevServer = async ({
   const serverStopAbortSignal = serverStopAbortController.signal;
   const kitchenCache = new Map();
 
-  const finalServices = [];
+  const finalServerPlugins = [];
   // x-server-inspect service
   {
-    finalServices.push({
+    finalServerPlugins.push({
       name: "jsenv:server_header",
       routes: [
         {
@@ -205,8 +205,8 @@ export const startDevServer = async ({
   }
   // cors service
   {
-    finalServices.push(
-      jsenvServiceCORS({
+    finalServerPlugins.push(
+      serverPluginCORS({
         accessControlAllowRequestOrigin: true,
         accessControlAllowRequestMethod: true,
         accessControlAllowRequestHeaders: true,
@@ -219,9 +219,9 @@ export const startDevServer = async ({
       }),
     );
   }
-  // custom services
+  // custom server plugins
   {
-    finalServices.push(...services);
+    finalServerPlugins.push(...serverPlugins);
   }
   // file_service
   {
@@ -251,7 +251,7 @@ export const startDevServer = async ({
       sourceDirectoryUrl,
     });
 
-    const devServerPluginStore = await createPluginStore([
+    const devServerJsenvPluginStore = await createJsenvPluginStore([
       jsenvPluginServerEvents({ clientAutoreload }),
       ...plugins,
       ...getCorePlugins({
@@ -411,28 +411,28 @@ export const startDevServer = async ({
           );
         },
       );
-      const devServerPluginController = await createPluginController(
-        devServerPluginStore,
+      const devServerJsenvPluginController = await createJsenvPluginsController(
+        devServerJsenvPluginStore,
         kitchen,
       );
-      kitchen.setPluginController(devServerPluginController);
+      kitchen.setJsenvPluginsController(devServerJsenvPluginController);
 
       serverStopCallbackSet.add(() => {
-        devServerPluginController.callHooks("destroy", kitchen.context);
+        devServerJsenvPluginController.callHooks("destroy", kitchen.context);
       });
       kitchenCache.set(runtimeId, kitchen);
       onKitchenCreated(kitchen);
       return kitchen;
     };
 
-    finalServices.push({
+    finalServerPlugins.push({
       name: "jsenv:dev_server_routes",
       augmentRouteFetchSecondArg: async (request) => {
         const kitchen = await getOrCreateKitchen(request);
         return { kitchen };
       },
       routes: [
-        ...devServerPluginStore.allDevServerRoutes,
+        ...devServerJsenvPluginStore.allServerRoutes,
         {
           endpoint: "GET *",
           description: "Serve project files.",
@@ -545,7 +545,7 @@ export const startDevServer = async ({
                 reference,
                 urlInfo,
               };
-              kitchen.pluginController.callHooks(
+              kitchen.jsenvPluginsController.callHooks(
                 "augmentResponse",
                 augmentResponseInfo,
                 (returnValue) => {
@@ -632,11 +632,11 @@ export const startDevServer = async ({
         },
       ],
     });
-    finalServices.push(...devServerPluginStore.allDevServerServices);
+    finalServerPlugins.push(...devServerJsenvPluginStore.allServerPlugins);
   }
   // jsenv error handler service
   {
-    finalServices.push({
+    finalServerPlugins.push({
       name: "jsenv:omega_error_handler",
       handleError: (error) => {
         const getResponseForError = () => {
@@ -673,8 +673,8 @@ export const startDevServer = async ({
   }
   // default error handler
   {
-    finalServices.push(
-      jsenvServiceErrorHandler({
+    finalServerPlugins.push(
+      serverPluginErrorHandler({
         sendErrorDetails: true,
       }),
     );
@@ -696,7 +696,7 @@ export const startDevServer = async ({
     hostname,
     port,
     requestWaitingMs: 60_000,
-    services: finalServices,
+    plugins: finalServerPlugins,
   });
   server.stoppedPromise.then((reason) => {
     onStop();

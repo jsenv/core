@@ -243,11 +243,11 @@ function requireLimiter () {
 	return limiter;
 }
 
-var permessageDeflate;
+var permessageDeflate$1;
 var hasRequiredPermessageDeflate;
 
 function requirePermessageDeflate () {
-	if (hasRequiredPermessageDeflate) return permessageDeflate;
+	if (hasRequiredPermessageDeflate) return permessageDeflate$1;
 	hasRequiredPermessageDeflate = 1;
 
 	const zlib = require$$0;
@@ -287,6 +287,9 @@ function requirePermessageDeflate () {
 	   *     acknowledge disabling of client context takeover
 	   * @param {Number} [options.concurrencyLimit=10] The number of concurrent
 	   *     calls to zlib
+	   * @param {Boolean} [options.isServer=false] Create the instance in either
+	   *     server or client mode
+	   * @param {Number} [options.maxPayload=0] The maximum allowed message length
 	   * @param {(Boolean|Number)} [options.serverMaxWindowBits] Request/confirm the
 	   *     use of a custom server window size
 	   * @param {Boolean} [options.serverNoContextTakeover=false] Request/accept
@@ -297,16 +300,13 @@ function requirePermessageDeflate () {
 	   *     deflate
 	   * @param {Object} [options.zlibInflateOptions] Options to pass to zlib on
 	   *     inflate
-	   * @param {Boolean} [isServer=false] Create the instance in either server or
-	   *     client mode
-	   * @param {Number} [maxPayload=0] The maximum allowed message length
 	   */
-	  constructor(options, isServer, maxPayload) {
-	    this._maxPayload = maxPayload | 0;
+	  constructor(options) {
 	    this._options = options || {};
 	    this._threshold =
 	      this._options.threshold !== undefined ? this._options.threshold : 1024;
-	    this._isServer = !!isServer;
+	    this._maxPayload = this._options.maxPayload | 0;
+	    this._isServer = !!this._options.isServer;
 	    this._deflate = null;
 	    this._inflate = null;
 
@@ -710,7 +710,7 @@ function requirePermessageDeflate () {
 	  }
 	}
 
-	permessageDeflate = PerMessageDeflate;
+	permessageDeflate$1 = PerMessageDeflate;
 
 	/**
 	 * The listener of the `zlib.DeflateRaw` stream `'data'` event.
@@ -776,7 +776,7 @@ function requirePermessageDeflate () {
 	  err[kStatusCode] = 1007;
 	  this[kCallback](err);
 	}
-	return permessageDeflate;
+	return permessageDeflate$1;
 }
 
 var validation = {exports: {}};
@@ -2564,11 +2564,11 @@ function requireEventTarget () {
 	return eventTarget;
 }
 
-var extension;
+var extension$1;
 var hasRequiredExtension;
 
 function requireExtension () {
-	if (hasRequiredExtension) return extension;
+	if (hasRequiredExtension) return extension$1;
 	hasRequiredExtension = 1;
 
 	const { tokenChars } = requireValidation();
@@ -2771,8 +2771,8 @@ function requireExtension () {
 	    .join(', ');
 	}
 
-	extension = { format, parse };
-	return extension;
+	extension$1 = { format, parse };
+	return extension$1;
 }
 
 /* eslint no-unused-vars: ["error", { "varsIgnorePattern": "^Duplex|Readable$", "caughtErrors": "none" }] */
@@ -3475,7 +3475,7 @@ function requireWebsocket () {
 	  } else {
 	    try {
 	      parsedUrl = new URL(address);
-	    } catch (e) {
+	    } catch {
 	      throw new SyntaxError(`Invalid URL: ${address}`);
 	    }
 	  }
@@ -3537,11 +3537,11 @@ function requireWebsocket () {
 	  opts.timeout = opts.handshakeTimeout;
 
 	  if (opts.perMessageDeflate) {
-	    perMessageDeflate = new PerMessageDeflate(
-	      opts.perMessageDeflate !== true ? opts.perMessageDeflate : {},
-	      false,
-	      opts.maxPayload
-	    );
+	    perMessageDeflate = new PerMessageDeflate({
+	      ...opts.perMessageDeflate,
+	      isServer: false,
+	      maxPayload: opts.maxPayload
+	    });
 	    opts.headers['Sec-WebSocket-Extensions'] = format({
 	      [PerMessageDeflate.extensionName]: perMessageDeflate.offer()
 	    });
@@ -4348,17 +4348,19 @@ function requireStream () {
 
 requireStream();
 
+requireExtension();
+
+requirePermessageDeflate();
+
 requireReceiver();
 
 requireSender();
 
-requireWebsocket();
-
-var subprotocol;
+var subprotocol$1;
 var hasRequiredSubprotocol;
 
 function requireSubprotocol () {
-	if (hasRequiredSubprotocol) return subprotocol;
+	if (hasRequiredSubprotocol) return subprotocol$1;
 	hasRequiredSubprotocol = 1;
 
 	const { tokenChars } = requireValidation();
@@ -4420,9 +4422,13 @@ function requireSubprotocol () {
 	  return protocols;
 	}
 
-	subprotocol = { parse };
-	return subprotocol;
+	subprotocol$1 = { parse };
+	return subprotocol$1;
 }
+
+requireSubprotocol();
+
+requireWebsocket();
 
 /* eslint no-unused-vars: ["error", { "varsIgnorePattern": "^Duplex$", "caughtErrors": "none" }] */
 
@@ -4724,11 +4730,11 @@ function requireWebsocketServer () {
 	      this.options.perMessageDeflate &&
 	      secWebSocketExtensions !== undefined
 	    ) {
-	      const perMessageDeflate = new PerMessageDeflate(
-	        this.options.perMessageDeflate,
-	        true,
-	        this.options.maxPayload
-	      );
+	      const perMessageDeflate = new PerMessageDeflate({
+	        ...this.options.perMessageDeflate,
+	        isServer: true,
+	        maxPayload: this.options.maxPayload
+	      });
 
 	      try {
 	        const offers = extension.parse(secWebSocketExtensions);

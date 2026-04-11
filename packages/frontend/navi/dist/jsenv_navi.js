@@ -71,7 +71,7 @@ const useActionStatus = (action) => {
   };
 };
 
-installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
+installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
   .action_error {
     margin-top: 0;
     margin-bottom: 20px;
@@ -79,7 +79,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
     background: #fdd;
     border: 1px solid red;
   }
-`;
+`, "/src/action/action_renderer.jsx"];
 const renderIdleDefault = () => null;
 const renderLoadingDefault = () => null;
 const renderAbortedDefault = () => null;
@@ -7449,7 +7449,32 @@ const updateStyle = (element, style, preventInitialTransition) => {
   styleKeySetWeakMap.set(element, styleKeySet);
 };
 
-installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
+installImportMetaCssBuild(import.meta);/**
+ * Box - A Swiss Army Knife for Layout
+ *
+ * A regular div by default, enhanced with styling props for spacing, sizing,
+ * and layout. The main value is a friendlier API over raw CSS Flexbox.
+ *
+ * ## Display & Layout
+ *
+ * - `flex` — horizontal flex container (items side by side)
+ * - `flex="y"` — vertical flex container (items stacked). The prop name makes
+ *   the axis explicit, avoiding the classic CSS trap where `flex-direction: column`
+ *   actually stacks items vertically despite "column" feeling horizontal.
+ * - `grid` — grid container
+ * - `inline` — switches to inline display (works with flex and grid too)
+ *
+ * ## Alignment
+ *
+ * Instead of CSS's justify-content/align-items which swap meaning based on flex-direction:
+ * - `alignX` — horizontal alignment, always
+ * - `alignY` — vertical alignment, always
+ *
+ * ## Spacing & Sizing
+ *
+ * Props for margin, padding, gap, width, height, expand, shrink, and more.
+ */
+import.meta.css = [/* css */`
   [navi-box-flow="inline"] {
     display: inline;
   }
@@ -7497,7 +7522,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
       grid-auto-flow: unset;
     }
   }
-`;
+`, "/src/box/box.jsx"];
 const PSEUDO_CLASSES_DEFAULT = [];
 const PSEUDO_ELEMENTS_DEFAULT = [];
 const STYLE_CSS_VARS_DEFAULT = {};
@@ -8041,8 +8066,68 @@ const monitorItemsOverflow = (container) => {
   return destroy;
 };
 
-installImportMetaCssBuild(import.meta);
-import.meta.css = /* css */ `
+installImportMetaCssBuild(import.meta);/**
+ * UI Transition - Core Implementation
+ * Provides smooth resize transitions with cross-fade effects between content states
+ *
+ * Content Types and Terminology:
+ *
+ * - ui: What the user currently sees rendered in the UI
+ * - dom_nodes: The actual DOM elements that make up the visual representation
+ * - content_id: Unique identifier for a content and its content_phase(s)
+ * - content_phase: Intermediate states (loading spinners, error messages, empty states)
+ * - content: The primary/final content we want to display (e.g., car details, user profile)
+ *
+ * Required HTML structure:
+ *
+ * <div class="ui_transition">
+ *   <div class="ui_transition_active_group">
+ *     <div class="ui_transition_target_slot"></div>
+ *     <div class="ui_transition_outgoing_slot"></div>
+ *   </div>
+ *   <div class="ui_transition_previous_group">
+ *     <div class="ui_transition_previous_target_slot"></div>
+ *     <div class="ui_transition_previous_outgoing_slot"></div>
+ *   </div>
+ * </div>
+ *
+ * Architecture Overview:
+ *
+ * .ui_transition
+ *   The main container that handles dimensional transitions. Its width and height animate
+ *   smoothly from current to target dimensions. Has overflow:hidden to clip ui during transitions.
+ *
+ * .active_group
+ *   Contains the ui that should be active after the transition completes. Groups both the target
+ *   ui (.target_slot) and transitional ui (.outgoing_slot) as a single unit that can
+ *   be manipulated together (e.g., applying transforms or slides).
+ *
+ * .target_slot
+ *   Always contains the target ui - what should be displayed at the end of the transition.
+ *   Whether transitioning to content or content_phase, this slot receives the new dom_nodes.
+ *   Receives fade-in transitions (opacity 0 → 1) during all transition types.
+ *
+ * .outgoing_slot
+ *   Holds content_phase that's being replaced during content_phase transitions. When transitioning
+ *   from one content_phase to another, or from content_phase to content, the old content_phase moves
+ *   here for fade-out. Receives fade-out transitions (opacity 1 → 0).
+ *
+ * .previous_group
+ *   Used for content-to-content transitions. When switching between content (not phases),
+ *   the entire .active_group dom_nodes are cloned here to fade out while the new content fades in.
+ *   Can slide out when sliding transitions are enabled, otherwise fades out.
+ *
+ * Transition Scenarios:
+ * - content → content: Car A details → Car B details (clone to previous_group)
+ * - content_phase → content_phase: Loading state → Error state (move to outgoing_slot, same content_id)
+ * - content → content_phase: Car A details → Loading Car B (use outgoing_slot for cross-fade)
+ * - content_phase → content: Loading Car B → Car B details (use outgoing_slot for cross-fade)
+ *
+ * Size Transition Handling:
+ * During dimensional transitions, both .target_slot and .outgoing_slot have their dimensions
+ * explicitly set to prevent dom_nodes reflow and maintain visual consistency.
+ */
+import.meta.css = [/* css */`
   * {
     box-sizing: border-box;
   }
@@ -8144,74 +8229,51 @@ import.meta.css = /* css */ `
   .ui_transition[data-transitioning] .ui_transition_target_slot_background {
     display: block;
   }
-`;
-
+`, "/src/ui_transition/ui_transition.js"];
 const CONTENT_ID_ATTRIBUTE = "data-content-id";
 const CONTENT_PHASE_ATTRIBUTE = "data-content-phase";
 const UNSET = {
   domNodes: [],
   domNodesClone: [],
   isEmpty: true,
-
   type: "unset",
   contentId: "unset",
   contentPhase: undefined,
   isContentPhase: false,
   isContent: false,
-  toString: () => "unset",
+  toString: () => "unset"
 };
-
 const isSameConfiguration = (configA, configB) => {
   return configA.toString() === configB.toString();
 };
-
-const createUITransitionController = (
-  root,
-  {
-    duration = 300,
-    alignX = "center",
-    alignY = "center",
-    onStateChange = () => {},
-    pauseBreakpoints = [],
-  } = {},
-) => {
+const createUITransitionController = (root, {
+  duration = 300,
+  alignX = "center",
+  alignY = "center",
+  onStateChange = () => {},
+  pauseBreakpoints = []
+} = {}) => {
   const debugConfig = {
     detection: root.hasAttribute("data-debug-detection"),
-    size: root.hasAttribute("data-debug-size"),
+    size: root.hasAttribute("data-debug-size")
   };
   const hasDebugLogs = debugConfig.size;
-  const debugDetection = (message) => {
+  const debugDetection = message => {
     if (!debugConfig.detection) return;
     console.debug(`[detection]`, message);
   };
-  const debugSize = (message) => {
+  const debugSize = message => {
     if (!debugConfig.size) return;
     console.debug(`[size]`, message);
   };
-
   const activeGroup = root.querySelector(".ui_transition_active_group");
   const targetSlot = root.querySelector(".ui_transition_target_slot");
   const outgoingSlot = root.querySelector(".ui_transition_outgoing_slot");
   const previousGroup = root.querySelector(".ui_transition_previous_group");
-  const previousTargetSlot = previousGroup?.querySelector(
-    ".ui_transition_previous_target_slot",
-  );
-  const previousOutgoingSlot = previousGroup?.querySelector(
-    ".ui_transition_previous_outgoing_slot",
-  );
-
-  if (
-    !root ||
-    !activeGroup ||
-    !targetSlot ||
-    !outgoingSlot ||
-    !previousGroup ||
-    !previousTargetSlot ||
-    !previousOutgoingSlot
-  ) {
-    throw new Error(
-      "createUITransitionController requires element with .active_group, .target_slot, .outgoing_slot, .previous_group, .previous_target_slot, and .previous_outgoing_slot elements",
-    );
+  const previousTargetSlot = previousGroup?.querySelector(".ui_transition_previous_target_slot");
+  const previousOutgoingSlot = previousGroup?.querySelector(".ui_transition_previous_outgoing_slot");
+  if (!root || !activeGroup || !targetSlot || !outgoingSlot || !previousGroup || !previousTargetSlot || !previousOutgoingSlot) {
+    throw new Error("createUITransitionController requires element with .active_group, .target_slot, .outgoing_slot, .previous_group, .previous_target_slot, and .previous_outgoing_slot elements");
   }
 
   // we maintain a background copy behind target slot to avoid showing
@@ -8219,17 +8281,17 @@ const createUITransitionController = (
   const targetSlotBackground = document.createElement("div");
   targetSlotBackground.className = "ui_transition_target_slot_background";
   activeGroup.insertBefore(targetSlotBackground, targetSlot);
-
   root.style.setProperty("--x-transition-duration", `${duration}ms`);
   outgoingSlot.setAttribute("inert", "");
   previousGroup.setAttribute("inert", "");
-
-  const detectConfiguration = (slot, { contentId, contentPhase } = {}) => {
+  const detectConfiguration = (slot, {
+    contentId,
+    contentPhase
+  } = {}) => {
     const domNodes = Array.from(slot.childNodes);
     if (!domNodes) {
       return UNSET;
     }
-
     const isEmpty = domNodes.length === 0;
     let textNodeCount = 0;
     let elementNodeCount = 0;
@@ -8250,7 +8312,6 @@ const createUITransitionController = (
             firstElementNode = domNode;
           }
           elementNodeCount++;
-
           if (domNode.hasAttribute("data-content-phase")) {
             const contentPhaseAttr = domNode.getAttribute("data-content-phase");
             contentPhase = contentPhaseAttr || "attr";
@@ -8262,11 +8323,8 @@ const createUITransitionController = (
         const domNodeClone = domNode.cloneNode(true);
         domNodesClone.push(domNodeClone);
       }
-
       if (contentIdSlotAttr && contentIdChildAttr) {
-        console.warn(
-          `Slot and slot child both have a [${CONTENT_ID_ATTRIBUTE}]. Slot is ${contentIdSlotAttr} and child is ${contentIdChildAttr}, using the child.`,
-        );
+        console.warn(`Slot and slot child both have a [${CONTENT_ID_ATTRIBUTE}]. Slot is ${contentIdSlotAttr} and child is ${contentIdChildAttr}, using the child.`);
       }
       if (contentId === undefined) {
         contentId = contentIdChildAttr || contentIdSlotAttr || undefined;
@@ -8274,7 +8332,6 @@ const createUITransitionController = (
     }
     const isOnlyTextNodes = elementNodeCount === 0 && textNodeCount > 1;
     const singleElementNode = elementNodeCount === 1 ? firstElementNode : null;
-
     contentId = contentId || getElementSignature(domNodes[0]);
     if (!contentPhase && isEmpty) {
       // Imagine code rendering null while switching to a new content
@@ -8285,22 +8342,16 @@ const createUITransitionController = (
       // intermediate states.
       contentPhase = "empty";
     }
-
     let width;
     let height;
     let borderRadius;
     let border;
     let background;
-
     if (isEmpty) {
       debugSize(`measureSlot(".${slot.className}") -> it is empty`);
     } else if (singleElementNode) {
-      const visualSelector = singleElementNode.getAttribute(
-        "data-visual-selector",
-      );
-      const visualElement = visualSelector
-        ? singleElementNode.querySelector(visualSelector) || singleElementNode
-        : singleElementNode;
+      const visualSelector = singleElementNode.getAttribute("data-visual-selector");
+      const visualElement = visualSelector ? singleElementNode.querySelector(visualSelector) || singleElementNode : singleElementNode;
       const rect = visualElement.getBoundingClientRect();
       width = rect.width;
       height = rect.height;
@@ -8315,23 +8366,19 @@ const createUITransitionController = (
       height = rect.height;
       debugSize(`measureSlot(".${slot.className}") -> [${width}x${height}]`);
     }
-
     const commonProperties = {
       domNodes,
       domNodesClone,
       isEmpty,
       isOnlyTextNodes,
       singleElementNode,
-
       width,
       height,
       borderRadius,
       border,
       background,
-
-      contentId,
+      contentId
     };
-
     if (contentPhase) {
       return {
         ...commonProperties,
@@ -8339,7 +8386,7 @@ const createUITransitionController = (
         contentPhase,
         isContentPhase: true,
         isContent: false,
-        toString: () => `content(${contentId}).phase(${contentPhase})`,
+        toString: () => `content(${contentId}).phase(${contentPhase})`
       };
     }
     return {
@@ -8348,18 +8395,16 @@ const createUITransitionController = (
       contentPhase: undefined,
       isContentPhase: false,
       isContent: true,
-      toString: () => `content(${contentId})`,
+      toString: () => `content(${contentId})`
     };
   };
-
   const targetSlotInitialConfiguration = detectConfiguration(targetSlot);
   const outgoingSlotInitialConfiguration = detectConfiguration(outgoingSlot, {
-    contentPhase: "true",
+    contentPhase: "true"
   });
   let targetSlotConfiguration = targetSlotInitialConfiguration;
   let outgoingSlotConfiguration = outgoingSlotInitialConfiguration;
   let previousTargetSlotConfiguration = UNSET;
-
   const updateSlotAttributes = () => {
     if (targetSlotConfiguration.isEmpty && outgoingSlotConfiguration.isEmpty) {
       root.setAttribute("data-only-previous-group", "");
@@ -8372,7 +8417,6 @@ const createUITransitionController = (
     root.setAttribute("data-align-x", alignX);
     root.setAttribute("data-align-y", alignY);
   };
-
   const moveConfigurationIntoSlot = (configuration, slot) => {
     slot.innerHTML = "";
     for (const domNode of configuration.domNodesClone) {
@@ -8390,9 +8434,7 @@ const createUITransitionController = (
       throw new Error("Unknown slot for applyConfiguration");
     }
   };
-
   updateAlignment();
-
   let transitionType = "none";
   const groupTransitionOptions = {
     // debugBreakpoints: [0.25],
@@ -8401,21 +8443,22 @@ const createUITransitionController = (
       setup: () => {
         updateSlotAttributes();
         root.setAttribute("data-transitioning", "");
-        onStateChange({ isTransitioning: true });
+        onStateChange({
+          isTransitioning: true
+        });
         return {
           teardown: () => {
             root.removeAttribute("data-transitioning");
             updateSlotAttributes(); // Update positioning after transition
-            onStateChange({ isTransitioning: false });
-          },
+            onStateChange({
+              isTransitioning: false
+            });
+          }
         };
-      },
-    },
+      }
+    }
   };
-  const transitionController = createGroupTransitionController(
-    groupTransitionOptions,
-  );
-
+  const transitionController = createGroupTransitionController(groupTransitionOptions);
   const elementToClip = root;
   const morphContainerIntoTarget = () => {
     const morphTransitions = [];
@@ -8429,31 +8472,28 @@ const createUITransitionController = (
       const fromHeight = previousTargetSlotConfiguration.height || 0;
       const toWidth = targetSlotConfiguration.width || 0;
       const toHeight = targetSlotConfiguration.height || 0;
-      debugSize(
-        `transition from [${fromWidth}x${fromHeight}] to [${toWidth}x${toHeight}]`,
-      );
+      debugSize(`transition from [${fromWidth}x${fromHeight}] to [${toWidth}x${toHeight}]`);
       const restoreOverflow = preventIntermediateScrollbar(root, {
         fromWidth,
         fromHeight,
         toWidth,
         toHeight,
-        onPrevent: ({ x, y, scrollContainer }) => {
+        onPrevent: ({
+          x,
+          y,
+          scrollContainer
+        }) => {
           if (x) {
-            debugSize(
-              `Temporarily hiding horizontal overflow during transition on ${getElementSignature(scrollContainer)}`,
-            );
+            debugSize(`Temporarily hiding horizontal overflow during transition on ${getElementSignature(scrollContainer)}`);
           }
           if (y) {
-            debugSize(
-              `Temporarily hiding vertical overflow during transition on ${getElementSignature(scrollContainer)}`,
-            );
+            debugSize(`Temporarily hiding vertical overflow during transition on ${getElementSignature(scrollContainer)}`);
           }
         },
         onRestore: () => {
           debugSize(`Restored overflow after transition`);
-        },
+        }
       });
-
       const onSizeTransitionFinished = () => {
         // Restore overflow when transition is complete
         restoreOverflow();
@@ -8476,95 +8516,63 @@ const createUITransitionController = (
         }
       };
       // Position of "from" content within large container
-      const fromLeft = getAlignedPosition(
-        elementToClipWidth,
-        fromWidth,
-        alignX,
-      );
-      const fromTop = getAlignedPosition(
-        elementToClipHeight,
-        fromHeight,
-        alignY,
-      );
+      const fromLeft = getAlignedPosition(elementToClipWidth, fromWidth, alignX);
+      const fromTop = getAlignedPosition(elementToClipHeight, fromHeight, alignY);
       // Position of target content within large container
-      const targetLeft = getAlignedPosition(
-        elementToClipWidth,
-        toWidth,
-        alignX,
-      );
-      const targetTop = getAlignedPosition(
-        elementToClipHeight,
-        toHeight,
-        alignY,
-      );
-      debugSize(
-        `Positions in container: from [${fromLeft},${fromTop}] ${fromWidth}x${fromHeight} to [${targetLeft},${targetTop}] ${toWidth}x${toHeight}`,
-      );
+      const targetLeft = getAlignedPosition(elementToClipWidth, toWidth, alignX);
+      const targetTop = getAlignedPosition(elementToClipHeight, toHeight, alignY);
+      debugSize(`Positions in container: from [${fromLeft},${fromTop}] ${fromWidth}x${fromHeight} to [${targetLeft},${targetTop}] ${toWidth}x${toHeight}`);
       // Get border-radius values
-      const fromBorderRadius =
-        previousTargetSlotConfiguration.borderRadius || 0;
+      const fromBorderRadius = previousTargetSlotConfiguration.borderRadius || 0;
       const toBorderRadius = targetSlotConfiguration.borderRadius || 0;
       const startInsetTop = fromTop;
       const startInsetRight = elementToClipWidth - (fromLeft + fromWidth);
       const startInsetBottom = elementToClipHeight - (fromTop + fromHeight);
       const startInsetLeft = fromLeft;
-
       const endInsetTop = targetTop;
       const endInsetRight = elementToClipWidth - (targetLeft + toWidth);
       const endInsetBottom = elementToClipHeight - (targetTop + toHeight);
       const endInsetLeft = targetLeft;
-
       const startClipPath = `inset(${startInsetTop}px ${startInsetRight}px ${startInsetBottom}px ${startInsetLeft}px round ${fromBorderRadius}px)`;
       const endClipPath = `inset(${endInsetTop}px ${endInsetRight}px ${endInsetBottom}px ${endInsetLeft}px round ${toBorderRadius}px)`;
       // Create clip-path animation using Web Animations API
-      const clipAnimation = elementToClip.animate(
-        [{ clipPath: startClipPath }, { clipPath: endClipPath }],
-        {
-          duration,
-          easing: "ease",
-          fill: "forwards",
-        },
-      );
+      const clipAnimation = elementToClip.animate([{
+        clipPath: startClipPath
+      }, {
+        clipPath: endClipPath
+      }], {
+        duration,
+        easing: "ease",
+        fill: "forwards"
+      });
 
       // Handle finish
-      clipAnimation.finished
-        .then(() => {
-          // Clear clip-path to restore normal behavior
-          elementToClip.style.clipPath = "";
-          clipAnimation.cancel();
-          onSizeTransitionFinished();
-        })
-        .catch(() => {
-          // Animation was cancelled
-        });
+      clipAnimation.finished.then(() => {
+        // Clear clip-path to restore normal behavior
+        elementToClip.style.clipPath = "";
+        clipAnimation.cancel();
+        onSizeTransitionFinished();
+      }).catch(() => {
+        // Animation was cancelled
+      });
       clipAnimation.play();
     }
-
     return morphTransitions;
   };
   const fadeInTargetSlot = () => {
-    targetSlotBackground.style.setProperty(
-      "--target-slot-background",
-      targetSlotConfiguration.background,
-    );
-    targetSlotBackground.style.setProperty(
-      "--target-slot-width",
-      `${targetSlotConfiguration.width || 0}px`,
-    );
-    targetSlotBackground.style.setProperty(
-      "--target-slot-height",
-      `${targetSlotConfiguration.height || 0}px`,
-    );
+    targetSlotBackground.style.setProperty("--target-slot-background", targetSlotConfiguration.background);
+    targetSlotBackground.style.setProperty("--target-slot-width", `${targetSlotConfiguration.width || 0}px`);
+    targetSlotBackground.style.setProperty("--target-slot-height", `${targetSlotConfiguration.height || 0}px`);
     return createOpacityTransition(targetSlot, 1, {
       from: 0,
       duration,
       styleSynchronizer: "inline_style",
-      onFinish: (targetSlotOpacityTransition) => {
+      onFinish: targetSlotOpacityTransition => {
         targetSlotBackground.style.removeProperty("--target-slot-background");
         targetSlotBackground.style.removeProperty("--target-slot-width");
         targetSlotBackground.style.removeProperty("--target-slot-height");
         targetSlotOpacityTransition.cancel();
-      },
+      }
     });
   };
   const fadeOutPreviousGroup = () => {
@@ -8572,10 +8580,10 @@ const createUITransitionController = (
       from: 1,
       duration,
       styleSynchronizer: "inline_style",
-      onFinish: (previousGroupOpacityTransition) => {
+      onFinish: previousGroupOpacityTransition => {
         previousGroupOpacityTransition.cancel();
         previousGroup.style.opacity = "0"; // keep previous group visually hidden
-      },
+      }
     });
   };
   const fadeOutOutgoingSlot = () => {
@@ -8583,27 +8591,22 @@ const createUITransitionController = (
       duration,
       from: 1,
       styleSynchronizer: "inline_style",
-      onFinish: (outgoingSlotOpacityTransition) => {
+      onFinish: outgoingSlotOpacityTransition => {
         outgoingSlotOpacityTransition.cancel();
         outgoingSlot.style.opacity = "0"; // keep outgoing slot visually hidden
-      },
+      }
     });
   };
 
   // content_to_content transition (uses previous_group)
-  const applyContentToContentTransition = (toConfiguration) => {
+  const applyContentToContentTransition = toConfiguration => {
     // 1. move target slot to previous
     moveConfigurationIntoSlot(targetSlotConfiguration, previousTargetSlot);
     targetSlotConfiguration = toConfiguration;
     // 2. move outgoing slot to previous
     moveConfigurationIntoSlot(outgoingSlotConfiguration, previousOutgoingSlot);
     moveConfigurationIntoSlot(UNSET, outgoingSlot);
-
-    const transitions = [
-      ...morphContainerIntoTarget(),
-      fadeInTargetSlot(),
-      fadeOutPreviousGroup(),
-    ];
+    const transitions = [...morphContainerIntoTarget(), fadeInTargetSlot(), fadeOutPreviousGroup()];
     const transition = transitionController.update(transitions, {
       onFinish: () => {
         moveConfigurationIntoSlot(UNSET, previousTargetSlot);
@@ -8611,29 +8614,23 @@ const createUITransitionController = (
         if (hasDebugLogs) {
           console.groupEnd();
         }
-      },
+      }
     });
     transition.play();
   };
   // content_phase_to_content_phase transition (uses outgoing_slot)
-  const applyContentPhaseToContentPhaseTransition = (toConfiguration) => {
+  const applyContentPhaseToContentPhaseTransition = toConfiguration => {
     // 1. Move target slot to outgoing
     moveConfigurationIntoSlot(targetSlotConfiguration, outgoingSlot);
     targetSlotConfiguration = toConfiguration;
-
-    const transitions = [
-      ...morphContainerIntoTarget(),
-      fadeInTargetSlot(),
-      fadeOutOutgoingSlot(),
-    ];
+    const transitions = [...morphContainerIntoTarget(), fadeInTargetSlot(), fadeOutOutgoingSlot()];
     const transition = transitionController.update(transitions, {
       onFinish: () => {
         moveConfigurationIntoSlot(UNSET, outgoingSlot);
-
         if (hasDebugLogs) {
           console.groupEnd();
         }
-      },
+      }
     });
     transition.play();
   };
@@ -8645,7 +8642,6 @@ const createUITransitionController = (
     // 2. move outgoing slot to previous
     moveConfigurationIntoSlot(outgoingSlotConfiguration, previousOutgoingSlot);
     outgoingSlotConfiguration = UNSET;
-
     const transitions = [...morphContainerIntoTarget(), fadeOutPreviousGroup()];
     const transition = transitionController.update(transitions, {
       onFinish: () => {
@@ -8654,15 +8650,15 @@ const createUITransitionController = (
         if (hasDebugLogs) {
           console.groupEnd();
         }
-      },
+      }
     });
     transition.play();
   };
   // Main transition method
-  const transitionTo = (
-    newContentElement,
-    { contentPhase, contentId } = {},
-  ) => {
+  const transitionTo = (newContentElement, {
+    contentPhase,
+    contentId
+  } = {}) => {
     if (contentId) {
       targetSlot.setAttribute(CONTENT_ID_ATTRIBUTE, contentId);
     } else {
@@ -8688,8 +8684,7 @@ const createUITransitionController = (
     moveConfigurationIntoSlot(UNSET, previousTargetSlot);
     moveConfigurationIntoSlot(UNSET, previousOutgoingSlot);
   };
-
-  const targetSlotEffect = (reasons) => {
+  const targetSlotEffect = reasons => {
     if (root.hasAttribute("data-disabled")) {
       return;
     }
@@ -8701,9 +8696,7 @@ const createUITransitionController = (
       console.debug(`- ${reasons.join("\n- ")}`);
     }
     if (isSameConfiguration(fromConfiguration, toConfiguration)) {
-      debugDetection(
-        `already in desired state (${toConfiguration}) -> early return`,
-      );
+      debugDetection(`already in desired state (${toConfiguration}) -> early return`);
       if (hasDebugLogs) {
         console.groupEnd();
       }
@@ -8712,9 +8705,7 @@ const createUITransitionController = (
     const fromConfigType = fromConfiguration.type;
     const toConfigType = toConfiguration.type;
     transitionType = `${fromConfigType}_to_${toConfigType}`;
-    debugDetection(
-      `Prepare "${transitionType}" transition (${fromConfiguration} -> ${toConfiguration})`,
-    );
+    debugDetection(`Prepare "${transitionType}" transition (${fromConfiguration} -> ${toConfiguration})`);
     // content_to_empty / content_phase_to_empty
     if (toConfiguration.isEmpty) {
       applyToEmptyTransition();
@@ -8738,10 +8729,9 @@ const createUITransitionController = (
     // content_to_content (default case)
     applyContentToContentTransition(toConfiguration);
   };
-
   const [teardown, addTeardown] = createPubSub();
   {
-    const mutationObserver = new MutationObserver((mutations) => {
+    const mutationObserver = new MutationObserver(mutations => {
       const reasonParts = [];
       for (const mutation of mutations) {
         if (mutation.type === "childList") {
@@ -8757,33 +8747,25 @@ const createUITransitionController = (
           continue;
         }
         if (mutation.type === "attributes") {
-          const { attributeName } = mutation;
-          if (
-            attributeName === CONTENT_ID_ATTRIBUTE ||
-            attributeName === CONTENT_PHASE_ATTRIBUTE
-          ) {
-            const { oldValue } = mutation;
+          const {
+            attributeName
+          } = mutation;
+          if (attributeName === CONTENT_ID_ATTRIBUTE || attributeName === CONTENT_PHASE_ATTRIBUTE) {
+            const {
+              oldValue
+            } = mutation;
             if (oldValue === null) {
               const value = targetSlot.getAttribute(attributeName);
-              reasonParts.push(
-                value
-                  ? `added [${attributeName}=${value}]`
-                  : `added [${attributeName}]`,
-              );
+              reasonParts.push(value ? `added [${attributeName}=${value}]` : `added [${attributeName}]`);
             } else if (targetSlot.hasAttribute(attributeName)) {
               const value = targetSlot.getAttribute(attributeName);
               reasonParts.push(`[${attributeName}] ${oldValue} -> ${value}`);
             } else {
-              reasonParts.push(
-                oldValue
-                  ? `removed [${attributeName}=${oldValue}]`
-                  : `removed [${attributeName}]`,
-              );
+              reasonParts.push(oldValue ? `removed [${attributeName}=${oldValue}]` : `removed [${attributeName}]`);
             }
           }
         }
       }
-
       if (reasonParts.length === 0) {
         return;
       }
@@ -8793,25 +8775,19 @@ const createUITransitionController = (
       childList: true,
       attributes: true,
       attributeFilter: [CONTENT_ID_ATTRIBUTE, CONTENT_PHASE_ATTRIBUTE],
-      characterData: false,
+      characterData: false
     });
     addTeardown(() => {
       mutationObserver.disconnect();
     });
   }
   {
-    const slots = [
-      targetSlot,
-      outgoingSlot,
-      previousTargetSlot,
-      previousOutgoingSlot,
-    ];
+    const slots = [targetSlot, outgoingSlot, previousTargetSlot, previousOutgoingSlot];
     for (const slot of slots) {
       addTeardown(monitorItemsOverflow(slot));
     }
   }
-
-  const setDuration = (newDuration) => {
+  const setDuration = newDuration => {
     duration = newDuration;
     // Update CSS variable immediately
     root.style.setProperty("--x-transition-duration", `${duration}ms`);
@@ -8821,27 +8797,25 @@ const createUITransitionController = (
     alignY = newAlignY;
     updateAlignment();
   };
-
   return {
-    updateContentId: (value) => {
+    updateContentId: value => {
       if (value) {
         targetSlot.setAttribute(CONTENT_ID_ATTRIBUTE, value);
       } else {
         targetSlot.removeAttribute(CONTENT_ID_ATTRIBUTE);
       }
     },
-
     transitionTo,
     resetContent,
     setDuration,
     setAlignment,
     updateAlignment,
-    setPauseBreakpoints: (value) => {
+    setPauseBreakpoints: value => {
       groupTransitionOptions.pauseBreakpoints = value;
     },
     cleanup: () => {
       teardown();
-    },
+    }
   };
 };
 
@@ -15574,7 +15548,7 @@ installImportMetaCssBuild(import.meta);
  * - Centers in viewport when no anchor element provided or anchor is too big
  */
 
-import.meta.css = /* css */ `
+import.meta.css = [/* css */`
   @layer navi {
     .navi_callout {
       --callout-success-color: #4caf50;
@@ -15716,7 +15690,7 @@ import.meta.css = /* css */ `
       }
     }
   }
-`;
+`, "/src/field/validation/callout/callout.js"];
 
 /**
  * Shows a callout attached to the specified element
@@ -15734,44 +15708,37 @@ import.meta.css = /* css */ `
  *   - {HTMLElement} element - The callout DOM element
  *   - {boolean} opened - Whether the callout is currently open
  */
-const openCallout = (
-  message,
-  {
-    anchorElement,
-    // status determines visual styling and behavior:
-    // "info" - polite announcement (e.g., "This element cannot be modified")
-    // "warning" - expected failure requiring user action (e.g., "Field is required")
-    // "error" - unexpected failure, may not be actionable (e.g., "Server error")
-    // "success" - positive feedback (e.g., "Changes saved successfully")
-    // "" - neutral information
-    status = "",
-    onClose,
-    closeOnClickOutside = status === "info",
-    showErrorStack,
-    debug = false,
-  } = {},
-) => {
+const openCallout = (message, {
+  anchorElement,
+  // status determines visual styling and behavior:
+  // "info" - polite announcement (e.g., "This element cannot be modified")
+  // "warning" - expected failure requiring user action (e.g., "Field is required")
+  // "error" - unexpected failure, may not be actionable (e.g., "Server error")
+  // "success" - positive feedback (e.g., "Changes saved successfully")
+  // "" - neutral information
+  status = "",
+  onClose,
+  closeOnClickOutside = status === "info",
+  showErrorStack,
+  debug = false
+} = {}) => {
   const callout = {
     opened: true,
     close: null,
     status: undefined,
-
     update: null,
     updatePosition: null,
-
-    element: null,
+    element: null
   };
-
   if (debug) {
     console.debug("open callout", {
       anchorElement,
       message,
-      status,
+      status
     });
   }
-
   const [teardown, addTeardown] = createPubSub(true);
-  const close = (reason) => {
+  const close = reason => {
     if (!callout.opened) {
       return;
     }
@@ -15784,39 +15751,35 @@ const openCallout = (
   if (onClose) {
     addTeardown(onClose);
   }
-
-  const [updateStatus, addStatusEffect, cleanupStatusEffects] =
-    createValueEffect(undefined);
+  const [updateStatus, addStatusEffect, cleanupStatusEffects] = createValueEffect(undefined);
   addTeardown(cleanupStatusEffects);
 
   // Create and add callout to document
   const calloutElement = createCalloutElement();
-  const calloutMessageElement = calloutElement.querySelector(
-    ".navi_callout_message",
-  );
-  const calloutCloseButton = calloutElement.querySelector(
-    ".navi_callout_close_button",
-  );
+  const calloutMessageElement = calloutElement.querySelector(".navi_callout_message");
+  const calloutCloseButton = calloutElement.querySelector(".navi_callout_close_button");
   calloutCloseButton.onclick = () => {
     close("click_close_button");
   };
   const calloutId = `navi_callout_${Date.now()}`;
   calloutElement.id = calloutId;
-  calloutStyleController.set(calloutElement, { opacity: 0 });
+  calloutStyleController.set(calloutElement, {
+    opacity: 0
+  });
   const update = (newMessage, options = {}) => {
     // Connect callout with target element for accessibility
     if (options.status && options.status !== callout.status) {
       callout.status = status;
       updateStatus(status);
     }
-
     if (options.closeOnClickOutside) {
       closeOnClickOutside = options.closeOnClickOutside;
     }
-
     if (isValidElement(newMessage)) {
       calloutMessageElement.innerHTML = "";
-      renderIntoCallout(newMessage, calloutMessageElement, { close });
+      renderIntoCallout(newMessage, calloutMessageElement, {
+        close
+      });
     } else if (newMessage instanceof Node) {
       // Handle DOM node (cloned from CSS selector)
       calloutMessageElement.innerHTML = "";
@@ -15824,9 +15787,10 @@ const openCallout = (
     } else if (typeof newMessage === "function") {
       calloutMessageElement.innerHTML = "";
       newMessage({
-        renderIntoCallout: (jsx) =>
-          renderIntoCallout(jsx, calloutMessageElement, { close }),
-        close,
+        renderIntoCallout: jsx => renderIntoCallout(jsx, calloutMessageElement, {
+          close
+        }),
+        close
       });
     } else {
       if (Error.isError(newMessage)) {
@@ -15855,16 +15819,12 @@ const openCallout = (
     }
   };
   {
-    const handleClickOutside = (event) => {
+    const handleClickOutside = event => {
       if (!closeOnClickOutside) {
         return;
       }
-
       const clickTarget = event.target;
-      if (
-        clickTarget === calloutElement ||
-        calloutElement.contains(clickTarget)
-      ) {
+      if (clickTarget === calloutElement || calloutElement.contains(clickTarget)) {
         return;
       }
       // if (
@@ -15884,15 +15844,12 @@ const openCallout = (
     const handleCustomCloseEvent = () => {
       close("custom_event");
     };
-    calloutElement.addEventListener(
-      "navi_callout_close",
-      handleCustomCloseEvent,
-    );
+    calloutElement.addEventListener("navi_callout_close", handleCustomCloseEvent);
   }
   Object.assign(callout, {
     element: calloutElement,
     update,
-    close,
+    close
   });
   addStatusEffect(() => {
     if (status) {
@@ -15900,7 +15857,6 @@ const openCallout = (
     } else {
       calloutElement.removeAttribute("data-status");
     }
-
     if (!status || status === "info" || status === "success") {
       calloutElement.setAttribute("role", "status");
     } else if (status) {
@@ -15911,39 +15867,31 @@ const openCallout = (
   addTeardown(() => {
     calloutElement.remove();
   });
-
   if (anchorElement) {
     const anchorVisuallyVisibleInfo = getVisuallyVisibleInfo(anchorElement, {
-      countOffscreenAsVisible: true,
+      countOffscreenAsVisible: true
     });
     if (!anchorVisuallyVisibleInfo.visible) {
-      console.warn(
-        `anchor element is not visually visible (${anchorVisuallyVisibleInfo.reason}) -> will be anchored to first visually visible ancestor`,
-      );
+      console.warn(`anchor element is not visually visible (${anchorVisuallyVisibleInfo.reason}) -> will be anchored to first visually visible ancestor`);
       anchorElement = getFirstVisuallyVisibleAncestor(anchorElement);
       if (!anchorElement) {
         // anchorElement is not in the DOM anymore, fallback to body
         anchorElement = document.body;
       }
     }
-
     allowWheelThrough(calloutElement, anchorElement);
     anchorElement.setAttribute("data-callout", calloutId);
     addTeardown(() => {
       anchorElement.removeAttribute("data-callout");
     });
-
-    addStatusEffect((status) => {
+    addStatusEffect(status => {
       if (!status) {
         return () => {};
       }
       // todo:
       // - dispatch something on the element to indicate the status
       // and that would in turn be used by pseudo styles system to eventually apply styles
-      const statusColor = resolveCSSColor(
-        `var(--callout-${status}-color)`,
-        calloutElement,
-      );
+      const statusColor = resolveCSSColor(`var(--callout-${status}-color)`, calloutElement);
       anchorElement.setAttribute("data-callout-status", status);
       anchorElement.style.setProperty("--callout-color", statusColor);
       return () => {
@@ -15951,7 +15899,7 @@ const openCallout = (
         anchorElement.style.removeProperty("--callout-color");
       };
     });
-    addStatusEffect((status) => {
+    addStatusEffect(status => {
       if (!status || status === "info" || status === "success") {
         anchorElement.setAttribute("aria-describedby", calloutId);
         return () => {
@@ -15965,7 +15913,6 @@ const openCallout = (
         anchorElement.removeAttribute("aria-invalid");
       };
     });
-
     {
       const onfocus = () => {
         if (status === "error") {
@@ -15987,13 +15934,12 @@ const openCallout = (
       delete anchorElement.callout;
     });
   }
-
-  update(message, { status });
-
+  update(message, {
+    status
+  });
   {
     const documentScrollLeftAtOpen = document.documentElement.scrollLeft;
     const documentScrollTopAtOpen = document.documentElement.scrollTop;
-
     let positioner;
     let strategy;
     const determine = () => {
@@ -16018,7 +15964,7 @@ const openCallout = (
       if (newStrategy === "centered") {
         positioner = centerCalloutInViewport(calloutElement, {
           documentScrollLeftAtOpen,
-          documentScrollTopAtOpen,
+          documentScrollTopAtOpen
         });
       } else {
         positioner = stickCalloutToAnchor(calloutElement, anchorElement);
@@ -16040,7 +15986,6 @@ const openCallout = (
     }
     callout.updatePosition = () => positioner.update();
   }
-
   return callout;
 };
 
@@ -16052,7 +15997,7 @@ const ARROW_HEIGHT = 8;
 const ARROW_SPACING = 8;
 
 // HTML template for the callout
-const calloutTemplate = /* html */ `
+const calloutTemplate = /* html */`
   <div class="navi_callout">
     <div class="navi_callout_box">
       <div class="navi_callout_frame"></div>
@@ -16087,7 +16032,6 @@ const calloutTemplate = /* html */ `
     </div>
   </div>
 `;
-
 const calloutStyleController = createStyleController("callout");
 
 /**
@@ -16100,20 +16044,15 @@ const createCalloutElement = () => {
   const calloutElement = div.firstElementChild;
   return calloutElement;
 };
-
-const centerCalloutInViewport = (
-  calloutElement,
-  { documentScrollLeftAtOpen, documentScrollTopAtOpen },
-) => {
+const centerCalloutInViewport = (calloutElement, {
+  documentScrollLeftAtOpen,
+  documentScrollTopAtOpen
+}) => {
   // Set up initial styles for centered positioning
   const calloutBoxElement = calloutElement.querySelector(".navi_callout_box");
-  const calloutFrameElement = calloutElement.querySelector(
-    ".navi_callout_frame",
-  );
+  const calloutFrameElement = calloutElement.querySelector(".navi_callout_frame");
   const calloutBodyElement = calloutElement.querySelector(".navi_callout_body");
-  const calloutMessageElement = calloutElement.querySelector(
-    ".navi_callout_message",
-  );
+  const calloutMessageElement = calloutElement.querySelector(".navi_callout_message");
 
   // Remove any margins and set frame positioning for no arrow
   calloutBoxElement.style.marginTop = "";
@@ -16126,9 +16065,10 @@ const centerCalloutInViewport = (
 
   // Generate simple rectangle SVG without arrow and position in center
   const updateCenteredPosition = () => {
-    const calloutElementClone =
-      cloneCalloutToMeasureNaturalSize(calloutElement);
-    const { height } = calloutElementClone.getBoundingClientRect();
+    const calloutElementClone = cloneCalloutToMeasureNaturalSize(calloutElement);
+    const {
+      height
+    } = calloutElementClone.getBoundingClientRect();
     calloutElementClone.remove();
 
     // Handle content overflow when viewport is too small
@@ -16139,8 +16079,7 @@ const centerCalloutInViewport = (
       const paddingSizes = getPaddingSizes(calloutBodyElement);
       const paddingY = paddingSizes.top + paddingSizes.bottom;
       const spaceNeededAroundContent = BORDER_WIDTH * 2 + paddingY;
-      const spaceAvailableForContent =
-        maxAllowedHeight - spaceNeededAroundContent;
+      const spaceAvailableForContent = maxAllowedHeight - spaceNeededAroundContent;
       calloutMessageElement.style.maxHeight = `${spaceAvailableForContent}px`;
       calloutMessageElement.style.overflowY = "scroll";
     } else {
@@ -16150,24 +16089,22 @@ const centerCalloutInViewport = (
     }
 
     // Get final dimensions after potential overflow adjustments
-    const { width: finalWidth, height: finalHeight } =
-      calloutElement.getBoundingClientRect();
-    calloutFrameElement.innerHTML = generateSvgWithoutArrow(
-      finalWidth,
-      finalHeight,
-    );
+    const {
+      width: finalWidth,
+      height: finalHeight
+    } = calloutElement.getBoundingClientRect();
+    calloutFrameElement.innerHTML = generateSvgWithoutArrow(finalWidth, finalHeight);
 
     // Center in viewport (accounting for document scroll)
     const viewportWidth = window.innerWidth;
     const left = documentScrollLeftAtOpen + (viewportWidth - finalWidth) / 2;
     const top = documentScrollTopAtOpen + (viewportHeight - finalHeight) / 2;
-
     calloutStyleController.set(calloutElement, {
       opacity: 1,
       transform: {
         translateX: left,
-        translateY: top,
-      },
+        translateY: top
+      }
     });
   };
 
@@ -16180,7 +16117,7 @@ const centerCalloutInViewport = (
     update: updateCenteredPosition,
     stop: () => {
       window.removeEventListener("resize", updateCenteredPosition);
-    },
+    }
   };
 };
 
@@ -16193,156 +16130,127 @@ const centerCalloutInViewport = (
 const stickCalloutToAnchor = (calloutElement, anchorElement) => {
   // Get references to callout parts
   const calloutBoxElement = calloutElement.querySelector(".navi_callout_box");
-  const calloutFrameElement = calloutElement.querySelector(
-    ".navi_callout_frame",
-  );
+  const calloutFrameElement = calloutElement.querySelector(".navi_callout_frame");
   const calloutBodyElement = calloutElement.querySelector(".navi_callout_body");
-  const calloutMessageElement = calloutElement.querySelector(
-    ".navi_callout_message",
-  );
+  const calloutMessageElement = calloutElement.querySelector(".navi_callout_message");
 
   // Set initial border styles
   calloutBoxElement.style.borderWidth = `${BORDER_WIDTH}px`;
   calloutFrameElement.style.left = `-${BORDER_WIDTH}px`;
   calloutFrameElement.style.right = `-${BORDER_WIDTH}px`;
+  const anchorVisibleRectEffect = visibleRectEffect(anchorElement, ({
+    left: anchorLeft,
+    right: anchorRight,
+    visibilityRatio
+  }) => {
+    const calloutElementClone = cloneCalloutToMeasureNaturalSize(calloutElement);
+    // Check for preferred and forced position from anchor element
+    const preferredPosition = anchorElement.getAttribute("data-callout-position");
+    const forcedPosition = anchorElement.getAttribute("data-callout-position-force");
+    const {
+      position,
+      left: calloutLeft,
+      top: calloutTop,
+      width: calloutWidth,
+      height: calloutHeight,
+      spaceAboveTarget,
+      spaceBelowTarget
+    } = pickPositionRelativeTo(calloutElementClone, anchorElement, {
+      alignToViewportEdgeWhenTargetNearEdge: 20,
+      // when fully to the left, the border color is collé to the browser window making it hard to see
+      minLeft: 1,
+      positionPreference:
+      // we want to avoid the callout to switch position when it can still fit so
+      // we start with preferredPosition if given but once a position is picked we stick to it
+      // This is implemented by favoring the data attribute of the callout then of the anchor
+      calloutElement.getAttribute("data-position") || preferredPosition,
+      forcePosition: forcedPosition
+    });
+    calloutElementClone.remove();
 
-  const anchorVisibleRectEffect = visibleRectEffect(
-    anchorElement,
-    ({ left: anchorLeft, right: anchorRight, visibilityRatio }) => {
-      const calloutElementClone =
-        cloneCalloutToMeasureNaturalSize(calloutElement);
-      // Check for preferred and forced position from anchor element
-      const preferredPosition = anchorElement.getAttribute(
-        "data-callout-position",
-      );
-      const forcedPosition = anchorElement.getAttribute(
-        "data-callout-position-force",
-      );
+    // Calculate arrow position to point at anchorElement element
+    let arrowLeftPosOnCallout;
+    // Determine arrow target position based on attribute
+    const arrowPositionAttribute = anchorElement.getAttribute("data-callout-arrow-x");
+    let arrowAnchorLeft;
+    if (arrowPositionAttribute === "center") {
+      // Target the center of the anchorElement element
+      arrowAnchorLeft = (anchorLeft + anchorRight) / 2;
+    } else if (arrowPositionAttribute === "end") {
+      const anchorBorderSizes = getBorderSizes(anchorElement);
+      // Target the right edge of the anchorElement element (before borders)
+      arrowAnchorLeft = anchorRight - anchorBorderSizes.right;
+    } else {
+      const anchorBorderSizes = getBorderSizes(anchorElement);
+      // Default behavior: target the left edge of the anchorElement element (after borders)
+      arrowAnchorLeft = anchorLeft + anchorBorderSizes.left;
+    }
 
-      const {
-        position,
-        left: calloutLeft,
-        top: calloutTop,
-        width: calloutWidth,
-        height: calloutHeight,
-        spaceAboveTarget,
-        spaceBelowTarget,
-      } = pickPositionRelativeTo(calloutElementClone, anchorElement, {
-        alignToViewportEdgeWhenTargetNearEdge: 20,
-        // when fully to the left, the border color is collé to the browser window making it hard to see
-        minLeft: 1,
-        positionPreference:
-          // we want to avoid the callout to switch position when it can still fit so
-          // we start with preferredPosition if given but once a position is picked we stick to it
-          // This is implemented by favoring the data attribute of the callout then of the anchor
-          calloutElement.getAttribute("data-position") || preferredPosition,
-        forcePosition: forcedPosition,
-      });
-      calloutElementClone.remove();
+    // Calculate arrow position within the callout
+    if (calloutLeft < arrowAnchorLeft) {
+      // Callout is left of the target point, move arrow right
+      const diff = arrowAnchorLeft - calloutLeft;
+      arrowLeftPosOnCallout = diff;
+    } else if (calloutLeft + calloutWidth < arrowAnchorLeft) {
+      // Edge case: target point is beyond right edge of callout
+      arrowLeftPosOnCallout = calloutWidth - ARROW_WIDTH;
+    } else {
+      // Target point is within callout width
+      arrowLeftPosOnCallout = arrowAnchorLeft - calloutLeft;
+    }
 
-      // Calculate arrow position to point at anchorElement element
-      let arrowLeftPosOnCallout;
-      // Determine arrow target position based on attribute
-      const arrowPositionAttribute = anchorElement.getAttribute(
-        "data-callout-arrow-x",
-      );
-      let arrowAnchorLeft;
-      if (arrowPositionAttribute === "center") {
-        // Target the center of the anchorElement element
-        arrowAnchorLeft = (anchorLeft + anchorRight) / 2;
-      } else if (arrowPositionAttribute === "end") {
-        const anchorBorderSizes = getBorderSizes(anchorElement);
-        // Target the right edge of the anchorElement element (before borders)
-        arrowAnchorLeft = anchorRight - anchorBorderSizes.right;
-      } else {
-        const anchorBorderSizes = getBorderSizes(anchorElement);
-        // Default behavior: target the left edge of the anchorElement element (after borders)
-        arrowAnchorLeft = anchorLeft + anchorBorderSizes.left;
+    // Ensure arrow stays within callout bounds with some padding
+    const minArrowPos = CORNER_RADIUS + ARROW_WIDTH / 2 + ARROW_SPACING;
+    const maxArrowPos = calloutWidth - minArrowPos;
+    arrowLeftPosOnCallout = Math.max(minArrowPos, Math.min(arrowLeftPosOnCallout, maxArrowPos));
+
+    // Force content overflow when there is not enough space to display
+    // the entirety of the callout
+    const spaceAvailable = position === "below" ? spaceBelowTarget : spaceAboveTarget;
+    const paddingSizes = getPaddingSizes(calloutBodyElement);
+    const paddingY = paddingSizes.top + paddingSizes.bottom;
+    const spaceNeededAroundContent = ARROW_HEIGHT + BORDER_WIDTH * 2 + paddingY;
+    const spaceAvailableForContent = spaceAvailable - spaceNeededAroundContent;
+    const contentHeight = calloutHeight - spaceNeededAroundContent;
+    const spaceRemainingAfterContent = spaceAvailableForContent - contentHeight;
+    if (spaceRemainingAfterContent < 2) {
+      const maxHeight = spaceAvailableForContent;
+      calloutMessageElement.style.maxHeight = `${maxHeight}px`;
+      calloutMessageElement.style.overflowY = "scroll";
+    } else {
+      calloutMessageElement.style.maxHeight = "";
+      calloutMessageElement.style.overflowY = "";
+    }
+    const {
+      width,
+      height
+    } = calloutElement.getBoundingClientRect();
+    if (position === "above") {
+      // Position above target element
+      calloutBoxElement.style.marginTop = "";
+      calloutBoxElement.style.marginBottom = `${ARROW_HEIGHT}px`;
+      calloutFrameElement.style.top = `-${BORDER_WIDTH}px`;
+      calloutFrameElement.style.bottom = `-${BORDER_WIDTH + ARROW_HEIGHT - 0.5}px`;
+      calloutFrameElement.innerHTML = generateSvgWithBottomArrow(width, height, arrowLeftPosOnCallout);
+    } else {
+      calloutBoxElement.style.marginTop = `${ARROW_HEIGHT}px`;
+      calloutBoxElement.style.marginBottom = "";
+      calloutFrameElement.style.top = `-${BORDER_WIDTH + ARROW_HEIGHT - 0.5}px`;
+      calloutFrameElement.style.bottom = `-${BORDER_WIDTH}px`;
+      calloutFrameElement.innerHTML = generateSvgWithTopArrow(width, height, arrowLeftPosOnCallout);
+    }
+    calloutElement.setAttribute("data-position", position);
+    calloutStyleController.set(calloutElement, {
+      opacity: visibilityRatio ? 1 : 0,
+      transform: {
+        translateX: calloutLeft,
+        translateY: calloutTop
       }
-
-      // Calculate arrow position within the callout
-      if (calloutLeft < arrowAnchorLeft) {
-        // Callout is left of the target point, move arrow right
-        const diff = arrowAnchorLeft - calloutLeft;
-        arrowLeftPosOnCallout = diff;
-      } else if (calloutLeft + calloutWidth < arrowAnchorLeft) {
-        // Edge case: target point is beyond right edge of callout
-        arrowLeftPosOnCallout = calloutWidth - ARROW_WIDTH;
-      } else {
-        // Target point is within callout width
-        arrowLeftPosOnCallout = arrowAnchorLeft - calloutLeft;
-      }
-
-      // Ensure arrow stays within callout bounds with some padding
-      const minArrowPos = CORNER_RADIUS + ARROW_WIDTH / 2 + ARROW_SPACING;
-      const maxArrowPos = calloutWidth - minArrowPos;
-      arrowLeftPosOnCallout = Math.max(
-        minArrowPos,
-        Math.min(arrowLeftPosOnCallout, maxArrowPos),
-      );
-
-      // Force content overflow when there is not enough space to display
-      // the entirety of the callout
-      const spaceAvailable =
-        position === "below" ? spaceBelowTarget : spaceAboveTarget;
-      const paddingSizes = getPaddingSizes(calloutBodyElement);
-      const paddingY = paddingSizes.top + paddingSizes.bottom;
-      const spaceNeededAroundContent =
-        ARROW_HEIGHT + BORDER_WIDTH * 2 + paddingY;
-      const spaceAvailableForContent =
-        spaceAvailable - spaceNeededAroundContent;
-      const contentHeight = calloutHeight - spaceNeededAroundContent;
-      const spaceRemainingAfterContent =
-        spaceAvailableForContent - contentHeight;
-      if (spaceRemainingAfterContent < 2) {
-        const maxHeight = spaceAvailableForContent;
-        calloutMessageElement.style.maxHeight = `${maxHeight}px`;
-        calloutMessageElement.style.overflowY = "scroll";
-      } else {
-        calloutMessageElement.style.maxHeight = "";
-        calloutMessageElement.style.overflowY = "";
-      }
-
-      const { width, height } = calloutElement.getBoundingClientRect();
-      if (position === "above") {
-        // Position above target element
-        calloutBoxElement.style.marginTop = "";
-        calloutBoxElement.style.marginBottom = `${ARROW_HEIGHT}px`;
-        calloutFrameElement.style.top = `-${BORDER_WIDTH}px`;
-        calloutFrameElement.style.bottom = `-${BORDER_WIDTH + ARROW_HEIGHT - 0.5}px`;
-        calloutFrameElement.innerHTML = generateSvgWithBottomArrow(
-          width,
-          height,
-          arrowLeftPosOnCallout,
-        );
-      } else {
-        calloutBoxElement.style.marginTop = `${ARROW_HEIGHT}px`;
-        calloutBoxElement.style.marginBottom = "";
-        calloutFrameElement.style.top = `-${BORDER_WIDTH + ARROW_HEIGHT - 0.5}px`;
-        calloutFrameElement.style.bottom = `-${BORDER_WIDTH}px`;
-        calloutFrameElement.innerHTML = generateSvgWithTopArrow(
-          width,
-          height,
-          arrowLeftPosOnCallout,
-        );
-      }
-
-      calloutElement.setAttribute("data-position", position);
-      calloutStyleController.set(calloutElement, {
-        opacity: visibilityRatio ? 1 : 0,
-        transform: {
-          translateX: calloutLeft,
-          translateY: calloutTop,
-        },
-      });
-    },
-  );
-  const calloutSizeChangeObserver = observeCalloutSizeChange(
-    calloutMessageElement,
-    (width, height) => {
-      anchorVisibleRectEffect.check(`callout_size_change (${width}x${height})`);
-    },
-  );
+    });
+  });
+  const calloutSizeChangeObserver = observeCalloutSizeChange(calloutMessageElement, (width, height) => {
+    anchorVisibleRectEffect.check(`callout_size_change (${width}x${height})`);
+  });
   anchorVisibleRectEffect.onBeforeAutoCheck(() => {
     // prevent feedback loop because check triggers size change which triggers check...
     calloutSizeChangeObserver.disable();
@@ -16350,22 +16258,23 @@ const stickCalloutToAnchor = (calloutElement, anchorElement) => {
       calloutSizeChangeObserver.enable();
     };
   });
-
   return {
     update: anchorVisibleRectEffect.check,
     stop: () => {
       calloutSizeChangeObserver.disconnect();
       anchorVisibleRectEffect.disconnect();
-    },
+    }
   };
 };
-
 const observeCalloutSizeChange = (elementSizeToObserve, callback) => {
   let lastContentWidth;
   let lastContentHeight;
-  const resizeObserver = new ResizeObserver((entries) => {
+  const resizeObserver = new ResizeObserver(entries => {
     const [entry] = entries;
-    const { width, height } = entry.contentRect;
+    const {
+      width,
+      height
+    } = entry.contentRect;
     // Debounce tiny changes that are likely sub-pixel rounding
     if (lastContentWidth !== undefined) {
       const widthDiff = Math.abs(width - lastContentWidth);
@@ -16380,7 +16289,6 @@ const observeCalloutSizeChange = (elementSizeToObserve, callback) => {
     callback(width, height);
   });
   resizeObserver.observe(elementSizeToObserve);
-
   return {
     disable: () => {
       resizeObserver.unobserve(elementSizeToObserve);
@@ -16390,17 +16298,11 @@ const observeCalloutSizeChange = (elementSizeToObserve, callback) => {
     },
     disconnect: () => {
       resizeObserver.disconnect();
-    },
+    }
   };
 };
-
-const escapeHtml = (string) => {
-  return string
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
+const escapeHtml = string => {
+  return string.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
 };
 
 /**
@@ -16408,7 +16310,7 @@ const escapeHtml = (string) => {
  * @param {string} content - The content to check
  * @returns {boolean} - True if it looks like a complete HTML document
  */
-const isHtmlDocument = (content) => {
+const isHtmlDocument = content => {
   if (typeof content !== "string") {
     return false;
   }
@@ -16418,20 +16320,17 @@ const isHtmlDocument = (content) => {
 };
 
 // It's ok to do this because the element is absolutely positioned
-const cloneCalloutToMeasureNaturalSize = (calloutElement) => {
+const cloneCalloutToMeasureNaturalSize = calloutElement => {
   // Create invisible clone to measure natural size
   const calloutElementClone = calloutElement.cloneNode(true);
   calloutElementClone.style.visibility = "hidden";
-  const calloutMessageElementClone = calloutElementClone.querySelector(
-    ".navi_callout_message",
-  );
+  const calloutMessageElementClone = calloutElementClone.querySelector(".navi_callout_message");
   // Reset any overflow constraints on the clone
   calloutMessageElementClone.style.maxHeight = "";
   calloutMessageElementClone.style.overflowY = "";
 
   // Add clone to DOM to measure
   calloutElement.parentNode.appendChild(calloutElementClone);
-
   return calloutElementClone;
 };
 
@@ -16444,14 +16343,10 @@ const cloneCalloutToMeasureNaturalSize = (calloutElement) => {
  */
 const generateSvgWithTopArrow = (width, height, arrowPosition) => {
   // Calculate valid arrow position range
-  const arrowLeft =
-    ARROW_WIDTH / 2 + CORNER_RADIUS + BORDER_WIDTH + ARROW_SPACING;
+  const arrowLeft = ARROW_WIDTH / 2 + CORNER_RADIUS + BORDER_WIDTH + ARROW_SPACING;
   const minArrowPos = arrowLeft;
   const maxArrowPos = width - arrowLeft;
-  const constrainedArrowPos = Math.max(
-    minArrowPos,
-    Math.min(arrowPosition, maxArrowPos),
-  );
+  const constrainedArrowPos = Math.max(minArrowPos, Math.min(arrowPosition, maxArrowPos));
 
   // Calculate content height
   const contentHeight = height - ARROW_HEIGHT;
@@ -16495,8 +16390,7 @@ const generateSvgWithTopArrow = (width, height, arrowPosition) => {
     V${ARROW_HEIGHT + innerRadius + BORDER_WIDTH} 
     Q${BORDER_WIDTH},${ARROW_HEIGHT + BORDER_WIDTH} ${innerRadius + BORDER_WIDTH},${ARROW_HEIGHT + BORDER_WIDTH}
   `;
-
-  return /* html */ `
+  return /* html */`
     <svg
       width="${adjustedWidth}"
       height="${adjustedHeight}"
@@ -16520,14 +16414,10 @@ const generateSvgWithTopArrow = (width, height, arrowPosition) => {
  */
 const generateSvgWithBottomArrow = (width, height, arrowPosition) => {
   // Calculate valid arrow position range
-  const arrowLeft =
-    ARROW_WIDTH / 2 + CORNER_RADIUS + BORDER_WIDTH + ARROW_SPACING;
+  const arrowLeft = ARROW_WIDTH / 2 + CORNER_RADIUS + BORDER_WIDTH + ARROW_SPACING;
   const minArrowPos = arrowLeft;
   const maxArrowPos = width - arrowLeft;
-  const constrainedArrowPos = Math.max(
-    minArrowPos,
-    Math.min(arrowPosition, maxArrowPos),
-  );
+  const constrainedArrowPos = Math.max(minArrowPos, Math.min(arrowPosition, maxArrowPos));
 
   // Calculate content height
   const contentHeight = height - ARROW_HEIGHT;
@@ -16571,8 +16461,7 @@ const generateSvgWithBottomArrow = (width, height, arrowPosition) => {
     V${innerRadius + BORDER_WIDTH} 
     Q${BORDER_WIDTH},${BORDER_WIDTH} ${innerRadius + BORDER_WIDTH},${BORDER_WIDTH}
   `;
-
-  return /* html */ `
+  return /* html */`
     <svg
       width="${adjustedWidth}"
       height="${adjustedHeight}"
@@ -16594,7 +16483,7 @@ const generateSvgWithBottomArrow = (width, height, arrowPosition) => {
  * @returns {string} - SVG markup
  */
 const generateSvgWithoutArrow = (width, height) => {
-  return /* html */ `
+  return /* html */`
     <svg
       width="${width}"
       height="${height}"
@@ -18894,7 +18783,8 @@ const selectByTextStrings = (element, range, startText, endText) => {
   }
 };
 
-installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
+installImportMetaCssBuild(import.meta);/* eslint-disable jsenv/no-unknown-params */
+import.meta.css = [/* css */`
   *[data-navi-space] {
     /* user-select: none; */
     padding-left: 0.25em;
@@ -19003,7 +18893,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
       transition-timing-function: ease;
     }
   }
-`;
+`, "/src/text/text.jsx"];
 
 // We could use <span data-navi-space=""> </span>
 // but we prefer to use zero width space as it has the nice side effects of
@@ -19150,6 +19040,7 @@ const TextOverflow = ({
     pre: !noWrap
     // For paragraph we prefer to keep lines and only hide unbreakable long sections
     ,
+
     preLine: rest.as === "p",
     ...rest,
     "data-text-overflow": true,
@@ -19268,7 +19159,7 @@ const TextBasic = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
+installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
   @layer navi {
     /* Ensure data attributes from box.jsx can win to update display */
     .navi_icon {
@@ -19343,7 +19234,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
     width: 100%;
     height: 100%;
   }
-`;
+`, "/src/graphic/icon.jsx"];
 const Icon = ({
   href,
   children,
@@ -19637,7 +19528,23 @@ const setupNetworkMonitoring = () => {
 };
 setupNetworkMonitoring();
 
-installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
+installImportMetaCssBuild(import.meta);/**
+ * RectangleLoading Component
+ *
+ * A responsive loading indicator that dynamically adjusts to fit its container.
+ * Displays an animated outline with a traveling dot that follows the container's shape.
+ *
+ * Features:
+ * - Adapts to any container dimensions using ResizeObserver
+ * - Scales stroke width, margins and corner radius proportionally
+ * - Animates using native SVG animations for smooth performance
+ * - High-quality SVG rendering with proper path calculations
+ *
+ * @param {Object} props - Component props
+ * @param {string} [props.color="#383a36"] - Color of the loading indicator
+ * @param {number} [props.radius=0] - Corner radius of the rectangle (px)
+ */
+import.meta.css = [/* css */`
   .navi_rectangle_loading {
     position: relative;
     display: flex;
@@ -19649,7 +19556,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
   .navi_rectangle_loading[data-visible] {
     opacity: 1;
   }
-`;
+`, "/src/graphic/loader/rectangle_loading.jsx"];
 const RectangleLoading = ({
   shouldShowSpinner,
   color = "currentColor",
@@ -19836,7 +19743,7 @@ const RectangleLoadingSvg = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
+installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
   .navi_loading_rectangle_wrapper {
     position: absolute;
     top: var(--rectangle-top, 0);
@@ -19851,7 +19758,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
       opacity: 1;
     }
   }
-`;
+`, "/src/graphic/loader/loader_background.jsx"];
 const LoaderBackground = ({
   loading,
   containerRef,
@@ -21213,7 +21120,7 @@ const useUIState = (uiStateController) => {
   return trackedUIState;
 };
 
-installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
+installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
   @layer navi {
     .navi_button {
       --button-outline-width: 1px;
@@ -21448,7 +21355,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
       --x-button-border-color: var(--callout-color);
     }
   }
-`;
+`, "/src/field/button.jsx"];
 const Button = props => {
   return renderActionableComponent(props, {
     Basic: ButtonBasic,
@@ -21537,6 +21444,7 @@ const ButtonBasic = props => {
     "aria-busy": innerLoading
     // style management
     ,
+
     baseClassName: "navi_button",
     styleCSSVars: ButtonStyleCSSVars,
     pseudoClasses: ButtonPseudoClasses,
@@ -21714,7 +21622,7 @@ const WarningSvg = () => {
   });
 };
 
-installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
+installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
   @layer navi {
     .navi_message_box {
       --background-color-info: var(--navi-info-color-light);
@@ -21757,7 +21665,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
     border-top-left-radius: 6px;
     border-bottom-left-radius: 6px;
   }
-`;
+`, "/src/text/message_box.jsx"];
 const MessageBoxPseudoClasses = [":-navi-status-info", ":-navi-status-success", ":-navi-status-warning", ":-navi-status-error"];
 const MessageBoxStatusContext = createContext();
 const MessageBoxReportTitleChildContext = createContext();
@@ -21825,7 +21733,7 @@ const MessageBox = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
+installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
   .navi_message_box {
     .navi_title {
       margin-top: 0;
@@ -21833,7 +21741,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
       color: var(--x-message-color);
     }
   }
-`;
+`, "/src/text/title.jsx"];
 const TitleLevelContext = createContext();
 const useTitleLevel = () => {
   return useContext(TitleLevelContext);
@@ -22010,7 +21918,8 @@ const useDimColorWhen = (elementRef, shouldDim) => {
   });
 };
 
-installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
+installImportMetaCssBuild(import.meta);/* eslint-disable jsenv/no-unknown-params */
+import.meta.css = [/* css */`
   @layer navi {
     .navi_link {
       --link-border-radius: unset;
@@ -22282,7 +22191,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
   .navi_title .navi_link[data-reveal-on-interaction] {
     top: 0.25em;
   }
-`;
+`, "/src/nav/link/link.jsx"];
 const LinkStyleCSSVars = {
   "outlineColor": "--link-outline-color",
   "borderRadius": "--link-border-radius",
@@ -22482,6 +22391,7 @@ const LinkPlain = props => {
     overflowEllipsis: overflowEllipsis
     // Visual
     ,
+
     "data-appearance": appearance,
     "data-current-effect-bold": currentEffectBold ? "" : undefined,
     "data-current-effect-shadow": currentEffectShadow ? "" : undefined,
@@ -22586,7 +22496,11 @@ const LinkWithAction = props => {
 const NavContext = createContext();
 createContext();
 
-installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
+installImportMetaCssBuild(import.meta);/**
+ * TabList component with support for horizontal and vertical layouts
+ * https://dribbble.com/search/tabs
+ */
+import.meta.css = [/* css */`
   @layer navi {
     .navi_nav {
       --nav-border: none;
@@ -22695,7 +22609,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
       }
     }
   }
-`;
+`, "/src/nav/link/nav.jsx"];
 const NavStyleCSSVars = {
   border: "--nav-border",
   borderRadius: "--nav-border-radius",
@@ -22767,7 +22681,7 @@ const useFocusGroup = (
 
 installImportMetaCssBuild(import.meta);const rightArrowPath = "M680-480L360-160l-80-80 240-240-240-240 80-80 320 320z";
 const downArrowPath = "M480-280L160-600l80-80 240 240 240-240 80 80-320 320z";
-import.meta.css = /* css */`
+import.meta.css = [/* css */`
   .navi_summary_marker {
     width: 1em;
     height: 1em;
@@ -22847,7 +22761,7 @@ import.meta.css = /* css */`
       d: path("${rightArrowPath}");
     }
   }
-`;
+`, "/src/field/details/summary_marker.jsx"];
 const SummaryMarker = ({
   open,
   loading
@@ -22905,7 +22819,7 @@ const SummaryMarker = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
+installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
   .navi_details {
     position: relative;
     z-index: 1;
@@ -22940,7 +22854,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
       }
     }
   }
-`;
+`, "/src/field/details/details.jsx"];
 const Details = props => {
   const {
     value = "on",
@@ -23256,7 +23170,7 @@ const fieldPropSet = new Set([
   "data-testid",
 ]);
 
-installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
+installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
   @layer navi {
     label {
       &[data-interactive] {
@@ -23270,7 +23184,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
       }
     }
   }
-`;
+`, "/src/field/label.jsx"];
 const ReportReadOnlyOnLabelContext = createContext();
 const ReportDisabledOnLabelContext = createContext();
 const ReportInteractiveOnLabelContext = createContext();
@@ -23321,7 +23235,7 @@ const Label = props => {
   });
 };
 
-installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
+installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
   @layer navi {
     .navi_checkbox {
       --margin: 3px 3px 3px 4px;
@@ -23646,7 +23560,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
       }
     }
   }
-`;
+`, "/src/field/input_checkbox.jsx"];
 const InputCheckbox = props => {
   const {
     value = "on"
@@ -23916,14 +23830,15 @@ const InputCheckboxWithAction = props => {
   });
 };
 
-installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
+installImportMetaCssBuild(import.meta);// TOFIX: select in data then reset, it reset to red/blue instead of red/blue/green
+import.meta.css = [/* css */`
   @layer navi {
     .navi_checkbox_list {
       display: flex;
       flex-direction: column;
     }
   }
-`;
+`, "/src/field/checkbox_list.jsx"];
 const CheckboxList = forwardRef((props, ref) => {
   const uiStateController = useUIGroupStateController(props, "checkbox_list", {
     childComponentType: "checkbox",
@@ -23975,6 +23890,7 @@ const CheckboxListBasic = forwardRef((props, ref) => {
     "data-checkbox-list": true
     // eslint-disable-next-line react/no-unknown-property
     ,
+
     onresetuistate: e => {
       uiStateController.resetUIState(e);
     },
@@ -24068,7 +23984,7 @@ forwardRef((props, ref) => {
   });
 });
 
-installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
+installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
   @layer navi {
     .navi_radio {
       --margin: 3px 3px 0 5px;
@@ -24359,7 +24275,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
       }
     }
   }
-`;
+`, "/src/field/input_radio.jsx"];
 const InputRadio = props => {
   const {
     value = "on"
@@ -24606,7 +24522,7 @@ const InputRadioWithAction = () => {
   throw new Error(`<Input type="radio" /> with an action make no sense. Use <RadioList action={something} /> instead`);
 };
 
-installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
+installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
   @layer navi {
     .navi_input_range {
       --border-radius: 6px;
@@ -24813,7 +24729,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
   .navi_input_range[data-callout] {
     /* What can we do? */
   }
-`;
+`, "/src/field/input_range.jsx"];
 const InputRange = props => {
   const uiStateController = useUIStateController(props, "input");
   const uiState = useUIState(uiStateController);
@@ -24965,6 +24881,7 @@ const InputRangeBasic = props => {
       }
       // style management
       ,
+
       baseClassName: "navi_native_input"
     });
   };
@@ -25083,7 +25000,24 @@ const SearchSvg = () => jsx("svg", {
   })
 });
 
-installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
+installImportMetaCssBuild(import.meta);/**
+ * Input component for all textual input types.
+ *
+ * Supports:
+ * - text (default)
+ * - password
+ * - hidden
+ * - email
+ * - url
+ * - search
+ * - tel
+ * - etc.
+ *
+ * For non-textual inputs, specialized components will be used:
+ * - <InputCheckbox /> for type="checkbox"
+ * - <InputRadio /> for type="radio"
+ */
+import.meta.css = [/* css */`
   @layer navi {
     .navi_input {
       --border-radius: 2px;
@@ -25293,7 +25227,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
     /* Fortunately we can override it as follow */
     -webkit-text-fill-color: var(--x-color) !important;
   }
-`;
+`, "/src/field/input_textual.jsx"];
 const InputTextual = props => {
   const uiStateController = useUIStateController(props, "input");
   const uiState = useUIState(uiStateController);
@@ -25436,6 +25370,7 @@ const InputTextualBasic = props => {
       }
       // style management
       ,
+
       baseClassName: "navi_native_input",
       "data-rendered-by": ".navi_input"
     });
@@ -25654,7 +25589,16 @@ const Input = props => {
   });
 };
 
-installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
+installImportMetaCssBuild(import.meta);/**
+ * - We must keep the edited element in the DOM so that
+ * the layout remains the same (especially important for table cells)
+ * And the editable part is in absolute so that it takes the original content dimensions
+ * AND for table cells it can actually take the table cell dimensions
+ *
+ * This means an editable thing MUST have a parent with position relative that wraps the content and the eventual editable input
+ *
+ */
+import.meta.css = [/* css */`
   .navi_editable_wrapper {
     --inset-top: 0px;
     --inset-right: 0px;
@@ -25679,7 +25623,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
       pointer-events: auto;
     }
   }
-`;
+`, "/src/field/edition/editable.jsx"];
 const useEditionController = () => {
   const [editing, editingSetter] = useState(null);
   const startEditing = useCallback(event => {
@@ -26113,7 +26057,7 @@ const FormWithAction = props => {
 //   form.dispatchEvent(customEvent);
 // };
 
-installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
+installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
   .navi_group {
     --border-width: 1px;
 
@@ -26202,7 +26146,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
       }
     }
   }
-`;
+`, "/src/field/group.jsx"];
 const Group = ({
   children,
   borderWidth = 1,
@@ -26227,7 +26171,7 @@ const Group = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);import.meta.css = /* css */``;
+installImportMetaCssBuild(import.meta);import.meta.css = [/* css */``, "/src/field/radio_list.jsx"];
 const RadioList = props => {
   const uiStateController = useUIGroupStateController(props, "radio_list", {
     childComponentType: "radio",
@@ -26409,11 +26353,11 @@ const useRefArray = (items, keyFromItem) => {
 };
 
 installImportMetaCssBuild(import.meta);const useNavState = () => {};
-import.meta.css = /* css */`
+import.meta.css = [/* css */`
   .navi_select[data-readonly] {
     pointer-events: none;
   }
-`;
+`, "/src/field/select.jsx"];
 const Select = forwardRef((props, ref) => {
   const select = renderActionableComponent(props, ref);
   return select;
@@ -26718,7 +26662,7 @@ const Z_INDEX_DROP_PREVIEW = Z_INDEX_STICKY_CORNER + 1;
 
 const Z_INDEX_TABLE_UI = Z_INDEX_STICKY_CORNER + 1;
 
-installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
+installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
   .navi_table_drag_clone_container {
     position: absolute;
     top: var(--table-visual-top);
@@ -26837,7 +26781,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
     width: 10px;
     height: 10px;
   }
-`;
+`, "/src/field/table/drag/table_drag.jsx"];
 const TableDragContext = createContext();
 const useTableDragContextValue = ({
   tableDragCloneContainerRef,
@@ -27382,7 +27326,7 @@ installImportMetaCssBuild(import.meta);const ROW_MIN_HEIGHT = 30;
 const ROW_MAX_HEIGHT = 100;
 const COLUMN_MIN_WIDTH = 50;
 const COLUMN_MAX_WIDTH = 500;
-import.meta.css = /* css */`
+import.meta.css = [/* css */`
   @layer navi {
     .navi_table {
       --table-resizer-handle-color: #063b7c;
@@ -27538,7 +27482,7 @@ import.meta.css = /* css */`
   .navi_table_row_resizer[data-grabbed] .navi_table_row_resizer_line {
     opacity: 1;
   }
-`;
+`, "/src/field/table/resize/table_resize.jsx"];
 
 // Column resize components
 const TableColumnResizer = forwardRef((props, ref) => {
@@ -28004,7 +27948,7 @@ const findPreviousTableRow = currentRow => {
   return currentIndex > 0 ? allRows[currentIndex - 1] : null;
 };
 
-installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
+installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
   @layer navi {
     .navi_table {
       --selection-border-color: var(--navi-selection-border-color, #0078d4);
@@ -28099,7 +28043,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
       inset 0 -1px 0 0 var(--selection-border-color),
       inset 1px 0 0 0 var(--selection-border-color);
   }
-`;
+`, "/src/field/table/selection/table_selection.jsx"];
 const useTableSelectionController = ({
   tableRef,
   selection,
@@ -28575,7 +28519,8 @@ const useTableStickyContextValue = ({
   }, [stickyLeftFrontierColumnIndex, stickyTopFrontierRowIndex]);
 };
 
-installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
+installImportMetaCssBuild(import.meta);// TODO: sticky left/top frontier should likely use "followPosition"
+import.meta.css = [/* css */`
   @layer navi {
     .navi_table {
       --sticky-frontier-color: #c0c0c0;
@@ -28814,7 +28759,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
       inset -1px 0 0 0 var(--border-color),
       inset 0 -1px 0 0 var(--border-color);
   }
-`;
+`, "/src/field/table/sticky/table_sticky.jsx"];
 const TableStickyFrontier = ({
   tableRef
 }) => {
@@ -29036,7 +28981,7 @@ const initMoveStickyFrontierViaPointer = (pointerdownEvent, {
   });
 };
 
-installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
+installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
   .navi_table_ui {
     position: fixed;
     inset: 0;
@@ -29045,7 +28990,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
     overflow: hidden; /* Ensure UI elements cannot impact scrollbars of the document  */
     /* background: rgba(0, 255, 0, 0.2); */
   }
-`;
+`, "/src/field/table/table_ui.jsx"];
 const TableUI = forwardRef((props, ref) => {
   const {
     tableRef,
@@ -29960,7 +29905,7 @@ const normalizeKey = (key) => {
   return key;
 };
 
-installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
+installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
   .navi_shortcut_container[data-visually-hidden] {
     /* Visually hidden container - doesn't affect layout */
     position: absolute;
@@ -29994,7 +29939,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
     opacity: 0;
     pointer-events: none;
   }
-`;
+`, "/src/keyboard/active_keyboard_shortcuts.jsx"];
 const ActiveKeyboardShortcuts = ({
   visible
 }) => {
@@ -30036,7 +29981,7 @@ const KeyboardShortcutAriaElement = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
+installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
   @layer navi {
     .navi_clipboard_container {
       --height: 1.5em;
@@ -30063,7 +30008,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
       transform: translateY(-100%);
     }
   }
-`;
+`, "/src/field/button_copy_to_clipboard.jsx"];
 const ButtonCopyToClipboard = ({
   children,
   ...props
@@ -30148,7 +30093,7 @@ const Address = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
+installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
   @layer navi {
   }
   .navi_badge {
@@ -30176,7 +30121,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
       --x-color-contrasting: var(--navi-color-white);
     }
   }
-`;
+`, "/src/text/badge.jsx"];
 const BadgeStyleCSSVars$1 = {
   borderWidth: "--border-width",
   borderRadius: "--border-radius",
@@ -30271,7 +30216,7 @@ const formatNumber = (value, { lang } = {}) => {
   return new Intl.NumberFormat(lang).format(value);
 };
 
-installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
+installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
   @layer navi {
   }
   .navi_badge_count {
@@ -30360,7 +30305,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
       }
     }
   }
-`;
+`, "/src/text/badge_count.jsx"];
 const BadgeStyleCSSVars = {
   borderWidth: "--border-width",
   borderRadius: "--border-radius",
@@ -30519,7 +30464,7 @@ const BadgeCountCircle = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
+installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
   @layer navi {
     .navi_caption {
       --color: #6b7280;
@@ -30535,7 +30480,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
   .navi_caption {
     color: var(--color);
   }
-`;
+`, "/src/text/caption.jsx"];
 const CaptionStyleCSSVars = {
   color: "--color"
 };
@@ -30547,6 +30492,7 @@ const Caption = ({
     as: "small",
     size: "0.8em" // We use em to be relative to the parent (we want to be smaller than the surrounding text)
     ,
+
     className: withPropsClassName("navi_caption", className),
     ...rest,
     styleCSSVars: CaptionStyleCSSVars
@@ -30919,7 +30865,7 @@ const interpolate = (template, values) => {
   });
 };
 
-installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
+installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
   @layer navi {
     .navi_quantity {
       --unit-color: color-mix(in srgb, currentColor 50%, white);
@@ -30975,7 +30921,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
       }
     }
   }
-`;
+`, "/src/text/quantity.jsx"];
 const QuantityIntl = createIntl();
 const wellKnownUnitMap = new Map();
 /**
@@ -31112,7 +31058,7 @@ const parseQuantityValue = children => {
   return Number.isNaN(parsed) ? children : parsed;
 };
 
-installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
+installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
   @layer navi {
     .navi_meter {
       --loader-color: var(--navi-loader-color);
@@ -31229,7 +31175,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
       }
     }
   }
-`;
+`, "/src/text/meter.jsx"];
 const MeterStyleCSSVars = {
   trackColor: "--track-color",
   borderColor: "--border-color",
@@ -31376,7 +31322,7 @@ const Paragraph = props => {
   });
 };
 
-installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
+installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
   .navi_text_placeholder {
     display: inline-block;
     width: 100%;
@@ -31397,7 +31343,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
       background-position: -200% 0;
     }
   }
-`;
+`, "/src/text/text_placeholder.jsx"];
 const TextPlaceholder = ({
   loading,
   ...props
@@ -31423,7 +31369,41 @@ const Svg = props => {
   });
 };
 
-installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
+installImportMetaCssBuild(import.meta);/**
+ * SVGComposition Component
+ *
+ * Creates composite SVGs by combining independent SVG elements with masking.
+ *
+ * This component solves the challenge of combining independently created SVGs into
+ * a single visual composition. Each SVG can have its own coordinate system, viewBox,
+ * and styling, allowing for maximum reusability of individual icons or graphics.
+ *
+ * When overlaying SVGs, each subsequent overlay "cuts out" its portion from the base SVG,
+ * creating a seamless integration where SVGs appear to interact with each other visually.
+ *
+ * Key benefits:
+ * - Maintains each SVG's independence - use them individually elsewhere
+ * - Handles different viewBox dimensions automatically
+ * - Works with any SVG components regardless of internal implementation
+ * - Supports unlimited overlay elements
+ * - Creates proper masking between elements for visual integration
+ *
+ * Usage example combining two independent icon components:
+ * ```jsx
+ * <SVGMaskOverlay viewBox="0 0 24 24">
+ *   <DatabaseSvg />
+ *   <svg x="12" y="12" width="16" height="16" overflow="visible">
+ *     <PlusSvg />
+ *   </svg>
+ * </SVGMaskOverlay>
+ * ```
+ *
+ * @param {Object} props - Component properties
+ * @param {string} props.viewBox - The main viewBox for the composition (required)
+ * @param {ReactNode[]} props.children - SVG elements (first is base, rest are overlays)
+ * @returns {ReactElement} A composed SVG with all elements properly masked
+ */
+import.meta.css = [/* css */`
   .svg_mask_content * {
     color: black !important;
     opacity: 1 !important;
@@ -31432,7 +31412,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
     stroke: black !important;
     stroke-opacity: 1 !important;
   }
-`;
+`, "/src/graphic/svg_mask_overlay.jsx"];
 const SVGMaskOverlay = ({
   viewBox,
   children
@@ -31489,7 +31469,8 @@ const SVGMaskOverlay = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
+installImportMetaCssBuild(import.meta);// We HAVE TO put paddings around the dialog to ensure window resizing respects this space
+import.meta.css = [/* css */`
   @layer navi {
     .navi_dialog_layout {
       --layout-margin: 30px;
@@ -31547,7 +31528,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
     border-color: var(--layout-border-color);
     border-radius: var(--layout-border-radius);
   }
-`;
+`, "/src/layout/dialog_layout.jsx"];
 const DialogLayoutStyleCSSVars = {
   margin: "--layout-margin",
   marginTop: "--layout-margin-top",
@@ -31588,7 +31569,7 @@ const DialogLayout = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
+installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
   @layer navi {
     .navi_separator {
       --size: 1px;
@@ -31620,7 +31601,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
       vertical-align: bottom;
     }
   }
-`;
+`, "/src/layout/separator.jsx"];
 const SeparatorStyleCSSVars = {
   color: "--color"
 };
@@ -31637,7 +31618,7 @@ const Separator = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
+installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
   @layer navi {
     .navi_viewport_layout {
       --layout-padding: 40px;
@@ -31664,7 +31645,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
     );
     background: var(--layout-background);
   }
-`;
+`, "/src/layout/viewport_layout.jsx"];
 const ViewportLayoutStyleCSSVars = {
   padding: "--layout-padding",
   paddingTop: "--layout-padding-top",
@@ -31684,7 +31665,7 @@ const ViewportLayout = props => {
   });
 };
 
-installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
+installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
   @layer navi {
     .navi_side_panel {
       --side-panel-width: 400px;
@@ -31781,7 +31762,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = /* css */`
       transform: translateX(100%);
     }
   }
-`;
+`, "/src/popover/side_panel.jsx"];
 const SidePanelCloseContext = createContext(null);
 const useSidePanelClose = () => useContext(SidePanelCloseContext);
 const SidePanelStyleCSSVars = {

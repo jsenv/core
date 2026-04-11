@@ -1394,76 +1394,6 @@ const createTaskLog = (
   };
 };
 
-const pathnameToExtension = (pathname) => {
-  const slashLastIndex = pathname.lastIndexOf("/");
-  const filename =
-    slashLastIndex === -1 ? pathname : pathname.slice(slashLastIndex + 1);
-  if (filename.match(/@([0-9])+(\.[0-9]+)?(\.[0-9]+)?$/)) {
-    return "";
-  }
-  const dotLastIndex = filename.lastIndexOf(".");
-  if (dotLastIndex === -1) {
-    return "";
-  }
-  // if (dotLastIndex === pathname.length - 1) return ""
-  const extension = filename.slice(dotLastIndex);
-  return extension;
-};
-
-const resourceToPathname = (resource) => {
-  const searchSeparatorIndex = resource.indexOf("?");
-  if (searchSeparatorIndex > -1) {
-    return resource.slice(0, searchSeparatorIndex);
-  }
-  const hashIndex = resource.indexOf("#");
-  if (hashIndex > -1) {
-    return resource.slice(0, hashIndex);
-  }
-  return resource;
-};
-
-const urlToScheme = (url) => {
-  const urlString = String(url);
-  const colonIndex = urlString.indexOf(":");
-  if (colonIndex === -1) {
-    return "";
-  }
-
-  const scheme = urlString.slice(0, colonIndex);
-  return scheme;
-};
-
-const urlToResource = (url) => {
-  const scheme = urlToScheme(url);
-
-  if (scheme === "file") {
-    const urlAsStringWithoutFileProtocol = String(url).slice("file://".length);
-    return urlAsStringWithoutFileProtocol;
-  }
-
-  if (scheme === "https" || scheme === "http") {
-    // remove origin
-    const afterProtocol = String(url).slice(scheme.length + "://".length);
-    const pathnameSlashIndex = afterProtocol.indexOf("/", "://".length);
-    const urlAsStringWithoutOrigin = afterProtocol.slice(pathnameSlashIndex);
-    return urlAsStringWithoutOrigin;
-  }
-
-  const urlAsStringWithoutProtocol = String(url).slice(scheme.length + 1);
-  return urlAsStringWithoutProtocol;
-};
-
-const urlToPathname = (url) => {
-  const resource = urlToResource(url);
-  const pathname = resourceToPathname(resource);
-  return pathname;
-};
-
-const urlToExtension = (url) => {
-  const pathname = urlToPathname(url);
-  return pathnameToExtension(pathname);
-};
-
 const transformUrlPathname = (url, transformer) => {
   if (typeof url === "string") {
     const urlObject = new URL(url);
@@ -1576,4 +1506,4 @@ const assertAndNormalizeDirectoryUrl = (
   return value;
 };
 
-export { Abort, assertAndNormalizeDirectoryUrl, createLogger, createTaskLog, raceProcessTeardownEvents, urlToExtension, urlToPathname };
+export { Abort, assertAndNormalizeDirectoryUrl, createLogger, createTaskLog, raceProcessTeardownEvents };

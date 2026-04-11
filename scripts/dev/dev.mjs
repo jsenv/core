@@ -8,7 +8,7 @@ import { jsenvPluginPreact } from "@jsenv/plugin-preact";
 const jsenvPluginControlledResource = () => {
   let resolve;
   return {
-    devServerRoutes: [
+    serverRoutes: [
       {
         endpoint: "GET /__delayed__.js",
         fetch: async () => {

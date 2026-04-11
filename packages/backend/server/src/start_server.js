@@ -23,17 +23,14 @@ import { composeTwoResponses } from "./internal/response_composition.js";
 import { createPolyglotServer } from "./internal/server-polyglot.js";
 import { trackServerPendingConnections } from "./internal/trackServerPendingConnections.js";
 import { trackServerPendingRequests } from "./internal/trackServerPendingRequests.js";
+import { serverPluginAutoreloadOnRestart } from "./plugins/autoreload_on_server_restart/server_plugin_autoreload_on_server_restart.js";
+import { serverPluginDefaultBody4xx5xx } from "./plugins/default_body_4xx_5xx/server_plugin_default_body_4xx_5xx.js";
+import { serverPluginInternalClientFiles } from "./plugins/internal_client_files/server_plugin_internal_client_files.js";
+import { serverPluginOpenFile } from "./plugins/open_file/server_plugin_open_file.js";
+import { serverPluginRouteInspector } from "./plugins/route_inspector/server_plugin_route_inspector.js";
+import { createServerPluginsController } from "./plugins/server_plugins_controller.js";
 import { createRouter } from "./router/router.js";
 import { timingToServerTimingResponseHeaders } from "./server_timing/timing_header.js";
-import {
-  createServiceController,
-  flattenAndFilterServices,
-} from "./service_controller.js";
-import { jsenvServiceAutoreloadOnRestart } from "./services/autoreload_on_server_restart/jsenv_service_autoreload_on_server_restart.js";
-import { jsenvServiceDefaultBody4xx5xx } from "./services/default_body_4xx_5xx/jsenv_service_default_body_4xx_5xx.js";
-import { jsenvServiceInternalClientFiles } from "./services/internal_client_files/jsenv_service_internal_client_files.js";
-import { jsenvServiceOpenFile } from "./services/open_file/jsenv_service_open_file.js";
-import { jsenvServiceRouteInspector } from "./services/route_inspector/jsenv_service_route_inspector.js";
 import {
   STOP_REASON_INTERNAL_ERROR,
   STOP_REASON_NOT_SPECIFIED,
@@ -42,7 +39,7 @@ import {
   STOP_REASON_PROCESS_SIGHUP,
   STOP_REASON_PROCESS_SIGINT,
   STOP_REASON_PROCESS_SIGTERM,
-} from "./stopReasons.js";
+} from "./stop_reasons.js";
 import { getWebSocketHandler } from "./web_socket_response.js";
 
 import { applyDnsResolution } from "./internal/dns_resolution.js";
@@ -81,7 +78,7 @@ export const startServer = async ({
   stopOnInternalError = false,
   keepProcessAlive = true,
   routes = [],
-  services = [],
+  plugins = [],
   nagle = true,
   serverTiming = false,
   requestWaitingMs = 0,
@@ -155,25 +152,26 @@ export const startServer = async ({
     }
   }
 
-  services = [
-    jsenvServiceOpenFile(),
-    jsenvServiceDefaultBody4xx5xx(),
-    jsenvServiceRouteInspector(),
-    jsenvServiceInternalClientFiles(),
-    jsenvServiceAutoreloadOnRestart(),
-    ...flattenAndFilterServices(services),
+  plugins = [
+    serverPluginOpenFile(),
+    serverPluginDefaultBody4xx5xx(),
+    serverPluginRouteInspector(),
+    serverPluginInternalClientFiles(),
+    serverPluginAutoreloadOnRestart(),
+    ...plugins,
   ];
 
+  const serverPluginsController = await createServerPluginsController(plugins);
   const allRouteArray = [];
   for (const route of routes) {
     allRouteArray.push(route);
   }
-  for (const service of services) {
-    const serviceRoutes = service.routes;
-    if (serviceRoutes) {
-      for (const serviceRoute of serviceRoutes) {
-        serviceRoute.service = service;
-        allRouteArray.push(serviceRoute);
+  for (const serverPlugin of serverPluginsController.activePlugins) {
+    const routes = serverPlugin.routes;
+    if (routes) {
+      for (const route of routes) {
+        route.serverPlugin = serverPlugin;
+        allRouteArray.push(route);
       }
     }
   }
@@ -184,8 +182,6 @@ export const startServer = async ({
   });
 
   const server = {};
-
-  const serviceController = createServiceController(services);
   const processTeardownEvents = {
     SIGHUP: stopOnExit,
     SIGTERM: stopOnExit,
@@ -296,7 +292,7 @@ export const startServer = async ({
       serverOrigins[key] = new URL(`${serverOrigins[key]}:${port}`).origin;
     });
 
-    serviceController.callHooks("serverListening", { port });
+    serverPluginsController.callHooks("serverListening", { port });
     startServerOperation.addAbortCallback(async () => {
       await stopListening(nodeServer);
     });
@@ -341,7 +337,7 @@ export const startServer = async ({
     }
     stopCallbackSet.clear();
     await Promise.all(promises);
-    serviceController.callHooks("serverStopped", { reason });
+    serverPluginsController.callHooks("serverStopped", { reason });
     status = "stopped";
     stoppedResolve(reason);
   });
@@ -396,7 +392,7 @@ export const startServer = async ({
   });
 
   const applyRequestInternalRedirection = (request) => {
-    serviceController.callHooks(
+    serverPluginsController.callHooks(
       "redirectRequest",
       request,
       {},
@@ -501,7 +497,7 @@ export const startServer = async ({
           headersToInject,
         );
       }
-      serviceController.callHooks(
+      serverPluginsController.callHooks(
         "injectResponseProperties",
         request,
         responseProperties,
@@ -559,7 +555,7 @@ export const startServer = async ({
             );
           },
         };
-        await serviceController.callAsyncHooks(
+        await serverPluginsController.callAsyncHooks(
           "augmentRouteFetchSecondArg",
           request,
           fetchSecondArg,
@@ -599,7 +595,7 @@ export const startServer = async ({
         stop(STOP_REASON_INTERNAL_ERROR);
       }
       const handleErrorReturnValue =
-        await serviceController.callAsyncHooksUntil("handleError", e, {
+        await serverPluginsController.callAsyncHooksUntil("handleError", e, {
           request,
         });
       if (!handleErrorReturnValue) {
@@ -718,19 +714,19 @@ export const startServer = async ({
               return;
             }
 
-            let preventedByService = null;
+            let preventedByPlugin = null;
             const prevent = () => {
-              preventedByService = serviceController.getCurrentService();
+              preventedByPlugin = serverPluginsController.getCurrentPlugin();
             };
-            serviceController.callHooksUntil(
+            serverPluginsController.callHooksUntil(
               "onResponsePush",
               { path, method },
               { request, prevent },
-              () => preventedByService,
+              () => preventedByPlugin,
             );
-            if (preventedByService) {
+            if (preventedByPlugin) {
               pushRequestLogger.debug(
-                `response push prevented by "${preventedByService.name}" service`,
+                `response push prevented by "${preventedByPlugin.name}" plugin`,
               );
               return;
             }

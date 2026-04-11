@@ -4,7 +4,7 @@ await startDevServer({
   logLevel: "info",
   sourceDirectoryUrl: import.meta.resolve("./client/"),
   sourceMainFilePath: "main.html",
-  services: [
+  plugins: [
     {
       name: "spy_request",
       routes: [

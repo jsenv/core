@@ -1,7 +1,7 @@
 import { startServer } from "@jsenv/server";
 
 const server = await startServer({
-  services: [
+  plugins: [
     {
       handleRequest: () => {
         return {

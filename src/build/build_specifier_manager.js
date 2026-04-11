@@ -117,14 +117,15 @@ export const createBuildSpecifierManager = ({
   const bundleInfoMap = new Map();
 
   const applyBundling = async ({ bundler, urlInfosToBundle }) => {
-    const urlInfosBundled = await rawKitchen.pluginController.callAsyncHook(
-      {
-        plugin: bundler.plugin,
-        hookName: "bundle",
-        value: bundler.bundleFunction,
-      },
-      urlInfosToBundle,
-    );
+    const urlInfosBundled =
+      await rawKitchen.jsenvPluginsController.callAsyncHook(
+        {
+          plugin: bundler.plugin,
+          hookName: "bundle",
+          value: bundler.bundleFunction,
+        },
+        urlInfosToBundle,
+      );
     for (const url of Object.keys(urlInfosBundled)) {
       const urlInfoBundled = urlInfosBundled[url];
       const contentSideEffects = [];
@@ -1315,9 +1316,9 @@ const isWrappedByQuote = (content, start, end) => {
 // https://github.com/rollup/rollup/blob/5a5391971d695c808eed0c5d7d2c6ccb594fc689/src/Chunk.ts#L870
 const generateVersion = (parts, length) => {
   const hash = createHash("sha256");
-  parts.forEach((part) => {
+  for (const part of parts) {
     hash.update(part);
-  });
+  }
   return hash.digest("hex").slice(0, length);
 };
 

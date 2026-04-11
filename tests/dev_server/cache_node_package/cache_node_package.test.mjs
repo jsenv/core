@@ -40,7 +40,7 @@ const devServer = await startDevServer({
   logLevel: "warn",
   sourceDirectoryUrl: import.meta.resolve("./client/"),
   keepProcessAlive: false,
-  services: [
+  serverPlugins: [
     {
       name: "spy_request",
       routes: [

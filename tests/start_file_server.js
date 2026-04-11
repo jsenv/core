@@ -1,6 +1,6 @@
 import {
   createFileSystemFetch,
-  jsenvServiceErrorHandler,
+  serverPluginErrorHandler,
   startServer,
 } from "@jsenv/server";
 
@@ -8,17 +8,14 @@ export const startFileServer = ({
   rootDirectoryUrl,
   debug = false,
   canUseLongTermCache = () => false,
-  services = [],
+  plugins = [],
   ...rest
 }) => {
   return startServer({
     logLevel: debug ? "info" : "error",
     keepProcessAlive: debug,
     port: debug ? 9777 : 0,
-    services: [
-      ...services,
-      jsenvServiceErrorHandler({ sendErrorDetails: true }),
-    ],
+    plugins: [...plugins, serverPluginErrorHandler({ sendErrorDetails: true })],
     routes: [
       {
         endpoint: "GET *",

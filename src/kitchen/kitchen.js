@@ -132,14 +132,14 @@ export const createKitchen = ({
     },
     graph: null,
     urlInfoTransformer: null,
-    pluginController: null,
+    jsenvPluginsController: null,
   };
   const kitchenContext = kitchen.context;
   kitchenContext.kitchen = kitchen;
 
-  let pluginController;
-  kitchen.setPluginController = (value) => {
-    pluginController = kitchen.pluginController = value;
+  let jsenvPluginsController;
+  kitchen.setJsenvPluginsController = (value) => {
+    jsenvPluginsController = kitchen.jsenvPluginsController = value;
   };
 
   const graph = createUrlGraph({
@@ -148,7 +148,11 @@ export const createKitchen = ({
     kitchen,
   });
   graph.urlInfoCreatedEventEmitter.on((urlInfoCreated) => {
-    pluginController.callHooks("urlInfoCreated", urlInfoCreated, () => {});
+    jsenvPluginsController.callHooks(
+      "urlInfoCreated",
+      urlInfoCreated,
+      () => {},
+    );
   });
   kitchen.graph = graph;
 
@@ -322,7 +326,7 @@ export const createKitchen = ({
           setReferenceUrl(reference.url);
           break resolve;
         }
-        const resolvedUrl = pluginController.callHooksUntil(
+        const resolvedUrl = jsenvPluginsController.callHooksUntil(
           "resolveReference",
           reference,
         );
@@ -336,7 +340,7 @@ export const createKitchen = ({
         setReferenceUrl(normalizedUrl);
         if (reference.debug) {
           logger.debug(`url resolved by "${
-            pluginController.getLastPluginUsed().name
+            jsenvPluginsController.getLastPluginUsed().name
           }"
 ${ANSI.color(reference.specifier, ANSI.GREY)} ->
 ${ANSI.color(reference.url, ANSI.YELLOW)}
@@ -350,7 +354,7 @@ ${ANSI.color(reference.url, ANSI.YELLOW)}
           // - side_effect_file references injected in entry points or at the top of files
           break redirect;
         }
-        pluginController.callHooks(
+        jsenvPluginsController.callHooks(
           "redirectReference",
           reference,
           (returnValue, plugin, setReference) => {
@@ -395,7 +399,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       return reference;
     } catch (error) {
       throw createResolveUrlError({
-        pluginController,
+        jsenvPluginsController,
         reference,
         error,
       });
@@ -422,7 +426,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       // But do not represent an other resource, it is considered as
       // the same resource under the hood
       const searchParamTransformationMap = new Map();
-      pluginController.callHooks(
+      jsenvPluginsController.callHooks(
         "transformReferenceSearchParams",
         reference,
         (returnValue) => {
@@ -450,7 +454,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       }
     }
     format: {
-      const returnValue = pluginController.callHooksUntil(
+      const returnValue = jsenvPluginsController.callHooksUntil(
         "formatReference",
         reference,
       );
@@ -471,7 +475,10 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
   const fetchUrlContent = async (urlInfo) => {
     try {
       const fetchUrlContentReturnValue =
-        await pluginController.callAsyncHooksUntil("fetchUrlContent", urlInfo);
+        await jsenvPluginsController.callAsyncHooksUntil(
+          "fetchUrlContent",
+          urlInfo,
+        );
       if (!fetchUrlContentReturnValue) {
         logger.warn(
           createDetailedMessage(
@@ -570,7 +577,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       });
     } catch (error) {
       throw createFetchUrlContentError({
-        pluginController,
+        jsenvPluginsController,
         urlInfo,
         error,
       });
@@ -580,7 +587,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
 
   const transformUrlContent = async (urlInfo) => {
     try {
-      await pluginController.callAsyncHooks(
+      await jsenvPluginsController.callAsyncHooks(
         "transformUrlContent",
         urlInfo,
         (transformReturnValue) => {
@@ -592,7 +599,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       );
     } catch (error) {
       const transformError = createTransformUrlContentError({
-        pluginController,
+        jsenvPluginsController,
         urlInfo,
         error,
       });
@@ -604,14 +611,15 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
   const finalizeUrlContent = async (urlInfo) => {
     try {
       await urlInfo.applyContentTransformationCallbacks();
-      const finalizeReturnValue = await pluginController.callAsyncHooksUntil(
-        "finalizeUrlContent",
-        urlInfo,
-      );
+      const finalizeReturnValue =
+        await jsenvPluginsController.callAsyncHooksUntil(
+          "finalizeUrlContent",
+          urlInfo,
+        );
       urlInfoTransformer.endTransformations(urlInfo, finalizeReturnValue);
     } catch (error) {
       throw createFinalizeUrlContentError({
-        pluginController,
+        jsenvPluginsController,
         urlInfo,
         error,
       });
@@ -692,7 +700,7 @@ ${urlInfo.firstReference.trace.message}`;
     }
 
     // "cooked" hook
-    pluginController.callHooks("cooked", urlInfo, (cookedReturnValue) => {
+    jsenvPluginsController.callHooks("cooked", urlInfo, (cookedReturnValue) => {
       if (typeof cookedReturnValue === "function") {
         const removeCallback = urlInfo.graph.urlInfoDereferencedEventEmitter.on(
           (urlInfoDereferenced, lastReferenceFromOther) => {

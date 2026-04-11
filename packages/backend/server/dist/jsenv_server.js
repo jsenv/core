@@ -5,9 +5,10 @@ import { parse } from "node:querystring";
 import { Readable, Stream, Writable } from "node:stream";
 import http from "node:http";
 import { Http2ServerResponse } from "node:http2";
-import { createReadStream, existsSync, readFileSync, readdirSync, lstatSync, statSync, readFile } from "node:fs";
+import { createReadStream, readFileSync, existsSync, readdirSync, lstatSync, statSync, readFile } from "node:fs";
 import { createRequire } from "node:module";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { performance as performance$1 } from "node:perf_hooks";
 import { lookup } from "node:dns";
 import { networkInterfaces } from "node:os";
 import { createHash } from "node:crypto";
@@ -2859,6 +2860,1403 @@ const trackHttp1ServerPendingRequests = (nodeServer) => {
   return { stop };
 };
 
+/**
+ * The standard ways to create a Response
+ * - new Response(body, init)
+ * - Response.json(data, init)
+ * Here we need a way to tell: I want to handle websocket
+ * to align with the style of new Response and Response.json to make it look as follow:
+ * ```js
+ * import { WebSocketResponse } from "@jsenv/server"
+ * new WebSocketResponse((websocket) => {
+ *   // do stuff with the websocket
+ * })
+ * ```
+ *
+ * But we don't really need a class so we are just returning a regular object under the hood
+ */
+
+class WebSocketResponse {
+  constructor(
+    webSocketHandler,
+    {
+      status = 101,
+      statusText = status === 101 ? "Switching Protocols" : undefined,
+      headers,
+    } = {},
+  ) {
+    const webSocketResponse = {
+      status,
+      statusText,
+      headers,
+      body: {
+        websocket: webSocketHandler,
+      },
+    };
+    // eslint-disable-next-line no-constructor-return
+    return webSocketResponse;
+  }
+}
+
+const getWebSocketHandler = (responseProperties) => {
+  const responseBody = responseProperties.body;
+  if (!responseBody) {
+    return undefined;
+  }
+  const webSocketHandler = responseBody.websocket;
+  return webSocketHandler;
+};
+
+/**
+ * https://www.html5rocks.com/en/tutorials/eventsource/basics/
+ *
+ */
+
+
+/**
+ * Creates a Server-Sent Events controller that manages client connections and event distribution.
+ * Supports both SSE (EventSource) and WebSocket connections with automatic event history tracking.
+ *
+ * @class
+ * @param {Object} options - Configuration options for the SSE controller
+ * @param {String} [options.logLevel] - Controls logging verbosity ('debug', 'info', 'warn', 'error', etc.)
+ * @param {Boolean} [options.keepProcessAlive=false] - If true, prevents Node.js from exiting while SSE connections are active
+ * @param {Number} [options.keepaliveDuration=30000] - Milliseconds between keepalive messages to prevent connection timeout
+ * @param {Number} [options.retryDuration=1000] - Suggested client reconnection delay in milliseconds
+ * @param {Number} [options.historyLength=1000] - Maximum number of events to keep in history for reconnecting clients
+ * @param {Number} [options.maxClientAllowed=100] - Maximum number of concurrent client connections allowed
+ * @param {Function} [options.computeEventId] - Function to generate event IDs, receives (event, lastEventId) and returns new ID
+ * @param {Boolean} [options.welcomeEventEnabled=false] - Whether to send a welcome event to new clients
+ * @param {Boolean} [options.welcomeEventPublic=false] - If true, welcome events are broadcast to all clients, not just the new one
+ * @param {String} [options.actionOnClientLimitReached='refuse'] - Action when client limit is reached ('refuse' or 'kick-oldest')
+ *
+ * @returns {Object} SSE controller with the following methods:
+ * @returns {Function} .sendEventToAllClients - Sends an event to all connected clients
+ * @returns {Function} .fetch - Handles HTTP requests and upgrades them to SSE/WebSocket connections
+ * @returns {Function} .getAllEventSince - Retrieves events since a specific ID
+ * @returns {Function} .getClientCount - Returns the number of connected clients
+ * @returns {Function} .close - Closes all connections and stops the controller
+ * @returns {Function} .open - Reopens the controller after closing
+ *
+ * @example
+ * import { ServerEvents } from "@jsenv/server";
+ *
+ * const serverEvents = new ServerEvents({
+ *   welcomeEventEnabled: true,
+ *   historyLength: 50
+ * });
+ *
+ * // Send events to all connected clients
+ * serverEvents.sendEventToAllClients({
+ *   type: "update",
+ *   data: JSON.stringify({ timestamp: Date.now() })
+ * });
+ *
+ * // Use in server route
+ * {
+ *   endpoint: "GET /events",
+ *   response: (request) => serverEvents.fetch(request)
+ * }
+ */
+class ServerEvents {
+  constructor(...args) {
+    // eslint-disable-next-line no-constructor-return
+    return createServerEvents(...args);
+  }
+}
+
+/**
+ * Creates a minimal Server-Sent Events controller that exposes only the fetch method
+ * to handle client connections, keeping other controller methods private.
+ *
+ * This is useful when you want to provide a minimal API surface and ensure
+ * the events can only be pushed through a given function.
+ *
+ * @class
+ * @param {Function} producer - Function called when first client connects
+ * @param {Object} [options] - Configuration options for the SSE controller
+ * @param {String} [options.logLevel] - Controls logging verbosity ('debug', 'info', 'warn', 'error', etc.)
+ * @param {Boolean} [options.keepProcessAlive=false] - If true, prevents Node.js from exiting while SSE connections are active
+ * @param {Number} [options.keepaliveDuration=30000] - Milliseconds between keepalive messages to prevent connection timeout
+ * @param {Number} [options.retryDuration=1000] - Suggested client reconnection delay in milliseconds
+ * @param {Number} [options.historyLength=1000] - Maximum number of events to keep in history for reconnecting clients
+ * @param {Number} [options.maxClientAllowed=100] - Maximum number of concurrent client connections allowed
+ * @param {Function} [options.computeEventId] - Function to generate event IDs, receives (event, lastEventId) and returns new ID
+ * @param {Boolean} [options.welcomeEventEnabled=false] - Whether to send a welcome event to new clients
+ * @param {Boolean} [options.welcomeEventPublic=false] - If true, welcome events are broadcast to all clients, not just the new one
+ * @param {String} [options.actionOnClientLimitReached='refuse'] - Action when client limit is reached ('refuse' or 'kick-oldest')
+ *
+ * @returns {Object} An object with only the fetch method to handle client connections
+ *
+ * @example
+ * import { LazyServerEvents } from "@jsenv/server";
+ *
+ * // Events can only be sent through the producer function
+ * const events = new LazyServerEvents((api) => {
+ *   console.log("First client connected");
+ *
+ *   // Setup interval, database watchers, etc.
+ *   const interval = setInterval(() => {
+ *     api.sendEvent({
+ *       type: "tick",
+ *       data: new Date().toISOString()
+ *     });
+ *   }, 1000);
+ *
+ *   // Return cleanup function that runs when last client disconnects
+ *   return () => {
+ *     console.log("Last client disconnected");
+ *     clearInterval(interval);
+ *   };
+ * });
+ *
+ * // Use in server route
+ * {
+ *   endpoint: "GET /events",
+ *   response: (request) => events.fetch(request)
+ * }
+ */
+class LazyServerEvents {
+  constructor(producer, options = {}) {
+    const serverEvents = createServerEvents({
+      producer,
+      ...options,
+    });
+    // eslint-disable-next-line no-constructor-return
+    return {
+      fetch: serverEvents.fetch,
+    };
+  }
+}
+
+const createServerEvents = ({
+  producer,
+  logLevel,
+  // do not keep process alive because of event source, something else must keep it alive
+  keepProcessAlive = false,
+  keepaliveDuration = 30 * 1000,
+  retryDuration = 1 * 1000,
+  historyLength = 1 * 1000,
+  maxClientAllowed = 100, // max 100 clients accepted
+  computeEventId = (event, lastEventId) => lastEventId + 1,
+  welcomeEventEnabled = false,
+  welcomeEventPublic = false,
+  actionOnClientLimitReached = "refuse",
+} = {}) => {
+  const logger = createLogger({ logLevel });
+
+  const serverEventSource = {
+    closed: false,
+  };
+  const clientArray = [];
+  const eventHistory = createEventHistory(historyLength);
+  // what about previousEventId that keeps growing ?
+  // we could add some limit
+  // one limit could be that an event older than 24h is deleted
+  let previousEventId = 0;
+  let interval;
+  let producerReturnValue;
+
+  const addClient = (client) => {
+    if (clientArray.length === 0) {
+      if (typeof producer === "function") {
+        producerReturnValue = producer({
+          sendEvent: sendEventToAllClients,
+        });
+      }
+    }
+    clientArray.push(client);
+    logger.debug(
+      `A client has joined. Number of client: ${clientArray.length}`,
+    );
+    if (client.lastKnownId !== undefined) {
+      const previousEvents = getAllEventSince(client.lastKnownId);
+      const eventMissedCount = previousEvents.length;
+      if (eventMissedCount > 0) {
+        logger.info(
+          `send ${eventMissedCount} event missed by client since event with id "${client.lastKnownId}"`,
+        );
+        for (const previousEvent of previousEvents) {
+          client.sendEvent(previousEvent);
+        }
+      }
+    }
+    if (welcomeEventEnabled) {
+      const welcomeEvent = {
+        retry: retryDuration,
+        type: "welcome",
+        data: new Date().toLocaleTimeString(),
+      };
+      addEventToHistory(welcomeEvent);
+
+      // send to everyone
+      if (welcomeEventPublic) {
+        sendEventToAllClients(welcomeEvent, {
+          history: false,
+        });
+      }
+      // send only to this client
+      else {
+        client.sendEvent(welcomeEvent);
+      }
+    } else {
+      const firstEvent = {
+        retry: retryDuration,
+        type: "comment",
+        data: new Date().toLocaleTimeString(),
+      };
+      client.sendEvent(firstEvent);
+    }
+  };
+  const removeClient = (client) => {
+    const index = clientArray.indexOf(client);
+    if (index === -1) {
+      return;
+    }
+    clientArray.splice(index, 1);
+    logger.debug(`A client left. Number of client: ${clientArray.length}`);
+    if (clientArray.length === 0) {
+      if (typeof producerReturnValue === "function") {
+        producerReturnValue();
+        producerReturnValue = undefined;
+      }
+    }
+  };
+
+  const fetch = (request) => {
+    const isWebsocketUpgradeRequest =
+      request.headers["upgrade"] === "websocket";
+    const isEventSourceRequest = isWebsocketUpgradeRequest
+      ? false
+      : request.headers["accept"] &&
+        request.headers["accept"].includes("text/event-stream");
+    if (!isWebsocketUpgradeRequest && !isEventSourceRequest) {
+      return {
+        status: 400,
+        body: "Bad Request, this endpoint only accepts WebSocket or EventSource requests",
+      };
+    }
+
+    if (clientArray.length >= maxClientAllowed) {
+      if (actionOnClientLimitReached === "refuse") {
+        return {
+          status: 503,
+        };
+      }
+      // "kick-oldest"
+      const oldestClient = clientArray.shift();
+      oldestClient.close();
+    }
+
+    if (serverEventSource.closed) {
+      return {
+        status: 204,
+      };
+    }
+
+    const lastKnownId =
+      request.headers["last-event-id"] ||
+      request.searchParams.get("last-event-id");
+    if (isWebsocketUpgradeRequest) {
+      return new WebSocketResponse((websocket) => {
+        const webSocketClient = {
+          type: "websocket",
+          lastKnownId,
+          request,
+          websocket,
+          sendEvent: (event) => {
+            websocket.send(JSON.stringify(event));
+          },
+          close: () => {
+            websocket.close();
+          },
+        };
+        addClient(webSocketClient);
+        return () => {
+          removeClient(webSocketClient);
+        };
+      });
+    }
+    // event source request
+    return {
+      status: 200,
+      headers: {
+        "content-type": "text/event-stream",
+        "cache-control": "no-store",
+        "connection": "keep-alive",
+      },
+      body: createObservable(({ next, complete, addTeardown }) => {
+        const client = {
+          type: "event_source",
+          lastKnownId,
+          request,
+          sendEvent: (event) => {
+            next(stringifySourceEvent(event));
+          },
+          close: () => {
+            complete(); // will terminate the http connection as body ends
+          },
+        };
+        addClient(client);
+        addTeardown(() => {
+          removeClient(client);
+        });
+      }),
+    };
+  };
+
+  const addEventToHistory = (event) => {
+    if (typeof event.id === "undefined") {
+      event.id = computeEventId(event, previousEventId);
+    }
+    previousEventId = event.id;
+    eventHistory.add(event);
+  };
+
+  const sendEventToAllClients = (event, { history = true } = {}) => {
+    if (history) {
+      addEventToHistory(event);
+    }
+    logger.debug(`send "${event.type}" event to ${clientArray.size} client(s)`);
+    for (const client of clientArray) {
+      client.sendEvent(event);
+    }
+  };
+
+  const getAllEventSince = (id) => {
+    const events = eventHistory.since(id);
+    if (welcomeEventEnabled && !welcomeEventPublic) {
+      return events.filter((event) => event.type !== "welcome");
+    }
+    return events;
+  };
+
+  const keepAlive = () => {
+    // maybe that, when an event occurs, we can delay the keep alive event
+    logger.debug(
+      `send keep alive event, number of client listening this event source: ${clientArray.length}`,
+    );
+    sendEventToAllClients(
+      {
+        type: "comment",
+        data: new Date().toLocaleTimeString(),
+      },
+      { history: false },
+    );
+  };
+
+  const open = () => {
+    if (!serverEventSource.closed) {
+      return;
+    }
+    interval = setInterval(keepAlive, keepaliveDuration);
+    if (!keepProcessAlive) {
+      interval.unref();
+    }
+    serverEventSource.closed = false;
+  };
+
+  const close = () => {
+    if (serverEventSource.closed) {
+      return;
+    }
+    logger.debug(`closing, number of client : ${clientArray.length}`);
+    for (const client of clientArray) {
+      client.close();
+    }
+    clientArray.length = 0;
+    clearInterval(interval);
+    eventHistory.reset();
+    serverEventSource.closed = true;
+  };
+
+  Object.assign(serverEventSource, {
+    // main api:
+    // - ability to sendEvent to clients in the room
+    // - ability to join the room
+    // - ability to leave the room
+    sendEventToAllClients,
+    fetch,
+
+    // should rarely be necessary, get information about the room
+    getAllEventSince,
+    getClientCount: () => clientArray.length,
+
+    // should rarely be used
+    close,
+    open,
+  });
+  return serverEventSource;
+};
+
+// https://github.com/dmail-old/project/commit/da7d2c88fc8273850812972885d030a22f9d7448
+// https://github.com/dmail-old/project/commit/98b3ae6748d461ac4bd9c48944a551b1128f4459
+// https://github.com/dmail-old/http-eventsource/blob/master/lib/event-source.js
+// http://html5doctor.com/server-sent-events/
+const stringifySourceEvent = ({ data, type = "message", id, retry }) => {
+  let string = "";
+
+  if (id !== undefined) {
+    string += `id:${id}\n`;
+  }
+
+  if (retry) {
+    string += `retry:${retry}\n`;
+  }
+
+  if (type !== "message") {
+    string += `event:${type}\n`;
+  }
+
+  string += `data:${data}\n\n`;
+
+  return string;
+};
+
+const createEventHistory = (limit) => {
+  const events = [];
+
+  const add = (data) => {
+    events.push(data);
+
+    if (events.length >= limit) {
+      events.shift();
+    }
+  };
+
+  const since = (id) => {
+    const index = events.findIndex((event) => String(event.id) === id);
+    return index === -1 ? [] : events.slice(index + 1);
+  };
+
+  const reset = () => {
+    events.length = 0;
+  };
+
+  return { add, since, reset };
+};
+
+const serverPluginAutoreloadOnRestart = () => {
+  const aliveServerEvents = new LazyServerEvents(() => {});
+
+  return {
+    name: "jsenv:autoreload_on_server_restart",
+
+    routes: [
+      {
+        endpoint: "GET /.internal/alive.websocket",
+        description:
+          "Client can connect to this websocket endpoint to detect when server connection is lost.",
+        declarationSource: import.meta.url,
+        /* eslint-disable no-undef */
+        clientCodeExample: () => {
+          const websocket = new WebSocket(
+            "ws://localhost/.internal/alive.websocket",
+          );
+          websocket.onclose = () => {
+            // server connection closed
+            window.location.reload();
+          };
+        },
+        fetch: aliveServerEvents.fetch,
+      },
+      {
+        endpoint: "GET /.internal/alive.eventsource",
+        description: `Client can connect to this eventsource endpoint to detect when server connection is lost.
+This endpoint exists mostly to demo eventsource as there is already the websocket endpoint.`,
+        declarationSource: import.meta.url,
+        /* eslint-disable no-undef */
+        clientCodeExample: async () => {
+          const eventSource = new EventSource("/.internal/alive.eventsource");
+          eventSource.onerror = () => {
+            // server connection closed
+            window.location.reload();
+          };
+        },
+        /* eslint-enable no-undef */
+        fetch: aliveServerEvents.fetch,
+      },
+    ],
+  };
+};
+
+const pickAcceptedContent = ({
+  availables,
+  accepteds,
+  getAcceptanceScore,
+}) => {
+  let highestScore = -1;
+  let availableWithHighestScore = null;
+  let availableIndex = 0;
+  while (availableIndex < availables.length) {
+    const available = availables[availableIndex];
+    availableIndex++;
+
+    let acceptedIndex = 0;
+    while (acceptedIndex < accepteds.length) {
+      const accepted = accepteds[acceptedIndex];
+      acceptedIndex++;
+
+      const score = getAcceptanceScore(accepted, available);
+      if (score > highestScore) {
+        availableWithHighestScore = available;
+        highestScore = score;
+      }
+    }
+  }
+  return availableWithHighestScore;
+};
+
+const pickContentType = (request, availableContentTypes) => {
+  const { headers = {} } = request;
+  const requestAcceptHeader = headers.accept;
+  if (!requestAcceptHeader) {
+    return null;
+  }
+
+  const contentTypesAccepted = parseAcceptHeader(requestAcceptHeader);
+  return pickAcceptedContent({
+    accepteds: contentTypesAccepted,
+    availables: availableContentTypes,
+    getAcceptanceScore: getContentTypeAcceptanceScore,
+  });
+};
+
+const parseAcceptHeader = (acceptHeader) => {
+  const acceptHeaderObject = parseMultipleHeader(acceptHeader, {
+    validateProperty: ({ name }) => {
+      // read only q, anything else is ignored
+      return name === "q";
+    },
+  });
+
+  const accepts = [];
+  Object.keys(acceptHeaderObject).forEach((key) => {
+    const { q = 1 } = acceptHeaderObject[key];
+    const value = key;
+    accepts.push({
+      value,
+      quality: q,
+    });
+  });
+  accepts.sort((a, b) => {
+    return b.quality - a.quality;
+  });
+  return accepts;
+};
+
+const getContentTypeAcceptanceScore = (
+  { value, quality },
+  availableContentType,
+) => {
+  const [acceptedType, acceptedSubtype] = decomposeContentType(value);
+  const [availableType, availableSubtype] =
+    decomposeContentType(availableContentType);
+
+  const typeAccepted = acceptedType === "*" || acceptedType === availableType;
+  const subtypeAccepted =
+    acceptedSubtype === "*" || acceptedSubtype === availableSubtype;
+
+  if (typeAccepted && subtypeAccepted) {
+    return quality;
+  }
+  return -1;
+};
+
+const decomposeContentType = (fullType) => {
+  const [type, subtype] = fullType.split("/");
+  return [type, subtype];
+};
+
+const replacePlaceholdersInHtml = (html, replacers) => {
+  return html.replace(/\$\{(\w+)\}/g, (match, name) => {
+    const replacer = replacers[name];
+    if (replacer === undefined) {
+      return match;
+    }
+    if (typeof replacer === "function") {
+      return replacer();
+    }
+    return replacer;
+  });
+};
+
+const clientErrorHtmlTemplateFileUrl = import.meta.resolve("./client/default_body_4xx_5xx/4xx.html");
+
+const serverPluginDefaultBody4xx5xx = () => {
+  return {
+    name: "jsenv:default_body_4xx_5xx",
+
+    injectResponseProperties: (request, responseProperties) => {
+      if (responseProperties.body !== undefined) {
+        return null;
+      }
+      if (responseProperties.status >= 400 && responseProperties.status < 500) {
+        return generateBadStatusResponse(request, responseProperties);
+      }
+      if (responseProperties.status >= 500 && responseProperties.status < 600) {
+        return generateBadStatusResponse(request, responseProperties);
+      }
+      return null;
+    },
+  };
+};
+
+const generateBadStatusResponse = (
+  request,
+  { status, statusText, statusMessage },
+) => {
+  const contentTypeNegotiated = pickContentType(request, [
+    "text/html",
+    "text/plain",
+    "application/json",
+  ]);
+  if (contentTypeNegotiated === "text/html") {
+    const htmlTemplate = readFileSync(
+      new URL(clientErrorHtmlTemplateFileUrl),
+      "utf8",
+    );
+    if (statusMessage) {
+      statusMessage = statusMessage.replace(/https?:\/\/\S+/g, (url) => {
+        return `<a href="${url}">${url}</a>`;
+      });
+      statusMessage = statusMessage.replace(
+        /(^|\s)(\/\S+)/g,
+        (match, startOrSpace, resource) => {
+          let end = "";
+          if (resource[resource.length - 1] === ".") {
+            resource = resource.slice(0, -1);
+            end = ".";
+          }
+          return `${startOrSpace}<a href="${resource}">${resource}</a>${end}`;
+        },
+      );
+      statusMessage = statusMessage.replace(/\r\n|\r|\n/g, "<br />");
+    }
+
+    const html = replacePlaceholdersInHtml(htmlTemplate, {
+      status,
+      statusText,
+      statusMessage: statusMessage || "",
+    });
+    return new Response(html, {
+      headers: { "content-type": "text/html" },
+      status,
+      statusText,
+    });
+  }
+  if (contentTypeNegotiated === "text/plain") {
+    return new Response(statusMessage, {
+      status,
+      statusText,
+    });
+  }
+  return Response.json(
+    { statusMessage },
+    {
+      status,
+      statusText,
+    },
+  );
+};
+
+const jsenvServerRootDirectoryUrl = import.meta.resolve("./");
+
+const serverPluginInternalClientFiles = () => {
+  return {
+    name: "jsenv:internal_client_files",
+
+    routes: [
+      {
+        endpoint: "GET /@jsenv/server/*",
+        description: "Serve @jsenv/server internal files.",
+        availableMediaTypes: ["text/javascript"],
+        declarationSource: import.meta.url,
+        fetch: (request) => {
+          const path = request.params[0];
+          const jsenvServerClientFileUrl = new URL(
+            `./${path}`,
+            jsenvServerRootDirectoryUrl,
+          );
+          const fileContent = readFileSync(jsenvServerClientFileUrl, "utf8");
+          return new Response(fileContent, {
+            headers: {
+              "content-type": CONTENT_TYPE.fromUrlExtension(
+                jsenvServerClientFileUrl,
+              ),
+            },
+          });
+        },
+      },
+    ],
+  };
+};
+
+const pathnameToExtension = (pathname) => {
+  const slashLastIndex = pathname.lastIndexOf("/");
+  const filename =
+    slashLastIndex === -1 ? pathname : pathname.slice(slashLastIndex + 1);
+  if (filename.match(/@([0-9])+(\.[0-9]+)?(\.[0-9]+)?$/)) {
+    return "";
+  }
+  const dotLastIndex = filename.lastIndexOf(".");
+  if (dotLastIndex === -1) {
+    return "";
+  }
+  // if (dotLastIndex === pathname.length - 1) return ""
+  const extension = filename.slice(dotLastIndex);
+  return extension;
+};
+
+const resourceToParts = (resource) => {
+  const searchSeparatorIndex = resource.indexOf("?");
+  if (searchSeparatorIndex === -1) {
+    const hashSeparatorIndex = resource.indexOf("#");
+    if (hashSeparatorIndex === -1) {
+      return [resource, "", ""];
+    }
+    const beforeHashSeparator = resource.slice(0, hashSeparatorIndex);
+    const afterHashSeparator = resource.slice(hashSeparatorIndex + 1);
+    return [beforeHashSeparator, "", afterHashSeparator];
+  }
+  const beforeSearchSeparator = resource.slice(0, searchSeparatorIndex);
+  const afterSearchSeparator = resource.slice(searchSeparatorIndex + 1);
+  const hashSeparatorIndex = afterSearchSeparator.indexOf("#");
+  if (hashSeparatorIndex === -1) {
+    return [beforeSearchSeparator, afterSearchSeparator, ""];
+  }
+  const afterSearchSeparatorAndBeforeHashSeparator = afterSearchSeparator.slice(
+    0,
+    hashSeparatorIndex,
+  );
+  const afterHashSeparator = afterSearchSeparator.slice(hashSeparatorIndex + 1);
+  return [
+    beforeSearchSeparator,
+    afterSearchSeparatorAndBeforeHashSeparator,
+    afterHashSeparator,
+  ];
+};
+
+const resourceToPathname = (resource) => {
+  const searchSeparatorIndex = resource.indexOf("?");
+  if (searchSeparatorIndex > -1) {
+    return resource.slice(0, searchSeparatorIndex);
+  }
+  const hashIndex = resource.indexOf("#");
+  if (hashIndex > -1) {
+    return resource.slice(0, hashIndex);
+  }
+  return resource;
+};
+
+const resourceToExtension = (resource) => {
+  const pathname = resourceToPathname(resource);
+  return pathnameToExtension(pathname);
+};
+
+const urlToScheme = (url) => {
+  const urlString = String(url);
+  const colonIndex = urlString.indexOf(":");
+  if (colonIndex === -1) {
+    return "";
+  }
+
+  const scheme = urlString.slice(0, colonIndex);
+  return scheme;
+};
+
+const urlToResource = (url) => {
+  const scheme = urlToScheme(url);
+
+  if (scheme === "file") {
+    const urlAsStringWithoutFileProtocol = String(url).slice("file://".length);
+    return urlAsStringWithoutFileProtocol;
+  }
+
+  if (scheme === "https" || scheme === "http") {
+    // remove origin
+    const afterProtocol = String(url).slice(scheme.length + "://".length);
+    const pathnameSlashIndex = afterProtocol.indexOf("/", "://".length);
+    const urlAsStringWithoutOrigin = afterProtocol.slice(pathnameSlashIndex);
+    return urlAsStringWithoutOrigin;
+  }
+
+  const urlAsStringWithoutProtocol = String(url).slice(scheme.length + 1);
+  return urlAsStringWithoutProtocol;
+};
+
+const urlToPathname = (url) => {
+  const resource = urlToResource(url);
+  const pathname = resourceToPathname(resource);
+  return pathname;
+};
+
+const urlToExtension = (url) => {
+  const pathname = urlToPathname(url);
+  return pathnameToExtension(pathname);
+};
+
+const getCommonPathname = (pathname, otherPathname) => {
+  if (pathname === otherPathname) {
+    return pathname;
+  }
+  let commonPart = "";
+  let commonPathname = "";
+  let i = 0;
+  const length = pathname.length;
+  const otherLength = otherPathname.length;
+  while (i < length) {
+    const char = pathname.charAt(i);
+    const otherChar = otherPathname.charAt(i);
+    i++;
+    if (char === otherChar) {
+      if (char === "/") {
+        commonPart += "/";
+        commonPathname += commonPart;
+        commonPart = "";
+      } else {
+        commonPart += char;
+      }
+    } else {
+      if (char === "/" && i - 1 === otherLength) {
+        commonPart += "/";
+        commonPathname += commonPart;
+      }
+      return commonPathname;
+    }
+  }
+  if (length === otherLength) {
+    commonPathname += commonPart;
+  } else if (otherPathname.charAt(i) === "/") {
+    commonPathname += commonPart;
+  }
+  return commonPathname;
+};
+
+const urlToRelativeUrl = (
+  url,
+  baseUrl,
+  { preferRelativeNotation } = {},
+) => {
+  const urlObject = new URL(url);
+  const baseUrlObject = new URL(baseUrl);
+
+  if (urlObject.protocol !== baseUrlObject.protocol) {
+    const urlAsString = String(url);
+    return urlAsString;
+  }
+
+  if (
+    urlObject.username !== baseUrlObject.username ||
+    urlObject.password !== baseUrlObject.password ||
+    urlObject.host !== baseUrlObject.host
+  ) {
+    const afterUrlScheme = String(url).slice(urlObject.protocol.length);
+    return afterUrlScheme;
+  }
+
+  const { pathname, hash, search } = urlObject;
+  if (pathname === "/") {
+    const baseUrlResourceWithoutLeadingSlash = baseUrlObject.pathname.slice(1);
+    return baseUrlResourceWithoutLeadingSlash;
+  }
+
+  const basePathname = baseUrlObject.pathname;
+  const commonPathname = getCommonPathname(pathname, basePathname);
+  if (!commonPathname) {
+    const urlAsString = String(url);
+    return urlAsString;
+  }
+  const specificPathname = pathname.slice(commonPathname.length);
+  const baseSpecificPathname = basePathname.slice(commonPathname.length);
+  if (baseSpecificPathname.includes("/")) {
+    const baseSpecificParentPathname =
+      pathnameToParentPathname(baseSpecificPathname);
+    const relativeDirectoriesNotation = baseSpecificParentPathname.replace(
+      /.*?\//g,
+      "../",
+    );
+    const relativeUrl = `${relativeDirectoriesNotation}${specificPathname}${search}${hash}`;
+    return relativeUrl;
+  }
+
+  const relativeUrl = `${specificPathname}${search}${hash}`;
+  return preferRelativeNotation ? `./${relativeUrl}` : relativeUrl;
+};
+
+const pathnameToParentPathname = (pathname) => {
+  const slashLastIndex = pathname.lastIndexOf("/");
+  if (slashLastIndex === -1) {
+    return "/";
+  }
+  return pathname.slice(0, slashLastIndex + 1);
+};
+
+const urlToFileSystemPath = (url) => {
+  const urlObject = new URL(url);
+  let { origin, pathname, hash } = urlObject;
+  if (urlObject.protocol === "file:") {
+    origin = "file://";
+  }
+  pathname = pathname
+    .split("/")
+    .map((part) => {
+      return part.replace(/%(?![0-9A-F][0-9A-F])/g, "%25");
+    })
+    .join("/");
+  if (hash) {
+    pathname += `%23${encodeURIComponent(hash.slice(1))}`;
+  }
+  const urlString = `${origin}${pathname}`;
+  const fileSystemPath = fileURLToPath(urlString);
+  if (fileSystemPath[fileSystemPath.length - 1] === "/") {
+    // remove trailing / so that nodejs path becomes predictable otherwise it logs
+    // the trailing slash on linux but does not on windows
+    return fileSystemPath.slice(0, -1);
+  }
+  return fileSystemPath;
+};
+
+const serverPluginOpenFile = () => {
+  return {
+    name: "jsenv:open_file",
+    routes: [
+      {
+        endpoint: "GET /.internal/open_file/*",
+        description: "Can be used to open a given file in your editor.",
+        declarationSource: import.meta.url,
+        fetch: (request) => {
+          let file = decodeURIComponent(request.params[0]);
+          if (!file) {
+            return {
+              status: 400,
+              body: "Missing file in url",
+            };
+          }
+          let fileUrl;
+          try {
+            fileUrl = new URL(file);
+          } catch {
+            return {
+              status: 400,
+              body: `"${file}" is not a file url`,
+            };
+          }
+          const filePath = urlToFileSystemPath(fileUrl);
+          const require = createRequire(import.meta.url);
+          const launch = require("launch-editor");
+          launch(filePath, () => {
+            // ignore error for now
+          });
+          return {
+            status: 200,
+            headers: {
+              "cache-control": "no-store",
+            },
+          };
+        },
+      },
+    ],
+  };
+};
+
+const routeInspectorHtmlFileUrl = import.meta
+  .resolve("./client/route_inspector/route_inspector.html");
+
+const serverPluginRouteInspector = () => {
+  return {
+    name: "jsenv:route_inspector",
+    routes: [
+      {
+        endpoint: "GET /.internal/route_inspector",
+        description:
+          "Explore the routes available on this server using a web interface.",
+        availableMediaTypes: ["text/html"],
+        declarationSource: import.meta.url,
+        fetch: () => {
+          const inspectorHtml = readFileSync(
+            new URL(routeInspectorHtmlFileUrl),
+            "utf8",
+          );
+          return new Response(inspectorHtml, {
+            headers: { "content-type": "text/html" },
+          });
+        },
+      },
+      {
+        endpoint: "GET /.internal/routes.json",
+        availableMediaTypes: ["application/json"],
+        description: "Get the routes available on this server in JSON.",
+        declarationSource: import.meta.url,
+        fetch: (request, helpers) => {
+          const routeJSON = helpers.router.inspect(request, helpers);
+          return Response.json(routeJSON);
+        },
+      },
+    ],
+  };
+};
+
+// createPluginsController manages an ordered list of plugins.
+// "plugins" is a generic term: it can refer to jsenv core plugins,
+// server plugins, or any extensibility mechanism using the same pattern.
+const createPluginsController = async ({
+  plugins,
+  pluginDescription = {},
+  filterPlugin,
+  getInitPluginArgs,
+  getHookFunction = defaultGetHookFunction,
+  getTimingKey = defaultGetTimingKey,
+  getEffectArgs = defaultGetEffectArgs,
+  meta = {},
+}) => {
+  const { name: pluginName = "plugin", properties = {} } = pluginDescription;
+
+  const hookSetMap = new Map();
+
+  const addHook = (hook) => {
+    let hookSet = hookSetMap.get(hook.name);
+    if (!hookSet) {
+      hookSet = new Set();
+      hookSetMap.set(hook.name, hookSet);
+    }
+    hookSet.add(hook);
+  };
+
+  const addPluginToHookSetMap = (plugin) => {
+    for (const key of Object.keys(plugin)) {
+      if (
+        key === "name" ||
+        key === "init" ||
+        key === "destroy" ||
+        key === "meta" ||
+        key === "effect"
+      ) {
+        continue;
+      }
+      const propDef = properties[key];
+      if (propDef === undefined) {
+        console.warn(
+          `Unexpected "${key}" property on "${plugin.name}" ${pluginName}`,
+        );
+        continue;
+      }
+      if (propDef.type !== "hook") {
+        // non-hook key, silently skip
+        continue;
+      }
+      const hookValue = plugin[key];
+      if (!hookValue) {
+        continue;
+      }
+      addHook({
+        plugin,
+        name: key,
+        value: hookValue,
+      });
+    }
+  };
+
+  const activatePlugin = (plugin) => {
+    if (plugin.meta) {
+      const pluginMeta = plugin.meta;
+      if (typeof pluginMeta !== "object" || pluginMeta === null) {
+        console.warn(`${pluginName}.meta must be an object, got ${pluginMeta}`);
+      } else {
+        Object.assign(meta, pluginMeta);
+        Object.freeze(pluginMeta);
+      }
+    }
+    addPluginToHookSetMap(plugin);
+  };
+
+  const pluginCandidates = plugins;
+  const activePlugins = [];
+  const pluginsWithEffect = [];
+
+  for (const pluginCandidate of pluginCandidates) {
+    if (filterPlugin && !filterPlugin(pluginCandidate)) {
+      pluginCandidate.destroy?.();
+      continue;
+    }
+    const active = await callInitOnPlugin(pluginCandidate, getInitPluginArgs);
+    if (!active) {
+      pluginCandidate.destroy?.();
+      continue;
+    }
+    if (pluginCandidate.effect) {
+      pluginsWithEffect.push(pluginCandidate);
+    } else {
+      activePlugins.push(pluginCandidate);
+    }
+  }
+
+  for (const pluginWithEffect of pluginsWithEffect) {
+    const effectArgs = getEffectArgs({ otherPlugins: activePlugins });
+    const returnValue = pluginWithEffect.effect(...effectArgs);
+    if (!returnValue) {
+      continue;
+    }
+    activePlugins.push(pluginWithEffect);
+    if (typeof returnValue === "function" && !pluginWithEffect.destroy) {
+      pluginWithEffect.destroy = returnValue;
+    }
+  }
+
+  // Preserve original declaration order
+  activePlugins.sort(
+    (a, b) => pluginCandidates.indexOf(a) - pluginCandidates.indexOf(b),
+  );
+
+  for (const activePlugin of activePlugins) {
+    activatePlugin(activePlugin);
+  }
+
+  const assertAndNormalizeReturnValue = (valueReturned, info, { hook }) => {
+    if (valueReturned === null || valueReturned === undefined) {
+      // all hooks are allowed to return null/undefined as a signal of "I don't do anything"
+      return valueReturned;
+    }
+    const propDef = properties[hook.name];
+    if (!propDef || !propDef.assertAndNormalize) {
+      return valueReturned;
+    }
+    const assertAndNormalizeResult = propDef.assertAndNormalize(
+      valueReturned,
+      info,
+      { hook },
+    );
+    return assertAndNormalizeResult;
+  };
+
+  let lastPluginUsed = null;
+  let currentPlugin = null;
+  let currentHookName = null;
+
+  const callHook = (hook, info, secondArg) => {
+    const hookFn = getHookFunction(hook, info);
+    if (!hookFn) {
+      return null;
+    }
+    lastPluginUsed = hook.plugin;
+    currentPlugin = hook.plugin;
+    currentHookName = hook.name;
+    let startTimestamp;
+    if (info && info.timing) {
+      startTimestamp = performance$1.now();
+    }
+    let valueReturned = hookFn(info, secondArg);
+    if (startTimestamp !== undefined) {
+      info.timing[getTimingKey(hook)] = performance$1.now() - startTimestamp;
+    }
+    valueReturned = assertAndNormalizeReturnValue(valueReturned, info, {
+      hook,
+    });
+    currentPlugin = null;
+    currentHookName = null;
+    return valueReturned;
+  };
+  const callAsyncHook = async (hook, info, secondArg) => {
+    const hookFn = getHookFunction(hook, info);
+    if (!hookFn) {
+      return null;
+    }
+    lastPluginUsed = hook.plugin;
+    currentPlugin = hook.plugin;
+    currentHookName = hook.name;
+    let startTimestamp;
+    if (info && info.timing) {
+      startTimestamp = performance$1.now();
+    }
+    let valueReturned = await hookFn(info, secondArg);
+    if (startTimestamp !== undefined) {
+      info.timing[getTimingKey(hook)] = performance$1.now() - startTimestamp;
+    }
+    valueReturned = assertAndNormalizeReturnValue(valueReturned, info, {
+      hook,
+    });
+    currentPlugin = null;
+    currentHookName = null;
+    return valueReturned;
+  };
+  // callHooks(hookName, info, callback)
+  // callHooks(hookName, info, secondArg, callback)
+  const callHooks = (hookName, info, secondArgOrCallback, callback) => {
+    const hookSet = hookSetMap.get(hookName);
+    if (!hookSet) {
+      return;
+    }
+    let secondArg;
+    if (typeof secondArgOrCallback === "function") {
+      callback = secondArgOrCallback;
+      secondArg = undefined;
+    } else {
+      secondArg = secondArgOrCallback;
+    }
+    const setHookParams = (firstArg = info) => {
+      info = firstArg;
+    };
+    for (const hook of hookSet) {
+      const returnValue = callHook(hook, info, secondArg);
+      if (returnValue && callback) {
+        callback(returnValue, hook.plugin, setHookParams);
+      }
+    }
+  };
+  // callAsyncHooks(hookName, info, callback)
+  // callAsyncHooks(hookName, info, secondArg, callback)
+  const callAsyncHooks = async (
+    hookName,
+    info,
+    secondArgOrCallback,
+    callback,
+  ) => {
+    const hookSet = hookSetMap.get(hookName);
+    if (!hookSet) {
+      return;
+    }
+    let secondArg;
+    if (typeof secondArgOrCallback === "function") {
+      callback = secondArgOrCallback;
+      secondArg = undefined;
+    } else {
+      secondArg = secondArgOrCallback;
+    }
+    for (const hook of hookSet) {
+      const returnValue = await callAsyncHook(hook, info, secondArg);
+      if (returnValue && callback) {
+        await callback(returnValue, hook.plugin);
+      }
+    }
+  };
+  // callHooksUntil(hookName, info)
+  // callHooksUntil(hookName, info, secondArg)
+  // callHooksUntil(hookName, info, secondArg, until)
+  const callHooksUntil = (hookName, info, secondArgOrUntil, until) => {
+    const hookSet = hookSetMap.get(hookName);
+    if (!hookSet) {
+      return null;
+    }
+    let secondArg;
+    if (typeof secondArgOrUntil === "function") {
+      until = secondArgOrUntil;
+      secondArg = undefined;
+    } else {
+      secondArg = secondArgOrUntil;
+    }
+    for (const hook of hookSet) {
+      const returnValue = callHook(hook, info, secondArg);
+      if (until) {
+        const untilValue = until(returnValue);
+        if (untilValue) {
+          return untilValue;
+        }
+      } else if (returnValue) {
+        return returnValue;
+      }
+    }
+    return null;
+  };
+  // callAsyncHooksUntil(hookName, info)
+  // callAsyncHooksUntil(hookName, info, secondArg)
+  const callAsyncHooksUntil = async (hookName, info, secondArg) => {
+    const hookSet = hookSetMap.get(hookName);
+    if (!hookSet) {
+      return null;
+    }
+    if (hookSet.size === 0) {
+      return null;
+    }
+    const iterator = hookSet.values()[Symbol.iterator]();
+    let result;
+    const visit = async () => {
+      const { done, value: hook } = iterator.next();
+      if (done) {
+        return;
+      }
+      const returnValue = await callAsyncHook(hook, info, secondArg);
+      if (returnValue) {
+        result = returnValue;
+        return;
+      }
+      await visit();
+    };
+    await visit();
+    return result;
+  };
+
+  return {
+    activePlugins,
+
+    callHook,
+    callAsyncHook,
+    callHooks,
+    callHooksUntil,
+    callAsyncHooks,
+    callAsyncHooksUntil,
+
+    getPluginMeta: (pluginName) => meta[pluginName],
+    getMeta: () => meta,
+    getLastPluginUsed: () => lastPluginUsed,
+    getCurrentPlugin: () => currentPlugin,
+    getCurrentHookName: () => currentHookName,
+  };
+};
+
+const callInitOnPlugin = async (plugin, getInitPluginArgs) => {
+  const { init } = plugin;
+  if (!init) {
+    return true;
+  }
+  const initArgs = getInitPluginArgs ? getInitPluginArgs(plugin) : [];
+  const initReturnValue = await init(...initArgs);
+  if (initReturnValue === false) {
+    return false;
+  }
+  if (typeof initReturnValue === "function" && !plugin.destroy) {
+    plugin.destroy = initReturnValue;
+  }
+  return true;
+};
+
+const defaultGetTimingKey = (hook) =>
+  `${hook.name}-${hook.plugin.name.replace("jsenv:", "")}`;
+const defaultGetEffectArgs = ({ otherPlugins }) => [{ otherPlugins }];
+
+// By default, hook values can be a function or an object keyed by info.type.
+// When an object, the hook for the matching type (or "*") is used.
+const defaultGetHookFunction = (hook, info = {}) => {
+  const hookValue = hook.value;
+  if (typeof hookValue === "object") {
+    const hookForType = hookValue[info.type] || hookValue["*"];
+    if (!hookForType) {
+      return null;
+    }
+    return hookForType;
+  }
+  return hookValue;
+};
+
+const createServerPluginsController = async (serverPlugins) => {
+  const jsenvServerPluginsController = await createPluginsController({
+    plugins: serverPlugins,
+    pluginDescription: {
+      name: "server plugin",
+      properties: {
+        serverListening: { type: "hook" },
+        redirectRequest: { type: "hook" },
+        augmentRouteFetchSecondArg: { type: "hook" },
+        handleError: { type: "hook" },
+        onResponsePush: { type: "hook" },
+        injectResponseProperties: { type: "hook" },
+        serverStopped: { type: "hook" },
+        routes: {}, // routes are handled separately (used to populate the router)
+      },
+    },
+  });
+  return jsenvServerPluginsController;
+};
+
 // This file is used just for test and internal tests
 // so super-linear-backtracking is ok
 // and I don't know how to update the regexes to prevent this
@@ -2987,189 +4385,6 @@ const removeRootIndentation = (text) => {
     result += isRootLine ? `${lineShortened}` : `\n${lineShortened}`;
   }
   return result;
-};
-
-const pathnameToExtension = (pathname) => {
-  const slashLastIndex = pathname.lastIndexOf("/");
-  const filename =
-    slashLastIndex === -1 ? pathname : pathname.slice(slashLastIndex + 1);
-  if (filename.match(/@([0-9])+(\.[0-9]+)?(\.[0-9]+)?$/)) {
-    return "";
-  }
-  const dotLastIndex = filename.lastIndexOf(".");
-  if (dotLastIndex === -1) {
-    return "";
-  }
-  // if (dotLastIndex === pathname.length - 1) return ""
-  const extension = filename.slice(dotLastIndex);
-  return extension;
-};
-
-const resourceToParts = (resource) => {
-  const searchSeparatorIndex = resource.indexOf("?");
-  if (searchSeparatorIndex === -1) {
-    const hashSeparatorIndex = resource.indexOf("#");
-    if (hashSeparatorIndex === -1) {
-      return [resource, "", ""];
-    }
-    const beforeHashSeparator = resource.slice(0, hashSeparatorIndex);
-    const afterHashSeparator = resource.slice(hashSeparatorIndex + 1);
-    return [beforeHashSeparator, "", afterHashSeparator];
-  }
-  const beforeSearchSeparator = resource.slice(0, searchSeparatorIndex);
-  const afterSearchSeparator = resource.slice(searchSeparatorIndex + 1);
-  const hashSeparatorIndex = afterSearchSeparator.indexOf("#");
-  if (hashSeparatorIndex === -1) {
-    return [beforeSearchSeparator, afterSearchSeparator, ""];
-  }
-  const afterSearchSeparatorAndBeforeHashSeparator = afterSearchSeparator.slice(
-    0,
-    hashSeparatorIndex,
-  );
-  const afterHashSeparator = afterSearchSeparator.slice(hashSeparatorIndex + 1);
-  return [
-    beforeSearchSeparator,
-    afterSearchSeparatorAndBeforeHashSeparator,
-    afterHashSeparator,
-  ];
-};
-
-const resourceToPathname = (resource) => {
-  const searchSeparatorIndex = resource.indexOf("?");
-  if (searchSeparatorIndex > -1) {
-    return resource.slice(0, searchSeparatorIndex);
-  }
-  const hashIndex = resource.indexOf("#");
-  if (hashIndex > -1) {
-    return resource.slice(0, hashIndex);
-  }
-  return resource;
-};
-
-const resourceToExtension = (resource) => {
-  const pathname = resourceToPathname(resource);
-  return pathnameToExtension(pathname);
-};
-
-const getCommonPathname = (pathname, otherPathname) => {
-  if (pathname === otherPathname) {
-    return pathname;
-  }
-  let commonPart = "";
-  let commonPathname = "";
-  let i = 0;
-  const length = pathname.length;
-  const otherLength = otherPathname.length;
-  while (i < length) {
-    const char = pathname.charAt(i);
-    const otherChar = otherPathname.charAt(i);
-    i++;
-    if (char === otherChar) {
-      if (char === "/") {
-        commonPart += "/";
-        commonPathname += commonPart;
-        commonPart = "";
-      } else {
-        commonPart += char;
-      }
-    } else {
-      if (char === "/" && i - 1 === otherLength) {
-        commonPart += "/";
-        commonPathname += commonPart;
-      }
-      return commonPathname;
-    }
-  }
-  if (length === otherLength) {
-    commonPathname += commonPart;
-  } else if (otherPathname.charAt(i) === "/") {
-    commonPathname += commonPart;
-  }
-  return commonPathname;
-};
-
-const urlToRelativeUrl = (
-  url,
-  baseUrl,
-  { preferRelativeNotation } = {},
-) => {
-  const urlObject = new URL(url);
-  const baseUrlObject = new URL(baseUrl);
-
-  if (urlObject.protocol !== baseUrlObject.protocol) {
-    const urlAsString = String(url);
-    return urlAsString;
-  }
-
-  if (
-    urlObject.username !== baseUrlObject.username ||
-    urlObject.password !== baseUrlObject.password ||
-    urlObject.host !== baseUrlObject.host
-  ) {
-    const afterUrlScheme = String(url).slice(urlObject.protocol.length);
-    return afterUrlScheme;
-  }
-
-  const { pathname, hash, search } = urlObject;
-  if (pathname === "/") {
-    const baseUrlResourceWithoutLeadingSlash = baseUrlObject.pathname.slice(1);
-    return baseUrlResourceWithoutLeadingSlash;
-  }
-
-  const basePathname = baseUrlObject.pathname;
-  const commonPathname = getCommonPathname(pathname, basePathname);
-  if (!commonPathname) {
-    const urlAsString = String(url);
-    return urlAsString;
-  }
-  const specificPathname = pathname.slice(commonPathname.length);
-  const baseSpecificPathname = basePathname.slice(commonPathname.length);
-  if (baseSpecificPathname.includes("/")) {
-    const baseSpecificParentPathname =
-      pathnameToParentPathname(baseSpecificPathname);
-    const relativeDirectoriesNotation = baseSpecificParentPathname.replace(
-      /.*?\//g,
-      "../",
-    );
-    const relativeUrl = `${relativeDirectoriesNotation}${specificPathname}${search}${hash}`;
-    return relativeUrl;
-  }
-
-  const relativeUrl = `${specificPathname}${search}${hash}`;
-  return preferRelativeNotation ? `./${relativeUrl}` : relativeUrl;
-};
-
-const pathnameToParentPathname = (pathname) => {
-  const slashLastIndex = pathname.lastIndexOf("/");
-  if (slashLastIndex === -1) {
-    return "/";
-  }
-  return pathname.slice(0, slashLastIndex + 1);
-};
-
-const urlToFileSystemPath = (url) => {
-  const urlObject = new URL(url);
-  let { origin, pathname, hash } = urlObject;
-  if (urlObject.protocol === "file:") {
-    origin = "file://";
-  }
-  pathname = pathname
-    .split("/")
-    .map((part) => {
-      return part.replace(/%(?![0-9A-F][0-9A-F])/g, "%25");
-    })
-    .join("/");
-  if (hash) {
-    pathname += `%23${encodeURIComponent(hash.slice(1))}`;
-  }
-  const urlString = `${origin}${pathname}`;
-  const fileSystemPath = fileURLToPath(urlString);
-  if (fileSystemPath[fileSystemPath.length - 1] === "/") {
-    // remove trailing / so that nodejs path becomes predictable otherwise it logs
-    // the trailing slash on linux but does not on windows
-    return fileSystemPath.slice(0, -1);
-  }
-  return fileSystemPath;
 };
 
 const getParentDirectoryUrl = (url) => {
@@ -4228,33 +5443,6 @@ const createResourcePattern = (pattern) => {
 //   return resource;
 // };
 
-const pickAcceptedContent = ({
-  availables,
-  accepteds,
-  getAcceptanceScore,
-}) => {
-  let highestScore = -1;
-  let availableWithHighestScore = null;
-  let availableIndex = 0;
-  while (availableIndex < availables.length) {
-    const available = availables[availableIndex];
-    availableIndex++;
-
-    let acceptedIndex = 0;
-    while (acceptedIndex < accepteds.length) {
-      const accepted = accepteds[acceptedIndex];
-      acceptedIndex++;
-
-      const score = getAcceptanceScore(accepted, available);
-      if (score > highestScore) {
-        availableWithHighestScore = available;
-        highestScore = score;
-      }
-    }
-  }
-  return availableWithHighestScore;
-};
-
 const pickContentEncoding = (request, availableEncodings) => {
   const { headers = {} } = request;
   const requestAcceptEncodingHeader = headers["accept-encoding"];
@@ -4385,67 +5573,6 @@ const compareVariant = (left, right) => {
     return true;
   }
   return false;
-};
-
-const pickContentType = (request, availableContentTypes) => {
-  const { headers = {} } = request;
-  const requestAcceptHeader = headers.accept;
-  if (!requestAcceptHeader) {
-    return null;
-  }
-
-  const contentTypesAccepted = parseAcceptHeader(requestAcceptHeader);
-  return pickAcceptedContent({
-    accepteds: contentTypesAccepted,
-    availables: availableContentTypes,
-    getAcceptanceScore: getContentTypeAcceptanceScore,
-  });
-};
-
-const parseAcceptHeader = (acceptHeader) => {
-  const acceptHeaderObject = parseMultipleHeader(acceptHeader, {
-    validateProperty: ({ name }) => {
-      // read only q, anything else is ignored
-      return name === "q";
-    },
-  });
-
-  const accepts = [];
-  Object.keys(acceptHeaderObject).forEach((key) => {
-    const { q = 1 } = acceptHeaderObject[key];
-    const value = key;
-    accepts.push({
-      value,
-      quality: q,
-    });
-  });
-  accepts.sort((a, b) => {
-    return b.quality - a.quality;
-  });
-  return accepts;
-};
-
-const getContentTypeAcceptanceScore = (
-  { value, quality },
-  availableContentType,
-) => {
-  const [acceptedType, acceptedSubtype] = decomposeContentType(value);
-  const [availableType, availableSubtype] =
-    decomposeContentType(availableContentType);
-
-  const typeAccepted = acceptedType === "*" || acceptedType === availableType;
-  const subtypeAccepted =
-    acceptedSubtype === "*" || acceptedSubtype === availableSubtype;
-
-  if (typeAccepted && subtypeAccepted) {
-    return quality;
-  }
-  return -1;
-};
-
-const decomposeContentType = (fullType) => {
-  const [type, subtype] = fullType.split("/");
-  return [type, subtype];
 };
 
 const pickContentVersion = (request, availableVersions) => {
@@ -4683,19 +5810,20 @@ const createRouter = (
       upgrade: false,
     };
 
-    let currentService;
+    let currentServerPlugin;
     let currentRoutingTiming;
     const onRouteMatchStart = (route) => {
-      if (route.service === currentService) {
+      const { serverPlugin } = route;
+      if (serverPlugin === currentServerPlugin) {
         return;
       }
       onRouteGroupEnd();
       currentRoutingTiming = fetchSecondArg.timing(
-        route.service
-          ? `${route.service.name.replace("jsenv:", "")}.routing`
+        serverPlugin && serverPlugin.name
+          ? `${serverPlugin.name.replace("jsenv:", "")}.routing`
           : "routing",
       );
-      currentService = route.service;
+      currentServerPlugin = serverPlugin;
     };
     const onRouteGroupEnd = () => {
       if (currentRoutingTiming) {
@@ -5032,6 +6160,7 @@ const createRoute = ({
   description,
   headers,
   service,
+  serverPlugin,
   availableMediaTypes = [],
   availableLanguages = [],
   availableVersions = [],
@@ -5081,6 +6210,7 @@ const createRoute = ({
     resource,
     description,
     service,
+    serverPlugin,
     availableMediaTypes,
     availableLanguages,
     availableVersions,
@@ -5445,923 +6575,6 @@ const letters = [
   "z",
 ];
 
-const HOOK_NAMES = [
-  "serverListening",
-  "redirectRequest",
-  "augmentRouteFetchSecondArg",
-  "routes",
-  "handleError",
-  "onResponsePush",
-  "injectResponseProperties",
-  "serverStopped",
-];
-
-const createServiceController = (services) => {
-  const hookSetMap = new Map();
-
-  const addHook = (hook) => {
-    let hookSet = hookSetMap.get(hook.name);
-    if (!hookSet) {
-      hookSet = new Set();
-      hookSetMap.set(hook.name, hookSet);
-    }
-    hookSet.add(hook);
-  };
-
-  const addService = (service) => {
-    for (const key of Object.keys(service)) {
-      if (key === "name") continue;
-      const isHook = HOOK_NAMES.includes(key);
-      if (!isHook) {
-        console.warn(
-          `Unexpected "${key}" property on "${service.name}" service`,
-        );
-      }
-      const hookName = key;
-      const hookValue = service[hookName];
-      if (!hookValue) {
-        continue;
-      }
-      if (hookName === "routes") ; else {
-        addHook({
-          service,
-          name: hookName,
-          value: hookValue,
-        });
-      }
-    }
-  };
-
-  for (const service of services) {
-    addService(service);
-  }
-
-  let currentService = null;
-  let currentHookName = null;
-  const callHook = (hook, info, context) => {
-    const hookFn = getHookFunction(hook, info);
-    if (!hookFn) {
-      return null;
-    }
-    currentService = hook.service;
-    currentHookName = hook.name;
-    let valueReturned = hookFn(info, context);
-    currentService = null;
-    currentHookName = null;
-    return valueReturned;
-  };
-  const callAsyncHook = async (hook, info, context) => {
-    const hookFn = getHookFunction(hook, info);
-    if (!hookFn) {
-      return null;
-    }
-    currentService = hook.service;
-    currentHookName = hook.name;
-    let valueReturned = await hookFn(info, context);
-    currentService = null;
-    currentHookName = null;
-    return valueReturned;
-  };
-
-  const callHooks = (hookName, info, context, callback = () => {}) => {
-    const hookSet = hookSetMap.get(hookName);
-    if (!hookSet) {
-      return;
-    }
-    for (const hook of hookSet) {
-      const returnValue = callHook(hook, info, context);
-      if (returnValue) {
-        callback(returnValue);
-      }
-    }
-  };
-  const callAsyncHooks = async (hookName, info, context, callback) => {
-    const hookSet = hookSetMap.get(hookName);
-    if (!hookSet) {
-      return;
-    }
-    for (const hook of hookSet) {
-      const returnValue = await callAsyncHook(hook, info, context);
-      if (returnValue && callback) {
-        await callback(returnValue, hook.plugin);
-      }
-    }
-  };
-  const callHooksUntil = (
-    hookName,
-    info,
-    context,
-    until = (returnValue) => returnValue,
-  ) => {
-    const hookSet = hookSetMap.get(hookName);
-    if (!hookSet) {
-      return null;
-    }
-    for (const hook of hookSet) {
-      const returnValue = callHook(hook, info, context);
-      const untilReturnValue = until(returnValue);
-      if (untilReturnValue) {
-        return untilReturnValue;
-      }
-    }
-    return null;
-  };
-  const callAsyncHooksUntil = async (hookName, info, context) => {
-    const hookSet = hookSetMap.get(hookName);
-    if (!hookSet) {
-      return null;
-    }
-    if (hookSet.size === 0) {
-      return null;
-    }
-    const iterator = hookSet.values()[Symbol.iterator]();
-    let result;
-    const visit = async () => {
-      const { done, value: hook } = iterator.next();
-      if (done) {
-        return;
-      }
-      const returnValue = await callAsyncHook(hook, info, context);
-      if (returnValue) {
-        result = returnValue;
-        return;
-      }
-      await visit();
-    };
-    await visit();
-    return result;
-  };
-
-  return {
-    services,
-
-    callHooks,
-    callHooksUntil,
-    callAsyncHooks,
-    callAsyncHooksUntil,
-
-    getCurrentService: () => currentService,
-    getCurrentHookName: () => currentHookName,
-  };
-};
-
-const getHookFunction = (hook, info) => {
-  const hookValue = hook.value;
-  if (hook.name === "handleRequest" && typeof hookValue === "object") {
-    const request = info;
-    const hookForMethod = hookValue[request.method] || hookValue["*"];
-    if (!hookForMethod) {
-      return null;
-    }
-    return hookForMethod;
-  }
-  return hookValue;
-};
-
-const flattenAndFilterServices = (services) => {
-  const flatServices = [];
-  const visitServiceEntry = (serviceEntry) => {
-    if (Array.isArray(serviceEntry)) {
-      serviceEntry.forEach((value) => visitServiceEntry(value));
-      return;
-    }
-    if (typeof serviceEntry === "object" && serviceEntry !== null) {
-      if (!serviceEntry.name) {
-        serviceEntry.name = "anonymous";
-      }
-      flatServices.push(serviceEntry);
-      return;
-    }
-    throw new Error(`services must be objects, got ${serviceEntry}`);
-  };
-  services.forEach((serviceEntry) => visitServiceEntry(serviceEntry));
-  return flatServices;
-};
-
-/**
- * The standard ways to create a Response
- * - new Response(body, init)
- * - Response.json(data, init)
- * Here we need a way to tell: I want to handle websocket
- * to align with the style of new Response and Response.json to make it look as follow:
- * ```js
- * import { WebSocketResponse } from "@jsenv/server"
- * new WebSocketResponse((websocket) => {
- *   // do stuff with the websocket
- * })
- * ```
- *
- * But we don't really need a class so we are just returning a regular object under the hood
- */
-
-class WebSocketResponse {
-  constructor(
-    webSocketHandler,
-    {
-      status = 101,
-      statusText = status === 101 ? "Switching Protocols" : undefined,
-      headers,
-    } = {},
-  ) {
-    const webSocketResponse = {
-      status,
-      statusText,
-      headers,
-      body: {
-        websocket: webSocketHandler,
-      },
-    };
-    // eslint-disable-next-line no-constructor-return
-    return webSocketResponse;
-  }
-}
-
-const getWebSocketHandler = (responseProperties) => {
-  const responseBody = responseProperties.body;
-  if (!responseBody) {
-    return undefined;
-  }
-  const webSocketHandler = responseBody.websocket;
-  return webSocketHandler;
-};
-
-/**
- * https://www.html5rocks.com/en/tutorials/eventsource/basics/
- *
- */
-
-
-/**
- * Creates a Server-Sent Events controller that manages client connections and event distribution.
- * Supports both SSE (EventSource) and WebSocket connections with automatic event history tracking.
- *
- * @class
- * @param {Object} options - Configuration options for the SSE controller
- * @param {String} [options.logLevel] - Controls logging verbosity ('debug', 'info', 'warn', 'error', etc.)
- * @param {Boolean} [options.keepProcessAlive=false] - If true, prevents Node.js from exiting while SSE connections are active
- * @param {Number} [options.keepaliveDuration=30000] - Milliseconds between keepalive messages to prevent connection timeout
- * @param {Number} [options.retryDuration=1000] - Suggested client reconnection delay in milliseconds
- * @param {Number} [options.historyLength=1000] - Maximum number of events to keep in history for reconnecting clients
- * @param {Number} [options.maxClientAllowed=100] - Maximum number of concurrent client connections allowed
- * @param {Function} [options.computeEventId] - Function to generate event IDs, receives (event, lastEventId) and returns new ID
- * @param {Boolean} [options.welcomeEventEnabled=false] - Whether to send a welcome event to new clients
- * @param {Boolean} [options.welcomeEventPublic=false] - If true, welcome events are broadcast to all clients, not just the new one
- * @param {String} [options.actionOnClientLimitReached='refuse'] - Action when client limit is reached ('refuse' or 'kick-oldest')
- *
- * @returns {Object} SSE controller with the following methods:
- * @returns {Function} .sendEventToAllClients - Sends an event to all connected clients
- * @returns {Function} .fetch - Handles HTTP requests and upgrades them to SSE/WebSocket connections
- * @returns {Function} .getAllEventSince - Retrieves events since a specific ID
- * @returns {Function} .getClientCount - Returns the number of connected clients
- * @returns {Function} .close - Closes all connections and stops the controller
- * @returns {Function} .open - Reopens the controller after closing
- *
- * @example
- * import { ServerEvents } from "@jsenv/server";
- *
- * const serverEvents = new ServerEvents({
- *   welcomeEventEnabled: true,
- *   historyLength: 50
- * });
- *
- * // Send events to all connected clients
- * serverEvents.sendEventToAllClients({
- *   type: "update",
- *   data: JSON.stringify({ timestamp: Date.now() })
- * });
- *
- * // Use in server route
- * {
- *   endpoint: "GET /events",
- *   response: (request) => serverEvents.fetch(request)
- * }
- */
-class ServerEvents {
-  constructor(...args) {
-    // eslint-disable-next-line no-constructor-return
-    return createServerEvents(...args);
-  }
-}
-
-/**
- * Creates a minimal Server-Sent Events controller that exposes only the fetch method
- * to handle client connections, keeping other controller methods private.
- *
- * This is useful when you want to provide a minimal API surface and ensure
- * the events can only be pushed through a given function.
- *
- * @class
- * @param {Function} producer - Function called when first client connects
- * @param {Object} [options] - Configuration options for the SSE controller
- * @param {String} [options.logLevel] - Controls logging verbosity ('debug', 'info', 'warn', 'error', etc.)
- * @param {Boolean} [options.keepProcessAlive=false] - If true, prevents Node.js from exiting while SSE connections are active
- * @param {Number} [options.keepaliveDuration=30000] - Milliseconds between keepalive messages to prevent connection timeout
- * @param {Number} [options.retryDuration=1000] - Suggested client reconnection delay in milliseconds
- * @param {Number} [options.historyLength=1000] - Maximum number of events to keep in history for reconnecting clients
- * @param {Number} [options.maxClientAllowed=100] - Maximum number of concurrent client connections allowed
- * @param {Function} [options.computeEventId] - Function to generate event IDs, receives (event, lastEventId) and returns new ID
- * @param {Boolean} [options.welcomeEventEnabled=false] - Whether to send a welcome event to new clients
- * @param {Boolean} [options.welcomeEventPublic=false] - If true, welcome events are broadcast to all clients, not just the new one
- * @param {String} [options.actionOnClientLimitReached='refuse'] - Action when client limit is reached ('refuse' or 'kick-oldest')
- *
- * @returns {Object} An object with only the fetch method to handle client connections
- *
- * @example
- * import { LazyServerEvents } from "@jsenv/server";
- *
- * // Events can only be sent through the producer function
- * const events = new LazyServerEvents((api) => {
- *   console.log("First client connected");
- *
- *   // Setup interval, database watchers, etc.
- *   const interval = setInterval(() => {
- *     api.sendEvent({
- *       type: "tick",
- *       data: new Date().toISOString()
- *     });
- *   }, 1000);
- *
- *   // Return cleanup function that runs when last client disconnects
- *   return () => {
- *     console.log("Last client disconnected");
- *     clearInterval(interval);
- *   };
- * });
- *
- * // Use in server route
- * {
- *   endpoint: "GET /events",
- *   response: (request) => events.fetch(request)
- * }
- */
-class LazyServerEvents {
-  constructor(producer, options = {}) {
-    const serverEvents = createServerEvents({
-      producer,
-      ...options,
-    });
-    // eslint-disable-next-line no-constructor-return
-    return {
-      fetch: serverEvents.fetch,
-    };
-  }
-}
-
-const createServerEvents = ({
-  producer,
-  logLevel,
-  // do not keep process alive because of event source, something else must keep it alive
-  keepProcessAlive = false,
-  keepaliveDuration = 30 * 1000,
-  retryDuration = 1 * 1000,
-  historyLength = 1 * 1000,
-  maxClientAllowed = 100, // max 100 clients accepted
-  computeEventId = (event, lastEventId) => lastEventId + 1,
-  welcomeEventEnabled = false,
-  welcomeEventPublic = false,
-  actionOnClientLimitReached = "refuse",
-} = {}) => {
-  const logger = createLogger({ logLevel });
-
-  const serverEventSource = {
-    closed: false,
-  };
-  const clientArray = [];
-  const eventHistory = createEventHistory(historyLength);
-  // what about previousEventId that keeps growing ?
-  // we could add some limit
-  // one limit could be that an event older than 24h is deleted
-  let previousEventId = 0;
-  let interval;
-  let producerReturnValue;
-
-  const addClient = (client) => {
-    if (clientArray.length === 0) {
-      if (typeof producer === "function") {
-        producerReturnValue = producer({
-          sendEvent: sendEventToAllClients,
-        });
-      }
-    }
-    clientArray.push(client);
-    logger.debug(
-      `A client has joined. Number of client: ${clientArray.length}`,
-    );
-    if (client.lastKnownId !== undefined) {
-      const previousEvents = getAllEventSince(client.lastKnownId);
-      const eventMissedCount = previousEvents.length;
-      if (eventMissedCount > 0) {
-        logger.info(
-          `send ${eventMissedCount} event missed by client since event with id "${client.lastKnownId}"`,
-        );
-        for (const previousEvent of previousEvents) {
-          client.sendEvent(previousEvent);
-        }
-      }
-    }
-    if (welcomeEventEnabled) {
-      const welcomeEvent = {
-        retry: retryDuration,
-        type: "welcome",
-        data: new Date().toLocaleTimeString(),
-      };
-      addEventToHistory(welcomeEvent);
-
-      // send to everyone
-      if (welcomeEventPublic) {
-        sendEventToAllClients(welcomeEvent, {
-          history: false,
-        });
-      }
-      // send only to this client
-      else {
-        client.sendEvent(welcomeEvent);
-      }
-    } else {
-      const firstEvent = {
-        retry: retryDuration,
-        type: "comment",
-        data: new Date().toLocaleTimeString(),
-      };
-      client.sendEvent(firstEvent);
-    }
-  };
-  const removeClient = (client) => {
-    const index = clientArray.indexOf(client);
-    if (index === -1) {
-      return;
-    }
-    clientArray.splice(index, 1);
-    logger.debug(`A client left. Number of client: ${clientArray.length}`);
-    if (clientArray.length === 0) {
-      if (typeof producerReturnValue === "function") {
-        producerReturnValue();
-        producerReturnValue = undefined;
-      }
-    }
-  };
-
-  const fetch = (request) => {
-    const isWebsocketUpgradeRequest =
-      request.headers["upgrade"] === "websocket";
-    const isEventSourceRequest = isWebsocketUpgradeRequest
-      ? false
-      : request.headers["accept"] &&
-        request.headers["accept"].includes("text/event-stream");
-    if (!isWebsocketUpgradeRequest && !isEventSourceRequest) {
-      return {
-        status: 400,
-        body: "Bad Request, this endpoint only accepts WebSocket or EventSource requests",
-      };
-    }
-
-    if (clientArray.length >= maxClientAllowed) {
-      if (actionOnClientLimitReached === "refuse") {
-        return {
-          status: 503,
-        };
-      }
-      // "kick-oldest"
-      const oldestClient = clientArray.shift();
-      oldestClient.close();
-    }
-
-    if (serverEventSource.closed) {
-      return {
-        status: 204,
-      };
-    }
-
-    const lastKnownId =
-      request.headers["last-event-id"] ||
-      request.searchParams.get("last-event-id");
-    if (isWebsocketUpgradeRequest) {
-      return new WebSocketResponse((websocket) => {
-        const webSocketClient = {
-          type: "websocket",
-          lastKnownId,
-          request,
-          websocket,
-          sendEvent: (event) => {
-            websocket.send(JSON.stringify(event));
-          },
-          close: () => {
-            websocket.close();
-          },
-        };
-        addClient(webSocketClient);
-        return () => {
-          removeClient(webSocketClient);
-        };
-      });
-    }
-    // event source request
-    return {
-      status: 200,
-      headers: {
-        "content-type": "text/event-stream",
-        "cache-control": "no-store",
-        "connection": "keep-alive",
-      },
-      body: createObservable(({ next, complete, addTeardown }) => {
-        const client = {
-          type: "event_source",
-          lastKnownId,
-          request,
-          sendEvent: (event) => {
-            next(stringifySourceEvent(event));
-          },
-          close: () => {
-            complete(); // will terminate the http connection as body ends
-          },
-        };
-        addClient(client);
-        addTeardown(() => {
-          removeClient(client);
-        });
-      }),
-    };
-  };
-
-  const addEventToHistory = (event) => {
-    if (typeof event.id === "undefined") {
-      event.id = computeEventId(event, previousEventId);
-    }
-    previousEventId = event.id;
-    eventHistory.add(event);
-  };
-
-  const sendEventToAllClients = (event, { history = true } = {}) => {
-    if (history) {
-      addEventToHistory(event);
-    }
-    logger.debug(`send "${event.type}" event to ${clientArray.size} client(s)`);
-    for (const client of clientArray) {
-      client.sendEvent(event);
-    }
-  };
-
-  const getAllEventSince = (id) => {
-    const events = eventHistory.since(id);
-    if (welcomeEventEnabled && !welcomeEventPublic) {
-      return events.filter((event) => event.type !== "welcome");
-    }
-    return events;
-  };
-
-  const keepAlive = () => {
-    // maybe that, when an event occurs, we can delay the keep alive event
-    logger.debug(
-      `send keep alive event, number of client listening this event source: ${clientArray.length}`,
-    );
-    sendEventToAllClients(
-      {
-        type: "comment",
-        data: new Date().toLocaleTimeString(),
-      },
-      { history: false },
-    );
-  };
-
-  const open = () => {
-    if (!serverEventSource.closed) {
-      return;
-    }
-    interval = setInterval(keepAlive, keepaliveDuration);
-    if (!keepProcessAlive) {
-      interval.unref();
-    }
-    serverEventSource.closed = false;
-  };
-
-  const close = () => {
-    if (serverEventSource.closed) {
-      return;
-    }
-    logger.debug(`closing, number of client : ${clientArray.length}`);
-    for (const client of clientArray) {
-      client.close();
-    }
-    clientArray.length = 0;
-    clearInterval(interval);
-    eventHistory.reset();
-    serverEventSource.closed = true;
-  };
-
-  Object.assign(serverEventSource, {
-    // main api:
-    // - ability to sendEvent to clients in the room
-    // - ability to join the room
-    // - ability to leave the room
-    sendEventToAllClients,
-    fetch,
-
-    // should rarely be necessary, get information about the room
-    getAllEventSince,
-    getClientCount: () => clientArray.length,
-
-    // should rarely be used
-    close,
-    open,
-  });
-  return serverEventSource;
-};
-
-// https://github.com/dmail-old/project/commit/da7d2c88fc8273850812972885d030a22f9d7448
-// https://github.com/dmail-old/project/commit/98b3ae6748d461ac4bd9c48944a551b1128f4459
-// https://github.com/dmail-old/http-eventsource/blob/master/lib/event-source.js
-// http://html5doctor.com/server-sent-events/
-const stringifySourceEvent = ({ data, type = "message", id, retry }) => {
-  let string = "";
-
-  if (id !== undefined) {
-    string += `id:${id}\n`;
-  }
-
-  if (retry) {
-    string += `retry:${retry}\n`;
-  }
-
-  if (type !== "message") {
-    string += `event:${type}\n`;
-  }
-
-  string += `data:${data}\n\n`;
-
-  return string;
-};
-
-const createEventHistory = (limit) => {
-  const events = [];
-
-  const add = (data) => {
-    events.push(data);
-
-    if (events.length >= limit) {
-      events.shift();
-    }
-  };
-
-  const since = (id) => {
-    const index = events.findIndex((event) => String(event.id) === id);
-    return index === -1 ? [] : events.slice(index + 1);
-  };
-
-  const reset = () => {
-    events.length = 0;
-  };
-
-  return { add, since, reset };
-};
-
-const jsenvServiceAutoreloadOnRestart = () => {
-  const aliveServerEvents = new LazyServerEvents(() => {});
-
-  return {
-    name: "jsenv:autoreload_on_server_restart",
-
-    routes: [
-      {
-        endpoint: "GET /.internal/alive.websocket",
-        description:
-          "Client can connect to this websocket endpoint to detect when server connection is lost.",
-        declarationSource: import.meta.url,
-        /* eslint-disable no-undef */
-        clientCodeExample: () => {
-          const websocket = new WebSocket(
-            "ws://localhost/.internal/alive.websocket",
-          );
-          websocket.onclose = () => {
-            // server connection closed
-            window.location.reload();
-          };
-        },
-        fetch: aliveServerEvents.fetch,
-      },
-      {
-        endpoint: "GET /.internal/alive.eventsource",
-        description: `Client can connect to this eventsource endpoint to detect when server connection is lost.
-This endpoint exists mostly to demo eventsource as there is already the websocket endpoint.`,
-        declarationSource: import.meta.url,
-        /* eslint-disable no-undef */
-        clientCodeExample: async () => {
-          const eventSource = new EventSource("/.internal/alive.eventsource");
-          eventSource.onerror = () => {
-            // server connection closed
-            window.location.reload();
-          };
-        },
-        /* eslint-enable no-undef */
-        fetch: aliveServerEvents.fetch,
-      },
-    ],
-  };
-};
-
-const replacePlaceholdersInHtml = (html, replacers) => {
-  return html.replace(/\$\{(\w+)\}/g, (match, name) => {
-    const replacer = replacers[name];
-    if (replacer === undefined) {
-      return match;
-    }
-    if (typeof replacer === "function") {
-      return replacer();
-    }
-    return replacer;
-  });
-};
-
-const clientErrorHtmlTemplateFileUrl = import.meta.resolve("./client/default_body_4xx_5xx/4xx.html");
-
-const jsenvServiceDefaultBody4xx5xx = () => {
-  return {
-    name: "jsenv:default_body_4xx_5xx",
-
-    injectResponseProperties: (request, responseProperties) => {
-      if (responseProperties.body !== undefined) {
-        return null;
-      }
-      if (responseProperties.status >= 400 && responseProperties.status < 500) {
-        return generateBadStatusResponse(request, responseProperties);
-      }
-      if (responseProperties.status >= 500 && responseProperties.status < 600) {
-        return generateBadStatusResponse(request, responseProperties);
-      }
-      return null;
-    },
-  };
-};
-
-const generateBadStatusResponse = (
-  request,
-  { status, statusText, statusMessage },
-) => {
-  const contentTypeNegotiated = pickContentType(request, [
-    "text/html",
-    "text/plain",
-    "application/json",
-  ]);
-  if (contentTypeNegotiated === "text/html") {
-    const htmlTemplate = readFileSync(
-      new URL(clientErrorHtmlTemplateFileUrl),
-      "utf8",
-    );
-    if (statusMessage) {
-      statusMessage = statusMessage.replace(/https?:\/\/\S+/g, (url) => {
-        return `<a href="${url}">${url}</a>`;
-      });
-      statusMessage = statusMessage.replace(
-        /(^|\s)(\/\S+)/g,
-        (match, startOrSpace, resource) => {
-          let end = "";
-          if (resource[resource.length - 1] === ".") {
-            resource = resource.slice(0, -1);
-            end = ".";
-          }
-          return `${startOrSpace}<a href="${resource}">${resource}</a>${end}`;
-        },
-      );
-      statusMessage = statusMessage.replace(/\r\n|\r|\n/g, "<br />");
-    }
-
-    const html = replacePlaceholdersInHtml(htmlTemplate, {
-      status,
-      statusText,
-      statusMessage: statusMessage || "",
-    });
-    return new Response(html, {
-      headers: { "content-type": "text/html" },
-      status,
-      statusText,
-    });
-  }
-  if (contentTypeNegotiated === "text/plain") {
-    return new Response(statusMessage, {
-      status,
-      statusText,
-    });
-  }
-  return Response.json(
-    { statusMessage },
-    {
-      status,
-      statusText,
-    },
-  );
-};
-
-const jsenvServerRootDirectoryUrl = import.meta.resolve("./");
-
-const jsenvServiceInternalClientFiles = () => {
-  return {
-    name: "jsenv:internal_client_files",
-
-    routes: [
-      {
-        endpoint: "GET /@jsenv/server/*",
-        description: "Serve @jsenv/server internal files.",
-        availableMediaTypes: ["text/javascript"],
-        declarationSource: import.meta.url,
-        fetch: (request) => {
-          const path = request.params[0];
-          const jsenvServerClientFileUrl = new URL(
-            `./${path}`,
-            jsenvServerRootDirectoryUrl,
-          );
-          const fileContent = readFileSync(jsenvServerClientFileUrl, "utf8");
-          return new Response(fileContent, {
-            headers: {
-              "content-type": CONTENT_TYPE.fromUrlExtension(
-                jsenvServerClientFileUrl,
-              ),
-            },
-          });
-        },
-      },
-    ],
-  };
-};
-
-const jsenvServiceOpenFile = () => {
-  return {
-    name: "jsenv:open_file",
-    routes: [
-      {
-        endpoint: "GET /.internal/open_file/*",
-        description: "Can be used to open a given file in your editor.",
-        declarationSource: import.meta.url,
-        fetch: (request) => {
-          let file = decodeURIComponent(request.params[0]);
-          if (!file) {
-            return {
-              status: 400,
-              body: "Missing file in url",
-            };
-          }
-          let fileUrl;
-          try {
-            fileUrl = new URL(file);
-          } catch {
-            return {
-              status: 400,
-              body: `"${file}" is not a file url`,
-            };
-          }
-          const filePath = urlToFileSystemPath(fileUrl);
-          const require = createRequire(import.meta.url);
-          const launch = require("launch-editor");
-          launch(filePath, () => {
-            // ignore error for now
-          });
-          return {
-            status: 200,
-            headers: {
-              "cache-control": "no-store",
-            },
-          };
-        },
-      },
-    ],
-  };
-};
-
-const routeInspectorHtmlFileUrl = import.meta
-  .resolve("./client/route_inspector/route_inspector.html");
-
-const jsenvServiceRouteInspector = () => {
-  return {
-    name: "jsenv:route_inspector",
-    routes: [
-      {
-        endpoint: "GET /.internal/route_inspector",
-        description:
-          "Explore the routes available on this server using a web interface.",
-        availableMediaTypes: ["text/html"],
-        declarationSource: import.meta.url,
-        fetch: () => {
-          const inspectorHtml = readFileSync(
-            new URL(routeInspectorHtmlFileUrl),
-            "utf8",
-          );
-          return new Response(inspectorHtml, {
-            headers: { "content-type": "text/html" },
-          });
-        },
-      },
-      {
-        endpoint: "GET /.internal/routes.json",
-        availableMediaTypes: ["application/json"],
-        description: "Get the routes available on this server in JSON.",
-        declarationSource: import.meta.url,
-        fetch: (request, helpers) => {
-          const routeJSON = helpers.router.inspect(request, helpers);
-          return Response.json(routeJSON);
-        },
-      },
-    ],
-  };
-};
-
 const createReason = (reasonString) => {
   return {
     toString: () => reasonString,
@@ -6521,7 +6734,7 @@ const startServer = async ({
   stopOnInternalError = false,
   keepProcessAlive = true,
   routes = [],
-  services = [],
+  plugins = [],
   nagle = true,
   serverTiming = false,
   requestWaitingMs = 0,
@@ -6595,25 +6808,26 @@ const startServer = async ({
     }
   }
 
-  services = [
-    jsenvServiceOpenFile(),
-    jsenvServiceDefaultBody4xx5xx(),
-    jsenvServiceRouteInspector(),
-    jsenvServiceInternalClientFiles(),
-    jsenvServiceAutoreloadOnRestart(),
-    ...flattenAndFilterServices(services),
+  plugins = [
+    serverPluginOpenFile(),
+    serverPluginDefaultBody4xx5xx(),
+    serverPluginRouteInspector(),
+    serverPluginInternalClientFiles(),
+    serverPluginAutoreloadOnRestart(),
+    ...plugins,
   ];
 
+  const serverPluginsController = await createServerPluginsController(plugins);
   const allRouteArray = [];
   for (const route of routes) {
     allRouteArray.push(route);
   }
-  for (const service of services) {
-    const serviceRoutes = service.routes;
-    if (serviceRoutes) {
-      for (const serviceRoute of serviceRoutes) {
-        serviceRoute.service = service;
-        allRouteArray.push(serviceRoute);
+  for (const serverPlugin of serverPluginsController.activePlugins) {
+    const routes = serverPlugin.routes;
+    if (routes) {
+      for (const route of routes) {
+        route.serverPlugin = serverPlugin;
+        allRouteArray.push(route);
       }
     }
   }
@@ -6624,8 +6838,6 @@ const startServer = async ({
   });
 
   const server = {};
-
-  const serviceController = createServiceController(services);
   const processTeardownEvents = {
     SIGHUP: stopOnExit,
     SIGTERM: stopOnExit,
@@ -6736,7 +6948,7 @@ const startServer = async ({
       serverOrigins[key] = new URL(`${serverOrigins[key]}:${port}`).origin;
     });
 
-    serviceController.callHooks("serverListening", { port });
+    serverPluginsController.callHooks("serverListening", { port });
     startServerOperation.addAbortCallback(async () => {
       await stopListening(nodeServer);
     });
@@ -6781,7 +6993,7 @@ const startServer = async ({
     }
     stopCallbackSet.clear();
     await Promise.all(promises);
-    serviceController.callHooks("serverStopped", { reason });
+    serverPluginsController.callHooks("serverStopped", { reason });
     status = "stopped";
     stoppedResolve(reason);
   });
@@ -6836,7 +7048,7 @@ const startServer = async ({
   });
 
   const applyRequestInternalRedirection = (request) => {
-    serviceController.callHooks(
+    serverPluginsController.callHooks(
       "redirectRequest",
       request,
       {},
@@ -6941,7 +7153,7 @@ const startServer = async ({
           headersToInject,
         );
       }
-      serviceController.callHooks(
+      serverPluginsController.callHooks(
         "injectResponseProperties",
         request,
         responseProperties,
@@ -6999,7 +7211,7 @@ const startServer = async ({
             );
           },
         };
-        await serviceController.callAsyncHooks(
+        await serverPluginsController.callAsyncHooks(
           "augmentRouteFetchSecondArg",
           request,
           fetchSecondArg,
@@ -7039,7 +7251,7 @@ const startServer = async ({
         stop(STOP_REASON_INTERNAL_ERROR);
       }
       const handleErrorReturnValue =
-        await serviceController.callAsyncHooksUntil("handleError", e, {
+        await serverPluginsController.callAsyncHooksUntil("handleError", e, {
           request,
         });
       if (!handleErrorReturnValue) {
@@ -7158,19 +7370,19 @@ const startServer = async ({
               return;
             }
 
-            let preventedByService = null;
+            let preventedByPlugin = null;
             const prevent = () => {
-              preventedByService = serviceController.getCurrentService();
+              preventedByPlugin = serverPluginsController.getCurrentPlugin();
             };
-            serviceController.callHooksUntil(
+            serverPluginsController.callHooksUntil(
               "onResponsePush",
               { path, method },
               { request, prevent },
-              () => preventedByService,
+              () => preventedByPlugin,
             );
-            if (preventedByService) {
+            if (preventedByPlugin) {
               pushRequestLogger.debug(
-                `response push prevented by "${preventedByService.name}" service`,
+                `response push prevented by "${preventedByPlugin.name}" plugin`,
               );
               return;
             }
@@ -7505,7 +7717,7 @@ const PROCESS_TEARDOWN_EVENTS_MAP = {
 
 const internalErrorHtmlFileUrl = import.meta.resolve("./client/error_handler/500.html");
 
-const jsenvServiceErrorHandler = ({ sendErrorDetails = false } = {}) => {
+const serverPluginErrorHandler = ({ sendErrorDetails = false } = {}) => {
   return {
     name: "jsenv:error_handler",
     handleError: (serverInternalError, { request }) => {
@@ -7610,6 +7822,198 @@ const jsenvServiceErrorHandler = ({ sendErrorDetails = false } = {}) => {
   };
 };
 
+class ProgressiveResponse {
+  constructor(responseBodyHandler, { status = 200, statusText, headers } = {}) {
+    const contentType = headers ? headers["content-type"] : "text/plain";
+    const progressiveResponse = {
+      status,
+      statusText,
+      headers,
+      body: createObservable(({ next, complete, addTeardown }) => {
+        // we must write something for fetch promise to resolve
+        // this is conform to HTTP spec where client expect body to starts writing
+        // before resolving response promise client side
+        if (CONTENT_TYPE.isTextual(contentType)) {
+          next("");
+        } else {
+          next(new Uint8Array());
+        }
+        const returnValue = responseBodyHandler({
+          write: (data) => {
+            next(data);
+          },
+          end: () => {
+            complete();
+          },
+        });
+        if (typeof returnValue === "function") {
+          addTeardown(() => {
+            returnValue();
+          });
+        }
+      }),
+    };
+    // eslint-disable-next-line no-constructor-return
+    return progressiveResponse;
+  }
+}
+
+/**
+ * @jsenv/server is already registering a route to handle OPTIONS request
+ * so here we just need to add the CORS headers to the response
+ */
+
+const jsenvAccessControlAllowedHeaders = ["x-requested-with"];
+
+const jsenvAccessControlAllowedMethods = [
+  "GET",
+  "POST",
+  "PUT",
+  "DELETE",
+  "OPTIONS",
+];
+
+const serverPluginCORS = ({
+  accessControlAllowedOrigins = [],
+  accessControlAllowedMethods = jsenvAccessControlAllowedMethods,
+  accessControlAllowedHeaders = jsenvAccessControlAllowedHeaders,
+  accessControlAllowRequestOrigin = false,
+  accessControlAllowRequestMethod = false,
+  accessControlAllowRequestHeaders = false,
+  accessControlAllowCredentials = false,
+  // by default OPTIONS request can be cache for a long time, it's not going to change soon ?
+  // we could put a lot here, see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Max-Age
+  accessControlMaxAge = 600,
+  timingAllowOrigin = false,
+} = {}) => {
+  // TODO: we should check access control params and throw/warn if we find strange values
+
+  const corsEnabled =
+    accessControlAllowRequestOrigin || accessControlAllowedOrigins.length;
+
+  if (!corsEnabled) {
+    return [];
+  }
+
+  return {
+    name: "jsenv:cors",
+    injectResponseProperties: (request) => {
+      const accessControlHeaders = generateAccessControlHeaders({
+        request,
+        accessControlAllowedOrigins,
+        accessControlAllowRequestOrigin,
+        accessControlAllowedMethods,
+        accessControlAllowRequestMethod,
+        accessControlAllowedHeaders,
+        accessControlAllowRequestHeaders,
+        accessControlAllowCredentials,
+        accessControlMaxAge,
+        timingAllowOrigin,
+      });
+      return {
+        headers: accessControlHeaders,
+      };
+    },
+  };
+};
+
+// https://www.w3.org/TR/cors/
+// https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS
+const generateAccessControlHeaders = ({
+  request: { headers },
+  accessControlAllowedOrigins,
+  accessControlAllowRequestOrigin,
+  accessControlAllowedMethods,
+  accessControlAllowRequestMethod,
+  accessControlAllowedHeaders,
+  accessControlAllowRequestHeaders,
+  accessControlAllowCredentials,
+  // by default OPTIONS request can be cache for a long time, it's not going to change soon ?
+  // we could put a lot here, see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Max-Age
+  accessControlMaxAge = 600,
+  timingAllowOrigin,
+} = {}) => {
+  const vary = [];
+
+  const allowedOriginArray = [...accessControlAllowedOrigins];
+  if (accessControlAllowRequestOrigin) {
+    if ("origin" in headers && headers.origin !== "null") {
+      allowedOriginArray.push(headers.origin);
+      vary.push("origin");
+    } else if ("referer" in headers) {
+      allowedOriginArray.push(new URL(headers.referer).origin);
+      vary.push("referer");
+    } else {
+      allowedOriginArray.push("*");
+    }
+  }
+
+  const allowedMethodArray = [...accessControlAllowedMethods];
+  if (
+    accessControlAllowRequestMethod &&
+    "access-control-request-method" in headers
+  ) {
+    const requestMethodName = headers["access-control-request-method"];
+    if (!allowedMethodArray.includes(requestMethodName)) {
+      allowedMethodArray.push(requestMethodName);
+      vary.push("access-control-request-method");
+    }
+  }
+
+  const allowedHeaderArray = [...accessControlAllowedHeaders];
+  if (
+    accessControlAllowRequestHeaders &&
+    "access-control-request-headers" in headers
+  ) {
+    const requestHeaderNameArray =
+      headers["access-control-request-headers"].split(", ");
+    requestHeaderNameArray.forEach((headerName) => {
+      const headerNameLowerCase = headerName.toLowerCase();
+      if (!allowedHeaderArray.includes(headerNameLowerCase)) {
+        allowedHeaderArray.push(headerNameLowerCase);
+        if (!vary.includes("access-control-request-headers")) {
+          vary.push("access-control-request-headers");
+        }
+      }
+    });
+  }
+
+  return {
+    "access-control-allow-origin": allowedOriginArray.join(", "),
+    "access-control-allow-methods": allowedMethodArray.join(", "),
+    "access-control-allow-headers": allowedHeaderArray.join(", "),
+    ...(accessControlAllowCredentials
+      ? { "access-control-allow-credentials": true }
+      : {}),
+    "access-control-max-age": accessControlMaxAge,
+    ...(timingAllowOrigin
+      ? { "timing-allow-origin": allowedOriginArray.join(", ") }
+      : {}),
+    ...(vary.length ? { vary: vary.join(", ") } : {}),
+  };
+};
+
+const ETAG_FOR_EMPTY_CONTENT = '"0-2jmj7l5rSw0yVb/vlWAYkK/YBwk"';
+
+const bufferToEtag = (buffer) => {
+  if (!Buffer.isBuffer(buffer)) {
+    throw new TypeError(`buffer expect,got ${buffer}`);
+  }
+
+  if (buffer.length === 0) {
+    return ETAG_FOR_EMPTY_CONTENT;
+  }
+
+  const hash = createHash("sha1");
+  hash.update(buffer, "utf8");
+
+  const hashBase64String = hash.digest("base64");
+  const hashBase64StringSubset = hashBase64String.slice(0, 27);
+  const length = buffer.length;
+
+  return `"${length.toString(16)}-${hashBase64StringSubset}"`;
+};
+
 const convertFileSystemErrorToResponseProperties = (error) => {
   // https://iojs.org/api/errors.html#errors_eacces_permission_denied
   if (isErrorWithCode(error, "EACCES")) {
@@ -7662,27 +8066,6 @@ const convertFileSystemErrorToResponseProperties = (error) => {
 
 const isErrorWithCode = (error, code) => {
   return typeof error === "object" && error.code === code;
-};
-
-const ETAG_FOR_EMPTY_CONTENT = '"0-2jmj7l5rSw0yVb/vlWAYkK/YBwk"';
-
-const bufferToEtag = (buffer) => {
-  if (!Buffer.isBuffer(buffer)) {
-    throw new TypeError(`buffer expect,got ${buffer}`);
-  }
-
-  if (buffer.length === 0) {
-    return ETAG_FOR_EMPTY_CONTENT;
-  }
-
-  const hash = createHash("sha1");
-  hash.update(buffer, "utf8");
-
-  const hashBase64String = hash.digest("base64");
-  const hashBase64StringSubset = hashBase64String.slice(0, 27);
-  const length = buffer.length;
-
-  return `"${length.toString(16)}-${hashBase64StringSubset}"`;
 };
 
 const isFileSystemPath = (value) => {
@@ -8223,178 +8606,47 @@ const asUrlString = (value) => {
   return null;
 };
 
-class ProgressiveResponse {
-  constructor(responseBodyHandler, { status = 200, statusText, headers } = {}) {
-    const contentType = headers ? headers["content-type"] : "text/plain";
-    const progressiveResponse = {
-      status,
-      statusText,
-      headers,
-      body: createObservable(({ next, complete, addTeardown }) => {
-        // we must write something for fetch promise to resolve
-        // this is conform to HTTP spec where client expect body to starts writing
-        // before resolving response promise client side
-        if (CONTENT_TYPE.isTextual(contentType)) {
-          next("");
-        } else {
-          next(new Uint8Array());
-        }
-        const returnValue = responseBodyHandler({
-          write: (data) => {
-            next(data);
-          },
-          end: () => {
-            complete();
-          },
-        });
-        if (typeof returnValue === "function") {
-          addTeardown(() => {
-            returnValue();
-          });
-        }
-      }),
-    };
-    // eslint-disable-next-line no-constructor-return
-    return progressiveResponse;
-  }
-}
-
-/**
- * @jsenv/server is already registering a route to handle OPTIONS request
- * so here we just need to add the CORS headers to the response
- */
-
-const jsenvAccessControlAllowedHeaders = ["x-requested-with"];
-
-const jsenvAccessControlAllowedMethods = [
-  "GET",
-  "POST",
-  "PUT",
-  "DELETE",
-  "OPTIONS",
-];
-
-const jsenvServiceCORS = ({
-  accessControlAllowedOrigins = [],
-  accessControlAllowedMethods = jsenvAccessControlAllowedMethods,
-  accessControlAllowedHeaders = jsenvAccessControlAllowedHeaders,
-  accessControlAllowRequestOrigin = false,
-  accessControlAllowRequestMethod = false,
-  accessControlAllowRequestHeaders = false,
-  accessControlAllowCredentials = false,
-  // by default OPTIONS request can be cache for a long time, it's not going to change soon ?
-  // we could put a lot here, see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Max-Age
-  accessControlMaxAge = 600,
-  timingAllowOrigin = false,
-} = {}) => {
-  // TODO: we should check access control params and throw/warn if we find strange values
-
-  const corsEnabled =
-    accessControlAllowRequestOrigin || accessControlAllowedOrigins.length;
-
-  if (!corsEnabled) {
-    return [];
-  }
-
+const serverPluginStaticFiles = ({ directoryUrl, mainFilePath }) => {
   return {
-    name: "jsenv:cors",
-    injectResponseProperties: (request) => {
-      const accessControlHeaders = generateAccessControlHeaders({
-        request,
-        accessControlAllowedOrigins,
-        accessControlAllowRequestOrigin,
-        accessControlAllowedMethods,
-        accessControlAllowRequestMethod,
-        accessControlAllowedHeaders,
-        accessControlAllowRequestHeaders,
-        accessControlAllowCredentials,
-        accessControlMaxAge,
-        timingAllowOrigin,
-      });
-      return {
-        headers: accessControlHeaders,
-      };
-    },
+    name: "jsenv:static_files",
+    routes: [
+      {
+        endpoint: "GET *",
+        description: "Serve static files.",
+        fetch: (request, helpers) => {
+          const urlIsVersioned = new URL(request.url).searchParams.has("v");
+          if (mainFilePath && request.resource === "/") {
+            request = {
+              ...request,
+              resource: `/${mainFilePath}`,
+            };
+          }
+          const urlObject = new URL(request.resource.slice(1), directoryUrl);
+          return createFileSystemFetch(directoryUrl, {
+            cacheControl: urlIsVersioned
+              ? `private,max-age=${SECONDS_IN_30_DAYS},immutable`
+              : "private,max-age=0,must-revalidate",
+            etagEnabled: true,
+            compressionEnabled: true,
+            canReadDirectory: true,
+            ENOENTFallback: () => {
+              if (
+                !urlToExtension(urlObject) &&
+                !urlToPathname(urlObject).endsWith("/")
+              ) {
+                return new URL(mainFilePath, directoryUrl);
+              }
+              return null;
+            },
+          })(request, helpers);
+        },
+      },
+    ],
   };
 };
+const SECONDS_IN_30_DAYS = 60 * 60 * 24 * 30;
 
-// https://www.w3.org/TR/cors/
-// https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS
-const generateAccessControlHeaders = ({
-  request: { headers },
-  accessControlAllowedOrigins,
-  accessControlAllowRequestOrigin,
-  accessControlAllowedMethods,
-  accessControlAllowRequestMethod,
-  accessControlAllowedHeaders,
-  accessControlAllowRequestHeaders,
-  accessControlAllowCredentials,
-  // by default OPTIONS request can be cache for a long time, it's not going to change soon ?
-  // we could put a lot here, see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Max-Age
-  accessControlMaxAge = 600,
-  timingAllowOrigin,
-} = {}) => {
-  const vary = [];
-
-  const allowedOriginArray = [...accessControlAllowedOrigins];
-  if (accessControlAllowRequestOrigin) {
-    if ("origin" in headers && headers.origin !== "null") {
-      allowedOriginArray.push(headers.origin);
-      vary.push("origin");
-    } else if ("referer" in headers) {
-      allowedOriginArray.push(new URL(headers.referer).origin);
-      vary.push("referer");
-    } else {
-      allowedOriginArray.push("*");
-    }
-  }
-
-  const allowedMethodArray = [...accessControlAllowedMethods];
-  if (
-    accessControlAllowRequestMethod &&
-    "access-control-request-method" in headers
-  ) {
-    const requestMethodName = headers["access-control-request-method"];
-    if (!allowedMethodArray.includes(requestMethodName)) {
-      allowedMethodArray.push(requestMethodName);
-      vary.push("access-control-request-method");
-    }
-  }
-
-  const allowedHeaderArray = [...accessControlAllowedHeaders];
-  if (
-    accessControlAllowRequestHeaders &&
-    "access-control-request-headers" in headers
-  ) {
-    const requestHeaderNameArray =
-      headers["access-control-request-headers"].split(", ");
-    requestHeaderNameArray.forEach((headerName) => {
-      const headerNameLowerCase = headerName.toLowerCase();
-      if (!allowedHeaderArray.includes(headerNameLowerCase)) {
-        allowedHeaderArray.push(headerNameLowerCase);
-        if (!vary.includes("access-control-request-headers")) {
-          vary.push("access-control-request-headers");
-        }
-      }
-    });
-  }
-
-  return {
-    "access-control-allow-origin": allowedOriginArray.join(", "),
-    "access-control-allow-methods": allowedMethodArray.join(", "),
-    "access-control-allow-headers": allowedHeaderArray.join(", "),
-    ...(accessControlAllowCredentials
-      ? { "access-control-allow-credentials": true }
-      : {}),
-    "access-control-max-age": accessControlMaxAge,
-    ...(timingAllowOrigin
-      ? { "timing-allow-origin": allowedOriginArray.join(", ") }
-      : {}),
-    ...(vary.length ? { vary: vary.join(", ") } : {}),
-  };
-};
-
-const jsenvServiceResponseAcceptanceCheck = () => {
+const serverPluginResponseAcceptanceCheck = () => {
   return {
     name: "jsenv:response_acceptance_check",
     inspectResponse: (request, { response, warn }) => {
@@ -8447,7 +8699,7 @@ ${requestAcceptEncodingHeader}`);
   }
 };
 
-const jsenvServiceRequestAliases = (resourceAliases) => {
+const serverPluginRequestAliases = (resourceAliases) => {
   const aliases = {};
   Object.keys(resourceAliases).forEach((key) => {
     aliases[asFileUrl(key)] = asFileUrl(resourceAliases[key]);
@@ -8483,4 +8735,4 @@ const replaceResource = (resourceBeforeAlias, newValue) => {
   return resource;
 };
 
-export { LazyServerEvents, ProgressiveResponse, STOP_REASON_INTERNAL_ERROR, STOP_REASON_NOT_SPECIFIED, STOP_REASON_PROCESS_BEFORE_EXIT, STOP_REASON_PROCESS_EXIT, STOP_REASON_PROCESS_SIGHUP, STOP_REASON_PROCESS_SIGINT, STOP_REASON_PROCESS_SIGTERM, ServerEvents, WebSocketResponse, composeTwoResponses, createFileSystemFetch, fetchFileSystem, findFreePort, jsenvAccessControlAllowedHeaders, jsenvAccessControlAllowedMethods, jsenvServiceCORS, jsenvServiceErrorHandler, jsenvServiceRequestAliases, jsenvServiceResponseAcceptanceCheck, pickContentEncoding, pickContentLanguage, pickContentType, serveDirectory, startServer };
+export { LazyServerEvents, ProgressiveResponse, STOP_REASON_INTERNAL_ERROR, STOP_REASON_NOT_SPECIFIED, STOP_REASON_PROCESS_BEFORE_EXIT, STOP_REASON_PROCESS_EXIT, STOP_REASON_PROCESS_SIGHUP, STOP_REASON_PROCESS_SIGINT, STOP_REASON_PROCESS_SIGTERM, ServerEvents, WebSocketResponse, composeTwoResponses, createFileSystemFetch, createPluginsController, fetchFileSystem, findFreePort, jsenvAccessControlAllowedHeaders, jsenvAccessControlAllowedMethods, pickContentEncoding, pickContentLanguage, pickContentType, serveDirectory, serverPluginCORS, serverPluginErrorHandler, serverPluginRequestAliases, serverPluginResponseAcceptanceCheck, serverPluginStaticFiles, startServer };

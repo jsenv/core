@@ -1,26 +1,58 @@
 const installImportMetaCssBuild = (importMeta) => {
-  const stylesheet = new CSSStyleSheet({ baseUrl: importMeta.url });
+  const IMPORT_META_CSS_BUILD = "jsenv_import_meta_css_build";
 
-  let called = false;
-  // eslint-disable-next-line accessor-pairs
+  if (importMeta.css === IMPORT_META_CSS_BUILD) {
+    return;
+  }
+
+  const stylesheetMap = new Map();
+  const adopt = (url, value) => {
+    const stylesheet = new CSSStyleSheet({ baseUrl: importMeta.url });
+    stylesheet.replaceSync(value);
+    stylesheetMap.set(url, stylesheet);
+    document.adoptedStyleSheets = [...document.adoptedStyleSheets, stylesheet];
+  };
+  const update = (url, value) => {
+    stylesheetMap.get(url).replaceSync(value);
+  };
+  const remove = (url) => {
+    const stylesheet = stylesheetMap.get(url);
+    document.adoptedStyleSheets = document.adoptedStyleSheets.filter(
+      (s) => s !== stylesheet,
+    );
+    stylesheetMap.delete(url);
+  };
+
+  const currentCssSourceMap = new Map();
   Object.defineProperty(importMeta, "css", {
     configurable: true,
-    set(value) {
-      if (called) {
-        throw new Error("import.meta.css setter can only be called once");
+    get() {
+      return IMPORT_META_CSS_BUILD;
+    },
+    set([value, url]) {
+      if (value === undefined) {
+        if (stylesheetMap.has(url)) {
+          remove(url);
+          currentCssSourceMap.delete(url);
+        }
+        return;
       }
-      called = true;
-      stylesheet.replaceSync(value);
-      document.adoptedStyleSheets = [
-        ...document.adoptedStyleSheets,
-        stylesheet,
-      ];
+      if (!stylesheetMap.has(url)) {
+        adopt(url, value);
+        currentCssSourceMap.set(url, value);
+      } else if (currentCssSourceMap.get(url) !== value) {
+        update(url, value);
+        currentCssSourceMap.set(url, value);
+      }
     },
   });
 };
 
-installImportMetaCssBuild(import.meta);
-import.meta.css = /* css */ `
+installImportMetaCssBuild(import.meta);/**
+ * Regroup CSS vars that makes sense to share across all navi components.
+ */
+
+import.meta.css = [/* css */`
   @layer navi {
     :root {
       --navi-focus-outline-color: light-dark(#4476ff, #3b82f6);
@@ -48,7 +80,7 @@ import.meta.css = /* css */ `
       --navi-xxl: 3em;
     }
   }
-`;
+`, "/src/navi_css_vars.js"];
 
 export { installImportMetaCssBuild };
 //# sourceMappingURL=jsenv_navi_side_effects.js.map

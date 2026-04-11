@@ -1,7 +1,7 @@
 import { requestCertificate } from "@jsenv/https-local";
 import {
   createFileSystemFetch,
-  jsenvServiceErrorHandler,
+  serverPluginErrorHandler,
   startServer,
 } from "@jsenv/server";
 
@@ -11,7 +11,7 @@ await startServer({
   port: 3679,
   http2: true,
   https: { certificate, privateKey },
-  services: [
+  plugins: [
     {
       handleRequest: (request, helpers) => {
         if (request.pathname === "/main.html") {
@@ -23,6 +23,6 @@ await startServer({
         })(request, helpers);
       },
     },
-    jsenvServiceErrorHandler({ sendErrorDetails: true }),
+    serverPluginErrorHandler({ sendErrorDetails: true }),
   ],
 });

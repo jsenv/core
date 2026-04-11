@@ -17,13 +17,12 @@ import { Abort, raceProcessTeardownEvents } from "@jsenv/abort";
 import { assertAndNormalizeDirectoryUrl } from "@jsenv/filesystem";
 import { createLogger, createTaskLog } from "@jsenv/humanize";
 import {
-  createFileSystemFetch,
   jsenvAccessControlAllowedHeaders,
-  jsenvServiceCORS,
-  jsenvServiceErrorHandler,
+  serverPluginCORS,
+  serverPluginErrorHandler,
+  serverPluginStaticFiles,
   startServer,
 } from "@jsenv/server";
-import { urlToExtension, urlToPathname } from "@jsenv/urls";
 import { existsSync } from "node:fs";
 
 /**
@@ -37,7 +36,7 @@ export const startBuildServer = async ({
   buildMainFilePath = "index.html",
   port = 9779,
   routes,
-  services = [],
+  serverPlugins = [],
   acceptAnyIp,
   hostname,
   https,
@@ -122,8 +121,8 @@ export const startBuildServer = async ({
     serverTiming: true,
     requestWaitingMs: 60_000,
     routes,
-    services: [
-      jsenvServiceCORS({
+    plugins: [
+      serverPluginCORS({
         accessControlAllowRequestOrigin: true,
         accessControlAllowRequestMethod: true,
         accessControlAllowRequestHeaders: true,
@@ -131,13 +130,13 @@ export const startBuildServer = async ({
         accessControlAllowCredentials: true,
         timingAllowOrigin: true,
       }),
-      ...services,
-      jsenvBuildFileService({
-        buildDirectoryUrl,
-        buildMainFilePath,
+      ...serverPlugins,
+      serverPluginStaticFiles({
+        directoryUrl: buildDirectoryUrl,
+        mainFilePath: buildMainFilePath,
       }),
-      jsenvServiceErrorHandler({
-        sendErrorDetails: true,
+      serverPluginErrorHandler({
+        sendErrorDetails: false,
       }),
     ],
   });
@@ -158,48 +157,3 @@ export const startBuildServer = async ({
     },
   };
 };
-
-const jsenvBuildFileService = ({ buildDirectoryUrl, buildMainFilePath }) => {
-  return {
-    name: "jsenv:build_files",
-    routes: [
-      {
-        endpoint: "GET *",
-        description: "Serve static files.",
-        fetch: (request, helpers) => {
-          const urlIsVersioned = new URL(request.url).searchParams.has("v");
-          if (buildMainFilePath && request.resource === "/") {
-            request = {
-              ...request,
-              resource: `/${buildMainFilePath}`,
-            };
-          }
-          const urlObject = new URL(
-            request.resource.slice(1),
-            buildDirectoryUrl,
-          );
-          return createFileSystemFetch(buildDirectoryUrl, {
-            cacheControl: urlIsVersioned
-              ? `private,max-age=${SECONDS_IN_30_DAYS},immutable`
-              : "private,max-age=0,must-revalidate",
-            etagEnabled: true,
-            compressionEnabled: true,
-            rootDirectoryUrl: buildDirectoryUrl,
-            canReadDirectory: true,
-            ENOENTFallback: () => {
-              if (
-                !urlToExtension(urlObject) &&
-                !urlToPathname(urlObject).endsWith("/")
-              ) {
-                return new URL(buildMainFilePath, buildDirectoryUrl);
-              }
-              return null;
-            },
-          })(request, helpers);
-        },
-      },
-    ],
-  };
-};
-
-const SECONDS_IN_30_DAYS = 60 * 60 * 24 * 30;
