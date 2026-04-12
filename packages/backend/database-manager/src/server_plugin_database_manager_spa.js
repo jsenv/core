@@ -1,19 +1,21 @@
+import { createFileSystemFetch } from "@jsenv/server";
 import { readFileSync } from "node:fs";
-import { replacePlaceholdersInHtml } from "./replace_placeholders_in_html.js";
 
 const databaseManagerHtmlFileUrl = import.meta
   .resolve("./client/database_manager.html");
 
 export const serverPluginDatabaseManagerSpa = ({ pathname }) => {
+  const apiUrl = new URL(`${pathname}api`, import.meta.url).href;
+
   return {
     name: "jsenv:database_manager_spa",
     routes: [
-      // {
-      //   endpoint: `GET ${pathname}assets/*`,
-      //   description: "Serve static files for database manager Web interface",
-      //   declarationSource: import.meta.url,
-      //   fetch: fetchFileSystem(import.meta.resolve("./client/"), {}),
-      // },
+      {
+        endpoint: `GET ${pathname}assets/*`,
+        description: "Serve static files for database manager Web interface",
+        declarationSource: import.meta.url,
+        fetch: createFileSystemFetch(import.meta.resolve("./client/assets/")),
+      },
       {
         endpoint: `GET ${pathname}`,
         description: "Manage database using a Web interface",
@@ -33,7 +35,7 @@ export const serverPluginDatabaseManagerSpa = ({ pathname }) => {
               __DB_MANAGER_CONFIG__: () => {
                 return {
                   pathname,
-                  apiUrl: new URL(`${pathname}api`, request.origin).href,
+                  apiUrl,
                 };
               },
             },
@@ -45,4 +47,12 @@ export const serverPluginDatabaseManagerSpa = ({ pathname }) => {
       },
     ],
   };
+};
+
+const replacePlaceholdersInHtml = (html, replacers) => {
+  for (const [name, replacer] of Object.entries(replacers)) {
+    const value = typeof replacer === "function" ? replacer() : replacer;
+    html = html.replaceAll(name, JSON.stringify(value));
+  }
+  return html;
 };

@@ -1,39 +1,29 @@
+import { createFileSystemFetch } from "@jsenv/server";
 import { readFileSync } from "node:fs";
 import { connectAs } from "@jsenv/database";
 import { execSync } from "node:child_process";
-
-const replacePlaceholdersInHtml = (html, replacers) => {
-  return html.replace(/\$\{(\w+)\}/g, (match, name) => {
-    const replacer = replacers[name];
-    if (replacer === undefined) {
-      return match;
-    }
-    if (typeof replacer === "function") {
-      return replacer();
-    }
-    return replacer;
-  });
-};
 
 const databaseManagerHtmlFileUrl = import.meta
   .resolve("./client/database_manager.html");
 
 const serverPluginDatabaseManagerSpa = ({ pathname }) => {
+  const apiUrl = new URL(`${pathname}api`, import.meta.url).href;
+
   return {
     name: "jsenv:database_manager_spa",
     routes: [
-      // {
-      //   endpoint: `GET ${pathname}app/*`,
-      //   description: "Serve static files for database manager Web interface",
-      //   declarationSource: import.meta.url,
-      //   fetch: fetchFileSystem(import.meta.resolve("./client/"), {}),
-      // },
+      {
+        endpoint: `GET ${pathname}assets/*`,
+        description: "Serve static files for database manager Web interface",
+        declarationSource: import.meta.url,
+        fetch: createFileSystemFetch(import.meta.resolve("./assets/")),
+      },
       {
         endpoint: `GET ${pathname}`,
         description: "Manage database using a Web interface",
         declarationSource: import.meta.url,
         fetch: (request) => {
-          if (request.pathname.startsWith(`${pathname}app/`)) {
+          if (request.pathname.startsWith(`${pathname}assets/`)) {
             // let the static files be handled (by jsenv dev server or a static file service)
             return undefined;
           }
@@ -47,7 +37,7 @@ const serverPluginDatabaseManagerSpa = ({ pathname }) => {
               __DB_MANAGER_CONFIG__: () => {
                 return {
                   pathname,
-                  apiUrl: new URL(`${pathname}api`, request.origin).href,
+                  apiUrl,
                 };
               },
             },
@@ -59,6 +49,14 @@ const serverPluginDatabaseManagerSpa = ({ pathname }) => {
       },
     ],
   };
+};
+
+const replacePlaceholdersInHtml = (html, replacers) => {
+  for (const [name, replacer] of Object.entries(replacers)) {
+    const value = typeof replacer === "function" ? replacer() : replacer;
+    html = html.replaceAll(name, JSON.stringify(value));
+  }
+  return html;
 };
 
 // https://www.postgresql.org/docs/14/sql-alterdatabase.html

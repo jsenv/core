@@ -8,6 +8,12 @@ await build({
     "./index.js": {
       buildRelativeUrl: "./jsenv_database_manager.js",
       runtimeCompat: { node: "20.0" },
+      directoryReferenceEffect: {
+        [import.meta.resolve("../src/client/assets/")]: "resolve",
+      },
+      packageDependencies: {
+        "@jsenv/server": "ignore",
+      },
     },
     "./src/client/database_manager.html": {
       buildRelativeUrl: "./client/database_manager.html",
