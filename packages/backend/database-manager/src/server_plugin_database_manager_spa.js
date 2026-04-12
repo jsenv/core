@@ -9,7 +9,7 @@ export const serverPluginDatabaseManagerSpa = ({ pathname }) => {
     name: "jsenv:database_manager_spa",
     routes: [
       // {
-      //   endpoint: `GET ${pathname}app/*`,
+      //   endpoint: `GET ${pathname}assets/*`,
       //   description: "Serve static files for database manager Web interface",
       //   declarationSource: import.meta.url,
       //   fetch: fetchFileSystem(import.meta.resolve("./client/"), {}),
@@ -19,7 +19,7 @@ export const serverPluginDatabaseManagerSpa = ({ pathname }) => {
         description: "Manage database using a Web interface",
         declarationSource: import.meta.url,
         fetch: (request) => {
-          if (request.pathname.startsWith(`${pathname}app/`)) {
+          if (request.pathname.startsWith(`${pathname}assets/`)) {
             // let the static files be handled (by jsenv dev server or a static file service)
             return undefined;
           }

@@ -12,7 +12,7 @@ await build({
     "./src/client/database_manager.html": {
       buildRelativeUrl: "./client/database_manager.html",
       runtimeCompat: { chrome: "89" },
-      assetsDirectory: "client/app/",
+      assetsDirectory: "client/assets/",
       plugins: [jsenvPluginPreact()],
     },
   },

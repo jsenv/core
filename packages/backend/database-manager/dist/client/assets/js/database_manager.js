@@ -41561,7 +41561,7 @@ globalObject.__InlineContent__ = function (content, { type = "text/plain" }) {
 };
 
 const inlineContent$2 = new __InlineContent__("body {\n  color: #333;\n  background-color: #fff;\n  margin: 0;\n  font-family: system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Arial, sans-serif;\n  line-height: 1.5;\n  transition: background-color .3s, color .3s;\n}\n\n* {\n  box-sizing: border-box;\n}\n\n[data-hidden] {\n  display: none !important;\n}\n", { type: "text/css" });
-const stylesheet$2 = new CSSStyleSheet({ baseUrl: "/src/client/app/database_manager.css?side_effect" });
+const stylesheet$2 = new CSSStyleSheet({ baseUrl: "/src/client/assets/database_manager.css?side_effect" });
 stylesheet$2.replaceSync(inlineContent$2.text);
 
 document.adoptedStyleSheets = [...document.adoptedStyleSheets, stylesheet$2];
@@ -43394,7 +43394,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
   .explorer_details .explorer_item_content {
     padding-left: calc(32px + var(--details-depth, 0) * 16px);
   }
-`, "@jsenv/database-manager/src/client/app/role/role_with_ownership/role_with_ownership_list_details.jsx"];
+`, "@jsenv/database-manager/src/client/assets/role/role_with_ownership/role_with_ownership_list_details.jsx"];
 const RoleWithOwnershipListDetails = () => {
   const [resizable, setResizable] = h(false);
   const roleWithOwnershipCount = useRoleWithOwnershipCount();
@@ -43561,7 +43561,7 @@ const TableListDetails = () => {
 };
 
 const inlineContent$1 = new __InlineContent__(".explorer {\n  background: #f5f5f5;\n  flex-direction: column;\n  flex: 1;\n  width: 100%;\n  height: 100%;\n  margin-bottom: 20px;\n  display: flex;\n  overflow: auto;\n}\n\n.explorer_head {\n  flex-direction: row;\n  align-items: center;\n  padding-left: 6px;\n  display: flex;\n}\n\n.explorer_head h2 {\n  user-select: none;\n  margin-top: .5em;\n  margin-bottom: .5em;\n  margin-left: 24px;\n  font-size: 16px;\n}\n\n.explorer_body {\n  flex-direction: column;\n  flex: 1;\n  min-height: 0;\n  display: flex;\n  overflow: hidden;\n}\n\n.explorer_group > summary {\n  cursor: pointer;\n  user-select: none;\n  border: 1px solid #0000;\n  border-top-color: #e0e0e0;\n  flex-shrink: 0;\n  font-size: 14px;\n}\n\n.explorer_group:first-of-type > summary {\n  border-top-color: #0000;\n}\n\n.explorer_group > summary:focus {\n  border-color: #00f;\n}\n\n.summary_action_icon {\n  visibility: hidden;\n  pointer-events: none;\n  padding: 0;\n}\n\n.explorer_group[open] .summary_action_icon {\n  visibility: visible;\n  pointer-events: auto;\n}\n\n.summary_label {\n  flex: 1;\n  align-items: center;\n  gap: .2em;\n  padding-right: 10px;\n  display: flex;\n}\n\n.explorer_group > summary .summary_label {\n  font-weight: 500;\n}\n\n.explorer_body > [data-resize-handle] {\n  z-index: 2;\n  opacity: 0;\n  cursor: ns-resize;\n  background-color: #0000;\n  flex-shrink: 0;\n  justify-content: center;\n  align-items: center;\n  width: 100%;\n  height: 5px;\n  margin-top: -2.5px;\n  margin-bottom: -2.5px;\n  transition: background-color .15s, opacity .15s;\n  display: flex;\n  position: relative;\n}\n\n.explorer_body > [data-resize-handle]:hover, .explorer_body > [data-resize-handle][data-active] {\n  opacity: .5;\n  background-color: #00f;\n  transition-delay: .3s;\n}\n\n.explorer_group_content {\n  overscroll-behavior: contain;\n  scrollbar-width: thin;\n  flex: 1;\n  height: 100%;\n  min-height: 0;\n  overflow-y: auto;\n}\n\n.explorer_group[data-size-animated] .explorer_group_content {\n  overflow-y: hidden;\n}\n\n.explorer_item {\n  position: relative;\n}\n\n.explorer_item_content {\n  flex: 1;\n  padding-left: 16px;\n}\n\n.explorer_item input {\n  flex: 1;\n  margin-left: -3.5px;\n  padding-top: .1em;\n  padding-bottom: 0;\n  font-size: 16px;\n}\n\n.explorer_item_content {\n  white-space: nowrap;\n  align-items: center;\n  gap: .3em;\n  min-width: 0;\n  display: flex;\n}\n\n.explorer_foot {\n  height: 50px;\n}\n", { type: "text/css" });
-const stylesheet$1 = new CSSStyleSheet({ baseUrl: "/src/client/app/explorer/explorer.css?side_effect" });
+const stylesheet$1 = new CSSStyleSheet({ baseUrl: "/src/client/assets/explorer/explorer.css?side_effect" });
 stylesheet$1.replaceSync(inlineContent$1.text);
 
 document.adoptedStyleSheets = [...document.adoptedStyleSheets, stylesheet$1];
@@ -43628,7 +43628,7 @@ const ExplorerBody = () => {
 };
 
 const inlineContent = new __InlineContent__("body {\n  scrollbar-gutter: stable;\n}\n\n#root {\n  --aside-width: 250px;\n}\n\n#app {\n  flex-direction: row;\n  display: flex;\n}\n\naside {\n  z-index: 1;\n  width: var(--aside-width);\n  border-right: 1px solid #e0e0e0;\n  flex-shrink: 0;\n  min-width: 100px;\n  height: 100vh;\n  min-height: 300px;\n  position: fixed;\n  top: 0;\n  left: 0;\n}\n\naside > [data-resize-handle] {\n  z-index: 1;\n  cursor: ew-resize;\n  width: 5px;\n  position: absolute;\n  top: 0;\n  bottom: 0;\n  right: -2.5px;\n}\n\naside > [data-resize-handle]:hover, aside[data-resizing] > [data-resize-handle] {\n  opacity: .5;\n  background-color: #00f;\n}\n\nmain {\n  z-index: 0;\n  box-sizing: border-box;\n  min-width: 200px;\n  min-height: 100vh;\n  margin-left: var(--aside-width);\n  flex: 1;\n  padding-bottom: 0;\n  position: relative;\n}\n\n.main_body {\n  flex-direction: column;\n  flex: 1;\n  min-width: 100%;\n  display: flex;\n}\n", { type: "text/css" });
-const stylesheet = new CSSStyleSheet({ baseUrl: "/src/client/app/layout/layout.css?side_effect" });
+const stylesheet = new CSSStyleSheet({ baseUrl: "/src/client/assets/layout/layout.css?side_effect" });
 stylesheet.replaceSync(inlineContent.text);
 
 document.adoptedStyleSheets = [...document.adoptedStyleSheets, stylesheet];
@@ -43906,7 +43906,7 @@ installImportMetaCssBuild(import.meta);import.meta.css = [/* css */`
     background: #fdd;
     border: 1px solid red;
   }
-`, "@jsenv/database-manager/src/client/app/layout/page.jsx"];
+`, "@jsenv/database-manager/src/client/assets/layout/page.jsx"];
 const Page = ({
   children,
   ...props
@@ -45304,7 +45304,7 @@ import.meta.css = [/* css */`
   .table_data_actions {
     margin-bottom: 15px;
   }
-`, "@jsenv/database-manager/src/client/app/table/table_data.jsx"];
+`, "@jsenv/database-manager/src/client/assets/table/table_data.jsx"];
 const TableData = ({
   table
 }) => {
