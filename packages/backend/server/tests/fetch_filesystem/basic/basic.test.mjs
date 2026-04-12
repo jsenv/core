@@ -35,6 +35,9 @@ const gitIgnoredDirectoryUrl = import.meta.resolve("./git_ignored/");
     },
     null,
     gitIgnoredDirectoryUrl,
+    {
+      cacheControl: "no-store",
+    },
   );
   const expect = {
     status: 200,

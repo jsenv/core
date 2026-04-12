@@ -5,7 +5,7 @@ import { readFileSync } from "node:fs";
 
 const testDirectoryUrl = import.meta.resolve("./fixtures/");
 const server = await startServer({
-  logLevel: "warn",
+  logLevel: "error",
   keepProcessAlive: false,
   routes: [
     {

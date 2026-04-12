@@ -467,5 +467,8 @@ const asUrlString = (value) => {
 const SECONDS_IN_30_DAYS = 60 * 60 * 24 * 30;
 
 const defaultIsVersioned = (request) => {
+  if (!request.url) {
+    return false;
+  }
   return new URL(request.url).searchParams.has("v");
 };
