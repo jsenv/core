@@ -73,6 +73,11 @@ await snapshotBuildTests(
           node: "16.14",
         },
       }));
+    test("resolve_nested", () =>
+      run({
+        sourceDirectoryUrl: new URL("./fixtures/5_nested/", import.meta.url),
+        directoryReferenceEffect: "resolve",
+      }));
   },
   {
     logEffects: { level: "warn" },
