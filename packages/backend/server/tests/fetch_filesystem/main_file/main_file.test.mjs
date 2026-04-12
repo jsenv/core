@@ -80,3 +80,34 @@ const server = await startServer({
   };
   assert({ actual, expect });
 }
+
+// GET /subdir/ -> 403 because canReadDirectory is false
+{
+  const response = await fetchUrl(new URL("/subdir/", server.origin).href);
+  const actual = {
+    status: response.status,
+  };
+  const expect = {
+    status: 403,
+  };
+  assert({ actual, expect });
+}
+
+// GET /subdir/b.js -> receives b.js
+{
+  const response = await fetchUrl(new URL("/subdir/b.js", server.origin).href);
+  const actual = {
+    status: response.status,
+    contentType: response.headers.get("content-type"),
+    body: await response.text(),
+  };
+  const expect = {
+    status: 200,
+    contentType: "text/javascript",
+    body: readFileSync(
+      new URL(import.meta.resolve("./fixtures/subdir/b.js")),
+      "utf8",
+    ),
+  };
+  assert({ actual, expect });
+}

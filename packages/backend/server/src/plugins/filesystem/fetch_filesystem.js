@@ -104,17 +104,17 @@ export const fetchFileSystem = async (
       readStatTiming?.end();
 
       if (fileStat.isDirectory()) {
-        if (directoryMainFileRelativeUrl) {
-          return serveFile(
-            new URL(directoryMainFileRelativeUrl, directoryUrl).href,
-          );
-        }
         if (canReadDirectory) {
           return serveDirectory(fileUrl, {
             headers: request.headers,
             canReadDirectory,
             rootDirectoryUrl: directoryUrl,
           });
+        }
+        if (directoryMainFileRelativeUrl && fileUrl === directoryUrlString) {
+          return serveFile(
+            new URL(directoryMainFileRelativeUrl, directoryUrl).href,
+          );
         }
         return {
           status: 403,

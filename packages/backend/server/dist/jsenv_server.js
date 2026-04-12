@@ -8283,7 +8283,7 @@ const fetchFileSystem = async (
             rootDirectoryUrl: directoryUrl,
           });
         }
-        if (directoryMainFileRelativeUrl) {
+        if (directoryMainFileRelativeUrl && fileUrl === directoryUrlString) {
           return serveFile(
             new URL(directoryMainFileRelativeUrl, directoryUrl).href,
           );
