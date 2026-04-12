@@ -7052,7 +7052,7 @@ import.meta.css = [/* css */`
     inset: 0;
     user-select: none;
   }
-`, "/src/interaction/drag/drag_gesture.js"];
+`, "@jsenv/dom/src/interaction/drag/drag_gesture.js"];
 
 installImportMetaCssBuild(import.meta);const setupConstraintFeedbackLine = () => {
   const constraintFeedbackLine = createConstraintFeedbackLine();
@@ -7141,7 +7141,7 @@ import.meta.css = [/* css */`
   .navi_constraint_feedback_line[data-visible] {
     visibility: visible;
   }
-`, "/src/interaction/drag/constraint_feedback_line.js"];
+`, "@jsenv/dom/src/interaction/drag/constraint_feedback_line.js"];
 
 installImportMetaCssBuild(import.meta);// Keep visual markers (debug markers, obstacle markers, constraint feedback line) in DOM after drag ends
 const MARKER_SIZE = 12;
@@ -7723,7 +7723,7 @@ import.meta.css = [/* css */`
     border-radius: 3px;
     pointer-events: none;
   }
-`, "/src/interaction/drag/drag_debug_markers.js"];
+`, "@jsenv/dom/src/interaction/drag/drag_debug_markers.js"];
 
 const initDragConstraints = (
   dragGesture,
@@ -8916,7 +8916,7 @@ import.meta.css = [/* css */`
     height: auto !important;
     opacity: 0 !important;
   }
-`, "/src/position/position_sticky.js"];
+`, "@jsenv/dom/src/position/position_sticky.js"];
 const initPositionSticky = element => {
   const computedStyle = getComputedStyle(element);
   const topCssValue = computedStyle.top;

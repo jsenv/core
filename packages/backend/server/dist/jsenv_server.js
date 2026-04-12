@@ -3970,7 +3970,7 @@ const createPluginsController = async ({
     addPluginToHookSetMap(plugin);
   };
 
-  const pluginCandidates = plugins;
+  const pluginCandidates = plugins.flat(Infinity);
   const activePlugins = [];
   const pluginsWithEffect = [];
 
