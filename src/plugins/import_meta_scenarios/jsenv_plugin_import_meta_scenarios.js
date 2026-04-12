@@ -19,6 +19,14 @@ export const jsenvPluginImportMetaScenarios = () => {
     appliesDuring: "*",
     transformUrlContent: {
       js_module: async (urlInfo) => {
+        // Do not scan node modules for import.meta.dev/import.meta.build
+        // - node modules won't have this in their code
+        // - ;or should use other an other technic as this one won't be available
+        // They would be discarded by content.includes detection
+        // but it's cheaper to detect by URL than to scan potentially large files
+        if (urlInfo.url.includes("/node_modules/")) {
+          return null;
+        }
         if (
           !urlInfo.content.includes("import.meta.dev") &&
           !urlInfo.content.includes("import.meta.test") &&

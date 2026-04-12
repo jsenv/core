@@ -36,6 +36,14 @@ export const jsenvPluginImportMetaCss = () => {
     appliesDuring: "*",
     transformUrlContent: {
       js_module: async (urlInfo) => {
+        // Do not scan node modules for import.meta.css
+        // - unlikely to be there
+        // - we don't watch node modules (too expensive)
+        // They would be discarded by content.includes detection
+        // but it's cheaper to detect by URL than to scan potentially large files
+        if (urlInfo.url.includes("/node_modules/")) {
+          return null;
+        }
         if (!urlInfo.content.includes("import.meta.css")) {
           return null;
         }

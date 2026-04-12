@@ -53,6 +53,14 @@ export const jsenvPluginImportMetaHot = () => {
         cssUrlInfo.data.hotAcceptDependencies = [];
       },
       js_module: async (urlInfo) => {
+        // Do not scan node modules for import.meta.hot
+        // - unlikely to be there
+        // - we don't watch node modules (too expensive)
+        // They would be discarded by content.includes detection
+        // but it's cheaper to detect by URL than to scan potentially large files
+        if (urlInfo.url.includes("/node_modules/")) {
+          return null;
+        }
         if (!urlInfo.content.includes("import.meta.hot")) {
           return null;
         }
