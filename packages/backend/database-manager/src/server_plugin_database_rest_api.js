@@ -1,3 +1,7 @@
+/**
+ * - nom des tables au singulier
+ */
+
 import { connectAs } from "@jsenv/database";
 
 import { execSync } from "node:child_process";
